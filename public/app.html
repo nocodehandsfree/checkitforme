@@ -826,6 +826,7 @@
   <section id="testing">
     <div class="k-title">Testing</div>
     <div class="k-sub">Owner only · Fun stores</div>
+    <div id="testing_src"></div>
     <div id="testing_summary"></div>
     <div id="testing_log"><div class="empty">Loading…</div></div>
   </section>
@@ -921,6 +922,7 @@
   <section id="feedback">
     <div class="k-title">Feedback</div>
     <div class="k-sub">What customers said they saw after an unclear check. Correcting fixes the call record.</div>
+    <div id="fb_src"></div>
     <div id="fb_summary"></div>
     <div id="fb_unclear"></div>
     <div class="k-eyebrow">Review queue</div>
@@ -1407,6 +1409,25 @@ const api = async (p, opts={}) => {
   if(r.status===401){ showAuthGate(); }           // safeguard: never leave cards spinning on a dead session
   try{ return await r.json(); }catch(_){ return {error:'bad_response'}; }
 };
+// Call-data source for the owner-testing pages (Testing + Feedback). THE Admin reads prod, but Fun-store
+// rehearsal happens on the staging site — these two pages can flip to it. Same admin login: the session
+// cookie lives on .checkitforme.com and both services verify it. A staging 401 must NOT trip the global
+// auth gate (the Admin session itself is fine), so this has its own fetch path with its own error keys.
+const STG_ORIGIN='https://staging.checkitforme.com';
+let CALL_SRC=localStorage.getItem('call_src')||'live';
+async function srcApi(p,opts={}){
+  if(CALL_SRC!=='staging') return api(p,opts);
+  try{
+    const r=await fetch(STG_ORIGIN+p,Object.assign({},opts,{credentials:'include'}));
+    if(r.status===401) return {error:'staging_auth'};
+    return await r.json();
+  }catch(_){ return {error:'staging_down'}; }
+}
+function setCallSrc(s,reload){ CALL_SRC=s; localStorage.setItem('call_src',s); document.querySelectorAll('.src-filter').forEach(el=>{el.value=s;}); if(reload) reload(); }
+const srcPicker=reloadName=>`<div class="k-filters"><select class="k-filter src-filter" data-tip="Which site's calls to show — the live site or the staging site" onchange="setCallSrc(this.value,${reloadName})"><option value="live"${CALL_SRC==='live'?' selected':''}>Live site</option><option value="staging"${CALL_SRC==='staging'?' selected':''}>Staging site</option></select></div>`;
+const srcEmpty=(d,fallback)=>d&&d.error==='staging_auth'
+  ? '<div class="empty">Staging wants a login. Open staging.checkitforme.com, sign in with your phone once, then come back.</div>'
+  : d&&d.error==='staging_down' ? '<div class="empty">Could not reach the staging site.</div>' : fallback;
 // Auth safeguard (DevOps owns the actual login wiring). When any /api call 401s, replace the eternal
 // "Loading…" with a clear, actionable gate instead of a silently broken dashboard.
 let AUTH_GATED=false;
@@ -2716,10 +2737,12 @@ function agoTs(unix){ if(!unix) return ''; const sec=Math.floor(Date.now()/1000-
 // open the transcript, and one-click correct it (which fixes the call record + the training signal). ----
 async function loadFeedback(){
   const list=document.getElementById('fb_list'); if(!list) return;
-  const rows=await api('/api/feedback');
-  if(!Array.isArray(rows)){ list.innerHTML='<div class="empty">Could not load feedback.</div>'; return; }
+  { const sp=document.getElementById('fb_src'); if(sp) sp.innerHTML=srcPicker('loadFeedback'); }
+  const rows=await srcApi('/api/feedback');
+  if(!Array.isArray(rows)){ const sum=document.getElementById('fb_summary'); if(sum) sum.innerHTML=''; const un=document.getElementById('fb_unclear'); if(un) un.innerHTML=''; list.innerHTML=srcEmpty(rows,'<div class="empty">Could not load feedback.</div>'); return; }
   const openDis=rows.filter(r=>r.disagree&&!r.reviewed).length;
-  FB_OPEN=openDis; { const _b=document.querySelector('#subnav2 button[data-sec="feedback"] .fbbadge'); if(_b){ _b.textContent=FB_OPEN>0?FB_OPEN:''; _b.style.display=FB_OPEN>0?'inline-block':'none'; } }
+  // The tab badge always counts THE Admin's own (live) queue — staging browsing must not repaint it.
+  if(CALL_SRC==='live'){ FB_OPEN=openDis; const _b=document.querySelector('#subnav2 button[data-sec="feedback"] .fbbadge'); if(_b){ _b.textContent=FB_OPEN>0?FB_OPEN:''; _b.style.display=FB_OPEN>0?'inline-block':'none'; } }
   const sum=document.getElementById('fb_summary');
   const well=(n,l,cls)=>`<div class="k-well"><div class="n${cls?' '+cls:''}">${n}</div><div class="l">${l}</div></div>`;
   if(sum) sum.innerHTML=`<div class="k-wells">${well(openDis,'To review',openDis?'a':'')}${well(rows.filter(r=>r.disagree).length,'Disagreed','')}${well(rows.length,'Responses','')}</div>`;
@@ -2767,14 +2790,15 @@ function fbTranscript(id){
 async function loadFbUnclear(){
   const el=document.getElementById('fb_unclear'); if(!el) return;
   try{
-    const rc=await api('/api/results?limit=120');
+    const rc=await srcApi('/api/results?limit=120');
     const unk=(rc&&Array.isArray(rc.rows)?rc.rows:[]).filter(r=>r.statusKey==='no_clear_answer').slice(0,15);
     if(!unk.length){ el.innerHTML=''; return; }
     el.innerHTML=`<div class="k-eyebrow">Unclear checks · newest ${unk.length} · Fun included</div><div class="k-pills" style="margin-top:0">${unk.map(r=>`<span class="k-pill" style="color:#F4D03F">${esch(String(r.retailer||('#'+r.retailerId)).split('—')[0].trim())} · ${agoTs(r.startedAt)}</span>`).join('')}</div>`;
   }catch(_){ el.innerHTML=''; }
 }
-async function fbReview(id){ const r=await api('/api/feedback/'+id+'/review',{method:'POST',headers:{'content-type':'application/json'},body:'{}'}); toast((r&&r.ok)?'Marked reviewed':"Couldn't update"); loadFeedback(); }
-async function fbCorrect(id,verdict){ const r=await api('/api/feedback/'+id+'/review',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({correct:verdict})}); toast((r&&r.ok)?'Corrected + reviewed':"Couldn't update"); loadFeedback(); }
+// Review/correct write to the SOURCE the row came from — a staging disagreement fixes the staging record.
+async function fbReview(id){ const r=await srcApi('/api/feedback/'+id+'/review',{method:'POST',headers:{'content-type':'application/json'},body:'{}'}); toast((r&&r.ok)?'Marked reviewed':"Couldn't update"); loadFeedback(); }
+async function fbCorrect(id,verdict){ const r=await srcApi('/api/feedback/'+id+'/review',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({correct:verdict})}); toast((r&&r.ok)?'Corrected + reviewed':"Couldn't update"); loadFeedback(); }
 
 // ---- Support: live chats from the support agent (site + Discord). Reads the Support lane's
 // /api/support/* endpoints (contract: docs/specs/support-agent/admin-panel-contract.md — ping
@@ -4632,8 +4656,9 @@ function tcStatusPill(key){ const F=({in_stock:['In stock','#4ADE80'],not_in_sto
 async function loadTesting(){
   const sum=document.getElementById('testing_summary'), log=document.getElementById('testing_log');
   if(!sum||!log) return;
-  const d=await api('/api/admin/test-calls');
-  if(!d||d.error){ sum.innerHTML=''; log.textContent='No test calls yet. Call the Fun or MVP store to start logging.'; return; }
+  { const sp=document.getElementById('testing_src'); if(sp) sp.innerHTML=srcPicker('loadTesting'); }
+  const d=await srcApi('/api/admin/test-calls');
+  if(!d||d.error){ sum.innerHTML=''; log.innerHTML=srcEmpty(d,'<div class="empty">No test calls yet. Call the Fun or MVP store to start logging.</div>'); return; }
   const s=d.summary||{};
   // Report strip over the log (comp: Testing is a LOG with a report strip).
   const well=(n,l,cls)=>`<div class="k-well"><div class="n${cls?' '+cls:''}">${n}</div><div class="l">${l}</div></div>`;

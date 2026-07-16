@@ -218,6 +218,24 @@ function cookieRootDomain(host: string | undefined): string | undefined {
   return ".checkitforme.com";
 }
 
+// THE Admin (admin.checkitforme.com) can read this service's /api/* cross-origin — how the Testing
+// and Feedback pages flip to the staging site's Fun-store data. Auth still applies: the admin_session
+// cookie is minted on the registrable root (.checkitforme.com) with a shared secret, so the owner's
+// one Admin login already works here; this middleware only opens the browser's CORS gate for it.
+const ADMIN_ORIGIN = "https://admin.checkitforme.com";
+app.use("/api/*", async (c, next) => {
+  if (c.req.header("origin") !== ADMIN_ORIGIN) return next();
+  c.header("Access-Control-Allow-Origin", ADMIN_ORIGIN);
+  c.header("Access-Control-Allow-Credentials", "true");
+  c.header("Vary", "Origin");
+  if (c.req.method === "OPTIONS") {
+    c.header("Access-Control-Allow-Methods", "GET,POST,PATCH,PUT,DELETE,OPTIONS");
+    c.header("Access-Control-Allow-Headers", "content-type,x-admin-token");
+    c.header("Access-Control-Max-Age", "86400");
+    return c.body(null, 204);
+  }
+  return next();
+});
 // /api/* = the operator dashboard. Admin auth only: the x-admin-token header (server-to-server) or the
 // signed `admin_session` cookie minted by /admin-login. (Consumer endpoints live under /pub + /app.)
 app.use("/api/*", async (c, next) => {
