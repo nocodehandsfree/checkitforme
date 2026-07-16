@@ -11,11 +11,10 @@
 - **Macy's (Toys R Us shop-in-shop) = MUTED** (resolved, owner-approved — main line never reaches the toy
   counter). **Micro Center = muted** (online-only).
 
-## THE 8 STILL UNMAPPED (106 stores) — a PHONE-NUMBER / detection issue, NOT navigation → DD
+## THE 8 STILL UNMAPPED (106 stores) — BAD NUMBERS, PARKED (owner 2026-07-16)
 - H-E-B(84), Lucky(7), FoodMaxx(5), Metro Market(5), Stop & Shop(2), Pak N Save(1), Payless(1), Uwajimaya(1).
-- All hit the "no human" wall. **H-E-B proven: our automated calls to 3 different stores captured NOTHING**
-  (dial→done, no menu, no human) even though the owner called and heard a full menu → the loaded numbers
-  aren't reaching the real IVR. **DD: verify the phone numbers for these 8.** Then Mapping takes one pass.
+- **Owner called them himself — the numbers can NOT be recovered. Parked, deal with later.** These 8 stay
+  unmapped for now (0.10% of stores). NOT a mapping problem, don't burn calls. Revisit if good numbers surface.
 - **H-E-B barge answer (owner asked):** NO, can't barge 0 at 3s — the line must play its greeting first
   before it accepts the 0. Press 0 works only after the greeting.
 
@@ -32,7 +31,8 @@
   real phones + hours for verified-kiosk stores (both envs), so "no store open" from a data gap is gone.
 
 ## Open / handed off
-- **DD:** verify phone numbers for the 8 unmapped chains (above); Food 4 Less kiosk-only flags; populate
+- **DD:** the 8 unmapped chains have unrecoverable numbers (parked, owner) — no action unless good numbers
+  turn up. Food 4 Less kiosk-only flags; populate
   muted reasons (Amazon/Best Buy/Micro Center = "online only", Aldi = "no store line").
 - **Admin:** add "Can't map" as a 3rd mapping state + reason display (spec in unmapped-audit-2026-07-11.md).
 - No open sweep. Standing down per owner (2026-07-16).
@@ -53,4 +53,4 @@
 
 ## State
 - Prod is go-live ready on mapping (99.90% stores). Recipes live in prod DB; staging mirrors via 3-min pull.
-  Remaining 0.10% = 8 micro-chains blocked on DD number verification.
+  Remaining 0.10% = 8 micro-chains with unrecoverable bad numbers (owner confirmed) — parked.
