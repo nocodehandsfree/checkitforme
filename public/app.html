@@ -4399,6 +4399,9 @@ function wfOptions(sel,placeholder){
 let WFM_VOICES=[], WFM_GLOBAL=[], WFM_ASSIGN={}; // WFM_ASSIGN: workflow name -> {stores:[], chains:[]}
 async function loadWorkflowMgr(){
   await loadWorkflows();
+  // Personas power the sheet's Persona dropdown — without this the list renders EMPTY here even when
+  // a persona is saved and bound (owner 07-16: "there's none there" while the binding was fine).
+  try{ if(!PERSONAS.length && typeof loadPersonas==='function') await loadPersonas(); }catch(e){}
   if(!WFM_VOICES.length){ const d=await api('/api/voices'); WFM_VOICES=(d&&d.voices)||[]; }
   const s=await api('/api/settings')||{}; WFM_GLOBAL=wfgFrom(s);
   WFM_ASSIGN=await api('/api/admin/workflow-assignments')||{};
