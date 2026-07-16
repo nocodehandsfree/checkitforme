@@ -232,8 +232,11 @@ export async function bootstrap() {
   await client.execute(`CREATE TABLE IF NOT EXISTS alert_subscriptions (
     id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, kind TEXT NOT NULL DEFAULT 'restock',
     retailer_id INTEGER, category_id INTEGER, product_label TEXT, channel TEXT NOT NULL DEFAULT 'sms',
-    active INTEGER NOT NULL DEFAULT 1, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
+    active INTEGER NOT NULL DEFAULT 1, muted INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
   await client.execute("CREATE INDEX IF NOT EXISTS alert_subs_user_idx ON alert_subscriptions(user_id, active)").catch(() => {});
+  // Alert mute (owner 07-16) for DBs created before the column existed — the ALTER above runs pre-create
+  // on a fresh DB and no-ops, so it has to run here too, after the table certainly exists.
+  await client.execute("ALTER TABLE alert_subscriptions ADD COLUMN muted INTEGER NOT NULL DEFAULT 0").catch(() => {});
   await client.execute(`CREATE TABLE IF NOT EXISTS alert_sends (
     id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT, event TEXT NOT NULL, channel TEXT NOT NULL,
     to_addr TEXT, status TEXT NOT NULL, detail TEXT, month_key TEXT, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
