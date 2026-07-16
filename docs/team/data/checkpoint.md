@@ -42,6 +42,10 @@
   Mariano's Westchester-IL 102842 "(914)"=NY. 9 all-kiosk chains awaiting Mapper (prompt handed to owner):
   H-E-B(84, owner-verified PRESS 0), Woodman's(14), Lucky(7), H Mart(6), FoodMaxx(5), Metro Market(5),
   Stop & Shop(2), Pak N Save(1), Uwajimaya(1).
+- **EVERY ODD-STATE DOOR SELF-DOCUMENTS (owner ask 07-16):** all muted / no-call-target / site-check
+  chains carry their WHY in `unmappableReason`/`stockCheckNote` on the chain row (synced to prod) —
+  audit shows 0 missing. Pokemon Vending chain = 13 machines in MALL common areas (owner-verified),
+  no store to call → muted for good. 19 other reasonless mutes were 0-store merge stubs, labeled.
 - **KIOSK IDENTITY TRAP (GOTCHAS'd):** vending overlay re-binds rows when TPCi moves machines — NEVER patch
   kiosk rows by DB id across time; match by ADDRESS+state+chain-token. Root fix open: key rows by place,
   overlay machines via `kiosks` table. TPCi API has NO phone field (why kiosk-born rows had none).
