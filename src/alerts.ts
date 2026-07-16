@@ -192,7 +192,7 @@ const EMAIL_DESIGN_EN: Record<EmailKind, EmailDesign> = {
     // Product-first: the HEADLINE is the item that's back (owner 07-15: "what's back?" — name it).
     // No product panel (it repeated the store/city and read as a gray box); store said once in the body.
     // CTA = real action: Get directions opens Google Maps to the store, not a dead website link.
-    kicker: "BACK IN STOCK", kickerColor: "#FFCB05", headline: "{product}",
+    kicker: "BACK IN STOCK", kickerColor: "#FFD60A", headline: "{product}",
     body: ["**{store}** has it right now.", "This stuff moves fast."],
     cta: "Get directions", url: "https://checkitforme.com",
   },
@@ -227,7 +227,7 @@ const EMAIL_DESIGN_ES: Record<EmailKind, EmailDesign> = {
     cta: "Usar mi check gratis", url: "https://checkitforme.com",
   },
   restock: {
-    kicker: "YA DISPONIBLE", kickerColor: "#FFCB05", headline: "{product}",
+    kicker: "YA DISPONIBLE", kickerColor: "#FFD60A", headline: "{product}",
     body: ["**{store}** lo tiene ahora.", "Esto vuela."],
     cta: "Cómo llegar", url: "https://checkitforme.com",
   },
@@ -256,7 +256,7 @@ function fillRaw(t: string, tokens: Record<string, string | number | undefined>)
 function fillHtmlBold(t: string, tk: Record<string, string | number | undefined>): string {
   return t.split(/(\*\*[^*]+\*\*)/).map((seg) => {
     const m = seg.match(/^\*\*([^*]+)\*\*$/);
-    if (m) return `<b style="${ink("#F4F4F6")};font-weight:700">${escHtml(fillRaw(m[1], tk))}</b>`;
+    if (m) return `<b style="${ink("#FFFFFF")};font-weight:700">${escHtml(fillRaw(m[1], tk))}</b>`;
     return escHtml(fillRaw(seg, tk));
   }).join("");
 }
@@ -269,10 +269,15 @@ function fillHtmlBold(t: string, tk: Record<string, string | number | undefined>
 //   1. a linear-gradient lock (wins wherever gradients render: Gmail, Apple Mail, most clients),
 //   2. a bgcolor fallback of pure #000000 (the one value Outlook's engines keep black when they don't).
 // Structure stays the Outlook-robust one that survived testing: ONE flat canvas, BORDERED modules
-// (borders survive every client), saturated accents, no floating card. Text is off-white, never #FFF.
+// (borders survive every client), saturated accents, no floating card.
+// BRIGHTNESS PRE-COMP (change #5, owner: "brighter"): Gmail dims every text color by a fixed pass and
+// offers no opt-out, so the whites are authored at pure #FFFFFF and the restock yellow one notch
+// hotter — Gmail's dimming lands them where the comp wants, and everywhere else the extra brightness
+// is barely visible. The old "never pure #FFF" rule guarded against canvas inversion; the gradient
+// lock closed that hole (proven on the owner's screenshots), so pure white text is safe now.
 const BOARD = "#08090D"; // comp board (docs/design/emails mock) — painted via the gradient lock
 const BLACK = "#000000"; // bgcolor fallback where gradients don't render; Outlook keeps true black
-const TXT = "#F4F4F6";   // headline / bold — off-white, never pure white
+const TXT = "#FFFFFF";   // headline / bold / CTA label — pure white (pre-comp for Gmail's dimming)
 const BODY1 = "#B9B9C4"; // body text (comp)
 const BODY2 = "#8A8A96"; // secondary text + footer (comp)
 const HAIR = "#333340";  // box borders (comp)
