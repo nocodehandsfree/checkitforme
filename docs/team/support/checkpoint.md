@@ -1,6 +1,18 @@
 # Support — checkpoint
 **What this is:** current state. Newest on top, ≤80 lines.
 
+- 2026-07-16 — New support topic `check_issue` ("Something's wrong with my check") LIVE on staging:
+  for bad-number / wrong-store / wrong-result reports off the status page. Full path: picker row
+  (2nd, EN+ES), tailored greeting asking which store + what went wrong, screenshot attach on, category
+  hint routes to a human ticket (escalate) so the team can fix the store record. Admin chip = "Check
+  problem". Plus a subtle "Something wrong with this check? Tell us" link on the result/status page →
+  openSupportTopic('check_issue') (opens support straight into the topic). Verified live: agent
+  apologizes + asks details + escalate:true; served HTML carries topic+link+ES. Admin chip label rides
+  Addie's next Admin deploy.
+- 2026-07-15 — Owner's train-it test debugged: the live Admin DOES have the Teach box (wired to
+  /api/support/review, embed works — proved by approving live, answer serves verbatim). His chat 1 had
+  reviewStatus=None → his Save never registered. Completed it for him; site now serves the partnership
+  answer. NOTE: prod+staging+api all share ONE qdrant (support_qa) — the agent memory is global.
 - 2026-07-15 — ADMIN DECOUPLED FROM PROD (owner): Admin can be pushed/deployed independently of the
   prod consumer site. Do NOT promote for Admin changes. Addie owns the Admin deploy — leave Admin
   work on staging for her, don't line up a prod promote for it.
