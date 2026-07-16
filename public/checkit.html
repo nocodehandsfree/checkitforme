@@ -307,15 +307,18 @@ __BRAND_HEAD__
      colour AND the body wash to the regular dark for the duration — the :has() rules undo themselves
      the moment the sheet closes. ID/class specificity + !important out-ranks every tone rule above,
      including the standalone media block and the v2 skin's body background. */
-  html:has(#acctOverlay.on),html:has(#buyOverlay.on),html:has(#pageOverlay.on),html:has(.csheet.on),html:has(#zones.on),html:has(#histOverlay.on),html:has(#zmenuOv.on),html:has(#emailOv.on),html:has(#alertsOv.on),html:has(#featOv.on),html:has(#scorePostOv.on){background:#0C0C12!important}
+  /* Sheet open → the root stays the SAME page grey as a bare page (owner 07-16: slide-ups were going
+     top-black/bottom-grey; the transparent look must survive a sheet). The dim above washes the page
+     toward this same grey, so strips, backdrop and sheet edge all live in one family. Toned verdict
+     pages still revert to it here, which is what this rule was originally for (owner 07-09). */
+  html:has(#acctOverlay.on),html:has(#buyOverlay.on),html:has(#pageOverlay.on),html:has(.csheet.on),html:has(#zones.on),html:has(#histOverlay.on),html:has(#zmenuOv.on),html:has(#emailOv.on),html:has(#alertsOv.on),html:has(#featOv.on),html:has(#scorePostOv.on){background:#1D1D22!important}
   html:has(#acctOverlay.on) body,html:has(#buyOverlay.on) body,html:has(#pageOverlay.on) body,html:has(.csheet.on) body,html:has(#zones.on) body,html:has(#histOverlay.on) body,html:has(#zmenuOv.on) body,html:has(#emailOv.on) body,html:has(#alertsOv.on) body,html:has(#featOv.on) body,html:has(#scorePostOv.on) body{background:var(--bg)!important}
   /* SHEET-EDGE TINT RETURN (owner 07-16): iOS paints BOTH chrome strips with the ROOT colour — the
-     call page blends because the root equals the page edges. While a sheet is open the root is the
-     dim-dark above, which matches the TOP, but the sheet itself is the grey card — so the bottom
-     strip sat against grey like a slab and the blend died. Same cure as the verdict bloom: the
-     surface returns to the chrome colour at the very edge. A fixed scrim fades every open sheet's
-     last pixels into the root dark so the bottom strip melts into the page again. */
-  html[data-skin="v2"] #acctOverlay.on::after,html[data-skin="v2"] #buyOverlay.on::after,html[data-skin="v2"] #pageOverlay.on::after,html[data-skin="v2"] .csheet.on::after,html[data-skin="v2"] #zones.on::after,html[data-skin="v2"] #histOverlay.on::after,html[data-skin="v2"] #zmenuOv.on::after,html[data-skin="v2"] #emailOv.on::after,html[data-skin="v2"] #alertsOv.on::after,html[data-skin="v2"] #featOv.on::after,html[data-skin="v2"] #scorePostOv.on::after,html[data-skin="v2"] #authOverlay.on::after,html[data-skin="v2"] #againOverlay.on::after,html[data-skin="v2"] #cidOverlay.on::after,html[data-skin="v2"] #kcallOverlay.on::after,html[data-skin="v2"] #leadOverlay.on::after,html[data-skin="v2"] #paidOverlay.on::after,html[data-skin="v2"] #scoreOverlay.on::after,html[data-skin="v2"] #shareOverlay.on::after,html[data-skin="v2"] #waitlistOverlay.on::after,html[data-skin="v2"] #storeReqOverlay.on::after,html[data-skin="v2"] #watchOverlay.on::after,html[data-skin="v2"] #scheduleOverlay.on::after,html[data-skin="v2"] #inviteOverlay.on::after,html[data-skin="v2"] #receiptOverlay.on::after,html[data-skin="v2"] #kioskOverlay.on::after{content:'';position:fixed;left:0;right:0;bottom:0;height:52px;background:linear-gradient(180deg,rgba(12,12,18,0) 0%,rgba(12,12,18,.5) 55%,rgba(12,12,18,1) 100%);pointer-events:none;z-index:9}
+     call page blends because the root equals the page edges. The sheet card is a different grey than
+     the root, so its bottom edge sat against the strip like a slab. Same cure as the verdict bloom:
+     the surface returns to the chrome colour at the very edge — a fixed scrim fades every open
+     sheet's last pixels into the root page grey so the bottom strip melts into the page again. */
+  html[data-skin="v2"] #acctOverlay.on::after,html[data-skin="v2"] #buyOverlay.on::after,html[data-skin="v2"] #pageOverlay.on::after,html[data-skin="v2"] .csheet.on::after,html[data-skin="v2"] #zones.on::after,html[data-skin="v2"] #histOverlay.on::after,html[data-skin="v2"] #zmenuOv.on::after,html[data-skin="v2"] #emailOv.on::after,html[data-skin="v2"] #alertsOv.on::after,html[data-skin="v2"] #featOv.on::after,html[data-skin="v2"] #scorePostOv.on::after,html[data-skin="v2"] #authOverlay.on::after,html[data-skin="v2"] #againOverlay.on::after,html[data-skin="v2"] #cidOverlay.on::after,html[data-skin="v2"] #kcallOverlay.on::after,html[data-skin="v2"] #leadOverlay.on::after,html[data-skin="v2"] #paidOverlay.on::after,html[data-skin="v2"] #scoreOverlay.on::after,html[data-skin="v2"] #shareOverlay.on::after,html[data-skin="v2"] #waitlistOverlay.on::after,html[data-skin="v2"] #storeReqOverlay.on::after,html[data-skin="v2"] #watchOverlay.on::after,html[data-skin="v2"] #scheduleOverlay.on::after,html[data-skin="v2"] #inviteOverlay.on::after,html[data-skin="v2"] #receiptOverlay.on::after,html[data-skin="v2"] #kioskOverlay.on::after{content:'';position:fixed;left:0;right:0;bottom:0;height:52px;background:linear-gradient(180deg,rgba(29,29,34,0) 0%,rgba(29,29,34,.5) 55%,rgba(29,29,34,1) 100%);pointer-events:none;z-index:9}
   /* Messenger open: tint the ROOT bg to the header colour so iOS samples it for the status strip —
      the header dome then fills seamlessly to the very top edge of the phone (no black notch band). */
   html:has(.supwrap.on){background:#1A1A20!important}
@@ -1408,7 +1411,7 @@ html[data-skin="v2"] .cs-key{background:transparent;border:0;box-shadow:none;ani
 html[data-skin="v2"] .chip{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;color:#CDCDD8;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
 html[data-skin="v2"] .chip.sel{color:#4ADE80;background:linear-gradient(180deg,#31313A 0%,#28282E 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.1),0 0 14px rgba(74,222,128,.25)}
 /* Pop-ups (§5.11): big card radius 26 over the dim, no grabber, no border. */
-html[data-skin="v2"] .overlay{background:rgba(5,6,9,.66)}
+html[data-skin="v2"] .overlay{background:rgba(29,29,34,.8)} /* the dim WASHES toward the page grey, never toward black — the chrome strips stay the same #1D1D22 they are on a bare page, so slide-ups keep the transparent look (owner 07-16) */
 html[data-skin="v2"] #success .fab-back{position:static;width:auto;height:auto;border-radius:999px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);color:#FFF;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);display:flex;align-items:center;gap:8px;margin:18px auto 8px;padding:11px 22px;font-size:12.5px;font-weight:800;letter-spacing:.1em}
 html[data-skin="v2"] #success .fab-back svg{width:15px;height:15px}
 html[data-skin="v2"] #success .fab-back svg path{stroke:#FFF}
