@@ -4062,7 +4062,7 @@ function renderStatuses(list){
 }
 function stSheet(id){
   const s=Object.values(STATUSES).find(x=>x.id===id); if(!s) return;
-  openSheet(s.label, ST_TONES[s.tone]||'', `
+  openSheet(s.label, (ST_TONES[s.tone]&&ST_TONES[s.tone]!==s.label)?ST_TONES[s.tone]:'', `
     <div data-sid="${s.id}">
       <div class="row" style="gap:10px;align-items:center;flex-wrap:nowrap;margin-top:4px">
         <button type="button" class="sticon-btn" onclick="statusPickIcon(this)" title="Change the icon">${statusIcon(s.emoji,s.color||s.tone,24)}</button>
@@ -4085,7 +4085,7 @@ function stSheet(id){
         </select>
         <span class="meta" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">key: <code>${escH(s.key)}</code></span>
       </div>
-      <div class="k-note" style="padding-left:0">Edits save as you type and go live for customers immediately.</div>
+      <div class="k-note" style="padding-left:0">Saves as you type · live for customers immediately</div>
     </div>`);
 }
 async function saveStatus(id,btn){
