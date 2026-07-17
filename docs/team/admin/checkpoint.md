@@ -3,6 +3,14 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-17 — CHAINS PAGE REDESIGNED (e5c4f1d, live)
+Full frog pass on the messiest page (comp 2e). Killed the phantom "Could not load" 6-stat wall → one
+slim mapped-progress bar ("120 of 131 mapped · 92%", the page's real story, fails silent not red).
+Green overload fixed: mapped = quiet gray (norm), UNMAPPED = amber (the exception the operator hunts).
+ABCD "how a call flows" demoted from prime top space to a footnote peek at the list bottom. Search up
+top, two filter pills one row. Verified: 7/7 chains interactions + gates green. tr_stats→tr_progress;
+preview rig stubs /api/admin/trainer/list.
+
 ## 2026-07-17 — SLIDE-UP TRANSPARENCY FIX (f7bbe69, live — NEEDS OWNER PHONE VERDICT)
 Applied design lane's /sheetpeek variant E (owner-proven on device). The full-screen rgba `.sheet-scrim`
 behind every sheet was THE thing killing iOS scroll-edge glass → bars died on any slide-up open, never
