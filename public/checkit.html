@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="sheetfix-r131" />
+<meta name="x-rev" content="glassH-acct-r132" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -1966,6 +1966,9 @@ html[data-skin="v2"] #authOverlay .x::before{display:none}
    faint check watermark blooming from the top-right, phone leads 26/900 with the email under it.
    No Sign out up here (foot of the sheet) and no plan pill (plan reads under Manage plan). */
 html[data-skin="v2"] #acctOverlay .modal{background:#1D1D22} /* comp: whole sheet incl. grabber zone = section grey, not black */
+/* Scroll-end spacer (variant H): the sheet body runs UNDER the toolbar so the glass has content to
+   ghost; this spacer keeps the last real row scrollable up above the bar at scroll-end. */
+html[data-skin="v2"] #acctOverlay .modal::after{content:'';display:block;flex:0 0 auto;height:calc(78px + env(safe-area-inset-bottom))}
 html[data-skin="v2"] .acctv2head .wash{position:relative;overflow:hidden;background:linear-gradient(180deg,#2C8E57 0%,#20693F 100%);padding:20px 20px 54px}
 html[data-skin="v2"] .acctv2head .wash .acwm{position:absolute;top:-42px;right:-46px;width:180px;height:180px;opacity:.16} /* NOT .wm — a legacy .wm{width:100%} rule grabs that name and re-centers the mark (owner 07-14: corner was off) */
 html[data-skin="v2"] .acctv2head .stats{margin:-40px 18px 0;display:flex;gap:10px;position:relative;z-index:2}
@@ -3892,6 +3895,22 @@ function acctIdentity(){
   const initial = name ? name[0].toUpperCase() : (email ? email[0].toUpperCase() : '');
   return { primary, secondary:subs.join('   ·   '), initial };
 }
+// GLASS SHEET mechanic (tint agent variant H, checkpoint 07-17c / /sheetpeek H): a bottom sheet must
+// live in the PAGE layer, not the fixed UI layer, or iOS 26's scroll-edge glass can't ghost it (the
+// top/bottom go solid). On open the WHOLE overlay becomes position:absolute at the current scroll
+// (top=scrollY, height=innerHeight+120 so the sheet runs ~120px under the toolbar); background scroll
+// is locked (html+body overflow:hidden) so absolute renders identically to fixed. The .modal keeps its
+// flex-end + slide-up + drag exactly as built. sheetGlassOff restores the fixed/closed state on close.
+// Reusable across acct/buy/csheet/messenger (rolling out one surface per push, owner verifies each).
+function sheetGlassOn(ov){ if(!ov) return; try{
+  const y=window.scrollY||window.pageYOffset||0;
+  ov.style.position='absolute'; ov.style.top=y+'px'; ov.style.bottom='auto'; ov.style.height=(window.innerHeight+120)+'px';
+  document.documentElement.style.overflow='hidden'; document.body.style.overflow='hidden';
+}catch(_){ } }
+function sheetGlassOff(ov){ if(!ov) return; try{
+  ov.style.position=''; ov.style.top=''; ov.style.bottom=''; ov.style.height='';
+  document.documentElement.style.overflow=''; document.body.style.overflow='';
+}catch(_){ } }
 function openAccount(fromPop){
   if(!isAuthed()) return;
   openAccount._pop=!!fromPop;
@@ -3956,7 +3975,7 @@ function openAccount(fromPop){
       <div id="acctv2panel" style="display:none;padding:14px 18px 0"></div>`; /* 6h upgrade capsule now lives in the overview panel */
     acctTab('overview');
   }catch(_){} }
-  { const _ov=$('acctOverlay'), _m=_ov&&_ov.querySelector('.modal'); if(_m){ _m.style.transition=''; _m.style.transform=''; _m.style.animation=''; } _ov.classList.add('on'); } track('account_open');
+  { const _ov=$('acctOverlay'), _m=_ov&&_ov.querySelector('.modal'); if(_m){ _m.style.transition=''; _m.style.transform=''; _m.style.animation=''; } sheetGlassOn(_ov); _ov.classList.add('on'); } track('account_open');
   try{ if(!openAccount._pop && !(history.state&&history.state.v==='acct')) history.pushState({v:'acct',t:'overview'},''); }catch(_){ } // back closes the sheet, not the page
   openAccount._pop=false;
 }
@@ -3966,9 +3985,9 @@ function closeAccount(instant){
     // slide the sheet DOWN out of view, then hide it (owner 07-05 — was a hard disappear)
     m.style.animation='none'; m.getBoundingClientRect(); // drop the entrance keyframe + lock current spot
     m.style.transition='transform .26s cubic-bezier(.32,.72,0,1)'; m.style.transform='translateY(100%)';
-    setTimeout(()=>{ ov.classList.remove('on'); m.style.transform=''; m.style.transition=''; m.style.animation=''; }, 250);
+    setTimeout(()=>{ ov.classList.remove('on'); m.style.transform=''; m.style.transition=''; m.style.animation=''; sheetGlassOff(ov); }, 250); // restore fixed/scroll AFTER the slide-down so the page doesn't jump
   } else {
-    ov.classList.remove('on'); if(m){ m.style.transform=''; m.style.transition=''; m.style.animation=''; }
+    ov.classList.remove('on'); if(m){ m.style.transform=''; m.style.transition=''; m.style.animation=''; } sheetGlassOff(ov);
   }
 }
 // Change number: the phone IS the login — re-verify a new one through the same code flow.
