@@ -3492,7 +3492,32 @@ async function boot(){
   // statuses registry + categories are in, so the verdict copy/emoji upgrade to the owner-edited ones.
   if(LASTRES && RAIL_CID && $('result') && !$('result').classList.contains('hidden')) showResult(LASTRES, RAIL_CID);
   if(!USER_LOC){ const sl=savedLoc(); if(sl) setUserLoc(sl.lat,sl.lng); } // restore last location → stores auto-load, no re-prompt
-  idle(()=>{ renderDemo(); loadFinds(); silentLocRecheck(); }); // ticker + demo + (if you've moved) location refresh — off the critical path
+  idle(()=>{ renderDemo(); loadFinds(); silentLocRecheck(); freshGuardInit(); }); // ticker + demo + (if you've moved) location refresh + stale-tab guard — off the critical path
+}
+// Stale-tab guard (owner 07-17): his Safari tab kept running days-old JS across a whole
+// broken-then-fixed cycle — an SPA only picks up a deploy on a full load, and iOS tabs live for weeks.
+// Remember the build rev we booted with; when the tab comes back to the foreground after ≥5 min away
+// AND the server reports a newer rev AND nothing is in flight (home view, no live call, no open sheet),
+// reload silently — the user just sees the homepage they expected, now on fresh code. Never fires
+// mid-anything; ancient servers without /pub/rev make it a no-op.
+let FRESH_REV=null, FRESH_HID=0;
+function freshGuardInit(){
+  try{
+    api('/pub/rev').then(r=>{ if(r&&r.rev) FRESH_REV=String(r.rev); }).catch(()=>{});
+    document.addEventListener('visibilitychange',()=>{
+      if(document.visibilityState==='hidden'){ FRESH_HID=Date.now(); return; }
+      if(!FRESH_REV||!FRESH_HID||(Date.now()-FRESH_HID)<300000) return;
+      FRESH_HID=0; // one check per background stretch
+      api('/pub/rev').then(r=>{
+        if(!r||!r.rev||String(r.rev)===FRESH_REV) return;
+        const busy = (typeof NAV_VIEW!=='undefined'&&NAV_VIEW!=='builder')
+          || ($('live')&&!$('live').classList.contains('hidden'))
+          || document.querySelector('.overlay.on,.csheet.on,.supwrap.on')
+          || document.body.classList.contains('huntmode');
+        if(!busy) location.reload(); // mid-flow: leave it — the stale rev stays set, so the next tab-return retries
+      }).catch(()=>{});
+    });
+  }catch(_){ }
 }
 // Silent location follow: the cached location is great when you're home, but if you've travelled to another
 // city it's stale (stores + finds would still be your old town). So — ONLY if you've ALREADY granted location
@@ -5144,7 +5169,7 @@ async function startCheckLive(){
   { const _fd=$('finds'); if(_fd)_fd.style.display='none'; } // hide the finds ticker on the call page — keep it uncrowded
   // Listeners hear the call through the browser — iOS silent switch mutes web audio, so remind them.
   const _mb=$('muteBanner'); if(_mb) _mb.style.display='none'; // owner asked to drop the 'flip off silent' note
-  LIVE_STEPS=[]; LIVE_TR=[]; LIVE_TRANSCRIPT=''; AGENT_PITCHED=false; LIVE_STAGE=0; LIVE_DONE=false; LIVE_T0=Date.now(); window.LIVE_FOLLOW=true;
+  LIVE_STEPS=[]; LIVE_TR=[]; LIVE_TRANSCRIPT=''; AGENT_PITCHED=false; LIVE_STAGE=0; LIVE_DONE=false; LIVE_T0=Date.now(); window.LIVE_FOLLOW=true; window._livePend=false;
   fillLiveHeader(); const _lr=$('live_rhead'); if(_lr)_lr.className='rhead live';
   liveStage(1); // logs step 1 + renders the call box (steps on top, empty script below)
   let secs=0; const elT=setInterval(()=>{ secs+=1; },1000); // counts toward the hard cap only — no on-screen timer
@@ -5356,7 +5381,7 @@ async function finalize(cid){
   saveCheckToHistory(res, cid);
   showResult(res, cid);
 }
-function backToBuilder(){ try{ document.documentElement.classList.remove('restoring'); }catch(_){ } /* deep-link hide must never survive into the homepage */ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } try{ document.body.classList.remove('zoning'); const _z=$('zones'); if(_z) _z.classList.remove('on'); const _h=$('histOverlay'); if(_h) _h.classList.remove('on'); }catch(_){ } /* close any open Check history / My Zones sheet */ TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); try{ const _st=$('supTab'); if(_st)_st.classList.remove('invite'); }catch(_){ } /* the post-check glow belongs to the result page only */ try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby','zones'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
+function backToBuilder(){ try{ document.documentElement.classList.remove('restoring'); }catch(_){ } /* deep-link hide must never survive into the homepage */ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } try{ document.body.classList.remove('zoning'); const _z=$('zones'); if(_z) _z.classList.remove('on'); const _h=$('histOverlay'); if(_h) _h.classList.remove('on'); }catch(_){ } /* close any open Check history / My Zones sheet */ TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); window._livePend=false; try{ const _st=$('supTab'); if(_st)_st.classList.remove('invite'); }catch(_){ } /* the post-check glow belongs to the result page only */ try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby','zones'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
   // Returning to the builder = a FRESH homepage (as if loaded for the first time). Drop ANY store/
   // category left over from a reopened call so it doesn't show pre-selected in the call CTA (which also
   // auto-scrolled to it). The apex site pre-locks Pokémon via BRAND_CAT, so this must NOT be gated on it
@@ -5551,7 +5576,12 @@ function showResult(o, cid){
   try{ recordResultPrice(o); }catch(_){ }
   resultCacheSet(cid,o);
   { const _r=$('result'); if(_r) _r.classList.remove('r-play'); } // clear the entrance trigger before every (re)render — the block below re-arms it only on the content-ready render
-  if(_fromLive && o && o.status!=='pending'){ setTimeout(()=>{ try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(_){ window.scrollTo(0,0); } },120); }
+  // Scroll back to the verdict at the top when a live call settles (owner 07-15b, re-broken by the
+  // instant pending-flip: finalizeLive hides #live and shows a PENDING result first, so by the time the
+  // real verdict renders _fromLive is false and the scroll never fired — owner 07-17). The pending flip
+  // arms a flag; the settled render consumes it.
+  if(_fromLive && o && o.status==='pending') window._livePend=true;
+  if(o && o.status!=='pending' && (_fromLive || window._livePend)){ window._livePend=false; setTimeout(()=>{ try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(_){ window.scrollTo(0,0); } },120); }
   stopLiveTimers(); LIVE_ROOM=null; if($('hangup_btn'))$('hangup_btn').style.display='none';
   $('live').classList.add('hidden'); $('builder').classList.add('hidden'); $('history').classList.add('hidden'); $('success').classList.add('hidden'); const hov=$('handoff'); if(hov)hov.classList.add('hidden'); document.body.classList.remove('fabbed');
   { const _fd=$('finds'); if(_fd)_fd.style.display='none'; } // no rotating finds ticker on the result/call page

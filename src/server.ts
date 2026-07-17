@@ -3438,6 +3438,11 @@ app.post("/app/checkout-intent", async (c) => {
 
 // Public: the live tiers + PAYG ladder for the consumer checkout sheet (Website's lane renders it).
 app.get("/pub/plans", async (c) => c.json(publicPlans(await getPlans())));
+// Freshness marker for the long-lived SPA tab (owner 07-17: his Safari tab ran days-old JS through a
+// whole broken-then-fixed cycle because nothing ever told the page it was stale). One value per boot —
+// a deploy restarts the service, so a changed rev == a newer build is live. Client checks on tab-return.
+const BOOT_REV = String(Date.now());
+app.get("/pub/rev", (c) => { c.header("Cache-Control", "no-store"); return c.json({ rev: BOOT_REV }); });
 
 // ---- Admin Plans manager (God View → Plans): edit tiers/PAYG, publish to Stripe. Admin-gated by /api/*. ----
 app.get("/api/admin/plans", async (c) => c.json(plansSyncView(await getPlans())));
