@@ -3,69 +3,59 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
-## 2026-07-16 — STRATEGY LOCKED: launch on Charlie. Delta is built + shelved.
+## 2026-07-17 — Charlie tuning week DONE on staging; next = owner hammer-tests, then promote + prod data capture
 
-**The decision (owner, honest-assessment call):** launch next week on **Charlie** (live agent).
-Delta stays fully built and tested but is NOT wired to any real store. Reasons: at launch volume the
-~2.5¢-vs-~5¢ saving is trivial next to first-impression risk; Delta is a tape deck + cheap classifier
-that can't reliably detect its OWN confident mistakes (mishears "tin"→"10" and rolls to the next clip
-sounding dumb), so a "flawless self-barge" cannot be promised. Charlie degrades gracefully; Delta
-degrades badly. Delta's real payoff is at SCALE + with a cache, and it needs a real corpus of clerk
-replies to get good — which launching Charlie *generates*. So Charlie-first is the on-ramp to Delta.
+**Phase:** owner finishing iOS tint with Webbie, then "test the hell out of calls" on the Fun store
+(staging), then PROMOTE and start real production store calls to capture data. Launch lane = Charlie.
 
-- **Fun store (106361) → "Branson Global" (Charlie) on BOTH DBs** (was Branson Test/Delta). Real stores
-  already defaulted to Branson Global, so production was Charlie-by-default all along — a one-line
-  assignment flip, no rework. Delta now runs on ZERO stores.
-- **Now fine-tuning Charlie**, slowly, one change at a time (owner drives persona/voice/workflow in
-  Admin so he can tell what moved the needle). Branson Global has NO persona set yet — that's lever #1.
-  ⚠️ Branson Global is the LIVE default every real store uses; tuning it tunes production. Fine
-  pre-launch (≈no traffic) and it IS the launch workflow, just know it's not a sandbox.
+**Charlie state — everything below LIVE on staging, tsc + suites green:**
+- Persona "13y old excited" on Branson Global (both DBs); role clamp appended to EVERY persona
+  (personas set vibe, never role — the "I'm about to call the store" narration bug is dead).
+- Greet-back ("oh hi Bob") = HARD RULE and PROVEN in a text run of the composed prompt: name present
+  → "Oh hi Bob!" fires. The only gap is physics: the first ~0.5s of pickup audio predates the media
+  stream, so a name in the very first beat never reaches the brain (see hearing, below).
+- Hearing: bridge calls carry INLINE TwiML (no answer-time webhook fetch → stream opens at answer);
+  echo gate retuned (BARGE 900→520, tail 250→150ms — it was eating real clerk words in the 350-900
+  energy band); agent breaks silence at ~2s on a quiet pickup. Transcripts now capture nearly the
+  whole greeting; residual loss ≈ first half-second (WS handshake). Full fix = re-architect answer
+  flow; parked post-launch.
+- Wording: owner's package question, punctuation shaped so TTS doesn't crescendo; natural variation
+  rule (never same phrasing twice, always concrete examples, never a dash); restock-day push restored
+  on the LIVE path (was hardcoded ""); voicemail-that-answers stamps "voicemail" (NOT YET verified by
+  a live call); voice steadied (stability .5, speed .93) — titrating by owner's ear.
+- ANTI-REVERT RAILS (why fixes stopped melting): boot pushes the canonical prompt to the env's EL
+  agent on EVERY server start (code deploy = talking agent updated, staging AND prod) ·
+  test-workflow-truth (Admin settings must land on the real call, 15 asserts) · live-view browser
+  LOCK at phone size (transcript renders + reachable, no early finalize, verdict paints) — all in
+  test-all. Flight recorder: page posts live-call play-by-play → GET /api/admin/live-debug.
 
-**Delta = DONE & SHELVED (built + unit-tested, NOT live-verified end-to-end; 37 delta cases green):**
-- Honors workflow tuning: speed 0.7-1.2 + voice model into clip synth; Beat→endpointing **floored 2s**
-  (eager 2 / normal 3 / patient 5 — never cuts a thinker off); Reply-timeout→initial wait (4-20s).
-- Patience model (`deltaSilence`, pure+tested): DEAD AIR → "you still there?" (clip 7); clerk asks to
-  HOLD/check ("hold on, let me check" = new `hold` label) → "no rush, take your time" + wait quietly;
-  long/ambiguous hold or hold music on a real store call → **barge to Charlie**. Never hangs up
-  mid-answer (the 07-15 "eager 1s cut me off + hung up before 'it's a tin'" bug is dead).
-- Second-read verdict + reconcile NOW wired into Delta finalize (was Charlie-only): conflict → honest
-  "no clear answer", not charged; second read fixes ASR product labels. + Twilio ASR `hints` vocab and
-  "10/ten→tin" alias in both classifier prompts.
-- Rotation is round-robin on shared counters with Charlie (openers, voices, every line slot).
-- Barge scope TODAY = off-script question at opener + dragging hold. Does NOT catch confident
-  mislabels mid-flow — that's the known Delta ceiling, revisit when Delta goes live.
-
-## 2026-07-14 — lane renamed by the owner: **Echo** (was Ringo). Same files.
-
-**Charlie state:** live, carried the owner's 07-09 calls; no spoken dashes, set-question example,
-unknown-set fallback, restock-day push, "Hello?" on dead-quiet pickup. Cheap-lane econ (connect-on-
-human bridge + bail rules) already live → ~5¢/call. This is the launch lane; tune persona/voice next.
-
-**SELF-LEARNING = THE priority right after Charlie sounds perfect (owner 07-16, ABOVE Delta).**
-Owner's goal: every call makes the system smarter/sharper on its own. Corpus EXISTS — prod has ~107
-calls, ~96 completed w/ transcripts+verdicts (~65 with a real in/out answer, 20 "no clear answer").
-Feedback plumbing half-built: `call_feedback` table + admin review + a front-end unclear-only survey,
-but it has 0 rows (never fed). The auto-vs-owner split we're building to:
-- AUTOMATIC (no owner notes): mine transcripts for clerk phrasings per verdict, mishears (tin→10),
-  opener answer-rate → auto-score/promote, timing/cost, and the reader-disagreements it already flags.
-  Nav/IVR tree learning already self-improves. = anything objective/measurable from the call itself.
-- NEEDS THE OWNER: ground truth on ambiguous/wrong verdicts (only a human who heard it knows), and
-  taste ("sounded weird/robotic/too fast"). Minimum-effort capture = a MASTER-ACCOUNT front-end flag
-  (owner's number) → right/wrong/sounded-weird tap on ANY call → writes the training table.
-Build plan (park until Charlie is dialed in): (1) read-only mining pass over existing calls (my lane,
-invisible), (2) master-account flag — backend mine, button = Webbie's checkit.html. NOT started.
+**PROMOTE-DAY NOTES (PM runs it, owner's word):** everything above rides the whole-staging promote.
+Prod EL agent gets the new brain automatically at first prod boot (no manual push step). Fun store on
+prod already routes to Branson Global. After promote: owner tweaks in Admin hit prod data directly —
+the Admin-edits-vs-staging-DB mirroring dance ENDS.
 
 **OPEN (priority order):**
-1. Fine-tune Charlie for launch: persona on Branson Global, voice, opener, pacing — one change at a time.
-2. Build the self-learning pass? (owner decision — minimal spec above).
-3. Bail enforcement (voicemail/IVR caps): policy UI exists, live enforcement NOT wired; switch stays off.
-4. A2P day: set TWILIO_MESSAGING_SERVICE_SID when approval lands (error 30034 = not active yet).
-5. Delta live end-to-end verification — deferred until we choose to bring Delta up (post-launch).
+1. Owner hammer-test round on Fun (staging): yes+detail · no→restock-day · "let me check" walk-away ·
+   sold-out · doesn't-carry · too-busy · voicemail (verifies the new stamp) · name-a-beat-in greeting
+   ("Fun store, this is Bob speaking" → hi Bob) · Spanish · silent pickup. MVP store for real-number
+   dress rehearsal. Then promote.
+2. SELF-LEARNING = first post-launch build (ABOVE Delta): mine call corpus (~110 calls and growing)
+   into phrasing/mishear/conditions library + owner's master-account front-end flag (backend mine,
+   button Webbie). Corpus capture already running (transcripts+verdicts+timing on every call).
+3. First-0.5s pickup audio (name-first greetings): real-store greetings are long so impact is small;
+   re-architecture parked post-launch.
+4. Bail enforcement (voicemail/IVR caps) — policy UI exists, live enforcement NOT wired, switch off.
+5. A2P day: set TWILIO_MESSAGING_SERVICE_SID when approval lands (error 30034 = not active yet).
 
-**Traps (top three; full list handoff.md §5):** free-tier keys never in the live path (Gemini 429 =
-"brain unplugged") · confirm the staging deploy before any test round (old deploy runs the wrong lane
-silently) · any new Twilio `<Stream>` fork must be `<Stop>`ped before a barge `<Connect>`.
-`DELTA_FU_DEFAULTS` in app.html MUST mirror `DEFAULT_FOLLOWUPS` in tapedeck.ts.
+**Delta: SHELVED** (built, 37 tests green, zero stores; full state in git log 07-15/16). Barge scope =
+off-script question + dragging hold; known ceiling: can't catch its own confident mislabels.
 
-**Boundaries:** consumer live-call UI = Website (Webbie); Admin call log/testing = Admin (Addie);
-spoken copy obeys Copper's guide. Voice owns: both call brains, routing/workflows, bridge, verdicts, cost.
+**Traps (full list handoff.md §5):** prompt edits reach the live agent ONLY via push — now automatic
+on boot, but NEVER assume a repo edit spoke until a deploy/boot happened · confirm the staging deploy
+before a test round; NEVER merge/deploy while the owner is mid-call (rollouts killed two live test
+calls) · Admin edits write PROD data while staging tests read STAGING data (until promote, mirror on
+request) · echo-gate thresholds are ear-tuned: if phantom "Clerk:" lines echo the agent's own words,
+BARGE_THRESH 520 is too low — raise toward 700 · DELTA_FU_DEFAULTS in app.html mirrors tapedeck.ts.
+
+**Boundaries:** consumer live-call UI/scroll/tint = Webbie · Admin screens = Addie · spoken copy =
+Copper's guide. Voice owns: call brains, workflows/routing, bridge plumbing, verdicts, call cost.
