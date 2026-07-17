@@ -655,6 +655,65 @@ app.get("/", rootHandler);
 // :param{regex} attempt crashed Hono's router on boot. These names never collide with /api, /pub, /r, /s, etc.
 for (const s of ["dash","users","restock","growth","calc","plans","retailers","search","add","zones","receipts","results","schedules","feedback","statuses","trees","settings","designer","workflows","testing","fun","gtm"]) app.get("/" + s, rootHandler);
 app.get("/r", (c) => { c.header("Cache-Control", "no-store"); const h=(c.req.header("host") || "").toLowerCase(); return c.html(renderRunner(resolveBrand(h, c.req.query("brand")), h, "checkit.html", c.req.query("tone") || "", peekOk(c.req.query("peek"), getCookie(c, "peek")))); });
+// SANDBOX (owner 07-16): /sheetpeek — standalone slide-up chrome test, touches NOTHING on the real site.
+// v2-look homepage; tap a store → sheet slides up (transform + dim, real mechanics); drag down to close.
+// Implementation under test: the root colour NEVER changes, so the close-drag can never sample a wrong
+// chrome colour. "Bug mode" toggle re-enables the legacy recolor to reproduce the poisoning on demand.
+app.get("/sheetpeek", (c) => {
+  c.header("Cache-Control", "no-store");
+  return c.html(`<!doctype html><html lang="en" style="background:#1D1D22"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>sheet peek</title>
+<style>
+*{box-sizing:border-box}
+html[data-bugmode="1"]:has(#sheet.on){background:#0C0C12!important} /* the LEGACY bug, for A/B */
+body{margin:0;min-height:100dvh;background:#1D1D22;color:#fff;font-family:-apple-system,system-ui,sans-serif}
+header{padding:14px 16px;display:flex;align-items:center;gap:8px}
+.logo{font-size:19px;font-weight:900}.logo b{color:#4ADE80}
+.pill{margin-left:auto;background:#26262B;border-radius:20px;padding:7px 12px;font-size:13px;font-weight:700}
+main{padding:10px 20px 40px;max-width:520px;margin:0 auto}
+.hint{font-size:13px;color:#8A8A96;margin:4px 0 14px;line-height:1.5}
+.bugbtn{display:inline-flex;gap:8px;align-items:center;background:#26262B;border:0;border-radius:20px;color:#fff;padding:8px 14px;font-weight:700;font-size:13px;margin-bottom:14px}
+.bugbtn .dot{width:9px;height:9px;border-radius:50%;background:#4ADE80}
+html[data-bugmode="1"] .bugbtn .dot{background:#EF4444}
+.store{display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:14px;margin-bottom:10px;cursor:pointer}
+.store .ic{width:44px;height:44px;border-radius:12px;background:#1B1B20;display:grid;place-items:center;font-weight:900}
+.store .nm{font-weight:800}.store .ad{font-size:12.5px;color:#8A8A96}
+#dim{position:fixed;inset:0;background:rgba(5,6,9,.66);opacity:0;pointer-events:none;transition:opacity .25s;z-index:79}
+#dim.on{opacity:1;pointer-events:auto}
+#sheet{position:fixed;left:0;right:0;bottom:0;z-index:80;background:#26262B;border-radius:28px 28px 0 0;padding:10px 20px calc(24px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .3s cubic-bezier(.32,.72,0,1);touch-action:none}
+#sheet.on{transform:translateY(0)}
+#sheet .handle{width:44px;height:5px;border-radius:3px;background:#3A3A42;margin:4px auto 16px}
+#sheet h2{margin:0 0 6px;font-size:20px}
+#sheet p{margin:0 0 18px;color:#8A8A96;font-size:14px;line-height:1.5}
+#sheet .cta{display:block;width:100%;background:#4ADE80;color:#06210F;border:0;border-radius:999px;padding:15px;font-weight:900;font-size:15px}
+</style></head><body>
+<header><span class="logo">Check <b>it</b></span><span class="pill">My ✓</span></header>
+<main>
+<button class="bugbtn" onclick="var h=document.documentElement;h.dataset.bugmode=h.dataset.bugmode==='1'?'':'1';this.querySelector('span:last-child').textContent=h.dataset.bugmode==='1'?'BUG MODE ON — legacy recolor':'FIXED MODE — colour never changes'"><span class="dot"></span><span>FIXED MODE — colour never changes</span></button>
+<div class="hint">Tap a store → sheet slides up → <b>drag it down</b> (or tap the dim) to close. In FIXED mode the top/bottom stay perfect no matter what. Flip to BUG MODE and do the same — the close-drag poisons the chrome until you refresh. Same page, only the one rule differs.</div>
+<div class="store" onclick="openSheet('Barnes &amp; Noble Calabasas','4735 Commons Way · till 9 PM')"><div class="ic">B&amp;N</div><div><div class="nm">Barnes &amp; Noble Calabasas</div><div class="ad">4735 Commons Way · till 9 PM</div></div></div>
+<div class="store" onclick="openSheet('CVS Ventura Blvd','22050 Ventura Blvd. · till 11 PM')"><div class="ic">CVS</div><div><div class="nm">CVS Ventura Blvd</div><div class="ad">22050 Ventura Blvd. · till 11 PM</div></div></div>
+<div class="store" onclick="openSheet('Fun','123 Fun Lane, Calabasas, CA')"><div class="ic">F</div><div><div class="nm">Fun</div><div class="ad">123 Fun Lane, Calabasas, CA</div></div></div>
+</main>
+<div id="dim" onclick="closeSheet()"></div>
+<div id="sheet">
+  <div class="handle"></div>
+  <h2 id="sh_nm">Store</h2>
+  <p id="sh_ad">Address</p>
+  <button class="cta" onclick="closeSheet()">CALL THE STORE →</button>
+</div>
+<script>
+var sheet=document.getElementById('sheet'),dim=document.getElementById('dim');
+function openSheet(n,a){document.getElementById('sh_nm').textContent=n;document.getElementById('sh_ad').textContent=a;sheet.classList.add('on');dim.classList.add('on');}
+function closeSheet(){sheet.classList.remove('on');dim.classList.remove('on');sheet.style.transform='';}
+var y0=null;
+sheet.addEventListener('touchstart',function(e){y0=e.touches[0].clientY;sheet.style.transition='none';},{passive:true});
+sheet.addEventListener('touchmove',function(e){if(y0==null)return;var d=Math.max(0,e.touches[0].clientY-y0);sheet.style.transform='translateY('+d+'px)';},{passive:true});
+sheet.addEventListener('touchend',function(e){sheet.style.transition='';var d=(e.changedTouches[0].clientY-(y0||0));y0=null;if(d>90){closeSheet();}else{sheet.style.transform='';}});
+</script>
+</body></html>`);
+});
 // Verticals as PATHS on the apex (checkitforme.com/pokemon, /onepiece, /toppsbasketball, /needoh) —
 // same brand resolution as the subdomains, keyed off the slug. This is what lets the product switcher
 // link to clean same-domain paths instead of subdomain hops.

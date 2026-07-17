@@ -119,7 +119,7 @@ await page.addInitScript((fix) => {
     return new Response(JSON.stringify({}), { status:200, headers:{'content-type':'application/json'} });
   };
 }, FIX);
-await page.route('**/logos/**', route => { // absolute asset paths break under file:// — serve them from public/
+await page.route('**/{logos,fonts}/**', route => { // absolute asset paths break under file:// — serve them from public/ (fonts INCLUDED: a render judged in the wrong typeface is a lie)
   const p = new URL(route.request().url()).pathname;
   route.fulfill({ path: process.cwd() + '/public' + p }).catch(() => route.abort());
 });

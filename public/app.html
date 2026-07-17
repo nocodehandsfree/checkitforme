@@ -13,9 +13,9 @@
 <title>Check It For Me · Admin</title>
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=2">
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preload" href="/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+<style>@font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;src:url(/fonts/inter-var-latin.woff2) format('woff2')}</style>
 <style>
   :root{
     /* core colors (shared with Fungibles Design System v1.3) */
@@ -783,8 +783,7 @@
   <section id="alerts">
     <div class="k-title">Alerts</div>
     <div class="k-sub">Customer messages and sends</div>
-    <div id="al_status" style="margin-top:12px"></div>
-    <div id="al_rollup"></div>
+    <div id="al_status" style="margin-top:2px"></div>
     <div class="k-eyebrow">Your in stock ping</div>
     <div style="display:flex;gap:8px;align-items:center">
       <select id="oa_channel" class="k-filter" style="flex:0 0 auto" onchange="saveOwnerAlert()">
@@ -798,8 +797,8 @@
     <div class="k-eyebrow">Messages</div>
     <div id="al_templates">Loading…</div>
     <div id="al_sheets" style="display:none"></div>
-    <div class="k-eyebrow">Recent sends</div>
-    <div id="al_log" class="meta">Loading…</div>
+    <div id="al_sends_row"></div>
+    <div id="al_sends_hold" style="display:none"><div id="al_log"></div></div>
   </section>
   <section id="workflows">
     <div class="k-title">Workflows</div>
@@ -4854,13 +4853,16 @@ async function loadAlerts(){
   const sEl=document.getElementById('al_status');
   if(sEl) sEl.innerHTML=chip(dv.sms,'Text')+chip(dv.email,'Email')
     +((dv.sms&&dv.email)?'':`<div style="font-size:11.5px;font-weight:600;color:rgba(245,158,11,.8);margin-top:9px">Stubbed sends never reach a customer</div>`);
-  // This month: three wells, no breakdown table (owner: it does not help manage alerts).
-  const roll=log.rollup||{}, rEl=document.getElementById('al_rollup');
-  if(rEl){ const ks=Object.keys(roll); const subs=log.subscribers||{};
-    const well=(n,l,cls)=>`<div class="k-well"><div class="n${cls?' '+cls:''}">${n}</div><div class="l">${l}</div></div>`;
-    const total=Object.values(roll).reduce((a,b)=>a+b,0);
-    const stubbed=ks.filter(k=>k.endsWith('.stubbed')).reduce((a,k)=>a+roll[k],0);
-    rEl.innerHTML=`<div class="k-wells" style="margin-top:12px">${well(subs.total||0,'Signed up','')}${well(total,'This month',total?'g':'')}${well(stubbed,'Stubbed',stubbed?'a':'')}</div>`; }
+  // Sends fold into ONE row (owner: the page said too much) — the log lives in its sheet.
+  const roll=log.rollup||{};
+  const total=Object.values(roll).reduce((a,b)=>a+b,0);
+  const stubbed=Object.keys(roll).filter(k=>k.endsWith('.stubbed')).reduce((a,k)=>a+roll[k],0);
+  const rowEl=document.getElementById('al_sends_row');
+  if(rowEl) rowEl.innerHTML=`<div class="k-eyebrow">Activity</div><button class="peek" onclick="sheetFromHolder('al_log','Sends','${total} this month${stubbed?` · ${stubbed} stubbed`:''}')">
+      <span class="pk-main"><span class="pk-t" style="display:block">Sends</span></span>
+      <span class="pk-fact ${stubbed?'a':(total?'g':'')}">${stubbed?stubbed+' stubbed':total+' this month'}</span>
+      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>`;
   // Recent sends: a LOG — first 20, one key shows the rest.
   const lg=document.getElementById('al_log'), recent=log.recent||[];
   if(lg){ const cap=AL_LOG_ALL?60:20;

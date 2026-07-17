@@ -103,3 +103,12 @@ worse than no comment. Several entries below started as wrong comments.)
   by an import again, so the next overlay run inserts a DUPLICATE row for that address — dedupe by
   address when ingesting. Root fix (open, data lane): store rows should be keyed by PLACE and machines
   overlaid via the `kiosks` table, not identity-rewritten into `retailers`.
+
+## The Admin preview rig rendered the WRONG FONT for a full day (07-17)
+- `app.html` loaded Inter from Google Fonts; headless Chromium in the agent container cannot reach
+  Google → every admin-preview.mjs screenshot rendered in DejaVu with different metrics. "Looks
+  clean" verdicts were judged against a typeface the owner never sees. **The design is only the
+  design in Inter** (same lesson checkit.html learned on 07-14 with DNS ad-blockers).
+- Fix shipped: app.html self-hosts `/fonts/inter-var-latin.woff2` (the site's exact recipe) and
+  admin-preview.mjs routes `/fonts/**` from public/. If you judge a render, FIRST confirm the
+  headline is actually Inter (compare a lowercase 'g').
