@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r141" />
+<meta name="x-rev" content="glassfix-r142" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -1906,6 +1906,11 @@ html[data-skin="v2"] #zmenuOv .modal,html[data-skin="v2"] #emailOv .modal,html[d
 html[data-skin="v2"] #zmenuOv .modal::before,html[data-skin="v2"] #emailOv .modal::before,html[data-skin="v2"] #alertsOv .modal::before,html[data-skin="v2"] #featOv .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 16px}
 html[data-skin="v2"] #zmenuOv.on .modal,html[data-skin="v2"] #emailOv.on .modal,html[data-skin="v2"] #alertsOv.on .modal,html[data-skin="v2"] #featOv.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
 html[data-skin="v2"] #histOverlay .hist-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:2px 18px calc(22px + env(safe-area-inset-bottom))}
+/* sheet-mode (body.sheetopen): the sheet box overshoots 120px under the iOS bar so rows ghost through the
+   glass. The inner scrollers get a 120px scroll-end spacer (last row stays reachable above the bar) and the
+   create-flow basket lifts off the box bottom so Save never hides under the bar. */
+body.sheetopen #zones .zf-scroll::after,body.sheetopen #histOverlay .hist-scroll::after{content:'';display:block;flex:0 0 auto;height:120px}
+body.sheetopen #zones .zbasket{bottom:120px}
 /* Footer links (About/FAQ/Terms/Privacy/Contact) slide up as a bottom sheet, like every other panel.
    Flex column: the grab handle + title stay pinned; only the body scrolls (owner 07-06: the top used to
    scroll away). */
@@ -3944,36 +3949,38 @@ function sheetH_on(ov){ if(!ov||ov.__sh) return; ov.__sh=1;
   // Modal: BOTTOM-anchored at its NATURAL content height (capped 86vh), box overshooting TAIL px under the
   // bar (inline height+maxHeight beat the CSS max-height:86-92vh that silently clamped earlier tails).
   // THE GLASS ONLY READS "TRANSPARENT" WHEN SHEET CONTENT FLOWS UNDER THE BAR (variant H / admin recipe):
-  //  - scrollable sheets (acct/buy/auth...): the box's overflow clip extends under the bar, so rows ghost
-  //    through the glass while you scroll; a TAIL scroll-end spacer keeps the last row reachable above it.
-  //  - fixed flex layouts (zones/hist): stretching children would shove their footer buttons under the bar,
-  //    so they keep natural height + a solid border-bottom tail (plain surface, proven box paint).
-  //  - content-sized sheets (email/menus): empty surface tail below the content.
-  // Measurement is FEEDBACK-PROOF (inline height/maxHeight/border/padding cleared before reading), and a
+  // every sheet's box overshoots TAIL px under the bar so its content/surface is what the glass ghosts.
+  //  - self-scrolling sheets (acct/buy/auth...): a TAIL scroll-end spacer keeps the last row reachable.
+  //  - flex sheets with inner scrollers (zones/hist): the stretched scroller gets its spacer + basket
+  //    offset from body.sheetopen CSS rules (see the #zones/.hist-scroll block).
+  // Measurement is FEEDBACK-PROOF (inline height/maxHeight/padding cleared before reading), and a
   // ResizeObserver re-anchors while open so content that grows or shrinks never mis-sits the sheet.
   const TAIL=120;
   const place=()=>{ const prev=m.style.height;
-    m.style.height=''; m.style.maxHeight=''; m.style.borderBottom=''; m.style.paddingBottom='';
+    m.style.height=''; m.style.maxHeight=''; m.style.paddingBottom='';
     const natural=Math.min(m.offsetHeight||0, window.innerHeight*0.86)||window.innerHeight*0.86;
     m.style.position='absolute'; m.style.left='0'; m.style.right='0'; m.style.top=(window.innerHeight-natural)+'px'; m.style.bottom='auto';
+    m.style.height=(natural+TAIL)+'px'; m.style.maxHeight=(natural+TAIL)+'px';
     const oy=getComputedStyle(m).overflowY;
-    if(oy==='hidden'){ m.style.height=(natural+TAIL)+'px'; m.style.maxHeight=(natural+TAIL)+'px'; m.style.borderBottom=TAIL+'px solid #26262B'; } /* border-box: +TAIL so the border tail lands BELOW the viewport edge, not carved out of the content area */
-    else{ m.style.height=(natural+TAIL)+'px'; m.style.maxHeight=(natural+TAIL)+'px';
-      if((oy==='auto'||oy==='scroll')&&m.scrollHeight>natural+4) m.style.paddingBottom=TAIL+'px'; }
+    if((oy==='auto'||oy==='scroll')&&m.scrollHeight>natural+4) m.style.paddingBottom=TAIL+'px';
     return prev!==m.style.height; };
   place();
   try{ ov.__ro=new ResizeObserver(()=>{ if(ov.__placing) return; ov.__placing=1; requestAnimationFrame(()=>{ place(); ov.__placing=0; }); }); ov.__ro.observe(m.firstElementChild||m); }catch(_){ }
 }
 function sheetH_off(ov){ if(!ov||!ov.__sh) return; ov.__sh=0; try{ if(ov.__ro){ ov.__ro.disconnect(); ov.__ro=null; } }catch(_){ } const m=ov.querySelector('.modal');
-  if(m){ m.style.position=''; m.style.left=''; m.style.right=''; m.style.top=''; m.style.bottom=''; m.style.height=''; m.style.maxHeight=''; m.style.borderBottom=''; m.style.paddingBottom=''; }
+  if(m){ m.style.position=''; m.style.left=''; m.style.right=''; m.style.top=''; m.style.bottom=''; m.style.height=''; m.style.maxHeight=''; m.style.paddingBottom=''; }
   ov.style.position=''; ov.style.top=''; ov.style.bottom=''; ov.style.height='';
   sheetBodyMaybeUnlock();
 }
 (function sheetHObserver(){ try{
   const mo=new MutationObserver(muts=>{ for(const mu of muts){ const el=mu.target;
-    if(el&&el.nodeType===1&&el.classList&&el.classList.contains('overlay')){
-      if(el.classList.contains('on')) sheetH_on(el); else sheetH_off(el); } } });
-  mo.observe(document.body,{attributes:true,attributeFilter:['class'],subtree:true});
+    if(!(el&&el.nodeType===1&&el.classList&&el.classList.contains('overlay'))) continue;
+    if(mu.type==='childList'){ // an open sheet's modal was REPLACED wholesale (zPop confirm/rename set
+      // ov.innerHTML while 'on') — the placed node is gone; re-place or the fresh modal lands off-screen
+      // below the overlay with the page locked behind it (owner: "delete a zone freezes the page")
+      if(el.__sh&&el.classList.contains('on')){ sheetH_off(el); sheetH_on(el); } continue; }
+    if(el.classList.contains('on')) sheetH_on(el); else sheetH_off(el); } });
+  mo.observe(document.body,{attributes:true,attributeFilter:['class'],subtree:true,childList:true});
 }catch(_){ }
 })();
 // The compact CALL SHEET (#csheet — a lone element, not overlay>modal) as page-layer content: measure its
@@ -7002,8 +7009,8 @@ function zoneDeleteConfirm(id){
     <button style="${Z_ROWBTN};justify-content:center;margin-bottom:10px" onclick="zPopClose();zoneDelete(${id})"><span style="color:#FF8A8A">${t('zones.delete.yes','Yes, delete it')}</span></button>
     <button style="${Z_ROWBTN};justify-content:center" onclick="zPopClose()">${t('zones.keep','Keep it')}</button>`);
 }
-async function zoneRename(id,name){ try{ await appApi('/app/zones/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({name})}); }catch(_){ } renderZonesList(); }
-async function zoneDelete(id){ try{ await appApi('/app/zones/'+id,{method:'DELETE'}); }catch(_){ } renderZonesList(); }
+async function zoneRename(id,name){ try{ await appApi('/app/zones/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({name})}); toast(t('zones.renamed','Zone renamed'),'neutral'); }catch(_){ toast(t('err.generic',"That didn't go through. Give it another try.")); } renderZonesList(); }
+async function zoneDelete(id){ try{ await appApi('/app/zones/'+id,{method:'DELETE'}); toast(t('zones.deleted','Zone deleted'),'neutral'); }catch(_){ toast(t('err.generic',"That didn't go through. Give it another try.")); } renderZonesList(); }
 // ---- Screen A — build / edit a zone ----
 async function zoneNew(){ zHideAll(); zShow(); ZONES.editId=null; ZONES.sel=new Set(); ZONES.name=''; ZONES.mapOpen=false; renderZoneBuild(); await zoneEnsureStores(); renderZoneBuild(); }
 async function zoneEdit(id){ zHideAll(); zShow(); ZONES.editId=id; ZONES.sel=new Set(); ZONES.name='';
