@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r136" />
+<meta name="x-rev" content="glassfix-r137" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -3917,16 +3917,20 @@ function acctIdentity(){
 // exactly like app.html's body-child sheet. body.sheetopen (a) grows the page so the overshoot isn't
 // clipped and (b) dims the CONTENT — never a cover layer. Root colour never touched.
 const SHEET_IDS = new Set(['acctOverlay','buyOverlay','pageOverlay','histOverlay','zones','zmenuOv','emailOv','alertsOv','featOv','scorePostOv']);
-function sheetBodyLock(){ document.documentElement.style.overflow='hidden'; document.body.style.overflow='hidden'; document.body.classList.add('sheetopen'); }
+function sheetGlassNudge(){ try{ const y=window.scrollY||0; window.scrollTo(0,y+1); window.scrollTo(0,y); }catch(_){ } } // a real document scroll is the ONLY thing that makes iOS re-snapshot the bar ghost — without it the glass keeps showing the pre-open page ("previous state")
+function sheetBodyLock(){ document.body.classList.add('sheetopen');
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ sheetGlassNudge();
+    document.documentElement.style.overflow='hidden'; document.body.style.overflow='hidden'; }));
+}
 function sheetBodyMaybeUnlock(){
   // Only VISIBLE sheets count — a stray .on on a display:none overlay (zones save flow) was keeping the
   // scroll locked forever (owner: page freezes until refresh). Re-check once more after the close
   // animations settle so a timing race can never strand the lock.
   const open=[...document.querySelectorAll('.overlay.on,.csheet.on,.supwrap.on')].some(el=>getComputedStyle(el).display!=='none');
-  if(!open){ document.documentElement.style.overflow=''; document.body.style.overflow=''; document.body.classList.remove('sheetopen'); }
+  if(!open){ document.documentElement.style.overflow=''; document.body.style.overflow=''; document.body.classList.remove('sheetopen'); sheetGlassNudge(); }
   clearTimeout(sheetBodyMaybeUnlock._t); sheetBodyMaybeUnlock._t=setTimeout(()=>{
     const still=[...document.querySelectorAll('.overlay.on,.csheet.on,.supwrap.on')].some(el=>getComputedStyle(el).display!=='none');
-    if(!still){ document.documentElement.style.overflow=''; document.body.style.overflow=''; document.body.classList.remove('sheetopen'); }
+    if(!still){ document.documentElement.style.overflow=''; document.body.style.overflow=''; document.body.classList.remove('sheetopen'); sheetGlassNudge(); }
   },450);
 }
 function sheetH_on(ov){ if(!ov||ov.__sh) return; ov.__sh=1;
@@ -3934,15 +3938,21 @@ function sheetH_on(ov){ if(!ov||ov.__sh) return; ov.__sh=1;
   if(!SHEET_IDS.has(ov.id)) return; // small centered dialogs (auth/checkout/etc.) get the dim only — they stay fixed, no glass needed
   const m=ov.querySelector('.modal'); if(!m) return;
   const sc=window.scrollY||document.documentElement.scrollTop||0;
-  // Overlay: page-layer catcher spanning the locked viewport + a deep under-bar overshoot (260px so an
-  // expanded Safari toolbar can never expose the page below the sheet — the old +120 left a peek strip).
+  // Overlay: page-layer catcher spanning the locked viewport + a deep under-bar tail so the toolbar can
+  // never expose the page below the sheet surface.
   ov.style.position='absolute'; ov.style.top=sc+'px'; ov.style.bottom='auto'; ov.style.height=(window.innerHeight+400)+'px';
-  // Modal: BOTTOM-anchored at its NATURAL height (capped 86vh) so short sheets (alerts etc.) stay short
-  // instead of being stretched to 86vh; the +260 tail is empty surface running under the bar for the glass.
-  const natural=Math.min(m.offsetHeight||0, window.innerHeight*0.86)||window.innerHeight*0.86;
-  m.style.position='absolute'; m.style.left='0'; m.style.top=(window.innerHeight-natural)+'px'; m.style.bottom='auto'; m.style.height=(natural+400)+'px';
+  // Modal: BOTTOM-anchored at its NATURAL content height (capped 86vh); the +400 tail is sheet surface
+  // running under the bar. Measurement is FEEDBACK-PROOF (inline height cleared before reading — the old
+  // re-measure read its own tail and ballooned the call sheet full-screen), and a ResizeObserver
+  // re-anchors while open so content that grows (kiosk) or shrinks (zone save) never mis-sits the sheet.
+  const place=()=>{ const prev=m.style.height; m.style.height='';
+    const natural=Math.min(m.offsetHeight||0, window.innerHeight*0.86)||window.innerHeight*0.86;
+    m.style.position='absolute'; m.style.left='0'; m.style.top=(window.innerHeight-natural)+'px'; m.style.bottom='auto'; m.style.height=(natural+400)+'px';
+    return prev!==m.style.height; };
+  place();
+  try{ ov.__ro=new ResizeObserver(()=>{ if(ov.__placing) return; ov.__placing=1; requestAnimationFrame(()=>{ place(); ov.__placing=0; }); }); ov.__ro.observe(m.firstElementChild||m); }catch(_){ }
 }
-function sheetH_off(ov){ if(!ov||!ov.__sh) return; ov.__sh=0; const m=ov.querySelector('.modal');
+function sheetH_off(ov){ if(!ov||!ov.__sh) return; ov.__sh=0; try{ if(ov.__ro){ ov.__ro.disconnect(); ov.__ro=null; } }catch(_){ } const m=ov.querySelector('.modal');
   if(m){ m.style.position=''; m.style.left=''; m.style.top=''; m.style.bottom=''; m.style.height=''; }
   ov.style.position=''; ov.style.top=''; ov.style.bottom=''; ov.style.height='';
   sheetBodyMaybeUnlock();
@@ -3958,12 +3968,14 @@ function sheetH_off(ov){ if(!ov||!ov.__sh) return; ov.__sh=0; const m=ov.querySe
 // natural height, anchor its top so the content sits at the viewport bottom, then overshoot ~120px under
 // the bar (empty surface) so the glass ghosts the bottom edge. The translateY slide/drag is unchanged.
 function csheetH_on(){ const el=$('csheet'); if(!el||el.__sh) return; el.__sh=1;
-  const place=()=>{ const sc=window.scrollY||0, H=Math.min(el.offsetHeight,window.innerHeight*0.9);
+  const place=()=>{ el.style.minHeight=''; // FEEDBACK-PROOF: never measure our own tail (that ballooned the sheet full-screen)
+    const sc=window.scrollY||0, H=Math.min(el.offsetHeight,window.innerHeight*0.9);
     el.style.position='absolute'; el.style.top=(sc+window.innerHeight-H)+'px'; el.style.bottom='auto'; el.style.minHeight=(H+400)+'px'; };
-  place(); requestAnimationFrame(place); // re-anchor after the sheet's content settles (kiosk rows grow after first paint — a stale height left a page strip showing below)
+  place();
+  try{ el.__ro=new ResizeObserver(()=>{ if(el.__placing) return; el.__placing=1; requestAnimationFrame(()=>{ if(el.__sh) place(); el.__placing=0; }); }); el.__ro.observe(el.firstElementChild||el); }catch(_){ }
   sheetBodyLock();
 }
-function csheetH_off(){ const el=$('csheet'); if(!el||!el.__sh) return; el.__sh=0;
+function csheetH_off(){ const el=$('csheet'); if(!el||!el.__sh) return; el.__sh=0; try{ if(el.__ro){ el.__ro.disconnect(); el.__ro=null; } }catch(_){ }
   el.style.position=''; el.style.top=''; el.style.bottom=''; el.style.minHeight='';
   sheetBodyMaybeUnlock();
 }
