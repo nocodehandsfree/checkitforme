@@ -681,6 +681,7 @@ main{padding:10px 20px 40px;max-width:520px;margin:0 auto}
 #dim{position:fixed;inset:0;background:rgba(5,6,9,.66);display:none;z-index:79}
 #sheet{position:fixed;left:0;right:0;bottom:0;z-index:80;background:#26262B;border-radius:28px 28px 0 0;padding:16px 20px calc(24px + env(safe-area-inset-bottom));display:none;touch-action:none}
 #sheet.slide{transform:translateY(0);transition:transform .3s}
+#sheet.frost{background:rgba(38,38,43,.55);backdrop-filter:blur(28px) saturate(1.1);-webkit-backdrop-filter:blur(28px) saturate(1.1)} /* F: frosted-glass sheet — the dimmed page shows THROUGH it, native-style */
 #sheet .handle{width:44px;height:5px;border-radius:3px;background:#3A3A42;margin:0 auto 14px}
 body.filterdim main,body.filterdim header{filter:brightness(.45)} /* dim WITHOUT covering: the page itself darkens, keeps scrolling under the glass */
 </style></head><body>
@@ -693,6 +694,7 @@ body.filterdim main,body.filterdim header{filter:brightness(.45)} /* dim WITHOUT
 <button class="t" id="C" onclick="T('C')">C sheet+dim</button>
 <button class="t" id="D" onclick="T('D')">D filter dim</button>
 <button class="t" id="E" onclick="T('E')">E sheet+filter</button>
+<button class="t" id="F" onclick="T('F')">F frosted sheet</button>
 </div>
 <div class="store"><div class="ic">B&N</div><div><div class="nm">Barnes &amp; Noble Calabasas</div><div class="ad">4735 Commons Way · till 9 PM</div></div></div>
 <div class="store"><div class="ic">CVS</div><div><div class="nm">CVS Ventura Blvd</div><div class="ad">22050 Ventura Blvd. · till 11 PM</div></div></div>
@@ -706,12 +708,13 @@ body.filterdim main,body.filterdim header{filter:brightness(.45)} /* dim WITHOUT
 var cur='';
 function T(k){
   var same=(cur===k); cur=same?'':k;
-  ['A','B','C','D','E'].forEach(function(x){document.getElementById(x).classList.toggle('on',x===cur);});
+  ['A','B','C','D','E','F'].forEach(function(x){document.getElementById(x).classList.toggle('on',x===cur);});
   var dim=document.getElementById('dim'),sheet=document.getElementById('sheet');
   dim.style.display=(cur==='A'||cur==='C')?'block':'none';
-  sheet.style.display=(cur==='B'||cur==='C'||cur==='E')?'block':'none';
+  sheet.style.display=(cur==='B'||cur==='C'||cur==='E'||cur==='F')?'block':'none';
+  sheet.classList.toggle('frost',cur==='F');
   sheet.style.transform='';
-  document.body.classList.toggle('filterdim',cur==='D'||cur==='E');
+  document.body.classList.toggle('filterdim',cur==='D'||cur==='E'||cur==='F');
 }
 // Drag the sheet down to close (like the real thing) — closing clears the whole test state so the
 // owner can check the after-close translucency.
