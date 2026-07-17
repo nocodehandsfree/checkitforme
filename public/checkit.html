@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="timeline-r126" />
+<meta name="x-rev" content="kioskword-r127" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -2814,8 +2814,7 @@ const I18N={ es:{
   'kioskhint':'<span style="display:flex;align-items:center;gap:7px;font-weight:800;white-space:nowrap"><span id="khspark"></span> ¿En un kiosco? ¡Verificación gratis!</span><a onclick="openReceipt()" style="display:inline-block;margin-top:5px;color:var(--purple);font-weight:800;cursor:pointer">Usa nuestro correo al pagar o reenvía tu recibo →</a>',
   'v.in':'¡En stock!','v.out':'No está en stock','v.unclear':'Nos dieron un “quizás”','v.soldout':'Agotado','v.noanswer':'Nadie contestó','v.hold':'En espera','v.soon':'¡Reabastecimiento en camino!','note.soon':'Llega un envío <b>{d}</b>. Sé el primero cuando caiga.',
   'search.ph':'Busca por tienda o ciudad…',
-  'cta.pick':'Elige una tienda para verificar','cta.check':'Verificar','cta.for':'por','cta.checkunit':'verificación','cta.kioskword':'kiosco',
-  'kcall.store':'esta tienda','kcall.body1':'Verificaremos si su kiosco de','kcall.body2':'está encendido y funcionando.','kcall.yes':'📞 Sí, llamar ahora →','kcall.no':'Ahora no','kcall.receipt':'Si estás en un kiosco, escríbenos para una verificación gratis',
+  'cta.pick':'Elige una tienda para verificar','cta.check':'Verificar','cta.for':'por','cta.checkunit':'verificación',  'kcall.store':'esta tienda','kcall.body1':'Verificaremos si su kiosco de','kcall.body2':'está encendido y funcionando.','kcall.yes':'📞 Sí, llamar ahora →','kcall.no':'Ahora no','kcall.receipt':'Si estás en un kiosco, escríbenos para una verificación gratis',
   'count.open':'abiertas','count.kiosks':'kioscos',
   'grp.best':'Mejores opciones','grp.mostly':'Mayormente confiable','grp.spotty':'Irregular','instock.now':'En stock ahora','lg.best':'Mejor','lg.mostly':'Confiable',
   'cover.types':'Tipos de tienda que cubrimos. Toca el pin para ver <b>las tuyas</b>:',
@@ -4815,15 +4814,13 @@ function renderCallSheet(){
   }
   // A hobby-locked product IS the ask — print it in the product-context line. v1: lock never set.
   const hob = (typeof HOBBY_LOCK!=='undefined'&&HOBBY_LOCK&&SEL_PRODUCT);
-  const prod = SEL_KIOSK ? t('cta.kioskword','kiosk') : (hob?SEL_PRODUCT:catLabels());
   // Hobby (locked product): "We'll check on pricing and availability for {set} {product}". Everyone else:
-  // just the category. NO "costs 1 check" on any of it (owner 07-09), NO "pick the exact set" link.
-  // Hobby keeps its descriptive line; kiosk keeps its word. The plain brand category (e.g. "Pokémon")
-  // is dropped here — it read awkward on its own — and shown instead as a faded product ball tucked
-  // behind the button arrow (owner 07-11), so you still see WHAT you're checking.
+  // NO product line — kiosk's lone "kiosk" word dropped too (owner 07-17). NO "costs 1 check" on any
+  // of it (owner 07-09), NO "pick the exact set" link. The plain brand category (e.g. "Pokémon")
+  // is shown instead as a faded product ball tucked behind the button arrow (owner 07-11),
+  // so you still see WHAT you're checking.
   const pe=$('cs_prod'); if(pe){
-    if(hob){ pe.innerHTML=`${t('cs.hobask',"We'll check on pricing and availability for")} ${esc(prod)}`; pe.style.display=''; }
-    else if(SEL_KIOSK){ pe.innerHTML=esc(prod); pe.style.display=''; }
+    if(hob){ pe.innerHTML=`${t('cs.hobask',"We'll check on pricing and availability for")} ${esc(SEL_PRODUCT)}`; pe.style.display=''; }
     else { pe.innerHTML=''; pe.style.display='none'; }
   }
   const gh=$('cs_ghost'); if(gh){ const art=document.getElementById('heroart'); gh.innerHTML = (art&&art.innerHTML)?art.innerHTML:''; }
