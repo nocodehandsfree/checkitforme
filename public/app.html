@@ -149,7 +149,7 @@
   .fld input,.fld textarea{background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:12px;padding:12px 14px;color:var(--text-strong);font-size:14px;font-family:inherit;width:100%;max-width:100%;box-sizing:border-box}
   .fld textarea{resize:vertical;line-height:1.45}
   .transcript{white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:12.5px;color:#cfcfe0;background:var(--terminal);border-radius:10px;padding:12px;margin-top:10px}
-  .empty{color:var(--muted);font-size:13px;padding:30px;text-align:center}
+  .empty{color:var(--muted);font-size:13px;font-weight:600;padding:34px 20px;text-align:center}
   /* THE notification (comp 1a): ONE gray pill, bottom center — raised, thin white ring, one line. */
   .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,#2E2E35,#25252B);border:none;padding:11px 22px;border-radius:999px;font-size:14.5px;font-weight:800;color:rgba(255,255,255,.92);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.35),0 0 18px rgba(255,255,255,.18);white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;opacity:0;transition:.2s;z-index:70;pointer-events:none}
   .toast.show{opacity:1}
@@ -369,7 +369,7 @@
   .k-switch::after{content:'';position:absolute;top:2.5px;left:2.5px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.3);transition:left .18s}
   .k-switch.on{background:var(--green);box-shadow:inset 0 1px 2px rgba(0,0,0,.2)}
   .k-switch.on::after{left:21.5px}
-  .k-sub{font-size:12.5px;font-weight:600;color:#8A8A96;margin-top:2px}
+  .k-sub{font-size:12.5px;font-weight:600;color:#8A8A96;margin:2px 0 16px}
   .k-note{font-size:11.5px;font-weight:600;color:#5C5C68;padding:16px 4px 0;line-height:1.5}
   .k-raise{background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
   /* Peek row — replaces every dash accordion. Headline is ON the row; tapping opens depth in the sheet. */
@@ -594,7 +594,10 @@
   .daychip{display:inline-block;font-size:10.5px;font-weight:700;color:#62626f;background:transparent;border:none;border-radius:0;padding:0;margin-right:9px;letter-spacing:.2px}
   .daychip.on{color:var(--green);background:transparent;border:none}
   .catchip{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:14px;padding:12px 16px;font-weight:800;font-size:13px}
-  .empty{color:var(--muted);font-size:13px;padding:34px 20px;text-align:center;background:var(--sheet);border:1px dashed var(--border);border-radius:16px}
+  .empty{color:var(--muted);font-size:13px;font-weight:600;padding:40px 24px;text-align:center;background:var(--sheet);border:1.5px dashed rgba(255,255,255,.13);border-radius:16px;margin-top:16px}
+  .empty .em-ic{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;margin:0 auto 12px}
+  .empty .em-t{font-size:17px;font-weight:800;letter-spacing:-.2px;color:#fff;line-height:1.25}
+  .empty .em-s{font-size:12.5px;font-weight:600;color:#8A8A96;margin-top:5px;line-height:1.45}
   body.authwait header,body.authwait nav,body.authwait main,body.authwait .agent-fab,body.authwait .agent-panel{display:none}
   /* drawn-icon chrome (replaces emoji) */
   .name{font-weight:800;display:flex;align-items:center}
@@ -783,13 +786,13 @@
     <div id="al_status" style="margin-top:12px"></div>
     <div id="al_rollup"></div>
     <div class="k-eyebrow">Your in stock ping</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <select id="oa_channel" class="k-filter" onchange="saveOwnerAlert()">
+    <div style="display:flex;gap:8px;align-items:center">
+      <select id="oa_channel" class="k-filter" style="flex:0 0 auto" onchange="saveOwnerAlert()">
         <option value="email">Email</option>
         <option value="sms">Text</option>
       </select>
-      <input id="oa_email" type="email" placeholder="where it lands" style="flex:1;min-width:180px;font-size:14px;padding:10px 14px" onblur="saveOwnerAlert()">
-      <button class="ghost" onclick="ownerPingTest()">Test it</button>
+      <input id="oa_email" type="email" placeholder="where it lands" style="flex:1;min-width:0;font-size:14px;padding:10px 14px" onblur="saveOwnerAlert()">
+      <button class="ghost" style="flex:0 0 auto" onclick="ownerPingTest()">Test it</button>
     </div>
     <div id="oa_out" class="meta" style="margin-top:8px;min-height:0"></div>
     <div class="k-eyebrow">Messages</div>
@@ -1479,7 +1482,7 @@ function openSheet(title,sub,body){
   try{ setTimeout(decorateChrome,20); }catch(_){}
 }
 function _restoreBorrow(){ if(!_sheetBorrow) return; const b=_sheetBorrow; _sheetBorrow=null; if(b.home){ if(b.next) b.home.insertBefore(b.node,b.next); else b.home.appendChild(b.node); } }
-function closeSheet(){ if(!_sheetEls) return; _sheetEls.sheet.style.transition=''; _sheetEls.sheet.style.transform=''; _sheetEls.scrim.classList.remove('on'); _sheetEls.sheet.classList.remove('on'); setTimeout(_restoreBorrow,280); }
+function closeSheet(){ if(!_sheetEls) return; _sheetEls.sheet.style.transition=''; _sheetEls.sheet.style.transform=''; _sheetEls.scrim.classList.remove('on'); _sheetEls.sheet.classList.remove('on'); setTimeout(_restoreBorrow,280); setTimeout(pokeChrome,320); /* iOS keeps the sheet's chrome sample until poked (site lesson) */ }
 window.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSheet(); });
 // Tap-to-show tooltip — works on mobile (hover doesn't). Tap a hint → bubble; tap again/elsewhere → gone.
 let _tipFor=null;
@@ -1540,6 +1543,8 @@ function showGroup(g, sectionId){
   if(g==='calls') refreshFbBadge();
   showSection(sectionId || GROUP_LAST[g] || grp.tabs[0][0], true);
 }
+// Designed empty state (site pattern 5.15): dashed panel, tinted icon, short headline, one gray line.
+function emptyState(ico,tint,title,sub){ return `<div class="empty"><span class="em-ic" style="background:${tint}1f">${ICO(ico,21,tint,2)}</span><div class="em-t">${esch(title)}</div><div class="em-s">${esch(sub)}</div></div>`; }
 function pokeChrome(){
   try{ if(document.activeElement&&document.activeElement.blur) document.activeElement.blur(); }catch(_){ }
   try{ const de=document.documentElement; const cur=getComputedStyle(de).backgroundColor; de.style.backgroundColor=cur; void de.offsetHeight; requestAnimationFrame(()=>{ de.style.backgroundColor=''; }); }catch(_){ }
@@ -2714,7 +2719,7 @@ async function loadFeedback(){
   // Unclear-status pills (incl. Fun/owner-only checks — the god-view headline filters those out ON
   // PURPOSE; this tab is the unfiltered surface, so the owner can confirm status data flows end to end).
   loadFbUnclear();
-  if(!rows.length){ list.innerHTML='<div class="empty">No poll responses yet. They appear when a customer taps what they saw after an unclear check.</div>'; return; }
+  if(!rows.length){ list.innerHTML=emptyState('chat','#FBBF24','No poll responses yet','They appear after an unclear check'); return; }
   const UV={in:'In stock',out:'Not in',soon:'Restocking',unsure:'Unclear'};
   const ours=r=>r.confirmed===1?'In stock':r.confirmed===0?'Not in':(r.status_key?String(r.status_key).replace(/_/g,' '):'—');
   FB_ROWS=rows;
@@ -4629,6 +4634,7 @@ async function loadTesting(){
   { const sp=document.getElementById('testing_src'); if(sp) sp.innerHTML=srcPicker('loadTesting'); }
   const d=await srcApi('/api/admin/test-calls');
   if(!d||d.error){ sum.innerHTML=''; log.innerHTML=srcEmpty(d,'<div class="empty">No test calls yet. Call the Fun or MVP store to start logging.</div>'); return; }
+  if(!(d.rows||[]).length){ sum.innerHTML=''; log.innerHTML=emptyState('phone','#4ADE80','No test calls yet','Call the Fun store to start the log'); return; }
   const s=d.summary||{};
   // Report strip over the log (comp: Testing is a LOG with a report strip).
   const well=(n,l,cls)=>`<div class="k-well"><div class="n${cls?' '+cls:''}">${n}</div><div class="l">${l}</div></div>`;
@@ -4649,7 +4655,7 @@ async function loadTesting(){
           </span>
           ${tcIcon(r.status)}
         </div>`;
-      }).join('') || '<div class="empty">No test calls yet. Call the Fun store.</div>');
+      }).join('') || emptyState('phone','#4ADE80','No test calls yet','Call the Fun store to start the log'));
 }
 // Settings → the one global default workflow.
 async function loadDefaultWorkflow(){
@@ -4844,26 +4850,26 @@ async function loadAlerts(){
   const log=await api('/api/alerts/log')||{};
   // Delivery chips: green when the provider creds are set, amber "stubbed" until then.
   const dv=log.delivery||{};
-  const chip=(on,label)=>`<span class="pill ${on?'g':'a'}" style="margin-right:8px">${on?'●':'○'} ${esch(label)} ${on?'live':'not set yet'}</span>`;
+  const chip=(on,label)=>`<span class="pill ${on?'g':''}" style="margin-right:8px;font-size:9.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;padding:5px 11px">● ${esch(label)} ${on?'live':'off'}</span>`;
   const sEl=document.getElementById('al_status');
-  if(sEl) sEl.innerHTML=chip(dv.sms,'Text (Twilio)')+chip(dv.email,'Email (Brevo)')
-    +((dv.sms&&dv.email)?'':`<div class="k-note" style="text-align:left;margin-top:6px">Missing keys log sends as stubbed, nothing reaches a customer yet</div>`);
+  if(sEl) sEl.innerHTML=chip(dv.sms,'Text')+chip(dv.email,'Email')
+    +((dv.sms&&dv.email)?'':`<div style="font-size:11.5px;font-weight:600;color:rgba(245,158,11,.8);margin-top:9px">Stubbed sends never reach a customer</div>`);
   // This month: three wells, no breakdown table (owner: it does not help manage alerts).
   const roll=log.rollup||{}, rEl=document.getElementById('al_rollup');
   if(rEl){ const ks=Object.keys(roll); const subs=log.subscribers||{};
     const well=(n,l,cls)=>`<div class="k-well"><div class="n${cls?' '+cls:''}">${n}</div><div class="l">${l}</div></div>`;
     const total=Object.values(roll).reduce((a,b)=>a+b,0);
     const stubbed=ks.filter(k=>k.endsWith('.stubbed')).reduce((a,k)=>a+roll[k],0);
-    rEl.innerHTML=`<div class="k-wells" style="margin-top:12px">${well(subs.total||0,'Signed up','')}${well(total,'Sends this month',total?'g':'')}${well(stubbed,'Stubbed',stubbed?'a':'')}</div>`; }
+    rEl.innerHTML=`<div class="k-wells" style="margin-top:12px">${well(subs.total||0,'Signed up','')}${well(total,'This month',total?'g':'')}${well(stubbed,'Stubbed',stubbed?'a':'')}</div>`; }
   // Recent sends: a LOG — first 20, one key shows the rest.
   const lg=document.getElementById('al_log'), recent=log.recent||[];
   if(lg){ const cap=AL_LOG_ALL?60:20;
     lg.innerHTML=(recent.length?recent.slice(0,cap).map(r=>{
-      const when=r.at?new Date(r.at*1000).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
+      const when=r.at?(d=>d.toLocaleDateString([],{month:'short',day:'numeric'})+' · '+d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}))(new Date(r.at*1000)):'';
       const ST={sent:['Sent','g'],stubbed:['Stubbed','a'],test_sent:['Test','']};
       const [stl,stc]=ST[r.status]||[String(r.status).replace(/_/g,' '),'r'];
       return `<div class="repline"><span class="rl">${esch(String(r.event).replace(/_/g,' '))} → ${esch(r.to||r.userId||'—')}</span><b style="font-weight:600;color:#8A8A96;white-space:nowrap">${esch(when)} <span class="pill ${stc}" style="margin-left:6px;${stc?'':'color:#CDCDD8;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14)'}">${esch(stl)}</span></b></div>`;
-    }).join(''):'<div class="empty">No sends yet. They appear the moment an alert goes out.</div>')
+    }).join(''):emptyState('note','#4ADE80','No sends yet','They appear the moment an alert goes out'))
     +(recent.length>20&&!AL_LOG_ALL?`<button class="k-key" onclick="AL_LOG_ALL=true;loadAlerts()">SHOW ${Math.min(40,recent.length-20)} MORE</button>`:''); }
 }
 // Save ONE event's copy (its sheet's Save key). Only offered fields ship — an empty email override
@@ -5004,7 +5010,7 @@ async function loadUsers(){
   const el=document.getElementById('users_list'); if(!el) return;
   const d=await api('/api/admin/users');
   if(!Array.isArray(d)){ el.textContent='Could not load users.'; return; }
-  if(!d.length){ el.innerHTML='<div class="empty">No signups yet.</div>'; return; }
+  if(!d.length){ el.innerHTML=emptyState('key','#4ADE80','No signups yet','Accounts appear when a phone verifies'); return; }
   USERS_ROWS=d;
   const real=d.filter(u=>!u.staff);
   const money=c=>'$'+((c||0)/100).toFixed(2);
@@ -5062,11 +5068,11 @@ function rsBar(label,n,max,cls){ return `<div class="rsbar"><span class="rsbl">$
 async function loadRestock(){
   const net=document.getElementById('restock_net'); if(!net) return;
   const d=await api('/api/admin/restock-intel');
-  if(!d||d.error){ net.innerHTML='<div class="empty">No restock data yet. Fills in as confirmed calls land.</div>'; return; }
+  if(!d||d.error){ net.innerHTML=emptyState('box','#F59E0B','Nothing learned yet','Builds itself from confirmed calls'); return; }
   const t=d.totals||{};
   // Nothing learned yet → ONE clean empty state, not a page of zeros (owner: hide until real data).
   if(!((d.shipmentDays||[]).length||t.confirms||(d.answerFunnel&&d.answerFunnel.dialed))){
-    net.innerHTML='<div class="empty">No restock intel yet. It builds itself from confirmed calls.</div>'; return;
+    net.innerHTML=emptyState('box','#F59E0B','Nothing learned yet','Builds itself from confirmed calls'); return;
   }
   const tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   const dMax=Math.max(1,...(d.shipmentDays||[]).map(x=>x.n));
@@ -5226,7 +5232,7 @@ async function loadGwKiosks(){
 async function loadGwWatches(){
   const ws=await api('/api/watches');
   const el=document.getElementById('gw_watches'); if(!el) return;
-  if(!Array.isArray(ws)||!ws.length){ el.innerHTML='<div class="empty">No active watches. They start when a customer asks for a restock alert.</div>'; gwQFact('gw_watches','0'); return; }
+  if(!Array.isArray(ws)||!ws.length){ el.innerHTML=emptyState('target','#4ADE80','No active watches','They start when a customer asks for a restock alert'); gwQFact('gw_watches','0'); return; }
   const live=ws.filter(w=>w.active!==false).length;
   gwQFact('gw_watches',String(live),live>0);
   el.innerHTML=ws.map(w=>`<div style="padding:6px 0;border-top:1px solid var(--border)">${esch(w.contact)} · ${esch(w.channel)} · store #${w.retailerId} · cat #${w.categoryId} ${w.active===false?'<span class="meta">(notified)</span>':''}</div>`).join('');
@@ -5234,7 +5240,7 @@ async function loadGwWatches(){
 async function loadGwCommunity(){
   const el=document.getElementById('gw_community'); if(!el) return;
   const ps=await api('/api/community');
-  if(!Array.isArray(ps)||!ps.length){ el.innerHTML='<div class="empty">No community posts yet. They land here when someone posts a score.</div>'; gwQFact('gw_community','0'); return; }
+  if(!Array.isArray(ps)||!ps.length){ el.innerHTML=emptyState('trophy','#FFCB05','No posts yet','They land here when someone posts a score'); gwQFact('gw_community','0'); return; }
   const pend=ps.filter(p=>!p.approved).length;
   gwQFact('gw_community',pend?pend+' pending':String(ps.length),pend>0);
   el.innerHTML=`<div style="margin-bottom:8px;color:${pend?'var(--yellow,#F4D03F)':'var(--muted)'}">${pend?('⏳ '+pend+' awaiting review'):'All caught up'}</div>`+
@@ -5249,7 +5255,7 @@ async function loadGwCommunity(){
 async function loadGwWaitlist(){
   const el=document.getElementById('gw_waitlist'); if(!el) return;
   const d=await api('/api/waitlist');
-  if(!d||d.error||!d.total){ el.innerHTML='<div class="empty">No waitlist signups yet. They land here from areas we have not launched.</div>'; gwQFact('gw_waitlist','0'); return; }
+  if(!d||d.error||!d.total){ el.innerHTML=emptyState('pin','#FBBF24','No waitlist signups yet','They come from areas we have not launched'); gwQFact('gw_waitlist','0'); return; }
   gwQFact('gw_waitlist',d.total+' waiting',d.total>0);
   const regions=(d.byRegion||[]).map(r=>`${esch(r.region)} <b style="color:var(--green)">${r.n}</b>`).join(' · ');
   const recent=(d.recent||[]).slice(0,12).map(w=>`<div style="padding:5px 0;border-top:1px solid var(--border);font-size:12.5px">${esch(w.contact)}${w.area?(' · '+esch(w.area)):''}${w.region?(' · '+esch(w.region)):''}</div>`).join('');
@@ -5273,7 +5279,7 @@ async function notifyWaitlist(){
 async function loadGwStoreReqs(){
   const el=document.getElementById('gw_storereqs'); if(!el) return;
   const rs=await api('/api/store-requests');
-  if(!Array.isArray(rs)||!rs.length){ el.innerHTML='<div class="empty">No store requests yet. They land here when a customer asks for a store.</div>'; gwQFact('gw_storereqs','0'); return; }
+  if(!Array.isArray(rs)||!rs.length){ el.innerHTML=emptyState('store','#4ADE80','No store requests yet','They land here when a customer asks for one'); gwQFact('gw_storereqs','0'); return; }
   const nw=rs.filter(r=>r.status==='new').length;
   gwQFact('gw_storereqs',nw?nw+' new':String(rs.length),nw>0);
   el.innerHTML=`<div style="margin-bottom:8px;color:${nw?'var(--yellow,#F4D03F)':'var(--muted)'}">${nw?('⏳ '+nw+' new'):'All handled'}</div>`+
