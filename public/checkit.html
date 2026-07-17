@@ -5139,7 +5139,15 @@ function playMu(b64,track){
   src.start(at); AUDIO_NEXT[track]=at+buf.duration;
 }
 function stopAudio(){ if(AUDIO_WS){AUDIO_WS.close();AUDIO_WS=null;} if(AUDIO_CTX){AUDIO_CTX.close().catch(()=>{});AUDIO_CTX=null;} AUDIO_NEXT={}; }
+// Flight recorder for the live view (owner 07-17: the freeze only happens on the owner's phone).
+// Buffers a terse play-by-play and ships it every few seconds + at finalize, so a frozen call still
+// tells us exactly what this device saw. Zero effect on behavior; ~1 tiny request per 5s during a call.
+let LVLOG=[]; let LVSHIP=null;
+function lvlog(m){ try{ LVLOG.push(Math.round((Date.now()-(LIVE_T0||Date.now()))/1000)+'s '+m); if(LVLOG.length>100) LVLOG.shift(); }catch(_){} }
+function lvship(){ try{ const body=JSON.stringify({lines:LVLOG}); if(navigator.sendBeacon) navigator.sendBeacon('/pub/live-debug', body); else fetch('/pub/live-debug',{method:'POST',headers:{'content-type':'application/json'},body,keepalive:true}).catch(()=>{}); }catch(_){} }
 async function startCheckLive(){
+  LVLOG=[]; lvlog('start ua-visible='+document.visibilityState); clearInterval(LVSHIP); LVSHIP=setInterval(lvship,5000);
+  document.addEventListener('visibilitychange',()=>lvlog('visibility='+document.visibilityState),{once:false});
   CALL_GEN++; // FIRST thing: cancel any still-running background verdict poll from the previous call NOW —
               // before the confirm modal — so it can never repaint the old result over this new call.
   stopAudio(); // tear down the PREVIOUS call's audio socket + AudioContext before opening a new one. Without
@@ -5176,9 +5184,11 @@ async function startCheckLive(){
   // this domain now passes WebSocket upgrades through (it used to rebuild the Response and drop the 101,
   // which silently killed the live transcript). Falls back to the raw host the server hands us.
   const myGen=CALL_GEN; const wsHost=(location.host||r.wsHost); const ws=new WebSocket('wss://'+wsHost+'/listen?room='+encodeURIComponent(r.room)); AUDIO_WS=ws;
+  lvlog('room='+String(r.room).slice(0,18)+' ws-connecting host='+wsHost);
+  ws.onopen=()=>lvlog('ws open'); ws.onerror=()=>lvlog('ws ERROR');
   ws.onmessage=ev=>{ if(myGen!==CALL_GEN){ try{ws.close();}catch(e){} return; } try{ const d=JSON.parse(ev.data); // a socket from an earlier call must never play/inject into a newer one
     if(d.audio){ if(AUDIO_CTX) playMu(d.audio,d.track); }
-    else if(d.line&&d.line.text){ LIVE_TR.push(d.line.role+': '+d.line.text); LIVE_TRANSCRIPT=LIVE_TR.join('\n'); if(d.line.role==='Agent'&&AGENT_ASK.test(d.line.text))AGENT_PITCHED=true; liveStage(stageForLines(LIVE_TR,AGENT_PITCHED)); renderLiveMsg(); } // real-time steps + human script, as the call happens
+    else if(d.line&&d.line.text){ if(!LIVE_TR.length) lvlog('ws first line'); LIVE_TR.push(d.line.role+': '+d.line.text); LIVE_TRANSCRIPT=LIVE_TR.join('\n'); if(d.line.role==='Agent'&&AGENT_ASK.test(d.line.text))AGENT_PITCHED=true; liveStage(stageForLines(LIVE_TR,AGENT_PITCHED)); renderLiveMsg(); } // real-time steps + human script, as the call happens
     // Instant flip: the bridge tells us the moment the call ends → finalize NOW (snappy, like the live
     // transcript). Crucially we do NOT clearInterval(POLL) here — the POLL keeps running as the safety net,
     // so even if this finalize hiccups the POLL still resolves it (that POLL-clearing was the old freeze).
@@ -5191,7 +5201,7 @@ async function startCheckLive(){
   // to CONNECT at dial time can't finalize prematurely — only treat a close as end-of-call once the call is
   // clearly underway (we have a conversation id, streamed lines, or it's been connected >15s). The POLL
   // still covers startup, and finalizeLive is idempotent, so this can only help, never double-fire harmfully.
-  ws.onclose=()=>{ try{ if(myGen!==CALL_GEN) return;
+  ws.onclose=()=>{ try{ if(myGen!==CALL_GEN) return; lvlog('ws CLOSED lines='+LIVE_TR.length);
     const underway = LIVE_CID||cid||LIVE_TR.length || (LIVE_T0 && (Date.now()-LIVE_T0)>15000);
     if(!(underway && $('live') && !$('live').classList.contains('hidden'))) return;
     // A socket close is NOT proof the call ended: mid-call the live connection can drop (network / CDN)
@@ -5212,6 +5222,7 @@ async function startCheckLive(){
       // the call is connected → flip to "Answered" and fall STRAIGHT through to pull the transcript
       // (no wasted cycle), instead of sitting on "Ringing…".
       const bs=await api('/pub/bridge/'+r.room);
+      lvlog('bridge prog='+(bs&&bs.callProgress?bs.callProgress.status:'-')+' cid='+(bs&&bs.conversationId?'Y':'n')+(bs&&bs.error?' err='+bs.error:''));
       // Twilio says the call was ANSWERED → show "We've connected" NOW, even if the agent hasn't
       // engaged yet (owner 07-10 call 6: the log sat on "waiting" ~35s into a connected call).
       if(bs&&bs.callProgress&&/^(in-progress|answered)$/.test(bs.callProgress.status)) liveStage(3);
@@ -5226,6 +5237,7 @@ async function startCheckLive(){
       else return; // still ringing / connecting
     }
     const o=await appApi('/pub/live/'+encodeURIComponent(cid));
+    lvlog('live tx='+((o&&o.transcript)?o.transcript.length:0)+' live='+(o?String(o.live):'-')+(o&&o.error?' err='+o.error:''));
     if(o&&o.transcript){
       const lines=o.transcript.split('\n').filter(Boolean);
       // Adopt the poll's transcript when the WS gave nothing yet OR when the poll has MORE than we've
@@ -5240,6 +5252,7 @@ async function startCheckLive(){
   },1200);
 }
 async function finalizeLive(cid){
+  lvlog('finalize cid='+(cid||LIVE_CID?'Y':'n')+' lines='+LIVE_TR.length); lvship(); clearInterval(LVSHIP);
   // Idempotent: d.ended (instant) AND the POLL can both call this. No hard guard + no POLL-clearing here
   // (that combo is what froze calls) — history dedupes and showResult just re-renders, so a re-fire is safe.
   stopAudio(); stopLiveTimers();
