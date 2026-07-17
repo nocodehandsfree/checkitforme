@@ -26,6 +26,13 @@ Names: **Pops / Ops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · *
   per push, ask him to look, and never say "fixed" — say "pushed, check your phone." Headless
   screenshots and local renders are evidence, not verdicts.
 - **Chats die; die clean.** At ~80% usage or when wrapping, do "Handoff" without being asked.
+- **Background tasks are for YOUR work only — never for waiting.** A build or a test suite may run
+  in the background. A task that polls/waits for a deploy, a promote, another agent, or the owner
+  is BANNED: it burns compute, blocks the owner from talking to you, and he has to hunt it down and
+  kill it. Blocked = write the dependency as a note (`PM: need X` in your checkpoint), then take
+  the next task or sit idle and interruptible. Check a deploy ONCE when you need it, don't watch it.
+- **CLAUDE.md loads at BOOT only.** Mid-session you won't see edits to it — when the owner says
+  "re-read CLAUDE.md," do it immediately and literally (Read the file), top to bottom.
 
 **"You are <Name>" is the OWNER's boot opener only — never yours.** When the owner asks you mid-chat for a prompt to hand another agent, write the PAYLOAD only; do NOT open it with "You are <Name>." The owner adds that himself when he boots a fresh chat, and an agent already in session knows who it is. (Same rule as "Box it" below — it applies to every handoff prompt, boxed or not.)
 
