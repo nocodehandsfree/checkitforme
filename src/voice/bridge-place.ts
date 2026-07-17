@@ -18,6 +18,26 @@ export const roomCallProgress = new Map<string, { status: string; at: number }>(
 // ends without ever reaching a human still finalizes its callResults row. Fired by /twiml/bridge-status.
 export const roomFinalizers = new Map<string, (twilioStatus: string) => void>();
 
+/** Attach a LIVE listen-only fork to an in-progress Twilio call (REST Streams API). Used on the
+ *  instant-connection (EL-native) path so ear-listening still works there (owner 07-17): EL runs the
+ *  call directly, and this forks a copy of both tracks into our /twilio-media room fanout — same
+ *  plumbing the D-lane's "deltatap" fork uses. Off the call path entirely: attach failure never
+ *  affects the call, it only means no live audio for the listener. */
+export async function attachListenFork(callSid: string, room: string): Promise<void> {
+  const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
+  if (!sid || !tok || !callSid || !room) return;
+  const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
+  const body = new URLSearchParams({ Url: `wss://${host}/twilio-media?room=${encodeURIComponent(room)}`, Track: "both_tracks", Name: "listenfork" });
+  try {
+    const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}/Streams.json`, {
+      method: "POST",
+      headers: { Authorization: "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64"), "content-type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+    });
+    if (!r.ok) console.error("[listenfork]", r.status, (await r.text()).slice(0, 120));
+  } catch (e) { console.error("[listenfork]", e); }
+}
+
 export async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, string>, onConversationId?: (id: string) => void, dtmf?: string | null, opts?: { from?: string; timeLimitSec?: number; connectOnHuman?: boolean; connectAtSec?: number; say?: string | null; voiceId?: string | null; voiceTuning?: Record<string, unknown> | null }): Promise<{ room?: string; error?: string }> {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
