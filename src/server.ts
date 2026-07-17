@@ -134,7 +134,7 @@ import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
 import { settings as settingsTbl } from "./db/schema";
 import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, activeBridgeCalls } from "./voice/bridge";
-import { placeBridgeCall, roomCallSids, roomCallProgress, roomFinalizers, RAILWAY_HOST, STAGING_HOST } from "./voice/bridge-place";
+import { placeBridgeCall, attachListenFork, roomCallSids, roomCallProgress, roomFinalizers, RAILWAY_HOST, STAGING_HOST } from "./voice/bridge-place";
 import { isCallingPaused, setCallingPaused, spendTodayCents, withLock } from "./redis";
 
 assertProdSecurity(); // refuse to boot in prod with an open admin / forgeable sessions
@@ -5954,7 +5954,12 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
   const direct = !v.dtmf && !v.say && !(v.dynamicVars.phone_tree || "").trim() && !v.connectAtSec && !from;
   if (direct) {
     const r = await triggerCall({ retailerId, categoryId: primary, mode: "restock", specificProduct, finderUserId: finder?.userId ?? undefined, isPrivate: finder?.isPrivate ?? false, kioskMode });
-    if (r.providerCallId) return { room: r.providerCallId };
+    if (r.providerCallId) {
+      // Ear-listening on the instant path (owner 07-17): fork a live copy of both call tracks into
+      // the listen room. Off the call path — a failed attach never touches the call itself.
+      if ("callSid" in r && r.callSid) void attachListenFork(String(r.callSid), r.providerCallId);
+      return { room: r.providerCallId };
+    }
     return { error: ("error" in r && r.error) ? String(r.error) : "call did not start" };
   }
   // Log the call once it connects (we get the ElevenLabs conversation id): insert the PRIMARY result
