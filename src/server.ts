@@ -683,19 +683,19 @@ main{padding:10px 20px 40px;max-width:520px;margin:0 auto}
 #sheet .grab{touch-action:none;padding:10px 0 4px;flex:0 0 auto}
 #sheet .body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 20px 6px} /* NO big bottom padding: the sheet's rows must run UNDER the toolbar so the glass has content to ghost — the old padding left an empty panel strip = the solid slab. A scroll-end spacer keeps the last row reachable. */
 #sheet .body::after{content:"";display:block;height:calc(70px + env(safe-area-inset-bottom))}
-#sheet .mychk{background:linear-gradient(135deg,#2E7D4F,#3E9D63);border-radius:20px;padding:18px;margin-bottom:14px}
-#sheet .mychk .k{font-size:11px;letter-spacing:2px;font-weight:800;opacity:.85}
-#sheet .mychk .ph{font-size:28px;font-weight:900;margin-top:6px}
-#sheet .stats{display:flex;gap:10px;margin-bottom:14px}
-#sheet .stat{flex:1;background:#1F1F25;border-radius:16px;padding:16px;text-align:center}
-#sheet .stat b{font-size:22px}
-#sheet .stat i{display:block;font-style:normal;font-size:11px;letter-spacing:1.5px;color:#8A8A96;margin-top:4px}
-#sheet .rowc{display:flex;justify-content:space-between;align-items:center;background:#1F1F25;border-radius:14px;padding:16px;margin-bottom:10px;font-weight:700}
-#sheet .rowc span{color:#8A8A96;font-weight:500;font-size:12.5px;display:block;margin-top:3px}
-#sheet .runbtn{display:block;width:100%;background:transparent;border:1.5px solid #4ADE80;color:#4ADE80;border-radius:999px;padding:15px;font-weight:900;font-size:14px;letter-spacing:1px;margin:8px 0 20px}
+.mychk{background:linear-gradient(135deg,#2E7D4F,#3E9D63);border-radius:20px;padding:18px;margin-bottom:14px}
+.mychk .k{font-size:11px;letter-spacing:2px;font-weight:800;opacity:.85}
+.mychk .ph{font-size:28px;font-weight:900;margin-top:6px}
+.stats{display:flex;gap:10px;margin-bottom:14px}
+.stat{flex:1;background:#1F1F25;border-radius:16px;padding:16px;text-align:center}
+.stat b{font-size:22px}
+.stat i{display:block;font-style:normal;font-size:11px;letter-spacing:1.5px;color:#8A8A96;margin-top:4px}
+.rowc{display:flex;justify-content:space-between;align-items:center;background:#1F1F25;border-radius:14px;padding:16px;margin-bottom:10px;font-weight:700}
+.rowc span{color:#8A8A96;font-weight:500;font-size:12.5px;display:block;margin-top:3px}
+.runbtn{display:block;width:100%;background:transparent;border:1.5px solid #4ADE80;color:#4ADE80;border-radius:999px;padding:15px;font-weight:900;font-size:14px;letter-spacing:1px;margin:8px 0 20px}
 #sheet[style*="display: flex"]{display:flex}
 #sheet.frost{background:rgba(38,38,43,.28);backdrop-filter:blur(22px) saturate(1.3);-webkit-backdrop-filter:blur(22px) saturate(1.3)} /* F: frosted-glass sheet — the dimmed page shows THROUGH it, native-style */
-#sheet.frost .mychk{background:linear-gradient(135deg,rgba(46,125,79,.75),rgba(62,157,99,.75))}
+#sheet.frost .mychk, #sheet.frost .mychk{background:linear-gradient(135deg,rgba(46,125,79,.75),rgba(62,157,99,.75))}
 #sheet.frost .stat,#sheet.frost .rowc{background:rgba(31,31,37,.38)}
 /* bright rows on the PAGE so there is something to ghost through the frost */
 .brite{background:linear-gradient(90deg,#4ADE80,#A7F3D0);border-radius:14px;color:#06210F;font-weight:900;padding:16px;margin-bottom:10px;text-align:center}
@@ -707,6 +707,7 @@ body.frostdim main,body.frostdim header{filter:brightness(.8) saturate(1.05)} /*
 </style></head><body>
 <header><span class="logo">Check <b>it</b></span></header>
 <main>
+<div id="mainwrap">
 <div class="hint"><b>Scroll first</b> so the header slides under the clock (that's the translucency). Then tap each test and scroll again — report which letters KEEP it. Tap the letter again to turn it off.</div>
 <div class="row">
 <button class="t" id="A" onclick="T('A')">A dim overlay</button>
@@ -715,6 +716,7 @@ body.frostdim main,body.frostdim header{filter:brightness(.8) saturate(1.05)} /*
 <button class="t" id="D" onclick="T('D')">D filter dim</button>
 <button class="t" id="E" onclick="T('E')">E sheet+filter</button>
 <button class="t" id="F" onclick="T('F')">F frosted sheet</button>
+<button class="t" id="G" onclick="T('G')">G sheet as page</button>
 </div>
 <div class="store"><div class="ic">B&N</div><div><div class="nm">Barnes &amp; Noble Calabasas</div><div class="ad">4735 Commons Way · till 9 PM</div></div></div>
 <div class="store"><div class="ic">CVS</div><div><div class="nm">CVS Ventura Blvd</div><div class="ad">22050 Ventura Blvd. · till 11 PM</div></div></div>
@@ -725,6 +727,22 @@ body.frostdim main,body.frostdim header{filter:brightness(.8) saturate(1.05)} /*
 <div class="brite">CHECK ANOTHER STORE →</div>
 <div style="height:40dvh"></div>
 <div class="store"><div class="ic">↑</div><div><div class="nm">Scroll runway</div><div class="ad">so the top can slide under the clock</div></div></div>
+</div>
+<div id="pagemode" style="display:none">
+<div class="mychk"><div class="k">MY CHECKS</div><div class="ph">(310) 666-2331</div></div>
+<div class="stats"><div class="stat"><b>∞</b><i>CHECKS LEFT</i></div><div class="stat"><b>4</b><i>CHECKS TODAY</i></div></div>
+<div class="rowc">Manage plan<span>Unlimited · billed monthly</span></div>
+<div class="rowc">Check history<span>31 checks in July</span></div>
+<div class="rowc">Alerts<span>Restock and auto check pings.</span></div>
+<div class="rowc">Manage Zones<span>Check a whole area in one tap.</span></div>
+<div class="rowc">Earn free checks<span>4 ways. Open to everyone.</span></div>
+<div class="rowc">Language<span>English</span></div>
+<div class="rowc">Sign out<span>See you soon.</span></div>
+<button class="runbtn">RUN A CHECK →</button>
+<div class="rowc">More rows so it scrolls<span>keep going</span></div>
+<div class="rowc">Even more<span>almost there</span></div>
+<div class="rowc">Last row<span>tap G again to exit</span></div>
+</div>
 </main>
 <div id="dim" onclick="T(cur)"></div>
 <div id="sheet"><div class="grab"><div class="handle"></div></div><div class="body">
@@ -743,7 +761,7 @@ body.frostdim main,body.frostdim header{filter:brightness(.8) saturate(1.05)} /*
 var cur='';
 function T(k){
   var same=(cur===k); cur=same?'':k;
-  ['A','B','C','D','E','F'].forEach(function(x){document.getElementById(x).classList.toggle('on',x===cur);});
+  ['A','B','C','D','E','F','G'].forEach(function(x){document.getElementById(x).classList.toggle('on',x===cur);});
   var dim=document.getElementById('dim'),sheet=document.getElementById('sheet');
   dim.style.display=(cur==='A'||cur==='C')?'block':'none';
   sheet.style.display=(cur==='B'||cur==='C'||cur==='E'||cur==='F')?'flex':'none';
@@ -751,6 +769,11 @@ function T(k){
   sheet.style.transform='';
   document.body.classList.toggle('filterdim',cur==='D'||cur==='E');
   document.body.classList.toggle('frostdim',cur==='F');
+  // G: same content as a PAGE-STATE — document scroll, so the glass ghosts it top AND bottom.
+  var pg=document.getElementById('pagemode');
+  pg.style.display=(cur==='G')?'block':'none';
+  document.getElementById('mainwrap').style.display=(cur==='G')?'none':'block';
+  if(cur==='G') window.scrollTo(0,0);
 }
 // Drag the sheet down to close (like the real thing) — closing clears the whole test state so the
 // owner can check the after-close translucency.
