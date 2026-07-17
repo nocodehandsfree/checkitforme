@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="android-r119" />
+<meta name="x-rev" content="baseline-r122" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -317,8 +317,17 @@ __BRAND_HEAD__
      colour AND the body wash to the regular dark for the duration — the :has() rules undo themselves
      the moment the sheet closes. ID/class specificity + !important out-ranks every tone rule above,
      including the standalone media block and the v2 skin's body background. */
-  html:has(#acctOverlay.on),html:has(#buyOverlay.on),html:has(#pageOverlay.on),html:has(.csheet.on),html:has(#zones.on),html:has(#histOverlay.on),html:has(#zmenuOv.on),html:has(#emailOv.on),html:has(#alertsOv.on),html:has(#featOv.on),html:has(#scorePostOv.on){background:#0C0C12!important}
+  /* BASE SKIN ONLY. In v2 the root colour must NEVER change in-page: iOS re-reads it at unpredictable
+     moments (load/scroll only) and then FREEZES it — this rule firing while the call sheet was open is
+     what left the chrome stuck on base-black through entire live calls (owner 07-16, "not transparent
+     until the status reveals"). v2's bloom keeps the root at #1D1D22 permanently, so every re-read,
+     whenever it happens, lands on the same value and the chrome always blends. */
+  html:not([data-skin="v2"]):has(#acctOverlay.on),html:not([data-skin="v2"]):has(#buyOverlay.on),html:not([data-skin="v2"]):has(#pageOverlay.on),html:not([data-skin="v2"]):has(.csheet.on),html:not([data-skin="v2"]):has(#zones.on),html:not([data-skin="v2"]):has(#histOverlay.on),html:not([data-skin="v2"]):has(#zmenuOv.on),html:not([data-skin="v2"]):has(#emailOv.on),html:not([data-skin="v2"]):has(#alertsOv.on),html:not([data-skin="v2"]):has(#featOv.on),html:not([data-skin="v2"]):has(#scorePostOv.on){background:#0C0C12!important}
   html:has(#acctOverlay.on) body,html:has(#buyOverlay.on) body,html:has(#pageOverlay.on) body,html:has(.csheet.on) body,html:has(#zones.on) body,html:has(#histOverlay.on) body,html:has(#zmenuOv.on) body,html:has(#emailOv.on) body,html:has(#alertsOv.on) body,html:has(#featOv.on) body,html:has(#scorePostOv.on) body{background:var(--bg)!important}
+  /* GLASS-EDGE VEILS: attempted 07-16 (rgba veils extending Safari's own edge dim/haze ramps) and
+     REVERTED same day — they muddied the verdict blooms the owner already approved. Safari's ~50%-dim
+     top strip and hazed bottom zone over the flat v2 base are ACCEPTED as the platform look on regular
+     pages. Do not re-add page-edge veils. */
   /* SHEET-OPEN CHROME — PROVEN IMPOSSIBLE to recolor in-page (attempt 4, 07-16, reverted like 1-3).
      iOS 26 Safari re-reads the root colour ONLY on a page load or a MAIN-document scroll. Opening a
      sheet is a class change with the main scroll locked, so Safari never re-reads: any root/:has
@@ -1777,6 +1786,14 @@ html[data-skin="v2"] .plan{background:linear-gradient(180deg,#2D2D34 0%,#27272D 
 html[data-skin="v2"] .plan.sub{background:#23232A;box-shadow:0 0 0 2px var(--accent,#FFCB05),0 8px 14px -8px rgba(0,0,0,.55),0 0 18px color-mix(in srgb,var(--accent,#FFCB05) 18%,transparent)}
 /* AUDIT SWEEP 1 — v1 hairlines/terminal fills that leaked through under v2. */
 html[data-skin="v2"] .rhead{background:#26262B;border:0;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
+/* LIVE call: the store card breathes — a soft green pulse that says "this call is happening right now"
+   (owner 07-16). v2's border:0 killed the base skin's ringglow, so the pulse lives in box-shadow here:
+   every frame keeps v2's resting card shadows and adds a breathing green ring + halo on top. */
+html[data-skin="v2"] .rhead.live{animation:liveGlowV2 2.2s ease-in-out infinite}
+@keyframes liveGlowV2{
+  0%,100%{box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07),0 0 0 1px rgba(74,222,128,.35),0 0 16px rgba(74,222,128,.18)}
+  50%{box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07),0 0 0 1.5px rgba(74,222,128,.7),0 0 30px rgba(74,222,128,.45)}
+}
 html[data-skin="v2"] .proof{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
 html[data-skin="v2"] .smline{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
 html[data-skin="v2"] .csheet-ic{background:#1F1F25;border:0;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
@@ -5147,7 +5164,15 @@ function playMu(b64,track){
   src.start(at); AUDIO_NEXT[track]=at+buf.duration;
 }
 function stopAudio(){ if(AUDIO_WS){AUDIO_WS.close();AUDIO_WS=null;} if(AUDIO_CTX){AUDIO_CTX.close().catch(()=>{});AUDIO_CTX=null;} AUDIO_NEXT={}; }
+// Flight recorder for the live view (owner 07-17: the freeze only happens on the owner's phone).
+// Buffers a terse play-by-play and ships it every few seconds + at finalize, so a frozen call still
+// tells us exactly what this device saw. Zero effect on behavior; ~1 tiny request per 5s during a call.
+let LVLOG=[]; let LVSHIP=null;
+function lvlog(m){ try{ LVLOG.push(Math.round((Date.now()-(LIVE_T0||Date.now()))/1000)+'s '+m); if(LVLOG.length>100) LVLOG.shift(); }catch(_){} }
+function lvship(){ try{ const body=JSON.stringify({lines:LVLOG}); if(navigator.sendBeacon) navigator.sendBeacon('/pub/live-debug', body); else fetch('/pub/live-debug',{method:'POST',headers:{'content-type':'application/json'},body,keepalive:true}).catch(()=>{}); }catch(_){} }
 async function startCheckLive(){
+  LVLOG=[]; lvlog('start ua-visible='+document.visibilityState); clearInterval(LVSHIP); LVSHIP=setInterval(lvship,5000);
+  document.addEventListener('visibilitychange',()=>lvlog('visibility='+document.visibilityState),{once:false});
   CALL_GEN++; // FIRST thing: cancel any still-running background verdict poll from the previous call NOW —
               // before the confirm modal — so it can never repaint the old result over this new call.
   stopAudio(); // tear down the PREVIOUS call's audio socket + AudioContext before opening a new one. Without
@@ -5184,9 +5209,11 @@ async function startCheckLive(){
   // this domain now passes WebSocket upgrades through (it used to rebuild the Response and drop the 101,
   // which silently killed the live transcript). Falls back to the raw host the server hands us.
   const myGen=CALL_GEN; const wsHost=(location.host||r.wsHost); const ws=new WebSocket('wss://'+wsHost+'/listen?room='+encodeURIComponent(r.room)); AUDIO_WS=ws;
+  lvlog('room='+String(r.room).slice(0,18)+' ws-connecting host='+wsHost);
+  ws.onopen=()=>lvlog('ws open'); ws.onerror=()=>lvlog('ws ERROR');
   ws.onmessage=ev=>{ if(myGen!==CALL_GEN){ try{ws.close();}catch(e){} return; } try{ const d=JSON.parse(ev.data); // a socket from an earlier call must never play/inject into a newer one
     if(d.audio){ if(AUDIO_CTX) playMu(d.audio,d.track); }
-    else if(d.line&&d.line.text){ LIVE_TR.push(d.line.role+': '+d.line.text); LIVE_TRANSCRIPT=LIVE_TR.join('\n'); if(d.line.role==='Agent'&&AGENT_ASK.test(d.line.text))AGENT_PITCHED=true; liveStage(stageForLines(LIVE_TR,AGENT_PITCHED)); renderLiveMsg(); } // real-time steps + human script, as the call happens
+    else if(d.line&&d.line.text){ if(!LIVE_TR.length) lvlog('ws first line'); LIVE_TR.push(d.line.role+': '+d.line.text); LIVE_TRANSCRIPT=LIVE_TR.join('\n'); if(d.line.role==='Agent'&&AGENT_ASK.test(d.line.text))AGENT_PITCHED=true; liveStage(stageForLines(LIVE_TR,AGENT_PITCHED)); renderLiveMsg(); } // real-time steps + human script, as the call happens
     // Instant flip: the bridge tells us the moment the call ends → finalize NOW (snappy, like the live
     // transcript). Crucially we do NOT clearInterval(POLL) here — the POLL keeps running as the safety net,
     // so even if this finalize hiccups the POLL still resolves it (that POLL-clearing was the old freeze).
@@ -5199,7 +5226,7 @@ async function startCheckLive(){
   // to CONNECT at dial time can't finalize prematurely — only treat a close as end-of-call once the call is
   // clearly underway (we have a conversation id, streamed lines, or it's been connected >15s). The POLL
   // still covers startup, and finalizeLive is idempotent, so this can only help, never double-fire harmfully.
-  ws.onclose=()=>{ try{ if(myGen!==CALL_GEN) return;
+  ws.onclose=()=>{ try{ if(myGen!==CALL_GEN) return; lvlog('ws CLOSED lines='+LIVE_TR.length);
     const underway = LIVE_CID||cid||LIVE_TR.length || (LIVE_T0 && (Date.now()-LIVE_T0)>15000);
     if(!(underway && $('live') && !$('live').classList.contains('hidden'))) return;
     // A socket close is NOT proof the call ended: mid-call the live connection can drop (network / CDN)
@@ -5220,6 +5247,7 @@ async function startCheckLive(){
       // the call is connected → flip to "Answered" and fall STRAIGHT through to pull the transcript
       // (no wasted cycle), instead of sitting on "Ringing…".
       const bs=await api('/pub/bridge/'+r.room);
+      lvlog('bridge prog='+(bs&&bs.callProgress?bs.callProgress.status:'-')+' cid='+(bs&&bs.conversationId?'Y':'n')+(bs&&bs.error?' err='+bs.error:''));
       // Twilio says the call was ANSWERED → show "We've connected" NOW, even if the agent hasn't
       // engaged yet (owner 07-10 call 6: the log sat on "waiting" ~35s into a connected call).
       if(bs&&bs.callProgress&&/^(in-progress|answered)$/.test(bs.callProgress.status)) liveStage(3);
@@ -5234,6 +5262,7 @@ async function startCheckLive(){
       else return; // still ringing / connecting
     }
     const o=await appApi('/pub/live/'+encodeURIComponent(cid));
+    lvlog('live tx='+((o&&o.transcript)?o.transcript.length:0)+' live='+(o?String(o.live):'-')+(o&&o.error?' err='+o.error:''));
     if(o&&o.transcript){
       const lines=o.transcript.split('\n').filter(Boolean);
       // Adopt the poll's transcript when the WS gave nothing yet OR when the poll has MORE than we've
@@ -5248,6 +5277,7 @@ async function startCheckLive(){
   },1200);
 }
 async function finalizeLive(cid){
+  lvlog('finalize cid='+(cid||LIVE_CID?'Y':'n')+' lines='+LIVE_TR.length); lvship(); clearInterval(LVSHIP);
   // Idempotent: d.ended (instant) AND the POLL can both call this. No hard guard + no POLL-clearing here
   // (that combo is what froze calls) — history dedupes and showResult just re-renders, so a re-fire is safe.
   stopAudio(); stopLiveTimers();

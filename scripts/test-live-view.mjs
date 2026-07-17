@@ -73,6 +73,26 @@ const tall = await page.evaluate(() => {
 if (tall.grew) ok("long conversation grows the page past one screen"); else fail("page CLAMPED to viewport — long conversation cannot extend it");
 if (tall.followed) ok("view follows the conversation down"); else fail("scroll-follow dead (page still at the top with a tall conversation)");
 if (tall.lastSized && tall.lastVisible) ok("newest bubble rendered and on screen"); else fail(`newest bubble collapsed/off-screen (sized=${tall.lastSized}, visible=${tall.lastVisible})`);
+// The conversation must be REACHABLE, not just in the DOM (owner 07-17: a chrome-tint CSS clamp froze
+// the page at viewport height with overflow hidden — bubbles rendered invisibly below the fold and
+// auto-scroll aimed at a page that could not grow). The newest bubble must be on-screen, or SOME
+// scroller must actually be able to bring it on-screen.
+const reach = await page.evaluate(() => {
+  const box = document.getElementById("live_msgbox");
+  if (!box || !box.lastElementChild) return { ok: false, why: "no msgbox content" };
+  const r = box.lastElementChild.getBoundingClientRect();
+  if (r.height < 3) return { ok: false, why: "newest conversation node is COLLAPSED (zero-size rect) — content renders but cannot be seen" };
+  if (r.top >= 0 && r.bottom <= innerHeight) return { ok: true, why: "newest bubble on-screen" };
+  let el = box;
+  while (el) { // any ancestor that can actually scroll the bubble into view counts
+    if (el.scrollHeight > el.clientHeight + 4 && /(auto|scroll)/.test(getComputedStyle(el).overflowY)) return { ok: true, why: "scrollable via " + (el.id || el.tagName) };
+    el = el.parentElement;
+  }
+  const de = document.scrollingElement;
+  if (de && de.scrollHeight > innerHeight + 4) return { ok: true, why: "page scrolls" };
+  return { ok: false, why: "conversation CLIPPED: below the fold and nothing scrolls (page clamped to viewport?)" };
+});
+if (reach.ok) ok("conversation is reachable (" + reach.why + ")"); else fail(reach.why);
 
 // 3: when the sim ends (~20s total), the verdict must paint — never eternal dots.
 await page.waitForTimeout(16000);

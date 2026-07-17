@@ -5813,6 +5813,18 @@ app.get("/pub/bridge/:room", (c) => {
   return c.json({ conversationId: bridgeConversationId(room), wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST, callProgress: roomCallProgress.get(room) ?? null });
 });
 app.get("/pub/bridge-debug", (c) => c.json({ log: bridgeDebug() }));
+// Live-view FLIGHT RECORDER (owner 07-17): the transcript freeze only reproduces on the owner's
+// phone — no theory survives remote testing. The page posts its own play-by-play (ws state, poll
+// responses, cid resolution, errors) so the next frozen call tells us exactly what the phone saw.
+const lvTraces: { at: number; ua: string; lines: string[] }[] = [];
+app.post("/pub/live-debug", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { lines?: unknown[] };
+  const lines = Array.isArray(b.lines) ? b.lines.slice(0, 100).map((x) => String(x).slice(0, 300)) : [];
+  lvTraces.push({ at: Date.now(), ua: (c.req.header("user-agent") || "").slice(0, 90), lines });
+  if (lvTraces.length > 20) lvTraces.shift();
+  return c.json({ ok: true });
+});
+app.get("/api/admin/live-debug", (c) => c.json(lvTraces));
 app.post("/api/bridge/call", async (c) => {
   const b = await c.req.json();
   if (!b.toNumber) return c.json({ error: "toNumber required" }, 400);
@@ -5881,6 +5893,15 @@ const httpServer = serve({ fetch: app.fetch, port: config.port }, (info) => {
 // If an overnight trainer batch was mid-run when this process last died (e.g. a redeploy), resume the
 // remaining chains. No-op when no batch flag is set. Best-effort, fire-and-forget.
 void resumeBatchIfFlagged();
+
+// BRAIN SYNC (owner 07-16/17: "why do things keep reverting?"). The agent's system prompt is a stored
+// copy inside ElevenLabs — a code deploy alone never reaches it, so prompt fixes silently didn't ship
+// three times this week. Every boot now pushes the canonical prompt (prompts.ts) to this env's agent:
+// deploy the code = the talking agent runs it, staging and prod alike. Best-effort; a failed push
+// logs loudly but never blocks serving.
+applyVoiceTuning({ pushPrompt: true })
+  .then(() => console.log("[boot] agent brain synced to the canonical prompt"))
+  .catch((e) => console.error("[boot] AGENT BRAIN SYNC FAILED — the live agent may be running an OLD prompt:", String(e).slice(0, 200)));
 
 // Keep-warm: a tiny periodic query so the DB connection doesn't go cold between visits — kills the
 // "first open is slow" cold start. Cheap (one row), every 4 minutes.

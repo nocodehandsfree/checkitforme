@@ -69,7 +69,7 @@ import { deltaStoreCall, setDeltaFinalize, tdTranscript, type TdSession } from "
 import type { AgentTuning } from "../voice/provider";
 import { notifyInStock, notifyContact } from "./notify";
 import { getSetting, setSetting } from "../db/settings";
-import { specificityClause, RESTOCK_PROMPT, VOICE_DEFAULTS, PREMIUM_FOLLOWUP } from "../voice/prompts";
+import { specificityClause, RESTOCK_PROMPT, VOICE_DEFAULTS, PREMIUM_FOLLOWUP, ASK_SHIPMENT_DAY } from "../voice/prompts";
 import { classifyVerdict, reconcile, productDetailLabel } from "../voice/verdict";
 
 const DEFAULT_OPENER = "Heyy! I was just checking to see if you guys got any {category} in?";
@@ -240,7 +240,10 @@ export async function buildRestockVars(
       // Listen-live (Runnr) asks about exactly the lines the user selected — the primary plus
       // any extras they multi-picked. It never auto-cascades from the store's carries field.
       other_categories: extraLabels.join(", "),
-      ask_shipment_day: "",
+      // Restock-day push is STANDARD on every live check (owner 07-16: "standard for any not in
+      // stock") — this path shipped "" while every other path asked, so live checks never captured
+      // the day. One source of truth in prompts.ts.
+      ask_shipment_day: ASK_SHIPMENT_DAY,
       // Kiosk-only store → the prompt asks about the vending kiosk, not a shelf shipment.
       // Explicit request flag wins; otherwise inferred from the store's flags.
       kiosk_mode: (kioskMode ?? kioskOnly(retailer)) ? "true" : "",

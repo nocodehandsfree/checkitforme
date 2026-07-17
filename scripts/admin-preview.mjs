@@ -57,6 +57,17 @@ const FIX = {
     { id:2, store:'Target Glendale', created_at:now-9000, confirmed:1, status_key:'in_stock', user_verdict:'in', disagree:0, reviewed:0 },
     { id:3, store:'GameStop Burbank', created_at:now-90000, confirmed:0, status_key:'not_in_stock', user_verdict:'out', disagree:0, reviewed:1 },
   ]; })(),
+  '/api/alerts/templates': { restock:{sms:'{product} is BACK at {store} in {city}! Get going, this stuff does not stay on the shelves.', emailSubject:'{product} is back at {store}', emailBody:'Get going, this stuff doesn’t stay on the shelves for very long.'}, auto_check:{sms:'Your {store} check: {result}', emailSubject:'Your auto check: {result}', emailBody:'Here is what the store said on today’s call.'}, store_added:{emailSubject:'{store} is live on Check', emailBody:'The store you asked for is live. Your free check is loaded.'}, waitlist:{emailSubject:'We’re live in your area', emailBody:'Check now covers your area. Come find your card.'}, confirm_email:{emailSubject:'Confirm your email', emailBody:'Tap below and alerts start landing here.'} },
+  '/api/alerts/log': (()=>{ const now=Math.floor(Date.now()/1000); return { delivery:{sms:false,email:true}, subscribers:{total:14}, rollup:{'restock.email.sent':6,'auto_check.email.sent':3,'restock.sms.stubbed':2}, recent:[
+    { event:'restock', to:'sam@example.com', at:now-3600, status:'sent' },
+    { event:'auto_check', to:'sam@example.com', at:now-7200, status:'sent' },
+    { event:'restock', to:'+13105551234', at:now-9000, status:'stubbed' },
+  ]}; })(),
+  '/api/admin/owner-alert': { channel:'email', email:'owner@checkitforme.com' },
+  '/api/watches': [ {contact:'sam@example.com',channel:'email',retailerId:11,categoryId:1,active:true}, {contact:'+18185550000',channel:'sms',retailerId:13,categoryId:1,active:false} ],
+  '/api/community': [ {id:1,imageUrl:'/logos/brand/check-icon.png',caption:'Pulled a Moonbreon!',handle:'sam',likes:4,approved:false} ],
+  '/api/store-requests': [ {id:1,storeName:'Card Castle',city:'Reseda',note:'They restock Fridays',contact:'sam@example.com',status:'new'} ],
+  '/api/waitlist': { total:9, byRegion:[{region:'Midwest',n:5},{region:'Northeast',n:4}], recent:[{contact:'amy@example.com',area:'Chicago',region:'Midwest'}] },
   '/api/retailers': [
     { id:1, chainId:null, name:'1 Stop Card Shop', location:'Hillsboro, OR', storeType:'Hobby', carries:'Topps' },
     { id:2, chainId:null, name:'1 Stop Card Shop and Games', location:'Lake Oswego, OR', storeType:'Hobby', carries:'Pokemon, One Piece, Topps' },
