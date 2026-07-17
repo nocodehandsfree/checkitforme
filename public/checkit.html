@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="launcher-scope-r134" />
+<meta name="x-rev" content="glassH-all-r135" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -585,8 +585,12 @@ __BRAND_HEAD__
      them (toast/csheet/overlays/supwrap are body children today; keep it that way). */
   .overlay{position:fixed;inset:0;background:transparent;display:none;align-items:center;justify-content:center;z-index:4000;padding:20px}
   .overlay.on{display:flex}
-  body:has(.overlay.on) header,body:has(.overlay.on) main,body:has(.overlay.on) .site-footer,
-  body:has(.csheet.on) header,body:has(.csheet.on) main,body:has(.csheet.on) .site-footer{filter:brightness(.45)}
+  /* Variant H (design 07-17c, copied from app.html): while any sheet is open body.sheetopen (a) dims the
+     page CONTENT — never a cover layer — and (b) grows the page so the absolute sheet's ~120px under-bar
+     overshoot is never clipped (THIS min-height is the line that makes the bottom glass work). The sheet
+     JS adds/removes .sheetopen. */
+  body.sheetopen header,body.sheetopen main,body.sheetopen .site-footer{filter:brightness(.45);transition:filter .22s}
+  body.sheetopen{min-height:calc(100dvh + 200px)}
   body:has(.overlay.on){overflow:hidden}  /* lock the background (incl. the Leaflet map) while a modal is open */
   .modal{background:var(--sheet);border:1px solid var(--border);border-radius:18px;padding:22px;max-width:380px;width:100%;text-align:center}
   .modal h3{margin:0 0 8px;font-size:20px}
@@ -652,7 +656,7 @@ __BRAND_HEAD__
   .supwrap{position:fixed;inset:0 0 0 auto;z-index:81;width:100%;max-width:100%;display:none;flex-direction:column;
     /* a touch deeper than the raw brand yellow — the neon read too bright in the panel (owner 07-11) */
     --sup-accent:color-mix(in srgb, var(--accent,#FFCB05) 73%, #14110a);
-    background:#141418}
+    background:#26262B}
   /* display:none when closed (07-17 sheetpeek rollout): a mounted full-screen layer — even transformed
      off + opacity:0 — kills the scroll-edge glass, incl. during live calls. Slide-in via keyframes
      (animations fire on display flips; transitions don't). Close is instant — accepted. */
@@ -1749,7 +1753,7 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
    body class to hide them (that was getting stuck and breaking the homepage). Overlays are z 4000 so
    they still open over the frame. height:100dvh = the VISIBLE viewport, so the basket + last store row
    clear iOS Safari's bottom toolbar (owner 07-11). */
-#zones .zframe{flex:1;min-height:0;background:#1D1D22;display:flex;flex-direction:column;font-family:Inter,-apple-system,system-ui,sans-serif}
+#zones .zframe{flex:1;min-height:0;background:#26262B;display:flex;flex-direction:column;font-family:Inter,-apple-system,system-ui,sans-serif}
 /* Clean sheet header (owner 07-13): no gray gradient bar (that read as a duplicate "My checks" header /
    a gray box under the drag handle) — just the big title on the sheet background, like Check history. */
 #zones .zf-head{flex:none;display:flex;align-items:center;gap:12px;background:transparent;padding:2px 18px 12px}
@@ -1975,7 +1979,7 @@ html[data-skin="v2"] #authOverlay .x::before{display:none}
 /* Approved 3C/4A header (owner 07-11, docs/specs/mychecks-header): muted green gradient wash, big
    faint check watermark blooming from the top-right, phone leads 26/900 with the email under it.
    No Sign out up here (foot of the sheet) and no plan pill (plan reads under Manage plan). */
-html[data-skin="v2"] #acctOverlay .modal{background:#141419} /* darker than the page (#1D1D22) so the sheet's top edge reads against it (owner 07-17) */
+html[data-skin="v2"] #acctOverlay .modal{background:#26262B} /* every sheet surface = #26262B: lighter than the page, so the top edge reads (design 07-17c, matches Addie + the owner's ref) */
 html[data-skin="v2"] .acctv2head .wash{position:relative;overflow:hidden;background:linear-gradient(180deg,#2C8E57 0%,#20693F 100%);padding:20px 20px 54px}
 html[data-skin="v2"] .acctv2head .wash .acwm{position:absolute;top:-42px;right:-46px;width:180px;height:180px;opacity:.16} /* NOT .wm — a legacy .wm{width:100%} rule grabs that name and re-centers the mark (owner 07-14: corner was off) */
 html[data-skin="v2"] .acctv2head .stats{margin:-40px 18px 0;display:flex;gap:10px;position:relative;z-index:2}
@@ -3299,11 +3303,11 @@ function supTabClick(){ const w=$('supWrap'); if(w&&w.classList.contains('on')){
   // greeting. The apology greeting stays exclusive to picking the problem topic by hand (owner 07-16).
   const st=$('supTab'); if(st&&st.classList.contains('invite')&&document.body.classList.contains('rview')){ openSupportTopic('check_issue','result'); return; }
   openSupport(); } // one tab, two jobs: open, then close from the same thumb spot (owner 07-14)
-function openSupport(){ const el=$('supWrap'); el.classList.add('on'); el.setAttribute('aria-hidden','false'); supStartNew(); }
+function openSupport(){ const el=$('supWrap'); supH_on(); el.classList.add('on'); el.setAttribute('aria-hidden','false'); supStartNew(); }
 // Open support straight into a specific topic (skips the picker). Used by the "report a problem"
 // link on a check's status/result so a bad number or wrong result lands in check_issue in one tap.
-function openSupportTopic(cat,src){ const el=$('supWrap'); el.classList.add('on'); el.setAttribute('aria-hidden','false'); supPickTopic(cat,src); }
-function closeSupport(){ const el=$('supWrap'); el.classList.remove('on'); el.setAttribute('aria-hidden','true');
+function openSupportTopic(cat,src){ const el=$('supWrap'); supH_on(); el.classList.add('on'); el.setAttribute('aria-hidden','false'); supPickTopic(cat,src); }
+function closeSupport(){ const el=$('supWrap'); el.classList.remove('on'); el.setAttribute('aria-hidden','true'); supH_off();
   // iOS wouldn't repaint its chrome strips after the chat's root tint dropped (bottom stayed the chat
   // color until a manual refresh — owner 07-14). Poke it: drop the keyboard, force a root style
   // recalc, and give the page a 1px scroll nudge so Safari re-samples the root color.
@@ -3902,6 +3906,61 @@ function acctIdentity(){
   const initial = name ? name[0].toUpperCase() : (email ? email[0].toUpperCase() : '');
   return { primary, secondary:subs.join('   ·   '), initial };
 }
+// ===== VARIANT H — glass sheets (design 07-17c, copied from app.html openSheet/_restoreSheetLayout) =====
+// A slide-up must be ABSOLUTE page-layer content while open — NEVER fixed — or iOS 26's scroll-edge glass
+// can't ghost it and the top/bottom bars go solid. ONE MutationObserver applies it the instant a sheet
+// overlay flips `.on`, and restores when `.on` drops (the close animations remove `.on` AFTER their
+// slide-down, so the timing is automatic). The OVERLAY drops to absolute at the live scroll (top=scrollY,
+// height=innerHeight) — a transparent page-layer catcher with NO fixed ancestor; the MODAL sits at
+// top=14vh inside it and overshoots ~120px under the bar. Net: the sheet lands at document-y scrollY+14vh
+// exactly like app.html's body-child sheet. body.sheetopen (a) grows the page so the overshoot isn't
+// clipped and (b) dims the CONTENT — never a cover layer. Root colour never touched.
+const SHEET_IDS = new Set(['acctOverlay','buyOverlay','pageOverlay','histOverlay','zones','zmenuOv','emailOv','alertsOv','featOv','scorePostOv']);
+function sheetBodyLock(){ document.documentElement.style.overflow='hidden'; document.body.style.overflow='hidden'; document.body.classList.add('sheetopen'); }
+function sheetBodyMaybeUnlock(){ if(!document.querySelector('.overlay.on,.csheet.on,.supwrap.on')){ document.documentElement.style.overflow=''; document.body.style.overflow=''; document.body.classList.remove('sheetopen'); } }
+function sheetH_on(ov){ if(!ov||ov.__sh) return; ov.__sh=1;
+  sheetBodyLock(); // dim + min-height + scroll lock for EVERY sheet/dialog
+  if(!SHEET_IDS.has(ov.id)) return; // small centered dialogs (auth/checkout/etc.) get the dim only — they stay fixed, no glass needed
+  const m=ov.querySelector('.modal'); if(!m) return;
+  const sc=window.scrollY||document.documentElement.scrollTop||0;
+  ov.style.position='absolute'; ov.style.top=sc+'px'; ov.style.bottom='auto'; ov.style.height=window.innerHeight+'px';
+  m.style.position='absolute'; m.style.left='0'; m.style.top=(window.innerHeight*0.14)+'px'; m.style.bottom='auto'; m.style.height=(window.innerHeight*0.86+120)+'px';
+}
+function sheetH_off(ov){ if(!ov||!ov.__sh) return; ov.__sh=0; const m=ov.querySelector('.modal');
+  if(m){ m.style.position=''; m.style.left=''; m.style.top=''; m.style.bottom=''; m.style.height=''; }
+  ov.style.position=''; ov.style.top=''; ov.style.bottom=''; ov.style.height='';
+  sheetBodyMaybeUnlock();
+}
+(function sheetHObserver(){ try{
+  const mo=new MutationObserver(muts=>{ for(const mu of muts){ const el=mu.target;
+    if(el&&el.nodeType===1&&el.classList&&el.classList.contains('overlay')){
+      if(el.classList.contains('on')) sheetH_on(el); else sheetH_off(el); } } });
+  mo.observe(document.body,{attributes:true,attributeFilter:['class'],subtree:true});
+}catch(_){ }
+})();
+// The compact CALL SHEET (#csheet — a lone element, not overlay>modal) as page-layer content: measure its
+// natural height, anchor its top so the content sits at the viewport bottom, then overshoot ~120px under
+// the bar (empty surface) so the glass ghosts the bottom edge. The translateY slide/drag is unchanged.
+function csheetH_on(){ const el=$('csheet'); if(!el||el.__sh) return; el.__sh=1;
+  const sc=window.scrollY||0, H=el.offsetHeight;
+  el.style.position='absolute'; el.style.top=(sc+window.innerHeight-H)+'px'; el.style.bottom='auto'; el.style.minHeight=(H+120)+'px';
+  sheetBodyLock();
+}
+function csheetH_off(){ const el=$('csheet'); if(!el||!el.__sh) return; el.__sh=0;
+  el.style.position=''; el.style.top=''; el.style.bottom=''; el.style.minHeight='';
+  sheetBodyMaybeUnlock();
+}
+// The MESSENGER (#supWrap — full-height RIGHT panel) as page-layer content: absolute, top=scrollY,
+// height=innerHeight+120, right-anchored; the translateX slide-in is unchanged.
+function supH_on(){ const el=$('supWrap'); if(!el||el.__sh) return; el.__sh=1;
+  const sc=window.scrollY||0;
+  el.style.position='absolute'; el.style.top=sc+'px'; el.style.bottom='auto'; el.style.height=(window.innerHeight+120)+'px';
+  sheetBodyLock();
+}
+function supH_off(){ const el=$('supWrap'); if(!el||!el.__sh) return; el.__sh=0;
+  el.style.position=''; el.style.top=''; el.style.bottom=''; el.style.height='';
+  sheetBodyMaybeUnlock();
+}
 function openAccount(fromPop){
   if(!isAuthed()) return;
   openAccount._pop=!!fromPop;
@@ -3950,7 +4009,7 @@ function openAccount(fromPop){
     // Approved 3C/4A header (owner 07-11 comp, docs/specs/mychecks-header): watermark check top-right,
     // MY CHECKS eyebrow, phone leads big with the email beneath. Sign out lives at the sheet FOOT and
     // the plan reads under Manage plan — neither renders up here anymore.
-    head.innerHTML=`<div style="display:flex;justify-content:center;align-items:flex-end;height:46px;padding-bottom:8px;background:#141419"><span style="width:40px;height:5px;border-radius:999px;background:#3E3E46"></span></div><div class="wash">
+    head.innerHTML=`<div style="display:flex;justify-content:center;align-items:flex-end;height:46px;padding-bottom:8px;background:#26262B"><span style="width:40px;height:5px;border-radius:999px;background:#3E3E46"></span></div><div class="wash">
         <svg class="acwm" width="180" height="180" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#8CF7B4"/><path d="M6.5 12.4 L10.3 16 L17.5 8" stroke="#20693F" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <div style="position:relative"><span style="font-size:10.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.8)">${t('acct.checks','My checks')}</span></div>
         <div style="position:relative;margin-top:16px">
@@ -4875,8 +4934,8 @@ function showCallSheet(){ const el=$('csheet'); if(!el) return; const already=el
   if(!already){ // guarantee the slide UP from the bottom: pin to off-screen, reflow, then release to .on
     el.style.transition='none'; el.style.transform='translateY(112%)'; void el.offsetHeight;
     el.style.transition=''; }
-  el.style.transform=''; el.classList.add('on'); el.setAttribute('aria-hidden','false'); const bd=$('csheetBd'); if(bd) bd.classList.add('on'); }
-function hideCallSheet(){ const el=$('csheet'); if(el){ el.style.transition=''; el.style.transform=''; el.classList.remove('on'); el.setAttribute('aria-hidden','true'); } const bd=$('csheetBd'); if(bd) bd.classList.remove('on'); }
+  csheetH_on(); el.style.transform=''; el.classList.add('on'); el.setAttribute('aria-hidden','false'); const bd=$('csheetBd'); if(bd) bd.classList.add('on'); }
+function hideCallSheet(){ const el=$('csheet'); if(el){ el.style.transition=''; el.style.transform=''; el.classList.remove('on'); el.setAttribute('aria-hidden','true'); csheetH_off(); } const bd=$('csheetBd'); if(bd) bd.classList.remove('on'); }
 // User-initiated dismiss (tap the backdrop / swipe down): also latch CS_DISMISSED so switching modes
 // (or any re-render) doesn't slide it back up until they pick a store again.
 function dismissCallSheet(){ CS_DISMISSED=true; hideCallSheet(); }
