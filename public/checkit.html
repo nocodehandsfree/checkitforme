@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="livebloom-r124" />
+<meta name="x-rev" content="amberbloom-r125" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -298,6 +298,9 @@ __BRAND_HEAD__
   html.tone-out body,body.rview.rv-out{background:linear-gradient(180deg,var(--bg) 0px,#6b2427 110px,#6b2427 230px,var(--bg) 100dvh)}
   html.tone-unk body,body.rview.rv-unk{background:linear-gradient(180deg,var(--bg) 0px,#6c5419 110px,#6c5419 230px,var(--bg) 100dvh)}
   html.tone-soon body,body.rview.rv-soon{background:linear-gradient(180deg,var(--bg) 0px,#6e490f 110px,#6e490f 230px,var(--bg) 100dvh)}
+  /* PENDING ("Getting the answer…") keeps the live view's working amber, statically — the page used
+     to flash back to flat dark between hang-up and the verdict printing (owner 07-17 screenshot). */
+  body.rview.rv-pend{background:linear-gradient(180deg,var(--bg) 0px,color-mix(in srgb,var(--accent,#FFCB05) 30%,var(--bg)) 110px,color-mix(in srgb,var(--accent,#FFCB05) 30%,var(--bg)) 230px,var(--bg) 100dvh)}
   /* NEUTRAL (no verdict): the page background is ONE solid gray = var(--bg) (#1D1D22 in v2), identical
      top to bottom, matching the root strip (owner 07-11 — no gradient, no mismatched shade). Verdict
      tones above override this for result pages. */
@@ -365,15 +368,21 @@ __BRAND_HEAD__
   .hcal{position:relative;flex:0 0 auto;display:flex}
   /* match the "You" pill height exactly (same vertical padding/border, square-ish) */
   #calbtn{width:auto;height:auto;padding:7px 9px;border-radius:20px}
-  /* LIVE CALL BLOOM (CD direction 07-16): while the call runs the page carries the same middle-out
-     bloom geometry as a verdict — dark at the top edge, green behind the store card by ~110px, dark
-     again by one viewport — in the approved green bloom tone (#266440). Header goes transparent like
-     the result view so the bloom flows under the nav. BODY ONLY: the root colour is never touched
-     (v2 keeps #1D1D22 constant — the chrome strips stay quiet; that lane is settled, see ~322).
-     The verdict bloom replaces this the moment the result renders (showResult swaps lview → rview).
-     This supersedes the old #live::before top wash. */
+  /* LIVE CALL BLOOM (owner 07-17, v2 of the idea): the first cut used the in-stock green — it read as
+     a verdict before there was one. Now the bloom rides the BRAND accent mixed dark (a warm amber on
+     Pokémon) and BREATHES slowly while the call runs: traffic-light logic — yellow means we're working,
+     verdict colors mean the answer. Same middle-out geometry as a verdict. The breath lives on a fixed
+     ::before overlay (body's own background stays flat) so nothing repaints but one composited layer;
+     the ROOT colour is never touched (v2 keeps #1D1D22 constant — chrome lane settled, see ~322).
+     The SAME amber then holds statically through "Getting the answer…" (rv-pend, below with the tone
+     rules) so the page never flashes back to flat dark between call end and the verdict printing. */
   #live{position:relative}
-  body.lview,html[data-skin="v2"] body.lview{background:linear-gradient(180deg,var(--bg) 0px,#266440 110px,#266440 230px,var(--bg) 100dvh)}
+  body.lview,html[data-skin="v2"] body.lview{background:transparent} /* the overlay below is the wash; root shows through at the edges */
+  body.lview::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background:linear-gradient(180deg,var(--bg) 0px,color-mix(in srgb,var(--accent,#FFCB05) 30%,var(--bg)) 110px,color-mix(in srgb,var(--accent,#FFCB05) 30%,var(--bg)) 230px,var(--bg) 100dvh);
+    animation:liveBloomBreathe 3.6s ease-in-out infinite}
+  @keyframes liveBloomBreathe{0%,100%{opacity:.55}50%{opacity:1}}
+  @media (prefers-reduced-motion:reduce){body.lview::before{animation:none}}
   body.lview header{background:transparent;border-bottom-color:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
   body.lview main{padding-top:18px}
   /* Header chips sit ON the green like the result view's (same recipe as body.rview.rv-in). */
