@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r138" />
+<meta name="x-rev" content="glassfix-r139" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -3942,21 +3942,23 @@ function sheetH_on(ov){ if(!ov||ov.__sh) return; ov.__sh=1;
   // never expose the page below the sheet surface.
   ov.style.position='absolute'; ov.style.top=sc+'px'; ov.style.bottom='auto'; ov.style.height=(window.innerHeight+400)+'px';
   // Modal: BOTTOM-anchored at its NATURAL content height (capped 86vh). The under-bar surface is a SOLID
-  // BOX-SHADOW below the box, NOT extra height — several sheets carry CSS max-height:86-92vh which silently
-  // clamps an inline height tail to zero (acct/zones/hist "page behind the sheet" bug), and a height tail
-  // also pushes the end of scrollable content under the bar. Shadow = pure paint: immune to both.
-  // Measurement is FEEDBACK-PROOF (inline height cleared before reading), and a ResizeObserver re-anchors
-  // while open so content that grows (kiosk) or shrinks (zone save) never mis-sits the sheet.
-  const place=()=>{ const prev=m.style.height; m.style.height='';
+  // BORDER-BOTTOM: real BOX paint like the working csheet (a box-shadow tail was NOT picked up by the iOS
+  // glass), inline height+maxHeight beat the CSS max-height:86-92vh that silently clamped the old height
+  // tail (acct/zones/hist "page behind the sheet"), and with border-box sizing the border eats the extra
+  // height so scrollable content still ends at the viewport edge — last row stays reachable.
+  // Measurement is FEEDBACK-PROOF (inline height/maxHeight/border cleared before reading), and a
+  // ResizeObserver re-anchors while open so content that grows or shrinks never mis-sits the sheet.
+  const TAIL=120;
+  const place=()=>{ const prev=m.style.height; m.style.height=''; m.style.maxHeight=''; m.style.borderBottom='';
     const natural=Math.min(m.offsetHeight||0, window.innerHeight*0.86)||window.innerHeight*0.86;
-    m.style.position='absolute'; m.style.left='0'; m.style.right='0'; m.style.top=(window.innerHeight-natural)+'px'; m.style.bottom='auto'; m.style.height=natural+'px';
-    m.style.boxShadow='0 24px 48px -12px rgba(0,0,0,.7),0 300px 0 0 #26262B';
+    m.style.position='absolute'; m.style.left='0'; m.style.right='0'; m.style.top=(window.innerHeight-natural)+'px'; m.style.bottom='auto';
+    m.style.height=(natural+TAIL)+'px'; m.style.maxHeight=(natural+TAIL)+'px'; m.style.borderBottom=TAIL+'px solid #26262B';
     return prev!==m.style.height; };
   place();
   try{ ov.__ro=new ResizeObserver(()=>{ if(ov.__placing) return; ov.__placing=1; requestAnimationFrame(()=>{ place(); ov.__placing=0; }); }); ov.__ro.observe(m.firstElementChild||m); }catch(_){ }
 }
 function sheetH_off(ov){ if(!ov||!ov.__sh) return; ov.__sh=0; try{ if(ov.__ro){ ov.__ro.disconnect(); ov.__ro=null; } }catch(_){ } const m=ov.querySelector('.modal');
-  if(m){ m.style.position=''; m.style.left=''; m.style.right=''; m.style.top=''; m.style.bottom=''; m.style.height=''; m.style.boxShadow=''; }
+  if(m){ m.style.position=''; m.style.left=''; m.style.right=''; m.style.top=''; m.style.bottom=''; m.style.height=''; m.style.maxHeight=''; m.style.borderBottom=''; }
   ov.style.position=''; ov.style.top=''; ov.style.bottom=''; ov.style.height='';
   sheetBodyMaybeUnlock();
 }
