@@ -3,7 +3,11 @@
 
 ## 2026-07-17 — janitor sweep (owner review pass)
 - **Cap clarified (owner):** the ~80-line cap is CHECKPOINT DOCS ONLY, never code — added to CLAUDE.md
-  step 3 + the CI docs-lint comment. (Roster PM/Logo/Ideas — owner added those himself; verified present.)
+  step 3 + the CI docs-lint comment.
+- **Roster sync (I'd missed this — owner caught it):** the new lanes were only in the CLAUDE.md roster.
+  Added the 4 missing (**Echo/Voice · Logo · Support · PM**) to `team/README.md` and the 5 missing to
+  `owner/new-chat-prompts.md`. All 3 rosters now list the same 13 lanes. Also killed the stale
+  "Rename status" section in `comps/README.md` (the WEBSITE_COMPS rename is long done).
 - **Pruned** `team/website` 137→49 and `team/admin` 81→80 (finished ✅ batches out; kept the fresh 07-17
   work + open + traps). **Still over the soft cap (their lanes, not this scope):** `team/data` 83,
   `team/design` 97 — flag for CD/DD to prune (warn-only, not the 120 hard-fail).
