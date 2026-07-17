@@ -130,7 +130,8 @@ export class ElevenLabsProvider implements VoiceProvider {
     if (patch.turnTimeout !== undefined) turn.turn_timeout = patch.turnTimeout; // silence (s) before the agent jumps in
     if (patch.softTimeoutSecs !== undefined) {
       // Presence filler on a long pause; -1 disables it. Keeps the line from feeling dead.
-      turn.soft_timeout_config = { timeout_seconds: patch.softTimeoutSecs, message: patch.softTimeoutMsg ?? "Yeah—hi, I'm here!", use_llm_generated_message: false };
+      // No dash in the spoken fallback (copy law — the 07-17 "Yeah—I'm here!" mid-call blurt came from here).
+      turn.soft_timeout_config = { timeout_seconds: patch.softTimeoutSecs, message: patch.softTimeoutMsg ?? "Yeah, hi, I'm here!", use_llm_generated_message: false };
     }
     if (Object.keys(turn).length) conversation_config.turn = turn;
 
