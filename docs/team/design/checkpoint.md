@@ -3,6 +3,18 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-17b — GLASS MAP COMPLETE (owner-verified, /sheetpeek variants A-G)
+- **Three proven laws:** (1) fixed sheets are NEVER ghosted by the scroll-edge glass — Safari treats
+  them as UI; their under-toolbar zone reads as the sheet surface, full stop. (2) PAGE-STATE views
+  (in-flow document content, like zones) get full glass, both edges, automatically. (3) with
+  overlay-dims replaced by content filter-dims, sheets no longer damage the page behind them —
+  open/close safe everywhere (live on site + admin).
+- **Bottom "solid" on dark pages = content contrast**, not a bug: content passes under the bar
+  (pixel-measured); dark-on-dark + Safari blur reads flat; bright content ghosts.
+- **Frost (backdrop-filter) works** but only reads frosted over bright/coloured backdrops.
+- **Per-surface design decision (owner):** sheet (clean, not glassy at bottom) vs page-state (full
+  glass). No third option exists on iOS 26.
+
 ## 2026-07-17 — SLIDE-UP TRANSPARENCY: SOLVED, owner-verified in the /sheetpeek sandbox
 - **THE RULE: never cover the page with a full-screen dim overlay.** A fixed rgba dim layer is the one
   thing that kills iOS 26's scroll-edge glass (the "translucent top/bottom" = Safari drawing page
