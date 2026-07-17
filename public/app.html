@@ -814,7 +814,6 @@
 
   <section id="retailers">
     <div class="k-title">Store intel</div>
-    <div class="k-sub" id="retailers_sub">The store book</div>
     <div id="storeintel"></div>
     <div id="storecoverage" style="display:none;margin-top:14px"></div>
     <div id="storecarries" style="display:none"></div>
@@ -2061,8 +2060,8 @@ async function loadPlans(){
   renderPlans();
 }
 function syncPill(s){ return s==='in_sync'
-  ? '<span style="font-size:10.5px;font-weight:700;color:#4ADE80;background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.3);border-radius:7px;padding:2px 8px">✓ in sync</span>'
-  : '<span style="font-size:10.5px;font-weight:700;color:#FBBF24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.3);border-radius:7px;padding:2px 8px">● pending publish</span>'; }
+  ? '<span style="font-size:10.5px;font-weight:700;color:#4ADE80;background:rgba(74,222,128,.14);border:none;border-radius:999px;padding:4px 9px;white-space:nowrap">✓ in sync</span>'
+  : '<span style="font-size:10.5px;font-weight:700;color:#FBBF24;background:rgba(251,191,36,.14);border:none;border-radius:999px;padding:4px 9px;white-space:nowrap">● pending</span>'; }
 function priceInput(val,oninput,w){ return '<span style="display:inline-flex;align-items:center;background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:12px;padding:0 10px"><span style="color:var(--text-tertiary);font-size:13px">$</span><input type="number" step="0.01" min="0" value="'+((val||0)/100).toFixed(2)+'" oninput="'+oninput+'" style="background:transparent;border:none;outline:none;box-shadow:none;color:var(--text-primary);font-size:14px;font-weight:600;padding:9px 2px;width:'+(w||60)+'px"></span>'; }
 function numInput(val,oninput,w){ return '<input type="number" min="0" step="1" value="'+(val||0)+'" oninput="'+oninput+'" style="border-radius:12px;font-size:14px;font-weight:600;padding:9px 10px;width:'+(w||56)+'px">'; }
 // Per-tier feature matrix: which of the premium features this tier includes. Drives /app/me.features →
@@ -2080,7 +2079,7 @@ function renderPlans(){
   const tierCard=(t,i)=>`<div class="card report">
     <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px">
       <input value="${esch(t.name)}" oninput="PLANS.tiers[${i}].name=this.value;plansTouch(${i})" style="background:transparent;border:none;box-shadow:none;outline:none;color:var(--text-primary);font-size:17px;font-weight:800;padding:2px 0;width:150px">
-      ${syncPill(t.sync)}
+      ${t.sync!=='in_sync'?syncPill(t.sync):''}
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 14px">
       <label style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12px;color:var(--text-muted)">Monthly</span>${priceInput(t.monthlyCents,`PLANS.tiers[${i}].monthlyCents=toCents(this.value);plansTouch(${i})`)}</label>
@@ -2089,9 +2088,9 @@ function renderPlans(){
     </div>
     ${featMatrix(t,i)}
   </div>`;
-  const bundleRow=(b,i)=>`<div class="row" style="justify-content:space-between;align-items:center;gap:10px;padding:10px 0">
-    <span style="display:flex;align-items:center;gap:8px">${numInput(b.checks,`PLANS.payg.bundles[${i}].checks=parseInt(this.value)||0;plansTouch()`,54)}<span style="font-size:13px;color:var(--text-muted)">checks</span></span>
-    <span style="display:flex;align-items:center;gap:10px">${priceInput(b.cents,`PLANS.payg.bundles[${i}].cents=toCents(this.value);plansTouch()`)}<span style="font-size:11px;color:var(--text-tertiary);width:74px;text-align:right">${b.checks?('~'+dollars(Math.round(b.cents/b.checks))+'/ea'):''}</span>${syncPill(b.sync)}</span>
+  const bundleRow=(b,i)=>`<div class="row" style="justify-content:space-between;align-items:center;gap:8px;padding:7px 0;flex-wrap:wrap">
+    <span style="display:flex;align-items:center;gap:7px;flex:0 0 auto">${numInput(b.checks,`PLANS.payg.bundles[${i}].checks=parseInt(this.value)||0;plansTouch()`,46)}<span style="font-size:12.5px;color:var(--text-muted)">checks</span></span>
+    <span style="display:flex;align-items:center;gap:8px;flex:0 0 auto">${priceInput(b.cents,`PLANS.payg.bundles[${i}].cents=toCents(this.value);plansTouch()`,56)}<span style="font-size:11px;color:var(--text-tertiary);min-width:64px;text-align:right">${b.checks?('~'+dollars(Math.round(b.cents/b.checks))+'/ea'):''}</span>${b.sync!=='in_sync'?syncPill(b.sync):''}</span>
   </div>`;
   document.getElementById('plans_root').innerHTML=`
     <div class="k-title">Plans</div>
@@ -2985,15 +2984,8 @@ async function loadCoverage(){
   el.style.display='';
   const TIP="Coverage: the % of the retail chains we know carry Pokémon at MSRP whose store locations we've loaded. It measures how many of those chains' stores we cover nationally. It does NOT mean every store has Pokémon in stock right now. A \"spotty\" (tier-3) chain carries it, but only at some locations.";
   const f=n=>Number(n||0).toLocaleString('en-US');
-  const gaps=d.gaps||[];
-  const gapRows=gaps.map(g=>`<div class="carryrow"><span>${esch(g.chain)} <span class="meta" style="text-transform:none;letter-spacing:0">${f(g.ours)}/${f(g.national)}</span></span><b style="color:${g.pct>=90?'var(--green)':g.pct>=70?'#FBBF24':'#ff8a8a'}">${g.pct}%</b></div>`).join('');
   el.innerHTML=
-    `<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">`
-      +`<div style="font-size:30px;font-weight:800;letter-spacing:-.5px;color:var(--green);line-height:1">${d.coveragePct}%</div>`
-      +`<div class="name" data-tip="${esch(TIP)}" style="margin:0">MSRP coverage</div>`
-    +`</div>`
-    +`<div class="meta" style="margin-top:5px;text-transform:none;letter-spacing:0">${f(d.loaded)} of ${f(d.national)} stores loaded across ${d.msrpChains} chains that carry Pokémon at MSRP (tiers 3–5).</div>`
-    ;
+    `<div class="repline"><span class="rl" data-tip="${esch(TIP)} ${f(d.loaded)} of ${f(d.national)} stores across ${d.msrpChains} chains.">MSRP coverage</span><b style="color:var(--green)">${d.coveragePct}%</b></div>`;
 }
 // The database at a glance — DB-wide totals (exact), independent of the current search.
 async function loadStoreIntel(){
@@ -3010,7 +3002,7 @@ async function loadStoreIntel(){
   const cw=document.getElementById('storecarries');
   if(cw){ if(items.length){ cw.style.display='';
       cw.innerHTML=`<div class="k-eyebrow">Carry each product · of ${fmt(d.total)}</div>`
-        +items.map(([p,n])=>`<div class="repline"><span class="rl">${prodMark(p,16)} ${esch(p)}</span><b>${fmt(n)}</b></div>`).join('');
+        +items.map(([p,n])=>`<div class="repline"><span class="rl">${prodIcon(p,16)}${esch(p)}</span><b>${fmt(n)}</b></div>`).join('');
     } else cw.style.display='none'; }
   // Fill the store-type filter from the full chain-type list, and the product filter from the carry list.
   if(Array.isArray(d.types)&&d.types.length) fillTypeFilter(d.types);
@@ -4716,6 +4708,7 @@ const FLAG_GROUPS=[
 ];
 const esch=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 // Product mark: show a known product's logo instead of its plain name (Pokémon for now).
+function prodIcon(name,size){ const m=prodMark(name,size); return /^<img/.test(m)?m+' ':''; }
 function prodMark(name,size){
   size=size||15; const s=String(name==null?'':name).trim();
   const img=(src,alt)=>`<img src="${src}" alt="${alt}" title="${alt}" style="height:${size}px;width:${size}px;vertical-align:-3px;object-fit:contain;display:inline-block">`;
@@ -5071,6 +5064,10 @@ async function loadRestock(){
   const d=await api('/api/admin/restock-intel');
   if(!d||d.error){ net.innerHTML='<div class="empty">No restock data yet. Fills in as confirmed calls land.</div>'; return; }
   const t=d.totals||{};
+  // Nothing learned yet → ONE clean empty state, not a page of zeros (owner: hide until real data).
+  if(!((d.shipmentDays||[]).length||t.confirms||(d.answerFunnel&&d.answerFunnel.dialed))){
+    net.innerHTML='<div class="empty">No restock intel yet. It builds itself from confirmed calls.</div>'; return;
+  }
   const tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   const dMax=Math.max(1,...(d.shipmentDays||[]).map(x=>x.n));
   const fMax=Math.max(1,...(d.productForms||[]).map(x=>x.n));
@@ -5127,7 +5124,6 @@ async function loadRestock(){
     +peek('Restock days',topDay||'—','ds_rsdays')
     +peek("What's landing",topForm||'—','ds_rsland')
     +`<div class="k-eyebrow">By store</div>`+storeRows
-    +`<div class="k-note">Learned from real calls. Tap a store for its breakdown.</div>`
     +`<div id="rs_details" style="display:none"><div id="ds_rsfunnel">${funnelBody}</div><div id="ds_rsdays">${daysBody}</div><div id="ds_rsland">${landingBody}</div></div>`;
 }
 async function openStoreRestock(id){
@@ -5180,11 +5176,12 @@ async function loadGwPlansMirror(){
   const d=await api('/api/admin/plans');
   if(!d||d.error||!Array.isArray(d.tiers)){ box.innerHTML=''; return; }
   const money=c=>'$'+((c||0)/100).toFixed(2);
-  box.innerHTML=`<div class="k-eyebrow" style="margin-top:18px">Memberships · set in Plans</div>`
-    +d.tiers.map(t=>`<div class="repline"><span class="rl">${esch(t.name)}</span><b>${money(t.monthlyCents)}/mo · ${t.checksPerMonth} checks</b></div>`).join('')
-    +((d.payg&&Array.isArray(d.payg.bundles)&&d.payg.bundles.length)?`<div class="k-eyebrow">PAYG bundles · set in Plans</div><div class="k-pills" style="margin-top:0">`
-      +d.payg.bundles.map(b=>`<span class="k-pill">${b.checks} checks · ${money(b.cents)}</span>`).join('')+`</div>`:'')
-    +`<a class="goto" href="#plans" onclick="showSection('plans');return false" style="padding:10px 0 0">Edit them in Plans →</a>`;
+  const nb=(d.payg&&Array.isArray(d.payg.bundles))?d.payg.bundles.length:0;
+  box.innerHTML=`<button class="peek" style="margin-top:18px" onclick="showSection('plans')">
+      <span class="pk-main"><span class="pk-t" style="display:block">Memberships and bundles</span><span class="pk-m" style="display:block">Set in Plans</span></span>
+      <span class="pk-fact">${d.tiers.length} tiers · ${nb} bundles</span>
+      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>`;
 }
 async function savePolicyForm(){
   const n=id=>{const x=Number(document.getElementById(id).value);return isFinite(x)?x:undefined;};
