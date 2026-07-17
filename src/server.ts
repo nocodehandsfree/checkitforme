@@ -5778,6 +5778,20 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
     const acct = (await db.select().from(accounts).where(eq(accounts.clerkUserId, finder.userId)))[0];
     if (acct?.callerId) from = acct.callerId; // only set after Twilio caller-ID verification
   }
+  // INSTANT CONNECTION for direct-answer stores (owner 07-17: "some clerks say Bob at the very
+  // beginning"). No menu recipe, no phone tree, no learned connect timer → the store greets a live
+  // person the moment they pick up, so the first breath must be heard. Route these down the
+  // EL-native outbound path (same engine as scheduled checks): audio flows AT answer, the whole
+  // greeting including a name-first "This is Bob" reaches the agent. Menu/tree stores KEEP the
+  // bridge — the cheap-nav cost model is untouched. Kept on the bridge too: calls dialing AS the
+  // finder's verified caller-ID (the native path can only dial from our own line). Ear-listen
+  // (owner-only tool) is unavailable on native calls; the customer live transcript is unaffected.
+  const direct = !v.dtmf && !v.say && !(v.dynamicVars.phone_tree || "").trim() && !v.connectAtSec && !from;
+  if (direct) {
+    const r = await triggerCall({ retailerId, categoryId: primary, mode: "restock", specificProduct, finderUserId: finder?.userId ?? undefined, isPrivate: finder?.isPrivate ?? false, kioskMode });
+    if (r.providerCallId) return { room: r.providerCallId };
+    return { error: ("error" in r && r.error) ? String(r.error) : "call did not start" };
+  }
   // Log the call once it connects (we get the ElevenLabs conversation id): insert the PRIMARY result
   // row; ingest fans out each extra line into its own row from the per-category extraction.
   return placeBridgeCall(v.retailer.phone, v.dynamicVars, (convId) => {
@@ -5803,6 +5817,9 @@ app.get("/pub/bridge/:room", (c) => {
       callProgress: s ? { status: s.status === "dialing" ? "ringing" : s.status === "live" ? "in-progress" : "completed", at: Date.now() } : null,
     });
   }
+  // Instant-connection (EL-native) call: the room IS the ElevenLabs conversation id — resolve it to
+  // itself so the live view's transcript poll engages immediately (no bridge, no Twilio callbacks).
+  if (room.startsWith("conv")) return c.json({ conversationId: room, wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST, callProgress: null });
   // callProgress = the REAL Twilio state (ringing/answered/…) so the live timeline shows what's actually
   // happening, not an inferred guess. null until the first status callback lands.
   return c.json({ conversationId: bridgeConversationId(room), wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST, callProgress: roomCallProgress.get(room) ?? null });
