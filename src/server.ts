@@ -5786,7 +5786,13 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
   // bridge — the cheap-nav cost model is untouched. Kept on the bridge too: calls dialing AS the
   // finder's verified caller-ID (the native path can only dial from our own line). Ear-listen
   // (owner-only tool) is unavailable on native calls; the customer live transcript is unaffected.
-  const direct = !v.dtmf && !v.say && !(v.dynamicVars.phone_tree || "").trim() && !v.connectAtSec && !from;
+  // "Direct" = no mechanical nav (keypad recipe, spoken recipe, learned connect timer). The
+  // phone_tree PROSE alone must not disqualify: direct stores often carry a note like "a live person
+  // answers directly, no phone menu" (the Fun store does — 07-17 bug: that text kept it OFF the
+  // instant path). Only tree text that actually describes a menu keeps a store on the bridge.
+  const treeTxt = (v.dynamicVars.phone_tree || "").trim();
+  const treeSaysDirect = !treeTxt || /answers? directly|no (phone )?menu|no ivr|straight to a person/i.test(treeTxt);
+  const direct = !v.dtmf && !v.say && treeSaysDirect && !v.connectAtSec && !from;
   if (direct) {
     const r = await triggerCall({ retailerId, categoryId: primary, mode: "restock", specificProduct, finderUserId: finder?.userId ?? undefined, isPrivate: finder?.isPrivate ?? false, kioskMode });
     if (r.providerCallId) {
