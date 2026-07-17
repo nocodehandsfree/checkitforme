@@ -325,7 +325,7 @@
   .peek .pk-t{font-size:15px}
   .peek .pk-fact{font-size:15px}
   /* THE dropdown as a pill (filters atop logs/lists) — auto width, raised, green chevron. */
-  select.k-filter{width:auto;max-width:60vw;background-color:transparent;background-image:linear-gradient(180deg,#2E2E35,#25252B),url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%234ADE80' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");background-origin:border-box;background-repeat:no-repeat,no-repeat;background-position:center,right 13px center;border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:999px;padding:9px 32px 9px 15px;font-size:12px;font-weight:700;color:rgba(255,255,255,.85)}
+  select.k-filter{width:auto;max-width:60vw;background-color:transparent;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%234ADE80' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>"),linear-gradient(180deg,#2E2E35,#25252B);background-origin:border-box;background-repeat:no-repeat,no-repeat;background-position:right 13px center,center;border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:999px;padding:9px 32px 9px 15px;font-size:12px;font-weight:700;color:rgba(255,255,255,.85)}
   .k-filters{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
   /* THE raised key — Show more, secondary page actions. Uppercase, letterspaced. */
   .k-key{display:block;margin:18px auto 0;background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:999px;padding:12px 26px;font-size:12.5px;font-weight:800;letter-spacing:.13em;color:rgba(255,255,255,.85);cursor:pointer;font-family:inherit;transition:transform .08s}
@@ -349,7 +349,7 @@
   .k-hero .n{font-size:34px;font-weight:900;letter-spacing:-1.2px;font-variant-numeric:tabular-nums;color:#fff}
   .k-hero .l{font-size:13px;font-weight:600;color:#8A8A96}
   .k-wells{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px}
-  .k-well{background:var(--terminal);border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:12px 6px;text-align:center}
+  .k-well{background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:12px 6px;text-align:center}
   .k-well .n{font-size:19px;font-weight:900;letter-spacing:-.4px;font-variant-numeric:tabular-nums;color:#fff}
   .k-well .n.g{color:var(--green)} .k-well .n.a{color:#F59E0B} .k-well .n.r{color:var(--red)}
   .k-well .l{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8A8A96;margin-top:3px}
@@ -773,14 +773,16 @@
     <div id="users_list"><div class="empty">Loading…</div></div>
   </section>
   <section id="restock">
-    <div class="k-title">Restock intel<span data-tip="When stores restock, and what's landing"></span></div>
+    <div class="k-title">Restock intel</div>
+    <div class="k-sub">When stores restock and what's landing</div>
     <div id="restock_net"><div class="empty">Loading…</div></div>
   </section>
   <section id="alerts">
-    <div class="k-title">Alerts<span data-tip="Every message we send customers, and every send"></span></div>
+    <div class="k-title">Alerts</div>
+    <div class="k-sub">Customer messages and sends</div>
     <div id="al_status" style="margin-top:12px"></div>
     <div id="al_rollup"></div>
-    <div class="k-eyebrow">Your in stock ping<span data-tip="Fires when a call confirms stock · pick where it lands"></span></div>
+    <div class="k-eyebrow">Your in stock ping</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <select id="oa_channel" class="k-filter" onchange="saveOwnerAlert()">
         <option value="email">Email</option>
@@ -797,23 +799,26 @@
     <div id="al_log" class="meta">Loading…</div>
   </section>
   <section id="workflows">
-    <div class="k-title">Workflows<span data-tip="A workflow is an opener set, a voice and a persona · the default powers every store unless a chain overrides · new ones are built in the Designer"></span></div>
+    <div class="k-title">Workflows</div>
+    <div class="k-sub">Opener set + voice + persona</div>
     <div id="wfm_list" style="margin-top:16px"><div class="empty">Loading…</div></div>
     <button class="k-cta" onclick="showSection('designer')"><span>NEW WORKFLOW →</span></button>
   </section>
   <section id="testing">
-    <div class="k-title">Testing<span data-tip="Owner-only Fun store calls · never counted in real-store stats"></span></div>
+    <div class="k-title">Testing</div>
+    <div class="k-sub" id="testing_sub">Fun store test calls</div>
     <div id="testing_src"></div>
     <div id="testing_summary"></div>
     <div id="testing_log"><div class="empty">Loading…</div></div>
   </section>
 
   <section id="retailers">
-    <div class="k-title">Store intel<span data-tip="The store book, at a glance"></span></div>
+    <div class="k-title">Store intel</div>
+    <div class="k-sub" id="retailers_sub">The store book</div>
     <div id="storeintel"></div>
+    <div id="storecoverage" style="display:none;margin-top:14px"></div>
     <div id="storecarries" style="display:none"></div>
     <div id="storereports" style="display:none"><div id="rep_body"></div></div>
-    <div id="storecoverage" style="display:none;margin-top:14px"></div>
   </section>
 
   <section id="search">
@@ -864,7 +869,8 @@
   </section>
 
   <section id="add">
-    <div class="k-title">Add a store<span data-tip="Goes live for customers as soon as it saves"></span></div>
+    <div class="k-title">Add a store</div>
+    <div class="k-sub">Live for customers when it saves</div>
     <div style="height:12px"></div>
     <div class="card">
       <div class="grid2">
@@ -895,7 +901,8 @@
   </section>
 
   <section id="feedback">
-    <div class="k-title">Feedback<span data-tip="What customers tapped after an unclear check · correcting fixes the call record"></span></div>
+    <div class="k-title">Feedback</div>
+    <div class="k-sub">What customers saw after an unclear check</div>
     <div id="fb_src"></div>
     <div id="fb_summary"></div>
     <div id="fb_unclear"></div>
@@ -984,8 +991,9 @@
   </section>
 
   <section id="growth">
-    <div class="k-title">Policy<span data-tip="Flags and pricing for the whole app · the queues hold live customer requests"></span></div>
-    <div class="k-eyebrow">Feature flags<span data-tip="Saves on tap · live for every customer immediately"></span></div>
+    <div class="k-title">Policy</div>
+    <div class="k-sub">Flags, pricing and customer queues</div>
+    <div class="k-eyebrow">Feature flags · live on tap</div>
     <div id="gw_flags" class="meta">Loading…</div>
     <div class="k-eyebrow">Pricing and rewards</div>
     <div id="gw_pricing" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
@@ -1002,7 +1010,8 @@
   </section>
 
   <section id="settings">
-    <div class="k-title">App<span data-tip="App wide defaults · chain overrides live in Chains"></span></div>
+    <div class="k-title">App</div>
+    <div class="k-sub">App wide defaults</div>
     <div style="height:16px"></div>
     <div class="peek static">
       <div class="pk-main"><div class="pk-t">Customers hear calls live</div><div class="pk-m">Streams call audio and a hang up button</div></div>
@@ -1182,7 +1191,8 @@
   </section>
 
     <section id="trees">
-    <div style="display:flex;align-items:baseline;gap:10px"><div class="k-title">Chains<span data-tip="Per-chain settings and the mapped phone route · tap a chain to open it"></span></div><div class="k-sub" id="set_pickcount" style="margin-top:0"></div></div>
+    <div class="k-title">Chains</div>
+    <div class="k-sub" id="set_pickcount">Per-chain settings and phone routes</div>
     
     <div class="stats" id="tr_stats" style="margin:14px 0 0"></div>
     <button class="peek" style="margin-top:12px" onclick="sheetFromHolder('ds_abcd','How a call flows','Alpha keypad · Bravo voice menu · Charlie live agent · Delta recorded clips')">
@@ -1250,7 +1260,8 @@
     </section>
 
     <section id="statuses">
-    <div class="k-title">Statuses<span data-tip="The verdicts customers see · edits go live instantly"></span></div>
+    <div class="k-title">Statuses</div>
+    <div class="k-sub">The verdicts customers see</div>
     <div id="st_list" style="margin-top:16px"><div class="empty">Loading…</div></div>
     <button class="k-cta" onclick="sheetFromHolder('ds_staddform','New status','Display is instant. Detecting it on calls needs the extraction wired.')"><span>NEW STATUS →</span></button>
     <div id="st_details" style="display:none">
@@ -1277,7 +1288,8 @@
   </section>
 
   <section id="fun">
-    <div class="k-title">Fun<span data-tip="Rings your own phone in any voice · never touches store calls"></span></div>
+    <div class="k-title">Fun</div>
+    <div class="k-sub">Rings your own phone · never store calls</div>
     <div style="height:16px"></div>
     <div class="card">
       <div class="name">Delta <span class="meta" style="font-weight:500">&nbsp;· recorded-agent rehearsal</span><span data-tip="Runs a whole check on recorded clips, no live agent · go off script to hear the barge-in"></span></div>
@@ -2042,8 +2054,8 @@ async function loadPlans(){
 function syncPill(s){ return s==='in_sync'
   ? '<span style="font-size:10.5px;font-weight:700;color:#4ADE80;background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.3);border-radius:7px;padding:2px 8px">✓ in sync</span>'
   : '<span style="font-size:10.5px;font-weight:700;color:#FBBF24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.3);border-radius:7px;padding:2px 8px">● pending publish</span>'; }
-function priceInput(val,oninput,w){ return '<span style="display:inline-flex;align-items:center;background:var(--terminal);border:1px solid var(--border-strong);border-radius:9px;padding:0 8px"><span style="color:var(--text-tertiary);font-size:13px">$</span><input type="number" step="0.01" min="0" value="'+((val||0)/100).toFixed(2)+'" oninput="'+oninput+'" style="background:transparent;border:none;outline:none;color:var(--text-primary);font-size:14px;font-weight:600;padding:8px 2px;width:'+(w||60)+'px"></span>'; }
-function numInput(val,oninput,w){ return '<input type="number" min="0" step="1" value="'+(val||0)+'" oninput="'+oninput+'" style="background:var(--terminal);border:1px solid var(--border-strong);border-radius:9px;color:var(--text-primary);font-size:14px;font-weight:600;padding:8px;width:'+(w||56)+'px">'; }
+function priceInput(val,oninput,w){ return '<span style="display:inline-flex;align-items:center;background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:12px;padding:0 10px"><span style="color:var(--text-tertiary);font-size:13px">$</span><input type="number" step="0.01" min="0" value="'+((val||0)/100).toFixed(2)+'" oninput="'+oninput+'" style="background:transparent;border:none;outline:none;box-shadow:none;color:var(--text-primary);font-size:14px;font-weight:600;padding:9px 2px;width:'+(w||60)+'px"></span>'; }
+function numInput(val,oninput,w){ return '<input type="number" min="0" step="1" value="'+(val||0)+'" oninput="'+oninput+'" style="border-radius:12px;font-size:14px;font-weight:600;padding:9px 10px;width:'+(w||56)+'px">'; }
 // Per-tier feature matrix: which of the premium features this tier includes. Drives /app/me.features →
 // the consumer app hides a module when its key is OFF here (comp always gets all). exact_products also
 // recomputes premiumAsks server-side, so unchecking it turns off the exact-product asks too.
@@ -2058,7 +2070,7 @@ function renderPlans(){
   const anyPending=PLANS.tiers.some(t=>t.sync!=='in_sync')||PLANS.payg.bundles.some(b=>b.sync!=='in_sync');
   const tierCard=(t,i)=>`<div class="card report">
     <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px">
-      <input value="${esch(t.name)}" oninput="PLANS.tiers[${i}].name=this.value;plansTouch(${i})" style="background:transparent;border:none;border-bottom:1px solid var(--border);outline:none;color:var(--text-primary);font-size:17px;font-weight:800;padding:2px 0;width:150px">
+      <input value="${esch(t.name)}" oninput="PLANS.tiers[${i}].name=this.value;plansTouch(${i})" style="background:transparent;border:none;box-shadow:none;outline:none;color:var(--text-primary);font-size:17px;font-weight:800;padding:2px 0;width:150px">
       ${syncPill(t.sync)}
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 14px">
@@ -2068,23 +2080,18 @@ function renderPlans(){
     </div>
     ${featMatrix(t,i)}
   </div>`;
-  const bundleRow=(b,i)=>`<div class="row" style="justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--border-dashed)">
+  const bundleRow=(b,i)=>`<div class="row" style="justify-content:space-between;align-items:center;gap:10px;padding:10px 0">
     <span style="display:flex;align-items:center;gap:8px">${numInput(b.checks,`PLANS.payg.bundles[${i}].checks=parseInt(this.value)||0;plansTouch()`,54)}<span style="font-size:13px;color:var(--text-muted)">checks</span></span>
     <span style="display:flex;align-items:center;gap:10px">${priceInput(b.cents,`PLANS.payg.bundles[${i}].cents=toCents(this.value);plansTouch()`)}<span style="font-size:11px;color:var(--text-tertiary);width:74px;text-align:right">${b.checks?('~'+dollars(Math.round(b.cents/b.checks))+'/ea'):''}</span>${syncPill(b.sync)}</span>
   </div>`;
   document.getElementById('plans_root').innerHTML=`
-    <div class="hero" style="margin-bottom:16px">
-      <div class="row" style="justify-content:space-between;align-items:center;gap:12px">
-        <div><div class="hero-eyebrow">Pricing</div>
-          <div style="font-size:13px;color:var(--text-muted);margin-top:6px;line-height:1.5">Edit tiers, then Publish to Stripe. <span style="color:#8A8A96;font-weight:700;cursor:pointer" onclick="openSheet('How pricing works','', '<div class=\'meta\' style=\'line-height:1.7\'>This page is the source of truth for every price. Edit a tier or the pay as you go ladder, then Publish to Stripe.<br><br>Subscription checks reset each cycle with no rollover. PAYG credits never expire.<br><br>Sanity check margins in Calc before publishing.</div>')">More →</span></div>
-        </div>
-        <button type="button" onclick="publishPlans()" ${anyPending?'':'disabled'} style="background:${anyPending?'linear-gradient(180deg,#5BEA93 0%,#34C268 100%)':'var(--surface-2)'};color:${anyPending?'#06210f':'var(--text-tertiary)'};border:none;font-weight:800;font-size:14px;padding:12px 20px;border-radius:12px;cursor:${anyPending?'pointer':'default'};white-space:nowrap;box-shadow:${anyPending?'0 8px 18px -8px rgba(52,197,107,.5)':'none'}">${anyPending?'Publish to Stripe':'All in sync'}</button>
-      </div>
-    </div>
-    <div style="font-size:11px;letter-spacing:.1em;color:var(--text-tertiary);font-weight:700;margin:4px 2px 10px">SUBSCRIPTION TIERS</div>
+    <div class="k-title">Plans</div>
+    <div class="k-sub">${anyPending?'Edits pending · publish to make them live on Stripe':'All in sync with Stripe'}</div>
+    ${anyPending?`<button class="k-cta" style="margin:14px 0 4px" onclick="publishPlans()"><span>PUBLISH TO STRIPE →</span></button>`:''}
+    <div class="k-eyebrow">Subscription tiers</div>
     ${PLANS.tiers.map(tierCard).join('')}
-    <div style="font-size:11px;letter-spacing:.1em;color:var(--text-tertiary);font-weight:700;margin:18px 2px 10px">PAY AS YOU GO · one-time bundles</div>
-    <div class="card report">${PLANS.payg.bundles.map(bundleRow).join('')}</div>`;
+    <div class="k-eyebrow">Pay as you go · one-time bundles</div>
+    <div class="card">${PLANS.payg.bundles.map(bundleRow).join('')}</div>`;
 }
 // A local edit flips the row to "pending" and auto-saves the config (draft); Publish pushes to Stripe.
 // `fast` (checkbox flips) saves near-instantly — the 600ms debounce is for typing, and an owner who
@@ -2456,7 +2463,6 @@ let DSTEP=1, DMAX=1;
 const DLABELS=['Voice','Voice feel','Script','Persona','Rotation','Test','Save workflow'];
 function dRender(){
   const rail=document.getElementById('d_rail');
-  const DSUBS=['Pick or clone the voice that makes the calls','How the voice sounds on the line','The openers this call rotates through','A named personality composed into the call','What rotates per call','Ring yourself before you save','Name it and save the workflow'];
   if(rail){
     // Comp 2c rail: done = filled green check · current = numbered ring with a soft glow · later = carved lock.
     const dot=n=>{
@@ -2473,7 +2479,7 @@ function dRender(){
     rail.innerHTML=DLABELS.map((_,i)=>dot(i+1)+(i<DLABELS.length-1?seg(i+1):'')).join('');
   }
   document.querySelectorAll('#d_steps .dstep').forEach(el=>{ el.style.display = Number(el.dataset.step)===DSTEP ? '' : 'none'; });
-  const lbl=document.getElementById('d_nav_label'); if(lbl) lbl.innerHTML='Step '+DSTEP+' \u00b7 '+esch(DLABELS[DSTEP-1])+'<span data-tip="'+esch(DSUBS[DSTEP-1]||'')+'"></span>';
+  const lbl=document.getElementById('d_nav_label'); if(lbl) lbl.textContent=DLABELS[DSTEP-1];
   const bk=document.getElementById('d_back'); if(bk) bk.style.visibility=DSTEP>1?'visible':'hidden';
   const fw=document.getElementById('d_fwd'), fl=document.getElementById('d_fwd_label');
   if(fw){ if(DSTEP>=7){ fw.style.visibility='hidden'; } else { fw.style.visibility='visible'; if(fl) fl.textContent='Next: '+DLABELS[DSTEP]; } }
@@ -2745,7 +2751,7 @@ async function loadFbUnclear(){
     const all=(rc&&Array.isArray(rc.rows)?rc.rows:[]).filter(r=>r.statusKey==='no_clear_answer');
     const unk=all.slice(0,8); // a strip, not a wall — the Calls log holds the rest
     if(!unk.length){ el.innerHTML=''; return; }
-    el.innerHTML=`<div class="k-eyebrow">Unclear checks<span data-tip="Fun included on purpose · the god view filters them out"></span></div><div class="k-pills" style="margin-top:0">${unk.map(r=>`<span class="k-pill" style="color:#F4D03F">${esch(String(r.retailer||('#'+r.retailerId)).split('—')[0].trim())} · ${agoTs(r.startedAt)}</span>`).join('')}${all.length>8?`<span class="k-pill">+${all.length-8} more in Calls</span>`:''}</div>`;
+    el.innerHTML=`<div class="k-eyebrow">Unclear checks · Fun included</div><div class="k-pills" style="margin-top:0">${unk.map(r=>`<span class="k-pill" style="color:#F4D03F">${esch(String(r.retailer||('#'+r.retailerId)).split('—')[0].trim())} · ${agoTs(r.startedAt)}</span>`).join('')}${all.length>8?`<span class="k-pill">+${all.length-8} more in Calls</span>`:''}</div>`;
   }catch(_){ el.innerHTML=''; }
 }
 // Review/correct write to the SOURCE the row came from — a staging disagreement fixes the staging record.
@@ -3495,7 +3501,7 @@ function filterChainPicker(){
   });
   const more=document.getElementById('set_more');
   if(more){ more.style.display=hidden?'':'none'; more.textContent='SHOW '+Math.min(100,hidden)+' MORE'; }
-  const cnt=document.getElementById('set_pickcount'); if(cnt) cnt.textContent=(shown+hidden)+' total';
+  const cnt=document.getElementById('set_pickcount'); if(cnt) cnt.textContent=(shown+hidden)+' chains · settings and phone routes';
 }
 // Pick a row → load it into the editor below (via the hidden set_chain the editor already reads).
 function pickChainRow(id){
@@ -4604,7 +4610,18 @@ async function wfmDelete(wi){ const w=WF.list[wi]; if(!w) return; if(!confirm('D
 // Reset this workflow's opener rotation so the next call to it starts at opener #1 (predictable testing).
 async function wfmResetRotation(wi){ const w=WF.list[wi]; if(!w) return; const r=await api('/api/admin/reset-rotation',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({workflow:w.name})}); toast((r&&r.ok)?'Rotation reset · next call uses opener #1':'Could not reset rotation'); }
 // Testing tab — the Fun-store test-call log (workflow · opener used · status · timing). Owner-only data.
-function tcStatusPill(key){ const F=({in_stock:['In stock','#4ADE80'],not_in_stock:['Not in','#EF4444'],sold_out:['Sold out','#EF4444'],does_not_sell:["Doesn't carry",'#EF4444'],no_clear_answer:['Maybe','#FBBF24'],too_busy:['Too busy','#FBBF24'],left_on_hold:['On hold','#FBBF24'],nobody_answered:['No answer','#9CA3AF'],closed:['Closed','#9CA3AF'],failed:['Failed','#FBBF24'],completed:['Done','#9CA3AF'],admin_hangup:['Canceled','#9CA3AF']})[key]||[key||'—','#9CA3AF']; return `<span style="font-size:9.5px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:${F[1]};background:${F[1]}24;border-radius:999px;padding:4px 10px;white-space:nowrap">${esch(F[0])}</span>`; }
+// Status = the site's icon chip (§5.7), never a colored word: ✓ in · ✕ out · ? unclear · phone gray.
+function tcIcon(key){
+  const I={
+    check:'<path d="M5 12l5 5 9-10"/>', x:'<path d="M6 6l12 12M18 6L6 18"/>',
+    q:'<path d="M9.2 9a3 3 0 0 1 5.8 1c0 2-2.6 2.3-2.6 4"/><path d="M12 17.5h.01"/>',
+    phone:'<path d="M5 4.5h3.4l1.4 4-2.1 1.5a12 12 0 0 0 5.8 5.8l1.5-2.1 4 1.4V18a2 2 0 0 1-2.2 2A15.5 15.5 0 0 1 3 6.7 2 2 0 0 1 5 4.5z"/><path d="M4 20L20 4"/>' };
+  const M={in_stock:['check','#4ADE80','In stock'],not_in_stock:['x','#EF4444','Not in'],sold_out:['x','#EF4444','Sold out'],does_not_sell:['x','#EF4444',"Doesn't carry"],
+    no_clear_answer:['q','#FBBF24','Unclear'],too_busy:['q','#FBBF24','Too busy'],left_on_hold:['q','#FBBF24','On hold'],failed:['q','#FBBF24','Failed'],
+    nobody_answered:['phone','#9CA3AF','No answer'],closed:['phone','#9CA3AF','Closed'],completed:['check','#9CA3AF','Done'],admin_hangup:['x','#9CA3AF','Canceled']};
+  const [ic,c,label]=M[key]||['q','#9CA3AF',key||'—'];
+  return `<span title="${esch(label)}" style="width:26px;height:26px;border-radius:50%;background:${c}26;display:grid;place-items:center;flex:0 0 auto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${I[ic]}</svg></span>`;
+}
 async function loadTesting(){
   const sum=document.getElementById('testing_summary'), log=document.getElementById('testing_log');
   if(!sum||!log) return;
@@ -4621,13 +4638,15 @@ async function loadTesting(){
   const t=v=>v!=null?secsFmt(v):'—';
   log.innerHTML=((d.rows||[]).map(r=>{
         const op=r.opener||{};
-        // The opener that repeated on every row is now a single letter (comp 2b).
         const m=String(op.label||'').match(/(\d+)/);
-        const letter=m?String.fromCharCode(64+Math.min(26,Math.max(1,Number(m[1])))):(op.said?'A':'·');
-        const dt=r.started?new Date(r.started*1000).toLocaleDateString([],{month:'short',day:'numeric'}):'—';
-        return `<div class="peek static" style="display:block">
-          <div style="display:flex;align-items:center;gap:9px"><div style="font-size:14px;font-weight:700">${r.workflow?esch(r.workflow):'<span style="color:#8A8A96;font-weight:500">no workflow</span>'}</div>${tcStatusPill(r.status)}<div style="margin-left:auto;font-size:11px;font-weight:600;color:#8A8A96;white-space:nowrap">${esch(dt)}</div></div>
-          <div style="font-family:ui-monospace,monospace;font-size:11.5px;color:#8A8A96;margin-top:8px"><span style="color:#FFCB05;font-weight:800" title="${esch(op.said||'opener not captured')}">${letter}</span> · human <span style="color:#CDCDD8">${t(r.navSec)}</span> · talk <span style="color:#4ADE80">${t(r.talkSec)}</span> · total <span style="color:#CDCDD8">${t(r.callSec)}</span></div>
+        const script=m?('Script '+m[1]):(op.said?'Script ?':'');
+        return `<div class="peek static">
+          <span class="pk-main">
+            <span class="pk-t" style="display:block">${r.workflow?esch(r.workflow):'<span style="color:#8A8A96;font-weight:500">no workflow</span>'}</span>
+            <span class="pk-m" style="display:block">${esch(when(r.started))}${script?` · <span title="${esch(op.said||'')}">${esch(script)}</span>`:''}</span>
+            <span style="display:block;font-family:ui-monospace,monospace;font-size:11.5px;color:#8A8A96;margin-top:6px">human <span style="color:#CDCDD8">${t(r.navSec)}</span> · talk <span style="color:#4ADE80">${t(r.talkSec)}</span> · total <span style="color:#CDCDD8">${t(r.callSec)}</span></span>
+          </span>
+          ${tcIcon(r.status)}
         </div>`;
       }).join('') || '<div class="empty">No test calls yet. Call the Fun store.</div>');
 }
@@ -4827,21 +4846,21 @@ async function loadAlerts(){
   const sEl=document.getElementById('al_status');
   if(sEl) sEl.innerHTML=chip(dv.sms,'Text (Twilio)')+chip(dv.email,'Email (Brevo)')
     +((dv.sms&&dv.email)?'':`<div class="k-note" style="text-align:left;margin-top:6px">Missing keys log sends as stubbed, nothing reaches a customer yet</div>`);
-  // This month: two wells; the per-event breakdown stays as compact lines under them.
+  // This month: three wells, no breakdown table (owner: it does not help manage alerts).
   const roll=log.rollup||{}, rEl=document.getElementById('al_rollup');
   if(rEl){ const ks=Object.keys(roll); const subs=log.subscribers||{};
     const well=(n,l,cls)=>`<div class="k-well"><div class="n${cls?' '+cls:''}">${n}</div><div class="l">${l}</div></div>`;
     const total=Object.values(roll).reduce((a,b)=>a+b,0);
     const stubbed=ks.filter(k=>k.endsWith('.stubbed')).reduce((a,k)=>a+roll[k],0);
-    rEl.innerHTML=`<div class="k-wells" style="margin-top:12px">${well(subs.total||0,'Signed up','')}${well(total,'Sends this month',total?'g':'')}${well(stubbed,'Stubbed',stubbed?'a':'')}</div>`
-      +(ks.length?ks.sort().map(k=>{const [ev,ch,st]=k.split('.');return `<div class="repline"><span class="rl">${esch(String(ev).replace(/_/g,' '))} · ${esch(ch)} · ${esch(String(st).replace(/_/g,' '))}</span><b>${roll[k]}</b></div>`;}).join(''):''); }
+    rEl.innerHTML=`<div class="k-wells" style="margin-top:12px">${well(subs.total||0,'Signed up','')}${well(total,'Sends this month',total?'g':'')}${well(stubbed,'Stubbed',stubbed?'a':'')}</div>`; }
   // Recent sends: a LOG — first 20, one key shows the rest.
   const lg=document.getElementById('al_log'), recent=log.recent||[];
   if(lg){ const cap=AL_LOG_ALL?60:20;
     lg.innerHTML=(recent.length?recent.slice(0,cap).map(r=>{
       const when=r.at?new Date(r.at*1000).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
-      const stcls=r.status==='sent'?'g':(r.status==='stubbed'?'a':'r');
-      return `<div class="repline"><span class="rl">${esch(r.event)} → ${esch(r.to||r.userId||'—')}</span><b style="font-weight:600;color:#8A8A96;white-space:nowrap">${esch(when)} <span class="pill ${stcls}" style="margin-left:6px">${esch(r.status)}</span></b></div>`;
+      const ST={sent:['Sent','g'],stubbed:['Stubbed','a'],test_sent:['Test','']};
+      const [stl,stc]=ST[r.status]||[String(r.status).replace(/_/g,' '),'r'];
+      return `<div class="repline"><span class="rl">${esch(String(r.event).replace(/_/g,' '))} → ${esch(r.to||r.userId||'—')}</span><b style="font-weight:600;color:#8A8A96;white-space:nowrap">${esch(when)} <span class="pill ${stc}" style="margin-left:6px;${stc?'':'color:#CDCDD8;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14)'}">${esch(stl)}</span></b></div>`;
     }).join(''):'<div class="empty">No sends yet. They appear the moment an alert goes out.</div>')
     +(recent.length>20&&!AL_LOG_ALL?`<button class="k-key" onclick="AL_LOG_ALL=true;loadAlerts()">SHOW ${Math.min(40,recent.length-20)} MORE</button>`:''); }
 }
