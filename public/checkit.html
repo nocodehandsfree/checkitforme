@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="noblush-r128" />
+<meta name="x-rev" content="glassdim-r129" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -176,8 +176,10 @@ __BRAND_HEAD__
   .callkey:active{transform:translateY(1px)}
   .callkey:disabled{opacity:.45;cursor:not-allowed;animation:none}
   /* ── Call slider (bottom sheet on store select) ── */
-  .csheet-bd{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:79;opacity:0;pointer-events:none;transition:opacity .25s}
-  .csheet-bd.on{opacity:1;pointer-events:auto}
+  /* Transparent click-catcher only — the dim is the content filter (see the .overlay dim block).
+     display:none when off: a mounted full-screen layer, even invisible, breaks the scroll-edge glass. */
+  .csheet-bd{position:fixed;inset:0;background:transparent;z-index:79;display:none}
+  .csheet-bd.on{display:block}
   .csheet{position:fixed;left:0;right:0;bottom:0;z-index:80;max-width:520px;margin:0 auto;
     background:#0e0e12;border:1px solid color-mix(in srgb,var(--accent,#FFCB05) 30%,transparent);border-bottom:none;
     border-radius:22px 22px 0 0;padding:8px 18px calc(20px + env(safe-area-inset-bottom));
@@ -337,9 +339,8 @@ __BRAND_HEAD__
      synthetic 1px main-scroll jiggle timed inside the sheet-open frame (fragile hack, untested) or
      (b) a design that works WITH the load-time colour (CD comp). The rules 310-311 above still matter:
      they set the colour a page LOADS with when restored mid-sheet, and the base-skin case. */
-  /* Messenger open: tint the ROOT bg to the header colour so iOS samples it for the status strip —
-     the header dome then fills seamlessly to the very top edge of the phone (no black notch band). */
-  html:has(.supwrap.on){background:#1A1A20!important}
+  /* Messenger root recolor REMOVED (07-17, sheetpeek rollout): the root colour never changes
+     in-page — iOS re-reads it at unpredictable moments and freezes the wrong colour (r120 rule). */
   /* SCROLLED: iOS paints ONE colour at both chrome strips, so a toned top forces a toned band behind
      the bottom address pill — which clashes once the dark lower page/footer is on screen (owner 07-09:
      "look like there's nothing there"). Middle path: the chrome is toned while the verdict is in view
@@ -577,8 +578,15 @@ __BRAND_HEAD__
   .foot{text-align:center;color:var(--muted);font-size:12px;margin-top:26px}
   .foot b{color:#9a9aac}
   /* modal */
-  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:4000;padding:20px}
+  /* SHEET DIM = the PAGE darkens, nothing covers it (owner-verified /sheetpeek variant E, 07-17):
+     a fixed rgba cover layer is the ONE thing that kills iOS 26's scroll-edge glass, so overlays are
+     fully transparent click-catchers and the dim is a brightness filter on the page content itself.
+     NOTE: filter makes header/main/footer containing blocks — keep position:fixed elements OUT of
+     them (toast/csheet/overlays/supwrap are body children today; keep it that way). */
+  .overlay{position:fixed;inset:0;background:transparent;display:none;align-items:center;justify-content:center;z-index:4000;padding:20px}
   .overlay.on{display:flex}
+  body:has(.overlay.on) header,body:has(.overlay.on) main,body:has(.overlay.on) .site-footer,
+  body:has(.csheet.on) header,body:has(.csheet.on) main,body:has(.csheet.on) .site-footer{filter:brightness(.45)}
   body:has(.overlay.on){overflow:hidden}  /* lock the background (incl. the Leaflet map) while a modal is open */
   .modal{background:var(--sheet);border:1px solid var(--border);border-radius:18px;padding:22px;max-width:380px;width:100%;text-align:center}
   .modal h3{margin:0 0 8px;font-size:20px}
@@ -631,11 +639,15 @@ __BRAND_HEAD__
   body:has(.supwrap.on) .suplaunch.tucked{transform:none;opacity:1;pointer-events:auto} /* no auto-tuck while it's the close button */
   body:has(.supwrap.on) .suplaunch.invite{animation:none;width:34px} /* chat open = it's the CLOSE tab; a glowing X reads wrong */
   body:has(.supwrap.on) .suplaunch.invite svg{stroke:#9a9aa8}
-  .supwrap{position:fixed;inset:0 0 0 auto;z-index:81;width:100%;max-width:100%;display:flex;flex-direction:column;
+  .supwrap{position:fixed;inset:0 0 0 auto;z-index:81;width:100%;max-width:100%;display:none;flex-direction:column;
     /* a touch deeper than the raw brand yellow — the neon read too bright in the panel (owner 07-11) */
     --sup-accent:color-mix(in srgb, var(--accent,#FFCB05) 73%, #14110a);
-    background:#141418;transform:translateX(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);opacity:0;pointer-events:none}
-  .supwrap.on{transform:translateX(0);opacity:1;pointer-events:auto}
+    background:#141418}
+  /* display:none when closed (07-17 sheetpeek rollout): a mounted full-screen layer — even transformed
+     off + opacity:0 — kills the scroll-edge glass, incl. during live calls. Slide-in via keyframes
+     (animations fire on display flips; transitions don't). Close is instant — accepted. */
+  .supwrap.on{display:flex;animation:supPanelIn .3s cubic-bezier(.32,.72,0,1)}
+  @keyframes supPanelIn{0%{transform:translateX(100%)}100%{transform:translateX(0)}}
   @media(min-width:720px){ .supwrap{width:420px;border-left:1px solid rgba(255,255,255,.06);box-shadow:-24px 0 60px -20px rgba(0,0,0,.7)} }
   /* Header dome: fill up into the notch (safe-area) so it feels like real app chrome to the top edge */
   .sup-hd{flex:0 0 auto;display:flex;align-items:center;gap:11px;padding:calc(14px + env(safe-area-inset-top)) 15px 13px;background:#1A1A20}
@@ -1421,7 +1433,7 @@ html[data-skin="v2"] .csheet-handle{width:40px;height:5px;background:rgba(255,25
 /* §3 law: green is THE action color — the old skin's purple accents (search pin, Find-my-stores,
    translate key, share chips) all re-key to green under v2. Comp P2 shows the well pin green. */
 html[data-skin="v2"]{--purple:#4ADE80;--ptint:rgba(74,222,128,.14);--pline:rgba(74,222,128,.42)}
-html[data-skin="v2"] .csheet-bd{background:rgba(5,6,9,.6)}
+html[data-skin="v2"] .csheet-bd{background:transparent} /* dim = content filter (sheetpeek E) — never a cover layer */
 html[data-skin="v2"] .csheet{padding:10px 22px calc(30px + env(safe-area-inset-bottom))}
 html[data-skin="v2"] .csheet-handle{margin:0 auto 18px}
 html[data-skin="v2"] .csheet-head{gap:13px}
@@ -1448,7 +1460,7 @@ html[data-skin="v2"] .cs-key{background:transparent;border:0;box-shadow:none;ani
 html[data-skin="v2"] .chip{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;color:#CDCDD8;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
 html[data-skin="v2"] .chip.sel{color:#4ADE80;background:linear-gradient(180deg,#31313A 0%,#28282E 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.1),0 0 14px rgba(74,222,128,.25)}
 /* Pop-ups (§5.11): big card radius 26 over the dim, no grabber, no border. */
-html[data-skin="v2"] .overlay{background:rgba(5,6,9,.66)} /* the ORIGINAL translucent dim — owner 07-16: two attempts at re-tinting the sheet chrome (grey wash, edge scrim) both made it worse and were reverted. Do NOT touch the sheet dim/root/chrome colours again without a design comp. */
+html[data-skin="v2"] .overlay{background:transparent} /* dim = content filter now (owner-verified /sheetpeek variant E, 07-17) — a cover layer here kills the scroll-edge glass */
 html[data-skin="v2"] #success .fab-back{position:static;width:auto;height:auto;border-radius:999px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);color:#FFF;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);display:flex;align-items:center;gap:8px;margin:18px auto 8px;padding:11px 22px;font-size:12.5px;font-weight:800;letter-spacing:.1em}
 html[data-skin="v2"] #success .fab-back svg{width:15px;height:15px}
 html[data-skin="v2"] #success .fab-back svg path{stroke:#FFF}
