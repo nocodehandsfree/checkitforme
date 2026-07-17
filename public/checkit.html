@@ -1895,7 +1895,7 @@ html[data-skin="v2"] .p6d-live .buygrid-h{color:#8A8A96}
 html[data-skin="v2"] #acctOverlay,html[data-skin="v2"] #buyOverlay,html[data-skin="v2"] #pageOverlay,html[data-skin="v2"] #zones,html[data-skin="v2"] #histOverlay{align-items:flex-end;padding:0}
 /* My Zones + Check history: same bottom-sheet recipe as #pageOverlay — flex column, pinned grab handle,
    the .zframe / .hist-scroll body is the only scroller. (owner 07-12) */
-html[data-skin="v2"] #zones .modal,html[data-skin="v2"] #histOverlay .modal{display:flex;flex-direction:column;padding:0;overflow:hidden;width:100%;max-width:none!important;border-radius:28px 28px 0 0;height:88vh;max-height:88vh;height:88dvh;max-height:88dvh;margin:0;background:#1D1D22} /* dvh = VISIBLE viewport, so the basket clears the iOS bottom toolbar (vh fallback for old Safari) */
+html[data-skin="v2"] #zones .modal,html[data-skin="v2"] #histOverlay .modal{display:flex;flex-direction:column;padding:0;overflow:hidden;width:100%;max-width:none!important;border-radius:28px 28px 0 0;height:88vh;max-height:88vh;height:88dvh;max-height:88dvh;margin:0;background:#26262B} /* every sheet surface = #26262B (owner: all slide-ups identical) */ /* dvh = VISIBLE viewport, so the basket clears the iOS bottom toolbar (vh fallback for old Safari) */
 html[data-skin="v2"] #zones .modal::before,html[data-skin="v2"] #histOverlay .modal::before{content:'';display:block;flex:0 0 auto;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:10px auto 8px}
 html[data-skin="v2"] #zones.on .modal,html[data-skin="v2"] #histOverlay.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
 /* Zone dialogs (actions menu / rename / delete / check confirm) = bottom sheets too — the comp shows
@@ -3923,8 +3923,13 @@ function sheetH_on(ov){ if(!ov||ov.__sh) return; ov.__sh=1;
   if(!SHEET_IDS.has(ov.id)) return; // small centered dialogs (auth/checkout/etc.) get the dim only — they stay fixed, no glass needed
   const m=ov.querySelector('.modal'); if(!m) return;
   const sc=window.scrollY||document.documentElement.scrollTop||0;
-  ov.style.position='absolute'; ov.style.top=sc+'px'; ov.style.bottom='auto'; ov.style.height=window.innerHeight+'px';
-  m.style.position='absolute'; m.style.left='0'; m.style.top=(window.innerHeight*0.14)+'px'; m.style.bottom='auto'; m.style.height=(window.innerHeight*0.86+120)+'px';
+  // Overlay: page-layer catcher spanning the locked viewport + a deep under-bar overshoot (260px so an
+  // expanded Safari toolbar can never expose the page below the sheet — the old +120 left a peek strip).
+  ov.style.position='absolute'; ov.style.top=sc+'px'; ov.style.bottom='auto'; ov.style.height=(window.innerHeight+260)+'px';
+  // Modal: BOTTOM-anchored at its NATURAL height (capped 86vh) so short sheets (alerts etc.) stay short
+  // instead of being stretched to 86vh; the +260 tail is empty surface running under the bar for the glass.
+  const natural=Math.min(m.offsetHeight||0, window.innerHeight*0.86)||window.innerHeight*0.86;
+  m.style.position='absolute'; m.style.left='0'; m.style.top=(window.innerHeight-natural)+'px'; m.style.bottom='auto'; m.style.height=(natural+260)+'px';
 }
 function sheetH_off(ov){ if(!ov||!ov.__sh) return; ov.__sh=0; const m=ov.querySelector('.modal');
   if(m){ m.style.position=''; m.style.left=''; m.style.top=''; m.style.bottom=''; m.style.height=''; }
@@ -3943,7 +3948,7 @@ function sheetH_off(ov){ if(!ov||!ov.__sh) return; ov.__sh=0; const m=ov.querySe
 // the bar (empty surface) so the glass ghosts the bottom edge. The translateY slide/drag is unchanged.
 function csheetH_on(){ const el=$('csheet'); if(!el||el.__sh) return; el.__sh=1;
   const sc=window.scrollY||0, H=el.offsetHeight;
-  el.style.position='absolute'; el.style.top=(sc+window.innerHeight-H)+'px'; el.style.bottom='auto'; el.style.minHeight=(H+120)+'px';
+  el.style.position='absolute'; el.style.top=(sc+window.innerHeight-H)+'px'; el.style.bottom='auto'; el.style.minHeight=(H+260)+'px';
   sheetBodyLock();
 }
 function csheetH_off(){ const el=$('csheet'); if(!el||!el.__sh) return; el.__sh=0;
@@ -3954,7 +3959,7 @@ function csheetH_off(){ const el=$('csheet'); if(!el||!el.__sh) return; el.__sh=
 // height=innerHeight+120, right-anchored; the translateX slide-in is unchanged.
 function supH_on(){ const el=$('supWrap'); if(!el||el.__sh) return; el.__sh=1;
   const sc=window.scrollY||0;
-  el.style.position='absolute'; el.style.top=sc+'px'; el.style.bottom='auto'; el.style.height=(window.innerHeight+120)+'px';
+  el.style.position='absolute'; el.style.top=sc+'px'; el.style.bottom='auto'; el.style.height=(window.innerHeight+260)+'px';
   sheetBodyLock();
 }
 function supH_off(){ const el=$('supWrap'); if(!el||!el.__sh) return; el.__sh=0;

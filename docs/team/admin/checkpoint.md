@@ -3,6 +3,15 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-17 — DESIGNER polish + GLASS HARDENED (75cbe8c / aea3701, live)
+- **Sheet-glass LOCKED:** scripts/qa-admin-glass.mjs asserts all 11 variant-H invariants in app.html
+  (no full-screen dim overlay, content filter-dim, absolute-on-open, scrollY+14vh anchor, +120
+  overshoot, scroll lock, restore-on-close, min-height guard, scroll-end spacer, root never recolored)
+  and is wired into test-all.sh — any revert of the tint fails the ship. Lock-note in the code too.
+- **Designer step 2 (Voice feel):** bare wrapping sliders → clean rows (normal-case label + bold green
+  value, all four populated) with green-filled tracks (sbFill). Steps 1/3/4/5/6/7 already clean from
+  prior passes. Gates + glass-lock + 13/13 sheets green.
+
 ## 2026-07-17 — CHAINS PAGE REDESIGNED (e5c4f1d, live)
 Full frog pass on the messiest page (comp 2e). Killed the phantom "Could not load" 6-stat wall → one
 slim mapped-progress bar ("120 of 131 mapped · 92%", the page's real story, fails silent not red).
@@ -12,16 +21,8 @@ top, two filter pills one row. **Report broken down by store category** (owner):
 per store type (Grocery/Big box/Hobby/Pharmacy/Thrift/Hardware), green when a category is fully mapped.
 Verified interactions + gates green each ship. tr_stats→tr_progress; preview rig stubs trainer/list w/ types.
 
-## 2026-07-17 — SHEET GLASS: VARIANT H shipped (a123641, live — NEEDS OWNER PHONE VERDICT)
-Design lane's FINAL recipe (checkpoint 07-17c, /sheetpeek variant H, owner-proven on device). Fixed
-sheets live in the UI layer iOS never ghosts → bottom bar read solid. Now while OPEN the sheet is
-ABSOLUTE page-layer content: anchored at scrollY+14vh, height 86vh+120 (overshoots ~120px under the
-bar), background scroll locked (overflow:hidden html+body), content filter-dim kept (never an overlay),
-root colour constant. Sheet bodies dropped their big bottom padding; .sh-body has a 70px+safe scroll-end
-spacer so the last row clears the bar. body.sheetopen min-height guards short pages. Close + drag-close
-+ tap-out all restore fixed positioning and unlock scroll after the slide. Verified headless (12 mechanic
-checks + 13 interactions + gates green). Supersedes the earlier variant-E fix. NEXT: #iconpick modal
-still uses a fixed rgba+blur backdrop (line ~664) — same absolute/filter treatment when owner oks it.
+## 2026-07-17 — SHEET GLASS variant H (a123641, live, owner-verified "works well"): absolute page-layer
+sheets so iOS glass ghosts rows under the bar. Now LOCKED by the guard above. Detail: git log + design 07-17c.
 
 ## 2026-07-17 — ADMIN COHESION + FROG PASSES (through 8d477a7, live)
 One kit app-wide (borderless-tinted chips / raised stats / carved inputs; purple + hairlines dead),
