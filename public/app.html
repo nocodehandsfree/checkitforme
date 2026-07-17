@@ -977,9 +977,10 @@
 
 
 
-  <section id="catalog"><h2>Tracked categories</h2><div id="catList"><div class="empty">Loading…</div></div></section>
+  <section id="catalog"><div class="k-title">Categories</div><div class="k-sub">The products Check can ask about</div><div id="catList"><div class="empty">Loading…</div></div></section>
   <section id="receipts">
     <div class="k-title">Kiosk intel</div>
+    <div class="k-sub">Machines, receipts and refresh cadences</div>
     <div id="gw_kiosks" style="margin-top:14px"><div class="empty">Loading…</div></div>
     <div class="k-wells" id="rcpt_wells" style="display:none"></div>
     <div class="k-eyebrow" style="display:flex;align-items:center;justify-content:space-between">Emailed-in receipts
@@ -1035,6 +1036,7 @@
 
   <section id="designer">
     <div class="k-title">Designer</div>
+    <div class="k-sub">Build a calling workflow</div>
     <div id="d_rail" style="display:flex;align-items:center;margin:18px 2px 0"></div>
     <div id="d_nav_label" style="font-size:20px;font-weight:800;letter-spacing:-.3px;margin-top:18px"></div>
     <div style="height:12px"></div>
@@ -1539,6 +1541,11 @@ function showGroup(g, sectionId){
   if(g==='calls') refreshFbBadge();
   showSection(sectionId || GROUP_LAST[g] || grp.tabs[0][0], true);
 }
+function pokeChrome(){
+  try{ if(document.activeElement&&document.activeElement.blur) document.activeElement.blur(); }catch(_){ }
+  try{ const de=document.documentElement; const cur=getComputedStyle(de).backgroundColor; de.style.backgroundColor=cur; void de.offsetHeight; requestAnimationFrame(()=>{ de.style.backgroundColor=''; }); }catch(_){ }
+  try{ const y=window.scrollY; window.scrollTo(0,y+1); requestAnimationFrame(()=>window.scrollTo(0,y)); }catch(_){ }
+}
 function showSection(id, fromGroup){
   const g=SECTION_GROUP[id]; if(!g) return;
   if(!fromGroup && g!==CUR_GROUP){ showGroup(g, id); return; }
@@ -1555,6 +1562,8 @@ function showSection(id, fromGroup){
   if(TAB_LOADERS[id]) TAB_LOADERS[id]();
   setTimeout(decorateChrome,150); setTimeout(decorateChrome,600); // strip emoji from freshly-rendered content too
   try{ window.scrollTo({top:0}); }catch(_){}
+  // pushState makes iOS drop its sampled bar tint (site lesson: Safari never resamples in-page) — poke it.
+  setTimeout(pokeChrome,80);
 }
 window.addEventListener('popstate', (e)=>{
   const id=e.state&&e.state.tab; if(!id||!SECTION_GROUP[id]) return;
@@ -2138,7 +2147,7 @@ async function calcSyncPlans(){
 }
 function calcShell(){
   const seg=Object.keys(CALC_STORE).map(t=>`<button type="button" id="calc_seg_${t}" onclick="calcPick('${t}')" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:10px;border-radius:11px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-muted);cursor:pointer;text-align:left;font:inherit"><span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(CALC_STORE[t].nc)}${t}</span><span style="font-size:10.5px;color:var(--text-tertiary)">${CALC_STORE[t].sub}</span></button>`).join('');
-  const rate=(label,k,suf)=>`<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:var(--text-muted)">${label}</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:1px solid var(--border-strong);border-radius:9px;padding:0 8px"><span style="color:var(--text-tertiary);font-size:13px">$</span><input type="number" step="0.0001" value="${CALC.rates[k]}" oninput="calcSetRate('${k}',this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:13px;font-weight:600;padding:8px 2px;width:62px"><span style="color:var(--text-tertiary);font-size:10.5px">${suf}</span></span></label>`;
+  const rate=(label,k,suf)=>`<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:var(--text-muted)">${label}</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:12px;padding:0 10px"><span style="color:var(--text-tertiary);font-size:13px">$</span><input type="number" step="0.0001" value="${CALC.rates[k]}" oninput="calcSetRate('${k}',this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;box-shadow:none;color:var(--text-primary);font-size:13px;font-weight:600;padding:9px 2px;width:62px"><span style="color:var(--text-tertiary);font-size:10.5px">${suf}</span></span></label>`;
   return `
   <div class="hero" style="margin-bottom:16px">
     <div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px">
@@ -2198,7 +2207,7 @@ function calcShell(){
   <div class="card report">
     <div class="name">Margin · per check</div>
     <div class="row" style="gap:12px">
-      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;color:var(--text-muted)">Revenue / check</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:1px solid var(--border-strong);border-radius:10px;padding:0 10px"><span style="color:var(--text-tertiary)">$</span><input id="calc_rev" type="number" step="0.01" min="0" value="${CALC.revenue}" oninput="calcSetRev(this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:22px;font-weight:700;padding:10px 2px;width:84px"></span></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;color:var(--text-muted)">Revenue / check</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:12px;padding:0 10px"><span style="color:var(--text-tertiary)">$</span><input id="calc_rev" type="number" step="0.01" min="0" value="${CALC.revenue}" oninput="calcSetRev(this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:22px;font-weight:700;padding:10px 2px;width:84px"></span></div>
       <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;color:var(--text-muted)">Margin</span><div id="calc_margin" style="font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0%</div></div>
       <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;color:var(--text-muted)">× return <span data-tip="Revenue ÷ cost. How many times the call pays for itself."></span></span><div id="calc_return" style="font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0×</div></div>
     </div>
@@ -2224,7 +2233,7 @@ function calcRenderPlans(){
   const el=document.getElementById('calc_plans'); if(!el) return;
   const cpc=calcPerCheck().perCheck, use=Math.max(0,Math.min(1,(CALC.usage||100)/100));
   const money=v=>calcMoney(v), pct=(a,b)=>b>0?(((a-b)/a)*100):0;
-  const inp=(i,f,val,w,pre)=>`<span style="display:inline-flex;align-items:center;background:var(--terminal);border:1px solid var(--border-strong);border-radius:8px;padding:0 6px">${pre?`<span style="color:var(--text-tertiary);font-size:12.5px">${pre}</span>`:''}<input value="${val}" oninput="calcSetPlan(${i},'${f}',this.value)" style="background:transparent;border:none;outline:none;color:var(--text-primary);font-size:12.5px;font-weight:600;padding:6px 2px;width:${w}px"></span>`;
+  const inp=(i,f,val,w,pre)=>`<span style="display:inline-flex;align-items:center;background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:10px;padding:0 6px">${pre?`<span style="color:var(--text-tertiary);font-size:12.5px">${pre}</span>`:''}<input value="${val}" oninput="calcSetPlan(${i},'${f}',this.value)" style="background:transparent;border:none;outline:none;box-shadow:none;color:var(--text-primary);font-size:12.5px;font-weight:600;padding:6px 2px;width:${w}px"></span>`;
   let h=`<thead><tr>${['Plan','Price','Checks','Cost (100%)','Margin','Exp. margin',''].map((c,i)=>`<th style="font-size:10.5px;color:var(--text-muted);font-weight:600;padding:6px 8px;text-align:${i<1?'left':'right'};border-bottom:1px solid var(--border-strong);white-space:nowrap">${c}</th>`).join('')}</tr></thead><tbody>`;
   CALC.plans.forEach((p,i)=>{
     const costWorst=cpc*(p.checks||0), costExp=costWorst*use, price=p.price||0;
