@@ -717,6 +717,7 @@ body.frostdim main,body.frostdim header{filter:brightness(.8) saturate(1.05)} /*
 <button class="t" id="E" onclick="T('E')">E sheet+filter</button>
 <button class="t" id="F" onclick="T('F')">F frosted sheet</button>
 <button class="t" id="G" onclick="T('G')">G sheet as page</button>
+<button class="t" id="H" onclick="T('H')">H page-layer sheet</button>
 </div>
 <div class="store"><div class="ic">B&N</div><div><div class="nm">Barnes &amp; Noble Calabasas</div><div class="ad">4735 Commons Way · till 9 PM</div></div></div>
 <div class="store"><div class="ic">CVS</div><div><div class="nm">CVS Ventura Blvd</div><div class="ad">22050 Ventura Blvd. · till 11 PM</div></div></div>
@@ -761,13 +762,23 @@ body.frostdim main,body.frostdim header{filter:brightness(.8) saturate(1.05)} /*
 var cur='';
 function T(k){
   var same=(cur===k); cur=same?'':k;
-  ['A','B','C','D','E','F','G'].forEach(function(x){document.getElementById(x).classList.toggle('on',x===cur);});
+  ['A','B','C','D','E','F','G','H'].forEach(function(x){document.getElementById(x).classList.toggle('on',x===cur);});
   var dim=document.getElementById('dim'),sheet=document.getElementById('sheet');
   dim.style.display=(cur==='A'||cur==='C')?'block':'none';
-  sheet.style.display=(cur==='B'||cur==='C'||cur==='E'||cur==='F')?'flex':'none';
+  sheet.style.display=(cur==='B'||cur==='C'||cur==='E'||cur==='F'||cur==='H')?'flex':'none';
+  // H: same sheet but ABSOLUTE in the document (page paint layer, not UI layer). Background scroll is
+  // locked while open (like real sheets), so absolute == fixed visually — but the glass can ghost it.
+  if(cur==='H'){
+    var top=window.scrollY+window.innerHeight*0.14;
+    sheet.style.position='absolute'; sheet.style.top=top+'px'; sheet.style.bottom='auto'; sheet.style.height=(window.innerHeight*0.86+120)+'px';
+    document.body.style.overflow='hidden'; document.documentElement.style.overflow='hidden';
+  } else {
+    sheet.style.position='fixed'; sheet.style.top='auto'; sheet.style.bottom='0'; sheet.style.height='86dvh';
+    document.body.style.overflow=''; document.documentElement.style.overflow='';
+  }
   sheet.classList.toggle('frost',cur==='F');
   sheet.style.transform='';
-  document.body.classList.toggle('filterdim',cur==='D'||cur==='E');
+  document.body.classList.toggle('filterdim',cur==='D'||cur==='E'||cur==='H');
   document.body.classList.toggle('frostdim',cur==='F');
   // G: same content as a PAGE-STATE — document scroll, so the glass ghosts it top AND bottom.
   var pg=document.getElementById('pagemode');
