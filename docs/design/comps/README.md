@@ -30,14 +30,7 @@ ships without its comp on the board. Same for the site and `WEBSITE_COMPS.dc.htm
   browser. Its optional `./support.js` runtime comes from the design pipeline; the board renders
   fine without it.
 
-## Rename status
-
-The physical rename of the 1.3MB site board needs one command (the file is over the design tool's
-push cap; every textual reference already points at the new name):
-
-```
-git mv docs/design/comps/NEW_CHECK_COMPS.dc.html docs/design/comps/WEBSITE_COMPS.dc.html
-```
+## Other boards
 
 **`MY_ZONES_COMP.dc.html`** — the owner's 07-11 My Zones board (self-contained; open in a browser).
 It locks the **bottom-notification pill** (thin glowing outline, gray, fragment copy — no periods or
