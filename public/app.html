@@ -1752,17 +1752,29 @@ async function testHelicone(model){
 }
 // Trainer = overview only. Per-chain Map/Re-map + call log live under Calls → Settings (a chain).
 // Stats align with Alpha/Bravo/Charlie (locked navType) + mapped/unmapped.
+// Mapped-progress report: the whole fleet at the top, then EACH store category and how much of it is
+// routed (owner 07-17). Bar length shows the laggards at a glance; a category hits green when it's done.
+function trBar(m,n,h){ const p=n?Math.round(m/n*100):0; return `<div style="height:${h}px;background:var(--terminal);border-radius:999px;box-shadow:inset 0 2px 4px rgba(0,0,0,.45);overflow:hidden"><div style="width:${p}%;height:100%;background:var(--green);border-radius:999px;transition:width .3s"></div></div>`; }
 async function loadTrainer(){
   const ss=document.getElementById('tr_progress'); if(!ss) return;
   const d=await api('/api/admin/trainer/list');
   if(!d||!Array.isArray(d.chains)){ ss.innerHTML=''; return; } // no phantom error — the list below still works
-  const ch=d.chains;
-  const mapped=ch.filter(c=>c.navStatus==='locked').length, total=ch.length||1, pct=Math.round(mapped/total*100);
-  // ONE vital: mapped progress. The per-lane (Alpha/Bravo/Charlie) breakdown lives in the ⓘ sheet, not here.
+  const ch=d.chains, isMapped=c=>c.navStatus==='locked';
+  const mapped=ch.filter(isMapped).length, total=ch.length||1, pct=Math.round(mapped/total*100);
+  // Per store-type breakdown, biggest categories first.
+  const byType=new Map();
+  ch.forEach(c=>{ const t=c.type||'Other'; const e=byType.get(t)||{n:0,m:0}; e.n++; if(isMapped(c)) e.m++; byType.set(t,e); });
+  const cats=[...byType.entries()].sort((a,b)=>b[1].n-a[1].n);
+  const catRow=([t,e])=>{ const done=e.m===e.n; return `<div style="display:flex;align-items:center;gap:12px;padding:7px 0">
+      <span style="flex:0 0 88px;font-size:12.5px;font-weight:600;color:#CDCDD8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esch(t)}</span>
+      <span style="flex:1;min-width:0">${trBar(e.m,e.n,5)}</span>
+      <span style="flex:0 0 auto;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;color:${done?'var(--green)':'#8A8A96'}">${e.m}/${e.n}</span>
+    </div>`; };
   ss.innerHTML=`<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:9px">
       <span style="font-size:13px;font-weight:700;color:#CDCDD8">${mapped} of ${ch.length} chains mapped</span>
       <span style="font-size:14px;font-weight:800;color:var(--green)">${pct}%</span></div>
-    <div style="height:6px;background:var(--terminal);border-radius:999px;box-shadow:inset 0 2px 4px rgba(0,0,0,.45);overflow:hidden"><div style="width:${pct}%;height:100%;background:var(--green);border-radius:999px"></div></div>`;
+    ${trBar(mapped,total,6)}
+    <div style="margin-top:14px">${cats.map(catRow).join('')}</div>`;
   renderABCD(ch);
 }
 // ABCD — how a call flows: Alpha (keypad) / Bravo (voice) / Charlie (live agent) / Delta (recorded clips).
