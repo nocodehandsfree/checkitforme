@@ -3,6 +3,21 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-17 (round three) — ONE LAYOUT LAW, EVERY PAGE (cda51ab, live)
+- Owner's rulings baked in: NO tooltips on section headers → title + short sub everywhere · info is
+  RAISED, forms are CARVED (k-well now matches God-view .v) · selects show their chevron (pill
+  gradient painted OVER the chevron layer — first bg-image is topmost; fixed) · Designer step label
+  = the name only (rail is the position).
+- Alerts: rollup table killed; send pills Sent/Stubbed/Test honest colors. Testing log: §5.7 icon
+  chip right, date+time + Script N meta, yellow letter retired. Plans: hero card → title + sync
+  sub + one Publish CTA; priceInput/numInput = ONE carved well (double-chrome + dashed rows gone).
+  Chains: count in the sub. Store intel: MSRP coverage moved up into the report block.
+- Snapshot sweep of all 22 sections: on-pattern except OUTLIERS for separate sessions —
+  (1) **Calc**: own visual language, purple accents, bordered chips, dense workbench → needs a comp;
+  (2) **iOS tint on Admin pages**: blind spot, PM wont-fixed the site variant 07-16 (git: tinttest
+  1-7, 'Safari never resamples in-page'); needs an owner phone loop, one change per push.
+- Gates green · 13/13 drive checks · live sha = tested sha.
+
 ## 2026-07-17 (round two) — DIRECTIONAL COPY OFF EVERY PAGE (9c3514c, live)
 - Owner's law: data stays on the page, directions become a tap-ⓘ bubble or die. Page subs fold into
   a gray ⓘ on the title (Alerts, Policy, Feedback, Testing, Workflows, Statuses, Chains, Store
@@ -13,21 +28,8 @@
 - Pops note: ship-admin.sh's post-deploy `grep grpnav` verify races Cloudflare and cries wolf —
   deploy succeeds (ui-version confirms). Worth a retry loop in the script.
 
-## 2026-07-17 (later) — FOUR-PAGE POLISH SHIPPED to THE Admin (086236d, live + drive-verified)
-- **Alerts:** 8 stacked sections → status chips + 3 wells + five message ROWS opening ONE edit
-  sheet (editors + tokens note + Save + per-channel test send inside). Owner ping got a Test it key.
-  Sends log caps at 20 + Show more.
-- **Policy:** flags = k-switch rows w/ one-line grays (labels pill on toggle) · carved pricing
-  inputs · the 4 queues fold into peek rows w/ hot counts opening sheets (holders + gwQFact).
-- **Designer:** data-tip ⓘ gray everywhere (purple retired) · hairline hr/border purged (verdict
-  box = carved + glow) · step-6 accordion inlined · persona builder now opens in THE sheet
-  (pnNew/pnLoad; save closes + selects) · every hint is one gray line.
-- **Feedback:** one-line sub · unclear strip clamps to 8 pills + "+N more in Calls".
-- **Save pills:** every silent auto-save toggle now pills — flags, opener rotation (both pages),
-  owner ping. Verified: 13/13 headless interaction checks + live page sha matches the tested file
-  (only server-injected posthog/CF differ). Preview harness got stubs for alerts/queues.
-- **PM note:** scripts/test-plans.ts fails 8 pre-existing on staging (renewal quota reset, tier
-  features, comp features) — NOT from admin work (verified via stash). Needs a plans-lane look.
+## 2026-07-17 — four-page polish (086236d): Alerts/Policy/Designer/Feedback rebuilt to grammar,
+save pills on every silent toggle, preview-harness stubs added. Detail: git log.
 
 ## 2026-07-17 — Testing/Feedback staging source SHIPPED · design audit delivered, awaiting go-ahead
 - **Live on THE Admin (ffa130f, verified end to end):** Testing + Feedback carry a "Live site /
