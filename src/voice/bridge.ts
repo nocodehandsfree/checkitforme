@@ -171,8 +171,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   // echo comes back well attenuated. Browser fanout is never gated (listeners hear the true line).
   let agentPlayingUntil = 0;  // ms epoch when the queued agent audio finishes playing out
   let echoDropped = 0;        // suppressed-frame counter (logged sparsely for bench tuning)
-  const ECHO_TAIL_MS = 250;   // reflection tail after playback ends (tunable)
-  const BARGE_THRESH = 900;   // inbound energy that still counts as a human interrupting (tunable)
+  // 07-17 retune (owner: agent missed his name said around agent speech): real phone speech often
+  // sits in the 350–900 energy band, so a 900 gate ate genuine clerk words spoken over or right
+  // after the agent — not just echo, which comes back well attenuated (≲300). Gate lower + shorter.
+  const ECHO_TAIL_MS = 150;   // reflection tail after playback ends (was 250)
+  const BARGE_THRESH = 520;   // inbound energy that still counts as a human talking (was 900)
   log(`twilio connected room=${room.slice(0, 8)} ctx=${!!ctx}`);
 
   async function connectEleven() {
