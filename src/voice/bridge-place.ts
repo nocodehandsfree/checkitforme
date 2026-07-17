@@ -4,7 +4,7 @@
 // The TwiML + status routes it points at stay in server.ts.
 import { config } from "../config";
 import { getPolicy } from "../policy";
-import { setBridgeContext } from "./bridge";
+import { setBridgeContext, takeBridgeDtmf, takeBridgeSay } from "./bridge";
 
 // Twilio's media stream is pinned to the direct Railway domains (verified WS path; avoids Cloudflare).
 export const RAILWAY_HOST = "voice-caller-production-2d6b.up.railway.app";
@@ -28,7 +28,36 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
   const pol = await getPolicy();
   setBridgeContext(room, { agentId: config.voice.agentId, dynamicVars, onConversationId, dtmf: dtmf || undefined, say: opts?.say || undefined, connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: opts?.connectAtSec, holdMaxSeconds: pol.bail.holdMaxSeconds, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
   const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
-  const body = new URLSearchParams({ To: e164(toNumber), From: from, Url: `https://${host}/twiml/bridge?room=${room}` });
+  // INLINE the TwiML instead of a Url callback (owner 07-17: "no cutoffs — listen from the very
+  // first thing I say"). With Url, Twilio answers the call and THEN phones our server for
+  // instructions before any audio streams — the clerk's first words ("This is Bob at the Fun
+  // store...") land in that round-trip hole and are lost forever. Inlined, Twilio has the
+  // instructions at answer and opens the media stream immediately; only the WS handshake
+  // (~100-300ms) remains. Same XML the /twiml/bridge endpoint builds (kept as a fallback).
+  const dtmf2 = takeBridgeDtmf(room);
+  let play = "";
+  if (dtmf2) {
+    let digits = "", prev = 0;
+    for (const m of dtmf2.matchAll(/([0-9*#])\s*@\s*(\d+(?:\.\d+)?)/g)) {
+      const at = Number(m[2]);
+      digits += "w".repeat(Math.max(0, Math.round((at - prev) / 0.5))) + m[1];
+      prev = at;
+    }
+    play = `<Play digits="${digits}"/>`;
+  }
+  const say = takeBridgeSay(room);
+  if (say) {
+    let prev = 0;
+    for (const m of say.matchAll(/([^,@]+?)\s*@\s*(\d+(?:\.\d+)?)/g)) {
+      const word = m[1].trim().replace(/[<>&'"]/g, ""); const at = Number(m[2]);
+      const wait = Math.max(0, Math.round(at - prev));
+      if (wait > 0) play += `<Pause length="${wait}"/>`;
+      play += `<Say voice="Polly.Joanna">${word}</Say>`;
+      prev = at;
+    }
+  }
+  const inlineTwiml = `<?xml version="1.0" encoding="UTF-8"?><Response>${play}<Connect><Stream url="wss://${host}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
+  const body = new URLSearchParams({ To: e164(toNumber), From: from, Twiml: inlineTwiml });
   // REAL call-progress feed: Twilio POSTs each transition so the live timeline shows what's actually
   // happening (dialing → ringing → answered → done) instead of guessing from timers.
   body.set("StatusCallback", `https://${host}/twiml/bridge-status?room=${room}`);
