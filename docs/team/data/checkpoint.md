@@ -11,6 +11,9 @@
   Pops' pipe — never touches chains/retailers; if a curated field ever moves into `settings`, flag Pops).
   ④ Never-sync fields (`phone`, `hours`, per-store learned) — write to BOTH envs directly, prod first.
   ⚠️ Hand-set nav on staging is overwritten from prod within 3 min — **map on PROD, it flows down.**
+- **OPEN NOW ONLY (owner law 07-16):** `/pub/stores/near` never returns a store that's closed at
+  request time (list, pins, rural fallback; owner-only test stores exempt). `hiddenClosed` in the
+  response = suppressed count for UI copy. Lives in the FEED so list behavior is Data's lever, not Webbie's.
 - **ONE DIALABLE RULE:** `chainDialable()` (recipe.ts) = !muted && callTarget && stockCheckMethod!=='site'.
   Read by mapping board + overnight batch + single-map — no surface re-decides callability on its own.
   Board rows carry `phones` + `blocker` so a data gap can never read as "all stores closed".
