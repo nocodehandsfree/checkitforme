@@ -1064,13 +1064,13 @@
           <option value="charlie">Charlie · live agent on the whole call</option>
           <option value="delta">Delta · recorded clips, escalates when stuck</option>
         </select>
-        <label>Voice</label>
+        <label>Live voice</label>
         <select id="vs_select"></select>
         <div id="vs_active" class="meta" style="margin-top:6px"></div>
         <div class="btnrow"><button class="ghost" onclick="vsSetActive()">Use for live calls</button></div>
-        <label style="margin-top:16px" data-tip="Record 30–60s of clear speech, name it, then clone">Clone a new voice</label>
-        <div class="row" style="margin-bottom:8px"><button class="ghost" id="vs_rec" onclick="vsToggleRec()"><span style="color:var(--red)">●</span> Record</button><span id="vs_rectime" class="meta"></span><audio id="vs_play" controls style="display:none;height:34px"></audio></div>
+        <div class="k-eyebrow" style="margin:20px 0 10px">Clone a new voice</div>
         <input id="vs_name" placeholder="Voice name (e.g. Branson)">
+        <div class="row" style="gap:10px;align-items:center;margin-top:10px"><button class="ghost" id="vs_rec" onclick="vsToggleRec()"><span style="color:var(--red)">●</span> Record</button><span id="vs_rectime" class="meta" data-tip="Record 30–60s of clear speech, then clone"></span><audio id="vs_play" controls style="display:none;height:34px"></audio></div>
         <div class="btnrow"><button class="ghost" id="vs_clone" onclick="vsClone()" disabled><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Clone &amp; save voice</button></div>
         <div id="vs_msg" class="meta" style="margin-top:8px;min-height:16px"></div>
       </div>
@@ -1170,11 +1170,11 @@
         <div class="meta" id="sim_delta_hint" style="display:none;margin:2px 0 12px;color:var(--green)">Saves the workflow then dials you on the real clip flow · answer like Staff · go off script to hear the handoff</div>
         <div id="sim_charlie_a">
         <label>Store</label><select id="sim_store" onchange="previewMaybe()"><option value="" disabled selected>Loading stores</option></select>
-        <label>Category to ask about</label><select id="sim_cat" onchange="previewMaybe()"></select>
+        <label>Category</label><select id="sim_cat" onchange="previewMaybe()"></select>
         </div>
-        <label>Your phone</label><input id="sim_phone" placeholder="+13106662331">
+        <label data-tip="The agent dials this number">Your phone</label><input id="sim_phone" placeholder="+13106662331">
         <div id="sim_charlie_b">
-        <label data-tip="Only your rotation voices show here">Voice for this test</label>
+        <label data-tip="Only your rotation voices show here">Test voice</label>
         <select id="sim_voice" onchange="refreshTestRotation()"><option value="">Bench default voice</option></select>
         <div class="grid2" style="margin-top:14px">
           <div><label style="margin-top:0">Flow</label><select id="sim_mode"><option value="restock">Restock (did your shipment include it?)</option><option value="carry">Carry (do you sell it at all?)</option></select></div>
@@ -3832,7 +3832,7 @@ async function loadSandbox(){
   if(g('sb_soft_msg')&&t.softTimeoutMsg) g('sb_soft_msg').value=t.softTimeoutMsg;
   if(g('sb_llm')&&t.llm) g('sb_llm').value=t.llm;
   sbLabels(); sbSoftToggle();
-  const s=document.getElementById('sb_status'); if(s) s.textContent='Showing the current draft.';
+  const s=document.getElementById('sb_status'); if(s) s.textContent='';
 }
 function sandboxBody(){
   const g=id=>document.getElementById(id);
