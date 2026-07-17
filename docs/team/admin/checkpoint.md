@@ -12,16 +12,16 @@ top, two filter pills one row. **Report broken down by store category** (owner):
 per store type (Grocery/Big box/Hobby/Pharmacy/Thrift/Hardware), green when a category is fully mapped.
 Verified interactions + gates green each ship. tr_stats→tr_progress; preview rig stubs trainer/list w/ types.
 
-## 2026-07-17 — SLIDE-UP TRANSPARENCY FIX (f7bbe69, live — NEEDS OWNER PHONE VERDICT)
-Applied design lane's /sheetpeek variant E (owner-proven on device). The full-screen rgba `.sheet-scrim`
-behind every sheet was THE thing killing iOS scroll-edge glass → bars died on any slide-up open, never
-recovered without refresh. **Scrim element deleted.** Dim now = `body.sheetopen header/#grpnav/.subnav2/
-main{filter:brightness(.45)}` — content darkens, nothing covers the page, root colour never changes.
-Tap-outside-close moved to a capture-phase document listener; grabber + swipe-down unchanged; chrome
-poke removed (glass never dies now). Verified headless: no scrim in DOM, filter dims/clears, tap-out
-closes, tap-in keeps open, root bg constant, 13/13 sheet interactions, gates green.
-- **NEXT SURFACE (one-per-push, owner's rule):** `#iconpick` status-icon modal still uses a fixed
-  rgba(0,0,0,.62)+blur backdrop (line ~664) — same swap to filter-dim when owner oks this one.
+## 2026-07-17 — SHEET GLASS: VARIANT H shipped (a123641, live — NEEDS OWNER PHONE VERDICT)
+Design lane's FINAL recipe (checkpoint 07-17c, /sheetpeek variant H, owner-proven on device). Fixed
+sheets live in the UI layer iOS never ghosts → bottom bar read solid. Now while OPEN the sheet is
+ABSOLUTE page-layer content: anchored at scrollY+14vh, height 86vh+120 (overshoots ~120px under the
+bar), background scroll locked (overflow:hidden html+body), content filter-dim kept (never an overlay),
+root colour constant. Sheet bodies dropped their big bottom padding; .sh-body has a 70px+safe scroll-end
+spacer so the last row clears the bar. body.sheetopen min-height guards short pages. Close + drag-close
++ tap-out all restore fixed positioning and unlock scroll after the slide. Verified headless (12 mechanic
+checks + 13 interactions + gates green). Supersedes the earlier variant-E fix. NEXT: #iconpick modal
+still uses a fixed rgba+blur backdrop (line ~664) — same absolute/filter treatment when owner oks it.
 
 ## 2026-07-17 — ADMIN COHESION + FROG PASSES (through 8d477a7, live)
 One kit app-wide (borderless-tinted chips / raised stats / carved inputs; purple + hairlines dead),
