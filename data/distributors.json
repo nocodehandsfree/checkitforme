@@ -1,15 +1,67 @@
 {
-  "_doc": "Distributor-driven carries (docs/specs/logo-r2-keystone.md sibling). A store's product list is DERIVED at serve-time from its chain's distributor(s) — union of each distributor's products. Lives in code so it's identical on every environment (Admin/staging/prod) and auto-applies to any newly-imported store, no per-store stamping. Chain keys must match chains.name EXACTLY. Add a chain here once we confidently know its distributor; unmapped chains fall back to their stored carries column.",
-  "products": {
-    "Excell": ["Pokemon TCG", "Disney Lorcana", "Magic: The Gathering", "One Piece TCG", "Yu-Gi-Oh", "Sports Cards (Topps/Panini)"],
-    "Schylling": ["NeeDoh (Schylling)"],
-    "Jazwares": ["Squishmallows"]
-  },
-  "chains": {
-    "CVS": ["Excell", "Schylling", "Jazwares"],
-    "Walgreens": ["Excell", "Schylling", "Jazwares"],
-    "Target": ["Excell", "Schylling", "Jazwares"],
-    "Walmart": ["Excell", "Schylling", "Jazwares"],
-    "Barnes & Noble": ["Excell", "Schylling", "Jazwares"]
-  }
+ "_doc": "Distributor-driven carries (docs/specs/logo-r2-keystone.md sibling). A store's product list is DERIVED at serve-time from its chain's distributor(s) — union of each distributor's products. Lives in code so it's identical on every environment (Admin/staging/prod) and auto-applies to any newly-imported store, no per-store stamping. Chain keys must match chains.name EXACTLY. Add a chain here once we confidently know its distributor; unmapped chains fall back to their stored carries column.",
+ "products": {
+  "Excell": [
+   "Pokemon TCG",
+   "Disney Lorcana",
+   "Magic: The Gathering",
+   "One Piece TCG",
+   "Yu-Gi-Oh",
+   "Sports Cards (Topps/Panini)"
+  ],
+  "Schylling": [
+   "NeeDoh (Schylling)"
+  ],
+  "Jazwares": [
+   "Squishmallows"
+  ]
+ },
+ "chains": {
+  "CVS": [
+   "Excell",
+   "Schylling",
+   "Jazwares"
+  ],
+  "Walgreens": [
+   "Excell",
+   "Schylling",
+   "Jazwares"
+  ],
+  "Target": [
+   "Excell",
+   "Schylling",
+   "Jazwares"
+  ],
+  "Walmart": [
+   "Excell",
+   "Schylling",
+   "Jazwares"
+  ],
+  "Barnes & Noble": [
+   "Excell",
+   "Schylling",
+   "Jazwares"
+  ]
+ },
+ "_labels_doc": "labels = DISPLAY-ONLY distributor name(s) for the Admin 'Distro' field. Unlike `chains`, these do NOT derive carries — the store keeps its stored product list. Use for chains whose distributor we know but whose products were curated by hand (Excell accounts, etc.).",
+ "labels": {
+  "Five Below": [
+   "Excell"
+  ],
+  "Hot Topic": [
+   "Excell"
+  ],
+  "BoxLunch": [
+   "Excell"
+  ],
+  "Claire's": [
+   "Excell"
+  ],
+  "Hobby Lobby": [
+   "Excell"
+  ],
+  "H-E-B": [
+   "Excell"
+  ]
+ }
 }

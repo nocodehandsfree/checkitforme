@@ -389,12 +389,17 @@
      (the translucent top/bottom bars). Dim the CONTENT ITSELF with a filter; nothing sits between the
      page and the bars, and the root colour never changes. No scrim element exists anymore. */
   body.sheetopen header,body.sheetopen #grpnav,body.sheetopen .subnav2,body.sheetopen main{filter:brightness(.45);transition:filter .22s}
-  .sheet{position:fixed;left:50%;bottom:0;width:min(100%,480px);background:#26262B;border-radius:24px 24px 0 0;box-shadow:0 -24px 48px -12px rgba(0,0,0,.7);z-index:61;transform:translate(-50%,100%);transition:transform .26s cubic-bezier(.22,1,.36,1);max-height:88vh;display:flex;flex-direction:column;padding:0 20px calc(26px + env(safe-area-inset-bottom))}
+  /* variant H (design 07-17c, /sheetpeek, owner-verified): while OPEN the sheet is ABSOLUTE page-layer
+     content (JS anchors it at scrollY+14vh, height overshooting ~120px under the bar) so iOS glass ghosts
+     its rows through the toolbar — a fixed sheet lives in the UI layer Safari never ghosts. No big bottom
+     padding: rows must run under the bar; a scroll-end spacer on .sh-body keeps the last row reachable. */
+  .sheet{position:fixed;left:50%;bottom:0;width:min(100%,480px);background:#26262B;border-radius:24px 24px 0 0;box-shadow:0 -24px 48px -12px rgba(0,0,0,.7);z-index:61;transform:translate(-50%,100%);transition:transform .26s cubic-bezier(.22,1,.36,1);display:flex;flex-direction:column;overflow:hidden;padding:0 20px 0}
+  body.sheetopen{min-height:calc(100dvh + 200px)} /* guarantee the absolute sheet's under-bar overshoot is never clipped on a short page */
   .sheet.on{transform:translate(-50%,0)}
   .sheet .grab{align-self:center;width:40px;height:5px;border-radius:999px;background:rgba(255,255,255,.16);margin:10px 0 6px;flex:0 0 auto}
   .sheet .sh-title{font-size:20px;font-weight:800;letter-spacing:-.3px;margin:4px 0 2px}
   .sheet .sh-sub{font-size:12px;font-weight:600;color:#8A8A96;margin-bottom:6px}
-  .sheet .sh-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding-top:6px}
+  .sheet .sh-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:6px 0 calc(70px + env(safe-area-inset-bottom))}
   .drow{background:var(--surface-1);border:none;border-radius:16px;margin-bottom:12px;overflow:hidden}
   .drow>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px}
   .drow>summary::-webkit-details-marker{display:none}
@@ -1466,7 +1471,7 @@ function _ensureSheet(){
         sheet.style.transition='transform .24s cubic-bezier(.32,.72,0,1)';
         sheet.style.transform='translate(-50%,112%)';
         document.body.classList.remove('sheetopen');
-        setTimeout(()=>{ sheet.classList.remove('on'); sheet.style.transition=''; sheet.style.transform=''; _restoreBorrow(); },240);
+        setTimeout(()=>{ sheet.classList.remove('on'); sheet.style.transition=''; _restoreBorrow(); _restoreSheetLayout(); },240);
       } else { sheet.style.transition=''; sheet.style.transform=''; } // snap back up
     }
     y0=null; dy=0; dragging=false;
@@ -1487,12 +1492,21 @@ function openSheet(title,sub,body){
     _sheetBorrow={node:body, home:body.parentNode, next:body.nextSibling};
     s.body.innerHTML=''; s.body.appendChild(body);
   } else { s.body.innerHTML=body||''; }
-  s.body.scrollTop=0; s.sheet.style.transform='';
-  requestAnimationFrame(()=>{ document.body.classList.add('sheetopen'); s.sheet.classList.add('on'); });
+  s.body.scrollTop=0;
+  // variant H (design 07-17c): sheet is ABSOLUTE page-layer content while open — anchored at scrollY+14vh,
+  // overshooting ~120px under the bar — so the iOS scroll-edge glass ghosts its rows through the toolbar
+  // (a fixed sheet lives in the UI layer Safari never ghosts). Background scroll locked; root colour constant.
+  const sc=window.scrollY||document.documentElement.scrollTop||0, sh=s.sheet;
+  sh.style.transform=''; // back to the CSS off-screen start translate(-50%,100%) before the slide-up
+  sh.style.position='absolute'; sh.style.top=(sc+window.innerHeight*0.14)+'px'; sh.style.bottom='auto'; sh.style.height=(window.innerHeight*0.86+120)+'px';
+  document.documentElement.style.overflow='hidden'; document.body.style.overflow='hidden';
+  requestAnimationFrame(()=>{ document.body.classList.add('sheetopen'); sh.classList.add('on'); });
   try{ setTimeout(decorateChrome,20); }catch(_){}
 }
 function _restoreBorrow(){ if(!_sheetBorrow) return; const b=_sheetBorrow; _sheetBorrow=null; if(b.home){ if(b.next) b.home.insertBefore(b.node,b.next); else b.home.appendChild(b.node); } }
-function closeSheet(){ if(!_sheetEls) return; _sheetEls.sheet.style.transition=''; _sheetEls.sheet.style.transform=''; document.body.classList.remove('sheetopen'); _sheetEls.sheet.classList.remove('on'); setTimeout(_restoreBorrow,280); /* no chrome poke needed: the glass never died — the page was never covered (design 07-17 /sheetpeek) */ }
+// Undo variant-H layout: back to the fixed off-screen resting state + unlock scroll (call AFTER the slide-down).
+function _restoreSheetLayout(){ const sh=_sheetEls&&_sheetEls.sheet; if(!sh) return; sh.style.position=''; sh.style.top=''; sh.style.bottom=''; sh.style.height=''; sh.style.transform=''; document.documentElement.style.overflow=''; document.body.style.overflow=''; }
+function closeSheet(){ if(!_sheetEls) return; const sh=_sheetEls.sheet; sh.style.transition=''; sh.style.transform=''; document.body.classList.remove('sheetopen'); sh.classList.remove('on'); setTimeout(()=>{ _restoreBorrow(); _restoreSheetLayout(); },300); }
 window.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSheet(); });
 // Tap-to-show tooltip — works on mobile (hover doesn't). Tap a hint → bubble; tap again/elsewhere → gone.
 let _tipFor=null;
@@ -1752,17 +1766,29 @@ async function testHelicone(model){
 }
 // Trainer = overview only. Per-chain Map/Re-map + call log live under Calls → Settings (a chain).
 // Stats align with Alpha/Bravo/Charlie (locked navType) + mapped/unmapped.
+// Mapped-progress report: the whole fleet at the top, then EACH store category and how much of it is
+// routed (owner 07-17). Bar length shows the laggards at a glance; a category hits green when it's done.
+function trBar(m,n,h){ const p=n?Math.round(m/n*100):0; return `<div style="height:${h}px;background:var(--terminal);border-radius:999px;box-shadow:inset 0 2px 4px rgba(0,0,0,.45);overflow:hidden"><div style="width:${p}%;height:100%;background:var(--green);border-radius:999px;transition:width .3s"></div></div>`; }
 async function loadTrainer(){
   const ss=document.getElementById('tr_progress'); if(!ss) return;
   const d=await api('/api/admin/trainer/list');
   if(!d||!Array.isArray(d.chains)){ ss.innerHTML=''; return; } // no phantom error — the list below still works
-  const ch=d.chains;
-  const mapped=ch.filter(c=>c.navStatus==='locked').length, total=ch.length||1, pct=Math.round(mapped/total*100);
-  // ONE vital: mapped progress. The per-lane (Alpha/Bravo/Charlie) breakdown lives in the ⓘ sheet, not here.
+  const ch=d.chains, isMapped=c=>c.navStatus==='locked';
+  const mapped=ch.filter(isMapped).length, total=ch.length||1, pct=Math.round(mapped/total*100);
+  // Per store-type breakdown, biggest categories first.
+  const byType=new Map();
+  ch.forEach(c=>{ const t=c.type||'Other'; const e=byType.get(t)||{n:0,m:0}; e.n++; if(isMapped(c)) e.m++; byType.set(t,e); });
+  const cats=[...byType.entries()].sort((a,b)=>b[1].n-a[1].n);
+  const catRow=([t,e])=>{ const done=e.m===e.n; return `<div style="display:flex;align-items:center;gap:12px;padding:7px 0">
+      <span style="flex:0 0 88px;font-size:12.5px;font-weight:600;color:#CDCDD8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esch(t)}</span>
+      <span style="flex:1;min-width:0">${trBar(e.m,e.n,5)}</span>
+      <span style="flex:0 0 auto;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;color:${done?'var(--green)':'#8A8A96'}">${e.m}/${e.n}</span>
+    </div>`; };
   ss.innerHTML=`<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:9px">
       <span style="font-size:13px;font-weight:700;color:#CDCDD8">${mapped} of ${ch.length} chains mapped</span>
       <span style="font-size:14px;font-weight:800;color:var(--green)">${pct}%</span></div>
-    <div style="height:6px;background:var(--terminal);border-radius:999px;box-shadow:inset 0 2px 4px rgba(0,0,0,.45);overflow:hidden"><div style="width:${pct}%;height:100%;background:var(--green);border-radius:999px"></div></div>`;
+    ${trBar(mapped,total,6)}
+    <div style="margin-top:14px">${cats.map(catRow).join('')}</div>`;
   renderABCD(ch);
 }
 // ABCD — how a call flows: Alpha (keypad) / Bravo (voice) / Charlie (live agent) / Delta (recorded clips).
@@ -1987,10 +2013,11 @@ async function loadTreeLab(){
   list.innerHTML=chains.map(c=>`<div class="card" style="padding:11px 13px">
     <div class="row" style="justify-content:space-between;align-items:baseline;gap:8px">
       <div class="sname">${esch(c.name)} ${badge(c.treeStatus)}${c.ringsDirect?' <span class="chip-sm" style="color:var(--green);background:rgba(74,222,128,.1)">rings direct</span>':''}${c.muted?' <span class="chip-sm">muted</span>':''}</div>
-      <div class="meta">${c.stores} stores</div>
+      <div class="meta">${c.stores} stores${c.phones!=null&&c.phones<c.stores?` · <span style="color:#FBBF24">${c.phones} w/ #</span>`:''}</div>
     </div>
+    ${c.blocker?`<div class="meta" style="margin-top:5px;color:#FBBF24">⚠ ${esch(c.blocker)}</div>`:''}
     ${c.note?`<div class="meta" style="margin-top:5px;color:#cdcdd8">${esch(c.note)}</div>`:''}
-    <div class="smeta" style="margin-top:5px">${c.dtmf?`keys: <code>${esch(c.dtmf)}</code> · `:''}${c.answerPath?esch(c.answerPath)+' · ':''}${c.avgTreeSeconds?secsFmt(c.avgTreeSeconds)+' to human · ':''}${c.verifiedAt?'verified '+agoTs(c.verifiedAt):c.learnedAt?'learned '+agoTs(c.learnedAt):'never mapped'}</div>
+    <div class="smeta" style="margin-top:5px">${c.distributor?`distro: ${esch(c.distributor)} · `:''}${c.dtmf?`keys: <code>${esch(c.dtmf)}</code> · `:''}${c.answerPath?esch(c.answerPath)+' · ':''}${c.avgTreeSeconds?secsFmt(c.avgTreeSeconds)+' to human · ':''}${c.verifiedAt?'verified '+agoTs(c.verifiedAt):c.learnedAt?'learned '+agoTs(c.learnedAt):'never mapped'}</div>
     <div class="ractions" style="margin-top:8px">
       <button class="ghost" onclick="tlOne('discover',${c.id},this)">Discover</button>
       <button class="ghost" onclick="tlOne('verify',${c.id},this)">Verify</button>
