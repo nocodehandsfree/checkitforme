@@ -3,6 +3,15 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-17 (round four) — CALC FIELDS + iOS TINT POKE + last headers (756c1e0, live)
+- **iOS tint fix shipped, needs the owner's phone verdict:** pushState drops Safari's sampled bar
+  tint and it never resamples in-page (site lesson 07-14, closeSupport). showSection now fires the
+  same poke (re-assert root color + 1px scroll nudge) after every page switch. NOT verified — only
+  his phone can.
+- Calc: every money field = ONE carved well (border-in-border gone); workbench otherwise untouched
+  (owner: fields only — full Calc redesign still needs a comp).
+- Kiosk intel / Designer / Categories join title+subhead. All 22 sections now share the format.
+
 ## 2026-07-17 (round three) — ONE LAYOUT LAW, EVERY PAGE (cda51ab, live)
 - Owner's rulings baked in: NO tooltips on section headers → title + short sub everywhere · info is
   RAISED, forms are CARVED (k-well now matches God-view .v) · selects show their chevron (pill
