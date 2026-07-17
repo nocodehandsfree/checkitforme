@@ -1199,24 +1199,24 @@
     <section id="trees">
     <div class="k-title">Chains</div>
     <div class="k-sub" id="set_pickcount">Per-chain settings and phone routes</div>
-    
-    <div class="stats" id="tr_stats" style="margin:14px 0 0"></div>
-    <button class="peek" style="margin-top:12px" onclick="sheetFromHolder('ds_abcd','How a call flows','Alpha keypad · Bravo voice menu · Charlie live agent · Delta recorded clips')">
-      <div class="pk-main"><div class="pk-t">How a call flows</div></div>
-      <div class="pk-fact">A / B / C / D</div>
-      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-    </button>
-    <div id="trees_details" style="display:none"><div id="ds_abcd"><div id="abcd_flow"></div></div></div>
+    <!-- The page's ONE story: how much of the fleet is routed. A slim bar, not a wall of stat tiles. -->
+    <div id="tr_progress" style="margin-top:16px"></div>
     <div id="set_pickwrap">
-      <div class="k-filters">
+      <input id="set_search" placeholder="Search chains…" oninput="filterChainPicker()" style="margin:16px 0 10px;font-size:14px;padding:12px 15px">
+      <div class="k-filters" style="margin:0 0 4px">
         <select class="k-filter" id="set_frate" onchange="filterChainPicker()"><option value="">All ratings</option><option value="5">5 Best Chance</option><option value="4">4 Mostly Reliable</option><option value="3">3 Spotty</option><option value="2">2 Over MSRP</option><option value="1">1 Unknown</option></select>
         <select class="k-filter" id="set_fmap" onchange="filterChainPicker()"><option value="">Mapped + not</option><option value="mapped">Mapped</option><option value="unmapped">Unmapped</option></select>
       </div>
-      <input id="set_search" placeholder="Search chains…" oninput="filterChainPicker()" style="margin:10px 0 14px;font-size:14px;padding:11px 15px">
       <select id="set_chain" onchange="setPickChain()" style="display:none"><option value="">Select a chain</option></select>
       <div id="set_picker"><div class="empty">Loading…</div></div>
       <button class="k-key" id="set_more" onclick="chainsShowMore()" style="display:none">SHOW MORE</button>
+      <!-- Reference, not content — demoted to a footnote at the very bottom of the list. -->
+      <button class="peek" style="margin-top:20px" onclick="sheetFromHolder('ds_abcd','How a call flows','Alpha keypad · Bravo voice menu · Charlie live agent · Delta recorded clips')">
+        <div class="pk-main"><div class="pk-t">How a call flows</div><div class="pk-m">Alpha · Bravo · Charlie · Delta</div></div>
+        <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
     </div>
+    <div id="trees_details" style="display:none"><div id="ds_abcd"><div id="abcd_flow"></div></div></div>
     <div id="set_body" style="display:none">
       <div class="card" id="set_storewrap">
         <div class="row" style="gap:10px;align-items:center"><span id="set_storelogo" class="setlogo"></span><span class="name">Store settings</span></div>
@@ -1753,14 +1753,16 @@ async function testHelicone(model){
 // Trainer = overview only. Per-chain Map/Re-map + call log live under Calls → Settings (a chain).
 // Stats align with Alpha/Bravo/Charlie (locked navType) + mapped/unmapped.
 async function loadTrainer(){
-  const ss=document.getElementById('tr_stats'); if(!ss) return;
+  const ss=document.getElementById('tr_progress'); if(!ss) return;
   const d=await api('/api/admin/trainer/list');
-  if(!d||!Array.isArray(d.chains)){ ss.innerHTML='<div class="meta">Could not load.</div>'; return; }
-  const ch=d.chains, lock=t=>ch.filter(c=>c.navStatus==='locked'&&(t?c.navType===t:true)).length;
-  const unmapped=ch.filter(c=>!c.navStatus||c.navStatus==='unmapped').length;
-  const st=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
-  ss.innerHTML=st(ch.length,'chains')+st(lock(),'mapped','green')+st(unmapped,'unmapped')
-    +st(lock('keypad'),'Alpha')+st(lock('voice'),'Bravo')+st(lock('direct'),'Charlie');
+  if(!d||!Array.isArray(d.chains)){ ss.innerHTML=''; return; } // no phantom error — the list below still works
+  const ch=d.chains;
+  const mapped=ch.filter(c=>c.navStatus==='locked').length, total=ch.length||1, pct=Math.round(mapped/total*100);
+  // ONE vital: mapped progress. The per-lane (Alpha/Bravo/Charlie) breakdown lives in the ⓘ sheet, not here.
+  ss.innerHTML=`<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:9px">
+      <span style="font-size:13px;font-weight:700;color:#CDCDD8">${mapped} of ${ch.length} chains mapped</span>
+      <span style="font-size:14px;font-weight:800;color:var(--green)">${pct}%</span></div>
+    <div style="height:6px;background:var(--terminal);border-radius:999px;box-shadow:inset 0 2px 4px rgba(0,0,0,.45);overflow:hidden"><div style="width:${pct}%;height:100%;background:var(--green);border-radius:999px"></div></div>`;
   renderABCD(ch);
 }
 // ABCD — how a call flows: Alpha (keypad) / Bravo (voice) / Charlie (live agent) / Delta (recorded clips).
@@ -3487,8 +3489,9 @@ function buildChainPicker(){
   el.innerHTML=live.map(ch=>{
     const locked=ch.navStatus==='locked';
     const nStores=Number((ch.stores&&ch.stores.n)||ch.callable||0);
+    // Color with intent: mapped is the NORM (quiet gray) · unmapped is the exception that needs routing (amber).
     const meta=[nStores?nStores+' store'+(nStores===1?'':'s'):null, ch.muted?'muted':null,
-      `<span style="color:${locked?'var(--green)':'#8A8A96'}">${locked?'mapped':'unmapped'}</span>`].filter(Boolean).join(' · ');
+      locked?'<span style="color:#8A8A96">mapped</span>':'<span style="color:#F59E0B;font-weight:700">unmapped</span>'].filter(Boolean).join(' · ');
     return `<div class="pickrow${String(ch.id)===cur?' on':''}" data-id="${ch.id}" data-name="${esch((ch.name||'').toLowerCase())}" data-tier="${ch.tier??''}" data-mapped="${locked?1:0}" onclick="pickChainRow(${ch.id})"${ch.muted?' style="opacity:.5"':''}>
       <span class="setlogo">${logTile(ch)}</span>
       <span style="flex:1;min-width:0"><span style="display:block;color:#fff;font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esch(ch.name)}</span>

@@ -693,15 +693,16 @@ main{padding:10px 20px 40px;max-width:520px;margin:0 auto}
 #sheet .rowc span{color:#8A8A96;font-weight:500;font-size:12.5px;display:block;margin-top:3px}
 #sheet .runbtn{display:block;width:100%;background:transparent;border:1.5px solid #4ADE80;color:#4ADE80;border-radius:999px;padding:15px;font-weight:900;font-size:14px;letter-spacing:1px;margin:8px 0 20px}
 #sheet[style*="display: flex"]{display:flex}
-#sheet.frost{background:rgba(38,38,43,.42);backdrop-filter:blur(26px) saturate(1.15);-webkit-backdrop-filter:blur(26px) saturate(1.15)} /* F: frosted-glass sheet — the dimmed page shows THROUGH it, native-style */
+#sheet.frost{background:rgba(38,38,43,.28);backdrop-filter:blur(22px) saturate(1.3);-webkit-backdrop-filter:blur(22px) saturate(1.3)} /* F: frosted-glass sheet — the dimmed page shows THROUGH it, native-style */
 #sheet.frost .mychk{background:linear-gradient(135deg,rgba(46,125,79,.75),rgba(62,157,99,.75))}
-#sheet.frost .stat,#sheet.frost .rowc{background:rgba(31,31,37,.6)}
+#sheet.frost .stat,#sheet.frost .rowc{background:rgba(31,31,37,.38)}
 /* bright rows on the PAGE so there is something to ghost through the frost */
 .brite{background:linear-gradient(90deg,#4ADE80,#A7F3D0);border-radius:14px;color:#06210F;font-weight:900;padding:16px;margin-bottom:10px;text-align:center}
 .brite.b2{background:linear-gradient(90deg,#FBBF24,#FDE68A)}
 .brite.b3{background:linear-gradient(90deg,#818CF8,#C7D2FE)}
 #sheet .handle{width:44px;height:5px;border-radius:3px;background:#3A3A42;margin:0 auto 14px}
-body.filterdim main,body.filterdim header{filter:brightness(.45)} /* dim WITHOUT covering: the page itself darkens, keeps scrolling under the glass */
+body.filterdim main,body.filterdim header{filter:brightness(.45)}
+body.frostdim main,body.frostdim header{filter:brightness(.8) saturate(1.05)} /* F: barely dim — the frost does the separating, the page must stay bright enough to ghost through */ /* dim WITHOUT covering: the page itself darkens, keeps scrolling under the glass */
 </style></head><body>
 <header><span class="logo">Check <b>it</b></span></header>
 <main>
@@ -747,7 +748,8 @@ function T(k){
   sheet.style.display=(cur==='B'||cur==='C'||cur==='E'||cur==='F')?'flex':'none';
   sheet.classList.toggle('frost',cur==='F');
   sheet.style.transform='';
-  document.body.classList.toggle('filterdim',cur==='D'||cur==='E'||cur==='F');
+  document.body.classList.toggle('filterdim',cur==='D'||cur==='E');
+  document.body.classList.toggle('frostdim',cur==='F');
 }
 // Drag the sheet down to close (like the real thing) — closing clears the whole test state so the
 // owner can check the after-close translucency.

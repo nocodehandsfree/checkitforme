@@ -26,6 +26,7 @@ const FIX = {
   '/api/voices': { voices:[{id:'v1',name:'Sam',cloned:true},{id:'v2',name:'Dana',cloned:true},{id:'v3',name:'Branson',cloned:true}], active:'v1' },
   '/api/admin/workflow-assignments': { 'Direct Dana': { chains:[{name:'Target'},{name:'GameStop'}], stores:[] }, 'Hobby Shop Casual': { chains:[], stores:[{name:'Hobby Planet',location:'Glendale'}] } },
   '/api/categories': [ {id:1,label:'Pokémon'}, {id:2,label:'One Piece TCG'}, {id:3,label:'Topps NBA'} ],
+  '/api/admin/trainer/list': (()=>{ const mk=(n,st,ty)=>Array.from({length:n},()=>({navStatus:st,navType:ty})); return { chains:[...mk(60,'locked','keypad'),...mk(38,'locked','voice'),...mk(22,'locked','direct'),...mk(11,'unmapped',null)] }; })(),
   '/api/chains': [
     { id:1, name:'Academy Sports', tier:5, navStatus:'locked', stores:{n:42}, type:'Big box' },
     { id:2, name:'Ace Hardware', tier:4, navStatus:'locked', stores:{n:63}, type:'Hardware' },
