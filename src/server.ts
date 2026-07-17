@@ -679,8 +679,27 @@ main{padding:10px 20px 40px;max-width:520px;margin:0 auto}
 .store .nm{font-weight:800}.store .ad{font-size:12.5px;color:#8A8A96}
 /* the moving parts, each independently toggleable */
 #dim{position:fixed;inset:0;background:rgba(5,6,9,.66);display:none;z-index:79}
-#sheet{position:fixed;left:0;right:0;bottom:0;z-index:80;background:#26262B;border-radius:28px 28px 0 0;padding:16px 20px calc(24px + env(safe-area-inset-bottom));display:none;touch-action:none}
-#sheet.slide{transform:translateY(0);transition:transform .3s}
+#sheet{position:fixed;left:0;right:0;bottom:0;z-index:80;background:#26262B;border-radius:28px 28px 0 0;display:none;height:86dvh;flex-direction:column;overflow:hidden}
+#sheet .grab{touch-action:none;padding:10px 0 4px;flex:0 0 auto}
+#sheet .body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 20px calc(24px + env(safe-area-inset-bottom))}
+#sheet .mychk{background:linear-gradient(135deg,#2E7D4F,#3E9D63);border-radius:20px;padding:18px;margin-bottom:14px}
+#sheet .mychk .k{font-size:11px;letter-spacing:2px;font-weight:800;opacity:.85}
+#sheet .mychk .ph{font-size:28px;font-weight:900;margin-top:6px}
+#sheet .stats{display:flex;gap:10px;margin-bottom:14px}
+#sheet .stat{flex:1;background:#1F1F25;border-radius:16px;padding:16px;text-align:center}
+#sheet .stat b{font-size:22px}
+#sheet .stat i{display:block;font-style:normal;font-size:11px;letter-spacing:1.5px;color:#8A8A96;margin-top:4px}
+#sheet .rowc{display:flex;justify-content:space-between;align-items:center;background:#1F1F25;border-radius:14px;padding:16px;margin-bottom:10px;font-weight:700}
+#sheet .rowc span{color:#8A8A96;font-weight:500;font-size:12.5px;display:block;margin-top:3px}
+#sheet .runbtn{display:block;width:100%;background:transparent;border:1.5px solid #4ADE80;color:#4ADE80;border-radius:999px;padding:15px;font-weight:900;font-size:14px;letter-spacing:1px;margin:8px 0 20px}
+#sheet[style*="display: flex"]{display:flex}
+#sheet.frost{background:rgba(38,38,43,.42);backdrop-filter:blur(26px) saturate(1.15);-webkit-backdrop-filter:blur(26px) saturate(1.15)} /* F: frosted-glass sheet — the dimmed page shows THROUGH it, native-style */
+#sheet.frost .mychk{background:linear-gradient(135deg,rgba(46,125,79,.75),rgba(62,157,99,.75))}
+#sheet.frost .stat,#sheet.frost .rowc{background:rgba(31,31,37,.6)}
+/* bright rows on the PAGE so there is something to ghost through the frost */
+.brite{background:linear-gradient(90deg,#4ADE80,#A7F3D0);border-radius:14px;color:#06210F;font-weight:900;padding:16px;margin-bottom:10px;text-align:center}
+.brite.b2{background:linear-gradient(90deg,#FBBF24,#FDE68A)}
+.brite.b3{background:linear-gradient(90deg,#818CF8,#C7D2FE)}
 #sheet .handle{width:44px;height:5px;border-radius:3px;background:#3A3A42;margin:0 auto 14px}
 body.filterdim main,body.filterdim header{filter:brightness(.45)} /* dim WITHOUT covering: the page itself darkens, keeps scrolling under the glass */
 </style></head><body>
@@ -693,32 +712,49 @@ body.filterdim main,body.filterdim header{filter:brightness(.45)} /* dim WITHOUT
 <button class="t" id="C" onclick="T('C')">C sheet+dim</button>
 <button class="t" id="D" onclick="T('D')">D filter dim</button>
 <button class="t" id="E" onclick="T('E')">E sheet+filter</button>
+<button class="t" id="F" onclick="T('F')">F frosted sheet</button>
 </div>
 <div class="store"><div class="ic">B&N</div><div><div class="nm">Barnes &amp; Noble Calabasas</div><div class="ad">4735 Commons Way · till 9 PM</div></div></div>
 <div class="store"><div class="ic">CVS</div><div><div class="nm">CVS Ventura Blvd</div><div class="ad">22050 Ventura Blvd. · till 11 PM</div></div></div>
 <div class="store"><div class="ic">F</div><div><div class="nm">Fun</div><div class="ad">123 Fun Lane, Calabasas, CA</div></div></div>
-<div style="height:60dvh"></div>
+<div class="brite">IN STOCK at CVS Mulholland</div>
+<div class="brite b2">Restock incoming · Sunday</div>
+<div class="brite b3">3 zones watched · 39 stores</div>
+<div class="brite">CHECK ANOTHER STORE →</div>
+<div style="height:40dvh"></div>
 <div class="store"><div class="ic">↑</div><div><div class="nm">Scroll runway</div><div class="ad">so the top can slide under the clock</div></div></div>
 </main>
 <div id="dim" onclick="T(cur)"></div>
-<div id="sheet"><div class="handle"></div><b id="sh_nm">Fun</b><p style="color:#8A8A96;font-size:14px">123 Fun Lane, Calabasas, CA</p></div>
+<div id="sheet"><div class="grab"><div class="handle"></div></div><div class="body">
+<div class="mychk"><div class="k">MY CHECKS</div><div class="ph">(310) 666-2331</div></div>
+<div class="stats"><div class="stat"><b>∞</b><i>CHECKS LEFT</i></div><div class="stat"><b>4</b><i>CHECKS TODAY</i></div></div>
+<div class="rowc">Manage plan<span>Unlimited · billed monthly</span></div>
+<div class="rowc">Check history<span>31 checks in July</span></div>
+<div class="rowc">Alerts<span>Restock and auto check pings.</span></div>
+<div class="rowc">Manage Zones<span>Check a whole area in one tap.</span></div>
+<div class="rowc">Earn free checks<span>4 ways. Open to everyone.</span></div>
+<div class="rowc">Language<span>English</span></div>
+<div class="rowc">Sign out<span>See you soon.</span></div>
+<button class="runbtn">RUN A CHECK →</button>
+</div></div>
 <script>
 var cur='';
 function T(k){
   var same=(cur===k); cur=same?'':k;
-  ['A','B','C','D','E'].forEach(function(x){document.getElementById(x).classList.toggle('on',x===cur);});
+  ['A','B','C','D','E','F'].forEach(function(x){document.getElementById(x).classList.toggle('on',x===cur);});
   var dim=document.getElementById('dim'),sheet=document.getElementById('sheet');
   dim.style.display=(cur==='A'||cur==='C')?'block':'none';
-  sheet.style.display=(cur==='B'||cur==='C'||cur==='E')?'block':'none';
+  sheet.style.display=(cur==='B'||cur==='C'||cur==='E'||cur==='F')?'flex':'none';
+  sheet.classList.toggle('frost',cur==='F');
   sheet.style.transform='';
-  document.body.classList.toggle('filterdim',cur==='D'||cur==='E');
+  document.body.classList.toggle('filterdim',cur==='D'||cur==='E'||cur==='F');
 }
 // Drag the sheet down to close (like the real thing) — closing clears the whole test state so the
 // owner can check the after-close translucency.
-var sheet=document.getElementById('sheet'),y0=null;
-sheet.addEventListener('touchstart',function(e){y0=e.touches[0].clientY;sheet.style.transition='none';},{passive:true});
-sheet.addEventListener('touchmove',function(e){if(y0==null)return;var d=Math.max(0,e.touches[0].clientY-y0);sheet.style.transform='translateY('+d+'px)';},{passive:true});
-sheet.addEventListener('touchend',function(e){sheet.style.transition='';var d=(e.changedTouches[0].clientY-(y0||0));y0=null;if(d>90){T(cur);}else{sheet.style.transform='';}});
+var sheet=document.getElementById('sheet'),grab=sheet.querySelector('.grab'),y0=null;
+grab.addEventListener('touchstart',function(e){y0=e.touches[0].clientY;sheet.style.transition='none';},{passive:true});
+grab.addEventListener('touchmove',function(e){if(y0==null)return;var d=Math.max(0,e.touches[0].clientY-y0);sheet.style.transform='translateY('+d+'px)';},{passive:true});
+grab.addEventListener('touchend',function(e){sheet.style.transition='';var d=(e.changedTouches[0].clientY-(y0||0));y0=null;if(d>90){T(cur);}else{sheet.style.transform='';}});
 </script>
 </body></html>`);
 });
