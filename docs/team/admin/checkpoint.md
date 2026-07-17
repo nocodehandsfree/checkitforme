@@ -48,32 +48,19 @@
 Checked clean (screenshot or markup): App console, Statuses, Users, Search, Chains, Testing,
 Feedback, Calls, Support, GTM, Kiosk, dash.
 
-## 2026-07-16 (final) — EMAIL RENDERING: SOLVED + OWNER SIGNED OFF ("OK we're there", "lock it in")
-Ten screenshot-judged rounds. **The mechanism (do NOT re-litigate; the laws live as the comment block
-at the color constants in `src/alerts.ts` — read them before touching ANY email color):** the email is
-AUTHORED as the flat-black design (pure #000000 canvas, yellow kicker, green-RING CTA, white label) —
-Outlook/Apple render it verbatim. A `u + .body` stylesheet (a selector only GMAIL matches) swaps every
-`em-*`-classed element to a light base that Gmail auto-darkens into its gray-card look. Gmail truths,
-each a failed round: it flips text lightness both ways, mangles authored-dark-only emails, gradient
-locks dim text, -webkit-text-fill-color is stripped, blend-mode recovery hue-inverts, and
-prefers-color-scheme did NOT drive the good render. All 6 designs walked + approved. Owner trims
-shipped (confirm_email + instock_owner; designs may have empty cta = no button). From-name "Check It
-For Me" live (code + Brevo sender #3). Inter @font-face where allowed; Gmail falls back.
-- OPEN ASK (owner, no-spend): Gmail avatar shows "C" — wants the brandmark. Free path: Google account
-  for noreply@ with brandmark photo (needs human phone-verify). BIMI rejected (costs). Wait for him.
-- Promotes stay with PM on the owner's word — server-side email changes are STAGING-ONLY until then.
+## 2026-07-16 — EMAIL RENDERING: SOLVED + OWNER SIGNED OFF ("lock it in") — do NOT re-litigate
+The laws live as the comment block at the color constants in `src/alerts.ts` — read them before
+touching ANY email color. Short version: authored flat-black design; a `u + .body` stylesheet (only
+Gmail matches it) swaps `em-*` elements to a light base Gmail auto-darkens. All 6 designs approved;
+owner trims shipped; from-name "Check It For Me" live. Full history: git log around 07-16.
+- OPEN ASK (no-spend): Gmail avatar brandmark via a Google account for noreply@ (human phone-verify).
+- Server-side email changes are STAGING-ONLY until PM's next promote.
 
-### Alert system — how it works (all in src/alerts.ts + calls/notify.ts + calls/service.ts)
-- Events: restock (text|email), auto_check (text|email), store_added / waitlist / confirm_email
-  (email), instock_owner (owner ping). EVENT_CHANNEL + EMAIL_DESIGN + DEFAULT/ES_TEMPLATES.
-- Email BODY editable in Admin ▸ Alerts (`emailBody`, sentence-split, **bold** + {token}). Copy is
-  generic — one template serves 4 brands, never hardcode "Pokemon". EN+ES; Admin edits EN.
-- Bilingual: accountLang picks es only when accounts.language='es'. confirm-gate: no alert email
-  until /confirm-email tapped. /unsubscribe = signed HMAC one-click. Owner ping: Admin ▸ Alerts.
-- FROM = noreply@checkitforme.com (Brevo id 3). Admin test dropdown covers all 8 send types.
-- ⚠ Server-side email changes STAGING-ONLY until Pops' next promote (new cols accounts.language +
-  call_results.customer_schedule_id + accounts.email_verified_at bootstrap-migrate on deploy).
-- POST-PROMOTE TODO: re-set the owner's email on PROD (/api/admin/users/phone:+13106662331/email).
+### Alert system (reference — src/alerts.ts + calls/notify.ts + calls/service.ts)
+Events: restock/auto_check (text|email) · store_added/waitlist/confirm_email (email) · instock_owner.
+Body editable in Admin ▸ Alerts ({token} + **bold**, generic across 4 brands). Bilingual via
+accounts.language. confirm-gate + HMAC unsubscribe. FROM noreply@ (Brevo id 3).
+POST-PROMOTE TODO: re-set owner's email on PROD (/api/admin/users/phone:+13106662331/email).
 
 ### ⚠ OWNER'S OPEN ASKS (cross-lane, unfinished)
 1. Store LOGOS on the WEBSITE alerts view (Webbie; skipped in email on purpose).
