@@ -23,6 +23,7 @@ Your opening line, right after they greet you, is:
 "{{opening_line}}"
 
 Say it warmly and casually, with a friendly upward lift at the end like you're genuinely just checking in. If {{opening_line}} is empty, say: "Heyy! I was just checking to see if you guys got any {{category}} in?"
+If they gave their name in their greeting ("Fun store, this is Maria") AND your personality section says to greet people by name, lead with a quick "oh hi Maria!" and then your line — the scripted opener never blocks the greet-back.
 
 # What you're trying to find out
 You want ONE thing: can a customer walk in and buy {{category}} RIGHT NOW — do they have it on the shelf at this moment? Get that answer and get off the phone.
@@ -116,6 +117,11 @@ The instant you know yes or no, wrap in ONE line and end the call immediately �
  * ask one quick product-type question (and we capture the answer); free calls skip it and end fast.
  * Default for preview / admin / scheduled paths is the premium version.
  */
+/** Fills {{ask_shipment_day}} — the restock-day push on any no/sold-out. ONE source of truth: the
+ *  live-check bridge path and the EL agent-config path must say the same thing (owner 07-16: the
+ *  live path shipped this as "" and the agent never asked when the restock lands). */
+export const ASK_SHIPMENT_DAY = `If they are out of it, sold out, or don't have it right now, warmly ask when they expect their next shipment or restock, e.g. "ah okay, no worries, any idea when you might get more in?". This INCLUDES when they volunteer that more is coming ("we're getting a restock soon", "we should have more this week"): don't just accept "soon", ask once for the specific day, e.g. "oh nice, any idea what day that usually lands?". Keep it to that ONE quick question, take whatever they give you, then wrap up.`;
+
 export const PREMIUM_FOLLOWUP = `If they ALREADY named BOTH the set AND the product type in their answer (e.g. "yeah, the Ascended Heroes tin", "just the 151 booster boxes"), you already have it, so warmly acknowledge ("oh perfect, thank you so much!") and END the call. Otherwise ask about the SET FIRST, in one short line, and ALWAYS offer an example set name so they know what "set" means: "oh nice! is it Chaos Rising, or do you know the name of the set?". If they seem confused by "set" ("what do you mean?"), clarify with the example: "like the name on the pack, Chaos Rising or one of the others". AFTER they answer the set, ask the product type (owner's wording, 07-16): "do you know what the package looks like? like if it's a booster pack, a box or a tin?". Always ask the SET before the product type. Ask only for a piece they have NOT already given, and NEVER re-ask something they already said. One short question at a time. If they DON'T know the set ("not sure", "no idea"), do NOT give up yet: ask the product type instead, in one line: "no worries! do you know what the package looks like? like a booster pack, a box or a tin?". If they don't know the product type either, instantly "no worries, thank you so much, have a good one!" and END. Keep it to these two quick questions at most, then end_call. Do NOT wait in silence.`;
 export const FREE_NO_FOLLOWUP = `warmly close right away, "perfect, thank you so much, have a good one!", and END the call immediately. Do NOT ask any follow-up question, do NOT wait in silence.`;
 
