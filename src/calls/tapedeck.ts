@@ -116,7 +116,7 @@ const play = (id: string, i: number) => `<Play>https://${HOST}/tapedeck/clip?ses
 // commas carry the pauses. {category} is filled at synth time.
 // Set question ALWAYS offers an example set name (owner, 07-10 call feedback): clerks often don't know
 // what "set" means. The example is edit-per-workflow on the Workflows page when a brand needs its own.
-const DEFAULT_FOLLOWUPS: Record<string, string[]> = {
+export const DEFAULT_FOLLOWUPS: Record<string, string[]> = {
   set: ["Oh nice! Is it Chaos Rising? Or do you know the name of the set?", "Awesome, any idea which set it is? Like Chaos Rising, or a different one?", "Oh sweet, do you know the name of the set? Like Chaos Rising?"],
   // Context-neutral phrasing: this clip plays after a set ANSWER and after "I don't know the set",
   // so no variant may assume either (owner 07-15: "No worries" read like it presumed confusion).
