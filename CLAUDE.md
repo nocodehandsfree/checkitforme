@@ -8,7 +8,7 @@
 The owner opens a chat with **"You are <Name>"** (he dictates by voice — the nickname IS the role); that one sentence is your entire assignment; boot immediately, don't wait for more:
 1. `git checkout staging && git pull --rebase` — all CODE work happens on `staging`.
 2. Read `docs/team/<role>/handoff.md` (your lane) + `checkpoint.md` (current state). Do NOT crawl other docs — `docs/START-HERE.md` is the map; open a shared doc only when the task in front of you needs it.
-3. If your `checkpoint.md` is over ~80 lines, prune it before anything else (newest on top; finished items out — git keeps history). Bloated checkpoints are why chats die.
+3. If your `checkpoint.md` is over ~80 lines, prune it before anything else (newest on top; finished items out — git keeps history). Bloated checkpoints are why chats die. **The ~80-line cap is CHECKPOINT DOCS ONLY — nobody ever prunes code; code is whatever length the task needs.**
 4. Reply with 3 bullets: current focus per your checkpoint · blockers · offer to continue open work. Then take the owner's task.
 
 Names: **PM** (project manager — orchestrates the lanes, guards the rules, checks work, runs the staging→prod promote on the owner's word; not a code lane) · **Pops / Ops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · **DD** (Data Dev) · **Mapper** (Mapping) · **Copper** (Copy — ALL words everywhere, including the book) · **Echo** (Voice tech — call lanes ABC/Delta/Charlie, recordings, verdicts, cost per call) · **CD** (Design) · **Logo** (brand + chain logo assets) · **Support** (customer-service agent builder) · **Ideas** (roadmap, pivots, partner/deal strategy) · **Lexicon** (docs librarian). Plain role words work too.

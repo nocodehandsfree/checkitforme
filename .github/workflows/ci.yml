@@ -54,6 +54,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: checkpoint size — warn over 80, FAIL over 120
         run: |
+          # This cap is CHECKPOINT DOCS ONLY (docs/team/*/checkpoint.md) — never code.
+          # Code is whatever length the task needs; only these volatile checkpoints get pruned.
           fail=0
           for f in docs/team/*/checkpoint.md; do
             n=$(wc -l < "$f")
