@@ -1,4 +1,4 @@
-# New-chat prompts — copy, paste, go. (This replaces KICKOFFS.md)
+# New-chat prompts — copy, paste, go.
 **What this is · who it's for:** Fungie's cheat sheet for starting agent chats that don't die.
 
 ## The prompt (same shape for every role — that's the whole point)
