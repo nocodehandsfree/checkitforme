@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="livefix-r123" />
+<meta name="x-rev" content="livebloom-r124" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -301,7 +301,7 @@ __BRAND_HEAD__
   /* NEUTRAL (no verdict): the page background is ONE solid gray = var(--bg) (#1D1D22 in v2), identical
      top to bottom, matching the root strip (owner 07-11 — no gradient, no mismatched shade). Verdict
      tones above override this for result pages. */
-  html:not(.tone-in):not(.tone-out):not(.tone-unk):not(.tone-soon) body:not(.rview){background:var(--bg)}
+  html:not(.tone-in):not(.tone-out):not(.tone-unk):not(.tone-soon) body:not(.rview):not(.lview){background:var(--bg)} /* :not(.lview) — the live-call bloom (below) must survive the neutral flattener */
   @media (display-mode: standalone){
     html.tone-in,html:has(body.rview.rv-in){background-color:#266440;background-image:linear-gradient(180deg,#266440 0px,#266440 140px,var(--bg) 100dvh)}
     html.tone-out,html:has(body.rview.rv-out){background-color:#6b2427;background-image:linear-gradient(180deg,#6b2427 0px,#6b2427 140px,var(--bg) 100dvh)}
@@ -365,10 +365,19 @@ __BRAND_HEAD__
   .hcal{position:relative;flex:0 0 auto;display:flex}
   /* match the "You" pill height exactly (same vertical padding/border, square-ish) */
   #calbtn{width:auto;height:auto;padding:7px 9px;border-radius:20px}
-  /* Live call in progress — a subtle green wash so "we're on the line for you" reads warm/active. */
+  /* LIVE CALL BLOOM (CD direction 07-16): while the call runs the page carries the same middle-out
+     bloom geometry as a verdict — dark at the top edge, green behind the store card by ~110px, dark
+     again by one viewport — in the approved green bloom tone (#266440). Header goes transparent like
+     the result view so the bloom flows under the nav. BODY ONLY: the root colour is never touched
+     (v2 keeps #1D1D22 constant — the chrome strips stay quiet; that lane is settled, see ~322).
+     The verdict bloom replaces this the moment the result renders (showResult swaps lview → rview).
+     This supersedes the old #live::before top wash. */
   #live{position:relative}
-  #live::before{content:'';position:absolute;left:-20px;right:-20px;top:-12px;height:220px;pointer-events:none;background:linear-gradient(180deg,rgba(74,222,128,.13),transparent 70%);z-index:0}
-  #live>*{position:relative;z-index:1}
+  body.lview,html[data-skin="v2"] body.lview{background:linear-gradient(180deg,var(--bg) 0px,#266440 110px,#266440 230px,var(--bg) 100dvh)}
+  body.lview header{background:transparent;border-bottom-color:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
+  body.lview main{padding-top:18px}
+  /* Header chips sit ON the green like the result view's (same recipe as body.rview.rv-in). */
+  body.lview .pill,body.lview .vsw-trig,body.lview .railcal{background:rgba(74,222,128,.05);border-color:rgba(74,222,128,.16)}
   .rpill{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;padding:5px 11px;border-radius:999px}
   .rpill .d{width:7px;height:7px;border-radius:50%;background:currentColor}
   .rverdict.out .rpill{color:var(--red);background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.32)}
@@ -1471,7 +1480,7 @@ html[data-skin="v2"] .bub.c .nm{color:#8A8A96;opacity:1}
 html[data-skin="v2"] .rpill .d{animation:ckGlowV2 2s ease-in-out infinite}
 /* Verdict pages (6m/P6/§5.8): chrome on a wash is GLASS — translucent + faint border, never dark
    pills. RESULT chip = glass with the verdict-tinted border; title solid verdict color 30/900. */
-html[data-skin="v2"] body.rview .pill,html[data-skin="v2"] body.rview .vsw-trig,html[data-skin="v2"] body.rview .railcal,html[data-skin="v2"] body.rview .rnav-b{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+html[data-skin="v2"] body.rview .pill,html[data-skin="v2"] body.rview .vsw-trig,html[data-skin="v2"] body.rview .railcal,html[data-skin="v2"] body.rview .rnav-b,html[data-skin="v2"] body.lview .pill,html[data-skin="v2"] body.lview .vsw-trig,html[data-skin="v2"] body.lview .railcal{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
 html[data-skin="v2"] .rpill{background:rgba(255,255,255,.06);padding:7px 14px} /* rotation 2: comp 7/14, was 5/11 */
 html[data-skin="v2"] .rverdict.in .rpill{border:1px solid rgba(74,222,128,.45)}
 html[data-skin="v2"] .rverdict.out .rpill{border:1px solid rgba(239,68,68,.45);color:#FF7B7B}
@@ -3541,8 +3550,10 @@ function freshGuardInit(){
 // (never a prompt) — quietly re-check your current position in the background. If you've moved more than
 // ~12 miles from the cached spot, switch to where you are now and refresh stores/finds. No move (or no
 // permission) → nothing happens, the cached location stands.
+let LOC_RECHECK_T=0;
 function silentLocRecheck(){
   try{
+    LOC_RECHECK_T=Date.now();
     if(MANUAL_LOC) return; // they dropped a pin / searched a ZIP on purpose — do NOT snap back to GPS (regression: map pin jumped home)
     if(!navigator.geolocation || !navigator.permissions || !navigator.permissions.query) return;
     navigator.permissions.query({name:'geolocation'}).then(p=>{
@@ -3558,6 +3569,14 @@ function silentLocRecheck(){
     }).catch(()=>{});
   }catch(e){}
 }
+// The follow has to fire on TAB RETURN too, not just at boot (owner 07-17: drove home, iOS restored
+// the tab without a reload, stores still showed the old town — the boot-only recheck never re-fired).
+// Same silent rules (granted permission only, manual pin wins, 1-mi threshold); one check per 3 min.
+document.addEventListener('visibilitychange',()=>{ try{
+  if(document.visibilityState!=='visible') return;
+  if(Date.now()-LOC_RECHECK_T<180000) return;
+  silentLocRecheck();
+}catch(_){ } });
 let PENDING_VIEW=null;
 let STORES_AUTH_TOKEN=null; // which token the visible store list was fetched under — re-fetch on login so owner-only surfaces (FUN store / VIPs) appear without a hard refresh
 async function refreshAuth(){
@@ -4891,7 +4910,7 @@ async function startCheck(){
   if(!isAuthed()){ AUTH_PENDING=()=>{ try{ if(SEL_STORE&&SEL_CATS.length) showCallSheet(); }catch(_){} }; openAuth(); return; } // after login, RE-OPEN the call sheet (don't auto-place the call — that was the weird login→auto-call)
   if(!ACCOUNT||ACCOUNT.credits<=0){ openBuy('out'); return; }
   return startCheckLive(); // always the live, hear-it-happen bridge path
-  $('builder').classList.add('hidden'); $('result').classList.add('hidden'); $('live').classList.remove('hidden'); document.body.classList.remove('rview');
+  $('builder').classList.add('hidden'); $('result').classList.add('hidden'); $('live').classList.remove('hidden'); document.body.classList.remove('rview'); document.body.classList.add('lview');
   $('livestore').textContent=SEL_STORE.name; $('phase').textContent=PHASES[0];
   $('live_tr').style.display='none'; $('live_tr_body').innerHTML='';
   let pi=0; const phaseT=setInterval(()=>{ pi=Math.min(pi+1,PHASES.length-1); $('phase').textContent=PHASES[pi]; },4500);
@@ -5190,7 +5209,7 @@ async function startCheckLive(){
   }catch(e){ AUDIO_CTX=null; }
   AUDIO_NEXT={}; AUDIO_LIVE=false; if($('audio_ind'))$('audio_ind').style.display='none';
   if(!(await preCallGate())) return; // #17: last-call reminder + 24h "are you sure" (audio already unlocked above)
-  $('builder').classList.add('hidden'); $('result').classList.add('hidden'); $('live').classList.remove('hidden'); document.body.classList.remove('rview');
+  $('builder').classList.add('hidden'); $('result').classList.add('hidden'); $('live').classList.remove('hidden'); document.body.classList.remove('rview'); document.body.classList.add('lview');
   { const _fd=$('finds'); if(_fd)_fd.style.display='none'; } // hide the finds ticker on the call page — keep it uncrowded
   // Listeners hear the call through the browser — iOS silent switch mutes web audio, so remind them.
   const _mb=$('muteBanner'); if(_mb) _mb.style.display='none'; // owner asked to drop the 'flip off silent' note
@@ -5411,7 +5430,7 @@ async function finalize(cid){
   saveCheckToHistory(res, cid);
   showResult(res, cid);
 }
-function backToBuilder(){ try{ document.documentElement.classList.remove('restoring'); }catch(_){ } /* deep-link hide must never survive into the homepage */ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } try{ document.body.classList.remove('zoning'); const _z=$('zones'); if(_z) _z.classList.remove('on'); const _h=$('histOverlay'); if(_h) _h.classList.remove('on'); }catch(_){ } /* close any open Check history / My Zones sheet */ TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); window._livePend=false; try{ const _st=$('supTab'); if(_st)_st.classList.remove('invite'); }catch(_){ } /* the post-check glow belongs to the result page only */ try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby','zones'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
+function backToBuilder(){ try{ document.documentElement.classList.remove('restoring'); }catch(_){ } /* deep-link hide must never survive into the homepage */ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } try{ document.body.classList.remove('zoning'); const _z=$('zones'); if(_z) _z.classList.remove('on'); const _h=$('histOverlay'); if(_h) _h.classList.remove('on'); }catch(_){ } /* close any open Check history / My Zones sheet */ TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); document.body.classList.remove('lview'); ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); window._livePend=false; try{ const _st=$('supTab'); if(_st)_st.classList.remove('invite'); }catch(_){ } /* the post-check glow belongs to the result page only */ try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby','zones'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
   // Returning to the builder = a FRESH homepage (as if loaded for the first time). Drop ANY store/
   // category left over from a reopened call so it doesn't show pre-selected in the call CTA (which also
   // auto-scrolled to it). The apex site pre-locks Pokémon via BRAND_CAT, so this must NOT be gated on it
@@ -5613,7 +5632,7 @@ function showResult(o, cid){
   if(_fromLive && o && o.status==='pending') window._livePend=true;
   if(o && o.status!=='pending' && (_fromLive || window._livePend)){ window._livePend=false; setTimeout(()=>{ try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(_){ window.scrollTo(0,0); } },120); }
   stopLiveTimers(); LIVE_ROOM=null; if($('hangup_btn'))$('hangup_btn').style.display='none';
-  $('live').classList.add('hidden'); $('builder').classList.add('hidden'); $('history').classList.add('hidden'); $('success').classList.add('hidden'); const hov=$('handoff'); if(hov)hov.classList.add('hidden'); document.body.classList.remove('fabbed');
+  $('live').classList.add('hidden'); $('builder').classList.add('hidden'); $('history').classList.add('hidden'); $('success').classList.add('hidden'); const hov=$('handoff'); if(hov)hov.classList.add('hidden'); document.body.classList.remove('fabbed'); document.body.classList.remove('lview'); /* verdict bloom takes over from the live bloom */
   { const _fd=$('finds'); if(_fd)_fd.style.display='none'; } // no rotating finds ticker on the result/call page
   LASTRES=o; TRANSLATED=false; ORIGHTML=''; FBK_SENT=false;
   // Always describe exactly what happened — never a bare "unclear".
