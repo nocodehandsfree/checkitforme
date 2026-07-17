@@ -102,8 +102,8 @@ handing him a merge is a protocol violation. (Prod is different: only `promote`,
   rehearsal replica at `staging.checkitforme.com`) and ONE Admin (`admin.checkitforme.com`) — full
   stop. NEVER create a new domain, subdomain, route, door, dashboard, or "temporary viewing URL" —
   not even for 20 minutes — without the owner naming it first. Owner needs to preview consumer work →
-  staging site. Admin work → promote, he reviews on THE Admin (it's owner-only; that's safe). This
-  rule exists because it was broken twice and cost real trust.
+  staging site. Admin work → ship it (`bash scripts/ship-admin.sh`), he reviews on THE Admin (it's
+  owner-only; that's safe — no promote needed). This rule exists because it was broken twice and cost real trust.
 - **Autonomous.** Don't ask permission — staging makes mistakes cheap. Need another lane? Leave a `DevOps: need X` note and keep going. Pause only for the owner to run a test-store call.
 - **Push the moment it's built — never wait to be asked.** `git push` is part of building, not a separate step: commit AND push in the SAME turn, then report. `staging.checkitforme.com` only shows what's PUSHED (Railway auto-deploys on push), so unpushed work = the owner can't test it = NOT done. Never say "done" with a commit still sitting local, and never end a turn leaving the owner something to push.
 - **Done = demonstrated, never claimed.** `npx tsc --noEmit` + `bash scripts/test-all.sh`, push, then drive your feature on `staging.checkitforme.com` like a user. Report the contract ✓/✗ with evidence (URL → action → observed). Can't verify? Say "NOT verified: X". "Should work" is banned.
