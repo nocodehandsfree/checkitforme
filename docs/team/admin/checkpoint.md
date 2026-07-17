@@ -78,4 +78,3 @@ source). Harness: `node scripts/admin-preview.mjs <section> out.png 390`. Safari
 - Premium toggle matrix in Plans (backend done, UI missing) — fold into a plans pass.
 - Workflows env picker Prod|Staging (comp 1e env track; srcApi + CORS now exist — half the work done).
 - Per-customer account view (docs/specs/admin-user-view.md; users sheet can host it).
-- test-all: only pre-existing consumer qa-design baseline items are expected fails.
