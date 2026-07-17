@@ -3,6 +3,22 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-17 (later) — FOUR-PAGE POLISH SHIPPED to THE Admin (086236d, live + drive-verified)
+- **Alerts:** 8 stacked sections → status chips + 3 wells + five message ROWS opening ONE edit
+  sheet (editors + tokens note + Save + per-channel test send inside). Owner ping got a Test it key.
+  Sends log caps at 20 + Show more.
+- **Policy:** flags = k-switch rows w/ one-line grays (labels pill on toggle) · carved pricing
+  inputs · the 4 queues fold into peek rows w/ hot counts opening sheets (holders + gwQFact).
+- **Designer:** data-tip ⓘ gray everywhere (purple retired) · hairline hr/border purged (verdict
+  box = carved + glow) · step-6 accordion inlined · persona builder now opens in THE sheet
+  (pnNew/pnLoad; save closes + selects) · every hint is one gray line.
+- **Feedback:** one-line sub · unclear strip clamps to 8 pills + "+N more in Calls".
+- **Save pills:** every silent auto-save toggle now pills — flags, opener rotation (both pages),
+  owner ping. Verified: 13/13 headless interaction checks + live page sha matches the tested file
+  (only server-injected posthog/CF differ). Preview harness got stubs for alerts/queues.
+- **PM note:** scripts/test-plans.ts fails 8 pre-existing on staging (renewal quota reset, tier
+  features, comp features) — NOT from admin work (verified via stash). Needs a plans-lane look.
+
 ## 2026-07-17 — Testing/Feedback staging source SHIPPED · design audit delivered, awaiting go-ahead
 - **Live on THE Admin (ffa130f, verified end to end):** Testing + Feedback carry a "Live site /
   Staging site" k-filter pill. Root cause of "my Fun calls are missing": rehearsal calls + feedback
