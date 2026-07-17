@@ -14,39 +14,12 @@ closes, tap-in keeps open, root bg constant, 13/13 sheet interactions, gates gre
 - **NEXT SURFACE (one-per-push, owner's rule):** `#iconpick` status-icon modal still uses a fixed
   rgba(0,0,0,.62)+blur backdrop (line ~664) — same swap to filter-dim when owner oks this one.
 
-## 2026-07-17 — FROG LOOP CLOSED (final: 24a2171 live, byte-verified)
-Hour-long /loop, 6 ships: kit unified (chips/stats/steps borderless-tinted or raised, purple dead) ·
-hairline purge app-wide (only Calc internals keep theirs) · restock honest empty state · store-intel
-sub/coverage folded + prodIcon dupe fix · Plans one-line bundles, sync pills only when pending ·
-Policy plans-mirror = one row · sheets audited on the 20/800+12/600 scale (status sub de-duped,
-support sub drops empty segments). Every page + major sheet screenshot-reviewed ≥2x, 13/13 drive
-checks each ship, gates green each ship. OPEN: iOS tint poke shipped earlier NEEDS OWNER PHONE
-VERDICT · Calc redesign needs a comp · 'catalog' section is nav-unreachable (dead? ask Lexicon/DD).
-
-## 2026-07-17 (cohesion marathon, /loop) — ONE KIT EVERYWHERE (3d2a2b4 + a770427, live)
-- Purple chip defaults + hairline outlines purged app-wide: .pill/.chip-sm/.upill/.tag-verified/
-  .chip-type = borderless tints · .stat = God-view vital chrome · persona picker chips match ·
-  search Filters/multiselects, category chips, day pills, carry rows, chain-sheet keys, mapped
-  chips, sticon keys, import textarea, map frame, disclosure keys, ABCD cards, agent chat — all on
-  the depth system. Fonts verified: 34 hero · 30 secondary · 22 stat · 20 title (ONE per page;
-  designer step label now 17) · 12.5 sub. Only Calc keeps its own look (needs a comp).
-- All 22 sections re-rendered + eyeballed · 13/13 drive checks × 3 runs · gates green each ship.
-
-## 2026-07-17 (round four) — CALC FIELDS + iOS TINT POKE + last headers (756c1e0, live)
-- **iOS tint fix shipped, needs the owner's phone verdict:** pushState drops Safari's sampled bar
-  tint and it never resamples in-page (site lesson 07-14, closeSupport). showSection now fires the
-  same poke (re-assert root color + 1px scroll nudge) after every page switch. NOT verified — only
-  his phone can.
-- Calc: every money field = ONE carved well (border-in-border gone); workbench otherwise untouched
-  (owner: fields only — full Calc redesign still needs a comp).
-- Kiosk intel / Designer / Categories join title+subhead. All 22 sections now share the format.
-
-## 2026-07-17 rounds two + three (9c3514c, cda51ab): directional copy → died or ⓘ (then owner
-reversed ⓘ on headers → subs), info RAISED / forms CARVED, chevrons fixed, testing log icons,
-Plans header + single-well fields, queues as rows. Detail: git log.
-
-## 2026-07-17 — four-page polish (086236d): Alerts/Policy/Designer/Feedback rebuilt to grammar,
-save pills on every silent toggle, preview-harness stubs added. Detail: git log.
+## 2026-07-17 — ADMIN COHESION + FROG PASSES (through 8d477a7, live)
+One kit app-wide (borderless-tinted chips / raised stats / carved inputs; purple + hairlines dead),
+designed empty states (dashed panel + tinted icon + non-wrapping headline), Plans one-line bundles,
+Alerts cut to one screen (chips · ping · 5 message rows · one Sends row→sheet). **Admin now
+self-hosts Inter** (was falling back to system font on blocked networks — same bug the site fixed
+07-14; preview rig now serves /fonts so renders are truthful). Detail: git log.
 
 ## 2026-07-17 — Testing/Feedback staging source SHIPPED · design audit delivered, awaiting go-ahead
 - **Live on THE Admin (ffa130f, verified end to end):** Testing + Feedback carry a "Live site /
