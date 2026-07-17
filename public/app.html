@@ -1999,10 +1999,11 @@ async function loadTreeLab(){
   list.innerHTML=chains.map(c=>`<div class="card" style="padding:11px 13px">
     <div class="row" style="justify-content:space-between;align-items:baseline;gap:8px">
       <div class="sname">${esch(c.name)} ${badge(c.treeStatus)}${c.ringsDirect?' <span class="chip-sm" style="color:var(--green);background:rgba(74,222,128,.1)">rings direct</span>':''}${c.muted?' <span class="chip-sm">muted</span>':''}</div>
-      <div class="meta">${c.stores} stores</div>
+      <div class="meta">${c.stores} stores${c.phones!=null&&c.phones<c.stores?` · <span style="color:#FBBF24">${c.phones} w/ #</span>`:''}</div>
     </div>
+    ${c.blocker?`<div class="meta" style="margin-top:5px;color:#FBBF24">⚠ ${esch(c.blocker)}</div>`:''}
     ${c.note?`<div class="meta" style="margin-top:5px;color:#cdcdd8">${esch(c.note)}</div>`:''}
-    <div class="smeta" style="margin-top:5px">${c.dtmf?`keys: <code>${esch(c.dtmf)}</code> · `:''}${c.answerPath?esch(c.answerPath)+' · ':''}${c.avgTreeSeconds?secsFmt(c.avgTreeSeconds)+' to human · ':''}${c.verifiedAt?'verified '+agoTs(c.verifiedAt):c.learnedAt?'learned '+agoTs(c.learnedAt):'never mapped'}</div>
+    <div class="smeta" style="margin-top:5px">${c.distributor?`distro: ${esch(c.distributor)} · `:''}${c.dtmf?`keys: <code>${esch(c.dtmf)}</code> · `:''}${c.answerPath?esch(c.answerPath)+' · ':''}${c.avgTreeSeconds?secsFmt(c.avgTreeSeconds)+' to human · ':''}${c.verifiedAt?'verified '+agoTs(c.verifiedAt):c.learnedAt?'learned '+agoTs(c.learnedAt):'never mapped'}</div>
     <div class="ractions" style="margin-top:8px">
       <button class="ghost" onclick="tlOne('discover',${c.id},this)">Discover</button>
       <button class="ghost" onclick="tlOne('verify',${c.id},this)">Verify</button>

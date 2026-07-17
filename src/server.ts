@@ -1231,7 +1231,11 @@ function chainLogoInfo(name: string | null | undefined): { url: string | null; w
 // Inlined fallback = source of truth in code, so carries derive even when the deployed container can't
 // read data/distributors.json (a prod-image file-read anomaly seen after a staging→prod merge). The file
 // is still preferred when readable (keeps it the editable source); the inline keeps prod resilient.
-const DISTRIBUTORS_FALLBACK: { products: Record<string, string[]>; chains: Record<string, string[]> } = {
+// `chains` DERIVE carries (products = union of the distributor lists). `labels` are DISPLAY-ONLY —
+// they fill the Admin "Distro" field for chains whose distributor we know but whose products were
+// curated by hand (Excell accounts), WITHOUT re-deriving/replacing those products. Keep the two apart.
+type DistCfg = { products: Record<string, string[]>; chains: Record<string, string[]>; labels?: Record<string, string[]> };
+const DISTRIBUTORS_FALLBACK: DistCfg = {
   products: {
     Excell: ["Pokemon TCG", "Disney Lorcana", "Magic: The Gathering", "One Piece TCG", "Yu-Gi-Oh", "Sports Cards (Topps/Panini)"],
     Schylling: ["NeeDoh (Schylling)"],
@@ -1244,9 +1248,13 @@ const DISTRIBUTORS_FALLBACK: { products: Record<string, string[]>; chains: Recor
     "Walmart": ["Excell", "Schylling", "Jazwares"],
     "Barnes & Noble": ["Excell", "Schylling", "Jazwares"],
   },
+  labels: {
+    "Five Below": ["Excell"], "Hot Topic": ["Excell"], "BoxLunch": ["Excell"],
+    "Claire's": ["Excell"], "Hobby Lobby": ["Excell"], "H-E-B": ["Excell"],
+  },
 };
-let distCache: { products: Record<string, string[]>; chains: Record<string, string[]> } | null = null;
-function distConfig(): { products: Record<string, string[]>; chains: Record<string, string[]> } {
+let distCache: DistCfg | null = null;
+function distConfig(): DistCfg {
   if (distCache) return distCache;
   try {
     const c = JSON.parse(readFileSync(join(here, "../data/distributors.json"), "utf8"));
@@ -1268,10 +1276,13 @@ function carriesForChain(name: string | null | undefined): string[] | null {
 function storeCarriesList(chainName: string | null | undefined, stored: string | null | undefined): string[] {
   return carriesForChain(chainName) ?? (stored ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 }
-/** Distributor name(s) serving a chain, for display in the Admin (e.g. "Excell · Schylling"). null = unmapped. */
+/** Distributor name(s) serving a chain, for display in the Admin (e.g. "Excell · Schylling"). Reads the
+ *  carries-deriving `chains` map first, then the display-only `labels` map — so a hand-curated Excell
+ *  account shows its distributor without its products being re-derived. null = we don't know the distributor. */
 function distributorsForChain(name: string | null | undefined): string | null {
   if (!name) return null;
-  const dists = distConfig().chains[name];
+  const cfg = distConfig();
+  const dists = cfg.chains[name] ?? (cfg.labels && cfg.labels[name]);
   return (dists && dists.length) ? dists.join(" · ") : null;
 }
 
@@ -5423,7 +5434,7 @@ app.get("/api/admin/tree/list", async (c) => {
     // blocker = why this chain can't be mapped even though it's a call target. Today: a data gap where
     // stores exist but none carry a real phone number (the board shows it so nobody chases hours/trees).
     const blocker = stores > 0 && phones === 0 ? "no phone numbers on file (data gap)" : null;
-    return { id: ch.id, name: ch.name, type: ch.type, stores, phones, blocker, treeStatus: ch.treeStatus, ringsDirect: ch.ringsDirect, dtmf: ch.dtmfShortcut, answerPath: ch.answerPath, avgTreeSeconds: ch.avgTreeSeconds, note: ch.treeNote || ch.phoneTreeDefault, learnedAt: ch.treeLearnedAt, verifiedAt: ch.treeVerifiedAt, muted: ch.muted };
+    return { id: ch.id, name: ch.name, type: ch.type, stores, phones, blocker, distributor: distributorsForChain(ch.name), treeStatus: ch.treeStatus, ringsDirect: ch.ringsDirect, dtmf: ch.dtmfShortcut, answerPath: ch.answerPath, avgTreeSeconds: ch.avgTreeSeconds, note: ch.treeNote || ch.phoneTreeDefault, learnedAt: ch.treeLearnedAt, verifiedAt: ch.treeVerifiedAt, muted: ch.muted };
   }) });
 });
 app.post("/api/admin/tree/discover", async (c) => {
