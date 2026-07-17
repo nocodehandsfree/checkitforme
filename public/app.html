@@ -383,9 +383,12 @@
   .peek .pk-chev{flex:0 0 auto;width:15px;height:15px;color:#5C5C68}
   .peek .pk-bar{height:6px;background:#1B1B20;border-radius:999px;box-shadow:inset 0 2px 4px rgba(0,0,0,.45);margin-top:8px;overflow:hidden}
   .peek .pk-bar>i{display:block;height:100%;border-radius:999px}
-  /* ONE sheet — bottom slide-up. Dismiss on grabber / swipe-down / scrim tap (DATA_DISPLAY §1). */
-  .sheet-scrim{position:fixed;inset:0;background:rgba(5,6,9,.66);opacity:0;pointer-events:none;transition:opacity .22s;z-index:60}
-  .sheet-scrim.on{opacity:1;pointer-events:auto}
+  /* ONE sheet — bottom slide-up. Dismiss on grabber / swipe-down / tap-outside (DATA_DISPLAY §1). */
+  /* PROVEN (design 07-17, /sheetpeek variant E, owner-verified on device): NEVER cover the page with a
+     fixed dim overlay — a full-screen layer (even transparent) is what kills iOS 26's scroll-edge glass
+     (the translucent top/bottom bars). Dim the CONTENT ITSELF with a filter; nothing sits between the
+     page and the bars, and the root colour never changes. No scrim element exists anymore. */
+  body.sheetopen header,body.sheetopen #grpnav,body.sheetopen .subnav2,body.sheetopen main{filter:brightness(.45);transition:filter .22s}
   .sheet{position:fixed;left:50%;bottom:0;width:min(100%,480px);background:#26262B;border-radius:24px 24px 0 0;box-shadow:0 -24px 48px -12px rgba(0,0,0,.7);z-index:61;transform:translate(-50%,100%);transition:transform .26s cubic-bezier(.22,1,.36,1);max-height:88vh;display:flex;flex-direction:column;padding:0 20px calc(26px + env(safe-area-inset-bottom))}
   .sheet.on{transform:translate(-50%,0)}
   .sheet .grab{align-self:center;width:40px;height:5px;border-radius:999px;background:rgba(255,255,255,.16);margin:10px 0 6px;flex:0 0 auto}
@@ -1422,16 +1425,24 @@ function showAuthGate(){
   document.body.appendChild(d);
 }
 const toast = (m) => { const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); };
-// ---- ONE shared sheet (DATA_DISPLAY §1: every sheet dismisses via grabber, swipe-down, scrim tap). ----
+// ---- ONE shared sheet (DATA_DISPLAY §1: every sheet dismisses via grabber, swipe-down, tap-outside). ----
 // openSheet(title, sub, bodyHTML): slides a bottom sheet up over the page. Reused by peek-row reports,
 // the call sheet, edit sheets, transcripts — build the sheet once, never a bespoke modal.
 let _sheetEls=null;
 function _ensureSheet(){
   if(_sheetEls) return _sheetEls;
-  const scrim=document.createElement('div'); scrim.className='sheet-scrim'; scrim.onclick=closeSheet;
   const sheet=document.createElement('div'); sheet.className='sheet';
   sheet.innerHTML='<div class="grab"></div><div class="sh-title"></div><div class="sh-sub"></div><div class="sh-body"></div>';
-  document.body.appendChild(scrim); document.body.appendChild(sheet);
+  document.body.appendChild(sheet);
+  // Tap OUTSIDE the sheet closes it — via a document listener, NOT a full-screen scrim (which would kill
+  // the iOS glass). Capture-phase so it fires before the dimmed page's own handlers; swallow the tap so
+  // the darkened content behind can't also react. The opening tap can't self-close: at capture time for
+  // that click the sheet has no `.on` yet (added by openSheet after this listener runs).
+  document.addEventListener('click',e=>{
+    if(!sheet.classList.contains('on')) return;
+    if(e.target.closest('.sheet')) return;
+    e.preventDefault(); e.stopPropagation(); closeSheet();
+  },true);
   // Thumb-drag ANYWHERE on the sheet to dismiss — the WEBSITE's exact gesture (sheetDrag in
   // checkit.html): arm only when no scroller between the finger and the sheet is mid-scroll; past the
   // threshold the sheet continues DOWN off-screen (never freezes mid-air), else it springs back.
@@ -1454,7 +1465,7 @@ function _ensureSheet(){
       if(dy>110){ // finish the gesture: animate the REST of the way down, then tidy up
         sheet.style.transition='transform .24s cubic-bezier(.32,.72,0,1)';
         sheet.style.transform='translate(-50%,112%)';
-        scrim.classList.remove('on');
+        document.body.classList.remove('sheetopen');
         setTimeout(()=>{ sheet.classList.remove('on'); sheet.style.transition=''; sheet.style.transform=''; _restoreBorrow(); },240);
       } else { sheet.style.transition=''; sheet.style.transform=''; } // snap back up
     }
@@ -1464,7 +1475,7 @@ function _ensureSheet(){
   sheet.addEventListener('touchmove',move,{passive:false});
   sheet.addEventListener('touchend',up);
   sheet.addEventListener('touchcancel',up);
-  _sheetEls={scrim,sheet,title:sheet.querySelector('.sh-title'),sub:sheet.querySelector('.sh-sub'),body:sheet.querySelector('.sh-body')};
+  _sheetEls={sheet,title:sheet.querySelector('.sh-title'),sub:sheet.querySelector('.sh-sub'),body:sheet.querySelector('.sh-body')};
   return _sheetEls;
 }
 let _sheetBorrow=null; // {node, home} — a live DOM node lent to the sheet, returned to its home on close
@@ -1477,11 +1488,11 @@ function openSheet(title,sub,body){
     s.body.innerHTML=''; s.body.appendChild(body);
   } else { s.body.innerHTML=body||''; }
   s.body.scrollTop=0; s.sheet.style.transform='';
-  requestAnimationFrame(()=>{ s.scrim.classList.add('on'); s.sheet.classList.add('on'); });
+  requestAnimationFrame(()=>{ document.body.classList.add('sheetopen'); s.sheet.classList.add('on'); });
   try{ setTimeout(decorateChrome,20); }catch(_){}
 }
 function _restoreBorrow(){ if(!_sheetBorrow) return; const b=_sheetBorrow; _sheetBorrow=null; if(b.home){ if(b.next) b.home.insertBefore(b.node,b.next); else b.home.appendChild(b.node); } }
-function closeSheet(){ if(!_sheetEls) return; _sheetEls.sheet.style.transition=''; _sheetEls.sheet.style.transform=''; _sheetEls.scrim.classList.remove('on'); _sheetEls.sheet.classList.remove('on'); setTimeout(_restoreBorrow,280); setTimeout(pokeChrome,320); /* iOS keeps the sheet's chrome sample until poked (site lesson) */ }
+function closeSheet(){ if(!_sheetEls) return; _sheetEls.sheet.style.transition=''; _sheetEls.sheet.style.transform=''; document.body.classList.remove('sheetopen'); _sheetEls.sheet.classList.remove('on'); setTimeout(_restoreBorrow,280); /* no chrome poke needed: the glass never died — the page was never covered (design 07-17 /sheetpeek) */ }
 window.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSheet(); });
 // Tap-to-show tooltip — works on mobile (hover doesn't). Tap a hint → bubble; tap again/elsewhere → gone.
 let _tipFor=null;
