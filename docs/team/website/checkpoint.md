@@ -6,6 +6,19 @@
 > the other dev: **he owns the tint CSS** (`__bootTone`/`tone-*`/body wash/sheet chrome), **I own
 > view/mode/nav** — don't blind-edit the tint, it's fragile (see the hard lesson below).
 
+## 🔧 07-17 — live-call page rebuilt trust (x-rev livebloom-r124, all driven in sim + owner test call OK)
+- Owner's "broken" call = STALE TAB (his 17:35 call finished fine server-side; page ran pre-fix JS).
+  Fixes: stale-tab guard (/pub/rev + visibility check, reloads on home view only) · scroll-back-to-
+  verdict restored (the pending-flip was swallowing it — _livePend flag) · LOCK test now phone-size and
+  asserts grow/follow/newest-visible/scroll-back/log-rollup. Owner ran a test call: works.
+- LIVE BLOOM shipped (CD direction): body.lview = verdict-bloom geometry in #266440 + transparent
+  header while the call runs; verdict bloom replaces it at showResult. Gotcha: the neutral flattener
+  (~line 304, five :not()s deep) outranks everything — needed :not(.lview). Root colour untouched.
+- Location follow now re-fires on visibilitychange→visible (3-min throttle) — boot-only recheck died
+  when iOS restored the tab (owner drove home, saw Westlake stores).
+- iOS black top during owner test checks = in-call UI (his phone joins the call) — NOT a page bug;
+  regular users unaffected (CD checkpoint agrees). Don't chase it.
+
 ## 🔧 07-16 EVENING pt2 — result page: support tab replaces the Tell-us link (driven live, PASS)
 - "Something wrong with this check? Tell us" link REMOVED (its ES string too). On a SETTLED result the
   bottom-right support tab slides out (supSlideIn) + breathes the check button's green glow
