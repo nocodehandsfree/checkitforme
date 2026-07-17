@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r139" />
+<meta name="x-rev" content="glassfix-r140" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -3941,24 +3941,31 @@ function sheetH_on(ov){ if(!ov||ov.__sh) return; ov.__sh=1;
   // Overlay: page-layer catcher spanning the locked viewport + a deep under-bar tail so the toolbar can
   // never expose the page below the sheet surface.
   ov.style.position='absolute'; ov.style.top=sc+'px'; ov.style.bottom='auto'; ov.style.height=(window.innerHeight+400)+'px';
-  // Modal: BOTTOM-anchored at its NATURAL content height (capped 86vh). The under-bar surface is a SOLID
-  // BORDER-BOTTOM: real BOX paint like the working csheet (a box-shadow tail was NOT picked up by the iOS
-  // glass), inline height+maxHeight beat the CSS max-height:86-92vh that silently clamped the old height
-  // tail (acct/zones/hist "page behind the sheet"), and with border-box sizing the border eats the extra
-  // height so scrollable content still ends at the viewport edge — last row stays reachable.
-  // Measurement is FEEDBACK-PROOF (inline height/maxHeight/border cleared before reading), and a
+  // Modal: BOTTOM-anchored at its NATURAL content height (capped 86vh), box overshooting TAIL px under the
+  // bar (inline height+maxHeight beat the CSS max-height:86-92vh that silently clamped earlier tails).
+  // THE GLASS ONLY READS "TRANSPARENT" WHEN SHEET CONTENT FLOWS UNDER THE BAR (variant H / admin recipe):
+  //  - scrollable sheets (acct/buy/auth...): the box's overflow clip extends under the bar, so rows ghost
+  //    through the glass while you scroll; a TAIL scroll-end spacer keeps the last row reachable above it.
+  //  - fixed flex layouts (zones/hist): stretching children would shove their footer buttons under the bar,
+  //    so they keep natural height + a solid border-bottom tail (plain surface, proven box paint).
+  //  - content-sized sheets (email/menus): empty surface tail below the content.
+  // Measurement is FEEDBACK-PROOF (inline height/maxHeight/border/padding cleared before reading), and a
   // ResizeObserver re-anchors while open so content that grows or shrinks never mis-sits the sheet.
   const TAIL=120;
-  const place=()=>{ const prev=m.style.height; m.style.height=''; m.style.maxHeight=''; m.style.borderBottom='';
+  const place=()=>{ const prev=m.style.height;
+    m.style.height=''; m.style.maxHeight=''; m.style.borderBottom=''; m.style.paddingBottom='';
     const natural=Math.min(m.offsetHeight||0, window.innerHeight*0.86)||window.innerHeight*0.86;
     m.style.position='absolute'; m.style.left='0'; m.style.right='0'; m.style.top=(window.innerHeight-natural)+'px'; m.style.bottom='auto';
-    m.style.height=(natural+TAIL)+'px'; m.style.maxHeight=(natural+TAIL)+'px'; m.style.borderBottom=TAIL+'px solid #26262B';
+    const oy=getComputedStyle(m).overflowY;
+    if(oy==='hidden'){ m.style.height=natural+'px'; m.style.maxHeight=natural+'px'; m.style.borderBottom=TAIL+'px solid #26262B'; }
+    else{ m.style.height=(natural+TAIL)+'px'; m.style.maxHeight=(natural+TAIL)+'px';
+      if((oy==='auto'||oy==='scroll')&&m.scrollHeight>natural+4) m.style.paddingBottom=TAIL+'px'; }
     return prev!==m.style.height; };
   place();
   try{ ov.__ro=new ResizeObserver(()=>{ if(ov.__placing) return; ov.__placing=1; requestAnimationFrame(()=>{ place(); ov.__placing=0; }); }); ov.__ro.observe(m.firstElementChild||m); }catch(_){ }
 }
 function sheetH_off(ov){ if(!ov||!ov.__sh) return; ov.__sh=0; try{ if(ov.__ro){ ov.__ro.disconnect(); ov.__ro=null; } }catch(_){ } const m=ov.querySelector('.modal');
-  if(m){ m.style.position=''; m.style.left=''; m.style.right=''; m.style.top=''; m.style.bottom=''; m.style.height=''; m.style.maxHeight=''; m.style.borderBottom=''; }
+  if(m){ m.style.position=''; m.style.left=''; m.style.right=''; m.style.top=''; m.style.bottom=''; m.style.height=''; m.style.maxHeight=''; m.style.borderBottom=''; m.style.paddingBottom=''; }
   ov.style.position=''; ov.style.top=''; ov.style.bottom=''; ov.style.height='';
   sheetBodyMaybeUnlock();
 }
