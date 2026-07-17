@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassdim-r129" />
+<meta name="x-rev" content="drivefollow-r130" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -3531,7 +3531,7 @@ async function boot(){
   // statuses registry + categories are in, so the verdict copy/emoji upgrade to the owner-edited ones.
   if(LASTRES && RAIL_CID && $('result') && !$('result').classList.contains('hidden')) showResult(LASTRES, RAIL_CID);
   if(!USER_LOC){ const sl=savedLoc(); if(sl) setUserLoc(sl.lat,sl.lng); } // restore last location → stores auto-load, no re-prompt
-  idle(()=>{ renderDemo(); loadFinds(); silentLocRecheck(); freshGuardInit(); }); // ticker + demo + (if you've moved) location refresh + stale-tab guard — off the critical path
+  idle(()=>{ renderDemo(); loadFinds(); silentLocRecheck(); locWatchStart(); freshGuardInit(); }); // ticker + demo + one-shot fix + continuous follow-as-you-drive + stale-tab guard — off the critical path
 }
 // Stale-tab guard (owner 07-17): his Safari tab kept running days-old JS across a whole
 // broken-then-fixed cycle — an SPA only picks up a deploy on a full load, and iOS tabs live for weeks.
@@ -3582,13 +3582,42 @@ function silentLocRecheck(){
     }).catch(()=>{});
   }catch(e){}
 }
-// The follow has to fire on TAB RETURN too, not just at boot (owner 07-17: drove home, iOS restored
-// the tab without a reload, stores still showed the old town — the boot-only recheck never re-fired).
-// Same silent rules (granted permission only, manual pin wins, 1-mi threshold); one check per 3 min.
+// CONTINUOUS FOLLOW (owner 07-17): a COARSE watchPosition follows you as you drive — no timer, no GPS
+// chip. The browser wakes the callback only on real movement and uses cheap wifi/cell fixes
+// (enableHighAccuracy:false), so the battery cost is negligible (this is what Maps/Yelp do). We STOP
+// the watch whenever the tab is hidden, so there's zero background drain. Same silent rules as the
+// one-shot: permission must ALREADY be granted (never prompts), a manual pin/ZIP wins, we only
+// relocate after a >1mi move (no jitter, no store-list thrash) and never mid call / sheet / hunt.
+let LOC_WATCH=null, LOC_TOAST_T=0;
+function locFollowApply(la,ln){
+  if(MANUAL_LOC) return;                                              // they chose a spot — GPS doesn't override
+  if(USER_LOC && miBetween(USER_LOC.lat,USER_LOC.lng,la,ln)<=1) return; // same area — ignore GPS jitter
+  const busy = (typeof NAV_VIEW!=='undefined'&&NAV_VIEW!=='builder')
+    || ($('live')&&!$('live').classList.contains('hidden'))
+    || document.querySelector('.csheet.on,.overlay.on,.supwrap.on')
+    || document.body.classList.contains('huntmode');
+  if(busy) return;                                                    // don't yank the ground out mid-flow — the next fix catches it
+  const mapOpen = MAP && $('mapview') && $('mapview').style.display==='block';
+  setUserLoc(la,ln,mapOpen);                                          // refetches the store list for the new spot
+  LOC_RECHECK_T=Date.now();
+  if(Date.now()-LOC_TOAST_T>120000){ LOC_TOAST_T=Date.now(); toast(t('toast.locupdated','Updated to your current location'),'neutral'); } // confirm at most once every 2 min — driving a highway must not spam pills
+}
+function locWatchStart(){ try{
+  if(LOC_WATCH!=null) return;
+  if(!navigator.geolocation || !navigator.permissions || !navigator.permissions.query) return;
+  navigator.permissions.query({name:'geolocation'}).then(p=>{
+    if(!p || p.state!=='granted' || LOC_WATCH!=null) return;          // only when already allowed — never trigger the OS prompt here
+    LOC_WATCH=navigator.geolocation.watchPosition(
+      pos=>locFollowApply(pos.coords.latitude,pos.coords.longitude),
+      ()=>{}, // errors: ignore, the cached location stands
+      {enableHighAccuracy:false, maximumAge:60000, timeout:20000});   // coarse wifi/cell; a 1-min-old fix is fine
+  }).catch(()=>{});
+}catch(_){ } }
+function locWatchStop(){ try{ if(LOC_WATCH!=null){ navigator.geolocation.clearWatch(LOC_WATCH); LOC_WATCH=null; } }catch(_){ } }
+// Tab hidden → stop the watch (zero background drain). Tab visible → restart it (its first fix is the
+// tab-return refresh — owner 07-17: drove home, iOS restored the stale tab; the watch re-fixes on return).
 document.addEventListener('visibilitychange',()=>{ try{
-  if(document.visibilityState!=='visible') return;
-  if(Date.now()-LOC_RECHECK_T<180000) return;
-  silentLocRecheck();
+  if(document.visibilityState==='visible') locWatchStart(); else locWatchStop();
 }catch(_){ } });
 let PENDING_VIEW=null;
 let STORES_AUTH_TOKEN=null; // which token the visible store list was fetched under — re-fetch on login so owner-only surfaces (FUN store / VIPs) appear without a hard refresh
@@ -4179,6 +4208,7 @@ function findMe(after){
   navigator.geolocation.getCurrentPosition(p=>{
     MANUAL_LOC=false; // explicit "find me" → GPS is the boss again
     setUserLoc(p.coords.latitude,p.coords.longitude);
+    try{ locWatchStart(); }catch(_){ } // granting here (maybe first time) → start the drive-follow watch now, not next boot
     if(typeof after==='function') after();
   }, err=>{ if(b)b.classList.remove('loading'); toast(err.code===1?t('toast.locblocked',"Location blocked. Enable it in your browser settings."):t('toast.locfail','Couldn’t get your location')); }, {enableHighAccuracy:true,timeout:8000});
 }
