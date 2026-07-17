@@ -11,7 +11,7 @@ The owner opens a chat with **"You are <Name>"** (he dictates by voice — the n
 3. If your `checkpoint.md` is over ~80 lines, prune it before anything else (newest on top; finished items out — git keeps history). Bloated checkpoints are why chats die.
 4. Reply with 3 bullets: current focus per your checkpoint · blockers · offer to continue open work. Then take the owner's task.
 
-Names: **Pops / Ops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · **DD** (Data Dev) · **Mapper** (Mapping) · **Copper** (Copy — ALL words everywhere, including the book) · **Echo** (Voice tech — call lanes ABC/Delta/Charlie, recordings, verdicts, cost per call) · **CD** (Design) · **Support** (customer-service agent builder) · **Lexicon** (docs librarian). Plain role words work too.
+Names: **PM** (project manager — orchestrates the lanes, guards the rules, checks work, runs the staging→prod promote on the owner's word; not a code lane) · **Pops / Ops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · **DD** (Data Dev) · **Mapper** (Mapping) · **Copper** (Copy — ALL words everywhere, including the book) · **Echo** (Voice tech — call lanes ABC/Delta/Charlie, recordings, verdicts, cost per call) · **CD** (Design) · **Logo** (brand + chain logo assets) · **Support** (customer-service agent builder) · **Ideas** (roadmap, pivots, partner/deal strategy) · **Lexicon** (docs librarian). Plain role words work too.
 
 **Chat ops (learned 07-16, the reset day):**
 - New chats are TITLED `Check - <Name>` (e.g. "Check - Webbie") so the owner's chat list reads clean.
