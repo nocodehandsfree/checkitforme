@@ -27,6 +27,11 @@
   to it; the separate fungibles `api` app holds no admin token (unaffected). Old value dead post-rotation.
 
 ## Owner: open
+- `Support: need X` (07-16) — CLAUDE.md contradicts itself on how Admin work ships: the "map of
+  surfaces" rule still says "Admin work → promote, he reviews on THE Admin," but the Admin row (and
+  reality since 07-15) is the decoupled path: admin UI ships DIRECT to the Admin via
+  `scripts/ship-admin.sh`, no promote. Owner asked Lexicon to reconcile (fix the promote line; he
+  also expected a "Ship paths" section that isn't in the file — add one if that's the plan).
 - `src/server.ts:3772` has a "(CALL_ECONOMICS §2)" citation pointing at the merged-away filename —
   DevOps to retarget to `COST_MODEL.md Part II §2` (code, not my lane).
 - `docs/design/comps/README.md` still has a "Rename status" section implying the WEBSITE_COMPS rename is
