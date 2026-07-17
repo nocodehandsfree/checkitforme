@@ -399,7 +399,8 @@
   .drow .rr{color:var(--text-muted);font-size:13px;display:flex;align-items:center;gap:8px;white-space:nowrap}
   .drow .chev{transition:.2s;opacity:.7} .drow[open] .chev{transform:rotate(180deg)}
   .drow .rbody{padding:0 16px 16px}
-  .drow .goto{color:var(--purple);font-size:13px;font-weight:700;text-decoration:none;display:block;padding:2px 16px 16px}
+  .goto{color:var(--green);font-size:13px;font-weight:700;text-decoration:none;display:block;padding:2px 0 4px}
+  .drow .goto{padding:2px 16px 16px}
   .wfmsub{font-size:12.5px;font-weight:700;letter-spacing:-.1px;color:var(--text-strong);margin:16px 0 8px}
   .wfmsub .meta{font-weight:500;color:var(--muted)}
   .wfmop{display:flex;gap:6px;align-items:flex-start;margin-bottom:3px}
@@ -749,7 +750,6 @@
       <div class="pk-fact" id="pk_credits">—</div>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
-    <div class="k-note">Tap any row for the full report.</div>
     <!-- hidden detail holders — the existing loaders populate these; dashSheet() lifts them into the shared sheet -->
     <div id="dash_details" style="display:none">
       <div id="ds_money"><div class="stats" id="d_money"></div><a class="goto" href="#calc" onclick="closeSheet();showSection('calc');return false">Open the full money view in Calc →</a></div>
@@ -773,16 +773,14 @@
     <div id="users_list"><div class="empty">Loading…</div></div>
   </section>
   <section id="restock">
-    <div class="k-title">Restock intel</div>
-    <div class="k-sub">When stores restock, and what's landing.</div>
+    <div class="k-title">Restock intel<span data-tip="When stores restock, and what's landing"></span></div>
     <div id="restock_net"><div class="empty">Loading…</div></div>
   </section>
   <section id="alerts">
-    <div class="k-title">Alerts</div>
-    <div class="k-sub">Every message we send customers, and every send</div>
+    <div class="k-title">Alerts<span data-tip="Every message we send customers, and every send"></span></div>
     <div id="al_status" style="margin-top:12px"></div>
     <div id="al_rollup"></div>
-    <div class="k-eyebrow">Your in stock ping</div>
+    <div class="k-eyebrow">Your in stock ping<span data-tip="Fires when a call confirms stock · pick where it lands"></span></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <select id="oa_channel" class="k-filter" onchange="saveOwnerAlert()">
         <option value="email">Email</option>
@@ -791,7 +789,7 @@
       <input id="oa_email" type="email" placeholder="where it lands" style="flex:1;min-width:180px;font-size:14px;padding:10px 14px" onblur="saveOwnerAlert()">
       <button class="ghost" onclick="ownerPingTest()">Test it</button>
     </div>
-    <div id="oa_out" class="k-note" style="margin-top:8px">Fires when a call confirms stock</div>
+    <div id="oa_out" class="meta" style="margin-top:8px;min-height:0"></div>
     <div class="k-eyebrow">Messages</div>
     <div id="al_templates">Loading…</div>
     <div id="al_sheets" style="display:none"></div>
@@ -799,23 +797,19 @@
     <div id="al_log" class="meta">Loading…</div>
   </section>
   <section id="workflows">
-    <div class="k-title">Workflows</div>
-    <div class="k-sub">A workflow is an opener set, a voice and a persona.</div>
+    <div class="k-title">Workflows<span data-tip="A workflow is an opener set, a voice and a persona · the default powers every store unless a chain overrides · new ones are built in the Designer"></span></div>
     <div id="wfm_list" style="margin-top:16px"><div class="empty">Loading…</div></div>
     <button class="k-cta" onclick="showSection('designer')"><span>NEW WORKFLOW →</span></button>
-    <div class="k-note" style="text-align:center">The default powers every store unless a chain overrides it.<br>New workflows are built in the Designer.</div>
   </section>
   <section id="testing">
-    <div class="k-title">Testing</div>
-    <div class="k-sub">Owner only · Fun stores</div>
+    <div class="k-title">Testing<span data-tip="Owner-only Fun store calls · never counted in real-store stats"></span></div>
     <div id="testing_src"></div>
     <div id="testing_summary"></div>
     <div id="testing_log"><div class="empty">Loading…</div></div>
   </section>
 
   <section id="retailers">
-    <div class="k-title">Store intel</div>
-    <div class="k-sub">The store book, at a glance.</div>
+    <div class="k-title">Store intel<span data-tip="The store book, at a glance"></span></div>
     <div id="storeintel"></div>
     <div id="storecarries" style="display:none"></div>
     <div id="storereports" style="display:none"><div id="rep_body"></div></div>
@@ -870,8 +864,7 @@
   </section>
 
   <section id="add">
-    <div class="k-title">Add a store</div>
-    <div class="k-sub">Goes live for customers as soon as it saves.</div>
+    <div class="k-title">Add a store<span data-tip="Goes live for customers as soon as it saves"></span></div>
     <div style="height:12px"></div>
     <div class="card">
       <div class="grid2">
@@ -902,8 +895,7 @@
   </section>
 
   <section id="feedback">
-    <div class="k-title">Feedback</div>
-    <div class="k-sub">What customers saw after an unclear check</div>
+    <div class="k-title">Feedback<span data-tip="What customers tapped after an unclear check · correcting fixes the call record"></span></div>
     <div id="fb_src"></div>
     <div id="fb_summary"></div>
     <div id="fb_unclear"></div>
@@ -992,9 +984,8 @@
   </section>
 
   <section id="growth">
-    <div class="k-title">Policy</div>
-    <div class="k-sub">Flags and pricing. The queues hold live customer requests</div>
-    <div class="k-eyebrow">Feature flags · live for customers on tap</div>
+    <div class="k-title">Policy<span data-tip="Flags and pricing for the whole app · the queues hold live customer requests"></span></div>
+    <div class="k-eyebrow">Feature flags<span data-tip="Saves on tap · live for every customer immediately"></span></div>
     <div id="gw_flags" class="meta">Loading…</div>
     <div class="k-eyebrow">Pricing and rewards</div>
     <div id="gw_pricing" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
@@ -1011,8 +1002,7 @@
   </section>
 
   <section id="settings">
-    <div class="k-title">App</div>
-    <div class="k-sub">App wide defaults. Chain overrides live in Chains.</div>
+    <div class="k-title">App<span data-tip="App wide defaults · chain overrides live in Chains"></span></div>
     <div style="height:16px"></div>
     <div class="peek static">
       <div class="pk-main"><div class="pk-t">Customers hear calls live</div><div class="pk-m">Streams call audio and a hang up button</div></div>
@@ -1026,7 +1016,6 @@
       <div class="pk-main"><div class="pk-t">Advanced policy</div><div class="pk-m">Raw JSON, dev escape hatch</div></div>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
-    <div class="k-note">Toggles save on tap.</div>
     <div id="set_details" style="display:none">
       <div id="ds_policy">
         <textarea id="gw_json" spellcheck="false" style="width:100%;min-height:220px;background:var(--terminal);color:#cfe;border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:14px;padding:14px;font:16px/1.5 ui-monospace,monospace;box-sizing:border-box;margin-top:4px"></textarea>
@@ -1039,24 +1028,21 @@
     <div class="k-title">Designer</div>
     <div id="d_rail" style="display:flex;align-items:center;margin:18px 2px 0"></div>
     <div id="d_nav_label" style="font-size:20px;font-weight:800;letter-spacing:-.3px;margin-top:18px"></div>
-    <div id="d_nav_sub" class="k-sub"></div>
     <div style="height:12px"></div>
     <div id="d_steps">
 
       <div class="card dstep" data-step="1">
 
-        <label style="margin-top:0">Call lane</label>
+        <label style="margin-top:0" data-tip="Charlie holds the whole conversation, smartest and costs the most · Delta plays recorded clips (~2.5¢ a check) and the live agent takes over if Staff go off script">Call lane</label>
         <select id="des_lane" onchange="desLaneChange()">
           <option value="charlie">Charlie · live agent on the whole call</option>
           <option value="delta">Delta · recorded clips, escalates when stuck</option>
         </select>
-        <div class="meta" id="des_lane_note" style="margin:6px 0 4px"></div>
         <label>Voice</label>
         <select id="vs_select"></select>
         <div id="vs_active" class="meta" style="margin-top:6px"></div>
         <div class="btnrow"><button class="ghost" onclick="vsSetActive()">Use for live calls</button></div>
-        <label style="margin-top:16px">Clone a new voice</label>
-        <div class="meta" style="margin:2px 0 8px">Record 30–60s of clear speech · name it · clone</div>
+        <label style="margin-top:16px" data-tip="Record 30–60s of clear speech, name it, then clone">Clone a new voice</label>
         <div class="row" style="margin-bottom:8px"><button class="ghost" id="vs_rec" onclick="vsToggleRec()"><span style="color:var(--red)">●</span> Record</button><span id="vs_rectime" class="meta"></span><audio id="vs_play" controls style="display:none;height:34px"></audio></div>
         <input id="vs_name" placeholder="Voice name (e.g. Branson)">
         <div class="btnrow"><button class="ghost" id="vs_clone" onclick="vsClone()" disabled><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Clone &amp; save voice</button></div>
@@ -1076,11 +1062,11 @@
           </div>
           <label style="display:flex;justify-content:space-between;align-items:baseline">Reply timeout <span id="sb_tt_val" class="hint" style="font-style:normal"></span></label>
           <input id="sb_turntimeout" type="range" min="3" max="45" step="1" style="width:100%" oninput="document.getElementById('sb_tt_val').textContent=this.value+'s'">
-          <div class="meta" id="sb_delta_hint" style="display:none;margin-top:6px">Beat = how long Staff can pause before Delta replies · it never cuts anyone off mid word</div>
+
         </div>
         <div class="grid2">
           <div>
-            <label style="margin-top:0">Beat</label>
+            <label style="margin-top:0" data-tip="How long Staff can pause before the agent replies · it never cuts anyone off mid word">Beat</label>
             <select id="sb_beat" onchange="updateDraftDot()">
               <option value="" disabled selected>Select a beat</option>
               <option value="normal">Normal (3s to think before it replies)</option>
@@ -1111,20 +1097,17 @@
 
       <div class="card dstep" data-step="3" style="display:none">
         
-        <div class="meta" style="margin:2px 0 12px">Tick the openers to rotate on live calls · fine-tune per store later in Workflows</div>
-        <label>Write a new opener</label>
-        <div class="meta" style="margin:2px 0 8px">{category} swaps per store · Pokémon, One Piece and so on</div>
+        <label style="margin-top:0" data-tip="{category} swaps per store · Pokémon, One Piece and so on">Write a new opener</label>
         <textarea id="rot_opener_new" rows="3" style="font-size:13px;line-height:1.5" placeholder="e.g. Heyy! Got any {category} in today?"></textarea>
         <div class="btnrow"><button class="ghost" onclick="addOpener()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save opener</button></div>
-        <label style="margin-top:16px">Your openers <span id="rot_opener_count" class="meta" style="text-transform:none;letter-spacing:0;font-weight:500"></span></label>
+        <label style="margin-top:16px" data-tip="Tick the ones to rotate on live calls · fine-tune per store later in Workflows">Your openers <span id="rot_opener_count" class="meta" style="text-transform:none;letter-spacing:0;font-weight:500"></span></label>
         <div id="rot_opener_list" style="margin-top:4px"></div>
       </div>
 
       <div class="card dstep" data-step="4" style="display:none">
 
         <div class="meta" id="pn_delta_note" style="display:none;margin:0 0 10px">Delta speaks in clips · the persona only talks if the call escalates to the live agent</div>
-        <label style="margin-top:0">Persona for this workflow</label>
-        <div class="meta" style="margin:2px 0 8px">Tap one to use it · saving a persona selects it</div>
+        <label style="margin-top:0" data-tip="Tap one to use it · saving a new persona selects it automatically">Persona for this workflow</label>
         <div id="wf_persona_pick" class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:4px"></div>
         <label style="margin-top:16px">Your personas</label>
         <div id="pn_list" style="margin-top:6px"></div>
@@ -1152,16 +1135,13 @@
 
       <div class="card dstep" data-step="5" style="display:none">
         
-        <div class="meta" id="rot_script_note" style="margin:2px 0 12px">Your Step 3 scripts rotate on their own, a different one each call. This step only picks the voices.</div>
-        <label style="margin-top:4px" data-tip="Tick 2+ and live calls alternate between them, one per call. Tick just one to always use that voice.">Voices in rotation</label>
+        <label style="margin-top:0" data-tip="Tick 2+ and live calls alternate them, one per call · Step 3 scripts rotate on their own">Voices in rotation</label>
         <div id="rot_voices" class="meta" style="margin-top:4px">Loading voices…</div>
-        <div class="meta" style="margin-top:8px">Next call uses the next ticked voice AND the next script, automatically.</div>
         <div class="btnrow"><button class="ghost" onclick="saveRotation(this)"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save rotation</button><span class="meta" id="rot_msg"></span></div>
       </div>
 
       <div class="card dstep" data-step="6" style="display:none">
         
-        <div class="meta" style="margin:2px 0 12px">Rings your phone to hear the voice, tuning and openers · staging stays the full end-to-end test</div>
         <div class="meta" id="sim_delta_hint" style="display:none;margin:2px 0 12px;color:var(--green)">Saves the workflow then dials you on the real clip flow · answer like Staff · go off script to hear the handoff</div>
         <div id="sim_charlie_a">
         <label>Store</label><select id="sim_store" onchange="previewMaybe()"><option value="" disabled selected>Loading stores</option></select>
@@ -1169,8 +1149,7 @@
         </div>
         <label>Your phone</label><input id="sim_phone" placeholder="+13106662331">
         <div id="sim_charlie_b">
-        <label>Voice for this test</label>
-        <div class="meta" style="margin:2px 0 8px">Only your rotation voices show here</div>
+        <label data-tip="Only your rotation voices show here">Voice for this test</label>
         <select id="sim_voice" onchange="refreshTestRotation()"><option value="">Bench default voice</option></select>
         <div class="grid2" style="margin-top:14px">
           <div><label style="margin-top:0">Flow</label><select id="sim_mode"><option value="restock">Restock (did your shipment include it?)</option><option value="carry">Carry (do you sell it at all?)</option></select></div>
@@ -1190,9 +1169,9 @@
 
       <div class="card dstep" data-step="7" style="display:none">
         
-        <label>Workflow name</label><input id="wf_name" placeholder="e.g. Warm Pokémon v2">
+        <label style="margin-top:0" data-tip="Saved workflows appear in Calls → App and on Chains to assign">Workflow name</label><input id="wf_name" placeholder="e.g. Warm Pokémon v2">
         <div class="btnrow"><button class="ghost" onclick="saveWorkflow()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save workflow</button></div>
-        <div class="meta" id="wf_msg" style="margin-top:8px">Saved workflows appear in Calls → Settings to assign to chains.</div>
+        <div class="meta" id="wf_msg" style="margin-top:8px"></div>
       </div>
 
     </div>
@@ -1203,8 +1182,8 @@
   </section>
 
     <section id="trees">
-    <div style="display:flex;align-items:baseline;gap:10px"><div class="k-title">Chains</div><div class="k-sub" id="set_pickcount" style="margin-top:0"></div></div>
-    <div class="k-sub" id="set_picked">Per-chain settings and the mapped phone route.</div>
+    <div style="display:flex;align-items:baseline;gap:10px"><div class="k-title">Chains<span data-tip="Per-chain settings and the mapped phone route · tap a chain to open it"></span></div><div class="k-sub" id="set_pickcount" style="margin-top:0"></div></div>
+    
     <div class="stats" id="tr_stats" style="margin:14px 0 0"></div>
     <button class="peek" style="margin-top:12px" onclick="sheetFromHolder('ds_abcd','How a call flows','Alpha keypad · Bravo voice menu · Charlie live agent · Delta recorded clips')">
       <div class="pk-main"><div class="pk-t">How a call flows</div></div>
@@ -1221,7 +1200,6 @@
       <select id="set_chain" onchange="setPickChain()" style="display:none"><option value="">Select a chain</option></select>
       <div id="set_picker"><div class="empty">Loading…</div></div>
       <button class="k-key" id="set_more" onclick="chainsShowMore()" style="display:none">SHOW MORE</button>
-      <div class="k-note" style="text-align:center">Tap a chain to open its settings and map it.</div>
     </div>
     <div id="set_body" style="display:none">
       <div class="card" id="set_storewrap">
@@ -1272,8 +1250,7 @@
     </section>
 
     <section id="statuses">
-    <div class="k-title">Statuses</div>
-    <div class="k-sub">The verdicts customers see. Edits go live instantly.</div>
+    <div class="k-title">Statuses<span data-tip="The verdicts customers see · edits go live instantly"></span></div>
     <div id="st_list" style="margin-top:16px"><div class="empty">Loading…</div></div>
     <button class="k-cta" onclick="sheetFromHolder('ds_staddform','New status','Display is instant. Detecting it on calls needs the extraction wired.')"><span>NEW STATUS →</span></button>
     <div id="st_details" style="display:none">
@@ -1300,12 +1277,10 @@
   </section>
 
   <section id="fun">
-    <div class="k-title">Fun</div>
-    <div class="k-sub">Ring your own phone in any voice. Never touches store calls.</div>
+    <div class="k-title">Fun<span data-tip="Rings your own phone in any voice · never touches store calls"></span></div>
     <div style="height:16px"></div>
     <div class="card">
-      <div class="name">Delta <span class="meta" style="font-weight:500">&nbsp;· recorded-agent rehearsal</span></div>
-      <div class="meta" style="margin:4px 0 12px">Calls you and runs a whole check on the Delta lane: recorded clips, no live agent. Say something off script to hear the barge-in.</div>
+      <div class="name">Delta <span class="meta" style="font-weight:500">&nbsp;· recorded-agent rehearsal</span><span data-tip="Runs a whole check on recorded clips, no live agent · go off script to hear the barge-in"></span></div>
       <label>Your phone</label>
       <input id="td_phone" placeholder="+13105551234">
       <div class="btnrow"><button class="act" onclick="tdCall()">Call me on tape</button></div>
@@ -1315,6 +1290,7 @@
       </div>
     </div>
     <div class="card">
+      <div class="name">Charlie <span class="meta" style="font-weight:500">&nbsp;· live-agent rehearsal</span><span data-tip="The live agent calls you and improvises · pick a flow, personality and voice"></span></div>
       <label>Phone</label>
       <input id="lab_phone" placeholder="+13105551234">
       <label data-tip="Optional. Opens with e.g. 'hey what's up Matt'">First name</label>
@@ -2420,11 +2396,6 @@ function firstActiveOpener(){ const a=OPENERS.filter(o=>o.on); return a.length?a
 function renderOpeners(){
   const box=document.getElementById('rot_opener_list');
   if(box) box.innerHTML = OPENERS.length ? OPENERS.map((o,i)=>`<label class="oprow"><input type="checkbox" ${o.on?'checked':''} onchange="toggleOpener(${i},this.checked)"><span class="optext">${esch(o.text)}</span><button class="ghost opdel" title="Remove" onclick="deleteOpener(${i})">${lucideSvg('x',14,'currentColor')}</button></label>`).join('') : '<div class="meta" style="padding:8px 0">No openers yet. write one above.</div>';
-  // Step 5 no longer mirrors the script list (owner 07-15: scripts rotate on their own; step 5 is voices
-  // only) — just keep its count line honest.
-  const note=document.getElementById('rot_script_note'); const onCt=OPENERS.filter(o=>o.on).length;
-  if(note) note.textContent = onCt>1 ? `Your ${onCt} Step 3 scripts rotate on their own, a different one each call. This step only picks the voices.`
-    : onCt===1 ? 'Your one Step 3 script plays on every call. This step only picks the voices.' : 'No scripts yet. Add them in Step 3. This step only picks the voices.';
   const on=OPENERS.filter(o=>o.on).length;
   const c=document.getElementById('rot_opener_count'); if(c) c.textContent=OPENERS.length?('· '+on+' of '+OPENERS.length+' rotating'):'';
   refreshTestRotation();
@@ -2502,26 +2473,18 @@ function dRender(){
     rail.innerHTML=DLABELS.map((_,i)=>dot(i+1)+(i<DLABELS.length-1?seg(i+1):'')).join('');
   }
   document.querySelectorAll('#d_steps .dstep').forEach(el=>{ el.style.display = Number(el.dataset.step)===DSTEP ? '' : 'none'; });
-  const lbl=document.getElementById('d_nav_label'); if(lbl) lbl.textContent='Step '+DSTEP+' \u00b7 '+DLABELS[DSTEP-1];
-  const sub=document.getElementById('d_nav_sub'); if(sub) sub.textContent=DSUBS[DSTEP-1]||'';
+  const lbl=document.getElementById('d_nav_label'); if(lbl) lbl.innerHTML='Step '+DSTEP+' \u00b7 '+esch(DLABELS[DSTEP-1])+'<span data-tip="'+esch(DSUBS[DSTEP-1]||'')+'"></span>';
   const bk=document.getElementById('d_back'); if(bk) bk.style.visibility=DSTEP>1?'visible':'hidden';
   const fw=document.getElementById('d_fwd'), fl=document.getElementById('d_fwd_label');
   if(fw){ if(DSTEP>=7){ fw.style.visibility='hidden'; } else { fw.style.visibility='visible'; if(fl) fl.textContent='Next: '+DLABELS[DSTEP]; } }
   // Lane-aware controls: Delta has no live agent, so Charlie-only knobs hide and Delta hints show.
   const _delta=desLane()==='delta';
   const _show=(id,on)=>{ const e=document.getElementById(id); if(e) e.style.display=on?'':'none'; };
-  _show('sb_nat_wrap',!_delta); _show('sb_soft_card',!_delta);
-  _show('sb_delta_hint',_delta); _show('pn_delta_note',_delta);
+  _show('sb_nat_wrap',!_delta); _show('sb_soft_card',!_delta); _show('pn_delta_note',_delta);
   _show('sim_delta_hint',_delta); _show('sim_charlie_a',!_delta); _show('sim_charlie_b',!_delta);
 }
 function desLane(){ const e=document.getElementById('des_lane'); return (e&&e.value)==='delta'?'delta':'charlie'; }
-function desLaneChange(){
-  const n=document.getElementById('des_lane_note');
-  if(n) n.textContent = desLane()==='delta'
-    ? 'Recorded clips ask the questions, a cheap brain picks the next line (~2.5¢ a check). Goes off script → the live agent takes over mid-call.'
-    : 'The live agent holds the whole conversation. Smartest, costs the most.';
-  dRender();
-}
+function desLaneChange(){ dRender(); }
 function dGo(n){ if(n>DMAX) return; if(n<DSTEP) DMAX=n; DSTEP=n; dRender(); const e=document.querySelector('#designer'); if(e) e.scrollIntoView({behavior:'smooth',block:'start'}); }
 function dNext(n){ DMAX=Math.max(DMAX,n); dGo(n); }
 function dBack(){ if(DSTEP>1) dGo(DSTEP-1); }
@@ -2782,7 +2745,7 @@ async function loadFbUnclear(){
     const all=(rc&&Array.isArray(rc.rows)?rc.rows:[]).filter(r=>r.statusKey==='no_clear_answer');
     const unk=all.slice(0,8); // a strip, not a wall — the Calls log holds the rest
     if(!unk.length){ el.innerHTML=''; return; }
-    el.innerHTML=`<div class="k-eyebrow">Unclear checks · Fun included</div><div class="k-pills" style="margin-top:0">${unk.map(r=>`<span class="k-pill" style="color:#F4D03F">${esch(String(r.retailer||('#'+r.retailerId)).split('—')[0].trim())} · ${agoTs(r.startedAt)}</span>`).join('')}${all.length>8?`<span class="k-pill">+${all.length-8} more in Calls</span>`:''}</div>`;
+    el.innerHTML=`<div class="k-eyebrow">Unclear checks<span data-tip="Fun included on purpose · the god view filters them out"></span></div><div class="k-pills" style="margin-top:0">${unk.map(r=>`<span class="k-pill" style="color:#F4D03F">${esch(String(r.retailer||('#'+r.retailerId)).split('—')[0].trim())} · ${agoTs(r.startedAt)}</span>`).join('')}${all.length>8?`<span class="k-pill">+${all.length-8} more in Calls</span>`:''}</div>`;
   }catch(_){ el.innerHTML=''; }
 }
 // Review/correct write to the SOURCE the row came from — a staging disagreement fixes the staging record.
@@ -4871,7 +4834,7 @@ async function loadAlerts(){
     const total=Object.values(roll).reduce((a,b)=>a+b,0);
     const stubbed=ks.filter(k=>k.endsWith('.stubbed')).reduce((a,k)=>a+roll[k],0);
     rEl.innerHTML=`<div class="k-wells" style="margin-top:12px">${well(subs.total||0,'Signed up','')}${well(total,'Sends this month',total?'g':'')}${well(stubbed,'Stubbed',stubbed?'a':'')}</div>`
-      +(ks.length?ks.sort().map(k=>{const [ev,ch,st]=k.split('.');return `<div class="repline"><span class="rl">${esch(String(ev).replace(/_/g,' '))} · ${esch(ch)} · ${esch(st)}</span><b>${roll[k]}</b></div>`;}).join(''):''); }
+      +(ks.length?ks.sort().map(k=>{const [ev,ch,st]=k.split('.');return `<div class="repline"><span class="rl">${esch(String(ev).replace(/_/g,' '))} · ${esch(ch)} · ${esch(String(st).replace(/_/g,' '))}</span><b>${roll[k]}</b></div>`;}).join(''):''); }
   // Recent sends: a LOG — first 20, one key shows the rest.
   const lg=document.getElementById('al_log'), recent=log.recent||[];
   if(lg){ const cap=AL_LOG_ALL?60:20;
@@ -4954,7 +4917,7 @@ const GW_QUEUES=[
 function renderGwQueues(){
   const el=document.getElementById('gw_queues'); if(!el||el.dataset.built) return; el.dataset.built='1';
   el.innerHTML=GW_QUEUES.map(([id,title,sub])=>`<button class="peek" onclick="sheetFromHolder('${id}','${esch(title)}','${esch(sub)}')">
-      <span class="pk-main"><span class="pk-t" style="display:block">${esch(title)}</span><span class="pk-m" style="display:block">${esch(sub)}</span></span>
+      <span class="pk-main"><span class="pk-t" style="display:block">${esch(title)}</span></span>
       <span class="pk-fact" id="qf_${id}"></span>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>`).join('');
