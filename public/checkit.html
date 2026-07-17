@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r140" />
+<meta name="x-rev" content="glassfix-r141" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -3957,7 +3957,7 @@ function sheetH_on(ov){ if(!ov||ov.__sh) return; ov.__sh=1;
     const natural=Math.min(m.offsetHeight||0, window.innerHeight*0.86)||window.innerHeight*0.86;
     m.style.position='absolute'; m.style.left='0'; m.style.right='0'; m.style.top=(window.innerHeight-natural)+'px'; m.style.bottom='auto';
     const oy=getComputedStyle(m).overflowY;
-    if(oy==='hidden'){ m.style.height=natural+'px'; m.style.maxHeight=natural+'px'; m.style.borderBottom=TAIL+'px solid #26262B'; }
+    if(oy==='hidden'){ m.style.height=(natural+TAIL)+'px'; m.style.maxHeight=(natural+TAIL)+'px'; m.style.borderBottom=TAIL+'px solid #26262B'; } /* border-box: +TAIL so the border tail lands BELOW the viewport edge, not carved out of the content area */
     else{ m.style.height=(natural+TAIL)+'px'; m.style.maxHeight=(natural+TAIL)+'px';
       if((oy==='auto'||oy==='scroll')&&m.scrollHeight>natural+4) m.style.paddingBottom=TAIL+'px'; }
     return prev!==m.style.height; };
