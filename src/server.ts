@@ -710,8 +710,15 @@ function T(k){
   var dim=document.getElementById('dim'),sheet=document.getElementById('sheet');
   dim.style.display=(cur==='A'||cur==='C')?'block':'none';
   sheet.style.display=(cur==='B'||cur==='C'||cur==='E')?'block':'none';
+  sheet.style.transform='';
   document.body.classList.toggle('filterdim',cur==='D'||cur==='E');
 }
+// Drag the sheet down to close (like the real thing) — closing clears the whole test state so the
+// owner can check the after-close translucency.
+var sheet=document.getElementById('sheet'),y0=null;
+sheet.addEventListener('touchstart',function(e){y0=e.touches[0].clientY;sheet.style.transition='none';},{passive:true});
+sheet.addEventListener('touchmove',function(e){if(y0==null)return;var d=Math.max(0,e.touches[0].clientY-y0);sheet.style.transform='translateY('+d+'px)';},{passive:true});
+sheet.addEventListener('touchend',function(e){sheet.style.transition='';var d=(e.changedTouches[0].clientY-(y0||0));y0=null;if(d>90){T(cur);}else{sheet.style.transform='';}});
 </script>
 </body></html>`);
 });
