@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassH-all-r135" />
+<meta name="x-rev" content="glassfix-r136" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -1895,6 +1895,7 @@ html[data-skin="v2"] .p6d-live .buygrid-h{color:#8A8A96}
 html[data-skin="v2"] #acctOverlay,html[data-skin="v2"] #buyOverlay,html[data-skin="v2"] #pageOverlay,html[data-skin="v2"] #zones,html[data-skin="v2"] #histOverlay{align-items:flex-end;padding:0}
 /* My Zones + Check history: same bottom-sheet recipe as #pageOverlay — flex column, pinned grab handle,
    the .zframe / .hist-scroll body is the only scroller. (owner 07-12) */
+html[data-skin="v2"] .csheet{background:#26262B} /* one sheet surface everywhere (owner) */
 html[data-skin="v2"] #zones .modal,html[data-skin="v2"] #histOverlay .modal{display:flex;flex-direction:column;padding:0;overflow:hidden;width:100%;max-width:none!important;border-radius:28px 28px 0 0;height:88vh;max-height:88vh;height:88dvh;max-height:88dvh;margin:0;background:#26262B} /* every sheet surface = #26262B (owner: all slide-ups identical) */ /* dvh = VISIBLE viewport, so the basket clears the iOS bottom toolbar (vh fallback for old Safari) */
 html[data-skin="v2"] #zones .modal::before,html[data-skin="v2"] #histOverlay .modal::before{content:'';display:block;flex:0 0 auto;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:10px auto 8px}
 html[data-skin="v2"] #zones.on .modal,html[data-skin="v2"] #histOverlay.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
@@ -3917,7 +3918,17 @@ function acctIdentity(){
 // clipped and (b) dims the CONTENT — never a cover layer. Root colour never touched.
 const SHEET_IDS = new Set(['acctOverlay','buyOverlay','pageOverlay','histOverlay','zones','zmenuOv','emailOv','alertsOv','featOv','scorePostOv']);
 function sheetBodyLock(){ document.documentElement.style.overflow='hidden'; document.body.style.overflow='hidden'; document.body.classList.add('sheetopen'); }
-function sheetBodyMaybeUnlock(){ if(!document.querySelector('.overlay.on,.csheet.on,.supwrap.on')){ document.documentElement.style.overflow=''; document.body.style.overflow=''; document.body.classList.remove('sheetopen'); } }
+function sheetBodyMaybeUnlock(){
+  // Only VISIBLE sheets count — a stray .on on a display:none overlay (zones save flow) was keeping the
+  // scroll locked forever (owner: page freezes until refresh). Re-check once more after the close
+  // animations settle so a timing race can never strand the lock.
+  const open=[...document.querySelectorAll('.overlay.on,.csheet.on,.supwrap.on')].some(el=>getComputedStyle(el).display!=='none');
+  if(!open){ document.documentElement.style.overflow=''; document.body.style.overflow=''; document.body.classList.remove('sheetopen'); }
+  clearTimeout(sheetBodyMaybeUnlock._t); sheetBodyMaybeUnlock._t=setTimeout(()=>{
+    const still=[...document.querySelectorAll('.overlay.on,.csheet.on,.supwrap.on')].some(el=>getComputedStyle(el).display!=='none');
+    if(!still){ document.documentElement.style.overflow=''; document.body.style.overflow=''; document.body.classList.remove('sheetopen'); }
+  },450);
+}
 function sheetH_on(ov){ if(!ov||ov.__sh) return; ov.__sh=1;
   sheetBodyLock(); // dim + min-height + scroll lock for EVERY sheet/dialog
   if(!SHEET_IDS.has(ov.id)) return; // small centered dialogs (auth/checkout/etc.) get the dim only — they stay fixed, no glass needed
@@ -3925,11 +3936,11 @@ function sheetH_on(ov){ if(!ov||ov.__sh) return; ov.__sh=1;
   const sc=window.scrollY||document.documentElement.scrollTop||0;
   // Overlay: page-layer catcher spanning the locked viewport + a deep under-bar overshoot (260px so an
   // expanded Safari toolbar can never expose the page below the sheet — the old +120 left a peek strip).
-  ov.style.position='absolute'; ov.style.top=sc+'px'; ov.style.bottom='auto'; ov.style.height=(window.innerHeight+260)+'px';
+  ov.style.position='absolute'; ov.style.top=sc+'px'; ov.style.bottom='auto'; ov.style.height=(window.innerHeight+400)+'px';
   // Modal: BOTTOM-anchored at its NATURAL height (capped 86vh) so short sheets (alerts etc.) stay short
   // instead of being stretched to 86vh; the +260 tail is empty surface running under the bar for the glass.
   const natural=Math.min(m.offsetHeight||0, window.innerHeight*0.86)||window.innerHeight*0.86;
-  m.style.position='absolute'; m.style.left='0'; m.style.top=(window.innerHeight-natural)+'px'; m.style.bottom='auto'; m.style.height=(natural+260)+'px';
+  m.style.position='absolute'; m.style.left='0'; m.style.top=(window.innerHeight-natural)+'px'; m.style.bottom='auto'; m.style.height=(natural+400)+'px';
 }
 function sheetH_off(ov){ if(!ov||!ov.__sh) return; ov.__sh=0; const m=ov.querySelector('.modal');
   if(m){ m.style.position=''; m.style.left=''; m.style.top=''; m.style.bottom=''; m.style.height=''; }
@@ -3947,8 +3958,9 @@ function sheetH_off(ov){ if(!ov||!ov.__sh) return; ov.__sh=0; const m=ov.querySe
 // natural height, anchor its top so the content sits at the viewport bottom, then overshoot ~120px under
 // the bar (empty surface) so the glass ghosts the bottom edge. The translateY slide/drag is unchanged.
 function csheetH_on(){ const el=$('csheet'); if(!el||el.__sh) return; el.__sh=1;
-  const sc=window.scrollY||0, H=el.offsetHeight;
-  el.style.position='absolute'; el.style.top=(sc+window.innerHeight-H)+'px'; el.style.bottom='auto'; el.style.minHeight=(H+260)+'px';
+  const place=()=>{ const sc=window.scrollY||0, H=Math.min(el.offsetHeight,window.innerHeight*0.9);
+    el.style.position='absolute'; el.style.top=(sc+window.innerHeight-H)+'px'; el.style.bottom='auto'; el.style.minHeight=(H+400)+'px'; };
+  place(); requestAnimationFrame(place); // re-anchor after the sheet's content settles (kiosk rows grow after first paint — a stale height left a page strip showing below)
   sheetBodyLock();
 }
 function csheetH_off(){ const el=$('csheet'); if(!el||!el.__sh) return; el.__sh=0;
@@ -4953,7 +4965,7 @@ function dismissCallSheet(){ CS_DISMISSED=true; hideCallSheet(); }
     el.style.transition='transform .28s cubic-bezier(.32,.72,0,1)';
     if(dy>80){ // continue the gesture DOWN to off-screen, then tidy up — never a mid-air disappear
       CS_DISMISSED=true; el.style.transform='translateY(112%)'; const bd=$('csheetBd'); if(bd) bd.classList.remove('on');
-      setTimeout(()=>{ el.classList.remove('on'); el.setAttribute('aria-hidden','true'); el.style.transition=''; el.style.transform=''; }, 300);
+      setTimeout(()=>{ el.classList.remove('on'); el.setAttribute('aria-hidden','true'); el.style.transition=''; el.style.transform=''; csheetH_off(); }, 300); // csheetH_off: restore absolute→fixed + unlock scroll — missing this froze the page after a drag-close
     } else { el.style.transform=''; } // snap back up to open
   });
 })();
