@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="livechrome-r120" />
+<meta name="x-rev" content="glassblend-r121" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -324,6 +324,19 @@ __BRAND_HEAD__
      whenever it happens, lands on the same value and the chrome always blends. */
   html:not([data-skin="v2"]):has(#acctOverlay.on),html:not([data-skin="v2"]):has(#buyOverlay.on),html:not([data-skin="v2"]):has(#pageOverlay.on),html:not([data-skin="v2"]):has(.csheet.on),html:not([data-skin="v2"]):has(#zones.on),html:not([data-skin="v2"]):has(#histOverlay.on),html:not([data-skin="v2"]):has(#zmenuOv.on),html:not([data-skin="v2"]):has(#emailOv.on),html:not([data-skin="v2"]):has(#alertsOv.on),html:not([data-skin="v2"]):has(#featOv.on),html:not([data-skin="v2"]):has(#scorePostOv.on){background:#0C0C12!important}
   html:has(#acctOverlay.on) body,html:has(#buyOverlay.on) body,html:has(#pageOverlay.on) body,html:has(.csheet.on) body,html:has(#zones.on) body,html:has(#histOverlay.on) body,html:has(#zmenuOv.on) body,html:has(#emailOv.on) body,html:has(#alertsOv.on) body,html:has(#featOv.on) body,html:has(#scorePostOv.on) body{background:var(--bg)!important}
+  /* v2 GLASS-EDGE BLEND (owner 07-16, values measured from device screenshots): iOS renders its top
+     strip at ~50% of the page colour (#1D1D22 → #0E0F13) and its bottom bar zone with a faint light
+     haze (#1D1D22 → #26262B), each with only a ~40pt ramp into the page. The old near-black base hid
+     those deltas; v2's lighter base shows them as pinned bands on every page — worst on the flat live
+     view, invisible on colourful blooms (long ramps read as ambient, short ones as bands). These two
+     always-on veils extend the system ramps: the page's edges start at what Safari renders and fade to
+     base over the glass height. Fixed on BODY (never on transformed sheets — containing-block trap),
+     above content like the real glass, below fab (60) and sheets (79+). Browser only — standalone has
+     no Safari glass and keeps clean edges. */
+  @media (display-mode: browser){
+    html[data-skin="v2"] body::before{content:"";position:fixed;left:0;top:0;width:100%;height:130px;background:linear-gradient(180deg,rgba(0,0,0,.5) 0,rgba(0,0,0,0) 100%);pointer-events:none;z-index:55}
+    html[data-skin="v2"] body::after{content:"";position:fixed;left:0;bottom:0;width:100%;height:110px;background:linear-gradient(0deg,rgba(255,255,255,.05) 0,rgba(255,255,255,0) 100%);pointer-events:none;z-index:55}
+  }
   /* SHEET-OPEN CHROME — PROVEN IMPOSSIBLE to recolor in-page (attempt 4, 07-16, reverted like 1-3).
      iOS 26 Safari re-reads the root colour ONLY on a page load or a MAIN-document scroll. Opening a
      sheet is a class change with the main scroll locked, so Safari never re-reads: any root/:has
