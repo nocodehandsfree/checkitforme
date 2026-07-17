@@ -679,7 +679,7 @@ main{padding:10px 20px 40px;max-width:520px;margin:0 auto}
 .store .nm{font-weight:800}.store .ad{font-size:12.5px;color:#8A8A96}
 /* the moving parts, each independently toggleable */
 #dim{position:fixed;inset:0;background:rgba(5,6,9,.66);display:none;z-index:79}
-#sheet{position:fixed;left:0;right:0;bottom:0;z-index:80;background:#26262B;border-radius:28px 28px 0 0;padding:16px 20px calc(24px + env(safe-area-inset-bottom));display:none}
+#sheet{position:fixed;left:0;right:0;bottom:0;z-index:80;background:#26262B;border-radius:28px 28px 0 0;padding:16px 20px calc(24px + env(safe-area-inset-bottom));display:none;touch-action:none}
 #sheet.slide{transform:translateY(0);transition:transform .3s}
 #sheet .handle{width:44px;height:5px;border-radius:3px;background:#3A3A42;margin:0 auto 14px}
 body.filterdim main,body.filterdim header{filter:brightness(.45)} /* dim WITHOUT covering: the page itself darkens, keeps scrolling under the glass */
@@ -700,7 +700,7 @@ body.filterdim main,body.filterdim header{filter:brightness(.45)} /* dim WITHOUT
 <div style="height:60dvh"></div>
 <div class="store"><div class="ic">↑</div><div><div class="nm">Scroll runway</div><div class="ad">so the top can slide under the clock</div></div></div>
 </main>
-<div id="dim"></div>
+<div id="dim" onclick="T(cur)"></div>
 <div id="sheet"><div class="handle"></div><b id="sh_nm">Fun</b><p style="color:#8A8A96;font-size:14px">123 Fun Lane, Calabasas, CA</p></div>
 <script>
 var cur='';
