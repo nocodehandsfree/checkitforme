@@ -12,30 +12,9 @@
   (owner: fields only — full Calc redesign still needs a comp).
 - Kiosk intel / Designer / Categories join title+subhead. All 22 sections now share the format.
 
-## 2026-07-17 (round three) — ONE LAYOUT LAW, EVERY PAGE (cda51ab, live)
-- Owner's rulings baked in: NO tooltips on section headers → title + short sub everywhere · info is
-  RAISED, forms are CARVED (k-well now matches God-view .v) · selects show their chevron (pill
-  gradient painted OVER the chevron layer — first bg-image is topmost; fixed) · Designer step label
-  = the name only (rail is the position).
-- Alerts: rollup table killed; send pills Sent/Stubbed/Test honest colors. Testing log: §5.7 icon
-  chip right, date+time + Script N meta, yellow letter retired. Plans: hero card → title + sync
-  sub + one Publish CTA; priceInput/numInput = ONE carved well (double-chrome + dashed rows gone).
-  Chains: count in the sub. Store intel: MSRP coverage moved up into the report block.
-- Snapshot sweep of all 22 sections: on-pattern except OUTLIERS for separate sessions —
-  (1) **Calc**: own visual language, purple accents, bordered chips, dense workbench → needs a comp;
-  (2) **iOS tint on Admin pages**: blind spot, PM wont-fixed the site variant 07-16 (git: tinttest
-  1-7, 'Safari never resamples in-page'); needs an owner phone loop, one change per push.
-- Gates green · 13/13 drive checks · live sha = tested sha.
-
-## 2026-07-17 (round two) — DIRECTIONAL COPY OFF EVERY PAGE (9c3514c, live)
-- Owner's law: data stays on the page, directions become a tap-ⓘ bubble or die. Page subs fold into
-  a gray ⓘ on the title (Alerts, Policy, Feedback, Testing, Workflows, Statuses, Chains, Store
-  intel, Restock, App, Add, Fun). Chrome notes deleted. Designer step subs + in-step hints ride ⓘ
-  (dead elements des_lane_note / sb_delta_hint / rot_script_note removed). Policy queue rows =
-  title + count. Fun's second card titled (Charlie). `.goto` was browser-purple outside .drow —
-  now a global green rule. Gates green, 13/13 drive checks, live sha matches.
-- Pops note: ship-admin.sh's post-deploy `grep grpnav` verify races Cloudflare and cries wolf —
-  deploy succeeds (ui-version confirms). Worth a retry loop in the script.
+## 2026-07-17 rounds two + three (9c3514c, cda51ab): directional copy → died or ⓘ (then owner
+reversed ⓘ on headers → subs), info RAISED / forms CARVED, chevrons fixed, testing log icons,
+Plans header + single-well fields, queues as rows. Detail: git log.
 
 ## 2026-07-17 — four-page polish (086236d): Alerts/Policy/Designer/Feedback rebuilt to grammar,
 save pills on every silent toggle, preview-harness stubs added. Detail: git log.
