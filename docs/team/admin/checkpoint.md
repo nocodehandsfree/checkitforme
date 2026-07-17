@@ -3,6 +3,16 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-17 (round two) — DIRECTIONAL COPY OFF EVERY PAGE (9c3514c, live)
+- Owner's law: data stays on the page, directions become a tap-ⓘ bubble or die. Page subs fold into
+  a gray ⓘ on the title (Alerts, Policy, Feedback, Testing, Workflows, Statuses, Chains, Store
+  intel, Restock, App, Add, Fun). Chrome notes deleted. Designer step subs + in-step hints ride ⓘ
+  (dead elements des_lane_note / sb_delta_hint / rot_script_note removed). Policy queue rows =
+  title + count. Fun's second card titled (Charlie). `.goto` was browser-purple outside .drow —
+  now a global green rule. Gates green, 13/13 drive checks, live sha matches.
+- Pops note: ship-admin.sh's post-deploy `grep grpnav` verify races Cloudflare and cries wolf —
+  deploy succeeds (ui-version confirms). Worth a retry loop in the script.
+
 ## 2026-07-17 (later) — FOUR-PAGE POLISH SHIPPED to THE Admin (086236d, live + drive-verified)
 - **Alerts:** 8 stacked sections → status chips + 3 wells + five message ROWS opening ONE edit
   sheet (editors + tokens note + Save + per-channel test send inside). Owner ping got a Test it key.
@@ -31,22 +41,6 @@
   the next promote — a no-op on prod (Admin is same-origin there). Nothing waits on it.
 - **Live-listen answered:** owner's phone is in COMP_PHONES → comp accounts ALWAYS get live audio +
   hang-up when signed in; the Policy box only turns it on for every customer. checkit.html:5085.
-
-### 🎨 DESIGN AUDIT 07-17 (vs ADMIN_COMPS + STYLE_GUIDE + admin copy guide) — REPORT ONLY, no go-ahead yet
-1. **Alerts — worst, and NO comp exists.** 8 stacked sections; 5 template cards with every textarea
-   open + an explainer paragraph each; token cheat-line; test-send widget; sends log. Fix shape:
-   status strip → templates as CRUD rows opening ONE edit sheet (test-send inside) → sends = LOG.
-   Standing rule: comp it in ADMIN_COMPS first.
-2. **Policy (Growth) — the split the comp board prescribed never happened.** 17 flag toggles each
-   with a description sentence + pricing form + plans tables + 4 queues on one page. Comp verdict:
-   flags/pricing stay CONSOLE (one-line grays); store requests/waitlist/moderation → LOG queues.
-3. **Designer — rail matches comp 2c, step bodies don't.** Purple ⓘ info-circles (banned accent;
-   comps: tooltips become gray lines), hairline <hr>s, 60-word Delta hints in step 2, persona
-   BUILDER embedded in step 4 (should be a sheet; the step keeps picker rows), step 6 Advanced is a
-   <details> accordion (comps killed accordions).
-4. **Fun — minor pass.** Purple ⓘ circles, second card missing its title, phone asked twice.
-Checked clean (screenshot or markup): App console, Statuses, Users, Search, Chains, Testing,
-Feedback, Calls, Support, GTM, Kiosk, dash.
 
 ## 2026-07-16 — EMAIL RENDERING: SOLVED + OWNER SIGNED OFF ("lock it in") — do NOT re-litigate
 The laws live as the comment block at the color constants in `src/alerts.ts` — read them before
