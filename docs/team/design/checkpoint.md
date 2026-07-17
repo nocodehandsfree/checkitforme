@@ -3,6 +3,17 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-17c — SHEETS CAN GHOST: variant H WINS (owner-verified)
+- **THE FULL RECIPE, final:** while a sheet is open, (1) dim = content filter (never an overlay),
+  (2) root colour constant, (3) the sheet is ABSOLUTE page-layer content, not position:fixed —
+  anchored at `scrollY + 14% viewport`, height overshooting ~120px into the bar zone, background
+  scroll locked (overflow:hidden on html+body; sheets lock scroll anyway). Fixed sheets live in the
+  UI layer Safari never ghosts; absolute sheets are page paint → the glass ghosts their rows under
+  the toolbar. Reference: /sheetpeek variant H (src/server.ts).
+- Rollout: Webbie (site sheets: acct/buy/page/csheet + messenger), Addie (admin) — swap fixed→absolute
+  on open, restore on close; keep close-drag; remove big bottom padding inside sheet bodies (content
+  must reach under the bar; scroll-end spacer keeps last row reachable).
+
 ## 2026-07-17b — GLASS MAP COMPLETE (owner-verified, /sheetpeek variants A-G)
 - **Three proven laws:** (1) fixed sheets are NEVER ghosted by the scroll-edge glass — Safari treats
   them as UI; their under-toolbar zone reads as the sheet surface, full stop. (2) PAGE-STATE views
