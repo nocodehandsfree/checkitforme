@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="android-r119" />
+<meta name="x-rev" content="livechrome-r120" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -317,7 +317,12 @@ __BRAND_HEAD__
      colour AND the body wash to the regular dark for the duration — the :has() rules undo themselves
      the moment the sheet closes. ID/class specificity + !important out-ranks every tone rule above,
      including the standalone media block and the v2 skin's body background. */
-  html:has(#acctOverlay.on),html:has(#buyOverlay.on),html:has(#pageOverlay.on),html:has(.csheet.on),html:has(#zones.on),html:has(#histOverlay.on),html:has(#zmenuOv.on),html:has(#emailOv.on),html:has(#alertsOv.on),html:has(#featOv.on),html:has(#scorePostOv.on){background:#0C0C12!important}
+  /* BASE SKIN ONLY. In v2 the root colour must NEVER change in-page: iOS re-reads it at unpredictable
+     moments (load/scroll only) and then FREEZES it — this rule firing while the call sheet was open is
+     what left the chrome stuck on base-black through entire live calls (owner 07-16, "not transparent
+     until the status reveals"). v2's bloom keeps the root at #1D1D22 permanently, so every re-read,
+     whenever it happens, lands on the same value and the chrome always blends. */
+  html:not([data-skin="v2"]):has(#acctOverlay.on),html:not([data-skin="v2"]):has(#buyOverlay.on),html:not([data-skin="v2"]):has(#pageOverlay.on),html:not([data-skin="v2"]):has(.csheet.on),html:not([data-skin="v2"]):has(#zones.on),html:not([data-skin="v2"]):has(#histOverlay.on),html:not([data-skin="v2"]):has(#zmenuOv.on),html:not([data-skin="v2"]):has(#emailOv.on),html:not([data-skin="v2"]):has(#alertsOv.on),html:not([data-skin="v2"]):has(#featOv.on),html:not([data-skin="v2"]):has(#scorePostOv.on){background:#0C0C12!important}
   html:has(#acctOverlay.on) body,html:has(#buyOverlay.on) body,html:has(#pageOverlay.on) body,html:has(.csheet.on) body,html:has(#zones.on) body,html:has(#histOverlay.on) body,html:has(#zmenuOv.on) body,html:has(#emailOv.on) body,html:has(#alertsOv.on) body,html:has(#featOv.on) body,html:has(#scorePostOv.on) body{background:var(--bg)!important}
   /* SHEET-OPEN CHROME — PROVEN IMPOSSIBLE to recolor in-page (attempt 4, 07-16, reverted like 1-3).
      iOS 26 Safari re-reads the root colour ONLY on a page load or a MAIN-document scroll. Opening a
@@ -1777,6 +1782,14 @@ html[data-skin="v2"] .plan{background:linear-gradient(180deg,#2D2D34 0%,#27272D 
 html[data-skin="v2"] .plan.sub{background:#23232A;box-shadow:0 0 0 2px var(--accent,#FFCB05),0 8px 14px -8px rgba(0,0,0,.55),0 0 18px color-mix(in srgb,var(--accent,#FFCB05) 18%,transparent)}
 /* AUDIT SWEEP 1 — v1 hairlines/terminal fills that leaked through under v2. */
 html[data-skin="v2"] .rhead{background:#26262B;border:0;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
+/* LIVE call: the store card breathes — a soft green pulse that says "this call is happening right now"
+   (owner 07-16). v2's border:0 killed the base skin's ringglow, so the pulse lives in box-shadow here:
+   every frame keeps v2's resting card shadows and adds a breathing green ring + halo on top. */
+html[data-skin="v2"] .rhead.live{animation:liveGlowV2 2.2s ease-in-out infinite}
+@keyframes liveGlowV2{
+  0%,100%{box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07),0 0 0 1px rgba(74,222,128,.35),0 0 16px rgba(74,222,128,.18)}
+  50%{box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07),0 0 0 1.5px rgba(74,222,128,.7),0 0 30px rgba(74,222,128,.45)}
+}
 html[data-skin="v2"] .proof{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
 html[data-skin="v2"] .smline{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
 html[data-skin="v2"] .csheet-ic{background:#1F1F25;border:0;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
