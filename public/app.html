@@ -191,7 +191,7 @@
   .recp.good{color:var(--green);background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.32)}
   .recp.mid{color:#F4D03F;background:rgba(244,208,63,.1);border:1px solid rgba(244,208,63,.3)}
   .recp.low{color:#ff8a8a;background:rgba(239,68,68,.09);border:1px solid rgba(239,68,68,.28)}
-  .recp.none{color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border);font-weight:700}
+  .recp.none{color:var(--text-muted);background:rgba(255,255,255,.07);border:none;font-weight:700}
   .srdetail{padding:0 13px 13px}
   .srline{display:flex;gap:10px;font-size:13px;line-height:1.5;padding-top:11px}
   .srlab{color:var(--text-muted);font-weight:600;flex:0 0 58px;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;padding-top:1px}
@@ -245,15 +245,15 @@
   .pulse{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);flex:0 0 auto;animation:scpulse 1.4s ease-in-out infinite}
   @keyframes scpulse{0%,100%{opacity:1}50%{opacity:.32}}
   .lvstop{width:100%;margin-bottom:12px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.45);color:#ff8a8a;border-radius:10px;padding:10px 15px;font:800 13px Inter;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer}
-  .lvx{width:34px;height:34px;border-radius:9px;border:1px solid var(--border);background:var(--surface-2);color:#9a9aac;font-size:15px;display:grid;place-items:center;cursor:pointer;flex:0 0 auto}
+  .lvx{width:34px;height:34px;border-radius:9px;border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);background:var(--surface-2);color:#9a9aac;font-size:15px;display:grid;place-items:center;cursor:pointer;flex:0 0 auto}
   .lvbody{max-height:46vh;overflow:auto}
   .lvbody .chat{margin-top:0}
   /* multi-select store-type filter (check several at once) */
   .msel{position:relative;flex:1;min-width:158px}
-  .msel-btn{display:flex;width:100%;align-items:center;justify-content:space-between;gap:7px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;color:#dcdce6;padding:8px 11px;font:600 13px Inter;cursor:pointer;white-space:nowrap}
+  .msel-btn{display:flex;width:100%;align-items:center;justify-content:space-between;gap:7px;background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:8px;color:#dcdce6;padding:8px 11px;font:600 13px Inter;cursor:pointer;white-space:nowrap}
   .msel-btn #ftype_lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .msel-car{color:#56566a;font-size:10px;flex:0 0 auto}
-  .msel-menu{display:none;position:absolute;z-index:60;top:calc(100% + 5px);left:0;width:230px;max-height:300px;overflow:auto;background:var(--sheet);border:1px solid var(--border);border-radius:11px;padding:6px;box-shadow:0 14px 34px rgba(0,0,0,.55)}
+  .msel-menu{display:none;position:absolute;z-index:60;top:calc(100% + 5px);left:0;width:230px;max-height:300px;overflow:auto;background:var(--sheet);border-radius:11px;padding:6px;box-shadow:0 14px 34px rgba(0,0,0,.55)}
   .msel-menu.open{display:block}
   .msel-opt{display:block;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:#e9e9f2;white-space:nowrap;line-height:1.3}
   .msel-opt:hover{background:var(--surface-2)}
@@ -264,7 +264,7 @@
   .urow:first-of-type{border-top:none}
   .ugrow{flex:1;min-width:0}
   .uname{font-size:13px;font-weight:700;color:#eaeaf2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .ucomp{font-size:10px;font-weight:700;color:var(--muted);background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:1px 5px;margin-left:7px;vertical-align:1px}
+  .ucomp{font-size:10px;font-weight:700;color:var(--muted);background:rgba(255,255,255,.07);border:none;border-radius:6px;padding:1px 5px;margin-left:7px;vertical-align:1px}
   .umeta{font-size:12.5px;color:var(--text-muted);margin-top:2px}
   .uright{flex:0 0 auto;text-align:right}
   .upill{display:inline-block;font:800 10.5px Inter;border-radius:7px;padding:4px 9px;border:none}
@@ -392,7 +392,7 @@
   .sheet .sh-title{font-size:20px;font-weight:800;letter-spacing:-.3px;margin:4px 0 2px}
   .sheet .sh-sub{font-size:12px;font-weight:600;color:#8A8A96;margin-bottom:6px}
   .sheet .sh-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding-top:6px}
-  .drow{background:var(--surface-1);border:1px solid var(--border);border-radius:16px;margin-bottom:12px;overflow:hidden}
+  .drow{background:var(--surface-1);border:none;border-radius:16px;margin-bottom:12px;overflow:hidden}
   .drow>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px}
   .drow>summary::-webkit-details-marker{display:none}
   .drow .rl{font-size:15px;font-weight:700;color:#eaeaf2}
@@ -427,12 +427,12 @@
   .rsbar b{flex:0 0 auto;min-width:18px;text-align:right;color:#e8e8f0}
   .stat.purple .n{color:var(--purple)}
   .stat.bad .n{color:var(--red)}
-  .rschip{display:inline-block;background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:3px 8px;margin:0 5px 5px 0;font-size:12.5px;color:var(--text-body)}
+  .rschip{display:inline-block;background:rgba(255,255,255,.07);border:none;border-radius:7px;padding:3px 8px;margin:0 5px 5px 0;font-size:12.5px;color:var(--text-body)}
   .rschip b{color:var(--green)}
   .rsrow{cursor:pointer;padding-left:6px;padding-right:6px;border-radius:8px}
   .rsrow:hover{background:var(--surface-2)}
   .sracts{display:flex;gap:9px;align-items:center;margin-top:12px}
-  #leafletmap{height:520px;border-radius:14px;border:1px solid var(--border);overflow:hidden}
+  #leafletmap{height:520px;border-radius:14px;border:none;box-shadow:0 8px 14px -8px rgba(0,0,0,.55);overflow:hidden}
   .leaflet-popup-content{font-family:Inter,sans-serif}
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:10px;margin-bottom:16px}
   .card .stats:last-child{margin-bottom:0}   /* no trailing gap when stats is the card's last row */
@@ -458,14 +458,14 @@
   .ractions button.act{white-space:nowrap}
   .filters{display:flex;gap:8px;margin-bottom:12px;align-items:stretch}
   .filters input{flex:1;min-width:0}
-  .fbtn{flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.04);border:1px solid var(--border-medium);color:var(--text-strong);padding:0 15px;border-radius:var(--r-btn);cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;transition:border-color .12s,background .12s}
+  .fbtn{flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:var(--text-strong);padding:0 15px;border-radius:var(--r-btn);cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap}
   .fbtn:hover{border-color:var(--border-strong)}
   .fbtn.on{border-color:var(--tint-purple-border);background:var(--tint-purple-bg);color:#c4b5fd}
   .fbtn .msel-car{transition:transform .2s}
   .fbtn[aria-expanded="true"] .msel-car{transform:rotate(180deg)}
   .fcount{display:none;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--purple);color:#160e2e;font-size:10.5px;font-weight:800;align-items:center;justify-content:center;line-height:1}
   .fcount.show{display:inline-flex}
-  .filterpanel{display:none;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:16px;padding:12px;background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-card)}
+  .filterpanel{display:none;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:16px;padding:12px;background:var(--surface-1);border-radius:var(--r-card)}
   .filterpanel.open{display:grid}
   .filterpanel select,.filterpanel .msel{width:100%;min-width:0}
   .filterpanel .fclear{grid-column:1 / -1;justify-self:start;margin-top:2px}
@@ -473,7 +473,7 @@
   .chip-type svg{opacity:.75}
   /* per-product counts as one box (replaces a circle per product) */
   .carrygrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px}
-  .carryrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--muted)}
+  .carryrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--muted)}
   .carryrow span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .carryrow b{color:#c7c7d2;font-size:13px;flex:0 0 auto}
   /* stores: intel reports (by type / top regions / most-checked) */
@@ -484,7 +484,7 @@
   .repline .rl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .repline b{color:#fff;flex:0 0 auto}
   /* statuses: one grouped icon control (drawn preview + emoji key) so it doesn't read as two icons */
-  .stico{display:inline-flex;align-items:center;border:1px solid var(--border);border-radius:9px;overflow:hidden;background:#0e0e14;flex:0 0 auto}
+  .stico{display:inline-flex;align-items:center;border:none;background:rgba(255,255,255,.06);border-radius:9px;overflow:hidden;background:#0e0e14;flex:0 0 auto}
   .stico-prev{display:grid;place-items:center;width:34px;height:42px;background:rgba(255,255,255,.05)}
   .stico-key{width:48px;height:42px;text-align:center;border:none!important;border-radius:0!important;background:transparent!important;font-size:16px}
   /* stores: row select + bulk-action bar */
@@ -512,7 +512,7 @@
   .day{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;background:transparent;border:none;padding:5px 4px;cursor:pointer;color:#cfcfd8;user-select:none}
   .day input{width:15px;height:15px;accent-color:var(--green)}
   /* day-of-week pickers render as clean toggle PILLS (hidden checkbox, green when on) — not raw checkboxes */
-  .daypick .day{justify-content:center;font-weight:700;color:#8a8a98;background:rgba(255,255,255,.04);border:1px solid var(--border);padding:8px 4px;border-radius:9px;flex:1 1 0;min-width:0;gap:0;transition:background .12s,border-color .12s,color .12s}
+  .daypick .day{justify-content:center;font-weight:700;color:#8a8a98;background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);padding:8px 4px;border-radius:9px;flex:1 1 0;min-width:0;gap:0;transition:background .12s,border-color .12s,color .12s}
   .daypick .day input{position:absolute;opacity:0;width:0;height:0;margin:0;pointer-events:none}
   .daypick .day:has(input:checked){background:rgba(74,222,128,.14);border-color:rgba(74,222,128,.5);color:var(--green)}
   #signinwrap{display:flex;justify-content:center;align-items:flex-start;padding:40px 16px;min-height:60vh}
@@ -533,12 +533,12 @@
   }
   /* Playbook sub-nav (mobile segmented control) */
   .subnav{display:flex;gap:6px;margin:0 0 12px;flex-wrap:nowrap}
-  .subnav button{flex:1;min-width:0;white-space:nowrap;background:rgba(255,255,255,.03);border:1px solid var(--border);color:var(--muted);padding:9px 8px;border-radius:10px;font-weight:700;font-size:12.5px;cursor:pointer}
+  .subnav button{flex:1;min-width:0;white-space:nowrap;background:rgba(255,255,255,.03);border:none;color:var(--muted);padding:9px 8px;border-radius:10px;font-weight:700;font-size:12.5px;cursor:pointer}
   .subnav button.active{background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.4);color:var(--green)}
   /* Collapsible cards on the Test Bench */
   details.card>summary{cursor:pointer;list-style:none;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
   details.card>summary::-webkit-details-marker{display:none}
-  details.card>summary::after{content:'';margin-left:auto;flex:0 0 auto;width:26px;height:26px;border-radius:50%;border:1px solid var(--border);background:rgba(255,255,255,.04) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%23b9b9c8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px no-repeat;transition:transform .22s,background-color .15s,border-color .15s}
+  details.card>summary::after{content:'';margin-left:auto;flex:0 0 auto;width:26px;height:26px;border-radius:50%;border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);background:linear-gradient(180deg,#2E2E35,#25252B) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%23b9b9c8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px no-repeat;transition:transform .22s,background-color .15s,border-color .15s}
   details.card[open]>summary::after{transform:rotate(180deg);background-color:rgba(74,222,128,.12);border-color:rgba(74,222,128,.45)}
   .chip-draft{font-size:10px;background:#FBBF24;color:#1a1a24;border-radius:6px;padding:2px 6px;font-weight:800;margin-left:6px}
   /* Calls: clean clickable table — one row per call, expands to detail */
@@ -593,7 +593,7 @@
   details.tr>summary::-webkit-details-marker{display:none}
   .daychip{display:inline-block;font-size:10.5px;font-weight:700;color:#62626f;background:transparent;border:none;border-radius:0;padding:0;margin-right:9px;letter-spacing:.2px}
   .daychip.on{color:var(--green);background:transparent;border:none}
-  .catchip{display:inline-flex;align-items:center;gap:8px;background:var(--sheet);border:1px solid var(--border);border-radius:14px;padding:12px 16px;font-weight:800;font-size:13px}
+  .catchip{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:14px;padding:12px 16px;font-weight:800;font-size:13px}
   .empty{color:var(--muted);font-size:13px;padding:34px 20px;text-align:center;background:var(--sheet);border:1px dashed var(--border);border-radius:16px}
   body.authwait header,body.authwait nav,body.authwait main,body.authwait .agent-fab,body.authwait .agent-panel{display:none}
   /* drawn-icon chrome (replaces emoji) */
@@ -634,29 +634,29 @@
   .agent-fab:hover{opacity:1} .agent-fab:active{transform:scale(.94)}
   .agent-fab svg{width:21px;height:21px}
   .agent-panel{position:fixed;right:20px;bottom:20px;z-index:61;width:min(420px,calc(100vw - 32px));height:min(620px,calc(100dvh - 90px));
-    display:flex;flex-direction:column;background:#0d0d15;border:1px solid var(--border);border-radius:18px;overflow:hidden;overscroll-behavior:contain;box-shadow:0 24px 60px -12px rgba(0,0,0,.7)}
+    display:flex;flex-direction:column;background:#1D1D22;border:none;box-shadow:0 24px 48px -12px rgba(0,0,0,.7);border-radius:18px;overflow:hidden;overscroll-behavior:contain;box-shadow:0 24px 60px -12px rgba(0,0,0,.7)}
   .agent-head{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border);background:rgba(74,222,128,.06)}
   .agent-title{font-weight:800;font-size:13px;color:#fff;display:inline-flex;align-items:center;gap:8px}
-  .agent-model{margin-left:auto;margin-right:8px;max-width:170px;background:#08080c;color:#cdcdd8;border:1px solid var(--border);border-radius:9px;padding:5px 7px;font-size:12.5px;font-weight:600;cursor:pointer}
+  .agent-model{margin-left:auto;margin-right:8px;max-width:170px;background:var(--terminal);color:#cdcdd8;border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:9px;padding:5px 7px;font-size:12.5px;font-weight:600;cursor:pointer}
   .agent-x{background:none;border:none;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;padding:0 4px}
   .agent-x:hover{color:#fff}
   .agent-log{flex:1;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:14px;display:flex;flex-direction:column;gap:10px}
   .agent-msg{max-width:86%;padding:9px 12px;border-radius:13px;font-size:13px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
   .agent-msg.user{align-self:flex-end;background:var(--ptint);border:1px solid var(--pline);color:#fff;border-bottom-right-radius:4px}
-  .agent-msg.bot{align-self:flex-start;background:rgba(255,255,255,.04);border:1px solid var(--border);color:#e7e7ef;border-bottom-left-radius:4px}
+  .agent-msg.bot{align-self:flex-start;background:linear-gradient(180deg,#2D2D34,#27272D);border:none;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#e7e7ef;border-bottom-left-radius:4px}
   .agent-msg.err{align-self:flex-start;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5}
   .agent-acts{align-self:flex-start;max-width:86%;display:flex;flex-direction:column;gap:4px;margin-top:-4px}
   .agent-act{font-size:12.5px;color:var(--green);background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);border-radius:8px;padding:4px 9px;display:inline-flex;align-items:center;gap:6px}
   .agent-empty{color:var(--muted);font-size:13px;text-align:center;margin:auto;padding:20px;line-height:1.6}
   .agent-typing{align-self:flex-start;color:var(--muted);font-size:13px;padding:4px 2px}
   .agent-input{display:flex;gap:8px;align-items:flex-end;padding:12px;border-top:1px solid var(--border)}
-  .agent-input textarea{flex:1;resize:none;min-height:60px;max-height:160px;background:#08080c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:11px 13px;font:inherit;font-size:15px;line-height:1.45}
+  .agent-input textarea{flex:1;resize:none;min-height:60px;max-height:160px;background:var(--terminal);color:#fff;border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:12px;padding:11px 13px;font:inherit;font-size:15px;line-height:1.45}
   body.agent-open{overflow:hidden}
   .agent-send{flex:0 0 auto;width:40px;height:40px;border-radius:11px;border:none;cursor:pointer;background:var(--green);display:grid;place-items:center}
   .agent-send:disabled{opacity:.4;cursor:default}
   @media(max-width:480px){ .agent-panel{right:8px;left:8px;width:auto;bottom:8px;height:calc(100dvh - 70px)} .agent-fab{right:16px;bottom:16px} }
   /* Status icon button + Lucide icon-library picker */
-  .sticon-btn{width:40px;height:40px;display:grid;place-items:center;flex:0 0 auto;background:var(--terminal);border:1px solid var(--border);border-radius:10px;cursor:pointer;padding:0;transition:border-color .12s}
+  .sticon-btn{width:40px;height:40px;display:grid;place-items:center;flex:0 0 auto;background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:10px;cursor:pointer;padding:0;transition:border-color .12s}
   .sticon-btn:hover{border-color:var(--green)}
   #iconpick{position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.62);backdrop-filter:blur(3px);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px}
   .iconpick-box{background:var(--sheet);border:1px solid var(--border-medium);border-radius:16px;width:100%;max-width:460px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.6)}
@@ -894,7 +894,7 @@
     </div>
     <details class="card">
       <summary><span class="name">Bulk import</span> <span class="meta" data-tip="Paste store JSON. We match on phone; region and timezone come from the state."></span></summary>
-      <textarea id="gw_import" spellcheck="false" placeholder='[{"name":"Target Sunset","phone":"+13105551212","address":"...","state":"CA","chain":"Target","carries":"Pokémon"}]' style="width:100%;min-height:150px;background:#0e0e14;color:#cfe;border:1px solid var(--border);border-radius:10px;padding:12px;font:16px/1.5 ui-monospace,monospace;box-sizing:border-box;margin-top:8px"></textarea>
+      <textarea id="gw_import" spellcheck="false" placeholder='[{"name":"Target Sunset","phone":"+13105551212","address":"...","state":"CA","chain":"Target","carries":"Pokémon"}]' style="width:100%;min-height:150px;background:var(--terminal);color:#cfe;border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:14px;padding:12px;font:16px/1.5 ui-monospace,monospace;box-sizing:border-box;margin-top:8px"></textarea>
       <div id="gw_import_msg" class="meta" style="margin:8px 0;min-height:16px"></div>
       <div><button class="act" onclick="importStoresJson()">Import stores</button> <button class="ghost" onclick="backfillRegions()">Backfill regions</button></div>
     </details>
@@ -1764,7 +1764,7 @@ function renderABCD(ch){
   ];
   el.innerHTML='<div class="meta" style="text-transform:none;margin-bottom:10px">Dial → <b>navigate</b> the menu (Alpha keypad / Bravo voice, via the locked recipe) → <b>human</b> → <b>Charlie</b> or <b>Delta</b> handles the conversation.</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
-    +lanes.map(L=>`<div style="border:1px solid var(--border);border-left:3px solid ${L[2]};border-radius:10px;padding:10px 11px">
+    +lanes.map(L=>`<div style="background:var(--surface-1);border:none;border-left:3px solid ${L[2]};border-radius:10px;padding:10px 11px">
       <div style="display:flex;align-items:baseline;gap:7px"><span style="font-weight:800;color:${L[2]}">${L[0]}</span><span style="font-weight:700;font-size:13.5px">${L[1]}</span><span class="meta" style="margin-left:auto;font-size:10.5px">${L[4]}</span></div>
       <div class="meta" style="font-size:11.5px;margin-top:4px;text-transform:none">${L[3]}</div>
       <div class="meta" style="font-size:10.5px;margin-top:5px">${L[5]}</div>
@@ -1790,7 +1790,7 @@ async function loadRuns(chainId, box){
         <span class="meta">${st.atSec}s</span><span style="color:#cfcfe0;overflow-wrap:anywhere">${esch(st.text||'')}</span>
         <span style="font-weight:600;white-space:nowrap;color:${us?'var(--text-body)':'var(--muted)'}">${esch(did)}</span></div>`;
     }).join('');
-    return `<details style="border:1px solid var(--border);border-radius:10px;margin-bottom:7px;background:var(--sheet)">
+    return `<details style="background:var(--surface-1);border:none;border-radius:10px;margin-bottom:7px;background:var(--sheet)">
       <summary style="cursor:pointer;list-style:none;padding:9px 11px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px">
         <b style="color:var(--muted);min-width:42px">#${runs.length-i}</b>
         <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col}"></span>
@@ -3385,7 +3385,7 @@ const SS_TYPES=[['Big Box','Big Box'],['Pharmacy','Pharmacy'],['Grocery','Grocer
 const SS_RATING={5:['Best near you','#2BFF88','Reliable, predictable restock. Worth checking on a rhythm.'],4:['Mostly reliable','#29D4FF','Carries broadly, no dependable rhythm.'],3:['Spotty','#FF9E2C','Carries, but varies by location.'],2:['Over MSRP','','Has it, but above MSRP.'],1:['Unknown','','Unconfirmed. Hidden from customers.']};
 let SS=null;
 const ssDot=c=>`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${c};flex-shrink:0"></span>`;
-function ssPill(t){ const p=SS_RATING[t]; if(!p) return '<span class="meta">unrated</span>'; if(!p[1]) return `<span style="display:inline-flex;align-items:center;font-size:12.5px;font-weight:700;color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border);border-radius:20px;padding:3px 11px">${esch(p[0])}</span>`; return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:${p[1]};background:${p[1]}1a;border:1px solid ${p[1]}66;border-radius:20px;padding:3px 11px">${ssDot(p[1])}${esch(p[0])}</span>`; }
+function ssPill(t){ const p=SS_RATING[t]; if(!p) return '<span class="meta">unrated</span>'; if(!p[1]) return `<span style="display:inline-flex;align-items:center;font-size:12.5px;font-weight:700;color:var(--text-muted);background:rgba(255,255,255,.07);border:none;border-radius:20px;padding:4px 11px">${esch(p[0])}</span>`; return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:${p[1]};background:${p[1]}1a;border:1px solid ${p[1]}66;border-radius:20px;padding:3px 11px">${ssDot(p[1])}${esch(p[0])}</span>`; }
 function setPickChain(){
   const id=Number(document.getElementById('set_chain').value);
   const body=document.getElementById('set_body'); const ch=CHAINS.find(c=>c.id===id);
@@ -3418,15 +3418,15 @@ function ssRenderStore(){
   // Status: live state is shown selected (icon); the OTHER button is the action. Mute asks first.
   const chk='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
   const muteIco='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/></svg>';
-  const stateBtn=(c,icon,lbl)=>`<div style="flex:1;padding:10px;border-radius:9px;border:1px solid ${c};background:${c}1f;color:${c};font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;gap:7px">${icon}${lbl}</div>`;
-  const actBtn=(onclick,icon,lbl)=>`<button type="button" onclick="${onclick}" style="flex:1;padding:10px;border-radius:9px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-body);font-weight:700;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px">${icon}${lbl}</button>`;
+  const stateBtn=(c,icon,lbl)=>`<div style="flex:1;padding:10px;border-radius:9px;border:none;background:${c}26;color:${c};font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;gap:7px">${icon}${lbl}</div>`;
+  const actBtn=(onclick,icon,lbl)=>`<button type="button" onclick="${onclick}" style="flex:1;padding:10px;border-radius:9px;background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:var(--text-body);font-weight:700;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px">${icon}${lbl}</button>`;
   const status=SS.muted
     ? stateBtn('var(--text-muted)',muteIco,'Muted')+actBtn('ssActivate()',chk,'Activate')
     : stateBtn('var(--green)',chk,'Active')+actBtn('ssMute()',muteIco,'Mute');
   // Rating: five clickable pills (selected = its color, rest greyed). Clicking stamps the tier on every store.
   const pill=(n)=>{ const p=SS_RATING[n]; const seld=SS.tier===n;
-    if(seld) return `<button type="button" onclick="ssRate(${n})" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:${p[1]||'#fff'};background:${p[1]?p[1]+'1f':'var(--surface-2)'};border:1px solid ${p[1]?p[1]+'80':'var(--border-strong)'};border-radius:20px;padding:5px 12px;cursor:pointer">${p[1]?ssDot(p[1]):''}${esch(p[0])}</button>`;
-    return `<button type="button" onclick="ssRate(${n})" style="display:inline-flex;align-items:center;font-size:12.5px;font-weight:700;color:var(--text-muted);background:var(--surface-1);border:1px solid var(--border);border-radius:20px;padding:5px 12px;cursor:pointer">${esch(p[0])}</button>`; };
+    if(seld) return `<button type="button" onclick="ssRate(${n})" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:${p[1]||'#fff'};background:${p[1]?p[1]+'26':'rgba(255,255,255,.1)'};border:none;border-radius:20px;padding:5px 12px;cursor:pointer">${p[1]?ssDot(p[1]):''}${esch(p[0])}</button>`;
+    return `<button type="button" onclick="ssRate(${n})" style="display:inline-flex;align-items:center;font-size:12.5px;font-weight:700;color:var(--text-muted);background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:20px;padding:5px 12px;cursor:pointer">${esch(p[0])}</button>`; };
   const pills=[5,4,3,2,1].map(pill).join('');
   // Per-store rows: bulk toggle commits immediately. KIOSK is per-store ON only — chain level is
   // CLEAR-ONLY (a blanket "kiosk ON" would falsely mark every store a kiosk → all tier-5 + Kiosk tab).
@@ -3462,9 +3462,9 @@ function ssClearKiosk(){ if(!SS||!SS.cKiosk) return; ssStoreBulk({hasKiosk:false
 const RATING_CANON={5:'Best Chance',4:'Mostly Reliable',3:'Spotty',2:'Over MSRP',1:'Unknown'};
 // Compact tier pill for a picker row — CANONICAL names from scoring.md (matches the rating filter),
 // in the tier's color.
-function ratePillMini(t){ const nm=RATING_CANON[t]; if(!nm) return '<span style="font-size:10.5px;font-weight:700;color:var(--text-tertiary)">unrated</span>'; const c=(SS_RATING[t]||[])[1], lbl=t+' '+nm; return c?`<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:${c};background:${c}1a;border:1px solid ${c}55;border-radius:20px;padding:2px 9px;white-space:nowrap">${ssDot(c)}${esch(lbl)}</span>`:`<span style="display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border);border-radius:20px;padding:2px 9px;white-space:nowrap">${esch(lbl)}</span>`; }
+function ratePillMini(t){ const nm=RATING_CANON[t]; if(!nm) return '<span style="font-size:10.5px;font-weight:700;color:var(--text-tertiary)">unrated</span>'; const c=(SS_RATING[t]||[])[1], lbl=t+' '+nm; return c?`<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:${c};background:${c}1a;border-radius:20px;padding:2px 9px;white-space:nowrap">${ssDot(c)}${esch(lbl)}</span>`:`<span style="display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;color:var(--text-muted);background:var(--surface-2);border-radius:20px;padding:2px 9px;white-space:nowrap">${esch(lbl)}</span>`; }
 // mapped/unmapped chip — Mapped = navStatus==='locked' (matches the Mapping section + the filter).
-function mapChipMini(ch){ const locked=ch.navStatus==='locked'; const c=locked?'var(--green)':'var(--text-muted)'; return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:${c};background:${locked?'rgba(74,222,128,.12)':'var(--surface-2)'};border:1px solid ${locked?'rgba(74,222,128,.4)':'var(--border)'};border-radius:20px;padding:2px 9px;white-space:nowrap">${ssDot(c)}${locked?'Mapped':'Unmapped'}</span>`; }
+function mapChipMini(ch){ const locked=ch.navStatus==='locked'; const c=locked?'var(--green)':'var(--text-muted)'; return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:${c};background:${locked?'rgba(74,222,128,.12)':'var(--surface-2)'};border-radius:20px;padding:2px 9px;white-space:nowrap">${ssDot(c)}${locked?'Mapped':'Unmapped'}</span>`; }
 function buildChainPicker(){
   const el=document.getElementById('set_picker'); if(!el) return;
   const cur=(document.getElementById('set_chain')||{}).value||'';
@@ -5258,7 +5258,7 @@ async function loadGwWaitlist(){
   const recent=(d.recent||[]).slice(0,12).map(w=>`<div style="padding:5px 0;border-top:1px solid var(--border);font-size:12.5px">${esch(w.contact)}${w.area?(' · '+esch(w.area)):''}${w.region?(' · '+esch(w.region)):''}</div>`).join('');
   // "We're live in your area" send: pick a region, email everyone waiting there (once). Email-only, never SMS.
   const opts=(d.byRegion||[]).filter(r=>r.region&&r.region!=='Unknown').map(r=>`<option value="${esch(r.region)}">${esch(r.region)} (${r.n})</option>`).join('');
-  const notify=opts?`<div style="display:flex;gap:8px;align-items:center;margin:10px 0 4px"><select id="wl_region" style="flex:1;background:var(--terminal);border:1px solid var(--border);border-radius:8px;padding:7px 9px;color:var(--text-strong);font-size:12.5px"><option value="">Notify a region we just launched…</option>${opts}</select><button class="act" style="font-size:12.5px;padding:7px 11px" onclick="notifyWaitlist()">Email them</button></div><div id="wl_notify_out" class="meta" style="font-size:11px"></div>`:'';
+  const notify=opts?`<div style="display:flex;gap:8px;align-items:center;margin:10px 0 4px"><select id="wl_region" style="flex:1;width:auto"><option value="">Notify a region we just launched…</option>${opts}</select><button class="act" style="font-size:12.5px;padding:7px 11px" onclick="notifyWaitlist()">Email them</button></div><div id="wl_notify_out" class="meta" style="font-size:11px"></div>`:'';
   el.innerHTML=`<div style="font-size:22px;font-weight:800;color:var(--text);margin-bottom:6px">${d.total} waiting</div><div style="margin-bottom:10px">${regions||'—'}</div>${notify}${recent}`;
 }
 async function notifyWaitlist(){
