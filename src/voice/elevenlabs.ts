@@ -17,7 +17,7 @@ import type {
   StartCallResult,
   VoiceProvider,
 } from "./provider";
-import { PREMIUM_FOLLOWUP, FREE_NO_FOLLOWUP, ASK_SHIPMENT_DAY } from "./prompts";
+import { PREMIUM_FOLLOWUP, FREE_NO_FOLLOWUP, ASK_SHIPMENT_DAY, SOFT_TIMEOUT_FALLBACK } from "./prompts";
 import { assertCallsEnabled } from "../config";
 
 export interface ElevenLabsConfig {
@@ -131,7 +131,7 @@ export class ElevenLabsProvider implements VoiceProvider {
     if (patch.softTimeoutSecs !== undefined) {
       // Presence filler on a long pause; -1 disables it. Keeps the line from feeling dead.
       // No dash in the spoken fallback (copy law — the 07-17 "Yeah—I'm here!" mid-call blurt came from here).
-      turn.soft_timeout_config = { timeout_seconds: patch.softTimeoutSecs, message: patch.softTimeoutMsg ?? "Yeah, hi, I'm here!", use_llm_generated_message: false };
+      turn.soft_timeout_config = { timeout_seconds: patch.softTimeoutSecs, message: patch.softTimeoutMsg ?? SOFT_TIMEOUT_FALLBACK, use_llm_generated_message: false };
     }
     if (Object.keys(turn).length) conversation_config.turn = turn;
 
