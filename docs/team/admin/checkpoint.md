@@ -3,6 +3,17 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-17 — SLIDE-UP TRANSPARENCY FIX (f7bbe69, live — NEEDS OWNER PHONE VERDICT)
+Applied design lane's /sheetpeek variant E (owner-proven on device). The full-screen rgba `.sheet-scrim`
+behind every sheet was THE thing killing iOS scroll-edge glass → bars died on any slide-up open, never
+recovered without refresh. **Scrim element deleted.** Dim now = `body.sheetopen header/#grpnav/.subnav2/
+main{filter:brightness(.45)}` — content darkens, nothing covers the page, root colour never changes.
+Tap-outside-close moved to a capture-phase document listener; grabber + swipe-down unchanged; chrome
+poke removed (glass never dies now). Verified headless: no scrim in DOM, filter dims/clears, tap-out
+closes, tap-in keeps open, root bg constant, 13/13 sheet interactions, gates green.
+- **NEXT SURFACE (one-per-push, owner's rule):** `#iconpick` status-icon modal still uses a fixed
+  rgba(0,0,0,.62)+blur backdrop (line ~664) — same swap to filter-dim when owner oks this one.
+
 ## 2026-07-17 — FROG LOOP CLOSED (final: 24a2171 live, byte-verified)
 Hour-long /loop, 6 ships: kit unified (chips/stats/steps borderless-tinted or raised, purple dead) ·
 hairline purge app-wide (only Calc internals keep theirs) · restock honest empty state · store-intel
