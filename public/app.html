@@ -636,7 +636,11 @@
   .card>.meta{margin-top:4px}
   .empty{padding:22px 18px}
   /* unified range sliders — match the consumer radius slider */
-  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:6px;background:rgba(255,255,255,.12);outline:none;margin:8px 0}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:999px;background:rgba(255,255,255,.12);outline:none;margin:2px 0 4px}
+  /* Voice-feel slider rows: readable normal-case label + green value, filled track (set by sbLabels). */
+  .srow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:16px 0 0}
+  .srow .sl{font-size:13px;font-weight:600;color:#CDCDD8}
+  .srow .sv{font-size:13px;font-weight:800;color:var(--green);font-variant-numeric:tabular-nums;white-space:nowrap}
   input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:var(--green);border:3px solid #0C0C12;box-shadow:0 2px 8px rgba(0,0,0,.5);cursor:pointer}
   input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--green);border:3px solid #0C0C12;cursor:pointer}
   /* day toggles + schedule grid: tighter, no bloated gaps */
@@ -1074,17 +1078,16 @@
       <div class="card dstep" data-step="2" style="display:none">
         
         <div class="card" style="background:var(--surface-1);margin-bottom:12px">
-          <label style="margin-top:0;display:flex;justify-content:space-between;align-items:baseline">Speed (cadence) <span id="sb_speed_val" class="hint" style="font-style:normal"></span></label>
-          <input id="sb_speed" type="range" min="0.7" max="1.2" step="0.01" style="width:100%" oninput="sbLabels()">
-          <label style="display:flex;justify-content:space-between;align-items:baseline">Warmth <span id="sb_stability_val" class="hint" style="font-style:normal"></span></label>
-          <input id="sb_stability" type="range" min="0.1" max="0.9" step="0.05" style="width:100%" oninput="sbLabels()">
+          <div class="srow" style="margin-top:0"><span class="sl">Speed</span><span class="sv" id="sb_speed_val"></span></div>
+          <input id="sb_speed" type="range" min="0.7" max="1.2" step="0.01" oninput="sbLabels()">
+          <div class="srow"><span class="sl">Warmth</span><span class="sv" id="sb_stability_val"></span></div>
+          <input id="sb_stability" type="range" min="0.1" max="0.9" step="0.05" oninput="sbLabels()">
           <div id="sb_nat_wrap">
-          <label style="display:flex;justify-content:space-between;align-items:baseline">Naturalness (smoothness) <span id="sb_latency_val" class="hint" style="font-style:normal"></span></label>
-          <input id="sb_latency" type="range" min="0" max="4" step="1" style="width:100%" oninput="sbLabels()">
+            <div class="srow"><span class="sl">Naturalness</span><span class="sv" id="sb_latency_val"></span></div>
+            <input id="sb_latency" type="range" min="0" max="4" step="1" oninput="sbLabels()">
           </div>
-          <label style="display:flex;justify-content:space-between;align-items:baseline">Reply timeout <span id="sb_tt_val" class="hint" style="font-style:normal"></span></label>
-          <input id="sb_turntimeout" type="range" min="3" max="45" step="1" style="width:100%" oninput="document.getElementById('sb_tt_val').textContent=this.value+'s'">
-
+          <div class="srow"><span class="sl">Reply timeout</span><span class="sv" id="sb_tt_val"></span></div>
+          <input id="sb_turntimeout" type="range" min="3" max="45" step="1" oninput="sbLabels()">
         </div>
         <div class="grid2">
           <div>
@@ -2533,6 +2536,7 @@ function dRender(){
     rail.innerHTML=DLABELS.map((_,i)=>dot(i+1)+(i<DLABELS.length-1?seg(i+1):'')).join('');
   }
   document.querySelectorAll('#d_steps .dstep').forEach(el=>{ el.style.display = Number(el.dataset.step)===DSTEP ? '' : 'none'; });
+  if(DSTEP===2 && typeof sbLabels==='function') sbLabels(); // populate slider values + fill tracks on entry
   const lbl=document.getElementById('d_nav_label'); if(lbl) lbl.textContent=DLABELS[DSTEP-1];
   const bk=document.getElementById('d_back'); if(bk) bk.style.visibility=DSTEP>1?'visible':'hidden';
   const fw=document.getElementById('d_fwd'), fl=document.getElementById('d_fwd_label');
@@ -3800,11 +3804,16 @@ function updateDraftDot(){
 
 // --- Draft (test bench) voice tuning ---
 const LATENCY_LABELS=['smoothest (0)','smooth (1)','balanced (2)','fast (3)','fastest/robotic (4)'];
+// Fill a range track green up to its thumb (webkit can't auto-fill a custom-appearance slider).
+function sbFill(el){ if(!el) return; const mn=+el.min, mx=+el.max, v=+el.value, p=mx>mn?Math.round((v-mn)/(mx-mn)*100):0;
+  el.style.background='linear-gradient(90deg,var(--green) 0%,var(--green) '+p+'%,rgba(255,255,255,.12) '+p+'%)'; }
 function sbLabels(){
   const g=id=>document.getElementById(id);
   if(g('sb_speed_val')) g('sb_speed_val').textContent=g('sb_speed').value;
   if(g('sb_stability_val')) g('sb_stability_val').textContent=g('sb_stability').value;
   if(g('sb_latency_val')) g('sb_latency_val').textContent=LATENCY_LABELS[Number(g('sb_latency').value)]||g('sb_latency').value;
+  if(g('sb_tt_val')&&g('sb_turntimeout')) g('sb_tt_val').textContent=g('sb_turntimeout').value+'s';
+  ['sb_speed','sb_stability','sb_latency','sb_turntimeout'].forEach(id=>sbFill(g(id)));
   updateDraftDot();
 }
 function sbSoftToggle(){ const d=document.getElementById('sb_soft_detail'), on=document.getElementById('sb_soft_on'); if(d&&on) d.style.display=on.checked?'':'none'; }
