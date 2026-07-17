@@ -3,6 +3,15 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-17 (cohesion marathon, /loop) — ONE KIT EVERYWHERE (3d2a2b4 + a770427, live)
+- Purple chip defaults + hairline outlines purged app-wide: .pill/.chip-sm/.upill/.tag-verified/
+  .chip-type = borderless tints · .stat = God-view vital chrome · persona picker chips match ·
+  search Filters/multiselects, category chips, day pills, carry rows, chain-sheet keys, mapped
+  chips, sticon keys, import textarea, map frame, disclosure keys, ABCD cards, agent chat — all on
+  the depth system. Fonts verified: 34 hero · 30 secondary · 22 stat · 20 title (ONE per page;
+  designer step label now 17) · 12.5 sub. Only Calc keeps its own look (needs a comp).
+- All 22 sections re-rendered + eyeballed · 13/13 drive checks × 3 runs · gates green each ship.
+
 ## 2026-07-17 (round four) — CALC FIELDS + iOS TINT POKE + last headers (756c1e0, live)
 - **iOS tint fix shipped, needs the owner's phone verdict:** pushState drops Safari's sampled bar
   tint and it never resamples in-page (site lesson 07-14, closeSupport). showSection now fires the
