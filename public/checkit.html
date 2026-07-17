@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="drivefollow-r130" />
+<meta name="x-rev" content="sheetfix-r131" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -2172,12 +2172,6 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   <!-- HISTORY -->
   <div id="history" class="hidden"></div>
 
-  <!-- CHECK HISTORY — bottom-sheet slide-up, same overlay/modal as My checks & Add store -->
-  <div class="overlay" id="histOverlay" onclick="if(event.target===this)closeHistory()"><div class="modal" id="histmodal"></div></div>
-
-  <!-- MANAGE ZONES — bottom-sheet slide-up, same overlay/modal as My checks & Add store -->
-  <div class="overlay" id="zones" onclick="if(event.target===this)backFromZones()"><div class="modal" id="zmodal"></div></div>
-
   <!-- DRIVER HAND-OFF (Runner) -->
   <div id="handoff" class="hidden"></div>
   <!-- HOBBY flow (P3a→P5) — HIDDEN preview build (owner override 2026-07-02). Only reachable with the
@@ -2212,6 +2206,12 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     <button class="fab-back" onclick="fabBack()" aria-label="Back" title="Back"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M14.5 5L8 12l6.5 7" stroke="#06210f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="fbk-lbl"></span></button>
   </div>
 </main>
+
+<!-- CHECK HISTORY + MANAGE ZONES — bottom-sheet slide-ups. MUST live at BODY level, NOT inside <main>
+     (07-17): the sheet-dim filter on `main` would otherwise make main the containing block for these
+     position:fixed overlays, anchoring them to main's box instead of the viewport (stuck-at-bottom). -->
+<div class="overlay" id="histOverlay" onclick="if(event.target===this)closeHistory()"><div class="modal" id="histmodal"></div></div>
+<div class="overlay" id="zones" onclick="if(event.target===this)backFromZones()"><div class="modal" id="zmodal"></div></div>
 
 <!-- Call slider — slides up from the bottom when a store is picked. Swipe down (or tap the backdrop)
      to dismiss. Replaces the inline "Check this store" button. -->
@@ -6848,7 +6848,7 @@ async function openAlerts(){ const ov=sheetShell('alertsOv');
         <span style="display:flex;flex-direction:column;gap:6px;flex:none">
           <button onclick="alertMute(${x.id},${x.muted?0:1})" style="background:rgba(255,255,255,.09);border:0;border-radius:999px;padding:7px 13px;color:#CDCDD8;font:800 12px Inter;cursor:pointer">${x.muted?t('alerts.unmute','Unmute'):t('alerts.mute','Mute')}</button>
           <button onclick="alertStop(${x.id})" style="background:rgba(255,123,123,.12);border:0;border-radius:999px;padding:7px 13px;color:#FF9B9B;font:800 12px Inter;cursor:pointer">${t('alerts.stop','Stop')}</button></span></div>`;}).join('')
-      : `<div class="meta" style="text-align:center;padding:18px 8px">${sentLines(t('alerts.none',"You haven't created any alerts."))}</div>`; };
+      : `<div style="margin-top:10px;padding:20px 16px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);text-align:center"><span style="font-size:12.5px;font-style:italic;font-weight:600;color:#8A8A96;line-height:1.5">${sentLines(t('alerts.none',"You haven't created any alerts."))}</span></div>`; }; // empty state = a card in the alert-row family, small italic muted text (owner 07-17: was reading as the section subhead)
   window.__alertsPaint=paint;
   // Instant when the prefetch already landed; dots only on a cold open.
   ov.innerHTML=shell(ALERTS_ME?'' : `<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:22px 0"><span></span><span></span><span></span></div>`);
