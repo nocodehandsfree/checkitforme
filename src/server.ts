@@ -5808,6 +5808,18 @@ app.get("/pub/bridge/:room", (c) => {
   return c.json({ conversationId: bridgeConversationId(room), wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST, callProgress: roomCallProgress.get(room) ?? null });
 });
 app.get("/pub/bridge-debug", (c) => c.json({ log: bridgeDebug() }));
+// Live-view FLIGHT RECORDER (owner 07-17): the transcript freeze only reproduces on the owner's
+// phone — no theory survives remote testing. The page posts its own play-by-play (ws state, poll
+// responses, cid resolution, errors) so the next frozen call tells us exactly what the phone saw.
+const lvTraces: { at: number; ua: string; lines: string[] }[] = [];
+app.post("/pub/live-debug", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { lines?: unknown[] };
+  const lines = Array.isArray(b.lines) ? b.lines.slice(0, 100).map((x) => String(x).slice(0, 300)) : [];
+  lvTraces.push({ at: Date.now(), ua: (c.req.header("user-agent") || "").slice(0, 90), lines });
+  if (lvTraces.length > 20) lvTraces.shift();
+  return c.json({ ok: true });
+});
+app.get("/api/admin/live-debug", (c) => c.json(lvTraces));
 app.post("/api/bridge/call", async (c) => {
   const b = await c.req.json();
   if (!b.toNumber) return c.json({ error: "toNumber required" }, 400);
