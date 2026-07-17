@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="revert-darkacct-r133" />
+<meta name="x-rev" content="launcher-scope-r134" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -629,6 +629,16 @@ __BRAND_HEAD__
      floating OVER the sheet and covering Save zone; the overlay's z4000 can't beat it because
      MAIN's stacking context traps it, so hide it outright). */
   body.zoning .suplaunch,body:has(#histOverlay.on) .suplaunch{display:none}
+  /* The support launcher lives on TWO surfaces only (owner 07-17): the homepage and the SETTLED status
+     page. Hide it over the call sheet (it was floating on top of the call card — z82 beat the sheet's
+     z80, see the reported screenshot), during a live call, on a still-loading result (show only once
+     the verdict is in, marked by .invite), and on the hunt / scores / hand-off full views. */
+  body:has(.csheet.on) .suplaunch,
+  body.lview .suplaunch,
+  body.huntmode .suplaunch,
+  body.fabbed .suplaunch,
+  body:has(#handoff:not(.hidden)) .suplaunch,
+  body.rview .suplaunch:not(.invite){display:none}
   /* Chat OPEN: the launcher stays put and flips to a CLOSE tab (owner 07-14 — the top X is a reach;
      the thumb is already at the launcher spot). Lifted above the composer so it never covers Send.
      Declared AFTER the hide rules so it wins when chat opens over zones/history. */
