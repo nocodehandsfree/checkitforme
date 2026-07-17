@@ -3,74 +3,81 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-17 — Testing/Feedback staging source SHIPPED · design audit delivered, awaiting go-ahead
+- **Live on THE Admin (ffa130f, verified end to end):** Testing + Feedback carry a "Live site /
+  Staging site" k-filter pill. Root cause of "my Fun calls are missing": rehearsal calls + feedback
+  taps land in the STAGING service's DB; the Admin reads prod. Staging reads ride the root-domain
+  admin cookie (shared SESSION_SECRET) through a CORS gate in server.ts scoped to
+  https://admin.checkitforme.com. Review/correct writes hit the source the row came from. Feedback
+  badge stays live-only. Staging 401 → inline "sign in on staging once" empty state, never the
+  global auth gate.
+- **PM note:** the CORS middleware (src/server.ts, ABOVE the /api auth gate) is on staging and rides
+  the next promote — a no-op on prod (Admin is same-origin there). Nothing waits on it.
+- **Live-listen answered:** owner's phone is in COMP_PHONES → comp accounts ALWAYS get live audio +
+  hang-up when signed in; the Policy box only turns it on for every customer. checkit.html:5085.
+
+### 🎨 DESIGN AUDIT 07-17 (vs ADMIN_COMPS + STYLE_GUIDE + admin copy guide) — REPORT ONLY, no go-ahead yet
+1. **Alerts — worst, and NO comp exists.** 8 stacked sections; 5 template cards with every textarea
+   open + an explainer paragraph each; token cheat-line; test-send widget; sends log. Fix shape:
+   status strip → templates as CRUD rows opening ONE edit sheet (test-send inside) → sends = LOG.
+   Standing rule: comp it in ADMIN_COMPS first.
+2. **Policy (Growth) — the split the comp board prescribed never happened.** 17 flag toggles each
+   with a description sentence + pricing form + plans tables + 4 queues on one page. Comp verdict:
+   flags/pricing stay CONSOLE (one-line grays); store requests/waitlist/moderation → LOG queues.
+3. **Designer — rail matches comp 2c, step bodies don't.** Purple ⓘ info-circles (banned accent;
+   comps: tooltips become gray lines), hairline <hr>s, 60-word Delta hints in step 2, persona
+   BUILDER embedded in step 4 (should be a sheet; the step keeps picker rows), step 6 Advanced is a
+   <details> accordion (comps killed accordions).
+4. **Fun — minor pass.** Purple ⓘ circles, second card missing its title, phone asked twice.
+Checked clean (screenshot or markup): App console, Statuses, Users, Search, Chains, Testing,
+Feedback, Calls, Support, GTM, Kiosk, dash.
+
 ## 2026-07-16 (final) — EMAIL RENDERING: SOLVED + OWNER SIGNED OFF ("OK we're there", "lock it in")
 Ten screenshot-judged rounds. **The mechanism (do NOT re-litigate; the laws live as the comment block
 at the color constants in `src/alerts.ts` — read them before touching ANY email color):** the email is
 AUTHORED as the flat-black design (pure #000000 canvas, yellow kicker, green-RING CTA, white label) —
 Outlook/Apple render it verbatim. A `u + .body` stylesheet (a selector only GMAIL matches) swaps every
-`em-*`-classed element to a light base that Gmail auto-darkens into its gray-card look. Key Gmail
-truths, each one a failed round: it flips text lightness (dark→white, white→dark — so the Gmail CTA
-label is authored near-black to render white), it mangles authored-dark-only emails, gradient locks
-make it dim text, -webkit-text-fill-color is stripped, blend-mode recovery hue-inverts, and
-prefers-color-scheme did NOT drive the good render. All 6 email designs walked and approved by the
-owner (restock, auto_check, store_added, waitlist, confirm_email, instock_owner). Owner trims shipped:
-confirm_email = no tap-instruction line, no address chip; instock_owner = ends at the restock-day
-line (designs may now have empty cta = no button). From-name "Check It For Me" (code + Brevo sender
-#3, done live). Inter @font-face for clients that allow it; Gmail falls back (client limit).
-- NEW OPEN ASK (owner, no-spend): Gmail sender avatar shows "C" — wants the brandmark. Free path: a
-  Google account for noreply@checkitforme.com with the brandmark as photo (needs human phone-verify).
-  BIMI rejected for now (costs money). Leave until he asks again.
-- Promotes stay with PM on the owner's word — these email changes are STAGING-ONLY until then.
-
-## 2026-07-16 — ALERT EMAILS: full editability (Addie) — HANDOFF
-Prior "one light design" rationale lives in git (`emails: switch to ONE light design`); superseded above.
-- **Email BODY editable in Admin now:** the branded email body renders from the template `emailBody`
-  (split by sentence, **bold** + {token}). Editing Admin ▸ Alerts changes the email for real. Restock
-  body = "Get going, this stuff doesn't stay on the shelves for very long." (generic — one template
-  serves all 4 brands, so DON'T hardcode "Pokemon"; owner edits live).
-- Restock = PRODUCT-FIRST (headline {product}, store once, no panel, CTA "Get directions"→Google Maps of
-  the store). auto_check same. Footer = Manage alerts ONLY. Brandmark not wordmark. EN+ES, Admin edits EN.
-
-### ⚠ OWNER'S OPEN ASKS (unfinished)
-1. Store LOGOS by store name — owner agreed to SKIP in email (images blocked → broken box); wants it on
-   the WEBSITE alerts view instead (Webbie's lane). Not built.
-2. Copper to fold my tightened restock/auto_check wording into COPY_STYLE_GUIDE.md.
-4. Webbie owes: My Checks email row + alerts slide-up (?alerts=1 deep link) + email-edit UI; the
-   footer "Manage alerts" link points there. Waitlist has NO signup front-end yet.
+`em-*`-classed element to a light base that Gmail auto-darkens into its gray-card look. Gmail truths,
+each a failed round: it flips text lightness both ways, mangles authored-dark-only emails, gradient
+locks dim text, -webkit-text-fill-color is stripped, blend-mode recovery hue-inverts, and
+prefers-color-scheme did NOT drive the good render. All 6 designs walked + approved. Owner trims
+shipped (confirm_email + instock_owner; designs may have empty cta = no button). From-name "Check It
+For Me" live (code + Brevo sender #3). Inter @font-face where allowed; Gmail falls back.
+- OPEN ASK (owner, no-spend): Gmail avatar shows "C" — wants the brandmark. Free path: Google account
+  for noreply@ with brandmark photo (needs human phone-verify). BIMI rejected (costs). Wait for him.
+- Promotes stay with PM on the owner's word — server-side email changes are STAGING-ONLY until then.
 
 ### Alert system — how it works (all in src/alerts.ts + calls/notify.ts + calls/service.ts)
-- Events: restock (text|email), auto_check (text|email), store_added / waitlist / confirm_email (email),
-  instock_owner (owner ping, email, internal EN). EVENT_CHANNEL + EMAIL_DESIGN + DEFAULT/ES_TEMPLATES.
-- Bilingual: accountLang(account) picks es only when accounts.language='es' (new col; /app/email captures
-  site LANG). {result}→localizeResult. Everyone English until the site sends lang.
-- confirm-gate: no alert email to an address until it taps /confirm-email (accounts.email_verified_at).
-  /unsubscribe = signed HMAC one-click. Both are branded EN+ES landing pages (server.ts).
-- Owner in-stock ping: Admin ▸ Alerts "Your in stock ping" (email|text + address; settings beat env).
-- auto_check results: call_results.customer_schedule_id links a fire to its schedule → every terminal
-  path alerts the owner with the statuses label. Restock fan-out pings EVERY watcher, finder irrelevant.
-- FROM = noreply@checkitforme.com (Brevo sender id 3, ALERT_FROM_EMAIL on both services). Admin test
-  dropdown covers all 8 send types.
+- Events: restock (text|email), auto_check (text|email), store_added / waitlist / confirm_email
+  (email), instock_owner (owner ping). EVENT_CHANNEL + EMAIL_DESIGN + DEFAULT/ES_TEMPLATES.
+- Email BODY editable in Admin ▸ Alerts (`emailBody`, sentence-split, **bold** + {token}). Copy is
+  generic — one template serves 4 brands, never hardcode "Pokemon". EN+ES; Admin edits EN.
+- Bilingual: accountLang picks es only when accounts.language='es'. confirm-gate: no alert email
+  until /confirm-email tapped. /unsubscribe = signed HMAC one-click. Owner ping: Admin ▸ Alerts.
+- FROM = noreply@checkitforme.com (Brevo id 3). Admin test dropdown covers all 8 send types.
 - ⚠ Server-side email changes STAGING-ONLY until Pops' next promote (new cols accounts.language +
-  call_results.customer_schedule_id + accounts.email_verified_at bootstrap-migrate on deploy). Admin UI
-  itself ships DECOUPLED: commit app.html → `bash scripts/ship-admin.sh` (no promote).
-- POST-PROMOTE TODO: re-set the owner's email on PROD (/api/admin/users/phone:+13106662331/email) so
-  email_verified_at stamps.
+  call_results.customer_schedule_id + accounts.email_verified_at bootstrap-migrate on deploy).
+- POST-PROMOTE TODO: re-set the owner's email on PROD (/api/admin/users/phone:+13106662331/email).
+
+### ⚠ OWNER'S OPEN ASKS (cross-lane, unfinished)
+1. Store LOGOS on the WEBSITE alerts view (Webbie; skipped in email on purpose).
+2. Copper: fold tightened restock/auto_check wording into COPY_STYLE_GUIDE.md.
+3. Webbie: My Checks email row + alerts slide-up (?alerts=1) + email-edit UI; waitlist signup UI.
 
 ### ⚖️ OWNER RULING 07-13 — THE design bar (Admin pages)
-Approved: my full-screen mock (comp 1b too flat). Laws: hero answers the page in ONE number/word + honest
-trend/spark (HIDE until real data — never fake, incl. the dash spark on a week of zeros). Color w/ intent
-(iOS-Settings: calm rows, ONE tinted icon, values colored only when state matters; vitals ALWAYS colored).
-Copy = nouns + numbers; explainers live in the SHEET sub. Page title 20px/800.
+Hero answers the page in ONE number/word + honest spark (HIDE until real data — never fake). Color
+w/ intent (iOS-Settings: calm rows, ONE tinted icon; vitals ALWAYS colored). Copy = nouns + numbers;
+explainers live in the SHEET sub. Page title 20px/800.
 
-### KIT (defined once in app.html <style>; comments point at comps ADMIN_COMPS.dc.html)
-.peek (+pk-*) · ONE sheet openSheet/closeSheet/sheetFromHolder (borrows live DOM; drag = WEBSITE physics,
-scroller-walk arm, animate-out past 110px) · carved inputs + selects (no hairline borders) · ghost = raised
-key · .k-switch/.k-filter/.k-key/.k-cta/.k-badge/.k-danger · report grammar .k-range/hero/wells/pills ·
-.k-eyebrow/title/sub/note · .slogo.emboss. Harness: `node scripts/admin-preview.mjs <section> out.png 390`.
-Safari chrome: html bg #1D1D22 root-sampled + apple metas + safe-area padding (site recipe).
+### KIT (defined once in app.html <style>; comps ADMIN_COMPS.dc.html)
+.peek (+pk-*) · ONE sheet openSheet/closeSheet/sheetFromHolder (website physics) · carved inputs +
+selects · ghost = raised key · .k-switch/.k-filter/.k-key/.k-cta/.k-badge/.k-danger · report grammar
+.k-range/hero/wells/pills · .k-eyebrow/title/sub/note · .slogo.emboss · srcApi/srcPicker (call-data
+source). Harness: `node scripts/admin-preview.mjs <section> out.png 390`. Safari chrome: html bg
+#1D1D22 + apple metas + safe-area padding.
 
-### Carried backlog (non-redesign, mine or cross-lane)
+### Carried backlog (non-redesign)
 - Premium toggle matrix in Plans (backend done, UI missing) — fold into a plans pass.
-- Workflows env picker Prod|Staging (needs DevOps cross-origin API).
-- Per-customer account view (docs/specs/admin-user-view.md; users page has the sheet to host it).
+- Workflows env picker Prod|Staging (comp 1e env track; srcApi + CORS now exist — half the work done).
+- Per-customer account view (docs/specs/admin-user-view.md; users sheet can host it).
 - test-all: only pre-existing consumer qa-design baseline items are expected fails.
