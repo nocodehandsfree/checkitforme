@@ -3,6 +3,20 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-17 — SLIDE-UP TRANSPARENCY: SOLVED, owner-verified in the /sheetpeek sandbox
+- **THE RULE: never cover the page with a full-screen dim overlay.** A fixed rgba dim layer is the one
+  thing that kills iOS 26's scroll-edge glass (the "translucent top/bottom" = Safari drawing page
+  content through its bars). Owner A/B/C/D/E-tested on-device: dim overlay alone = glass dies; sheet
+  alone, filter-dim, sheet+filter-dim = glass LIVES through open → scroll → drag-close → reopen.
+- **THE RECIPE (variant E, proven):** sheets stay exactly as built (fixed, transformed, unchanged);
+  the dim becomes `body.filterdim main,body.filterdim header{filter:brightness(.45)}`-style darkening
+  of the page content itself — nothing sits between the content and the glass. Plus the r120 rule:
+  the root colour never changes in-page.
+- **ROLLOUT (pending owner go, one surface per push):** site sheets (acct/buy/page/csheet — swap
+  `.overlay`/`.csheet-bd` dims for content filter), messenger (also remove its root recolor
+  `html:has(.supwrap.on)` ~line 342), Admin (`app.html` same audit). Reference implementation lives at
+  `/sheetpeek` (src/server.ts) — keep until rollout lands.
+
 ## 2026-07-16 — iOS chrome tint lane (tint specialist chat; Webbie takes the live page next)
 - **Staging = `baseline-r122` (`fb80f5c`).** v2 root colour is CONSTANT `#1D1D22` — sheet-open override
   scoped `html:not([data-skin="v2"])`. Fixed: chrome no longer freezes dark through live calls.
