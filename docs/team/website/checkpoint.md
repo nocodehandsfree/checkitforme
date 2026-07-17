@@ -6,16 +6,33 @@
 > the other dev: **he owns the tint CSS** (`__bootTone`/`tone-*`/body wash/sheet chrome), **I own
 > view/mode/nav** — don't blind-edit the tint, it's fragile (see the hard lesson below).
 
-## 🔧 07-17 — live-call page rebuilt trust (x-rev livebloom-r124, all driven in sim + owner test call OK)
-- Owner's "broken" call = STALE TAB (his 17:35 call finished fine server-side; page ran pre-fix JS).
-  Fixes: stale-tab guard (/pub/rev + visibility check, reloads on home view only) · scroll-back-to-
-  verdict restored (the pending-flip was swallowing it — _livePend flag) · LOCK test now phone-size and
-  asserts grow/follow/newest-visible/scroll-back/log-rollup. Owner ran a test call: works.
-- LIVE BLOOM shipped (CD direction): body.lview = verdict-bloom geometry in #266440 + transparent
-  header while the call runs; verdict bloom replaces it at showResult. Gotcha: the neutral flattener
-  (~line 304, five :not()s deep) outranks everything — needed :not(.lview). Root colour untouched.
-- Location follow now re-fires on visibilitychange→visible (3-min throttle) — boot-only recheck died
-  when iOS restored the tab (owner drove home, saw Westlake stores).
+## 🔧 07-17 pt2 — live-call polish + glass dim + DRIVE-FOLLOW (x-rev drivefollow-r130)
+- **Drive-follow: OWNER-VERIFIED ON THE ROAD (pill popped, store count adjusted as he drove).** Coarse
+  watchPosition (enableHighAccuracy:false = wifi/cell, cheap) replaces the boot+tab-return one-shot;
+  follows as you drive, stops when tab hidden (zero bg drain), restarts on return. Rules: permission
+  already-granted only (never prompts), manual pin/ZIP wins, >1mi threshold, never mid call/sheet/hunt,
+  toast throttled 1/2min. findMe also starts the watch on first grant. (Coverage gaps = DD, not me.)
+- **Live call = NO color (owner final):** both bloom attempts cut (green read as in-stock, amber too
+  much). Flat dark through the call AND 'Getting the answer'; only the store card's green glow
+  (liveGlowV2) lives; verdict tone is the reveal. Killed body.lview bg + rv-pend wash.
+- **Step log = moving timeline:** the current step is 15.5px/800 white, every passed step (incl the
+  'Calling' lead) demotes to 12.5px italic gray; seconds inherit the step's style (not bold).
+  'Reaching a person…' moved INSIDE the timeline col under the current step (was floating right-shifted).
+- **Kiosk word dropped** from the call sheet (lone 'kiosk' above the button, ES entry too).
+- **GLASS DIM (sheetpeek variant E, tint lane's spec):** sheet dims are now brightness(.45) on
+  header/main/footer via :has, NOT rgba cover layers (a cover layer kills iOS scroll-edge glass).
+  .overlay/.csheet-bd transparent; ALL inactive full-screen layers display:none incl the supwrap
+  messenger (was transformed-off+opacity:0 → still killed the glass, incl live calls). Messenger root
+  recolor removed. ⚠️ filter makes header/main/footer containing blocks — keep position:fixed kids
+  (toast/csheet/overlays) as BODY children. Owner: bottom strip STILL solid — that's tint lane's now.
+
+## 🔧 07-17 — live-call trust fixes (still-true facts; bloom/location above supersede the rest)
+- Owner's "broken" call = STALE TAB (his call finished fine server-side; page ran pre-fix JS).
+  Fixes still live: stale-tab guard (/pub/rev + visibility check, reloads on home view only) ·
+  scroll-back-to-verdict on settle (_livePend flag — the pending-flip was swallowing it) · LOCK test
+  (test-live-view) is phone-size, asserts grow/follow/newest-visible/scroll-back/log-rollup.
+- body.lview class still set/cleared on the live view (transparent header rides it) — but its bg wash
+  is gone (no-color decision above). Don't re-add a live bg without owner say-so.
 - iOS black top during owner test checks = in-call UI (his phone joins the call) — NOT a page bug;
   regular users unaffected (CD checkpoint agrees). Don't chase it.
 
