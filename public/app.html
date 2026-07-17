@@ -389,10 +389,12 @@
      (the translucent top/bottom bars). Dim the CONTENT ITSELF with a filter; nothing sits between the
      page and the bars, and the root colour never changes. No scrim element exists anymore. */
   body.sheetopen header,body.sheetopen #grpnav,body.sheetopen .subnav2,body.sheetopen main{filter:brightness(.45);transition:filter .22s}
-  /* variant H (design 07-17c, /sheetpeek, owner-verified): while OPEN the sheet is ABSOLUTE page-layer
-     content (JS anchors it at scrollY+14vh, height overshooting ~120px under the bar) so iOS glass ghosts
-     its rows through the toolbar — a fixed sheet lives in the UI layer Safari never ghosts. No big bottom
-     padding: rows must run under the bar; a scroll-end spacer on .sh-body keeps the last row reachable. */
+  /* variant H (design 07-17c, /sheetpeek, owner-verified ON DEVICE): while OPEN the sheet is ABSOLUTE
+     page-layer content (JS anchors it at scrollY+14vh, height overshooting ~120px under the bar) so iOS
+     glass ghosts its rows through the toolbar — a fixed sheet lives in the UI layer Safari never ghosts.
+     No big bottom padding: rows must run under the bar; a scroll-end spacer on .sh-body keeps the last row
+     reachable. ⚠ LOCKED by scripts/qa-admin-glass.mjs — this recipe took days of on-device A/B testing;
+     do NOT "simplify" the sheet back to position:fixed or add a dim overlay. Break it and the ship fails. */
   .sheet{position:fixed;left:50%;bottom:0;width:min(100%,480px);background:#26262B;border-radius:24px 24px 0 0;box-shadow:0 -24px 48px -12px rgba(0,0,0,.7);z-index:61;transform:translate(-50%,100%);transition:transform .26s cubic-bezier(.22,1,.36,1);display:flex;flex-direction:column;overflow:hidden;padding:0 20px 0}
   body.sheetopen{min-height:calc(100dvh + 200px)} /* guarantee the absolute sheet's under-bar overshoot is never clipped on a short page */
   .sheet.on{transform:translate(-50%,0)}

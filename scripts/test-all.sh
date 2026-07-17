@@ -46,6 +46,7 @@ run "smoke: settings sync" "env DATABASE_URL=file:./.t-setsync.db PORT=8788 ADMI
 run "integration: growth/CMS/community" "bash scripts/test-growth.sh"
 run "qa: pages (behavior benchmark)" "bash scripts/qa-pages.sh"
 run "qa: design tokens (v2 skin)" "$TSX scripts/qa-design.ts"
+run "qa: admin sheet-glass LOCK (variant H)" "node scripts/qa-admin-glass.mjs"
 run "qa: browser suites (v2 redesign)" "bash scripts/qa-browser.sh"
 run "qa: live call view LOCK (sim)" "env PORT=8798 bash scripts/test-live-view.sh"
 
