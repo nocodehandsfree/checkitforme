@@ -681,7 +681,8 @@ main{padding:10px 20px 40px;max-width:520px;margin:0 auto}
 #dim{position:fixed;inset:0;background:rgba(5,6,9,.66);display:none;z-index:79}
 #sheet{position:fixed;left:0;right:0;bottom:0;z-index:80;background:#26262B;border-radius:28px 28px 0 0;display:none;height:86dvh;flex-direction:column;overflow:hidden}
 #sheet .grab{touch-action:none;padding:10px 0 4px;flex:0 0 auto}
-#sheet .body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 20px calc(24px + env(safe-area-inset-bottom))}
+#sheet .body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 20px 6px} /* NO big bottom padding: the sheet's rows must run UNDER the toolbar so the glass has content to ghost — the old padding left an empty panel strip = the solid slab. A scroll-end spacer keeps the last row reachable. */
+#sheet .body::after{content:"";display:block;height:calc(70px + env(safe-area-inset-bottom))}
 #sheet .mychk{background:linear-gradient(135deg,#2E7D4F,#3E9D63);border-radius:20px;padding:18px;margin-bottom:14px}
 #sheet .mychk .k{font-size:11px;letter-spacing:2px;font-weight:800;opacity:.85}
 #sheet .mychk .ph{font-size:28px;font-weight:900;margin-top:6px}
