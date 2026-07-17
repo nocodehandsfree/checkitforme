@@ -3,6 +3,13 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-17 (frog loop, ongoing) — 47e3a9a + 0cfbf48 live
+- Restock = one honest empty state (no zero-well theater) · Store intel sub + coverage paragraph
+  folded, "Magic Magic" dupe fixed (prodIcon) · Plans bundles one line, sync pills only when
+  pending, compact "● pending" · Policy plans-mirror = one peek row · statuses sheet sub no longer
+  parrots the title. Sheets audited: workflow/user/money/status — on scale (20/800 + 12/600).
+- Loop armed at 5m per owner; iterating page-by-page under the frog lens until the hour closes.
+
 ## 2026-07-17 (cohesion marathon, /loop) — ONE KIT EVERYWHERE (3d2a2b4 + a770427, live)
 - Purple chip defaults + hairline outlines purged app-wide: .pill/.chip-sm/.upill/.tag-verified/
   .chip-type = borderless tints · .stat = God-view vital chrome · persona picker chips match ·
