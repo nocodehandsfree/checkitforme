@@ -11,7 +11,8 @@ import { db } from "../src/db/client";
 import { retailers, categories } from "../src/db/schema";
 import { setSetting } from "../src/db/settings";
 import { previewStorePrompt, resolveWorkflow } from "../src/calls/service";
-import { resolveTapedeckWorkflow, deltaTurnTuning } from "../src/calls/tapedeck";
+import { resolveTapedeckWorkflow, deltaTurnTuning, DEFAULT_FOLLOWUPS } from "../src/calls/tapedeck";
+import { PREMIUM_FOLLOWUP, FREE_NO_FOLLOWUP, ASK_SHIPMENT_DAY, SOFT_TIMEOUT_FALLBACK } from "../src/voice/prompts";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -65,6 +66,25 @@ async function main() {
   ok(td.followups.type[0].startsWith("TRUTH_TYPE_LINE"), "Delta line slots read the workflow's saved lines");
   const turn = deltaTurnTuning(td.tuning);
   ok(turn.endpoint === "5" && turn.waitSecs === 12, "Beat + Reply timeout map to the phone line (patient=5s, 12s wait)");
+
+  console.log("▶ dash sweep — EVERY line the agent can say, from EVERY source (owner 07-17: the dash");
+  console.log("  came back three times from three different hiding spots; this closes the class)");
+  const anyDash = (t: string) => /—|–/.test(t) || / - /.test(t);
+  // Pure spoken strings: the whole string must be clean.
+  const pureSpoken: [string, string][] = [
+    ["soft-timeout fallback line", SOFT_TIMEOUT_FALLBACK],
+    ...Object.entries(DEFAULT_FOLLOWUPS).flatMap(([slot, arr]) => arr.map((t, i) => [`Delta default ${slot}[${i}]`, t] as [string, string])),
+  ];
+  for (const [label, t] of pureSpoken) ok(!anyDash(t), `no dash: ${label}`);
+  // Instruction blocks injected into the call prompt: their QUOTED example lines must be clean
+  // (prose may use dashes; the model imitates the quotes).
+  for (const [label, block] of [["premium follow-up", PREMIUM_FOLLOWUP], ["restock-day push", ASK_SHIPMENT_DAY], ["free-tier close", FREE_NO_FOLLOWUP]] as [string, string][]) {
+    const badQuotes = (block.match(/"[^"\n]{4,160}"/g) || []).filter(anyDash);
+    ok(badQuotes.length === 0, `no dash in quoted examples: ${label}${badQuotes.length ? " (found: " + badQuotes[0] + ")" : ""}`);
+  }
+  // The workflow's own saved lines (what the Admin writes) — the data shape the calls actually read.
+  const dataLines = [...(td.followups ? Object.values(td.followups).flat() : []), ...(wf?.openers || [])];
+  ok(!dataLines.some(anyDash), "no dash in the workflow's saved openers + Delta lines");
 
   console.log(fail ? `workflow-truth: ${fail} FAILED` : "workflow-truth: all applied");
   process.exit(fail ? 1 : 0);
