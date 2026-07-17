@@ -1,6 +1,18 @@
 # Lexicon — checkpoint
 **What this is:** current state of the docs-hygiene lane. Newest on top, ≤80 lines.
 
+## 2026-07-17 — janitor sweep (owner review pass)
+- **Cap clarified (owner):** the ~80-line cap is CHECKPOINT DOCS ONLY, never code — added to CLAUDE.md
+  step 3 + the CI docs-lint comment. (Roster PM/Logo/Ideas — owner added those himself; verified present.)
+- **Pruned** `team/website` 137→49 and `team/admin` 81→80 (finished ✅ batches out; kept the fresh 07-17
+  work + open + traps). **Still over the soft cap (their lanes, not this scope):** `team/data` 83,
+  `team/design` 97 — flag for CD/DD to prune (warn-only, not the 120 hard-fail).
+- **`data/handoffs` cleared** the 6 ingested paste-dumps (kiosk/heb boxes + call-sheet + cleanup
+  snapshot; git keeps them). Kept `hours_needed_fresh.csv` (active) + README. **DD: confirm** the 3
+  `*-2026-07-11.md` analysis notes are superseded → I'll clear them next pass.
+- **Guardrail live (owner):** NO new folder or doc without Lexicon sign-off — I'm the gate now. The
+  flagged existing folders (`design/admin`, `copy/readme-theme`, `scripts/data-tools`) hold real files → kept.
+
 ## 2026-07-11 — skill library + drift cleanup (Full send)
 - **Built 5 skills** under `.claude/skills/`: `build-on-brand` · `ship-it` · `unblock-yourself` ·
   `known-problems` · `reply-simple`. Each = YAML frontmatter (name + trigger-rich when-to-load) + a body
