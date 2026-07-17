@@ -3,6 +3,22 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-16 — iOS chrome tint lane (tint specialist chat; Webbie takes the live page next)
+- **Staging = `baseline-r122` (`fb80f5c`).** v2 root colour is CONSTANT `#1D1D22` — sheet-open override
+  scoped `html:not([data-skin="v2"])`. Fixed: chrome no longer freezes dark through live calls.
+- **PLATFORM (proven on owner's iPhone, constraint comment at checkit.html ~310):** chrome = root
+  `background-color`, re-read ONLY at load/main-scroll → in-page recolor during sheets = impossible
+  (4 attempts reverted). Top strip renders ~50% of root; bottom zone gets a light haze — accepted.
+  Edge-compensation veils tried + reverted (muddied blooms) — do NOT re-add.
+- **Owner's black top during test checks = iOS in-call UI** (they answer the Fun store call as the
+  clerk). Not a page bug; real users unaffected. Self-test: don't answer → no green timer → blends.
+- **FOR WEBBIE (owner-approved direction):** (1) BUG — `.rhead.live` green halo clipped by a wrapper
+  above `#live`; unclip. (2) BUILD — green middle-out "call in progress" bloom on the live view (copy
+  verdict-bloom geometry, rules ~280), glowing card (liveGlowV2 exists) + streaming transcript;
+  verdict bloom replaces it at result. Don't touch sheet dim (~1404) or root colours. Style v2.
+- **Discipline:** bump `x-rev` meta every checkit.html edit + verify on device (iOS restores stale
+  tabs); engine-check computed styles before pushing; owner's iPhone is the only final verdict.
+
 ## 2026-07-11 — comps split: website + admin boards
 - **Two boards now:** `comps/WEBSITE_COMPS.dc.html` (the site, renamed from `NEW_CHECK_COMPS.dc.html`,
   rename landed) + `comps/ADMIN_COMPS.dc.html` (the admin, in the site's skin). **ONE style guide + ONE
