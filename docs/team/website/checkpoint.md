@@ -6,23 +6,40 @@
 > the other dev: **he owns the tint CSS** (`__bootTone`/`tone-*`/body wash/sheet chrome), **I own
 > view/mode/nav** — don't blind-edit the tint, it's fragile.
 
-## 🔧 07-17 pt3 — sheets, launcher, glass-H REVERTED (x-rev launcher-scope-r134)
+## 🚨 07-17 HANDOFF — GLASS-H ATTEMPT #2 FAILED ON DEVICE (x-rev glassH-all-r135, LIVE on staging)
+**Owner is handing the glass work to the iOS-tint agent directly + opening a FRESH Webbie chat. This
+attempt is committed + live on staging (commit 6bb6a9a) but FAILED on his iPhone. Last KNOWN-GOOD
+before it = launcher-scope-r134. If the site needs to be clean while they rebuild, revert to r134.**
+- **What I did (glassH-all-r135, faithful port of app.html openSheet/_restoreSheetLayout):** a single
+  MutationObserver on `.overlay` `.on` toggles → applies variant H: OVERLAY→absolute top=scrollY
+  height=innerHeight; MODAL→absolute top=14vh height=86vh+120 (nets the sheet at document-y scrollY+14vh).
+  `body.sheetopen{min-height:calc(100dvh+200px)}` (the missing line) + content-filter dim. csheet
+  (measure H, absolute, +120 overshoot) and messenger (absolute, top=scrollY, height=innerHeight+120)
+  wired explicitly. Every sheet surface → #26262B (acct modal, #zones .zframe, .supwrap).
+- **Headless mechanics ALL PASSED** (acct/buy/csheet/messenger: absolute, 14vh at 118px, #26262B,
+  scroll-locked, clean restore) — but the GLASS itself only renders on iOS 26 Safari, and it FAILED on
+  the owner's device (exact symptom not captured before handoff).
+- **PRIME HYPOTHESIS for the tint agent / fresh Webbie:** app.html has NO overlay — its sheet is a LONE
+  `body` child (position:absolute, document-relative, tap-close via a document capture-click listener,
+  NOT a scrim). I KEPT checkit's `.overlay > .modal` structure (overlay made absolute, modal absolute
+  INSIDE it). That extra wrapper is the likeliest reason the glass didn't ghost — Safari may still treat
+  the modal as UI-layer because of the overlay ancestor. **Next attempt should FLATTEN checkit's sheets
+  to lone body-children like app.html (drop the overlay; document-listener for tap-close), not wrap.**
+- Reference: `public/app.html` `openSheet`/`_restoreSheetLayout`/`_ensureSheet` (~line 1437-1509) is the
+  owner-approved-on-device implementation — copy that structure, don't reinvent.
+
+## 🔧 07-17 pt3 — sheets, launcher (x-rev launcher-scope-r134)
 - **Support launcher scoped (r134):** shows on the HOMEPAGE + SETTLED status page ONLY. Hidden over the
   call sheet (was z82 over the csheet z80 — the reported bug), during a live call, on a pending result
   (shows only with `.invite`), and on hunt/scores/handoff. Denylist added by the existing hide rules.
-- **Glass sheet variant H = REVERTED + PARKED (owner rejected).** I applied the tint agent's variant H
-  to the ACCOUNT sheet (absolute overlay, top=scrollY, height=innerHeight+120, scroll-lock) — owner
-  said it sat too low + flashed a solid slab on slide-down. Fully reverted (r133): account sheet back
-  to fixed/high, exactly as before. **Do NOT re-attempt glass-H without the owner's NEW tint solution**
-  — he's comparing my attempt vs Addie's Admin (app.html) version with the iOS-tint agent and will
-  hand me the final recipe. The /sheetpeek variant H reference + tint checkpoint 07-17c stand.
-- **Sheet dim = content filter, not cover layers (r129, tint variant E):** `.overlay`/`.csheet-bd`
-  transparent; dim = brightness(.45) on header/main/footer via :has. ALL inactive full-screen layers
-  display:none (incl the supwrap messenger). History+Zones sheets MOVED to body level (r131) — they
-  were inside <main>, so the filter's containing block anchored them (stuck-at-bottom). ⚠️ keep every
-  position:fixed/absolute overlay a BODY child, never inside a filtered ancestor.
-- **Account sheet surface darkened** to #141419 (was #1D1D22 = page color, top edge blended). Owner may
-  want it LIGHTER instead (his ref buy sheet #26262B is lighter than the page) — one-line flip if so.
+- **Glass-H attempt #1 (r132) was reverted (r133)** — sat too low (overlay+flex-end anchored the modal at
+  14vh+120). Attempt #2 (glassH-all-r135, top section) fixed the geometry but failed on device. History only.
+- **Sheet dim = content filter, not cover layers (tint variant E):** dim = brightness(.45) on
+  header/main/footer (now via `body.sheetopen`), NOT an rgba cover — a cover kills the scroll-edge glass.
+  History+Zones sheets MOVED to body level (r131) — were inside <main>, so the filter's containing block
+  anchored them (stuck-at-bottom). ⚠️ keep EVERY position:fixed/absolute overlay a BODY child.
+- **All sheet surfaces = #26262B** (glassH-all-r135, per tint spec): acct modal, #zones .zframe, .supwrap.
+  Lighter than the page so the top edge reads. (Was briefly #141419 in r133 — owner wanted lighter.)
 - **Alerts empty state** = a card with small italic muted text (was reading as the section subhead).
 
 ## 🔧 07-17 pt2 — live-call polish + glass dim + DRIVE-FOLLOW (x-rev drivefollow-r130)
@@ -37,7 +54,7 @@
 - **Step log = moving timeline:** current step 15.5px/800 white, every passed step (incl the 'Calling'
   lead) demotes to 12.5px italic gray; seconds inherit the step's style. 'Reaching a person…' moved
   INSIDE the timeline col under the current step.
-- (glass dim mechanic now lives in pt3 above.) Kiosk word dropped from the call sheet (ES too).
+- Kiosk word dropped from the call sheet (ES too).
 
 ## 🔧 07-17 — live-call trust fixes (still-true facts)
 - Owner's "broken" call = STALE TAB (finished fine server-side; page ran pre-fix JS). Live fixes:
@@ -47,9 +64,9 @@
 - iOS black top during owner test checks = in-call UI (his phone joins the call) — NOT a page bug; real users unaffected.
 
 ## ⏳ OPEN — needs owner / other lanes
-- **GLASS SHEETS — waiting on owner's FINAL tint recipe.** My variant-H attempt was rejected + reverted;
-  owner is reconciling my approach vs Addie's Admin version with the iOS-tint agent. He'll hand me the
-  recipe. Until then: sheets stay fixed, dim = content filter. Do NOT freelance the sheet chrome.
+- **GLASS SHEETS — owner handed it to the iOS-tint agent + fresh Webbie (see 🚨 top section).**
+  glassH-all-r135 is LIVE on staging but FAILED on device. Prime fix hypothesis: flatten sheets to lone
+  body-children like app.html (drop the overlay wrapper). Roll to r134 if the site needs to be clean.
 - **Slow result load — flagged to Echo (server-side).** Front-end flips to results + shows transcript
   the moment it detects call-end, then polls for the verdict; a "forever" load = slow call-end signal
   OR slow verdict consensus (both Voice lane). Couldn't trace the owner's call — my deploys wiped the
