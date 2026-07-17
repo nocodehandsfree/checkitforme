@@ -1694,7 +1694,7 @@ app.get("/pub/stores/near", async (c) => {
         beyondRadius: false as boolean, // set true only on the rural-fallback store (nearest dialable past the radius)
         miles, openState: openState(r.hours, r.timezone) };
   };
-  const all = rows
+  const shaped = rows
     .filter((r) => comp || !r.ownerOnly)
     // Muted chains never surface — except Thrift-type chains when the Thrift chip explicitly opted in.
     .filter((r) => !(r.chainId && mutedChains.has(r.chainId)) || (thriftOptIn && r.chainId != null && types.get(r.chainId) === "Thrift"))
@@ -1705,7 +1705,15 @@ app.get("/pub/stores/near", async (c) => {
     .filter((r) => !typeF || (((r.chainId && types.get(r.chainId)) || "Other") === typeF))
     .filter((r) => !q || qTokenMatch(`${r.name} ${r.location || ""}`, q))
     .map(shape)
-    .filter((r) => r.ownerOnly || !hasLoc || r.miles == null || r.miles <= radius) // owner-only store is never distance-filtered
+    .filter((r) => r.ownerOnly || !hasLoc || r.miles == null || r.miles <= radius); // owner-only store is never distance-filtered
+  // OPEN NOW ONLY (owner law 2026-07-16): a store that's closed at this moment never reaches the list —
+  // a shopper can't buy from a closed door, so listing it is dead weight ("it's stupid that it even
+  // shows up"). openState already folds in real hours, midnight wraps, and the closed-overnight default
+  // for unknown-hours stores. Owner-only test stores are exempt (the owner tests at any hour).
+  // hiddenClosed rides the response so the UI can explain a thin/empty night list instead of looking broken.
+  const hiddenClosed = shaped.filter((r) => !r.ownerOnly && r.openState.open === false).length;
+  const all = shaped
+    .filter((r) => r.ownerOnly || r.openState.open !== false)
     .sort((a, b) => (a.miles ?? 9e9) - (b.miles ?? 9e9) || a.name.localeCompare(b.name));
   // Rural fallback: nothing dialable inside the radius → surface the single NEAREST callable+ready store
   // (up to 40mi out) so a rural screen is never blank. Only runs when the in-radius set has none, so it's
@@ -1722,7 +1730,7 @@ app.get("/pub/stores/near", async (c) => {
       .map((r) => ({ r, mi: haversineMi(lat, lng, r.lat as number, r.lng as number) }))
       .filter((x) => x.mi > radius)
       .sort((a, b) => a.mi - b.mi);
-    for (const x of near) { const s = shape(x.r); if (s.callReady) { s.beyondRadius = true; fallbackStore = s; break; } }
+    for (const x of near) { const s = shape(x.r); if (s.callReady && s.openState.open !== false) { s.beyondRadius = true; fallbackStore = s; break; } } // open-now law applies to the fallback too
   }
   // Owner-only stores are pinned into the response (never lost to the distance sort + page limit),
   // so the owner always gets the "Fun" store no matter how far away they are.
@@ -1745,7 +1753,8 @@ app.get("/pub/stores/near", async (c) => {
   const stores = [...owned, ...nearestT5, ...rest.slice(offset, offset + limit)];
   if (fallbackStore && !stores.some((s) => s.id === fallbackStore!.id)) stores.push(fallbackStore);
   // radiusMax + radiusCapped let the UI cap the picker and prompt Check Plus; beyondRadius flags the rural pin.
-  return c.json({ total: all.length + (fallbackStore ? 1 : 0), offset, limit, radiusMax: maxRadius, radiusCapped, stores });
+  // hiddenClosed = in-radius stores suppressed because they're closed right now (UI: explain a thin night list).
+  return c.json({ total: all.length + (fallbackStore ? 1 : 0), offset, limit, radiusMax: maxRadius, radiusCapped, hiddenClosed, stores });
 });
 
 // Single-store fetch (consumer): backfills address/logo/hours for a REOPENED call whose store sits

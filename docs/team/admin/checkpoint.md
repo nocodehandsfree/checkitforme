@@ -3,6 +3,15 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-17 — FROG LOOP CLOSED (final: 24a2171 live, byte-verified)
+Hour-long /loop, 6 ships: kit unified (chips/stats/steps borderless-tinted or raised, purple dead) ·
+hairline purge app-wide (only Calc internals keep theirs) · restock honest empty state · store-intel
+sub/coverage folded + prodIcon dupe fix · Plans one-line bundles, sync pills only when pending ·
+Policy plans-mirror = one row · sheets audited on the 20/800+12/600 scale (status sub de-duped,
+support sub drops empty segments). Every page + major sheet screenshot-reviewed ≥2x, 13/13 drive
+checks each ship, gates green each ship. OPEN: iOS tint poke shipped earlier NEEDS OWNER PHONE
+VERDICT · Calc redesign needs a comp · 'catalog' section is nav-unreachable (dead? ask Lexicon/DD).
+
 ## 2026-07-17 (cohesion marathon, /loop) — ONE KIT EVERYWHERE (3d2a2b4 + a770427, live)
 - Purple chip defaults + hairline outlines purged app-wide: .pill/.chip-sm/.upill/.tag-verified/
   .chip-type = borderless tints · .stat = God-view vital chrome · persona picker chips match ·
