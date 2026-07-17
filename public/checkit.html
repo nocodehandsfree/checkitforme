@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="amberbloom-r125" />
+<meta name="x-rev" content="timeline-r126" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -5057,7 +5057,7 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
     // Direct-dial calls log menu stages (4/5/6) in a 0s pass-through — they never happened; drop them.
     }).filter(r=>!((r.s.n===4||r.s.n===5||r.s.n===6)&&!r.last&&r.secs!=null&&r.secs<1));
     // The final step ("Asking about {product}") shows NO trailing seconds (owner 2026-07-02).
-    const stepEls=stepRows.map(r=>`<span class="${r.last?'cur':''}">${esc(liveStageLabel(r.s.n)||r.s.label)}${r.secs!=null&&!r.last?` <span style="color:#C2C2D0;font-weight:600;font-size:12.5px">${r.secs}s</span>`:''}</span>`).join('');
+    const stepEls=stepRows.map(r=>`<span class="${r.last?'cur':''}">${esc(liveStageLabel(r.s.n)||r.s.label)}${r.secs!=null&&!r.last?` ${r.secs}s`:''}</span>`).join(''); // seconds are plain text — same size/weight/italic as the step they belong to (owner 07-17)
     const totalS=finalElapsed!=null?Math.round(finalElapsed):(n>0?Math.round(steps[n-1].at):0);
     const bubs=human.map(l=>{ const m=l.match(/^(Agent|Clerk):\s*(.*)$/); if(!m) return '';
       const ai=m[1]==='Agent';
@@ -5072,9 +5072,10 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
           <div class="ctlv2-steps">${stepEls}</div>
         </details>
         <div id="convo_body" style="${bubs?'margin-top:12px;':''}display:flex;flex-direction:column;gap:9px">${bubs}</div>
+        ${(live&&!bubs)?`<div class="cs-wait" style="margin:9px 0 0;padding-left:0;text-align:left">${t('live.waitperson','Reaching a person…')}</div>`:''}
         ${vline}
       </div>
-    </div>${(live&&!bubs)?`<div class="cs-wait" style="margin:6px 0 22px 26px;padding-left:0;text-align:left">${t('live.waitperson','Reaching a person…')}</div>`:''}`; /* 26px = the rail (12) + gap (14): flush with the step text column — the class's own 24px padding was double-indenting it (owner 07-17: timeline stays left-aligned) */
+    </div>`; /* "Reaching a person…" now lives INSIDE the timeline column, right under the current step (owner 07-17: it floated below the log and read right-shifted) */
   }
   const stepRows = steps.slice(1).map((s,idx)=>{
     const realI=idx+1; let secs=null; // seconds this step took (real timings only — derived steps are all at:0)
