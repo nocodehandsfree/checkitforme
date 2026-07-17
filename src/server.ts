@@ -679,7 +679,10 @@ html[data-bugmode="1"] .bugbtn .dot{background:#EF4444}
 .store{display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:14px;margin-bottom:10px;cursor:pointer}
 .store .ic{width:44px;height:44px;border-radius:12px;background:#1B1B20;display:grid;place-items:center;font-weight:900}
 .store .nm{font-weight:800}.store .ad{font-size:12.5px;color:#8A8A96}
-#dim{position:fixed;inset:0;background:rgba(5,6,9,.66);opacity:0;pointer-events:none;transition:opacity .25s;z-index:79}
+#dim{position:fixed;inset:0;background:linear-gradient(180deg,rgba(5,6,9,0) 0,rgba(5,6,9,.66) 130px,rgba(5,6,9,.66) 100%);opacity:0;pointer-events:none;transition:opacity .25s;z-index:79}
+/* ^ EDGE-SAFE DIM (the trick under test): the dim fades to nothing at the TOP edge, so the pixels
+   beside the status strip stay base-coloured and the chrome keeps blending even while the sheet is
+   open (chrome can't be recoloured mid-sheet — proven). Bottom edge is covered by the sheet itself. */
 #dim.on{opacity:1;pointer-events:auto}
 #sheet{position:fixed;left:0;right:0;bottom:0;z-index:80;background:#26262B;border-radius:28px 28px 0 0;padding:10px 20px calc(24px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .3s cubic-bezier(.32,.72,0,1);touch-action:none}
 #sheet.on{transform:translateY(0)}
