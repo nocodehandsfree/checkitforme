@@ -17,7 +17,7 @@ const fail = (msg) => { console.error("  ✗ " + msg); process.exitCode = 1; };
 const ok = (msg) => console.log("  ✓ " + msg);
 
 const b = await chromium.launch({ executablePath: EXE });
-const page = await (await b.newContext()).newPage();
+const page = await (await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })).newPage(); // phone-sized: the 07-17 clamp bug only shows when content must overflow
 const jsErrors = [];
 page.on("pageerror", (e) => jsErrors.push(String(e).slice(0, 200)));
 await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: "domcontentloaded" });
@@ -42,6 +42,27 @@ const mid = await page.evaluate(() => ({
 }));
 if (mid.convo && mid.chars > 0) ok(`transcript renders live (${mid.chars} chars mid-call)`); else fail(`NO live transcript mid-call (chars=${mid.chars}, bubbles=${mid.convo})`);
 if (mid.liveVisible) ok("no premature finalize (live view still up mid-call)"); else fail("live view finalized EARLY while the sim call was still running");
+
+// The conversation must be REACHABLE, not just in the DOM (owner 07-17: a chrome-tint CSS clamp froze
+// the page at viewport height with overflow hidden — bubbles rendered invisibly below the fold and
+// auto-scroll aimed at a page that could not grow). The newest bubble must be on-screen, or SOME
+// scroller must actually be able to bring it on-screen.
+const reach = await page.evaluate(() => {
+  const box = document.getElementById("live_msgbox");
+  if (!box || !box.lastElementChild) return { ok: false, why: "no msgbox content" };
+  const r = box.lastElementChild.getBoundingClientRect();
+  if (r.height < 3) return { ok: false, why: "newest conversation node is COLLAPSED (zero-size rect) — content renders but cannot be seen" };
+  if (r.top >= 0 && r.bottom <= innerHeight) return { ok: true, why: "newest bubble on-screen" };
+  let el = box;
+  while (el) { // any ancestor that can actually scroll the bubble into view counts
+    if (el.scrollHeight > el.clientHeight + 4 && /(auto|scroll)/.test(getComputedStyle(el).overflowY)) return { ok: true, why: "scrollable via " + (el.id || el.tagName) };
+    el = el.parentElement;
+  }
+  const de = document.scrollingElement;
+  if (de && de.scrollHeight > innerHeight + 4) return { ok: true, why: "page scrolls" };
+  return { ok: false, why: "conversation CLIPPED: below the fold and nothing scrolls (page clamped to viewport?)" };
+});
+if (reach.ok) ok("conversation is reachable (" + reach.why + ")"); else fail(reach.why);
 
 // 3: when the sim ends (~20s total), the verdict must paint — never eternal dots.
 await page.waitForTimeout(16000);
