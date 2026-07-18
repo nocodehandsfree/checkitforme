@@ -21,10 +21,15 @@ description: >-
    push), so unpushed work = the owner can't test it = NOT done.
 4. **Drive it yourself on staging like a real user.** Open the actual flow on
    `staging.checkitforme.com` and do the thing — click the button, submit the form, walk the path.
-   Not "the test passes" — the *feature works in the running app*.
+   Not "the test passes" — the *feature works in the running app*. **The owner is not your tester:**
+   anything a customer sees, YOU walk it first. Re-fixing something that already broke? It needs NEW
+   proof you drove it this time, not "should be fixed now" — the last "fixed" is why he's back.
    - Tooling: `node scripts/site-health.mjs https://staging.checkitforme.com` walks every page/form
      and fails on JS errors, broken requests, or dead views (see the `unblock-yourself` skill for a
      test account + comping premium UI so gated screens actually render).
+   - **Device-only blind spot** (how iOS paints the glass/tint, how Gmail recolors an email, how a
+     call sounds): you genuinely can't see these — headless shots are evidence, not a verdict. Ship
+     ONE change, say **"pushed, check your phone,"** never "fixed."
 5. **Report in ONE line with evidence:** contract ✓/✗ per item, each as `URL → action → observed`.
    Can't drive it? Say **"NOT verified: X"** and why. **"Should work" is banned.**
 
