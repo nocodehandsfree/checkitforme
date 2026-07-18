@@ -191,6 +191,25 @@ export async function releaseCallSlot(key: string): Promise<void> {
   await kvDel("hold:" + key);
 }
 
+/** Cheap capacity probe (NO acquire) — the queue uses this to decide place-vs-enqueue and the drainer
+ *  uses it to decide when to release the next queued check. Mirrors acquireCallSlot's gates exactly:
+ *  batch leaves the interactive reserve free; a user can't exceed maxPerUser. Governor OFF → always
+ *  true (place immediately). Returns { free, totalUsed, totalCap } so callers can also show pool load. */
+export async function canPlaceNow(priority: "interactive" | "batch", userId?: string): Promise<{ free: boolean; totalUsed: number; totalCap: number }> {
+  const g = await govConfig();
+  const pool = callAccounts();
+  const totalCap = pool.reduce((s, a) => s + Math.min(a.cap, g.perAccountCap), 0);
+  if (!g.enabled) return { free: true, totalUsed: 0, totalCap };
+  if (userId && (await count("user:" + userId)) >= g.maxPerUser) return { free: false, totalUsed: -1, totalCap };
+  const perAcct = await Promise.all(pool.map((a) => count("acct:" + a.id)));
+  const totalUsed = perAcct.reduce((s, n) => s + n, 0);
+  const ceiling = priority === "interactive" ? totalCap : Math.max(0, totalCap - g.reserveInteractive);
+  return { free: totalUsed < ceiling, totalUsed, totalCap };
+}
+
+/** Is the governor's master switch on? (queue + drainer only run when true). */
+export async function governorEnabled(): Promise<boolean> { return (await govConfig()).enabled; }
+
 /** Live pool utilization — for the Admin readout and the load test. */
 export async function concurrencyStatus() {
   const g = await govConfig();

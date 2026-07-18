@@ -3,26 +3,29 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-18 — CALC concurrency dimension (SHIPPED to Admin)
+- Calc (God View → Calc, app.html) now models flat voice-plan cost + concurrency. New "Scale &
+  concurrency" card: monthly-revenue slider → peak concurrent (Little's law on busy hour) → voice plan.
+- **Matched to Pops's canonical spec** (PM checkpoint 07-17 "Scale switches"): plan ladder Creator
+  $22 10/30 · Pro $99 20/60 · Scale $299 30/90; pick = cheapest plan whose SUSTAINED covers peak, then
+  ride Scale+burst (so $100k → Scale, ~0.3% of rev — verified on the slider). All assumptions in ONE
+  tunable CALC.conc object (revPerCheck/daysPerMonth/peakHourFrac/avgCallMin/burstDuty/burstMult).
+- Two new per-delivered-check lines: concurrency headroom (plan fee ÷ month's checks) + burst overflow
+  (small % at ~2x). Both roll into the headline; slider proves per-check barely moves ($0.025→$0.028
+  across 0→80 concurrent). Admin-only, EN only. tsc + glass + full test-all green; drove the slider.
+- LESSON: this is Admin/app.html — MY lane, ships autonomously (merge staging → ship-admin.sh). Do NOT
+  wait for the owner's "ship it" on Admin work (CLAUDE.md: push the moment it's built).
+
 ## 2026-07-17 — DESIGNER polish + GLASS HARDENED (75cbe8c / aea3701, live)
-- **Sheet-glass LOCKED:** scripts/qa-admin-glass.mjs asserts all 11 variant-H invariants in app.html
-  (no full-screen dim overlay, content filter-dim, absolute-on-open, scrollY+14vh anchor, +120
-  overshoot, scroll lock, restore-on-close, min-height guard, scroll-end spacer, root never recolored)
-  and is wired into test-all.sh — any revert of the tint fails the ship. Lock-note in the code too.
-- **Designer step 2 (Voice feel):** bare wrapping sliders → clean rows (normal-case label + bold green
-  value, all four populated) with green-filled tracks (sbFill). Steps 1/3/4/5/6/7 already clean from
-  prior passes. Gates + glass-lock + 13/13 sheets green.
+- **Sheet-glass LOCKED:** scripts/qa-admin-glass.mjs asserts all 11 variant-H invariants (in test-all);
+  any revert of the tint fails the ship. Variant H = absolute page-layer sheets (iOS glass ghosts rows
+  under the bar), owner-verified "works well". Detail: git log + design 07-17c.
+- **Designer step 2 (Voice feel):** wrapping sliders → clean rows + green-filled tracks (sbFill). Gates green.
 
 ## 2026-07-17 — CHAINS PAGE REDESIGNED (e5c4f1d, live)
-Full frog pass on the messiest page (comp 2e). Killed the phantom "Could not load" 6-stat wall → one
-slim mapped-progress bar ("120 of 131 mapped · 92%", the page's real story, fails silent not red).
-Green overload fixed: mapped = quiet gray (norm), UNMAPPED = amber (the exception the operator hunts).
-ABCD "how a call flows" demoted from prime top space to a footnote peek at the list bottom. Search up
-top, two filter pills one row. **Report broken down by store category** (owner): fleet total + a bar
-per store type (Grocery/Big box/Hobby/Pharmacy/Thrift/Hardware), green when a category is fully mapped.
-Verified interactions + gates green each ship. tr_stats→tr_progress; preview rig stubs trainer/list w/ types.
-
-## 2026-07-17 — SHEET GLASS variant H (a123641, live, owner-verified "works well"): absolute page-layer
-sheets so iOS glass ghosts rows under the bar. Now LOCKED by the guard above. Detail: git log + design 07-17c.
+Frog pass on comp 2e: phantom "Could not load" wall → one slim mapped-progress bar (fails silent not
+red); mapped=gray, UNMAPPED=amber; ABCD demoted to footnote peek; report broken down by store category
+(fleet total + per-type bar). Verified + gates green. tr_stats→tr_progress; preview rig stubs by type.
 
 ## 2026-07-17 — ADMIN COHESION + FROG PASSES (through 8d477a7, live)
 One kit app-wide (borderless-tinted chips / raised stats / carved inputs; purple + hairlines dead),

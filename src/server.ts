@@ -26,6 +26,7 @@ import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning
 import { applyStoreSync, storeSyncTick, syncStatus, learnedSyncTick, learnedSyncStatus } from "./store-sync";
 import { buildSettingsExport, settingsSyncStatus, settingsSyncTick } from "./settings-sync";
 import { concurrencyStatus } from "./calls/concurrency";
+import { routeCheck, ticketStatus, drainCheckQueue } from "./calls/queue";
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
 import { simStartCall, isSimId, simLive, simResult } from "./staging-sim";
@@ -3122,11 +3123,18 @@ app.post("/pub/check", async (c) => {
   const closed = await closedGate(Number(retailerId)); if (closed) return c.json(closed, 409);
   try {
     // Cheap lane when flagged: same response contract — the bridge:<room> id polls /pub/result like any cid.
-    const place = (await getPolicy()).flags.cheapBridgeAll ? bridgeCheckCall : triggerCall;
-    const r = await place({ retailerId, categoryId, mode: "restock", specificProduct, kioskMode });
+    const bridge = (await getPolicy()).flags.cheapBridgeAll;
+    const place = bridge ? bridgeCheckCall : triggerCall;
+    const r = await routeCheck(bridge ? "bridge" : "direct", (args) => place({ ...args, mode: "restock" }),
+      { retailerId, categoryId, specificProduct, kioskMode });
+    if ("queued" in r) return c.json(r);
     return c.json({ providerCallId: r.providerCallId, status: r.status });
   } catch (e) { return c.json({ error: String(e) }, 400); }
 });
+// Waiting-screen poll (docs/specs/queue-feed/CONTRACT.md): place-in-line + real ETA while queued,
+// then the live call id once a slot frees so the page flips to the transcript. No auth beyond the
+// ticket id (same model as a cid). Inert unless the concurrency governor is on.
+app.get("/pub/queue/:ticketId", async (c) => c.json(await ticketStatus(c.req.param("ticketId"))));
 // Free check WITH live audio (bridged through our Twilio). Returns a room to listen on.
 app.post("/pub/check-live", async (c) => {
   const rl = rlCheck("check", clientIp(c.req.raw.headers), LIMITS.check);
@@ -3411,8 +3419,14 @@ app.post("/app/check", async (c) => {
   }
   try {
     // Cheap lane when flagged: same response contract — the bridge:<room> id polls /pub/result like any cid.
-    const place = (await getPolicy()).flags.cheapBridgeAll ? bridgeCheckCall : triggerCall;
-    const r = await place({ retailerId, categoryId, mode: "restock", specificProduct, finderUserId: u.id, isPrivate: await isFinderPrivate(a), kioskMode });
+    const bridge = (await getPolicy()).flags.cheapBridgeAll;
+    const place = bridge ? bridgeCheckCall : triggerCall;
+    const isPrivate = await isFinderPrivate(a);
+    // Governor ON + pool full → routeCheck queues (returns {queued,ticketId,position,etaSeconds});
+    // else it places now (today's shape). Governor OFF → straight through, unchanged.
+    const r = await routeCheck(bridge ? "bridge" : "direct", (args) => place({ ...args, mode: "restock" }),
+      { retailerId, categoryId, specificProduct, finderUserId: u.id, isPrivate, kioskMode });
+    if ("queued" in r) return c.json(r);
     return c.json({ providerCallId: r.providerCallId, status: r.status });
   } catch (e) { return c.json({ error: String(e) }, 400); }
 });
@@ -6271,6 +6285,7 @@ setInterval(() => withLock("geocode", 10, () => geocodeMissing(1)).catch((e) => 
 setInterval(() => withLock("store-sync", 280, storeSyncTick).catch((e) => console.error("store-sync:", e)), 300_000); // staging→prod curated store data (inert until STORE_SYNC_URL/TOKEN set)
 setInterval(() => withLock("learned-sync", 160, learnedSyncTick).catch((e) => console.error("learned-sync:", e)), 180_000); // prod→staging learned phone-nav (mirror of store-sync; inert off-staging)
 setInterval(() => withLock("settings-sync", 55, settingsSyncTick).catch((e) => console.error("settings-sync:", e)), 60_000); // prod→staging owner settings mirror (staging pulls; inert elsewhere)
+setInterval(() => withLock("check-queue", 2, () => drainCheckQueue(triggerCall, bridgeCheckCall)).catch((e) => console.error("check-queue:", e)), 1_000); // waiting-screen: place queued checks as slots free (inert unless the governor is on)
 setInterval(() => withLock("harvest", 110, harvestHoursTick).catch((e) => console.error("harvest:", e)), 120_000); // self-updating hours (policy-gated, off by default)
 setInterval(() => withLock("cust-sched", 85, customerScheduleTick).catch((e) => console.error("cust-sched:", e)), 90_000); // subscriber auto-checks (policy-gated)
 setInterval(() => withLock("gmail-receipts", 25, gmailReceiptTick).catch((e) => console.error("gmail-receipts:", e)), 30_000); // ingest kiosk receipts (policy-gated + creds)
