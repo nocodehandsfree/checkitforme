@@ -499,12 +499,12 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   const zoneMsg = L(`Check called ${zN} stores at once. ${esc(cat)} is on the shelf at these:`,
                     `Check llamó a ${zN} tiendas a la vez. ${esc(cat)} está en el estante en estas:`);
   const whatIsIt = state === "in"
-    ? L("Use Check AI to find viral products on the shelves at retail prices.", "Usa Check AI para encontrar productos virales en los estantes a precio de tienda.")
+    ? L("Your friend used Check AI to find viral products on the shelves at retail prices.", "Tu amigo usó Check AI para encontrar productos virales en los estantes a precio de tienda.")
     : state === "zonein" ? "" // the zone message + logo row carry it
     : zone ? L("None yet. Check catches the restock.", "Ninguna aún. Check atrapa la reposición.")
     : L("Not in yet. Check catches the restock.", "Aún no. Check atrapa la reposición.");
   const hook = L("First check's on us.", "Tu primera verificación va por nuestra cuenta.");
-  const button = L("CHECK STORES", "BUSCAR TIENDAS");
+  const button = L("YOUR TURN", "TE TOCA");
   // Store row (comp hero tile 56px + store name): real logo if the share carried one, else a monogram.
   const storeRow = showStore
     ? `<div class="srow"><div class="stile${slogo ? "" : " mono"}">${slogo
@@ -557,10 +557,11 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   body{background:#1D1D22;color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100dvh;display:grid;place-items:center;padding:24px}
   .wrap{max-width:400px;width:100%;text-align:center}
   .card{position:relative;text-align:left;border:1px solid rgba(255,255,255,.12);border-radius:36px;padding:22px 24px 28px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7);overflow:hidden}
-  .card.pos{background:linear-gradient(180deg,#266440 -30px,#1D1D22 200px)}
-  .chead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}
-  .cmark{height:21px;width:auto;opacity:.92;flex:0 0 auto}
+  .card.pos{background:linear-gradient(180deg,rgba(38,100,64,.95) -40px,rgba(38,100,64,0) 210px),#20202A}
   .card.neg{background:#26262B}
+  .cwm{position:absolute;top:-40px;right:-44px;width:180px;height:180px;opacity:.16;z-index:0}
+  .cbody{position:relative;z-index:1}
+  .chead{margin-bottom:18px}
   .badge{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.13em;color:${accent};background:rgba(255,255,255,.06);border:1px solid ${accent}66;padding:7px 14px;border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
   .gdot{width:8px;height:8px;border-radius:50%;background:${accent};box-shadow:0 0 8px ${accent};animation:ckGlow 2s ease-in-out infinite}
   .big{font-size:34px;font-weight:900;line-height:1.1;letter-spacing:-1px;margin-bottom:2px} .big .hl{color:${accent}}
@@ -586,13 +587,16 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   @media (prefers-reduced-motion:reduce){.shine,.gdot{animation:none}}
 /*CPEND*/</style></head><body><div class="wrap">
   <div class="card ${positive ? "pos" : "neg"}">
-    <div class="chead"><div class="badge">${badgeIcon} ${badge}</div><img class="cmark" src="/logos/brand/check-icon.png?v=3" alt="Check"></div>
+    ${positive ? `<svg class="cwm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#8CF7B4"/><path d="M6.5 12.4 L10.3 16 L17.5 8" stroke="#20693F" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` : ""}
+    <div class="cbody">
+    <div class="chead"><div class="badge">${badgeIcon} ${badge}</div></div>
     <h1 class="big">${headline}</h1>
     ${storeRow}
     ${state === "zonein" ? `<div class="zmsg">${zoneMsg}</div>${logoRow}` : ""}
     ${whatIsIt ? `<div class="what">${whatIsIt}</div>` : ""}
     <a class="cta" href="${site}"><span class="cin"><span class="shine"></span><span class="ctxt">${button}</span><svg class="arw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></span></a>
     <div class="foot">${hook}</div>
+    </div>
   </div>
 </div></body></html>`;
 }
@@ -600,7 +604,7 @@ app.get("/s", (c) => {
   c.header("Cache-Control", "public, max-age=300");
   const host = (c.req.header("host") || "").toLowerCase();
   const brand = resolveBrand(host, c.req.query("brand"));
-  const q = { store: c.req.query("store") || "", cat: c.req.query("cat") || "", v: c.req.query("v") || "in", k: c.req.query("k") || "", n: c.req.query("n") || "", i: c.req.query("i") || "", st: c.req.query("st") || "", lang: c.req.query("lang") || "", al: c.req.header("accept-language") || "" };
+  const q = { store: c.req.query("store") || "", cat: c.req.query("cat") || "", v: c.req.query("v") || "in", k: c.req.query("k") || "", n: c.req.query("n") || "", i: c.req.query("i") || "", st: c.req.query("st") || "", slogo: c.req.query("slogo") || "", lang: c.req.query("lang") || "", al: c.req.header("accept-language") || "" };
   return c.html(renderShare(brand, host, q, peekOk(c.req.query("peek"), getCookie(c, "peek"))));
 });
 
