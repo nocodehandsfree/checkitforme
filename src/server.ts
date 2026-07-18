@@ -493,13 +493,13 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   const badge = state === "in" ? L("IN STOCK", "EN STOCK")
     : state === "zonein" ? L(`${zI} OF ${zN} HAD IT`, `${zI} DE ${zN} LO TENÍAN`)
     : L("ON WATCH", "EN SEGUIMIENTO");
-  const headline = state === "in" ? L(`${catHl} is on the shelves`, `${catHl} está en los estantes`)
+  const headline = state === "in" ? catHl
     : state === "zonein" ? L(`${catHl} is on shelves nearby`, `${catHl} está en estantes cerca`)
     : L(`We're tracking ${catHl}`, `Estamos rastreando ${catHl}`);
   const zoneMsg = L(`Check called ${zN} stores at once. ${esc(cat)} is on the shelf at these:`,
                     `Check llamó a ${zN} tiendas a la vez. ${esc(cat)} está en el estante en estas:`);
   const whatIsIt = state === "in"
-    ? L("Check AI calls stores so you don't have to.", "Check llama a las tiendas para que no tengas que hacerlo.")
+    ? L("Use Check AI to find viral products on the shelves at retail prices.", "Usa Check AI para encontrar productos virales en los estantes a precio de tienda.")
     : state === "zonein" ? "" // the zone message + logo row carry it
     : zone ? L("None yet. Check catches the restock.", "Ninguna aún. Check atrapa la reposición.")
     : L("Not in yet. Check catches the restock.", "Aún no. Check atrapa la reposición.");
@@ -556,14 +556,15 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   *{box-sizing:border-box;margin:0} :root{--green:${green};--amber:${amber}}
   body{background:#1D1D22;color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100dvh;display:grid;place-items:center;padding:24px}
   .wrap{max-width:400px;width:100%;text-align:center}
-  .mark{height:24px;width:auto;display:block;margin:0 auto 22px;opacity:.96}
-  .card{border:1px solid rgba(255,255,255,.12);border-radius:40px;padding:36px 24px 28px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
-  .card.pos{background:linear-gradient(180deg,#266440 0px,#1D1D22 460px)}
+  .card{position:relative;text-align:left;border:1px solid rgba(255,255,255,.12);border-radius:36px;padding:22px 24px 28px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7);overflow:hidden}
+  .card.pos{background:linear-gradient(180deg,#266440 -30px,#1D1D22 200px)}
+  .chead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}
+  .cmark{height:21px;width:auto;opacity:.92;flex:0 0 auto}
   .card.neg{background:#26262B}
-  .badge{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.13em;color:${accent};background:rgba(255,255,255,.06);border:1px solid ${accent}66;padding:7px 14px;border-radius:999px;margin-bottom:16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .badge{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.13em;color:${accent};background:rgba(255,255,255,.06);border:1px solid ${accent}66;padding:7px 14px;border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
   .gdot{width:8px;height:8px;border-radius:50%;background:${accent};box-shadow:0 0 8px ${accent};animation:ckGlow 2s ease-in-out infinite}
-  .big{font-size:29px;font-weight:900;line-height:1.15;letter-spacing:-.8px;text-wrap:balance;margin-bottom:2px} .big .hl{color:${accent}}
-  .srow{display:flex;align-items:center;justify-content:center;gap:12px;margin:16px 0 2px}
+  .big{font-size:34px;font-weight:900;line-height:1.1;letter-spacing:-1px;margin-bottom:2px} .big .hl{color:${accent}}
+  .srow{display:flex;align-items:center;justify-content:flex-start;gap:12px;margin:14px 0 2px}
   .stile{width:52px;height:52px;border-radius:14px;background:#1F1F25;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
   .stile img{width:40px;height:40px;object-fit:contain}
   .stile.mono{color:#CDCDD8;font-weight:900;font-size:17px;background:linear-gradient(145deg,#34343D,#23232B)}
@@ -573,20 +574,19 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   .ltile,.lmono{width:40px;height:40px;border-radius:11px;flex:0 0 auto}
   .ltile{background:#1F1F25;display:grid;place-items:center;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)} .ltile img{width:30px;height:30px;object-fit:contain}
   .lmono{background:linear-gradient(145deg,#34343D,#23232B);display:grid;place-items:center;color:#CDCDD8;font-weight:900;font-size:14px}
-  .what{color:rgba(255,255,255,.72);font-size:15.5px;font-weight:500;line-height:1.5;margin:14px auto 0;max-width:320px}
+  .what{color:rgba(255,255,255,.82);font-size:15px;font-weight:500;line-height:1.5;margin:16px 0 0}
   .cta{display:block;text-decoration:none;border-radius:999px;padding:2.5px;margin-top:22px;background:linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%);box-shadow:0 12px 28px -8px rgba(25,177,69,.45)}
   .cin{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:10px;border-radius:999px;background:#20202A;padding:15px 24px}
   .shine{position:absolute;top:0;bottom:0;left:-45%;width:45%;background:linear-gradient(105deg,transparent 0%,rgba(140,255,185,.25) 50%,transparent 100%);animation:ckShine 2.8s ease-in-out infinite}
   .ctxt{position:relative;font-size:13.5px;font-weight:800;letter-spacing:.14em;color:#fff}
   .arw{position:relative;flex:0 0 auto}
-  .foot{color:#8A8A96;font-size:12.5px;font-weight:600;margin-top:14px}
+  .foot{color:#8A8A96;font-size:12.5px;font-weight:600;margin-top:13px;text-align:center}
   @keyframes ckShine{0%{left:-45%}55%,100%{left:110%}}
   @keyframes ckGlow{0%,100%{opacity:.4}50%{opacity:1}}
   @media (prefers-reduced-motion:reduce){.shine,.gdot{animation:none}}
 /*CPEND*/</style></head><body><div class="wrap">
-  <img class="mark" src="/logos/brand/check.png?v=2" alt="Check It For Me">
   <div class="card ${positive ? "pos" : "neg"}">
-    <div class="badge">${badgeIcon} ${badge}</div>
+    <div class="chead"><div class="badge">${badgeIcon} ${badge}</div><img class="cmark" src="/logos/brand/check-icon.png?v=3" alt="Check"></div>
     <h1 class="big">${headline}</h1>
     ${storeRow}
     ${state === "zonein" ? `<div class="zmsg">${zoneMsg}</div>${logoRow}` : ""}
