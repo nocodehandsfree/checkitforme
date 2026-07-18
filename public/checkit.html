@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r142" />
+<meta name="x-rev" content="glassfix-r143" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -653,7 +653,7 @@ __BRAND_HEAD__
   body:has(.supwrap.on) .suplaunch.tucked{transform:none;opacity:1;pointer-events:auto} /* no auto-tuck while it's the close button */
   body:has(.supwrap.on) .suplaunch.invite{animation:none;width:34px} /* chat open = it's the CLOSE tab; a glowing X reads wrong */
   body:has(.supwrap.on) .suplaunch.invite svg{stroke:#9a9aa8}
-  .supwrap{position:fixed;inset:0 0 0 auto;z-index:81;width:100%;max-width:100%;display:none;flex-direction:column;
+  .supwrap{position:fixed;top:0;right:0;bottom:auto;left:auto;height:100vh;height:100dvh;z-index:81;width:100%;max-width:100%;display:none;flex-direction:column;
     /* a touch deeper than the raw brand yellow — the neon read too bright in the panel (owner 07-11) */
     --sup-accent:color-mix(in srgb, var(--accent,#FFCB05) 73%, #14110a);
     background:#26262B}
@@ -1909,7 +1909,7 @@ html[data-skin="v2"] #histOverlay .hist-scroll{flex:1 1 auto;min-height:0;overfl
 /* sheet-mode (body.sheetopen): the sheet box overshoots 120px under the iOS bar so rows ghost through the
    glass. The inner scrollers get a 120px scroll-end spacer (last row stays reachable above the bar) and the
    create-flow basket lifts off the box bottom so Save never hides under the bar. */
-body.sheetopen #zones .zf-scroll::after,body.sheetopen #histOverlay .hist-scroll::after{content:'';display:block;flex:0 0 auto;height:120px}
+body.sheetopen #zones .zf-scroll::after,body.sheetopen #histOverlay .hist-scroll::after,body.sheetopen #pageOverlay #pg_body::after{content:'';display:block;flex:0 0 auto;height:calc(160px + env(safe-area-inset-bottom))} /* clears the 120px under-bar overshoot AND lifts the last row a comfortable tap above the iOS toolbar (a flush-to-edge link was untappable) */
 body.sheetopen #zones .zbasket{bottom:120px}
 /* Footer links (About/FAQ/Terms/Privacy/Contact) slide up as a bottom sheet, like every other panel.
    Flex column: the grab handle + title stay pinned; only the body scrolls (owner 07-06: the top used to
@@ -3998,11 +3998,12 @@ function csheetH_off(){ const el=$('csheet'); if(!el||!el.__sh) return; el.__sh=
   el.style.position=''; el.style.top=''; el.style.bottom=''; el.style.minHeight='';
   sheetBodyMaybeUnlock();
 }
-// The MESSENGER (#supWrap — full-height RIGHT panel) as page-layer content: absolute, top=scrollY,
-// height=innerHeight+120, right-anchored; the translateX slide-in is unchanged.
+// The MESSENGER (#supWrap) is a FULL-SCREEN take-over panel, not a peek sheet: it's position:fixed and
+// sized to the VISIBLE viewport (100dvh in CSS) so its composer (the type/attach bar) always sits ABOVE the
+// iOS toolbar. Do NOT switch it to absolute + overshoot like the bottom sheets — that pushed the composer
+// 260px under the bar and it vanished (owner: "the box to type is gone"). Its message list scrolls inside;
+// the translateX slide-in is unchanged. supH_on/off only lock/unlock the background scroll.
 function supH_on(){ const el=$('supWrap'); if(!el||el.__sh) return; el.__sh=1;
-  const sc=window.scrollY||0;
-  el.style.position='absolute'; el.style.top=sc+'px'; el.style.bottom='auto'; el.style.height=(window.innerHeight+260)+'px';
   sheetBodyLock();
 }
 function supH_off(){ const el=$('supWrap'); if(!el||!el.__sh) return; el.__sh=0;
