@@ -47,6 +47,19 @@ owner reasks.
    deal notes live in docs/team/ideas/checkpoint.md).
 6. Owner walk list O2-O10 in docs/specs/launch-journeys/JOURNEYS.md (A1-A8 automated + green).
 
+## Scale switches — how we grow call capacity (Pops built, default OFF, 07-17)
+Turn-on ORDER when traffic climbs (do NOT flip early — voice testing stays untouched while OFF):
+1. **ElevenLabs burst** first — instant 3x headroom (10→30 concurrent on Creator), overflow bills
+   ~2x/min only during spikes, zero code, zero risk.
+2. **Pops's governor** — instant single-checks jump ahead of zone sweeps · per-user zone cap
+   (default 10) · graceful queueing past burst instead of failing · account-pool ready (5 EL
+   accts = 50 concurrent).
+Shake out on the Fun store with the hard-gated Phase-2 load test (physically can't dial a real
+store) BEFORE it touches real stores. Plan ladder: Creator $22=10/30burst · Pro $99=20/60 ·
+Scale $299=30/90; at $100k/mo peak ~30-50 concurrent → Scale+burst=90 covers it (~0.3% of rev).
+**PENDING owner build:** Calc concurrency slider (Addie) — revenue→peak-concurrency→plan cost→
+per-check impact; formula from Pops.
+
 ## Standing facts (prune when stale)
 - **You are the verification gate (CLAUDE.md).** Nothing user-facing reaches the owner as done, and
   nothing promotes, on someone's word it works — you DRIVE it on staging.checkitforme.com yourself and
