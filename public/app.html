@@ -2060,9 +2060,17 @@ const CALC_STORE={ Direct:{label:'Direct',sub:'human picks up',nav:0,nc:'var(--t
 const CALC_TALK=[10,15,20,25,30,60];
 const calcMoney=n=>'$'+(n<0?'-':'')+Math.abs(n).toFixed(3);
 const CALC={ storeType:'Alpha', nav:30, talk:20, revenue:0.2, lane:'delta', deltaEsc:30, reach:45, usage:50,
+  monthlyRevenue:100000, // the concurrency slider — monthly voice-plan sizing (Scale & concurrency card)
   rates:{ twilioPerMin:0.014, elevenPerSec:0.0012, claudePerSec:0.0002, bravoNavPerSec:0, overhead:0.001, deltaClipPerCall:0.0002, classifyPerCall:0.0004 },
+  // Concurrency model assumptions (anchored to Pops: ~40 peak concurrent at $100k/mo). Peak concurrent =
+  // (monthlyRevenue/revPerCheck)/daysPerMonth × peakHourFrac × avgCallMin/60 (Little's law on the busy hour).
+  // These are the tunable inputs — dial them to real telephony data as it lands; the anchor above holds at defaults.
+  conc:{ revPerCheck:0.25, daysPerMonth:30, peakHourFrac:0.12, avgCallMin:1.5, burstDuty:0.15, burstMult:2 },
   plans:[{name:'Family',price:4.99,checks:15},{name:'Collector',price:9.99,checks:30},{name:'Hunter',price:19.99,checks:100},{name:'Operator',price:49.99,checks:300}],
   ready:false };
+// Voice-plan concurrency tiers (ElevenLabs ConvAI): flat monthly fee · sustained concurrent · burst ceiling.
+const CALC_VOICE_PLANS=[{name:'Creator',fee:22,sustained:10,burst:30},{name:'Pro',fee:99,sustained:20,burst:60},{name:'Scale',fee:299,sustained:30,burst:90}];
+const calcPickPlan=peak=>CALC_VOICE_PLANS.find(p=>p.burst>=peak)||CALC_VOICE_PLANS[CALC_VOICE_PLANS.length-1];
 const calcDot=c=>`<span style="display:inline-block;width:8px;height:8px;border-radius:9px;background:${c};flex-shrink:0"></span>`;
 
 // core cost model — one source of truth (Twilio runs the whole call; Bravo nav is now CHEAP voice-injection
@@ -2087,12 +2095,30 @@ function calcCompute(storeType,nav,talk,r,lane,esc){
   items.push({label:'Fixed overhead / call',detail:'flat',accent:'var(--text-muted)',amount:r.overhead});
   return { items, total: items.reduce((s,i)=>s+i.amount,0) };
 }
+// Concurrency dimension — from monthly revenue, size the voice plan and its two per-check costs.
+// peak concurrent (Little's law on the busy hour) → cheapest plan whose BURST covers it. The band
+// between the plan's sustained and the peak is the "overflow" billed at ~2x during spikes.
+function calcConcurrency(connected){
+  const c=CALC.conc;
+  const monthlyChecks = c.revPerCheck>0 ? (CALC.monthlyRevenue||0)/c.revPerCheck : 0;
+  const peak = monthlyChecks>0 ? (monthlyChecks/c.daysPerMonth)*c.peakHourFrac*(c.avgCallMin/60) : 0;
+  const plan = calcPickPlan(peak);
+  const overCapacity = peak>plan.burst; // beyond the biggest tier — needs a 2nd account / enterprise
+  // headroom = flat plan fee spread across the month's checks (a fraction of a cent, shrinks as you scale)
+  const headroomPerCheck = monthlyChecks>0 ? plan.fee/monthlyChecks : 0;
+  // burst overflow = the small share of calls that sit above the plan's sustained line during spikes, billed ~2x
+  const overflowPct = peak>plan.sustained ? Math.min(1,(peak-plan.sustained)/peak)*c.burstDuty : 0;
+  const burstPerCheck = overflowPct*(connected||0)*(c.burstMult-1);
+  return { monthlyChecks, peak, plan, overCapacity, headroomPerCheck, overflowPct, burstPerCheck };
+}
 function calcPerCheck(){
   const connected=calcCompute(CALC.storeType,CALC.nav,CALC.talk,CALC.rates,CALC.lane,CALC.deltaEsc).total;
   const reachFrac=Math.max(0.01,(CALC.reach||45)/100);
   const wasted=(1/reachFrac)-1;
   const wastedCost=(CALC.rates.twilioPerMin/60)*8 + CALC.rates.overhead;
-  return { connected, perCheck: connected + wasted*wastedCost, wasted, wastedCost };
+  const conc=calcConcurrency(connected);
+  const perCheck = connected + wasted*wastedCost + conc.headroomPerCheck + conc.burstPerCheck;
+  return { connected, perCheck, wasted, wastedCost, conc };
 }
 // Toggle the God-view sub-nav between the live Overview and the Calc.
 // ---- God View · Plans: owner-editable pricing tiers + PAYG ladder, published to Stripe ----
@@ -2231,8 +2257,22 @@ function calcShell(){
     </div>
   </div>
   <div class="card report">
+    <div class="name">Scale &amp; concurrency</div>
+    <div style="font-size:10.5px;color:var(--text-tertiary);margin-bottom:14px">As revenue grows, more calls run at once. Size the flat voice plan for the busy hour — and watch the per-check price barely move.</div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px"><span style="font-size:13px;color:var(--text-muted)">Monthly revenue</span><span style="font-family:ui-monospace,monospace;font-size:19px;font-weight:700"><span style="font-size:12.5px;color:var(--text-tertiary)">$</span><span id="calc_mrevval">0</span></span></div>
+    <input id="calc_mrev" type="range" min="0" max="200000" step="5000" value="${CALC.monthlyRevenue}" oninput="calcSetMonthlyRev(this.value)">
+    <div id="calc_mrevnote" style="font-size:10.5px;color:var(--text-tertiary);margin-top:2px">—</div>
+    <div class="row" style="justify-content:space-between;align-items:center;gap:12px;margin-top:16px">
+      <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:10px;letter-spacing:.1em;color:var(--text-tertiary);font-weight:700">PEAK CONCURRENT CALLS</span><span id="calc_peak" style="font-size:28px;font-weight:800;color:var(--text-strong);font-variant-numeric:tabular-nums;line-height:1.05">0</span></div>
+      <div id="calc_plan_chip" style="display:inline-flex;flex-direction:column;align-items:flex-end;gap:2px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:8px 12px"></div>
+    </div>
+    <div id="calc_conc_bar" style="display:flex;height:12px;border-radius:7px;overflow:hidden;margin-top:14px;background:var(--surface-1);border:1px solid var(--border)"></div>
+    <div id="calc_conc_legend" class="row" style="gap:14px;margin-top:8px;align-items:center;font-size:11px;color:var(--text-tertiary)"></div>
+  </div>
+  <div class="card report">
     <div class="name">Breakdown</div>
     <div id="calc_breakdown"></div>
+    <div id="calc_percheck_lines" style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)"></div>
     <div style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--border-dashed)"><span style="font-size:10px;letter-spacing:.1em;color:var(--text-tertiary);font-weight:700">FLAT MONTHLY · ≈ $0.000 / CALL</span><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${['Railway compute','Twilio number rental','Helicone gateway','TiDB'].map(f=>`<span style="font-size:10.5px;color:var(--text-muted);background:var(--surface-1);border:1px solid var(--border);border-radius:7px;padding:3px 8px">${f}</span>`).join('')}</div></div>
   </div>
   <div class="card report">
@@ -2270,6 +2310,7 @@ function calcSetRev(v){ CALC.revenue=v===''?0:(parseFloat(v)||0); calcUpdate(); 
 function calcSetLane(l){ CALC.lane=l; calcSync(); calcUpdate(); }
 function calcSetEsc(v){ CALC.deltaEsc=parseInt(v,10)||0; const e=document.getElementById('calc_escval'); if(e) e.textContent=CALC.deltaEsc; calcUpdate(); }
 function calcSetReach(v){ CALC.reach=parseInt(v,10)||45; const e=document.getElementById('calc_reachval'); if(e) e.textContent=CALC.reach; calcUpdate(); }
+function calcSetMonthlyRev(v){ CALC.monthlyRevenue=parseInt(v,10)||0; calcUpdate(); }
 function calcSetUsage(v){ CALC.usage=parseInt(v,10)||100; const e=document.getElementById('calc_usageval'); if(e) e.textContent=CALC.usage; calcRenderPlans(); }
 function calcSetPlan(i,f,v){ if(!CALC.plans[i]) return; CALC.plans[i][f]=(f==='name')?v:(parseFloat(v)||0); calcRenderPlans(); }
 function calcAddPlan(){ CALC.plans.push({name:'New plan',price:9.99,checks:30}); calcRenderPlans(); }
@@ -2317,6 +2358,27 @@ function calcUpdate(){
   set('calc_strip',strip);
   set('calc_legend',`<span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-muted);opacity:${isDirect?.4:1}">${calcDot(st.nc)}nav ${CALC.nav}s</span><span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-muted)">${calcDot('var(--purple)')}talk ${CALC.talk}s</span><span style="flex:1"></span><span style="font-size:10.5px;color:var(--text-tertiary)">${calcMoney(total/Math.max(dur,1))}/s effective</span>`);
   set('calc_breakdown',items.map(it=>`<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)"><span style="width:3px;height:30px;border-radius:3px;flex-shrink:0;background:${it.accent}"></span><div style="flex:1;min-width:0"><div style="font-size:13px;color:var(--text-strong)">${it.label}</div><div style="font-size:10.5px;color:var(--text-tertiary);margin-top:2px">${it.detail}</div></div><div style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;color:${it.amount===0?'var(--text-tertiary)':'var(--text-primary)'}">${calcMoney(it.amount)}</div></div>`).join('')+`<div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px"><div style="font-size:13px;font-weight:700">All-in / call</div><div style="font-size:22px;font-weight:800;color:var(--green);font-variant-numeric:tabular-nums">${calcMoney(total)}</div></div>`);
+  // ---- Concurrency dimension: revenue slider → peak concurrent → voice plan → two per-check lines ----
+  const conc=pc.conc, cc=conc.plan, money4=v=>'$'+(v<0?'-':'')+Math.abs(v).toFixed(4), cents=v=>(v*100).toFixed(3)+'¢';
+  const peakR=Math.round(conc.peak);
+  txt('calc_mrevval',(CALC.monthlyRevenue||0).toLocaleString());
+  txt('calc_mrevnote',`≈ ${Math.round(conc.monthlyChecks).toLocaleString()} checks / month`);
+  txt('calc_peak',peakR);
+  set('calc_plan_chip',`<span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(conc.overCapacity?'#FF6B6B':'var(--green)')}${cc.name} · $${cc.fee}/mo</span><span style="font-size:10.5px;color:var(--text-muted)">${cc.sustained} concurrent · ${cc.burst} burst</span>${conc.overCapacity?'<span style="font-size:10px;color:#FF6B6B;font-weight:700">over top tier — needs a 2nd account</span>':''}`);
+  const bcap=Math.max(cc.burst,peakR,1);
+  const gW=cc.sustained/bcap*100, aW=Math.max(0,Math.min(peakR,cc.burst)-cc.sustained)/bcap*100, oW=Math.max(0,peakR-cc.burst)/bcap*100;
+  set('calc_conc_bar',`<div style="width:${gW}%;background:linear-gradient(180deg,#4ADE80,#22C55E)"></div><div style="width:${aW}%;background:linear-gradient(180deg,#FBBF24,#F59E0B)"></div>${oW>0?`<div style="width:${oW}%;background:linear-gradient(180deg,#FF6B6B,#EF4444)"></div>`:''}`);
+  set('calc_conc_legend',`<span style="display:inline-flex;align-items:center;gap:5px">${calcDot('#22C55E')}sustained ${cc.sustained}</span><span style="display:inline-flex;align-items:center;gap:5px">${calcDot('#F59E0B')}burst band → ${cc.burst}</span><span style="flex:1"></span><span>peak ${peakR}${conc.overflowPct>0?' · '+(conc.overflowPct*100).toFixed(1)+'% of calls at 2×':''}</span>`);
+  // Per-delivered-check buildup — the two new lines (headroom + burst) sit under the connected-call cost.
+  const noAnswer=pc.wasted*pc.wastedCost;
+  const pcRow=(label,sub,amt,accent,isNew)=>`<div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border)"><span style="width:3px;height:26px;border-radius:3px;flex-shrink:0;background:${accent}"></span><div style="flex:1;min-width:0"><div style="font-size:12.5px;color:var(--text-strong)">${label}${isNew?' <span style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--green);background:rgba(74,222,128,.14);border-radius:5px;padding:1px 5px;vertical-align:middle">NEW</span>':''}</div><div style="font-size:10.5px;color:var(--text-tertiary);margin-top:2px">${sub}</div></div><div style="font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;color:${amt===0?'var(--text-tertiary)':'var(--text-primary)'}">${amt<0.01?money4(amt):calcMoney(amt)}</div></div>`;
+  set('calc_percheck_lines',
+    `<div style="font-size:10px;letter-spacing:.1em;color:var(--text-tertiary);font-weight:700;margin-bottom:6px">PER DELIVERED CHECK</div>`+
+    pcRow('Connected call','the call cost above',pc.connected,'var(--green)',false)+
+    pcRow('No-answer waste',`reach ${CALC.reach}% · dials that miss`,noAnswer,'var(--text-muted)',false)+
+    pcRow('Concurrency headroom',`${cc.name} $${cc.fee}/mo ÷ ${Math.round(conc.monthlyChecks).toLocaleString()} checks · ${cents(conc.headroomPerCheck)}`,conc.headroomPerCheck,'#38BDF8',true)+
+    pcRow('Burst overflow',`${(conc.overflowPct*100).toFixed(1)}% of calls at ~2× during spikes · ${cents(conc.burstPerCheck)}`,conc.burstPerCheck,'#FBBF24',true)+
+    `<div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px"><div style="font-size:13px;font-weight:700">All-in / delivered check</div><div style="font-size:22px;font-weight:800;color:var(--green);font-variant-numeric:tabular-nums">${calcMoney(pc.perCheck)}</div></div>`);
   const rows=['Alpha','Bravo','Direct'].map(t=>({type:t,row:CALC_TALK.map(tk=>calcCompute(t,CALC_STORE[t].nav,tk,CALC.rates,CALC.lane,CALC.deltaEsc).total)}));
   const flat=[]; rows.forEach(r=>flat.push(...r.row)); const mn=Math.min(...flat), mx=Math.max(...flat), heat=v=>mx===mn?0:(v-mn)/(mx-mn);
   let mt=`<thead><tr><th style="font-size:10.5px;color:var(--text-muted);font-weight:600;padding:6px 8px;text-align:left;border-bottom:1px solid var(--border-strong)">Store</th>${CALC_TALK.map(c=>`<th style="font-size:10.5px;color:var(--text-muted);font-weight:600;padding:6px 8px;text-align:right;border-bottom:1px solid var(--border-strong)">${c}s</th>`).join('')}</tr></thead><tbody>`;
