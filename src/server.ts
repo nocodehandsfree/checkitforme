@@ -456,69 +456,127 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
 // humans see a styled card + a CTA back into the app. Pure string render — no deps, cache-friendly.
 function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Record<string, string>, peek = false): string {
   void peek; // coming-soon gate now lives in the single middleware above (peek bypass handled there)
+  // Bilingual: the sharer's app appends &lang=; a cold recipient with no lang param falls back to their
+  // browser's Accept-Language. Friend-to-friend is almost always the same language, so lang wins.
+  const lang = q.lang === "es" || (!q.lang && /^\s*es/i.test(q.al || "")) ? "es" : "en";
+  const L = (en: string, es: string) => (lang === "es" ? es : en);
   const zone = q.k === "zone"; // zone-sweep share: "{i} of {n} stores had it"
   const inStock = (q.v || "in") === "in";
-  const store = (q.store || "a local store").slice(0, 80);
+  const store = (q.store || "").slice(0, 80);
   const cat = (q.cat || brand.category || "cards").slice(0, 60);
   const plainName = brand.name.replace(/<[^>]+>/g, "");
   const pub = publicHost(host); // never the internal railway host in emitted URLs (see publicHost)
   const site = `https://${pub}/`;
-  // Unfurl cards (owner 07-14): section-reflective images with the brandmark + copy baked in.
-  // In-stock find → the per-brand "X in stock" card (store name rides og:title under the image);
-  // zone share → the zone card; out-of-stock keeps the brand hero card.
-  const findCard = `https://${pub}/og/card-find-${brand.key}.png`;
-  const ogImage = zone ? `https://${pub}/og/card-zone.png` : inStock ? findCard : `https://${pub}/og/${brand.key}.png`;
   const zN = Math.max(0, Number(q.n) || 0), zI = Math.max(0, Number(q.i) || 0);
-  const title = zone ? `${zI} of ${zN} stores had it in stock`
-    : inStock ? `${cat} in stock at ${store}` : `👀 ${store}: watching for ${cat}`;
-  const desc = zone
-    ? `One tap checked every store in the area. No answer = no charge.`
-    : inStock
-    ? `Check AI called the store and confirmed it. No answer = no charge.`
-    : `Not in yet — but ${plainName} will catch the restock. Check any store near you with one tap.`;
+  // State drives every branch. Zone with hits → "zonein"; zone with zero hits collapses to the
+  // store-less watch copy (owner: "none yet, Check catches the restock").
+  const state: "in" | "watch" | "zonein" = zone ? (zI > 0 ? "zonein" : "watch") : inStock ? "in" : "watch";
+  const positive = state === "in" || state === "zonein";
+  const showStore = state !== "zonein" && !(state === "watch" && zone) && !!store; // no single store on a zone card
+  // In-stock stores for the zone logo row (owner): client passes st=<json [{l:logoUrl,n:name}]>. Cap 6.
+  let zStores: Array<{ l: string; n: string }> = [];
+  if (state === "zonein" && q.st) { try { const a = JSON.parse(q.st); if (Array.isArray(a)) zStores = a.slice(0, 6).map((s) => ({ l: String(s.l || ""), n: String(s.n || "") })); } catch { /* ignore malformed */ } }
+  const mono = (n: string) => (n.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2) || "?").toUpperCase();
+
+  // Unfurl cards (owner 07-14): baked images with the brandmark + copy. Zone → zone card; in-stock →
+  // per-brand find card; watch → brand hero card.
+  const ogImage = state === "zonein" ? `https://${pub}/og/card-zone.png` : state === "in" ? `https://${pub}/og/card-find-${brand.key}.png` : `https://${pub}/og/${brand.key}.png`;
+
+  const catHl = `<span class="hl">${esc(cat)}</span>`;
+  const badge = state === "in" ? L("✅ In stock", "✅ En stock")
+    : state === "zonein" ? L(`✅ ${zI} of ${zN} had it`, `✅ ${zI} de ${zN} lo tenían`)
+    : L("🔔 On watch", "🔔 En seguimiento");
+  const headline = state === "in" ? L(`${catHl} is in stock`, `${catHl} está en stock`)
+    : state === "zonein" ? L(`${catHl} is in stock nearby`, `${catHl} está en stock cerca`)
+    : L(`We're tracking ${catHl}`, `Estamos rastreando ${catHl}`);
+  const storeLine = L(`at <b>${esc(store)}</b>`, `en <b>${esc(store)}</b>`);
+  const zoneMsg = L(`Check called ${zN} stores at once. ${esc(cat)} is on the shelf at these:`,
+                    `Check llamó a ${zN} tiendas a la vez. ${esc(cat)} está en el estante en estas:`);
+  const whatIsIt = state === "in"
+    ? L("A friend used Check to find this. Our AI called the store and a real person confirmed it's on the shelf.",
+        "Un amigo usó Check para encontrarlo. Nuestra IA llamó a la tienda y una persona real confirmó que está en el estante.")
+    : state === "zonein" ? "" // the zone message + logo row carry it
+    : zone ? L("None on the shelf yet. Check keeps watching these stores and catches the restock.",
+               "Ninguna en el estante todavía. Check sigue vigilando estas tiendas y atrapa la reposición.")
+    : L("Not on the shelf right now. Check is watching this store and catches the restock.",
+        "No está en el estante ahora. Check vigila esta tienda y atrapa la reposición.");
+  const hook = L("Your first check is on us.", "Tu primera verificación va por nuestra cuenta.");
+  const button = L("See what's in stock near you →", "Ve qué hay en stock cerca →");
+  const trust = L("Check calls the store live and sends you proof. No answer, no charge.",
+                  "Check llama a la tienda en vivo y te manda la prueba. Sin respuesta, sin cargo.");
+
+  const green = "#4ADE80", amber = "#F59E0B";
+  const accent = positive ? green : amber;
+  const title = state === "in" ? L(`${cat} is in stock at ${store}`, `${cat} está en stock en ${store}`)
+    : state === "zonein" ? L(`${cat} is in stock nearby`, `${cat} está en stock cerca`)
+    : L(`We're tracking ${cat}`, `Estamos rastreando ${cat}`);
+  const desc = whatIsIt || L(`Check called ${zN} stores at once. ${cat} is on the shelf nearby.`,
+                             `Check llamó a ${zN} tiendas a la vez. ${cat} está en el estante cerca.`);
+  const shareUrl = `https://${pub}/s?${new URLSearchParams({ ...(store ? { store } : {}), cat, v: inStock ? "in" : "out", ...(zone ? { k: "zone", n: String(zN), i: String(zI) } : {}), lang }).toString()}`;
   const head = [
     `<title>${esc(title)}</title>`,
     `<meta name="description" content="${esc(desc)}">`,
     `<meta name="robots" content="index,follow,max-image-preview:large">`,
-    `<meta name="theme-color" content="#0C0C12">`,
+    `<meta name="theme-color" content="#1D1D22">`,
     `<meta property="og:type" content="website">`,
     `<meta property="og:site_name" content="${esc(plainName)}">`,
     `<meta property="og:title" content="${esc(title)}">`,
     `<meta property="og:description" content="${esc(desc)}">`,
-    `<meta property="og:url" content="https://${pub}/s?store=${encodeURIComponent(store)}&cat=${encodeURIComponent(cat)}&v=${inStock ? "in" : "out"}">`,
+    `<meta property="og:url" content="${esc(shareUrl)}">`,
     `<meta property="og:image" content="${ogImage}">`,
     `<meta name="twitter:card" content="summary_large_image">`,
     `<meta name="twitter:title" content="${esc(title)}">`,
     `<meta name="twitter:description" content="${esc(desc)}">`,
     `<meta name="twitter:image" content="${ogImage}">`,
   ].join("\n");
-  const accent = inStock ? "#4ADE80" : "#A78BFA";
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">${head}
+  const logoRow = state === "zonein" && zStores.length
+    ? `<div class="logos">${zStores.map((s) => s.l
+        ? `<div class="ltile"><img src="${esc(s.l)}" alt="" onerror="this.style.display='none';this.parentNode.classList.add('lmono');this.parentNode.textContent='${esc(mono(s.n))}'"></div>`
+        : `<span class="lmono">${esc(mono(s.n))}</span>`).join("")}</div>`
+    : "";
+  // Elevated skin tokens (STYLE_GUIDE §1-3): page #1D1D22, big card #26262B r26, Inter, green CTA ring.
+  return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">${head}
+<link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
 <style>
-  *{box-sizing:border-box} body{margin:0;background:#0A0A0E;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;min-height:100vh;display:grid;place-items:center;padding:24px}
-  .wrap{max-width:440px;width:100%;text-align:center}
-  .card{background:linear-gradient(170deg,#15151c,#0e0e14);border:1px solid #23232e;border-radius:22px;padding:30px 24px;box-shadow:0 24px 60px rgba(0,0,0,.5)}
-  .brand{font-size:13px;font-weight:800;letter-spacing:.04em;color:${esc(brand.accent)};text-transform:uppercase;margin-bottom:18px}
-  .badge{display:inline-block;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:${accent};background:${accent}1f;border:1px solid ${accent}55;padding:7px 13px;border-radius:999px;margin-bottom:16px}
-  .big{font-size:27px;font-weight:900;line-height:1.18;margin:0 0 8px} .big .hl{color:${accent}}
-  .store{color:#b9b9c8;font-size:15px;margin-bottom:22px}
-  .cta{display:block;background:${esc(brand.accent)};color:#06210f;text-decoration:none;font-weight:900;font-size:16px;padding:16px;border-radius:14px;box-shadow:0 10px 26px ${esc(brand.accent)}40}
-  .sub{color:#7a7a88;font-size:12.5px;margin-top:16px}
-</style></head><body><div class="wrap"><div class="card">
-  <div class="brand">${brand.emoji || "🎴"} ${esc(plainName)}</div>
-  <div class="badge">${inStock ? "✅ In stock" : "🔔 On watch"}</div>
-  <h1 class="big">${inStock ? `<span class="hl">${esc(cat)}</span> is in stock` : `Tracking <span class="hl">${esc(cat)}</span>`}</h1>
-  <div class="store">at <b>${esc(store)}</b></div>
-  <a class="cta" href="${site}">Check any store near you →</a>
-  <div class="sub">${esc(plainName)} calls the store live and texts you proof. Real human, real shelf truth.</div>
-</div></div></body></html>`;
+  *{box-sizing:border-box;margin:0} :root{--green:${green};--amber:${amber}}
+  body{background:#1D1D22;color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100dvh;display:grid;place-items:center;padding:24px}
+  .wrap{max-width:400px;width:100%;text-align:center}
+  .mark{height:24px;width:auto;display:block;margin:0 auto 22px;opacity:.96}
+  .card{background:#26262B;border-radius:26px;padding:30px 24px 26px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
+  .badge{display:inline-block;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:${accent};background:${accent}22;padding:7px 13px;border-radius:999px;margin-bottom:15px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .big{font-size:29px;font-weight:900;line-height:1.15;letter-spacing:-.8px;text-wrap:balance;margin-bottom:9px} .big .hl{color:${accent}}
+  .store{color:#B9B9C4;font-size:15px;font-weight:600;margin-bottom:18px} .store b{color:#fff;font-weight:800}
+  .zmsg{color:rgba(255,255,255,.78);font-size:14.5px;font-weight:500;line-height:1.5;margin:2px auto 4px;max-width:330px}
+  .logos{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:14px 0 6px}
+  .ltile,.lmono{width:40px;height:40px;border-radius:11px;flex:0 0 auto}
+  .ltile{background:#1F1F25;display:grid;place-items:center;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)} .ltile img{width:30px;height:30px;object-fit:contain}
+  .lmono{background:linear-gradient(145deg,#34343D,#23232B);display:grid;place-items:center;color:#CDCDD8;font-weight:900;font-size:14px}
+  .what{color:rgba(255,255,255,.78);font-size:14.5px;font-weight:500;line-height:1.5;margin:0 auto 20px;max-width:330px}
+  .hook{color:#fff;font-size:16px;font-weight:800;letter-spacing:-.2px;margin-bottom:14px}
+  .cta{display:block;text-decoration:none;border-radius:999px;padding:16px 20px;font-size:14px;font-weight:800;letter-spacing:.02em;color:#06210f;background:linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%);box-shadow:0 12px 28px -8px rgba(25,177,69,.5)}
+  .trust{color:#8A8A96;font-size:12.5px;font-weight:600;line-height:1.45;margin-top:16px;max-width:320px;margin-left:auto;margin-right:auto}
+</style></head><body><div class="wrap">
+  <img class="mark" src="/logos/brand/check.png?v=2" alt="Check It For Me">
+  <div class="card">
+    <div class="badge">${badge}</div>
+    <h1 class="big">${headline}</h1>
+    ${showStore ? `<div class="store">${storeLine}</div>` : ""}
+    ${state === "zonein" ? `<div class="zmsg">${zoneMsg}</div>${logoRow}` : ""}
+    ${whatIsIt ? `<div class="what"${state === "zonein" ? ` style="margin-top:14px"` : ""}>${whatIsIt}</div>` : ""}
+    <div class="hook">${hook}</div>
+    <a class="cta" href="${site}">${button}</a>
+    <div class="trust">${trust}</div>
+  </div>
+</div></body></html>`;
 }
 app.get("/s", (c) => {
   c.header("Cache-Control", "public, max-age=300");
   const host = (c.req.header("host") || "").toLowerCase();
   const brand = resolveBrand(host, c.req.query("brand"));
-  const q = { store: c.req.query("store") || "", cat: c.req.query("cat") || "", v: c.req.query("v") || "in", k: c.req.query("k") || "", n: c.req.query("n") || "", i: c.req.query("i") || "" };
+  const q = { store: c.req.query("store") || "", cat: c.req.query("cat") || "", v: c.req.query("v") || "in", k: c.req.query("k") || "", n: c.req.query("n") || "", i: c.req.query("i") || "", st: c.req.query("st") || "", lang: c.req.query("lang") || "", al: c.req.header("accept-language") || "" };
   return c.html(renderShare(brand, host, q, peekOk(c.req.query("peek"), getCookie(c, "peek"))));
 });
 
@@ -3475,7 +3533,7 @@ app.get("/app/zones/run/:runId", async (c) => {
   const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
   const rows = await db.select().from(callResults).where(and(eq(callResults.zoneRunId, c.req.param("runId")), eq(callResults.finderUserId, g.u.id)));
   const stores = await retailerMap();
-  const results = rows.map((r) => ({ retailerId: r.retailerId, name: stores.get(r.retailerId)?.name || "A store", cid: r.providerCallId, status: r.status, statusKey: r.statusKey, confirmed: r.confirmed, summary: r.summary }));
+  const results = rows.map((r) => { const nm = stores.get(r.retailerId)?.name || "A store"; return { retailerId: r.retailerId, name: nm, logoUrl: chainLogoInfo(nm.split(/—|–| - /)[0]).url || "", cid: r.providerCallId, status: r.status, statusKey: r.statusKey, confirmed: r.confirmed, summary: r.summary }; });
   const live = (st: string) => st === "in_progress" || st === "queued";
   const summary = {
     inStock: results.filter((r) => r.statusKey === "in_stock").length,

@@ -2857,7 +2857,9 @@ const I18N={ es:{
   'ph.quoted':'Precio indicado','ph.overmsrp':'sobre el precio de lista','ph.title':'Precios encontrados','ph.best':'MEJOR','ph.oos':'agotado',
   'plan.member':'Miembro',
   'buy.tabplans':'Planes','buy.tabpayg':'Por uso','plan.on':'Tienes','plan.checks':'verificaciones','plan.percheck':'aprox.','plan.percheck2':'por verificación','plan.noexpire':'no caducan','acct.stat.run2':'Verificaciones hoy','acct.perweek2':'Verificaciones esta semana','auth.newcell':'Danos tu nuevo celular','auth.cell.title':'Tu celular','ph.cellmail':'tu correo',
-  'ref.sharemsg':'¡Oye! Mira esta tecnología. Está increíble.\nNos ayuda a encontrar productos virales en stock como cartas Pokémon a precio de tienda.\nRegístrate y ambos ganamos 3 verificaciones gratis: ','ref.copied':'¡Enlace de invitación copiado!','ref.copy':'Copia tu enlace de invitación:','ref.both':'Ambos reciben <b style="color:#fff">3 verificaciones gratis</b> cuando se registran.','ref.copybtn':'COPIAR','ref.text':'Mensaje','ref.post':'Publicar','ref.more':'Más',
+  'ref.sharemsg':'¡Oye! Mira esta tecnología. Está increíble.\nNos ayuda a encontrar productos virales en stock como cartas Pokémon a precio de tienda.\nRegístrate y ambos ganamos una verificación gratis: ','ref.copied':'¡Enlace de invitación copiado!','ref.copy':'Copia tu enlace de invitación:','ref.both':'Ambos reciben <b style="color:#fff">una verificación gratis</b> cuando se registran.','ref.copybtn':'COPIAR','ref.text':'Mensaje','ref.post':'Publicar','ref.more':'Más',
+  // Referral welcome (owner 07-18) — the invited visitor's first screen
+  'refw.badge':'🎁 Un regalo de un amigo','refw.title':'Una verificación gratis, de tu amigo.','refw.sub':'Usa Check para encontrar {x} en stock en tiendas reales. Ahora tú también.','refw.what':'Nuestra IA llama a la tienda, una persona real confirma, y tú recibes la prueba.','refw.hook':'Regístrate y ambos reciben una verificación gratis.','refw.cta':'Reclamar mi verificación gratis →',
   'kioskonly':'Solo kiosco','kiosk.precall':'Solo kiosco. Preguntaremos si su kiosco está funcionando y surtido, no por un envío.',
   'closednow':'· cerrado ahora','store.soon':'¡Agregando tienda pronto!','store.soonchip':'Muy pronto',
   // live view
@@ -3524,6 +3526,7 @@ async function boot(){
   initGA();
   buildSwitcher(); applyBrand(); renderIcons(); buildLangSel(); applyLang();
   renderAuth(); renderStores(); renderChips(); renderFooter(); refreshAuth();
+  maybeShowRefWelcome(); // referral visitor's first screen (gated: fresh ?ref=, not signed in)
   if(sp.get('paid')){ history.replaceState({},'','/'); toast(t('toast.payment2','Payment received. Adding your checks…'),'neutral');
     // Success redirect (hosted or 3DS return) — the grant is async via webhook. Poll /app/me until the
     // tier/credits actually land, THEN celebrate, instead of firing openPaid on a fixed timer that can
@@ -3728,7 +3731,32 @@ async function referShareTo(tg){
   else if(tg==='native'){ if(navigator.share){ try{ await navigator.share({text:text+' '+url}); }catch(e){} } else copyRefer(); }
 }
 // Stash an inbound ?ref= code; claim it once the visitor is signed in.
-function captureReferral(){ try{ const sp=new URLSearchParams(location.search); const code=sp.get('ref'); if(code){ localStorage.setItem('runnr_ref',code); sp.delete('ref'); const q=sp.toString(); history.replaceState({},'',location.pathname+(q?'?'+q:'')); } }catch(e){} }
+let REF_FRESH=false; // set when a ?ref= just arrived this pageload → show the welcome (not on later reloads)
+function captureReferral(){ try{ const sp=new URLSearchParams(location.search); const code=sp.get('ref'); if(code){ localStorage.setItem('runnr_ref',code); REF_FRESH=true; sp.delete('ref'); const q=sp.toString(); history.replaceState({},'',location.pathname+(q?'?'+q:'')); } }catch(e){} }
+// Referral welcome (owner 07-18): a friend's invite link is the visitor's FIRST screen — a gift framing
+// that leads into signup (where the free check is actually claimed). Shown once, only on the fresh
+// arrival, only when not already signed in. Centered pop-up (§5.11), elevated skin.
+function maybeShowRefWelcome(){ if(!REF_FRESH||isAuthed()) return; if((POLICY.flags||{}).referrals===false) return;
+  if(document.querySelector('.overlay.on')) return; // never stack on a deep-link overlay
+  setTimeout(openRefWelcome,260); }
+function openRefWelcome(){ if(isAuthed()) return;
+  let ov=$('refwelcomeOverlay');
+  if(!ov){ ov=document.createElement('div'); ov.className='overlay'; ov.id='refwelcomeOverlay';
+    const badge=`<div style="display:inline-block;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:#4ADE80;background:rgba(74,222,128,.14);padding:7px 13px;border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)">${t('refw.badge','🎁 A gift from a friend')}</div>`;
+    ov.innerHTML=`<div class="modal" style="position:relative;text-align:center;max-width:360px">
+      ${badge}
+      <h3 style="margin:15px 0 8px;font-size:21px;font-weight:900;letter-spacing:-.4px">${t('refw.title','A free check, on your friend.')}</h3>
+      <div style="color:rgba(255,255,255,.78);font-size:14.5px;font-weight:500;line-height:1.5;margin:0 auto 12px;max-width:300px">${tf('refw.sub','They use Check to find {x} in stock at real stores. Now you can too.',{x:brandProduct()})}</div>
+      <div style="color:#8A8A96;font-size:13px;font-weight:600;line-height:1.45;margin:0 auto 18px;max-width:300px">${t('refw.what','Our AI calls the store, a real person confirms, you get proof.')}</div>
+      <div style="color:#fff;font-size:15.5px;font-weight:800;letter-spacing:-.2px;margin-bottom:14px">${t('refw.hook','Sign up and you both get a free check.')}</div>
+      <a onclick="refWelcomeClaim()" style="display:block;text-decoration:none;border-radius:999px;padding:16px 20px;font-size:14px;font-weight:800;letter-spacing:.02em;color:#06210f;background:linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%);box-shadow:0 12px 28px -8px rgba(25,177,69,.5);cursor:pointer">${t('refw.cta','Claim my free check →')}</a>
+    </div>`;
+    ov.onclick=e=>{ if(e.target===ov) closeRefWelcome(); };
+    document.body.appendChild(ov); }
+  ov.classList.add('on'); track('refwelcome_open');
+}
+function closeRefWelcome(){ const ov=$('refwelcomeOverlay'); if(ov) ov.classList.remove('on'); }
+function refWelcomeClaim(){ closeRefWelcome(); track('refwelcome_claim'); try{ openAuth(); }catch(_){ } } // signup = where the free check is granted
 async function claimPendingReferral(){
   if(!isAuthed()) return;
   const code=localStorage.getItem('runnr_ref'); if(!code) return;
@@ -7246,7 +7274,12 @@ async function zoneExpand(cid,btn){ if(!cid) return; const body=btn.nextElementS
 async function zoneStopAll(){ const r=ZONES.run; if(!r) return; try{ await appApi('/app/zones/run/'+r.runId+'/stop',{method:'POST'}); }catch(_){ } toast(t('zones.stopped','Stopping the sweep…'),'neutral'); setTimeout(zonePollTick,600); }
 function zoneShare(){ const r=ZONES.run; const d=(r&&r.data)||{}; const sm=d.summary||{}; const n=d.total||0, i=sm.inStock||0;
   const txt=tf('zones.sharemsg2','Just had an AI call {n} stores at once. {i} had it in stock. This thing is nuts:',{n,i});
-  const url=location.origin+'/s?k=zone&n='+n+'&i='+i; // zone landing → the zone unfurl card (owner 07-14)
+  // Pass the in-stock stores' logos so the landing page can show a logo row (owner 07-18). Cap 6, keep
+  // the URL short: {l:logoUrl, n:name} — the server tiles them, monogram-falling-back on name.
+  const hits=(d.results||[]).filter(row=>zoneRunTone(row)==='in').slice(0,6).map(row=>({l:row.logoUrl||'',n:row.name||''}));
+  const st=hits.length?'&st='+encodeURIComponent(JSON.stringify(hits)):'';
+  const cat=encodeURIComponent(brandProduct());
+  const url=location.origin+'/s?k=zone&n='+n+'&i='+i+'&cat='+cat+st+'&lang='+LANG; // zone landing → the zone unfurl card (owner 07-14)
   try{ if(navigator.share){ navigator.share({text:txt+' '+url}); } else { navigator.clipboard.writeText(txt+' '+url); toast(t('zones.copied','Copied to clipboard'),'neutral'); } }catch(_){ } }
 // ==== /ZONES ======================================================================================
 // ---- Call switcher: hop call-to-call; filter by store and outcome (scales to 20+ calls) ----
@@ -7749,7 +7782,7 @@ function findStoreName(){ return (SEL_STORE&&SEL_STORE.name)?SEL_STORE.name.spli
 function brandName(){ return ((BRAND&&BRAND.name)||'Check It For Me').replace(/<[^>]+>/g,'').trim(); }
 function shareMessage(){ return tf('share.msg2','Yo. {s} has {p} in stock right now. An AI called the store for me. Check it:',{s:findStoreName(),p:brandProduct()}); } // owner 07-14 approved copy; the unfurl card carries the visual
 // A find-specific landing URL that unfurls richly on socials (dynamic OG title/description).
-function shareUrl(){ return location.origin+'/s?store='+encodeURIComponent(findStoreName())+'&cat='+encodeURIComponent(findProductLabel())+'&v=in'; }
+function shareUrl(){ return location.origin+'/s?store='+encodeURIComponent(findStoreName())+'&cat='+encodeURIComponent(findProductLabel())+'&v=in&lang='+LANG; } // lang so the landing renders in the sharer's language
 
 async function shareFind(){
   track('share_open',{product:findProductLabel()});
