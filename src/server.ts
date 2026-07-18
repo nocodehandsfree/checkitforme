@@ -483,9 +483,12 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   const ogImage = state === "zonein" ? `https://${pub}/og/card-zone.png` : state === "in" ? `https://${pub}/og/card-find-${brand.key}.png` : `https://${pub}/og/${brand.key}.png`;
 
   const catHl = `<span class="hl">${esc(cat)}</span>`;
-  const badge = state === "in" ? L("✅ In stock", "✅ En stock")
-    : state === "zonein" ? L(`✅ ${zI} of ${zN} had it`, `✅ ${zI} de ${zN} lo tenían`)
-    : L("🔔 On watch", "🔔 En seguimiento");
+  const ic = positive
+    ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>`
+    : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>`;
+  const badge = state === "in" ? L("In stock", "En stock")
+    : state === "zonein" ? L(`${zI} of ${zN} had it`, `${zI} de ${zN} lo tenían`)
+    : L("On watch", "En seguimiento");
   const headline = state === "in" ? L(`${catHl} is in stock`, `${catHl} está en stock`)
     : state === "zonein" ? L(`${catHl} is in stock nearby`, `${catHl} está en stock cerca`)
     : L(`We're tracking ${catHl}`, `Estamos rastreando ${catHl}`);
@@ -493,17 +496,12 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   const zoneMsg = L(`Check called ${zN} stores at once. ${esc(cat)} is on the shelf at these:`,
                     `Check llamó a ${zN} tiendas a la vez. ${esc(cat)} está en el estante en estas:`);
   const whatIsIt = state === "in"
-    ? L("A friend used Check to find this. Our AI called the store and a real person confirmed it's on the shelf.",
-        "Un amigo usó Check para encontrarlo. Nuestra IA llamó a la tienda y una persona real confirmó que está en el estante.")
+    ? L("A real call just confirmed it.", "Una llamada real lo confirmó.")
     : state === "zonein" ? "" // the zone message + logo row carry it
-    : zone ? L("None on the shelf yet. Check keeps watching these stores and catches the restock.",
-               "Ninguna en el estante todavía. Check sigue vigilando estas tiendas y atrapa la reposición.")
-    : L("Not on the shelf right now. Check is watching this store and catches the restock.",
-        "No está en el estante ahora. Check vigila esta tienda y atrapa la reposición.");
-  const hook = L("Your first check is on us.", "Tu primera verificación va por nuestra cuenta.");
-  const button = L("See what's in stock near you →", "Ve qué hay en stock cerca →");
-  const trust = L("Check calls the store live and sends you proof. No answer, no charge.",
-                  "Check llama a la tienda en vivo y te manda la prueba. Sin respuesta, sin cargo.");
+    : zone ? L("None yet. Check catches the restock.", "Ninguna aún. Check atrapa la reposición.")
+    : L("Not in yet. Check catches the restock.", "Aún no. Check atrapa la reposición.");
+  const hook = L("First check's on us.", "Tu primera verificación va por nuestra cuenta.");
+  const button = L("See what's near you →", "Ve qué hay cerca →");
 
   const green = "#4ADE80", amber = "#F59E0B";
   const accent = positive ? green : amber;
@@ -538,15 +536,15 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">${head}
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+<link rel="preload" href="/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin>
 <style>
+  @font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;src:url(/fonts/inter-var-latin.woff2) format('woff2')}
   *{box-sizing:border-box;margin:0} :root{--green:${green};--amber:${amber}}
   body{background:#1D1D22;color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100dvh;display:grid;place-items:center;padding:24px}
   .wrap{max-width:400px;width:100%;text-align:center}
   .mark{height:24px;width:auto;display:block;margin:0 auto 22px;opacity:.96}
   .card{background:#26262B;border-radius:26px;padding:30px 24px 26px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
-  .badge{display:inline-block;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:${accent};background:${accent}22;padding:7px 13px;border-radius:999px;margin-bottom:15px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:${accent};background:${accent}22;padding:7px 13px;border-radius:999px;margin-bottom:15px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
   .big{font-size:29px;font-weight:900;line-height:1.15;letter-spacing:-.8px;text-wrap:balance;margin-bottom:9px} .big .hl{color:${accent}}
   .store{color:#B9B9C4;font-size:15px;font-weight:600;margin-bottom:18px} .store b{color:#fff;font-weight:800}
   .zmsg{color:rgba(255,255,255,.78);font-size:14.5px;font-weight:500;line-height:1.5;margin:2px auto 4px;max-width:330px}
@@ -556,19 +554,18 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   .lmono{background:linear-gradient(145deg,#34343D,#23232B);display:grid;place-items:center;color:#CDCDD8;font-weight:900;font-size:14px}
   .what{color:rgba(255,255,255,.78);font-size:14.5px;font-weight:500;line-height:1.5;margin:0 auto 20px;max-width:330px}
   .hook{color:#fff;font-size:16px;font-weight:800;letter-spacing:-.2px;margin-bottom:14px}
-  .cta{display:block;text-decoration:none;border-radius:999px;padding:16px 20px;font-size:14px;font-weight:800;letter-spacing:.02em;color:#06210f;background:linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%);box-shadow:0 12px 28px -8px rgba(25,177,69,.5)}
+  .cta{display:block;text-decoration:none;border-radius:14px;padding:16px;font-size:16px;font-weight:900;letter-spacing:-.2px;color:#06210f;background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);box-shadow:0 10px 24px -8px rgba(52,194,104,.4)}
   .trust{color:#8A8A96;font-size:12.5px;font-weight:600;line-height:1.45;margin-top:16px;max-width:320px;margin-left:auto;margin-right:auto}
 </style></head><body><div class="wrap">
   <img class="mark" src="/logos/brand/check.png?v=2" alt="Check It For Me">
   <div class="card">
-    <div class="badge">${badge}</div>
+    <div class="badge">${ic} ${badge}</div>
     <h1 class="big">${headline}</h1>
     ${showStore ? `<div class="store">${storeLine}</div>` : ""}
     ${state === "zonein" ? `<div class="zmsg">${zoneMsg}</div>${logoRow}` : ""}
     ${whatIsIt ? `<div class="what"${state === "zonein" ? ` style="margin-top:14px"` : ""}>${whatIsIt}</div>` : ""}
     <div class="hook">${hook}</div>
     <a class="cta" href="${site}">${button}</a>
-    <div class="trust">${trust}</div>
   </div>
 </div></body></html>`;
 }
