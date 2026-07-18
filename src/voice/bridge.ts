@@ -6,6 +6,9 @@ import { config } from "../config";
 
 export interface BridgeContext {
   agentId: string;
+  // Multi-account pool (concurrency governor): open EL on this account's key when set; else the
+  // configured primary account (today's behavior). Caller-ID and everything else unchanged.
+  apiKey?: string;
   dynamicVars: Record<string, string>;
   onConversationId?: (id: string) => void;
   // Deterministic keypad presses, e.g. "0@3" = send the DTMF tone for 0 three seconds after the
@@ -85,9 +88,9 @@ export function bridgeDebug(): string[] { return debugLog.slice(-60); }
 /** Allow the server (listen-socket relay) to write into the same diagnostic log. */
 export function bridgeLog(msg: string) { log(msg); }
 
-async function signedUrl(agentId: string): Promise<string | null> {
+async function signedUrl(agentId: string, apiKey?: string): Promise<string | null> {
   try {
-    const r = await fetch(`https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${agentId}`, { headers: { "xi-api-key": config.voice.apiKey } });
+    const r = await fetch(`https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${agentId}`, { headers: { "xi-api-key": apiKey || config.voice.apiKey } });
     if (!r.ok) { log(`signedUrl HTTP ${r.status}: ${(await r.text()).slice(0, 80)}`); return null; }
     const d = (await r.json()) as { signed_url?: string };
     return d.signed_url ?? null;
@@ -182,7 +185,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (!ctx) { log("connectEleven: NO CONTEXT"); return; }
     connecting = true; // from now, buffer inbound audio for the agent
     const c = ctx; // narrowed
-    const url = await signedUrl(c.agentId);
+    const url = await signedUrl(c.agentId, c.apiKey);
     if (!url) { log("connectEleven: no signed url -> abort"); return; }
     log("connectEleven: opening ElevenLabs WS");
     eleven = new WebSocket(url);

@@ -38,12 +38,15 @@ export class ElevenLabsProvider implements VoiceProvider {
 
   async startCall(p: StartCallParams): Promise<StartCallResult> {
     assertCallsEnabled(); // no real store calls on a UI-only preview deploy
+    // Multi-account pool: dial on the granted account's key + number when the governor supplies them;
+    // undefined → the configured primary account (today's behavior).
+    const apiKey = p.apiKey ?? this.cfg.apiKey;
     const res = await fetch(`${BASE}/twilio/outbound-call`, {
       method: "POST",
-      headers: this.headers(),
+      headers: { "xi-api-key": apiKey, "content-type": "application/json" },
       body: JSON.stringify({
         agent_id: p.agentId ?? this.cfg.agentId,
-        agent_phone_number_id: this.cfg.phoneNumberId,
+        agent_phone_number_id: p.phoneNumberId ?? this.cfg.phoneNumberId,
         to_number: p.toNumber,
         conversation_initiation_client_data: {
           // Per-call voice override (admin "Talk to me" / bench voice picker). Only applies if the

@@ -25,6 +25,7 @@ import { importZonesData, geocodeMissing, backfillDirectChains, isDirectDefaultC
 import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus, learnedSyncTick, learnedSyncStatus } from "./store-sync";
 import { buildSettingsExport, settingsSyncStatus, settingsSyncTick } from "./settings-sync";
+import { concurrencyStatus } from "./calls/concurrency";
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
 import { simStartCall, isSimId, simLive, simResult } from "./staging-sim";
@@ -4587,6 +4588,10 @@ app.get("/api/store-sync/status", async (c) => c.json(await syncStatus()));
 // One-way by construction: this endpoint is the only prod side, and it writes nothing.
 app.get("/api/settings-sync/export", async (c) => c.json(await buildSettingsExport()));
 app.get("/api/settings-sync/status", async (c) => c.json(await settingsSyncStatus()));
+
+// Call concurrency governor readout (Admin + the Phase-2 load test): live pool utilization,
+// per-account used/cap, the interactive reserve, and the per-user cap. Enabled reflects the flag.
+app.get("/api/concurrency", async (c) => c.json(await concurrencyStatus()));
 
 app.get("/api/gtm", async (c) => {
   let items = GTM_SEED;
