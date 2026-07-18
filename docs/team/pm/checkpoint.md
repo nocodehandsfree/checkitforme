@@ -47,6 +47,17 @@ owner reasks.
    deal notes live in docs/team/ideas/checkpoint.md).
 6. Owner walk list O2-O10 in docs/specs/launch-journeys/JOURNEYS.md (A1-A8 automated + green).
 
+## Concurrency-queue UX build (owner 07-17) — coordinated across 3 lanes
+When call slots are full, the 11th check QUEUES, never fails. UX: a calm holding card (borrows the
+referral share-card LOOK, own copy) with store name + a LIVE, accurate countdown ("You're next ·
+about 30 sec"), auto-flips to the live transcript when the call dials. No messaging (owner: don't
+notify), no charge until connect.
+- **Pops:** queue feed — place-in-line + ETA computed from live calls' elapsed+expected duration;
+  poll endpoint; emit "your call started" signal. Activates only when governor is on.
+- **CD:** design the queued holding-card state (ref = owner's referral-card image, look only).
+- **iOS tint (front):** build the card to CD's comp + zone cap 10 in the UI. Both EN+ES.
+Front & back must agree the queued signal + ETA shape. Rides the promote train (consumer code).
+
 ## Scale switches — how we grow call capacity (Pops built, default OFF, 07-17)
 Turn-on ORDER when traffic climbs (do NOT flip early — voice testing stays untouched while OFF):
 1. **ElevenLabs burst** first — instant 3x headroom (10→30 concurrent on Creator), overflow bills
