@@ -5953,31 +5953,14 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
     const acct = (await db.select().from(accounts).where(eq(accounts.clerkUserId, finder.userId)))[0];
     if (acct?.callerId) from = acct.callerId; // only set after Twilio caller-ID verification
   }
-  // INSTANT CONNECTION for direct-answer stores (owner 07-17: "some clerks say Bob at the very
-  // beginning"). No menu recipe, no phone tree, no learned connect timer → the store greets a live
-  // person the moment they pick up, so the first breath must be heard. Route these down the
-  // EL-native outbound path (same engine as scheduled checks): audio flows AT answer, the whole
-  // greeting including a name-first "This is Bob" reaches the agent. Menu/tree stores KEEP the
-  // bridge — the cheap-nav cost model is untouched. Kept on the bridge too: calls dialing AS the
-  // finder's verified caller-ID (the native path can only dial from our own line). Ear-listen
-  // (owner-only tool) is unavailable on native calls; the customer live transcript is unaffected.
-  // "Direct" = no mechanical nav (keypad recipe, spoken recipe, learned connect timer). The
-  // phone_tree PROSE alone must not disqualify: direct stores often carry a note like "a live person
-  // answers directly, no phone menu" (the Fun store does — 07-17 bug: that text kept it OFF the
-  // instant path). Only tree text that actually describes a menu keeps a store on the bridge.
-  const treeTxt = (v.dynamicVars.phone_tree || "").trim();
-  const treeSaysDirect = !treeTxt || /answers? directly|no (phone )?menu|no ivr|straight to a person/i.test(treeTxt);
-  const direct = !v.dtmf && !v.say && treeSaysDirect && !v.connectAtSec && !from;
-  if (direct) {
-    const r = await triggerCall({ retailerId, categoryId: primary, mode: "restock", specificProduct, finderUserId: finder?.userId ?? undefined, isPrivate: finder?.isPrivate ?? false, kioskMode });
-    if (r.providerCallId) {
-      // Ear-listening on the instant path (owner 07-17): fork a live copy of both call tracks into
-      // the listen room. Off the call path — a failed attach never touches the call itself.
-      if ("callSid" in r && r.callSid) void attachListenFork(String(r.callSid), r.providerCallId);
-      return { room: r.providerCallId };
-    }
-    return { error: ("error" in r && r.error) ? String(r.error) : "call did not start" };
-  }
+  // NOTE (owner 07-18): the instant-connection native path (routing direct stores to triggerCall for
+  // first-word capture) was REVERTED here — it has no live-transcript relay to the page, so the
+  // consumer live view rendered nothing mid-call. Live transcript is the priority; ALL live checks go
+  // through the bridge, which streams each line to the page in real time (relayLine over the listen
+  // WS). Inline-TwiML in placeBridgeCall still opens the media stream at answer, so the bridge already
+  // captures most of the greeting. Full first-word capture on the bridge (buffer-from-start + replay
+  // to the agent at connect-on-human) is a separate build — attachListenFork/native routing kept
+  // dormant for it. The live-view LOCK exercises this bridge path, so this is the covered path.
   // Log the call once it connects (we get the ElevenLabs conversation id): insert the PRIMARY result
   // row; ingest fans out each extra line into its own row from the per-category extraction.
   return placeBridgeCall(v.retailer.phone, v.dynamicVars, (convId) => {
