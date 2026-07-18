@@ -20,6 +20,11 @@
   upgrade → Family, REAL card → receipts. It's still the last launch gate — keep it front.
 - Handoffs from Addie + Webbie arriving; fold into this file as they land.
 
+>**Owner decision 07-17 (do not relitigate):** LAUNCH WITHOUT a spoken recording
+disclosure at the start of calls. Deliberate entrepreneur risk. A WRITTEN recording
+line on the Privacy page is fine; no agent adds a spoken call disclosure unless the
+owner reasks.
+
 ## Open queue (after the Charlie/card session)
 1. Pops: one `ship-admin.sh` rehearsal → Addie ships Admin UI in seconds, no promotes.
 1b. Settings mirror PROD→STAGING — **BUILT + staging half LIVE** (Pops, e0e6e0c; 20/20 suite in
