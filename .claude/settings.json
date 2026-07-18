@@ -11,5 +11,18 @@
       "Bash(curl -s https://staging.checkitforme.com/*)", "Bash(curl -s -X POST https://staging.checkitforme.com/*)",
       "Bash(curl -s https://admin.checkitforme.com/*)", "Bash(curl -s -X POST https://admin.checkitforme.com/*)"
     ]
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/three-rules.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
   }
 }
