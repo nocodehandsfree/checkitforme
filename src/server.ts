@@ -558,18 +558,18 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   .cwm{position:absolute;top:-40px;right:-44px;width:180px;height:180px;opacity:.16}
   .cbody{position:relative;z-index:1}
   .chead{margin-bottom:16px}
-  .badge{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.13em;color:${accent};background:rgba(255,255,255,.06);border:1px solid ${accent}66;padding:7px 14px;border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .badge{display:inline-flex;align-items:center;gap:7px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.13em;color:${accent};background:rgba(255,255,255,.06);border:1px solid ${accent}66;padding:6px 12px;border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
   .gdot{width:8px;height:8px;border-radius:50%;background:${accent};box-shadow:0 0 8px ${accent};animation:ckGlow 2s ease-in-out infinite}
   .title{display:inline-block;max-width:100%}
-  .big{font-size:34px;font-weight:900;line-height:1.04;letter-spacing:-1px;margin:0} .big .hl{color:${brandColor}}
-  .satname{display:block;text-align:right;font-size:14px;font-weight:800;letter-spacing:-.2px;color:#fff;margin-top:5px}
+  .big{font-size:44px;font-weight:900;line-height:1;letter-spacing:-1.6px;margin:0} .big .hl{color:${brandColor}}
+  .satname{display:block;text-align:right;font-size:16px;font-weight:700;letter-spacing:-.2px;color:#fff;margin-top:7px}
   .zmsg{color:rgba(255,255,255,.78);font-size:14.5px;font-weight:500;line-height:1.5;margin:6px auto 4px;max-width:330px}
   .logos{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:14px 0 6px}
   .ltile,.lmono{width:40px;height:40px;border-radius:11px;flex:0 0 auto}
   .ltile{background:#1F1F25;display:grid;place-items:center;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)} .ltile img{width:30px;height:30px;object-fit:contain}
   .lmono{background:linear-gradient(145deg,#34343D,#23232B);display:grid;place-items:center;color:#CDCDD8;font-weight:900;font-size:14px}
   .what{color:rgba(255,255,255,.82);font-size:15px;font-weight:500;line-height:1.5;margin:16px 0 0}
-  .cta{display:block;text-decoration:none;border-radius:999px;padding:2.5px;margin-top:22px;background:linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%);box-shadow:0 12px 28px -8px rgba(25,177,69,.45)}
+  .cta{display:block;text-decoration:none;border-radius:999px;padding:2.5px;margin-top:22px;background:linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%);box-shadow:0 10px 22px -12px rgba(0,0,0,.55)}
   .cin{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:10px;border-radius:999px;background:#20202A;padding:15px 24px}
   .shine{position:absolute;top:0;bottom:0;left:-45%;width:45%;background:linear-gradient(105deg,transparent 0%,rgba(140,255,185,.25) 50%,transparent 100%);animation:ckShine 2.8s ease-in-out infinite}
   .ctxt{position:relative;font-size:13.5px;font-weight:800;letter-spacing:.14em;color:#fff}
