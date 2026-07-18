@@ -112,3 +112,16 @@ worse than no comment. Several entries below started as wrong comments.)
 - Fix shipped: app.html self-hosts `/fonts/inter-var-latin.woff2` (the site's exact recipe) and
   admin-preview.mjs routes `/fonts/**` from public/. If you judge a render, FIRST confirm the
   headline is actually Inter (compare a lowercase 'g').
+
+## Share/landing (/s): a gradient fading to a TRANSPARENT color leaves a green haze on iOS
+- Symptom: owner's iPhone showed a faint green tint/line across the BOTTOM of the /s card; every
+  headless Chromium screenshot showed the bottom perfectly clean. Cost ~7 round trips chasing it as
+  a "button glow."
+- Root cause: `.card.pos` background was `linear-gradient(180deg, rgba(38,100,64,.95) …, rgba(38,100,64,0) 210px), #20202A`.
+  Chromium renders the `rgba(38,100,64,0)` endpoint as truly clear; **iOS Safari interpolates toward
+  that RGB at low alpha, so the whole region below the last stop gets a faint GREEN wash** over the
+  dark base. Invisible in Chromium, visible on the device.
+- Fix: never fade to a transparent COLORED stop for a wash. Fade between two OPAQUE colors:
+  `linear-gradient(180deg,#266440 0%,#20202A 46%)`. No alpha, no premultiply artifact, clean bottom.
+- Lesson: a colors/fonts diff and a Chromium render CANNOT catch this — it is an iOS-paint blind spot.
+  If the owner reports a tint that no render reproduces, suspect a `rgba(r,g,b,0)` gradient stop first.

@@ -551,14 +551,14 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   *{box-sizing:border-box;margin:0} :root{--green:${green};--amber:${amber}}
   body{background:#1D1D22;color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100dvh;display:grid;place-items:center;padding:24px}
   .wrap{max-width:430px;width:100%;text-align:center}
-  .card{position:relative;display:flex;flex-direction:column;text-align:left;border:1px solid rgba(255,255,255,.12);border-radius:40px;padding:34px 26px 30px;min-height:446px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
-  .card.pos{background:linear-gradient(180deg,rgba(38,100,64,.95) -40px,rgba(38,100,64,0) 210px),#20202A}
+  .card{position:relative;text-align:left;border:1px solid rgba(255,255,255,.12);border-radius:40px;padding:40px 27px 34px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
+  .card.pos{background:linear-gradient(180deg,#266440 0%,#20202A 46%)}
   .card.neg{background:#26262B}
   .cwmwrap{position:absolute;inset:0;border-radius:40px;overflow:hidden;z-index:0;pointer-events:none}
   .cwm{position:absolute;top:-40px;right:-44px;width:180px;height:180px;opacity:.16}
-  .cbody{position:relative;z-index:1;flex:1;display:flex;flex-direction:column}
-  .cact{margin-top:auto;padding-top:26px}
-  .chead{margin-bottom:20px}
+  .cbody{position:relative;z-index:1}
+  .cact{margin-top:38px}
+  .chead{margin-bottom:30px}
   .badge{display:inline-flex;align-items:center;gap:7px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.13em;color:${accent};background:rgba(255,255,255,.06);border:1px solid ${accent}66;padding:6px 12px;border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
   .gdot{width:8px;height:8px;border-radius:50%;background:${accent};box-shadow:0 0 8px ${accent};animation:ckGlow 2s ease-in-out infinite}
   .title{display:inline-block;max-width:100%;align-self:flex-start}
@@ -569,7 +569,7 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   .ltile,.lmono{width:40px;height:40px;border-radius:11px;flex:0 0 auto}
   .ltile{background:#1F1F25;display:grid;place-items:center;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)} .ltile img{width:30px;height:30px;object-fit:contain}
   .lmono{background:linear-gradient(145deg,#34343D,#23232B);display:grid;place-items:center;color:#CDCDD8;font-weight:900;font-size:14px}
-  .what{color:rgba(255,255,255,.82);font-size:15px;font-weight:500;line-height:1.5;margin:18px 0 0}
+  .what{color:rgba(255,255,255,.82);font-size:15px;font-weight:500;line-height:1.55;margin:24px 0 0}
   .cta{display:block;text-decoration:none;border-radius:999px;padding:2.5px;background:linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%);box-shadow:0 10px 22px -12px rgba(0,0,0,.55)}
   .cin{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:9px;border-radius:999px;background:#20202A;padding:13px 22px}
   .shine{position:absolute;top:0;bottom:0;left:-45%;width:45%;background:linear-gradient(105deg,transparent 0%,rgba(140,255,185,.25) 50%,transparent 100%);animation:ckShine 2.8s ease-in-out infinite}
@@ -596,7 +596,7 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
 </div></body></html>`;
 }
 app.get("/s", (c) => {
-  c.header("Cache-Control", "public, max-age=300");
+  c.header("Cache-Control", "public, max-age=30");
   const host = (c.req.header("host") || "").toLowerCase();
   const brand = resolveBrand(host, c.req.query("brand"));
   const q = { store: c.req.query("store") || "", cat: c.req.query("cat") || "", v: c.req.query("v") || "in", k: c.req.query("k") || "", n: c.req.query("n") || "", i: c.req.query("i") || "", st: c.req.query("st") || "", slogo: c.req.query("slogo") || "", lang: c.req.query("lang") || "", al: c.req.header("accept-language") || "" };
