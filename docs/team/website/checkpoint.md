@@ -6,6 +6,18 @@
 > the other dev: **he owns the tint CSS** (`__bootTone`/`tone-*`/body wash/sheet chrome), **I own
 > view/mode/nav** — don't blind-edit the tint, it's fragile.
 
+## 🔧 07-18 — share-card image fix + kiosk map (LIVE on staging, verified server-side)
+- **Share unfurl showed no image (owner report).** ROOT CAUSE: behind the staging Cloudflare worker the
+  origin Host header is the INTERNAL `voice-caller-staging-production.up.railway.app`, so og:image/og:url/
+  canonical were built on a host iMessage/Facebook can't fetch → blank card, slow. Extracted the
+  `publicHost()` helper (the fix that already lived inline for og:title) and applied it to EVERY
+  bot-fetched URL in renderShare/renderRunner/renderComingSoon (`src/server.ts`). Verified live: og:image
+  now `https://staging.checkitforme.com/og/...`, fetches 200 in ~0.65s. ⚠️ prod is NOT behind a
+  host-rewriting worker (brand subdomains arrive real), so publicHost only triggers on the railway host.
+- **Kiosk map view added.** Map toggle was hard-hidden for kiosk (`!kiosk` on the display line);
+  hobby/thrift already had it. Enabled kiosk + gave it a plain-dot legend (tier colours don't apply to
+  kiosks). Pins come from LAST_STORES lat/lng like every mode. ⚠️ actual iOS map RENDER = owner's phone.
+
 ## 🚨 07-17 HANDOFF — GLASS-H ATTEMPT #2 FAILED ON DEVICE (x-rev glassH-all-r135, LIVE on staging)
 **Owner is handing the glass work to the iOS-tint agent directly + opening a FRESH Webbie chat. This
 attempt is committed + live on staging (commit 6bb6a9a) but FAILED on his iPhone. Last KNOWN-GOOD
@@ -75,7 +87,6 @@ before it = launcher-scope-r134. If the site needs to be clean while they rebuil
 - **Email rendering** (Outlook/Gmail) — other lane actively iterating (one light design now).
 - **Restock SMS blocked externally** (A2P denied, toll-free pending) — email alerts live.
 - **Service worker PHASE 2** (network-first HTML + offline) — not rebuilt.
-- **og:image URLs ride the internal railway host** — works; public-host constant cleaner (DevOps).
 - **Next (owner):** Charlie test calls + check-status page render — boundary in `docs/team/voice/checkpoint.md`.
 
 ## 🪤 Traps
