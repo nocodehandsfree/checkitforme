@@ -19,6 +19,10 @@ export interface StartCallParams {
   voiceId: string;
   /** Override which engine agent handles this call (e.g. restock vs carry-check). Defaults to the configured agent. */
   agentId?: string;
+  /** Multi-account pool overrides (concurrency governor): dial this call on a specific EL account.
+   *  Undefined → the provider's configured (primary) account, i.e. today's behavior. */
+  apiKey?: string;
+  phoneNumberId?: string;
   /** What the category means / what does NOT count (e.g. excludes repackaged cards). */
   clarification?: string;
   /** Plain-English IVR/transfer navigation for this store. */

@@ -38,7 +38,7 @@ export async function attachListenFork(callSid: string, room: string): Promise<v
   } catch (e) { console.error("[listenfork]", e); }
 }
 
-export async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, string>, onConversationId?: (id: string) => void, dtmf?: string | null, opts?: { from?: string; timeLimitSec?: number; connectOnHuman?: boolean; connectAtSec?: number; say?: string | null; voiceId?: string | null; voiceTuning?: Record<string, unknown> | null }): Promise<{ room?: string; error?: string }> {
+export async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, string>, onConversationId?: (id: string) => void, dtmf?: string | null, opts?: { from?: string; timeLimitSec?: number; connectOnHuman?: boolean; connectAtSec?: number; say?: string | null; voiceId?: string | null; voiceTuning?: Record<string, unknown> | null; apiKey?: string; agentId?: string }): Promise<{ room?: string; error?: string }> {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
@@ -46,7 +46,7 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
   // Dial AS the customer's verified number when we have it (phone-first model); else the house line.
   const from = opts?.from || process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const pol = await getPolicy();
-  setBridgeContext(room, { agentId: config.voice.agentId, dynamicVars, onConversationId, dtmf: dtmf || undefined, say: opts?.say || undefined, connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: opts?.connectAtSec, holdMaxSeconds: pol.bail.holdMaxSeconds, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
+  setBridgeContext(room, { agentId: opts?.agentId || config.voice.agentId, apiKey: opts?.apiKey || undefined, dynamicVars, onConversationId, dtmf: dtmf || undefined, say: opts?.say || undefined, connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: opts?.connectAtSec, holdMaxSeconds: pol.bail.holdMaxSeconds, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
   const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
   // INLINE the TwiML instead of a Url callback (owner 07-17: "no cutoffs — listen from the very
   // first thing I say"). With Url, Twilio answers the call and THEN phones our server for

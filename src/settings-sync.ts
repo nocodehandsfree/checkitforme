@@ -70,7 +70,14 @@ export function mergePolicyBlob(prodJson: string | null, stagingJson: string | n
     if (k in localFlags) prodFlags[k] = localFlags[k];
     else delete prodFlags[k]; // staging never set it → let staging's code defaults rule
   }
-  return JSON.stringify({ ...prod, flags: prodFlags });
+  const out: Record<string, unknown> = { ...prod, flags: prodFlags };
+  // The concurrency governor's master switch is a staging call-test toggle (like the flags above):
+  // mirror prod's tuning numbers, but keep staging's own `enabled` so a test in progress isn't
+  // flipped back off every 60s. Everything else in the block flows from prod.
+  const prodConc = prod.concurrency as Record<string, unknown> | undefined;
+  const localConc = local.concurrency as Record<string, unknown> | undefined;
+  if (prodConc && localConc && "enabled" in localConc) out.concurrency = { ...prodConc, enabled: localConc.enabled };
+  return JSON.stringify(out);
 }
 
 /** Prod's plan ladder with staging's own Stripe publish artifacts preserved. Exported for tests. */

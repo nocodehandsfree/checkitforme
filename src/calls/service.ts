@@ -10,6 +10,7 @@ import {
 import { chargeOneCredit, isCompAccount, getAccount } from "../billing";
 import { sendRestockEmailTo, sendAlert, accountLang, localizeResult } from "../alerts";
 import { isCallingPaused } from "../redis";
+import { acquireCallSlot, releaseCallSlot } from "./concurrency";
 import { getPolicy } from "../policy";
 
 /** Notify every active restock-watch for this store+category that it's back in stock, once. */
@@ -422,6 +423,18 @@ export async function triggerCall(a: TriggerArgs) {
     return { ...row, providerCallId: deltaCid, status: "in_progress" as const };
   }
 
+  // Concurrency governor (flag-gated; OFF = grants the primary account instantly = today's behavior).
+  // Bench/simulator dials to the owner's own phone (toOverride) are test traffic — never governed.
+  // On a full pool past the wait budget, `slot` is null → surface a graceful busy, not a hard failure.
+  const slot = a.toOverride ? null : await acquireCallSlot({
+    key: `call:${row.id}`, priority: a.zoneRunId ? "batch" : "interactive",
+    userId: a.finderUserId ?? undefined, ttlSec: ((await getPolicy()).bail.maxCallSeconds || 180) + 120,
+  });
+  if (a.toOverride ? false : slot === null) {
+    await db.update(callResults).set({ status: "failed", statusKey: "system_busy", summary: "All lines busy — the check will be retried." }).where(eq(callResults.id, row.id));
+    throw new Error("calls_busy");
+  }
+  const acct = slot?.account;
   try {
     const { providerCallId, callSid } = await provider.startCall({
       callId: row.id,
@@ -430,7 +443,8 @@ export async function triggerCall(a: TriggerArgs) {
       location: retailer.location,
       productName: category.label,
       question,
-      agentId,
+      agentId: acct?.agentId ? (mode === "carry" ? (acct.carryAgentId ?? agentId) : acct.agentId) : agentId,
+      apiKey: acct?.apiKey, phoneNumberId: acct?.phoneNumberId, // multi-account pool: dial on the granted account (undefined → provider default)
       // Voice: explicit override → rotate the global voice pool → rotate the workflow's voice strip →
       // default. The pool wins over a workflow's strip so an owner-configured GLOBAL rotation is never
       // silently disabled by a default workflow; both rotations are live round-robins.
@@ -454,6 +468,7 @@ export async function triggerCall(a: TriggerArgs) {
       .where(eq(callResults.id, row.id));
     return { ...row, providerCallId, callSid, status: "in_progress" as const };
   } catch (e) {
+    await releaseCallSlot(`call:${row.id}`); // dial failed → free the slot now (else TTL reaps it)
     await db.update(callResults).set({ status: "failed", summary: String(e) }).where(eq(callResults.id, row.id));
     throw e;
   }
@@ -500,19 +515,32 @@ export async function bridgeCheckCall(a: TriggerArgs) {
     isPrivate: a.isPrivate ?? false,
   }).returning();
 
+  const pol = await getPolicy();
+  // Concurrency governor (flag-gated; OFF = grants the primary account instantly = today's behavior).
+  // A zone-sweep call is "batch" (leaves the interactive reserve free); a lone check is "interactive".
+  const slot = await acquireCallSlot({
+    key: `call:${row.id}`, priority: a.zoneRunId ? "batch" : "interactive",
+    userId: a.finderUserId ?? undefined, ttlSec: (pol.bail.maxCallSeconds || 180) + 120,
+  });
+  if (slot === null) {
+    await db.update(callResults).set({ status: "failed", statusKey: "system_busy", summary: "All lines busy — the check will be retried." }).where(eq(callResults.id, row.id));
+    throw new Error("calls_busy");
+  }
+  const acct = slot.account;
+
   // Phone-first: dial AS the finder's verified number when present (same as the live bridge path).
   let from: string | undefined;
   if (a.finderUserId) {
-    const acct = (await db.select().from(accounts).where(eq(accounts.clerkUserId, a.finderUserId)))[0];
-    if (acct?.callerId) from = acct.callerId;
+    const acc = (await db.select().from(accounts).where(eq(accounts.clerkUserId, a.finderUserId)))[0];
+    if (acc?.callerId) from = acc.callerId;
   }
-  const pol = await getPolicy();
   const r = await placeBridgeCall(v.retailer.phone, v.dynamicVars, (convId) => {
     // Human reached, billed agent open — hand the row to the normal EL ingest by conv id.
     db.update(callResults).set({ providerCallId: convId, status: "in_progress" }).where(eq(callResults.id, row.id))
       .catch((e) => console.error("bridge check connect update:", e));
-  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning });
+  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, apiKey: acct.apiKey, agentId: acct.agentId });
   if (r.error || !r.room) {
+    await slot.release(); // dial never placed → free the slot immediately
     await db.update(callResults).set({ status: "failed", summary: r.error || "bridge call failed" }).where(eq(callResults.id, row.id));
     throw new Error(r.error || "bridge call failed");
   }
@@ -532,6 +560,7 @@ export async function bridgeCheckCall(a: TriggerArgs) {
         summary: `Bridge call ended before a human answered (${twilioStatus}).`,
         completedAt: Math.floor(Date.now() / 1000),
       }).where(eq(callResults.id, row.id));
+      await releaseCallSlot(`call:${row.id}`); // never reached a human → free the slot (idempotent)
       await notifyAutoCheckResult(row.id); // an auto-check that never reached a human is still a result
     })().catch((e) => console.error("bridge check finalize:", e));
   });
@@ -1004,6 +1033,7 @@ export async function ingestPending(): Promise<number> {
     if (outcome.shipmentDay) {
       await db.update(retailers).set({ shipmentDay: outcome.shipmentDay }).where(eq(retailers.id, row.retailerId));
     }
+    await releaseCallSlot(`call:${row.id}`); // call is terminal → free its concurrency slot (idempotent; no-op if ungoverned)
     finalized++;
   }
   return finalized;
