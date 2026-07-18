@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r143" />
+<meta name="x-rev" content="glassfix-r144" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -3958,11 +3958,17 @@ function sheetH_on(ov){ if(!ov||ov.__sh) return; ov.__sh=1;
   const TAIL=120;
   const place=()=>{ const prev=m.style.height;
     m.style.height=''; m.style.maxHeight=''; m.style.paddingBottom='';
-    const natural=Math.min(m.offsetHeight||0, window.innerHeight*0.86)||window.innerHeight*0.86;
-    m.style.position='absolute'; m.style.left='0'; m.style.right='0'; m.style.top=(window.innerHeight-natural)+'px'; m.style.bottom='auto';
-    m.style.height=(natural+TAIL)+'px'; m.style.maxHeight=(natural+TAIL)+'px';
-    const oy=getComputedStyle(m).overflowY;
-    if((oy==='auto'||oy==='scroll')&&m.scrollHeight>natural+4) m.style.paddingBottom=TAIL+'px';
+    const cap=window.innerHeight*0.86, cs=getComputedStyle(m);
+    // FILL sheets — a flex column that scrolls INSIDE (reading pages, zones, history) — open TALL at the
+    // cap so there's room to read. Measuring their natural height opens them short because their content
+    // loads a beat after the sheet (owner: "you can't read much like this, 75% of the page"). Form/menu
+    // sheets (plain boxes) still open content-sized.
+    const fill = cs.display==='flex' && cs.flexDirection.indexOf('column')===0 && cs.overflowY==='hidden';
+    const h = fill ? cap : (Math.min(m.offsetHeight||0, cap)||cap);
+    m.style.position='absolute'; m.style.left='0'; m.style.right='0'; m.style.top=(window.innerHeight-h)+'px'; m.style.bottom='auto';
+    m.style.height=(h+TAIL)+'px'; m.style.maxHeight=(h+TAIL)+'px';
+    const oy=cs.overflowY;
+    if((oy==='auto'||oy==='scroll')&&m.scrollHeight>h+4) m.style.paddingBottom=TAIL+'px';
     return prev!==m.style.height; };
   place();
   try{ ov.__ro=new ResizeObserver(()=>{ if(ov.__placing) return; ov.__placing=1; requestAnimationFrame(()=>{ place(); ov.__placing=0; }); }); ov.__ro.observe(m.firstElementChild||m); }catch(_){ }
