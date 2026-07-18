@@ -6028,14 +6028,16 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
     const acct = (await db.select().from(accounts).where(eq(accounts.clerkUserId, finder.userId)))[0];
     if (acct?.callerId) from = acct.callerId; // only set after Twilio caller-ID verification
   }
-  // NOTE (owner 07-18): the instant-connection native path (routing direct stores to triggerCall for
-  // first-word capture) was REVERTED here — it has no live-transcript relay to the page, so the
-  // consumer live view rendered nothing mid-call. Live transcript is the priority; ALL live checks go
-  // through the bridge, which streams each line to the page in real time (relayLine over the listen
-  // WS). Inline-TwiML in placeBridgeCall still opens the media stream at answer, so the bridge already
-  // captures most of the greeting. Full first-word capture on the bridge (buffer-from-start + replay
-  // to the agent at connect-on-human) is a separate build — attachListenFork/native routing kept
-  // dormant for it. The live-view LOCK exercises this bridge path, so this is the covered path.
+  // FIRST-WORD CAPTURE without losing the live view (owner 07-18). Everything runs through the bridge
+  // (keeps the live transcript relay AND live-listen). The clip was connect-on-human: on a store with
+  // NO menu, waiting to VAD-detect a human before the agent joins buys nothing — the detected greeting
+  // is consumed by detection instead of reaching the agent, so "This is Bob" is lost. For DIRECT stores
+  // we instead connect the agent AT ANSWER (connectOnHuman:false): Twilio's <Connect><Stream> only
+  // starts at pickup, so there's no ringing waste, and the bridge buffers inbound frames during the
+  // ~200-500ms EL handshake and replays them the instant the agent is ready — so the opening words are
+  // captured, not clipped. Menu/tree stores KEEP connect-on-human (it saves the real nav time).
+  const isDirect = !v.dtmf && !v.say && !v.connectAtSec &&
+    (() => { const t = (v.dynamicVars.phone_tree || "").trim(); return !t || /answers? directly|no (phone )?menu|no ivr|straight to a person/i.test(t); })();
   // Log the call once it connects (we get the ElevenLabs conversation id): insert the PRIMARY result
   // row; ingest fans out each extra line into its own row from the per-category extraction.
   return placeBridgeCall(v.retailer.phone, v.dynamicVars, (convId) => {
@@ -6043,7 +6045,7 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
       .catch((e) => console.error("bridge call log insert:", e));
     // Per-store talk cap (chains.maxTalkSeconds) wins over the global bail ceiling when set, so a
     // store the owner marked "wrap fast" gets a tighter Twilio TimeLimit — the cost guarantee.
-  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning });
+  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, connectOnHuman: isDirect ? false : undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning });
 }
 app.get("/pub/bridge/:room", (c) => {
   const room = c.req.param("room");
