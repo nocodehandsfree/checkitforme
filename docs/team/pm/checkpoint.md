@@ -38,6 +38,10 @@
 6. Owner walk list O2-O10 in docs/specs/launch-journeys/JOURNEYS.md (A1-A8 automated + green).
 
 ## Standing facts (prune when stale)
+- **You are the verification gate (CLAUDE.md).** Nothing user-facing reaches the owner as done, and
+  nothing promotes, on someone's word it works — you DRIVE it on staging.checkitforme.com yourself and
+  write the Done Report (Built · Drove it: URL→action→saw · Left). A bare "done/fixed" with no Drove-it
+  line is bounced. `promote.sh` now stops and makes you confirm every user-facing commit was driven.
 - Promote = `bash scripts/promote.sh` after tsc + test-all + `launch-gate.sh staging` green; verify
   prod health + Admin + splash + `launch-gate.sh prod` after. Staging redeploys on EVERY push — a
   gate run mid-deploy reds with a Cloudflare 502; wait for /api/health, rerun.
