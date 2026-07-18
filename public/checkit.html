@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r145" />
+<meta name="x-rev" content="glassfix-r146" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -123,6 +123,15 @@ __BRAND_HEAD__
   @media(max-width:380px){ .hero h1{font-size:26px} }
   .hero p{color:#b9b9c8;font-size:15px;margin:0;line-height:1.5}
   .card{background:var(--sheet);border:1px solid var(--border);border-radius:18px;padding:22px;margin-bottom:20px}
+  /* Queued holding card ("you're next") — borrows the referral share-card LOOK (glass card + in-stock green wash). */
+  .holdcard{position:relative;display:flex;flex-direction:column;border-radius:28px;padding:28px 24px 24px;overflow:hidden;background:linear-gradient(180deg,rgba(38,100,64,.30) -30px,rgba(38,100,64,0) 180px),#20202A;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
+  .holdcard .hc-badge{display:inline-flex;align-items:center;gap:7px;align-self:flex-start;font:800 10.5px Inter;text-transform:uppercase;letter-spacing:.13em;color:var(--green);background:rgba(255,255,255,.06);border:1px solid rgba(74,222,128,.4);padding:6px 12px;border-radius:999px}
+  .holdcard .hc-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:ckGlowV2 2s ease-in-out infinite}
+  .holdcard .hc-store{font-size:26px;font-weight:900;letter-spacing:-.8px;color:#fff;margin:16px 0 0;line-height:1.06}
+  .holdcard .hc-eta{font-size:16px;font-weight:600;color:rgba(255,255,255,.82);margin-top:8px}
+  .holdcard .hc-eta b{color:var(--green);font-weight:800}
+  .holdcard .hc-sub{font-size:13px;font-weight:500;color:rgba(255,255,255,.62);margin-top:16px;line-height:1.5}
+  .holdcard .hc-cancel{margin-top:18px;align-self:flex-start;background:none;border:0;color:rgba(255,255,255,.5);font:700 13px Inter;cursor:pointer;padding:4px 0}
   .step{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-weight:800;margin-bottom:14px}
   input{background:var(--terminal);border:1px solid var(--border);color:#fff;padding:13px 14px;border-radius:12px;font-size:16px;font-family:inherit;width:100%}
   input:focus{outline:none;border-color:rgba(74,222,128,.45);box-shadow:0 0 0 2px rgba(74,222,128,.12)}
@@ -2190,6 +2199,15 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   <!-- RESULT -->
   <div id="result" class="hidden"></div>
 
+  <!-- Queued "you're next" holding card (shows only when the backend returns a queued signal; see holdForSlot) -->
+  <div id="holdCard" class="hidden"><div class="holdcard">
+    <span class="hc-badge"><span class="hc-dot"></span><span id="hc_badge_txt">You're next</span></span>
+    <div class="hc-store" id="hc_store"></div>
+    <div class="hc-eta" id="hc_eta"></div>
+    <div class="hc-sub" id="hc_sub"></div>
+    <button class="hc-cancel" id="hc_cancel" onclick="holdCancel()">Cancel</button>
+  </div></div>
+
   <!-- HISTORY -->
   <div id="history" class="hidden"></div>
 
@@ -3003,7 +3021,7 @@ const I18N={ es:{
   'zones.locph':'Busca un código postal o ciudad…','zones.go':'Ir','zones.list':'Lista','zones.map':'Mapa',
   'zones.radius':'Radio','zones.addallshort':'Agregar todo','zones.selstore':'tienda seleccionada','zones.selstores':'tiendas seleccionadas',
   'zones.typloc':'Escribe primero un código postal o ciudad.','zones.located':'Centrado en {q}','zones.noplace':'No encontramos ese lugar.',
-  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas','zones.cap10':'Una zona verifica hasta 10 tiendas a la vez.','em.title':'Tu correo','step.calling':'Llamando','watch.verify.h':'Revisa tu correo para confirmarlo.','watch.verify.hsms':'Te enviaremos un texto para confirmar tu celular.','watch.then2':'Luego te avisamos al instante<br>cuando se confirme en stock.','em.sub':'Las alertas y avisos de reposición llegan aquí.','em.new':'Danos tu nuevo correo','em.first':'Danos tu correo','em.empty':'Escribe tu nuevo correo primero','em.same':'Ese ya es tu correo','em.resent':'Confirmación enviada. Revisa tu correo.','em.again':'Enviarla de nuevo','em.done':'Correo confirmado. Alertas activas.','em.badlink':'Ese enlace no funcionó. Toca Enviarla de nuevo.','em.ph':'tu@correo.com','em.save':'Guardar correo','em.saving':'Guardando…','em.confirm':'Revisa tu correo para confirmar','em.add':'Agrega tu correo para alertas','alerts.title':'Alertas','alerts.sub':'Maneja tus alertas de correo y texto.','alerts.row.at':'{p} en {s}','alerts.d.remail':'Te manda un correo al volver.','alerts.d.rsms':'Te manda un texto al volver.','alerts.d.semail':'Verifica la tienda sola. Resultado al correo.','alerts.d.ssms':'Verifica la tienda sola. Resultado por texto.','alerts.none':'Aún no has creado alertas.','alerts.off':'Apagar','alerts.mute':'Silenciar','alerts.unmute':'Activar','alerts.stop':'Parar','alerts.d.muted':'Silenciada. No llega nada hasta activarla.','alerts.mutedpill':'Silenciada. Actívala cuando quieras.','alerts.unmutedpill':'Activada. Te avisaremos.','alerts.stopped':'Cancelamos {x}','alerts.name.restock':'las alertas de reposición de {s}','alerts.name.sched':'las alertas de auto chequeo de {s}','alerts.thatstore':'esa tienda','alerts.thisalert':'esta alerta','alerts.k.sched':'Auto-verificación','alerts.k.restock':'Alerta de reposición','alerts.c.sms':'texto','alerts.c.email':'correo','alerts.acheck':'Una verificación','acct.row.alerts':'Alertas','acct.row.alerts.sub':'Avisos de reposición y autoverificación.',
+  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas','zones.cap10':'Una zona verifica hasta 10 tiendas a la vez.','hold.badge.next':'Eres el siguiente','hold.badge.line':'Estás en la fila','hold.eta.sec':'unos {n} seg','hold.eta.min':'unos {n} min','hold.sub':'Te guardamos tu lugar en la fila. Sin cargo hasta conectar.','hold.cancel':'Cancelar','em.title':'Tu correo','step.calling':'Llamando','watch.verify.h':'Revisa tu correo para confirmarlo.','watch.verify.hsms':'Te enviaremos un texto para confirmar tu celular.','watch.then2':'Luego te avisamos al instante<br>cuando se confirme en stock.','em.sub':'Las alertas y avisos de reposición llegan aquí.','em.new':'Danos tu nuevo correo','em.first':'Danos tu correo','em.empty':'Escribe tu nuevo correo primero','em.same':'Ese ya es tu correo','em.resent':'Confirmación enviada. Revisa tu correo.','em.again':'Enviarla de nuevo','em.done':'Correo confirmado. Alertas activas.','em.badlink':'Ese enlace no funcionó. Toca Enviarla de nuevo.','em.ph':'tu@correo.com','em.save':'Guardar correo','em.saving':'Guardando…','em.confirm':'Revisa tu correo para confirmar','em.add':'Agrega tu correo para alertas','alerts.title':'Alertas','alerts.sub':'Maneja tus alertas de correo y texto.','alerts.row.at':'{p} en {s}','alerts.d.remail':'Te manda un correo al volver.','alerts.d.rsms':'Te manda un texto al volver.','alerts.d.semail':'Verifica la tienda sola. Resultado al correo.','alerts.d.ssms':'Verifica la tienda sola. Resultado por texto.','alerts.none':'Aún no has creado alertas.','alerts.off':'Apagar','alerts.mute':'Silenciar','alerts.unmute':'Activar','alerts.stop':'Parar','alerts.d.muted':'Silenciada. No llega nada hasta activarla.','alerts.mutedpill':'Silenciada. Actívala cuando quieras.','alerts.unmutedpill':'Activada. Te avisaremos.','alerts.stopped':'Cancelamos {x}','alerts.name.restock':'las alertas de reposición de {s}','alerts.name.sched':'las alertas de auto chequeo de {s}','alerts.thatstore':'esa tienda','alerts.thisalert':'esta alerta','alerts.k.sched':'Auto-verificación','alerts.k.restock':'Alerta de reposición','alerts.c.sms':'texto','alerts.c.email':'correo','alerts.acheck':'Una verificación','acct.row.alerts':'Alertas','acct.row.alerts.sub':'Avisos de reposición y autoverificación.',
   'feat.d.zone_sweeps':'Guarda tus tiendas como una zona. Un toque las llama todas a la vez. Mira las respuestas llegar en vivo. Cada tienda cuesta una verificación. Sin respuesta, sin cargo.','feat.d.restock_alerts':'Deja de revisar. Te avisamos. Toca Avísame cuando vuelva en un resultado. Vigilamos esa tienda por ti. Apenas llegue producto, te avisamos. Un aviso por reposición, nada de spam.','feat.d.scheduled_checks':'Las tiendas reponen con ritmo. La autoverificación corre en sus días de envío. La respuesta te espera en el celular. Cancela cuando quieras en Mis verificaciones.','feat.d.any_town':'Las cuentas gratis buscan cerca de casa. Cualquier ciudad te suelta la correa. Busca cualquier código postal o ciudad. El mapa salta ahí. Más de 100,000 tiendas.','feat.d.store_holds':'¿Lo encontraste pero estás a 20 minutos? Le pedimos al personal que te aparte uno. Con tu nombre, en la misma llamada.','feat.d.your_voice':'Elige la voz que llama por ti. Quien contesta escucha una voz amable y natural.','feat.d.thrift_hunts':'Colecciones viejas acaban en tiendas de segunda. Precios de risa, nadie las revisó. Activa Thrift y llamamos a las de tu zona. Preguntamos qué hay en la vitrina hoy.','feat.d.hobby_hunts':'Un muro de Pokémon para explorar. Cada era, cada set, cada producto. Con precios de lista. Elige tu objetivo. Cada llamada pide exactamente eso.',
   'zones.untitled':'Zona sin nombre','zones.store':'tienda','zones.stores':'tiendas',
   'zones.rename':'Renombrar','zones.delete':'Eliminar zona','zones.rename.save':'Guardar nombre','zones.delete.sure':'No se puede deshacer.','zones.delete.yes':'Sí, eliminarla','zones.keep':'Conservarla','zones.allclosed':'Todas las tiendas de esta zona están cerradas','zones.confirm.title':'¿Verificar todas las tiendas de esta zona?','zones.confirm.per':'1 verificación por tienda.',
@@ -5388,6 +5406,53 @@ function stopAudio(){ if(AUDIO_WS){AUDIO_WS.close();AUDIO_WS=null;} if(AUDIO_CTX
 let LVLOG=[]; let LVSHIP=null;
 function lvlog(m){ try{ LVLOG.push(Math.round((Date.now()-(LIVE_T0||Date.now()))/1000)+'s '+m); if(LVLOG.length>100) LVLOG.shift(); }catch(_){} }
 function lvship(){ try{ const body=JSON.stringify({lines:LVLOG}); if(navigator.sendBeacon) navigator.sendBeacon('/pub/live-debug', body); else fetch('/pub/live-debug',{method:'POST',headers:{'content-type':'application/json'},body,keepalive:true}).catch(()=>{}); }catch(_){} }
+// ============================================================================================
+// QUEUED "YOU'RE NEXT" HOLDING CARD  —  contract Pops's queue feed must match (front & back agree):
+//   POST /app/check-live (and /pub/check-live): when the concurrency governor has NO open slot,
+//     respond  { queued:true, ticket:"<id>", position:<1-based int>, etaSec:<int> }
+//     instead of { room, wsHost }. When a slot is free, respond { room, wsHost } exactly as today.
+//   GET /app/check-live/queue/:ticket (and /pub/check-live/queue/:ticket), polled once/second:
+//     still waiting -> { queued:true, position:<int>, etaSec:<int> }
+//     call started  -> { room:"<room>", wsHost:"<host>" }   (the "your call started" flip signal)
+//     gave up/expired -> { error:"<reason>" }
+// NON-DESTRUCTIVE: today the backend never returns queued -> this whole path is skipped and a check
+// goes straight to live, byte-identical to before. No charge happens while queued (the call isn't
+// placed until a slot opens). Drive it on staging with ?simqueue=1 (front-only demo, no backend).
+let HOLD={active:false};
+function holdEtaTxt(eta){ eta=Math.max(1,Math.round(eta)); return eta>=60?tf('hold.eta.min','about {n} min',{n:Math.round(eta/60)}):tf('hold.eta.sec','about {n} sec',{n:eta}); }
+function holdRender(store,position,eta){
+  const st=$('hc_store'); if(st) st.textContent=store||t('live.store','the store');
+  const bt=$('hc_badge_txt'); if(bt) bt.textContent=(position<=1)?t('hold.badge.next',"You're next"):t('hold.badge.line',"You're in line");
+  const et=$('hc_eta'); if(et) et.innerHTML='<b>'+esc(holdEtaTxt(eta))+'</b>';
+}
+function holdResolve(v){ if(!HOLD.active) return; HOLD.active=false; clearInterval(HOLD.poll); clearInterval(HOLD.tick); const r=HOLD.resolve; HOLD.resolve=null; if(r) r(v); }
+function holdCancel(){ if(HOLD.active) holdResolve({cancelled:true}); }
+function holdForSlot(resp,useApp){
+  return new Promise(resolve=>{
+    const store=(SEL_STORE&&SEL_STORE.name)||'';
+    HOLD={active:true,ticket:resp.ticket,sim:resp.ticket==='sim',eta:Math.max(1,resp.etaSec||30),pos:resp.position||1,resolve:resolve,poll:null,tick:null};
+    $('live').classList.add('hidden'); $('holdCard').classList.remove('hidden');
+    const sub=$('hc_sub'); if(sub) sub.textContent=t('hold.sub','Holding your place in line. No charge until we connect.');
+    const cx=$('hc_cancel'); if(cx) cx.textContent=t('hold.cancel','Cancel');
+    holdRender(store,HOLD.pos,HOLD.eta);
+    HOLD.tick=setInterval(()=>{ if(!HOLD.active) return; HOLD.eta=Math.max(0,HOLD.eta-1); holdRender(store,HOLD.pos,HOLD.eta); },1000); // smooth local countdown between polls
+    if(HOLD.sim){ setTimeout(()=>{ if(HOLD.active) holdResolve({simDone:true}); },(resp.etaSec||12)*1000); return; } // staging demo: no backend, just count down
+    const base=useApp?'/app/check-live/queue/':'/pub/check-live/queue/'; const started=Date.now();
+    HOLD.poll=setInterval(async()=>{
+      if(!HOLD.active) return;
+      let o=null; try{ o=await (useApp?appApi:api)(base+encodeURIComponent(HOLD.ticket)); }catch(_){ o=null; }
+      if(!HOLD.active) return;
+      if(o){
+        if(o.room){ holdResolve(o); return; }                 // call started -> flip to the live transcript
+        if(o.error){ holdResolve({error:o.error}); return; }
+        if(typeof o.etaSec==='number') HOLD.eta=Math.max(0,o.etaSec);
+        if(typeof o.position==='number') HOLD.pos=o.position;
+        holdRender(store,HOLD.pos,HOLD.eta);
+      }
+      if(Date.now()-started>5*60*1000) holdResolve({error:'timeout'}); // safety: never hold forever
+    },1000);
+  });
+}
 async function startCheckLive(){
   LVLOG=[]; lvlog('start BUILD=r0718a ua-visible='+document.visibilityState+' online='+navigator.onLine); lvship(); clearInterval(LVSHIP); LVSHIP=setInterval(lvship,3000);
   document.addEventListener('visibilitychange',()=>lvlog('visibility='+document.visibilityState),{once:false});
@@ -5417,7 +5482,19 @@ async function startCheckLive(){
   liveStage(1); // logs step 1 + renders the call box (steps on top, empty script below)
   let secs=0; const elT=setInterval(()=>{ secs+=1; },1000); // counts toward the hard cap only — no on-screen timer
   LIVE_TIMERS=[elT];
-  const r=await (useApp?appApi:api)(useApp?'/app/check-live':'/pub/check-live',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryIds:SEL_CATS,specificProduct:SEL_PRODUCT,kioskMode:!!SEL_KIOSK})});
+  const SIMQUEUE=/[?&]simqueue/i.test(location.search||'');
+  if(SIMQUEUE){ const _s=await holdForSlot({queued:true,ticket:'sim',position:2,etaSec:12},useApp); $('holdCard').classList.add('hidden'); $('live').classList.remove('hidden'); if(_s&&_s.cancelled){ clearInterval(elT); stopAudio(); backToBuilder(); return; } }
+  let r=await (useApp?appApi:api)(useApp?'/app/check-live':'/pub/check-live',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryIds:SEL_CATS,specificProduct:SEL_PRODUCT,kioskMode:!!SEL_KIOSK})});
+  // Queued (no open call slot): hold the user on the "you're next" card, poll Pops's queue feed each
+  // second, and flip to the live transcript the instant a slot opens (room arrives). Skipped entirely
+  // when the backend returns a room straight away (today's behavior).
+  if(r && r.queued && r.ticket){
+    const held=await holdForSlot(r,useApp);
+    $('holdCard').classList.add('hidden'); $('live').classList.remove('hidden');
+    if(held&&held.cancelled){ clearInterval(elT); stopAudio(); backToBuilder(); return; }
+    if(!held||held.error||!held.room){ clearInterval(elT); stopAudio(); backToBuilder(); toast(t('toast.callstart.fail',"Couldn't start the check")); return; }
+    r=held; LIVE_T0=Date.now(); // start the call timing at connect, not during the wait
+  }
   if(r.error||!r.room){ clearInterval(elT); stopAudio(); backToBuilder(); if(r.error==='no_credits')openBuy('out'); else if(r.error==='unauthorized')signIn(); else if(r.error==='too_soon'){ toast(r.message||tf('toast.toosoon','You just checked this store. Check again in about {n} min.',{n:r.retryAfterMin||60}),'accent'); } else if(r.error==='store_closed'){ toast(tf('toast.closed','🔒 {x}. No call placed.',{x:tLbl(r.label||'Store is closed')})); } else toast(t('toast.callstart.fail',"Couldn't start the check")); return; }
   LIVE_ROOM=r.room; if(canListen) $('hangup_btn').style.display='';
   // Transcript + stage stream over the WS for EVERYONE — instant, the moment ElevenLabs emits a line
