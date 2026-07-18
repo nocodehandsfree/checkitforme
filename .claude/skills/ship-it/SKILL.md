@@ -30,8 +30,15 @@ description: >-
    - **Device-only blind spot** (how iOS paints the glass/tint, how Gmail recolors an email, how a
      call sounds): you genuinely can't see these — headless shots are evidence, not a verdict. Ship
      ONE change, say **"pushed, check your phone,"** never "fixed."
-5. **Report in ONE line with evidence:** contract ✓/✗ per item, each as `URL → action → observed`.
-   Can't drive it? Say **"NOT verified: X"** and why. **"Should work" is banned.**
+5. **Report as a Done Report — the only shape "done" may reach the owner in:**
+   - **Built** — one plain line.
+   - **Drove it** — `URL → action → what I saw`, per contract item. Device-only blind spot →
+     "pushed, check your phone."
+   - **Left** — what you did NOT check.
+   No Drove-it line = not done; a bare "done / fixed / should be good" gets bounced unread.
+   **"Should work" is banned.** For user-facing work, PM drives it again as the gate before the
+   owner — and `promote.sh` makes the promoter confirm every user-facing commit was driven before
+   prod ships. Your report is what PM checks against.
 
 ## Gotchas that fake a green check (see the `known-problems` skill)
 - A `401` on a new `/api/*` path does NOT prove it deployed — use a content marker.

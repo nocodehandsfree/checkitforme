@@ -606,6 +606,8 @@ const DEFAULT_PAGES: Record<string, string> = {
 <p>We call stores and ask if something's in stock, then tell you what they said. Answers are a snapshot. Stores get it wrong sometimes, so we can't promise the item is there, or the price, or that it'll still be there when you show up.</p>
 <h2 ${H2}>Checks and payments</h2>
 <p>You pay with checks, bought in packs or included in a plan. Stripe handles the card. A check is spent when it places a call. Unused checks can be refunded if you ask. Spent ones can't. Plans renew until you cancel, and you can cancel any time for the next round.</p>
+<h2 ${H2}>Who can use it</h2>
+<p>You need to be at least 18 and in the United States. You're responsible for the checks placed on your account.</p>
 <h2 ${H2}>Play nice</h2>
 <p>Don't use us to harass a store, place calls you've got no real reason for, resell the service, or break the law. We can pause accounts that abuse the service or the stores we call.</p>
 <h2 ${H2}>The fine print</h2>
@@ -613,20 +615,26 @@ const DEFAULT_PAGES: Record<string, string> = {
 <h2 ${H2}>Changes</h2>
 <p>We may update these terms. Keep using the app and that's a yes. Questions? Ask us in the app chat or on Discord.</p>
 <p style="margin-top:22px"><a href="/p/privacy" onclick="if(window.openPage){openPage('privacy');return false}">Privacy Policy →</a></p>`,
-  privacy: `<p>Here's what <b>Check It For Me</b> (checkitforme.com) collects, and why. Short version: we grab what we need to run your checks. We don't sell your info.</p>
+  privacy: `<p>Here's what <b>Check It For Me</b> (checkitforme.com) collects, why, and what you can do about it. Short version: we take only what we need to run your checks, we keep it only as long as we need it, and we never sell it.</p>
 <h2 ${H2}>What we collect</h2>
 <ul>
-<li><b>Your cell number.</b> It's how you sign in. And we call stores on your behalf, so a verified number is required. No number, no checks.</li>
-<li><b>Your checks.</b> The store, the product, the result, the call convo.</li>
+<li><b>Your cell number.</b> It's how you sign in, and we call stores on your behalf, so a verified number is required. No number, no checks.</li>
+<li><b>Your checks.</b> The store, the product, the result, and the written conversation we bring back as your proof.</li>
 <li><b>Rough location.</b> Only if you allow it, to show stores near you. Say no and search by ZIP instead.</li>
-<li><b>Payment info.</b> Stripe handles it. We never see your full card.</li>
+<li><b>Payment info.</b> Stripe handles your card. We never see the full number.</li>
+<li><b>Basic usage.</b> Enough to keep the app running, fix bugs, and stop abuse.</li>
 </ul>
 <h2 ${H2}>How we use it</h2>
-<p>To place your calls, show your history, take payment, stop abuse, and get more accurate. That's it.</p>
-<h2 ${H2}>Who sees it</h2>
-<p>Only the vendors that make it work. A voice provider to place calls, a sign-in provider, and Stripe for payments. They handle it for us under their own terms. We do not sell your personal info.</p>
-<h2 ${H2}>Your data, your call</h2>
-<p>We keep your account and history until you ask us to delete it. Want a copy, or a delete? Ask us in the app chat or on Discord. You can turn off location any time in your browser.</p>`,
+<p>To place your calls, show your history, take payment, keep the service safe, and make the answers more accurate. That is the whole list.</p>
+<h2 ${H2}>Who we share it with</h2>
+<p>Only the vendors that make Check work, and only so they can do their job. Our AI voice provider places and transcribes the calls. Twilio sends your login codes and alert texts, and carries the calls. Stripe processes payments. They handle your info under their own terms, on our behalf. We do not sell your personal information, and we never will.</p>
+<h2 ${H2}>How long we keep it</h2>
+<p>We keep your account, your checks, and their conversations until you ask us to delete them, or until we no longer need them to run the service. Delete your account and we remove your personal data, apart from the little the law requires us to hold.</p>
+<h2 ${H2}>Your rights</h2>
+<p>You can see your data, correct it, download a copy, or delete it. Turn off location any time in your browser. Turn off alert texts and emails from your account. Want a copy or a deletion? Ask us in the app chat or on Discord and we will take care of it.</p>
+<h2 ${H2}>Kids</h2>
+<p>Check is made for adults in the United States. It is not meant for children under 13, and we do not knowingly collect their information.</p>
+<p style="margin-top:22px"><a href="/p/terms" onclick="if(window.openPage){openPage('terms');return false}">Terms of Service &rarr;</a></p>`,
 };
 // Hand-written Spanish for the footer pages (copy law 3: every string ships its Spanish). Same voice,
 // no dashes, fewest words. Served whenever the app asks with ?lang=es; the owner's policy.pages
@@ -650,6 +658,8 @@ const DEFAULT_PAGES_ES: Record<string, string> = {
 <p>Llamamos a tiendas y preguntamos si algo está en stock, luego te contamos lo que dijeron. Las respuestas son una foto del momento. Las tiendas a veces se equivocan, así que no podemos garantizar que el artículo esté, ni el precio, ni que siga ahí cuando llegues.</p>
 <h2 ${H2}>Verificaciones y pagos</h2>
 <p>Pagas con verificaciones, en paquetes o incluidas en un plan. Stripe procesa la tarjeta. Una verificación se gasta cuando coloca una llamada. Las que no uses se pueden reembolsar si lo pides. Las gastadas no. Los planes se renuevan hasta que canceles, y puedes cancelar cuando quieras para el siguiente ciclo.</p>
+<h2 ${H2}>Quién puede usarlo</h2>
+<p>Debes tener al menos 18 años y estar en Estados Unidos. Eres responsable de las verificaciones hechas en tu cuenta.</p>
 <h2 ${H2}>Juega limpio</h2>
 <p>No nos uses para acosar a una tienda, hacer llamadas sin motivo real, revender el servicio o romper la ley. Podemos pausar cuentas que abusen del servicio o de las tiendas.</p>
 <h2 ${H2}>La letra chica</h2>
@@ -657,20 +667,26 @@ const DEFAULT_PAGES_ES: Record<string, string> = {
 <h2 ${H2}>Cambios</h2>
 <p>Podemos actualizar estos términos. Si sigues usando la app, es un sí. ¿Preguntas? Escríbenos en el chat de la app o en Discord.</p>
 <p style="margin-top:22px"><a href="/p/privacy" onclick="if(window.openPage){openPage('privacy');return false}">Política de privacidad →</a></p>`,
-  privacy: `<p>Esto es lo que <b>Check It For Me</b> (checkitforme.com) recopila, y para qué. Versión corta: tomamos lo necesario para hacer tus verificaciones. No vendemos tu información.</p>
+  privacy: `<p>Esto es lo que <b>Check It For Me</b> (checkitforme.com) recopila, por qué, y qué puedes hacer al respecto. Versión corta: tomamos solo lo necesario para hacer tus verificaciones, lo guardamos solo el tiempo que haga falta, y nunca lo vendemos.</p>
 <h2 ${H2}>Qué recopilamos</h2>
 <ul>
-<li><b>Tu número de celular.</b> Es tu forma de iniciar sesión. Y llamamos a tiendas en tu nombre, así que se requiere un número verificado. Sin número, no hay verificaciones.</li>
-<li><b>Tus verificaciones.</b> La tienda, el producto, el resultado, la conversación de la llamada.</li>
+<li><b>Tu número de celular.</b> Es tu forma de iniciar sesión, y llamamos a tiendas en tu nombre, así que se requiere un número verificado. Sin número, no hay verificaciones.</li>
+<li><b>Tus verificaciones.</b> La tienda, el producto, el resultado, y la conversación escrita que te traemos como prueba.</li>
 <li><b>Ubicación aproximada.</b> Solo si la permites, para mostrarte tiendas cerca. Di que no y busca por código postal.</li>
-<li><b>Datos de pago.</b> Los maneja Stripe. Nunca vemos tu tarjeta completa.</li>
+<li><b>Datos de pago.</b> Stripe procesa tu tarjeta. Nunca vemos el número completo.</li>
+<li><b>Uso básico.</b> Lo justo para que la app funcione, corregir errores y frenar abusos.</li>
 </ul>
 <h2 ${H2}>Cómo la usamos</h2>
-<p>Para colocar tus llamadas, mostrar tu historial, cobrar, frenar abusos y afinar la precisión. Eso es todo.</p>
-<h2 ${H2}>Quién la ve</h2>
-<p>Solo los proveedores que hacen que funcione. Un proveedor de voz para las llamadas, uno de inicio de sesión y Stripe para pagos. La manejan por nosotros bajo sus propios términos. No vendemos tu información personal.</p>
-<h2 ${H2}>Tus datos, tú decides</h2>
-<p>Guardamos tu cuenta e historial hasta que pidas borrarlos. ¿Quieres una copia, o borrar todo? Escríbenos en el chat de la app o en Discord. Puedes apagar la ubicación cuando quieras en tu navegador.</p>`,
+<p>Para colocar tus llamadas, mostrar tu historial, cobrar, mantener el servicio seguro y hacer las respuestas más precisas. Esa es toda la lista.</p>
+<h2 ${H2}>Con quién la compartimos</h2>
+<p>Solo con los proveedores que hacen funcionar a Check, y solo para que hagan su trabajo. Nuestro proveedor de voz con IA coloca y transcribe las llamadas. Twilio envía tus códigos de acceso y tus textos de alerta, y transporta las llamadas. Stripe procesa los pagos. Manejan tu información bajo sus propios términos, por nosotros. No vendemos tu información personal, y nunca lo haremos.</p>
+<h2 ${H2}>Cuánto tiempo la guardamos</h2>
+<p>Guardamos tu cuenta, tus verificaciones y sus conversaciones hasta que pidas borrarlas, o hasta que ya no las necesitemos para el servicio. Borra tu cuenta y eliminamos tus datos personales, salvo lo poco que la ley nos obliga a conservar.</p>
+<h2 ${H2}>Tus derechos</h2>
+<p>Puedes ver tus datos, corregirlos, descargar una copia o borrarlos. Apaga la ubicación cuando quieras en tu navegador. Desactiva los textos y correos de alerta desde tu cuenta. ¿Quieres una copia o un borrado? Escríbenos en el chat de la app o en Discord y lo resolvemos.</p>
+<h2 ${H2}>Niños</h2>
+<p>Check es para adultos en Estados Unidos. No es para menores de 13 años, y no recopilamos su información a sabiendas.</p>
+<p style="margin-top:22px"><a href="/p/terms" onclick="if(window.openPage){openPage('terms');return false}">Términos del servicio &rarr;</a></p>`,
 };
 // FAQ retired → the book (the one FAQ source of truth; the messenger FAQ tab reads it too).
 // Registered before /p/:slug so it wins.

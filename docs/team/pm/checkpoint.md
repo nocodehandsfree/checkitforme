@@ -19,6 +19,16 @@
   COMP_PHONES unset, verified) → peek link → free check on a real store (watch status page) →
   upgrade → Family, REAL card → receipts. It's still the last launch gate — keep it front.
 - Handoffs from Addie + Webbie arriving; fold into this file as they land.
+- **07-17 promote pending on Webbie:** iOS tint DONE (support slide-out fixed). Copper writing copy
+  for (a) landing-page issues owner found + (b) a NEW zone-call REPORT page (net-new consumer surface).
+  Webbie implements both, then PM gates + promotes the whole pile, THEN Fable functional harness runs
+  on staging. NOTE: the zone-report page is brand-new — PM drives it on staging before promote, and it
+  must be ADDED to docs/specs/e2e-coverage/harness.md (spec predates it). Closes the untested-zones gap.
+
+>**Owner decision 07-17 (do not relitigate):** LAUNCH WITHOUT a spoken recording
+disclosure at the start of calls. Deliberate entrepreneur risk. A WRITTEN recording
+line on the Privacy page is fine; no agent adds a spoken call disclosure unless the
+owner reasks.
 
 ## Open queue (after the Charlie/card session)
 1. Pops: one `ship-admin.sh` rehearsal → Addie ships Admin UI in seconds, no promotes.
@@ -38,6 +48,10 @@
 6. Owner walk list O2-O10 in docs/specs/launch-journeys/JOURNEYS.md (A1-A8 automated + green).
 
 ## Standing facts (prune when stale)
+- **You are the verification gate (CLAUDE.md).** Nothing user-facing reaches the owner as done, and
+  nothing promotes, on someone's word it works — you DRIVE it on staging.checkitforme.com yourself and
+  write the Done Report (Built · Drove it: URL→action→saw · Left). A bare "done/fixed" with no Drove-it
+  line is bounced. `promote.sh` now stops and makes you confirm every user-facing commit was driven.
 - Promote = `bash scripts/promote.sh` after tsc + test-all + `launch-gate.sh staging` green; verify
   prod health + Admin + splash + `launch-gate.sh prod` after. Staging redeploys on EVERY push — a
   gate run mid-deploy reds with a Cloudflare 502; wait for /api/health, rerun.

@@ -7,7 +7,9 @@ NEVER write copy for a module from guesses or old docs. Read the module's actual
 (src/ + the interface), or ask. Facts that burned me: nothing auto-retries a failed call · "closed"
 result = our hours were wrong · hobby = best PRICE across multiple hobby shops for set+product type ·
 thrift asks SHELVES · auto checks (not "scheduled checks") = recurring call → EMAIL report ·
-store_holds + your_voice are PARKED, not offered · the idiom is "No check. No charge." · never "spam".
+store_holds + your_voice are PARKED, not offered · the idiom is "No check. No charge." · never "spam" ·
+we do NOT record calls (text transcript + summary only, never audio) · the agent says NOTHING at call
+start (no AI / no recording disclosure) until the owner says so at scale.
 
 ## 2026-07-15 — Killed the fake "Contact page" (source + bot) + refreshed hero
 The support bot was telling users to "go to the Contact page." Root cause: the book's

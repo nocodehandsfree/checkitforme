@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r142" />
+<meta name="x-rev" content="glassfix-r144" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -653,7 +653,7 @@ __BRAND_HEAD__
   body:has(.supwrap.on) .suplaunch.tucked{transform:none;opacity:1;pointer-events:auto} /* no auto-tuck while it's the close button */
   body:has(.supwrap.on) .suplaunch.invite{animation:none;width:34px} /* chat open = it's the CLOSE tab; a glowing X reads wrong */
   body:has(.supwrap.on) .suplaunch.invite svg{stroke:#9a9aa8}
-  .supwrap{position:fixed;inset:0 0 0 auto;z-index:81;width:100%;max-width:100%;display:none;flex-direction:column;
+  .supwrap{position:fixed;top:0;right:0;bottom:auto;left:auto;height:100vh;height:100dvh;z-index:81;width:100%;max-width:100%;display:none;flex-direction:column;
     /* a touch deeper than the raw brand yellow — the neon read too bright in the panel (owner 07-11) */
     --sup-accent:color-mix(in srgb, var(--accent,#FFCB05) 73%, #14110a);
     background:#26262B}
@@ -1909,7 +1909,7 @@ html[data-skin="v2"] #histOverlay .hist-scroll{flex:1 1 auto;min-height:0;overfl
 /* sheet-mode (body.sheetopen): the sheet box overshoots 120px under the iOS bar so rows ghost through the
    glass. The inner scrollers get a 120px scroll-end spacer (last row stays reachable above the bar) and the
    create-flow basket lifts off the box bottom so Save never hides under the bar. */
-body.sheetopen #zones .zf-scroll::after,body.sheetopen #histOverlay .hist-scroll::after{content:'';display:block;flex:0 0 auto;height:120px}
+body.sheetopen #zones .zf-scroll::after,body.sheetopen #histOverlay .hist-scroll::after,body.sheetopen #pageOverlay #pg_body::after{content:'';display:block;flex:0 0 auto;height:calc(160px + env(safe-area-inset-bottom))} /* clears the 120px under-bar overshoot AND lifts the last row a comfortable tap above the iOS toolbar (a flush-to-edge link was untappable) */
 body.sheetopen #zones .zbasket{bottom:120px}
 /* Footer links (About/FAQ/Terms/Privacy/Contact) slide up as a bottom sheet, like every other panel.
    Flex column: the grab handle + title stay pinned; only the body scrolls (owner 07-06: the top used to
@@ -3986,11 +3986,17 @@ function sheetH_on(ov){ if(!ov||ov.__sh) return; ov.__sh=1;
   const TAIL=120;
   const place=()=>{ const prev=m.style.height;
     m.style.height=''; m.style.maxHeight=''; m.style.paddingBottom='';
-    const natural=Math.min(m.offsetHeight||0, window.innerHeight*0.86)||window.innerHeight*0.86;
-    m.style.position='absolute'; m.style.left='0'; m.style.right='0'; m.style.top=(window.innerHeight-natural)+'px'; m.style.bottom='auto';
-    m.style.height=(natural+TAIL)+'px'; m.style.maxHeight=(natural+TAIL)+'px';
-    const oy=getComputedStyle(m).overflowY;
-    if((oy==='auto'||oy==='scroll')&&m.scrollHeight>natural+4) m.style.paddingBottom=TAIL+'px';
+    const cap=window.innerHeight*0.86, cs=getComputedStyle(m);
+    // FILL sheets — a flex column that scrolls INSIDE (reading pages, zones, history) — open TALL at the
+    // cap so there's room to read. Measuring their natural height opens them short because their content
+    // loads a beat after the sheet (owner: "you can't read much like this, 75% of the page"). Form/menu
+    // sheets (plain boxes) still open content-sized.
+    const fill = cs.display==='flex' && cs.flexDirection.indexOf('column')===0 && cs.overflowY==='hidden';
+    const h = fill ? cap : (Math.min(m.offsetHeight||0, cap)||cap);
+    m.style.position='absolute'; m.style.left='0'; m.style.right='0'; m.style.top=(window.innerHeight-h)+'px'; m.style.bottom='auto';
+    m.style.height=(h+TAIL)+'px'; m.style.maxHeight=(h+TAIL)+'px';
+    const oy=cs.overflowY;
+    if((oy==='auto'||oy==='scroll')&&m.scrollHeight>h+4) m.style.paddingBottom=TAIL+'px';
     return prev!==m.style.height; };
   place();
   try{ ov.__ro=new ResizeObserver(()=>{ if(ov.__placing) return; ov.__placing=1; requestAnimationFrame(()=>{ place(); ov.__placing=0; }); }); ov.__ro.observe(m.firstElementChild||m); }catch(_){ }
@@ -4026,11 +4032,12 @@ function csheetH_off(){ const el=$('csheet'); if(!el||!el.__sh) return; el.__sh=
   el.style.position=''; el.style.top=''; el.style.bottom=''; el.style.minHeight='';
   sheetBodyMaybeUnlock();
 }
-// The MESSENGER (#supWrap — full-height RIGHT panel) as page-layer content: absolute, top=scrollY,
-// height=innerHeight+120, right-anchored; the translateX slide-in is unchanged.
+// The MESSENGER (#supWrap) is a FULL-SCREEN take-over panel, not a peek sheet: it's position:fixed and
+// sized to the VISIBLE viewport (100dvh in CSS) so its composer (the type/attach bar) always sits ABOVE the
+// iOS toolbar. Do NOT switch it to absolute + overshoot like the bottom sheets — that pushed the composer
+// 260px under the bar and it vanished (owner: "the box to type is gone"). Its message list scrolls inside;
+// the translateX slide-in is unchanged. supH_on/off only lock/unlock the background scroll.
 function supH_on(){ const el=$('supWrap'); if(!el||el.__sh) return; el.__sh=1;
-  const sc=window.scrollY||0;
-  el.style.position='absolute'; el.style.top=sc+'px'; el.style.bottom='auto'; el.style.height=(window.innerHeight+260)+'px';
   sheetBodyLock();
 }
 function supH_off(){ const el=$('supWrap'); if(!el||!el.__sh) return; el.__sh=0;
@@ -5381,7 +5388,7 @@ let LVLOG=[]; let LVSHIP=null;
 function lvlog(m){ try{ LVLOG.push(Math.round((Date.now()-(LIVE_T0||Date.now()))/1000)+'s '+m); if(LVLOG.length>100) LVLOG.shift(); }catch(_){} }
 function lvship(){ try{ const body=JSON.stringify({lines:LVLOG}); if(navigator.sendBeacon) navigator.sendBeacon('/pub/live-debug', body); else fetch('/pub/live-debug',{method:'POST',headers:{'content-type':'application/json'},body,keepalive:true}).catch(()=>{}); }catch(_){} }
 async function startCheckLive(){
-  LVLOG=[]; lvlog('start ua-visible='+document.visibilityState); clearInterval(LVSHIP); LVSHIP=setInterval(lvship,5000);
+  LVLOG=[]; lvlog('start BUILD=r0718a ua-visible='+document.visibilityState+' online='+navigator.onLine); lvship(); clearInterval(LVSHIP); LVSHIP=setInterval(lvship,3000);
   document.addEventListener('visibilitychange',()=>lvlog('visibility='+document.visibilityState),{once:false});
   CALL_GEN++; // FIRST thing: cancel any still-running background verdict poll from the previous call NOW —
               // before the confirm modal — so it can never repaint the old result over this new call.
