@@ -335,13 +335,21 @@ function seoGraph(brand: ReturnType<typeof resolveBrand>, plainName: string) {
   ];
 }
 
+// Behind the staging/prod Cloudflare worker the origin Host header is the INTERNAL *.railway.app
+// service hostname, not the domain the visitor actually used. Any absolute URL we hand a link-preview
+// bot (og:image, og:url, canonical) MUST carry the public domain — iMessage/Facebook can't fetch the
+// internal host, so the unfurl card renders blank (owner 07-18: shared find showed no image). Mirrors
+// the og:title fix that already lived inline in renderRunner; now the single source for every render.
+const publicHost = (host: string): string =>
+  /railway\.app$/i.test(host) ? (config.staging.on ? "staging.checkitforme.com" : "checkitforme.com") : host.replace(/^www\./, "");
+
 // Coming-soon splash: the ONLY public HTML while config.comingSoon is on. Check wordmark + the owner's
 // launch line + the four product-type icons. Standalone (no app JS), dark on-brand, noindex.
 const COMING_SOON_ICONS = ["pokemon", "onepiece", "topps", "needoh"];
 function renderComingSoon(_host: string, refShare = false): string {
   const line = "Find insanely hard to get products on the shelves at retail prices.";
   // Even gated, a shared link must unfurl right: bots read these tags while humans see the splash.
-  const ogImage = `https://${_host}/og/${refShare ? "card-refer" : "runner"}.png`;
+  const ogImage = `https://${publicHost(_host)}/og/${refShare ? "card-refer" : "runner"}.png`;
   const ogTitle = refShare ? "We both get a free check." : "Check — coming soon";
   const og = [
     `<meta property="og:type" content="website">`,
@@ -389,10 +397,11 @@ body{background:#0C0C12;color:#fff;font-family:Inter,-apple-system,system-ui,san
 /** Render the consumer page branded for a vertical micro-site (resolved from the subdomain). */
 function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file = "checkit.html", tone = "", peek = false, refShare = false): string {
   void peek; // coming-soon gate now lives in the single middleware above (peek bypass handled there)
-  const canonical = `https://${host}/`;
+  const pub = publicHost(host); // never the internal railway host in emitted URLs (see publicHost)
+  const canonical = `https://${pub}/`;
   const plainName = brand.name.replace(/<[^>]+>/g, "");
   // Invite links (?ref=CODE) unfurl with the referral card (owner 07-14) — the page itself is the app.
-  const ogImage = refShare ? `https://${host}/og/card-refer.png` : `https://${host}/og/${brand.key}.png`;
+  const ogImage = refShare ? `https://${pub}/og/card-refer.png` : `https://${pub}/og/${brand.key}.png`;
   const head = [
     `<title>${esc(brand.title)}</title>`,
     `<meta name="description" content="${esc(brand.desc)}">`,
@@ -406,14 +415,14 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
     `<meta property="og:type" content="website">`,
     `<meta property="og:site_name" content="${esc(plainName)}">`,
     // Apex/invite embeds (owner): the CARD IMAGE carries the headline, so the visible link title is
-    // just the address — no repeated "Is it in stock?" under the image. NB: behind the proxy the Host
-    // header is the internal Railway hostname — show the public domain, never that.
-    `<meta property="og:title" content="${esc(brand.key === "runner" ? (/railway\.app$/i.test(host) ? (config.staging.on ? "staging.checkitforme.com" : "checkitforme.com") : host.replace(/^www\./, "")) : brand.title)}">`,
+    // just the address — no repeated "Is it in stock?" under the image. publicHost keeps the internal
+    // Railway hostname out of the visible title behind the proxy.
+    `<meta property="og:title" content="${esc(brand.key === "runner" ? pub : brand.title)}">`,
     `<meta property="og:description" content="${esc(brand.desc)}">`,
     `<meta property="og:url" content="${canonical}">`,
     `<meta property="og:image" content="${ogImage}">`,
     `<meta name="twitter:card" content="summary_large_image">`,
-    `<meta name="twitter:title" content="${esc(brand.key === "runner" ? (/railway\.app$/i.test(host) ? (config.staging.on ? "staging.checkitforme.com" : "checkitforme.com") : host.replace(/^www\./, "")) : brand.title)}">`,
+    `<meta name="twitter:title" content="${esc(brand.key === "runner" ? pub : brand.title)}">`,
     `<meta name="twitter:description" content="${esc(brand.desc)}">`,
     `<meta name="twitter:image" content="${ogImage}">`,
     `<style>:root{--accent:${brand.accent};--accent2:${brand.accent2 || brand.accent};--logo-scale:${brand.logoScale || 1}}</style>`,
@@ -452,12 +461,13 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   const store = (q.store || "a local store").slice(0, 80);
   const cat = (q.cat || brand.category || "cards").slice(0, 60);
   const plainName = brand.name.replace(/<[^>]+>/g, "");
-  const site = `https://${host}/`;
+  const pub = publicHost(host); // never the internal railway host in emitted URLs (see publicHost)
+  const site = `https://${pub}/`;
   // Unfurl cards (owner 07-14): section-reflective images with the brandmark + copy baked in.
   // In-stock find → the per-brand "X in stock" card (store name rides og:title under the image);
   // zone share → the zone card; out-of-stock keeps the brand hero card.
-  const findCard = `https://${host}/og/card-find-${brand.key}.png`;
-  const ogImage = zone ? `https://${host}/og/card-zone.png` : inStock ? findCard : `https://${host}/og/${brand.key}.png`;
+  const findCard = `https://${pub}/og/card-find-${brand.key}.png`;
+  const ogImage = zone ? `https://${pub}/og/card-zone.png` : inStock ? findCard : `https://${pub}/og/${brand.key}.png`;
   const zN = Math.max(0, Number(q.n) || 0), zI = Math.max(0, Number(q.i) || 0);
   const title = zone ? `${zI} of ${zN} stores had it in stock`
     : inStock ? `${cat} in stock at ${store}` : `👀 ${store}: watching for ${cat}`;
@@ -475,7 +485,7 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
     `<meta property="og:site_name" content="${esc(plainName)}">`,
     `<meta property="og:title" content="${esc(title)}">`,
     `<meta property="og:description" content="${esc(desc)}">`,
-    `<meta property="og:url" content="https://${host}/s?store=${encodeURIComponent(store)}&cat=${encodeURIComponent(cat)}&v=${inStock ? "in" : "out"}">`,
+    `<meta property="og:url" content="https://${pub}/s?store=${encodeURIComponent(store)}&cat=${encodeURIComponent(cat)}&v=${inStock ? "in" : "out"}">`,
     `<meta property="og:image" content="${ogImage}">`,
     `<meta name="twitter:card" content="summary_large_image">`,
     `<meta name="twitter:title" content="${esc(title)}">`,

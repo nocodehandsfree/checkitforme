@@ -4319,6 +4319,10 @@ let MAP_FIT_NEXT=false, MAP_GESTURING=false;
 // Neon store-color legend shown along the bottom of the map.
 function mapLegendHtml(){
   const dot=(c)=>`<span class="lgd" style="background:${c};box-shadow:0 0 7px ${c},0 0 2px ${c}"></span>`;
+  // Kiosk pins carry no tier colour (TIER_VIEW=!kiosk) — a Best/Mostly/Spotty legend there would be a
+  // lie. Show a plain-dot "Kiosk" key + the in-stock check instead. (owner 07-18)
+  if(MODE==='kiosk') return `<span>${dot('#9aa0b0')}${t('count.kiosks','kiosks')}</span>`
+       + `<span>${FCHK(14)}${t('instock.now','In stock')}</span>`;
   return `<span>${dot('#2BFF88')}${t('lg.best','Best')}</span>`
        + `<span>${dot('#29D4FF')}${t('lg.mostly','Mostly')}</span>`
        + `<span>${dot('#FF9E2C')}${t('grp.spotty','Spotty')}</span>`
@@ -4546,7 +4550,7 @@ function renderStores(){
   const lh=$('listhdr'), lhl=$('lh_label');
   if(lhl) lhl.textContent = (TIER_VIEW && t5.length) ? t('grp.best','Best bets') : '';
   if(lh) lh.style.display = (list.length && (USER_LOC||q)) ? 'flex' : 'none';
-  { const mt=$('maptoggle'); if(mt) mt.style.display = (list.length && USER_LOC && !kiosk) ? '' : 'none'; }
+  { const mt=$('maptoggle'); if(mt) mt.style.display = (list.length && USER_LOC) ? '' : 'none'; } // kiosk/hobby/thrift all get the map too — pins come from LAST_STORES lat/lng (owner 07-18)
   const emptyMsg=()=>{
     if(kiosk) return USER_LOC?tf('empty.kiosk',`No kiosks mapped within ${RADIUS} mi yet. They're crowd-built. Bought from one? <a onclick="openReceipt()" style="color:var(--purple);font-weight:700;cursor:pointer">Email a receipt</a> to put it on the map.`,{r:RADIUS}):t('empty.search',"No matches. Try a different search, or tap the pin for stores nearby.");
     if(!USER_LOC) return t('empty.search',"No matches. Try a different search, or tap the pin for stores nearby.");
