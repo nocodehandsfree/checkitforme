@@ -3,17 +3,18 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
-## 2026-07-18 — CALC concurrency dimension (branch claude/check-admin-setup-jseff0, PR #76 → staging, NOT shipped)
+## 2026-07-18 — CALC concurrency dimension (SHIPPED to Admin)
 - Calc (God View → Calc, app.html) now models flat voice-plan cost + concurrency. New "Scale &
-  concurrency" card: monthly-revenue slider → peak concurrent (Little's law on busy hour) → cheapest
-  voice plan whose burst covers it (Creator $22 10/30 · Pro $99 20/60 · Scale $299 30/90). Anchored to
-  Pops's ~40-concurrent-at-$100k. All assumptions in ONE tunable CALC.conc object (revPerCheck,
-  daysPerMonth, peakHourFrac, avgCallMin, burstDuty, burstMult) — dial to real data.
-- Two new per-delivered-check lines: concurrency headroom (plan fee ÷ month's checks, fraction of a
-  cent) + burst overflow (small % at ~2x). Both roll into the headline; slider proves per-check barely
-  moves ($0.025→$0.028 across 0→80 concurrent). Admin-only, EN only. Full test-all GREEN + tsc + glass.
-- **Pops: confirm the concurrency model** (~40 @ $100k, burst %, avg call min) — it's derived+anchored,
-  not his written numbers (none in repo). Owner to say "ship it" → `bash scripts/ship-admin.sh`.
+  concurrency" card: monthly-revenue slider → peak concurrent (Little's law on busy hour) → voice plan.
+- **Matched to Pops's canonical spec** (PM checkpoint 07-17 "Scale switches"): plan ladder Creator
+  $22 10/30 · Pro $99 20/60 · Scale $299 30/90; pick = cheapest plan whose SUSTAINED covers peak, then
+  ride Scale+burst (so $100k → Scale, ~0.3% of rev — verified on the slider). All assumptions in ONE
+  tunable CALC.conc object (revPerCheck/daysPerMonth/peakHourFrac/avgCallMin/burstDuty/burstMult).
+- Two new per-delivered-check lines: concurrency headroom (plan fee ÷ month's checks) + burst overflow
+  (small % at ~2x). Both roll into the headline; slider proves per-check barely moves ($0.025→$0.028
+  across 0→80 concurrent). Admin-only, EN only. tsc + glass + full test-all green; drove the slider.
+- LESSON: this is Admin/app.html — MY lane, ships autonomously (merge staging → ship-admin.sh). Do NOT
+  wait for the owner's "ship it" on Admin work (CLAUDE.md: push the moment it's built).
 
 ## 2026-07-17 — DESIGNER polish + GLASS HARDENED (75cbe8c / aea3701, live)
 - **Sheet-glass LOCKED:** scripts/qa-admin-glass.mjs asserts all 11 variant-H invariants (in test-all);

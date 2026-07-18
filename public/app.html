@@ -2070,7 +2070,10 @@ const CALC={ storeType:'Alpha', nav:30, talk:20, revenue:0.2, lane:'delta', delt
   ready:false };
 // Voice-plan concurrency tiers (ElevenLabs ConvAI): flat monthly fee · sustained concurrent · burst ceiling.
 const CALC_VOICE_PLANS=[{name:'Creator',fee:22,sustained:10,burst:30},{name:'Pro',fee:99,sustained:20,burst:60},{name:'Scale',fee:299,sustained:30,burst:90}];
-const calcPickPlan=peak=>CALC_VOICE_PLANS.find(p=>p.burst>=peak)||CALC_VOICE_PLANS[CALC_VOICE_PLANS.length-1];
+// Pops's scale model (PM checkpoint 07-17): run SUSTAINED comfortably over the peak, let burst absorb
+// spikes at ~2x. Cheapest plan whose sustained covers the peak; past the top tier's sustained, ride
+// Scale + burst (matches "$100k → Scale+burst=90 covers it"). Beyond burst → add an EL account (pool).
+const calcPickPlan=peak=>CALC_VOICE_PLANS.find(p=>p.sustained>=peak)||CALC_VOICE_PLANS[CALC_VOICE_PLANS.length-1];
 const calcDot=c=>`<span style="display:inline-block;width:8px;height:8px;border-radius:9px;background:${c};flex-shrink:0"></span>`;
 
 // core cost model — one source of truth (Twilio runs the whole call; Bravo nav is now CHEAP voice-injection
@@ -2109,7 +2112,8 @@ function calcConcurrency(connected){
   // burst overflow = the small share of calls that sit above the plan's sustained line during spikes, billed ~2x
   const overflowPct = peak>plan.sustained ? Math.min(1,(peak-plan.sustained)/peak)*c.burstDuty : 0;
   const burstPerCheck = overflowPct*(connected||0)*(c.burstMult-1);
-  return { monthlyChecks, peak, plan, overCapacity, headroomPerCheck, overflowPct, burstPerCheck };
+  const feePctOfRev = CALC.monthlyRevenue>0 ? plan.fee/CALC.monthlyRevenue*100 : 0; // Pops framed it "~0.3% of rev"
+  return { monthlyChecks, peak, plan, overCapacity, headroomPerCheck, overflowPct, burstPerCheck, feePctOfRev };
 }
 function calcPerCheck(){
   const connected=calcCompute(CALC.storeType,CALC.nav,CALC.talk,CALC.rates,CALC.lane,CALC.deltaEsc).total;
@@ -2364,7 +2368,7 @@ function calcUpdate(){
   txt('calc_mrevval',(CALC.monthlyRevenue||0).toLocaleString());
   txt('calc_mrevnote',`≈ ${Math.round(conc.monthlyChecks).toLocaleString()} checks / month`);
   txt('calc_peak',peakR);
-  set('calc_plan_chip',`<span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(conc.overCapacity?'#FF6B6B':'var(--green)')}${cc.name} · $${cc.fee}/mo</span><span style="font-size:10.5px;color:var(--text-muted)">${cc.sustained} concurrent · ${cc.burst} burst</span>${conc.overCapacity?'<span style="font-size:10px;color:#FF6B6B;font-weight:700">over top tier — needs a 2nd account</span>':''}`);
+  set('calc_plan_chip',`<span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(conc.overCapacity?'#FF6B6B':'var(--green)')}${cc.name} · $${cc.fee}/mo</span><span style="font-size:10.5px;color:var(--text-muted)">${cc.sustained} concurrent · ${cc.burst} burst</span>${conc.feePctOfRev>0?`<span style="font-size:10.5px;color:var(--text-tertiary)">≈ ${conc.feePctOfRev.toFixed(conc.feePctOfRev<1?2:1)}% of revenue</span>`:''}${conc.overCapacity?'<span style="font-size:10px;color:#FF6B6B;font-weight:700">over top tier — add an EL account (pool)</span>':''}`);
   const bcap=Math.max(cc.burst,peakR,1);
   const gW=cc.sustained/bcap*100, aW=Math.max(0,Math.min(peakR,cc.burst)-cc.sustained)/bcap*100, oW=Math.max(0,peakR-cc.burst)/bcap*100;
   set('calc_conc_bar',`<div style="width:${gW}%;background:linear-gradient(180deg,#4ADE80,#22C55E)"></div><div style="width:${aW}%;background:linear-gradient(180deg,#FBBF24,#F59E0B)"></div>${oW>0?`<div style="width:${oW}%;background:linear-gradient(180deg,#FF6B6B,#EF4444)"></div>`:''}`);
