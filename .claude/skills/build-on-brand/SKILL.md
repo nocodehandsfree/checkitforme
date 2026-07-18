@@ -15,6 +15,17 @@ description: >-
 Nothing visual or written ships without the guides. This skill is a map, not the
 content — open the docs it points at; they are the single source of truth.
 
+## 🚫 HARD GATE — do this BEFORE you write one line of UI
+**Open the comp file and name the element you are lifting.** Not the style guide's written
+component list — the actual comp (`WEBSITE_COMPS.dc.html` / `ADMIN_COMPS.dc.html`). The guides are
+PROSE DESCRIBING the comps; the comp is the source of truth. Building from the prose is exactly how
+you invent a button, badge, or font that doesn't exist and ship a page that looks nothing like the
+site (it happened — a whole landing-page cycle wasted, 2026-07-18).
+
+Before coding, for every piece on your screen, answer: **"which comp element is this, and did I open
+the file and copy it?"** Can't point to the comp element? You're inventing — STOP and open the file.
+"The written list was enough" is the exact lie that failed. It is never enough. Open the comp.
+
 ## Read first, in this order (don't skip)
 1. **`docs/design/STYLE_GUIDE.md`** — the look: every token, type size, radius, depth, component rule.
 2. **`docs/design/copy/COPY_STYLE_GUIDE.md`** — the words. Owns EVERY customer-facing string. On any
