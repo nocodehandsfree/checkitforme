@@ -533,11 +533,15 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
         : `<span class="lmono">${esc(mono(s.n))}</span>`).join("")}</div>`
     : "";
   // Elevated skin tokens (STYLE_GUIDE §1-3): page #1D1D22, big card #26262B r26, Inter, green CTA ring.
+  // The CP / CPEND comment markers below fence this <style> as a CONSUMER PAGE: qa-design audits
+  // everything inside against the STYLE_GUIDE token set + Inter-only, same as the homepage. ANY new
+  // consumer landing/share/report page's <style> MUST be fenced the same way (copy the two markers
+  // around it) so it can't ship off-system — server pages had no design coverage before 2026-07-18.
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">${head}
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="preload" href="/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin>
-<style>
+<style>/*CP*/
   @font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;src:url(/fonts/inter-var-latin.woff2) format('woff2')}
   *{box-sizing:border-box;margin:0} :root{--green:${green};--amber:${amber}}
   body{background:#1D1D22;color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100dvh;display:grid;place-items:center;padding:24px}
@@ -556,7 +560,7 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   .hook{color:#fff;font-size:16px;font-weight:800;letter-spacing:-.2px;margin-bottom:14px}
   .cta{display:block;text-decoration:none;border-radius:14px;padding:16px;font-size:16px;font-weight:900;letter-spacing:-.2px;color:#06210f;background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);box-shadow:0 10px 24px -8px rgba(52,194,104,.4)}
   .trust{color:#8A8A96;font-size:12.5px;font-weight:600;line-height:1.45;margin-top:16px;max-width:320px;margin-left:auto;margin-right:auto}
-</style></head><body><div class="wrap">
+/*CPEND*/</style></head><body><div class="wrap">
   <img class="mark" src="/logos/brand/check.png?v=2" alt="Check It For Me">
   <div class="card">
     <div class="badge">${ic} ${badge}</div>
