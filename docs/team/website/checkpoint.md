@@ -6,6 +6,22 @@
 > the other dev: **he owns the tint CSS** (`__bootTone`/`tone-*`/body wash/sheet chrome), **I own
 > view/mode/nav** — don't blind-edit the tint, it's fragile.
 
+## 🔧 07-18 pt2 — share PROOF page rebuilt + referral welcome (LIVE on staging)
+- **Share proof page (`/s` renderShare, server.ts):** rebuilt on the elevated skin (page #1D1D22, big
+  card #26262B r26, Inter, green CTA ring). Owner's proof+teaser copy in order: brandmark → verdict
+  badge → headline → store line (or zone logo row) → what-it-is → hook + green CTA (→ site root) →
+  trust. Retired "Real human, real shelf truth." **Bilingual:** sharer's app appends `&lang=`; cold
+  recipient falls back to Accept-Language. Zone sweep: `zoneShare` passes in-stock stores' logos
+  (server adds `logoUrl` to zone-run results via chainLogoInfo), server tiles them 40px with a 2-letter
+  monogram fallback; `i=0` collapses to on-watch copy. **Verified LIVE all 5 states** (in EN/ES, watch,
+  zone-with-logos incl. monogram, zone i=0) + og:image on the public host.
+- **Referral welcome (checkit.html):** `?ref=` + not-signed-in → gift-framed centered pop-up as the
+  first screen; CTA opens signup (where the free check is granted). Shown once on the fresh arrival
+  (`REF_FRESH`), gated on `.overlay.on` so it never stacks on a deep-link. ⚠️ **NOT driven headless**
+  (proxy blocks staging TLS; local-server recipe too heavy) — built on proven `.overlay`/`.modal` +
+  openAuth, typechecks + tests green. Owner sees it in a SIGNED-OUT/private tab only (by design).
+- **Copy:** synced stale ES `ref.sharemsg`/`ref.both` from 3 → 1 check. Every new string ships EN+ES.
+
 ## 🔧 07-18 — share-card image fix + kiosk map (LIVE on staging, verified server-side)
 - **Share unfurl showed no image (owner report).** ROOT CAUSE: behind the staging Cloudflare worker the
   origin Host header is the INTERNAL `voice-caller-staging-production.up.railway.app`, so og:image/og:url/
