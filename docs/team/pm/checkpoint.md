@@ -19,6 +19,11 @@
   COMP_PHONES unset, verified) → peek link → free check on a real store (watch status page) →
   upgrade → Family, REAL card → receipts. It's still the last launch gate — keep it front.
 - Handoffs from Addie + Webbie arriving; fold into this file as they land.
+- **07-17 promote pending on Webbie:** iOS tint DONE (support slide-out fixed). Copper writing copy
+  for (a) landing-page issues owner found + (b) a NEW zone-call REPORT page (net-new consumer surface).
+  Webbie implements both, then PM gates + promotes the whole pile, THEN Fable functional harness runs
+  on staging. NOTE: the zone-report page is brand-new — PM drives it on staging before promote, and it
+  must be ADDED to docs/specs/e2e-coverage/harness.md (spec predates it). Closes the untested-zones gap.
 
 >**Owner decision 07-17 (do not relitigate):** LAUNCH WITHOUT a spoken recording
 disclosure at the start of calls. Deliberate entrepreneur risk. A WRITTEN recording
