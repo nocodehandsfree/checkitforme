@@ -484,25 +484,33 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   const ogImage = state === "zonein" ? `https://${pub}/og/card-zone.png` : state === "in" ? `https://${pub}/og/card-find-${brand.key}.png` : `https://${pub}/og/${brand.key}.png`;
 
   const catHl = `<span class="hl">${esc(cat)}</span>`;
-  const ic = positive
-    ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>`
-    : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>`;
-  const badge = state === "in" ? L("In stock", "En stock")
-    : state === "zonein" ? L(`${zI} of ${zN} had it`, `${zI} de ${zN} lo tenían`)
-    : L("On watch", "En seguimiento");
-  const headline = state === "in" ? L(`${catHl} is in stock`, `${catHl} está en stock`)
-    : state === "zonein" ? L(`${catHl} is in stock nearby`, `${catHl} está en stock cerca`)
+  // Optional store-logo URL the app appends on an in-stock share (?slogo=). Absent → monogram tile.
+  const slogo = (q.slogo || "").slice(0, 300);
+  // Badge icon: comp P6 in-stock RESULT pill uses a glowing dot; watch keeps the bell.
+  const dot = `<span class="gdot"></span>`;
+  const bell = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>`;
+  const badgeIcon = positive ? dot : bell;
+  const badge = state === "in" ? L("IN STOCK", "EN STOCK")
+    : state === "zonein" ? L(`${zI} OF ${zN} HAD IT`, `${zI} DE ${zN} LO TENÍAN`)
+    : L("ON WATCH", "EN SEGUIMIENTO");
+  const headline = state === "in" ? L(`${catHl} is on the shelves`, `${catHl} está en los estantes`)
+    : state === "zonein" ? L(`${catHl} is on shelves nearby`, `${catHl} está en estantes cerca`)
     : L(`We're tracking ${catHl}`, `Estamos rastreando ${catHl}`);
-  const storeLine = L(`at <b>${esc(store)}</b>`, `en <b>${esc(store)}</b>`);
   const zoneMsg = L(`Check called ${zN} stores at once. ${esc(cat)} is on the shelf at these:`,
                     `Check llamó a ${zN} tiendas a la vez. ${esc(cat)} está en el estante en estas:`);
   const whatIsIt = state === "in"
-    ? L("A real call just confirmed it.", "Una llamada real lo confirmó.")
+    ? L("Check AI calls stores so you don't have to.", "Check llama a las tiendas para que no tengas que hacerlo.")
     : state === "zonein" ? "" // the zone message + logo row carry it
     : zone ? L("None yet. Check catches the restock.", "Ninguna aún. Check atrapa la reposición.")
     : L("Not in yet. Check catches the restock.", "Aún no. Check atrapa la reposición.");
   const hook = L("First check's on us.", "Tu primera verificación va por nuestra cuenta.");
-  const button = L("See what's near you →", "Ve qué hay cerca →");
+  const button = L("CHECK STORES", "BUSCAR TIENDAS");
+  // Store row (comp hero tile 56px + store name): real logo if the share carried one, else a monogram.
+  const storeRow = showStore
+    ? `<div class="srow"><div class="stile${slogo ? "" : " mono"}">${slogo
+        ? `<img src="${esc(slogo)}" alt="" onerror="this.parentNode.classList.add('mono');this.parentNode.textContent='${esc(mono(store))}'">`
+        : esc(mono(store))}</div><div class="sname">${esc(store)}</div></div>`
+    : "";
 
   const green = "#4ADE80", amber = "#F59E0B";
   const accent = positive ? green : amber;
@@ -533,11 +541,12 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
         ? `<div class="ltile"><img src="${esc(s.l)}" alt="" onerror="this.style.display='none';this.parentNode.classList.add('lmono');this.parentNode.textContent='${esc(mono(s.n))}'"></div>`
         : `<span class="lmono">${esc(mono(s.n))}</span>`).join("")}</div>`
     : "";
-  // Elevated skin tokens (STYLE_GUIDE §1-3): page #1D1D22, big card #26262B r26, Inter, green CTA ring.
-  // The CP / CPEND comment markers below fence this <style> as a CONSUMER PAGE: qa-design audits
-  // everything inside against the STYLE_GUIDE token set + Inter-only, same as the homepage. ANY new
-  // consumer landing/share/report page's <style> MUST be fenced the same way (copy the two markers
-  // around it) so it can't ship off-system — server pages had no design coverage before 2026-07-18.
+  // Rebuilt 2026-07-18 element-for-element from the P6 IN-STOCK comp (docs/design/comps/
+  // WEBSITE_COMPS.dc.html, ~L448-471): green-wash card (r40), glow-dot IN STOCK pill, 56px store
+  // hero tile, and the "Check another store" capsule CTA with the ckShine sweep + ckGlow dot.
+  // The CP / CPEND markers fence this <style> as a CONSUMER PAGE: qa-design holds everything inside
+  // to the STYLE_GUIDE token set + Inter-only, same as the homepage. ANY new consumer landing/share
+  // page's <style> MUST be fenced the same way so it can't ship off-system.
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">${head}
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
@@ -548,29 +557,42 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   body{background:#1D1D22;color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100dvh;display:grid;place-items:center;padding:24px}
   .wrap{max-width:400px;width:100%;text-align:center}
   .mark{height:24px;width:auto;display:block;margin:0 auto 22px;opacity:.96}
-  .card{background:#26262B;border-radius:26px;padding:30px 24px 26px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
-  .badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:${accent};background:${accent}22;padding:7px 13px;border-radius:999px;margin-bottom:15px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
-  .big{font-size:29px;font-weight:900;line-height:1.15;letter-spacing:-.8px;text-wrap:balance;margin-bottom:9px} .big .hl{color:${accent}}
-  .store{color:#B9B9C4;font-size:15px;font-weight:600;margin-bottom:18px} .store b{color:#fff;font-weight:800}
-  .zmsg{color:rgba(255,255,255,.78);font-size:14.5px;font-weight:500;line-height:1.5;margin:2px auto 4px;max-width:330px}
+  .card{border:1px solid rgba(255,255,255,.12);border-radius:40px;padding:36px 24px 28px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
+  .card.pos{background:linear-gradient(180deg,#266440 0px,#1D1D22 460px)}
+  .card.neg{background:#26262B}
+  .badge{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.13em;color:${accent};background:rgba(255,255,255,.06);border:1px solid ${accent}66;padding:7px 14px;border-radius:999px;margin-bottom:16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .gdot{width:8px;height:8px;border-radius:50%;background:${accent};box-shadow:0 0 8px ${accent};animation:ckGlow 2s ease-in-out infinite}
+  .big{font-size:29px;font-weight:900;line-height:1.15;letter-spacing:-.8px;text-wrap:balance;margin-bottom:2px} .big .hl{color:${accent}}
+  .srow{display:flex;align-items:center;justify-content:center;gap:12px;margin:16px 0 2px}
+  .stile{width:52px;height:52px;border-radius:14px;background:#1F1F25;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
+  .stile img{width:40px;height:40px;object-fit:contain}
+  .stile.mono{color:#CDCDD8;font-weight:900;font-size:17px;background:linear-gradient(145deg,#34343D,#23232B)}
+  .sname{font-size:19px;font-weight:800;letter-spacing:-.3px;text-align:left}
+  .zmsg{color:rgba(255,255,255,.78);font-size:14.5px;font-weight:500;line-height:1.5;margin:6px auto 4px;max-width:330px}
   .logos{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:14px 0 6px}
   .ltile,.lmono{width:40px;height:40px;border-radius:11px;flex:0 0 auto}
   .ltile{background:#1F1F25;display:grid;place-items:center;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)} .ltile img{width:30px;height:30px;object-fit:contain}
   .lmono{background:linear-gradient(145deg,#34343D,#23232B);display:grid;place-items:center;color:#CDCDD8;font-weight:900;font-size:14px}
-  .what{color:rgba(255,255,255,.78);font-size:14.5px;font-weight:500;line-height:1.5;margin:0 auto 20px;max-width:330px}
-  .hook{color:#fff;font-size:16px;font-weight:800;letter-spacing:-.2px;margin-bottom:14px}
-  .cta{display:block;text-decoration:none;border-radius:14px;padding:16px;font-size:16px;font-weight:900;letter-spacing:-.2px;color:#06210f;background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);box-shadow:0 10px 24px -8px rgba(52,194,104,.4)}
-  .trust{color:#8A8A96;font-size:12.5px;font-weight:600;line-height:1.45;margin-top:16px;max-width:320px;margin-left:auto;margin-right:auto}
+  .what{color:rgba(255,255,255,.72);font-size:15.5px;font-weight:500;line-height:1.5;margin:14px auto 0;max-width:320px}
+  .cta{display:block;text-decoration:none;border-radius:999px;padding:2.5px;margin-top:22px;background:linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%);box-shadow:0 12px 28px -8px rgba(25,177,69,.45)}
+  .cin{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:10px;border-radius:999px;background:#20202A;padding:15px 24px}
+  .shine{position:absolute;top:0;bottom:0;left:-45%;width:45%;background:linear-gradient(105deg,transparent 0%,rgba(140,255,185,.25) 50%,transparent 100%);animation:ckShine 2.8s ease-in-out infinite}
+  .ctxt{position:relative;font-size:13.5px;font-weight:800;letter-spacing:.14em;color:#fff}
+  .arw{position:relative;flex:0 0 auto}
+  .foot{color:#8A8A96;font-size:12.5px;font-weight:600;margin-top:14px}
+  @keyframes ckShine{0%{left:-45%}55%,100%{left:110%}}
+  @keyframes ckGlow{0%,100%{opacity:.4}50%{opacity:1}}
+  @media (prefers-reduced-motion:reduce){.shine,.gdot{animation:none}}
 /*CPEND*/</style></head><body><div class="wrap">
   <img class="mark" src="/logos/brand/check.png?v=2" alt="Check It For Me">
-  <div class="card">
-    <div class="badge">${ic} ${badge}</div>
+  <div class="card ${positive ? "pos" : "neg"}">
+    <div class="badge">${badgeIcon} ${badge}</div>
     <h1 class="big">${headline}</h1>
-    ${showStore ? `<div class="store">${storeLine}</div>` : ""}
+    ${storeRow}
     ${state === "zonein" ? `<div class="zmsg">${zoneMsg}</div>${logoRow}` : ""}
-    ${whatIsIt ? `<div class="what"${state === "zonein" ? ` style="margin-top:14px"` : ""}>${whatIsIt}</div>` : ""}
-    <div class="hook">${hook}</div>
-    <a class="cta" href="${site}">${button}</a>
+    ${whatIsIt ? `<div class="what">${whatIsIt}</div>` : ""}
+    <a class="cta" href="${site}"><span class="cin"><span class="shine"></span><span class="ctxt">${button}</span><svg class="arw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></span></a>
+    <div class="foot">${hook}</div>
   </div>
 </div></body></html>`;
 }
