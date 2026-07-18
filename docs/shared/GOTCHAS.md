@@ -125,3 +125,10 @@ worse than no comment. Several entries below started as wrong comments.)
   `linear-gradient(180deg,#266440 0%,#20202A 46%)`. No alpha, no premultiply artifact, clean bottom.
 - Lesson: a colors/fonts diff and a Chromium render CANNOT catch this — it is an iOS-paint blind spot.
   If the owner reports a tint that no render reproduces, suspect a `rgba(r,g,b,0)` gradient stop first.
+
+  UPDATE: the opaque-gradient fix alone did NOT kill it. The real culprit was the watermark
+  layer: `.cwmwrap{position:absolute;inset:0;border-radius:40px;overflow:hidden}` wrapping a
+  bright-green check. iOS Safari's `overflow:hidden` + `border-radius` clip leaks a 1px line of
+  the clipped content's color along the BOTTOM edge (Chromium doesn't). Fix: drop the full-card
+  clip layer entirely — contain the watermark fully inside the card, and use an inset ring shadow
+  instead of a border for the edge.
