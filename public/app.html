@@ -5097,7 +5097,13 @@ function userSheet(i){
     +(u.email?line('Email',esch(u.email)):'')+(u.phone?line('Phone',esch(u.phone)):'')
     +line('Credits',u.credits)+line('Checks made',u.callsMade)+line('Spent',money(u.spentCents))
     +line('Caller ID',u.callerIdVerified?'<span style="color:var(--green)">verified</span>':'not verified')
-    +`<div class="btnrow split" style="margin-top:18px">
+    +`<div class="k-eyebrow">Free credits</div>
+    <div class="row" style="gap:8px">
+      <input id="grant_n" type="number" min="1" max="1000" inputmode="numeric" placeholder="e.g. 25" style="flex:1">
+      <button class="k-key" style="margin:0" onclick="giveCredits('${esch(u.id)}')">Give</button>
+    </div>
+    <div class="hint" style="margin-top:8px">Added to their balance now, free. 1 to 1000.</div>
+    <div class="btnrow split" style="margin-top:18px">
       ${u.comp?'<span></span>':`<button class="ghost" onclick="closeSheet();toggleStaff('${esch(u.id)}',${u.manualStaff?'false':'true'})">${u.manualStaff?'Unmark admin/test':'Mark admin/test'}</button>`}
     </div>
     <button class="k-danger" onclick="closeSheet();resetAccount('${esch(u.id)}','${esch(u.phone||u.email||u.id)}')">Reset this account</button>`);
@@ -5117,6 +5123,14 @@ async function resetAccount(id,label){
   if(r&&r.ok){ toast(label+' reset to brand new'); loadUsers(); } else toast('Could not reset that account');
 }
 async function toggleStaff(id,on){ const r=await api('/api/admin/users/staff',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,on})}); if(r&&!r.error){ toast(on?'Flagged as admin/test · not a customer':'Unflagged'); loadUsers(); } else toast('Could not update'); }
+// Give an account free credits (added to their balance now, never expires). Server caps 1–1000.
+async function giveCredits(id){
+  const el=document.getElementById('grant_n'); const n=Math.round(Number(el&&el.value));
+  if(!n||n<1||n>1000){ toast('Enter 1 to 1000'); if(el) el.focus(); return; }
+  const r=await api('/api/admin/users/'+encodeURIComponent(id)+'/grant',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({checks:n})});
+  if(r&&r.ok){ closeSheet(); toast('Gave '+n+' free credit'+(n===1?'':'s')+' · now '+r.credits); loadUsers(); }
+  else toast(r&&r.error==='not_found'?'Account not found':r&&r.error?r.error:'Could not give credits');
+}
 // ---- Restock intel (God View → Restock): network view + per-store breakdown on tap ----
 function rsBar(label,n,max,cls){ return `<div class="rsbar"><span class="rsbl">${esch(label)}</span><span class="rsbt"><span class="rsbf ${cls||''}" style="width:${max?Math.round(n/max*100):0}%"></span></span><b>${n}</b></div>`; }
 async function loadRestock(){
