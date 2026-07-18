@@ -3,6 +3,14 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-18 — FREE CREDITS grant in Users (UI only, live)
+Owner ask (pre-launch): assign free credits to any account. Added a **Free credits** control to the
+user detail sheet (God View ▸ Members ▸ tap a member): carved amount input + "Give" button + one-line
+hint ("Added to their balance now, free. 1 to 1000."). Wired to POST /api/admin/users/:id/grant
+(checks:n) → grantCredits(id,n,0), PAYG credits, never expires. Server endpoint ALREADY on prod, so
+UI-only ship. Toast shows new balance, list refreshes, sheet closes. Full gates + glass-lock green;
+verified render of the sheet. Shipped via ship-admin.sh.
+
 ## 2026-07-17 — DESIGNER polish + GLASS HARDENED (75cbe8c / aea3701, live)
 - **Sheet-glass LOCKED:** scripts/qa-admin-glass.mjs asserts all 11 variant-H invariants in app.html
   (no full-screen dim overlay, content filter-dim, absolute-on-open, scrollY+14vh anchor, +120
