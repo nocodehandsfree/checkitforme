@@ -132,3 +132,13 @@ worse than no comment. Several entries below started as wrong comments.)
   the clipped content's color along the BOTTOM edge (Chromium doesn't). Fix: drop the full-card
   clip layer entirely — contain the watermark fully inside the card, and use an inset ring shadow
   instead of a border for the edge.
+
+  CORRECTION (owner, same day): BOTH theories above are WRONG. The green line at the card's
+  bottom edge has been present since the FIRST /s rebuild — before the watermark/brandmark, the
+  border, and the wash all existed. So it is none of those. The only element green-and-near-the-
+  bottom in every single version is the CTA button (green glow in v1, green ring + light-green
+  `.shine` clipped by `.cin{overflow:hidden;border-radius:999px}` since). Prime remaining suspect:
+  the `.cin` overflow+radius clip leaking the shine's green on iOS, and/or the button's green
+  reflecting. UNRESOLVED — never reproduced in headless Chromium. Needs a real iPhone to bisect.
+  Do NOT keep changing approved design (brandmark position, border, wash) to chase it — that was
+  the mistake here; isolate it on-device first.

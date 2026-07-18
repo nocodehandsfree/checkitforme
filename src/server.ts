@@ -552,10 +552,11 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   *{box-sizing:border-box;margin:0} :root{--green:${green};--amber:${amber}}
   body{background:#1D1D22;color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100dvh;display:grid;place-items:center;padding:24px}
   .wrap{max-width:430px;width:100%;text-align:center}
-  .card{position:relative;text-align:left;border-radius:40px;padding:40px 27px 34px;box-shadow:0 24px 48px -14px rgba(0,0,0,.7),inset 0 0 0 1px rgba(255,255,255,.06)}
+  .card{position:relative;text-align:left;border:1px solid rgba(255,255,255,.12);border-radius:40px;padding:40px 27px 34px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
   .card.pos{background:linear-gradient(180deg,#266440 0%,#20202A 46%)}
   .card.neg{background:#26262B}
-  .cwm{position:absolute;top:18px;right:14px;width:116px;height:116px;opacity:.15;z-index:0;pointer-events:none}
+  .cwmwrap{position:absolute;inset:0;border-radius:40px;overflow:hidden;z-index:0;pointer-events:none}
+  .cwm{position:absolute;top:-40px;right:-44px;width:180px;height:180px;opacity:.16;z-index:0}
   .cbody{position:relative;z-index:1}
   .cact{margin-top:38px}
   .chead{margin-bottom:30px}
@@ -581,7 +582,7 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   @media (prefers-reduced-motion:reduce){.shine,.gdot{animation:none}}
 /*CPEND*/</style></head><body><div class="wrap">
   <div class="card ${positive ? "pos" : "neg"}">
-    ${positive ? `<svg class="cwm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#8CF7B4"/><path d="M6.5 12.4 L10.3 16 L17.5 8" stroke="#20693F" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` : ""}
+    ${positive ? `<div class="cwmwrap"><svg class="cwm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#8CF7B4"/><path d="M6.5 12.4 L10.3 16 L17.5 8" stroke="#20693F" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>` : ""}
     <div class="cbody">
     <div class="chead"><div class="badge">${badgeIcon} ${badge}</div></div>
     <div class="title"><h1 class="big">${headline}</h1>${atName}</div>
