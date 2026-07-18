@@ -503,17 +503,20 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
     : state === "zonein" ? "" // the zone message + logo row carry it
     : zone ? L("None yet. Check catches the restock.", "Ninguna aún. Check atrapa la reposición.")
     : L("Not in yet. Check catches the restock.", "Aún no. Check atrapa la reposición.");
-  const hook = L("First check's on us.", "Tu primera verificación va por nuestra cuenta.");
+  const hook = L("First one's on us!", "¡La primera va por nuestra cuenta!");
   const button = L("YOUR TURN", "TE TOCA");
-  // Store row (comp hero tile 56px + store name): real logo if the share carried one, else a monogram.
-  const storeRow = showStore
-    ? `<div class="srow"><div class="stile${slogo ? "" : " mono"}">${slogo
-        ? `<img src="${esc(slogo)}" alt="" onerror="this.parentNode.classList.add('mono');this.parentNode.textContent='${esc(mono(store))}'">`
-        : esc(mono(store))}</div><div class="sname">${esc(store)}</div></div>`
+  // Store logo rides in the header at the IN STOCK pill's height (real chain logo if the share
+  // carried one, else a monogram tile). The full store name prints as "@ Name" under the headline.
+  const headerLogo = (positive && (slogo || store))
+    ? `<div class="hlogo${slogo ? "" : " mono"}">${slogo
+        ? `<img src="${esc(slogo)}" alt="${esc(store)}" onerror="this.parentNode.classList.add('mono');this.parentNode.textContent='${esc(mono(store))}'">`
+        : esc(mono(store))}</div>`
     : "";
+  const atName = showStore && store ? `<div class="satname">@ ${esc(store)}</div>` : "";
 
   const green = "#4ADE80", amber = "#F59E0B";
   const accent = positive ? green : amber;
+  const brandColor = brand.accent || green; // the product's own color (Pokémon yellow, One Piece red…)
   const title = state === "in" ? L(`${cat} is in stock at ${store}`, `${cat} está en stock en ${store}`)
     : state === "zonein" ? L(`${cat} is in stock nearby`, `${cat} está en stock cerca`)
     : L(`We're tracking ${cat}`, `Estamos rastreando ${cat}`);
@@ -561,15 +564,14 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   .card.neg{background:#26262B}
   .cwm{position:absolute;top:-40px;right:-44px;width:180px;height:180px;opacity:.16;z-index:0}
   .cbody{position:relative;z-index:1}
-  .chead{margin-bottom:18px}
+  .chead{display:flex;align-items:center;gap:11px;margin-bottom:16px}
   .badge{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.13em;color:${accent};background:rgba(255,255,255,.06);border:1px solid ${accent}66;padding:7px 14px;border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
   .gdot{width:8px;height:8px;border-radius:50%;background:${accent};box-shadow:0 0 8px ${accent};animation:ckGlow 2s ease-in-out infinite}
-  .big{font-size:34px;font-weight:900;line-height:1.1;letter-spacing:-1px;margin-bottom:2px} .big .hl{color:${accent}}
-  .srow{display:flex;align-items:center;justify-content:flex-start;gap:12px;margin:14px 0 2px}
-  .stile{width:52px;height:52px;border-radius:14px;background:#1F1F25;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
-  .stile img{width:40px;height:40px;object-fit:contain}
-  .stile.mono{color:#CDCDD8;font-weight:900;font-size:17px;background:linear-gradient(145deg,#34343D,#23232B)}
-  .sname{font-size:19px;font-weight:800;letter-spacing:-.3px;text-align:left}
+  .big{font-size:34px;font-weight:900;line-height:1.04;letter-spacing:-1px;margin-bottom:0} .big .hl{color:${brandColor}}
+  .hlogo{width:31px;height:31px;border-radius:9px;background:#1F1F25;display:flex;align-items:center;justify-content:center;flex:0 0 auto;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+  .hlogo img{width:24px;height:24px;object-fit:contain}
+  .hlogo.mono{color:#CDCDD8;font-weight:900;font-size:12px;background:linear-gradient(145deg,#34343D,#23232B)}
+  .satname{font-size:14px;font-weight:800;letter-spacing:-.2px;color:rgba(255,255,255,.55);margin:4px 0 0 2px}
   .zmsg{color:rgba(255,255,255,.78);font-size:14.5px;font-weight:500;line-height:1.5;margin:6px auto 4px;max-width:330px}
   .logos{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:14px 0 6px}
   .ltile,.lmono{width:40px;height:40px;border-radius:11px;flex:0 0 auto}
@@ -581,7 +583,7 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   .shine{position:absolute;top:0;bottom:0;left:-45%;width:45%;background:linear-gradient(105deg,transparent 0%,rgba(140,255,185,.25) 50%,transparent 100%);animation:ckShine 2.8s ease-in-out infinite}
   .ctxt{position:relative;font-size:13.5px;font-weight:800;letter-spacing:.14em;color:#fff}
   .arw{position:relative;flex:0 0 auto}
-  .foot{color:#8A8A96;font-size:12.5px;font-weight:600;margin-top:13px;text-align:center}
+  .foot{color:${brandColor};opacity:.55;font-size:12.5px;font-weight:700;margin-top:14px;text-align:center}
   @keyframes ckShine{0%{left:-45%}55%,100%{left:110%}}
   @keyframes ckGlow{0%,100%{opacity:.4}50%{opacity:1}}
   @media (prefers-reduced-motion:reduce){.shine,.gdot{animation:none}}
@@ -589,9 +591,9 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   <div class="card ${positive ? "pos" : "neg"}">
     ${positive ? `<svg class="cwm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#8CF7B4"/><path d="M6.5 12.4 L10.3 16 L17.5 8" stroke="#20693F" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>` : ""}
     <div class="cbody">
-    <div class="chead"><div class="badge">${badgeIcon} ${badge}</div></div>
+    <div class="chead"><div class="badge">${badgeIcon} ${badge}</div>${headerLogo}</div>
     <h1 class="big">${headline}</h1>
-    ${storeRow}
+    ${atName}
     ${state === "zonein" ? `<div class="zmsg">${zoneMsg}</div>${logoRow}` : ""}
     ${whatIsIt ? `<div class="what">${whatIsIt}</div>` : ""}
     <a class="cta" href="${site}"><span class="cin"><span class="shine"></span><span class="ctxt">${button}</span><svg class="arw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></span></a>
