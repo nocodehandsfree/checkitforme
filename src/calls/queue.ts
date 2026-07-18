@@ -84,7 +84,7 @@ async function etaSeconds(pos0: number, priority: "interactive" | "batch"): Prom
   const cap = (await canPlaceNow(priority)).totalCap;
   const pol = await getPolicy();
   const reserve = pol.concurrency?.reserveInteractive ?? 2;
-  const effCap = priority === "interactive" ? cap : Math.max(1, cap - reserve);
+  const effCap = Math.max(1, priority === "interactive" ? cap : cap - reserve); // never 0 → no NaN ETA on a degenerate cap
   const now = Date.now();
   const live = await db.select({ startedAt: callResults.startedAt }).from(callResults)
     .where(inArray(callResults.status, ["dialing", "in_progress"]));
