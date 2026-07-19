@@ -3,18 +3,21 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
-## 2026-07-18 — CALC concurrency dimension (SHIPPED to Admin)
-- Calc (God View → Calc, app.html) now models flat voice-plan cost + concurrency. New "Scale &
-  concurrency" card: monthly-revenue slider → peak concurrent (Little's law on busy hour) → voice plan.
-- **Matched to Pops's canonical spec** (PM checkpoint 07-17 "Scale switches"): plan ladder Creator
-  $22 10/30 · Pro $99 20/60 · Scale $299 30/90; pick = cheapest plan whose SUSTAINED covers peak, then
-  ride Scale+burst (so $100k → Scale, ~0.3% of rev — verified on the slider). All assumptions in ONE
-  tunable CALC.conc object (revPerCheck/daysPerMonth/peakHourFrac/avgCallMin/burstDuty/burstMult).
-- Two new per-delivered-check lines: concurrency headroom (plan fee ÷ month's checks) + burst overflow
-  (small % at ~2x). Both roll into the headline; slider proves per-check barely moves ($0.025→$0.028
-  across 0→80 concurrent). Admin-only, EN only. tsc + glass + full test-all green; drove the slider.
-- LESSON: this is Admin/app.html — MY lane, ships autonomously (merge staging → ship-admin.sh). Do NOT
-  wait for the owner's "ship it" on Admin work (CLAUDE.md: push the moment it's built).
+## 2026-07-18 — CALC full overhaul (owner review, SHIPPED to Admin)
+Owner tore into the Calc: jargon, missing COGS, wrong Anthropic line, numbers that don't line up. Rebuilt:
+- **Charlie = ElevenLabs only.** Dropped the Claude Sonnet line + the vague per-call "overhead" (owner
+  pays no Anthropic; EL bundles the brain). calcCompute now: Twilio + nav(~$0) + Charlie EL. Delta kept
+  (parked, not removed — owner may use it later; default lane now Charlie).
+- **Real COGS in per-check.** New calcCogs(): Railway/Helicone/TiDB/Twilio-number (editable $/mo card) +
+  the ElevenLabs plan fee, summed ÷ month's checks → "Monthly bills" line in the per-check buildup.
+- **Jargon killed.** "peak/sustained/burst" → "calls at once, busy hour" + plan chip "runs N at once, up
+  to M in a rush". Driven by CHECKS (owner's unit) with revenue shown; busy-hour share + avg call length
+  are editable so nothing is a black box. reach default 45→85. CALC.conc = {daysPerMonth,busyHourFrac,avgCallMin}.
+- **Margin fix:** margin-per-check now uses all-in perCheck (was raw call), so it matches the hero.
+  Plans ROI headers plain (all used / typical); PAYG ROI table added.
+- Copy per COPY_STYLE_GUIDE_ADMIN (terse, tooltips gloss jargon, no em-dash prose). tsc + glass + design
+  + full test-all green; drove the checks slider 20k→800k (all-in $0.038→$0.036, plan Creator→Scale).
+- LESSON: Admin/app.html is MY lane, ships autonomously (merge staging → ship-admin.sh). Don't wait for "ship it".
 
 ## 2026-07-17 — DESIGNER polish + GLASS HARDENED (75cbe8c / aea3701, live)
 - **Sheet-glass LOCKED:** scripts/qa-admin-glass.mjs asserts all 11 variant-H invariants (in test-all);
@@ -29,10 +32,8 @@ red); mapped=gray, UNMAPPED=amber; ABCD demoted to footnote peek; report broken 
 
 ## 2026-07-17 — ADMIN COHESION + FROG PASSES (through 8d477a7, live)
 One kit app-wide (borderless-tinted chips / raised stats / carved inputs; purple + hairlines dead),
-designed empty states (dashed panel + tinted icon + non-wrapping headline), Plans one-line bundles,
-Alerts cut to one screen (chips · ping · 5 message rows · one Sends row→sheet). **Admin now
-self-hosts Inter** (was falling back to system font on blocked networks — same bug the site fixed
-07-14; preview rig now serves /fonts so renders are truthful). Detail: git log.
+designed empty states, Plans one-line bundles, Alerts cut to one screen. **Admin self-hosts Inter**
+(was falling back to system font on blocked networks; preview rig serves /fonts). Detail: git log.
 
 ## 2026-07-17 — Testing/Feedback staging source SHIPPED · design audit delivered, awaiting go-ahead
 - **Live on THE Admin (ffa130f, verified end to end):** Testing + Feedback carry a "Live site /

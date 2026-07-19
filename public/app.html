@@ -2056,73 +2056,84 @@ async function loadCallTiming(){
 // ---- God view · Calc sub-nav: per-call unit economics (Alpha keypad / Bravo voice-menu / Charlie agent) ----
 // Vanilla-JS port of the CallCOGS calculator so the owner can play with the cost model live. Pure client-side:
 // pick a store type, drag nav/talk seconds, edit the rate card → live all-in cost, breakdown, matrix + margin.
-const CALC_STORE={ Direct:{label:'Direct',sub:'human picks up',nav:0,nc:'var(--text-muted)'}, Alpha:{label:'Alpha',sub:'keypad tones',nav:30,nc:'#F4B740'}, Bravo:{label:'Bravo',sub:'voice menu',nav:50,nc:'#38BDF8'} };
+const CALC_STORE={ Direct:{label:'Direct',sub:'human answers, no menu',nav:0,nc:'var(--text-muted)'}, Alpha:{label:'Alpha',sub:'keypad menu',nav:30,nc:'#F4B740'}, Bravo:{label:'Bravo',sub:'voice menu',nav:50,nc:'#38BDF8'} };
 const CALC_TALK=[10,15,20,25,30,60];
 const calcMoney=n=>'$'+(n<0?'-':'')+Math.abs(n).toFixed(3);
-const CALC={ storeType:'Alpha', nav:30, talk:20, revenue:0.2, lane:'delta', deltaEsc:30, reach:45, usage:50,
-  monthlyRevenue:100000, // the concurrency slider — monthly voice-plan sizing (Scale & concurrency card)
-  rates:{ twilioPerMin:0.014, elevenPerSec:0.0012, claudePerSec:0.0002, bravoNavPerSec:0, overhead:0.001, deltaClipPerCall:0.0002, classifyPerCall:0.0004 },
-  // Concurrency model assumptions (anchored to Pops: ~40 peak concurrent at $100k/mo). Peak concurrent =
-  // (monthlyRevenue/revPerCheck)/daysPerMonth × peakHourFrac × avgCallMin/60 (Little's law on the busy hour).
-  // These are the tunable inputs — dial them to real telephony data as it lands; the anchor above holds at defaults.
-  conc:{ revPerCheck:0.25, daysPerMonth:30, peakHourFrac:0.12, avgCallMin:1.5, burstDuty:0.15, burstMult:2 },
+const calcMoney4=n=>'$'+(n<0?'-':'')+Math.abs(n).toFixed(4);
+const CALC={ storeType:'Alpha', nav:30, talk:20, revenue:0.25, lane:'charlie', deltaEsc:30, reach:85, usage:50,
+  monthlyChecks:20000, // primary driver (owner thinks in checks); revenue = checks × revenue-per-check (CALC.revenue)
+  // Charlie's only real bill is ElevenLabs (voice + brain in one). No separate Anthropic charge — dropped.
+  rates:{ twilioPerMin:0.014, elevenPerSec:0.0012, bravoNavPerSec:0, deltaClipPerCall:0.0002, classifyPerCall:0.0004 },
+  // Real monthly bills ($/mo), spread across the month's checks. The ElevenLabs voice-plan fee is added on top,
+  // picked from the concurrency card. Edit these to your real invoices.
+  cogs:{ railway:20, helicone:0, tidb:0, twilioNumber:2 },
+  // Busy-hour concurrency (editable). calls at once = (checks ÷ days) × busy-hour share × avg call minutes ÷ 60.
+  conc:{ daysPerMonth:30, busyHourFrac:0.15, avgCallMin:1.5 },
   plans:[{name:'Family',price:4.99,checks:15},{name:'Collector',price:9.99,checks:30},{name:'Hunter',price:19.99,checks:100},{name:'Operator',price:49.99,checks:300}],
   ready:false };
-// Voice-plan concurrency tiers (ElevenLabs ConvAI): flat monthly fee · sustained concurrent · burst ceiling.
-const CALC_VOICE_PLANS=[{name:'Creator',fee:22,sustained:10,burst:30},{name:'Pro',fee:99,sustained:20,burst:60},{name:'Scale',fee:299,sustained:30,burst:90}];
-// Pops's scale model (PM checkpoint 07-17): run SUSTAINED comfortably over the peak, let burst absorb
-// spikes at ~2x. Cheapest plan whose sustained covers the peak; past the top tier's sustained, ride
-// Scale + burst (matches "$100k → Scale+burst=90 covers it"). Beyond burst → add an EL account (pool).
-const calcPickPlan=peak=>CALC_VOICE_PLANS.find(p=>p.sustained>=peak)||CALC_VOICE_PLANS[CALC_VOICE_PLANS.length-1];
+// ElevenLabs voice plans: flat monthly fee · calls it runs at once · the higher number it briefly stretches to.
+const CALC_VOICE_PLANS=[{name:'Creator',fee:22,atOnce:10,rush:30},{name:'Pro',fee:99,atOnce:20,rush:60},{name:'Scale',fee:299,atOnce:30,rush:90}];
+// Pick the cheapest plan that runs your busy-hour calls at once; past the top plan's normal limit, ride Scale
+// and its rush headroom. Beyond even the rush ceiling → add a second ElevenLabs account.
+const calcPickPlan=atOnce=>CALC_VOICE_PLANS.find(p=>p.atOnce>=atOnce)||CALC_VOICE_PLANS[CALC_VOICE_PLANS.length-1];
 const calcDot=c=>`<span style="display:inline-block;width:8px;height:8px;border-radius:9px;background:${c};flex-shrink:0"></span>`;
 
-// core cost model — one source of truth (Twilio runs the whole call; Bravo nav is now CHEAP voice-injection
-// — Polly speaks the menu words, no STT/agent — so it's ~$0 like Alpha; Charlie = agent talk only)
+// core cost model — one connected call. Twilio runs the whole call; Alpha/Bravo nav is replayed with
+// cheap text-to-speech (no AI) so it's ~$0; Charlie's only bill is ElevenLabs (voice + brain in one).
 function calcCompute(storeType,nav,talk,r,lane,esc){
   lane=lane||'charlie';
   const twilioPerSec=r.twilioPerMin/60, dur=nav+talk, items=[];
   items.push({label:'Twilio line',detail:`${dur}s · $${r.twilioPerMin}/min`,accent:'var(--text-muted)',amount:twilioPerSec*dur});
-  if(storeType==='Bravo') items.push({label:'Bravo nav · voice-injection (cheap TTS)',detail:`${nav}s · ~$0/s`,accent:'#38BDF8',amount:r.bravoNavPerSec*nav});
-  else if(storeType==='Alpha') items.push({label:'Alpha nav · keypad tones',detail:`${nav}s · $0/s`,accent:'#F4B740',amount:0});
-  else items.push({label:'Navigation',detail:'direct line · none',accent:'var(--text-tertiary)',amount:0});
-  const charlieTalk=(r.elevenPerSec+r.claudePerSec)*talk;
+  if(storeType==='Bravo') items.push({label:'Bravo nav · spoken menu (cheap TTS, no AI)',detail:`${nav}s · ~$0/s`,accent:'#38BDF8',amount:r.bravoNavPerSec*nav});
+  else if(storeType==='Alpha') items.push({label:'Alpha nav · keypad menu',detail:`${nav}s · $0/s`,accent:'#F4B740',amount:0});
+  else items.push({label:'Navigation',detail:'direct line, no menu',accent:'var(--text-tertiary)',amount:0});
+  const charlieTalk=r.elevenPerSec*talk; // ElevenLabs only, brain included
   if(lane==='delta'){
     const escFrac=(esc||0)/100;
     items.push({label:'Delta · recorded clips',detail:'pre-rendered · Twilio plays them',accent:'#C084FC',amount:r.deltaClipPerCall});
     items.push({label:'Delta · cheap classifier',detail:'~3 turns · flash-lite',accent:'#C084FC',amount:r.classifyPerCall});
     items.push({label:`Charlie escalation · ${esc||0}%`,detail:`${esc||0}% go off-script to the live agent`,accent:'var(--purple)',amount:charlieTalk*escFrac});
   } else {
-    items.push({label:'Charlie · ElevenLabs ConvAI',detail:`${talk}s · $${r.elevenPerSec}/s`,accent:'var(--purple)',amount:r.elevenPerSec*talk});
-    items.push({label:'Charlie · Claude Sonnet',detail:`${talk}s · $${r.claudePerSec}/s`,accent:'var(--purple)',amount:r.claudePerSec*talk});
+    items.push({label:'Charlie · ElevenLabs',detail:`${talk}s talk · voice + brain · $${r.elevenPerSec}/s`,accent:'var(--purple)',amount:charlieTalk});
   }
-  items.push({label:'Fixed overhead / call',detail:'flat',accent:'var(--text-muted)',amount:r.overhead});
   return { items, total: items.reduce((s,i)=>s+i.amount,0) };
 }
-// Concurrency dimension — from monthly revenue, size the voice plan and its two per-check costs.
-// peak concurrent (Little's law on the busy hour) → cheapest plan whose BURST covers it. The band
-// between the plan's sustained and the peak is the "overflow" billed at ~2x during spikes.
-function calcConcurrency(connected){
-  const c=CALC.conc;
-  const monthlyChecks = c.revPerCheck>0 ? (CALC.monthlyRevenue||0)/c.revPerCheck : 0;
-  const peak = monthlyChecks>0 ? (monthlyChecks/c.daysPerMonth)*c.peakHourFrac*(c.avgCallMin/60) : 0;
-  const plan = calcPickPlan(peak);
-  const overCapacity = peak>plan.burst; // beyond the biggest tier — needs a 2nd account / enterprise
-  // headroom = flat plan fee spread across the month's checks (a fraction of a cent, shrinks as you scale)
-  const headroomPerCheck = monthlyChecks>0 ? plan.fee/monthlyChecks : 0;
-  // burst overflow = the small share of calls that sit above the plan's sustained line during spikes, billed ~2x
-  const overflowPct = peak>plan.sustained ? Math.min(1,(peak-plan.sustained)/peak)*c.burstDuty : 0;
-  const burstPerCheck = overflowPct*(connected||0)*(c.burstMult-1);
-  const feePctOfRev = CALC.monthlyRevenue>0 ? plan.fee/CALC.monthlyRevenue*100 : 0; // Pops framed it "~0.3% of rev"
-  return { monthlyChecks, peak, plan, overCapacity, headroomPerCheck, overflowPct, burstPerCheck, feePctOfRev };
+// Monthly bills spread across the month's checks — the real always-on costs (Railway, Helicone, TiDB,
+// Twilio number) plus the ElevenLabs voice-plan fee picked below. Returns per-check total + itemized lines.
+function calcCogs(monthlyChecks, planFee, planName){
+  const c=CALC.cogs;
+  const bills=[
+    {label:`ElevenLabs plan · ${planName}`, monthly:planFee||0, accent:'var(--purple)'},
+    {label:'Railway compute', monthly:c.railway||0, accent:'#38BDF8'},
+    {label:'Helicone gateway', monthly:c.helicone||0, accent:'#38BDF8'},
+    {label:'TiDB database', monthly:c.tidb||0, accent:'#38BDF8'},
+    {label:'Twilio number rental', monthly:c.twilioNumber||0, accent:'var(--text-muted)'},
+  ];
+  const totalMonthly=bills.reduce((s,b)=>s+b.monthly,0);
+  const perCheck=monthlyChecks>0?totalMonthly/monthlyChecks:0;
+  bills.forEach(b=>{ b.perCheck=monthlyChecks>0?b.monthly/monthlyChecks:0; });
+  return { bills, totalMonthly, perCheck };
+}
+// Concurrency — from the month's checks, how many calls run at once in the busy hour and which plan covers it.
+function calcConcurrency(){
+  const c=CALC.conc, checks=CALC.monthlyChecks||0;
+  const revenue=checks*(CALC.revenue||0);
+  const atOnce = checks>0 ? (checks/c.daysPerMonth)*c.busyHourFrac*(c.avgCallMin/60) : 0;
+  const plan=calcPickPlan(atOnce);
+  const overCapacity=atOnce>plan.rush;
+  const feePctOfRev=revenue>0?plan.fee/revenue*100:0;
+  return { checks, revenue, atOnce, plan, overCapacity, feePctOfRev };
 }
 function calcPerCheck(){
   const connected=calcCompute(CALC.storeType,CALC.nav,CALC.talk,CALC.rates,CALC.lane,CALC.deltaEsc).total;
-  const reachFrac=Math.max(0.01,(CALC.reach||45)/100);
+  const reachFrac=Math.max(0.01,(CALC.reach||85)/100);
   const wasted=(1/reachFrac)-1;
-  const wastedCost=(CALC.rates.twilioPerMin/60)*8 + CALC.rates.overhead;
-  const conc=calcConcurrency(connected);
-  const perCheck = connected + wasted*wastedCost + conc.headroomPerCheck + conc.burstPerCheck;
-  return { connected, perCheck, wasted, wastedCost, conc };
+  const wastedCost=(CALC.rates.twilioPerMin/60)*8; // a miss = ~8s of ring on the line, no AI
+  const conc=calcConcurrency();
+  const cogs=calcCogs(conc.checks, conc.plan.fee, conc.plan.name);
+  const noAnswer=wasted*wastedCost;
+  const perCheck=connected + noAnswer + cogs.perCheck;
+  return { connected, perCheck, wasted, wastedCost, noAnswer, conc, cogs };
 }
 // Toggle the God-view sub-nav between the live Overview and the Calc.
 // ---- God View · Plans: owner-editable pricing tiers + PAYG ladder, published to Stripe ----
@@ -2221,11 +2232,13 @@ async function calcSyncPlans(){
   const d=await api('/api/admin/plans');
   if(!d||d.error||!Array.isArray(d.tiers)||!d.tiers.length) return;
   CALC.plans=d.tiers.map(t=>({name:t.name,price:(t.monthlyCents||0)/100,checks:t.checksPerMonth||0}));
+  CALC.payg=(d.payg&&Array.isArray(d.payg.bundles))?d.payg.bundles.map(b=>({checks:b.checks,price:(b.cents||0)/100})):[];
   CALC_PLANS_SYNCED=true; calcRenderPlans(); calcUpdate();
 }
 function calcShell(){
   const seg=Object.keys(CALC_STORE).map(t=>`<button type="button" id="calc_seg_${t}" onclick="calcPick('${t}')" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:10px;border-radius:11px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-muted);cursor:pointer;text-align:left;font:inherit"><span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(CALC_STORE[t].nc)}${t}</span><span style="font-size:10.5px;color:var(--text-tertiary)">${CALC_STORE[t].sub}</span></button>`).join('');
   const rate=(label,k,suf)=>`<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:var(--text-muted)">${label}</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:12px;padding:0 10px"><span style="color:var(--text-tertiary);font-size:13px">$</span><input type="number" step="0.0001" value="${CALC.rates[k]}" oninput="calcSetRate('${k}',this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;box-shadow:none;color:var(--text-primary);font-size:13px;font-weight:600;padding:9px 2px;width:62px"><span style="color:var(--text-tertiary);font-size:10.5px">${suf}</span></span></label>`;
+  const cog=(label,k)=>`<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:var(--text-muted)">${label}</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:12px;padding:0 10px"><span style="color:var(--text-tertiary);font-size:13px">$</span><input type="number" step="1" min="0" value="${CALC.cogs[k]}" oninput="calcSetCogs('${k}',this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;box-shadow:none;color:var(--text-primary);font-size:13px;font-weight:600;padding:9px 2px;width:62px"><span style="color:var(--text-tertiary);font-size:10.5px">/mo</span></span></label>`;
   return `
   <div class="hero" style="margin-bottom:16px">
     <div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px">
@@ -2239,17 +2252,17 @@ function calcShell(){
   </div>
   <div class="card report">
     <div class="name">Scenario</div>
-    <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">Store type</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">Store type <span data-tip="How the store's phone answers. It sets the menu time, not who talks."></span></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">${seg}</div>
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px"><span style="font-size:13px;color:var(--text-muted)">Navigation time</span><span style="font-family:ui-monospace,monospace;font-size:19px;font-weight:700"><span id="calc_navval">0</span><span style="font-size:12.5px;color:var(--text-tertiary)">s</span></span></div>
     <input id="calc_nav" type="range" min="0" max="120" value="${CALC.nav}" oninput="calcSetNav(this.value)">
     <div id="calc_navnote" style="font-size:10.5px;color:var(--text-tertiary);margin-top:2px;display:none">Direct line, no menu</div>
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin:16px 0 2px"><span style="font-size:13px;color:var(--text-muted)">Talk time with human</span><span style="font-family:ui-monospace,monospace;font-size:19px;font-weight:700"><span id="calc_talkval">0</span><span style="font-size:12.5px;color:var(--text-tertiary)">s</span></span></div>
     <input id="calc_talk" type="range" min="0" max="120" value="${CALC.talk}" oninput="calcSetTalk(this.value)">
-    <div style="margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--border);font-size:13px;color:var(--text-muted)">Who handles the talk</div>
+    <div style="margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--border);font-size:13px;color:var(--text-muted)">Who handles the talk <span data-tip="Charlie is the live AI on the call. Delta is a cheaper recorded-clip lane, parked for now, kept for later."></span></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <button type="button" id="calc_lane_delta" onclick="calcSetLane('delta')" style="padding:11px;border-radius:11px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-muted);cursor:pointer;text-align:left;font:inherit"><span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot('#C084FC')}Delta</span><span style="font-size:10.5px;color:var(--text-tertiary)">recorded + cheap ears</span></button>
-      <button type="button" id="calc_lane_charlie" onclick="calcSetLane('charlie')" style="padding:11px;border-radius:11px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-muted);cursor:pointer;text-align:left;font:inherit"><span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot('var(--purple)')}Charlie</span><span style="font-size:10.5px;color:var(--text-tertiary)">live AI on the whole talk</span></button>
+      <button type="button" id="calc_lane_charlie" onclick="calcSetLane('charlie')" style="padding:11px;border-radius:11px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-muted);cursor:pointer;text-align:left;font:inherit"><span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot('var(--purple)')}Charlie</span><span style="font-size:10.5px;color:var(--text-tertiary)">live AI, the whole talk</span></button>
+      <button type="button" id="calc_lane_delta" onclick="calcSetLane('delta')" style="padding:11px;border-radius:11px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-muted);cursor:pointer;text-align:left;font:inherit"><span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot('#C084FC')}Delta</span><span style="font-size:10.5px;color:var(--text-tertiary)">recorded clips, parked</span></button>
     </div>
     <div id="calc_esc_wrap" style="margin-top:16px">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px"><span style="font-size:13px;color:var(--text-muted)">Off-script → Charlie <span data-tip="Share of Delta calls that go weird and hand to the live agent. The rest run fully on recordings."></span></span><span style="font-family:ui-monospace,monospace;font-size:19px;font-weight:700"><span id="calc_escval">${CALC.deltaEsc}</span><span style="font-size:12.5px;color:var(--text-tertiary)">%</span></span></div>
@@ -2261,40 +2274,52 @@ function calcShell(){
     </div>
   </div>
   <div class="card report">
-    <div class="name">Scale &amp; concurrency</div>
-    <div style="font-size:10.5px;color:var(--text-tertiary);margin-bottom:14px">As revenue grows, more calls run at once. Size the flat voice plan for the busy hour — and watch the per-check price barely move.</div>
-    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px"><span style="font-size:13px;color:var(--text-muted)">Monthly revenue</span><span style="font-family:ui-monospace,monospace;font-size:19px;font-weight:700"><span style="font-size:12.5px;color:var(--text-tertiary)">$</span><span id="calc_mrevval">0</span></span></div>
-    <input id="calc_mrev" type="range" min="0" max="200000" step="5000" value="${CALC.monthlyRevenue}" oninput="calcSetMonthlyRev(this.value)">
-    <div id="calc_mrevnote" style="font-size:10.5px;color:var(--text-tertiary);margin-top:2px">—</div>
+    <div class="name">Calls at once &amp; voice plan</div>
+    <div style="font-size:10.5px;color:var(--text-tertiary);margin-bottom:14px">More checks means more calls run at the same time. Pick the ElevenLabs plan that covers your busy hour.</div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px"><span style="font-size:13px;color:var(--text-muted)">Checks / month</span><span style="font-family:ui-monospace,monospace;font-size:19px;font-weight:700"><span id="calc_mchecksval">0</span></span></div>
+    <input id="calc_mchecks" type="range" min="0" max="800000" step="5000" value="${CALC.monthlyChecks}" oninput="calcSetMonthlyChecks(this.value)">
+    <div id="calc_mchecksnote" style="font-size:10.5px;color:var(--text-tertiary);margin-top:2px">—</div>
     <div class="row" style="justify-content:space-between;align-items:center;gap:12px;margin-top:16px">
-      <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:10px;letter-spacing:.1em;color:var(--text-tertiary);font-weight:700">PEAK CONCURRENT CALLS</span><span id="calc_peak" style="font-size:28px;font-weight:800;color:var(--text-strong);font-variant-numeric:tabular-nums;line-height:1.05">0</span></div>
+      <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:10px;letter-spacing:.1em;color:var(--text-tertiary);font-weight:700">CALLS AT ONCE, BUSY HOUR <span data-tip="The most calls happening at the same time during your busiest hour. This is what the voice plan has to cover."></span></span><span id="calc_atonce" style="font-size:28px;font-weight:800;color:var(--text-strong);font-variant-numeric:tabular-nums;line-height:1.05">0</span></div>
       <div id="calc_plan_chip" style="display:inline-flex;flex-direction:column;align-items:flex-end;gap:2px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:8px 12px"></div>
     </div>
     <div id="calc_conc_bar" style="display:flex;height:12px;border-radius:7px;overflow:hidden;margin-top:14px;background:var(--surface-1);border:1px solid var(--border)"></div>
     <div id="calc_conc_legend" class="row" style="gap:14px;margin-top:8px;align-items:center;font-size:11px;color:var(--text-tertiary)"></div>
+    <div class="row" style="gap:18px;margin-top:14px;padding-top:12px;border-top:1px dashed var(--border-dashed);flex-wrap:wrap">
+      <label style="display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;color:var(--text-muted)">Busy-hour share <span data-tip="Portion of a day's calls that land in the single busiest hour."></span></span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:10px;padding:0 8px"><input type="number" step="1" min="1" max="100" value="${Math.round(CALC.conc.busyHourFrac*100)}" oninput="calcSetConc('busyHourFrac',this.value/100)" style="background:transparent;border:none;outline:none;color:var(--text-primary);font-size:13px;font-weight:600;padding:8px 2px;width:34px"><span style="color:var(--text-tertiary);font-size:10.5px">%</span></span></label>
+      <label style="display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;color:var(--text-muted)">Avg call length <span data-tip="Average minutes a connected call runs, nav plus talk."></span></span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:10px;padding:0 8px"><input type="number" step="0.1" min="0.1" value="${CALC.conc.avgCallMin}" oninput="calcSetConc('avgCallMin',this.value)" style="background:transparent;border:none;outline:none;color:var(--text-primary);font-size:13px;font-weight:600;padding:8px 2px;width:40px"><span style="color:var(--text-tertiary);font-size:10.5px">min</span></span></label>
+    </div>
   </div>
   <div class="card report">
     <div class="name">Breakdown</div>
     <div id="calc_breakdown"></div>
     <div id="calc_percheck_lines" style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)"></div>
-    <div style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--border-dashed)"><span style="font-size:10px;letter-spacing:.1em;color:var(--text-tertiary);font-weight:700">FLAT MONTHLY · ≈ $0.000 / CALL</span><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${['Railway compute','Twilio number rental','Helicone gateway','TiDB'].map(f=>`<span style="font-size:10.5px;color:var(--text-muted);background:var(--surface-1);border:1px solid var(--border);border-radius:7px;padding:3px 8px">${f}</span>`).join('')}</div></div>
   </div>
   <div class="card report">
-    <div class="name">Rate card · editable</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${rate('Twilio line','twilioPerMin','/min')}${rate('ElevenLabs ConvAI','elevenPerSec','/sec')}${rate('Claude Sonnet','claudePerSec','/sec')}${rate('Bravo nav (all-in)','bravoNavPerSec','/sec')}${rate('Fixed overhead','overhead','/call')}</div>
+    <div class="name">Per-call rates · editable</div>
+    <div style="font-size:10.5px;color:var(--text-tertiary);margin-bottom:12px">Estimates from our cost notes, not confirmed invoices yet.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${rate('Twilio line','twilioPerMin','/min')}${rate('ElevenLabs (Charlie)','elevenPerSec','/sec')}${rate('Bravo nav','bravoNavPerSec','/sec')}</div>
   </div>
   <div class="card report">
-    <div class="name">Total / call by talk time</div>
-    <div style="font-size:10.5px;color:var(--text-tertiary);margin-bottom:12px">nav held at each type's default · Alpha 30s · Bravo 50s · Direct 0s</div>
+    <div class="name">Monthly bills · editable</div>
+    <div style="font-size:10.5px;color:var(--text-tertiary);margin-bottom:12px">Always-on costs, split across the month's checks. The ElevenLabs plan is set by the card above.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${cog('Railway compute','railway')}${cog('Helicone gateway','helicone')}${cog('TiDB database','tidb')}${cog('Twilio number','twilioNumber')}</div>
+    <div id="calc_cogs_note" style="font-size:10.5px;color:var(--text-tertiary);margin-top:12px">—</div>
+  </div>
+  <div class="card report">
+    <div class="name">Cost per call by nav type</div>
+    <div style="font-size:10.5px;color:var(--text-tertiary);margin-bottom:12px">Menu time fixed at each type's usual length. Alpha 30s, Bravo 50s, Direct 0s. Only talk time changes across the row.</div>
     <div style="overflow-x:auto"><table id="calc_matrix" style="border-collapse:separate;border-spacing:0;width:100%;min-width:360px"></table></div>
+    <div style="font-size:10.5px;color:var(--text-tertiary);margin-top:10px;line-height:1.5">Alpha presses a keypad menu. Bravo talks through a voice menu. Direct is a human answering with no menu. Check AI (Charlie) does the talking in all three.</div>
   </div>
   <div class="card report">
     <div class="name">Plans · ROI</div>
-    <div style="font-size:10.5px;color:var(--text-tertiary);margin-bottom:10px">Each plan's monthly margin at the cost-per-check above. Edit name / price / checks. Worst case = every check used; expected = the usage slider.</div>
-    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px"><span style="font-size:13px;color:var(--text-muted)">Expected usage <span data-tip="Share of a plan's monthly checks a real subscriber actually uses. Break-even math should still work at 100% (worst case)."></span></span><span style="font-family:ui-monospace,monospace;font-size:19px;font-weight:700"><span id="calc_usageval">${CALC.usage}</span><span style="font-size:12.5px;color:var(--text-tertiary)">%</span></span></div>
+    <div style="font-size:10.5px;color:var(--text-tertiary);margin-bottom:10px">Each plan's monthly margin at the all-in cost per check above. Edit name, price, checks. The table follows your scenario settings.</div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px"><span style="font-size:13px;color:var(--text-muted)">Typical use <span data-tip="Share of a plan's monthly checks a real subscriber actually uses. The math should still clear at 100 percent."></span></span><span style="font-family:ui-monospace,monospace;font-size:19px;font-weight:700"><span id="calc_usageval">${CALC.usage}</span><span style="font-size:12.5px;color:var(--text-tertiary)">%</span></span></div>
     <input id="calc_usage" type="range" min="10" max="100" value="${CALC.usage}" oninput="calcSetUsage(this.value)" style="margin-bottom:14px">
-    <div style="overflow-x:auto"><table id="calc_plans" style="border-collapse:separate;border-spacing:0;width:100%;min-width:420px"></table></div>
+    <div style="overflow-x:auto"><table id="calc_plans" style="border-collapse:separate;border-spacing:0;width:100%;min-width:440px"></table></div>
     <div class="btnrow" style="justify-content:flex-start;margin-top:10px"><button class="ghost" onclick="calcAddPlan()">+ add plan</button></div>
+    <div id="calc_payg" style="margin-top:16px"></div>
   </div>
   <div class="card report">
     <div class="name">Margin · per check</div>
@@ -2313,8 +2338,10 @@ function calcSetRate(k,v){ const n=v===''?0:parseFloat(v); CALC.rates[k]=isNaN(n
 function calcSetRev(v){ CALC.revenue=v===''?0:(parseFloat(v)||0); calcUpdate(); }
 function calcSetLane(l){ CALC.lane=l; calcSync(); calcUpdate(); }
 function calcSetEsc(v){ CALC.deltaEsc=parseInt(v,10)||0; const e=document.getElementById('calc_escval'); if(e) e.textContent=CALC.deltaEsc; calcUpdate(); }
-function calcSetReach(v){ CALC.reach=parseInt(v,10)||45; const e=document.getElementById('calc_reachval'); if(e) e.textContent=CALC.reach; calcUpdate(); }
-function calcSetMonthlyRev(v){ CALC.monthlyRevenue=parseInt(v,10)||0; calcUpdate(); }
+function calcSetReach(v){ CALC.reach=parseInt(v,10)||85; const e=document.getElementById('calc_reachval'); if(e) e.textContent=CALC.reach; calcUpdate(); }
+function calcSetMonthlyChecks(v){ CALC.monthlyChecks=parseInt(v,10)||0; calcUpdate(); }
+function calcSetCogs(k,v){ const n=v===''?0:parseFloat(v); CALC.cogs[k]=isNaN(n)?0:n; calcUpdate(); }
+function calcSetConc(k,v){ const n=parseFloat(v); if(!isNaN(n)&&n>0) CALC.conc[k]=n; calcUpdate(); }
 function calcSetUsage(v){ CALC.usage=parseInt(v,10)||100; const e=document.getElementById('calc_usageval'); if(e) e.textContent=CALC.usage; calcRenderPlans(); }
 function calcSetPlan(i,f,v){ if(!CALC.plans[i]) return; CALC.plans[i][f]=(f==='name')?v:(parseFloat(v)||0); calcRenderPlans(); }
 function calcAddPlan(){ CALC.plans.push({name:'New plan',price:9.99,checks:30}); calcRenderPlans(); }
@@ -2327,13 +2354,22 @@ function calcRenderPlans(){
   const cpc=calcPerCheck().perCheck, use=Math.max(0,Math.min(1,(CALC.usage||100)/100));
   const money=v=>calcMoney(v), pct=(a,b)=>b>0?(((a-b)/a)*100):0;
   const inp=(i,f,val,w,pre)=>`<span style="display:inline-flex;align-items:center;background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:10px;padding:0 6px">${pre?`<span style="color:var(--text-tertiary);font-size:12.5px">${pre}</span>`:''}<input value="${val}" oninput="calcSetPlan(${i},'${f}',this.value)" style="background:transparent;border:none;outline:none;box-shadow:none;color:var(--text-primary);font-size:12.5px;font-weight:600;padding:6px 2px;width:${w}px"></span>`;
-  let h=`<thead><tr>${['Plan','Price','Checks','Cost (100%)','Margin','Exp. margin',''].map((c,i)=>`<th style="font-size:10.5px;color:var(--text-muted);font-weight:600;padding:6px 8px;text-align:${i<1?'left':'right'};border-bottom:1px solid var(--border-strong);white-space:nowrap">${c}</th>`).join('')}</tr></thead><tbody>`;
+  let h=`<thead><tr>${['Plan','Price','Checks','Cost (all used)','Margin (all used)','Margin (typical)',''].map((c,i)=>`<th style="font-size:10.5px;color:var(--text-muted);font-weight:600;padding:6px 8px;text-align:${i<1?'left':'right'};border-bottom:1px solid var(--border-strong);white-space:nowrap">${c}</th>`).join('')}</tr></thead><tbody>`;
   CALC.plans.forEach((p,i)=>{
     const costWorst=cpc*(p.checks||0), costExp=costWorst*use, price=p.price||0;
     const mW=pct(price,costWorst), mE=pct(price,costExp), cW=mW>=0?'var(--green)':'#FF6B6B', cE=mE>=0?'var(--green)':'#FF6B6B';
     h+=`<tr><td style="padding:8px;text-align:left">${inp(i,'name',esch(p.name),96)}</td><td style="padding:8px;text-align:right">${inp(i,'price',price,52,'$')}</td><td style="padding:8px;text-align:right">${inp(i,'checks',p.checks||0,46)}</td><td style="font-size:12.5px;text-align:right;padding:10px 8px;color:var(--text-body);font-variant-numeric:tabular-nums">${money(costWorst)}</td><td style="font-size:13px;font-weight:700;text-align:right;padding:10px 8px;color:${cW};font-variant-numeric:tabular-nums">${mW.toFixed(0)}%</td><td style="font-size:13px;font-weight:700;text-align:right;padding:10px 8px;color:${cE};font-variant-numeric:tabular-nums">${mE.toFixed(0)}%</td><td style="text-align:right;padding:6px 4px"><button class="ghost" style="padding:4px 8px;font-size:12px" onclick="calcDelPlan(${i})" title="Remove">✕</button></td></tr>`;
   });
   el.innerHTML=h+'</tbody>';
+  // Pay-as-you-go bundles: margin if all the bundle's checks get used, plus the price per check.
+  const pel=document.getElementById('calc_payg'); if(pel){
+    const pg=CALC.payg||[];
+    if(!pg.length){ pel.innerHTML=''; }
+    else { let ph=`<div class="k-eyebrow" style="margin-bottom:8px">Pay as you go</div><div style="overflow-x:auto"><table style="border-collapse:separate;border-spacing:0;width:100%;min-width:360px"><thead><tr>${['Bundle','Price','Cost (all used)','Margin','$/check'].map((c,i)=>`<th style="font-size:10.5px;color:var(--text-muted);font-weight:600;padding:6px 8px;text-align:${i<1?'left':'right'};border-bottom:1px solid var(--border-strong);white-space:nowrap">${c}</th>`).join('')}</tr></thead><tbody>`;
+      pg.forEach(b=>{ const cost=cpc*(b.checks||0), m=b.price>0?((b.price-cost)/b.price)*100:0, cm=m>=0?'var(--green)':'#FF6B6B', ea=b.checks?b.price/b.checks:0;
+        ph+=`<tr><td style="font-size:12.5px;text-align:left;padding:10px 8px;color:var(--text-body)">${b.checks} checks</td><td style="font-size:12.5px;text-align:right;padding:10px 8px;font-variant-numeric:tabular-nums">$${(b.price||0).toFixed(2)}</td><td style="font-size:12.5px;text-align:right;padding:10px 8px;color:var(--text-body);font-variant-numeric:tabular-nums">${money(cost)}</td><td style="font-size:13px;font-weight:700;text-align:right;padding:10px 8px;color:${cm};font-variant-numeric:tabular-nums">${m.toFixed(0)}%</td><td style="font-size:11px;text-align:right;padding:10px 8px;color:var(--text-tertiary);font-variant-numeric:tabular-nums">$${ea.toFixed(2)}</td></tr>`; });
+      pel.innerHTML=ph+'</tbody></table></div>'; }
+  }
 }
 // sync control ELEMENTS to state (segment highlight, nav slider value/disabled) — not run during a slider drag
 function calcSync(){
@@ -2362,37 +2398,37 @@ function calcUpdate(){
   set('calc_strip',strip);
   set('calc_legend',`<span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-muted);opacity:${isDirect?.4:1}">${calcDot(st.nc)}nav ${CALC.nav}s</span><span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-muted)">${calcDot('var(--purple)')}talk ${CALC.talk}s</span><span style="flex:1"></span><span style="font-size:10.5px;color:var(--text-tertiary)">${calcMoney(total/Math.max(dur,1))}/s effective</span>`);
   set('calc_breakdown',items.map(it=>`<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)"><span style="width:3px;height:30px;border-radius:3px;flex-shrink:0;background:${it.accent}"></span><div style="flex:1;min-width:0"><div style="font-size:13px;color:var(--text-strong)">${it.label}</div><div style="font-size:10.5px;color:var(--text-tertiary);margin-top:2px">${it.detail}</div></div><div style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;color:${it.amount===0?'var(--text-tertiary)':'var(--text-primary)'}">${calcMoney(it.amount)}</div></div>`).join('')+`<div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px"><div style="font-size:13px;font-weight:700">All-in / call</div><div style="font-size:22px;font-weight:800;color:var(--green);font-variant-numeric:tabular-nums">${calcMoney(total)}</div></div>`);
-  // ---- Concurrency dimension: revenue slider → peak concurrent → voice plan → two per-check lines ----
-  const conc=pc.conc, cc=conc.plan, money4=v=>'$'+(v<0?'-':'')+Math.abs(v).toFixed(4), cents=v=>(v*100).toFixed(3)+'¢';
-  const peakR=Math.round(conc.peak);
-  txt('calc_mrevval',(CALC.monthlyRevenue||0).toLocaleString());
-  txt('calc_mrevnote',`≈ ${Math.round(conc.monthlyChecks).toLocaleString()} checks / month`);
-  txt('calc_peak',peakR);
-  set('calc_plan_chip',`<span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(conc.overCapacity?'#FF6B6B':'var(--green)')}${cc.name} · $${cc.fee}/mo</span><span style="font-size:10.5px;color:var(--text-muted)">${cc.sustained} concurrent · ${cc.burst} burst</span>${conc.feePctOfRev>0?`<span style="font-size:10.5px;color:var(--text-tertiary)">≈ ${conc.feePctOfRev.toFixed(conc.feePctOfRev<1?2:1)}% of revenue</span>`:''}${conc.overCapacity?'<span style="font-size:10px;color:#FF6B6B;font-weight:700">over top tier — add an EL account (pool)</span>':''}`);
-  const bcap=Math.max(cc.burst,peakR,1);
-  const gW=cc.sustained/bcap*100, aW=Math.max(0,Math.min(peakR,cc.burst)-cc.sustained)/bcap*100, oW=Math.max(0,peakR-cc.burst)/bcap*100;
-  set('calc_conc_bar',`<div style="width:${gW}%;background:linear-gradient(180deg,#4ADE80,#22C55E)"></div><div style="width:${aW}%;background:linear-gradient(180deg,#FBBF24,#F59E0B)"></div>${oW>0?`<div style="width:${oW}%;background:linear-gradient(180deg,#FF6B6B,#EF4444)"></div>`:''}`);
-  set('calc_conc_legend',`<span style="display:inline-flex;align-items:center;gap:5px">${calcDot('#22C55E')}sustained ${cc.sustained}</span><span style="display:inline-flex;align-items:center;gap:5px">${calcDot('#F59E0B')}burst band → ${cc.burst}</span><span style="flex:1"></span><span>peak ${peakR}${conc.overflowPct>0?' · '+(conc.overflowPct*100).toFixed(1)+'% of calls at 2×':''}</span>`);
-  // Per-delivered-check buildup — the two new lines (headroom + burst) sit under the connected-call cost.
-  const noAnswer=pc.wasted*pc.wastedCost;
-  const pcRow=(label,sub,amt,accent,isNew)=>`<div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border)"><span style="width:3px;height:26px;border-radius:3px;flex-shrink:0;background:${accent}"></span><div style="flex:1;min-width:0"><div style="font-size:12.5px;color:var(--text-strong)">${label}${isNew?' <span style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--green);background:rgba(74,222,128,.14);border-radius:5px;padding:1px 5px;vertical-align:middle">NEW</span>':''}</div><div style="font-size:10.5px;color:var(--text-tertiary);margin-top:2px">${sub}</div></div><div style="font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;color:${amt===0?'var(--text-tertiary)':'var(--text-primary)'}">${amt<0.01?money4(amt):calcMoney(amt)}</div></div>`;
+  // ---- Calls at once → voice plan; per-delivered-check buildup with the real monthly bills ----
+  const conc=pc.conc, cc=conc.plan, cg=pc.cogs, atOnceR=Math.round(conc.atOnce);
+  const cents=v=>(v*100).toFixed(3)+'¢';
+  txt('calc_mchecksval',(CALC.monthlyChecks||0).toLocaleString());
+  txt('calc_mchecksnote',`≈ $${Math.round(conc.revenue).toLocaleString()} / month at $${(CALC.revenue||0).toFixed(2)} a check`);
+  txt('calc_atonce',atOnceR);
+  set('calc_plan_chip',`<span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(conc.overCapacity?'#FF6B6B':'var(--green)')}${cc.name} · $${cc.fee}/mo</span><span style="font-size:10.5px;color:var(--text-muted)">runs ${cc.atOnce} at once, up to ${cc.rush} in a rush</span>${conc.feePctOfRev>0?`<span style="font-size:10.5px;color:var(--text-tertiary)">${conc.feePctOfRev.toFixed(conc.feePctOfRev<1?2:1)}% of revenue</span>`:''}${conc.overCapacity?'<span style="font-size:10px;color:#FF6B6B;font-weight:700">over this plan, add a second account</span>':''}`);
+  const bcap=Math.max(cc.rush,atOnceR,1);
+  const gW=Math.min(atOnceR,cc.atOnce)/bcap*100, aW=Math.max(0,Math.min(atOnceR,cc.rush)-cc.atOnce)/bcap*100, oW=Math.max(0,atOnceR-cc.rush)/bcap*100;
+  set('calc_conc_bar',`<div style="width:${gW}%;background:linear-gradient(180deg,#4ADE80,#22C55E)"></div>${aW>0?`<div style="width:${aW}%;background:linear-gradient(180deg,#FBBF24,#F59E0B)"></div>`:''}${oW>0?`<div style="width:${oW}%;background:linear-gradient(180deg,#FF6B6B,#EF4444)"></div>`:''}`);
+  set('calc_conc_legend',`<span style="display:inline-flex;align-items:center;gap:5px">${calcDot('#22C55E')}your busy hour ${atOnceR}</span><span style="flex:1"></span><span>plan runs ${cc.atOnce} at once, ${cc.rush} in a rush</span>`);
+  // Per-delivered-check buildup: the connected call, plus misses, plus the monthly bills split per check.
+  const pcRow=(label,sub,amt,accent)=>`<div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border)"><span style="width:3px;height:26px;border-radius:3px;flex-shrink:0;background:${accent}"></span><div style="flex:1;min-width:0"><div style="font-size:12.5px;color:var(--text-strong)">${label}</div><div style="font-size:10.5px;color:var(--text-tertiary);margin-top:2px">${sub}</div></div><div style="font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;color:${amt===0?'var(--text-tertiary)':'var(--text-primary)'}">${amt>0&&amt<0.01?calcMoney4(amt):calcMoney(amt)}</div></div>`;
   set('calc_percheck_lines',
     `<div style="font-size:10px;letter-spacing:.1em;color:var(--text-tertiary);font-weight:700;margin-bottom:6px">PER DELIVERED CHECK</div>`+
-    pcRow('Connected call','the call cost above',pc.connected,'var(--green)',false)+
-    pcRow('No-answer waste',`reach ${CALC.reach}% · dials that miss`,noAnswer,'var(--text-muted)',false)+
-    pcRow('Concurrency headroom',`${cc.name} $${cc.fee}/mo ÷ ${Math.round(conc.monthlyChecks).toLocaleString()} checks · ${cents(conc.headroomPerCheck)}`,conc.headroomPerCheck,'#38BDF8',true)+
-    pcRow('Burst overflow',`${(conc.overflowPct*100).toFixed(1)}% of calls at ~2× during spikes · ${cents(conc.burstPerCheck)}`,conc.burstPerCheck,'#FBBF24',true)+
-    `<div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px"><div style="font-size:13px;font-weight:700">All-in / delivered check</div><div style="font-size:22px;font-weight:800;color:var(--green);font-variant-numeric:tabular-nums">${calcMoney(pc.perCheck)}</div></div>`);
+    pcRow('Connected call','the call cost above',pc.connected,'var(--green)')+
+    pcRow('No-answer waste',`${CALC.reach}% of stores pick up. Misses cost a little ring time.`,pc.noAnswer,'var(--text-muted)')+
+    pcRow('Monthly bills',`$${Math.round(cg.totalMonthly).toLocaleString()}/mo ÷ ${(conc.checks||0).toLocaleString()} checks · ${cents(cg.perCheck)}`,cg.perCheck,'#38BDF8')+
+    `<div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px"><div style="font-size:13px;font-weight:700">All-in per delivered check</div><div style="font-size:22px;font-weight:800;color:var(--green);font-variant-numeric:tabular-nums">${calcMoney(pc.perCheck)}</div></div>`);
+  txt('calc_cogs_note',`ElevenLabs plan $${cc.fee} + Railway $${CALC.cogs.railway} + Helicone $${CALC.cogs.helicone} + TiDB $${CALC.cogs.tidb} + Twilio number $${CALC.cogs.twilioNumber} = $${Math.round(cg.totalMonthly).toLocaleString()}/mo, so ${cents(cg.perCheck)} a check`);
   const rows=['Alpha','Bravo','Direct'].map(t=>({type:t,row:CALC_TALK.map(tk=>calcCompute(t,CALC_STORE[t].nav,tk,CALC.rates,CALC.lane,CALC.deltaEsc).total)}));
   const flat=[]; rows.forEach(r=>flat.push(...r.row)); const mn=Math.min(...flat), mx=Math.max(...flat), heat=v=>mx===mn?0:(v-mn)/(mx-mn);
-  let mt=`<thead><tr><th style="font-size:10.5px;color:var(--text-muted);font-weight:600;padding:6px 8px;text-align:left;border-bottom:1px solid var(--border-strong)">Store</th>${CALC_TALK.map(c=>`<th style="font-size:10.5px;color:var(--text-muted);font-weight:600;padding:6px 8px;text-align:right;border-bottom:1px solid var(--border-strong)">${c}s</th>`).join('')}</tr></thead><tbody>`;
+  let mt=`<thead><tr><th style="font-size:10.5px;color:var(--text-muted);font-weight:600;padding:6px 8px;text-align:left;border-bottom:1px solid var(--border-strong)">Nav type</th>${CALC_TALK.map(c=>`<th style="font-size:10.5px;color:var(--text-muted);font-weight:600;padding:6px 8px;text-align:right;border-bottom:1px solid var(--border-strong)">${c}s</th>`).join('')}</tr></thead><tbody>`;
   rows.forEach(({type,row})=>{ const sel=type===CALC.storeType, c=CALC_STORE[type].nc;
     mt+=`<tr><th style="font-size:12.5px;color:${sel?'var(--text-primary)':'var(--text-muted)'};font-weight:600;text-align:left;padding:8px;white-space:nowrap">${calcDot(c)} ${type}</th>`+row.map(v=>`<td style="font-size:12.5px;font-weight:600;text-align:right;padding:10px 8px;font-variant-numeric:tabular-nums;border-bottom:1px solid var(--border);background:rgba(74,222,128,${(0.04+heat(v)*0.22).toFixed(3)});outline:${sel?'1px solid '+(c[0]==='#'?c+'55':'var(--purple)'):'none'}">${calcMoney(v)}</td>`).join('')+`</tr>`; });
   set('calc_matrix',mt+'</tbody>');
-  const margin=CALC.revenue>0?((CALC.revenue-total)/CALC.revenue)*100:0, mc=margin>=0?'var(--green)':'#FF6B6B';
+  // Margin uses the all-in per delivered check (matches the hero number), not just the raw call.
+  const cpc=pc.perCheck, margin=CALC.revenue>0?((CALC.revenue-cpc)/CALC.revenue)*100:0, mc=margin>=0?'var(--green)':'#FF6B6B';
   const mEl=document.getElementById('calc_margin'); if(mEl){ mEl.textContent=margin.toFixed(1)+'%'; mEl.style.color=mc; }
-  const ret=total>0?CALC.revenue/total:0, rEl=document.getElementById('calc_return'); if(rEl){ rEl.textContent=ret.toFixed(1)+'×'; rEl.style.color=ret>=1?'var(--green)':'#FF6B6B'; }
-  set('calc_sentence',`At ${calcMoney(CALC.revenue)} revenue/call, cost is <b style="color:var(--text-primary)">${calcMoney(total)}</b> → margin = <b style="color:${mc}">${margin.toFixed(1)}%</b>.`);
+  const ret=cpc>0?CALC.revenue/cpc:0, rEl=document.getElementById('calc_return'); if(rEl){ rEl.textContent=ret.toFixed(1)+'×'; rEl.style.color=ret>=1?'var(--green)':'#FF6B6B'; }
+  set('calc_sentence',`At $${(CALC.revenue||0).toFixed(2)} a check, all-in cost is <b style="color:var(--text-primary)">${calcMoney(cpc)}</b>. Margin is <b style="color:${mc}">${margin.toFixed(1)}%</b>.`);
   calcRenderPlans();
 }
 async function loadDash(){
