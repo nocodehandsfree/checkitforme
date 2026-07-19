@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r153" />
+<meta name="x-rev" content="glassfix-r154" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -1784,6 +1784,8 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
    a gray box under the drag handle) — just the big title on the sheet background, like Check history. */
 #zones .zf-head{flex:none;display:flex;align-items:center;gap:12px;background:transparent;padding:2px 18px 12px}
 #zones .zf-title{font-size:22px;font-weight:900;letter-spacing:-.4px;color:#fff;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#zones .zf-head.zf-compact{padding:0 18px 8px;justify-content:center}
+#zones .zf-title.sm{font-size:16px;font-weight:800;text-align:center;letter-spacing:.01em}
 #zones .zf-back{width:38px;height:38px;flex:0 0 auto;border-radius:50%;border:0;background:linear-gradient(180deg,#31313A,#28282E);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.12);color:#fff;font-size:19px;line-height:1;cursor:pointer;display:grid;place-items:center}
 #zones .zf-sub{flex:none;padding:6px 16px 6px;background:transparent}
 #zones .zcap{padding:4px 16px 2px;font:600 12px Inter;color:var(--muted)}
@@ -1798,7 +1800,7 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zf-scroll>*{flex:0 0 auto}
 #zones .zf-foot{flex:none}
 /* create-flow slide-up basket — absolute so it overlays the bottom (no reserved gap when empty) */
-#zones .zbasket{position:absolute;left:0;right:0;bottom:0;z-index:5;background:linear-gradient(180deg,#2D2D34,#25252B);box-shadow:0 -18px 34px -12px rgba(0,0,0,.72),inset 0 1px 0 rgba(255,255,255,.08);border-radius:26px 26px 0 0;padding:15px 18px calc(20px + env(safe-area-inset-bottom));transform:translateY(112%);transition:transform .28s cubic-bezier(.2,.8,.3,1)}
+#zones .zbasket{position:absolute;left:0;right:0;bottom:0;z-index:1000;background:linear-gradient(180deg,#2D2D34,#25252B);box-shadow:0 -18px 34px -12px rgba(0,0,0,.72),inset 0 1px 0 rgba(255,255,255,.08);border-radius:26px 26px 0 0;padding:15px 18px calc(20px + env(safe-area-inset-bottom));transform:translateY(112%);transition:transform .28s cubic-bezier(.2,.8,.3,1)}
 #zones .zbasket.up{transform:translateY(0)}
 #zones .zbkhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;font:900 14px Inter;color:#fff;white-space:nowrap}
 #zones .zclearall{background:none;border:0;color:#8A8A96;font:700 12.5px Inter;letter-spacing:.02em;cursor:pointer;padding:2px 0}
@@ -4058,7 +4060,7 @@ function sheetH_on(ov){ if(!ov||ov.__sh) return; ov.__sh=1;
   const TAIL=120;
   const place=()=>{ const prev=m.style.height;
     m.style.height=''; m.style.maxHeight=''; m.style.paddingBottom='';
-    const cap=window.innerHeight*0.86, cs=getComputedStyle(m);
+    const cap=window.innerHeight*0.93, cs=getComputedStyle(m);
     // FILL sheets — a flex column that scrolls INSIDE (reading pages, zones, history) — open TALL at the
     // cap so there's room to read. Measuring their natural height opens them short because their content
     // loads a beat after the sheet (owner: "you can't read much like this, 75% of the page"). Form/menu
@@ -7004,8 +7006,8 @@ function zCredits(){ try{ if(ACCOUNT&&(ACCOUNT.comp||ACCOUNT.credits==null&&ACCO
 // Clean header: just the title (no credits pill — that read as "repeating My checks"). No back button on
 // the top-level My Zones (it's a slide-up: drag down / tap behind). Sub-screens pass `back` for list nav.
 const zFrameHead=(title,back)=>back
-  ? `<div class="zf-head"><button class="zf-back" onclick="${back}" aria-label="Back">‹</button><div class="zf-title">${esc(title)}</div></div>`
-  : `<div class="zf-head" style="flex-direction:column;align-items:center;gap:9px;padding-top:0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${AC1()}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg><div class="zf-title">${esc(title)}</div></div>`; // unified sheet nav: icon on top (owner 07-14)
+  ? `<div class="zf-head zf-compact"><div class="zf-title sm">${esc(title)}</div></div>` /* no back button — drag the sheet down to go back to My Zones (owner 07-19) */
+  : `<div class="zf-head" style="flex-direction:column;align-items:center;gap:9px;padding-top:0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${AC1()}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg><div class="zf-title">${esc(title)}</div></div>`;
 const ZKEBAB='<svg width="20" height="20" viewBox="0 0 24 24" fill="#8A8A96"><circle cx="5" cy="12" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="19" cy="12" r="2"></circle></svg>';
 const ZGOARR='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFCB05" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15"></path><path d="M13 6l6 6-6 6"></path></svg>';
 async function openZones(){
@@ -7039,6 +7041,7 @@ async function renderZonesList(){
 // Same renderer the homepage store rows use (storeFace) so zone logos are byte-for-byte identical.
 function zoneFace(st){ return `<div class="zc-face ${st.logoDark?'lite':''} ${st.logoWide?'widelogo':''}">${storeFace(st)}</div>`; }
 function zonePaintList(list){
+  ZONES.building=false;
   const z=$('zmodal'); if(!z) return;
   const CHK='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"></path></svg>';
   const cards=(list||[]).map(zn=>{
@@ -7220,6 +7223,7 @@ function zoneRowHTML(s){ const on=ZONES.sel.has(s.id); const mi=storeMi(s); cons
     <div style="min-width:0;flex:1"><div class="nm">${esc(s.name)}</div><div class="lo">${esc(s.location||'')}${closed?' · '+t('zones.closed','closed'):''}</div></div>
     ${mi!=null?`<div class="smi">${mi<10?mi.toFixed(1):Math.round(mi)}<small>mi</small></div>`:''}</div>`; }
 function renderZoneBuild(){
+  ZONES.building=true;
   const z=$('zmodal'); const stores=zoneBuildStores(); const n=ZONES.sel.size; const R=ZONES.radius||5; const map=!!ZONES.mapOpen;
   const rings=[1,2,5,10].map(r=>`<button class="zrad ${R===r?'on':''}" onclick="zoneSetRadius(${r})">${r}</button>`).join('');
   const rows=stores.length?stores.map(zoneRowHTML).join('')
@@ -7921,6 +7925,19 @@ function closeCheckout(){ const o=$('coOverlay'); if(o) o.classList.remove('on')
 
 // Swipe-down-to-dismiss for the bottom sheets (plans + My checks). passive:false on move so the
 // drag beats the scroll once it starts; only arms when the sheet is scrolled to the top.
+(function zoneKeyboard(){
+  const vv=window.visualViewport; if(!vv) return;
+  function apply(){
+    const z=$('zones'), bk=$('zBasket'); if(!z||!bk||!z.classList.contains('on')) return;
+    const kb=Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+    const focused=document.activeElement && document.activeElement.id==='z_name';
+    if(kb>90 && focused){ bk.style.position='fixed'; bk.style.left='0'; bk.style.right='0'; bk.style.bottom=kb+'px'; bk.style.transform='none'; bk.style.zIndex='2147483000'; bk.classList.add('kbfloat'); }
+    else if(bk.classList.contains('kbfloat')){ bk.classList.remove('kbfloat'); bk.style.position=''; bk.style.left=''; bk.style.right=''; bk.style.bottom=''; bk.style.transform=''; bk.style.zIndex=''; requestAnimationFrame(()=>sheetReplaceSoon($('zones'))); }
+  }
+  vv.addEventListener('resize', apply); vv.addEventListener('scroll', apply);
+  document.addEventListener('focusin', e=>{ if(e.target&&e.target.id==='z_name') setTimeout(apply,60); });
+  document.addEventListener('focusout', e=>{ if(e.target&&e.target.id==='z_name') setTimeout(apply,80); });
+})();
 function sheetDrag(overlayId, closeFn){
   let y0=0,dy=0,drag=false;
   const modal=()=>document.querySelector('#'+overlayId+' .modal');
@@ -7941,7 +7958,7 @@ sheetDrag('pageOverlay', ()=>closePage()); // footer pages are a bottom sheet no
 sheetDrag('acctOverlay', ()=>{ try{ closeAccount(true); }catch(_){ } }); // sheetDrag already ran the slide-down → instant hide
 sheetDrag('coOverlay', ()=>{ try{ closeCheckout(); }catch(_){ } });
 sheetDrag('storeReqOverlay', ()=>{ try{ closeStoreReq(); }catch(_){ } });
-sheetDrag('zones', ()=>{ try{ backFromZones(); }catch(_){ } });       // drag My Zones down to dismiss
+sheetDrag('zones', ()=>{ try{ if(ZONES.building){ renderZonesList(); } else { backFromZones(); } }catch(_){ } }); // builder -> My Zones; list -> My checks
 sheetDrag('histOverlay', ()=>{ try{ closeHistory(); }catch(_){ } });  // drag Check history down to dismiss
 sheetDrag('watchOverlay', ()=>{ try{ closeWatch(); }catch(_){ } });
 sheetDrag('scheduleOverlay', ()=>{ try{ closeSchedule(); }catch(_){ } });
