@@ -1760,7 +1760,14 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zrrow{display:flex;align-items:center;gap:11px;width:100%;margin-top:8px;padding:11px 13px;border:0;border-radius:13px 13px 0 0;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);color:#FFF;cursor:pointer}
 #zones .zrrow .nm{display:block;font-size:14.5px;font-weight:700}
 #zones .zrlbl{display:block;font-size:12px;font-weight:700;margin-top:2px} #zones .zrlbl.t-in{color:#4ADE80} #zones .zrlbl.t-out{color:#EF4444} #zones .zrlbl.t-unk{color:#FBBF24} #zones .zrlbl.t-live{color:#8A8A96}
-#zones .zri{font-size:18px;flex:0 0 auto} #zones .zrchev{color:#7C7C88;flex:0 0 auto}
+#zones .zri{flex:0 0 auto;display:flex;align-items:center;justify-content:center;width:18px} #zones .zrchev{color:#7C7C88;flex:0 0 auto}
+/* Verdict-tone status dots — the app's existing verdict language (green/red/amber/grey), replacing the
+   off-system emoji in the live sweep report. Same tokens as .zrlbl. In-stock glows; live pulses. */
+#zones .zdotv{width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:#8A8A96}
+#zones .zdotv.t-in{background:#4ADE80;box-shadow:0 0 7px #4ADE80} #zones .zdotv.t-out{background:#EF4444} #zones .zdotv.t-unk{background:#FBBF24} #zones .zdotv.t-live{background:#8A8A96;animation:zLive 1.4s ease-in-out infinite}
+#zones .zchipdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle;position:relative;top:-1px}
+@keyframes zLive{0%,100%{opacity:.35}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){#zones .zdotv.t-live{animation:none}}
 #zones .zrbody{background:#1B1B20;border-radius:0 0 13px 13px;padding:8px 12px 12px;margin-bottom:2px}
 /* ===== Zones LOCKED FRAME (owner 07-11 comp): full-screen takeover — header pinned top, only the
    middle scrolls, basket bar pinned bottom. Nothing bleeds under the header. ===== */
@@ -7369,10 +7376,10 @@ function renderZoneRun(){
   const r=ZONES.run; if(!r) return; const d=r.data||{summary:{},results:[]};
   const sm=d.summary||{}; const done=d.done||0, total=d.total||(d.results?d.results.length:0);
   const dots=Array.from({length:total},(_,i)=>`<span class="zdot ${i<done?'done':''}"></span>`).join('');
-  const rows=(d.results||[]).map(row=>{ const tone=zoneRunTone(row); const ic={in:'✅',out:'❌',unk:'🔇',live:'📞'}[tone];
+  const rows=(d.results||[]).map(row=>{ const tone=zoneRunTone(row);
     const lbl=row.summary||({in:t('zones.rin','In stock'),out:t('zones.rout','Not in stock'),unk:t('zones.runk','No answer'),live:t('zones.rlive','Checking…')}[tone]);
     return `<button class="zrrow" onclick="zoneExpand('${esc(row.cid||'')}',this)">
-      <span class="zri">${ic}</span>
+      <span class="zri"><span class="zdotv t-${tone}"></span></span>
       <span style="flex:1;min-width:0;text-align:left"><span class="nm">${esc(row.name||('Store '+row.retailerId))}</span><span class="zrlbl t-${tone}">${esc(lbl)}</span></span>
       <span class="zrchev">▸</span>
     </button><div class="zrbody" style="display:none"></div>`; }).join('');
@@ -7382,7 +7389,7 @@ function renderZoneRun(){
     <div class="card" style="padding:14px 16px">
       <div class="zdots">${dots}</div>
       <div class="zsummary">${done} ${t('zones.done','done')}${live?' · '+(total-done)+' '+t('zones.checkingw','checking'):''}</div>
-      <div class="zsumchips"><span>✅ ${sm.inStock||0} ${t('zones.rin','in stock')}</span><span>❌ ${sm.no||0} ${t('zones.no','no')}</span><span>🔇 ${sm.noAnswer||0} ${t('zones.noans','no answer')}</span></div>
+      <div class="zsumchips"><span><span class="zchipdot t-in" style="background:#4ADE80"></span>${sm.inStock||0} ${t('zones.rin','in stock')}</span><span><span class="zchipdot t-out" style="background:#EF4444"></span>${sm.no||0} ${t('zones.no','no')}</span><span><span class="zchipdot t-unk" style="background:#FBBF24"></span>${sm.noAnswer||0} ${t('zones.noans','no answer')}</span></div>
     </div>
     <div class="zrlist">${rows||`<div class="card" style="text-align:center;color:#8A8A96;padding:20px">${t('zones.starting','Starting the sweep…')}</div>`}</div>
     <div class="zbar"><div class="zbarrow" style="gap:10px">${live?`<button class="findbtn-primary" style="flex:1" onclick="zoneStopAll()">${t('zones.stopall','Stop all')}</button>`:''}<button class="cta sm" style="flex:1" onclick="zoneShare()">${t('zones.share','Share results')}</button></div></div>
