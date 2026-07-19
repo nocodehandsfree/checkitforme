@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r150" />
+<meta name="x-rev" content="glassfix-r151" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -125,13 +125,16 @@ __BRAND_HEAD__
   .card{background:var(--sheet);border:1px solid var(--border);border-radius:18px;padding:22px;margin-bottom:20px}
   /* Queued holding card — CD comp docs/design/comps/QUEUED_HOLDING_CARD_COMP.dc.html (2026-07-18): contained in-stock wash, glass timer well, store row. */
   .holdcard{position:relative;border-radius:26px;overflow:hidden;padding:26px 24px 24px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7);background:radial-gradient(120% 92% at 88% -8%,rgba(74,222,128,.22) 0%,rgba(74,222,128,0) 50%),linear-gradient(180deg,#266440 0%,#21503A 32%,#1D1D22 90%)}
+  .holdcard .hc-wm{position:absolute;top:-34px;right:-40px;width:168px;height:168px;opacity:.16;z-index:0;pointer-events:none}
+  .holdcard .hc-wm svg{width:100%;height:100%;display:block}
+  .holdcard .hc-head,.holdcard .hc-sub,.holdcard .hc-timer{position:relative;z-index:1}
   .holdcard .hc-row{display:flex;align-items:center;gap:13px}
   .holdcard .hc-logo{width:44px;height:44px;flex:0 0 auto;border-radius:12px;background:#1F1F25;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;overflow:hidden}
   .holdcard .hc-logo img{max-width:34px;max-height:34px;width:auto;height:auto;object-fit:contain;display:block}
   .holdcard .hc-id{min-width:0}
   .holdcard .hc-store{color:#fff;font:700 15px Inter;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .holdcard .hc-meta{color:#8A8A96;font:600 12.5px Inter;margin-top:2px}
-  .holdcard .hc-head{margin:22px 0 0;color:#fff;font:900 36px Inter;line-height:1;letter-spacing:-1.6px;white-space:nowrap}
+  .holdcard .hc-head{margin:10px 0 0;color:#fff;font:900 36px Inter;line-height:1;letter-spacing:-1.6px;white-space:nowrap}
   .holdcard .hc-sub{margin:12px 0 0;color:rgba(255,255,255,.78);font:600 16.5px Inter;line-height:1.4;max-width:290px}
   .holdcard .hc-timer{margin-top:22px;border-radius:18px;padding:16px 20px;background:rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.10),inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:space-between;gap:14px}
   .holdcard .hc-tl{display:flex;align-items:center;gap:11px;min-width:0}
@@ -2214,10 +2217,10 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
 
   <!-- Queued "you're next" holding card (shows only when the backend returns a queued signal; see holdForSlot) -->
   <div id="holdCard" class="hidden"><div class="holdcard">
-    <div class="hc-row"><div class="hc-logo" id="hc_logo"></div><div class="hc-id"><div class="hc-store" id="hc_store"></div><div class="hc-meta" id="hc_meta"></div></div></div>
+    <div class="hc-wm"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#8CF7B4"/><path d="M6.5 12.4 L10.3 16 L17.5 8" stroke="#20693F" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
     <h1 class="hc-head" id="hc_head">We're slammed.</h1>
     <p class="hc-sub" id="hc_sub"></p>
-    <div class="hc-timer"><div class="hc-tl"><span class="hc-dot"></span><span class="hc-lbl" id="hc_lbl">Check starts in</span></div><span class="hc-val" id="hc_val">0:30</span></div>
+    <div class="hc-timer"><div class="hc-tl"><span class="hc-dot"></span><span class="hc-lbl" id="hc_lbl">Your check starts in</span></div><span class="hc-val" id="hc_val">0:30</span></div>
   </div></div>
 
   <!-- HISTORY -->
@@ -3033,7 +3036,7 @@ const I18N={ es:{
   'zones.locph':'Busca un código postal o ciudad…','zones.go':'Ir','zones.list':'Lista','zones.map':'Mapa',
   'zones.radius':'Radio','zones.addallshort':'Agregar todo','zones.selstore':'tienda seleccionada','zones.selstores':'tiendas seleccionadas',
   'zones.typloc':'Escribe primero un código postal o ciudad.','zones.located':'Centrado en {q}','zones.noplace':'No encontramos ese lugar.',
-  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas','zones.cap10':'Una zona verifica hasta 10 tiendas a la vez.','hold.meta':'Buscando {p}','hold.meta.generic':'Revisando el estante','hold.head':'Estamos a tope.','hold.sub':'Un momento.','hold.timer':'La revisión empieza en','em.title':'Tu correo','step.calling':'Llamando','watch.verify.h':'Revisa tu correo para confirmarlo.','watch.verify.hsms':'Te enviaremos un texto para confirmar tu celular.','watch.then2':'Luego te avisamos al instante<br>cuando se confirme en stock.','em.sub':'Las alertas y avisos de reposición llegan aquí.','em.new':'Danos tu nuevo correo','em.first':'Danos tu correo','em.empty':'Escribe tu nuevo correo primero','em.same':'Ese ya es tu correo','em.resent':'Confirmación enviada. Revisa tu correo.','em.again':'Enviarla de nuevo','em.done':'Correo confirmado. Alertas activas.','em.badlink':'Ese enlace no funcionó. Toca Enviarla de nuevo.','em.ph':'tu@correo.com','em.save':'Guardar correo','em.saving':'Guardando…','em.confirm':'Revisa tu correo para confirmar','em.add':'Agrega tu correo para alertas','alerts.title':'Alertas','alerts.sub':'Maneja tus alertas de correo y texto.','alerts.row.at':'{p} en {s}','alerts.d.remail':'Te manda un correo al volver.','alerts.d.rsms':'Te manda un texto al volver.','alerts.d.semail':'Verifica la tienda sola. Resultado al correo.','alerts.d.ssms':'Verifica la tienda sola. Resultado por texto.','alerts.none':'Aún no has creado alertas.','alerts.off':'Apagar','alerts.mute':'Silenciar','alerts.unmute':'Activar','alerts.stop':'Parar','alerts.d.muted':'Silenciada. No llega nada hasta activarla.','alerts.mutedpill':'Silenciada. Actívala cuando quieras.','alerts.unmutedpill':'Activada. Te avisaremos.','alerts.stopped':'Cancelamos {x}','alerts.name.restock':'las alertas de reposición de {s}','alerts.name.sched':'las alertas de auto chequeo de {s}','alerts.thatstore':'esa tienda','alerts.thisalert':'esta alerta','alerts.k.sched':'Auto-verificación','alerts.k.restock':'Alerta de reposición','alerts.c.sms':'texto','alerts.c.email':'correo','alerts.acheck':'Una verificación','acct.row.alerts':'Alertas','acct.row.alerts.sub':'Avisos de reposición y autoverificación.',
+  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas','zones.cap10':'Una zona verifica hasta 10 tiendas a la vez.','hold.meta':'Buscando {p}','hold.meta.generic':'Revisando el estante','hold.head':'Estamos a tope.','hold.sub':'Un momento.','hold.timer':'Tu revisión empieza en','em.title':'Tu correo','step.calling':'Llamando','watch.verify.h':'Revisa tu correo para confirmarlo.','watch.verify.hsms':'Te enviaremos un texto para confirmar tu celular.','watch.then2':'Luego te avisamos al instante<br>cuando se confirme en stock.','em.sub':'Las alertas y avisos de reposición llegan aquí.','em.new':'Danos tu nuevo correo','em.first':'Danos tu correo','em.empty':'Escribe tu nuevo correo primero','em.same':'Ese ya es tu correo','em.resent':'Confirmación enviada. Revisa tu correo.','em.again':'Enviarla de nuevo','em.done':'Correo confirmado. Alertas activas.','em.badlink':'Ese enlace no funcionó. Toca Enviarla de nuevo.','em.ph':'tu@correo.com','em.save':'Guardar correo','em.saving':'Guardando…','em.confirm':'Revisa tu correo para confirmar','em.add':'Agrega tu correo para alertas','alerts.title':'Alertas','alerts.sub':'Maneja tus alertas de correo y texto.','alerts.row.at':'{p} en {s}','alerts.d.remail':'Te manda un correo al volver.','alerts.d.rsms':'Te manda un texto al volver.','alerts.d.semail':'Verifica la tienda sola. Resultado al correo.','alerts.d.ssms':'Verifica la tienda sola. Resultado por texto.','alerts.none':'Aún no has creado alertas.','alerts.off':'Apagar','alerts.mute':'Silenciar','alerts.unmute':'Activar','alerts.stop':'Parar','alerts.d.muted':'Silenciada. No llega nada hasta activarla.','alerts.mutedpill':'Silenciada. Actívala cuando quieras.','alerts.unmutedpill':'Activada. Te avisaremos.','alerts.stopped':'Cancelamos {x}','alerts.name.restock':'las alertas de reposición de {s}','alerts.name.sched':'las alertas de auto chequeo de {s}','alerts.thatstore':'esa tienda','alerts.thisalert':'esta alerta','alerts.k.sched':'Auto-verificación','alerts.k.restock':'Alerta de reposición','alerts.c.sms':'texto','alerts.c.email':'correo','alerts.acheck':'Una verificación','acct.row.alerts':'Alertas','acct.row.alerts.sub':'Avisos de reposición y autoverificación.',
   'feat.d.zone_sweeps':'Guarda tus tiendas como una zona. Un toque las llama todas a la vez. Mira las respuestas llegar en vivo. Cada tienda cuesta una verificación. Sin respuesta, sin cargo.','feat.d.restock_alerts':'Deja de revisar. Te avisamos. Toca Avísame cuando vuelva en un resultado. Vigilamos esa tienda por ti. Apenas llegue producto, te avisamos. Un aviso por reposición, nada de spam.','feat.d.scheduled_checks':'Las tiendas reponen con ritmo. La autoverificación corre en sus días de envío. La respuesta te espera en el celular. Cancela cuando quieras en Mis verificaciones.','feat.d.any_town':'Las cuentas gratis buscan cerca de casa. Cualquier ciudad te suelta la correa. Busca cualquier código postal o ciudad. El mapa salta ahí. Más de 100,000 tiendas.','feat.d.store_holds':'¿Lo encontraste pero estás a 20 minutos? Le pedimos al personal que te aparte uno. Con tu nombre, en la misma llamada.','feat.d.your_voice':'Elige la voz que llama por ti. Quien contesta escucha una voz amable y natural.','feat.d.thrift_hunts':'Colecciones viejas acaban en tiendas de segunda. Precios de risa, nadie las revisó. Activa Thrift y llamamos a las de tu zona. Preguntamos qué hay en la vitrina hoy.','feat.d.hobby_hunts':'Un muro de Pokémon para explorar. Cada era, cada set, cada producto. Con precios de lista. Elige tu objetivo. Cada llamada pide exactamente eso.',
   'zones.untitled':'Zona sin nombre','zones.store':'tienda','zones.stores':'tiendas',
   'zones.rename':'Renombrar','zones.delete':'Eliminar zona','zones.rename.save':'Guardar nombre','zones.delete.sure':'No se puede deshacer.','zones.delete.yes':'Sí, eliminarla','zones.keep':'Conservarla','zones.allclosed':'Todas las tiendas de esta zona están cerradas','zones.confirm.title':'¿Verificar todas las tiendas de esta zona?','zones.confirm.per':'1 verificación por tienda.',
@@ -5471,15 +5474,9 @@ function holdResolve(v){ if(!HOLD.active) return; HOLD.active=false; clearInterv
 function holdForSlot(resp,useApp){
   return new Promise(resolve=>{
     HOLD={active:true,ticket:resp.ticketId,sim:resp.ticketId==='sim',eta:Math.max(0,resp.etaSeconds!=null?resp.etaSeconds:30),resolve:resolve,poll:null,tick:null};
-    // Store row (logo + name + what we're checking) — CD comp S5.6.
-    const s=SEL_STORE||{}; const lg=$('hc_logo'); if(lg) lg.innerHTML=(typeof storeFace==='function')?storeFace(s):'';
-    const st=$('hc_store'); if(st) st.textContent=s.name||t('live.store','the store');
-    const cats=(SEL_CATS||[]).map(id=>((CATS||[]).find(c=>c.id===id)||{}).label).filter(Boolean);
-    const prod=SEL_PRODUCT||cats[0]||((typeof BRAND!=='undefined'&&BRAND&&BRAND.label)||'');
-    const mt=$('hc_meta'); if(mt) mt.textContent=prod?tf('hold.meta','Checking for {p}',{p:prod}):t('hold.meta.generic','Checking the shelf');
     const hd=$('hc_head'); if(hd) hd.textContent=t('hold.head',"We're slammed.");
     const sub=$('hc_sub'); if(sub) sub.textContent=t('hold.sub','Hang tight.');
-    const lb=$('hc_lbl'); if(lb) lb.textContent=t('hold.timer','Check starts in');
+    const lb=$('hc_lbl'); if(lb) lb.textContent=t('hold.timer','Your check starts in');
     $('live').classList.add('hidden'); $('holdCard').classList.remove('hidden');
     holdRender(HOLD.eta);
     HOLD.tick=setInterval(()=>{ if(!HOLD.active) return; HOLD.eta=Math.max(0,HOLD.eta-1); holdRender(HOLD.eta); },1000); // smooth local countdown between polls
@@ -5503,12 +5500,9 @@ function holdPeek(){
   try{ ['builder','live','result','history'].forEach(id=>{ const el=$(id); if(el) el.classList.add('hidden'); }); }catch(_){ }
   try{ const hd=document.querySelector('header'); if(hd) hd.style.display='none'; const ft=document.querySelector('.site-footer'); if(ft) ft.style.display='none'; const sl=document.querySelector('.suplaunch'); if(sl) sl.style.display='none'; document.querySelectorAll('.sup-tab').forEach(e=>e.style.display='none'); const m=document.querySelector('main'); if(m){ m.style.minHeight='86vh'; m.style.display='flex'; m.style.flexDirection='column'; m.style.justifyContent='center'; } }catch(_){ }
   const hc=$('holdCard'); if(!hc) return; hc.classList.remove('hidden');
-  const lg=$('hc_logo'); if(lg) lg.innerHTML=(typeof storeFace==='function')?storeFace({name:'Target Los Feliz',logoUrl:'/logos/chains/target.png'}):'';
-  const st=$('hc_store'); if(st) st.textContent='Target Los Feliz';
-  const mt=$('hc_meta'); if(mt) mt.textContent=tf('hold.meta','Checking for {p}',{p:'Pokémon'});
   const hd=$('hc_head'); if(hd) hd.textContent=t('hold.head',"We're slammed.");
   const sub=$('hc_sub'); if(sub) sub.textContent=t('hold.sub','Hang tight.');
-  const lb=$('hc_lbl'); if(lb) lb.textContent=t('hold.timer','Check starts in');
+  const lb=$('hc_lbl'); if(lb) lb.textContent=t('hold.timer','Your check starts in');
   let s=30; const fmt=n=>Math.floor(n/60)+':'+String(n%60).padStart(2,'0');
   const tick=()=>{ const v=$('hc_val'); if(!v) return; v.textContent=fmt(s); s=s>0?s-1:30; };
   tick(); setInterval(tick,1000);
