@@ -2060,9 +2060,21 @@ const CALC_STORE={ Direct:{label:'Direct',sub:'human picks up',nav:0,nc:'var(--t
 const CALC_TALK=[10,15,20,25,30,60];
 const calcMoney=n=>'$'+(n<0?'-':'')+Math.abs(n).toFixed(3);
 const CALC={ storeType:'Alpha', nav:30, talk:20, revenue:0.2, lane:'delta', deltaEsc:30, reach:45, usage:50,
+  monthlyChecks:20000, // drives the "Calls at once" section
+  conc:{ daysPerMonth:30, busyHourFrac:0.15, avgCallMin:1.5 }, // busy-hour concurrency assumptions (editable)
   rates:{ twilioPerMin:0.014, elevenPerSec:0.0012, claudePerSec:0.0002, bravoNavPerSec:0, overhead:0.001, deltaClipPerCall:0.0002, classifyPerCall:0.0004 },
   plans:[{name:'Family',price:4.99,checks:15},{name:'Collector',price:9.99,checks:30},{name:'Hunter',price:19.99,checks:100},{name:'Operator',price:49.99,checks:300}],
   ready:false };
+// ElevenLabs voice plans: flat monthly fee · calls it runs at once · the higher number it briefly stretches to.
+const CALC_VOICE_PLANS=[{name:'Creator',fee:22,atOnce:10,rush:30},{name:'Pro',fee:99,atOnce:20,rush:60},{name:'Scale',fee:299,atOnce:30,rush:90}];
+const calcPickPlan=n=>CALC_VOICE_PLANS.find(p=>p.atOnce>=n)||CALC_VOICE_PLANS[CALC_VOICE_PLANS.length-1];
+// From the month's checks: how many calls run at once in the busy hour, and which plan covers it.
+function calcConcurrency(){
+  const c=CALC.conc, checks=CALC.monthlyChecks||0, revenue=checks*(CALC.revenue||0);
+  const atOnce=checks>0?(checks/c.daysPerMonth)*c.busyHourFrac*(c.avgCallMin/60):0;
+  const plan=calcPickPlan(atOnce);
+  return { checks, revenue, atOnce, plan, overCapacity:atOnce>plan.rush, feePctOfRev:revenue>0?plan.fee/revenue*100:0 };
+}
 const calcDot=c=>`<span style="display:inline-block;width:8px;height:8px;border-radius:9px;background:${c};flex-shrink:0"></span>`;
 
 // core cost model — one source of truth (Twilio runs the whole call; Bravo nav is now CHEAP voice-injection
@@ -2196,6 +2208,8 @@ async function calcSyncPlans(){
 function calcShell(){
   const seg=Object.keys(CALC_STORE).map(t=>`<button type="button" id="calc_seg_${t}" onclick="calcPick('${t}')" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:10px;border-radius:11px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-muted);cursor:pointer;text-align:left;font:inherit"><span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(CALC_STORE[t].nc)}${t}</span><span style="font-size:10.5px;color:var(--text-tertiary)">${CALC_STORE[t].sub}</span></button>`).join('');
   const rate=(label,k,suf)=>`<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:var(--text-muted)">${label}</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:12px;padding:0 10px"><span style="color:var(--text-tertiary);font-size:13px">$</span><input type="number" step="0.0001" value="${CALC.rates[k]}" oninput="calcSetRate('${k}',this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;box-shadow:none;color:var(--text-primary);font-size:13px;font-weight:600;padding:9px 2px;width:62px"><span style="color:var(--text-tertiary);font-size:10.5px">${suf}</span></span></label>`;
+  // carved unit-input, same pattern as rate() (box-shadow:none on the input so it never double-boxes)
+  const cInput=(label,tip,val,oninput,suf,step)=>`<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:var(--text-muted)">${label}${tip?` <span data-tip="${tip}"></span>`:''}</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:12px;padding:0 12px"><input type="number" step="${step}" min="0" value="${val}" oninput="${oninput}" style="flex:0 0 auto;background:transparent;border:none;outline:none;box-shadow:none;color:var(--text-primary);font-size:13px;font-weight:600;padding:9px 2px;width:50px"><span style="color:var(--text-tertiary);font-size:10.5px">${suf}</span></span></label>`;
   return `
   <div class="hero" style="margin-bottom:16px">
     <div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px">
@@ -2231,6 +2245,24 @@ function calcShell(){
     </div>
   </div>
   <div class="card report">
+    <div class="name">Calls at once &amp; voice plan</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px">More checks means more calls run at the same time. Pick the ElevenLabs plan that covers your busy hour.</div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px"><span style="font-size:13px;color:var(--text-muted)">Checks / month</span><span style="font-family:ui-monospace,monospace;font-size:19px;font-weight:700"><span id="calc_mchecksval">0</span></span></div>
+    <input id="calc_mchecks" type="range" min="0" max="800000" step="5000" value="${CALC.monthlyChecks}" oninput="calcSetMonthlyChecks(this.value)">
+    <div id="calc_mchecksnote" style="font-size:10.5px;color:var(--text-tertiary);margin-top:2px">—</div>
+    <div class="stats" style="margin:16px 0 0">
+      <div class="stat"><div class="n" id="calc_atonce">0</div><div class="l">calls at once · busy hour</div></div>
+      <div class="stat green"><div class="n" id="calc_planfee">—</div><div class="l" id="calc_planlbl">voice plan</div></div>
+    </div>
+    <div id="calc_conc_bar" style="display:flex;height:12px;border-radius:7px;overflow:hidden;margin-top:14px;background:var(--surface-1);border:1px solid var(--border)"></div>
+    <div id="calc_conc_legend" class="row" style="gap:14px;margin-top:8px;align-items:center;font-size:11px;color:var(--text-tertiary)"></div>
+    <div style="font-size:10.5px;color:var(--text-tertiary);margin-top:10px;line-height:1.5">Assumes checks spread through the day. Batched restock alerts firing together spike this higher.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+      ${cInput('Busy-hour share','Portion of daily calls that land in the single busiest hour.',Math.round(CALC.conc.busyHourFrac*100),"calcSetConc('busyHourFrac',this.value/100)",'%',1)}
+      ${cInput('Avg call length','Average minutes a connected call runs, menu plus talk.',CALC.conc.avgCallMin,"calcSetConc('avgCallMin',this.value)",'min',0.1)}
+    </div>
+  </div>
+  <div class="card report">
     <div class="name">Breakdown</div>
     <div id="calc_breakdown"></div>
     <div style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--border-dashed)"><span style="font-size:10px;letter-spacing:.1em;color:var(--text-tertiary);font-weight:700">FLAT MONTHLY · ≈ $0.000 / CALL</span><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${['Railway compute','Twilio number rental','Helicone gateway','TiDB'].map(f=>`<span style="font-size:10.5px;color:var(--text-muted);background:var(--surface-1);border:1px solid var(--border);border-radius:7px;padding:3px 8px">${f}</span>`).join('')}</div></div>
@@ -2255,7 +2287,7 @@ function calcShell(){
   <div class="card report">
     <div class="name">Margin · per check</div>
     <div class="row" style="gap:12px">
-      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;color:var(--text-muted)">Revenue / check</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:12px;padding:0 10px"><span style="color:var(--text-tertiary)">$</span><input id="calc_rev" type="number" step="0.01" min="0" value="${CALC.revenue}" oninput="calcSetRev(this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:22px;font-weight:700;padding:10px 2px;width:84px"></span></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;color:var(--text-muted)">Revenue / check</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:12px;padding:0 10px"><span style="color:var(--text-tertiary)">$</span><input id="calc_rev" type="number" step="0.01" min="0" value="${CALC.revenue}" oninput="calcSetRev(this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;box-shadow:none;color:var(--text-primary);font-size:22px;font-weight:700;padding:10px 2px;width:84px"></span></div>
       <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;color:var(--text-muted)">Margin</span><div id="calc_margin" style="font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0%</div></div>
       <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;color:var(--text-muted)">× return <span data-tip="Revenue ÷ cost. How many times the call pays for itself."></span></span><div id="calc_return" style="font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0×</div></div>
     </div>
@@ -2270,6 +2302,8 @@ function calcSetRev(v){ CALC.revenue=v===''?0:(parseFloat(v)||0); calcUpdate(); 
 function calcSetLane(l){ CALC.lane=l; calcSync(); calcUpdate(); }
 function calcSetEsc(v){ CALC.deltaEsc=parseInt(v,10)||0; const e=document.getElementById('calc_escval'); if(e) e.textContent=CALC.deltaEsc; calcUpdate(); }
 function calcSetReach(v){ CALC.reach=parseInt(v,10)||45; const e=document.getElementById('calc_reachval'); if(e) e.textContent=CALC.reach; calcUpdate(); }
+function calcSetMonthlyChecks(v){ CALC.monthlyChecks=parseInt(v,10)||0; calcUpdate(); }
+function calcSetConc(k,v){ const n=parseFloat(v); if(!isNaN(n)&&n>0) CALC.conc[k]=n; calcUpdate(); }
 function calcSetUsage(v){ CALC.usage=parseInt(v,10)||100; const e=document.getElementById('calc_usageval'); if(e) e.textContent=CALC.usage; calcRenderPlans(); }
 function calcSetPlan(i,f,v){ if(!CALC.plans[i]) return; CALC.plans[i][f]=(f==='name')?v:(parseFloat(v)||0); calcRenderPlans(); }
 function calcAddPlan(){ CALC.plans.push({name:'New plan',price:9.99,checks:30}); calcRenderPlans(); }
@@ -2327,6 +2361,17 @@ function calcUpdate(){
   const mEl=document.getElementById('calc_margin'); if(mEl){ mEl.textContent=margin.toFixed(1)+'%'; mEl.style.color=mc; }
   const ret=total>0?CALC.revenue/total:0, rEl=document.getElementById('calc_return'); if(rEl){ rEl.textContent=ret.toFixed(1)+'×'; rEl.style.color=ret>=1?'var(--green)':'#FF6B6B'; }
   set('calc_sentence',`At ${calcMoney(CALC.revenue)} revenue/call, cost is <b style="color:var(--text-primary)">${calcMoney(total)}</b> → margin = <b style="color:${mc}">${margin.toFixed(1)}%</b>.`);
+  // ---- Calls at once & voice plan ----
+  const conc=calcConcurrency(), cp=conc.plan, atOnceR=Math.round(conc.atOnce);
+  txt('calc_mchecksval',(CALC.monthlyChecks||0).toLocaleString());
+  txt('calc_mchecksnote',`≈ $${Math.round(conc.revenue).toLocaleString()} / month at $${(CALC.revenue||0).toFixed(2)} a check`);
+  txt('calc_atonce',atOnceR);
+  txt('calc_planfee',`${cp.name} · $${cp.fee}/mo`);
+  const planEl=document.getElementById('calc_planfee'); if(planEl) planEl.style.color=conc.overCapacity?'#FF6B6B':'var(--green)';
+  txt('calc_planlbl',conc.overCapacity?'over this plan, add a 2nd account':`voice plan · ${conc.feePctOfRev>0?conc.feePctOfRev.toFixed(conc.feePctOfRev<1?2:1)+'% of revenue':'flat monthly'}`);
+  const bcap=Math.max(cp.rush,atOnceR,1), gW=Math.min(atOnceR,cp.atOnce)/bcap*100, aW=Math.max(0,Math.min(atOnceR,cp.rush)-cp.atOnce)/bcap*100, oW=Math.max(0,atOnceR-cp.rush)/bcap*100;
+  set('calc_conc_bar',`<div style="width:${gW}%;background:linear-gradient(180deg,#4ADE80,#22C55E)"></div>${aW>0?`<div style="width:${aW}%;background:linear-gradient(180deg,#FBBF24,#F59E0B)"></div>`:''}${oW>0?`<div style="width:${oW}%;background:linear-gradient(180deg,#FF6B6B,#EF4444)"></div>`:''}`);
+  set('calc_conc_legend',`<span style="display:inline-flex;align-items:center;gap:5px">${calcDot('#22C55E')}your busy hour ${atOnceR}</span><span style="flex:1"></span><span>plan runs ${cp.atOnce} at once, ${cp.rush} in a rush</span>`);
   calcRenderPlans();
 }
 async function loadDash(){
