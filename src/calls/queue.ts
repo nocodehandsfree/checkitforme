@@ -17,8 +17,8 @@ import { redis } from "../redis";
 import { getPolicy } from "../policy";
 import { canPlaceNow, governorEnabled } from "./concurrency";
 
-export type Lane = "direct" | "bridge";
-export interface QueueArgs { retailerId: number; categoryId: number; specificProduct?: string; finderUserId?: string; isPrivate?: boolean; kioskMode?: boolean; live?: boolean }
+export type Lane = "direct" | "bridge" | "live";
+export interface QueueArgs { retailerId: number; categoryId: number; categoryIds?: number[]; specificProduct?: string; finderUserId?: string; isPrivate?: boolean; kioskMode?: boolean; live?: boolean }
 export interface Ticket {
   id: string; lane: Lane; priority: "interactive" | "batch"; userId?: string;
   args: QueueArgs; enqueuedAt: number;
@@ -133,7 +133,9 @@ export async function ticketStatus(ticketId: string): Promise<Record<string, unk
 
 // The place functions are injected by server.ts (avoids a queue→service import cycle). They return
 // rich call-row objects; we only read these fields (providerCallId can be null on the row type).
-export interface PlaceResult { providerCallId?: string | null; room?: string | null; wsHost?: string | null; status?: string }
+// The live lane (bridgeStoreCall) reports failures as an { error } value rather than throwing, so a
+// place fn may carry one — routeCheck/drain treat it like the endpoints do (a real dial error).
+export interface PlaceResult { providerCallId?: string | null; room?: string | null; wsHost?: string | null; status?: string; error?: string }
 type PlaceFn = (args: QueueArgs) => Promise<PlaceResult>;
 
 /** Route a single check: place now if a slot is free, else queue. Governor OFF → always places
@@ -142,7 +144,7 @@ export async function routeCheck(lane: Lane, placeFn: PlaceFn, args: QueueArgs):
   if (!(await governorEnabled())) return placeFn(args); // ungoverned → straight through
   const probe = await canPlaceNow("interactive", args.finderUserId);
   if (probe.free) {
-    try { return await placeFn(args); }
+    try { const r = await placeFn(args); if (r.error !== "calls_busy") return r; /* else lost the race → queue */ }
     catch (e) { if (String((e as Error)?.message) !== "calls_busy") throw e; /* lost the race → fall through to queue */ }
   }
   return enqueueCheck(args, "interactive", lane);
@@ -151,7 +153,7 @@ export async function routeCheck(lane: Lane, placeFn: PlaceFn, args: QueueArgs):
 let draining = false;
 /** Drain the queue as slots free (1s tick, single-leader). Places queued checks in service order via
  *  the injected place functions; stores the resulting call id so the poll flips the page to live. */
-export async function drainCheckQueue(placeDirect: PlaceFn, placeBridge: PlaceFn): Promise<void> {
+export async function drainCheckQueue(placeDirect: PlaceFn, placeBridge: PlaceFn, placeLive?: PlaceFn): Promise<void> {
   if (draining || !(await governorEnabled())) return;
   draining = true;
   try {
@@ -160,8 +162,11 @@ export async function drainCheckQueue(placeDirect: PlaceFn, placeBridge: PlaceFn
       if (!t || t.status !== "queued") { await removePending(id); continue; }
       if (!(await canPlaceNow(t.priority, t.userId)).free) break; // pool full → stop this tick
       try {
-        const r = await (t.lane === "bridge" ? placeBridge : placeDirect)(t.args);
-        t.status = "placed"; t.providerCallId = r.providerCallId ?? undefined; t.room = r.room ?? undefined; t.wsHost = r.wsHost ?? undefined;
+        const place = t.lane === "live" ? (placeLive ?? placeBridge) : t.lane === "bridge" ? placeBridge : placeDirect;
+        const r = await place(t.args);
+        if (r.error === "calls_busy") break; // lost the race → retry next tick
+        if (r.error) { t.status = "error"; t.error = r.error.slice(0, 200); } // a real dial error (store closed, paused…)
+        else { t.status = "placed"; t.providerCallId = r.providerCallId ?? undefined; t.room = r.room ?? undefined; t.wsHost = r.wsHost ?? undefined; }
       } catch (e) {
         if (String((e as Error)?.message) === "calls_busy") break; // race lost → retry next tick
         t.status = "error"; t.error = String((e as Error)?.message || e).slice(0, 200);

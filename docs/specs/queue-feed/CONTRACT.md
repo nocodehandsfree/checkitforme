@@ -12,8 +12,9 @@ place instantly as today and none of this is reached.
 ## 1. Placing a check — the response gains a queued branch
 
 The existing check endpoints are unchanged on the happy path. When the pool is full they return a
-`queued` object instead of a call id. Endpoints: `POST /app/check`, `POST /pub/check`,
-`POST /app/check-live`, `POST /pub/check-live`.
+`queued` object instead of a call id. All four are wired: `POST /app/check`, `POST /pub/check`,
+`POST /app/check-live`, `POST /pub/check-live`. The two `-live` paths queue with the same shape but
+flip to the `{ room, wsHost }` dialing signal (they have no `providerCallId`) — see §2.
 
 **Slot free (placed now — TODAY's shape, unchanged):**
 ```jsonc

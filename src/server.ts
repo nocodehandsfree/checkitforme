@@ -25,8 +25,8 @@ import { importZonesData, geocodeMissing, backfillDirectChains, isDirectDefaultC
 import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus, learnedSyncTick, learnedSyncStatus } from "./store-sync";
 import { buildSettingsExport, settingsSyncStatus, settingsSyncTick } from "./settings-sync";
-import { concurrencyStatus } from "./calls/concurrency";
-import { routeCheck, ticketStatus, drainCheckQueue } from "./calls/queue";
+import { concurrencyStatus, acquireCallSlot, releaseCallSlot, governorEnabled } from "./calls/concurrency";
+import { routeCheck, ticketStatus, drainCheckQueue, type QueueArgs, type PlaceResult } from "./calls/queue";
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
 import { simStartCall, isSimId, simLive, simResult } from "./staging-sim";
@@ -3146,9 +3146,12 @@ app.post("/pub/check-live", async (c) => {
   if (!b.retailerId || !catIds.length) return c.json({ error: "retailerId and categoryId(s) required" }, 400);
   if (config.staging.on && !config.callsEnabled) return c.json({ room: simStartCall().providerCallId, wsHost: STAGING_HOST }); // preview: simulated live call
   const closed = await closedGate(Number(b.retailerId)); if (closed) return c.json(closed, 409);
-  const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, undefined, b.kioskMode);
+  // Governor ON + pool full → routeCheck queues (waiting-screen ticket); else places now (today's
+  // shape). Governor OFF → straight through to placeLive, unchanged.
+  const r = await routeCheck("live", placeLive, { retailerId: Number(b.retailerId), categoryId: catIds[0], categoryIds: catIds, specificProduct: b.specificProduct, kioskMode: b.kioskMode, live: true });
+  if ("queued" in r) return c.json(r);
   if (r.error) return c.json({ error: r.error }, 502);
-  return c.json({ room: r.room, wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
+  return c.json({ room: r.room, wsHost: r.wsHost ?? (config.staging.on ? STAGING_HOST : RAILWAY_HOST) });
 });
 // Transcript privacy (flags.transcriptAuth): a call placed by a signed-in finder is readable only by
 // that finder (phone-session Bearer token) or the admin. Anonymous calls stay readable by cid — the
@@ -3454,9 +3457,13 @@ app.post("/app/check-live", async (c) => {
       return c.json({ error: "too_soon", retryAfterMin: mins, message: `You just checked this store — you can check again in about ${mins} min.` }, 429);
     }
   }
-  const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, { userId: u.id, isPrivate: await isFinderPrivate(a) }, b.kioskMode);
+  // Governor ON + pool full → routeCheck queues (waiting-screen ticket); else places now (today's
+  // shape). Governor OFF → straight through to placeLive, unchanged.
+  const isPrivate = await isFinderPrivate(a);
+  const r = await routeCheck("live", placeLive, { retailerId: Number(b.retailerId), categoryId: catIds[0], categoryIds: catIds, specificProduct: b.specificProduct, finderUserId: u.id, isPrivate, kioskMode: b.kioskMode, live: true });
+  if ("queued" in r) return c.json(r);
   if (r.error) return c.json({ error: r.error }, 502);
-  return c.json({ room: r.room, wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
+  return c.json({ room: r.room, wsHost: r.wsHost ?? (config.staging.on ? STAGING_HOST : RAILWAY_HOST) });
 });
 
 // ============ Manage Zones (consumer, premium `zone_sweeps`) — spec docs/archive/manage-zones-SHIPPED.md ============
@@ -6078,15 +6085,78 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
   // captured, not clipped. Menu/tree stores KEEP connect-on-human (it saves the real nav time).
   const isDirect = !v.dtmf && !v.say && !v.connectAtSec &&
     (() => { const t = (v.dynamicVars.phone_tree || "").trim(); return !t || /answers? directly|no (phone )?menu|no ivr|straight to a person/i.test(t); })();
-  // Log the call once it connects (we get the ElevenLabs conversation id): insert the PRIMARY result
-  // row; ingest fans out each extra line into its own row from the per-category extraction.
-  return placeBridgeCall(v.retailer.phone, v.dynamicVars, (convId) => {
-    db.insert(callResults).values({ retailerId, categoryId: primary, mode: "restock", status: "in_progress", providerCallId: convId, finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false })
-      .catch((e) => console.error("bridge call log insert:", e));
+
+  // Concurrency governor (flag-gated). OFF = the exact path below (row inserted only at connect, no
+  // slot) — byte-identical to before. ON = pre-insert a "dialing" row so we can hold a slot keyed on
+  // its id (the queue reads slot counts to know the pool is full), release it if the call never
+  // reaches a human, and let the EL poller release it on a normal finish (same lifecycle as the
+  // headless bridge check). The live-audio room + response shape are unchanged either way.
+  const governed = await governorEnabled();
+  let slotRowId: number | null = null;
+  if (governed) {
+    const [row] = await db.insert(callResults).values({ retailerId, categoryId: primary, mode: "restock", status: "dialing", finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false }).returning();
+    slotRowId = row.id;
+    const slot = await acquireCallSlot({ key: `call:${row.id}`, priority: "interactive", userId: finder?.userId ?? undefined, ttlSec: (pol.bail.maxCallSeconds || 180) + 120 });
+    if (slot === null) {
+      await db.update(callResults).set({ status: "failed", statusKey: "system_busy", summary: "All lines busy — the check will be retried." }).where(eq(callResults.id, row.id));
+      return { error: "calls_busy" }; // routeCheck sees this and queues the check instead of failing
+    }
+  }
+
+  // Log the call once it connects (we get the ElevenLabs conversation id). Governed → update the row
+  // we pre-inserted; ungoverned → insert the PRIMARY row now (today's behavior). ingest fans out each
+  // extra line into its own row from the per-category extraction.
+  const result = await placeBridgeCall(v.retailer.phone, v.dynamicVars, (convId) => {
+    if (governed && slotRowId != null) {
+      db.update(callResults).set({ providerCallId: convId, status: "in_progress" }).where(eq(callResults.id, slotRowId))
+        .catch((e) => console.error("bridge call log update:", e));
+    } else {
+      db.insert(callResults).values({ retailerId, categoryId: primary, mode: "restock", status: "in_progress", providerCallId: convId, finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false })
+        .catch((e) => console.error("bridge call log insert:", e));
+    }
     // Per-store talk cap (chains.maxTalkSeconds) wins over the global bail ceiling when set, so a
     // store the owner marked "wrap fast" gets a tighter Twilio TimeLimit — the cost guarantee.
   }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, connectOnHuman: isDirect ? false : undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning });
+
+  // Governed bookkeeping: point the pre-inserted row at the room (so /pub/result resolves it before
+  // connect), release the slot on a dial that never placed, and register a finalizer that frees the
+  // slot + writes the real reason if the call ends before a human answers.
+  if (governed && slotRowId != null) {
+    if (result.error || !result.room) {
+      await releaseCallSlot(`call:${slotRowId}`);
+      await db.update(callResults).set({ status: "failed", summary: result.error || "bridge call failed" }).where(eq(callResults.id, slotRowId));
+    } else {
+      const rid = slotRowId;
+      await db.update(callResults).set({ providerCallId: `bridge:${result.room}` }).where(eq(callResults.id, rid));
+      roomFinalizers.set(result.room, (twilioStatus) => {
+        void (async () => {
+          const cur = (await db.select().from(callResults).where(eq(callResults.id, rid)))[0];
+          if (!cur || cur.status !== "dialing") return; // conv id landed → EL ingest owns the verdict + release
+          const statusKey = ({ busy: "busy", failed: "bad_number" } as Record<string, string>)[twilioStatus] ?? "nobody_answered";
+          await db.update(callResults).set({
+            status: "no_answer", confirmed: null, statusKey,
+            summary: `Bridge call ended before a human answered (${twilioStatus}).`,
+            completedAt: Math.floor(Date.now() / 1000),
+          }).where(eq(callResults.id, rid));
+          await releaseCallSlot(`call:${rid}`); // never reached a human → free the slot (idempotent)
+        })().catch((e) => console.error("live bridge finalize:", e));
+      });
+    }
+  }
+  return result;
 }
+// Queue adapter for the live lane: reconstruct a live check from a ticket's args and return the
+// waiting-screen PlaceResult shape ({ room, wsHost } or { error }). Used both when a check is placed
+// immediately (routeCheck) and when the drainer places a queued one as a slot frees.
+const LIVE_WS_HOST = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
+const placeLive = (args: QueueArgs): Promise<PlaceResult> =>
+  bridgeStoreCall(
+    Number(args.retailerId),
+    args.categoryIds?.length ? args.categoryIds.map(Number) : [Number(args.categoryId)],
+    args.specificProduct,
+    args.finderUserId ? { userId: args.finderUserId, isPrivate: args.isPrivate } : undefined,
+    args.kioskMode,
+  ).then((rr) => ({ room: rr.room ?? null, wsHost: LIVE_WS_HOST, error: rr.error }));
 app.get("/pub/bridge/:room", (c) => {
   const room = c.req.param("room");
   if (config.staging.on && isSimId(room)) return c.json({ conversationId: room, wsHost: STAGING_HOST }); // sim: room IS the conversation id
@@ -6285,7 +6355,7 @@ setInterval(() => withLock("geocode", 10, () => geocodeMissing(1)).catch((e) => 
 setInterval(() => withLock("store-sync", 280, storeSyncTick).catch((e) => console.error("store-sync:", e)), 300_000); // staging→prod curated store data (inert until STORE_SYNC_URL/TOKEN set)
 setInterval(() => withLock("learned-sync", 160, learnedSyncTick).catch((e) => console.error("learned-sync:", e)), 180_000); // prod→staging learned phone-nav (mirror of store-sync; inert off-staging)
 setInterval(() => withLock("settings-sync", 55, settingsSyncTick).catch((e) => console.error("settings-sync:", e)), 60_000); // prod→staging owner settings mirror (staging pulls; inert elsewhere)
-setInterval(() => withLock("check-queue", 2, () => drainCheckQueue(triggerCall, bridgeCheckCall)).catch((e) => console.error("check-queue:", e)), 1_000); // waiting-screen: place queued checks as slots free (inert unless the governor is on)
+setInterval(() => withLock("check-queue", 2, () => drainCheckQueue(triggerCall, bridgeCheckCall, placeLive)).catch((e) => console.error("check-queue:", e)), 1_000); // waiting-screen: place queued checks as slots free (inert unless the governor is on)
 setInterval(() => withLock("harvest", 110, harvestHoursTick).catch((e) => console.error("harvest:", e)), 120_000); // self-updating hours (policy-gated, off by default)
 setInterval(() => withLock("cust-sched", 85, customerScheduleTick).catch((e) => console.error("cust-sched:", e)), 90_000); // subscriber auto-checks (policy-gated)
 setInterval(() => withLock("gmail-receipts", 25, gmailReceiptTick).catch((e) => console.error("gmail-receipts:", e)), 30_000); // ingest kiosk receipts (policy-gated + creds)

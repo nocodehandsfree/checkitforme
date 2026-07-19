@@ -16,6 +16,8 @@ const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}
 const nowSec = () => Math.floor(Date.now() / 1000);
 let placed = 0;
 const fakePlace = async () => ({ providerCallId: "conv_" + (++placed), status: "in_progress" });
+// Live lane returns the -live shape ({ room, wsHost }) instead of a providerCallId.
+const fakeLive = async () => ({ room: "room_" + (++placed), wsHost: "staging.example", status: "in_progress" });
 
 async function conc(o: Record<string, unknown>) {
   await setPolicy({ concurrency: { enabled: true, perAccountCap: 1, reserveInteractive: 0, maxPerUser: 10, interactiveWaitMs: 200, batchWaitMs: 300, ...o } } as never);
@@ -67,6 +69,18 @@ async function main() {
   await drainCheckQueue(fakePlace, fakePlace);
   const flipped = await ticketStatus(q1.ticketId);
   ok(flipped.status === "dialing" && String(flipped.providerCallId).startsWith("conv_"), `ticket flipped → {dialing, providerCallId} — got ${flipped.status}`);
+
+  console.log("▶ LIVE lane (signed-in listen-live check) → queues, and a freed slot flips it to {dialing, room, wsHost}");
+  const slot2 = await acquireCallSlot({ key: "occupy2", priority: "interactive", ttlSec: 300 }); // fill the pool again
+  ok(!!slot2, "re-occupied the only slot");
+  const qL = await routeCheck("live", fakeLive, { retailerId: 9002, categoryId: 1, categoryIds: [1], finderUserId: "phone:+13105550009", live: true }) as any;
+  ok(qL.queued === true && qL.ticketId, "live check queued when full (not a hard error)");
+  await releaseCallSlot("occupy2");
+  await drainCheckQueue(fakePlace, fakePlace, fakeLive); // drainer routes the "live" lane to fakeLive
+  const flippedL = await ticketStatus(qL.ticketId);
+  ok(flippedL.status === "dialing" && String(flippedL.room).startsWith("room_") && flippedL.wsHost === "staging.example",
+    `live ticket flipped → {dialing, room, wsHost} — got ${flippedL.status}/${flippedL.room}/${flippedL.wsHost}`);
+  ok(flippedL.providerCallId == null, "live flip carries room, not a providerCallId");
 
   console.log("▶ unknown ticket → gone");
   ok((await ticketStatus("q_nope")).status === "gone", "unknown ticket → gone");
