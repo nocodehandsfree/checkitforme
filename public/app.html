@@ -2062,8 +2062,9 @@ const calcMoney=n=>'$'+(n<0?'-':'')+Math.abs(n).toFixed(3);
 const calcMoney4=n=>'$'+(n<0?'-':'')+Math.abs(n).toFixed(4);
 const CALC={ storeType:'Alpha', nav:30, talk:20, revenue:0.25, lane:'charlie', deltaEsc:30, reach:85, usage:50,
   monthlyChecks:20000, // primary driver (owner thinks in checks); revenue = checks × revenue-per-check (CALC.revenue)
-  // Charlie's only real bill is ElevenLabs (voice + brain in one). No separate Anthropic charge — dropped.
-  rates:{ twilioPerMin:0.014, elevenPerSec:0.0012, bravoNavPerSec:0, deltaClipPerCall:0.0002, classifyPerCall:0.0004 },
+  // Charlie = ElevenLabs voice + a Claude Sonnet brain (src/voice/prompts.ts llm:'claude-sonnet-4-6').
+  // Two cost components on the talk. claudePerSec is our current estimate — confirm against the real bill.
+  rates:{ twilioPerMin:0.014, elevenPerSec:0.0012, claudePerSec:0.0002, bravoNavPerSec:0, deltaClipPerCall:0.0002, classifyPerCall:0.0004 },
   // Real monthly bills ($/mo), spread across the month's checks. The ElevenLabs voice-plan fee is added on top,
   // picked from the concurrency card. Edit these to your real invoices.
   cogs:{ railway:20, helicone:0, tidb:0, twilioNumber:2 },
@@ -2087,14 +2088,15 @@ function calcCompute(storeType,nav,talk,r,lane,esc){
   if(storeType==='Bravo') items.push({label:'Bravo nav · spoken menu (cheap TTS, no AI)',detail:`${nav}s · ~$0/s`,accent:'#38BDF8',amount:r.bravoNavPerSec*nav});
   else if(storeType==='Alpha') items.push({label:'Alpha nav · keypad menu',detail:`${nav}s · $0/s`,accent:'#F4B740',amount:0});
   else items.push({label:'Navigation',detail:'direct line, no menu',accent:'var(--text-tertiary)',amount:0});
-  const charlieTalk=r.elevenPerSec*talk; // ElevenLabs only, brain included
+  const charlieVoice=r.elevenPerSec*talk, charlieBrain=r.claudePerSec*talk, charlieTalk=charlieVoice+charlieBrain;
   if(lane==='delta'){
     const escFrac=(esc||0)/100;
     items.push({label:'Delta · recorded clips',detail:'pre-rendered · Twilio plays them',accent:'#C084FC',amount:r.deltaClipPerCall});
     items.push({label:'Delta · cheap classifier',detail:'~3 turns · flash-lite',accent:'#C084FC',amount:r.classifyPerCall});
     items.push({label:`Charlie escalation · ${esc||0}%`,detail:`${esc||0}% go off-script to the live agent`,accent:'var(--purple)',amount:charlieTalk*escFrac});
   } else {
-    items.push({label:'Charlie · ElevenLabs',detail:`${talk}s talk · voice + brain · $${r.elevenPerSec}/s`,accent:'var(--purple)',amount:charlieTalk});
+    items.push({label:'Charlie voice · ElevenLabs',detail:`${talk}s talk · $${r.elevenPerSec}/s`,accent:'var(--purple)',amount:charlieVoice});
+    items.push({label:'Charlie brain · Claude Sonnet',detail:`${talk}s talk · $${r.claudePerSec}/s · may bill via ElevenLabs`,accent:'#A78BFA',amount:charlieBrain});
   }
   return { items, total: items.reduce((s,i)=>s+i.amount,0) };
 }
@@ -2285,9 +2287,10 @@ function calcShell(){
     </div>
     <div id="calc_conc_bar" style="display:flex;height:12px;border-radius:7px;overflow:hidden;margin-top:14px;background:var(--surface-1);border:1px solid var(--border)"></div>
     <div id="calc_conc_legend" class="row" style="gap:14px;margin-top:8px;align-items:center;font-size:11px;color:var(--text-tertiary)"></div>
-    <div class="row" style="gap:18px;margin-top:14px;padding-top:12px;border-top:1px dashed var(--border-dashed);flex-wrap:wrap">
-      <label style="display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;color:var(--text-muted)">Busy-hour share <span data-tip="Portion of a day's calls that land in the single busiest hour."></span></span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:10px;padding:0 8px"><input type="number" step="1" min="1" max="100" value="${Math.round(CALC.conc.busyHourFrac*100)}" oninput="calcSetConc('busyHourFrac',this.value/100)" style="background:transparent;border:none;outline:none;color:var(--text-primary);font-size:13px;font-weight:600;padding:8px 2px;width:34px"><span style="color:var(--text-tertiary);font-size:10.5px">%</span></span></label>
-      <label style="display:flex;flex-direction:column;gap:4px"><span style="font-size:11px;color:var(--text-muted)">Avg call length <span data-tip="Average minutes a connected call runs, nav plus talk."></span></span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:10px;padding:0 8px"><input type="number" step="0.1" min="0.1" value="${CALC.conc.avgCallMin}" oninput="calcSetConc('avgCallMin',this.value)" style="background:transparent;border:none;outline:none;color:var(--text-primary);font-size:13px;font-weight:600;padding:8px 2px;width:40px"><span style="color:var(--text-tertiary);font-size:10.5px">min</span></span></label>
+    <div style="font-size:10.5px;color:var(--text-tertiary);margin-top:10px;line-height:1.5">Assumes checks spread through the day. Batched restock alerts firing together spike this much higher.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;padding-top:12px;border-top:1px dashed var(--border-dashed)">
+      <label style="display:flex;flex-direction:column;gap:5px"><span style="font-size:11.5px;color:var(--text-muted)">Busy-hour share <span data-tip="Portion of a day's calls that land in the single busiest hour."></span></span><span style="display:inline-flex;align-items:center;justify-content:space-between;background:var(--terminal);box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:12px;padding:2px 12px"><input type="number" step="1" min="1" max="100" value="${Math.round(CALC.conc.busyHourFrac*100)}" oninput="calcSetConc('busyHourFrac',this.value/100)" style="background:transparent;border:none;outline:none;color:var(--text-primary);font-size:14px;font-weight:600;padding:9px 0;width:44px"><span style="color:var(--text-tertiary);font-size:11px;margin-left:6px">%</span></span></label>
+      <label style="display:flex;flex-direction:column;gap:5px"><span style="font-size:11.5px;color:var(--text-muted)">Avg call length <span data-tip="Average minutes a connected call runs, menu plus talk."></span></span><span style="display:inline-flex;align-items:center;justify-content:space-between;background:var(--terminal);box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:12px;padding:2px 12px"><input type="number" step="0.1" min="0.1" value="${CALC.conc.avgCallMin}" oninput="calcSetConc('avgCallMin',this.value)" style="background:transparent;border:none;outline:none;color:var(--text-primary);font-size:14px;font-weight:600;padding:9px 0;width:44px"><span style="color:var(--text-tertiary);font-size:11px;margin-left:6px">min</span></span></label>
     </div>
   </div>
   <div class="card report">
@@ -2298,7 +2301,7 @@ function calcShell(){
   <div class="card report">
     <div class="name">Per-call rates · editable</div>
     <div style="font-size:10.5px;color:var(--text-tertiary);margin-bottom:12px">Estimates from our cost notes, not confirmed invoices yet.</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${rate('Twilio line','twilioPerMin','/min')}${rate('ElevenLabs (Charlie)','elevenPerSec','/sec')}${rate('Bravo nav','bravoNavPerSec','/sec')}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${rate('Twilio line','twilioPerMin','/min')}${rate('Charlie voice · ElevenLabs','elevenPerSec','/sec')}${rate('Charlie brain · Claude','claudePerSec','/sec')}${rate('Bravo nav','bravoNavPerSec','/sec')}</div>
   </div>
   <div class="card report">
     <div class="name">Monthly bills · editable</div>
@@ -2389,7 +2392,7 @@ function calcUpdate(){
   const txt=(id,t)=>{ const e=document.getElementById(id); if(e) e.textContent=t; };
   txt('calc_total',calcMoney(total)); txt('calc_navval',CALC.nav); txt('calc_talkval',CALC.talk);
   txt('calc_percheck',calcMoney(pc.perCheck)); txt('calc_lanelbl',CALC.lane==='delta'?('Delta · '+CALC.deltaEsc+'% to Charlie'):'Charlie (live)');
-  set('calc_chip',`<span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(st.nc)}${st.label}</span><span style="font-size:10.5px;color:var(--text-muted)">${dur}s call</span>`);
+  set('calc_chip',`<span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(st.nc)}${st.label}</span><span style="font-size:10.5px;color:var(--text-muted)">${CALC.nav>0?CALC.nav+'s menu + '+CALC.talk+'s talk':CALC.talk+'s talk'}</span>`);
   const tot=Math.max(dur,1), navPct=CALC.nav/tot*100, talkPct=CALC.talk/tot*100;
   let strip='';
   if(CALC.nav>0) strip+=`<div style="width:${navPct}%;background:linear-gradient(180deg,${st.nc},${st.nc}99);display:flex;align-items:center;justify-content:center">${navPct>14?'<span style="font-size:10px;font-weight:800;letter-spacing:.1em;color:#0B0E14">NAV</span>':''}</div>`;
