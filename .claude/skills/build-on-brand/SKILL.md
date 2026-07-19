@@ -15,16 +15,23 @@ description: >-
 Nothing visual or written ships without the guides. This skill is a map, not the
 content — open the docs it points at; they are the single source of truth.
 
-## 🚫 HARD GATE — do this BEFORE you write one line of UI
-**Open the comp file and name the element you are lifting.** Not the style guide's written
-component list — the actual comp (`WEBSITE_COMPS.dc.html` / `ADMIN_COMPS.dc.html`). The guides are
-PROSE DESCRIBING the comps; the comp is the source of truth. Building from the prose is exactly how
-you invent a button, badge, or font that doesn't exist and ship a page that looks nothing like the
-site (it happened — a whole landing-page cycle wasted, 2026-07-18).
+## 🚫 HARD GATE — RENDER the comp and LOOK before you write one line of UI
+**A comp is a rendered picture, not text. You cannot grep it, skim it, or read the style guide's
+written list instead.** A text search of a comp file comes back nearly empty — and letting that
+emptiness convince you "there's no comp for this" is EXACTLY how off-brand screens keep shipping
+(2026-07-02 paint-not-structure; the 2026-07-18 landing cycle; the zones report). Render it to an
+image and open the image. One command; it removes every excuse:
 
-Before coding, for every piece on your screen, answer: **"which comp element is this, and did I open
-the file and copy it?"** Can't point to the comp element? You're inventing — STOP and open the file.
-"The written list was enough" is the exact lie that failed. It is never enough. Open the comp.
+- **Website / consumer pages** → `./node_modules/.bin/tsx scripts/render-comps.ts board`
+  then OPEN the PNGs in `loops/site-redesign/render/board-*.png`.
+- **Admin pages** → `node scripts/admin-preview.mjs <section> out.png 390`, then open the PNG.
+- **My Zones / zone-report flow** → boot the local server, then `node scripts/zones-preview.mjs`
+  (usage in the script header) → open `shots/*.png`.
+
+Then, for every piece on your screen, name which comp element you're copying from the rendered
+image. Can't see it there? You're inventing — STOP. Rendering takes one command; guessing costs a
+whole cycle of the owner's money. "The written list was enough" and "grep came back empty" are the
+two lies that failed — never trust either. Render, and look.
 
 ## Read first, in this order (don't skip)
 1. **`docs/design/STYLE_GUIDE.md`** — the look: every token, type size, radius, depth, component rule.
