@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r148" />
+<meta name="x-rev" content="glassfix-r149" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -3540,6 +3540,7 @@ async function submitStoreReq(){
 const idle=(fn)=>('requestIdleCallback' in window)?requestIdleCallback(fn,{timeout:1500}):setTimeout(fn,300);
 async function boot(){
   captureReferral(); // stash any ?ref= before we clean the URL
+  if(/[?&]holdpeek/i.test(location.search||'')) return holdPeek(); // standalone preview of the queued holding card (no check placed)
   if(location.pathname==='/peek') document.body.classList.add('peek'); // minimal first-time-visitor preview
   try{ loadPlans(); }catch(_){ } // warm the live plans at page open — the Check+ sheet must never open against an empty cache (owner 07-16)
   STORES=[];
@@ -5496,6 +5497,20 @@ function holdForSlot(resp,useApp){
       if(Date.now()-started>5*60*1000) holdResolve({error:'timeout'}); // safety: never hold forever
     },1000);
   });
+}
+// Standalone visual preview of the queued holding card (?holdpeek) — no check, no call, just the card looping.
+function holdPeek(){
+  try{ ['builder','live','result','history'].forEach(id=>{ const el=$(id); if(el) el.classList.add('hidden'); }); }catch(_){ }
+  const hc=$('holdCard'); if(!hc) return; hc.classList.remove('hidden');
+  const lg=$('hc_logo'); if(lg) lg.innerHTML='<img src="/logos/chains/target.png?v=3" alt="" onerror="this.style.display=\'none\'">';
+  const st=$('hc_store'); if(st) st.textContent='Target Los Feliz';
+  const mt=$('hc_meta'); if(mt) mt.textContent=tf('hold.meta','Checking for {p}',{p:'Pokémon'});
+  const hd=$('hc_head'); if(hd) hd.textContent=t('hold.head',"We're slammed.");
+  const sub=$('hc_sub'); if(sub) sub.innerHTML=esc(t('hold.sub1','Hang tight or come back later.'))+'<br>'+esc(t('hold.sub2',"We'll check for you either way."));
+  const lb=$('hc_lbl'); if(lb) lb.textContent=t('hold.timer','Check starts in');
+  let s=30; const fmt=n=>Math.floor(n/60)+':'+String(n%60).padStart(2,'0');
+  const tick=()=>{ const v=$('hc_val'); if(!v) return; v.textContent=fmt(s); s=s>0?s-1:30; };
+  tick(); setInterval(tick,1000);
 }
 async function startCheckLive(){
   LVLOG=[]; lvlog('start BUILD=r0718a ua-visible='+document.visibilityState+' online='+navigator.onLine); lvship(); clearInterval(LVSHIP); LVSHIP=setInterval(lvship,3000);
