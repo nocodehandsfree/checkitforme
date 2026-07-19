@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r147" />
+<meta name="x-rev" content="glassfix-r148" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -5429,7 +5429,7 @@ function holdRender(eta){ const v=$('hc_val'); if(v) v.textContent=holdFmt(eta);
 function holdResolve(v){ if(!HOLD.active) return; HOLD.active=false; clearInterval(HOLD.poll); clearInterval(HOLD.tick); const r=HOLD.resolve; HOLD.resolve=null; if(r) r(v); }
 function holdForSlot(resp,useApp){
   return new Promise(resolve=>{
-    HOLD={active:true,ticket:resp.ticket,sim:resp.ticket==='sim',eta:Math.max(0,resp.etaSec!=null?resp.etaSec:30),resolve:resolve,poll:null,tick:null};
+    HOLD={active:true,ticket:resp.ticketId,sim:resp.ticketId==='sim',eta:Math.max(0,resp.etaSeconds!=null?resp.etaSeconds:30),resolve:resolve,poll:null,tick:null};
     // Store row (logo + name + what we're checking) — CD comp S5.6.
     const s=SEL_STORE||{}; const lg=$('hc_logo'); if(lg) lg.innerHTML=(typeof storeFace==='function')?storeFace(s):'';
     const st=$('hc_store'); if(st) st.textContent=s.name||t('live.store','the store');
@@ -5442,16 +5442,16 @@ function holdForSlot(resp,useApp){
     $('live').classList.add('hidden'); $('holdCard').classList.remove('hidden');
     holdRender(HOLD.eta);
     HOLD.tick=setInterval(()=>{ if(!HOLD.active) return; HOLD.eta=Math.max(0,HOLD.eta-1); holdRender(HOLD.eta); },1000); // smooth local countdown between polls
-    if(HOLD.sim){ setTimeout(()=>{ if(HOLD.active) holdResolve({simDone:true}); },((resp.etaSec!=null?resp.etaSec:30)+1)*1000); return; } // staging demo (?simqueue): count down, then run the real check
-    const base=useApp?'/app/check-live/queue/':'/pub/check-live/queue/'; const started=Date.now();
+    if(HOLD.sim){ setTimeout(()=>{ if(HOLD.active) holdResolve({simDone:true}); },((resp.etaSeconds!=null?resp.etaSeconds:30)+1)*1000); return; } // staging demo (?simqueue): count down, then run the real check
+    const started=Date.now(); // Pops's feed (docs/specs/queue-feed/CONTRACT): one public ticket poll for both app + anon.
     HOLD.poll=setInterval(async()=>{
       if(!HOLD.active) return;
-      let o=null; try{ o=await (useApp?appApi:api)(base+encodeURIComponent(HOLD.ticket)); }catch(_){ o=null; }
+      let o=null; try{ o=await (useApp?appApi:api)('/pub/queue/'+encodeURIComponent(HOLD.ticket)); }catch(_){ o=null; }
       if(!HOLD.active) return;
       if(o){
-        if(o.room){ holdResolve(o); return; }                 // call started -> flip to the live transcript
-        if(o.error){ holdResolve({error:o.error}); return; }
-        if(typeof o.etaSec==='number'){ HOLD.eta=Math.max(0,o.etaSec); holdRender(HOLD.eta); }
+        if(o.status==='dialing'||o.room||o.providerCallId){ holdResolve(o); return; } // slot opened -> flip to the live transcript
+        if(o.status==='error'||o.status==='gone'){ holdResolve({error:o.error||o.status}); return; }
+        if(typeof o.etaSeconds==='number'){ HOLD.eta=Math.max(0,o.etaSeconds); holdRender(HOLD.eta); } // status:'queued'
       }
       if(Date.now()-started>5*60*1000) holdResolve({error:'timeout'}); // safety: never hold forever
     },1000);
@@ -5487,17 +5487,17 @@ async function startCheckLive(){
   let secs=0; const elT=setInterval(()=>{ secs+=1; },1000); // counts toward the hard cap only — no on-screen timer
   LIVE_TIMERS=[elT];
   const SIMQUEUE=/[?&]simqueue/i.test(location.search||'');
-  if(SIMQUEUE){ const _s=await holdForSlot({queued:true,ticket:'sim',etaSec:30},useApp); $('holdCard').classList.add('hidden'); $('live').classList.remove('hidden'); if(_s&&_s.cancelled){ clearInterval(elT); stopAudio(); backToBuilder(); return; } }
+  if(SIMQUEUE){ const _s=await holdForSlot({queued:true,ticketId:'sim',etaSeconds:30},useApp); $('holdCard').classList.add('hidden'); $('live').classList.remove('hidden'); if(_s&&_s.cancelled){ clearInterval(elT); stopAudio(); backToBuilder(); return; } }
   let r=await (useApp?appApi:api)(useApp?'/app/check-live':'/pub/check-live',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryIds:SEL_CATS,specificProduct:SEL_PRODUCT,kioskMode:!!SEL_KIOSK})});
   // Queued (no open call slot): hold the user on the "you're next" card, poll Pops's queue feed each
   // second, and flip to the live transcript the instant a slot opens (room arrives). Skipped entirely
   // when the backend returns a room straight away (today's behavior).
-  if(r && r.queued && r.ticket){
+  if(r && r.queued && r.ticketId){
     const held=await holdForSlot(r,useApp);
     $('holdCard').classList.add('hidden'); $('live').classList.remove('hidden');
-    if(held&&held.cancelled){ clearInterval(elT); stopAudio(); backToBuilder(); return; }
-    if(!held||held.error||!held.room){ clearInterval(elT); stopAudio(); backToBuilder(); toast(t('toast.callstart.fail',"Couldn't start the check")); return; }
-    r=held; LIVE_T0=Date.now(); // start the call timing at connect, not during the wait
+    const liveRoom=held&&(held.room||held.providerCallId);
+    if(!held||held.error||!liveRoom){ clearInterval(elT); stopAudio(); backToBuilder(); toast(t('toast.callstart.fail',"Couldn't start the check")); return; }
+    r={room:liveRoom,wsHost:held.wsHost}; LIVE_T0=Date.now(); // slot opened: enter the live view at connect
   }
   if(r.error||!r.room){ clearInterval(elT); stopAudio(); backToBuilder(); if(r.error==='no_credits')openBuy('out'); else if(r.error==='unauthorized')signIn(); else if(r.error==='too_soon'){ toast(r.message||tf('toast.toosoon','You just checked this store. Check again in about {n} min.',{n:r.retryAfterMin||60}),'accent'); } else if(r.error==='store_closed'){ toast(tf('toast.closed','🔒 {x}. No call placed.',{x:tLbl(r.label||'Store is closed')})); } else toast(t('toast.callstart.fail',"Couldn't start the check")); return; }
   LIVE_ROOM=r.room; if(canListen) $('hangup_btn').style.display='';
