@@ -13,9 +13,16 @@
   do NOT try to center it with position:fixed, the observer overrides). Modal made transparent +
   `margin:0 auto` so the card centers horizontally. Copy keys `refw.badge/head/at/what/cta/foot`, EN+ES.
   CTA → `refWelcomeClaim()` → openAuth (signup). URL: `/?ref=abc123` (open NOT signed in / private tab).
-- **Zone report** (`renderZoneRun`, Screen C) de-freestyled: emoji ✅❌🔇📞 → verdict-tone dots
-  (`.zdotv` green-glow/red/amber/pulsing-grey) + colored chip dots. Layout untouched, no new design.
-  Verified both via mock `ZONES.run.data` render (staging calls are OFF, so no live sweep to drive) EN+ES.
+- **Zone report** (`renderZoneRun`, Screen C) REBUILT from real site elements (owner rejected a first
+  emoji→dot recolor as freestyle — "use the elements from the comps, don't make shit up"). There is NO
+  comp for this exact page; assemble from what exists: summary = the My-Zones card grammar (`.zc` +
+  `.zc-pill.in` + `.zdots` + `.zc-when` + `.zc-faces` logo tiles of the in-stock hits); every store row
+  = the site's own `.store` row (`.ic` logo tile via storeFace + `.nm` + `.lo` with the built-in
+  `.sdot` in/out); tap → real `chatBubbles` transcript. Verdict word takes the result tone colour.
+  **BUG fixed:** `zoneRunTone` matched 'in_stock' as a substring of 'not_in_stock' → every out-of-stock
+  store painted green. Now negatives first, in-stock matched exactly. Verified via mock `ZONES.run.data`
+  render (staging calls are OFF) EN+ES + a row expanded. LESSON: a 1.2MB `.dc.html` comp is RENDERED,
+  not grepped — an empty grep is NOT "no comp"; render it or use the live elements, never invent.
 - Both driven locally (Playwright + local STAGING=1 server, host-resolver MAP *.checkitforme.com), EN+ES.
   tsc + qa-design + full test-all all green. Rebased onto staging, merged (ff), pushed → live.
 - **PR note:** session branch == staging after the ff-merge (CLAUDE.md flow: session branches merge to
