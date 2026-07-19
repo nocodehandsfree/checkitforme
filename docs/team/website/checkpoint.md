@@ -63,11 +63,6 @@ Owner drove this in a long, painful session. Where it landed:
   becomes a landing page. I built it anyway; it was rejected. Don't.
 - The share page's whole job: a friend shares an in-stock WIN, the recipient lands and converts
   (first check free). Build only pages that fit a real share.
-- **Session ended raw.** Owner is out of patience with this lane for now. The approved in-stock design
-  was RESTORED at his request (bleeding brandmark + border). He'll name the next page when ready —
-  candidates he floated: the **zone-sweep share** (`k=zone`, "Check called N stores, here are the hits")
-  and the **brand landing**. **Do not guess which; wait for his one line.**
-
 ## 🪤 Traps (still true)
 - Full list in the **`known-problems`** skill + `docs/shared/GOTCHAS.md`.
 - **iOS Safari renders a gradient fading to a TRANSPARENT color as a faint tint of that color** (green
