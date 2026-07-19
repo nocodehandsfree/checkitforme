@@ -61,6 +61,18 @@ owner reasks.
    deal notes live in docs/team/ideas/checkpoint.md).
 6. Owner walk list O2-O10 in docs/specs/launch-journeys/JOURNEYS.md (A1-A8 automated + green).
 
+## My Zones redesign (CD, owner 07-19) — decisions locked
+CD redesigning My Zones (BUILT + functional → tighter, better use of space; slide-ups over My Checks
+cramp store-selection — the core fix). Decisions: NO confirm pop-up (press Check → starts checking
+open stores immediately, just tells them closed ones were skipped, never blocks) · it's the "zone
+report" (not "sweep") · tap a store row → expands to the single-check status-page look (live
+transcript/verdict/proof) · a waiting store row shows "In queue: 30s" accurate countdown → flips to
+Checking · LANGUAGE LAW: "checks" not "calls", NEVER "an AI" (rewrite share copy). Single-check
+waiting card already approved — don't touch. CD delivers ONLY this section's comps, writes to repo
+only after owner approval (github tools hidden — search to reveal).
+**LATER (don't forget):** after approval, merge the new My Zones comp into the ONE master comp doc +
+delete the old zone comp material — one comp, not scattered.
+
 ## Concurrency-queue UX build (owner 07-17) — coordinated across 3 lanes
 When call slots are full, the 11th check QUEUES, never fails. UX: a calm holding card (borrows the
 referral share-card LOOK, own copy) with store name + a LIVE, accurate countdown ("You're next ·
