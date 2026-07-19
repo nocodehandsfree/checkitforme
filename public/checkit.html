@@ -1763,14 +1763,13 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zrrow{display:flex;align-items:center;gap:11px;width:100%;margin-top:8px;padding:11px 13px;border:0;border-radius:13px 13px 0 0;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);color:#FFF;cursor:pointer}
 #zones .zrrow .nm{display:block;font-size:14.5px;font-weight:700}
 #zones .zrlbl{display:block;font-size:12px;font-weight:700;margin-top:2px} #zones .zrlbl.t-in{color:#4ADE80} #zones .zrlbl.t-out{color:#EF4444} #zones .zrlbl.t-unk{color:#FBBF24} #zones .zrlbl.t-live{color:#8A8A96}
-#zones .zri{flex:0 0 auto;display:flex;align-items:center;justify-content:center;width:18px} #zones .zrchev{color:#7C7C88;flex:0 0 auto}
-/* Verdict-tone status dots — the app's existing verdict language (green/red/amber/grey), replacing the
-   off-system emoji in the live sweep report. Same tokens as .zrlbl. In-stock glows; live pulses. */
-#zones .zdotv{width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:#8A8A96}
-#zones .zdotv.t-in{background:#4ADE80;box-shadow:0 0 7px #4ADE80} #zones .zdotv.t-out{background:#EF4444} #zones .zdotv.t-unk{background:#FBBF24} #zones .zdotv.t-live{background:#8A8A96;animation:zLive 1.4s ease-in-out infinite}
-#zones .zchipdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle;position:relative;top:-1px}
-@keyframes zLive{0%,100%{opacity:.35}50%{opacity:1}}
-@media (prefers-reduced-motion:reduce){#zones .zdotv.t-live{animation:none}}
+#zones .zrchev{color:#7C7C88;flex:0 0 auto;align-self:center}
+/* Live sweep report rows ARE the site's store rows (.store): logo tile + name + .lo status line with the
+   existing .sdot (green in-stock / red out). No invented elements. The verdict word takes the result-view
+   tone colour; a live row shows the neutral .sdot.on + "Calling…". */
+#zones .zrfin{color:#4ADE80} #zones .zrfin.t-out{color:#EF4444} #zones .zrfin.t-unk{color:#FBBF24} #zones .zrfin.t-live{color:#8A8A96}
+#zones .store.zrhead{width:100%;text-align:left;border-radius:14px} #zones .store.zrhead.open{border-radius:14px 14px 0 0}
+#zones .zrbody{margin-top:0;border-radius:0 0 14px 14px}
 #zones .zrbody{background:#1B1B20;border-radius:0 0 13px 13px;padding:8px 12px 12px;margin-bottom:2px}
 /* ===== Zones LOCKED FRAME (owner 07-11 comp): full-screen takeover — header pinned top, only the
    middle scrolls, basket bar pinned bottom. Nothing bleeds under the header. ===== */
@@ -3073,6 +3072,7 @@ Object.assign(I18N.es, {
   'zones.up.sub':'Guarda tus tiendas como una zona. Verifícalas todas a la vez y míralo en vivo. Solo Check+.',
   'zones.up.cta':'Ver planes Check+',
   'zones.instock':'en stock','zones.never':'Aún no verificada',
+  'zones.checkingnow':'Verificando…','zones.of':'de','zones.checkedw':'verificadas','zones.callingw':'llamando',
   'zones.empty':'Guarda las tiendas cercanas como zona y verifícalas todas de un toque.',
   'zones.check':'verificación','zones.checks':'verificaciones',
   'zones.rin':'En stock','zones.rlive':'Verificando…','zones.rout':'No está en stock','zones.runk':'Sin respuesta',
@@ -7381,34 +7381,57 @@ async function zonePollTick(){
   ZONES.run.data=data; renderZoneRun();
   if(data.done!=null && data.total!=null && data.done>=data.total) zoneStopPoll();
 }
-function zoneRunTone(row){ const k=(row.statusKey||row.status||'').toLowerCase(); if(row.confirmed===true||/in_?stock/.test(k)) return 'in'; if(row.confirmed===false||/no_?stock|not|out|sold/.test(k)) return 'out'; if(/answer|voicemail|ivr|busy/.test(k)) return 'unk'; if(/progress|ring|calling|checking|live/.test(k)||!k) return 'live'; return 'unk'; }
+function zoneRunTone(row){ const k=(row.statusKey||row.status||'').toLowerCase();
+  // live FIRST (a mid-call row has confirmed=null), then decide stock. Match keys EXACTLY where it
+  // matters: 'not_in_stock' contains the substring 'in_stock', so a loose /in_?stock/ test paints every
+  // out-of-stock store green — check the negative keys before the positive one.
+  if(/in_progress|queued|ring|calling|checking|live/.test(k)||!k) return 'live';
+  if(row.confirmed===false||/not_in_stock|no_?stock|does_not_sell|sold_out|\bnot\b|\bout\b/.test(k)) return 'out';
+  if(row.confirmed===true||/(^|_)in_?stock/.test(k)) return 'in';
+  if(/answer|voicemail|ivr|busy/.test(k)) return 'unk'; return 'unk'; }
+// Built from EXISTING app elements only (owner 07-19c — "use the elements from the comps, don't make
+// shit up"): the summary is the My-Zones card grammar (.zc-pill · .zc-when · .zdots · .zc-faces of the
+// in-stock logos), and EVERY store row is the site's own store row (.store: .ic logo tile + .nm + .lo
+// with the built-in .sdot in/out). The verdict word takes the result-view tone colour.
 function renderZoneRun(){
   const r=ZONES.run; if(!r) return; const d=r.data||{summary:{},results:[]};
   const sm=d.summary||{}; const done=d.done||0, total=d.total||(d.results?d.results.length:0);
+  const inN=sm.inStock||0, live=total>done, checking=sm.checking!=null?sm.checking:(total-done);
   const dots=Array.from({length:total},(_,i)=>`<span class="zdot ${i<done?'done':''}"></span>`).join('');
+  const CHK='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"></path></svg>';
+  // In-stock store logos → the same .zc-faces tile row the zone card uses.
+  const hits=(d.results||[]).filter(row=>zoneRunTone(row)==='in');
+  const faces=hits.slice(0,6).map(row=>`<div class="zc-face">${storeFace({logoUrl:row.logoUrl,name:row.name})}</div>`).join('')+(hits.length>6?`<div class="zc-more">+${hits.length-6}</div>`:'');
+  const pill=inN>0?`<span class="zc-pill in">${CHK}${inN} ${t('zones.instock','in stock')}</span>`:`<span class="zc-pill none">${live?t('zones.checkingnow','Checking…'):t('zones.checked','Checked')}</span>`;
+  const when=`${done} ${t('zones.of','of')} ${total} ${t('zones.checkedw','checked')}${live?' · '+checking+' '+t('zones.callingw','calling'):''}`;
+  // Each result = the real store row. Tap to drop the transcript underneath.
   const rows=(d.results||[]).map(row=>{ const tone=zoneRunTone(row);
-    const lbl=row.summary||({in:t('zones.rin','In stock'),out:t('zones.rout','Not in stock'),unk:t('zones.runk','No answer'),live:t('zones.rlive','Checking…')}[tone]);
-    return `<button class="zrrow" onclick="zoneExpand('${esc(row.cid||'')}',this)">
-      <span class="zri"><span class="zdotv t-${tone}"></span></span>
-      <span style="flex:1;min-width:0;text-align:left"><span class="nm">${esc(row.name||('Store '+row.retailerId))}</span><span class="zrlbl t-${tone}">${esc(lbl)}</span></span>
-      <span class="zrchev">▸</span>
-    </button><div class="zrbody" style="display:none"></div>`; }).join('');
-  const live=total>done;
+    const lbl=row.summary||({in:t('zones.rin','In stock'),out:t('zones.rout','Not in stock'),unk:t('zones.runk','No answer'),live:t('zones.rlive','Calling…')}[tone]);
+    const dotCls=tone==='in'?'instock':tone==='out'?'outstock':'on';
+    const sub=tone==='live'
+      ? `<span class="sdot on"></span><span class="zrfin t-live">${esc(lbl)}</span>`
+      : `<span class="sdot ${dotCls}"></span><span class="zrfin t-${tone}">${esc(lbl)}</span>`;
+    return `<div class="zresult">
+      <button class="store zrhead" onclick="zoneExpand('${esc(row.cid||'')}',this)">
+        <div class="ic">${storeFace({logoUrl:row.logoUrl,name:row.name})}</div>
+        <div style="min-width:0;flex:1"><div class="nm">${esc(row.name||('Store '+row.retailerId))}</div><div class="lo">${sub}</div></div>
+        <span class="zrchev">▸</span>
+      </button><div class="zrbody" style="display:none"></div></div>`; }).join('');
   $('zmodal').innerHTML=`<div class="zframe">${zFrameHead(r.name||t('zones.report','Zone check'),'renderZonesList()')}
     <div class="zf-scroll">
-    <div class="card" style="padding:14px 16px">
+    <div class="zc" style="cursor:default;margin-bottom:4px">
       <div class="zdots">${dots}</div>
-      <div class="zsummary">${done} ${t('zones.done','done')}${live?' · '+(total-done)+' '+t('zones.checkingw','checking'):''}</div>
-      <div class="zsumchips"><span><span class="zchipdot t-in" style="background:#4ADE80"></span>${sm.inStock||0} ${t('zones.rin','in stock')}</span><span><span class="zchipdot t-out" style="background:#EF4444"></span>${sm.no||0} ${t('zones.no','no')}</span><span><span class="zchipdot t-unk" style="background:#FBBF24"></span>${sm.noAnswer||0} ${t('zones.noans','no answer')}</span></div>
+      <div class="zc-meta">${pill}<span class="zc-when">${when}</span></div>
+      ${inN>0?`<div class="zc-faces" style="margin:14px 0 2px">${faces}</div>`:''}
     </div>
-    <div class="zrlist">${rows||`<div class="card" style="text-align:center;color:#8A8A96;padding:20px">${t('zones.starting','Starting the sweep…')}</div>`}</div>
+    <div class="zrlist">${rows||`<div class="zc" style="text-align:center;color:#8A8A96;padding:24px">${t('zones.starting','Starting the sweep…')}</div>`}</div>
     <div class="zbar"><div class="zbarrow" style="gap:10px">${live?`<button class="findbtn-primary" style="flex:1" onclick="zoneStopAll()">${t('zones.stopall','Stop all')}</button>`:''}<button class="cta sm" style="flex:1" onclick="zoneShare()">${t('zones.share','Share results')}</button></div></div>
     </div>
   </div>`;
 }
 async function zoneExpand(cid,btn){ if(!cid) return; const body=btn.nextElementSibling; if(!body) return;
-  if(body.style.display!=='none'){ body.style.display='none'; return; }
-  body.style.display='block'; body.innerHTML=`<div class="loaddots" style="display:flex;gap:6px;padding:10px 4px"><span></span><span></span><span></span></div>`;
+  if(body.style.display!=='none'){ body.style.display='none'; btn.classList.remove('open'); return; }
+  body.style.display='block'; btn.classList.add('open'); body.innerHTML=`<div class="loaddots" style="display:flex;gap:6px;padding:10px 4px"><span></span><span></span><span></span></div>`;
   try{ const o=await appApi('/pub/result/'+encodeURIComponent(cid)); const tx=(o&&o.transcript)||''; body.innerHTML=tx?chatBubbles(tx):`<div class="lo" style="padding:8px 4px;color:#8A8A96">${t('zones.notx','No transcript yet.')}</div>`; }catch(_){ body.innerHTML=`<div class="lo" style="padding:8px 4px;color:#8A8A96">${t('zones.notx','No transcript yet.')}</div>`; }
 }
 async function zoneStopAll(){ const r=ZONES.run; if(!r) return; try{ await appApi('/app/zones/run/'+r.runId+'/stop',{method:'POST'}); }catch(_){ } toast(t('zones.stopped','Stopping the sweep…'),'neutral'); setTimeout(zonePollTick,600); }
