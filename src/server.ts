@@ -553,7 +553,7 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   body{background:#1D1D22;color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100dvh;display:grid;place-items:center;padding:24px}
   .wrap{max-width:430px;width:100%;text-align:center}
   .card{position:relative;text-align:left;border:1px solid rgba(255,255,255,.12);border-radius:40px;padding:40px 27px 34px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
-  .card.pos{background:#20202A}
+  .card.pos{background:radial-gradient(125% 82% at 34% 15%, rgba(38,100,64,.98) 0%, rgba(38,100,64,.5) 30%, rgba(38,100,64,0) 60%),#20202A}
   .card.neg{background:#26262B}
   .cwmwrap{position:absolute;inset:0;border-radius:40px;overflow:hidden;z-index:0;pointer-events:none}
   .cwm{position:absolute;top:-40px;right:-44px;width:180px;height:180px;opacity:.16;z-index:0}
