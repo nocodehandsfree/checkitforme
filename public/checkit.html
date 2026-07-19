@@ -3562,6 +3562,7 @@ async function boot(){
   buildSwitcher(); applyBrand(); renderIcons(); buildLangSel(); applyLang();
   renderAuth(); renderStores(); renderChips(); renderFooter(); refreshAuth();
   maybeShowRefWelcome(); // referral visitor's first screen (gated: fresh ?ref=, not signed in)
+  if(/[?&]zonepeek/i.test(location.search||'')){ try{ zonePeek(); }catch(_){ } } // preview the live sweep report, no calls (owner)
   if(sp.get('paid')){ history.replaceState({},'','/'); toast(t('toast.payment2','Payment received. Adding your checks…'),'neutral');
     // Success redirect (hosted or 3DS return) — the grant is async via webhook. Poll /app/me until the
     // tier/credits actually land, THEN celebrate, instead of firing openPaid on a fixed timer that can
@@ -7428,6 +7429,23 @@ function renderZoneRun(){
     <div class="zbar"><div class="zbarrow" style="gap:10px">${live?`<button class="findbtn-primary" style="flex:1" onclick="zoneStopAll()">${t('zones.stopall','Stop all')}</button>`:''}<button class="cta sm" style="flex:1" onclick="zoneShare()">${t('zones.share','Share results')}</button></div></div>
     </div>
   </div>`;
+}
+// Standalone PREVIEW of the live sweep report (owner: "give me a link before I call stores"). Mirrors
+// ?holdpeek — opens the real report over the app with SAMPLE results, no calls placed. Pulls real
+// nearby stores so the logos are real; falls back to plain names if the fetch is empty.
+async function zonePeek(){
+  try{ document.body.classList.add('zoning'); }catch(_){ }
+  const z=$('zones'); if(z){ z.classList.remove('hidden'); z.classList.add('on'); }
+  let stores=[]; try{ const r=await appApi('/pub/stores/near?q=Los%20Angeles&limit=6'); if(r&&Array.isArray(r.stores)) stores=r.stores; }catch(_){ }
+  if(!stores.length) stores=[{id:1,name:'Target'},{id:2,name:'GameStop'},{id:3,name:'Walmart'},{id:4,name:'Best Buy'},{id:5,name:'Walgreens Pharmacy'},{id:6,name:'CVS'}];
+  const keys=['in_stock','in_stock','not_in_stock','nobody_answered','in_progress','queued'];
+  const results=stores.slice(0,6).map((s,i)=>{ const k=keys[i]||'queued'; const liveK=/in_progress|queued/.test(k);
+    return { retailerId:s.id, name:s.name, logoUrl:s.logoUrl||'', cid:'', status:liveK?k:'done', statusKey:k,
+      confirmed:k==='in_stock'?true:k==='not_in_stock'?false:null, summary:'' }; });
+  const summary={ inStock:results.filter(r=>r.statusKey==='in_stock').length, no:results.filter(r=>r.statusKey==='not_in_stock').length,
+    noAnswer:results.filter(r=>r.statusKey==='nobody_answered').length, checking:results.filter(r=>/in_progress|queued/.test(r.status)).length };
+  ZONES.run={ id:0, runId:'preview', name:t('zones.previewname','Los Angeles'), data:{ done:results.filter(r=>!/in_progress|queued/.test(r.status)).length, total:results.length, summary, results } };
+  renderZoneRun();
 }
 async function zoneExpand(cid,btn){ if(!cid) return; const body=btn.nextElementSibling; if(!body) return;
   if(body.style.display!=='none'){ body.style.display='none'; btn.classList.remove('open'); return; }
