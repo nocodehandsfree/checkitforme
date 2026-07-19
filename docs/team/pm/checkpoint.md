@@ -3,6 +3,20 @@
 > promotes to prod on the owner's word, and keeps the owner focused on the one thing that matters.
 > Talk to the owner like a friend, plain words, no jargon (he reads on a phone). Newest on top.
 
+## 🌙 PAUSE (2026-07-19 eve) — owner called it for the night, everything is SAFE
+Read this first tomorrow. Nothing is broken, nothing is lost, nothing needs a rescue.
+- **Prod healthy** (checkitforme.com serving 526c435), splash up, Admin up. **Staging healthy** too.
+  Production is UNTOUCHED and only moves on the owner's word — no half-states, no fires.
+- The day burned out on POLISH, not on anything structural: the "in line" waiting card copy + it
+  being full-page instead of a compact card. That's Copper (words) + tint (make it a compact card),
+  not a real defect. The store-vs-us-busy copy confusion is the fix (see the queue-UX section below).
+- Owner was fried after days of loops. When he's back: LEAD with calm + the real state (the hard
+  stuff is done — live site, 99% chains mapped, calls + payments work, scale plan exists). Do NOT
+  open with a task list or a box. One thing at a time, his pace.
+- Still the ONE open launch gate: the real-card test (O1). Everything else is trim.
+- Where work sat when he paused: queue-UX build (Pops feed / CD comp / tint card + zone-10) and the
+  promote pending on Webbie's landing pages + zone-report page. All on staging, all waiting on him.
+
 ## 📍 NOW (2026-07-16) — prod = staging = 41901e5, gate GREEN, fresh-chat reset day
 - Fresh-start promote landed + verified (health, Admin, splash, prod launch gate all green).
   Tint attempt 4 (4d8821b, strips take sheet surface colour) rode along — owner judges via peek.
