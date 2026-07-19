@@ -3,6 +3,18 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-18 — QUEUED "we're slammed" holding card comped (CD)
+- New check-status state: all call slots full, the check can't start yet (no transcript). A calm
+  holding moment, **never an error** — no "line"/"queue" language anywhere (owner).
+- Comp: `comps/QUEUED_HOLDING_CARD_COMP.dc.html` (standalone `.dc.html`). Contained in-stock green
+  wash (§3) + glass chrome (§5.4); store row (§5.6) with the real chain logo; one-line headline
+  "We're slammed." (§8); subhead = two sentences, break lands on the period (COPY hard rule 2); glass
+  timer well "Check starts in 0:30" (accent `#FFCB05`).
+- EN+ES copy, token refs, and Webbie build notes live in the comp file's header comment. The 30s
+  countdown is a COMP DEMO only; real value is server-driven.
+- **OPEN:** source of the 30s value + exact `0:00` → live-call view handoff; fold into
+  `WEBSITE_COMPS.dc.html` on the next board regen.
+
 ## 2026-07-17c — SHEETS CAN GHOST: variant H WINS (owner-verified)
 - **THE FULL RECIPE, final:** while a sheet is open, (1) dim = content filter (never an overlay),
   (2) root colour constant, (3) the sheet is ABSOLUTE page-layer content, not position:fixed —
