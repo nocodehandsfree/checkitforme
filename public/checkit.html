@@ -3788,7 +3788,7 @@ function openRefWelcome(){ if(isAuthed()) return;
   let ov=$('refwelcomeOverlay');
   if(!ov){ ov=document.createElement('div'); ov.className='rfw-ov'; ov.id='refwelcomeOverlay';
     const css=`<style>
-      #refwelcomeOverlay{position:fixed;inset:0;z-index:5000;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(6,7,11,.74);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+      #refwelcomeOverlay{position:fixed;inset:0;z-index:5000;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(3,4,7,.94);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
       #refwelcomeOverlay.on{display:flex}
       .rfw-card{position:relative;width:100%;max-width:392px;text-align:left;border:1px solid rgba(255,255,255,.12);border-radius:40px;padding:34px 27px 30px;box-shadow:0 30px 64px -14px rgba(0,0,0,.85);background:radial-gradient(125% 82% at 34% 15%, rgba(38,100,64,.98) 0%, rgba(38,100,64,.5) 30%, rgba(38,100,64,0) 60%),#20202A}
       .rfw-wm{position:absolute;inset:0;border-radius:40px;overflow:hidden;z-index:0;pointer-events:none}
