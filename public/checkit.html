@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r155" />
+<meta name="x-rev" content="glassfix-r156" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -7041,7 +7041,7 @@ async function renderZonesList(){
 // Same renderer the homepage store rows use (storeFace) so zone logos are byte-for-byte identical.
 function zoneFace(st){ return `<div class="zc-face ${st.logoDark?'lite':''} ${st.logoWide?'widelogo':''}">${storeFace(st)}</div>`; }
 function zonePaintList(list){
-  ZONES.building=false;
+  ZONES.building=false; window.KB_DOCK=false; // leaving the builder: drop the keyboard-dock freeze so the sheet re-anchors (glass) on the list
   const z=$('zmodal'); if(!z) return;
   const CHK='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"></path></svg>';
   const cards=(list||[]).map(zn=>{
@@ -7942,8 +7942,10 @@ function closeCheckout(){ const o=$('coOverlay'); if(o) o.classList.remove('on')
   }
   function undock(){
     if(!window.KB_DOCK) return; window.KB_DOCK=false;
-    const bk=$('zBasket'); if(bk){ bk.style.bottom=''; }
-    requestAnimationFrame(()=>sheetReplaceSoon($('zones')));
+    const z=$('zones'), m=z&&z.querySelector('.modal'), bk=$('zBasket');
+    if(m){ m.style.position=''; m.style.left=''; m.style.right=''; m.style.top=''; m.style.bottom=''; m.style.height=''; m.style.maxHeight=''; m.style.margin=''; }
+    if(bk){ bk.style.bottom=''; }
+    requestAnimationFrame(()=>sheetReplaceSoon(z));
   }
   document.addEventListener('focusin', e=>{ if(e.target&&e.target.id==='z_name'){ window.KB_DOCK=true; setTimeout(dock,60); } }); // freeze re-place IMMEDIATELY, dock once the viewport settles
   document.addEventListener('focusout', e=>{ if(e.target&&e.target.id==='z_name'){ setTimeout(undock,80); } });
