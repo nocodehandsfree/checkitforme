@@ -2896,7 +2896,7 @@ const I18N={ es:{
   'buy.tabplans':'Planes','buy.tabpayg':'Por uso','plan.on':'Tienes','plan.checks':'verificaciones','plan.percheck':'aprox.','plan.percheck2':'por verificación','plan.noexpire':'no caducan','acct.stat.run2':'Verificaciones hoy','acct.perweek2':'Verificaciones esta semana','auth.newcell':'Danos tu nuevo celular','auth.cell.title':'Tu celular','ph.cellmail':'tu correo',
   'ref.sharemsg':'¡Oye! Mira esta tecnología. Está increíble.\nNos ayuda a encontrar productos virales en stock como cartas Pokémon a precio de tienda.\nRegístrate y ambos ganamos una verificación gratis: ','ref.copied':'¡Enlace de invitación copiado!','ref.copy':'Copia tu enlace de invitación:','ref.both':'Ambos reciben <b style="color:#fff">una verificación gratis</b> cuando se registran.','ref.copybtn':'COPIAR','ref.text':'Mensaje','ref.post':'Publicar','ref.more':'Más',
   // Referral welcome (owner 07-18) — the invited visitor's first screen
-  'refw.badge':'Un regalo de un amigo','refw.head':'Tienes un check gratis.','refw.at':'Tu amigo te echó la mano.','refw.what':'Check AI llama a las tiendas y encuentra lo que siempre está agotado.','refw.cta':'Reclámalo','refw.foot':'Los dos reciben uno.',
+  'refw.badge':'Un regalo','refw.head':'Un amigo te echó la mano.','refw.sub':'Usa Check AI para llamar a las tiendas y conseguir productos difíciles de encontrar a precio de tienda.','refw.cta':'Consigue tu check gratis','refw.foot':'Ellos también reciben uno',
   'kioskonly':'Solo kiosco','kiosk.precall':'Solo kiosco. Preguntaremos si su kiosco está funcionando y surtido, no por un envío.',
   'closednow':'· cerrado ahora','store.soon':'¡Agregando tienda pronto!','store.soonchip':'Muy pronto',
   // live view
@@ -3779,56 +3779,55 @@ function captureReferral(){ try{ const sp=new URLSearchParams(location.search); 
 function maybeShowRefWelcome(){ if(!REF_FRESH||isAuthed()) return; if((POLICY.flags||{}).referrals===false) return;
   if(document.querySelector('.overlay.on')) return; // never stack on a deep-link overlay
   setTimeout(openRefWelcome,260); }
-// Rebuilt 2026-07-19 to FEEL like the in-stock share card (renderShare "in" state, server.ts):
-// same green-wash card (r40), bleeding check watermark top-right, glow-dot pill, brand-color hero
-// headline + right-aligned subline (mirrors "@ Store"), and the ring-capsule CTA with the shine
-// sweep. rfw- prefixed so nothing collides with the app's own .card/.badge/.cta. Values are the
-// STYLE_GUIDE token set (same hexes the share card uses); the modal shell is made transparent so
-// only this card shows, centered (§5.11).
+// Referral welcome (owner 07-19d): the in-stock share card design, but CENTERED on a DIMMED page so
+// it's the only thing in focus (owner: "middle of the screen, everything behind darkened"). It does
+// NOT use the .overlay class on purpose — that would drag it into v2's bottom-sheet machinery
+// (sheetHObserver anchors every .overlay to the bottom); this is its own fixed, centered, scrim'd
+// layer. rfw- prefixed so nothing collides with the app's .card/.badge/.cta.
 function openRefWelcome(){ if(isAuthed()) return;
   let ov=$('refwelcomeOverlay');
-  if(!ov){ ov=document.createElement('div'); ov.className='overlay'; ov.id='refwelcomeOverlay';
+  if(!ov){ ov=document.createElement('div'); ov.className='rfw-ov'; ov.id='refwelcomeOverlay';
     const css=`<style>
-      #refwelcomeOverlay .modal{background:transparent!important;box-shadow:none!important;padding:0!important;border-radius:0!important;max-width:388px;margin:0 auto!important}
-      .rfw-card{position:relative;text-align:left;border:1px solid rgba(255,255,255,.12);border-radius:40px;padding:40px 27px 34px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7);background:radial-gradient(125% 82% at 34% 15%, rgba(38,100,64,.98) 0%, rgba(38,100,64,.5) 30%, rgba(38,100,64,0) 60%),#20202A}
+      #refwelcomeOverlay{position:fixed;inset:0;z-index:5000;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(6,7,11,.74);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+      #refwelcomeOverlay.on{display:flex}
+      .rfw-card{position:relative;width:100%;max-width:392px;text-align:left;border:1px solid rgba(255,255,255,.12);border-radius:40px;padding:34px 27px 30px;box-shadow:0 30px 64px -14px rgba(0,0,0,.85);background:radial-gradient(125% 82% at 34% 15%, rgba(38,100,64,.98) 0%, rgba(38,100,64,.5) 30%, rgba(38,100,64,0) 60%),#20202A}
       .rfw-wm{position:absolute;inset:0;border-radius:40px;overflow:hidden;z-index:0;pointer-events:none}
       .rfw-wm svg{position:absolute;top:-40px;right:-44px;width:180px;height:180px;opacity:.16}
       .rfw-body{position:relative;z-index:1}
       .rfw-badge{display:inline-flex;align-items:center;gap:7px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.13em;color:#4ADE80;background:rgba(255,255,255,.06);border:1px solid rgba(74,222,128,.4);padding:6px 12px;border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
       .rfw-gdot{width:8px;height:8px;border-radius:50%;background:#4ADE80;box-shadow:0 0 8px #4ADE80;animation:ckGlow 2s ease-in-out infinite}
-      .rfw-head{margin-bottom:30px}
-      .rfw-title{display:inline-block;max-width:100%}
-      .rfw-big{font-size:38px;font-weight:900;line-height:1;letter-spacing:-1.4px;margin:0;color:var(--accent,#FFCB05)}
-      .rfw-at{display:block;text-align:right;font-size:16px;font-weight:700;letter-spacing:-.2px;color:#fff;margin-top:7px}
-      .rfw-what{color:rgba(255,255,255,.82);font-size:15px;font-weight:500;line-height:1.55;margin:24px 0 0}
-      .rfw-cact{margin-top:38px}
-      .rfw-cta{display:block;text-decoration:none;border-radius:999px;padding:2.5px;background:linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%);box-shadow:0 10px 22px -12px rgba(0,0,0,.55);cursor:pointer}
-      .rfw-cin{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:9px;border-radius:999px;background:#20202A;padding:13px 22px}
+      .rfw-head{margin-bottom:13px}
+      .rfw-big{font-size:33px;font-weight:900;line-height:1.04;letter-spacing:-1.1px;margin:0;color:var(--accent,#FFCB05)}
+      .rfw-sub{color:rgba(255,255,255,.82);font-size:15px;font-weight:500;line-height:1.5;margin:14px 0 0}
+      .rfw-cact{margin-top:28px}
+      .rfw-cta{display:block;width:100%;text-decoration:none;border:0;border-radius:999px;padding:2.5px;background:linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%);box-shadow:0 10px 22px -12px rgba(0,0,0,.55);cursor:pointer}
+      .rfw-cin{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:9px;border-radius:999px;background:#20202A;padding:15px 24px}
       .rfw-shine{position:absolute;top:0;bottom:0;left:-45%;width:45%;background:linear-gradient(105deg,transparent 0%,rgba(140,255,185,.25) 50%,transparent 100%);animation:ckShine 2.8s ease-in-out infinite}
-      .rfw-ctxt{position:relative;font-size:12.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:#fff}
+      .rfw-ctxt{position:relative;font-size:12.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#fff;text-decoration:none}
+      .rfw-arw{position:relative;flex:0 0 auto}
       .rfw-foot{color:#8A8A96;font-size:12.5px;font-weight:600;margin-top:14px;text-align:center}
       @keyframes ckShine{0%{left:-45%}55%,100%{left:110%}}
       @keyframes ckGlow{0%,100%{opacity:.4}50%{opacity:1}}
       @media (prefers-reduced-motion:reduce){.rfw-shine,.rfw-gdot{animation:none}}
     </style>`;
-    ov.innerHTML=`<div class="modal">${css}
+    ov.innerHTML=`${css}
       <div class="rfw-card">
         <div class="rfw-wm"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#8CF7B4"/><path d="M6.5 12.4 L10.3 16 L17.5 8" stroke="#20693F" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
         <div class="rfw-body">
-          <div class="rfw-head"><div class="rfw-badge"><span class="rfw-gdot"></span>${t('refw.badge','A gift from a friend')}</div></div>
-          <div class="rfw-title"><h1 class="rfw-big">${t('refw.head','You got a free check.')}</h1><div class="rfw-at">${t('refw.at','Your friend hooked you up.')}</div></div>
-          <div class="rfw-what">${t('refw.what',"Check AI calls stores and finds the stuff that's always sold out.")}</div>
+          <div class="rfw-head"><div class="rfw-badge"><span class="rfw-gdot"></span>${t('refw.badge','A Gift')}</div></div>
+          <h1 class="rfw-big">${t('refw.head','A friend just hooked you up.')}</h1>
+          <div class="rfw-sub">${t('refw.sub',"Use Check AI to call stores and get products that are hard to find at retail prices.")}</div>
           <div class="rfw-cact">
-            <a class="rfw-cta" onclick="refWelcomeClaim()"><span class="rfw-cin"><span class="rfw-shine"></span><span class="rfw-ctxt">${t('refw.cta','Claim it')}</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></span></a>
-            <div class="rfw-foot">${t('refw.foot','You both get one.')}</div>
+            <button class="rfw-cta" onclick="refWelcomeClaim()"><span class="rfw-cin"><span class="rfw-shine"></span><span class="rfw-ctxt">${t('refw.cta','Get your free check')}</span><svg class="rfw-arw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></span></button>
+            <div class="rfw-foot">${t('refw.foot',"They'll get one too")}</div>
           </div>
         </div>
       </div>`;
     ov.onclick=e=>{ if(e.target===ov) closeRefWelcome(); };
     document.body.appendChild(ov); }
-  ov.classList.add('on'); track('refwelcome_open');
+  ov.classList.add('on'); try{ document.documentElement.style.overflow='hidden'; document.body.style.overflow='hidden'; }catch(_){ } track('refwelcome_open');
 }
-function closeRefWelcome(){ const ov=$('refwelcomeOverlay'); if(ov) ov.classList.remove('on'); }
+function closeRefWelcome(){ const ov=$('refwelcomeOverlay'); if(ov) ov.classList.remove('on'); try{ document.documentElement.style.overflow=''; document.body.style.overflow=''; }catch(_){ } }
 function refWelcomeClaim(){ closeRefWelcome(); track('refwelcome_claim'); try{ openAuth(); }catch(_){ } } // signup = where the free check is granted
 async function claimPendingReferral(){
   if(!isAuthed()) return;
