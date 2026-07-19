@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r156" />
+<meta name="x-rev" content="glassfix-r157" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -607,7 +607,7 @@ __BRAND_HEAD__
      page CONTENT — never a cover layer — and (b) grows the page so the absolute sheet's ~120px under-bar
      overshoot is never clipped (THIS min-height is the line that makes the bottom glass work). The sheet
      JS adds/removes .sheetopen. */
-  body.sheetopen header,body.sheetopen main,body.sheetopen .site-footer{filter:brightness(.45);transition:filter .22s}
+  body.sheetopen header,body.sheetopen main,body.sheetopen .site-footer{filter:brightness(.22);transition:filter .22s}
   body.sheetopen{min-height:calc(100dvh + 200px)}
   body:has(.overlay.on){overflow:hidden}  /* lock the background (incl. the Leaflet map) while a modal is open */
   .modal{background:var(--sheet);border:1px solid var(--border);border-radius:18px;padding:22px;max-width:380px;width:100%;text-align:center}
@@ -4060,7 +4060,7 @@ function sheetH_on(ov){ if(!ov||ov.__sh) return; ov.__sh=1;
   const TAIL=120;
   const place=()=>{ const prev=m.style.height;
     m.style.height=''; m.style.maxHeight=''; m.style.paddingBottom='';
-    const cap=window.innerHeight*0.93, cs=getComputedStyle(m);
+    const cap=window.innerHeight*0.96, cs=getComputedStyle(m);
     // FILL sheets — a flex column that scrolls INSIDE (reading pages, zones, history) — open TALL at the
     // cap so there's room to read. Measuring their natural height opens them short because their content
     // loads a beat after the sheet (owner: "you can't read much like this, 75% of the page"). Form/menu
