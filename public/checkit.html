@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r152" />
+<meta name="x-rev" content="glassfix-r153" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -1742,7 +1742,9 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zlist{max-height:54vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#1B1B20;border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:6px 8px}
 #zones .zpin{background:none;border:0}
 /* store row = retail .store look + leading check + green ring when picked (logos identical to retail) */
-#zones .zpick{cursor:pointer;position:relative;margin-top:9px;text-align:left}
+#zones .zpick{cursor:pointer;position:relative;margin-top:8px;text-align:left;padding:8px 12px}
+#zones .zpick .ic{width:40px;height:40px;border-radius:11px}
+#zones .zpick .ic img{max-width:30px;max-height:30px}
 #zones .zpick.picked{box-shadow:0 0 0 2px #4ADE80,0 8px 16px -8px rgba(74,222,128,.35)}
 #zones .zpick.zclosed{opacity:.6}
 #zones .zck{width:22px;height:22px;flex:0 0 auto;border-radius:50%;display:grid;place-items:center;background:#1B1B20;box-shadow:inset 0 1px 3px rgba(0,0,0,.5)}
@@ -1799,12 +1801,13 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zbasket{position:absolute;left:0;right:0;bottom:0;z-index:5;background:linear-gradient(180deg,#2D2D34,#25252B);box-shadow:0 -18px 34px -12px rgba(0,0,0,.72),inset 0 1px 0 rgba(255,255,255,.08);border-radius:26px 26px 0 0;padding:15px 18px calc(20px + env(safe-area-inset-bottom));transform:translateY(112%);transition:transform .28s cubic-bezier(.2,.8,.3,1)}
 #zones .zbasket.up{transform:translateY(0)}
 #zones .zbkhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;font:900 14px Inter;color:#fff;white-space:nowrap}
+#zones .zclearall{background:none;border:0;color:#8A8A96;font:700 12.5px Inter;letter-spacing:.02em;cursor:pointer;padding:2px 0}
 /* basket = just the LOGOS (owner 07-11), wrapping so every pick shows; small X badge to drop one */
 #zones .zchips{display:flex;flex-wrap:nowrap;gap:10px;margin-bottom:14px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:2px}
 #zones .zchips::-webkit-scrollbar{display:none}
-#zones .zchip{flex:none;position:relative;width:46px;height:46px;border-radius:12px;background:#1F1F25;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;overflow:visible}
+#zones .zchip{flex:none;position:relative;width:36px;height:36px;border-radius:10px;background:#1F1F25;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;overflow:visible}
 #zones .zchip:not(:has(img)){background:linear-gradient(145deg,#34343D,#23232B);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5)}
-#zones .zchip img{max-width:34px;max-height:34px;object-fit:contain}
+#zones .zchip img{max-width:26px;max-height:26px;object-fit:contain}
 #zones .zchip.widelogo img{max-width:40px;max-height:30px}
 #zones .zchip .cx{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#3E3E46;border:2px solid #23232B;color:#E9E9F0;display:grid;place-items:center;cursor:pointer;padding:0}
 #zones .zbkrow{display:flex;gap:12px}
@@ -1935,7 +1938,8 @@ html[data-skin="v2"] #histOverlay .hist-scroll{flex:1 1 auto;min-height:0;overfl
    glass. The inner scrollers get a 120px scroll-end spacer (last row stays reachable above the bar) and the
    create-flow basket lifts off the box bottom so Save never hides under the bar. */
 body.sheetopen #zones .zf-scroll::after,body.sheetopen #histOverlay .hist-scroll::after,body.sheetopen #pageOverlay #pg_body::after{content:'';display:block;flex:0 0 auto;height:calc(160px + env(safe-area-inset-bottom))} /* clears the 120px under-bar overshoot AND lifts the last row a comfortable tap above the iOS toolbar (a flush-to-edge link was untappable) */
-body.sheetopen #zones .zbasket{padding-bottom:calc(150px + env(safe-area-inset-bottom))}
+body.sheetopen #zones .zbasket.up{bottom:120px}
+#zones .zbasket::after{content:'';position:absolute;top:calc(100% - 1px);left:0;right:0;height:100vh;background:#25252B}
 /* Footer links (About/FAQ/Terms/Privacy/Contact) slide up as a bottom sheet, like every other panel.
    Flex column: the grab handle + title stay pinned; only the body scrolls (owner 07-06: the top used to
    scroll away). */
@@ -3035,7 +3039,7 @@ const I18N={ es:{
   'zones.locph':'Busca un código postal o ciudad…','zones.go':'Ir','zones.list':'Lista','zones.map':'Mapa',
   'zones.radius':'Radio','zones.addallshort':'Agregar todo','zones.selstore':'tienda seleccionada','zones.selstores':'tiendas seleccionadas',
   'zones.typloc':'Escribe primero un código postal o ciudad.','zones.located':'Centrado en {q}','zones.noplace':'No encontramos ese lugar.',
-  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas','zones.cap10':'Una zona verifica hasta 10 tiendas a la vez.','hold.meta':'Buscando {p}','hold.meta.generic':'Revisando el estante','hold.head':'Estamos a tope.','hold.sub':'Un momento.','zones.limit10':'Llegaste al límite de 10 tiendas','hold.timer':'Tu revisión empieza en','em.title':'Tu correo','step.calling':'Llamando','watch.verify.h':'Revisa tu correo para confirmarlo.','watch.verify.hsms':'Te enviaremos un texto para confirmar tu celular.','watch.then2':'Luego te avisamos al instante<br>cuando se confirme en stock.','em.sub':'Las alertas y avisos de reposición llegan aquí.','em.new':'Danos tu nuevo correo','em.first':'Danos tu correo','em.empty':'Escribe tu nuevo correo primero','em.same':'Ese ya es tu correo','em.resent':'Confirmación enviada. Revisa tu correo.','em.again':'Enviarla de nuevo','em.done':'Correo confirmado. Alertas activas.','em.badlink':'Ese enlace no funcionó. Toca Enviarla de nuevo.','em.ph':'tu@correo.com','em.save':'Guardar correo','em.saving':'Guardando…','em.confirm':'Revisa tu correo para confirmar','em.add':'Agrega tu correo para alertas','alerts.title':'Alertas','alerts.sub':'Maneja tus alertas de correo y texto.','alerts.row.at':'{p} en {s}','alerts.d.remail':'Te manda un correo al volver.','alerts.d.rsms':'Te manda un texto al volver.','alerts.d.semail':'Verifica la tienda sola. Resultado al correo.','alerts.d.ssms':'Verifica la tienda sola. Resultado por texto.','alerts.none':'Aún no has creado alertas.','alerts.off':'Apagar','alerts.mute':'Silenciar','alerts.unmute':'Activar','alerts.stop':'Parar','alerts.d.muted':'Silenciada. No llega nada hasta activarla.','alerts.mutedpill':'Silenciada. Actívala cuando quieras.','alerts.unmutedpill':'Activada. Te avisaremos.','alerts.stopped':'Cancelamos {x}','alerts.name.restock':'las alertas de reposición de {s}','alerts.name.sched':'las alertas de auto chequeo de {s}','alerts.thatstore':'esa tienda','alerts.thisalert':'esta alerta','alerts.k.sched':'Auto-verificación','alerts.k.restock':'Alerta de reposición','alerts.c.sms':'texto','alerts.c.email':'correo','alerts.acheck':'Una verificación','acct.row.alerts':'Alertas','acct.row.alerts.sub':'Avisos de reposición y autoverificación.',
+  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas','zones.cap10':'Una zona verifica hasta 10 tiendas a la vez.','hold.meta':'Buscando {p}','hold.meta.generic':'Revisando el estante','hold.head':'Estamos a tope.','hold.sub':'Un momento.','zones.limit10':'Llegaste al límite de 10 tiendas','zones.clearall':'Borrar todo','hold.timer':'Tu revisión empieza en','em.title':'Tu correo','step.calling':'Llamando','watch.verify.h':'Revisa tu correo para confirmarlo.','watch.verify.hsms':'Te enviaremos un texto para confirmar tu celular.','watch.then2':'Luego te avisamos al instante<br>cuando se confirme en stock.','em.sub':'Las alertas y avisos de reposición llegan aquí.','em.new':'Danos tu nuevo correo','em.first':'Danos tu correo','em.empty':'Escribe tu nuevo correo primero','em.same':'Ese ya es tu correo','em.resent':'Confirmación enviada. Revisa tu correo.','em.again':'Enviarla de nuevo','em.done':'Correo confirmado. Alertas activas.','em.badlink':'Ese enlace no funcionó. Toca Enviarla de nuevo.','em.ph':'tu@correo.com','em.save':'Guardar correo','em.saving':'Guardando…','em.confirm':'Revisa tu correo para confirmar','em.add':'Agrega tu correo para alertas','alerts.title':'Alertas','alerts.sub':'Maneja tus alertas de correo y texto.','alerts.row.at':'{p} en {s}','alerts.d.remail':'Te manda un correo al volver.','alerts.d.rsms':'Te manda un texto al volver.','alerts.d.semail':'Verifica la tienda sola. Resultado al correo.','alerts.d.ssms':'Verifica la tienda sola. Resultado por texto.','alerts.none':'Aún no has creado alertas.','alerts.off':'Apagar','alerts.mute':'Silenciar','alerts.unmute':'Activar','alerts.stop':'Parar','alerts.d.muted':'Silenciada. No llega nada hasta activarla.','alerts.mutedpill':'Silenciada. Actívala cuando quieras.','alerts.unmutedpill':'Activada. Te avisaremos.','alerts.stopped':'Cancelamos {x}','alerts.name.restock':'las alertas de reposición de {s}','alerts.name.sched':'las alertas de auto chequeo de {s}','alerts.thatstore':'esa tienda','alerts.thisalert':'esta alerta','alerts.k.sched':'Auto-verificación','alerts.k.restock':'Alerta de reposición','alerts.c.sms':'texto','alerts.c.email':'correo','alerts.acheck':'Una verificación','acct.row.alerts':'Alertas','acct.row.alerts.sub':'Avisos de reposición y autoverificación.',
   'feat.d.zone_sweeps':'Guarda tus tiendas como una zona. Un toque las llama todas a la vez. Mira las respuestas llegar en vivo. Cada tienda cuesta una verificación. Sin respuesta, sin cargo.','feat.d.restock_alerts':'Deja de revisar. Te avisamos. Toca Avísame cuando vuelva en un resultado. Vigilamos esa tienda por ti. Apenas llegue producto, te avisamos. Un aviso por reposición, nada de spam.','feat.d.scheduled_checks':'Las tiendas reponen con ritmo. La autoverificación corre en sus días de envío. La respuesta te espera en el celular. Cancela cuando quieras en Mis verificaciones.','feat.d.any_town':'Las cuentas gratis buscan cerca de casa. Cualquier ciudad te suelta la correa. Busca cualquier código postal o ciudad. El mapa salta ahí. Más de 100,000 tiendas.','feat.d.store_holds':'¿Lo encontraste pero estás a 20 minutos? Le pedimos al personal que te aparte uno. Con tu nombre, en la misma llamada.','feat.d.your_voice':'Elige la voz que llama por ti. Quien contesta escucha una voz amable y natural.','feat.d.thrift_hunts':'Colecciones viejas acaban en tiendas de segunda. Precios de risa, nadie las revisó. Activa Thrift y llamamos a las de tu zona. Preguntamos qué hay en la vitrina hoy.','feat.d.hobby_hunts':'Un muro de Pokémon para explorar. Cada era, cada set, cada producto. Con precios de lista. Elige tu objetivo. Cada llamada pide exactamente eso.',
   'zones.untitled':'Zona sin nombre','zones.store':'tienda','zones.stores':'tiendas',
   'zones.rename':'Renombrar','zones.delete':'Eliminar zona','zones.rename.save':'Guardar nombre','zones.delete.sure':'No se puede deshacer.','zones.delete.yes':'Sí, eliminarla','zones.keep':'Conservarla','zones.allclosed':'Todas las tiendas de esta zona están cerradas','zones.confirm.title':'¿Verificar todas las tiendas de esta zona?','zones.confirm.per':'1 verificación por tienda.',
@@ -4075,13 +4079,16 @@ function sheetH_off(ov){ if(!ov||!ov.__sh) return; ov.__sh=0; try{ if(ov.__ro){ 
   ov.style.position=''; ov.style.top=''; ov.style.bottom=''; ov.style.height='';
   sheetBodyMaybeUnlock();
 }
+let _rplT=0, _rplSet=new Set();
+function sheetReplaceSoon(ov){ if(!ov) return; _rplSet.add(ov); clearTimeout(_rplT); _rplT=setTimeout(()=>{ const set=_rplSet; _rplSet=new Set(); set.forEach(o=>{ if(o.__sh&&o.classList.contains('on')){ sheetH_off(o); sheetH_on(o); } }); },60); }
 (function sheetHObserver(){ try{
   const mo=new MutationObserver(muts=>{ for(const mu of muts){ const el=mu.target;
+    if(mu.type==='childList'){ // content INSIDE an open sheet changed (zone list/builder re-render on
+      // save/edit/delete, zPop modal swap) — re-place so the fresh content re-anchors instead of
+      // stranding the sheet off-screen with the page showing behind it (owner: "stuck on this page").
+      let ovc=(el&&el.nodeType===1&&el.classList&&el.classList.contains('overlay')&&el.classList.contains('on'))?el:((el&&el.closest)?el.closest('.overlay.on'):null);
+      if(ovc&&ovc.__sh) sheetReplaceSoon(ovc); continue; }
     if(!(el&&el.nodeType===1&&el.classList&&el.classList.contains('overlay'))) continue;
-    if(mu.type==='childList'){ // an open sheet's modal was REPLACED wholesale (zPop confirm/rename set
-      // ov.innerHTML while 'on') — the placed node is gone; re-place or the fresh modal lands off-screen
-      // below the overlay with the page locked behind it (owner: "delete a zone freezes the page")
-      if(el.__sh&&el.classList.contains('on')){ sheetH_off(el); sheetH_on(el); } continue; }
     if(el.classList.contains('on')) sheetH_on(el); else sheetH_off(el); } });
   mo.observe(document.body,{attributes:true,attributeFilter:['class'],subtree:true,childList:true});
 }catch(_){ }
@@ -7231,7 +7238,7 @@ function renderZoneBuild(){
       <div class="zlist" style="display:${map?'none':'block'};max-height:none;background:none;box-shadow:none;padding:0">${rows}</div>
     </div>
     <div class="zf-foot"><div class="zbasket${n?' up':''}" id="zBasket">
-      <div class="zbkhead"><span id="z_count">${n} ${n===1?t('zones.store','store'):t('zones.stores','stores')}</span></div>
+      <div class="zbkhead"><span id="z_count">${n} ${n===1?t('zones.store','store'):t('zones.stores','stores')}</span><button class="zclearall" onclick="zoneClearAll()">${t('zones.clearall','Clear all')}</button></div>
       <div class="zchips" id="zChips">${zoneChipsHTML()}</div>
       <div class="zbkrow"><input id="z_name" placeholder="${t('zones.nameph3','Name it…')}" value="${esc(ZONES.name||'')}" maxlength="40" oninput="ZONES.name=this.value"><button class="zbksave" id="z_save" onclick="zoneSave()"><span>${t('zones.save','Save zone')}</span></button></div>
     </div></div>
@@ -7290,6 +7297,7 @@ async function zoneGeocode(silent){
     toast(tf('zones.located','Centered on {q}',{q}),'neutral'); }
   else if(silent!==true) toast(t('zones.noplace',"Couldn't find that place."));
 }
+function zoneClearAll(){ ZONES.sel=new Set(); renderZoneBuild(); }
 function zoneToggleMap(){ ZONES.mapOpen=!ZONES.mapOpen; renderZoneBuild(); }
 function zoneMapEnsure(){
   if(!ZONES.mapOpen) return;
