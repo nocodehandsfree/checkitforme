@@ -550,10 +550,10 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
 <style>/*CP*/
   @font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;src:url(/fonts/inter-var-latin.woff2) format('woff2')}
   *{box-sizing:border-box;margin:0} :root{--green:${green};--amber:${amber}}
-  body{background:#1D1D22;color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;height:100dvh;overflow:hidden;display:grid;place-items:center;padding:24px}
+  body{background:#1D1D22;color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100dvh;display:grid;place-items:center;padding:24px}
   .wrap{max-width:430px;width:100%;text-align:center}
   .card{position:relative;text-align:left;border:1px solid rgba(255,255,255,.12);border-radius:40px;padding:40px 27px 34px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
-  .card.pos{background:linear-gradient(180deg,#266440 0%,#20202A 46%)}
+  .card.pos{background:#20202A}
   .card.neg{background:#26262B}
   .cwmwrap{position:absolute;inset:0;border-radius:40px;overflow:hidden;z-index:0;pointer-events:none}
   .cwm{position:absolute;top:-40px;right:-44px;width:180px;height:180px;opacity:.16;z-index:0}
