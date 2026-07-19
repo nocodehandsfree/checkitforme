@@ -5,6 +5,22 @@
 > (`staging` → `staging.checkitforme.com`; promote = apply on `main`). Clean split with the other dev:
 > **he owns the tint CSS** (`__bootTone`/`tone-*`/body wash/sheet chrome), **I own view/mode/nav**.
 
+## ✅ 07-19b — REFERRAL WELCOME + ZONE REPORT shipped to staging (the 3-landing-pages plate)
+- **Referral welcome** (`?ref` on homepage, not signed in) rebuilt to FEEL like the in-stock share card:
+  green-wash card (r40) + bleeding check watermark + glow-dot pill + brand-color hero + right-aligned
+  subline + ring-capsule shine CTA. Lives in `openRefWelcome()` (checkit.html), `rfw-` prefixed inline
+  `<style>`. Renders as a native v2 bottom sheet (the sheetHObserver bottom-anchors EVERY `.overlay` —
+  do NOT try to center it with position:fixed, the observer overrides). Modal made transparent +
+  `margin:0 auto` so the card centers horizontally. Copy keys `refw.badge/head/at/what/cta/foot`, EN+ES.
+  CTA → `refWelcomeClaim()` → openAuth (signup). URL: `/?ref=abc123` (open NOT signed in / private tab).
+- **Zone report** (`renderZoneRun`, Screen C) de-freestyled: emoji ✅❌🔇📞 → verdict-tone dots
+  (`.zdotv` green-glow/red/amber/pulsing-grey) + colored chip dots. Layout untouched, no new design.
+  Verified both via mock `ZONES.run.data` render (staging calls are OFF, so no live sweep to drive) EN+ES.
+- Both driven locally (Playwright + local STAGING=1 server, host-resolver MAP *.checkitforme.com), EN+ES.
+  tsc + qa-design + full test-all all green. Rebased onto staging, merged (ff), pushed → live.
+- **PR note:** session branch == staging after the ff-merge (CLAUDE.md flow: session branches merge to
+  staging and die), so an open PR to staging is empty/impossible — that's expected, not a miss.
+
 ## 🔧 07-19 — SHARE/LANDING (/s renderShare) rebuilt to the approved in-stock comp (LIVE on staging)
 Owner drove this in a long, painful session. Where it landed:
 - **In-stock share landing = APPROVED + live.** Built element-for-element from the P6 in-stock comp
