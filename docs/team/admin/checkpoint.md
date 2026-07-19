@@ -3,11 +3,18 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
-## 2026-07-18 — CALC full overhaul (owner review, SHIPPED to Admin)
-Owner tore into the Calc: jargon, missing COGS, wrong Anthropic line, numbers that don't line up. Rebuilt:
-- **Charlie = ElevenLabs only.** Dropped the Claude Sonnet line + the vague per-call "overhead" (owner
-  pays no Anthropic; EL bundles the brain). calcCompute now: Twilio + nav(~$0) + Charlie EL. Delta kept
-  (parked, not removed — owner may use it later; default lane now Charlie).
+## 2026-07-18 — CALC full overhaul + accuracy fix (owner review, SHIPPED to Admin)
+Owner tore into the Calc: jargon, missing COGS, numbers that don't line up. Rebuilt, then corrected:
+- **⚠️ Charlie has TWO cost components: ElevenLabs voice + Claude Sonnet brain** (src/voice/prompts.ts
+  `llm:'claude-sonnet-4-6'`). I WRONGLY dropped the brain line in the first pass (misread owner's "haven't
+  paid Anthropic YET" as "no Anthropic cost") — restored it. Do NOT remove it again; owner not billed yet
+  (free credits / may pass through the EL invoice) but it's real. calcCompute charlie lane = voice + brain.
+  With brain back, a typical Bravo menu call ≈ 5¢ (matches owner's remembered number). Dropped per-call
+  "overhead" (folded to monthly COGS). Delta kept (parked; default lane Charlie).
+- Claude rate is an ESTIMATE ($0.0002/s); cost doc also cites $0.0004/s — OPEN: confirm vs real EL+Anthropic bill.
+- Hero chip was "70s call" (total nav+talk) → now "50s menu + 20s talk" (owner confused it for nav). Inputs cleaned.
+- Concurrency 20k→3 assumes calls SPREAD evenly; batched restock alerts spike it. Note added + busy-hour editable.
+  OPEN: owner to say if checks fire spread or batched.
 - **Real COGS in per-check.** New calcCogs(): Railway/Helicone/TiDB/Twilio-number (editable $/mo card) +
   the ElevenLabs plan fee, summed ÷ month's checks → "Monthly bills" line in the per-check buildup.
 - **Jargon killed.** "peak/sustained/burst" → "calls at once, busy hour" + plan chip "runs N at once, up
