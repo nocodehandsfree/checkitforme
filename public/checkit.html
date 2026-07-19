@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r154" />
+<meta name="x-rev" content="glassfix-r155" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -4073,7 +4073,7 @@ function sheetH_on(ov){ if(!ov||ov.__sh) return; ov.__sh=1;
     if((oy==='auto'||oy==='scroll')&&m.scrollHeight>h+4) m.style.paddingBottom=TAIL+'px';
     return prev!==m.style.height; };
   place();
-  try{ ov.__ro=new ResizeObserver(()=>{ if(ov.__placing) return; ov.__placing=1; requestAnimationFrame(()=>{ place(); ov.__placing=0; }); }); ov.__ro.observe(m.firstElementChild||m); }catch(_){ }
+  try{ ov.__ro=new ResizeObserver(()=>{ if(window.KB_DOCK||ov.__placing) return; ov.__placing=1; requestAnimationFrame(()=>{ place(); ov.__placing=0; }); }); ov.__ro.observe(m.firstElementChild||m); }catch(_){ }
 }
 function sheetH_off(ov){ if(!ov||!ov.__sh) return; ov.__sh=0; try{ if(ov.__ro){ ov.__ro.disconnect(); ov.__ro=null; } }catch(_){ } const m=ov.querySelector('.modal');
   if(m){ m.style.position=''; m.style.left=''; m.style.right=''; m.style.top=''; m.style.bottom=''; m.style.height=''; m.style.maxHeight=''; m.style.paddingBottom=''; }
@@ -4081,7 +4081,7 @@ function sheetH_off(ov){ if(!ov||!ov.__sh) return; ov.__sh=0; try{ if(ov.__ro){ 
   sheetBodyMaybeUnlock();
 }
 let _rplT=0, _rplSet=new Set();
-function sheetReplaceSoon(ov){ if(!ov) return; _rplSet.add(ov); clearTimeout(_rplT); _rplT=setTimeout(()=>{ const set=_rplSet; _rplSet=new Set(); set.forEach(o=>{ if(o.__sh&&o.classList.contains('on')){ sheetH_off(o); sheetH_on(o); } }); },60); }
+function sheetReplaceSoon(ov){ if(!ov||window.KB_DOCK) return; _rplSet.add(ov); clearTimeout(_rplT); _rplT=setTimeout(()=>{ const set=_rplSet; _rplSet=new Set(); set.forEach(o=>{ if(o.__sh&&o.classList.contains('on')){ sheetH_off(o); sheetH_on(o); } }); },60); }
 (function sheetHObserver(){ try{
   const mo=new MutationObserver(muts=>{ for(const mu of muts){ const el=mu.target;
     if(mu.type==='childList'){ // content INSIDE an open sheet changed (zone list/builder re-render on
@@ -7925,18 +7925,30 @@ function closeCheckout(){ const o=$('coOverlay'); if(o) o.classList.remove('on')
 
 // Swipe-down-to-dismiss for the bottom sheets (plans + My checks). passive:false on move so the
 // drag beats the scroll once it starts; only arms when the sheet is scrolled to the top.
+// KEYBOARD DOCK: this device shrinks window.innerHeight when the keyboard opens, which made the fill
+// sheet re-measure tiny and collapse (basket floating mid-screen, homepage showing through -> a tap
+// fell through to My checks). While the zone-name input is focused we (1) freeze auto-re-placement
+// (KB_DOCK) so nothing collapses, and (2) dock the sheet to the VISIBLE area via visualViewport so the
+// name box + Save sit right above the keyboard. On blur we un-dock and restore the normal placement.
 (function zoneKeyboard(){
   const vv=window.visualViewport; if(!vv) return;
-  function apply(){
-    const z=$('zones'), bk=$('zBasket'); if(!z||!bk||!z.classList.contains('on')) return;
-    const kb=Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
-    const focused=document.activeElement && document.activeElement.id==='z_name';
-    if(kb>90 && focused){ bk.style.position='fixed'; bk.style.left='0'; bk.style.right='0'; bk.style.bottom=kb+'px'; bk.style.transform='none'; bk.style.zIndex='2147483000'; bk.classList.add('kbfloat'); }
-    else if(bk.classList.contains('kbfloat')){ bk.classList.remove('kbfloat'); bk.style.position=''; bk.style.left=''; bk.style.right=''; bk.style.bottom=''; bk.style.transform=''; bk.style.zIndex=''; requestAnimationFrame(()=>sheetReplaceSoon($('zones'))); }
+  function dock(){
+    const z=$('zones'), m=z&&z.querySelector('.modal'), bk=$('zBasket');
+    if(!z||!m||!z.classList.contains('on')) return;
+    m.style.position='fixed'; m.style.left='0'; m.style.right='0'; m.style.margin='0';
+    m.style.top=Math.max(0,Math.round(vv.offsetTop))+'px'; m.style.bottom='auto';
+    m.style.height=Math.round(vv.height)+'px'; m.style.maxHeight=Math.round(vv.height)+'px';
+    if(bk){ bk.style.bottom='0'; }
   }
-  vv.addEventListener('resize', apply); vv.addEventListener('scroll', apply);
-  document.addEventListener('focusin', e=>{ if(e.target&&e.target.id==='z_name') setTimeout(apply,60); });
-  document.addEventListener('focusout', e=>{ if(e.target&&e.target.id==='z_name') setTimeout(apply,80); });
+  function undock(){
+    if(!window.KB_DOCK) return; window.KB_DOCK=false;
+    const bk=$('zBasket'); if(bk){ bk.style.bottom=''; }
+    requestAnimationFrame(()=>sheetReplaceSoon($('zones')));
+  }
+  document.addEventListener('focusin', e=>{ if(e.target&&e.target.id==='z_name'){ window.KB_DOCK=true; setTimeout(dock,60); } }); // freeze re-place IMMEDIATELY, dock once the viewport settles
+  document.addEventListener('focusout', e=>{ if(e.target&&e.target.id==='z_name'){ setTimeout(undock,80); } });
+  vv.addEventListener('resize', ()=>{ if(window.KB_DOCK) dock(); });
+  vv.addEventListener('scroll', ()=>{ if(window.KB_DOCK) dock(); });
 })();
 function sheetDrag(overlayId, closeFn){
   let y0=0,dy=0,drag=false;
