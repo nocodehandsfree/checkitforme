@@ -4,6 +4,16 @@ Non-obvious traps that cost real time. Add one the moment you learn it; delete o
 (Pairs with the **doc-lint** habit: before a big push, skim the docs against the code — a comment that lies is
 worse than no comment. Several entries below started as wrong comments.)
 
+## Compute / testing
+- **`scripts/test-all.sh` spawns local servers + headless browsers — don't run it reflexively, and never
+  leave it orphaned** (owner 07-20, it was killing his compute + morale). The `smoke:`/`qa:` lines each
+  boot a server (ports 8788-8798) and Chromium. If the run is killed partway (OOM, worker restart), those
+  processes keep running with nobody to stop them. Rules: (1) for a small change run ONLY the one relevant
+  unit test (e.g. `tsx scripts/test-prompts.ts`), NOT the whole suite; (2) the suite now self-cleans on
+  exit/Ctrl-C via a trap, but an OOM SIGKILL can't be trapped; (3) the stop button is `bash
+  scripts/kill-tests.sh` — kills every orphaned test runner, browser, and port squatter. Run it any time
+  compute feels stuck.
+
 ## Design rulings
 - **The call-timeline left rail is owner-approved — never remove it** (settled 2026-07-10). Addie read a
   voice note ("no indenting, everything left adjusted") as "remove the rail" and cut the whole vertical

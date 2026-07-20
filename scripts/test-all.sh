@@ -6,6 +6,11 @@ TSX=./node_modules/.bin/tsx
 ENV="ELEVENLABS_API_KEY=test ELEVENLABS_AGENT_ID=test ELEVENLABS_PHONE_NUMBER_ID=test"
 FAILED=""
 
+# Self-cleanup (owner 07-20): the smoke/qa suites boot local servers + headless browsers. On ANY exit
+# — pass, fail, or Ctrl-C — tear them down so nothing is ever orphaned to burn compute. (An OOM SIGKILL
+# can't be trapped; for that, and for a small change, run ONE relevant unit test, not this whole suite.)
+trap 'bash scripts/kill-tests.sh >/dev/null 2>&1 || true' EXIT INT TERM
+
 run(){ # label, command
   echo ""; echo "▭▭▭ $1 ▭▭▭"
   if eval "$2"; then echo "   → $1 OK"; else echo "   → $1 FAILED"; FAILED="$FAILED $1"; fi
