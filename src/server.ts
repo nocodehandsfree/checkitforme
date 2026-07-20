@@ -3701,13 +3701,16 @@ app.get("/app/history", async (c) => {
   }
   const stores = await retailerMap();
   const cats = await categoryLabelMap();
+  const histChains = new Map((await cachedChains()).map((x) => [x.id, x.name]));
   const rows = (await db.select().from(callResults)
     .where(inArray(callResults.finderUserId, [...ids]))
     .orderBy(desc(callResults.startedAt)).limit(80))
     .filter((r) => r.providerCallId);
   return c.json(rows.map((r) => {
-    const sName = stores.get(r.retailerId)?.name || "A store";
-    const l = chainLogoInfo(sName);
+    const st = stores.get(r.retailerId);
+    const sName = st?.name || "A store";
+    // Chain logo via chainId first (like the homepage list) — bare name matching missed most stores.
+    const l = chainLogoInfo((st?.chainId && histChains.get(st.chainId)) || sName.split(/—|–| - /)[0]);
     return {
       cid: r.providerCallId, storeId: r.retailerId, storeName: sName,
       categoryId: r.categoryId, category: cats.get(r.categoryId) || "",

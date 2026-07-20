@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r162" />
+<meta name="x-rev" content="glassfix-r163" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -7076,8 +7076,6 @@ const zFrameHead=(title,back)=>back
   : `<div class="zf-head" style="flex-direction:column;align-items:center;gap:9px;padding-top:0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${AC1()}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg><div class="zf-title">${esc(title)}</div></div>`;
 const ZKEBAB='<svg width="20" height="20" viewBox="0 0 24 24" fill="#8A8A96"><circle cx="5" cy="12" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="19" cy="12" r="2"></circle></svg>';
 const ZGOARR='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFCB05" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15"></path><path d="M13 6l6 6-6 6"></path></svg>';
-async function railZoneOpen(runId,zoneId){ try{ const pp=$('railcalpop'); if(pp) pp.classList.remove('on'); }catch(_){ }
-  await openZones(); zoneOpenReport(zoneId,runId); }
 async function openZones(){
   if(!isAuthed()){ try{ openAuth(); }catch(_){ } return; }
   zHideAll(); zShow();
@@ -7662,6 +7660,7 @@ function railCatId(){
 // Race-proof: if the category id isn't resolved yet (CATS still loading), match by the brand's category
 // LABEL so we never fall open and show another product's checks.
 function railInCat(e){
+  if(e&&e.zoneRunId) return false; // zone-run calls live in the ZONE report (owner 07-20), never the calendar/rail
   const id=railCatId(); if(id!=null) return e.categoryId===id;
   const lbl=(BRAND&&BRAND.category||'').toLowerCase();
   if(lbl) return (e.category||'').toLowerCase()===lbl;
@@ -7743,24 +7742,7 @@ function renderRailDayList(pop){
   const lbl=new Date(day+'T12:00:00').toLocaleDateString(LANG==='es'?'es-ES':'en-US',{weekday:'short',month:'short',day:'numeric'});
   const back=`<button onclick="railPickDay('',event)" aria-label="${esc(t('rail.backcal','Back to calendar'))}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M14.5 5L8 12l6.5 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
   pop.innerHTML=`<div class="rcal-h">${back}<b>${esc(lbl)}</b><span style="width:13px"></span></div>
-    <div class="rday-list">${calls.length?(function(){
-      // Zone runs GROUP under one header row (owner 07-19): "{name} zone · N stores" -> tap opens the
-      // zone report; the stores list beneath as normal rows. Solo checks unchanged.
-      const emitted=new Set(); const out=[];
-      const rowH=e=>`<button class="rday-item ${e.cid===RAIL_CID?'on':''}" onclick="railOpen('${esc(e.cid)}')">${isV2()?v2StatusChip(railTone(e),24):`<span class="rday-dot ${railTone(e)}"></span>`}<span class="rday-nm">${esc(railBase(e.storeName)||t('hist.acheck','Store check'))}</span><span class="rday-tm">${new Date(e.ts).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'})}</span></button>`;
-      const out2=[];
-      for(const e of calls){
-        if(!e.zoneRunId){ out2.push(rowH(e)); continue; }
-        if(emitted.has(e.zoneRunId)) continue; emitted.add(e.zoneRunId);
-        const grp=calls.filter(x=>x.zoneRunId===e.zoneRunId);
-        const zm=/^z(\d+)-/.exec(e.zoneRunId); const zid=zm?+zm[1]:0;
-        const zn=(typeof ZONES!=='undefined'&&Array.isArray(ZONES.list)&&ZONES.list.find(x=>x.id===zid))||null;
-        const znm=(zn&&zn.name)?zn.name.replace(/\s+zone\s*$/i,''):t('zones.azone','Zone');
-        out2.push(`<button class="rday-item" style="background:rgba(74,222,128,.07)" onclick="railZoneOpen('${esc(e.zoneRunId)}',${zid})"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg><span class="rday-nm" style="font-weight:800">${esc(znm)} ${t('zones.zoneword','zone')} · ${grp.length} ${grp.length===1?t('zones.store','store'):t('zones.stores','stores')}</span><span class="rday-tm">→</span></button>`);
-        grp.forEach(x=>out2.push(rowH(x)));
-      }
-      return out2.join('');
-    })():`<div style="color:var(--muted);font-size:12.5px;text-align:center;padding:12px 10px;line-height:1.5">${t('rail.noneday2','No checks this day.')}<br><a onclick="railPickDay('',event)" style="color:var(--green);font-weight:700;cursor:pointer">${t('rail.pickanother','← Pick another day')}</a></div>`}</div>`;
+    <div class="rday-list">${calls.length?calls.map(e=>`<button class="rday-item ${e.cid===RAIL_CID?'on':''}" onclick="railOpen('${esc(e.cid)}')">${isV2()?v2StatusChip(railTone(e),24):`<span class="rday-dot ${railTone(e)}"></span>`}<span class="rday-nm">${esc(railBase(e.storeName)||t('hist.acheck','Store check'))}</span><span class="rday-tm">${new Date(e.ts).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'})}</span></button>`).join(''):`<div style="color:var(--muted);font-size:12.5px;text-align:center;padding:12px 10px;line-height:1.5">${t('rail.noneday2','No checks this day.')}<br><a onclick="railPickDay('',event)" style="color:var(--green);font-weight:700;cursor:pointer">${t('rail.pickanother','← Pick another day')}</a></div>`}</div>`;
 }
 function renderRailCal(){
   const pop=$('railcalpop'); if(!pop) return;
