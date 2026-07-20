@@ -14,8 +14,10 @@ description: >-
 
 ## The sequence
 1. **Typecheck:** `npx tsc --noEmit` — must be clean.
-2. **Full suite:** `bash scripts/test-all.sh` — units + integration + the design-token/store-contract
-   gates. Green, or it isn't done.
+2. **Tests for what you changed** — run the specific test(s) covering the files you touched, not the
+   world. The full `bash scripts/test-all.sh` suite boots servers and lingers, so it's GATED: run it
+   ONLY when the owner says "run the full suite" (it prompts before running). Never fire it for a
+   question, a read, or a docs-only change.
 3. **Push — it's part of building, not after it.** `git add -A && git commit && git push` to `staging`
    in the SAME turn. `staging.checkitforme.com` only shows what's PUSHED (Railway auto-deploys on
    push), so unpushed work = the owner can't test it = NOT done.
