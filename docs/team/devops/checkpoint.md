@@ -27,6 +27,10 @@
   annual price/4 brands/admin. Last full runs GREEN (local 7/7 · staging 9/9 · prod 15/15).
 
 ## NEXT PROMOTE CHECKLIST (mine to run the gate; PM pulls the trigger)
+0. **PM/Pops: promote wanted — Mapper bridge fix `770ffa0` (src/voice/bridge.ts, one line).** VAD was
+   firing on VOICE-nav chains (say-plan, no dtmf) → tripped on the IVR's recorded greeting and opened the
+   billed agent EARLY → CVS + pharmacy zone calls failed (agent asked its question to the recording).
+   Fix: VAD only when no timer AND no dtmf AND no say-plan. tsc clean. Ride it with the echo-gate bench call.
 1. Echo gate needs ONE Fun-store bench call first (BARGE_THRESH interrupt tuning — src/voice/bridge.ts).
 2. `bash scripts/launch-gate.sh` green before; `bash scripts/launch-gate.sh prod` right after.
 3. Post-promote verifications queued: settings mirror flows a real Admin edit ≤1 min (PM watches);
