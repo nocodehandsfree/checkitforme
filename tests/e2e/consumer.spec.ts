@@ -127,11 +127,12 @@ test.describe("P1 harness paths (staging)", () => {
       data: { contact: "+13105550100", retailerId: near.stores[0].id, categoryId: 1 },
     });
     expect(refused.status(), "phone contact → 400 while SMS is dark").toBe(400);
-    await page.goto(`/?call=sim_${Date.now() - 60_000}_out`);
-    await expect(page.locator("#result")).toBeVisible({ timeout: 20_000 });
-    await page.evaluate(() => (window as any).openWatch());
-    await expect(page.locator("#watchOverlay")).toHaveClass(/on/, { timeout: 10_000 });
-    await expect(page.locator("#watch_contact"), "form asks for email only").toHaveAttribute("placeholder", /@/);
+    // The forms themselves ask for email from first paint (the watch SHEET is member-gated, so the
+    // input's placeholder is the honest anonymous-visible assertion).
+    await page.goto("/");
+    await expect(page.locator("#findcard")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("#watch_contact"), "watch form asks for email only").toHaveAttribute("placeholder", /@/, { timeout: 10_000 });
+    await expect(page.locator("#sch_contact"), "auto-check form asks for email only").toHaveAttribute("placeholder", /@/);
   });
 
   // P1-11: an in-stock verdict carries the share affordance, and the share landing renders.
@@ -227,7 +228,8 @@ test.describe("P1 harness paths (staging)", () => {
     // The fresh ?ref shows the referral welcome; its CTA is the signup door. Fall back to the auth
     // pill if the welcome didn't fire (e.g. replayed pageload).
     const welcomeCta = page.locator("#refwelcomeOverlay .rfw-cta");
-    if (await welcomeCta.isVisible({ timeout: 5_000 }).catch(() => false)) await welcomeCta.click();
+    const shown = await welcomeCta.waitFor({ state: "visible", timeout: 10_000 }).then(() => true).catch(() => false);
+    if (shown) await welcomeCta.click();
     else await page.click("#authpill");
     await expect(page.locator("#authOverlay")).toHaveClass(/on/, { timeout: 10_000 });
     await page.fill("#auth_phone", freshPhone().replace("+1", ""));
