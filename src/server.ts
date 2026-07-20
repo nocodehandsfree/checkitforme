@@ -3596,7 +3596,13 @@ app.get("/app/zones/run/:runId", async (c) => {
   const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
   const rows = await db.select().from(callResults).where(and(eq(callResults.zoneRunId, c.req.param("runId")), eq(callResults.finderUserId, g.u.id)));
   const stores = await retailerMap();
-  const results = rows.map((r) => { const nm = stores.get(r.retailerId)?.name || "A store"; return { retailerId: r.retailerId, name: nm, logoUrl: chainLogoInfo(nm.split(/—|–| - /)[0]).url || "", cid: r.providerCallId, status: r.status, statusKey: r.statusKey, confirmed: r.confirmed, summary: r.summary }; });
+  // Logos resolve exactly like the homepage store list: the CHAIN's registered logo first (via the
+  // store's chainId), name-prefix only as a fallback — name-matching alone left most report rows on
+  // monogram tiles (owner 07-19).
+  const chainNames = new Map((await cachedChains()).map((x) => [x.id, x.name]));
+  const results = rows.map((r) => { const st = stores.get(r.retailerId); const nm = st?.name || "A store";
+    const l = chainLogoInfo((st?.chainId && chainNames.get(st.chainId)) || nm.split(/—|–| - /)[0]);
+    return { retailerId: r.retailerId, name: nm, location: st?.location || "", logoUrl: l.url || "", logoWide: l.wide, logoDark: l.dark, cid: r.providerCallId, status: r.status, statusKey: r.statusKey, confirmed: r.confirmed, summary: r.summary }; });
   const live = (st: string) => st === "in_progress" || st === "queued";
   const summary = {
     inStock: results.filter((r) => r.statusKey === "in_stock").length,
