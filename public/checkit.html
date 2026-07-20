@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r161" />
+<meta name="x-rev" content="glassfix-r162" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -7717,6 +7717,9 @@ function openRailCal(){
   const base = RAIL_F.date ? new Date(RAIL_F.date+'T12:00:00') : (f.length?new Date(f[0].ts):new Date());
   RAIL_CAL_M = new Date(base.getFullYear(), base.getMonth(), 1).getTime();
   renderRailCal(); pop.classList.add('on');
+  // Zone-run calls exist only in SERVER history (no local entry like a solo check writes), so the
+  // cached list can be minutes stale — refetch on open and repaint if the popover is still up.
+  ensureHistCache().then(()=>{ try{ if(pop.classList.contains('on')) renderRailCal(); }catch(_){ } });
   setTimeout(()=>document.addEventListener('click',railCalAway),0);
 }
 function closeRailCal(){ const pop=$('railcalpop'); if(pop){ pop.classList.remove('on'); pop.innerHTML=''; } document.removeEventListener('click',railCalAway); }
