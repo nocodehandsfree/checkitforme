@@ -3,6 +3,14 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-20 — voice A/B in flight
+- Owner gave a clean 29s Branson recording; re-cloned via /api/voices/clone → **Branson HD =
+  `1P1JhCcLzeMmkvLi1BkG`**. Set ACTIVE on BOTH prod + staging (`/api/voices/active`).
+- **REVERT if HD is worse:** set active back to the old good clone **Branson = `6HjmwcEkrRm46qtsvp9k`**
+  (still in the EL account) on both envs. That's the one-move undo.
+- Speed now 0.85 on both envs (workflow tuning + vt_speed). First-word capture (connectOnHuman:false
+  on direct stores) + package-line reword ("does that come in a pack? or like a box?") shipped + promoted.
+
 ## 2026-07-17 — Charlie tuning week DONE on staging; next = owner hammer-tests, then promote + prod data capture
 
 **Phase:** owner finishing iOS tint with Webbie, then "test the hell out of calls" on the Fun store
