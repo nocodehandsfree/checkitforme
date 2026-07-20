@@ -92,3 +92,77 @@ test.describe("P0 harness paths (staging)", () => {
     await expect(page.locator("#buymode button").last(), "PAYG mode toggle present").toBeVisible();
   });
 });
+
+// ── E2E path harness P1 (retention + viral) — staging-only, same independence rules.
+test.describe("P1 harness paths (staging)", () => {
+  test.skip(process.env.E2E_TARGET === "prod", "mints accounts / uses staging sim — never on prod");
+
+  // P1-9: a sold-out verdict offers "tell me when it's back", and the watch endpoint records one.
+  // (The in-sheet contact-verify loop is a device/SMS flow — the create is asserted at the API.)
+  test("P1-9: sold-out verdict offers a restock watch + watch endpoint records it", async ({ page, request }) => {
+    const base = new URL(test.info().project.use.baseURL as string).origin;
+    await page.goto(`/?call=sim_${Date.now() - 60_000}_out`);
+    await expect(page.locator("#result"), "out-of-stock result renders").toBeVisible({ timeout: 20_000 });
+    await expect(page.locator("#result"), "restock-watch affordance renders on a sold-out verdict")
+      .toContainText(/when it's back|Check back soon/i, { timeout: 15_000 });
+    const near = await (await request.get(`${base}/pub/stores/near?lat=34.05&lng=-118.24&radius=25`, { headers: UA })).json();
+    const cats = await (await request.get(`${base}/pub/categories`, { headers: UA })).json();
+    const r = await request.post(`${base}/pub/watch`, {
+      headers: UA,
+      data: { contact: "e2e-harness@checkitfor.me", retailerId: near.stores[0].id, categoryId: (cats.categories?.[0]?.id ?? cats[0]?.id ?? 1) },
+    });
+    expect(r.ok(), `/pub/watch create → 200 (got ${r.status()})`).toBeTruthy();
+    expect((await r.json()).ok, "watch created").toBeTruthy();
+  });
+
+  // P1-11: an in-stock verdict carries the share affordance, and the share landing renders.
+  test("P1-11: in-stock verdict offers share + share landing serves", async ({ page, request }) => {
+    await page.goto(`/?call=sim_${Date.now() - 60_000}_in`);
+    await expect(page.locator("#result")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("button", { name: /share your score/i }).first(), "share button on the verdict").toBeVisible({ timeout: 15_000 });
+    const base = new URL(test.info().project.use.baseURL as string).origin;
+    const r = await request.get(`${base}/s?store=Target&cat=Pok%C3%A9mon%20cards&v=in&lang=en`, { headers: UA });
+    expect(r.ok(), `share landing /s → 200 (got ${r.status()})`).toBeTruthy();
+    expect(await r.text(), "share landing names the store").toContain("Target");
+  });
+
+  // P1-12: the "Scores from the hunt" community strip renders for a logged-in visitor
+  // (placeholder counts — the strip must be present even before the first post nearby).
+  test("P1-12: scores-from-the-hunt strip renders when logged in", async ({ page, request }) => {
+    const base = new URL(test.info().project.use.baseURL as string).origin;
+    const pol = await (await request.get(`${base}/pub/policy`, { headers: UA })).json();
+    test.skip(!pol.flags?.community, "community flag is off");
+    const token = await mintToken(request, base, freshPhone());
+    await injectAuth(page, token);
+    await page.goto("/");
+    await expect(page.locator("body")).toHaveClass(/authed/, { timeout: 20_000 });
+    await expect(page.locator("#scoresRow"), "community scores strip renders").toBeVisible({ timeout: 20_000 });
+  });
+
+  // P1-13: the sightings ("finds") ticker — feed wiring always asserted; the banner render half
+  // self-skips while staging has no confirmed finds nearby (it only paints with real local data).
+  test("P1-13: finds feed serves + sightings ticker renders when data exists", async ({ page, request }) => {
+    const base = new URL(test.info().project.use.baseURL as string).origin;
+    const r = await request.get(`${base}/pub/finds?lat=34.05&lng=-118.24&radius=10`, { headers: UA });
+    expect(r.ok(), `/pub/finds → 200 (got ${r.status()})`).toBeTruthy();
+    const finds = await r.json();
+    expect(Array.isArray(finds), "finds feed is an array").toBeTruthy();
+    test.skip(!finds.length, "no confirmed finds near the test area on staging right now");
+    await page.goto("/");
+    await expect(page.locator("#finds"), "sightings ticker renders").toBeVisible({ timeout: 20_000 });
+  });
+
+  // P1-14: the any-town gate — a free account typing a ZIP gets the Check+ upsell (the plans
+  // sheet opens as the upgrade path) and no check ever starts.
+  test("P1-14: free user searching another town hits the Check+ gate", async ({ page, request }) => {
+    const base = new URL(test.info().project.use.baseURL as string).origin;
+    const token = await mintToken(request, base, freshPhone());
+    await injectAuth(page, token);
+    await page.goto("/");
+    await expect(page.locator("body")).toHaveClass(/authed/, { timeout: 20_000 });
+    await page.fill("#search", "10001"); // a ZIP = "take me to another town" — a Check+ perk
+    await page.locator("#search").dispatchEvent("input");
+    await expect(page.locator("#buyOverlay"), "upsell: the plans sheet opens").toHaveClass(/on/, { timeout: 10_000 });
+    await expect(page.locator("#live"), "no check ever starts").toBeHidden();
+  });
+});
