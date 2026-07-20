@@ -57,26 +57,13 @@ One kit app-wide (borderless-tinted chips / raised stats / carved inputs; purple
 designed empty states, Plans one-line bundles, Alerts cut to one screen. **Admin self-hosts Inter**
 (was falling back to system font on blocked networks; preview rig serves /fonts). Detail: git log.
 
-## 2026-07-17 — Testing/Feedback staging source SHIPPED · design audit delivered, awaiting go-ahead
-- **Live on THE Admin (ffa130f, verified end to end):** Testing + Feedback carry a "Live site /
-  Staging site" k-filter pill. Root cause of "my Fun calls are missing": rehearsal calls + feedback
-  taps land in the STAGING service's DB; the Admin reads prod. Staging reads ride the root-domain
-  admin cookie (shared SESSION_SECRET) through a CORS gate in server.ts scoped to
-  https://admin.checkitforme.com. Review/correct writes hit the source the row came from. Feedback
-  badge stays live-only. Staging 401 → inline "sign in on staging once" empty state, never the
-  global auth gate.
-- **PM note:** the CORS middleware (src/server.ts, ABOVE the /api auth gate) is on staging and rides
-  the next promote — a no-op on prod (Admin is same-origin there). Nothing waits on it.
-- **Live-listen answered:** owner's phone is in COMP_PHONES → comp accounts ALWAYS get live audio +
-  hang-up when signed in; the Policy box only turns it on for every customer. checkit.html:5085.
+## 2026-07-17 — Testing/Feedback staging source SHIPPED (ffa130f, verified)
+Testing + Feedback carry a "Live / Staging site" filter pill (Fun calls land in staging's DB; Admin
+reads prod). Staging reads ride the root-domain admin cookie through a CORS gate in server.ts. Detail: git log.
 
-## 2026-07-16 — EMAIL RENDERING: SOLVED + OWNER SIGNED OFF ("lock it in") — do NOT re-litigate
-The laws live as the comment block at the color constants in `src/alerts.ts` — read them before
-touching ANY email color. Short version: authored flat-black design; a `u + .body` stylesheet (only
-Gmail matches it) swaps `em-*` elements to a light base Gmail auto-darkens. All 6 designs approved;
-owner trims shipped; from-name "Check It For Me" live. Full history: git log around 07-16.
-- OPEN ASK (no-spend): Gmail avatar brandmark via a Google account for noreply@ (human phone-verify).
-- Server-side email changes are STAGING-ONLY until PM's next promote.
+## 2026-07-16 — EMAIL RENDERING: SOLVED + OWNER SIGNED OFF — do NOT re-litigate
+Laws live in the comment block at the color constants in `src/alerts.ts` — read before touching ANY
+email color. All 6 designs approved; from-name "Check It For Me" live. Detail: git log ~07-16.
 
 ### Alert system (reference — src/alerts.ts + calls/notify.ts + calls/service.ts)
 Events: restock/auto_check (text|email) · store_added/waitlist/confirm_email (email) · instock_owner.
