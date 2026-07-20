@@ -4821,6 +4821,17 @@ app.patch("/api/chains/:id", async (c) => {
   // the connect-timer and mutes the agent (silent-agent bug). Enforce it here too, so a manual admin edit
   // that flips a chain to direct can't recreate it (the learn/trainer paths already guard this).
   if (patch.ringsDirect === true || patch.answerPath === "direct_human") patch.avgTreeSeconds = null;
+  // MAPPED CHAINS ARE UNTOUCHABLE (owner law 2026-07-20, the Walgreens incident): a chain with a
+  // learned/verified tree (or rings-direct) may not be flagged out of the call lane — "check online",
+  // callTarget off, or muted — without an explicit force:true in the body. A wrong flag on a mapped
+  // tier-5 hides a working recipe from the whole operation. Remap (or force, with the reason written
+  // in unmappableReason) is the only way out.
+  const _cur = (await db.select().from(chains).where(eq(chains.id, Number(c.req.param("id")))))[0];
+  const _mapped = !!_cur && (_cur.treeStatus === "learned" || _cur.treeStatus === "verified" || _cur.ringsDirect === true);
+  const _suppressing = patch.stockCheckMethod === "site" || patch.callTarget === false || patch.muted === true;
+  if (_mapped && _suppressing && b.force !== true) {
+    return c.json({ error: `${_cur.name} is MAPPED (${_cur.treeStatus || "rings direct"}) — refusing to flag it out of the call lane. Pass force:true (and write the reason) if this is deliberate.` }, 409);
+  }
   const [row] = await db.update(chains).set(patch).where(eq(chains.id, Number(c.req.param("id")))).returning();
   invalidateRefCache();
   if (patch.logoUrl !== undefined || patch.logoWide !== undefined || patch.logoDark !== undefined) await refreshChainLogoDb();
@@ -5599,15 +5610,23 @@ app.get("/api/admin/tree/list", async (c) => {
   // The mapping board must MATCH the store data: only real, DIALABLE chains. chainDialable() is the ONE
   // shared rule (recipe.ts) the board, the overnight batch, and single-chain map all read — a muted,
   // call-center (callTarget=false), or site-check chain (stockCheckMethod=site, e.g. Micro Center) is
-  // never dialed, so it must not look callable here either. Plus board-only clutter filters: a chain
-  // with 0 active stores has nothing to call, and a "_" name is a retired merge-stub. `?all=1` = unfiltered.
+  // never dialed, so it must not look callable here either. EXCEPTION (Walgreens incident 2026-07-20):
+  // a MAPPED chain is ALWAYS visible, whatever its flags — hiding a mapped chain from this board is how
+  // a flag conflict goes unnoticed until a live call dials blind; it surfaces with a conflict blocker
+  // instead. Plus board-only clutter filters: 0 active stores = nothing to call, "_" = retired
+  // merge-stub. `?all=1` = unfiltered.
+  const isMapped = (ch: typeof chs[number]) => ch.treeStatus === "learned" || ch.treeStatus === "verified" || ch.ringsDirect === true;
   const showAll = c.req.query("all") === "1";
-  const visible = showAll ? chs : chs.filter((ch) => chainDialable(ch) && !(ch.name || "").startsWith("_") && (cnt.get(ch.id) || 0) > 0);
+  const visible = showAll ? chs : chs.filter((ch) => (chainDialable(ch) || isMapped(ch)) && !(ch.name || "").startsWith("_") && (cnt.get(ch.id) || 0) > 0);
   return c.json({ model: TREE_MODEL, chains: visible.map((ch) => {
     const stores = cnt.get(ch.id) || 0, phones = pcnt.get(ch.id) || 0;
-    // blocker = why this chain can't be mapped even though it's a call target. Today: a data gap where
-    // stores exist but none carry a real phone number (the board shows it so nobody chases hours/trees).
-    const blocker = stores > 0 && phones === 0 ? "no phone numbers on file (data gap)" : null;
+    // blocker = why this chain can't be mapped/called even though it looks like a call target. A data
+    // gap (stores but no numbers), or a FLAG CONFLICT — mapped yet flagged out of the call lane (the
+    // Walgreens class of bug; must never hide silently again).
+    const conflict = isMapped(ch) && !chainDialable(ch)
+      ? `CONFLICT: mapped but flagged ${ch.muted ? "muted" : ch.callTarget === false ? "no-call-target" : "check-online"} — recipe exists yet chain is off the call lane`
+      : null;
+    const blocker = conflict ?? (stores > 0 && phones === 0 ? "no phone numbers on file (data gap)" : null);
     return { id: ch.id, name: ch.name, type: ch.type, stores, phones, blocker, distributor: distributorsForChain(ch.name), treeStatus: ch.treeStatus, ringsDirect: ch.ringsDirect, dtmf: ch.dtmfShortcut, answerPath: ch.answerPath, avgTreeSeconds: ch.avgTreeSeconds, note: ch.treeNote || ch.phoneTreeDefault, learnedAt: ch.treeLearnedAt, verifiedAt: ch.treeVerifiedAt, muted: ch.muted };
   }) });
 });

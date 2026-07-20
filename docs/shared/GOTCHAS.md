@@ -152,3 +152,16 @@ worse than no comment. Several entries below started as wrong comments.)
   reflecting. UNRESOLVED — never reproduced in headless Chromium. Needs a real iPhone to bisect.
   Do NOT keep changing approved design (brandmark position, border, wash) to chase it — that was
   the mistake here; isolate it on-device first.
+- **A MAPPED CHAIN IS UNTOUCHABLE — nothing may flag it out of the call lane except a remap** (owner
+  law 2026-07-20, the Walgreens incident). Found: 18 mapped big-box chains (Walgreens, Target, Costco…)
+  carried `stockCheckMethod=site` — a classification from `data/stock_check_intel.json` that PREDATES
+  current git history (the 07-09 squash destroyed attribution) and violates the data lane's own doctrine
+  (site = UNCALLABLE chains with a live stock feed, e.g. Micro Center — handoff.md §flags). It never
+  "switched": the flag was constant; Mapper mapped these chains 07-10..12 on top of it and nobody
+  reconciled. The 07-20 CVS/Walgreens zone-call failures were NOT this flag — the new My Zones call path
+  skipped the Alpha/Bravo recipe attachment entirely (its builder is fixing it); the standard call path
+  (`buildRestockVars`) attaches recipes unconditionally, and the full sweep shows all 93 mapped chains'
+  recipes intact. Guards now in code: ① `seedStockCheckIntel` never re-stamps site onto a mapped chain
+  (even force). ② `PATCH /api/chains/:id` returns 409 when flagging a mapped chain site/muted/no-call
+  without `force:true`. ③ the mapping board ALWAYS shows mapped chains, flag conflicts surface as a
+  "CONFLICT" blocker instead of hiding.
