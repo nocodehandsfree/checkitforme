@@ -3467,7 +3467,7 @@ app.post("/app/check-live", async (c) => {
 });
 
 // ============ Manage Zones (consumer, premium `zone_sweeps`) — spec docs/archive/manage-zones-SHIPPED.md ============
-const zoneRunSids = new Map<string, string[]>(); // runId -> Twilio callSids (in-memory, for "Stop all")
+const zoneRunSids = new Map<string, { sid: string; retailerId: number }[]>(); // runId -> per-store Twilio callSids (in-memory, for Stop all / stop one)
 
 /** Bearer auth + zone_sweeps entitlement. ok:false short-circuits with the right status. */
 async function zoneAuth(authHeader?: string): Promise<
@@ -3498,7 +3498,7 @@ async function zoneView(z: typeof zones.$inferSelect) {
   let lastRun = null;
   if (last?.zoneRunId) {
     const rr = await db.select().from(callResults).where(eq(callResults.zoneRunId, last.zoneRunId));
-    lastRun = { at: last.startedAt, inStock: rr.filter((r) => r.statusKey === "in_stock").length, total: rr.length };
+    lastRun = { at: last.startedAt, runId: last.zoneRunId, inStock: rr.filter((r) => r.statusKey === "in_stock").length, total: rr.length };
   }
   return { id: z.id, name: z.name, stores, checkCount: stores.filter((s) => s.callable).length, lastRun };
 }
@@ -3577,13 +3577,13 @@ app.post("/app/zones/:id/check", async (c) => {
   const runId = `z${id}-${crypto.randomUUID()}`;
   const isPrivate = await isFinderPrivate(g.a);
   const placed: { retailerId: number; cid: string | null }[] = [];
-  const sids: string[] = [];
+  const sids: { sid: string; retailerId: number }[] = [];
   const viaBridge = (await getPolicy()).flags.cheapBridgeAll; // cheap lane: recipe nav + agent only on human
   for (const s of rows) {
     try {
       const r = await (viaBridge ? bridgeCheckCall : triggerCall)({ retailerId: s.id, categoryId: cat.id, mode: "restock", finderUserId: g.u.id, isPrivate, zoneRunId: runId });
       placed.push({ retailerId: s.id, cid: (r as { providerCallId?: string }).providerCallId ?? null });
-      const sid = (r as { callSid?: string }).callSid; if (sid) sids.push(sid);
+      const sid = (r as { callSid?: string }).callSid; if (sid) sids.push({ sid, retailerId: s.id });
     } catch (e) { console.error("zone check failed", s.id, e); placed.push({ retailerId: s.id, cid: null }); }
   }
   zoneRunSids.set(runId, sids); setTimeout(() => zoneRunSids.delete(runId), 30 * 60 * 1000);
@@ -3607,12 +3607,29 @@ app.post("/app/zones/run/:runId/stop", async (c) => {
   const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
   const sids = zoneRunSids.get(c.req.param("runId")) || [];
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
-  if (sid && tok) for (const callSid of sids) {
+  if (sid && tok) for (const { sid: callSid } of sids) {
     await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}.json`, {
       method: "POST", headers: { Authorization: "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64"), "content-type": "application/x-www-form-urlencoded" }, body: "Status=completed",
     }).catch(() => {});
   }
   return c.json({ ok: true, stopped: sids.length });
+// Stop ONE store's call in a live run (owner 07-19: tap a not-yet-checked store -> "Stop checking").
+// A queued-by-governor ticket (no callSid yet) can't be stopped here — that cancel lives with the
+// queue feed (Pops); for placed calls this hangs up just that store's dial.
+app.post("/app/zones/run/:runId/stop-one", async (c) => {
+  const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
+  const b = await c.req.json().catch(() => ({}));
+  const rid = Number(b.retailerId);
+  const all = zoneRunSids.get(c.req.param("runId")) || [];
+  const mine = all.filter((x) => x.retailerId === rid);
+  const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
+  if (sid && tok) for (const { sid: callSid } of mine) {
+    await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}.json`, {
+      method: "POST", headers: { Authorization: "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64"), "content-type": "application/x-www-form-urlencoded" }, body: "Status=completed",
+    }).catch(() => {});
+  }
+  return c.json({ ok: true, stopped: mine.length });
+});
 });
 
 // ---- Subscriber auto-checks (scheduled shipment-day calls) ----
@@ -3686,7 +3703,7 @@ app.get("/app/history", async (c) => {
       cid: r.providerCallId, storeId: r.retailerId, storeName: sName,
       categoryId: r.categoryId, category: cats.get(r.categoryId) || "",
       ts: (r.startedAt || 0) * 1000, status: r.status, confirmed: r.confirmed,
-      statusKey: r.statusKey, productDetail: r.productDetail, shipmentDay: r.shipmentDayHeard,
+      statusKey: r.statusKey, productDetail: r.productDetail, shipmentDay: r.shipmentDayHeard, zoneRunId: r.zoneRunId || null,
       logoUrl: l.url, logoWide: l.wide, logoDark: l.dark,
     };
   }));
