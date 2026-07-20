@@ -59,6 +59,18 @@ export interface Policy {
     ringMaxSeconds: number;          // ringing with no pickup longer than this → bail
     maxCallSeconds: number;          // absolute cap on any call, no exceptions
   };
+  // Call concurrency governor (src/calls/concurrency.ts) — the scale ceiling. `enabled` is the
+  // master switch, OFF by default so nothing changes until tested. EL concurrency is per-ACCOUNT
+  // (~10 on Creator); this queues overflow instead of failing it, reserves slots for instant
+  // checks, caps a single user's zone, and spreads across the EL_ACCOUNTS pool.
+  concurrency: {
+    enabled: boolean;                // master switch — off = ungoverned (today's behavior)
+    perAccountCap: number;           // EL simultaneous conversations per account (Creator ~10)
+    reserveInteractive: number;      // slots kept free for instant single checks (batch can't touch)
+    maxPerUser: number;              // one user's zone can't hold more than this at once
+    interactiveWaitMs: number;       // an instant check waits this long for a slot, then "busy"
+    batchWaitMs: number;             // a zone-sweep call waits this long for a slot before skipping
+  };
   // Footer/site config — all owner-editable, no deploy needed.
   links: { x: string; discord: string; instagram: string; tiktok: string };
   support: { discord: string };     // help is Discord-only (AI bot) — no email, ever
@@ -92,6 +104,10 @@ export const DEFAULT_POLICY: Policy = {
     enabled: false,
     gotAnswerHangup: true, voicemailBail: true, closedBail: true,
     ivrMaxSeconds: 90, holdMaxSeconds: 60, ringMaxSeconds: 35, maxCallSeconds: 180,
+  },
+  concurrency: {
+    enabled: false, perAccountCap: 10, reserveInteractive: 2, maxPerUser: 10,
+    interactiveWaitMs: 3000, batchWaitMs: 20_000,
   },
   links: { x: "", discord: "", instagram: "", tiktok: "" },
   support: { discord: "" },   // set links.discord (or this) to your invite — support lives in Discord

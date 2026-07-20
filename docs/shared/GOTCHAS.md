@@ -103,3 +103,42 @@ worse than no comment. Several entries below started as wrong comments.)
   by an import again, so the next overlay run inserts a DUPLICATE row for that address — dedupe by
   address when ingesting. Root fix (open, data lane): store rows should be keyed by PLACE and machines
   overlaid via the `kiosks` table, not identity-rewritten into `retailers`.
+
+## The Admin preview rig rendered the WRONG FONT for a full day (07-17)
+- `app.html` loaded Inter from Google Fonts; headless Chromium in the agent container cannot reach
+  Google → every admin-preview.mjs screenshot rendered in DejaVu with different metrics. "Looks
+  clean" verdicts were judged against a typeface the owner never sees. **The design is only the
+  design in Inter** (same lesson checkit.html learned on 07-14 with DNS ad-blockers).
+- Fix shipped: app.html self-hosts `/fonts/inter-var-latin.woff2` (the site's exact recipe) and
+  admin-preview.mjs routes `/fonts/**` from public/. If you judge a render, FIRST confirm the
+  headline is actually Inter (compare a lowercase 'g').
+
+## Share/landing (/s): a gradient fading to a TRANSPARENT color leaves a green haze on iOS
+- Symptom: owner's iPhone showed a faint green tint/line across the BOTTOM of the /s card; every
+  headless Chromium screenshot showed the bottom perfectly clean. Cost ~7 round trips chasing it as
+  a "button glow."
+- Root cause: `.card.pos` background was `linear-gradient(180deg, rgba(38,100,64,.95) …, rgba(38,100,64,0) 210px), #20202A`.
+  Chromium renders the `rgba(38,100,64,0)` endpoint as truly clear; **iOS Safari interpolates toward
+  that RGB at low alpha, so the whole region below the last stop gets a faint GREEN wash** over the
+  dark base. Invisible in Chromium, visible on the device.
+- Fix: never fade to a transparent COLORED stop for a wash. Fade between two OPAQUE colors:
+  `linear-gradient(180deg,#266440 0%,#20202A 46%)`. No alpha, no premultiply artifact, clean bottom.
+- Lesson: a colors/fonts diff and a Chromium render CANNOT catch this — it is an iOS-paint blind spot.
+  If the owner reports a tint that no render reproduces, suspect a `rgba(r,g,b,0)` gradient stop first.
+
+  UPDATE: the opaque-gradient fix alone did NOT kill it. The real culprit was the watermark
+  layer: `.cwmwrap{position:absolute;inset:0;border-radius:40px;overflow:hidden}` wrapping a
+  bright-green check. iOS Safari's `overflow:hidden` + `border-radius` clip leaks a 1px line of
+  the clipped content's color along the BOTTOM edge (Chromium doesn't). Fix: drop the full-card
+  clip layer entirely — contain the watermark fully inside the card, and use an inset ring shadow
+  instead of a border for the edge.
+
+  CORRECTION (owner, same day): BOTH theories above are WRONG. The green line at the card's
+  bottom edge has been present since the FIRST /s rebuild — before the watermark/brandmark, the
+  border, and the wash all existed. So it is none of those. The only element green-and-near-the-
+  bottom in every single version is the CTA button (green glow in v1, green ring + light-green
+  `.shine` clipped by `.cin{overflow:hidden;border-radius:999px}` since). Prime remaining suspect:
+  the `.cin` overflow+radius clip leaking the shine's green on iOS, and/or the button's green
+  reflecting. UNRESOLVED — never reproduced in headless Chromium. Needs a real iPhone to bisect.
+  Do NOT keep changing approved design (brandmark position, border, wash) to chase it — that was
+  the mistake here; isolate it on-device first.

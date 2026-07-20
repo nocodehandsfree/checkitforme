@@ -1,4 +1,4 @@
-# New-chat prompts — copy, paste, go. (This replaces KICKOFFS.md)
+# New-chat prompts — copy, paste, go.
 **What this is · who it's for:** Fungie's cheat sheet for starting agent chats that don't die.
 
 ## The prompt (same shape for every role — that's the whole point)
@@ -8,7 +8,7 @@ That one line is enough. The repo guide (CLAUDE.md) makes them: check out stagin
 `docs/team/<role>/handoff.md` + `checkpoint.md` (CLAUDE.md loads automatically) → reply ready. ~2 short files,
 cheap boot, and they resume from their own checkpoint so nothing is "forgotten."
 
-Names: **Pops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · **DD** (Data) · **Mapper** (Mapping) · **Copper** (Copy + the book) · **CD** (Design) · **Lexicon** (docs)
+Names: **Pops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · **DD** (Data) · **Mapper** (Mapping) · **Echo** (Voice) · **Copper** (Copy + the book) · **CD** (Design) · **Logo** (logo assets) · **Support** (support agent) · **PM** (coordination + promotes) · **Ideas** (idea generation) · **Lexicon** (docs)
 (add the day's task on a second line if you want: "Today: <one line>").
 
 ## How to keep chats from dying (the 3 habits)

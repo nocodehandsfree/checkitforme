@@ -128,5 +128,7 @@ export function reconcile(el: ElRead, second: ClerkVerdict | null): Consensus {
   if (decisive === "yes") return { confirmed: true, definitive: true, statusKey: "in_stock", agreed: true };
   if (decisive === "no") return { confirmed: false, definitive: true, statusKey: "not_in_stock", agreed: true };
   // Both unclear → honest unsure (keep "left on hold" / "too busy" near-misses distinct).
-  return { confirmed: null, definitive: false, statusKey: (el.statusKey === "left_on_hold" || el.statusKey === "too_busy" || el.statusKey === "language_barrier") ? el.statusKey : "no_clear_answer", agreed: true };
+  // voicemail rides the preserve list too — flattening it to "no clear answer" hid a real reason
+  // from the customer (owner 07-17: phone went to voicemail, status showed no-clear-answer).
+  return { confirmed: null, definitive: false, statusKey: (el.statusKey === "left_on_hold" || el.statusKey === "too_busy" || el.statusKey === "language_barrier" || el.statusKey === "voicemail") ? el.statusKey : "no_clear_answer", agreed: true };
 }

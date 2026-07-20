@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="android-r119" />
+<meta name="x-rev" content="glassfix-r157" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -123,6 +123,24 @@ __BRAND_HEAD__
   @media(max-width:380px){ .hero h1{font-size:26px} }
   .hero p{color:#b9b9c8;font-size:15px;margin:0;line-height:1.5}
   .card{background:var(--sheet);border:1px solid var(--border);border-radius:18px;padding:22px;margin-bottom:20px}
+  /* Queued holding card — CD comp docs/design/comps/QUEUED_HOLDING_CARD_COMP.dc.html (2026-07-18): contained in-stock wash, glass timer well, store row. */
+  .holdcard{position:relative;border-radius:26px;overflow:hidden;padding:26px 24px 24px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7);background:radial-gradient(120% 92% at 88% -8%,rgba(74,222,128,.22) 0%,rgba(74,222,128,0) 50%),linear-gradient(180deg,#266440 0%,#21503A 32%,#1D1D22 90%)}
+  .holdcard .hc-wm{position:absolute;top:-34px;right:-40px;width:168px;height:168px;opacity:.16;z-index:0;pointer-events:none}
+  .holdcard .hc-wm svg{width:100%;height:100%;display:block}
+  .holdcard .hc-head,.holdcard .hc-sub,.holdcard .hc-timer{position:relative;z-index:1}
+  .holdcard .hc-row{display:flex;align-items:center;gap:13px}
+  .holdcard .hc-logo{width:44px;height:44px;flex:0 0 auto;border-radius:12px;background:#1F1F25;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .holdcard .hc-logo img{max-width:34px;max-height:34px;width:auto;height:auto;object-fit:contain;display:block}
+  .holdcard .hc-id{min-width:0}
+  .holdcard .hc-store{color:#fff;font:700 15px Inter;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .holdcard .hc-meta{color:#8A8A96;font:600 12.5px Inter;margin-top:2px}
+  .holdcard .hc-head{margin:10px 0 0;color:#fff;font:900 36px Inter;line-height:1;letter-spacing:-1.6px;white-space:nowrap}
+  .holdcard .hc-sub{margin:12px 0 0;color:rgba(255,255,255,.78);font:600 16.5px Inter;line-height:1.4;max-width:290px}
+  .holdcard .hc-timer{margin-top:22px;border-radius:18px;padding:16px 20px;background:rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.10),inset 0 0 0 1px rgba(255,255,255,.14);display:flex;align-items:center;justify-content:space-between;gap:14px}
+  .holdcard .hc-tl{display:flex;align-items:center;gap:11px;min-width:0}
+  .holdcard .hc-dot{width:9px;height:9px;flex:0 0 auto;border-radius:50%;background:#4ADE80;box-shadow:0 0 8px #4ADE80;animation:ckGlowV2 2s ease-in-out infinite}
+  .holdcard .hc-lbl{color:rgba(255,255,255,.72);font:800 12.5px Inter;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .holdcard .hc-val{flex:0 0 auto;white-space:nowrap;color:#FFCB05;font:800 24px Inter;letter-spacing:-.3px;font-variant-numeric:tabular-nums;line-height:1}
   .step{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-weight:800;margin-bottom:14px}
   input{background:var(--terminal);border:1px solid var(--border);color:#fff;padding:13px 14px;border-radius:12px;font-size:16px;font-family:inherit;width:100%}
   input:focus{outline:none;border-color:rgba(74,222,128,.45);box-shadow:0 0 0 2px rgba(74,222,128,.12)}
@@ -176,8 +194,10 @@ __BRAND_HEAD__
   .callkey:active{transform:translateY(1px)}
   .callkey:disabled{opacity:.45;cursor:not-allowed;animation:none}
   /* ── Call slider (bottom sheet on store select) ── */
-  .csheet-bd{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:79;opacity:0;pointer-events:none;transition:opacity .25s}
-  .csheet-bd.on{opacity:1;pointer-events:auto}
+  /* Transparent click-catcher only — the dim is the content filter (see the .overlay dim block).
+     display:none when off: a mounted full-screen layer, even invisible, breaks the scroll-edge glass. */
+  .csheet-bd{position:fixed;inset:0;background:transparent;z-index:79;display:none}
+  .csheet-bd.on{display:block}
   .csheet{position:fixed;left:0;right:0;bottom:0;z-index:80;max-width:520px;margin:0 auto;
     background:#0e0e12;border:1px solid color-mix(in srgb,var(--accent,#FFCB05) 30%,transparent);border-bottom:none;
     border-radius:22px 22px 0 0;padding:8px 18px calc(20px + env(safe-area-inset-bottom));
@@ -317,8 +337,17 @@ __BRAND_HEAD__
      colour AND the body wash to the regular dark for the duration — the :has() rules undo themselves
      the moment the sheet closes. ID/class specificity + !important out-ranks every tone rule above,
      including the standalone media block and the v2 skin's body background. */
-  html:has(#acctOverlay.on),html:has(#buyOverlay.on),html:has(#pageOverlay.on),html:has(.csheet.on),html:has(#zones.on),html:has(#histOverlay.on),html:has(#zmenuOv.on),html:has(#emailOv.on),html:has(#alertsOv.on),html:has(#featOv.on),html:has(#scorePostOv.on){background:#0C0C12!important}
+  /* BASE SKIN ONLY. In v2 the root colour must NEVER change in-page: iOS re-reads it at unpredictable
+     moments (load/scroll only) and then FREEZES it — this rule firing while the call sheet was open is
+     what left the chrome stuck on base-black through entire live calls (owner 07-16, "not transparent
+     until the status reveals"). v2's bloom keeps the root at #1D1D22 permanently, so every re-read,
+     whenever it happens, lands on the same value and the chrome always blends. */
+  html:not([data-skin="v2"]):has(#acctOverlay.on),html:not([data-skin="v2"]):has(#buyOverlay.on),html:not([data-skin="v2"]):has(#pageOverlay.on),html:not([data-skin="v2"]):has(.csheet.on),html:not([data-skin="v2"]):has(#zones.on),html:not([data-skin="v2"]):has(#histOverlay.on),html:not([data-skin="v2"]):has(#zmenuOv.on),html:not([data-skin="v2"]):has(#emailOv.on),html:not([data-skin="v2"]):has(#alertsOv.on),html:not([data-skin="v2"]):has(#featOv.on),html:not([data-skin="v2"]):has(#scorePostOv.on){background:#0C0C12!important}
   html:has(#acctOverlay.on) body,html:has(#buyOverlay.on) body,html:has(#pageOverlay.on) body,html:has(.csheet.on) body,html:has(#zones.on) body,html:has(#histOverlay.on) body,html:has(#zmenuOv.on) body,html:has(#emailOv.on) body,html:has(#alertsOv.on) body,html:has(#featOv.on) body,html:has(#scorePostOv.on) body{background:var(--bg)!important}
+  /* GLASS-EDGE VEILS: attempted 07-16 (rgba veils extending Safari's own edge dim/haze ramps) and
+     REVERTED same day — they muddied the verdict blooms the owner already approved. Safari's ~50%-dim
+     top strip and hazed bottom zone over the flat v2 base are ACCEPTED as the platform look on regular
+     pages. Do not re-add page-edge veils. */
   /* SHEET-OPEN CHROME — PROVEN IMPOSSIBLE to recolor in-page (attempt 4, 07-16, reverted like 1-3).
      iOS 26 Safari re-reads the root colour ONLY on a page load or a MAIN-document scroll. Opening a
      sheet is a class change with the main scroll locked, so Safari never re-reads: any root/:has
@@ -328,9 +357,8 @@ __BRAND_HEAD__
      synthetic 1px main-scroll jiggle timed inside the sheet-open frame (fragile hack, untested) or
      (b) a design that works WITH the load-time colour (CD comp). The rules 310-311 above still matter:
      they set the colour a page LOADS with when restored mid-sheet, and the base-skin case. */
-  /* Messenger open: tint the ROOT bg to the header colour so iOS samples it for the status strip —
-     the header dome then fills seamlessly to the very top edge of the phone (no black notch band). */
-  html:has(.supwrap.on){background:#1A1A20!important}
+  /* Messenger root recolor REMOVED (07-17, sheetpeek rollout): the root colour never changes
+     in-page — iOS re-reads it at unpredictable moments and freezes the wrong colour (r120 rule). */
   /* SCROLLED: iOS paints ONE colour at both chrome strips, so a toned top forces a toned band behind
      the bottom address pill — which clashes once the dark lower page/footer is on screen (owner 07-09:
      "look like there's nothing there"). Middle path: the chrome is toned while the verdict is in view
@@ -356,10 +384,16 @@ __BRAND_HEAD__
   .hcal{position:relative;flex:0 0 auto;display:flex}
   /* match the "You" pill height exactly (same vertical padding/border, square-ish) */
   #calbtn{width:auto;height:auto;padding:7px 9px;border-radius:20px}
-  /* Live call in progress — a subtle green wash so "we're on the line for you" reads warm/active. */
+  /* LIVE CALL = NO COLOR, on purpose (owner 07-17, final — supersedes both bloom attempts: the green
+     one read as a verdict, the amber one was cut too). The page stays the flat dark through the call
+     AND through "Getting the answer…"; the ONLY life is the store card's breathing green glow
+     (liveGlowV2). The verdict tone printing at the end IS the reveal — don't re-add a live wash.
+     body.lview still rides along for the transparent header + pill treatment below. */
   #live{position:relative}
-  #live::before{content:'';position:absolute;left:-20px;right:-20px;top:-12px;height:220px;pointer-events:none;background:linear-gradient(180deg,rgba(74,222,128,.13),transparent 70%);z-index:0}
-  #live>*{position:relative;z-index:1}
+  body.lview header{background:transparent;border-bottom-color:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
+  body.lview main{padding-top:18px}
+  /* Header chips sit ON the green like the result view's (same recipe as body.rview.rv-in). */
+  body.lview .pill,body.lview .vsw-trig,body.lview .railcal{background:rgba(74,222,128,.05);border-color:rgba(74,222,128,.16)}
   .rpill{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;padding:5px 11px;border-radius:999px}
   .rpill .d{width:7px;height:7px;border-radius:50%;background:currentColor}
   .rverdict.out .rpill{color:var(--red);background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.32)}
@@ -562,8 +596,19 @@ __BRAND_HEAD__
   .foot{text-align:center;color:var(--muted);font-size:12px;margin-top:26px}
   .foot b{color:#9a9aac}
   /* modal */
-  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:4000;padding:20px}
+  /* SHEET DIM = the PAGE darkens, nothing covers it (owner-verified /sheetpeek variant E, 07-17):
+     a fixed rgba cover layer is the ONE thing that kills iOS 26's scroll-edge glass, so overlays are
+     fully transparent click-catchers and the dim is a brightness filter on the page content itself.
+     NOTE: filter makes header/main/footer containing blocks — keep position:fixed elements OUT of
+     them (toast/csheet/overlays/supwrap are body children today; keep it that way). */
+  .overlay{position:fixed;inset:0;background:transparent;display:none;align-items:center;justify-content:center;z-index:4000;padding:20px}
   .overlay.on{display:flex}
+  /* Variant H (design 07-17c, copied from app.html): while any sheet is open body.sheetopen (a) dims the
+     page CONTENT — never a cover layer — and (b) grows the page so the absolute sheet's ~120px under-bar
+     overshoot is never clipped (THIS min-height is the line that makes the bottom glass work). The sheet
+     JS adds/removes .sheetopen. */
+  body.sheetopen header,body.sheetopen main,body.sheetopen .site-footer{filter:brightness(.22);transition:filter .22s}
+  body.sheetopen{min-height:calc(100dvh + 200px)}
   body:has(.overlay.on){overflow:hidden}  /* lock the background (incl. the Leaflet map) while a modal is open */
   .modal{background:var(--sheet);border:1px solid var(--border);border-radius:18px;padding:22px;max-width:380px;width:100%;text-align:center}
   .modal h3{margin:0 0 8px;font-size:20px}
@@ -606,6 +651,16 @@ __BRAND_HEAD__
      floating OVER the sheet and covering Save zone; the overlay's z4000 can't beat it because
      MAIN's stacking context traps it, so hide it outright). */
   body.zoning .suplaunch,body:has(#histOverlay.on) .suplaunch{display:none}
+  /* The support launcher lives on TWO surfaces only (owner 07-17): the homepage and the SETTLED status
+     page. Hide it over the call sheet (it was floating on top of the call card — z82 beat the sheet's
+     z80, see the reported screenshot), during a live call, on a still-loading result (show only once
+     the verdict is in, marked by .invite), and on the hunt / scores / hand-off full views. */
+  body:has(.csheet.on) .suplaunch,
+  body.lview .suplaunch,
+  body.huntmode .suplaunch,
+  body.fabbed .suplaunch,
+  body:has(#handoff:not(.hidden)) .suplaunch,
+  body.rview .suplaunch:not(.invite){display:none}
   /* Chat OPEN: the launcher stays put and flips to a CLOSE tab (owner 07-14 — the top X is a reach;
      the thumb is already at the launcher spot). Lifted above the composer so it never covers Send.
      Declared AFTER the hide rules so it wins when chat opens over zones/history. */
@@ -616,11 +671,15 @@ __BRAND_HEAD__
   body:has(.supwrap.on) .suplaunch.tucked{transform:none;opacity:1;pointer-events:auto} /* no auto-tuck while it's the close button */
   body:has(.supwrap.on) .suplaunch.invite{animation:none;width:34px} /* chat open = it's the CLOSE tab; a glowing X reads wrong */
   body:has(.supwrap.on) .suplaunch.invite svg{stroke:#9a9aa8}
-  .supwrap{position:fixed;inset:0 0 0 auto;z-index:81;width:100%;max-width:100%;display:flex;flex-direction:column;
+  .supwrap{position:fixed;top:0;right:0;bottom:auto;left:auto;height:100vh;height:100dvh;z-index:81;width:100%;max-width:100%;display:none;flex-direction:column;
     /* a touch deeper than the raw brand yellow — the neon read too bright in the panel (owner 07-11) */
     --sup-accent:color-mix(in srgb, var(--accent,#FFCB05) 73%, #14110a);
-    background:#141418;transform:translateX(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);opacity:0;pointer-events:none}
-  .supwrap.on{transform:translateX(0);opacity:1;pointer-events:auto}
+    background:#26262B}
+  /* display:none when closed (07-17 sheetpeek rollout): a mounted full-screen layer — even transformed
+     off + opacity:0 — kills the scroll-edge glass, incl. during live calls. Slide-in via keyframes
+     (animations fire on display flips; transitions don't). Close is instant — accepted. */
+  .supwrap.on{display:flex;animation:supPanelIn .3s cubic-bezier(.32,.72,0,1)}
+  @keyframes supPanelIn{0%{transform:translateX(100%)}100%{transform:translateX(0)}}
   @media(min-width:720px){ .supwrap{width:420px;border-left:1px solid rgba(255,255,255,.06);box-shadow:-24px 0 60px -20px rgba(0,0,0,.7)} }
   /* Header dome: fill up into the notch (safe-area) so it feels like real app chrome to the top edge */
   .sup-hd{flex:0 0 auto;display:flex;align-items:center;gap:11px;padding:calc(14px + env(safe-area-inset-top)) 15px 13px;background:#1A1A20}
@@ -1406,7 +1465,7 @@ html[data-skin="v2"] .csheet-handle{width:40px;height:5px;background:rgba(255,25
 /* §3 law: green is THE action color — the old skin's purple accents (search pin, Find-my-stores,
    translate key, share chips) all re-key to green under v2. Comp P2 shows the well pin green. */
 html[data-skin="v2"]{--purple:#4ADE80;--ptint:rgba(74,222,128,.14);--pline:rgba(74,222,128,.42)}
-html[data-skin="v2"] .csheet-bd{background:rgba(5,6,9,.6)}
+html[data-skin="v2"] .csheet-bd{background:transparent} /* dim = content filter (sheetpeek E) — never a cover layer */
 html[data-skin="v2"] .csheet{padding:10px 22px calc(30px + env(safe-area-inset-bottom))}
 html[data-skin="v2"] .csheet-handle{margin:0 auto 18px}
 html[data-skin="v2"] .csheet-head{gap:13px}
@@ -1433,7 +1492,7 @@ html[data-skin="v2"] .cs-key{background:transparent;border:0;box-shadow:none;ani
 html[data-skin="v2"] .chip{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;color:#CDCDD8;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
 html[data-skin="v2"] .chip.sel{color:#4ADE80;background:linear-gradient(180deg,#31313A 0%,#28282E 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.1),0 0 14px rgba(74,222,128,.25)}
 /* Pop-ups (§5.11): big card radius 26 over the dim, no grabber, no border. */
-html[data-skin="v2"] .overlay{background:rgba(5,6,9,.66)} /* the ORIGINAL translucent dim — owner 07-16: two attempts at re-tinting the sheet chrome (grey wash, edge scrim) both made it worse and were reverted. Do NOT touch the sheet dim/root/chrome colours again without a design comp. */
+html[data-skin="v2"] .overlay{background:transparent} /* dim = content filter now (owner-verified /sheetpeek variant E, 07-17) — a cover layer here kills the scroll-edge glass */
 html[data-skin="v2"] #success .fab-back{position:static;width:auto;height:auto;border-radius:999px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);color:#FFF;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);display:flex;align-items:center;gap:8px;margin:18px auto 8px;padding:11px 22px;font-size:12.5px;font-weight:800;letter-spacing:.1em}
 html[data-skin="v2"] #success .fab-back svg{width:15px;height:15px}
 html[data-skin="v2"] #success .fab-back svg path{stroke:#FFF}
@@ -1462,7 +1521,7 @@ html[data-skin="v2"] .bub.c .nm{color:#8A8A96;opacity:1}
 html[data-skin="v2"] .rpill .d{animation:ckGlowV2 2s ease-in-out infinite}
 /* Verdict pages (6m/P6/§5.8): chrome on a wash is GLASS — translucent + faint border, never dark
    pills. RESULT chip = glass with the verdict-tinted border; title solid verdict color 30/900. */
-html[data-skin="v2"] body.rview .pill,html[data-skin="v2"] body.rview .vsw-trig,html[data-skin="v2"] body.rview .railcal,html[data-skin="v2"] body.rview .rnav-b{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+html[data-skin="v2"] body.rview .pill,html[data-skin="v2"] body.rview .vsw-trig,html[data-skin="v2"] body.rview .railcal,html[data-skin="v2"] body.rview .rnav-b,html[data-skin="v2"] body.lview .pill,html[data-skin="v2"] body.lview .vsw-trig,html[data-skin="v2"] body.lview .railcal{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
 html[data-skin="v2"] .rpill{background:rgba(255,255,255,.06);padding:7px 14px} /* rotation 2: comp 7/14, was 5/11 */
 html[data-skin="v2"] .rverdict.in .rpill{border:1px solid rgba(74,222,128,.45)}
 html[data-skin="v2"] .rverdict.out .rpill{border:1px solid rgba(239,68,68,.45);color:#FF7B7B}
@@ -1683,7 +1742,9 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zlist{max-height:54vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#1B1B20;border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:6px 8px}
 #zones .zpin{background:none;border:0}
 /* store row = retail .store look + leading check + green ring when picked (logos identical to retail) */
-#zones .zpick{cursor:pointer;position:relative;margin-top:9px}
+#zones .zpick{cursor:pointer;position:relative;margin-top:8px;text-align:left;padding:8px 12px}
+#zones .zpick .ic{width:40px;height:40px;border-radius:11px}
+#zones .zpick .ic img{max-width:30px;max-height:30px}
 #zones .zpick.picked{box-shadow:0 0 0 2px #4ADE80,0 8px 16px -8px rgba(74,222,128,.35)}
 #zones .zpick.zclosed{opacity:.6}
 #zones .zck{width:22px;height:22px;flex:0 0 auto;border-radius:50%;display:grid;place-items:center;background:#1B1B20;box-shadow:inset 0 1px 3px rgba(0,0,0,.5)}
@@ -1704,7 +1765,13 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zrrow{display:flex;align-items:center;gap:11px;width:100%;margin-top:8px;padding:11px 13px;border:0;border-radius:13px 13px 0 0;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);color:#FFF;cursor:pointer}
 #zones .zrrow .nm{display:block;font-size:14.5px;font-weight:700}
 #zones .zrlbl{display:block;font-size:12px;font-weight:700;margin-top:2px} #zones .zrlbl.t-in{color:#4ADE80} #zones .zrlbl.t-out{color:#EF4444} #zones .zrlbl.t-unk{color:#FBBF24} #zones .zrlbl.t-live{color:#8A8A96}
-#zones .zri{font-size:18px;flex:0 0 auto} #zones .zrchev{color:#7C7C88;flex:0 0 auto}
+#zones .zrchev{color:#7C7C88;flex:0 0 auto;align-self:center}
+/* Live sweep report rows ARE the site's store rows (.store): logo tile + name + .lo status line with the
+   existing .sdot (green in-stock / red out). No invented elements. The verdict word takes the result-view
+   tone colour; a live row shows the neutral .sdot.on + "Calling…". */
+#zones .zrfin{color:#4ADE80} #zones .zrfin.t-out{color:#EF4444} #zones .zrfin.t-unk{color:#FBBF24} #zones .zrfin.t-live{color:#8A8A96}
+#zones .store.zrhead{width:100%;text-align:left;border-radius:14px} #zones .store.zrhead.open{border-radius:14px 14px 0 0}
+#zones .zrbody{margin-top:0;border-radius:0 0 14px 14px}
 #zones .zrbody{background:#1B1B20;border-radius:0 0 13px 13px;padding:8px 12px 12px;margin-bottom:2px}
 /* ===== Zones LOCKED FRAME (owner 07-11 comp): full-screen takeover — header pinned top, only the
    middle scrolls, basket bar pinned bottom. Nothing bleeds under the header. ===== */
@@ -1712,13 +1779,16 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
    body class to hide them (that was getting stuck and breaking the homepage). Overlays are z 4000 so
    they still open over the frame. height:100dvh = the VISIBLE viewport, so the basket + last store row
    clear iOS Safari's bottom toolbar (owner 07-11). */
-#zones .zframe{flex:1;min-height:0;background:#1D1D22;display:flex;flex-direction:column;font-family:Inter,-apple-system,system-ui,sans-serif}
+#zones .zframe{flex:1;min-height:0;background:#26262B;display:flex;flex-direction:column;font-family:Inter,-apple-system,system-ui,sans-serif}
 /* Clean sheet header (owner 07-13): no gray gradient bar (that read as a duplicate "My checks" header /
    a gray box under the drag handle) — just the big title on the sheet background, like Check history. */
 #zones .zf-head{flex:none;display:flex;align-items:center;gap:12px;background:transparent;padding:2px 18px 12px}
 #zones .zf-title{font-size:22px;font-weight:900;letter-spacing:-.4px;color:#fff;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#zones .zf-head.zf-compact{padding:0 18px 8px;justify-content:center}
+#zones .zf-title.sm{font-size:16px;font-weight:800;text-align:center;letter-spacing:.01em}
 #zones .zf-back{width:38px;height:38px;flex:0 0 auto;border-radius:50%;border:0;background:linear-gradient(180deg,#31313A,#28282E);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.12);color:#fff;font-size:19px;line-height:1;cursor:pointer;display:grid;place-items:center}
 #zones .zf-sub{flex:none;padding:6px 16px 6px;background:transparent}
+#zones .zcap{padding:4px 16px 2px;font:600 12px Inter;color:var(--muted)}
 #zones .zf-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:16px;display:flex;flex-direction:column}
 #zones .zf-scroll.tight{padding:2px 16px 14px}
 #zones .zf-scroll.basketpad{padding-bottom:220px}
@@ -1730,15 +1800,16 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zf-scroll>*{flex:0 0 auto}
 #zones .zf-foot{flex:none}
 /* create-flow slide-up basket — absolute so it overlays the bottom (no reserved gap when empty) */
-#zones .zbasket{position:absolute;left:0;right:0;bottom:0;z-index:5;background:linear-gradient(180deg,#2D2D34,#25252B);box-shadow:0 -18px 34px -12px rgba(0,0,0,.72),inset 0 1px 0 rgba(255,255,255,.08);border-radius:26px 26px 0 0;padding:15px 18px calc(20px + env(safe-area-inset-bottom));transform:translateY(112%);transition:transform .28s cubic-bezier(.2,.8,.3,1)}
+#zones .zbasket{position:absolute;left:0;right:0;bottom:0;z-index:1000;background:linear-gradient(180deg,#2D2D34,#25252B);box-shadow:0 -18px 34px -12px rgba(0,0,0,.72),inset 0 1px 0 rgba(255,255,255,.08);border-radius:26px 26px 0 0;padding:15px 18px calc(20px + env(safe-area-inset-bottom));transform:translateY(112%);transition:transform .28s cubic-bezier(.2,.8,.3,1)}
 #zones .zbasket.up{transform:translateY(0)}
 #zones .zbkhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;font:900 14px Inter;color:#fff;white-space:nowrap}
+#zones .zclearall{background:none;border:0;color:#8A8A96;font:700 12.5px Inter;letter-spacing:.02em;cursor:pointer;padding:2px 0}
 /* basket = just the LOGOS (owner 07-11), wrapping so every pick shows; small X badge to drop one */
-#zones .zchips{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;max-height:150px;overflow-y:auto}
+#zones .zchips{display:flex;flex-wrap:nowrap;gap:10px;margin-bottom:14px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:2px}
 #zones .zchips::-webkit-scrollbar{display:none}
-#zones .zchip{flex:none;position:relative;width:46px;height:46px;border-radius:12px;background:#1F1F25;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;overflow:visible}
+#zones .zchip{flex:none;position:relative;width:36px;height:36px;border-radius:10px;background:#1F1F25;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;overflow:visible}
 #zones .zchip:not(:has(img)){background:linear-gradient(145deg,#34343D,#23232B);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5)}
-#zones .zchip img{max-width:34px;max-height:34px;object-fit:contain}
+#zones .zchip img{max-width:26px;max-height:26px;object-fit:contain}
 #zones .zchip.widelogo img{max-width:40px;max-height:30px}
 #zones .zchip .cx{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#3E3E46;border:2px solid #23232B;color:#E9E9F0;display:grid;place-items:center;cursor:pointer;padding:0}
 #zones .zbkrow{display:flex;gap:12px}
@@ -1777,6 +1848,14 @@ html[data-skin="v2"] .plan{background:linear-gradient(180deg,#2D2D34 0%,#27272D 
 html[data-skin="v2"] .plan.sub{background:#23232A;box-shadow:0 0 0 2px var(--accent,#FFCB05),0 8px 14px -8px rgba(0,0,0,.55),0 0 18px color-mix(in srgb,var(--accent,#FFCB05) 18%,transparent)}
 /* AUDIT SWEEP 1 — v1 hairlines/terminal fills that leaked through under v2. */
 html[data-skin="v2"] .rhead{background:#26262B;border:0;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
+/* LIVE call: the store card breathes — a soft green pulse that says "this call is happening right now"
+   (owner 07-16). v2's border:0 killed the base skin's ringglow, so the pulse lives in box-shadow here:
+   every frame keeps v2's resting card shadows and adds a breathing green ring + halo on top. */
+html[data-skin="v2"] .rhead.live{animation:liveGlowV2 2.2s ease-in-out infinite}
+@keyframes liveGlowV2{
+  0%,100%{box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07),0 0 0 1px rgba(74,222,128,.35),0 0 16px rgba(74,222,128,.18)}
+  50%{box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07),0 0 0 1.5px rgba(74,222,128,.7),0 0 30px rgba(74,222,128,.45)}
+}
 html[data-skin="v2"] .proof{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
 html[data-skin="v2"] .smline{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
 html[data-skin="v2"] .csheet-ic{background:#1F1F25;border:0;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
@@ -1846,7 +1925,8 @@ html[data-skin="v2"] .p6d-live .buygrid-h{color:#8A8A96}
 html[data-skin="v2"] #acctOverlay,html[data-skin="v2"] #buyOverlay,html[data-skin="v2"] #pageOverlay,html[data-skin="v2"] #zones,html[data-skin="v2"] #histOverlay{align-items:flex-end;padding:0}
 /* My Zones + Check history: same bottom-sheet recipe as #pageOverlay — flex column, pinned grab handle,
    the .zframe / .hist-scroll body is the only scroller. (owner 07-12) */
-html[data-skin="v2"] #zones .modal,html[data-skin="v2"] #histOverlay .modal{display:flex;flex-direction:column;padding:0;overflow:hidden;width:100%;max-width:none!important;border-radius:28px 28px 0 0;height:88vh;max-height:88vh;height:88dvh;max-height:88dvh;margin:0;background:#1D1D22} /* dvh = VISIBLE viewport, so the basket clears the iOS bottom toolbar (vh fallback for old Safari) */
+html[data-skin="v2"] .csheet{background:#26262B} /* one sheet surface everywhere (owner) */
+html[data-skin="v2"] #zones .modal,html[data-skin="v2"] #histOverlay .modal{display:flex;flex-direction:column;padding:0;overflow:hidden;width:100%;max-width:none!important;border-radius:28px 28px 0 0;height:88vh;max-height:88vh;height:88dvh;max-height:88dvh;margin:0;background:#26262B} /* every sheet surface = #26262B (owner: all slide-ups identical) */ /* dvh = VISIBLE viewport, so the basket clears the iOS bottom toolbar (vh fallback for old Safari) */
 html[data-skin="v2"] #zones .modal::before,html[data-skin="v2"] #histOverlay .modal::before{content:'';display:block;flex:0 0 auto;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:10px auto 8px}
 html[data-skin="v2"] #zones.on .modal,html[data-skin="v2"] #histOverlay.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
 /* Zone dialogs (actions menu / rename / delete / check confirm) = bottom sheets too — the comp shows
@@ -1856,6 +1936,12 @@ html[data-skin="v2"] #zmenuOv .modal,html[data-skin="v2"] #emailOv .modal,html[d
 html[data-skin="v2"] #zmenuOv .modal::before,html[data-skin="v2"] #emailOv .modal::before,html[data-skin="v2"] #alertsOv .modal::before,html[data-skin="v2"] #featOv .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 16px}
 html[data-skin="v2"] #zmenuOv.on .modal,html[data-skin="v2"] #emailOv.on .modal,html[data-skin="v2"] #alertsOv.on .modal,html[data-skin="v2"] #featOv.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
 html[data-skin="v2"] #histOverlay .hist-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:2px 18px calc(22px + env(safe-area-inset-bottom))}
+/* sheet-mode (body.sheetopen): the sheet box overshoots 120px under the iOS bar so rows ghost through the
+   glass. The inner scrollers get a 120px scroll-end spacer (last row stays reachable above the bar) and the
+   create-flow basket lifts off the box bottom so Save never hides under the bar. */
+body.sheetopen #zones .zf-scroll::after,body.sheetopen #histOverlay .hist-scroll::after,body.sheetopen #pageOverlay #pg_body::after{content:'';display:block;flex:0 0 auto;height:calc(160px + env(safe-area-inset-bottom))} /* clears the 120px under-bar overshoot AND lifts the last row a comfortable tap above the iOS toolbar (a flush-to-edge link was untappable) */
+body.sheetopen #zones .zbasket.up{bottom:120px}
+#zones .zbasket::after{content:'';position:absolute;top:calc(100% - 1px);left:0;right:0;height:100vh;background:#25252B}
 /* Footer links (About/FAQ/Terms/Privacy/Contact) slide up as a bottom sheet, like every other panel.
    Flex column: the grab handle + title stay pinned; only the body scrolls (owner 07-06: the top used to
    scroll away). */
@@ -1930,7 +2016,7 @@ html[data-skin="v2"] #authOverlay .x::before{display:none}
 /* Approved 3C/4A header (owner 07-11, docs/specs/mychecks-header): muted green gradient wash, big
    faint check watermark blooming from the top-right, phone leads 26/900 with the email under it.
    No Sign out up here (foot of the sheet) and no plan pill (plan reads under Manage plan). */
-html[data-skin="v2"] #acctOverlay .modal{background:#1D1D22} /* comp: whole sheet incl. grabber zone = section grey, not black */
+html[data-skin="v2"] #acctOverlay .modal{background:#26262B} /* every sheet surface = #26262B: lighter than the page, so the top edge reads (design 07-17c, matches Addie + the owner's ref) */
 html[data-skin="v2"] .acctv2head .wash{position:relative;overflow:hidden;background:linear-gradient(180deg,#2C8E57 0%,#20693F 100%);padding:20px 20px 54px}
 html[data-skin="v2"] .acctv2head .wash .acwm{position:absolute;top:-42px;right:-46px;width:180px;height:180px;opacity:.16} /* NOT .wm — a legacy .wm{width:100%} rule grabs that name and re-centers the mark (owner 07-14: corner was off) */
 html[data-skin="v2"] .acctv2head .stats{margin:-40px 18px 0;display:flex;gap:10px;position:relative;z-index:2}
@@ -1964,7 +2050,12 @@ html[data-skin="v2"] .ctlv2-rail .d2{width:10px;height:10px;border-radius:50%;fl
 html[data-skin="v2"] .ctlv2 details>summary{display:flex;align-items:center;justify-content:space-between;list-style:none;cursor:pointer}
 html[data-skin="v2"] .ctlv2 details>summary::-webkit-details-marker{display:none}
 html[data-skin="v2"] .ctlv2-steps{margin-top:10px;display:flex;flex-direction:column;gap:8px;font-size:14px;font-weight:500;color:#DCDCE6} /* near-white — #5C5C68 sank into the verdict bloom (owner 07-09) */
-html[data-skin="v2"] .ctlv2-steps .cur{color:#fff;font-weight:700;position:relative} /* one light family — the log stopped competing with the page colors (owner 07-15b) */
+/* Step-log progression (owner 07-17): the step we're ON is the big bold line; every step before it
+   demotes — smaller, italic, lighter — so the log reads as a moving timeline, not a flat list. */
+html[data-skin="v2"] .ctlv2-steps span:not(.cur){font-size:12.5px;font-style:italic;font-weight:500;color:#8A8A96}
+html[data-skin="v2"] .ctl-lead{font-size:15px;font-weight:700} /* the roll-up "Calling" label (was inline) */
+html[data-skin="v2"] .ctl-lead.was{font-size:12.5px;font-style:italic;font-weight:500;color:#8A8A96} /* live + a later step landed → "Calling" demotes like every passed step */
+html[data-skin="v2"] .ctlv2-steps .cur{font-size:15.5px;color:#fff;font-weight:800;position:relative} /* one light family — the log stopped competing with the page colors (owner 07-15b) */
 html[data-skin="v2"] .ctlv2-steps .cur::before{content:"";position:absolute;left:-24px;top:50%;transform:translateY(-50%);width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 6px currentColor}
 html[data-skin="v2"] .ctl-term{position:relative}
 html[data-skin="v2"] .ctl-term::before{content:"";position:absolute;left:-25px;top:50%;transform:translateY(-50%);width:10px;height:10px;border-radius:50%;background:currentColor;box-shadow:0 0 6px currentColor}
@@ -2129,14 +2220,16 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   <!-- RESULT -->
   <div id="result" class="hidden"></div>
 
+  <!-- Queued "you're next" holding card (shows only when the backend returns a queued signal; see holdForSlot) -->
+  <div id="holdCard" class="hidden"><div class="holdcard">
+    <div class="hc-wm"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#8CF7B4"/><path d="M6.5 12.4 L10.3 16 L17.5 8" stroke="#20693F" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <h1 class="hc-head" id="hc_head">We're slammed.</h1>
+    <p class="hc-sub" id="hc_sub"></p>
+    <div class="hc-timer"><div class="hc-tl"><span class="hc-dot"></span><span class="hc-lbl" id="hc_lbl">Your check starts in</span></div><span class="hc-val" id="hc_val">0:30</span></div>
+  </div></div>
+
   <!-- HISTORY -->
   <div id="history" class="hidden"></div>
-
-  <!-- CHECK HISTORY — bottom-sheet slide-up, same overlay/modal as My checks & Add store -->
-  <div class="overlay" id="histOverlay" onclick="if(event.target===this)closeHistory()"><div class="modal" id="histmodal"></div></div>
-
-  <!-- MANAGE ZONES — bottom-sheet slide-up, same overlay/modal as My checks & Add store -->
-  <div class="overlay" id="zones" onclick="if(event.target===this)backFromZones()"><div class="modal" id="zmodal"></div></div>
 
   <!-- DRIVER HAND-OFF (Runner) -->
   <div id="handoff" class="hidden"></div>
@@ -2172,6 +2265,12 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     <button class="fab-back" onclick="fabBack()" aria-label="Back" title="Back"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M14.5 5L8 12l6.5 7" stroke="#06210f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="fbk-lbl"></span></button>
   </div>
 </main>
+
+<!-- CHECK HISTORY + MANAGE ZONES — bottom-sheet slide-ups. MUST live at BODY level, NOT inside <main>
+     (07-17): the sheet-dim filter on `main` would otherwise make main the containing block for these
+     position:fixed overlays, anchoring them to main's box instead of the viewport (stuck-at-bottom). -->
+<div class="overlay" id="histOverlay" onclick="if(event.target===this)closeHistory()"><div class="modal" id="histmodal"></div></div>
+<div class="overlay" id="zones" onclick="if(event.target===this)backFromZones()"><div class="modal" id="zmodal"></div></div>
 
 <!-- Call slider — slides up from the bottom when a store is picked. Swipe down (or tap the backdrop)
      to dismiss. Replaces the inline "Check this store" button. -->
@@ -2774,8 +2873,7 @@ const I18N={ es:{
   'kioskhint':'<span style="display:flex;align-items:center;gap:7px;font-weight:800;white-space:nowrap"><span id="khspark"></span> ¿En un kiosco? ¡Verificación gratis!</span><a onclick="openReceipt()" style="display:inline-block;margin-top:5px;color:var(--purple);font-weight:800;cursor:pointer">Usa nuestro correo al pagar o reenvía tu recibo →</a>',
   'v.in':'¡En stock!','v.out':'No está en stock','v.unclear':'Nos dieron un “quizás”','v.soldout':'Agotado','v.noanswer':'Nadie contestó','v.hold':'En espera','v.soon':'¡Reabastecimiento en camino!','note.soon':'Llega un envío <b>{d}</b>. Sé el primero cuando caiga.',
   'search.ph':'Busca por tienda o ciudad…',
-  'cta.pick':'Elige una tienda para verificar','cta.check':'Verificar','cta.for':'por','cta.checkunit':'verificación','cta.kioskword':'kiosco',
-  'kcall.store':'esta tienda','kcall.body1':'Verificaremos si su kiosco de','kcall.body2':'está encendido y funcionando.','kcall.yes':'📞 Sí, llamar ahora →','kcall.no':'Ahora no','kcall.receipt':'Si estás en un kiosco, escríbenos para una verificación gratis',
+  'cta.pick':'Elige una tienda para verificar','cta.check':'Verificar','cta.for':'por','cta.checkunit':'verificación',  'kcall.store':'esta tienda','kcall.body1':'Verificaremos si su kiosco de','kcall.body2':'está encendido y funcionando.','kcall.yes':'📞 Sí, llamar ahora →','kcall.no':'Ahora no','kcall.receipt':'Si estás en un kiosco, escríbenos para una verificación gratis',
   'count.open':'abiertas','count.kiosks':'kioscos',
   'grp.best':'Mejores opciones','grp.mostly':'Mayormente confiable','grp.spotty':'Irregular','instock.now':'En stock ahora','lg.best':'Mejor','lg.mostly':'Confiable',
   'cover.types':'Tipos de tienda que cubrimos. Toca el pin para ver <b>las tuyas</b>:',
@@ -2798,7 +2896,9 @@ const I18N={ es:{
   'ph.quoted':'Precio indicado','ph.overmsrp':'sobre el precio de lista','ph.title':'Precios encontrados','ph.best':'MEJOR','ph.oos':'agotado',
   'plan.member':'Miembro',
   'buy.tabplans':'Planes','buy.tabpayg':'Por uso','plan.on':'Tienes','plan.checks':'verificaciones','plan.percheck':'aprox.','plan.percheck2':'por verificación','plan.noexpire':'no caducan','acct.stat.run2':'Verificaciones hoy','acct.perweek2':'Verificaciones esta semana','auth.newcell':'Danos tu nuevo celular','auth.cell.title':'Tu celular','ph.cellmail':'tu correo',
-  'ref.sharemsg':'¡Oye! Mira esta tecnología. Está increíble.\nNos ayuda a encontrar productos virales en stock como cartas Pokémon a precio de tienda.\nRegístrate y ambos ganamos 3 verificaciones gratis: ','ref.copied':'¡Enlace de invitación copiado!','ref.copy':'Copia tu enlace de invitación:','ref.both':'Ambos reciben <b style="color:#fff">3 verificaciones gratis</b> cuando se registran.','ref.copybtn':'COPIAR','ref.text':'Mensaje','ref.post':'Publicar','ref.more':'Más',
+  'ref.sharemsg':'¡Oye! Mira esta tecnología. Está increíble.\nNos ayuda a encontrar productos virales en stock como cartas Pokémon a precio de tienda.\nRegístrate y ambos ganamos una verificación gratis: ','ref.copied':'¡Enlace de invitación copiado!','ref.copy':'Copia tu enlace de invitación:','ref.both':'Ambos reciben <b style="color:#fff">una verificación gratis</b> cuando se registran.','ref.copybtn':'COPIAR','ref.text':'Mensaje','ref.post':'Publicar','ref.more':'Más',
+  // Referral welcome (owner 07-18) — the invited visitor's first screen
+  'refw.badge':'Un regalo','refw.head':'Un amigo te echó la mano.','refw.sub':'Usa Check AI para llamar a las tiendas y conseguir productos difíciles de encontrar a precio de tienda.','refw.cta':'Consigue tu check gratis','refw.foot':'Ellos también reciben uno',
   'kioskonly':'Solo kiosco','kiosk.precall':'Solo kiosco. Preguntaremos si su kiosco está funcionando y surtido, no por un envío.',
   'closednow':'· cerrado ahora','store.soon':'¡Agregando tienda pronto!','store.soonchip':'Muy pronto',
   // live view
@@ -2941,7 +3041,7 @@ const I18N={ es:{
   'zones.locph':'Busca un código postal o ciudad…','zones.go':'Ir','zones.list':'Lista','zones.map':'Mapa',
   'zones.radius':'Radio','zones.addallshort':'Agregar todo','zones.selstore':'tienda seleccionada','zones.selstores':'tiendas seleccionadas',
   'zones.typloc':'Escribe primero un código postal o ciudad.','zones.located':'Centrado en {q}','zones.noplace':'No encontramos ese lugar.',
-  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas','zones.max25':'Máximo 25 tiendas por zona','em.title':'Tu correo','step.calling':'Llamando','watch.verify.h':'Revisa tu correo para confirmarlo.','watch.verify.hsms':'Te enviaremos un texto para confirmar tu celular.','watch.then2':'Luego te avisamos al instante<br>cuando se confirme en stock.','em.sub':'Las alertas y avisos de reposición llegan aquí.','em.new':'Danos tu nuevo correo','em.first':'Danos tu correo','em.empty':'Escribe tu nuevo correo primero','em.same':'Ese ya es tu correo','em.resent':'Confirmación enviada. Revisa tu correo.','em.again':'Enviarla de nuevo','em.done':'Correo confirmado. Alertas activas.','em.badlink':'Ese enlace no funcionó. Toca Enviarla de nuevo.','em.ph':'tu@correo.com','em.save':'Guardar correo','em.saving':'Guardando…','em.confirm':'Revisa tu correo para confirmar','em.add':'Agrega tu correo para alertas','alerts.title':'Alertas','alerts.sub':'Maneja tus alertas de correo y texto.','alerts.row.at':'{p} en {s}','alerts.d.remail':'Te manda un correo al volver.','alerts.d.rsms':'Te manda un texto al volver.','alerts.d.semail':'Verifica la tienda sola. Resultado al correo.','alerts.d.ssms':'Verifica la tienda sola. Resultado por texto.','alerts.none':'Aún no has creado alertas.','alerts.off':'Apagar','alerts.mute':'Silenciar','alerts.unmute':'Activar','alerts.stop':'Parar','alerts.d.muted':'Silenciada. No llega nada hasta activarla.','alerts.mutedpill':'Silenciada. Actívala cuando quieras.','alerts.unmutedpill':'Activada. Te avisaremos.','alerts.stopped':'Cancelamos {x}','alerts.name.restock':'las alertas de reposición de {s}','alerts.name.sched':'las alertas de auto chequeo de {s}','alerts.thatstore':'esa tienda','alerts.thisalert':'esta alerta','alerts.k.sched':'Auto-verificación','alerts.k.restock':'Alerta de reposición','alerts.c.sms':'texto','alerts.c.email':'correo','alerts.acheck':'Una verificación','acct.row.alerts':'Alertas','acct.row.alerts.sub':'Avisos de reposición y autoverificación.',
+  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas','zones.cap10':'Una zona verifica hasta 10 tiendas a la vez.','hold.meta':'Buscando {p}','hold.meta.generic':'Revisando el estante','hold.head':'Estamos a tope.','hold.sub':'Un momento.','zones.limit10':'Llegaste al límite de 10 tiendas','zones.clearall':'Borrar todo','hold.timer':'Tu revisión empieza en','em.title':'Tu correo','step.calling':'Llamando','watch.verify.h':'Revisa tu correo para confirmarlo.','watch.verify.hsms':'Te enviaremos un texto para confirmar tu celular.','watch.then2':'Luego te avisamos al instante<br>cuando se confirme en stock.','em.sub':'Las alertas y avisos de reposición llegan aquí.','em.new':'Danos tu nuevo correo','em.first':'Danos tu correo','em.empty':'Escribe tu nuevo correo primero','em.same':'Ese ya es tu correo','em.resent':'Confirmación enviada. Revisa tu correo.','em.again':'Enviarla de nuevo','em.done':'Correo confirmado. Alertas activas.','em.badlink':'Ese enlace no funcionó. Toca Enviarla de nuevo.','em.ph':'tu@correo.com','em.save':'Guardar correo','em.saving':'Guardando…','em.confirm':'Revisa tu correo para confirmar','em.add':'Agrega tu correo para alertas','alerts.title':'Alertas','alerts.sub':'Maneja tus alertas de correo y texto.','alerts.row.at':'{p} en {s}','alerts.d.remail':'Te manda un correo al volver.','alerts.d.rsms':'Te manda un texto al volver.','alerts.d.semail':'Verifica la tienda sola. Resultado al correo.','alerts.d.ssms':'Verifica la tienda sola. Resultado por texto.','alerts.none':'Aún no has creado alertas.','alerts.off':'Apagar','alerts.mute':'Silenciar','alerts.unmute':'Activar','alerts.stop':'Parar','alerts.d.muted':'Silenciada. No llega nada hasta activarla.','alerts.mutedpill':'Silenciada. Actívala cuando quieras.','alerts.unmutedpill':'Activada. Te avisaremos.','alerts.stopped':'Cancelamos {x}','alerts.name.restock':'las alertas de reposición de {s}','alerts.name.sched':'las alertas de auto chequeo de {s}','alerts.thatstore':'esa tienda','alerts.thisalert':'esta alerta','alerts.k.sched':'Auto-verificación','alerts.k.restock':'Alerta de reposición','alerts.c.sms':'texto','alerts.c.email':'correo','alerts.acheck':'Una verificación','acct.row.alerts':'Alertas','acct.row.alerts.sub':'Avisos de reposición y autoverificación.',
   'feat.d.zone_sweeps':'Guarda tus tiendas como una zona. Un toque las llama todas a la vez. Mira las respuestas llegar en vivo. Cada tienda cuesta una verificación. Sin respuesta, sin cargo.','feat.d.restock_alerts':'Deja de revisar. Te avisamos. Toca Avísame cuando vuelva en un resultado. Vigilamos esa tienda por ti. Apenas llegue producto, te avisamos. Un aviso por reposición, nada de spam.','feat.d.scheduled_checks':'Las tiendas reponen con ritmo. La autoverificación corre en sus días de envío. La respuesta te espera en el celular. Cancela cuando quieras en Mis verificaciones.','feat.d.any_town':'Las cuentas gratis buscan cerca de casa. Cualquier ciudad te suelta la correa. Busca cualquier código postal o ciudad. El mapa salta ahí. Más de 100,000 tiendas.','feat.d.store_holds':'¿Lo encontraste pero estás a 20 minutos? Le pedimos al personal que te aparte uno. Con tu nombre, en la misma llamada.','feat.d.your_voice':'Elige la voz que llama por ti. Quien contesta escucha una voz amable y natural.','feat.d.thrift_hunts':'Colecciones viejas acaban en tiendas de segunda. Precios de risa, nadie las revisó. Activa Thrift y llamamos a las de tu zona. Preguntamos qué hay en la vitrina hoy.','feat.d.hobby_hunts':'Un muro de Pokémon para explorar. Cada era, cada set, cada producto. Con precios de lista. Elige tu objetivo. Cada llamada pide exactamente eso.',
   'zones.untitled':'Zona sin nombre','zones.store':'tienda','zones.stores':'tiendas',
   'zones.rename':'Renombrar','zones.delete':'Eliminar zona','zones.rename.save':'Guardar nombre','zones.delete.sure':'No se puede deshacer.','zones.delete.yes':'Sí, eliminarla','zones.keep':'Conservarla','zones.allclosed':'Todas las tiendas de esta zona están cerradas','zones.confirm.title':'¿Verificar todas las tiendas de esta zona?','zones.confirm.per':'1 verificación por tienda.',
@@ -2978,6 +3078,7 @@ Object.assign(I18N.es, {
   'zones.up.sub':'Guarda tus tiendas como una zona. Verifícalas todas a la vez y míralo en vivo. Solo Check+.',
   'zones.up.cta':'Ver planes Check+',
   'zones.instock':'en stock','zones.never':'Aún no verificada',
+  'zones.checkingnow':'Verificando…','zones.of':'de','zones.checkedw':'verificadas','zones.callingw':'llamando',
   'zones.empty':'Guarda las tiendas cercanas como zona y verifícalas todas de un toque.',
   'zones.check':'verificación','zones.checks':'verificaciones',
   'zones.rin':'En stock','zones.rlive':'Verificando…','zones.rout':'No está en stock','zones.runk':'Sin respuesta',
@@ -3152,7 +3253,12 @@ let PHONE_TOKEN = localStorage.getItem('cifm_token')||'';
 function isAuthed(){ return !!PHONE_TOKEN; }
 function freeUsed(){ return localStorage.getItem('runnr_free_used')==='1'; }
 async function appToken(){ return PHONE_TOKEN; }
-async function appApi(p,opts={}){ const t=await appToken(); const headers=Object.assign({},opts.headers||{},t?{Authorization:'Bearer '+t}:{}); return fetch(p,Object.assign({},opts,{headers})).then(r=>r.json()).catch(()=>({error:'network'})); }
+async function appApi(p,opts={}){
+  // NEVER let a slow/hung auth-token fetch stall the request (owner 07-16: the live-call transcript froze
+  // because every poll tick awaited a token that never resolved). 2.5s cap, then proceed anonymous —
+  // /pub/* endpoints answer anon, and one anonymous tick beats a dead page.
+  let t=null; try{ t=await Promise.race([appToken(), new Promise(res=>setTimeout(()=>res(null),2500))]); }catch(_){ t=null; }
+  const headers=Object.assign({},opts.headers||{},t?{Authorization:'Bearer '+t}:{}); return fetch(p,Object.assign({},opts,{headers})).then(r=>r.json()).catch(()=>({error:'network'})); }
 function initGA(){
   const id=POLICY&&POLICY.ga4Id; if(!id||window.__ga) return; window.__ga=1;
   const s=document.createElement('script'); s.async=true; s.src='https://www.googletagmanager.com/gtag/js?id='+id; document.head.appendChild(s);
@@ -3245,11 +3351,11 @@ function supTabClick(){ const w=$('supWrap'); if(w&&w.classList.contains('on')){
   // greeting. The apology greeting stays exclusive to picking the problem topic by hand (owner 07-16).
   const st=$('supTab'); if(st&&st.classList.contains('invite')&&document.body.classList.contains('rview')){ openSupportTopic('check_issue','result'); return; }
   openSupport(); } // one tab, two jobs: open, then close from the same thumb spot (owner 07-14)
-function openSupport(){ const el=$('supWrap'); el.classList.add('on'); el.setAttribute('aria-hidden','false'); supStartNew(); }
+function openSupport(){ const el=$('supWrap'); supH_on(); el.classList.add('on'); el.setAttribute('aria-hidden','false'); supStartNew(); }
 // Open support straight into a specific topic (skips the picker). Used by the "report a problem"
 // link on a check's status/result so a bad number or wrong result lands in check_issue in one tap.
-function openSupportTopic(cat,src){ const el=$('supWrap'); el.classList.add('on'); el.setAttribute('aria-hidden','false'); supPickTopic(cat,src); }
-function closeSupport(){ const el=$('supWrap'); el.classList.remove('on'); el.setAttribute('aria-hidden','true');
+function openSupportTopic(cat,src){ const el=$('supWrap'); supH_on(); el.classList.add('on'); el.setAttribute('aria-hidden','false'); supPickTopic(cat,src); }
+function closeSupport(){ const el=$('supWrap'); el.classList.remove('on'); el.setAttribute('aria-hidden','true'); supH_off();
   // iOS wouldn't repaint its chrome strips after the chat's root tint dropped (bottom stayed the chat
   // color until a manual refresh — owner 07-14). Poke it: drop the keyboard, force a root style
   // recalc, and give the page a 1px scroll nudge so Safari re-samples the root color.
@@ -3443,6 +3549,7 @@ async function submitStoreReq(){
 const idle=(fn)=>('requestIdleCallback' in window)?requestIdleCallback(fn,{timeout:1500}):setTimeout(fn,300);
 async function boot(){
   captureReferral(); // stash any ?ref= before we clean the URL
+  if(/[?&]holdpeek/i.test(location.search||'')) return holdPeek(); // standalone preview of the queued holding card (no check placed)
   if(location.pathname==='/peek') document.body.classList.add('peek'); // minimal first-time-visitor preview
   try{ loadPlans(); }catch(_){ } // warm the live plans at page open — the Check+ sheet must never open against an empty cache (owner 07-16)
   STORES=[];
@@ -3460,6 +3567,8 @@ async function boot(){
   initGA();
   buildSwitcher(); applyBrand(); renderIcons(); buildLangSel(); applyLang();
   renderAuth(); renderStores(); renderChips(); renderFooter(); refreshAuth();
+  maybeShowRefWelcome(); // referral visitor's first screen (gated: fresh ?ref=, not signed in)
+  if(/[?&]zonepeek/i.test(location.search||'')){ try{ zonePeek(); }catch(_){ } } // preview the live sweep report, no calls (owner)
   if(sp.get('paid')){ history.replaceState({},'','/'); toast(t('toast.payment2','Payment received. Adding your checks…'),'neutral');
     // Success redirect (hosted or 3DS return) — the grant is async via webhook. Poll /app/me until the
     // tier/credits actually land, THEN celebrate, instead of firing openPaid on a fixed timer that can
@@ -3487,15 +3596,42 @@ async function boot(){
   // statuses registry + categories are in, so the verdict copy/emoji upgrade to the owner-edited ones.
   if(LASTRES && RAIL_CID && $('result') && !$('result').classList.contains('hidden')) showResult(LASTRES, RAIL_CID);
   if(!USER_LOC){ const sl=savedLoc(); if(sl) setUserLoc(sl.lat,sl.lng); } // restore last location → stores auto-load, no re-prompt
-  idle(()=>{ renderDemo(); loadFinds(); silentLocRecheck(); }); // ticker + demo + (if you've moved) location refresh — off the critical path
+  idle(()=>{ renderDemo(); loadFinds(); silentLocRecheck(); locWatchStart(); freshGuardInit(); }); // ticker + demo + one-shot fix + continuous follow-as-you-drive + stale-tab guard — off the critical path
+}
+// Stale-tab guard (owner 07-17): his Safari tab kept running days-old JS across a whole
+// broken-then-fixed cycle — an SPA only picks up a deploy on a full load, and iOS tabs live for weeks.
+// Remember the build rev we booted with; when the tab comes back to the foreground after ≥5 min away
+// AND the server reports a newer rev AND nothing is in flight (home view, no live call, no open sheet),
+// reload silently — the user just sees the homepage they expected, now on fresh code. Never fires
+// mid-anything; ancient servers without /pub/rev make it a no-op.
+let FRESH_REV=null, FRESH_HID=0;
+function freshGuardInit(){
+  try{
+    api('/pub/rev').then(r=>{ if(r&&r.rev) FRESH_REV=String(r.rev); }).catch(()=>{});
+    document.addEventListener('visibilitychange',()=>{
+      if(document.visibilityState==='hidden'){ FRESH_HID=Date.now(); return; }
+      if(!FRESH_REV||!FRESH_HID||(Date.now()-FRESH_HID)<300000) return;
+      FRESH_HID=0; // one check per background stretch
+      api('/pub/rev').then(r=>{
+        if(!r||!r.rev||String(r.rev)===FRESH_REV) return;
+        const busy = (typeof NAV_VIEW!=='undefined'&&NAV_VIEW!=='builder')
+          || ($('live')&&!$('live').classList.contains('hidden'))
+          || document.querySelector('.overlay.on,.csheet.on,.supwrap.on')
+          || document.body.classList.contains('huntmode');
+        if(!busy) location.reload(); // mid-flow: leave it — the stale rev stays set, so the next tab-return retries
+      }).catch(()=>{});
+    });
+  }catch(_){ }
 }
 // Silent location follow: the cached location is great when you're home, but if you've travelled to another
 // city it's stale (stores + finds would still be your old town). So — ONLY if you've ALREADY granted location
 // (never a prompt) — quietly re-check your current position in the background. If you've moved more than
 // ~12 miles from the cached spot, switch to where you are now and refresh stores/finds. No move (or no
 // permission) → nothing happens, the cached location stands.
+let LOC_RECHECK_T=0;
 function silentLocRecheck(){
   try{
+    LOC_RECHECK_T=Date.now();
     if(MANUAL_LOC) return; // they dropped a pin / searched a ZIP on purpose — do NOT snap back to GPS (regression: map pin jumped home)
     if(!navigator.geolocation || !navigator.permissions || !navigator.permissions.query) return;
     navigator.permissions.query({name:'geolocation'}).then(p=>{
@@ -3511,6 +3647,43 @@ function silentLocRecheck(){
     }).catch(()=>{});
   }catch(e){}
 }
+// CONTINUOUS FOLLOW (owner 07-17): a COARSE watchPosition follows you as you drive — no timer, no GPS
+// chip. The browser wakes the callback only on real movement and uses cheap wifi/cell fixes
+// (enableHighAccuracy:false), so the battery cost is negligible (this is what Maps/Yelp do). We STOP
+// the watch whenever the tab is hidden, so there's zero background drain. Same silent rules as the
+// one-shot: permission must ALREADY be granted (never prompts), a manual pin/ZIP wins, we only
+// relocate after a >1mi move (no jitter, no store-list thrash) and never mid call / sheet / hunt.
+let LOC_WATCH=null, LOC_TOAST_T=0;
+function locFollowApply(la,ln){
+  if(MANUAL_LOC) return;                                              // they chose a spot — GPS doesn't override
+  if(USER_LOC && miBetween(USER_LOC.lat,USER_LOC.lng,la,ln)<=1) return; // same area — ignore GPS jitter
+  const busy = (typeof NAV_VIEW!=='undefined'&&NAV_VIEW!=='builder')
+    || ($('live')&&!$('live').classList.contains('hidden'))
+    || document.querySelector('.csheet.on,.overlay.on,.supwrap.on')
+    || document.body.classList.contains('huntmode');
+  if(busy) return;                                                    // don't yank the ground out mid-flow — the next fix catches it
+  const mapOpen = MAP && $('mapview') && $('mapview').style.display==='block';
+  setUserLoc(la,ln,mapOpen);                                          // refetches the store list for the new spot
+  LOC_RECHECK_T=Date.now();
+  if(Date.now()-LOC_TOAST_T>120000){ LOC_TOAST_T=Date.now(); toast(t('toast.locupdated','Updated to your current location'),'neutral'); } // confirm at most once every 2 min — driving a highway must not spam pills
+}
+function locWatchStart(){ try{
+  if(LOC_WATCH!=null) return;
+  if(!navigator.geolocation || !navigator.permissions || !navigator.permissions.query) return;
+  navigator.permissions.query({name:'geolocation'}).then(p=>{
+    if(!p || p.state!=='granted' || LOC_WATCH!=null) return;          // only when already allowed — never trigger the OS prompt here
+    LOC_WATCH=navigator.geolocation.watchPosition(
+      pos=>locFollowApply(pos.coords.latitude,pos.coords.longitude),
+      ()=>{}, // errors: ignore, the cached location stands
+      {enableHighAccuracy:false, maximumAge:60000, timeout:20000});   // coarse wifi/cell; a 1-min-old fix is fine
+  }).catch(()=>{});
+}catch(_){ } }
+function locWatchStop(){ try{ if(LOC_WATCH!=null){ navigator.geolocation.clearWatch(LOC_WATCH); LOC_WATCH=null; } }catch(_){ } }
+// Tab hidden → stop the watch (zero background drain). Tab visible → restart it (its first fix is the
+// tab-return refresh — owner 07-17: drove home, iOS restored the stale tab; the watch re-fixes on return).
+document.addEventListener('visibilitychange',()=>{ try{
+  if(document.visibilityState==='visible') locWatchStart(); else locWatchStop();
+}catch(_){ } });
 let PENDING_VIEW=null;
 let STORES_AUTH_TOKEN=null; // which token the visible store list was fetched under — re-fetch on login so owner-only surfaces (FUN store / VIPs) appear without a hard refresh
 async function refreshAuth(){
@@ -3600,7 +3773,64 @@ async function referShareTo(tg){
   else if(tg==='native'){ if(navigator.share){ try{ await navigator.share({text:text+' '+url}); }catch(e){} } else copyRefer(); }
 }
 // Stash an inbound ?ref= code; claim it once the visitor is signed in.
-function captureReferral(){ try{ const sp=new URLSearchParams(location.search); const code=sp.get('ref'); if(code){ localStorage.setItem('runnr_ref',code); sp.delete('ref'); const q=sp.toString(); history.replaceState({},'',location.pathname+(q?'?'+q:'')); } }catch(e){} }
+let REF_FRESH=false; // set when a ?ref= just arrived this pageload → show the welcome (not on later reloads)
+function captureReferral(){ try{ const sp=new URLSearchParams(location.search); const code=sp.get('ref'); if(code){ localStorage.setItem('runnr_ref',code); REF_FRESH=true; sp.delete('ref'); const q=sp.toString(); history.replaceState({},'',location.pathname+(q?'?'+q:'')); } }catch(e){} }
+// Referral welcome (owner 07-18): a friend's invite link is the visitor's FIRST screen — a gift framing
+// that leads into signup (where the free check is actually claimed). Shown once, only on the fresh
+// arrival, only when not already signed in. Centered pop-up (§5.11), elevated skin.
+function maybeShowRefWelcome(){ if(!REF_FRESH||isAuthed()) return; if((POLICY.flags||{}).referrals===false) return;
+  if(document.querySelector('.overlay.on')) return; // never stack on a deep-link overlay
+  setTimeout(openRefWelcome,260); }
+// Referral welcome (owner 07-19d): the in-stock share card design, but CENTERED on a DIMMED page so
+// it's the only thing in focus (owner: "middle of the screen, everything behind darkened"). It does
+// NOT use the .overlay class on purpose — that would drag it into v2's bottom-sheet machinery
+// (sheetHObserver anchors every .overlay to the bottom); this is its own fixed, centered, scrim'd
+// layer. rfw- prefixed so nothing collides with the app's .card/.badge/.cta.
+function openRefWelcome(){ if(isAuthed()) return;
+  let ov=$('refwelcomeOverlay');
+  if(!ov){ ov=document.createElement('div'); ov.className='rfw-ov'; ov.id='refwelcomeOverlay';
+    const css=`<style>
+      #refwelcomeOverlay{position:fixed;inset:0;z-index:5000;display:none;align-items:center;justify-content:center;padding:24px;background:#050609}
+      #refwelcomeOverlay.on{display:flex}
+      .rfw-card{position:relative;width:100%;max-width:392px;text-align:left;border:1px solid rgba(255,255,255,.12);border-radius:40px;padding:34px 27px 30px;box-shadow:0 30px 64px -14px rgba(0,0,0,.85);background:radial-gradient(125% 82% at 34% 15%, rgba(38,100,64,.98) 0%, rgba(38,100,64,.5) 30%, rgba(38,100,64,0) 60%),#20202A}
+      .rfw-wm{position:absolute;inset:0;border-radius:40px;overflow:hidden;z-index:0;pointer-events:none}
+      .rfw-wm svg{position:absolute;top:-40px;right:-44px;width:180px;height:180px;opacity:.16}
+      .rfw-body{position:relative;z-index:1}
+      .rfw-badge{display:inline-flex;align-items:center;gap:7px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.13em;color:#4ADE80;background:rgba(255,255,255,.06);border:1px solid rgba(74,222,128,.4);padding:6px 12px;border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+      .rfw-gdot{width:8px;height:8px;border-radius:50%;background:#4ADE80;box-shadow:0 0 8px #4ADE80;animation:ckGlow 2s ease-in-out infinite}
+      .rfw-head{margin-bottom:13px}
+      .rfw-big{font-size:33px;font-weight:900;line-height:1.04;letter-spacing:-1.1px;margin:0;color:var(--accent,#FFCB05)}
+      .rfw-sub{color:rgba(255,255,255,.82);font-size:15px;font-weight:500;line-height:1.5;margin:14px 0 0}
+      .rfw-cact{margin-top:28px}
+      .rfw-cta{display:block;width:100%;text-decoration:none;border:0;border-radius:999px;padding:2.5px;background:linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%);box-shadow:0 10px 22px -12px rgba(0,0,0,.55);cursor:pointer}
+      .rfw-cin{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:9px;border-radius:999px;background:#20202A;padding:15px 24px}
+      .rfw-shine{position:absolute;top:0;bottom:0;left:-45%;width:45%;background:linear-gradient(105deg,transparent 0%,rgba(140,255,185,.25) 50%,transparent 100%);animation:ckShine 2.8s ease-in-out infinite}
+      .rfw-ctxt{position:relative;font-size:12.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#fff;text-decoration:none}
+      .rfw-arw{position:relative;flex:0 0 auto}
+      .rfw-foot{color:#8A8A96;font-size:12.5px;font-weight:600;margin-top:14px;text-align:center}
+      @keyframes ckShine{0%{left:-45%}55%,100%{left:110%}}
+      @keyframes ckGlow{0%,100%{opacity:.4}50%{opacity:1}}
+      @media (prefers-reduced-motion:reduce){.rfw-shine,.rfw-gdot{animation:none}}
+    </style>`;
+    ov.innerHTML=`${css}
+      <div class="rfw-card">
+        <div class="rfw-wm"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#8CF7B4"/><path d="M6.5 12.4 L10.3 16 L17.5 8" stroke="#20693F" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="rfw-body">
+          <div class="rfw-head"><div class="rfw-badge"><span class="rfw-gdot"></span>${t('refw.badge','A Gift')}</div></div>
+          <h1 class="rfw-big">${t('refw.head','A friend just hooked you up.')}</h1>
+          <div class="rfw-sub">${t('refw.sub',"Use Check AI to call stores and get hard to find products at retail prices.")}</div>
+          <div class="rfw-cact">
+            <button class="rfw-cta" onclick="refWelcomeClaim()"><span class="rfw-cin"><span class="rfw-shine"></span><span class="rfw-ctxt">${t('refw.cta','Get your free check')}</span><svg class="rfw-arw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></span></button>
+            <div class="rfw-foot">${t('refw.foot',"They'll get one too")}</div>
+          </div>
+        </div>
+      </div>`;
+    ov.onclick=e=>{ if(e.target===ov) closeRefWelcome(); };
+    document.body.appendChild(ov); }
+  ov.classList.add('on'); try{ document.documentElement.style.overflow='hidden'; document.body.style.overflow='hidden'; }catch(_){ } track('refwelcome_open');
+}
+function closeRefWelcome(){ const ov=$('refwelcomeOverlay'); if(ov) ov.classList.remove('on'); try{ document.documentElement.style.overflow=''; document.body.style.overflow=''; }catch(_){ } }
+function refWelcomeClaim(){ closeRefWelcome(); track('refwelcome_claim'); try{ openAuth(); }catch(_){ } } // signup = where the free check is granted
 async function claimPendingReferral(){
   if(!isAuthed()) return;
   const code=localStorage.getItem('runnr_ref'); if(!code) return;
@@ -3784,6 +4014,113 @@ function acctIdentity(){
   const initial = name ? name[0].toUpperCase() : (email ? email[0].toUpperCase() : '');
   return { primary, secondary:subs.join('   ·   '), initial };
 }
+// ===== VARIANT H — glass sheets (design 07-17c, copied from app.html openSheet/_restoreSheetLayout) =====
+// A slide-up must be ABSOLUTE page-layer content while open — NEVER fixed — or iOS 26's scroll-edge glass
+// can't ghost it and the top/bottom bars go solid. ONE MutationObserver applies it the instant a sheet
+// overlay flips `.on`, and restores when `.on` drops (the close animations remove `.on` AFTER their
+// slide-down, so the timing is automatic). The OVERLAY drops to absolute at the live scroll (top=scrollY,
+// height=innerHeight) — a transparent page-layer catcher with NO fixed ancestor; the MODAL sits at
+// top=14vh inside it and overshoots ~120px under the bar. Net: the sheet lands at document-y scrollY+14vh
+// exactly like app.html's body-child sheet. body.sheetopen (a) grows the page so the overshoot isn't
+// clipped and (b) dims the CONTENT — never a cover layer. Root colour never touched.
+// EVERY .overlay is a bottom sheet in v2 (auth/checkout/score/etc. included) — no allowlist: the old
+// SHEET_IDS gate is exactly how sheets kept getting missed (phone-edit black bottom, etc.).
+function sheetGlassNudge(){ try{ const y=window.scrollY||0; window.scrollTo(0,y+1); window.scrollTo(0,y); }catch(_){ } } // a real document scroll is the ONLY thing that makes iOS re-snapshot the bar ghost — without it the glass keeps showing the pre-open page ("previous state")
+function sheetBodyLock(){ document.body.classList.add('sheetopen');
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ sheetGlassNudge();
+    document.documentElement.style.overflow='hidden'; document.body.style.overflow='hidden'; }));
+}
+function sheetBodyMaybeUnlock(){
+  // Only VISIBLE sheets count — a stray .on on a display:none overlay (zones save flow) was keeping the
+  // scroll locked forever (owner: page freezes until refresh). Re-check once more after the close
+  // animations settle so a timing race can never strand the lock.
+  const open=[...document.querySelectorAll('.overlay.on,.csheet.on,.supwrap.on')].some(el=>getComputedStyle(el).display!=='none');
+  if(!open){ document.documentElement.style.overflow=''; document.body.style.overflow=''; document.body.classList.remove('sheetopen'); sheetGlassNudge(); }
+  clearTimeout(sheetBodyMaybeUnlock._t); sheetBodyMaybeUnlock._t=setTimeout(()=>{
+    const still=[...document.querySelectorAll('.overlay.on,.csheet.on,.supwrap.on')].some(el=>getComputedStyle(el).display!=='none');
+    if(!still){ document.documentElement.style.overflow=''; document.body.style.overflow=''; document.body.classList.remove('sheetopen'); sheetGlassNudge(); }
+  },450);
+}
+function sheetH_on(ov){ if(!ov||ov.__sh) return; ov.__sh=1;
+  sheetBodyLock(); // dim + min-height + scroll lock for EVERY sheet/dialog
+  const m=ov.querySelector('.modal'); if(!m) return;
+  const sc=window.scrollY||document.documentElement.scrollTop||0;
+  // Overlay: page-layer catcher spanning the locked viewport + a deep under-bar tail so the toolbar can
+  // never expose the page below the sheet surface.
+  ov.style.position='absolute'; ov.style.top=sc+'px'; ov.style.bottom='auto'; ov.style.height=(window.innerHeight+400)+'px';
+  // Modal: BOTTOM-anchored at its NATURAL content height (capped 86vh), box overshooting TAIL px under the
+  // bar (inline height+maxHeight beat the CSS max-height:86-92vh that silently clamped earlier tails).
+  // THE GLASS ONLY READS "TRANSPARENT" WHEN SHEET CONTENT FLOWS UNDER THE BAR (variant H / admin recipe):
+  // every sheet's box overshoots TAIL px under the bar so its content/surface is what the glass ghosts.
+  //  - self-scrolling sheets (acct/buy/auth...): a TAIL scroll-end spacer keeps the last row reachable.
+  //  - flex sheets with inner scrollers (zones/hist): the stretched scroller gets its spacer + basket
+  //    offset from body.sheetopen CSS rules (see the #zones/.hist-scroll block).
+  // Measurement is FEEDBACK-PROOF (inline height/maxHeight/padding cleared before reading), and a
+  // ResizeObserver re-anchors while open so content that grows or shrinks never mis-sits the sheet.
+  const TAIL=120;
+  const place=()=>{ const prev=m.style.height;
+    m.style.height=''; m.style.maxHeight=''; m.style.paddingBottom='';
+    const cap=window.innerHeight*0.96, cs=getComputedStyle(m);
+    // FILL sheets — a flex column that scrolls INSIDE (reading pages, zones, history) — open TALL at the
+    // cap so there's room to read. Measuring their natural height opens them short because their content
+    // loads a beat after the sheet (owner: "you can't read much like this, 75% of the page"). Form/menu
+    // sheets (plain boxes) still open content-sized.
+    const fill = cs.display==='flex' && cs.flexDirection.indexOf('column')===0 && cs.overflowY==='hidden';
+    const h = fill ? cap : (Math.min(m.offsetHeight||0, cap)||cap);
+    m.style.position='absolute'; m.style.left='0'; m.style.right='0'; m.style.top=(window.innerHeight-h)+'px'; m.style.bottom='auto';
+    m.style.height=(h+TAIL)+'px'; m.style.maxHeight=(h+TAIL)+'px';
+    const oy=cs.overflowY;
+    if((oy==='auto'||oy==='scroll')&&m.scrollHeight>h+4) m.style.paddingBottom=TAIL+'px';
+    return prev!==m.style.height; };
+  place();
+  try{ ov.__ro=new ResizeObserver(()=>{ if(window.KB_DOCK||ov.__placing) return; ov.__placing=1; requestAnimationFrame(()=>{ place(); ov.__placing=0; }); }); ov.__ro.observe(m.firstElementChild||m); }catch(_){ }
+}
+function sheetH_off(ov){ if(!ov||!ov.__sh) return; ov.__sh=0; try{ if(ov.__ro){ ov.__ro.disconnect(); ov.__ro=null; } }catch(_){ } const m=ov.querySelector('.modal');
+  if(m){ m.style.position=''; m.style.left=''; m.style.right=''; m.style.top=''; m.style.bottom=''; m.style.height=''; m.style.maxHeight=''; m.style.paddingBottom=''; }
+  ov.style.position=''; ov.style.top=''; ov.style.bottom=''; ov.style.height='';
+  sheetBodyMaybeUnlock();
+}
+let _rplT=0, _rplSet=new Set();
+function sheetReplaceSoon(ov){ if(!ov||window.KB_DOCK) return; _rplSet.add(ov); clearTimeout(_rplT); _rplT=setTimeout(()=>{ const set=_rplSet; _rplSet=new Set(); set.forEach(o=>{ if(o.__sh&&o.classList.contains('on')){ sheetH_off(o); sheetH_on(o); } }); },60); }
+(function sheetHObserver(){ try{
+  const mo=new MutationObserver(muts=>{ for(const mu of muts){ const el=mu.target;
+    if(mu.type==='childList'){ // content INSIDE an open sheet changed (zone list/builder re-render on
+      // save/edit/delete, zPop modal swap) — re-place so the fresh content re-anchors instead of
+      // stranding the sheet off-screen with the page showing behind it (owner: "stuck on this page").
+      let ovc=(el&&el.nodeType===1&&el.classList&&el.classList.contains('overlay')&&el.classList.contains('on'))?el:((el&&el.closest)?el.closest('.overlay.on'):null);
+      if(ovc&&ovc.__sh) sheetReplaceSoon(ovc); continue; }
+    if(!(el&&el.nodeType===1&&el.classList&&el.classList.contains('overlay'))) continue;
+    if(el.classList.contains('on')) sheetH_on(el); else sheetH_off(el); } });
+  mo.observe(document.body,{attributes:true,attributeFilter:['class'],subtree:true,childList:true});
+}catch(_){ }
+})();
+// The compact CALL SHEET (#csheet — a lone element, not overlay>modal) as page-layer content: measure its
+// natural height, anchor its top so the content sits at the viewport bottom, then overshoot ~120px under
+// the bar (empty surface) so the glass ghosts the bottom edge. The translateY slide/drag is unchanged.
+function csheetH_on(){ const el=$('csheet'); if(!el||el.__sh) return; el.__sh=1;
+  const place=()=>{ el.style.minHeight=''; // FEEDBACK-PROOF: never measure our own tail (that ballooned the sheet full-screen)
+    const sc=window.scrollY||0, H=Math.min(el.offsetHeight,window.innerHeight*0.9);
+    el.style.position='absolute'; el.style.top=(sc+window.innerHeight-H)+'px'; el.style.bottom='auto'; el.style.minHeight=(H+400)+'px'; };
+  place();
+  try{ el.__ro=new ResizeObserver(()=>{ if(el.__placing) return; el.__placing=1; requestAnimationFrame(()=>{ if(el.__sh) place(); el.__placing=0; }); }); el.__ro.observe(el.firstElementChild||el); }catch(_){ }
+  sheetBodyLock();
+}
+function csheetH_off(){ const el=$('csheet'); if(!el||!el.__sh) return; el.__sh=0; try{ if(el.__ro){ el.__ro.disconnect(); el.__ro=null; } }catch(_){ }
+  el.style.position=''; el.style.top=''; el.style.bottom=''; el.style.minHeight='';
+  sheetBodyMaybeUnlock();
+}
+// The MESSENGER (#supWrap) is a FULL-SCREEN take-over panel, not a peek sheet: it's position:fixed and
+// sized to the VISIBLE viewport (100dvh in CSS) so its composer (the type/attach bar) always sits ABOVE the
+// iOS toolbar. Do NOT switch it to absolute + overshoot like the bottom sheets — that pushed the composer
+// 260px under the bar and it vanished (owner: "the box to type is gone"). Its message list scrolls inside;
+// the translateX slide-in is unchanged. supH_on/off only lock/unlock the background scroll.
+function supH_on(){ const el=$('supWrap'); if(!el||el.__sh) return; el.__sh=1;
+  sheetBodyLock();
+}
+function supH_off(){ const el=$('supWrap'); if(!el||!el.__sh) return; el.__sh=0;
+  el.style.position=''; el.style.top=''; el.style.bottom=''; el.style.height='';
+  sheetBodyMaybeUnlock();
+}
 function openAccount(fromPop){
   if(!isAuthed()) return;
   openAccount._pop=!!fromPop;
@@ -3832,7 +4169,7 @@ function openAccount(fromPop){
     // Approved 3C/4A header (owner 07-11 comp, docs/specs/mychecks-header): watermark check top-right,
     // MY CHECKS eyebrow, phone leads big with the email beneath. Sign out lives at the sheet FOOT and
     // the plan reads under Manage plan — neither renders up here anymore.
-    head.innerHTML=`<div style="display:flex;justify-content:center;align-items:flex-end;height:46px;padding-bottom:8px;background:#1D1D22"><span style="width:40px;height:5px;border-radius:999px;background:#3E3E46"></span></div><div class="wash">
+    head.innerHTML=`<div style="display:flex;justify-content:center;align-items:flex-end;height:46px;padding-bottom:8px;background:#26262B"><span style="width:40px;height:5px;border-radius:999px;background:#3E3E46"></span></div><div class="wash">
         <svg class="acwm" width="180" height="180" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#8CF7B4"/><path d="M6.5 12.4 L10.3 16 L17.5 8" stroke="#20693F" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <div style="position:relative"><span style="font-size:10.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.8)">${t('acct.checks','My checks')}</span></div>
         <div style="position:relative;margin-top:16px">
@@ -4100,6 +4437,7 @@ function findMe(after){
   navigator.geolocation.getCurrentPosition(p=>{
     MANUAL_LOC=false; // explicit "find me" → GPS is the boss again
     setUserLoc(p.coords.latitude,p.coords.longitude);
+    try{ locWatchStart(); }catch(_){ } // granting here (maybe first time) → start the drive-follow watch now, not next boot
     if(typeof after==='function') after();
   }, err=>{ if(b)b.classList.remove('loading'); toast(err.code===1?t('toast.locblocked',"Location blocked. Enable it in your browser settings."):t('toast.locfail','Couldn’t get your location')); }, {enableHighAccuracy:true,timeout:8000});
 }
@@ -4124,6 +4462,10 @@ let MAP_FIT_NEXT=false, MAP_GESTURING=false;
 // Neon store-color legend shown along the bottom of the map.
 function mapLegendHtml(){
   const dot=(c)=>`<span class="lgd" style="background:${c};box-shadow:0 0 7px ${c},0 0 2px ${c}"></span>`;
+  // Kiosk pins carry no tier colour (TIER_VIEW=!kiosk) — a Best/Mostly/Spotty legend there would be a
+  // lie. Show a plain-dot "Kiosk" key + the in-stock check instead. (owner 07-18)
+  if(MODE==='kiosk') return `<span>${dot('#9aa0b0')}${t('count.kiosks','kiosks')}</span>`
+       + `<span>${FCHK(14)}${t('instock.now','In stock')}</span>`;
   return `<span>${dot('#2BFF88')}${t('lg.best','Best')}</span>`
        + `<span>${dot('#29D4FF')}${t('lg.mostly','Mostly')}</span>`
        + `<span>${dot('#FF9E2C')}${t('grp.spotty','Spotty')}</span>`
@@ -4351,7 +4693,7 @@ function renderStores(){
   const lh=$('listhdr'), lhl=$('lh_label');
   if(lhl) lhl.textContent = (TIER_VIEW && t5.length) ? t('grp.best','Best bets') : '';
   if(lh) lh.style.display = (list.length && (USER_LOC||q)) ? 'flex' : 'none';
-  { const mt=$('maptoggle'); if(mt) mt.style.display = (list.length && USER_LOC && !kiosk) ? '' : 'none'; }
+  { const mt=$('maptoggle'); if(mt) mt.style.display = (list.length && USER_LOC) ? '' : 'none'; } // kiosk/hobby/thrift all get the map too — pins come from LAST_STORES lat/lng (owner 07-18)
   const emptyMsg=()=>{
     if(kiosk) return USER_LOC?tf('empty.kiosk',`No kiosks mapped within ${RADIUS} mi yet. They're crowd-built. Bought from one? <a onclick="openReceipt()" style="color:var(--purple);font-weight:700;cursor:pointer">Email a receipt</a> to put it on the map.`,{r:RADIUS}):t('empty.search',"No matches. Try a different search, or tap the pin for stores nearby.");
     if(!USER_LOC) return t('empty.search',"No matches. Try a different search, or tap the pin for stores nearby.");
@@ -4735,15 +5077,13 @@ function renderCallSheet(){
   }
   // A hobby-locked product IS the ask — print it in the product-context line. v1: lock never set.
   const hob = (typeof HOBBY_LOCK!=='undefined'&&HOBBY_LOCK&&SEL_PRODUCT);
-  const prod = SEL_KIOSK ? t('cta.kioskword','kiosk') : (hob?SEL_PRODUCT:catLabels());
   // Hobby (locked product): "We'll check on pricing and availability for {set} {product}". Everyone else:
-  // just the category. NO "costs 1 check" on any of it (owner 07-09), NO "pick the exact set" link.
-  // Hobby keeps its descriptive line; kiosk keeps its word. The plain brand category (e.g. "Pokémon")
-  // is dropped here — it read awkward on its own — and shown instead as a faded product ball tucked
-  // behind the button arrow (owner 07-11), so you still see WHAT you're checking.
+  // NO product line — kiosk's lone "kiosk" word dropped too (owner 07-17). NO "costs 1 check" on any
+  // of it (owner 07-09), NO "pick the exact set" link. The plain brand category (e.g. "Pokémon")
+  // is shown instead as a faded product ball tucked behind the button arrow (owner 07-11),
+  // so you still see WHAT you're checking.
   const pe=$('cs_prod'); if(pe){
-    if(hob){ pe.innerHTML=`${t('cs.hobask',"We'll check on pricing and availability for")} ${esc(prod)}`; pe.style.display=''; }
-    else if(SEL_KIOSK){ pe.innerHTML=esc(prod); pe.style.display=''; }
+    if(hob){ pe.innerHTML=`${t('cs.hobask',"We'll check on pricing and availability for")} ${esc(SEL_PRODUCT)}`; pe.style.display=''; }
     else { pe.innerHTML=''; pe.style.display='none'; }
   }
   const gh=$('cs_ghost'); if(gh){ const art=document.getElementById('heroart'); gh.innerHTML = (art&&art.innerHTML)?art.innerHTML:''; }
@@ -4758,8 +5098,8 @@ function showCallSheet(){ const el=$('csheet'); if(!el) return; const already=el
   if(!already){ // guarantee the slide UP from the bottom: pin to off-screen, reflow, then release to .on
     el.style.transition='none'; el.style.transform='translateY(112%)'; void el.offsetHeight;
     el.style.transition=''; }
-  el.style.transform=''; el.classList.add('on'); el.setAttribute('aria-hidden','false'); const bd=$('csheetBd'); if(bd) bd.classList.add('on'); }
-function hideCallSheet(){ const el=$('csheet'); if(el){ el.style.transition=''; el.style.transform=''; el.classList.remove('on'); el.setAttribute('aria-hidden','true'); } const bd=$('csheetBd'); if(bd) bd.classList.remove('on'); }
+  csheetH_on(); el.style.transform=''; el.classList.add('on'); el.setAttribute('aria-hidden','false'); const bd=$('csheetBd'); if(bd) bd.classList.add('on'); }
+function hideCallSheet(){ const el=$('csheet'); if(el){ el.style.transition=''; el.style.transform=''; el.classList.remove('on'); el.setAttribute('aria-hidden','true'); csheetH_off(); } const bd=$('csheetBd'); if(bd) bd.classList.remove('on'); }
 // User-initiated dismiss (tap the backdrop / swipe down): also latch CS_DISMISSED so switching modes
 // (or any re-render) doesn't slide it back up until they pick a store again.
 function dismissCallSheet(){ CS_DISMISSED=true; hideCallSheet(); }
@@ -4772,7 +5112,7 @@ function dismissCallSheet(){ CS_DISMISSED=true; hideCallSheet(); }
     el.style.transition='transform .28s cubic-bezier(.32,.72,0,1)';
     if(dy>80){ // continue the gesture DOWN to off-screen, then tidy up — never a mid-air disappear
       CS_DISMISSED=true; el.style.transform='translateY(112%)'; const bd=$('csheetBd'); if(bd) bd.classList.remove('on');
-      setTimeout(()=>{ el.classList.remove('on'); el.setAttribute('aria-hidden','true'); el.style.transition=''; el.style.transform=''; }, 300);
+      setTimeout(()=>{ el.classList.remove('on'); el.setAttribute('aria-hidden','true'); el.style.transition=''; el.style.transform=''; csheetH_off(); }, 300); // csheetH_off: restore absolute→fixed + unlock scroll — missing this froze the page after a drag-close
     } else { el.style.transform=''; } // snap back up to open
   });
 })();
@@ -4844,7 +5184,7 @@ async function startCheck(){
   if(!isAuthed()){ AUTH_PENDING=()=>{ try{ if(SEL_STORE&&SEL_CATS.length) showCallSheet(); }catch(_){} }; openAuth(); return; } // after login, RE-OPEN the call sheet (don't auto-place the call — that was the weird login→auto-call)
   if(!ACCOUNT||ACCOUNT.credits<=0){ openBuy('out'); return; }
   return startCheckLive(); // always the live, hear-it-happen bridge path
-  $('builder').classList.add('hidden'); $('result').classList.add('hidden'); $('live').classList.remove('hidden'); document.body.classList.remove('rview');
+  $('builder').classList.add('hidden'); $('result').classList.add('hidden'); $('live').classList.remove('hidden'); document.body.classList.remove('rview'); document.body.classList.add('lview');
   $('livestore').textContent=SEL_STORE.name; $('phase').textContent=PHASES[0];
   $('live_tr').style.display='none'; $('live_tr_body').innerHTML='';
   let pi=0; const phaseT=setInterval(()=>{ pi=Math.min(pi+1,PHASES.length-1); $('phase').textContent=PHASES[pi]; },4500);
@@ -4977,7 +5317,7 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
     // Direct-dial calls log menu stages (4/5/6) in a 0s pass-through — they never happened; drop them.
     }).filter(r=>!((r.s.n===4||r.s.n===5||r.s.n===6)&&!r.last&&r.secs!=null&&r.secs<1));
     // The final step ("Asking about {product}") shows NO trailing seconds (owner 2026-07-02).
-    const stepEls=stepRows.map(r=>`<span class="${r.last?'cur':''}">${esc(liveStageLabel(r.s.n)||r.s.label)}${r.secs!=null&&!r.last?` <span style="color:#C2C2D0;font-weight:600;font-size:12.5px">${r.secs}s</span>`:''}</span>`).join('');
+    const stepEls=stepRows.map(r=>`<span class="${r.last?'cur':''}">${esc(liveStageLabel(r.s.n)||r.s.label)}${r.secs!=null&&!r.last?` ${r.secs}s`:''}</span>`).join(''); // seconds are plain text — same size/weight/italic as the step they belong to (owner 07-17)
     const totalS=finalElapsed!=null?Math.round(finalElapsed):(n>0?Math.round(steps[n-1].at):0);
     const bubs=human.map(l=>{ const m=l.match(/^(Agent|Clerk):\s*(.*)$/); if(!m) return '';
       const ai=m[1]==='Agent';
@@ -4988,13 +5328,14 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
     return `<div class="ctlv2" style="margin-bottom:22px">
       <div class="ctlv2-rail"><span class="d1"></span><span class="ln" style="background:linear-gradient(180deg,#4ADE80 0%,${live?'#4ADE80 100%':`color-mix(in srgb,#4ADE80 35%,${tone}) 60%,${tone} 100%`})"></span><span class="d2" style="background:${live?'#4ADE80':tone};${live?'box-shadow:0 0 8px rgba(74,222,128,.6)':''}"></span></div>
       <div style="flex:1;min-width:0">
-        <details${status?'':' open'}><summary><span style="font-size:15px;font-weight:700;display:inline-flex;align-items:center">${t('step.calling','Calling')}${SEL_STORE&&(SEL_STORE.logoUrl||SEL_STORE.name)?`<span class="callwho ${SEL_STORE.logoDark?'lite':''}">${storeFace(SEL_STORE)}</span>`:''}</span><span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#8A8A96">${stepRows.length+1} ${stepRows.length+1===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg></span></summary>
+        <details${status?'':' open'}><summary><span class="ctl-lead${(live&&stepRows.length)?' was':''}" style="display:inline-flex;align-items:center">${t('step.calling','Calling')}${SEL_STORE&&(SEL_STORE.logoUrl||SEL_STORE.name)?`<span class="callwho ${SEL_STORE.logoDark?'lite':''}">${storeFace(SEL_STORE)}</span>`:''}</span><span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#8A8A96">${stepRows.length+1} ${stepRows.length+1===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg></span></summary>
           <div class="ctlv2-steps">${stepEls}</div>
         </details>
         <div id="convo_body" style="${bubs?'margin-top:12px;':''}display:flex;flex-direction:column;gap:9px">${bubs}</div>
+        ${(live&&!bubs)?`<div class="cs-wait" style="margin:9px 0 0;padding-left:0;text-align:left">${t('live.waitperson','Reaching a person…')}</div>`:''}
         ${vline}
       </div>
-    </div>${(live&&!bubs)?`<div class="cs-wait" style="margin:6px 0 22px 26px">${t('live.waitperson','Reaching a person…')}</div>`:''}`;
+    </div>`; /* "Reaching a person…" now lives INSIDE the timeline column, right under the current step (owner 07-17: it floated below the log and read right-shifted) */
   }
   const stepRows = steps.slice(1).map((s,idx)=>{
     const realI=idx+1; let secs=null; // seconds this step took (real timings only — derived steps are all at:0)
@@ -5117,7 +5458,67 @@ function playMu(b64,track){
   src.start(at); AUDIO_NEXT[track]=at+buf.duration;
 }
 function stopAudio(){ if(AUDIO_WS){AUDIO_WS.close();AUDIO_WS=null;} if(AUDIO_CTX){AUDIO_CTX.close().catch(()=>{});AUDIO_CTX=null;} AUDIO_NEXT={}; }
+// Flight recorder for the live view (owner 07-17: the freeze only happens on the owner's phone).
+// Buffers a terse play-by-play and ships it every few seconds + at finalize, so a frozen call still
+// tells us exactly what this device saw. Zero effect on behavior; ~1 tiny request per 5s during a call.
+let LVLOG=[]; let LVSHIP=null;
+function lvlog(m){ try{ LVLOG.push(Math.round((Date.now()-(LIVE_T0||Date.now()))/1000)+'s '+m); if(LVLOG.length>100) LVLOG.shift(); }catch(_){} }
+function lvship(){ try{ const body=JSON.stringify({lines:LVLOG}); if(navigator.sendBeacon) navigator.sendBeacon('/pub/live-debug', body); else fetch('/pub/live-debug',{method:'POST',headers:{'content-type':'application/json'},body,keepalive:true}).catch(()=>{}); }catch(_){} }
+// ============================================================================================
+// QUEUED "YOU'RE NEXT" HOLDING CARD  —  contract Pops's queue feed must match (front & back agree):
+//   POST /app/check-live (and /pub/check-live): when the concurrency governor has NO open slot,
+//     respond  { queued:true, ticket:"<id>", position:<1-based int>, etaSec:<int> }
+//     instead of { room, wsHost }. When a slot is free, respond { room, wsHost } exactly as today.
+//   GET /app/check-live/queue/:ticket (and /pub/check-live/queue/:ticket), polled once/second:
+//     still waiting -> { queued:true, position:<int>, etaSec:<int> }
+//     call started  -> { room:"<room>", wsHost:"<host>" }   (the "your call started" flip signal)
+//     gave up/expired -> { error:"<reason>" }
+// NON-DESTRUCTIVE: today the backend never returns queued -> this whole path is skipped and a check
+// goes straight to live, byte-identical to before. No charge happens while queued (the call isn't
+// placed until a slot opens). Drive it on staging with ?simqueue=1 (front-only demo, no backend).
+let HOLD={active:false};
+function holdFmt(sec){ sec=Math.max(0,Math.round(sec)); return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0'); } // mm:ss (CD comp)
+function holdRender(eta){ const v=$('hc_val'); if(v) v.textContent=holdFmt(eta); }
+function holdResolve(v){ if(!HOLD.active) return; HOLD.active=false; clearInterval(HOLD.poll); clearInterval(HOLD.tick); const r=HOLD.resolve; HOLD.resolve=null; if(r) r(v); }
+function holdForSlot(resp,useApp){
+  return new Promise(resolve=>{
+    HOLD={active:true,ticket:resp.ticketId,sim:resp.ticketId==='sim',eta:Math.max(0,resp.etaSeconds!=null?resp.etaSeconds:30),resolve:resolve,poll:null,tick:null};
+    const hd=$('hc_head'); if(hd) hd.textContent=t('hold.head',"We're slammed.");
+    const sub=$('hc_sub'); if(sub) sub.textContent=t('hold.sub','Hang tight.');
+    const lb=$('hc_lbl'); if(lb) lb.textContent=t('hold.timer','Your check starts in');
+    $('live').classList.add('hidden'); $('holdCard').classList.remove('hidden');
+    holdRender(HOLD.eta);
+    HOLD.tick=setInterval(()=>{ if(!HOLD.active) return; HOLD.eta=Math.max(0,HOLD.eta-1); holdRender(HOLD.eta); },1000); // smooth local countdown between polls
+    if(HOLD.sim){ setTimeout(()=>{ if(HOLD.active) holdResolve({simDone:true}); },((resp.etaSeconds!=null?resp.etaSeconds:30)+1)*1000); return; } // staging demo (?simqueue): count down, then run the real check
+    const started=Date.now(); // Pops's feed (docs/specs/queue-feed/CONTRACT): one public ticket poll for both app + anon.
+    HOLD.poll=setInterval(async()=>{
+      if(!HOLD.active) return;
+      let o=null; try{ o=await (useApp?appApi:api)('/pub/queue/'+encodeURIComponent(HOLD.ticket)); }catch(_){ o=null; }
+      if(!HOLD.active) return;
+      if(o){
+        if(o.status==='dialing'||o.room||o.providerCallId){ holdResolve(o); return; } // slot opened -> flip to the live transcript
+        if(o.status==='error'||o.status==='gone'){ holdResolve({error:o.error||o.status}); return; }
+        if(typeof o.etaSeconds==='number'){ HOLD.eta=Math.max(0,o.etaSeconds); holdRender(HOLD.eta); } // status:'queued'
+      }
+      if(Date.now()-started>5*60*1000) holdResolve({error:'timeout'}); // safety: never hold forever
+    },1000);
+  });
+}
+// Standalone visual preview of the queued holding card (?holdpeek) — no check, no call, just the card looping.
+function holdPeek(){
+  try{ ['builder','live','result','history'].forEach(id=>{ const el=$(id); if(el) el.classList.add('hidden'); }); }catch(_){ }
+  try{ const hd=document.querySelector('header'); if(hd) hd.style.display='none'; const ft=document.querySelector('.site-footer'); if(ft) ft.style.display='none'; const sl=document.querySelector('.suplaunch'); if(sl) sl.style.display='none'; document.querySelectorAll('.sup-tab').forEach(e=>e.style.display='none'); const m=document.querySelector('main'); if(m){ m.style.minHeight='86vh'; m.style.display='flex'; m.style.flexDirection='column'; m.style.justifyContent='center'; } }catch(_){ }
+  const hc=$('holdCard'); if(!hc) return; hc.classList.remove('hidden');
+  const hd=$('hc_head'); if(hd) hd.textContent=t('hold.head',"We're slammed.");
+  const sub=$('hc_sub'); if(sub) sub.textContent=t('hold.sub','Hang tight.');
+  const lb=$('hc_lbl'); if(lb) lb.textContent=t('hold.timer','Your check starts in');
+  let s=30; const fmt=n=>Math.floor(n/60)+':'+String(n%60).padStart(2,'0');
+  const tick=()=>{ const v=$('hc_val'); if(!v) return; v.textContent=fmt(s); s=s>0?s-1:30; };
+  tick(); setInterval(tick,1000);
+}
 async function startCheckLive(){
+  LVLOG=[]; lvlog('start BUILD=r0718a ua-visible='+document.visibilityState+' online='+navigator.onLine); lvship(); clearInterval(LVSHIP); LVSHIP=setInterval(lvship,3000);
+  document.addEventListener('visibilitychange',()=>lvlog('visibility='+document.visibilityState),{once:false});
   CALL_GEN++; // FIRST thing: cancel any still-running background verdict poll from the previous call NOW —
               // before the confirm modal — so it can never repaint the old result over this new call.
   stopAudio(); // tear down the PREVIOUS call's audio socket + AudioContext before opening a new one. Without
@@ -5135,16 +5536,28 @@ async function startCheckLive(){
   }catch(e){ AUDIO_CTX=null; }
   AUDIO_NEXT={}; AUDIO_LIVE=false; if($('audio_ind'))$('audio_ind').style.display='none';
   if(!(await preCallGate())) return; // #17: last-call reminder + 24h "are you sure" (audio already unlocked above)
-  $('builder').classList.add('hidden'); $('result').classList.add('hidden'); $('live').classList.remove('hidden'); document.body.classList.remove('rview');
+  $('builder').classList.add('hidden'); $('result').classList.add('hidden'); $('live').classList.remove('hidden'); document.body.classList.remove('rview'); document.body.classList.add('lview');
   { const _fd=$('finds'); if(_fd)_fd.style.display='none'; } // hide the finds ticker on the call page — keep it uncrowded
   // Listeners hear the call through the browser — iOS silent switch mutes web audio, so remind them.
   const _mb=$('muteBanner'); if(_mb) _mb.style.display='none'; // owner asked to drop the 'flip off silent' note
-  LIVE_STEPS=[]; LIVE_TR=[]; LIVE_TRANSCRIPT=''; AGENT_PITCHED=false; LIVE_STAGE=0; LIVE_DONE=false; LIVE_T0=Date.now(); window.LIVE_FOLLOW=true;
+  LIVE_STEPS=[]; LIVE_TR=[]; LIVE_TRANSCRIPT=''; AGENT_PITCHED=false; LIVE_STAGE=0; LIVE_DONE=false; LIVE_T0=Date.now(); window.LIVE_FOLLOW=true; window._livePend=false;
   fillLiveHeader(); const _lr=$('live_rhead'); if(_lr)_lr.className='rhead live';
   liveStage(1); // logs step 1 + renders the call box (steps on top, empty script below)
   let secs=0; const elT=setInterval(()=>{ secs+=1; },1000); // counts toward the hard cap only — no on-screen timer
   LIVE_TIMERS=[elT];
-  const r=await (useApp?appApi:api)(useApp?'/app/check-live':'/pub/check-live',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryIds:SEL_CATS,specificProduct:SEL_PRODUCT,kioskMode:!!SEL_KIOSK})});
+  const SIMQUEUE=/[?&]simqueue/i.test(location.search||'');
+  if(SIMQUEUE){ const _s=await holdForSlot({queued:true,ticketId:'sim',etaSeconds:30},useApp); $('holdCard').classList.add('hidden'); $('live').classList.remove('hidden'); if(_s&&_s.cancelled){ clearInterval(elT); stopAudio(); backToBuilder(); return; } }
+  let r=await (useApp?appApi:api)(useApp?'/app/check-live':'/pub/check-live',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryIds:SEL_CATS,specificProduct:SEL_PRODUCT,kioskMode:!!SEL_KIOSK})});
+  // Queued (no open call slot): hold the user on the "you're next" card, poll Pops's queue feed each
+  // second, and flip to the live transcript the instant a slot opens (room arrives). Skipped entirely
+  // when the backend returns a room straight away (today's behavior).
+  if(r && r.queued && r.ticketId){
+    const held=await holdForSlot(r,useApp);
+    $('holdCard').classList.add('hidden'); $('live').classList.remove('hidden');
+    const liveRoom=held&&(held.room||held.providerCallId);
+    if(!held||held.error||!liveRoom){ clearInterval(elT); stopAudio(); backToBuilder(); toast(t('toast.callstart.fail',"Couldn't start the check")); return; }
+    r={room:liveRoom,wsHost:held.wsHost}; LIVE_T0=Date.now(); // slot opened: enter the live view at connect
+  }
   if(r.error||!r.room){ clearInterval(elT); stopAudio(); backToBuilder(); if(r.error==='no_credits')openBuy('out'); else if(r.error==='unauthorized')signIn(); else if(r.error==='too_soon'){ toast(r.message||tf('toast.toosoon','You just checked this store. Check again in about {n} min.',{n:r.retryAfterMin||60}),'accent'); } else if(r.error==='store_closed'){ toast(tf('toast.closed','🔒 {x}. No call placed.',{x:tLbl(r.label||'Store is closed')})); } else toast(t('toast.callstart.fail',"Couldn't start the check")); return; }
   LIVE_ROOM=r.room; if(canListen) $('hangup_btn').style.display='';
   // Transcript + stage stream over the WS for EVERYONE — instant, the moment ElevenLabs emits a line
@@ -5154,9 +5567,11 @@ async function startCheckLive(){
   // this domain now passes WebSocket upgrades through (it used to rebuild the Response and drop the 101,
   // which silently killed the live transcript). Falls back to the raw host the server hands us.
   const myGen=CALL_GEN; const wsHost=(location.host||r.wsHost); const ws=new WebSocket('wss://'+wsHost+'/listen?room='+encodeURIComponent(r.room)); AUDIO_WS=ws;
+  lvlog('room='+String(r.room).slice(0,18)+' ws-connecting host='+wsHost);
+  ws.onopen=()=>lvlog('ws open'); ws.onerror=()=>lvlog('ws ERROR');
   ws.onmessage=ev=>{ if(myGen!==CALL_GEN){ try{ws.close();}catch(e){} return; } try{ const d=JSON.parse(ev.data); // a socket from an earlier call must never play/inject into a newer one
     if(d.audio){ if(AUDIO_CTX) playMu(d.audio,d.track); }
-    else if(d.line&&d.line.text){ LIVE_TR.push(d.line.role+': '+d.line.text); LIVE_TRANSCRIPT=LIVE_TR.join('\n'); if(d.line.role==='Agent'&&AGENT_ASK.test(d.line.text))AGENT_PITCHED=true; liveStage(stageForLines(LIVE_TR,AGENT_PITCHED)); renderLiveMsg(); } // real-time steps + human script, as the call happens
+    else if(d.line&&d.line.text){ if(!LIVE_TR.length) lvlog('ws first line'); LIVE_TR.push(d.line.role+': '+d.line.text); LIVE_TRANSCRIPT=LIVE_TR.join('\n'); if(d.line.role==='Agent'&&AGENT_ASK.test(d.line.text))AGENT_PITCHED=true; liveStage(stageForLines(LIVE_TR,AGENT_PITCHED)); renderLiveMsg(); } // real-time steps + human script, as the call happens
     // Instant flip: the bridge tells us the moment the call ends → finalize NOW (snappy, like the live
     // transcript). Crucially we do NOT clearInterval(POLL) here — the POLL keeps running as the safety net,
     // so even if this finalize hiccups the POLL still resolves it (that POLL-clearing was the old freeze).
@@ -5169,7 +5584,7 @@ async function startCheckLive(){
   // to CONNECT at dial time can't finalize prematurely — only treat a close as end-of-call once the call is
   // clearly underway (we have a conversation id, streamed lines, or it's been connected >15s). The POLL
   // still covers startup, and finalizeLive is idempotent, so this can only help, never double-fire harmfully.
-  ws.onclose=()=>{ try{ if(myGen!==CALL_GEN) return;
+  ws.onclose=()=>{ try{ if(myGen!==CALL_GEN) return; lvlog('ws CLOSED lines='+LIVE_TR.length);
     const underway = LIVE_CID||cid||LIVE_TR.length || (LIVE_T0 && (Date.now()-LIVE_T0)>15000);
     if(!(underway && $('live') && !$('live').classList.contains('hidden'))) return;
     // A socket close is NOT proof the call ended: mid-call the live connection can drop (network / CDN)
@@ -5183,13 +5598,14 @@ async function startCheckLive(){
   }catch(e){} };
   liveStage(2); // dialing → it's ringing
   let cid=null;
-  POLL=setInterval(async()=>{
+  POLL=setInterval(async()=>{ try{
     if(secs>=210){ clearInterval(POLL);clearInterval(elT); finalizeLive(cid); return; }
     if(!cid){
       // Resolve the live conversation id (set once the bridge engages ElevenLabs). The moment it lands
       // the call is connected → flip to "Answered" and fall STRAIGHT through to pull the transcript
       // (no wasted cycle), instead of sitting on "Ringing…".
       const bs=await api('/pub/bridge/'+r.room);
+      lvlog('bridge prog='+(bs&&bs.callProgress?bs.callProgress.status:'-')+' cid='+(bs&&bs.conversationId?'Y':'n')+(bs&&bs.error?' err='+bs.error:''));
       // Twilio says the call was ANSWERED → show "We've connected" NOW, even if the agent hasn't
       // engaged yet (owner 07-10 call 6: the log sat on "waiting" ~35s into a connected call).
       if(bs&&bs.callProgress&&/^(in-progress|answered)$/.test(bs.callProgress.status)) liveStage(3);
@@ -5204,6 +5620,7 @@ async function startCheckLive(){
       else return; // still ringing / connecting
     }
     const o=await appApi('/pub/live/'+encodeURIComponent(cid));
+    lvlog('live tx='+((o&&o.transcript)?o.transcript.length:0)+' live='+(o?String(o.live):'-')+(o&&o.error?' err='+o.error:''));
     if(o&&o.transcript){
       const lines=o.transcript.split('\n').filter(Boolean);
       // Adopt the poll's transcript when the WS gave nothing yet OR when the poll has MORE than we've
@@ -5214,9 +5631,11 @@ async function startCheckLive(){
       renderLiveMsg();
     }
     if(o && o.live===false){ clearInterval(POLL);clearInterval(elT); finalizeLive(cid); }
+  }catch(_){/* one bad tick must NEVER kill the live view — the next tick retries (owner 07-16 freeze) */}
   },1200);
 }
 async function finalizeLive(cid){
+  lvlog('finalize cid='+(cid||LIVE_CID?'Y':'n')+' lines='+LIVE_TR.length); lvship(); clearInterval(LVSHIP);
   // Idempotent: d.ended (instant) AND the POLL can both call this. No hard guard + no POLL-clearing here
   // (that combo is what froze calls) — history dedupes and showResult just re-renders, so a re-fire is safe.
   stopAudio(); stopLiveTimers();
@@ -5350,7 +5769,7 @@ async function finalize(cid){
   saveCheckToHistory(res, cid);
   showResult(res, cid);
 }
-function backToBuilder(){ try{ document.documentElement.classList.remove('restoring'); }catch(_){ } /* deep-link hide must never survive into the homepage */ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } try{ document.body.classList.remove('zoning'); const _z=$('zones'); if(_z) _z.classList.remove('on'); const _h=$('histOverlay'); if(_h) _h.classList.remove('on'); }catch(_){ } /* close any open Check history / My Zones sheet */ TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); try{ const _st=$('supTab'); if(_st)_st.classList.remove('invite'); }catch(_){ } /* the post-check glow belongs to the result page only */ try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby','zones'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
+function backToBuilder(){ try{ document.documentElement.classList.remove('restoring'); }catch(_){ } /* deep-link hide must never survive into the homepage */ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } try{ document.body.classList.remove('zoning'); const _z=$('zones'); if(_z) _z.classList.remove('on'); const _h=$('histOverlay'); if(_h) _h.classList.remove('on'); }catch(_){ } /* close any open Check history / My Zones sheet */ TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); document.body.classList.remove('lview'); ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); window._livePend=false; try{ const _st=$('supTab'); if(_st)_st.classList.remove('invite'); }catch(_){ } /* the post-check glow belongs to the result page only */ try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby','zones'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
   // Returning to the builder = a FRESH homepage (as if loaded for the first time). Drop ANY store/
   // category left over from a reopened call so it doesn't show pre-selected in the call CTA (which also
   // auto-scrolled to it). The apex site pre-locks Pokémon via BRAND_CAT, so this must NOT be gated on it
@@ -5545,9 +5964,14 @@ function showResult(o, cid){
   try{ recordResultPrice(o); }catch(_){ }
   resultCacheSet(cid,o);
   { const _r=$('result'); if(_r) _r.classList.remove('r-play'); } // clear the entrance trigger before every (re)render — the block below re-arms it only on the content-ready render
-  if(_fromLive && o && o.status!=='pending'){ setTimeout(()=>{ try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(_){ window.scrollTo(0,0); } },120); }
+  // Scroll back to the verdict at the top when a live call settles (owner 07-15b, re-broken by the
+  // instant pending-flip: finalizeLive hides #live and shows a PENDING result first, so by the time the
+  // real verdict renders _fromLive is false and the scroll never fired — owner 07-17). The pending flip
+  // arms a flag; the settled render consumes it.
+  if(_fromLive && o && o.status==='pending') window._livePend=true;
+  if(o && o.status!=='pending' && (_fromLive || window._livePend)){ window._livePend=false; setTimeout(()=>{ try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(_){ window.scrollTo(0,0); } },120); }
   stopLiveTimers(); LIVE_ROOM=null; if($('hangup_btn'))$('hangup_btn').style.display='none';
-  $('live').classList.add('hidden'); $('builder').classList.add('hidden'); $('history').classList.add('hidden'); $('success').classList.add('hidden'); const hov=$('handoff'); if(hov)hov.classList.add('hidden'); document.body.classList.remove('fabbed');
+  $('live').classList.add('hidden'); $('builder').classList.add('hidden'); $('history').classList.add('hidden'); $('success').classList.add('hidden'); const hov=$('handoff'); if(hov)hov.classList.add('hidden'); document.body.classList.remove('fabbed'); document.body.classList.remove('lview'); /* verdict bloom takes over from the live bloom */
   { const _fd=$('finds'); if(_fd)_fd.style.display='none'; } // no rotating finds ticker on the result/call page
   LASTRES=o; TRANSLATED=false; ORIGHTML=''; FBK_SENT=false;
   // Always describe exactly what happened — never a bare "unclear".
@@ -6582,8 +7006,8 @@ function zCredits(){ try{ if(ACCOUNT&&(ACCOUNT.comp||ACCOUNT.credits==null&&ACCO
 // Clean header: just the title (no credits pill — that read as "repeating My checks"). No back button on
 // the top-level My Zones (it's a slide-up: drag down / tap behind). Sub-screens pass `back` for list nav.
 const zFrameHead=(title,back)=>back
-  ? `<div class="zf-head"><button class="zf-back" onclick="${back}" aria-label="Back">‹</button><div class="zf-title">${esc(title)}</div></div>`
-  : `<div class="zf-head" style="flex-direction:column;align-items:center;gap:9px;padding-top:0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${AC1()}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg><div class="zf-title">${esc(title)}</div></div>`; // unified sheet nav: icon on top (owner 07-14)
+  ? `<div class="zf-head zf-compact"><div class="zf-title sm">${esc(title)}</div></div>` /* no back button — drag the sheet down to go back to My Zones (owner 07-19) */
+  : `<div class="zf-head" style="flex-direction:column;align-items:center;gap:9px;padding-top:0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${AC1()}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg><div class="zf-title">${esc(title)}</div></div>`;
 const ZKEBAB='<svg width="20" height="20" viewBox="0 0 24 24" fill="#8A8A96"><circle cx="5" cy="12" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="19" cy="12" r="2"></circle></svg>';
 const ZGOARR='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFCB05" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15"></path><path d="M13 6l6 6-6 6"></path></svg>';
 async function openZones(){
@@ -6617,6 +7041,7 @@ async function renderZonesList(){
 // Same renderer the homepage store rows use (storeFace) so zone logos are byte-for-byte identical.
 function zoneFace(st){ return `<div class="zc-face ${st.logoDark?'lite':''} ${st.logoWide?'widelogo':''}">${storeFace(st)}</div>`; }
 function zonePaintList(list){
+  ZONES.building=false; window.KB_DOCK=false; // leaving the builder: drop the keyboard-dock freeze so the sheet re-anchors (glass) on the list
   const z=$('zmodal'); if(!z) return;
   const CHK='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"></path></svg>';
   const cards=(list||[]).map(zn=>{
@@ -6721,7 +7146,7 @@ async function openAlerts(){ const ov=sheetShell('alertsOv');
         <span style="display:flex;flex-direction:column;gap:6px;flex:none">
           <button onclick="alertMute(${x.id},${x.muted?0:1})" style="background:rgba(255,255,255,.09);border:0;border-radius:999px;padding:7px 13px;color:#CDCDD8;font:800 12px Inter;cursor:pointer">${x.muted?t('alerts.unmute','Unmute'):t('alerts.mute','Mute')}</button>
           <button onclick="alertStop(${x.id})" style="background:rgba(255,123,123,.12);border:0;border-radius:999px;padding:7px 13px;color:#FF9B9B;font:800 12px Inter;cursor:pointer">${t('alerts.stop','Stop')}</button></span></div>`;}).join('')
-      : `<div class="meta" style="text-align:center;padding:18px 8px">${sentLines(t('alerts.none',"You haven't created any alerts."))}</div>`; };
+      : `<div style="margin-top:10px;padding:20px 16px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);text-align:center"><span style="font-size:12.5px;font-style:italic;font-weight:600;color:#8A8A96;line-height:1.5">${sentLines(t('alerts.none',"You haven't created any alerts."))}</span></div>`; }; // empty state = a card in the alert-row family, small italic muted text (owner 07-17: was reading as the section subhead)
   window.__alertsPaint=paint;
   // Instant when the prefetch already landed; dots only on a cold open.
   ov.innerHTML=shell(ALERTS_ME?'' : `<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:22px 0"><span></span><span></span><span></span></div>`);
@@ -6765,8 +7190,8 @@ function zoneDeleteConfirm(id){
     <button style="${Z_ROWBTN};justify-content:center;margin-bottom:10px" onclick="zPopClose();zoneDelete(${id})"><span style="color:#FF8A8A">${t('zones.delete.yes','Yes, delete it')}</span></button>
     <button style="${Z_ROWBTN};justify-content:center" onclick="zPopClose()">${t('zones.keep','Keep it')}</button>`);
 }
-async function zoneRename(id,name){ try{ await appApi('/app/zones/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({name})}); }catch(_){ } renderZonesList(); }
-async function zoneDelete(id){ try{ await appApi('/app/zones/'+id,{method:'DELETE'}); }catch(_){ } renderZonesList(); }
+async function zoneRename(id,name){ try{ await appApi('/app/zones/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({name})}); toast(t('zones.renamed','Zone renamed'),'neutral'); }catch(_){ toast(t('err.generic',"That didn't go through. Give it another try.")); } renderZonesList(); }
+async function zoneDelete(id){ try{ await appApi('/app/zones/'+id,{method:'DELETE'}); toast(t('zones.deleted','Zone deleted'),'neutral'); }catch(_){ toast(t('err.generic',"That didn't go through. Give it another try.")); } renderZonesList(); }
 // ---- Screen A — build / edit a zone ----
 async function zoneNew(){ zHideAll(); zShow(); ZONES.editId=null; ZONES.sel=new Set(); ZONES.name=''; ZONES.mapOpen=false; renderZoneBuild(); await zoneEnsureStores(); renderZoneBuild(); }
 async function zoneEdit(id){ zHideAll(); zShow(); ZONES.editId=id; ZONES.sel=new Set(); ZONES.name='';
@@ -6798,6 +7223,7 @@ function zoneRowHTML(s){ const on=ZONES.sel.has(s.id); const mi=storeMi(s); cons
     <div style="min-width:0;flex:1"><div class="nm">${esc(s.name)}</div><div class="lo">${esc(s.location||'')}${closed?' · '+t('zones.closed','closed'):''}</div></div>
     ${mi!=null?`<div class="smi">${mi<10?mi.toFixed(1):Math.round(mi)}<small>mi</small></div>`:''}</div>`; }
 function renderZoneBuild(){
+  ZONES.building=true;
   const z=$('zmodal'); const stores=zoneBuildStores(); const n=ZONES.sel.size; const R=ZONES.radius||5; const map=!!ZONES.mapOpen;
   const rings=[1,2,5,10].map(r=>`<button class="zrad ${R===r?'on':''}" onclick="zoneSetRadius(${r})">${r}</button>`).join('');
   const rows=stores.length?stores.map(zoneRowHTML).join('')
@@ -6808,13 +7234,14 @@ function renderZoneBuild(){
       <div class="zsearch"><input id="z_loc" class="kin" placeholder="${t('zones.locph','Search a ZIP or town…')}" autocomplete="off" oninput="zoneSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();zoneGeocode();}"><button class="zgps" onclick="zoneGPS()" aria-label="Use my location">${ICO.pin('currentColor')}</button></div>
       <div class="zseg"><button class="${!map?'on':''}" onclick="if(ZONES.mapOpen)zoneToggleMap()">${t('zones.list','List')}</button><button class="${map?'on':''}" onclick="if(!ZONES.mapOpen)zoneToggleMap()">${t('zones.map','Map')}</button></div>
       <div class="zradrow"><span class="zradlbl">${t('zones.radius','Radius')}</span><div class="zradtrack">${rings}<span class="zradmi">mi</span></div><button class="zaddall${zoneAllInRadiusSelected()?' on':''}" onclick="zoneToggleAll()">${zoneAllInRadiusSelected()?t('zones.removeall','Remove all'):'＋ '+t('zones.addallshort','Add all')}</button></div>
+      <div class="zcap">${t('zones.cap10','A zone checks up to 10 stores at once.')}</div>
     </div>
     <div class="zf-scroll tight${map?' mapmode':''}" style="${map?'overflow:hidden':''}">
       <div id="zmap" style="display:${map?'block':'none'};height:100%"></div>
       <div class="zlist" style="display:${map?'none':'block'};max-height:none;background:none;box-shadow:none;padding:0">${rows}</div>
     </div>
     <div class="zf-foot"><div class="zbasket${n?' up':''}" id="zBasket">
-      <div class="zbkhead"><span id="z_count">${n} ${n===1?t('zones.store','store'):t('zones.stores','stores')}</span></div>
+      <div class="zbkhead"><span id="z_count">${n} ${n===1?t('zones.store','store'):t('zones.stores','stores')}</span><button class="zclearall" onclick="zoneClearAll()">${t('zones.clearall','Clear all')}</button></div>
       <div class="zchips" id="zChips">${zoneChipsHTML()}</div>
       <div class="zbkrow"><input id="z_name" placeholder="${t('zones.nameph3','Name it…')}" value="${esc(ZONES.name||'')}" maxlength="40" oninput="ZONES.name=this.value"><button class="zbksave" id="z_save" onclick="zoneSave()"><span>${t('zones.save','Save zone')}</span></button></div>
     </div></div>
@@ -6842,7 +7269,7 @@ function zoneBarSync(){ const n=ZONES.sel.size;
 function zoneSyncBasketPad(){ requestAnimationFrame(()=>{ const sc=document.querySelector('#zones .zf-scroll'), bk=$('zBasket'); if(!sc) return; if(sc.classList.contains('mapmode')){ sc.style.paddingBottom=''; return; } sc.style.paddingBottom=(ZONES.sel.size>0&&bk)?(bk.offsetHeight+18)+'px':''; }); }
 function zoneGPS(){ try{ toast(t('zones.locating','Finding your location…'),'neutral'); }catch(_){ } findMe(async()=>{ await zoneEnsureStores(); if(ZONES.mapOpen){ if(ZMAP&&USER_LOC){ try{ ZMAP.setView([USER_LOC.lat,USER_LOC.lng],12); }catch(_){ } } zoneMapDraw(); zoneBarSync(); } else renderZoneBuild(); }); }
 function zoneToggle(id){ const add=!ZONES.sel.has(id);
-  if(add && ZONES.sel.size>=25){ toast(t('zones.max25','Zones max out at 25 stores'),'neutral'); return; } // sweep cap (owner 07-14)
+  if(add && ZONES.sel.size>=10){ toast(t('zones.limit10',"You've hit the 10 store limit"),'neutral'); return; } // sweep cap (owner 07-14)
   if(add){ ZONES.sel.add(id); const s=(STORES||[]).find(x=>x.id===id); if(s) ZONES.storeById.set(id,s); } else ZONES.sel.delete(id);
   // update the tapped row + footer in place (keeps the list scroll position)
   const row=document.querySelector('#zones .zlist .zpick[onclick="zoneToggle('+id+')"]');
@@ -6856,8 +7283,8 @@ function zoneAllInRadiusSelected(){ const rs=zoneRadiusStores(); return rs.lengt
 // "Remove all" so a tap clears them back out.
 function zoneToggleAll(){ const rs=zoneRadiusStores(); const allOn=rs.length>0 && rs.every(s=>ZONES.sel.has(s.id));
   if(allOn){ rs.forEach(s=>ZONES.sel.delete(s.id)); }
-  else { let hitCap=false; for(const s of rs){ if(ZONES.sel.has(s.id)) continue; if(ZONES.sel.size>=25){ hitCap=true; break; } ZONES.sel.add(s.id); ZONES.storeById.set(s.id,s); } // nearest first — the list is distance-sorted
-    if(hitCap) toast(t('zones.max25','Zones max out at 25 stores'),'neutral'); }
+  else { let hitCap=false; for(const s of rs){ if(ZONES.sel.has(s.id)) continue; if(ZONES.sel.size>=10){ hitCap=true; break; } ZONES.sel.add(s.id); ZONES.storeById.set(s.id,s); } // nearest first — the list is distance-sorted
+    if(hitCap) toast(t('zones.limit10',"You've hit the 10 store limit"),'neutral'); }
   if(ZONES.mapOpen){ zoneMapDraw(); zoneBarSync(); } else renderZoneBuild(); }
 // --- Zone location search + map ('pin a zone'): type a ZIP/town or tap the map to recenter, tap pins to add ---
 let ZMAP=null, ZMARKERS={}, ZRING=null;
@@ -6873,6 +7300,7 @@ async function zoneGeocode(silent){
     toast(tf('zones.located','Centered on {q}',{q}),'neutral'); }
   else if(silent!==true) toast(t('zones.noplace',"Couldn't find that place."));
 }
+function zoneClearAll(){ ZONES.sel=new Set(); renderZoneBuild(); }
 function zoneToggleMap(){ ZONES.mapOpen=!ZONES.mapOpen; renderZoneBuild(); }
 function zoneMapEnsure(){
   if(!ZONES.mapOpen) return;
@@ -6954,7 +7382,7 @@ async function zoneCheckAll(id){
   });
   if(!goOn) return;
   let run=null; try{ run=await appApi('/app/zones/'+id+'/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({categoryId:(BRAND_CAT&&BRAND_CAT.id)||SEL_CAT||undefined})}); }catch(e){ run={error:'net'}; }
-  if(!run||run.error){ toast(run&&run.error==='zone_too_big'?t('zones.max25','Zones max out at 25 stores'):run&&run.error==='no_credits'?t('zones.nocredits','You\'re a few checks short for the whole zone.'):t('err.generic',"That didn't go through. Give it another try."), run&&run.error==='zone_too_big'?'neutral':undefined); if(run&&run.error==='no_credits'){ setTimeout(()=>{ backToBuilder(); openBuy(); },600); } return; }
+  if(!run||run.error){ toast(run&&run.error==='zone_too_big'?t('zones.cap10','A zone checks up to 10 stores at once.'):run&&run.error==='no_credits'?t('zones.nocredits','You\'re a few checks short for the whole zone.'):t('err.generic',"That didn't go through. Give it another try."), run&&run.error==='zone_too_big'?'neutral':undefined); if(run&&run.error==='no_credits'){ setTimeout(()=>{ backToBuilder(); openBuy(); },600); } return; }
   ZONES.run={ id, runId:run.runId, name:run.name||'' }; renderZoneRun(); zoneStartPoll();
 }
 function zoneStartPoll(){ zoneStopPoll(); ZONES.poll=setInterval(zonePollTick,1800); zonePollTick(); }
@@ -6965,40 +7393,85 @@ async function zonePollTick(){
   ZONES.run.data=data; renderZoneRun();
   if(data.done!=null && data.total!=null && data.done>=data.total) zoneStopPoll();
 }
-function zoneRunTone(row){ const k=(row.statusKey||row.status||'').toLowerCase(); if(row.confirmed===true||/in_?stock/.test(k)) return 'in'; if(row.confirmed===false||/no_?stock|not|out|sold/.test(k)) return 'out'; if(/answer|voicemail|ivr|busy/.test(k)) return 'unk'; if(/progress|ring|calling|checking|live/.test(k)||!k) return 'live'; return 'unk'; }
+function zoneRunTone(row){ const k=(row.statusKey||row.status||'').toLowerCase();
+  // live FIRST (a mid-call row has confirmed=null), then decide stock. Match keys EXACTLY where it
+  // matters: 'not_in_stock' contains the substring 'in_stock', so a loose /in_?stock/ test paints every
+  // out-of-stock store green — check the negative keys before the positive one.
+  if(/in_progress|queued|ring|calling|checking|live/.test(k)||!k) return 'live';
+  if(row.confirmed===false||/not_in_stock|no_?stock|does_not_sell|sold_out|\bnot\b|\bout\b/.test(k)) return 'out';
+  if(row.confirmed===true||/(^|_)in_?stock/.test(k)) return 'in';
+  if(/answer|voicemail|ivr|busy/.test(k)) return 'unk'; return 'unk'; }
+// Built from EXISTING app elements only (owner 07-19c — "use the elements from the comps, don't make
+// shit up"): the summary is the My-Zones card grammar (.zc-pill · .zc-when · .zdots · .zc-faces of the
+// in-stock logos), and EVERY store row is the site's own store row (.store: .ic logo tile + .nm + .lo
+// with the built-in .sdot in/out). The verdict word takes the result-view tone colour.
 function renderZoneRun(){
   const r=ZONES.run; if(!r) return; const d=r.data||{summary:{},results:[]};
   const sm=d.summary||{}; const done=d.done||0, total=d.total||(d.results?d.results.length:0);
+  const inN=sm.inStock||0, live=total>done, checking=sm.checking!=null?sm.checking:(total-done);
   const dots=Array.from({length:total},(_,i)=>`<span class="zdot ${i<done?'done':''}"></span>`).join('');
-  const rows=(d.results||[]).map(row=>{ const tone=zoneRunTone(row); const ic={in:'✅',out:'❌',unk:'🔇',live:'📞'}[tone];
-    const lbl=row.summary||({in:t('zones.rin','In stock'),out:t('zones.rout','Not in stock'),unk:t('zones.runk','No answer'),live:t('zones.rlive','Checking…')}[tone]);
-    return `<button class="zrrow" onclick="zoneExpand('${esc(row.cid||'')}',this)">
-      <span class="zri">${ic}</span>
-      <span style="flex:1;min-width:0;text-align:left"><span class="nm">${esc(row.name||('Store '+row.retailerId))}</span><span class="zrlbl t-${tone}">${esc(lbl)}</span></span>
-      <span class="zrchev">▸</span>
-    </button><div class="zrbody" style="display:none"></div>`; }).join('');
-  const live=total>done;
+  const CHK='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"></path></svg>';
+  // In-stock store logos → the same .zc-faces tile row the zone card uses.
+  const hits=(d.results||[]).filter(row=>zoneRunTone(row)==='in');
+  const faces=hits.slice(0,6).map(row=>`<div class="zc-face">${storeFace({logoUrl:row.logoUrl,name:row.name})}</div>`).join('')+(hits.length>6?`<div class="zc-more">+${hits.length-6}</div>`:'');
+  const pill=inN>0?`<span class="zc-pill in">${CHK}${inN} ${t('zones.instock','in stock')}</span>`:`<span class="zc-pill none">${live?t('zones.checkingnow','Checking…'):t('zones.checked','Checked')}</span>`;
+  const when=`${done} ${t('zones.of','of')} ${total} ${t('zones.checkedw','checked')}${live?' · '+checking+' '+t('zones.callingw','calling'):''}`;
+  // Each result = the real store row. Tap to drop the transcript underneath.
+  const rows=(d.results||[]).map(row=>{ const tone=zoneRunTone(row);
+    const lbl=row.summary||({in:t('zones.rin','In stock'),out:t('zones.rout','Not in stock'),unk:t('zones.runk','No answer'),live:t('zones.rlive','Calling…')}[tone]);
+    const dotCls=tone==='in'?'instock':tone==='out'?'outstock':'on';
+    const sub=tone==='live'
+      ? `<span class="sdot on"></span><span class="zrfin t-live">${esc(lbl)}</span>`
+      : `<span class="sdot ${dotCls}"></span><span class="zrfin t-${tone}">${esc(lbl)}</span>`;
+    return `<div class="zresult">
+      <button class="store zrhead" onclick="zoneExpand('${esc(row.cid||'')}',this)">
+        <div class="ic">${storeFace({logoUrl:row.logoUrl,name:row.name})}</div>
+        <div style="min-width:0;flex:1"><div class="nm">${esc(row.name||('Store '+row.retailerId))}</div><div class="lo">${sub}</div></div>
+        <span class="zrchev">▸</span>
+      </button><div class="zrbody" style="display:none"></div></div>`; }).join('');
   $('zmodal').innerHTML=`<div class="zframe">${zFrameHead(r.name||t('zones.report','Zone check'),'renderZonesList()')}
     <div class="zf-scroll">
-    <div class="card" style="padding:14px 16px">
+    <div class="zc" style="cursor:default;margin-bottom:4px">
       <div class="zdots">${dots}</div>
-      <div class="zsummary">${done} ${t('zones.done','done')}${live?' · '+(total-done)+' '+t('zones.checkingw','checking'):''}</div>
-      <div class="zsumchips"><span>✅ ${sm.inStock||0} ${t('zones.rin','in stock')}</span><span>❌ ${sm.no||0} ${t('zones.no','no')}</span><span>🔇 ${sm.noAnswer||0} ${t('zones.noans','no answer')}</span></div>
+      <div class="zc-meta">${pill}<span class="zc-when">${when}</span></div>
+      ${inN>0?`<div class="zc-faces" style="margin:14px 0 2px">${faces}</div>`:''}
     </div>
-    <div class="zrlist">${rows||`<div class="card" style="text-align:center;color:#8A8A96;padding:20px">${t('zones.starting','Starting the sweep…')}</div>`}</div>
+    <div class="zrlist">${rows||`<div class="zc" style="text-align:center;color:#8A8A96;padding:24px">${t('zones.starting','Starting the sweep…')}</div>`}</div>
     <div class="zbar"><div class="zbarrow" style="gap:10px">${live?`<button class="findbtn-primary" style="flex:1" onclick="zoneStopAll()">${t('zones.stopall','Stop all')}</button>`:''}<button class="cta sm" style="flex:1" onclick="zoneShare()">${t('zones.share','Share results')}</button></div></div>
     </div>
   </div>`;
 }
+// Standalone PREVIEW of the live sweep report (owner: "give me a link before I call stores"). Mirrors
+// ?holdpeek — opens the real report over the app with SAMPLE results, no calls placed. Pulls real
+// nearby stores so the logos are real; falls back to plain names if the fetch is empty.
+async function zonePeek(){
+  try{ document.body.classList.add('zoning'); }catch(_){ }
+  const z=$('zones'); if(z){ z.classList.remove('hidden'); z.classList.add('on'); }
+  let stores=[]; try{ const r=await appApi('/pub/stores/near?q=Los%20Angeles&limit=6'); if(r&&Array.isArray(r.stores)) stores=r.stores; }catch(_){ }
+  if(!stores.length) stores=[{id:1,name:'Target'},{id:2,name:'GameStop'},{id:3,name:'Walmart'},{id:4,name:'Best Buy'},{id:5,name:'Walgreens Pharmacy'},{id:6,name:'CVS'}];
+  const keys=['in_stock','in_stock','not_in_stock','nobody_answered','in_progress','queued'];
+  const results=stores.slice(0,6).map((s,i)=>{ const k=keys[i]||'queued'; const liveK=/in_progress|queued/.test(k);
+    return { retailerId:s.id, name:s.name, logoUrl:s.logoUrl||'', cid:'', status:liveK?k:'done', statusKey:k,
+      confirmed:k==='in_stock'?true:k==='not_in_stock'?false:null, summary:'' }; });
+  const summary={ inStock:results.filter(r=>r.statusKey==='in_stock').length, no:results.filter(r=>r.statusKey==='not_in_stock').length,
+    noAnswer:results.filter(r=>r.statusKey==='nobody_answered').length, checking:results.filter(r=>/in_progress|queued/.test(r.status)).length };
+  ZONES.run={ id:0, runId:'preview', name:t('zones.previewname','Los Angeles'), data:{ done:results.filter(r=>!/in_progress|queued/.test(r.status)).length, total:results.length, summary, results } };
+  renderZoneRun();
+}
 async function zoneExpand(cid,btn){ if(!cid) return; const body=btn.nextElementSibling; if(!body) return;
-  if(body.style.display!=='none'){ body.style.display='none'; return; }
-  body.style.display='block'; body.innerHTML=`<div class="loaddots" style="display:flex;gap:6px;padding:10px 4px"><span></span><span></span><span></span></div>`;
+  if(body.style.display!=='none'){ body.style.display='none'; btn.classList.remove('open'); return; }
+  body.style.display='block'; btn.classList.add('open'); body.innerHTML=`<div class="loaddots" style="display:flex;gap:6px;padding:10px 4px"><span></span><span></span><span></span></div>`;
   try{ const o=await appApi('/pub/result/'+encodeURIComponent(cid)); const tx=(o&&o.transcript)||''; body.innerHTML=tx?chatBubbles(tx):`<div class="lo" style="padding:8px 4px;color:#8A8A96">${t('zones.notx','No transcript yet.')}</div>`; }catch(_){ body.innerHTML=`<div class="lo" style="padding:8px 4px;color:#8A8A96">${t('zones.notx','No transcript yet.')}</div>`; }
 }
 async function zoneStopAll(){ const r=ZONES.run; if(!r) return; try{ await appApi('/app/zones/run/'+r.runId+'/stop',{method:'POST'}); }catch(_){ } toast(t('zones.stopped','Stopping the sweep…'),'neutral'); setTimeout(zonePollTick,600); }
 function zoneShare(){ const r=ZONES.run; const d=(r&&r.data)||{}; const sm=d.summary||{}; const n=d.total||0, i=sm.inStock||0;
   const txt=tf('zones.sharemsg2','Just had an AI call {n} stores at once. {i} had it in stock. This thing is nuts:',{n,i});
-  const url=location.origin+'/s?k=zone&n='+n+'&i='+i; // zone landing → the zone unfurl card (owner 07-14)
+  // Pass the in-stock stores' logos so the landing page can show a logo row (owner 07-18). Cap 6, keep
+  // the URL short: {l:logoUrl, n:name} — the server tiles them, monogram-falling-back on name.
+  const hits=(d.results||[]).filter(row=>zoneRunTone(row)==='in').slice(0,6).map(row=>({l:row.logoUrl||'',n:row.name||''}));
+  const st=hits.length?'&st='+encodeURIComponent(JSON.stringify(hits)):'';
+  const cat=encodeURIComponent(brandProduct());
+  const url=location.origin+'/s?k=zone&n='+n+'&i='+i+'&cat='+cat+st+'&lang='+LANG; // zone landing → the zone unfurl card (owner 07-14)
   try{ if(navigator.share){ navigator.share({text:txt+' '+url}); } else { navigator.clipboard.writeText(txt+' '+url); toast(t('zones.copied','Copied to clipboard'),'neutral'); } }catch(_){ } }
 // ==== /ZONES ======================================================================================
 // ---- Call switcher: hop call-to-call; filter by store and outcome (scales to 20+ calls) ----
@@ -7452,6 +7925,33 @@ function closeCheckout(){ const o=$('coOverlay'); if(o) o.classList.remove('on')
 
 // Swipe-down-to-dismiss for the bottom sheets (plans + My checks). passive:false on move so the
 // drag beats the scroll once it starts; only arms when the sheet is scrolled to the top.
+// KEYBOARD DOCK: this device shrinks window.innerHeight when the keyboard opens, which made the fill
+// sheet re-measure tiny and collapse (basket floating mid-screen, homepage showing through -> a tap
+// fell through to My checks). While the zone-name input is focused we (1) freeze auto-re-placement
+// (KB_DOCK) so nothing collapses, and (2) dock the sheet to the VISIBLE area via visualViewport so the
+// name box + Save sit right above the keyboard. On blur we un-dock and restore the normal placement.
+(function zoneKeyboard(){
+  const vv=window.visualViewport; if(!vv) return;
+  function dock(){
+    const z=$('zones'), m=z&&z.querySelector('.modal'), bk=$('zBasket');
+    if(!z||!m||!z.classList.contains('on')) return;
+    m.style.position='fixed'; m.style.left='0'; m.style.right='0'; m.style.margin='0';
+    m.style.top=Math.max(0,Math.round(vv.offsetTop))+'px'; m.style.bottom='auto';
+    m.style.height=Math.round(vv.height)+'px'; m.style.maxHeight=Math.round(vv.height)+'px';
+    if(bk){ bk.style.bottom='0'; }
+  }
+  function undock(){
+    if(!window.KB_DOCK) return; window.KB_DOCK=false;
+    const z=$('zones'), m=z&&z.querySelector('.modal'), bk=$('zBasket');
+    if(m){ m.style.position=''; m.style.left=''; m.style.right=''; m.style.top=''; m.style.bottom=''; m.style.height=''; m.style.maxHeight=''; m.style.margin=''; }
+    if(bk){ bk.style.bottom=''; }
+    requestAnimationFrame(()=>sheetReplaceSoon(z));
+  }
+  document.addEventListener('focusin', e=>{ if(e.target&&e.target.id==='z_name'){ window.KB_DOCK=true; setTimeout(dock,60); } }); // freeze re-place IMMEDIATELY, dock once the viewport settles
+  document.addEventListener('focusout', e=>{ if(e.target&&e.target.id==='z_name'){ setTimeout(undock,80); } });
+  vv.addEventListener('resize', ()=>{ if(window.KB_DOCK) dock(); });
+  vv.addEventListener('scroll', ()=>{ if(window.KB_DOCK) dock(); });
+})();
 function sheetDrag(overlayId, closeFn){
   let y0=0,dy=0,drag=false;
   const modal=()=>document.querySelector('#'+overlayId+' .modal');
@@ -7472,7 +7972,7 @@ sheetDrag('pageOverlay', ()=>closePage()); // footer pages are a bottom sheet no
 sheetDrag('acctOverlay', ()=>{ try{ closeAccount(true); }catch(_){ } }); // sheetDrag already ran the slide-down → instant hide
 sheetDrag('coOverlay', ()=>{ try{ closeCheckout(); }catch(_){ } });
 sheetDrag('storeReqOverlay', ()=>{ try{ closeStoreReq(); }catch(_){ } });
-sheetDrag('zones', ()=>{ try{ backFromZones(); }catch(_){ } });       // drag My Zones down to dismiss
+sheetDrag('zones', ()=>{ try{ if(ZONES.building){ renderZonesList(); } else { backFromZones(); } }catch(_){ } }); // builder -> My Zones; list -> My checks
 sheetDrag('histOverlay', ()=>{ try{ closeHistory(); }catch(_){ } });  // drag Check history down to dismiss
 sheetDrag('watchOverlay', ()=>{ try{ closeWatch(); }catch(_){ } });
 sheetDrag('scheduleOverlay', ()=>{ try{ closeSchedule(); }catch(_){ } });
@@ -7501,7 +8001,7 @@ function findStoreName(){ return (SEL_STORE&&SEL_STORE.name)?SEL_STORE.name.spli
 function brandName(){ return ((BRAND&&BRAND.name)||'Check It For Me').replace(/<[^>]+>/g,'').trim(); }
 function shareMessage(){ return tf('share.msg2','Yo. {s} has {p} in stock right now. An AI called the store for me. Check it:',{s:findStoreName(),p:brandProduct()}); } // owner 07-14 approved copy; the unfurl card carries the visual
 // A find-specific landing URL that unfurls richly on socials (dynamic OG title/description).
-function shareUrl(){ return location.origin+'/s?store='+encodeURIComponent(findStoreName())+'&cat='+encodeURIComponent(findProductLabel())+'&v=in'; }
+function shareUrl(){ return location.origin+'/s?store='+encodeURIComponent(findStoreName())+'&cat='+encodeURIComponent(findProductLabel())+'&v=in&lang='+LANG; } // lang so the landing renders in the sharer's language
 
 async function shareFind(){
   track('share_open',{product:findProductLabel()});

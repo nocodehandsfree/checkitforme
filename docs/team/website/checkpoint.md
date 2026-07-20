@@ -1,107 +1,78 @@
 # Check - Website — CHECKPOINT (current state)
 
 > **Volatile — update at every "Checkpoint".** Newest on top, bullets, prune finished (history = git).
-> Lane: the consumer web app `public/checkit.html` (+ `public/app.html` admin). STAGING-FIRST
-> (`staging` → `staging.checkitforme.com`; promote = apply on the `main` prod branch). Clean split with
-> the other dev: **he owns the tint CSS** (`__bootTone`/`tone-*`/body wash/sheet chrome), **I own
-> view/mode/nav** — don't blind-edit the tint, it's fragile (see the hard lesson below).
+> Lane: consumer web app `public/checkit.html` + consumer routes in `src/server.ts`. STAGING-FIRST
+> (`staging` → `staging.checkitforme.com`; promote = apply on `main`). Clean split with the other dev:
+> **he owns the tint CSS** (`__bootTone`/`tone-*`/body wash/sheet chrome), **I own view/mode/nav**.
 
-## 🔧 07-16 EVENING pt2 — result page: support tab replaces the Tell-us link (driven live, PASS)
-- "Something wrong with this check? Tell us" link REMOVED (its ES string too). On a SETTLED result the
-  bottom-right support tab slides out (supSlideIn) + breathes the check button's green glow
-  (supInviteGlow, rCtaGlow family); tap = openSupportTopic('check_issue') → "make it right" greet.
-- Scope is belt-and-suspenders: `.invite` class (showResult adds, navMark/backToBuilder remove) AND
-  CSS+tap gated on `body.rview` — backToBuilder skips navMark, so class-only scoping leaked. Pending
-  results and every other page: tab untouched; chat-open close-tab state kills the glow.
+## ✅ 07-19b — REFERRAL WELCOME + ZONE REPORT shipped to staging (the 3-landing-pages plate)
+- **Referral welcome** (`?ref` on homepage, not signed in) rebuilt to FEEL like the in-stock share card:
+  green-wash card (r40) + bleeding check watermark + glow-dot pill + brand-color hero + right-aligned
+  subline + ring-capsule shine CTA. Lives in `openRefWelcome()` (checkit.html), `rfw-` prefixed inline
+  `<style>`. Renders as a native v2 bottom sheet (the sheetHObserver bottom-anchors EVERY `.overlay` —
+  do NOT try to center it with position:fixed, the observer overrides). Modal made transparent +
+  `margin:0 auto` so the card centers horizontally. Copy keys `refw.badge/head/at/what/cta/foot`, EN+ES.
+  CTA → `refWelcomeClaim()` → openAuth (signup). URL: `/?ref=abc123` (open NOT signed in / private tab).
+- **Zone report** (`renderZoneRun`, Screen C) REBUILT from real site elements (owner rejected a first
+  emoji→dot recolor as freestyle — "use the elements from the comps, don't make shit up"). There is NO
+  comp for this exact page; assemble from what exists: summary = the My-Zones card grammar (`.zc` +
+  `.zc-pill.in` + `.zdots` + `.zc-when` + `.zc-faces` logo tiles of the in-stock hits); every store row
+  = the site's own `.store` row (`.ic` logo tile via storeFace + `.nm` + `.lo` with the built-in
+  `.sdot` in/out); tap → real `chatBubbles` transcript. Verdict word takes the result tone colour.
+  **BUG fixed:** `zoneRunTone` matched 'in_stock' as a substring of 'not_in_stock' → every out-of-stock
+  store painted green. Now negatives first, in-stock matched exactly. Verified via mock `ZONES.run.data`
+  render (staging calls are OFF) EN+ES + a row expanded. LESSON: a 1.2MB `.dc.html` comp is RENDERED,
+  not grepped — an empty grep is NOT "no comp"; render it or use the live elements, never invent.
+- Both driven locally (Playwright + local STAGING=1 server, host-resolver MAP *.checkitforme.com), EN+ES.
+  tsc + qa-design + full test-all all green. Rebased onto staging, merged (ff), pushed → live.
+- **PR note:** session branch == staging after the ff-merge (CLAUDE.md flow: session branches merge to
+  staging and die), so an open PR to staging is empty/impossible — that's expected, not a miss.
 
-## 🔧 07-16 EVENING — PTR back + per-tier Check+ grid (both driven live on staging, PASS)
-- **Pull-to-refresh restored.** The Android pass's blanket `overscroll-behavior-y:none` killed the
-  owner's pull-to-refresh. Now PTR is blocked ONLY mid-flow (`.overlay.on`, `.csheet.on`, `.supwrap.on`,
-  `body.huntmode`, `#live` visible) via `html:has(...)`; at rest the default is back. REAL verdict =
-  owner's phone (headless shows computed style only).
-- **Check+ grid follows the ringed tier.** Tap a plan → grid re-paints from THAT tier's feature map;
-  header flips "Every plan gets" → "This plan gets" (ES 'Este plan incluye') only when tiers differ;
-  `grid-template-rows:62px 62px` pins the 2-row/132px height so plans never sink below the fold.
-- **Root cause of "unchecking hobby/thrift did nothing": Admin writes PROD's DB, staging site reads
-  STAGING's DB** (GOTCHAS updated). Mirrored his edit into staging config (family: thrift+hobby off)
-  via staging admin API. Store holds/your voice only "worked" because I'd flipped them in staging
-  config myself last session.
-- **Next (owner):** Charlie test calls + check-status page render — boundary in docs/team/voice/checkpoint.md.
+## 🔧 07-19 — SHARE/LANDING (/s renderShare) rebuilt to the approved in-stock comp (LIVE on staging)
+Owner drove this in a long, painful session. Where it landed:
+- **In-stock share landing = APPROVED + live.** Built element-for-element from the P6 in-stock comp
+  (`docs/design/comps/WEBSITE_COMPS.dc.html`). The box: 1px rgba border, r40, green wash
+  `linear-gradient(180deg,#266440 0%,#20202A 46%)`, **bleeding check watermark top-right** (`.cwmwrap`
+  overflow-clip + `.cwm`). Inside: small green **IN STOCK** pill (glow dot) · **headline in the
+  product's own brand color** (`brand.accent` — Pokémon yellow, One Piece red) · **`@ Store Name`**
+  white/bold, right-aligned to the end of the headline (`.title` inline-block + text-align:right) ·
+  subhead · **green ring-capsule CTA** (call-page "check another store" style: `.cta` gradient ring +
+  `.cin` + `.shine` ckShine + arrow) reading **YOUR TURN** · **First one's on us!** gray. Bilingual
+  (EN+ES same commit). `<style>` fenced in `/*CP*/…/*CPEND*/` so qa-design holds it to the token set.
+- **Copy is placeholder-approved** — owner supplied it live. Use "Check AI" (two words) per copy guide.
+- `/s` cache lowered to `max-age=30` (browser was serving stale versions and masking fixes).
+- **Verify recipe that works:** boot a local server (`PORT=88xx tsx src/server.ts`, needs ELEVENLABS_*
+  + ADMIN_TOKEN env), then Playwright screenshot via `playwright-core` +
+  `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` (run node with `NODE_PATH=…/node_modules`).
+  Script lives in scratchpad `shot.cjs`. **tsx has no hot-reload — restart the server after edits.**
 
-## 📱 ANDROID PASS (07-16, android sub-session) — DONE, merged PRs #44+#45, live (x-rev android-r119)
-- Drove all 28 consumer screens/flows at Pixel 8 viewport (412x915 + 360w) via headless Chromium →
-  staging. No overflow-x anywhere; rendering matches iOS. Fixed the Android-only breaks:
-  keyboard covering bottom sheets (`interactive-widget=resizes-content` in the viewport meta),
-  pull-to-refresh reloading mid-flow (`overscroll-behavior-y:none`), failed logo imgs painting
-  Chrome's broken-image glyph (wmFail() → designed .wm monogram; map pins/switcher icons hide),
-  OTP autofill washing #auth_code. All verified live on staging post-deploy.
-- **Store logos are HEALTHY — don't re-chase.** Broken tiles in the first sweep were a SANDBOX
-  artifact (headless Chromium can't TLS to logos.fungibles.com; relay it like the staging bridge).
-  Verified: 49/49 imgs render with the CDN relayed, 0 fallbacks fire, all 45 unique logo URLs
-  across 5 metros return 200. wmFail stays as insurance for genuinely dead logos.
-- **Owner decisions (07-16): pinch-zoom stays BLOCKED everywhere** (meta unchanged; iOS ignores the
-  flag at the browser level — that side is Safari policy, not ours).
-- New tools (committed): `scripts/qa-android-sweep.mjs` (full Android screenshot+diagnostics drive)
-  + `scripts/staging-bridge.mjs` (the GOTCHAS loopback bridge, now a file not a paste).
-- Friday real-device check: type in the sign-in sheet (keyboard must not cover it), pull-down
-  doesn't reload, logos render. Emoji differ slightly (Noto vs Apple) — cosmetic, no action.
+## 🚨 07-19 OPEN BUG — thin GREEN LINE on the /s card's BOTTOM EDGE, iPhone only (UNRESOLVED)
+- Owner sees a thin green line hugging the card's bottom edge on his iPhone. **It has NEVER reproduced
+  in headless Chromium** — every screenshot shows a clean bottom. Classic iOS-paint blind spot.
+- Owner's key clue: **the line predates the brandmark, the border, and the wash** — so none of those
+  are it (I wasted ~7 tries "fixing" each; all wrong). Only element green-and-near-the-bottom in every
+  version is the **CTA button** (green glow in v1 → green ring + light-green `.shine` clipped by
+  `.cin{overflow:hidden;border-radius:999px}` since). **Prime suspect: `.cin` overflow+radius clip
+  leaking the shine's green on iOS.** Full write-up in `docs/shared/GOTCHAS.md`.
+- **NEXT PERSON: bisect on a real iPhone.** Try (a) drop `.shine`, (b) drop `.cin` overflow:hidden,
+  (c) swap the ring for a flat border — one at a time, on-device. **Do NOT change the owner-approved
+  design (brandmark position, border, wash) to chase it** — that was my mistake and it enraged him.
 
-## 🤝 HANDOFF (07-16 afternoon) — state at session end
-- ALL of it merged to staging + deploy-verified; working tree clean; no background tasks. Afternoon
-  batch = PRs #37/38/40/41/42/43 (on top of the morning's #29/31/32/36 below). NOT yet promoted —
-  prod is at the PM's 41901e5 fresh-start; everything after rides the next promote.
-- **07-16 afternoon fixes (each driven live, most with the owner watching):**
-  · Kiosk: 2nd kiosk pick never slid the sheet up — pickKiosk was missing pickStore's CS_DISMISSED
-    reset. · Toasts were z-60 UNDER z-4600 sheets — every pill fired inside a sheet was invisible;
-    now z-9000. · Email edit: pending address = yellow + carved card + "Send it again" (confirm line
-    out of the header); same-pending-address save RE-SENDS the confirmation; every unconfirmed save
-    pills "Confirmation sent." · Confirm-email landing page GONE → 302 to /?emconf=1|0, My checks
-    opens with the confirmed/bad-link pill. · Admin email copy: confirm_email was the one send not
-    passing bodyRaw → design's baked text; Admin copy sends now. · Admin Plans editor: checkbox saves
-    were silently droppable (600ms debounce + no feedback) — now ~60ms + "Saved · live on the site"/
-    "NOT saved" pills + pagehide flush; I also flipped store_holds/your_voice OFF in the staging
-    config via the admin API (owner asked twice). · Check+ grid: NO hardcoded list anywhere — boot
-    prefetch + 3x retry + fixed-height loading dots; always 2 rows at the ORIGINAL 132px footprint
-    (owner: plans must never fall below the fold).
-- **Owner eyeball still pending:** slide-up chrome (other dev's attempt 4), Android real-device
-  checklist (above).
-- **QA drivers (committed):** `scripts/qa-website-drive.mjs` (13 statuses + alerts mute/stop, EN+ES
-  wrap law) · `scripts/qa-android-sweep.mjs` · `scripts/staging-bridge.mjs`. Run before shipping.
+## ⚠️ 07-19 — what NOT to build / lessons
+- **A "not in stock" share landing has NO use case** — nobody shares a sold-out result, so it never
+  becomes a landing page. I built it anyway; it was rejected. Don't.
+- The share page's whole job: a friend shares an in-stock WIN, the recipient lands and converts
+  (first check free). Build only pages that fit a real share.
+## 🪤 Traps (still true)
+- Full list in the **`known-problems`** skill + `docs/shared/GOTCHAS.md`.
+- **iOS Safari renders a gradient fading to a TRANSPARENT color as a faint tint of that color** (green
+  haze) that Chromium shows as fully clear — never fade to `rgba(r,g,b,0)`; fade between opaque colors.
+- **`overflow:hidden` + `border-radius` on iOS can leak a 1px line of the clipped content's color at an
+  edge** — suspect for the open green-line bug.
+- A colors/fonts diff + a Chromium render CANNOT catch an iOS paint issue. Owner's phone is the rig.
+- `#auth_logo` is a left-flex wordmark bar — stacked headers must override its container per mode.
+- headless→staging TLS blocked by the proxy; verify with a LOCAL server + Playwright, not against staging.
 
-## ✅ Shipped earlier this session (07-15 → 07-16 morning, PRs #29/31/32/36 — all verified live)
-1. **My checks:** edit cell/email = icon-top sheets with owner-approved copy; every exit returns to
-   My checks; Earn row removed (Earn tab covers it).
-2. **Alerts:** rows read "{product} at {store}" (server joins retailer + category names; junk labels
-   fall back to the category, else store-only). MUTE pauses sends (muted column, /app/alerts/mute,
-   fan-out skips; row dims) with pill "Muted. Unmute any time."; STOP removes + pill "Unsubscribed
-   from restock alerts for {store}". Cache-first (My checks prefetches) → sheet opens instantly.
-   Empty state "You haven't created any alerts." Sub "Manage your email and text alerts." (owner's
-   words). Email unsubscribe link → /?alerts=1 (landing page gone; RFC 8058 POST kept). Buttons
-   stack vertically so ES labels never squeeze copy into a wrap.
-3. **Verdicts:** sub wrap law site-wide (`sentLines` — fits one line or breaks at the period, digits
-   count as sentence starts). In-stock sub pulls the Admin statuses-registry note; `prodPhrase()`
-   turns raw "Tin · Scarlet and Violet" into "a Scarlet and Violet tin" (EN+ES). Date/time on EVERY
-   status (fixed the ts-less /pub/result branch + history-time fallback; all 13 statuses audited).
-   Footer pins to the bottom edge on short verdicts (dead grey band gone; supersedes 07-10 item 51).
-4. **Check+ = launch set, Admin-driven:** exact_products OUT of the catalog (every account gets exact
-   asks; premiumAsks always true), hobby_hunts IN, store_holds/your_voice default OFF until built —
-   checking them in Admin brings the box back, no code. Boxes 2-up BIG at ≤6 services, auto-tighten
-   past 6. Tap a box → info sheet with book copy (docs/Check+, EN+ES, wrap-audited). Paid-welcome
-   "Now live" list + "+N more" render from the same live list.
-5. **Language:** every email-capturing POST sends the site lang; account stores it; alert emails/texts
-   go out in the customer's language.
-
-## ⏳ OPEN — needs owner / other lanes
-- **Slide-up chrome (tint lane):** other dev's attempt 4 is on staging/prod — owner verdict pending.
-- **Email rendering** (Outlook/Gmail) — other lane actively iterating (one light design now).
-- **Restock SMS blocked externally** (A2P denied, toll-free pending) — email alerts live.
-- **Service worker PHASE 2** (network-first HTML + offline) — not rebuilt.
-- **og:image URLs ride the internal railway host** — works; public-host constant cleaner (DevOps).
-
-## 🪤 Traps
-`known-problems` skill has the full list. New this session: #auth_logo is a left-flex wordmark bar —
-stacked headers must override its container per mode · a fixed-position ::after on a TRANSFORMED
-sheet pins to the sheet, not the viewport (the tint lesson) · bootstrap.ts ALTERs that run BEFORE the
-CREATE TABLE silently no-op on fresh DBs — put the ALTER after the create · alerts sheet text column
-is ~240px next to its buttons; sentences must fit it in BOTH languages · headless→staging TLS +
-local-verify recipe = docs/shared/GOTCHAS.md + scripts/qa-website-drive.mjs.
+## ⏳ Older open (other lanes / paused)
+- Glass sheets (iOS 26) — long ago handed to the tint agent; not this session.
+- Slow result load flagged to Echo (server-side); Email rendering (other lane); Restock SMS blocked (A2P).

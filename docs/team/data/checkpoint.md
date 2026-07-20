@@ -11,6 +11,9 @@
   Pops' pipe — never touches chains/retailers; if a curated field ever moves into `settings`, flag Pops).
   ④ Never-sync fields (`phone`, `hours`, per-store learned) — write to BOTH envs directly, prod first.
   ⚠️ Hand-set nav on staging is overwritten from prod within 3 min — **map on PROD, it flows down.**
+- **OPEN NOW ONLY (owner law 07-16):** `/pub/stores/near` never returns a store that's closed at
+  request time (list, pins, rural fallback; owner-only test stores exempt). `hiddenClosed` in the
+  response = suppressed count for UI copy. Lives in the FEED so list behavior is Data's lever, not Webbie's.
 - **ONE DIALABLE RULE:** `chainDialable()` (recipe.ts) = !muted && callTarget && stockCheckMethod!=='site'.
   Read by mapping board + overnight batch + single-map — no surface re-decides callability on its own.
   Board rows carry `phones` + `blocker` so a data gap can never read as "all stores closed".
@@ -34,12 +37,13 @@
   Admin API via `curl` subprocess only. TPCi vending API IS reachable (no UA tricks needed).
 - **NEVER** run the paid hours backfill (`/api/hours/backfill`) or re-chain big-box from directories.
 
-## IN PROGRESS
-- **Mapper is mapping NOW (owner confirmed 07-16):** the 9 all-kiosk grocery chains — H-E-B (84 stores,
-  owner-verified PRESS 0 → customer service), Woodman's (14, 24h), Lucky (7), H Mart (6), FoodMaxx (5),
-  Metro Market (5), Stop & Shop (2), Pak N Save (1), Uwajimaya (1) — plus a one-call test of Macy's
-  Toys-R-Us counter (dead-end ⇒ mute, owner approved). Locked nav lands on prod → auto-flows to staging.
-  My side is DONE (phones+hours on both envs); nothing to do unless Mapper hits a data gap.
+## IN PROGRESS (owner away — resume here)
+- **Mapping is at 99.9% (Mapper's final run 07-16):** Publix (1,240) + Woodman's + H Mart locked;
+  Macy's muted. The last 0.1% = the 7 chains whose Google numbers were fabricated (see OPEN below) —
+  once real numbers land, Mapper takes one more pass. H-E-B nav note for that pass: press 0 works but
+  only AFTER the greeting plays (barge at 3s gets dropped — Mapper tested).
+- **NEXT SESSION ON DECK (owner's plan):** owner pulls real numbers from each chain's OWN store
+  locator / Google Maps pins (never the answer box), I ingest address-verified, Mapper finishes.
 - **HOURS backfill loop (PAUSED by owner — resume when he says):** ~3,300 fresh storefronts (Habitat
   ReStore + WPN adds) still hourless. Batch 2 (150) was cut and never pasted back. Flow:
   send box from `docs/team/data/handoffs/hours_needed_fresh.csv` → owner Googles → 
@@ -48,9 +52,16 @@
   ({kind:direct} | {kind:menu,seconds} | null, evidence-only). Webbie owns the UI; data side done.
 
 ## OPEN (smaller)
-- Payless Foods Athens: 1 store, NO phone exists anywhere (only board blocker left). Mute or leave.
-- Two owner-googled numbers held back as WRONG: Fry's Gilbert 102795 "(482)" nonexistent area code,
-  Mariano's Westchester-IL 102842 "(914)"=NY number. Re-google someday; chains already mapped.
+- **7 kiosk chains need REAL numbers (Google answer box FABRICATED the last batch — owner dialed 3/3
+  bad; all 105 quarantined to nophone on both envs 07-16 evening):** H-E-B, Lucky, FoodMaxx,
+  Metro Market, Stop & Shop, Pak N Save, Uwajimaya. NEW LAW: phones ONLY from the chain's own store
+  locator or the Google MAPS pin — never the AI answer box. Woodman's + H Mart numbers were real
+  (Mapper locked both). Hours kept (display-only, low risk).
+- **Staging/prod count mismatch to chase:** quarantine found 105 bad numbers on prod but only 33 on
+  staging — something re-imported/overwrote staging retailers again (same phantom as the identity
+  shuffle). Check for dupe rows on the kiosk chains and find WHO runs the overlay.
+- Payless Foods Athens: 1 store, NO phone exists anywhere. Mute or leave.
+- Fry's Gilbert 102795 + Mariano's Westchester-IL 102842: held-back wrong numbers; chains already mapped.
 - Kiosk root fix (my lane, post-launch): key kiosk rows by PLACE, overlay machines via `kiosks` table,
   so TPCi machine moves stop rewriting row identities.
 - Logos needed (real brands): Habitat ReStore, Unique — owner getting. Logo-resolver finding → DevOps

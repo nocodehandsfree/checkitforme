@@ -64,6 +64,34 @@ const fonts = (scope.match(/font-family:[^;]+/g) || []).filter(f => !/Inter/.tes
 if (fonts.length) no(`non-Inter font-family in v2 scope: ${fonts[0]}`);
 else ok("Inter-only in v2 scope");
 
+// ---- 3. Server-rendered CONSUMER pages (src/server.ts) — the share/landing family.
+// These had ZERO design coverage: qa-design only ever read checkit.html, so an off-brand server page
+// (freestyle button, off-system marks, wrong font) sailed through the suite (the 2026-07-18 landing
+// miss). Any consumer page's <style> wrapped in /*CP*/…/*CPEND*/ is held to the SAME token+font law
+// as the homepage. Heterogeneous non-consumer pages (splash, error pages) are intentionally NOT
+// marked — they carry their own palettes; forcing this set on them would false-fail.
+const server = readFileSync(join(here, "../src/server.ts"), "utf8");
+const cpBlocks = [...server.matchAll(/\/\*CP\*\/([\s\S]*?)\/\*CPEND\*\//g)].map(x => x[1]);
+if (!cpBlocks.length) {
+  // Canary: the coverage must not be silently deleted. If a consumer page exists with no marker,
+  // that's the gap reopening — fail loudly rather than pass vacuously.
+  no("no /*CP*/ consumer-page blocks found in src/server.ts — server-page design coverage was removed");
+} else {
+  const cp = cpBlocks.join("\n");
+  // Interpolations (${green}, ${accent}) resolve to consts that are themselves in the token set; the
+  // audit sees only literal hexes, which is what a freestyle page introduces.
+  const cpHex = (cp.match(/#[0-9a-fA-F]{3,8}\b/g) || []);
+  const cpOff = [...new Set(cpHex.map(h => h.toUpperCase())
+    .filter(h => h.length === 4 || h.length === 7)
+    .filter(h => !TOKENS.has(h)))];
+  if (cpOff.length) no(`off-system colors in server consumer page(s): ${cpOff.slice(0, 12).join(" ")}`);
+  else ok(`server consumer page colors all on-system (${cpHex.length} uses, ${cpBlocks.length} page(s))`);
+
+  const cpFonts = (cp.match(/font-family:[^;}]+/g) || []).filter(f => !/Inter/.test(f));
+  if (cpFonts.length) no(`non-Inter font-family in server consumer page(s): ${cpFonts[0]}`);
+  else ok("Inter-only in server consumer page(s)");
+}
+
 console.log("════════════════");
 console.log(`  qa-design PASS: ${pass}  FAIL: ${fail}`);
 process.exit(fail ? 1 : 0);

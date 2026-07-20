@@ -244,6 +244,10 @@ export async function bootstrap() {
   await client.execute(`CREATE TABLE IF NOT EXISTS kiosk_receipts (
     id INTEGER PRIMARY KEY AUTOINCREMENT, message_id TEXT NOT NULL UNIQUE, machine_id TEXT, product TEXT,
     total TEXT, order_id TEXT, txn_at TEXT, claimed_by TEXT, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
+  // Full line-item detail (owner 07-19: receipts only showed the first of several packs). Guarded ALTERs.
+  for (const col of ["items TEXT", "subtotal TEXT", "tax TEXT", "item_count INTEGER"]) {
+    try { await client.execute(`ALTER TABLE kiosk_receipts ADD COLUMN ${col}`); } catch { /* column already exists */ }
+  }
   // Stock signals (site checkers + Discord cook-group pings + receipts) and the channel registry.
   await client.execute(`CREATE TABLE IF NOT EXISTS stock_signals (
     id INTEGER PRIMARY KEY AUTOINCREMENT, retailer_id INTEGER, chain_id INTEGER, category_id INTEGER,

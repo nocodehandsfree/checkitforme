@@ -15,6 +15,24 @@ description: >-
 Nothing visual or written ships without the guides. This skill is a map, not the
 content — open the docs it points at; they are the single source of truth.
 
+## 🚫 HARD GATE — RENDER the comp and LOOK before you write one line of UI
+**A comp is a rendered picture, not text. You cannot grep it, skim it, or read the style guide's
+written list instead.** A text search of a comp file comes back nearly empty — and letting that
+emptiness convince you "there's no comp for this" is EXACTLY how off-brand screens keep shipping
+(2026-07-02 paint-not-structure; the 2026-07-18 landing cycle; the zones report). Render it to an
+image and open the image. One command; it removes every excuse:
+
+- **Website / consumer pages** → `./node_modules/.bin/tsx scripts/render-comps.ts board`
+  then OPEN the PNGs in `loops/site-redesign/render/board-*.png`.
+- **Admin pages** → `node scripts/admin-preview.mjs <section> out.png 390`, then open the PNG.
+- **My Zones / zone-report flow** → boot the local server, then `node scripts/zones-preview.mjs`
+  (usage in the script header) → open `shots/*.png`.
+
+Then, for every piece on your screen, name which comp element you're copying from the rendered
+image. Can't see it there? You're inventing — STOP. Rendering takes one command; guessing costs a
+whole cycle of the owner's money. "The written list was enough" and "grep came back empty" are the
+two lies that failed — never trust either. Render, and look.
+
 ## Read first, in this order (don't skip)
 1. **`docs/design/STYLE_GUIDE.md`** — the look: every token, type size, radius, depth, component rule.
 2. **`docs/design/copy/COPY_STYLE_GUIDE.md`** — the words. Owns EVERY customer-facing string. On any

@@ -6,6 +6,9 @@ import { config } from "../config";
 
 export interface BridgeContext {
   agentId: string;
+  // Multi-account pool (concurrency governor): open EL on this account's key when set; else the
+  // configured primary account (today's behavior). Caller-ID and everything else unchanged.
+  apiKey?: string;
   dynamicVars: Record<string, string>;
   onConversationId?: (id: string) => void;
   // Deterministic keypad presses, e.g. "0@3" = send the DTMF tone for 0 three seconds after the
@@ -85,9 +88,9 @@ export function bridgeDebug(): string[] { return debugLog.slice(-60); }
 /** Allow the server (listen-socket relay) to write into the same diagnostic log. */
 export function bridgeLog(msg: string) { log(msg); }
 
-async function signedUrl(agentId: string): Promise<string | null> {
+async function signedUrl(agentId: string, apiKey?: string): Promise<string | null> {
   try {
-    const r = await fetch(`https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${agentId}`, { headers: { "xi-api-key": config.voice.apiKey } });
+    const r = await fetch(`https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${agentId}`, { headers: { "xi-api-key": apiKey || config.voice.apiKey } });
     if (!r.ok) { log(`signedUrl HTTP ${r.status}: ${(await r.text()).slice(0, 80)}`); return null; }
     const d = (await r.json()) as { signed_url?: string };
     return d.signed_url ?? null;
@@ -171,15 +174,18 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   // echo comes back well attenuated. Browser fanout is never gated (listeners hear the true line).
   let agentPlayingUntil = 0;  // ms epoch when the queued agent audio finishes playing out
   let echoDropped = 0;        // suppressed-frame counter (logged sparsely for bench tuning)
-  const ECHO_TAIL_MS = 250;   // reflection tail after playback ends (tunable)
-  const BARGE_THRESH = 900;   // inbound energy that still counts as a human interrupting (tunable)
+  // 07-17 retune (owner: agent missed his name said around agent speech): real phone speech often
+  // sits in the 350–900 energy band, so a 900 gate ate genuine clerk words spoken over or right
+  // after the agent — not just echo, which comes back well attenuated (≲300). Gate lower + shorter.
+  const ECHO_TAIL_MS = 150;   // reflection tail after playback ends (was 250)
+  const BARGE_THRESH = 520;   // inbound energy that still counts as a human talking (was 900)
   log(`twilio connected room=${room.slice(0, 8)} ctx=${!!ctx}`);
 
   async function connectEleven() {
     if (!ctx) { log("connectEleven: NO CONTEXT"); return; }
     connecting = true; // from now, buffer inbound audio for the agent
     const c = ctx; // narrowed
-    const url = await signedUrl(c.agentId);
+    const url = await signedUrl(c.agentId, c.apiKey);
     if (!url) { log("connectEleven: no signed url -> abort"); return; }
     log("connectEleven: opening ElevenLabs WS");
     eleven = new WebSocket(url);

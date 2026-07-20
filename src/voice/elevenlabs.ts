@@ -17,7 +17,7 @@ import type {
   StartCallResult,
   VoiceProvider,
 } from "./provider";
-import { PREMIUM_FOLLOWUP, FREE_NO_FOLLOWUP } from "./prompts";
+import { PREMIUM_FOLLOWUP, FREE_NO_FOLLOWUP, ASK_SHIPMENT_DAY, SOFT_TIMEOUT_FALLBACK } from "./prompts";
 import { assertCallsEnabled } from "../config";
 
 export interface ElevenLabsConfig {
@@ -38,12 +38,15 @@ export class ElevenLabsProvider implements VoiceProvider {
 
   async startCall(p: StartCallParams): Promise<StartCallResult> {
     assertCallsEnabled(); // no real store calls on a UI-only preview deploy
+    // Multi-account pool: dial on the granted account's key + number when the governor supplies them;
+    // undefined → the configured primary account (today's behavior).
+    const apiKey = p.apiKey ?? this.cfg.apiKey;
     const res = await fetch(`${BASE}/twilio/outbound-call`, {
       method: "POST",
-      headers: this.headers(),
+      headers: { "xi-api-key": apiKey, "content-type": "application/json" },
       body: JSON.stringify({
         agent_id: p.agentId ?? this.cfg.agentId,
-        agent_phone_number_id: this.cfg.phoneNumberId,
+        agent_phone_number_id: p.phoneNumberId ?? this.cfg.phoneNumberId,
         to_number: p.toNumber,
         conversation_initiation_client_data: {
           // Per-call voice override (admin "Talk to me" / bench voice picker). Only applies if the
@@ -61,7 +64,7 @@ export class ElevenLabsProvider implements VoiceProvider {
             personality: p.personalityTone ?? "",
             opening_line: p.openingLine ?? "",
             other_categories: (p.otherCategories ?? []).join(", "),
-            ask_shipment_day: p.askShipmentDay ? "If they are out of it, sold out, or don't have it right now, warmly ask when they expect their next shipment or restock, e.g. \"ah okay, no worries, any idea when you might get more in?\". This INCLUDES when they volunteer that more is coming (\"we're getting a restock soon\", \"we should have more this week\"): don't just accept \"soon\", ask once for the specific day, e.g. \"oh nice, any idea what day that usually lands?\". Keep it to that ONE quick question, take whatever they give you, then wrap up." : "",
+            ask_shipment_day: p.askShipmentDay ? ASK_SHIPMENT_DAY : "",
             // Kiosk-only store: the prompt branches on this to ask about the vending kiosk
             // (working/stocked) instead of a shelf shipment. "" = normal shelf check.
             kiosk_mode: p.kioskMode ? "true" : "",
@@ -130,7 +133,8 @@ export class ElevenLabsProvider implements VoiceProvider {
     if (patch.turnTimeout !== undefined) turn.turn_timeout = patch.turnTimeout; // silence (s) before the agent jumps in
     if (patch.softTimeoutSecs !== undefined) {
       // Presence filler on a long pause; -1 disables it. Keeps the line from feeling dead.
-      turn.soft_timeout_config = { timeout_seconds: patch.softTimeoutSecs, message: patch.softTimeoutMsg ?? "Yeah—hi, I'm here!", use_llm_generated_message: false };
+      // No dash in the spoken fallback (copy law — the 07-17 "Yeah—I'm here!" mid-call blurt came from here).
+      turn.soft_timeout_config = { timeout_seconds: patch.softTimeoutSecs, message: patch.softTimeoutMsg ?? SOFT_TIMEOUT_FALLBACK, use_llm_generated_message: false };
     }
     if (Object.keys(turn).length) conversation_config.turn = turn;
 
@@ -336,11 +340,16 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
       const langBarrierFlag = /^(yes|true)/i.test(String(collected.language_barrier?.value ?? "").trim());
       const LANGBARRIER = /\b(no (?:speak |hablo |habla )?english|don'?t (?:speak|understand) (?:english|you)|no entiendo|no hablo ingl[eé]s|no ingl[eé]s|sólo espa[ñn]ol|solo espa[ñn]ol|hablas espa[ñn]ol|no understand|me no understand|no comprende|wo bu dong|t[ií] khong hi[eể]u)\b/i;
       const langBarrier = langBarrierFlag || LANGBARRIER.test(clerkAll);
+      // VOICEMAIL that ANSWERS the call counts as "completed", so the carrier-reason path below never
+      // sees it (owner 07-17: phone asleep → voicemail → verdict said "no clear answer" while the
+      // summary literally said voicemail). Recognize the machine from what the "clerk" side said.
+      const VOICEMAIL = /\b(leave (?:a|your) message|after the (?:tone|beep)|at the (?:tone|beep)|voice ?mail|mailbox|record your message|is not available|unable to take your call|has been forwarded to)\b/i;
+      const voicemail = VOICEMAIL.test(clerkAll);
       // A completed call means a human was on the line (under connect-on-human, ElevenLabs only joins
       // once a human is reached). So the honest worst case here is "no clear answer" — NEVER
       // "nobody_answered" (that lie comes only from the non-completed branch below). `asked` still
       // gates the too-busy heuristic above; it must not downgrade a real conversation to no-answer.
-      statusKey = onHold ? "left_on_hold" : (langBarrier ? "language_barrier" : (tooBusy ? "too_busy" : "no_clear_answer"));
+      statusKey = voicemail ? "voicemail" : onHold ? "left_on_hold" : (langBarrier ? "language_barrier" : (tooBusy ? "too_busy" : "no_clear_answer"));
     }
   } else {
     // Non-completed: prefer the SPECIFIC carrier reason (voicemail/busy/bad_number/closed) over the

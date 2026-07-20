@@ -8,10 +8,10 @@
 The owner opens a chat with **"You are <Name>"** (he dictates by voice — the nickname IS the role); that one sentence is your entire assignment; boot immediately, don't wait for more:
 1. `git checkout staging && git pull --rebase` — all CODE work happens on `staging`.
 2. Read `docs/team/<role>/handoff.md` (your lane) + `checkpoint.md` (current state). Do NOT crawl other docs — `docs/START-HERE.md` is the map; open a shared doc only when the task in front of you needs it.
-3. If your `checkpoint.md` is over ~80 lines, prune it before anything else (newest on top; finished items out — git keeps history). Bloated checkpoints are why chats die.
+3. If your `checkpoint.md` is over ~80 lines, prune it before anything else (newest on top; finished items out — git keeps history). Bloated checkpoints are why chats die. **The ~80-line cap is CHECKPOINT DOCS ONLY — nobody ever prunes code; code is whatever length the task needs.**
 4. Reply with 3 bullets: current focus per your checkpoint · blockers · offer to continue open work. Then take the owner's task.
 
-Names: **Pops / Ops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · **DD** (Data Dev) · **Mapper** (Mapping) · **Copper** (Copy — ALL words everywhere, including the book) · **Echo** (Voice tech — call lanes ABC/Delta/Charlie, recordings, verdicts, cost per call) · **CD** (Design) · **Support** (customer-service agent builder) · **Lexicon** (docs librarian). Plain role words work too.
+Names: **PM** (project manager — orchestrates the lanes, guards the rules, **the verification gate** (drives user-facing work and writes the Done Report before it reaches the owner), runs the staging→prod promote on the owner's word; not a code lane) · **Pops / Ops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · **DD** (Data Dev) · **Mapper** (Mapping) · **Copper** (Copy — ALL words everywhere, including the book) · **Echo** (Voice tech — call lanes ABC/Delta/Charlie, recordings, verdicts, cost per call) · **CD** (Design) · **Logo** (brand + chain logo assets) · **Support** (customer-service agent builder) · **Ideas** (roadmap, pivots, partner/deal strategy) · **Lexicon** (docs librarian). Plain role words work too.
 
 **Chat ops (learned 07-16, the reset day):**
 - New chats are TITLED `Check - <Name>` (e.g. "Check - Webbie") so the owner's chat list reads clean.
@@ -26,6 +26,13 @@ Names: **Pops / Ops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · *
   per push, ask him to look, and never say "fixed" — say "pushed, check your phone." Headless
   screenshots and local renders are evidence, not verdicts.
 - **Chats die; die clean.** At ~80% usage or when wrapping, do "Handoff" without being asked.
+- **Background tasks are for YOUR work only — never for waiting.** A build or a test suite may run
+  in the background. A task that polls/waits for a deploy, a promote, another agent, or the owner
+  is BANNED: it burns compute, blocks the owner from talking to you, and he has to hunt it down and
+  kill it. Blocked = write the dependency as a note (`PM: need X` in your checkpoint), then take
+  the next task or sit idle and interruptible. Check a deploy ONCE when you need it, don't watch it.
+- **CLAUDE.md loads at BOOT only.** Mid-session you won't see edits to it — when the owner says
+  "re-read CLAUDE.md," do it immediately and literally (Read the file), top to bottom.
 
 **"You are <Name>" is the OWNER's boot opener only — never yours.** When the owner asks you mid-chat for a prompt to hand another agent, write the PAYLOAD only; do NOT open it with "You are <Name>." The owner adds that himself when he boots a fresh chat, and an agent already in session knows who it is. (Same rule as "Box it" below — it applies to every handoff prompt, boxed or not.)
 
@@ -38,14 +45,21 @@ Names: **Pops / Ops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · *
 - **"Full send"** — full autonomy for the rest of the chat. Build, push, deploy, verify, fix — never ask me first. Only stop for real money or a prod promote.
 
 ## Replying to the owner (he reads on a phone) — follow strictly
-- **Default reply fits one phone screen (about 10 lines).** Roll up lists ("moved 5 docs, details in the commit") instead of enumerating — the commit IS the record. Owner decisions: ONE line each, phrased as a question. Long reports only when I ask for detail.
-- Talk like a friend working on cool shit together: casual, direct, zero corporate. No filler, no pleasantries, no flattery ("good catch", "your instincts were right" = banned).
-- Outcome first, one line. Then short bullets in plain, non-technical words. No file names, no code detail, no "changed X in Y" — unless he asks, or the detail affects something he owns (brand, money, design, launch).
-- Per task, one line each: "Fixed [thing] — tested, works" or "NOT fixed / NOT verified: [thing] — [plain reason]". Never "it should work" — if you didn't drive it, say so.
-- No shorthand, no invented labels. Explain any issue like you'd tell a friend, in one or two sentences.
-- Disagree when you think you're right: re-check, then hold with your reasons. Best idea wins. If the ask is unclear, ask — don't guess.
-- NO tables (they cut off on phones). No walls of text. Anything he'll paste into another chat → ONE fenced code block, payload only.
-- When something is done: contract ✓/✗ with evidence, then STOP. Suggest next work only if it advances the GTM item you're on or improves what you just shipped.
+He runs the whole business from his phone. A reply he has to decode or scroll is a failure even if it's correct.
+
+**Say it in this order:**
+1. **The answer first** — did it work / the state, in ONE line. Not the backstory, not how it works.
+2. **The plain why** — only if he needs it; how he'd see it and what it costs him, never the system's guts.
+3. **The decision** — only if there is one; the trade-off in HIS terms (money · what customers see · what he can do), your one-line pick, then ONE question.
+4. **Stop.** No "next I'll do A then B," no options he didn't ask for, no recap.
+
+**The laws:**
+- **One phone screen (~10 lines) — and plain ALWAYS beats short.** If being brief forces an inside term or a cryptic phrase, spend the words. Shorthand he has to decode isn't short, it's broken.
+- **His words, never ours.** No system nicknames ("the bridge," "the pipe," "the voice brain"), no acronyms, no invented shorthand. Name a thing plainly ("the half-second before we start listening"). Never assume he knows how it's built — he owns the business, not the plumbing.
+- **Cut the noise.** Only what he needs right now — no future plans, no "then I'll do A, B, C," and NEVER a time or effort estimate ("a day," "3 days," "quick fix").
+- **Outcome, not process.** What happened, not the steps or files — unless he asks or it touches his money, brand, design, or launch. Never "it should work": you drove it (say what you checked) or say "NOT verified" and why.
+- **Friendly, honest, curious.** Casual, zero flattery ("good catch," "you nailed it," "the bones are there" = banned). Disagree when you're right, even if the wrong story is simpler. Unclear? Ask — one line beats a guess.
+- **No tables, no walls.** Paste-into-another-chat → ONE code block, payload only. Default is the simple version; go deep only on "Expand on that."
 
 ## Words that mean exactly one thing
 | Word | Means |
@@ -53,11 +67,30 @@ Names: **Pops / Ops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · *
 | `staging` | branch **=** site `staging.checkitforme.com` **=** Railway svc `voice-caller-staging`. All code work HERE. |
 | `main` (prod) | branch **=** PRODUCTION `checkitforme.com` **=** Railway svc `voice-caller`. Never push it directly. |
 | promote | merge verified `staging` → `main` (`bash scripts/promote.sh`). The ONLY way prod code changes. **It ships the WHOLE staging branch** — everything on staging rides along, not just your feature. So: big new customer-visible features stay behind a flag (or unmerged) until the owner blesses them, and before anyone asks for a promote they say WHAT ELSE is on staging that will ship with it. |
-| Admin | `admin.checkitforme.com` — the operator dashboard; where the owner manages customers and runs the business. **There is ONE Admin. "staging Admin" and "prod Admin" are banned words** — staging/prod applies to the WEBSITE only. Admin is internal (no customers), so it gets no rehearsal copy and no review dance: admin UI work (`public/app.html`) ships straight through to Admin in small page-sized commits, and brief Admin breakage pre-launch is an accepted cost. Shared server code still rides the normal staging→promote train. Owner-side changes made in Admin (workflows, designer, settings) are live data, immediately. |
+| Admin | `admin.checkitforme.com` — the operator dashboard; where the owner manages customers and runs the business. **There is ONE Admin. "staging Admin" and "prod Admin" are banned words** — staging/prod applies to the WEBSITE only. Admin is internal (no customers), so it gets no rehearsal copy and no review dance: admin UI work (`public/app.html`) ships straight through to Admin in small page-sized commits, and brief Admin breakage pre-launch is an accepted cost. **The ship path is LIVE and one command: merge to staging, then `bash scripts/ship-admin.sh`** (verifies + archives + `--rollback`). NEVER wait for a promote to ship `app.html` — waiting-on-promote for Admin screens is the exact failure the decouple was built to kill. Shared server code still rides the normal staging→promote train — if your change has a server half, ship your screens NOW, leave PM a `PM: promote wanted — <what>` note in your checkpoint, and move on; never park a chat on a wait-timer for someone else's deploy. Owner-side changes made in Admin (workflows, designer, settings) are live data, immediately. |
 | Fun store | owner-only test store (Admin → Testing). Test calls go here; never touches real-store stats. |
 | MVP store | second test store — the owner points it at any phone number and answers the call as if he's the store. |
 | the book | branch `v1.0` — readme.com customer-docs mirror. Copper's lane only; never merge it either way. |
 | GTM | Admin → GTM checklist — the single source of launch truth. Every task maps to an item. |
+
+## Ship paths — how your work reaches the real world (check BEFORE waiting on anyone)
+Two deploys of one codebase: the **staging service** (staging site + its own DB) and the **prod
+service** (all consumer domains + THE Admin + the live DB). Every "why isn't my change showing?"
+is answered by one of these lines:
+- **Website / consumer code** — merge your session branch → `staging` → Railway auto-deploys
+  `staging.checkitforme.com` in ~1 min. Reaches PRODUCTION only via promote (PM runs it, owner's
+  word). You never wait for that: leave `PM: promote wanted — <what>` in your checkpoint, move on.
+- **Admin screens (`public/app.html`)** — merge to staging, then `bash scripts/ship-admin.sh` →
+  live on THE Admin in seconds, production website untouched. NEVER wait on a promote for app.html.
+- **Server code (`src/`)** — on the staging service at push; reaches prod only via promote. If the
+  Admin needs your new endpoint on prod, that's a PM note, not a wait.
+- **Data** — the Admin edits LIVE PROD data, immediately. Pipes sync the rest automatically:
+  owner settings (policy / plans / statuses) mirror prod→staging within a minute · curated store
+  fields sync staging→prod · learned phone-nav syncs prod→staging. Owner flips a checkmark in
+  Admin → prod has it instantly, staging within a minute. An admin-API DB write hits ONLY the env
+  you call.
+- **Never park a chat on a wait-timer for someone else's deploy or promote.** Write the dependency
+  down (PM note), take the next task or Handoff. Waiting chats burn money and block the owner.
 
 No other long-lived branches exist. Session branches merge to `staging` and die — and **YOU merge
 them**: when your harness puts work on a session branch/PR, run the gates, then merge it into
@@ -76,11 +109,13 @@ handing him a merge is a protocol violation. (Prod is different: only `promote`,
   rehearsal replica at `staging.checkitforme.com`) and ONE Admin (`admin.checkitforme.com`) — full
   stop. NEVER create a new domain, subdomain, route, door, dashboard, or "temporary viewing URL" —
   not even for 20 minutes — without the owner naming it first. Owner needs to preview consumer work →
-  staging site. Admin work → promote, he reviews on THE Admin (it's owner-only; that's safe). This
+  staging site. Admin work → `ship-admin.sh`, he reviews on THE Admin (it's owner-only; that's safe). This
   rule exists because it was broken twice and cost real trust.
 - **Autonomous.** Don't ask permission — staging makes mistakes cheap. Need another lane? Leave a `DevOps: need X` note and keep going. Pause only for the owner to run a test-store call.
 - **Push the moment it's built — never wait to be asked.** `git push` is part of building, not a separate step: commit AND push in the SAME turn, then report. `staging.checkitforme.com` only shows what's PUSHED (Railway auto-deploys on push), so unpushed work = the owner can't test it = NOT done. Never say "done" with a commit still sitting local, and never end a turn leaving the owner something to push.
-- **Done = demonstrated, never claimed.** `npx tsc --noEmit` + `bash scripts/test-all.sh`, push, then drive your feature on `staging.checkitforme.com` like a user. Report the contract ✓/✗ with evidence (URL → action → observed). Can't verify? Say "NOT verified: X". "Should work" is banned.
+- **Done = demonstrated, never claimed.** `npx tsc --noEmit` + `bash scripts/test-all.sh`, push, then drive your feature on `staging.checkitforme.com` like a user. Report the contract ✓/✗ with evidence (URL → action → observed). Can't verify? Say "NOT verified: X". "Should work" is banned. **The owner is not your tester.** Anything a customer will see, YOU walk before "done" — and a re-fix on something that already broke needs NEW proof you drove it, not "should be fixed now." The one exception is a device-only blind spot (how iOS paints, how Gmail recolors, how a call sounds — see "Blind-spot truth"): there you ship ONE change and say "pushed, check your phone," never "fixed."
+- **The Done Report — the ONLY shape "done" is allowed to reach the owner in.** Three lines: **Built** (one line, plain) · **Drove it** (`URL → action → what I saw`, or `NOT verified: X` with why) · **Left** (what you did NOT check). A bare "done" / "fixed" / "should be good" with no Drove-it line is not a status — the owner bounces it unread, no proof no done. Device-only blind spot → the Drove-it line is "pushed, check your phone," never "fixed."
+- **PM is the gate before the owner — and the gate before prod.** For anything a customer sees, PM independently drives it and writes the Done Report; the owner is never the first person to test a change. Prod ships on PM's proof, NOT on the owner's word that it works: `scripts/promote.sh` now stops and makes the promoter confirm every user-facing commit was driven before it merges to `main`. Drift is caught here even when an agent skips the rule upstream.
 - **Touching code? Read `docs/shared/AGENT_RULES.md` first.** Non-negotiable.
 - **Checkpoint as you go**; doc-lint what you touched before a big push; new trap → `docs/shared/GOTCHAS.md`.
 - **New docs go ONLY in** `docs/team/<you>/` **or** `docs/specs/<feature>/`. Finished work = the commit message. Superseded → `docs/archive/`. Docs feel bloated → that's a Lexicon session, not a new folder.

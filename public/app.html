@@ -13,9 +13,9 @@
 <title>Check It For Me · Admin</title>
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=2">
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preload" href="/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+<style>@font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;src:url(/fonts/inter-var-latin.woff2) format('woff2')}</style>
 <style>
   :root{
     /* core colors (shared with Fungibles Design System v1.3) */
@@ -139,25 +139,26 @@
   .rgrp .meta{font-weight:500;color:var(--muted)}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   @media(max-width:560px){.grid2{grid-template-columns:1fr}}
-  .pill{display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;color:var(--purple);background:var(--tint-purple-bg);border:1px solid var(--tint-purple-border);padding:4px 11px;border-radius:var(--r-pill)}
-  .pill.g{color:var(--green);background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3)}
-  .pill.a{color:#F59E0B;background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3)}
-  .pill.r{color:var(--red);background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.3)}
+  .pill{display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;color:#CDCDD8;background:rgba(255,255,255,.07);border:none;padding:4px 11px;border-radius:var(--r-pill)}
+  .pill.g{color:var(--green);background:rgba(74,222,128,.14)}
+  .pill.a{color:#F59E0B;background:rgba(245,158,11,.14)}
+  .pill.r{color:var(--red);background:rgba(248,113,113,.14)}
   /* Alerts editor fields (God View → Alerts) */
   .fld{display:block;margin-bottom:8px} .fld:last-child{margin-bottom:0}
   .fld .fl{display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:4px}
   .fld input,.fld textarea{background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:12px;padding:12px 14px;color:var(--text-strong);font-size:14px;font-family:inherit;width:100%;max-width:100%;box-sizing:border-box}
   .fld textarea{resize:vertical;line-height:1.45}
   .transcript{white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:12.5px;color:#cfcfe0;background:var(--terminal);border-radius:10px;padding:12px;margin-top:10px}
-  .empty{color:var(--muted);font-size:13px;padding:30px;text-align:center}
+  .empty{color:var(--muted);font-size:13px;font-weight:600;padding:34px 20px;text-align:center}
   /* THE notification (comp 1a): ONE gray pill, bottom center — raised, thin white ring, one line. */
   .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,#2E2E35,#25252B);border:none;padding:11px 22px;border-radius:999px;font-size:14.5px;font-weight:800;color:rgba(255,255,255,.92);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.35),0 0 18px rgba(255,255,255,.18);white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;opacity:0;transition:.2s;z-index:70;pointer-events:none}
   .toast.show{opacity:1}
   /* Tooltip: TAP to show (works on mobile — hover doesn't exist on touch). A small ⓘ marks tappable hints. */
   [data-tip]{cursor:help}
   label[data-tip],span[data-tip],.name[data-tip],b[data-tip]{display:inline-flex;align-items:center;gap:4px}
-  [data-tip]::after{content:"ⓘ";font-size:13px;color:var(--purple);font-style:normal;font-weight:700;line-height:1;margin:-4px 0 -4px 1px;padding:4px;vertical-align:middle;opacity:.85;cursor:pointer}
-  [data-tip]:active::after{opacity:1;color:#c4b5fd}
+  /* Hint marks are quiet gray, never an accent (comps: explainers are gray, color means state). */
+  [data-tip]::after{content:"ⓘ";font-size:13px;color:#8A8A96;font-style:normal;font-weight:700;line-height:1;margin:-4px 0 -4px 1px;padding:4px;vertical-align:middle;opacity:.85;cursor:pointer}
+  [data-tip]:active::after{opacity:1;color:rgba(255,255,255,.85)}
   #tiptip{position:fixed;z-index:9000;max-width:262px;background:#06060a;color:#e8e8f2;font:500 12.5px/1.45 Inter,-apple-system,sans-serif;font-style:normal;padding:9px 11px;border-radius:9px;border:1px solid rgba(255,255,255,.18);box-shadow:0 12px 30px rgba(0,0,0,.6)}
   /* Settings page: sections reuse the global details.card chevron (green circle, top-right). */
   details.card.setsec>summary{align-items:center}
@@ -190,7 +191,7 @@
   .recp.good{color:var(--green);background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.32)}
   .recp.mid{color:#F4D03F;background:rgba(244,208,63,.1);border:1px solid rgba(244,208,63,.3)}
   .recp.low{color:#ff8a8a;background:rgba(239,68,68,.09);border:1px solid rgba(239,68,68,.28)}
-  .recp.none{color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border);font-weight:700}
+  .recp.none{color:var(--text-muted);background:rgba(255,255,255,.07);border:none;font-weight:700}
   .srdetail{padding:0 13px 13px}
   .srline{display:flex;gap:10px;font-size:13px;line-height:1.5;padding-top:11px}
   .srlab{color:var(--text-muted);font-weight:600;flex:0 0 58px;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;padding-top:1px}
@@ -244,15 +245,15 @@
   .pulse{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);flex:0 0 auto;animation:scpulse 1.4s ease-in-out infinite}
   @keyframes scpulse{0%,100%{opacity:1}50%{opacity:.32}}
   .lvstop{width:100%;margin-bottom:12px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.45);color:#ff8a8a;border-radius:10px;padding:10px 15px;font:800 13px Inter;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer}
-  .lvx{width:34px;height:34px;border-radius:9px;border:1px solid var(--border);background:var(--surface-2);color:#9a9aac;font-size:15px;display:grid;place-items:center;cursor:pointer;flex:0 0 auto}
+  .lvx{width:34px;height:34px;border-radius:9px;border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);background:var(--surface-2);color:#9a9aac;font-size:15px;display:grid;place-items:center;cursor:pointer;flex:0 0 auto}
   .lvbody{max-height:46vh;overflow:auto}
   .lvbody .chat{margin-top:0}
   /* multi-select store-type filter (check several at once) */
   .msel{position:relative;flex:1;min-width:158px}
-  .msel-btn{display:flex;width:100%;align-items:center;justify-content:space-between;gap:7px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;color:#dcdce6;padding:8px 11px;font:600 13px Inter;cursor:pointer;white-space:nowrap}
+  .msel-btn{display:flex;width:100%;align-items:center;justify-content:space-between;gap:7px;background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:8px;color:#dcdce6;padding:8px 11px;font:600 13px Inter;cursor:pointer;white-space:nowrap}
   .msel-btn #ftype_lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .msel-car{color:#56566a;font-size:10px;flex:0 0 auto}
-  .msel-menu{display:none;position:absolute;z-index:60;top:calc(100% + 5px);left:0;width:230px;max-height:300px;overflow:auto;background:var(--sheet);border:1px solid var(--border);border-radius:11px;padding:6px;box-shadow:0 14px 34px rgba(0,0,0,.55)}
+  .msel-menu{display:none;position:absolute;z-index:60;top:calc(100% + 5px);left:0;width:230px;max-height:300px;overflow:auto;background:var(--sheet);border-radius:11px;padding:6px;box-shadow:0 14px 34px rgba(0,0,0,.55)}
   .msel-menu.open{display:block}
   .msel-opt{display:block;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:#e9e9f2;white-space:nowrap;line-height:1.3}
   .msel-opt:hover{background:var(--surface-2)}
@@ -263,14 +264,14 @@
   .urow:first-of-type{border-top:none}
   .ugrow{flex:1;min-width:0}
   .uname{font-size:13px;font-weight:700;color:#eaeaf2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .ucomp{font-size:10px;font-weight:700;color:var(--muted);background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:1px 5px;margin-left:7px;vertical-align:1px}
+  .ucomp{font-size:10px;font-weight:700;color:var(--muted);background:rgba(255,255,255,.07);border:none;border-radius:6px;padding:1px 5px;margin-left:7px;vertical-align:1px}
   .umeta{font-size:12.5px;color:var(--text-muted);margin-top:2px}
   .uright{flex:0 0 auto;text-align:right}
-  .upill{display:inline-block;font:800 10.5px Inter;border-radius:7px;padding:3px 9px;border:1px solid}
-  .upill.in{color:var(--green);background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3)}
-  .upill.soon{color:#F4D03F;background:rgba(244,208,63,.1);border-color:rgba(244,208,63,.28)}
-  .upill.out{color:var(--text-muted);background:var(--surface-2);border-color:var(--border)}
-  .upill.gray{color:var(--purple);background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.3)}
+  .upill{display:inline-block;font:800 10.5px Inter;border-radius:7px;padding:4px 9px;border:none}
+  .upill.in{color:var(--green);background:rgba(74,222,128,.14)}
+  .upill.soon{color:#F4D03F;background:rgba(244,208,63,.14)}
+  .upill.out{color:var(--text-muted);background:rgba(255,255,255,.07)}
+  .upill.gray{color:#CDCDD8;background:rgba(255,255,255,.07)}
   /* workflows manager */
   .wfm{background:var(--surface-1);border:1px solid var(--border-default);border-radius:var(--r-card);padding:14px;margin-bottom:12px}
   .wfm.def{border-color:rgba(74,222,128,.34)}
@@ -324,7 +325,7 @@
   .peek .pk-t{font-size:15px}
   .peek .pk-fact{font-size:15px}
   /* THE dropdown as a pill (filters atop logs/lists) — auto width, raised, green chevron. */
-  select.k-filter{width:auto;max-width:60vw;background-color:transparent;background-image:linear-gradient(180deg,#2E2E35,#25252B),url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%234ADE80' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");background-origin:border-box;background-repeat:no-repeat,no-repeat;background-position:center,right 13px center;border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:999px;padding:9px 32px 9px 15px;font-size:12px;font-weight:700;color:rgba(255,255,255,.85)}
+  select.k-filter{width:auto;max-width:60vw;background-color:transparent;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%234ADE80' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>"),linear-gradient(180deg,#2E2E35,#25252B);background-origin:border-box;background-repeat:no-repeat,no-repeat;background-position:right 13px center,center;border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:999px;padding:9px 32px 9px 15px;font-size:12px;font-weight:700;color:rgba(255,255,255,.85)}
   .k-filters{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
   /* THE raised key — Show more, secondary page actions. Uppercase, letterspaced. */
   .k-key{display:block;margin:18px auto 0;background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:999px;padding:12px 26px;font-size:12.5px;font-weight:800;letter-spacing:.13em;color:rgba(255,255,255,.85);cursor:pointer;font-family:inherit;transition:transform .08s}
@@ -348,7 +349,7 @@
   .k-hero .n{font-size:34px;font-weight:900;letter-spacing:-1.2px;font-variant-numeric:tabular-nums;color:#fff}
   .k-hero .l{font-size:13px;font-weight:600;color:#8A8A96}
   .k-wells{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px}
-  .k-well{background:var(--terminal);border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:12px 6px;text-align:center}
+  .k-well{background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:12px 6px;text-align:center}
   .k-well .n{font-size:19px;font-weight:900;letter-spacing:-.4px;font-variant-numeric:tabular-nums;color:#fff}
   .k-well .n.g{color:var(--green)} .k-well .n.a{color:#F59E0B} .k-well .n.r{color:var(--red)}
   .k-well .l{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8A8A96;margin-top:3px}
@@ -368,7 +369,7 @@
   .k-switch::after{content:'';position:absolute;top:2.5px;left:2.5px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.3);transition:left .18s}
   .k-switch.on{background:var(--green);box-shadow:inset 0 1px 2px rgba(0,0,0,.2)}
   .k-switch.on::after{left:21.5px}
-  .k-sub{font-size:12.5px;font-weight:600;color:#8A8A96;margin-top:2px}
+  .k-sub{font-size:12.5px;font-weight:600;color:#8A8A96;margin:2px 0 16px}
   .k-note{font-size:11.5px;font-weight:600;color:#5C5C68;padding:16px 4px 0;line-height:1.5}
   .k-raise{background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
   /* Peek row — replaces every dash accordion. Headline is ON the row; tapping opens depth in the sheet. */
@@ -382,23 +383,34 @@
   .peek .pk-chev{flex:0 0 auto;width:15px;height:15px;color:#5C5C68}
   .peek .pk-bar{height:6px;background:#1B1B20;border-radius:999px;box-shadow:inset 0 2px 4px rgba(0,0,0,.45);margin-top:8px;overflow:hidden}
   .peek .pk-bar>i{display:block;height:100%;border-radius:999px}
-  /* ONE sheet — bottom slide-up. Dismiss on grabber / swipe-down / scrim tap (DATA_DISPLAY §1). */
-  .sheet-scrim{position:fixed;inset:0;background:rgba(5,6,9,.66);opacity:0;pointer-events:none;transition:opacity .22s;z-index:60}
-  .sheet-scrim.on{opacity:1;pointer-events:auto}
-  .sheet{position:fixed;left:50%;bottom:0;width:min(100%,480px);background:#26262B;border-radius:24px 24px 0 0;box-shadow:0 -24px 48px -12px rgba(0,0,0,.7);z-index:61;transform:translate(-50%,100%);transition:transform .26s cubic-bezier(.22,1,.36,1);max-height:88vh;display:flex;flex-direction:column;padding:0 20px calc(26px + env(safe-area-inset-bottom))}
+  /* ONE sheet — bottom slide-up. Dismiss on grabber / swipe-down / tap-outside (DATA_DISPLAY §1). */
+  /* PROVEN (design 07-17, /sheetpeek variant E, owner-verified on device): NEVER cover the page with a
+     fixed dim overlay — a full-screen layer (even transparent) is what kills iOS 26's scroll-edge glass
+     (the translucent top/bottom bars). Dim the CONTENT ITSELF with a filter; nothing sits between the
+     page and the bars, and the root colour never changes. No scrim element exists anymore. */
+  body.sheetopen header,body.sheetopen #grpnav,body.sheetopen .subnav2,body.sheetopen main{filter:brightness(.45);transition:filter .22s}
+  /* variant H (design 07-17c, /sheetpeek, owner-verified ON DEVICE): while OPEN the sheet is ABSOLUTE
+     page-layer content (JS anchors it at scrollY+14vh, height overshooting ~120px under the bar) so iOS
+     glass ghosts its rows through the toolbar — a fixed sheet lives in the UI layer Safari never ghosts.
+     No big bottom padding: rows must run under the bar; a scroll-end spacer on .sh-body keeps the last row
+     reachable. ⚠ LOCKED by scripts/qa-admin-glass.mjs — this recipe took days of on-device A/B testing;
+     do NOT "simplify" the sheet back to position:fixed or add a dim overlay. Break it and the ship fails. */
+  .sheet{position:fixed;left:50%;bottom:0;width:min(100%,480px);background:#26262B;border-radius:24px 24px 0 0;box-shadow:0 -24px 48px -12px rgba(0,0,0,.7);z-index:61;transform:translate(-50%,100%);transition:transform .26s cubic-bezier(.22,1,.36,1);display:flex;flex-direction:column;overflow:hidden;padding:0 20px 0}
+  body.sheetopen{min-height:calc(100dvh + 200px)} /* guarantee the absolute sheet's under-bar overshoot is never clipped on a short page */
   .sheet.on{transform:translate(-50%,0)}
   .sheet .grab{align-self:center;width:40px;height:5px;border-radius:999px;background:rgba(255,255,255,.16);margin:10px 0 6px;flex:0 0 auto}
   .sheet .sh-title{font-size:20px;font-weight:800;letter-spacing:-.3px;margin:4px 0 2px}
   .sheet .sh-sub{font-size:12px;font-weight:600;color:#8A8A96;margin-bottom:6px}
-  .sheet .sh-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding-top:6px}
-  .drow{background:var(--surface-1);border:1px solid var(--border);border-radius:16px;margin-bottom:12px;overflow:hidden}
+  .sheet .sh-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:6px 0 calc(70px + env(safe-area-inset-bottom))}
+  .drow{background:var(--surface-1);border:none;border-radius:16px;margin-bottom:12px;overflow:hidden}
   .drow>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px}
   .drow>summary::-webkit-details-marker{display:none}
   .drow .rl{font-size:15px;font-weight:700;color:#eaeaf2}
   .drow .rr{color:var(--text-muted);font-size:13px;display:flex;align-items:center;gap:8px;white-space:nowrap}
   .drow .chev{transition:.2s;opacity:.7} .drow[open] .chev{transform:rotate(180deg)}
   .drow .rbody{padding:0 16px 16px}
-  .drow .goto{color:var(--purple);font-size:13px;font-weight:700;text-decoration:none;display:block;padding:2px 16px 16px}
+  .goto{color:var(--green);font-size:13px;font-weight:700;text-decoration:none;display:block;padding:2px 0 4px}
+  .drow .goto{padding:2px 16px 16px}
   .wfmsub{font-size:12.5px;font-weight:700;letter-spacing:-.1px;color:var(--text-strong);margin:16px 0 8px}
   .wfmsub .meta{font-weight:500;color:var(--muted)}
   .wfmop{display:flex;gap:6px;align-items:flex-start;margin-bottom:3px}
@@ -425,16 +437,16 @@
   .rsbar b{flex:0 0 auto;min-width:18px;text-align:right;color:#e8e8f0}
   .stat.purple .n{color:var(--purple)}
   .stat.bad .n{color:var(--red)}
-  .rschip{display:inline-block;background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:3px 8px;margin:0 5px 5px 0;font-size:12.5px;color:var(--text-body)}
+  .rschip{display:inline-block;background:rgba(255,255,255,.07);border:none;border-radius:7px;padding:3px 8px;margin:0 5px 5px 0;font-size:12.5px;color:var(--text-body)}
   .rschip b{color:var(--green)}
   .rsrow{cursor:pointer;padding-left:6px;padding-right:6px;border-radius:8px}
   .rsrow:hover{background:var(--surface-2)}
   .sracts{display:flex;gap:9px;align-items:center;margin-top:12px}
-  #leafletmap{height:520px;border-radius:14px;border:1px solid var(--border);overflow:hidden}
+  #leafletmap{height:520px;border-radius:14px;border:none;box-shadow:0 8px 14px -8px rgba(0,0,0,.55);overflow:hidden}
   .leaflet-popup-content{font-family:Inter,sans-serif}
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:10px;margin-bottom:16px}
   .card .stats:last-child{margin-bottom:0}   /* no trailing gap when stats is the card's last row */
-  .stat{background:var(--surface-1);border:1px solid var(--border-default);border-radius:var(--r-card);padding:13px 15px;min-width:104px;flex:1 1 auto}
+  .stat{background:linear-gradient(180deg,#2D2D34,#27272D);border:none;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);border-radius:var(--r-card);padding:13px 15px;min-width:104px;flex:1 1 auto}
   .stat .n{font-size:22px;font-weight:800;line-height:1.1;letter-spacing:-.5px;color:#c7c7d2}
   .stat .l{font-size:12.5px;color:var(--muted);letter-spacing:0;line-height:1.3;margin-top:4px;font-weight:500;text-transform:none}
   .stat.green .n{color:var(--green)}
@@ -448,30 +460,30 @@
   .hero .stat .n{font-size:22px}
   details.card>summary{list-style:none;outline:none}
   details.card>summary::-webkit-details-marker{display:none}
-  .chip-sm{display:inline-flex;align-items:center;font-size:10px;font-weight:700;color:var(--purple);background:var(--tint-purple-bg);border:1px solid var(--tint-purple-border);padding:3px 8px;border-radius:var(--r-tag-lg);margin:2px 4px 0 0}
-  .tag-verified{display:inline-flex;align-items:center;font-size:10px;font-weight:700;color:var(--green);background:var(--tint-green-bg);border:1px solid var(--tint-green-border);padding:3px 8px;border-radius:var(--r-tag-lg)}
+  .chip-sm{display:inline-flex;align-items:center;font-size:10px;font-weight:700;color:#CDCDD8;background:rgba(255,255,255,.07);border:none;padding:4px 9px;border-radius:var(--r-tag-lg);margin:2px 4px 0 0}
+  .tag-verified{display:inline-flex;align-items:center;font-size:10px;font-weight:700;color:var(--green);background:rgba(74,222,128,.14);border:none;padding:4px 9px;border-radius:var(--r-tag-lg)}
   .tag-unverified{display:inline-flex;align-items:center;font-size:10px;font-weight:700;color:var(--orange);background:var(--tint-orange-bg);border:1px solid var(--tint-orange-border);padding:3px 8px;border-radius:var(--r-tag-lg)}
   .ractions{display:flex;gap:10px;margin-top:12px}
   .ractions select{flex:1;min-width:0}
   .ractions button.act{white-space:nowrap}
   .filters{display:flex;gap:8px;margin-bottom:12px;align-items:stretch}
   .filters input{flex:1;min-width:0}
-  .fbtn{flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.04);border:1px solid var(--border-medium);color:var(--text-strong);padding:0 15px;border-radius:var(--r-btn);cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;transition:border-color .12s,background .12s}
+  .fbtn{flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:var(--text-strong);padding:0 15px;border-radius:var(--r-btn);cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap}
   .fbtn:hover{border-color:var(--border-strong)}
   .fbtn.on{border-color:var(--tint-purple-border);background:var(--tint-purple-bg);color:#c4b5fd}
   .fbtn .msel-car{transition:transform .2s}
   .fbtn[aria-expanded="true"] .msel-car{transform:rotate(180deg)}
   .fcount{display:none;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--purple);color:#160e2e;font-size:10.5px;font-weight:800;align-items:center;justify-content:center;line-height:1}
   .fcount.show{display:inline-flex}
-  .filterpanel{display:none;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:16px;padding:12px;background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-card)}
+  .filterpanel{display:none;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:16px;padding:12px;background:var(--surface-1);border-radius:var(--r-card)}
   .filterpanel.open{display:grid}
   .filterpanel select,.filterpanel .msel{width:100%;min-width:0}
   .filterpanel .fclear{grid-column:1 / -1;justify-self:start;margin-top:2px}
-  .chip-type{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border-medium);padding:3px 8px;border-radius:var(--r-tag-lg)}
+  .chip-type{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted);background:rgba(255,255,255,.07);border:none;padding:4px 9px;border-radius:var(--r-tag-lg)}
   .chip-type svg{opacity:.75}
   /* per-product counts as one box (replaces a circle per product) */
   .carrygrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px}
-  .carryrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--muted)}
+  .carryrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--muted)}
   .carryrow span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .carryrow b{color:#c7c7d2;font-size:13px;flex:0 0 auto}
   /* stores: intel reports (by type / top regions / most-checked) */
@@ -482,7 +494,7 @@
   .repline .rl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .repline b{color:#fff;flex:0 0 auto}
   /* statuses: one grouped icon control (drawn preview + emoji key) so it doesn't read as two icons */
-  .stico{display:inline-flex;align-items:center;border:1px solid var(--border);border-radius:9px;overflow:hidden;background:#0e0e14;flex:0 0 auto}
+  .stico{display:inline-flex;align-items:center;border:none;background:rgba(255,255,255,.06);border-radius:9px;overflow:hidden;background:#0e0e14;flex:0 0 auto}
   .stico-prev{display:grid;place-items:center;width:34px;height:42px;background:rgba(255,255,255,.05)}
   .stico-key{width:48px;height:42px;text-align:center;border:none!important;border-radius:0!important;background:transparent!important;font-size:16px}
   /* stores: row select + bulk-action bar */
@@ -510,7 +522,7 @@
   .day{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;background:transparent;border:none;padding:5px 4px;cursor:pointer;color:#cfcfd8;user-select:none}
   .day input{width:15px;height:15px;accent-color:var(--green)}
   /* day-of-week pickers render as clean toggle PILLS (hidden checkbox, green when on) — not raw checkboxes */
-  .daypick .day{justify-content:center;font-weight:700;color:#8a8a98;background:rgba(255,255,255,.04);border:1px solid var(--border);padding:8px 4px;border-radius:9px;flex:1 1 0;min-width:0;gap:0;transition:background .12s,border-color .12s,color .12s}
+  .daypick .day{justify-content:center;font-weight:700;color:#8a8a98;background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);padding:8px 4px;border-radius:9px;flex:1 1 0;min-width:0;gap:0;transition:background .12s,border-color .12s,color .12s}
   .daypick .day input{position:absolute;opacity:0;width:0;height:0;margin:0;pointer-events:none}
   .daypick .day:has(input:checked){background:rgba(74,222,128,.14);border-color:rgba(74,222,128,.5);color:var(--green)}
   #signinwrap{display:flex;justify-content:center;align-items:flex-start;padding:40px 16px;min-height:60vh}
@@ -531,12 +543,12 @@
   }
   /* Playbook sub-nav (mobile segmented control) */
   .subnav{display:flex;gap:6px;margin:0 0 12px;flex-wrap:nowrap}
-  .subnav button{flex:1;min-width:0;white-space:nowrap;background:rgba(255,255,255,.03);border:1px solid var(--border);color:var(--muted);padding:9px 8px;border-radius:10px;font-weight:700;font-size:12.5px;cursor:pointer}
+  .subnav button{flex:1;min-width:0;white-space:nowrap;background:rgba(255,255,255,.03);border:none;color:var(--muted);padding:9px 8px;border-radius:10px;font-weight:700;font-size:12.5px;cursor:pointer}
   .subnav button.active{background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.4);color:var(--green)}
   /* Collapsible cards on the Test Bench */
   details.card>summary{cursor:pointer;list-style:none;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
   details.card>summary::-webkit-details-marker{display:none}
-  details.card>summary::after{content:'';margin-left:auto;flex:0 0 auto;width:26px;height:26px;border-radius:50%;border:1px solid var(--border);background:rgba(255,255,255,.04) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%23b9b9c8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px no-repeat;transition:transform .22s,background-color .15s,border-color .15s}
+  details.card>summary::after{content:'';margin-left:auto;flex:0 0 auto;width:26px;height:26px;border-radius:50%;border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);background:linear-gradient(180deg,#2E2E35,#25252B) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%23b9b9c8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px no-repeat;transition:transform .22s,background-color .15s,border-color .15s}
   details.card[open]>summary::after{transform:rotate(180deg);background-color:rgba(74,222,128,.12);border-color:rgba(74,222,128,.45)}
   .chip-draft{font-size:10px;background:#FBBF24;color:#1a1a24;border-radius:6px;padding:2px 6px;font-weight:800;margin-left:6px}
   /* Calls: clean clickable table — one row per call, expands to detail */
@@ -591,8 +603,11 @@
   details.tr>summary::-webkit-details-marker{display:none}
   .daychip{display:inline-block;font-size:10.5px;font-weight:700;color:#62626f;background:transparent;border:none;border-radius:0;padding:0;margin-right:9px;letter-spacing:.2px}
   .daychip.on{color:var(--green);background:transparent;border:none}
-  .catchip{display:inline-flex;align-items:center;gap:8px;background:var(--sheet);border:1px solid var(--border);border-radius:14px;padding:12px 16px;font-weight:800;font-size:13px}
-  .empty{color:var(--muted);font-size:13px;padding:34px 20px;text-align:center;background:var(--sheet);border:1px dashed var(--border);border-radius:16px}
+  .catchip{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:14px;padding:12px 16px;font-weight:800;font-size:13px}
+  .empty{color:var(--muted);font-size:13px;font-weight:600;padding:40px 24px;text-align:center;background:var(--sheet);border:1.5px dashed rgba(255,255,255,.13);border-radius:16px;margin-top:16px}
+  .empty .em-ic{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;margin:0 auto 12px}
+  .empty .em-t{font-size:17px;font-weight:800;letter-spacing:-.2px;color:#fff;line-height:1.25}
+  .empty .em-s{font-size:12.5px;font-weight:600;color:#8A8A96;margin-top:5px;line-height:1.45}
   body.authwait header,body.authwait nav,body.authwait main,body.authwait .agent-fab,body.authwait .agent-panel{display:none}
   /* drawn-icon chrome (replaces emoji) */
   .name{font-weight:800;display:flex;align-items:center}
@@ -621,7 +636,11 @@
   .card>.meta{margin-top:4px}
   .empty{padding:22px 18px}
   /* unified range sliders — match the consumer radius slider */
-  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:6px;background:rgba(255,255,255,.12);outline:none;margin:8px 0}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:999px;background:rgba(255,255,255,.12);outline:none;margin:2px 0 4px}
+  /* Voice-feel slider rows: readable normal-case label + green value, filled track (set by sbLabels). */
+  .srow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin:16px 0 0}
+  .srow .sl{font-size:13px;font-weight:600;color:#CDCDD8}
+  .srow .sv{font-size:13px;font-weight:800;color:var(--green);font-variant-numeric:tabular-nums;white-space:nowrap}
   input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:var(--green);border:3px solid #0C0C12;box-shadow:0 2px 8px rgba(0,0,0,.5);cursor:pointer}
   input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--green);border:3px solid #0C0C12;cursor:pointer}
   /* day toggles + schedule grid: tighter, no bloated gaps */
@@ -632,29 +651,29 @@
   .agent-fab:hover{opacity:1} .agent-fab:active{transform:scale(.94)}
   .agent-fab svg{width:21px;height:21px}
   .agent-panel{position:fixed;right:20px;bottom:20px;z-index:61;width:min(420px,calc(100vw - 32px));height:min(620px,calc(100dvh - 90px));
-    display:flex;flex-direction:column;background:#0d0d15;border:1px solid var(--border);border-radius:18px;overflow:hidden;overscroll-behavior:contain;box-shadow:0 24px 60px -12px rgba(0,0,0,.7)}
+    display:flex;flex-direction:column;background:#1D1D22;border:none;box-shadow:0 24px 48px -12px rgba(0,0,0,.7);border-radius:18px;overflow:hidden;overscroll-behavior:contain;box-shadow:0 24px 60px -12px rgba(0,0,0,.7)}
   .agent-head{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border);background:rgba(74,222,128,.06)}
   .agent-title{font-weight:800;font-size:13px;color:#fff;display:inline-flex;align-items:center;gap:8px}
-  .agent-model{margin-left:auto;margin-right:8px;max-width:170px;background:#08080c;color:#cdcdd8;border:1px solid var(--border);border-radius:9px;padding:5px 7px;font-size:12.5px;font-weight:600;cursor:pointer}
+  .agent-model{margin-left:auto;margin-right:8px;max-width:170px;background:var(--terminal);color:#cdcdd8;border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:9px;padding:5px 7px;font-size:12.5px;font-weight:600;cursor:pointer}
   .agent-x{background:none;border:none;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;padding:0 4px}
   .agent-x:hover{color:#fff}
   .agent-log{flex:1;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:14px;display:flex;flex-direction:column;gap:10px}
   .agent-msg{max-width:86%;padding:9px 12px;border-radius:13px;font-size:13px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
   .agent-msg.user{align-self:flex-end;background:var(--ptint);border:1px solid var(--pline);color:#fff;border-bottom-right-radius:4px}
-  .agent-msg.bot{align-self:flex-start;background:rgba(255,255,255,.04);border:1px solid var(--border);color:#e7e7ef;border-bottom-left-radius:4px}
+  .agent-msg.bot{align-self:flex-start;background:linear-gradient(180deg,#2D2D34,#27272D);border:none;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#e7e7ef;border-bottom-left-radius:4px}
   .agent-msg.err{align-self:flex-start;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5}
   .agent-acts{align-self:flex-start;max-width:86%;display:flex;flex-direction:column;gap:4px;margin-top:-4px}
   .agent-act{font-size:12.5px;color:var(--green);background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);border-radius:8px;padding:4px 9px;display:inline-flex;align-items:center;gap:6px}
   .agent-empty{color:var(--muted);font-size:13px;text-align:center;margin:auto;padding:20px;line-height:1.6}
   .agent-typing{align-self:flex-start;color:var(--muted);font-size:13px;padding:4px 2px}
   .agent-input{display:flex;gap:8px;align-items:flex-end;padding:12px;border-top:1px solid var(--border)}
-  .agent-input textarea{flex:1;resize:none;min-height:60px;max-height:160px;background:#08080c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:11px 13px;font:inherit;font-size:15px;line-height:1.45}
+  .agent-input textarea{flex:1;resize:none;min-height:60px;max-height:160px;background:var(--terminal);color:#fff;border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:12px;padding:11px 13px;font:inherit;font-size:15px;line-height:1.45}
   body.agent-open{overflow:hidden}
   .agent-send{flex:0 0 auto;width:40px;height:40px;border-radius:11px;border:none;cursor:pointer;background:var(--green);display:grid;place-items:center}
   .agent-send:disabled{opacity:.4;cursor:default}
   @media(max-width:480px){ .agent-panel{right:8px;left:8px;width:auto;bottom:8px;height:calc(100dvh - 70px)} .agent-fab{right:16px;bottom:16px} }
   /* Status icon button + Lucide icon-library picker */
-  .sticon-btn{width:40px;height:40px;display:grid;place-items:center;flex:0 0 auto;background:var(--terminal);border:1px solid var(--border);border-radius:10px;cursor:pointer;padding:0;transition:border-color .12s}
+  .sticon-btn{width:40px;height:40px;display:grid;place-items:center;flex:0 0 auto;background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:10px;cursor:pointer;padding:0;transition:border-color .12s}
   .sticon-btn:hover{border-color:var(--green)}
   #iconpick{position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.62);backdrop-filter:blur(3px);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px}
   .iconpick-box{background:var(--sheet);border:1px solid var(--border-medium);border-radius:16px;width:100%;max-width:460px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.6)}
@@ -748,7 +767,6 @@
       <div class="pk-fact" id="pk_credits">—</div>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
-    <div class="k-note">Tap any row for the full report.</div>
     <!-- hidden detail holders — the existing loaders populate these; dashSheet() lifts them into the shared sheet -->
     <div id="dash_details" style="display:none">
       <div id="ds_money"><div class="stats" id="d_money"></div><a class="goto" href="#calc" onclick="closeSheet();showSection('calc');return false">Open the full money view in Calc →</a></div>
@@ -773,70 +791,49 @@
   </section>
   <section id="restock">
     <div class="k-title">Restock intel</div>
-    <div class="k-sub">When stores restock, and what's landing.</div>
+    <div class="k-sub">When stores restock and what's landing</div>
     <div id="restock_net"><div class="empty">Loading…</div></div>
   </section>
   <section id="alerts">
     <div class="k-title">Alerts</div>
-    <div class="k-sub">Every message we send customers, and every send. Restock rides text or email; the rest go by email.</div>
-    <div class="k-eyebrow">Delivery status</div>
-    <div id="al_status" class="meta">Loading…</div>
+    <div class="k-sub">Customer messages and sends</div>
+    <div id="al_status" style="margin-top:2px"></div>
     <div class="k-eyebrow">Your in stock ping</div>
-    <div class="k-sub" style="margin:0 0 8px">Fires when a call confirms stock. Pick where it lands.</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <select id="oa_channel" class="k-filter" onchange="saveOwnerAlert()">
+    <div style="display:flex;gap:8px;align-items:center">
+      <select id="oa_channel" class="k-filter" style="flex:0 0 auto" onchange="saveOwnerAlert()">
         <option value="email">Email</option>
         <option value="sms">Text</option>
       </select>
-      <input id="oa_email" type="email" placeholder="where it lands" style="flex:1;min-width:180px;font-size:14px;padding:10px 14px" onblur="saveOwnerAlert()">
+      <input id="oa_email" type="email" placeholder="where it lands" style="flex:1;min-width:0;font-size:14px;padding:10px 14px" onblur="saveOwnerAlert()">
+      <button class="ghost" style="flex:0 0 auto" onclick="ownerPingTest()">Test it</button>
     </div>
-    <div id="oa_out" class="meta" style="margin-top:8px;font-size:12px"></div>
-    <div class="k-eyebrow">This month</div>
-    <div id="al_rollup" class="meta">Loading…</div>
-    <div class="k-eyebrow">Message templates</div>
-    <div class="k-sub" style="margin:0 0 8px">Tokens fill per send: {store} {product} {city} {email} {result}</div>
+    <div id="oa_out" class="meta" style="margin-top:8px;min-height:0"></div>
+    <div class="k-eyebrow">Messages</div>
     <div id="al_templates">Loading…</div>
-    <div class="btnrow"><span id="al_saved" class="meta"></span><button class="act" onclick="saveAlertTemplates()">Save messages</button></div>
-    <div class="k-eyebrow">Send yourself a test</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <select id="al_test_event" class="k-filter">
-        <option value="confirm_email">Confirm your email (email)</option>
-        <option value="store_added">Store went live (email)</option>
-        <option value="waitlist">We’re live in your area (email)</option>
-        <option value="restock_email">Restock (email)</option>
-        <option value="restock">Restock (text)</option>
-        <option value="auto_check_email">Auto check results (email)</option>
-        <option value="auto_check">Auto check results (text)</option>
-        <option value="instock_owner">Your in stock ping (email)</option>
-      </select>
-      <input id="al_test_to" type="text" placeholder="your email (or a phone for the text)" style="flex:1;min-width:180px;font-size:14px;padding:10px 14px">
-      <button class="act" onclick="sendAlertTest()">Send test</button>
-    </div>
-    <div id="al_test_out" class="meta" style="margin-top:8px;font-size:12px"></div>
-    <div class="k-eyebrow">Recent sends</div>
-    <div id="al_log" class="meta">Loading…</div>
+    <div id="al_sheets" style="display:none"></div>
+    <div id="al_sends_row"></div>
+    <div id="al_sends_hold" style="display:none"><div id="al_log"></div></div>
   </section>
   <section id="workflows">
     <div class="k-title">Workflows</div>
-    <div class="k-sub">A workflow is an opener set, a voice and a persona.</div>
+    <div class="k-sub">Opener set + voice + persona</div>
     <div id="wfm_list" style="margin-top:16px"><div class="empty">Loading…</div></div>
     <button class="k-cta" onclick="showSection('designer')"><span>NEW WORKFLOW →</span></button>
-    <div class="k-note" style="text-align:center">The default powers every store unless a chain overrides it.<br>New workflows are built in the Designer.</div>
   </section>
   <section id="testing">
     <div class="k-title">Testing</div>
-    <div class="k-sub">Owner only · Fun stores</div>
+    <div class="k-sub" id="testing_sub">Fun store test calls</div>
+    <div id="testing_src"></div>
     <div id="testing_summary"></div>
     <div id="testing_log"><div class="empty">Loading…</div></div>
   </section>
 
   <section id="retailers">
     <div class="k-title">Store intel</div>
-    <div class="k-sub">The store book, at a glance.</div>
     <div id="storeintel"></div>
+    <div id="storecoverage" style="display:none;margin-top:14px"></div>
     <div id="storecarries" style="display:none"></div>
     <div id="storereports" style="display:none"><div id="rep_body"></div></div>
-    <div id="storecoverage" style="display:none;margin-top:14px"></div>
   </section>
 
   <section id="search">
@@ -888,7 +885,7 @@
 
   <section id="add">
     <div class="k-title">Add a store</div>
-    <div class="k-sub">Goes live for customers as soon as it saves.</div>
+    <div class="k-sub">Live for customers when it saves</div>
     <div style="height:12px"></div>
     <div class="card">
       <div class="grid2">
@@ -912,7 +909,7 @@
     </div>
     <details class="card">
       <summary><span class="name">Bulk import</span> <span class="meta" data-tip="Paste store JSON. We match on phone; region and timezone come from the state."></span></summary>
-      <textarea id="gw_import" spellcheck="false" placeholder='[{"name":"Target Sunset","phone":"+13105551212","address":"...","state":"CA","chain":"Target","carries":"Pokémon"}]' style="width:100%;min-height:150px;background:#0e0e14;color:#cfe;border:1px solid var(--border);border-radius:10px;padding:12px;font:16px/1.5 ui-monospace,monospace;box-sizing:border-box;margin-top:8px"></textarea>
+      <textarea id="gw_import" spellcheck="false" placeholder='[{"name":"Target Sunset","phone":"+13105551212","address":"...","state":"CA","chain":"Target","carries":"Pokémon"}]' style="width:100%;min-height:150px;background:var(--terminal);color:#cfe;border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:14px;padding:12px;font:16px/1.5 ui-monospace,monospace;box-sizing:border-box;margin-top:8px"></textarea>
       <div id="gw_import_msg" class="meta" style="margin:8px 0;min-height:16px"></div>
       <div><button class="act" onclick="importStoresJson()">Import stores</button> <button class="ghost" onclick="backfillRegions()">Backfill regions</button></div>
     </details>
@@ -920,7 +917,8 @@
 
   <section id="feedback">
     <div class="k-title">Feedback</div>
-    <div class="k-sub">What customers said they saw after an unclear check. Correcting fixes the call record.</div>
+    <div class="k-sub">What customers saw after an unclear check</div>
+    <div id="fb_src"></div>
     <div id="fb_summary"></div>
     <div id="fb_unclear"></div>
     <div class="k-eyebrow">Review queue</div>
@@ -994,9 +992,10 @@
 
 
 
-  <section id="catalog"><h2>Tracked categories</h2><div id="catList"><div class="empty">Loading…</div></div></section>
+  <section id="catalog"><div class="k-title">Categories</div><div class="k-sub">The products Check can ask about</div><div id="catList"><div class="empty">Loading…</div></div></section>
   <section id="receipts">
     <div class="k-title">Kiosk intel</div>
+    <div class="k-sub">Machines, receipts and refresh cadences</div>
     <div id="gw_kiosks" style="margin-top:14px"><div class="empty">Loading…</div></div>
     <div class="k-wells" id="rcpt_wells" style="display:none"></div>
     <div class="k-eyebrow" style="display:flex;align-items:center;justify-content:space-between">Emailed-in receipts
@@ -1009,26 +1008,26 @@
 
   <section id="growth">
     <div class="k-title">Policy</div>
-    <div class="k-sub">Flags and pricing up top. The queues below are live customer requests.</div>
-    <div class="k-eyebrow">Feature flags · live for customers on tap</div>
+    <div class="k-sub">Flags, pricing and customer queues</div>
+    <div class="k-eyebrow">Feature flags · live on tap</div>
     <div id="gw_flags" class="meta">Loading…</div>
     <div class="k-eyebrow">Pricing and rewards</div>
     <div id="gw_pricing" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
     <div class="btnrow"><button class="act" onclick="savePolicyForm()">Save pricing</button></div>
     <div id="gw_plansmirror"></div>
-    <div class="k-eyebrow">Restock watches</div>
-    <div id="gw_watches" class="meta">Loading…</div>
-    <div class="k-eyebrow">Community moderation</div>
-    <div id="gw_community" class="meta">Loading…</div>
-    <div class="k-eyebrow">Store requests</div>
-    <div id="gw_storereqs" class="meta">Loading…</div>
-    <div class="k-eyebrow">Launch waitlist</div>
-    <div id="gw_waitlist" class="meta">Loading…</div>
+    <div class="k-eyebrow">Queues</div>
+    <div id="gw_queues"></div>
+    <div id="gw_qholders" style="display:none">
+      <div id="gw_watches"></div>
+      <div id="gw_community"></div>
+      <div id="gw_storereqs"></div>
+      <div id="gw_waitlist"></div>
+    </div>
   </section>
 
   <section id="settings">
     <div class="k-title">App</div>
-    <div class="k-sub">App wide defaults. Chain overrides live in Chains.</div>
+    <div class="k-sub">App wide defaults</div>
     <div style="height:16px"></div>
     <div class="peek static">
       <div class="pk-main"><div class="pk-t">Customers hear calls live</div><div class="pk-m">Streams call audio and a hang up button</div></div>
@@ -1042,7 +1041,6 @@
       <div class="pk-main"><div class="pk-t">Advanced policy</div><div class="pk-m">Raw JSON, dev escape hatch</div></div>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
-    <div class="k-note">Toggles save on tap.</div>
     <div id="set_details" style="display:none">
       <div id="ds_policy">
         <textarea id="gw_json" spellcheck="false" style="width:100%;min-height:220px;background:var(--terminal);color:#cfe;border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:14px;padding:14px;font:16px/1.5 ui-monospace,monospace;box-sizing:border-box;margin-top:4px"></textarea>
@@ -1053,28 +1051,26 @@
 
   <section id="designer">
     <div class="k-title">Designer</div>
+    <div class="k-sub">Build a calling workflow</div>
     <div id="d_rail" style="display:flex;align-items:center;margin:18px 2px 0"></div>
-    <div id="d_nav_label" style="font-size:20px;font-weight:800;letter-spacing:-.3px;margin-top:18px"></div>
-    <div id="d_nav_sub" class="k-sub"></div>
+    <div id="d_nav_label" style="font-size:17px;font-weight:800;letter-spacing:-.3px;margin-top:18px"></div>
     <div style="height:12px"></div>
     <div id="d_steps">
 
       <div class="card dstep" data-step="1">
 
-        <label style="margin-top:0" data-tip="Delta plays recorded clips with a cheap brain picking the next line (~2.5¢ a check) and hands the call to the live agent if the clerk goes off script. Charlie is the live agent on the whole call.">Call lane</label>
+        <label style="margin-top:0" data-tip="Charlie holds the whole conversation, smartest and costs the most · Delta plays recorded clips (~2.5¢ a check) and the live agent takes over if Staff go off script">Call lane</label>
         <select id="des_lane" onchange="desLaneChange()">
           <option value="charlie">Charlie · live agent on the whole call</option>
           <option value="delta">Delta · recorded clips, escalates when stuck</option>
         </select>
-        <div class="meta" id="des_lane_note" style="margin:6px 0 4px"></div>
-        <label>Voice</label>
+        <label>Live voice</label>
         <select id="vs_select"></select>
         <div id="vs_active" class="meta" style="margin-top:6px"></div>
         <div class="btnrow"><button class="ghost" onclick="vsSetActive()">Use for live calls</button></div>
-        <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-        <label data-tip="Record ~30–60s of clear speech, name it, then clone.">Clone a new voice</label>
-        <div class="row" style="margin-bottom:8px"><button class="ghost" id="vs_rec" onclick="vsToggleRec()"><span style="color:var(--red)">●</span> Record</button><span id="vs_rectime" class="meta"></span><audio id="vs_play" controls style="display:none;height:34px"></audio></div>
+        <div class="k-eyebrow" style="margin:20px 0 10px">Clone a new voice</div>
         <input id="vs_name" placeholder="Voice name (e.g. Branson)">
+        <div class="row" style="gap:10px;align-items:center;margin-top:10px"><button class="ghost" id="vs_rec" onclick="vsToggleRec()"><span style="color:var(--red)">●</span> Record</button><span id="vs_rectime" class="meta" data-tip="Record 30–60s of clear speech, then clone"></span><audio id="vs_play" controls style="display:none;height:34px"></audio></div>
         <div class="btnrow"><button class="ghost" id="vs_clone" onclick="vsClone()" disabled><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Clone &amp; save voice</button></div>
         <div id="vs_msg" class="meta" style="margin-top:8px;min-height:16px"></div>
       </div>
@@ -1082,21 +1078,20 @@
       <div class="card dstep" data-step="2" style="display:none">
         
         <div class="card" style="background:var(--surface-1);margin-bottom:12px">
-          <label style="margin-top:0;display:flex;justify-content:space-between;align-items:baseline">Speed (cadence) <span id="sb_speed_val" class="hint" style="font-style:normal"></span></label>
-          <input id="sb_speed" type="range" min="0.7" max="1.2" step="0.01" style="width:100%" oninput="sbLabels()">
-          <label style="display:flex;justify-content:space-between;align-items:baseline">Warmth <span id="sb_stability_val" class="hint" style="font-style:normal"></span></label>
-          <input id="sb_stability" type="range" min="0.1" max="0.9" step="0.05" style="width:100%" oninput="sbLabels()">
+          <div class="srow" style="margin-top:0"><span class="sl">Speed</span><span class="sv" id="sb_speed_val"></span></div>
+          <input id="sb_speed" type="range" min="0.7" max="1.2" step="0.01" oninput="sbLabels()">
+          <div class="srow"><span class="sl">Warmth</span><span class="sv" id="sb_stability_val"></span></div>
+          <input id="sb_stability" type="range" min="0.1" max="0.9" step="0.05" oninput="sbLabels()">
           <div id="sb_nat_wrap">
-          <label style="display:flex;justify-content:space-between;align-items:baseline">Naturalness (smoothness) <span id="sb_latency_val" class="hint" style="font-style:normal"></span></label>
-          <input id="sb_latency" type="range" min="0" max="4" step="1" style="width:100%" oninput="sbLabels()">
+            <div class="srow"><span class="sl">Naturalness</span><span class="sv" id="sb_latency_val"></span></div>
+            <input id="sb_latency" type="range" min="0" max="4" step="1" oninput="sbLabels()">
           </div>
-          <label style="display:flex;justify-content:space-between;align-items:baseline">Reply timeout <span id="sb_tt_val" class="hint" style="font-style:normal"></span></label>
-          <input id="sb_turntimeout" type="range" min="3" max="45" step="1" style="width:100%" oninput="document.getElementById('sb_tt_val').textContent=this.value+'s'">
-          <div class="meta" id="sb_delta_hint" style="display:none;margin-top:6px">On Delta: Beat is how many seconds a clerk can pause before it assumes they're done and replies. Normal (3s) gives room to think; Patient (5s) gives more; Eager (2s) is snappiest but tighter. It never cuts anyone off mid word, and if they go quiet it says "no rush, take your time" instead of hanging up. Reply timeout is how long it waits for them to start answering.</div>
+          <div class="srow"><span class="sl">Reply timeout</span><span class="sv" id="sb_tt_val"></span></div>
+          <input id="sb_turntimeout" type="range" min="3" max="45" step="1" oninput="sbLabels()">
         </div>
         <div class="grid2">
           <div>
-            <label style="margin-top:0">Beat</label>
+            <label style="margin-top:0" data-tip="How long Staff can pause before the agent replies · it never cuts anyone off mid word">Beat</label>
             <select id="sb_beat" onchange="updateDraftDot()">
               <option value="" disabled selected>Select a beat</option>
               <option value="normal">Normal (3s to think before it replies)</option>
@@ -1127,72 +1122,71 @@
 
       <div class="card dstep" data-step="3" style="display:none">
         
-        <div class="meta" style="margin:2px 0 12px">The openers this workflow rotates through. <span data-tip="These are your shared scripts. Tick the ones to rotate on live calls. Once the workflow is saved, you can also fine-tune its openers per store on the Workflows page."></span></div>
-        <label data-tip="Use {category}, fills in Pokémon, One Piece, etc.">Write a new opener</label>
+        <label style="margin-top:0" data-tip="{category} swaps per store · Pokémon, One Piece and so on">Write a new opener</label>
         <textarea id="rot_opener_new" rows="3" style="font-size:13px;line-height:1.5" placeholder="e.g. Heyy! Got any {category} in today?"></textarea>
         <div class="btnrow"><button class="ghost" onclick="addOpener()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save opener</button></div>
-        <label style="margin-top:16px">Your openers <span id="rot_opener_count" class="meta" style="text-transform:none;letter-spacing:0;font-weight:500"></span></label>
+        <label style="margin-top:16px" data-tip="Tick the ones to rotate on live calls · fine-tune per store later in Workflows">Your openers <span id="rot_opener_count" class="meta" style="text-transform:none;letter-spacing:0;font-weight:500"></span></label>
         <div id="rot_opener_list" style="margin-top:4px"></div>
       </div>
 
       <div class="card dstep" data-step="4" style="display:none">
-        
-        <div class="meta" id="pn_delta_note" style="display:none;margin:0 0 10px">Delta plays recorded clips, so the persona never speaks on script. It only takes over if the call escalates to the live agent, so it's still worth setting one.</div>
-        <label data-tip="The persona live calls use for this workflow. Build one below, then tap it here to select it.">Persona for this workflow</label>
+
+        <div class="meta" id="pn_delta_note" style="display:none;margin:0 0 10px">Delta speaks in clips · the persona only talks if the call escalates to the live agent</div>
+        <label style="margin-top:0" data-tip="Tap one to use it · saving a new persona selects it automatically">Persona for this workflow</label>
         <div id="wf_persona_pick" class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:4px"></div>
-        <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-        <div class="name" style="font-size:13px">Build a persona</div>
-        <div id="pn_edit_hint" class="meta" style="margin-top:4px"></div>
-        <label style="margin-top:8px">Persona name</label><input id="pn_name" placeholder="e.g. Friendly Jared">
+        <label style="margin-top:16px">Your personas</label>
+        <div id="pn_list" style="margin-top:6px"></div>
+        <button class="k-key" onclick="pnNew()">NEW PERSONA</button>
+      </div>
+      <!-- Persona builder — opens in THE sheet (create + edit), never inline on the step.
+           The hidden WRAPPER keeps it off the page after the sheet returns the borrowed node. -->
+      <div id="pn_builder_wrap" style="display:none">
+      <div id="pn_builder">
+        <label style="margin-top:0">Persona name</label><input id="pn_name" placeholder="e.g. Friendly Jared">
         <label>Starting vibe <span class="meta" style="font-weight:500">· optional</span></label>
         <div id="pn_base" class="row" style="gap:6px"></div>
-        <div class="meta" style="margin-top:4px">Your Tone &amp; style below always comes through. a vibe just adds a quick descriptor on top. Pick Custom for none.</div>
-        <label>Tone &amp; style <span data-tip="Free text. Whatever you write drops straight into the persona (e.g. 'Calm, a little dry humor, never pushy')."></span></label><textarea id="pn_tone" rows="3" style="font-size:13px"></textarea>
+        <div class="meta" style="margin-top:4px">A vibe is a quick descriptor on top · your tone below always comes through</div>
+        <label>Tone &amp; style</label><textarea id="pn_tone" rows="3" style="font-size:13px" placeholder="e.g. Calm, a little dry humor, never pushy"></textarea>
         <label>Style toggles</label>
         <div style="display:flex;flex-direction:column;gap:8px">
           <label class="day" style="margin:0"><input id="pn_slang" type="checkbox"> Casual slang</label>
           <label class="day" style="margin:0"><input id="pn_swear" type="checkbox"> Profanity OK</label>
-          <label class="day" style="margin:0" data-tip="On: if staff give their name, the agent may use it once. Off: it never calls them by name."><input id="pn_affection" type="checkbox"> Affectionate <span class="meta" style="font-weight:500">· uses the staff member's name</span></label>
+          <label class="day" style="margin:0"><input id="pn_affection" type="checkbox"> Affectionate <span class="meta" style="font-weight:500">· may use a staff name once</span></label>
         </div>
         <label>Greeting style</label><input id="pn_greet" placeholder="How they open the call">
-        <div class="btnrow"><button class="ghost" id="pn_cancel" onclick="pnCancel()" style="display:none">Cancel edit</button><button class="act" onclick="savePersona()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save persona</button></div>
-        <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-        <label style="margin-top:0">Your personas</label>
-        <div id="pn_list" style="margin-top:6px"></div>
+        <div class="btnrow"><button class="ghost" id="pn_cancel" onclick="pnCancel();closeSheet()" style="display:none">Cancel</button><button class="act" onclick="savePersona()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save persona</button></div>
+      </div>
       </div>
 
       <div class="card dstep" data-step="5" style="display:none">
         
-        <div class="meta" id="rot_script_note" style="margin:2px 0 12px">Your Step 3 scripts rotate on their own, a different one each call. This step only picks the voices.</div>
-        <label style="margin-top:4px" data-tip="Tick 2+ and live calls alternate between them, one per call. Tick just one to always use that voice.">Voices in rotation</label>
+        <label style="margin-top:0" data-tip="Tick 2+ and live calls alternate them, one per call · Step 3 scripts rotate on their own">Voices in rotation</label>
         <div id="rot_voices" class="meta" style="margin-top:4px">Loading voices…</div>
-        <div class="meta" style="margin-top:8px">Next call uses the next ticked voice AND the next script, automatically.</div>
         <div class="btnrow"><button class="ghost" onclick="saveRotation(this)"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save rotation</button><span class="meta" id="rot_msg"></span></div>
       </div>
 
       <div class="card dstep" data-step="6" style="display:none">
         
-        <div class="meta" style="margin:2px 0 12px">Rings your phone so you can hear the voice, tuning, and openers before you save. <span data-tip="A quick gut-check. Staging (staging.checkitforme.com) is still the full end-to-end test with real store calls."></span></div>
-        <div class="meta" id="sim_delta_hint" style="display:none;margin:2px 0 12px;color:var(--green)">Delta rehearsal: saves this workflow, then dials you and runs the real clip flow. Answer like you work at the store. Go off script to hear the live-agent handoff.</div>
+        <div class="meta" id="sim_delta_hint" style="display:none;margin:2px 0 12px;color:var(--green)">Saves the workflow then dials you on the real clip flow · answer like Staff · go off script to hear the handoff</div>
         <div id="sim_charlie_a">
         <label>Store</label><select id="sim_store" onchange="previewMaybe()"><option value="" disabled selected>Loading stores</option></select>
-        <label>Category to ask about</label><select id="sim_cat" onchange="previewMaybe()"></select>
+        <label>Category</label><select id="sim_cat" onchange="previewMaybe()"></select>
         </div>
         <label data-tip="The agent dials this number">Your phone</label><input id="sim_phone" placeholder="+13106662331">
         <div id="sim_charlie_b">
-        <label data-tip="Only your rotation voices show here.">Voice for this test</label><select id="sim_voice" onchange="refreshTestRotation()"><option value="">Bench default voice</option></select>
-        <details class="card" style="margin:16px 0 0;background:var(--surface-1)">
-          <summary><span class="name" style="font-size:13px">Advanced</span></summary>
-          <label>Flow</label><select id="sim_mode"><option value="restock">Restock (did your shipment include it?)</option><option value="carry">Carry (do you sell it at all?)</option></select>
-          <label>Decision tree</label><select id="sim_tree" onchange="syncTreeUI();previewMaybe()"><option value="general">General (any of it counts)</option><option value="specific">Specific (only that exact set)</option></select>
-          <div id="sim_specific_wrap" style="display:none"><label>Specific set / product</label><input id="sim_specific" placeholder="151 booster boxes"></div>
-        </details>
+        <label data-tip="Only your rotation voices show here">Test voice</label>
+        <select id="sim_voice" onchange="refreshTestRotation()"><option value="">Bench default voice</option></select>
+        <div class="grid2" style="margin-top:14px">
+          <div><label style="margin-top:0">Flow</label><select id="sim_mode"><option value="restock">Restock (did your shipment include it?)</option><option value="carry">Carry (do you sell it at all?)</option></select></div>
+          <div><label style="margin-top:0">Decision tree</label><select id="sim_tree" onchange="syncTreeUI();previewMaybe()"><option value="general">General (any of it counts)</option><option value="specific">Specific (only that exact set)</option></select></div>
+        </div>
+        <div id="sim_specific_wrap" style="display:none"><label>Specific set / product</label><input id="sim_specific" placeholder="151 booster boxes"></div>
         <div id="tb_rot_line" class="meta" style="color:var(--green);font-weight:600;min-height:16px;margin:12px 0 8px"></div>
         </div>
         <div class="btnrow"><button class="act" onclick="benchCall()">Call me</button></div>
         <div class="card" id="tb_transcript_card" style="display:none;margin-top:16px">
           <div class="row" style="align-items:center;margin-bottom:8px"><div class="grow"><div class="name">Test result</div><div class="meta" id="tb_t_status">Waiting for the call to connect…</div></div><button class="ghost" onclick="hideTranscript('tb')">Clear</button></div>
-          <div id="tb_verdict" style="display:none;text-align:center;padding:14px;border-radius:12px;margin-bottom:10px;border:1px solid var(--border)"></div>
+          <div id="tb_verdict" style="display:none;text-align:center;padding:14px;border-radius:12px;margin-bottom:10px;background:var(--terminal);box-shadow:inset 0 2px 6px rgba(0,0,0,.45)"></div>
           <div id="tb_t_summary" class="meta" style="color:#ddd;margin-bottom:8px"></div>
           <div id="tb_t_body" class="transcript">…</div>
         </div>
@@ -1200,9 +1194,9 @@
 
       <div class="card dstep" data-step="7" style="display:none">
         
-        <label>Workflow name</label><input id="wf_name" placeholder="e.g. Warm Pokémon v2">
+        <label style="margin-top:0" data-tip="Saved workflows appear in Calls → App and on Chains to assign">Workflow name</label><input id="wf_name" placeholder="e.g. Warm Pokémon v2">
         <div class="btnrow"><button class="ghost" onclick="saveWorkflow()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save workflow</button></div>
-        <div class="meta" id="wf_msg" style="margin-top:8px">Saved workflows appear in Calls → Settings to assign to chains.</div>
+        <div class="meta" id="wf_msg" style="margin-top:8px"></div>
       </div>
 
     </div>
@@ -1213,26 +1207,26 @@
   </section>
 
     <section id="trees">
-    <div style="display:flex;align-items:baseline;gap:10px"><div class="k-title">Chains</div><div class="k-sub" id="set_pickcount" style="margin-top:0"></div></div>
-    <div class="k-sub" id="set_picked">Per-chain settings and the mapped phone route.</div>
-    <div class="stats" id="tr_stats" style="margin:14px 0 0"></div>
-    <button class="peek" style="margin-top:12px" onclick="sheetFromHolder('ds_abcd','How a call flows','Alpha keypad · Bravo voice menu · Charlie live agent · Delta recorded clips')">
-      <div class="pk-main"><div class="pk-t">How a call flows</div></div>
-      <div class="pk-fact">A / B / C / D</div>
-      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-    </button>
-    <div id="trees_details" style="display:none"><div id="ds_abcd"><div id="abcd_flow"></div></div></div>
+    <div class="k-title">Chains</div>
+    <div class="k-sub" id="set_pickcount">Per-chain settings and phone routes</div>
+    <!-- The page's ONE story: how much of the fleet is routed. A slim bar, not a wall of stat tiles. -->
+    <div id="tr_progress" style="margin-top:16px"></div>
     <div id="set_pickwrap">
-      <div class="k-filters">
+      <input id="set_search" placeholder="Search chains…" oninput="filterChainPicker()" style="margin:16px 0 10px;font-size:14px;padding:12px 15px">
+      <div class="k-filters" style="margin:0 0 4px">
         <select class="k-filter" id="set_frate" onchange="filterChainPicker()"><option value="">All ratings</option><option value="5">5 Best Chance</option><option value="4">4 Mostly Reliable</option><option value="3">3 Spotty</option><option value="2">2 Over MSRP</option><option value="1">1 Unknown</option></select>
         <select class="k-filter" id="set_fmap" onchange="filterChainPicker()"><option value="">Mapped + not</option><option value="mapped">Mapped</option><option value="unmapped">Unmapped</option></select>
       </div>
-      <input id="set_search" placeholder="Search chains…" oninput="filterChainPicker()" style="margin:10px 0 14px;font-size:14px;padding:11px 15px">
       <select id="set_chain" onchange="setPickChain()" style="display:none"><option value="">Select a chain</option></select>
       <div id="set_picker"><div class="empty">Loading…</div></div>
       <button class="k-key" id="set_more" onclick="chainsShowMore()" style="display:none">SHOW MORE</button>
-      <div class="k-note" style="text-align:center">Tap a chain to open its settings and map it.</div>
+      <!-- Reference, not content — demoted to a footnote at the very bottom of the list. -->
+      <button class="peek" style="margin-top:20px" onclick="sheetFromHolder('ds_abcd','How a call flows','Alpha keypad · Bravo voice menu · Charlie live agent · Delta recorded clips')">
+        <div class="pk-main"><div class="pk-t">How a call flows</div><div class="pk-m">Alpha · Bravo · Charlie · Delta</div></div>
+        <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
     </div>
+    <div id="trees_details" style="display:none"><div id="ds_abcd"><div id="abcd_flow"></div></div></div>
     <div id="set_body" style="display:none">
       <div class="card" id="set_storewrap">
         <div class="row" style="gap:10px;align-items:center"><span id="set_storelogo" class="setlogo"></span><span class="name">Store settings</span></div>
@@ -1283,7 +1277,7 @@
 
     <section id="statuses">
     <div class="k-title">Statuses</div>
-    <div class="k-sub">The verdicts customers see. Edits go live instantly.</div>
+    <div class="k-sub">The verdicts customers see</div>
     <div id="st_list" style="margin-top:16px"><div class="empty">Loading…</div></div>
     <button class="k-cta" onclick="sheetFromHolder('ds_staddform','New status','Display is instant. Detecting it on calls needs the extraction wired.')"><span>NEW STATUS →</span></button>
     <div id="st_details" style="display:none">
@@ -1311,11 +1305,10 @@
 
   <section id="fun">
     <div class="k-title">Fun</div>
-    <div class="k-sub">Ring your own phone in any voice. Never touches store calls.</div>
+    <div class="k-sub">Rings your own phone · never store calls</div>
     <div style="height:16px"></div>
     <div class="card">
-      <div class="name">Delta <span class="meta" style="font-weight:500">&nbsp;· recorded-agent rehearsal</span></div>
-      <div class="meta" style="margin:4px 0 12px">Calls you and runs a whole check on the Delta lane: recorded clips, no live agent. Say something off script to hear the barge-in.</div>
+      <div class="name">Delta <span class="meta" style="font-weight:500">&nbsp;· recorded-agent rehearsal</span><span data-tip="Runs a whole check on recorded clips, no live agent · go off script to hear the barge-in"></span></div>
       <label>Your phone</label>
       <input id="td_phone" placeholder="+13105551234">
       <div class="btnrow"><button class="act" onclick="tdCall()">Call me on tape</button></div>
@@ -1325,6 +1318,7 @@
       </div>
     </div>
     <div class="card">
+      <div class="name">Charlie <span class="meta" style="font-weight:500">&nbsp;· live-agent rehearsal</span><span data-tip="The live agent calls you and improvises · pick a flow, personality and voice"></span></div>
       <label>Phone</label>
       <input id="lab_phone" placeholder="+13105551234">
       <label data-tip="Optional. Opens with e.g. 'hey what's up Matt'">First name</label>
@@ -1351,7 +1345,7 @@
           <div class="meta" id="lab_t_status">Waiting for the call to connect…</div></div>
         <button class="ghost" onclick="hideTranscript()">Clear</button>
       </div>
-      <div id="lab_verdict" style="display:none;text-align:center;padding:14px;border-radius:12px;margin-bottom:10px;border:1px solid var(--border)"></div>
+      <div id="lab_verdict" style="display:none;text-align:center;padding:14px;border-radius:12px;margin-bottom:10px;background:var(--terminal);box-shadow:inset 0 2px 6px rgba(0,0,0,.45)"></div>
       <div id="lab_t_summary" class="meta" style="color:#ddd;margin-bottom:8px"></div>
       <div id="lab_t_body" class="transcript">…</div>
     </div>
@@ -1407,6 +1401,25 @@ const api = async (p, opts={}) => {
   if(r.status===401){ showAuthGate(); }           // safeguard: never leave cards spinning on a dead session
   try{ return await r.json(); }catch(_){ return {error:'bad_response'}; }
 };
+// Call-data source for the owner-testing pages (Testing + Feedback). THE Admin reads prod, but Fun-store
+// rehearsal happens on the staging site — these two pages can flip to it. Same admin login: the session
+// cookie lives on .checkitforme.com and both services verify it. A staging 401 must NOT trip the global
+// auth gate (the Admin session itself is fine), so this has its own fetch path with its own error keys.
+const STG_ORIGIN='https://staging.checkitforme.com';
+let CALL_SRC=localStorage.getItem('call_src')||'live';
+async function srcApi(p,opts={}){
+  if(CALL_SRC!=='staging') return api(p,opts);
+  try{
+    const r=await fetch(STG_ORIGIN+p,Object.assign({},opts,{credentials:'include'}));
+    if(r.status===401) return {error:'staging_auth'};
+    return await r.json();
+  }catch(_){ return {error:'staging_down'}; }
+}
+function setCallSrc(s,reload){ CALL_SRC=s; localStorage.setItem('call_src',s); document.querySelectorAll('.src-filter').forEach(el=>{el.value=s;}); if(reload) reload(); }
+const srcPicker=reloadName=>`<div class="k-filters"><select class="k-filter src-filter" data-tip="Which site's calls to show — the live site or the staging site" onchange="setCallSrc(this.value,${reloadName})"><option value="live"${CALL_SRC==='live'?' selected':''}>Live site</option><option value="staging"${CALL_SRC==='staging'?' selected':''}>Staging site</option></select></div>`;
+const srcEmpty=(d,fallback)=>d&&d.error==='staging_auth'
+  ? '<div class="empty">Staging wants a login. Open staging.checkitforme.com, sign in with your phone once, then come back.</div>'
+  : d&&d.error==='staging_down' ? '<div class="empty">Could not reach the staging site.</div>' : fallback;
 // Auth safeguard (DevOps owns the actual login wiring). When any /api call 401s, replace the eternal
 // "Loading…" with a clear, actionable gate instead of a silently broken dashboard.
 let AUTH_GATED=false;
@@ -1422,16 +1435,24 @@ function showAuthGate(){
   document.body.appendChild(d);
 }
 const toast = (m) => { const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); };
-// ---- ONE shared sheet (DATA_DISPLAY §1: every sheet dismisses via grabber, swipe-down, scrim tap). ----
+// ---- ONE shared sheet (DATA_DISPLAY §1: every sheet dismisses via grabber, swipe-down, tap-outside). ----
 // openSheet(title, sub, bodyHTML): slides a bottom sheet up over the page. Reused by peek-row reports,
 // the call sheet, edit sheets, transcripts — build the sheet once, never a bespoke modal.
 let _sheetEls=null;
 function _ensureSheet(){
   if(_sheetEls) return _sheetEls;
-  const scrim=document.createElement('div'); scrim.className='sheet-scrim'; scrim.onclick=closeSheet;
   const sheet=document.createElement('div'); sheet.className='sheet';
   sheet.innerHTML='<div class="grab"></div><div class="sh-title"></div><div class="sh-sub"></div><div class="sh-body"></div>';
-  document.body.appendChild(scrim); document.body.appendChild(sheet);
+  document.body.appendChild(sheet);
+  // Tap OUTSIDE the sheet closes it — via a document listener, NOT a full-screen scrim (which would kill
+  // the iOS glass). Capture-phase so it fires before the dimmed page's own handlers; swallow the tap so
+  // the darkened content behind can't also react. The opening tap can't self-close: at capture time for
+  // that click the sheet has no `.on` yet (added by openSheet after this listener runs).
+  document.addEventListener('click',e=>{
+    if(!sheet.classList.contains('on')) return;
+    if(e.target.closest('.sheet')) return;
+    e.preventDefault(); e.stopPropagation(); closeSheet();
+  },true);
   // Thumb-drag ANYWHERE on the sheet to dismiss — the WEBSITE's exact gesture (sheetDrag in
   // checkit.html): arm only when no scroller between the finger and the sheet is mid-scroll; past the
   // threshold the sheet continues DOWN off-screen (never freezes mid-air), else it springs back.
@@ -1454,8 +1475,8 @@ function _ensureSheet(){
       if(dy>110){ // finish the gesture: animate the REST of the way down, then tidy up
         sheet.style.transition='transform .24s cubic-bezier(.32,.72,0,1)';
         sheet.style.transform='translate(-50%,112%)';
-        scrim.classList.remove('on');
-        setTimeout(()=>{ sheet.classList.remove('on'); sheet.style.transition=''; sheet.style.transform=''; _restoreBorrow(); },240);
+        document.body.classList.remove('sheetopen');
+        setTimeout(()=>{ sheet.classList.remove('on'); sheet.style.transition=''; _restoreBorrow(); _restoreSheetLayout(); },240);
       } else { sheet.style.transition=''; sheet.style.transform=''; } // snap back up
     }
     y0=null; dy=0; dragging=false;
@@ -1464,7 +1485,7 @@ function _ensureSheet(){
   sheet.addEventListener('touchmove',move,{passive:false});
   sheet.addEventListener('touchend',up);
   sheet.addEventListener('touchcancel',up);
-  _sheetEls={scrim,sheet,title:sheet.querySelector('.sh-title'),sub:sheet.querySelector('.sh-sub'),body:sheet.querySelector('.sh-body')};
+  _sheetEls={sheet,title:sheet.querySelector('.sh-title'),sub:sheet.querySelector('.sh-sub'),body:sheet.querySelector('.sh-body')};
   return _sheetEls;
 }
 let _sheetBorrow=null; // {node, home} — a live DOM node lent to the sheet, returned to its home on close
@@ -1476,12 +1497,21 @@ function openSheet(title,sub,body){
     _sheetBorrow={node:body, home:body.parentNode, next:body.nextSibling};
     s.body.innerHTML=''; s.body.appendChild(body);
   } else { s.body.innerHTML=body||''; }
-  s.body.scrollTop=0; s.sheet.style.transform='';
-  requestAnimationFrame(()=>{ s.scrim.classList.add('on'); s.sheet.classList.add('on'); });
+  s.body.scrollTop=0;
+  // variant H (design 07-17c): sheet is ABSOLUTE page-layer content while open — anchored at scrollY+14vh,
+  // overshooting ~120px under the bar — so the iOS scroll-edge glass ghosts its rows through the toolbar
+  // (a fixed sheet lives in the UI layer Safari never ghosts). Background scroll locked; root colour constant.
+  const sc=window.scrollY||document.documentElement.scrollTop||0, sh=s.sheet;
+  sh.style.transform=''; // back to the CSS off-screen start translate(-50%,100%) before the slide-up
+  sh.style.position='absolute'; sh.style.top=(sc+window.innerHeight*0.14)+'px'; sh.style.bottom='auto'; sh.style.height=(window.innerHeight*0.86+120)+'px';
+  document.documentElement.style.overflow='hidden'; document.body.style.overflow='hidden';
+  requestAnimationFrame(()=>{ document.body.classList.add('sheetopen'); sh.classList.add('on'); });
   try{ setTimeout(decorateChrome,20); }catch(_){}
 }
 function _restoreBorrow(){ if(!_sheetBorrow) return; const b=_sheetBorrow; _sheetBorrow=null; if(b.home){ if(b.next) b.home.insertBefore(b.node,b.next); else b.home.appendChild(b.node); } }
-function closeSheet(){ if(!_sheetEls) return; _sheetEls.sheet.style.transition=''; _sheetEls.sheet.style.transform=''; _sheetEls.scrim.classList.remove('on'); _sheetEls.sheet.classList.remove('on'); setTimeout(_restoreBorrow,280); }
+// Undo variant-H layout: back to the fixed off-screen resting state + unlock scroll (call AFTER the slide-down).
+function _restoreSheetLayout(){ const sh=_sheetEls&&_sheetEls.sheet; if(!sh) return; sh.style.position=''; sh.style.top=''; sh.style.bottom=''; sh.style.height=''; sh.style.transform=''; document.documentElement.style.overflow=''; document.body.style.overflow=''; }
+function closeSheet(){ if(!_sheetEls) return; const sh=_sheetEls.sheet; sh.style.transition=''; sh.style.transform=''; document.body.classList.remove('sheetopen'); sh.classList.remove('on'); setTimeout(()=>{ _restoreBorrow(); _restoreSheetLayout(); },300); }
 window.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSheet(); });
 // Tap-to-show tooltip — works on mobile (hover doesn't). Tap a hint → bubble; tap again/elsewhere → gone.
 let _tipFor=null;
@@ -1542,6 +1572,13 @@ function showGroup(g, sectionId){
   if(g==='calls') refreshFbBadge();
   showSection(sectionId || GROUP_LAST[g] || grp.tabs[0][0], true);
 }
+// Designed empty state (site pattern 5.15): dashed panel, tinted icon, short headline, one gray line.
+function emptyState(ico,tint,title,sub){ return `<div class="empty"><span class="em-ic" style="background:${tint}1f">${ICO(ico,21,tint,2)}</span><div class="em-t">${esch(title)}</div><div class="em-s">${esch(sub)}</div></div>`; }
+function pokeChrome(){
+  try{ if(document.activeElement&&document.activeElement.blur) document.activeElement.blur(); }catch(_){ }
+  try{ const de=document.documentElement; const cur=getComputedStyle(de).backgroundColor; de.style.backgroundColor=cur; void de.offsetHeight; requestAnimationFrame(()=>{ de.style.backgroundColor=''; }); }catch(_){ }
+  try{ const y=window.scrollY; window.scrollTo(0,y+1); requestAnimationFrame(()=>window.scrollTo(0,y)); }catch(_){ }
+}
 function showSection(id, fromGroup){
   const g=SECTION_GROUP[id]; if(!g) return;
   if(!fromGroup && g!==CUR_GROUP){ showGroup(g, id); return; }
@@ -1558,6 +1595,8 @@ function showSection(id, fromGroup){
   if(TAB_LOADERS[id]) TAB_LOADERS[id]();
   setTimeout(decorateChrome,150); setTimeout(decorateChrome,600); // strip emoji from freshly-rendered content too
   try{ window.scrollTo({top:0}); }catch(_){}
+  // pushState makes iOS drop its sampled bar tint (site lesson: Safari never resamples in-page) — poke it.
+  setTimeout(pokeChrome,80);
 }
 window.addEventListener('popstate', (e)=>{
   const id=e.state&&e.state.tab; if(!id||!SECTION_GROUP[id]) return;
@@ -1665,6 +1704,12 @@ function gtmAdd(){
 // ---- Receipts: shoppers email a receipt → parsed into kiosk_receipts → a free check. "Claimed"
 //      means the reward was granted to that device/account. Server: /api/kiosk-receipts, flow in
 //      src/gmail-receipts.ts (Gmail IMAP, policy flag kioskReceipts + GMAIL_USER/APP_PASSWORD). ----
+// Parse the stored line-item list (JSON) off a receipt row; [] for old single-product rows.
+function rcptItems(r){ if(!r) return []; if(Array.isArray(r.items)) return r.items; try{ const a=JSON.parse(r.items||'[]'); return Array.isArray(a)?a:[]; }catch{ return []; } }
+// Refresh cadence from the real hit minute: a 5:14 hit → ":14 & :44 · every 30 min" (owner's model).
+function refreshFromHit(txnAt){ const m=String(txnAt||'').match(/\d{1,2}:(\d{2})\s*[AP]M/i); if(!m) return null;
+  const min=parseInt(m[1],10)%60, mk=n=>':'+String(n).padStart(2,'0'); const marks=[...new Set([min,(min+30)%60])].sort((a,b)=>a-b).map(mk).join(' & ');
+  return marks+' · every 30 min'; }
 async function loadReceipts(){
   const list=document.getElementById('rcptList'), wells=document.getElementById('rcpt_wells');
   if(!list) return;
@@ -1679,12 +1724,12 @@ async function loadReceipts(){
   if(!rows.length){ list.innerHTML='<div class="empty">No receipts yet. They show up once a shopper emails one in and we can read it.</div>'; return; }
   // Compact rows (owner 07-15): name + price on the row, EVERYTHING else in the receipt sheet.
   RCPT_ROWS=rows;
-  list.innerHTML=rows.map((r,i)=>`<button class="peek" onclick="rcptSheet(${i})">
-      <span class="pk-main"><span class="pk-t" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(r.product||'(no product parsed)')}</span>
-      <span class="pk-m" style="display:block">${r.claimedBy?'<span style=\'color:var(--green)\'>claimed</span>':'unclaimed'} · ${ago(r.createdAt)} ago</span></span>
+  list.innerHTML=rows.map((r,i)=>{ const nItems=r.itemCount||rcptItems(r).length; return `<button class="peek" onclick="rcptSheet(${i})">
+      <span class="pk-main"><span class="pk-t" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(r.product||'(no product parsed)')}${nItems>1?` +${nItems-1} more`:''}</span>
+      <span class="pk-m" style="display:block">${r.claimedBy?'<span style=\'color:var(--green)\'>claimed</span>':'unclaimed'} · ${ago(r.createdAt)} ago${nItems>1?` · ${nItems} items`:''}</span></span>
       <span class="pk-fact">${r.total?('$'+esch(r.total)):''}</span>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-    </button>`).join('');
+    </button>`; }).join('');
 }
 // Admin diagnostic: read the ingest inbox and show what the parser does with each email (incl. rejects),
 // so we can see whether a receipt arrived and why it did/didn't land. Read-only; admin-gated server-side.
@@ -1692,9 +1737,19 @@ let RCPT_ROWS=[];
 function rcptSheet(i){
   const r=RCPT_ROWS[i]; if(!r) return;
   const line=(k,v)=>v?`<div class="repline"><span class="rl">${k}</span><b>${esch(String(v))}</b></div>`:'';
+  const items=rcptItems(r), cadence=refreshFromHit(r.txnAt);
+  // Every pack on the receipt (was only showing the first). Falls back to the single product for old rows.
+  const itemsHtml=items.length
+    ? `<div class="k-eyebrow" style="margin-top:2px">Items (${r.itemCount||items.length})</div>`
+      +items.map(it=>`<div class="repline"><span class="rl" style="max-width:72%">${esch(it.name)}</span><b>$${esch(it.price)}</b></div>`).join('')
+    : `<div style="font-size:15px;font-weight:700;line-height:1.4;margin:4px 0 10px">${esch(r.product||'(no product parsed)')}</div>`;
   openSheet('Receipt', r.claimedBy?'Claimed · free check granted':'Unclaimed',
-    `<div style="font-size:15px;font-weight:700;line-height:1.4;margin:4px 0 10px">${esch(r.product||'(no product parsed)')}</div>`
-    +line('Machine',r.machineId)+line('Total',r.total?('$'+r.total):null)+line('Order',r.orderId?('#'+r.orderId):null)
+    itemsHtml
+    +(r.subtotal?line('Subtotal','$'+r.subtotal):'')+(r.tax?line('Tax','$'+r.tax):'')
+    +line('Total',r.total?('$'+r.total):null)
+    +(cadence?`<div class="k-eyebrow" style="margin-top:12px">Restock cadence</div>${line('Refreshes',cadence)}<div class="meta" style="font-size:10.5px;color:var(--text-tertiary);margin-top:2px">From the hit at ${esch(r.txnAt||'')}. Holds this week, Sunday to Sunday, until they restock.</div>`:'')
+    +`<div class="k-eyebrow" style="margin-top:12px">Details</div>`
+    +line('Machine',r.machineId)+line('Order',r.orderId?('#'+r.orderId):null)
     +line('Purchased',r.txnAt)+line('From',r.fromEmail||r.from)+line('Store',r.store||r.storeName)
     +line('Claimed by',r.claimedBy)
     +(r.raw?`<div class="k-eyebrow">Raw parse</div><pre style="white-space:pre-wrap;word-break:break-word;font-size:11.5px;background:var(--terminal);box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:14px;padding:12px">${esch(typeof r.raw==='string'?r.raw:JSON.stringify(r.raw,null,2))}</pre>`:''));
@@ -1732,15 +1787,29 @@ async function testHelicone(model){
 }
 // Trainer = overview only. Per-chain Map/Re-map + call log live under Calls → Settings (a chain).
 // Stats align with Alpha/Bravo/Charlie (locked navType) + mapped/unmapped.
+// Mapped-progress report: the whole fleet at the top, then EACH store category and how much of it is
+// routed (owner 07-17). Bar length shows the laggards at a glance; a category hits green when it's done.
+function trBar(m,n,h){ const p=n?Math.round(m/n*100):0; return `<div style="height:${h}px;background:var(--terminal);border-radius:999px;box-shadow:inset 0 2px 4px rgba(0,0,0,.45);overflow:hidden"><div style="width:${p}%;height:100%;background:var(--green);border-radius:999px;transition:width .3s"></div></div>`; }
 async function loadTrainer(){
-  const ss=document.getElementById('tr_stats'); if(!ss) return;
+  const ss=document.getElementById('tr_progress'); if(!ss) return;
   const d=await api('/api/admin/trainer/list');
-  if(!d||!Array.isArray(d.chains)){ ss.innerHTML='<div class="meta">Could not load.</div>'; return; }
-  const ch=d.chains, lock=t=>ch.filter(c=>c.navStatus==='locked'&&(t?c.navType===t:true)).length;
-  const unmapped=ch.filter(c=>!c.navStatus||c.navStatus==='unmapped').length;
-  const st=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
-  ss.innerHTML=st(ch.length,'chains')+st(lock(),'mapped','green')+st(unmapped,'unmapped')
-    +st(lock('keypad'),'Alpha')+st(lock('voice'),'Bravo')+st(lock('direct'),'Charlie');
+  if(!d||!Array.isArray(d.chains)){ ss.innerHTML=''; return; } // no phantom error — the list below still works
+  const ch=d.chains, isMapped=c=>c.navStatus==='locked';
+  const mapped=ch.filter(isMapped).length, total=ch.length||1, pct=Math.round(mapped/total*100);
+  // Per store-type breakdown, biggest categories first.
+  const byType=new Map();
+  ch.forEach(c=>{ const t=c.type||'Other'; const e=byType.get(t)||{n:0,m:0}; e.n++; if(isMapped(c)) e.m++; byType.set(t,e); });
+  const cats=[...byType.entries()].sort((a,b)=>b[1].n-a[1].n);
+  const catRow=([t,e])=>{ const done=e.m===e.n; return `<div style="display:flex;align-items:center;gap:12px;padding:7px 0">
+      <span style="flex:0 0 88px;font-size:12.5px;font-weight:600;color:#CDCDD8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esch(t)}</span>
+      <span style="flex:1;min-width:0">${trBar(e.m,e.n,5)}</span>
+      <span style="flex:0 0 auto;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;color:${done?'var(--green)':'#8A8A96'}">${e.m}/${e.n}</span>
+    </div>`; };
+  ss.innerHTML=`<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:9px">
+      <span style="font-size:13px;font-weight:700;color:#CDCDD8">${mapped} of ${ch.length} chains mapped</span>
+      <span style="font-size:14px;font-weight:800;color:var(--green)">${pct}%</span></div>
+    ${trBar(mapped,total,6)}
+    <div style="margin-top:14px">${cats.map(catRow).join('')}</div>`;
   renderABCD(ch);
 }
 // ABCD — how a call flows: Alpha (keypad) / Bravo (voice) / Charlie (live agent) / Delta (recorded clips).
@@ -1758,7 +1827,7 @@ function renderABCD(ch){
   ];
   el.innerHTML='<div class="meta" style="text-transform:none;margin-bottom:10px">Dial → <b>navigate</b> the menu (Alpha keypad / Bravo voice, via the locked recipe) → <b>human</b> → <b>Charlie</b> or <b>Delta</b> handles the conversation.</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
-    +lanes.map(L=>`<div style="border:1px solid var(--border);border-left:3px solid ${L[2]};border-radius:10px;padding:10px 11px">
+    +lanes.map(L=>`<div style="background:var(--surface-1);border:none;border-left:3px solid ${L[2]};border-radius:10px;padding:10px 11px">
       <div style="display:flex;align-items:baseline;gap:7px"><span style="font-weight:800;color:${L[2]}">${L[0]}</span><span style="font-weight:700;font-size:13.5px">${L[1]}</span><span class="meta" style="margin-left:auto;font-size:10.5px">${L[4]}</span></div>
       <div class="meta" style="font-size:11.5px;margin-top:4px;text-transform:none">${L[3]}</div>
       <div class="meta" style="font-size:10.5px;margin-top:5px">${L[5]}</div>
@@ -1784,7 +1853,7 @@ async function loadRuns(chainId, box){
         <span class="meta">${st.atSec}s</span><span style="color:#cfcfe0;overflow-wrap:anywhere">${esch(st.text||'')}</span>
         <span style="font-weight:600;white-space:nowrap;color:${us?'var(--text-body)':'var(--muted)'}">${esch(did)}</span></div>`;
     }).join('');
-    return `<details style="border:1px solid var(--border);border-radius:10px;margin-bottom:7px;background:var(--sheet)">
+    return `<details style="background:var(--surface-1);border:none;border-radius:10px;margin-bottom:7px;background:var(--sheet)">
       <summary style="cursor:pointer;list-style:none;padding:9px 11px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px">
         <b style="color:var(--muted);min-width:42px">#${runs.length-i}</b>
         <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col}"></span>
@@ -1965,10 +2034,11 @@ async function loadTreeLab(){
   list.innerHTML=chains.map(c=>`<div class="card" style="padding:11px 13px">
     <div class="row" style="justify-content:space-between;align-items:baseline;gap:8px">
       <div class="sname">${esch(c.name)} ${badge(c.treeStatus)}${c.ringsDirect?' <span class="chip-sm" style="color:var(--green);background:rgba(74,222,128,.1)">rings direct</span>':''}${c.muted?' <span class="chip-sm">muted</span>':''}</div>
-      <div class="meta">${c.stores} stores</div>
+      <div class="meta">${c.stores} stores${c.phones!=null&&c.phones<c.stores?` · <span style="color:#FBBF24">${c.phones} w/ #</span>`:''}</div>
     </div>
+    ${c.blocker?`<div class="meta" style="margin-top:5px;color:#FBBF24">⚠ ${esch(c.blocker)}</div>`:''}
     ${c.note?`<div class="meta" style="margin-top:5px;color:#cdcdd8">${esch(c.note)}</div>`:''}
-    <div class="smeta" style="margin-top:5px">${c.dtmf?`keys: <code>${esch(c.dtmf)}</code> · `:''}${c.answerPath?esch(c.answerPath)+' · ':''}${c.avgTreeSeconds?secsFmt(c.avgTreeSeconds)+' to human · ':''}${c.verifiedAt?'verified '+agoTs(c.verifiedAt):c.learnedAt?'learned '+agoTs(c.learnedAt):'never mapped'}</div>
+    <div class="smeta" style="margin-top:5px">${c.distributor?`distro: ${esch(c.distributor)} · `:''}${c.dtmf?`keys: <code>${esch(c.dtmf)}</code> · `:''}${c.answerPath?esch(c.answerPath)+' · ':''}${c.avgTreeSeconds?secsFmt(c.avgTreeSeconds)+' to human · ':''}${c.verifiedAt?'verified '+agoTs(c.verifiedAt):c.learnedAt?'learned '+agoTs(c.learnedAt):'never mapped'}</div>
     <div class="ractions" style="margin-top:8px">
       <button class="ghost" onclick="tlOne('discover',${c.id},this)">Discover</button>
       <button class="ghost" onclick="tlOne('verify',${c.id},this)">Verify</button>
@@ -2006,9 +2076,21 @@ const CALC_STORE={ Direct:{label:'Direct',sub:'human picks up',nav:0,nc:'var(--t
 const CALC_TALK=[10,15,20,25,30,60];
 const calcMoney=n=>'$'+(n<0?'-':'')+Math.abs(n).toFixed(3);
 const CALC={ storeType:'Alpha', nav:30, talk:20, revenue:0.2, lane:'delta', deltaEsc:30, reach:45, usage:50,
+  monthlyChecks:20000, // drives the "Calls at once" section
+  conc:{ daysPerMonth:30, busyHourFrac:0.15, avgCallMin:1.5 }, // busy-hour concurrency assumptions (editable)
   rates:{ twilioPerMin:0.014, elevenPerSec:0.0012, claudePerSec:0.0002, bravoNavPerSec:0, overhead:0.001, deltaClipPerCall:0.0002, classifyPerCall:0.0004 },
   plans:[{name:'Family',price:4.99,checks:15},{name:'Collector',price:9.99,checks:30},{name:'Hunter',price:19.99,checks:100},{name:'Operator',price:49.99,checks:300}],
   ready:false };
+// ElevenLabs voice plans: flat monthly fee · calls it runs at once · the higher number it briefly stretches to.
+const CALC_VOICE_PLANS=[{name:'Creator',fee:22,atOnce:10,rush:30},{name:'Pro',fee:99,atOnce:20,rush:60},{name:'Scale',fee:299,atOnce:30,rush:90}];
+const calcPickPlan=n=>CALC_VOICE_PLANS.find(p=>p.atOnce>=n)||CALC_VOICE_PLANS[CALC_VOICE_PLANS.length-1];
+// From the month's checks: how many calls run at once in the busy hour, and which plan covers it.
+function calcConcurrency(){
+  const c=CALC.conc, checks=CALC.monthlyChecks||0, revenue=checks*(CALC.revenue||0);
+  const atOnce=checks>0?(checks/c.daysPerMonth)*c.busyHourFrac*(c.avgCallMin/60):0;
+  const plan=calcPickPlan(atOnce);
+  return { checks, revenue, atOnce, plan, overCapacity:atOnce>plan.rush, feePctOfRev:revenue>0?plan.fee/revenue*100:0 };
+}
 const calcDot=c=>`<span style="display:inline-block;width:8px;height:8px;border-radius:9px;background:${c};flex-shrink:0"></span>`;
 
 // core cost model — one source of truth (Twilio runs the whole call; Bravo nav is now CHEAP voice-injection
@@ -2055,10 +2137,10 @@ async function loadPlans(){
   renderPlans();
 }
 function syncPill(s){ return s==='in_sync'
-  ? '<span style="font-size:10.5px;font-weight:700;color:#4ADE80;background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.3);border-radius:7px;padding:2px 8px">✓ in sync</span>'
-  : '<span style="font-size:10.5px;font-weight:700;color:#FBBF24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.3);border-radius:7px;padding:2px 8px">● pending publish</span>'; }
-function priceInput(val,oninput,w){ return '<span style="display:inline-flex;align-items:center;background:var(--terminal);border:1px solid var(--border-strong);border-radius:9px;padding:0 8px"><span style="color:var(--text-tertiary);font-size:13px">$</span><input type="number" step="0.01" min="0" value="'+((val||0)/100).toFixed(2)+'" oninput="'+oninput+'" style="background:transparent;border:none;outline:none;color:var(--text-primary);font-size:14px;font-weight:600;padding:8px 2px;width:'+(w||60)+'px"></span>'; }
-function numInput(val,oninput,w){ return '<input type="number" min="0" step="1" value="'+(val||0)+'" oninput="'+oninput+'" style="background:var(--terminal);border:1px solid var(--border-strong);border-radius:9px;color:var(--text-primary);font-size:14px;font-weight:600;padding:8px;width:'+(w||56)+'px">'; }
+  ? '<span style="font-size:10.5px;font-weight:700;color:#4ADE80;background:rgba(74,222,128,.14);border:none;border-radius:999px;padding:4px 9px;white-space:nowrap">✓ in sync</span>'
+  : '<span style="font-size:10.5px;font-weight:700;color:#FBBF24;background:rgba(251,191,36,.14);border:none;border-radius:999px;padding:4px 9px;white-space:nowrap">● pending</span>'; }
+function priceInput(val,oninput,w){ return '<span style="display:inline-flex;align-items:center;background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:12px;padding:0 10px"><span style="color:var(--text-tertiary);font-size:13px">$</span><input type="number" step="0.01" min="0" value="'+((val||0)/100).toFixed(2)+'" oninput="'+oninput+'" style="background:transparent;border:none;outline:none;box-shadow:none;color:var(--text-primary);font-size:14px;font-weight:600;padding:9px 2px;width:'+(w||60)+'px"></span>'; }
+function numInput(val,oninput,w){ return '<input type="number" min="0" step="1" value="'+(val||0)+'" oninput="'+oninput+'" style="border-radius:12px;font-size:14px;font-weight:600;padding:9px 10px;width:'+(w||56)+'px">'; }
 // Per-tier feature matrix: which of the premium features this tier includes. Drives /app/me.features →
 // the consumer app hides a module when its key is OFF here (comp always gets all). exact_products also
 // recomputes premiumAsks server-side, so unchecking it turns off the exact-product asks too.
@@ -2073,8 +2155,8 @@ function renderPlans(){
   const anyPending=PLANS.tiers.some(t=>t.sync!=='in_sync')||PLANS.payg.bundles.some(b=>b.sync!=='in_sync');
   const tierCard=(t,i)=>`<div class="card report">
     <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px">
-      <input value="${esch(t.name)}" oninput="PLANS.tiers[${i}].name=this.value;plansTouch(${i})" style="background:transparent;border:none;border-bottom:1px solid var(--border);outline:none;color:var(--text-primary);font-size:17px;font-weight:800;padding:2px 0;width:150px">
-      ${syncPill(t.sync)}
+      <input value="${esch(t.name)}" oninput="PLANS.tiers[${i}].name=this.value;plansTouch(${i})" style="background:transparent;border:none;box-shadow:none;outline:none;color:var(--text-primary);font-size:17px;font-weight:800;padding:2px 0;width:150px">
+      ${t.sync!=='in_sync'?syncPill(t.sync):''}
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 14px">
       <label style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12px;color:var(--text-muted)">Monthly</span>${priceInput(t.monthlyCents,`PLANS.tiers[${i}].monthlyCents=toCents(this.value);plansTouch(${i})`)}</label>
@@ -2083,23 +2165,18 @@ function renderPlans(){
     </div>
     ${featMatrix(t,i)}
   </div>`;
-  const bundleRow=(b,i)=>`<div class="row" style="justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--border-dashed)">
-    <span style="display:flex;align-items:center;gap:8px">${numInput(b.checks,`PLANS.payg.bundles[${i}].checks=parseInt(this.value)||0;plansTouch()`,54)}<span style="font-size:13px;color:var(--text-muted)">checks</span></span>
-    <span style="display:flex;align-items:center;gap:10px">${priceInput(b.cents,`PLANS.payg.bundles[${i}].cents=toCents(this.value);plansTouch()`)}<span style="font-size:11px;color:var(--text-tertiary);width:74px;text-align:right">${b.checks?('~'+dollars(Math.round(b.cents/b.checks))+'/ea'):''}</span>${syncPill(b.sync)}</span>
+  const bundleRow=(b,i)=>`<div class="row" style="justify-content:space-between;align-items:center;gap:8px;padding:7px 0;flex-wrap:wrap">
+    <span style="display:flex;align-items:center;gap:7px;flex:0 0 auto">${numInput(b.checks,`PLANS.payg.bundles[${i}].checks=parseInt(this.value)||0;plansTouch()`,46)}<span style="font-size:12.5px;color:var(--text-muted)">checks</span></span>
+    <span style="display:flex;align-items:center;gap:8px;flex:0 0 auto">${priceInput(b.cents,`PLANS.payg.bundles[${i}].cents=toCents(this.value);plansTouch()`,56)}<span style="font-size:11px;color:var(--text-tertiary);min-width:64px;text-align:right">${b.checks?('~'+dollars(Math.round(b.cents/b.checks))+'/ea'):''}</span>${b.sync!=='in_sync'?syncPill(b.sync):''}</span>
   </div>`;
   document.getElementById('plans_root').innerHTML=`
-    <div class="hero" style="margin-bottom:16px">
-      <div class="row" style="justify-content:space-between;align-items:center;gap:12px">
-        <div><div class="hero-eyebrow">Pricing</div>
-          <div style="font-size:13px;color:var(--text-muted);margin-top:6px;line-height:1.5">Edit tiers, then Publish to Stripe. <span style="color:#8A8A96;font-weight:700;cursor:pointer" onclick="openSheet('How pricing works','', '<div class=\'meta\' style=\'line-height:1.7\'>This page is the source of truth for every price. Edit a tier or the pay as you go ladder, then Publish to Stripe.<br><br>Subscription checks reset each cycle with no rollover. PAYG credits never expire.<br><br>Sanity check margins in Calc before publishing.</div>')">More →</span></div>
-        </div>
-        <button type="button" onclick="publishPlans()" ${anyPending?'':'disabled'} style="background:${anyPending?'linear-gradient(180deg,#5BEA93 0%,#34C268 100%)':'var(--surface-2)'};color:${anyPending?'#06210f':'var(--text-tertiary)'};border:none;font-weight:800;font-size:14px;padding:12px 20px;border-radius:12px;cursor:${anyPending?'pointer':'default'};white-space:nowrap;box-shadow:${anyPending?'0 8px 18px -8px rgba(52,197,107,.5)':'none'}">${anyPending?'Publish to Stripe':'All in sync'}</button>
-      </div>
-    </div>
-    <div style="font-size:11px;letter-spacing:.1em;color:var(--text-tertiary);font-weight:700;margin:4px 2px 10px">SUBSCRIPTION TIERS</div>
+    <div class="k-title">Plans</div>
+    <div class="k-sub">${anyPending?'Edits pending · publish to make them live on Stripe':'All in sync with Stripe'}</div>
+    ${anyPending?`<button class="k-cta" style="margin:14px 0 4px" onclick="publishPlans()"><span>PUBLISH TO STRIPE →</span></button>`:''}
+    <div class="k-eyebrow">Subscription tiers</div>
     ${PLANS.tiers.map(tierCard).join('')}
-    <div style="font-size:11px;letter-spacing:.1em;color:var(--text-tertiary);font-weight:700;margin:18px 2px 10px">PAY AS YOU GO · one-time bundles</div>
-    <div class="card report">${PLANS.payg.bundles.map(bundleRow).join('')}</div>`;
+    <div class="k-eyebrow">Pay as you go · one-time bundles</div>
+    <div class="card">${PLANS.payg.bundles.map(bundleRow).join('')}</div>`;
 }
 // A local edit flips the row to "pending" and auto-saves the config (draft); Publish pushes to Stripe.
 // `fast` (checkbox flips) saves near-instantly — the 600ms debounce is for typing, and an owner who
@@ -2146,7 +2223,9 @@ async function calcSyncPlans(){
 }
 function calcShell(){
   const seg=Object.keys(CALC_STORE).map(t=>`<button type="button" id="calc_seg_${t}" onclick="calcPick('${t}')" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:10px;border-radius:11px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-muted);cursor:pointer;text-align:left;font:inherit"><span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(CALC_STORE[t].nc)}${t}</span><span style="font-size:10.5px;color:var(--text-tertiary)">${CALC_STORE[t].sub}</span></button>`).join('');
-  const rate=(label,k,suf)=>`<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:var(--text-muted)">${label}</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:1px solid var(--border-strong);border-radius:9px;padding:0 8px"><span style="color:var(--text-tertiary);font-size:13px">$</span><input type="number" step="0.0001" value="${CALC.rates[k]}" oninput="calcSetRate('${k}',this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:13px;font-weight:600;padding:8px 2px;width:62px"><span style="color:var(--text-tertiary);font-size:10.5px">${suf}</span></span></label>`;
+  const rate=(label,k,suf)=>`<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:var(--text-muted)">${label}</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:12px;padding:0 10px"><span style="color:var(--text-tertiary);font-size:13px">$</span><input type="number" step="0.0001" value="${CALC.rates[k]}" oninput="calcSetRate('${k}',this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;box-shadow:none;color:var(--text-primary);font-size:13px;font-weight:600;padding:9px 2px;width:62px"><span style="color:var(--text-tertiary);font-size:10.5px">${suf}</span></span></label>`;
+  // carved unit-input, same pattern as rate() (box-shadow:none on the input so it never double-boxes)
+  const cInput=(label,tip,val,oninput,suf,step)=>`<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:var(--text-muted)">${label}${tip?` <span data-tip="${tip}"></span>`:''}</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:12px;padding:0 12px"><input type="number" step="${step}" min="0" value="${val}" oninput="${oninput}" style="flex:0 0 auto;background:transparent;border:none;outline:none;box-shadow:none;color:var(--text-primary);font-size:13px;font-weight:600;padding:9px 2px;width:50px"><span style="color:var(--text-tertiary);font-size:10.5px">${suf}</span></span></label>`;
   return `
   <div class="hero" style="margin-bottom:16px">
     <div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px">
@@ -2182,6 +2261,24 @@ function calcShell(){
     </div>
   </div>
   <div class="card report">
+    <div class="name">Calls at once &amp; voice plan</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px">More checks means more calls run at the same time. Pick the ElevenLabs plan that covers your busy hour.</div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px"><span style="font-size:13px;color:var(--text-muted)">Checks / month</span><span style="font-family:ui-monospace,monospace;font-size:19px;font-weight:700"><span id="calc_mchecksval">0</span></span></div>
+    <input id="calc_mchecks" type="range" min="0" max="800000" step="5000" value="${CALC.monthlyChecks}" oninput="calcSetMonthlyChecks(this.value)">
+    <div id="calc_mchecksnote" style="font-size:10.5px;color:var(--text-tertiary);margin-top:2px">—</div>
+    <div class="stats" style="margin:16px 0 0">
+      <div class="stat"><div class="n" id="calc_atonce">0</div><div class="l">calls at once · busy hour</div></div>
+      <div class="stat green"><div class="n" id="calc_planfee">—</div><div class="l" id="calc_planlbl">voice plan</div></div>
+    </div>
+    <div id="calc_conc_bar" style="display:flex;height:12px;border-radius:7px;overflow:hidden;margin-top:14px;background:var(--surface-1);border:1px solid var(--border)"></div>
+    <div id="calc_conc_legend" class="row" style="gap:14px;margin-top:8px;align-items:center;font-size:11px;color:var(--text-tertiary)"></div>
+    <div style="font-size:10.5px;color:var(--text-tertiary);margin-top:10px;line-height:1.5">Assumes checks spread through the day. Batched restock alerts firing together spike this higher.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+      ${cInput('Busy-hour share','Portion of daily calls that land in the single busiest hour.',Math.round(CALC.conc.busyHourFrac*100),"calcSetConc('busyHourFrac',this.value/100)",'%',1)}
+      ${cInput('Avg call length','Average minutes a connected call runs, menu plus talk.',CALC.conc.avgCallMin,"calcSetConc('avgCallMin',this.value)",'min',0.1)}
+    </div>
+  </div>
+  <div class="card report">
     <div class="name">Breakdown</div>
     <div id="calc_breakdown"></div>
     <div style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--border-dashed)"><span style="font-size:10px;letter-spacing:.1em;color:var(--text-tertiary);font-weight:700">FLAT MONTHLY · ≈ $0.000 / CALL</span><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${['Railway compute','Twilio number rental','Helicone gateway','TiDB'].map(f=>`<span style="font-size:10.5px;color:var(--text-muted);background:var(--surface-1);border:1px solid var(--border);border-radius:7px;padding:3px 8px">${f}</span>`).join('')}</div></div>
@@ -2206,7 +2303,7 @@ function calcShell(){
   <div class="card report">
     <div class="name">Margin · per check</div>
     <div class="row" style="gap:12px">
-      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;color:var(--text-muted)">Revenue / check</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:1px solid var(--border-strong);border-radius:10px;padding:0 10px"><span style="color:var(--text-tertiary)">$</span><input id="calc_rev" type="number" step="0.01" min="0" value="${CALC.revenue}" oninput="calcSetRev(this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:22px;font-weight:700;padding:10px 2px;width:84px"></span></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;color:var(--text-muted)">Revenue / check</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:12px;padding:0 10px"><span style="color:var(--text-tertiary)">$</span><input id="calc_rev" type="number" step="0.01" min="0" value="${CALC.revenue}" oninput="calcSetRev(this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;box-shadow:none;color:var(--text-primary);font-size:22px;font-weight:700;padding:10px 2px;width:84px"></span></div>
       <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;color:var(--text-muted)">Margin</span><div id="calc_margin" style="font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0%</div></div>
       <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;color:var(--text-muted)">× return <span data-tip="Revenue ÷ cost. How many times the call pays for itself."></span></span><div id="calc_return" style="font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0×</div></div>
     </div>
@@ -2221,6 +2318,8 @@ function calcSetRev(v){ CALC.revenue=v===''?0:(parseFloat(v)||0); calcUpdate(); 
 function calcSetLane(l){ CALC.lane=l; calcSync(); calcUpdate(); }
 function calcSetEsc(v){ CALC.deltaEsc=parseInt(v,10)||0; const e=document.getElementById('calc_escval'); if(e) e.textContent=CALC.deltaEsc; calcUpdate(); }
 function calcSetReach(v){ CALC.reach=parseInt(v,10)||45; const e=document.getElementById('calc_reachval'); if(e) e.textContent=CALC.reach; calcUpdate(); }
+function calcSetMonthlyChecks(v){ CALC.monthlyChecks=parseInt(v,10)||0; calcUpdate(); }
+function calcSetConc(k,v){ const n=parseFloat(v); if(!isNaN(n)&&n>0) CALC.conc[k]=n; calcUpdate(); }
 function calcSetUsage(v){ CALC.usage=parseInt(v,10)||100; const e=document.getElementById('calc_usageval'); if(e) e.textContent=CALC.usage; calcRenderPlans(); }
 function calcSetPlan(i,f,v){ if(!CALC.plans[i]) return; CALC.plans[i][f]=(f==='name')?v:(parseFloat(v)||0); calcRenderPlans(); }
 function calcAddPlan(){ CALC.plans.push({name:'New plan',price:9.99,checks:30}); calcRenderPlans(); }
@@ -2232,7 +2331,7 @@ function calcRenderPlans(){
   const el=document.getElementById('calc_plans'); if(!el) return;
   const cpc=calcPerCheck().perCheck, use=Math.max(0,Math.min(1,(CALC.usage||100)/100));
   const money=v=>calcMoney(v), pct=(a,b)=>b>0?(((a-b)/a)*100):0;
-  const inp=(i,f,val,w,pre)=>`<span style="display:inline-flex;align-items:center;background:var(--terminal);border:1px solid var(--border-strong);border-radius:8px;padding:0 6px">${pre?`<span style="color:var(--text-tertiary);font-size:12.5px">${pre}</span>`:''}<input value="${val}" oninput="calcSetPlan(${i},'${f}',this.value)" style="background:transparent;border:none;outline:none;color:var(--text-primary);font-size:12.5px;font-weight:600;padding:6px 2px;width:${w}px"></span>`;
+  const inp=(i,f,val,w,pre)=>`<span style="display:inline-flex;align-items:center;background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:10px;padding:0 6px">${pre?`<span style="color:var(--text-tertiary);font-size:12.5px">${pre}</span>`:''}<input value="${val}" oninput="calcSetPlan(${i},'${f}',this.value)" style="background:transparent;border:none;outline:none;box-shadow:none;color:var(--text-primary);font-size:12.5px;font-weight:600;padding:6px 2px;width:${w}px"></span>`;
   let h=`<thead><tr>${['Plan','Price','Checks','Cost (100%)','Margin','Exp. margin',''].map((c,i)=>`<th style="font-size:10.5px;color:var(--text-muted);font-weight:600;padding:6px 8px;text-align:${i<1?'left':'right'};border-bottom:1px solid var(--border-strong);white-space:nowrap">${c}</th>`).join('')}</tr></thead><tbody>`;
   CALC.plans.forEach((p,i)=>{
     const costWorst=cpc*(p.checks||0), costExp=costWorst*use, price=p.price||0;
@@ -2278,6 +2377,17 @@ function calcUpdate(){
   const mEl=document.getElementById('calc_margin'); if(mEl){ mEl.textContent=margin.toFixed(1)+'%'; mEl.style.color=mc; }
   const ret=total>0?CALC.revenue/total:0, rEl=document.getElementById('calc_return'); if(rEl){ rEl.textContent=ret.toFixed(1)+'×'; rEl.style.color=ret>=1?'var(--green)':'#FF6B6B'; }
   set('calc_sentence',`At ${calcMoney(CALC.revenue)} revenue/call, cost is <b style="color:var(--text-primary)">${calcMoney(total)}</b> → margin = <b style="color:${mc}">${margin.toFixed(1)}%</b>.`);
+  // ---- Calls at once & voice plan ----
+  const conc=calcConcurrency(), cp=conc.plan, atOnceR=Math.round(conc.atOnce);
+  txt('calc_mchecksval',(CALC.monthlyChecks||0).toLocaleString());
+  txt('calc_mchecksnote',`≈ $${Math.round(conc.revenue).toLocaleString()} / month at $${(CALC.revenue||0).toFixed(2)} a check`);
+  txt('calc_atonce',atOnceR);
+  txt('calc_planfee',`${cp.name} · $${cp.fee}/mo`);
+  const planEl=document.getElementById('calc_planfee'); if(planEl) planEl.style.color=conc.overCapacity?'#FF6B6B':'var(--green)';
+  txt('calc_planlbl',conc.overCapacity?'over this plan, add a 2nd account':`voice plan · ${conc.feePctOfRev>0?conc.feePctOfRev.toFixed(conc.feePctOfRev<1?2:1)+'% of revenue':'flat monthly'}`);
+  const bcap=Math.max(cp.rush,atOnceR,1), gW=Math.min(atOnceR,cp.atOnce)/bcap*100, aW=Math.max(0,Math.min(atOnceR,cp.rush)-cp.atOnce)/bcap*100, oW=Math.max(0,atOnceR-cp.rush)/bcap*100;
+  set('calc_conc_bar',`<div style="width:${gW}%;background:linear-gradient(180deg,#4ADE80,#22C55E)"></div>${aW>0?`<div style="width:${aW}%;background:linear-gradient(180deg,#FBBF24,#F59E0B)"></div>`:''}${oW>0?`<div style="width:${oW}%;background:linear-gradient(180deg,#FF6B6B,#EF4444)"></div>`:''}`);
+  set('calc_conc_legend',`<span style="display:inline-flex;align-items:center;gap:5px">${calcDot('#22C55E')}your busy hour ${atOnceR}</span><span style="flex:1"></span><span>plan runs ${cp.atOnce} at once, ${cp.rush} in a rush</span>`);
   calcRenderPlans();
 }
 async function loadDash(){
@@ -2411,11 +2521,6 @@ function firstActiveOpener(){ const a=OPENERS.filter(o=>o.on); return a.length?a
 function renderOpeners(){
   const box=document.getElementById('rot_opener_list');
   if(box) box.innerHTML = OPENERS.length ? OPENERS.map((o,i)=>`<label class="oprow"><input type="checkbox" ${o.on?'checked':''} onchange="toggleOpener(${i},this.checked)"><span class="optext">${esch(o.text)}</span><button class="ghost opdel" title="Remove" onclick="deleteOpener(${i})">${lucideSvg('x',14,'currentColor')}</button></label>`).join('') : '<div class="meta" style="padding:8px 0">No openers yet. write one above.</div>';
-  // Step 5 no longer mirrors the script list (owner 07-15: scripts rotate on their own; step 5 is voices
-  // only) — just keep its count line honest.
-  const note=document.getElementById('rot_script_note'); const onCt=OPENERS.filter(o=>o.on).length;
-  if(note) note.textContent = onCt>1 ? `Your ${onCt} Step 3 scripts rotate on their own, a different one each call. This step only picks the voices.`
-    : onCt===1 ? 'Your one Step 3 script plays on every call. This step only picks the voices.' : 'No scripts yet. Add them in Step 3. This step only picks the voices.';
   const on=OPENERS.filter(o=>o.on).length;
   const c=document.getElementById('rot_opener_count'); if(c) c.textContent=OPENERS.length?('· '+on+' of '+OPENERS.length+' rotating'):'';
   refreshTestRotation();
@@ -2430,7 +2535,7 @@ async function addOpener(){
   if(!t){ toast('Write an opener first'); return; }
   OPENERS.push({text:t,on:true}); ta.value=''; renderOpeners(); await persistOpeners(); toast('Opener saved');
 }
-function toggleOpener(i,on){ if(OPENERS[i]){ OPENERS[i].on=on; renderOpeners(); persistOpeners(); } }
+function toggleOpener(i,on){ if(OPENERS[i]){ OPENERS[i].on=on; renderOpeners(); persistOpeners().then(()=>toast(on?'Opener in the rotation':'Opener off')); } }
 async function deleteOpener(i){ if(OPENERS[i]==null) return; OPENERS.splice(i,1); renderOpeners(); await persistOpeners(); toast('Opener removed'); }
 async function saveRotation(btn){
   const o=btn.textContent; btn.textContent='…'; btn.disabled=true;
@@ -2476,7 +2581,6 @@ let DSTEP=1, DMAX=1;
 const DLABELS=['Voice','Voice feel','Script','Persona','Rotation','Test','Save workflow'];
 function dRender(){
   const rail=document.getElementById('d_rail');
-  const DSUBS=['Pick or clone the voice that makes the calls','How the voice sounds on the line','The openers this call rotates through','A named personality composed into the call','What rotates per call','Ring yourself before you save','Name it and save the workflow'];
   if(rail){
     // Comp 2c rail: done = filled green check · current = numbered ring with a soft glow · later = carved lock.
     const dot=n=>{
@@ -2493,26 +2597,19 @@ function dRender(){
     rail.innerHTML=DLABELS.map((_,i)=>dot(i+1)+(i<DLABELS.length-1?seg(i+1):'')).join('');
   }
   document.querySelectorAll('#d_steps .dstep').forEach(el=>{ el.style.display = Number(el.dataset.step)===DSTEP ? '' : 'none'; });
-  const lbl=document.getElementById('d_nav_label'); if(lbl) lbl.textContent='Step '+DSTEP+' \u00b7 '+DLABELS[DSTEP-1];
-  const sub=document.getElementById('d_nav_sub'); if(sub) sub.textContent=DSUBS[DSTEP-1]||'';
+  if(DSTEP===2 && typeof sbLabels==='function') sbLabels(); // populate slider values + fill tracks on entry
+  const lbl=document.getElementById('d_nav_label'); if(lbl) lbl.textContent=DLABELS[DSTEP-1];
   const bk=document.getElementById('d_back'); if(bk) bk.style.visibility=DSTEP>1?'visible':'hidden';
   const fw=document.getElementById('d_fwd'), fl=document.getElementById('d_fwd_label');
   if(fw){ if(DSTEP>=7){ fw.style.visibility='hidden'; } else { fw.style.visibility='visible'; if(fl) fl.textContent='Next: '+DLABELS[DSTEP]; } }
   // Lane-aware controls: Delta has no live agent, so Charlie-only knobs hide and Delta hints show.
   const _delta=desLane()==='delta';
   const _show=(id,on)=>{ const e=document.getElementById(id); if(e) e.style.display=on?'':'none'; };
-  _show('sb_nat_wrap',!_delta); _show('sb_soft_card',!_delta);
-  _show('sb_delta_hint',_delta); _show('pn_delta_note',_delta);
+  _show('sb_nat_wrap',!_delta); _show('sb_soft_card',!_delta); _show('pn_delta_note',_delta);
   _show('sim_delta_hint',_delta); _show('sim_charlie_a',!_delta); _show('sim_charlie_b',!_delta);
 }
 function desLane(){ const e=document.getElementById('des_lane'); return (e&&e.value)==='delta'?'delta':'charlie'; }
-function desLaneChange(){
-  const n=document.getElementById('des_lane_note');
-  if(n) n.textContent = desLane()==='delta'
-    ? 'Recorded clips ask the questions, a cheap brain picks the next line (~2.5¢ a check). Goes off script → the live agent takes over mid-call.'
-    : 'The live agent holds the whole conversation. Smartest, costs the most.';
-  dRender();
-}
+function desLaneChange(){ dRender(); }
 function dGo(n){ if(n>DMAX) return; if(n<DSTEP) DMAX=n; DSTEP=n; dRender(); const e=document.querySelector('#designer'); if(e) e.scrollIntoView({behavior:'smooth',block:'start'}); }
 function dNext(n){ DMAX=Math.max(DMAX,n); dGo(n); }
 function dBack(){ if(DSTEP>1) dGo(DSTEP-1); }
@@ -2522,12 +2619,12 @@ function dPrev(n){ dGo(n); }
 // server composes it into {{personality}} on that workflow's live + bench calls.
 let PERSONAS=[], PN_SEL='Custom', WF_PERSONA='', PN_EDIT=-1;
 const PN_BASE=['Professional','Friendly','Hyped','Warm','Custom'];
-function pnBaseRender(){ const b=document.getElementById('pn_base'); if(!b) return; b.innerHTML=PN_BASE.map(p=>`<span class="chip-sm" onclick="pnPick('${p}')" style="cursor:pointer;${p===PN_SEL?'color:var(--green);background:var(--tint-green-bg);border:1px solid var(--tint-green-border)':'background:var(--surface-2);color:var(--text-muted);border:1px solid var(--border-medium)'}">${p}</span>`).join(''); }
+function pnBaseRender(){ const b=document.getElementById('pn_base'); if(!b) return; b.innerHTML=PN_BASE.map(p=>`<span class="chip-sm" onclick="pnPick('${p}')" style="cursor:pointer;padding:7px 13px;font-size:12px;${p===PN_SEL?'color:var(--green);background:rgba(74,222,128,.14)':''}">${p}</span>`).join(''); }
 function pnPick(p){ PN_SEL=p; pnBaseRender(); }
 // The workflow's persona selector — chips of saved personas (+ None). Picking one binds it to the workflow.
 function wfPersonaRender(){
   const el=document.getElementById('wf_persona_pick'); if(!el) return;
-  const chip=(idx,label,on)=>`<span class="chip-sm" onclick="wfPersonaPickIdx(${idx})" style="cursor:pointer;${on?'color:var(--green);background:var(--tint-green-bg);border:1px solid var(--tint-green-border)':'background:var(--surface-2);color:var(--text-muted);border:1px solid var(--border-medium)'}">${esch(label)}</span>`;
+  const chip=(idx,label,on)=>`<span class="chip-sm" onclick="wfPersonaPickIdx(${idx})" style="cursor:pointer;padding:7px 13px;font-size:12px;${on?'color:var(--green);background:rgba(74,222,128,.14)':''}">${esch(label)}</span>`;
   let html=chip(-1,'None',!WF_PERSONA);
   html+=(PERSONAS||[]).map((p,idx)=>chip(idx,p.name,WF_PERSONA===p.name)).join('');
   if(!(PERSONAS||[]).length) html+='<span class="meta" style="align-self:center">— build one below</span>';
@@ -2540,9 +2637,9 @@ function renderPersonas(){
   if(!PERSONAS.length){ el.innerHTML='<div class="meta">No personas yet. build one above and save it.</div>'; return; }
   el.innerHTML=PERSONAS.map((p,i)=>{
     const tags=[]; if(p.slang)tags.push('Casual slang'); if(p.swear)tags.push('Profanity OK'); if(p.affection)tags.push('Affectionate');
-    const pills=tags.map(t=>`<span class="chip-sm" style="color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border-medium)">${t}</span>`).join('');
+    const pills=tags.map(t=>`<span class="chip-sm">${t}</span>`).join('');
     const sel=WF_PERSONA===p.name;
-    return `<div class="card" style="background:var(--surface-1);padding:12px 14px;margin-bottom:8px;${sel?'border-color:var(--tint-green-border)':''}">
+    return `<div class="card" style="background:var(--surface-1);padding:12px 14px;margin-bottom:8px;${sel?'box-shadow:0 0 0 1.5px var(--tint-green-border), 0 8px 14px -8px rgba(0,0,0,.55)':''}">
       <div class="row" style="align-items:flex-start;gap:10px">
         <div class="grow">
           <div class="name" style="font-size:13px">${esch(p.name)}${sel?' <span class="meta" style="color:var(--green);font-weight:600">· in this workflow</span>':''}</div>
@@ -2558,10 +2655,11 @@ function renderPersonas(){
     </div>`;
   }).join('');
 }
-function pnEditHint(){ const h=document.getElementById('pn_edit_hint'), c=document.getElementById('pn_cancel');
-  if(PN_EDIT>=0 && PERSONAS[PN_EDIT]){ if(h) h.textContent='Editing \u201c'+(PERSONAS[PN_EDIT].name||'')+'\u201d. change anything, then Save to update it.'; if(c) c.style.display=''; }
-  else { if(h) h.textContent='New persona.'; if(c) c.style.display='none'; }
+function pnEditHint(){ const c=document.getElementById('pn_cancel');
+  if(c) c.style.display=(PN_EDIT>=0 && PERSONAS[PN_EDIT])?'':'none';
 }
+// The builder lives in THE sheet \u2014 new and edit both open it there (comp 2c: create flows are sheets).
+function pnNew(){ PN_EDIT=-1; pnClearForm(); pnEditHint(); sheetFromHolder('pn_builder','New persona','Composed into the call prompt \u00b7 saving selects it for this workflow'); }
 function pnClearForm(){ ['pn_name','pn_tone','pn_greet'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
   ['pn_slang','pn_swear','pn_affection'].forEach(id=>{ const e=document.getElementById(id); if(e) e.checked=false; });
   PN_SEL='Custom'; pnBaseRender(); }
@@ -2574,8 +2672,7 @@ function pnLoad(i){ const p=PERSONAS[i]; if(!p) return; PN_EDIT=i;
   document.getElementById('pn_affection').checked=!!p.affection;
   document.getElementById('pn_greet').value=p.greet||'';
   pnEditHint();
-  const d=document.getElementById('designer'); if(d) d.scrollIntoView({behavior:'smooth',block:'start'});
-  toast('Loaded \u201c'+(p.name||'')+'\u201d · edit then Save');
+  sheetFromHolder('pn_builder','Edit \u201c'+(p.name||'')+'\u201d','Change anything then Save to update it');
 }
 function pnCancel(){ PN_EDIT=-1; pnClearForm(); pnEditHint(); }
 async function pnDelete(i){ const p=PERSONAS[i]; if(!p) return; if(!confirm('Delete persona \u201c'+p.name+'\u201d?')) return;
@@ -2596,10 +2693,10 @@ async function savePersona(){ const name=v('pn_name'); if(!name){ toast('Name th
   if(PN_EDIT>=0 && PERSONAS[PN_EDIT]){ oldName=PERSONAS[PN_EDIT].name; PERSONAS[PN_EDIT]=p; updated=true; }
   else { const idx=PERSONAS.findIndex(x=>x.name===name); if(idx>=0){ oldName=name; PERSONAS[idx]=p; updated=true; } else PERSONAS.push(p); }
   if(updated && oldName && WF_PERSONA===oldName) WF_PERSONA=name;  // follow a rename
-  if(!WF_PERSONA) WF_PERSONA=name;  // first persona auto-selects for the workflow
+  WF_PERSONA=name;  // saving a persona SELECTS it for the workflow you're building (owner 07-16: no re-attach dance)
   const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({personas:JSON.stringify(PERSONAS)})});
-  PN_EDIT=-1; pnClearForm(); pnEditHint(); renderPersonas();
-  toast((r&&!r.error)?(updated?'Persona updated':'Persona saved, selected for this workflow'):"Couldn't save the persona"); }
+  PN_EDIT=-1; pnClearForm(); pnEditHint(); renderPersonas(); closeSheet();
+  toast((r&&!r.error)?(updated?'Persona updated · selected for this workflow':'Persona saved · selected for this workflow'):"Couldn't save the persona"); }
 async function saveWorkflow(){ const name=v('wf_name'); if(!name){ toast('Name the workflow first'); return; }
   const wf={name, voiceId:(document.getElementById('vs_select')||{}).value||'', tuning:sandboxBody(), openers:OPENERS.filter(o=>o.on).map(o=>o.text), persona:WF_PERSONA, lane:desLane(), savedAt:Date.now()};
   let WFS=[]; const s=await api('/api/settings')||{}; try{ WFS=JSON.parse(s.vt_workflows||'[]'); }catch(e){}
@@ -2716,17 +2813,19 @@ function agoTs(unix){ if(!unix) return ''; const sec=Math.floor(Date.now()/1000-
 // open the transcript, and one-click correct it (which fixes the call record + the training signal). ----
 async function loadFeedback(){
   const list=document.getElementById('fb_list'); if(!list) return;
-  const rows=await api('/api/feedback');
-  if(!Array.isArray(rows)){ list.innerHTML='<div class="empty">Could not load feedback.</div>'; return; }
+  { const sp=document.getElementById('fb_src'); if(sp) sp.innerHTML=srcPicker('loadFeedback'); }
+  const rows=await srcApi('/api/feedback');
+  if(!Array.isArray(rows)){ const sum=document.getElementById('fb_summary'); if(sum) sum.innerHTML=''; const un=document.getElementById('fb_unclear'); if(un) un.innerHTML=''; list.innerHTML=srcEmpty(rows,'<div class="empty">Could not load feedback.</div>'); return; }
   const openDis=rows.filter(r=>r.disagree&&!r.reviewed).length;
-  FB_OPEN=openDis; { const _b=document.querySelector('#subnav2 button[data-sec="feedback"] .fbbadge'); if(_b){ _b.textContent=FB_OPEN>0?FB_OPEN:''; _b.style.display=FB_OPEN>0?'inline-block':'none'; } }
+  // The tab badge always counts THE Admin's own (live) queue — staging browsing must not repaint it.
+  if(CALL_SRC==='live'){ FB_OPEN=openDis; const _b=document.querySelector('#subnav2 button[data-sec="feedback"] .fbbadge'); if(_b){ _b.textContent=FB_OPEN>0?FB_OPEN:''; _b.style.display=FB_OPEN>0?'inline-block':'none'; } }
   const sum=document.getElementById('fb_summary');
   const well=(n,l,cls)=>`<div class="k-well"><div class="n${cls?' '+cls:''}">${n}</div><div class="l">${l}</div></div>`;
   if(sum) sum.innerHTML=`<div class="k-wells">${well(openDis,'To review',openDis?'a':'')}${well(rows.filter(r=>r.disagree).length,'Disagreed','')}${well(rows.length,'Responses','')}</div>`;
   // Unclear-status pills (incl. Fun/owner-only checks — the god-view headline filters those out ON
   // PURPOSE; this tab is the unfiltered surface, so the owner can confirm status data flows end to end).
   loadFbUnclear();
-  if(!rows.length){ list.innerHTML='<div class="empty">No poll responses yet. They appear when a customer taps what they saw after an unclear check.</div>'; return; }
+  if(!rows.length){ list.innerHTML=emptyState('chat','#FBBF24','No poll responses yet','They appear after an unclear check'); return; }
   const UV={in:'In stock',out:'Not in',soon:'Restocking',unsure:'Unclear'};
   const ours=r=>r.confirmed===1?'In stock':r.confirmed===0?'Not in':(r.status_key?String(r.status_key).replace(/_/g,' '):'—');
   FB_ROWS=rows;
@@ -2767,14 +2866,16 @@ function fbTranscript(id){
 async function loadFbUnclear(){
   const el=document.getElementById('fb_unclear'); if(!el) return;
   try{
-    const rc=await api('/api/results?limit=120');
-    const unk=(rc&&Array.isArray(rc.rows)?rc.rows:[]).filter(r=>r.statusKey==='no_clear_answer').slice(0,15);
+    const rc=await srcApi('/api/results?limit=120');
+    const all=(rc&&Array.isArray(rc.rows)?rc.rows:[]).filter(r=>r.statusKey==='no_clear_answer');
+    const unk=all.slice(0,8); // a strip, not a wall — the Calls log holds the rest
     if(!unk.length){ el.innerHTML=''; return; }
-    el.innerHTML=`<div class="k-eyebrow">Unclear checks · newest ${unk.length} · Fun included</div><div class="k-pills" style="margin-top:0">${unk.map(r=>`<span class="k-pill" style="color:#F4D03F">${esch(String(r.retailer||('#'+r.retailerId)).split('—')[0].trim())} · ${agoTs(r.startedAt)}</span>`).join('')}</div>`;
+    el.innerHTML=`<div class="k-eyebrow">Unclear checks · Fun included</div><div class="k-pills" style="margin-top:0">${unk.map(r=>`<span class="k-pill" style="color:#F4D03F">${esch(String(r.retailer||('#'+r.retailerId)).split('—')[0].trim())} · ${agoTs(r.startedAt)}</span>`).join('')}${all.length>8?`<span class="k-pill">+${all.length-8} more in Calls</span>`:''}</div>`;
   }catch(_){ el.innerHTML=''; }
 }
-async function fbReview(id){ const r=await api('/api/feedback/'+id+'/review',{method:'POST',headers:{'content-type':'application/json'},body:'{}'}); toast((r&&r.ok)?'Marked reviewed':"Couldn't update"); loadFeedback(); }
-async function fbCorrect(id,verdict){ const r=await api('/api/feedback/'+id+'/review',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({correct:verdict})}); toast((r&&r.ok)?'Corrected + reviewed':"Couldn't update"); loadFeedback(); }
+// Review/correct write to the SOURCE the row came from — a staging disagreement fixes the staging record.
+async function fbReview(id){ const r=await srcApi('/api/feedback/'+id+'/review',{method:'POST',headers:{'content-type':'application/json'},body:'{}'}); toast((r&&r.ok)?'Marked reviewed':"Couldn't update"); loadFeedback(); }
+async function fbCorrect(id,verdict){ const r=await srcApi('/api/feedback/'+id+'/review',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({correct:verdict})}); toast((r&&r.ok)?'Corrected + reviewed':"Couldn't update"); loadFeedback(); }
 
 // ---- Support: live chats from the support agent (site + Discord). Reads the Support lane's
 // /api/support/* endpoints (contract: docs/specs/support-agent/admin-panel-contract.md — ping
@@ -2894,7 +2995,7 @@ async function openSupChat(id){
   const teachA=String(lastA.text||lastA.content||'');
   const who=r.account?(r.account.email||r.account.phone||r.account.label||'Member'):'Guest';
   openSheet(who,
-    `${esch(SUP_CATS[r.category]||r.category||'Other')} · ${esch(String(r.status||'open'))}${r.tier!=null?' · '+esch(supTier(r.tier)):''} · ${agoTs(r.createdAt||r.created_at)}`,
+    [esch(SUP_CATS[r.category]||r.category||'Other'),esch(String(r.status||'open')),r.tier!=null?esch(supTier(r.tier)):'',agoTs(r.createdAt||r.created_at)].filter(Boolean).join(' · '),
     `<div style="display:flex;flex-direction:column;margin-bottom:14px" class="chat">${msgs.map(bub).join('')||'<div class="empty">No transcript.</div>'}</div>
     ${shot?`<div class="k-eyebrow">Screenshot</div><a href="${esch(shot)}" target="_blank" rel="noopener"><img src="${esch(shot)}" alt="Customer screenshot" style="max-width:100%;border-radius:14px;margin-bottom:14px"></a>`:''}
     ${dbg?`<div class="k-eyebrow">Debug info</div><pre style="white-space:pre-wrap;word-break:break-word;font-size:11.5px;background:var(--terminal);box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:14px;padding:12px;margin:0 0 14px">${esch(dbg)}</pre>`:''}
@@ -2994,15 +3095,8 @@ async function loadCoverage(){
   el.style.display='';
   const TIP="Coverage: the % of the retail chains we know carry Pokémon at MSRP whose store locations we've loaded. It measures how many of those chains' stores we cover nationally. It does NOT mean every store has Pokémon in stock right now. A \"spotty\" (tier-3) chain carries it, but only at some locations.";
   const f=n=>Number(n||0).toLocaleString('en-US');
-  const gaps=d.gaps||[];
-  const gapRows=gaps.map(g=>`<div class="carryrow"><span>${esch(g.chain)} <span class="meta" style="text-transform:none;letter-spacing:0">${f(g.ours)}/${f(g.national)}</span></span><b style="color:${g.pct>=90?'var(--green)':g.pct>=70?'#FBBF24':'#ff8a8a'}">${g.pct}%</b></div>`).join('');
   el.innerHTML=
-    `<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">`
-      +`<div style="font-size:30px;font-weight:800;letter-spacing:-.5px;color:var(--green);line-height:1">${d.coveragePct}%</div>`
-      +`<div class="name" data-tip="${esch(TIP)}" style="margin:0">MSRP coverage</div>`
-    +`</div>`
-    +`<div class="meta" style="margin-top:5px;text-transform:none;letter-spacing:0">${f(d.loaded)} of ${f(d.national)} stores loaded across ${d.msrpChains} chains that carry Pokémon at MSRP (tiers 3–5).</div>`
-    ;
+    `<div class="repline"><span class="rl" data-tip="${esch(TIP)} ${f(d.loaded)} of ${f(d.national)} stores across ${d.msrpChains} chains.">MSRP coverage</span><b style="color:var(--green)">${d.coveragePct}%</b></div>`;
 }
 // The database at a glance — DB-wide totals (exact), independent of the current search.
 async function loadStoreIntel(){
@@ -3019,7 +3113,7 @@ async function loadStoreIntel(){
   const cw=document.getElementById('storecarries');
   if(cw){ if(items.length){ cw.style.display='';
       cw.innerHTML=`<div class="k-eyebrow">Carry each product · of ${fmt(d.total)}</div>`
-        +items.map(([p,n])=>`<div class="repline"><span class="rl">${prodMark(p,16)} ${esch(p)}</span><b>${fmt(n)}</b></div>`).join('');
+        +items.map(([p,n])=>`<div class="repline"><span class="rl">${prodIcon(p,16)}${esch(p)}</span><b>${fmt(n)}</b></div>`).join('');
     } else cw.style.display='none'; }
   // Fill the store-type filter from the full chain-type list, and the product filter from the carry list.
   if(Array.isArray(d.types)&&d.types.length) fillTypeFilter(d.types);
@@ -3394,7 +3488,7 @@ const SS_TYPES=[['Big Box','Big Box'],['Pharmacy','Pharmacy'],['Grocery','Grocer
 const SS_RATING={5:['Best near you','#2BFF88','Reliable, predictable restock. Worth checking on a rhythm.'],4:['Mostly reliable','#29D4FF','Carries broadly, no dependable rhythm.'],3:['Spotty','#FF9E2C','Carries, but varies by location.'],2:['Over MSRP','','Has it, but above MSRP.'],1:['Unknown','','Unconfirmed. Hidden from customers.']};
 let SS=null;
 const ssDot=c=>`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${c};flex-shrink:0"></span>`;
-function ssPill(t){ const p=SS_RATING[t]; if(!p) return '<span class="meta">unrated</span>'; if(!p[1]) return `<span style="display:inline-flex;align-items:center;font-size:12.5px;font-weight:700;color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border);border-radius:20px;padding:3px 11px">${esch(p[0])}</span>`; return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:${p[1]};background:${p[1]}1a;border:1px solid ${p[1]}66;border-radius:20px;padding:3px 11px">${ssDot(p[1])}${esch(p[0])}</span>`; }
+function ssPill(t){ const p=SS_RATING[t]; if(!p) return '<span class="meta">unrated</span>'; if(!p[1]) return `<span style="display:inline-flex;align-items:center;font-size:12.5px;font-weight:700;color:var(--text-muted);background:rgba(255,255,255,.07);border:none;border-radius:20px;padding:4px 11px">${esch(p[0])}</span>`; return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:${p[1]};background:${p[1]}1a;border:1px solid ${p[1]}66;border-radius:20px;padding:3px 11px">${ssDot(p[1])}${esch(p[0])}</span>`; }
 function setPickChain(){
   const id=Number(document.getElementById('set_chain').value);
   const body=document.getElementById('set_body'); const ch=CHAINS.find(c=>c.id===id);
@@ -3427,15 +3521,15 @@ function ssRenderStore(){
   // Status: live state is shown selected (icon); the OTHER button is the action. Mute asks first.
   const chk='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
   const muteIco='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/></svg>';
-  const stateBtn=(c,icon,lbl)=>`<div style="flex:1;padding:10px;border-radius:9px;border:1px solid ${c};background:${c}1f;color:${c};font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;gap:7px">${icon}${lbl}</div>`;
-  const actBtn=(onclick,icon,lbl)=>`<button type="button" onclick="${onclick}" style="flex:1;padding:10px;border-radius:9px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-body);font-weight:700;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px">${icon}${lbl}</button>`;
+  const stateBtn=(c,icon,lbl)=>`<div style="flex:1;padding:10px;border-radius:9px;border:none;background:${c}26;color:${c};font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;gap:7px">${icon}${lbl}</div>`;
+  const actBtn=(onclick,icon,lbl)=>`<button type="button" onclick="${onclick}" style="flex:1;padding:10px;border-radius:9px;background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:var(--text-body);font-weight:700;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px">${icon}${lbl}</button>`;
   const status=SS.muted
     ? stateBtn('var(--text-muted)',muteIco,'Muted')+actBtn('ssActivate()',chk,'Activate')
     : stateBtn('var(--green)',chk,'Active')+actBtn('ssMute()',muteIco,'Mute');
   // Rating: five clickable pills (selected = its color, rest greyed). Clicking stamps the tier on every store.
   const pill=(n)=>{ const p=SS_RATING[n]; const seld=SS.tier===n;
-    if(seld) return `<button type="button" onclick="ssRate(${n})" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:${p[1]||'#fff'};background:${p[1]?p[1]+'1f':'var(--surface-2)'};border:1px solid ${p[1]?p[1]+'80':'var(--border-strong)'};border-radius:20px;padding:5px 12px;cursor:pointer">${p[1]?ssDot(p[1]):''}${esch(p[0])}</button>`;
-    return `<button type="button" onclick="ssRate(${n})" style="display:inline-flex;align-items:center;font-size:12.5px;font-weight:700;color:var(--text-muted);background:var(--surface-1);border:1px solid var(--border);border-radius:20px;padding:5px 12px;cursor:pointer">${esch(p[0])}</button>`; };
+    if(seld) return `<button type="button" onclick="ssRate(${n})" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:${p[1]||'#fff'};background:${p[1]?p[1]+'26':'rgba(255,255,255,.1)'};border:none;border-radius:20px;padding:5px 12px;cursor:pointer">${p[1]?ssDot(p[1]):''}${esch(p[0])}</button>`;
+    return `<button type="button" onclick="ssRate(${n})" style="display:inline-flex;align-items:center;font-size:12.5px;font-weight:700;color:var(--text-muted);background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:20px;padding:5px 12px;cursor:pointer">${esch(p[0])}</button>`; };
   const pills=[5,4,3,2,1].map(pill).join('');
   // Per-store rows: bulk toggle commits immediately. KIOSK is per-store ON only — chain level is
   // CLEAR-ONLY (a blanket "kiosk ON" would falsely mark every store a kiosk → all tier-5 + Kiosk tab).
@@ -3471,9 +3565,9 @@ function ssClearKiosk(){ if(!SS||!SS.cKiosk) return; ssStoreBulk({hasKiosk:false
 const RATING_CANON={5:'Best Chance',4:'Mostly Reliable',3:'Spotty',2:'Over MSRP',1:'Unknown'};
 // Compact tier pill for a picker row — CANONICAL names from scoring.md (matches the rating filter),
 // in the tier's color.
-function ratePillMini(t){ const nm=RATING_CANON[t]; if(!nm) return '<span style="font-size:10.5px;font-weight:700;color:var(--text-tertiary)">unrated</span>'; const c=(SS_RATING[t]||[])[1], lbl=t+' '+nm; return c?`<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:${c};background:${c}1a;border:1px solid ${c}55;border-radius:20px;padding:2px 9px;white-space:nowrap">${ssDot(c)}${esch(lbl)}</span>`:`<span style="display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border);border-radius:20px;padding:2px 9px;white-space:nowrap">${esch(lbl)}</span>`; }
+function ratePillMini(t){ const nm=RATING_CANON[t]; if(!nm) return '<span style="font-size:10.5px;font-weight:700;color:var(--text-tertiary)">unrated</span>'; const c=(SS_RATING[t]||[])[1], lbl=t+' '+nm; return c?`<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:${c};background:${c}1a;border-radius:20px;padding:2px 9px;white-space:nowrap">${ssDot(c)}${esch(lbl)}</span>`:`<span style="display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;color:var(--text-muted);background:var(--surface-2);border-radius:20px;padding:2px 9px;white-space:nowrap">${esch(lbl)}</span>`; }
 // mapped/unmapped chip — Mapped = navStatus==='locked' (matches the Mapping section + the filter).
-function mapChipMini(ch){ const locked=ch.navStatus==='locked'; const c=locked?'var(--green)':'var(--text-muted)'; return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:${c};background:${locked?'rgba(74,222,128,.12)':'var(--surface-2)'};border:1px solid ${locked?'rgba(74,222,128,.4)':'var(--border)'};border-radius:20px;padding:2px 9px;white-space:nowrap">${ssDot(c)}${locked?'Mapped':'Unmapped'}</span>`; }
+function mapChipMini(ch){ const locked=ch.navStatus==='locked'; const c=locked?'var(--green)':'var(--text-muted)'; return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:${c};background:${locked?'rgba(74,222,128,.12)':'var(--surface-2)'};border-radius:20px;padding:2px 9px;white-space:nowrap">${ssDot(c)}${locked?'Mapped':'Unmapped'}</span>`; }
 function buildChainPicker(){
   const el=document.getElementById('set_picker'); if(!el) return;
   const cur=(document.getElementById('set_chain')||{}).value||'';
@@ -3489,8 +3583,9 @@ function buildChainPicker(){
   el.innerHTML=live.map(ch=>{
     const locked=ch.navStatus==='locked';
     const nStores=Number((ch.stores&&ch.stores.n)||ch.callable||0);
+    // Color with intent: mapped is the NORM (quiet gray) · unmapped is the exception that needs routing (amber).
     const meta=[nStores?nStores+' store'+(nStores===1?'':'s'):null, ch.muted?'muted':null,
-      `<span style="color:${locked?'var(--green)':'#8A8A96'}">${locked?'mapped':'unmapped'}</span>`].filter(Boolean).join(' · ');
+      locked?'<span style="color:#8A8A96">mapped</span>':'<span style="color:#F59E0B;font-weight:700">unmapped</span>'].filter(Boolean).join(' · ');
     return `<div class="pickrow${String(ch.id)===cur?' on':''}" data-id="${ch.id}" data-name="${esch((ch.name||'').toLowerCase())}" data-tier="${ch.tier??''}" data-mapped="${locked?1:0}" onclick="pickChainRow(${ch.id})"${ch.muted?' style="opacity:.5"':''}>
       <span class="setlogo">${logTile(ch)}</span>
       <span style="flex:1;min-width:0"><span style="display:block;color:#fff;font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esch(ch.name)}</span>
@@ -3519,7 +3614,7 @@ function filterChainPicker(){
   });
   const more=document.getElementById('set_more');
   if(more){ more.style.display=hidden?'':'none'; more.textContent='SHOW '+Math.min(100,hidden)+' MORE'; }
-  const cnt=document.getElementById('set_pickcount'); if(cnt) cnt.textContent=(shown+hidden)+' total';
+  const cnt=document.getElementById('set_pickcount'); if(cnt) cnt.textContent=(shown+hidden)+' chains · settings and phone routes';
 }
 // Pick a row → load it into the editor below (via the hidden set_chain the editor already reads).
 function pickChainRow(id){
@@ -3770,11 +3865,16 @@ function updateDraftDot(){
 
 // --- Draft (test bench) voice tuning ---
 const LATENCY_LABELS=['smoothest (0)','smooth (1)','balanced (2)','fast (3)','fastest/robotic (4)'];
+// Fill a range track green up to its thumb (webkit can't auto-fill a custom-appearance slider).
+function sbFill(el){ if(!el) return; const mn=+el.min, mx=+el.max, v=+el.value, p=mx>mn?Math.round((v-mn)/(mx-mn)*100):0;
+  el.style.background='linear-gradient(90deg,var(--green) 0%,var(--green) '+p+'%,rgba(255,255,255,.12) '+p+'%)'; }
 function sbLabels(){
   const g=id=>document.getElementById(id);
   if(g('sb_speed_val')) g('sb_speed_val').textContent=g('sb_speed').value;
   if(g('sb_stability_val')) g('sb_stability_val').textContent=g('sb_stability').value;
   if(g('sb_latency_val')) g('sb_latency_val').textContent=LATENCY_LABELS[Number(g('sb_latency').value)]||g('sb_latency').value;
+  if(g('sb_tt_val')&&g('sb_turntimeout')) g('sb_tt_val').textContent=g('sb_turntimeout').value+'s';
+  ['sb_speed','sb_stability','sb_latency','sb_turntimeout'].forEach(id=>sbFill(g(id)));
   updateDraftDot();
 }
 function sbSoftToggle(){ const d=document.getElementById('sb_soft_detail'), on=document.getElementById('sb_soft_on'); if(d&&on) d.style.display=on.checked?'':'none'; }
@@ -3793,7 +3893,7 @@ async function loadSandbox(){
   if(g('sb_soft_msg')&&t.softTimeoutMsg) g('sb_soft_msg').value=t.softTimeoutMsg;
   if(g('sb_llm')&&t.llm) g('sb_llm').value=t.llm;
   sbLabels(); sbSoftToggle();
-  const s=document.getElementById('sb_status'); if(s) s.textContent='Showing the current draft.';
+  const s=document.getElementById('sb_status'); if(s) s.textContent='';
 }
 function sandboxBody(){
   const g=id=>document.getElementById(id);
@@ -3992,7 +4092,7 @@ function pollTranscript(cid, pre){
       clearInterval(TRANSCRIPT_TIMER); TRANSCRIPT_TIMER=null;
       el('_t_status').innerHTML='Call '+o.status;
       const vv=customerVerdict(o), vd=el('_verdict');
-      vd.style.display=''; vd.style.borderColor=vv.c;
+      vd.style.display=''; vd.style.boxShadow='inset 0 2px 6px rgba(0,0,0,.45), 0 0 14px '+vv.c+'33'; // carved well + verdict glow (no hairline)
       vd.innerHTML='<div style="font-size:12.5px;font-weight:700;color:var(--text-strong);margin-bottom:8px">What the customer sees</div>'
         +'<div style="margin-bottom:2px">'+vmark(vv.e,vv.c,34)+'</div><div style="font-size:22px;font-weight:800;color:'+vv.c+'">'+vv.t+'</div>'
         +'<div style="font-size:13px;color:#bbb;margin-top:4px">'+noteHtml(vv.n)+'</div>';
@@ -4079,7 +4179,7 @@ function renderStatuses(list){
 }
 function stSheet(id){
   const s=Object.values(STATUSES).find(x=>x.id===id); if(!s) return;
-  openSheet(s.label, ST_TONES[s.tone]||'', `
+  openSheet(s.label, (ST_TONES[s.tone]&&ST_TONES[s.tone]!==s.label)?ST_TONES[s.tone]:'', `
     <div data-sid="${s.id}">
       <div class="row" style="gap:10px;align-items:center;flex-wrap:nowrap;margin-top:4px">
         <button type="button" class="sticon-btn" onclick="statusPickIcon(this)" title="Change the icon">${statusIcon(s.emoji,s.color||s.tone,24)}</button>
@@ -4102,7 +4202,7 @@ function stSheet(id){
         </select>
         <span class="meta" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">key: <code>${escH(s.key)}</code></span>
       </div>
-      <div class="k-note" style="padding-left:0">Edits save as you type and go live for customers immediately.</div>
+      <div class="k-note" style="padding-left:0">Saves as you type · live for customers immediately</div>
     </div>`);
 }
 async function saveStatus(id,btn){
@@ -4423,7 +4523,7 @@ async function wfgSave(){
 async function wfgAdd(){ const inp=document.getElementById('wfg_add'); const t=((inp&&inp.value)||'').trim(); if(!t) return; WFM_GLOBAL.push({text:t,on:true}); renderWorkflowMgr(); await wfgSave(); toast('Opener added'); }
 async function wfgDel(i){ if(WFM_GLOBAL[i]==null) return; WFM_GLOBAL.splice(i,1); renderWorkflowMgr(); await wfgSave(); toast('Opener removed'); }
 async function wfgEdit(i,text){ if(WFM_GLOBAL[i]==null) return; const t=(text||'').trim(); if(!t){ WFM_GLOBAL.splice(i,1); renderWorkflowMgr(); } else { WFM_GLOBAL[i].text=t; } await wfgSave(); }
-async function wfgToggle(i,on){ if(WFM_GLOBAL[i]){ WFM_GLOBAL[i].on=on; await wfgSave(); } }
+async function wfgToggle(i,on){ if(WFM_GLOBAL[i]){ WFM_GLOBAL[i].on=on; await wfgSave(); toast(on?'Opener in the rotation':'Opener off'); } }
 function wfmVoiceGroups(fmt){ const mine=WFM_VOICES.filter(v=>v.cloned), stock=WFM_VOICES.filter(v=>!v.cloned);
   const g=(label,arr)=>arr.length?`<optgroup label="${label}">`+arr.map(fmt).join('')+'</optgroup>':'';
   return g('Your voices',mine)+g('Built-in',stock); }
@@ -4628,12 +4728,25 @@ async function wfmDelete(wi){ const w=WF.list[wi]; if(!w) return; if(!confirm('D
 // Reset this workflow's opener rotation so the next call to it starts at opener #1 (predictable testing).
 async function wfmResetRotation(wi){ const w=WF.list[wi]; if(!w) return; const r=await api('/api/admin/reset-rotation',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({workflow:w.name})}); toast((r&&r.ok)?'Rotation reset · next call uses opener #1':'Could not reset rotation'); }
 // Testing tab — the Fun-store test-call log (workflow · opener used · status · timing). Owner-only data.
-function tcStatusPill(key){ const F=({in_stock:['In stock','#4ADE80'],not_in_stock:['Not in','#EF4444'],sold_out:['Sold out','#EF4444'],does_not_sell:["Doesn't carry",'#EF4444'],no_clear_answer:['Maybe','#FBBF24'],too_busy:['Too busy','#FBBF24'],left_on_hold:['On hold','#FBBF24'],nobody_answered:['No answer','#9CA3AF'],closed:['Closed','#9CA3AF'],failed:['Failed','#FBBF24'],completed:['Done','#9CA3AF'],admin_hangup:['Canceled','#9CA3AF']})[key]||[key||'—','#9CA3AF']; return `<span style="font-size:9.5px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:${F[1]};background:${F[1]}24;border-radius:999px;padding:4px 10px;white-space:nowrap">${esch(F[0])}</span>`; }
+// Status = the site's icon chip (§5.7), never a colored word: ✓ in · ✕ out · ? unclear · phone gray.
+function tcIcon(key){
+  const I={
+    check:'<path d="M5 12l5 5 9-10"/>', x:'<path d="M6 6l12 12M18 6L6 18"/>',
+    q:'<path d="M9.2 9a3 3 0 0 1 5.8 1c0 2-2.6 2.3-2.6 4"/><path d="M12 17.5h.01"/>',
+    phone:'<path d="M5 4.5h3.4l1.4 4-2.1 1.5a12 12 0 0 0 5.8 5.8l1.5-2.1 4 1.4V18a2 2 0 0 1-2.2 2A15.5 15.5 0 0 1 3 6.7 2 2 0 0 1 5 4.5z"/><path d="M4 20L20 4"/>' };
+  const M={in_stock:['check','#4ADE80','In stock'],not_in_stock:['x','#EF4444','Not in'],sold_out:['x','#EF4444','Sold out'],does_not_sell:['x','#EF4444',"Doesn't carry"],
+    no_clear_answer:['q','#FBBF24','Unclear'],too_busy:['q','#FBBF24','Too busy'],left_on_hold:['q','#FBBF24','On hold'],failed:['q','#FBBF24','Failed'],
+    nobody_answered:['phone','#9CA3AF','No answer'],closed:['phone','#9CA3AF','Closed'],completed:['check','#9CA3AF','Done'],admin_hangup:['x','#9CA3AF','Canceled']};
+  const [ic,c,label]=M[key]||['q','#9CA3AF',key||'—'];
+  return `<span title="${esch(label)}" style="width:26px;height:26px;border-radius:50%;background:${c}26;display:grid;place-items:center;flex:0 0 auto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${I[ic]}</svg></span>`;
+}
 async function loadTesting(){
   const sum=document.getElementById('testing_summary'), log=document.getElementById('testing_log');
   if(!sum||!log) return;
-  const d=await api('/api/admin/test-calls');
-  if(!d||d.error){ sum.innerHTML=''; log.textContent='No test calls yet. Call the Fun or MVP store to start logging.'; return; }
+  { const sp=document.getElementById('testing_src'); if(sp) sp.innerHTML=srcPicker('loadTesting'); }
+  const d=await srcApi('/api/admin/test-calls');
+  if(!d||d.error){ sum.innerHTML=''; log.innerHTML=srcEmpty(d,'<div class="empty">No test calls yet. Call the Fun or MVP store to start logging.</div>'); return; }
+  if(!(d.rows||[]).length){ sum.innerHTML=''; log.innerHTML=emptyState('phone','#4ADE80','No test calls yet','Call the Fun store to start the log'); return; }
   const s=d.summary||{};
   // Report strip over the log (comp: Testing is a LOG with a report strip).
   const well=(n,l,cls)=>`<div class="k-well"><div class="n${cls?' '+cls:''}">${n}</div><div class="l">${l}</div></div>`;
@@ -4644,15 +4757,17 @@ async function loadTesting(){
   const t=v=>v!=null?secsFmt(v):'—';
   log.innerHTML=((d.rows||[]).map(r=>{
         const op=r.opener||{};
-        // The opener that repeated on every row is now a single letter (comp 2b).
         const m=String(op.label||'').match(/(\d+)/);
-        const letter=m?String.fromCharCode(64+Math.min(26,Math.max(1,Number(m[1])))):(op.said?'A':'·');
-        const dt=r.started?new Date(r.started*1000).toLocaleDateString([],{month:'short',day:'numeric'}):'—';
-        return `<div class="peek static" style="display:block">
-          <div style="display:flex;align-items:center;gap:9px"><div style="font-size:14px;font-weight:700">${r.workflow?esch(r.workflow):'<span style="color:#8A8A96;font-weight:500">no workflow</span>'}</div>${tcStatusPill(r.status)}<div style="margin-left:auto;font-size:11px;font-weight:600;color:#8A8A96;white-space:nowrap">${esch(dt)}</div></div>
-          <div style="font-family:ui-monospace,monospace;font-size:11.5px;color:#8A8A96;margin-top:8px"><span style="color:#FFCB05;font-weight:800" title="${esch(op.said||'opener not captured')}">${letter}</span> · human <span style="color:#CDCDD8">${t(r.navSec)}</span> · talk <span style="color:#4ADE80">${t(r.talkSec)}</span> · total <span style="color:#CDCDD8">${t(r.callSec)}</span></div>
+        const script=m?('Script '+m[1]):(op.said?'Script ?':'');
+        return `<div class="peek static">
+          <span class="pk-main">
+            <span class="pk-t" style="display:block">${r.workflow?esch(r.workflow):'<span style="color:#8A8A96;font-weight:500">no workflow</span>'}</span>
+            <span class="pk-m" style="display:block">${esch(when(r.started))}${script?` · <span title="${esch(op.said||'')}">${esch(script)}</span>`:''}</span>
+            <span style="display:block;font-family:ui-monospace,monospace;font-size:11.5px;color:#8A8A96;margin-top:6px">human <span style="color:#CDCDD8">${t(r.navSec)}</span> · talk <span style="color:#4ADE80">${t(r.talkSec)}</span> · total <span style="color:#CDCDD8">${t(r.callSec)}</span></span>
+          </span>
+          ${tcIcon(r.status)}
         </div>`;
-      }).join('') || '<div class="empty">No test calls yet. Call the Fun store.</div>');
+      }).join('') || emptyState('phone','#4ADE80','No test calls yet','Call the Fun store to start the log'));
 }
 // Settings → the one global default workflow.
 async function loadDefaultWorkflow(){
@@ -4686,31 +4801,32 @@ let POL=null;
 // absent — both are baked in (always on), not owner-toggleable. Toggling any flag is GLOBAL (all users).
 const FLAG_GROUPS=[
   {title:'Check+ (premium)',flags:[
-    ['scheduling','Auto-checks','Check+ members schedule calls on known shipment days.'],
-    ['restockAlerts','Restock alerts','Notify Check+ members when a product comes back in stock.'],
-    ['multiProduct','Advanced checks · multiple products','Let one call ask about more than one product at once.'],
-    ['specificSets','Advanced checks · specific set','Let a check narrow to a single specific set.'],
-    ['hobby','Hobby shops','Members can check hobby shops. Off = unavailable for every user.'],
-    ['thrift','Thrift · treasure hunts','Members can check thrift stores. Off = unavailable for every user.'],
+    ['scheduling','Auto-checks','Scheduled calls on known shipment days'],
+    ['restockAlerts','Restock alerts','Ping members when stock comes back'],
+    ['multiProduct','Multiple products','One call can ask about several products'],
+    ['specificSets','Specific set','A check can narrow to one exact set'],
+    ['hobby','Hobby shops','Members can check hobby shops'],
+    ['thrift','Thrift · treasure hunts','Members can check thrift stores'],
   ]},
   {title:'Consumer (free)',flags:[
-    ['kiosks','Kiosk intel + rewards','Kiosk picker + crowd refresh-time submissions (earns a free check).'],
-    ['kioskReceipts','Kiosk-receipt rewards','Email a kiosk receipt for verified intel + a free check.'],
-    ['community','Community wall','The moderated I-scored photo wall.'],
-    ['communityAutoApprove','Community · auto-approve','Skip moderation; posts go live immediately.'],
-    ['referrals','Referrals','Refer-a-friend free-check loop (both sides earn).'],
-    ['shareCards','Share cards','Shareable found-it cards / preview images.'],
-    ['stockSignals','Live stock feed','Free real-time stock rail (site checkers + drops) in the consumer UI.'],
-    ['driverHandoff','Driver hand-off demo','Shows the local-driver hand-off demo under an in-stock result.'],
-    ['liveListen','Live-listen','Stream call audio + a hang-up button to customers (testing tool).'],
+    ['kiosks','Kiosk intel + rewards','Crowd refresh times · earns a free check'],
+    ['kioskReceipts','Kiosk-receipt rewards','A receipt earns a free check'],
+    ['community','Community wall','The moderated I-scored photo wall'],
+    ['communityAutoApprove','Community · auto-approve','Posts go live with no review'],
+    ['referrals','Referrals','Free-check loop · both sides earn'],
+    ['shareCards','Share cards','Shareable found-it cards'],
+    ['stockSignals','Live stock feed','Real-time stock rail on the site'],
+    ['driverHandoff','Driver hand-off demo','Demo under an in-stock result'],
+    ['liveListen','Live-listen','Customers hear calls + can hang up'],
   ]},
   {title:'Admin & Global',flags:[
-    ['oneCheckPerStorePerDay','Fresh-result cache (24h)','Reuse a recent result instead of re-calling the same store+product within 24h.'],
-    ['dogfoodHours','Overnight hours-harvest','Night-time store-hours auto-calling. Leave OFF until you say go.'],
+    ['oneCheckPerStorePerDay','Fresh-result cache (24h)','Reuse a recent result instead of re-calling'],
+    ['dogfoodHours','Overnight hours-harvest','Overnight auto-calling · leave OFF'],
   ]},
 ];
 const esch=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 // Product mark: show a known product's logo instead of its plain name (Pokémon for now).
+function prodIcon(name,size){ const m=prodMark(name,size); return /^<img/.test(m)?m+' ':''; }
 function prodMark(name,size){
   size=size||15; const s=String(name==null?'':name).trim();
   const img=(src,alt)=>`<img src="${src}" alt="${alt}" title="${alt}" style="height:${size}px;width:${size}px;vertical-align:-3px;object-fit:contain;display:inline-block">`;
@@ -4767,11 +4883,11 @@ function decorateChrome(){
 }
 // ---- Alerts (God View → Alerts): editable message templates, subscribers, and the send log ----
 const AL_EVENTS=[
-  ['restock','Restock (text or email)','both','Fires on a confirmed restock, on the channel the customer picked. Texts count against their plan’s monthly cap.'],
-  ['auto_check','Auto check results (text or email)','both','Fires after each scheduled auto check, with what the call found.'],
-  ['store_added','Store went live (email)','email','Their requested store just went live. Grants a free check.'],
-  ['waitlist','We’re live in your area (email)','email','A waitlist signup’s area just launched.'],
-  ['confirm_email','Confirm your email (email)','email','Someone added an email. Nothing sends until they tap confirm.'],
+  ['restock','Restock','both','Fires on a confirmed restock, on the channel the customer picked. Texts count against their plan’s monthly cap.'],
+  ['auto_check','Auto check results','both','Fires after each scheduled auto check, with what the call found.'],
+  ['store_added','Store went live','email','Their requested store just went live. Grants a free check.'],
+  ['waitlist','We’re live in your area','email','A waitlist signup’s area just launched.'],
+  ['confirm_email','Confirm your email','email','Someone added an email. Nothing sends until they tap confirm.'],
 ];
 let AL_TPL={};
 function alField(id,label,val,tall){ return `<label class="fld"><span class="fl">${esch(label)}</span>`
@@ -4794,59 +4910,105 @@ async function saveOwnerAlert(){
   const r=await api('/api/admin/owner-alert',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({channel:ch,email:em})});
   if(!r||r.error){ if(out){ out.style.color='#F87171'; out.textContent= (r&&r.error)==='invalid_email'?'That email does not look right':'Could not save'; } return; }
   if(out){ out.style.color=''; out.textContent='Ping rides '+(r.channel==='email'?('email · '+(r.email||'no address set')):'text · '+(r.phone||'no number set')); }
+  toast('Ping saved');
+}
+// One-tap test of the owner's own in-stock ping, to wherever it currently lands.
+async function ownerPingTest(){
+  const to=((document.getElementById('oa_email')||{}).value||'').trim();
+  if(!to){ toast('Set where it lands first'); return; }
+  const r=await api('/api/alerts/test',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({event:'instock_owner',to})});
+  toast(r&&r.status==='sent'?'Test sent · check your inbox':r&&r.status==='stubbed'?'Logged but not delivered · keys missing':'Could not send the test');
+}
+// Alerts = a CRUD list: each message is ONE row; editing + the test send live in its sheet.
+let AL_LOG_ALL=false;
+function alPreview(k){
+  const t=AL_TPL[k]||{}; const chan=(AL_EVENTS.find(e=>e[0]===k)||[])[2];
+  const first=(chan==='email'?(t.emailSubject||t.emailBody):(t.sms||t.emailSubject))||'';
+  return first?String(first).replace(/\s+/g,' ').trim():'Default copy';
+}
+function alRows(){
+  const tEl=document.getElementById('al_templates'); if(!tEl) return;
+  tEl.innerHTML=AL_EVENTS.map(([k,label,chan])=>`<button class="peek" onclick="alSheet('${k}')">
+      <span class="pk-main"><span class="pk-t" style="display:block">${esch(label)}</span>
+      <span class="pk-m" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(alPreview(k))}</span></span>
+      <span class="pk-fact">${chan==='both'?'Text · email':'Email'}</span>
+      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>`).join('');
+}
+// The one message sheet: editors on top, Save, then the test send at the thumb.
+function alSheet(k){
+  const ev=AL_EVENTS.find(e=>e[0]===k); if(!ev) return;
+  const [,label,chan,hint]=ev; const t=AL_TPL[k]||{};
+  const hold=document.getElementById('al_sheets'); if(!hold) return;
+  let box=document.getElementById('al_sh_'+k);
+  if(!box){ box=document.createElement('div'); box.id='al_sh_'+k; hold.appendChild(box); }
+  const sms=alField('al_'+k+'_sms','Text message',t.sms,true);
+  const email=alField('al_'+k+'_subj','Email subject',t.emailSubject,false)+alField('al_'+k+'_body','Email body',t.emailBody,true);
+  const tests=(chan==='both'?[['sms','Test text'],['email','Test email']]:[['email','Test email']])
+    .map(x=>`<button class="ghost" onclick="sendAlertTest('${k}','${x[0]}')">${x[1]}</button>`).join('');
+  box.innerHTML=(chan==='email'?email:sms+email)
+    +`<div class="k-note" style="text-align:left;margin:10px 0 0">Tokens fill per send: {store} {product} {city} {email} {result}</div>`
+    +`<div class="btnrow"><button class="act" onclick="saveAlertTemplates('${k}')">Save message</button></div>`
+    +`<div class="k-eyebrow" style="margin-top:18px">Send yourself a test</div>`
+    +`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input id="al_test_to_${k}" type="text" placeholder="your email (or a phone for the text)" style="flex:1;min-width:170px;font-size:14px;padding:10px 14px" value="${esch(((document.getElementById('oa_email')||{}).value||''))}">${tests}</div>`
+    +`<div id="al_test_out_${k}" class="meta" style="margin-top:8px;font-size:12px"></div>`;
+  sheetFromHolder('al_sh_'+k, label, hint);
 }
 async function loadAlerts(){
   const tEl=document.getElementById('al_templates'); if(!tEl) return;
   loadOwnerAlert();
   AL_TPL=await api('/api/alerts/templates')||{};
-  tEl.innerHTML=AL_EVENTS.map(([k,label,chan,hint])=>{
-    const t=AL_TPL[k]||{};
-    const sms=alField('al_'+k+'_sms','Text message',t.sms,true);
-    const email=alField('al_'+k+'_subj','Email subject',t.emailSubject,false)+alField('al_'+k+'_body','Email body',t.emailBody,true);
-    const body= chan==='sms'?sms : chan==='email'?email : sms+email;
-    return `<div class="drow" style="padding:14px 16px"><div class="name" style="margin-bottom:2px">${esch(label)}</div><div class="meta" style="margin:0 0 10px">${esch(hint)}</div>${body}</div>`;
-  }).join('');
+  alRows();
   const log=await api('/api/alerts/log')||{};
-  // Delivery banner: green when the provider creds are set, amber "stubbed" until then.
+  // Delivery chips: green when the provider creds are set, amber "stubbed" until then.
   const dv=log.delivery||{};
-  const chip=(on,label)=>`<span class="pill ${on?'g':'a'}" style="margin-right:8px">${on?'●':'○'} ${esch(label)} ${on?'live':'not set yet'}</span>`;
-  const sEl=document.getElementById('al_status'); if(sEl) sEl.innerHTML=chip(dv.sms,'Text (Twilio)')+chip(dv.email,'Email (Brevo)')+`<div class="meta" style="margin-top:6px">${(dv.sms&&dv.email)?'Both channels are live.':'Sends are logged as “stubbed” until the missing keys are set in Railway. Nothing goes to a customer yet.'}</div>`;
-  // Month rollup
-  const roll=log.rollup||{}, rEl=document.getElementById('al_rollup');
-  if(rEl){ const ks=Object.keys(roll); const subs=log.subscribers||{};
-    rEl.innerHTML=`<div class="stats"><div class="stat"><div class="n">${subs.total||0}</div><div class="l">signed up</div></div><div class="stat"><div class="n">${Object.values(roll).reduce((a,b)=>a+b,0)}</div><div class="l">sends this month</div></div></div>`
-      +(ks.length?`<div style="margin-top:8px">`+ks.sort().map(k=>{const [ev,ch,st]=k.split('.');return `<div class="repline"><span class="rl">${esch(String(ev).replace(/_/g,' '))} · ${esch(ch)} · ${esch(st)}</span><b>${roll[k]}</b></div>`;}).join('')+`</div>`:'<div class="meta" style="margin-top:6px">No sends yet this month.</div>'); }
-  // Recent sends
+  const chip=(on,label)=>`<span class="pill ${on?'g':''}" style="margin-right:8px;font-size:9.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;padding:5px 11px">● ${esch(label)} ${on?'live':'off'}</span>`;
+  const sEl=document.getElementById('al_status');
+  if(sEl) sEl.innerHTML=chip(dv.sms,'Text')+chip(dv.email,'Email')
+    +((dv.sms&&dv.email)?'':`<div style="font-size:11.5px;font-weight:600;color:rgba(245,158,11,.8);margin-top:9px">Stubbed sends never reach a customer</div>`);
+  // Sends fold into ONE row (owner: the page said too much) — the log lives in its sheet.
+  const roll=log.rollup||{};
+  const total=Object.values(roll).reduce((a,b)=>a+b,0);
+  const stubbed=Object.keys(roll).filter(k=>k.endsWith('.stubbed')).reduce((a,k)=>a+roll[k],0);
+  const rowEl=document.getElementById('al_sends_row');
+  if(rowEl) rowEl.innerHTML=`<div class="k-eyebrow">Activity</div><button class="peek" onclick="sheetFromHolder('al_log','Sends','${total} this month${stubbed?` · ${stubbed} stubbed`:''}')">
+      <span class="pk-main"><span class="pk-t" style="display:block">Sends</span></span>
+      <span class="pk-fact ${stubbed?'a':(total?'g':'')}">${stubbed?stubbed+' stubbed':total+' this month'}</span>
+      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>`;
+  // Recent sends: a LOG — first 20, one key shows the rest.
   const lg=document.getElementById('al_log'), recent=log.recent||[];
-  if(lg){ lg.innerHTML=recent.length?recent.slice(0,60).map(r=>{
-      const when=r.at?new Date(r.at*1000).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
-      const stcls=r.status==='sent'?'g':(r.status==='stubbed'?'a':'r');
-      return `<div class="repline"><span class="rl">${esch(r.event)} → ${esch(r.to||r.userId||'—')}</span><b style="font-weight:600;color:#8A8A96;white-space:nowrap">${esch(when)} <span class="pill ${stcls}" style="margin-left:6px">${esch(r.status)}</span></b></div>`;
-    }).join(''):'No sends yet.'; }
+  if(lg){ const cap=AL_LOG_ALL?60:20;
+    lg.innerHTML=(recent.length?recent.slice(0,cap).map(r=>{
+      const when=r.at?(d=>d.toLocaleDateString([],{month:'short',day:'numeric'})+' · '+d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}))(new Date(r.at*1000)):'';
+      const ST={sent:['Sent','g'],stubbed:['Stubbed','a'],test_sent:['Test','']};
+      const [stl,stc]=ST[r.status]||[String(r.status).replace(/_/g,' '),'r'];
+      return `<div class="repline"><span class="rl">${esch(String(r.event).replace(/_/g,' '))} → ${esch(r.to||r.userId||'—')}</span><b style="font-weight:600;color:#8A8A96;white-space:nowrap">${esch(when)} <span class="pill ${stc}" style="margin-left:6px;${stc?'':'color:#CDCDD8;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14)'}">${esch(stl)}</span></b></div>`;
+    }).join(''):emptyState('note','#4ADE80','No sends yet','They appear the moment an alert goes out'))
+    +(recent.length>20&&!AL_LOG_ALL?`<button class="k-key" onclick="AL_LOG_ALL=true;loadAlerts()">SHOW ${Math.min(40,recent.length-20)} MORE</button>`:''); }
 }
-async function saveAlertTemplates(){
+// Save ONE event's copy (its sheet's Save key). Only offered fields ship — an empty email override
+// would blank the real defaults the moment the server learns the fields.
+async function saveAlertTemplates(only){
   const patch={};
   for(const [k,,chan] of AL_EVENTS){
+    if(only&&k!==only) continue;
+    if(!document.getElementById('al_'+k+'_sms')&&!document.getElementById('al_'+k+'_subj')) continue; // sheet never opened
     patch[k]={};
     if(chan!=='email'){ const v=(document.getElementById('al_'+k+'_sms')||{}).value; patch[k].sms=v||''; }
     if(chan!=='sms'){
       const subj=(document.getElementById('al_'+k+'_subj')||{}).value||'', body=(document.getElementById('al_'+k+'_body')||{}).value||'';
-      // Don't save empty email copy the server never offered (old server + 'both' row) — an empty
-      // override would blank the real defaults the moment the server learns the fields.
       if(subj||body||(AL_TPL[k]&&AL_TPL[k].emailSubject)){ patch[k].emailSubject=subj; patch[k].emailBody=body; }
     }
   }
   const r=await api('/api/alerts/templates',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(patch)});
-  const s=document.getElementById('al_saved');
-  if(r&&!r.error){ AL_TPL=r; if(s){ s.textContent='Saved'; setTimeout(()=>{s.textContent='';},2000); } toast('Messages saved'); }
-  else toast('Could not save messages');
+  if(r&&!r.error){ AL_TPL=r; toast('Message saved'); alRows(); }
+  else toast('Could not save the message');
 }
-async function sendAlertTest(){
-  const pick=(document.getElementById('al_test_event')||{}).value||'confirm_email';
-  // "<event>_email" is the UI's name for a text-first event over the email channel; the server takes event+channel.
-  const req= pick.endsWith('_email')&&pick!=='confirm_email' ? {event:pick.replace(/_email$/,''),channel:'email'} : {event:pick};
-  const to=((document.getElementById('al_test_to')||{}).value||'').trim();
-  const out=document.getElementById('al_test_out');
+async function sendAlertTest(k,channel){
+  const req= channel==='email'&&k!=='confirm_email' ? {event:k,channel:'email'} : {event:k};
+  const to=((document.getElementById('al_test_to_'+k)||{}).value||'').trim();
+  const out=document.getElementById('al_test_out_'+k);
   if(!to){ if(out){ out.style.color='#F59E0B'; out.textContent='Enter where to send it first.'; } return; }
   if(out){ out.style.color=''; out.textContent='Sending…'; }
   const r=await api('/api/alerts/test',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({...req,to})});
@@ -4855,24 +5017,22 @@ async function sendAlertTest(){
   if(r.status==='sent'){ if(out){ out.style.color='var(--green)'; out.textContent='Sent to '+to+' · check your '+(r.channel==='sms'?'phone':'inbox (and spam)'); } toast('Test sent'); }
   else if(r.status==='stubbed'){ if(out){ out.style.color='#F59E0B'; out.textContent='Logged but NOT delivered · '+(r.channel==='sms'?'the Twilio number isn’t live yet (pending A2P).':'Brevo key not set on this service.')+' ('+(r.detail||'')+')'; } }
   else{ if(out){ out.style.color='#F59E0B'; out.textContent=r.status+(r.detail?(' · '+r.detail):''); } }
-  loadAlerts();
 }
 async function loadGrowth(){
   POL=await api('/api/policy');
   if(!POL||POL.error){ document.getElementById('gw_flags').textContent='Could not load policy.'; return; }
-  // flags
+  // Flags = console rows (comp 1i): calm switch rows, one gray line each, saved on tap.
   const f=POL.flags||{};
   document.getElementById('gw_flags').innerHTML=FLAG_GROUPS.map(g=>
-    `<div style="margin-bottom:14px"><div class="meta" style="font-weight:700;color:var(--text-muted);margin:2px 0 6px">${g.title}</div>`+
-    g.flags.map(fl=>{const k=fl[0];return `<div style="padding:7px 0">
-      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;color:var(--text)">
-        <input type="checkbox" ${f[k]?'checked':''} onchange="toggleFlag('${k}',this.checked)" style="margin-top:3px">
-        <span style="flex:1;min-width:0"><span style="font-weight:600">${fl[1]}</span><span style="display:block;font-size:11.5px;font-weight:500;color:#8A8A96;line-height:1.4;margin-top:2px">${esch(String(fl[2]))}</span></span></label></div>`;}).join('')+
-    `</div>`
+    `<div class="meta" style="font-weight:700;color:var(--text-muted);margin:14px 0 2px">${g.title}</div>`+
+    g.flags.map(fl=>{const k=fl[0],on=!!f[k];return `<div class="peek static">
+      <div class="pk-main"><div class="pk-t">${esch(fl[1])}</div><div class="pk-m">${esch(String(fl[2]))}</div></div>
+      <button class="k-switch${on?' on':''}" onclick="toggleFlag('${k}',${on?'false':'true'},'${esch(fl[1])}')" aria-label="${esch(fl[1])}"></button>
+    </div>`;}).join('')
   ).join('');
   // pricing
   const p=POL.pricing||{}, sub=p.sub||{};
-  const fld=(id,lbl,val)=>`<label class="meta" style="display:block">${lbl}<input id="${id}" value="${esch(val)}" inputmode="numeric" style="display:block;width:90px;margin-top:4px;background:#0e0e14;color:#fff;border:1px solid var(--border);border-radius:8px;padding:9px 10px"></label>`;
+  const fld=(id,lbl,val)=>`<label class="meta" style="display:block">${lbl}<input id="${id}" value="${esch(val)}" inputmode="numeric" style="display:block;width:90px;margin-top:4px;background:var(--terminal);color:#fff;border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:12px;padding:10px 12px"></label>`;
   document.getElementById('gw_pricing').innerHTML=
     fld('gw_percall','Per-check price (¢)',p.perCallCents)+
     fld('gw_minpur','Minimum top-up (¢)',p.minPurchaseCents)+
@@ -4885,8 +5045,26 @@ async function loadGrowth(){
   // Memberships + PAYG bundles are OWNED BY PLANS (vt_plans → Stripe). Mirror them read-only here so
   // this page can never drift from the Plans tab again (owner 07-13: pricing must match Plans).
   loadGwPlansMirror();
+  renderGwQueues();
   loadGwPulse(); loadGwIntel(); loadGwKiosks(); loadGwWatches(); loadGwCommunity(); loadGwWaitlist(); loadGwStoreReqs();
 }
+// The four queues fold into peek rows (comp note: Policy splits in two — console up top, queues below).
+// Each loader renders into its hidden holder and stamps its row's fact; a tap opens the holder in the sheet.
+const GW_QUEUES=[
+  ['gw_watches','Restock watches','Customers waiting on a product'],
+  ['gw_community','Community moderation','Approve or hide score posts'],
+  ['gw_storereqs','Store requests','Stores customers asked us to add'],
+  ['gw_waitlist','Launch waitlist','Signups outside live areas'],
+];
+function renderGwQueues(){
+  const el=document.getElementById('gw_queues'); if(!el||el.dataset.built) return; el.dataset.built='1';
+  el.innerHTML=GW_QUEUES.map(([id,title,sub])=>`<button class="peek" onclick="sheetFromHolder('${id}','${esch(title)}','${esch(sub)}')">
+      <span class="pk-main"><span class="pk-t" style="display:block">${esch(title)}</span></span>
+      <span class="pk-fact" id="qf_${id}"></span>
+      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>`).join('');
+}
+function gwQFact(id,text,hot){ const e=document.getElementById('qf_'+id); if(e){ e.textContent=text; e.className='pk-fact'+(hot?' a':''); } }
 async function loadGwPulse(){
   const el=document.getElementById('gw_pulse'); if(!el) return;
   const d=await api('/api/admin/pulse');
@@ -4947,7 +5125,7 @@ async function loadUsers(){
   const el=document.getElementById('users_list'); if(!el) return;
   const d=await api('/api/admin/users');
   if(!Array.isArray(d)){ el.textContent='Could not load users.'; return; }
-  if(!d.length){ el.innerHTML='<div class="empty">No signups yet.</div>'; return; }
+  if(!d.length){ el.innerHTML=emptyState('key','#4ADE80','No signups yet','Accounts appear when a phone verifies'); return; }
   USERS_ROWS=d;
   const real=d.filter(u=>!u.staff);
   const money=c=>'$'+((c||0)/100).toFixed(2);
@@ -5005,8 +5183,12 @@ function rsBar(label,n,max,cls){ return `<div class="rsbar"><span class="rsbl">$
 async function loadRestock(){
   const net=document.getElementById('restock_net'); if(!net) return;
   const d=await api('/api/admin/restock-intel');
-  if(!d||d.error){ net.innerHTML='<div class="empty">No restock data yet. Fills in as confirmed calls land.</div>'; return; }
+  if(!d||d.error){ net.innerHTML=emptyState('box','#F59E0B','Nothing learned yet','Builds itself from confirmed calls'); return; }
   const t=d.totals||{};
+  // Nothing learned yet → ONE clean empty state, not a page of zeros (owner: hide until real data).
+  if(!((d.shipmentDays||[]).length||t.confirms||(d.answerFunnel&&d.answerFunnel.dialed))){
+    net.innerHTML=emptyState('box','#F59E0B','Nothing learned yet','Builds itself from confirmed calls'); return;
+  }
   const tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   const dMax=Math.max(1,...(d.shipmentDays||[]).map(x=>x.n));
   const fMax=Math.max(1,...(d.productForms||[]).map(x=>x.n));
@@ -5063,7 +5245,6 @@ async function loadRestock(){
     +peek('Restock days',topDay||'—','ds_rsdays')
     +peek("What's landing",topForm||'—','ds_rsland')
     +`<div class="k-eyebrow">By store</div>`+storeRows
-    +`<div class="k-note">Learned from real calls. Tap a store for its breakdown.</div>`
     +`<div id="rs_details" style="display:none"><div id="ds_rsfunnel">${funnelBody}</div><div id="ds_rsdays">${daysBody}</div><div id="ds_rsland">${landingBody}</div></div>`;
 }
 async function openStoreRestock(id){
@@ -5106,9 +5287,9 @@ async function loadGwIntel(){
     `<div class="meta" style="margin:2px 0 4px"><b style="color:#c7c7d2">Shipment days heard:</b> ${days}</div>`+
     (rows||'<div class="meta" style="padding:6px 0">No confirmed restocks logged yet.</div>');
 }
-async function toggleFlag(key,on){
-  await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({flags:{[key]:on}})});
-  toast((on?'Enabled ':'Disabled ')+key); loadGrowth();
+async function toggleFlag(key,on,label){
+  const r=await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({flags:{[key]:on}})});
+  toast((r&&!r.error)?((label||key)+(on?' on':' off')):'Could not save the flag'); loadGrowth();
 }
 // Membership + PAYG numbers live in Plans; this page shows them read-only and links across.
 async function loadGwPlansMirror(){
@@ -5116,11 +5297,12 @@ async function loadGwPlansMirror(){
   const d=await api('/api/admin/plans');
   if(!d||d.error||!Array.isArray(d.tiers)){ box.innerHTML=''; return; }
   const money=c=>'$'+((c||0)/100).toFixed(2);
-  box.innerHTML=`<div class="k-eyebrow" style="margin-top:18px">Memberships · set in Plans</div>`
-    +d.tiers.map(t=>`<div class="repline"><span class="rl">${esch(t.name)}</span><b>${money(t.monthlyCents)}/mo · ${t.checksPerMonth} checks</b></div>`).join('')
-    +((d.payg&&Array.isArray(d.payg.bundles)&&d.payg.bundles.length)?`<div class="k-eyebrow">PAYG bundles · set in Plans</div><div class="k-pills" style="margin-top:0">`
-      +d.payg.bundles.map(b=>`<span class="k-pill">${b.checks} checks · ${money(b.cents)}</span>`).join('')+`</div>`:'')
-    +`<a class="goto" href="#plans" onclick="showSection('plans');return false" style="padding:10px 0 0">Edit them in Plans →</a>`;
+  const nb=(d.payg&&Array.isArray(d.payg.bundles))?d.payg.bundles.length:0;
+  box.innerHTML=`<button class="peek" style="margin-top:18px" onclick="showSection('plans')">
+      <span class="pk-main"><span class="pk-t" style="display:block">Memberships and bundles</span><span class="pk-m" style="display:block">Set in Plans</span></span>
+      <span class="pk-fact">${d.tiers.length} tiers · ${nb} bundles</span>
+      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>`;
 }
 async function savePolicyForm(){
   const n=id=>{const x=Number(document.getElementById(id).value);return isFinite(x)?x:undefined;};
@@ -5164,15 +5346,18 @@ async function loadGwKiosks(){
 }
 async function loadGwWatches(){
   const ws=await api('/api/watches');
-  const el=document.getElementById('gw_watches');
-  if(!Array.isArray(ws)||!ws.length){ el.textContent='No active watches.'; return; }
+  const el=document.getElementById('gw_watches'); if(!el) return;
+  if(!Array.isArray(ws)||!ws.length){ el.innerHTML=emptyState('target','#4ADE80','No active watches','They start when a customer asks for a restock alert'); gwQFact('gw_watches','0'); return; }
+  const live=ws.filter(w=>w.active!==false).length;
+  gwQFact('gw_watches',String(live),live>0);
   el.innerHTML=ws.map(w=>`<div style="padding:6px 0;border-top:1px solid var(--border)">${esch(w.contact)} · ${esch(w.channel)} · store #${w.retailerId} · cat #${w.categoryId} ${w.active===false?'<span class="meta">(notified)</span>':''}</div>`).join('');
 }
 async function loadGwCommunity(){
   const el=document.getElementById('gw_community'); if(!el) return;
   const ps=await api('/api/community');
-  if(!Array.isArray(ps)||!ps.length){ el.textContent='No community posts yet.'; return; }
+  if(!Array.isArray(ps)||!ps.length){ el.innerHTML=emptyState('trophy','#FFCB05','No posts yet','They land here when someone posts a score'); gwQFact('gw_community','0'); return; }
   const pend=ps.filter(p=>!p.approved).length;
+  gwQFact('gw_community',pend?pend+' pending':String(ps.length),pend>0);
   el.innerHTML=`<div style="margin-bottom:8px;color:${pend?'var(--yellow,#F4D03F)':'var(--muted)'}">${pend?('⏳ '+pend+' awaiting review'):'All caught up'}</div>`+
     ps.slice(0,30).map(p=>`<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--border)">
       <img src="${esch(p.imageUrl)}" style="width:46px;height:46px;border-radius:8px;object-fit:cover;background:#0e0e14">
@@ -5185,12 +5370,13 @@ async function loadGwCommunity(){
 async function loadGwWaitlist(){
   const el=document.getElementById('gw_waitlist'); if(!el) return;
   const d=await api('/api/waitlist');
-  if(!d||d.error||!d.total){ el.textContent='No waitlist signups yet.'; return; }
+  if(!d||d.error||!d.total){ el.innerHTML=emptyState('pin','#FBBF24','No waitlist signups yet','They come from areas we have not launched'); gwQFact('gw_waitlist','0'); return; }
+  gwQFact('gw_waitlist',d.total+' waiting',d.total>0);
   const regions=(d.byRegion||[]).map(r=>`${esch(r.region)} <b style="color:var(--green)">${r.n}</b>`).join(' · ');
   const recent=(d.recent||[]).slice(0,12).map(w=>`<div style="padding:5px 0;border-top:1px solid var(--border);font-size:12.5px">${esch(w.contact)}${w.area?(' · '+esch(w.area)):''}${w.region?(' · '+esch(w.region)):''}</div>`).join('');
   // "We're live in your area" send: pick a region, email everyone waiting there (once). Email-only, never SMS.
   const opts=(d.byRegion||[]).filter(r=>r.region&&r.region!=='Unknown').map(r=>`<option value="${esch(r.region)}">${esch(r.region)} (${r.n})</option>`).join('');
-  const notify=opts?`<div style="display:flex;gap:8px;align-items:center;margin:10px 0 4px"><select id="wl_region" style="flex:1;background:var(--terminal);border:1px solid var(--border);border-radius:8px;padding:7px 9px;color:var(--text-strong);font-size:12.5px"><option value="">Notify a region we just launched…</option>${opts}</select><button class="act" style="font-size:12.5px;padding:7px 11px" onclick="notifyWaitlist()">Email them</button></div><div id="wl_notify_out" class="meta" style="font-size:11px"></div>`:'';
+  const notify=opts?`<div style="display:flex;gap:8px;align-items:center;margin:10px 0 4px"><select id="wl_region" style="flex:1;width:auto"><option value="">Notify a region we just launched…</option>${opts}</select><button class="act" style="font-size:12.5px;padding:7px 11px" onclick="notifyWaitlist()">Email them</button></div><div id="wl_notify_out" class="meta" style="font-size:11px"></div>`:'';
   el.innerHTML=`<div style="font-size:22px;font-weight:800;color:var(--text);margin-bottom:6px">${d.total} waiting</div><div style="margin-bottom:10px">${regions||'—'}</div>${notify}${recent}`;
 }
 async function notifyWaitlist(){
@@ -5208,8 +5394,9 @@ async function notifyWaitlist(){
 async function loadGwStoreReqs(){
   const el=document.getElementById('gw_storereqs'); if(!el) return;
   const rs=await api('/api/store-requests');
-  if(!Array.isArray(rs)||!rs.length){ el.textContent='No store requests yet.'; return; }
+  if(!Array.isArray(rs)||!rs.length){ el.innerHTML=emptyState('store','#4ADE80','No store requests yet','They land here when a customer asks for one'); gwQFact('gw_storereqs','0'); return; }
   const nw=rs.filter(r=>r.status==='new').length;
+  gwQFact('gw_storereqs',nw?nw+' new':String(rs.length),nw>0);
   el.innerHTML=`<div style="margin-bottom:8px;color:${nw?'var(--yellow,#F4D03F)':'var(--muted)'}">${nw?('⏳ '+nw+' new'):'All handled'}</div>`+
     rs.slice(0,40).map(r=>`<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--border)">
       <div style="flex:1;min-width:0"><div style="font-size:13px;color:var(--text)"><b>${esch(r.storeName)}</b>${r.city?(' · '+esch(r.city)):''}</div>

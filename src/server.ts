@@ -25,6 +25,8 @@ import { importZonesData, geocodeMissing, backfillDirectChains, isDirectDefaultC
 import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus, learnedSyncTick, learnedSyncStatus } from "./store-sync";
 import { buildSettingsExport, settingsSyncStatus, settingsSyncTick } from "./settings-sync";
+import { concurrencyStatus, acquireCallSlot, releaseCallSlot, governorEnabled } from "./calls/concurrency";
+import { routeCheck, ticketStatus, drainCheckQueue, type QueueArgs, type PlaceResult } from "./calls/queue";
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
 import { simStartCall, isSimId, simLive, simResult } from "./staging-sim";
@@ -134,7 +136,7 @@ import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
 import { settings as settingsTbl } from "./db/schema";
 import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, activeBridgeCalls } from "./voice/bridge";
-import { placeBridgeCall, roomCallSids, roomCallProgress, roomFinalizers, RAILWAY_HOST, STAGING_HOST } from "./voice/bridge-place";
+import { placeBridgeCall, attachListenFork, roomCallSids, roomCallProgress, roomFinalizers, RAILWAY_HOST, STAGING_HOST } from "./voice/bridge-place";
 import { isCallingPaused, setCallingPaused, spendTodayCents, withLock } from "./redis";
 
 assertProdSecurity(); // refuse to boot in prod with an open admin / forgeable sessions
@@ -218,6 +220,24 @@ function cookieRootDomain(host: string | undefined): string | undefined {
   return ".checkitforme.com";
 }
 
+// THE Admin (admin.checkitforme.com) can read this service's /api/* cross-origin — how the Testing
+// and Feedback pages flip to the staging site's Fun-store data. Auth still applies: the admin_session
+// cookie is minted on the registrable root (.checkitforme.com) with a shared secret, so the owner's
+// one Admin login already works here; this middleware only opens the browser's CORS gate for it.
+const ADMIN_ORIGIN = "https://admin.checkitforme.com";
+app.use("/api/*", async (c, next) => {
+  if (c.req.header("origin") !== ADMIN_ORIGIN) return next();
+  c.header("Access-Control-Allow-Origin", ADMIN_ORIGIN);
+  c.header("Access-Control-Allow-Credentials", "true");
+  c.header("Vary", "Origin");
+  if (c.req.method === "OPTIONS") {
+    c.header("Access-Control-Allow-Methods", "GET,POST,PATCH,PUT,DELETE,OPTIONS");
+    c.header("Access-Control-Allow-Headers", "content-type,x-admin-token");
+    c.header("Access-Control-Max-Age", "86400");
+    return c.body(null, 204);
+  }
+  return next();
+});
 // /api/* = the operator dashboard. Admin auth only: the x-admin-token header (server-to-server) or the
 // signed `admin_session` cookie minted by /admin-login. (Consumer endpoints live under /pub + /app.)
 app.use("/api/*", async (c, next) => {
@@ -317,13 +337,21 @@ function seoGraph(brand: ReturnType<typeof resolveBrand>, plainName: string) {
   ];
 }
 
+// Behind the staging/prod Cloudflare worker the origin Host header is the INTERNAL *.railway.app
+// service hostname, not the domain the visitor actually used. Any absolute URL we hand a link-preview
+// bot (og:image, og:url, canonical) MUST carry the public domain — iMessage/Facebook can't fetch the
+// internal host, so the unfurl card renders blank (owner 07-18: shared find showed no image). Mirrors
+// the og:title fix that already lived inline in renderRunner; now the single source for every render.
+const publicHost = (host: string): string =>
+  /railway\.app$/i.test(host) ? (config.staging.on ? "staging.checkitforme.com" : "checkitforme.com") : host.replace(/^www\./, "");
+
 // Coming-soon splash: the ONLY public HTML while config.comingSoon is on. Check wordmark + the owner's
 // launch line + the four product-type icons. Standalone (no app JS), dark on-brand, noindex.
 const COMING_SOON_ICONS = ["pokemon", "onepiece", "topps", "needoh"];
 function renderComingSoon(_host: string, refShare = false): string {
   const line = "Find insanely hard to get products on the shelves at retail prices.";
   // Even gated, a shared link must unfurl right: bots read these tags while humans see the splash.
-  const ogImage = `https://${_host}/og/${refShare ? "card-refer" : "runner"}.png`;
+  const ogImage = `https://${publicHost(_host)}/og/${refShare ? "card-refer" : "runner"}.png`;
   const ogTitle = refShare ? "We both get a free check." : "Check — coming soon";
   const og = [
     `<meta property="og:type" content="website">`,
@@ -371,10 +399,11 @@ body{background:#0C0C12;color:#fff;font-family:Inter,-apple-system,system-ui,san
 /** Render the consumer page branded for a vertical micro-site (resolved from the subdomain). */
 function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file = "checkit.html", tone = "", peek = false, refShare = false): string {
   void peek; // coming-soon gate now lives in the single middleware above (peek bypass handled there)
-  const canonical = `https://${host}/`;
+  const pub = publicHost(host); // never the internal railway host in emitted URLs (see publicHost)
+  const canonical = `https://${pub}/`;
   const plainName = brand.name.replace(/<[^>]+>/g, "");
   // Invite links (?ref=CODE) unfurl with the referral card (owner 07-14) — the page itself is the app.
-  const ogImage = refShare ? `https://${host}/og/card-refer.png` : `https://${host}/og/${brand.key}.png`;
+  const ogImage = refShare ? `https://${pub}/og/card-refer.png` : `https://${pub}/og/${brand.key}.png`;
   const head = [
     `<title>${esc(brand.title)}</title>`,
     `<meta name="description" content="${esc(brand.desc)}">`,
@@ -388,14 +417,14 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
     `<meta property="og:type" content="website">`,
     `<meta property="og:site_name" content="${esc(plainName)}">`,
     // Apex/invite embeds (owner): the CARD IMAGE carries the headline, so the visible link title is
-    // just the address — no repeated "Is it in stock?" under the image. NB: behind the proxy the Host
-    // header is the internal Railway hostname — show the public domain, never that.
-    `<meta property="og:title" content="${esc(brand.key === "runner" ? (/railway\.app$/i.test(host) ? (config.staging.on ? "staging.checkitforme.com" : "checkitforme.com") : host.replace(/^www\./, "")) : brand.title)}">`,
+    // just the address — no repeated "Is it in stock?" under the image. publicHost keeps the internal
+    // Railway hostname out of the visible title behind the proxy.
+    `<meta property="og:title" content="${esc(brand.key === "runner" ? pub : brand.title)}">`,
     `<meta property="og:description" content="${esc(brand.desc)}">`,
     `<meta property="og:url" content="${canonical}">`,
     `<meta property="og:image" content="${ogImage}">`,
     `<meta name="twitter:card" content="summary_large_image">`,
-    `<meta name="twitter:title" content="${esc(brand.key === "runner" ? (/railway\.app$/i.test(host) ? (config.staging.on ? "staging.checkitforme.com" : "checkitforme.com") : host.replace(/^www\./, "")) : brand.title)}">`,
+    `<meta name="twitter:title" content="${esc(brand.key === "runner" ? pub : brand.title)}">`,
     `<meta name="twitter:description" content="${esc(brand.desc)}">`,
     `<meta name="twitter:image" content="${ogImage}">`,
     `<style>:root{--accent:${brand.accent};--accent2:${brand.accent2 || brand.accent};--logo-scale:${brand.logoScale || 1}}</style>`,
@@ -429,68 +458,149 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
 // humans see a styled card + a CTA back into the app. Pure string render — no deps, cache-friendly.
 function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Record<string, string>, peek = false): string {
   void peek; // coming-soon gate now lives in the single middleware above (peek bypass handled there)
+  // Bilingual: the sharer's app appends &lang=; a cold recipient with no lang param falls back to their
+  // browser's Accept-Language. Friend-to-friend is almost always the same language, so lang wins.
+  const lang = q.lang === "es" || (!q.lang && /^\s*es/i.test(q.al || "")) ? "es" : "en";
+  const L = (en: string, es: string) => (lang === "es" ? es : en);
   const zone = q.k === "zone"; // zone-sweep share: "{i} of {n} stores had it"
   const inStock = (q.v || "in") === "in";
-  const store = (q.store || "a local store").slice(0, 80);
+  const store = (q.store || "").slice(0, 80);
   const cat = (q.cat || brand.category || "cards").slice(0, 60);
   const plainName = brand.name.replace(/<[^>]+>/g, "");
-  const site = `https://${host}/`;
-  // Unfurl cards (owner 07-14): section-reflective images with the brandmark + copy baked in.
-  // In-stock find → the per-brand "X in stock" card (store name rides og:title under the image);
-  // zone share → the zone card; out-of-stock keeps the brand hero card.
-  const findCard = `https://${host}/og/card-find-${brand.key}.png`;
-  const ogImage = zone ? `https://${host}/og/card-zone.png` : inStock ? findCard : `https://${host}/og/${brand.key}.png`;
+  const pub = publicHost(host); // never the internal railway host in emitted URLs (see publicHost)
+  const site = `https://${pub}/`;
   const zN = Math.max(0, Number(q.n) || 0), zI = Math.max(0, Number(q.i) || 0);
-  const title = zone ? `${zI} of ${zN} stores had it in stock`
-    : inStock ? `${cat} in stock at ${store}` : `👀 ${store}: watching for ${cat}`;
-  const desc = zone
-    ? `One tap checked every store in the area. No answer = no charge.`
-    : inStock
-    ? `Check AI called the store and confirmed it. No answer = no charge.`
-    : `Not in yet — but ${plainName} will catch the restock. Check any store near you with one tap.`;
+  // State drives every branch. Zone with hits → "zonein"; zone with zero hits collapses to the
+  // store-less watch copy (owner: "none yet, Check catches the restock").
+  const state: "in" | "watch" | "zonein" = zone ? (zI > 0 ? "zonein" : "watch") : inStock ? "in" : "watch";
+  const positive = state === "in" || state === "zonein";
+  const showStore = state !== "zonein" && !(state === "watch" && zone) && !!store; // no single store on a zone card
+  // In-stock stores for the zone logo row (owner): client passes st=<json [{l:logoUrl,n:name}]>. Cap 6.
+  let zStores: Array<{ l: string; n: string }> = [];
+  if (state === "zonein" && q.st) { try { const a = JSON.parse(q.st); if (Array.isArray(a)) zStores = a.slice(0, 6).map((s) => ({ l: String(s.l || ""), n: String(s.n || "") })); } catch { /* ignore malformed */ } }
+  const mono = (n: string) => (n.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2) || "?").toUpperCase();
+
+  // Unfurl cards (owner 07-14): baked images with the brandmark + copy. Zone → zone card; in-stock →
+  // per-brand find card; watch → brand hero card.
+  const ogImage = state === "zonein" ? `https://${pub}/og/card-zone.png` : state === "in" ? `https://${pub}/og/card-find-${brand.key}.png` : `https://${pub}/og/${brand.key}.png`;
+
+  const catHl = `<span class="hl">${esc(cat)}</span>`;
+  // Badge icon: comp P6 in-stock RESULT pill uses a glowing dot; watch keeps the bell.
+  const dot = `<span class="gdot"></span>`;
+  const bell = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>`;
+  const badgeIcon = positive ? dot : bell;
+  const badge = state === "in" ? L("IN STOCK", "EN STOCK")
+    : state === "zonein" ? L(`${zI} OF ${zN} HAD IT`, `${zI} DE ${zN} LO TENÍAN`)
+    : L("ON WATCH", "EN SEGUIMIENTO");
+  const headline = state === "in" ? catHl
+    : state === "zonein" ? L(`${catHl} is on shelves nearby`, `${catHl} está en estantes cerca`)
+    : L(`We're tracking ${catHl}`, `Estamos rastreando ${catHl}`);
+  const zoneMsg = L(`Check called ${zN} stores at once. ${esc(cat)} is on the shelf at these:`,
+                    `Check llamó a ${zN} tiendas a la vez. ${esc(cat)} está en el estante en estas:`);
+  const whatIsIt = state === "in"
+    ? L("Your friend used Check AI to find viral products on the shelves at retail prices.", "Tu amigo usó Check AI para encontrar productos virales en los estantes a precio de tienda.")
+    : state === "zonein" ? "" // the zone message + logo row carry it
+    : zone ? L("None yet. Check catches the restock.", "Ninguna aún. Check atrapa la reposición.")
+    : L("Not in yet. Check catches the restock.", "Aún no. Check atrapa la reposición.");
+  const hook = L("First one's on us!", "¡La primera va por nuestra cuenta!");
+  const button = L("YOUR TURN", "TE TOCA");
+  // The full store name prints as "@ Name" under the headline, right-aligned to the headline's edge.
+  const atName = showStore && store ? `<div class="satname">@ ${esc(store)}</div>` : "";
+
+  const green = "#4ADE80", amber = "#F59E0B";
+  const accent = positive ? green : amber;
+  const brandColor = brand.accent || green; // the product's own color (Pokémon yellow, One Piece red…)
+  const title = state === "in" ? L(`${cat} is in stock at ${store}`, `${cat} está en stock en ${store}`)
+    : state === "zonein" ? L(`${cat} is in stock nearby`, `${cat} está en stock cerca`)
+    : L(`We're tracking ${cat}`, `Estamos rastreando ${cat}`);
+  const desc = whatIsIt || L(`Check called ${zN} stores at once. ${cat} is on the shelf nearby.`,
+                             `Check llamó a ${zN} tiendas a la vez. ${cat} está en el estante cerca.`);
+  const shareUrl = `https://${pub}/s?${new URLSearchParams({ ...(store ? { store } : {}), cat, v: inStock ? "in" : "out", ...(zone ? { k: "zone", n: String(zN), i: String(zI) } : {}), lang }).toString()}`;
   const head = [
     `<title>${esc(title)}</title>`,
     `<meta name="description" content="${esc(desc)}">`,
     `<meta name="robots" content="index,follow,max-image-preview:large">`,
-    `<meta name="theme-color" content="#0C0C12">`,
+    `<meta name="theme-color" content="#1D1D22">`,
     `<meta property="og:type" content="website">`,
     `<meta property="og:site_name" content="${esc(plainName)}">`,
     `<meta property="og:title" content="${esc(title)}">`,
     `<meta property="og:description" content="${esc(desc)}">`,
-    `<meta property="og:url" content="https://${host}/s?store=${encodeURIComponent(store)}&cat=${encodeURIComponent(cat)}&v=${inStock ? "in" : "out"}">`,
+    `<meta property="og:url" content="${esc(shareUrl)}">`,
     `<meta property="og:image" content="${ogImage}">`,
     `<meta name="twitter:card" content="summary_large_image">`,
     `<meta name="twitter:title" content="${esc(title)}">`,
     `<meta name="twitter:description" content="${esc(desc)}">`,
     `<meta name="twitter:image" content="${ogImage}">`,
   ].join("\n");
-  const accent = inStock ? "#4ADE80" : "#A78BFA";
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">${head}
-<style>
-  *{box-sizing:border-box} body{margin:0;background:#0A0A0E;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;min-height:100vh;display:grid;place-items:center;padding:24px}
-  .wrap{max-width:440px;width:100%;text-align:center}
-  .card{background:linear-gradient(170deg,#15151c,#0e0e14);border:1px solid #23232e;border-radius:22px;padding:30px 24px;box-shadow:0 24px 60px rgba(0,0,0,.5)}
-  .brand{font-size:13px;font-weight:800;letter-spacing:.04em;color:${esc(brand.accent)};text-transform:uppercase;margin-bottom:18px}
-  .badge{display:inline-block;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:${accent};background:${accent}1f;border:1px solid ${accent}55;padding:7px 13px;border-radius:999px;margin-bottom:16px}
-  .big{font-size:27px;font-weight:900;line-height:1.18;margin:0 0 8px} .big .hl{color:${accent}}
-  .store{color:#b9b9c8;font-size:15px;margin-bottom:22px}
-  .cta{display:block;background:${esc(brand.accent)};color:#06210f;text-decoration:none;font-weight:900;font-size:16px;padding:16px;border-radius:14px;box-shadow:0 10px 26px ${esc(brand.accent)}40}
-  .sub{color:#7a7a88;font-size:12.5px;margin-top:16px}
-</style></head><body><div class="wrap"><div class="card">
-  <div class="brand">${brand.emoji || "🎴"} ${esc(plainName)}</div>
-  <div class="badge">${inStock ? "✅ In stock" : "🔔 On watch"}</div>
-  <h1 class="big">${inStock ? `<span class="hl">${esc(cat)}</span> is in stock` : `Tracking <span class="hl">${esc(cat)}</span>`}</h1>
-  <div class="store">at <b>${esc(store)}</b></div>
-  <a class="cta" href="${site}">Check any store near you →</a>
-  <div class="sub">${esc(plainName)} calls the store live and texts you proof. Real human, real shelf truth.</div>
-</div></div></body></html>`;
+  const logoRow = state === "zonein" && zStores.length
+    ? `<div class="logos">${zStores.map((s) => s.l
+        ? `<div class="ltile"><img src="${esc(s.l)}" alt="" onerror="this.style.display='none';this.parentNode.classList.add('lmono');this.parentNode.textContent='${esc(mono(s.n))}'"></div>`
+        : `<span class="lmono">${esc(mono(s.n))}</span>`).join("")}</div>`
+    : "";
+  // Rebuilt 2026-07-18 element-for-element from the P6 IN-STOCK comp (docs/design/comps/
+  // WEBSITE_COMPS.dc.html, ~L448-471): green-wash card (r40), glow-dot IN STOCK pill, 56px store
+  // hero tile, and the "Check another store" capsule CTA with the ckShine sweep + ckGlow dot.
+  // The CP / CPEND markers fence this <style> as a CONSUMER PAGE: qa-design holds everything inside
+  // to the STYLE_GUIDE token set + Inter-only, same as the homepage. ANY new consumer landing/share
+  // page's <style> MUST be fenced the same way so it can't ship off-system.
+  return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">${head}
+<link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
+<link rel="preload" href="/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+<style>/*CP*/
+  @font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;src:url(/fonts/inter-var-latin.woff2) format('woff2')}
+  *{box-sizing:border-box;margin:0} :root{--green:${green};--amber:${amber}}
+  body{background:#1D1D22;color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100dvh;display:grid;place-items:center;padding:24px}
+  .wrap{max-width:430px;width:100%;text-align:center}
+  .card{position:relative;text-align:left;border:1px solid rgba(255,255,255,.12);border-radius:40px;padding:40px 27px 34px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
+  .card.pos{background:radial-gradient(125% 82% at 34% 15%, rgba(38,100,64,.98) 0%, rgba(38,100,64,.5) 30%, rgba(38,100,64,0) 60%),#20202A}
+  .card.neg{background:#26262B}
+  .cwmwrap{position:absolute;inset:0;border-radius:40px;overflow:hidden;z-index:0;pointer-events:none}
+  .cwm{position:absolute;top:-40px;right:-44px;width:180px;height:180px;opacity:.16;z-index:0}
+  .cbody{position:relative;z-index:1}
+  .cact{margin-top:38px}
+  .chead{margin-bottom:30px}
+  .badge{display:inline-flex;align-items:center;gap:7px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.13em;color:${accent};background:rgba(255,255,255,.06);border:1px solid ${accent}66;padding:6px 12px;border-radius:999px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+  .gdot{width:8px;height:8px;border-radius:50%;background:${accent};box-shadow:0 0 8px ${accent};animation:ckGlow 2s ease-in-out infinite}
+  .title{display:inline-block;max-width:100%;align-self:flex-start}
+  .big{font-size:44px;font-weight:900;line-height:1;letter-spacing:-1.6px;margin:0} .big .hl{color:${brandColor}}
+  .satname{display:block;text-align:right;font-size:16px;font-weight:700;letter-spacing:-.2px;color:#fff;margin-top:7px}
+  .zmsg{color:rgba(255,255,255,.78);font-size:14.5px;font-weight:500;line-height:1.5;margin:6px auto 4px;max-width:330px}
+  .logos{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:14px 0 6px}
+  .ltile,.lmono{width:40px;height:40px;border-radius:11px;flex:0 0 auto}
+  .ltile{background:#1F1F25;display:grid;place-items:center;overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)} .ltile img{width:30px;height:30px;object-fit:contain}
+  .lmono{background:linear-gradient(145deg,#34343D,#23232B);display:grid;place-items:center;color:#CDCDD8;font-weight:900;font-size:14px}
+  .what{color:rgba(255,255,255,.82);font-size:15px;font-weight:500;line-height:1.55;margin:24px 0 0}
+  .cta{display:block;text-decoration:none;border-radius:999px;padding:2.5px;background:linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%);box-shadow:0 10px 22px -12px rgba(0,0,0,.55)}
+  .cin{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:9px;border-radius:999px;background:#20202A;padding:13px 22px}
+  .shine{position:absolute;top:0;bottom:0;left:-45%;width:45%;background:linear-gradient(105deg,transparent 0%,rgba(140,255,185,.25) 50%,transparent 100%);animation:ckShine 2.8s ease-in-out infinite}
+  .ctxt{position:relative;font-size:12.5px;font-weight:800;letter-spacing:.13em;color:#fff}
+  .arw{position:relative;flex:0 0 auto}
+  .foot{color:#8A8A96;font-size:12.5px;font-weight:600;margin-top:14px;text-align:center}
+  @keyframes ckShine{0%{left:-45%}55%,100%{left:110%}}
+  @keyframes ckGlow{0%,100%{opacity:.4}50%{opacity:1}}
+  @media (prefers-reduced-motion:reduce){.shine,.gdot{animation:none}}
+/*CPEND*/</style></head><body><div class="wrap">
+  <div class="card ${positive ? "pos" : "neg"}">
+    ${positive ? `<div class="cwmwrap"><svg class="cwm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#8CF7B4"/><path d="M6.5 12.4 L10.3 16 L17.5 8" stroke="#20693F" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>` : ""}
+    <div class="cbody">
+    <div class="chead"><div class="badge">${badgeIcon} ${badge}</div></div>
+    <div class="title"><h1 class="big">${headline}</h1>${atName}</div>
+    ${state === "zonein" ? `<div class="zmsg">${zoneMsg}</div>${logoRow}` : ""}
+    ${whatIsIt ? `<div class="what">${whatIsIt}</div>` : ""}
+    <div class="cact">
+    <a class="cta" href="${site}"><span class="cin"><span class="shine"></span><span class="ctxt">${button}</span><svg class="arw" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></span></a>
+    <div class="foot">${hook}</div>
+    </div>
+    </div>
+  </div>
+</div></body></html>`;
 }
 app.get("/s", (c) => {
-  c.header("Cache-Control", "public, max-age=300");
+  c.header("Cache-Control", "public, max-age=30");
   const host = (c.req.header("host") || "").toLowerCase();
   const brand = resolveBrand(host, c.req.query("brand"));
-  const q = { store: c.req.query("store") || "", cat: c.req.query("cat") || "", v: c.req.query("v") || "in", k: c.req.query("k") || "", n: c.req.query("n") || "", i: c.req.query("i") || "" };
+  const q = { store: c.req.query("store") || "", cat: c.req.query("cat") || "", v: c.req.query("v") || "in", k: c.req.query("k") || "", n: c.req.query("n") || "", i: c.req.query("i") || "", st: c.req.query("st") || "", slogo: c.req.query("slogo") || "", lang: c.req.query("lang") || "", al: c.req.header("accept-language") || "" };
   return c.html(renderShare(brand, host, q, peekOk(c.req.query("peek"), getCookie(c, "peek"))));
 });
 
@@ -520,6 +630,8 @@ const DEFAULT_PAGES: Record<string, string> = {
 <p>We call stores and ask if something's in stock, then tell you what they said. Answers are a snapshot. Stores get it wrong sometimes, so we can't promise the item is there, or the price, or that it'll still be there when you show up.</p>
 <h2 ${H2}>Checks and payments</h2>
 <p>You pay with checks, bought in packs or included in a plan. Stripe handles the card. A check is spent when it places a call. Unused checks can be refunded if you ask. Spent ones can't. Plans renew until you cancel, and you can cancel any time for the next round.</p>
+<h2 ${H2}>Who can use it</h2>
+<p>You need to be at least 18 and in the United States. You're responsible for the checks placed on your account.</p>
 <h2 ${H2}>Play nice</h2>
 <p>Don't use us to harass a store, place calls you've got no real reason for, resell the service, or break the law. We can pause accounts that abuse the service or the stores we call.</p>
 <h2 ${H2}>The fine print</h2>
@@ -527,20 +639,26 @@ const DEFAULT_PAGES: Record<string, string> = {
 <h2 ${H2}>Changes</h2>
 <p>We may update these terms. Keep using the app and that's a yes. Questions? Ask us in the app chat or on Discord.</p>
 <p style="margin-top:22px"><a href="/p/privacy" onclick="if(window.openPage){openPage('privacy');return false}">Privacy Policy →</a></p>`,
-  privacy: `<p>Here's what <b>Check It For Me</b> (checkitforme.com) collects, and why. Short version: we grab what we need to run your checks. We don't sell your info.</p>
+  privacy: `<p>Here's what <b>Check It For Me</b> (checkitforme.com) collects, why, and what you can do about it. Short version: we take only what we need to run your checks, we keep it only as long as we need it, and we never sell it.</p>
 <h2 ${H2}>What we collect</h2>
 <ul>
-<li><b>Your cell number.</b> It's how you sign in. And we call stores on your behalf, so a verified number is required. No number, no checks.</li>
-<li><b>Your checks.</b> The store, the product, the result, the call convo.</li>
+<li><b>Your cell number.</b> It's how you sign in, and we call stores on your behalf, so a verified number is required. No number, no checks.</li>
+<li><b>Your checks.</b> The store, the product, the result, and the written conversation we bring back as your proof.</li>
 <li><b>Rough location.</b> Only if you allow it, to show stores near you. Say no and search by ZIP instead.</li>
-<li><b>Payment info.</b> Stripe handles it. We never see your full card.</li>
+<li><b>Payment info.</b> Stripe handles your card. We never see the full number.</li>
+<li><b>Basic usage.</b> Enough to keep the app running, fix bugs, and stop abuse.</li>
 </ul>
 <h2 ${H2}>How we use it</h2>
-<p>To place your calls, show your history, take payment, stop abuse, and get more accurate. That's it.</p>
-<h2 ${H2}>Who sees it</h2>
-<p>Only the vendors that make it work. A voice provider to place calls, a sign-in provider, and Stripe for payments. They handle it for us under their own terms. We do not sell your personal info.</p>
-<h2 ${H2}>Your data, your call</h2>
-<p>We keep your account and history until you ask us to delete it. Want a copy, or a delete? Ask us in the app chat or on Discord. You can turn off location any time in your browser.</p>`,
+<p>To place your calls, show your history, take payment, keep the service safe, and make the answers more accurate. That is the whole list.</p>
+<h2 ${H2}>Who we share it with</h2>
+<p>Only the vendors that make Check work, and only so they can do their job. Our AI voice provider places and transcribes the calls. Twilio sends your login codes and alert texts, and carries the calls. Stripe processes payments. They handle your info under their own terms, on our behalf. We do not sell your personal information, and we never will.</p>
+<h2 ${H2}>How long we keep it</h2>
+<p>We keep your account, your checks, and their conversations until you ask us to delete them, or until we no longer need them to run the service. Delete your account and we remove your personal data, apart from the little the law requires us to hold.</p>
+<h2 ${H2}>Your rights</h2>
+<p>You can see your data, correct it, download a copy, or delete it. Turn off location any time in your browser. Turn off alert texts and emails from your account. Want a copy or a deletion? Ask us in the app chat or on Discord and we will take care of it.</p>
+<h2 ${H2}>Kids</h2>
+<p>Check is made for adults in the United States. It is not meant for children under 13, and we do not knowingly collect their information.</p>
+<p style="margin-top:22px"><a href="/p/terms" onclick="if(window.openPage){openPage('terms');return false}">Terms of Service &rarr;</a></p>`,
 };
 // Hand-written Spanish for the footer pages (copy law 3: every string ships its Spanish). Same voice,
 // no dashes, fewest words. Served whenever the app asks with ?lang=es; the owner's policy.pages
@@ -564,6 +682,8 @@ const DEFAULT_PAGES_ES: Record<string, string> = {
 <p>Llamamos a tiendas y preguntamos si algo está en stock, luego te contamos lo que dijeron. Las respuestas son una foto del momento. Las tiendas a veces se equivocan, así que no podemos garantizar que el artículo esté, ni el precio, ni que siga ahí cuando llegues.</p>
 <h2 ${H2}>Verificaciones y pagos</h2>
 <p>Pagas con verificaciones, en paquetes o incluidas en un plan. Stripe procesa la tarjeta. Una verificación se gasta cuando coloca una llamada. Las que no uses se pueden reembolsar si lo pides. Las gastadas no. Los planes se renuevan hasta que canceles, y puedes cancelar cuando quieras para el siguiente ciclo.</p>
+<h2 ${H2}>Quién puede usarlo</h2>
+<p>Debes tener al menos 18 años y estar en Estados Unidos. Eres responsable de las verificaciones hechas en tu cuenta.</p>
 <h2 ${H2}>Juega limpio</h2>
 <p>No nos uses para acosar a una tienda, hacer llamadas sin motivo real, revender el servicio o romper la ley. Podemos pausar cuentas que abusen del servicio o de las tiendas.</p>
 <h2 ${H2}>La letra chica</h2>
@@ -571,20 +691,26 @@ const DEFAULT_PAGES_ES: Record<string, string> = {
 <h2 ${H2}>Cambios</h2>
 <p>Podemos actualizar estos términos. Si sigues usando la app, es un sí. ¿Preguntas? Escríbenos en el chat de la app o en Discord.</p>
 <p style="margin-top:22px"><a href="/p/privacy" onclick="if(window.openPage){openPage('privacy');return false}">Política de privacidad →</a></p>`,
-  privacy: `<p>Esto es lo que <b>Check It For Me</b> (checkitforme.com) recopila, y para qué. Versión corta: tomamos lo necesario para hacer tus verificaciones. No vendemos tu información.</p>
+  privacy: `<p>Esto es lo que <b>Check It For Me</b> (checkitforme.com) recopila, por qué, y qué puedes hacer al respecto. Versión corta: tomamos solo lo necesario para hacer tus verificaciones, lo guardamos solo el tiempo que haga falta, y nunca lo vendemos.</p>
 <h2 ${H2}>Qué recopilamos</h2>
 <ul>
-<li><b>Tu número de celular.</b> Es tu forma de iniciar sesión. Y llamamos a tiendas en tu nombre, así que se requiere un número verificado. Sin número, no hay verificaciones.</li>
-<li><b>Tus verificaciones.</b> La tienda, el producto, el resultado, la conversación de la llamada.</li>
+<li><b>Tu número de celular.</b> Es tu forma de iniciar sesión, y llamamos a tiendas en tu nombre, así que se requiere un número verificado. Sin número, no hay verificaciones.</li>
+<li><b>Tus verificaciones.</b> La tienda, el producto, el resultado, y la conversación escrita que te traemos como prueba.</li>
 <li><b>Ubicación aproximada.</b> Solo si la permites, para mostrarte tiendas cerca. Di que no y busca por código postal.</li>
-<li><b>Datos de pago.</b> Los maneja Stripe. Nunca vemos tu tarjeta completa.</li>
+<li><b>Datos de pago.</b> Stripe procesa tu tarjeta. Nunca vemos el número completo.</li>
+<li><b>Uso básico.</b> Lo justo para que la app funcione, corregir errores y frenar abusos.</li>
 </ul>
 <h2 ${H2}>Cómo la usamos</h2>
-<p>Para colocar tus llamadas, mostrar tu historial, cobrar, frenar abusos y afinar la precisión. Eso es todo.</p>
-<h2 ${H2}>Quién la ve</h2>
-<p>Solo los proveedores que hacen que funcione. Un proveedor de voz para las llamadas, uno de inicio de sesión y Stripe para pagos. La manejan por nosotros bajo sus propios términos. No vendemos tu información personal.</p>
-<h2 ${H2}>Tus datos, tú decides</h2>
-<p>Guardamos tu cuenta e historial hasta que pidas borrarlos. ¿Quieres una copia, o borrar todo? Escríbenos en el chat de la app o en Discord. Puedes apagar la ubicación cuando quieras en tu navegador.</p>`,
+<p>Para colocar tus llamadas, mostrar tu historial, cobrar, mantener el servicio seguro y hacer las respuestas más precisas. Esa es toda la lista.</p>
+<h2 ${H2}>Con quién la compartimos</h2>
+<p>Solo con los proveedores que hacen funcionar a Check, y solo para que hagan su trabajo. Nuestro proveedor de voz con IA coloca y transcribe las llamadas. Twilio envía tus códigos de acceso y tus textos de alerta, y transporta las llamadas. Stripe procesa los pagos. Manejan tu información bajo sus propios términos, por nosotros. No vendemos tu información personal, y nunca lo haremos.</p>
+<h2 ${H2}>Cuánto tiempo la guardamos</h2>
+<p>Guardamos tu cuenta, tus verificaciones y sus conversaciones hasta que pidas borrarlas, o hasta que ya no las necesitemos para el servicio. Borra tu cuenta y eliminamos tus datos personales, salvo lo poco que la ley nos obliga a conservar.</p>
+<h2 ${H2}>Tus derechos</h2>
+<p>Puedes ver tus datos, corregirlos, descargar una copia o borrarlos. Apaga la ubicación cuando quieras en tu navegador. Desactiva los textos y correos de alerta desde tu cuenta. ¿Quieres una copia o un borrado? Escríbenos en el chat de la app o en Discord y lo resolvemos.</p>
+<h2 ${H2}>Niños</h2>
+<p>Check es para adultos en Estados Unidos. No es para menores de 13 años, y no recopilamos su información a sabiendas.</p>
+<p style="margin-top:22px"><a href="/p/terms" onclick="if(window.openPage){openPage('terms');return false}">Términos del servicio &rarr;</a></p>`,
 };
 // FAQ retired → the book (the one FAQ source of truth; the messenger FAQ tab reads it too).
 // Registered before /p/:slug so it wins.
@@ -637,6 +763,146 @@ app.get("/", rootHandler);
 // :param{regex} attempt crashed Hono's router on boot. These names never collide with /api, /pub, /r, /s, etc.
 for (const s of ["dash","users","restock","growth","calc","plans","retailers","search","add","zones","receipts","results","schedules","feedback","statuses","trees","settings","designer","workflows","testing","fun","gtm"]) app.get("/" + s, rootHandler);
 app.get("/r", (c) => { c.header("Cache-Control", "no-store"); const h=(c.req.header("host") || "").toLowerCase(); return c.html(renderRunner(resolveBrand(h, c.req.query("brand")), h, "checkit.html", c.req.query("tone") || "", peekOk(c.req.query("peek"), getCookie(c, "peek")))); });
+// SANDBOX (owner 07-16): /sheetpeek — standalone slide-up chrome test, touches NOTHING on the real site.
+// v2-look homepage; tap a store → sheet slides up (transform + dim, real mechanics); drag down to close.
+// Implementation under test: the root colour NEVER changes, so the close-drag can never sample a wrong
+// chrome colour. "Bug mode" toggle re-enables the legacy recolor to reproduce the poisoning on demand.
+app.get("/sheetpeek", (c) => {
+  c.header("Cache-Control", "no-store");
+  return c.html(`<!doctype html><html lang="en" style="background:#1D1D22"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>sheet peek 2</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:160dvh;background:#1D1D22;color:#fff;font-family:-apple-system,system-ui,sans-serif}
+header{padding:14px 16px;display:flex;align-items:center;gap:8px}
+.logo{font-size:19px;font-weight:900}.logo b{color:#4ADE80}
+main{padding:10px 20px 40px;max-width:520px;margin:0 auto}
+.hint{font-size:13px;color:#8A8A96;margin:4px 0 14px;line-height:1.5}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.t{background:#26262B;border:0;border-radius:18px;color:#fff;padding:9px 13px;font-weight:800;font-size:13px}
+.t.on{background:#4ADE80;color:#06210F}
+.store{display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:14px;margin-bottom:10px}
+.store .ic{width:44px;height:44px;border-radius:12px;background:#1B1B20;display:grid;place-items:center;font-weight:900}
+.store .nm{font-weight:800}.store .ad{font-size:12.5px;color:#8A8A96}
+/* the moving parts, each independently toggleable */
+#dim{position:fixed;inset:0;background:rgba(5,6,9,.66);display:none;z-index:79}
+#sheet{position:fixed;left:0;right:0;bottom:0;z-index:80;background:#26262B;border-radius:28px 28px 0 0;display:none;height:86dvh;flex-direction:column;overflow:hidden}
+#sheet .grab{touch-action:none;padding:10px 0 4px;flex:0 0 auto}
+#sheet .body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 20px 6px} /* NO big bottom padding: the sheet's rows must run UNDER the toolbar so the glass has content to ghost — the old padding left an empty panel strip = the solid slab. A scroll-end spacer keeps the last row reachable. */
+#sheet .body::after{content:"";display:block;height:calc(70px + env(safe-area-inset-bottom))}
+.mychk{background:linear-gradient(135deg,#2E7D4F,#3E9D63);border-radius:20px;padding:18px;margin-bottom:14px}
+.mychk .k{font-size:11px;letter-spacing:2px;font-weight:800;opacity:.85}
+.mychk .ph{font-size:28px;font-weight:900;margin-top:6px}
+.stats{display:flex;gap:10px;margin-bottom:14px}
+.stat{flex:1;background:#1F1F25;border-radius:16px;padding:16px;text-align:center}
+.stat b{font-size:22px}
+.stat i{display:block;font-style:normal;font-size:11px;letter-spacing:1.5px;color:#8A8A96;margin-top:4px}
+.rowc{display:flex;justify-content:space-between;align-items:center;background:#1F1F25;border-radius:14px;padding:16px;margin-bottom:10px;font-weight:700}
+.rowc span{color:#8A8A96;font-weight:500;font-size:12.5px;display:block;margin-top:3px}
+.runbtn{display:block;width:100%;background:transparent;border:1.5px solid #4ADE80;color:#4ADE80;border-radius:999px;padding:15px;font-weight:900;font-size:14px;letter-spacing:1px;margin:8px 0 20px}
+#sheet[style*="display: flex"]{display:flex}
+#sheet.frost{background:rgba(38,38,43,.28);backdrop-filter:blur(22px) saturate(1.3);-webkit-backdrop-filter:blur(22px) saturate(1.3)} /* F: frosted-glass sheet — the dimmed page shows THROUGH it, native-style */
+#sheet.frost .mychk, #sheet.frost .mychk{background:linear-gradient(135deg,rgba(46,125,79,.75),rgba(62,157,99,.75))}
+#sheet.frost .stat,#sheet.frost .rowc{background:rgba(31,31,37,.38)}
+/* bright rows on the PAGE so there is something to ghost through the frost */
+.brite{background:linear-gradient(90deg,#4ADE80,#A7F3D0);border-radius:14px;color:#06210F;font-weight:900;padding:16px;margin-bottom:10px;text-align:center}
+.brite.b2{background:linear-gradient(90deg,#FBBF24,#FDE68A)}
+.brite.b3{background:linear-gradient(90deg,#818CF8,#C7D2FE)}
+#sheet .handle{width:44px;height:5px;border-radius:3px;background:#3A3A42;margin:0 auto 14px}
+body.filterdim main,body.filterdim header{filter:brightness(.45)}
+body.frostdim main,body.frostdim header{filter:brightness(.8) saturate(1.05)} /* F: barely dim — the frost does the separating, the page must stay bright enough to ghost through */ /* dim WITHOUT covering: the page itself darkens, keeps scrolling under the glass */
+</style></head><body>
+<header><span class="logo">Check <b>it</b></span></header>
+<main>
+<div id="mainwrap">
+<div class="hint"><b>Scroll first</b> so the header slides under the clock (that's the translucency). Then tap each test and scroll again — report which letters KEEP it. Tap the letter again to turn it off.</div>
+<div class="row">
+<button class="t" id="A" onclick="T('A')">A dim overlay</button>
+<button class="t" id="B" onclick="T('B')">B sheet only</button>
+<button class="t" id="C" onclick="T('C')">C sheet+dim</button>
+<button class="t" id="D" onclick="T('D')">D filter dim</button>
+<button class="t" id="E" onclick="T('E')">E sheet+filter</button>
+<button class="t" id="F" onclick="T('F')">F frosted sheet</button>
+<button class="t" id="G" onclick="T('G')">G sheet as page</button>
+<button class="t" id="H" onclick="T('H')">H page-layer sheet</button>
+</div>
+<div class="store"><div class="ic">B&N</div><div><div class="nm">Barnes &amp; Noble Calabasas</div><div class="ad">4735 Commons Way · till 9 PM</div></div></div>
+<div class="store"><div class="ic">CVS</div><div><div class="nm">CVS Ventura Blvd</div><div class="ad">22050 Ventura Blvd. · till 11 PM</div></div></div>
+<div class="store"><div class="ic">F</div><div><div class="nm">Fun</div><div class="ad">123 Fun Lane, Calabasas, CA</div></div></div>
+<div class="brite">IN STOCK at CVS Mulholland</div>
+<div class="brite b2">Restock incoming · Sunday</div>
+<div class="brite b3">3 zones watched · 39 stores</div>
+<div class="brite">CHECK ANOTHER STORE →</div>
+<div style="height:40dvh"></div>
+<div class="store"><div class="ic">↑</div><div><div class="nm">Scroll runway</div><div class="ad">so the top can slide under the clock</div></div></div>
+</div>
+<div id="pagemode" style="display:none">
+<div class="mychk"><div class="k">MY CHECKS</div><div class="ph">(310) 666-2331</div></div>
+<div class="stats"><div class="stat"><b>∞</b><i>CHECKS LEFT</i></div><div class="stat"><b>4</b><i>CHECKS TODAY</i></div></div>
+<div class="rowc">Manage plan<span>Unlimited · billed monthly</span></div>
+<div class="rowc">Check history<span>31 checks in July</span></div>
+<div class="rowc">Alerts<span>Restock and auto check pings.</span></div>
+<div class="rowc">Manage Zones<span>Check a whole area in one tap.</span></div>
+<div class="rowc">Earn free checks<span>4 ways. Open to everyone.</span></div>
+<div class="rowc">Language<span>English</span></div>
+<div class="rowc">Sign out<span>See you soon.</span></div>
+<button class="runbtn">RUN A CHECK →</button>
+<div class="rowc">More rows so it scrolls<span>keep going</span></div>
+<div class="rowc">Even more<span>almost there</span></div>
+<div class="rowc">Last row<span>tap G again to exit</span></div>
+</div>
+</main>
+<div id="dim" onclick="T(cur)"></div>
+<div id="sheet"><div class="grab"><div class="handle"></div></div><div class="body">
+<div class="mychk"><div class="k">MY CHECKS</div><div class="ph">(310) 666-2331</div></div>
+<div class="stats"><div class="stat"><b>∞</b><i>CHECKS LEFT</i></div><div class="stat"><b>4</b><i>CHECKS TODAY</i></div></div>
+<div class="rowc">Manage plan<span>Unlimited · billed monthly</span></div>
+<div class="rowc">Check history<span>31 checks in July</span></div>
+<div class="rowc">Alerts<span>Restock and auto check pings.</span></div>
+<div class="rowc">Manage Zones<span>Check a whole area in one tap.</span></div>
+<div class="rowc">Earn free checks<span>4 ways. Open to everyone.</span></div>
+<div class="rowc">Language<span>English</span></div>
+<div class="rowc">Sign out<span>See you soon.</span></div>
+<button class="runbtn">RUN A CHECK →</button>
+</div></div>
+<script>
+var cur='';
+function T(k){
+  var same=(cur===k); cur=same?'':k;
+  ['A','B','C','D','E','F','G','H'].forEach(function(x){document.getElementById(x).classList.toggle('on',x===cur);});
+  var dim=document.getElementById('dim'),sheet=document.getElementById('sheet');
+  dim.style.display=(cur==='A'||cur==='C')?'block':'none';
+  sheet.style.display=(cur==='B'||cur==='C'||cur==='E'||cur==='F'||cur==='H')?'flex':'none';
+  // H: same sheet but ABSOLUTE in the document (page paint layer, not UI layer). Background scroll is
+  // locked while open (like real sheets), so absolute == fixed visually — but the glass can ghost it.
+  if(cur==='H'){
+    var top=window.scrollY+window.innerHeight*0.14;
+    sheet.style.position='absolute'; sheet.style.top=top+'px'; sheet.style.bottom='auto'; sheet.style.height=(window.innerHeight*0.86+120)+'px';
+    document.body.style.overflow='hidden'; document.documentElement.style.overflow='hidden';
+  } else {
+    sheet.style.position='fixed'; sheet.style.top='auto'; sheet.style.bottom='0'; sheet.style.height='86dvh';
+    document.body.style.overflow=''; document.documentElement.style.overflow='';
+  }
+  sheet.classList.toggle('frost',cur==='F');
+  sheet.style.transform='';
+  document.body.classList.toggle('filterdim',cur==='D'||cur==='E'||cur==='H');
+  document.body.classList.toggle('frostdim',cur==='F');
+  // G: same content as a PAGE-STATE — document scroll, so the glass ghosts it top AND bottom.
+  var pg=document.getElementById('pagemode');
+  pg.style.display=(cur==='G')?'block':'none';
+  document.getElementById('mainwrap').style.display=(cur==='G')?'none':'block';
+  if(cur==='G') window.scrollTo(0,0);
+}
+// Drag the sheet down to close (like the real thing) — closing clears the whole test state so the
+// owner can check the after-close translucency.
+var sheet=document.getElementById('sheet'),grab=sheet.querySelector('.grab'),y0=null;
+grab.addEventListener('touchstart',function(e){y0=e.touches[0].clientY;sheet.style.transition='none';},{passive:true});
+grab.addEventListener('touchmove',function(e){if(y0==null)return;var d=Math.max(0,e.touches[0].clientY-y0);sheet.style.transform='translateY('+d+'px)';},{passive:true});
+grab.addEventListener('touchend',function(e){sheet.style.transition='';var d=(e.changedTouches[0].clientY-(y0||0));y0=null;if(d>90){T(cur);}else{sheet.style.transform='';}});
+</script>
+</body></html>`);
+});
 // Verticals as PATHS on the apex (checkitforme.com/pokemon, /onepiece, /toppsbasketball, /needoh) —
 // same brand resolution as the subdomains, keyed off the slug. This is what lets the product switcher
 // link to clean same-domain paths instead of subdomain hops.
@@ -1073,7 +1339,11 @@ function chainLogoInfo(name: string | null | undefined): { url: string | null; w
 // Inlined fallback = source of truth in code, so carries derive even when the deployed container can't
 // read data/distributors.json (a prod-image file-read anomaly seen after a staging→prod merge). The file
 // is still preferred when readable (keeps it the editable source); the inline keeps prod resilient.
-const DISTRIBUTORS_FALLBACK: { products: Record<string, string[]>; chains: Record<string, string[]> } = {
+// `chains` DERIVE carries (products = union of the distributor lists). `labels` are DISPLAY-ONLY —
+// they fill the Admin "Distro" field for chains whose distributor we know but whose products were
+// curated by hand (Excell accounts), WITHOUT re-deriving/replacing those products. Keep the two apart.
+type DistCfg = { products: Record<string, string[]>; chains: Record<string, string[]>; labels?: Record<string, string[]> };
+const DISTRIBUTORS_FALLBACK: DistCfg = {
   products: {
     Excell: ["Pokemon TCG", "Disney Lorcana", "Magic: The Gathering", "One Piece TCG", "Yu-Gi-Oh", "Sports Cards (Topps/Panini)"],
     Schylling: ["NeeDoh (Schylling)"],
@@ -1086,9 +1356,13 @@ const DISTRIBUTORS_FALLBACK: { products: Record<string, string[]>; chains: Recor
     "Walmart": ["Excell", "Schylling", "Jazwares"],
     "Barnes & Noble": ["Excell", "Schylling", "Jazwares"],
   },
+  labels: {
+    "Five Below": ["Excell"], "Hot Topic": ["Excell"], "BoxLunch": ["Excell"],
+    "Claire's": ["Excell"], "Hobby Lobby": ["Excell"], "H-E-B": ["Excell"],
+  },
 };
-let distCache: { products: Record<string, string[]>; chains: Record<string, string[]> } | null = null;
-function distConfig(): { products: Record<string, string[]>; chains: Record<string, string[]> } {
+let distCache: DistCfg | null = null;
+function distConfig(): DistCfg {
   if (distCache) return distCache;
   try {
     const c = JSON.parse(readFileSync(join(here, "../data/distributors.json"), "utf8"));
@@ -1110,10 +1384,13 @@ function carriesForChain(name: string | null | undefined): string[] | null {
 function storeCarriesList(chainName: string | null | undefined, stored: string | null | undefined): string[] {
   return carriesForChain(chainName) ?? (stored ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 }
-/** Distributor name(s) serving a chain, for display in the Admin (e.g. "Excell · Schylling"). null = unmapped. */
+/** Distributor name(s) serving a chain, for display in the Admin (e.g. "Excell · Schylling"). Reads the
+ *  carries-deriving `chains` map first, then the display-only `labels` map — so a hand-curated Excell
+ *  account shows its distributor without its products being re-derived. null = we don't know the distributor. */
 function distributorsForChain(name: string | null | undefined): string | null {
   if (!name) return null;
-  const dists = distConfig().chains[name];
+  const cfg = distConfig();
+  const dists = cfg.chains[name] ?? (cfg.labels && cfg.labels[name]);
   return (dists && dists.length) ? dists.join(" · ") : null;
 }
 
@@ -1676,7 +1953,7 @@ app.get("/pub/stores/near", async (c) => {
         beyondRadius: false as boolean, // set true only on the rural-fallback store (nearest dialable past the radius)
         miles, openState: openState(r.hours, r.timezone) };
   };
-  const all = rows
+  const shaped = rows
     .filter((r) => comp || !r.ownerOnly)
     // Muted chains never surface — except Thrift-type chains when the Thrift chip explicitly opted in.
     .filter((r) => !(r.chainId && mutedChains.has(r.chainId)) || (thriftOptIn && r.chainId != null && types.get(r.chainId) === "Thrift"))
@@ -1687,7 +1964,15 @@ app.get("/pub/stores/near", async (c) => {
     .filter((r) => !typeF || (((r.chainId && types.get(r.chainId)) || "Other") === typeF))
     .filter((r) => !q || qTokenMatch(`${r.name} ${r.location || ""}`, q))
     .map(shape)
-    .filter((r) => r.ownerOnly || !hasLoc || r.miles == null || r.miles <= radius) // owner-only store is never distance-filtered
+    .filter((r) => r.ownerOnly || !hasLoc || r.miles == null || r.miles <= radius); // owner-only store is never distance-filtered
+  // OPEN NOW ONLY (owner law 2026-07-16): a store that's closed at this moment never reaches the list —
+  // a shopper can't buy from a closed door, so listing it is dead weight ("it's stupid that it even
+  // shows up"). openState already folds in real hours, midnight wraps, and the closed-overnight default
+  // for unknown-hours stores. Owner-only test stores are exempt (the owner tests at any hour).
+  // hiddenClosed rides the response so the UI can explain a thin/empty night list instead of looking broken.
+  const hiddenClosed = shaped.filter((r) => !r.ownerOnly && r.openState.open === false).length;
+  const all = shaped
+    .filter((r) => r.ownerOnly || r.openState.open !== false)
     .sort((a, b) => (a.miles ?? 9e9) - (b.miles ?? 9e9) || a.name.localeCompare(b.name));
   // Rural fallback: nothing dialable inside the radius → surface the single NEAREST callable+ready store
   // (up to 40mi out) so a rural screen is never blank. Only runs when the in-radius set has none, so it's
@@ -1704,7 +1989,7 @@ app.get("/pub/stores/near", async (c) => {
       .map((r) => ({ r, mi: haversineMi(lat, lng, r.lat as number, r.lng as number) }))
       .filter((x) => x.mi > radius)
       .sort((a, b) => a.mi - b.mi);
-    for (const x of near) { const s = shape(x.r); if (s.callReady) { s.beyondRadius = true; fallbackStore = s; break; } }
+    for (const x of near) { const s = shape(x.r); if (s.callReady && s.openState.open !== false) { s.beyondRadius = true; fallbackStore = s; break; } } // open-now law applies to the fallback too
   }
   // Owner-only stores are pinned into the response (never lost to the distance sort + page limit),
   // so the owner always gets the "Fun" store no matter how far away they are.
@@ -1727,7 +2012,8 @@ app.get("/pub/stores/near", async (c) => {
   const stores = [...owned, ...nearestT5, ...rest.slice(offset, offset + limit)];
   if (fallbackStore && !stores.some((s) => s.id === fallbackStore!.id)) stores.push(fallbackStore);
   // radiusMax + radiusCapped let the UI cap the picker and prompt Check Plus; beyondRadius flags the rural pin.
-  return c.json({ total: all.length + (fallbackStore ? 1 : 0), offset, limit, radiusMax: maxRadius, radiusCapped, stores });
+  // hiddenClosed = in-radius stores suppressed because they're closed right now (UI: explain a thin night list).
+  return c.json({ total: all.length + (fallbackStore ? 1 : 0), offset, limit, radiusMax: maxRadius, radiusCapped, hiddenClosed, stores });
 });
 
 // Single-store fetch (consumer): backfills address/logo/hours for a REOPENED call whose store sits
@@ -2837,11 +3123,18 @@ app.post("/pub/check", async (c) => {
   const closed = await closedGate(Number(retailerId)); if (closed) return c.json(closed, 409);
   try {
     // Cheap lane when flagged: same response contract — the bridge:<room> id polls /pub/result like any cid.
-    const place = (await getPolicy()).flags.cheapBridgeAll ? bridgeCheckCall : triggerCall;
-    const r = await place({ retailerId, categoryId, mode: "restock", specificProduct, kioskMode });
+    const bridge = (await getPolicy()).flags.cheapBridgeAll;
+    const place = bridge ? bridgeCheckCall : triggerCall;
+    const r = await routeCheck(bridge ? "bridge" : "direct", (args) => place({ ...args, mode: "restock" }),
+      { retailerId, categoryId, specificProduct, kioskMode });
+    if ("queued" in r) return c.json(r);
     return c.json({ providerCallId: r.providerCallId, status: r.status });
   } catch (e) { return c.json({ error: String(e) }, 400); }
 });
+// Waiting-screen poll (docs/specs/queue-feed/CONTRACT.md): place-in-line + real ETA while queued,
+// then the live call id once a slot frees so the page flips to the transcript. No auth beyond the
+// ticket id (same model as a cid). Inert unless the concurrency governor is on.
+app.get("/pub/queue/:ticketId", async (c) => c.json(await ticketStatus(c.req.param("ticketId"))));
 // Free check WITH live audio (bridged through our Twilio). Returns a room to listen on.
 app.post("/pub/check-live", async (c) => {
   const rl = rlCheck("check", clientIp(c.req.raw.headers), LIMITS.check);
@@ -2853,9 +3146,12 @@ app.post("/pub/check-live", async (c) => {
   if (!b.retailerId || !catIds.length) return c.json({ error: "retailerId and categoryId(s) required" }, 400);
   if (config.staging.on && !config.callsEnabled) return c.json({ room: simStartCall().providerCallId, wsHost: STAGING_HOST }); // preview: simulated live call
   const closed = await closedGate(Number(b.retailerId)); if (closed) return c.json(closed, 409);
-  const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, undefined, b.kioskMode);
+  // Governor ON + pool full → routeCheck queues (waiting-screen ticket); else places now (today's
+  // shape). Governor OFF → straight through to placeLive, unchanged.
+  const r = await routeCheck("live", placeLive, { retailerId: Number(b.retailerId), categoryId: catIds[0], categoryIds: catIds, specificProduct: b.specificProduct, kioskMode: b.kioskMode, live: true });
+  if ("queued" in r) return c.json(r);
   if (r.error) return c.json({ error: r.error }, 502);
-  return c.json({ room: r.room, wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
+  return c.json({ room: r.room, wsHost: r.wsHost ?? (config.staging.on ? STAGING_HOST : RAILWAY_HOST) });
 });
 // Transcript privacy (flags.transcriptAuth): a call placed by a signed-in finder is readable only by
 // that finder (phone-session Bearer token) or the admin. Anonymous calls stay readable by cid — the
@@ -3126,8 +3422,14 @@ app.post("/app/check", async (c) => {
   }
   try {
     // Cheap lane when flagged: same response contract — the bridge:<room> id polls /pub/result like any cid.
-    const place = (await getPolicy()).flags.cheapBridgeAll ? bridgeCheckCall : triggerCall;
-    const r = await place({ retailerId, categoryId, mode: "restock", specificProduct, finderUserId: u.id, isPrivate: await isFinderPrivate(a), kioskMode });
+    const bridge = (await getPolicy()).flags.cheapBridgeAll;
+    const place = bridge ? bridgeCheckCall : triggerCall;
+    const isPrivate = await isFinderPrivate(a);
+    // Governor ON + pool full → routeCheck queues (returns {queued,ticketId,position,etaSeconds});
+    // else it places now (today's shape). Governor OFF → straight through, unchanged.
+    const r = await routeCheck(bridge ? "bridge" : "direct", (args) => place({ ...args, mode: "restock" }),
+      { retailerId, categoryId, specificProduct, finderUserId: u.id, isPrivate, kioskMode });
+    if ("queued" in r) return c.json(r);
     return c.json({ providerCallId: r.providerCallId, status: r.status });
   } catch (e) { return c.json({ error: String(e) }, 400); }
 });
@@ -3155,9 +3457,13 @@ app.post("/app/check-live", async (c) => {
       return c.json({ error: "too_soon", retryAfterMin: mins, message: `You just checked this store — you can check again in about ${mins} min.` }, 429);
     }
   }
-  const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, { userId: u.id, isPrivate: await isFinderPrivate(a) }, b.kioskMode);
+  // Governor ON + pool full → routeCheck queues (waiting-screen ticket); else places now (today's
+  // shape). Governor OFF → straight through to placeLive, unchanged.
+  const isPrivate = await isFinderPrivate(a);
+  const r = await routeCheck("live", placeLive, { retailerId: Number(b.retailerId), categoryId: catIds[0], categoryIds: catIds, specificProduct: b.specificProduct, finderUserId: u.id, isPrivate, kioskMode: b.kioskMode, live: true });
+  if ("queued" in r) return c.json(r);
   if (r.error) return c.json({ error: r.error }, 502);
-  return c.json({ room: r.room, wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
+  return c.json({ room: r.room, wsHost: r.wsHost ?? (config.staging.on ? STAGING_HOST : RAILWAY_HOST) });
 });
 
 // ============ Manage Zones (consumer, premium `zone_sweeps`) — spec docs/archive/manage-zones-SHIPPED.md ============
@@ -3287,7 +3593,7 @@ app.get("/app/zones/run/:runId", async (c) => {
   const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
   const rows = await db.select().from(callResults).where(and(eq(callResults.zoneRunId, c.req.param("runId")), eq(callResults.finderUserId, g.u.id)));
   const stores = await retailerMap();
-  const results = rows.map((r) => ({ retailerId: r.retailerId, name: stores.get(r.retailerId)?.name || "A store", cid: r.providerCallId, status: r.status, statusKey: r.statusKey, confirmed: r.confirmed, summary: r.summary }));
+  const results = rows.map((r) => { const nm = stores.get(r.retailerId)?.name || "A store"; return { retailerId: r.retailerId, name: nm, logoUrl: chainLogoInfo(nm.split(/—|–| - /)[0]).url || "", cid: r.providerCallId, status: r.status, statusKey: r.statusKey, confirmed: r.confirmed, summary: r.summary }; });
   const live = (st: string) => st === "in_progress" || st === "queued";
   const summary = {
     inStock: results.filter((r) => r.statusKey === "in_stock").length,
@@ -3420,6 +3726,11 @@ app.post("/app/checkout-intent", async (c) => {
 
 // Public: the live tiers + PAYG ladder for the consumer checkout sheet (Website's lane renders it).
 app.get("/pub/plans", async (c) => c.json(publicPlans(await getPlans())));
+// Freshness marker for the long-lived SPA tab (owner 07-17: his Safari tab ran days-old JS through a
+// whole broken-then-fixed cycle because nothing ever told the page it was stale). One value per boot —
+// a deploy restarts the service, so a changed rev == a newer build is live. Client checks on tab-return.
+const BOOT_REV = String(Date.now());
+app.get("/pub/rev", (c) => { c.header("Cache-Control", "no-store"); return c.json({ rev: BOOT_REV }); });
 
 // ---- Admin Plans manager (God View → Plans): edit tiers/PAYG, publish to Stripe. Admin-gated by /api/*. ----
 app.get("/api/admin/plans", async (c) => c.json(plansSyncView(await getPlans())));
@@ -4319,6 +4630,10 @@ app.get("/api/store-sync/status", async (c) => c.json(await syncStatus()));
 // One-way by construction: this endpoint is the only prod side, and it writes nothing.
 app.get("/api/settings-sync/export", async (c) => c.json(await buildSettingsExport()));
 app.get("/api/settings-sync/status", async (c) => c.json(await settingsSyncStatus()));
+
+// Call concurrency governor readout (Admin + the Phase-2 load test): live pool utilization,
+// per-account used/cap, the interactive reserve, and the per-user cap. Enabled reflects the flag.
+app.get("/api/concurrency", async (c) => c.json(await concurrencyStatus()));
 
 app.get("/api/gtm", async (c) => {
   let items = GTM_SEED;
@@ -5251,7 +5566,7 @@ app.get("/api/admin/tree/list", async (c) => {
     // blocker = why this chain can't be mapped even though it's a call target. Today: a data gap where
     // stores exist but none carry a real phone number (the board shows it so nobody chases hours/trees).
     const blocker = stores > 0 && phones === 0 ? "no phone numbers on file (data gap)" : null;
-    return { id: ch.id, name: ch.name, type: ch.type, stores, phones, blocker, treeStatus: ch.treeStatus, ringsDirect: ch.ringsDirect, dtmf: ch.dtmfShortcut, answerPath: ch.answerPath, avgTreeSeconds: ch.avgTreeSeconds, note: ch.treeNote || ch.phoneTreeDefault, learnedAt: ch.treeLearnedAt, verifiedAt: ch.treeVerifiedAt, muted: ch.muted };
+    return { id: ch.id, name: ch.name, type: ch.type, stores, phones, blocker, distributor: distributorsForChain(ch.name), treeStatus: ch.treeStatus, ringsDirect: ch.ringsDirect, dtmf: ch.dtmfShortcut, answerPath: ch.answerPath, avgTreeSeconds: ch.avgTreeSeconds, note: ch.treeNote || ch.phoneTreeDefault, learnedAt: ch.treeLearnedAt, verifiedAt: ch.treeVerifiedAt, muted: ch.muted };
   }) });
 });
 app.post("/api/admin/tree/discover", async (c) => {
@@ -5760,15 +6075,88 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
     const acct = (await db.select().from(accounts).where(eq(accounts.clerkUserId, finder.userId)))[0];
     if (acct?.callerId) from = acct.callerId; // only set after Twilio caller-ID verification
   }
-  // Log the call once it connects (we get the ElevenLabs conversation id): insert the PRIMARY result
-  // row; ingest fans out each extra line into its own row from the per-category extraction.
-  return placeBridgeCall(v.retailer.phone, v.dynamicVars, (convId) => {
-    db.insert(callResults).values({ retailerId, categoryId: primary, mode: "restock", status: "in_progress", providerCallId: convId, finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false })
-      .catch((e) => console.error("bridge call log insert:", e));
+  // FIRST-WORD CAPTURE without losing the live view (owner 07-18). Everything runs through the bridge
+  // (keeps the live transcript relay AND live-listen). The clip was connect-on-human: on a store with
+  // NO menu, waiting to VAD-detect a human before the agent joins buys nothing — the detected greeting
+  // is consumed by detection instead of reaching the agent, so "This is Bob" is lost. For DIRECT stores
+  // we instead connect the agent AT ANSWER (connectOnHuman:false): Twilio's <Connect><Stream> only
+  // starts at pickup, so there's no ringing waste, and the bridge buffers inbound frames during the
+  // ~200-500ms EL handshake and replays them the instant the agent is ready — so the opening words are
+  // captured, not clipped. Menu/tree stores KEEP connect-on-human (it saves the real nav time).
+  const isDirect = !v.dtmf && !v.say && !v.connectAtSec &&
+    (() => { const t = (v.dynamicVars.phone_tree || "").trim(); return !t || /answers? directly|no (phone )?menu|no ivr|straight to a person/i.test(t); })();
+
+  // Concurrency governor (flag-gated). OFF = the exact path below (row inserted only at connect, no
+  // slot) — byte-identical to before. ON = pre-insert a "dialing" row so we can hold a slot keyed on
+  // its id (the queue reads slot counts to know the pool is full), release it if the call never
+  // reaches a human, and let the EL poller release it on a normal finish (same lifecycle as the
+  // headless bridge check). The live-audio room + response shape are unchanged either way.
+  const governed = await governorEnabled();
+  let slotRowId: number | null = null;
+  if (governed) {
+    const [row] = await db.insert(callResults).values({ retailerId, categoryId: primary, mode: "restock", status: "dialing", finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false }).returning();
+    slotRowId = row.id;
+    const slot = await acquireCallSlot({ key: `call:${row.id}`, priority: "interactive", userId: finder?.userId ?? undefined, ttlSec: (pol.bail.maxCallSeconds || 180) + 120 });
+    if (slot === null) {
+      await db.update(callResults).set({ status: "failed", statusKey: "system_busy", summary: "All lines busy — the check will be retried." }).where(eq(callResults.id, row.id));
+      return { error: "calls_busy" }; // routeCheck sees this and queues the check instead of failing
+    }
+  }
+
+  // Log the call once it connects (we get the ElevenLabs conversation id). Governed → update the row
+  // we pre-inserted; ungoverned → insert the PRIMARY row now (today's behavior). ingest fans out each
+  // extra line into its own row from the per-category extraction.
+  const result = await placeBridgeCall(v.retailer.phone, v.dynamicVars, (convId) => {
+    if (governed && slotRowId != null) {
+      db.update(callResults).set({ providerCallId: convId, status: "in_progress" }).where(eq(callResults.id, slotRowId))
+        .catch((e) => console.error("bridge call log update:", e));
+    } else {
+      db.insert(callResults).values({ retailerId, categoryId: primary, mode: "restock", status: "in_progress", providerCallId: convId, finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false })
+        .catch((e) => console.error("bridge call log insert:", e));
+    }
     // Per-store talk cap (chains.maxTalkSeconds) wins over the global bail ceiling when set, so a
     // store the owner marked "wrap fast" gets a tighter Twilio TimeLimit — the cost guarantee.
-  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning });
+  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, connectOnHuman: isDirect ? false : undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning });
+
+  // Governed bookkeeping: point the pre-inserted row at the room (so /pub/result resolves it before
+  // connect), release the slot on a dial that never placed, and register a finalizer that frees the
+  // slot + writes the real reason if the call ends before a human answers.
+  if (governed && slotRowId != null) {
+    if (result.error || !result.room) {
+      await releaseCallSlot(`call:${slotRowId}`);
+      await db.update(callResults).set({ status: "failed", summary: result.error || "bridge call failed" }).where(eq(callResults.id, slotRowId));
+    } else {
+      const rid = slotRowId;
+      await db.update(callResults).set({ providerCallId: `bridge:${result.room}` }).where(eq(callResults.id, rid));
+      roomFinalizers.set(result.room, (twilioStatus) => {
+        void (async () => {
+          const cur = (await db.select().from(callResults).where(eq(callResults.id, rid)))[0];
+          if (!cur || cur.status !== "dialing") return; // conv id landed → EL ingest owns the verdict + release
+          const statusKey = ({ busy: "busy", failed: "bad_number" } as Record<string, string>)[twilioStatus] ?? "nobody_answered";
+          await db.update(callResults).set({
+            status: "no_answer", confirmed: null, statusKey,
+            summary: `Bridge call ended before a human answered (${twilioStatus}).`,
+            completedAt: Math.floor(Date.now() / 1000),
+          }).where(eq(callResults.id, rid));
+          await releaseCallSlot(`call:${rid}`); // never reached a human → free the slot (idempotent)
+        })().catch((e) => console.error("live bridge finalize:", e));
+      });
+    }
+  }
+  return result;
 }
+// Queue adapter for the live lane: reconstruct a live check from a ticket's args and return the
+// waiting-screen PlaceResult shape ({ room, wsHost } or { error }). Used both when a check is placed
+// immediately (routeCheck) and when the drainer places a queued one as a slot frees.
+const LIVE_WS_HOST = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
+const placeLive = (args: QueueArgs): Promise<PlaceResult> =>
+  bridgeStoreCall(
+    Number(args.retailerId),
+    args.categoryIds?.length ? args.categoryIds.map(Number) : [Number(args.categoryId)],
+    args.specificProduct,
+    args.finderUserId ? { userId: args.finderUserId, isPrivate: args.isPrivate } : undefined,
+    args.kioskMode,
+  ).then((rr) => ({ room: rr.room ?? null, wsHost: LIVE_WS_HOST, error: rr.error }));
 app.get("/pub/bridge/:room", (c) => {
   const room = c.req.param("room");
   if (config.staging.on && isSimId(room)) return c.json({ conversationId: room, wsHost: STAGING_HOST }); // sim: room IS the conversation id
@@ -5785,11 +6173,26 @@ app.get("/pub/bridge/:room", (c) => {
       callProgress: s ? { status: s.status === "dialing" ? "ringing" : s.status === "live" ? "in-progress" : "completed", at: Date.now() } : null,
     });
   }
+  // Instant-connection (EL-native) call: the room IS the ElevenLabs conversation id — resolve it to
+  // itself so the live view's transcript poll engages immediately (no bridge, no Twilio callbacks).
+  if (room.startsWith("conv")) return c.json({ conversationId: room, wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST, callProgress: null });
   // callProgress = the REAL Twilio state (ringing/answered/…) so the live timeline shows what's actually
   // happening, not an inferred guess. null until the first status callback lands.
   return c.json({ conversationId: bridgeConversationId(room), wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST, callProgress: roomCallProgress.get(room) ?? null });
 });
 app.get("/pub/bridge-debug", (c) => c.json({ log: bridgeDebug() }));
+// Live-view FLIGHT RECORDER (owner 07-17): the transcript freeze only reproduces on the owner's
+// phone — no theory survives remote testing. The page posts its own play-by-play (ws state, poll
+// responses, cid resolution, errors) so the next frozen call tells us exactly what the phone saw.
+const lvTraces: { at: number; ua: string; lines: string[] }[] = [];
+app.post("/pub/live-debug", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { lines?: unknown[] };
+  const lines = Array.isArray(b.lines) ? b.lines.slice(0, 100).map((x) => String(x).slice(0, 300)) : [];
+  lvTraces.push({ at: Date.now(), ua: (c.req.header("user-agent") || "").slice(0, 90), lines });
+  if (lvTraces.length > 20) lvTraces.shift();
+  return c.json({ ok: true });
+});
+app.get("/api/admin/live-debug", (c) => c.json(lvTraces));
 app.post("/api/bridge/call", async (c) => {
   const b = await c.req.json();
   if (!b.toNumber) return c.json({ error: "toNumber required" }, 400);
@@ -5858,6 +6261,15 @@ const httpServer = serve({ fetch: app.fetch, port: config.port }, (info) => {
 // If an overnight trainer batch was mid-run when this process last died (e.g. a redeploy), resume the
 // remaining chains. No-op when no batch flag is set. Best-effort, fire-and-forget.
 void resumeBatchIfFlagged();
+
+// BRAIN SYNC (owner 07-16/17: "why do things keep reverting?"). The agent's system prompt is a stored
+// copy inside ElevenLabs — a code deploy alone never reaches it, so prompt fixes silently didn't ship
+// three times this week. Every boot now pushes the canonical prompt (prompts.ts) to this env's agent:
+// deploy the code = the talking agent runs it, staging and prod alike. Best-effort; a failed push
+// logs loudly but never blocks serving.
+applyVoiceTuning({ pushPrompt: true })
+  .then(() => console.log("[boot] agent brain synced to the canonical prompt"))
+  .catch((e) => console.error("[boot] AGENT BRAIN SYNC FAILED — the live agent may be running an OLD prompt:", String(e).slice(0, 200)));
 
 // Keep-warm: a tiny periodic query so the DB connection doesn't go cold between visits — kills the
 // "first open is slow" cold start. Cheap (one row), every 4 minutes.
@@ -5943,6 +6355,7 @@ setInterval(() => withLock("geocode", 10, () => geocodeMissing(1)).catch((e) => 
 setInterval(() => withLock("store-sync", 280, storeSyncTick).catch((e) => console.error("store-sync:", e)), 300_000); // staging→prod curated store data (inert until STORE_SYNC_URL/TOKEN set)
 setInterval(() => withLock("learned-sync", 160, learnedSyncTick).catch((e) => console.error("learned-sync:", e)), 180_000); // prod→staging learned phone-nav (mirror of store-sync; inert off-staging)
 setInterval(() => withLock("settings-sync", 55, settingsSyncTick).catch((e) => console.error("settings-sync:", e)), 60_000); // prod→staging owner settings mirror (staging pulls; inert elsewhere)
+setInterval(() => withLock("check-queue", 2, () => drainCheckQueue(triggerCall, bridgeCheckCall, placeLive)).catch((e) => console.error("check-queue:", e)), 1_000); // waiting-screen: place queued checks as slots free (inert unless the governor is on)
 setInterval(() => withLock("harvest", 110, harvestHoursTick).catch((e) => console.error("harvest:", e)), 120_000); // self-updating hours (policy-gated, off by default)
 setInterval(() => withLock("cust-sched", 85, customerScheduleTick).catch((e) => console.error("cust-sched:", e)), 90_000); // subscriber auto-checks (policy-gated)
 setInterval(() => withLock("gmail-receipts", 25, gmailReceiptTick).catch((e) => console.error("gmail-receipts:", e)), 30_000); // ingest kiosk receipts (policy-gated + creds)

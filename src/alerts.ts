@@ -53,7 +53,7 @@ export const DEFAULT_TEMPLATES: Record<AlertEvent, AlertTemplate> = {
   },
   confirm_email: {
     emailSubject: "Confirm your email.",
-    emailBody: "You added this address for alerts. Tap the button to confirm it's yours, then they'll land right here.",
+    emailBody: "You added this address for alerts.",
   },
   auto_check: {
     sms: "Your auto check called {store}. Result: {result}. See it at checkitforme.com",
@@ -78,7 +78,7 @@ export const ES_TEMPLATES: Record<AlertEvent, AlertTemplate> = {
   },
   confirm_email: {
     emailSubject: "Confirma tu correo.",
-    emailBody: "Agregaste este correo para tus alertas. Toca el botón para confirmarlo y empezarán a llegar aquí.",
+    emailBody: "Agregaste este correo para tus alertas.",
   },
   auto_check: {
     sms: "Tu check automático llamó a {store}. {result}. Míralo en checkitforme.com",
@@ -198,8 +198,7 @@ const EMAIL_DESIGN_EN: Record<EmailKind, EmailDesign> = {
   },
   confirm_email: {
     kicker: "CONFIRM YOUR EMAIL", kickerColor: "#4ADE80", headline: "One tap left.",
-    body: ["You added this address for alerts. Tap below to confirm it's yours, then they'll land right here."],
-    module: { type: "chip", text: "{email}" },
+    body: ["You added this address for alerts."],
     cta: "Confirm my email", url: "https://checkitforme.com",
   },
   auto_check: {
@@ -209,10 +208,11 @@ const EMAIL_DESIGN_EN: Record<EmailKind, EmailDesign> = {
     cta: "See the call", url: "https://checkitforme.com",
   },
   instock_owner: {
+    // Owner 07-16: nothing below the restock-day line — no product panel, no CTA (he can't open the
+    // customer's account from the email anyway, so "See the call" was a dead button for him).
     kicker: "CALL CONFIRMED", kickerColor: "#4ADE80", headline: "It's in stock.",
     body: ["A call just confirmed **{product}** is on the shelf at **{store}**.", "{dayline}"],
-    module: { type: "product", title: "{product}", sub: "{store}", badge: "CONFIRMED" },
-    cta: "See the call", url: "https://checkitforme.com",
+    cta: "", url: "https://checkitforme.com",
   },
 };
 const EMAIL_DESIGN_ES: Record<EmailKind, EmailDesign> = {
@@ -233,8 +233,7 @@ const EMAIL_DESIGN_ES: Record<EmailKind, EmailDesign> = {
   },
   confirm_email: {
     kicker: "CONFIRMA TU CORREO", kickerColor: "#4ADE80", headline: "Un toque más.",
-    body: ["Agregaste este correo para tus alertas. Toca abajo para confirmarlo y empezarán a llegar aquí."],
-    module: { type: "chip", text: "{email}" },
+    body: ["Agregaste este correo para tus alertas."],
     cta: "Confirmar mi correo", url: "https://checkitforme.com",
   },
   auto_check: {
@@ -340,7 +339,8 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, bodyRaw =
   // Capsule CTA, authored = the Outlook-approved green RING on black with a WHITE label. The Gmail
   // stylesheet swaps it to a DEEP-green filled capsule (#15803D) — deep enough that Gmail's contrast
   // pass leaves the white label and arrow alone (it recolored white on the lighter #16A34A).
-  const cta = `<tr><td style="padding-top:24px">
+  // A design with no CTA label (the owner ping) renders no button row at all.
+  const cta = !d.cta ? "" : `<tr><td style="padding-top:24px">
     <!--[if mso]>
     <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:52px;v-text-anchor:middle;width:520px;" arcsize="50%" strokecolor="${D.ctaLine}" strokeweight="2px" fillcolor="${D.board}">
       <w:anchorlock/>

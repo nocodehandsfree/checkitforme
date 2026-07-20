@@ -21,12 +21,24 @@ description: >-
    push), so unpushed work = the owner can't test it = NOT done.
 4. **Drive it yourself on staging like a real user.** Open the actual flow on
    `staging.checkitforme.com` and do the thing — click the button, submit the form, walk the path.
-   Not "the test passes" — the *feature works in the running app*.
+   Not "the test passes" — the *feature works in the running app*. **The owner is not your tester:**
+   anything a customer sees, YOU walk it first. Re-fixing something that already broke? It needs NEW
+   proof you drove it this time, not "should be fixed now" — the last "fixed" is why he's back.
    - Tooling: `node scripts/site-health.mjs https://staging.checkitforme.com` walks every page/form
      and fails on JS errors, broken requests, or dead views (see the `unblock-yourself` skill for a
      test account + comping premium UI so gated screens actually render).
-5. **Report in ONE line with evidence:** contract ✓/✗ per item, each as `URL → action → observed`.
-   Can't drive it? Say **"NOT verified: X"** and why. **"Should work" is banned.**
+   - **Device-only blind spot** (how iOS paints the glass/tint, how Gmail recolors an email, how a
+     call sounds): you genuinely can't see these — headless shots are evidence, not a verdict. Ship
+     ONE change, say **"pushed, check your phone,"** never "fixed."
+5. **Report as a Done Report — the only shape "done" may reach the owner in:**
+   - **Built** — one plain line.
+   - **Drove it** — `URL → action → what I saw`, per contract item. Device-only blind spot →
+     "pushed, check your phone."
+   - **Left** — what you did NOT check.
+   No Drove-it line = not done; a bare "done / fixed / should be good" gets bounced unread.
+   **"Should work" is banned.** For user-facing work, PM drives it again as the gate before the
+   owner — and `promote.sh` makes the promoter confirm every user-facing commit was driven before
+   prod ships. Your report is what PM checks against.
 
 ## Gotchas that fake a green check (see the `known-problems` skill)
 - A `401` on a new `/api/*` path does NOT prove it deployed — use a content marker.

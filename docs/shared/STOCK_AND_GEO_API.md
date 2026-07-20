@@ -29,7 +29,11 @@ Gate the stock-rail UI on `policy.flags.stockSignals`.
 
 - Location optional fallbacks: `?state=CA` or `?q=target` (no lat/lng → `miles: null`).
 - `mode`: `call` | `kiosk` | `site` | empty = all. Matches the existing toggle + a future "Live stock" tab.
-- Returns `{ total, offset, limit, stores: [...] }`, distance-sorted.
+- Returns `{ total, offset, limit, radiusMax, radiusCapped, hiddenClosed, stores: [...] }`, distance-sorted.
+- **OPEN NOW ONLY (owner law 2026-07-16):** stores closed at this moment are NOT in `stores` at all —
+  the list is "where can you buy right now." `hiddenClosed` counts the in-radius stores suppressed for
+  being closed, so the UI can explain a thin night list ("12 more open in the morning") instead of
+  looking broken. Owner-only test stores are exempt. Unknown-hours stores count as closed 9 PM–7 AM local.
 - Store shape = the `/pub/stores` row shape **plus**: `miles`, `callable`, `stockCheckMethod`, `mapsUri` (Google Maps deep link for directions).
 - `GET /pub/store-types` → `[{ type: "Pharmacy", stores: 8900, chains: ["CVS", ...] }]` — the
   pre-location list (generic store types with counts, no table shipped).

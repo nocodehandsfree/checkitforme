@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<!--
+================================================================================
+QUEUED / "WE'RE SLAMMED" HOLDING CARD  —  Check status screen  (CD, 2026-07-18)
+================================================================================
+WHAT / WHEN
+  Shown on the check-status screen when every call slot is full and the person's
+  check cannot start yet (no transcript exists). A calm "we're on it, hang tight"
+  moment. NEVER an error. Reference look: the share/verdict card (in-stock green
+  glass); purpose is different (waiting, not a result).
+
+FINAL COPY  (EN / ES)  — COPY_STYLE_GUIDE wins any wording conflict
+  Store row name .... Target Los Feliz            / Target Los Feliz
+  Store row meta .... Checking for Pokemon         / Buscando Pokemon
+  Headline .......... We're slammed.               / Estamos a tope.
+  Subhead line 1 .... Hang tight or come back later. / Espera o vuelve mas tarde.
+  Subhead line 2 .... We'll check for you either way. / Igual lo revisamos por ti.
+  Timer label ....... Check starts in              / La revision empieza en
+  Timer value ....... 0:30  (mm:ss, server-driven)
+  NOTE: subhead is two sentences; the break lands on the period (hard rule 2).
+  No "line"/"queue" language anywhere (owner). Spanish length-checked at 390pt.
+
+TOKENS USED  (STYLE_GUIDE)
+  Page #1D1D22 . card = contained in-stock verdict wash #266440 -> #1D1D22 (S3/S5.8)
+  Chrome = GLASS rgba(255,255,255,.07-.08) + inset highlight, no hairline (S5.4)
+  Store row S5.6: 48px logo slot #1F1F25 radius 13 + real chain logo (target.png)
+  Green #4ADE80 (live dot, ckGlow S5.3) . Accent #FFCB05 (timer value)
+  Type: Inter. Headline 36/900/-1.6 one line (S8). Subhead 16.5/600 78% white.
+  Eyebrow 12.5/800 +.12em caps. Radii: card 26, timer well 18, logo slot 13 (S6).
+
+STATES
+  default (this): timer counting down. At 0:00 hand off to the live-call view
+    (green "call in progress" bloom + streaming transcript per checkpoint 07-16).
+  The 30s loop here is a COMP DEMO only; real value is server-driven.
+
+BUILD NOTES FOR WEBBIE
+  - Logo resolves by chain via /logos/chains/target.png (chainLogoInfo, cache-bust
+    ?v=NN). Slot bg #1F1F25; target flags w:0 d:0 (square, no plate).
+  - Headline must stay one line (S8) — if a longer store/product ever pushes it,
+    shorten copy, never wrap.
+  - Timer span is white-space:nowrap + flex-shrink:0 so it can't blow out; keep that.
+  - No CTA button: nothing to tap while waiting.
+  OPEN FOR OWNER: source of the 30s value + exact 0:00 -> live-view transition;
+  fold into WEBSITE_COMPS.dc.html on the next board regen.
+================================================================================
+-->
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; }
+  * { -webkit-font-smoothing: antialiased; }
+  @keyframes ckGlow { 0%,100%{opacity:.4} 50%{opacity:1} }
+</style>
+</helmet>
+<div style="min-height:100vh; background:#08090D; display:flex; align-items:center; justify-content:center; padding:32px; box-sizing:border-box; font-family:Inter,-apple-system,system-ui,sans-serif;">
+
+  <!-- phone -->
+  <div style="width:390px; height:844px; background:#1D1D22; border-radius:40px; position:relative; overflow:hidden; box-shadow:0 40px 90px -20px rgba(0,0,0,.7);">
+
+    <!-- status bar -->
+    <div style="position:absolute; top:0; left:0; right:0; height:54px; display:flex; align-items:center; justify-content:space-between; padding:0 30px; z-index:5;">
+      <span style="color:#fff; font-size:16px; font-weight:700; letter-spacing:.3px;">16:21</span>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="color:#fff; font-size:12px; letter-spacing:1px;">▪▪▪▪</span>
+        <span style="color:#fff; font-size:13px;">◗</span>
+        <div style="width:26px; height:13px; border-radius:4px; box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.85); padding:1.5px; box-sizing:border-box;">
+          <div style="width:62%; height:100%; background:#fff; border-radius:2px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- screen: compact card, vertically centered -->
+    <div style="position:absolute; inset:0; padding:54px 20px 74px; box-sizing:border-box; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+
+      <!-- holding card = contained in-stock verdict wash (S3/S5.8); glass chrome on it (S5.4) -->
+      <div style="position:relative; width:100%; border-radius:26px; overflow:hidden;
+          box-shadow:0 24px 48px -12px rgba(0,0,0,.7);
+          background:
+            radial-gradient(120% 92% at 88% -8%, rgba(74,222,128,.22) 0%, rgba(74,222,128,0) 50%),
+            linear-gradient(180deg, #266440 0%, #21503A 32%, #1D1D22 90%);">
+
+        <div style="position:relative; z-index:2; padding:26px 24px 24px; display:flex; flex-direction:column;">
+
+          <!-- store row (S5.6): real chain logo + name + what we're checking -->
+          <div style="display:flex; align-items:center; gap:13px;">
+            <div style="width:48px; height:48px; flex-shrink:0; border-radius:13px; background:#1F1F25; box-shadow:inset 0 1px 0 rgba(255,255,255,.06); display:flex; align-items:center; justify-content:center;">
+              <img src="https://checkitforme.com/logos/chains/target.png" alt="Target" style="width:34px; height:34px; object-fit:contain; display:block;">
+            </div>
+            <div style="min-width:0;">
+              <div style="color:#fff; font-size:15px; font-weight:700; letter-spacing:-.2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Target Los Feliz</div>
+              <div style="color:#8A8A96; font-size:12.5px; font-weight:600; margin-top:2px;">Checking for Pokémon</div>
+            </div>
+          </div>
+
+          <!-- verdict-style headline: short, one line (S8 no two-line headings) -->
+          <h1 style="margin:22px 0 0; color:#fff; font-size:36px; line-height:1; font-weight:900; letter-spacing:-1.6px; white-space:nowrap;">We're slammed.</h1>
+
+          <p style="margin:12px 0 0; color:rgba(255,255,255,.78); font-size:16.5px; line-height:1.4; font-weight:600; max-width:290px; text-wrap:pretty;">Hang tight or come back later.<br>We'll check for you either way.</p>
+
+          <!-- timer well — glass; number is nowrap + non-shrinking so it can never blow out -->
+          <div style="margin-top:22px; border-radius:18px; padding:16px 20px; background:rgba(255,255,255,.08); box-shadow:inset 0 1px 0 rgba(255,255,255,.10), inset 0 0 0 1px rgba(255,255,255,.14); display:flex; align-items:center; justify-content:space-between; gap:14px;">
+            <div style="display:flex; align-items:center; gap:11px; min-width:0;">
+              <span style="width:9px; height:9px; flex-shrink:0; border-radius:50%; background:#4ADE80; box-shadow:0 0 8px #4ADE80; animation:ckGlow 2s ease-in-out infinite;"></span>
+              <span style="color:rgba(255,255,255,.72); font-size:12.5px; font-weight:800; letter-spacing:.12em; text-transform:uppercase;">Check starts in</span>
+            </div>
+            <span ref="{{ timerRef }}" style="flex-shrink:0; white-space:nowrap; color:#FFCB05; font-size:24px; font-weight:800; letter-spacing:-.3px; font-variant-numeric:tabular-nums; line-height:1;">0:30</span>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- browser chrome -->
+    <div style="position:absolute; bottom:0; left:0; right:0; height:74px; display:flex; align-items:center; justify-content:center; gap:12px; padding:0 18px; z-index:5;">
+      <div style="width:42px; height:42px; border-radius:50%; background:linear-gradient(180deg,#2E2E35,#25252B); box-shadow:inset 0 1px 0 rgba(255,255,255,.08); display:flex; align-items:center; justify-content:center; color:#8A8A96; font-size:20px;">‹</div>
+      <div style="flex:1; height:42px; border-radius:999px; background:#17171C; box-shadow:inset 0 2px 6px rgba(0,0,0,.45); display:flex; align-items:center; gap:8px; padding:0 16px; box-sizing:border-box;">
+        <span style="color:#7C7C88; font-size:14px;">▤</span>
+        <span style="color:rgba(255,255,255,.72); font-size:14px; font-weight:500;">staging.checkitforme.com</span>
+        <span style="margin-left:auto; color:#7C7C88; font-size:15px;">⟳</span>
+      </div>
+      <div style="width:42px; height:42px; border-radius:50%; background:linear-gradient(180deg,#2E2E35,#25252B); box-shadow:inset 0 1px 0 rgba(255,255,255,.08); display:flex; align-items:center; justify-content:center; color:#8A8A96; font-size:17px; letter-spacing:1px;">···</div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  timerRef = React.createRef();
+  componentDidMount() {
+    let s = 30;
+    const fmt = n => Math.floor(n / 60) + ':' + String(n % 60).padStart(2, '0');
+    const tick = () => {
+      const el = this.timerRef.current;
+      if (!el) return;
+      el.textContent = fmt(s);
+      s = s > 0 ? s - 1 : 30; // loop for the comp demo; real value is server-driven
+    };
+    tick();
+    this._iv = setInterval(tick, 1000);
+  }
+  componentWillUnmount() { clearInterval(this._iv); }
+  renderVals() { return { timerRef: this.timerRef }; }
+}
+</script>
+</body>
+</html>
