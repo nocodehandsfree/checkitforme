@@ -120,9 +120,9 @@ test("A6: closed + kiosk-only store cards carry the right state and (non-)call a
   // API truth first: the feed says exactly what the cards must render.
   const near = await request.get(`${base}/pub/stores/near?lat=34.05&lng=-118.24&radius=25`, { headers: UA });
   const stores = (await near.json()).stores as any[];
-  const closed = stores.find((s) => s.id === CLOSED);
-  expect(closed, "closed store in the feed").toBeTruthy();
-  expect(closed.openState?.known && !closed.openState?.open, "closed store is KNOWN closed").toBeTruthy();
+  // Open-now-only law (owner 2026-07-16): a store that's closed RIGHT NOW never reaches the feed
+  // at all — the server drops it, the UI never has to.
+  expect(stores.some((s) => s.id === CLOSED), "known-closed store is excluded from the feed").toBeFalsy();
   const kiosk = stores.find((s) => s.id === KIOSK);
   expect(kiosk, "kiosk-only store in the default feed").toBeTruthy();
   expect(kiosk.callable, "kiosk-only store is not callable").toBeFalsy();
@@ -140,6 +140,25 @@ test("A6: closed + kiosk-only store cards carry the right state and (non-)call a
   await page.press("#search", "Enter");
   await expect(page.locator("#storelist .store", { hasText: "Gate Store A" })).toBeVisible({ timeout: 20_000 });
   await expect(page.locator("#storelist .store", { hasText: "Gate Closed Store" }), "known-closed store is never offered in the retail list").toHaveCount(0);
+});
+
+// Harness P2-27: live listening is a testing tool (comp accounts / policy.flags.liveListen) —
+// a plain free account must never see the live-audio control during a call. Driven here because
+// entering the live screen requires pressing the dial, which only this server does safely.
+test("P2-27: no live-listen control for a free account during a call", async ({ page, request }) => {
+  const t = await mintToken(request, base, freshPhone());
+  await page.addInitScript((tok) => { localStorage.setItem("cifm_token", tok as string); localStorage.setItem("runnr_authed", "1"); }, t);
+  await page.goto("/");
+  await expect(page.locator("body")).toHaveClass(/authed/, { timeout: 20_000 });
+  await page.fill("#search", "Los Angeles");
+  await page.press("#search", "Enter");
+  const rows = page.locator("#storelist .store:not(.shut):not(.coming)");
+  await expect(rows.first()).toBeVisible({ timeout: 20_000 });
+  await rows.first().click();
+  await expect(page.locator("#csheet")).toHaveClass(/on/, { timeout: 15_000 });
+  await page.click("#cs_call"); // safe HERE only: dialing is hard-disabled → scripted sim call
+  await expect(page.locator("#live"), "live call screen shows").toBeVisible({ timeout: 20_000 });
+  await expect(page.locator("#audio_ind"), "no live-audio badge for a free account").toBeHidden();
 });
 
 test("A2: last credit gone → the upgrade sheet, never an error", async ({ page, request }) => {
