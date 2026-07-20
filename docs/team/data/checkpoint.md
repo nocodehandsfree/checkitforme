@@ -38,6 +38,12 @@
 - **NEVER** run the paid hours backfill (`/api/hours/backfill`) or re-chain big-box from directories.
 
 ## IN PROGRESS (owner away — resume here)
+- **WALGREENS INCIDENT CLOSED 07-20 (full story in GOTCHAS):** 18 mapped big-box chains carried a
+  pre-history "site" flag → ALL flipped to call on BOTH envs (verified 18/18). Sweep: 93 mapped chains,
+  zero recipes wiped. Today's CVS/Walgreens zone failures = the NEW My Zones call path skipped
+  Alpha/Bravo recipe attachment (its builder fixing) — NOT the flag, NOT a new CVS phone system
+  (owner called CVS himself: unchanged; Echo's "new assistant" claim = false). Guards live: intel seed
+  + chain PATCH refuse to unflag-from-call-lane on mapped chains w/o force; board shows CONFLICT.
 - **Mapping is at 99.9% (Mapper's final run 07-16):** Publix (1,240) + Woodman's + H Mart locked;
   Macy's muted. The last 0.1% = the 7 chains whose Google numbers were fabricated (see OPEN below) —
   once real numbers land, Mapper takes one more pass. H-E-B nav note for that pass: press 0 works but
