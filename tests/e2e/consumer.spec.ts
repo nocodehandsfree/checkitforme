@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { UA, freshPhone, injectAuth, me, mintToken, withPeek } from "./helpers";
+import { UA, bearer, freshPhone, injectAuth, me, mintToken, withPeek } from "./helpers";
 
 // Consumer render smoke — safe everywhere (@safe): these run against prod right after a promote.
 // The write-path journeys live in journeys.spec.ts (staging) and local.spec.ts (dial side).
@@ -164,5 +164,74 @@ test.describe("P1 harness paths (staging)", () => {
     await page.locator("#search").dispatchEvent("input");
     await expect(page.locator("#buyOverlay"), "upsell: the plans sheet opens").toHaveClass(/on/, { timeout: 10_000 });
     await expect(page.locator("#live"), "no check ever starts").toBeHidden();
+  });
+
+  // P1-10: referral — the Earn tab hands out a personal invite link; a second user claiming the
+  // code lands rewards.referralChecks on BOTH accounts (set-once, so fresh accounts every run).
+  test("P1-10: referral link renders + claim rewards both accounts", async ({ page, request }) => {
+    const base = new URL(test.info().project.use.baseURL as string).origin;
+    const tokenA = await mintToken(request, base, freshPhone());
+    const status = await (await request.get(`${base}/app/referral`, { headers: bearer(tokenA) })).json();
+    test.skip(!status.enabled, "referrals flag is off");
+    expect(status.code, "account has a referral code").toBeTruthy();
+    // UI: account sheet → Earn → Invite a friend → the sheet carries THIS account's link.
+    await injectAuth(page, tokenA);
+    await page.goto("/");
+    await expect(page.locator("body")).toHaveClass(/authed/, { timeout: 20_000 });
+    await page.evaluate(() => (window as any).openAccount());
+    await page.evaluate(() => (window as any).acctTab("earn"));
+    await page.getByText("Invite a friend", { exact: false }).first().click();
+    await expect(page.locator("#inviteOverlay"), "invite sheet opens").toHaveClass(/on/, { timeout: 10_000 });
+    const link = await page.evaluate(() => (window as any).__invLink || "");
+    expect(link, "invite link carries the personal code").toContain(status.code);
+    // Second user claims the code → both balances grow by the published reward.
+    const aBefore = await me(request, base, tokenA);
+    const tokenB = await mintToken(request, base, freshPhone());
+    const bBefore = await me(request, base, tokenB);
+    const claim = await request.post(`${base}/app/referral/claim`, { headers: bearer(tokenB), data: { code: status.code } });
+    expect(claim.ok(), `claim → 200 (got ${claim.status()})`).toBeTruthy();
+    const cj = await claim.json();
+    expect(cj.ok, `claim accepted (got ${JSON.stringify(cj)})`).toBeTruthy();
+    expect((await me(request, base, tokenB)).credits, "referee got the reward").toBe(bBefore.credits + status.reward);
+    expect((await me(request, base, tokenA)).credits, "referrer got the reward").toBe(aBefore.credits + status.reward);
+  });
+});
+
+// ── E2E path harness P2 (secondary consumer) — staging-only.
+test.describe("P2 harness paths (staging)", () => {
+  test.skip(process.env.E2E_TARGET === "prod", "mints accounts / writes staging rows — never on prod");
+
+  // P2-19: best bet — the ranked "most likely" pick is served and badged at the top of the list.
+  test("P2-19: best-bet stores served + top pick badged in the list", async ({ page, request }) => {
+    const base = new URL(test.info().project.use.baseURL as string).origin;
+    const top = await (await request.get(`${base}/pub/best-bet?lat=34.05&lng=-118.24&radius=10`, { headers: UA })).json();
+    expect(Array.isArray(top), "best-bet serves an array").toBeTruthy();
+    expect(top.length, "best-bet returns at most 3 ranked stores").toBeLessThanOrEqual(3);
+    test.skip(!top.length, "no best-bet candidates near the test area");
+    await page.goto("/"); // geolocation is granted → the site auto-locates and ranks
+    await expect(page.locator("#lh_label"), "ranked Best bets header leads the store list").toHaveText(/Best bets/, { timeout: 30_000 });
+  });
+
+  // P2-22: Spanish — flipping the language flips the visible strings (approved ES copy).
+  test("P2-22: Spanish flips the UI strings", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator("#findcard")).toBeVisible({ timeout: 15_000 });
+    await page.evaluate(() => (window as any).setLang("es"));
+    await expect(page.getByRole("button", { name: "Tiendas" }), "store-mode tab in Spanish").toBeVisible({ timeout: 10_000 });
+    // Sanity: the flip must not blow the layout sideways.
+    const overflow = await page.evaluate(() => document.body.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow, "no horizontal overflow in Spanish").toBeLessThanOrEqual(1);
+  });
+
+  // P2-24: store request — "don't see your store" submits and thanks the hunter.
+  test("P2-24: store request submits + confirmation shows", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator("#findcard")).toBeVisible({ timeout: 15_000 });
+    await page.evaluate(() => (window as any).openStoreReq());
+    await expect(page.locator("#storeReqOverlay")).toHaveClass(/on/, { timeout: 10_000 });
+    await page.fill("#sr_name", "E2E Harness Test Store");
+    await page.fill("#sr_city", "Los Angeles, CA");
+    await page.click("#sr_btn");
+    await expect(page.locator("#sr_done"), "store submitted confirmation").toBeVisible({ timeout: 15_000 });
   });
 });
