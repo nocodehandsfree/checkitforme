@@ -2458,6 +2458,8 @@ app.post("/pub/watch", async (c) => {
   const b = await c.req.json();
   if (!b.contact || !b.retailerId || !b.categoryId) return c.json({ error: "contact, retailerId, categoryId required" }, 400);
   const channel = String(b.contact).includes("@") ? "email" : "sms";
+  // SMS channel is dark until the toll-free number is approved (flags.smsAlerts) — email only till then.
+  if (channel === "sms" && !(await getPolicy()).flags.smsAlerts) return c.json({ error: "email_required" }, 400);
   await db.insert(watches).values({ contact: b.contact, channel, retailerId: Number(b.retailerId), categoryId: Number(b.categoryId) });
   return c.json({ ok: true });
 });
@@ -5133,12 +5135,15 @@ app.post("/app/alerts/subscribe", async (c) => {
   // The site sends its language with the signup — store it so this account's alerts go out in it.
   const subLang = b.lang === "es" ? "es" : b.lang === "en" ? "en" : undefined;
   if (subLang) await db.update(accounts).set({ language: subLang }).where(eq(accounts.clerkUserId, u.id));
+  // SMS stays dark until flags.smsAlerts (toll-free approval) — an sms ask quietly rides email instead
+  // of erroring, so an out-of-date client still gets its alert.
+  const smsOn = (await getPolicy()).flags.smsAlerts;
   const r = await alertSubscribe(u.id, {
     kind: b.kind ? String(b.kind) : "restock",
     retailerId: b.retailerId != null ? Number(b.retailerId) : null,
     categoryId: b.categoryId != null ? Number(b.categoryId) : null,
     productLabel: b.productLabel ? String(b.productLabel).slice(0, 120) : null,
-    channel: b.channel === "email" ? "email" : "sms",
+    channel: b.channel === "email" ? "email" : smsOn ? "sms" : "email",
   });
   return c.json(r);
 });

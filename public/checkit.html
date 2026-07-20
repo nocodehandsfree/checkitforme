@@ -2971,7 +2971,7 @@ const I18N={ es:{
   'sch.body':'Verificamos <b id="sch_store">la tienda</b> automáticamente y te avisamos con los resultados.<b id="sch_cat" style="display:none"></b>','watch.setting':'Configurando…','watch.done':"🔔 Listo. Te avisamos en cuanto vuelva",
   'watch.verify.email':'<b>Ve a tu correo para verificar tu email.</b>','watch.verify.sms':'<b>Te enviaremos un mensaje para confirmar tu celular.</b>','watch.then':'Luego te avisamos en cuanto se confirme en stock.','watch.done2':'Listo','watch.left':'Te quedan {n} de {cap} alertas de texto este mes.',
   // schedule modal
-  'sch.perk':'Beneficio de miembro Check+','sch.title':'Auto-verificación','sch.days':'¿Qué días?','sch.time':'Hora más temprana para llamar','sch.where':'Agrega tu celular o correo','sch.ph':'correo o teléfono','sch.cta':'Activar auto-verificación →','sch.setting':'Configurando…','sch.on.days':'📅 Auto-verificación activa. Llamaremos esos días','sch.on.ship':'📅 Auto-verificación activa. Llamaremos el día de envío de esta tienda','sch.canceled':'Auto-verificación cancelada','sch.cancelfail':'No se pudo cancelar. Inténtalo de nuevo',
+  'sch.perk':'Beneficio de miembro Check+','sch.title':'Auto-verificación','sch.days':'¿Qué días?','sch.time':'Hora más temprana para llamar','sch.where':'Agrega tu celular o correo','sch.where.em':'Agrega tu correo','sch.ph':'correo o teléfono','sch.cta':'Activar auto-verificación →','sch.setting':'Configurando…','sch.on.days':'📅 Auto-verificación activa. Llamaremos esos días','sch.on.ship':'📅 Auto-verificación activa. Llamaremos el día de envío de esta tienda','sch.canceled':'Auto-verificación cancelada','sch.cancelfail':'No se pudo cancelar. Inténtalo de nuevo',
   // waitlist modal
   'wl.title':'Te enviamos un correo cuando lancemos aquí','wl.sub':'Deja tu correo. En cuanto lleguemos a tu zona, eres el primero en saberlo.','wl.ph':'tu correo','wl.cta':'Unirme a la lista →','wl.adding':'Agregándote…','wl.done':"🙌 Estás en la lista",
   // refer modal
@@ -3731,7 +3731,7 @@ function openWaitlist(){ $('wl_err').textContent=''; $('wl_contact').value=''; t
 function closeWaitlist(){ $('waitlistOverlay').classList.remove('on'); acctReturn(); }
 async function submitWaitlist(){
   const c=($('wl_contact').value||'').trim();
-  const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(c);
+  const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(c)&&smsAlertsOn();
   if(!isEmail&&!isPhone){ markFld($('wl_contact'),true); $('wl_err').textContent=''; return; }
   const btn=$('wl_btn'); btn.disabled=true; btn.textContent=t('wl.adding','Adding you…');
   const body={ contact:c, lat:USER_LOC&&USER_LOC.lat, lng:USER_LOC&&USER_LOC.lng };
@@ -3784,6 +3784,9 @@ async function referShareTo(tg){
   else if(tg==='native'){ if(navigator.share){ try{ await navigator.share({text:text+' '+url}); }catch(e){} } else copyRefer(); }
 }
 // Stash an inbound ?ref= code; claim it once the visitor is signed in.
+// SMS alert channel gate — until the owner flips flags.smsAlerts in Admin (toll-free number
+// approved), every alert form collects EMAIL only and phone entries are rejected client-side.
+function smsAlertsOn(){ return (POLICY.flags||{}).smsAlerts===true; }
 let REF_FRESH=false; // set when a ?ref= just arrived this pageload → show the welcome (not on later reloads)
 function captureReferral(){ try{ const sp=new URLSearchParams(location.search); const code=sp.get('ref'); if(code){ localStorage.setItem('runnr_ref',code); REF_FRESH=true; sp.delete('ref'); const q=sp.toString(); history.replaceState({},'',location.pathname+(q?'?'+q:'')); } }catch(e){} }
 // Referral welcome (owner 07-18): a friend's invite link is the visitor's FIRST screen — a gift framing
@@ -8095,7 +8098,7 @@ async function openWatch(){
   if(!SEL_STORE||!SEL_STORE.id){ toast(t('err.pickstore','Pick a store first')); return; }
   if(!isAuthed()){ toast(t('toast.joinalerts','Join to set alerts')); signUp(); return; }
   if(!hasFeature('restock_alerts')){ openBuy('premium'); return; } // restock alerts = a per-tier perk
-  $('watch_err').textContent=''; $('watch_contact').value=''; $('watch_contact').style.display=''; { const wb=$('watch_btn'); if(wb){ wb.textContent=t('watch.cta','Watch this store →'); wb.onclick=submitWatch; } } { const ws=$('watch_sub'); if(ws) ws.innerHTML=t('watch.sub',"We'll ping you the instant anyone confirms it in stock here."); } { const wt=document.querySelector('#watchOverlay h3 [data-i18n="watch.title"]'); if(wt) wt.textContent=t('watch.title','Tell me when it\'s back'); }
+  $('watch_err').textContent=''; $('watch_contact').value=''; $('watch_contact').style.display=''; $('watch_contact').placeholder=smsAlertsOn()?t('watch.ph','email or phone number'):t('em.ph','you@email.com'); { const wb=$('watch_btn'); if(wb){ wb.textContent=t('watch.cta','Watch this store →'); wb.onclick=submitWatch; } } { const ws=$('watch_sub'); if(ws) ws.innerHTML=t('watch.sub',"We'll ping you the instant anyone confirms it in stock here."); } { const wt=document.querySelector('#watchOverlay h3 [data-i18n="watch.title"]'); if(wt) wt.textContent=t('watch.title','Tell me when it\'s back'); }
   const sub=$('watch_sub'); if(sub) sub.textContent=LANG==='es'?`Te avisamos en cuanto alguien confirme ${findProductLabel()} en stock en ${findStoreName()}.`:`We'll ping you the instant anyone confirms ${findProductLabel()} in stock at ${findStoreName()}.`;
   track('watch_open',{retailerId:SEL_STORE.id});
   $('watchOverlay').classList.add('on'); sheetPush('watch'); setTimeout(()=>{try{$('watch_contact').focus();}catch(e){}},80);
@@ -8105,7 +8108,7 @@ async function openWatch(){
 function closeWatch(){ $('watchOverlay').classList.remove('on'); }
 async function submitWatch(){
   const c=($('watch_contact').value||'').trim();
-  const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(c);
+  const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(c)&&smsAlertsOn();
   if(!isEmail&&!isPhone){ markFld($('watch_contact'),true); $('watch_err').textContent=''; return; }
   const btn=$('watch_btn'); btn.disabled=true; btn.textContent=t('watch.setting','Setting it up…');
   const channel=isEmail?'email':'sms';
@@ -8541,7 +8544,8 @@ function openSchedule(){
   SCH_DAYS=new Set();
   $('sch_err').textContent='';
   $('sch_store').textContent=findStoreName(); $('sch_cat').textContent=findProductLabel();
-  const cw=$('sch_contact'); if(cw) cw.value=''; // keep the number OUT of the box (it's a grey placeholder); we default to the account contact on submit
+  const cw=$('sch_contact'); if(cw){ cw.value=''; cw.placeholder=smsAlertsOn()?t('ph.schednum','Enter number'):t('em.ph','you@email.com'); } // keep the contact OUT of the box (grey placeholder); we default to the account contact on submit
+  { const wl=document.querySelector('#scheduleOverlay [data-i18n="sch.where"]'); if(wl) wl.textContent=smsAlertsOn()?t('sch.where','Add your cell or email'):t('sch.where.em','Add your email'); }
   $('sch_days').innerHTML=DOWLBL.map(([v,l])=>`<div class="chip" data-d="${v}" onclick="toggleSchDay('${v}',this)" style="cursor:pointer;text-align:center;padding:9px 0;font-size:13px">${l}</div>`).join('');
   track('schedule_open',{retailerId:SEL_STORE.id});
   $('scheduleOverlay').classList.add('on'); sheetPush('sched');
@@ -8551,7 +8555,7 @@ function closeSchedule(){ $('scheduleOverlay').classList.remove('on'); }
 async function submitSchedule(){
   let contact=($('sch_contact').value||'').trim();
   if(!contact){ try{ contact=(ACCOUNT&&ACCOUNT.email)||(ACCOUNT&&ACCOUNT.phone)||''; }catch(e){} } // empty box → default to their account contact
-  if(contact){ const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(contact); if(!isEmail&&!isPhone){ markFld($('sch_contact'),true); $('sch_err').textContent=''; return; } }
+  if(contact){ const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(contact)&&smsAlertsOn(); if(!isEmail&&!isPhone){ markFld($('sch_contact'),true); $('sch_err').textContent=''; return; } }
   const btn=$('sch_btn'); btn.disabled=true; btn.textContent=t('sch.setting','Setting it up…');
   const body={ retailerId:SEL_STORE.id, categoryId:SEL_CAT, specificProduct:SEL_PRODUCT||undefined,
     daysOfWeek:[...SCH_DAYS].join(','), timeLocal:$('sch_time').value||'10:00', contact:contact||undefined, lang:LANG };

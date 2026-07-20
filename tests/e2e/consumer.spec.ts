@@ -115,6 +115,25 @@ test.describe("P1 harness paths (staging)", () => {
     expect((await r.json()).ok, "watch created").toBeTruthy();
   });
 
+  // P1-9b: while SMS is dark (flags.smsAlerts off — toll-free pending), alert collection is
+  // email-only END TO END: the watch form asks for email, and the API refuses a phone contact.
+  test("P1-9b: SMS off → watch form is email-only, phone contact refused", async ({ page, request }) => {
+    const base = new URL(test.info().project.use.baseURL as string).origin;
+    const pol = await (await request.get(`${base}/pub/policy`, { headers: UA })).json();
+    test.skip(pol.flags?.smsAlerts === true, "SMS channel is ON — email-only gate not in force");
+    const near = await (await request.get(`${base}/pub/stores/near?lat=34.05&lng=-118.24&radius=25`, { headers: UA })).json();
+    const refused = await request.post(`${base}/pub/watch`, {
+      headers: UA,
+      data: { contact: "+13105550100", retailerId: near.stores[0].id, categoryId: 1 },
+    });
+    expect(refused.status(), "phone contact → 400 while SMS is dark").toBe(400);
+    await page.goto(`/?call=sim_${Date.now() - 60_000}_out`);
+    await expect(page.locator("#result")).toBeVisible({ timeout: 20_000 });
+    await page.evaluate(() => (window as any).openWatch());
+    await expect(page.locator("#watchOverlay")).toHaveClass(/on/, { timeout: 10_000 });
+    await expect(page.locator("#watch_contact"), "form asks for email only").toHaveAttribute("placeholder", /@/);
+  });
+
   // P1-11: an in-stock verdict carries the share affordance, and the share landing renders.
   test("P1-11: in-stock verdict offers share + share landing serves", async ({ page, request }) => {
     await page.goto(`/?call=sim_${Date.now() - 60_000}_in`);
@@ -194,6 +213,38 @@ test.describe("P1 harness paths (staging)", () => {
     expect(cj.ok, `claim accepted (got ${JSON.stringify(cj)})`).toBeTruthy();
     expect((await me(request, base, tokenB)).credits, "referee got the reward").toBe(bBefore.credits + status.reward);
     expect((await me(request, base, tokenA)).credits, "referrer got the reward").toBe(aBefore.credits + status.reward);
+  });
+
+  // P1-10b: the REAL customer path — friend taps the ?ref= invite link, sees the welcome, signs up,
+  // and the claim fires on its own. Both balances grow and the referrer's tracked count ticks up.
+  test("P1-10b: invite link → welcome → signup → auto-claim pays + tracks", async ({ page, request }) => {
+    const base = new URL(test.info().project.use.baseURL as string).origin;
+    const tokenA = await mintToken(request, base, freshPhone());
+    const status = await (await request.get(`${base}/app/referral`, { headers: bearer(tokenA) })).json();
+    test.skip(!status.enabled, "referrals flag is off");
+    const aBefore = await me(request, base, tokenA);
+    await page.goto(`/?ref=${status.code}`);
+    // The fresh ?ref shows the referral welcome; its CTA is the signup door. Fall back to the auth
+    // pill if the welcome didn't fire (e.g. replayed pageload).
+    const welcomeCta = page.locator("#refwelcomeOverlay .rfw-cta");
+    if (await welcomeCta.isVisible({ timeout: 5_000 }).catch(() => false)) await welcomeCta.click();
+    else await page.click("#authpill");
+    await expect(page.locator("#authOverlay")).toHaveClass(/on/, { timeout: 10_000 });
+    await page.fill("#auth_phone", freshPhone().replace("+1", ""));
+    await page.click("#auth_send");
+    await expect(page.locator("#auth_step_code")).toBeVisible();
+    if (!(await page.inputValue("#auth_code"))) await page.fill("#auth_code", "000000");
+    if (!(await page.locator("body.authed").count())) await page.click("#auth_verify").catch(() => {});
+    await expect(page.locator("body")).toHaveClass(/authed/, { timeout: 15_000 });
+    // Auto-claim fires post-signup → referrer paid + tracked; referee's balance carries the reward.
+    await expect
+      .poll(async () => (await me(request, base, tokenA)).credits, { timeout: 30_000, intervals: [2_000] })
+      .toBe(aBefore.credits + status.reward);
+    const after = await (await request.get(`${base}/app/referral`, { headers: bearer(tokenA) })).json();
+    expect(after.referrals, "referral is tracked on the referrer").toBe(status.referrals + 1);
+    const tokenB = (await page.evaluate(() => localStorage.getItem("cifm_token"))) || "";
+    const pol = await (await request.get(`${base}/pub/policy`, { headers: UA })).json();
+    expect((await me(request, base, tokenB)).credits, "friend lands with free checks + the reward").toBe(pol.freeChecks + status.reward);
   });
 });
 

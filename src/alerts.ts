@@ -13,6 +13,7 @@ import { accounts, alertSubscriptions, alertSends, retailers, categories } from 
 import { getSetting, setSetting } from "./db/settings";
 import { getAccount, isCompAccount } from "./billing";
 import { getPlans } from "./plans";
+import { getPolicy } from "./policy";
 import { config } from "./config";
 
 // "welcome" is dead (owner 2026-07-15): there is no email-only signup — everyone signs up by phone,
@@ -447,6 +448,10 @@ export async function sendAlert(userId: string, event: AlertEvent, tokens: Recor
   }
 
   if (channel === "sms") {
+    // Channel kill-switch: until flags.smsAlerts (toll-free approval) no customer SMS ever fires —
+    // covers legacy sms subscriptions created before the switch existed. Admin's template test
+    // (sendTestAlert) is deliberately NOT gated so the owner can eyeball sends before flipping it.
+    if (!(await getPolicy()).flags.smsAlerts) { await log(userId, event, channel, to, "skipped_sms_off", tagged()); return { status: "skipped_sms_off" }; }
     const { left, cap } = await smsAlertsLeft(userId);
     if (cap != null && left != null && left <= 0) { await log(userId, event, channel, to, "skipped_cap", tagged()); return { status: "skipped_cap" }; }
     const body = fill(tpls[event].sms, tokens);
