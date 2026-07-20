@@ -3198,7 +3198,7 @@ app.get("/pub/result/:cid", async (c) => {
     if (row && row.status && row.status !== "in_progress" && row.status !== "dialing") {
       return c.json({
         status: row.status, confirmed: row.confirmed, statusKey: row.statusKey,
-        productDetail: row.productDetail, shipmentDay: row.shipmentDayHeard ?? null,
+        productDetail: row.productDetail, shipmentDay: row.shipmentDayHeard ?? null, shipmentTime: row.shipmentTimeHeard ?? null,
         summary: row.summary ?? "", transcript: row.transcript ?? "",
         durationSecs: row.callSeconds ?? undefined,
       });
@@ -3219,6 +3219,7 @@ app.get("/pub/result/:cid", async (c) => {
       ts: (row.startedAt || 0) * 1000,       // call start (ms) — the status page shows date + time (owner 07-10)
       productDetail: row.productDetail,      // e.g. "3-pack blister · Surging Sparks" — null if not captured
       shipmentDay: row.shipmentDayHeard ?? (o?.shipmentDay ?? null),
+      shipmentTime: row.shipmentTimeHeard ?? (o?.shipmentTime ?? null),
       summary: row.summary ?? o?.summary ?? "",
       transcript: row.transcript ?? o?.transcript ?? "",
     });
@@ -3239,11 +3240,11 @@ app.get("/pub/result/:cid", async (c) => {
     const productDetail = productDetailLabel(second);
     await db.update(callResults).set({
       status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey,
-      shipmentDayHeard: o.shipmentDay, productDetail, summary: o.summary, transcript: o.transcript,
+      shipmentDayHeard: o.shipmentDay, shipmentTimeHeard: (second?.restockTime ?? o.shipmentTime) ?? null, productDetail, summary: o.summary, transcript: o.transcript,
       completedAt: Math.floor(Date.now() / 1000),
     }).where(eq(callResults.id, row.id));
     if (row.finderUserId && consensus.definitive) await chargeCallOnce(row.id, row.finderUserId);
-    return c.json({ ...(o ?? {}), status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey, ts: (row.startedAt || 0) * 1000, productDetail, shipmentDay: o.shipmentDay, summary: o.summary, transcript: o.transcript });
+    return c.json({ ...(o ?? {}), status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey, ts: (row.startedAt || 0) * 1000, productDetail, shipmentDay: o.shipmentDay, shipmentTime: (second?.restockTime ?? o.shipmentTime) ?? null, summary: o.summary, transcript: o.transcript });
   }
   // Truly mid-call → progress only, never a verdict (so a wrong key can't flash before the real one).
   return c.json(o ? { ...o, ts: row?.startedAt ? row.startedAt * 1000 : undefined } : { status: "in_progress", transcript: "", summary: "", ts: row?.startedAt ? row.startedAt * 1000 : undefined });
@@ -3705,7 +3706,7 @@ app.get("/app/history", async (c) => {
       cid: r.providerCallId, storeId: r.retailerId, storeName: sName,
       categoryId: r.categoryId, category: cats.get(r.categoryId) || "",
       ts: (r.startedAt || 0) * 1000, status: r.status, confirmed: r.confirmed,
-      statusKey: r.statusKey, productDetail: r.productDetail, shipmentDay: r.shipmentDayHeard, zoneRunId: r.zoneRunId || null,
+      statusKey: r.statusKey, productDetail: r.productDetail, shipmentDay: r.shipmentDayHeard, shipmentTime: r.shipmentTimeHeard ?? null, zoneRunId: r.zoneRunId || null,
       logoUrl: l.url, logoWide: l.wide, logoDark: l.dark,
     };
   }));

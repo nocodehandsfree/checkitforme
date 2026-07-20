@@ -70,6 +70,8 @@ export interface CallOutcome {
   categoryResults: Record<string, boolean | null>;
   /** Day the clerk said shipments usually arrive, if asked/heard. */
   shipmentDay: string | null;
+  /** Time of day the clerk gave for the shipment, if any (e.g. "around 2 PM", "the morning"). */
+  shipmentTime?: string | null;
   /** The specific product the clerk named as in stock, if any (e.g. "Knockout packs"). */
   productName?: string | null;
   summary: string;                // short summary of what the clerk said

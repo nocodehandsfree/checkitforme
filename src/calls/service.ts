@@ -583,6 +583,7 @@ async function finalizeDeltaSession(s: TdSession): Promise<void> {
   let definitive = confirmed === true || confirmed === false;
   let productDetail = s.resProduct || null;
   let dayHeard = s.resDay || null;
+  let timeHeard: string | null = null;
   const transcript = tdTranscript(s);
   let agreed = true;
   // SECOND READ (same safety net the C-lane has had all along — owner 07-15: it was NOT wired here).
@@ -596,6 +597,7 @@ async function finalizeDeltaSession(s: TdSession): Promise<void> {
     const label = productDetailLabel(second);
     if (label) productDetail = label; // the second read's trade-name mapping beats raw ASR text
     if (!dayHeard && second?.restockDay) dayHeard = second.restockDay;
+    if (!timeHeard && second?.restockTime) timeHeard = second.restockTime;
   }
   await db.update(callResults).set({
     status,
@@ -603,6 +605,7 @@ async function finalizeDeltaSession(s: TdSession): Promise<void> {
     statusKey,
     productDetail,
     shipmentDayHeard: dayHeard,
+    shipmentTimeHeard: timeHeard,
     transcript,
     summary: `Delta lane (${s.workflow}): ${statusKey}${agreed ? "" : " (reads disagreed → honest unsure)"}`,
     completedAt: now,
@@ -929,6 +932,7 @@ export async function ingestPending(): Promise<number> {
     let definitive = primaryConfirmed === true || primaryConfirmed === false;
     let productDetail: string | null = null;
     let restockDayHeard: string | null = null;
+    let restockTimeHeard: string | null = null;
     if (outcome.status === "completed") {
       // Speed: the second read decides the VERDICT only when EL was unclear (the case it rescues);
       // decisive EL answers stand. But on a confirmed YES we still run it for EXTRACTION ONLY — it's
@@ -945,6 +949,7 @@ export async function ingestPending(): Promise<number> {
       definitive = consensus.definitive;
       productDetail = productDetailLabel(second);
       restockDayHeard = second?.restockDay ?? null; // restock day staff VOLUNTEERED — captured even unprompted
+      restockTimeHeard = second?.restockTime ?? null;
     }
 
     // Update the primary row (the line we called about).
@@ -953,6 +958,7 @@ export async function ingestPending(): Promise<number> {
       confirmed: finalConfirmed,
       statusKey: finalStatusKey,
       shipmentDayHeard: restockDayHeard ?? outcome.shipmentDay, // prefer the LLM's read of the transcript
+      shipmentTimeHeard: restockTimeHeard ?? outcome.shipmentTime ?? null,
       productDetail,
       summary: outcome.summary,
       transcript: outcome.transcript,

@@ -492,6 +492,7 @@ export const callResults = sqliteTable(
     // verdict — does_not_sell / sold_out / left_on_hold / voicemail … which `confirmed` alone loses.
     statusKey: text("status_key"),
     shipmentDayHeard: text("shipment_day_heard"), // if asked: the day the clerk gave
+    shipmentTimeHeard: text("shipment_time_heard"), // if named: the time of day for that shipment
     summary: text("summary"),       // short human summary of what the clerk said
     transcript: text("transcript"), // text transcript (no audio is ever stored)
     providerCallId: text("provider_call_id"), // ElevenLabs conversation id

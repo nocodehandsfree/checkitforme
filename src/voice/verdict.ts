@@ -12,6 +12,7 @@ export const VERDICT_MODEL = "gemini-2.5-flash-lite";
 export interface ClerkVerdict {
   inStock: "yes" | "no" | "unclear"; // buyable RIGHT NOW for the asked category
   restockDay: string | null;         // future shipment day the clerk named, if any
+  restockTime: string | null;        // time of day for that shipment, if named ("around 2 PM", "morning")
   productForm: string | null;        // "booster packs" | "tin" | "3-pack blister" | "ETB" | "booster box" | …
   set: string | null;                // named set, if the clerk knew it
   confidence: number;                // 0..1 — how sure the model is about inStock
@@ -45,6 +46,7 @@ export async function classifyVerdict(
     `- "we don't carry that / we don't sell those" → no.\n` +
     `- "let me check / hold on / I'll go look" and the call ends with NO answer → unclear.\n` +
     `- a FUTURE shipment ("getting more Thursday") with nothing buyable now → no, but put the day in restockDay.\n` +
+    `- if the clerk also names a TIME for that shipment ("around 2", "2pm", "in the morning", "first thing"), put it in restockTime (short, as they said it); else null. Never invent a time.\n` +
     `Judge MEANING and TONE, not exact keywords. Casual, indirect, or oddly-phrased affirmatives still mean ` +
     `YES when the surrounding words signal the item is here and buyable — e.g. "yeah come on down", "we're loaded", ` +
     `"got a ton", "plenty left", "just put a bunch out", "oh for sure", "yep got those", "come grab one". ` +
@@ -54,7 +56,7 @@ export async function classifyVerdict(
     `Clerks describe products loosely; map descriptions to the trade name: "three packs in one" / "a pack with three smaller packs inside" → "3-pack blister"; "the big box of packs" → "booster box"; "the box with a promo card" → "ETB". ` +
     `The transcript comes from phone speech-to-text and mishears words: "10" or "ten" in a product-type answer almost always means "tin" (the metal box) — NEVER report a bare number as a set or product name; "E T B" / "easy B" → "ETB". ` +
     `Reserve "unclear" for GENUINE uncertainty only — no real answer, or hedging with no commitment. A clearly positive answer phrased unusually is YES, not unclear.\n` +
-    `Reply with STRICT JSON only: {"inStock":"yes|no|unclear","restockDay":string|null,"productForm":string|null,"set":string|null,"confidence":0..1,"reason":"short"}`;
+    `Reply with STRICT JSON only: {"inStock":"yes|no|unclear","restockDay":string|null,"restockTime":string|null,"productForm":string|null,"set":string|null,"confidence":0..1,"reason":"short"}`;
   try {
     const raw = await llm(
       VERDICT_MODEL,
@@ -68,6 +70,7 @@ export async function classifyVerdict(
     return {
       inStock,
       restockDay: clean(d.restockDay),
+      restockTime: clean(d.restockTime),
       productForm: clean(d.productForm),
       set: clean(d.set),
       confidence: Number.isFinite(confRaw) ? Math.max(0, Math.min(1, confRaw)) : 0.5,

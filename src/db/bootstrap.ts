@@ -95,6 +95,7 @@ export async function bootstrap() {
   await client.execute("ALTER TABLE store_requests ADD COLUMN user_id TEXT").catch(() => {});
   await client.execute("ALTER TABLE store_requests ADD COLUMN rewarded_at INTEGER").catch(() => {});
   await client.execute("ALTER TABLE call_results ADD COLUMN zone_run_id TEXT").catch(() => {});
+  await client.execute("ALTER TABLE call_results ADD COLUMN shipment_time_heard TEXT").catch(() => {});
   await client.execute("ALTER TABLE chains ADD COLUMN dtmf_shortcut TEXT").catch(() => {});
   // Chains: answer-path classification + per-chain consumer mute.
   await client.execute("ALTER TABLE chains ADD COLUMN answer_path TEXT").catch(() => {});

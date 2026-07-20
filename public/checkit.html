@@ -4404,6 +4404,13 @@ const DAYABBR={sunday:'Sun',monday:'Mon',tuesday:'Tue',wednesday:'Wed',thursday:
 function fmtShipDay(s){ if(!s) return ''; const raw=String(s).trim(); if(LANG!=='es') return raw;
   const ES={today:'hoy',tomorrow:'mañana',sunday:'el domingo',monday:'el lunes',tuesday:'el martes',wednesday:'el miércoles',thursday:'el jueves',friday:'el viernes',saturday:'el sábado'};
   return raw.replace(/\b(today|tomorrow|sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/gi,m=>ES[m.toLowerCase()]||m); }
+// Shipment TIME the clerk gave (owner 07-20) — returns a natural fragment WITH its connector, e.g.
+// "around 2 PM" / "in the morning", localized; '' when none, so the day-only note stays unchanged.
+function fmtShipTime(tm){ if(!tm) return ''; const raw=String(tm).trim(); if(!raw) return ''; const low=raw.toLowerCase();
+  const PART_EN={morning:'in the morning',afternoon:'in the afternoon',evening:'in the evening',noon:'around noon',midday:'around midday','first thing':'first thing','end of day':'end of day','end of the day':'end of the day'};
+  const PART_ES={morning:'por la mañana',afternoon:'por la tarde',evening:'por la noche',noon:'sobre el mediodía',midday:'sobre el mediodía','first thing':'a primera hora','end of day':'al final del día','end of the day':'al final del día'};
+  if(LANG==='es'){ return PART_ES[low] || ('sobre las '+raw); }
+  return PART_EN[low] || ('around '+raw); }
 function shipmentDayShort(s){ if(!s||!s.shipmentDay) return ''; const k=String(s.shipmentDay).trim().toLowerCase(); return DAYABBR[k]||(s.shipmentDay.length<=3?s.shipmentDay:s.shipmentDay.slice(0,3)); }
 function shipmentLine(s){ const d=shipmentDayShort(s); return d?`<div class="hrs" style="color:${AC2()}">${t('restocks','🚚 usually restocks')} ${esc(d)}</div>`:''; }
 // --- Geolocation + radius ---
@@ -6076,7 +6083,8 @@ function showResult(o, cid){
   // shipment day on a no/sold-out → flip from a flat "not in" to a restock-incoming heads-up.
   if(cls!=='in' && !o.doesNotSell && o.status==='completed' && o.shipmentDay){
     cls='soon'; big='🚚'; title=t('v.soon','Restock incoming!');
-    note=tf('note.soon','A shipment lands <b>{d}</b>. Be first when it drops.',{d:esc(fmtShipDay(o.shipmentDay))});
+    const _tm=o.shipmentTime?(' '+fmtShipTime(o.shipmentTime)):''; // clerk gave a time → "tomorrow around 2 PM"
+    note=tf('note.soon','A shipment lands <b>{d}</b>. Be first when it drops.',{d:esc(fmtShipDay(o.shipmentDay))+esc(_tm)});
   }
 
   // Multi-line check → show a per-category breakdown (Pokémon in stock, One Piece not, etc.)

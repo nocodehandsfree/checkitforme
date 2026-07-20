@@ -247,6 +247,22 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
       .match(/\b(today|tonight|tomorrow|this (?:weekend|week|afternoon|evening|morning))\b/i);
     if (rel) shipmentDay = rel[1].toLowerCase();
   }
+  // Shipment TIME the clerk named ("around 2", "2pm", "in the morning") — only meaningful alongside a
+  // shipment day, so we surface "lands tomorrow around 2 PM" instead of a bare day (owner 07-20).
+  let shipmentTime: string | null = String(collected.shipment_time?.value ?? "").trim() || null;
+  if (shipmentDay && !shipmentTime) {
+    const clerkSaid = (d.transcript ?? []).filter((t) => t.role !== "agent" && t.message).map((t) => String(t.message)).join(" ");
+    const clock = clerkSaid.match(/\b(1[0-2]|[1-9])(?::([0-5]\d))?\s*(a\.?m\.?|p\.?m\.?|o'?clock)\b/i);
+    const partOfDay = clerkSaid.match(/\b(morning|afternoon|evening|noon|midday|first thing|end of (?:the )?day)\b/i);
+    if (clock) {
+      const min = clock[2] ? `:${clock[2]}` : "";
+      const suffix = /o'?clock/i.test(clock[3]) ? "" : ` ${clock[3].replace(/\./g, "").toUpperCase()}`;
+      shipmentTime = `${clock[1]}${min}${suffix}`.trim();
+    } else if (partOfDay) {
+      shipmentTime = partOfDay[1].toLowerCase();
+    }
+  }
+  if (shipmentTime) shipmentTime = shipmentTime.slice(0, 24);
   // If the clerk named the specific product they have in (e.g. "Knockout packs"), capture it so
   // we can show it on the In-stock verdict ("In stock — Knockout packs").
   const productName = (() => {
@@ -384,6 +400,7 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
     statusKey,
     categoryResults,
     shipmentDay,
+    shipmentTime,
     productName,
     summary: d.analysis?.transcript_summary ?? "",
     transcript,
