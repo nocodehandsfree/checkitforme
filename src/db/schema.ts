@@ -393,7 +393,11 @@ export const kioskReceipts = sqliteTable("kiosk_receipts", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   messageId: text("message_id").notNull().unique(), // email Message-ID (dedupe)
   machineId: text("machine_id"),
-  product: text("product"),
+  product: text("product"),              // first line-item name (back-compat); full list is `items`
+  items: text("items"),                  // JSON array of every line item: [{name, price}, ...]
+  subtotal: text("subtotal"),
+  tax: text("tax"),
+  itemCount: integer("item_count"),      // total items purchased on the receipt
   total: text("total"),
   orderId: text("order_id"),
   txnAt: text("txn_at"),                 // transaction time as printed on the receipt

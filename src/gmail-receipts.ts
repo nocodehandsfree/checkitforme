@@ -7,7 +7,9 @@ import { db } from "./db/client";
 import { kioskReceipts } from "./db/schema";
 import { getPolicy } from "./policy";
 
-export interface ParsedReceipt { machineId: string | null; product: string | null; total: string | null; orderId: string | null; at: string | null }
+export interface ReceiptItem { name: string; price: string }
+export interface ParsedReceipt { machineId: string | null; product: string | null; total: string | null; orderId: string | null; at: string | null;
+  items: ReceiptItem[]; subtotal: string | null; tax: string | null; itemCount: number | null }
 
 /** Decode quoted-printable (email bodies wrap lines with =\n and encode bytes as =XX). */
 function decodeQP(s: string): string {
@@ -27,13 +29,20 @@ export function parseReceipt(raw: string): ParsedReceipt | null {
   const at = (t.match(/(\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}:\d{2}\s*[AP]M)/i) || [])[1] || null;
   // "Total" but not "Subtotal" (guard the preceding char) and not "Total Items".
   const total = (t.match(/(?:^|[^a-z])Total:?\s*\$\s*([0-9]+\.\d{2})/i) || [])[1] || null;
-  // Product: a line-item is "<SKU 10+ digits> <name> $price" (10+ avoids the 8-digit Order ID).
-  let product: string | null = null;
-  const m = t.match(/\b\d{10,}\s+(.+?)\s+\$\s*\d+\.\d{2}/);
-  if (m) product = m[1].trim();
+  const subtotal = (t.match(/Subtotal:?\s*\$\s*([0-9]+\.\d{2})/i) || [])[1] || null;
+  const tax = (t.match(/Tax:?\s*\$\s*([0-9]+\.\d{2})/i) || [])[1] || null;
+  // Every line-item is "<SKU 10+ digits> <name> $price" (10+ avoids the 8-digit Order ID). Capture ALL of
+  // them, not just the first — a single transaction is often 3+ packs (owner 07-19: receipts showed one).
+  const items: ReceiptItem[] = [];
+  for (const m of t.matchAll(/\b\d{10,}\s+(.+?)\s+\$\s*(\d+\.\d{2})/g)) {
+    items.push({ name: m[1].trim().replace(/\s+/g, " "), price: m[2] });
+  }
+  const printedCount = (t.match(/Total\s*Items(?:\s*Purchased)?:?\s*(\d+)/i) || [])[1];
+  const itemCount = printedCount ? Number(printedCount) : (items.length || null);
+  const product = items[0]?.name || null; // kept for back-compat (poll reward + old rows)
   // Require at least a machine id or a product+total to count as a real receipt.
   if (!machineId && !(product && total)) return null;
-  return { machineId, product, total, orderId, at };
+  return { machineId, product, total, orderId, at, items, subtotal, tax, itemCount };
 }
 
 export function isGmailConfigured(): boolean {
@@ -122,6 +131,8 @@ export async function gmailReceiptTick(): Promise<number> {
       const res = await db.insert(kioskReceipts).values({
         messageId: r.messageId, machineId: r.machineId, product: r.product, total: r.total,
         orderId: r.orderId, txnAt: r.at,
+        items: r.items && r.items.length ? JSON.stringify(r.items) : null,
+        subtotal: r.subtotal, tax: r.tax, itemCount: r.itemCount,
       }).onConflictDoNothing().returning();
       if (res.length) added++;
     }

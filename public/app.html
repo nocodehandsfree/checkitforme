@@ -1704,6 +1704,12 @@ function gtmAdd(){
 // ---- Receipts: shoppers email a receipt → parsed into kiosk_receipts → a free check. "Claimed"
 //      means the reward was granted to that device/account. Server: /api/kiosk-receipts, flow in
 //      src/gmail-receipts.ts (Gmail IMAP, policy flag kioskReceipts + GMAIL_USER/APP_PASSWORD). ----
+// Parse the stored line-item list (JSON) off a receipt row; [] for old single-product rows.
+function rcptItems(r){ if(!r) return []; if(Array.isArray(r.items)) return r.items; try{ const a=JSON.parse(r.items||'[]'); return Array.isArray(a)?a:[]; }catch{ return []; } }
+// Refresh cadence from the real hit minute: a 5:14 hit → ":14 & :44 · every 30 min" (owner's model).
+function refreshFromHit(txnAt){ const m=String(txnAt||'').match(/\d{1,2}:(\d{2})\s*[AP]M/i); if(!m) return null;
+  const min=parseInt(m[1],10)%60, mk=n=>':'+String(n).padStart(2,'0'); const marks=[...new Set([min,(min+30)%60])].sort((a,b)=>a-b).map(mk).join(' & ');
+  return marks+' · every 30 min'; }
 async function loadReceipts(){
   const list=document.getElementById('rcptList'), wells=document.getElementById('rcpt_wells');
   if(!list) return;
@@ -1718,12 +1724,12 @@ async function loadReceipts(){
   if(!rows.length){ list.innerHTML='<div class="empty">No receipts yet. They show up once a shopper emails one in and we can read it.</div>'; return; }
   // Compact rows (owner 07-15): name + price on the row, EVERYTHING else in the receipt sheet.
   RCPT_ROWS=rows;
-  list.innerHTML=rows.map((r,i)=>`<button class="peek" onclick="rcptSheet(${i})">
-      <span class="pk-main"><span class="pk-t" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(r.product||'(no product parsed)')}</span>
-      <span class="pk-m" style="display:block">${r.claimedBy?'<span style=\'color:var(--green)\'>claimed</span>':'unclaimed'} · ${ago(r.createdAt)} ago</span></span>
+  list.innerHTML=rows.map((r,i)=>{ const nItems=r.itemCount||rcptItems(r).length; return `<button class="peek" onclick="rcptSheet(${i})">
+      <span class="pk-main"><span class="pk-t" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(r.product||'(no product parsed)')}${nItems>1?` +${nItems-1} more`:''}</span>
+      <span class="pk-m" style="display:block">${r.claimedBy?'<span style=\'color:var(--green)\'>claimed</span>':'unclaimed'} · ${ago(r.createdAt)} ago${nItems>1?` · ${nItems} items`:''}</span></span>
       <span class="pk-fact">${r.total?('$'+esch(r.total)):''}</span>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-    </button>`).join('');
+    </button>`; }).join('');
 }
 // Admin diagnostic: read the ingest inbox and show what the parser does with each email (incl. rejects),
 // so we can see whether a receipt arrived and why it did/didn't land. Read-only; admin-gated server-side.
@@ -1731,9 +1737,19 @@ let RCPT_ROWS=[];
 function rcptSheet(i){
   const r=RCPT_ROWS[i]; if(!r) return;
   const line=(k,v)=>v?`<div class="repline"><span class="rl">${k}</span><b>${esch(String(v))}</b></div>`:'';
+  const items=rcptItems(r), cadence=refreshFromHit(r.txnAt);
+  // Every pack on the receipt (was only showing the first). Falls back to the single product for old rows.
+  const itemsHtml=items.length
+    ? `<div class="k-eyebrow" style="margin-top:2px">Items (${r.itemCount||items.length})</div>`
+      +items.map(it=>`<div class="repline"><span class="rl" style="max-width:72%">${esch(it.name)}</span><b>$${esch(it.price)}</b></div>`).join('')
+    : `<div style="font-size:15px;font-weight:700;line-height:1.4;margin:4px 0 10px">${esch(r.product||'(no product parsed)')}</div>`;
   openSheet('Receipt', r.claimedBy?'Claimed · free check granted':'Unclaimed',
-    `<div style="font-size:15px;font-weight:700;line-height:1.4;margin:4px 0 10px">${esch(r.product||'(no product parsed)')}</div>`
-    +line('Machine',r.machineId)+line('Total',r.total?('$'+r.total):null)+line('Order',r.orderId?('#'+r.orderId):null)
+    itemsHtml
+    +(r.subtotal?line('Subtotal','$'+r.subtotal):'')+(r.tax?line('Tax','$'+r.tax):'')
+    +line('Total',r.total?('$'+r.total):null)
+    +(cadence?`<div class="k-eyebrow" style="margin-top:12px">Restock cadence</div>${line('Refreshes',cadence)}<div class="meta" style="font-size:10.5px;color:var(--text-tertiary);margin-top:2px">From the hit at ${esch(r.txnAt||'')}. Holds this week, Sunday to Sunday, until they restock.</div>`:'')
+    +`<div class="k-eyebrow" style="margin-top:12px">Details</div>`
+    +line('Machine',r.machineId)+line('Order',r.orderId?('#'+r.orderId):null)
     +line('Purchased',r.txnAt)+line('From',r.fromEmail||r.from)+line('Store',r.store||r.storeName)
     +line('Claimed by',r.claimedBy)
     +(r.raw?`<div class="k-eyebrow">Raw parse</div><pre style="white-space:pre-wrap;word-break:break-word;font-size:11.5px;background:var(--terminal);box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:14px;padding:12px">${esch(typeof r.raw==='string'?r.raw:JSON.stringify(r.raw,null,2))}</pre>`:''));

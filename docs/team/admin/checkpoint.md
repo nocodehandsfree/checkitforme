@@ -3,6 +3,21 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-19 — KIOSK receipts: full detail + real cadence
+- **Root cause (owner: receipts show 1 pack):** parser (src/gmail-receipts.ts) grabbed only the FIRST
+  line item; schema stored a single product+total. Fixed: parseReceipt now captures ALL items +
+  subtotal/tax/itemCount; kiosk_receipts got items/subtotal/tax/item_count cols (guarded ALTER in
+  bootstrap). Admin receipts view (loadReceipts/rcptSheet) lists every pack + subtotal/tax/total.
+  Parser test (scripts/test-receipt.ts) 15/15 incl. the owner's 3-item receipt (prices sum to subtotal).
+- **Cadence (owner: :03&:33 looks hardcoded):** it was crowd-report-sourced. Owner's real model = anchor
+  to the hit minute, every 30 min (5:14 hit → :14 & :44), holds Sun→Sun until restock. Added
+  refreshFromHit(txnAt) in Admin, shown on each receipt. Works on existing rows (txnAt already stored).
+- **⚠️ PM: promote wanted** — the parser + schema half is server-side (rides the promote train). Admin
+  display shipped now and degrades gracefully (old rows show single product; cadence works from txnAt).
+  Full item list only appears for NEW receipts parsed AFTER the promote. Historical rows stay 1-item
+  (we didn't store raw email). Kiosk-ROW refreshSummary is still crowd-sourced — switching it to
+  receipt-derived needs a machine↔kiosk link (data-model follow-up, not done).
+
 ## 2026-07-18 — CALC full overhaul + accuracy fix (owner review, SHIPPED to Admin)
 Owner tore into the Calc: jargon, missing COGS, numbers that don't line up. Rebuilt, then corrected:
 - **⚠️ Charlie has TWO cost components: ElevenLabs voice + Claude Sonnet brain** (src/voice/prompts.ts
