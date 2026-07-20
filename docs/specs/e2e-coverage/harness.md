@@ -77,14 +77,21 @@ Legend: **P0** = money/core, a break loses a paying customer · **P1** = retenti
   Playwright never does it. That test lives with the owner, not in this suite.
 - Wrap P0 in Checkly (prod monitoring, same code) after launch so a broken checkout pages someone.
 
-## Coverage status (2026-07-20 run — all listed tests driven green vs live staging)
-- **P0: 8/8 green.** 1 journeys.spec `signup` + consumer.spec `P0-1` (freeChecks balance) · 2 journeys `find a store`
-  · 3 local.spec `verdict settles` (dial-safe by design — staging dials real stores, so the live-staging pass
-  stops before the dial; the Fun-store live dial stays an owner/manual check) · 4 consumer `P0-4` · 5 consumer
-  `P0-5` · 6 journeys `upgrade + pay` · 7 journeys `A1 PAYG` · 8 local `A2 last credit → upgrade sheet`.
-- **P1: 7/8 covered.** 9 consumer `P1-9` · 10 referral NOT WRITTEN yet (claim flow needs discovery) · 11 `P1-11`
-  · 12 `P1-12` · 13 `P1-13` (self-skips until staging has confirmed finds nearby) · 14 `P1-14`
-  · 15 journeys `scheduled check` · 16 journeys `zones` + local `zone fire`.
-- **P2/P3: not started** beyond what admin-api.spec/admin.spec already smoke (29/30/33 partially).
-- Known red found on the way: local gate `A6` (closed-store seed missing from /pub/stores/near on the
-  throwaway server) — pre-existing, not a harness path; needs its own look.
+## Coverage status (2026-07-20, second pass — staging gate 40 ✓ / 3 honest skips, local gate 13 ✓)
+- **P0: 8/8 green.** 1 journeys `signup` + consumer `P0-1` · 2 journeys `find a store` · 3 local `verdict
+  settles` (dial-safe by design; the Fun-store live dial stays owner-manual) · 4 `P0-4` · 5 `P0-5`
+  · 6 journeys `upgrade + pay` · 7 journeys `A1 PAYG` · 8 local `A2`.
+- **P1: 8/8 green.** 9 `P1-9` · 10 `P1-10` (link + claim, both accounts paid) · 11 `P1-11` · 12 `P1-12`
+  · 13 `P1-13` (self-skips until staging has confirmed finds nearby) · 14 `P1-14` · 15 journeys · 16 journeys+local.
+- **P2: 11/12 green, 1 not automatable.** 17 `P2-17` · 18 `P2-18` (start handshake; the ingest half rides a
+  real Gmail inbox) · 19 `P2-19` · 20 `P2-20` — pins the perk GATE: no published tier grants exact_products,
+  so the picker is comp-only today; entitled half owner-manual · 21 `P2-21` (self-skips: no mapped
+  non-callable chain in staging's LA feed) · 22 `P2-22` · 23 `P2-23` · 24 `P2-24` · 25/26 `P2-25/26`
+  (hidden half; entitled half needs comp + flag, owner-manual) · 27 local `P2-27` · **28 NOT AUTOMATABLE**:
+  the too-soon guard sits after the sim early-return, so no test can reach it without a real dial.
+- **P3: 12/12 surfaces green.** Local `P3-29++` walks all 12 admin sections (real app.html via
+  admin.localhost on the throwaway server) · writes: `P3-31` add/delete store · `P3-33` statuses edit
+  · `P3-35` policy flag · `P3-38` GTM toggle (all local, all restore) · `P3-34` plans publish → in_sync
+  (staging, Stripe TEST) · 40's live Fun-store dial stays owner-manual (it rings a real phone).
+- Fixed on the way: stale `A6` (expected closed stores IN the feed; the 07-16 open-now law drops them
+  server-side) and admin.spec's dead `#tr_stats` marker.
