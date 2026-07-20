@@ -76,3 +76,15 @@ Legend: **P0** = money/core, a break loses a paying customer · **P1** = retenti
 - The **real-money prod money-path** (signup → call → upgrade with a real card) is OWNER-MANUAL —
   Playwright never does it. That test lives with the owner, not in this suite.
 - Wrap P0 in Checkly (prod monitoring, same code) after launch so a broken checkout pages someone.
+
+## Coverage status (2026-07-20 run — all listed tests driven green vs live staging)
+- **P0: 8/8 green.** 1 journeys.spec `signup` + consumer.spec `P0-1` (freeChecks balance) · 2 journeys `find a store`
+  · 3 local.spec `verdict settles` (dial-safe by design — staging dials real stores, so the live-staging pass
+  stops before the dial; the Fun-store live dial stays an owner/manual check) · 4 consumer `P0-4` · 5 consumer
+  `P0-5` · 6 journeys `upgrade + pay` · 7 journeys `A1 PAYG` · 8 local `A2 last credit → upgrade sheet`.
+- **P1: 7/8 covered.** 9 consumer `P1-9` · 10 referral NOT WRITTEN yet (claim flow needs discovery) · 11 `P1-11`
+  · 12 `P1-12` · 13 `P1-13` (self-skips until staging has confirmed finds nearby) · 14 `P1-14`
+  · 15 journeys `scheduled check` · 16 journeys `zones` + local `zone fire`.
+- **P2/P3: not started** beyond what admin-api.spec/admin.spec already smoke (29/30/33 partially).
+- Known red found on the way: local gate `A6` (closed-store seed missing from /pub/stores/near on the
+  throwaway server) — pre-existing, not a harness path; needs its own look.
