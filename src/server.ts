@@ -3470,7 +3470,23 @@ app.post("/app/check-live", async (c) => {
 });
 
 // ============ Manage Zones (consumer, premium `zone_sweeps`) — spec docs/archive/manage-zones-SHIPPED.md ============
-const zoneRunSids = new Map<string, { sid: string; retailerId: number }[]>(); // runId -> per-store Twilio callSids (in-memory, for Stop all / stop one)
+const zoneRunSids = new Map<string, { room: string; retailerId: number }[]>(); // runId -> per-store bridge rooms (in-memory, for Stop all / stop one)
+async function zoneHangRoom(room: string): Promise<void> {
+  // Same semantics as /pub/bridge-hangup: WE ended it — stamp admin_hangup (never "nobody answered"),
+  // then complete the Twilio leg. Delta rooms have no Twilio sid here; the stamp alone ends their row.
+  const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
+  const ids = [room.startsWith("delta:") ? room : `bridge:${room}`, bridgeConversationId(room) || ""].filter(Boolean);
+  await db.update(callResults)
+    .set({ status: "admin_hangup", statusKey: "admin_hangup", confirmed: null, completedAt: Math.floor(Date.now() / 1000) })
+    .where(and(inArray(callResults.providerCallId, ids), inArray(callResults.status, ["dialing", "in_progress", "queued"])))
+    .catch((e) => console.error("zone admin_hangup stamp:", e));
+  const callSid = roomCallSids.get(room);
+  if (sid && tok && callSid) {
+    await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}.json`, {
+      method: "POST", headers: { Authorization: "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64"), "content-type": "application/x-www-form-urlencoded" }, body: "Status=completed",
+    }).catch(() => {});
+  }
+}
 
 /** Bearer auth + zone_sweeps entitlement. ok:false short-circuits with the right status. */
 async function zoneAuth(authHeader?: string): Promise<
@@ -3580,16 +3596,20 @@ app.post("/app/zones/:id/check", async (c) => {
   const runId = `z${id}-${crypto.randomUUID()}`;
   const isPrivate = await isFinderPrivate(g.a);
   const placed: { retailerId: number; cid: string | null }[] = [];
-  const sids: { sid: string; retailerId: number }[] = [];
-  const viaBridge = (await getPolicy()).flags.cheapBridgeAll; // cheap lane: recipe nav + agent only on human
+  const rooms: { room: string; retailerId: number }[] = [];
+  // A zone store dials EXACTLY like a single check — bridgeStoreCall, the one path that carries the
+  // full mapping stack (workflow lanes incl. Alpha/Bravo/Delta, chain nav recipes, connect-on-human,
+  // voices). The old cheap lane skipped lane routing and broke every menu store (owner 07-20).
+  // Only differences: the row is stamped with the zoneRunId, and the governor slot is "batch" so a
+  // sweep can never starve instant single checks.
   for (const s of rows) {
     try {
-      const r = await (viaBridge ? bridgeCheckCall : triggerCall)({ retailerId: s.id, categoryId: cat.id, mode: "restock", finderUserId: g.u.id, isPrivate, zoneRunId: runId });
-      placed.push({ retailerId: s.id, cid: (r as { providerCallId?: string }).providerCallId ?? null });
-      const sid = (r as { callSid?: string }).callSid; if (sid) sids.push({ sid, retailerId: s.id });
+      const r = await bridgeStoreCall(s.id, [cat.id], undefined, { userId: g.u.id, isPrivate }, false, { zoneRunId: runId, priority: "batch" });
+      if (r.room) { placed.push({ retailerId: s.id, cid: r.room.startsWith("delta:") ? r.room : `bridge:${r.room}` }); rooms.push({ room: r.room, retailerId: s.id }); }
+      else { console.error("zone check failed", s.id, r.error); placed.push({ retailerId: s.id, cid: null }); }
     } catch (e) { console.error("zone check failed", s.id, e); placed.push({ retailerId: s.id, cid: null }); }
   }
-  zoneRunSids.set(runId, sids); setTimeout(() => zoneRunSids.delete(runId), 30 * 60 * 1000);
+  zoneRunSids.set(runId, rooms); setTimeout(() => zoneRunSids.delete(runId), 30 * 60 * 1000);
   return c.json({ runId, stores: placed });
 });
 app.get("/app/zones/run/:runId", async (c) => {
@@ -3615,12 +3635,7 @@ app.get("/app/zones/run/:runId", async (c) => {
 app.post("/app/zones/run/:runId/stop", async (c) => {
   const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
   const sids = zoneRunSids.get(c.req.param("runId")) || [];
-  const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
-  if (sid && tok) for (const { sid: callSid } of sids) {
-    await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}.json`, {
-      method: "POST", headers: { Authorization: "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64"), "content-type": "application/x-www-form-urlencoded" }, body: "Status=completed",
-    }).catch(() => {});
-  }
+  for (const { room } of sids) await zoneHangRoom(room);
   return c.json({ ok: true, stopped: sids.length });
 // Stop ONE store's call in a live run (owner 07-19: tap a not-yet-checked store -> "Stop checking").
 // A queued-by-governor ticket (no callSid yet) can't be stopped here — that cancel lives with the
@@ -3631,12 +3646,7 @@ app.post("/app/zones/run/:runId/stop-one", async (c) => {
   const rid = Number(b.retailerId);
   const all = zoneRunSids.get(c.req.param("runId")) || [];
   const mine = all.filter((x) => x.retailerId === rid);
-  const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
-  if (sid && tok) for (const { sid: callSid } of mine) {
-    await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}.json`, {
-      method: "POST", headers: { Authorization: "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64"), "content-type": "application/x-www-form-urlencoded" }, body: "Status=completed",
-    }).catch(() => {});
-  }
+  for (const { room } of mine) await zoneHangRoom(room);
   return c.json({ ok: true, stopped: mine.length });
 });
 });
@@ -6078,7 +6088,7 @@ app.post("/pub/bridge-hangup", async (c) => {
   return c.json({ ok: true });
 });
 // Resolve a store + category, then place a bridge call to it. Used by Runnr "Listen live".
-async function bridgeStoreCall(retailerId: number, categoryIds: number[], specificProduct?: string, finder?: { userId?: string; isPrivate?: boolean }, kioskMode?: boolean): Promise<{ room?: string; error?: string }> {
+async function bridgeStoreCall(retailerId: number, categoryIds: number[], specificProduct?: string, finder?: { userId?: string; isPrivate?: boolean }, kioskMode?: boolean, opts?: { zoneRunId?: string; priority?: "interactive" | "batch" }): Promise<{ room?: string; error?: string }> {
   if (await isCallingPaused()) return { error: "calling_paused" }; // global spend kill-switch
   const primary = categoryIds[0];
   const extras = categoryIds.slice(1);
@@ -6090,7 +6100,7 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
     const ret = (await db.select().from(retailers).where(eq(retailers.id, retailerId)))[0];
     const wf = ret ? await resolveWorkflow(ret.id, ret.chainId ?? null).catch(() => null) : null;
     if (wf?.lane === "delta") {
-      const r = await triggerCall({ retailerId, categoryId: primary, mode: "restock", specificProduct, finderUserId: finder?.userId ?? undefined, isPrivate: finder?.isPrivate ?? false, kioskMode });
+      const r = await triggerCall({ retailerId, categoryId: primary, mode: "restock", specificProduct, finderUserId: finder?.userId ?? undefined, isPrivate: finder?.isPrivate ?? false, kioskMode, zoneRunId: opts?.zoneRunId });
       if (r.providerCallId) return { room: r.providerCallId };
       return { error: "delta call did not start" };
     }
@@ -6125,13 +6135,17 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
   // headless bridge check). The live-audio room + response shape are unchanged either way.
   const governed = await governorEnabled();
   let slotRowId: number | null = null;
-  if (governed) {
-    const [row] = await db.insert(callResults).values({ retailerId, categoryId: primary, mode: "restock", status: "dialing", finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false }).returning();
+  if (governed || opts?.zoneRunId) {
+    // Zone rows pre-insert too: a store whose dial fails must still appear on the run report as a
+    // terminal row, not silently vanish (the connect-only insert would drop it).
+    const [row] = await db.insert(callResults).values({ retailerId, categoryId: primary, mode: "restock", status: "dialing", finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false, zoneRunId: opts?.zoneRunId ?? null }).returning();
     slotRowId = row.id;
-    const slot = await acquireCallSlot({ key: `call:${row.id}`, priority: "interactive", userId: finder?.userId ?? undefined, ttlSec: (pol.bail.maxCallSeconds || 180) + 120 });
-    if (slot === null) {
-      await db.update(callResults).set({ status: "failed", statusKey: "system_busy", summary: "All lines busy — the check will be retried." }).where(eq(callResults.id, row.id));
-      return { error: "calls_busy" }; // routeCheck sees this and queues the check instead of failing
+    if (governed) {
+      const slot = await acquireCallSlot({ key: `call:${row.id}`, priority: opts?.priority ?? "interactive", userId: finder?.userId ?? undefined, ttlSec: (pol.bail.maxCallSeconds || 180) + 120 });
+      if (slot === null) {
+        await db.update(callResults).set({ status: "failed", statusKey: "system_busy", summary: "All lines busy — the check will be retried." }).where(eq(callResults.id, row.id));
+        return { error: "calls_busy" }; // routeCheck sees this and queues the check instead of failing
+      }
     }
   }
 
@@ -6139,11 +6153,11 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
   // we pre-inserted; ungoverned → insert the PRIMARY row now (today's behavior). ingest fans out each
   // extra line into its own row from the per-category extraction.
   const result = await placeBridgeCall(v.retailer.phone, v.dynamicVars, (convId) => {
-    if (governed && slotRowId != null) {
+    if (slotRowId != null) {
       db.update(callResults).set({ providerCallId: convId, status: "in_progress" }).where(eq(callResults.id, slotRowId))
         .catch((e) => console.error("bridge call log update:", e));
     } else {
-      db.insert(callResults).values({ retailerId, categoryId: primary, mode: "restock", status: "in_progress", providerCallId: convId, finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false })
+      db.insert(callResults).values({ retailerId, categoryId: primary, mode: "restock", status: "in_progress", providerCallId: convId, finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false, zoneRunId: opts?.zoneRunId ?? null })
         .catch((e) => console.error("bridge call log insert:", e));
     }
     // Per-store talk cap (chains.maxTalkSeconds) wins over the global bail ceiling when set, so a
@@ -6153,7 +6167,7 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
   // Governed bookkeeping: point the pre-inserted row at the room (so /pub/result resolves it before
   // connect), release the slot on a dial that never placed, and register a finalizer that frees the
   // slot + writes the real reason if the call ends before a human answers.
-  if (governed && slotRowId != null) {
+  if (slotRowId != null) {
     if (result.error || !result.room) {
       await releaseCallSlot(`call:${slotRowId}`);
       await db.update(callResults).set({ status: "failed", summary: result.error || "bridge call failed" }).where(eq(callResults.id, slotRowId));
