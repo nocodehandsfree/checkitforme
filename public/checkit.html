@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r158" />
+<meta name="x-rev" content="glassfix-r159" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -7047,7 +7047,7 @@ async function renderZonesList(){
   // Paint the cached list instantly (no spinner) when we've loaded zones before this session, then refresh
   // silently underneath — the /app/zones round-trip is the slow part; the user shouldn't stare at loaddots.
   if(Array.isArray(ZONES.list)) zonePaintList(ZONES.list);
-  else z.innerHTML=`<div class="zframe">${zFrameHead(t('zones.title','My Zones'))}<div class="zf-scroll"><div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:40px 0"><span></span><span></span><span></span></div></div></div>`;
+  else z.innerHTML=`<div class="zframe"><div class="zf-scroll" style="justify-content:center"><div class="loaddots" style="display:flex;justify-content:center;gap:8px"><span></span><span></span><span></span></div></div></div>`; // no header while loading (redesign 07-19) — dots centered on the sheet
   let list=null; try{ const r=await appApi('/app/zones'); if(Array.isArray(r)) list=r; else if(r&&Array.isArray(r.zones)) list=r.zones; }catch(_){ }
   if(list==null){ if(!Array.isArray(ZONES.list)) zonePaintList([]); return; } // network hiccup — keep whatever's on screen
   ZONES.list=list; zonePaintList(list);
@@ -7082,7 +7082,7 @@ function zonePaintList(list){
     ? `<div class="zframe">
         <div class="zlisthead"><div class="ttl">${t('zones.title2','Zones')}</div><button class="znewpill" onclick="zoneNew()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>${t('zones.new','New zone')}</button></div>
         <div class="zf-scroll">${cards}</div></div>`
-    : `<div class="zframe"><div class="zf-scroll">
+    : `<div class="zframe"><div class="zf-scroll" style="justify-content:center">
         <div class="zempty">${t('zones.empty','Save the stores near you as a zone, then check them all in one tap.')}</div>
         <button class="znew" onclick="zoneNew()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg><span>${t('zones.new','New zone')}</span></button>
       </div></div>`;
