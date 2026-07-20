@@ -3602,8 +3602,9 @@ async function boot(){
   CATS=Array.isArray(c)?c:[];
   if(Array.isArray(st)) st.forEach(x=>RSTATUSES[x.key]=x);
   if(pol&&!pol.error){ const flags=Object.assign({},POLICY.flags,pol.flags||{}); POLICY=Object.assign(POLICY,pol); POLICY.flags=flags; }
-  // SMS dark (flags.smsAlerts off) → the alert inputs ask for email from first paint, not just on open.
-  if(!smsAlertsOn()){ try{ const w=$('watch_contact'); if(w) w.placeholder=t('em.ph','you@email.com'); const s=$('sch_contact'); if(s) s.placeholder=t('em.ph','you@email.com'); }catch(_){ } }
+  // SMS dark (flags.smsAlerts off) → the alert inputs ask for email from first paint, not just on
+  // open. Drop the i18n-ph attr too or the language pass re-stamps "email or phone" right back.
+  if(!smsAlertsOn()){ try{ [ $('watch_contact'), $('sch_contact') ].forEach(el=>{ if(el){ el.removeAttribute('data-i18n-ph'); el.placeholder=t('em.ph','you@email.com'); } }); }catch(_){ } }
   applyBrand(); applyFlags(); renderChips(); renderStores(); applyLang();
   // A result painted instantly (from cache) or before the registry loaded → repaint it now that the
   // statuses registry + categories are in, so the verdict copy/emoji upgrade to the owner-edited ones.
