@@ -223,6 +223,96 @@ test.describe("P2 harness paths (staging)", () => {
     expect(overflow, "no horizontal overflow in Spanish").toBeLessThanOrEqual(1);
   });
 
+  // P2-17: kiosk mode + a refresh-time report lands and pays the reward credits.
+  // Label-based kiosk ("E2E Harness Kiosk") — never attached to a real store's stats.
+  test("P2-17: kiosk mode renders + refresh report grants the reward", async ({ page, request }) => {
+    const base = new URL(test.info().project.use.baseURL as string).origin;
+    await page.goto("/");
+    await expect(page.locator("#findcard")).toBeVisible({ timeout: 15_000 });
+    await page.evaluate(() => (window as any).setMode("kiosk"));
+    await expect(page.locator('.modetab[data-mode="kiosk"]'), "kiosk tab active").toHaveClass(/on/);
+    const token = await mintToken(request, base, freshPhone());
+    const before = await me(request, base, token);
+    const r = await request.post(`${base}/pub/kiosks/report`, {
+      headers: { ...bearer(token), "content-type": "application/json" },
+      data: { label: "E2E Harness Kiosk", minutes: [15], category: "Pokémon" },
+    });
+    expect(r.ok(), `kiosk report → 200 (got ${r.status()})`).toBeTruthy();
+    const j = await r.json();
+    expect(j.ok, "report saved").toBeTruthy();
+    const reward = j.reward?.credits ?? 0;
+    expect(reward, "report pays a credit reward").toBeGreaterThan(0);
+    expect((await me(request, base, token)).credits, "reward landed on the account").toBe(before.credits + reward);
+  });
+
+  // P2-18: kiosk receipt — the widget's start handshake serves (the ingest half rides a real
+  // Gmail inbox + a physical receipt, which no test can fake honestly).
+  test("P2-18: kiosk-receipt flow is wired (start handshake serves)", async ({ request }) => {
+    const base = new URL(test.info().project.use.baseURL as string).origin;
+    const r = await request.get(`${base}/pub/kiosk-receipt/start`, { headers: UA });
+    expect(r.ok(), `/pub/kiosk-receipt/start → 200 (got ${r.status()})`).toBeTruthy();
+    expect((await r.json()).email, "receipt inbox address served").toBeTruthy();
+  });
+
+  // P2-20: the "anything specific?" set/product picker is a PERK (v2 gates it on exact_products,
+  // which no published tier grants — comp/owner accounts only). The customer-facing contract to
+  // pin is therefore the gate: a free account must NOT see the picker. Entitled half: owner-manual.
+  test("P2-20: product picker stays hidden for a free account (perk gate)", async ({ page, request }) => {
+    const base = new URL(test.info().project.use.baseURL as string).origin;
+    const token = await mintToken(request, base, freshPhone());
+    await injectAuth(page, token);
+    await page.goto("/");
+    await expect(page.locator("body")).toHaveClass(/authed/, { timeout: 20_000 });
+    await page.fill("#search", "Los Angeles, CA");
+    await page.press("#search", "Enter");
+    const rows = page.locator("#storelist .store:not(.shut):not(.coming)");
+    await expect(rows.first()).toBeVisible({ timeout: 30_000 });
+    await rows.first().click();
+    await expect(page.locator("#csheet")).toHaveClass(/on/, { timeout: 15_000 });
+    await expect(page.locator("#prodwrap"), "exact-product picker is perk-gated").toBeHidden();
+  });
+
+  // P2-21: non-callable chain → the sell-methods card replaces the call button. The retail list
+  // filters these rows near LA, so drive the app's own selection path (pickStore — exactly what a
+  // row tap calls) on a non-callable store from the live feed cache.
+  test("P2-21: non-callable store shows ways-to-get, no call button", async ({ page }) => {
+    await page.goto("/");
+    const rows = page.locator("#storelist .store");
+    await expect(rows.first(), "store list loaded (auto-located)").toBeVisible({ timeout: 30_000 });
+    const picked = await page.evaluate(() => {
+      const st = ((window as any).STORES || []).find((s: any) => s.callable === false && !s.hasKiosk && s.callReady !== false);
+      if (!st) return null;
+      (window as any).pickStore(st.id);
+      return st.name;
+    });
+    test.skip(!picked, "no non-callable store in the live feed cache");
+    await expect(page.locator("#sellmeta"), "sell-methods card renders").toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("#sellmeta"), "restock-notify path offered instead of a call").toContainText(/Notify me/i);
+    await expect(page.locator("#checkBtn"), "no call button for a non-callable chain").toBeHidden();
+  });
+
+  // P2-23: feedback on a verdict — the "what was it really" survey rides UNCLEAR verdicts.
+  test("P2-23: verdict feedback records + thank-you shows", async ({ page }) => {
+    await page.goto(`/?call=sim_${Date.now() - 60_000}_maybe`);
+    await expect(page.locator("#result")).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator("#fbk"), "feedback block on the unclear verdict").toBeVisible({ timeout: 15_000 });
+    await page.locator("#fbk .fbk-b").first().click();
+    await expect(page.locator("#fbk .fbk-thanks"), "thank-you replaces the buttons").toBeVisible({ timeout: 10_000 });
+  });
+
+  // P2-25/26: Hobby + Thrift are entitlement-gated chips — hidden for a plain free account
+  // (both flags are OFF at launch; the entitled half needs a comp account + flag, owner-manual).
+  test("P2-25/26: hobby + thrift chips hidden for a free account", async ({ page, request }) => {
+    const base = new URL(test.info().project.use.baseURL as string).origin;
+    const token = await mintToken(request, base, freshPhone());
+    await injectAuth(page, token);
+    await page.goto("/");
+    await expect(page.locator("body")).toHaveClass(/authed/, { timeout: 20_000 });
+    await expect(page.locator("#findcard")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: /^hobby$/i }), "no Hobby chip").toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^thrift$/i }), "no Thrift chip").toHaveCount(0);
+  });
+
   // P2-24: store request — "don't see your store" submits and thanks the hunter.
   test("P2-24: store request submits + confirmation shows", async ({ page }) => {
     await page.goto("/");
