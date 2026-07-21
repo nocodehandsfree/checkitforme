@@ -18,10 +18,7 @@
   **Owner flips it ON when Toll/A2P approves — no rebuild.** Proven live: consumer.spec P1-9b.
 - **Referrals PROVEN end-to-end (GTM card can close)** — consumer.spec P1-10 (API) + P1-10b (real ?ref
   link → welcome → signup → auto-claim pays BOTH + count ticks). Was "BUILT, needs walk" — walked.
-- **GTM cards now tap-to-expand** (`public/app.html`, gtmToggleOpen) — owner couldn't read full card
-  text. Shipped to Admin via ship-admin.sh @ 4e8c5b5.
-- Two readable owner reports in scratchpad (launch-test-report.md, launch-list.md) — NOT committed
-  (scratchpad = trash); regenerate from harness.md + `/api/gtm` if needed.
+- **GTM cards now tap-to-expand** (`public/app.html`, gtmToggleOpen) — shipped via ship-admin.sh @ 4e8c5b5.
 
 ## 📍 2026-07-16 — everything on staging; ONE promote lights up the last two pipes
 - **Settings mirror prod→staging LIVE (staging half)** — `src/settings-sync.ts`, pull-only every
@@ -30,13 +27,10 @@
   20/20 suite in test-all. **FULLY LIVE since the 07-16 promote** — PM verified the puller's
   status shows ok runs moving real keys (policy_json, vt_plans, statuses) prod→staging every minute.
   Zero overlap with DD's store/learned pipes (asserted in tests; notes swapped in her checkpoint).
-- **PR #18 MERGED to staging** (PM-confirmed promote; cc27924, verified deployed): cheap-bridge
-  wiring (all 7 non-live paths ride Mapper recipes via bridgeCheckCall), real call-failed reasons
-  (voicemail/busy/bad_number; voicemail no longer mislabeled "closed"), bridge echo gate.
-  `cheapBridgeAll` flag confirmed OFF live — owner flips it (Admin → Policy) after Fun-store tests.
-- **Admin ship-path decouple on staging** — after next promote, Addie ships app.html via
-  `bash scripts/ship-admin.sh` (~10s, atomic, rollback, bundled fallback; --staging rehearses,
-  --status shows what's live). PM queue: one rehearsal with a real commit, then it's her flow.
+- **PR #18 MERGED to staging** (cc27924, deployed): cheap-bridge wiring, real call-failed reasons,
+  bridge echo gate. `cheapBridgeAll` flag OFF live — owner flips it (Admin → Policy) after Fun tests.
+- **Admin ship-path decouple on staging** — Addie ships app.html via `bash scripts/ship-admin.sh`
+  (~10s, atomic, rollback, bundled fallback). PM queue: one rehearsal with a real commit.
 - **Launch gate = `bash scripts/launch-gate.sh`** (local+staging; `prod` for post-promote —
   enters via peek). Covers signup/check/pay/cancel/PAYG/gates/zones/schedules/closed-kiosk cards/
   annual price/4 brands/admin. Last full runs GREEN (local 7/7 · staging 9/9 · prod 15/15).
