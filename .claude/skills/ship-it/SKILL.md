@@ -3,8 +3,9 @@ name: ship-it
 description: >-
   Load the moment you believe a feature or fix is done, BEFORE you tell the owner
   it's done. Triggers on "it's done / finished / that works / ready to ship / I
-  fixed it". It is the mandatory done-sequence: typecheck, full test suite, drive
-  the change yourself on staging like a real user, push, verify live, then report
+  fixed it". It is the mandatory done-sequence: typecheck, the tests for what you
+  changed (NEVER the full suite unprompted, never in the background), drive the
+  change yourself on staging like a real user, push, verify live, then report
   in one line with evidence. Use it to stop yourself from claiming "should work".
 ---
 
@@ -14,8 +15,10 @@ description: >-
 
 ## The sequence
 1. **Typecheck:** `npx tsc --noEmit` — must be clean.
-2. **Full suite:** `bash scripts/test-all.sh` — units + integration + the design-token/store-contract
-   gates. Green, or it isn't done.
+2. **Tests for what you changed** — run the specific test(s) covering the files you touched, not the
+   world. The full `bash scripts/test-all.sh` suite boots servers and lingers, so it's GATED: run it
+   ONLY when the owner says "run the full suite" (it prompts before running). Never fire it for a
+   question, a read, or a docs-only change.
 3. **Push — it's part of building, not after it.** `git add -A && git commit && git push` to `staging`
    in the SAME turn. `staging.checkitforme.com` only shows what's PUSHED (Railway auto-deploys on
    push), so unpushed work = the owner can't test it = NOT done.

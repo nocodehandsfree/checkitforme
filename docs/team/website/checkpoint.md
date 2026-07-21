@@ -1,78 +1,74 @@
 # Check - Website — CHECKPOINT (current state)
 
 > **Volatile — update at every "Checkpoint".** Newest on top, bullets, prune finished (history = git).
-> Lane: consumer web app `public/checkit.html` + consumer routes in `src/server.ts`. STAGING-FIRST
-> (`staging` → `staging.checkitforme.com`; promote = apply on `main`). Clean split with the other dev:
-> **he owns the tint CSS** (`__bootTone`/`tone-*`/body wash/sheet chrome), **I own view/mode/nav**.
 
-## ✅ 07-19b — REFERRAL WELCOME + ZONE REPORT shipped to staging (the 3-landing-pages plate)
-- **Referral welcome** (`?ref` on homepage, not signed in) rebuilt to FEEL like the in-stock share card:
-  green-wash card (r40) + bleeding check watermark + glow-dot pill + brand-color hero + right-aligned
-  subline + ring-capsule shine CTA. Lives in `openRefWelcome()` (checkit.html), `rfw-` prefixed inline
-  `<style>`. Renders as a native v2 bottom sheet (the sheetHObserver bottom-anchors EVERY `.overlay` —
-  do NOT try to center it with position:fixed, the observer overrides). Modal made transparent +
-  `margin:0 auto` so the card centers horizontally. Copy keys `refw.badge/head/at/what/cta/foot`, EN+ES.
-  CTA → `refWelcomeClaim()` → openAuth (signup). URL: `/?ref=abc123` (open NOT signed in / private tab).
-- **Zone report** (`renderZoneRun`, Screen C) REBUILT from real site elements (owner rejected a first
-  emoji→dot recolor as freestyle — "use the elements from the comps, don't make shit up"). There is NO
-  comp for this exact page; assemble from what exists: summary = the My-Zones card grammar (`.zc` +
-  `.zc-pill.in` + `.zdots` + `.zc-when` + `.zc-faces` logo tiles of the in-stock hits); every store row
-  = the site's own `.store` row (`.ic` logo tile via storeFace + `.nm` + `.lo` with the built-in
-  `.sdot` in/out); tap → real `chatBubbles` transcript. Verdict word takes the result tone colour.
-  **BUG fixed:** `zoneRunTone` matched 'in_stock' as a substring of 'not_in_stock' → every out-of-stock
-  store painted green. Now negatives first, in-stock matched exactly. Verified via mock `ZONES.run.data`
-  render (staging calls are OFF) EN+ES + a row expanded. LESSON: a 1.2MB `.dc.html` comp is RENDERED,
-  not grepped — an empty grep is NOT "no comp"; render it or use the live elements, never invent.
-- Both driven locally (Playwright + local STAGING=1 server, host-resolver MAP *.checkitforme.com), EN+ES.
-  tsc + qa-design + full test-all all green. Rebased onto staging, merged (ff), pushed → live.
-- **PR note:** session branch == staging after the ff-merge (CLAUDE.md flow: session branches merge to
-  staging and die), so an open PR to staging is empty/impossible — that's expected, not a miss.
+## ⚖️ STANDING ORDERS (permanent — obey on every task, they survive every session)
+1. **Lane:** consumer web app `public/checkit.html` + consumer routes in `src/server.ts`. The CALLING
+   ENGINE (`src/voice/`) is FROZEN — the machine blocks edits (owner order after this lane's
+   predecessor flip-flopped a one-line engine fix and bypassed the proven dial path). If a task seems
+   to need an engine change, write `PM: engine change wanted — <why>` here and STOP. Store settings
+   (mute/method/recipes/logo flags) are also out of bounds — data lane only.
+2. **ADDITIVE (CLAUDE.md LAW 1):** new work snaps onto existing pieces — name them BEFORE building:
+   store row (`.store`/`.ic`/storeFace) · logo system (storeFace + `.slogo.emboss`; read
+   `docs/data/store-logos.md` first) · sheets (openSheet physics; sheetHObserver bottom-anchors EVERY
+   `.overlay` — never fight it with position:fixed) · view/mode nav incl. the shared BACK behavior
+   (every new screen wires into it) · toast = ONE gray line, EN+ES · i18n `t()`/`tf()`, Spanish in the
+   SAME commit · live-call view (steps 1-8 + `/listen` audio) is display-only here — feed is engine-side.
+3. **Design + copy:** open `docs/design/STYLE_GUIDE.md` + `docs/design/copy/COPY_STYLE_GUIDE.md` first;
+   build 1:1 to `docs/design/comps/WEBSITE_COMPS.dc.html`. A `.dc.html` comp is RENDERED, never
+   grepped — no comp = assemble from live site elements, never invent. Never re-introduce a reverted
+   design. Status/system copy comes from the owner/Copy lane — don't author it.
+4. **Done = the ship-it skill:** tsc + tests for what you changed + DRIVE it (local server + Playwright
+   recipe below) + push same turn + Done Report (Built / Drove it / Left). iOS paint is the owner's
+   phone only: ship ONE change, "pushed, check your phone," never "fixed."
+5. Never run the full suite unprompted, never in background. Never wait on a promote — leave
+   `PM: promote wanted — <what>` here and move on. Don't self-start ideas the owner said to hold.
 
-## 🔧 07-19 — SHARE/LANDING (/s renderShare) rebuilt to the approved in-stock comp (LIVE on staging)
-Owner drove this in a long, painful session. Where it landed:
-- **In-stock share landing = APPROVED + live.** Built element-for-element from the P6 in-stock comp
-  (`docs/design/comps/WEBSITE_COMPS.dc.html`). The box: 1px rgba border, r40, green wash
-  `linear-gradient(180deg,#266440 0%,#20202A 46%)`, **bleeding check watermark top-right** (`.cwmwrap`
-  overflow-clip + `.cwm`). Inside: small green **IN STOCK** pill (glow dot) · **headline in the
-  product's own brand color** (`brand.accent` — Pokémon yellow, One Piece red) · **`@ Store Name`**
-  white/bold, right-aligned to the end of the headline (`.title` inline-block + text-align:right) ·
-  subhead · **green ring-capsule CTA** (call-page "check another store" style: `.cta` gradient ring +
-  `.cin` + `.shine` ckShine + arrow) reading **YOUR TURN** · **First one's on us!** gray. Bilingual
-  (EN+ES same commit). `<style>` fenced in `/*CP*/…/*CPEND*/` so qa-design holds it to the token set.
-- **Copy is placeholder-approved** — owner supplied it live. Use "Check AI" (two words) per copy guide.
-- `/s` cache lowered to `max-age=30` (browser was serving stale versions and masking fixes).
-- **Verify recipe that works:** boot a local server (`PORT=88xx tsx src/server.ts`, needs ELEVENLABS_*
-  + ADMIN_TOKEN env), then Playwright screenshot via `playwright-core` +
-  `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` (run node with `NODE_PATH=…/node_modules`).
-  Script lives in scratchpad `shot.cjs`. **tsx has no hot-reload — restart the server after edits.**
+## 🔧 Verify recipe that works (07-19)
+Local server `PORT=88xx tsx src/server.ts` (needs ELEVENLABS_* + ADMIN_TOKEN env) + Playwright via
+`playwright-core` + `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` (NODE_PATH to node_modules).
+tsx has NO hot-reload — restart after edits. headless→staging TLS is proxy-blocked: drive LOCAL.
 
-## 🚨 07-19 OPEN BUG — thin GREEN LINE on the /s card's BOTTOM EDGE, iPhone only (UNRESOLVED)
-- Owner sees a thin green line hugging the card's bottom edge on his iPhone. **It has NEVER reproduced
-  in headless Chromium** — every screenshot shows a clean bottom. Classic iOS-paint blind spot.
-- Owner's key clue: **the line predates the brandmark, the border, and the wash** — so none of those
-  are it (I wasted ~7 tries "fixing" each; all wrong). Only element green-and-near-the-bottom in every
-  version is the **CTA button** (green glow in v1 → green ring + light-green `.shine` clipped by
-  `.cin{overflow:hidden;border-radius:999px}` since). **Prime suspect: `.cin` overflow+radius clip
-  leaking the shine's green on iOS.** Full write-up in `docs/shared/GOTCHAS.md`.
-- **NEXT PERSON: bisect on a real iPhone.** Try (a) drop `.shine`, (b) drop `.cin` overflow:hidden,
-  (c) swap the ring for a flat border — one at a time, on-device. **Do NOT change the owner-approved
-  design (brandmark position, border, wash) to chase it** — that was my mistake and it enraged him.
+## ✅ 07-21 (Webbie) — ONE email-alert process + My Checks → Alerts list (branch claude/webbie-checkpoint-yokoam)
+- **Subscribe = one path** (`watchStore`): confirmed email → instant ON + gray toast "We'll email you
+  when it's back", no confirm sent. No email → inline ask → ONE confirm; pending → sheet top "Check
+  your inbox". Pending watch turns on by itself (delivery gated on emailVerifiedAt). Email-only channel.
+  `openWatch`/upsell/notify button all route here. Confirm sheet reuses `#watchOverlay`.
+- **Alerts list** (`openAlerts`): each watch = the site's store row + On/Off switch (reuses `.ho-toggle`),
+  master "Pause all alerts" on top, each row removable (trash). Replaces old mute/stop. Make-room mode
+  when a new watch hits the 10 cap. EN+ES. New `.alsw/.alrm/.alpause/.almk` CSS.
+- **Server** (`src/`, prod via promote): `accounts.alerts_paused_at` (bootstrap ALTER); subscribe returns
+  on/pending/need_email + enforces cap 10 (on OR off holds a slot); `/app/alerts/pause-all`; myAlerts adds
+  location + paused + slots; fan-out skips paused. **PM: promote wanted — the alerts server half.**
+- **Drove it** local server + real routes: need_email→confirm→verified→instant-on, cap bounce + make-room,
+  toggle off/on, master pause (fan-out notified 0 paused / 1 unpaused), remove frees slot. Playwright UI
+  both langs, no JS errors, "Check your inbox"/"Revisa tu correo" confirmed.
+- **PM/Copper note:** row switch labels are On/Off in BOTH langs (Spanish "Activa/Apagada" truncated the
+  compact toggle — layout rule won). Auto-check + launch-waitlist + add-a-store still use their own
+  contact ask — unifying them under this gate is a clean follow-up box.
+- **OPEN (owner mentioned, deferred — do next if he confirms):** the feedback POLL (In stock / Not in /
+  Restocking / Unclear) is NOT yet in the individual-check UNFOLD — the unfold renders verdict+timeline+
+  transcript but not the `fbk` block `showResult` adds for unclear results.
+- **⚠️ r170's step-ladder code lives in `src/voice/elevenlabs.ts`+`provider.ts` — over the line, left in
+  because live+tested; now FROZEN with the engine. Echo's lane reviews/owns it. Website never touches it.**
+- **Admin/live-data writes it made (state known, lane now closed to Website):** `user_cancelled` status
+  row + admin_hangup note; chain 79 TJ Maxx `logoWide/logoDark=true` on staging.
+- Customer stops now read "Check cancelled" (`statusKey user_cancelled`, row status stays admin_hangup,
+  no-charge rules unchanged). **Owner supplies rewritten cancel copy (no dashes) — paste verbatim.**
 
-## ⚠️ 07-19 — what NOT to build / lessons
-- **A "not in stock" share landing has NO use case** — nobody shares a sold-out result, so it never
-  becomes a landing page. I built it anyway; it was rejected. Don't.
-- The share page's whole job: a friend shares an in-stock WIN, the recipient lands and converts
-  (first check free). Build only pages that fit a real share.
-## 🪤 Traps (still true)
-- Full list in the **`known-problems`** skill + `docs/shared/GOTCHAS.md`.
-- **iOS Safari renders a gradient fading to a TRANSPARENT color as a faint tint of that color** (green
-  haze) that Chromium shows as fully clear — never fade to `rgba(r,g,b,0)`; fade between opaque colors.
-- **`overflow:hidden` + `border-radius` on iOS can leak a 1px line of the clipped content's color at an
-  edge** — suspect for the open green-line bug.
-- A colors/fonts diff + a Chromium render CANNOT catch an iOS paint issue. Owner's phone is the rig.
-- `#auth_logo` is a left-flex wordmark bar — stacked headers must override its container per mode.
-- headless→staging TLS blocked by the proxy; verify with a LOCAL server + Playwright, not against staging.
+## 🚨 OPEN BUG — thin GREEN LINE, /s card bottom edge, iPhone only (UNRESOLVED)
+- Never reproduces headless; predates brandmark/border/wash (7 wrong fixes chased those). Prime suspect:
+  `.cin{overflow:hidden;border-radius:999px}` clipping the shine's green on iOS.
+- NEXT: bisect ON DEVICE, one change at a time — drop `.shine` / drop `.cin` overflow / flat border.
+  Do NOT alter the owner-approved design to chase it. Full story in GOTCHAS.
 
-## ⏳ Older open (other lanes / paused)
-- Glass sheets (iOS 26) — long ago handed to the tint agent; not this session.
-- Slow result load flagged to Echo (server-side); Email rendering (other lane); Restock SMS blocked (A2P).
+## ⚠️ Lessons that stay true
+- iOS: gradients fading to transparent tint green (fade between opaque colors); overflow+radius can leak
+  a 1px edge line; Chromium renders CANNOT catch iOS paint — owner's phone is the rig.
+- 'in_stock' substring-matches 'not_in_stock' — match negatives first/exact. A "not in stock" share
+  landing has no use case. `#auth_logo` is a left-flex wordmark bar (override per mode).
+
+## ⏳ Open
+- **FIRST BOX (owner 07-21): missing email-confirmation** — box lives in the PM chat; likely cause =
+  owner's PROD email never re-set post-promote (admin checkpoint TODO). Owner copy changes = box #2.
+- Glass sheets rollout (tint discipline) — owner-box only. Slow result load → Echo. Restock SMS → A2P.

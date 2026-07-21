@@ -4,6 +4,16 @@ Non-obvious traps that cost real time. Add one the moment you learn it; delete o
 (Pairs with the **doc-lint** habit: before a big push, skim the docs against the code — a comment that lies is
 worse than no comment. Several entries below started as wrong comments.)
 
+## Compute / testing
+- **`scripts/test-all.sh` spawns local servers + headless browsers — don't run it reflexively, and never
+  leave it orphaned** (owner 07-20, it was killing his compute + morale). The `smoke:`/`qa:` lines each
+  boot a server (ports 8788-8798) and Chromium. If the run is killed partway (OOM, worker restart), those
+  processes keep running with nobody to stop them. Rules: (1) for a small change run ONLY the one relevant
+  unit test (e.g. `tsx scripts/test-prompts.ts`), NOT the whole suite; (2) the suite now self-cleans on
+  exit/Ctrl-C via a trap, but an OOM SIGKILL can't be trapped; (3) the stop button is `bash
+  scripts/kill-tests.sh` — kills every orphaned test runner, browser, and port squatter. Run it any time
+  compute feels stuck.
+
 ## Design rulings
 - **The call-timeline left rail is owner-approved — never remove it** (settled 2026-07-10). Addie read a
   voice note ("no indenting, everything left adjusted") as "remove the rail" and cut the whole vertical
@@ -142,3 +152,16 @@ worse than no comment. Several entries below started as wrong comments.)
   reflecting. UNRESOLVED — never reproduced in headless Chromium. Needs a real iPhone to bisect.
   Do NOT keep changing approved design (brandmark position, border, wash) to chase it — that was
   the mistake here; isolate it on-device first.
+- **A MAPPED CHAIN IS UNTOUCHABLE — nothing may flag it out of the call lane except a remap** (owner
+  law 2026-07-20, the Walgreens incident). Found: 18 mapped big-box chains (Walgreens, Target, Costco…)
+  carried `stockCheckMethod=site` — a classification from `data/stock_check_intel.json` that PREDATES
+  current git history (the 07-09 squash destroyed attribution) and violates the data lane's own doctrine
+  (site = UNCALLABLE chains with a live stock feed, e.g. Micro Center — handoff.md §flags). It never
+  "switched": the flag was constant; Mapper mapped these chains 07-10..12 on top of it and nobody
+  reconciled. The 07-20 CVS/Walgreens zone-call failures were NOT this flag — the new My Zones call path
+  skipped the Alpha/Bravo recipe attachment entirely (its builder is fixing it); the standard call path
+  (`buildRestockVars`) attaches recipes unconditionally, and the full sweep shows all 93 mapped chains'
+  recipes intact. Guards now in code: ① `seedStockCheckIntel` never re-stamps site onto a mapped chain
+  (even force). ② `PATCH /api/chains/:id` returns 409 when flagging a mapped chain site/muted/no-call
+  without `force:true`. ③ the mapping board ALWAYS shows mapped chains, flag conflicts surface as a
+  "CONFLICT" blocker instead of hiding.

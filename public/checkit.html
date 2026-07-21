@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r157" />
+<meta name="x-rev" content="glassfix-r177" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -478,6 +478,16 @@ __BRAND_HEAD__
      without shouting (owner 07-15). */
   .callwho{display:inline-flex;width:20px;height:20px;border-radius:6px;background:#1F1F25;align-items:center;justify-content:center;overflow:hidden;opacity:.72;vertical-align:-4px;margin-left:7px;flex:none}
   .callwho img{max-width:15px;max-height:15px;object-fit:contain}
+  /* Wide wordmark logos (TJ Maxx, Big 5…) sit on a SQUARE canvas with the mark as a thin centred band
+     (only ~20% of the height), so any max-height crushes it. Render like the store tiles: white backing,
+     width-driven, height auto — the chip's overflow:hidden clips the transparent top/bottom so the
+     wordmark reads at full width, exactly as it does in a zone-row tile (owner 07-21, verified render). */
+  /* Calling-chip ROLLBACK (owner 07-21, pre-demo): the chip IGNORES logo flags — every store, old
+     saved calls included, renders the classic dark tile with the contained 15px logo. The wide/lite
+     experiments live on other surfaces only; do NOT re-enable here without the owner's word. */
+  .callwho.widelogo{width:20px;padding:0;height:20px}
+  .callwho.widelogo img{max-width:15px;max-height:15px;height:auto;width:auto;object-fit:contain}
+  .callwho.lite{background:#1F1F25;opacity:.72}
   .verdict.in .title{color:var(--green)} .verdict.out .title{color:var(--red)} .verdict.unk .title{color:#FBBF24} .verdict.soon .title{color:#F59E0B}
   .vstore{text-align:center;color:#d6d6e0;font-size:14.5px;font-weight:600;margin-top:9px}
   /* combined call header: store + verdict status + timing in one box at the top */
@@ -1290,6 +1300,13 @@ __BRAND_HEAD__
   .ho-toggle{display:flex;background:var(--terminal);border:1px solid var(--border);border-radius:13px;padding:4px;gap:4px}
   .ho-toggle button{flex:1;border:0;background:transparent;color:var(--muted);font-weight:700;font-size:13px;padding:10px 6px;border-radius:9px;cursor:pointer;transition:.18s;white-space:nowrap}
   .ho-toggle button.on{background:var(--sheet);color:#fff}
+  /* Alerts list (owner 07-21): each watched store is the site's own store row + one ON/OFF switch
+     (reuses .ho-toggle), a master pause on top, and a remove. */
+  .alsw button{padding:8px 6px;font-size:12px}
+  .alrm{background:rgba(255,123,123,.12);border:0;border-radius:12px;padding:9px;color:#FF9B9B;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .alrow-off{opacity:.55}
+  .alpause{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)}
+  .almk{padding:12px 14px;border-radius:14px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.28);color:#F5C368;font-size:13px;font-weight:700;line-height:1.45;text-align:center}
   .ho-stepper{display:flex;align-items:center;justify-content:space-between;background:var(--terminal);border:1px solid var(--border);border-radius:13px;padding:8px 10px}
   .ho-stepper .amt{font-size:26px;font-weight:900;letter-spacing:-.4px}
   .ho-pm{display:flex;gap:8px}
@@ -1719,12 +1736,20 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zlast{font-size:11.5px;font-weight:600;color:#7C7C88;margin-top:5px}
 #zones .zmore{width:32px;height:32px;flex:0 0 auto;border:0;border-radius:10px;background:#1B1B20;color:#B9B9C4;font-size:18px;line-height:1;cursor:pointer}
 #zones .zempty{text-align:center;color:#8A8A96;font-size:14.5px;line-height:1.5;padding:30px 24px 6px;text-wrap:balance}
+#zones .zhero{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 34px}
+#zones .zhero .tile{width:76px;height:76px;border-radius:22px;background:#1B1B20;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);display:grid;place-items:center;margin-bottom:22px}
+#zones .zhero .h1{font:800 19px/1.35 Inter;letter-spacing:-.2px;color:#fff;text-wrap:balance}
+#zones .zhero .h2{font:500 14px/1.55 Inter;color:#8A8A96;margin-top:10px;text-wrap:balance}
+#zones .zhero .go{margin-top:24px;padding:2px;border-radius:999px;border:0;background:linear-gradient(120deg,#5BEA93,#19B145 55%,#0B5A2C);box-shadow:0 14px 30px -10px rgba(25,177,69,.5);cursor:pointer}
+#zones .zhero .go>span{display:flex;align-items:center;gap:9px;background:#20202A;border-radius:999px;padding:13px 22px;font:800 13px Inter;letter-spacing:.06em;text-transform:uppercase;color:#4ADE80}
 /* controls */
 #zones .zsearch{position:relative;margin:0 0 10px}
-#zones .zsearch input{width:100%;box-sizing:border-box;padding-right:56px}
+#zones .zsearch input{width:100%;box-sizing:border-box;height:46px;background:#1B1B20;border:0;border-radius:13px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:0 56px 0 40px;font:500 15px Inter;color:#fff}
+#zones .zsearch input::placeholder{font-style:italic;color:#8A8A96}
+#zones .zsearch .zmag{position:absolute;left:14px;top:14px;pointer-events:none}
 #zones .zsearch .zgps{position:absolute;right:5px;top:5px;bottom:5px;width:38px;border:0;border-radius:9px;background:#34343D;color:var(--accent,#4ADE80);display:grid;place-items:center;cursor:pointer}
-#zones .zseg{display:flex;background:#1B1B20;border-radius:12px;padding:4px;gap:4px;margin-bottom:12px}
-#zones .zseg button{flex:1;border:0;background:transparent;color:#8A8A96;font-weight:800;font-size:13.5px;padding:9px;border-radius:9px;cursor:pointer}
+#zones .zseg{display:flex;background:#1B1B20;border-radius:12px;padding:4px;gap:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.5)}
+#zones .zseg button{width:40px;height:38px;border:0;background:transparent;color:#7C7C88;border-radius:9px;cursor:pointer;display:grid;place-items:center;padding:0}
 #zones .zseg button.on{background:linear-gradient(180deg,#31313A,#28282E);color:#fff;box-shadow:0 6px 12px -6px rgba(0,0,0,.6)}
 /* Radius = ONE carved capsule track, keys inside; selected key = raised + muted-yellow ring + yellow
    number (comp; §8 bans a green selection next to the green Add-all CTA). */
@@ -1735,14 +1760,16 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zrad.on{background:linear-gradient(180deg,#31313A,#28282E);color:#FFCB05;box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08),0 0 0 1.5px rgba(255,203,5,.5)}
 #zones .zradmi{font:800 12px Inter;color:#6B6B7B;padding:0 8px 0 3px}
 #zones .zaddall{margin-left:auto;border:0;background:rgba(74,222,128,.1);border-radius:999px;padding:8px 14px;color:#4ADE80;font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap}
-#zones .zaddall.on{background:rgba(255,123,123,.12);color:#FF9B9B} /* flipped to Remove-all */
+#zones .zaddall.on{background:none;color:#8A8A96;text-decoration:underline;text-underline-offset:3px;font-weight:700} /* flipped to Remove-all: quiet underline link (owner 07-19) */
+#zones .zaddall.capped:not(.on){background:rgba(255,255,255,.04);color:#5C5C68} /* at the 10-cap Add-all dims (comp) */
 /* stage: fixed-height map or a capped scrolling list — flows above the footer, never under browser chrome */
 #zones .zstage{display:flex;flex-direction:column}
 #zones #zmap{height:46vh;min-height:300px;border-radius:16px;overflow:hidden;background:#15151c}
 #zones .zlist{max-height:54vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#1B1B20;border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:6px 8px}
 #zones .zpin{background:none;border:0}
 /* store row = retail .store look + leading check + green ring when picked (logos identical to retail) */
-#zones .zpick{cursor:pointer;position:relative;margin-top:8px;text-align:left;padding:8px 12px}
+#zones .zpick{cursor:pointer;position:relative;margin-top:8px;text-align:left;padding:8px 12px;border-radius:14px}
+#zones .zlist.zfull .zpick:not(.picked){opacity:.42} /* at the 10-cap: extra rows dim (comp) */
 #zones .zpick .ic{width:40px;height:40px;border-radius:11px}
 #zones .zpick .ic img{max-width:30px;max-height:30px}
 #zones .zpick.picked{box-shadow:0 0 0 2px #4ADE80,0 8px 16px -8px rgba(74,222,128,.35)}
@@ -1759,6 +1786,43 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zbar{margin-top:14px} /* live-report action bar — in-flow, not fixed */
 #zones .zbarrow{display:flex;gap:10px}
 #zones .zdots{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+#zones .ztally{background:#1F1F24;border-radius:18px;padding:15px 16px 14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+#zones .zsegbar{display:flex;gap:5px;margin:0 0 11px}
+#zones .zsegbar span{flex:1;height:6px;border-radius:3px;background:#2D2D34} #zones .zsegbar span.done{background:#4ADE80;box-shadow:0 0 6px rgba(74,222,128,.5)}
+/* Report head — status-count pills + live/done dot (owner's comp screenshots 2 & 3). */
+#zones .zrp{display:inline-flex;align-items:center;gap:5px;font:800 12px Inter;padding:5px 10px;border-radius:999px;white-space:nowrap}
+#zones .zrp.in{color:#4ADE80;background:rgba(74,222,128,.14)}
+#zones .zrp.out{color:#FF7B7B;background:rgba(239,68,68,.14)}
+#zones .zrp.unk{color:#FBBF24;background:rgba(251,191,36,.14)}
+#zones .zrsub{font:600 12.5px Inter;color:#7C7C88}
+#zones .zdotlive{width:9px;height:9px;border-radius:50%;background:#4ADE80;box-shadow:0 0 8px rgba(74,222,128,.7);flex:0 0 auto;animation:ckWaveV2 1.5s infinite}
+#zones .zdotdone{width:9px;height:9px;border-radius:50%;background:#4ADE80;flex:0 0 auto}
+#zones .zclosedbox{display:flex;gap:10px;background:rgba(232,154,74,.12);border:1px solid rgba(232,154,74,.35);border-radius:14px;padding:11px 13px;font:600 13px/1.45 Inter;color:#f0c79a}
+#zones .zclosedbox b{color:#f6d3a6}
+#zones .zrrow2{display:flex;align-items:center;gap:11px;width:100%;padding:11px 13px;border:0;border-radius:14px;background:linear-gradient(180deg,#2D2D34,#27272D);cursor:pointer;text-align:left;color:#fff}
+#zones .zrrow2.open{border-radius:14px 14px 0 0}
+#zones .zrbody{text-align:left;overflow-x:hidden}
+#zones .zresult:has(.zrrow2.open){border-radius:14px;box-shadow:0 0 0 1px rgba(74,222,128,.25)}
+#zones .ic2{width:40px;height:40px;border-radius:11px;background:linear-gradient(145deg,#34343D,#23232B);display:grid;place-items:center;flex:none;overflow:hidden}
+#zones .ic2 img{max-width:30px;max-height:30px;object-fit:contain}
+#zones .ic2 .wm{font-size:9px}
+#zones .zrrow2 .nm2{flex:1;min-width:0;font:700 14.5px Inter;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#zones .zrrow2.checking{box-shadow:0 0 0 1px rgba(74,222,128,.35),0 0 16px rgba(74,222,128,.14)}
+#zones .zstopall{width:100%;height:50px;border:0;border-radius:14px;background:linear-gradient(180deg,#2D2D34,#27272D);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;gap:9px;font:800 13px Inter;letter-spacing:.06em;text-transform:uppercase;color:#FF9B9B;cursor:pointer}
+#zones .zstopall i{width:12px;height:12px;border-radius:3px;background:#FF9B9B;font-style:normal}
+#zones .zsharecard,#zmenuOv .zsharecard{position:relative;border-radius:20px;overflow:hidden;background:linear-gradient(180deg,#266440 0%,#20202A 62%);border:1px solid rgba(255,255,255,.08);padding:17px 17px 18px}
+#zones .zsharecard .wm2,#zmenuOv .zsharecard .wm2{position:absolute;top:-24px;right:-16px;opacity:.14}
+#zones .zsharecard .chip2,#zmenuOv .zsharecard .chip2{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:999px;background:rgba(74,222,128,.16);position:relative}
+#zones .zsharecard .chip2 b,#zmenuOv .zsharecard .chip2 b{width:7px;height:7px;border-radius:50%;background:#4ADE80;box-shadow:0 0 8px #4ADE80}
+#zones .zsharecard .chip2 span,#zmenuOv .zsharecard .chip2 span{font:800 10px Inter;letter-spacing:.12em;text-transform:uppercase;color:#8CF7B4}
+#zones .zsharecard .hl2,#zmenuOv .zsharecard .hl2{font:900 25px/1.1 Inter;letter-spacing:-.6px;margin-top:14px;color:#FFCB05;position:relative}
+#zones .zsharecard .tiles2,#zmenuOv .zsharecard .tiles2{display:flex;gap:8px;margin-top:15px;position:relative}
+#zones .zsharecard .tiles2>div,#zmenuOv .zsharecard .tiles2>div{width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,#34343D,#23232B);display:grid;place-items:center;overflow:hidden}
+#zones .zsharecard .tiles2 img,#zmenuOv .zsharecard .tiles2 img{max-width:28px;max-height:28px;object-fit:contain}
+#zones .zsharewell,#zmenuOv .zsharewell{background:#1B1B20;border-radius:14px;padding:13px 14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
+#zones .zsharewell .lbl2,#zmenuOv .zsharewell .lbl2{font:700 9.5px Inter;letter-spacing:.14em;text-transform:uppercase;color:#5C5C68;margin-bottom:6px}
+#zones .zsharewell .tx2,#zmenuOv .zsharewell .tx2{font:500 13.5px/1.5 Inter;color:#e6e6ee}
+#zones .zsharego,#zmenuOv .zsharego{width:100%;display:flex;align-items:center;justify-content:center;gap:9px;height:52px;border-radius:14px;background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%) border-box;border:2.5px solid transparent;box-shadow:0 12px 28px -8px rgba(25,177,69,.45);font:800 13px Inter;letter-spacing:.1em;text-transform:uppercase;color:#4ADE80;cursor:pointer}
 #zones .zdot{width:9px;height:9px;border-radius:50%;background:#2D2D34}
 #zones .zdot.done{background:var(--accent,#4ADE80);box-shadow:0 0 6px color-mix(in srgb,var(--accent,#4ADE80) 60%,transparent)}
 #zones .zsummary{font-size:13px;font-weight:700} #zones .zsumchips{display:flex;gap:12px;margin-top:7px;font-size:12.5px;font-weight:700;color:#B9B9C4;flex-wrap:wrap}
@@ -1800,40 +1864,54 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zf-scroll>*{flex:0 0 auto}
 #zones .zf-foot{flex:none}
 /* create-flow slide-up basket — absolute so it overlays the bottom (no reserved gap when empty) */
-#zones .zbasket{position:absolute;left:0;right:0;bottom:0;z-index:1000;background:linear-gradient(180deg,#2D2D34,#25252B);box-shadow:0 -18px 34px -12px rgba(0,0,0,.72),inset 0 1px 0 rgba(255,255,255,.08);border-radius:26px 26px 0 0;padding:15px 18px calc(20px + env(safe-area-inset-bottom));transform:translateY(112%);transition:transform .28s cubic-bezier(.2,.8,.3,1)}
+#zones .zbasket{position:absolute;left:12px;right:12px;bottom:14px;z-index:1000;background:linear-gradient(180deg,#2F2F37,#26262C);box-shadow:0 22px 46px -14px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.07),inset 0 1px 0 rgba(255,255,255,.09);border-radius:20px;padding:11px 12px 12px;transform:translateY(140%);transition:transform .28s cubic-bezier(.2,.8,.3,1)} /* floating DOCK, exact CD comp: inset 12px so the list shows past its edges */
 #zones .zbasket.up{transform:translateY(0)}
-#zones .zbkhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;font:900 14px Inter;color:#fff;white-space:nowrap}
-#zones .zclearall{background:none;border:0;color:#8A8A96;font:700 12.5px Inter;letter-spacing:.02em;cursor:pointer;padding:2px 0}
+#zones .zbkhead{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+#zones .zclearall{flex:none;background:none;border:0;color:#8A8A96;font:700 12px Inter;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:2px 0}
+#zones .zcount10{flex:none;font:800 13px Inter;color:#B9B9C4;white-space:nowrap} #zones .zcount10 i{font-style:normal;color:#6B6B7B}
+#zones .zcount10.full{color:#FFCB05} #zones .zcount10.full i{color:#8A6D00}
 /* basket = just the LOGOS (owner 07-11), wrapping so every pick shows; small X badge to drop one */
-#zones .zchips{display:flex;flex-wrap:nowrap;gap:10px;margin-bottom:14px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+#zones .zchips{flex:1;min-width:0;display:flex;flex-wrap:nowrap;gap:7px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;padding-top:5px}
 #zones .zchips::-webkit-scrollbar{display:none}
-#zones .zchip{flex:none;position:relative;width:36px;height:36px;border-radius:10px;background:#1F1F25;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;overflow:visible}
+#zones .zchip{flex:none;position:relative;width:32px;height:32px;border-radius:9px;background:linear-gradient(145deg,#34343D,#23232B);display:flex;align-items:center;justify-content:center;overflow:visible}
 #zones .zchip:not(:has(img)){background:linear-gradient(145deg,#34343D,#23232B);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5)}
-#zones .zchip img{max-width:26px;max-height:26px;object-fit:contain}
+#zones .zchip img{max-width:24px;max-height:24px;object-fit:contain}
 #zones .zchip.widelogo img{max-width:40px;max-height:30px}
-#zones .zchip .cx{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#3E3E46;border:2px solid #23232B;color:#E9E9F0;display:grid;place-items:center;cursor:pointer;padding:0}
+#zones .zchip .cx{position:absolute;top:-5px;right:-5px;width:17px;height:17px;border-radius:50%;background:#3E3E46;border:2px solid #2A2A31;color:#E9E9F0;display:grid;place-items:center;cursor:pointer;padding:0}
 #zones .zbkrow{display:flex;gap:12px}
-#zones .zbkrow input{flex:1;min-width:0;height:52px;background:#1B1B20;border:none;outline:none;border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.5);padding:0 18px;color:#fff;font:500 16px Inter}
-#zones .zbksave{flex:none;padding:2.5px;border-radius:14px;background:linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%);box-shadow:0 12px 26px -8px rgba(74,222,128,.5);cursor:pointer;border:0}
-#zones .zbksave>span{display:flex;height:100%;background:#20202A;border-radius:12px;padding:0 22px;align-items:center;justify-content:center;white-space:nowrap;font:800 13px Inter;letter-spacing:.1em;text-transform:uppercase;color:#4ADE80}
+#zones .zbkrow input{flex:1;min-width:0;height:46px;background:#1B1B20;border:none;outline:none;border-radius:12px;box-shadow:inset 0 2px 6px rgba(0,0,0,.5);padding:0 15px;color:#fff;font:500 15px Inter} #zones .zbkrow input::placeholder{font-style:italic;color:#8A8A96}
+#zones .zbksave{flex:none;padding:2px;border-radius:12px;background:linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%);box-shadow:0 12px 26px -8px rgba(74,222,128,.5);cursor:pointer;border:0}
+#zones .zbksave>span{display:flex;height:100%;background:#20202A;border-radius:10px;padding:0 20px;align-items:center;justify-content:center;white-space:nowrap;font:800 13px Inter;letter-spacing:.08em;text-transform:uppercase;color:#4ADE80}
 /* comp zone card (list) */
 #zones .zc{background:#26262B;border-radius:26px;padding:20px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.04);margin-bottom:16px}
+#zones .zlisthead{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 18px 12px}
+#zones .zlisthead .ttl{font:900 21px Inter;letter-spacing:-.5px;color:#fff}
+#zones .znewpill{display:inline-flex;align-items:center;gap:8px;background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.24);border-radius:999px;padding:9px 15px 9px 13px;font:800 12.5px Inter;letter-spacing:.02em;color:#4ADE80;cursor:pointer;animation:zPillGlow 2.6s ease-in-out infinite}
+@keyframes zPillGlow{0%,100%{box-shadow:0 0 0 1px rgba(74,222,128,.18),0 0 10px rgba(74,222,128,.10)}50%{box-shadow:0 0 0 1px rgba(74,222,128,.5),0 0 18px rgba(74,222,128,.3)}}
+#zones button.zc-meta{border:0;background:none;width:100%;cursor:pointer;text-align:left;padding:0}
+#zones .zc-open .zc-when{color:#B9B9C4}
+#zones .zst{width:34px;height:34px;flex:0 0 auto;border-radius:50%;display:grid;place-items:center}
+#zones .zst.in{background:rgba(74,222,128,.14)} #zones .zst.out{background:rgba(255,123,123,.12)} #zones .zst.unk{background:rgba(255,255,255,.07)} #zones .zst.queue{background:rgba(255,255,255,.07)}
+#zones .zst.live{background:rgba(74,222,128,.10)} #zones .zst.live i{width:9px;height:9px;border-radius:50%;background:#4ADE80;box-shadow:0 0 8px #4ADE80;animation:ckGlowV2 1.6s ease-in-out infinite;display:block}
+#zones .zrephead{font:900 22px Inter;letter-spacing:-.6px;color:#fff;line-height:1.15}
+#zones .zrepnote{font:600 12.5px Inter;color:#8A8A96;margin-top:6px}
 #zones .zc-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
 #zones .zc-nm{font:900 21px Inter;letter-spacing:-.4px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #zones .zc-kebab{width:38px;height:38px;flex:none;border:0;border-radius:50%;background:linear-gradient(180deg,#2E2E35,#25252B);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);cursor:pointer;display:grid;place-items:center}
 #zones .zc-meta{display:flex;align-items:center;gap:10px;margin-top:12px}
 #zones .zc-pill{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border-radius:999px;font:900 11px Inter;letter-spacing:.04em;text-transform:uppercase}
-#zones .zc-pill.in{background:rgba(74,222,128,.14);color:#4ADE80} #zones .zc-pill.none{background:rgba(255,255,255,.05);color:#8A8A96}
+#zones .zc-pill.in{background:rgba(74,222,128,.14);color:#4ADE80} #zones .zc-pill.none{background:rgba(255,255,255,.05);color:#8A8A96} #zones .zc-pill.out{background:rgba(239,68,68,.13);color:#F08A8A}
 #zones .zc-when{font:600 12.5px Inter;color:#7C7C88;white-space:nowrap}
 #zones .zc-faces{display:flex;gap:9px;margin:18px 0 20px;flex-wrap:wrap}
 /* zone-card logo tiles: IDENTICAL to the homepage store logo (#1F1F25 tile, img max 34, gradient
    fallback for no-logo, wide logos wider) — owner 07-11 "make them exactly like the homepage". */
-#zones .zc-face{width:44px;height:44px;border-radius:12px;flex:none;background:#1F1F25;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;overflow:hidden}
+#zones .zc-face{width:32px;height:32px;border-radius:9px;flex:none;background:linear-gradient(145deg,#34343D,#23232B);box-shadow:inset 0 1px 0 rgba(255,255,255,.09);display:flex;align-items:center;justify-content:center;overflow:hidden}
+#zones .zc-face img{max-width:24px;max-height:24px;object-fit:contain}
 #zones .zc-face:not(:has(img)){background:linear-gradient(145deg,#34343D,#23232B);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5)}
 #zones .zc-face img{max-width:34px;max-height:34px;object-fit:contain}
 #zones .zc-face.widelogo img{max-width:40px;max-height:30px}
 #zones .zfooter{margin-top:auto}
-#zones .zc-more{width:44px;height:44px;border-radius:12px;flex:none;background:#23232A;box-shadow:inset 0 1px 0 rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;color:#8A8A96;font:800 13px Inter}
+#zones .zc-more{width:32px;height:32px;border-radius:9px;flex:none;background:#23232A;box-shadow:inset 0 1px 0 rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;color:#8A8A96;font:800 11px Inter}
 #zones .zc-go,#zmenuOv .zc-go{align-self:flex-end;padding:2.5px;border-radius:999px;background:linear-gradient(120deg,#FFE066 0%,#FFCB05 55%,#8A6D00 100%);box-shadow:0 12px 26px -10px rgba(255,203,5,.45);cursor:pointer;border:0}
 #zones .zc-go>span,#zmenuOv .zc-go>span{display:flex;background:#20202A;border-radius:999px;padding:13px 20px;align-items:center;gap:9px;white-space:nowrap;font:800 12.5px Inter;letter-spacing:.12em;text-transform:uppercase;color:#FFCB05}
 #zones .zc-row{display:flex;justify-content:flex-end}
@@ -1933,6 +2011,9 @@ html[data-skin="v2"] #zones.on .modal,html[data-skin="v2"] #histOverlay.on .moda
    them sliding up from the bottom edge over the dimmed zones list, same recipe as scorePostOv. */
 html[data-skin="v2"] #zmenuOv,html[data-skin="v2"] #emailOv,html[data-skin="v2"] #alertsOv,html[data-skin="v2"] #featOv{align-items:flex-end;padding:0}
 html[data-skin="v2"] #zmenuOv .modal,html[data-skin="v2"] #emailOv .modal,html[data-skin="v2"] #alertsOv .modal,html[data-skin="v2"] #featOv .modal{width:100%;max-width:none!important;border-radius:28px 28px 0 0;margin:0;padding:8px 20px calc(24px + env(safe-area-inset-bottom))}
+/* The bottom slide-up was invisible against the page behind it (owner 07-21: the check-zone confirm
+   "got lost"). A hairline top-edge border + deeper drop shadow separates the sheet from the page. */
+html[data-skin="v2"] #zmenuOv .modal,html[data-skin="v2"] #emailOv .modal,html[data-skin="v2"] #alertsOv .modal,html[data-skin="v2"] #featOv .modal{border:1px solid rgba(255,255,255,.15);border-bottom:0;box-shadow:0 -20px 60px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.07)}
 html[data-skin="v2"] #zmenuOv .modal::before,html[data-skin="v2"] #emailOv .modal::before,html[data-skin="v2"] #alertsOv .modal::before,html[data-skin="v2"] #featOv .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 16px}
 html[data-skin="v2"] #zmenuOv.on .modal,html[data-skin="v2"] #emailOv.on .modal,html[data-skin="v2"] #alertsOv.on .modal,html[data-skin="v2"] #featOv.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
 html[data-skin="v2"] #histOverlay .hist-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:2px 18px calc(22px + env(safe-area-inset-bottom))}
@@ -1940,8 +2021,8 @@ html[data-skin="v2"] #histOverlay .hist-scroll{flex:1 1 auto;min-height:0;overfl
    glass. The inner scrollers get a 120px scroll-end spacer (last row stays reachable above the bar) and the
    create-flow basket lifts off the box bottom so Save never hides under the bar. */
 body.sheetopen #zones .zf-scroll::after,body.sheetopen #histOverlay .hist-scroll::after,body.sheetopen #pageOverlay #pg_body::after{content:'';display:block;flex:0 0 auto;height:calc(160px + env(safe-area-inset-bottom))} /* clears the 120px under-bar overshoot AND lifts the last row a comfortable tap above the iOS toolbar (a flush-to-edge link was untappable) */
-body.sheetopen #zones .zbasket.up{bottom:120px}
-#zones .zbasket::after{content:'';position:absolute;top:calc(100% - 1px);left:0;right:0;height:100vh;background:#25252B}
+body.sheetopen #zones .zbasket.up{bottom:134px} /* 14px float above the sheet's 120px under-bar overshoot */
+
 /* Footer links (About/FAQ/Terms/Privacy/Contact) slide up as a bottom sheet, like every other panel.
    Flex column: the grab handle + title stay pinned; only the body scrolls (owner 07-06: the top used to
    scroll away). */
@@ -2425,7 +2506,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     <div class="meta" style="margin-bottom:16px;text-align:center" id="watch_sub" data-i18n="watch.sub">We'll ping you the instant anyone confirms it in stock here.</div>
     <input id="watch_contact" type="text" inputmode="email" autocomplete="email" placeholder="email or phone number" data-i18n-ph="watch.ph" style="width:100%;background:#15151c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 12px;font-size:16px;box-sizing:border-box">
     <div id="watch_err" style="color:#ff6b6b;font-size:13px;margin-top:8px;min-height:16px"></div>
-    <button class="cta" id="watch_btn" onclick="submitWatch()" style="margin-top:6px;width:100%" data-i18n="watch.cta">Watch this store →</button>
+    <button class="cta" id="watch_btn" onclick="submitWatchEmail()" style="margin-top:6px;width:100%" data-i18n="watch.cta">Watch this store →</button>
   </div>
 </div>
 
@@ -2930,6 +3011,7 @@ const I18N={ es:{
   'st.language_barrier':'No nos entendimos','stn.language_barrier':'No pudimos comunicarnos. Sin cargo.',
   'st.nobody_answered':'Nadie contestó','stn.nobody_answered':'Nadie respondió. Sin cargo.',
   'st.voicemail':'Buzón de voz','stn.voicemail':'Salió una grabación, no una persona. Sin cargo.',
+  'st.user_cancelled':'Verificación cancelada','stn.user_cancelled':'Detuviste esta verificación.',
   'st.busy':'Línea ocupada','stn.busy':'La línea estaba ocupada. Sin cargo.',
   'st.bad_number':'Número equivocado','stn.bad_number':'Ese número no conectó. Sin cargo.',
   'st.closed':'Está cerrado','stn.closed':'{store} está cerrado ahora. Sin cargo.','stn.closed2':'La tienda está cerrada.',
@@ -2960,7 +3042,7 @@ const I18N={ es:{
   'sch.body':'Verificamos <b id="sch_store">la tienda</b> automáticamente y te avisamos con los resultados.<b id="sch_cat" style="display:none"></b>','watch.setting':'Configurando…','watch.done':"🔔 Listo. Te avisamos en cuanto vuelva",
   'watch.verify.email':'<b>Ve a tu correo para verificar tu email.</b>','watch.verify.sms':'<b>Te enviaremos un mensaje para confirmar tu celular.</b>','watch.then':'Luego te avisamos en cuanto se confirme en stock.','watch.done2':'Listo','watch.left':'Te quedan {n} de {cap} alertas de texto este mes.',
   // schedule modal
-  'sch.perk':'Beneficio de miembro Check+','sch.title':'Auto-verificación','sch.days':'¿Qué días?','sch.time':'Hora más temprana para llamar','sch.where':'Agrega tu celular o correo','sch.ph':'correo o teléfono','sch.cta':'Activar auto-verificación →','sch.setting':'Configurando…','sch.on.days':'📅 Auto-verificación activa. Llamaremos esos días','sch.on.ship':'📅 Auto-verificación activa. Llamaremos el día de envío de esta tienda','sch.canceled':'Auto-verificación cancelada','sch.cancelfail':'No se pudo cancelar. Inténtalo de nuevo',
+  'sch.perk':'Beneficio de miembro Check+','sch.title':'Auto-verificación','sch.days':'¿Qué días?','sch.time':'Hora más temprana para llamar','sch.where':'Agrega tu celular o correo','sch.where.em':'Agrega tu correo','sch.ph':'correo o teléfono','sch.cta':'Activar auto-verificación →','sch.setting':'Configurando…','sch.on.days':'📅 Auto-verificación activa. Llamaremos esos días','sch.on.ship':'📅 Auto-verificación activa. Llamaremos el día de envío de esta tienda','sch.canceled':'Auto-verificación cancelada','sch.cancelfail':'No se pudo cancelar. Inténtalo de nuevo',
   // waitlist modal
   'wl.title':'Te enviamos un correo cuando lancemos aquí','wl.sub':'Deja tu correo. En cuanto lleguemos a tu zona, eres el primero en saberlo.','wl.ph':'tu correo','wl.cta':'Unirme a la lista →','wl.adding':'Agregándote…','wl.done':"🙌 Estás en la lista",
   // refer modal
@@ -3041,7 +3123,8 @@ const I18N={ es:{
   'zones.locph':'Busca un código postal o ciudad…','zones.go':'Ir','zones.list':'Lista','zones.map':'Mapa',
   'zones.radius':'Radio','zones.addallshort':'Agregar todo','zones.selstore':'tienda seleccionada','zones.selstores':'tiendas seleccionadas',
   'zones.typloc':'Escribe primero un código postal o ciudad.','zones.located':'Centrado en {q}','zones.noplace':'No encontramos ese lugar.',
-  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas','zones.cap10':'Una zona verifica hasta 10 tiendas a la vez.','hold.meta':'Buscando {p}','hold.meta.generic':'Revisando el estante','hold.head':'Estamos a tope.','hold.sub':'Un momento.','zones.limit10':'Llegaste al límite de 10 tiendas','zones.clearall':'Borrar todo','hold.timer':'Tu revisión empieza en','em.title':'Tu correo','step.calling':'Llamando','watch.verify.h':'Revisa tu correo para confirmarlo.','watch.verify.hsms':'Te enviaremos un texto para confirmar tu celular.','watch.then2':'Luego te avisamos al instante<br>cuando se confirme en stock.','em.sub':'Las alertas y avisos de reposición llegan aquí.','em.new':'Danos tu nuevo correo','em.first':'Danos tu correo','em.empty':'Escribe tu nuevo correo primero','em.same':'Ese ya es tu correo','em.resent':'Confirmación enviada. Revisa tu correo.','em.again':'Enviarla de nuevo','em.done':'Correo confirmado. Alertas activas.','em.badlink':'Ese enlace no funcionó. Toca Enviarla de nuevo.','em.ph':'tu@correo.com','em.save':'Guardar correo','em.saving':'Guardando…','em.confirm':'Revisa tu correo para confirmar','em.add':'Agrega tu correo para alertas','alerts.title':'Alertas','alerts.sub':'Maneja tus alertas de correo y texto.','alerts.row.at':'{p} en {s}','alerts.d.remail':'Te manda un correo al volver.','alerts.d.rsms':'Te manda un texto al volver.','alerts.d.semail':'Verifica la tienda sola. Resultado al correo.','alerts.d.ssms':'Verifica la tienda sola. Resultado por texto.','alerts.none':'Aún no has creado alertas.','alerts.off':'Apagar','alerts.mute':'Silenciar','alerts.unmute':'Activar','alerts.stop':'Parar','alerts.d.muted':'Silenciada. No llega nada hasta activarla.','alerts.mutedpill':'Silenciada. Actívala cuando quieras.','alerts.unmutedpill':'Activada. Te avisaremos.','alerts.stopped':'Cancelamos {x}','alerts.name.restock':'las alertas de reposición de {s}','alerts.name.sched':'las alertas de auto chequeo de {s}','alerts.thatstore':'esa tienda','alerts.thisalert':'esta alerta','alerts.k.sched':'Auto-verificación','alerts.k.restock':'Alerta de reposición','alerts.c.sms':'texto','alerts.c.email':'correo','alerts.acheck':'Una verificación','acct.row.alerts':'Alertas','acct.row.alerts.sub':'Avisos de reposición y autoverificación.',
+  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas','zones.cap10':'Una zona verifica hasta 10 tiendas a la vez.','hold.meta':'Buscando {p}','hold.meta.generic':'Revisando el estante','hold.head':'Estamos a tope.','hold.sub':'Un momento.','zones.limit10':'Llegaste al límite de 10 tiendas','zones.clearall':'Borrar todo','zones.title2':'Zonas','zones.checkingzone':'Verificando la zona {n} ahora','zones.checkingyours':'Verificando tu zona ahora','zones.allchecked':'Las {n} verificadas','zones.stopone.q':'¿Dejar de verificar {s}?','zones.stopone.yes':'Dejar de verificar','zones.stopone.no':'Continuar','zones.stoppedone':'Detuvimos esa tienda','zones.azone':'Zona','zones.zoneword':'zona','zones.new2':'Nueva zona','zones.edit2':'Editar zona','zones.locph2':'Código postal o ciudad…','zones.save2':'Guardar','zones.empty1':'Aún no tienes zonas.','zones.empty2':'Guarda las tiendas cercanas como una zona. Luego revísalas todas con un toque.','zones.nonein':'Ninguna disponible','zones.checkzone2':'Revisar zona','zones.skipped':', así que las saltamos.','zones.alldone':'Las {n} revisadas · listo','zones.zonecheck':'Chequeo de zona','zones.hadit':'{i} de {n} tiendas lo tenían.','zones.sharetext':'Texto para compartir','zones.sharego':'Compartir','zones.ago':'atrás','zones.starting2':'Empezando…','zones.rin2':'Disponible.','zones.rout2':'Sin stock.','zones.runk2':'Sin respuesta.','zones.result':'Resultado','zones.confirmed':'Confirmado.','hold.timer':'Tu revisión empieza en','em.title':'Tu correo','step.calling':'Llamando','watch.verify.h':'Revisa tu correo para confirmarlo.','watch.verify.hsms':'Te enviaremos un texto para confirmar tu celular.','watch.then2':'Luego te avisamos al instante<br>cuando se confirme en stock.','em.sub':'Las alertas y avisos de reposición llegan aquí.','em.new':'Danos tu nuevo correo','em.first':'Danos tu correo','em.empty':'Escribe tu nuevo correo primero','em.same':'Ese ya es tu correo','em.resent':'Confirmación enviada. Revisa tu correo.','em.again':'Enviarla de nuevo','em.done':'Correo confirmado. Alertas activas.','em.badlink':'Ese enlace no funcionó. Toca Enviarla de nuevo.','em.ph':'tu@correo.com','em.save':'Guardar correo','em.saving':'Guardando…','em.confirm':'Revisa tu correo para confirmar','em.add':'Agrega tu correo para alertas','alerts.title':'Alertas','alerts.sub':'Maneja tus alertas de correo y texto.','alerts.row.at':'{p} en {s}','alerts.d.remail':'Te manda un correo al volver.','alerts.d.rsms':'Te manda un texto al volver.','alerts.d.semail':'Verifica la tienda sola. Resultado al correo.','alerts.d.ssms':'Verifica la tienda sola. Resultado por texto.','alerts.none':'Aún no has creado alertas.','alerts.off':'Apagar','alerts.mute':'Silenciar','alerts.unmute':'Activar','alerts.stop':'Parar','alerts.d.muted':'Silenciada. No llega nada hasta activarla.','alerts.mutedpill':'Silenciada. Actívala cuando quieras.','alerts.unmutedpill':'Activada. Te avisaremos.','alerts.stopped':'Cancelamos {x}','alerts.name.restock':'las alertas de reposición de {s}','alerts.name.sched':'las alertas de auto chequeo de {s}','alerts.thatstore':'esa tienda','alerts.thisalert':'esta alerta','alerts.k.sched':'Auto-verificación','alerts.k.restock':'Alerta de reposición','alerts.c.sms':'texto','alerts.c.email':'correo','alerts.acheck':'Una verificación','acct.row.alerts':'Alertas','acct.row.alerts.sub':'Avisos de reposición y autoverificación.',
+  'watch.on':'Te avisamos por correo cuando vuelva','watch.askemail':'¿A qué correo te avisamos?','watch.cta2':'Vigilar esta tienda','watch.inbox':'Revisa tu correo','watch.inboxsub':'Confirma tu correo y lo activamos.','alerts.sub':'Cada tienda que vigilas. Prende o apaga cada una.','alerts.pauseall':'Pausar todas las alertas','alerts.on':'Activas','alerts.paused':'En pausa','alerts.rowon':'On','alerts.rowoff':'Off','alerts.remove':'Quitar','alerts.none':'Aún no vigilas ninguna tienda.','alerts.makeroom':'Vigilas {n} tiendas. Quita una para agregar esta.','alerts.added':'Ahora vigilas {s}.','alerts.stopped':'Quitamos {x}.','alerts.set':'Tu {type} de {store} está lista. Gestiónala en Mis verificaciones > Alertas.','alerts.type.restock':'Alerta de reposición','alerts.type.auto':'Auto-verificación',
   'feat.d.zone_sweeps':'Guarda tus tiendas como una zona. Un toque las llama todas a la vez. Mira las respuestas llegar en vivo. Cada tienda cuesta una verificación. Sin respuesta, sin cargo.','feat.d.restock_alerts':'Deja de revisar. Te avisamos. Toca Avísame cuando vuelva en un resultado. Vigilamos esa tienda por ti. Apenas llegue producto, te avisamos. Un aviso por reposición, nada de spam.','feat.d.scheduled_checks':'Las tiendas reponen con ritmo. La autoverificación corre en sus días de envío. La respuesta te espera en el celular. Cancela cuando quieras en Mis verificaciones.','feat.d.any_town':'Las cuentas gratis buscan cerca de casa. Cualquier ciudad te suelta la correa. Busca cualquier código postal o ciudad. El mapa salta ahí. Más de 100,000 tiendas.','feat.d.store_holds':'¿Lo encontraste pero estás a 20 minutos? Le pedimos al personal que te aparte uno. Con tu nombre, en la misma llamada.','feat.d.your_voice':'Elige la voz que llama por ti. Quien contesta escucha una voz amable y natural.','feat.d.thrift_hunts':'Colecciones viejas acaban en tiendas de segunda. Precios de risa, nadie las revisó. Activa Thrift y llamamos a las de tu zona. Preguntamos qué hay en la vitrina hoy.','feat.d.hobby_hunts':'Un muro de Pokémon para explorar. Cada era, cada set, cada producto. Con precios de lista. Elige tu objetivo. Cada llamada pide exactamente eso.',
   'zones.untitled':'Zona sin nombre','zones.store':'tienda','zones.stores':'tiendas',
   'zones.rename':'Renombrar','zones.delete':'Eliminar zona','zones.rename.save':'Guardar nombre','zones.delete.sure':'No se puede deshacer.','zones.delete.yes':'Sí, eliminarla','zones.keep':'Conservarla','zones.allclosed':'Todas las tiendas de esta zona están cerradas','zones.confirm.title':'¿Verificar todas las tiendas de esta zona?','zones.confirm.per':'1 verificación por tienda.',
@@ -3085,7 +3168,7 @@ Object.assign(I18N.es, {
   'zones.report':'Verificación de zona','zones.checkingw':'verificando','zones.done':'listas','zones.no':'sin','zones.noans':'sin respuesta',
   'zones.starting':'Iniciando el barrido…','zones.share':'Compartir resultados','zones.stopall':'Detener todo',
   'zones.notx':'Aún no hay transcripción.','zones.stopped':'Deteniendo el barrido…','zones.copied':'Copiado al portapapeles',
-  'zones.sharemsg2':'Acabo de poner a una IA a llamar {n} tiendas a la vez. {i} lo tenían en stock. Una locura:',
+  'zones.sharemsg2':'Revisé {n} tiendas a la vez. {i} lo tenían. Una locura:',
   'zones.nocredits':'Te faltan unas verificaciones para toda la zona.',
   'ref.both2':'Ambos reciben <b style="color:#fff">{n} {c} gratis</b> cuando se registran.',
   'ref.check1':'verificación','ref.checkN':'verificaciones',
@@ -3311,7 +3394,7 @@ function closeStoreReq(){ $('storeReqOverlay').classList.remove('on'); acctRetur
 // The ladder + RAG live server-side; this is the whole client surface. Answers are grounded in the
 // book (readme.com); the human path is buried and only surfaces after the AI can't resolve.
 const SUP_BOOK='https://checkitforme.readme.io';
-let SUP_SID=''; let SUP_CAT='other'; let SUP_SHOT=null; let SUP_VIEW='home'; let SUP_STARTED=false; let SUP_ESC=0;
+let SUP_SID=''; let SUP_CAT='other'; let SUP_SHOT=null; let SUP_VIEW='home'; let SUP_STARTED=false; let SUP_ESC=0; let SUP_SRC='messenger';
 const SUP_CATS=[
   ['how_checks_work','How checks work','Cómo funcionan los checks'],
   ['check_issue',"Something's wrong with my check",'Algo está mal con mi check'],
@@ -3440,7 +3523,7 @@ function supStartNew(){ supShow('topic',{title:t('sup.topic.title',"What's it ab
     el.innerHTML=`<div class="rmain"><div class="rtitle">${esc(supCatLabel(k))}</div></div><svg class="rarrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`;
     box.appendChild(el); });
 }
-function supPickTopic(cat,src){ SUP_CAT=cat; supFreshChat(); supGo('chat');
+function supPickTopic(cat,src){ SUP_CAT=cat; SUP_SRC=(src==='result')?'status_page':(src||'messenger'); supFreshChat(); supGo('chat');
   $('sup_clip').classList.toggle('hide',cat!=='bug'&&cat!=='check_issue');
   // Same topic, two doors: from the result page nothing is wrong yet, so open neutral ("how did it
   // go?"); the apology greeting is only for people who PICKED "something's wrong" in the topic list.
@@ -3465,8 +3548,11 @@ async function sendSupport(){
   const btn=$('sup_send'); btn.disabled=true;
   const dots=document.createElement('div'); dots.className='supm bot dots'; dots.innerHTML='<span></span><span></span><span></span>';
   $('sup_msgs').appendChild(dots); $('sup_msgs').scrollTop=1e6;
+  // Stamp where this chat came from — the page, and the check id when it opened off a status page.
+  const _cid=(document.body.classList.contains('rview')&&LASTRES&&LASTRES.cid)?String(LASTRES.cid):undefined;
   const r=await appApi('/pub/support/chat',{method:'POST',headers:{'content-type':'application/json'},
-    body:JSON.stringify({sessionId:SUP_SID||undefined,message:msg,lang:LANG,category:SUP_CAT})});
+    body:JSON.stringify({sessionId:SUP_SID||undefined,message:msg,lang:LANG,category:SUP_CAT,
+      source:SUP_SRC,pageUrl:(location.pathname+location.search).slice(0,300),checkId:_cid})});
   dots.remove(); btn.disabled=false;
   if(!r||r.error==='network'||(!r.reply&&!r.escalate)){ supBubbleMsg('bot', t('err.generic',"That didn't go through. Give it another try.")); return; }
   if(r.sessionId){ SUP_SID=r.sessionId; supGuestAdd(SUP_SID,msg,SUP_CAT); }
@@ -3591,6 +3677,9 @@ async function boot(){
   CATS=Array.isArray(c)?c:[];
   if(Array.isArray(st)) st.forEach(x=>RSTATUSES[x.key]=x);
   if(pol&&!pol.error){ const flags=Object.assign({},POLICY.flags,pol.flags||{}); POLICY=Object.assign(POLICY,pol); POLICY.flags=flags; }
+  // SMS dark (flags.smsAlerts off) → the alert inputs ask for email from first paint, not just on
+  // open. Drop the i18n-ph attr too or the language pass re-stamps "email or phone" right back.
+  if(!smsAlertsOn()){ try{ [ $('watch_contact'), $('sch_contact') ].forEach(el=>{ if(el){ el.removeAttribute('data-i18n-ph'); el.placeholder=t('em.ph','you@email.com'); } }); }catch(_){ } }
   applyBrand(); applyFlags(); renderChips(); renderStores(); applyLang();
   // A result painted instantly (from cache) or before the registry loaded → repaint it now that the
   // statuses registry + categories are in, so the verdict copy/emoji upgrade to the owner-edited ones.
@@ -3720,7 +3809,7 @@ function openWaitlist(){ $('wl_err').textContent=''; $('wl_contact').value=''; t
 function closeWaitlist(){ $('waitlistOverlay').classList.remove('on'); acctReturn(); }
 async function submitWaitlist(){
   const c=($('wl_contact').value||'').trim();
-  const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(c);
+  const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(c)&&smsAlertsOn();
   if(!isEmail&&!isPhone){ markFld($('wl_contact'),true); $('wl_err').textContent=''; return; }
   const btn=$('wl_btn'); btn.disabled=true; btn.textContent=t('wl.adding','Adding you…');
   const body={ contact:c, lat:USER_LOC&&USER_LOC.lat, lng:USER_LOC&&USER_LOC.lng };
@@ -3773,6 +3862,9 @@ async function referShareTo(tg){
   else if(tg==='native'){ if(navigator.share){ try{ await navigator.share({text:text+' '+url}); }catch(e){} } else copyRefer(); }
 }
 // Stash an inbound ?ref= code; claim it once the visitor is signed in.
+// SMS alert channel gate — until the owner flips flags.smsAlerts in Admin (toll-free number
+// approved), every alert form collects EMAIL only and phone entries are rejected client-side.
+function smsAlertsOn(){ return (POLICY.flags||{}).smsAlerts===true; }
 let REF_FRESH=false; // set when a ?ref= just arrived this pageload → show the welcome (not on later reloads)
 function captureReferral(){ try{ const sp=new URLSearchParams(location.search); const code=sp.get('ref'); if(code){ localStorage.setItem('runnr_ref',code); REF_FRESH=true; sp.delete('ref'); const q=sp.toString(); history.replaceState({},'',location.pathname+(q?'?'+q:'')); } }catch(e){} }
 // Referral welcome (owner 07-18): a friend's invite link is the visitor's FIRST screen — a gift framing
@@ -4323,11 +4415,15 @@ async function restoreCall(cid, storeName, catName){
   if(!o||o.error||o.status==='in_progress'){ if(cached) return; toast(t('toast.callgone',"That check is no longer available")); backToBuilder(); return; }
   let srvRow=null;
   if(!known && isAuthed()){ try{ srvRow=(await fetchServerHistory()).find(x=>x.cid===cid)||null; }catch(_){ } }
-  if(srvRow&&srvRow.storeName){ SEL_STORE={id:srvRow.storeId,name:srvRow.storeName}; } // the account's record of THIS call wins over any guess
+  if(srvRow&&srvRow.storeName){ SEL_STORE={id:srvRow.storeId,name:srvRow.storeName,logoUrl:srvRow.logoUrl||null,logoWide:!!srvRow.logoWide,logoDark:!!srvRow.logoDark}; // the account's record of THIS call wins over any guess
+    const _rs=STORES.find(x=>x.id===srvRow.storeId); if(_rs){ if(_rs.logoUrl){ SEL_STORE.logoUrl=_rs.logoUrl; SEL_STORE.logoWide=_rs.logoWide; SEL_STORE.logoDark=_rs.logoDark; } SEL_STORE.address=_rs.address||null; SEL_STORE.location=_rs.location||null; } }
   if(!SEL_STORE.name) SEL_STORE.name=t('hist.acheck','Store check');
   if(!known && SEL_STORE.id!=null){
     const h=loadHist();
-    h.unshift({cid, storeId:SEL_STORE.id, storeName:SEL_STORE.name, address:SEL_STORE.address||null, location:SEL_STORE.location||null, logoUrl:SEL_STORE.logoUrl||null, logoWide:!!SEL_STORE.logoWide, logoDark:!!SEL_STORE.logoDark, categoryId:SEL_CAT, category:ct?ct.label:(catName||''), ts:(srvRow&&srvRow.ts)||o.ts||Date.now(), status:o.status, confirmed:o.confirmed});
+    // categoryId comes from the account's record first — a null here poisons the merged history (the
+    // shadow row wins the merge and drops this call out of the calendar + ‹ › arrow pool).
+    const _catId=(srvRow&&srvRow.categoryId!=null)?srvRow.categoryId:(ct?ct.id:SEL_CAT);
+    h.unshift({cid, storeId:SEL_STORE.id, storeName:SEL_STORE.name, address:SEL_STORE.address||null, location:SEL_STORE.location||null, logoUrl:SEL_STORE.logoUrl||null, logoWide:!!SEL_STORE.logoWide, logoDark:!!SEL_STORE.logoDark, categoryId:_catId, category:(srvRow&&srvRow.category)||(ct?ct.label:(catName||'')), zoneRunId:(srvRow&&srvRow.zoneRunId)||null, ts:(srvRow&&srvRow.ts)||o.ts||Date.now(), status:o.status, confirmed:o.confirmed});
     localStorage.setItem('runnr_history', JSON.stringify(h.slice(0,60)));
   }
   if(known&&known.steps) o.savedSteps=known.steps;
@@ -4349,6 +4445,13 @@ const DAYABBR={sunday:'Sun',monday:'Mon',tuesday:'Tue',wednesday:'Wed',thursday:
 function fmtShipDay(s){ if(!s) return ''; const raw=String(s).trim(); if(LANG!=='es') return raw;
   const ES={today:'hoy',tomorrow:'mañana',sunday:'el domingo',monday:'el lunes',tuesday:'el martes',wednesday:'el miércoles',thursday:'el jueves',friday:'el viernes',saturday:'el sábado'};
   return raw.replace(/\b(today|tomorrow|sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/gi,m=>ES[m.toLowerCase()]||m); }
+// Shipment TIME the clerk gave (owner 07-20) — returns a natural fragment WITH its connector, e.g.
+// "around 2 PM" / "in the morning", localized; '' when none, so the day-only note stays unchanged.
+function fmtShipTime(tm){ if(!tm) return ''; const raw=String(tm).trim(); if(!raw) return ''; const low=raw.toLowerCase();
+  const PART_EN={morning:'in the morning',afternoon:'in the afternoon',evening:'in the evening',noon:'around noon',midday:'around midday','first thing':'first thing','end of day':'end of day','end of the day':'end of the day'};
+  const PART_ES={morning:'por la mañana',afternoon:'por la tarde',evening:'por la noche',noon:'sobre el mediodía',midday:'sobre el mediodía','first thing':'a primera hora','end of day':'al final del día','end of the day':'al final del día'};
+  if(LANG==='es'){ return PART_ES[low] || ('sobre las '+raw); }
+  return PART_EN[low] || ('around '+raw); }
 function shipmentDayShort(s){ if(!s||!s.shipmentDay) return ''; const k=String(s.shipmentDay).trim().toLowerCase(); return DAYABBR[k]||(s.shipmentDay.length<=3?s.shipmentDay:s.shipmentDay.slice(0,3)); }
 function shipmentLine(s){ const d=shipmentDayShort(s); return d?`<div class="hrs" style="color:${AC2()}">${t('restocks','🚚 usually restocks')} ${esc(d)}</div>`:''; }
 // --- Geolocation + radius ---
@@ -5261,7 +5364,7 @@ function scriptHTML(transcript, final){
   const lines=(transcript||'').split('\n').filter(Boolean);
   const hs=transcriptHumanStart(lines);
   const human=lines.slice(hs).filter(l=>/^(Agent|Clerk):/.test(l));
-  if(!human.length) return `<div class="cs-wait">${final?t('live.noconvo','No live conversation on this call.'):t('live.waitperson',"Reaching a person…")}</div>`;
+  if(!human.length) return final?`<div class="cs-wait">${t('live.noconvo','No live conversation on this call.')}</div>`:''; /* live: the log shows real steps ONLY — no filler line past the current step (owner 07-21) */
   return `<div class="chat">${human.map(l=>bubbleHTML(l,true)).join('')}</div>`;
 }
 function callMsgBoxHTML(steps, transcript, opts){
@@ -5328,14 +5431,13 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
     return `<div class="ctlv2" style="margin-bottom:22px">
       <div class="ctlv2-rail"><span class="d1"></span><span class="ln" style="background:linear-gradient(180deg,#4ADE80 0%,${live?'#4ADE80 100%':`color-mix(in srgb,#4ADE80 35%,${tone}) 60%,${tone} 100%`})"></span><span class="d2" style="background:${live?'#4ADE80':tone};${live?'box-shadow:0 0 8px rgba(74,222,128,.6)':''}"></span></div>
       <div style="flex:1;min-width:0">
-        <details${status?'':' open'}><summary><span class="ctl-lead${(live&&stepRows.length)?' was':''}" style="display:inline-flex;align-items:center">${t('step.calling','Calling')}${SEL_STORE&&(SEL_STORE.logoUrl||SEL_STORE.name)?`<span class="callwho ${SEL_STORE.logoDark?'lite':''}">${storeFace(SEL_STORE)}</span>`:''}</span><span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#8A8A96">${stepRows.length+1} ${stepRows.length+1===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg></span></summary>
+        <details${status?'':' open'}><summary><span class="ctl-lead${(live&&stepRows.length)?' was':''}" style="display:inline-flex;align-items:center">${t('step.calling','Calling')}${(()=>{const _w=(status&&status.store)||SEL_STORE;return _w&&(_w.logoUrl||_w.name)?`<span class="callwho ${_w.logoDark?'lite':''}${_w.logoWide?' widelogo':''}">${storeFace(_w)}</span>`:'';})()}</span><span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#8A8A96">${stepRows.length+1} ${stepRows.length+1===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg></span></summary>
           <div class="ctlv2-steps">${stepEls}</div>
         </details>
         <div id="convo_body" style="${bubs?'margin-top:12px;':''}display:flex;flex-direction:column;gap:9px">${bubs}</div>
-        ${(live&&!bubs)?`<div class="cs-wait" style="margin:9px 0 0;padding-left:0;text-align:left">${t('live.waitperson','Reaching a person…')}</div>`:''}
         ${vline}
       </div>
-    </div>`; /* "Reaching a person…" now lives INSIDE the timeline column, right under the current step (owner 07-17: it floated below the log and read right-shifted) */
+    </div>`; /* no filler line under the steps — the log shows real steps ONLY (owner 07-21) */
   }
   const stepRows = steps.slice(1).map((s,idx)=>{
     const realI=idx+1; let secs=null; // seconds this step took (real timings only — derived steps are all at:0)
@@ -5350,13 +5452,12 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
   }).join('');
   // Roll-up handle: lead with "Ringing the store…" (drop the "Calling {store}" header) + total steps · secs.
   const totalS = finalElapsed!=null ? Math.round(finalElapsed) : (n>0 ? Math.round(steps[n-1].at) : 0);
-  const reach = n ? `<details class="reach" open><summary><span class="ctl-dot"></span><span class="reach-lbl" style="display:inline-flex;align-items:center">${t('step.calling','Calling')}${SEL_STORE&&(SEL_STORE.logoUrl||SEL_STORE.name)?`<span class="callwho ${SEL_STORE.logoDark?'lite':''}">${storeFace(SEL_STORE)}</span>`:''}</span><span class="reach-n">${n} ${n===1?t('step.one','step'):t('step.many','steps')}${totalS?` · <span class="cs-count">${totalS}</span>s`:''}</span><span class="reach-chev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary><div class="reach-steps">${stepRows}</div></details>` : '';
+  const reach = n ? `<details class="reach" open><summary><span class="ctl-dot"></span><span class="reach-lbl" style="display:inline-flex;align-items:center">${t('step.calling','Calling')}${SEL_STORE&&(SEL_STORE.logoUrl||SEL_STORE.name)?`<span class="callwho ${SEL_STORE.logoDark?'lite':''}${SEL_STORE.logoWide?' widelogo':''}">${storeFace(SEL_STORE)}</span>`:''}</span><span class="reach-n">${n} ${n===1?t('step.one','step'):t('step.many','steps')}${totalS?` · <span class="cs-count">${totalS}</span>s`:''}</span><span class="reach-chev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary><div class="reach-steps">${stepRows}</div></details>` : '';
   // Conversation: a "Conversation" label (green dot) then the bubbles — NO per-bubble dots.
   const convLabel = human.length ? `<div class="ctl-conv"><span class="ctl-dot"></span><span class="conv-lbl">${t('res.conversation','Conversation')}</span></div>` : '';
-  const emptyMsg = finalElapsed==null ? t('live.waitperson',"Reaching a person…") : '';
   const convo = human.length
     ? human.map(l=>`<div class="ctl-bub${/^Agent:/.test(l)?' ai':''}">${bubbleHTML(l,true)}</div>`).join('')
-    : (emptyMsg?`<div class="cs-wait">${emptyMsg}</div>`:'');
+    : ''; /* live: no filler while waiting — the log shows real steps only (owner 07-21) */
   // Bottom: the call status — last dot + the verdict line (no "confirmed").
   const statusRow = (status&&(status.term||status.title)) ? `<div class="ctl-status tl-${status.cls||'unk'}"><span class="ctl-dot"></span><span class="status-txt">${esc(status.term||status.title)}</span></div>` : '';
   const lineCls = status ? ('ctl-'+(status.cls||'unk')) : 'ctl-live';
@@ -5955,29 +6056,16 @@ function pricesFoundHTML(o){ // cross-store cheapest-first list for the checked 
   const li=rows.map(r=>{ const isBest=r===best;
     return `<div class="ph-row${isBest?' best':''}"><span class="ph-st">${esc(r.store||'—')}${isBest?` <span class="besttag">${t('ph.best','BEST')}</span>`:''}${r.inStock?'':` <span class="ph-oos">${t('ph.oos','out')}</span>`}</span><span class="ph-pr">${money(r.cents)}</span></div>`; }).join('');
   return `<div class="ph-panel"><div class="ph-h">${t('ph.title','Prices found')}</div>${li}</div>`; }
-function showResult(o, cid){
-  const _fromLive=(()=>{ try{ return !$('live').classList.contains('hidden'); }catch(_){ return false; } })(); // call just ended → bring them back to the verdict at the top (owner 07-15b)
-  try{ const _ho=$('histOverlay'); if(_ho) _ho.classList.remove('on'); }catch(_){ } // opening an actual check leaves the history sheet for the full verdict view (owner 07-12)
-  try{ if(o && !o.ts && LIVE_T0) o._t0=LIVE_T0; }catch(_){ } // fresh call: server ts may lag — use the start time we clocked locally
-  try{ if(o && !o.ts && !o._t0 && cid){ const _e=histList().find(x=>x.cid===cid); if(_e&&_e.ts) o.ts=_e.ts; } }catch(_){ } // reopened call with a ts-less payload → the saved history time keeps the date line on EVERY status (owner 07-16)
-  try{ exitHunt(); }catch(_){ }
-  try{ recordResultPrice(o); }catch(_){ }
-  resultCacheSet(cid,o);
-  { const _r=$('result'); if(_r) _r.classList.remove('r-play'); } // clear the entrance trigger before every (re)render — the block below re-arms it only on the content-ready render
-  // Scroll back to the verdict at the top when a live call settles (owner 07-15b, re-broken by the
-  // instant pending-flip: finalizeLive hides #live and shows a PENDING result first, so by the time the
-  // real verdict renders _fromLive is false and the scroll never fired — owner 07-17). The pending flip
-  // arms a flag; the settled render consumes it.
-  if(_fromLive && o && o.status==='pending') window._livePend=true;
-  if(o && o.status!=='pending' && (_fromLive || window._livePend)){ window._livePend=false; setTimeout(()=>{ try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(_){ window.scrollTo(0,0); } },120); }
-  stopLiveTimers(); LIVE_ROOM=null; if($('hangup_btn'))$('hangup_btn').style.display='none';
-  $('live').classList.add('hidden'); $('builder').classList.add('hidden'); $('history').classList.add('hidden'); $('success').classList.add('hidden'); const hov=$('handoff'); if(hov)hov.classList.add('hidden'); document.body.classList.remove('fabbed'); document.body.classList.remove('lview'); /* verdict bloom takes over from the live bloom */
-  { const _fd=$('finds'); if(_fd)_fd.style.display='none'; } // no rotating finds ticker on the result/call page
-  LASTRES=o; TRANSLATED=false; ORIGHTML=''; FBK_SENT=false;
+// THE verdict engine — status → {cls,big,title,note}. Extracted from showResult (unchanged logic) so the
+// zone report's in-frame unfold renders through the exact same registry/copy as the full result page —
+// one source of truth, never a rebuilt approximation. _lbl = the category label for this call;
+// _sh = the store headline ("Big 5 Sporting Goods Woodland Hills") for the rich store-naming sub-line.
+function deriveVerdict(o, _lbl, _sh){
+  const catL=_lbl||'';
   // Always describe exactly what happened — never a bare "unclear".
   // Did the agent actually get to ASK its question? (vs. only navigating the phone menu) —
   // tells "reached a person but no clear answer" apart from "nobody ever picked up at the desk".
-  const cat=(catLabel()||'').toLowerCase();
+  const cat=catL.toLowerCase();
   const agentLines=(o.transcript||'').split('\n').filter(l=>/^\s*Agent:/.test(l)).join(' ').toLowerCase();
   const asked = !!cat && (agentLines.includes(cat) || /checking to see|got any|in stock|do you (have|carry|sell)|shipment|looking for/.test(agentLines));
   let cls='unk', big='📵', title=t('v.noanswer','Nobody answered'), note=t('note.unreached',"We couldn't reach anyone at the store. No charge. Try again in a bit.");
@@ -5995,10 +6083,10 @@ function showResult(o, cid){
     note=(o.statusKey==='failed'&&o.failureReason)?safeReason(o.failureReason):t('stn.'+o.statusKey, s.note||'');
   }
   else if(o.statusKey==='left_on_hold'){ cls='unk'; big='⏳'; title=t('v.hold','Left on hold'); note=t('note.hold',"They went to check, but the call dropped on hold. No charge. Try again."); }
-  else if(o.status==='completed'&&o.doesNotSell){ cls='out'; big='🚫'; title=t('v.nocarry',"They don't carry it"); note=tf('note.nocarry',"This store doesn't carry "+(catLabel()||'this')+". Try another.",{x:catLabel()||'this'}); }
+  else if(o.status==='completed'&&o.doesNotSell){ cls='out'; big='🚫'; title=t('v.nocarry',"They don't carry it"); note=tf('note.nocarry',"This store doesn't carry "+(catL||'this')+". Try another.",{x:catL||'this'}); }
   else if(o.status==='completed'&&o.soldOut){ cls='out'; big='🕐'; title=t('v.soldout','Sold out'); note=t('note.soldout',"Came in, but it's already gone. Worth catching the next shipment."); }
-  else if(o.status==='completed'&&o.confirmed===true){ cls='in'; big='✅'; title=t('v.in','In stock!'); note=tf('note.in','They have {c}. Go grab it.',{c:'<b style="color:#fff;font-weight:800">'+esc(catLabel()||'them')+'</b>'}); }
-  else if(o.status==='completed'&&o.confirmed===false){ cls='out'; big='❌'; title=t('v.out','Not in stock'); const _oc=catLabel()||(Array.isArray(o.cats)&&o.cats[0])||(typeof BRAND_CAT!=='undefined'&&BRAND_CAT&&BRAND_CAT.label)||''; note=_oc?tf('note.out2',"They don't have any <b style=\"color:#fff\">{c}</b> in stock right now.",{c:esc(_oc)}):t('note.out',"They don't have it."); }
+  else if(o.status==='completed'&&o.confirmed===true){ cls='in'; big='✅'; title=t('v.in','In stock!'); note=tf('note.in','They have {c}. Go grab it.',{c:'<b style="color:#fff;font-weight:800">'+esc(catL||'them')+'</b>'}); }
+  else if(o.status==='completed'&&o.confirmed===false){ cls='out'; big='❌'; title=t('v.out','Not in stock'); const _oc=catL||(Array.isArray(o.cats)&&o.cats[0])||(typeof BRAND_CAT!=='undefined'&&BRAND_CAT&&BRAND_CAT.label)||''; note=_oc?tf('note.out2',"They don't have any <b style=\"color:#fff\">{c}</b> in stock right now.",{c:esc(_oc)}):t('note.out',"They don't have it."); }
   else if(o.status==='completed'){ // reached the end but no yes/no extracted
     if(asked){ cls='unk'; big='🔄'; title=t('v.unclear',"No clear answer. Recheck."); note=t('note.unclear','Someone answered but didn’t give a clear yes or no. See what they said below.'); }
     else { cls='unk'; big='📵'; title=t('v.noanswer','Nobody answered'); note=t('note.noanswer.desk','Got through the menu, but no one picked up at the desk. No charge.'); }
@@ -6021,8 +6109,47 @@ function showResult(o, cid){
   // shipment day on a no/sold-out → flip from a flat "not in" to a restock-incoming heads-up.
   if(cls!=='in' && !o.doesNotSell && o.status==='completed' && o.shipmentDay){
     cls='soon'; big='🚚'; title=t('v.soon','Restock incoming!');
-    note=tf('note.soon','A shipment lands <b>{d}</b>. Be first when it drops.',{d:esc(fmtShipDay(o.shipmentDay))});
+    const _tm=o.shipmentTime?(' '+fmtShipTime(o.shipmentTime)):''; // clerk gave a time → "tomorrow around 2 PM"
+    note=tf('note.soon','A shipment lands <b>{d}</b>. Be first when it drops.',{d:esc(fmtShipDay(o.shipmentDay))+esc(_tm)});
   }
+  // Rich verdict sub-line: "{store} has / doesn't have {category} … right now" — completed single-category
+  // checks with a known store + category only; every other outcome keeps its own note.
+  const _asked1=(Array.isArray(o.cats)&&o.cats.length)?o.cats.length<=1:true;
+  if(!REG_NOTE && o.status==='completed' && _asked1 && !o.doesNotSell && _sh && catL){
+    const _SN=esc(_sh), _C=esc(catL);
+    if(cls==='in'){ note = o.productName
+        ? tf('sub.in.named','<b>{s}</b> has <b>{p}</b> in. Go grab it before it’s gone.',{s:_SN,p:esc(o.productName)})
+        : tf('sub.in','<b>{s}</b> has <b>{c}</b> in. Go grab it before it’s gone.',{s:_SN,c:_C}); }
+    else if(o.soldOut){ note=tf('sub.soldout','{s} is sold out of <b>{c}</b> right now.',{s:_SN,c:_C}); }
+    else if(cls==='out'){ note=tf('sub.out',"<b>{s}</b> doesn't have any <b>{c}</b> in stock right now.",{s:_SN,c:_C}); }
+  }
+  return {cls,big,title,note,REG_NOTE};
+}
+function showResult(o, cid){
+  const _fromLive=(()=>{ try{ return !$('live').classList.contains('hidden'); }catch(_){ return false; } })(); // call just ended → bring them back to the verdict at the top (owner 07-15b)
+  try{ const _ho=$('histOverlay'); if(_ho) _ho.classList.remove('on'); }catch(_){ } // opening an actual check leaves the history sheet for the full verdict view (owner 07-12)
+  try{ if(o && !o.ts && LIVE_T0) o._t0=LIVE_T0; }catch(_){ } // fresh call: server ts may lag — use the start time we clocked locally
+  try{ if(o && !o.ts && !o._t0 && cid){ const _e=histList().find(x=>x.cid===cid); if(_e&&_e.ts) o.ts=_e.ts; } }catch(_){ } // reopened call with a ts-less payload → the saved history time keeps the date line on EVERY status (owner 07-16)
+  try{ exitHunt(); }catch(_){ }
+  try{ recordResultPrice(o); }catch(_){ }
+  resultCacheSet(cid,o);
+  { const _r=$('result'); if(_r) _r.classList.remove('r-play'); } // clear the entrance trigger before every (re)render — the block below re-arms it only on the content-ready render
+  // Scroll back to the verdict at the top when a live call settles (owner 07-15b, re-broken by the
+  // instant pending-flip: finalizeLive hides #live and shows a PENDING result first, so by the time the
+  // real verdict renders _fromLive is false and the scroll never fired — owner 07-17). The pending flip
+  // arms a flag; the settled render consumes it.
+  if(_fromLive && o && o.status==='pending') window._livePend=true;
+  if(o && o.status!=='pending' && (_fromLive || window._livePend)){ window._livePend=false; setTimeout(()=>{ try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(_){ window.scrollTo(0,0); } },120); }
+  stopLiveTimers(); LIVE_ROOM=null; if($('hangup_btn'))$('hangup_btn').style.display='none';
+  $('live').classList.add('hidden'); $('builder').classList.add('hidden'); $('history').classList.add('hidden'); $('success').classList.add('hidden'); const hov=$('handoff'); if(hov)hov.classList.add('hidden'); document.body.classList.remove('fabbed'); document.body.classList.remove('lview'); /* verdict bloom takes over from the live bloom */
+  { const _fd=$('finds'); if(_fd)_fd.style.display='none'; } // no rotating finds ticker on the result/call page
+  LASTRES=o; TRANSLATED=false; ORIGHTML=''; FBK_SENT=false;
+  // Verdict = deriveVerdict, THE single status→copy engine (shared with the zone report's unfold).
+  // The store-naming rich sub-line applies only to single-category checks — same rule as always.
+  const _nmv=splitStoreName((SEL_STORE&&SEL_STORE.name)||'');
+  const _shv=[_nmv.base,_nmv.branch].filter(Boolean).join(' ');
+  const _alv=(Array.isArray(o.cats)&&o.cats.length) ? o.cats : ASKED_CATS.map(x=>x.label);
+  let {cls,big,title,note,REG_NOTE}=deriveVerdict(o, catLabel()||(_alv.length===1?String(_alv[0]||''):''), _alv.length<=1?_shv:'');
 
   // Multi-line check → show a per-category breakdown (Pokémon in stock, One Piece not, etc.)
   const askedLabels = (Array.isArray(o.cats)&&o.cats.length) ? o.cats : ASKED_CATS.map(x=>x.label);
@@ -6120,26 +6247,14 @@ function showResult(o, cid){
   // Full address on ONE line: street + city/state (e.g. "23357 Mulholland Drive, Woodland Hills, CA").
   const _aStreet=_store.address||SEL_STORE.address||'', _aCity=_store.location||SEL_STORE.location||'';
   const fullAddr=(_aStreet&&_aCity&&!_aStreet.includes(_aCity))?(_aStreet+', '+_aCity):(_aStreet||_aCity);
-  const haveLive=LIVE_STEPS.length>0;
-  // A reopened call reuses the SAVED live step timings (so "…3s / …2s" persists); else derive (no per-step secs).
-  const savedSteps=(!haveLive && Array.isArray(o.savedSteps) && o.savedSteps.length) ? o.savedSteps : null;
-  const resultSteps=haveLive?LIVE_STEPS:(savedSteps||deriveSteps(o.transcript||''));
-  const finalElapsed=haveLive&&LIVE_T0?((Date.now()-LIVE_T0)/1000):((typeof o.durationSecs==='number'&&o.durationSecs>0)?o.durationSecs:null);
+  // The server's transcript-clock ladder is the ONE truth for step seconds (owner 07-21): device
+  // stamps drift — a stage the live view missed gets stamped at call-end and fakes a giant step
+  // (the "We've connected 59s" bug). Device steps only when the server has no ladder yet.
+  const savedSteps=((Array.isArray(o.savedSteps)&&o.savedSteps.length)?o.savedSteps:((Array.isArray(o.steps)&&o.steps.length)?o.steps:null))||null;
+  const resultSteps=savedSteps||(LIVE_STEPS.length?LIVE_STEPS:deriveSteps(o.transcript||''));
+  const finalElapsed=(typeof o.durationSecs==='number'&&o.durationSecs>0)?o.durationSecs:((!savedSteps&&LIVE_STEPS.length&&LIVE_T0)?((Date.now()-LIVE_T0)/1000):null);
   const vTitle=String(title).replace(/[\s!?.:：]+$/,''); // "In stock!" → "In stock" so the "Status: summary" line reads clean (colon separator, no dash)
-  // Rich verdict sub-line (mirrors the /demo design): "{store} has / doesn't have {category} … right
-  // now". Only for a completed single-category check where we know the store + category; every other
-  // outcome (no-answer, closed, doesn't-carry, restock-soon, multi-category) keeps prod's own note.
-  // Naming the store right here lets us drop the separate store line below it.
-  let richSub=false;
-  if(!REG_NOTE && o.status==='completed' && askedLabels.length<=1 && !o.doesNotSell && storeHeadline && headLabel){
-    const _SN=esc(storeHeadline), _C=esc(headLabel);
-    if(cls==='in'){ note = o.productName
-        ? tf('sub.in.named','<b>{s}</b> has <b>{p}</b> in. Go grab it before it’s gone.',{s:_SN,p:esc(o.productName)})
-        : tf('sub.in','<b>{s}</b> has <b>{c}</b> in. Go grab it before it’s gone.',{s:_SN,c:_C});
-      richSub=true; }
-    else if(o.soldOut){ note=tf('sub.soldout','{s} is sold out of <b>{c}</b> right now.',{s:_SN,c:_C}); richSub=true; }
-    else if(cls==='out'){ note=tf('sub.out',"<b>{s}</b> doesn't have any <b>{c}</b> in stock right now.",{s:_SN,c:_C}); richSub=true; }
-  }
+  // (The rich store-naming sub-line now lives in deriveVerdict — shared with the zone unfold.)
   // Boxless "The call" subline: "{ago} · {dur}" — both pieces reuse existing prod helpers/vars
   // (timeAgo for the ago, callSummary already carries the "Call · Ns" duration). No new copy/keys.
   const callSubline=[o.ts?new Date(o.ts).toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'short',day:'numeric'})+' · '+new Date(o.ts).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'}):'', _secs?(_secs+'s'):''].filter(Boolean).join(' · '); // header now says "Call" — keep the subline just ago · duration (no redundant "Call")
@@ -6428,8 +6543,10 @@ async function ensureHistCache(){
       if(s.storeName&&e.storeName!==s.storeName){ e.storeName=s.storeName; e.storeId=s.storeId; e.logoUrl=s.logoUrl||e.logoUrl; fixed=true; }
       else if(s.storeName&&e.storeId==null){ e.storeId=s.storeId; fixed=true; }
       if(!e.logoUrl&&s.logoUrl){ e.logoUrl=s.logoUrl; e.logoWide=s.logoWide; e.logoDark=s.logoDark; fixed=true; } // old rows saved before we kept the logo
+      if(e.categoryId==null&&s.categoryId!=null){ e.categoryId=s.categoryId; if(!e.category&&s.category) e.category=s.category; fixed=true; } // a null categoryId drops the call out of the calendar + arrow pool
       if(!e.location&&(s.location||s.address)){ e.location=s.location||s.address; fixed=true; }
-      if(s.ts&&e.ts&&Math.abs(e.ts-s.ts)>15*60000){ e.ts=s.ts; fixed=true; } });
+      if(s.ts&&e.ts&&Math.abs(e.ts-s.ts)>15*60000){ e.ts=s.ts; fixed=true; }
+      if(s.zoneRunId&&!e.zoneRunId){ e.zoneRunId=s.zoneRunId; fixed=true; } });
     if(fixed) localStorage.setItem('runnr_history', JSON.stringify(h.slice(0,60)));
     const seen=new Set(h.map(x=>x.cid));
     h=h.concat(srv.filter(s=>s.cid&&!seen.has(s.cid))).sort((a,b)=>(b.ts||0)-(a.ts||0));
@@ -6502,13 +6619,21 @@ async function openHistEntry(e){
   ANIM_CID=null; // explicit user reopen → re-arm the entrance so opening any call replays the animation
   TONE_NAV_DONE=false; // opening another result → let it re-tint the status bar at load (real nav to its ?tone)
   SEL_STORE={id:e.storeId,name:e.storeName,carries:[],address:e.address||null,location:e.location||null,logoUrl:e.logoUrl,logoWide:e.logoWide,logoDark:e.logoDark}; SEL_CAT=e.categoryId;
+  // The live store record is the logo/address truth (it's what the homepage + a pull-to-refresh show) —
+  // a history row can predate the logo or come from a server-only call. Same source ⇒ same look, always.
+  { const _ls=STORES.find(x=>x.id===e.storeId);
+    if(_ls){ if(_ls.logoUrl){ SEL_STORE.logoUrl=_ls.logoUrl; SEL_STORE.logoWide=_ls.logoWide; SEL_STORE.logoDark=_ls.logoDark; }
+      if(!SEL_STORE.address) SEL_STORE.address=_ls.address||null; if(!SEL_STORE.location) SEL_STORE.location=_ls.location||null; } }
   if((!e.cats||!e.cats.length)&&e.category) e.cats=[e.category]; // server-history rows carry `category` (label) but no cats[] — normalize so the status note + "Asking about {p}" print the real name, never 'it'/'cards'
   SEL_CATS=e.categoryId?[e.categoryId]:[]; ASKED_CATS=(e.cats||[]).map(l=>({id:null,label:l}));
   // Old calls saved before we persisted the address (or whose store sits outside the current nearby
   // slice) have no address — fetch this ONE store and repaint in place once it lands. Guarded so a
   // navigation away (or opening a different call) can't repaint a stale result.
-  if(!SEL_STORE.address && SEL_STORE.id){ const _sid=SEL_STORE.id, _cid=e.cid;
-    appApi('/pub/store/'+_sid).then(st=>{ if(st&&!st.error&&(st.address||st.location) && SEL_STORE && SEL_STORE.id===_sid && RAIL_CID===_cid && NAV_VIEW==='result'){ SEL_STORE.address=st.address||null; SEL_STORE.location=st.location||SEL_STORE.location||null; if(LASTRES) showResult(LASTRES, RAIL_CID); } }).catch(()=>{});
+  // Logo look (url/wide/dark) is live-brand identity, not call data: ALWAYS re-pull it from the store
+  // record so a past call shows the CURRENT logo even if it saved an older look — e.g. a size/plate flag
+  // we corrected after the call (owner 07-21). Address/location stay fill-only (they don't change on us).
+  if(SEL_STORE.id && !String(e.cid).startsWith('local:')){ const _sid=SEL_STORE.id, _cid=e.cid;
+    appApi('/pub/store/'+_sid).then(st=>{ if(st&&!st.error && SEL_STORE && SEL_STORE.id===_sid && RAIL_CID===_cid && NAV_VIEW==='result'){ SEL_STORE.address=SEL_STORE.address||st.address||null; SEL_STORE.location=SEL_STORE.location||st.location||null; if(st.logoUrl){ SEL_STORE.logoUrl=st.logoUrl; SEL_STORE.logoWide=!!st.logoWide; SEL_STORE.logoDark=!!st.logoDark; } if(LASTRES) showResult(LASTRES, RAIL_CID); } }).catch(()=>{});
   }
   LIVE_STEPS=[]; LIVE_T0=0; // reopening a past call → no live timings; derive steps and start collapsed (it isn't happening live now)
   // A never-connected call (synthetic "local:" id) has no server transcript — rebuild its verdict from
@@ -7033,7 +7158,7 @@ async function renderZonesList(){
   // Paint the cached list instantly (no spinner) when we've loaded zones before this session, then refresh
   // silently underneath — the /app/zones round-trip is the slow part; the user shouldn't stare at loaddots.
   if(Array.isArray(ZONES.list)) zonePaintList(ZONES.list);
-  else z.innerHTML=`<div class="zframe">${zFrameHead(t('zones.title','My Zones'))}<div class="zf-scroll"><div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:40px 0"><span></span><span></span><span></span></div></div></div>`;
+  else z.innerHTML=`<div class="zframe"><div class="zf-scroll" style="justify-content:center"><div class="loaddots" style="display:flex;justify-content:center;gap:8px"><span></span><span></span><span></span></div></div></div>`; // no header while loading (redesign 07-19) — dots centered on the sheet
   let list=null; try{ const r=await appApi('/app/zones'); if(Array.isArray(r)) list=r; else if(r&&Array.isArray(r.zones)) list=r.zones; }catch(_){ }
   if(list==null){ if(!Array.isArray(ZONES.list)) zonePaintList([]); return; } // network hiccup — keep whatever's on screen
   ZONES.list=list; zonePaintList(list);
@@ -7041,30 +7166,43 @@ async function renderZonesList(){
 // Same renderer the homepage store rows use (storeFace) so zone logos are byte-for-byte identical.
 function zoneFace(st){ return `<div class="zc-face ${st.logoDark?'lite':''} ${st.logoWide?'widelogo':''}">${storeFace(st)}</div>`; }
 function zonePaintList(list){
-  ZONES.building=false; window.KB_DOCK=false; // leaving the builder: drop the keyboard-dock freeze so the sheet re-anchors (glass) on the list
+  ZONES.building=false; ZONES.viewRun=false; window.KB_DOCK=false; // leaving the builder: drop the keyboard-dock freeze so the sheet re-anchors (glass) on the list
   const z=$('zmodal'); if(!z) return;
   const CHK='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"></path></svg>';
   const cards=(list||[]).map(zn=>{
     const stores=zn.stores||[]; const n=zn.checkCount!=null?zn.checkCount:stores.length;
     const inN=zn.lastRun?(zn.lastRun.inStock||0):0;
     const pill=zn.lastRun
-      ? (inN>0?`<span class="zc-pill in">${CHK}${inN} ${t('zones.instock','in stock')}</span>`:`<span class="zc-pill none">${t('zones.checked','Checked')}</span>`)
+      ? (inN>0?`<span class="zc-pill in">${CHK}${inN} ${t('zones.instock','in stock')}</span>`:`<span class="zc-pill out">${t('zones.nonein','None in stock')}</span>`)
       : `<span class="zc-pill none">${t('zones.never','Not checked yet')}</span>`;
-    const when=`${n} ${n===1?t('zones.store','store'):t('zones.stores','stores')}${zn.lastRun?' · '+esc(zAgo(zn.lastRun.at)):''}`;
+    const when=`${n} ${n===1?t('zones.store','store'):t('zones.stores','stores')}${zn.lastRun?' · '+esc(zAgo((zn.lastRun.at||0)*1000))+' '+t('zones.ago','ago'):''}`;
     const faces=stores.slice(0,4).map(zoneFace).join('')+(stores.length>4?`<div class="zc-more">+${stores.length-4}</div>`:'');
     return `<div class="zc">
       <div class="zc-top"><div class="zc-nm">${esc(zn.name||t('zones.untitled','Untitled zone'))}</div><button class="zc-kebab" onclick="zoneMenu(${zn.id},event)" aria-label="Zone actions">${ZKEBAB}</button></div>
-      <div class="zc-meta">${pill}<span class="zc-when">${when}</span></div>
+      ${(ZONES.run&&ZONES.run.id===zn.id&&ZONES.run.data&&(ZONES.run.data.done||0)<(ZONES.run.data.total||0))
+        ? `<button class="zc-meta zc-open" onclick="zoneResumeRun()"><span class="zc-pill in">${t('zones.checkingnow','Checking…')}</span><span class="zc-when">${(ZONES.run.data.done||0)} ${t('zones.of','of')} ${ZONES.run.data.total||0} →</span></button>`
+        : (zn.lastRun&&zn.lastRun.runId)
+        ? `<button class="zc-meta zc-open" onclick="zoneOpenReport(${zn.id},'${esc(zn.lastRun.runId)}')">${pill}<span class="zc-when">${when} →</span></button>`
+        : `<div class="zc-meta">${pill}<span class="zc-when">${when}</span></div>`}
       ${faces?`<div class="zc-faces">${faces}</div>`:'<div style="height:14px"></div>'}
-      <div class="zc-row"><button class="zc-go" onclick="zoneCheckAll(${zn.id})"><span>${t('zones.checkzone','Check this zone')}${ZGOARR}</span></button></div>
+      <div class="zc-row"><button class="zc-go" onclick="zoneCheckAll(${zn.id})"><span>${t('zones.checkzone2','Check zone')}${ZGOARR}</span></button></div>
     </div>`;
   }).join('');
 
-  z.innerHTML=`<div class="zframe">${zFrameHead(t('zones.title','My Zones'))}
-    <div class="zf-scroll">
-      <button class="znew" onclick="zoneNew()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg><span>${t('zones.new','New zone')}</span></button>
-      ${cards||`<div class="zempty">${t('zones.empty','Save the stores near you as a zone, then check them all in one tap.')}</div>`}
-    </div></div>`;
+  // CD redesign 07-19: one-line compact header (small "Zones" + glowing New-zone pill) so cards get the
+  // room; EMPTY state drops the title entirely (owner) — just the message + the big New zone button.
+  z.innerHTML=cards
+    ? `<div class="zframe">
+        <div class="zlisthead"><div class="ttl">${t('zones.title2','Zones')}</div><button class="znewpill" onclick="zoneNew()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>${t('zones.new','New zone')}</button></div>
+        <div class="zf-scroll">${cards}</div></div>`
+    : `<div class="zframe"><div class="zf-scroll" style="justify-content:center">
+        <div class="zhero">
+          <div class="tile"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></div>
+          <div class="h1">${t('zones.empty1','No zones yet.')}</div>
+          <div class="h2">${t('zones.empty2','Save the stores near you as a zone. Then check them all in one tap.')}</div>
+          <button class="go" onclick="zoneNew()"><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>${t('zones.new','New zone')}</span></button>
+        </div>
+      </div></div>`;
 }
 function zAgo(at){ try{ const s=Math.max(1,Math.floor((Date.now()-new Date(at).getTime())/1000)); if(s<3600) return Math.floor(s/60)+'m'; if(s<86400) return Math.floor(s/3600)+'h'; return Math.floor(s/86400)+'d'; }catch(_){ return ''; } }
 // One shell for every zone dialog (actions menu, rename, delete, check confirm) — a BOTTOM SHEET like
@@ -7119,36 +7257,47 @@ function alertsPrefetch(){ try{ appApi('/app/alerts/me').then(r=>{ if(r&&!r.erro
 // What we call this alert when we talk about it in a pill ("restock alerts for Fun").
 function alertName(x){ const s=x.storeName||t('alerts.thatstore','that store');
   return x.kind==='schedule'?tf('alerts.name.sched','auto check alerts for {s}',{s}):tf('alerts.name.restock','restock alerts for {s}',{s}); }
-async function openAlerts(){ const ov=sheetShell('alertsOv');
-  const shell=rows=>`<div class="modal" style="text-align:left">
+// The Alerts list (owner 07-21): every watched store as the site's own store row + one ON/OFF switch,
+// a master "Pause all alerts" on top, each row removable. Optionally opens in make-room mode when a
+// new watch hit the 10-store cap. Cache-first so it paints instantly; the fetch refreshes.
+let ALERTS_MAKEROOM=false;
+// Same store object shape the homepage row uses, so storeFace() paints the REAL chain logo (server
+// sends logoUrl/logoWide/logoDark/storeType via chainLogoInfo); falls back to the live STORES cache.
+function alertStoreObj(x){ const cached=(window.STORES||[]).find(s=>s.id===x.retailerId);
+  return { id:x.retailerId, name:x.storeName||(cached&&cached.name)||t('alerts.thatstore','that store'),
+    location:x.storeLocation||(cached&&cached.location)||'',
+    logoUrl:x.logoUrl||(cached&&cached.logoUrl)||null,
+    logoWide:x.logoWide!=null?x.logoWide:(cached&&cached.logoWide),
+    logoDark:x.logoDark!=null?x.logoDark:(cached&&cached.logoDark),
+    storeType:x.storeType||(cached&&cached.storeType)||'' }; }
+function closeAlerts(){ const o=$('alertsOv'); if(o) o.classList.remove('on'); }
+async function openAlerts(opts){ opts=opts||{}; ALERTS_MAKEROOM=!!opts.makeRoom; const ov=sheetShell('alertsOv');
+  const shell=inner=>`<div class="modal" style="text-align:left">
     <div style="display:flex;justify-content:center;margin-bottom:6px">${ICO.bell(AC1()).replace('width="15" height="15"','width="28" height="28"')}</div>
     <h3 style="margin:2px 0 4px;text-align:center">${t('alerts.title','Alerts')}</h3>
-    <div class="meta" style="margin-bottom:14px;text-align:center">${sentLines(t('alerts.sub','Manage your email and text alerts.'))}</div>
-    <div id="alertsList">${rows}</div></div>`;
+    <div class="meta" style="margin-bottom:14px;text-align:center">${sentLines(t('alerts.sub',"Every store you're watching. Flip each on or off."))}</div>
+    <div id="alertsList">${inner}</div></div>`;
   const paint=me2=>{ if(me2) ALERTS_ME=me2; const subs=(me2&&me2.subscriptions)||[];
     if(!$('alertsList')) return;
-    $('alertsList').innerHTML = subs.length? subs.map(x=>{
-      // Row copy law (owner 07-16): plain English, exactly what it is. Title = product + store when we
-      // have a REAL product name; a junk stored label ("cards") falls back to the category's name from
-      // the server, and if there's no trustworthy name at all the title is just the store.
-      let what=String(x.productLabel||'').trim();
-      const cat=String(x.categoryLabel||(CATS.find(c=>c.id===x.categoryId)||{}).label||'').trim();
-      if(!what || (what.length<8 && !/\s/.test(what)) || (cat&&cat.toLowerCase().endsWith(what.toLowerCase()))) what=cat;
-      const title=(what&&x.storeName)?tf('alerts.row.at','{p} at {s}',{p:esc(what),s:esc(x.storeName)}):esc(what||x.storeName||t('alerts.acheck','A check'));
-      // Short sentences on purpose: the text column next to Mute+Stop is ~240px — every sentence must
-      // hold ONE line there (copy-guide hard rule 2).
-      const does=x.muted?t('alerts.d.muted','Muted. Nothing sends until you unmute.')
-        :x.kind==='schedule'
-        ? (x.channel==='sms'?t('alerts.d.ssms','Auto checks the store. Texts results.'):t('alerts.d.semail','Auto checks the store. Emails results.'))
-        : (x.channel==='sms'?t('alerts.d.rsms',"Texts you when it's back."):t('alerts.d.remail',"Emails you when it's back."));
-      return `<div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding:13px 14px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)${x.muted?';opacity:.6':''}">
-        <span style="flex:1;min-width:0"><span style="display:block;font-size:14.5px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${title}</span><span style="display:block;margin-top:2px;font-size:12px;font-weight:600;color:#8A8A96;line-height:1.45">${sentLines(does)}</span></span>
-        <span style="display:flex;flex-direction:column;gap:6px;flex:none">
-          <button onclick="alertMute(${x.id},${x.muted?0:1})" style="background:rgba(255,255,255,.09);border:0;border-radius:999px;padding:7px 13px;color:#CDCDD8;font:800 12px Inter;cursor:pointer">${x.muted?t('alerts.unmute','Unmute'):t('alerts.mute','Mute')}</button>
-          <button onclick="alertStop(${x.id})" style="background:rgba(255,123,123,.12);border:0;border-radius:999px;padding:7px 13px;color:#FF9B9B;font:800 12px Inter;cursor:pointer">${t('alerts.stop','Stop')}</button></span></div>`;}).join('')
-      : `<div style="margin-top:10px;padding:20px 16px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);text-align:center"><span style="font-size:12.5px;font-style:italic;font-weight:600;color:#8A8A96;line-height:1.5">${sentLines(t('alerts.none',"You haven't created any alerts."))}</span></div>`; }; // empty state = a card in the alert-row family, small italic muted text (owner 07-17: was reading as the section subhead)
+    const paused=!!(me2&&me2.alertsPaused), cap=(me2&&me2.slotCap)||10;
+    // Make-room banner (owner: full list → remove one to add the store they just tried to watch).
+    const banner=ALERTS_MAKEROOM?`<div class="almk" style="margin-bottom:12px">${sentLines(tf('alerts.makeroom',"You're watching {n} stores. Remove one to add this one.",{n:cap}))}</div>`:'';
+    // Master pause — only meaningful once there's at least one alert.
+    const master=subs.length?`<div class="alpause" style="margin-bottom:12px"><span style="font-size:14.5px;font-weight:800;color:#fff">${t('alerts.pauseall','Pause all alerts')}</span>
+      <div class="ho-toggle alsw" style="width:170px;flex:0 0 auto"><button class="${!paused?'on':''}" onclick="alertsPauseAll(0)">${t('alerts.on','Alerts on')}</button><button class="${paused?'on':''}" onclick="alertsPauseAll(1)">${t('alerts.paused','Paused')}</button></div></div>`:'';
+    const rows = subs.length? subs.map(x=>{
+      const so=alertStoreObj(x), off=!!x.muted;
+      const name=esc(so.name||x.storeName||t('alerts.acheck','A check')), loc=esc(so.location||x.storeLocation||'');
+      return `<div class="store${off||paused?' alrow-off':''}" style="cursor:default;margin-top:10px">
+        <div class="ic ${so.logoDark?'lite':''} ${so.logoWide?'widelogo':''}">${storeFace(so)}</div>
+        <div style="min-width:0;flex:1"><div class="nm" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</div><div class="lo" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${loc}</div></div>
+        <div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+          <div class="ho-toggle alsw" style="width:108px;flex:0 0 auto"><button class="${!off?'on':''}" onclick="alertSetOn(${x.id},1)">${t('alerts.rowon','On')}</button><button class="${off?'on':''}" onclick="alertSetOn(${x.id},0)">${t('alerts.rowoff','Off')}</button></div>
+          <button class="alrm" onclick="alertStop(${x.id})" aria-label="${t('alerts.remove','Remove')}">${Z_ICO_TRASH}</button>
+        </div></div>`;}).join('')
+      : `<div style="margin-top:10px;padding:20px 16px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);text-align:center"><span style="font-size:12.5px;font-style:italic;font-weight:600;color:#8A8A96;line-height:1.5">${sentLines(t('alerts.none',"You aren't watching any stores yet."))}</span></div>`;
+    $('alertsList').innerHTML = banner+master+rows; };
   window.__alertsPaint=paint;
-  // Instant when the prefetch already landed; dots only on a cold open.
   ov.innerHTML=shell(ALERTS_ME?'' : `<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:22px 0"><span></span><span></span><span></span></div>`);
   if(ALERTS_ME) paint(ALERTS_ME);
   ov.classList.add('on');
@@ -7157,10 +7306,31 @@ async function openAlerts(){ const ov=sheetShell('alertsOv');
   else if(!ALERTS_ME) paint(null);
 }
 function alertRowById(id){ try{ return ((ALERTS_ME&&ALERTS_ME.subscriptions)||[]).find(x=>x.id===id)||null; }catch(_){ return null; } }
+// The ON/OFF switch = mute/unmute under the hood (muted stays listed, holds its slot, never sends).
+async function alertSetOn(id,on){
+  const r=await appApi('/app/alerts/mute',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,muted:on?false:true})});
+  if(r&&!r.error){ if(window.__alertsPaint) window.__alertsPaint(r); }
+  else toast(t('err.generic',"That didn't go through. Give it another try."),'neutral'); }
+// Master "Pause all alerts".
+async function alertsPauseAll(paused){
+  const r=await appApi('/app/alerts/pause-all',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({paused:!!paused})});
+  if(r&&!r.error){ if(window.__alertsPaint) window.__alertsPaint(r); }
+  else toast(t('err.generic',"That didn't go through. Give it another try."),'neutral'); }
+// Remove a watch (frees its slot). In make-room mode a removal immediately adds the store they were
+// trying to watch, so the cap bounce lands them one tap from done.
 async function alertStop(id){ const x=alertRowById(id);
   const r=await appApi('/app/alerts/unsubscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id})});
-  if(r&&!r.error){ if(window.__alertsPaint) window.__alertsPaint(r); toast(tf('alerts.stopped','Unsubscribed from {x}',{x:x?alertName(x):t('alerts.thisalert','this alert')}),'neutral'); }
-  else toast(t('err.generic',"That didn't go through. Give it another try."),'neutral'); }
+  if(!r||r.error){ toast(t('err.generic',"That didn't go through. Give it another try."),'neutral'); return; }
+  if(window.__alertsPaint) window.__alertsPaint(r);
+  if(ALERTS_MAKEROOM&&PENDING_WATCH){ const pw=PENDING_WATCH; PENDING_WATCH=null; ALERTS_MAKEROOM=false;
+    const sub=await appApi('/app/alerts/subscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind:'restock',retailerId:pw.store.id,categoryId:pw.categoryId,productLabel:pw.productLabel,channel:'email',lang:LANG})});
+    if(sub&&!sub.error){
+      const me=await appApi('/app/alerts/me'); if(me&&!me.error&&window.__alertsPaint) window.__alertsPaint(me);
+      if(sub.status==='on'){ toast(tf('alerts.added','Now watching {s}.',{s:pw.store.name||t('alerts.thatstore','that store')}),'neutral'); }
+      else { closeAlerts(); openWatchConfirm(pw.store, sub.status); } }
+    else toast(t('err.generic',"That didn't go through. Give it another try."),'neutral');
+    return; }
+  toast(tf('alerts.stopped','Removed {x}.',{x:x?(x.storeName||t('alerts.thisalert','this alert')):t('alerts.thisalert','this alert')}),'neutral'); }
 async function alertMute(id,muted){
   const r=await appApi('/app/alerts/mute',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,muted:!!muted})});
   if(r&&!r.error){ if(window.__alertsPaint) window.__alertsPaint(r); toast(muted?t('alerts.mutedpill','Muted. Unmute any time.'):t('alerts.unmutedpill',"Back on. We'll ping you."),'neutral'); }
@@ -7195,7 +7365,11 @@ async function zoneDelete(id){ try{ await appApi('/app/zones/'+id,{method:'DELET
 // ---- Screen A — build / edit a zone ----
 async function zoneNew(){ zHideAll(); zShow(); ZONES.editId=null; ZONES.sel=new Set(); ZONES.name=''; ZONES.mapOpen=false; renderZoneBuild(); await zoneEnsureStores(); renderZoneBuild(); }
 async function zoneEdit(id){ zHideAll(); zShow(); ZONES.editId=id; ZONES.sel=new Set(); ZONES.name='';
-  try{ const r=await appApi('/app/zones/'+id); const zn=(r&&r.id)?r:((r&&r.zone)||null); if(zn){ ZONES.name=zn.name||''; (zn.stores||[]).forEach(s=>{ ZONES.sel.add(s.retailerId); ZONES.storeById.set(s.retailerId,s); }); } }catch(_){ }
+  // Seed from the zones LIST (it carries each zone's stores) — GET /app/zones/<id> never existed, so
+  // this fetch 404'd silently and Edit opened with nothing selected (owner 07-21: "the whole point of edit").
+  let zn=(ZONES.list||[]).find(x=>x.id===id);
+  if(!zn){ try{ const r=await appApi('/app/zones'); if(Array.isArray(r)){ ZONES.list=r; zn=r.find(x=>x.id===id); } }catch(_){ } }
+  if(zn){ ZONES.name=zn.name||''; (zn.stores||[]).forEach(s=>{ ZONES.sel.add(s.retailerId); ZONES.storeById.set(s.retailerId,s); }); }
   await zoneEnsureStores(); renderZoneBuild();
 }
 async function zoneEnsureStores(){
@@ -7223,27 +7397,33 @@ function zoneRowHTML(s){ const on=ZONES.sel.has(s.id); const mi=storeMi(s); cons
     <div style="min-width:0;flex:1"><div class="nm">${esc(s.name)}</div><div class="lo">${esc(s.location||'')}${closed?' · '+t('zones.closed','closed'):''}</div></div>
     ${mi!=null?`<div class="smi">${mi<10?mi.toFixed(1):Math.round(mi)}<small>mi</small></div>`:''}</div>`; }
 function renderZoneBuild(){
-  ZONES.building=true;
+  ZONES.building=true; ZONES.viewRun=false;
   const z=$('zmodal'); const stores=zoneBuildStores(); const n=ZONES.sel.size; const R=ZONES.radius||5; const map=!!ZONES.mapOpen;
   const rings=[1,2,5,10].map(r=>`<button class="zrad ${R===r?'on':''}" onclick="zoneSetRadius(${r})">${r}</button>`).join('');
   const rows=stores.length?stores.map(zoneRowHTML).join('')
     : `<div class="zempty2">${USER_LOC?tf('zones.norad','No stores in {r} mi. Try a bigger radius.',{r:R}):t('zones.needloc','Tap the pin or search a ZIP to see stores.')}</div>`;
+  const LISTICO='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>';
+  const MAPICO='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3 3 6v15l6-3 6 3 6-3V3l-6 3-6-3Z"/><path d="M9 3v15M15 6v15"/></svg>';
   z.innerHTML=`<div class="zframe">
-    ${zFrameHead(ZONES.editId?t('zones.edit','Edit zone'):t('zones.newz','Create a zone'),'renderZonesList()')}
+    <div class="zf-head zf-compact"><div class="zf-title sm">${ZONES.editId?t('zones.edit2','Edit zone'):t('zones.new2','New zone')}</div></div>
     <div class="zf-sub">
-      <div class="zsearch"><input id="z_loc" class="kin" placeholder="${t('zones.locph','Search a ZIP or town…')}" autocomplete="off" oninput="zoneSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();zoneGeocode();}"><button class="zgps" onclick="zoneGPS()" aria-label="Use my location">${ICO.pin('currentColor')}</button></div>
-      <div class="zseg"><button class="${!map?'on':''}" onclick="if(ZONES.mapOpen)zoneToggleMap()">${t('zones.list','List')}</button><button class="${map?'on':''}" onclick="if(!ZONES.mapOpen)zoneToggleMap()">${t('zones.map','Map')}</button></div>
-      <div class="zradrow"><span class="zradlbl">${t('zones.radius','Radius')}</span><div class="zradtrack">${rings}<span class="zradmi">mi</span></div><button class="zaddall${zoneAllInRadiusSelected()?' on':''}" onclick="zoneToggleAll()">${zoneAllInRadiusSelected()?t('zones.removeall','Remove all'):'＋ '+t('zones.addallshort','Add all')}</button></div>
-      <div class="zcap">${t('zones.cap10','A zone checks up to 10 stores at once.')}</div>
+      <div style="display:flex;gap:9px">
+        <div class="zsearch" style="flex:1;margin:0"><svg class="zmag" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7C7C88" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4" stroke-linecap="round"/></svg><input id="z_loc" placeholder="${t('zones.locph2','ZIP or town…')}" autocomplete="off" oninput="zoneSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();zoneGeocode();}"><button class="zgps" onclick="zoneGPS()" aria-label="Use my location">${ICO.pin('#4ADE80').replace('width="20" height="20"','width="17" height="17"')}</button></div>
+        <div class="zseg"><button class="${!map?'on':''}" onclick="if(ZONES.mapOpen)zoneToggleMap()" aria-label="${t('zones.list','List')}">${LISTICO}</button><button class="${map?'on':''}" onclick="if(!ZONES.mapOpen)zoneToggleMap()" aria-label="${t('zones.map','Map')}">${MAPICO}</button></div>
+      </div>
+      <div class="zradrow" style="margin-top:9px"><span class="zradlbl">${t('zones.radius','Radius')}</span><div class="zradtrack">${rings}<span class="zradmi">mi</span></div><button class="zaddall${zoneAllInRadiusSelected()?' on':''}${ZONES.sel.size>=10?' capped':''}" onclick="zoneToggleAll()">${zoneAllInRadiusSelected()?t('zones.removeall','Remove all'):'＋ '+t('zones.addallshort','Add all')}</button></div>
     </div>
     <div class="zf-scroll tight${map?' mapmode':''}" style="${map?'overflow:hidden':''}">
       <div id="zmap" style="display:${map?'block':'none'};height:100%"></div>
-      <div class="zlist" style="display:${map?'none':'block'};max-height:none;background:none;box-shadow:none;padding:0">${rows}</div>
+      <div class="zlist${ZONES.sel.size>=10?' zfull':''}" id="zListEl" style="display:${map?'none':'block'};max-height:none;background:none;box-shadow:none;padding:0">${rows}</div>
     </div>
     <div class="zf-foot"><div class="zbasket${n?' up':''}" id="zBasket">
-      <div class="zbkhead"><span id="z_count">${n} ${n===1?t('zones.store','store'):t('zones.stores','stores')}</span><button class="zclearall" onclick="zoneClearAll()">${t('zones.clearall','Clear all')}</button></div>
-      <div class="zchips" id="zChips">${zoneChipsHTML()}</div>
-      <div class="zbkrow"><input id="z_name" placeholder="${t('zones.nameph3','Name it…')}" value="${esc(ZONES.name||'')}" maxlength="40" oninput="ZONES.name=this.value"><button class="zbksave" id="z_save" onclick="zoneSave()"><span>${t('zones.save','Save zone')}</span></button></div>
+      <div class="zbkhead">
+        <div class="zchips" id="zChips">${zoneChipsHTML()}</div>
+        <button class="zclearall" onclick="zoneClearAll()">${t('zones.clearall','Clear all')}</button>
+        <span class="zcount10${n>=10?' full':''}" id="z_count">${n} <i>/ 10</i></span>
+      </div>
+      <div class="zbkrow"><input id="z_name" placeholder="${t('zones.nameph3','Name it…')}" value="${esc(ZONES.name||'')}" maxlength="24" oninput="ZONES.name=this.value.slice(0,24)"><button class="zbksave" id="z_save" onclick="zoneSave()"><span>${t('zones.save2','Save')}</span></button></div>
     </div></div>
   </div>`;
   if(map) setTimeout(zoneMapEnsure,30); // (re)build the Leaflet map into the fresh #zmap node
@@ -7258,15 +7438,16 @@ function zoneChipsHTML(){
 }
 // Sync the basket (count · chips · slide up/down) + the Add-all toggle in place, no full re-render.
 function zoneBarSync(){ const n=ZONES.sel.size;
-  const c=$('z_count'); if(c) c.textContent=`${n} ${n===1?t('zones.store','store'):t('zones.stores','stores')}`;
+  const c=$('z_count'); if(c){ c.innerHTML=`${n} <i>/ 10</i>`; c.classList.toggle('full',n>=10); }
   const ch=$('zChips'); if(ch) ch.innerHTML=zoneChipsHTML();
   const bk=$('zBasket'); if(bk) bk.classList.toggle('up',n>0);
-  const aa=document.querySelector('#zones .zaddall'); if(aa){ const all=zoneAllInRadiusSelected(); aa.classList.toggle('on',all); aa.innerHTML=all?t('zones.removeall','Remove all'):'＋ '+t('zones.addallshort','Add all'); }
+  const zl=$('zListEl'); if(zl) zl.classList.toggle('zfull',n>=10);
+  const aa=document.querySelector('#zones .zaddall'); if(aa){ const all=zoneAllInRadiusSelected(); aa.classList.toggle('on',all); aa.classList.toggle('capped',n>=10); aa.innerHTML=all?t('zones.removeall','Remove all'):'＋ '+t('zones.addallshort','Add all'); }
   zoneSyncBasketPad();
 }
 // Pad the store list bottom by the basket's ACTUAL height so the last store always clears it (the
 // basket grows as logos wrap, so a fixed pad wasn't enough). Measured next frame after the reflow.
-function zoneSyncBasketPad(){ requestAnimationFrame(()=>{ const sc=document.querySelector('#zones .zf-scroll'), bk=$('zBasket'); if(!sc) return; if(sc.classList.contains('mapmode')){ sc.style.paddingBottom=''; return; } sc.style.paddingBottom=(ZONES.sel.size>0&&bk)?(bk.offsetHeight+18)+'px':''; }); }
+function zoneSyncBasketPad(){ requestAnimationFrame(()=>{ const sc=document.querySelector('#zones .zf-scroll'), bk=$('zBasket'); if(!sc) return; if(sc.classList.contains('mapmode')){ sc.style.paddingBottom=''; return; } sc.style.paddingBottom=(ZONES.sel.size>0&&bk)?(Math.max(128,bk.offsetHeight+18))+'px':''; }); }
 function zoneGPS(){ try{ toast(t('zones.locating','Finding your location…'),'neutral'); }catch(_){ } findMe(async()=>{ await zoneEnsureStores(); if(ZONES.mapOpen){ if(ZMAP&&USER_LOC){ try{ ZMAP.setView([USER_LOC.lat,USER_LOC.lng],12); }catch(_){ } } zoneMapDraw(); zoneBarSync(); } else renderZoneBuild(); }); }
 function zoneToggle(id){ const add=!ZONES.sel.has(id);
   if(add && ZONES.sel.size>=10){ toast(t('zones.limit10',"You've hit the 10 store limit"),'neutral'); return; } // sweep cap (owner 07-14)
@@ -7377,22 +7558,35 @@ async function zoneCheckAll(id){
       ${closedWarn||`<div class="meta" style="margin-bottom:16px">${t('zones.confirm.per','1 check per store.')}</div>`}
       <button class="zc-go" style="width:100%;margin-bottom:10px;display:block" id="zca_go"><span style="justify-content:center">${tf('zones.checkallN','Check all {n}',{n:openN})}${ZGOARR}</span></button>
       <button style="${Z_ROWBTN};justify-content:center" id="zca_no">${t('pre.again.no','Not now')}</button>`);
-    $('zca_go').onclick=()=>{ zPopClose(); res(true); }; $('zca_no').onclick=()=>{ zPopClose(); res(false); };
+    // GHOST-TAP GUARD, v2 (owner 07-21 both ways). v1 was a 600ms dead window — it blocked the ghost
+    // but ALSO silently ate a real fast tap (owner re-ran a zone, tapped quickly, nothing dialed).
+    // Structural fix: iOS's trailing ghost click comes from the touch that began BEFORE this sheet
+    // existed, so it arrives with NO new finger-down on the sheet. A real tap — however fast — always
+    // puts a fresh pointerdown on the overlay first. Arm on that; ignore any click that never was one.
+    let _armed=false; const _arm=()=>{ _armed=true; };
+    $('zmenuOv').addEventListener('pointerdown',_arm,{capture:true,once:true});
+    $('zmenuOv').addEventListener('touchstart',_arm,{capture:true,once:true,passive:true});
+    $('zca_go').onclick=()=>{ if(!_armed) return; zPopClose(); res(true); }; $('zca_no').onclick=()=>{ zPopClose(); res(false); };
     $('zmenuOv').onclick=e=>{ if(e.target===$('zmenuOv')){ zPopClose(); res(false); } };
   });
   if(!goOn) return;
   let run=null; try{ run=await appApi('/app/zones/'+id+'/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({categoryId:(BRAND_CAT&&BRAND_CAT.id)||SEL_CAT||undefined})}); }catch(e){ run={error:'net'}; }
   if(!run||run.error){ toast(run&&run.error==='zone_too_big'?t('zones.cap10','A zone checks up to 10 stores at once.'):run&&run.error==='no_credits'?t('zones.nocredits','You\'re a few checks short for the whole zone.'):t('err.generic',"That didn't go through. Give it another try."), run&&run.error==='zone_too_big'?'neutral':undefined); if(run&&run.error==='no_credits'){ setTimeout(()=>{ backToBuilder(); openBuy(); },600); } return; }
-  ZONES.run={ id, runId:run.runId, name:run.name||'' }; renderZoneRun(); zoneStartPoll();
+  ZONES.run={ id, runId:run.runId, name:run.name||'', fresh:true }; ZONES.viewRun=true; renderZoneRun(); zoneStartPoll(); // fresh:true = a run we JUST kicked off — the only case the report may say "Starting…" with a Stop all
 }
 function zoneStartPoll(){ zoneStopPoll(); ZONES.poll=setInterval(zonePollTick,1800); zonePollTick(); }
 async function zonePollTick(){
   const r=ZONES.run; if(!r){ zoneStopPoll(); return; }
   let data=null; try{ data=await appApi('/app/zones/run/'+r.runId); }catch(_){ }
   if(!data||data.error) return;
-  ZONES.run.data=data; renderZoneRun();
-  if(data.done!=null && data.total!=null && data.done>=data.total) zoneStopPoll();
+  const wasLive=r.data&&(r.data.done||0)<(r.data.total||0);
+  ZONES.run.data=data;
+  try{ sessionStorage.setItem('zrun:'+r.runId, JSON.stringify(data)); }catch(_){ } // reopening this report later paints instantly from here
+  if(ZONES.viewRun) renderZoneRun(); // in-place unless the shape changed (see renderZoneRun)
+  else if(!ZONES.building){ const dw=document.querySelector('#zones .zc-open .zc-when'); if(dw&&ZONES.run) dw.textContent=`${data.done||0} ${t('zones.of','of')} ${data.total||0} →`; }
+  if(data.done!=null && data.total!=null && data.done>=data.total){ zoneStopPoll(); if(!ZONES.viewRun&&!ZONES.building&&Array.isArray(ZONES.list)) renderZonesList(); }
 }
+function zoneResumeRun(){ ZONES.viewRun=true; ZONES._runPaint=null; renderZoneRun(); zoneStartPoll(); }
 function zoneRunTone(row){ const k=(row.statusKey||row.status||'').toLowerCase();
   // live FIRST (a mid-call row has confirmed=null), then decide stock. Match keys EXACTLY where it
   // matters: 'not_in_stock' contains the substring 'in_stock', so a loose /in_?stock/ test paints every
@@ -7408,39 +7602,129 @@ function zoneRunTone(row){ const k=(row.statusKey||row.status||'').toLowerCase()
 function renderZoneRun(){
   const r=ZONES.run; if(!r) return; const d=r.data||{summary:{},results:[]};
   const sm=d.summary||{}; const done=d.done||0, total=d.total||(d.results?d.results.length:0);
-  const inN=sm.inStock||0, live=total>done, checking=sm.checking!=null?sm.checking:(total-done);
-  const dots=Array.from({length:total},(_,i)=>`<span class="zdot ${i<done?'done':''}"></span>`).join('');
+  const inN=sm.inStock||0, loading=!total, live=loading?!!r.fresh:done<total, checking=sm.checking!=null?sm.checking:(total-done); // no data + not a run we just kicked off = a REOPEN still loading — neutral dots, never "Starting…"/Stop all
   const CHK='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"></path></svg>';
-  // In-stock store logos → the same .zc-faces tile row the zone card uses.
-  const hits=(d.results||[]).filter(row=>zoneRunTone(row)==='in');
-  const faces=hits.slice(0,6).map(row=>`<div class="zc-face">${storeFace({logoUrl:row.logoUrl,name:row.name})}</div>`).join('')+(hits.length>6?`<div class="zc-more">+${hits.length-6}</div>`:'');
-  const pill=inN>0?`<span class="zc-pill in">${CHK}${inN} ${t('zones.instock','in stock')}</span>`:`<span class="zc-pill none">${live?t('zones.checkingnow','Checking…'):t('zones.checked','Checked')}</span>`;
-  const when=`${done} ${t('zones.of','of')} ${total} ${t('zones.checkedw','checked')}${live?' · '+checking+' '+t('zones.callingw','calling'):''}`;
-  // Each result = the real store row. Tap to drop the transcript underneath.
-  const rows=(d.results||[]).map(row=>{ const tone=zoneRunTone(row);
-    const lbl=row.summary||({in:t('zones.rin','In stock'),out:t('zones.rout','Not in stock'),unk:t('zones.runk','No answer'),live:t('zones.rlive','Calling…')}[tone]);
-    const dotCls=tone==='in'?'instock':tone==='out'?'outstock':'on';
-    const sub=tone==='live'
-      ? `<span class="sdot on"></span><span class="zrfin t-live">${esc(lbl)}</span>`
-      : `<span class="sdot ${dotCls}"></span><span class="zrfin t-${tone}">${esc(lbl)}</span>`;
-    return `<div class="zresult">
-      <button class="store zrhead" onclick="zoneExpand('${esc(row.cid||'')}',this)">
-        <div class="ic">${storeFace({logoUrl:row.logoUrl,name:row.name})}</div>
-        <div style="min-width:0;flex:1"><div class="nm">${esc(row.name||('Store '+row.retailerId))}</div><div class="lo">${sub}</div></div>
-        <span class="zrchev">▸</span>
+  const znMeta=(ZONES.list||[]).find(x=>x.id===r.id);
+  const nmBase=String(r.name||(znMeta&&znMeta.name)||'').replace(/\s+zone\s*$/i,'').trim();
+  // Status marks = the SITE'S OWN chips (v2StatusChip) for finished rows; the comp's wave dots while
+  // checking; the comp's clock while waiting. Nothing invented (owner 07-19).
+  const mark=tone=>tone==='live'
+      ? '<span style="display:inline-flex;gap:2px;align-items:center;flex:0 0 auto"><span style="width:4px;height:4px;border-radius:50%;background:#4ADE80;animation:ckWaveV2 1.5s infinite"></span><span style="width:4px;height:4px;border-radius:50%;background:#4ADE80;animation:ckWaveV2 1.5s infinite .3s"></span><span style="width:4px;height:4px;border-radius:50%;background:#4ADE80;animation:ckWaveV2 1.5s infinite .6s"></span></span>'
+      : tone==='queue'
+      ? '<span style="flex:0 0 auto;display:inline-grid;place-items:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A8A96" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>'
+      : v2StatusChip(tone,26);
+  const rowTone=row=>((String(row.status||'').toLowerCase()==='queued')||!row.cid)?'queue':zoneRunTone(row);
+  // Comp report head (owner's screenshots 2 & 3): a circular progress RING (done/total) + status-count
+  // pills, ONE progress element — not the old 3-segment bar. Counts come from the row tones so the pills
+  // always match the rows exactly.
+  let cIn=0,cOut=0,cUnk=0,cLive=0,cQueue=0;
+  (d.results||[]).forEach(row=>{ const tn=rowTone(row); if(tn==='in')cIn++; else if(tn==='out')cOut++; else if(tn==='unk')cUnk++; else if(tn==='live')cLive++; else cQueue++; });
+  const ringTotal=total||(cIn+cOut+cUnk+cLive+cQueue)||(znMeta&&Array.isArray(znMeta.stores)?znMeta.stores.filter(s=>s.callable!==false).length:0);
+  const ringDone=cIn+cOut+cUnk;
+  const RINGC=263.894; // 2πr, r=42
+  const ringOff=ringTotal?RINGC*(1-Math.min(1,ringDone/ringTotal)):RINGC;
+  const headline=live?(nmBase?tf('zones.checkingzone','Checking {n} zone now',{n:nmBase}):t('zones.checkingyours','Checking your zone now')):tf('zones.alldone2','All {n} checked',{n:ringTotal});
+  const callingLbl=cLive>0?`${cLive} ${t('zones.callingw','calling')}`:'';
+  const pillHTML=[
+    cIn>0?`<span class="zrp in">${CHK}${cIn} ${t('zones.instock','in stock')}</span>`:'',
+    cOut>0?`<span class="zrp out">${cOut} ${t('zones.notpill','not')}</span>`:'',
+    cUnk>0?`<span class="zrp unk">${cUnk} ${t('zones.noansw','no answer')}</span>`:''
+  ].filter(Boolean).join('');
+  const subMeta = (loading&&!r.fresh) ? '' : (live?`${cLive} ${t('zones.callingnow','calling now')}${cQueue?` · ${cQueue} ${t('zones.waitingslot','waiting for a slot')}`:''}`:(r.fresh?t('zones.starting2','Starting…'):''));
+  const pillsOrSub = pillHTML || (subMeta?`<span class="zrsub">${esc(subMeta)}</span>`:'');
+  const ringNum=`<span style="font:900 25px Inter;color:#fff">${ringDone}</span><span style="font:800 14px Inter;color:#7C7C88">/${ringTotal}</span>`;
+
+  // ---- IN-PLACE tick (poll): same row set + same live-state -> update marks/tally only, so scroll
+  // position, open transcripts, and the stop box all survive (the 1.8s full repaint was wiping them).
+  const shape=total+':'+(live?'L':'D')+':'+(d.results||[]).map(x=>x.retailerId).join(',');
+  if(ZONES._runPaint===shape){
+    (d.results||[]).forEach(row=>{ const el=document.querySelector('#zones .zresult[data-rid="'+row.retailerId+'"]');
+      if(!el) return; const mk=el.querySelector('.zmark'); const tone=rowTone(row);
+      if(mk&&mk.dataset.tone!==tone){ mk.dataset.tone=tone; mk.innerHTML=mark(tone); el.querySelector('.zrrow2').classList.toggle('checking',tone==='live');
+        const btn=el.querySelector('.zrrow2'); if(btn) btn.setAttribute('onclick', tone==='queue'?`zoneStopOnePrompt(${row.retailerId},'${esc(row.name||'')}')`:`zoneExpand('${esc(row.cid||'')}',this)`); } });
+    const ra=document.getElementById('z_ringarc'); if(ra) ra.setAttribute('stroke-dashoffset', ringOff);
+    const rn=document.getElementById('z_ringnum'); if(rn) rn.innerHTML=ringNum;
+    const pz=document.getElementById('z_pills'); if(pz) pz.innerHTML=pillsOrSub;
+    const cg=document.getElementById('z_calling'); if(cg){ cg.innerHTML=callingLbl; cg.style.display=callingLbl?'':'none'; }
+    return;
+  }
+  ZONES._runPaint=shape;
+
+  let closedBox='';
+  if(znMeta&&Array.isArray(znMeta.stores)&&(d.results||[]).length){
+    const got=new Set((d.results||[]).map(x=>x.retailerId));
+    const closed=znMeta.stores.filter(st=>st.callable!==false&&!got.has(st.retailerId)).map(st=>railBase(st.name||'')).filter(Boolean);
+    if(closed.length){ const andW=LANG==='es'?' y ':' and '; const names=closed.length>1?closed.slice(0,-1).join(', ')+andW+closed[closed.length-1]:closed[0];
+      closedBox=`<div class="zclosedbox"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#f0c79a" stroke-width="2" style="flex:none;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01" stroke-linecap="round"/></svg><div><b>${esc(names)} ${closed.length>1?t('zones.areclosed','are closed'):t('zones.isclosed','is closed')}</b>${t('zones.skipped',', so we skipped those.')}</div></div>`; }
+  }
+  const rows=(d.results||[]).map(row=>{ const tone=rowTone(row);
+    const tap=tone==='queue'?`zoneStopOnePrompt(${row.retailerId},'${esc(row.name||'')}')`:`zoneExpand('${esc(row.cid||'')}',this)`;
+    return `<div class="zresult" data-rid="${row.retailerId}">
+      <button class="zrrow2 ${tone==='live'?'checking':''}" onclick="${tap}">
+        <div class="ic2 ${row.logoDark?'lite':''} ${row.logoWide?'widelogo':''}">${storeFace(row)}</div>
+        <div class="nm2">${esc(row.name||('Store '+row.retailerId))}</div>
+        <span class="zmark" data-tone="${tone}">${mark(tone)}</span>
       </button><div class="zrbody" style="display:none"></div></div>`; }).join('');
-  $('zmodal').innerHTML=`<div class="zframe">${zFrameHead(r.name||t('zones.report','Zone check'),'renderZonesList()')}
-    <div class="zf-scroll">
-    <div class="zc" style="cursor:default;margin-bottom:4px">
-      <div class="zdots">${dots}</div>
-      <div class="zc-meta">${pill}<span class="zc-when">${when}</span></div>
-      ${inN>0?`<div class="zc-faces" style="margin:14px 0 2px">${faces}</div>`:''}
+  $('zmodal').innerHTML=`<div class="zframe">
+    <div class="zf-scroll" style="padding-top:10px">
+    <div class="ztally" style="display:flex;align-items:center;gap:15px">
+      <div style="position:relative;width:82px;height:82px;flex:none">
+        <svg width="82" height="82" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="#2D2D34" stroke-width="9"/>
+          <circle id="z_ringarc" cx="50" cy="50" r="42" fill="none" stroke="#4ADE80" stroke-width="9" stroke-linecap="round" stroke-dasharray="${RINGC}" stroke-dashoffset="${ringOff}" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset .5s ease"/>
+        </svg>
+        <div id="z_ringnum" style="position:absolute;inset:0;display:grid;place-items:center;line-height:1">${ringNum}</div>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="${live?'zdotlive':'zdotdone'}"></span>
+          <span class="zrephead" style="font:800 17px Inter;letter-spacing:-.3px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(headline)}</span>
+          <span id="z_calling" style="font:600 12.5px Inter;color:#7C7C88;flex:0 0 auto;${callingLbl?'':'display:none'}">${callingLbl}</span>
+        </div>
+        <div id="z_pills" style="display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-top:9px">${pillsOrSub}</div>
+      </div>
     </div>
-    <div class="zrlist">${rows||`<div class="zc" style="text-align:center;color:#8A8A96;padding:24px">${t('zones.starting','Starting the sweep…')}</div>`}</div>
-    <div class="zbar"><div class="zbarrow" style="gap:10px">${live?`<button class="findbtn-primary" style="flex:1" onclick="zoneStopAll()">${t('zones.stopall','Stop all')}</button>`:''}<button class="cta sm" style="flex:1" onclick="zoneShare()">${t('zones.share','Share results')}</button></div></div>
+    ${closedBox}
+    <div class="zrlist" style="display:flex;flex-direction:column;gap:8px;margin-top:8px">${rows||`<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:36px 0"><span></span><span></span><span></span></div>`}</div>
+    <div class="zbar">${loading&&!r.fresh?'':(live?`<button class="zstopall" onclick="zoneStopAll()"><i></i>${t('zones.stopall','Stop all')}</button>`:`<button class="zsharego" onclick="zoneShareSheet()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>${t('zones.share','Share results')}</button>`)}</div>
     </div>
   </div>`;
 }
+// Share = MESSAGE FIRST (owner 07-19): a sheet showing the share text, then one Share button that
+// opens the OS share sheet (zoneShare, unchanged).
+function zoneShareSheet(){ const r=ZONES.run; const d=(r&&r.data)||{}; const sm=d.summary||{};
+  const total=d.total||0, inN=sm.inStock||0;
+  const txt=tf('zones.sharemsg2','Checked {n} stores at once. {i} had it in stock. Wild:',{n:total,i:inN});
+  const hits=(d.results||[]).filter(row=>zoneRunTone(row)==='in');
+  const tiles=hits.slice(0,6).map(row=>`<div>${storeFace({logoUrl:row.logoUrl,name:row.name})}</div>`).join('');
+  // Comp layout (owner 07-21): "Share results" title, card w/ headline + product·zone·when meta +
+  // in-stock logo tiles, share-text well, then SHARE (primary) + COPY side by side. One owner tweak:
+  // the check brandmark stays as the card's upper-right watermark, NOT the comp's logo row up top.
+  const zn=(ZONES.list||[]).find(x=>x.id===r.id);
+  const when=(zn&&zn.lastRun&&zn.lastRun.at)?tf('zones.agoword','{t} ago',{t:zAgo(zn.lastRun.at*1000)}):t('zones.justnow','just now');
+  const meta=[(BRAND&&BRAND.category)||'', (zn&&zn.name)||r.name||'', when].filter(Boolean).join(' · ');
+  zPop(`<div style="text-align:center;font:900 20px Inter;letter-spacing:-.4px;margin:0 0 14px">${t('zones.sharetitle','Share results')}</div>
+    <div class="zsharecard" style="margin:0 0 12px">
+      <div class="wm2"><svg width="120" height="120" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" fill="#4CF286"/><path d="M6.5 12.4 L10.3 16 L17.5 8" stroke="#0C2916" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="chip2"><b></b><span>${t('zones.zonecheck','Zone check')}</span></div>
+      <div class="hl2">${tf('zones.hadit','{i} of {n} stores had it in stock.',{i:inN,n:total})}</div>
+      ${meta?`<div style="font:600 13px Inter;color:#9A9AA6;margin-top:6px">${esc(meta)}</div>`:''}
+      ${tiles?`<div class="tiles2">${tiles}</div>`:''}
+    </div>
+    <div class="zsharewell" style="margin-bottom:14px"><div class="lbl2">${t('zones.sharetext','Share text')}</div><div class="tx2">${esc(txt)}</div></div>
+    <div style="display:flex;gap:10px;align-items:stretch">
+      <button class="zsharego" style="flex:1" onclick="zPopClose();zoneShare()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg>${t('zones.sharego','Share')}</button>
+      <button onclick="zoneCopyShare(this)" style="flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:8px;height:52px;padding:0 20px;border-radius:14px;border:0;background:linear-gradient(180deg,#31313A 0%,#26262C 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);font:800 13px Inter;letter-spacing:.1em;text-transform:uppercase;color:#DCDCE6;cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>${t('zones.copy','Copy')}</button>
+    </div>`); }
+// Copy the share text + the SAME landing link zoneShare sends — comp's second action.
+async function zoneCopyShare(btn){ const r=ZONES.run; const d=(r&&r.data)||{}; const sm=d.summary||{}; const n=d.total||0, i=sm.inStock||0;
+  const hits=(d.results||[]).filter(row=>zoneRunTone(row)==='in').slice(0,6).map(row=>({l:row.logoUrl||'',n:row.name||''}));
+  const st=hits.length?'&st='+encodeURIComponent(JSON.stringify(hits)):'';
+  const url=location.origin+'/s?k=zone&n='+n+'&i='+i+'&cat='+encodeURIComponent(brandProduct())+st+'&lang='+LANG;
+  const txt=tf('zones.sharemsg2','Checked {n} stores at once. {i} had it in stock. Wild:',{n,i})+' '+url;
+  try{ await navigator.clipboard.writeText(txt); }catch(_){ try{ const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }catch(_2){ } }
+  try{ if(btn){ const keep=btn.innerHTML; btn.innerHTML=t('zones.copied','Copied ✓'); setTimeout(()=>{ try{ btn.innerHTML=keep; }catch(_){ } },1400); } }catch(_){ }
+  toast(t('zones.copied2','Copied to clipboard'),'neutral'); }
 // Standalone PREVIEW of the live sweep report (owner: "give me a link before I call stores"). Mirrors
 // ?holdpeek — opens the real report over the app with SAMPLE results, no calls placed. Pulls real
 // nearby stores so the logos are real; falls back to plain names if the fetch is empty.
@@ -7460,12 +7744,65 @@ async function zonePeek(){
 }
 async function zoneExpand(cid,btn){ if(!cid) return; const body=btn.nextElementSibling; if(!body) return;
   if(body.style.display!=='none'){ body.style.display='none'; btn.classList.remove('open'); return; }
-  body.style.display='block'; btn.classList.add('open'); body.innerHTML=`<div class="loaddots" style="display:flex;gap:6px;padding:10px 4px"><span></span><span></span><span></span></div>`;
-  try{ const o=await appApi('/pub/result/'+encodeURIComponent(cid)); const tx=(o&&o.transcript)||''; body.innerHTML=tx?chatBubbles(tx):`<div class="lo" style="padding:8px 4px;color:#8A8A96">${t('zones.notx','No transcript yet.')}</div>`; }catch(_){ body.innerHTML=`<div class="lo" style="padding:8px 4px;color:#8A8A96">${t('zones.notx','No transcript yet.')}</div>`; }
+  body.style.display='block'; btn.classList.add('open');
+  // The row unfolds into the REAL check status page, rendered INSIDE this frame (owner 07-21): the
+  // same verdict engine (deriveVerdict), same RESULT pill / date / headline / sub-line classes, and
+  // the same timeline + conversation component the single-check page uses. Cached result → instant.
+  const paint=(o)=>{
+    const row=(ZONES.run&&ZONES.run.data&&(ZONES.run.data.results||[]).find(x=>x.cid===cid))||{};
+    const lbl=(typeof BRAND_CAT!=='undefined'&&BRAND_CAT&&BRAND_CAT.label)||(BRAND&&BRAND.category)||(Array.isArray(o.cats)&&o.cats[0])||'';
+    const nm=splitStoreName(row.name||''); const sh=[nm.base,nm.branch].filter(Boolean).join(' ');
+    if(!o.cats||!o.cats.length) o.cats=lbl?[lbl]:[];
+    if(!o.storeName) o.storeName=row.name||''; // fillP's {store} token names THIS row's store
+    const v=deriveVerdict(o, lbl, sh);
+    const vT=String(v.title).replace(/[\s!?.:：]+$/,'');
+    const when=o.ts?`${new Date(o.ts).toLocaleDateString(LANG==='es'?'es-ES':'en-US',{weekday:'short',month:'short',day:'numeric'})} · ${new Date(o.ts).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'})}`:'';
+    const term = v.cls==='in'?t('term.in','In stock.'):v.cls==='out'?t('term.out','Not in stock'):v.cls==='soon'?t('term.soon2','Restock confirmed'):v.cls==='pend'?t('term.getting','Getting result…'):t('term.unk','No clear answer');
+    const used = o.status==='completed'?t('res.used','1 check used'):t('res.nocharge','No charge for this one');
+    const tx=o.transcript||'';
+    body.innerHTML=`<div style="background:#1B1B20;padding:14px 14px 4px;border-radius:0 0 14px 14px;text-align:left;overflow:hidden">
+      <div class="rverdict ${v.cls}">
+        <span class="rpill"><span class="d"></span>${t('res.result','Result')}</span>
+        ${when?`<div class="rwhen">${esc(when)}</div>`:''}
+        <div class="rtitle2">${esc(vT)}</div>
+        ${v.note?`<div class="rsub">${sentLines(fillP(v.note,o,v.cls))}</div>`:''}
+      </div>
+      <div style="margin-top:16px">${combinedTimelineHTML((Array.isArray(o.steps)&&o.steps.length)?o.steps:deriveSteps(tx), tx, (typeof o.durationSecs==='number'&&o.durationSecs>0)?o.durationSecs:null, {cls:v.cls, title:vT, term, ts:o.ts, used, store:{name:row.name||'',logoUrl:row.logoUrl||null,logoWide:!!row.logoWide,logoDark:!!row.logoDark}})}</div>
+    </div>`;
+  };
+  const cached=resultCacheGet(cid);
+  if(cached){ try{ paint(cached); }catch(_){ } }
+  else body.innerHTML=`<div class="loaddots" style="display:flex;gap:6px;padding:10px 4px"><span></span><span></span><span></span></div>`;
+  try{ const o=await appApi('/pub/result/'+encodeURIComponent(cid));
+    if(o&&!o.error&&o.status!=='in_progress'){ resultCacheSet(cid,o); if(!resultSame(o,cached)) paint(o); }
+    else if(o&&!o.error&&o.status==='in_progress'){ // mid-call peek: the live timeline + conversation so far, no verdict yet
+      const row=(ZONES.run&&ZONES.run.data&&(ZONES.run.data.results||[]).find(x=>x.cid===cid))||{};
+      const tx=o.transcript||'';
+      body.innerHTML=`<div style="background:#1B1B20;padding:14px 14px 4px;border-radius:0 0 14px 14px;text-align:left;overflow:hidden">${combinedTimelineHTML(deriveSteps(tx), tx, null, {cls:'pend', title:'', term:'', ts:null, used:'', store:{name:row.name||'',logoUrl:row.logoUrl||null,logoWide:!!row.logoWide,logoDark:!!row.logoDark}})}</div>`;
+    }
+    else if(!cached){ // no provider record (never-connected dial) — verdict from the run row itself
+      const row=(ZONES.run&&ZONES.run.data&&(ZONES.run.data.results||[]).find(x=>x.cid===cid))||{};
+      paint({status:row.status||'no_answer', statusKey:row.statusKey||null, confirmed:row.confirmed, transcript:'', summary:'', ts:null});
+    }
+  }catch(_){ if(!cached) body.innerHTML=`<div class="lo" style="padding:8px 4px;color:#8A8A96">${t('zones.notx','No transcript yet.')}</div>`; }
 }
+function zoneOpenReport(zoneId,runId){ const zn=(ZONES.list||[]).find(x=>x.id===zoneId);
+  // INSTANT: keep the live run's data if it's this run, else paint from the session cache (saved on
+  // every poll tick) — the report shows in one frame and the poll refreshes it underneath. No more
+  // "Starting…" flash on a report we've already seen.
+  if(ZONES.run&&ZONES.run.runId===runId&&ZONES.run.data){ ZONES.run.id=zoneId; }
+  else { let cd=null; try{ cd=JSON.parse(sessionStorage.getItem('zrun:'+runId)||'null'); }catch(_){ }
+    ZONES.run={id:zoneId,runId,name:(zn&&zn.name)||'',data:cd||null}; }
+  ZONES.viewRun=true; ZONES._runPaint=null; renderZoneRun(); zoneStartPoll(); }
+function zoneStopOnePrompt(rid,nm){ zPop(`<h3 style="margin:4px 0 16px;text-align:center">${tf('zones.stopone.q','Stop checking {s}?',{s:nm||t('zones.astore','Store')})}</h3>
+  <button style="${Z_ROWBTN};justify-content:center;margin-bottom:10px" onclick="zPopClose();zoneStopOne(${rid})"><span style="color:#FF8A8A">${t('zones.stopone.yes','Stop checking')}</span></button>
+  <button style="${Z_ROWBTN};justify-content:center" onclick="zPopClose()">${t('zones.stopone.no','Continue')}</button>`); }
+async function zoneStopOne(rid){ const r=ZONES.run; if(!r) return;
+  try{ await appApi('/app/zones/run/'+r.runId+'/stop-one',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:rid})}); }catch(_){ }
+  toast(t('zones.stoppedone','Stopped that store'),'neutral'); setTimeout(zonePollTick,600); }
 async function zoneStopAll(){ const r=ZONES.run; if(!r) return; try{ await appApi('/app/zones/run/'+r.runId+'/stop',{method:'POST'}); }catch(_){ } toast(t('zones.stopped','Stopping the sweep…'),'neutral'); setTimeout(zonePollTick,600); }
 function zoneShare(){ const r=ZONES.run; const d=(r&&r.data)||{}; const sm=d.summary||{}; const n=d.total||0, i=sm.inStock||0;
-  const txt=tf('zones.sharemsg2','Just had an AI call {n} stores at once. {i} had it in stock. This thing is nuts:',{n,i});
+  const txt=tf('zones.sharemsg2','Checked {n} stores at once. {i} had it in stock. Wild:',{n,i});
   // Pass the in-stock stores' logos so the landing page can show a logo row (owner 07-18). Cap 6, keep
   // the URL short: {l:logoUrl, n:name} — the server tiles them, monogram-falling-back on name.
   const hits=(d.results||[]).filter(row=>zoneRunTone(row)==='in').slice(0,6).map(row=>({l:row.logoUrl||'',n:row.name||''}));
@@ -7567,6 +7904,9 @@ function openRailCal(){
   const base = RAIL_F.date ? new Date(RAIL_F.date+'T12:00:00') : (f.length?new Date(f[0].ts):new Date());
   RAIL_CAL_M = new Date(base.getFullYear(), base.getMonth(), 1).getTime();
   renderRailCal(); pop.classList.add('on');
+  // Zone-run calls exist only in SERVER history (no local entry like a solo check writes), so the
+  // cached list can be minutes stale — refetch on open and repaint if the popover is still up.
+  ensureHistCache().then(()=>{ try{ if(pop.classList.contains('on')) renderRailCal(); }catch(_){ } });
   setTimeout(()=>document.addEventListener('click',railCalAway),0);
 }
 function closeRailCal(){ const pop=$('railcalpop'); if(pop){ pop.classList.remove('on'); pop.innerHTML=''; } document.removeEventListener('click',railCalAway); }
@@ -7972,7 +8312,7 @@ sheetDrag('pageOverlay', ()=>closePage()); // footer pages are a bottom sheet no
 sheetDrag('acctOverlay', ()=>{ try{ closeAccount(true); }catch(_){ } }); // sheetDrag already ran the slide-down → instant hide
 sheetDrag('coOverlay', ()=>{ try{ closeCheckout(); }catch(_){ } });
 sheetDrag('storeReqOverlay', ()=>{ try{ closeStoreReq(); }catch(_){ } });
-sheetDrag('zones', ()=>{ try{ if(ZONES.building){ renderZonesList(); } else { backFromZones(); } }catch(_){ } }); // builder -> My Zones; list -> My checks
+sheetDrag('zones', ()=>{ try{ if(ZONES.building||ZONES.viewRun){ ZONES.viewRun=false; renderZonesList(); } else { backFromZones(); } }catch(_){ } }); // builder/report -> zones list. Poll keeps running so the card shows live progress + the doorway drops back in
 sheetDrag('histOverlay', ()=>{ try{ closeHistory(); }catch(_){ } });  // drag Check history down to dismiss
 sheetDrag('watchOverlay', ()=>{ try{ closeWatch(); }catch(_){ } });
 sheetDrag('scheduleOverlay', ()=>{ try{ closeSchedule(); }catch(_){ } });
@@ -8023,46 +8363,78 @@ function shareTo(target){
 }
 function closeShare(){ $('shareOverlay').classList.remove('on'); }
 
-async function openWatch(){
-  if(!SEL_STORE||!SEL_STORE.id){ toast(t('err.pickstore','Pick a store first')); return; }
+// ── ONE email-alert path for every "notify me when it's back" surface (owner 07-21) ──
+// A confirmed email = instant ON + a single gray toast, nothing asked. No email (or a still-pending
+// one) = the confirm sheet. A full list (10 stores) = make-room mode. Email is the only channel.
+let PENDING_WATCH=null; // a store bounced at the cap — re-added the moment a slot frees in make-room
+// One "your alert is set" confirmation for EVERY alert type (owner 07-21): names the store + the alert
+// type and points at the one place to manage it. typeKey/typeEn = the alert's name ("Restock Alert",
+// "Auto Check"). Store shortened to the chain (before the dash) so the line stays tight.
+function alertSetToast(storeName, typeKey, typeEn){
+  const store=String(storeName||'').split(/—|–| - /)[0].trim()||t('alerts.thatstore','that store');
+  toast(tf('alerts.set','Your {store} {type} is set. Manage in My Checks > Alerts.',{store,type:t(typeKey,typeEn)}),'neutral');
+}
+async function openWatch(){ return watchStore(); }
+async function watchStore(opts){
+  opts=opts||{};
+  const st=opts.store||SEL_STORE;
+  if(!st||!st.id){ toast(t('err.pickstore','Pick a store first')); return; }
   if(!isAuthed()){ toast(t('toast.joinalerts','Join to set alerts')); signUp(); return; }
   if(!hasFeature('restock_alerts')){ openBuy('premium'); return; } // restock alerts = a per-tier perk
-  $('watch_err').textContent=''; $('watch_contact').value=''; $('watch_contact').style.display=''; { const wb=$('watch_btn'); if(wb){ wb.textContent=t('watch.cta','Watch this store →'); wb.onclick=submitWatch; } } { const ws=$('watch_sub'); if(ws) ws.innerHTML=t('watch.sub',"We'll ping you the instant anyone confirms it in stock here."); } { const wt=document.querySelector('#watchOverlay h3 [data-i18n="watch.title"]'); if(wt) wt.textContent=t('watch.title','Tell me when it\'s back'); }
-  const sub=$('watch_sub'); if(sub) sub.textContent=LANG==='es'?`Te avisamos en cuanto alguien confirme ${findProductLabel()} en stock en ${findStoreName()}.`:`We'll ping you the instant anyone confirms ${findProductLabel()} in stock at ${findStoreName()}.`;
-  track('watch_open',{retailerId:SEL_STORE.id});
-  $('watchOverlay').classList.add('on'); sheetPush('watch'); setTimeout(()=>{try{$('watch_contact').focus();}catch(e){}},80);
-  // Social proof: surface how many others are already waiting on this store.
-
+  const categoryId=(opts.categoryId!=null)?opts.categoryId:SEL_CAT;
+  const productLabel=opts.productLabel||findProductLabel();
+  track('watch_open',{retailerId:st.id});
+  const r=await appApi('/app/alerts/subscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind:'restock',retailerId:st.id,categoryId,productLabel,channel:'email',lang:LANG})});
+  // Full list → open Alerts in make-room mode, remembering this store so a removal re-adds it.
+  if(r&&r.error==='cap'){ ALERTS_ME=r; PENDING_WATCH={store:st,categoryId,productLabel}; openAlerts({makeRoom:true}); return; }
+  if(!r||r.error){ toast(t('err.generic',"That didn't go through. Give it another try."),'neutral'); return; }
+  track('watch_set',{retailerId:st.id,channel:'email'});
+  // Keep the legacy Admin "Restock watches" card fed when there's an address on file.
+  if(ACCOUNT&&ACCOUNT.email){ try{ api('/pub/watch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:st.id,categoryId,contact:ACCOUNT.email})}); }catch(_){ } }
+  try{ alertsPrefetch(); }catch(_){ }
+  if(r.status==='on'){ alertSetToast(st.name,'alerts.type.restock','Restock Alert'); return; } // confirmed email: instant
+  openWatchConfirm(st, r.status); // need_email | pending
 }
 function closeWatch(){ $('watchOverlay').classList.remove('on'); }
-async function submitWatch(){
-  const c=($('watch_contact').value||'').trim();
-  const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(c);
-  if(!isEmail&&!isPhone){ markFld($('watch_contact'),true); $('watch_err').textContent=''; return; }
+// The confirm sheet, shown only when there's no confirmed email yet. Reuses #watchOverlay.
+function openWatchConfirm(st, status){
+  const ov=$('watchOverlay'); if(!ov) return;
+  const ico=$('watchIco'); if(ico) ico.innerHTML=ICO.bell(AC1()).replace('width="15" height="15"','width="28" height="28"');
+  const h=document.querySelector('#watchOverlay h3 [data-i18n="watch.title"]');
+  const sub=$('watch_sub'), inp=$('watch_contact'), btn=$('watch_btn'), err=$('watch_err');
+  if(err) err.textContent='';
+  if(status==='need_email'){
+    if(h) h.textContent=t('watch.title',"Tell me when it's back");
+    if(sub) sub.innerHTML=t('watch.askemail','Where should we email you?');
+    if(inp){ inp.style.display=''; inp.value=(ACCOUNT&&ACCOUNT.email)||''; inp.type='email'; inp.inputMode='email'; inp.placeholder=t('em.ph','you@email.com'); }
+    if(btn){ btn.textContent=t('watch.cta2','Watch this store')+' →'; btn.disabled=false; btn.onclick=submitWatchEmail; }
+    ov.classList.add('on'); sheetPush('watch'); setTimeout(()=>{try{$('watch_contact').focus();}catch(e){}},80);
+  } else { // pending: the address is on file but not confirmed yet
+    paintInboxState(); ov.classList.add('on'); sheetPush('watch');
+  }
+}
+// The "check your inbox" face of the confirm sheet (owner 07-21: the top copy is exactly this).
+function paintInboxState(){
+  const h=document.querySelector('#watchOverlay h3 [data-i18n="watch.title"]');
+  const sub=$('watch_sub'), inp=$('watch_contact'), btn=$('watch_btn'), err=$('watch_err');
+  if(err) err.textContent='';
+  if(h) h.textContent=t('watch.inbox','Check your inbox');
+  if(inp) inp.style.display='none';
+  if(sub) sub.innerHTML='<span style="color:#8A8A96">'+t('watch.inboxsub',"Confirm your email and we'll switch it on.")+'</span>'+((ACCOUNT&&ACCOUNT.email)?'<br><a onclick="resendConfirm()" style="display:inline-block;margin-top:9px;font-size:12.5px;font-weight:800;color:var(--purple);cursor:pointer;text-decoration:underline;text-underline-offset:3px">'+t('em.again','Send it again')+'</a>':'');
+  if(btn){ btn.textContent=t('watch.done2','Done'); btn.disabled=false; btn.onclick=closeWatch; }
+}
+async function submitWatchEmail(){
+  const e=(($('watch_contact').value)||'').trim().toLowerCase();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)){ markFld($('watch_contact'),true); $('watch_err').textContent=''; return; }
   const btn=$('watch_btn'); btn.disabled=true; btn.textContent=t('watch.setting','Setting it up…');
-  const channel=isEmail?'email':'sms';
-  // Register the standing opt-in twice: /pub/watch feeds the legacy Admin "Restock watches" card,
-  // and /app/alerts/subscribe puts it in the metered alerts system (per-plan SMS cap + Admin tracking).
-  const [r,sub]=await Promise.all([
-    api('/pub/watch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryId:SEL_CAT,contact:c})}),
-    appApi('/app/alerts/subscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind:'restock',retailerId:SEL_STORE.id,categoryId:SEL_CAT,productLabel:findProductLabel(),channel,lang:LANG})}),
-  ]);
-  btn.disabled=false; btn.textContent=t('watch.cta','Watch this store →');
-  if((!r||r.error)&&(!sub||sub.error)){ $('watch_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
-  track('watch_set',{retailerId:SEL_STORE.id,channel});
-  // Typed an email and the account has none saved → save it as THE account email so the branded
-  // confirm email fires (Addie 07-15). Fire-and-forget: the watch itself is already registered.
-  if(isEmail&&isAuthed()&&ACCOUNT&&!ACCOUNT.email){ try{ appApi('/app/email',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:c,lang:LANG})}).then(r=>{ if(r&&!r.error){ ACCOUNT.email=r.email; ACCOUNT.emailVerified=!!r.verified; } }); }catch(_){ } }
-  // In-place confirmation (owner: no toasts, no crowd counts). The input goes away; the box tells
-  // them the ONE next step, then how the alert lands. Verification wiring = Admin build.
-  $('watch_contact').style.display='none';
-  const sub2=$('watch_sub');
-  let leftLine='';
-  // For text alerts on a capped plan, tell them how many they have left this month.
-  try{ const me=await appApi('/app/alerts/me'); if(channel==='sms'&&me&&me.smsAlertsCap!=null){ leftLine='<br><span style="color:#8A8A96">'+tf('watch.left','{n} of {cap} text alerts left this month.',{n:me.smsAlertsLeft,cap:me.smsAlertsCap})+'</span>'; } }catch(_){ }
-  { const wt=document.querySelector('#watchOverlay h3 [data-i18n="watch.title"]'); if(wt) wt.textContent=isEmail?t('watch.verify.h','Go to your inbox to confirm your email.'):t('watch.verify.hsms',"We'll text you to confirm your cell."); } // the ask IS the header now (owner 07-15)
-  if(sub2) sub2.innerHTML='<span style="color:#8A8A96">'+t('watch.then2',"Then we'll ping you the instant<br>it's confirmed in stock.")+'</span>'+leftLine;
-  btn.textContent=t('watch.done2','Done'); btn.onclick=closeWatch;
+  const r=await appApi('/app/email',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:e,lang:LANG})});
+  btn.disabled=false;
+  if(!r||r.error){ btn.textContent=t('watch.cta2','Watch this store')+' →'; $('watch_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
+  if(ACCOUNT){ ACCOUNT.email=r.email; ACCOUNT.emailVerified=!!r.verified; }
+  try{ if(ACCOUNT&&ACCOUNT.email){ api('/pub/watch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:(SEL_STORE&&SEL_STORE.id)||0,categoryId:SEL_CAT,contact:ACCOUNT.email})}); } }catch(_){ }
+  // Address was already confirmed on file → it's on now; otherwise the confirm email just went out.
+  if(r.verified){ closeWatch(); alertSetToast((SEL_STORE&&SEL_STORE.name),'alerts.type.restock','Restock Alert'); try{alertsPrefetch();}catch(_){ } return; }
+  paintInboxState();
 }
 
 function openDriverDemo(){ track('driver_demo_open'); openHandoff(); }
@@ -8473,7 +8845,8 @@ function openSchedule(){
   SCH_DAYS=new Set();
   $('sch_err').textContent='';
   $('sch_store').textContent=findStoreName(); $('sch_cat').textContent=findProductLabel();
-  const cw=$('sch_contact'); if(cw) cw.value=''; // keep the number OUT of the box (it's a grey placeholder); we default to the account contact on submit
+  const cw=$('sch_contact'); if(cw){ cw.value=''; cw.placeholder=smsAlertsOn()?t('ph.schednum','Enter number'):t('em.ph','you@email.com'); } // keep the contact OUT of the box (grey placeholder); we default to the account contact on submit
+  { const wl=document.querySelector('#scheduleOverlay [data-i18n="sch.where"]'); if(wl) wl.textContent=smsAlertsOn()?t('sch.where','Add your cell or email'):t('sch.where.em','Add your email'); }
   $('sch_days').innerHTML=DOWLBL.map(([v,l])=>`<div class="chip" data-d="${v}" onclick="toggleSchDay('${v}',this)" style="cursor:pointer;text-align:center;padding:9px 0;font-size:13px">${l}</div>`).join('');
   track('schedule_open',{retailerId:SEL_STORE.id});
   $('scheduleOverlay').classList.add('on'); sheetPush('sched');
@@ -8483,7 +8856,7 @@ function closeSchedule(){ $('scheduleOverlay').classList.remove('on'); }
 async function submitSchedule(){
   let contact=($('sch_contact').value||'').trim();
   if(!contact){ try{ contact=(ACCOUNT&&ACCOUNT.email)||(ACCOUNT&&ACCOUNT.phone)||''; }catch(e){} } // empty box → default to their account contact
-  if(contact){ const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(contact); if(!isEmail&&!isPhone){ markFld($('sch_contact'),true); $('sch_err').textContent=''; return; } }
+  if(contact){ const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(contact)&&smsAlertsOn(); if(!isEmail&&!isPhone){ markFld($('sch_contact'),true); $('sch_err').textContent=''; return; } }
   const btn=$('sch_btn'); btn.disabled=true; btn.textContent=t('sch.setting','Setting it up…');
   const body={ retailerId:SEL_STORE.id, categoryId:SEL_CAT, specificProduct:SEL_PRODUCT||undefined,
     daysOfWeek:[...SCH_DAYS].join(','), timeLocal:$('sch_time').value||'10:00', contact:contact||undefined, lang:LANG };
@@ -8493,7 +8866,7 @@ async function submitSchedule(){
   if(!r||r.error){ $('sch_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
   track('schedule_set',{retailerId:SEL_STORE.id,days:[...SCH_DAYS].join(',')||'auto'});
   closeSchedule(); loadSchedules();
-  toast(SCH_DAYS.size?t('sch.on.days2',"Auto-check on"):t('sch.on.ship2',"Auto-check on · this store's shipment day"),'neutral');
+  alertSetToast((SEL_STORE&&SEL_STORE.name),'alerts.type.auto','Auto Check');
 }
 boot();
 </script>

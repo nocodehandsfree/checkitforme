@@ -20,3 +20,4 @@ loops/site-redesign/proofs/
 # Playwright launch-gate artifacts
 test-results/
 playwright-report/
+.unlock-voice

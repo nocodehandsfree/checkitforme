@@ -3,6 +3,18 @@
 > **Volatile — update at every "Checkpoint".** Newest on top, bullets, ≤80 lines. Prune finished
 > items (history lives in git). Access token: Railway staging `ADMIN_TOKEN` → scratchpad `.atok`.
 
+## ⚖️ STANDING ORDERS (permanent — obey on every task, they survive every session)
+1. **Lane:** store/chain/product data on BOTH envs + the sync pipes. The CALLING ENGINE
+   (`src/voice/`) is FROZEN — machine-blocked; data shapes call behavior ONLY through
+   recipes/settings via the guarded doors, reason stamped in the same breath, never a new writer.
+2. **KEY FACTS below are LAW** — the four pipes, the ONE DIALABLE RULE, never-sync fields,
+   map-on-PROD, phones ONLY from the chain's own locator or the Google MAPS pin (never the answer
+   box), no paid hours backfill, kiosk rows matched by ADDRESS.
+3. **Mapped chains are untouchable:** the flip-guard refuses unflagging without force — never force
+   it without a PM/owner box. Every mute/flip writes its WHY on the chain row, same breath.
+4. **Done** = counts verified on BOTH envs + Done Report (Built/Drove/Left). Never run the full
+   suite unprompted, never in background.
+
 ## KEY FACTS / DECISIONS (written nowhere else — do NOT re-learn the hard way)
 - **ENV + SYNC (all four pipes LIVE, no hand-sync ever):** staging & prod are separate deploys/DBs.
   ① CURATED store data staging→prod every 5 min (`storeSyncTick`; fields in `store-sync.ts` CHAIN_CURATED/
@@ -28,8 +40,9 @@
   default direct via `DIRECT_DEFAULT_CHAINS`+`backfillDirectChains()` (enforced every boot; nav-sync skips them).
 - **BOOT BACKFILLS (`import-data.ts` via `bootstrap.ts`):** `backfillChainTypes()` fill-only re-derives
   `chain.type` from `CHAIN_TYPES` (brand missing from table → reverts to "Other" every deploy).
-- **PRICING/CALLABLE:** MSRP retailer → `stockCheckMethod="site"` (never called, off the mapping board;
-  Micro Center is the archetype — owner: never callable). Hobby (sells ABOVE MSRP) → `"call"`.
+- **CALLABLE LAW (rewritten 07-20):** `stockCheckMethod="site"` is for UNCALLABLE chains ONLY
+  (Micro Center, Spencer's, Best Buy). Every mapped chain = "call" — 18 big-box flipped 07-20, and
+  code now REFUSES to flag a mapped chain site/muted/no-call without force (PATCH 409 + seed skip).
 - **PRODUCTS:** Drops DB read-only sync (`scripts/sync-dropsdb.ts`); curated adds via
   `data/pokemon-catalog-supplement.json`. Never fabricate a historical MSRP.
 - **THIS BOX:** python-http AND headless Chromium proxy-blocked; Google/Bing/DDG bot-block curl; Overpass
@@ -38,46 +51,33 @@
 - **NEVER** run the paid hours backfill (`/api/hours/backfill`) or re-chain big-box from directories.
 
 ## IN PROGRESS (owner away — resume here)
-- **Mapping is at 99.9% (Mapper's final run 07-16):** Publix (1,240) + Woodman's + H Mart locked;
-  Macy's muted. The last 0.1% = the 7 chains whose Google numbers were fabricated (see OPEN below) —
-  once real numbers land, Mapper takes one more pass. H-E-B nav note for that pass: press 0 works but
-  only AFTER the greeting plays (barge at 3s gets dropped — Mapper tested).
-- **NEXT SESSION ON DECK (owner's plan):** owner pulls real numbers from each chain's OWN store
-  locator / Google Maps pins (never the answer box), I ingest address-verified, Mapper finishes.
-- **HOURS backfill loop (PAUSED by owner — resume when he says):** ~3,300 fresh storefronts (Habitat
-  ReStore + WPN adds) still hourless. Batch 2 (150) was cut and never pasted back. Flow:
-  send box from `docs/team/data/handoffs/hours_needed_fresh.csv` → owner Googles → 
-  `ingest_hours.py <resp> <sent> --apply` (id-keyed is SAFE here — these are storefronts, not kiosk rows).
-- **"Time to reach a human" on the call button:** `reach` field already ships on `/pub/stores/near`
-  ({kind:direct} | {kind:menu,seconds} | null, evidence-only). Webbie owns the UI; data side done.
+- **WALGREENS INCIDENT CLOSED 07-20 (full story in GOTCHAS):** 18 mapped big-box flipped site→call
+  both envs (18/18 verified); sweep = 93 mapped chains, zero recipes wiped. Real failure cause: My
+  Zones path skipped recipe attachment (builder fixing). CVS unchanged (owner-verified). Guards live.
+- **Mapping 99.9%:** last 0.1% = the 7 fabricated-number chains (OPEN below). Next session: owner
+  pulls numbers from chain locators/Maps pins, I ingest address-verified, Mapper finishes
+  (H-E-B: press 0 only AFTER the greeting — barge at 3s gets dropped).
+- **HOURS backfill PAUSED (owner resumes):** ~3,300 storefronts hourless. Box from
+  `handoffs/hours_needed_fresh.csv` → owner Googles → `ingest_hours.py <resp> <sent> --apply`
+  (id-keyed SAFE here — storefronts, not kiosk rows).
 
 ## OPEN (smaller)
-- **7 kiosk chains need REAL numbers (Google answer box FABRICATED the last batch — owner dialed 3/3
-  bad; all 105 quarantined to nophone on both envs 07-16 evening):** H-E-B, Lucky, FoodMaxx,
-  Metro Market, Stop & Shop, Pak N Save, Uwajimaya. NEW LAW: phones ONLY from the chain's own store
-  locator or the Google MAPS pin — never the AI answer box. Woodman's + H Mart numbers were real
-  (Mapper locked both). Hours kept (display-only, low risk).
-- **Staging/prod count mismatch to chase:** quarantine found 105 bad numbers on prod but only 33 on
-  staging — something re-imported/overwrote staging retailers again (same phantom as the identity
-  shuffle). Check for dupe rows on the kiosk chains and find WHO runs the overlay.
-- Payless Foods Athens: 1 store, NO phone exists anywhere. Mute or leave.
-- Fry's Gilbert 102795 + Mariano's Westchester-IL 102842: held-back wrong numbers; chains already mapped.
-- Kiosk root fix (my lane, post-launch): key kiosk rows by PLACE, overlay machines via `kiosks` table,
-  so TPCi machine moves stop rewriting row identities.
-- Logos needed (real brands): Habitat ReStore, Unique — owner getting. Logo-resolver finding → DevOps
-  (`docs/specs/logo-resolver-hardening/`): delete the fuzzy substring fallback (0 stores ride it).
-- Grade ~38 unscored chains (`tier:null`). Expand `data/distributors.json` when owner's research lands
-  (TPCi is ACQUIRING Excell, announced 2026-02-19 — re-verify the map when it closes).
-- New-chain candidates (free, same playbook): Buffalo Exchange, Plato's Closet/Once Upon a Child,
-  St. Vincent de Paul, ARC.
-- PROD front-end BEHIND staging (promote = owner's call, not mine): `type` filter + hobby/thrift chips.
+- **7 kiosk chains need REAL numbers** (answer-box fabrications quarantined to nophone both envs
+  07-16): H-E-B, Lucky, FoodMaxx, Metro Market, Stop & Shop, Pak N Save, Uwajimaya. Owner pulls from
+  store locators, I ingest address-verified, Mapper finishes.
+- **Staging/prod count mismatch to chase:** quarantine wrote 105 on prod but staging showed 33 —
+  something re-imports/overwrites staging retailers (same phantom as the identity shuffle). Find WHO.
+- Admin fields build AWAITING OWNER GO (mockup: claude.ai/code/artifact/b5259f70-2c73-4557-938a-9d182f353a42).
+- Payless Foods Athens (no phone exists: mute or leave) · Fry's Gilbert 102795 + Mariano's
+  Westchester-IL 102842 held-back wrong numbers (chains already mapped).
+- Kiosk root fix (post-launch): key kiosk rows by PLACE (`kiosks` overlay) so TPCi moves stop
+  rewriting row identities.
+- Logos: Habitat ReStore, Unique (owner getting) · logo-resolver: delete the fuzzy substring fallback
+  (0 stores ride it) · grade ~38 unscored chains · re-verify distributor map when TPCi's Excell
+  acquisition closes (announced 2026-02-19).
+- PROD front-end BEHIND staging (promote = owner's call): `type` filter + hobby/thrift chips.
 
-## DONE 2026-07-16 (kiosk day — detail in git log)
-- **Kiosk phones COMPLETE:** owner googled 178 numbers+hours in 3 boxes; applied to BOTH envs,
-  address-verified. Every verified kiosk is dialable except Payless (no number exists). 13 machines in
-  mall common areas = muted for good with owner's reason stamped on the chain (Pokemon Vending).
-- **Misdial incident caught+fixed:** batch-1 numbers applied by id landed on shuffled rows (TPCi moved
-  machines mid-day) — all reverted + re-applied by address on both envs; verified clean; GOTCHAS'd.
-- **learned-sync built** (prod→staging nav, closes the "mapped on prod, gray on staging" class),
-  **chainDialable() unified**, mapping board shows phones/blocker, 20 unexplained mutes labeled,
-  radius ladder + Check Plus cap + rural fallback live on `/pub/stores/near`.
+## DONE (detail in git log)
+- 07-16 kiosk day: 178 owner-googled phones applied address-verified both envs; misdial caught+fixed;
+  learned-sync + chainDialable + board blockers + radius ladder + open-now feed law shipped.
+- 07-20: Walgreens incident closed (see IN PROGRESS top); mapped-chain guards live + verified.

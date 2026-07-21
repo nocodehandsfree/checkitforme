@@ -247,6 +247,22 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
       .match(/\b(today|tonight|tomorrow|this (?:weekend|week|afternoon|evening|morning))\b/i);
     if (rel) shipmentDay = rel[1].toLowerCase();
   }
+  // Shipment TIME the clerk named ("around 2", "2pm", "in the morning") — only meaningful alongside a
+  // shipment day, so we surface "lands tomorrow around 2 PM" instead of a bare day (owner 07-20).
+  let shipmentTime: string | null = String(collected.shipment_time?.value ?? "").trim() || null;
+  if (shipmentDay && !shipmentTime) {
+    const clerkSaid = (d.transcript ?? []).filter((t) => t.role !== "agent" && t.message).map((t) => String(t.message)).join(" ");
+    const clock = clerkSaid.match(/\b(1[0-2]|[1-9])(?::([0-5]\d))?\s*(a\.?m\.?|p\.?m\.?|o'?clock)\b/i);
+    const partOfDay = clerkSaid.match(/\b(morning|afternoon|evening|noon|midday|first thing|end of (?:the )?day)\b/i);
+    if (clock) {
+      const min = clock[2] ? `:${clock[2]}` : "";
+      const suffix = /o'?clock/i.test(clock[3]) ? "" : ` ${clock[3].replace(/\./g, "").toUpperCase()}`;
+      shipmentTime = `${clock[1]}${min}${suffix}`.trim();
+    } else if (partOfDay) {
+      shipmentTime = partOfDay[1].toLowerCase();
+    }
+  }
+  if (shipmentTime) shipmentTime = shipmentTime.slice(0, 24);
   // If the clerk named the specific product they have in (e.g. "Knockout packs"), capture it so
   // we can show it on the In-stock verdict ("In stock — Knockout packs").
   const productName = (() => {
@@ -375,6 +391,26 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
   }
   if (navSecs == null) navSecs = firstHuman?.time_in_call_secs ?? null; // fallback: legacy first-non-agent
 
+  // Real step ladder with REAL timestamps for the replayed call log (owner 07-21: every check shows its
+  // steps with seconds next to them — zone checks included, no client-side recording required). Times
+  // come from the transcript's own clock. Ladder numbers match the site's liveStageLabel: 1 ringing
+  // (the roll-up handle), 3 connected, 4 menu heard, 6 transferred, 7 person picked up, 8 asking.
+  const IVR_STEP = /press \d|para espa|main menu|store hours|directions|your call (may|will) be|transferring|one moment|please hold|hold on|connecting you|speak (with|to) (a|an|the)/i;
+  const stepsRaw: { n: number; at: number }[] = [{ n: 1, at: 0 }];
+  const tFirst = tr.find((t) => t.message != null)?.time_in_call_secs ?? 0;
+  stepsRaw.push({ n: 3, at: Math.max(0, tFirst) });
+  const ivrLines = tr.filter((t) => t.role !== "agent" && t.message != null && (navSecs == null || (t.time_in_call_secs ?? 0) < navSecs) && IVR_STEP.test(t.message));
+  if (ivrLines.length) {
+    stepsRaw.push({ n: 4, at: ivrLines[0].time_in_call_secs ?? tFirst });
+    const lastIvr = ivrLines[ivrLines.length - 1];
+    if (ivrLines.length > 1 && lastIvr.time_in_call_secs != null) stepsRaw.push({ n: 6, at: lastIvr.time_in_call_secs });
+  }
+  if (navSecs != null && navSecs > 0) stepsRaw.push({ n: 7, at: navSecs });
+  if (askIdx >= 0 && tr[askIdx].time_in_call_secs != null) stepsRaw.push({ n: 8, at: tr[askIdx].time_in_call_secs! });
+  stepsRaw.sort((a, b) => a.at - b.at || a.n - b.n);
+  const steps: { n: number; at: number }[] = [];
+  for (const st of stepsRaw) if (!steps.some((x) => x.n === st.n) && (!steps.length || st.at >= steps[steps.length - 1].at)) steps.push(st);
+
   return {
     callId: Number(vars.internal_call_id),
     providerCallId: d.conversation_id,
@@ -384,11 +420,13 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
     statusKey,
     categoryResults,
     shipmentDay,
+    shipmentTime,
     productName,
     summary: d.analysis?.transcript_summary ?? "",
     transcript,
     durationSecs,
     navSecs,
+    steps,
     status,
     failureReason: explainFailure(d),
   };

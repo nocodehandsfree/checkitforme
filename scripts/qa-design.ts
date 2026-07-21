@@ -43,6 +43,7 @@ const TOKENS = new Set([
   "#F5B301","#FF8080","#9CA3AF", // verdict-tone dots/stats (soon amber · out soft-red · unclear grey — owner: unclear must not read as restock yellow)
   "#FFCB05","#FFE066","#8A6D00","#EF4444","#FF7B7B","#FBBF24","#F59E0B","#FF9B9B","#7F1D1D",
   "#266440","#6B2427","#6C5419","#6E490F",
+  "#1F1F24","#F0C79A","#F6D3A6","#E6E6EE","#2F2F37","#2A2A31","#F08A8A", // MY_ZONES_COMP (CD 07-19, owner-approved): report tally well · skipped-closed amber text pair · share-text ink · dock gradient top · chip-badge ring · none-in-stock pill
   "#FFF","#FFFFFF","#000","#000000","#8A8A96","#7C7C88","#5C5C68","#6B6B7B","#CDCDD8","#B9B9C4",
   "#2B2B33","#25252C","#E9E9F0",
 ]);

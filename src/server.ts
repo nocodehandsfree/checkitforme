@@ -54,8 +54,8 @@ import { check as rlCheck, clientIp, LIMITS } from "./ratelimit";
 import { isGmailConfigured, gmailReceiptTick, debugRecentInbox } from "./gmail-receipts";
 import { rankBets } from "./best-bet";
 import { referralStatus, claimReferral } from "./referrals";
-import { sendAlert, sendAnonEmail, sendTestAlert, sendOwnerInStockEmail, sendConfirmEmail, checkEmailToken, alertSubscribe, myAlerts, alertMute, getAlertTemplatesPublic, setAlertTemplates, monthKey, fanoutRestock } from "./alerts";
-import { ownerAlertPrefs } from "./calls/notify";
+import { sendAlert, sendAnonEmail, sendTestAlert, sendOwnerInStockEmail, sendConfirmEmail, checkEmailToken, alertSubscribe, myAlerts, alertMute, pauseAllAlerts, alertSlotsUsed, alertExists, ALERT_SLOT_CAP, getAlertTemplatesPublic, setAlertTemplates, monthKey, fanoutRestock } from "./alerts";
+import { ownerAlertPrefs, notifyContact } from "./calls/notify";
 
 /** 409-style gate: returns a closed payload if we KNOW the store is closed right now, else null. */
 async function closedGate(retailerId: number): Promise<{ error: string; label: string } | null> {
@@ -2458,6 +2458,8 @@ app.post("/pub/watch", async (c) => {
   const b = await c.req.json();
   if (!b.contact || !b.retailerId || !b.categoryId) return c.json({ error: "contact, retailerId, categoryId required" }, 400);
   const channel = String(b.contact).includes("@") ? "email" : "sms";
+  // SMS channel is dark until the toll-free number is approved (flags.smsAlerts) — email only till then.
+  if (channel === "sms" && !(await getPolicy()).flags.smsAlerts) return c.json({ error: "email_required" }, 400);
   await db.insert(watches).values({ contact: b.contact, channel, retailerId: Number(b.retailerId), categoryId: Number(b.categoryId) });
   return c.json({ ok: true });
 });
@@ -3196,7 +3198,7 @@ app.get("/pub/result/:cid", async (c) => {
     if (row && row.status && row.status !== "in_progress" && row.status !== "dialing") {
       return c.json({
         status: row.status, confirmed: row.confirmed, statusKey: row.statusKey,
-        productDetail: row.productDetail, shipmentDay: row.shipmentDayHeard ?? null,
+        productDetail: row.productDetail, shipmentDay: row.shipmentDayHeard ?? null, shipmentTime: row.shipmentTimeHeard ?? null,
         summary: row.summary ?? "", transcript: row.transcript ?? "",
         durationSecs: row.callSeconds ?? undefined,
       });
@@ -3217,6 +3219,7 @@ app.get("/pub/result/:cid", async (c) => {
       ts: (row.startedAt || 0) * 1000,       // call start (ms) — the status page shows date + time (owner 07-10)
       productDetail: row.productDetail,      // e.g. "3-pack blister · Surging Sparks" — null if not captured
       shipmentDay: row.shipmentDayHeard ?? (o?.shipmentDay ?? null),
+      shipmentTime: row.shipmentTimeHeard ?? (o?.shipmentTime ?? null),
       summary: row.summary ?? o?.summary ?? "",
       transcript: row.transcript ?? o?.transcript ?? "",
     });
@@ -3237,11 +3240,11 @@ app.get("/pub/result/:cid", async (c) => {
     const productDetail = productDetailLabel(second);
     await db.update(callResults).set({
       status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey,
-      shipmentDayHeard: o.shipmentDay, productDetail, summary: o.summary, transcript: o.transcript,
+      shipmentDayHeard: o.shipmentDay, shipmentTimeHeard: (second?.restockTime ?? o.shipmentTime) ?? null, productDetail, summary: o.summary, transcript: o.transcript,
       completedAt: Math.floor(Date.now() / 1000),
     }).where(eq(callResults.id, row.id));
     if (row.finderUserId && consensus.definitive) await chargeCallOnce(row.id, row.finderUserId);
-    return c.json({ ...(o ?? {}), status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey, ts: (row.startedAt || 0) * 1000, productDetail, shipmentDay: o.shipmentDay, summary: o.summary, transcript: o.transcript });
+    return c.json({ ...(o ?? {}), status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey, ts: (row.startedAt || 0) * 1000, productDetail, shipmentDay: o.shipmentDay, shipmentTime: (second?.restockTime ?? o.shipmentTime) ?? null, summary: o.summary, transcript: o.transcript });
   }
   // Truly mid-call → progress only, never a verdict (so a wrong key can't flash before the real one).
   return c.json(o ? { ...o, ts: row?.startedAt ? row.startedAt * 1000 : undefined } : { status: "in_progress", transcript: "", summary: "", ts: row?.startedAt ? row.startedAt * 1000 : undefined });
@@ -3467,7 +3470,24 @@ app.post("/app/check-live", async (c) => {
 });
 
 // ============ Manage Zones (consumer, premium `zone_sweeps`) — spec docs/archive/manage-zones-SHIPPED.md ============
-const zoneRunSids = new Map<string, string[]>(); // runId -> Twilio callSids (in-memory, for "Stop all")
+const zoneRunSids = new Map<string, { room: string; retailerId: number }[]>(); // runId -> per-store bridge rooms (in-memory, for Stop all / stop one)
+async function zoneHangRoom(room: string): Promise<void> {
+  // Customer pressed Stop (all / one) — stamp statusKey user_cancelled so the verdict reads
+  // "Check cancelled / You stopped this check from happening." status stays admin_hangup: every
+  // non-result, aggregate and no-charge rule keys off status, so nothing else changes (owner 07-21).
+  const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
+  const ids = [room.startsWith("delta:") ? room : `bridge:${room}`, bridgeConversationId(room) || ""].filter(Boolean);
+  await db.update(callResults)
+    .set({ status: "admin_hangup", statusKey: "user_cancelled", confirmed: null, completedAt: Math.floor(Date.now() / 1000) })
+    .where(and(inArray(callResults.providerCallId, ids), inArray(callResults.status, ["dialing", "in_progress", "queued"])))
+    .catch((e) => console.error("zone admin_hangup stamp:", e));
+  const callSid = roomCallSids.get(room);
+  if (sid && tok && callSid) {
+    await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}.json`, {
+      method: "POST", headers: { Authorization: "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64"), "content-type": "application/x-www-form-urlencoded" }, body: "Status=completed",
+    }).catch(() => {});
+  }
+}
 
 /** Bearer auth + zone_sweeps entitlement. ok:false short-circuits with the right status. */
 async function zoneAuth(authHeader?: string): Promise<
@@ -3498,7 +3518,7 @@ async function zoneView(z: typeof zones.$inferSelect) {
   let lastRun = null;
   if (last?.zoneRunId) {
     const rr = await db.select().from(callResults).where(eq(callResults.zoneRunId, last.zoneRunId));
-    lastRun = { at: last.startedAt, inStock: rr.filter((r) => r.statusKey === "in_stock").length, total: rr.length };
+    lastRun = { at: last.startedAt, runId: last.zoneRunId, inStock: rr.filter((r) => r.statusKey === "in_stock").length, total: rr.length };
   }
   return { id: z.id, name: z.name, stores, checkCount: stores.filter((s) => s.callable).length, lastRun };
 }
@@ -3513,7 +3533,7 @@ app.post("/app/zones", async (c) => {
   const b = await c.req.json();
   const retailerIds = (Array.isArray(b.retailerIds) ? b.retailerIds : []).map(Number).filter(Boolean);
   if (!retailerIds.length) return c.json({ error: "no_stores" }, 400);
-  const [z] = await db.insert(zones).values({ name: String(b.name || "").trim().slice(0, 60) || "My zone", ownerUserId: g.u.id, centerZip: b.centerZip ?? null, radiusMiles: b.radiusMiles ?? null }).returning();
+  const [z] = await db.insert(zones).values({ name: String(b.name || "").trim().slice(0, 24) || "My zone", ownerUserId: g.u.id, centerZip: b.centerZip ?? null, radiusMiles: b.radiusMiles ?? null }).returning();
   await db.insert(zoneRetailers).values(retailerIds.map((rid: number) => ({ zoneId: z.id, retailerId: rid })));
   return c.json(await zoneView(z), 201);
 });
@@ -3523,7 +3543,7 @@ app.patch("/app/zones/:id", async (c) => {
   const z = (await db.select().from(zones).where(and(eq(zones.id, id), eq(zones.ownerUserId, g.u.id))))[0];
   if (!z) return c.json({ error: "not_found" }, 404);
   const b = await c.req.json();
-  if (typeof b.name === "string") await db.update(zones).set({ name: b.name.trim().slice(0, 60) || z.name }).where(eq(zones.id, id));
+  if (typeof b.name === "string") await db.update(zones).set({ name: b.name.trim().slice(0, 24) || z.name }).where(eq(zones.id, id));
   if (Array.isArray(b.retailerIds)) {
     const ids = b.retailerIds.map(Number).filter(Boolean);
     await db.delete(zoneRetailers).where(eq(zoneRetailers.zoneId, id));
@@ -3577,23 +3597,33 @@ app.post("/app/zones/:id/check", async (c) => {
   const runId = `z${id}-${crypto.randomUUID()}`;
   const isPrivate = await isFinderPrivate(g.a);
   const placed: { retailerId: number; cid: string | null }[] = [];
-  const sids: string[] = [];
-  const viaBridge = (await getPolicy()).flags.cheapBridgeAll; // cheap lane: recipe nav + agent only on human
+  const rooms: { room: string; retailerId: number }[] = [];
+  // A zone store dials EXACTLY like a single check — bridgeStoreCall, the one path that carries the
+  // full mapping stack (workflow lanes incl. Alpha/Bravo/Delta, chain nav recipes, connect-on-human,
+  // voices). The old cheap lane skipped lane routing and broke every menu store (owner 07-20).
+  // Only differences: the row is stamped with the zoneRunId, and the governor slot is "batch" so a
+  // sweep can never starve instant single checks.
   for (const s of rows) {
     try {
-      const r = await (viaBridge ? bridgeCheckCall : triggerCall)({ retailerId: s.id, categoryId: cat.id, mode: "restock", finderUserId: g.u.id, isPrivate, zoneRunId: runId });
-      placed.push({ retailerId: s.id, cid: (r as { providerCallId?: string }).providerCallId ?? null });
-      const sid = (r as { callSid?: string }).callSid; if (sid) sids.push(sid);
+      const r = await bridgeStoreCall(s.id, [cat.id], undefined, { userId: g.u.id, isPrivate }, false, { zoneRunId: runId, priority: "batch" });
+      if (r.room) { placed.push({ retailerId: s.id, cid: r.room.startsWith("delta:") ? r.room : `bridge:${r.room}` }); rooms.push({ room: r.room, retailerId: s.id }); }
+      else { console.error("zone check failed", s.id, r.error); placed.push({ retailerId: s.id, cid: null }); }
     } catch (e) { console.error("zone check failed", s.id, e); placed.push({ retailerId: s.id, cid: null }); }
   }
-  zoneRunSids.set(runId, sids); setTimeout(() => zoneRunSids.delete(runId), 30 * 60 * 1000);
+  zoneRunSids.set(runId, rooms); setTimeout(() => zoneRunSids.delete(runId), 30 * 60 * 1000);
   return c.json({ runId, stores: placed });
 });
 app.get("/app/zones/run/:runId", async (c) => {
   const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
   const rows = await db.select().from(callResults).where(and(eq(callResults.zoneRunId, c.req.param("runId")), eq(callResults.finderUserId, g.u.id)));
   const stores = await retailerMap();
-  const results = rows.map((r) => { const nm = stores.get(r.retailerId)?.name || "A store"; return { retailerId: r.retailerId, name: nm, logoUrl: chainLogoInfo(nm.split(/—|–| - /)[0]).url || "", cid: r.providerCallId, status: r.status, statusKey: r.statusKey, confirmed: r.confirmed, summary: r.summary }; });
+  // Logos resolve exactly like the homepage store list: the CHAIN's registered logo first (via the
+  // store's chainId), name-prefix only as a fallback — name-matching alone left most report rows on
+  // monogram tiles (owner 07-19).
+  const chainNames = new Map((await cachedChains()).map((x) => [x.id, x.name]));
+  const results = rows.map((r) => { const st = stores.get(r.retailerId); const nm = st?.name || "A store";
+    const l = chainLogoInfo((st?.chainId && chainNames.get(st.chainId)) || nm.split(/—|–| - /)[0]);
+    return { retailerId: r.retailerId, name: nm, location: st?.location || "", logoUrl: l.url || "", logoWide: l.wide, logoDark: l.dark, cid: r.providerCallId, status: r.status, statusKey: r.statusKey, confirmed: r.confirmed, summary: r.summary }; });
   const live = (st: string) => st === "in_progress" || st === "queued";
   const summary = {
     inStock: results.filter((r) => r.statusKey === "in_stock").length,
@@ -3606,13 +3636,20 @@ app.get("/app/zones/run/:runId", async (c) => {
 app.post("/app/zones/run/:runId/stop", async (c) => {
   const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
   const sids = zoneRunSids.get(c.req.param("runId")) || [];
-  const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
-  if (sid && tok) for (const callSid of sids) {
-    await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}.json`, {
-      method: "POST", headers: { Authorization: "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64"), "content-type": "application/x-www-form-urlencoded" }, body: "Status=completed",
-    }).catch(() => {});
-  }
+  for (const { room } of sids) await zoneHangRoom(room);
   return c.json({ ok: true, stopped: sids.length });
+// Stop ONE store's call in a live run (owner 07-19: tap a not-yet-checked store -> "Stop checking").
+// A queued-by-governor ticket (no callSid yet) can't be stopped here — that cancel lives with the
+// queue feed (Pops); for placed calls this hangs up just that store's dial.
+app.post("/app/zones/run/:runId/stop-one", async (c) => {
+  const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
+  const b = await c.req.json().catch(() => ({}));
+  const rid = Number(b.retailerId);
+  const all = zoneRunSids.get(c.req.param("runId")) || [];
+  const mine = all.filter((x) => x.retailerId === rid);
+  for (const { room } of mine) await zoneHangRoom(room);
+  return c.json({ ok: true, stopped: mine.length });
+});
 });
 
 // ---- Subscriber auto-checks (scheduled shipment-day calls) ----
@@ -3675,18 +3712,21 @@ app.get("/app/history", async (c) => {
   }
   const stores = await retailerMap();
   const cats = await categoryLabelMap();
+  const histChains = new Map((await cachedChains()).map((x) => [x.id, x.name]));
   const rows = (await db.select().from(callResults)
     .where(inArray(callResults.finderUserId, [...ids]))
     .orderBy(desc(callResults.startedAt)).limit(80))
     .filter((r) => r.providerCallId);
   return c.json(rows.map((r) => {
-    const sName = stores.get(r.retailerId)?.name || "A store";
-    const l = chainLogoInfo(sName);
+    const st = stores.get(r.retailerId);
+    const sName = st?.name || "A store";
+    // Chain logo via chainId first (like the homepage list) — bare name matching missed most stores.
+    const l = chainLogoInfo((st?.chainId && histChains.get(st.chainId)) || sName.split(/—|–| - /)[0]);
     return {
       cid: r.providerCallId, storeId: r.retailerId, storeName: sName,
       categoryId: r.categoryId, category: cats.get(r.categoryId) || "",
       ts: (r.startedAt || 0) * 1000, status: r.status, confirmed: r.confirmed,
-      statusKey: r.statusKey, productDetail: r.productDetail, shipmentDay: r.shipmentDayHeard,
+      statusKey: r.statusKey, productDetail: r.productDetail, shipmentDay: r.shipmentDayHeard, shipmentTime: r.shipmentTimeHeard ?? null, zoneRunId: r.zoneRunId || null,
       logoUrl: l.url, logoWide: l.wide, logoDark: l.dark,
     };
   }));
@@ -4782,6 +4822,17 @@ app.patch("/api/chains/:id", async (c) => {
   // the connect-timer and mutes the agent (silent-agent bug). Enforce it here too, so a manual admin edit
   // that flips a chain to direct can't recreate it (the learn/trainer paths already guard this).
   if (patch.ringsDirect === true || patch.answerPath === "direct_human") patch.avgTreeSeconds = null;
+  // MAPPED CHAINS ARE UNTOUCHABLE (owner law 2026-07-20, the Walgreens incident): a chain with a
+  // learned/verified tree (or rings-direct) may not be flagged out of the call lane — "check online",
+  // callTarget off, or muted — without an explicit force:true in the body. A wrong flag on a mapped
+  // tier-5 hides a working recipe from the whole operation. Remap (or force, with the reason written
+  // in unmappableReason) is the only way out.
+  const _cur = (await db.select().from(chains).where(eq(chains.id, Number(c.req.param("id")))))[0];
+  const _mapped = !!_cur && (_cur.treeStatus === "learned" || _cur.treeStatus === "verified" || _cur.ringsDirect === true);
+  const _suppressing = patch.stockCheckMethod === "site" || patch.callTarget === false || patch.muted === true;
+  if (_mapped && _suppressing && b.force !== true) {
+    return c.json({ error: `${_cur.name} is MAPPED (${_cur.treeStatus || "rings direct"}) — refusing to flag it out of the call lane. Pass force:true (and write the reason) if this is deliberate.` }, 409);
+  }
   const [row] = await db.update(chains).set(patch).where(eq(chains.id, Number(c.req.param("id")))).returning();
   invalidateRefCache();
   if (patch.logoUrl !== undefined || patch.logoWide !== undefined || patch.logoDark !== undefined) await refreshChainLogoDb();
@@ -4891,9 +4942,14 @@ app.post("/pub/support/chat", async (c) => {
   const category = SUPPORT_CATEGORIES.includes(b.category) ? (b.category as SupportCategory) : "other";
   // Attribute to the signed-in account when a phone-session bearer is present (anonymous still works).
   const u = await verifyClerkToken(c.req.header("Authorization")).catch(() => null);
+  // Where they opened it — the page, and the check id when it came off a status page.
+  const src = String(b.source || "").slice(0, 32) || null;
+  const pageUrl = String(b.pageUrl || "").slice(0, 300) || null;
+  const checkId = /^[\w-]{1,64}$/.test(String(b.checkId || "")) ? String(b.checkId) : null;
   try {
     const r = await answerSupport(sessionId, message, {
       lang, category, account: u ? { id: u.id, phone: (u as { phone?: string }).phone } : null,
+      origin: { source: src || undefined, pageUrl: pageUrl || undefined, checkId: checkId || undefined },
     });
     return c.json({ sessionId, reply: r.reply, escalate: r.escalate });
   } catch (e) {
@@ -5047,13 +5103,22 @@ app.get("/api/support/chats", async (c) => {
   if (conds.length) sel = sel.where(and(...conds));
   const rows = await sel.orderBy(desc(supportConversations.updatedAt)).limit(Math.min(Number(q.limit) || 100, 200));
   const counts = new Map<number, number>();
+  const emails = new Map<string, string | null>();
   if (rows.length) {
     const ids = rows.map((r) => r.id);
     for (const mc of await db.select({ cid: supportMessages.conversationId, n: sql<number>`count(*)` }).from(supportMessages)
       .where(inArray(supportMessages.conversationId, ids)).groupBy(supportMessages.conversationId)) counts.set(mc.cid, Number(mc.n));
+    // Batch-resolve the members' emails so the list shows who it was (not just "Guest").
+    const acctIds = [...new Set(rows.map((r) => r.accountId).filter(Boolean) as string[])];
+    if (acctIds.length) {
+      for (const a of await db.select({ id: accounts.clerkUserId, email: accounts.email }).from(accounts)
+        .where(inArray(accounts.clerkUserId, acctIds))) emails.set(a.id, a.email);
+    }
   }
   return c.json({ chats: rows.map((r) => ({
     id: r.id, category: r.category, accountId: r.accountId, accountPhone: r.accountPhone,
+    account: r.accountId ? { id: r.accountId, phone: r.accountPhone, email: emails.get(r.accountId) || null } : null,
+    source: r.source, pageUrl: r.pageUrl, checkId: r.checkId,
     title: r.title, maxTier: r.maxTier, status: r.status, escalated: r.status === "escalated",
     msgCount: counts.get(r.id) || 0, createdAt: r.createdAt, updatedAt: r.updatedAt,
   })) });
@@ -5065,14 +5130,31 @@ app.get("/api/support/chats/:id", async (c) => {
   if (!cv) return c.json({ error: "not_found" }, 404);
   const msgs = await db.select().from(supportMessages).where(eq(supportMessages.conversationId, id)).orderBy(supportMessages.id);
   const ticket = (await db.select().from(supportTickets).where(eq(supportTickets.conversationId, id)).orderBy(desc(supportTickets.id)).limit(1))[0] || null;
+  // Enrich the signed-in account with the summary the Admin renders (email, plan, credits, checks made).
+  const acct = cv.accountId ? (await db.select().from(accounts).where(eq(accounts.clerkUserId, cv.accountId)).limit(1))[0] : null;
   return c.json({
     id: cv.id, category: cv.category, status: cv.status, lang: cv.lang, maxTier: cv.maxTier, costUsd: cv.costUsd,
-    account: cv.accountId ? { id: cv.accountId, phone: cv.accountPhone } : null,
+    account: cv.accountId ? { id: cv.accountId, phone: acct?.phone || cv.accountPhone,
+      email: acct?.email || null, subscription: acct?.subscription, credits: acct?.credits, callsMade: acct?.callsMade } : null,
+    source: cv.source, pageUrl: cv.pageUrl, checkId: cv.checkId,
     createdAt: cv.createdAt, updatedAt: cv.updatedAt,
     messages: msgs.map((m) => ({ role: m.role, content: m.content, tier: m.tier, model: m.model, createdAt: m.createdAt })),
     ticket: ticket ? { id: ticket.id, name: ticket.name, email: ticket.email, message: ticket.message,
       screenshotUrl: ticket.screenshotUrl, debug: ticket.debug ? JSON.parse(ticket.debug) : null, emailedOk: ticket.emailedOk } : null,
   });
+});
+// Admin: mark a chat done (or reopen it) so the list dot goes green — the operator's "handled" flip.
+// Only open/resolved is settable here; escalation is owned by the ladder, never hand-flipped.
+app.post("/api/support/chats/:id/status", async (c) => {
+  const id = Number(c.req.param("id"));
+  const b = await c.req.json().catch(() => ({}));
+  const status = b.status === "resolved" ? "resolved" : b.status === "open" ? "open" : null;
+  if (!status) return c.json({ error: "bad_status" }, 400);
+  const cv = (await db.select().from(supportConversations).where(eq(supportConversations.id, id)).limit(1))[0];
+  if (!cv) return c.json({ error: "not_found" }, 404);
+  await db.update(supportConversations).set({ status, updatedAt: Math.floor(Date.now() / 1000) })
+    .where(eq(supportConversations.id, id));
+  return c.json({ ok: true, status });
 });
 // Admin: the dashboard numbers — volume, category mix, who answered, escalation, CSAT, spend.
 app.get("/api/support/stats", async (c) => {
@@ -5108,27 +5190,67 @@ app.get("/api/support/stats", async (c) => {
 });
 
 // ---- Customer alerts (restock opt-in + status) ----
+// Paint each watched store in the Alerts list with the SAME logo the homepage store row uses:
+// chainLogoInfo(chainName) + the chain's type. Without this the list falls back to a made-up monogram.
+async function enrichAlertStores<T extends { subscriptions?: Array<{ retailerId?: number | null }> }>(me: T): Promise<T> {
+  const subs = (me.subscriptions || []) as Array<Record<string, unknown>>;
+  const ids = [...new Set(subs.map((s) => s.retailerId as number | null).filter((x): x is number => x != null))];
+  if (!ids.length) return me;
+  const rets = await db.select({ id: retailers.id, name: retailers.name, chainId: retailers.chainId }).from(retailers).where(inArray(retailers.id, ids));
+  const chainRows = await db.select({ id: chains.id, name: chains.name, type: chains.type }).from(chains);
+  const cName = new Map(chainRows.map((x) => [x.id, x.name]));
+  const cType = new Map(chainRows.map((x) => [x.id, x.type]));
+  const byId = new Map(rets.map((r) => [r.id, r]));
+  (me as { subscriptions?: unknown }).subscriptions = subs.map((s) => {
+    const r = s.retailerId != null ? byId.get(s.retailerId as number) : null;
+    if (!r) return s;
+    const chainName = (r.chainId && cName.get(r.chainId)) || r.name.split(/—|–| - /)[0];
+    const l = chainLogoInfo(chainName);
+    return { ...s, storeType: (r.chainId && cType.get(r.chainId)) || "Other", logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
+  });
+  return me;
+}
 app.post("/app/alerts/subscribe", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
   if (!u) return c.json({ error: "unauthorized" }, 401);
   const b = await c.req.json().catch(() => ({}));
-  await getAccount(u.id, u.email || undefined);
+  const acct = await getAccount(u.id, u.email || undefined);
   // The site sends its language with the signup — store it so this account's alerts go out in it.
   const subLang = b.lang === "es" ? "es" : b.lang === "en" ? "en" : undefined;
   if (subLang) await db.update(accounts).set({ language: subLang }).where(eq(accounts.clerkUserId, u.id));
+  const retailerId = b.retailerId != null ? Number(b.retailerId) : null;
+  const productLabel = b.productLabel ? String(b.productLabel).slice(0, 120) : null;
+  // CAP: 10 slots (ON or OFF both hold one). A store already on the list re-subscribes for free; a NEW
+  // store at the cap gets bounced back so the client can open the list in make-room mode.
+  const already = await alertExists(u.id, retailerId, productLabel);
+  if (!already && (await alertSlotsUsed(u.id)) >= ALERT_SLOT_CAP) {
+    return c.json({ error: "cap", cap: ALERT_SLOT_CAP, ...(await enrichAlertStores(await myAlerts(u.id))) }, 200);
+  }
+  // Email is the one alert channel here (SMS/toll-free still dark) — every opt-in rides the account email.
   const r = await alertSubscribe(u.id, {
     kind: b.kind ? String(b.kind) : "restock",
-    retailerId: b.retailerId != null ? Number(b.retailerId) : null,
+    retailerId,
     categoryId: b.categoryId != null ? Number(b.categoryId) : null,
-    productLabel: b.productLabel ? String(b.productLabel).slice(0, 120) : null,
-    channel: b.channel === "email" ? "email" : "sms",
+    productLabel,
+    channel: "email",
   });
-  return c.json(r);
+  // Confirmed email → instant ON, nothing else asked. No email → the client asks inline then POSTs
+  // /app/email (one confirm). Pending email → tell them to check their inbox. The sub is live either way;
+  // delivery is globally gated on emailVerifiedAt, so a pending watch turns on by itself once confirmed.
+  const status = acct?.emailVerifiedAt ? "on" : acct?.email ? "pending" : "need_email";
+  return c.json({ ...r, status, hasEmail: !!acct?.email, emailVerified: !!acct?.emailVerifiedAt });
+});
+// Master "Pause all alerts" — the switch on top of the Alerts list.
+app.post("/app/alerts/pause-all", async (c) => {
+  const u = await verifyClerkToken(c.req.header("Authorization"));
+  if (!u) return c.json({ error: "unauthorized" }, 401);
+  const { paused } = await c.req.json().catch(() => ({}));
+  return c.json(await enrichAlertStores(await pauseAllAlerts(u.id, !!paused)));
 });
 app.get("/app/alerts/me", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
   if (!u) return c.json({ error: "unauthorized" }, 401);
-  return c.json(await myAlerts(u.id));
+  return c.json(await enrichAlertStores(await myAlerts(u.id)));
 });
 // Turn one alert off (the My Checks alerts sheet). Only the caller's own subscriptions.
 app.post("/app/alerts/unsubscribe", async (c) => {
@@ -5137,7 +5259,7 @@ app.post("/app/alerts/unsubscribe", async (c) => {
   const { id } = await c.req.json().catch(() => ({}));
   if (!id) return c.json({ error: "id required" }, 400);
   await db.update(alertSubscriptions).set({ active: 0 }).where(and(eq(alertSubscriptions.id, Number(id)), eq(alertSubscriptions.userId, u.id)));
-  return c.json(await myAlerts(u.id));
+  return c.json(await enrichAlertStores(await myAlerts(u.id)));
 });
 // Mute = pause without losing the alert (owner 07-16): stays on the sheet, never sends until unmuted.
 app.post("/app/alerts/mute", async (c) => {
@@ -5145,7 +5267,7 @@ app.post("/app/alerts/mute", async (c) => {
   if (!u) return c.json({ error: "unauthorized" }, 401);
   const { id, muted } = await c.req.json().catch(() => ({}));
   if (!id) return c.json({ error: "id required" }, 400);
-  return c.json(await alertMute(u.id, Number(id), !!muted));
+  return c.json(await enrichAlertStores(await alertMute(u.id, Number(id), !!muted)));
 });
 
 // ---- Admin: editable alert message templates + the send log (tracking) ----
@@ -5160,6 +5282,22 @@ app.post("/api/alerts/test", async (c) => {
   // The hands-free owner ping (call confirmed stock) is its own template, email only.
   if (event === "instock_owner") {
     return c.json(await sendOwnerInStockEmail(to, { store: "Target Glendale", product: "151 Booster Box", day: "Tuesdays", url: "https://checkitforme.com" }, { test: true }));
+  }
+  // Customer-composed share texts (in-stock / referral / zone): text the owner the composed message so
+  // they can read it. Copy is the Admin-edited alerts_json override, or the approved default.
+  if (["instock_share", "referral", "zone_instock"].includes(event)) {
+    let over: Record<string, { sms?: string }> = {};
+    try { over = JSON.parse((await getSetting("alerts_json")) || "{}"); } catch { /* ignore */ }
+    const SHARE_DEFAULTS: Record<string, string> = {
+      instock_share: "Yo. {store} has {product} in stock right now. An AI called the store for me. Check it:",
+      referral: "Yo! Check this tech out. It's sick.\nAn AI calls stores and finds {product} in stock at retail prices.\nSign up and we both get {reward}:",
+      zone_instock: "Checked {n} stores at once. {i} had it in stock. Wild:",
+    };
+    let body = over[event]?.sms || SHARE_DEFAULTS[event];
+    const sample: Record<string, string> = { store: "Target Glendale", product: "151 Booster Box", reward: "a free check", n: "10", i: "3" };
+    for (const kk of Object.keys(sample)) body = body.split(`{${kk}}`).join(sample[kk]);
+    await notifyContact("sms", to, "Check", body, "https://checkitforme.com");
+    return c.json({ status: "test_sent", channel: "sms" });
   }
   if (!["restock", "store_added", "waitlist", "confirm_email", "auto_check"].includes(event)) return c.json({ error: "bad_event" }, 400);
   const r = await sendTestAlert(event as "restock" | "store_added" | "waitlist" | "confirm_email" | "auto_check", to, channel);
@@ -5557,15 +5695,23 @@ app.get("/api/admin/tree/list", async (c) => {
   // The mapping board must MATCH the store data: only real, DIALABLE chains. chainDialable() is the ONE
   // shared rule (recipe.ts) the board, the overnight batch, and single-chain map all read — a muted,
   // call-center (callTarget=false), or site-check chain (stockCheckMethod=site, e.g. Micro Center) is
-  // never dialed, so it must not look callable here either. Plus board-only clutter filters: a chain
-  // with 0 active stores has nothing to call, and a "_" name is a retired merge-stub. `?all=1` = unfiltered.
+  // never dialed, so it must not look callable here either. EXCEPTION (Walgreens incident 2026-07-20):
+  // a MAPPED chain is ALWAYS visible, whatever its flags — hiding a mapped chain from this board is how
+  // a flag conflict goes unnoticed until a live call dials blind; it surfaces with a conflict blocker
+  // instead. Plus board-only clutter filters: 0 active stores = nothing to call, "_" = retired
+  // merge-stub. `?all=1` = unfiltered.
+  const isMapped = (ch: typeof chs[number]) => ch.treeStatus === "learned" || ch.treeStatus === "verified" || ch.ringsDirect === true;
   const showAll = c.req.query("all") === "1";
-  const visible = showAll ? chs : chs.filter((ch) => chainDialable(ch) && !(ch.name || "").startsWith("_") && (cnt.get(ch.id) || 0) > 0);
+  const visible = showAll ? chs : chs.filter((ch) => (chainDialable(ch) || isMapped(ch)) && !(ch.name || "").startsWith("_") && (cnt.get(ch.id) || 0) > 0);
   return c.json({ model: TREE_MODEL, chains: visible.map((ch) => {
     const stores = cnt.get(ch.id) || 0, phones = pcnt.get(ch.id) || 0;
-    // blocker = why this chain can't be mapped even though it's a call target. Today: a data gap where
-    // stores exist but none carry a real phone number (the board shows it so nobody chases hours/trees).
-    const blocker = stores > 0 && phones === 0 ? "no phone numbers on file (data gap)" : null;
+    // blocker = why this chain can't be mapped/called even though it looks like a call target. A data
+    // gap (stores but no numbers), or a FLAG CONFLICT — mapped yet flagged out of the call lane (the
+    // Walgreens class of bug; must never hide silently again).
+    const conflict = isMapped(ch) && !chainDialable(ch)
+      ? `CONFLICT: mapped but flagged ${ch.muted ? "muted" : ch.callTarget === false ? "no-call-target" : "check-online"} — recipe exists yet chain is off the call lane`
+      : null;
+    const blocker = conflict ?? (stores > 0 && phones === 0 ? "no phone numbers on file (data gap)" : null);
     return { id: ch.id, name: ch.name, type: ch.type, stores, phones, blocker, distributor: distributorsForChain(ch.name), treeStatus: ch.treeStatus, ringsDirect: ch.ringsDirect, dtmf: ch.dtmfShortcut, answerPath: ch.answerPath, avgTreeSeconds: ch.avgTreeSeconds, note: ch.treeNote || ch.phoneTreeDefault, learnedAt: ch.treeLearnedAt, verifiedAt: ch.treeVerifiedAt, muted: ch.muted };
   }) });
 });
@@ -6030,8 +6176,10 @@ app.post("/pub/bridge-hangup", async (c) => {
   // statusKey drives the display pill (verdictKey reads statusKey first), so set both.
   const convId = bridgeConversationId(room);
   if (convId) {
+    // Customer-initiated stop -> statusKey user_cancelled ("Check cancelled"); status stays
+    // admin_hangup so the non-result/no-charge semantics are byte-identical (owner 07-21).
     await db.update(callResults)
-      .set({ status: "admin_hangup", statusKey: "admin_hangup", confirmed: null, completedAt: Math.floor(Date.now() / 1000) })
+      .set({ status: "admin_hangup", statusKey: "user_cancelled", confirmed: null, completedAt: Math.floor(Date.now() / 1000) })
       .where(and(eq(callResults.providerCallId, convId),
         inArray(callResults.status, ["dialing", "in_progress", "queued"])))
       .catch((e) => console.error("admin_hangup stamp:", e));
@@ -6046,7 +6194,7 @@ app.post("/pub/bridge-hangup", async (c) => {
   return c.json({ ok: true });
 });
 // Resolve a store + category, then place a bridge call to it. Used by Runnr "Listen live".
-async function bridgeStoreCall(retailerId: number, categoryIds: number[], specificProduct?: string, finder?: { userId?: string; isPrivate?: boolean }, kioskMode?: boolean): Promise<{ room?: string; error?: string }> {
+async function bridgeStoreCall(retailerId: number, categoryIds: number[], specificProduct?: string, finder?: { userId?: string; isPrivate?: boolean }, kioskMode?: boolean, opts?: { zoneRunId?: string; priority?: "interactive" | "batch" }): Promise<{ room?: string; error?: string }> {
   if (await isCallingPaused()) return { error: "calling_paused" }; // global spend kill-switch
   const primary = categoryIds[0];
   const extras = categoryIds.slice(1);
@@ -6058,7 +6206,7 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
     const ret = (await db.select().from(retailers).where(eq(retailers.id, retailerId)))[0];
     const wf = ret ? await resolveWorkflow(ret.id, ret.chainId ?? null).catch(() => null) : null;
     if (wf?.lane === "delta") {
-      const r = await triggerCall({ retailerId, categoryId: primary, mode: "restock", specificProduct, finderUserId: finder?.userId ?? undefined, isPrivate: finder?.isPrivate ?? false, kioskMode });
+      const r = await triggerCall({ retailerId, categoryId: primary, mode: "restock", specificProduct, finderUserId: finder?.userId ?? undefined, isPrivate: finder?.isPrivate ?? false, kioskMode, zoneRunId: opts?.zoneRunId });
       if (r.providerCallId) return { room: r.providerCallId };
       return { error: "delta call did not start" };
     }
@@ -6093,13 +6241,17 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
   // headless bridge check). The live-audio room + response shape are unchanged either way.
   const governed = await governorEnabled();
   let slotRowId: number | null = null;
-  if (governed) {
-    const [row] = await db.insert(callResults).values({ retailerId, categoryId: primary, mode: "restock", status: "dialing", finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false }).returning();
+  if (governed || opts?.zoneRunId) {
+    // Zone rows pre-insert too: a store whose dial fails must still appear on the run report as a
+    // terminal row, not silently vanish (the connect-only insert would drop it).
+    const [row] = await db.insert(callResults).values({ retailerId, categoryId: primary, mode: "restock", status: "dialing", finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false, zoneRunId: opts?.zoneRunId ?? null }).returning();
     slotRowId = row.id;
-    const slot = await acquireCallSlot({ key: `call:${row.id}`, priority: "interactive", userId: finder?.userId ?? undefined, ttlSec: (pol.bail.maxCallSeconds || 180) + 120 });
-    if (slot === null) {
-      await db.update(callResults).set({ status: "failed", statusKey: "system_busy", summary: "All lines busy — the check will be retried." }).where(eq(callResults.id, row.id));
-      return { error: "calls_busy" }; // routeCheck sees this and queues the check instead of failing
+    if (governed) {
+      const slot = await acquireCallSlot({ key: `call:${row.id}`, priority: opts?.priority ?? "interactive", userId: finder?.userId ?? undefined, ttlSec: (pol.bail.maxCallSeconds || 180) + 120 });
+      if (slot === null) {
+        await db.update(callResults).set({ status: "failed", statusKey: "system_busy", summary: "All lines busy — the check will be retried." }).where(eq(callResults.id, row.id));
+        return { error: "calls_busy" }; // routeCheck sees this and queues the check instead of failing
+      }
     }
   }
 
@@ -6107,11 +6259,11 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
   // we pre-inserted; ungoverned → insert the PRIMARY row now (today's behavior). ingest fans out each
   // extra line into its own row from the per-category extraction.
   const result = await placeBridgeCall(v.retailer.phone, v.dynamicVars, (convId) => {
-    if (governed && slotRowId != null) {
+    if (slotRowId != null) {
       db.update(callResults).set({ providerCallId: convId, status: "in_progress" }).where(eq(callResults.id, slotRowId))
         .catch((e) => console.error("bridge call log update:", e));
     } else {
-      db.insert(callResults).values({ retailerId, categoryId: primary, mode: "restock", status: "in_progress", providerCallId: convId, finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false })
+      db.insert(callResults).values({ retailerId, categoryId: primary, mode: "restock", status: "in_progress", providerCallId: convId, finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false, zoneRunId: opts?.zoneRunId ?? null })
         .catch((e) => console.error("bridge call log insert:", e));
     }
     // Per-store talk cap (chains.maxTalkSeconds) wins over the global bail ceiling when set, so a
@@ -6121,7 +6273,7 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
   // Governed bookkeeping: point the pre-inserted row at the room (so /pub/result resolves it before
   // connect), release the slot on a dial that never placed, and register a finalizer that frees the
   // slot + writes the real reason if the call ends before a human answers.
-  if (governed && slotRowId != null) {
+  if (slotRowId != null) {
     if (result.error || !result.room) {
       await releaseCallSlot(`call:${slotRowId}`);
       await db.update(callResults).set({ status: "failed", summary: result.error || "bridge call failed" }).where(eq(callResults.id, slotRowId));

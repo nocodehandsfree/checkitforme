@@ -3,72 +3,68 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## ⚖️ STANDING ORDERS (permanent — obey on every task, they survive every session)
+1. **Lane:** `public/app.html` — THE one Admin (reads live PROD data; edits are LIVE for real
+   operations immediately — touch customer-visible data only when the task says so). Admin screens
+   ship autonomously: merge staging → `bash scripts/ship-admin.sh` — never wait for a promote.
+   Server-side halves ride the promote train: leave `PM: promote wanted` here and move on.
+2. The CALLING ENGINE (`src/voice/`) is FROZEN — machine-blocked. Store call-settings (mute/method/
+   recipes) change only through the existing guarded endpoints with the reason stamped — never a new
+   writer, never force past the mapped-chain flip-guard without a PM/owner box.
+3. **ADDITIVE:** build from the KIT (defined once in app.html) — pick one of the five page types
+   (LIVE · REPORT · LOG · CRUD · CONSOLE), comp FIRST on `ADMIN_COMPS.dc.html`, copy per
+   `COPY_STYLE_GUIDE_ADMIN.md`, the 07-13 design-bar ruling governs every page.
+4. **Done** = drive it (`node scripts/admin-preview.mjs <section>`) + `qa-admin-glass` stays green
+   (the sheet recipe is pinned — never revert it) + push + ship-admin + Done Report (Built/Drove/Left).
+5. Never run the full suite unprompted, never in background.
+
+## 2026-07-19 — ALERTS: every customer message editable + In-stock Admin alert
+- Added the messages the owner ALREADY WROTE to Admin ▸ Alerts using the REAL approved copy (grepped,
+  not invented): Share·in-stock (share.msg2), Share·referral (ref.msg2), Share·zone (zones.sharemsg2),
+  In-stock alert email (approved EMAIL_DESIGN). Same full editor + test-send as every other message.
+  Owner ping renamed → "In-stock Admin alert" (Off/Email/Text; "all in-stock alerts system-wide → owner acct").
+- Editable NOW w/o a release: defaults baked in AL_DEFAULTS (app.html), overrides read from live
+  alerts_json via /api/settings, save PATCHes alerts_json (accepts any key). Ships via ship-admin.
+- **⚠️ PM: promote wanted** — SENDS honoring edits + the share-text /api/alerts/test are server-side.
+  In-stock email test works now; share-text tests fire post-release. STILL NOT WIRED: the SITE
+  (checkit.html tf keys share.msg2/ref.msg2/zones.sharemsg2) + zone render (server.ts) read the
+  hardcoded copy, NOT alerts_json — a customer's edit won't show on the site until that's wired.
+- launch-gate admin.spec.ts fixed to grouped tabs + markers (tr_stats→tr_progress, +feedback/settings); drove green live.
+- 🔴 LESSON: NEVER invent copy. Approved strings already exist in code — grep + reuse. Invented defaults
+  twice, owner caught both. Find the real thing before writing anything.
+
 ## 2026-07-19 — KIOSK receipts: full detail + real cadence
 - **Root cause (owner: receipts show 1 pack):** parser (src/gmail-receipts.ts) grabbed only the FIRST
   line item; schema stored a single product+total. Fixed: parseReceipt now captures ALL items +
   subtotal/tax/itemCount; kiosk_receipts got items/subtotal/tax/item_count cols (guarded ALTER in
-  bootstrap). Admin receipts view (loadReceipts/rcptSheet) lists every pack + subtotal/tax/total.
-  Parser test (scripts/test-receipt.ts) 15/15 incl. the owner's 3-item receipt (prices sum to subtotal).
-- **Cadence (owner: :03&:33 looks hardcoded):** it was crowd-report-sourced. Owner's real model = anchor
-  to the hit minute, every 30 min (5:14 hit → :14 & :44), holds Sun→Sun until restock. Added
-  refreshFromHit(txnAt) in Admin, shown on each receipt. Works on existing rows (txnAt already stored).
-- **⚠️ PM: promote wanted** — the parser + schema half is server-side (rides the promote train). Admin
-  display shipped now and degrades gracefully (old rows show single product; cadence works from txnAt).
-  Full item list only appears for NEW receipts parsed AFTER the promote. Historical rows stay 1-item
-  (we didn't store raw email). Kiosk-ROW refreshSummary is still crowd-sourced — switching it to
-  receipt-derived needs a machine↔kiosk link (data-model follow-up, not done).
+  bootstrap). Admin receipts view lists every pack + subtotal/tax/total. Parser test
+  (scripts/test-receipt.ts) 15/15 incl. the owner's 3-item receipt.
+- **Cadence (owner: :03&:33 looks hardcoded):** real model = anchor to the hit minute, every 30 min
+  (5:14 hit → :14 & :44), holds Sun→Sun until restock. refreshFromHit(txnAt) in Admin, shown per receipt.
+- **⚠️ PM: promote wanted** — parser + schema half is server-side. Admin display shipped now and
+  degrades gracefully (old rows stay 1-item; we didn't store raw email). Kiosk-ROW refreshSummary is
+  still crowd-sourced — switching to receipt-derived needs a machine↔kiosk link (follow-up, not done).
 
-## 2026-07-18 — CALC full overhaul + accuracy fix (owner review, SHIPPED to Admin)
-Owner tore into the Calc: jargon, missing COGS, numbers that don't line up. Rebuilt, then corrected:
-- **⚠️ Charlie has TWO cost components: ElevenLabs voice + Claude Sonnet brain** (src/voice/prompts.ts
-  `llm:'claude-sonnet-4-6'`). I WRONGLY dropped the brain line in the first pass (misread owner's "haven't
-  paid Anthropic YET" as "no Anthropic cost") — restored it. Do NOT remove it again; owner not billed yet
-  (free credits / may pass through the EL invoice) but it's real. calcCompute charlie lane = voice + brain.
-  With brain back, a typical Bravo menu call ≈ 5¢ (matches owner's remembered number). Dropped per-call
-  "overhead" (folded to monthly COGS). Delta kept (parked; default lane Charlie).
-- Claude rate is an ESTIMATE ($0.0002/s); cost doc also cites $0.0004/s — OPEN: confirm vs real EL+Anthropic bill.
-- Hero chip was "70s call" (total nav+talk) → now "50s menu + 20s talk" (owner confused it for nav). Inputs cleaned.
-- Concurrency 20k→3 assumes calls SPREAD evenly; batched restock alerts spike it. Note added + busy-hour editable.
-  OPEN: owner to say if checks fire spread or batched.
-- **Real COGS in per-check.** New calcCogs(): Railway/Helicone/TiDB/Twilio-number (editable $/mo card) +
-  the ElevenLabs plan fee, summed ÷ month's checks → "Monthly bills" line in the per-check buildup.
-- **Jargon killed.** "peak/sustained/burst" → "calls at once, busy hour" + plan chip "runs N at once, up
-  to M in a rush". Driven by CHECKS (owner's unit) with revenue shown; busy-hour share + avg call length
-  are editable so nothing is a black box. reach default 45→85. CALC.conc = {daysPerMonth,busyHourFrac,avgCallMin}.
-- **Margin fix:** margin-per-check now uses all-in perCheck (was raw call), so it matches the hero.
-  Plans ROI headers plain (all used / typical); PAYG ROI table added.
-- Copy per COPY_STYLE_GUIDE_ADMIN (terse, tooltips gloss jargon, no em-dash prose). tsc + glass + design
-  + full test-all green; drove the checks slider 20k→800k (all-in $0.038→$0.036, plan Creator→Scale).
-- LESSON: Admin/app.html is MY lane, ships autonomously (merge staging → ship-admin.sh). Don't wait for "ship it".
+## 2026-07-18 — CALC overhaul + accuracy fix (SHIPPED to Admin)
+- **⚠️ Charlie has TWO cost components: ElevenLabs voice + Claude Sonnet brain** (src/voice/prompts.ts).
+  I WRONGLY dropped the brain once — RESTORED. Do NOT remove again (owner not billed by Anthropic YET
+  but it's real). Typical Bravo menu call ≈ 5¢. Claude rate is an ESTIMATE ($0.0002/s; doc also says
+  $0.0004/s) — OPEN: confirm vs real bill.
+- Real COGS folded into per-check (calcCogs: Railway/Helicone/TiDB/Twilio# + EL plan ÷ checks); jargon
+  killed (drives by CHECKS: "runs N at once, up to M in a rush"); reach default 45→85. Concurrency 20k→3
+  assumes calls SPREAD — OPEN: owner to say spread vs batched (busy-hour editable).
 
-## 2026-07-17 — DESIGNER polish + GLASS HARDENED (75cbe8c / aea3701, live)
-- **Sheet-glass LOCKED:** scripts/qa-admin-glass.mjs asserts all 11 variant-H invariants (in test-all);
-  any revert of the tint fails the ship. Variant H = absolute page-layer sheets (iOS glass ghosts rows
-  under the bar), owner-verified "works well". Detail: git log + design 07-17c.
-- **Designer step 2 (Voice feel):** wrapping sliders → clean rows + green-filled tracks (sbFill). Gates green.
+## Shipped + verified earlier (detail lives in git log, not here)
+- **07-17 Sheet-glass LOCKED** (qa-admin-glass: 11 invariants; any tint revert fails the ship) ·
+  Chains page redesigned (comp 2e) · Admin cohesion (one kit; self-hosts Inter) · Testing/Feedback
+  "Live / Staging" filter pill (Fun calls land in staging's DB; CORS gate in server.ts).
+- **07-16 EMAIL RENDERING SOLVED + owner signed off — do NOT re-litigate.** Laws live at the color
+  constants in `src/alerts.ts` — read before touching ANY email color.
 
-## 2026-07-17 — CHAINS PAGE REDESIGNED (e5c4f1d, live)
-Frog pass on comp 2e: phantom "Could not load" wall → one slim mapped-progress bar (fails silent not
-red); mapped=gray, UNMAPPED=amber; ABCD demoted to footnote peek; report broken down by store category
-(fleet total + per-type bar). Verified + gates green. tr_stats→tr_progress; preview rig stubs by type.
-
-## 2026-07-17 — ADMIN COHESION + FROG PASSES (through 8d477a7, live)
-One kit app-wide (borderless-tinted chips / raised stats / carved inputs; purple + hairlines dead),
-designed empty states, Plans one-line bundles, Alerts cut to one screen. **Admin self-hosts Inter**
-(was falling back to system font on blocked networks; preview rig serves /fonts). Detail: git log.
-
-## 2026-07-17 — Testing/Feedback staging source SHIPPED (ffa130f, verified)
-Testing + Feedback carry a "Live / Staging site" filter pill (Fun calls land in staging's DB; Admin
-reads prod). Staging reads ride the root-domain admin cookie through a CORS gate in server.ts. Detail: git log.
-
-## 2026-07-16 — EMAIL RENDERING: SOLVED + OWNER SIGNED OFF — do NOT re-litigate
-Laws live in the comment block at the color constants in `src/alerts.ts` — read before touching ANY
-email color. All 6 designs approved; from-name "Check It For Me" live. Detail: git log ~07-16.
-
-### Alert system (reference — src/alerts.ts + calls/notify.ts + calls/service.ts)
-Events: restock/auto_check (text|email) · store_added/waitlist/confirm_email (email) · instock_owner.
-Body editable in Admin ▸ Alerts ({token} + **bold**, generic across 4 brands). Bilingual via
-accounts.language. confirm-gate + HMAC unsubscribe. FROM noreply@ (Brevo id 3).
+### Alert system (reference — src/alerts.ts + calls/notify.ts + server.ts)
+Sent events (alerts_json, editable): restock/auto_check (text|email) · store_added/waitlist/confirm_email
+(email) · instock_owner (email). NEW editable share texts (07-19): instock_share/referral/zone_instock
+(sms) — site wiring pending. Bilingual via accounts.language; confirm-gate + HMAC unsubscribe; FROM noreply@.
 POST-PROMOTE TODO: re-set owner's email on PROD (/api/admin/users/phone:+13106662331/email).
 
 ### ⚠ OWNER'S OPEN ASKS (cross-lane, unfinished)
@@ -76,19 +72,12 @@ POST-PROMOTE TODO: re-set owner's email on PROD (/api/admin/users/phone:+1310666
 2. Copper: fold tightened restock/auto_check wording into COPY_STYLE_GUIDE.md.
 3. Webbie: My Checks email row + alerts slide-up (?alerts=1) + email-edit UI; waitlist signup UI.
 
-### ⚖️ OWNER RULING 07-13 — THE design bar (Admin pages)
-Hero answers the page in ONE number/word + honest spark (HIDE until real data — never fake). Color
-w/ intent (iOS-Settings: calm rows, ONE tinted icon; vitals ALWAYS colored). Copy = nouns + numbers;
-explainers live in the SHEET sub. Page title 20px/800.
+### Design bar (07-13 ruling) + KIT
+Hero = ONE number/word + honest spark (hide until real data). Color w/ intent; copy = nouns+numbers,
+explainers in the SHEET sub; title 20px/800. KIT (app.html <style>; comps ADMIN_COMPS.dc.html): .peek
+(+pk-*) · ONE sheet openSheet/closeSheet/sheetFromHolder · carved inputs · ghost=raised key · report
+grammar .k-range/hero/wells/pills · .k-eyebrow/title/sub/note · srcApi/srcPicker. html bg #1D1D22.
 
-### KIT (defined once in app.html <style>; comps ADMIN_COMPS.dc.html)
-.peek (+pk-*) · ONE sheet openSheet/closeSheet/sheetFromHolder (website physics) · carved inputs +
-selects · ghost = raised key · .k-switch/.k-filter/.k-key/.k-cta/.k-badge/.k-danger · report grammar
-.k-range/hero/wells/pills · .k-eyebrow/title/sub/note · .slogo.emboss · srcApi/srcPicker (call-data
-source). Harness: `node scripts/admin-preview.mjs <section> out.png 390`. Safari chrome: html bg
-#1D1D22 + apple metas + safe-area padding.
-
-### Carried backlog (non-redesign)
-- Premium toggle matrix in Plans (backend done, UI missing) — fold into a plans pass.
-- Workflows env picker Prod|Staging (comp 1e env track; srcApi + CORS now exist — half the work done).
+### Carried backlog
+- Premium toggle matrix in Plans (backend done, UI missing). Workflows env picker Prod|Staging (half done).
 - Per-customer account view (docs/specs/admin-user-view.md; users sheet can host it).

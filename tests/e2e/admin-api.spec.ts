@@ -46,5 +46,19 @@ test.describe("admin API smoke @safe", () => {
       const r = await request.get("/api/admin/overview", { headers: H });
       expect(r.ok(), `/api/admin/overview → 200 (got ${r.status()})`).toBeTruthy();
     });
+
+    // Harness P3-34: publish the CURRENT plans (a no-change publish — the sync is idempotent) and
+    // assert every tier lands in_sync with Stripe. Never runs on prod: publish writes plan state,
+    // so it stays a staging-only write even though the rest of this file is @safe.
+    test("P3-34: plans publish → every tier in_sync with Stripe", async ({ request }) => {
+      test.skip(process.env.E2E_TARGET === "prod", "plans publish is a write — staging only");
+      const r = await request.post("/api/admin/plans/publish", { headers: H, data: {} });
+      test.skip(r.status() === 400 && ((await r.text()).includes("stripe_key_missing")), "no Stripe key on this env");
+      expect(r.ok(), `publish → 200 (got ${r.status()})`).toBeTruthy();
+      const view = await r.json();
+      for (const t of view.tiers || []) {
+        expect(t.sync, `tier ${t.key} in_sync after publish`).toBe("in_sync");
+      }
+    });
   });
 });

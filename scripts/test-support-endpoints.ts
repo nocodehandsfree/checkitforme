@@ -7,7 +7,9 @@
 //      ELEVENLABS_PHONE_NUMBER_ID=test ADMIN_TOKEN=t ./node_modules/.bin/tsx scripts/test-support-endpoints.ts
 import { bootstrap } from "../src/db/bootstrap";
 import { db } from "../src/db/client";
-import { supportConversations, supportMessages, supportTickets } from "../src/db/schema";
+import { eq } from "drizzle-orm";
+import { accounts, supportConversations, supportMessages, supportTickets } from "../src/db/schema";
+import { answerSupport } from "../src/support/ladder";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -98,6 +100,46 @@ async function main() {
   r = await fetch(`${base}/api/support/chats/${mcv.id}`, { headers: admin });
   const detail = await r.json();
   ok(r.status === 200 && detail.account?.phone === "+13105550199" && detail.messages.length === 1, "chat detail has account + transcript");
+
+  // ---- v4: origin stamping (account + the page a chat came from, esp. a check's status page) ----
+  // The write path: answerSupport stamps source/page/checkId onto the conversation it creates. A
+  // check_issue from an account with no charged check is handled by the credit machine deterministically
+  // ($0, no model keys), so this exercises the real create-and-stamp code.
+  await answerSupport("test-origin-1", "my check to a store went to a bad number", {
+    category: "check_issue", account: { id: "acct_orig" },
+    origin: { source: "status_page", pageUrl: "/r?call=abc123", checkId: "cid_777" },
+  }).catch(() => { /* ladder may be keyless; the credit machine still stamps on create */ });
+  const stamped = (await db.select().from(supportConversations).where(eq(supportConversations.sessionId, "test-origin-1")))[0];
+  ok(!!stamped && stamped.source === "status_page" && stamped.pageUrl === "/r?call=abc123" && stamped.checkId === "cid_777",
+    "answerSupport stamps source + pageUrl + checkId on create");
+  ok(!!stamped && stamped.accountId === "acct_orig", "origin chat still attributes the account");
+
+  // An account row so the Admin read paths can render who it was (email/plan/credits).
+  await db.insert(accounts).values({ clerkUserId: "acct_orig", email: "hunter@example.com", phone: "+13105550123",
+    credits: 4, subscription: "active", callsMade: 9 }).onConflictDoNothing();
+
+  // The list surfaces source + a rendered account object (member, not "Guest").
+  r = await fetch(`${base}/api/support/chats?account=members`, { headers: admin });
+  const members = (await r.json()).chats as Array<{ sessionId?: string; source?: string; account?: { email?: string } | null; checkId?: string }>;
+  r = await fetch(`${base}/api/support/chats`, { headers: admin });
+  const allChats = (await r.json()).chats as Array<{ id: number; source?: string; checkId?: string; account?: { email?: string } | null }>;
+  const originRow = allChats.find((x) => x.source === "status_page");
+  ok(!!originRow && originRow.checkId === "cid_777", "list carries source=status_page + checkId");
+  ok(!!originRow && originRow.account?.email === "hunter@example.com", "list renders the member's email (not Guest)");
+
+  // The detail surfaces source/page/checkId + the enriched account (email/plan/credits).
+  r = await fetch(`${base}/api/support/chats/${originRow!.id}`, { headers: admin });
+  const od = await r.json();
+  ok(od.source === "status_page" && od.pageUrl === "/r?call=abc123" && od.checkId === "cid_777", "detail carries source + page + checkId");
+  ok(od.account?.email === "hunter@example.com" && od.account?.credits === 4 && od.account?.subscription === "active", "detail enriches account with email/plan/credits");
+
+  // Backfill: a later message that carries page context stamps a conversation opened without it.
+  await answerSupport("test-origin-2", "hello, quick question", { category: "check_issue", account: { id: "acct_orig" } }).catch(() => {});
+  await answerSupport("test-origin-2", "actually it was about my check", {
+    category: "check_issue", account: { id: "acct_orig" }, origin: { source: "status_page", checkId: "cid_888" },
+  }).catch(() => {});
+  const back = (await db.select().from(supportConversations).where(eq(supportConversations.sessionId, "test-origin-2")))[0];
+  ok(!!back && back.source === "status_page" && back.checkId === "cid_888", "later message backfills source + checkId when unset");
 
   // Search endpoint: empty query short-circuits (no qdrant needed).
   r = await fetch(`${base}/pub/support/search`, { method: "POST", headers: pub, body: JSON.stringify({ q: "a" }) });

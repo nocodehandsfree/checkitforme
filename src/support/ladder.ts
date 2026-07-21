@@ -80,6 +80,8 @@ export interface AnswerOpts {
   category?: SupportCategory;
   account?: { id: string; phone?: string } | null;
   checkContext?: string;   // a short readout of the signed-in user's recent checks, for grounded specifics
+  // Where the chat was opened from — stamped on the conversation so the Admin renders the context.
+  origin?: { source?: string; pageUrl?: string; checkId?: string } | null;
 }
 
 /** Answer one user message inside a conversation. Creates the conversation on first call. */
@@ -88,17 +90,24 @@ export async function answerSupport(sessionId: string, userMessage: string, opts
   const category = SUPPORT_CATEGORIES.includes(opts.category as SupportCategory) ? opts.category! : "other";
   let convo = (await db.select().from(supportConversations)
     .where(eq(supportConversations.sessionId, sessionId)).limit(1))[0];
+  const org = opts.origin || null;
   if (!convo) {
     const ins = await db.insert(supportConversations)
       .values({ sessionId, lang: opts.lang || "en", category, accountId: opts.account?.id || null,
         accountPhone: opts.account?.phone || null, title: userMessage.slice(0, 120),
+        source: org?.source || null, pageUrl: org?.pageUrl || null, checkId: org?.checkId || null,
         status: "open", maxTier: 0, costUsd: 0, createdAt: now, updatedAt: now })
       .returning();
     convo = ins[0];
-  } else if (opts.account?.id && !convo.accountId) {
-    // User signed in mid-conversation — attach the account now.
-    await db.update(supportConversations).set({ accountId: opts.account.id, accountPhone: opts.account.phone || null })
-      .where(eq(supportConversations.id, convo.id));
+  } else {
+    // Backfill anything not stamped yet: the user signs in mid-chat, or a later message carries the
+    // page context the opener didn't. Never overwrite a value that's already set.
+    const patch: Partial<typeof supportConversations.$inferInsert> = {};
+    if (opts.account?.id && !convo.accountId) { patch.accountId = opts.account.id; patch.accountPhone = opts.account.phone || null; }
+    if (org?.source && !convo.source) patch.source = org.source;
+    if (org?.pageUrl && !convo.pageUrl) patch.pageUrl = org.pageUrl;
+    if (org?.checkId && !convo.checkId) patch.checkId = org.checkId;
+    if (Object.keys(patch).length) await db.update(supportConversations).set(patch).where(eq(supportConversations.id, convo.id));
   }
   await db.insert(supportMessages).values({
     conversationId: convo.id, role: "user", content: userMessage.slice(0, 2000), tier: null, model: null, createdAt: now,

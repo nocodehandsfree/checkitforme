@@ -10,9 +10,35 @@
       "Bash(curl -s https://checkitforme.com/*)", "Bash(curl -s -X POST https://checkitforme.com/*)",
       "Bash(curl -s https://staging.checkitforme.com/*)", "Bash(curl -s -X POST https://staging.checkitforme.com/*)",
       "Bash(curl -s https://admin.checkitforme.com/*)", "Bash(curl -s -X POST https://admin.checkitforme.com/*)"
+    ],
+    "ask": [
+      "Bash(bash scripts/test-all.sh)", "Bash(bash scripts/test-all.sh:*)",
+      "Bash(sh scripts/test-all.sh)", "Bash(./scripts/test-all.sh)", "Bash(./scripts/test-all.sh:*)"
     ]
   },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/push-gate.sh\"",
+            "timeout": 15
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/edit-gate.sh\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
     "UserPromptSubmit": [
       {
         "hooks": [

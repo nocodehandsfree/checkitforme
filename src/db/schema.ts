@@ -264,6 +264,7 @@ export const accounts = sqliteTable("accounts", {
   clerkUserId: text("clerk_user_id").primaryKey(), // Clerk id, OR "phone:<E.164>" for phone-first users
   email: text("email"),
   emailVerifiedAt: integer("email_verified_at"), // set when they tap the confirm-email link; alert emails require it
+  alertsPausedAt: integer("alerts_paused_at"),   // master "Pause all alerts": set = every alert paused (fan-out skips this account) until cleared
   language: text("language"),   // "es" → alert emails/texts go out in Spanish; null/"en" → English
   phone: text("phone"),         // E.164 cell for phone-first (Clerk-free) identity
   callerId: text("caller_id"),  // verified caller-ID number for this account's outbound calls
@@ -492,6 +493,7 @@ export const callResults = sqliteTable(
     // verdict — does_not_sell / sold_out / left_on_hold / voicemail … which `confirmed` alone loses.
     statusKey: text("status_key"),
     shipmentDayHeard: text("shipment_day_heard"), // if asked: the day the clerk gave
+    shipmentTimeHeard: text("shipment_time_heard"), // if named: the time of day for that shipment
     summary: text("summary"),       // short human summary of what the clerk said
     transcript: text("transcript"), // text transcript (no audio is ever stored)
     providerCallId: text("provider_call_id"), // ElevenLabs conversation id
@@ -576,6 +578,10 @@ export const supportConversations = sqliteTable(
     category: text("category").notNull().default("other"), // technical|bug|billing|partnerships|how_checks_work|other
     accountId: text("account_id"),                    // phone-session user id when signed in, else null (guest)
     accountPhone: text("account_phone"),              // denormalized for the Admin list (avoid a join per row)
+    // Where the chat was opened from — stamped on first message so the Admin can see the context.
+    source: text("source"),                           // "status_page" (from a check's result) | "messenger" | null(legacy)
+    pageUrl: text("page_url"),                        // the page path they were on when they opened it
+    checkId: text("check_id"),                        // the call_results id being viewed, when opened off a check's status page
     title: text("title"),                             // first user line — the Admin/Messages list label
     status: text("status").notNull().default("open"), // open | escalated | resolved | unhelped
     reviewStatus: text("review_status"),              // null | pending | approved | rejected

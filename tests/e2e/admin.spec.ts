@@ -19,11 +19,15 @@ test.describe("admin UI @safe", () => {
     await expect(page).toHaveTitle(/.+/);
 
     // Deep-link the core tabs; each section must gain .active and show its distinctive content.
+    // Matches the redesigned grouped nav (Calls group: results/feedback/statuses/trees/settings;
+    // Testing lives under the Voice group). Markers are the static content containers in each section.
     const tabs: Array<[string, string]> = [
-      ["results", "#res_count"], // Calls feed
-      ["statuses", "#st_list"], // Statuses editor
-      ["trees", "#tr_stats"], // Chains / mapping
-      ["testing", "#testing_log"], // Fun-store test calls
+      ["results", "#res_count"], // Calls group: calls feed
+      ["feedback", "#fb_list"], // Calls group: verdict feedback
+      ["statuses", "#st_list"], // Calls group: statuses editor
+      ["trees", "#tr_progress"], // Calls group: chains / mapping (was #tr_stats)
+      ["settings", "#set_call"], // Calls group: app settings
+      ["testing", "#testing_log"], // Voice group: Fun-store test calls
     ];
     for (const [tab, marker] of tabs) {
       await page.goto(`${ADMIN_URL}/${tab}`);

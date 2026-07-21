@@ -30,10 +30,19 @@ async function seedStatuses() {
     // "failed" stays only until carrier failures are mapped to real reasons (voicemail/busy/bad_number/
     // nobody_answered); then it's removed so every call shows a real reason, never a bare "Call failed".
     ["failed", "⚠️", "Call failed", "unk", "#FBBF24", "The call didn't go through this time. No check = no charge."],
-    // Admin ended the call from the dashboard. A NON-RESULT — excluded from every report/aggregate +
-    // never billed; reads as "no data" (like a canceled call). Written by the master Stop & hang-up.
-    ["admin_hangup", "·", "Admin canceled", "unk", "#9CA3AF", "We ended this call from the dashboard — it doesn't count as a check. No charge."],
+    // Admin ended the check from the dashboard. A NON-RESULT — excluded from every report/aggregate +
+    // never billed; reads as "no data" (like a canceled check). Written by the master Stop & hang-up.
+    ["admin_hangup", "·", "Admin canceled", "unk", "#9CA3AF", "We ended this check. It doesn't count — no charge."],
+    // Customer pressed Stop (live view "Stop & hang up", zone "Stop all"/stop-one). Same non-result
+    // semantics as admin_hangup (the row's STATUS is admin_hangup — only the display key differs).
+    ["user_cancelled", "·", "Check cancelled", "unk", "#9CA3AF", "You stopped this check from happening."],
   ];
+  // 07-21 copy fix (owner): "call" -> "check", drop "from the dashboard". Fill-only — applies just
+  // while the row still has the original seed text, so a dashboard edit is never overwritten.
+  await client.execute({
+    sql: "UPDATE statuses SET note=? WHERE key='admin_hangup' AND note=?",
+    args: ["We ended this check. It doesn't count — no charge.", "We ended this call from the dashboard — it doesn't count as a check. No charge."],
+  }).catch(() => {});
   let sort = 0;
   for (const [key, emoji, label, tone, color, note] of rows) {
     sort += 10;
@@ -86,6 +95,8 @@ export async function bootstrap() {
   await client.execute("ALTER TABLE zones ADD COLUMN owner_user_id TEXT").catch(() => {});
   // Email confirmation: alert emails only send once the address is confirmed (confirm-email flow).
   await client.execute("ALTER TABLE accounts ADD COLUMN email_verified_at INTEGER").catch(() => {});
+  // Master "Pause all alerts": one switch on the Alerts list pauses every alert for the account.
+  await client.execute("ALTER TABLE accounts ADD COLUMN alerts_paused_at INTEGER").catch(() => {});
   // Auto-check results alert: link a fired call back to the customer schedule that placed it.
   await client.execute("ALTER TABLE call_results ADD COLUMN customer_schedule_id INTEGER").catch(() => {});
   // Per-account language for alert copy: "es" sends Spanish, else English.
@@ -95,6 +106,7 @@ export async function bootstrap() {
   await client.execute("ALTER TABLE store_requests ADD COLUMN user_id TEXT").catch(() => {});
   await client.execute("ALTER TABLE store_requests ADD COLUMN rewarded_at INTEGER").catch(() => {});
   await client.execute("ALTER TABLE call_results ADD COLUMN zone_run_id TEXT").catch(() => {});
+  await client.execute("ALTER TABLE call_results ADD COLUMN shipment_time_heard TEXT").catch(() => {});
   await client.execute("ALTER TABLE chains ADD COLUMN dtmf_shortcut TEXT").catch(() => {});
   // Chains: answer-path classification + per-chain consumer mute.
   await client.execute("ALTER TABLE chains ADD COLUMN answer_path TEXT").catch(() => {});
@@ -298,6 +310,9 @@ export async function bootstrap() {
   await client.execute("CREATE INDEX IF NOT EXISTS support_credit_acct_idx ON support_credit_grants(account_id, granted_at)").catch(() => {});
   await client.execute("ALTER TABLE support_conversations ADD COLUMN credit_decision TEXT").catch(() => {});
   await client.execute("ALTER TABLE support_conversations ADD COLUMN credit_cid INTEGER").catch(() => {});
+  await client.execute("ALTER TABLE support_conversations ADD COLUMN source TEXT").catch(() => {});
+  await client.execute("ALTER TABLE support_conversations ADD COLUMN page_url TEXT").catch(() => {});
+  await client.execute("ALTER TABLE support_conversations ADD COLUMN check_id TEXT").catch(() => {});
   // One-time: stock the anonymous free-check pool for launch (each visitor gets 1 free check).
   if (!(await getSetting("pub_credits_initialized"))) {
     await setSetting("pub_credits", "250");

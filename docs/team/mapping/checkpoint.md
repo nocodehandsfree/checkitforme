@@ -1,5 +1,7 @@
 # Check - Mapping — CHECKPOINT (current state)
 > **Volatile — update at every "Checkpoint".** Newest on top, bullets not prose, under ~80 lines.
+> **⚖️ BOOT LAW: read `MAPPING-MANUAL.md` (this folder) FULLY before any task — it is how the
+> technology actually works, anchored to code. Pass its comprehension gate (§9) before acting.**
 
 ## STATE (2026-07-16) — 99.9% of stores mapped, go-live ready. Nothing running.
 - **110,516 / 110,622 covered stores are front-end callable (99.9%).** Only 7 micro-chains / ~105

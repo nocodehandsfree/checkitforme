@@ -796,11 +796,13 @@
   </section>
   <section id="alerts">
     <div class="k-title">Alerts</div>
-    <div class="k-sub">Customer messages and sends</div>
+    <div class="k-sub">The messages customers get and share</div>
     <div id="al_status" style="margin-top:2px"></div>
-    <div class="k-eyebrow">Your in stock ping</div>
+    <div class="k-eyebrow">In-stock Admin alert</div>
+    <div style="font-size:11.5px;color:var(--text-tertiary);margin:-2px 0 9px">All in-stock alerts system wide can be sent to an owner account.</div>
     <div style="display:flex;gap:8px;align-items:center">
       <select id="oa_channel" class="k-filter" style="flex:0 0 auto" onchange="saveOwnerAlert()">
+        <option value="off">Off</option>
         <option value="email">Email</option>
         <option value="sms">Text</option>
       </select>
@@ -952,6 +954,7 @@
       <div class="pk-fact" id="sup_credits_fact"></div>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
+    <div id="sup_src"></div>
     <div class="k-filters">
       <select class="k-filter" id="sup_f_cat" onchange="supFilter()">
         <option value="">All categories</option>
@@ -1630,6 +1633,8 @@ async function gtmRestore(){
   const r=await api('/api/gtm/restore-defaults',{method:'POST'});
   if(r&&r.ok){ GTM_ITEMS=r.items||GTM_ITEMS; GTM_MISSING=[]; toast('Restored '+r.restored+' item(s)'); renderGtm(); }
 }
+const GTM_OPEN=new Set(); // expanded card ids — survives re-renders within the session
+function gtmToggleOpen(idx){ const it=GTM_ITEMS[idx]; if(!it) return; const k=it.id||String(idx); if(GTM_OPEN.has(k)) GTM_OPEN.delete(k); else GTM_OPEN.add(k); renderGtm(); }
 function renderGtm(){
   const fArea=(document.getElementById('gtm_f_area')||{}).value||'';
   const fAgent=(document.getElementById('gtm_f_agent')||{}).value||'';
@@ -1656,8 +1661,11 @@ function renderGtm(){
     </div>`):'';
   if(!list.length){ el.innerHTML=rb+'<div class="empty">Nothing here. Adjust the filters or add an item.</div>'; return; }
   // Comp 2a row: circle + one-line title + LAUNCH chip · description clamped to two · agent/area chips.
+  // Tap the text → the card expands (full title + full description); tap again to collapse (owner 07-20:
+  // "nobody ever gave me the ability to click on one to see all the text").
   const row=i=>{
     const idx=GTM_ITEMS.indexOf(i), isDone=i.status==='done', isDoing=i.status==='doing';
+    const open=GTM_OPEN.has(i.id||String(idx));
     const circle=isDone
       ? `<button type="button" title="Cycle status" onclick="gtmCycle(${idx})" style="flex:0 0 auto;margin-top:1px;width:22px;height:22px;border-radius:50%;border:none;background:var(--green);box-shadow:0 0 8px rgba(74,222,128,.4);cursor:pointer;display:grid;place-items:center;padding:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#06210f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></button>`
       : `<button type="button" title="Cycle status" onclick="gtmCycle(${idx})" style="flex:0 0 auto;margin-top:1px;width:22px;height:22px;border-radius:50%;border:2px solid ${isDoing?'#FBBF24':'rgba(255,255,255,.2)'};background:transparent;cursor:pointer;padding:0"></button>`;
@@ -1665,11 +1673,11 @@ function renderGtm(){
       ${circle}
       <div class="pk-main">
         <div style="display:flex;align-items:center;gap:8px">
-          <div style="font-size:14.5px;font-weight:700;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;${isDone?'text-decoration:line-through':''}">${esch(i.title)}</div>
+          <div onclick="gtmToggleOpen(${idx})" style="font-size:14.5px;font-weight:700;letter-spacing:-.2px;${open?'white-space:normal':'white-space:nowrap;overflow:hidden;text-overflow:ellipsis'};flex:1;min-width:0;cursor:pointer;${isDone?'text-decoration:line-through':''}">${esch(i.title)}</div>
           ${i.critical?'<span style="font-size:8.5px;font-weight:900;letter-spacing:.06em;color:#EF4444;background:rgba(239,68,68,.14);border-radius:6px;padding:3px 6px;flex:0 0 auto">LAUNCH</span>':''}
           <button type="button" title="Remove" onclick="gtmDelete(${idx})" style="flex:0 0 auto;background:none;border:none;color:#5C5C68;cursor:pointer;font-size:15px;line-height:1;padding:0 2px">×</button>
         </div>
-        ${i.detail?`<div style="font-size:12px;font-weight:500;color:#8A8A96;line-height:1.45;margin-top:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esch(i.detail)}</div>`:''}
+        ${i.detail?`<div onclick="gtmToggleOpen(${idx})" style="font-size:12px;font-weight:500;color:#8A8A96;line-height:1.45;margin-top:5px;cursor:pointer;${open?'':'display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden'}">${esch(i.detail)}</div>`:''}
         <div style="display:flex;align-items:center;gap:7px;margin-top:9px">
           <span style="font-size:9px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:#FFCB05;background:rgba(255,203,5,.13);border-radius:7px;padding:4px 8px">${esch(gtmAgentLabel(i.agent))}</span>
           <span style="font-size:9px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:#8A8A96;background:var(--terminal);box-shadow:inset 0 2px 4px rgba(0,0,0,.4);border-radius:7px;padding:4px 8px">${esch(GTM_AREA[i.area]||i.area)}</span>
@@ -2895,13 +2903,13 @@ function supStatusPill(s){
   const cls=k==='resolved'?'g':(k==='escalated'?'a':'');
   return `<span class="pill ${cls}" style="font-size:10.5px;padding:3px 9px">${esch(k)}</span>`;
 }
-async function loadSupport(){ loadSupportStats(); loadSupportChats(); loadSupportCredits(); }
+async function loadSupport(){ { const sp=document.getElementById('sup_src'); if(sp) sp.innerHTML=srcPicker('loadSupport'); } loadSupportStats(); loadSupportChats(); loadSupportCredits(); }
 // Auto-credit audit: every make-good the credit machine granted, with the evidence. Row stays
 // hidden until the first grant exists so the section doesn't ship an empty box.
 async function loadSupportCredits(){
   const row=document.getElementById('sup_credits_row'), holder=document.getElementById('ds_supcredits');
   if(!row||!holder) return;
-  const r=await api('/api/support/credits');
+  const r=await srcApi('/api/support/credits');
   const g=(r&&Array.isArray(r.grants))?r.grants:[];
   if(!g.length){ row.style.display='none'; return; }
   row.style.display='';
@@ -2921,7 +2929,7 @@ async function loadSupportStats(){
   const heroN=document.getElementById('sup_hero_n'), heroL=document.getElementById('sup_hero_l');
   const wells=document.getElementById('sup_wells'), cats=document.getElementById('sup_cats');
   const topRow=document.getElementById('sup_top_row');
-  const r=await api('/api/support/stats?range='+encodeURIComponent(SUP.range));
+  const r=await srcApi('/api/support/stats?range='+encodeURIComponent(SUP.range));
   const rangeWord={today:'chats today','7d':'chats this week','30d':'chats this month'}[SUP.range]||'chats';
   if(!r||r.error){
     if(heroN)heroN.textContent='—'; if(heroL)heroL.textContent='Support APIs aren\'t live yet. This lights up on its own once they land.';
@@ -2956,16 +2964,20 @@ async function loadSupportChats(){
   const el=document.getElementById('sup_list'); if(!el) return;
   const p=new URLSearchParams({account:SUP.acct,since:String(supSince())});
   if(SUP.cat)p.set('category',SUP.cat); if(SUP.q)p.set('q',SUP.q);
-  const r=await api('/api/support/chats?'+p.toString());
+  const r=await srcApi('/api/support/chats?'+p.toString());
   const rows=Array.isArray(r)?r:(r&&Array.isArray(r.chats)?r.chats:null);
-  if(!rows){ el.innerHTML='<div class="empty">No chat data yet. Waiting on the Support lane\'s API.</div>'; return; }
+  if(!rows){ el.innerHTML=srcEmpty(r,'<div class="empty">No chat data yet. Waiting on the Support lane\'s API.</div>'); return; }
   if(!rows.length){ el.innerHTML='<div class="empty">No chats match these filters.</div>'; return; }
   // Log rows (comp 1g): initials tile · the question · who/category/when · right icon = how it ended
   // (green check = the AI handled it, amber up arrow = went to a human, yellow ? = pending).
   el.innerHTML=rows.map(c=>{
     const who=c.account?(c.account.email||c.account.phone||c.account.label||'Member'):'Guest';
     const member=!!c.account;
-    const snippet=(c.lastMessage||c.snippet||'').slice(0,90)||'(no messages)';
+    // Row title = the real first message. When a chat opened from a check's status page with nothing
+    // typed yet, name where it came from ("Check status") instead of a blank "(no messages)".
+    const srcLabel=c.source==='status_page'?'Check status':(c.source==='messenger'?'Messenger':'');
+    const title=(c.title||'').trim();
+    const snippet=title?title.slice(0,90):(srcLabel||'(no message yet)');
     const k=String(c.status||'open');
     const st=k==='escalated'
       ? `<span class="stc" style="background:rgba(245,158,11,.15)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span>`
@@ -2975,13 +2987,13 @@ async function loadSupportChats(){
     return `<button class="peek" onclick="openSupChat('${esch(String(c.id))}')">
       <span class="pk-logo"><span class="slogo emboss" style="width:38px;height:38px;border-radius:11px">${esch((who.replace(/[^A-Za-z0-9]/g,'').slice(0,2)||'G').toUpperCase())}</span></span>
       <span class="pk-main"><span class="pk-t" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(snippet)}</span>
-      <span class="pk-m" style="display:block">${member?'Member':'Guest'} · ${esch((SUP_CATS[c.category]||c.category||'other').toLowerCase())} · ${agoTs(c.createdAt||c.created_at)}</span></span>
+      <span class="pk-m" style="display:block">${member?esch(who):'Guest'} · ${esch((SUP_CATS[c.category]||c.category||'other').toLowerCase())} · ${agoTs(c.createdAt||c.created_at)}${(title&&srcLabel)?' · '+esch(srcLabel):''}</span></span>
       <span class="pk-st">${st}</span>
     </button>`;
   }).join('');
 }
 async function openSupChat(id){
-  const r=await api('/api/support/chats/'+encodeURIComponent(id));
+  const r=await srcApi('/api/support/chats/'+encodeURIComponent(id));
   if(!r||r.error){ toast('Could not load that chat'); return; }
   const msgs=Array.isArray(r.transcript)?r.transcript:(Array.isArray(r.messages)?r.messages:[]);
   const bub=(m)=>{ const ours=m.role!=='user'&&m.role!=='customer';
@@ -2994,9 +3006,19 @@ async function openSupChat(id){
   const teachQ=String(firstQ.text||firstQ.content||'');
   const teachA=String(lastA.text||lastA.content||'');
   const who=r.account?(r.account.email||r.account.phone||r.account.label||'Member'):'Guest';
+  const done=String(r.status||'open')==='resolved', escalated=String(r.status||'')==='escalated';
+  // Operator flip so the list dot goes green: mark a handled chat done (or reopen it). Escalated chats
+  // belong to the ladder, so we don't offer the flip there.
+  const statusBtn=escalated?'':`<button class="${done?'ghost':'act'}" style="width:100%;margin-bottom:14px" onclick="supSetStatus('${esch(String(r.id||id))}','${done?'open':'resolved'}')">${done?'Reopen this chat':'Mark resolved'}</button>`;
+  // Where the chat came from — the page, and the check it was opened off of.
+  const srcLabel=r.source==='status_page'?"A check's status page":(r.source==='messenger'?'Support messenger':(r.source||''));
+  const originRows=[srcLabel?['Opened from',srcLabel]:null,r.checkId?['Check',String(r.checkId)]:null,r.pageUrl?['Page',String(r.pageUrl)]:null]
+    .filter(Boolean).map(([k,v])=>`<div class="rsbar"><span class="rsbl" style="flex-basis:auto">${k}</span><b style="text-align:right;word-break:break-all">${esch(v)}</b></div>`).join('');
+  const originBlock=originRows?`<div class="k-eyebrow">Where it came from</div>${originRows}<div style="height:14px"></div>`:'';
   openSheet(who,
     [esch(SUP_CATS[r.category]||r.category||'Other'),esch(String(r.status||'open')),r.tier!=null?esch(supTier(r.tier)):'',agoTs(r.createdAt||r.created_at)].filter(Boolean).join(' · '),
     `<div style="display:flex;flex-direction:column;margin-bottom:14px" class="chat">${msgs.map(bub).join('')||'<div class="empty">No transcript.</div>'}</div>
+    ${statusBtn}
     ${shot?`<div class="k-eyebrow">Screenshot</div><a href="${esch(shot)}" target="_blank" rel="noopener"><img src="${esch(shot)}" alt="Customer screenshot" style="max-width:100%;border-radius:14px;margin-bottom:14px"></a>`:''}
     ${dbg?`<div class="k-eyebrow">Debug info</div><pre style="white-space:pre-wrap;word-break:break-word;font-size:11.5px;background:var(--terminal);box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:14px;padding:12px;margin:0 0 14px">${esch(dbg)}</pre>`:''}
     <div class="card" style="margin-bottom:14px;border-color:rgba(74,222,128,.3)">
@@ -3006,7 +3028,13 @@ async function openSupChat(id){
       <div class="fld" style="margin-top:9px"><label style="font-size:11px;display:block;margin-bottom:4px">Right answer</label><textarea id="sup_teach_a" rows="4">${esch(teachA)}</textarea></div>
       <button class="act" style="margin-top:11px" onclick="supTeach('${esch(String(r.id||id))}')">Save as approved answer</button>
     </div>
-    <div class="k-eyebrow">Account</div>${acct}`);
+    ${originBlock}<div class="k-eyebrow">Account</div>${acct}`);
+}
+// Flip a chat's status (resolved/open) so the list dot turns green or back to open. Reloads the list.
+async function supSetStatus(id,status){
+  const r=await srcApi('/api/support/chats/'+encodeURIComponent(id)+'/status',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({status})});
+  if(r&&r.ok){ toast(status==='resolved'?'Marked resolved':'Reopened'); closeSheet(); loadSupport(); }
+  else toast('Could not update that chat');
 }
 // Teach: save a corrected question+answer as an approved pair. It embeds into the answer cache, so the
 // next time someone asks this the agent serves your wording verbatim instead of reasoning fresh.
@@ -3014,7 +3042,7 @@ async function supTeach(id){
   const q=((document.getElementById('sup_teach_q')||{}).value||'').trim();
   const a=((document.getElementById('sup_teach_a')||{}).value||'').trim();
   if(!q||!a){ toast('Add a question and the right answer first'); return; }
-  const r=await api('/api/support/review/'+encodeURIComponent(id),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'approve',question:q,answer:a})});
+  const r=await srcApi('/api/support/review/'+encodeURIComponent(id),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'approve',question:q,answer:a})});
   if(r&&r.ok){ toast('Saved. It will use this next time.'); closeSheet(); }
   else toast('Could not save that answer');
 }
@@ -4809,6 +4837,7 @@ const FLAG_GROUPS=[
     ['thrift','Thrift · treasure hunts','Members can check thrift stores'],
   ]},
   {title:'Consumer (free)',flags:[
+    ['smsAlerts','Text alerts (SMS)','ON once toll-free texting is approved · OFF = alert forms collect email only'],
     ['kiosks','Kiosk intel + rewards','Crowd refresh times · earns a free check'],
     ['kioskReceipts','Kiosk-receipt rewards','A receipt earns a free check'],
     ['community','Community wall','The moderated I-scored photo wall'],
@@ -4888,8 +4917,20 @@ const AL_EVENTS=[
   ['store_added','Store went live','email','Their requested store just went live. Grants a free check.'],
   ['waitlist','We’re live in your area','email','A waitlist signup’s area just launched.'],
   ['confirm_email','Confirm your email','email','Someone added an email. Nothing sends until they tap confirm.'],
+  ['instock_owner','In-stock alert email','email','The email sent when a call confirms stock. Turned on by the In-stock Admin alert above.'],
+  ['instock_share','Share: in stock','sms','The text a customer shares when a store has it.'],
+  ['referral','Share: referral','sms','The text a customer shares to invite a friend.'],
+  ['zone_instock','Share: zone result','sms','The text a customer shares after checking a zone.'],
 ];
-let AL_TPL={};
+// Real owner-approved copy, verbatim from the site (share.msg2 / ref.msg2 / zones.sharemsg2) and the
+// approved in-stock email. Editable here; the site + email honor edits after the release.
+const AL_DEFAULTS={
+  instock_owner:{ emailSubject:'In stock: {product} at {store}.', emailBody:'A call just confirmed {product} is on the shelf at {store}. {dayline}' },
+  instock_share:{ sms:'Yo. {store} has {product} in stock right now. An AI called the store for me. Check it:' },
+  referral:{ sms:"Yo! Check this tech out. It's sick.\nAn AI calls stores and finds {product} in stock at retail prices.\nSign up and we both get {reward}:" },
+  zone_instock:{ sms:'Checked {n} stores at once. {i} had it in stock. Wild:' },
+};
+let AL_TPL={}, AL_RAW={};
 function alField(id,label,val,tall){ return `<label class="fld"><span class="fl">${esch(label)}</span>`
   +(tall?`<textarea id="${id}" rows="3" style="width:100%;box-sizing:border-box">${esch(val||'')}</textarea>`
         :`<input id="${id}" type="text" value="${esch(val||'')}" style="width:100%;box-sizing:border-box">`)+`</label>`; }
@@ -4931,7 +4972,7 @@ function alRows(){
   tEl.innerHTML=AL_EVENTS.map(([k,label,chan])=>`<button class="peek" onclick="alSheet('${k}')">
       <span class="pk-main"><span class="pk-t" style="display:block">${esch(label)}</span>
       <span class="pk-m" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(alPreview(k))}</span></span>
-      <span class="pk-fact">${chan==='both'?'Text · email':'Email'}</span>
+      <span class="pk-fact">${chan==='sms'?'Text':chan==='both'?'Text · email':'Email'}</span>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>`).join('');
 }
@@ -4942,15 +4983,16 @@ function alSheet(k){
   const hold=document.getElementById('al_sheets'); if(!hold) return;
   let box=document.getElementById('al_sh_'+k);
   if(!box){ box=document.createElement('div'); box.id='al_sh_'+k; hold.appendChild(box); }
+  // Every message uses the same full editor: a text field (share texts + restock), email fields, or both.
   const sms=alField('al_'+k+'_sms','Text message',t.sms,true);
   const email=alField('al_'+k+'_subj','Email subject',t.emailSubject,false)+alField('al_'+k+'_body','Email body',t.emailBody,true);
-  const tests=(chan==='both'?[['sms','Test text'],['email','Test email']]:[['email','Test email']])
+  const tests=(chan==='both'?[['sms','Test text'],['email','Test email']]:chan==='sms'?[['sms','Test text']]:[['email','Test email']])
     .map(x=>`<button class="ghost" onclick="sendAlertTest('${k}','${x[0]}')">${x[1]}</button>`).join('');
-  box.innerHTML=(chan==='email'?email:sms+email)
+  box.innerHTML=(chan==='email'?email:chan==='sms'?sms:sms+email)
     +`<div class="k-note" style="text-align:left;margin:10px 0 0">Tokens fill per send: {store} {product} {city} {email} {result}</div>`
     +`<div class="btnrow"><button class="act" onclick="saveAlertTemplates('${k}')">Save message</button></div>`
     +`<div class="k-eyebrow" style="margin-top:18px">Send yourself a test</div>`
-    +`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input id="al_test_to_${k}" type="text" placeholder="your email (or a phone for the text)" style="flex:1;min-width:170px;font-size:14px;padding:10px 14px" value="${esch(((document.getElementById('oa_email')||{}).value||''))}">${tests}</div>`
+    +`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input id="al_test_to_${k}" type="text" placeholder="${chan==='email'?'your email':'a phone for the text'}" style="flex:1;min-width:170px;font-size:14px;padding:10px 14px" value="${esch(((document.getElementById('oa_email')||{}).value||''))}">${tests}</div>`
     +`<div id="al_test_out_${k}" class="meta" style="margin-top:8px;font-size:12px"></div>`;
   sheetFromHolder('al_sh_'+k, label, hint);
 }
@@ -4958,6 +5000,10 @@ async function loadAlerts(){
   const tEl=document.getElementById('al_templates'); if(!tEl) return;
   loadOwnerAlert();
   AL_TPL=await api('/api/alerts/templates')||{};
+  // The newer messages (owner ping, zone, referral) aren't in the server registry yet, so their
+  // defaults are baked in AL_DEFAULTS and their saved overrides come straight from the live alerts_json.
+  try { const st=await api('/api/settings'); AL_RAW=JSON.parse((st&&st.alerts_json)||'{}')||{}; } catch(e){ AL_RAW={}; }
+  for(const k of Object.keys(AL_DEFAULTS)) AL_TPL[k]={...AL_DEFAULTS[k],...(AL_TPL[k]||{}),...(AL_RAW[k]||{})};
   alRows();
   const log=await api('/api/alerts/log')||{};
   // Delivery chips: green when the provider creds are set, amber "stubbed" until then.
@@ -5002,7 +5048,11 @@ async function saveAlertTemplates(only){
     }
   }
   const r=await api('/api/alerts/templates',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(patch)});
-  if(r&&!r.error){ AL_TPL=r; toast('Message saved'); alRows(); }
+  if(r&&!r.error){ AL_TPL=r;
+    // r comes from the server registry (the 5 wired events) and drops the newer keys; re-merge them from
+    // their baked defaults + saved overrides so the just-saved value stays on screen.
+    for(const k of Object.keys(AL_DEFAULTS)){ if(patch[k]) AL_RAW[k]={...(AL_RAW[k]||{}),...patch[k]}; AL_TPL[k]={...AL_DEFAULTS[k],...(AL_RAW[k]||{})}; }
+    toast('Message saved'); alRows(); }
   else toast('Could not save the message');
 }
 async function sendAlertTest(k,channel){

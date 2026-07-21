@@ -29,6 +29,7 @@ export interface Policy {
     driverHandoff: boolean;          // show the "have a local grab it" driver demo below in-stock
     scheduling: boolean;             // subscriber: schedule calls on known shipment days
     restockAlerts: boolean;          // subscriber: notify when something comes back in stock
+    smsAlerts: boolean;              // SMS alert channel is LIVE (toll-free approved). OFF = every alert form collects email only and no SMS ever sends
     kiosks: boolean;                 // kiosk picker + crowd refresh-time submissions
     hobby: boolean;                  // GLOBAL master switch for the Hobby chip (off = hidden for EVERY account, incl. comp)
     thrift: boolean;                 // GLOBAL master switch for the Thrift chip (off = hidden for EVERY account, incl. comp)
@@ -94,7 +95,7 @@ export const DEFAULT_POLICY: Policy = {
   finds: { publicFeed: true, headstartMin: 10, subscriberPrivateAlways: true, keepPrivateCostChecks: 0 },
   rewards: { kioskRefreshChecks: 1, referralChecks: 1, storeAddChecks: 1 }, // referral = 1+1 -> ~$1 CAC at ~$0.50/check; store-add = 1 free check when it goes live
   flags: {
-    dogfoodHours: false, driverHandoff: true, scheduling: true, restockAlerts: true,
+    dogfoodHours: false, driverHandoff: true, scheduling: true, restockAlerts: true, smsAlerts: false,
     kiosks: true, hobby: true, thrift: true, shareCards: true, multiProduct: true, specificSets: true,
     community: false, communityAutoApprove: false, referrals: true, kioskReceipts: true,
     liveListen: false, stockSignals: true, requirePhoneSignup: false, connectOnHuman: false,

@@ -57,6 +57,12 @@ export async function seedStockCheckIntel(force = false): Promise<number> {
       applied++;
       continue;
     }
+    // MAPPED CHAINS ARE UNTOUCHABLE (owner law 2026-07-20, the Walgreens incident): once a chain has a
+    // learned/verified tree or rings direct, NO seed — not even force — may flag it "site" out of the
+    // call lane. The intel file predates the mapping work; letting it re-stamp a mapped chain is how a
+    // tier-5 best-bet ends up "check online" while carrying a perfect recipe. Remap is the only override.
+    const isMapped = found.treeStatus === "learned" || found.treeStatus === "verified" || found.ringsDirect === true;
+    if (isMapped && it.stockCheckMethod === "site") continue;
     // Only fill blanks so the owner's admin edits always win over re-deploys (unless forced).
     const r = await db.update(chains).set({
       stockCheckMethod: it.stockCheckMethod, stockCheckConfidence: it.stockCheckConfidence,
