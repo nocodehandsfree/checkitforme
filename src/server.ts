@@ -4942,9 +4942,14 @@ app.post("/pub/support/chat", async (c) => {
   const category = SUPPORT_CATEGORIES.includes(b.category) ? (b.category as SupportCategory) : "other";
   // Attribute to the signed-in account when a phone-session bearer is present (anonymous still works).
   const u = await verifyClerkToken(c.req.header("Authorization")).catch(() => null);
+  // Where they opened it — the page, and the check id when it came off a status page.
+  const src = String(b.source || "").slice(0, 32) || null;
+  const pageUrl = String(b.pageUrl || "").slice(0, 300) || null;
+  const checkId = /^[\w-]{1,64}$/.test(String(b.checkId || "")) ? String(b.checkId) : null;
   try {
     const r = await answerSupport(sessionId, message, {
       lang, category, account: u ? { id: u.id, phone: (u as { phone?: string }).phone } : null,
+      origin: { source: src || undefined, pageUrl: pageUrl || undefined, checkId: checkId || undefined },
     });
     return c.json({ sessionId, reply: r.reply, escalate: r.escalate });
   } catch (e) {
@@ -5098,13 +5103,22 @@ app.get("/api/support/chats", async (c) => {
   if (conds.length) sel = sel.where(and(...conds));
   const rows = await sel.orderBy(desc(supportConversations.updatedAt)).limit(Math.min(Number(q.limit) || 100, 200));
   const counts = new Map<number, number>();
+  const emails = new Map<string, string | null>();
   if (rows.length) {
     const ids = rows.map((r) => r.id);
     for (const mc of await db.select({ cid: supportMessages.conversationId, n: sql<number>`count(*)` }).from(supportMessages)
       .where(inArray(supportMessages.conversationId, ids)).groupBy(supportMessages.conversationId)) counts.set(mc.cid, Number(mc.n));
+    // Batch-resolve the members' emails so the list shows who it was (not just "Guest").
+    const acctIds = [...new Set(rows.map((r) => r.accountId).filter(Boolean) as string[])];
+    if (acctIds.length) {
+      for (const a of await db.select({ id: accounts.clerkUserId, email: accounts.email }).from(accounts)
+        .where(inArray(accounts.clerkUserId, acctIds))) emails.set(a.id, a.email);
+    }
   }
   return c.json({ chats: rows.map((r) => ({
     id: r.id, category: r.category, accountId: r.accountId, accountPhone: r.accountPhone,
+    account: r.accountId ? { id: r.accountId, phone: r.accountPhone, email: emails.get(r.accountId) || null } : null,
+    source: r.source, pageUrl: r.pageUrl, checkId: r.checkId,
     title: r.title, maxTier: r.maxTier, status: r.status, escalated: r.status === "escalated",
     msgCount: counts.get(r.id) || 0, createdAt: r.createdAt, updatedAt: r.updatedAt,
   })) });
@@ -5116,9 +5130,13 @@ app.get("/api/support/chats/:id", async (c) => {
   if (!cv) return c.json({ error: "not_found" }, 404);
   const msgs = await db.select().from(supportMessages).where(eq(supportMessages.conversationId, id)).orderBy(supportMessages.id);
   const ticket = (await db.select().from(supportTickets).where(eq(supportTickets.conversationId, id)).orderBy(desc(supportTickets.id)).limit(1))[0] || null;
+  // Enrich the signed-in account with the summary the Admin renders (email, plan, credits, checks made).
+  const acct = cv.accountId ? (await db.select().from(accounts).where(eq(accounts.clerkUserId, cv.accountId)).limit(1))[0] : null;
   return c.json({
     id: cv.id, category: cv.category, status: cv.status, lang: cv.lang, maxTier: cv.maxTier, costUsd: cv.costUsd,
-    account: cv.accountId ? { id: cv.accountId, phone: cv.accountPhone } : null,
+    account: cv.accountId ? { id: cv.accountId, phone: acct?.phone || cv.accountPhone,
+      email: acct?.email || null, subscription: acct?.subscription, credits: acct?.credits, callsMade: acct?.callsMade } : null,
+    source: cv.source, pageUrl: cv.pageUrl, checkId: cv.checkId,
     createdAt: cv.createdAt, updatedAt: cv.updatedAt,
     messages: msgs.map((m) => ({ role: m.role, content: m.content, tier: m.tier, model: m.model, createdAt: m.createdAt })),
     ticket: ticket ? { id: ticket.id, name: ticket.name, email: ticket.email, message: ticket.message,

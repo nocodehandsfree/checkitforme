@@ -308,6 +308,9 @@ export async function bootstrap() {
   await client.execute("CREATE INDEX IF NOT EXISTS support_credit_acct_idx ON support_credit_grants(account_id, granted_at)").catch(() => {});
   await client.execute("ALTER TABLE support_conversations ADD COLUMN credit_decision TEXT").catch(() => {});
   await client.execute("ALTER TABLE support_conversations ADD COLUMN credit_cid INTEGER").catch(() => {});
+  await client.execute("ALTER TABLE support_conversations ADD COLUMN source TEXT").catch(() => {});
+  await client.execute("ALTER TABLE support_conversations ADD COLUMN page_url TEXT").catch(() => {});
+  await client.execute("ALTER TABLE support_conversations ADD COLUMN check_id TEXT").catch(() => {});
   // One-time: stock the anonymous free-check pool for launch (each visitor gets 1 free check).
   if (!(await getSetting("pub_credits_initialized"))) {
     await setSetting("pub_credits", "250");

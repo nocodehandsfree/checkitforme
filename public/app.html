@@ -2983,7 +2983,7 @@ async function loadSupportChats(){
     return `<button class="peek" onclick="openSupChat('${esch(String(c.id))}')">
       <span class="pk-logo"><span class="slogo emboss" style="width:38px;height:38px;border-radius:11px">${esch((who.replace(/[^A-Za-z0-9]/g,'').slice(0,2)||'G').toUpperCase())}</span></span>
       <span class="pk-main"><span class="pk-t" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(snippet)}</span>
-      <span class="pk-m" style="display:block">${member?'Member':'Guest'} · ${esch((SUP_CATS[c.category]||c.category||'other').toLowerCase())} · ${agoTs(c.createdAt||c.created_at)}</span></span>
+      <span class="pk-m" style="display:block">${member?'Member':'Guest'} · ${esch((SUP_CATS[c.category]||c.category||'other').toLowerCase())} · ${agoTs(c.createdAt||c.created_at)}${c.source==='status_page'?' · from a check':''}</span></span>
       <span class="pk-st">${st}</span>
     </button>`;
   }).join('');
@@ -3002,6 +3002,11 @@ async function openSupChat(id){
   const teachQ=String(firstQ.text||firstQ.content||'');
   const teachA=String(lastA.text||lastA.content||'');
   const who=r.account?(r.account.email||r.account.phone||r.account.label||'Member'):'Guest';
+  // Where the chat came from — the page, and the check it was opened off of.
+  const srcLabel=r.source==='status_page'?"A check's status page":(r.source==='messenger'?'Support messenger':(r.source||''));
+  const originRows=[srcLabel?['Opened from',srcLabel]:null,r.checkId?['Check',String(r.checkId)]:null,r.pageUrl?['Page',String(r.pageUrl)]:null]
+    .filter(Boolean).map(([k,v])=>`<div class="rsbar"><span class="rsbl" style="flex-basis:auto">${k}</span><b style="text-align:right;word-break:break-all">${esch(v)}</b></div>`).join('');
+  const originBlock=originRows?`<div class="k-eyebrow">Where it came from</div>${originRows}<div style="height:14px"></div>`:'';
   openSheet(who,
     [esch(SUP_CATS[r.category]||r.category||'Other'),esch(String(r.status||'open')),r.tier!=null?esch(supTier(r.tier)):'',agoTs(r.createdAt||r.created_at)].filter(Boolean).join(' · '),
     `<div style="display:flex;flex-direction:column;margin-bottom:14px" class="chat">${msgs.map(bub).join('')||'<div class="empty">No transcript.</div>'}</div>
@@ -3014,7 +3019,7 @@ async function openSupChat(id){
       <div class="fld" style="margin-top:9px"><label style="font-size:11px;display:block;margin-bottom:4px">Right answer</label><textarea id="sup_teach_a" rows="4">${esch(teachA)}</textarea></div>
       <button class="act" style="margin-top:11px" onclick="supTeach('${esch(String(r.id||id))}')">Save as approved answer</button>
     </div>
-    <div class="k-eyebrow">Account</div>${acct}`);
+    ${originBlock}<div class="k-eyebrow">Account</div>${acct}`);
 }
 // Teach: save a corrected question+answer as an approved pair. It embeds into the answer cache, so the
 // next time someone asks this the agent serves your wording verbatim instead of reasoning fresh.

@@ -577,6 +577,10 @@ export const supportConversations = sqliteTable(
     category: text("category").notNull().default("other"), // technical|bug|billing|partnerships|how_checks_work|other
     accountId: text("account_id"),                    // phone-session user id when signed in, else null (guest)
     accountPhone: text("account_phone"),              // denormalized for the Admin list (avoid a join per row)
+    // Where the chat was opened from — stamped on first message so the Admin can see the context.
+    source: text("source"),                           // "status_page" (from a check's result) | "messenger" | null(legacy)
+    pageUrl: text("page_url"),                        // the page path they were on when they opened it
+    checkId: text("check_id"),                        // the call_results id being viewed, when opened off a check's status page
     title: text("title"),                             // first user line — the Admin/Messages list label
     status: text("status").notNull().default("open"), // open | escalated | resolved | unhelped
     reviewStatus: text("review_status"),              // null | pending | approved | rejected

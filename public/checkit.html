@@ -3383,7 +3383,7 @@ function closeStoreReq(){ $('storeReqOverlay').classList.remove('on'); acctRetur
 // The ladder + RAG live server-side; this is the whole client surface. Answers are grounded in the
 // book (readme.com); the human path is buried and only surfaces after the AI can't resolve.
 const SUP_BOOK='https://checkitforme.readme.io';
-let SUP_SID=''; let SUP_CAT='other'; let SUP_SHOT=null; let SUP_VIEW='home'; let SUP_STARTED=false; let SUP_ESC=0;
+let SUP_SID=''; let SUP_CAT='other'; let SUP_SHOT=null; let SUP_VIEW='home'; let SUP_STARTED=false; let SUP_ESC=0; let SUP_SRC='messenger';
 const SUP_CATS=[
   ['how_checks_work','How checks work','Cómo funcionan los checks'],
   ['check_issue',"Something's wrong with my check",'Algo está mal con mi check'],
@@ -3512,7 +3512,7 @@ function supStartNew(){ supShow('topic',{title:t('sup.topic.title',"What's it ab
     el.innerHTML=`<div class="rmain"><div class="rtitle">${esc(supCatLabel(k))}</div></div><svg class="rarrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`;
     box.appendChild(el); });
 }
-function supPickTopic(cat,src){ SUP_CAT=cat; supFreshChat(); supGo('chat');
+function supPickTopic(cat,src){ SUP_CAT=cat; SUP_SRC=(src==='result')?'status_page':(src||'messenger'); supFreshChat(); supGo('chat');
   $('sup_clip').classList.toggle('hide',cat!=='bug'&&cat!=='check_issue');
   // Same topic, two doors: from the result page nothing is wrong yet, so open neutral ("how did it
   // go?"); the apology greeting is only for people who PICKED "something's wrong" in the topic list.
@@ -3537,8 +3537,11 @@ async function sendSupport(){
   const btn=$('sup_send'); btn.disabled=true;
   const dots=document.createElement('div'); dots.className='supm bot dots'; dots.innerHTML='<span></span><span></span><span></span>';
   $('sup_msgs').appendChild(dots); $('sup_msgs').scrollTop=1e6;
+  // Stamp where this chat came from — the page, and the check id when it opened off a status page.
+  const _cid=(document.body.classList.contains('rview')&&LASTRES&&LASTRES.cid)?String(LASTRES.cid):undefined;
   const r=await appApi('/pub/support/chat',{method:'POST',headers:{'content-type':'application/json'},
-    body:JSON.stringify({sessionId:SUP_SID||undefined,message:msg,lang:LANG,category:SUP_CAT})});
+    body:JSON.stringify({sessionId:SUP_SID||undefined,message:msg,lang:LANG,category:SUP_CAT,
+      source:SUP_SRC,pageUrl:(location.pathname+location.search).slice(0,300),checkId:_cid})});
   dots.remove(); btn.disabled=false;
   if(!r||r.error==='network'||(!r.reply&&!r.escalate)){ supBubbleMsg('bot', t('err.generic',"That didn't go through. Give it another try.")); return; }
   if(r.sessionId){ SUP_SID=r.sessionId; supGuestAdd(SUP_SID,msg,SUP_CAT); }
