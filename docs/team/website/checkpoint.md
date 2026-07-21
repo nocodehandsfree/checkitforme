@@ -29,18 +29,23 @@ Local server `PORT=88xx tsx src/server.ts` (needs ELEVENLABS_* + ADMIN_TOKEN env
 `playwright-core` + `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` (NODE_PATH to node_modules).
 tsx has NO hot-reload — restart after edits. headless→staging TLS is proxy-blocked: drive LOCAL.
 
-## ✅ 07-21 shipped by the prior session (r165-r173, all on staging — detail in git log)
-- Zone report transcripts = the REAL status page unfolded in-frame (`zoneExpand` → `deriveVerdict` +
-  `combinedTimelineHTML` + `chatBubbles`, same engine as a single check). History unification (calendar
-  rows resolve logo/address from live `STORES`; `restoreCall` carries categoryId/zoneRunId). r167 zone
-  fixes (edit-zone preselect, share sheet to comp, wide wordmarks in the Calling chip). r168 ghost-tap
-  guard v2 (arms on real pointerdown). r171 pin icon. r170 per-step REAL seconds on replayed checks.
-- r173 zone REPORT head rebuilt to the owner's comp (screenshots 2 & 3): circular done/total progress
-  RING + status-count pills (N in stock / N not / N no answer, from row tones) + `N calling`; replaces
-  the 3-segment bar. `renderZoneRun` + poll tick update `#z_ringarc/#z_ringnum/#z_pills/#z_calling`.
-  r172 wide wordmark (TJ Maxx) now legible in the `.callwho` Calling chip (white backing, width-driven,
-  overflow clips the square canvas's transparent band) — verified with the REAL asset; applies when the
-  store's wide/dark flags reach the page (always for NEW checks, not always a reopen from stale cache).
+## ✅ 07-21 (Webbie) — ONE email-alert process + My Checks → Alerts list (branch claude/webbie-checkpoint-yokoam)
+- **Subscribe = one path** (`watchStore`): confirmed email → instant ON + gray toast "We'll email you
+  when it's back", no confirm sent. No email → inline ask → ONE confirm; pending → sheet top "Check
+  your inbox". Pending watch turns on by itself (delivery gated on emailVerifiedAt). Email-only channel.
+  `openWatch`/upsell/notify button all route here. Confirm sheet reuses `#watchOverlay`.
+- **Alerts list** (`openAlerts`): each watch = the site's store row + On/Off switch (reuses `.ho-toggle`),
+  master "Pause all alerts" on top, each row removable (trash). Replaces old mute/stop. Make-room mode
+  when a new watch hits the 10 cap. EN+ES. New `.alsw/.alrm/.alpause/.almk` CSS.
+- **Server** (`src/`, prod via promote): `accounts.alerts_paused_at` (bootstrap ALTER); subscribe returns
+  on/pending/need_email + enforces cap 10 (on OR off holds a slot); `/app/alerts/pause-all`; myAlerts adds
+  location + paused + slots; fan-out skips paused. **PM: promote wanted — the alerts server half.**
+- **Drove it** local server + real routes: need_email→confirm→verified→instant-on, cap bounce + make-room,
+  toggle off/on, master pause (fan-out notified 0 paused / 1 unpaused), remove frees slot. Playwright UI
+  both langs, no JS errors, "Check your inbox"/"Revisa tu correo" confirmed.
+- **PM/Copper note:** row switch labels are On/Off in BOTH langs (Spanish "Activa/Apagada" truncated the
+  compact toggle — layout rule won). Auto-check + launch-waitlist + add-a-store still use their own
+  contact ask — unifying them under this gate is a clean follow-up box.
 - **OPEN (owner mentioned, deferred — do next if he confirms):** the feedback POLL (In stock / Not in /
   Restocking / Unclear) is NOT yet in the individual-check UNFOLD — the unfold renders verdict+timeline+
   transcript but not the `fbk` block `showResult` adds for unclear results.
