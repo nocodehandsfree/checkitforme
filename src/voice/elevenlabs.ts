@@ -361,11 +361,13 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
       // summary literally said voicemail). Recognize the machine from what the "clerk" side said.
       const VOICEMAIL = /\b(leave (?:a|your) message|after the (?:tone|beep)|at the (?:tone|beep)|voice ?mail|mailbox|record your message|is not available|unable to take your call|has been forwarded to)\b/i;
       const voicemail = VOICEMAIL.test(clerkAll);
-      // A completed call means a human was on the line (under connect-on-human, ElevenLabs only joins
-      // once a human is reached). So the honest worst case here is "no clear answer" — NEVER
-      // "nobody_answered" (that lie comes only from the non-completed branch below). `asked` still
-      // gates the too-busy heuristic above; it must not downgrade a real conversation to no-answer.
-      statusKey = voicemail ? "voicemail" : onHold ? "left_on_hold" : (langBarrier ? "language_barrier" : (tooBusy ? "too_busy" : "no_clear_answer"));
+      // "Completed" no longer proves a human engaged (owner 07-21): the connect timer / hold-timeout
+      // opens the agent even when nobody ever speaks, and the agent now STAYS SILENT on recordings.
+      // If our agent never said a word, no person ever engaged — the honest status is
+      // "nobody_answered", not "no clear answer" (B&N Thousand Oaks + Target dead-air specimens).
+      // Voicemail/hold stay first: a machine that answered is the more specific truth.
+      const agentSpoke = (d.transcript ?? []).some((t) => t.role === "agent" && t.message && String(t.message).trim());
+      statusKey = voicemail ? "voicemail" : onHold ? "left_on_hold" : (!agentSpoke ? "nobody_answered" : (langBarrier ? "language_barrier" : (tooBusy ? "too_busy" : "no_clear_answer")));
     }
   } else {
     // Non-completed: prefer the SPECIFIC carrier reason (voicemail/busy/bad_number/closed) over the
@@ -405,7 +407,11 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
     const lastIvr = ivrLines[ivrLines.length - 1];
     if (ivrLines.length > 1 && lastIvr.time_in_call_secs != null) stepsRaw.push({ n: 6, at: lastIvr.time_in_call_secs });
   }
-  if (navSecs != null && navSecs > 0) stepsRaw.push({ n: 7, at: navSecs });
+  // "A person picked up" (7) may only appear when a person actually ENGAGED — our agent spoke to
+  // someone. On a silent wait that ends with nobody (timer fired, no conversation), steps 7/8 are
+  // lies and stay OFF the ladder (owner 07-21: the B&N log said a person picked up when no one did).
+  const engaged = tr.some((t) => t.role === "agent" && t.message && String(t.message).trim());
+  if (engaged && navSecs != null && navSecs > 0) stepsRaw.push({ n: 7, at: navSecs });
   if (askIdx >= 0 && tr[askIdx].time_in_call_secs != null) stepsRaw.push({ n: 8, at: tr[askIdx].time_in_call_secs! });
   stepsRaw.sort((a, b) => a.at - b.at || a.n - b.n);
   const steps: { n: number; at: number }[] = [];
