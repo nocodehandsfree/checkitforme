@@ -22,11 +22,11 @@ product, rebuild process · hard stops over prose rules · PM as front door · t
     Topic). Rolled back: every store waits for a voice again. (2) The ear-gate armed on TIMER chains
     because it read consumed ctx fields (B&N: timer 29s, agent opened at 8s on the greeting).
     Fixed with Mapper's strict boolean (bridge.ts, owner unlock, relocked, 13/13 bridge tests).
-    EL dials calmed (eager→normal, speculative off). Echo's listen-then-talk build stays boxed as
-    the LONG-TERM fix that also restores first-word capture. PROOF = one B&N staging check.
-0a. **Status precision (owner, after demo):** empty-conversation completed calls (Chris's Target,
-    row 150 — dead air) must read as nobody-answered, not "Couldn't tell". Outcome mapper wording,
-    engine-side (FROZEN → unlock), Echo box, small.
+    EL dials calmed (eager→normal, speculative off). (3) Silent calls now report the TRUTH:
+    agent-never-spoke completed calls = nobody_answered, and "A person picked up" only renders when
+    someone engaged (62854b5). OLD rows keep their stored wrong status; steps heal on reopen.
+    Echo's listen-then-talk build stays boxed (long-term fix + narrates the recording phase —
+    the log can't say "listening to menu" pre-join until the brain hears from second 0).
 0. **424 = admin on STAGING (owner 07-21, noted don't-fix-yet):** his 424 is in staging's
    ADMIN_PHONES, so the fresh-customer signup test boots as admin. Before the real-card/upgrade walk
    (owner + Chris): pull 424 from staging ADMIN_PHONES (Railway var), verify clean signup. COMP undo
