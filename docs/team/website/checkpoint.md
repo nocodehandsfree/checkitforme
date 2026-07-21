@@ -35,6 +35,15 @@ tsx has NO hot-reload — restart after edits. headless→staging TLS is proxy-b
   rows resolve logo/address from live `STORES`; `restoreCall` carries categoryId/zoneRunId). r167 zone
   fixes (edit-zone preselect, share sheet to comp, wide wordmarks in the Calling chip). r168 ghost-tap
   guard v2 (arms on real pointerdown). r171 pin icon. r170 per-step REAL seconds on replayed checks.
+- r173 zone REPORT head rebuilt to the owner's comp (screenshots 2 & 3): circular done/total progress
+  RING + status-count pills (N in stock / N not / N no answer, from row tones) + `N calling`; replaces
+  the 3-segment bar. `renderZoneRun` + poll tick update `#z_ringarc/#z_ringnum/#z_pills/#z_calling`.
+  r172 wide wordmark (TJ Maxx) now legible in the `.callwho` Calling chip (white backing, width-driven,
+  overflow clips the square canvas's transparent band) — verified with the REAL asset; applies when the
+  store's wide/dark flags reach the page (always for NEW checks, not always a reopen from stale cache).
+- **OPEN (owner mentioned, deferred — do next if he confirms):** the feedback POLL (In stock / Not in /
+  Restocking / Unclear) is NOT yet in the individual-check UNFOLD — the unfold renders verdict+timeline+
+  transcript but not the `fbk` block `showResult` adds for unclear results.
 - **⚠️ r170's step-ladder code lives in `src/voice/elevenlabs.ts`+`provider.ts` — over the line, left in
   because live+tested; now FROZEN with the engine. Echo's lane reviews/owns it. Website never touches it.**
 - **Admin/live-data writes it made (state known, lane now closed to Website):** `user_cancelled` status
