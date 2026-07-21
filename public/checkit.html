@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r170" />
+<meta name="x-rev" content="glassfix-r171" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -7350,7 +7350,7 @@ function renderZoneBuild(){
     <div class="zf-head zf-compact"><div class="zf-title sm">${ZONES.editId?t('zones.edit2','Edit zone'):t('zones.new2','New zone')}</div></div>
     <div class="zf-sub">
       <div style="display:flex;gap:9px">
-        <div class="zsearch" style="flex:1;margin:0"><svg class="zmag" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7C7C88" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4" stroke-linecap="round"/></svg><input id="z_loc" placeholder="${t('zones.locph2','ZIP or town…')}" autocomplete="off" oninput="zoneSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();zoneGeocode();}"><button class="zgps" onclick="zoneGPS()" aria-label="Use my location"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2"><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke-linecap="round"/><circle cx="12" cy="12" r="3.4"/></svg></button></div>
+        <div class="zsearch" style="flex:1;margin:0"><svg class="zmag" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7C7C88" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4" stroke-linecap="round"/></svg><input id="z_loc" placeholder="${t('zones.locph2','ZIP or town…')}" autocomplete="off" oninput="zoneSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();zoneGeocode();}"><button class="zgps" onclick="zoneGPS()" aria-label="Use my location">${ICO.pin('#4ADE80').replace('width="20" height="20"','width="17" height="17"')}</button></div>
         <div class="zseg"><button class="${!map?'on':''}" onclick="if(ZONES.mapOpen)zoneToggleMap()" aria-label="${t('zones.list','List')}">${LISTICO}</button><button class="${map?'on':''}" onclick="if(!ZONES.mapOpen)zoneToggleMap()" aria-label="${t('zones.map','Map')}">${MAPICO}</button></div>
       </div>
       <div class="zradrow" style="margin-top:9px"><span class="zradlbl">${t('zones.radius','Radius')}</span><div class="zradtrack">${rings}<span class="zradmi">mi</span></div><button class="zaddall${zoneAllInRadiusSelected()?' on':''}${ZONES.sel.size>=10?' capped':''}" onclick="zoneToggleAll()">${zoneAllInRadiusSelected()?t('zones.removeall','Remove all'):'＋ '+t('zones.addallshort','Add all')}</button></div>
