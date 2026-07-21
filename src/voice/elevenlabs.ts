@@ -361,11 +361,14 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
       // summary literally said voicemail). Recognize the machine from what the "clerk" side said.
       const VOICEMAIL = /\b(leave (?:a|your) message|after the (?:tone|beep)|at the (?:tone|beep)|voice ?mail|mailbox|record your message|is not available|unable to take your call|has been forwarded to)\b/i;
       const voicemail = VOICEMAIL.test(clerkAll);
-      // A completed call means a human was on the line (under connect-on-human, ElevenLabs only joins
-      // once a human is reached). So the honest worst case here is "no clear answer" — NEVER
-      // "nobody_answered" (that lie comes only from the non-completed branch below). `asked` still
-      // gates the too-busy heuristic above; it must not downgrade a real conversation to no-answer.
-      statusKey = voicemail ? "voicemail" : onHold ? "left_on_hold" : (langBarrier ? "language_barrier" : (tooBusy ? "too_busy" : "no_clear_answer"));
+      // "Completed" no longer guarantees a human spoke: DIRECT stores open ElevenLabs AT pickup
+      // (connectOnHuman:false, for first-word capture), so a menu/hold/instant-hangup lands here as a
+      // connected call with an empty clerk side. Dead air ⇒ nobody actually answered — tell the truth
+      // (nobody_answered), never "Couldn't tell". A call where the clerk DID speak but gave no verdict
+      // stays "no clear answer". `asked` still gates the too-busy heuristic; it must not downgrade a
+      // real conversation to no-answer.
+      const deadAir = isDeadAirClerk(clerkAll);
+      statusKey = deadAir ? "nobody_answered" : voicemail ? "voicemail" : onHold ? "left_on_hold" : (langBarrier ? "language_barrier" : (tooBusy ? "too_busy" : "no_clear_answer"));
     }
   } else {
     // Non-completed: prefer the SPECIFIC carrier reason (voicemail/busy/bad_number/closed) over the
@@ -430,6 +433,18 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
     status,
     failureReason: explainFailure(d),
   };
+}
+
+/** Dead-air detector: a call can flip to "completed" (connected, a non-agent turn exists) yet the
+ *  clerk side is empty or near-empty — a direct line that answered to a menu/hold or hung up before
+ *  a word, so ElevenLabs (which on direct stores joins AT pickup, not at a human) transcribed only
+ *  our agent + silence. That is NOT "no clear answer" ("Couldn't tell" implies a person waffled) —
+ *  nobody actually spoke, so it must read as nobody_answered. Pure + exported for unit tests. */
+export function isDeadAirClerk(clerkText: string): boolean {
+  // Dead air = the clerk side carries no actual WORD (a 2+ letter run) — empty, whitespace, or a
+  // stray transcribed blip (punctuation / a lone digit). Conservative on purpose: if the clerk got
+  // even one real word out we keep the softer "no clear answer", never the harder "nobody answered".
+  return !/[a-zA-ZÀ-ſ]{2,}/.test(clerkText ?? "");
 }
 
 /** Map a provider/carrier termination reason to the SPECIFIC statuses-registry key, so a failed

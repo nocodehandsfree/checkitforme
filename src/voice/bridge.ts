@@ -114,6 +114,45 @@ function frameEnergy(b64: string): number {
   return sum / buf.length;
 }
 
+// ---- Opening-line classifier: menu vs human (direct-line "split listen from talk") ----
+// A menu's recorded voice and a person's voice are both just "sound", so energy alone can't tell
+// them apart — only the WORDS can. We read the FIRST transcribed line to decide whether to let the
+// agent greet. STRONG_MENU = phrasing a live clerk essentially never says (press an option, please
+// hold, IVR boilerplate) in English + Spanish. "Thank you for calling" is deliberately NOT a menu
+// marker — a real clerk opens with it ("Thanks for calling Box Lunch, this is Bob") — so it only
+// counts as a menu when paired with option/hold language.
+const STRONG_MENU = new RegExp([
+  "\\b(press|dial|marque|oprima|presione)\\s+(\\d|one|two|three|four|five|six|seven|eight|nine|zero|uno|dos|tres|cuatro|the\\s|pound|star|#|\\*)",
+  "\\bfor\\s+.{0,32}\\b(press|say|dial)\\b",              // "for hours, press 1"
+  "\\bto\\s+.{0,32}\\b(press|say|dial)\\b",               // "to reach the pharmacy, press 2"
+  "\\b(please hold|please stay on the line|remain on the line|stay on the line|please continue to hold|your call (is|may be) (important|recorded|monitored)|for quality (and|assurance)|main menu|all (of )?our (representatives|agents|associates)|the next available)\\b",
+  "\\b(leave (a|your) message|after the (tone|beep)|at the (tone|beep)|voice ?mail|mailbox|has been forwarded)\\b",
+  "\\b(para español|para continuar|oprima|marque|presione|gracias por su llamada|por favor espere|mantén?gase en la línea|permanezca en la línea|deje (un|su) mensaje|después del tono)\\b",
+].join("|"), "i");
+const HUMAN_HINT = new RegExp([
+  "\\bthis is \\w+",                                       // "…this is Bob"
+  "\\bhow (can|may) i help",
+  "\\bwhat can i (do|get) for (you|ya)",
+  "\\bhow('?s| is) it goin|how are (you|ya)|how ya doin",
+  "\\bspeaking\\b",                                        // "Bob speaking"
+  "\\b(good (morning|afternoon|evening)).{0,24}\\b(this is|how (can|may)|what can)",
+  "\\bwhat('?s| is) up\\b|\\bwhatcha need",
+].join("|"), "i");
+/** Read the opening transcribed line → should the agent greet now?
+ *  "menu"  = keep the agent silent (it's a recording, not a person).
+ *  "human" = a person answered — greet.
+ *  "ambiguous" = can't tell — the caller's cap decides (speak within a couple seconds so a real
+ *  human is never met with silence). Pure + exported for unit tests. */
+export function classifyOpeningLine(text: string): "menu" | "human" | "ambiguous" {
+  const t = (text ?? "").trim();
+  if (!t) return "ambiguous";
+  if (STRONG_MENU.test(t)) return "menu";
+  if (HUMAN_HINT.test(t)) return "human";
+  // Short and natural with no menu/hold markers → a person picked up ("Box Lunch?", "Hi, this Sherman Oaks").
+  if (t.split(/\s+/).length <= 7) return "human";
+  return "ambiguous";
+}
+
 // ---- DTMF tone synthesis (μ-law 8 kHz, same format as the Twilio stream) ----
 // G.711 μ-law encode one 16-bit PCM sample.
 function linearToMulaw(sample: number): number {
@@ -179,6 +218,56 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   // after the agent — not just echo, which comes back well attenuated (≲300). Gate lower + shorter.
   const ECHO_TAIL_MS = 150;   // reflection tail after playback ends (was 250)
   const BARGE_THRESH = 520;   // inbound energy that still counts as a human talking (was 900)
+  // ---- Direct-line MOUTH GATE ("split listen from talk", owner 07-21) ----
+  // On a DIRECT store (connectOnHuman === false → agent opens at pickup) an unexpected menu used to
+  // get talked over: the brain opened AND the agent greeted in the same instant (Box Lunch, Sherman
+  // Oaks). Fix: keep opening the brain at pickup (so first words are still captured) but HOLD the
+  // agent's audio off the line until the opening words read as a person, not a menu. Buffer the
+  // held greeting and flush it on release so a quiet human still hears the agent promptly (never
+  // silence on a real human — the banned failure). We never DELAY the brain, so no added cost.
+  let mouthGate = false;      // true while we're holding the agent's audio off the line (direct only)
+  let mouthReleased = false;  // becomes true once the agent is cleared to talk
+  const heldAgent: string[] = []; // agent audio buffered while the mouth is held (flushed on release)
+  let gateStartMs = 0;        // when the hold began (≈ pickup)
+  let lastMenuMs = 0;         // last time the opening line read as a menu (extends the hold)
+  const gateTimers: NodeJS.Timeout[] = [];
+  const TALK_HOLD_CAP_MS = 2000;   // ambiguous opening → greet anyway after ~2s (owner: never leave a human in silence)
+  const MENU_QUIET_MS = 2500;      // keep holding while a menu line was heard this recently
+  const TALK_HOLD_CEIL_MS = 12000; // absolute max hold (bounds silence + buffer staleness on a stubborn IVR)
+  function releaseMouth(reason: string) {
+    if (mouthReleased) return;
+    mouthReleased = true; mouthGate = false;
+    log(`mouth gate: RELEASE (${reason}) after ${Date.now() - gateStartMs}ms, flushing ${heldAgent.length} held frames`);
+    if (twilio.readyState === 1 && streamSid) {
+      for (const b64 of heldAgent) {
+        twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: b64 } }));
+        fanout(room, b64, "agent");
+        const ms = Math.ceil((b64.length * 3) / 4 / 8);
+        agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + ms;
+      }
+    }
+    heldAgent.length = 0;
+  }
+  // Called for each opening transcript line while the mouth is held.
+  function gateOnOpeningLine(text: string) {
+    if (!mouthGate || mouthReleased) return;
+    const verdict = classifyOpeningLine(text);
+    if (verdict === "human") releaseMouth("human");
+    else if (verdict === "menu") { lastMenuMs = Date.now(); heldAgent.length = 0; log("mouth gate: menu heard — staying silent"); } // drop what the agent babbled at the menu; keep only a fresh post-menu greeting
+    // "ambiguous" → let the cap timer decide
+  }
+  function startMouthGate() {
+    mouthGate = true; gateStartMs = Date.now();
+    log("mouth gate: HOLDING agent until a human is heard (direct line)");
+    const tick = () => {
+      if (mouthReleased) return;
+      const heldFor = Date.now() - gateStartMs;
+      const recentMenu = lastMenuMs && Date.now() - lastMenuMs < MENU_QUIET_MS;
+      if (recentMenu && heldFor < TALK_HOLD_CEIL_MS) gateTimers.push(setTimeout(tick, 500)); // still hearing a menu → keep waiting
+      else releaseMouth(heldFor >= TALK_HOLD_CEIL_MS ? "ceiling" : "cap");
+    };
+    gateTimers.push(setTimeout(tick, TALK_HOLD_CAP_MS));
+  }
   log(`twilio connected room=${room.slice(0, 8)} ctx=${!!ctx}`);
 
   async function connectEleven() {
@@ -222,7 +311,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         pending.length = 0;
       } else if (m.type === "audio") {
         const b64 = m.audio_event?.audio_base_64;
-        if (b64 && twilio.readyState === 1) {
+        if (b64 && mouthGate && !mouthReleased) {
+          heldAgent.push(b64); // direct-line hold: buffer the agent off the line until a human is heard
+        } else if (b64 && twilio.readyState === 1) {
           twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: b64 } }));
           fanout(room, b64, "agent");
           // Extend the echo-gate window by this chunk's real playout time (μ-law 8kHz = 8 bytes/ms);
@@ -231,7 +322,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + ms;
         }
       } else if (m.type === "user_transcript") {
-        const txt = m.user_transcription_event?.user_transcript; if (txt) try { relayLine?.(room, "Clerk", String(txt)); } catch { /* relay best-effort */ }
+        const txt = m.user_transcription_event?.user_transcript; if (txt) { try { relayLine?.(room, "Clerk", String(txt)); } catch { /* relay best-effort */ } gateOnOpeningLine(String(txt)); }
       } else if (m.type === "agent_response") {
         const txt = m.agent_response_event?.agent_response; if (txt) try { relayLine?.(room, "Agent", String(txt)); } catch { /* relay best-effort */ }
       } else if (m.type === "ping") {
@@ -304,7 +395,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           dtmfTimers.push(setTimeout(() => triggerConnect("hold-timeout"), (ctx.holdMaxSeconds ?? 45) * 1000));
         }
       } else {
-        log(`twilio start room=${room.slice(0, 8)} ctx=${!!ctx} -> connectEleven`);
+        // DIRECT store: open the brain at pickup (first-word capture) but HOLD the agent's voice off
+        // the line until the opening words read as a person, not a menu (owner 07-21, Box Lunch).
+        log(`twilio start room=${room.slice(0, 8)} ctx=${!!ctx} -> connectEleven + mouth gate`);
+        startMouthGate();
         connectEleven();
       }
     }
@@ -323,5 +417,5 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       else if (ctx?.connectOnHuman && (!ctx.connectAtSec || (!ctx.dtmf && !ctx.say))) maybeDetectHuman(b64); // VAD only when there's NO nav plan at all (no timer, no keypad, no spoken plan). Voice chains (CVS: say-plan, no dtmf) MUST NOT VAD — it trips on the IVR's own recorded greeting and opens the agent early (2026-07-16: CVS/pharmacy zone-call failures).
     } else if (m.event === "stop") { log("twilio stop"); signalEnd(); if (eleven) eleven.close(); }
   });
-  twilio.on("close", () => { activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); if (eleven) eleven.close(); });
+  twilio.on("close", () => { activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); gateTimers.forEach(clearTimeout); if (eleven) eleven.close(); });
 }
