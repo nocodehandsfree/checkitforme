@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r164" />
+<meta name="x-rev" content="glassfix-r165" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -1164,6 +1164,8 @@ __BRAND_HEAD__
   /* Verdict prev/next: two arrows top-right of the result (where the IN STOCK pill row sits), sitting
      right next to each other. Newest call shows only ›; step forward and a ‹ appears to its left. */
   .rnav{position:absolute;top:2px;right:2px;display:flex;gap:6px;z-index:2}
+  .rnav-zback{position:absolute;top:2px;left:2px;z-index:2} /* result opened from a zone report — ‹ back to it (mirrors the ‹ › cluster) */
+  .rverdict:has(.rnav-zback) .rpill{margin-left:44px} /* the pill slides right so the ‹ never overlaps it */
   .rnav-b{width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#dcdce6;display:grid;place-items:center;cursor:pointer;padding:0;touch-action:manipulation;transition:transform .1s,border-color .12s,color .12s}
   .rnav-b:active{transform:scale(.92)}
   body.rview .rnav-b{background:rgba(74,222,128,.05);border-color:rgba(74,222,128,.16)}
@@ -4382,11 +4384,15 @@ async function restoreCall(cid, storeName, catName){
   if(!o||o.error||o.status==='in_progress'){ if(cached) return; toast(t('toast.callgone',"That check is no longer available")); backToBuilder(); return; }
   let srvRow=null;
   if(!known && isAuthed()){ try{ srvRow=(await fetchServerHistory()).find(x=>x.cid===cid)||null; }catch(_){ } }
-  if(srvRow&&srvRow.storeName){ SEL_STORE={id:srvRow.storeId,name:srvRow.storeName}; } // the account's record of THIS call wins over any guess
+  if(srvRow&&srvRow.storeName){ SEL_STORE={id:srvRow.storeId,name:srvRow.storeName,logoUrl:srvRow.logoUrl||null,logoWide:!!srvRow.logoWide,logoDark:!!srvRow.logoDark}; // the account's record of THIS call wins over any guess
+    const _rs=STORES.find(x=>x.id===srvRow.storeId); if(_rs){ if(_rs.logoUrl){ SEL_STORE.logoUrl=_rs.logoUrl; SEL_STORE.logoWide=_rs.logoWide; SEL_STORE.logoDark=_rs.logoDark; } SEL_STORE.address=_rs.address||null; SEL_STORE.location=_rs.location||null; } }
   if(!SEL_STORE.name) SEL_STORE.name=t('hist.acheck','Store check');
   if(!known && SEL_STORE.id!=null){
     const h=loadHist();
-    h.unshift({cid, storeId:SEL_STORE.id, storeName:SEL_STORE.name, address:SEL_STORE.address||null, location:SEL_STORE.location||null, logoUrl:SEL_STORE.logoUrl||null, logoWide:!!SEL_STORE.logoWide, logoDark:!!SEL_STORE.logoDark, categoryId:SEL_CAT, category:ct?ct.label:(catName||''), ts:(srvRow&&srvRow.ts)||o.ts||Date.now(), status:o.status, confirmed:o.confirmed});
+    // categoryId comes from the account's record first — a null here poisons the merged history (the
+    // shadow row wins the merge and drops this call out of the calendar + ‹ › arrow pool).
+    const _catId=(srvRow&&srvRow.categoryId!=null)?srvRow.categoryId:(ct?ct.id:SEL_CAT);
+    h.unshift({cid, storeId:SEL_STORE.id, storeName:SEL_STORE.name, address:SEL_STORE.address||null, location:SEL_STORE.location||null, logoUrl:SEL_STORE.logoUrl||null, logoWide:!!SEL_STORE.logoWide, logoDark:!!SEL_STORE.logoDark, categoryId:_catId, category:(srvRow&&srvRow.category)||(ct?ct.label:(catName||'')), zoneRunId:(srvRow&&srvRow.zoneRunId)||null, ts:(srvRow&&srvRow.ts)||o.ts||Date.now(), status:o.status, confirmed:o.confirmed});
     localStorage.setItem('runnr_history', JSON.stringify(h.slice(0,60)));
   }
   if(known&&known.steps) o.savedSteps=known.steps;
@@ -5835,7 +5841,7 @@ async function finalize(cid){
   saveCheckToHistory(res, cid);
   showResult(res, cid);
 }
-function backToBuilder(){ try{ document.documentElement.classList.remove('restoring'); }catch(_){ } /* deep-link hide must never survive into the homepage */ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } try{ document.body.classList.remove('zoning'); const _z=$('zones'); if(_z) _z.classList.remove('on'); const _h=$('histOverlay'); if(_h) _h.classList.remove('on'); }catch(_){ } /* close any open Check history / My Zones sheet */ TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); document.body.classList.remove('lview'); ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); window._livePend=false; try{ const _st=$('supTab'); if(_st)_st.classList.remove('invite'); }catch(_){ } /* the post-check glow belongs to the result page only */ try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby','zones'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
+function backToBuilder(){ try{ ZONE_RET=null; }catch(_){ } /* leaving the result any other way drops the zone-report back-link */ try{ document.documentElement.classList.remove('restoring'); }catch(_){ } /* deep-link hide must never survive into the homepage */ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } try{ document.body.classList.remove('zoning'); const _z=$('zones'); if(_z) _z.classList.remove('on'); const _h=$('histOverlay'); if(_h) _h.classList.remove('on'); }catch(_){ } /* close any open Check history / My Zones sheet */ TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); document.body.classList.remove('lview'); ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); window._livePend=false; try{ const _st=$('supTab'); if(_st)_st.classList.remove('invite'); }catch(_){ } /* the post-check glow belongs to the result page only */ try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby','zones'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
   // Returning to the builder = a FRESH homepage (as if loaded for the first time). Drop ANY store/
   // category left over from a reopened call so it doesn't show pre-selected in the call CTA (which also
   // auto-scrolled to it). The apex site pre-locks Pokémon via BRAND_CAT, so this must NOT be gated on it
@@ -6259,6 +6265,7 @@ function showResult(o, cid){
     </div>` : '';
   $('result').innerHTML = `
     <div class="rverdict ${cls}">
+      ${ZONE_RET?`<button class="rnav-b rnav-zback" onclick="zoneBackToReport()" aria-label="Back to zone report"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M14.5 5L8 12l6.5 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`:''}
       <div class="rnav" id="rnav"></div>
       <span class="rpill"><span class="d"></span>${t('res.result','Result')}</span>
       ${(o.ts||o._t0)?`<div class="rwhen">${esc(new Date(o.ts||o._t0).toLocaleDateString(LANG==='es'?'es-ES':'en-US',{weekday:'short',month:'short',day:'numeric'}))} · ${esc(new Date(o.ts||o._t0).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'}))}</div>`:''}
@@ -6495,6 +6502,7 @@ async function ensureHistCache(){
       if(s.storeName&&e.storeName!==s.storeName){ e.storeName=s.storeName; e.storeId=s.storeId; e.logoUrl=s.logoUrl||e.logoUrl; fixed=true; }
       else if(s.storeName&&e.storeId==null){ e.storeId=s.storeId; fixed=true; }
       if(!e.logoUrl&&s.logoUrl){ e.logoUrl=s.logoUrl; e.logoWide=s.logoWide; e.logoDark=s.logoDark; fixed=true; } // old rows saved before we kept the logo
+      if(e.categoryId==null&&s.categoryId!=null){ e.categoryId=s.categoryId; if(!e.category&&s.category) e.category=s.category; fixed=true; } // a null categoryId drops the call out of the calendar + arrow pool
       if(!e.location&&(s.location||s.address)){ e.location=s.location||s.address; fixed=true; }
       if(s.ts&&e.ts&&Math.abs(e.ts-s.ts)>15*60000){ e.ts=s.ts; fixed=true; }
       if(s.zoneRunId&&!e.zoneRunId){ e.zoneRunId=s.zoneRunId; fixed=true; } });
@@ -6570,13 +6578,18 @@ async function openHistEntry(e){
   ANIM_CID=null; // explicit user reopen → re-arm the entrance so opening any call replays the animation
   TONE_NAV_DONE=false; // opening another result → let it re-tint the status bar at load (real nav to its ?tone)
   SEL_STORE={id:e.storeId,name:e.storeName,carries:[],address:e.address||null,location:e.location||null,logoUrl:e.logoUrl,logoWide:e.logoWide,logoDark:e.logoDark}; SEL_CAT=e.categoryId;
+  // The live store record is the logo/address truth (it's what the homepage + a pull-to-refresh show) —
+  // a history row can predate the logo or come from a server-only call. Same source ⇒ same look, always.
+  { const _ls=STORES.find(x=>x.id===e.storeId);
+    if(_ls){ if(_ls.logoUrl){ SEL_STORE.logoUrl=_ls.logoUrl; SEL_STORE.logoWide=_ls.logoWide; SEL_STORE.logoDark=_ls.logoDark; }
+      if(!SEL_STORE.address) SEL_STORE.address=_ls.address||null; if(!SEL_STORE.location) SEL_STORE.location=_ls.location||null; } }
   if((!e.cats||!e.cats.length)&&e.category) e.cats=[e.category]; // server-history rows carry `category` (label) but no cats[] — normalize so the status note + "Asking about {p}" print the real name, never 'it'/'cards'
   SEL_CATS=e.categoryId?[e.categoryId]:[]; ASKED_CATS=(e.cats||[]).map(l=>({id:null,label:l}));
   // Old calls saved before we persisted the address (or whose store sits outside the current nearby
   // slice) have no address — fetch this ONE store and repaint in place once it lands. Guarded so a
   // navigation away (or opening a different call) can't repaint a stale result.
-  if(!SEL_STORE.address && SEL_STORE.id){ const _sid=SEL_STORE.id, _cid=e.cid;
-    appApi('/pub/store/'+_sid).then(st=>{ if(st&&!st.error&&(st.address||st.location) && SEL_STORE && SEL_STORE.id===_sid && RAIL_CID===_cid && NAV_VIEW==='result'){ SEL_STORE.address=st.address||null; SEL_STORE.location=st.location||SEL_STORE.location||null; if(LASTRES) showResult(LASTRES, RAIL_CID); } }).catch(()=>{});
+  if((!SEL_STORE.address||!SEL_STORE.logoUrl) && SEL_STORE.id){ const _sid=SEL_STORE.id, _cid=e.cid;
+    appApi('/pub/store/'+_sid).then(st=>{ if(st&&!st.error&&(st.address||st.location||st.logoUrl) && SEL_STORE && SEL_STORE.id===_sid && RAIL_CID===_cid && NAV_VIEW==='result'){ SEL_STORE.address=SEL_STORE.address||st.address||null; SEL_STORE.location=SEL_STORE.location||st.location||null; if(!SEL_STORE.logoUrl&&st.logoUrl){ SEL_STORE.logoUrl=st.logoUrl; SEL_STORE.logoWide=st.logoWide; SEL_STORE.logoDark=st.logoDark; } if(LASTRES) showResult(LASTRES, RAIL_CID); } }).catch(()=>{});
   }
   LIVE_STEPS=[]; LIVE_T0=0; // reopening a past call → no live timings; derive steps and start collapsed (it isn't happening live now)
   // A never-connected call (synthetic "local:" id) has no server transcript — rebuild its verdict from
@@ -7062,6 +7075,7 @@ function hobbyPickProduct(pi){
 // Consumer UI for the /app/zones/* contract (DevOps builds the backend). Three screens, one view:
 //   B My Zones list → A build/edit a zone → C the live multi-store check report. "CHECK", never "call".
 let ZONES={ sel:new Set(), storeById:new Map(), editId:null, radius:5, run:null, poll:null };
+let ZONE_RET=null; // a result page opened from a zone report — the verdict's ‹ back returns to that report
 function zHideAll(){ try{ exitHunt(); }catch(_){ } try{ if(typeof HUNT_STEP!=='undefined') HUNT_STEP=''; }catch(_){ }
   try{ document.body.classList.remove('rview','rv-in','rv-out','rv-soon','rv-unk'); dropBakedTone(); }catch(_){ } } // drop the result-view verdict wash (else a red "out of stock" bg bleeds under zones). The sheet is an OVERLAY now — leave the background view in place so it shows dimmed behind, like Add store (owner 07-12).
 function zShow(){ const z=$('zones'); if(z){ z.classList.remove('hidden'); z.classList.add('on'); } const w=$('hcalwrap'); if(w) w.style.display='none'; try{ document.body.classList.add('zoning'); }catch(_){ } } // open the bottom-sheet overlay (sheetUpV2 slides it up) — owner 07-12
@@ -7522,7 +7536,7 @@ function renderZoneRun(){
     (d.results||[]).forEach(row=>{ const el=document.querySelector('#zones .zresult[data-rid="'+row.retailerId+'"]');
       if(!el) return; const mk=el.querySelector('.zmark'); const tone=rowTone(row);
       if(mk&&mk.dataset.tone!==tone){ mk.dataset.tone=tone; mk.innerHTML=mark(tone); el.querySelector('.zrrow2').classList.toggle('checking',tone==='live');
-        const btn=el.querySelector('.zrrow2'); if(btn) btn.setAttribute('onclick', tone==='queue'?`zoneStopOnePrompt(${row.retailerId},'${esc(row.name||'')}')`:`zoneExpand('${esc(row.cid||'')}',this)`); } });
+        const btn=el.querySelector('.zrrow2'); if(btn) btn.setAttribute('onclick', tone==='queue'?`zoneStopOnePrompt(${row.retailerId},'${esc(row.name||'')}')`:(tone==='live'?`zoneExpand('${esc(row.cid||'')}',this)`:`zoneOpenResult('${esc(row.cid||'')}')`)); } });
     const sb=document.getElementById('z_segbar'); if(sb) sb.innerHTML=Array.from({length:total},(_,k)=>`<span class="${k<done?'done':''}"></span>`).join('');
     const mt=document.getElementById('z_runmeta'); if(mt) mt.textContent=meta;
     const pl=document.getElementById('z_runpill'); if(pl){ pl.style.display=inN>0?'':'none'; pl.innerHTML=`${CHK}${inN} ${t('zones.instock','in stock')}`; }
@@ -7539,7 +7553,9 @@ function renderZoneRun(){
       closedBox=`<div class="zclosedbox"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#f0c79a" stroke-width="2" style="flex:none;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01" stroke-linecap="round"/></svg><div><b>${esc(names)} ${closed.length>1?t('zones.areclosed','are closed'):t('zones.isclosed','is closed')}</b>${t('zones.skipped',', so we skipped those.')}</div></div>`; }
   }
   const rows=(d.results||[]).map(row=>{ const tone=rowTone(row);
-    const tap=tone==='queue'?`zoneStopOnePrompt(${row.retailerId},'${esc(row.name||'')}')`:`zoneExpand('${esc(row.cid||'')}',this)`;
+    // Finished store → the REAL check status page (owner 07-21: byte-identical to a single check —
+    // verdict pill, status system, transcript, the works). Mid-call → inline transcript-so-far unfold.
+    const tap=tone==='queue'?`zoneStopOnePrompt(${row.retailerId},'${esc(row.name||'')}')`:(tone==='live'?`zoneExpand('${esc(row.cid||'')}',this)`:`zoneOpenResult('${esc(row.cid||'')}')`);
     return `<div class="zresult" data-rid="${row.retailerId}">
       <button class="zrrow2 ${tone==='live'?'checking':''}" onclick="${tap}">
         <div class="ic2 ${row.logoDark?'lite':''} ${row.logoWide?'widelogo':''}">${storeFace(row)}</div>
@@ -7617,6 +7633,22 @@ async function zoneExpand(cid,btn){ if(!cid) return; const body=btn.nextElementS
 }
 function zoneOpenReport(zoneId,runId){ const zn=(ZONES.list||[]).find(x=>x.id===zoneId);
   ZONES.run={id:zoneId,runId,name:(zn&&zn.name)||''}; ZONES.viewRun=true; ZONES._runPaint=null; renderZoneRun(); zoneStartPoll(); }
+// A finished zone store opens the REAL check status page — the exact same openHistEntry path a single
+// check replays through (verdict pill, full status registry, transcript, share). Never a hand-built
+// mini-page. The result page shows a ‹ back (ZONE_RET) that returns to this zone report.
+async function zoneOpenResult(cid){ if(!cid) return;
+  const r=ZONES.run||{};
+  let e=histList().find(x=>x.cid===cid);
+  if(!e && isAuthed()){ try{ await ensureHistCache(); e=histList().find(x=>x.cid===cid); }catch(_){ } }
+  if(!e){ const row=((r.data&&r.data.results)||[]).find(x=>x.cid===cid)||{};
+    e={ cid, storeId:row.retailerId, storeName:row.name||'', location:row.location||null, logoUrl:row.logoUrl||null, logoWide:!!row.logoWide, logoDark:!!row.logoDark,
+        categoryId:(typeof BRAND_CAT!=='undefined'&&BRAND_CAT&&BRAND_CAT.id)||null, category:(BRAND&&BRAND.category)||'', ts:Date.now(), status:row.status||'completed', confirmed:row.confirmed, statusKey:row.statusKey||null }; }
+  ZONE_RET={ id:r.id, runId:r.runId||null };
+  zoneStopPoll(); const z=$('zones'); if(z) z.classList.remove('on'); try{ document.body.classList.remove('zoning'); }catch(_){ }
+  openHistEntry(e);
+}
+function zoneBackToReport(){ const ret=ZONE_RET; ZONE_RET=null; backToBuilder(); if(!isAuthed()) return;
+  zShow(); if(ret&&ret.runId&&ret.id!=null){ zoneOpenReport(ret.id,ret.runId); } else { renderZonesList(); } }
 function zoneStopOnePrompt(rid,nm){ zPop(`<h3 style="margin:4px 0 16px;text-align:center">${tf('zones.stopone.q','Stop checking {s}?',{s:nm||t('zones.astore','Store')})}</h3>
   <button style="${Z_ROWBTN};justify-content:center;margin-bottom:10px" onclick="zPopClose();zoneStopOne(${rid})"><span style="color:#FF8A8A">${t('zones.stopone.yes','Stop checking')}</span></button>
   <button style="${Z_ROWBTN};justify-content:center" onclick="zPopClose()">${t('zones.stopone.no','Continue')}</button>`); }
