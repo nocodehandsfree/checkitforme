@@ -1,5 +1,7 @@
 # Support — checkpoint
 **What this is:** current state. Newest on top, ≤80 lines.
+> **⚖️ BOOT LAW: read `SUPPORT-MANUAL.md` (this folder) FULLY before any task — the technology,
+> anchored to code. Pass its comprehension gate (§7) before acting.**
 
 ## ⚖️ STANDING ORDERS (permanent — obey on every task, they survive every session)
 1. **Lane:** the support messenger (site panel + `src/support/`), the credit machine, RAG over the
