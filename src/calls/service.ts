@@ -164,7 +164,7 @@ export async function buildRestockVars(
   specificProduct?: string,
   extraCategoryIds?: number[],
   kioskMode?: boolean,
-): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; say: string | null; connectAtSec: number | null; maxTalk: number | null; voiceId: string | null; voiceTuning: Record<string, unknown> | null; dynamicVars: Record<string, string> } | null> {
+): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; say: string | null; connectAtSec: number | null; maxTalk: number | null; voiceId: string | null; voiceTuning: Record<string, unknown> | null; agentFromAnswer: boolean; navBudgetSec: number; dynamicVars: Record<string, string> } | null> {
   const retailer = (await db.select().from(retailers).where(eq(retailers.id, retailerId)))[0];
   if (!retailer) return null;
   const category = (await db.select().from(categories).where(eq(categories.id, categoryId)))[0];
@@ -211,16 +211,32 @@ export async function buildRestockVars(
     } catch { /* ignore bad recipe */ }
   }
 
+  // AGENT-FROM-ANSWER on voice-menu (Bravo) chains — owner 07-21, after the blind 11:51p CVS call.
+  // The say-plan TwiML navigates BEFORE <Connect>, so the call's first ~50s have NO media stream:
+  // nothing to hear live, no transcript, no step ladder, and the customer stares at a blank
+  // "reaching a person". Charlie already knows voice menus (one-word menu replies + {{phone_tree}}
+  // directions), and agent-from-answer is the pre-cheap-lane path that always worked: audio, live
+  // transcript and steps exist from the moment the store answers. Costs more per Bravo call (the
+  // agent rides the nav at EL quiet rates); the cheap lane returns when nav words can be played
+  // INSIDE the stream (tapedeck-style clips) so transparency survives the savings.
+  const agentFromAnswer = !!say;
+  // Mapped nav time (for the call-duration cap: nav + talk, so the cap can't chop mid-conversation —
+  // the 07-20 16¢ call AND the 07-21 11:51p call both hit the bare 120s cap during/after nav).
+  const navBudgetSec = agentFromAnswer ? (connectAtSecFor(chain) ?? 60) : 0;
+  if (agentFromAnswer) say = null;
+
   return {
     retailer, category, chainName: chain?.name ?? null,
     // Bridge-level keypad shortcut (chain-wide): pressed by OUR code at a fixed time, not the LLM.
     dtmf: chain?.dtmfShortcut ?? null,
     say,
+    agentFromAnswer, navBudgetSec,
     // ABC deterministic hand-off: open the billed agent at the chain's LEARNED time-to-human.
     // Guarded (connectAtSecFor): direct-answer chains and chains with no tree evidence NEVER get a
     // timer — the timer mutes the agent until it fires (the 2026-07-02 silent-agent bug). null =
-    // bridge falls back to VAD + hold-timeout.
-    connectAtSec: connectAtSecFor(chain),
+    // bridge falls back to VAD + hold-timeout. Agent-from-answer (Bravo) calls skip the timer:
+    // the agent is on from the start and navigates by voice.
+    connectAtSec: agentFromAnswer ? null : connectAtSecFor(chain),
     // Per-store talk cap (chains.maxTalkSeconds). Null = caller falls back to the global bail cap.
     maxTalk: chain?.maxTalkSeconds ?? null,
     // Workflow voice strip: rotates round-robin per call on this workflow's own counter (same pattern
@@ -233,7 +249,9 @@ export async function buildRestockVars(
       retailer_name: retailer.name || "the store",
       location: retailer.location || "",
       clarification,
-      phone_tree: phoneTree,
+      // Agent-from-answer (Bravo): give Charlie the chain's LEARNED voice-menu directions — a store
+      // row can carry a stale keypad note ("Press 3…") that predates the voice mapping.
+      phone_tree: agentFromAnswer ? (chain?.phoneTreeDefault || phoneTree) : phoneTree,
       special_instructions: retailer.specialInstructions ?? "",
       voicemail_policy: voicemailPolicy,
       personality: workflow?.personality || "",
@@ -538,7 +556,7 @@ export async function bridgeCheckCall(a: TriggerArgs) {
     // Human reached, billed agent open — hand the row to the normal EL ingest by conv id.
     db.update(callResults).set({ providerCallId: convId, status: "in_progress" }).where(eq(callResults.id, row.id))
       .catch((e) => console.error("bridge check connect update:", e));
-  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, apiKey: acct.apiKey, agentId: acct.agentId });
+  }, v.dtmf, { from, timeLimitSec: (v.maxTalk ?? pol.bail.maxCallSeconds) + v.navBudgetSec, say: v.say, connectAtSec: v.connectAtSec ?? undefined, connectOnHuman: v.agentFromAnswer ? false : undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, apiKey: acct.apiKey, agentId: acct.agentId });
   if (r.error || !r.room) {
     await slot.release(); // dial never placed → free the slot immediately
     await db.update(callResults).set({ status: "failed", summary: r.error || "bridge call failed" }).where(eq(callResults.id, row.id));

@@ -3,18 +3,25 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
-## 2026-07-21 — CVS/Bravo early-join FIXED (for real this time)
-- 8:54p zone call to CVS: billed agent joined during nav/hold (~16¢ vs ~5¢). THREE stacked causes:
-  (1) VAD gate checked ctx.dtmf/say — but plans are CONSUMED at TwiML build, so the gate always
-  passed and VAD ran hair-trigger on Bravo (trips on CVS's recorded transfer voice). This is also
-  why fix 770ffa0 (07-20 23:11, reverted 40min later by 8671855, no reason) was a silent NO-OP.
-  (2) connectAtSec is answer-anchored but the timer starts at stream open (post-nav) → Bravo aimed
-  ~50s late. (3) hair-trigger "direct" VAD mode keyed off lastDtmfMs which is always 0 now.
-- Fix: hadDtmf/hadSay flags survive consumption; VAD only for fully UNMAPPED stores; timer
-  re-anchored via navEndSec (navPlanEndSec pure fn). tsc + test-bridge 20/0 green.
-- NOT live-verified: needs one real Bravo (CVS) call to confirm agent joins at the human. Owner drives.
-- Live phone-menu narration on the call view: built, owner ordered it DROPPED (dcd0d75 reverted).
-  Do NOT rebuild without his word; if revived it's owner-account-only.
+## 2026-07-21 — Bravo (voice-menu chains) = AGENT-FROM-ANSWER; demo-critical
+- Owner's 11:51p CVS call was blind + "couldn't tell": store CLOSED (night IVR ≠ mapped daytime
+  menu; live/zone path has NO closed-store guard — bridgeCheckCall does, bridgeStoreCall doesn't,
+  OPEN item) AND the Bravo cheap lane has no media stream until nav TwiML ends (~50s): nothing to
+  hear/show by design. Earlier 8:54p 16¢ call: VAD gate no-op (checked consumed ctx.dtmf/say) +
+  timer anchored to stream-open not answer. Website session confessed flip-flopping 770ffa0.
+- SHIPPED: voice-nav chains now open Charlie AT ANSWER (buildRestockVars agentFromAnswer: say plan
+  dropped, connectOnHuman:false, phone_tree = chain's learned voice directions, TimeLimit = talk cap
+  + navBudgetSec so the cap can't chop mid-talk). Audio/live transcript/step ladder exist from
+  second one; Charlie speaks the menu (one-word replies law). ~14.5¢/Bravo call vs 5.5¢ — accepted
+  for reliability; CHEAP LANE RETURNS as in-band clip nav (tapedeck-style words INSIDE the stream),
+  post-demo build. Alpha/unmapped keep cheap lane: hadDtmf/hadSay flags survive consumption, VAD
+  only for fully unmapped stores, timer re-anchored via navEndSec.
+- Proof: tsc clean · test-bridge 20/0 · workflow-truth ALL (fixed stale package-wording assert to
+  owner's 07-18 reword) · live-view browser lock ALL green. NOT ear-verified (audio = owner's phone);
+  first DAYTIME CVS call is the real proof before the demo.
+- Known gaps: "A person picked up" can fire off the join not a human · owner's 8-step labeled call
+  log (Listening to menu/Navigating/Transferring…) = screens lane, needs PM box · Fun store can't
+  rehearse Bravo (no voice menu) — MVP store pointed at a real IVR is the only rehearsal.
 
 ## 2026-07-20 — voice A/B in flight
 - Owner gave a clean 29s Branson recording; re-cloned via /api/voices/clone → **Branson HD =
@@ -50,10 +57,8 @@
   LOCK at phone size (transcript renders + reachable, no early finalize, verdict paints) — all in
   test-all. Flight recorder: page posts live-call play-by-play → GET /api/admin/live-debug.
 
-**PROMOTE-DAY NOTES (PM runs it, owner's word):** everything above rides the whole-staging promote.
-Prod EL agent gets the new brain automatically at first prod boot (no manual push step). Fun store on
-prod already routes to Branson Global. After promote: owner tweaks in Admin hit prod data directly —
-the Admin-edits-vs-staging-DB mirroring dance ENDS.
+**PROMOTE-DAY NOTES (PM runs it, owner's word):** everything rides the whole-staging promote. Prod EL
+agent gets the new brain automatically at first prod boot. After promote the Admin-vs-staging mirror dance ends.
 
 **OPEN (priority order):**
 1. Owner hammer-test round on Fun (staging): yes+detail · no→restock-day · "let me check" walk-away ·
@@ -66,8 +71,7 @@ the Admin-edits-vs-staging-DB mirroring dance ENDS.
 3. First-0.5s pickup audio: parked post-launch. 4. Bail enforcement — UI only, live wiring off.
 5. A2P day: set TWILIO_MESSAGING_SERVICE_SID when approval lands (error 30034 = not active yet).
 
-**Delta: SHELVED** (built, 37 tests green, zero stores; full state in git log 07-15/16). Barge scope =
-off-script question + dragging hold; known ceiling: can't catch its own confident mislabels.
+**Delta: SHELVED** (built, 37 tests green, zero stores; full state in git log 07-15/16).
 
 **Traps (full list handoff.md §5):** prompt edits reach the live agent ONLY via push — now automatic
 on boot, but NEVER assume a repo edit spoke until a deploy/boot happened · confirm the staging deploy

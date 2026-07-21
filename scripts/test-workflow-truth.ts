@@ -48,7 +48,7 @@ async function main() {
   ok(prompt.includes("greet them right back"), "name-echo (Affectionate) instruction lands");
   ok(/TRUTH_OPENER_(ONE|TWO)/.test(prompt), "workflow opener (not the global fallback) is the opening line");
   ok(prompt.includes("next shipment or restock"), "restock-day push is in EVERY live check");
-  ok(prompt.includes("package looks like"), "premium follow-up carries the owner's package-question wording");
+  ok(prompt.includes("does that come in a pack? or like a box?"), "premium follow-up carries the owner's package-question wording (07-18 reword)");
   // Copy law: dashes are banned in anything the agent SAYS. Instruction prose may use them; the
   // quoted example lines (what the model imitates) may not — except the explicit "don't do this" sample.
   const spoken = (prompt.replace('no "thanks so much — have a good one"', "").match(/"[^"\n]{4,120}"/g) || []).filter((q) => q.includes("—"));

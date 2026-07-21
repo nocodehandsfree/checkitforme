@@ -6203,7 +6203,17 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
     }
     // Per-store talk cap (chains.maxTalkSeconds) wins over the global bail ceiling when set, so a
     // store the owner marked "wrap fast" gets a tighter Twilio TimeLimit — the cost guarantee.
-  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, connectOnHuman: isDirect ? false : undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning });
+  }, v.dtmf, {
+    from,
+    // Nav-riding (Bravo agent-from-answer) calls get the mapped nav time ON TOP of the talk cap —
+    // a bare talk cap chops them mid-conversation (both 07-20/21 CVS calls hit the 120s wall).
+    timeLimitSec: (v.maxTalk ?? pol.bail.maxCallSeconds) + v.navBudgetSec,
+    say: v.say, connectAtSec: v.connectAtSec ?? undefined,
+    // Direct stores AND Bravo voice-menu stores open the agent at answer (Bravo: the agent navigates
+    // the voice menu itself, so audio/transcript/steps exist from second one — owner 07-21).
+    connectOnHuman: (isDirect || v.agentFromAnswer) ? false : undefined,
+    voiceId: v.voiceId, voiceTuning: v.voiceTuning,
+  });
 
   // Governed bookkeeping: point the pre-inserted row at the room (so /pub/result resolves it before
   // connect), release the slot on a dial that never placed, and register a finalizer that frees the
