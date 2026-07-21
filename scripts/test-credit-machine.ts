@@ -129,6 +129,25 @@ async function main() {
   res = await answerSupport("sess-loop-1", "just fix it", { category: "check_issue", account: { id: USER } });
   ok("3rd vague → stops asking, hands to a person", /sending this to the team/i.test(res.reply) && res.escalate === true, res.reply);
 
+  console.log("\n== 12. pinned by provider conversation id (?call=conv_… deep link) resolves that check ==");
+  await db.delete(callResults);
+  await db.delete(supportCreditGrants);
+  const convCheck = await mkCheck(r1.id, { statusKey: "nobody_answered", chargedAt: now - 400, callSeconds: 6, providerCallId: "conv_pin_test_123" });
+  await mkCheck(r2.id, { statusKey: "in_stock", confirmed: true, chargedAt: now - 300, callSeconds: 120 });
+  res = await answerSupport("sess-pinconv-1", "the check messed up", { category: "check_issue", account: { id: USER }, origin: { checkId: "conv_pin_test_123" } });
+  ok("conv-id pin → credits that check, no 'which store'", !/Which/i.test(res.reply) && /put 1 check back/i.test(res.reply), res.reply);
+  ok("grant is on the pinned check", (await db.select().from(supportCreditGrants))[0]?.cid === convCheck.id);
+
+  console.log("\n== 13. 'answered' flag: a clarifying question is not an answer; a real answer is ==");
+  await db.delete(callResults);
+  await db.delete(supportCreditGrants);
+  await mkCheck(bn1.id, { statusKey: "nobody_answered", chargedAt: now - 200, callSeconds: 5 });
+  await mkCheck(bn2.id, { statusKey: "nobody_answered", chargedAt: now - 100, callSeconds: 5 });
+  res = await answerSupport("sess-ans-1", "my check broke", { category: "check_issue", account: { id: USER } });
+  ok("ambiguous question → answered=false", res.answered === false, `answered=${res.answered}`);
+  res = await answerSupport("sess-ans-1", "Barnes & Noble Thousand Oaks", { category: "check_issue", account: { id: USER } });
+  ok("real answer → answered=true", res.answered === true, `answered=${res.answered}`);
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }

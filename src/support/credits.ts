@@ -40,6 +40,7 @@ export type CreditOutcome =
 
 interface Candidate {
   id: number; retailerId: number; storeName: string; storeLocation: string | null; storePhone: string | null;
+  providerCallId: string | null;
   statusKey: string | null; status: string; confirmed: boolean | null;
   callSeconds: number | null; chargedAt: number | null; startedAt: number;
 }
@@ -69,7 +70,7 @@ function evidenceFor(c: Candidate): { ok: boolean; reason: string } {
  * Deterministic, cheap (a few indexed reads), and safe to re-run on every message of a
  * conversation until it reaches a terminal outcome.
  */
-export async function verifyCheckIssue(accountId: string | null | undefined, message: string, conversationId: number, pinnedCid?: number | null): Promise<CreditOutcome> {
+export async function verifyCheckIssue(accountId: string | null | undefined, message: string, conversationId: number, pinnedRef?: string | null): Promise<CreditOutcome> {
   if (!accountId) return { kind: "guest" };
   const now = Math.floor(Date.now() / 1000);
 
@@ -82,6 +83,7 @@ export async function verifyCheckIssue(accountId: string | null | undefined, mes
   const rows = await db.select({
     id: callResults.id, retailerId: callResults.retailerId,
     storeName: retailers.name, storeLocation: retailers.location, storePhone: retailers.phone,
+    providerCallId: callResults.providerCallId,
     statusKey: callResults.statusKey, status: callResults.status, confirmed: callResults.confirmed,
     callSeconds: callResults.callSeconds, chargedAt: callResults.chargedAt, startedAt: callResults.startedAt,
   }).from(callResults)
@@ -93,13 +95,14 @@ export async function verifyCheckIssue(accountId: string | null | undefined, mes
   // Which check are they talking about?
   //  · pinned — the chat was opened from a check's own status page, so we already know the exact
   //    check they're looking at. Use it, never ask "which store". This is the common path and the
-  //    one that was looping before.
+  //    one that was looping before. The client hands us whichever id it holds: the numeric row id
+  //    OR the provider conversation id (conv_… from a ?call= deep link), so match on either.
   //  · otherwise rank by how well the message names each store and keep only the best matches; a
   //    real tie between different stores is the only thing that still asks.
   let pool = rows;
   let pinned = false;
-  if (pinnedCid != null) {
-    const hit = rows.find((c) => c.id === pinnedCid);
+  if (pinnedRef) {
+    const hit = rows.find((c) => String(c.id) === pinnedRef || c.providerCallId === pinnedRef);
     if (hit) { pool = [hit]; pinned = true; }
   }
   if (!pinned) {

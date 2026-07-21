@@ -3549,7 +3549,10 @@ async function sendSupport(){
   const dots=document.createElement('div'); dots.className='supm bot dots'; dots.innerHTML='<span></span><span></span><span></span>';
   $('sup_msgs').appendChild(dots); $('sup_msgs').scrollTop=1e6;
   // Stamp where this chat came from — the page, and the check id when it opened off a status page.
-  const _cid=(document.body.classList.contains('rview')&&LASTRES&&LASTRES.cid)?String(LASTRES.cid):undefined;
+  // The id we hold is RAIL_CID (the provider conversation id from the result view); LASTRES.cid is a
+  // fallback. Without this the credit machine can't tie the chat to the check they're looking at.
+  const _railCid=(RAIL_CID||(LASTRES&&LASTRES.cid))||'';
+  const _cid=(document.body.classList.contains('rview')&&_railCid)?String(_railCid):undefined;
   const r=await appApi('/pub/support/chat',{method:'POST',headers:{'content-type':'application/json'},
     body:JSON.stringify({sessionId:SUP_SID||undefined,message:msg,lang:LANG,category:SUP_CAT,
       source:SUP_SRC,pageUrl:(location.pathname+location.search).slice(0,300),checkId:_cid})});
@@ -3562,7 +3565,9 @@ async function sendSupport(){
   if(r.escalate){ SUP_ESC++;
     if(SUP_ESC>=2){ supBubbleMsg('bot', t('sup.stuck',"I still couldn't crack this one. Want a person to take a look?"),false); supOfferHuman(); }
     else { supBubbleMsg('bot', t('sup.tryagain',"I might be missing something. Can you give me a bit more detail?"),false); $('sup_help').classList.add('on'); $('sup_human').style.display='none'; }
-  } else { $('sup_help').classList.add('on'); $('sup_human').style.display='none'; }
+  } else if(r.answered!==false){ $('sup_help').classList.add('on'); $('sup_human').style.display='none'; }
+  // answered===false → the bot asked a clarifying question, not gave an answer: leave "That answered
+  // it" hidden so we never claim to have answered before we have.
 }
 // The buried human path — revealed only after repeated AI failure.
 function supOfferHuman(){ $('sup_help').classList.add('on'); $('sup_human').style.display=''; }

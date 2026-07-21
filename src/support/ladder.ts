@@ -58,6 +58,7 @@ export interface LadderResult {
   reply: string;
   tier: number;              // rung that produced the answer (0–3)
   escalate: boolean;         // true → widget offers the escalation form
+  answered: boolean;         // false → this reply is a clarifying question, not an answer (hide "That answered it")
   conversationId: number;
 }
 
@@ -129,10 +130,9 @@ export async function answerSupport(sessionId: string, userMessage: string, opts
     const acctId = opts.account?.id || convo.accountId || null;
     // Opened off a check's status page → we already know the exact check. Pass it so the verifier
     // resolves to it and never asks "which store" (the loop the customer hit).
-    const cidNum = convo.checkId ? parseInt(convo.checkId, 10) : NaN;
-    const pinnedCid = Number.isFinite(cidNum) ? cidNum : null;
+    const pinnedRef = convo.checkId || null;
     try {
-      let out = await verifyCheckIssue(acctId, userMessage, convo.id, pinnedCid);
+      let out = await verifyCheckIssue(acctId, userMessage, convo.id, pinnedRef);
       // Loop-break: if we've already asked which store twice and still can't tell, stop asking and
       // hand it to a person instead of repeating the question forever.
       if (out.kind === "ambiguous") {
@@ -147,7 +147,9 @@ export async function answerSupport(sessionId: string, userMessage: string, opts
       }
       if (terminal || out.kind === "ambiguous" || firstAsk) {
         const r = creditReply(out, convo.lang || opts.lang || "en");
-        return finish(convo.id, r.reply, 0, "credit-machine", r.escalate, 0, now);
+        // "ambiguous" is a question back to the customer, not an answer → the widget keeps the
+        // "That answered it" button hidden until a real answer lands.
+        return finish(convo.id, r.reply, 0, "credit-machine", r.escalate, 0, now, out.kind !== "ambiguous");
       }
     } catch (e) {
       // Verifier down ≠ chat down: log and let the normal ladder answer (its hint forbids promises).
@@ -204,7 +206,7 @@ export async function answerSupport(sessionId: string, userMessage: string, opts
   return finish(convo.id, sorry, 3, "error", true, cost, now);
 }
 
-async function finish(conversationId: number, reply: string, tier: number, model: string, escalate: boolean, cost: number, now: number): Promise<LadderResult> {
+async function finish(conversationId: number, reply: string, tier: number, model: string, escalate: boolean, cost: number, now: number, answered = true): Promise<LadderResult> {
   await db.insert(supportMessages).values({
     conversationId, role: "assistant", content: reply, tier, model, createdAt: now,
   });
@@ -216,7 +218,7 @@ async function finish(conversationId: number, reply: string, tier: number, model
     ...(escalate ? { status: "escalated" } : {}),
     updatedAt: now,
   }).where(eq(supportConversations.id, conversationId));
-  return { reply, tier, escalate, conversationId };
+  return { reply, tier, escalate, answered, conversationId };
 }
 
 /** Thumbs up/down from the widget. helped=true puts the conversation in the review queue. */
