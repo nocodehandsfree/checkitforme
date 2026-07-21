@@ -3,6 +3,18 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-21 — LIVE nav play-by-play (tree stores no longer sit blank)
+- Owner: a Bravo/Alpha call showed nothing on the live view for its whole ~30-80s menu walk (agent
+  joins only at the human), so he thought CVS was broken and hung up at 30s. FIX (server-only):
+  `scheduleNavRelay` in `/twiml/bridge` relays the menu nav into the listen room as synthetic lines
+  the page ALREADY renders — Menu badge → "Listening to the menu…", each say word → "Working through
+  the menu…", transfer word → "Transferred". Zero agent cost (agent still joins at the human);
+  live-only (never persisted, saved transcript unchanged). Timers cleared on relayEnd + terminal
+  bridge-status. NO checkit.html change (dodges the agent on that page).
+- Proven: tsc clean; `scratchpad/nav-stage.test.mjs` runs the REAL page stageForLines against the
+  emitted lines (menu→4, no/front→5, general→6, human→7, ask→8) all PASS. NOT driven on a live CVS
+  call (needs a real store to answer) — owner to place one CVS check and watch it light up from pickup.
+
 ## 2026-07-20 — voice A/B in flight
 - Owner gave a clean 29s Branson recording; re-cloned via /api/voices/clone → **Branson HD =
   `1P1JhCcLzeMmkvLi1BkG`**. Set ACTIVE on BOTH prod + staging (`/api/voices/active`).

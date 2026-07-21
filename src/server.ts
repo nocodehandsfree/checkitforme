@@ -1034,6 +1034,12 @@ app.all("/twiml/bridge", (c) => {
       prev = at;
     }
   }
+  // LIVE nav play-by-play (owner 07-21): a tree store spends its first 30-80s walking the phone menu
+  // with cheap TTS/DTMF BEFORE the agent joins, so the live view used to sit blank on "Reaching a
+  // person…" the whole time. We know the recipe + its timing, so relay the navigation into the same
+  // listen room — the page already renders it (menu badge + "Working through the menu…" stages). This
+  // TwiML is fetched at answer, so the timeline lines up with what the caller actually plays.
+  scheduleNavRelay(room, say, dtmf);
   const xml = `<?xml version="1.0" encoding="UTF-8"?><Response>${play}<Connect><Stream url="wss://${config.staging.on ? STAGING_HOST : RAILWAY_HOST}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
   return c.body(xml, 200, { "Content-Type": "text/xml" });
 });
@@ -6060,6 +6066,7 @@ app.post("/twiml/bridge-status", async (c) => {
   if (room && status) {
     roomCallProgress.set(room, { status, at: Date.now() });
     if (["completed", "busy", "failed", "no-answer", "canceled"].includes(status)) {
+      clearNavRelay(room); // hung up before/during nav (no bridge socket to fire relayEnd) — stop the timers
       setTimeout(() => roomCallProgress.delete(room), 60_000);
       // Headless bridge calls (schedules/zones/admin call-now) registered a finalizer so a call
       // that ended without reaching a human still lands a terminal callResults row.
@@ -6369,12 +6376,48 @@ const relayLine = (room: string, role: string, text: string) => {
 // Tell browser listeners the moment the bridge tears down (agent/clerk hung up) so the UI flips to
 // the result instantly instead of waiting on the next poll + ElevenLabs status lag.
 const relayEnd = (room: string) => {
+  clearNavRelay(room); // the call is over — kill any still-pending nav play-by-play timers
   const set = rooms.get(room);
   bridgeLog(`relayEnd room=${room.slice(0, 8)} listeners=${set ? set.size : 0}`); // diagnose hang-up→flip
   if (!set) return;
   const msg = JSON.stringify({ ended: true });
   for (const ws of set) if (ws.readyState === 1) ws.send(msg);
 };
+// LIVE phone-menu play-by-play. A tree store (Alpha tone / Bravo voice) walks its IVR with cheap
+// Twilio TTS/DTMF for 30-80s BEFORE the agent joins — so the live view had no lines and sat on
+// "Reaching a person…". We know the recipe, so we relay the navigation into the SAME listen room as
+// synthetic lines the page ALREADY knows how to render: a "Menu" badge (→ "Listening to the menu…")
+// and each nav word we say (→ "Working through the menu…", transfer word → "Transferred to the
+// front"). Zero agent cost — the agent still joins only at the human. Live-only: these lines are never
+// persisted, so the saved transcript stays the true conversation.
+const navTimers = new Map<string, NodeJS.Timeout[]>();
+function clearNavRelay(room: string) {
+  const ts = navTimers.get(room);
+  if (ts) { ts.forEach(clearTimeout); navTimers.delete(room); }
+}
+function scheduleNavRelay(room: string, say: string | null, dtmf: string | null) {
+  if (!room || (!say && !dtmf)) return; // direct-answer stores have no menu to narrate
+  clearNavRelay(room); // never stack two schedules on one room (e.g. a Twilio TwiML re-fetch)
+  const timers: NodeJS.Timeout[] = [];
+  const emit = (delayMs: number, role: string, text: string) =>
+    timers.push(setTimeout(() => { if (navTimers.has(room)) relayLine(room, role, text); }, Math.max(0, delayMs)));
+  // At pickup: badge the automated menu. Text MUST match the page's IVR pattern ("automated") or the
+  // page would read a non-agent line as a HUMAN and jump the stage to "a person picked up".
+  emit(0, "Clerk", "Automated phone menu.");
+  // Bravo (spoken IVR): relay each learned word at its scheduled second. The page maps a bare nav word
+  // to "Working through the menu…" and the transfer word ("general"/"operator") to "Transferred".
+  if (say) for (const m of say.matchAll(/([^,@]+?)\s*@\s*(\d+(?:\.\d+)?)/g)) {
+    const word = m[1].trim(); const at = Number(m[2]) * 1000;
+    if (word) emit(at, "Agent", word);
+  }
+  // Alpha (tone IVR): show each keypress as a visible action (the menu badge above already advanced
+  // the stage; the digit itself isn't a spoken nav word).
+  if (dtmf) for (const m of dtmf.matchAll(/([0-9*#])\s*@\s*(\d+(?:\.\d+)?)/g)) {
+    const digit = m[1]; const at = Number(m[2]) * 1000;
+    emit(at, "Agent", `Pressed ${digit}`);
+  }
+  navTimers.set(room, timers);
+}
 // D-lane live view: stream every Delta turn + the hang-up into the same listen room the browser
 // watches ("delta:<session>"), so a D-lane check streams like an EL call. Registered here (not in
 // the engine) so tapedeck stays free of WebSocket imports.
