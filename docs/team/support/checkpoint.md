@@ -13,14 +13,32 @@
 4. Copy per `COPY_STYLE_GUIDE.md`, EN+ES same commit. **Done** = drive the real flow with real
    clicks + Done Report (Built/Drove/Left). Never run the full suite unprompted, never in background.
 
+## OPEN / blockers (top of mind)
+- **BLOCKER — new chats NOT reaching the Admin dashboard (owner 07-16).** Live chats the owner
+  creates on the site are not appearing in Admin ▸ Support (that's why I couldn't find his "never got
+  the email confirmation" chat — Admin only shows the one old chat id 1). The chat pipe into the Admin
+  DB is broken/unwired. **PM: get Addie on it** — new support conversations must land in the Admin
+  list. (Root cause likely the site DB vs Admin DB split; Admin reads the prod/api DB, site writes its
+  own. Needs the write/read to line up so operators see live chats.)
+- **Owner action, in flight:** he started a Target chat and will work WITH the support agent live to
+  push it toward good, detailed responses (email-confirmation scenario). Once that lands in Admin
+  (blocker above), Teach the corrected answer so it serves verbatim.
+- **"I never got the email confirmation" — plan agreed, not built.** Quick fix: Copper adds a book
+  entry (spam/Promotions, sender, wait a few min, re-enter email to RESEND, fix a typo) + Teach it.
+  Real fix (my lane, mirrors the credit machine): a deterministic email helper — signed-in, checks
+  emailVerifiedAt, resends the confirm email on the spot (plumbing exists: re-saving the same pending
+  address auto-resends via sendConfirmEmail), optionally reads Brevo delivery status. No human.
+- **Discord bot module** — build dark (lights up when owner drops the bot token). Plugs into
+  answerSupport() in src/support/ladder.ts. Not started.
+- **check-history readout** — ladder takes checkContext but the readout isn't built (quick follow-up).
+
+## Log
 - 2026-07-16 (3) — Door-aware check_issue greeting LIVE on staging: the post-check glowing corner
-  tab (Webbie's invite tab, which replaced my old "Tell us" text link) opens NEUTRAL ("How did your
-  check go? …add a screenshot"); the apology greeting ("Sorry, let's make it right") now shows ONLY
-  when someone picks the problem topic by hand. openSupportTopic(cat,src) carries the door; EN+ES;
-  both doors driven via real clicks, zero page errors. Freeze lifted afterward: session branch was
-  already fully merged (PR #5, then direct staging pushes); local copy deleted, remote delete blocked
-  by the git proxy (no GITHUB_PAT reachable) so origin/claude/support-lane-spec-7hd2aj is a stale
-  merged label. NOTHING promoted; promotes stay with PM on the owner's word.
+  tab (Webbie's invite tab) opens NEUTRAL ("How did your check go? …add a screenshot"); the apology
+  greeting shows ONLY when someone picks the problem topic by hand. openSupportTopic(cat,src) carries
+  the door; EN+ES; driven via real clicks. Session branch fully merged + retired; nothing promoted.
+  Lexicon note left: CLAUDE.md still says "Admin work → promote" but reality is the decoupled
+  ship-admin path; owner also expects a "Ship paths" section that isn't in the file yet.
 - 2026-07-16 (2) — CREDIT MACHINE built + 20/20 drive green (owner-approved params: 2 grants per
   account per 30d · check ≤7 days old · credits only, never cash). check_issue chats now run a
   deterministic verifier BEFORE any model (src/support/credits.ts): signed-in + charged check +
