@@ -51,33 +51,30 @@
 - **NEVER** run the paid hours backfill (`/api/hours/backfill`) or re-chain big-box from directories.
 
 ## IN PROGRESS (owner away — resume here)
-- **WALGREENS INCIDENT CLOSED 07-20 (full story in GOTCHAS):** 18 mapped big-box flipped site→call
-  both envs (18/18 verified); sweep = 93 mapped chains, zero recipes wiped. Real failure cause: My
-  Zones path skipped recipe attachment (builder fixing). CVS unchanged (owner-verified). Guards live.
-- **Mapping 99.9%:** last 0.1% = the 7 fabricated-number chains (OPEN below). Next session: owner
-  pulls numbers from chain locators/Maps pins, I ingest address-verified, Mapper finishes
-  (H-E-B: press 0 only AFTER the greeting — barge at 3s gets dropped).
-- **HOURS backfill PAUSED (owner resumes):** ~3,300 storefronts hourless. Box from
-  `handoffs/hours_needed_fresh.csv` → owner Googles → `ingest_hours.py <resp> <sent> --apply`
-  (id-keyed SAFE here — storefronts, not kiosk rows).
+- **07-22 LOGO FLAGS — both envs, LIVE (curated, feed-verified):** logo_wide=true on 15 wide wordmarks
+  (Scheels, Sheetz, Smith's, Staples, Star Market, TJ Maxx, Tractor Supply, Vons, Walgreens, Wawa, Wegmans,
+  WinCo, Micro Center, Ross Dress for Less, Tokyo Japanese Lifestyle); Publix logo_wide=false; TJ Maxx
+  logo_dark=false (killed white plate). Walmart + Tom Thumb stay square. Via PATCH /api/chains/:id.
+- **⚠️ OPEN BUG — NOT data, CSS/Webbie lane:** the small "Calling" chip does NOT stretch wide logos even
+  with logo_wide=true (~15px crushed). `.callwho.widelogo` (public/checkit.html ~L485) not winning; store
+  tiles + result header stretch fine. Owner verified staging still small (2 strikes). **PM: route to Webbie.**
+- **07-22 shipped STAGING — PM: promote wanted:** openHistEntry re-pulls live store logo so a REOPENED old
+  call shows the current logo. public/checkit.html. New checks already right on prod; old-call repaint needs promote.
+- **Mapping 99.9%:** last 0.1% = 7 fabricated-number kiosk chains (OPEN). Owner pulls numbers from chain
+  locators/Maps pins, I ingest address-verified, Mapper finishes.
+- **HOURS backfill PAUSED (owner resumes):** ~3,300 hourless. `handoffs/hours_needed_fresh.csv` → owner
+  Googles → `ingest_hours.py <resp> <sent> --apply` (id-keyed SAFE — storefronts).
 
 ## OPEN (smaller)
-- **7 kiosk chains need REAL numbers** (answer-box fabrications quarantined to nophone both envs
-  07-16): H-E-B, Lucky, FoodMaxx, Metro Market, Stop & Shop, Pak N Save, Uwajimaya. Owner pulls from
-  store locators, I ingest address-verified, Mapper finishes.
-- **Staging/prod count mismatch to chase:** quarantine wrote 105 on prod but staging showed 33 —
-  something re-imports/overwrites staging retailers (same phantom as the identity shuffle). Find WHO.
-- Admin fields build AWAITING OWNER GO (mockup: claude.ai/code/artifact/b5259f70-2c73-4557-938a-9d182f353a42).
-- Payless Foods Athens (no phone exists: mute or leave) · Fry's Gilbert 102795 + Mariano's
-  Westchester-IL 102842 held-back wrong numbers (chains already mapped).
-- Kiosk root fix (post-launch): key kiosk rows by PLACE (`kiosks` overlay) so TPCi moves stop
-  rewriting row identities.
-- Logos: Habitat ReStore, Unique (owner getting) · logo-resolver: delete the fuzzy substring fallback
-  (0 stores ride it) · grade ~38 unscored chains · re-verify distributor map when TPCi's Excell
-  acquisition closes (announced 2026-02-19).
-- PROD front-end BEHIND staging (promote = owner's call): `type` filter + hobby/thrift chips.
+- **07-22 CHRIS ALERT HUNT (read-only prod):** NOTHING for +17188259888 — 1 account (owner only), 0 subs,
+  0 sends. Break = signup/opt-in never hit prod. Left: Clerk auth records + staging. **PM routes.**
+- **7 kiosk chains need REAL numbers** (nophone both envs): H-E-B, Lucky, FoodMaxx, Metro Market, Stop &
+  Shop, Pak N Save, Uwajimaya.
+- **Staging/prod count mismatch:** quarantine wrote 105 prod, staging showed 33 — something re-imports staging retailers. Find WHO.
+- Held-back wrong numbers: Fry's Gilbert 102795 + Mariano's Westchester-IL 102842 (mapped) · Payless Foods Athens (no phone: mute/leave).
+- Logos: Habitat ReStore, Unique (owner getting) · delete logo-resolver fuzzy fallback (0 ride) · grade ~38 unscored · re-verify distributor map post-TPCi/Excell.
+- PROD front-end BEHIND staging (promote = owner): `type` filter + hobby/thrift chips.
 
 ## DONE (detail in git log)
-- 07-16 kiosk day: 178 owner-googled phones applied address-verified both envs; misdial caught+fixed;
-  learned-sync + chainDialable + board blockers + radius ladder + open-now feed law shipped.
-- 07-20: Walgreens incident closed (see IN PROGRESS top); mapped-chain guards live + verified.
+- 07-20 Walgreens closed (18 big-box site→call both envs; guards live) · 07-16 kiosk day: 178 phones
+  address-verified both envs; learned-sync + chainDialable + radius ladder + open-now feed law shipped.
