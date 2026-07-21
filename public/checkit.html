@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r175" />
+<meta name="x-rev" content="glassfix-r176" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -483,7 +483,7 @@ __BRAND_HEAD__
      width-driven, height auto — the chip's overflow:hidden clips the transparent top/bottom so the
      wordmark reads at full width, exactly as it does in a zone-row tile (owner 07-21, verified render). */
   .callwho.widelogo{width:auto;padding:0 5px;height:20px}
-  .callwho.widelogo img{width:52px;max-width:52px;height:auto;max-height:none;object-fit:contain} /* max-width MUST override the base .callwho img 15px cap, or the wide mark stays crushed */
+  .callwho.widelogo img{height:20px;width:auto;max-width:52px;max-height:20px;object-fit:contain} /* height-capped, aspect kept: a true wide mark fills the 52px, a square asset renders 20x20 clean instead of blowing up and clipping (the TJ Maxx stretch) */
   .callwho.lite{background:#f2f2f5;opacity:1}
   .verdict.in .title{color:var(--green)} .verdict.out .title{color:var(--red)} .verdict.unk .title{color:#FBBF24} .verdict.soon .title{color:#F59E0B}
   .vstore{text-align:center;color:#d6d6e0;font-size:14.5px;font-weight:600;margin-top:9px}
