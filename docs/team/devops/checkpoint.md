@@ -24,10 +24,6 @@
   20/20 suite in test-all. **FULLY LIVE since the 07-16 promote** — PM verified the puller's
   status shows ok runs moving real keys (policy_json, vt_plans, statuses) prod→staging every minute.
   Zero overlap with DD's store/learned pipes (asserted in tests; notes swapped in her checkpoint).
-- **PR #18 MERGED to staging** (PM-confirmed promote; cc27924, verified deployed): cheap-bridge
-  wiring (all 7 non-live paths ride Mapper recipes via bridgeCheckCall), real call-failed reasons
-  (voicemail/busy/bad_number; voicemail no longer mislabeled "closed"), bridge echo gate.
-  `cheapBridgeAll` flag confirmed OFF live — owner flips it (Admin → Policy) after Fun-store tests.
 - **Admin ship-path decouple on staging** — after next promote, Addie ships app.html via
   `bash scripts/ship-admin.sh` (~10s, atomic, rollback, bundled fallback; --staging rehearses,
   --status shows what's live). PM queue: one rehearsal with a real commit, then it's her flow.
