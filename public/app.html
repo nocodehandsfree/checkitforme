@@ -598,6 +598,13 @@
   .bub.c{align-self:flex-start;background:linear-gradient(180deg,#2D2D34,#27272D);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
   .bub.c .nm{color:#8A8A96}
   .bub-note{align-self:center;font-size:12.5px;color:var(--muted);font-style:italic;text-align:center;padding:2px 0}
+  /* Call transcript = the SAME cards the website result page uses (checkit.html .ctlv2-bub). One look
+     for a call's conversation everywhere it shows, never a second UI. */
+  .convo-thread{display:flex;flex-direction:column;gap:9px;margin-top:10px}
+  .ctlv2-bub{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:16px;padding:12px 15px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
+  .ctlv2-bub .who{font-size:10px;font-weight:700;letter-spacing:.13em;color:#8A8A96}
+  .ctlv2-bub.ai .who{color:#4ADE80}
+  .ctlv2-bub .tx{margin-top:4px;font-size:15px;font-weight:500;color:rgba(255,255,255,.85)}
   details.tr{margin-top:10px}
   details.tr>summary{list-style:none;cursor:pointer;font-size:12.5px;color:var(--purple);font-weight:700;display:inline-flex;align-items:center;gap:6px}
   details.tr>summary::-webkit-details-marker{display:none}
@@ -3056,14 +3063,18 @@ async function supReindex(btn){
   if(r&&r.ok) toast('Reloaded the book: '+(r.pages!=null?r.pages+' pages':'done'));
   else toast('Could not reload the book');
 }
+// Call transcript renderer — renders the exact cards the website result page uses (checkit.html's
+// .ctlv2-bub: CHECK AI in green, STAFF in gray, full-width stacked). Same look on every call transcript
+// in the Admin (Feedback, Calls, live) so there is never a second transcript UI.
 function bubbles(t){
   if(!t) return '';
-  return '<div class="chat">'+t.split('\n').filter(Boolean).map(line=>{
+  const rows=t.split('\n').filter(Boolean).map(line=>{
     const m=line.match(/^(Agent|Clerk):\s*(.*)$/);
-    if(!m) return `<div class="bub-note">${esch(line)}</div>`;
-    const who=m[1]==='Agent'?'a':'c';
-    return `<div class="bub ${who}"><span class="nm">${m[1]==='Agent'?'Check AI':'Staff'}</span>${esch(m[2])}</div>`;
-  }).join('')+'</div>';
+    if(!m) return `<div class="ctlv2-bub"><div class="tx">${esch(line)}</div></div>`;
+    const ai=m[1]==='Agent';
+    return `<div class="ctlv2-bub${ai?' ai':''}"><div class="who">${ai?'CHECK AI':'STAFF'}</div><div class="tx">${esch(m[2])}</div></div>`;
+  }).join('');
+  return `<div class="convo-thread">${rows}</div>`;
 }
 let RETAILERS=[];
 let ADMIN_SEARCH_T=null;
