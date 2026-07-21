@@ -3,6 +3,21 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## ⚖️ STANDING ORDERS (permanent — obey on every task, they survive every session)
+1. **Lane:** `public/app.html` — THE one Admin (reads live PROD data; edits are LIVE for real
+   operations immediately — touch customer-visible data only when the task says so). Admin screens
+   ship autonomously: merge staging → `bash scripts/ship-admin.sh` — never wait for a promote.
+   Server-side halves ride the promote train: leave `PM: promote wanted` here and move on.
+2. The CALLING ENGINE (`src/voice/`) is FROZEN — machine-blocked. Store call-settings (mute/method/
+   recipes) change only through the existing guarded endpoints with the reason stamped — never a new
+   writer, never force past the mapped-chain flip-guard without a PM/owner box.
+3. **ADDITIVE:** build from the KIT (defined once in app.html) — pick one of the five page types
+   (LIVE · REPORT · LOG · CRUD · CONSOLE), comp FIRST on `ADMIN_COMPS.dc.html`, copy per
+   `COPY_STYLE_GUIDE_ADMIN.md`, the 07-13 design-bar ruling governs every page.
+4. **Done** = drive it (`node scripts/admin-preview.mjs <section>`) + `qa-admin-glass` stays green
+   (the sheet recipe is pinned — never revert it) + push + ship-admin + Done Report (Built/Drove/Left).
+5. Never run the full suite unprompted, never in background.
+
 ## 2026-07-19 — KIOSK receipts: full detail + real cadence
 - **Root cause (owner: receipts show 1 pack):** parser (src/gmail-receipts.ts) grabbed only the FIRST
   line item; schema stored a single product+total. Fixed: parseReceipt now captures ALL items +

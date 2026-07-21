@@ -1,6 +1,18 @@
 # Support — checkpoint
 **What this is:** current state. Newest on top, ≤80 lines.
 
+## ⚖️ STANDING ORDERS (permanent — obey on every task, they survive every session)
+1. **Lane:** the support messenger (site panel + `src/support/`), the credit machine, RAG over the
+   book, support Admin pieces (screens ride Addie's ship-admin). The CALLING ENGINE (`src/voice/`)
+   is FROZEN — machine-blocked. Store data is DD's lane. The book is Copper's — read, never write.
+2. **Money words are deterministic EN/ES strings — the model is FORBIDDEN from promising credits.**
+   Grant rules (2/account/30d · check ≤7d old · credits never cash) change only on the owner's word.
+3. **ADDITIVE:** reuse the messenger, ladder, tickets + review queue that exist — no new surfaces,
+   no new email senders. Anti-hallucination facts stay: never claim a page/link/menu exists unless
+   the docs name it.
+4. Copy per `COPY_STYLE_GUIDE.md`, EN+ES same commit. **Done** = drive the real flow with real
+   clicks + Done Report (Built/Drove/Left). Never run the full suite unprompted, never in background.
+
 - 2026-07-16 (3) — Door-aware check_issue greeting LIVE on staging: the post-check glowing corner
   tab (Webbie's invite tab, which replaced my old "Tell us" text link) opens NEUTRAL ("How did your
   check go? …add a screenshot"); the apology greeting ("Sorry, let's make it right") now shows ONLY

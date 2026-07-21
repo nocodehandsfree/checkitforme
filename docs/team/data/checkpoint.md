@@ -3,6 +3,18 @@
 > **Volatile — update at every "Checkpoint".** Newest on top, bullets, ≤80 lines. Prune finished
 > items (history lives in git). Access token: Railway staging `ADMIN_TOKEN` → scratchpad `.atok`.
 
+## ⚖️ STANDING ORDERS (permanent — obey on every task, they survive every session)
+1. **Lane:** store/chain/product data on BOTH envs + the sync pipes. The CALLING ENGINE
+   (`src/voice/`) is FROZEN — machine-blocked; data shapes call behavior ONLY through
+   recipes/settings via the guarded doors, reason stamped in the same breath, never a new writer.
+2. **KEY FACTS below are LAW** — the four pipes, the ONE DIALABLE RULE, never-sync fields,
+   map-on-PROD, phones ONLY from the chain's own locator or the Google MAPS pin (never the answer
+   box), no paid hours backfill, kiosk rows matched by ADDRESS.
+3. **Mapped chains are untouchable:** the flip-guard refuses unflagging without force — never force
+   it without a PM/owner box. Every mute/flip writes its WHY on the chain row, same breath.
+4. **Done** = counts verified on BOTH envs + Done Report (Built/Drove/Left). Never run the full
+   suite unprompted, never in background.
+
 ## KEY FACTS / DECISIONS (written nowhere else — do NOT re-learn the hard way)
 - **ENV + SYNC (all four pipes LIVE, no hand-sync ever):** staging & prod are separate deploys/DBs.
   ① CURATED store data staging→prod every 5 min (`storeSyncTick`; fields in `store-sync.ts` CHAIN_CURATED/
@@ -58,25 +70,16 @@
   ({kind:direct} | {kind:menu,seconds} | null, evidence-only). Webbie owns the UI; data side done.
 
 ## OPEN (smaller)
-- **7 kiosk chains need REAL numbers (Google answer box FABRICATED the last batch — owner dialed 3/3
-  bad; all 105 quarantined to nophone on both envs 07-16 evening):** H-E-B, Lucky, FoodMaxx,
-  Metro Market, Stop & Shop, Pak N Save, Uwajimaya. NEW LAW: phones ONLY from the chain's own store
-  locator or the Google MAPS pin — never the AI answer box. Woodman's + H Mart numbers were real
-  (Mapper locked both). Hours kept (display-only, low risk).
-- **Staging/prod count mismatch to chase:** quarantine found 105 bad numbers on prod but only 33 on
-  staging — something re-imported/overwrote staging retailers again (same phantom as the identity
-  shuffle). Check for dupe rows on the kiosk chains and find WHO runs the overlay.
-- Payless Foods Athens: 1 store, NO phone exists anywhere. Mute or leave.
-- Fry's Gilbert 102795 + Mariano's Westchester-IL 102842: held-back wrong numbers; chains already mapped.
-- Kiosk root fix (my lane, post-launch): key kiosk rows by PLACE, overlay machines via `kiosks` table,
-  so TPCi machine moves stop rewriting row identities.
-- Logos needed (real brands): Habitat ReStore, Unique — owner getting. Logo-resolver hardening spec →
-  DevOps: delete the fuzzy substring fallback (0 stores ride it).
-- Grade ~38 unscored chains (`tier:null`). Expand `data/distributors.json` when owner's research lands.
-- New-chain candidates (free, same playbook): Buffalo Exchange, Plato's Closet, St. Vincent de Paul, ARC.
-- PROD front-end BEHIND staging (promote = owner's call, not mine): `type` filter + hobby/thrift chips.
-
-## DONE 2026-07-16 (kiosk day — detail in git log)
-Kiosk phones COMPLETE (178 numbers applied both envs, address-verified; 13 mall-common-area machines
-muted w/ reason) · misdial incident fixed + GOTCHAS'd · learned-sync built · chainDialable() unified ·
-radius ladder + rural fallback live on `/pub/stores/near`.
+- **7 kiosk chains need REAL numbers** (answer-box fabrications quarantined to nophone both envs
+  07-16): H-E-B, Lucky, FoodMaxx, Metro Market, Stop & Shop, Pak N Save, Uwajimaya. Owner pulls from
+  store locators, I ingest address-verified, Mapper finishes.
+- **Staging/prod count mismatch to chase:** quarantine wrote 105 on prod but staging showed 33 —
+  something re-imports/overwrites staging retailers (same phantom as the identity shuffle). Find WHO.
+- Payless Foods Athens (no phone exists: mute or leave) · Fry's Gilbert 102795 + Mariano's
+  Westchester-IL 102842 held-back wrong numbers (chains already mapped).
+- Kiosk root fix (post-launch): key kiosk rows by PLACE (`kiosks` overlay) so TPCi moves stop
+  rewriting row identities.
+- Logos: Habitat ReStore, Unique (owner getting) · logo-resolver: delete the fuzzy substring fallback
+  (0 stores ride it) · grade ~38 unscored chains · candidates: Buffalo Exchange, Plato's Closet,
+  St. Vincent de Paul, ARC.
+- PROD front-end BEHIND staging (promote = owner's call): `type` filter + hobby/thrift chips.
