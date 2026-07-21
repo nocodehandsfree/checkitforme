@@ -135,7 +135,7 @@ import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPh
 import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
 import { settings as settingsTbl } from "./db/schema";
-import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, setBridgeNavEnd, navPlanEndSec, activeBridgeCalls } from "./voice/bridge";
+import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, activeBridgeCalls } from "./voice/bridge";
 import { placeBridgeCall, attachListenFork, roomCallSids, roomCallProgress, roomFinalizers, RAILWAY_HOST, STAGING_HOST } from "./voice/bridge-place";
 import { isCallingPaused, setCallingPaused, spendTodayCents, withLock } from "./redis";
 
@@ -1034,9 +1034,6 @@ app.all("/twiml/bridge", (c) => {
       prev = at;
     }
   }
-  // Same re-anchor as placeBridgeCall's inline TwiML: nav runs before <Connect>, so the bridge's
-  // connect-at timer must not count the nav seconds twice.
-  setBridgeNavEnd(room, navPlanEndSec(dtmf, say));
   const xml = `<?xml version="1.0" encoding="UTF-8"?><Response>${play}<Connect><Stream url="wss://${config.staging.on ? STAGING_HOST : RAILWAY_HOST}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
   return c.body(xml, 200, { "Content-Type": "text/xml" });
 });
@@ -6203,15 +6200,7 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
     }
     // Per-store talk cap (chains.maxTalkSeconds) wins over the global bail ceiling when set, so a
     // store the owner marked "wrap fast" gets a tighter Twilio TimeLimit — the cost guarantee.
-  }, v.dtmf, {
-    from,
-    // Tree calls get the mapped nav time ON TOP of the talk cap — a bare talk cap chops them
-    // mid-conversation (both 07-20/21 CVS calls hit the 120s wall during/after nav).
-    timeLimitSec: (v.maxTalk ?? pol.bail.maxCallSeconds) + v.navBudgetSec,
-    say: v.say, connectAtSec: v.connectAtSec ?? undefined,
-    connectOnHuman: isDirect ? false : undefined,
-    voiceId: v.voiceId, voiceTuning: v.voiceTuning,
-  });
+  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, connectOnHuman: isDirect ? false : undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning });
 
   // Governed bookkeeping: point the pre-inserted row at the room (so /pub/result resolves it before
   // connect), release the slot on a dial that never placed, and register a finalizer that frees the

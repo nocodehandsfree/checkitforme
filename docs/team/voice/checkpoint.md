@@ -3,25 +3,30 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
-## 2026-07-21 — Bravo (voice-menu chains) = AGENT-FROM-ANSWER; demo-critical
-- Owner's 11:51p CVS call was blind + "couldn't tell": store CLOSED (night IVR ≠ mapped daytime
-  menu; live/zone path has NO closed-store guard — bridgeCheckCall does, bridgeStoreCall doesn't,
-  OPEN item) AND the Bravo cheap lane has no media stream until nav TwiML ends (~50s): nothing to
-  hear/show by design. Earlier 8:54p 16¢ call: VAD gate no-op (checked consumed ctx.dtmf/say) +
-  timer anchored to stream-open not answer. Website session confessed flip-flopping 770ffa0.
-- SHIPPED: voice-nav chains now open Charlie AT ANSWER (buildRestockVars agentFromAnswer: say plan
-  dropped, connectOnHuman:false, phone_tree = chain's learned voice directions, TimeLimit = talk cap
-  + navBudgetSec so the cap can't chop mid-talk). Audio/live transcript/step ladder exist from
-  second one; Charlie speaks the menu (one-word replies law). ~14.5¢/Bravo call vs 5.5¢ — accepted
-  for reliability; CHEAP LANE RETURNS as in-band clip nav (tapedeck-style words INSIDE the stream),
-  post-demo build. Alpha/unmapped keep cheap lane: hadDtmf/hadSay flags survive consumption, VAD
-  only for fully unmapped stores, timer re-anchored via navEndSec.
-- Proof: tsc clean · test-bridge 20/0 · workflow-truth ALL (fixed stale package-wording assert to
-  owner's 07-18 reword) · live-view browser lock ALL green. NOT ear-verified (audio = owner's phone);
-  first DAYTIME CVS call is the real proof before the demo.
-- Known gaps: "A person picked up" can fire off the join not a human · owner's 8-step labeled call
-  log (Listening to menu/Navigating/Transferring…) = screens lane, needs PM box · Fun store can't
-  rehearse Bravo (no voice menu) — MVP store pointed at a real IVR is the only rehearsal.
+## 2026-07-21 — HANDOFF: engine reverted to pre-session state on owner's order. DEMO IS TODAY.
+- **STATE: the calling engine (bridge.ts, bridge-place.ts, service.ts, server.ts, test-bridge.ts) is
+  EXACTLY commit 2593e1b** — every change from this Echo session is reverted, including a brief
+  agent-from-answer experiment that raised Bravo cost (owner: NEVER raise call cost; the A/B/C
+  mapped lanes ARE the product). Only kept: workflow-truth's package-wording assert updated to the
+  owner's own 07-18 reword (suite was failing on pre-reword copy).
+- **Facts for the next owner of this lane (with receipts):**
+  · 07-20 8:54p CVS zone call billed ~16¢, EL joined at 0s. 770ffa0 (07-20 23:11) claimed to fix a
+    VAD-on-voice-nav bug; 8671855 (23:51) reverted it — the website session's checkpoint ADMITS the
+    flip-flop. CAUTION: this session found ctx.dtmf/ctx.say are NULLED at TwiML build
+    (takeBridgeDtmf/Say), so 770ffa0's gate may check already-consumed fields. NOT live-verified.
+    Investigate before trusting either version. Bare talk-cap TimeLimit also chops tree calls.
+  · 07-21 11:51p CVS call (24-HOUR store per owner): joined ~74s, first transcript line was CVS's
+    main greeting, "couldn't tell". Ran on since-reverted code — NOT evidence about today's engine.
+  · Bravo say-plan runs as TwiML BEFORE <Connect> → no media stream during nav (nothing to hear or
+    transcribe until it ends). Owner says listening + full call log worked before; reconcile with
+    docs/finance/CHEAP_NAV_ARCHITECTURE.md (design: nav broker rides the OPEN stream) BEFORE coding.
+  · Pieces that exist: attachListenFork (bridge-place.ts, listen-from-answer, EL-native path) ·
+    live step ladder derives from transcript lines (checkit.html ~5460, labels incl "Transferring
+    to the front") · r170 server steps[] on /pub/result.
+- **Owner's standing orders:** call log shows EVERY step + seconds (8-step ladder) · live audio in
+  Safari the whole call · never raise call cost · use the mapped lanes exactly as designed · ASK
+  HIM before changing anything; never deploy while he's mid-call. Verify any fix with ONE daytime
+  CVS call he can hear. This chat is done; a fresh agent takes the lane.
 
 ## 2026-07-20 — voice A/B in flight
 - Owner gave a clean 29s Branson recording; re-cloned via /api/voices/clone → **Branson HD =
@@ -61,24 +66,18 @@
 agent gets the new brain automatically at first prod boot. After promote the Admin-vs-staging mirror dance ends.
 
 **OPEN (priority order):**
-1. Owner hammer-test round on Fun (staging): yes+detail · no→restock-day · "let me check" walk-away ·
-   sold-out · doesn't-carry · too-busy · voicemail (verifies the new stamp) · name-a-beat-in greeting
-   ("Fun store, this is Bob speaking" → hi Bob) · Spanish · silent pickup. MVP store for real-number
-   dress rehearsal. Then promote.
-2. SELF-LEARNING = first post-launch build (ABOVE Delta): mine call corpus (~110 calls and growing)
-   into phrasing/mishear/conditions library + owner's master-account front-end flag (backend mine,
-   button Webbie). Corpus capture already running (transcripts+verdicts+timing on every call).
+1. Owner hammer-test round on Fun (staging): the full script list (handoff.md §3), MVP store dress
+   rehearsal, then promote.
+2. SELF-LEARNING = first post-launch build (ABOVE Delta): mine the call corpus (~110 calls) into a
+   phrasing/mishear/conditions library. Corpus capture already running.
 3. First-0.5s pickup audio: parked post-launch. 4. Bail enforcement — UI only, live wiring off.
 5. A2P day: set TWILIO_MESSAGING_SERVICE_SID when approval lands (error 30034 = not active yet).
 
 **Delta: SHELVED** (built, 37 tests green, zero stores; full state in git log 07-15/16).
 
-**Traps (full list handoff.md §5):** prompt edits reach the live agent ONLY via push — now automatic
-on boot, but NEVER assume a repo edit spoke until a deploy/boot happened · confirm the staging deploy
-before a test round; NEVER merge/deploy while the owner is mid-call (rollouts killed two live test
-calls) · Admin edits write PROD data while staging tests read STAGING data (until promote, mirror on
-request) · echo-gate thresholds are ear-tuned: if phantom "Clerk:" lines echo the agent's own words,
-BARGE_THRESH 520 is too low — raise toward 700 · DELTA_FU_DEFAULTS in app.html mirrors tapedeck.ts.
+**Traps (full list handoff.md §5):** prompt edits reach the live agent ONLY via deploy/boot · NEVER
+merge/deploy while the owner is mid-call · Admin edits write PROD data, staging tests read STAGING ·
+phantom "Clerk:" echo lines → BARGE_THRESH 520 too low, raise toward 700.
 
 **Boundaries:** consumer live-call UI/scroll/tint = Webbie · Admin screens = Addie · spoken copy =
 Copper's guide. Voice owns: call brains, workflows/routing, bridge plumbing, verdicts, call cost.

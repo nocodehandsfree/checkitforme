@@ -4,7 +4,7 @@
 // The TwiML + status routes it points at stay in server.ts.
 import { config } from "../config";
 import { getPolicy } from "../policy";
-import { setBridgeContext, takeBridgeDtmf, takeBridgeSay, setBridgeNavEnd, navPlanEndSec } from "./bridge";
+import { setBridgeContext, takeBridgeDtmf, takeBridgeSay } from "./bridge";
 
 // Twilio's media stream is pinned to the direct Railway domains (verified WS path; avoids Cloudflare).
 export const RAILWAY_HOST = "voice-caller-production-2d6b.up.railway.app";
@@ -76,9 +76,6 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
       prev = at;
     }
   }
-  // The nav TwiML above runs BEFORE <Connect> opens the stream — tell the bridge how long it lasts
-  // so the connect-at timer (answer-anchored) can re-anchor itself to stream time.
-  setBridgeNavEnd(room, navPlanEndSec(dtmf2, say));
   const inlineTwiml = `<?xml version="1.0" encoding="UTF-8"?><Response>${play}<Connect><Stream url="wss://${host}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
   const body = new URLSearchParams({ To: e164(toNumber), From: from, Twiml: inlineTwiml });
   // REAL call-progress feed: Twilio POSTs each transition so the live timeline shows what's actually
