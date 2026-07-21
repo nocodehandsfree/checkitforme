@@ -94,7 +94,8 @@ He runs the whole business from his phone. A reply he has to decode or scroll is
    the sheets. Before building, FIND the existing system and name it in your contract ("zone calls
    dial through the same engine as a single check"). If you believe you need new architecture for
    something that already works, STOP — that's a PM/owner decision, never yours. Re-inventing a
-   working path is how CVS and Walgreens broke.
+   working path is how CVS and Walgreens broke. **`src/voice/` (the calling engine) is FROZEN —
+   machine-blocked (`.claude/hooks/edit-gate.sh`); PM + owner unlock it per task, nobody else.**
 2. **Contract first, plan BACKWARDS.** Non-trivial build → write the end state as if shipped, derive
    steps backwards, turn it into 5–10 one-line testable assertions BEFORE coding. Build to that list.
 3. **Design + copy fidelity.** Any UI/UX or copy change: open `docs/design/STYLE_GUIDE.md` (and

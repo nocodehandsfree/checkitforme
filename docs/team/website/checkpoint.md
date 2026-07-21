@@ -1,65 +1,60 @@
 # Check - Website — CHECKPOINT (current state)
 
 > **Volatile — update at every "Checkpoint".** Newest on top, bullets, prune finished (history = git).
-> Lane: consumer web app `public/checkit.html` + consumer routes in `src/server.ts`. STAGING-FIRST
-> (`staging` → `staging.checkitforme.com`; promote = apply on `main`). Clean split with the other dev:
-> **he owns the tint CSS** (`__bootTone`/`tone-*`/body wash/sheet chrome), **I own view/mode/nav**.
 
-## 🚧 07-21 — HANDOFF (session ending, agent deprecated). Everything below is on `staging`, committed + pushed. Working tree clean, `staging` == `origin/staging`. Current rev served: `glassfix-r171`.
+## ⚖️ STANDING ORDERS (permanent — obey on every task, they survive every session)
+1. **Lane:** consumer web app `public/checkit.html` + consumer routes in `src/server.ts`. The CALLING
+   ENGINE (`src/voice/`) is FROZEN — the machine blocks edits (owner order after this lane's
+   predecessor flip-flopped a one-line engine fix and bypassed the proven dial path). If a task seems
+   to need an engine change, write `PM: engine change wanted — <why>` here and STOP. Store settings
+   (mute/method/recipes/logo flags) are also out of bounds — data lane only.
+2. **ADDITIVE (CLAUDE.md LAW 1):** new work snaps onto existing pieces — name them BEFORE building:
+   store row (`.store`/`.ic`/storeFace) · logo system (storeFace + `.slogo.emboss`; read
+   `docs/data/store-logos.md` first) · sheets (openSheet physics; sheetHObserver bottom-anchors EVERY
+   `.overlay` — never fight it with position:fixed) · view/mode nav incl. the shared BACK behavior
+   (every new screen wires into it) · toast = ONE gray line, EN+ES · i18n `t()`/`tf()`, Spanish in the
+   SAME commit · live-call view (steps 1-8 + `/listen` audio) is display-only here — feed is engine-side.
+3. **Design + copy:** open `docs/design/STYLE_GUIDE.md` + `docs/design/copy/COPY_STYLE_GUIDE.md` first;
+   build 1:1 to `docs/design/comps/WEBSITE_COMPS.dc.html`. A `.dc.html` comp is RENDERED, never
+   grepped — no comp = assemble from live site elements, never invent. Never re-introduce a reverted
+   design. Status/system copy comes from the owner/Copy lane — don't author it.
+4. **Done = the ship-it skill:** tsc + tests for what you changed + DRIVE it (local server + Playwright
+   recipe below) + push same turn + Done Report (Built / Drove it / Left). iOS paint is the owner's
+   phone only: ship ONE change, "pushed, check your phone," never "fixed."
+5. Never run the full suite unprompted, never in background. Never wait on a promote — leave
+   `PM: promote wanted — <what>` here and move on. Don't self-start ideas the owner said to hold.
 
-> ⛔ **HARD BOUNDARY set by owner this session — carry it forward.** Do NOT touch the calling engine,
-> the recipes, the voice/bridge listening logic, or any store settings, EVER, unless a written order
-> names that exact file. That lane is Echo/Mapper's. **Echo is restoring Mapper's fix `770ffa0`** (the
-> one-line VAD/listening fix) — do not touch it. This session bypassed the proven dial engine and
-> flip-flopped 770ffa0; that is the root of the grief. The Website lane = the SCREENS only, built from
-> pieces that already exist. Reuse, don't reinvent (no homemade icons / call paths / behaviors). When
-> something isn't obviously screens, ASK first.
+## 🔧 Verify recipe that works (07-19)
+Local server `PORT=88xx tsx src/server.ts` (needs ELEVENLABS_* + ADMIN_TOKEN env) + Playwright via
+`playwright-core` + `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` (NODE_PATH to node_modules).
+tsx has NO hot-reload — restart after edits. headless→staging TLS is proxy-blocked: drive LOCAL.
 
-**Shipped to staging this session (client `public/checkit.html`, all verified headless before push):**
-- **r165–r166 Zone report transcripts** = the REAL check status page, unfolded IN the zone report frame
-  (never a separate page). `zoneExpand(cid)` renders through the SAME engine as a single check:
-  `deriveVerdict()` (extracted from `showResult`, one status→copy source) + `combinedTimelineHTML` +
-  `chatBubbles`. RESULT pill, verdict, timeline, transcript, share — identical to a single check.
-  Finished rows unfold; queued rows keep the stop prompt; mid-call rows show the live peek.
-- **r165 History unification** — calendar-opened calls resolve logo/address from the live `STORES`
-  record (same source as a refresh) + `/pub/store` backfill; `restoreCall` shadow row now carries
-  `categoryId/category/zoneRunId` (a null categoryId was dropping calls out of the ‹ › arrow pool);
-  `ensureHistCache` heals already-poisoned local rows. Individual zone calls appear in My Checks
-  calendar AND unfold in the report (both paths proven with `scratchpad/bothtest.js`).
-- **r167 zone fixes**: edit-zone preselect (was fetching a nonexistent `GET /app/zones/:id` → now seeds
-  name + selected stores from the zones LIST); bottom slide-ups (`#zmenuOv` etc.) got a hairline top
-  border + deeper shadow; share sheet rebuilt to comp (title, card headline + `product · zone · when`
-  meta + in-stock tiles, share-text well, SHARE + COPY side by side; `zoneCopyShare`); wide wordmark
-  logos (TJ Maxx) render at natural width in the `.callwho` "Calling" chip; zone name capped 24 chars.
-- **r168 ghost-tap guard v2** — the check-zone confirm could start a sweep from the SAME tap that opened
-  it (iOS trailing click). v1 (600ms dead window) ALSO ate a real fast tap. v2: the go button arms only
-  after a real `pointerdown/touchstart` lands on the sheet — the phantom click has none. Proven both
-  ways headless (`scratchpad/r167test.js`, guard-v2 test).
-- **r171** — create-zone location button now uses the homepage pin (`ICO.pin`), not the crosshair.
+## ✅ 07-21 shipped by the prior session (r165-r173, all on staging — detail in git log)
+- Zone report transcripts = the REAL status page unfolded in-frame (`zoneExpand` → `deriveVerdict` +
+  `combinedTimelineHTML` + `chatBubbles`, same engine as a single check). History unification (calendar
+  rows resolve logo/address from live `STORES`; `restoreCall` carries categoryId/zoneRunId). r167 zone
+  fixes (edit-zone preselect, share sheet to comp, wide wordmarks in the Calling chip). r168 ghost-tap
+  guard v2 (arms on real pointerdown). r171 pin icon. r170 per-step REAL seconds on replayed checks.
+- **⚠️ r170's step-ladder code lives in `src/voice/elevenlabs.ts`+`provider.ts` — over the line, left in
+  because live+tested; now FROZEN with the engine. Echo's lane reviews/owns it. Website never touches it.**
+- **Admin/live-data writes it made (state known, lane now closed to Website):** `user_cancelled` status
+  row + admin_hangup note; chain 79 TJ Maxx `logoWide/logoDark=true` on staging.
+- Customer stops now read "Check cancelled" (`statusKey user_cancelled`, row status stays admin_hangup,
+  no-charge rules unchanged). **Owner supplies rewritten cancel copy (no dashes) — paste verbatim.**
 
-**⚠️ Server + data changes I made this session (OUTSIDE the pure screens lane — flag for reconciliation):**
-- `src/db/bootstrap.ts` + `src/server.ts` (r169, committed/pushed): CUSTOMER-initiated stops (live
-  Stop & hang up, zone Stop all / stop-one) stamp `statusKey: "user_cancelled"` → "Check cancelled /
-  You stopped this check from happening." Row STATUS stays `admin_hangup` (all non-result/no-charge
-  rules unchanged). Admin `/api/hangup` keeps `admin_hangup`. Seeded a `user_cancelled` status row.
-- `src/voice/elevenlabs.ts` + `src/voice/provider.ts` (r170, committed/pushed): the EL outcome mapper
-  computes a real step ladder with timestamps from the transcript clock, returned on `/pub/result` as
-  `steps[]`, so replayed checks (zones incl.) show steps+seconds. **NOTE: this touched voice/ files —
-  under the new boundary this was over my line; leaving it in place because it's live + tested, but
-  the next owner of that lane should review/own it. Do not have Website touch it again.**
-- **⚠️ Owner rewriting the cancel COPY** — he flagged the em-dash in "It doesn't count — no charge" as a
-  style-guide violation (`docs/design/copy/COPY_STYLE_GUIDE.md`: no dashes inside sentences). Copy is
-  the Copy lane's / owner's job, NOT mine. He will supply the words. Do not author status copy.
-- **Live Admin data I wrote directly** (the ONE decoupled Admin at `admin.checkitforme.com`, reads live
-  prod): patched `admin_hangup` note + created the `user_cancelled` status row via `/api/statuses`.
-  Also flipped chain **79 (TJ Maxx)** `logoWide/logoDark = true` on `staging.checkitforme.com/api/chains`.
-  (Store-setting edits are now OUT of bounds too — logged here only so state is known.)
+## 🚨 OPEN BUG — thin GREEN LINE, /s card bottom edge, iPhone only (UNRESOLVED)
+- Never reproduces headless; predates brandmark/border/wash (7 wrong fixes chased those). Prime suspect:
+  `.cin{overflow:hidden;border-radius:999px}` clipping the shine's green on iOS.
+- NEXT: bisect ON DEVICE, one change at a time — drop `.shine` / drop `.cin` overflow / flat border.
+  Do NOT alter the owner-approved design to chase it. Full story in GOTCHAS.
 
-**Open / next (screens lane only, when owner directs — do NOT self-start):**
-- Owner supplies rewritten cancel copy (no dashes) → paste verbatim into the Admin status note.
-- Owner's demo is tomorrow; everything above is on staging. If a PROD demo, promote train = merge
-  staging → prod branch (not mine to run without a written order).
-- Earlier owner asks intentionally NOT built (correct — he said hold): re-check dedup rules (skip/warn
-  on same-day re-checks), nightly LLM transcript assessment. Do not build unprompted.
+## ⚠️ Lessons that stay true
+- iOS: gradients fading to transparent tint green (fade between opaque colors); overflow+radius can leak
+  a 1px edge line; Chromium renders CANNOT catch iOS paint — owner's phone is the rig.
+- 'in_stock' substring-matches 'not_in_stock' — match negatives first/exact. A "not in stock" share
+  landing has no use case. `#auth_logo` is a left-flex wordmark bar (override per mode).
 
-*(07-19 sections — referral welcome, zone report, share landing — FINISHED + pruned per docs law; full detail in git history of this file.)*
+## ⏳ Open
+- **FIRST BOX (owner 07-21): missing email-confirmation** — box lives in the PM chat; likely cause =
+  owner's PROD email never re-set post-promote (admin checkpoint TODO). Owner copy changes = box #2.
+- Glass sheets rollout (tint discipline) — owner-box only. Slow result load → Echo. Restock SMS → A2P.
