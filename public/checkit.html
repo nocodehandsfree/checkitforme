@@ -6626,8 +6626,11 @@ async function openHistEntry(e){
   // Old calls saved before we persisted the address (or whose store sits outside the current nearby
   // slice) have no address — fetch this ONE store and repaint in place once it lands. Guarded so a
   // navigation away (or opening a different call) can't repaint a stale result.
-  if((!SEL_STORE.address||!SEL_STORE.logoUrl) && SEL_STORE.id){ const _sid=SEL_STORE.id, _cid=e.cid;
-    appApi('/pub/store/'+_sid).then(st=>{ if(st&&!st.error&&(st.address||st.location||st.logoUrl) && SEL_STORE && SEL_STORE.id===_sid && RAIL_CID===_cid && NAV_VIEW==='result'){ SEL_STORE.address=SEL_STORE.address||st.address||null; SEL_STORE.location=SEL_STORE.location||st.location||null; if(!SEL_STORE.logoUrl&&st.logoUrl){ SEL_STORE.logoUrl=st.logoUrl; SEL_STORE.logoWide=st.logoWide; SEL_STORE.logoDark=st.logoDark; } if(LASTRES) showResult(LASTRES, RAIL_CID); } }).catch(()=>{});
+  // Logo look (url/wide/dark) is live-brand identity, not call data: ALWAYS re-pull it from the store
+  // record so a past call shows the CURRENT logo even if it saved an older look — e.g. a size/plate flag
+  // we corrected after the call (owner 07-21). Address/location stay fill-only (they don't change on us).
+  if(SEL_STORE.id && !String(e.cid).startsWith('local:')){ const _sid=SEL_STORE.id, _cid=e.cid;
+    appApi('/pub/store/'+_sid).then(st=>{ if(st&&!st.error && SEL_STORE && SEL_STORE.id===_sid && RAIL_CID===_cid && NAV_VIEW==='result'){ SEL_STORE.address=SEL_STORE.address||st.address||null; SEL_STORE.location=SEL_STORE.location||st.location||null; if(st.logoUrl){ SEL_STORE.logoUrl=st.logoUrl; SEL_STORE.logoWide=!!st.logoWide; SEL_STORE.logoDark=!!st.logoDark; } if(LASTRES) showResult(LASTRES, RAIL_CID); } }).catch(()=>{});
   }
   LIVE_STEPS=[]; LIVE_T0=0; // reopening a past call → no live timings; derive steps and start collapsed (it isn't happening live now)
   // A never-connected call (synthetic "local:" id) has no server transcript — rebuild its verdict from
