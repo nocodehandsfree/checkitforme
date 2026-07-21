@@ -6205,13 +6205,11 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
     // store the owner marked "wrap fast" gets a tighter Twilio TimeLimit — the cost guarantee.
   }, v.dtmf, {
     from,
-    // Nav-riding (Bravo agent-from-answer) calls get the mapped nav time ON TOP of the talk cap —
-    // a bare talk cap chops them mid-conversation (both 07-20/21 CVS calls hit the 120s wall).
+    // Tree calls get the mapped nav time ON TOP of the talk cap — a bare talk cap chops them
+    // mid-conversation (both 07-20/21 CVS calls hit the 120s wall during/after nav).
     timeLimitSec: (v.maxTalk ?? pol.bail.maxCallSeconds) + v.navBudgetSec,
     say: v.say, connectAtSec: v.connectAtSec ?? undefined,
-    // Direct stores AND Bravo voice-menu stores open the agent at answer (Bravo: the agent navigates
-    // the voice menu itself, so audio/transcript/steps exist from second one — owner 07-21).
-    connectOnHuman: (isDirect || v.agentFromAnswer) ? false : undefined,
+    connectOnHuman: isDirect ? false : undefined,
     voiceId: v.voiceId, voiceTuning: v.voiceTuning,
   });
 
