@@ -3532,7 +3532,7 @@ app.post("/app/zones", async (c) => {
   const b = await c.req.json();
   const retailerIds = (Array.isArray(b.retailerIds) ? b.retailerIds : []).map(Number).filter(Boolean);
   if (!retailerIds.length) return c.json({ error: "no_stores" }, 400);
-  const [z] = await db.insert(zones).values({ name: String(b.name || "").trim().slice(0, 60) || "My zone", ownerUserId: g.u.id, centerZip: b.centerZip ?? null, radiusMiles: b.radiusMiles ?? null }).returning();
+  const [z] = await db.insert(zones).values({ name: String(b.name || "").trim().slice(0, 24) || "My zone", ownerUserId: g.u.id, centerZip: b.centerZip ?? null, radiusMiles: b.radiusMiles ?? null }).returning();
   await db.insert(zoneRetailers).values(retailerIds.map((rid: number) => ({ zoneId: z.id, retailerId: rid })));
   return c.json(await zoneView(z), 201);
 });
@@ -3542,7 +3542,7 @@ app.patch("/app/zones/:id", async (c) => {
   const z = (await db.select().from(zones).where(and(eq(zones.id, id), eq(zones.ownerUserId, g.u.id))))[0];
   if (!z) return c.json({ error: "not_found" }, 404);
   const b = await c.req.json();
-  if (typeof b.name === "string") await db.update(zones).set({ name: b.name.trim().slice(0, 60) || z.name }).where(eq(zones.id, id));
+  if (typeof b.name === "string") await db.update(zones).set({ name: b.name.trim().slice(0, 24) || z.name }).where(eq(zones.id, id));
   if (Array.isArray(b.retailerIds)) {
     const ids = b.retailerIds.map(Number).filter(Boolean);
     await db.delete(zoneRetailers).where(eq(zoneRetailers.zoneId, id));

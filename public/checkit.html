@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r166" />
+<meta name="x-rev" content="glassfix-r167" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -478,6 +478,11 @@ __BRAND_HEAD__
      without shouting (owner 07-15). */
   .callwho{display:inline-flex;width:20px;height:20px;border-radius:6px;background:#1F1F25;align-items:center;justify-content:center;overflow:hidden;opacity:.72;vertical-align:-4px;margin-left:7px;flex:none}
   .callwho img{max-width:15px;max-height:15px;object-fit:contain}
+  /* Wide wordmark logos (TJ Maxx, Big 5…) were crushed into the 20px square — give them room. Dark
+     logos get the light backing, same rule as every .ic tile. */
+  .callwho.widelogo{width:auto;padding:0 5px}
+  .callwho.widelogo img{max-width:46px;max-height:13px}
+  .callwho.lite{background:#E9E9EF;opacity:1}
   .verdict.in .title{color:var(--green)} .verdict.out .title{color:var(--red)} .verdict.unk .title{color:#FBBF24} .verdict.soon .title{color:#F59E0B}
   .vstore{text-align:center;color:#d6d6e0;font-size:14.5px;font-weight:600;margin-top:9px}
   /* combined call header: store + verdict status + timing in one box at the top */
@@ -1986,6 +1991,9 @@ html[data-skin="v2"] #zones.on .modal,html[data-skin="v2"] #histOverlay.on .moda
    them sliding up from the bottom edge over the dimmed zones list, same recipe as scorePostOv. */
 html[data-skin="v2"] #zmenuOv,html[data-skin="v2"] #emailOv,html[data-skin="v2"] #alertsOv,html[data-skin="v2"] #featOv{align-items:flex-end;padding:0}
 html[data-skin="v2"] #zmenuOv .modal,html[data-skin="v2"] #emailOv .modal,html[data-skin="v2"] #alertsOv .modal,html[data-skin="v2"] #featOv .modal{width:100%;max-width:none!important;border-radius:28px 28px 0 0;margin:0;padding:8px 20px calc(24px + env(safe-area-inset-bottom))}
+/* The bottom slide-up was invisible against the page behind it (owner 07-21: the check-zone confirm
+   "got lost"). A hairline top-edge border + deeper drop shadow separates the sheet from the page. */
+html[data-skin="v2"] #zmenuOv .modal,html[data-skin="v2"] #emailOv .modal,html[data-skin="v2"] #alertsOv .modal,html[data-skin="v2"] #featOv .modal{border:1px solid rgba(255,255,255,.15);border-bottom:0;box-shadow:0 -20px 60px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.07)}
 html[data-skin="v2"] #zmenuOv .modal::before,html[data-skin="v2"] #emailOv .modal::before,html[data-skin="v2"] #alertsOv .modal::before,html[data-skin="v2"] #featOv .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 16px}
 html[data-skin="v2"] #zmenuOv.on .modal,html[data-skin="v2"] #emailOv.on .modal,html[data-skin="v2"] #alertsOv.on .modal,html[data-skin="v2"] #featOv.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
 html[data-skin="v2"] #histOverlay .hist-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:2px 18px calc(22px + env(safe-area-inset-bottom))}
@@ -5398,7 +5406,7 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
     return `<div class="ctlv2" style="margin-bottom:22px">
       <div class="ctlv2-rail"><span class="d1"></span><span class="ln" style="background:linear-gradient(180deg,#4ADE80 0%,${live?'#4ADE80 100%':`color-mix(in srgb,#4ADE80 35%,${tone}) 60%,${tone} 100%`})"></span><span class="d2" style="background:${live?'#4ADE80':tone};${live?'box-shadow:0 0 8px rgba(74,222,128,.6)':''}"></span></div>
       <div style="flex:1;min-width:0">
-        <details${status?'':' open'}><summary><span class="ctl-lead${(live&&stepRows.length)?' was':''}" style="display:inline-flex;align-items:center">${t('step.calling','Calling')}${(()=>{const _w=(status&&status.store)||SEL_STORE;return _w&&(_w.logoUrl||_w.name)?`<span class="callwho ${_w.logoDark?'lite':''}">${storeFace(_w)}</span>`:'';})()}</span><span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#8A8A96">${stepRows.length+1} ${stepRows.length+1===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg></span></summary>
+        <details${status?'':' open'}><summary><span class="ctl-lead${(live&&stepRows.length)?' was':''}" style="display:inline-flex;align-items:center">${t('step.calling','Calling')}${(()=>{const _w=(status&&status.store)||SEL_STORE;return _w&&(_w.logoUrl||_w.name)?`<span class="callwho ${_w.logoDark?'lite':''}${_w.logoWide?' widelogo':''}">${storeFace(_w)}</span>`:'';})()}</span><span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#8A8A96">${stepRows.length+1} ${stepRows.length+1===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg></span></summary>
           <div class="ctlv2-steps">${stepEls}</div>
         </details>
         <div id="convo_body" style="${bubs?'margin-top:12px;':''}display:flex;flex-direction:column;gap:9px">${bubs}</div>
@@ -5420,7 +5428,7 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
   }).join('');
   // Roll-up handle: lead with "Ringing the store…" (drop the "Calling {store}" header) + total steps · secs.
   const totalS = finalElapsed!=null ? Math.round(finalElapsed) : (n>0 ? Math.round(steps[n-1].at) : 0);
-  const reach = n ? `<details class="reach" open><summary><span class="ctl-dot"></span><span class="reach-lbl" style="display:inline-flex;align-items:center">${t('step.calling','Calling')}${SEL_STORE&&(SEL_STORE.logoUrl||SEL_STORE.name)?`<span class="callwho ${SEL_STORE.logoDark?'lite':''}">${storeFace(SEL_STORE)}</span>`:''}</span><span class="reach-n">${n} ${n===1?t('step.one','step'):t('step.many','steps')}${totalS?` · <span class="cs-count">${totalS}</span>s`:''}</span><span class="reach-chev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary><div class="reach-steps">${stepRows}</div></details>` : '';
+  const reach = n ? `<details class="reach" open><summary><span class="ctl-dot"></span><span class="reach-lbl" style="display:inline-flex;align-items:center">${t('step.calling','Calling')}${SEL_STORE&&(SEL_STORE.logoUrl||SEL_STORE.name)?`<span class="callwho ${SEL_STORE.logoDark?'lite':''}${SEL_STORE.logoWide?' widelogo':''}">${storeFace(SEL_STORE)}</span>`:''}</span><span class="reach-n">${n} ${n===1?t('step.one','step'):t('step.many','steps')}${totalS?` · <span class="cs-count">${totalS}</span>s`:''}</span><span class="reach-chev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary><div class="reach-steps">${stepRows}</div></details>` : '';
   // Conversation: a "Conversation" label (green dot) then the bubbles — NO per-bubble dots.
   const convLabel = human.length ? `<div class="ctl-conv"><span class="ctl-dot"></span><span class="conv-lbl">${t('res.conversation','Conversation')}</span></div>` : '';
   const emptyMsg = finalElapsed==null ? t('live.waitperson',"Reaching a person…") : '';
@@ -7298,7 +7306,11 @@ async function zoneDelete(id){ try{ await appApi('/app/zones/'+id,{method:'DELET
 // ---- Screen A — build / edit a zone ----
 async function zoneNew(){ zHideAll(); zShow(); ZONES.editId=null; ZONES.sel=new Set(); ZONES.name=''; ZONES.mapOpen=false; renderZoneBuild(); await zoneEnsureStores(); renderZoneBuild(); }
 async function zoneEdit(id){ zHideAll(); zShow(); ZONES.editId=id; ZONES.sel=new Set(); ZONES.name='';
-  try{ const r=await appApi('/app/zones/'+id); const zn=(r&&r.id)?r:((r&&r.zone)||null); if(zn){ ZONES.name=zn.name||''; (zn.stores||[]).forEach(s=>{ ZONES.sel.add(s.retailerId); ZONES.storeById.set(s.retailerId,s); }); } }catch(_){ }
+  // Seed from the zones LIST (it carries each zone's stores) — GET /app/zones/<id> never existed, so
+  // this fetch 404'd silently and Edit opened with nothing selected (owner 07-21: "the whole point of edit").
+  let zn=(ZONES.list||[]).find(x=>x.id===id);
+  if(!zn){ try{ const r=await appApi('/app/zones'); if(Array.isArray(r)){ ZONES.list=r; zn=r.find(x=>x.id===id); } }catch(_){ } }
+  if(zn){ ZONES.name=zn.name||''; (zn.stores||[]).forEach(s=>{ ZONES.sel.add(s.retailerId); ZONES.storeById.set(s.retailerId,s); }); }
   await zoneEnsureStores(); renderZoneBuild();
 }
 async function zoneEnsureStores(){
@@ -7352,7 +7364,7 @@ function renderZoneBuild(){
         <button class="zclearall" onclick="zoneClearAll()">${t('zones.clearall','Clear all')}</button>
         <span class="zcount10${n>=10?' full':''}" id="z_count">${n} <i>/ 10</i></span>
       </div>
-      <div class="zbkrow"><input id="z_name" placeholder="${t('zones.nameph3','Name it…')}" value="${esc(ZONES.name||'')}" maxlength="40" oninput="ZONES.name=this.value"><button class="zbksave" id="z_save" onclick="zoneSave()"><span>${t('zones.save2','Save')}</span></button></div>
+      <div class="zbkrow"><input id="z_name" placeholder="${t('zones.nameph3','Name it…')}" value="${esc(ZONES.name||'')}" maxlength="24" oninput="ZONES.name=this.value.slice(0,24)"><button class="zbksave" id="z_save" onclick="zoneSave()"><span>${t('zones.save2','Save')}</span></button></div>
     </div></div>
   </div>`;
   if(map) setTimeout(zoneMapEnsure,30); // (re)build the Leaflet map into the fresh #zmap node
@@ -7487,7 +7499,12 @@ async function zoneCheckAll(id){
       ${closedWarn||`<div class="meta" style="margin-bottom:16px">${t('zones.confirm.per','1 check per store.')}</div>`}
       <button class="zc-go" style="width:100%;margin-bottom:10px;display:block" id="zca_go"><span style="justify-content:center">${tf('zones.checkallN','Check all {n}',{n:openN})}${ZGOARR}</span></button>
       <button style="${Z_ROWBTN};justify-content:center" id="zca_no">${t('pre.again.no','Not now')}</button>`);
-    $('zca_go').onclick=()=>{ zPopClose(); res(true); }; $('zca_no').onclick=()=>{ zPopClose(); res(false); };
+    // GHOST-TAP GUARD (owner 07-21: a sweep started without him choosing). The confirm opens in the
+    // SAME tap that pressed "Check zone", and iOS fires a trailing click that lands on the go button
+    // that just appeared under the finger. The go button is dead for its first 600ms — a tap in that
+    // window is the opening gesture, never a choice. Cancel paths stay live immediately.
+    const _t0=Date.now();
+    $('zca_go').onclick=()=>{ if(Date.now()-_t0<600) return; zPopClose(); res(true); }; $('zca_no').onclick=()=>{ zPopClose(); res(false); };
     $('zmenuOv').onclick=e=>{ if(e.target===$('zmenuOv')){ zPopClose(); res(false); } };
   });
   if(!goOn) return;
@@ -7589,15 +7606,34 @@ function zoneShareSheet(){ const r=ZONES.run; const d=(r&&r.data)||{}; const sm=
   const txt=tf('zones.sharemsg2','Checked {n} stores at once. {i} had it in stock. Wild:',{n:total,i:inN});
   const hits=(d.results||[]).filter(row=>zoneRunTone(row)==='in');
   const tiles=hits.slice(0,6).map(row=>`<div>${storeFace({logoUrl:row.logoUrl,name:row.name})}</div>`).join('');
-  // The comp's share block, as the slide-up (owner 07-20): card + share text + one Share action.
-  zPop(`<div class="zsharecard" style="margin:4px 0 12px">
+  // Comp layout (owner 07-21): "Share results" title, card w/ headline + product·zone·when meta +
+  // in-stock logo tiles, share-text well, then SHARE (primary) + COPY side by side. One owner tweak:
+  // the check brandmark stays as the card's upper-right watermark, NOT the comp's logo row up top.
+  const zn=(ZONES.list||[]).find(x=>x.id===r.id);
+  const when=(zn&&zn.lastRun&&zn.lastRun.at)?tf('zones.agoword','{t} ago',{t:zAgo(zn.lastRun.at*1000)}):t('zones.justnow','just now');
+  const meta=[(BRAND&&BRAND.category)||'', (zn&&zn.name)||r.name||'', when].filter(Boolean).join(' · ');
+  zPop(`<div style="text-align:center;font:900 20px Inter;letter-spacing:-.4px;margin:0 0 14px">${t('zones.sharetitle','Share results')}</div>
+    <div class="zsharecard" style="margin:0 0 12px">
       <div class="wm2"><svg width="120" height="120" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" fill="#4CF286"/><path d="M6.5 12.4 L10.3 16 L17.5 8" stroke="#0C2916" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
       <div class="chip2"><b></b><span>${t('zones.zonecheck','Zone check')}</span></div>
       <div class="hl2">${tf('zones.hadit','{i} of {n} stores had it in stock.',{i:inN,n:total})}</div>
+      ${meta?`<div style="font:600 13px Inter;color:#9A9AA6;margin-top:6px">${esc(meta)}</div>`:''}
       ${tiles?`<div class="tiles2">${tiles}</div>`:''}
     </div>
     <div class="zsharewell" style="margin-bottom:14px"><div class="lbl2">${t('zones.sharetext','Share text')}</div><div class="tx2">${esc(txt)}</div></div>
-    <button class="zsharego" onclick="zPopClose();zoneShare()">${t('zones.sharego','Share')}</button>`); }
+    <div style="display:flex;gap:10px;align-items:stretch">
+      <button class="zsharego" style="flex:1" onclick="zPopClose();zoneShare()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg>${t('zones.sharego','Share')}</button>
+      <button onclick="zoneCopyShare(this)" style="flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:8px;height:52px;padding:0 20px;border-radius:14px;border:0;background:linear-gradient(180deg,#31313A 0%,#26262C 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);font:800 13px Inter;letter-spacing:.1em;text-transform:uppercase;color:#DCDCE6;cursor:pointer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>${t('zones.copy','Copy')}</button>
+    </div>`); }
+// Copy the share text + the SAME landing link zoneShare sends — comp's second action.
+async function zoneCopyShare(btn){ const r=ZONES.run; const d=(r&&r.data)||{}; const sm=d.summary||{}; const n=d.total||0, i=sm.inStock||0;
+  const hits=(d.results||[]).filter(row=>zoneRunTone(row)==='in').slice(0,6).map(row=>({l:row.logoUrl||'',n:row.name||''}));
+  const st=hits.length?'&st='+encodeURIComponent(JSON.stringify(hits)):'';
+  const url=location.origin+'/s?k=zone&n='+n+'&i='+i+'&cat='+encodeURIComponent(brandProduct())+st+'&lang='+LANG;
+  const txt=tf('zones.sharemsg2','Checked {n} stores at once. {i} had it in stock. Wild:',{n,i})+' '+url;
+  try{ await navigator.clipboard.writeText(txt); }catch(_){ try{ const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }catch(_2){ } }
+  try{ if(btn){ const keep=btn.innerHTML; btn.innerHTML=t('zones.copied','Copied ✓'); setTimeout(()=>{ try{ btn.innerHTML=keep; }catch(_){ } },1400); } }catch(_){ }
+  toast(t('zones.copied2','Copied to clipboard'),'neutral'); }
 // Standalone PREVIEW of the live sweep report (owner: "give me a link before I call stores"). Mirrors
 // ?holdpeek — opens the real report over the app with SAMPLE results, no calls placed. Pulls real
 // nearby stores so the logos are real; falls back to plain names if the fetch is empty.
