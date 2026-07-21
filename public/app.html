@@ -954,6 +954,7 @@
       <div class="pk-fact" id="sup_credits_fact"></div>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
+    <div id="sup_src"></div>
     <div class="k-filters">
       <select class="k-filter" id="sup_f_cat" onchange="supFilter()">
         <option value="">All categories</option>
@@ -2902,13 +2903,13 @@ function supStatusPill(s){
   const cls=k==='resolved'?'g':(k==='escalated'?'a':'');
   return `<span class="pill ${cls}" style="font-size:10.5px;padding:3px 9px">${esch(k)}</span>`;
 }
-async function loadSupport(){ loadSupportStats(); loadSupportChats(); loadSupportCredits(); }
+async function loadSupport(){ { const sp=document.getElementById('sup_src'); if(sp) sp.innerHTML=srcPicker('loadSupport'); } loadSupportStats(); loadSupportChats(); loadSupportCredits(); }
 // Auto-credit audit: every make-good the credit machine granted, with the evidence. Row stays
 // hidden until the first grant exists so the section doesn't ship an empty box.
 async function loadSupportCredits(){
   const row=document.getElementById('sup_credits_row'), holder=document.getElementById('ds_supcredits');
   if(!row||!holder) return;
-  const r=await api('/api/support/credits');
+  const r=await srcApi('/api/support/credits');
   const g=(r&&Array.isArray(r.grants))?r.grants:[];
   if(!g.length){ row.style.display='none'; return; }
   row.style.display='';
@@ -2928,7 +2929,7 @@ async function loadSupportStats(){
   const heroN=document.getElementById('sup_hero_n'), heroL=document.getElementById('sup_hero_l');
   const wells=document.getElementById('sup_wells'), cats=document.getElementById('sup_cats');
   const topRow=document.getElementById('sup_top_row');
-  const r=await api('/api/support/stats?range='+encodeURIComponent(SUP.range));
+  const r=await srcApi('/api/support/stats?range='+encodeURIComponent(SUP.range));
   const rangeWord={today:'chats today','7d':'chats this week','30d':'chats this month'}[SUP.range]||'chats';
   if(!r||r.error){
     if(heroN)heroN.textContent='—'; if(heroL)heroL.textContent='Support APIs aren\'t live yet. This lights up on its own once they land.';
@@ -2963,9 +2964,9 @@ async function loadSupportChats(){
   const el=document.getElementById('sup_list'); if(!el) return;
   const p=new URLSearchParams({account:SUP.acct,since:String(supSince())});
   if(SUP.cat)p.set('category',SUP.cat); if(SUP.q)p.set('q',SUP.q);
-  const r=await api('/api/support/chats?'+p.toString());
+  const r=await srcApi('/api/support/chats?'+p.toString());
   const rows=Array.isArray(r)?r:(r&&Array.isArray(r.chats)?r.chats:null);
-  if(!rows){ el.innerHTML='<div class="empty">No chat data yet. Waiting on the Support lane\'s API.</div>'; return; }
+  if(!rows){ el.innerHTML=srcEmpty(r,'<div class="empty">No chat data yet. Waiting on the Support lane\'s API.</div>'); return; }
   if(!rows.length){ el.innerHTML='<div class="empty">No chats match these filters.</div>'; return; }
   // Log rows (comp 1g): initials tile · the question · who/category/when · right icon = how it ended
   // (green check = the AI handled it, amber up arrow = went to a human, yellow ? = pending).
@@ -2988,7 +2989,7 @@ async function loadSupportChats(){
   }).join('');
 }
 async function openSupChat(id){
-  const r=await api('/api/support/chats/'+encodeURIComponent(id));
+  const r=await srcApi('/api/support/chats/'+encodeURIComponent(id));
   if(!r||r.error){ toast('Could not load that chat'); return; }
   const msgs=Array.isArray(r.transcript)?r.transcript:(Array.isArray(r.messages)?r.messages:[]);
   const bub=(m)=>{ const ours=m.role!=='user'&&m.role!=='customer';
@@ -3021,7 +3022,7 @@ async function supTeach(id){
   const q=((document.getElementById('sup_teach_q')||{}).value||'').trim();
   const a=((document.getElementById('sup_teach_a')||{}).value||'').trim();
   if(!q||!a){ toast('Add a question and the right answer first'); return; }
-  const r=await api('/api/support/review/'+encodeURIComponent(id),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'approve',question:q,answer:a})});
+  const r=await srcApi('/api/support/review/'+encodeURIComponent(id),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'approve',question:q,answer:a})});
   if(r&&r.ok){ toast('Saved. It will use this next time.'); closeSheet(); }
   else toast('Could not save that answer');
 }

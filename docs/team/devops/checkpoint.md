@@ -9,8 +9,6 @@
   New tests in `tests/e2e/consumer.spec.ts` (P0/P1/P2 blocks), `local.spec.ts` (P2-27 + P3 admin
   walk via admin.localhost), `admin-api.spec.ts` (P3-34 publish→in_sync). Coverage table in
   harness.md is the live record. **Last runs GREEN: local 13/13 · staging 40/40 (2 honest skips).**
-- **Fixed 2 stale reds:** A6 (expected closed stores IN the near feed; 07-16 open-now law drops them
-  server-side) + admin.spec dead `#tr_stats`→`#tr_progress`.
 - **SMS kill-switch SHIPPED** — new `flags.smsAlerts` (default OFF). While OFF: watch/schedule/waitlist
   forms collect EMAIL only (EN+ES, placeholder survives the lang pass — drops data-i18n-ph), `/pub/watch`
   refuses phone contacts (400), `/app/alerts/subscribe` rides email, `sendAlert` never fires a customer
@@ -18,10 +16,6 @@
   **Owner flips it ON when Toll/A2P approves — no rebuild.** Proven live: consumer.spec P1-9b.
 - **Referrals PROVEN end-to-end (GTM card can close)** — consumer.spec P1-10 (API) + P1-10b (real ?ref
   link → welcome → signup → auto-claim pays BOTH + count ticks). Was "BUILT, needs walk" — walked.
-- **GTM cards now tap-to-expand** (`public/app.html`, gtmToggleOpen) — owner couldn't read full card
-  text. Shipped to Admin via ship-admin.sh @ 4e8c5b5.
-- Two readable owner reports in scratchpad (launch-test-report.md, launch-list.md) — NOT committed
-  (scratchpad = trash); regenerate from harness.md + `/api/gtm` if needed.
 
 ## 📍 2026-07-16 — everything on staging; ONE promote lights up the last two pipes
 - **Settings mirror prod→staging LIVE (staging half)** — `src/settings-sync.ts`, pull-only every
