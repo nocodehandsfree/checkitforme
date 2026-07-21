@@ -787,6 +787,7 @@
   <section id="users">
     <div class="k-title">Users</div>
     <div class="k-sub" id="users_sub">Everyone with an account.</div>
+    <div id="users_src"></div>
     <div id="users_list"><div class="empty">Loading…</div></div>
   </section>
   <section id="restock">
@@ -5173,7 +5174,10 @@ async function loadCallHealth(){
 // User dashboard: everyone who signed up (phone-first, Clerk-free) — newest first.
 async function loadUsers(){
   const el=document.getElementById('users_list'); if(!el) return;
-  const d=await api('/api/admin/users');
+  { const sp=document.getElementById('users_src'); if(sp) sp.innerHTML=srcPicker('loadUsers'); }
+  const d=await srcApi('/api/admin/users');
+  if(d&&d.error==='staging_auth'){ el.textContent='Staging sign-in needed — open staging.checkitforme.com once, then reload.'; return; }
+  if(d&&d.error==='staging_down'){ el.textContent='Could not reach the staging site.'; return; }
   if(!Array.isArray(d)){ el.textContent='Could not load users.'; return; }
   if(!d.length){ el.innerHTML=emptyState('key','#4ADE80','No signups yet','Accounts appear when a phone verifies'); return; }
   USERS_ROWS=d;
@@ -5217,17 +5221,17 @@ function userSheet(i){
 // cancel any live subscription. Previews the exact counts first, then asks once before deleting.
 async function resetAccount(id,label){
   const enc=encodeURIComponent(id);
-  const dry=await api('/api/admin/users/'+enc+'/delete?dry=1',{method:'POST'});
+  const dry=await srcApi('/api/admin/users/'+enc+'/delete?dry=1',{method:'POST'});
   if(!dry||dry.error){ toast('Could not read that account'); return; }
   const w=dry.wouldRemove||{};
   const owned=(w.callResults||0)+(w.customerSchedules||0)+(w.alertSubscriptions||0)+(w.storeRequests||0)+(w.communityPosts||0)+(w.zones||0)+(w.watches||0);
   const subs=(dry.stripeSubsToCancel||[]).length;
   const lines=['Reset '+label+' to a brand new account?','','Removes the account plus '+owned+' owned item'+(owned===1?'':'s')+' (checks, alerts, schedules, zones).'+(subs?(' Cancels '+subs+' live subscription'+(subs===1?'':'s')+'.'):'' ),'','This cannot be undone.'];
   if(!confirm(lines.join('\n'))) return;
-  const r=await api('/api/admin/users/'+enc+'/delete',{method:'POST'});
+  const r=await srcApi('/api/admin/users/'+enc+'/delete',{method:'POST'});
   if(r&&r.ok){ toast(label+' reset to brand new'); loadUsers(); } else toast('Could not reset that account');
 }
-async function toggleStaff(id,on){ const r=await api('/api/admin/users/staff',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,on})}); if(r&&!r.error){ toast(on?'Flagged as admin/test · not a customer':'Unflagged'); loadUsers(); } else toast('Could not update'); }
+async function toggleStaff(id,on){ const r=await srcApi('/api/admin/users/staff',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,on})}); if(r&&!r.error){ toast(on?'Flagged as admin/test · not a customer':'Unflagged'); loadUsers(); } else toast('Could not update'); }
 // ---- Restock intel (God View → Restock): network view + per-store breakdown on tap ----
 function rsBar(label,n,max,cls){ return `<div class="rsbar"><span class="rsbl">${esch(label)}</span><span class="rsbt"><span class="rsbf ${cls||''}" style="width:${max?Math.round(n/max*100):0}%"></span></span><b>${n}</b></div>`; }
 async function loadRestock(){
