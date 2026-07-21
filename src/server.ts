@@ -6223,16 +6223,13 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
     const acct = (await db.select().from(accounts).where(eq(accounts.clerkUserId, finder.userId)))[0];
     if (acct?.callerId) from = acct.callerId; // only set after Twilio caller-ID verification
   }
-  // FIRST-WORD CAPTURE without losing the live view (owner 07-18). Everything runs through the bridge
-  // (keeps the live transcript relay AND live-listen). The clip was connect-on-human: on a store with
-  // NO menu, waiting to VAD-detect a human before the agent joins buys nothing — the detected greeting
-  // is consumed by detection instead of reaching the agent, so "This is Bob" is lost. For DIRECT stores
-  // we instead connect the agent AT ANSWER (connectOnHuman:false): Twilio's <Connect><Stream> only
-  // starts at pickup, so there's no ringing waste, and the bridge buffers inbound frames during the
-  // ~200-500ms EL handshake and replays them the instant the agent is ready — so the opening words are
-  // captured, not clipped. Menu/tree stores KEEP connect-on-human (it saves the real nav time).
-  const isDirect = !v.dtmf && !v.say && !v.connectAtSec &&
-    (() => { const t = (v.dynamicVars.phone_tree || "").trim(); return !t || /answers? directly|no (phone )?menu|no ivr|straight to a person/i.test(t); })();
+  // ROLLBACK of the 07-18 "first-word capture" instant-connect (owner order 07-21): connecting the
+  // agent AT ANSWER on "direct" stores made Charlie talk over any store that only LOOKS direct but
+  // plays a recording first (Box Lunch, Hot Topic, B&N Thousand Oaks — billed from second one).
+  // Every store now waits for a voice before the paid agent joins (connect-on-human default), the
+  // exact behavior of the trusted pre-07-18 era. Cost accepted by the owner: a true direct clerk's
+  // first words can get clipped again. The REAL fix (ears open at pickup, mouth held until the words
+  // read human, never-silent cap) is Echo's boxed build — do NOT re-enable instant-connect here.
 
   // Concurrency governor (flag-gated). OFF = the exact path below (row inserted only at connect, no
   // slot) — byte-identical to before. ON = pre-insert a "dialing" row so we can hold a slot keyed on
@@ -6268,7 +6265,7 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
     }
     // Per-store talk cap (chains.maxTalkSeconds) wins over the global bail ceiling when set, so a
     // store the owner marked "wrap fast" gets a tighter Twilio TimeLimit — the cost guarantee.
-  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, connectOnHuman: isDirect ? false : undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning });
+  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning });
 
   // Governed bookkeeping: point the pre-inserted row at the room (so /pub/result resolves it before
   // connect), release the slot on a dial that never placed, and register a finalizer that frees the
