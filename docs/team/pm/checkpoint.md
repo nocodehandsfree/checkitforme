@@ -17,6 +17,10 @@ product, rebuild process · hard stops over prose rules · PM as front door · t
 - **Owner plan:** close ALL old chats, reboot lanes fresh one at a time, each boot = PM boxed order.
 
 ## Open verifies (PM drives before anything new ships)
+0. **424 = admin on STAGING (owner 07-21, noted don't-fix-yet):** his 424 is in staging's
+   ADMIN_PHONES, so the fresh-customer signup test boots as admin. Before the real-card/upgrade walk
+   (owner + Chris): pull 424 from staging ADMIN_PHONES (Railway var), verify clean signup. COMP undo
+   already done on prod (owner wants 424 as a real paying account — do NOT re-comp it).
 1. **Zone run on CVS/Walgreens** since the rebuild (zones dial the SAME engine as single checks,
    2080731; Mapper's VAD patch reverted 8eb8d22 — rides next promote). Real calls, owner judges.
 2. **Logo fidelity in My Zones + call-log header logo** (owner: both broke; logos-in-history fix
