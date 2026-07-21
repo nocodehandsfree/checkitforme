@@ -7635,7 +7635,7 @@ function renderZoneRun(){
   const subMeta = (loading&&!r.fresh) ? '' : (live?`${cLive} ${t('zones.callingnow','calling now')}${cQueue?` · ${cQueue} ${t('zones.waitingslot','waiting for a slot')}`:''}`:(r.fresh?t('zones.starting2','Starting…'):''));
   const pillsOrSub = pillHTML || (subMeta?`<span class="zrsub">${esc(subMeta)}</span>`:'');
   // Ring center: the running count while live, a green check the moment it's all done (comp screenshot 1).
-  const ringNum=live?`<span style="font:900 25px Inter;color:#fff">${ringDone}</span><span style="font:800 14px Inter;color:#7C7C88">/${ringTotal}</span>`:'<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"/></svg>';
+  const ringNum=live?`<span style="display:inline-flex;align-items:baseline"><span style="font:900 25px Inter;color:#fff">${ringDone}</span><span style="font:800 14px Inter;color:#7C7C88">/${ringTotal}</span></span>`:'<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"/></svg>';
 
   // ---- IN-PLACE tick (poll): same row set + same live-state -> update marks/tally only, so scroll
   // position, open transcripts, and the stop box all survive (the 1.8s full repaint was wiping them).
@@ -7676,7 +7676,7 @@ function renderZoneRun(){
           <circle cx="50" cy="50" r="42" fill="none" stroke="#2D2D34" stroke-width="9"/>
           <circle id="z_ringarc" cx="50" cy="50" r="42" fill="none" stroke="#4ADE80" stroke-width="9" stroke-linecap="round" stroke-dasharray="${RINGC}" stroke-dashoffset="${ringOff}" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset .5s ease"/>
         </svg>
-        <div id="z_ringnum" style="position:absolute;inset:0;display:grid;place-items:center;line-height:1">${ringNum}</div>
+        <div id="z_ringnum" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;line-height:1">${ringNum}</div>
       </div>
       <div style="flex:1;min-width:0;text-align:left">
         <div style="display:flex;align-items:center;gap:8px">
