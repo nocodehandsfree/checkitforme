@@ -54,7 +54,7 @@ import { check as rlCheck, clientIp, LIMITS } from "./ratelimit";
 import { isGmailConfigured, gmailReceiptTick, debugRecentInbox } from "./gmail-receipts";
 import { rankBets } from "./best-bet";
 import { referralStatus, claimReferral } from "./referrals";
-import { sendAlert, sendAnonEmail, sendTestAlert, sendOwnerInStockEmail, sendConfirmEmail, checkEmailToken, alertSubscribe, myAlerts, alertMute, getAlertTemplatesPublic, setAlertTemplates, monthKey, fanoutRestock } from "./alerts";
+import { sendAlert, sendAnonEmail, sendTestAlert, sendOwnerInStockEmail, sendConfirmEmail, checkEmailToken, alertSubscribe, myAlerts, alertMute, pauseAllAlerts, alertSlotsUsed, alertExists, ALERT_SLOT_CAP, getAlertTemplatesPublic, setAlertTemplates, monthKey, fanoutRestock } from "./alerts";
 import { ownerAlertPrefs, notifyContact } from "./calls/notify";
 
 /** 409-style gate: returns a closed payload if we KNOW the store is closed right now, else null. */
@@ -5163,21 +5163,38 @@ app.post("/app/alerts/subscribe", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
   if (!u) return c.json({ error: "unauthorized" }, 401);
   const b = await c.req.json().catch(() => ({}));
-  await getAccount(u.id, u.email || undefined);
+  const acct = await getAccount(u.id, u.email || undefined);
   // The site sends its language with the signup — store it so this account's alerts go out in it.
   const subLang = b.lang === "es" ? "es" : b.lang === "en" ? "en" : undefined;
   if (subLang) await db.update(accounts).set({ language: subLang }).where(eq(accounts.clerkUserId, u.id));
-  // SMS stays dark until flags.smsAlerts (toll-free approval) — an sms ask quietly rides email instead
-  // of erroring, so an out-of-date client still gets its alert.
-  const smsOn = (await getPolicy()).flags.smsAlerts;
+  const retailerId = b.retailerId != null ? Number(b.retailerId) : null;
+  const productLabel = b.productLabel ? String(b.productLabel).slice(0, 120) : null;
+  // CAP: 10 slots (ON or OFF both hold one). A store already on the list re-subscribes for free; a NEW
+  // store at the cap gets bounced back so the client can open the list in make-room mode.
+  const already = await alertExists(u.id, retailerId, productLabel);
+  if (!already && (await alertSlotsUsed(u.id)) >= ALERT_SLOT_CAP) {
+    return c.json({ error: "cap", cap: ALERT_SLOT_CAP, ...(await myAlerts(u.id)) }, 200);
+  }
+  // Email is the one alert channel here (SMS/toll-free still dark) — every opt-in rides the account email.
   const r = await alertSubscribe(u.id, {
     kind: b.kind ? String(b.kind) : "restock",
-    retailerId: b.retailerId != null ? Number(b.retailerId) : null,
+    retailerId,
     categoryId: b.categoryId != null ? Number(b.categoryId) : null,
-    productLabel: b.productLabel ? String(b.productLabel).slice(0, 120) : null,
-    channel: b.channel === "email" ? "email" : smsOn ? "sms" : "email",
+    productLabel,
+    channel: "email",
   });
-  return c.json(r);
+  // Confirmed email → instant ON, nothing else asked. No email → the client asks inline then POSTs
+  // /app/email (one confirm). Pending email → tell them to check their inbox. The sub is live either way;
+  // delivery is globally gated on emailVerifiedAt, so a pending watch turns on by itself once confirmed.
+  const status = acct?.emailVerifiedAt ? "on" : acct?.email ? "pending" : "need_email";
+  return c.json({ ...r, status, hasEmail: !!acct?.email, emailVerified: !!acct?.emailVerifiedAt });
+});
+// Master "Pause all alerts" — the switch on top of the Alerts list.
+app.post("/app/alerts/pause-all", async (c) => {
+  const u = await verifyClerkToken(c.req.header("Authorization"));
+  if (!u) return c.json({ error: "unauthorized" }, 401);
+  const { paused } = await c.req.json().catch(() => ({}));
+  return c.json(await pauseAllAlerts(u.id, !!paused));
 });
 app.get("/app/alerts/me", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));

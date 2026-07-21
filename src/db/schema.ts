@@ -264,6 +264,7 @@ export const accounts = sqliteTable("accounts", {
   clerkUserId: text("clerk_user_id").primaryKey(), // Clerk id, OR "phone:<E.164>" for phone-first users
   email: text("email"),
   emailVerifiedAt: integer("email_verified_at"), // set when they tap the confirm-email link; alert emails require it
+  alertsPausedAt: integer("alerts_paused_at"),   // master "Pause all alerts": set = every alert paused (fan-out skips this account) until cleared
   language: text("language"),   // "es" → alert emails/texts go out in Spanish; null/"en" → English
   phone: text("phone"),         // E.164 cell for phone-first (Clerk-free) identity
   callerId: text("caller_id"),  // verified caller-ID number for this account's outbound calls

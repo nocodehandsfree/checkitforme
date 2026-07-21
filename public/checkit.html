@@ -1297,6 +1297,13 @@ __BRAND_HEAD__
   .ho-toggle{display:flex;background:var(--terminal);border:1px solid var(--border);border-radius:13px;padding:4px;gap:4px}
   .ho-toggle button{flex:1;border:0;background:transparent;color:var(--muted);font-weight:700;font-size:13px;padding:10px 6px;border-radius:9px;cursor:pointer;transition:.18s;white-space:nowrap}
   .ho-toggle button.on{background:var(--sheet);color:#fff}
+  /* Alerts list (owner 07-21): each watched store is the site's own store row + one ON/OFF switch
+     (reuses .ho-toggle), a master pause on top, and a remove. */
+  .alsw button{padding:8px 6px;font-size:12px}
+  .alrm{background:rgba(255,123,123,.12);border:0;border-radius:12px;padding:9px;color:#FF9B9B;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .alrow-off{opacity:.55}
+  .alpause{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)}
+  .almk{padding:12px 14px;border-radius:14px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.28);color:#F5C368;font-size:13px;font-weight:700;line-height:1.45;text-align:center}
   .ho-stepper{display:flex;align-items:center;justify-content:space-between;background:var(--terminal);border:1px solid var(--border);border-radius:13px;padding:8px 10px}
   .ho-stepper .amt{font-size:26px;font-weight:900;letter-spacing:-.4px}
   .ho-pm{display:flex;gap:8px}
@@ -2496,7 +2503,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     <div class="meta" style="margin-bottom:16px;text-align:center" id="watch_sub" data-i18n="watch.sub">We'll ping you the instant anyone confirms it in stock here.</div>
     <input id="watch_contact" type="text" inputmode="email" autocomplete="email" placeholder="email or phone number" data-i18n-ph="watch.ph" style="width:100%;background:#15151c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 12px;font-size:16px;box-sizing:border-box">
     <div id="watch_err" style="color:#ff6b6b;font-size:13px;margin-top:8px;min-height:16px"></div>
-    <button class="cta" id="watch_btn" onclick="submitWatch()" style="margin-top:6px;width:100%" data-i18n="watch.cta">Watch this store →</button>
+    <button class="cta" id="watch_btn" onclick="submitWatchEmail()" style="margin-top:6px;width:100%" data-i18n="watch.cta">Watch this store →</button>
   </div>
 </div>
 
@@ -3114,6 +3121,7 @@ const I18N={ es:{
   'zones.radius':'Radio','zones.addallshort':'Agregar todo','zones.selstore':'tienda seleccionada','zones.selstores':'tiendas seleccionadas',
   'zones.typloc':'Escribe primero un código postal o ciudad.','zones.located':'Centrado en {q}','zones.noplace':'No encontramos ese lugar.',
   'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas','zones.cap10':'Una zona verifica hasta 10 tiendas a la vez.','hold.meta':'Buscando {p}','hold.meta.generic':'Revisando el estante','hold.head':'Estamos a tope.','hold.sub':'Un momento.','zones.limit10':'Llegaste al límite de 10 tiendas','zones.clearall':'Borrar todo','zones.title2':'Zonas','zones.checkingzone':'Verificando la zona {n} ahora','zones.checkingyours':'Verificando tu zona ahora','zones.allchecked':'Las {n} verificadas','zones.stopone.q':'¿Dejar de verificar {s}?','zones.stopone.yes':'Dejar de verificar','zones.stopone.no':'Continuar','zones.stoppedone':'Detuvimos esa tienda','zones.azone':'Zona','zones.zoneword':'zona','zones.new2':'Nueva zona','zones.edit2':'Editar zona','zones.locph2':'Código postal o ciudad…','zones.save2':'Guardar','zones.empty1':'Aún no tienes zonas.','zones.empty2':'Guarda las tiendas cercanas como una zona. Luego revísalas todas con un toque.','zones.nonein':'Ninguna disponible','zones.checkzone2':'Revisar zona','zones.skipped':', así que las saltamos.','zones.alldone':'Las {n} revisadas · listo','zones.zonecheck':'Chequeo de zona','zones.hadit':'{i} de {n} tiendas lo tenían.','zones.sharetext':'Texto para compartir','zones.sharego':'Compartir','zones.ago':'atrás','zones.starting2':'Empezando…','zones.rin2':'Disponible.','zones.rout2':'Sin stock.','zones.runk2':'Sin respuesta.','zones.result':'Resultado','zones.confirmed':'Confirmado.','hold.timer':'Tu revisión empieza en','em.title':'Tu correo','step.calling':'Llamando','watch.verify.h':'Revisa tu correo para confirmarlo.','watch.verify.hsms':'Te enviaremos un texto para confirmar tu celular.','watch.then2':'Luego te avisamos al instante<br>cuando se confirme en stock.','em.sub':'Las alertas y avisos de reposición llegan aquí.','em.new':'Danos tu nuevo correo','em.first':'Danos tu correo','em.empty':'Escribe tu nuevo correo primero','em.same':'Ese ya es tu correo','em.resent':'Confirmación enviada. Revisa tu correo.','em.again':'Enviarla de nuevo','em.done':'Correo confirmado. Alertas activas.','em.badlink':'Ese enlace no funcionó. Toca Enviarla de nuevo.','em.ph':'tu@correo.com','em.save':'Guardar correo','em.saving':'Guardando…','em.confirm':'Revisa tu correo para confirmar','em.add':'Agrega tu correo para alertas','alerts.title':'Alertas','alerts.sub':'Maneja tus alertas de correo y texto.','alerts.row.at':'{p} en {s}','alerts.d.remail':'Te manda un correo al volver.','alerts.d.rsms':'Te manda un texto al volver.','alerts.d.semail':'Verifica la tienda sola. Resultado al correo.','alerts.d.ssms':'Verifica la tienda sola. Resultado por texto.','alerts.none':'Aún no has creado alertas.','alerts.off':'Apagar','alerts.mute':'Silenciar','alerts.unmute':'Activar','alerts.stop':'Parar','alerts.d.muted':'Silenciada. No llega nada hasta activarla.','alerts.mutedpill':'Silenciada. Actívala cuando quieras.','alerts.unmutedpill':'Activada. Te avisaremos.','alerts.stopped':'Cancelamos {x}','alerts.name.restock':'las alertas de reposición de {s}','alerts.name.sched':'las alertas de auto chequeo de {s}','alerts.thatstore':'esa tienda','alerts.thisalert':'esta alerta','alerts.k.sched':'Auto-verificación','alerts.k.restock':'Alerta de reposición','alerts.c.sms':'texto','alerts.c.email':'correo','alerts.acheck':'Una verificación','acct.row.alerts':'Alertas','acct.row.alerts.sub':'Avisos de reposición y autoverificación.',
+  'watch.on':'Te avisamos por correo cuando vuelva','watch.askemail':'¿A qué correo te avisamos?','watch.cta2':'Vigilar esta tienda','watch.inbox':'Revisa tu correo','watch.inboxsub':'Confirma tu correo y lo activamos.','alerts.sub':'Cada tienda que vigilas. Prende o apaga cada una.','alerts.pauseall':'Pausar todas las alertas','alerts.on':'Activas','alerts.paused':'En pausa','alerts.rowon':'On','alerts.rowoff':'Off','alerts.remove':'Quitar','alerts.none':'Aún no vigilas ninguna tienda.','alerts.makeroom':'Vigilas {n} tiendas. Quita una para agregar esta.','alerts.added':'Ahora vigilas {s}.','alerts.stopped':'Quitamos {x}.',
   'feat.d.zone_sweeps':'Guarda tus tiendas como una zona. Un toque las llama todas a la vez. Mira las respuestas llegar en vivo. Cada tienda cuesta una verificación. Sin respuesta, sin cargo.','feat.d.restock_alerts':'Deja de revisar. Te avisamos. Toca Avísame cuando vuelva en un resultado. Vigilamos esa tienda por ti. Apenas llegue producto, te avisamos. Un aviso por reposición, nada de spam.','feat.d.scheduled_checks':'Las tiendas reponen con ritmo. La autoverificación corre en sus días de envío. La respuesta te espera en el celular. Cancela cuando quieras en Mis verificaciones.','feat.d.any_town':'Las cuentas gratis buscan cerca de casa. Cualquier ciudad te suelta la correa. Busca cualquier código postal o ciudad. El mapa salta ahí. Más de 100,000 tiendas.','feat.d.store_holds':'¿Lo encontraste pero estás a 20 minutos? Le pedimos al personal que te aparte uno. Con tu nombre, en la misma llamada.','feat.d.your_voice':'Elige la voz que llama por ti. Quien contesta escucha una voz amable y natural.','feat.d.thrift_hunts':'Colecciones viejas acaban en tiendas de segunda. Precios de risa, nadie las revisó. Activa Thrift y llamamos a las de tu zona. Preguntamos qué hay en la vitrina hoy.','feat.d.hobby_hunts':'Un muro de Pokémon para explorar. Cada era, cada set, cada producto. Con precios de lista. Elige tu objetivo. Cada llamada pide exactamente eso.',
   'zones.untitled':'Zona sin nombre','zones.store':'tienda','zones.stores':'tiendas',
   'zones.rename':'Renombrar','zones.delete':'Eliminar zona','zones.rename.save':'Guardar nombre','zones.delete.sure':'No se puede deshacer.','zones.delete.yes':'Sí, eliminarla','zones.keep':'Conservarla','zones.allclosed':'Todas las tiendas de esta zona están cerradas','zones.confirm.title':'¿Verificar todas las tiendas de esta zona?','zones.confirm.per':'1 verificación por tienda.',
@@ -7241,36 +7249,40 @@ function alertsPrefetch(){ try{ appApi('/app/alerts/me').then(r=>{ if(r&&!r.erro
 // What we call this alert when we talk about it in a pill ("restock alerts for Fun").
 function alertName(x){ const s=x.storeName||t('alerts.thatstore','that store');
   return x.kind==='schedule'?tf('alerts.name.sched','auto check alerts for {s}',{s}):tf('alerts.name.restock','restock alerts for {s}',{s}); }
-async function openAlerts(){ const ov=sheetShell('alertsOv');
-  const shell=rows=>`<div class="modal" style="text-align:left">
+// The Alerts list (owner 07-21): every watched store as the site's own store row + one ON/OFF switch,
+// a master "Pause all alerts" on top, each row removable. Optionally opens in make-room mode when a
+// new watch hit the 10-store cap. Cache-first so it paints instantly; the fetch refreshes.
+let ALERTS_MAKEROOM=false;
+function alertStoreObj(x){ const cached=(window.STORES||[]).find(s=>s.id===x.retailerId);
+  return cached||{id:x.retailerId,name:x.storeName||t('alerts.thatstore','that store'),location:x.storeLocation||'',logoUrl:null}; }
+function closeAlerts(){ const o=$('alertsOv'); if(o) o.classList.remove('on'); }
+async function openAlerts(opts){ opts=opts||{}; ALERTS_MAKEROOM=!!opts.makeRoom; const ov=sheetShell('alertsOv');
+  const shell=inner=>`<div class="modal" style="text-align:left">
     <div style="display:flex;justify-content:center;margin-bottom:6px">${ICO.bell(AC1()).replace('width="15" height="15"','width="28" height="28"')}</div>
     <h3 style="margin:2px 0 4px;text-align:center">${t('alerts.title','Alerts')}</h3>
-    <div class="meta" style="margin-bottom:14px;text-align:center">${sentLines(t('alerts.sub','Manage your email and text alerts.'))}</div>
-    <div id="alertsList">${rows}</div></div>`;
+    <div class="meta" style="margin-bottom:14px;text-align:center">${sentLines(t('alerts.sub',"Every store you're watching. Flip each on or off."))}</div>
+    <div id="alertsList">${inner}</div></div>`;
   const paint=me2=>{ if(me2) ALERTS_ME=me2; const subs=(me2&&me2.subscriptions)||[];
     if(!$('alertsList')) return;
-    $('alertsList').innerHTML = subs.length? subs.map(x=>{
-      // Row copy law (owner 07-16): plain English, exactly what it is. Title = product + store when we
-      // have a REAL product name; a junk stored label ("cards") falls back to the category's name from
-      // the server, and if there's no trustworthy name at all the title is just the store.
-      let what=String(x.productLabel||'').trim();
-      const cat=String(x.categoryLabel||(CATS.find(c=>c.id===x.categoryId)||{}).label||'').trim();
-      if(!what || (what.length<8 && !/\s/.test(what)) || (cat&&cat.toLowerCase().endsWith(what.toLowerCase()))) what=cat;
-      const title=(what&&x.storeName)?tf('alerts.row.at','{p} at {s}',{p:esc(what),s:esc(x.storeName)}):esc(what||x.storeName||t('alerts.acheck','A check'));
-      // Short sentences on purpose: the text column next to Mute+Stop is ~240px — every sentence must
-      // hold ONE line there (copy-guide hard rule 2).
-      const does=x.muted?t('alerts.d.muted','Muted. Nothing sends until you unmute.')
-        :x.kind==='schedule'
-        ? (x.channel==='sms'?t('alerts.d.ssms','Auto checks the store. Texts results.'):t('alerts.d.semail','Auto checks the store. Emails results.'))
-        : (x.channel==='sms'?t('alerts.d.rsms',"Texts you when it's back."):t('alerts.d.remail',"Emails you when it's back."));
-      return `<div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding:13px 14px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)${x.muted?';opacity:.6':''}">
-        <span style="flex:1;min-width:0"><span style="display:block;font-size:14.5px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${title}</span><span style="display:block;margin-top:2px;font-size:12px;font-weight:600;color:#8A8A96;line-height:1.45">${sentLines(does)}</span></span>
-        <span style="display:flex;flex-direction:column;gap:6px;flex:none">
-          <button onclick="alertMute(${x.id},${x.muted?0:1})" style="background:rgba(255,255,255,.09);border:0;border-radius:999px;padding:7px 13px;color:#CDCDD8;font:800 12px Inter;cursor:pointer">${x.muted?t('alerts.unmute','Unmute'):t('alerts.mute','Mute')}</button>
-          <button onclick="alertStop(${x.id})" style="background:rgba(255,123,123,.12);border:0;border-radius:999px;padding:7px 13px;color:#FF9B9B;font:800 12px Inter;cursor:pointer">${t('alerts.stop','Stop')}</button></span></div>`;}).join('')
-      : `<div style="margin-top:10px;padding:20px 16px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);text-align:center"><span style="font-size:12.5px;font-style:italic;font-weight:600;color:#8A8A96;line-height:1.5">${sentLines(t('alerts.none',"You haven't created any alerts."))}</span></div>`; }; // empty state = a card in the alert-row family, small italic muted text (owner 07-17: was reading as the section subhead)
+    const paused=!!(me2&&me2.alertsPaused), cap=(me2&&me2.slotCap)||10;
+    // Make-room banner (owner: full list → remove one to add the store they just tried to watch).
+    const banner=ALERTS_MAKEROOM?`<div class="almk" style="margin-bottom:12px">${sentLines(tf('alerts.makeroom',"You're watching {n} stores. Remove one to add this one.",{n:cap}))}</div>`:'';
+    // Master pause — only meaningful once there's at least one alert.
+    const master=subs.length?`<div class="alpause" style="margin-bottom:12px"><span style="font-size:14.5px;font-weight:800;color:#fff">${t('alerts.pauseall','Pause all alerts')}</span>
+      <div class="ho-toggle alsw" style="width:170px;flex:0 0 auto"><button class="${!paused?'on':''}" onclick="alertsPauseAll(0)">${t('alerts.on','Alerts on')}</button><button class="${paused?'on':''}" onclick="alertsPauseAll(1)">${t('alerts.paused','Paused')}</button></div></div>`:'';
+    const rows = subs.length? subs.map(x=>{
+      const so=alertStoreObj(x), off=!!x.muted;
+      const name=esc(so.name||x.storeName||t('alerts.acheck','A check')), loc=esc(so.location||x.storeLocation||'');
+      return `<div class="store${off||paused?' alrow-off':''}" style="cursor:default;margin-top:10px">
+        <div class="ic ${so.logoDark?'lite':''} ${so.logoWide?'widelogo':''}">${storeFace(so)}</div>
+        <div style="min-width:0;flex:1"><div class="nm">${name}</div><div class="lo">${loc}</div></div>
+        <div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+          <div class="ho-toggle alsw" style="width:108px;flex:0 0 auto"><button class="${!off?'on':''}" onclick="alertSetOn(${x.id},1)">${t('alerts.rowon','On')}</button><button class="${off?'on':''}" onclick="alertSetOn(${x.id},0)">${t('alerts.rowoff','Off')}</button></div>
+          <button class="alrm" onclick="alertStop(${x.id})" aria-label="${t('alerts.remove','Remove')}">${Z_ICO_TRASH}</button>
+        </div></div>`;}).join('')
+      : `<div style="margin-top:10px;padding:20px 16px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);text-align:center"><span style="font-size:12.5px;font-style:italic;font-weight:600;color:#8A8A96;line-height:1.5">${sentLines(t('alerts.none',"You aren't watching any stores yet."))}</span></div>`;
+    $('alertsList').innerHTML = banner+master+rows; };
   window.__alertsPaint=paint;
-  // Instant when the prefetch already landed; dots only on a cold open.
   ov.innerHTML=shell(ALERTS_ME?'' : `<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:22px 0"><span></span><span></span><span></span></div>`);
   if(ALERTS_ME) paint(ALERTS_ME);
   ov.classList.add('on');
@@ -7279,10 +7291,31 @@ async function openAlerts(){ const ov=sheetShell('alertsOv');
   else if(!ALERTS_ME) paint(null);
 }
 function alertRowById(id){ try{ return ((ALERTS_ME&&ALERTS_ME.subscriptions)||[]).find(x=>x.id===id)||null; }catch(_){ return null; } }
+// The ON/OFF switch = mute/unmute under the hood (muted stays listed, holds its slot, never sends).
+async function alertSetOn(id,on){
+  const r=await appApi('/app/alerts/mute',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,muted:on?false:true})});
+  if(r&&!r.error){ if(window.__alertsPaint) window.__alertsPaint(r); }
+  else toast(t('err.generic',"That didn't go through. Give it another try."),'neutral'); }
+// Master "Pause all alerts".
+async function alertsPauseAll(paused){
+  const r=await appApi('/app/alerts/pause-all',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({paused:!!paused})});
+  if(r&&!r.error){ if(window.__alertsPaint) window.__alertsPaint(r); }
+  else toast(t('err.generic',"That didn't go through. Give it another try."),'neutral'); }
+// Remove a watch (frees its slot). In make-room mode a removal immediately adds the store they were
+// trying to watch, so the cap bounce lands them one tap from done.
 async function alertStop(id){ const x=alertRowById(id);
   const r=await appApi('/app/alerts/unsubscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id})});
-  if(r&&!r.error){ if(window.__alertsPaint) window.__alertsPaint(r); toast(tf('alerts.stopped','Unsubscribed from {x}',{x:x?alertName(x):t('alerts.thisalert','this alert')}),'neutral'); }
-  else toast(t('err.generic',"That didn't go through. Give it another try."),'neutral'); }
+  if(!r||r.error){ toast(t('err.generic',"That didn't go through. Give it another try."),'neutral'); return; }
+  if(window.__alertsPaint) window.__alertsPaint(r);
+  if(ALERTS_MAKEROOM&&PENDING_WATCH){ const pw=PENDING_WATCH; PENDING_WATCH=null; ALERTS_MAKEROOM=false;
+    const sub=await appApi('/app/alerts/subscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind:'restock',retailerId:pw.store.id,categoryId:pw.categoryId,productLabel:pw.productLabel,channel:'email',lang:LANG})});
+    if(sub&&!sub.error){
+      const me=await appApi('/app/alerts/me'); if(me&&!me.error&&window.__alertsPaint) window.__alertsPaint(me);
+      if(sub.status==='on'){ toast(tf('alerts.added','Now watching {s}.',{s:pw.store.name||t('alerts.thatstore','that store')}),'neutral'); }
+      else { closeAlerts(); openWatchConfirm(pw.store, sub.status); } }
+    else toast(t('err.generic',"That didn't go through. Give it another try."),'neutral');
+    return; }
+  toast(tf('alerts.stopped','Removed {x}.',{x:x?(x.storeName||t('alerts.thisalert','this alert')):t('alerts.thisalert','this alert')}),'neutral'); }
 async function alertMute(id,muted){
   const r=await appApi('/app/alerts/mute',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,muted:!!muted})});
   if(r&&!r.error){ if(window.__alertsPaint) window.__alertsPaint(r); toast(muted?t('alerts.mutedpill','Muted. Unmute any time.'):t('alerts.unmutedpill',"Back on. We'll ping you."),'neutral'); }
@@ -8315,46 +8348,71 @@ function shareTo(target){
 }
 function closeShare(){ $('shareOverlay').classList.remove('on'); }
 
-async function openWatch(){
-  if(!SEL_STORE||!SEL_STORE.id){ toast(t('err.pickstore','Pick a store first')); return; }
+// ── ONE email-alert path for every "notify me when it's back" surface (owner 07-21) ──
+// A confirmed email = instant ON + a single gray toast, nothing asked. No email (or a still-pending
+// one) = the confirm sheet. A full list (10 stores) = make-room mode. Email is the only channel.
+let PENDING_WATCH=null; // a store bounced at the cap — re-added the moment a slot frees in make-room
+async function openWatch(){ return watchStore(); }
+async function watchStore(opts){
+  opts=opts||{};
+  const st=opts.store||SEL_STORE;
+  if(!st||!st.id){ toast(t('err.pickstore','Pick a store first')); return; }
   if(!isAuthed()){ toast(t('toast.joinalerts','Join to set alerts')); signUp(); return; }
   if(!hasFeature('restock_alerts')){ openBuy('premium'); return; } // restock alerts = a per-tier perk
-  $('watch_err').textContent=''; $('watch_contact').value=''; $('watch_contact').style.display=''; $('watch_contact').placeholder=smsAlertsOn()?t('watch.ph','email or phone number'):t('em.ph','you@email.com'); { const wb=$('watch_btn'); if(wb){ wb.textContent=t('watch.cta','Watch this store →'); wb.onclick=submitWatch; } } { const ws=$('watch_sub'); if(ws) ws.innerHTML=t('watch.sub',"We'll ping you the instant anyone confirms it in stock here."); } { const wt=document.querySelector('#watchOverlay h3 [data-i18n="watch.title"]'); if(wt) wt.textContent=t('watch.title','Tell me when it\'s back'); }
-  const sub=$('watch_sub'); if(sub) sub.textContent=LANG==='es'?`Te avisamos en cuanto alguien confirme ${findProductLabel()} en stock en ${findStoreName()}.`:`We'll ping you the instant anyone confirms ${findProductLabel()} in stock at ${findStoreName()}.`;
-  track('watch_open',{retailerId:SEL_STORE.id});
-  $('watchOverlay').classList.add('on'); sheetPush('watch'); setTimeout(()=>{try{$('watch_contact').focus();}catch(e){}},80);
-  // Social proof: surface how many others are already waiting on this store.
-
+  const categoryId=(opts.categoryId!=null)?opts.categoryId:SEL_CAT;
+  const productLabel=opts.productLabel||findProductLabel();
+  track('watch_open',{retailerId:st.id});
+  const r=await appApi('/app/alerts/subscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind:'restock',retailerId:st.id,categoryId,productLabel,channel:'email',lang:LANG})});
+  // Full list → open Alerts in make-room mode, remembering this store so a removal re-adds it.
+  if(r&&r.error==='cap'){ ALERTS_ME=r; PENDING_WATCH={store:st,categoryId,productLabel}; openAlerts({makeRoom:true}); return; }
+  if(!r||r.error){ toast(t('err.generic',"That didn't go through. Give it another try."),'neutral'); return; }
+  track('watch_set',{retailerId:st.id,channel:'email'});
+  // Keep the legacy Admin "Restock watches" card fed when there's an address on file.
+  if(ACCOUNT&&ACCOUNT.email){ try{ api('/pub/watch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:st.id,categoryId,contact:ACCOUNT.email})}); }catch(_){ } }
+  try{ alertsPrefetch(); }catch(_){ }
+  if(r.status==='on'){ toast(t('watch.on',"We'll email you when it's back"),'neutral'); return; } // confirmed email: instant
+  openWatchConfirm(st, r.status); // need_email | pending
 }
 function closeWatch(){ $('watchOverlay').classList.remove('on'); }
-async function submitWatch(){
-  const c=($('watch_contact').value||'').trim();
-  const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(c)&&smsAlertsOn();
-  if(!isEmail&&!isPhone){ markFld($('watch_contact'),true); $('watch_err').textContent=''; return; }
+// The confirm sheet, shown only when there's no confirmed email yet. Reuses #watchOverlay.
+function openWatchConfirm(st, status){
+  const ov=$('watchOverlay'); if(!ov) return;
+  const ico=$('watchIco'); if(ico) ico.innerHTML=ICO.bell(AC1()).replace('width="15" height="15"','width="28" height="28"');
+  const h=document.querySelector('#watchOverlay h3 [data-i18n="watch.title"]');
+  const sub=$('watch_sub'), inp=$('watch_contact'), btn=$('watch_btn'), err=$('watch_err');
+  if(err) err.textContent='';
+  if(status==='need_email'){
+    if(h) h.textContent=t('watch.title',"Tell me when it's back");
+    if(sub) sub.innerHTML=t('watch.askemail','Where should we email you?');
+    if(inp){ inp.style.display=''; inp.value=(ACCOUNT&&ACCOUNT.email)||''; inp.type='email'; inp.inputMode='email'; inp.placeholder=t('em.ph','you@email.com'); }
+    if(btn){ btn.textContent=t('watch.cta2','Watch this store')+' →'; btn.disabled=false; btn.onclick=submitWatchEmail; }
+    ov.classList.add('on'); sheetPush('watch'); setTimeout(()=>{try{$('watch_contact').focus();}catch(e){}},80);
+  } else { // pending: the address is on file but not confirmed yet
+    paintInboxState(); ov.classList.add('on'); sheetPush('watch');
+  }
+}
+// The "check your inbox" face of the confirm sheet (owner 07-21: the top copy is exactly this).
+function paintInboxState(){
+  const h=document.querySelector('#watchOverlay h3 [data-i18n="watch.title"]');
+  const sub=$('watch_sub'), inp=$('watch_contact'), btn=$('watch_btn'), err=$('watch_err');
+  if(err) err.textContent='';
+  if(h) h.textContent=t('watch.inbox','Check your inbox');
+  if(inp) inp.style.display='none';
+  if(sub) sub.innerHTML='<span style="color:#8A8A96">'+t('watch.inboxsub',"Confirm your email and we'll switch it on.")+'</span>'+((ACCOUNT&&ACCOUNT.email)?'<br><a onclick="resendConfirm()" style="display:inline-block;margin-top:9px;font-size:12.5px;font-weight:800;color:var(--purple);cursor:pointer;text-decoration:underline;text-underline-offset:3px">'+t('em.again','Send it again')+'</a>':'');
+  if(btn){ btn.textContent=t('watch.done2','Done'); btn.disabled=false; btn.onclick=closeWatch; }
+}
+async function submitWatchEmail(){
+  const e=(($('watch_contact').value)||'').trim().toLowerCase();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)){ markFld($('watch_contact'),true); $('watch_err').textContent=''; return; }
   const btn=$('watch_btn'); btn.disabled=true; btn.textContent=t('watch.setting','Setting it up…');
-  const channel=isEmail?'email':'sms';
-  // Register the standing opt-in twice: /pub/watch feeds the legacy Admin "Restock watches" card,
-  // and /app/alerts/subscribe puts it in the metered alerts system (per-plan SMS cap + Admin tracking).
-  const [r,sub]=await Promise.all([
-    api('/pub/watch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryId:SEL_CAT,contact:c})}),
-    appApi('/app/alerts/subscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind:'restock',retailerId:SEL_STORE.id,categoryId:SEL_CAT,productLabel:findProductLabel(),channel,lang:LANG})}),
-  ]);
-  btn.disabled=false; btn.textContent=t('watch.cta','Watch this store →');
-  if((!r||r.error)&&(!sub||sub.error)){ $('watch_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
-  track('watch_set',{retailerId:SEL_STORE.id,channel});
-  // Typed an email and the account has none saved → save it as THE account email so the branded
-  // confirm email fires (Addie 07-15). Fire-and-forget: the watch itself is already registered.
-  if(isEmail&&isAuthed()&&ACCOUNT&&!ACCOUNT.email){ try{ appApi('/app/email',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:c,lang:LANG})}).then(r=>{ if(r&&!r.error){ ACCOUNT.email=r.email; ACCOUNT.emailVerified=!!r.verified; } }); }catch(_){ } }
-  // In-place confirmation (owner: no toasts, no crowd counts). The input goes away; the box tells
-  // them the ONE next step, then how the alert lands. Verification wiring = Admin build.
-  $('watch_contact').style.display='none';
-  const sub2=$('watch_sub');
-  let leftLine='';
-  // For text alerts on a capped plan, tell them how many they have left this month.
-  try{ const me=await appApi('/app/alerts/me'); if(channel==='sms'&&me&&me.smsAlertsCap!=null){ leftLine='<br><span style="color:#8A8A96">'+tf('watch.left','{n} of {cap} text alerts left this month.',{n:me.smsAlertsLeft,cap:me.smsAlertsCap})+'</span>'; } }catch(_){ }
-  { const wt=document.querySelector('#watchOverlay h3 [data-i18n="watch.title"]'); if(wt) wt.textContent=isEmail?t('watch.verify.h','Go to your inbox to confirm your email.'):t('watch.verify.hsms',"We'll text you to confirm your cell."); } // the ask IS the header now (owner 07-15)
-  if(sub2) sub2.innerHTML='<span style="color:#8A8A96">'+t('watch.then2',"Then we'll ping you the instant<br>it's confirmed in stock.")+'</span>'+leftLine;
-  btn.textContent=t('watch.done2','Done'); btn.onclick=closeWatch;
+  const r=await appApi('/app/email',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:e,lang:LANG})});
+  btn.disabled=false;
+  if(!r||r.error){ btn.textContent=t('watch.cta2','Watch this store')+' →'; $('watch_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
+  if(ACCOUNT){ ACCOUNT.email=r.email; ACCOUNT.emailVerified=!!r.verified; }
+  try{ if(ACCOUNT&&ACCOUNT.email){ api('/pub/watch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:(SEL_STORE&&SEL_STORE.id)||0,categoryId:SEL_CAT,contact:ACCOUNT.email})}); } }catch(_){ }
+  // Address was already confirmed on file → it's on now; otherwise the confirm email just went out.
+  if(r.verified){ closeWatch(); toast(t('watch.on',"We'll email you when it's back"),'neutral'); try{alertsPrefetch();}catch(_){ } return; }
+  paintInboxState();
 }
 
 function openDriverDemo(){ track('driver_demo_open'); openHandoff(); }

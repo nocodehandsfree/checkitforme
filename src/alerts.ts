@@ -7,7 +7,7 @@
 // swaps the inline HTML for Design's branded template when it's ready. Nothing
 // throws — a send that can't complete is recorded, never crashes a trigger.
 import { createHmac } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "./db/client";
 import { accounts, alertSubscriptions, alertSends, retailers, categories } from "./db/schema";
 import { getSetting, setSetting } from "./db/settings";
@@ -558,6 +558,28 @@ export async function alertSubscribe(userId: string, o: { kind?: string; retaile
   return { ok: true, id: ins[0]?.id ?? 0 };
 }
 
+/** How many alert slots this account is using. An alert holds a slot whether it's ON or OFF (paused);
+ *  only removing it (active:0) frees the slot. Flat 10 for now — per-plan caps can key off plan data later. */
+export const ALERT_SLOT_CAP = 10;
+export async function alertSlotsUsed(userId: string): Promise<number> {
+  const rows = await db.select({ id: alertSubscriptions.id, retailerId: alertSubscriptions.retailerId, productLabel: alertSubscriptions.productLabel })
+    .from(alertSubscriptions).where(and(eq(alertSubscriptions.userId, userId), eq(alertSubscriptions.active, 1)));
+  return rows.length;
+}
+/** Is this exact store/product already in the account's active list? (Re-subscribing to it never needs a slot.) */
+export async function alertExists(userId: string, retailerId: number | null, productLabel: string | null): Promise<boolean> {
+  const rows = await db.select({ retailerId: alertSubscriptions.retailerId, productLabel: alertSubscriptions.productLabel })
+    .from(alertSubscriptions).where(and(eq(alertSubscriptions.userId, userId), eq(alertSubscriptions.active, 1)));
+  return rows.some((r) => (r.retailerId ?? null) === (retailerId ?? null) && (r.productLabel ?? "") === (productLabel ?? ""));
+}
+
+/** Master "Pause all alerts" (the switch on top of the Alerts list): paused = fan-out skips this whole
+ *  account, per-row ON/OFF states are preserved. Returns the fresh list. */
+export async function pauseAllAlerts(userId: string, paused: boolean) {
+  await db.update(accounts).set({ alertsPausedAt: paused ? Math.floor(Date.now() / 1000) : null }).where(eq(accounts.clerkUserId, userId));
+  return myAlerts(userId);
+}
+
 /** Have we already texted this user about this store recently? Stops a burst of in_stock signals
  *  (site + Discord + a call, all within minutes) from firing three texts for one restock. */
 async function restockedRecently(userId: string, retailerId: number, withinHours = 6): Promise<boolean> {
@@ -573,8 +595,13 @@ export async function fanoutRestock(retailerId: number, o: { storeName?: string;
   let notified = 0, skipped = 0;
   try {
     const subs = await db.select().from(alertSubscriptions).where(and(eq(alertSubscriptions.kind, "restock"), eq(alertSubscriptions.active, 1)));
+    // Master "Pause all alerts": one query up front for which of these owners have paused everything.
+    const ownerIds = [...new Set(subs.map((s) => s.userId))];
+    const pausedRows = ownerIds.length ? await db.select({ id: accounts.clerkUserId, p: accounts.alertsPausedAt }).from(accounts).where(inArray(accounts.clerkUserId, ownerIds)) : [];
+    const pausedSet = new Set(pausedRows.filter((r) => r.p).map((r) => r.id));
     for (const s of subs) {
-      if (s.muted) { skipped++; continue; } // muted = paused by the customer; never send, never spend cap
+      if (pausedSet.has(s.userId)) { skipped++; continue; } // account-level pause: skip every alert it holds
+      if (s.muted) { skipped++; continue; } // muted = this one alert paused by the customer; never send
       // Match: this store (or an any-store opt-in), and category if the sub pinned one.
       if (s.retailerId != null && s.retailerId !== retailerId) { continue; }
       if (s.categoryId != null && o.categoryId != null && s.categoryId !== o.categoryId) { continue; }
@@ -591,17 +618,23 @@ export async function fanoutRestock(retailerId: number, o: { storeName?: string;
 
 /** A user's active alert opt-ins + how many restock texts they have left this month. */
 export async function myAlerts(userId: string) {
-  // Store + category names ride along so the alerts sheet can say plainly what each ping watches —
-  // stored productLabels can be junk ("cards"); the category's real label is the trustworthy name.
-  const subs = await db.select({ s: alertSubscriptions, storeName: retailers.name, categoryLabel: categories.label })
+  // Store name + location + category ride along so the Alerts list can paint each watch as the site's
+  // own store row — stored productLabels can be junk ("cards"); the category's real label is trustworthy.
+  const subs = await db.select({ s: alertSubscriptions, storeName: retailers.name, storeLocation: retailers.location, categoryLabel: categories.label })
     .from(alertSubscriptions)
     .leftJoin(retailers, eq(alertSubscriptions.retailerId, retailers.id))
     .leftJoin(categories, eq(alertSubscriptions.categoryId, categories.id))
     .where(and(eq(alertSubscriptions.userId, userId), eq(alertSubscriptions.active, 1)));
   const sms = await smsAlertsLeft(userId);
+  const acct = await getAccount(userId);
   return {
     smsAlertsLeft: sms.left, smsAlertsCap: sms.cap,
-    subscriptions: subs.map(({ s, storeName, categoryLabel }) => ({ id: s.id, kind: s.kind, retailerId: s.retailerId, categoryId: s.categoryId, productLabel: s.productLabel, channel: s.channel, muted: !!s.muted, storeName: storeName ?? null, categoryLabel: categoryLabel ?? null })),
+    // Master pause + the confirmed-email gate + slot budget, so the Alerts list and the subscribe flow
+    // render off one payload (no second round-trip).
+    alertsPaused: !!acct?.alertsPausedAt,
+    hasEmail: !!acct?.email, email: acct?.email ?? null, emailVerified: !!acct?.emailVerifiedAt,
+    slotsUsed: subs.length, slotCap: ALERT_SLOT_CAP,
+    subscriptions: subs.map(({ s, storeName, storeLocation, categoryLabel }) => ({ id: s.id, kind: s.kind, retailerId: s.retailerId, categoryId: s.categoryId, productLabel: s.productLabel, channel: s.channel, muted: !!s.muted, storeName: storeName ?? null, storeLocation: storeLocation ?? null, categoryLabel: categoryLabel ?? null })),
   };
 }
 
