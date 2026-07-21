@@ -35,6 +35,7 @@ export type CreditOutcome =
   | { kind: "cap" }
   | { kind: "no_recent" }
   | { kind: "ambiguous"; stores: string[] }
+  | { kind: "unresolved" }   // asked which store twice, still can't tell → hand to a human
   | { kind: "guest" };
 
 interface Candidate {
@@ -43,12 +44,17 @@ interface Candidate {
   callSeconds: number | null; chargedAt: number | null; startedAt: number;
 }
 
-/** Words from the message that could name a store ("target", "gamestop", "walmart"...). */
-function matchesStore(message: string, c: Candidate): boolean {
+/**
+ * How well the message names this store: the count of the store's own words that appear in the
+ * message. Ranking by count (not any-match) is what tells two same-brand stores apart — "Barnes &
+ * Noble Thousand Oaks" scores 4 on the Thousand Oaks check but only 2 (barnes, noble) on Calabasas,
+ * so the customer can actually pick the one they mean. Any-match treated them as a tie forever.
+ */
+function storeScore(message: string, c: Candidate): number {
   const m = message.toLowerCase();
   const tokens = `${c.storeName} ${c.storeLocation || ""}`.toLowerCase()
     .split(/[^a-z0-9]+/).filter((w) => w.length >= 4 && !["store", "shop", "super", "center"].includes(w));
-  return tokens.some((tk) => m.includes(tk));
+  return tokens.filter((tk) => m.includes(tk)).length;
 }
 
 function evidenceFor(c: Candidate): { ok: boolean; reason: string } {
@@ -63,7 +69,7 @@ function evidenceFor(c: Candidate): { ok: boolean; reason: string } {
  * Deterministic, cheap (a few indexed reads), and safe to re-run on every message of a
  * conversation until it reaches a terminal outcome.
  */
-export async function verifyCheckIssue(accountId: string | null | undefined, message: string, conversationId: number): Promise<CreditOutcome> {
+export async function verifyCheckIssue(accountId: string | null | undefined, message: string, conversationId: number, pinnedCid?: number | null): Promise<CreditOutcome> {
   if (!accountId) return { kind: "guest" };
   const now = Math.floor(Date.now() / 1000);
 
@@ -84,12 +90,25 @@ export async function verifyCheckIssue(accountId: string | null | undefined, mes
     .orderBy(desc(callResults.startedAt)).limit(12) as Candidate[];
   if (!rows.length) return { kind: "no_recent" };
 
-  // Which check are they talking about? One check → that one. Several → need the store named.
+  // Which check are they talking about?
+  //  · pinned — the chat was opened from a check's own status page, so we already know the exact
+  //    check they're looking at. Use it, never ask "which store". This is the common path and the
+  //    one that was looping before.
+  //  · otherwise rank by how well the message names each store and keep only the best matches; a
+  //    real tie between different stores is the only thing that still asks.
   let pool = rows;
-  const named = rows.filter((c) => matchesStore(message, c));
-  if (named.length) pool = named;
-  const distinctStores = [...new Set(pool.map((c) => c.storeName))];
-  if (distinctStores.length > 1) return { kind: "ambiguous", stores: distinctStores.slice(0, 4) };
+  let pinned = false;
+  if (pinnedCid != null) {
+    const hit = rows.find((c) => c.id === pinnedCid);
+    if (hit) { pool = [hit]; pinned = true; }
+  }
+  if (!pinned) {
+    const scored = rows.map((c) => ({ c, s: storeScore(message, c) }));
+    const max = Math.max(0, ...scored.map((x) => x.s));
+    if (max > 0) pool = scored.filter((x) => x.s === max).map((x) => x.c);
+    const distinctStores = [...new Set(pool.map((c) => c.storeName))];
+    if (distinctStores.length > 1) return { kind: "ambiguous", stores: distinctStores.slice(0, 4) };
+  }
 
   // Same store, several checks: judge the most creditable one (bad evidence first, newest first).
   const target = pool.slice().sort((a, b) => {
@@ -172,8 +191,12 @@ export function creditReply(out: CreditOutcome, lang: string): { reply: string; 
         : `I don't see a check on your account from the last 7 days. If it was longer ago or on a different account, send it to the team and they'll review it.` };
     case "ambiguous":
       return { escalate: false, reply: es
-        ? `¿Cuál tienda fue? Veo checks recientes en: ${out.stores.join(", ")}.`
-        : `Which store was it? I see recent checks at: ${out.stores.join(", ")}.` };
+        ? `¿Cuál de estos fue? Dime la ciudad y lo reviso: ${out.stores.join(", ")}.`
+        : `Which of these was it? Tell me the city and I'll check it: ${out.stores.join(", ")}.` };
+    case "unresolved":
+      return { escalate: true, reply: es
+        ? `Todavía no logro identificar de cuál check hablas desde aquí. Lo envío al equipo y una persona lo revisa contigo.`
+        : `I still can't tell which check you mean from here. I'm sending this to the team so a person can sort it out with you.` };
     case "guest":
       return { escalate: false, reply: es
         ? `Los checks viven en tu cuenta, así que inicia sesión y lo reviso al instante. Entra con tu número y vuelve a este chat.`

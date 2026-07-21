@@ -127,9 +127,19 @@ export async function answerSupport(sessionId: string, userMessage: string, opts
   // category hint forbids it from ever promising a credit.
   if ((convo.category || category) === "check_issue" && !convo.creditDecision) {
     const acctId = opts.account?.id || convo.accountId || null;
+    // Opened off a check's status page → we already know the exact check. Pass it so the verifier
+    // resolves to it and never asks "which store" (the loop the customer hit).
+    const cidNum = convo.checkId ? parseInt(convo.checkId, 10) : NaN;
+    const pinnedCid = Number.isFinite(cidNum) ? cidNum : null;
     try {
-      const out = await verifyCheckIssue(acctId, userMessage, convo.id);
-      const terminal = ["granted", "already", "denied_fine", "not_charged", "cap"].includes(out.kind);
+      let out = await verifyCheckIssue(acctId, userMessage, convo.id, pinnedCid);
+      // Loop-break: if we've already asked which store twice and still can't tell, stop asking and
+      // hand it to a person instead of repeating the question forever.
+      if (out.kind === "ambiguous") {
+        const priorAsks = history.filter((m) => m.role === "assistant" && m.model === "credit-machine").length;
+        if (priorAsks >= 2) out = { kind: "unresolved" };
+      }
+      const terminal = ["granted", "already", "denied_fine", "not_charged", "cap", "unresolved"].includes(out.kind);
       if (terminal) {
         await db.update(supportConversations)
           .set({ creditDecision: out.kind, creditCid: "cid" in out ? out.cid : null })

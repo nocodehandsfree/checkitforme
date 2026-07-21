@@ -66,7 +66,7 @@ async function main() {
   await mkCheck(r1.id, { statusKey: "nobody_answered", chargedAt: now - 3000, callSeconds: 6 });
   await mkCheck(r2.id, { statusKey: "in_stock", confirmed: true, chargedAt: now - 2000, callSeconds: 120 });
   res = await answerSupport("sess-amb-1", "my check went to a bad number", { category: "check_issue", account: { id: USER } });
-  ok("asks which store, lists both", /Which store/i.test(res.reply) && /Target/.test(res.reply) && /GameStop/.test(res.reply), res.reply);
+  ok("asks which store, lists both", /Which/i.test(res.reply) && /Target/.test(res.reply) && /GameStop/.test(res.reply), res.reply);
   res = await answerSupport("sess-amb-1", "it was the target one", { category: "check_issue", account: { id: USER } });
   ok("naming the store concludes → granted", /put 1 check back/i.test(res.reply), res.reply);
 
@@ -96,6 +96,38 @@ async function main() {
   await mkCheck(r1.id, { statusKey: "nobody_answered", chargedAt: now - 500, callSeconds: 7 });
   res = await answerSupport("sess-es-1", "el check a Target fue un número malo", { category: "check_issue", account: { id: USER }, lang: "es" });
   ok("ES grant reply", /devolví 1 check/i.test(res.reply), res.reply);
+
+  console.log("\n== 9. opened off a check's page (pinned cid) → resolves to THAT check, never asks which store ==");
+  await db.delete(callResults);
+  await db.delete(supportCreditGrants); // clear cap
+  const pinBad = await mkCheck(r1.id, { statusKey: "nobody_answered", chargedAt: now - 800, callSeconds: 6 });
+  await mkCheck(r2.id, { statusKey: "in_stock", confirmed: true, chargedAt: now - 700, callSeconds: 120 });
+  res = await answerSupport("sess-pin-1", "my check did not go well the agent messed up what should I do",
+    { category: "check_issue", account: { id: USER }, origin: { checkId: String(pinBad.id) } });
+  ok("no 'which store' question", !/Which/i.test(res.reply), res.reply);
+  ok("credits the pinned check", /put 1 check back/i.test(res.reply), res.reply);
+
+  console.log("\n== 10. two same-brand stores, full name typed → RANKED to the right one (the B&N Thousand Oaks bug) ==");
+  await db.delete(callResults);
+  await db.delete(supportCreditGrants);
+  const bn1 = (await db.insert(retailers).values({ name: "Barnes & Noble Thousand Oaks", phone: "+18050000001", location: "Thousand Oaks, CA", active: true }).returning())[0];
+  const bn2 = (await db.insert(retailers).values({ name: "Barnes & Noble Calabasas", phone: "+18180000002", location: "Calabasas, CA", active: true }).returning())[0];
+  await mkCheck(bn1.id, { statusKey: "nobody_answered", chargedAt: now - 600, callSeconds: 5 });
+  await mkCheck(bn2.id, { statusKey: "in_stock", confirmed: true, chargedAt: now - 500, callSeconds: 110 });
+  res = await answerSupport("sess-rank-1", "Barnes & Noble Thousand Oaks", { category: "check_issue", account: { id: USER } });
+  ok("full name resolves, no endless re-ask", !/Which/i.test(res.reply) && /put 1 check back/i.test(res.reply), res.reply);
+
+  console.log("\n== 11. genuinely vague, asked twice, still stuck → LOOP-BREAK to a human ==");
+  await db.delete(callResults);
+  await db.delete(supportCreditGrants);
+  await mkCheck(bn1.id, { statusKey: "nobody_answered", chargedAt: now - 400, callSeconds: 5 });
+  await mkCheck(bn2.id, { statusKey: "nobody_answered", chargedAt: now - 300, callSeconds: 5 });
+  res = await answerSupport("sess-loop-1", "something was wrong with my check", { category: "check_issue", account: { id: USER } });
+  ok("1st vague → asks which", /Which/i.test(res.reply), res.reply);
+  res = await answerSupport("sess-loop-1", "I dunno, one of them", { category: "check_issue", account: { id: USER } });
+  ok("2nd vague → asks which again", /Which/i.test(res.reply), res.reply);
+  res = await answerSupport("sess-loop-1", "just fix it", { category: "check_issue", account: { id: USER } });
+  ok("3rd vague → stops asking, hands to a person", /sending this to the team/i.test(res.reply) && res.escalate === true, res.reply);
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
