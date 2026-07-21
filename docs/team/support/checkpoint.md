@@ -66,26 +66,11 @@
 - 2026-07-15 — ADMIN DECOUPLED FROM PROD (owner): Admin can be pushed/deployed independently of the
   prod consumer site. Do NOT promote for Admin changes. Addie owns the Admin deploy — leave Admin
   work on staging for her, don't line up a prod promote for it.
-- 2026-07-15 — Two fixes shipped to staging. (1) Anti-hallucination: ladder SYSTEM now forbids
-  claiming any page/link/menu exists unless the docs name it, + always-true site facts (real footer
-  links, NO Contact page, partnerships→Discord). Verified LIVE: agent asked "where's the contact
-  page" now answers Discord/footer, no invented page. (2) Admin can finally TRAIN it — the Support
-  chat sheet has a "Teach the right answer" box (question+corrected answer → POST review/:id approve
-  → embeds to cache, served verbatim next time) + an "Update from the book" button (POST reindex,
-  proven live: 46 pages). Verified UI end-to-end locally (openSheet, no page errors). tsc clean.
-- 2026-07-15 — Launcher saga CLOSED: after trying top-edge (owner rejected) and a center bottom
-  handle, landed on the owner-approved GRAY icon-only chat tab (#26262C, 72% opacity) dropped to the
-  bottom-right corner, auto-hides (slides off right) on scroll, glides back at rest. Live on staging.
-  NOTE: a rogue Claude staging→main merge (02:02 UTC 07-12) swept an in-progress launcher onto PROD;
-  flagged to owner, prod left untouched pending his call.
-- 2026-07-11 — v3 Messenger + owner design pass, LIVE (details in git log + docs/specs/support-agent/
-  v3-messenger.md): full-screen Intercom-style panel (Home/Messages/Help tabs, topic picker, R2 bug
-  screenshots, EN/ES), RAG over the ReadMe book via llms.txt (46 pages), REAL FAQ from Copper's
-  common-questions (10min cache — edit there, it reflects), gray icon-only launcher, brand mark +
-  approved X, human path buried (2 fails to reveal). Open follow-up: check-aware answers are plumbed
-  (ladder takes checkContext) but the check-history readout isn't built.
-- 2026-07-09..11 — Foundations (details in git log): lane created at repo split; spec v2 approved
-  (form → support@, cheap tiers vet before money); ladder + RAG + widget + tickets + review queue
-  built, driven live ($0.0005 whole drive), Brevo delivery proven. Standing notes: flip
-  SUPPORT_MODEL_BIG=claude-opus-4-8 once Anthropic is funded; STYLE_GUIDE still says centered
-  pop-ups but owner moved to slide-up sheets, CD to reconcile.
+- 2026-07-15 — Anti-hallucination (LIVE): ladder forbids claiming any page/link/menu unless the docs
+  name it + site facts (real footer, NO Contact page, partnerships→Discord). Admin Teach box (approve
+  a corrected Q&A → embeds to cache, serves verbatim) + "Update from the book" reindex, both proven.
+- 2026-07-11..15 — Foundations, all LIVE (details in git log + docs/specs/support-agent/): ladder
+  (cache→free→cheap→big) + RAG over the ReadMe book (46 pages, 10min FAQ cache), full-screen Messenger
+  (Home/Messages/Help, topic picker, R2 bug screenshots, EN/ES), tickets → support@ via Brevo, review
+  queue, gray bottom-right launcher, human path buried (2 fails to reveal). Standing note: flip
+  SUPPORT_MODEL_BIG=claude-opus-4-8 once Anthropic is funded.
