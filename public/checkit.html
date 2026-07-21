@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r167" />
+<meta name="x-rev" content="glassfix-r168" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -7499,12 +7499,15 @@ async function zoneCheckAll(id){
       ${closedWarn||`<div class="meta" style="margin-bottom:16px">${t('zones.confirm.per','1 check per store.')}</div>`}
       <button class="zc-go" style="width:100%;margin-bottom:10px;display:block" id="zca_go"><span style="justify-content:center">${tf('zones.checkallN','Check all {n}',{n:openN})}${ZGOARR}</span></button>
       <button style="${Z_ROWBTN};justify-content:center" id="zca_no">${t('pre.again.no','Not now')}</button>`);
-    // GHOST-TAP GUARD (owner 07-21: a sweep started without him choosing). The confirm opens in the
-    // SAME tap that pressed "Check zone", and iOS fires a trailing click that lands on the go button
-    // that just appeared under the finger. The go button is dead for its first 600ms — a tap in that
-    // window is the opening gesture, never a choice. Cancel paths stay live immediately.
-    const _t0=Date.now();
-    $('zca_go').onclick=()=>{ if(Date.now()-_t0<600) return; zPopClose(); res(true); }; $('zca_no').onclick=()=>{ zPopClose(); res(false); };
+    // GHOST-TAP GUARD, v2 (owner 07-21 both ways). v1 was a 600ms dead window — it blocked the ghost
+    // but ALSO silently ate a real fast tap (owner re-ran a zone, tapped quickly, nothing dialed).
+    // Structural fix: iOS's trailing ghost click comes from the touch that began BEFORE this sheet
+    // existed, so it arrives with NO new finger-down on the sheet. A real tap — however fast — always
+    // puts a fresh pointerdown on the overlay first. Arm on that; ignore any click that never was one.
+    let _armed=false; const _arm=()=>{ _armed=true; };
+    $('zmenuOv').addEventListener('pointerdown',_arm,{capture:true,once:true});
+    $('zmenuOv').addEventListener('touchstart',_arm,{capture:true,once:true,passive:true});
+    $('zca_go').onclick=()=>{ if(!_armed) return; zPopClose(); res(true); }; $('zca_no').onclick=()=>{ zPopClose(); res(false); };
     $('zmenuOv').onclick=e=>{ if(e.target===$('zmenuOv')){ zPopClose(); res(false); } };
   });
   if(!goOn) return;
