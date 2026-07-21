@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r173" />
+<meta name="x-rev" content="glassfix-r174" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -5350,7 +5350,7 @@ function scriptHTML(transcript, final){
   const lines=(transcript||'').split('\n').filter(Boolean);
   const hs=transcriptHumanStart(lines);
   const human=lines.slice(hs).filter(l=>/^(Agent|Clerk):/.test(l));
-  if(!human.length) return `<div class="cs-wait">${final?t('live.noconvo','No live conversation on this call.'):t('live.waitperson',"Reaching a person…")}</div>`;
+  if(!human.length) return final?`<div class="cs-wait">${t('live.noconvo','No live conversation on this call.')}</div>`:''; /* live: the log shows real steps ONLY — no filler line past the current step (owner 07-21) */
   return `<div class="chat">${human.map(l=>bubbleHTML(l,true)).join('')}</div>`;
 }
 function callMsgBoxHTML(steps, transcript, opts){
@@ -5421,10 +5421,9 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
           <div class="ctlv2-steps">${stepEls}</div>
         </details>
         <div id="convo_body" style="${bubs?'margin-top:12px;':''}display:flex;flex-direction:column;gap:9px">${bubs}</div>
-        ${(live&&!bubs)?`<div class="cs-wait" style="margin:9px 0 0;padding-left:0;text-align:left">${t('live.waitperson','Reaching a person…')}</div>`:''}
         ${vline}
       </div>
-    </div>`; /* "Reaching a person…" now lives INSIDE the timeline column, right under the current step (owner 07-17: it floated below the log and read right-shifted) */
+    </div>`; /* no filler line under the steps — the log shows real steps ONLY (owner 07-21) */
   }
   const stepRows = steps.slice(1).map((s,idx)=>{
     const realI=idx+1; let secs=null; // seconds this step took (real timings only — derived steps are all at:0)
@@ -5442,10 +5441,9 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
   const reach = n ? `<details class="reach" open><summary><span class="ctl-dot"></span><span class="reach-lbl" style="display:inline-flex;align-items:center">${t('step.calling','Calling')}${SEL_STORE&&(SEL_STORE.logoUrl||SEL_STORE.name)?`<span class="callwho ${SEL_STORE.logoDark?'lite':''}${SEL_STORE.logoWide?' widelogo':''}">${storeFace(SEL_STORE)}</span>`:''}</span><span class="reach-n">${n} ${n===1?t('step.one','step'):t('step.many','steps')}${totalS?` · <span class="cs-count">${totalS}</span>s`:''}</span><span class="reach-chev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary><div class="reach-steps">${stepRows}</div></details>` : '';
   // Conversation: a "Conversation" label (green dot) then the bubbles — NO per-bubble dots.
   const convLabel = human.length ? `<div class="ctl-conv"><span class="ctl-dot"></span><span class="conv-lbl">${t('res.conversation','Conversation')}</span></div>` : '';
-  const emptyMsg = finalElapsed==null ? t('live.waitperson',"Reaching a person…") : '';
   const convo = human.length
     ? human.map(l=>`<div class="ctl-bub${/^Agent:/.test(l)?' ai':''}">${bubbleHTML(l,true)}</div>`).join('')
-    : (emptyMsg?`<div class="cs-wait">${emptyMsg}</div>`:'');
+    : ''; /* live: no filler while waiting — the log shows real steps only (owner 07-21) */
   // Bottom: the call status — last dot + the verdict line (no "confirmed").
   const statusRow = (status&&(status.term||status.title)) ? `<div class="ctl-status tl-${status.cls||'unk'}"><span class="ctl-dot"></span><span class="status-txt">${esc(status.term||status.title)}</span></div>` : '';
   const lineCls = status ? ('ctl-'+(status.cls||'unk')) : 'ctl-live';
