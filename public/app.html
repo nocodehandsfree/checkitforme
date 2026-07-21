@@ -4894,8 +4894,18 @@ const AL_EVENTS=[
   ['store_added','Store went live','email','Their requested store just went live. Grants a free check.'],
   ['waitlist','We’re live in your area','email','A waitlist signup’s area just launched.'],
   ['confirm_email','Confirm your email','email','Someone added an email. Nothing sends until they tap confirm.'],
+  ['instock_owner','In-stock owner ping','both','Your hands-free alert the moment a call confirms stock. Sends to you on the channel set in Owner ping.'],
+  ['zone_instock','Zone result · nearby','message','The line on the shared result page after a zone call finds stock at nearby stores. Tokens: {n} {product}.'],
+  ['referral','Referral welcome','message','The first line an invited friend sees when they open your referral link.'],
 ];
-let AL_TPL={};
+// Defaults for the newer messages that aren't in the server template registry yet. Baked here so they
+// show + edit in the Admin now (overrides persist to the live alerts_json). Server sends honor them post-release.
+const AL_DEFAULTS={
+  instock_owner:{ sms:'🟢 {store} just confirmed {product} is in stock.', emailSubject:'In stock: {product} at {store}.', emailBody:'A call just confirmed {product} is on the shelf at {store}. {dayline}' },
+  zone_instock:{ msg:'Check called {n} stores at once. {product} is on the shelf at these:' },
+  referral:{ msg:'Your friend used Check AI to find viral products on the shelves at retail prices.' },
+};
+let AL_TPL={}, AL_RAW={};
 function alField(id,label,val,tall){ return `<label class="fld"><span class="fl">${esch(label)}</span>`
   +(tall?`<textarea id="${id}" rows="3" style="width:100%;box-sizing:border-box">${esch(val||'')}</textarea>`
         :`<input id="${id}" type="text" value="${esch(val||'')}" style="width:100%;box-sizing:border-box">`)+`</label>`; }
@@ -4929,7 +4939,7 @@ async function ownerPingTest(){
 let AL_LOG_ALL=false;
 function alPreview(k){
   const t=AL_TPL[k]||{}; const chan=(AL_EVENTS.find(e=>e[0]===k)||[])[2];
-  const first=(chan==='email'?(t.emailSubject||t.emailBody):(t.sms||t.emailSubject))||'';
+  const first=(chan==='message'?t.msg:(chan==='email'?(t.emailSubject||t.emailBody):(t.sms||t.emailSubject)))||'';
   return first?String(first).replace(/\s+/g,' ').trim():'Default copy';
 }
 function alRows(){
@@ -4937,7 +4947,7 @@ function alRows(){
   tEl.innerHTML=AL_EVENTS.map(([k,label,chan])=>`<button class="peek" onclick="alSheet('${k}')">
       <span class="pk-main"><span class="pk-t" style="display:block">${esch(label)}</span>
       <span class="pk-m" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(alPreview(k))}</span></span>
-      <span class="pk-fact">${chan==='both'?'Text · email':'Email'}</span>
+      <span class="pk-fact">${chan==='message'?'On the page':chan==='both'?'Text · email':'Email'}</span>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>`).join('');
 }
@@ -4948,22 +4958,35 @@ function alSheet(k){
   const hold=document.getElementById('al_sheets'); if(!hold) return;
   let box=document.getElementById('al_sh_'+k);
   if(!box){ box=document.createElement('div'); box.id='al_sh_'+k; hold.appendChild(box); }
+  // Page-copy messages (zone, referral) are a single line. Sent messages keep text + email fields.
+  if(chan==='message'){
+    box.innerHTML=alField('al_'+k+'_msg','Message',t.msg,true)
+      +`<div class="k-note" style="text-align:left;margin:10px 0 0">Shows on the page. Tokens fill live per visitor.</div>`
+      +`<div class="btnrow"><button class="act" onclick="saveAlertTemplates('${k}')">Save message</button></div>`;
+    sheetFromHolder('al_sh_'+k, label, hint); return;
+  }
   const sms=alField('al_'+k+'_sms','Text message',t.sms,true);
   const email=alField('al_'+k+'_subj','Email subject',t.emailSubject,false)+alField('al_'+k+'_body','Email body',t.emailBody,true);
   const tests=(chan==='both'?[['sms','Test text'],['email','Test email']]:[['email','Test email']])
     .map(x=>`<button class="ghost" onclick="sendAlertTest('${k}','${x[0]}')">${x[1]}</button>`).join('');
+  // Test-send only for events the server already wires; the newer ones edit now, test after the release.
+  const canTest=!AL_DEFAULTS[k];
   box.innerHTML=(chan==='email'?email:sms+email)
     +`<div class="k-note" style="text-align:left;margin:10px 0 0">Tokens fill per send: {store} {product} {city} {email} {result}</div>`
     +`<div class="btnrow"><button class="act" onclick="saveAlertTemplates('${k}')">Save message</button></div>`
-    +`<div class="k-eyebrow" style="margin-top:18px">Send yourself a test</div>`
+    +(canTest?`<div class="k-eyebrow" style="margin-top:18px">Send yourself a test</div>`
     +`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input id="al_test_to_${k}" type="text" placeholder="your email (or a phone for the text)" style="flex:1;min-width:170px;font-size:14px;padding:10px 14px" value="${esch(((document.getElementById('oa_email')||{}).value||''))}">${tests}</div>`
-    +`<div id="al_test_out_${k}" class="meta" style="margin-top:8px;font-size:12px"></div>`;
+    +`<div id="al_test_out_${k}" class="meta" style="margin-top:8px;font-size:12px"></div>`:'');
   sheetFromHolder('al_sh_'+k, label, hint);
 }
 async function loadAlerts(){
   const tEl=document.getElementById('al_templates'); if(!tEl) return;
   loadOwnerAlert();
   AL_TPL=await api('/api/alerts/templates')||{};
+  // The newer messages (owner ping, zone, referral) aren't in the server registry yet, so their
+  // defaults are baked in AL_DEFAULTS and their saved overrides come straight from the live alerts_json.
+  try { const st=await api('/api/settings'); AL_RAW=JSON.parse((st&&st.alerts_json)||'{}')||{}; } catch(e){ AL_RAW={}; }
+  for(const k of Object.keys(AL_DEFAULTS)) AL_TPL[k]={...AL_DEFAULTS[k],...(AL_TPL[k]||{}),...(AL_RAW[k]||{})};
   alRows();
   const log=await api('/api/alerts/log')||{};
   // Delivery chips: green when the provider creds are set, amber "stubbed" until then.
@@ -4999,8 +5022,9 @@ async function saveAlertTemplates(only){
   const patch={};
   for(const [k,,chan] of AL_EVENTS){
     if(only&&k!==only) continue;
-    if(!document.getElementById('al_'+k+'_sms')&&!document.getElementById('al_'+k+'_subj')) continue; // sheet never opened
+    if(!document.getElementById('al_'+k+'_sms')&&!document.getElementById('al_'+k+'_subj')&&!document.getElementById('al_'+k+'_msg')) continue; // sheet never opened
     patch[k]={};
+    if(chan==='message'){ patch[k].msg=(document.getElementById('al_'+k+'_msg')||{}).value||''; continue; }
     if(chan!=='email'){ const v=(document.getElementById('al_'+k+'_sms')||{}).value; patch[k].sms=v||''; }
     if(chan!=='sms'){
       const subj=(document.getElementById('al_'+k+'_subj')||{}).value||'', body=(document.getElementById('al_'+k+'_body')||{}).value||'';
@@ -5008,7 +5032,11 @@ async function saveAlertTemplates(only){
     }
   }
   const r=await api('/api/alerts/templates',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(patch)});
-  if(r&&!r.error){ AL_TPL=r; toast('Message saved'); alRows(); }
+  if(r&&!r.error){ AL_TPL=r;
+    // r comes from the server registry (the 5 wired events) and drops the newer keys; re-merge them from
+    // their baked defaults + saved overrides so the just-saved value stays on screen.
+    for(const k of Object.keys(AL_DEFAULTS)){ if(patch[k]) AL_RAW[k]={...(AL_RAW[k]||{}),...patch[k]}; AL_TPL[k]={...AL_DEFAULTS[k],...(AL_RAW[k]||{})}; }
+    toast('Message saved'); alRows(); }
   else toast('Could not save the message');
 }
 async function sendAlertTest(k,channel){
