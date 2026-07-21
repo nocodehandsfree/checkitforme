@@ -3,11 +3,15 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
-## 2026-07-21 — CVS/Bravo early-join FIXED (restored)
-- 8:54p zone call to CVS: billed agent joined during nav/hold (~16¢ vs ~5¢). Root cause: bridge.ts
-  VAD gate only checked dtmf, so say-plan (Bravo) chains ran the hair-trigger VAD, which trips on
-  the IVR's recorded transfer voice. Fix 770ffa0 (07-20 23:11) was REVERTED 40min later (8671855,
-  no reason given). Restored by reverting the revert; tsc + test-bridge 13/0 green.
+## 2026-07-21 — CVS/Bravo early-join FIXED (for real this time)
+- 8:54p zone call to CVS: billed agent joined during nav/hold (~16¢ vs ~5¢). THREE stacked causes:
+  (1) VAD gate checked ctx.dtmf/say — but plans are CONSUMED at TwiML build, so the gate always
+  passed and VAD ran hair-trigger on Bravo (trips on CVS's recorded transfer voice). This is also
+  why fix 770ffa0 (07-20 23:11, reverted 40min later by 8671855, no reason) was a silent NO-OP.
+  (2) connectAtSec is answer-anchored but the timer starts at stream open (post-nav) → Bravo aimed
+  ~50s late. (3) hair-trigger "direct" VAD mode keyed off lastDtmfMs which is always 0 now.
+- Fix: hadDtmf/hadSay flags survive consumption; VAD only for fully UNMAPPED stores; timer
+  re-anchored via navEndSec (navPlanEndSec pure fn). tsc + test-bridge 20/0 green.
 - NOT live-verified: needs one real Bravo (CVS) call to confirm agent joins at the human. Owner drives.
 - Live phone-menu narration on the call view: built, owner ordered it DROPPED (dcd0d75 reverted).
   Do NOT rebuild without his word; if revived it's owner-account-only.
@@ -59,9 +63,7 @@ the Admin-edits-vs-staging-DB mirroring dance ENDS.
 2. SELF-LEARNING = first post-launch build (ABOVE Delta): mine call corpus (~110 calls and growing)
    into phrasing/mishear/conditions library + owner's master-account front-end flag (backend mine,
    button Webbie). Corpus capture already running (transcripts+verdicts+timing on every call).
-3. First-0.5s pickup audio (name-first greetings): real-store greetings are long so impact is small;
-   re-architecture parked post-launch.
-4. Bail enforcement (voicemail/IVR caps) — policy UI exists, live enforcement NOT wired, switch off.
+3. First-0.5s pickup audio: parked post-launch. 4. Bail enforcement — UI only, live wiring off.
 5. A2P day: set TWILIO_MESSAGING_SERVICE_SID when approval lands (error 30034 = not active yet).
 
 **Delta: SHELVED** (built, 37 tests green, zero stores; full state in git log 07-15/16). Barge scope =

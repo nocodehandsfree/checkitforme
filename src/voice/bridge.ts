@@ -32,6 +32,15 @@ export interface BridgeContext {
   // is otherwise left untouched, since overriding prompt/first-message there once hung calls up).
   voiceId?: string;
   voiceTuning?: Record<string, unknown>;
+  // Set when a nav plan (dtmf/say) was CONSUMED into TwiML. The plan strings themselves are nulled
+  // at TwiML build (before any media frame arrives), so the media-time logic must read these flags,
+  // never ctx.dtmf/ctx.say — checking the consumed strings is how the 07-20 CVS fix silently no-op'd.
+  hadDtmf?: boolean;
+  hadSay?: boolean;
+  // Seconds of nav TwiML (<Pause>/<Say>/<Play digits>) that run BEFORE <Connect> opens the stream.
+  // connectAtSec is measured from ANSWER, but the bridge's timer starts at stream open — nav-heavy
+  // (Bravo) calls must subtract this or the timer aims ~the whole nav-length late.
+  navEndSec?: number;
 }
 const contexts = new Map<string, BridgeContext>();
 export function setBridgeContext(room: string, ctx: BridgeContext) {
@@ -58,6 +67,7 @@ export function takeBridgeDtmf(room: string): string | null {
   if (!ctx?.dtmf) return null;
   const d = ctx.dtmf;
   ctx.dtmf = undefined;
+  ctx.hadDtmf = true; // survives consumption — media-time logic keys off this, not the nulled plan
   return d;
 }
 
@@ -68,7 +78,23 @@ export function takeBridgeSay(room: string): string | null {
   if (!ctx?.say) return null;
   const s = ctx.say;
   ctx.say = undefined;
+  ctx.hadSay = true; // survives consumption — media-time logic keys off this, not the nulled plan
   return s;
+}
+
+/** Record how many seconds of nav TwiML run before <Connect> opens the stream (computed where the
+ *  TwiML is built). Lets the connect timer re-anchor connectAtSec (answer-relative) to stream time. */
+export function setBridgeNavEnd(room: string, sec: number) {
+  const ctx = contexts.get(room);
+  if (ctx) ctx.navEndSec = sec;
+}
+
+/** Seconds until the last nav step of a plan finishes: last atSec + speech/press time. Pure, for tests. */
+export function navPlanEndSec(dtmf?: string | null, say?: string | null): number {
+  let end = 0;
+  for (const m of (dtmf ?? "").matchAll(/([0-9*#])\s*@\s*(\d+(?:\.\d+)?)/g)) end = Math.max(end, Number(m[2]) + 1);
+  for (const m of (say ?? "").matchAll(/([^,@]+?)\s*@\s*(\d+(?:\.\d+)?)/g)) end = Math.max(end, Number(m[2]) + 2);
+  return Math.round(end);
 }
 
 // room -> ElevenLabs conversation id (so Runnr can poll transcript/result for a bridged call)
@@ -297,8 +323,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       if (ctx?.connectOnHuman) {
         if (ctx.connectAtSec && ctx.connectAtSec > 0) {
           // Deterministic: open the agent at the learned time-to-human. No VAD guesswork.
-          log(`twilio start room=${room.slice(0, 8)} -> connect-on-human TIMER: connect at ${ctx.connectAtSec}s`);
-          dtmfTimers.push(setTimeout(() => triggerConnect("recipe-timer"), ctx.connectAtSec * 1000));
+          // connectAtSec counts from ANSWER, but this timer starts at stream open — which on a
+          // nav-plan call is AFTER the <Pause>/<Say>/<Play> TwiML ran. Subtract that nav time or a
+          // Bravo call (CVS: ~50s of spoken nav) aims the whole nav-length late and misses the human.
+          const at = Math.max(2, ctx.connectAtSec - (ctx.navEndSec ?? 0));
+          log(`twilio start room=${room.slice(0, 8)} -> connect-on-human TIMER: connect at ${at}s of stream (learned ${ctx.connectAtSec}s - nav ${ctx.navEndSec ?? 0}s)`);
+          dtmfTimers.push(setTimeout(() => triggerConnect("recipe-timer"), at * 1000));
         } else {
           log(`twilio start room=${room.slice(0, 8)} -> connect-on-human (VAD; deferring ElevenLabs until a human)`);
           dtmfTimers.push(setTimeout(() => triggerConnect("hold-timeout"), (ctx.holdMaxSeconds ?? 45) * 1000));
@@ -320,7 +350,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       if (suppress) { if (++echoDropped % 200 === 1) log(`echo gate: suppressing agent playback echo (dropped=${echoDropped})`); }
       else if (eleven && ready) eleven.send(JSON.stringify({ user_audio_chunk: b64 }));
       else if (connecting) pending.push(b64);          // committed to connect → buffer for the agent
-      else if (ctx?.connectOnHuman && (!ctx.connectAtSec || (!ctx.dtmf && !ctx.say))) maybeDetectHuman(b64); // VAD only when there's NO nav plan at all (no timer, no keypad, no spoken plan). Voice chains (CVS: say-plan, no dtmf) MUST NOT VAD — it trips on the IVR's own recorded greeting and opens the agent early (2026-07-16: CVS/pharmacy zone-call failures).
+      else if (ctx?.connectOnHuman && !ctx.connectAtSec && !ctx.hadDtmf && !ctx.hadSay) maybeDetectHuman(b64); // VAD is the LAST resort: only when the store is completely unmapped (no learned timer, no keypad plan, no spoken plan). Mapped stores connect on the recipe timer — VAD trips on IVR recordings (CVS transfer voice) and opens the billed agent early. NOTE ctx.hadDtmf/hadSay, NOT ctx.dtmf/ctx.say: the plan strings are consumed at TwiML build, so checking them here is always-true and silently re-enables VAD (the 07-20 no-op fix).
     } else if (m.event === "stop") { log("twilio stop"); signalEnd(); if (eleven) eleven.close(); }
   });
   twilio.on("close", () => { activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); if (eleven) eleven.close(); });
