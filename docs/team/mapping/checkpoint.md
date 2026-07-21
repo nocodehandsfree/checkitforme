@@ -2,55 +2,65 @@
 > **Volatile — update at every "Checkpoint".** Newest on top, bullets not prose, under ~80 lines.
 > (Full history in git + report-2026-07-10/11.md, unmapped-audit-2026-07-11.md.)
 
-## LAUNCH READINESS (2026-07-16) — 99.90% of stores mapped
-- **110,516 of 110,622 covered stores are front-end callable (99.90%).** 87/95 chains. Only **8 chains /
-  106 stores (0.10%)** unmapped. Strong go-live position; not a blocker.
-- **Mapped this session:** Publix(70) keypad 142s (slow tree but callable — the big one, 1,240 stores) ·
-  Woodman's(86) direct 27s · H Mart(131) keypad 49s. (Earlier: Walmart 10s, Office Depot direct ~16s,
-  Family Dollar 40s.)
-- **Macy's (Toys R Us shop-in-shop) = MUTED** (resolved, owner-approved — main line never reaches the toy
-  counter). **Micro Center = muted** (online-only).
+## STATE (2026-07-21) — map VERIFIED intact on prod. Owner running a live CVS proof call now.
+- **95 mapped chains live on prod, every one still carries its recipe (I read all 95 today):**
+  45 direct · 41 keypad · 1 voice (CVS) · 87 treeStatus learned/verified. Marquee spot-check all
+  correct: CVS `say:no>front>general` 67s · Walgreens press 0×4 34s · Target press 2×2 16s ·
+  Walmart press 9 10s · Costco press 1 35s · Publix 142s · Ralphs 59s · Meijer press 0×2 71s.
+- **This session = ASSESSMENT ONLY — zero Mapper code/data changes.** Diagnosed the 07-20 zone-call
+  CVS/Walgreens/TJ-Maxx failures and reviewed Echo's fix; the MAP was never the problem.
+- **99.90% coverage holds** (110,516 of 110,622 stores callable). Only the 8 micro-chains / 106 stores
+  are unmapped, and that's a DATA gap (bad numbers), not a mapping gap. Macy's + Micro Center muted.
+- **Ship path (unchanged):** map on **PROD**; learned nav syncs prod→staging every 3 min (DD's pipe).
+  NEVER hand-set nav on staging — overwritten. ⚠️ Container reclaim reverts the LOCAL tree to stale
+  commits — remote is truth; drive per-check-in, never trust the local working copy after a gap.
 
-## THE 8 STILL UNMAPPED (106 stores) — BAD NUMBERS, PARKED (owner 2026-07-16)
-- H-E-B(84), Lucky(7), FoodMaxx(5), Metro Market(5), Stop & Shop(2), Pak N Save(1), Payless(1), Uwajimaya(1).
-- **Owner called them himself — the numbers can NOT be recovered. Parked, deal with later.** These 8 stay
-  unmapped for now (0.10% of stores). NOT a mapping problem, don't burn calls. Revisit if good numbers surface.
-- **H-E-B barge answer (owner asked):** NO, can't barge 0 at 3s — the line must play its greeting first
-  before it accepts the 0. Press 0 works only after the greeting.
+## CVS ZONE FAILURE — ROOT CAUSE + FIX (Echo's lane, `df1c4c8` on staging — I reviewed it, it's sound)
+- **Not the map, not the models.** Bug lived in the connect-on-human (cheap ~5¢) path: the
+  "wait for a human before waking the billed agent" guard read `ctx.dtmf`/`ctx.say`, which are NULLED
+  at TwiML build before any media frame — so the guard was always-true and VAD ran on MAPPED stores,
+  opening the agent on CVS's recorded transfer voice (~16¢). My 07-20 one-liner (`770ffa0`) failed for
+  the SAME reason (checked the consumed strings) → reverted, correctly.
+- **Echo's fix:** `hadDtmf`/`hadSay` flags survive consumption → VAD now ONLY on fully unmapped stores;
+  `connectAtSec` re-anchored by `navEndSec` (subtract nav-TwiML length or the timer aims ~a full menu
+  late on CVS). Wired at BOTH placement sites (`server.ts:1039`, `bridge-place.ts:81`) — not inert.
+  test-bridge 20/0, tsc clean. **NOT proven live yet** — owner dialing a real CVS now; proof =
+  transcript kicks in at pickup, cost ~5¢.
+- **Why single checks always worked:** the proven single-check path wakes the agent immediately and
+  never leaned on the defer-agent timing. My Zones switched the cheap defer path on broadly and dragged
+  these latent timing bugs into daylight. The recipes were always correct.
 
-## Engine state (LIVE on prod 25be309)
-- No-downgrade guard (`6feff66`) + skip-rings-direct (`52d2c77`) promoted + verified. Guard proven: a verify
-  re-measure that comes in slower KEEPS the faster lock.
-- Independents/co-ops = DIRECT, handled in code (DIRECT_DEFAULT_CHAINS + boot backfill, 0b8d077). Boot pass
-  overwrites hand-locks → **don't hand-lock independents.** Tree-mapper SKIPS ringsDirect/answerPath=direct_human.
-- Ace = co-op → per-store nav is the long-term fix (backend ask), never one chain tree.
+## Engine state (LIVE on prod)
+- No-downgrade guard (`6feff66`) + skip-rings-direct (`52d2c77`): a verify re-measure that comes in
+  slower KEEPS the faster lock. Independents/co-ops = DIRECT in code (`DIRECT_DEFAULT_CHAINS` + boot
+  backfill); don't hand-lock them (boot overwrites). Ace = co-op → per-store nav is the long-term fix.
+  Daily cap = 60 runaway guard + `mapper_daily_cap` setting.
 
-## Staging (RESOLVED by DD) — lock on PROD, it flows down
-- The "mapped chains gray on staging" gap is fixed: **staging auto-pulls learned nav from prod every ~3 min.**
-  So map on PROD only; **NEVER hand-set nav on staging — it gets overwritten by the sync.** DD also loaded
-  real phones + hours for verified-kiosk stores (both envs), so "no store open" from a data gap is gone.
+## THE 8 STILL UNMAPPED (106 stores) — BAD NUMBERS, PARKED (owner)
+- H-E-B(84), Lucky(7), FoodMaxx(5), Metro Market(5), Stop & Shop(2), Pak N Save(1), Payless(1),
+  Uwajimaya(1). Loaded numbers were Google answer-box fabrications (owner dialed them, unrecoverable);
+  quarantined to `nophone` both envs. NEW LAW (DD): phones ONLY from the chain's own store locator or
+  the Google MAPS pin. When real numbers land, **Mapper takes ONE pass** (simple single-tree groceries).
+  H-E-B nav note: press 0 reaches customer service but ONLY after the greeting (barge at 3s dropped).
+  Payless Athens: 1 store, no number exists anywhere → mute/leave.
 
-## Open / handed off
-- **DD:** the 8 unmapped chains have unrecoverable numbers (parked, owner) — no action unless good numbers
-  turn up. Food 4 Less kiosk-only flags; populate
-  muted reasons (Amazon/Best Buy/Micro Center = "online only", Aldi = "no store line").
-- **Admin:** add "Can't map" as a 3rd mapping state + reason display (spec in unmapped-audit-2026-07-11.md).
-- No open sweep. Standing down per owner (2026-07-16).
+## Open handoffs
+- **DD:** real numbers for the 8 chains → Mapper's final pass. Food 4 Less kiosk-only flags.
+- **Echo/zones lane:** finish proving `df1c4c8` on a live CVS; TJ-Maxx keypad-tone tool failure
+  (`play_keypad_touch_tone failed`) still open — that's the zone-call bridge, not the map.
+- **Webby/logs:** call log showed total call LENGTH not time-to-human; per-step seconds now server-
+  computed (`180f74e`) — verify it reads right on the next zone run.
+- **Admin:** add "Can't map" as a 3rd mapping state + reason display (unmapped-audit-2026-07-11.md).
 
 ## #1 TRAP (keep)
-- Auto-nav 0-hammers when it can't parse an option → FALSE "no human path". NEVER call a chain dead from an
-  auto-caller failure. Method: `trainer/document` → read FULL menuPrompts (human option often LAST) →
-  press-test (`barge`+`confirm:true`) → `trainer/lock`. A no-answer ≠ unmappable (may ring direct).
-- NEW: "no human (done)" across many stores of a chain + a plain listen capturing NOTHING = a phone-NUMBER
-  problem (DD), not a nav problem — don't grind calls, flag the numbers.
+- Auto-nav 0-hammers when it can't parse an option → FALSE "no human path". NEVER call a chain dead from
+  an auto-caller failure. `trainer/document` (listen) → read FULL menuPrompts (human option often LAST)
+  → press-test (`barge`+`confirm:true`) → `trainer/lock`. A no-answer ≠ unmappable.
+- NEW: "no human" across many stores of a chain + a plain listen capturing NOTHING = a phone-NUMBER
+  problem (DD), not nav — flag the numbers, don't grind calls.
 
-## Other traps + owner rules (keep)
-- STT garbles digits — press-test each candidate. Recorded greetings false-fire "human" ~8-13s in (can
-  mis-lock type:direct). Stored times can be lucky single samples — trust the engine's re-measure.
-- Muted = never call. Never push code while a call is live. Independents/single-location = DIRECT (no tree).
-  Military = muted. National/online = callTarget:false or muted. Pops owns prod promotes; explicit owner
-  naming for prod pushes. Done = demonstrated w/ evidence.
-
-## State
-- Prod is go-live ready on mapping (99.90% stores). Recipes live in prod DB; staging mirrors via 3-min pull.
-  Remaining 0.10% = 8 micro-chains with unrecoverable bad numbers (owner confirmed) — parked.
+## Owner rules (keep)
+- STT garbles digits — press-test each candidate. Recorded greetings false-fire "human" ~8-13s in.
+- Muted = never call. Independents/single-location = DIRECT (no tree). Never push code while a call is
+  live. Done = demonstrated w/ evidence. Pops owns prod promotes; explicit owner naming before prod push.
+- Owner is twitchy about test calls — never dial unless he says go. Don't touch other agents' lanes.
