@@ -31,7 +31,7 @@ export type CreditOutcome =
   | { kind: "granted"; cid: number; store: string; reason: string }
   | { kind: "already"; cid: number; store: string }
   | { kind: "denied_fine"; cid: number; store: string; seconds: number | null }
-  | { kind: "not_charged"; cid: number; store: string }
+  | { kind: "not_charged"; cid: number; store: string; statusKey: string | null }
   | { kind: "cap" }
   | { kind: "no_recent" }
   | { kind: "ambiguous"; stores: string[] }
@@ -122,7 +122,7 @@ export async function verifyCheckIssue(accountId: string | null | undefined, mes
 
   const prior = (await db.select().from(supportCreditGrants).where(eq(supportCreditGrants.cid, target.id)).limit(1))[0];
   if (prior) return { kind: "already", cid: target.id, store };
-  if (!target.chargedAt) return { kind: "not_charged", cid: target.id, store };
+  if (!target.chargedAt) return { kind: "not_charged", cid: target.id, store, statusKey: target.statusKey };
 
   const ev = evidenceFor(target);
   if (!ev.ok) return { kind: "denied_fine", cid: target.id, store, seconds: target.callSeconds };
@@ -162,6 +162,23 @@ export async function listCreditGrants(limit = 50) {
   return db.select().from(supportCreditGrants).orderBy(desc(supportCreditGrants.grantedAt)).limit(Math.min(limit, 200));
 }
 
+// Plain-words reason a check never completed, from its telemetry statusKey. Friend voice, no store
+// name (the sentence around it names the store once). Anything we don't have a specific line for
+// falls back to "the call didn't connect" — never invents a cause.
+function wentWrong(statusKey: string | null, es: boolean): string {
+  switch (statusKey) {
+    case "bad_number":       return es ? "El número que teníamos no funcionó" : "The number we had didn't work";
+    case "nobody_answered":  return es ? "Nadie contestó" : "Nobody picked up";
+    case "voicemail":        return es ? "Entró al buzón de voz" : "It went to voicemail";
+    case "busy":
+    case "too_busy":         return es ? "La línea estaba ocupada" : "The line was busy";
+    case "left_on_hold":     return es ? "Nos dejaron en espera" : "We got left on hold";
+    case "closed":           return es ? "La tienda estaba cerrada" : "The store was closed";
+    case "language_barrier": return es ? "No pudimos pasar la barrera del idioma" : "We couldn't get past a language barrier";
+    default:                 return es ? "La llamada no conectó" : "The call didn't connect";
+  }
+}
+
 // Deterministic customer-facing replies (EN/ES) — money words never come from a model.
 export function creditReply(out: CreditOutcome, lang: string): { reply: string; escalate: boolean } {
   const es = lang === "es";
@@ -176,8 +193,8 @@ export function creditReply(out: CreditOutcome, lang: string): { reply: string; 
         : `That check to ${out.store} was already credited back earlier, so you're covered. If something else went wrong, tell me.` };
     case "not_charged":
       return { escalate: false, reply: es
-        ? `Buenas noticias: ese check a ${out.store} nunca se cobró. Los checks fallidos son gratis, tu saldo no bajó, así que no hay nada que devolver.`
-        : `Good news: that check to ${out.store} was never charged. Failed checks are free, your balance didn't move, so there's nothing to give back.` };
+        ? `Ese check a ${out.store} no se concretó. ${wentWrong(out.statusKey, true)}, así que la llamada no se completó y no te cobramos. Todos tus checks siguen en tu cuenta. Puedes intentarlo otra vez cuando quieras, y si sigue fallando avísame y pongo a una persona a revisar el número de esa tienda.`
+        : `That check to ${out.store} didn't go through. ${wentWrong(out.statusKey, false)}, so the call never completed and you weren't charged. All your checks are still on your account. You can try again anytime, and if it keeps failing tell me and I'll get a person on that store's number.` };
     case "denied_fine": {
       const secs = out.seconds != null ? ` ${out.seconds}s` : "";
       return { escalate: true, reply: es

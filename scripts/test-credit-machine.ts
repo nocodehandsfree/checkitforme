@@ -54,11 +54,13 @@ async function main() {
   const acct3 = (await db.select().from(accounts).where(eq(accounts.clerkUserId, USER)))[0];
   ok("balance unchanged", acct3.credits === 1, `credits=${acct3.credits}`);
 
-  console.log("\n== 3. failed + never charged → NOT_CHARGED, no credit needed ==");
+  console.log("\n== 3. failed + never charged → NOT_CHARGED: explains what went wrong, confirms balance, gives next step ==");
   await db.delete(callResults);
   await mkCheck(r1.id, { statusKey: "nobody_answered", status: "failed", chargedAt: null, callSeconds: 5 });
   res = await answerSupport("sess-free-1", "The Target call failed", { category: "check_issue", account: { id: USER } });
-  ok("reply says never charged", /never charged/i.test(res.reply), res.reply);
+  ok("says what went wrong (nobody picked up)", /nobody picked up/i.test(res.reply), res.reply);
+  ok("confirms not charged + balance intact", /weren't charged/i.test(res.reply) && /still on your account/i.test(res.reply), res.reply);
+  ok("gives a next step", /try again/i.test(res.reply), res.reply);
   ok("no escalation", res.escalate === false);
 
   console.log("\n== 4. two stores, vague message → AMBIGUOUS, then naming the store concludes ==");
