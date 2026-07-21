@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r171" />
+<meta name="x-rev" content="glassfix-r172" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -478,11 +478,13 @@ __BRAND_HEAD__
      without shouting (owner 07-15). */
   .callwho{display:inline-flex;width:20px;height:20px;border-radius:6px;background:#1F1F25;align-items:center;justify-content:center;overflow:hidden;opacity:.72;vertical-align:-4px;margin-left:7px;flex:none}
   .callwho img{max-width:15px;max-height:15px;object-fit:contain}
-  /* Wide wordmark logos (TJ Maxx, Big 5…) were crushed into the 20px square — give them room. Dark
-     logos get the light backing, same rule as every .ic tile. */
-  .callwho.widelogo{width:auto;padding:0 5px}
-  .callwho.widelogo img{max-width:46px;max-height:13px}
-  .callwho.lite{background:#E9E9EF;opacity:1}
+  /* Wide wordmark logos (TJ Maxx, Big 5…) sit on a SQUARE canvas with the mark as a thin centred band
+     (only ~20% of the height), so any max-height crushes it. Render like the store tiles: white backing,
+     width-driven, height auto — the chip's overflow:hidden clips the transparent top/bottom so the
+     wordmark reads at full width, exactly as it does in a zone-row tile (owner 07-21, verified render). */
+  .callwho.widelogo{width:auto;padding:0 5px;height:20px}
+  .callwho.widelogo img{width:52px;max-width:52px;height:auto;max-height:none;object-fit:contain} /* max-width MUST override the base .callwho img 15px cap, or the wide mark stays crushed */
+  .callwho.lite{background:#f2f2f5;opacity:1}
   .verdict.in .title{color:var(--green)} .verdict.out .title{color:var(--red)} .verdict.unk .title{color:#FBBF24} .verdict.soon .title{color:#F59E0B}
   .vstore{text-align:center;color:#d6d6e0;font-size:14.5px;font-weight:600;margin-top:9px}
   /* combined call header: store + verdict status + timing in one box at the top */
