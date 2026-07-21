@@ -2973,7 +2973,11 @@ async function loadSupportChats(){
   el.innerHTML=rows.map(c=>{
     const who=c.account?(c.account.email||c.account.phone||c.account.label||'Member'):'Guest';
     const member=!!c.account;
-    const snippet=(c.lastMessage||c.snippet||'').slice(0,90)||'(no messages)';
+    // Row title = the real first message. When a chat opened from a check's status page with nothing
+    // typed yet, name where it came from ("Check status") instead of a blank "(no messages)".
+    const srcLabel=c.source==='status_page'?'Check status':(c.source==='messenger'?'Messenger':'');
+    const title=(c.title||'').trim();
+    const snippet=title?title.slice(0,90):(srcLabel||'(no message yet)');
     const k=String(c.status||'open');
     const st=k==='escalated'
       ? `<span class="stc" style="background:rgba(245,158,11,.15)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span>`
@@ -2983,7 +2987,7 @@ async function loadSupportChats(){
     return `<button class="peek" onclick="openSupChat('${esch(String(c.id))}')">
       <span class="pk-logo"><span class="slogo emboss" style="width:38px;height:38px;border-radius:11px">${esch((who.replace(/[^A-Za-z0-9]/g,'').slice(0,2)||'G').toUpperCase())}</span></span>
       <span class="pk-main"><span class="pk-t" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(snippet)}</span>
-      <span class="pk-m" style="display:block">${member?'Member':'Guest'} · ${esch((SUP_CATS[c.category]||c.category||'other').toLowerCase())} · ${agoTs(c.createdAt||c.created_at)}${c.source==='status_page'?' · from a check':''}</span></span>
+      <span class="pk-m" style="display:block">${member?esch(who):'Guest'} · ${esch((SUP_CATS[c.category]||c.category||'other').toLowerCase())} · ${agoTs(c.createdAt||c.created_at)}${(title&&srcLabel)?' · '+esch(srcLabel):''}</span></span>
       <span class="pk-st">${st}</span>
     </button>`;
   }).join('');
@@ -3002,6 +3006,10 @@ async function openSupChat(id){
   const teachQ=String(firstQ.text||firstQ.content||'');
   const teachA=String(lastA.text||lastA.content||'');
   const who=r.account?(r.account.email||r.account.phone||r.account.label||'Member'):'Guest';
+  const done=String(r.status||'open')==='resolved', escalated=String(r.status||'')==='escalated';
+  // Operator flip so the list dot goes green: mark a handled chat done (or reopen it). Escalated chats
+  // belong to the ladder, so we don't offer the flip there.
+  const statusBtn=escalated?'':`<button class="${done?'ghost':'act'}" style="width:100%;margin-bottom:14px" onclick="supSetStatus('${esch(String(r.id||id))}','${done?'open':'resolved'}')">${done?'Reopen this chat':'Mark resolved'}</button>`;
   // Where the chat came from — the page, and the check it was opened off of.
   const srcLabel=r.source==='status_page'?"A check's status page":(r.source==='messenger'?'Support messenger':(r.source||''));
   const originRows=[srcLabel?['Opened from',srcLabel]:null,r.checkId?['Check',String(r.checkId)]:null,r.pageUrl?['Page',String(r.pageUrl)]:null]
@@ -3010,6 +3018,7 @@ async function openSupChat(id){
   openSheet(who,
     [esch(SUP_CATS[r.category]||r.category||'Other'),esch(String(r.status||'open')),r.tier!=null?esch(supTier(r.tier)):'',agoTs(r.createdAt||r.created_at)].filter(Boolean).join(' · '),
     `<div style="display:flex;flex-direction:column;margin-bottom:14px" class="chat">${msgs.map(bub).join('')||'<div class="empty">No transcript.</div>'}</div>
+    ${statusBtn}
     ${shot?`<div class="k-eyebrow">Screenshot</div><a href="${esch(shot)}" target="_blank" rel="noopener"><img src="${esch(shot)}" alt="Customer screenshot" style="max-width:100%;border-radius:14px;margin-bottom:14px"></a>`:''}
     ${dbg?`<div class="k-eyebrow">Debug info</div><pre style="white-space:pre-wrap;word-break:break-word;font-size:11.5px;background:var(--terminal);box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:14px;padding:12px;margin:0 0 14px">${esch(dbg)}</pre>`:''}
     <div class="card" style="margin-bottom:14px;border-color:rgba(74,222,128,.3)">
@@ -3020,6 +3029,12 @@ async function openSupChat(id){
       <button class="act" style="margin-top:11px" onclick="supTeach('${esch(String(r.id||id))}')">Save as approved answer</button>
     </div>
     ${originBlock}<div class="k-eyebrow">Account</div>${acct}`);
+}
+// Flip a chat's status (resolved/open) so the list dot turns green or back to open. Reloads the list.
+async function supSetStatus(id,status){
+  const r=await srcApi('/api/support/chats/'+encodeURIComponent(id)+'/status',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({status})});
+  if(r&&r.ok){ toast(status==='resolved'?'Marked resolved':'Reopened'); closeSheet(); loadSupport(); }
+  else toast('Could not update that chat');
 }
 // Teach: save a corrected question+answer as an approved pair. It embeds into the answer cache, so the
 // next time someone asks this the agent serves your wording verbatim instead of reasoning fresh.

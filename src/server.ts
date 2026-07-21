@@ -5143,6 +5143,19 @@ app.get("/api/support/chats/:id", async (c) => {
       screenshotUrl: ticket.screenshotUrl, debug: ticket.debug ? JSON.parse(ticket.debug) : null, emailedOk: ticket.emailedOk } : null,
   });
 });
+// Admin: mark a chat done (or reopen it) so the list dot goes green — the operator's "handled" flip.
+// Only open/resolved is settable here; escalation is owned by the ladder, never hand-flipped.
+app.post("/api/support/chats/:id/status", async (c) => {
+  const id = Number(c.req.param("id"));
+  const b = await c.req.json().catch(() => ({}));
+  const status = b.status === "resolved" ? "resolved" : b.status === "open" ? "open" : null;
+  if (!status) return c.json({ error: "bad_status" }, 400);
+  const cv = (await db.select().from(supportConversations).where(eq(supportConversations.id, id)).limit(1))[0];
+  if (!cv) return c.json({ error: "not_found" }, 404);
+  await db.update(supportConversations).set({ status, updatedAt: Math.floor(Date.now() / 1000) })
+    .where(eq(supportConversations.id, id));
+  return c.json({ ok: true, status });
+});
 // Admin: the dashboard numbers — volume, category mix, who answered, escalation, CSAT, spend.
 app.get("/api/support/stats", async (c) => {
   const range = c.req.query("range");
