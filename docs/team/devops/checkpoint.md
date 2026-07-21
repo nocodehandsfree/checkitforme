@@ -3,6 +3,26 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 📍 2026-07-20 — e2e harness complete + SMS kill-switch shipped (branch claude/e2e-coverage-harness-a9esc7, all merged to staging)
+- **E2E harness DONE — all 40 paths in `docs/specs/e2e-coverage/harness.md` dispositioned.** P0 8/8,
+  P1 8/8, P2 11/12 (28 anti-abuse un-automatable: guard sits past the sim early-return), P3 12/12.
+  New tests in `tests/e2e/consumer.spec.ts` (P0/P1/P2 blocks), `local.spec.ts` (P2-27 + P3 admin
+  walk via admin.localhost), `admin-api.spec.ts` (P3-34 publish→in_sync). Coverage table in
+  harness.md is the live record. **Last runs GREEN: local 13/13 · staging 40/40 (2 honest skips).**
+- **Fixed 2 stale reds:** A6 (expected closed stores IN the near feed; 07-16 open-now law drops them
+  server-side) + admin.spec dead `#tr_stats`→`#tr_progress`.
+- **SMS kill-switch SHIPPED** — new `flags.smsAlerts` (default OFF). While OFF: watch/schedule/waitlist
+  forms collect EMAIL only (EN+ES, placeholder survives the lang pass — drops data-i18n-ph), `/pub/watch`
+  refuses phone contacts (400), `/app/alerts/subscribe` rides email, `sendAlert` never fires a customer
+  SMS (legacy sms subs → skipped_sms_off). Admin toggle live: Policy → Consumer → "Text alerts (SMS)".
+  **Owner flips it ON when Toll/A2P approves — no rebuild.** Proven live: consumer.spec P1-9b.
+- **Referrals PROVEN end-to-end (GTM card can close)** — consumer.spec P1-10 (API) + P1-10b (real ?ref
+  link → welcome → signup → auto-claim pays BOTH + count ticks). Was "BUILT, needs walk" — walked.
+- **GTM cards now tap-to-expand** (`public/app.html`, gtmToggleOpen) — owner couldn't read full card
+  text. Shipped to Admin via ship-admin.sh @ 4e8c5b5.
+- Two readable owner reports in scratchpad (launch-test-report.md, launch-list.md) — NOT committed
+  (scratchpad = trash); regenerate from harness.md + `/api/gtm` if needed.
+
 ## 📍 2026-07-16 — everything on staging; ONE promote lights up the last two pipes
 - **Settings mirror prod→staging LIVE (staging half)** — `src/settings-sync.ts`, pull-only every
   60s: policy (minus staging's in-test call flags cheapBridgeAll/connectOnHuman), vt_plans (minus
@@ -10,11 +30,6 @@
   20/20 suite in test-all. **FULLY LIVE since the 07-16 promote** — PM verified the puller's
   status shows ok runs moving real keys (policy_json, vt_plans, statuses) prod→staging every minute.
   Zero overlap with DD's store/learned pipes (asserted in tests; notes swapped in her checkpoint).
-- **Owner's thrift/hobby plan-toggle incident RESOLVED on staging:** his Admin uncheck had landed
-  on Family only + Admin edits live on prod which staging can't see yet. I flipped thrift_hunts +
-  hobby_hunts OFF on all 4 tiers on STAGING via the admin API and drove the buy sheet — tiles gone
-  (screenshot sent). ⚠️ OWNER STILL OWES: uncheck them on Collector/Hunter/Operator rows in Admin,
-  else post-promote the mirror faithfully copies prod back and the tiles RETURN on staging.
 - **PR #18 MERGED to staging** (PM-confirmed promote; cc27924, verified deployed): cheap-bridge
   wiring (all 7 non-live paths ride Mapper recipes via bridgeCheckCall), real call-failed reasons
   (voicemail/busy/bad_number; voicemail no longer mislabeled "closed"), bridge echo gate.
@@ -46,8 +61,6 @@
   (PM queue #2, small build; alerts senders + admin views already exist).
 - **Alerts leftovers (not mine):** A2P 10DLC registration (owner paperwork, gates real SMS),
   email branding (Copper/Webbie), My-Checks contact form (Webbie).
-- **Referrals: BUILT, GTM card stale** — engine+UI+unit tests all pass; needs owner's checkmark
-  + one phone walk of the share link.
 - **Remove `/api/zones*` admin endpoints** (keep the engine) · **Admin price-editor → Stripe**
   (GTM `price-editor`) · logo-resolver fuzzy-fallback delete (DD finding, agreed).
 - [~] **Transcript IDOR** — backend shipped, flag off; waiting on Website Bearer header → flip on.
