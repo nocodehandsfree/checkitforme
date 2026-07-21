@@ -3,6 +3,15 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-21 — CVS/Bravo early-join FIXED (restored)
+- 8:54p zone call to CVS: billed agent joined during nav/hold (~16¢ vs ~5¢). Root cause: bridge.ts
+  VAD gate only checked dtmf, so say-plan (Bravo) chains ran the hair-trigger VAD, which trips on
+  the IVR's recorded transfer voice. Fix 770ffa0 (07-20 23:11) was REVERTED 40min later (8671855,
+  no reason given). Restored by reverting the revert; tsc + test-bridge 13/0 green.
+- NOT live-verified: needs one real Bravo (CVS) call to confirm agent joins at the human. Owner drives.
+- Live phone-menu narration on the call view: built, owner ordered it DROPPED (dcd0d75 reverted).
+  Do NOT rebuild without his word; if revived it's owner-account-only.
+
 ## 2026-07-20 — voice A/B in flight
 - Owner gave a clean 29s Branson recording; re-cloned via /api/voices/clone → **Branson HD =
   `1P1JhCcLzeMmkvLi1BkG`**. Set ACTIVE on BOTH prod + staging (`/api/voices/active`).
