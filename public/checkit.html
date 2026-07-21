@@ -7678,9 +7678,8 @@ function renderZoneRun(){
         </svg>
         <div id="z_ringnum" style="position:absolute;inset:0;display:grid;place-items:center;line-height:1">${ringNum}</div>
       </div>
-      <div style="flex:1;min-width:0">
+      <div style="flex:1;min-width:0;text-align:left">
         <div style="display:flex;align-items:center;gap:8px">
-          ${live?'<span class="zdotlive"></span>':''}
           <span class="zrephead" style="font:800 17px Inter;letter-spacing:-.3px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(headline)}</span>
           <span id="z_calling" style="font:600 12.5px Inter;color:#7C7C88;flex:0 0 auto;${callingLbl?'':'display:none'}">${callingLbl}</span>
         </div>
