@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r163" />
+<meta name="x-rev" content="glassfix-r164" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -1776,26 +1776,28 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zclosedbox b{color:#f6d3a6}
 #zones .zrrow2{display:flex;align-items:center;gap:11px;width:100%;padding:11px 13px;border:0;border-radius:14px;background:linear-gradient(180deg,#2D2D34,#27272D);cursor:pointer;text-align:left;color:#fff}
 #zones .zrrow2.open{border-radius:14px 14px 0 0}
+#zones .zrbody{text-align:left;overflow-x:hidden}
 #zones .zresult:has(.zrrow2.open){border-radius:14px;box-shadow:0 0 0 1px rgba(74,222,128,.25)}
-#zones .zrrow2 .ic2{width:40px;height:40px;border-radius:11px;background:linear-gradient(145deg,#34343D,#23232B);display:grid;place-items:center;flex:none;overflow:hidden}
-#zones .zrrow2 .ic2 img{max-width:30px;max-height:30px;object-fit:contain}
+#zones .ic2{width:40px;height:40px;border-radius:11px;background:linear-gradient(145deg,#34343D,#23232B);display:grid;place-items:center;flex:none;overflow:hidden}
+#zones .ic2 img{max-width:30px;max-height:30px;object-fit:contain}
+#zones .ic2 .wm{font-size:9px}
 #zones .zrrow2 .nm2{flex:1;min-width:0;font:700 14.5px Inter;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #zones .zrrow2.checking{box-shadow:0 0 0 1px rgba(74,222,128,.35),0 0 16px rgba(74,222,128,.14)}
 #zones .zstopall{width:100%;height:50px;border:0;border-radius:14px;background:linear-gradient(180deg,#2D2D34,#27272D);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;gap:9px;font:800 13px Inter;letter-spacing:.06em;text-transform:uppercase;color:#FF9B9B;cursor:pointer}
 #zones .zstopall i{width:12px;height:12px;border-radius:3px;background:#FF9B9B;font-style:normal}
-#zones .zsharecard{position:relative;border-radius:20px;overflow:hidden;background:linear-gradient(180deg,#266440 0%,#20202A 62%);border:1px solid rgba(255,255,255,.08);padding:17px 17px 18px}
-#zones .zsharecard .wm2{position:absolute;top:-24px;right:-16px;opacity:.14}
-#zones .zsharecard .chip2{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:999px;background:rgba(74,222,128,.16);position:relative}
-#zones .zsharecard .chip2 b{width:7px;height:7px;border-radius:50%;background:#4ADE80;box-shadow:0 0 8px #4ADE80}
-#zones .zsharecard .chip2 span{font:800 10px Inter;letter-spacing:.12em;text-transform:uppercase;color:#8CF7B4}
-#zones .zsharecard .hl2{font:900 25px/1.1 Inter;letter-spacing:-.6px;margin-top:14px;color:#FFCB05;position:relative}
-#zones .zsharecard .tiles2{display:flex;gap:8px;margin-top:15px;position:relative}
-#zones .zsharecard .tiles2>div{width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,#34343D,#23232B);display:grid;place-items:center;overflow:hidden}
-#zones .zsharecard .tiles2 img{max-width:28px;max-height:28px;object-fit:contain}
-#zones .zsharewell{background:#1B1B20;border-radius:14px;padding:13px 14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
-#zones .zsharewell .lbl2{font:700 9.5px Inter;letter-spacing:.14em;text-transform:uppercase;color:#5C5C68;margin-bottom:6px}
-#zones .zsharewell .tx2{font:500 13.5px/1.5 Inter;color:#e6e6ee}
-#zones .zsharego{width:100%;display:flex;align-items:center;justify-content:center;gap:9px;height:52px;border-radius:14px;background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%) border-box;border:2.5px solid transparent;box-shadow:0 12px 28px -8px rgba(25,177,69,.45);font:800 13px Inter;letter-spacing:.1em;text-transform:uppercase;color:#4ADE80;cursor:pointer}
+#zones .zsharecard,#zmenuOv .zsharecard{position:relative;border-radius:20px;overflow:hidden;background:linear-gradient(180deg,#266440 0%,#20202A 62%);border:1px solid rgba(255,255,255,.08);padding:17px 17px 18px}
+#zones .zsharecard .wm2,#zmenuOv .zsharecard .wm2{position:absolute;top:-24px;right:-16px;opacity:.14}
+#zones .zsharecard .chip2,#zmenuOv .zsharecard .chip2{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:999px;background:rgba(74,222,128,.16);position:relative}
+#zones .zsharecard .chip2 b,#zmenuOv .zsharecard .chip2 b{width:7px;height:7px;border-radius:50%;background:#4ADE80;box-shadow:0 0 8px #4ADE80}
+#zones .zsharecard .chip2 span,#zmenuOv .zsharecard .chip2 span{font:800 10px Inter;letter-spacing:.12em;text-transform:uppercase;color:#8CF7B4}
+#zones .zsharecard .hl2,#zmenuOv .zsharecard .hl2{font:900 25px/1.1 Inter;letter-spacing:-.6px;margin-top:14px;color:#FFCB05;position:relative}
+#zones .zsharecard .tiles2,#zmenuOv .zsharecard .tiles2{display:flex;gap:8px;margin-top:15px;position:relative}
+#zones .zsharecard .tiles2>div,#zmenuOv .zsharecard .tiles2>div{width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,#34343D,#23232B);display:grid;place-items:center;overflow:hidden}
+#zones .zsharecard .tiles2 img,#zmenuOv .zsharecard .tiles2 img{max-width:28px;max-height:28px;object-fit:contain}
+#zones .zsharewell,#zmenuOv .zsharewell{background:#1B1B20;border-radius:14px;padding:13px 14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
+#zones .zsharewell .lbl2,#zmenuOv .zsharewell .lbl2{font:700 9.5px Inter;letter-spacing:.14em;text-transform:uppercase;color:#5C5C68;margin-bottom:6px}
+#zones .zsharewell .tx2,#zmenuOv .zsharewell .tx2{font:500 13.5px/1.5 Inter;color:#e6e6ee}
+#zones .zsharego,#zmenuOv .zsharego{width:100%;display:flex;align-items:center;justify-content:center;gap:9px;height:52px;border-radius:14px;background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%) border-box;border:2.5px solid transparent;box-shadow:0 12px 28px -8px rgba(25,177,69,.45);font:800 13px Inter;letter-spacing:.1em;text-transform:uppercase;color:#4ADE80;cursor:pointer}
 #zones .zdot{width:9px;height:9px;border-radius:50%;background:#2D2D34}
 #zones .zdot.done{background:var(--accent,#4ADE80);box-shadow:0 0 6px color-mix(in srgb,var(--accent,#4ADE80) 60%,transparent)}
 #zones .zsummary{font-size:13px;font-weight:700} #zones .zsumchips{display:flex;gap:12px;margin-top:7px;font-size:12.5px;font-weight:700;color:#B9B9C4;flex-wrap:wrap}
@@ -7560,8 +7562,18 @@ function renderZoneRun(){
 // Share = MESSAGE FIRST (owner 07-19): a sheet showing the share text, then one Share button that
 // opens the OS share sheet (zoneShare, unchanged).
 function zoneShareSheet(){ const r=ZONES.run; const d=(r&&r.data)||{}; const sm=d.summary||{};
-  const txt=tf('zones.sharemsg2','Checked {n} stores at once. {i} had it in stock. Wild:',{n:d.total||0,i:sm.inStock||0});
-  zPop(`<div class="zsharewell" style="margin:4px 0 14px"><div class="lbl2">${t('zones.sharetext','Share text')}</div><div class="tx2">${esc(txt)}</div></div>
+  const total=d.total||0, inN=sm.inStock||0;
+  const txt=tf('zones.sharemsg2','Checked {n} stores at once. {i} had it in stock. Wild:',{n:total,i:inN});
+  const hits=(d.results||[]).filter(row=>zoneRunTone(row)==='in');
+  const tiles=hits.slice(0,6).map(row=>`<div>${storeFace({logoUrl:row.logoUrl,name:row.name})}</div>`).join('');
+  // The comp's share block, as the slide-up (owner 07-20): card + share text + one Share action.
+  zPop(`<div class="zsharecard" style="margin:4px 0 12px">
+      <div class="wm2"><svg width="120" height="120" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" fill="#4CF286"/><path d="M6.5 12.4 L10.3 16 L17.5 8" stroke="#0C2916" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="chip2"><b></b><span>${t('zones.zonecheck','Zone check')}</span></div>
+      <div class="hl2">${tf('zones.hadit','{i} of {n} stores had it in stock.',{i:inN,n:total})}</div>
+      ${tiles?`<div class="tiles2">${tiles}</div>`:''}
+    </div>
+    <div class="zsharewell" style="margin-bottom:14px"><div class="lbl2">${t('zones.sharetext','Share text')}</div><div class="tx2">${esc(txt)}</div></div>
     <button class="zsharego" onclick="zPopClose();zoneShare()">${t('zones.sharego','Share')}</button>`); }
 // Standalone PREVIEW of the live sweep report (owner: "give me a link before I call stores"). Mirrors
 // ?holdpeek — opens the real report over the app with SAMPLE results, no calls placed. Pulls real
@@ -7592,8 +7604,8 @@ async function zoneExpand(cid,btn){ if(!cid) return; const body=btn.nextElementS
     const hlStyle=tone==='in'?'background:linear-gradient(180deg,#A8FFCB,#34D873);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 2px 18px rgba(74,222,128,.35))':(tone==='out'?'color:#FF7B7B':'color:#C6C6D0');
     const when=o.ts?new Date(o.ts).toLocaleString(LANG==='es'?'es-ES':'en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
     const tx=(o&&o.transcript)||'';
-    body.innerHTML=`<div style="background:#1B1B20;padding:15px 14px 16px;border-radius:0 0 14px 14px">
-      <div style="display:flex;align-items:center;gap:12px;background:#26262B;border-radius:14px;padding:13px 14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05);margin-bottom:14px"><div class="ic2" style="width:46px;height:46px;border-radius:13px">${storeFace(row)}</div><div style="min-width:0;flex:1"><div style="font:800 17px Inter;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(row.name||'')}</div>${row.location?`<div style="font:500 12.5px Inter;color:#8A8A96;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(row.location)}</div>`:''}</div></div>
+    body.innerHTML=`<div style="background:#1B1B20;padding:15px 14px 16px;border-radius:0 0 14px 14px;text-align:left;overflow:hidden">
+      <div style="display:flex;align-items:center;gap:12px;background:#26262B;border-radius:14px;padding:13px 14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05);margin-bottom:14px"><div class="ic2" style="width:46px;height:46px;border-radius:13px;overflow:hidden">${storeFace(row)}</div><div style="min-width:0;flex:1"><div style="font:800 17px Inter;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(row.name||'')}</div>${row.location?`<div style="font:500 12.5px Inter;color:#8A8A96;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(row.location)}</div>`:''}</div></div>
       <div style="display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:999px;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3);margin-bottom:9px"><span style="width:7px;height:7px;border-radius:50%;background:#4ADE80;box-shadow:0 0 8px #4ADE80"></span><span style="font:800 10px Inter;letter-spacing:.14em;text-transform:uppercase;color:#4ADE80">${t('zones.result','Result')}</span></div>
       ${when?`<div style="font:700 10.5px Inter;letter-spacing:.14em;text-transform:uppercase;color:#5C5C68;margin-bottom:6px">${esc(when)}</div>`:''}
       <div style="font:900 33px Inter;letter-spacing:-1.2px;line-height:1.02;${hlStyle}">${esc(hl)}</div>
@@ -7660,7 +7672,6 @@ function railCatId(){
 // Race-proof: if the category id isn't resolved yet (CATS still loading), match by the brand's category
 // LABEL so we never fall open and show another product's checks.
 function railInCat(e){
-  if(e&&e.zoneRunId) return false; // zone-run calls live in the ZONE report (owner 07-20), never the calendar/rail
   const id=railCatId(); if(id!=null) return e.categoryId===id;
   const lbl=(BRAND&&BRAND.category||'').toLowerCase();
   if(lbl) return (e.category||'').toLowerCase()===lbl;
