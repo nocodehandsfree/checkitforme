@@ -3,8 +3,9 @@ name: ship-it
 description: >-
   Load the moment you believe a feature or fix is done, BEFORE you tell the owner
   it's done. Triggers on "it's done / finished / that works / ready to ship / I
-  fixed it". It is the mandatory done-sequence: typecheck, full test suite, drive
-  the change yourself on staging like a real user, push, verify live, then report
+  fixed it". It is the mandatory done-sequence: typecheck, the tests for what you
+  changed (NEVER the full suite unprompted, never in the background), drive the
+  change yourself on staging like a real user, push, verify live, then report
   in one line with evidence. Use it to stop yourself from claiming "should work".
 ---
 

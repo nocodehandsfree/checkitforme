@@ -70,20 +70,13 @@
 - Fry's Gilbert 102795 + Mariano's Westchester-IL 102842: held-back wrong numbers; chains already mapped.
 - Kiosk root fix (my lane, post-launch): key kiosk rows by PLACE, overlay machines via `kiosks` table,
   so TPCi machine moves stop rewriting row identities.
-- Logos needed (real brands): Habitat ReStore, Unique — owner getting. Logo-resolver finding → DevOps
-  (`docs/specs/logo-resolver-hardening/`): delete the fuzzy substring fallback (0 stores ride it).
-- Grade ~38 unscored chains (`tier:null`). Expand `data/distributors.json` when owner's research lands
-  (TPCi is ACQUIRING Excell, announced 2026-02-19 — re-verify the map when it closes).
-- New-chain candidates (free, same playbook): Buffalo Exchange, Plato's Closet/Once Upon a Child,
-  St. Vincent de Paul, ARC.
+- Logos needed (real brands): Habitat ReStore, Unique — owner getting. Logo-resolver hardening spec →
+  DevOps: delete the fuzzy substring fallback (0 stores ride it).
+- Grade ~38 unscored chains (`tier:null`). Expand `data/distributors.json` when owner's research lands.
+- New-chain candidates (free, same playbook): Buffalo Exchange, Plato's Closet, St. Vincent de Paul, ARC.
 - PROD front-end BEHIND staging (promote = owner's call, not mine): `type` filter + hobby/thrift chips.
 
 ## DONE 2026-07-16 (kiosk day — detail in git log)
-- **Kiosk phones COMPLETE:** owner googled 178 numbers+hours in 3 boxes; applied to BOTH envs,
-  address-verified. Every verified kiosk is dialable except Payless (no number exists). 13 machines in
-  mall common areas = muted for good with owner's reason stamped on the chain (Pokemon Vending).
-- **Misdial incident caught+fixed:** batch-1 numbers applied by id landed on shuffled rows (TPCi moved
-  machines mid-day) — all reverted + re-applied by address on both envs; verified clean; GOTCHAS'd.
-- **learned-sync built** (prod→staging nav, closes the "mapped on prod, gray on staging" class),
-  **chainDialable() unified**, mapping board shows phones/blocker, 20 unexplained mutes labeled,
-  radius ladder + Check Plus cap + rural fallback live on `/pub/stores/near`.
+Kiosk phones COMPLETE (178 numbers applied both envs, address-verified; 13 mall-common-area machines
+muted w/ reason) · misdial incident fixed + GOTCHAS'd · learned-sync built · chainDialable() unified ·
+radius ladder + rural fallback live on `/pub/stores/near`.
