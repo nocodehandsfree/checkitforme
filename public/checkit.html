@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r165" />
+<meta name="x-rev" content="glassfix-r166" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -1164,8 +1164,6 @@ __BRAND_HEAD__
   /* Verdict prev/next: two arrows top-right of the result (where the IN STOCK pill row sits), sitting
      right next to each other. Newest call shows only ›; step forward and a ‹ appears to its left. */
   .rnav{position:absolute;top:2px;right:2px;display:flex;gap:6px;z-index:2}
-  .rnav-zback{position:absolute;top:2px;left:2px;z-index:2} /* result opened from a zone report — ‹ back to it (mirrors the ‹ › cluster) */
-  .rverdict:has(.rnav-zback) .rpill{margin-left:44px} /* the pill slides right so the ‹ never overlaps it */
   .rnav-b{width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#dcdce6;display:grid;place-items:center;cursor:pointer;padding:0;touch-action:manipulation;transition:transform .1s,border-color .12s,color .12s}
   .rnav-b:active{transform:scale(.92)}
   body.rview .rnav-b{background:rgba(74,222,128,.05);border-color:rgba(74,222,128,.16)}
@@ -5400,7 +5398,7 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
     return `<div class="ctlv2" style="margin-bottom:22px">
       <div class="ctlv2-rail"><span class="d1"></span><span class="ln" style="background:linear-gradient(180deg,#4ADE80 0%,${live?'#4ADE80 100%':`color-mix(in srgb,#4ADE80 35%,${tone}) 60%,${tone} 100%`})"></span><span class="d2" style="background:${live?'#4ADE80':tone};${live?'box-shadow:0 0 8px rgba(74,222,128,.6)':''}"></span></div>
       <div style="flex:1;min-width:0">
-        <details${status?'':' open'}><summary><span class="ctl-lead${(live&&stepRows.length)?' was':''}" style="display:inline-flex;align-items:center">${t('step.calling','Calling')}${SEL_STORE&&(SEL_STORE.logoUrl||SEL_STORE.name)?`<span class="callwho ${SEL_STORE.logoDark?'lite':''}">${storeFace(SEL_STORE)}</span>`:''}</span><span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#8A8A96">${stepRows.length+1} ${stepRows.length+1===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg></span></summary>
+        <details${status?'':' open'}><summary><span class="ctl-lead${(live&&stepRows.length)?' was':''}" style="display:inline-flex;align-items:center">${t('step.calling','Calling')}${(()=>{const _w=(status&&status.store)||SEL_STORE;return _w&&(_w.logoUrl||_w.name)?`<span class="callwho ${_w.logoDark?'lite':''}">${storeFace(_w)}</span>`:'';})()}</span><span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#8A8A96">${stepRows.length+1} ${stepRows.length+1===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg></span></summary>
           <div class="ctlv2-steps">${stepEls}</div>
         </details>
         <div id="convo_body" style="${bubs?'margin-top:12px;':''}display:flex;flex-direction:column;gap:9px">${bubs}</div>
@@ -5841,7 +5839,7 @@ async function finalize(cid){
   saveCheckToHistory(res, cid);
   showResult(res, cid);
 }
-function backToBuilder(){ try{ ZONE_RET=null; }catch(_){ } /* leaving the result any other way drops the zone-report back-link */ try{ document.documentElement.classList.remove('restoring'); }catch(_){ } /* deep-link hide must never survive into the homepage */ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } try{ document.body.classList.remove('zoning'); const _z=$('zones'); if(_z) _z.classList.remove('on'); const _h=$('histOverlay'); if(_h) _h.classList.remove('on'); }catch(_){ } /* close any open Check history / My Zones sheet */ TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); document.body.classList.remove('lview'); ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); window._livePend=false; try{ const _st=$('supTab'); if(_st)_st.classList.remove('invite'); }catch(_){ } /* the post-check glow belongs to the result page only */ try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby','zones'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
+function backToBuilder(){ try{ document.documentElement.classList.remove('restoring'); }catch(_){ } /* deep-link hide must never survive into the homepage */ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } try{ document.body.classList.remove('zoning'); const _z=$('zones'); if(_z) _z.classList.remove('on'); const _h=$('histOverlay'); if(_h) _h.classList.remove('on'); }catch(_){ } /* close any open Check history / My Zones sheet */ TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); document.body.classList.remove('lview'); ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); window._livePend=false; try{ const _st=$('supTab'); if(_st)_st.classList.remove('invite'); }catch(_){ } /* the post-check glow belongs to the result page only */ try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby','zones'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
   // Returning to the builder = a FRESH homepage (as if loaded for the first time). Drop ANY store/
   // category left over from a reopened call so it doesn't show pre-selected in the call CTA (which also
   // auto-scrolled to it). The apex site pre-locks Pokémon via BRAND_CAT, so this must NOT be gated on it
@@ -6027,29 +6025,16 @@ function pricesFoundHTML(o){ // cross-store cheapest-first list for the checked 
   const li=rows.map(r=>{ const isBest=r===best;
     return `<div class="ph-row${isBest?' best':''}"><span class="ph-st">${esc(r.store||'—')}${isBest?` <span class="besttag">${t('ph.best','BEST')}</span>`:''}${r.inStock?'':` <span class="ph-oos">${t('ph.oos','out')}</span>`}</span><span class="ph-pr">${money(r.cents)}</span></div>`; }).join('');
   return `<div class="ph-panel"><div class="ph-h">${t('ph.title','Prices found')}</div>${li}</div>`; }
-function showResult(o, cid){
-  const _fromLive=(()=>{ try{ return !$('live').classList.contains('hidden'); }catch(_){ return false; } })(); // call just ended → bring them back to the verdict at the top (owner 07-15b)
-  try{ const _ho=$('histOverlay'); if(_ho) _ho.classList.remove('on'); }catch(_){ } // opening an actual check leaves the history sheet for the full verdict view (owner 07-12)
-  try{ if(o && !o.ts && LIVE_T0) o._t0=LIVE_T0; }catch(_){ } // fresh call: server ts may lag — use the start time we clocked locally
-  try{ if(o && !o.ts && !o._t0 && cid){ const _e=histList().find(x=>x.cid===cid); if(_e&&_e.ts) o.ts=_e.ts; } }catch(_){ } // reopened call with a ts-less payload → the saved history time keeps the date line on EVERY status (owner 07-16)
-  try{ exitHunt(); }catch(_){ }
-  try{ recordResultPrice(o); }catch(_){ }
-  resultCacheSet(cid,o);
-  { const _r=$('result'); if(_r) _r.classList.remove('r-play'); } // clear the entrance trigger before every (re)render — the block below re-arms it only on the content-ready render
-  // Scroll back to the verdict at the top when a live call settles (owner 07-15b, re-broken by the
-  // instant pending-flip: finalizeLive hides #live and shows a PENDING result first, so by the time the
-  // real verdict renders _fromLive is false and the scroll never fired — owner 07-17). The pending flip
-  // arms a flag; the settled render consumes it.
-  if(_fromLive && o && o.status==='pending') window._livePend=true;
-  if(o && o.status!=='pending' && (_fromLive || window._livePend)){ window._livePend=false; setTimeout(()=>{ try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(_){ window.scrollTo(0,0); } },120); }
-  stopLiveTimers(); LIVE_ROOM=null; if($('hangup_btn'))$('hangup_btn').style.display='none';
-  $('live').classList.add('hidden'); $('builder').classList.add('hidden'); $('history').classList.add('hidden'); $('success').classList.add('hidden'); const hov=$('handoff'); if(hov)hov.classList.add('hidden'); document.body.classList.remove('fabbed'); document.body.classList.remove('lview'); /* verdict bloom takes over from the live bloom */
-  { const _fd=$('finds'); if(_fd)_fd.style.display='none'; } // no rotating finds ticker on the result/call page
-  LASTRES=o; TRANSLATED=false; ORIGHTML=''; FBK_SENT=false;
+// THE verdict engine — status → {cls,big,title,note}. Extracted from showResult (unchanged logic) so the
+// zone report's in-frame unfold renders through the exact same registry/copy as the full result page —
+// one source of truth, never a rebuilt approximation. _lbl = the category label for this call;
+// _sh = the store headline ("Big 5 Sporting Goods Woodland Hills") for the rich store-naming sub-line.
+function deriveVerdict(o, _lbl, _sh){
+  const catL=_lbl||'';
   // Always describe exactly what happened — never a bare "unclear".
   // Did the agent actually get to ASK its question? (vs. only navigating the phone menu) —
   // tells "reached a person but no clear answer" apart from "nobody ever picked up at the desk".
-  const cat=(catLabel()||'').toLowerCase();
+  const cat=catL.toLowerCase();
   const agentLines=(o.transcript||'').split('\n').filter(l=>/^\s*Agent:/.test(l)).join(' ').toLowerCase();
   const asked = !!cat && (agentLines.includes(cat) || /checking to see|got any|in stock|do you (have|carry|sell)|shipment|looking for/.test(agentLines));
   let cls='unk', big='📵', title=t('v.noanswer','Nobody answered'), note=t('note.unreached',"We couldn't reach anyone at the store. No charge. Try again in a bit.");
@@ -6067,10 +6052,10 @@ function showResult(o, cid){
     note=(o.statusKey==='failed'&&o.failureReason)?safeReason(o.failureReason):t('stn.'+o.statusKey, s.note||'');
   }
   else if(o.statusKey==='left_on_hold'){ cls='unk'; big='⏳'; title=t('v.hold','Left on hold'); note=t('note.hold',"They went to check, but the call dropped on hold. No charge. Try again."); }
-  else if(o.status==='completed'&&o.doesNotSell){ cls='out'; big='🚫'; title=t('v.nocarry',"They don't carry it"); note=tf('note.nocarry',"This store doesn't carry "+(catLabel()||'this')+". Try another.",{x:catLabel()||'this'}); }
+  else if(o.status==='completed'&&o.doesNotSell){ cls='out'; big='🚫'; title=t('v.nocarry',"They don't carry it"); note=tf('note.nocarry',"This store doesn't carry "+(catL||'this')+". Try another.",{x:catL||'this'}); }
   else if(o.status==='completed'&&o.soldOut){ cls='out'; big='🕐'; title=t('v.soldout','Sold out'); note=t('note.soldout',"Came in, but it's already gone. Worth catching the next shipment."); }
-  else if(o.status==='completed'&&o.confirmed===true){ cls='in'; big='✅'; title=t('v.in','In stock!'); note=tf('note.in','They have {c}. Go grab it.',{c:'<b style="color:#fff;font-weight:800">'+esc(catLabel()||'them')+'</b>'}); }
-  else if(o.status==='completed'&&o.confirmed===false){ cls='out'; big='❌'; title=t('v.out','Not in stock'); const _oc=catLabel()||(Array.isArray(o.cats)&&o.cats[0])||(typeof BRAND_CAT!=='undefined'&&BRAND_CAT&&BRAND_CAT.label)||''; note=_oc?tf('note.out2',"They don't have any <b style=\"color:#fff\">{c}</b> in stock right now.",{c:esc(_oc)}):t('note.out',"They don't have it."); }
+  else if(o.status==='completed'&&o.confirmed===true){ cls='in'; big='✅'; title=t('v.in','In stock!'); note=tf('note.in','They have {c}. Go grab it.',{c:'<b style="color:#fff;font-weight:800">'+esc(catL||'them')+'</b>'}); }
+  else if(o.status==='completed'&&o.confirmed===false){ cls='out'; big='❌'; title=t('v.out','Not in stock'); const _oc=catL||(Array.isArray(o.cats)&&o.cats[0])||(typeof BRAND_CAT!=='undefined'&&BRAND_CAT&&BRAND_CAT.label)||''; note=_oc?tf('note.out2',"They don't have any <b style=\"color:#fff\">{c}</b> in stock right now.",{c:esc(_oc)}):t('note.out',"They don't have it."); }
   else if(o.status==='completed'){ // reached the end but no yes/no extracted
     if(asked){ cls='unk'; big='🔄'; title=t('v.unclear',"No clear answer. Recheck."); note=t('note.unclear','Someone answered but didn’t give a clear yes or no. See what they said below.'); }
     else { cls='unk'; big='📵'; title=t('v.noanswer','Nobody answered'); note=t('note.noanswer.desk','Got through the menu, but no one picked up at the desk. No charge.'); }
@@ -6096,6 +6081,44 @@ function showResult(o, cid){
     const _tm=o.shipmentTime?(' '+fmtShipTime(o.shipmentTime)):''; // clerk gave a time → "tomorrow around 2 PM"
     note=tf('note.soon','A shipment lands <b>{d}</b>. Be first when it drops.',{d:esc(fmtShipDay(o.shipmentDay))+esc(_tm)});
   }
+  // Rich verdict sub-line: "{store} has / doesn't have {category} … right now" — completed single-category
+  // checks with a known store + category only; every other outcome keeps its own note.
+  const _asked1=(Array.isArray(o.cats)&&o.cats.length)?o.cats.length<=1:true;
+  if(!REG_NOTE && o.status==='completed' && _asked1 && !o.doesNotSell && _sh && catL){
+    const _SN=esc(_sh), _C=esc(catL);
+    if(cls==='in'){ note = o.productName
+        ? tf('sub.in.named','<b>{s}</b> has <b>{p}</b> in. Go grab it before it’s gone.',{s:_SN,p:esc(o.productName)})
+        : tf('sub.in','<b>{s}</b> has <b>{c}</b> in. Go grab it before it’s gone.',{s:_SN,c:_C}); }
+    else if(o.soldOut){ note=tf('sub.soldout','{s} is sold out of <b>{c}</b> right now.',{s:_SN,c:_C}); }
+    else if(cls==='out'){ note=tf('sub.out',"<b>{s}</b> doesn't have any <b>{c}</b> in stock right now.",{s:_SN,c:_C}); }
+  }
+  return {cls,big,title,note,REG_NOTE};
+}
+function showResult(o, cid){
+  const _fromLive=(()=>{ try{ return !$('live').classList.contains('hidden'); }catch(_){ return false; } })(); // call just ended → bring them back to the verdict at the top (owner 07-15b)
+  try{ const _ho=$('histOverlay'); if(_ho) _ho.classList.remove('on'); }catch(_){ } // opening an actual check leaves the history sheet for the full verdict view (owner 07-12)
+  try{ if(o && !o.ts && LIVE_T0) o._t0=LIVE_T0; }catch(_){ } // fresh call: server ts may lag — use the start time we clocked locally
+  try{ if(o && !o.ts && !o._t0 && cid){ const _e=histList().find(x=>x.cid===cid); if(_e&&_e.ts) o.ts=_e.ts; } }catch(_){ } // reopened call with a ts-less payload → the saved history time keeps the date line on EVERY status (owner 07-16)
+  try{ exitHunt(); }catch(_){ }
+  try{ recordResultPrice(o); }catch(_){ }
+  resultCacheSet(cid,o);
+  { const _r=$('result'); if(_r) _r.classList.remove('r-play'); } // clear the entrance trigger before every (re)render — the block below re-arms it only on the content-ready render
+  // Scroll back to the verdict at the top when a live call settles (owner 07-15b, re-broken by the
+  // instant pending-flip: finalizeLive hides #live and shows a PENDING result first, so by the time the
+  // real verdict renders _fromLive is false and the scroll never fired — owner 07-17). The pending flip
+  // arms a flag; the settled render consumes it.
+  if(_fromLive && o && o.status==='pending') window._livePend=true;
+  if(o && o.status!=='pending' && (_fromLive || window._livePend)){ window._livePend=false; setTimeout(()=>{ try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(_){ window.scrollTo(0,0); } },120); }
+  stopLiveTimers(); LIVE_ROOM=null; if($('hangup_btn'))$('hangup_btn').style.display='none';
+  $('live').classList.add('hidden'); $('builder').classList.add('hidden'); $('history').classList.add('hidden'); $('success').classList.add('hidden'); const hov=$('handoff'); if(hov)hov.classList.add('hidden'); document.body.classList.remove('fabbed'); document.body.classList.remove('lview'); /* verdict bloom takes over from the live bloom */
+  { const _fd=$('finds'); if(_fd)_fd.style.display='none'; } // no rotating finds ticker on the result/call page
+  LASTRES=o; TRANSLATED=false; ORIGHTML=''; FBK_SENT=false;
+  // Verdict = deriveVerdict, THE single status→copy engine (shared with the zone report's unfold).
+  // The store-naming rich sub-line applies only to single-category checks — same rule as always.
+  const _nmv=splitStoreName((SEL_STORE&&SEL_STORE.name)||'');
+  const _shv=[_nmv.base,_nmv.branch].filter(Boolean).join(' ');
+  const _alv=(Array.isArray(o.cats)&&o.cats.length) ? o.cats : ASKED_CATS.map(x=>x.label);
+  let {cls,big,title,note,REG_NOTE}=deriveVerdict(o, catLabel()||(_alv.length===1?String(_alv[0]||''):''), _alv.length<=1?_shv:'');
 
   // Multi-line check → show a per-category breakdown (Pokémon in stock, One Piece not, etc.)
   const askedLabels = (Array.isArray(o.cats)&&o.cats.length) ? o.cats : ASKED_CATS.map(x=>x.label);
@@ -6199,20 +6222,7 @@ function showResult(o, cid){
   const resultSteps=haveLive?LIVE_STEPS:(savedSteps||deriveSteps(o.transcript||''));
   const finalElapsed=haveLive&&LIVE_T0?((Date.now()-LIVE_T0)/1000):((typeof o.durationSecs==='number'&&o.durationSecs>0)?o.durationSecs:null);
   const vTitle=String(title).replace(/[\s!?.:：]+$/,''); // "In stock!" → "In stock" so the "Status: summary" line reads clean (colon separator, no dash)
-  // Rich verdict sub-line (mirrors the /demo design): "{store} has / doesn't have {category} … right
-  // now". Only for a completed single-category check where we know the store + category; every other
-  // outcome (no-answer, closed, doesn't-carry, restock-soon, multi-category) keeps prod's own note.
-  // Naming the store right here lets us drop the separate store line below it.
-  let richSub=false;
-  if(!REG_NOTE && o.status==='completed' && askedLabels.length<=1 && !o.doesNotSell && storeHeadline && headLabel){
-    const _SN=esc(storeHeadline), _C=esc(headLabel);
-    if(cls==='in'){ note = o.productName
-        ? tf('sub.in.named','<b>{s}</b> has <b>{p}</b> in. Go grab it before it’s gone.',{s:_SN,p:esc(o.productName)})
-        : tf('sub.in','<b>{s}</b> has <b>{c}</b> in. Go grab it before it’s gone.',{s:_SN,c:_C});
-      richSub=true; }
-    else if(o.soldOut){ note=tf('sub.soldout','{s} is sold out of <b>{c}</b> right now.',{s:_SN,c:_C}); richSub=true; }
-    else if(cls==='out'){ note=tf('sub.out',"<b>{s}</b> doesn't have any <b>{c}</b> in stock right now.",{s:_SN,c:_C}); richSub=true; }
-  }
+  // (The rich store-naming sub-line now lives in deriveVerdict — shared with the zone unfold.)
   // Boxless "The call" subline: "{ago} · {dur}" — both pieces reuse existing prod helpers/vars
   // (timeAgo for the ago, callSummary already carries the "Call · Ns" duration). No new copy/keys.
   const callSubline=[o.ts?new Date(o.ts).toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'short',day:'numeric'})+' · '+new Date(o.ts).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'}):'', _secs?(_secs+'s'):''].filter(Boolean).join(' · '); // header now says "Call" — keep the subline just ago · duration (no redundant "Call")
@@ -6265,7 +6275,6 @@ function showResult(o, cid){
     </div>` : '';
   $('result').innerHTML = `
     <div class="rverdict ${cls}">
-      ${ZONE_RET?`<button class="rnav-b rnav-zback" onclick="zoneBackToReport()" aria-label="Back to zone report"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M14.5 5L8 12l6.5 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`:''}
       <div class="rnav" id="rnav"></div>
       <span class="rpill"><span class="d"></span>${t('res.result','Result')}</span>
       ${(o.ts||o._t0)?`<div class="rwhen">${esc(new Date(o.ts||o._t0).toLocaleDateString(LANG==='es'?'es-ES':'en-US',{weekday:'short',month:'short',day:'numeric'}))} · ${esc(new Date(o.ts||o._t0).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'}))}</div>`:''}
@@ -7075,7 +7084,6 @@ function hobbyPickProduct(pi){
 // Consumer UI for the /app/zones/* contract (DevOps builds the backend). Three screens, one view:
 //   B My Zones list → A build/edit a zone → C the live multi-store check report. "CHECK", never "call".
 let ZONES={ sel:new Set(), storeById:new Map(), editId:null, radius:5, run:null, poll:null };
-let ZONE_RET=null; // a result page opened from a zone report — the verdict's ‹ back returns to that report
 function zHideAll(){ try{ exitHunt(); }catch(_){ } try{ if(typeof HUNT_STEP!=='undefined') HUNT_STEP=''; }catch(_){ }
   try{ document.body.classList.remove('rview','rv-in','rv-out','rv-soon','rv-unk'); dropBakedTone(); }catch(_){ } } // drop the result-view verdict wash (else a red "out of stock" bg bleeds under zones). The sheet is an OVERLAY now — leave the background view in place so it shows dimmed behind, like Add store (owner 07-12).
 function zShow(){ const z=$('zones'); if(z){ z.classList.remove('hidden'); z.classList.add('on'); } const w=$('hcalwrap'); if(w) w.style.display='none'; try{ document.body.classList.add('zoning'); }catch(_){ } } // open the bottom-sheet overlay (sheetUpV2 slides it up) — owner 07-12
@@ -7485,7 +7493,7 @@ async function zoneCheckAll(id){
   if(!goOn) return;
   let run=null; try{ run=await appApi('/app/zones/'+id+'/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({categoryId:(BRAND_CAT&&BRAND_CAT.id)||SEL_CAT||undefined})}); }catch(e){ run={error:'net'}; }
   if(!run||run.error){ toast(run&&run.error==='zone_too_big'?t('zones.cap10','A zone checks up to 10 stores at once.'):run&&run.error==='no_credits'?t('zones.nocredits','You\'re a few checks short for the whole zone.'):t('err.generic',"That didn't go through. Give it another try."), run&&run.error==='zone_too_big'?'neutral':undefined); if(run&&run.error==='no_credits'){ setTimeout(()=>{ backToBuilder(); openBuy(); },600); } return; }
-  ZONES.run={ id, runId:run.runId, name:run.name||'' }; ZONES.viewRun=true; renderZoneRun(); zoneStartPoll();
+  ZONES.run={ id, runId:run.runId, name:run.name||'', fresh:true }; ZONES.viewRun=true; renderZoneRun(); zoneStartPoll(); // fresh:true = a run we JUST kicked off — the only case the report may say "Starting…" with a Stop all
 }
 function zoneStartPoll(){ zoneStopPoll(); ZONES.poll=setInterval(zonePollTick,1800); zonePollTick(); }
 async function zonePollTick(){
@@ -7494,6 +7502,7 @@ async function zonePollTick(){
   if(!data||data.error) return;
   const wasLive=r.data&&(r.data.done||0)<(r.data.total||0);
   ZONES.run.data=data;
+  try{ sessionStorage.setItem('zrun:'+r.runId, JSON.stringify(data)); }catch(_){ } // reopening this report later paints instantly from here
   if(ZONES.viewRun) renderZoneRun(); // in-place unless the shape changed (see renderZoneRun)
   else if(!ZONES.building){ const dw=document.querySelector('#zones .zc-open .zc-when'); if(dw&&ZONES.run) dw.textContent=`${data.done||0} ${t('zones.of','of')} ${data.total||0} →`; }
   if(data.done!=null && data.total!=null && data.done>=data.total){ zoneStopPoll(); if(!ZONES.viewRun&&!ZONES.building&&Array.isArray(ZONES.list)) renderZonesList(); }
@@ -7514,7 +7523,7 @@ function zoneRunTone(row){ const k=(row.statusKey||row.status||'').toLowerCase()
 function renderZoneRun(){
   const r=ZONES.run; if(!r) return; const d=r.data||{summary:{},results:[]};
   const sm=d.summary||{}; const done=d.done||0, total=d.total||(d.results?d.results.length:0);
-  const inN=sm.inStock||0, loading=!total, live=loading?true:done<total, checking=sm.checking!=null?sm.checking:(total-done);
+  const inN=sm.inStock||0, loading=!total, live=loading?!!r.fresh:done<total, checking=sm.checking!=null?sm.checking:(total-done); // no data + not a run we just kicked off = a REOPEN still loading — neutral dots, never "Starting…"/Stop all
   const CHK='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"></path></svg>';
   const znMeta=(ZONES.list||[]).find(x=>x.id===r.id);
   const nmBase=String(r.name||(znMeta&&znMeta.name)||'').replace(/\s+zone\s*$/i,'').trim();
@@ -7527,7 +7536,7 @@ function renderZoneRun(){
       : v2StatusChip(tone,26);
   const rowTone=row=>((String(row.status||'').toLowerCase()==='queued')||!row.cid)?'queue':zoneRunTone(row);
   const headline=live?(nmBase?tf('zones.checkingzone','Checking {n} zone now',{n:nmBase}):t('zones.checkingyours','Checking your zone now')):'';
-  const meta=loading?t('zones.starting2','Starting…'):(live?`${done} ${t('zones.of','of')} ${total} ${t('zones.checkedw','checked')} · ${checking} ${t('zones.checkingw','checking')}`:tf('zones.alldone','All {n} checked · done',{n:total}));
+  const meta=loading?(r.fresh?t('zones.starting2','Starting…'):''):(live?`${done} ${t('zones.of','of')} ${total} ${t('zones.checkedw','checked')} · ${checking} ${t('zones.checkingw','checking')}`:tf('zones.alldone','All {n} checked · done',{n:total}));
 
   // ---- IN-PLACE tick (poll): same row set + same live-state -> update marks/tally only, so scroll
   // position, open transcripts, and the stop box all survive (the 1.8s full repaint was wiping them).
@@ -7536,7 +7545,7 @@ function renderZoneRun(){
     (d.results||[]).forEach(row=>{ const el=document.querySelector('#zones .zresult[data-rid="'+row.retailerId+'"]');
       if(!el) return; const mk=el.querySelector('.zmark'); const tone=rowTone(row);
       if(mk&&mk.dataset.tone!==tone){ mk.dataset.tone=tone; mk.innerHTML=mark(tone); el.querySelector('.zrrow2').classList.toggle('checking',tone==='live');
-        const btn=el.querySelector('.zrrow2'); if(btn) btn.setAttribute('onclick', tone==='queue'?`zoneStopOnePrompt(${row.retailerId},'${esc(row.name||'')}')`:(tone==='live'?`zoneExpand('${esc(row.cid||'')}',this)`:`zoneOpenResult('${esc(row.cid||'')}')`)); } });
+        const btn=el.querySelector('.zrrow2'); if(btn) btn.setAttribute('onclick', tone==='queue'?`zoneStopOnePrompt(${row.retailerId},'${esc(row.name||'')}')`:`zoneExpand('${esc(row.cid||'')}',this)`); } });
     const sb=document.getElementById('z_segbar'); if(sb) sb.innerHTML=Array.from({length:total},(_,k)=>`<span class="${k<done?'done':''}"></span>`).join('');
     const mt=document.getElementById('z_runmeta'); if(mt) mt.textContent=meta;
     const pl=document.getElementById('z_runpill'); if(pl){ pl.style.display=inN>0?'':'none'; pl.innerHTML=`${CHK}${inN} ${t('zones.instock','in stock')}`; }
@@ -7553,9 +7562,7 @@ function renderZoneRun(){
       closedBox=`<div class="zclosedbox"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#f0c79a" stroke-width="2" style="flex:none;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01" stroke-linecap="round"/></svg><div><b>${esc(names)} ${closed.length>1?t('zones.areclosed','are closed'):t('zones.isclosed','is closed')}</b>${t('zones.skipped',', so we skipped those.')}</div></div>`; }
   }
   const rows=(d.results||[]).map(row=>{ const tone=rowTone(row);
-    // Finished store → the REAL check status page (owner 07-21: byte-identical to a single check —
-    // verdict pill, status system, transcript, the works). Mid-call → inline transcript-so-far unfold.
-    const tap=tone==='queue'?`zoneStopOnePrompt(${row.retailerId},'${esc(row.name||'')}')`:(tone==='live'?`zoneExpand('${esc(row.cid||'')}',this)`:`zoneOpenResult('${esc(row.cid||'')}')`);
+    const tap=tone==='queue'?`zoneStopOnePrompt(${row.retailerId},'${esc(row.name||'')}')`:`zoneExpand('${esc(row.cid||'')}',this)`;
     return `<div class="zresult" data-rid="${row.retailerId}">
       <button class="zrrow2 ${tone==='live'?'checking':''}" onclick="${tap}">
         <div class="ic2 ${row.logoDark?'lite':''} ${row.logoWide?'widelogo':''}">${storeFace(row)}</div>
@@ -7571,7 +7578,7 @@ function renderZoneRun(){
     </div>
     ${closedBox}
     <div class="zrlist" style="display:flex;flex-direction:column;gap:8px;margin-top:8px">${rows||`<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:36px 0"><span></span><span></span><span></span></div>`}</div>
-    <div class="zbar">${live?`<button class="zstopall" onclick="zoneStopAll()"><i></i>${t('zones.stopall','Stop all')}</button>`:`<button class="zsharego" onclick="zoneShareSheet()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>${t('zones.share','Share results')}</button>`}</div>
+    <div class="zbar">${loading&&!r.fresh?'':(live?`<button class="zstopall" onclick="zoneStopAll()"><i></i>${t('zones.stopall','Stop all')}</button>`:`<button class="zsharego" onclick="zoneShareSheet()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>${t('zones.share','Share results')}</button>`)}</div>
     </div>
   </div>`;
 }
@@ -7610,45 +7617,56 @@ async function zonePeek(){
 }
 async function zoneExpand(cid,btn){ if(!cid) return; const body=btn.nextElementSibling; if(!body) return;
   if(body.style.display!=='none'){ body.style.display='none'; btn.classList.remove('open'); return; }
-  body.style.display='block'; btn.classList.add('open'); body.innerHTML=`<div class="loaddots" style="display:flex;gap:6px;padding:10px 4px"><span></span><span></span><span></span></div>`;
-  // The row unfolds into the REAL single-store check page (comp): store card, verdict headline,
-  // summary sentence, live transcript bubbles, confirmed proof.
-  try{ const o=await appApi('/pub/result/'+encodeURIComponent(cid));
+  body.style.display='block'; btn.classList.add('open');
+  // The row unfolds into the REAL check status page, rendered INSIDE this frame (owner 07-21): the
+  // same verdict engine (deriveVerdict), same RESULT pill / date / headline / sub-line classes, and
+  // the same timeline + conversation component the single-check page uses. Cached result → instant.
+  const paint=(o)=>{
     const row=(ZONES.run&&ZONES.run.data&&(ZONES.run.data.results||[]).find(x=>x.cid===cid))||{};
-    const tone=zoneRunTone({...row,...o});
-    const hl=tone==='in'?t('zones.rin2','In stock.'):tone==='out'?t('zones.rout2','Not in stock.'):t('zones.runk2','No answer.');
-    const hlStyle=tone==='in'?'background:linear-gradient(180deg,#A8FFCB,#34D873);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 2px 18px rgba(74,222,128,.35))':(tone==='out'?'color:#FF7B7B':'color:#C6C6D0');
-    const when=o.ts?new Date(o.ts).toLocaleString(LANG==='es'?'es-ES':'en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
-    const tx=(o&&o.transcript)||'';
-    body.innerHTML=`<div style="background:#1B1B20;padding:15px 14px 16px;border-radius:0 0 14px 14px;text-align:left;overflow:hidden">
-      <div style="display:flex;align-items:center;gap:12px;background:#26262B;border-radius:14px;padding:13px 14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05);margin-bottom:14px"><div class="ic2" style="width:46px;height:46px;border-radius:13px;overflow:hidden">${storeFace(row)}</div><div style="min-width:0;flex:1"><div style="font:800 17px Inter;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(row.name||'')}</div>${row.location?`<div style="font:500 12.5px Inter;color:#8A8A96;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(row.location)}</div>`:''}</div></div>
-      <div style="display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:999px;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3);margin-bottom:9px"><span style="width:7px;height:7px;border-radius:50%;background:#4ADE80;box-shadow:0 0 8px #4ADE80"></span><span style="font:800 10px Inter;letter-spacing:.14em;text-transform:uppercase;color:#4ADE80">${t('zones.result','Result')}</span></div>
-      ${when?`<div style="font:700 10.5px Inter;letter-spacing:.14em;text-transform:uppercase;color:#5C5C68;margin-bottom:6px">${esc(when)}</div>`:''}
-      <div style="font:900 33px Inter;letter-spacing:-1.2px;line-height:1.02;${hlStyle}">${esc(hl)}</div>
-      ${o.summary?`<div style="font:650 13.5px/1.55 Inter;color:#b4b4c2;margin-top:10px">${esc(o.summary)}</div>`:''}
-      ${tx?`<div style="margin-top:15px">${chatBubbles(tx)}</div>`:`<div class="lo" style="padding:8px 0;color:#8A8A96">${t('zones.notx','No transcript yet.')}</div>`}
-      ${o.confirmed?`<div style="display:flex;align-items:center;gap:9px;background:#26262B;border-radius:12px;padding:11px 13px;margin-top:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#4CF286"/><path d="M7.5 12.5l3 3 6-6.5" stroke="#0C2916" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span style="font:700 13px Inter;color:#e6e6ee">${esc(hl)} ${o.confirmed?t('zones.confirmed','Confirmed.'):''}</span></div>`:''}
+    const lbl=(typeof BRAND_CAT!=='undefined'&&BRAND_CAT&&BRAND_CAT.label)||(BRAND&&BRAND.category)||(Array.isArray(o.cats)&&o.cats[0])||'';
+    const nm=splitStoreName(row.name||''); const sh=[nm.base,nm.branch].filter(Boolean).join(' ');
+    if(!o.cats||!o.cats.length) o.cats=lbl?[lbl]:[];
+    if(!o.storeName) o.storeName=row.name||''; // fillP's {store} token names THIS row's store
+    const v=deriveVerdict(o, lbl, sh);
+    const vT=String(v.title).replace(/[\s!?.:：]+$/,'');
+    const when=o.ts?`${new Date(o.ts).toLocaleDateString(LANG==='es'?'es-ES':'en-US',{weekday:'short',month:'short',day:'numeric'})} · ${new Date(o.ts).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'})}`:'';
+    const term = v.cls==='in'?t('term.in','In stock.'):v.cls==='out'?t('term.out','Not in stock'):v.cls==='soon'?t('term.soon2','Restock confirmed'):v.cls==='pend'?t('term.getting','Getting result…'):t('term.unk','No clear answer');
+    const used = o.status==='completed'?t('res.used','1 check used'):t('res.nocharge','No charge for this one');
+    const tx=o.transcript||'';
+    body.innerHTML=`<div style="background:#1B1B20;padding:14px 14px 4px;border-radius:0 0 14px 14px;text-align:left;overflow:hidden">
+      <div class="rverdict ${v.cls}">
+        <span class="rpill"><span class="d"></span>${t('res.result','Result')}</span>
+        ${when?`<div class="rwhen">${esc(when)}</div>`:''}
+        <div class="rtitle2">${esc(vT)}</div>
+        ${v.note?`<div class="rsub">${sentLines(fillP(v.note,o,v.cls))}</div>`:''}
+      </div>
+      <div style="margin-top:16px">${combinedTimelineHTML(deriveSteps(tx), tx, (typeof o.durationSecs==='number'&&o.durationSecs>0)?o.durationSecs:null, {cls:v.cls, title:vT, term, ts:o.ts, used, store:{name:row.name||'',logoUrl:row.logoUrl||null,logoWide:!!row.logoWide,logoDark:!!row.logoDark}})}</div>
     </div>`;
-  }catch(_){ body.innerHTML=`<div class="lo" style="padding:8px 4px;color:#8A8A96">${t('zones.notx','No transcript yet.')}</div>`; }
+  };
+  const cached=resultCacheGet(cid);
+  if(cached){ try{ paint(cached); }catch(_){ } }
+  else body.innerHTML=`<div class="loaddots" style="display:flex;gap:6px;padding:10px 4px"><span></span><span></span><span></span></div>`;
+  try{ const o=await appApi('/pub/result/'+encodeURIComponent(cid));
+    if(o&&!o.error&&o.status!=='in_progress'){ resultCacheSet(cid,o); if(!resultSame(o,cached)) paint(o); }
+    else if(o&&!o.error&&o.status==='in_progress'){ // mid-call peek: the live timeline + conversation so far, no verdict yet
+      const row=(ZONES.run&&ZONES.run.data&&(ZONES.run.data.results||[]).find(x=>x.cid===cid))||{};
+      const tx=o.transcript||'';
+      body.innerHTML=`<div style="background:#1B1B20;padding:14px 14px 4px;border-radius:0 0 14px 14px;text-align:left;overflow:hidden">${combinedTimelineHTML(deriveSteps(tx), tx, null, {cls:'pend', title:'', term:'', ts:null, used:'', store:{name:row.name||'',logoUrl:row.logoUrl||null,logoWide:!!row.logoWide,logoDark:!!row.logoDark}})}</div>`;
+    }
+    else if(!cached){ // no provider record (never-connected dial) — verdict from the run row itself
+      const row=(ZONES.run&&ZONES.run.data&&(ZONES.run.data.results||[]).find(x=>x.cid===cid))||{};
+      paint({status:row.status||'no_answer', statusKey:row.statusKey||null, confirmed:row.confirmed, transcript:'', summary:'', ts:null});
+    }
+  }catch(_){ if(!cached) body.innerHTML=`<div class="lo" style="padding:8px 4px;color:#8A8A96">${t('zones.notx','No transcript yet.')}</div>`; }
 }
 function zoneOpenReport(zoneId,runId){ const zn=(ZONES.list||[]).find(x=>x.id===zoneId);
-  ZONES.run={id:zoneId,runId,name:(zn&&zn.name)||''}; ZONES.viewRun=true; ZONES._runPaint=null; renderZoneRun(); zoneStartPoll(); }
-// A finished zone store opens the REAL check status page — the exact same openHistEntry path a single
-// check replays through (verdict pill, full status registry, transcript, share). Never a hand-built
-// mini-page. The result page shows a ‹ back (ZONE_RET) that returns to this zone report.
-async function zoneOpenResult(cid){ if(!cid) return;
-  const r=ZONES.run||{};
-  let e=histList().find(x=>x.cid===cid);
-  if(!e && isAuthed()){ try{ await ensureHistCache(); e=histList().find(x=>x.cid===cid); }catch(_){ } }
-  if(!e){ const row=((r.data&&r.data.results)||[]).find(x=>x.cid===cid)||{};
-    e={ cid, storeId:row.retailerId, storeName:row.name||'', location:row.location||null, logoUrl:row.logoUrl||null, logoWide:!!row.logoWide, logoDark:!!row.logoDark,
-        categoryId:(typeof BRAND_CAT!=='undefined'&&BRAND_CAT&&BRAND_CAT.id)||null, category:(BRAND&&BRAND.category)||'', ts:Date.now(), status:row.status||'completed', confirmed:row.confirmed, statusKey:row.statusKey||null }; }
-  ZONE_RET={ id:r.id, runId:r.runId||null };
-  zoneStopPoll(); const z=$('zones'); if(z) z.classList.remove('on'); try{ document.body.classList.remove('zoning'); }catch(_){ }
-  openHistEntry(e);
-}
-function zoneBackToReport(){ const ret=ZONE_RET; ZONE_RET=null; backToBuilder(); if(!isAuthed()) return;
-  zShow(); if(ret&&ret.runId&&ret.id!=null){ zoneOpenReport(ret.id,ret.runId); } else { renderZonesList(); } }
+  // INSTANT: keep the live run's data if it's this run, else paint from the session cache (saved on
+  // every poll tick) — the report shows in one frame and the poll refreshes it underneath. No more
+  // "Starting…" flash on a report we've already seen.
+  if(ZONES.run&&ZONES.run.runId===runId&&ZONES.run.data){ ZONES.run.id=zoneId; }
+  else { let cd=null; try{ cd=JSON.parse(sessionStorage.getItem('zrun:'+runId)||'null'); }catch(_){ }
+    ZONES.run={id:zoneId,runId,name:(zn&&zn.name)||'',data:cd||null}; }
+  ZONES.viewRun=true; ZONES._runPaint=null; renderZoneRun(); zoneStartPoll(); }
 function zoneStopOnePrompt(rid,nm){ zPop(`<h3 style="margin:4px 0 16px;text-align:center">${tf('zones.stopone.q','Stop checking {s}?',{s:nm||t('zones.astore','Store')})}</h3>
   <button style="${Z_ROWBTN};justify-content:center;margin-bottom:10px" onclick="zPopClose();zoneStopOne(${rid})"><span style="color:#FF8A8A">${t('zones.stopone.yes','Stop checking')}</span></button>
   <button style="${Z_ROWBTN};justify-content:center" onclick="zPopClose()">${t('zones.stopone.no','Continue')}</button>`); }
