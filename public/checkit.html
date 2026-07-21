@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r176" />
+<meta name="x-rev" content="glassfix-r177" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -482,9 +482,12 @@ __BRAND_HEAD__
      (only ~20% of the height), so any max-height crushes it. Render like the store tiles: white backing,
      width-driven, height auto — the chip's overflow:hidden clips the transparent top/bottom so the
      wordmark reads at full width, exactly as it does in a zone-row tile (owner 07-21, verified render). */
-  .callwho.widelogo{width:auto;padding:0 5px;height:20px}
-  .callwho.widelogo img{height:20px;width:auto;max-width:52px;max-height:20px;object-fit:contain} /* height-capped, aspect kept: a true wide mark fills the 52px, a square asset renders 20x20 clean instead of blowing up and clipping (the TJ Maxx stretch) */
-  .callwho.lite{background:#f2f2f5;opacity:1}
+  /* Calling-chip ROLLBACK (owner 07-21, pre-demo): the chip IGNORES logo flags — every store, old
+     saved calls included, renders the classic dark tile with the contained 15px logo. The wide/lite
+     experiments live on other surfaces only; do NOT re-enable here without the owner's word. */
+  .callwho.widelogo{width:20px;padding:0;height:20px}
+  .callwho.widelogo img{max-width:15px;max-height:15px;height:auto;width:auto;object-fit:contain}
+  .callwho.lite{background:#1F1F25;opacity:.72}
   .verdict.in .title{color:var(--green)} .verdict.out .title{color:var(--red)} .verdict.unk .title{color:#FBBF24} .verdict.soon .title{color:#F59E0B}
   .vstore{text-align:center;color:#d6d6e0;font-size:14.5px;font-weight:600;margin-top:9px}
   /* combined call header: store + verdict status + timing in one box at the top */
