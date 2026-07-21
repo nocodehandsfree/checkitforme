@@ -30,10 +30,19 @@ async function seedStatuses() {
     // "failed" stays only until carrier failures are mapped to real reasons (voicemail/busy/bad_number/
     // nobody_answered); then it's removed so every call shows a real reason, never a bare "Call failed".
     ["failed", "⚠️", "Call failed", "unk", "#FBBF24", "The call didn't go through this time. No check = no charge."],
-    // Admin ended the call from the dashboard. A NON-RESULT — excluded from every report/aggregate +
-    // never billed; reads as "no data" (like a canceled call). Written by the master Stop & hang-up.
-    ["admin_hangup", "·", "Admin canceled", "unk", "#9CA3AF", "We ended this call from the dashboard — it doesn't count as a check. No charge."],
+    // Admin ended the check from the dashboard. A NON-RESULT — excluded from every report/aggregate +
+    // never billed; reads as "no data" (like a canceled check). Written by the master Stop & hang-up.
+    ["admin_hangup", "·", "Admin canceled", "unk", "#9CA3AF", "We ended this check. It doesn't count — no charge."],
+    // Customer pressed Stop (live view "Stop & hang up", zone "Stop all"/stop-one). Same non-result
+    // semantics as admin_hangup (the row's STATUS is admin_hangup — only the display key differs).
+    ["user_cancelled", "·", "Check cancelled", "unk", "#9CA3AF", "You stopped this check from happening."],
   ];
+  // 07-21 copy fix (owner): "call" -> "check", drop "from the dashboard". Fill-only — applies just
+  // while the row still has the original seed text, so a dashboard edit is never overwritten.
+  await client.execute({
+    sql: "UPDATE statuses SET note=? WHERE key='admin_hangup' AND note=?",
+    args: ["We ended this check. It doesn't count — no charge.", "We ended this call from the dashboard — it doesn't count as a check. No charge."],
+  }).catch(() => {});
   let sort = 0;
   for (const [key, emoji, label, tone, color, note] of rows) {
     sort += 10;

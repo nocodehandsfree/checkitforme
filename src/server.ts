@@ -3472,12 +3472,13 @@ app.post("/app/check-live", async (c) => {
 // ============ Manage Zones (consumer, premium `zone_sweeps`) — spec docs/archive/manage-zones-SHIPPED.md ============
 const zoneRunSids = new Map<string, { room: string; retailerId: number }[]>(); // runId -> per-store bridge rooms (in-memory, for Stop all / stop one)
 async function zoneHangRoom(room: string): Promise<void> {
-  // Same semantics as /pub/bridge-hangup: WE ended it — stamp admin_hangup (never "nobody answered"),
-  // then complete the Twilio leg. Delta rooms have no Twilio sid here; the stamp alone ends their row.
+  // Customer pressed Stop (all / one) — stamp statusKey user_cancelled so the verdict reads
+  // "Check cancelled / You stopped this check from happening." status stays admin_hangup: every
+  // non-result, aggregate and no-charge rule keys off status, so nothing else changes (owner 07-21).
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   const ids = [room.startsWith("delta:") ? room : `bridge:${room}`, bridgeConversationId(room) || ""].filter(Boolean);
   await db.update(callResults)
-    .set({ status: "admin_hangup", statusKey: "admin_hangup", confirmed: null, completedAt: Math.floor(Date.now() / 1000) })
+    .set({ status: "admin_hangup", statusKey: "user_cancelled", confirmed: null, completedAt: Math.floor(Date.now() / 1000) })
     .where(and(inArray(callResults.providerCallId, ids), inArray(callResults.status, ["dialing", "in_progress", "queued"])))
     .catch((e) => console.error("zone admin_hangup stamp:", e));
   const callSid = roomCallSids.get(room);
@@ -6091,8 +6092,10 @@ app.post("/pub/bridge-hangup", async (c) => {
   // statusKey drives the display pill (verdictKey reads statusKey first), so set both.
   const convId = bridgeConversationId(room);
   if (convId) {
+    // Customer-initiated stop -> statusKey user_cancelled ("Check cancelled"); status stays
+    // admin_hangup so the non-result/no-charge semantics are byte-identical (owner 07-21).
     await db.update(callResults)
-      .set({ status: "admin_hangup", statusKey: "admin_hangup", confirmed: null, completedAt: Math.floor(Date.now() / 1000) })
+      .set({ status: "admin_hangup", statusKey: "user_cancelled", confirmed: null, completedAt: Math.floor(Date.now() / 1000) })
       .where(and(eq(callResults.providerCallId, convId),
         inArray(callResults.status, ["dialing", "in_progress", "queued"])))
       .catch((e) => console.error("admin_hangup stamp:", e));
