@@ -796,11 +796,13 @@
   </section>
   <section id="alerts">
     <div class="k-title">Alerts</div>
-    <div class="k-sub">Customer messages and sends</div>
+    <div class="k-sub">The messages customers get and share</div>
     <div id="al_status" style="margin-top:2px"></div>
-    <div class="k-eyebrow">Your in stock ping</div>
+    <div class="k-eyebrow">In-stock Admin alert</div>
+    <div style="font-size:11.5px;color:var(--text-tertiary);margin:-2px 0 9px">All in-stock alerts system wide can be sent to an owner account.</div>
     <div style="display:flex;gap:8px;align-items:center">
       <select id="oa_channel" class="k-filter" style="flex:0 0 auto" onchange="saveOwnerAlert()">
+        <option value="off">Off</option>
         <option value="email">Email</option>
         <option value="sms">Text</option>
       </select>
@@ -4894,16 +4896,18 @@ const AL_EVENTS=[
   ['store_added','Store went live','email','Their requested store just went live. Grants a free check.'],
   ['waitlist','We’re live in your area','email','A waitlist signup’s area just launched.'],
   ['confirm_email','Confirm your email','email','Someone added an email. Nothing sends until they tap confirm.'],
-  ['instock_owner','In-stock owner ping','both','Your hands-free alert the moment a call confirms stock. Sends to you on the channel set in Owner ping.'],
-  ['zone_instock','Zone result · nearby','message','The line on the shared result page after a zone call finds stock at nearby stores. Tokens: {n} {product}.'],
-  ['referral','Referral welcome','message','The first line an invited friend sees when they open your referral link.'],
+  ['instock_owner','In-stock alert email','email','The email sent when a call confirms stock. Turned on by the In-stock Admin alert above.'],
+  ['instock_share','Share: in stock','message','The text a customer shares when a store has it.'],
+  ['referral','Share: referral','message','The text a customer shares to invite a friend.'],
+  ['zone_instock','Share: zone result','message','The text a customer shares after checking a zone.'],
 ];
-// Defaults for the newer messages that aren't in the server template registry yet. Baked here so they
-// show + edit in the Admin now (overrides persist to the live alerts_json). Server sends honor them post-release.
+// Real owner-approved copy, verbatim from the site (share.msg2 / ref.msg2 / zones.sharemsg2) and the
+// approved in-stock email. Editable here; the site + email honor edits after the release.
 const AL_DEFAULTS={
-  instock_owner:{ sms:'🟢 {store} just confirmed {product} is in stock.', emailSubject:'In stock: {product} at {store}.', emailBody:'A call just confirmed {product} is on the shelf at {store}. {dayline}' },
-  zone_instock:{ msg:'Check called {n} stores at once. {product} is on the shelf at these:' },
-  referral:{ msg:'Your friend used Check AI to find viral products on the shelves at retail prices.' },
+  instock_owner:{ emailSubject:'In stock: {product} at {store}.', emailBody:'A call just confirmed {product} is on the shelf at {store}. {dayline}' },
+  instock_share:{ msg:'Yo. {store} has {product} in stock right now. An AI called the store for me. Check it:' },
+  referral:{ msg:"Yo! Check this tech out. It's sick.\nAn AI calls stores and finds {product} in stock at retail prices.\nSign up and we both get {reward}:" },
+  zone_instock:{ msg:'Checked {n} stores at once. {i} had it in stock. Wild:' },
 };
 let AL_TPL={}, AL_RAW={};
 function alField(id,label,val,tall){ return `<label class="fld"><span class="fl">${esch(label)}</span>`
