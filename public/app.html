@@ -4897,17 +4897,17 @@ const AL_EVENTS=[
   ['waitlist','We’re live in your area','email','A waitlist signup’s area just launched.'],
   ['confirm_email','Confirm your email','email','Someone added an email. Nothing sends until they tap confirm.'],
   ['instock_owner','In-stock alert email','email','The email sent when a call confirms stock. Turned on by the In-stock Admin alert above.'],
-  ['instock_share','Share: in stock','message','The text a customer shares when a store has it.'],
-  ['referral','Share: referral','message','The text a customer shares to invite a friend.'],
-  ['zone_instock','Share: zone result','message','The text a customer shares after checking a zone.'],
+  ['instock_share','Share: in stock','sms','The text a customer shares when a store has it.'],
+  ['referral','Share: referral','sms','The text a customer shares to invite a friend.'],
+  ['zone_instock','Share: zone result','sms','The text a customer shares after checking a zone.'],
 ];
 // Real owner-approved copy, verbatim from the site (share.msg2 / ref.msg2 / zones.sharemsg2) and the
 // approved in-stock email. Editable here; the site + email honor edits after the release.
 const AL_DEFAULTS={
   instock_owner:{ emailSubject:'In stock: {product} at {store}.', emailBody:'A call just confirmed {product} is on the shelf at {store}. {dayline}' },
-  instock_share:{ msg:'Yo. {store} has {product} in stock right now. An AI called the store for me. Check it:' },
-  referral:{ msg:"Yo! Check this tech out. It's sick.\nAn AI calls stores and finds {product} in stock at retail prices.\nSign up and we both get {reward}:" },
-  zone_instock:{ msg:'Checked {n} stores at once. {i} had it in stock. Wild:' },
+  instock_share:{ sms:'Yo. {store} has {product} in stock right now. An AI called the store for me. Check it:' },
+  referral:{ sms:"Yo! Check this tech out. It's sick.\nAn AI calls stores and finds {product} in stock at retail prices.\nSign up and we both get {reward}:" },
+  zone_instock:{ sms:'Checked {n} stores at once. {i} had it in stock. Wild:' },
 };
 let AL_TPL={}, AL_RAW={};
 function alField(id,label,val,tall){ return `<label class="fld"><span class="fl">${esch(label)}</span>`
@@ -4943,7 +4943,7 @@ async function ownerPingTest(){
 let AL_LOG_ALL=false;
 function alPreview(k){
   const t=AL_TPL[k]||{}; const chan=(AL_EVENTS.find(e=>e[0]===k)||[])[2];
-  const first=(chan==='message'?t.msg:(chan==='email'?(t.emailSubject||t.emailBody):(t.sms||t.emailSubject)))||'';
+  const first=(chan==='email'?(t.emailSubject||t.emailBody):(t.sms||t.emailSubject))||'';
   return first?String(first).replace(/\s+/g,' ').trim():'Default copy';
 }
 function alRows(){
@@ -4951,7 +4951,7 @@ function alRows(){
   tEl.innerHTML=AL_EVENTS.map(([k,label,chan])=>`<button class="peek" onclick="alSheet('${k}')">
       <span class="pk-main"><span class="pk-t" style="display:block">${esch(label)}</span>
       <span class="pk-m" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(alPreview(k))}</span></span>
-      <span class="pk-fact">${chan==='message'?'On the page':chan==='both'?'Text · email':'Email'}</span>
+      <span class="pk-fact">${chan==='sms'?'Text':chan==='both'?'Text · email':'Email'}</span>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>`).join('');
 }
@@ -4962,25 +4962,17 @@ function alSheet(k){
   const hold=document.getElementById('al_sheets'); if(!hold) return;
   let box=document.getElementById('al_sh_'+k);
   if(!box){ box=document.createElement('div'); box.id='al_sh_'+k; hold.appendChild(box); }
-  // Page-copy messages (zone, referral) are a single line. Sent messages keep text + email fields.
-  if(chan==='message'){
-    box.innerHTML=alField('al_'+k+'_msg','Message',t.msg,true)
-      +`<div class="k-note" style="text-align:left;margin:10px 0 0">Shows on the page. Tokens fill live per visitor.</div>`
-      +`<div class="btnrow"><button class="act" onclick="saveAlertTemplates('${k}')">Save message</button></div>`;
-    sheetFromHolder('al_sh_'+k, label, hint); return;
-  }
+  // Every message uses the same full editor: a text field (share texts + restock), email fields, or both.
   const sms=alField('al_'+k+'_sms','Text message',t.sms,true);
   const email=alField('al_'+k+'_subj','Email subject',t.emailSubject,false)+alField('al_'+k+'_body','Email body',t.emailBody,true);
-  const tests=(chan==='both'?[['sms','Test text'],['email','Test email']]:[['email','Test email']])
+  const tests=(chan==='both'?[['sms','Test text'],['email','Test email']]:chan==='sms'?[['sms','Test text']]:[['email','Test email']])
     .map(x=>`<button class="ghost" onclick="sendAlertTest('${k}','${x[0]}')">${x[1]}</button>`).join('');
-  // Test-send only for events the server already wires; the newer ones edit now, test after the release.
-  const canTest=!AL_DEFAULTS[k];
-  box.innerHTML=(chan==='email'?email:sms+email)
+  box.innerHTML=(chan==='email'?email:chan==='sms'?sms:sms+email)
     +`<div class="k-note" style="text-align:left;margin:10px 0 0">Tokens fill per send: {store} {product} {city} {email} {result}</div>`
     +`<div class="btnrow"><button class="act" onclick="saveAlertTemplates('${k}')">Save message</button></div>`
-    +(canTest?`<div class="k-eyebrow" style="margin-top:18px">Send yourself a test</div>`
-    +`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input id="al_test_to_${k}" type="text" placeholder="your email (or a phone for the text)" style="flex:1;min-width:170px;font-size:14px;padding:10px 14px" value="${esch(((document.getElementById('oa_email')||{}).value||''))}">${tests}</div>`
-    +`<div id="al_test_out_${k}" class="meta" style="margin-top:8px;font-size:12px"></div>`:'');
+    +`<div class="k-eyebrow" style="margin-top:18px">Send yourself a test</div>`
+    +`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input id="al_test_to_${k}" type="text" placeholder="${chan==='email'?'your email':'a phone for the text'}" style="flex:1;min-width:170px;font-size:14px;padding:10px 14px" value="${esch(((document.getElementById('oa_email')||{}).value||''))}">${tests}</div>`
+    +`<div id="al_test_out_${k}" class="meta" style="margin-top:8px;font-size:12px"></div>`;
   sheetFromHolder('al_sh_'+k, label, hint);
 }
 async function loadAlerts(){
@@ -5026,9 +5018,8 @@ async function saveAlertTemplates(only){
   const patch={};
   for(const [k,,chan] of AL_EVENTS){
     if(only&&k!==only) continue;
-    if(!document.getElementById('al_'+k+'_sms')&&!document.getElementById('al_'+k+'_subj')&&!document.getElementById('al_'+k+'_msg')) continue; // sheet never opened
+    if(!document.getElementById('al_'+k+'_sms')&&!document.getElementById('al_'+k+'_subj')) continue; // sheet never opened
     patch[k]={};
-    if(chan==='message'){ patch[k].msg=(document.getElementById('al_'+k+'_msg')||{}).value||''; continue; }
     if(chan!=='email'){ const v=(document.getElementById('al_'+k+'_sms')||{}).value; patch[k].sms=v||''; }
     if(chan!=='sms'){
       const subj=(document.getElementById('al_'+k+'_subj')||{}).value||'', body=(document.getElementById('al_'+k+'_body')||{}).value||'';

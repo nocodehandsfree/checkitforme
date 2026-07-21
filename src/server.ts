@@ -55,7 +55,7 @@ import { isGmailConfigured, gmailReceiptTick, debugRecentInbox } from "./gmail-r
 import { rankBets } from "./best-bet";
 import { referralStatus, claimReferral } from "./referrals";
 import { sendAlert, sendAnonEmail, sendTestAlert, sendOwnerInStockEmail, sendConfirmEmail, checkEmailToken, alertSubscribe, myAlerts, alertMute, getAlertTemplatesPublic, setAlertTemplates, monthKey, fanoutRestock } from "./alerts";
-import { ownerAlertPrefs } from "./calls/notify";
+import { ownerAlertPrefs, notifyContact } from "./calls/notify";
 
 /** 409-style gate: returns a closed payload if we KNOW the store is closed right now, else null. */
 async function closedGate(retailerId: number): Promise<{ error: string; label: string } | null> {
@@ -5214,6 +5214,22 @@ app.post("/api/alerts/test", async (c) => {
   // The hands-free owner ping (call confirmed stock) is its own template, email only.
   if (event === "instock_owner") {
     return c.json(await sendOwnerInStockEmail(to, { store: "Target Glendale", product: "151 Booster Box", day: "Tuesdays", url: "https://checkitforme.com" }, { test: true }));
+  }
+  // Customer-composed share texts (in-stock / referral / zone): text the owner the composed message so
+  // they can read it. Copy is the Admin-edited alerts_json override, or the approved default.
+  if (["instock_share", "referral", "zone_instock"].includes(event)) {
+    let over: Record<string, { sms?: string }> = {};
+    try { over = JSON.parse((await getSetting("alerts_json")) || "{}"); } catch { /* ignore */ }
+    const SHARE_DEFAULTS: Record<string, string> = {
+      instock_share: "Yo. {store} has {product} in stock right now. An AI called the store for me. Check it:",
+      referral: "Yo! Check this tech out. It's sick.\nAn AI calls stores and finds {product} in stock at retail prices.\nSign up and we both get {reward}:",
+      zone_instock: "Checked {n} stores at once. {i} had it in stock. Wild:",
+    };
+    let body = over[event]?.sms || SHARE_DEFAULTS[event];
+    const sample: Record<string, string> = { store: "Target Glendale", product: "151 Booster Box", reward: "a free check", n: "10", i: "3" };
+    for (const kk of Object.keys(sample)) body = body.split(`{${kk}}`).join(sample[kk]);
+    await notifyContact("sms", to, "Check", body, "https://checkitforme.com");
+    return c.json({ status: "test_sent", channel: "sms" });
   }
   if (!["restock", "store_added", "waitlist", "confirm_email", "auto_check"].includes(event)) return c.json({ error: "bad_event" }, 400);
   const r = await sendTestAlert(event as "restock" | "store_added" | "waitlist" | "confirm_email" | "auto_check", to, channel);
