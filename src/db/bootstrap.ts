@@ -95,6 +95,8 @@ export async function bootstrap() {
   await client.execute("ALTER TABLE zones ADD COLUMN owner_user_id TEXT").catch(() => {});
   // Email confirmation: alert emails only send once the address is confirmed (confirm-email flow).
   await client.execute("ALTER TABLE accounts ADD COLUMN email_verified_at INTEGER").catch(() => {});
+  // Master "Pause all alerts": one switch on the Alerts list pauses every alert for the account.
+  await client.execute("ALTER TABLE accounts ADD COLUMN alerts_paused_at INTEGER").catch(() => {});
   // Auto-check results alert: link a fired call back to the customer schedule that placed it.
   await client.execute("ALTER TABLE call_results ADD COLUMN customer_schedule_id INTEGER").catch(() => {});
   // Per-account language for alert copy: "es" sends Spanish, else English.
