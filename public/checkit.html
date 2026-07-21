@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r172" />
+<meta name="x-rev" content="glassfix-r173" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -1779,6 +1779,14 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .ztally{background:#1F1F24;border-radius:18px;padding:15px 16px 14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
 #zones .zsegbar{display:flex;gap:5px;margin:0 0 11px}
 #zones .zsegbar span{flex:1;height:6px;border-radius:3px;background:#2D2D34} #zones .zsegbar span.done{background:#4ADE80;box-shadow:0 0 6px rgba(74,222,128,.5)}
+/* Report head — status-count pills + live/done dot (owner's comp screenshots 2 & 3). */
+#zones .zrp{display:inline-flex;align-items:center;gap:5px;font:800 12px Inter;padding:5px 10px;border-radius:999px;white-space:nowrap}
+#zones .zrp.in{color:#4ADE80;background:rgba(74,222,128,.14)}
+#zones .zrp.out{color:#FF7B7B;background:rgba(239,68,68,.14)}
+#zones .zrp.unk{color:#FBBF24;background:rgba(251,191,36,.14)}
+#zones .zrsub{font:600 12.5px Inter;color:#7C7C88}
+#zones .zdotlive{width:9px;height:9px;border-radius:50%;background:#4ADE80;box-shadow:0 0 8px rgba(74,222,128,.7);flex:0 0 auto;animation:ckWaveV2 1.5s infinite}
+#zones .zdotdone{width:9px;height:9px;border-radius:50%;background:#4ADE80;flex:0 0 auto}
 #zones .zclosedbox{display:flex;gap:10px;background:rgba(232,154,74,.12);border:1px solid rgba(232,154,74,.35);border-radius:14px;padding:11px 13px;font:600 13px/1.45 Inter;color:#f0c79a}
 #zones .zclosedbox b{color:#f6d3a6}
 #zones .zrrow2{display:flex;align-items:center;gap:11px;width:100%;padding:11px 13px;border:0;border-radius:14px;background:linear-gradient(180deg,#2D2D34,#27272D);cursor:pointer;text-align:left;color:#fff}
@@ -7558,8 +7566,25 @@ function renderZoneRun(){
       ? '<span style="flex:0 0 auto;display:inline-grid;place-items:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A8A96" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>'
       : v2StatusChip(tone,26);
   const rowTone=row=>((String(row.status||'').toLowerCase()==='queued')||!row.cid)?'queue':zoneRunTone(row);
-  const headline=live?(nmBase?tf('zones.checkingzone','Checking {n} zone now',{n:nmBase}):t('zones.checkingyours','Checking your zone now')):'';
-  const meta=loading?(r.fresh?t('zones.starting2','Starting…'):''):(live?`${done} ${t('zones.of','of')} ${total} ${t('zones.checkedw','checked')} · ${checking} ${t('zones.checkingw','checking')}`:tf('zones.alldone','All {n} checked · done',{n:total}));
+  // Comp report head (owner's screenshots 2 & 3): a circular progress RING (done/total) + status-count
+  // pills, ONE progress element — not the old 3-segment bar. Counts come from the row tones so the pills
+  // always match the rows exactly.
+  let cIn=0,cOut=0,cUnk=0,cLive=0,cQueue=0;
+  (d.results||[]).forEach(row=>{ const tn=rowTone(row); if(tn==='in')cIn++; else if(tn==='out')cOut++; else if(tn==='unk')cUnk++; else if(tn==='live')cLive++; else cQueue++; });
+  const ringTotal=total||(cIn+cOut+cUnk+cLive+cQueue)||(znMeta&&Array.isArray(znMeta.stores)?znMeta.stores.filter(s=>s.callable!==false).length:0);
+  const ringDone=cIn+cOut+cUnk;
+  const RINGC=263.894; // 2πr, r=42
+  const ringOff=ringTotal?RINGC*(1-Math.min(1,ringDone/ringTotal)):RINGC;
+  const headline=live?(nmBase?tf('zones.checkingzone','Checking {n} zone now',{n:nmBase}):t('zones.checkingyours','Checking your zone now')):tf('zones.alldone2','All {n} checked',{n:ringTotal});
+  const callingLbl=cLive>0?`${cLive} ${t('zones.callingw','calling')}`:'';
+  const pillHTML=[
+    cIn>0?`<span class="zrp in">${CHK}${cIn} ${t('zones.instock','in stock')}</span>`:'',
+    cOut>0?`<span class="zrp out">${cOut} ${t('zones.notpill','not')}</span>`:'',
+    cUnk>0?`<span class="zrp unk">${cUnk} ${t('zones.noansw','no answer')}</span>`:''
+  ].filter(Boolean).join('');
+  const subMeta = (loading&&!r.fresh) ? '' : (live?`${cLive} ${t('zones.callingnow','calling now')}${cQueue?` · ${cQueue} ${t('zones.waitingslot','waiting for a slot')}`:''}`:(r.fresh?t('zones.starting2','Starting…'):''));
+  const pillsOrSub = pillHTML || (subMeta?`<span class="zrsub">${esc(subMeta)}</span>`:'');
+  const ringNum=`<span style="font:900 25px Inter;color:#fff">${ringDone}</span><span style="font:800 14px Inter;color:#7C7C88">/${ringTotal}</span>`;
 
   // ---- IN-PLACE tick (poll): same row set + same live-state -> update marks/tally only, so scroll
   // position, open transcripts, and the stop box all survive (the 1.8s full repaint was wiping them).
@@ -7569,14 +7594,14 @@ function renderZoneRun(){
       if(!el) return; const mk=el.querySelector('.zmark'); const tone=rowTone(row);
       if(mk&&mk.dataset.tone!==tone){ mk.dataset.tone=tone; mk.innerHTML=mark(tone); el.querySelector('.zrrow2').classList.toggle('checking',tone==='live');
         const btn=el.querySelector('.zrrow2'); if(btn) btn.setAttribute('onclick', tone==='queue'?`zoneStopOnePrompt(${row.retailerId},'${esc(row.name||'')}')`:`zoneExpand('${esc(row.cid||'')}',this)`); } });
-    const sb=document.getElementById('z_segbar'); if(sb) sb.innerHTML=Array.from({length:total},(_,k)=>`<span class="${k<done?'done':''}"></span>`).join('');
-    const mt=document.getElementById('z_runmeta'); if(mt) mt.textContent=meta;
-    const pl=document.getElementById('z_runpill'); if(pl){ pl.style.display=inN>0?'':'none'; pl.innerHTML=`${CHK}${inN} ${t('zones.instock','in stock')}`; }
+    const ra=document.getElementById('z_ringarc'); if(ra) ra.setAttribute('stroke-dashoffset', ringOff);
+    const rn=document.getElementById('z_ringnum'); if(rn) rn.innerHTML=ringNum;
+    const pz=document.getElementById('z_pills'); if(pz) pz.innerHTML=pillsOrSub;
+    const cg=document.getElementById('z_calling'); if(cg){ cg.innerHTML=callingLbl; cg.style.display=callingLbl?'':'none'; }
     return;
   }
   ZONES._runPaint=shape;
 
-  const segs=Array.from({length:total},(_,k)=>`<span class="${k<done?'done':''}"></span>`).join('');
   let closedBox='';
   if(znMeta&&Array.isArray(znMeta.stores)&&(d.results||[]).length){
     const got=new Set((d.results||[]).map(x=>x.retailerId));
@@ -7594,10 +7619,22 @@ function renderZoneRun(){
       </button><div class="zrbody" style="display:none"></div></div>`; }).join('');
   $('zmodal').innerHTML=`<div class="zframe">
     <div class="zf-scroll" style="padding-top:10px">
-    <div class="ztally">
-      ${headline?`<div class="zrephead" style="font-size:17px;letter-spacing:-.3px;margin-bottom:11px">${esc(headline)}</div>`:''}
-      <div class="zsegbar" id="z_segbar">${segs}</div>
-      <div style="display:flex;align-items:center;gap:10px"><span class="zc-pill in" id="z_runpill" style="${inN>0?'':'display:none'}">${CHK}${inN} ${t('zones.instock','in stock')}</span><span style="font:600 12.5px Inter;color:#7C7C88" id="z_runmeta">${meta}</span></div>
+    <div class="ztally" style="display:flex;align-items:center;gap:15px">
+      <div style="position:relative;width:82px;height:82px;flex:none">
+        <svg width="82" height="82" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="#2D2D34" stroke-width="9"/>
+          <circle id="z_ringarc" cx="50" cy="50" r="42" fill="none" stroke="#4ADE80" stroke-width="9" stroke-linecap="round" stroke-dasharray="${RINGC}" stroke-dashoffset="${ringOff}" transform="rotate(-90 50 50)" style="transition:stroke-dashoffset .5s ease"/>
+        </svg>
+        <div id="z_ringnum" style="position:absolute;inset:0;display:grid;place-items:center;line-height:1">${ringNum}</div>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="${live?'zdotlive':'zdotdone'}"></span>
+          <span class="zrephead" style="font:800 17px Inter;letter-spacing:-.3px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(headline)}</span>
+          <span id="z_calling" style="font:600 12.5px Inter;color:#7C7C88;flex:0 0 auto;${callingLbl?'':'display:none'}">${callingLbl}</span>
+        </div>
+        <div id="z_pills" style="display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-top:9px">${pillsOrSub}</div>
+      </div>
     </div>
     ${closedBox}
     <div class="zrlist" style="display:flex;flex-direction:column;gap:8px;margin-top:8px">${rows||`<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:36px 0"><span></span><span></span><span></span></div>`}</div>
