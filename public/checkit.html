@@ -7255,8 +7255,15 @@ function alertName(x){ const s=x.storeName||t('alerts.thatstore','that store');
 // a master "Pause all alerts" on top, each row removable. Optionally opens in make-room mode when a
 // new watch hit the 10-store cap. Cache-first so it paints instantly; the fetch refreshes.
 let ALERTS_MAKEROOM=false;
+// Same store object shape the homepage row uses, so storeFace() paints the REAL chain logo (server
+// sends logoUrl/logoWide/logoDark/storeType via chainLogoInfo); falls back to the live STORES cache.
 function alertStoreObj(x){ const cached=(window.STORES||[]).find(s=>s.id===x.retailerId);
-  return cached||{id:x.retailerId,name:x.storeName||t('alerts.thatstore','that store'),location:x.storeLocation||'',logoUrl:null}; }
+  return { id:x.retailerId, name:x.storeName||(cached&&cached.name)||t('alerts.thatstore','that store'),
+    location:x.storeLocation||(cached&&cached.location)||'',
+    logoUrl:x.logoUrl||(cached&&cached.logoUrl)||null,
+    logoWide:x.logoWide!=null?x.logoWide:(cached&&cached.logoWide),
+    logoDark:x.logoDark!=null?x.logoDark:(cached&&cached.logoDark),
+    storeType:x.storeType||(cached&&cached.storeType)||'' }; }
 function closeAlerts(){ const o=$('alertsOv'); if(o) o.classList.remove('on'); }
 async function openAlerts(opts){ opts=opts||{}; ALERTS_MAKEROOM=!!opts.makeRoom; const ov=sheetShell('alertsOv');
   const shell=inner=>`<div class="modal" style="text-align:left">
@@ -7277,7 +7284,7 @@ async function openAlerts(opts){ opts=opts||{}; ALERTS_MAKEROOM=!!opts.makeRoom;
       const name=esc(so.name||x.storeName||t('alerts.acheck','A check')), loc=esc(so.location||x.storeLocation||'');
       return `<div class="store${off||paused?' alrow-off':''}" style="cursor:default;margin-top:10px">
         <div class="ic ${so.logoDark?'lite':''} ${so.logoWide?'widelogo':''}">${storeFace(so)}</div>
-        <div style="min-width:0;flex:1"><div class="nm">${name}</div><div class="lo">${loc}</div></div>
+        <div style="min-width:0;flex:1"><div class="nm" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</div><div class="lo" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${loc}</div></div>
         <div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
           <div class="ho-toggle alsw" style="width:108px;flex:0 0 auto"><button class="${!off?'on':''}" onclick="alertSetOn(${x.id},1)">${t('alerts.rowon','On')}</button><button class="${off?'on':''}" onclick="alertSetOn(${x.id},0)">${t('alerts.rowoff','Off')}</button></div>
           <button class="alrm" onclick="alertStop(${x.id})" aria-label="${t('alerts.remove','Remove')}">${Z_ICO_TRASH}</button>

@@ -5177,6 +5177,26 @@ app.get("/api/support/stats", async (c) => {
 });
 
 // ---- Customer alerts (restock opt-in + status) ----
+// Paint each watched store in the Alerts list with the SAME logo the homepage store row uses:
+// chainLogoInfo(chainName) + the chain's type. Without this the list falls back to a made-up monogram.
+async function enrichAlertStores<T extends { subscriptions?: Array<{ retailerId?: number | null }> }>(me: T): Promise<T> {
+  const subs = (me.subscriptions || []) as Array<Record<string, unknown>>;
+  const ids = [...new Set(subs.map((s) => s.retailerId as number | null).filter((x): x is number => x != null))];
+  if (!ids.length) return me;
+  const rets = await db.select({ id: retailers.id, name: retailers.name, chainId: retailers.chainId }).from(retailers).where(inArray(retailers.id, ids));
+  const chainRows = await db.select({ id: chains.id, name: chains.name, type: chains.type }).from(chains);
+  const cName = new Map(chainRows.map((x) => [x.id, x.name]));
+  const cType = new Map(chainRows.map((x) => [x.id, x.type]));
+  const byId = new Map(rets.map((r) => [r.id, r]));
+  (me as { subscriptions?: unknown }).subscriptions = subs.map((s) => {
+    const r = s.retailerId != null ? byId.get(s.retailerId as number) : null;
+    if (!r) return s;
+    const chainName = (r.chainId && cName.get(r.chainId)) || r.name.split(/—|–| - /)[0];
+    const l = chainLogoInfo(chainName);
+    return { ...s, storeType: (r.chainId && cType.get(r.chainId)) || "Other", logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
+  });
+  return me;
+}
 app.post("/app/alerts/subscribe", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
   if (!u) return c.json({ error: "unauthorized" }, 401);
@@ -5191,7 +5211,7 @@ app.post("/app/alerts/subscribe", async (c) => {
   // store at the cap gets bounced back so the client can open the list in make-room mode.
   const already = await alertExists(u.id, retailerId, productLabel);
   if (!already && (await alertSlotsUsed(u.id)) >= ALERT_SLOT_CAP) {
-    return c.json({ error: "cap", cap: ALERT_SLOT_CAP, ...(await myAlerts(u.id)) }, 200);
+    return c.json({ error: "cap", cap: ALERT_SLOT_CAP, ...(await enrichAlertStores(await myAlerts(u.id))) }, 200);
   }
   // Email is the one alert channel here (SMS/toll-free still dark) — every opt-in rides the account email.
   const r = await alertSubscribe(u.id, {
@@ -5212,12 +5232,12 @@ app.post("/app/alerts/pause-all", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
   if (!u) return c.json({ error: "unauthorized" }, 401);
   const { paused } = await c.req.json().catch(() => ({}));
-  return c.json(await pauseAllAlerts(u.id, !!paused));
+  return c.json(await enrichAlertStores(await pauseAllAlerts(u.id, !!paused)));
 });
 app.get("/app/alerts/me", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
   if (!u) return c.json({ error: "unauthorized" }, 401);
-  return c.json(await myAlerts(u.id));
+  return c.json(await enrichAlertStores(await myAlerts(u.id)));
 });
 // Turn one alert off (the My Checks alerts sheet). Only the caller's own subscriptions.
 app.post("/app/alerts/unsubscribe", async (c) => {
@@ -5226,7 +5246,7 @@ app.post("/app/alerts/unsubscribe", async (c) => {
   const { id } = await c.req.json().catch(() => ({}));
   if (!id) return c.json({ error: "id required" }, 400);
   await db.update(alertSubscriptions).set({ active: 0 }).where(and(eq(alertSubscriptions.id, Number(id)), eq(alertSubscriptions.userId, u.id)));
-  return c.json(await myAlerts(u.id));
+  return c.json(await enrichAlertStores(await myAlerts(u.id)));
 });
 // Mute = pause without losing the alert (owner 07-16): stays on the sheet, never sends until unmuted.
 app.post("/app/alerts/mute", async (c) => {
@@ -5234,7 +5254,7 @@ app.post("/app/alerts/mute", async (c) => {
   if (!u) return c.json({ error: "unauthorized" }, 401);
   const { id, muted } = await c.req.json().catch(() => ({}));
   if (!id) return c.json({ error: "id required" }, 400);
-  return c.json(await alertMute(u.id, Number(id), !!muted));
+  return c.json(await enrichAlertStores(await alertMute(u.id, Number(id), !!muted)));
 });
 
 // ---- Admin: editable alert message templates + the send log (tracking) ----
