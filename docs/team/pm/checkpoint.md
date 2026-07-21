@@ -17,6 +17,9 @@ product, rebuild process · hard stops over prose rules · PM as front door · t
 - **Owner plan:** close ALL old chats, reboot lanes fresh one at a time, each boot = PM boxed order.
 
 ## Open verifies (PM drives before anything new ships)
+0a. **Status precision (owner, after demo):** empty-conversation completed calls (Chris's Target,
+    row 150 — dead air) must read as nobody-answered, not "Couldn't tell". Outcome mapper wording,
+    engine-side (FROZEN → unlock), Echo box, small.
 0. **424 = admin on STAGING (owner 07-21, noted don't-fix-yet):** his 424 is in staging's
    ADMIN_PHONES, so the fresh-customer signup test boots as admin. Before the real-card/upgrade walk
    (owner + Chris): pull 424 from staging ADMIN_PHONES (Railway var), verify clean signup. COMP undo
@@ -73,12 +76,11 @@ Copper/CD/Mapper/Pops/Logo/Support parked until a box needs them.
 - Owner's own plate: Twilio A2P · Discord · #379/#364 · Echo/Charlie tuning · hide hobby chains ·
   Chris talk (notes in docs/team/ideas/checkpoint.md) · LEGAL/consent (critical GTM, un-started).
 
-## Session branches on origin
-**Provably merged, SAFE TO DELETE (this session lacked delete permission):** check-admin-setup-jseff0 ·
-e2e-coverage-harness-a9esc7 · hobby-hours-backfill-eexkg0 · webbie-landing-pages-lzpq0l · lexicon-repo-org-n4lpzn.
-**Delete after its lane confirms dead at reboot:** admin-redesign-data-hiy0ej · admin-standup-handoff-uipqja ·
-android-compatibility-testing-gjimn8 · check-app-ideas-sv1cl2 · check-email-rendering-uxomo9 ·
-check-pops-devops-cul4v8 · copper-landing-page-copy-3tatx4 · docs-overhaul-public-manuals-smlohx ·
-logo-asset-lane-setup-8rx7ep · mapper-checkpoint-scheduling-tbtnps · my-zones-layout-fix-68gs56 ·
-restructure-public-logos-pewy1c · ringo-voice-onboarding-634tk6 · support-lane-spec-7hd2aj ·
-ui-polish-pass · webbie-landing-share-rebuild-345ikb · webbie-website-handoff-s0ql27
+## Session branches on origin (all pre-07-19, superseded by later merges — none block anything)
+**Provably merged, SAFE TO DELETE (needs a session with delete permission or GitHub UI):**
+check-admin-setup · e2e-coverage-harness · hobby-hours-backfill · webbie-landing-pages · lexicon-repo-org.
+**Delete after its lane confirms dead at reboot:** admin-redesign-data · admin-standup-handoff ·
+android-compatibility-testing · check-app-ideas · check-email-rendering · check-pops-devops ·
+copper-landing-page-copy · docs-overhaul-public-manuals · logo-asset-lane-setup ·
+mapper-checkpoint-scheduling · my-zones-layout-fix · restructure-public-logos · ringo-voice-onboarding ·
+support-lane-spec · ui-polish-pass · webbie-landing-share-rebuild · webbie-website-handoff
