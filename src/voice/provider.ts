@@ -80,6 +80,7 @@ export interface CallOutcome {
   durationSecs?: number;
   /** Seconds spent navigating the phone tree before a human first spoke (time-to-human). null if never reached. */
   navSecs?: number | null;
+  steps?: { n: number; at: number }[]; // real step ladder from the transcript clock (liveStageLabel numbering)
   status: "completed" | "no_answer" | "failed" | "closed";
   /** Why a call ended early, in plain English (e.g. quota exceeded). Only set on failures. */
   failureReason?: string | null;
