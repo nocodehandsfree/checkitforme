@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r179" />
+<meta name="x-rev" content="glassfix-r180" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -6134,7 +6134,7 @@ function deriveVerdict(o, _lbl, _sh){
   // shipment day on a no/sold-out → flip from a flat "not in" to a restock-incoming heads-up.
   if(cls!=='in' && !o.doesNotSell && o.status==='completed' && o.shipmentDay){
     cls='soon'; big='🚚'; title=t('v.soon','Restock incoming!');
-    const _tm=o.shipmentTime?(' '+fmtShipTime(o.shipmentTime).replace(/ /g,' ')):''; // clerk gave a time → "tomorrow around 2 PM" — nbsp inside the time so "PM." can never wrap onto its own line (copy law: no orphan wraps)
+    const _tm=o.shipmentTime?(' '+fmtShipTime(String(o.shipmentTime).replace(/:00(?=\s*[APap])/,'')).replace(/ (?=[^ ]+$)/,'\u00A0')):''; // "2:00 PM" reads "2 PM", and only the LAST joint is glued — the line may break before the time, never inside its final word, so the subhead holds at TWO lines max (owner law) with no orphan
     note=tf('note.soon','A shipment lands <b>{d}</b>. Be first when it drops.',{d:esc(fmtShipDay(o.shipmentDay))+esc(_tm)});
   }
   // Rich verdict sub-line: "{store} has / doesn't have {category} … right now" — completed single-category
