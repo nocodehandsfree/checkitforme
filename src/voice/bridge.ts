@@ -232,6 +232,14 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         }
       } else if (m.type === "user_transcript") {
         const txt = m.user_transcription_event?.user_transcript; if (txt) try { relayLine?.(room, "Clerk", String(txt)); } catch { /* relay best-effort */ }
+        // VOICEMAIL = hang up NOW, not after the greeting plays out (owner 07-22: "as soon as it
+        // starts hearing the voice message it should hang up to save us money"). Same phrases the
+        // outcome mapper stamps `voicemail` from, so the verdict stays consistent. Closing the
+        // stream ends the TwiML <Connect> → Twilio hangs the PSTN leg; the EL leg closes with it.
+        if (txt && /\b(leave (?:a|your) message|after the (?:tone|beep)|at the (?:tone|beep)|voice ?mail|mailbox|record your message|is not available|unable to take your call|has been forwarded to)\b/i.test(String(txt))) {
+          log(`voicemail greeting detected -> hanging up to save the call minutes`);
+          signalEnd(); try { eleven?.close(); } catch { /* torn down */ } try { twilio.close(); } catch { /* torn down */ }
+        }
       } else if (m.type === "agent_response") {
         const txt = m.agent_response_event?.agent_response; if (txt) try { relayLine?.(room, "Agent", String(txt)); } catch { /* relay best-effort */ }
       } else if (m.type === "ping") {
