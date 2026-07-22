@@ -1,16 +1,23 @@
-# comps/ — the visual comps (two boards)
+# comps/ — the visual comps (one active board + the inbox)
 
-**There are exactly two approved boards. One style guide and one copy guide cover both.**
+**Rebuild 2026-07-22:** the consumer site is FROZEN and its reference is the LIVE SITE itself,
+snapshotted in `../truth/`. The old consumer boards (`WEBSITE_COMPS`, `MY_ZONES_COMP`,
+`QUEUED_HOLDING_CARD_COMP`) are superseded → `docs/archive/`. Never resurrect them.
 
-| Board | Surface |
+| What | Surface |
 |---|---|
-| **`WEBSITE_COMPS.dc.html`** | checkitforme.com (`public/checkit.html`). Renamed from `NEW_CHECK_COMPS.dc.html`. |
-| **`ADMIN_COMPS.dc.html`** | admin.checkitforme.com (`public/app.html`). The admin in the site's skin. |
+| **`ADMIN_COMPS.dc.html`** (ACTIVE) | admin.checkitforme.com (`public/app.html`) — Admin is still being built toward it. |
+| **`inbox/`** | CD's MCP submissions — temporary files; see `inbox/README.md` for the flow. |
+| **`../truth/`** | Snapshots of the live consumer pages — THE reference for the frozen site. |
+
+**Never open a board whole** — `../INDEX.md` first, then the line range.
+Comp ↔ live differences: `node scripts/gap-check.mjs <comp> <truth-or-url>` (before AND after building).
 
 ## ⚖️ Standing rule (owner, 2026-07-11)
 
 **Every NEW admin feature gets comped in `ADMIN_COMPS.dc.html` FIRST, then built.** No admin UI
-ships without its comp on the board. Same for the site and `WEBSITE_COMPS.dc.html`.
+ships without its comp on the board. Consumer pages don't take comps while frozen — an owner-named
+task + the `.unlock` flow is the only path, and the truth snapshot is re-taken after.
 
 ## The boards and the guides reference each other
 
