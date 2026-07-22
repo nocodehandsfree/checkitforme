@@ -38,7 +38,7 @@ import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MO
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay } from "./calls/tapedeck";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
-import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, connectAtSecFor, chainDialable, type Recipe } from "./calls/recipe";
+import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, connectAtSecFor, chainDialable, chainNavPlan, type Recipe } from "./calls/recipe";
 import { llm, heli } from "./llm";
 import { opsAlert, watchdogTick, watchdogState, backupTick, backupNow, backupState } from "./ops-watch";
 import { harvestHoursTick } from "./hours-harvest";
@@ -3210,6 +3210,32 @@ app.get("/pub/result/:cid", async (c) => {
   // status_key/confirmed) and the captured product detail, which the live outcome does not. While the
   // call is still in flight, fall back to the live outcome so the consumer sees progress immediately.
   const row = (await db.select().from(callResults).where(eq(callResults.providerCallId, cid)))[0];
+  // The ladder tells the WHOLE story (owner 07-22): nav runs as TwiML BEFORE the media stream
+  // exists, so the EL transcript can never narrate the menu phase. But the nav plan is FACT — we
+  // know the menu started at pickup and when every press/word fired (the learned schedule the TwiML
+  // reproduced). Rebase the ladder onto the wall clock: ring (row) → menu + presses (recipe) → the
+  // agent's own steps (EL clock, shifted past the nav TwiML). Direct chains: untouched.
+  if (o && Array.isArray((o as { steps?: { n: number; at: number }[] }).steps) && row?.retailerId != null) {
+    try {
+      const ret = (await db.select({ chainId: retailers.chainId }).from(retailers).where(eq(retailers.id, row.retailerId)))[0];
+      const ch = ret?.chainId != null ? (await db.select().from(chains).where(eq(chains.id, ret.chainId)))[0] : null;
+      const plan = chainNavPlan(ch);
+      if (plan) {
+        const oo = o as unknown as { steps: { n: number; at: number }[]; durationSecs?: number };
+        const wall = row.completedAt && row.startedAt ? row.completedAt - row.startedAt : null;
+        const el = typeof oo.durationSecs === "number" ? oo.durationSecs : null;
+        const ring = wall != null && el != null ? Math.max(1, Math.round(wall - el - plan.len)) : 2;
+        const ladder: { n: number; at: number }[] = [{ n: 1, at: 0 }, { n: 3, at: ring }];
+        for (const s of plan.steps) ladder.push({ n: s.n, at: ring + s.at });
+        for (const s of oo.steps) if (s.n >= 7) ladder.push({ n: s.n, at: Math.round(ring + plan.len + s.at) });
+        ladder.sort((a, b) => a.at - b.at || a.n - b.n);
+        const out: { n: number; at: number }[] = [];
+        for (const s of ladder) if (!out.length || s.n > out[out.length - 1].n) out.push(s);
+        oo.steps = out;
+        if (wall != null) oo.durationSecs = wall; // header total = the real wall clock the ladder spans
+      }
+    } catch { /* narration is best-effort — never block a result on it */ }
+  }
   if (row && row.status === "completed") {
     return c.json({
       ...(o ?? {}),
