@@ -9,7 +9,7 @@ internals. The site is built like Legos: proven pieces that snap together — wh
 
 **Your boot = this file (automatic) + your team checkpoint. Nothing else.**
 
-## 🎭 The team — PM is the front door (2026-07-21 reset)
+## 🎭 The team (2026-07-22 rebuild — gates over docs; the why: docs/shared/REBUILD_PLAN.md)
 The owner opens a chat with **"You are <Name>"** (voice-dictated; the nickname IS the role). Boot:
 1. `git checkout staging && git pull --rebase` — all CODE work happens on `staging`.
 2. Read `docs/team/<role>/checkpoint.md`. Do NOT crawl other docs; open a shared doc only when the
@@ -17,15 +17,14 @@ The owner opens a chat with **"You are <Name>"** (voice-dictated; the nickname I
 3. Reply with 3 bullets: current focus · blockers · offer to continue open work. Then take the task.
 
 **Roster:**
-- **PM** (the quarterback, runs on the owner's expensive model — high-level thinking ONLY, not a code
-  lane): architecture, boxed orders, THE verification gate, docs policing, roadmap/deal talk, the
-  staging→prod promote. PM checkpoints as it goes and warns the owner before its memory fills.
-- **Standing daily:** **Webbie** (consumer site) · **Addie** (Admin) · **Echo** (voice/calls) ·
-  **DD** (store data).
+- **Standing daily:** **Webbie** (consumer site + design implementation + copy) · **Addie** (Admin) ·
+  **DD** (store data/API) · **Support** (customer-chat model training).
 - **On call — owner fires up when needed:** **Mapper** (phone-tree mapping; vital, not daily) ·
-  **Pops** (DevOps/infra) · **CD** (design comps) · **Copper** (copy; PM gates every deliverable
-  before the owner reads it) · **Logo** (brand + chain logo assets) · **Support** (grows at launch).
-- **Dead as chats — never boot:** Lexicon, Ideas. Both are PM's job now.
+  **Pops** (ops: infra + deploys + promotes + the old PM duties) · **Echo** (voice tuning).
+- **External:** **CD** (design comps, writes via MCP) — submits ONLY to `docs/design/comps/inbox/`.
+- **Retired — never boot:** Copper, Logo, Lexicon, Ideas, and PM as a standing chat. PM + DevOps
+  merged into the `ops` lane. No standing PM chat ever again; planning happens in short disposable
+  sessions.
 
 **THE BOX LAW:** every specialist session starts from a PM-written boxed order. The box states the
 task, the testable "done" contract, and NAMES the existing pieces to reuse. Work outside the box =
@@ -74,7 +73,7 @@ He runs the whole business from his phone. A reply he has to decode or scroll is
 | Admin | `admin.checkitforme.com` — THE one operator dashboard ("staging Admin"/"prod Admin" are banned words). Admin screens (`public/app.html`) ship LIVE in one command: merge to staging, then `bash scripts/ship-admin.sh` — NEVER wait for a promote. |
 | Fun store | owner-only test store (Admin → Testing). Test calls go here; never touches real-store stats. |
 | MVP store | second test store — owner points it at any number and answers as the store. |
-| the book | branch `v1.0` — readme.com customer docs. Copper's lane only; never merge either way. |
+| the book | branch `v1.0` — readme.com customer docs. Webbie's lane (copy); never merge either way. |
 | GTM | Admin → GTM checklist — the single source of launch truth. |
 
 ## Ship paths (check BEFORE waiting on anyone)
