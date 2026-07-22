@@ -7,6 +7,7 @@ New task = one small md here (what · done-when · lane · status). Owner adds/r
 
 | Task | Lane | Status |
 |---|---|---|
+| [First promote after the rebuild — prod + admin LIVE in verify-live](first-promote-after-rebuild.md) | Ops | open |
 | [Store name gets cut off on alert cards](alert-card-store-name-cutoff.md) | Webbie | open |
 | [Alerts sheet formatting](alerts-sheet-formatting.md) | Webbie | open |
 | [Zone checks do not update the activity dashboard](zones-checks-activity-dashboard.md) | Webbie | open |
