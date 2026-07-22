@@ -17,16 +17,18 @@ product, rebuild process · hard stops over prose rules · PM as front door · t
 - **Owner plan:** close ALL old chats, reboot lanes fresh one at a time, each boot = PM boxed order.
 
 ## Open verifies (PM drives before anything new ships)
-0b. **THE TALK-OVER SAGA CLOSED (07-21 night) — two causes, both fixed, one proof pending:**
-    (1) 07-18 instant-connect on "direct" stores → Charlie talked over recordings (Box Lunch, Hot
-    Topic). Rolled back: every store waits for a voice again. (2) The ear-gate armed on TIMER chains
-    because it read consumed ctx fields (B&N: timer 29s, agent opened at 8s on the greeting).
-    Fixed with Mapper's strict boolean (bridge.ts, owner unlock, relocked, 13/13 bridge tests).
-    EL dials calmed (eager→normal, speculative off). (3) Silent calls now report the TRUTH:
-    agent-never-spoke completed calls = nobody_answered, and "A person picked up" only renders when
-    someone engaged (62854b5). OLD rows keep their stored wrong status; steps heal on reopen.
-    Echo's listen-then-talk build stays boxed (long-term fix + narrates the recording phase —
-    the log can't say "listening to menu" pre-join until the brain hears from second 0).
+0c. **r181 (83b84c7, staging): subhead class fix, render-proven via sweep.** Two-line law now
+    ENFORCED (fitSub trims trailing flavor sentence when a sub overflows — result page + zone
+    unfold) · fillP strips clerk articles ("a Chaos Rising booster packs" bug) · esc() coerces
+    non-strings (silent literal-{store} failure) · "Couldn't tell" survey only when statusKey
+    truly is no_clear_answer — voicemail/hold/nobody keep their REAL titles (client was
+    relabeling them!). Receipt: `scripts/qa-verdicts.cjs` sweeps 10 verdict states → one contact
+    sheet; run it after ANY result-page text change (needs local server :8899).
+0b. **TALK-OVER SAGA CLOSED (07-21 night):** (1) 07-18 instant-connect rolled back — every store
+    waits for a voice. (2) Ear-gate armed on timer chains (read consumed ctx fields) — Mapper's
+    strict boolean in bridge.ts (owner unlock, relocked, 13/13 bridge tests). EL dials calmed
+    (eager→normal, speculative off). (3) Silent completed calls = nobody_answered; "picked up"
+    renders only on real engagement (62854b5). Echo's listen-then-talk build stays boxed.
 0. **424 = admin on STAGING (owner 07-21, noted don't-fix-yet):** his 424 is in staging's
    ADMIN_PHONES, so the fresh-customer signup test boots as admin. Before the real-card/upgrade walk
    (owner + Chris): pull 424 from staging ADMIN_PHONES (Railway var), verify clean signup. COMP undo
@@ -52,8 +54,8 @@ restock-alert-row box) · DD idle (overwrite hunt when owner says) · Mapper/oth
 ## Prod + promote state
 - **PROD = bf621bc (owner-ordered promote 07-21 ~19:38 UTC, splash verified up, Admin 200).** Owner
   email re-set on prod (jcoindefi@gmail.com). COMP_PHONES deliberately UNSET (real-card test).
-- Staging is AHEAD again: instant-connect rollback + ear-gate fix + r175-r177 page fixes + manuals.
-  Next promote carries all of it — say what rides.
+- Staging is AHEAD again: instant-connect rollback + ear-gate fix + billing rule + log truth +
+  r175-r181 page fixes + manuals. Next promote carries ALL of it — say what rides.
 - Fable e2e harness 40 paths recorded 07-20; zone-report page still needs ADDING to the spec.
 
 ## THE ONE THING — still open
@@ -77,8 +79,6 @@ restock-alert-row box) · DD idle (overwrite hunt when owner says) · Mapper/oth
 ## Session branches on origin (all pre-07-19, superseded by later merges — none block anything)
 **Provably merged, SAFE TO DELETE (needs a session with delete permission or GitHub UI):**
 check-admin-setup · e2e-coverage-harness · hobby-hours-backfill · webbie-landing-pages · lexicon-repo-org.
-**Delete after its lane confirms dead at reboot:** admin-redesign-data · admin-standup-handoff ·
-android-compatibility-testing · check-app-ideas · check-email-rendering · check-pops-devops ·
-copper-landing-page-copy · docs-overhaul-public-manuals · logo-asset-lane-setup ·
-mapper-checkpoint-scheduling · my-zones-layout-fix · restructure-public-logos · ringo-voice-onboarding ·
-support-lane-spec · ui-polish-pass · webbie-landing-share-rebuild · webbie-website-handoff
+**Delete after its lane confirms dead at reboot:** the other 17 pre-07-19 session branches
+(admin-*, check-*, copper-*, docs-overhaul-*, logo-*, mapper-*, my-zones-*, restructure-*,
+ringo-*, support-lane-spec, ui-polish-pass, webbie-*).
