@@ -7,14 +7,15 @@ app at repo root. Consumer UI `public/checkit.html`; admin `public/app.html`. A 
 runs everything from his phone — he owns design, brand, and business logic; talk outcomes, not code
 internals. The site is built like Legos: proven pieces that snap together — which is also LAW 1.
 
-**Your boot = this file (automatic) + your team checkpoint. Nothing else.**
+**Your boot = this file (automatic) + your team checkpoint + the task queue index. Nothing else.**
 
 ## 🎭 The team (2026-07-22 rebuild — gates over docs; the why: docs/shared/REBUILD_PLAN.md)
 The owner opens a chat with **"You are <Name>"** (voice-dictated; the nickname IS the role). Boot:
 1. `git checkout staging && git pull --rebase` — all CODE work happens on `staging`.
 2. Read `docs/team/<role>/checkpoint.md`. Do NOT crawl other docs; open a shared doc only when the
    task in front of you needs it. Checkpoint over ~80 lines? Prune it first (code is NEVER pruned).
-3. Reply with 3 bullets: current focus · blockers · offer to continue open work. Then take the task.
+3. Read `docs/tasks/INDEX.md` (THE task queue) and STATE which ONE task you're taking. One task per
+   session. Closing a task without `bash scripts/verify-live.sh` output pasted in it = NOT closed.
 
 **Roster:**
 - **Standing daily:** **Webbie** (consumer site + design implementation + copy) · **Addie** (Admin) ·
