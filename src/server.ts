@@ -156,6 +156,23 @@ app.use("*", async (c, next) => {
   if (process.env.RAILWAY_ENVIRONMENT) c.header("Strict-Transport-Security", "max-age=15552000; includeSubDomains");
 });
 
+// ---- Build stamp (REBUILD_PLAN 2026-07-22) ----
+// Every served HTML page carries the git SHA Railway built from, so scripts/verify-live.sh can
+// PROVE what a site is actually serving. "Shipped/pushed/fixed" claims paste that script's output.
+const BUILD_SHA = (process.env.RAILWAY_GIT_COMMIT_SHA || "").slice(0, 12) || "local";
+app.use("*", async (c, next) => {
+  await next();
+  const ct = c.res.headers.get("content-type") || "";
+  if (!ct.includes("text/html") || c.res.status === 101 || !c.res.body) return;
+  const body = await c.res.text();
+  const stamped = body.includes("</head>")
+    ? body.replace("</head>", `<meta name="build" content="${BUILD_SHA}">\n</head>`)
+    : body;
+  const headers = new Headers(c.res.headers);
+  headers.delete("content-length");
+  c.res = new Response(stamped, { status: c.res.status, headers });
+});
+
 // ---- Staging (STAGING=1) — a private replica, NOT password-walled ----
 // Staging used to sit behind an HTTP Basic / login-form gate, but it was constant friction (iOS
 // re-prompting) for no real benefit: you log in with your phone exactly like prod. So the gate is

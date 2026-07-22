@@ -35,8 +35,9 @@ payload only, no "You are X" preamble (the owner adds that when he boots the cha
 device said no = a strike; after strike TWO stop and write what you tried into GOTCHAS/your
 checkpoint; strike three = say plainly it needs a fresh chat/specialist and hand off · **Blind
 spots** (iOS chrome paint, email-client colors, how a call sounds): only the owner's phone judges —
-ship ONE change, say "pushed, check your phone," never "fixed" · At ~80% context: "Handoff" without
-being asked · CLAUDE.md loads at boot only — owner says "re-read CLAUDE.md" → Read it, top to bottom.
+ship ONE change, say "pushed, check your phone," never "fixed" · A hook counts your turns and tells
+you when it's handoff time — obey it · CLAUDE.md loads at boot only — owner says "re-read CLAUDE.md"
+→ Read it, top to bottom.
 
 **Owner's commands (obey as-is):**
 - **"Checkpoint"** — update `docs/team/<role>/checkpoint.md` to reality RIGHT NOW (≤80 lines).
@@ -140,6 +141,8 @@ curl -s -X POST https://backboard.railway.app/graphql/v2 \
 Another repo? Fetch `GITHUB_PAT` the same way, then clone with it — never say "can't access" untried.
 
 ## Map (open only what a task needs)
+- **NEVER open `public/checkit.html`, `public/app.html`, or `docs/design/comps/*` whole — they break agents.**
+- **Read `docs/design/INDEX.md` (generated section index) first, then Read ONLY the line range you need.**
 - **The book** (readme.com, branch `v1.0`) — product/business reference; plans/pricing code truth is `src/plans.ts`.
 - `docs/shared/` — AGENT_RULES · GOTCHAS · ARCHITECTURE · API_CONTRACT + STOCK_AND_GEO_API.
 - `docs/design/` — STYLE_GUIDE · `brand/` (logos) · `comps/` (boards) · `copy/` (voice + approved copy).

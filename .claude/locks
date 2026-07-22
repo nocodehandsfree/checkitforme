@@ -1,0 +1,5 @@
+# Locked paths — one glob per line. Edit/Write on a matching path is BLOCKED by
+# .claude/hooks/edit-gate.sh unless repo-root .unlock (gitignored) contains that EXACT glob.
+# Unlock flow (REBUILD_PLAN): owner names the task -> write the glob into .unlock ->
+# fix ONLY that scope -> verify-live -> delete .unlock -> re-snapshot the page if consumer UI.
+src/voice/**
