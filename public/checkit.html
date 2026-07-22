@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r177" />
+<meta name="x-rev" content="glassfix-r178" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -3088,7 +3088,7 @@ const I18N={ es:{
   'hist.today.cta':'Verificar una tienda','hist.today.none':'Sin verificaciones hoy',
   'hist.signin.title':'Inicia sesión para ver tus verificaciones','hist.signin.sub':'Tus verificaciones anteriores están guardadas en tu cuenta.','hist.signin.cta':'Iniciar sesión',
   'hist.today.sub':'Selecciona un día abajo para ver tus verificaciones anteriores.','hist.today.sub0':'Selecciona un día abajo para ver tus verificaciones anteriores.',
-  'live.s1':'Llamando a la tienda…','live.s2':'Está timbrando…','live.s3':'Conectamos','live.s4':'Escuchando el menú…','live.s5':'Navegando el menú…','live.s6':'Transferido al mostrador','live.s7':'Contestó una persona','live.s8':'Preguntando por {p}',
+  'live.s1':'Llamando a la tienda…','live.s2':'Está timbrando…','live.s3':'Conectamos','live.s4':'Escuchando el menú…','live.s5':'Navegando el menú…','live.s6':'Transferido al mostrador','live.s7':'Contestó el personal','live.s8':'Preguntando por {p}',
   'live.item':'tu producto','live.store':'la tienda','live.waitperson':'Buscando a una persona…','live.noconvo':'No hay conversación en vivo en esta llamada.',
   'step.one':'paso','step.many':'pasos','step.ringing':'Llamando a la tienda…',
   'note.fbk':'No pudimos entender bien la respuesta.<br>Lee la conversación y dinos qué opinas.',
@@ -5361,7 +5361,7 @@ function liveStageLabel(n){
   const resCat=(typeof LASTRES!=='undefined'&&LASTRES&&Array.isArray(LASTRES.cats)&&LASTRES.cats[0])||'';
   const prod=(SEL_PRODUCT||askedCat||catLabel()||resCat||t('live.item','your item'));
   // Active-voice steps (the result design). Stage 1 is the roll-up handle ("Ringing the store…").
-  return ({1:t('live.s1','Ringing the store…'),2:t('live.s2',"It's ringing…"),3:t('live.s3',"We've connected"),4:t('live.s4','Listening to the menu…'),5:t('live.s5','Working through the menu…'),6:t('live.s6','Transferred to the front'),7:t('live.s7','A person picked up'),8:tf('live.s8','Asking about {p}',{p:prod})})[n]||'';
+  return ({1:t('live.s1','Ringing the store…'),2:t('live.s2',"It's ringing…"),3:t('live.s3',"We've connected"),4:t('live.s4','Listening to the menu…'),5:t('live.s5','Working through the menu…'),6:t('live.s6','Transferred to the front'),7:t('live.s7','Staff picked up'),8:tf('live.s8','Asking about {p}',{p:prod})})[n]||'';
 }
 function liveStage(n){
   if(!n||n<=LIVE_STAGE) return;
@@ -6134,7 +6134,7 @@ function deriveVerdict(o, _lbl, _sh){
   // shipment day on a no/sold-out → flip from a flat "not in" to a restock-incoming heads-up.
   if(cls!=='in' && !o.doesNotSell && o.status==='completed' && o.shipmentDay){
     cls='soon'; big='🚚'; title=t('v.soon','Restock incoming!');
-    const _tm=o.shipmentTime?(' '+fmtShipTime(o.shipmentTime)):''; // clerk gave a time → "tomorrow around 2 PM"
+    const _tm=o.shipmentTime?(' '+fmtShipTime(o.shipmentTime).replace(/ /g,' ')):''; // clerk gave a time → "tomorrow around 2 PM" — nbsp inside the time so "PM." can never wrap onto its own line (copy law: no orphan wraps)
     note=tf('note.soon','A shipment lands <b>{d}</b>. Be first when it drops.',{d:esc(fmtShipDay(o.shipmentDay))+esc(_tm)});
   }
   // Rich verdict sub-line: "{store} has / doesn't have {category} … right now" — completed single-category
