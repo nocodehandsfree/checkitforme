@@ -29,32 +29,25 @@ Local server `PORT=88xx tsx src/server.ts` (needs ELEVENLABS_* + ADMIN_TOKEN env
 `playwright-core` + `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` (NODE_PATH to node_modules).
 tsx has NO hot-reload — restart after edits. headless→staging TLS is proxy-blocked: drive LOCAL.
 
-## ✅ 07-21 (Webbie) — ONE email-alert process + My Checks → Alerts list (branch claude/webbie-checkpoint-yokoam)
-- **Subscribe = one path** (`watchStore`): confirmed email → instant ON + gray toast "We'll email you
-  when it's back", no confirm sent. No email → inline ask → ONE confirm; pending → sheet top "Check
-  your inbox". Pending watch turns on by itself (delivery gated on emailVerifiedAt). Email-only channel.
-  `openWatch`/upsell/notify button all route here. Confirm sheet reuses `#watchOverlay`.
-- **Alerts list** (`openAlerts`): each watch = the site's store row + On/Off switch (reuses `.ho-toggle`),
-  master "Pause all alerts" on top, each row removable (trash). Replaces old mute/stop. Make-room mode
-  when a new watch hits the 10 cap. EN+ES. New `.alsw/.alrm/.alpause/.almk` CSS.
-- **Server** (`src/`, prod via promote): `accounts.alerts_paused_at` (bootstrap ALTER); subscribe returns
-  on/pending/need_email + enforces cap 10 (on OR off holds a slot); `/app/alerts/pause-all`; myAlerts adds
-  location + paused + slots; fan-out skips paused. **PM: promote wanted — the alerts server half.**
-- **Drove it** local server + real routes: need_email→confirm→verified→instant-on, cap bounce + make-room,
-  toggle off/on, master pause (fan-out notified 0 paused / 1 unpaused), remove frees slot. Playwright UI
-  both langs, no JS errors, "Check your inbox"/"Revisa tu correo" confirmed.
-- **PM/Copper note:** row switch labels are On/Off in BOTH langs (Spanish "Activa/Apagada" truncated the
-  compact toggle — layout rule won). Auto-check + launch-waitlist + add-a-store still use their own
-  contact ask — unifying them under this gate is a clean follow-up box.
-- **OPEN (owner mentioned, deferred — do next if he confirms):** the feedback POLL (In stock / Not in /
-  Restocking / Unclear) is NOT yet in the individual-check UNFOLD — the unfold renders verdict+timeline+
-  transcript but not the `fbk` block `showResult` adds for unclear results.
-- **⚠️ r170's step-ladder code lives in `src/voice/elevenlabs.ts`+`provider.ts` — over the line, left in
-  because live+tested; now FROZEN with the engine. Echo's lane reviews/owns it. Website never touches it.**
-- **Admin/live-data writes it made (state known, lane now closed to Website):** `user_cancelled` status
-  row + admin_hangup note; chain 79 TJ Maxx `logoWide/logoDark=true` on staging.
-- Customer stops now read "Check cancelled" (`statusKey user_cancelled`, row status stays admin_hangup,
-  no-charge rules unchanged). **Owner supplies rewritten cancel copy (no dashes) — paste verbatim.**
+## ✅ 07-21 (Webbie) — email alerts + zones report head (ALL LIVE ON staging)
+- **ONE email-alert path** (`watchStore`): confirmed email → instant ON + toast "Your {store} {Restock
+  Alert|Auto Check} is set. Manage in My Checks > Alerts." (shared `alertSetToast`, EN+ES). No email →
+  inline ask → ONE confirm; pending → confirm sheet top "Check your inbox" (reuses `#watchOverlay`).
+  Delivery gated on emailVerifiedAt so a pending watch turns on itself. `openWatch`/upsell/notify route here.
+- **My Checks → Alerts list** (`openAlerts`): each watch = the site store row with the REAL chain logo
+  (server `enrichAlertStores`, same `chainLogoInfo`+type as the homepage) + On/Off switch (`.ho-toggle`),
+  master "Pause all alerts" on top, trash-removable. 10-slot cap (on OR off holds one); at cap → make-room.
+- **Server** (`src/`, prod ONLY via promote): `accounts.alerts_paused_at` (bootstrap ALTER); subscribe
+  returns on/pending/need_email + cap; `/app/alerts/pause-all`; myAlerts adds location/logo/paused/slots;
+  fan-out skips paused. **PM: promote wanted — the whole alerts server half + confirm gate.**
+- **Zone report head rebuilt** (`renderZoneRun`; owner rejected it hard): KEEP CD's comp RING (I removed
+  it once — wrong, never do that). Head = ring (count "3/5" side-by-side ONE line via flex; green CHECK
+  when done) + LEFT-aligned status "Calling stores…"/"Checking live"/"All checked" (NEVER the zone name) +
+  "N calling" + `.zrp` count pills on ONE line, no stray live dot. Nothing else on the page touched. EN+ES.
+- **Drove it all** local server + Playwright, both langs, no JS errors; zone head compared to the owner's
+  3 comp screenshots (done/live/starting) and matched.
+- **Follow-ups:** auto-check + launch-waitlist + add-a-store still use their own contact ask (fold into the
+  gate later). Feedback POLL still not in the individual-check UNFOLD (`fbk` block from `showResult`).
 
 ## 🚨 OPEN BUG — thin GREEN LINE, /s card bottom edge, iPhone only (UNRESOLVED)
 - Never reproduces headless; predates brandmark/border/wash (7 wrong fixes chased those). Prime suspect:
@@ -67,6 +60,8 @@ tsx has NO hot-reload — restart after edits. headless→staging TLS is proxy-b
   a 1px edge line; Chromium renders CANNOT catch iOS paint — owner's phone is the rig.
 - 'in_stock' substring-matches 'not_in_stock' — match negatives first/exact. A "not in stock" share
   landing has no use case. `#auth_logo` is a left-flex wordmark bar (override per mode).
+- **RENDER the comp and read EVERY state before touching a designed head.** "circle laid out wrong" = fix
+  the circle, NOT remove it. I removed the zone ring and burned a cycle. The owner's screenshot is truth.
 
 ## ⏳ Open
 - **FIRST BOX (owner 07-21): missing email-confirmation** — box lives in the PM chat; likely cause =
