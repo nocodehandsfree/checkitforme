@@ -7,7 +7,8 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 UA="Mozilla/5.0 (X11; Linux x86_64) Chrome/126.0"
 HEAD_SHA=$(git rev-parse HEAD)
-MAIN_SHA=$(git rev-parse origin/main 2>/dev/null || echo "none")
+git fetch -q origin main 2>/dev/null || true
+MAIN_SHA=$(git rev-parse --verify -q origin/main 2>/dev/null || git rev-parse --verify -q FETCH_HEAD 2>/dev/null || echo "none")
 
 stamp_of() {
   curl -s --max-time 20 -A "$UA" "$1" | grep -oE 'name="build" content="[0-9a-z]+"' | head -1 | sed -E 's/.*content="([0-9a-z]+)".*/\1/'
