@@ -81,6 +81,33 @@ export function recipeAnswerPath(r: Recipe): string {
   return (r.steps || []).map((s) => `${s.action}:${s.value}`).join(">") || "";
 }
 
+/** The KNOWN nav story of a call to this chain, as call-log ladder steps relative to ANSWER
+ *  (owner 07-22: "the moment we get the menu we need to say that, with seconds"). Nav runs as TwiML
+ *  BEFORE the media stream exists, so nothing can LISTEN to the menu yet — but the plan is fact:
+ *  we know when the menu starts (pickup) and when every press/word fires (the learned atSec the
+ *  TwiML reproduces). Ladder numbers match liveStageLabel: 4 = menu heard, 5 = working through it.
+ *  `len` = seconds of TwiML nav played before <Connect> opens the stream (0 when no actions).
+ *  Returns null for direct chains / no evidence of a tree — never invent a menu that isn't there. */
+export function chainNavPlan(ch?: {
+  navType?: string | null; ringsDirect?: boolean | null; answerPath?: string | null;
+  navRecipe?: string | null; dtmfShortcut?: string | null; avgTreeSeconds?: number | null;
+} | null): { steps: { n: number; at: number }[]; len: number } | null {
+  if (!ch) return null;
+  if (ch.navType === "direct" || ch.ringsDirect === true || ch.answerPath === "direct_human") return null;
+  let acts: RecipeStep[] = [];
+  try {
+    const r = ch.navRecipe ? (JSON.parse(ch.navRecipe) as Recipe) : null;
+    acts = (r?.steps || []).filter((s) => (s.action === "press" || s.action === "say") && s.value);
+  } catch { /* unreadable recipe → fall through to the shortcut/timer evidence below */ }
+  const hasTree = acts.length > 0 || !!ch.dtmfShortcut || (ch.avgTreeSeconds ?? 0) > 0;
+  if (!hasTree) return null;
+  const steps: { n: number; at: number }[] = [{ n: 4, at: 1 }]; // the menu starts talking right at pickup
+  let prev = -1, len = 0;
+  acts.forEach((s, i) => { const at = stepAt(s, i, prev); prev = at; len = at; steps.push({ n: 5, at }); });
+  if (!acts.length && ch.dtmfShortcut) { steps.push({ n: 5, at: FIRST_AT }); len = FIRST_AT; }
+  return { steps, len: len ? len + 2 : 0 }; // +2s: the last press/word plays out before <Connect>
+}
+
 /** ABC connect-timer guard: when (seconds after connect) to open the billed agent for a chain, or
  *  null for "no timer" (bridge falls back to VAD + hold-timeout). The timer MUTES the agent until it
  *  fires, so a DIRECT-answer chain must NEVER arm it — a human is on the line at pickup (the

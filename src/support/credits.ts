@@ -31,24 +31,31 @@ export type CreditOutcome =
   | { kind: "granted"; cid: number; store: string; reason: string }
   | { kind: "already"; cid: number; store: string }
   | { kind: "denied_fine"; cid: number; store: string; seconds: number | null }
-  | { kind: "not_charged"; cid: number; store: string }
+  | { kind: "not_charged"; cid: number; store: string; statusKey: string | null }
   | { kind: "cap" }
   | { kind: "no_recent" }
   | { kind: "ambiguous"; stores: string[] }
+  | { kind: "unresolved" }   // asked which store twice, still can't tell → hand to a human
   | { kind: "guest" };
 
 interface Candidate {
   id: number; retailerId: number; storeName: string; storeLocation: string | null; storePhone: string | null;
+  providerCallId: string | null;
   statusKey: string | null; status: string; confirmed: boolean | null;
   callSeconds: number | null; chargedAt: number | null; startedAt: number;
 }
 
-/** Words from the message that could name a store ("target", "gamestop", "walmart"...). */
-function matchesStore(message: string, c: Candidate): boolean {
+/**
+ * How well the message names this store: the count of the store's own words that appear in the
+ * message. Ranking by count (not any-match) is what tells two same-brand stores apart — "Barnes &
+ * Noble Thousand Oaks" scores 4 on the Thousand Oaks check but only 2 (barnes, noble) on Calabasas,
+ * so the customer can actually pick the one they mean. Any-match treated them as a tie forever.
+ */
+function storeScore(message: string, c: Candidate): number {
   const m = message.toLowerCase();
   const tokens = `${c.storeName} ${c.storeLocation || ""}`.toLowerCase()
     .split(/[^a-z0-9]+/).filter((w) => w.length >= 4 && !["store", "shop", "super", "center"].includes(w));
-  return tokens.some((tk) => m.includes(tk));
+  return tokens.filter((tk) => m.includes(tk)).length;
 }
 
 function evidenceFor(c: Candidate): { ok: boolean; reason: string } {
@@ -63,7 +70,7 @@ function evidenceFor(c: Candidate): { ok: boolean; reason: string } {
  * Deterministic, cheap (a few indexed reads), and safe to re-run on every message of a
  * conversation until it reaches a terminal outcome.
  */
-export async function verifyCheckIssue(accountId: string | null | undefined, message: string, conversationId: number): Promise<CreditOutcome> {
+export async function verifyCheckIssue(accountId: string | null | undefined, message: string, conversationId: number, pinnedRef?: string | null): Promise<CreditOutcome> {
   if (!accountId) return { kind: "guest" };
   const now = Math.floor(Date.now() / 1000);
 
@@ -76,6 +83,7 @@ export async function verifyCheckIssue(accountId: string | null | undefined, mes
   const rows = await db.select({
     id: callResults.id, retailerId: callResults.retailerId,
     storeName: retailers.name, storeLocation: retailers.location, storePhone: retailers.phone,
+    providerCallId: callResults.providerCallId,
     statusKey: callResults.statusKey, status: callResults.status, confirmed: callResults.confirmed,
     callSeconds: callResults.callSeconds, chargedAt: callResults.chargedAt, startedAt: callResults.startedAt,
   }).from(callResults)
@@ -84,12 +92,26 @@ export async function verifyCheckIssue(accountId: string | null | undefined, mes
     .orderBy(desc(callResults.startedAt)).limit(12) as Candidate[];
   if (!rows.length) return { kind: "no_recent" };
 
-  // Which check are they talking about? One check → that one. Several → need the store named.
+  // Which check are they talking about?
+  //  · pinned — the chat was opened from a check's own status page, so we already know the exact
+  //    check they're looking at. Use it, never ask "which store". This is the common path and the
+  //    one that was looping before. The client hands us whichever id it holds: the numeric row id
+  //    OR the provider conversation id (conv_… from a ?call= deep link), so match on either.
+  //  · otherwise rank by how well the message names each store and keep only the best matches; a
+  //    real tie between different stores is the only thing that still asks.
   let pool = rows;
-  const named = rows.filter((c) => matchesStore(message, c));
-  if (named.length) pool = named;
-  const distinctStores = [...new Set(pool.map((c) => c.storeName))];
-  if (distinctStores.length > 1) return { kind: "ambiguous", stores: distinctStores.slice(0, 4) };
+  let pinned = false;
+  if (pinnedRef) {
+    const hit = rows.find((c) => String(c.id) === pinnedRef || c.providerCallId === pinnedRef);
+    if (hit) { pool = [hit]; pinned = true; }
+  }
+  if (!pinned) {
+    const scored = rows.map((c) => ({ c, s: storeScore(message, c) }));
+    const max = Math.max(0, ...scored.map((x) => x.s));
+    if (max > 0) pool = scored.filter((x) => x.s === max).map((x) => x.c);
+    const distinctStores = [...new Set(pool.map((c) => c.storeName))];
+    if (distinctStores.length > 1) return { kind: "ambiguous", stores: distinctStores.slice(0, 4) };
+  }
 
   // Same store, several checks: judge the most creditable one (bad evidence first, newest first).
   const target = pool.slice().sort((a, b) => {
@@ -100,7 +122,7 @@ export async function verifyCheckIssue(accountId: string | null | undefined, mes
 
   const prior = (await db.select().from(supportCreditGrants).where(eq(supportCreditGrants.cid, target.id)).limit(1))[0];
   if (prior) return { kind: "already", cid: target.id, store };
-  if (!target.chargedAt) return { kind: "not_charged", cid: target.id, store };
+  if (!target.chargedAt) return { kind: "not_charged", cid: target.id, store, statusKey: target.statusKey };
 
   const ev = evidenceFor(target);
   if (!ev.ok) return { kind: "denied_fine", cid: target.id, store, seconds: target.callSeconds };
@@ -140,6 +162,23 @@ export async function listCreditGrants(limit = 50) {
   return db.select().from(supportCreditGrants).orderBy(desc(supportCreditGrants.grantedAt)).limit(Math.min(limit, 200));
 }
 
+// Plain-words reason a check never completed, from its telemetry statusKey. Friend voice, no store
+// name (the sentence around it names the store once). Anything we don't have a specific line for
+// falls back to "the call didn't connect" — never invents a cause.
+function wentWrong(statusKey: string | null, es: boolean): string {
+  switch (statusKey) {
+    case "bad_number":       return es ? "El número que teníamos no funcionó" : "The number we had didn't work";
+    case "nobody_answered":  return es ? "Nadie contestó" : "Nobody picked up";
+    case "voicemail":        return es ? "Entró al buzón de voz" : "It went to voicemail";
+    case "busy":
+    case "too_busy":         return es ? "La línea estaba ocupada" : "The line was busy";
+    case "left_on_hold":     return es ? "Nos dejaron en espera" : "We got left on hold";
+    case "closed":           return es ? "La tienda estaba cerrada" : "The store was closed";
+    case "language_barrier": return es ? "No pudimos pasar la barrera del idioma" : "We couldn't get past a language barrier";
+    default:                 return es ? "La llamada no conectó" : "The call didn't connect";
+  }
+}
+
 // Deterministic customer-facing replies (EN/ES) — money words never come from a model.
 export function creditReply(out: CreditOutcome, lang: string): { reply: string; escalate: boolean } {
   const es = lang === "es";
@@ -154,8 +193,8 @@ export function creditReply(out: CreditOutcome, lang: string): { reply: string; 
         : `That check to ${out.store} was already credited back earlier, so you're covered. If something else went wrong, tell me.` };
     case "not_charged":
       return { escalate: false, reply: es
-        ? `Buenas noticias: ese check a ${out.store} nunca se cobró. Los checks fallidos son gratis, tu saldo no bajó, así que no hay nada que devolver.`
-        : `Good news: that check to ${out.store} was never charged. Failed checks are free, your balance didn't move, so there's nothing to give back.` };
+        ? `Ese check a ${out.store} no se concretó. ${wentWrong(out.statusKey, true)}, así que la llamada no se completó y no te cobramos. Todos tus checks siguen en tu cuenta. Puedes intentarlo otra vez cuando quieras, y si sigue fallando avísame y pongo a una persona a revisar el número de esa tienda.`
+        : `That check to ${out.store} didn't go through. ${wentWrong(out.statusKey, false)}, so the call never completed and you weren't charged. All your checks are still on your account. You can try again anytime, and if it keeps failing tell me and I'll get a person on that store's number.` };
     case "denied_fine": {
       const secs = out.seconds != null ? ` ${out.seconds}s` : "";
       return { escalate: true, reply: es
@@ -172,8 +211,12 @@ export function creditReply(out: CreditOutcome, lang: string): { reply: string; 
         : `I don't see a check on your account from the last 7 days. If it was longer ago or on a different account, send it to the team and they'll review it.` };
     case "ambiguous":
       return { escalate: false, reply: es
-        ? `¿Cuál tienda fue? Veo checks recientes en: ${out.stores.join(", ")}.`
-        : `Which store was it? I see recent checks at: ${out.stores.join(", ")}.` };
+        ? `¿Cuál de estos fue? Dime la ciudad y lo reviso: ${out.stores.join(", ")}.`
+        : `Which of these was it? Tell me the city and I'll check it: ${out.stores.join(", ")}.` };
+    case "unresolved":
+      return { escalate: true, reply: es
+        ? `Todavía no logro identificar de cuál check hablas desde aquí. Lo envío al equipo y una persona lo revisa contigo.`
+        : `I still can't tell which check you mean from here. I'm sending this to the team so a person can sort it out with you.` };
     case "guest":
       return { escalate: false, reply: es
         ? `Los checks viven en tu cuenta, así que inicia sesión y lo reviso al instante. Entra con tu número y vuelve a este chat.`

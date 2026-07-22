@@ -33,6 +33,10 @@ description: >-
    - **Device-only blind spot** (how iOS paints the glass/tint, how Gmail recolors an email, how a
      call sounds): you genuinely can't see these — headless shots are evidence, not a verdict. Ship
      ONE change, say **"pushed, check your phone,"** never "fixed."
+   - **"Check your phone" MUST include the exact ritual** — the owner is never left guessing: which
+     URL to open · "swipe the tab closed first, reopen fresh" (iOS restores stale tabs) · exactly
+     what "fixed" looks like. NEVER tell him to clear cookies — that logs him out and fixes nothing.
+     If the deploy hasn't landed yet, say "give it N minutes" — never let him test a stale build.
 5. **Report as a Done Report — the only shape "done" may reach the owner in:**
    - **Built** — one plain line.
    - **Drove it** — `URL → action → what I saw`, per contract item. Device-only blind spot →

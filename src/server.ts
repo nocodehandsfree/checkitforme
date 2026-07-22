@@ -38,7 +38,7 @@ import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MO
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay } from "./calls/tapedeck";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
-import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, connectAtSecFor, chainDialable, type Recipe } from "./calls/recipe";
+import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, connectAtSecFor, chainDialable, chainNavPlan, type Recipe } from "./calls/recipe";
 import { llm, heli } from "./llm";
 import { opsAlert, watchdogTick, watchdogState, backupTick, backupNow, backupState } from "./ops-watch";
 import { harvestHoursTick } from "./hours-harvest";
@@ -3210,6 +3210,32 @@ app.get("/pub/result/:cid", async (c) => {
   // status_key/confirmed) and the captured product detail, which the live outcome does not. While the
   // call is still in flight, fall back to the live outcome so the consumer sees progress immediately.
   const row = (await db.select().from(callResults).where(eq(callResults.providerCallId, cid)))[0];
+  // The ladder tells the WHOLE story (owner 07-22): nav runs as TwiML BEFORE the media stream
+  // exists, so the EL transcript can never narrate the menu phase. But the nav plan is FACT — we
+  // know the menu started at pickup and when every press/word fired (the learned schedule the TwiML
+  // reproduced). Rebase the ladder onto the wall clock: ring (row) → menu + presses (recipe) → the
+  // agent's own steps (EL clock, shifted past the nav TwiML). Direct chains: untouched.
+  if (o && Array.isArray((o as { steps?: { n: number; at: number }[] }).steps) && row?.retailerId != null) {
+    try {
+      const ret = (await db.select({ chainId: retailers.chainId }).from(retailers).where(eq(retailers.id, row.retailerId)))[0];
+      const ch = ret?.chainId != null ? (await db.select().from(chains).where(eq(chains.id, ret.chainId)))[0] : null;
+      const plan = chainNavPlan(ch);
+      if (plan) {
+        const oo = o as unknown as { steps: { n: number; at: number }[]; durationSecs?: number };
+        const wall = row.completedAt && row.startedAt ? row.completedAt - row.startedAt : null;
+        const el = typeof oo.durationSecs === "number" ? oo.durationSecs : null;
+        const ring = wall != null && el != null ? Math.max(1, Math.round(wall - el - plan.len)) : 2;
+        const ladder: { n: number; at: number }[] = [{ n: 1, at: 0 }, { n: 3, at: ring }];
+        for (const s of plan.steps) ladder.push({ n: s.n, at: ring + s.at });
+        for (const s of oo.steps) if (s.n >= 7) ladder.push({ n: s.n, at: Math.round(ring + plan.len + s.at) });
+        ladder.sort((a, b) => a.at - b.at || a.n - b.n);
+        const out: { n: number; at: number }[] = [];
+        for (const s of ladder) if (!out.length || s.n > out[out.length - 1].n) out.push(s);
+        oo.steps = out;
+        if (wall != null) oo.durationSecs = wall; // header total = the real wall clock the ladder spans
+      }
+    } catch { /* narration is best-effort — never block a result on it */ }
+  }
   if (row && row.status === "completed") {
     return c.json({
       ...(o ?? {}),
@@ -4951,7 +4977,7 @@ app.post("/pub/support/chat", async (c) => {
       lang, category, account: u ? { id: u.id, phone: (u as { phone?: string }).phone } : null,
       origin: { source: src || undefined, pageUrl: pageUrl || undefined, checkId: checkId || undefined },
     });
-    return c.json({ sessionId, reply: r.reply, escalate: r.escalate });
+    return c.json({ sessionId, reply: r.reply, escalate: r.escalate, answered: r.answered });
   } catch (e) {
     console.error("[support] chat", e);
     return c.json({ sessionId, reply: null, escalate: true, error: "unavailable" }, 500);
@@ -6223,16 +6249,13 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
     const acct = (await db.select().from(accounts).where(eq(accounts.clerkUserId, finder.userId)))[0];
     if (acct?.callerId) from = acct.callerId; // only set after Twilio caller-ID verification
   }
-  // FIRST-WORD CAPTURE without losing the live view (owner 07-18). Everything runs through the bridge
-  // (keeps the live transcript relay AND live-listen). The clip was connect-on-human: on a store with
-  // NO menu, waiting to VAD-detect a human before the agent joins buys nothing — the detected greeting
-  // is consumed by detection instead of reaching the agent, so "This is Bob" is lost. For DIRECT stores
-  // we instead connect the agent AT ANSWER (connectOnHuman:false): Twilio's <Connect><Stream> only
-  // starts at pickup, so there's no ringing waste, and the bridge buffers inbound frames during the
-  // ~200-500ms EL handshake and replays them the instant the agent is ready — so the opening words are
-  // captured, not clipped. Menu/tree stores KEEP connect-on-human (it saves the real nav time).
-  const isDirect = !v.dtmf && !v.say && !v.connectAtSec &&
-    (() => { const t = (v.dynamicVars.phone_tree || "").trim(); return !t || /answers? directly|no (phone )?menu|no ivr|straight to a person/i.test(t); })();
+  // ROLLBACK of the 07-18 "first-word capture" instant-connect (owner order 07-21): connecting the
+  // agent AT ANSWER on "direct" stores made Charlie talk over any store that only LOOKS direct but
+  // plays a recording first (Box Lunch, Hot Topic, B&N Thousand Oaks — billed from second one).
+  // Every store now waits for a voice before the paid agent joins (connect-on-human default), the
+  // exact behavior of the trusted pre-07-18 era. Cost accepted by the owner: a true direct clerk's
+  // first words can get clipped again. The REAL fix (ears open at pickup, mouth held until the words
+  // read human, never-silent cap) is Echo's boxed build — do NOT re-enable instant-connect here.
 
   // Concurrency governor (flag-gated). OFF = the exact path below (row inserted only at connect, no
   // slot) — byte-identical to before. ON = pre-insert a "dialing" row so we can hold a slot keyed on
@@ -6268,7 +6291,7 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
     }
     // Per-store talk cap (chains.maxTalkSeconds) wins over the global bail ceiling when set, so a
     // store the owner marked "wrap fast" gets a tighter Twilio TimeLimit — the cost guarantee.
-  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, connectOnHuman: isDirect ? false : undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning });
+  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning });
 
   // Governed bookkeeping: point the pre-inserted row at the room (so /pub/result resolves it before
   // connect), release the slot on a dial that never placed, and register a finalizer that frees the

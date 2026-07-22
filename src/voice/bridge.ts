@@ -232,6 +232,14 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         }
       } else if (m.type === "user_transcript") {
         const txt = m.user_transcription_event?.user_transcript; if (txt) try { relayLine?.(room, "Clerk", String(txt)); } catch { /* relay best-effort */ }
+        // VOICEMAIL = hang up NOW, not after the greeting plays out (owner 07-22: "as soon as it
+        // starts hearing the voice message it should hang up to save us money"). Same phrases the
+        // outcome mapper stamps `voicemail` from, so the verdict stays consistent. Closing the
+        // stream ends the TwiML <Connect> → Twilio hangs the PSTN leg; the EL leg closes with it.
+        if (txt && /\b(leave (?:a|your) message|after the (?:tone|beep)|at the (?:tone|beep)|voice ?mail|mailbox|record your message|is not available|unable to take your call|has been forwarded to)\b/i.test(String(txt))) {
+          log(`voicemail greeting detected -> hanging up to save the call minutes`);
+          signalEnd(); try { eleven?.close(); } catch { /* torn down */ } try { twilio.close(); } catch { /* torn down */ }
+        }
       } else if (m.type === "agent_response") {
         const txt = m.agent_response_event?.agent_response; if (txt) try { relayLine?.(room, "Agent", String(txt)); } catch { /* relay best-effort */ }
       } else if (m.type === "ping") {
@@ -320,7 +328,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       if (suppress) { if (++echoDropped % 200 === 1) log(`echo gate: suppressing agent playback echo (dropped=${echoDropped})`); }
       else if (eleven && ready) eleven.send(JSON.stringify({ user_audio_chunk: b64 }));
       else if (connecting) pending.push(b64);          // committed to connect → buffer for the agent
-      else if (ctx?.connectOnHuman && (!ctx.connectAtSec || (!ctx.dtmf && !ctx.say))) maybeDetectHuman(b64); // VAD only when there's NO nav plan at all (no timer, no keypad, no spoken plan). Voice chains (CVS: say-plan, no dtmf) MUST NOT VAD — it trips on the IVR's own recorded greeting and opens the agent early (2026-07-16: CVS/pharmacy zone-call failures).
+      else if (ctx?.connectOnHuman && !ctx.connectAtSec && !ctx.dtmf && !ctx.say) maybeDetectHuman(b64); // VAD ONLY when there is NO nav plan at all — no timer AND no keypad AND no spoken plan (Mapper's 770ffa0 boolean, owner-ordered 07-21). The old OR let VAD arm on TIMER chains whenever dtmf/say were already consumed at TwiML build (B&N 3:42p: timer 29s armed, ear opened the agent on the recorded greeting at 8s). A mapped chain's timer is the ONLY door; the ear is for bare direct dials.
     } else if (m.event === "stop") { log("twilio stop"); signalEnd(); if (eleven) eleven.close(); }
   });
   twilio.on("close", () => { activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); if (eleven) eleven.close(); });
