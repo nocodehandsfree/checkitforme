@@ -13,7 +13,7 @@ import { db, client } from "./db/client";
 import {
   alertSends, alertSubscriptions, callResults, categories, chains, communityPosts, customerSchedules, discordChannels, kiosks, kioskReceipts, kioskReports, leads, products, retailers, schedules, scheduleTargets, statuses, storeRequests, supportConversations, supportMessages, supportTickets, waitlist, watches, zones, zoneRetailers,
 } from "./db/schema";
-import { answerSupport, resolveConversation, SUPPORT_MODELS, SUPPORT_CATEGORIES, type SupportCategory } from "./support/ladder";
+import { answerSupport, resolveConversation, warmClose, SUPPORT_MODELS, SUPPORT_CATEGORIES, type SupportCategory } from "./support/ladder";
 import { submitTicket } from "./support/tickets";
 import { addQa, reindexBook, searchBook, getFaq } from "./support/rag";
 import { listCreditGrants } from "./support/credits";
@@ -5047,8 +5047,12 @@ app.post("/pub/support/resolve", async (c) => {
   const rl = rlCheck("support", clientIp(c.req.raw.headers), LIMITS.support);
   if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
   const b = await c.req.json().catch(() => ({}));
-  const ok = await resolveConversation(String(b.sessionId || ""), !!b.helped);
-  return c.json({ ok });
+  const helped = !!b.helped;
+  const ok = await resolveConversation(String(b.sessionId || ""), helped);
+  // On "that answered it" the chat stays open and the agent signs off warmly (model-written, with a
+  // fixed fallback). Money words never appear in it.
+  const close = ok && helped ? await warmClose(b.lang === "es" ? "es" : "en") : undefined;
+  return c.json({ ok, close });
 });
 // Escalation form — the only path to a human. Emails the transcript to the support inbox.
 app.post("/pub/support/ticket", async (c) => {

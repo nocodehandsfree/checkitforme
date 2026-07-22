@@ -3146,6 +3146,7 @@ const I18N={ es:{
   'sup.hello':'¡Hola! Pregúntame lo que sea sobre checks, tiendas o planes.',
   'ph.support':'Escribe tu pregunta',
   'sup.yes':'Eso lo resolvió','sup.human':'Hablar con una persona','sup.thanks':'Gracias por avisarnos.',
+  'sup.close':'Me alegra haber ayudado. ¿Hay algo más en que pueda ayudarte?',
   'sup.tryagain':'Quizá me falta algo. ¿Me das un poco más de detalle?',
   'sup.stuck':'No pude resolver esto. ¿Quieres que una persona lo revise?',
   'sup.form.title':'Déjalo con nosotros','sup.form.sub':'Dinos dónde contactarte. Una persona te responderá por correo.',
@@ -3541,6 +3542,9 @@ function supBubbleMsg(kind,text,attrib){ const d=document.createElement('div'); 
   d.textContent=text; $('sup_msgs').appendChild(d);
   if(kind==='bot'&&attrib!==false){ const a=document.createElement('div'); a.className='supm att'; a.textContent=t('sup.attrib','Check AI · just now'); $('sup_msgs').appendChild(a); }
   $('sup_msgs').scrollTop=1e6; return d; }
+// Hold the typing dots to a natural "thinking" beat (~1s + a little jitter) measured from when they
+// appeared, so a fast reply doesn't fire back instantly and read as canned.
+function supThink(t0){ const min=950+Math.floor(Math.random()*450); const left=min-(Date.now()-t0); return left>0?new Promise(r=>setTimeout(r,left)):Promise.resolve(); }
 async function sendSupport(){
   const inp=$('sup_in'), msg=(inp.value||'').trim(); if(!msg) return;
   inp.value=''; supGrow(inp); $('sup_help').classList.remove('on');
@@ -3548,6 +3552,7 @@ async function sendSupport(){
   const btn=$('sup_send'); btn.disabled=true;
   const dots=document.createElement('div'); dots.className='supm bot dots'; dots.innerHTML='<span></span><span></span><span></span>';
   $('sup_msgs').appendChild(dots); $('sup_msgs').scrollTop=1e6;
+  const _t0=Date.now();
   // Stamp where this chat came from — the page, and the check id when it opened off a status page.
   // The id we hold is RAIL_CID (the provider conversation id from the result view); LASTRES.cid is a
   // fallback. Without this the credit machine can't tie the chat to the check they're looking at.
@@ -3556,6 +3561,9 @@ async function sendSupport(){
   const r=await appApi('/pub/support/chat',{method:'POST',headers:{'content-type':'application/json'},
     body:JSON.stringify({sessionId:SUP_SID||undefined,message:msg,lang:LANG,category:SUP_CAT,
       source:SUP_SRC,pageUrl:(location.pathname+location.search).slice(0,300),checkId:_cid})});
+  // Never snap back instantly. A quick deterministic reply otherwise reads as canned; hold the typing
+  // dots for a natural beat so it feels like the agent actually thought about it.
+  await supThink(_t0);
   dots.remove(); btn.disabled=false;
   if(!r||r.error==='network'||(!r.reply&&!r.escalate)){ supBubbleMsg('bot', t('err.generic',"That didn't go through. Give it another try.")); return; }
   if(r.sessionId){ SUP_SID=r.sessionId; supGuestAdd(SUP_SID,msg,SUP_CAT); }
@@ -3571,9 +3579,21 @@ async function sendSupport(){
 }
 // The buried human path — revealed only after repeated AI failure.
 function supOfferHuman(){ $('sup_help').classList.add('on'); $('sup_human').style.display=''; }
-async function supHelped(yes){ $('sup_help').classList.remove('on'); SUP_STARTED=false;
-  if(SUP_SID) appApi('/pub/support/resolve',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:SUP_SID,helped:yes})});
-  toast(t('sup.thanks','Thanks for letting us know.'),'neutral'); supGo('home'); }
+// "That answered it" is a conversational close, NOT an exit. It posts the customer's "that answered
+// it" to the chat, the agent signs off warmly once, and the chat stays open for anything else.
+async function supHelped(yes){
+  $('sup_help').classList.remove('on');
+  supBubbleMsg('me', t('sup.yes','That answered it'), false);
+  const dots=document.createElement('div'); dots.className='supm bot dots'; dots.innerHTML='<span></span><span></span><span></span>';
+  $('sup_msgs').appendChild(dots); $('sup_msgs').scrollTop=1e6;
+  const _t0=Date.now();
+  let close='';
+  try{ const r=await appApi('/pub/support/resolve',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:SUP_SID,helped:yes,lang:LANG})}); close=(r&&r.close)||''; }catch(_){ }
+  await supThink(_t0);
+  dots.remove();
+  supBubbleMsg('bot', close || t('sup.close','Glad I could help. Anything else I can do for you?'));
+  SUP_STARTED=true; // stay in the chat, ready for the next question
+}
 async function supOpenConversation(sid){ SUP_STARTED=true; SUP_SID=sid; $('sup_msgs').innerHTML=''; $('sup_help').classList.remove('on');
   supGo('chat');
   const r=await api('/pub/support/conversation/'+encodeURIComponent(sid));
