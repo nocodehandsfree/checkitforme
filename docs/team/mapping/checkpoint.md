@@ -3,6 +3,22 @@
 > **⚖️ BOOT LAW: read `MAPPING-MANUAL.md` (this folder) FULLY before any task — it is how the
 > technology actually works, anchored to code. Pass its comprehension gate (§9) before acting.**
 
+## FINDING (2026-07-22) — BoxLunch (13) is DIRECT but SLOW; NOT a mapping bug. Nothing running.
+- Owner hit a "phone tree" on BoxLunch Sherman Oaks (8719), agent talked to it → boxed me to remap.
+- Called it TWICE on PROD in open hours (Tue 11am PT): BOTH reached a real human. Confirm run:
+  emp "Fox, how can I help you?" @17s → asked → "yes, pack of 20 + 2 boosters" @31s. Genuine person.
+- Root cause: rings direct but SLOW (~17-24s to pickup). Flagged ringsDirect = no connect-timer, so on
+  a LIVE call the VAD ear (Echo's "open on human pickup") opens the talker on the ~20s of ring/hold
+  BEFORE the human — talker talks into that gap = the "menu" owner heard. NOT a stale ringsDirect flag.
+- Did NOT remap/lock: a tree recipe would arm a timer that MUTES the agent on the real human
+  (silent-agent bug). Left chain 13 UNTOUCHED (still locked/direct/21s) — verified unchanged after calls.
+- Why "Charlie" didn't catch a menu: no menu-reader runs on a live DIRECT call; smart detect is
+  mapping-only. The live talker is a warm persona, not a menu detector — never had the chance.
+- FIX = engine (src/voice FROZEN → Echo + PM), not mapping: ear must wait for a real human voice
+  (skip ring/music/hold) before opening, OR talker stays silent until the person speaks. Kills the class.
+- Chain-fork note: Topanga (22) is also genuinely direct ("Hello"→answered). BoxLunch really rings
+  direct where open — KEEP it direct. **PM: offered owner to box Echo the fix — awaiting his word.**
+
 ## STATE (2026-07-16) — 99.9% of stores mapped, go-live ready. Nothing running.
 - **110,516 / 110,622 covered stores are front-end callable (99.9%).** Only 7 micro-chains / ~105
   stores unmapped (0.1%), and that's a DATA gap, not a mapping gap (see below).
