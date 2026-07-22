@@ -6,3 +6,10 @@ src/voice/**
 # The consumer site is the GOLDEN BASE — frozen as-is, warts included (2026-07-22).
 # It changes ONLY through an owner-named task + the .unlock flow; then re-snapshot the page.
 public/checkit.html
+# The phone-tree brain + store-callability data (owner-approved locks, 2026-07-22).
+# The DB is the live store source — these seed/intel files are reference, not daily churn.
+src/calls/recipe.ts
+src/calls/tree-learn.ts
+data/stores-master/**
+data/stock_check_intel.json
+data/sell_methods_intel.json

@@ -3,28 +3,24 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
-## 📍 2026-07-22 — THE REBUILD landed (docs/shared/REBUILD_PLAN.md is the why + the design)
-- Gates live: path locks (.claude/locks + .unlock flow, checkit.html + src/voice frozen) · copy gate ·
-  sprawl gate · compute gate · build stamp + `scripts/verify-live.sh` (done = its output pasted) ·
-  section INDEX (docs/design/INDEX.md, never open the giant files whole) · 25-turn handoff nudge.
-- Team is 7 lanes (ops = old pm + devops); PM's open items now live in `docs/tasks/INDEX.md` (the
-  queue every boot reads). Truth snapshots of the frozen consumer site: `docs/design/truth/`.
-- Prod does NOT carry the build stamp until the next promote — verify-live shows prod/admin
-  NOT-LIVE (no stamp) until then. Expected, not a bug.
+## 📍 2026-07-22 — THE REBUILD landed + owner-approved follow-ups (why: docs/shared/REBUILD_PLAN.md)
+- Gates live + demoed blocking: path locks (.claude/locks + .unlock flow) · copy gate · sprawl gate ·
+  compute gate · build stamp + `scripts/verify-live.sh` (done = its output pasted, staging verified
+  LIVE) · section INDEX (never open the giant files whole) · 25-turn handoff nudge.
+- Locks (owner-approved): src/voice/** · public/checkit.html · src/calls/recipe.ts ·
+  src/calls/tree-learn.ts · data/stores-master/** · both intel jsons (DB stays the live store source).
+- Script sweep (owner-approved): 12 one-offs → scripts/archive/ (incl. sync-dropsdb.ts);
+  import-stores.ts KEPT (active for hobby/thrift adds); tests/e2e stays (launch gate).
+- Team is 7 lanes (ops = old pm + devops); PM's open items live in `docs/tasks/INDEX.md` (the queue
+  every boot reads, 39 tasks). Truth snapshots of the frozen consumer site: `docs/design/truth/`.
+- Prod/admin show NOT-LIVE (no stamp) until the next promote — expected; queued as
+  `docs/tasks/first-promote-after-rebuild.md`. Next session: take ONE task from the queue.
 
-## 📍 2026-07-20 — e2e harness complete + SMS kill-switch shipped (branch claude/e2e-coverage-harness-a9esc7, all merged to staging)
-- **E2E harness DONE — all 40 paths in `docs/specs/e2e-coverage/harness.md` dispositioned.** P0 8/8,
-  P1 8/8, P2 11/12 (28 anti-abuse un-automatable: guard sits past the sim early-return), P3 12/12.
-  New tests in `tests/e2e/consumer.spec.ts` (P0/P1/P2 blocks), `local.spec.ts` (P2-27 + P3 admin
-  walk via admin.localhost), `admin-api.spec.ts` (P3-34 publish→in_sync). Coverage table in
-  harness.md is the live record. **Last runs GREEN: local 13/13 · staging 40/40 (2 honest skips).**
-- **SMS kill-switch SHIPPED** — new `flags.smsAlerts` (default OFF). While OFF: watch/schedule/waitlist
-  forms collect EMAIL only (EN+ES, placeholder survives the lang pass — drops data-i18n-ph), `/pub/watch`
-  refuses phone contacts (400), `/app/alerts/subscribe` rides email, `sendAlert` never fires a customer
-  SMS (legacy sms subs → skipped_sms_off). Admin toggle live: Policy → Consumer → "Text alerts (SMS)".
-  **Owner flips it ON when Toll/A2P approves — no rebuild.** Proven live: consumer.spec P1-9b.
-- **Referrals PROVEN end-to-end (GTM card can close)** — consumer.spec P1-10 (API) + P1-10b (real ?ref
-  link → welcome → signup → auto-claim pays BOTH + count ticks). Was "BUILT, needs walk" — walked.
+## 📍 2026-07-20 — e2e harness + SMS kill-switch + referrals (all shipped + proven, merged to staging)
+- E2E harness DONE, 40/40 paths (`docs/specs/e2e-coverage/harness.md` = the live coverage record).
+- SMS kill-switch `flags.smsAlerts` default OFF; email-only alerts meanwhile; **owner flips it ON in
+  Admin → Policy → Consumer when Toll/A2P approves — no rebuild.** Proven: consumer.spec P1-9b.
+- Referrals proven end-to-end (P1-10/10b) — the GTM card can close.
 
 ## 📍 2026-07-16 — everything on staging; ONE promote lights up the last two pipes
 - **Settings mirror prod→staging LIVE (staging half)** — `src/settings-sync.ts`, pull-only every
