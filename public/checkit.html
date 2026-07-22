@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r178" />
+<meta name="x-rev" content="glassfix-r179" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -6024,7 +6024,7 @@ function nlSent(s){ s=String(s==null?'':s); if(s.includes('<br')) return s; retu
 // boundaries — never mid-sentence ("…Nobody picked up. No | charge." is banned). Each sentence
 // becomes an inline-block: the line breaks between blocks first; a sentence longer than the whole
 // line still wraps inside itself instead of overflowing.
-function sentLines(s){ s=String(s==null?'':s).replace(/<br\s*\/?>/gi,' ').replace(/\s+/g,' ').trim();
+function sentLines(s){ s=String(s==null?'':s).replace(/<br\s*\/?>/gi,' ').replace(/(?:(?!\u00A0)\s)+/g,' ').trim(); /* collapse whitespace but PRESERVE no-break spaces — they are deliberate typography ("2:00 PM" must never split; \s would eat them, owner 07-22) */
   const parts=s.replace(/([.!?…])\s+(?=[A-Z0-9ÁÉÍÓÚÑ¿¡])/g,'$1\u0001').split('\u0001');
   if(parts.length<2) return s;
   return parts.map(p=>'<span style="display:inline-block">'+p+'</span>').join(' '); }
