@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r180" />
+<meta name="x-rev" content="glassfix-r181" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -408,6 +408,7 @@ __BRAND_HEAD__
   @supports ((-webkit-background-clip:text) or (background-clip:text)){
     .rverdict.in .rtitle2{background:linear-gradient(180deg,#A8FFCB,#34D873);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 2px 22px rgba(74,222,128,.5))}
   }
+  body{text-wrap:pretty} /* CLASS-LEVEL wrap law (owner 07-22): the browser avoids orphan last lines on EVERY string, every page — Safari 26/Chrome support it, others ignore it harmlessly */
   .rsub{color:#b4b4c2;font-size:13.5px;font-weight:650;line-height:1.55;margin-top:12px} /* smaller than before but still pronounced (owner 07-15) */
   .rsub b{color:#fff;font-weight:800} .rsub .y{color:#fff;font-weight:800} /* product name neutral white — no per-vertical accent on a result */
   .rstore-line{color:#cfcfe0;font-size:13px;font-weight:600;margin-top:8px;line-height:1.4}
@@ -5291,7 +5292,7 @@ async function loadLiveStock(id){
   }
   if(sig&&sig.url){ const bt=$('smbuy'); if(bt){ bt.href=sig.url; bt.style.display=''; } }
 }
-function esc(s){return (s||'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));} /* coerce: a non-string (numeric id, etc.) must never throw here — fillP silently swallows the throw and the verdict prints literal {store}/{product} tokens */
 // "160 S Westlake Blvd, Thousand Oaks, CA 91362" → street + "Thousand Oaks, CA 91362"
 // (each renders on its own line, so a city name never wraps mid-word).
 function splitAddr(a){ const i=(a||'').indexOf(','); if(i<0) return {street:(a||'').trim(),city:''}; return {street:a.slice(0,i).trim(),city:a.slice(i+1).trim()}; }
@@ -6028,6 +6029,16 @@ function sentLines(s){ s=String(s==null?'':s).replace(/<br\s*\/?>/gi,' ').replac
   const parts=s.replace(/([.!?…])\s+(?=[A-Z0-9ÁÉÍÓÚÑ¿¡])/g,'$1\u0001').split('\u0001');
   if(parts.length<2) return s;
   return parts.map(p=>'<span style="display:inline-block">'+p+'</span>').join(' '); }
+// TWO-LINE LAW (owner: "this message is never more than two lines in the subhead" 07-22; the v2
+// .rsub CSS has said "2 lines MAX" since 07-15b — this enforces it). Measured after render on
+// EVERY .rsub: while the sub runs past two lines, drop its LAST sentence span — the first sentence
+// is the answer, the tail is flavor ("Go grab it…", "Sign up…"). Long store+product combos on a
+// 390px phone are the case that overflows; short names render exactly as authored.
+function fitSub(root){ try{ (root||document).querySelectorAll('.rsub').forEach(el=>{
+  const lh=parseFloat(getComputedStyle(el).lineHeight)||(parseFloat(getComputedStyle(el).fontSize)||14)*1.5;
+  let guard=4;
+  while(guard-->0 && el.scrollHeight>lh*2.5){ const sp=el.querySelectorAll(':scope > span'); if(sp.length<2) break; sp[sp.length-1].remove(); }
+  }); }catch(_){ } }
 // Registry/owner-written notes can use a {product} token — we fill it with the live product name (bolded),
 // so the owner writes the message in Admin and it still reads "…check if Pokémon was in stock…".
 // The clerk-named detail arrives as a raw "form · set" label ("Tin · Scarlet and Violet") — never print
@@ -6047,7 +6058,10 @@ function prodPhrase(o){ try{ let d=String((o&&o.productDetail)||'').trim(); if(!
 function fillP(s,o,tn){ try{ const oc=(o&&Array.isArray(o.cats)&&o.cats[0])||(o&&o.category)||''; // the CALL's own saved category — beats a generic 'it' when the picker state isn't loaded (deep link / server-history reopen)
   // Owner 2026-07-02: the {store} token stays WHITE on every verdict (overrides the 6m comp's red — too hard to read on the wash).
   const sc='#fff';
-  const pn=esc(prodPhrase(o)||(o&&o.productName)||catLabel()||oc||'it'); const sn=esc((o&&o.storeName)||(SEL_STORE&&SEL_STORE.name)||'the store'); const cn=esc(catLabel()||oc||'it'); const dy=esc((o&&o.shipmentDay)?fmtShipDay(o.shipmentDay):'soon'); return String(s==null?'':s).replace(/\{product\}/g,'<b style="color:#fff">'+pn+'</b>').replace(/\{store\}/g,'<b style="color:'+sc+'">'+sn+'</b>').replace(/\{category\}/g,'<b style="color:#fff">'+cn+'</b>').replace(/\{day\}/g,'<b style="color:#fff">'+dy+'</b>'); }catch(e){ return String(s==null?'':s); } }
+  // Clerk-captured product names arrive with their own article ("a … booster packs") — the note template
+  // supplies the grammar, so strip it here or "{store} has {product}" reads "has a … packs" (owner 07-22).
+  const _rawPN=(o&&o.productName)?String(o.productName).replace(/^(?:a|an|the|some)\s+/i,'').trim():'';
+  const pn=esc(prodPhrase(o)||_rawPN||catLabel()||oc||'it'); const sn=esc((o&&o.storeName)||(SEL_STORE&&SEL_STORE.name)||'the store'); const cn=esc(catLabel()||oc||'it'); const dy=esc((o&&o.shipmentDay)?fmtShipDay(o.shipmentDay):'soon'); return String(s==null?'':s).replace(/\{product\}/g,'<b style="color:#fff">'+pn+'</b>').replace(/\{store\}/g,'<b style="color:'+sc+'">'+sn+'</b>').replace(/\{category\}/g,'<b style="color:#fff">'+cn+'</b>').replace(/\{day\}/g,'<b style="color:#fff">'+dy+'</b>'); }catch(e){ return String(s==null?'':s); } }
 // ===== PRICE HUNT (item 3) — cross-store cheapest-first comparison. Populates from a completed check's
 // quoted price (o.priceCents). That field is pending on GET /pub/result + /app/history (see the price
 // contract note); until it lands this renders NOTHING — the moment it ships, the price line + panel light
@@ -6129,7 +6143,8 @@ function deriveVerdict(o, _lbl, _sh){
   // today even with an empty note).
   const REG_NOTE = (o.statusKey && RSTATUSES[o.statusKey] && !(o.statusKey==='failed'&&o.failureReason) && String(t('stn.'+o.statusKey, RSTATUSES[o.statusKey].note||'')).trim()) ? t('stn.'+o.statusKey, RSTATUSES[o.statusKey].note||'') : '';
   // If the clerk named the exact product they have in, surface it on the in-stock verdict.
-  if(!REG_NOTE && cls==='in' && o.productName){ note=tf('note.in.named','They have <b style="color:#fff">'+esc(o.productName)+'</b> in. Go grab it.',{x:esc(o.productName)}); }
+  const _PN=o.productName?String(o.productName).replace(/^(?:a|an|the|some)\s+/i,'').trim():null; /* clerk-captured names arrive with their own article ("a ... packs") — templates supply the grammar, so strip it (owner 07-22) */
+  if(!REG_NOTE && cls==='in' && _PN){ note=tf('note.in.named','They have <b style="color:#fff">'+esc(_PN)+'</b> in. Go grab it.',{x:esc(_PN)}); }
   // Alpha: "not in NOW, but a shipment is coming" → the hopeful be-first verdict. The clerk named a
   // shipment day on a no/sold-out → flip from a flat "not in" to a restock-incoming heads-up.
   if(cls!=='in' && !o.doesNotSell && o.status==='completed' && o.shipmentDay){
@@ -6142,8 +6157,8 @@ function deriveVerdict(o, _lbl, _sh){
   const _asked1=(Array.isArray(o.cats)&&o.cats.length)?o.cats.length<=1:true;
   if(!REG_NOTE && o.status==='completed' && _asked1 && !o.doesNotSell && _sh && catL){
     const _SN=esc(_sh), _C=esc(catL);
-    if(cls==='in'){ note = o.productName
-        ? tf('sub.in.named','<b>{s}</b> has <b>{p}</b> in. Go grab it before it’s gone.',{s:_SN,p:esc(o.productName)})
+    if(cls==='in'){ note = _PN
+        ? tf('sub.in.named','<b>{s}</b> has <b>{p}</b> in. Go grab it before it’s gone.',{s:_SN,p:esc(_PN)})
         : tf('sub.in','<b>{s}</b> has <b>{c}</b> in. Go grab it before it’s gone.',{s:_SN,c:_C}); }
     else if(o.soldOut){ note=tf('sub.soldout','{s} is sold out of <b>{c}</b> right now.',{s:_SN,c:_C}); }
     else if(cls==='out'){ note=tf('sub.out',"<b>{s}</b> doesn't have any <b>{c}</b> in stock right now.",{s:_SN,c:_C}); }
@@ -6316,7 +6331,10 @@ function showResult(o, cid){
     : cls==='soon' ? ((!_rawDay||_rawDay==='soon'||_rawDay==='pronto') ? t('term.soon2','Restock confirmed') : tf('term.soon','Restock confirmed · {d}',{d:esc(fmtShipDay(o.shipmentDay))}))
     : cls==='unk' ? t('term.unk','No clear answer')
     : cls==='pend' ? t('term.getting','Getting result…') : '';
-  const showFeedback = o.status==='completed' && cls==='unk' && !!o.transcript && cid && !String(cid).startsWith('local:');
+  // Feedback survey ONLY when the status genuinely IS "we couldn't call it" — a named unk status
+  // (voicemail, left_on_hold, nobody_answered…) keeps its own registry title; forcing those to
+  // "Couldn't tell" was the status-lying class the owner keeps catching (07-22).
+  const showFeedback = o.status==='completed' && cls==='unk' && (!o.statusKey || o.statusKey==='no_clear_answer') && !!o.transcript && cid && !String(cid).startsWith('local:');
   // New unclear copy: name the product, hand the call to the human (the transcript is right below).
   if(showFeedback){ note = t('note.fbk','We couldn’t quite make out the answer.<br>Read the convo and tell us what you think.'); }
   // Feedback = an end-of-call survey (the four statuses), shown ABOVE the CTA on an unclear verdict.
@@ -6352,6 +6370,7 @@ function showResult(o, cid){
     ${o.status==='pending' ? '' : (inStock ? inActions : '')}
     ${o.status==='pending' ? '' : upsell}`;
   $('result').classList.remove('hidden');
+  fitSub($('result')); // two-line subhead law — must run visible (a hidden element measures 0 and the trim would never fire)
   try{ const st=$('supTab'); if(st) st.classList.toggle('invite', !!(o.status&&o.status!=='pending')); }catch(_){ } // post-check: the support tab takes over the old Tell-us link (slide-out + glow, result page only)
   navMark('result');
   // Entrance motion: play ONCE per call, on the CONTENT-READY render. Reopening a past-day call renders
@@ -7796,6 +7815,7 @@ async function zoneExpand(cid,btn){ if(!cid) return; const body=btn.nextElementS
       </div>
       <div style="margin-top:16px">${combinedTimelineHTML((Array.isArray(o.steps)&&o.steps.length)?o.steps:deriveSteps(tx), tx, (typeof o.durationSecs==='number'&&o.durationSecs>0)?o.durationSecs:null, {cls:v.cls, title:vT, term, ts:o.ts, used, store:{name:row.name||'',logoUrl:row.logoUrl||null,logoWide:!!row.logoWide,logoDark:!!row.logoDark}})}</div>
     </div>`;
+    fitSub(body); // two-line subhead law — the zone unfold obeys the same cap as the full result page
   };
   const cached=resultCacheGet(cid);
   if(cached){ try{ paint(cached); }catch(_){ } }
