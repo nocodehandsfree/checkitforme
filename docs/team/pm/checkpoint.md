@@ -3,18 +3,13 @@
 > absorbed). Runs on the owner's expensive model: high-level thinking only, boxed orders out.
 > Newest on top, ≤80 lines (machine-enforced at push).
 
-## 📍 NOW (2026-07-21) — THE RESET: new system live, owner rebooting lanes one at a time
-Owner hit his limit 07-20/21: agents freelancing architecture (My Zones), runaway self-started test
-suites, comps/logos ignored, work stranded on session branches. Diagnosed together; he chose: keep
-product, rebuild process · hard stops over prose rules · PM as front door · team cut.
-- **CLAUDE.md rebuilt** — roster (4 standing + 6 on-call; Lexicon+Ideas dead, PM absorbs), THE BOX
-  LAW (every specialist boots on a PM boxed order naming pieces to reuse), LAW 1 = ADDITIVE NEVER
-  PARALLEL (the My Zones lesson), full suite = owner's words only, never background.
-- **Machine locks live:** `scripts/checkpoint-lint.sh` + `.claude/hooks/push-gate.sh` — `git push`
-  refuses while any checkpoint >85 lines (verified: blocked my own push until I pruned 4 files).
-  ship-it description no longer says "full test suite" (the line that made agents fire it).
-  Orphan cleanup: `bash scripts/kill-tests.sh`.
-- **Owner plan:** close ALL old chats, reboot lanes fresh one at a time, each boot = PM boxed order.
+## 📍 NOW (2026-07-22) — reset holds; owner reboots lanes one at a time on PM boxed orders
+- **The 07-21 reset is live:** CLAUDE.md rebuilt (roster cut to 4 standing + 6 on-call, THE BOX
+  LAW, LAW 1 = additive-never-parallel, full suite = owner's literal words only). Machine locks
+  verified: push blocked while any checkpoint >85 lines; src/voice/ edit-gated (.unlock-voice).
+  Orphan test cleanup: `bash scripts/kill-tests.sh`.
+- **Today (07-22):** result-page class fixes shipped + render-proven (0c below); staging carries
+  billing rule + log truth + r175-r181, all awaiting the owner's next promote word.
 
 ## Open verifies (PM drives before anything new ships)
 0c. **r181 (83b84c7, staging): subhead class fix, render-proven via sweep.** Two-line law now
