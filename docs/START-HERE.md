@@ -1,22 +1,25 @@
 # START HERE — the map of every doc (glance and go)
-**One rule:** agents boot from `team/<you>/` and read nothing else until a task needs it.
-Every folder below has a README that explains its contents **right on the folder page in GitHub** — click a folder, the explanation is under the file list.
+**One rule:** agents boot from CLAUDE.md + `team/<you>/` + the task queue index, and read nothing
+else until a task needs it. The system runs on gates (hooks that block bad moves), not memory —
+the why and the design: `shared/REBUILD_PLAN.md`.
 
 | Folder | What lives there | Who it's for |
 |---|---|---|
-| `team/` | **One folder per agent**: `handoff.md` (stable lane) + `checkpoint.md` (current state, updated every "Checkpoint") | Each agent — your ONLY starting point |
-| `owner/` | `new-chat-prompts.md` (paste-ready chat starters); business reference = the book (readme.com) | Fungie |
-| `shared/` | **Whole-system manuals** (ADMIN · WEBSITE · SYSTEM) · code rules · architecture · **API contract** · gotchas | Everyone, only when a task needs it |
-| `design/` | **ALL design**: `brand/` (the logo) · `STYLE_GUIDE.md` (the look) · `comps/` (boards) · `copy/` (the voice) · `emails/` (email mocks) | Design, Website, Copy |
+| `team/` | **One folder per lane** (7: website, admin, data, voice, mapping, support, ops): `handoff.md` (stable lane) + `checkpoint.md` (current state, ≤80 lines) | Each agent — your ONLY starting point |
+| `tasks/` | **THE TASK QUEUE** — `INDEX.md` + one small md per task (what · done-when · status · verify-live output on close) | Everyone, every boot |
+| `owner/` | `new-chat-prompts.md` (paste-ready chat starters); business reference = the book (readme.com) | The owner |
+| `shared/` | `REBUILD_PLAN.md` · whole-system manuals (ADMIN · WEBSITE · SYSTEM) · AGENT_RULES · ARCHITECTURE · API_CONTRACT · GOTCHAS | Everyone, only when a task needs it |
+| `design/` | `INDEX.md` (**generated section index — read THIS, never open checkit/app/comps whole**) · `truth/` (live-site snapshots = the reference for frozen consumer pages) · `STYLE_GUIDE.md` · `brand/` · `comps/` (ADMIN comps active; `comps/inbox/` = CD's temporary submissions) · `copy/` (the voice) · `emails/` | Anyone touching UI or words |
 | `specs/` | **Active builds only** — one file/folder per feature; ships → moves to `archive/` | The lanes building them |
-| `data/` | Store-data reference + `samples/` (raw .json/.csv kept apart from docs) | Data Dev |
-| `business/` | Roadmap | Owner + DevOps |
-| `finance/` | Cost model + calculator (`COST_MODEL.md` — per-check economics + call anatomy/lanes/pricing, one doc) | Owner + DevOps |
-| `archive/` | Done or superseded — "where did X go?" answers | Anyone |
+| `data/` | Store-data reference (`provenance.md`, `store-logos.md`) + `samples/` | DD |
+| `business/` | Roadmap | Owner + Ops |
+| `finance/` | Cost model (`COST_MODEL.md`) | Owner + Ops |
+| `archive/` | Done or superseded — "where did X go?" answers. Retired team lanes: `archive/team/` | Anyone |
 
-## The rules (what keeps this clean — DevOps enforces)
+## The rules (the gates enforce most of these — don't fight a hook)
 1. **Docs root stays empty** except this file. Everything lives in a folder with a README.
-2. **Every doc opens with one line:** *what this is · who it's for.*
-3. **Finished work = a git commit message, not a doc.** Superseded doc → `archive/` (suffix the reason: `-SHIPPED`).
-4. **Temp docs** (briefs, prompts) live INSIDE their feature's `specs/<feature>/` folder and get archived with it. No temp folders.
-5. **New docs go in exactly two places:** your `team/<you>/checkpoint.md`, or `specs/<feature>/` for a cross-lane build. Anywhere else — don't.
+2. **New files/docs are gated.** The sprawl gate blocks paths outside the allowed list — write
+   `PM: <path> — <why>` in your checkpoint instead of working around it.
+3. **Finished work = a git commit message, not a doc.** Superseded doc → `archive/` (suffix why).
+4. **Big HTML never opens whole.** `design/INDEX.md` first, then read only the line range.
+5. **"Done" = `bash scripts/verify-live.sh` output pasted.** Every time. No exceptions.

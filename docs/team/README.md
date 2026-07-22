@@ -1,19 +1,20 @@
-# team/ — one folder per agent. Your folder is the ONLY place you start.
-| Folder | Agent | Owns |
-|---|---|---|
-| `devops/` | Pops | backend, infra, security, deploys, API contract, these docs |
-| `website/` | Webbie | the consumer site (checkit.html) + /pub |
-| `admin/` | Addie | the admin dashboard (app.html) + /api |
-| `data/` | DD | store rows, importer, chains, store logos |
-| `mapping/` | Mapper | phone-tree mapper → locked call recipes |
-| `voice/` | Echo | voice tech: call lanes ABC/Delta/Charlie, recordings, verdicts, cost per call |
-| `copy/` | Copper | every word everywhere: site, admin, emails/SMS, and the book (readme.com) |
-| `design/` | CD | comps, brand, look & feel |
-| `logo/` | Logo | store + brand logo assets — every logo looks good and renders |
-| `support/` | Support | the customer-service / in-app messenger support agent |
-| `pm/` | PM | orchestrates the lanes, guards the rules, checks work, runs the staging→prod promote (not a code lane) |
-| `ideas/` | Ideas | ranked product/business/growth ideas grounded in what's built; hands picks to lanes |
-| `lexicon/` | Lexicon | the librarian: docs pruning, archiving, map accuracy (weekly pass) |
+# team/ — one folder per lane. Your folder is the ONLY place you start.
+Roster reset 2026-07-22 (`docs/shared/REBUILD_PLAN.md`). 7 lanes, nothing else.
 
-**Every folder = `handoff.md`** (stable: who you are, your lane — rarely changes) **+ `checkpoint.md`**
-(volatile: current state — update at every "Checkpoint"). Boot = CLAUDE.md (loads automatically) + your two files. Nothing else.
+| Folder | Agent | Standing | Owns |
+|---|---|---|---|
+| `website/` | Webbie | daily | the consumer site (checkit.html) + /pub + design implementation + ALL copy |
+| `admin/` | Addie | daily | the admin dashboard (app.html) + /api |
+| `data/` | DD | daily | store rows, importer, chains, store data/API |
+| `support/` | Support | daily | the customer-chat support agent + its model training |
+| `mapping/` | Mapper | on call | phone-tree mapper → locked call recipes |
+| `voice/` | Echo | on call | voice tuning: call lanes, verdicts, cost per call |
+| `ops/` | Ops (Pops) | on call | backend core, infra, deploys, API contract, promotes + the old PM duties |
+
+**External:** CD (design comps, writes via MCP) submits ONLY to `docs/design/comps/inbox/` — no team folder.
+**Retired** (archived in `docs/archive/team/`): Copper, Logo, Lexicon, Ideas, and PM as a standing chat.
+Copy + logo-display rules folded into `website/handoff.md`; PM's open items live in the task queue.
+
+**Every folder = `handoff.md`** (stable lane charter) **+ `checkpoint.md`** (current state, ≤80 lines,
+updated at every "Checkpoint"). Boot = CLAUDE.md (loads automatically) + your two files + the task
+queue index (`docs/tasks/INDEX.md`). Nothing else.

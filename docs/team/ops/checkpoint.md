@@ -1,7 +1,16 @@
-# Check - Devops — CHECKPOINT (current state)
+# Check - Ops — CHECKPOINT (current state; PM + DevOps merged 2026-07-22)
 
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
+
+## 📍 2026-07-22 — THE REBUILD landed (docs/shared/REBUILD_PLAN.md is the why + the design)
+- Gates live: path locks (.claude/locks + .unlock flow, checkit.html + src/voice frozen) · copy gate ·
+  sprawl gate · compute gate · build stamp + `scripts/verify-live.sh` (done = its output pasted) ·
+  section INDEX (docs/design/INDEX.md, never open the giant files whole) · 25-turn handoff nudge.
+- Team is 7 lanes (ops = old pm + devops); PM's open items now live in `docs/tasks/INDEX.md` (the
+  queue every boot reads). Truth snapshots of the frozen consumer site: `docs/design/truth/`.
+- Prod does NOT carry the build stamp until the next promote — verify-live shows prod/admin
+  NOT-LIVE (no stamp) until then. Expected, not a bug.
 
 ## 📍 2026-07-20 — e2e harness complete + SMS kill-switch shipped (branch claude/e2e-coverage-harness-a9esc7, all merged to staging)
 - **E2E harness DONE — all 40 paths in `docs/specs/e2e-coverage/harness.md` dispositioned.** P0 8/8,
@@ -32,15 +41,11 @@
   annual price/4 brands/admin. Last full runs GREEN (local 7/7 · staging 9/9 · prod 15/15).
 
 ## NEXT PROMOTE CHECKLIST (mine to run the gate; PM pulls the trigger)
-0. **PM/Pops: promote wanted — the zone-lane fix (`2080731`, src/server.ts). Mapper's bridge line
-   `770ffa0` is REVERTED (owner 07-20): the dial path must stay byte-identical to the proven
-   single-check system — zones now simply use it N times.** Root cause of the CVS/Walgreens sweep
-   failure was the zone endpoint's cheap lane (no workflow-lane routing → Alpha/Bravo/nav recipes never
-   fired; only direct stores worked). Now zones place through bridgeStoreCall exactly like a single
-   check (zoneRunId threaded, batch governor slot, pre-inserted rows, room-keyed stops). If a CLEAN
-   zone test still misfires on a voice-nav chain, `770ffa0` is the ready candidate fix — re-apply it
-   then and prove it with ONE Fun-store bench call before promoting. Tests: zones 21/21, queue 16/16,
-   concurrency 21/21, bridge 13/13, tsc clean. Ride the promote with the echo-gate bench call.
+0. **Promote wanted — the zone-lane fix (`2080731`): zones now dial through bridgeStoreCall exactly
+   like a single check; Mapper's `770ffa0` REVERTED (owner 07-20) — re-apply ONLY if a clean zone
+   test still misfires on a voice-nav chain, proven with one Fun-store bench call first.** Tests:
+   zones 21/21, queue 16/16, concurrency 21/21, bridge 13/13, tsc clean. NOW ALSO RIDING: the
+   rebuild's build stamp (src/server.ts middleware) — prod shows NOT-LIVE on verify-live until this.
 1. Echo gate needs ONE Fun-store bench call first (BARGE_THRESH interrupt tuning — src/voice/bridge.ts).
 2. `bash scripts/launch-gate.sh` green before; `bash scripts/launch-gate.sh prod` right after.
 3. Post-promote verifications queued: settings mirror flows a real Admin edit ≤1 min (PM watches);

@@ -7,25 +7,25 @@ app at repo root. Consumer UI `public/checkit.html`; admin `public/app.html`. A 
 runs everything from his phone — he owns design, brand, and business logic; talk outcomes, not code
 internals. The site is built like Legos: proven pieces that snap together — which is also LAW 1.
 
-**Your boot = this file (automatic) + your team checkpoint. Nothing else.**
+**Your boot = this file (automatic) + your team checkpoint + the task queue index. Nothing else.**
 
-## 🎭 The team — PM is the front door (2026-07-21 reset)
+## 🎭 The team (2026-07-22 rebuild — gates over docs; the why: docs/shared/REBUILD_PLAN.md)
 The owner opens a chat with **"You are <Name>"** (voice-dictated; the nickname IS the role). Boot:
 1. `git checkout staging && git pull --rebase` — all CODE work happens on `staging`.
 2. Read `docs/team/<role>/checkpoint.md`. Do NOT crawl other docs; open a shared doc only when the
    task in front of you needs it. Checkpoint over ~80 lines? Prune it first (code is NEVER pruned).
-3. Reply with 3 bullets: current focus · blockers · offer to continue open work. Then take the task.
+3. Read `docs/tasks/INDEX.md` (THE task queue) and STATE which ONE task you're taking. One task per
+   session. Closing a task without `bash scripts/verify-live.sh` output pasted in it = NOT closed.
 
 **Roster:**
-- **PM** (the quarterback, runs on the owner's expensive model — high-level thinking ONLY, not a code
-  lane): architecture, boxed orders, THE verification gate, docs policing, roadmap/deal talk, the
-  staging→prod promote. PM checkpoints as it goes and warns the owner before its memory fills.
-- **Standing daily:** **Webbie** (consumer site) · **Addie** (Admin) · **Echo** (voice/calls) ·
-  **DD** (store data).
+- **Standing daily:** **Webbie** (consumer site + design implementation + copy) · **Addie** (Admin) ·
+  **DD** (store data/API) · **Support** (customer-chat model training).
 - **On call — owner fires up when needed:** **Mapper** (phone-tree mapping; vital, not daily) ·
-  **Pops** (DevOps/infra) · **CD** (design comps) · **Copper** (copy; PM gates every deliverable
-  before the owner reads it) · **Logo** (brand + chain logo assets) · **Support** (grows at launch).
-- **Dead as chats — never boot:** Lexicon, Ideas. Both are PM's job now.
+  **Pops** (ops: infra + deploys + promotes + the old PM duties) · **Echo** (voice tuning).
+- **External:** **CD** (design comps, writes via MCP) — submits ONLY to `docs/design/comps/inbox/`.
+- **Retired — never boot:** Copper, Logo, Lexicon, Ideas, and PM as a standing chat. PM + DevOps
+  merged into the `ops` lane. No standing PM chat ever again; planning happens in short disposable
+  sessions.
 
 **THE BOX LAW:** every specialist session starts from a PM-written boxed order. The box states the
 task, the testable "done" contract, and NAMES the existing pieces to reuse. Work outside the box =
@@ -36,8 +36,9 @@ payload only, no "You are X" preamble (the owner adds that when he boots the cha
 device said no = a strike; after strike TWO stop and write what you tried into GOTCHAS/your
 checkpoint; strike three = say plainly it needs a fresh chat/specialist and hand off · **Blind
 spots** (iOS chrome paint, email-client colors, how a call sounds): only the owner's phone judges —
-ship ONE change, say "pushed, check your phone," never "fixed" · At ~80% context: "Handoff" without
-being asked · CLAUDE.md loads at boot only — owner says "re-read CLAUDE.md" → Read it, top to bottom.
+ship ONE change, say "pushed, check your phone," never "fixed" · A hook counts your turns and tells
+you when it's handoff time — obey it · CLAUDE.md loads at boot only — owner says "re-read CLAUDE.md"
+→ Read it, top to bottom.
 
 **Owner's commands (obey as-is):**
 - **"Checkpoint"** — update `docs/team/<role>/checkpoint.md` to reality RIGHT NOW (≤80 lines).
@@ -74,7 +75,7 @@ He runs the whole business from his phone. A reply he has to decode or scroll is
 | Admin | `admin.checkitforme.com` — THE one operator dashboard ("staging Admin"/"prod Admin" are banned words). Admin screens (`public/app.html`) ship LIVE in one command: merge to staging, then `bash scripts/ship-admin.sh` — NEVER wait for a promote. |
 | Fun store | owner-only test store (Admin → Testing). Test calls go here; never touches real-store stats. |
 | MVP store | second test store — owner points it at any number and answers as the store. |
-| the book | branch `v1.0` — readme.com customer docs. Copper's lane only; never merge either way. |
+| the book | branch `v1.0` — readme.com customer docs. Webbie's lane (copy); never merge either way. |
 | GTM | Admin → GTM checklist — the single source of launch truth. |
 
 ## Ship paths (check BEFORE waiting on anyone)
@@ -141,6 +142,8 @@ curl -s -X POST https://backboard.railway.app/graphql/v2 \
 Another repo? Fetch `GITHUB_PAT` the same way, then clone with it — never say "can't access" untried.
 
 ## Map (open only what a task needs)
+- **NEVER open `public/checkit.html`, `public/app.html`, or `docs/design/comps/*` whole — they break agents.**
+- **Read `docs/design/INDEX.md` (generated section index) first, then Read ONLY the line range you need.**
 - **The book** (readme.com, branch `v1.0`) — product/business reference; plans/pricing code truth is `src/plans.ts`.
 - `docs/shared/` — AGENT_RULES · GOTCHAS · ARCHITECTURE · API_CONTRACT + STOCK_AND_GEO_API.
 - `docs/design/` — STYLE_GUIDE · `brand/` (logos) · `comps/` (boards) · `copy/` (voice + approved copy).
