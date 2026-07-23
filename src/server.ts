@@ -30,7 +30,7 @@ import { routeCheck, ticketStatus, drainCheckQueue, type QueueArgs, type PlaceRe
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
 import { simStartCall, isSimId, simLive, simResult } from "./staging-sim";
-import { getPolicy, setPolicy, publicPolicy } from "./policy";
+import { getPolicy, setPolicy, publicPolicy, cachedPolicy } from "./policy";
 import { importStores, backfillRegions } from "./stores-import";
 import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
 import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
@@ -465,7 +465,7 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
     .replace(/__BRAND_JSON__/g, JSON.stringify({ key: brand.key, name: brand.name, category: brand.category, accent: brand.accent, accent2: brand.accent2 || brand.accent, logoUrl: brand.logoUrl || "", emoji: brand.emoji }))
     .replace(/__BRAND_LOGO__/g, brand.logo || `${brand.emoji} ${brand.name}`)
     .replace(/__BRAND_ART__/g, brand.logoUrl ? `<img src="${brand.logoUrl}" alt="${esc(brand.short)}">` : (brand.art || ""))
-    .replace(/__BRAND_SWITCHER__/g, JSON.stringify({ current: brand.key, list: brandSwitcher() }))
+    .replace(/__BRAND_SWITCHER__/g, JSON.stringify({ current: brand.key, list: brandSwitcher(cachedPolicy().flags) }))
     .replace(/__BRAND_HEADLINE__/g, brand.headline)
     .replace(/__BRAND_SUB__/g, brand.sub);
 }

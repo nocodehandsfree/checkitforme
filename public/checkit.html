@@ -1306,6 +1306,14 @@ __BRAND_HEAD__
   .alsw button{padding:8px 6px;font-size:12px}
   .alrm{background:rgba(255,123,123,.12);border:0;border-radius:12px;padding:9px;color:#FF9B9B;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
   .alrow-off{opacity:.55}
+  /* Alerts rows (owner 07-23): the On/Off toggle + remove used to sit beside the name and squeeze it,
+     cutting long store names. Give the name the full row width and drop the controls onto their own line
+     underneath, so the whole name shows (2 line wrap). Scoped to .alrow so the homepage list is untouched. */
+  .store.alrow{align-items:flex-start}
+  .alrow-main{min-width:0;flex:1;display:flex;flex-direction:column;gap:10px}
+  .alrow-id{min-width:0}
+  .alrow-ctrls{display:flex;align-items:center;gap:8px}
+  .alrow-ctrls .alsw{width:108px;flex:0 0 auto}
   .alpause{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)}
   .almk{padding:12px 14px;border-radius:14px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.28);color:#F5C368;font-size:13px;font-weight:700;line-height:1.45;text-align:center}
   .ho-stepper{display:flex;align-items:center;justify-content:space-between;background:var(--terminal);border:1px solid var(--border);border-radius:13px;padding:8px 10px}
@@ -4957,6 +4965,7 @@ function isProdHost(){ return /^(www\.)?checkitforme\.com$/i.test(location.hostn
 function isTestStore(name){ return /^(fun|mvp)\b/i.test(String(name||'').trim()); }
 function renderFindsBanner(f){
   const el=$('finds'); if(!el) return;
+  if((POLICY.flags||{}).inStockBanner===false){ el.style.display='none'; return; } // Admin switched the in-stock banner OFF
   f=Array.isArray(f)?f:[];
   if(BRAND_CAT) f=f.filter(x=>String(x.category||'').toLowerCase()===BRAND_CAT.label.toLowerCase());
   // Staleness cap (owner 07-05): an in-stock find goes cold — drop it from the rotating banner once it's
@@ -4988,6 +4997,7 @@ async function loadFinds(){
   // for local-only; the national feed was surfacing finds hundreds of miles away). The banner only appears
   // once we have the visitor's location, and only with finds inside their radius.
   const el=$('finds');
+  if((POLICY.flags||{}).inStockBanner===false){ if(el) el.style.display='none'; return; } // banner off in Admin → skip the fetch entirely
   if(!USER_LOC){ if(el) el.style.display='none'; return; }
   // SNAPPY: paint the last cached feed INSTANTLY (it's always localized — we only ever fetch WITH a
   // location now), then refresh in the background and re-cache. Cache key bumped to cifm_finds_cache so any
@@ -5005,6 +5015,10 @@ function swIcon(b){ return b.logoUrl ? `<img src="${b.logoUrl}" alt="" onerror="
 function swLbl(b){ return b.tag || b.label; }
 function buildSwitcher(){
   const sw=(window.SWITCHER||{}); if(!sw.list) return;
+  // One product enabled (Admin per-product flags) → nothing to switch to, so hide the whole switcher pill.
+  const vsw=$('vsw');
+  if((sw.list||[]).length<=1){ if(vsw) vsw.style.display='none'; return; }
+  if(vsw) vsw.style.display='';
   const cur=sw.list.find(b=>b.key===sw.current)||sw.list[0];
   const trig=$('vsw_trig');
   if(trig&&cur) trig.innerHTML=`${swIcon(cur)}<span class="vsw-name">${esc(swLbl(cur))}</span>${ICO.chev('#cfcfd8')}`;
@@ -5963,7 +5977,7 @@ function sheetPush(tag){ try{ if(!(history.state&&history.state.v==='sheet'&&his
 window.addEventListener('popstate',(ev)=>{
   // Back with a sheet open closes THAT sheet and stays put (owner 07-10 item 6).
   try{
-    const OPEN=[['coOverlay',()=>closeCheckout()],['buyOverlay',()=>closeBuy()],['pageOverlay',()=>closePage()],['histOverlay',()=>closeHistory()],['watchOverlay',()=>closeWatch()],['scheduleOverlay',()=>closeSchedule()],['storeReqOverlay',()=>closeStoreReq()]];
+    const OPEN=[['coOverlay',()=>closeCheckout()],['buyOverlay',()=>closeBuy()],['pageOverlay',()=>closePage()],['histOverlay',()=>closeHistory()],['watchOverlay',()=>closeWatch()],['scheduleOverlay',()=>closeSchedule()],['storeReqOverlay',()=>closeStoreReq()],['alertsOv',()=>closeAlerts()]];
     for(const [id,fn] of OPEN){ const o=$(id); if(o&&o.classList.contains('on')){ try{ fn(); }catch(_){ o.classList.remove('on'); } return; } }
   }catch(_){ }
   // Zones: back leaves the zones screen for wherever you were; forward re-enters it.
@@ -7332,19 +7346,21 @@ async function openAlerts(opts){ opts=opts||{}; ALERTS_MAKEROOM=!!opts.makeRoom;
     const rows = subs.length? subs.map(x=>{
       const so=alertStoreObj(x), off=!!x.muted;
       const name=esc(so.name||x.storeName||t('alerts.acheck','A check')), loc=esc(so.location||x.storeLocation||'');
-      return `<div class="store${off||paused?' alrow-off':''}" style="cursor:default;margin-top:10px">
+      return `<div class="store alrow${off||paused?' alrow-off':''}" style="cursor:default;margin-top:10px">
         <div class="ic ${so.logoDark?'lite':''} ${so.logoWide?'widelogo':''}">${storeFace(so)}</div>
-        <div style="min-width:0;flex:1"><div class="nm" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</div><div class="lo" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${loc}</div></div>
-        <div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
-          <div class="ho-toggle alsw" style="width:108px;flex:0 0 auto"><button class="${!off?'on':''}" onclick="alertSetOn(${x.id},1)">${t('alerts.rowon','On')}</button><button class="${off?'on':''}" onclick="alertSetOn(${x.id},0)">${t('alerts.rowoff','Off')}</button></div>
-          <button class="alrm" onclick="alertStop(${x.id})" aria-label="${t('alerts.remove','Remove')}">${Z_ICO_TRASH}</button>
+        <div class="alrow-main">
+          <div class="alrow-id"><div class="nm">${name}</div><div class="lo" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${loc}</div></div>
+          <div class="alrow-ctrls">
+            <div class="ho-toggle alsw"><button class="${!off?'on':''}" onclick="alertSetOn(${x.id},1)">${t('alerts.rowon','On')}</button><button class="${off?'on':''}" onclick="alertSetOn(${x.id},0)">${t('alerts.rowoff','Off')}</button></div>
+            <button class="alrm" onclick="alertStop(${x.id})" aria-label="${t('alerts.remove','Remove')}">${Z_ICO_TRASH}</button>
+          </div>
         </div></div>`;}).join('')
       : `<div style="margin-top:10px;padding:20px 16px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);text-align:center"><span style="font-size:12.5px;font-style:italic;font-weight:600;color:#8A8A96;line-height:1.5">${sentLines(t('alerts.none',"You aren't watching any stores yet."))}</span></div>`;
     $('alertsList').innerHTML = banner+master+rows; };
   window.__alertsPaint=paint;
   ov.innerHTML=shell(ALERTS_ME?'' : `<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:22px 0"><span></span><span></span><span></span></div>`);
   if(ALERTS_ME) paint(ALERTS_ME);
-  ov.classList.add('on');
+  ov.classList.add('on'); sheetPush('alerts'); // register with history so the back button collapses THIS sheet (like watch/schedule)
   const me=await appApi('/app/alerts/me');
   if(me&&!me.error) paint(me);
   else if(!ALERTS_ME) paint(null);
@@ -7626,6 +7642,11 @@ async function zonePollTick(){
   const wasLive=r.data&&(r.data.done||0)<(r.data.total||0);
   ZONES.run.data=data;
   try{ sessionStorage.setItem('zrun:'+r.runId, JSON.stringify(data)); }catch(_){ } // reopening this report later paints instantly from here
+  // Zones dial the SAME engine as single checks (LAW 1). The server already logs each finished zone store
+  // result to the account history (stamped zoneRunId), but the zone flow never refreshed the local cache the
+  // activity dashboard reads, so zone checks never showed there. Each time a store finalizes we pull the fresh
+  // history in (once per done count, self resetting per runId), the same store a single check lands in.
+  if(isAuthed() && (data.done||0)>0){ const _hk=r.runId+':'+(data.done||0); if(ZONES._histKey!==_hk){ ZONES._histKey=_hk; ensureHistCache().then(()=>{ try{ renderCallRail(); }catch(_){ } }).catch(()=>{}); } }
   if(ZONES.viewRun) renderZoneRun(); // in-place unless the shape changed (see renderZoneRun)
   else if(!ZONES.building){ const dw=document.querySelector('#zones .zc-open .zc-when'); if(dw&&ZONES.run) dw.textContent=`${data.done||0} ${t('zones.of','of')} ${data.total||0} →`; }
   if(data.done!=null && data.total!=null && data.done>=data.total){ zoneStopPoll(); if(!ZONES.viewRun&&!ZONES.building&&Array.isArray(ZONES.list)) renderZonesList(); }

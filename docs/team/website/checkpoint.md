@@ -29,6 +29,15 @@ Local server `PORT=88xx tsx src/server.ts` (needs ELEVENLABS_* + ADMIN_TOKEN env
 `playwright-core` + `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` (NODE_PATH to node_modules).
 tsx has NO hot-reload — restart after edits. headless→staging TLS is proxy-blocked: drive LOCAL.
 
+## 🧰 07-23 (Webbie) — 5 queued tasks BUILT on branch `claude/webbie-task-queue-c4wpxu` (PR; NOT on staging)
+- Admin policy flags added (`src/policy.ts` + FLAG_GROUPS in `app.html`, nothing else in Admin): `inStockBanner`
+  gates the `#finds` banner; `productPokemon/OnePiece/Topps/Needoh` filter `brandSwitcher()` (server injects via
+  `cachedPolicy()`), and client `buildSwitcher` hides `#vsw` when ≤1 product (Pokémon-only = no dropdown). Defaults ON.
+- Back: `openAlerts` → `sheetPush('alerts')` + `['alertsOv',closeAlerts]` in popstate (email/score sheets share the
+  gap, left for a named follow-up). Zones→Activity: `zonePollTick` now `ensureHistCache()` per finished store.
+- Alerts rows: `.alrow` stacked layout, name full-width 2-line wrap, On/Off + trash drop below so long names show.
+- tsc clean + all inline scripts parse. NOT driven live. **PM: merge→staging, verify-live + re-snapshot 5 pages, close tasks.**
+
 ## ✅ 07-21 (Webbie) — email alerts + zones report head (ALL LIVE ON staging)
 - **ONE email-alert path** (`watchStore`): confirmed email → instant ON + toast "Your {store} {Restock
   Alert|Auto Check} is set. Manage in My Checks > Alerts." (shared `alertSetToast`, EN+ES). No email →
