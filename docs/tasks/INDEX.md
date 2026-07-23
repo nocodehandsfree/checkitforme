@@ -24,6 +24,8 @@ New task = one small md here (what · done-when · lane · status). Owner adds/r
 | [Real-card test (O1) — the owner's move](real-card-test.md) | Owner | blocked |
 | [Retarget the stale CALL_ECONOMICS citation in server.ts](server-cost-citation.md) | Ops | open |
 | [Reconcile COPY_CHANGES_APPROVED.md location](copy-changes-approved-reconcile.md) | Webbie | open |
+| [Branch sweep — nothing stranded on a claude/* branch](branch-sweep.md) | Ops | open |
+| [Doc census — every .md outside docs/archive: keep/fix/archive](doc-census.md) | Ops | open |
 | [Admin cleanup: Live (godview › dash)](admin-cleanup-dash.md) | Addie | open |
 | [Admin cleanup: Users (godview › users)](admin-cleanup-users.md) | Addie | open |
 | [Admin cleanup: Restock (godview › restock)](admin-cleanup-restock.md) | Addie | open |
