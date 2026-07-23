@@ -18,6 +18,17 @@
 6. **ANSWER-FIRST means ANSWER — do NOT build until told.** Owner says "answer first" / asks a
    question = reply and STOP. Building unasked burns his money and he called it out (07-22). Wait.
 
+## 2026-07-23 — Admin design system, TASK 1 (built + verified; on branch → PR, NOT yet on staging)
+- SPEC saved: `docs/team/admin/SPEC.md` (six-size type scale + 22-page verdicts; supersedes round-1 CD comps).
+- Task 1 in `public/app.html`, ADDITIVE (new `.ds-*` classes + a scoped `.ds`; the 22 pages untouched):
+  · Six type classes 28/22/15/14/12 (nothing under 12px) + `.ds-num` mono. Verified EXACT via computed styles.
+  · One control set: green pill toggle, `.act`/`.ghost`/`.ds-danger`, 44px inputs w/ caption labels, chips (status + lane), (i) info.
+  · Lucide reuses the existing `LUCIDE` set via a new `dsIco()` at 1.75 stroke; added settings-2/workflow/flask-conical/plus-circle.
+  · Live/Staging toggle in the HEADER (carved track, STYLE_GUIDE 5.1) wired to the existing `CALL_SRC` read-routing, Live default. It replaced the old clock+dot.
+  · Hidden `/#preview` route (NOT in NAV_GROUPS) renders the toggle + type + controls + icon map for the owner's phone review.
+- Proof: Chromium render at iPhone width (Live AND Staging states); `qa-admin-glass` 11/0 (sheet lock intact); copy-gate clean.
+- REMOTE-SESSION: work is on `claude/admin-design-system-spec-mgthjd` → draft PR to staging. NOT live until that PR merges (then `staging.checkitforme.com/#preview`). STOP for owner review (SPEC Part 4.3) before the six masters.
+
 ## 2026-07-22 — Support surface + call-transcript UI (SHIPPED to Admin + PROMOTED to prod)
 - Support screen: Live/Staging source picker (srcApi) so staging chats show. Chats list now shows the
   REAL first message (was "(no messages)" — read a field the API doesn't send), a "Check status" label
