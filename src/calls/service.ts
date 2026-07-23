@@ -65,7 +65,7 @@ import { ElevenLabsProvider } from "../voice/elevenlabs";
 import { takeBridgeNav } from "../voice/bridge";
 import { placeBridgeCall, roomFinalizers } from "../voice/bridge-place";
 import { learnTreeFromTranscript, consumeTreeRelearn } from "./tree-learn";
-import { connectAtSecFor } from "./recipe";
+import { connectAtSecFor, recipeToDtmf, recipeToVoice, type Recipe } from "./recipe";
 import { deltaStoreCall, setDeltaFinalize, tdTranscript, type TdSession } from "./tapedeck";
 import type { AgentTuning } from "../voice/provider";
 import { notifyInStock, notifyContact } from "./notify";
@@ -164,7 +164,7 @@ export async function buildRestockVars(
   specificProduct?: string,
   extraCategoryIds?: number[],
   kioskMode?: boolean,
-): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; say: string | null; connectAtSec: number | null; maxTalk: number | null; voiceId: string | null; voiceTuning: Record<string, unknown> | null; dynamicVars: Record<string, string> } | null> {
+): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; say: string | null; connectAtSec: number | null; ringVariable: boolean; maxTalk: number | null; voiceId: string | null; voiceTuning: Record<string, unknown> | null; dynamicVars: Record<string, string> } | null> {
   const retailer = (await db.select().from(retailers).where(eq(retailers.id, retailerId)))[0];
   if (!retailer) return null;
   const category = (await db.select().from(categories).where(eq(categories.id, categoryId)))[0];
@@ -200,27 +200,40 @@ export async function buildRestockVars(
   const openingLine = openerTemplate.replace(/\{category\}/g, category.label);
   const clarification = specificityClause((specificProduct ?? "").trim());
 
-  // Bravo voice nav: build the spoken plan ("no@26,front@38,…") from the locked recipe so the bridge
-  // speaks it with cheap TTS before opening the agent — keeps voice-IVR stores (CVS) cheap.
-  let say: string | null = null;
-  if (chain?.navType === "voice" && chain.navRecipe) {
-    try {
-      const r = JSON.parse(chain.navRecipe) as { steps?: Array<{ action?: string; value?: string; atSec?: number }> };
-      const ss = (r.steps ?? []).filter((s) => s.action === "say" && s.value);
-      if (ss.length) say = ss.map((s) => `${String(s.value).replace(/[,@]/g, " ").trim()}@${Math.round(s.atSec ?? 0)}`).join(",");
-    } catch { /* ignore bad recipe */ }
-  }
+  // ONE source of truth for phone-tree navigation: the locked map RECIPE, every call, every chain.
+  // Both the keypad presses (Alpha, "digit@sec") and the spoken menu words (Bravo, "word@sec") are
+  // derived from navRecipe via recipeToDtmf/recipeToVoice — the SAME builders the mapper/trainer use,
+  // so the live call reproduces the mapped path exactly. We deliberately no longer read the legacy
+  // per-chain dtmfShortcut as the primary: it stored only the FIRST press and dropped its timing, so
+  // the bridge's "digit@sec" press regex silently skipped it — the HomeGoods "press 4 never fired"
+  // bug, and 25 other keypad chains (Kohl's needs 4 presses, Publix 10; the shortcut had 1).
+  let recipe: Recipe | null = null;
+  try { recipe = chain?.navRecipe ? (JSON.parse(chain.navRecipe) as Recipe) : null; } catch { recipe = null; }
+  const dtmfFromRecipe = recipe ? recipeToDtmf(recipe) : "";
+  const sayFromRecipe = recipe ? recipeToVoice(recipe) : "";
+  // Legacy fallback ONLY when it's already in the executable "digit@sec" form — never a bare digit the
+  // bridge would skip. Belt-and-suspenders for any shortcut-only chain; the recipe is the default.
+  const legacyDtmf = (chain?.dtmfShortcut && /@/.test(chain.dtmfShortcut)) ? chain.dtmfShortcut : "";
+  const dtmf = dtmfFromRecipe || legacyDtmf || null;
+  const say = sayFromRecipe || null;
+  // Variable-ring chains (department pickup — HomeGoods, grocery front desks) reach a human at a time
+  // that swings call to call, so a fixed connect timer opens Charlie onto ringback/hold. Flag it so the
+  // bridge WAITS for the human (VAD) with the timer as a floor, not a hard open. Read defensively — the
+  // mapper writes ringVariable onto the recipe JSON, which the shared Recipe type doesn't yet name.
+  const ringVariable = recipe ? (recipe as { ringVariable?: boolean }).ringVariable === true : false;
 
   return {
     retailer, category, chainName: chain?.name ?? null,
-    // Bridge-level keypad shortcut (chain-wide): pressed by OUR code at a fixed time, not the LLM.
-    dtmf: chain?.dtmfShortcut ?? null,
+    // Keypad presses (Alpha) + spoken nav (Bravo), both from the recipe — the one source above.
+    dtmf,
     say,
     // ABC deterministic hand-off: open the billed agent at the chain's LEARNED time-to-human.
     // Guarded (connectAtSecFor): direct-answer chains and chains with no tree evidence NEVER get a
     // timer — the timer mutes the agent until it fires (the 2026-07-02 silent-agent bug). null =
     // bridge falls back to VAD + hold-timeout.
     connectAtSec: connectAtSecFor(chain),
+    // Variable-ring: hold Charlie for the human instead of opening on the timer (see above).
+    ringVariable,
     // Per-store talk cap (chains.maxTalkSeconds). Null = caller falls back to the global bail cap.
     maxTalk: chain?.maxTalkSeconds ?? null,
     // Workflow voice strip: rotates round-robin per call on this workflow's own counter (same pattern
@@ -538,7 +551,7 @@ export async function bridgeCheckCall(a: TriggerArgs) {
     // Human reached, billed agent open — hand the row to the normal EL ingest by conv id.
     db.update(callResults).set({ providerCallId: convId, status: "in_progress" }).where(eq(callResults.id, row.id))
       .catch((e) => console.error("bridge check connect update:", e));
-  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, apiKey: acct.apiKey, agentId: acct.agentId });
+  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, ringVariable: v.ringVariable, voiceId: v.voiceId, voiceTuning: v.voiceTuning, apiKey: acct.apiKey, agentId: acct.agentId });
   if (r.error || !r.room) {
     await slot.release(); // dial never placed → free the slot immediately
     await db.update(callResults).set({ status: "failed", summary: r.error || "bridge call failed" }).where(eq(callResults.id, row.id));
