@@ -410,6 +410,7 @@ __BRAND_HEAD__
   }
   body{text-wrap:pretty} /* CLASS-LEVEL wrap law (owner 07-22): the browser avoids orphan last lines on EVERY string, every page — Safari 26/Chrome support it, others ignore it harmlessly */
   .rsub{color:#b4b4c2;font-size:13.5px;font-weight:650;line-height:1.55;margin-top:12px} /* smaller than before but still pronounced (owner 07-15) */
+  .rsub .subln{display:block} /* first sentence on line 1, the rest on line 2 (owner 07.23 two line law) */
   .rsub b{color:#fff;font-weight:800} .rsub .y{color:#fff;font-weight:800} /* product name neutral white — no per-vertical accent on a result */
   .rstore-line{color:#cfcfe0;font-size:13px;font-weight:600;margin-top:8px;line-height:1.4}
   .rstore-line b{color:#fff;font-weight:800} .rstore-line .ad{color:var(--muted);font-weight:500}
@@ -5403,7 +5404,7 @@ function stepsHTML(steps, finalElapsed){
 function scriptHTML(transcript, final){
   const lines=(transcript||'').split('\n').filter(Boolean);
   const hs=transcriptHumanStart(lines);
-  const human=lines.slice(hs).filter(l=>/^(Agent|Clerk):/.test(l));
+  const human=lines.slice(hs).filter(l=>/^Agent:/.test(l)||(/^Clerk:/.test(l)&&isHumanSpeech(l.replace(/^Clerk:\s*/,'')))); // drop junk store-side lines (ringback/silence heard as "...") so they never show as a Staff bubble
   if(!human.length) return final?`<div class="cs-wait">${t('live.noconvo','No live conversation on this call.')}</div>`:''; /* live: the log shows real steps ONLY — no filler line past the current step (owner 07-21) */
   return `<div class="chat">${human.map(l=>bubbleHTML(l,true)).join('')}</div>`;
 }
@@ -5440,7 +5441,7 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
   // Conversation lines first — knowing whether a person was reached colours the final connection step.
   const lines=(transcript||'').split('\n').filter(Boolean);
   const hs=transcriptHumanStart(lines);
-  const human=lines.slice(hs).filter(l=>/^(Agent|Clerk):/.test(l));
+  const human=lines.slice(hs).filter(l=>/^Agent:/.test(l)||(/^Clerk:/.test(l)&&isHumanSpeech(l.replace(/^Clerk:\s*/,'')))); // drop junk store-side lines (ringback/silence heard as "...") so they never show as a Staff bubble
   const reached = human.length>0 || (n>0 && steps[n-1].n>=6);
   // Steps list — DROP the first "Calling {store}…" step (the roll-up header carries it, so the store
   // name shows ONCE). Greyed text, no dots; the final connection step turns green ✓ when we got a person.
@@ -5543,6 +5544,12 @@ window.addEventListener('scroll',()=>{ try{ const lv=$('live'); if(!lv||lv.class
 // didn't catch that") are NOT nav — they were wrongly painting "Working through the menu" on DIRECT
 // calls a human answered instantly (the fake-steps bug on the owner's own-phone tests).
 const AGENT_NAV_RE=/^(no|yes|yeah|okay|ok|zero|one|two|three|four|five|six|seven|eight|nine|front|general|operator|representative|customer service|associate|store|manager)[\s.,!?]*$/i;
+// Speech to text hallucinates a store side line out of ringback, hold silence, or line noise (a lone
+// ellipsis, a stray fragment). That is NOT a person picking up. A store side line counts as a real
+// human only when it carries actual WORDS (a run of letters), so the log never flips to Staff picked up
+// on noise. Owner 07.23: Target rang, nobody answered, yet a dotted junk line faked a pickup. Junk is
+// ignored and we hold the current step until a real voice or the verdict arrives.
+function isHumanSpeech(txt){ const s=String(txt||'').trim(); return /[a-zA-ZÀ-ɏ]{2,}/.test(s); }
 function stageForLines(lines, pitched){
   let st=3, routed=false, human=false;
   for(const l of (lines||[])){
@@ -5557,7 +5564,8 @@ function stageForLines(lines, pitched){
       // OR post-transfer. Menu/hold badging only applies BEFORE a human has been heard, so a clerk's
       // "hold on, let me check" mid-conversation can never re-paint the call as an IVR.
       if(!human && (IVR_RE.test(txt) || HOLD_RE.test(txt))) st=Math.max(st,4); // automated menu / hold recording
-      else { human=true; st=Math.max(st,7); }                      // a real person picked up
+      else if(isHumanSpeech(txt)){ human=true; st=Math.max(st,7); } // a real person picked up (real words only, never noise)
+      // else the line is transcription noise (ringback or silence heard as a junk line). Ignore it and hold the step.
     }
   }
   return pitched ? Math.max(st,8) : st;
@@ -6041,17 +6049,23 @@ function nlSent(s){ s=String(s==null?'':s); if(s.includes('<br')) return s; retu
 // line still wraps inside itself instead of overflowing.
 function sentLines(s){ s=String(s==null?'':s).replace(/<br\s*\/?>/gi,' ').replace(/(?:(?!\u00A0)\s)+/g,' ').trim(); /* collapse whitespace but PRESERVE no-break spaces — they are deliberate typography ("2:00 PM" must never split; \s would eat them, owner 07-22) */
   const parts=s.replace(/([.!?…])\s+(?=[A-Z0-9ÁÉÍÓÚÑ¿¡])/g,'$1\u0001').split('\u0001');
-  if(parts.length<2) return s;
-  return parts.map(p=>'<span style="display:inline-block">'+p+'</span>').join(' '); }
+  // Two physical lines, always: the FIRST sentence is line one, every sentence after it is line two, so a
+  // second sentence can never begin on the first line. fitSub then shrinks the whole sub to hold two visual
+  // lines. Nothing is ever dropped or truncated (owner 07.23).
+  if(parts.length<2) return '<span class="subln">'+s+'</span>';
+  return '<span class="subln">'+parts[0]+'</span><span class="subln">'+parts.slice(1).join(' ')+'</span>'; }
 // TWO-LINE LAW (owner: "this message is never more than two lines in the subhead" 07-22; the v2
 // .rsub CSS has said "2 lines MAX" since 07-15b — this enforces it). Measured after render on
 // EVERY .rsub: while the sub runs past two lines, drop its LAST sentence span — the first sentence
 // is the answer, the tail is flavor ("Go grab it…", "Sign up…"). Long store+product combos on a
 // 390px phone are the case that overflows; short names render exactly as authored.
 function fitSub(root){ try{ (root||document).querySelectorAll('.rsub').forEach(el=>{
-  const lh=parseFloat(getComputedStyle(el).lineHeight)||(parseFloat(getComputedStyle(el).fontSize)||14)*1.5;
-  let guard=4;
-  while(guard-->0 && el.scrollHeight>lh*2.5){ const sp=el.querySelectorAll(':scope > span'); if(sp.length<2) break; sp[sp.length-1].remove(); }
+  el.style.fontSize=''; // start from the CSS size on every render, so it can grow back after a shorter note
+  const base=parseFloat(getComputedStyle(el).fontSize)||16; let size=base, guard=14;
+  const over=()=>{ const lh=parseFloat(getComputedStyle(el).lineHeight)||size*1.5; return el.scrollHeight>lh*2.35; };
+  // If the two lines run past two visual lines, nudge the whole sub a hair smaller until it fits. Floor at
+  // 60% so it stays readable. Nothing is ever cut. Normal short notes never shrink (owner 07.23).
+  while(guard-->0 && over() && size>base*0.6){ size=Math.max(base*0.6,size-0.5); el.style.fontSize=size+'px'; }
   }); }catch(_){ } }
 // Registry/owner-written notes can use a {product} token — we fill it with the live product name (bolded),
 // so the owner writes the message in Admin and it still reads "…check if Pokémon was in stock…".
@@ -6075,7 +6089,7 @@ function fillP(s,o,tn){ try{ const oc=(o&&Array.isArray(o.cats)&&o.cats[0])||(o&
   // Clerk-captured product names arrive with their own article ("a … booster packs") — the note template
   // supplies the grammar, so strip it here or "{store} has {product}" reads "has a … packs" (owner 07-22).
   const _rawPN=(o&&o.productName)?String(o.productName).replace(/^(?:a|an|the|some)\s+/i,'').trim():'';
-  const pn=esc(prodPhrase(o)||_rawPN||catLabel()||oc||'it'); const sn=esc((o&&o.storeName)||(SEL_STORE&&SEL_STORE.name)||'the store'); const cn=esc(catLabel()||oc||'it'); const dy=esc((o&&o.shipmentDay)?fmtShipDay(o.shipmentDay):'soon'); return String(s==null?'':s).replace(/\{product\}/g,'<b style="color:#fff">'+pn+'</b>').replace(/\{store\}/g,'<b style="color:'+sc+'">'+sn+'</b>').replace(/\{category\}/g,'<b style="color:#fff">'+cn+'</b>').replace(/\{day\}/g,'<b style="color:#fff">'+dy+'</b>'); }catch(e){ return String(s==null?'':s); } }
+  const pn=esc(prodPhrase(o)||_rawPN||catLabel()||oc||'it'); const sn=esc((o&&o.storeName)||(SEL_STORE&&SEL_STORE.name)||'the store'); const cn=esc(catLabel()||oc||'it'); const dy=esc((o&&o.shipmentDay)?fmtShipDay(o.shipmentDay):'soon'); return String(s==null?'':s).replace(/\{product\}/g,'<b style="color:#fff">'+pn+'</b>').replace(/\{store(name)?\}/g,'<b style="color:'+sc+'">'+sn+'</b>').replace(/\{category\}/g,'<b style="color:#fff">'+cn+'</b>').replace(/\{day\}/g,'<b style="color:#fff">'+dy+'</b>'); }catch(e){ return String(s==null?'':s); } }
 // ===== PRICE HUNT (item 3) — cross-store cheapest-first comparison. Populates from a completed check's
 // quoted price (o.priceCents). That field is pending on GET /pub/result + /app/history (see the price
 // contract note); until it lands this renders NOTHING — the moment it ships, the price line + panel light

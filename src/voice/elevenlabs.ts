@@ -347,8 +347,11 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
       // the only one there, and asked us to try later. Distinct from on-hold (they never went to look) and
       // from no-clear-answer (they didn't waffle — they declined to check). Heuristic gated on `asked`.
       const clerkAll = (d.transcript ?? []).filter((t) => t.role !== "agent" && t.message).map((t) => String(t.message)).join(" ");
-      const TOOBUSY = /\b(too busy|really busy|so busy|very busy|crazy busy|pretty busy|kind of busy|kinda busy|a (?:bit|little) busy|swamped|slammed|short[- ]?staffed|in the middle of|can'?t (?:check|look|help|get to|do that|right now)|don'?t have time|no time (?:right now|to)|only (?:one|person|me) (?:here|working)|by myself|on my own|i'?m (?:alone|the only one)|too much going on|call back (?:later|in a|in an)|try (?:back|again|us) (?:later|in a|in an|tomorrow))\b/i;
-      const tooBusy = tooBusyFlag || (asked && TOOBUSY.test(clerkAll));
+      const TOOBUSY = /\b(too busy|really busy|so busy|very busy|crazy busy|pretty busy|kind of busy|kinda busy|a (?:bit|little) busy|swamped|slammed|short[- ]?staffed|in the middle of|can'?t (?:check|look|help|get to|do that|talk|right now)|can'?t (?:really |even )?talk|not (?:a|the best) (?:good )?time|don'?t have time|no time (?:right now|to)|only (?:one|person|me) (?:here|working)|by myself|on my own|i'?m (?:alone|the only one)|too much going on|call back (?:later|in a|in an|tomorrow)|try (?:back|again|us) (?:later|in a|in an|tomorrow))\b/i;
+      // A person begging off ("I can't talk right now", "call back later") is TOO BUSY, not "couldn't
+      // tell" — a real reason we should show. Gate off tooBusyFlag OR any clerk-side decline, no longer
+      // requiring that we already asked the stock question (they often brush us off before the ask).
+      const tooBusy = tooBusyFlag || TOOBUSY.test(clerkAll);
       // Language barrier — the human who answered couldn't understand us (no shared language), so we
       // never got a real answer. Distinct from busy/on-hold/no-clear: communication itself failed.
       // Structured field first, then a transcript heuristic (English phrasings of "I don't understand"
