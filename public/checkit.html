@@ -1307,14 +1307,16 @@ __BRAND_HEAD__
   .alsw button{padding:8px 6px;font-size:12px}
   .alrm{background:rgba(255,123,123,.12);border:0;border-radius:12px;padding:9px;color:#FF9B9B;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
   .alrow-off{opacity:.55}
-  /* Alerts rows (owner 07-23): the On/Off toggle + remove used to sit beside the name and squeeze it,
-     cutting long store names. Give the name the full row width and drop the controls onto their own line
-     underneath, so the whole name shows (2 line wrap). Scoped to .alrow so the homepage list is untouched. */
-  .store.alrow{align-items:flex-start}
-  .alrow-main{min-width:0;flex:1;display:flex;flex-direction:column;gap:10px}
-  .alrow-id{min-width:0}
-  .alrow-ctrls{display:flex;align-items:center;gap:8px}
-  .alrow-ctrls .alsw{width:108px;flex:0 0 auto}
+  /* Alerts rows (owner 07-23): compact. Full store name (2-line wrap) plus a small slider plus remove, all
+     on about 2 lines. A small slider replaces the wide On/Off pill so the name keeps its room. Scoped to
+     .alrow so the homepage store list is untouched. */
+  .store.alrow{align-items:center;gap:10px}
+  .alrow-id{min-width:0;flex:1}
+  .store.alrow .alrm{padding:7px}
+  .alsw2{position:relative;width:42px;height:25px;border-radius:999px;background:#3A3A42;border:0;padding:0;cursor:pointer;flex:0 0 auto;transition:background .18s}
+  .alsw2.on{background:var(--accent,#4ADE80)}
+  .alsw2::after{content:'';position:absolute;top:3px;left:3px;width:19px;height:19px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4);transition:left .18s}
+  .alsw2.on::after{left:20px}
   .alpause{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)}
   .almk{padding:12px 14px;border-radius:14px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.28);color:#F5C368;font-size:13px;font-weight:700;line-height:1.45;text-align:center}
   .ho-stepper{display:flex;align-items:center;justify-content:space-between;background:var(--terminal);border:1px solid var(--border);border-radius:13px;padding:8px 10px}
@@ -2026,6 +2028,8 @@ html[data-skin="v2"] #zmenuOv .modal,html[data-skin="v2"] #emailOv .modal,html[d
 html[data-skin="v2"] #zmenuOv .modal,html[data-skin="v2"] #emailOv .modal,html[data-skin="v2"] #alertsOv .modal,html[data-skin="v2"] #featOv .modal{border:1px solid rgba(255,255,255,.15);border-bottom:0;box-shadow:0 -20px 60px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.07)}
 html[data-skin="v2"] #zmenuOv .modal::before,html[data-skin="v2"] #emailOv .modal::before,html[data-skin="v2"] #alertsOv .modal::before,html[data-skin="v2"] #featOv .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 16px}
 html[data-skin="v2"] #zmenuOv.on .modal,html[data-skin="v2"] #emailOv.on .modal,html[data-skin="v2"] #alertsOv.on .modal,html[data-skin="v2"] #featOv.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
+  /* Alerts can hold up to 10 stores, so let the sheet scroll instead of running off-screen (owner 07-23). */
+  html[data-skin="v2"] #alertsOv .modal{max-height:86vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 html[data-skin="v2"] #histOverlay .hist-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:2px 18px calc(22px + env(safe-area-inset-bottom))}
 /* sheet-mode (body.sheetopen): the sheet box overshoots 120px under the iOS bar so rows ghost through the
    glass. The inner scrollers get a 120px scroll-end spacer (last row stays reachable above the bar) and the
@@ -5991,7 +5995,7 @@ window.addEventListener('popstate',(ev)=>{
   // Zones: back leaves the zones screen for wherever you were; forward re-enters it.
   try{ const z=$('zones');
     if(ev&&ev.state&&ev.state.v==='zones'){ if(z&&!z.classList.contains('on')) openZones(); return; }
-    if(z&&z.classList.contains('on')){ zoneStopPoll(); z.classList.remove('on'); try{ document.body.classList.remove('zoning'); }catch(_){ } const sp0=new URLSearchParams(location.search); if(!sp0.get('call')&&!sp0.get('v')) backToBuilder(); return; }
+    if(z&&z.classList.contains('on')){ zoneStopPoll(); z.classList.remove('on'); try{ document.body.classList.remove('zoning'); }catch(_){ } if(!(typeof acctReturn==='function'&&acctReturn())){ const sp0=new URLSearchParams(location.search); if(!sp0.get('call')&&!sp0.get('v')) backToBuilder(); } return; } // back from zones → My checks if you came from there, else home (owner 07-23)
   }catch(_){ }
   // History-driven account nav: back AND forward walk the sheet's sections; leaving the sheet's
   // states closes it; a check opened FROM the sheet returns to its tab.
@@ -7360,20 +7364,16 @@ async function openAlerts(opts){ opts=opts||{}; ALERTS_MAKEROOM=!!opts.makeRoom;
     // Make-room banner (owner: full list → remove one to add the store they just tried to watch).
     const banner=ALERTS_MAKEROOM?`<div class="almk" style="margin-bottom:12px">${sentLines(tf('alerts.makeroom',"You're watching {n} stores. Remove one to add this one.",{n:cap}))}</div>`:'';
     // Master pause — only meaningful once there's at least one alert.
-    const master=subs.length?`<div class="alpause" style="margin-bottom:12px"><span style="font-size:14.5px;font-weight:800;color:#fff">${t('alerts.pauseall','Pause all alerts')}</span>
-      <div class="ho-toggle alsw" style="width:170px;flex:0 0 auto"><button class="${!paused?'on':''}" onclick="alertsPauseAll(0)">${t('alerts.on','Alerts on')}</button><button class="${paused?'on':''}" onclick="alertsPauseAll(1)">${t('alerts.paused','Paused')}</button></div></div>`:'';
+    const master=subs.length?`<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button class="alsw2 ${!paused?'on':''}" onclick="alertsPauseAll(${paused?0:1})" aria-label="${t('alerts.pauseall','Pause all alerts')}"></button></div>`:'';
     const rows = subs.length? subs.map(x=>{
       const so=alertStoreObj(x), off=!!x.muted;
       const name=esc(so.name||x.storeName||t('alerts.acheck','A check')), loc=esc(so.location||x.storeLocation||'');
       return `<div class="store alrow${off||paused?' alrow-off':''}" style="cursor:default;margin-top:10px">
         <div class="ic ${so.logoDark?'lite':''} ${so.logoWide?'widelogo':''}">${storeFace(so)}</div>
-        <div class="alrow-main">
-          <div class="alrow-id"><div class="nm">${name}</div><div class="lo" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${loc}</div></div>
-          <div class="alrow-ctrls">
-            <div class="ho-toggle alsw"><button class="${!off?'on':''}" onclick="alertSetOn(${x.id},1)">${t('alerts.rowon','On')}</button><button class="${off?'on':''}" onclick="alertSetOn(${x.id},0)">${t('alerts.rowoff','Off')}</button></div>
-            <button class="alrm" onclick="alertStop(${x.id})" aria-label="${t('alerts.remove','Remove')}">${Z_ICO_TRASH}</button>
-          </div>
-        </div></div>`;}).join('')
+        <div class="alrow-id"><div class="nm">${name}</div><div class="lo" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${loc}</div></div>
+        <button class="alsw2 ${!off?'on':''}" onclick="alertSetOn(${x.id},${off?1:0})" aria-label="${t('alerts.rowon','On')}"></button>
+        <button class="alrm" onclick="alertStop(${x.id})" aria-label="${t('alerts.remove','Remove')}">${Z_ICO_TRASH}</button>
+      </div>`;}).join('')
       : `<div style="margin-top:10px;padding:20px 16px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);text-align:center"><span style="font-size:12.5px;font-style:italic;font-weight:600;color:#8A8A96;line-height:1.5">${sentLines(t('alerts.none',"You aren't watching any stores yet."))}</span></div>`;
     $('alertsList').innerHTML = banner+master+rows; };
   window.__alertsPaint=paint;
