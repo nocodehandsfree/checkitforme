@@ -28,7 +28,8 @@
   · Hidden `/#preview` route (NOT in NAV_GROUPS) now renders the cleaned LIVE page master (SPEC page 1: checks row, four-caller scoreboard, exceptions, funnel, reports) with sample data.
 - Proof: Chromium render at iPhone width (normal admin = clock, no switch; preview = Live page + switch); `qa-admin-glass` 11/0; copy-gate clean.
 - SHIPPED to THE Admin via ship-admin (override); owner reviews on his phone at `admin.checkitforme.com/#preview`. His real 22 screens are untouched. Also on branch `claude/admin-design-system-spec-mgthjd` + draft PR #91. STOP for his verdict on the Live page before the other 5 masters.
-- OWNER OPEN: per-page src dropdowns (Users/Feedback/Testing/Chats) still exist; they retire together with the switch going global (do NOT leave both).
+- OWNER-BLESSED the switch global: Live/Staging switch now shows in the header on EVERY page (clock removed), wired to `CALL_SRC` read-routing; the per-page src dropdowns (Users/Feedback/Testing/Chats) are gone (`srcPicker` returns ''). Verified in Chromium: shows + flips on a normal page.
+- COPY/ICON/SPACING sweep (owner asked for the whole admin). 6-agent audit found 98 (copy 61, icon 24, spacing 13), saved to `docs/team/admin/copy-icon-audit.md`. WAVE 1: 28 unique copy swaps applied + shipped (2 apostrophe JS breaks caught + fixed; qa-glass 11/0; smoke clean). REMAINING: icons + spacing + hand-crafted copy (GA4/flag renames/Chats tier labels/GTM taxonomy/Add import warning) per that doc, page by page.
 
 ## 2026-07-22 — Support surface + call-transcript UI (SHIPPED to Admin + PROMOTED to prod)
 - Support screen: Live/Staging source picker (srcApi) so staging chats show. Chats list now shows the

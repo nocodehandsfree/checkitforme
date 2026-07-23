@@ -795,10 +795,7 @@
   /* PREVIEW MODE. The hidden /#preview route hides the group nav so the owner reviews just the
      shell toggle and the system. The real nav is untouched everywhere else. */
   body.preview-mode #grpnav,body.preview-mode .subnav2{display:none}
-  /* The switch stays OFF the real admin (clock shows) and appears only inside the preview. */
-  header .envtog{display:none}
-  body.preview-mode header .sub{display:none}
-  body.preview-mode header .envtog{display:inline-flex}
+  /* The Live/Staging switch is the ONE master control, in the header on every page. */
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -811,7 +808,6 @@
     <img src="/logos/brand/check.png?v=2" alt="Check" style="height:22px;width:auto;object-fit:contain;display:block">
     <span class="adm">ADMIN</span>
   </a>
-  <span class="sub"><span class="dot" title="live"></span><span id="clock"></span></span>
   <div class="envtog" id="envtog" role="group" aria-label="Data source">
     <button type="button" class="envtog-opt on" data-env="live" id="env_live" aria-pressed="true" onclick="setEnv('live')"><span class="envtog-dot"></span>Live</button>
     <button type="button" class="envtog-opt" data-env="staging" id="env_staging" aria-pressed="false" onclick="setEnv('staging')"><span class="envtog-dot"></span>Staging</button>
@@ -981,12 +977,12 @@
         <option value="closed">Closed now</option>
         <option value="online">Online</option>
         <option value="muted">Muted (chain)</option>
-        <option value="badnum">Bad / missing number</option>
+        <option value="badnum">No phone number</option>
         <option value="kiosk">Has kiosk</option>
       </select>
       <select id="f_sort" onchange="onStoreFilter()">
         <option value="rel">Sort: best match</option>
-        <option value="name">Name A–Z</option>
+        <option value="name">Name A to Z</option>
         <option value="verified">Verified first</option>
         <option value="instock">In stock first</option>
         <option value="recent">Recently called</option>
@@ -1106,7 +1102,7 @@
       <select class="k-filter" id="r_sort" onchange="renderResults()">
         <option value="newest">Newest</option>
         <option value="oldest">Oldest</option>
-        <option value="store">Store A–Z</option>
+        <option value="store">Store A to Z</option>
         <option value="outcome">In stock first</option>
       </select>
     </div>
@@ -1122,7 +1118,7 @@
     <div class="k-sub">Machines, receipts and refresh cadences</div>
     <div id="gw_kiosks" style="margin-top:14px"><div class="empty">Loading…</div></div>
     <div class="k-wells" id="rcpt_wells" style="display:none"></div>
-    <div class="k-eyebrow" style="display:flex;align-items:center;justify-content:space-between">Emailed-in receipts
+    <div class="k-eyebrow" style="display:flex;align-items:center;justify-content:space-between">Receipts inbox
       <button class="k-key" style="margin:0;padding:8px 14px;font-size:11px;letter-spacing:.06em;text-transform:none" onclick="inspectInbox()">Inspect</button></div>
     <div style="font-size:12px;font-weight:700;color:#8A8A96;margin:-2px 0 10px;cursor:pointer" onclick="openSheet('Why some don\u2019t count','', '<div class=\'meta\' style=\'line-height:1.6\'>Only kiosk receipts land here: we need a Machine ID, or a product plus a total. A normal store or online receipt won\u2019t parse, so it never becomes a free check.</div>')">Why some don&rsquo;t count &rarr;</div>
     <div id="rcpt_status" style="display:none"></div>
@@ -1403,7 +1399,7 @@
     <div class="k-title">Statuses</div>
     <div class="k-sub">The verdicts customers see</div>
     <div id="st_list" style="margin-top:16px"><div class="empty">Loading…</div></div>
-    <button class="k-cta" onclick="sheetFromHolder('ds_staddform','New status','Display is instant. Detecting it on calls needs the extraction wired.')"><span>NEW STATUS →</span></button>
+    <button class="k-cta" onclick="sheetFromHolder('ds_staddform','New status','You will see it right away. Reading it off real calls has to be set up first.')"><span>NEW STATUS →</span></button>
     <div id="st_details" style="display:none">
       <div id="ds_staddform">
         <div class="row" style="gap:8px;margin-top:4px">
@@ -1432,7 +1428,7 @@
     <div class="k-sub">Rings your own phone · never store calls</div>
     <div style="height:16px"></div>
     <div class="card">
-      <div class="name">Delta <span class="meta" style="font-weight:500">&nbsp;· recorded-agent rehearsal</span><span data-tip="Runs a whole check on recorded clips, no live agent · go off script to hear the barge-in"></span></div>
+      <div class="name">Delta <span class="meta" style="font-weight:500">&nbsp;· recorded-agent rehearsal</span><span data-tip="Runs a whole check on recorded clips. Go off script and a live agent takes over."></span></div>
       <label>Your phone</label>
       <input id="td_phone" placeholder="+13105551234">
       <div class="btnrow"><button class="act" onclick="tdCall()">Call me on tape</button></div>
@@ -1453,7 +1449,7 @@
         <option value="open">Open conversation</option>
         <option value="carry">Carry check</option>
       </select>
-      <label data-tip="For open conversation">Personality</label>
+      <label data-tip="For open conversation">Persona</label>
       <select id="lab_personality">
         <option value="professional">Professional</option>
         <option value="homie">Homie</option>
@@ -1683,7 +1679,9 @@ function setCallSrc(s,reload){ CALL_SRC=s; localStorage.setItem('call_src',s); d
 // source dropdowns do. Live is the default. It reloads whatever tab you are on so its reads refresh.
 function setEnv(s){ setCallSrc(s); const cur=localStorage.getItem('active_tab'); if(cur && typeof TAB_LOADERS!=='undefined' && TAB_LOADERS[cur]){ try{ TAB_LOADERS[cur](); }catch(_){} } }
 function renderEnvTog(){ document.querySelectorAll('#envtog .envtog-opt').forEach(b=>{ const on=b.dataset.env===CALL_SRC; b.classList.toggle('on',on); b.setAttribute('aria-pressed',on?'true':'false'); }); }
-const srcPicker=reloadName=>`<div class="k-filters"><select class="k-filter src-filter" data-tip="Which site's calls to show — the live site or the staging site" onchange="setCallSrc(this.value,${reloadName})"><option value="live"${CALL_SRC==='live'?' selected':''}>Live site</option><option value="staging"${CALL_SRC==='staging'?' selected':''}>Staging site</option></select></div>`;
+// Per-page source dropdowns retired: the header Live/Staging switch is the one master control.
+// Kept as a no-op so the four pages that call it (Users, Feedback, Testing, Chats) render clean.
+const srcPicker=reloadName=>'';
 const srcEmpty=(d,fallback)=>d&&d.error==='staging_auth'
   ? '<div class="empty">Staging wants a login. Open staging.checkitforme.com, sign in with your phone once, then come back.</div>'
   : d&&d.error==='staging_down' ? '<div class="empty">Could not reach the staging site.</div>' : fallback;
@@ -2047,10 +2045,10 @@ function rcptSheet(i){
 }
 async function inspectInbox(){
   const el=document.getElementById('rcpt_debug'); if(!el) return;
-  el.innerHTML='Reading restocktimer@gmail.com…';
+  el.innerHTML='Reading the receipts inbox…';
   const d=await api('/api/admin/receipts/inbox-debug?hours=72');
   if(!d||!d.ok){ el.innerHTML='<span style="color:#ff6b6b">Inbox read failed: '+esch((d&&d.error)||'unknown')+'</span>'; return; }
-  if(!d.configured){ el.innerHTML='<span style="color:#FBBF24">Gmail not configured (no creds set).</span>'; return; }
+  if(!d.configured){ el.innerHTML='<span style="color:#FBBF24">The receipts inbox is not connected yet.</span>'; return; }
   const rows=d.rows||[];
   if(!rows.length){ el.innerHTML='No emails in the inbox over the last 72h.'; return; }
   const dt=ms=>{ const m=Math.floor((Date.now()-ms)/60000); return m<60?Math.max(1,m)+'m ago':(m<1440?Math.floor(m/60)+'h ago':Math.floor(m/1440)+'d ago'); };
@@ -2228,10 +2226,10 @@ async function mapperPoll(){
   const rec=run.best||run.baseline||{};
   const menu=Array.isArray(rec.menu)?rec.menu:[];
   const menuHtml=menu.length?('<div class="meta" style="margin-top:6px">Menu heard: '+menu.map(o=>'<code>'+esch(o.digit)+'</code> '+esch(o.label||'?')).join(' · ')+'</div>'):'';
-  const varHtml=rec.ringVariable?'<div class="meta" style="margin-top:4px;color:#FBBF24">Variable ring (department pickup) — time-to-human varies call to call</div>':'';
+  const varHtml=rec.ringVariable?'<div class="meta" style="margin-top:4px;color:#FBBF24">Variable ring. A department picks up, so the time to reach a person changes every call.</div>':'';
   const tgtHtml=run.target?('<div class="meta" style="margin-top:4px">Target: <b>'+esch(run.target)+'</b></div>'):'';
   const needHtml=run.needsTarget?('<div style="margin-top:8px;background:rgba(251,191,36,.1);border:1px solid #FBBF24;border-radius:10px;padding:9px 11px">'
-    +'<div class="meta" style="color:#FBBF24">No customer-service option in this menu. which desk should we press for card stock?</div>'
+    +'<div class="meta" style="color:#FBBF24">No customer service option in this menu. Which desk should we press for card stock?</div>'
     +'<div class="row" style="gap:6px;margin-top:6px"><input id="mapper_target_in" placeholder="e.g. customer service, front, sporting goods" style="flex:1;min-width:120px"/>'
     +'<button class="act" onclick="mapperSetTarget('+run.chainId+')">Set target &amp; re-map</button></div></div>'):'';
   document.getElementById('mapper_bench').innerHTML='Before: <b>'+bench+'</b> to a human · best now: <b style="color:var(--green)">'+best+'</b>'+(run.stopReason?' · '+esch(run.stopReason):'')+tgtHtml+varHtml+menuHtml+needHtml;
@@ -2485,7 +2483,7 @@ async function savePlansDraft(){
     payg:PLANS.payg.bundles.map(b=>({checks:b.checks,cents:b.cents})) };
   const r=await api('/api/admin/plans',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   if(r&&!r.error){ PLANS=r; renderPlans(); toast('Saved · live on the site'); }
-  else toast('NOT saved — that edit did not go through. Try it again.'); // never lose an owner edit silently
+  else toast('NOT saved. That edit did not go through. Try again.'); // never lose an owner edit silently
 }
 async function publishPlans(){
   if(!confirm('Publish these prices to Stripe? This creates new Stripe Prices and archives the old ones (existing subscribers keep their current price until they change plans). Products are never deleted.')) return;
@@ -2744,7 +2742,7 @@ function dashHeroDots(el){
 }
 function dashSheet(key){
   const titles={money:'Money',pulse:'Members',timing:'Call time',health:'Call health',credits:'Credits'};
-  const subs={money:'Revenue, profit and margin',pulse:'Signups, scores and activity today',timing:'Time to reach a person vs talk time',health:'Real dialed calls vs seed and rehearsal',credits:'ElevenLabs · estimated from the last 31 days'};
+  const subs={money:'Revenue, profit and margin',pulse:'Signups, scores and activity today',timing:'Time to reach a person vs talk time',health:'Real calls vs test calls',credits:'Voice credits · estimated over the last 31 days'};
   sheetFromHolder('ds_'+key, titles[key], subs[key]);
 }
 
@@ -2925,7 +2923,7 @@ function wfPersonaPickIdx(idx){ WF_PERSONA=(idx<0||!PERSONAS[idx])?'':PERSONAS[i
 function renderPersonas(){
   wfPersonaRender();
   const el=document.getElementById('pn_list'); if(!el) return;
-  if(!PERSONAS.length){ el.innerHTML='<div class="meta">No personas yet. build one above and save it.</div>'; return; }
+  if(!PERSONAS.length){ el.innerHTML='<div class="meta">No personas yet. Build one below and save it.</div>'; return; }
   el.innerHTML=PERSONAS.map((p,i)=>{
     const tags=[]; if(p.slang)tags.push('Casual slang'); if(p.swear)tags.push('Profanity OK'); if(p.affection)tags.push('Affectionate');
     const pills=tags.map(t=>`<span class="chip-sm">${t}</span>`).join('');
@@ -3226,13 +3224,13 @@ async function loadSupportStats(){
   const selfPct=(r.selfServed!=null&&total)?Math.round(100*r.selfServed/total)+'%':(r.selfServed!=null?String(r.selfServed):'—');
   const well=(n,l,cls)=>`<div class="k-well"><div class="n${cls?' '+cls:''}">${esch(String(n))}</div><div class="l">${l}</div></div>`;
   if(wells){ wells.style.display=''; wells.innerHTML=
-    well(selfPct,'Self served','g')+well(r.escalated!=null?r.escalated:'—','Escalated',(r.escalated||0)>0?'a':'')+well(r.avgMessages!=null?r.avgMessages:'—','Msgs avg',''); }
+    well(selfPct,'Self served','g')+well(r.escalated!=null?r.escalated:'—','Escalated',(r.escalated||0)>0?'a':'')+well(r.avgMessages!=null?r.avgMessages:'—','Avg messages',''); }
   // One pill per fact worth a glance; everything deeper waits for the chat rows.
   if(cats){ const by=r.byCategory||{};
     const pills=Object.keys(by).map(k=>`<span class="k-pill">${esch(SUP_CATS[k]||k)} · ${by[k]}</span>`);
     if(r.pendingReview) pills.push(`<span class="k-pill" style="color:#FBBF24">Pending review · ${r.pendingReview}</span>`);
     if(r.tickets!=null||r.ticketsEmailed!=null) pills.push(`<span class="k-pill">Tickets · ${r.tickets!=null?r.tickets:r.ticketsEmailed}</span>`);
-    if(r.estCostUsd!=null) pills.push(`<span class="k-pill">LLM $${Number(r.estCostUsd).toFixed(2)}</span>`);
+    if(r.estCostUsd!=null) pills.push(`<span class="k-pill">Chat cost $${Number(r.estCostUsd).toFixed(2)}</span>`);
     cats.innerHTML=pills.join(''); }
   // Top questions drill in on a peek row — the report keeps ONE list (the chats).
   const qs=r.topQuestions||[], holder=document.getElementById('ds_suptop');
@@ -3615,7 +3613,7 @@ function storeDetailsHTML(r){
     h+=`<div class="stcdrow"><span class="stcdlab">Last check</span><span class="stcdval"><b style="color:${vv.c}">${vmark(vv.e,vv.c,14)} ${esch(vv.t)}</b>${lc.category?' · '+esch(lc.category):''} · ${esch(agoTs(lc.startedAt)||'')}</span></div>`;
     if(lc.summary) h+=`<div class="stcdsum">“${esch(lc.summary)}”</div>`;
   }
-  if(r.distributor) h+=`<div class="stcdrow"><span class="stcdlab">Distro</span><span class="stcdval">${esch(r.distributor)}</span></div>`;
+  if(r.distributor) h+=`<div class="stcdrow"><span class="stcdlab">Distributor</span><span class="stcdval">${esch(r.distributor)}</span></div>`;
   if(carries.length) h+=`<div class="stcdrow"><span class="stcdlab">Carries</span><span class="stcdval">${carries.map(esch).join(' · ')}</span></div>`;
   if(window.WF&&WF.list&&WF.list.length){ const inh=(r.chainId&&WF.chains&&WF.chains[r.chainId])||WF.def||''; h+=`<div class="stcdrow"><span class="stcdlab">Workflow</span><span class="stcdval"><select onclick="event.stopPropagation()" onchange="event.stopPropagation();setStoreWorkflow(${r.id},this.value)" style="max-width:100%">${wfOptions(WF.stores[r.id]||'', inh?('Default · '+esch(inh)):'Default')}</select></span></div>`; }
   return h;
@@ -3945,7 +3943,7 @@ function ssRenderData(){
   const sccOpts=[['','—'],['confirmed','confirmed'],['probable','probable']];
   const scmOpts=[['','—'],['site','site · read the website'],['call','call · phone the store']];
   el.innerHTML=
-    `<div class="row" style="gap:7px;align-items:center;margin:2px 0 16px"><label style="display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;color:var(--text-body)"><input type="checkbox" id="set_msrp" ${SS.isMSRP?'checked':''}> First-party. sells at MSRP</label><span data-tip="We price the store's own shelf at retail. Not a reseller that may mark it up."></span></div>`
+    `<div class="row" style="gap:7px;align-items:center;margin:2px 0 16px"><label style="display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;color:var(--text-body)"><input type="checkbox" id="set_msrp" ${SS.isMSRP?'checked':''}> Sells at MSRP (the store's own shelf)</label><span data-tip="We price the store's own shelf at retail. Not a reseller that may mark it up."></span></div>`
     +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Stock-check method <span data-tip="How we check this chain's stock. Read their website (site) or phone the store (call)."></span></div>`
     +`<select id="set_scm" style="margin-bottom:16px">${scmOpts.map(([v,l])=>`<option value="${v}"${(SS.scm||'')===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
     +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Stock-check confidence <span data-tip="How sure we are it carries: confirmed (seen/called) vs probable (expected, unverified)."></span></div>`
@@ -3970,7 +3968,7 @@ function ssRenderCall(){
   const tog=(on,onclick)=>`<button type="button" onclick="${onclick}" style="width:48px;padding:5px;border-radius:8px;border:1px solid ${on?'var(--green)':'var(--border)'};background:${on?'rgba(74,222,128,.14)':'var(--surface-1)'};color:${on?'var(--green)':'var(--text-muted)'};font-weight:700;cursor:pointer;font-size:12.5px">${on?'ON':'OFF'}</button>`;
   el.innerHTML=
     `<div class="row" style="gap:26px;align-items:center;flex-wrap:wrap;margin:2px 0 4px">`
-    +`<div class="row" style="gap:9px;align-items:center"><input id="set_maxtalk" type="number" min="0" placeholder="45" value="${esch(SS.maxTalk)}" onchange="ssSetMaxTalk(this.value)" style="width:68px;padding:9px 10px;font-size:15px;text-align:center"><div style="font-weight:700;font-size:13px;line-height:1.15">Max talk <span data-tip="Hard cap on how long the caller talks to a person before wrapping up.ping up."></span><div class="meta" style="font-size:10.5px;font-weight:500">seconds</div></div></div>`
+    +`<div class="row" style="gap:9px;align-items:center"><input id="set_maxtalk" type="number" min="0" placeholder="45" value="${esch(SS.maxTalk)}" onchange="ssSetMaxTalk(this.value)" style="width:68px;padding:9px 10px;font-size:15px;text-align:center"><div style="font-weight:700;font-size:13px;line-height:1.15">Max talk <span data-tip="Hard cap on how long the caller talks to a person before wrapping up."></span><div class="meta" style="font-size:10.5px;font-weight:500">seconds</div></div></div>`
     +`<div class="row" style="gap:9px;align-items:flex-start"><input type="checkbox" id="set_vm" ${SS.vm?'checked':''} onchange="ssSetHangup(this.checked)" style="margin-top:2px"><div style="line-height:1.25"><div style="display:flex;align-items:center;gap:5px"><label for="set_vm" style="font-weight:700;font-size:13px;color:var(--text-body);cursor:pointer;text-transform:none;letter-spacing:0;display:inline;margin:0">Hang up</label><span data-tip="Voicemail or a closed / recorded line → hang up at once. No message, no charge."></span></div><div class="meta" style="font-size:10.5px;margin-top:1px">voicemail / closed</div></div></div>`
     +`</div>`
     +`<div class="setrow" style="justify-content:flex-end;gap:11px"><div class="setlbl">Phone this chain <span data-tip="ON = we call this chain's stores to check stock. OFF = listed, but never dialed."></span></div>${tog(SS.callTarget,'ssToggleCallTarget()')}</div>`
@@ -4195,7 +4193,7 @@ function sbLabels(){
 function sbSoftToggle(){ const d=document.getElementById('sb_soft_detail'), on=document.getElementById('sb_soft_on'); if(d&&on) d.style.display=on.checked?'':'none'; }
 async function loadSandbox(){
   const t=await api('/api/sandbox-tuning');
-  if(!t||t.error){ const s=document.getElementById('sb_status'); if(s) s.textContent = t&&t.error ? 'Test-bench agent not configured.' : ''; return; }
+  if(!t||t.error){ const s=document.getElementById('sb_status'); if(s) s.textContent = t&&t.error ? 'Voice tuning is not set up yet.' : ''; return; }
   const g=id=>document.getElementById(id);
   if(g('sb_speed')) g('sb_speed').value=t.speed;
   if(g('sb_stability')) g('sb_stability').value=t.stability;
@@ -4547,7 +4545,7 @@ async function addStatus(){
   const body={ key:label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,''), label,
     emoji:v('st_new_emoji')||'•', note:v('st_new_note'), tone:document.getElementById('st_new_tone').value };
   const r=await api('/api/statuses',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-  if(r&&r.id){ document.getElementById('st_msg').textContent='Added ✓. Note: DISPLAY is live, but detecting this situation on calls needs the Admin dev agent to wire the extraction (tell it what the staff says).';
+  if(r&&r.id){ document.getElementById('st_msg').textContent='Added. It shows up now. Reading it off real calls still has to be set up.';
     ['st_new_label','st_new_emoji','st_new_note'].forEach(x=>document.getElementById(x).value='');
     loadStatusReg(); }
   else document.getElementById('st_msg').textContent='Could not add'+(r&&r.error?': '+r.error:'');
@@ -5134,7 +5132,7 @@ const FLAG_GROUPS=[
     ['thrift','Thrift · treasure hunts','Members can check thrift stores'],
   ]},
   {title:'Consumer (free)',flags:[
-    ['smsAlerts','Text alerts (SMS)','ON once toll-free texting is approved · OFF = alert forms collect email only'],
+    ['smsAlerts','Text alerts (SMS)','Send customers a text, not only email'],
     ['kiosks','Kiosk intel + rewards','Crowd refresh times · earns a free check'],
     ['kioskReceipts','Kiosk-receipt rewards','A receipt earns a free check'],
     ['community','Community wall','The moderated I-scored photo wall'],
@@ -5308,7 +5306,7 @@ async function loadAlerts(){
   const chip=(on,label)=>`<span class="pill ${on?'g':''}" style="margin-right:8px;font-size:9.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;padding:5px 11px">● ${esch(label)} ${on?'live':'off'}</span>`;
   const sEl=document.getElementById('al_status');
   if(sEl) sEl.innerHTML=chip(dv.sms,'Text')+chip(dv.email,'Email')
-    +((dv.sms&&dv.email)?'':`<div style="font-size:11.5px;font-weight:600;color:rgba(245,158,11,.8);margin-top:9px">Stubbed sends never reach a customer</div>`);
+    +((dv.sms&&dv.email)?'':`<div style="font-size:11.5px;font-weight:600;color:rgba(245,158,11,.8);margin-top:9px">Test sends only. Nothing reaches a customer yet.</div>`);
   // Sends fold into ONE row (owner: the page said too much) — the log lives in its sheet.
   const roll=log.rollup||{};
   const total=Object.values(roll).reduce((a,b)=>a+b,0);
@@ -5387,7 +5385,7 @@ async function loadGrowth(){
     fld('gw_kreward','Kiosk reward (checks)',(POL.rewards||{}).kioskRefreshChecks)+
     fld('gw_referral','Referral reward (checks · both)',(POL.rewards||{}).referralChecks)+
     fld('gw_storeadd','Store-add reward (checks · on go-live)',(POL.rewards||{}).storeAddChecks)+
-    fld('gw_headstart','Finds headstart (min)',(POL.finds||{}).headstartMin)+
+    fld('gw_headstart','Members see finds first (minutes)',(POL.finds||{}).headstartMin)+
     fld('gw_ga4','GA4 measurement id',POL.ga4Id||'');
   // Memberships + PAYG bundles are OWNED BY PLANS (vt_plans → Stripe). Mirror them read-only here so
   // this page can never drift from the Plans tab again (owner 07-13: pricing must match Plans).
@@ -5457,7 +5455,7 @@ async function loadCallHealth(){
       +tile(a.total||0,'total rows')
       +tile(a.neverDialed||0,'never dialed')
       +tile(a.ownerOnlyTest||0,'rehearsal')
-      +tile(dup,'dup ingests',dup?'bad':'')
+      +tile(dup,'repeat imports',dup?'bad':'')
     +`</div>`
     +irow('First real call',fd(a.firstDialedCall))
     +irow('Latest call',fd(a.lastCall))
@@ -5472,7 +5470,7 @@ async function loadUsers(){
   const el=document.getElementById('users_list'); if(!el) return;
   { const sp=document.getElementById('users_src'); if(sp) sp.innerHTML=srcPicker('loadUsers'); }
   const d=await srcApi('/api/admin/users');
-  if(d&&d.error==='staging_auth'){ el.textContent='Staging sign-in needed — open staging.checkitforme.com once, then reload.'; return; }
+  if(d&&d.error==='staging_auth'){ el.textContent='Staging sign in needed. Open the staging site once, then reload.'; return; }
   if(d&&d.error==='staging_down'){ el.textContent='Could not reach the staging site.'; return; }
   if(!Array.isArray(d)){ el.textContent='Could not load users.'; return; }
   if(!d.length){ el.innerHTML=emptyState('key','#4ADE80','No signups yet','Accounts appear when a phone verifies'); return; }
@@ -5675,7 +5673,7 @@ async function importStoresJson(){
   let body; try{ body=JSON.parse(document.getElementById('gw_import').value); }catch(e){ msg.style.color='#ff6b6b'; msg.textContent='Invalid JSON'; return; }
   msg.style.color='var(--muted)'; msg.textContent='Importing…';
   const r=await api('/api/stores/import',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-  if(!r||r.error){ msg.style.color='#ff6b6b'; msg.textContent="Couldn't backfill the regions: "+((r&&r.error)||'unknown'); return; }
+  if(!r||r.error){ msg.style.color='#ff6b6b'; msg.textContent="Couldn't import the stores: "+((r&&r.error)||'unknown'); return; }
   msg.style.color='var(--green)'; msg.textContent=`✓ ${r.inserted||0} added · ${r.updated||0} updated · ${r.deactivated||0} removed${r.skipped?(' · '+r.skipped+' skipped'):''}`;
   loadRetailers&&loadRetailers();
 }
