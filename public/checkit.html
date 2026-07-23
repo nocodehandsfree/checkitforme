@@ -5595,10 +5595,26 @@ async function hangUpLive(){
   finalizeLive(LIVE_CID);
 }
 function muLawDecode(u){ u=~u&0xFF; const sign=u&0x80,exp=(u>>4)&7,man=u&0x0F; let s=((man<<3)+0x84)<<exp; s-=0x84; return sign?-s:s; }
+// Live-listen ringback. Before the store answers there is NO call audio to stream (the line is not
+// bridged until pickup), so the listen feed used to sit silent and then start mid call. We play a soft
+// ringback tone in the browser from the moment dialing starts, then stop it the instant real audio
+// arrives at answer, so it flows straight into the live call. Listeners only (needs the unlocked AudioContext).
+let RINGBACK=null;
+function startRingback(){ try{ if(!AUDIO_CTX||RINGBACK) return;
+  const g=AUDIO_CTX.createGain(); g.gain.value=0.0001; g.connect(AUDIO_CTX.destination);
+  const o1=AUDIO_CTX.createOscillator(), o2=AUDIO_CTX.createOscillator(); o1.type=o2.type='sine'; o1.frequency.value=440; o2.frequency.value=480;
+  o1.connect(g); o2.connect(g); o1.start(); o2.start();
+  const ring=()=>{ if(!RINGBACK||!AUDIO_CTX) return; const tt=AUDIO_CTX.currentTime; try{ g.gain.cancelScheduledValues(tt);
+    g.gain.setValueAtTime(0.0001,tt); g.gain.exponentialRampToValueAtTime(0.05,tt+0.06); g.gain.setValueAtTime(0.05,tt+2); g.gain.exponentialRampToValueAtTime(0.0001,tt+2.1); }catch(_){ } }; // US cadence: ~2s on, ~4s off
+  ring(); RINGBACK={g,o1,o2,iv:setInterval(ring,6000)};
+  }catch(_){ } }
+function stopRingback(){ try{ const r=RINGBACK; RINGBACK=null; if(!r) return; clearInterval(r.iv);
+  try{ const tt=AUDIO_CTX?AUDIO_CTX.currentTime:0; r.g.gain.cancelScheduledValues(tt); r.g.gain.setValueAtTime(0.0001,tt); }catch(_){ }
+  try{ r.o1.stop(); r.o2.stop(); }catch(_){ } }catch(_){ } }
 function playMu(b64,track){
   if(!AUDIO_CTX) return; track=track||'agent';
   if(AUDIO_CTX.state==='suspended'){ AUDIO_CTX.resume(); }  // keep it awake (iOS can re-suspend)
-  if(!AUDIO_LIVE){ AUDIO_LIVE=true; const ai=$('audio_ind'); if(ai)ai.style.display=''; }  // first frame -> show the LIVE badge
+  if(!AUDIO_LIVE){ AUDIO_LIVE=true; stopRingback(); const ai=$('audio_ind'); if(ai)ai.style.display=''; }  // first REAL frame -> kill the synthetic ring, show the LIVE badge
   const raw=atob(b64), n=raw.length; if(!n) return;
   const buf=AUDIO_CTX.createBuffer(1,n,8000), ch=buf.getChannelData(0);
   for(let i=0;i<n;i++) ch[i]=muLawDecode(raw.charCodeAt(i))/32768;
@@ -5610,7 +5626,7 @@ function playMu(b64,track){
   const at=AUDIO_NEXT[track];
   src.start(at); AUDIO_NEXT[track]=at+buf.duration;
 }
-function stopAudio(){ if(AUDIO_WS){AUDIO_WS.close();AUDIO_WS=null;} if(AUDIO_CTX){AUDIO_CTX.close().catch(()=>{});AUDIO_CTX=null;} AUDIO_NEXT={}; }
+function stopAudio(){ stopRingback(); if(AUDIO_WS){AUDIO_WS.close();AUDIO_WS=null;} if(AUDIO_CTX){AUDIO_CTX.close().catch(()=>{});AUDIO_CTX=null;} AUDIO_NEXT={}; }
 // Flight recorder for the live view (owner 07-17: the freeze only happens on the owner's phone).
 // Buffers a terse play-by-play and ships it every few seconds + at finalize, so a frozen call still
 // tells us exactly what this device saw. Zero effect on behavior; ~1 tiny request per 5s during a call.
@@ -5749,7 +5765,7 @@ async function startCheckLive(){
     if(!_id){ finalizeLive(_id); return; }
     appApi('/pub/live/'+encodeURIComponent(_id)).then(lv=>{ if(lv&&lv.live===false) finalizeLive(_id); }).catch(()=>{});
   }catch(e){} };
-  liveStage(2); // dialing → it's ringing
+  liveStage(2); startRingback(); // dialing to ringing: play the ring in the listen feed from the first second
   let cid=null;
   POLL=setInterval(async()=>{ try{
     if(secs>=210){ clearInterval(POLL);clearInterval(elT); finalizeLive(cid); return; }
