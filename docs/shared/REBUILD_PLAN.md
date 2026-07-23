@@ -57,3 +57,7 @@ block bad behavior. If a hook blocks you, do exactly what it says. Never work ar
 - "Done" requires verify-live output pasted. Every time. No exceptions.
 - If the owner is getting frustrated or you've failed twice: say "this needs a fresh
   chat," checkpoint, and hand off.
+- A session is not done until its work is ON STAGING. If you were forced onto a
+  claude/* branch (remote sessions do this), your final message must say so and
+  either merge to staging or hand the owner the PR link — never imply it's live.
+  verify-live proves code; this rule covers docs.
