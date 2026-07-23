@@ -1653,6 +1653,18 @@
 <script>
 async function clerkToken(){ return null; } // Clerk removed — /api/* auth is the admin_session cookie (sent automatically)
 const api = async (p, opts={}) => {
+  // Master Live/Staging switch (header): a GET honors CALL_SRC so EVERY data page reflects the switch,
+  // not only the few that call srcApi. Writes always hit THIS prod service (real operations only, never
+  // silently sent to staging). Staging shares the admin session cookie on .checkitforme.com, so it
+  // authenticates the same way; a staging 401 returns an error and never trips the admin auth gate.
+  const method = ((opts.method)||'GET').toUpperCase();
+  if(typeof CALL_SRC!=='undefined' && CALL_SRC==='staging' && method==='GET' && typeof p==='string' && p.indexOf('/api/')===0){
+    try{
+      const rs = await fetch(STG_ORIGIN+p, Object.assign({}, opts, {credentials:'include'}));
+      if(rs.status===401) return {error:'staging_auth'};
+      try{ return await rs.json(); }catch(_){ return {error:'bad_response'}; }
+    }catch(_){ return {error:'staging_down'}; }
+  }
   const t = await clerkToken();
   const headers = Object.assign({}, opts.headers||{}, t?{Authorization:'Bearer '+t}:{});
   const r = await fetch(p, Object.assign({}, opts, {headers}));
