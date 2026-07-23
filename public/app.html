@@ -1335,7 +1335,7 @@
       <input id="set_search" placeholder="Search chains…" oninput="filterChainPicker()" style="margin:16px 0 10px;font-size:14px;padding:12px 15px">
       <div class="k-filters" style="margin:0 0 4px">
         <select class="k-filter" id="set_frate" onchange="filterChainPicker()"><option value="">All ratings</option><option value="5">5 Best Chance</option><option value="4">4 Mostly Reliable</option><option value="3">3 Spotty</option><option value="2">2 Over MSRP</option><option value="1">1 Unknown</option></select>
-        <select class="k-filter" id="set_fmap" onchange="filterChainPicker()"><option value="">Mapped + not</option><option value="mapped">Mapped</option><option value="unmapped">Unmapped</option></select>
+        <select class="k-filter" id="set_ftype" onchange="filterChainPicker()"><option value="">All types</option></select>
       </div>
       <select id="set_chain" onchange="setPickChain()" style="display:none"><option value="">Select a chain</option></select>
       <div id="set_picker"><div class="empty">Loading…</div></div>
@@ -1843,7 +1843,7 @@ function showGroup(g, sectionId){
   document.querySelectorAll('#grpnav button').forEach(b=>b.classList.toggle('active',b.dataset.grp===g));
   const sn=document.getElementById('subnav2');
   if(sn){ sn.style.display = grp.tabs.length>1?'flex':'none';
-    sn.innerHTML=grp.tabs.map(t=>`<button data-sec="${t[0]}" onclick="showSection('${t[0]}')">${ICO(t[2],17)}<span style="vertical-align:middle">${esch(t[1])}</span>${t[0]==='feedback'?`<span class="fbbadge" style="display:${FB_OPEN>0?'inline-block':'none'};background:#F4D03F;color:#111;font-size:10px;font-weight:800;border-radius:20px;padding:1px 6px;margin-left:5px">${FB_OPEN>0?FB_OPEN:''}</span>`:''}</button>`).join('');
+    sn.innerHTML=grp.tabs.map(t=>`<button data-sec="${t[0]}" onclick="showSection('${t[0]}')">${ICO(t[2],17)}<span style="vertical-align:middle">${esch(t[1])}</span></button>`).join('');
     const setFade=()=>sn.classList.toggle('ovf', sn.scrollWidth - sn.scrollLeft > sn.clientWidth + 2); // fade the right edge while tabs are off-screen
     sn.onscroll=setFade; requestAnimationFrame(setFade); }
   if(g==='calls') refreshFbBadge();
@@ -2096,21 +2096,10 @@ async function loadTrainer(){
   const d=await api('/api/admin/trainer/list');
   if(!d||!Array.isArray(d.chains)){ ss.innerHTML=''; return; } // no phantom error — the list below still works
   const ch=d.chains, isMapped=c=>c.navStatus==='locked';
-  const mapped=ch.filter(isMapped).length, total=ch.length||1, pct=Math.round(mapped/total*100);
-  // Per store-type breakdown, biggest categories first.
-  const byType=new Map();
-  ch.forEach(c=>{ const t=c.type||'Other'; const e=byType.get(t)||{n:0,m:0}; e.n++; if(isMapped(c)) e.m++; byType.set(t,e); });
-  const cats=[...byType.entries()].sort((a,b)=>b[1].n-a[1].n);
-  const catRow=([t,e])=>{ const done=e.m===e.n; return `<div style="display:flex;align-items:center;gap:12px;padding:7px 0">
-      <span style="flex:0 0 88px;font-size:12.5px;font-weight:600;color:#CDCDD8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esch(t)}</span>
-      <span style="flex:1;min-width:0">${trBar(e.m,e.n,5)}</span>
-      <span style="flex:0 0 auto;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;color:${done?'var(--green)':'#8A8A96'}">${e.m}/${e.n}</span>
-    </div>`; };
-  ss.innerHTML=`<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:9px">
-      <span style="font-size:13px;font-weight:700;color:#CDCDD8">${mapped} of ${ch.length} chains mapped</span>
-      <span style="font-size:14px;font-weight:800;color:var(--green)">${pct}%</span></div>
-    ${trBar(mapped,total,6)}
-    <div style="margin-top:14px">${cats.map(catRow).join('')}</div>`;
+  // Owner 07-23: one number only, the percent of STORES covered by a mapped chain. No stat wall.
+  let sMap=0,sTot=0; ch.forEach(c=>{ const n=Number((c.stores&&c.stores.n)||c.callable||0); sTot+=n; if(isMapped(c)) sMap+=n; });
+  const spct=sTot?Math.round(sMap/sTot*100):0;
+  ss.innerHTML=`<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px"><span style="font-size:14px;font-weight:600;color:#CDCDD8">Stores mapped</span><span style="font-size:15px;font-weight:800;color:var(--green);font-variant-numeric:tabular-nums">${spct}%</span></div>${trBar(sMap,sTot||1,6)}`;
   renderABCD(ch);
 }
 // ABCD — how a call flows: Alpha (keypad) / Bravo (voice) / Charlie (live agent) / Delta (recorded clips).
@@ -3908,14 +3897,16 @@ function buildChainPicker(){
     const locked=ch.navStatus==='locked';
     const nStores=Number((ch.stores&&ch.stores.n)||ch.callable||0);
     // Color with intent: mapped is the NORM (quiet gray) · unmapped is the exception that needs routing (amber).
-    const meta=[nStores?nStores+' store'+(nStores===1?'':'s'):null, ch.muted?'muted':null,
-      locked?'<span style="color:#8A8A96">mapped</span>':'<span style="color:#F59E0B;font-weight:700">unmapped</span>'].filter(Boolean).join(' · ');
-    return `<div class="pickrow${String(ch.id)===cur?' on':''}" data-id="${ch.id}" data-name="${esch((ch.name||'').toLowerCase())}" data-tier="${ch.tier??''}" data-mapped="${locked?1:0}" onclick="pickChainRow(${ch.id})"${ch.muted?' style="opacity:.5"':''}>
-      <span class="setlogo">${logTile(ch)}</span>
+    const meta=[nStores?nStores+' store'+(nStores===1?'':'s'):null, ch.muted?'muted':null].filter(Boolean).join(' · ');
+    return `<div class="pickrow${String(ch.id)===cur?' on':''}" data-id="${ch.id}" data-name="${esch((ch.name||'').toLowerCase())}" data-tier="${ch.tier??''}" data-type="${esch((ch.type||'').toLowerCase())}" data-mapped="${locked?1:0}" onclick="pickChainRow(${ch.id})"${ch.muted?' style="opacity:.5"':''}>
+      <span class="setlogo">${logoTile(ch)}</span>
       <span style="flex:1;min-width:0"><span style="display:block;color:#fff;font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esch(ch.name)}</span>
       <span style="display:block;font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px">${meta}</span></span>
       ${chip(ch.tier)}</div>`;
   }).join('')||'<div class="empty" style="padding:16px">No chains loaded.</div>';
+  // Populate the store-type filter from the types actually present (Retail / Thrift / Hobby / Kiosk).
+  const types=[...new Set((CHAINS||[]).map(c=>c.type).filter(Boolean))].sort();
+  const tf=document.getElementById('set_ftype'); if(tf){ const cur=tf.value; tf.innerHTML='<option value="">All types</option>'+types.map(t=>`<option value="${esch(String(t).toLowerCase())}">${esch(t)}</option>`).join(''); if([...tf.options].some(o=>o.value===cur)) tf.value=cur; }
   filterChainPicker();
 }
 // Comp 2e: long list ends in a Show-more key, never a wall of 131 rows.
@@ -3925,13 +3916,13 @@ function filterChainPicker(){
   const el=document.getElementById('set_picker'); if(!el) return;
   const raw=(document.getElementById('set_search')||{}).value||''; const norm=s=>(s||'').toLowerCase().replace(/[^a-z0-9]+/g,''); const q=norm(raw);
   const subseq=(hay)=>{ let i=0; for(let k=0;k<hay.length&&i<q.length;k++) if(hay[k]===q[i]) i++; return i===q.length; };
-  const fmap=(document.getElementById('set_fmap')||{}).value||''; const frate=(document.getElementById('set_frate')||{}).value||'';
+  const ftype=(document.getElementById('set_ftype')||{}).value||''; const frate=(document.getElementById('set_frate')||{}).value||'';
   let shown=0, hidden=0;
   el.querySelectorAll('.pickrow').forEach(r=>{
-    const name=norm(r.getAttribute('data-name')), tier=r.getAttribute('data-tier'), mapped=r.getAttribute('data-mapped')==='1';
+    const name=norm(r.getAttribute('data-name')), tier=r.getAttribute('data-tier'), type=r.getAttribute('data-type')||'';
     let ok=true;
     if(q && !(name.includes(q)||subseq(name))) ok=false;
-    if(fmap==='mapped'&&!mapped) ok=false; if(fmap==='unmapped'&&mapped) ok=false;
+    if(ftype && type!==ftype) ok=false;
     if(frate&&String(tier)!==String(frate)) ok=false;
     if(ok&&shown>=CH_LIMIT){ hidden++; ok=false; } // beyond the fold: Show-more reveals (comp 2e)
     r.style.display=ok?'':'none'; if(ok) shown++;
