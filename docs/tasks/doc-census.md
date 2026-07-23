@@ -7,7 +7,7 @@ docs already in the tree.
 **Done when:** A complete one-line-per-doc keep/fix/archive list is produced and owner-approved; the
 approved moves/fixes are done.
 **Lane:** Ops
-**Status:** list produced (2026-07-23) — awaiting owner go on the moves/fixes
+**Status:** owner-approved + executed (2026-07-23) — 10 archived, 5/8 fixes done, 3 routed to lanes
 
 **Finding (full record: `docs/team/ops/doc-census-2026-07-23.md`):**
 158 `.md` outside `docs/archive/`: **~140 keep, 8 fix, 10 archive.** The full `docs/tasks/` queue and
@@ -17,5 +17,8 @@ destructive; awaiting owner go.
 
 **Verify-live output (paste on close — a task without it is NOT closed):**
 ```
-(pending owner approval to archive the 10 + fix the 8)
+2026-07-23: 10 docs → docs/archive/ (git renames). 5 stale docs fixed in-tree
+(STYLE_GUIDE, design/README, comps/README, build-on-brand SKILL, CHEAP_NAV).
+3 held for lane context (API_CONTRACT auth, specs/README index, alerts build-spec).
+Record: docs/team/ops/doc-census-2026-07-23.md. (verify-live.sh N/A — docs-only.)
 ```

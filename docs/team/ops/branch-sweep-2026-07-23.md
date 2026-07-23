@@ -56,6 +56,11 @@ webbie-landing-pages-lzpq0l · webbie-landing-share-rebuild-345ikb · webbie-web
 ## Open PRs to close when their branches die
 #88, #86, #85, #83, #78, #74 — deleting the head branch closes each.
 
-## Blocked on owner
-Deleting remote branches + closing PRs is owner-approved (per the task). Awaiting the go.
-Recommended: re-land PR #74's free-credits button first (no work lost), then delete all 31.
+## Status (owner approved 2026-07-23) — deletion BLOCKED by environment
+Owner approved killing the branches. **But `git push --delete` returns 403 — the egress policy in
+this session blocks remote branch deletion, and there is no GitHub API tool exposed for it.** So the
+31 branches cannot be deleted from here; this must be done from the owner's side (GitHub UI or a
+session where the policy allows it). The recommendation stands: keep `admin-standup-handoff-uipqja`
+(PR #74) until its free-credits button is re-landed, then delete all 31.
+Note: PR #74's button work belongs to the active Admin rebuild (`claude/admin-design-system-spec-mgthjd`,
+opened today) to fold in — no safe parallel path from here.

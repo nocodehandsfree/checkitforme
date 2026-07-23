@@ -1,12 +1,13 @@
 # Check — Style Guide
 
 The single visual source of truth for **checkitforme.com** ("Check") and its admin/vertical
-surfaces — the **elevated / soft-depth** skin the live site runs. Every spec here is extracted 1:1
-from the approved master boards in this folder: **`comps/WEBSITE_COMPS.dc.html`** (the site) and
-**`comps/ADMIN_COMPS.dc.html`** (the admin) — this guide and those boards reference each other; the
-guide is the words for what the boards show. Standing rule (owner): every NEW admin feature gets
-comped in `ADMIN_COMPS.dc.html` FIRST, then built. The old self-contained bundle `NEW_CHECK_COMPS.html` was a generated duplicate and is
-retired to `docs/archive/`.
+surfaces — the **elevated / soft-depth** skin the live site runs. For the **consumer site** (frozen
+post-rebuild) the reference is the LIVE SITE itself, snapshotted in `comps/../truth/`. For the
+**admin**, specs here are extracted 1:1 from **`comps/ADMIN_COMPS.dc.html`** — this guide and that
+board reference each other; the guide is the words for what the board shows. Standing rule (owner):
+every NEW admin feature gets comped in `ADMIN_COMPS.dc.html` FIRST, then built. The old consumer
+boards (`WEBSITE_COMPS.dc.html`, `MY_ZONES_COMP.dc.html`, `NEW_CHECK_COMPS.html`) are retired to
+`docs/archive/`.
 
 **This doc is one of three that reference each other — keep them in sync:**
 - **Look** (this file): type, color, spacing, the raised/carved depth system, components.
@@ -15,10 +16,10 @@ retired to `docs/archive/`.
 - **Brand mark + colors**: `docs/design/brand/BRAND.md`.
 - **Live-vs-comp proof** (screenshots): `docs/specs/design-gap/inventory.html`.
 
-**What "live" means here.** The elevated skin renders under `?skin=v2` and is being promoted to the
-default; a "v3" you may hear about is a service-worker/cache-version bump (the fix for stale v1
-sticking through Cloudflare), **not** a new skin. When this doc and the live `?skin=v2` site
-disagree, fix whichever is wrong and note it. Open reconciliation items are tracked as votable
+**What "live" means here.** The elevated skin is the default the live site now renders
+unconditionally (the old `?skin=v2` gate is retired); a "v3" you may hear about is a
+service-worker/cache-version bump (the fix for stale v1 sticking through Cloudflare), **not** a new
+skin. When this doc and the live site disagree, fix whichever is wrong and note it. Open reconciliation items are tracked as votable
 bullets in `docs/team/design/checkpoint.md`.
 
 ---
@@ -288,5 +289,5 @@ tile/banner 16 · poll/day key 11–14 · selection ring = inner + 2 · logo slo
 
 ---
 
-_Owned by Design. Screens: `comps/WEBSITE_COMPS.dc.html` + `comps/ADMIN_COMPS.dc.html`. Words:
-`docs/design/copy/COPY_STYLE_GUIDE.md`._
+_Owned by Design. Screens: consumer site → `comps/../truth/` snapshots; admin → `comps/ADMIN_COMPS.dc.html`.
+Words: `docs/design/copy/COPY_STYLE_GUIDE.md`._

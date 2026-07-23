@@ -8,20 +8,26 @@ The rest of the KEEPs (manuals, guides, checkpoints, active specs, data/logo doc
 Below are only the docs that need action.
 
 ## FIX (8) — accurate mostly, one stale section each
-One theme drives half of these: the 07-22 rebuild **archived the consumer comp boards**
+One theme drove half of these: the 07-22 rebuild **archived the consumer comp boards**
 (`WEBSITE_COMPS`, `MY_ZONES_COMP`) and **retired the `?skin=v2` gate** (staging now sets
-`data-skin='v2'` unconditionally). Four docs still name those retired systems as live.
+`data-skin='v2'` unconditionally). Docs still naming those retired systems as live were synced to
+the rebuild truth already stated in `comps/README.md`.
 
-| Doc | Stale section |
+**DONE (5) — synced to established rebuild truth (this commit):**
+| Doc | Fix applied |
 |---|---|
-| docs/design/STYLE_GUIDE.md | `?skin=v2` framing + WEBSITE_COMPS master-board refs |
-| docs/design/README.md | lists archived WEBSITE_COMPS as active; cites retired `?skin=v2` |
-| docs/design/comps/README.md | "Other boards" resurrects archived MY_ZONES_COMP (self-contradicts) |
-| .claude/skills/build-on-brand/SKILL.md | routes site work to archived WEBSITE_COMPS; wrong admin-copy-guide line |
-| docs/shared/API_CONTRACT.md | auth section cites Clerk; real system is phone/SMS JWT + `x-admin-token` |
-| docs/finance/CHEAP_NAV_ARCHITECTURE.md | status section stale — connect-on-human is now live |
-| docs/specs/README.md | index lists only 3 of 18 spec folders |
-| docs/specs/alerts/build-spec.md | mostly shipped (07-15 audit); only SMS caps remain |
+| docs/design/STYLE_GUIDE.md | consumer ref → live-site `truth/` snapshots; `?skin=v2` → the shipped default skin; retired-board list corrected (3 places) |
+| docs/design/README.md | dropped archived WEBSITE_COMPS as active board; removed `?skin=v2` phrasing |
+| docs/design/comps/README.md | removed the "Other boards" section resurrecting archived MY_ZONES_COMP |
+| .claude/skills/build-on-brand/SKILL.md | site → `truth/` snapshots; drift note updated; noted COPY_STYLE_GUIDE_ADMIN now exists |
+| docs/finance/CHEAP_NAV_ARCHITECTURE.md | `connectOnHuman` marked SHIPPED (live cheap path today) |
+
+**REMAINING (3) — need their lane's context, not an Ops freestyle:**
+| Doc | Why held | Route |
+|---|---|---|
+| docs/shared/API_CONTRACT.md | doc cites Clerk auth; server.ts uses our own phone-session JWT (`/app`) + `x-admin-token`/admin cookie (`/api`) — but 21 `src/` files still reference Clerk, so the true state is unclear | whoever owns auth (Ops/DD) — verify Clerk is retired before rewriting |
+| docs/specs/README.md | index lists 3 of 18 spec folders; accurate rewrite needs each spec's live status | spec owners |
+| docs/specs/alerts/build-spec.md | mostly shipped per 07-15 audit; only SMS caps remain | Webbie/alerts owner |
 
 ## ARCHIVE (10) — superseded / consumed / dated snapshots → move to docs/archive/
 | Doc | Why |
@@ -43,7 +49,8 @@ All manuals (`docs/shared/*`, role manuals), copy + brand guides, active specs
 spec/v3/panel, call-metrics, design-gap, logo-resolver, safari-tint, email-design-brief),
 all data + logo docs, all current role checkpoints/handoffs, and the full `docs/tasks/` queue.
 
-## Blocked on owner
-Awaiting the go to (a) archive the 10, (b) fix the 8. Both are safe, additive doc hygiene.
-`safari-tint` / `design-gap` / `call-metrics` briefs are old but have no shipped/superseded
-signal — kept as-is; flag if you want them archived too.
+## Status (owner approved 2026-07-23)
+- Archived the 10 → `docs/archive/` (git-tracked renames; recoverable).
+- Fixed 5 of 8 stale docs (see table above). 3 held for their lane's context.
+- `safari-tint` / `design-gap` / `call-metrics` briefs are old but have no shipped/superseded
+  signal — kept as-is; flag if you want them archived too.

@@ -37,12 +37,7 @@ task + the `.unlock` flow is the only path, and the truth snapshot is re-taken a
   browser. Its optional `./support.js` runtime comes from the design pipeline; the board renders
   fine without it.
 
-## Other boards
+The pill + zones rules the old `MY_ZONES_COMP` board once held now live in **`../STYLE_GUIDE.md`**
+(§5.4 pill · §5.17 zones); the board itself is retired to `docs/archive/` (see the rebuild note above).
 
-**`MY_ZONES_COMP.dc.html`** — the owner's 07-11 My Zones board (self-contained; open in a browser).
-It locks the **bottom-notification pill** (thin glowing outline, gray, fragment copy — no periods or
-commas) and the **zones** screens (list · basket bar · check-this-zone confirm · actions sheet). The
-words for both are in **`../STYLE_GUIDE.md` §5.4 (pill) and §5.17 (zones)**. Shipped to staging
-2026-07-11; fold these screens into the website board on the next board regen.
-
-(The old self-contained bundle `NEW_CHECK_COMPS.html` stays retired in `docs/archive/`.)
+(The old self-contained bundle `NEW_CHECK_COMPS.html` also stays retired in `docs/archive/`.)
