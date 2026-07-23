@@ -2065,6 +2065,14 @@ html[data-skin="v2"] #authOverlay.on .modal,html[data-skin="v2"] #againOverlay.o
 html[data-skin="v2"] #authOverlay .modal>.x,html[data-skin="v2"] #againOverlay .modal>.x,html[data-skin="v2"] #cidOverlay .modal>.x,html[data-skin="v2"] #kcallOverlay .modal>.x,html[data-skin="v2"] #leadOverlay .modal>.x,html[data-skin="v2"] #paidOverlay .modal>.x,html[data-skin="v2"] #scoreOverlay .modal>.x,html[data-skin="v2"] #shareOverlay .modal>.x,html[data-skin="v2"] #waitlistOverlay .modal>.x{display:none!important}
 
 html[data-skin="v2"] #buyOverlay .modal{overflow-y:auto;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
+  /* Continue dock: sticks to the foot of the scrolling buy sheet so Continue is never below the fold.
+     Same dock look as the zones basket the owner likes (owner 07-23). */
+  html[data-skin="v2"] #buyOverlay .buydock{position:sticky;bottom:0;z-index:6;display:flex;align-items:center;gap:12px;margin:16px 0 0;padding:14px 0 6px;background:linear-gradient(180deg,rgba(38,38,43,0) 0%,#26262B 26%)}
+  html[data-skin="v2"] #buyOverlay .buydock .cta{margin:0;flex:1;width:auto}
+  html[data-skin="v2"] #buyOverlay .buydock-plan{flex:0 0 auto;max-width:42%;font-size:12.5px;font-weight:600;color:#8A8A96;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  html[data-skin="v2"] #buyOverlay .buydock-plan b{color:#fff;font-weight:800}
+  html[data-skin="v2"] .billcyc-in{margin:0!important;padding:4px}
+  html[data-skin="v2"] .billcyc-in button{padding:7px 12px;font-size:12px;flex:0 0 auto}
 /* 6c CHECKOUT (v2) — branded on-site Stripe Elements page. Bottom sheet, comp tokens: raised order
    card, carved "or pay with card" divider, Payment Element in the well, green SUBSCRIBE ring capsule. */
 html[data-skin="v2"] #coOverlay{align-items:flex-end;padding:0}
@@ -2437,9 +2445,9 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     <span class="x" onclick="closeBuy()">×</span>
     <h3 style="text-align:center" id="buy_title">Get more checks</h3>
     <div class="meta" id="buy_lead" style="text-align:center;margin:-4px 0 14px;display:none"></div>
-    <div class="ho-toggle" id="billcycle" style="margin-bottom:12px">
-      <button class="on" onclick="setCycle(false,this)" data-i18n="plan.monthly">Monthly</button>
-      <button onclick="setCycle(true,this)" data-i18n="plan.annual">Annual · save 17%</button>
+    <div class="ho-toggle billcyc" id="billcycle" style="margin-bottom:12px">
+      <button class="on" data-an="false" onclick="setCycle(false,this)" data-i18n="plan.monthly">Monthly</button>
+      <button data-an="true" onclick="setCycle(true,this)" data-i18n="plan.annual">Annual · save 17%</button>
     </div>
     <div id="buy_plans"></div>
     <div class="meta" id="buy_note" style="text-align:center;margin-top:12px"></div>
@@ -2931,6 +2939,7 @@ const I18N={ es:{
   'acct.perweek':'Verificaciones por semana','acct.hist':'Historial','acct.8wks':'hace 8 sem','acct.thisweek':'esta semana','acct.last':'Últimas verificaciones','acct.none':'Aún no hay verificaciones.',
   'acct.earn.lead':'Ayuda a la cacería. Te llenamos de verificaciones gratis.',
   'buy6b.title':'Cada función.<br>Elige tus verificaciones.','buy6b.grid':'Todo plan incluye','buy6b.gridsel':'Este plan incluye','buy6b.cta':'Continuar',
+  'buy6b.titleplans':'Planes Check+ Premium','buy6b.titlepayg':'Paga por verificación','plan.mo3':'Mensual','plan.an3':'Anual',
   'buy6b.f1':'Productos exactos','buy6b.f2':'Barridos de zona','buy6b.f3':'Alertas de reabastecimiento','buy6b.f4':'Verificaciones programadas','buy6b.f5':'Cualquier ciudad','buy6b.f6':'Apartados en tienda','buy6b.f7':'Tu voz','buy6b.f8':'Cacerías thrift',
   'up6a.title':'Esa fue tu verificación gratis.<br>¿Listo para lo bueno?','up6a.cta':'Ver planes Check+','up6a.f1':'Verifica cualquier ciudad de EE. UU.','up6a.f2':'Alertas de reabastecimiento','up6a.f3':'Verifica varias tiendas a la vez',
   'up6d.title':'Ya estás dentro.','up6d.live':'Ya activo en tu cuenta','up6d.more':'+ 5 más en Administrar plan ›','up6d.moreN':'+ {n} más en Administrar plan ›','up6d.cta':'Haz una verificación','up6d.note':'Administra tu plan cuando quieras en Mis verificaciones.',
@@ -8154,7 +8163,7 @@ function paygBundles(){
   if(POLICY.packs&&POLICY.packs.length) return POLICY.packs.map(p=>({checks:p.credits,cents:p.cents,credits:p.credits,key:p.key}));
   return [{checks:10,cents:990,credits:10,key:'payg:10'},{checks:25,cents:1999,credits:25,key:'payg:25'},{checks:50,cents:3499,credits:50,key:'payg:50'}];
 }
-function setCycle(annual,btn){ BILLING_ANNUAL=annual; document.querySelectorAll('#billcycle button').forEach(b=>b.classList.toggle('on',b===btn)); renderBuyPlans(); }
+function setCycle(annual,btn){ BILLING_ANNUAL=!!annual; document.querySelectorAll('.billcyc button').forEach(b=>b.classList.toggle('on', b.dataset.an===String(!!annual))); renderBuyPlans(); renderBuyDock(); }
 function tierPrice(tr){ return BILLING_ANNUAL?money(tr.annualCents||Math.round(tr.cents*12*0.83/100)*100):money(tr.cents); }
 // The subscriber's CURRENT plan label — derived from ACCOUNT.subTier + live tiers (never hardcoded, so a
 // Collector/Hunter/Operator member sees their real tier + price, not "Family · $9.99").
@@ -8163,14 +8172,40 @@ function curTierLabel(){
   const ti=(typeof tiers==='function'?tiers():[]).find(x=>x.key===st);
   return ti ? esc(ti.name)+' · '+tierPrice(ti)+(BILLING_ANNUAL?t('plan.yr','/yr'):t('plan.mo','/mo')) : t('plan.member','Member');
 }
+// Header (logo + title) follows the tab: Plans shows Check+ (with the plus); Pay-as-you-go shows plain
+// Check (no plus, since it isn't a Check+ product) and hides the "every plan gets" feature grid (owner 07-23).
+function applyBuyHeader(){
+  if(!isV2()) return;
+  const packs=(BUY_MODE==='packs');
+  const t3=$('buy_title'); if(t3) t3.innerHTML = packs ? t('buy6b.titlepayg','Pay by the Check') : t('buy6b.titleplans','Check+ Premium Plans');
+  const lg=$('buy6blogo'); if(lg) lg.innerHTML = `<img src="${packs?'/logos/brand/check.png':'/logos/brand/checkplus.png'}" alt="${packs?'Check':'Check+'}" style="height:26px;width:auto">`;
+  const g=$('buy_grid'); if(g) g.style.display = packs ? 'none' : '';
+}
+// The Continue dock at the foot of the buy sheet: shows what's ringed (plan or pack) and slides up.
+function renderBuyDock(){
+  const dock=$('buyDock'); if(!dock) return;
+  const plan=$('buyDockPlan');
+  if(BUY_MODE==='packs'){ const packs=paygBundles(); const pk=packs[Math.max(0,Math.min(packs.length-1,PACK_IDX))];
+    if(plan&&pk) plan.innerHTML=`<b>${pk.checks} ${t('plan.checks','checks')}</b> · ${money(pk.cents)}`; }
+  else { const _t=tiers(); const ti=_t.find(x=>x.key===SEL_TIER_KEY)||_t.find(x=>x.key===defaultTierKey())||_t[0];
+    if(plan&&ti){ const per=BILLING_ANNUAL?t('plan.yr','/yr'):t('plan.mo','/mo'); plan.innerHTML=`<b>${esc(ti.name)}</b> · ${tierPrice(ti)}${per}`; } }
+  dock.classList.add('up');
+}
 function renderBuyPlans(){
   const member=!!(ACCOUNT&&ACCOUNT.subscription==='active'), comp=!!(ACCOUNT&&ACCOUNT.comp);
   const per=BILLING_ANNUAL?t('plan.yr','/yr'):t('plan.mo','/mo');
+  // The monthly/annual toggle moves next to the "You're on" line for members (owner 07-23), so hide the
+  // tall standalone one for them; keep it for new members (no plan line yet); always hide it under packs.
+  const _bc=$('billcycle'); if(_bc) _bc.style.display=(BUY_MODE==='packs' || ((member||comp)&&isV2()))?'none':'';
   let html='';
   if((member||comp)&&isV2()){
-    // Owner 2026-07-02: this sheet SELLS — the pill + stat tiles on My-checks already tell you your
-    // plan. Just a small note here, then the upgrade options.
-    html+=`<div style="margin:0 0 12px;text-align:center;font-size:12.5px;font-weight:600;color:#8A8A96">${t('plan.on',"You're on")} <b style="color:#FFF">${comp?t('plan.founder',"Founder. Unlimited."):curTierLabel()}</b> <span style="color:#4ADE80">✓</span></div>`;
+    // The plan you're on sits in a centered row between the feature grid and the plan list, with the
+    // monthly/annual toggle on its right (owner 07-23) so the tall full-width toggle stops eating the space
+    // above the fold. Toggle is hidden under pay-as-you-go (one-time packs have no billing cycle).
+    html+=`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:18px 0 16px">
+      <div style="min-width:0;font-size:12.5px;font-weight:600;color:#8A8A96">${t('plan.on',"You're on")} <b style="color:#FFF">${comp?t('plan.founder',"Founder. Unlimited."):curTierLabel()}</b> <span style="color:#4ADE80">✓</span></div>
+      ${BUY_MODE==='packs'?'':`<div class="ho-toggle billcyc billcyc-in" style="flex:0 0 auto"><button class="${!BILLING_ANNUAL?'on':''}" data-an="false" onclick="setCycle(false,this)">${t('plan.mo3','Monthly')}</button><button class="${BILLING_ANNUAL?'on':''}" data-an="true" onclick="setCycle(true,this)">${t('plan.an3','Annual')}</button></div>`}
+    </div>`;
   }
   else if(member||comp){
     // The plan dashboard: what you're on, what you've used, where to grow.
@@ -8217,16 +8252,17 @@ let SEL_TIER_KEY=null, BUY_MODE='plans', PACK_IDX=1;
 // One source of truth for "which tier is selected when you haven't tapped anything" (items 26-27):
 // your CURRENT plan if you're on one, else the featured tier. Continue buys exactly what's ringed.
 function defaultTierKey(){ const _t=tiers(); const cur=ACCOUNT&&ACCOUNT.subTier; if(cur&&_t.some(x=>x.key===cur)) return cur; const f=_t.find(x=>x.featured); return (f||_t[0]||{}).key||null; }
-function setBuyMode(m,btn){ BUY_MODE=m; document.querySelectorAll('#buymode button').forEach(b=>b.classList.toggle('on',b===btn)); const bc=$('billcycle'); if(bc) bc.style.display=(m==='packs'?'none':''); renderBuyPlans(); }
+function setBuyMode(m,btn){ BUY_MODE=m; document.querySelectorAll('#buymode button').forEach(b=>b.classList.toggle('on',b===btn)); applyBuyHeader(); renderBuyPlans(); renderBuyDock(); }
 function setPackIdx(i){ const packs=paygBundles(); PACK_IDX=Math.max(0,Math.min(packs.length-1, i|0));
   const pk=packs[PACK_IDX]; if(!pk) return;
   const rng=$('payg_rng'); if(rng){ if(+rng.value!==PACK_IDX) rng.value=PACK_IDX; rng.style.setProperty('--fill',(packs.length>1?(PACK_IDX/(packs.length-1)*100):100)+'%'); } // green fill tracks the thumb edge-to-edge
   const n=$('payg_n'), pr=$('payg_p'), per=$('payg_per');
   if(n) n.textContent=pk.checks+' '+t('plan.checks','checks');
   if(pr) pr.textContent=money(pk.cents);
-  if(per) per.textContent=t('plan.percheck','about')+' $'+(pk.cents/pk.checks/100).toFixed(2)+' '+t('plan.percheck2','per check')+' · '+t('plan.noexpire','checks never expire'); }
+  if(per) per.textContent=t('plan.percheck','about')+' $'+(pk.cents/pk.checks/100).toFixed(2)+' '+t('plan.percheck2','per check')+' · '+t('plan.noexpire','checks never expire');
+  renderBuyDock(); }
 function pickTier(k){
-  if(isV2()){ SEL_TIER_KEY=k; renderBuyPlans(); renderBuyGrid(); return; } // 6b comp: tap selects (ring moves + the services grid re-paints for the ringed tier), CONTINUE buys
+  if(isV2()){ SEL_TIER_KEY=k; renderBuyPlans(); renderBuyGrid(); renderBuyDock(); return; } // 6b comp: tap selects (ring moves + grid + dock re-paint for the ringed tier), CONTINUE in the dock buys
   buyContinue();
 }
 function buyContinue(){
@@ -8273,25 +8309,27 @@ function openBuy(reason){
   // icon TILES (comp SVGs verbatim), tier click SELECTS, CONTINUE capsule buys. Copy stays queued;
   // tiles/prices runtime-POLICY.
   if(isV2()){ try{
-    $('buy_title').innerHTML=t('buy6b.title','Every feature.<br>Pick your checks.');
     lead.style.display='none';
     let lg=$('buy6blogo');
     if(!lg){ lg=document.createElement('div'); lg.id='buy6blogo'; lg.className='buy6b-logo';
       const h3=$('buy_title'); h3.parentElement.insertBefore(lg,h3); }
-    lg.innerHTML=`<img src="/logos/brand/checkplus.png" alt="Check+" style="height:26px;width:auto">`;
     if(!$('buy_grid')){ const g=document.createElement('div'); g.id='buy_grid';
       const bc=$('billcycle'); bc.parentElement.insertBefore(g,bc); }
     renderBuyGrid();
-    let cta=$('buy_cta');
-    if(!cta){ cta=document.createElement('button'); cta.id='buy_cta'; cta.type='button'; cta.onclick=()=>buyContinue();
-      const note=$('buy_note'); note.parentElement.insertBefore(cta,note); }
-    cta.innerHTML=`<span>${t('buy6b.cta','Continue')}</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>`;
+    // Continue lives in a slide-up dock at the foot of the sheet (the zones-basket feel the owner likes)
+    // so it is never below the fold. It shows the plan you have ringed and buys exactly that (owner 07-23).
+    let dock=$('buyDock');
+    if(!dock){ dock=document.createElement('div'); dock.id='buyDock'; dock.className='buydock';
+      dock.innerHTML=`<div class="buydock-plan" id="buyDockPlan"></div><button class="cta" id="buy_cta" type="button" onclick="buyContinue()"><span>${t('buy6b.cta','Continue')}</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>`;
+      const note=$('buy_note'); note.parentElement.insertBefore(dock,note); }
+    applyBuyHeader();
+    renderBuyDock();
   }catch(_){} }
   setI('buy_note', `${ICO.lock('#7a7a88')} ${t('buy.secure2','Secure checkout via Stripe')}`);
   track('buy_open',{reason:reason||'manual'});
   $('buyOverlay').classList.add('on'); sheetPush('buy');
   // Live plans may not be cached yet on first open — fetch, then re-render tiles + grid in place.
-  if(!PLANS){ loadPlans().then(p=>{ if(p&&$('buyOverlay').classList.contains('on')){ try{ SEL_TIER_KEY=defaultTierKey(); renderBuyPlans(); if(isV2()) renderBuyGrid(); }catch(_){ } } }); } // live tiers may rename keys — re-derive the default
+  if(!PLANS){ loadPlans().then(p=>{ if(p&&$('buyOverlay').classList.contains('on')){ try{ SEL_TIER_KEY=defaultTierKey(); renderBuyPlans(); if(isV2()){ renderBuyGrid(); applyBuyHeader(); renderBuyDock(); } }catch(_){ } } }); } // live tiers may rename keys, so re-derive the default
 }
 function closeBuy(){ const m=document.querySelector('#buyOverlay .modal'); if(m){ m.style.transform=''; m.style.transition=''; } $('buyOverlay').classList.remove('on'); acctReturn(); }
 
