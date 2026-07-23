@@ -1,8 +1,9 @@
-# Voice lane — HANDOFF (everything the phone tech knows, 2026-07-11)
+# VOICE-CALLS — handoff (stable charter: the phone/call system)
 
-**What this is · who it's for:** the boot doc for the new Voice lane. The phone/call technology was
-Admin's (Addie's) sub-lane until tonight; this file is the complete transfer. Read this + your
-checkpoint.md and you know what Addie knew.
+**What this is:** the charter for the voice-calls system — the calling engine, voice tuning, and
+phone-tree mapping (mapping folded in 2026-07-22). Read this + `MAPPING-MANUAL.md` + `checkpoint.md`
+and you know how a check becomes a phone call. `src/voice/` is FROZEN (machine-blocked); it opens only
+for an owner-named task via the `.unlock` flow.
 
 ## 1. The three ways a call runs
 
@@ -131,3 +132,16 @@ without touching the verdict.
 (consumer live-call UI) · workflows/routing: Admin → Voice → Workflows (vt_workflows setting).
 Secrets: Railway variables (see CLAUDE.md — curl one-liner). Model bench + fallback story:
 git log around f61bed2 and the 07-11 admin checkpoint.
+
+## 7. Phone-tree mapping (folded in from the retired Mapping lane, 2026-07-22)
+Teach the system the fastest path to a human at each chain, then lock it as a zero-AI recipe. FULL
+technology: read `MAPPING-MANUAL.md` (this folder) before any mapping task — pass its comprehension gate.
+- **Lane files:** `src/calls/mapper.ts`, `navigator.ts`, `trainer-batch.ts` + the Tree Trainer panel.
+  `src/calls/recipe.ts` + `tree-learn.ts` are LOCKED (owner-approved) — open via `.unlock` only.
+- **Map on PROD** (admin.checkitforme.com); learned nav syncs prod→staging every 3 min (DD's pipe).
+  NEVER hand-set nav on staging — it is overwritten within a minute. Staging never learns; owner-only
+  test stores never feed mapping in any env.
+- Never touch `chains.phoneTreeDefault` semantics (drives live-call nav) without an owner-named task.
+- The one dialable rule lives with Data (`chainDialable()`); the tree-mapper skips ringsDirect /
+  answerPath=direct_human. Auto-nav 0-hammering a menu it can't parse = FALSE "no human" — a no-answer
+  is never "unmappable"; listen → read menuPrompts → press-test → lock.

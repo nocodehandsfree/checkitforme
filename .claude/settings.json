@@ -1,4 +1,5 @@
 {
+  "outputStyle": "Check Owner Reply",
   "permissions": {
     "allow": [
       "Bash(git status:*)", "Bash(git log:*)", "Bash(git diff:*)", "Bash(git show:*)",
@@ -78,6 +79,17 @@
             "type": "command",
             "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/turn-counter.sh\"",
             "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/doc-caps-stop.sh\"",
+            "timeout": 15
           }
         ]
       }

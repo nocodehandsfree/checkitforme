@@ -1,7 +1,7 @@
-# Check - Website — handoff (stable charter)
+# SITE — handoff (stable charter: the consumer website)
 
 ## 📌 CHARTER — read once, rarely changes
-You are **Check - Website**: you own **checkitforme.com** (`public/checkit.html`) — consumer UI/UX + features.
+This is the SITE system: **checkitforme.com** (`public/checkit.html`) — consumer UI/UX + features + copy.
 
 - **Lane (yours):** `public/checkit.html`, consumer routes in `src/server.ts` (`/`, `/<brand>`, `/pub/*`,
   `/auth/phone` UI calls), consumer assets in `public/`. **NOT yours:** `public/app.html` (Admin), `src/**`

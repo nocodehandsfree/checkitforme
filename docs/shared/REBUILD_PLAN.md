@@ -36,23 +36,25 @@ block bad behavior. If a hook blocks you, do exactly what it says. Never work ar
   source of truth.
 - A future task (queued, not now): extract repeated UI elements (sheets, pills, cards,
   logo blocks) into a small documented catalog. That is the real long-term shrink.
-- Roster after Phase 0: Daily = Webbie (site + design implementation + copy),
-  Addie (admin), DD (store data/API), Support (customer-chat model training).
-  On-call = Mapper, Pops/Ops, Echo (voice tuning). External = CD.
-  Retired = Copper, Logo, Lexicon, Ideas, and PM as a standing chat. PM + DevOps merge
-  into `ops`. No standing PM chat ever again; planning happens in short disposable
-  sessions.
-- Phase 4 (later, owner-triggered only): personas retire entirely; chats are named by
-  task ("Task: remap store X"); checkpoints move to systems (site / admin / voice /
-  data). PLAN THIS WITH THE OWNER — never start it unprompted.
-- Phase 5 (later): delete every CLAUDE.md rule a gate now enforces; target under 100
-  lines; the owner-reply rules become the project output style.
-- Owner reply rules are law on every turn: TLDR first, his words, no jargon, no walls
-  of text, one question max, stop.
+- Phase 4 — DONE (flipped 2026-07-23). Personas retired entirely. Chats are named by task
+  ("Task: fix the alerts row"), never "You are <Name>". Checkpoints reorganized by SYSTEM, not
+  persona: **site · admin · voice-calls · data · support** (`docs/team/<system>/`). The old persona
+  lanes folded in — mapping → voice-calls, ops → data; the rest map 1:1. CD stays external via
+  `docs/design/comps/inbox/`. Retired persona checkpoints are in `docs/archive/team/` / git history.
+- Phase 5 — DONE (2026-07-23). Every CLAUDE.md rule a gate now enforces was deleted; CLAUDE.md is
+  under 100 lines; START-HERE + the boot prompts were swept the same way. The owner-reply rules became
+  the project OUTPUT STYLE (`.claude/output-styles/check-owner-reply.md`, set as the project default),
+  so every session carries answer-first replies at the system level — no longer a CLAUDE.md section.
+- Phase 6 — DONE (2026-07-23). DOC LAW: every living doc has a hard size cap (STATE.md ~40 · checkpoints
+  60 · CLAUDE.md 100); updating a doc REPLACES stale content, never appends (history lives in git). The
+  checkpoint-lint hook enforces all caps — over cap fails the session close (Stop hook) and blocks a push.
 
 ## Standing rules for every agent who reads this
-- One task per session. Boot: pull staging → read your checkpoint → read the task
-  queue index → state which task you're taking.
+- One task per session. Boot ritual: pull staging → read `docs/STATE.md` → read your SYSTEM's
+  checkpoint (`docs/team/<system>/checkpoint.md`) → read the task queue index → name the ONE task you're taking.
+- Every session updates `docs/STATE.md` + its system checkpoint at close — the Stop-hook doc-cap
+  requirement now covers STATE.md too. Update = REPLACE stale content, never append (history is git).
+- Doc caps are hard: STATE.md ~40 · checkpoints 60 · CLAUDE.md 100. Over cap fails the close and blocks a push.
 - Never open checkit.html / app.html / comps whole. INDEX.md first, then the range.
 - "Done" requires verify-live output pasted. Every time. No exceptions.
 - If the owner is getting frustrated or you've failed twice: say "this needs a fresh

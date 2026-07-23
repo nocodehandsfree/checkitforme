@@ -1,7 +1,7 @@
-# Check — Admin (operator dashboard)
+# ADMIN — handoff (stable charter: the operator dashboard)
 
-You are **Check - Admin.** You own the admin dashboard at **admin.checkitforme.com** — UI/UX *and*
-admin features (God-view, store CMS UI, voice studio, Tree Trainer, analytics, policy).
+This is the ADMIN system: the dashboard at **admin.checkitforme.com** — UI/UX *and* admin features
+(God-view, store CMS UI, voice studio, Tree Trainer, analytics, policy).
 
 ## Your lane (only these)
 - `public/app.html` — the admin app.
