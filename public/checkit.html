@@ -2067,7 +2067,7 @@ html[data-skin="v2"] #authOverlay .modal>.x,html[data-skin="v2"] #againOverlay .
 html[data-skin="v2"] #buyOverlay .modal{overflow-y:auto;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
   /* Continue dock: sticks to the foot of the scrolling buy sheet so Continue is never below the fold.
      Same dock look as the zones basket the owner likes (owner 07-23). */
-  html[data-skin="v2"] #buyOverlay .buydock{position:sticky;bottom:0;z-index:6;display:flex;align-items:center;gap:12px;margin:16px 0 0;padding:14px 0 6px;background:linear-gradient(180deg,rgba(38,38,43,0) 0%,#26262B 26%)}
+  html[data-skin="v2"] #buyOverlay .buydock{position:sticky;bottom:0;z-index:6;display:flex;align-items:center;gap:12px;margin:16px 0 0;padding:14px 0 6px;background:transparent} /* transparent, not a gray band: a cover layer here kills the iOS scroll-edge glass (owner 07-23) */
   html[data-skin="v2"] #buyOverlay .buydock .cta{margin:0;flex:1;width:auto}
   html[data-skin="v2"] #buyOverlay .buydock-plan{flex:0 0 auto;max-width:42%;font-size:12.5px;font-weight:600;color:#8A8A96;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   html[data-skin="v2"] #buyOverlay .buydock-plan b{color:#fff;font-weight:800}
@@ -2943,6 +2943,7 @@ const I18N={ es:{
   'acct.earn.lead':'Ayuda a la cacería. Te llenamos de verificaciones gratis.',
   'buy6b.title':'Cada función.<br>Elige tus verificaciones.','buy6b.grid':'Todo plan incluye','buy6b.gridsel':'Este plan incluye','buy6b.cta':'Continuar',
   'buy6b.titleplans':'Planes Check+ Premium','buy6b.titlepayg':'Paga por verificación','plan.mo3':'Mensual','plan.an3':'Anual',
+  'plan.unlimited':'Ilimitado','plan.online':'Tienes el plan {p}','plan.save17':'Ahorra 17% al año',
   'buy6b.f1':'Productos exactos','buy6b.f2':'Barridos de zona','buy6b.f3':'Alertas de reabastecimiento','buy6b.f4':'Verificaciones programadas','buy6b.f5':'Cualquier ciudad','buy6b.f6':'Apartados en tienda','buy6b.f7':'Tu voz','buy6b.f8':'Cacerías thrift',
   'up6a.title':'Esa fue tu verificación gratis.<br>¿Listo para lo bueno?','up6a.cta':'Ver planes Check+','up6a.f1':'Verifica cualquier ciudad de EE. UU.','up6a.f2':'Alertas de reabastecimiento','up6a.f3':'Verifica varias tiendas a la vez',
   'up6d.title':'Ya estás dentro.','up6d.live':'Ya activo en tu cuenta','up6d.more':'+ 5 más en Administrar plan ›','up6d.moreN':'+ {n} más en Administrar plan ›','up6d.cta':'Haz una verificación','up6d.note':'Administra tu plan cuando quieras en Mis verificaciones.',
@@ -8181,7 +8182,7 @@ function applyBuyHeader(){
   if(!isV2()) return;
   const packs=(BUY_MODE==='packs');
   const t3=$('buy_title'); if(t3) t3.innerHTML = packs ? t('buy6b.titlepayg','Pay by the Check') : t('buy6b.titleplans','Check+ Premium Plans');
-  const lg=$('buy6blogo'); if(lg) lg.innerHTML = `<img src="${packs?'/logos/brand/check.png':'/logos/brand/checkplus.png'}" alt="${packs?'Check':'Check+'}" style="height:26px;width:auto">`;
+  const lg=$('buy6blogo'); if(lg) lg.innerHTML = `<img src="${packs?'/logos/brand/check-brandmark-1024.png':'/logos/brand/checkplus.png'}" alt="${packs?'Check':'Check+'}" style="height:26px;width:auto">`;
   const g=$('buy_grid'); if(g) g.style.display = packs ? 'none' : '';
 }
 // The Continue dock at the foot of the buy sheet: shows what's ringed (plan or pack) and slides up.
@@ -8204,13 +8205,19 @@ function renderBuyPlans(){
   const _bc=$('billcycle'); if(_bc) _bc.style.display=(BUY_MODE==='packs' || ((member||comp)&&isV2()))?'none':'';
   let html='';
   if((member||comp)&&isV2()){
-    // The plan you're on sits in a centered row between the feature grid and the plan list, with the
-    // monthly/annual toggle on its right (owner 07-23) so the tall full-width toggle stops eating the space
-    // above the fold. Toggle is hidden under pay-as-you-go (one-time packs have no billing cycle).
-    html+=`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:18px 0 16px">
-      <div style="min-width:0;font-size:12.5px;font-weight:600;color:#8A8A96">${t('plan.on',"You're on")} <b style="color:#FFF">${comp?t('plan.founder',"Founder. Unlimited."):curTierLabel()}</b> <span style="color:#4ADE80">✓</span></div>
-      ${BUY_MODE==='packs'?'':`<div class="ho-toggle billcyc billcyc-in" style="flex:0 0 auto"><button class="${!BILLING_ANNUAL?'on':''}" data-an="false" onclick="setCycle(false,this)">${t('plan.mo3','Monthly')}</button><button class="${BILLING_ANNUAL?'on':''}" data-an="true" onclick="setCycle(true,this)">${t('plan.an3','Annual')}</button></div>`}
-    </div>`;
+    // "You're on the <name> plan" for everyone (comp reads Unlimited). Shows ONLY on the Plans tab, never
+    // under pay-as-you-go, and only when they actually have a plan (owner 07-23). Monthly/Annual sits on
+    // the right with a green "save 17%" nudge so the yearly discount stays visible.
+    if(BUY_MODE!=='packs'){
+      const planName=comp?t('plan.unlimited','Unlimited'):(()=>{ const _ti=(tiers()||[]).find(x=>x.key===(ACCOUNT&&ACCOUNT.subTier)); return _ti?esc(_ti.name):t('plan.member','Member'); })();
+      html+=`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 0 16px">
+        <div style="min-width:0;font-size:12.5px;font-weight:600;color:#8A8A96">${tf('plan.online',"You're on the {p} plan",{p:`<b style="color:#FFF">${planName}</b>`})}</div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:0 0 auto">
+          <div class="ho-toggle billcyc billcyc-in"><button class="${!BILLING_ANNUAL?'on':''}" data-an="false" onclick="setCycle(false,this)">${t('plan.mo3','Monthly')}</button><button class="${BILLING_ANNUAL?'on':''}" data-an="true" onclick="setCycle(true,this)">${t('plan.an3','Annual')}</button></div>
+          <span style="font-size:10px;font-weight:700;color:#4ADE80;letter-spacing:.02em">${t('plan.save17','Save 17% yearly')}</span>
+        </div>
+      </div>`;
+    }
   }
   else if(member||comp){
     // The plan dashboard: what you're on, what you've used, where to grow.

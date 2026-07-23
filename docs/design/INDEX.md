@@ -4,7 +4,7 @@ Built by `node scripts/gen-index.mjs`; a hook regenerates it when a source file 
 **The law: NEVER open these files whole.** Find your section here, then Read ONLY the line
 range (`offset` + `limit`). Ranges run to the next `id=` — a navigation aid, not exact DOM bounds.
 
-## public/checkit.html (9015 lines, 361 sections)
+## public/checkit.html (9022 lines, 361 sections)
 
 | id | element | lines | description |
 |---|---|---|---|
@@ -303,72 +303,72 @@ range (`offset` + `limit`). Ranges run to the next `id=` — a navigation aid, n
 | supt_home | button | 2880–2880 |  |
 | supt_msgs | button | 2881–2881 |  |
 | supt_help | button | 2882–2885 |  |
-| toast | div.toast | 2886–2971 |  |
-| khspark | span | 2972–3059 |  |
-| sch_store | b | 3060–3070 |  |
-| sch_cat | b | 3060–3070 |  |
-| kiosk_reward | b | 3071–3128 |  |
-| ho_appname | b | 3129–4024 |  |
-| creditN | span | 4025–4319 |  |
-| acctv2panel | div | 4320–4344 |  |
-| scorePostHost | div | 4345–4366 | '+t('sc.pop.title','Post your score')+' |
-| inviteHost | div | 4367–5289 | '+t('ref.tagline','Give a check, get a check')+' |
-| smlive | div.smline | 5290–5297 |  |
-| smbuy | a.smbtn | 5298–5437 |  |
-| tbtn | button.tbtn | 5438–5485 |  |
-| tbtn_l | span | 5438–5485 |  |
-| convo_body | div | 5438–5485 |  |
-| convo_body | div | 5486–5512 |  |
-| convo_body | div | 5513–6281 |  |
-| tbtn | button.tbtn | 6282–6282 |  |
-| proofbody | div | 6283–6399 |  |
-| fbk | div.fbk | 6400–6409 |  |
-| rnav | div.rnav | 6410–6423 |  |
-| tbtn | button.tbtn | 6424–6710 |  |
-| tbtn_l | span | 6424–6710 |  |
-| todaycal | div | 6711–6818 |  |
-| acctScheds | div | 6819–6891 |  |
-| myStoresBlock | div | 6892–7065 |  |
-| hobEraSearch | input | 7066–7066 |  |
-| hobEraGrid | div | 7067–7067 |  |
-| hobEraNone | div | 7068–7328 |  |
-| em_in | input | 7329–7329 |  |
-| em_err | div | 7330–7330 |  |
-| em_btn | button.cta | 7331–7379 |  |
-| alertsList | div | 7380–7453 |  |
-| zrn_in | input | 7454–7511 |  |
-| z_loc | input | 7512–7517 |  |
-| zmap | div | 7518–7520 |  |
-| zBasket | div.zbasket${n?'.up':''} | 7521–7522 |  |
-| zChips | div.zchips | 7523–7526 |  |
-| z_name | input | 7527–7659 |  |
-| z_save | button.zbksave | 7527–7659 |  |
-| zca_go | button.zc-go | 7660–7660 |  |
-| zca_no | button | 7661–7782 |  |
-| z_ringarc | circle | 7783–7784 |  |
-| z_ringnum | div | 7785–7789 |  |
-| z_calling | span | 7790–7791 |  |
-| z_pills | div | 7792–8239 |  |
-| payg_n | span | 8240–8240 |  |
-| payg_p | span | 8240–8240 |  |
-| payg_rng | input.rng | 8241–8242 |  |
-| payg_per | div | 8243–8327 |  |
-| buyDockPlan | div.buydock-plan | 8328–8403 |  |
-| buy_cta | button.cta | 8328–8403 |  |
-| co_loading | div.co-loading | 8404–8605 |  |
-| ho_dropchip | span | 8606–8609 |  |
-| ho_steps | div | 8610–8611 |  |
-| ho_drop | div.ho-toggle | 8612–8615 |  |
-| ho_drophint | p.hint | 8616–8619 |  |
-| ho_bonus | span | 8620–8625 |  |
-| ho_app | div.ho-seg | 8626–8629 |  |
-| ho_appname | b | 8630–8630 |  |
-| ho_open | a.ho-btn.violet | 8631–8633 |  |
-| ho_msg | div.ho-msg | 8634–8644 |  |
-| ho_dv3 | li | 8645–8653 |  |
-| ho_stars | div.ho-stars | 8654–8656 |  |
-| ho_done | div | 8657–8659 | ${t('ho.done.title',"Bonus released. You're done.")} |
-| ho_donep | p | 8660–9015 |  |
+| toast | div.toast | 2886–2972 |  |
+| khspark | span | 2973–3060 |  |
+| sch_store | b | 3061–3071 |  |
+| sch_cat | b | 3061–3071 |  |
+| kiosk_reward | b | 3072–3129 |  |
+| ho_appname | b | 3130–4025 |  |
+| creditN | span | 4026–4320 |  |
+| acctv2panel | div | 4321–4345 |  |
+| scorePostHost | div | 4346–4367 | '+t('sc.pop.title','Post your score')+' |
+| inviteHost | div | 4368–5290 | '+t('ref.tagline','Give a check, get a check')+' |
+| smlive | div.smline | 5291–5298 |  |
+| smbuy | a.smbtn | 5299–5438 |  |
+| tbtn | button.tbtn | 5439–5486 |  |
+| tbtn_l | span | 5439–5486 |  |
+| convo_body | div | 5439–5486 |  |
+| convo_body | div | 5487–5513 |  |
+| convo_body | div | 5514–6282 |  |
+| tbtn | button.tbtn | 6283–6283 |  |
+| proofbody | div | 6284–6400 |  |
+| fbk | div.fbk | 6401–6410 |  |
+| rnav | div.rnav | 6411–6424 |  |
+| tbtn | button.tbtn | 6425–6711 |  |
+| tbtn_l | span | 6425–6711 |  |
+| todaycal | div | 6712–6819 |  |
+| acctScheds | div | 6820–6892 |  |
+| myStoresBlock | div | 6893–7066 |  |
+| hobEraSearch | input | 7067–7067 |  |
+| hobEraGrid | div | 7068–7068 |  |
+| hobEraNone | div | 7069–7329 |  |
+| em_in | input | 7330–7330 |  |
+| em_err | div | 7331–7331 |  |
+| em_btn | button.cta | 7332–7380 |  |
+| alertsList | div | 7381–7454 |  |
+| zrn_in | input | 7455–7512 |  |
+| z_loc | input | 7513–7518 |  |
+| zmap | div | 7519–7521 |  |
+| zBasket | div.zbasket${n?'.up':''} | 7522–7523 |  |
+| zChips | div.zchips | 7524–7527 |  |
+| z_name | input | 7528–7660 |  |
+| z_save | button.zbksave | 7528–7660 |  |
+| zca_go | button.zc-go | 7661–7661 |  |
+| zca_no | button | 7662–7783 |  |
+| z_ringarc | circle | 7784–7785 |  |
+| z_ringnum | div | 7786–7790 |  |
+| z_calling | span | 7791–7792 |  |
+| z_pills | div | 7793–8246 |  |
+| payg_n | span | 8247–8247 |  |
+| payg_p | span | 8247–8247 |  |
+| payg_rng | input.rng | 8248–8249 |  |
+| payg_per | div | 8250–8334 |  |
+| buyDockPlan | div.buydock-plan | 8335–8410 |  |
+| buy_cta | button.cta | 8335–8410 |  |
+| co_loading | div.co-loading | 8411–8612 |  |
+| ho_dropchip | span | 8613–8616 |  |
+| ho_steps | div | 8617–8618 |  |
+| ho_drop | div.ho-toggle | 8619–8622 |  |
+| ho_drophint | p.hint | 8623–8626 |  |
+| ho_bonus | span | 8627–8632 |  |
+| ho_app | div.ho-seg | 8633–8636 |  |
+| ho_appname | b | 8637–8637 |  |
+| ho_open | a.ho-btn.violet | 8638–8640 |  |
+| ho_msg | div.ho-msg | 8641–8651 |  |
+| ho_dv3 | li | 8652–8660 |  |
+| ho_stars | div.ho-stars | 8661–8663 |  |
+| ho_done | div | 8664–8666 | ${t('ho.done.title',"Bonus released. You're done.")} |
+| ho_donep | p | 8667–9022 |  |
 
 ## public/app.html (5584 lines, 369 sections)
 
