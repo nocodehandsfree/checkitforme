@@ -53,6 +53,19 @@ logo-asset-lane-setup-8rx7ep · my-zones-layout-fix-68gs56 · restructure-public
 ringo-voice-onboarding-634tk6 · support-lane-spec-7hd2aj · ui-polish-pass ·
 webbie-landing-pages-lzpq0l · webbie-landing-share-rebuild-345ikb · webbie-website-handoff-s0ql27
 
+## Knowledge-loss check (owner's concern) — CLEAR
+Compared every branch's docs against staging at the content level:
+- Files unique to the branches are all the **pre-rebuild retired lanes** (copy/design/ideas/lexicon/
+  logo/pm) — already preserved in `docs/archive/team/` by the rebuild — plus scratch/test files.
+- Everything else the diff flagged is just an **older version** of a file staging already carries newer.
+- Only 3 files lived on a branch and nowhere else: `docs/team/devops/checkpoint.md` + `handoff.md`
+  (pre-rebuild ops notes; superseded by the ops lane) and `docs/team/copy/referral-welcome-copy.md`
+  (its copy already live in `public/checkit.html`). **All 3 captured into `docs/archive/team/` this
+  commit**, so deletion loses nothing.
+
+No product/business knowledge (GOTCHAS, manuals, current checkpoints, specs, store data) is on these
+branches only — it is all present on staging.
+
 ## Open PRs to close when their branches die
 #88, #86, #85, #83, #78, #74 — deleting the head branch closes each.
 
