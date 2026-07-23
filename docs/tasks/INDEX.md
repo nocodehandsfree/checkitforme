@@ -47,5 +47,29 @@ New task = one small md here (what · done-when · lane · status). Owner adds/r
 | [Admin cleanup: Chats (help › support)](admin-cleanup-support.md) | Addie | open |
 | [Admin cleanup: Go-to-Market (launch › gtm)](admin-cleanup-gtm.md) | Addie | open |
 
+## Admin audit findings (2026-07-23 · docs/team/admin/AUDIT.md)
+One task per finding, tagged wiring / comp / copy / cut. Full context in AUDIT.md.
+
+| Task | Tag | Lane | Status |
+|---|---|---|---|
+| [One Admin, two environments: shell-level Live/Staging switch](admin-audit-env-switch.md) | wiring | Ops + Addie | open (owner-gated) |
+| [Policy/Plans/Statuses edit prod-first — staging-writable path](admin-audit-policy-plans-staging-write.md) | wiring | Ops | open |
+| [Designer + Workflows write prod voice config — env picker never shipped](admin-audit-voice-config-prod-coupling.md) | wiring | Addie | open |
+| [Store CRUD writes prod against the staging→prod sync](admin-audit-store-crud-prod-write.md) | wiring | DD | open |
+| [Alert copy is prod-only — not mirrored to staging](admin-audit-alerts-not-mirrored.md) | wiring | Addie + Webbie | open |
+| [Real prod calls with no staging rehearsal](admin-audit-realcall-no-rehearsal.md) | wiring | Ops + Echo | open |
+| [Alerts diverges from its comp (CRUD vs LOG)](admin-audit-alerts-comp-diverge.md) | comp | Addie | open |
+| [Policy page overloaded — split per comp](admin-audit-policy-overload.md) | comp | Addie | open |
+| [No comp for Calc/Fun/Users/Search](admin-audit-comps-missing.md) | comp | CD + Addie | open |
+| [Lane codenames + tuning jargon leak into the UI](admin-audit-lane-codenames-copy.md) | copy | Webbie + Addie | open |
+| [Small Admin copy fixes (wrong toast, dev-speak, raw values)](admin-audit-copy-bugs.md) | copy | Webbie | open |
+| [Policy flag labels should use real feature names](admin-audit-flag-names-real.md) | copy | Webbie | open |
+| [Cut/hide Calc from the daily command center](admin-audit-cut-calc.md) | cut | Addie | open |
+| [Retire or hide Go-to-Market at launch](admin-audit-cut-gtm.md) | cut | Addie + Ops | open |
+| [Dead-code sweep across the Admin](admin-audit-dead-code-sweep.md) | cut | Addie | open |
+| [Move dev diagnostics off daily operator surfaces](admin-audit-cut-dev-diagnostics.md) | cut | Addie | open |
+| [Voice: consolidate overlapping edit surfaces + rehearsal engines](admin-audit-voice-overlap.md) | cut | Addie | open |
+| [Alerts can't actually send — launch blocker](admin-audit-alerts-providers-blocker.md) | cut | Ops | open (launch-critical) |
+
 Admin cleanup is one task per Admin page (22 pages from NAV_GROUPS). Consumer-site tasks
 need an owner-named unlock (the site is frozen — docs/shared/REBUILD_PLAN.md).
