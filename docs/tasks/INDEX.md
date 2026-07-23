@@ -8,7 +8,10 @@ New task = one small md here (what · done-when · lane · status). Owner adds/r
 | Task | Lane | Status |
 |---|---|---|
 | [First promote after the rebuild — prod + admin LIVE in verify-live](first-promote-after-rebuild.md) | Ops | open |
-| [Store name gets cut off on alert cards](alert-card-store-name-cutoff.md) | Webbie | open |
+| [In-stock banner: owner on/off toggle](instock-banner-toggle.md) | Webbie | open |
+| [Product types: per-product on/off flags (auto-hide the dropdown)](product-type-flags.md) | Webbie | open |
+| [Back button must always return to the previous page](back-button-returns-previous.md) | Webbie | open |
+| [Store name gets cut off on alert cards (toggle + delete crowd the row)](alert-card-store-name-cutoff.md) | Webbie | open |
 | [Alerts sheet formatting](alerts-sheet-formatting.md) | Webbie | open |
 | [Zone checks do not update the activity dashboard](zones-checks-activity-dashboard.md) | Webbie | open |
 | [Missing CD comps for data-heavy Admin pages](admin-cd-comps-data-pages.md) | CD + Addie | open |

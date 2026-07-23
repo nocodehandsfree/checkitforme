@@ -7,5 +7,8 @@
 
 **Verify-live output (paste on close — a task without it is NOT closed):**
 ```
-(none yet)
+Built on branch claude/webbie-task-queue-c4wpxu (PR). Root cause: the zone flow never refreshed
+the history cache the dashboard reads; zonePollTick now ensureHistCache() per finished store
+(server already logs zone rows with zoneRunId). tsc clean, inline JS parses.
+NOT on staging yet — verify-live pending merge to staging.
 ```

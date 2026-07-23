@@ -166,10 +166,19 @@ export function brandForPath(slug: string): Brand | null {
   return b && b.key !== "runner" ? b : null;
 }
 
-/** Verticals for the top-of-page product switcher (the default "all" site isn't a vertical). */
-export function brandSwitcher(): Array<{ key: string; slug: string; label: string; emoji: string; logoUrl: string; tag?: string }> {
+/** Each vertical's Admin policy flag (per-product on/off). A flag !== false means the product is shown. */
+export const BRAND_FLAG: Record<string, string> = {
+  poke: "productPokemon", onepiece: "productOnePiece", topps: "productTopps", needoh: "productNeedoh",
+};
+
+/** Verticals for the top-of-page product switcher (the default "all" site isn't a vertical).
+ *  Pass the current policy flags to drop any product the owner switched off in Admin — a product with
+ *  its flag === false is removed from the switcher; when only one survives, the client hides the pill. */
+export function brandSwitcher(flags?: Record<string, boolean>): Array<{ key: string; slug: string; label: string; emoji: string; logoUrl: string; tag?: string }> {
   // tag: when the logo already spells the brand, show the logo + just the missing qualifier
   // (Topps logo says "Topps" → tag "NBA" → reads "Topps NBA" without doubling the word).
   const TAG: Record<string, string> = { topps: "NBA Cards" };
-  return BRANDS.filter((b) => b.key !== "runner").map((b) => ({ key: b.key, slug: b.slug, label: b.short, emoji: b.emoji, logoUrl: b.logoUrl || "", ...(TAG[b.key] ? { tag: TAG[b.key] } : {}) }));
+  return BRANDS
+    .filter((b) => b.key !== "runner" && (!flags || flags[BRAND_FLAG[b.key]] !== false))
+    .map((b) => ({ key: b.key, slug: b.slug, label: b.short, emoji: b.emoji, logoUrl: b.logoUrl || "", ...(TAG[b.key] ? { tag: TAG[b.key] } : {}) }));
 }
