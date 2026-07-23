@@ -20,12 +20,9 @@ New task = one small md here (what · done-when · lane · status). Owner adds/r
 | [Settings mirror: verify prod export live](settings-mirror-verify.md) | Ops | open |
 | [Prod gate 14/15: stale tests/e2e/admin.spec.ts](e2e-admin-spec-stale.md) | Addie | open |
 | [Add the zone-report page to the e2e spec](e2e-zone-report-spec.md) | Ops | open |
-| [Delete the dead pre-07-19 session branches on origin](origin-branch-cleanup.md) | Ops | open |
 | [Real-card test (O1) — the owner's move](real-card-test.md) | Owner | blocked |
 | [Retarget the stale CALL_ECONOMICS citation in server.ts](server-cost-citation.md) | Ops | open |
 | [Reconcile COPY_CHANGES_APPROVED.md location](copy-changes-approved-reconcile.md) | Webbie | open |
-| [Branch sweep — nothing stranded on a claude/* branch](branch-sweep.md) | Ops | open |
-| [Doc census — every .md outside docs/archive: keep/fix/archive](doc-census.md) | Ops | open |
 | [Admin cleanup: Live (godview › dash)](admin-cleanup-dash.md) | Addie | open |
 | [Admin cleanup: Users (godview › users)](admin-cleanup-users.md) | Addie | open |
 | [Admin cleanup: Restock (godview › restock)](admin-cleanup-restock.md) | Addie | open |
