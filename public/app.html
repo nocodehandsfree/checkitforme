@@ -306,7 +306,7 @@
      Raised gradient cards, one of each control, defined once and reused on every page.
      Grow this block when a page needs a control that isn't here yet; never style a one-off.
      ========================================================================== */
-  .k-eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96;margin:22px 4px 10px}
+  .k-eyebrow{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#8A8A96;margin:22px 4px 10px}
   .k-eyebrow:first-child{margin-top:2px}
   .k-title{font-size:20px;font-weight:800;letter-spacing:-.3px;color:#fff;margin:0}
   /* Hero card — the ONE number the page answers with, plus an honest trend + 7-day spark. */
@@ -333,7 +333,7 @@
   /* Log row — the peek anatomy with a logo tile + status icon instead of icon + chevron. */
   .peek .pk-logo{flex:0 0 auto}
   .peek .pk-logo .slogo{width:38px;height:38px;border-radius:11px}
-  .peek .pk-m{font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .peek .pk-m{font-size:12px;font-weight:600;color:#8A8A96;margin-top:1px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .peek .pk-st{display:flex;align-items:center;gap:6px;flex:0 0 auto;font-size:11px;font-weight:800}
   .peek .pk-st .stc{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto}
   /* Embossed initials tile — the log's fallback for stores with no logo art (comp 1c). */
@@ -1046,7 +1046,7 @@
 
   <section id="support">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-      <div class="k-title">Support</div>
+      <div class="k-title">Chats</div>
       <div style="display:flex;align-items:center;gap:8px">
         <!-- "Update from the book" moved OFF this header (owner 07-15: crowded + confusing). supReindex()
              still works; it re-homes into Copper's book-update flow when that lands. -->
@@ -1295,7 +1295,7 @@
         <label data-tip="The agent dials this number">Your phone</label><input id="sim_phone" placeholder="+13106662331">
         <div id="sim_charlie_b">
         <label data-tip="Only your rotation voices show here">Test voice</label>
-        <select id="sim_voice" onchange="refreshTestRotation()"><option value="">Bench default voice</option></select>
+        <select id="sim_voice" onchange="refreshTestRotation()"><option value="">Default voice</option></select>
         <div class="grid2" style="margin-top:14px">
           <div><label style="margin-top:0">Flow</label><select id="sim_mode"><option value="restock">Restock (did your shipment include it?)</option><option value="carry">Carry (do you sell it at all?)</option></select></div>
           <div><label style="margin-top:0">Decision tree</label><select id="sim_tree" onchange="syncTreeUI();previewMaybe()"><option value="general">General (any of it counts)</option><option value="specific">Specific (only that exact set)</option></select></div>
@@ -2014,7 +2014,7 @@ async function loadReceipts(){
   // Compact rows (owner 07-15): name + price on the row, EVERYTHING else in the receipt sheet.
   RCPT_ROWS=rows;
   list.innerHTML=rows.map((r,i)=>{ const nItems=r.itemCount||rcptItems(r).length; return `<button class="peek" onclick="rcptSheet(${i})">
-      <span class="pk-main"><span class="pk-t" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(r.product||'(no product parsed)')}${nItems>1?` +${nItems-1} more`:''}</span>
+      <span class="pk-main"><span class="pk-t" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(r.product||'(no product found)')}${nItems>1?` +${nItems-1} more`:''}</span>
       <span class="pk-m" style="display:block">${r.claimedBy?'<span style=\'color:var(--green)\'>claimed</span>':'unclaimed'} · ${ago(r.createdAt)} ago${nItems>1?` · ${nItems} items`:''}</span></span>
       <span class="pk-fact">${r.total?('$'+esch(r.total)):''}</span>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
@@ -2031,7 +2031,7 @@ function rcptSheet(i){
   const itemsHtml=items.length
     ? `<div class="k-eyebrow" style="margin-top:2px">Items (${r.itemCount||items.length})</div>`
       +items.map(it=>`<div class="repline"><span class="rl" style="max-width:72%">${esch(it.name)}</span><b>$${esch(it.price)}</b></div>`).join('')
-    : `<div style="font-size:15px;font-weight:700;line-height:1.4;margin:4px 0 10px">${esch(r.product||'(no product parsed)')}</div>`;
+    : `<div style="font-size:15px;font-weight:700;line-height:1.4;margin:4px 0 10px">${esch(r.product||'(no product found)')}</div>`;
   openSheet('Receipt', r.claimedBy?'Claimed · free check granted':'Unclaimed',
     itemsHtml
     +(r.subtotal?line('Subtotal','$'+r.subtotal):'')+(r.tax?line('Tax','$'+r.tax):'')
@@ -2053,7 +2053,7 @@ async function inspectInbox(){
   if(!rows.length){ el.innerHTML='No emails in the inbox over the last 72h.'; return; }
   const dt=ms=>{ const m=Math.floor((Date.now()-ms)/60000); return m<60?Math.max(1,m)+'m ago':(m<1440?Math.floor(m/60)+'h ago':Math.floor(m/1440)+'d ago'); };
   const stored=rows.filter(r=>r.stored).length;
-  el.innerHTML=`<div style="margin:4px 0 6px"><b>${rows.length}</b> emails · last 72h. <b style="color:var(--green)">${stored}</b> parse as kiosk receipts</div>`+
+  el.innerHTML=`<div style="margin:4px 0 6px"><b>${rows.length}</b> emails · last 72h. <b style="color:var(--green)">${stored}</b> count as kiosk receipts</div>`+
     rows.map(r=>{ const p=r.parsed||{};
       const head=`<b style="color:${r.stored?'var(--green)':'#ff8a8a'}">${r.stored?'✓ parses':'✗ rejected'}</b> · ${esch(r.from||'?')} · ${dt(r.date)}`;
       const fields=r.stored
@@ -2178,7 +2178,7 @@ async function tdPoll(){
     const us=st.who==="us";
     return `<div style="display:grid;grid-template-columns:34px 1fr;gap:8px;font-size:12.5px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">
       <span class="meta">${st.atSec}s</span>
-      <span><b style="color:${us?"var(--green)":"#e8e8f0"}">${us?"TAPE":"YOU"}</b> ${esch(st.text||"")}${st.label?` <span class="meta">· ${esch(st.label)}</span>`:""}</span></div>`;
+      <span><b style="color:${us?"var(--green)":"#e8e8f0"}">${us?"AI":"YOU"}</b> ${esch(st.text||"")}${st.label?` <span class="meta">· ${esch(st.label)}</span>`:""}</span></div>`;
   }).join("");
   if(s.status==="done"||s.status==="failed"){ clearInterval(TD_POLL); TD_BUSY=false; const btn=document.querySelector("#fun [onclick=\"tdCall()\"]"); if(btn){btn.disabled=false;btn.textContent="Call me on tape";} }
 }
@@ -2849,7 +2849,7 @@ function poolVoices(){ return [...document.querySelectorAll('.rotvoice:checked')
 function syncTestVoices(){
   const sel=document.getElementById('sim_voice'); if(!sel) return;
   const pool=poolVoices(); const cur=sel.value;
-  let html='<option value="">Bench default voice</option>';
+  let html='<option value="">Default voice</option>';
   if(pool.length>1) html+=`<option value="__rotate__">Rotate through pool (${pool.length})</option>`;
   html+=pool.map(v=>`<option value="${v.id}">${esch(v.name)}</option>`).join('');
   sel.innerHTML=html;
@@ -3178,7 +3178,7 @@ function supFilter(){ SUP.cat=(document.getElementById('sup_f_cat')||{}).value||
 function supSearch(){ clearTimeout(SUP_SEARCH_T); SUP_SEARCH_T=setTimeout(()=>{ SUP.q=(document.getElementById('sup_f_q')||{}).value||''; loadSupportChats(); },300); }
 function supSince(){ if(SUP.range==='today'){ const d=new Date(); d.setHours(0,0,0,0); return Math.floor(d.getTime()/1000); } return Math.floor(Date.now()/1000)-(SUP.range==='30d'?30:7)*86400; }
 const supCatChip=(c)=>`<span class="chip-sm">${esch(SUP_CATS[c]||c||'Other')}</span>`;
-const supTier=(t)=>t==null?'':(String(t)==='3'||t==='human'?'Human email':String(t)==='2'||t==='smart'?'Tier 2':'Tier 1');
+const supTier=(t)=>t==null?'':(String(t)==='3'||t==='human'?'Needs a human':String(t)==='2'||t==='smart'?'Bot unsure':'Bot answered');
 function supStatusPill(s){
   const k=String(s||'open');
   const cls=k==='resolved'?'g':(k==='escalated'?'a':'');
@@ -3213,7 +3213,7 @@ async function loadSupportStats(){
   const r=await srcApi('/api/support/stats?range='+encodeURIComponent(SUP.range));
   const rangeWord={today:'chats today','7d':'chats this week','30d':'chats this month'}[SUP.range]||'chats';
   if(!r||r.error){
-    if(heroN)heroN.textContent='—'; if(heroL)heroL.textContent='Support APIs aren\'t live yet. This lights up on its own once they land.';
+    if(heroN)heroN.textContent='—'; if(heroL)heroL.textContent='Chats are not turned on yet. This fills in on its own once they start.';
     if(wells){wells.style.display='none';} if(cats)cats.innerHTML=''; if(topRow)topRow.style.display='none';
     return;
   }
@@ -3228,7 +3228,6 @@ async function loadSupportStats(){
   // One pill per fact worth a glance; everything deeper waits for the chat rows.
   if(cats){ const by=r.byCategory||{};
     const pills=Object.keys(by).map(k=>`<span class="k-pill">${esch(SUP_CATS[k]||k)} · ${by[k]}</span>`);
-    if(r.pendingReview) pills.push(`<span class="k-pill" style="color:#FBBF24">Pending review · ${r.pendingReview}</span>`);
     if(r.tickets!=null||r.ticketsEmailed!=null) pills.push(`<span class="k-pill">Tickets · ${r.tickets!=null?r.tickets:r.ticketsEmailed}</span>`);
     if(r.estCostUsd!=null) pills.push(`<span class="k-pill">Chat cost $${Number(r.estCostUsd).toFixed(2)}</span>`);
     cats.innerHTML=pills.join(''); }
@@ -3425,7 +3424,7 @@ async function loadStoreIntel(){
   const items=Object.entries(bp).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1]);
   const cw=document.getElementById('storecarries');
   if(cw){ if(items.length){ cw.style.display='';
-      cw.innerHTML=`<div class="k-eyebrow">Carry each product · of ${fmt(d.total)}</div>`
+      cw.innerHTML=`<div class="k-eyebrow">Stores carrying each product</div>`
         +items.map(([p,n])=>`<div class="repline"><span class="rl">${prodIcon(p,16)}${esch(p)}</span><b>${fmt(n)}</b></div>`).join('');
     } else cw.style.display='none'; }
   // Fill the store-type filter from the full chain-type list, and the product filter from the carry list.
@@ -5139,7 +5138,7 @@ const FLAG_GROUPS=[
     ['communityAutoApprove','Community · auto-approve','Posts go live with no review'],
     ['referrals','Referrals','Free-check loop · both sides earn'],
     ['shareCards','Share cards','Shareable found-it cards'],
-    ['stockSignals','Live stock feed','Real-time stock rail on the site'],
+    ['stockSignals','Latest finds rail','The row of recent finds on the site'],
     ['driverHandoff','Driver hand-off demo','Demo under an in-stock result'],
     ['liveListen','Live-listen','Customers hear calls + can hang up'],
   ]},
@@ -5312,9 +5311,9 @@ async function loadAlerts(){
   const total=Object.values(roll).reduce((a,b)=>a+b,0);
   const stubbed=Object.keys(roll).filter(k=>k.endsWith('.stubbed')).reduce((a,k)=>a+roll[k],0);
   const rowEl=document.getElementById('al_sends_row');
-  if(rowEl) rowEl.innerHTML=`<div class="k-eyebrow">Activity</div><button class="peek" onclick="sheetFromHolder('al_log','Sends','${total} this month${stubbed?` · ${stubbed} stubbed`:''}')">
+  if(rowEl) rowEl.innerHTML=`<div class="k-eyebrow">Activity</div><button class="peek" onclick="sheetFromHolder('al_log','Sends','${total} this month${stubbed?` · ${stubbed} not delivered`:''}')">
       <span class="pk-main"><span class="pk-t" style="display:block">Sends</span></span>
-      <span class="pk-fact ${stubbed?'a':(total?'g':'')}">${stubbed?stubbed+' stubbed':total+' this month'}</span>
+      <span class="pk-fact ${stubbed?'a':(total?'g':'')}">${stubbed?stubbed+' not delivered':total+' this month'}</span>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>`;
   // Recent sends: a LOG — first 20, one key shows the rest.
@@ -5386,7 +5385,7 @@ async function loadGrowth(){
     fld('gw_referral','Referral reward (checks · both)',(POL.rewards||{}).referralChecks)+
     fld('gw_storeadd','Store-add reward (checks · on go-live)',(POL.rewards||{}).storeAddChecks)+
     fld('gw_headstart','Members see finds first (minutes)',(POL.finds||{}).headstartMin)+
-    fld('gw_ga4','GA4 measurement id',POL.ga4Id||'');
+    fld('gw_ga4','Web analytics ID',POL.ga4Id||'');
   // Memberships + PAYG bundles are OWNED BY PLANS (vt_plans → Stripe). Mirror them read-only here so
   // this page can never drift from the Plans tab again (owner 07-13: pricing must match Plans).
   loadGwPlansMirror();
@@ -5452,9 +5451,9 @@ async function loadCallHealth(){
   const reasons=(purge&&purge.flagged)?Object.entries(purge.byReason||{}).map(([k,n])=>n+' '+k.replace(/_/g,' ')).join(' · '):'';
   el.innerHTML=
     `<div class="stats">`
-      +tile(a.total||0,'total rows')
+      +tile(a.total||0,'total calls')
       +tile(a.neverDialed||0,'never dialed')
-      +tile(a.ownerOnlyTest||0,'rehearsal')
+      +tile(a.ownerOnlyTest||0,'test calls')
       +tile(dup,'repeat imports',dup?'bad':'')
     +`</div>`
     +irow('First real call',fd(a.firstDialedCall))
@@ -5462,7 +5461,7 @@ async function loadCallHealth(){
     +irow('Confirmed in stock',a.confirmedInStock||0)
     +`<div class="rgrp" style="margin-top:12px">By status</div>`
       +((a.byStatus||[]).map(x=>rsBar(x.k,x.n,sMax)).join('')||'<div class="meta">—</div>')
-    +(purge?`<div class="rgrp" style="margin-top:12px">Cleanup preview <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· dry run · billed calls protected · restorable from ElevenLabs</span></div>`
+    +(purge?`<div class="rgrp" style="margin-top:12px">Cleanup preview <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· nothing deleted · paid calls kept · restorable</span></div>`
        +`<div class="meta" style="line-height:1.55"><b style="color:${purge.flagged?'var(--orange)':'var(--green)'}">${purge.flagged}</b> of ${purge.total} rows are unprovable${reasons?' ('+esch(reasons)+')':''}; <b style="color:#e8e8f0">${purge.keptDefinitive}</b> are definitive. Nothing is deleted from here. run the purge deliberately when ready.</div>`:'');
 }
 // User dashboard: everyone who signed up (phone-first, Clerk-free) — newest first.
@@ -5482,7 +5481,7 @@ async function loadUsers(){
   const members=d.filter(u=>u.plan==='Subscriber').length, payg=d.filter(u=>u.plan==='Pay-as-you-go').length;
   const revenue=d.reduce((s,u)=>s+(u.spentCents||0),0);
   const well=(n,l,cls)=>`<div class="k-well"><div class="n${cls?' '+cls:''}">${n}</div><div class="l">${l}</div></div>`;
-  const planFact=u=>u.plan==='Subscriber'?['Member','g']:u.plan==='Pay-as-you-go'?['PAYG','a']:(u.comp||u.plan==='Comp / owner')?['Comp','']:u.manualStaff||u.plan==='Admin / test'?['Test','']:[u.plan||'—',''];
+  const planFact=u=>u.plan==='Subscriber'?['Member','g']:u.plan==='Pay-as-you-go'?['Pay as you go','a']:(u.comp||u.plan==='Comp / owner')?['Comp','']:u.manualStaff||u.plan==='Admin / test'?['Test','']:[u.plan||'—',''];
   el.innerHTML=`<div class="k-wells" style="margin-bottom:14px">${well(members,'Members',members?'g':'')}${well(payg,'Pay as you go',payg?'a':'')}${well(money(revenue),'Spent all time','')}</div>`
     + d.map((u,i)=>{
       const pf=planFact(u), who=u.phone||u.email||u.id;
@@ -5706,7 +5705,7 @@ async function loadGwCommunity(){
   if(!Array.isArray(ps)||!ps.length){ el.innerHTML=emptyState('trophy','#FFCB05','No posts yet','They land here when someone posts a score'); gwQFact('gw_community','0'); return; }
   const pend=ps.filter(p=>!p.approved).length;
   gwQFact('gw_community',pend?pend+' pending':String(ps.length),pend>0);
-  el.innerHTML=`<div style="margin-bottom:8px;color:${pend?'var(--yellow,#F4D03F)':'var(--muted)'}">${pend?('⏳ '+pend+' awaiting review'):'All caught up'}</div>`+
+  el.innerHTML=`<div style="margin-bottom:8px;color:${pend?'var(--yellow,#F4D03F)':'var(--muted)'}">${pend?(dsIco('clock',13)+' '+pend+' awaiting review'):'All caught up'}</div>`+
     ps.slice(0,30).map(p=>`<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--border)">
       <img src="${esch(p.imageUrl)}" style="width:46px;height:46px;border-radius:8px;object-fit:cover;background:#0e0e14">
       <div style="flex:1;min-width:0"><div style="font-size:13px;color:var(--text)">${esch(p.caption||'(no caption)')}</div>
@@ -5745,7 +5744,7 @@ async function loadGwStoreReqs(){
   if(!Array.isArray(rs)||!rs.length){ el.innerHTML=emptyState('store','#4ADE80','No store requests yet','They land here when a customer asks for one'); gwQFact('gw_storereqs','0'); return; }
   const nw=rs.filter(r=>r.status==='new').length;
   gwQFact('gw_storereqs',nw?nw+' new':String(rs.length),nw>0);
-  el.innerHTML=`<div style="margin-bottom:8px;color:${nw?'var(--yellow,#F4D03F)':'var(--muted)'}">${nw?('⏳ '+nw+' new'):'All handled'}</div>`+
+  el.innerHTML=`<div style="margin-bottom:8px;color:${nw?'var(--yellow,#F4D03F)':'var(--muted)'}">${nw?(dsIco('clock',13)+' '+nw+' new'):'All handled'}</div>`+
     rs.slice(0,40).map(r=>`<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--border)">
       <div style="flex:1;min-width:0"><div style="font-size:13px;color:var(--text)"><b>${esch(r.storeName)}</b>${r.city?(' · '+esch(r.city)):''}</div>
         <div class="meta" style="font-size:10.5px">${esch(r.note||'')}${r.contact?(' · '+esch(r.contact)):''} · ${r.status}</div></div>

@@ -1,9 +1,9 @@
 # Admin copy / icon / spacing audit (2026-07-23)
 
-Source: 6-agent audit workflow across all 22 pages + their slide-ups, checked vs COPY_STYLE_GUIDE + SPEC Part 1.
-Total 98: copy 61, icon 24, spacing 13.
+6-agent audit across all 22 pages + slide-ups vs COPY_STYLE_GUIDE + SPEC Part 1.
+Total 98 (copy 61, icon 24, spacing 13). DONE so far: 46.
 
-DONE this pass = a first copy wave (28 unique swaps) applied + shipped. Everything unchecked is the remaining worklist (icons, spacing, and copy that needs hand-crafting or an (i) sheet). Do these page by page.
+Waves 1 and 2 applied + shipped (copy mostly, 2 emoji icons -> Lucide clock, 2 shared sub-12px classes bumped). Unchecked = remaining worklist: the icon migration (legacy/unicode/inline glyphs -> Lucide dsIco, NOT the nav which the owner keeps), the per-page sub-12px + tap-target spacing, and the copy that needs an (i) sheet or a bigger rework (GTM taxonomy, Add import warning, Designer voice-model dropdown, Kiosk raw JSON, Fun Delta status map). Do page by page.
 
 ## COPY
 - [x] **Users** (high) page (loadUsers staging error state) @ line 5475
@@ -15,19 +15,19 @@ DONE this pass = a first copy wave (28 unique swaps) applied + shipped. Everythi
 - [x] **Live** (high) Call health sheet (subtitle under the sheet title) @ line 2747 (dashSheet subs.health)
       now: Real dialed calls vs seed and rehearsal
       fix: Real calls vs test calls
-- [ ] **Policy** (high) page @ line 5391, gw_pricing field (id gw_ga4)
+- [x] **Policy** (high) page @ line 5391, gw_pricing field (id gw_ga4)
       now: GA4 measurement id
-      fix: Analytics ID  — put the raw Google Analytics measurement id behind an (i) info sheet, labe
+      fix: Analytics ID  — put the raw Google Analytics measurement id behind an (i) info sheet, la
 - [x] **Policy** (high) page @ line 5390, gw_pricing field (id gw_headstart)
       now: Finds headstart (min)
       fix: Members see finds first (minutes)
-- [ ] **Policy** (high) page @ line 5144, FLAG_GROUPS flag label 'stockSignals'
+- [x] **Policy** (high) page @ line 5144, FLAG_GROUPS flag label 'stockSignals'
       now: Live stock feed  /  caption: Real-time stock rail on the site
       fix: Latest finds rail  /  caption: The row of recent finds on the site
 - [x] **Alerts** (high) page @ line 5311, al_status delivery note
       now: Stubbed sends never reach a customer
       fix: Test sends only. Nothing reaches a customer yet.
-- [ ] **Alerts** (high) page @ lines 5317, 5319 (Sends row fact + subtitle) and 5327 (send-log status label)
+- [x] **Alerts** (high) page @ lines 5317, 5319 (Sends row fact + subtitle) and 5327 (send-log status label)
       now: 'N stubbed' / '· N stubbed' / log chip label 'Stubbed'
       fix: 'N not delivered' / '· N not delivered' / log chip 'Not delivered'
 - [x] **Plans** (high) page (toast) @ line 2488, savePlansDraft toast
@@ -40,68 +40,68 @@ DONE this pass = a first copy wave (28 unique swaps) applied + shipped. Everythi
       now: Couldn't backfill the regions: "+((r&&r.error)||'unknown')
       fix: Couldn't import the stores: "+((r&&r.error)||'unknown')
 - [x] **Add** (high) Bulk import (details card) + toast @ line 1037 button label; line 5684 toast strings
-      now: Button: "Backfill regions"  ·  toasts: "Regions backfilled" / "Couldn't backfill the regio
-      fix: Button: "Fill in missing regions"  ·  toasts: "Regions filled in" / "Couldn't fill in the 
+      now: Button: "Backfill regions"  ·  toasts: "Regions backfilled" / "Couldn't backfill the reg
+      fix: Button: "Fill in missing regions"  ·  toasts: "Regions filled in" / "Couldn't fill in th
 - [x] **Chains** (high) page (Map until locked live panel) @ line 2231, mapperPoll() varHtml (id mapper_bench)
       now: Variable ring (department pickup) — time-to-human varies call to call
       fix: Variable ring. A department picks up, so the time to reach a person changes every call.
 - [x] **Chains** (high) page (Call settings, Max talk tooltip) @ line 3973, ssRenderCall() data-tip on Max talk
       now: Hard cap on how long the caller talks to a person before wrapping up.ping up.
       fix: Hard cap on how long the caller talks to a person before wrapping up.
-- [ ] **Designer** (high) page @ L1302, #sim_voice option (Step 6 Test)
+- [x] **Designer** (high) page @ L1302, #sim_voice option (Step 6 Test)
       now: Bench default voice
       fix: Default voice
-- [ ] **Chats** (high) chat detail slide-up (sheet subtitle) @ line 3183, supTier(); rendered at line 3302
+- [x] **Chats** (high) chat detail slide-up (sheet subtitle) @ line 3183, supTier(); rendered at line 3302
       now: 'Human email' / 'Tier 2' / 'Tier 1'
-      fix: Needs a human / Bot unsure / Bot answered (Tier 1 -> Bot answered, Tier 2 -> Bot unsure, H
-- [ ] **Chats** (high) page (category pills row) @ line 3233, loadSupportStats()
+      fix: Needs a human / Bot unsure / Bot answered (Tier 1 -> Bot answered, Tier 2 -> Bot unsure,
+- [x] **Chats** (high) page (category pills row) @ line 3233, loadSupportStats()
       now: Pending review · ${r.pendingReview}  (amber pill)
       fix: Delete this pill entirely.
-- [ ] **Users** (medium) page (user row plan chip) @ line 5487 (planFact)
+- [x] **Users** (medium) page (user row plan chip) @ line 5487 (planFact)
       now: PAYG
       fix: Pay as you go
 - [ ] **Users** (medium) User detail sheet (subtitle under name) @ line 5506 (userSheet openSheet subtitle)
       now: raw plan value, e.g. "Subscriber" / "Pay-as-you-go" / "Admin / test"
       fix: Use the same labels the row uses: Member / Pay as you go / Comp / Test
-- [ ] **Live** (medium) Call health sheet @ line 5459 (loadCallHealth tile)
+- [x] **Live** (medium) Call health sheet @ line 5459 (loadCallHealth tile)
       now: rehearsal
       fix: test calls
-- [ ] **Live** (medium) Call health sheet @ line 5457 (loadCallHealth tile)
+- [x] **Live** (medium) Call health sheet @ line 5457 (loadCallHealth tile)
       now: total rows
       fix: total calls
 - [ ] **Alerts** (medium) page @ lines 5308-5310, al_status delivery chips
       now: ● Text off  /  ● Text live  /  ● Email off  /  ● Email live
       fix: SMS (off state): 'Text · not approved yet'; when working: 'Text live' / 'Email live'
 - [ ] **Alerts** (medium) message editor sheet (sendAlertTest result) @ line 5365, al_test_out result text
-      now: Logged but NOT delivered · the Twilio number isn’t live yet (pending A2P). ... Brevo key n
-      fix: Logged but not delivered. Text sending isn’t approved yet. / Logged but not delivered. Ema
+      now: Logged but NOT delivered · the Twilio number isn’t live yet (pending A2P). ... Brevo key
+      fix: Logged but not delivered. Text sending isn’t approved yet. / Logged but not delivered. E
 - [x] **Policy** (medium) page @ line 5137, FLAG_GROUPS flag 'smsAlerts' caption
       now: ON once toll-free texting is approved · OFF = alert forms collect email only
       fix: Short caption: 'Text alerts to customers' + (i) info sheet holding the ON/OFF detail
 - [ ] **Policy** (medium) Restock watches sheet (loadGwWatches) @ line 5703, gw_watches row
       now: {contact} · {channel} · store #{retailerId} · cat #{categoryId}
       fix: {contact} · {channel} · {store name} · {product name}
-- [ ] **Store Intel** (medium) page @ line 3430 (storecarries eyebrow)
+- [x] **Store Intel** (medium) page @ line 3430 (storecarries eyebrow)
       now: Carry each product · of 113,583
       fix: Stores carrying each product
 - [x] **Kiosk** (medium) page (Inspect diagnostic) @ line 2053 (inspectInbox, not-configured branch)
       now: Gmail not configured (no creds set).
       fix: The receipts inbox isn't connected yet.
-- [ ] **Kiosk** (medium) page + Receipt sheet @ line 2019 (row title) and line 2036 (rcptSheet fallback)
+- [x] **Kiosk** (medium) page + Receipt sheet @ line 2019 (row title) and line 2036 (rcptSheet fallback)
       now: (no product parsed)
       fix: (no product found)
 - [x] **Kiosk** (medium) page @ line 1125 (receipts eyebrow)
       now: Emailed-in receipts
       fix: Receipts inbox
-- [ ] **Kiosk** (medium) page (Inspect diagnostic) @ line 2058 (inspectInbox summary line)
+- [x] **Kiosk** (medium) page (Inspect diagnostic) @ line 2058 (inspectInbox summary line)
       now: 12 emails · last 72h. 3 parse as kiosk receipts
       fix: 12 emails · last 72h. 3 count as kiosk receipts
 - [ ] **Kiosk** (medium) Receipt sheet @ line 2046 (rcptSheet, r.raw block)
       now: <div class="k-eyebrow">Raw parse</div> + a <pre> JSON dump of r.raw
-      fix: Relabel to plain 'Details we read' and drop the raw JSON dump from the everyday sheet (SPE
+      fix: Relabel to plain 'Details we read' and drop the raw JSON dump from the everyday sheet (S
 - [ ] **Add** (medium) Bulk import (details card) @ lines 1033-1037 (Bulk import summary + buttons)
-      now: No warning that importing deactivates every store not in the pasted file (only shown after
-      fix: Add a red one-line warning above the buttons: 'Import replaces the whole store list. Store
+      now: No warning that importing deactivates every store not in the pasted file (only shown aft
+      fix: Add a red one-line warning above the buttons: 'Import replaces the whole store list. Sto
 - [x] **Search** (medium) store card (expanded) @ line 3618 (storeDetailsHTML)
       now: Distro
       fix: Distributor
@@ -109,7 +109,7 @@ DONE this pass = a first copy wave (28 unique swaps) applied + shipped. Everythi
       now: Display is instant. Detecting it on calls needs the extraction wired.
       fix: You will see it right away. Reading it off real calls has to be set up first.
 - [x] **Statuses** (medium) page (add-status confirmation, id st_msg) @ line 4550, addStatus() success message
-      now: Added ✓. Note: DISPLAY is live, but detecting this situation on calls needs the Admin dev 
+      now: Added ✓. Note: DISPLAY is live, but detecting this situation on calls needs the Admin de
       fix: Added. It shows up now. Reading it off real calls still has to be set up.
 - [x] **Chains** (medium) page (Store data, checkbox label) @ line 3948, ssRenderData() first checkbox label
       now: First-party. sells at MSRP
@@ -121,11 +121,11 @@ DONE this pass = a first copy wave (28 unique swaps) applied + shipped. Everythi
       now: Test-bench agent not configured.
       fix: Voice tuning isn't set up yet.
 - [ ] **Fun** (medium) page @ L2169 + L2178, td_status (Delta feed)
-      now: dialing…  / when not live, prints the raw API status verbatim: s.status (e.g. "queued", "r
-      fix: Sentence-case, plain map: 'Dialing you…' and map raw states (queued/ringing→'Ringing you…'
+      now: dialing…  / when not live, prints the raw API status verbatim: s.status (e.g. "queued", 
+      fix: Sentence-case, plain map: 'Dialing you…' and map raw states (queued/ringing→'Ringing you
 - [ ] **Designer** (medium) page @ L1230-1231, #sb_model options (Step 2)
       now: Turbo v2 (natural)  /  Flash v2 (fastest, robotic)
-      fix: Drop the raw model codenames: 'Natural' / 'Fast (less natural)'. Per SPEC this whole dropd
+      fix: Drop the raw model codenames: 'Natural' / 'Fast (less natural)'. Per SPEC this whole dro
 - [x] **Fun** (medium) page @ L1435, Delta card (i) tooltip
       now: Runs a whole check on recorded clips, no live agent · go off script to hear the barge-in
       fix: …go off script to hear the live agent take over
@@ -138,19 +138,19 @@ DONE this pass = a first copy wave (28 unique swaps) applied + shipped. Everythi
 - [ ] **Chats** (medium) page (chat list empty state) @ line 3252, loadSupportChats()
       now: No chat data yet. Waiting on the Support lane's API.
       fix: No chats yet. This fills in as people reach out.
-- [ ] **Chats** (medium) page (hero label, error state) @ line 3218, loadSupportStats()
+- [x] **Chats** (medium) page (hero label, error state) @ line 3218, loadSupportStats()
       now: Support APIs aren't live yet. This lights up on its own once they land.
       fix: Chats aren't turned on yet. This fills in on its own once they start.
 - [ ] **Chats** (medium) page (title) @ line 1053, k-title
       now: Support
       fix: Chats
 - [ ] **Go-to-Market** (medium) page (Agent filter) + Add an item slide-up (Agent field) @ line 1895 GTM_AGENTS; used at line 1483 (filter) and line 1494 (add sheet)
-      now: Agent list: Owner, DevOps, Website, Admin, Data, Copy, Design, QA, Support agent, Discord,
-      fix: Retire this 11-name taxonomy. SPEC item 22: collapse to 3 areas (Site · Admin · Voice) and
+      now: Agent list: Owner, DevOps, Website, Admin, Data, Copy, Design, QA, Support agent, Discor
+      fix: Retire this 11-name taxonomy. SPEC item 22: collapse to 3 areas (Site · Admin · Voice) a
 - [x] **Live** (low) Credits sheet (subtitle) @ line 2747 (dashSheet subs.credits)
       now: ElevenLabs · estimated from the last 31 days
       fix: Voice credits · estimated over the last 31 days
-- [ ] **Live** (low) Call health sheet (cleanup preview line) @ line 5467
+- [x] **Live** (low) Call health sheet (cleanup preview line) @ line 5467
       now: Cleanup preview · dry run · billed calls protected · restorable from ElevenLabs
       fix: Cleanup preview · nothing deleted · paid calls kept · restorable
 - [x] **Search** (low) Filters panel (sort select) @ line 989 (f_sort option)
@@ -158,10 +158,10 @@ DONE this pass = a first copy wave (28 unique swaps) applied + shipped. Everythi
       fix: Name A to Z
 - [ ] **Add** (low) Bulk import (details card) @ line 1034 tooltip; line 1035 placeholder; line 5675 error
       now: 'Paste store JSON…' tooltip, a raw JSON array placeholder, and error 'Invalid JSON'
-      fix: Behind the Advanced gate this is acceptable for a power tool, but soften surface copy: too
+      fix: Behind the Advanced gate this is acceptable for a power tool, but soften surface copy: t
 - [ ] **Store Intel** (low) page (MSRP coverage row tooltip) @ line 3411 (TIP constant)
-      now: Coverage: the % of the retail chains we know carry Pokémon at MSRP whose store locations w
-      fix: Trim to one line, e.g. 'How many of the chains we know carry Pokémon we've loaded stores f
+      now: Coverage: the % of the retail chains we know carry Pokémon at MSRP whose store locations
+      fix: Trim to one line, e.g. 'How many of the chains we know carry Pokémon we've loaded stores
 - [x] **Search** (low) Filters panel (status select) @ line 984 (f_status option)
       now: Bad / missing number
       fix: No phone number
@@ -174,7 +174,7 @@ DONE this pass = a first copy wave (28 unique swaps) applied + shipped. Everythi
 - [x] **Designer** (low) page @ L2928, renderPersonas() empty state for #pn_list (Step 4)
       now: No personas yet. build one above and save it.
       fix: No personas yet. Build one below and save it.
-- [ ] **Fun** (low) page @ L2183, td_feed transcript speaker label (Delta rehearsal)
+- [x] **Fun** (low) page @ L2183, td_feed transcript speaker label (Delta rehearsal)
       now: Speaker labelled TAPE (vs YOU for the person answering)
       fix: Label the agent side 'AI' (or 'Check AI').
 - [x] **Chats** (low) page (stats wells) @ line 3229, loadSupportStats()
@@ -182,7 +182,7 @@ DONE this pass = a first copy wave (28 unique swaps) applied + shipped. Everythi
       fix: Avg messages
 - [ ] **Chats** (low) chat detail slide-up (sheet subtitle) @ line 3302, openSupChat()
       now: raw status value shown verbatim: 'open' / 'escalated' / 'resolved'
-      fix: Map to friendly words: Open / Needs a human / Resolved (reuse the same map as the row stat
+      fix: Map to friendly words: Open / Needs a human / Resolved (reuse the same map as the row st
 - [ ] **Go-to-Market** (low) page (Area filter) + Add an item slide-up (Area field) @ line 1896 GTM_AREA; used at line 1482 (filter) and line 1493 (add sheet)
       now: Backend / Frontend / Ops / Growth
       fix: Site / Admin / Voice
@@ -199,13 +199,13 @@ DONE this pass = a first copy wave (28 unique swaps) applied + shipped. Everythi
       fix: Use a non-zap icon, e.g. Lucide gauge (voice balance) or coins
 - [ ] **Restock** (medium) page (drill-in report rows) @ line 5583 (peek() builder)
       now: Call reality / Restock days / What's landing rows have no leading icon
-      fix: Add a leading Lucide icon per row: phone-call (Call reality), calendar (Restock days), pac
-- [ ] **Policy** (medium) Community moderation & Store requests sheets @ line 5711 (gw_community) and line 5750 (gw_storereqs) status line
+      fix: Add a leading Lucide icon per row: phone-call (Call reality), calendar (Restock days), p
+- [x] **Policy** (medium) Community moderation & Store requests sheets @ line 5711 (gw_community) and line 5750 (gw_storereqs) status line
       now: ⏳ (hourglass emoji) before 'N awaiting review' / 'N new'
       fix: Replace the ⏳ emoji with the Lucide 'clock' icon via dsIco('clock',...)
 - [ ] **Kiosk** (medium) page (Inspect diagnostic) @ line 2060 (inspectInbox row head)
       now: '✓ parses' / '✗ rejected' (unicode check/cross glyphs used as icons, plus dev-speak)
-      fix: Use dsIco('check-circle-2') in --green with label 'Counts' and dsIco('x-circle') in --red 
+      fix: Use dsIco('check-circle-2') in --green with label 'Counts' and dsIco('x-circle') in --re
 - [ ] **Statuses** (medium) sub-nav tab @ line 1811, NAV_GROUPS.calls tab ['statuses','Statuses','tag']
       now: hand-drawn 'tag' icon (ICONS set)
       fix: Lucide flag (dsIco/lucideSvg 'flag')
@@ -217,13 +217,13 @@ DONE this pass = a first copy wave (28 unique swaps) applied + shipped. Everythi
       fix: Lucide message-square (dsIco/lucideSvg 'message-square')
 - [ ] **Testing** (medium) page @ L5062-5066, tcIcon() status glyphs in the call-log rows
       now: Bespoke hand-drawn SVG glyph set (check / x / q / phone) drawn in colored circles
-      fix: Use Lucide per the concept map: check-circle-2 (in stock), x-circle (not in / sold out / d
+      fix: Use Lucide per the concept map: check-circle-2 (in stock), x-circle (not in / sold out /
 - [ ] **Chats** (medium) page (chat list rows, status at right) @ lines 3266-3269, loadSupportChats()
-      now: Hand-drawn inline SVGs (up-arrow path 'M12 19V5M5 12l7-7 7 7' for escalated, checkmark 'M5
-      fix: Use the Lucide sprite (dsIco/lucideSvg): resolved -> check-circle-2, escalated -> arrow-up
+      now: Hand-drawn inline SVGs (up-arrow path 'M12 19V5M5 12l7-7 7 7' for escalated, checkmark '
+      fix: Use the Lucide sprite (dsIco/lucideSvg): resolved -> check-circle-2, escalated -> arrow-
 - [ ] **Go-to-Market** (medium) page (item card remove) + restore strip (dismiss) @ line 1961 (Remove) and line 1943 (dismiss), renderGtm()
       now: '×' text glyph used as the button (color #5C5C68, font-size:15px)
-      fix: Delete/Remove -> Lucide trash-2 (destructive); the restore-strip dismiss -> Lucide x. Rend
+      fix: Delete/Remove -> Lucide trash-2 (destructive); the restore-strip dismiss -> Lucide x. Re
 - [ ] **Restock** (low) page (empty state) @ lines 5536 and 5540 (emptyState('box',...))
       now: box glyph from the legacy ICONS set
       fix: Lucide package via the LUCIDE set / dsIco
@@ -232,25 +232,25 @@ DONE this pass = a first copy wave (28 unique swaps) applied + shipped. Everythi
       fix: Lucide users (plural)
 - [ ] **Policy** (low) Community moderation sheet (loadGwCommunity) @ line 5715, community post meta row
       now: ♥{likes} ... and a bare '✓ live' checkmark character
-      fix: Use Lucide 'heart' for likes and Lucide 'check-circle-2' for the live/approved marker (dsI
+      fix: Use Lucide 'heart' for likes and Lucide 'check-circle-2' for the live/approved marker (d
 - [ ] **Plans** (low) page @ lines 2431-2432, syncPill()
       now: '✓ in sync' and '● pending' using a checkmark char and a bullet char as icons
-      fix: Lucide 'check-circle-2' for in-sync and 'clock' for pending (dsIco), sized as a chip icon
+      fix: Lucide 'check-circle-2' for in-sync and 'clock' for pending (dsIco), sized as a chip ico
 - [ ] **Calc** (low) page @ lines 2542-2543 (and hero label line 2525)
       now: Delta / Charlie shown as bordered segment buttons with a colored dot
-      fix: Render the lane names as the standard lane chips (.ds-chip.delta / .ds-chip.charlie) with 
+      fix: Render the lane names as the standard lane chips (.ds-chip.delta / .ds-chip.charlie) wit
 - [ ] **Search** (low) Filters @ lines 968 and 971 (msel-car / filters caret)
       now: ▾ (unicode caret glyph used as the dropdown icon)
       fix: Use dsIco('chevron-down') so the caret matches the Lucide set.
 - [ ] **Kiosk** (low) page + Receipt/report rows @ line 2022 (receipt row chev); same .pk-chev inline path also at 3444 Store Intel reports, 1001 Search map peek
       now: Hand-drawn inline chevron SVG <path d="M9 6l6 6-6 6"/> on every drill-in row
-      fix: Render drill-in chevrons via dsIco('chevron-right') so they use the Lucide set at the syst
+      fix: Render drill-in chevrons via dsIco('chevron-right') so they use the Lucide set at the sy
 - [ ] **Calls** (low) page (call row, restock verdict) @ line 4641, renderResults() shipmentDayHeard branch
       now: inline one-off hand-drawn truck SVG (<svg ...><path d="M2 7h11v8H2z..."/></svg>)
       fix: dsIco('truck', 15) — Lucide 'truck' already exists in the sprite
 - [ ] **Chains** (low) page (Store settings toggle rows) @ lines 3863-3866, ssRenderStore() row(): Callable / Kiosk / Online / Stock verified
       now: toggle rows have no leading icon (label + count + ON/OFF only)
-      fix: Add a Lucide icon per SPEC toggle row format [icon][label+caption][toggle]: Callable=phone
+      fix: Add a Lucide icon per SPEC toggle row format [icon][label+caption][toggle]: Callable=pho
 - [ ] **Designer** (low) page @ L1197 (and L3018-3019), #vs_rec Record/Stop button
       now: Uses the Unicode characters ● and ■ as record/stop icons
       fix: Use Lucide 'circle' (record) and 'square' (stop), or 'mic', via lucideSvg().
@@ -259,18 +259,18 @@ DONE this pass = a first copy wave (28 unique swaps) applied + shipped. Everythi
       fix: Render Lucide 'info' as the (i) affordance instead of the ⓘ character.
 - [ ] **Workflows** (low) Workflow editor sheet (wfSheet) @ L4865, wfmVoiceChips() remove control on each voice pin
       now: Raw '×' character as the remove button
-      fix: Use lucideSvg('x',14) — matches the opener remove buttons on the same sheet (L4906/L4927),
+      fix: Use lucideSvg('x',14) — matches the opener remove buttons on the same sheet (L4906/L4927
 - [ ] **Go-to-Market** (low) page (restore strip icon + done circle) @ line 1940 (alert-triangle) and line 1953 (checkmark), renderGtm()
-      now: Hand-drawn inline SVGs: warning triangle ('M12 3.5 21 19H3z...') and a check ('M5 12l5 5 9
-      fix: Swap for the Lucide sprite versions (alert-triangle, check-circle-2) so they match the res
+      now: Hand-drawn inline SVGs: warning triangle ('M12 3.5 21 19H3z...') and a check ('M5 12l5 5
+      fix: Swap for the Lucide sprite versions (alert-triangle, check-circle-2) so they match the r
 
 ## SPACING
-- [ ] **Users** (medium) page (user row subline) + shared .peek CSS @ line 336 (.peek .pk-m), rendered at line 5494
+- [x] **Users** (medium) page (user row subline) + shared .peek CSS @ line 336 (.peek .pk-m), rendered at line 5494
       now: user metadata line ('X credits · Y calls · $Z') set at font-size 11.5px
       fix: Raise .pk-m to 12px (Caption)
 - [ ] **Kiosk** (medium) Receipt sheet + Inspect diagnostic @ line 2041 (rcptSheet meta), lines 2062-2063 (inspectInbox fields)
       now: font-size:10.5px on the 'From the hit at…' note and the machine/product/snippet lines
-      fix: Raise to the Caption size (12px). SPEC Part 1: nothing smaller than 12px exists; the 10.5p
+      fix: Raise to the Caption size (12px). SPEC Part 1: nothing smaller than 12px exists; the 10.
 - [ ] **Feedback** (medium) Feedback sheet (We said / They saw cards) + list row REVIEW pill @ lines 3144-3145 (9.5px labels) and line 3131 (9px REVIEW pill), fbSheet()/loadFeedback()
       now: font-size:9.5px labels 'We said'/'They saw'; REVIEW pill font-size:9px
       fix: Raise to 12px (Caption). SPEC Part 1: nothing smaller than 12px exists.
@@ -281,17 +281,17 @@ DONE this pass = a first copy wave (28 unique swaps) applied + shipped. Everythi
       now: font-size:11.5px (ui-monospace 'human … · talk … · total …')
       fix: Raise to 12px minimum.
 - [ ] **Go-to-Market** (medium) page (item cards) @ lines 1960 (LAUNCH chip), 1965 (agent chip), 1966 (area chip), renderGtm()
-      now: font-size:8.5px (LAUNCH), font-size:9px (agent chip), font-size:9px (area chip), all upper
-      fix: Bump chips to Caption 12px / 500 per SPEC (nothing below 12px exists); use the standard ti
+      now: font-size:8.5px (LAUNCH), font-size:9px (agent chip), font-size:9px (area chip), all upp
+      fix: Bump chips to Caption 12px / 500 per SPEC (nothing below 12px exists); use the standard 
 - [ ] **Go-to-Market** (medium) page (item cards) @ line 1961 (Remove ×) and lines 1953-1954 (status-cycle circle), renderGtm()
       now: Remove '×' hit area ~19px (padding:0 2px, font 15px); status-cycle circle is 22px x 22px
       fix: Give both a >=44px tap area (pad the hit box even if the glyph stays small).
 - [ ] **Live** (low) Members sheet (loadGwPulse 'Stats baseline' row) @ line 5431
-      now: 'Start fresh' / 'Count all again' buttons at font-size 10.5px, padding 5px 10px (~20px tal
+      now: 'Start fresh' / 'Count all again' buttons at font-size 10.5px, padding 5px 10px (~20px t
       fix: Raise to 12px text with ~11px vertical padding so the tap target reaches ~44px
 - [ ] **Alerts** (low) page @ line 923 (caption) and line 930 (oa_email input)
-      now: Caption 'All in-stock alerts system wide can be sent to an owner account.' at font-size:11
-      fix: Bump caption to 12px (Caption min). Give the input a Caption label above it ('Where it lan
+      now: Caption 'All in-stock alerts system wide can be sent to an owner account.' at font-size:
+      fix: Bump caption to 12px (Caption min). Give the input a Caption label above it ('Where it l
 - [ ] **Alerts** (low) page @ line 5308, delivery chip()
       now: Chip text at font-size:9.5px
       fix: Raise to 12px Caption (SPEC chip = Caption 500) so the status chips meet the 12px floor
