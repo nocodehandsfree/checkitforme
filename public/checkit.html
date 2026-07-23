@@ -2073,6 +2073,9 @@ html[data-skin="v2"] #buyOverlay .modal{overflow-y:auto;padding-bottom:calc(22px
   html[data-skin="v2"] #buyOverlay .buydock-plan b{color:#fff;font-weight:800}
   html[data-skin="v2"] .billcyc-in{margin:0!important;padding:4px}
   html[data-skin="v2"] .billcyc-in button{padding:7px 12px;font-size:12px;flex:0 0 auto}
+  /* Pay-as-you-go: Continue is a plain button, not the floating slide-up dock (owner 07-23). */
+  html[data-skin="v2"] #buyOverlay .buydock.flat{position:static;background:none;padding:0;margin-top:14px}
+  html[data-skin="v2"] #buyOverlay .buydock.flat .buydock-plan{display:none}
 /* 6c CHECKOUT (v2) — branded on-site Stripe Elements page. Bottom sheet, comp tokens: raised order
    card, carved "or pay with card" divider, Payment Element in the well, green SUBSCRIBE ring capsule. */
 html[data-skin="v2"] #coOverlay{align-items:flex-end;padding:0}
@@ -8189,7 +8192,9 @@ function renderBuyDock(){
     if(plan&&pk) plan.innerHTML=`<b>${pk.checks} ${t('plan.checks','checks')}</b> · ${money(pk.cents)}`; }
   else { const _t=tiers(); const ti=_t.find(x=>x.key===SEL_TIER_KEY)||_t.find(x=>x.key===defaultTierKey())||_t[0];
     if(plan&&ti){ const per=BILLING_ANNUAL?t('plan.yr','/yr'):t('plan.mo','/mo'); plan.innerHTML=`<b>${esc(ti.name)}</b> · ${tierPrice(ti)}${per}`; } }
-  dock.classList.add('up');
+  // Pay-as-you-go is short, so nothing falls below the fold: Continue is a plain button there, not the
+  // floating slide-up dock (owner 07-23). Plans stays a slide-up because its list runs long.
+  dock.classList.add('up'); dock.classList.toggle('flat', BUY_MODE==='packs');
 }
 function renderBuyPlans(){
   const member=!!(ACCOUNT&&ACCOUNT.subscription==='active'), comp=!!(ACCOUNT&&ACCOUNT.comp);
