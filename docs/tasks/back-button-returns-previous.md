@@ -16,7 +16,8 @@ as before. EN + ES. Truth snapshot re-taken.
 
 **Verify-live output (paste on close — a task without it is NOT closed):**
 ```
-Built on branch claude/webbie-task-queue-c4wpxu (PR). tsc clean, inline JS parses.
-Scope = the named Alerts sheet; email/score sheets share the same gap (noted follow-up).
-NOT on staging yet — verify-live + re-snapshot pending merge to staging.
+verify-live 2026-07-23: staging https://staging.checkitforme.com/ → LIVE (serving HEAD 4f6c4a6).
+Alerts sheet now sheetPush('alerts') + alertsOv in the popstate close-map (present in live snapshot).
+Truth snapshot re-taken. Owner confirms back-collapse on his phone. Follow-up: email/score sheets
+share the same gap, left for a named task.
 ```

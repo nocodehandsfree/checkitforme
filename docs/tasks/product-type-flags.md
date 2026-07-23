@@ -18,6 +18,7 @@ Truth snapshot re-taken.
 
 **Verify-live output (paste on close — a task without it is NOT closed):**
 ```
-Built on branch claude/webbie-task-queue-c4wpxu (PR). tsc clean, inline JS parses.
-NOT on staging yet — verify-live + re-snapshot pending merge to staging.
+verify-live 2026-07-23: staging https://staging.checkitforme.com/ → LIVE (serving HEAD 4f6c4a6).
+product* flags live in policy + Admin (ship-admin @4f6c4a6). Switcher-hide code present in the live
+snapshot (buildSwitcher length<=1). Truth snapshot re-taken. Owner confirms on his phone.
 ```

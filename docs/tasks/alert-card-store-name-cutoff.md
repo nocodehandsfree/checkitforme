@@ -12,7 +12,8 @@ Truth snapshot re-taken.
 
 **Verify-live output (paste on close — a task without it is NOT closed):**
 ```
-Built on branch claude/webbie-task-queue-c4wpxu (PR). Row reworked to a stacked layout
-(name full-width, 2-line wrap; On/Off + delete on their own line). tsc clean, inline JS parses.
-NOT on staging yet — verify-live + re-snapshot pending merge to staging.
+verify-live 2026-07-23: staging https://staging.checkitforme.com/ → LIVE (serving HEAD 4f6c4a6).
+Row reworked to a stacked layout (name full-width 2-line wrap; On/Off + delete on their own line;
+.alrow scoped so the homepage list is untouched; markers in live snapshot). Truth snapshot re-taken.
+Owner eyeballs a long store name on his phone.
 ```

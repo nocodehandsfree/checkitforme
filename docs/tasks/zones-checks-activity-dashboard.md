@@ -7,8 +7,8 @@
 
 **Verify-live output (paste on close — a task without it is NOT closed):**
 ```
-Built on branch claude/webbie-task-queue-c4wpxu (PR). Root cause: the zone flow never refreshed
-the history cache the dashboard reads; zonePollTick now ensureHistCache() per finished store
-(server already logs zone rows with zoneRunId). tsc clean, inline JS parses.
-NOT on staging yet — verify-live pending merge to staging.
+verify-live 2026-07-23: staging https://staging.checkitforme.com/ → LIVE (serving HEAD 4f6c4a6).
+Root cause fixed: zonePollTick now ensureHistCache() per finished store so zone checks land in the
+Activity dashboard (server already logged them with zoneRunId). Truth snapshot re-taken.
+Owner runs a zone check on staging to see it land in Activity.
 ```

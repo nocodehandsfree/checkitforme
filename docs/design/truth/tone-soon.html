@@ -1321,6 +1321,14 @@
   .alsw button{padding:8px 6px;font-size:12px}
   .alrm{background:rgba(255,123,123,.12);border:0;border-radius:12px;padding:9px;color:#FF9B9B;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
   .alrow-off{opacity:.55}
+  /* Alerts rows (owner 07-23): the On/Off toggle + remove used to sit beside the name and squeeze it,
+     cutting long store names. Give the name the full row width and drop the controls onto their own line
+     underneath, so the whole name shows (2 line wrap). Scoped to .alrow so the homepage list is untouched. */
+  .store.alrow{align-items:flex-start}
+  .alrow-main{min-width:0;flex:1;display:flex;flex-direction:column;gap:10px}
+  .alrow-id{min-width:0}
+  .alrow-ctrls{display:flex;align-items:center;gap:8px}
+  .alrow-ctrls .alsw{width:108px;flex:0 0 auto}
   .alpause{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)}
   .almk{padding:12px 14px;border-radius:14px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.28);color:#F5C368;font-size:13px;font-weight:700;line-height:1.45;text-align:center}
   .ho-stepper{display:flex;align-items:center;justify-content:space-between;background:var(--terminal);border:1px solid var(--border);border-radius:13px;padding:8px 10px}
@@ -2195,6 +2203,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   html[data-skin="v2"] .ckarc1,html[data-skin="v2"] .ckarc2,html[data-skin="v2"] .rpill .d{animation:none}
 }
 /*V2END*/</style>
+<meta name="build" content="4f6c4a62f9fa">
 </head>
 <body>
 <!-- Hard-refresh of a result deep-link: apply the verdict treatment (wash + transparent nav) NOW, so
@@ -4972,6 +4981,7 @@ function isProdHost(){ return /^(www\.)?checkitforme\.com$/i.test(location.hostn
 function isTestStore(name){ return /^(fun|mvp)\b/i.test(String(name||'').trim()); }
 function renderFindsBanner(f){
   const el=$('finds'); if(!el) return;
+  if((POLICY.flags||{}).inStockBanner===false){ el.style.display='none'; return; } // Admin switched the in-stock banner OFF
   f=Array.isArray(f)?f:[];
   if(BRAND_CAT) f=f.filter(x=>String(x.category||'').toLowerCase()===BRAND_CAT.label.toLowerCase());
   // Staleness cap (owner 07-05): an in-stock find goes cold — drop it from the rotating banner once it's
@@ -5003,6 +5013,7 @@ async function loadFinds(){
   // for local-only; the national feed was surfacing finds hundreds of miles away). The banner only appears
   // once we have the visitor's location, and only with finds inside their radius.
   const el=$('finds');
+  if((POLICY.flags||{}).inStockBanner===false){ if(el) el.style.display='none'; return; } // banner off in Admin → skip the fetch entirely
   if(!USER_LOC){ if(el) el.style.display='none'; return; }
   // SNAPPY: paint the last cached feed INSTANTLY (it's always localized — we only ever fetch WITH a
   // location now), then refresh in the background and re-cache. Cache key bumped to cifm_finds_cache so any
@@ -5020,6 +5031,10 @@ function swIcon(b){ return b.logoUrl ? `<img src="${b.logoUrl}" alt="" onerror="
 function swLbl(b){ return b.tag || b.label; }
 function buildSwitcher(){
   const sw=(window.SWITCHER||{}); if(!sw.list) return;
+  // One product enabled (Admin per-product flags) → nothing to switch to, so hide the whole switcher pill.
+  const vsw=$('vsw');
+  if((sw.list||[]).length<=1){ if(vsw) vsw.style.display='none'; return; }
+  if(vsw) vsw.style.display='';
   const cur=sw.list.find(b=>b.key===sw.current)||sw.list[0];
   const trig=$('vsw_trig');
   if(trig&&cur) trig.innerHTML=`${swIcon(cur)}<span class="vsw-name">${esc(swLbl(cur))}</span>${ICO.chev('#cfcfd8')}`;
@@ -5978,7 +5993,7 @@ function sheetPush(tag){ try{ if(!(history.state&&history.state.v==='sheet'&&his
 window.addEventListener('popstate',(ev)=>{
   // Back with a sheet open closes THAT sheet and stays put (owner 07-10 item 6).
   try{
-    const OPEN=[['coOverlay',()=>closeCheckout()],['buyOverlay',()=>closeBuy()],['pageOverlay',()=>closePage()],['histOverlay',()=>closeHistory()],['watchOverlay',()=>closeWatch()],['scheduleOverlay',()=>closeSchedule()],['storeReqOverlay',()=>closeStoreReq()]];
+    const OPEN=[['coOverlay',()=>closeCheckout()],['buyOverlay',()=>closeBuy()],['pageOverlay',()=>closePage()],['histOverlay',()=>closeHistory()],['watchOverlay',()=>closeWatch()],['scheduleOverlay',()=>closeSchedule()],['storeReqOverlay',()=>closeStoreReq()],['alertsOv',()=>closeAlerts()]];
     for(const [id,fn] of OPEN){ const o=$(id); if(o&&o.classList.contains('on')){ try{ fn(); }catch(_){ o.classList.remove('on'); } return; } }
   }catch(_){ }
   // Zones: back leaves the zones screen for wherever you were; forward re-enters it.
@@ -7347,19 +7362,21 @@ async function openAlerts(opts){ opts=opts||{}; ALERTS_MAKEROOM=!!opts.makeRoom;
     const rows = subs.length? subs.map(x=>{
       const so=alertStoreObj(x), off=!!x.muted;
       const name=esc(so.name||x.storeName||t('alerts.acheck','A check')), loc=esc(so.location||x.storeLocation||'');
-      return `<div class="store${off||paused?' alrow-off':''}" style="cursor:default;margin-top:10px">
+      return `<div class="store alrow${off||paused?' alrow-off':''}" style="cursor:default;margin-top:10px">
         <div class="ic ${so.logoDark?'lite':''} ${so.logoWide?'widelogo':''}">${storeFace(so)}</div>
-        <div style="min-width:0;flex:1"><div class="nm" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</div><div class="lo" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${loc}</div></div>
-        <div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
-          <div class="ho-toggle alsw" style="width:108px;flex:0 0 auto"><button class="${!off?'on':''}" onclick="alertSetOn(${x.id},1)">${t('alerts.rowon','On')}</button><button class="${off?'on':''}" onclick="alertSetOn(${x.id},0)">${t('alerts.rowoff','Off')}</button></div>
-          <button class="alrm" onclick="alertStop(${x.id})" aria-label="${t('alerts.remove','Remove')}">${Z_ICO_TRASH}</button>
+        <div class="alrow-main">
+          <div class="alrow-id"><div class="nm">${name}</div><div class="lo" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${loc}</div></div>
+          <div class="alrow-ctrls">
+            <div class="ho-toggle alsw"><button class="${!off?'on':''}" onclick="alertSetOn(${x.id},1)">${t('alerts.rowon','On')}</button><button class="${off?'on':''}" onclick="alertSetOn(${x.id},0)">${t('alerts.rowoff','Off')}</button></div>
+            <button class="alrm" onclick="alertStop(${x.id})" aria-label="${t('alerts.remove','Remove')}">${Z_ICO_TRASH}</button>
+          </div>
         </div></div>`;}).join('')
       : `<div style="margin-top:10px;padding:20px 16px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);text-align:center"><span style="font-size:12.5px;font-style:italic;font-weight:600;color:#8A8A96;line-height:1.5">${sentLines(t('alerts.none',"You aren't watching any stores yet."))}</span></div>`;
     $('alertsList').innerHTML = banner+master+rows; };
   window.__alertsPaint=paint;
   ov.innerHTML=shell(ALERTS_ME?'' : `<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:22px 0"><span></span><span></span><span></span></div>`);
   if(ALERTS_ME) paint(ALERTS_ME);
-  ov.classList.add('on');
+  ov.classList.add('on'); sheetPush('alerts'); // register with history so the back button collapses THIS sheet (like watch/schedule)
   const me=await appApi('/app/alerts/me');
   if(me&&!me.error) paint(me);
   else if(!ALERTS_ME) paint(null);
@@ -7641,6 +7658,11 @@ async function zonePollTick(){
   const wasLive=r.data&&(r.data.done||0)<(r.data.total||0);
   ZONES.run.data=data;
   try{ sessionStorage.setItem('zrun:'+r.runId, JSON.stringify(data)); }catch(_){ } // reopening this report later paints instantly from here
+  // Zones dial the SAME engine as single checks (LAW 1). The server already logs each finished zone store
+  // result to the account history (stamped zoneRunId), but the zone flow never refreshed the local cache the
+  // activity dashboard reads, so zone checks never showed there. Each time a store finalizes we pull the fresh
+  // history in (once per done count, self resetting per runId), the same store a single check lands in.
+  if(isAuthed() && (data.done||0)>0){ const _hk=r.runId+':'+(data.done||0); if(ZONES._histKey!==_hk){ ZONES._histKey=_hk; ensureHistCache().then(()=>{ try{ renderCallRail(); }catch(_){ } }).catch(()=>{}); } }
   if(ZONES.viewRun) renderZoneRun(); // in-place unless the shape changed (see renderZoneRun)
   else if(!ZONES.building){ const dw=document.querySelector('#zones .zc-open .zc-when'); if(dw&&ZONES.run) dw.textContent=`${data.done||0} ${t('zones.of','of')} ${data.total||0} →`; }
   if(data.done!=null && data.total!=null && data.done>=data.total){ zoneStopPoll(); if(!ZONES.viewRun&&!ZONES.building&&Array.isArray(ZONES.list)) renderZonesList(); }
@@ -8932,5 +8954,5 @@ async function submitSchedule(){
 }
 boot();
 </script>
-<script>!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);posthog.init("phc_xYyBl7VcEYqf4emnV42blLSKQZM0CtxjgEVUSBpS2uL",{api_host:"https://us.i.posthog.com",defaults:"2025-05-24"})</script><script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a1f525ce7b04e14c',t:'MTc4NDc1MTY0Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);posthog.init("phc_xYyBl7VcEYqf4emnV42blLSKQZM0CtxjgEVUSBpS2uL",{api_host:"https://us.i.posthog.com",defaults:"2025-05-24"})</script><script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a1fd9649beb3841f',t:'MTc4NDg0MDEzNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
