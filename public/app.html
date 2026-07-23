@@ -781,13 +781,13 @@
 
   /* ENV TOGGLE (shell). Live / Staging. Carved track (STYLE_GUIDE 5.1): #1B1B20, inset shadow,
      radius 999, active key raised inside. Green dot is Live, orange dot is Staging. Live default. */
-  .envtog{display:inline-flex;align-items:center;gap:3px;margin-left:auto;background:var(--terminal);
-    border-radius:999px;padding:4px;box-shadow:inset 0 2px 6px rgba(0,0,0,.5)}
-  .envtog-opt{display:inline-flex;align-items:center;gap:7px;border:none;background:transparent;color:var(--text-muted);
-    font-family:inherit;font-size:15px;font-weight:600;padding:9px 17px;min-height:36px;border-radius:999px;cursor:pointer;line-height:1;transition:color .14s}
+  .envtog{display:inline-flex;align-items:center;gap:2px;margin-left:auto;background:var(--terminal);
+    border-radius:999px;padding:3px;box-shadow:inset 0 2px 6px rgba(0,0,0,.5)}
+  .envtog-opt{display:inline-flex;align-items:center;gap:6px;border:none;background:transparent;color:var(--text-muted);
+    font-family:inherit;font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px;cursor:pointer;line-height:1;transition:color .14s}
   .envtog-opt.on{background:linear-gradient(180deg,#31313A,#28282E);color:#fff;font-weight:700;
     box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
-  .envtog-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;display:none}
+  .envtog-dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto;display:none}
   .envtog-opt.on .envtog-dot{display:block}
   .envtog-opt[data-env=live].on .envtog-dot{background:var(--green);box-shadow:0 0 8px var(--green);animation:livepulse 2s ease-in-out infinite}
   .envtog-opt[data-env=staging].on .envtog-dot{background:var(--orange);box-shadow:0 0 8px var(--orange)}
@@ -795,6 +795,10 @@
   /* PREVIEW MODE. The hidden /#preview route hides the group nav so the owner reviews just the
      shell toggle and the system. The real nav is untouched everywhere else. */
   body.preview-mode #grpnav,body.preview-mode .subnav2{display:none}
+  /* The switch stays OFF the real admin (clock shows) and appears only inside the preview. */
+  header .envtog{display:none}
+  body.preview-mode header .sub{display:none}
+  body.preview-mode header .envtog{display:inline-flex}
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -807,6 +811,7 @@
     <img src="/logos/brand/check.png?v=2" alt="Check" style="height:22px;width:auto;object-fit:contain;display:block">
     <span class="adm">ADMIN</span>
   </a>
+  <span class="sub"><span class="dot" title="live"></span><span id="clock"></span></span>
   <div class="envtog" id="envtog" role="group" aria-label="Data source">
     <button type="button" class="envtog-opt on" data-env="live" id="env_live" aria-pressed="true" onclick="setEnv('live')"><span class="envtog-dot"></span>Live</button>
     <button type="button" class="envtog-opt" data-env="staging" id="env_staging" aria-pressed="false" onclick="setEnv('staging')"><span class="envtog-dot"></span>Staging</button>
@@ -1493,103 +1498,141 @@
       </div>
     </div>
   </section>
-  <!-- HIDDEN DESIGN-SYSTEM PREVIEW (SPEC Part 3, the /#preview route). Not in NAV_GROUPS, so it never
-       appears in the nav. The owner reviews the shell Live/Staging toggle (in the header) plus the type
-       scale and control set here, before the six masters get built. Icons fill in from data-ico. -->
+  <!-- HIDDEN PREVIEW of the cleaned LIVE page (SPEC Part 2, page 1) at /#preview. Not in NAV_GROUPS, so
+       it never shows in the real nav. Sample numbers, real layout and the design system, for phone review
+       before the page gets wired to live data. The switch shows in the header only here. Icons from data-ico. -->
   <section id="preview">
     <div class="ds">
       <div class="ds-section">
-        <div class="ds-eyebrow">Design system</div>
-        <div class="ds-title">Admin, cleaned up</div>
-        <div class="ds-caption" style="margin-top:4px">Same look. One type scale, one control set, real icons.</div>
+        <div class="ds-title">Today</div>
+        <div class="ds-caption" style="margin-top:2px">Wednesday, July 23. Sample numbers, real layout.</div>
       </div>
 
+      <!-- Checks: today / 7 days / 30 days -->
       <div class="ds-section">
-        <div class="ds-eyebrow">Type. Six sizes only</div>
-        <div class="ds-card">
-          <div class="ds-display">Display 28</div>
-          <div class="ds-caption">One hero number per page</div>
-          <div style="height:14px"></div>
-          <div class="ds-title">Title 22</div>
-          <div class="ds-caption">Page titles</div>
-          <div style="height:14px"></div>
-          <div class="ds-subhead">Subhead 15</div>
-          <div class="ds-caption">Section headers, card titles, sheet titles</div>
-          <div style="height:14px"></div>
-          <div class="ds-body">Body 14. All reading text, row labels, values.</div>
-          <div style="height:14px"></div>
-          <div class="ds-caption">Caption 12. Metadata, chips, captions under numbers.</div>
-          <div style="height:14px"></div>
-          <div><span class="ds-display ds-num">$1,284</span> <span class="ds-caption">revenue, even width numbers</span></div>
+        <div class="ds-card" style="display:flex;gap:12px">
+          <div style="flex:1"><div class="ds-display ds-num">418</div><div class="ds-caption">Checks today</div></div>
+          <div style="flex:1"><div class="ds-subhead ds-num">2,640</div><div class="ds-caption">7 days</div></div>
+          <div style="flex:1"><div class="ds-subhead ds-num">11,208</div><div class="ds-caption">30 days</div></div>
         </div>
       </div>
 
+      <!-- Model scoreboard: the four callers -->
       <div class="ds-section">
-        <div class="ds-eyebrow">Report card</div>
-        <button class="ds-report" type="button">
-          <span class="ds-ic" data-ico="trending-up" data-sz="22" style="color:var(--green)"></span>
-          <span class="ds-rep-main">
-            <span class="ds-subhead">Where are checks coming from?</span>
-            <div class="ds-rep-answer"><span class="ds-display ds-num">62%</span> <span class="ds-caption">Retail, past 7 days</span></div>
-          </span>
+        <div class="ds-eyebrow">How each caller is doing</div>
+        <div class="ds-caption" style="margin:-4px 0 10px">Cost per check, green under 5 cents</div>
+
+        <div class="ds-card">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span><span class="ds-chip alpha">Alpha</span> <span class="ds-caption">keypad</span></span>
+            <span class="ds-chip green ds-num">3.9&#162; each</span>
+          </div>
+          <div style="display:flex;gap:20px;margin-top:12px">
+            <div><div class="ds-subhead ds-num">1,204</div><div class="ds-caption">checks</div></div>
+            <div><div class="ds-subhead ds-num">96%</div><div class="ds-caption">success</div></div>
+            <div><div class="ds-subhead ds-num">1:58</div><div class="ds-caption">avg call</div></div>
+          </div>
+        </div>
+
+        <div class="ds-card">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span><span class="ds-chip bravo">Bravo</span> <span class="ds-caption">voice menu</span></span>
+            <span class="ds-chip green ds-num">4.6&#162; each</span>
+          </div>
+          <div style="display:flex;gap:20px;margin-top:12px">
+            <div><div class="ds-subhead ds-num">642</div><div class="ds-caption">checks</div></div>
+            <div><div class="ds-subhead ds-num">92%</div><div class="ds-caption">success</div></div>
+            <div><div class="ds-subhead ds-num">2:20</div><div class="ds-caption">avg call</div></div>
+          </div>
+        </div>
+
+        <div class="ds-card">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span><span class="ds-chip charlie">Charlie</span> <span class="ds-caption">AI agent</span></span>
+            <span class="ds-chip red ds-num">8.1&#162; each</span>
+          </div>
+          <div style="display:flex;gap:20px;margin-top:12px">
+            <div><div class="ds-subhead ds-num">318</div><div class="ds-caption">checks</div></div>
+            <div><div class="ds-subhead ds-num">89%</div><div class="ds-caption">success</div></div>
+            <div><div class="ds-subhead ds-num">2:47</div><div class="ds-caption">avg call</div></div>
+          </div>
+        </div>
+
+        <div class="ds-card">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span><span class="ds-chip delta">Delta</span> <span class="ds-caption">recorded</span></span>
+            <span class="ds-chip green ds-num">4.2&#162; each</span>
+          </div>
+          <div style="display:flex;gap:20px;margin-top:12px">
+            <div><div class="ds-subhead ds-num">476</div><div class="ds-caption">checks</div></div>
+            <div><div class="ds-subhead ds-num">94%</div><div class="ds-caption">success</div></div>
+            <div><div class="ds-subhead ds-num">2:05</div><div class="ds-caption">avg call</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Exceptions: calls that need a look -->
+      <div class="ds-section">
+        <div class="ds-eyebrow">Calls that need a look</div>
+        <div class="ds-card" style="padding:2px 14px">
+          <div class="ds-row">
+            <span class="ds-ic" data-ico="triangle-alert" data-sz="20" style="color:var(--yellow)"></span>
+            <span class="ds-rowmain"><div class="ds-body">Target, Eastvale</div><div class="ds-caption">Nobody answered after three tries, 14m ago</div></span>
+            <span class="ds-ic" data-ico="chevron-right" data-sz="20" style="color:var(--text-tertiary)"></span>
+          </div>
+          <div class="ds-row">
+            <span class="ds-ic" data-ico="triangle-alert" data-sz="20" style="color:var(--yellow)"></span>
+            <span class="ds-rowmain"><div class="ds-body">GameStop, Riverside</div><div class="ds-caption">Line was busy every try, 31m ago</div></span>
+            <span class="ds-ic" data-ico="chevron-right" data-sz="20" style="color:var(--text-tertiary)"></span>
+          </div>
+          <div class="ds-row">
+            <span class="ds-ic" data-ico="circle-x" data-sz="20" style="color:var(--red)"></span>
+            <span class="ds-rowmain"><div class="ds-body">Walmart, Corona</div><div class="ds-caption">Call dropped mid answer, 1h ago</div></span>
+            <span class="ds-ic" data-ico="chevron-right" data-sz="20" style="color:var(--text-tertiary)"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Funnel -->
+      <div class="ds-section">
+        <div class="ds-eyebrow">From visitor to paying</div>
+        <div class="ds-card">
+          <div style="display:flex;justify-content:space-between;text-align:center;gap:6px">
+            <div><div class="ds-subhead ds-num">2,410</div><div class="ds-caption">Leads</div></div>
+            <div><div class="ds-subhead ds-num">386</div><div class="ds-caption">Signups</div></div>
+            <div><div class="ds-subhead ds-num">92</div><div class="ds-caption">Paying</div></div>
+            <div><div class="ds-subhead ds-num">57</div><div class="ds-caption">Members</div></div>
+            <div><div class="ds-subhead ds-num" style="color:var(--green)">$1,284</div><div class="ds-caption">Revenue</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reports (open into sheets) -->
+      <div class="ds-section">
+        <div class="ds-eyebrow">Reports</div>
+        <button class="ds-report" type="button" style="align-items:center">
+          <span class="ds-ic" data-ico="clock" data-sz="22" style="color:var(--text-strong)"></span>
+          <span class="ds-rep-main"><div class="ds-subhead">Call time</div><div class="ds-caption">When calls land and how long they run</div></span>
+          <span class="ds-num" style="color:var(--text-strong)">2:11 avg</span>
           <span class="ds-chev" data-ico="chevron-right" data-sz="20"></span>
         </button>
-      </div>
-
-      <div class="ds-section">
-        <div class="ds-eyebrow">Settings rows and the toggle</div>
-        <div class="ds-card">
-          <div class="ds-row">
-            <span class="ds-ic" data-ico="bell" data-sz="20"></span>
-            <span class="ds-rowmain"><div class="ds-body">Text alerts</div><div class="ds-caption">Send a text when a store restocks</div></span>
-            <button class="ds-info" type="button" aria-label="More" data-ico="info" data-sz="14"></button>
-            <label class="ds-switch"><input type="checkbox" checked><span class="ds-track"></span><span class="ds-knob"></span></label>
-          </div>
-          <div class="ds-row">
-            <span class="ds-ic" data-ico="receipt" data-sz="20"></span>
-            <span class="ds-rowmain"><div class="ds-body">Kiosk receipt rewards</div><div class="ds-caption">Credit a scan when a receipt checks out</div></span>
-            <label class="ds-switch"><input type="checkbox"><span class="ds-track"></span><span class="ds-knob"></span></label>
-          </div>
-        </div>
-      </div>
-
-      <div class="ds-section">
-        <div class="ds-eyebrow">Inputs</div>
-        <div class="ds-card">
-          <div class="ds-field"><label class="ds-label">Store name</label><input class="ds-input" placeholder="Target"></div>
-          <div class="ds-field" style="margin-bottom:0"><label class="ds-label">Timezone</label><select class="ds-select"><option>Pacific</option><option>Mountain</option><option>Central</option><option>Eastern</option></select></div>
-        </div>
-      </div>
-
-      <div class="ds-section">
-        <div class="ds-eyebrow">Buttons. One primary per view</div>
-        <div class="ds-card" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-          <button class="act" type="button">Save</button>
-          <button class="ghost" type="button">Cancel</button>
-          <button class="ds-danger" type="button">Reset account</button>
-        </div>
-      </div>
-
-      <div class="ds-section">
-        <div class="ds-eyebrow">Chips. Status and lanes</div>
-        <div class="ds-card" style="display:flex;flex-wrap:wrap;gap:8px">
-          <span class="ds-chip green"><span data-ico="circle-check-big" data-sz="18"></span>In stock</span>
-          <span class="ds-chip red"><span data-ico="circle-x" data-sz="18"></span>Failed</span>
-          <span class="ds-chip yellow">Warning</span>
-          <span class="ds-chip orange">Pending</span>
-          <span class="ds-chip neutral">Free plan</span>
-        </div>
-        <div class="ds-card" style="display:flex;flex-wrap:wrap;gap:8px">
-          <span class="ds-chip alpha">Alpha</span>
-          <span class="ds-chip bravo">Bravo</span>
-          <span class="ds-chip charlie">Charlie</span>
-          <span class="ds-chip delta">Delta</span>
-        </div>
-      </div>
-
-      <div class="ds-section">
-        <div class="ds-eyebrow">Icons. The concept map</div>
-        <div class="ds-card" id="ds_iconset"></div>
+        <button class="ds-report" type="button" style="align-items:center">
+          <span class="ds-ic" data-ico="store" data-sz="22" style="color:var(--text-strong)"></span>
+          <span class="ds-rep-main"><div class="ds-subhead">Per store averages</div><div class="ds-caption">Which stores answer fastest</div></span>
+          <span class="ds-chev" data-ico="chevron-right" data-sz="20"></span>
+        </button>
+        <button class="ds-report" type="button" style="align-items:center">
+          <span class="ds-ic" data-ico="zap" data-sz="22" style="color:var(--orange)"></span>
+          <span class="ds-rep-main"><div class="ds-subhead">Credits</div><div class="ds-caption">Calling balance and the daily limit</div></span>
+          <span class="ds-num" style="color:var(--text-strong)">48% used</span>
+          <span class="ds-chev" data-ico="chevron-right" data-sz="20"></span>
+        </button>
+        <button class="ds-report" type="button" style="align-items:center">
+          <span class="ds-ic" data-ico="settings-2" data-sz="22" style="color:var(--text-strong)"></span>
+          <span class="ds-rep-main"><div class="ds-subhead">Maintenance</div><div class="ds-caption">Behind the scenes housekeeping</div></span>
+          <span class="ds-chip green">All clear</span>
+          <span class="ds-chev" data-ico="chevron-right" data-sz="20"></span>
+        </button>
       </div>
     </div>
   </section>

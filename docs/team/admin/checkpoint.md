@@ -18,16 +18,17 @@
 6. **ANSWER-FIRST means ANSWER — do NOT build until told.** Owner says "answer first" / asks a
    question = reply and STOP. Building unasked burns his money and he called it out (07-22). Wait.
 
-## 2026-07-23 — Admin design system, TASK 1 (built + verified; on branch → PR, NOT yet on staging)
+## 2026-07-23 — Admin design system, TASK 1 (built + shipped to THE Admin preview for owner review)
 - SPEC saved: `docs/team/admin/SPEC.md` (six-size type scale + 22-page verdicts; supersedes round-1 CD comps).
 - Task 1 in `public/app.html`, ADDITIVE (new `.ds-*` classes + a scoped `.ds`; the 22 pages untouched):
   · Six type classes 28/22/15/14/12 (nothing under 12px) + `.ds-num` mono. Verified EXACT via computed styles.
   · One control set: green pill toggle, `.act`/`.ghost`/`.ds-danger`, 44px inputs w/ caption labels, chips (status + lane), (i) info.
   · Lucide reuses the existing `LUCIDE` set via a new `dsIco()` at 1.75 stroke; added settings-2/workflow/flask-conical/plus-circle.
-  · Live/Staging toggle in the HEADER (carved track, STYLE_GUIDE 5.1) wired to the existing `CALL_SRC` read-routing, Live default. It replaced the old clock+dot.
-  · Hidden `/#preview` route (NOT in NAV_GROUPS) renders the toggle + type + controls + icon map for the owner's phone review.
-- Proof: Chromium render at iPhone width (Live AND Staging states); `qa-admin-glass` 11/0 (sheet lock intact); copy-gate clean.
-- REMOTE-SESSION: work is on `claude/admin-design-system-spec-mgthjd` → draft PR to staging. NOT live until that PR merges (then `staging.checkitforme.com/#preview`). STOP for owner review (SPEC Part 4.3) before the six masters.
+  · Live/Staging toggle (carved track, STYLE_GUIDE 5.1) wired to the existing `CALL_SRC` read-routing, Live default. Per owner feedback it now shows ONLY inside the preview; the real admin keeps its clock (switch goes global once he blesses it), and it was shrunk.
+  · Hidden `/#preview` route (NOT in NAV_GROUPS) now renders the cleaned LIVE page master (SPEC page 1: checks row, four-caller scoreboard, exceptions, funnel, reports) with sample data.
+- Proof: Chromium render at iPhone width (normal admin = clock, no switch; preview = Live page + switch); `qa-admin-glass` 11/0; copy-gate clean.
+- SHIPPED to THE Admin via ship-admin (override); owner reviews on his phone at `admin.checkitforme.com/#preview`. His real 22 screens are untouched. Also on branch `claude/admin-design-system-spec-mgthjd` + draft PR #91. STOP for his verdict on the Live page before the other 5 masters.
+- OWNER OPEN: per-page src dropdowns (Users/Feedback/Testing/Chats) still exist; they retire together with the switch going global (do NOT leave both).
 
 ## 2026-07-22 — Support surface + call-transcript UI (SHIPPED to Admin + PROMOTED to prod)
 - Support screen: Live/Staging source picker (srcApi) so staging chats show. Chats list now shows the
