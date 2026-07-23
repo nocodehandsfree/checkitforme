@@ -573,8 +573,8 @@
      docs/data/store-logos.md §5 DoD: copy these exact values. 46px tile, 42px mark, wide wordmarks
      44px·auto, dark marks on a #f2f2f5 light plate. No-logo fallback = shared storeWordmark. */
   .slogo{width:46px;height:46px;flex:0 0 auto;border-radius:12px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;overflow:hidden}
-  .slogo img{width:42px;height:42px;object-fit:contain}
-  .slogo.widelogo img{width:44px;height:auto;max-height:34px}
+  .slogo img{max-width:78%;max-height:78%;width:auto;height:auto;object-fit:contain}
+  .slogo.widelogo img{max-width:92%;max-height:64%;width:auto;height:auto;object-fit:contain}
   .slogo.lite{background:#f2f2f5}
   .slogo .mono{font-size:13px;font-weight:900;color:#d6d6e0}
   /* shared two-line text wordmark — ported verbatim from checkit.html (storeWordmark fallback) */
@@ -1336,6 +1336,7 @@
       <div class="k-filters" style="margin:0 0 4px">
         <select class="k-filter" id="set_frate" onchange="filterChainPicker()"><option value="">All ratings</option><option value="5">5 Best Chance</option><option value="4">4 Mostly Reliable</option><option value="3">3 Spotty</option><option value="2">2 Over MSRP</option><option value="1">1 Unknown</option></select>
         <select class="k-filter" id="set_ftype" onchange="filterChainPicker()"><option value="">All types</option></select>
+        <select class="k-filter" id="set_fmap" onchange="filterChainPicker()"><option value="">All</option><option value="mapped">Mapped</option><option value="unmapped">Unmapped</option></select>
       </div>
       <select id="set_chain" onchange="setPickChain()" style="display:none"><option value="">Select a chain</option></select>
       <div id="set_picker"><div class="empty">Loading…</div></div>
@@ -2096,10 +2097,16 @@ async function loadTrainer(){
   const d=await api('/api/admin/trainer/list');
   if(!d||!Array.isArray(d.chains)){ ss.innerHTML=''; return; } // no phantom error — the list below still works
   const ch=d.chains, isMapped=c=>c.navStatus==='locked';
-  // Owner 07-23: one number only, the percent of STORES covered by a mapped chain. No stat wall.
-  let sMap=0,sTot=0; ch.forEach(c=>{ const n=Number((c.stores&&c.stores.n)||c.callable||0); sTot+=n; if(isMapped(c)) sMap+=n; });
-  const spct=sTot?Math.round(sMap/sTot*100):0;
-  ss.innerHTML=`<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px"><span style="font-size:14px;font-weight:600;color:#CDCDD8">Stores mapped</span><span style="font-size:15px;font-weight:800;color:var(--green);font-variant-numeric:tabular-nums">${spct}%</span></div>${trBar(sMap,sTot||1,6)}`;
+  // Owner 07-23: the percent of STORES mapped, broken out by the store's rating (tier).
+  const byRate=new Map();
+  ch.forEach(c=>{ const t=Number(c.tier)||0; const n=Number((c.stores&&c.stores.n)||c.callable||0); const e=byRate.get(t)||{m:0,n:0}; e.n+=n; if(isMapped(c)) e.m+=n; byRate.set(t,e); });
+  const rateRow=t=>{ const e=byRate.get(t); if(!e||!e.n) return ''; const pct=Math.round(e.m/e.n*100); const nm=RATING_CANON[t]||('Tier '+t); const c=(SS_RATING[t]||[])[1]||'#8A8A96';
+    return `<div style="display:flex;align-items:center;gap:12px;padding:6px 0">
+      <span style="flex:0 0 122px;font-size:13px;font-weight:600;color:${c};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t} ${esch(nm)}</span>
+      <span style="flex:1;min-width:0">${trBar(e.m,e.n,5)}</span>
+      <span style="flex:0 0 auto;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;color:${c}">${pct}%</span></div>`; };
+  const rows=[5,4,3,2,1].map(rateRow).join('');
+  ss.innerHTML=`<div class="k-eyebrow" style="margin:0 0 6px">Stores mapped by rating</div>${rows||'<div class="meta">No ratings yet.</div>'}`;
   renderABCD(ch);
 }
 // ABCD — how a call flows: Alpha (keypad) / Bravo (voice) / Charlie (live agent) / Delta (recorded clips).
@@ -3897,7 +3904,7 @@ function buildChainPicker(){
     const locked=ch.navStatus==='locked';
     const nStores=Number((ch.stores&&ch.stores.n)||ch.callable||0);
     // Color with intent: mapped is the NORM (quiet gray) · unmapped is the exception that needs routing (amber).
-    const meta=[nStores?nStores+' store'+(nStores===1?'':'s'):null, ch.muted?'muted':null].filter(Boolean).join(' · ');
+    const meta=[nStores?nStores+' store'+(nStores===1?'':'s'):null, ch.muted?'muted':null, locked?'<span style="color:#8A8A96">mapped</span>':'<span style="color:#F59E0B;font-weight:700">unmapped</span>'].filter(Boolean).join(' · ');
     return `<div class="pickrow${String(ch.id)===cur?' on':''}" data-id="${ch.id}" data-name="${esch((ch.name||'').toLowerCase())}" data-tier="${ch.tier??''}" data-type="${esch((ch.type||'').toLowerCase())}" data-mapped="${locked?1:0}" onclick="pickChainRow(${ch.id})"${ch.muted?' style="opacity:.5"':''}>
       <span class="setlogo">${logoTile(ch)}</span>
       <span style="flex:1;min-width:0"><span style="display:block;color:#fff;font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esch(ch.name)}</span>
@@ -3916,13 +3923,14 @@ function filterChainPicker(){
   const el=document.getElementById('set_picker'); if(!el) return;
   const raw=(document.getElementById('set_search')||{}).value||''; const norm=s=>(s||'').toLowerCase().replace(/[^a-z0-9]+/g,''); const q=norm(raw);
   const subseq=(hay)=>{ let i=0; for(let k=0;k<hay.length&&i<q.length;k++) if(hay[k]===q[i]) i++; return i===q.length; };
-  const ftype=(document.getElementById('set_ftype')||{}).value||''; const frate=(document.getElementById('set_frate')||{}).value||'';
+  const ftype=(document.getElementById('set_ftype')||{}).value||''; const frate=(document.getElementById('set_frate')||{}).value||''; const fmap=(document.getElementById('set_fmap')||{}).value||'';
   let shown=0, hidden=0;
   el.querySelectorAll('.pickrow').forEach(r=>{
-    const name=norm(r.getAttribute('data-name')), tier=r.getAttribute('data-tier'), type=r.getAttribute('data-type')||'';
+    const name=norm(r.getAttribute('data-name')), tier=r.getAttribute('data-tier'), type=r.getAttribute('data-type')||'', mapped=r.getAttribute('data-mapped')==='1';
     let ok=true;
     if(q && !(name.includes(q)||subseq(name))) ok=false;
     if(ftype && type!==ftype) ok=false;
+    if(fmap==='mapped'&&!mapped) ok=false; if(fmap==='unmapped'&&mapped) ok=false;
     if(frate&&String(tier)!==String(frate)) ok=false;
     if(ok&&shown>=CH_LIMIT){ hidden++; ok=false; } // beyond the fold: Show-more reveals (comp 2e)
     r.style.display=ok?'':'none'; if(ok) shown++;
