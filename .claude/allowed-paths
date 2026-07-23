@@ -2,6 +2,7 @@
 # Generated from the tree as it exists after Phase 0 (2026-07-22). One glob per line.
 # Everything else (new root files, new folders, new docs/ locations) is blocked by
 # .claude/hooks/sprawl-gate.sh — write "PM: <path> — <why>" in your checkpoint instead.
+docs/STATE.md
 src/**
 public/**
 scripts/**
