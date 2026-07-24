@@ -1021,6 +1021,13 @@ app.get("/sitemap.xml", (c) => {
 // TwiML Twilio fetches when OUR bridge call connects: stream the call's audio to our WS.
 // Twilio's media stream is pinned to the direct Railway domain (verified WS path; avoids Cloudflare).
 // Hosts live in bridge-place.ts (placeBridgeCall builds its callback URLs from them too).
+// Twilio's own report on the pickup fork (stream-started / stream-stopped / stream-error). Logged
+// into the bridge ring buffer so a silent fork failure names its reason instead of just not playing.
+app.all("/twiml/stream-status", async (c) => {
+  const b = await c.req.text().catch(() => "");
+  bridgeLog(`stream-status room=${(c.req.query("room") || "").slice(0, 8)} ${b.slice(0, 220)}`);
+  return c.body("ok", 200);
+});
 app.all("/twiml/bridge", (c) => {
   const room = c.req.query("room") || "";
   // Chain keypad shortcut (e.g. B&N "0@3"): send it as REAL carrier DTMF via <Play digits>
@@ -1057,7 +1064,7 @@ app.all("/twiml/bridge", (c) => {
   // non-blocking; the fork is listen-only and goes quiet the instant the real bridge socket takes
   // over the room (bridgeLiveRooms), so listeners never hear doubled audio.
   const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
-  const fork = `<Start><Stream url="wss://${host}/twilio-media?room=${room}" track="both_tracks"><Parameter name="room" value="${room}" /></Stream></Start>`;
+  const fork = `<Start><Stream url="wss://${host}/twilio-media?room=${room}" track="both_tracks" statusCallback="https://${host}/twiml/stream-status?room=${room}" statusCallbackMethod="POST"><Parameter name="room" value="${room}" /></Stream></Start>`;
   const xml = `<?xml version="1.0" encoding="UTF-8"?><Response>${fork}${play}<Connect><Stream url="wss://${host}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
   return c.body(xml, 200, { "Content-Type": "text/xml" });
 });
