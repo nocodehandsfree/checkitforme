@@ -2382,7 +2382,9 @@ async function loadCallTiming(){
 const CALC_STORE={ Direct:{label:'Direct',sub:'human picks up',nav:0,nc:'var(--text-muted)'}, Alpha:{label:'Alpha',sub:'keypad tones',nav:30,nc:'#F4B740'}, Bravo:{label:'Bravo',sub:'voice menu',nav:50,nc:'#38BDF8'} };
 const CALC_TALK=[10,15,20,25,30,60];
 const calcMoney=n=>'$'+(n<0?'-':'')+Math.abs(n).toFixed(3);
-const CALC={ storeType:'Alpha', nav:30, talk:20, revenue:0.2, lane:'delta', deltaEsc:30, reach:45, usage:50,
+// Charlie is the DEFAULT lane: he is what actually runs today. Delta is a plan, not a built thing, so
+// it must never be the number a session plans against (owner 07-24).
+const CALC={ storeType:'Alpha', nav:30, talk:20, revenue:0.2, lane:'charlie', deltaEsc:30, reach:45, usage:50,
   monthlyChecks:20000, // drives the "Calls at once" section
   conc:{ daysPerMonth:30, busyHourFrac:0.15, avgCallMin:1.5 }, // busy-hour concurrency assumptions (editable)
   rates:{ twilioPerMin:0.014, elevenPerSec:0.0012, claudePerSec:0.0002, bravoNavPerSec:0, overhead:0.001, deltaClipPerCall:0.0002, classifyPerCall:0.0004 },
@@ -2399,13 +2401,21 @@ function calcConcurrency(){
   return { checks, revenue, atOnce, plan, overCapacity:atOnce>plan.rush, feePctOfRev:revenue>0?plan.fee/revenue*100:0 };
 }
 const calcDot=c=>`<span style="display:inline-block;width:8px;height:8px;border-radius:9px;background:${c};flex-shrink:0"></span>`;
+// "2 minutes" reads better than "2 min" on a line the owner reads at a glance.
+const CALC_NUMWORD=['zero','one','two','three','four','five','six','seven','eight','nine','ten'];
+const calcNumWord=n=>CALC_NUMWORD[n]||String(n);
+const calcMinWord=m=>m===1?'1 minute':`${m} minutes`;
 
 // core cost model — one source of truth (Twilio runs the whole call; Bravo nav is now CHEAP voice-injection
 // — Polly speaks the menu words, no STT/agent — so it's ~$0 like Alpha; Charlie = agent talk only)
 function calcCompute(storeType,nav,talk,r,lane,esc){
   lane=lane||'charlie';
-  const twilioPerSec=r.twilioPerMin/60, dur=nav+talk, items=[];
-  items.push({label:'Twilio line',detail:`${dur}s · $${r.twilioPerMin}/min`,accent:'var(--text-muted)',amount:twilioPerSec*dur});
+  // THE PHONE LINE IS BILLED BY THE WHOLE MINUTE, never by the second. Verified 2026-07-24 against
+  // 873 priced calls on the live account: 839 of them sit exactly on ceil(seconds/60) x the per-minute
+  // rate, and ZERO were billed a partial minute. So a call one second past 60 costs double. The old
+  // per-second math under-counted every call and hid that cliff.
+  const dur=nav+talk, billedMin=Math.ceil(dur/60), items=[];
+  items.push({label:'Phone line',detail:dur>0?`${calcMinWord(billedMin)} billed · ${dur}s on the call · $${r.twilioPerMin}/min`:'no call',accent:'var(--text-muted)',amount:billedMin*r.twilioPerMin});
   if(storeType==='Bravo') items.push({label:'Bravo nav · voice-injection (cheap TTS)',detail:`${nav}s · ~$0/s`,accent:'#38BDF8',amount:r.bravoNavPerSec*nav});
   else if(storeType==='Alpha') items.push({label:'Alpha nav · keypad tones',detail:`${nav}s · $0/s`,accent:'#F4B740',amount:0});
   else items.push({label:'Navigation',detail:'direct line · none',accent:'var(--text-tertiary)',amount:0});
@@ -2426,7 +2436,13 @@ function calcPerCheck(){
   const connected=calcCompute(CALC.storeType,CALC.nav,CALC.talk,CALC.rates,CALC.lane,CALC.deltaEsc).total;
   const reachFrac=Math.max(0.01,(CALC.reach||45)/100);
   const wasted=(1/reachFrac)-1;
-  const wastedCost=(CALC.rates.twilioPerMin/60)*8 + CALC.rates.overhead;
+  // A call nobody answers costs NOTHING on the phone line. Verified 2026-07-24 on the live account:
+  // 74 no-answer / busy / cancelled calls, the oldest from 06-19 so billing has long settled, carry no
+  // charge at all, and every "failed" call is priced at an explicit $0.00. The old model charged 8
+  // seconds of line time for each one. Only our own fixed overhead is real here.
+  // ASSUMES the miss never connects. If a recording picks up, that call IS answered and costs a whole
+  // billed minute, which the page says out loud under the breakdown.
+  const wastedCost=CALC.rates.overhead;
   return { connected, perCheck: connected + wasted*wastedCost, wasted, wastedCost };
 }
 // Toggle the God-view sub-nav between the live Overview and the Calc.
@@ -2534,15 +2550,16 @@ function calcShell(){
   // carved unit-input, same pattern as rate() (box-shadow:none on the input so it never double-boxes)
   const cInput=(label,tip,val,oninput,suf,step)=>`<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:var(--text-muted)">${label}${tip?` <span data-tip="${tip}"></span>`:''}</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:12px;padding:0 12px"><input type="number" step="${step}" min="0" value="${val}" oninput="${oninput}" style="flex:0 0 auto;background:transparent;border:none;outline:none;box-shadow:none;color:var(--text-primary);font-size:13px;font-weight:600;padding:9px 2px;width:50px"><span style="color:var(--text-tertiary);font-size:10.5px">${suf}</span></span></label>`;
   return `
-  <div class="hero" style="margin-bottom:16px">
-    <div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px">
-      <div><div class="hero-eyebrow">All-in cost per delivered check</div>
-        <div id="calc_percheck" style="font-size:30px;font-weight:800;color:var(--green);letter-spacing:-.02em;line-height:1.05;margin-top:6px;font-variant-numeric:tabular-nums">$0.000</div>
-        <div class="meta" style="margin-top:4px">connected call <b id="calc_total" style="color:var(--text-strong)">$0.000</b> · <span id="calc_lanelbl">Delta</span></div></div>
-      <div id="calc_chip" style="display:inline-flex;flex-direction:column;align-items:flex-end;gap:2px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:8px 12px"></div>
+  <div class="hero" style="margin-bottom:16px;position:relative">
+    <div style="padding-right:104px">
+      <div class="hero-eyebrow">All-in cost per delivered check</div>
+      <div id="calc_percheck" style="font-size:30px;font-weight:800;color:var(--green);letter-spacing:-.02em;line-height:1.05;margin-top:6px;font-variant-numeric:tabular-nums">$0.000</div>
+      <div class="meta" style="margin-top:4px">connected call <b id="calc_total" style="color:var(--text-strong)">$0.000</b> · <span id="calc_lanelbl">Charlie</span></div>
     </div>
-    <div id="calc_strip" style="display:flex;height:30px;border-radius:9px;overflow:hidden;margin-top:16px;background:var(--surface-1);border:1px solid var(--border)"></div>
+    <div id="calc_chip" style="position:absolute;top:14px;right:14px;display:inline-flex;flex-direction:column;align-items:flex-end;gap:2px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:8px 12px"></div>
+    <div id="calc_strip" style="position:relative;display:flex;height:30px;border-radius:9px;overflow:hidden;margin-top:14px;background:var(--surface-1);border:1px solid var(--border)"></div>
     <div id="calc_legend" class="row" style="gap:14px;margin-top:10px;align-items:center;font-size:12.5px"></div>
+    <div id="calc_cliff" style="display:none;margin-top:10px;font-size:12.5px;line-height:1.45;color:#F59E0B"></div>
   </div>
   <div class="card report">
     <div class="name">Scenario</div>
@@ -2555,7 +2572,7 @@ function calcShell(){
     <input id="calc_talk" type="range" min="0" max="120" value="${CALC.talk}" oninput="calcSetTalk(this.value)">
     <div style="margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--border);font-size:13px;color:var(--text-muted)">Who handles the talk</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <button type="button" id="calc_lane_delta" onclick="calcSetLane('delta')" style="padding:11px;border-radius:11px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-muted);cursor:pointer;text-align:left;font:inherit"><span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot('#C084FC')}Delta</span><span style="font-size:10.5px;color:var(--text-tertiary)">recorded + cheap ears</span></button>
+      <button type="button" id="calc_lane_delta" onclick="calcSetLane('delta')" style="padding:11px;border-radius:11px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-muted);cursor:pointer;text-align:left;font:inherit"><span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot('#C084FC')}Delta</span><span style="font-size:10.5px;color:#F59E0B">not built yet</span></button>
       <button type="button" id="calc_lane_charlie" onclick="calcSetLane('charlie')" style="padding:11px;border-radius:11px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-muted);cursor:pointer;text-align:left;font:inherit"><span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot('var(--purple)')}Charlie</span><span style="font-size:10.5px;color:var(--text-tertiary)">live AI on the whole talk</span></button>
     </div>
     <div id="calc_esc_wrap" style="margin-top:16px">
@@ -2584,15 +2601,21 @@ function calcShell(){
       ${cInput('Busy-hour share','Portion of daily calls that land in the single busiest hour.',Math.round(CALC.conc.busyHourFrac*100),"calcSetConc('busyHourFrac',this.value/100)",'%',1)}
       ${cInput('Avg call length','Average minutes a connected call runs, menu plus talk.',CALC.conc.avgCallMin,"calcSetConc('avgCallMin',this.value)",'min',0.1)}
     </div>
+    <div id="calc_concnote" style="display:none;margin-top:10px;font-size:11.5px;line-height:1.5;color:#F59E0B"></div>
   </div>
   <div class="card report">
     <div class="name">Breakdown</div>
     <div id="calc_breakdown"></div>
+    <div style="margin-top:12px;font-size:11.5px;line-height:1.55;color:var(--text-tertiary)">A dial that never gets picked up costs nothing on the phone line, only our own fixed overhead. If a recording answers instead, that call counts as answered and costs a whole billed minute.</div>
     <div style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--border-dashed)"><span style="font-size:10px;letter-spacing:.1em;color:var(--text-tertiary);font-weight:700">FLAT MONTHLY · ≈ $0.000 / CALL</span><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${['Railway compute','Twilio number rental','Helicone gateway','TiDB'].map(f=>`<span style="font-size:10.5px;color:var(--text-muted);background:var(--surface-1);border:1px solid var(--border);border-radius:7px;padding:3px 8px">${f}</span>`).join('')}</div></div>
   </div>
   <div class="card report">
     <div class="name">Rate card · editable</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${rate('Twilio line','twilioPerMin','/min')}${rate('ElevenLabs ConvAI','elevenPerSec','/sec')}${rate('Claude Sonnet','claudePerSec','/sec')}${rate('Bravo nav (all-in)','bravoNavPerSec','/sec')}${rate('Fixed overhead','overhead','/call')}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${rate('Phone line','twilioPerMin','/min')}${rate('ElevenLabs ConvAI','elevenPerSec','/sec')}${rate('Claude Sonnet','claudePerSec','/sec')}${rate('Bravo nav (all-in)','bravoNavPerSec','/sec')}${rate('Fixed overhead','overhead','/call')}</div>
+    <div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border-dashed);font-size:11.5px;line-height:1.55;color:var(--text-tertiary)">
+      <div><b style="color:var(--green)">Checked against real bills:</b> the phone line only. 873 charged calls on our account, every one billed by the whole minute, none by the second. A call nobody picks up costs nothing.</div>
+      <div style="margin-top:6px"><b style="color:#F59E0B">Not checked:</b> the ElevenLabs and Claude numbers are list prices, never matched to an invoice. Our ElevenLabs account is on a flat monthly plan, so talk time is really paid for by that monthly fee, not by the second. Treat every talk number here as a rough guide.</div>
+    </div>
   </div>
   <div class="card report">
     <div class="name">Total / call by talk time</div>
@@ -2664,15 +2687,39 @@ function calcUpdate(){
   const set=(id,html)=>{ const e=document.getElementById(id); if(e) e.innerHTML=html; };
   const txt=(id,t)=>{ const e=document.getElementById(id); if(e) e.textContent=t; };
   txt('calc_total',calcMoney(total)); txt('calc_navval',CALC.nav); txt('calc_talkval',CALC.talk);
-  txt('calc_percheck',calcMoney(pc.perCheck)); txt('calc_lanelbl',CALC.lane==='delta'?('Delta · '+CALC.deltaEsc+'% to Charlie'):'Charlie (live)');
+  txt('calc_percheck',calcMoney(pc.perCheck)); txt('calc_lanelbl',CALC.lane==='delta'?('Delta · '+CALC.deltaEsc+'% to Charlie'):'Charlie');
   set('calc_chip',`<span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(st.nc)}${st.label}</span><span style="font-size:10.5px;color:var(--text-muted)">${dur}s call</span>`);
   const tot=Math.max(dur,1), navPct=CALC.nav/tot*100, talkPct=CALC.talk/tot*100;
   let strip='';
   if(CALC.nav>0) strip+=`<div style="width:${navPct}%;background:linear-gradient(180deg,${st.nc},${st.nc}99);display:flex;align-items:center;justify-content:center">${navPct>14?'<span style="font-size:10px;font-weight:800;letter-spacing:.1em;color:#0B0E14">NAV</span>':''}</div>`;
   if(CALC.talk>0){ const dl=CALC.lane==='delta', tg=dl?'linear-gradient(180deg,#C084FC,#A855F7)':'linear-gradient(180deg,var(--purple),#A78BFA)', tl=dl?'TALK · DELTA':'TALK · CHARLIE'; strip+=`<div style="width:${talkPct}%;background:${tg};display:flex;align-items:center;justify-content:center;border-left:${CALC.nav>0?'1px solid rgba(11,14,20,.6)':'none'}">${talkPct>14?'<span style="font-size:10px;font-weight:800;letter-spacing:.1em;color:#0B0E14">'+tl+'</span>':''}</div>`; }
   if(dur===0) strip='<div style="width:100%;opacity:.3"></div>';
+  // Draw the minute boundaries ON the bar so the cliff is something you can SEE while dragging, not
+  // just a number that jumps. Each line is where the phone company starts charging another minute.
+  const billedMin=Math.ceil(dur/60);
+  for(let k=1;k<billedMin;k++){
+    const at=(60*k)/tot*100; if(at>=100) break;
+    strip+=`<div style="position:absolute;top:0;bottom:0;left:${at}%;width:2px;background:#F59E0B;box-shadow:0 0 6px #F59E0B;pointer-events:none"></div>`;
+  }
   set('calc_strip',strip);
-  set('calc_legend',`<span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-muted);opacity:${isDirect?.4:1}">${calcDot(st.nc)}nav ${CALC.nav}s</span><span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-muted)">${calcDot('var(--purple)')}talk ${CALC.talk}s</span><span style="flex:1"></span><span style="font-size:10.5px;color:var(--text-tertiary)">${calcMoney(total/Math.max(dur,1))}/s effective</span>`);
+  // The warning, in his words, the moment the call crosses a minute.
+  const cliffEl=document.getElementById('calc_cliff');
+  if(cliffEl){
+    if(dur>60){
+      cliffEl.style.display='block';
+      cliffEl.innerHTML=`This call runs past ${billedMin-1===1?'one minute':calcNumWord(billedMin-1)+' minutes'}, so the phone company charges for ${calcNumWord(billedMin)}. Trim it under ${(billedMin-1)*60}s and the line drops to ${calcMoney((billedMin-1)*CALC.rates.twilioPerMin)}.`;
+    } else if(dur===60){
+      cliffEl.style.display='block';
+      cliffEl.style.color='var(--text-tertiary)';
+      cliffEl.innerHTML='Right on one minute. One more second and the phone company charges for two.';
+    } else if(dur>50){
+      cliffEl.style.display='block';
+      cliffEl.style.color='var(--text-tertiary)';
+      cliffEl.innerHTML=`${60-dur}s of room left before the phone company charges for a second minute.`;
+    } else { cliffEl.style.display='none'; }
+    if(dur>60) cliffEl.style.color='#F59E0B';
+  }
+  set('calc_legend',`<span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-muted);opacity:${isDirect?.4:1}">${calcDot(st.nc)}nav ${CALC.nav}s</span><span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-muted)">${calcDot('var(--purple)')}talk ${CALC.talk}s</span><span style="flex:1"></span><span style="font-size:10.5px;color:var(--text-tertiary)">${dur>0?'billed as '+calcMinWord(Math.ceil(dur/60)):'no call'}</span>`);
   set('calc_breakdown',items.map(it=>`<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)"><span style="width:3px;height:30px;border-radius:3px;flex-shrink:0;background:${it.accent}"></span><div style="flex:1;min-width:0"><div style="font-size:13px;color:var(--text-strong)">${it.label}</div><div style="font-size:10.5px;color:var(--text-tertiary);margin-top:2px">${it.detail}</div></div><div style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;color:${it.amount===0?'var(--text-tertiary)':'var(--text-primary)'}">${calcMoney(it.amount)}</div></div>`).join('')+`<div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px"><div style="font-size:13px;font-weight:700">All-in / call</div><div style="font-size:22px;font-weight:800;color:var(--green);font-variant-numeric:tabular-nums">${calcMoney(total)}</div></div>`);
   const rows=['Alpha','Bravo','Direct'].map(t=>({type:t,row:CALC_TALK.map(tk=>calcCompute(t,CALC_STORE[t].nav,tk,CALC.rates,CALC.lane,CALC.deltaEsc).total)}));
   const flat=[]; rows.forEach(r=>flat.push(...r.row)); const mn=Math.min(...flat), mx=Math.max(...flat), heat=v=>mx===mn?0:(v-mn)/(mx-mn);
@@ -2692,6 +2739,16 @@ function calcUpdate(){
   txt('calc_planfee',`${cp.name} · $${cp.fee}/mo`);
   const planEl=document.getElementById('calc_planfee'); if(planEl) planEl.style.color=conc.overCapacity?'#FF6B6B':'var(--green)';
   txt('calc_planlbl',conc.overCapacity?'over this plan, add a 2nd account':`voice plan · ${conc.feePctOfRev>0?conc.feePctOfRev.toFixed(conc.feePctOfRev<1?2:1)+'% of revenue':'flat monthly'}`);
+  // TWO PLACES described one call length and could silently disagree, so the plan this page tells you to
+  // buy could be sized off a number the scenario above already contradicts. Say so instead of hiding it.
+  const cnEl=document.getElementById('calc_concnote');
+  if(cnEl){
+    const scenarioMin=dur/60, gap=Math.abs(scenarioMin-(CALC.conc.avgCallMin||0));
+    if(dur>0&&gap>=0.25){
+      cnEl.style.display='block';
+      cnEl.innerHTML=`The call above runs ${dur}s, which is ${scenarioMin.toFixed(1)} minutes, but this box says ${CALC.conc.avgCallMin}. The voice plan below is sized off this box, so make them agree before trusting it.`;
+    } else cnEl.style.display='none';
+  }
   const bcap=Math.max(cp.rush,atOnceR,1), gW=Math.min(atOnceR,cp.atOnce)/bcap*100, aW=Math.max(0,Math.min(atOnceR,cp.rush)-cp.atOnce)/bcap*100, oW=Math.max(0,atOnceR-cp.rush)/bcap*100;
   set('calc_conc_bar',`<div style="width:${gW}%;background:linear-gradient(180deg,#4ADE80,#22C55E)"></div>${aW>0?`<div style="width:${aW}%;background:linear-gradient(180deg,#FBBF24,#F59E0B)"></div>`:''}${oW>0?`<div style="width:${oW}%;background:linear-gradient(180deg,#FF6B6B,#EF4444)"></div>`:''}`);
   set('calc_conc_legend',`<span style="display:inline-flex;align-items:center;gap:5px">${calcDot('#22C55E')}your busy hour ${atOnceR}</span><span style="flex:1"></span><span>plan runs ${cp.atOnce} at once, ${cp.rush} in a rush</span>`);
