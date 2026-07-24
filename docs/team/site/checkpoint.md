@@ -9,6 +9,17 @@ Local server `PORT=88xx tsx src/server.ts` (needs ELEVENLABS_* + ADMIN_TOKEN env
 `playwright-core` + `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` (NODE_PATH to node_modules).
 tsx has NO hot-reload — restart after edits. Headless→staging TLS is proxy-blocked: drive LOCAL.
 
+## 07-23 (cont.) — alerts sheet + zones back + PLANS sheet (all LIVE on staging, NOT promoted)
+- Alerts sheet: reverted to the original On/Off pill + labeled "Pause all alerts" bar (a slider redesign
+  was rejected); kept the sheet scroll fix + name 2-line wrap. Zones back → My checks (acctReturn in popstate).
+- Plans sheet (money page): per-tab header (Plans "Check+ Premium Plans" + Check+ mark; PAYG "Pay by the
+  Check" + bare `check-brandmark`, no plus); feature grid hidden on PAYG; "You're on the <name> plan" (comp
+  = Unlimited, no check) shown ONLY on Plans and only if on a plan; monthly/annual inline right of that line
+  with a green "Save 17% yearly" nudge.
+- CONTINUE = plain in-flow button (reverted). A sticky/floating dock at the sheet bottom KILLS the iOS
+  scroll-edge glass (new GOTCHAS entry). **FOLLOW-UP (fresh chat): build the Continue slide-up the
+  zones-basket way: absolute in the OVERLAY, OUTSIDE the scroll container, never a sticky scroll child.**
+
 ## 07-23 — the five site fixes SHIPPED (PR #92 @4f6c4a6, LIVE on staging + Admin; owner confirms on phone)
 - **In-stock banner toggle:** new Admin policy flag `inStockBanner` gates the `#finds` banner (default ON).
 - **Product-type flags:** `productPokemon/OnePiece/Topps/Needoh` filter `brandSwitcher()` (server injects
