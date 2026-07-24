@@ -14,14 +14,13 @@ git. Last updated: 2026-07-24 (Target trees mapped; calling emergency root-cause
 - Restock "By store" shows real store logos instead of two-letter boxes (Live needs a promote).
 - Call rows show the status ICON only (tap for words); five squashed store logos fixed on live data.
 
-## Target stores do NOT share one phone menu (07-24, 11 real calls to 5 stores)
-- Every Target opens the same: press 2 for a department. The DEPARTMENT list after that is different
-  store to store. At Granada Hills, Topanga, Austin and Coral Springs, 2 is the guest service desk.
-  At Mission Hills there is no desk option at all: 2 is the FOOD department and the person is 3.
-- That is why your Mission Hills checks die in the menu, and a person really answers 30 to 45 seconds
-  in, not 16. Nothing changed; one setting for all Targets cannot be right.
-- YOUR call: store the second key per store, or have the caller listen to the department list and
-  pick the desk itself. Detail: docs/team/voice-calls/report-target-trees-2026-07-24.md.
+## Target: 59 stores called in 24 states — you were right, there is basically ONE menu (07-24)
+- 55 of 59 stores put the service desk on 2, exactly what we press today. Four stores have no service
+  desk option at all, so our 2 lands in groceries: Mission Hills, North Hollywood, UC San Diego and
+  one in Boston. We cannot tell those four apart from our store list, but every store reads its
+  department list out loud before we choose, so we can hear which kind it is.
+- A person really answers 30 to 45 seconds in, not the 16 the setting says.
+- Nothing changed. Options written up in docs/team/voice-calls/report-target-trees-2026-07-24.md.
 
 ## Two work streams from before (unchanged)
 1. **Site fixes (five) — DONE on staging, waiting on you.** Check them on your phone, then say
