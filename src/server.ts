@@ -3967,11 +3967,11 @@ app.get("/api/admin/restock-intel", async (c) => {
   const rows = (await db.select().from(callResults).where(eq(callResults.status, "completed"))).filter((r) => !ownerOnly.has(r.retailerId) && (r.startedAt || 0) >= statsSince);
   const confirmed = rows.filter((r) => r.confirmed === true);
   // Per-store: how often a confirmation lands + the shipment day staff gave (the gold).
-  const byStore = new Map<number, { id: number; store: string; location: string | null; chain: string; region: string | null; confirms: number; last: number; days: Record<string, number> }>();
+  const byStore = new Map<number, { id: number; store: string; location: string | null; chain: string; chainId: number | null; region: string | null; confirms: number; last: number; days: Record<string, number> }>();
   for (const r of confirmed) {
     const s = stores.get(r.retailerId); if (!s) continue;
     let e = byStore.get(r.retailerId);
-    if (!e) { e = { id: r.retailerId, store: s.name.split("—")[0].trim(), location: s.location ?? null, chain: "", region: s.region ?? null, confirms: 0, last: 0, days: {} }; byStore.set(r.retailerId, e); }
+    if (!e) { e = { id: r.retailerId, store: s.name.split("—")[0].trim(), location: s.location ?? null, chain: "", chainId: s.chainId ?? null, region: s.region ?? null, confirms: 0, last: 0, days: {} }; byStore.set(r.retailerId, e); }
     e.confirms++;
     const at = r.completedAt ?? r.startedAt; if (at > e.last) e.last = at;
     if (r.shipmentDayHeard) e.days[r.shipmentDayHeard] = (e.days[r.shipmentDayHeard] || 0) + 1;
@@ -3989,8 +3989,20 @@ app.get("/api/admin/restock-intel", async (c) => {
   // Per-category split (which brand line lands most).
   const catTally: Record<string, number> = {};
   for (const r of confirmed) { const label = cats.get(r.categoryId) || String(r.categoryId); catTally[label] = (catTally[label] || 0) + 1; }
+  // Paint each row with the SAME logo every other store list uses: chainLogoInfo(chainName) + the
+  // chain's type, resolved through the store's chainId (never a name guess). Without these fields the
+  // Admin's "By store" list fell back to a made-up two-letter monogram (owner 07-24).
+  const rsChains = await cachedChains();
+  const rsChainName = new Map(rsChains.map((x) => [x.id, x.name]));
+  const rsChainType = new Map(rsChains.map((x) => [x.id, x.type]));
   const topStores = [...byStore.values()].sort((a, b) => b.confirms - a.confirms || b.last - a.last).slice(0, 25)
-    .map((e) => ({ ...e, bestDay: Object.entries(e.days).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null }));
+    .map((e) => {
+      const chainName = (e.chainId != null && rsChainName.get(e.chainId)) || e.store.split(/—|–| - /)[0];
+      const l = chainLogoInfo(chainName);
+      return { ...e, bestDay: Object.entries(e.days).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null,
+        storeType: (e.chainId != null && rsChainType.get(e.chainId)) || "Other",
+        logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
+    });
   const prodNet = parseProducts(confirmed);
   const catNet: Record<string, number> = {};
   for (const r of confirmed) { const cl = cats.get(r.categoryId) || "?"; catNet[cl] = (catNet[cl] || 0) + 1; }
@@ -4028,7 +4040,8 @@ app.get("/api/admin/restock-intel", async (c) => {
     productForms: prodNet.forms,
     productSets: prodNet.sets,
     byCategory: Object.entries(catNet).sort((a, b) => b[1] - a[1]).map(([category, n]) => ({ category, n })),
-    topStores: topStores.map((e) => ({ id: e.id, store: e.store, location: e.location, region: e.region, confirms: e.confirms, last: e.last, bestDay: e.bestDay })),
+    topStores: topStores.map((e) => ({ id: e.id, store: e.store, location: e.location, region: e.region, confirms: e.confirms, last: e.last, bestDay: e.bestDay,
+      chainId: e.chainId, storeType: e.storeType, logoUrl: e.logoUrl, logoWide: e.logoWide, logoDark: e.logoDark })),
     answerFunnel,
     statsSince,
   });
