@@ -17,6 +17,12 @@ REPLACES old — history is in git. Last updated: 2026-07-24 (calling emergency 
   nobody-answers calls end on their own with Charlie never billed (~1–2¢, your Admin bail dial).
 - YOUR one check: one Target or CVS call on staging, hands off, listening. Then say "promote".
 
+## The Admin Live/Staging switch — BACK, live now (07-24)
+- The rollback did NOT cause this. The Admin redesign was shipped to your dashboard off a side branch
+  that was never merged, so the next Admin ship overwrote it. Merged properly now, so it can't happen again.
+- Back on admin.checkitforme.com: the Live/Staging switch top right on every page, the new icons and
+  plainer wording, and the Chains page logo/filter fixes. Nothing about calling was touched.
+
 ## Two work streams from before (unchanged)
 1. **Site fixes (five) — DONE on staging, waiting on you.** Check them on your phone, then say
    "promote" to push to the real site. NOT on the real site yet.

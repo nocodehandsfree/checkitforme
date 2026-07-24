@@ -64,6 +64,16 @@ worse than no comment. Several entries below started as wrong comments.)
   REAL test send, one variable per iteration. Owner's requirement: the dark look, everywhere.
 
 ## Infra / branches
+- **`ship-admin.sh` is NOT git — an Admin shipped from an unmerged branch WILL be silently wiped**
+  (cost us the whole Admin design system, 07-23→07-24). ship-admin POSTs `public/app.html` as a server-side
+  *override*; it happily ships from any branch, and the next ship-admin run from `staging` replaces that
+  override with staging's copy. That's exactly what happened: the master Live/Staging switch + Lucide/copy
+  sweeps were shipped live off `claude/admin-design-system-spec-mgthjd`, never merged, then overwritten at
+  23:32 UTC by a ship from staging commit f96c161. The owner saw the switch vanish and blamed the same-night
+  calling-engine revert — which was innocent (it touched 5 server files, zero Admin UI). **Rule: merge to
+  `staging` FIRST, then ship-admin.** To check what's actually live: `bash scripts/ship-admin.sh --status`
+  returns the override's commit — if that commit isn't an ancestor of `staging`, the Admin is living on
+  borrowed time. Restored in 2de7f24.
 - **Admin traffic does NOT reliably arrive on a host starting with `admin.`/`caller.`** — prod edge
   routing can hand the app other hostnames for the same service. The app's real admin-vs-consumer
   decision is brand resolution (`resolveBrand(host).key === "runner"` and not `runner.*` = admin), in
