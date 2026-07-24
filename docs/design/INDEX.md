@@ -4,7 +4,7 @@ Built by `node scripts/gen-index.mjs`; a hook regenerates it when a source file 
 **The law: NEVER open these files whole.** Find your section here, then Read ONLY the line
 range (`offset` + `limit`). Ranges run to the next `id=` — a navigation aid, not exact DOM bounds.
 
-## public/checkit.html (9057 lines, 366 sections)
+## public/checkit.html (9053 lines, 366 sections)
 
 | id | element | lines | description |
 |---|---|---|---|
@@ -353,27 +353,27 @@ range (`offset` + `limit`). Ranges run to the next `id=` — a navigation aid, n
 | z_ringarc | circle | 7809–7810 |  |
 | z_ringnum | div | 7811–7815 |  |
 | z_calling | span | 7816–7817 |  |
-| z_pills | div | 7818–8281 |  |
-| payg_n | span | 8282–8282 |  |
-| payg_p | span | 8282–8282 |  |
-| payg_rng | input.rng | 8283–8284 |  |
-| payg_per | div | 8285–8369 |  |
-| buyDockPlan | div.buydock-plan | 8370–8445 |  |
-| buy_cta | button.cta | 8370–8445 |  |
-| co_loading | div.co-loading | 8446–8647 |  |
-| ho_dropchip | span | 8648–8651 |  |
-| ho_steps | div | 8652–8653 |  |
-| ho_drop | div.ho-toggle | 8654–8657 |  |
-| ho_drophint | p.hint | 8658–8661 |  |
-| ho_bonus | span | 8662–8667 |  |
-| ho_app | div.ho-seg | 8668–8671 |  |
-| ho_appname | b | 8672–8672 |  |
-| ho_open | a.ho-btn.violet | 8673–8675 |  |
-| ho_msg | div.ho-msg | 8676–8686 |  |
-| ho_dv3 | li | 8687–8695 |  |
-| ho_stars | div.ho-stars | 8696–8698 |  |
-| ho_done | div | 8699–8701 | ${t('ho.done.title',"Bonus released. You're done.")} |
-| ho_donep | p | 8702–9057 |  |
+| z_pills | div | 7818–8277 |  |
+| payg_n | span | 8278–8278 |  |
+| payg_p | span | 8278–8278 |  |
+| payg_rng | input.rng | 8279–8280 |  |
+| payg_per | div | 8281–8365 |  |
+| buyDockPlan | div.buydock-plan | 8366–8441 |  |
+| buy_cta | button.cta | 8366–8441 |  |
+| co_loading | div.co-loading | 8442–8643 |  |
+| ho_dropchip | span | 8644–8647 |  |
+| ho_steps | div | 8648–8649 |  |
+| ho_drop | div.ho-toggle | 8650–8653 |  |
+| ho_drophint | p.hint | 8654–8657 |  |
+| ho_bonus | span | 8658–8663 |  |
+| ho_app | div.ho-seg | 8664–8667 |  |
+| ho_appname | b | 8668–8668 |  |
+| ho_open | a.ho-btn.violet | 8669–8671 |  |
+| ho_msg | div.ho-msg | 8672–8682 |  |
+| ho_dv3 | li | 8683–8691 |  |
+| ho_stars | div.ho-stars | 8692–8694 |  |
+| ho_done | div | 8695–8697 | ${t('ho.done.title',"Bonus released. You're done.")} |
+| ho_donep | p | 8698–9053 |  |
 
 ## public/app.html (5584 lines, 369 sections)
 

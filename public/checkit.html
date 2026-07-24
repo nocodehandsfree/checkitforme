@@ -8213,8 +8213,8 @@ function applyBuyHeader(){
 // The Continue dock at the foot of the buy sheet: shows what's ringed (plan or pack) and slides up.
 function renderBuyDock(){
   const dock=$('buyDock'); if(!dock) return;
-  // Plans uses the slide-up plan sheet (planSheet); only pay-as-you-go keeps a plain in-flow Continue here.
-  dock.style.display=(BUY_MODE==='packs')?'':'none';
+  // Plain Continue button at the foot of the sheet on BOTH tabs (scrolls with the list, glass stays clean).
+  dock.style.display='';
   const plan=$('buyDockPlan');
   if(BUY_MODE==='packs'){ const packs=paygBundles(); const pk=packs[Math.max(0,Math.min(packs.length-1,PACK_IDX))];
     if(plan&&pk) plan.innerHTML=`<b>${pk.checks} ${t('plan.checks','checks')}</b> · ${money(pk.cents)}`; }
@@ -8239,7 +8239,7 @@ function renderBuyPlans(){
   const per=BILLING_ANNUAL?t('plan.yr','/yr'):t('plan.mo','/mo');
   // The monthly/annual toggle moves next to the "You're on" line for members (owner 07-23), so hide the
   // tall standalone one for them; keep it for new members (no plan line yet); always hide it under packs.
-  const _bc=$('billcycle'); if(_bc) _bc.style.display=(BUY_MODE==='packs' || ((member||comp)&&isV2()))?'none':'';
+  const _bc=$('billcycle'); if(_bc) _bc.style.display=(BUY_MODE==='packs')?'none':''; // the full-width Monthly/Annual toggle (shows "· save 17%") for everyone; hidden only under packs
   let html='';
   if((member||comp)&&isV2()){
     // "You're on the <name> plan" for everyone (comp reads Unlimited). Shows ONLY on the Plans tab, never
@@ -8247,11 +8247,7 @@ function renderBuyPlans(){
     // the right with a green "save 17%" nudge so the yearly discount stays visible.
     if(BUY_MODE!=='packs'){
       const planName=comp?t('plan.unlimited','Unlimited'):(()=>{ const _ti=(tiers()||[]).find(x=>x.key===(ACCOUNT&&ACCOUNT.subTier)); return _ti?esc(_ti.name):t('plan.member','Member'); })();
-      html+=`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 0 6px">
-        <div style="min-width:0;font-size:12.5px;font-weight:600;color:#8A8A96">${tf('plan.online',"You're on the {p} plan",{p:`<b style="color:#FFF">${planName}</b>`})}</div>
-        <div class="ho-toggle billcyc billcyc-in" style="flex:0 0 auto"><button class="${!BILLING_ANNUAL?'on':''}" data-an="false" onclick="setCycle(false,this)">${t('plan.mo3','Monthly')}</button><button class="${BILLING_ANNUAL?'on':''}" data-an="true" onclick="setCycle(true,this)">${t('plan.an3','Annual')}</button></div>
-      </div>
-      <div style="text-align:right;margin:0 0 14px;font-size:10.5px;font-weight:800;color:#4ADE80;letter-spacing:.04em">${t('plan.save17','Save 17% yearly')}</div>`;
+      html+=`<div style="margin:2px 0 14px;font-size:12.5px;font-weight:600;color:#8A8A96">${tf('plan.online',"You're on the {p} plan",{p:`<b style="color:#FFF">${planName}</b>`})}</div>`;
     }
   }
   else if(member||comp){
@@ -8309,7 +8305,7 @@ function setPackIdx(i){ const packs=paygBundles(); PACK_IDX=Math.max(0,Math.min(
   if(per) per.textContent=t('plan.percheck','about')+' $'+(pk.cents/pk.checks/100).toFixed(2)+' '+t('plan.percheck2','per check')+' · '+t('plan.noexpire','checks never expire');
   renderBuyDock(); }
 function pickTier(k){
-  if(isV2()){ SEL_TIER_KEY=k; renderBuyPlans(); renderBuyGrid(); openPlanSheet(); return; } // tap a plan → ring moves + the plan slider comes up from the bottom with that plan + Continue
+  if(isV2()){ SEL_TIER_KEY=k; renderBuyPlans(); renderBuyGrid(); renderBuyDock(); return; } // tap selects (ring moves); Continue is the plain button at the foot of the sheet
   buyContinue();
 }
 function buyContinue(){
