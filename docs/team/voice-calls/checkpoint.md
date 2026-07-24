@@ -38,7 +38,11 @@
    LLM, no agent. Recipe becomes "2 after prompt 1, 2 after prompt 2"; the mapper already records
    exactly that (`reactivePress`, navigator.ts:337). Timer stays as the FALLBACK, store facts (Target
    `externalStoreId`) as a third layer. Proof + the 5 cost layers:
-   `report-how-nav-used-to-work-2026-07-24.md`. NOT BUILT — prompt-boundary accuracy is untested.
+   `report-how-nav-used-to-work-2026-07-24.md` + lanes/providers/design-vs-shipped in
+   `report-abc-lanes-2026-07-24.md` (Bravo was SPECED 06-18 as "cheap STT -> **Haiku** picks the word
+   -> cheap TTS. loop." for $0.013; `7f67f5a1` shipped a TIMER 4 days later and 07-02 made it doctrine
+   — "No AI"). NOT BUILT — prompt-boundary accuracy is untested. **EL's real rate is UNKNOWN: our own
+   docs say $0.072 / ~$0.10 / ~$0.22 per min, none checked against an invoice.**
    **If a transcriber is ever needed, NEVER Twilio `<Gather input="speech">`: measured $0.02 per 15s
    interval = ~8.6c/call ($8.98 vs $2.09 of line over 104 trainer calls today; $55.98 month to date).
    Fork the audio we already stream ($0.0044/min) to a non-Twilio STT and price it first.**
