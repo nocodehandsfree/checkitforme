@@ -7,6 +7,18 @@
 ## LAW — ADMIN IS THE RECORD OF TRUTH (owner, absolute)
 Never change a setting behind Admin's back; if Admin can show it, the change goes THROUGH Admin data.
 
+## 07-24 — TARGET TREES VARY BY STORE (11 live PROD calls, 5 stores) → HANDBACK, nothing changed
+- First menu identical everywhere (1 hours · 2 department · 3 pharmacy [· 4 optical]). SECOND menu
+  differs: Granada/Topanga/Austin `2 = guest service desk`; Coral Springs `2 = guest services, 3 = HR`;
+  **Mission Hills `2 = FOOD AND BEVERAGE`, no desk option at all — its human is 3 (general merch)**.
+  So `press:2>press:2` sends every Mission Hills check to groceries; 0 is INVALID in menu 2 and three
+  bad entries make the IVR say "Goodbye" and hang up. Digits DO buffer during the greeting.
+- Real time-to-human on the right key: 30 · 33 · 36 · 40 · 45s — navSeconds 16 is 15–30s early. The
+  16s recipe was locked 07-10 off two runs that heard NOTHING back and ended `done`, never `human`.
+- Full evidence + the three ways forward: `report-target-trees-2026-07-24.md`. Target chain row
+  UNTOUCHED (navRecipe/navSeconds/answerPath/phoneTreeDefault); no other chain touched.
+- OWNER DECISION: per-store second key vs listen-to-the-department-list. Not a mapping cleanup.
+
 ## 07-24 — "system is down" night: RESOLVED (full story in git log 793f663/30af536)
 - Broken engine build reverted 01:31 UTC; engine bytes == baseline verified; prompt self-heals on
   boot; nav rows + phones intact both envs; prod consumer never affected.
@@ -20,16 +32,14 @@ Never change a setting behind Admin's back; if Admin can show it, the change goe
   set question · package question · restock-day ask on any no · voicemail status · echo gate 520/150.
 - Shipment TIME capture ("tomorrow around 2 PM" → `shipment_time_heard`) still NOT live-verified.
 
-## Mapping — 99.9% covered; data verified intact 07-24 (Echo re-confirmed: HT/BL mapped Jun 25,
-B&N Jul 10 — working-era records, the "weekend rewrite" claim was a timestamp misread, NO restore
-needed). Map on PROD (staging hand-edits overwritten).
+## Mapping — 99.9% covered; data verified intact 07-24 (HT/BL mapped Jun 25, B&N Jul 10 — the
+"weekend rewrite" was a timestamp misread). Map on PROD (staging hand-edits overwritten).
 
 ## 07-24 late — VAD dead-gate fix LIVE on staging (owner-authorized, .unlock flow, 5d56acc6)
 - Root cause of "Charlie listening to phone trees": every gate version read ctx.dtmf/ctx.say, which
-  takeBridgeDtmf/Say CONSUME at TwiML build — so by media time they were ALWAYS empty and the ear
-  armed on every timerless nav chain. That's why 770ffa0 + each rewrite "didn't work."
-- Fix: setBridgeContext stamps hadDtmf/hadSay (never consumed); the ear's no-nav-plan test reads
-  those. Merged WITH the smart-join (earArmed) line, complements it. tsc + 13 bridge tests green.
+  takeBridgeDtmf/Say CONSUME at TwiML build — always empty by media time, so the ear armed on every
+  timerless nav chain. Fix: setBridgeContext stamps hadDtmf/hadSay (never consumed) and the ear's
+  no-nav-plan test reads those; rides with the smart-join (earArmed) line. tsc + 13 tests green.
 
 ## OPEN (priority order)
 1. OWNER drive-test: one Target or CVS check on staging, 60–90s. Expect: ring tone ~3s, then the
@@ -38,10 +48,9 @@ needed). Map on PROD (staging hand-edits overwritten).
 2. Status hammer-test on Fun (staging), then the queued CVS/Walgreens zone run (owner listens).
 3. Call/log investigation (STATE.md): a real Fun-store transcript came back cut off — chase the
    capture gap. Design only near the engine; nothing ships without the owner's word.
-4. 03:4x SMART JOIN restored (owner-named): ear DEAF through the recipe, arms at last-step+2s,
-   Charlie joins only on a real voice; give-up at max(earFrom, learned-time)+ringMax(20s) with
-   Charlie never billed. Post-join word-check cap stays as backstop. NOT live-fired yet — owner's
-   next Target/CVS call is the proof (watch /pub/bridge-debug for the EAR line). Prod on promote.
+4. SMART JOIN restored (owner-named): ear DEAF through the recipe, arms at last-step+2s, Charlie
+   joins only on a real voice, give-up at max(earFrom, learned)+20s, never billed. NOT live-fired —
+   the owner's next Target/CVS call proves it (watch /pub/bridge-debug for EAR). Prod on promote.
 
 ## Traps
 - Never run the full suite for a small change. Never deploy while the owner is mid-test-call.
