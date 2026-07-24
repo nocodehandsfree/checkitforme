@@ -2,26 +2,22 @@
 One screen. Every session updates this at close (the doc-cap gate holds it ≤40 lines). New truth
 REPLACES old — history is in git. Last updated: 2026-07-24 (calling emergency root-caused, screen fix live).
 
-## The calling emergency (07-23 night) — cause found, fix shipped, one check from you closes it
-- Every failed test you made ran on the PRIOR session's broken build. The revert went live at
-  6:31 PM your time; your tests ran 5:48–6:23 PM, all on the broken engine. Your two later calls
-  (6:43 CVS, 6:44 Target) ran on the fixed engine but ended at 48s and 10s — hung up before the
-  agent joins (CVS walks its phone menu for 67 seconds, Target 16).
-- Proof pulled tonight: the phone company shows every call was ANSWERED (nothing rang out unanswered);
-  the server log for your 6:44 Target call shows the fixed engine arming the correct menu plan.
-  Engine code, menu maps, store phone numbers, and the agent's brain are all verified identical to
-  the last known-good state. The real site (checkitforme.com) was never affected.
-- Fixed on staging tonight, in order: the call screen now shows real steps (you saw it) · you can
-  HEAR calls from the moment the store's system picks up (menu, presses, ring-through) · Charlie is
-  back to joining ONLY on a real human voice, deaf through the menu so recordings can't fool him ·
-  nobody-answers calls end on their own with Charlie never billed (~1–2¢, your Admin bail dial).
+## The calling emergency (07-23 night) — cause found, fixed, one check from you closes it
+- Your failed tests all ran on the prior broken build; the real site was never affected. Engine code,
+  menu maps, store numbers and the agent's brain are verified identical to the last known-good state.
+- Fixed on staging: the call screen shows real steps · you can hear calls from the moment the store
+  picks up · Charlie joins only on a real human voice · nobody-answers calls end themselves unbilled.
 - YOUR one check: one Target or CVS call on staging, hands off, listening. Then say "promote".
 
-## The Admin Live/Staging switch — BACK, live now (07-24)
-- The rollback did NOT cause this. The Admin redesign was shipped to your dashboard off a side branch
-  that was never merged, so the next Admin ship overwrote it. Merged properly now, so it can't happen again.
-- Back on admin.checkitforme.com: the Live/Staging switch top right on every page, the new icons and
-  plainer wording, and the Chains page logo/filter fixes. Nothing about calling was touched.
+## Admin fixes, live now (07-24)
+- The Live/Staging switch is BACK, top right on every page, with the new icons and plainer wording.
+  The rollback did not cause it: the redesign was put on your dashboard off a side copy that was never
+  saved into the main one, so the next Admin update replaced it. Saved properly now.
+- Restock "By store" shows real store logos instead of two-letter boxes. (On the Live setting this one
+  needs a promote; on Staging it already works.)
+- Call rows show the status ICON only, no repeated "Nobody answered" text. Tap the row for the words.
+- Five store logos were marked the wrong shape so they drew too small or squashed. Fixed on the live
+  data: Ross, Micro Center, Tokyo, Walmart. Tom Thumb was already right.
 
 ## Two work streams from before (unchanged)
 1. **Site fixes (five) — DONE on staging, waiting on you.** Check them on your phone, then say

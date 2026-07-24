@@ -4,56 +4,57 @@
 > `bash scripts/ship-admin.sh` (never waits on a promote); server halves ride the promote train.
 > Charter + standing rules: `handoff.md`. Volatile — REPLACE stale lines, newest on top, ≤60 lines.
 
-## 2026-07-24 — RESTORED the Admin work an overwrite dropped (switch + sweeps back live)
-- Owner: "the Live/Staging switch top right is gone." Root cause was NOT the calling-engine revert
-  (793f663 touched only 5 server files, zero Admin UI). The design-system work was shipped straight to
-  THE Admin via ship-admin's override but NEVER merged to `staging`; on 07-23 23:32 UTC a later
-  ship-admin ran from staging commit f96c161 and replaced the override with a copy that never had it.
-- 🔴 TRAP (now in GOTCHAS): ship-admin's override is NOT git. Shipping from a branch without merging to
-  `staging` leaves the next ship-admin free to wipe it. ALWAYS merge to staging BEFORE ship-admin.
-- Fix: merged `claude/admin-design-system-spec-mgthjd` into staging (2de7f24) + shipped. Back: master
-  switch, .ds-* design system, Lucide sweep, copy waves 1-3, Chains logo/filter/by-rating fixes, /#preview.
-  Kept staging's newer "couldn't tell" reader + inStockBanner flag. Zero `src/` files touched — voice safe.
-- Drove it: served bytes from admin.checkitforme.com rendered in Chromium at 390px — switch at the top
-  right (right edge 376/390), Live default green, tap Staging → orange + `call_src=staging`. qa-glass 11/0.
+## 2026-07-24 — Restock logos + call rows show the status icon only + four logo shapes
+- Restock "By store" drew invented 2-letter monograms (row hand-rolled initials AND restock-intel sent no
+  logo fields). `topStores` now carries chainId/storeType/logoUrl/logoWide/logoDark via chainLogoInfo
+  (through chainId, never a name guess) and the row calls `logoTile`. ⚠️ SERVER half is staging-only until
+  a promote; prod topStores is empty today anyway. Page half shipped to THE Admin.
+- Calls list: status is the ICON ALONE, never the name (owner: repeated "Nobody answered" read as a wall).
+  Heard restock day keeps truck + day. Name rides `title`/`aria-label` + the call sheet.
+- LOGO SHAPES: `w` picks the draw size (wide 92% of the tile, square 78%). Measured the TRIMMED artwork of
+  all 104 files: clean split at ~1.48, four outliers. Ross 2.58 / Micro Center 1.86 / Tokyo 1.81 were
+  square so drew small → wide; Walmart 0.89 is taller than wide → square. Set in the LIVE `chains` table
+  (DB beats `_meta.json` for any chain in it) + the file. Tom Thumb 1.49 was NOT flipped the way the old
+  logo branch wanted (it sits wide-side, DB already square) — don't trust that branch's other flags.
+- Drove it: THE Admin's served page against real staging rows. 7/7 real logos, logoless Big 5 gets the
+  storefront icon not a monogram, call rows icon-only with the name in the tooltip.
 
-## 2026-07-23 — Admin design system, TASK 1 (built + shipped to THE Admin preview for owner review)
-- SPEC saved: `docs/team/admin/SPEC.md` (six-size type scale + 22-page verdicts; supersedes round-1 CD comps).
-- Task 1 in `public/app.html`, ADDITIVE (new `.ds-*` classes + a scoped `.ds`; the 22 pages untouched):
-  · Six type classes 28/22/15/14/12 (nothing under 12px) + `.ds-num` mono. Verified EXACT via computed styles.
-  · One control set: green pill toggle, `.act`/`.ghost`/`.ds-danger`, 44px inputs w/ caption labels, chips (status + lane), (i) info.
-  · Lucide reuses the existing `LUCIDE` set via a new `dsIco()` at 1.75 stroke; added settings-2/workflow/flask-conical/plus-circle.
-  · Live/Staging toggle (carved track, STYLE_GUIDE 5.1) wired to `CALL_SRC` read-routing, Live default.
-  · Hidden `/#preview` route (NOT in NAV_GROUPS) now renders the cleaned LIVE page master (SPEC page 1: checks row, four-caller scoreboard, exceptions, funnel, reports) with sample data.
-- Proof: Chromium render at iPhone width (normal admin = clock, no switch; preview = Live page + switch); `qa-admin-glass` 11/0; copy-gate clean.
-- SHIPPED to THE Admin via ship-admin (override); owner reviews on his phone at `admin.checkitforme.com/#preview`. His real 22 screens are untouched. Also on branch `claude/admin-design-system-spec-mgthjd` + draft PR #91. STOP for his verdict on the Live page before the other 5 masters.
-- OWNER-BLESSED the switch global: Live/Staging switch now shows in the header on EVERY page (clock removed), wired to `CALL_SRC` read-routing; the per-page src dropdowns (Users/Feedback/Testing/Chats) are gone (`srcPicker` returns ''). Verified in Chromium: shows + flips on a normal page.
-- MAPPING page (Chains) per owner, round 2 (I misread twice first time): picker uses `logoTile` (chains=custom logo, hobby/thrift=type icon) not initials; `.slogo img` now `max-width %` so WIDE wordmarks scale to fit the tile (were cut off with fixed 42/44px in the 38px tile). Added a store-type filter AND KEPT the mapped/unmapped filter (owner meant relabel "Mapped + not"->"All", not delete) + the per-row mapped/unmapped text. Top report = % of stores mapped BY RATING (tier rows), not one number. Feedback nav count badge removed. Verified: real-logo screenshot (wide logos fit), by-rating report + filter in Chromium, qa-glass 11/0. NEXT: same logo fix on the other admin store lists.
-- MASTER SWITCH now routes ALL reads: `api()` sends GET to the staging service when CALL_SRC==='staging' (was only the 4 srcApi pages); writes always stay prod. Verified in Chromium (mocked fetch): staging+GET->staging, staging+POST->prod, live+GET->prod. Fixes "switch does nothing on Calls/Restock".
-- COPY/ICON/SPACING sweep (whole admin). 6-agent AUDIT found 98; tracked in `docs/team/admin/copy-icon-audit.md`. WAVES 1-3: ~94 applied + shipped (safe copy: dev-speak/dashes/raw values gone, real feature names; icons emoji/unicode/legacy/inline-SVG -> Lucide via dsIco/lucideSvg + an additive `emptyState` lucide flag; safe sub-12px bumps). Wave 3 CRAFTED by a 6-agent workflow with JS-safety guards, applied unique-only, qa-glass 11/0 + smoke clean each wave (2 apostrophe JS breaks from an early bulk pass caught + fixed). REMAINING = 24 bigger reworks in the audit doc's MANUAL section ((i) sheets, GTM 11-name taxonomy collapse, Designer voice-model dropdown, Kiosk raw-JSON gate, Fun/Chains raw-state maps, Add import warning + Spanish). NAV icons stay (owner keeps the nav).
+## 2026-07-24 — RESTORED the Admin work a ship-admin overwrite dropped (switch + sweeps back live)
+- 🔴 TRAP (full story in GOTCHAS): ship-admin's override is NOT git. The design system was shipped live
+  off its branch, never merged to `staging`, so a later ship from staging (f96c161) wiped it. The
+  calling-engine revert was innocent. ALWAYS merge to staging BEFORE ship-admin; `--status` shows the
+  live override commit, and if it isn't an ancestor of staging the Admin is on borrowed time.
+- Fixed by merging the branch into staging (2de7f24). Zero `src/` files touched, so voice was unaffected.
 
-## 2026-07-22 — Support surface + call-transcript UI (SHIPPED to Admin + PROMOTED to prod)
-- Support screen: real first message, "Check status" label, account (not "Guest"); Mark resolved / Reopen
-  → `POST /api/support/chats/:id/status`. (Its src picker is now the header master switch.)
-- Call transcripts (Feedback / Calls / live) reuse the site's `.ctlv2-bub` cards via shared `bubbles()` —
-  CHECK AI green / STAFF gray. One transcript look everywhere, never a second UI.
-- **OPEN — owner decision, NOT built:** hide simulated (`sim_`) poll rows from the Feedback review
-  queue (no store + no transcript = clutter). Awaiting yes/no.
+## 2026-07-23 — Admin design system TASK 1 (shipped; full detail in git + SPEC.md)
+- `SPEC.md` = six-size type scale + 22-page verdicts. Task 1 was ADDITIVE `.ds-*` classes: type scale
+  28/22/15/14/12 (nothing under 12px), one control set, Lucide via `dsIco()`, hidden `/#preview` master.
+- Master Live/Staging switch in the header on EVERY page (clock removed), owner-blessed. `api()` routes
+  GET to the staging service when CALL_SRC==='staging'; writes ALWAYS stay prod. Per-page src dropdowns
+  retired (`srcPicker` returns ''). Chains/mapping page: `logoTile` not initials, `.slogo img` max-width %
+  so wide wordmarks fit, store-type filter kept alongside mapped/unmapped, report by RATING.
+- Copy/icon/spacing sweep waves 1-3: ~94 of 98 audit findings applied. REMAINING = 24 bigger reworks in
+  the MANUAL section of `copy-icon-audit.md`. NAV icons stay (owner keeps the nav).
+
+## 2026-07-22 — Support surface + call transcripts (SHIPPED + PROMOTED; detail in git)
+- Support chats show the real first message + the account; Mark resolved / Reopen via
+  `POST /api/support/chats/:id/status`. Transcripts everywhere reuse the site's `.ctlv2-bub` via
+  `bubbles()` (CHECK AI green / STAFF gray). One transcript look, never a second UI.
+- **OPEN, owner decision, NOT built:** hide simulated (`sim_`) poll rows from the Feedback queue. Yes/no?
 
 ## Reference (read before touching)
-- **NEVER invent copy — grep + reuse** (owner caught invented defaults twice, 07-19).
-- **07-19 Alerts editor + Kiosk receipts** shipped (detail in git). ⚠️ The SITE still reads hardcoded
-  share/referral/zones messages — a customer's Alerts edit won't show on the site until that's wired (site lane).
-- **Alerts** (src/alerts.ts + calls/notify.ts): events in `alerts_json`, bilingual via
-  accounts.language, confirm-gate + HMAC unsubscribe, FROM noreply@. Email colors LOCKED.
-  POST-PROMOTE TODO: re-set owner's email on PROD (`/api/admin/users/phone:+13106662331/email`).
+- **NEVER invent copy — grep + reuse** (owner caught invented defaults twice, 07-19). ⚠️ 07-19 Alerts
+  editor shipped, but the SITE still reads hardcoded share/referral/zones copy (site lane owns wiring it).
+- **Alerts** (src/alerts.ts + calls/notify.ts): events in `alerts_json`, bilingual via accounts.language,
+  confirm-gate + HMAC unsubscribe, FROM noreply@. Email colors LOCKED. POST-PROMOTE TODO: re-set owner's
+  email on PROD (`/api/admin/users/phone:+13106662331/email`).
 - **07-17 Sheet-glass LOCKED** (`qa-admin-glass`: 11 invariants; any tint revert fails the ship).
 - **Design bar (07-13) + KIT** (app.html <style>; comps `ADMIN_COMPS.dc.html`): hero = ONE number/word
   + honest spark; `.peek`; ONE sheet openSheet/closeSheet; carved inputs; report grammar `.k-range`/
-  hero/wells/pills; `.k-eyebrow`/title/sub/note; srcApi/srcPicker. html bg #1D1D22.
+  hero/wells/pills; `.k-eyebrow`/title/sub/note; `logoTile` for ANY store row. html bg #1D1D22.
 
 ## Open (the Admin cleanup + audit queue is in docs/tasks/INDEX.md)
 - 22 page-cleanups (one per Admin page) + the 18 audit findings (wiring/comp/copy/cut) are queued.
 - Owner open asks: store LOGOS on the site alerts view (site lane) · premium toggle matrix in Plans
-  (backend done, UI missing) · per-customer account view (`docs/specs/admin-user-view.md`; users sheet
-  can host it) · answer-first means ANSWER — do NOT build until told.
+  (backend done, UI missing) · per-customer account view (`docs/specs/admin-user-view.md`) · answer-first
+  means ANSWER, do NOT build until told.
