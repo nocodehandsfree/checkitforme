@@ -85,11 +85,21 @@ If the flag holds at scale, Target stays pure keypad with no listening and no AI
 `retailers.phoneTree` already exists as a per-store override of the chain tree, but it is free text
 for the agent prompt, not a keypad plan, so the wiring is still to be designed.
 
-Listening to the department list stays the fallback for chains where no such flag exists. Two facts
-that make it cheap when it is needed: the list is read as text by the same Twilio transcription that
-produced every quote in this report (no model, no Charlie), and a wrong press makes Target re-read
-the whole list, so a miss costs ~10s inside the same call instead of a redial. Neither is priced yet
-— the rate card has no line for speech recognition.
+Listening to the department list stays the fallback for chains where no such flag exists — and it is
+**not** free. Twilio's own speech recognition (`<Gather input="speech">`, what produced every quote
+in this report) is billed at **$0.02 per 15-second interval, minimum one interval per Gather**.
+Measured on this account today: **$8.98 of speech recognition against $2.09 of phone line** across
+104 calls, about 4.3 intervals each, so **8.6¢ of listening per call** — past the whole 5¢ ceiling on
+its own. Month to date: $55.98. Never put a Twilio speech Gather on a live check.
+
+The audio fork we already run for live listen (`calls-media-stream-minutes`) is measured at
+**$0.0044/min**, so the affordable shape is: fork the audio, send it to a non-Twilio speech-to-text,
+and keep Twilio out of the transcription. That STT still needs a real quote before anyone builds on
+it. A wrong press is genuinely free: Target re-reads the whole list, so a miss costs ~10s inside the
+same call instead of a redial.
+
+Zone runs ride the identical path — a zone store dials `bridgeStoreCall` exactly like a single check
+(`src/server.ts:3667`) — so every per-call number above multiplies by the number of stores in a zone.
 
 ## Other measured facts
 
