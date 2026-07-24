@@ -2688,7 +2688,11 @@ function calcUpdate(){
   const txt=(id,t)=>{ const e=document.getElementById(id); if(e) e.textContent=t; };
   txt('calc_total',calcMoney(total)); txt('calc_navval',CALC.nav); txt('calc_talkval',CALC.talk);
   txt('calc_percheck',calcMoney(pc.perCheck)); txt('calc_lanelbl',CALC.lane==='delta'?('Delta · '+CALC.deltaEsc+'% to Charlie'):'Charlie');
-  set('calc_chip',`<span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(st.nc)}${st.label}</span><span style="font-size:10.5px;color:var(--text-muted)">${dur}s call</span>`);
+  // The chip is NAMED for the store type, so its number must be that store type's own time, not the
+  // whole call. It used to read "Bravo · 52s" on a 32s menu with 20s of talk, which reads as 52
+  // seconds of menu (owner 07-24). The whole call now lives in the legend under the bar, where the
+  // nav and talk parts it is made of are already spelled out.
+  set('calc_chip',`<span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(st.nc)}${st.label}</span><span style="font-size:10.5px;color:var(--text-muted)">${isDirect?'no menu':CALC.nav+'s menu'}</span>`);
   const tot=Math.max(dur,1), navPct=CALC.nav/tot*100, talkPct=CALC.talk/tot*100;
   let strip='';
   if(CALC.nav>0) strip+=`<div style="width:${navPct}%;background:linear-gradient(180deg,${st.nc},${st.nc}99);display:flex;align-items:center;justify-content:center">${navPct>14?'<span style="font-size:10px;font-weight:800;letter-spacing:.1em;color:#0B0E14">NAV</span>':''}</div>`;
@@ -2719,7 +2723,7 @@ function calcUpdate(){
     } else { cliffEl.style.display='none'; }
     if(dur>60) cliffEl.style.color='#F59E0B';
   }
-  set('calc_legend',`<span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-muted);opacity:${isDirect?.4:1}">${calcDot(st.nc)}nav ${CALC.nav}s</span><span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-muted)">${calcDot('var(--purple)')}talk ${CALC.talk}s</span><span style="flex:1"></span><span style="font-size:10.5px;color:var(--text-tertiary)">${dur>0?'billed as '+calcMinWord(Math.ceil(dur/60)):'no call'}</span>`);
+  set('calc_legend',`<span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-muted);opacity:${isDirect?.4:1}">${calcDot(st.nc)}nav ${CALC.nav}s</span><span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-muted)">${calcDot('var(--purple)')}talk ${CALC.talk}s</span><span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-muted)">= ${dur}s whole call</span><span style="flex:1"></span><span style="font-size:10.5px;color:var(--text-tertiary)">${dur>0?'billed as '+calcMinWord(Math.ceil(dur/60)):'no call'}</span>`);
   set('calc_breakdown',items.map(it=>`<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)"><span style="width:3px;height:30px;border-radius:3px;flex-shrink:0;background:${it.accent}"></span><div style="flex:1;min-width:0"><div style="font-size:13px;color:var(--text-strong)">${it.label}</div><div style="font-size:10.5px;color:var(--text-tertiary);margin-top:2px">${it.detail}</div></div><div style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;color:${it.amount===0?'var(--text-tertiary)':'var(--text-primary)'}">${calcMoney(it.amount)}</div></div>`).join('')+`<div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px"><div style="font-size:13px;font-weight:700">All-in / call</div><div style="font-size:22px;font-weight:800;color:var(--green);font-variant-numeric:tabular-nums">${calcMoney(total)}</div></div>`);
   const rows=['Alpha','Bravo','Direct'].map(t=>({type:t,row:CALC_TALK.map(tk=>calcCompute(t,CALC_STORE[t].nav,tk,CALC.rates,CALC.lane,CALC.deltaEsc).total)}));
   const flat=[]; rows.forEach(r=>flat.push(...r.row)); const mn=Math.min(...flat), mx=Math.max(...flat), heat=v=>mx===mn?0:(v-mn)/(mx-mn);
