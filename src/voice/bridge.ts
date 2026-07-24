@@ -41,9 +41,19 @@ export interface BridgeContext {
   // is otherwise left untouched, since overriding prompt/first-message there once hung calls up).
   voiceId?: string;
   voiceTuning?: Record<string, unknown>;
+  // PERMANENT record that this call HAD a nav plan. `dtmf`/`say` are CONSUMED (nulled) by
+  // takeBridgeDtmf/takeBridgeSay when the inline TwiML is built — before the media stream ever
+  // starts — so any later gate reading them sees empty and thinks the store is direct. That dead
+  // gate let VAD run on tree stores, trip on the IVR's recording, and open the billed agent into
+  // the middle of the phone tree (owner 07-22: "Charlie was listening to phone trees"). These
+  // flags are stamped at context-set time and never consumed, so the VAD gate stays truthful.
+  hadDtmf?: boolean;
+  hadSay?: boolean;
 }
 const contexts = new Map<string, BridgeContext>();
 export function setBridgeContext(room: string, ctx: BridgeContext) {
+  ctx.hadDtmf = !!ctx.dtmf;
+  ctx.hadSay = !!ctx.say;
   contexts.set(room, ctx);
   setTimeout(() => contexts.delete(room), 5 * 60 * 1000); // auto-expire
 }
@@ -377,7 +387,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       if (suppress) { if (++echoDropped % 200 === 1) log(`echo gate: suppressing agent playback echo (dropped=${echoDropped})`); }
       else if (eleven && ready) eleven.send(JSON.stringify({ user_audio_chunk: b64 }));
       else if (connecting) pending.push(b64);          // committed to connect → buffer for the agent
-      else if (earArmed || (ctx?.connectOnHuman && !ctx.connectAtSec && !ctx.dtmf && !ctx.say)) maybeDetectHuman(b64); // The ear runs in exactly two states: (1) bare direct dials — no nav plan at all (Mapper's 770ffa0 boolean, owner-ordered 07-21: never DURING a menu, where it trips on the recorded greeting — B&N 3:42p); (2) earArmed — the smart join, where the recipe has FINISHED the menu and the ear opens for the real human voice (owner design, restored 07-24).
+      else if (earArmed || (ctx?.connectOnHuman && !ctx.connectAtSec && !ctx.hadDtmf && !ctx.hadSay)) maybeDetectHuman(b64); // The ear runs in exactly two states: (1) bare direct dials — no nav plan at all (Mapper's 770ffa0 boolean, owner-ordered 07-21: never DURING a menu, where it trips on the recorded greeting — B&N 3:42p); (2) earArmed — the smart join, where the recipe has FINISHED the menu and the ear opens for the real human voice (owner design, restored 07-24). State (1) MUST read hadDtmf/hadSay, NOT ctx.dtmf/ctx.say: those are consumed at TwiML build (takeBridgeDtmf/Say), so by media time they are ALWAYS empty and the ear armed on every timerless keypad/voice chain — the agent opened into the recording and billed through the tree (owner 07-22).
     } else if (m.event === "stop") { log("twilio stop"); signalEnd(); if (eleven) eleven.close(); }
   });
   twilio.on("close", () => { activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (eleven) eleven.close(); });
