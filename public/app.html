@@ -1659,7 +1659,14 @@ const api = async (p, opts={}) => {
   // silently sent to staging). Staging shares the admin session cookie on .checkitforme.com, so it
   // authenticates the same way; a staging 401 returns an error and never trips the admin auth gate.
   const method = ((opts.method)||'GET').toUpperCase();
-  if(typeof CALL_SRC!=='undefined' && CALL_SRC==='staging' && method==='GET' && typeof p==='string' && p.indexOf('/api/')===0){
+  // SETTINGS ALWAYS READ THE SAME PLACE THEY WRITE (prod). Writes never go to staging, so routing a
+  // settings GET to staging made the Admin show one environment's answer for a control that edits the
+  // other. Owner 07-24: he turned Topps/NeeDoh/One Piece OFF, the save confirmed, and the switches
+  // snapped straight back on because the refresh had read staging. These are configuration he edits,
+  // not call data he browses, so the switch must not touch them.
+  const CONFIG_READS=['/api/policy','/api/settings','/api/statuses','/api/plans'];
+  const isConfig = typeof p==='string' && CONFIG_READS.some(c=>p===c||p.indexOf(c+'/')===0||p.indexOf(c+'?')===0);
+  if(typeof CALL_SRC!=='undefined' && CALL_SRC==='staging' && method==='GET' && !isConfig && typeof p==='string' && p.indexOf('/api/')===0){
     try{
       const rs = await fetch(STG_ORIGIN+p, Object.assign({}, opts, {credentials:'include'}));
       if(rs.status===401) return {error:'staging_auth'};
@@ -1789,7 +1796,10 @@ function openSheet(title,sub,body){
 function _restoreBorrow(){ if(!_sheetBorrow) return; const b=_sheetBorrow; _sheetBorrow=null; if(b.home){ if(b.next) b.home.insertBefore(b.node,b.next); else b.home.appendChild(b.node); } }
 // Undo variant-H layout: back to the fixed off-screen resting state + unlock scroll (call AFTER the slide-down).
 function _restoreSheetLayout(){ const sh=_sheetEls&&_sheetEls.sheet; if(!sh) return; sh.style.position=''; sh.style.top=''; sh.style.bottom=''; sh.style.height=''; sh.style.transform=''; document.documentElement.style.overflow=''; document.body.style.overflow=''; }
-function closeSheet(){ if(!_sheetEls) return; const sh=_sheetEls.sheet; sh.style.transition=''; sh.style.transform=''; document.body.classList.remove('sheetopen'); sh.classList.remove('on'); setTimeout(()=>{ _restoreBorrow(); _restoreSheetLayout(); },300); }
+function closeSheet(){ if(!_sheetEls) return;
+  // Swiping the sheet down must never drop an edit that is still inside its type-ahead window.
+  if(typeof statusFlush==='function') statusFlush();
+  const sh=_sheetEls.sheet; sh.style.transition=''; sh.style.transform=''; document.body.classList.remove('sheetopen'); sh.classList.remove('on'); setTimeout(()=>{ _restoreBorrow(); _restoreSheetLayout(); },300); }
 window.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSheet(); });
 // Tap-to-show tooltip — works on mobile (hover doesn't). Tap a hint → bubble; tap again/elsewhere → gone.
 let _tipFor=null;
@@ -4503,14 +4513,25 @@ function pickIcon(n){ if(_iconPickCb) _iconPickCb(n); closeIconPicker(); }
 function closeIconPicker(){ const ov=document.getElementById("iconpick"); if(ov) ov.remove(); _iconPickCb=null; }
 function statusPickIcon(btn){ const card=btn.closest("[data-sid]")||btn.parentNode; const hid=card.querySelector("input[data-f=emoji]"); const colEl=card.querySelector("input[data-f=color]"); const col=colEl?colEl.value:"#9CA3AF";
   openIconPicker(n=>{ if(hid) hid.value=n; btn.innerHTML=statusIcon(n,col,24); statusAutoSave(btn); }, hid?hid.value:""); }
-// Auto-save a status row whenever you change its icon/color/tone/label/note — no separate Save needed.
-let _stSaveT={};
+// Auto-save a status row whenever you change its icon/color/tone/label/note. No separate Save needed.
+// The sheet PROMISES "Saves as you type", so the message box fires on `input`, not on `change`: a
+// textarea's `change` only fires on blur, and swiping the sheet down never blurs it, so an edited
+// message was silently thrown away (owner 07-24, he lost "No check, no charge." three times).
+// The pending edit is held here rather than in the timer, so closeSheet can flush it before the
+// sheet's DOM goes away.
+let _stSaveT=null, _stPending=null;
 function statusAutoSave(el){ const card=el.closest("[data-sid]"); if(!card) return; const id=card.dataset.sid; if(!id) return;
   const body={}; card.querySelectorAll("[data-f]").forEach(i=>{ body[i.dataset.f]=i.value; });
-  clearTimeout(_stSaveT[id]); _stSaveT[id]=setTimeout(async()=>{
-    const r=await api("/api/statuses/"+id,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
-    if(r&&r.id){ STATUSES[r.key]=r; renderStatuses(); toast("Saved ✓"); }
-  }, 450); }
+  _stPending={id,body};
+  clearTimeout(_stSaveT); _stSaveT=setTimeout(statusFlush, 450); }
+// Write whatever is pending right now. Safe to call any time: a no-op when nothing is waiting.
+async function statusFlush(){
+  const p=_stPending; if(!p) return;
+  _stPending=null; clearTimeout(_stSaveT); _stSaveT=null;
+  const r=await api("/api/statuses/"+p.id,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(p.body)});
+  if(r&&r.id){ STATUSES[r.key]=r; renderStatuses(); toast("Saved"); }
+  else toast("Could not save that message");
+}
 
 // ---- Statuses as CRUD rows (comp 1e): light list, editing in the shared sheet. ----
 const ST_TONES={in:'In stock',out:'Not in stock',unk:'Check failed',soon:'Restock coming'};
@@ -4532,13 +4553,13 @@ function stSheet(id){
       <div class="row" style="gap:10px;align-items:center;flex-wrap:nowrap;margin-top:4px">
         <button type="button" class="sticon-btn" onclick="statusPickIcon(this)" title="Change the icon">${statusIcon(s.emoji,s.color||s.tone,24)}</button>
         <input type="hidden" data-f="emoji" value="${escH(s.emoji)}">
-        <input value="${escH(s.label)}" data-f="label" onchange="statusAutoSave(this)" style="flex:1;min-width:0;font-size:15px" placeholder="Label">
+        <input value="${escH(s.label)}" data-f="label" oninput="statusAutoSave(this)" style="flex:1;min-width:0;font-size:15px" placeholder="Label">
         ${s.key==='in_stock'
           ? `<input type="color" value="#4ADE80" data-f="color" disabled title="Locked to brand green. matches the logo" style="width:42px;height:42px;padding:2px;border-radius:9px;border:1.5px solid var(--green);background:none;flex:0 0 auto;cursor:not-allowed">`
           : `<input type="color" value="${escH(s.color)}" data-f="color" oninput="statusRecolor(this)" onchange="statusAutoSave(this)" title="Icon color" style="width:42px;height:42px;padding:2px;border-radius:9px;border:none;background:none;flex:0 0 auto">`}
       </div>
       <div class="k-eyebrow">Message the customer sees</div>
-      <textarea data-f="note" rows="3" onchange="statusAutoSave(this)" placeholder="Message the customer sees" style="font-size:14px;line-height:1.5">${escH(s.note)}</textarea>
+      <textarea data-f="note" rows="3" oninput="statusAutoSave(this)" placeholder="Message the customer sees" style="font-size:14px;line-height:1.5">${escH(s.note)}</textarea>
       <div class="meta" style="margin-top:6px;font-size:12px;line-height:1.45">Use <code>{product}</code> for the live product name · <code>&lt;b&gt;…&lt;/b&gt;</code> to bold.</div>
       <div class="k-eyebrow">Meaning</div>
       <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
@@ -5395,18 +5416,23 @@ async function sendAlertTest(k,channel){
   else if(r.status==='stubbed'){ if(out){ out.style.color='#F59E0B'; out.textContent='Logged but not delivered. '+(r.channel==='sms'?'Text sending is not approved yet.':'Email sending is not set up yet.'); } }
   else{ if(out){ out.style.color='#F59E0B'; out.textContent=r.status+(r.detail?(' · '+r.detail):''); } }
 }
-async function loadGrowth(){
-  POL=await api('/api/policy');
-  if(!POL||POL.error){ document.getElementById('gw_flags').textContent='Could not load policy.'; return; }
-  // Flags = console rows (comp 1i): calm switch rows, one gray line each, saved on tap.
-  const f=POL.flags||{};
-  document.getElementById('gw_flags').innerHTML=FLAG_GROUPS.map(g=>
+// Flags = console rows (comp 1i): calm switch rows, one gray line each, saved on tap. Its own function
+// so a save can redraw the switches from the saved policy without refetching the whole page.
+function renderGwFlags(){
+  const el=document.getElementById('gw_flags'); if(!el) return;
+  const f=(POL&&POL.flags)||{};
+  el.innerHTML=FLAG_GROUPS.map(g=>
     `<div class="meta" style="font-weight:700;color:var(--text-muted);margin:14px 0 2px">${g.title}</div>`+
     g.flags.map(fl=>{const k=fl[0],on=!!f[k];return `<div class="peek static">
       <div class="pk-main"><div class="pk-t">${esch(fl[1])}</div><div class="pk-m">${esch(String(fl[2]))}</div></div>
       <button class="k-switch${on?' on':''}" onclick="toggleFlag('${k}',${on?'false':'true'},'${esch(fl[1])}')" aria-label="${esch(fl[1])}"></button>
     </div>`;}).join('')
   ).join('');
+}
+async function loadGrowth(){
+  POL=await api('/api/policy');
+  if(!POL||POL.error){ document.getElementById('gw_flags').textContent='Could not load policy.'; return; }
+  renderGwFlags();
   // pricing
   const p=POL.pricing||{}, sub=p.sub||{};
   const fld=(id,lbl,val)=>`<label class="meta" style="display:block">${lbl}<input id="${id}" value="${esch(val)}" inputmode="numeric" style="display:block;width:90px;margin-top:4px;background:var(--terminal);color:#fff;border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:12px;padding:10px 12px"></label>`;
@@ -5667,9 +5693,12 @@ async function loadGwIntel(){
     `<div class="meta" style="margin:2px 0 4px"><b style="color:#c7c7d2">Shipment days heard:</b> ${days}</div>`+
     (rows||'<div class="meta" style="padding:6px 0">No confirmed restocks logged yet.</div>');
 }
+// The PATCH returns the whole saved policy, so redraw from THAT rather than firing a second read.
+// One round trip, and the switch can never disagree with what was actually stored.
 async function toggleFlag(key,on,label){
   const r=await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({flags:{[key]:on}})});
-  toast((r&&!r.error)?((label||key)+(on?' on':' off')):'Could not save the flag'); loadGrowth();
+  if(r&&!r.error&&r.flags){ POL=r; renderGwFlags(); toast((label||key)+(on?' on':' off')); }
+  else { toast('Could not save the flag'); loadGrowth(); }
 }
 // Membership + PAYG numbers live in Plans; this page shows them read-only and links across.
 async function loadGwPlansMirror(){
