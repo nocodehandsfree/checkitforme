@@ -11,10 +11,11 @@ REPLACES old — history is in git. Last updated: 2026-07-24 (calling emergency 
   the server log for your 6:44 Target call shows the fixed engine arming the correct menu plan.
   Engine code, menu maps, store phone numbers, and the agent's brain are all verified identical to
   the last known-good state. The real site (checkitforme.com) was never affected.
-- What WAS still broken: the call screen sat on "It's ringing" in silence through the whole menu
-  walk, so working calls looked dead and got hung up on. FIXED on staging: the screen now shows
-  "We've connected" the moment the store's system picks up, then "Working through the menu…".
-- YOUR one check: run a Target check on staging and let it sit 60–90 seconds without hanging up.
+- Fixed on staging tonight, in order: the call screen now shows real steps (you saw it) · you can
+  HEAR calls from the moment the store's system picks up (menu, presses, ring-through) · Charlie is
+  back to joining ONLY on a real human voice, deaf through the menu so recordings can't fool him ·
+  nobody-answers calls end on their own with Charlie never billed (~1–2¢, your Admin bail dial).
+- YOUR one check: one Target or CVS call on staging, hands off, listening. Then say "promote".
 
 ## Two work streams from before (unchanged)
 1. **Site fixes (five) — DONE on staging, waiting on you.** Check them on your phone, then say
