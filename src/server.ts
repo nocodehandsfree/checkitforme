@@ -3230,6 +3230,7 @@ app.get("/pub/result/:cid", async (c) => {
       return c.json({
         status: row.status, confirmed: row.confirmed, statusKey: row.statusKey,
         productDetail: row.productDetail, shipmentDay: row.shipmentDayHeard ?? null, shipmentTime: row.shipmentTimeHeard ?? null,
+        charged: !!row.chargedAt, // the page must say "1 check used" only when a check REALLY was spent
         summary: row.summary ?? "", transcript: row.transcript ?? "",
         durationSecs: row.callSeconds ?? undefined,
       });
@@ -3277,6 +3278,7 @@ app.get("/pub/result/:cid", async (c) => {
       productDetail: row.productDetail,      // e.g. "3-pack blister · Surging Sparks" — null if not captured
       shipmentDay: row.shipmentDayHeard ?? (o?.shipmentDay ?? null),
       shipmentTime: row.shipmentTimeHeard ?? (o?.shipmentTime ?? null),
+      charged: !!row.chargedAt, // the page must say "1 check used" only when a check REALLY was spent
       summary: row.summary ?? o?.summary ?? "",
       transcript: row.transcript ?? o?.transcript ?? "",
     });
