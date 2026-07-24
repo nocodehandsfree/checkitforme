@@ -5596,10 +5596,10 @@ function fillLiveHeader(){
 }
 function stopLiveTimers(){ LIVE_TIMERS.forEach(t=>clearInterval(t)); LIVE_TIMERS=[]; if(POLL){clearInterval(POLL);POLL=null;} }
 async function hangUpLive(){
+  window.LIVE_CANCELLED=true; // the user aborted this check, so it is a cancel and never a verdict (owner 07.24)
   if(LIVE_ROOM){ api('/pub/bridge-hangup',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({room:LIVE_ROOM})}); }
   LIVE_ROOM=null; stopLiveTimers(); stopAudio();
   const hb=$('hangup_btn'); if(hb)hb.style.display='none';
-  // Don't discard the call — capture whatever happened (it gets logged + shown like any check).
   const _p=$('phase'); if(_p)_p.textContent=t('live.getting','⏳ Getting the result…'); $('audio_ind') && ($('audio_ind').style.display='none');
   finalizeLive(LIVE_CID);
 }
@@ -5718,7 +5718,7 @@ async function startCheckLive(){
   { const _fd=$('finds'); if(_fd)_fd.style.display='none'; } // hide the finds ticker on the call page — keep it uncrowded
   // Listeners hear the call through the browser — iOS silent switch mutes web audio, so remind them.
   const _mb=$('muteBanner'); if(_mb) _mb.style.display='none'; // owner asked to drop the 'flip off silent' note
-  LIVE_STEPS=[]; LIVE_TR=[]; LIVE_TRANSCRIPT=''; AGENT_PITCHED=false; LIVE_STAGE=0; LIVE_DONE=false; LIVE_T0=Date.now(); window.LIVE_FOLLOW=true; window._livePend=false;
+  LIVE_STEPS=[]; LIVE_TR=[]; LIVE_TRANSCRIPT=''; AGENT_PITCHED=false; LIVE_STAGE=0; LIVE_DONE=false; window.LIVE_CANCELLED=false; LIVE_T0=Date.now(); window.LIVE_FOLLOW=true; window._livePend=false;
   fillLiveHeader(); const _lr=$('live_rhead'); if(_lr)_lr.className='rhead live';
   liveStage(1); // logs step 1 + renders the call box (steps on top, empty script below)
   let secs=0; const elT=setInterval(()=>{ secs+=1; },1000); // counts toward the hard cap only — no on-screen timer
@@ -5820,6 +5820,13 @@ async function finalizeLive(cid){
   stopAudio(); stopLiveTimers();
   cid = cid || LIVE_CID || null;
   const live=(LIVE_TR.length?LIVE_TR.join('\n'):LIVE_TRANSCRIPT)||'';
+  // The user hit Stop and hang up: this is a CANCEL, not a verdict. Show "Check cancelled" (no charge)
+  // and do NOT fetch or settle a server verdict or run reconcile, so a racing result can never overwrite
+  // it with "nobody answered" or "no clear answer" and charge for a check the user aborted (owner 07.24).
+  if(window.LIVE_CANCELLED){
+    const res={status:'admin_hangup', statusKey:'user_cancelled', transcript:live, summary:'', confirmed:null};
+    saveCheckToHistory(res, cid); showResult(res, cid); return;
+  }
   // INSTANT FLIP: the moment the call ends, leave the active-call screen NOW — don't sit on it while we
   // recover the id / fetch the verdict. Show the streamed conversation under "Getting the answer…" right
   // away; the real verdict repaints over it below. Only flip from the live view (so a late re-fire of
