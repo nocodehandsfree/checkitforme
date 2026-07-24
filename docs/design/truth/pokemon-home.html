@@ -425,6 +425,7 @@
   }
   body{text-wrap:pretty} /* CLASS-LEVEL wrap law (owner 07-22): the browser avoids orphan last lines on EVERY string, every page — Safari 26/Chrome support it, others ignore it harmlessly */
   .rsub{color:#b4b4c2;font-size:13.5px;font-weight:650;line-height:1.55;margin-top:12px} /* smaller than before but still pronounced (owner 07-15) */
+  .rsub .subln{display:block} /* first sentence on line 1, the rest on line 2 (owner 07.23 two line law) */
   .rsub b{color:#fff;font-weight:800} .rsub .y{color:#fff;font-weight:800} /* product name neutral white — no per-vertical accent on a result */
   .rstore-line{color:#cfcfe0;font-size:13px;font-weight:600;margin-top:8px;line-height:1.4}
   .rstore-line b{color:#fff;font-weight:800} .rstore-line .ad{color:var(--muted);font-weight:500}
@@ -1321,14 +1322,8 @@
   .alsw button{padding:8px 6px;font-size:12px}
   .alrm{background:rgba(255,123,123,.12);border:0;border-radius:12px;padding:9px;color:#FF9B9B;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
   .alrow-off{opacity:.55}
-  /* Alerts rows (owner 07-23): the On/Off toggle + remove used to sit beside the name and squeeze it,
-     cutting long store names. Give the name the full row width and drop the controls onto their own line
-     underneath, so the whole name shows (2 line wrap). Scoped to .alrow so the homepage list is untouched. */
-  .store.alrow{align-items:flex-start}
-  .alrow-main{min-width:0;flex:1;display:flex;flex-direction:column;gap:10px}
-  .alrow-id{min-width:0}
-  .alrow-ctrls{display:flex;align-items:center;gap:8px}
-  .alrow-ctrls .alsw{width:108px;flex:0 0 auto}
+  /* Alerts rows (owner 07-23): the original On/Off pill + remove, unchanged. The only tweak is the store
+     name now wraps to 2 lines (base .store .nm clamp) instead of a single-line cut, so long names show. */
   .alpause{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)}
   .almk{padding:12px 14px;border-radius:14px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.28);color:#F5C368;font-size:13px;font-weight:700;line-height:1.45;text-align:center}
   .ho-stepper{display:flex;align-items:center;justify-content:space-between;background:var(--terminal);border:1px solid var(--border);border-radius:13px;padding:8px 10px}
@@ -2040,6 +2035,8 @@ html[data-skin="v2"] #zmenuOv .modal,html[data-skin="v2"] #emailOv .modal,html[d
 html[data-skin="v2"] #zmenuOv .modal,html[data-skin="v2"] #emailOv .modal,html[data-skin="v2"] #alertsOv .modal,html[data-skin="v2"] #featOv .modal{border:1px solid rgba(255,255,255,.15);border-bottom:0;box-shadow:0 -20px 60px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.07)}
 html[data-skin="v2"] #zmenuOv .modal::before,html[data-skin="v2"] #emailOv .modal::before,html[data-skin="v2"] #alertsOv .modal::before,html[data-skin="v2"] #featOv .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 16px}
 html[data-skin="v2"] #zmenuOv.on .modal,html[data-skin="v2"] #emailOv.on .modal,html[data-skin="v2"] #alertsOv.on .modal,html[data-skin="v2"] #featOv.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
+  /* Alerts can hold up to 10 stores, so let the sheet scroll instead of running off-screen (owner 07-23). */
+  html[data-skin="v2"] #alertsOv .modal{max-height:86vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 html[data-skin="v2"] #histOverlay .hist-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:2px 18px calc(22px + env(safe-area-inset-bottom))}
 /* sheet-mode (body.sheetopen): the sheet box overshoots 120px under the iOS bar so rows ghost through the
    glass. The inner scrollers get a 120px scroll-end spacer (last row stays reachable above the bar) and the
@@ -2083,6 +2080,17 @@ html[data-skin="v2"] #authOverlay.on .modal,html[data-skin="v2"] #againOverlay.o
 html[data-skin="v2"] #authOverlay .modal>.x,html[data-skin="v2"] #againOverlay .modal>.x,html[data-skin="v2"] #cidOverlay .modal>.x,html[data-skin="v2"] #kcallOverlay .modal>.x,html[data-skin="v2"] #leadOverlay .modal>.x,html[data-skin="v2"] #paidOverlay .modal>.x,html[data-skin="v2"] #scoreOverlay .modal>.x,html[data-skin="v2"] #shareOverlay .modal>.x,html[data-skin="v2"] #waitlistOverlay .modal>.x{display:none!important}
 
 html[data-skin="v2"] #buyOverlay .modal{overflow-y:auto;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
+  /* Continue is a plain full-width button in normal flow, like every other page. A sticky/floating element
+     at the sheet's bottom edge sits on the iOS scroll-edge glass and kills it (GOTCHAS), so it stays in flow.
+     The proper slide-up is the zones-basket architecture: a float OUTSIDE the scroll container. Owner 07-23. */
+  html[data-skin="v2"] #buyOverlay .buydock{margin-top:16px}
+  html[data-skin="v2"] #buyOverlay .buydock .cta{width:100%;margin:0}
+  html[data-skin="v2"] #buyOverlay .buydock-plan{display:none}
+  html[data-skin="v2"] .billcyc-in{margin:0!important;padding:4px}
+  html[data-skin="v2"] .billcyc-in button{padding:7px 12px;font-size:12px;flex:0 0 auto}
+  /* Pay-as-you-go: Continue is a plain button, not the floating slide-up dock (owner 07-23). */
+  html[data-skin="v2"] #buyOverlay .buydock.flat{position:static;background:none;box-shadow:none;border-radius:0;padding:0;margin-top:14px}
+  html[data-skin="v2"] #buyOverlay .buydock.flat .buydock-plan{display:none}
 /* 6c CHECKOUT (v2) — branded on-site Stripe Elements page. Bottom sheet, comp tokens: raised order
    card, carved "or pay with card" divider, Payment Element in the well, green SUBSCRIBE ring capsule. */
 html[data-skin="v2"] #coOverlay{align-items:flex-end;padding:0}
@@ -2203,7 +2211,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   html[data-skin="v2"] .ckarc1,html[data-skin="v2"] .ckarc2,html[data-skin="v2"] .rpill .d{animation:none}
 }
 /*V2END*/</style>
-<meta name="build" content="4f6c4a62f9fa">
+<meta name="build" content="be708da57309">
 </head>
 <body>
 <!-- Hard-refresh of a result deep-link: apply the verdict treatment (wash + transparent nav) NOW, so
@@ -2456,9 +2464,9 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     <span class="x" onclick="closeBuy()">×</span>
     <h3 style="text-align:center" id="buy_title">Get more checks</h3>
     <div class="meta" id="buy_lead" style="text-align:center;margin:-4px 0 14px;display:none"></div>
-    <div class="ho-toggle" id="billcycle" style="margin-bottom:12px">
-      <button class="on" onclick="setCycle(false,this)" data-i18n="plan.monthly">Monthly</button>
-      <button onclick="setCycle(true,this)" data-i18n="plan.annual">Annual · save 17%</button>
+    <div class="ho-toggle billcyc" id="billcycle" style="margin-bottom:12px">
+      <button class="on" data-an="false" onclick="setCycle(false,this)" data-i18n="plan.monthly">Monthly</button>
+      <button data-an="true" onclick="setCycle(true,this)" data-i18n="plan.annual">Annual · save 17%</button>
     </div>
     <div id="buy_plans"></div>
     <div class="meta" id="buy_note" style="text-align:center;margin-top:12px"></div>
@@ -2950,6 +2958,8 @@ const I18N={ es:{
   'acct.perweek':'Verificaciones por semana','acct.hist':'Historial','acct.8wks':'hace 8 sem','acct.thisweek':'esta semana','acct.last':'Últimas verificaciones','acct.none':'Aún no hay verificaciones.',
   'acct.earn.lead':'Ayuda a la cacería. Te llenamos de verificaciones gratis.',
   'buy6b.title':'Cada función.<br>Elige tus verificaciones.','buy6b.grid':'Todo plan incluye','buy6b.gridsel':'Este plan incluye','buy6b.cta':'Continuar',
+  'buy6b.titleplans':'Planes Check+ Premium','buy6b.titlepayg':'Paga por verificación','plan.mo3':'Mensual','plan.an3':'Anual',
+  'plan.unlimited':'Ilimitado','plan.online':'Tienes el plan {p}','plan.save17':'Ahorra 17% al año',
   'buy6b.f1':'Productos exactos','buy6b.f2':'Barridos de zona','buy6b.f3':'Alertas de reabastecimiento','buy6b.f4':'Verificaciones programadas','buy6b.f5':'Cualquier ciudad','buy6b.f6':'Apartados en tienda','buy6b.f7':'Tu voz','buy6b.f8':'Cacerías thrift',
   'up6a.title':'Esa fue tu verificación gratis.<br>¿Listo para lo bueno?','up6a.cta':'Ver planes Check+','up6a.f1':'Verifica cualquier ciudad de EE. UU.','up6a.f2':'Alertas de reabastecimiento','up6a.f3':'Verifica varias tiendas a la vez',
   'up6d.title':'Ya estás dentro.','up6d.live':'Ya activo en tu cuenta','up6d.more':'+ 5 más en Administrar plan ›','up6d.moreN':'+ {n} más en Administrar plan ›','up6d.cta':'Haz una verificación','up6d.note':'Administra tu plan cuando quieras en Mis verificaciones.',
@@ -5375,7 +5385,7 @@ let LIVE_STEPS=[], LIVE_T0=0, LIVE_TRANSCRIPT=''; // step log (with timings), ca
 // Phone-tree (IVR) language vs. our bot's real ask. The store side ("Clerk") covers BOTH the automated
 // tree AND a human, so a Clerk line alone can't mean "with a clerk". Our bot stays quiet / presses keys
 // through the tree and only delivers its stock question to a HUMAN — so AGENT_ASK is the human signal.
-const IVR_RE=/press \d|press the|press [a-z]\b|para español|for .{2,40}[ ,]+press|main menu|thank you for calling|currently closed|store hours|please hold|hold on|one moment|moment please|your call (is|may be)|automated|enter your|to speak (to|with)|the following (menu|options|prompts)|leave a (message|voicemail)|after the (tone|beep)|if you know your party|dial \d/i;
+const IVR_RE=/press \d|press the|press [a-z]\b|para español|for .{2,40}[ ,]+press|main menu|than(k you|ks)( again)? for calling|currently closed|store hours|please hold|hold on|one moment|moment please|your call (is|may be)|automated|enter your|to speak (to|with)|the following (menu|options|prompts)|leave a (message|voicemail)|after the (tone|beep)|if you know your party|dial \d/i;
 const AGENT_ASK=/in stock|do you (have|carry|sell)|have any|y'?all have|carr(y|ying)|wondering if|calling to (see|check)|checking to see|see if (you|y'?all)|get any|got any|come in|new shipment|on the shelf|restock|booster|\bpacks?\b|\bcards?\b|\bsealed\b/i;
 // The FINAL transfer word — what the agent says LAST to get routed to a live person and start ringing
 // the front. On CVS that's "general" (after it has already picked "front" to navigate). "Front" itself
@@ -5419,7 +5429,7 @@ function stepsHTML(steps, finalElapsed){
 function scriptHTML(transcript, final){
   const lines=(transcript||'').split('\n').filter(Boolean);
   const hs=transcriptHumanStart(lines);
-  const human=lines.slice(hs).filter(l=>/^(Agent|Clerk):/.test(l));
+  const human=lines.slice(hs).filter(l=>/^Agent:/.test(l)||(/^Clerk:/.test(l)&&isHumanSpeech(l.replace(/^Clerk:\s*/,'')))); // drop junk store-side lines (ringback/silence heard as "...") so they never show as a Staff bubble
   if(!human.length) return final?`<div class="cs-wait">${t('live.noconvo','No live conversation on this call.')}</div>`:''; /* live: the log shows real steps ONLY — no filler line past the current step (owner 07-21) */
   return `<div class="chat">${human.map(l=>bubbleHTML(l,true)).join('')}</div>`;
 }
@@ -5456,7 +5466,7 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
   // Conversation lines first — knowing whether a person was reached colours the final connection step.
   const lines=(transcript||'').split('\n').filter(Boolean);
   const hs=transcriptHumanStart(lines);
-  const human=lines.slice(hs).filter(l=>/^(Agent|Clerk):/.test(l));
+  const human=lines.slice(hs).filter(l=>/^Agent:/.test(l)||(/^Clerk:/.test(l)&&isHumanSpeech(l.replace(/^Clerk:\s*/,'')))); // drop junk store-side lines (ringback/silence heard as "...") so they never show as a Staff bubble
   const reached = human.length>0 || (n>0 && steps[n-1].n>=6);
   // Steps list — DROP the first "Calling {store}…" step (the roll-up header carries it, so the store
   // name shows ONCE). Greyed text, no dots; the final connection step turns green ✓ when we got a person.
@@ -5532,7 +5542,7 @@ function deriveSteps(transcript){
   // Menu steps need REAL menu evidence (IVR/hold language on a store-side line before the human) — a
   // clerk's plain "Hello?" before the ask is a direct answer, not a phone tree.
   const wentThroughMenu = lines.slice(0, Math.max(0,hs)).some(l=>{ const m=l.match(/^Clerk:\s*(.*)$/); return !!m && (IVR_RE.test(m[1])||HOLD_RE.test(m[1])); });
-  const want=[1,3]; // ringing handle + "we've connected" always
+  const want=[1,2,3]; // ringing handle + "It's ringing" + "we've connected" always (every call rings)
   if(wentThroughMenu){ if(max>=4)want.push(4); if(max>=5)want.push(5); if(max>=6)want.push(6); }
   if(max>=7) want.push(7);
   if(max>=8) want.push(8);
@@ -5559,23 +5569,34 @@ window.addEventListener('scroll',()=>{ try{ const lv=$('live'); if(!lv||lv.class
 // didn't catch that") are NOT nav — they were wrongly painting "Working through the menu" on DIRECT
 // calls a human answered instantly (the fake-steps bug on the owner's own-phone tests).
 const AGENT_NAV_RE=/^(no|yes|yeah|okay|ok|zero|one|two|three|four|five|six|seven|eight|nine|front|general|operator|representative|customer service|associate|store|manager)[\s.,!?]*$/i;
+// Speech to text hallucinates a store side line out of ringback, hold silence, or line noise (a lone
+// ellipsis, a stray fragment). That is NOT a person picking up. A store side line counts as a real
+// human only when it carries actual WORDS (a run of letters), so the log never flips to Staff picked up
+// on noise. Owner 07.23: Target rang, nobody answered, yet a dotted junk line faked a pickup. Junk is
+// ignored and we hold the current step until a real voice or the verdict arrives.
+function isHumanSpeech(txt){ const s=String(txt||'').trim(); return /[a-zA-ZÀ-ɏ]{2,}/.test(s); }
 function stageForLines(lines, pitched){
-  let st=3, routed=false, human=false;
+  // Base is 2 (still ringing). We only reach "We've connected" (3) once the store side produces REAL
+  // content: a menu, a hold recording, or a human voice. A bare carrier answer flag or ringback noise
+  // is NOT a connection (owner 07.24: Target rang out to nobody, yet the log said "We've connected").
+  let st=2, routed=false, human=false, connected=false;
   for(const l of (lines||[])){
     const m=String(l).match(/^(Agent|Clerk):\s*(.*)$/); if(!m) continue;
     const txt=m[2]||'';
     if(m[1]==='Agent'){
-      if(AGENT_ASK.test(txt)) return 8;                            // our stock question — a human is on the line
-      if(TRANSFER_RE.test(txt)){ routed=true; st=Math.max(st,6); } // "general" = transferring + ringing the front
-      else if(!human && AGENT_NAV_RE.test(txt.trim())) st=Math.max(st,5); // a real menu pick, pre-human only
+      if(AGENT_ASK.test(txt)) return 8;                            // our stock question means a human is on the line
+      if(TRANSFER_RE.test(txt)){ routed=true; st=Math.max(st,6); connected=true; } // "general" = transferring + ringing the front
+      else if(!human && AGENT_NAV_RE.test(txt.trim())){ st=Math.max(st,5); connected=true; } // a real menu pick, pre-human only
     } else {
-      // A non-agent voice that ISN'T an automated menu or hold recording is a real PERSON — direct answer
-      // OR post-transfer. Menu/hold badging only applies BEFORE a human has been heard, so a clerk's
-      // "hold on, let me check" mid-conversation can never re-paint the call as an IVR.
-      if(!human && (IVR_RE.test(txt) || HOLD_RE.test(txt))) st=Math.max(st,4); // automated menu / hold recording
-      else { human=true; st=Math.max(st,7); }                      // a real person picked up
+      // A store side voice that is NOT an automated menu or hold recording is a real PERSON (direct answer
+      // or post transfer). Menu/hold badging only applies BEFORE a human has been heard, so a clerk's
+      // "hold on, let me check" mid conversation can never re paint the call as an IVR.
+      if(!human && (IVR_RE.test(txt) || HOLD_RE.test(txt))){ st=Math.max(st,4); connected=true; } // automated menu / hold recording = the line engaged
+      else if(isHumanSpeech(txt)){ human=true; st=Math.max(st,7); connected=true; } // a real person picked up (real words only, never noise)
+      // else the line is transcription noise (ringback or silence heard as a junk line). Ignore it and hold on ringing.
     }
   }
+  if(connected) st=Math.max(st,3); // reached "We've connected" only from real content above, never a flag or noise
   return pitched ? Math.max(st,8) : st;
 }
 // Paint the live card's store header (logo + name + full address) — the SAME shell as the verdict card,
@@ -5591,18 +5612,34 @@ function fillLiveHeader(){
 }
 function stopLiveTimers(){ LIVE_TIMERS.forEach(t=>clearInterval(t)); LIVE_TIMERS=[]; if(POLL){clearInterval(POLL);POLL=null;} }
 async function hangUpLive(){
+  window.LIVE_CANCELLED=true; // the user aborted this check, so it is a cancel and never a verdict (owner 07.24)
   if(LIVE_ROOM){ api('/pub/bridge-hangup',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({room:LIVE_ROOM})}); }
   LIVE_ROOM=null; stopLiveTimers(); stopAudio();
   const hb=$('hangup_btn'); if(hb)hb.style.display='none';
-  // Don't discard the call — capture whatever happened (it gets logged + shown like any check).
   const _p=$('phase'); if(_p)_p.textContent=t('live.getting','⏳ Getting the result…'); $('audio_ind') && ($('audio_ind').style.display='none');
   finalizeLive(LIVE_CID);
 }
 function muLawDecode(u){ u=~u&0xFF; const sign=u&0x80,exp=(u>>4)&7,man=u&0x0F; let s=((man<<3)+0x84)<<exp; s-=0x84; return sign?-s:s; }
+// Live-listen ringback. Before the store answers there is NO call audio to stream (the line is not
+// bridged until pickup), so the listen feed used to sit silent and then start mid call. We play a soft
+// ringback tone in the browser from the moment dialing starts, then stop it the instant real audio
+// arrives at answer, so it flows straight into the live call. Listeners only (needs the unlocked AudioContext).
+let RINGBACK=null;
+function startRingback(){ try{ if(!AUDIO_CTX||RINGBACK) return;
+  const g=AUDIO_CTX.createGain(); g.gain.value=0.0001; g.connect(AUDIO_CTX.destination);
+  const o1=AUDIO_CTX.createOscillator(), o2=AUDIO_CTX.createOscillator(); o1.type=o2.type='sine'; o1.frequency.value=440; o2.frequency.value=480;
+  o1.connect(g); o2.connect(g); o1.start(); o2.start();
+  const ring=()=>{ if(!RINGBACK||!AUDIO_CTX) return; const tt=AUDIO_CTX.currentTime; try{ g.gain.cancelScheduledValues(tt);
+    g.gain.setValueAtTime(0.0001,tt); g.gain.exponentialRampToValueAtTime(0.05,tt+0.06); g.gain.setValueAtTime(0.05,tt+2); g.gain.exponentialRampToValueAtTime(0.0001,tt+2.1); }catch(_){ } }; // US cadence: ~2s on, ~4s off
+  ring(); RINGBACK={g,o1,o2,iv:setInterval(ring,6000)};
+  }catch(_){ } }
+function stopRingback(){ try{ const r=RINGBACK; RINGBACK=null; if(!r) return; clearInterval(r.iv);
+  try{ const tt=AUDIO_CTX?AUDIO_CTX.currentTime:0; r.g.gain.cancelScheduledValues(tt); r.g.gain.setValueAtTime(0.0001,tt); }catch(_){ }
+  try{ r.o1.stop(); r.o2.stop(); }catch(_){ } }catch(_){ } }
 function playMu(b64,track){
   if(!AUDIO_CTX) return; track=track||'agent';
   if(AUDIO_CTX.state==='suspended'){ AUDIO_CTX.resume(); }  // keep it awake (iOS can re-suspend)
-  if(!AUDIO_LIVE){ AUDIO_LIVE=true; const ai=$('audio_ind'); if(ai)ai.style.display=''; }  // first frame -> show the LIVE badge
+  if(!AUDIO_LIVE){ AUDIO_LIVE=true; stopRingback(); const ai=$('audio_ind'); if(ai)ai.style.display=''; }  // first REAL frame -> kill the synthetic ring, show the LIVE badge
   const raw=atob(b64), n=raw.length; if(!n) return;
   const buf=AUDIO_CTX.createBuffer(1,n,8000), ch=buf.getChannelData(0);
   for(let i=0;i<n;i++) ch[i]=muLawDecode(raw.charCodeAt(i))/32768;
@@ -5614,7 +5651,7 @@ function playMu(b64,track){
   const at=AUDIO_NEXT[track];
   src.start(at); AUDIO_NEXT[track]=at+buf.duration;
 }
-function stopAudio(){ if(AUDIO_WS){AUDIO_WS.close();AUDIO_WS=null;} if(AUDIO_CTX){AUDIO_CTX.close().catch(()=>{});AUDIO_CTX=null;} AUDIO_NEXT={}; }
+function stopAudio(){ stopRingback(); if(AUDIO_WS){AUDIO_WS.close();AUDIO_WS=null;} if(AUDIO_CTX){AUDIO_CTX.close().catch(()=>{});AUDIO_CTX=null;} AUDIO_NEXT={}; }
 // Flight recorder for the live view (owner 07-17: the freeze only happens on the owner's phone).
 // Buffers a terse play-by-play and ships it every few seconds + at finalize, so a frozen call still
 // tells us exactly what this device saw. Zero effect on behavior; ~1 tiny request per 5s during a call.
@@ -5697,7 +5734,7 @@ async function startCheckLive(){
   { const _fd=$('finds'); if(_fd)_fd.style.display='none'; } // hide the finds ticker on the call page — keep it uncrowded
   // Listeners hear the call through the browser — iOS silent switch mutes web audio, so remind them.
   const _mb=$('muteBanner'); if(_mb) _mb.style.display='none'; // owner asked to drop the 'flip off silent' note
-  LIVE_STEPS=[]; LIVE_TR=[]; LIVE_TRANSCRIPT=''; AGENT_PITCHED=false; LIVE_STAGE=0; LIVE_DONE=false; LIVE_T0=Date.now(); window.LIVE_FOLLOW=true; window._livePend=false;
+  LIVE_STEPS=[]; LIVE_TR=[]; LIVE_TRANSCRIPT=''; AGENT_PITCHED=false; LIVE_STAGE=0; LIVE_DONE=false; window.LIVE_CANCELLED=false; LIVE_T0=Date.now(); window.LIVE_FOLLOW=true; window._livePend=false;
   fillLiveHeader(); const _lr=$('live_rhead'); if(_lr)_lr.className='rhead live';
   liveStage(1); // logs step 1 + renders the call box (steps on top, empty script below)
   let secs=0; const elT=setInterval(()=>{ secs+=1; },1000); // counts toward the hard cap only — no on-screen timer
@@ -5753,8 +5790,8 @@ async function startCheckLive(){
     if(!_id){ finalizeLive(_id); return; }
     appApi('/pub/live/'+encodeURIComponent(_id)).then(lv=>{ if(lv&&lv.live===false) finalizeLive(_id); }).catch(()=>{});
   }catch(e){} };
-  liveStage(2); // dialing → it's ringing
-  let cid=null;
+  liveStage(2); // ring tone DISABLED 07.24: it kept playing through the whole pre-stream nav (16 to 48s of keypad/voice navigation for chains like Target and CVS), so a call that was actually navigating fine sounded like it was ringing forever and got hung up on. startRingback stays defined but is no longer called.
+  let cid=null, ansAt=0; // ansAt is when the carrier said the store's system answered (per call, this closure)
   POLL=setInterval(async()=>{ try{
     if(secs>=210){ clearInterval(POLL);clearInterval(elT); finalizeLive(cid); return; }
     if(!cid){
@@ -5763,18 +5800,26 @@ async function startCheckLive(){
       // (no wasted cycle), instead of sitting on "Ringing…".
       const bs=await api('/pub/bridge/'+r.room);
       lvlog('bridge prog='+(bs&&bs.callProgress?bs.callProgress.status:'-')+' cid='+(bs&&bs.conversationId?'Y':'n')+(bs&&bs.error?' err='+bs.error:''));
-      // Twilio says the call was ANSWERED → show "We've connected" NOW, even if the agent hasn't
-      // engaged yet (owner 07-10 call 6: the log sat on "waiting" ~35s into a connected call).
-      if(bs&&bs.callProgress&&/^(in-progress|answered)$/.test(bs.callProgress.status)) liveStage(3);
-      if(bs&&bs.conversationId){ cid=bs.conversationId; LIVE_CID=cid; liveStage(3);
+      if(bs&&bs.conversationId){ cid=bs.conversationId; LIVE_CID=cid;
         // Only show steps that ACTUALLY happen. We used to auto-advance to "Listening to the menu" on a 3.5s
         // timer to fill the gap — but on a store that answers directly (no IVR) that step never occurred and
         // it was misleading. Stages now advance ONLY from real transcript signals (stageForLines), so a
         // direct-answer call shows: connected → a person picked up → asking. (We sit on "We've connected"
         // during an IVR's untranscribed opening monologue — honest, if briefly quiet.)
         try{ history.replaceState({},'','/?call='+encodeURIComponent(cid)); }catch(e){} }
-      // (no premature "Answered" here — the bridge engaging isn't a person; we only leave Calling/Answering when a real transcript line lands)
-      else return; // still ringing / connecting
+      else {
+        // The store's phone SYSTEM answering IS real progress the caller must see. Menu chains walk
+        // their tree in silence BEFORE any agent joins (Target ~16s, CVS ~67s: the presses/spoken menu
+        // words run inside the TwiML, and for voice chains the audio stream doesn't even start until
+        // they finish). Sitting on "It's ringing" made every working menu call look dead and get
+        // hung up on (owner 07.24, the "system is down" night). Carrier ANSWERED shows "We've connected";
+        // still no agent 6s later means the locked recipe is navigating, so "Working through the menu…".
+        // The VERDICT never comes from this flag: a rang-out call still ends "Nobody answered" (the
+        // transcript decides), so this cannot fake a result. It only stops hiding a live one.
+        const cp=bs&&bs.callProgress?String(bs.callProgress.status||''):'';
+        if(cp==='answered'||cp==='in-progress'){ if(!ansAt)ansAt=Date.now(); liveStage((Date.now()-ansAt>6000)?5:3); }
+        return; // no agent conversation yet, keep polling
+      }
     }
     const o=await appApi('/pub/live/'+encodeURIComponent(cid));
     lvlog('live tx='+((o&&o.transcript)?o.transcript.length:0)+' live='+(o?String(o.live):'-')+(o&&o.error?' err='+o.error:''));
@@ -5798,6 +5843,13 @@ async function finalizeLive(cid){
   stopAudio(); stopLiveTimers();
   cid = cid || LIVE_CID || null;
   const live=(LIVE_TR.length?LIVE_TR.join('\n'):LIVE_TRANSCRIPT)||'';
+  // The user hit Stop and hang up: this is a CANCEL, not a verdict. Show "Check cancelled" (no charge)
+  // and do NOT fetch or settle a server verdict or run reconcile, so a racing result can never overwrite
+  // it with "nobody answered" or "no clear answer" and charge for a check the user aborted (owner 07.24).
+  if(window.LIVE_CANCELLED){
+    const res={status:'admin_hangup', statusKey:'user_cancelled', transcript:live, summary:'', confirmed:null};
+    saveCheckToHistory(res, cid); showResult(res, cid); return;
+  }
   // INSTANT FLIP: the moment the call ends, leave the active-call screen NOW — don't sit on it while we
   // recover the id / fetch the verdict. Show the streamed conversation under "Getting the answer…" right
   // away; the real verdict repaints over it below. Only flip from the live view (so a late re-fire of
@@ -5999,7 +6051,7 @@ window.addEventListener('popstate',(ev)=>{
   // Zones: back leaves the zones screen for wherever you were; forward re-enters it.
   try{ const z=$('zones');
     if(ev&&ev.state&&ev.state.v==='zones'){ if(z&&!z.classList.contains('on')) openZones(); return; }
-    if(z&&z.classList.contains('on')){ zoneStopPoll(); z.classList.remove('on'); try{ document.body.classList.remove('zoning'); }catch(_){ } const sp0=new URLSearchParams(location.search); if(!sp0.get('call')&&!sp0.get('v')) backToBuilder(); return; }
+    if(z&&z.classList.contains('on')){ zoneStopPoll(); z.classList.remove('on'); try{ document.body.classList.remove('zoning'); }catch(_){ } if(!(typeof acctReturn==='function'&&acctReturn())){ const sp0=new URLSearchParams(location.search); if(!sp0.get('call')&&!sp0.get('v')) backToBuilder(); } return; } // back from zones → My checks if you came from there, else home (owner 07-23)
   }catch(_){ }
   // History-driven account nav: back AND forward walk the sheet's sections; leaving the sheet's
   // states closes it; a check opened FROM the sheet returns to its tab.
@@ -6057,17 +6109,23 @@ function nlSent(s){ s=String(s==null?'':s); if(s.includes('<br')) return s; retu
 // line still wraps inside itself instead of overflowing.
 function sentLines(s){ s=String(s==null?'':s).replace(/<br\s*\/?>/gi,' ').replace(/(?:(?!\u00A0)\s)+/g,' ').trim(); /* collapse whitespace but PRESERVE no-break spaces — they are deliberate typography ("2:00 PM" must never split; \s would eat them, owner 07-22) */
   const parts=s.replace(/([.!?…])\s+(?=[A-Z0-9ÁÉÍÓÚÑ¿¡])/g,'$1\u0001').split('\u0001');
-  if(parts.length<2) return s;
-  return parts.map(p=>'<span style="display:inline-block">'+p+'</span>').join(' '); }
+  // Two physical lines, always: the FIRST sentence is line one, every sentence after it is line two, so a
+  // second sentence can never begin on the first line. fitSub then shrinks the whole sub to hold two visual
+  // lines. Nothing is ever dropped or truncated (owner 07.23).
+  if(parts.length<2) return '<span class="subln">'+s+'</span>';
+  return '<span class="subln">'+parts[0]+'</span><span class="subln">'+parts.slice(1).join(' ')+'</span>'; }
 // TWO-LINE LAW (owner: "this message is never more than two lines in the subhead" 07-22; the v2
 // .rsub CSS has said "2 lines MAX" since 07-15b — this enforces it). Measured after render on
 // EVERY .rsub: while the sub runs past two lines, drop its LAST sentence span — the first sentence
 // is the answer, the tail is flavor ("Go grab it…", "Sign up…"). Long store+product combos on a
 // 390px phone are the case that overflows; short names render exactly as authored.
 function fitSub(root){ try{ (root||document).querySelectorAll('.rsub').forEach(el=>{
-  const lh=parseFloat(getComputedStyle(el).lineHeight)||(parseFloat(getComputedStyle(el).fontSize)||14)*1.5;
-  let guard=4;
-  while(guard-->0 && el.scrollHeight>lh*2.5){ const sp=el.querySelectorAll(':scope > span'); if(sp.length<2) break; sp[sp.length-1].remove(); }
+  el.style.fontSize=''; // start from the CSS size on every render, so it can grow back after a shorter note
+  const base=parseFloat(getComputedStyle(el).fontSize)||16; let size=base, guard=14;
+  const over=()=>{ const lh=parseFloat(getComputedStyle(el).lineHeight)||size*1.5; return el.scrollHeight>lh*2.35; };
+  // If the two lines run past two visual lines, nudge the whole sub a hair smaller until it fits. Floor at
+  // 60% so it stays readable. Nothing is ever cut. Normal short notes never shrink (owner 07.23).
+  while(guard-->0 && over() && size>base*0.6){ size=Math.max(base*0.6,size-0.5); el.style.fontSize=size+'px'; }
   }); }catch(_){ } }
 // Registry/owner-written notes can use a {product} token — we fill it with the live product name (bolded),
 // so the owner writes the message in Admin and it still reads "…check if Pokémon was in stock…".
@@ -6091,7 +6149,7 @@ function fillP(s,o,tn){ try{ const oc=(o&&Array.isArray(o.cats)&&o.cats[0])||(o&
   // Clerk-captured product names arrive with their own article ("a … booster packs") — the note template
   // supplies the grammar, so strip it here or "{store} has {product}" reads "has a … packs" (owner 07-22).
   const _rawPN=(o&&o.productName)?String(o.productName).replace(/^(?:a|an|the|some)\s+/i,'').trim():'';
-  const pn=esc(prodPhrase(o)||_rawPN||catLabel()||oc||'it'); const sn=esc((o&&o.storeName)||(SEL_STORE&&SEL_STORE.name)||'the store'); const cn=esc(catLabel()||oc||'it'); const dy=esc((o&&o.shipmentDay)?fmtShipDay(o.shipmentDay):'soon'); return String(s==null?'':s).replace(/\{product\}/g,'<b style="color:#fff">'+pn+'</b>').replace(/\{store\}/g,'<b style="color:'+sc+'">'+sn+'</b>').replace(/\{category\}/g,'<b style="color:#fff">'+cn+'</b>').replace(/\{day\}/g,'<b style="color:#fff">'+dy+'</b>'); }catch(e){ return String(s==null?'':s); } }
+  const pn=esc(prodPhrase(o)||_rawPN||catLabel()||oc||'it'); const sn=esc((o&&o.storeName)||(SEL_STORE&&SEL_STORE.name)||'the store'); const cn=esc(catLabel()||oc||'it'); const dy=esc((o&&o.shipmentDay)?fmtShipDay(o.shipmentDay):'soon'); return String(s==null?'':s).replace(/\{product\}/g,'<b style="color:#fff">'+pn+'</b>').replace(/\{store(name)?\}/g,'<b style="color:'+sc+'">'+sn+'</b>').replace(/\{category\}/g,'<b style="color:#fff">'+cn+'</b>').replace(/\{day\}/g,'<b style="color:#fff">'+dy+'</b>'); }catch(e){ return String(s==null?'':s); } }
 // ===== PRICE HUNT (item 3) — cross-store cheapest-first comparison. Populates from a completed check's
 // quoted price (o.priceCents). That field is pending on GET /pub/result + /app/history (see the price
 // contract note); until it lands this renders NOTHING — the moment it ships, the price line + panel light
@@ -6321,8 +6379,13 @@ function showResult(o, cid){
   // stamps drift — a stage the live view missed gets stamped at call-end and fakes a giant step
   // (the "We've connected 59s" bug). Device steps only when the server has no ladder yet.
   const savedSteps=((Array.isArray(o.savedSteps)&&o.savedSteps.length)?o.savedSteps:((Array.isArray(o.steps)&&o.steps.length)?o.steps:null))||null;
-  const resultSteps=savedSteps||(LIVE_STEPS.length?LIVE_STEPS:deriveSteps(o.transcript||''));
-  const finalElapsed=(typeof o.durationSecs==='number'&&o.durationSecs>0)?o.durationSecs:((!savedSteps&&LIVE_STEPS.length&&LIVE_T0)?((Date.now()-LIVE_T0)/1000):null);
+  // The steps the customer WATCHED are the record: on a call we just followed live, keep LIVE_STEPS so
+  // the printed result matches the live log exactly and NOTHING vanishes when the status flips (owner
+  // 07-23). The server's transcript-rebuilt ladder was overwriting the live log with a different,
+  // shorter list (dropped "It's ringing", re-ordered the menu). It's now the fallback ONLY for a
+  // REOPENED call that has no live log; a fresh live call always shows what you saw happen.
+  const resultSteps=(LIVE_STEPS.length?LIVE_STEPS:(savedSteps||deriveSteps(o.transcript||'')));
+  const finalElapsed=(typeof o.durationSecs==='number'&&o.durationSecs>0)?o.durationSecs:((LIVE_STEPS.length&&LIVE_T0)?((Date.now()-LIVE_T0)/1000):null);
   const vTitle=String(title).replace(/[\s!?.:：]+$/,''); // "In stock!" → "In stock" so the "Status: summary" line reads clean (colon separator, no dash)
   // (The rich store-naming sub-line now lives in deriveVerdict — shared with the zone unfold.)
   // Boxless "The call" subline: "{ago} · {dur}" — both pieces reuse existing prod helpers/vars
@@ -7362,14 +7425,12 @@ async function openAlerts(opts){ opts=opts||{}; ALERTS_MAKEROOM=!!opts.makeRoom;
     const rows = subs.length? subs.map(x=>{
       const so=alertStoreObj(x), off=!!x.muted;
       const name=esc(so.name||x.storeName||t('alerts.acheck','A check')), loc=esc(so.location||x.storeLocation||'');
-      return `<div class="store alrow${off||paused?' alrow-off':''}" style="cursor:default;margin-top:10px">
+      return `<div class="store${off||paused?' alrow-off':''}" style="cursor:default;margin-top:10px">
         <div class="ic ${so.logoDark?'lite':''} ${so.logoWide?'widelogo':''}">${storeFace(so)}</div>
-        <div class="alrow-main">
-          <div class="alrow-id"><div class="nm">${name}</div><div class="lo" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${loc}</div></div>
-          <div class="alrow-ctrls">
-            <div class="ho-toggle alsw"><button class="${!off?'on':''}" onclick="alertSetOn(${x.id},1)">${t('alerts.rowon','On')}</button><button class="${off?'on':''}" onclick="alertSetOn(${x.id},0)">${t('alerts.rowoff','Off')}</button></div>
-            <button class="alrm" onclick="alertStop(${x.id})" aria-label="${t('alerts.remove','Remove')}">${Z_ICO_TRASH}</button>
-          </div>
+        <div style="min-width:0;flex:1"><div class="nm">${name}</div><div class="lo" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${loc}</div></div>
+        <div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+          <div class="ho-toggle alsw" style="width:108px;flex:0 0 auto"><button class="${!off?'on':''}" onclick="alertSetOn(${x.id},1)">${t('alerts.rowon','On')}</button><button class="${off?'on':''}" onclick="alertSetOn(${x.id},0)">${t('alerts.rowoff','Off')}</button></div>
+          <button class="alrm" onclick="alertStop(${x.id})" aria-label="${t('alerts.remove','Remove')}">${Z_ICO_TRASH}</button>
         </div></div>`;}).join('')
       : `<div style="margin-top:10px;padding:20px 16px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);text-align:center"><span style="font-size:12.5px;font-style:italic;font-weight:600;color:#8A8A96;line-height:1.5">${sentLines(t('alerts.none',"You aren't watching any stores yet."))}</span></div>`;
     $('alertsList').innerHTML = banner+master+rows; };
@@ -8141,7 +8202,7 @@ function paygBundles(){
   if(POLICY.packs&&POLICY.packs.length) return POLICY.packs.map(p=>({checks:p.credits,cents:p.cents,credits:p.credits,key:p.key}));
   return [{checks:10,cents:990,credits:10,key:'payg:10'},{checks:25,cents:1999,credits:25,key:'payg:25'},{checks:50,cents:3499,credits:50,key:'payg:50'}];
 }
-function setCycle(annual,btn){ BILLING_ANNUAL=annual; document.querySelectorAll('#billcycle button').forEach(b=>b.classList.toggle('on',b===btn)); renderBuyPlans(); }
+function setCycle(annual,btn){ BILLING_ANNUAL=!!annual; document.querySelectorAll('.billcyc button').forEach(b=>b.classList.toggle('on', b.dataset.an===String(!!annual))); renderBuyPlans(); renderBuyDock(); }
 function tierPrice(tr){ return BILLING_ANNUAL?money(tr.annualCents||Math.round(tr.cents*12*0.83/100)*100):money(tr.cents); }
 // The subscriber's CURRENT plan label — derived from ACCOUNT.subTier + live tiers (never hardcoded, so a
 // Collector/Hunter/Operator member sees their real tier + price, not "Family · $9.99").
@@ -8150,14 +8211,54 @@ function curTierLabel(){
   const ti=(typeof tiers==='function'?tiers():[]).find(x=>x.key===st);
   return ti ? esc(ti.name)+' · '+tierPrice(ti)+(BILLING_ANNUAL?t('plan.yr','/yr'):t('plan.mo','/mo')) : t('plan.member','Member');
 }
+// Header (logo + title) follows the tab: Plans shows Check+ (with the plus); Pay-as-you-go shows plain
+// Check (no plus, since it isn't a Check+ product) and hides the "every plan gets" feature grid (owner 07-23).
+function applyBuyHeader(){
+  if(!isV2()) return;
+  const packs=(BUY_MODE==='packs');
+  const t3=$('buy_title'); if(t3) t3.innerHTML = packs ? t('buy6b.titlepayg','Pay by the Check') : t('buy6b.titleplans','Check+ Premium Plans');
+  const lg=$('buy6blogo'); if(lg) lg.innerHTML = `<img src="${packs?'/logos/brand/check-brandmark-1024.png':'/logos/brand/checkplus.png'}" alt="${packs?'Check':'Check+'}" style="height:26px;width:auto">`;
+  const g=$('buy_grid'); if(g) g.style.display = packs ? 'none' : '';
+}
+// The Continue dock at the foot of the buy sheet: shows what's ringed (plan or pack) and slides up.
+function renderBuyDock(){
+  const dock=$('buyDock'); if(!dock) return;
+  // Plain Continue button at the foot of the sheet on BOTH tabs (scrolls with the list, glass stays clean).
+  dock.style.display='';
+  const plan=$('buyDockPlan');
+  if(BUY_MODE==='packs'){ const packs=paygBundles(); const pk=packs[Math.max(0,Math.min(packs.length-1,PACK_IDX))];
+    if(plan&&pk) plan.innerHTML=`<b>${pk.checks} ${t('plan.checks','checks')}</b> · ${money(pk.cents)}`; }
+  dock.classList.add('up'); dock.classList.toggle('flat', BUY_MODE==='packs');
+}
+// The plan slider (Plans tab): slides up when you pick a plan, showing that plan + Continue, the same way
+// the store call sheet works. It is a FIXED top-level sheet (outside the buy sheet scroll) so it never
+// touches the buy sheet's bottom scroll-edge glass. Tapping another plan re-paints it (owner 07-23).
+function openPlanSheet(){
+  if(!isV2()||BUY_MODE==='packs') return;
+  const _t=tiers(); const ti=_t.find(x=>x.key===SEL_TIER_KEY)||_t.find(x=>x.key===defaultTierKey())||_t[0]; if(!ti) return;
+  const per=BILLING_ANNUAL?t('plan.yr','/yr'):t('plan.mo','/mo');
+  const nm=$('planSheetName'); if(nm) nm.innerHTML=esc(ti.name)+(ti.featured?` <span style="color:var(--green);font-size:12px;font-weight:700;margin-left:6px">${t('plan.popular','most popular')}</span>`:'');
+  const sub=$('planSheetSub'); if(sub) sub.textContent=(ti.checks||0).toLocaleString()+' '+t('plan.checksmo','checks/mo');
+  const pr=$('planSheetPrice'); if(pr) pr.innerHTML=`${tierPrice(ti)}<span style="font-size:13px;color:#8A8A96;font-weight:700">${per}</span>`;
+  const sh=$('planSheet'); if(sh){ sh.classList.add('on'); sh.setAttribute('aria-hidden','false'); }
+}
+function dismissPlanSheet(){ const sh=$('planSheet'); if(sh){ sh.classList.remove('on'); sh.setAttribute('aria-hidden','true'); } }
+function planSheetContinue(){ dismissPlanSheet(); buyContinue(); }
 function renderBuyPlans(){
   const member=!!(ACCOUNT&&ACCOUNT.subscription==='active'), comp=!!(ACCOUNT&&ACCOUNT.comp);
   const per=BILLING_ANNUAL?t('plan.yr','/yr'):t('plan.mo','/mo');
+  // The monthly/annual toggle moves next to the "You're on" line for members (owner 07-23), so hide the
+  // tall standalone one for them; keep it for new members (no plan line yet); always hide it under packs.
+  const _bc=$('billcycle'); if(_bc) _bc.style.display=(BUY_MODE==='packs')?'none':''; // the full-width Monthly/Annual toggle (shows "· save 17%") for everyone; hidden only under packs
   let html='';
   if((member||comp)&&isV2()){
-    // Owner 2026-07-02: this sheet SELLS — the pill + stat tiles on My-checks already tell you your
-    // plan. Just a small note here, then the upgrade options.
-    html+=`<div style="margin:0 0 12px;text-align:center;font-size:12.5px;font-weight:600;color:#8A8A96">${t('plan.on',"You're on")} <b style="color:#FFF">${comp?t('plan.founder',"Founder. Unlimited."):curTierLabel()}</b> <span style="color:#4ADE80">✓</span></div>`;
+    // "You're on the <name> plan" for everyone (comp reads Unlimited). Shows ONLY on the Plans tab, never
+    // under pay-as-you-go, and only when they actually have a plan (owner 07-23). Monthly/Annual sits on
+    // the right with a green "save 17%" nudge so the yearly discount stays visible.
+    if(BUY_MODE!=='packs'){
+      const planName=comp?t('plan.unlimited','Unlimited'):(()=>{ const _ti=(tiers()||[]).find(x=>x.key===(ACCOUNT&&ACCOUNT.subTier)); return _ti?esc(_ti.name):t('plan.member','Member'); })();
+      html+=`<div style="margin:2px 0 14px;font-size:12.5px;font-weight:600;color:#8A8A96">${tf('plan.online',"You're on the {p} plan",{p:`<b style="color:#FFF">${planName}</b>`})}</div>`;
+    }
   }
   else if(member||comp){
     // The plan dashboard: what you're on, what you've used, where to grow.
@@ -8204,16 +8305,17 @@ let SEL_TIER_KEY=null, BUY_MODE='plans', PACK_IDX=1;
 // One source of truth for "which tier is selected when you haven't tapped anything" (items 26-27):
 // your CURRENT plan if you're on one, else the featured tier. Continue buys exactly what's ringed.
 function defaultTierKey(){ const _t=tiers(); const cur=ACCOUNT&&ACCOUNT.subTier; if(cur&&_t.some(x=>x.key===cur)) return cur; const f=_t.find(x=>x.featured); return (f||_t[0]||{}).key||null; }
-function setBuyMode(m,btn){ BUY_MODE=m; document.querySelectorAll('#buymode button').forEach(b=>b.classList.toggle('on',b===btn)); const bc=$('billcycle'); if(bc) bc.style.display=(m==='packs'?'none':''); renderBuyPlans(); }
+function setBuyMode(m,btn){ BUY_MODE=m; document.querySelectorAll('#buymode button').forEach(b=>b.classList.toggle('on',b===btn)); dismissPlanSheet(); applyBuyHeader(); renderBuyPlans(); renderBuyDock(); }
 function setPackIdx(i){ const packs=paygBundles(); PACK_IDX=Math.max(0,Math.min(packs.length-1, i|0));
   const pk=packs[PACK_IDX]; if(!pk) return;
   const rng=$('payg_rng'); if(rng){ if(+rng.value!==PACK_IDX) rng.value=PACK_IDX; rng.style.setProperty('--fill',(packs.length>1?(PACK_IDX/(packs.length-1)*100):100)+'%'); } // green fill tracks the thumb edge-to-edge
   const n=$('payg_n'), pr=$('payg_p'), per=$('payg_per');
   if(n) n.textContent=pk.checks+' '+t('plan.checks','checks');
   if(pr) pr.textContent=money(pk.cents);
-  if(per) per.textContent=t('plan.percheck','about')+' $'+(pk.cents/pk.checks/100).toFixed(2)+' '+t('plan.percheck2','per check')+' · '+t('plan.noexpire','checks never expire'); }
+  if(per) per.textContent=t('plan.percheck','about')+' $'+(pk.cents/pk.checks/100).toFixed(2)+' '+t('plan.percheck2','per check')+' · '+t('plan.noexpire','checks never expire');
+  renderBuyDock(); }
 function pickTier(k){
-  if(isV2()){ SEL_TIER_KEY=k; renderBuyPlans(); renderBuyGrid(); return; } // 6b comp: tap selects (ring moves + the services grid re-paints for the ringed tier), CONTINUE buys
+  if(isV2()){ SEL_TIER_KEY=k; renderBuyPlans(); renderBuyGrid(); renderBuyDock(); return; } // tap selects (ring moves); Continue is the plain button at the foot of the sheet
   buyContinue();
 }
 function buyContinue(){
@@ -8260,27 +8362,29 @@ function openBuy(reason){
   // icon TILES (comp SVGs verbatim), tier click SELECTS, CONTINUE capsule buys. Copy stays queued;
   // tiles/prices runtime-POLICY.
   if(isV2()){ try{
-    $('buy_title').innerHTML=t('buy6b.title','Every feature.<br>Pick your checks.');
     lead.style.display='none';
     let lg=$('buy6blogo');
     if(!lg){ lg=document.createElement('div'); lg.id='buy6blogo'; lg.className='buy6b-logo';
       const h3=$('buy_title'); h3.parentElement.insertBefore(lg,h3); }
-    lg.innerHTML=`<img src="/logos/brand/checkplus.png" alt="Check+" style="height:26px;width:auto">`;
     if(!$('buy_grid')){ const g=document.createElement('div'); g.id='buy_grid';
       const bc=$('billcycle'); bc.parentElement.insertBefore(g,bc); }
     renderBuyGrid();
-    let cta=$('buy_cta');
-    if(!cta){ cta=document.createElement('button'); cta.id='buy_cta'; cta.type='button'; cta.onclick=()=>buyContinue();
-      const note=$('buy_note'); note.parentElement.insertBefore(cta,note); }
-    cta.innerHTML=`<span>${t('buy6b.cta','Continue')}</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>`;
+    // Continue lives in a slide-up dock at the foot of the sheet (the zones-basket feel the owner likes)
+    // so it is never below the fold. It shows the plan you have ringed and buys exactly that (owner 07-23).
+    let dock=$('buyDock');
+    if(!dock){ dock=document.createElement('div'); dock.id='buyDock'; dock.className='buydock';
+      dock.innerHTML=`<div class="buydock-plan" id="buyDockPlan"></div><button class="cta" id="buy_cta" type="button" onclick="buyContinue()"><span>${t('buy6b.cta','Continue')}</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>`;
+      const note=$('buy_note'); note.parentElement.insertBefore(dock,note); } // plain button in flow, above the secure-checkout note (glass-safe)
+    applyBuyHeader();
+    renderBuyDock();
   }catch(_){} }
   setI('buy_note', `${ICO.lock('#7a7a88')} ${t('buy.secure2','Secure checkout via Stripe')}`);
   track('buy_open',{reason:reason||'manual'});
   $('buyOverlay').classList.add('on'); sheetPush('buy');
   // Live plans may not be cached yet on first open — fetch, then re-render tiles + grid in place.
-  if(!PLANS){ loadPlans().then(p=>{ if(p&&$('buyOverlay').classList.contains('on')){ try{ SEL_TIER_KEY=defaultTierKey(); renderBuyPlans(); if(isV2()) renderBuyGrid(); }catch(_){ } } }); } // live tiers may rename keys — re-derive the default
+  if(!PLANS){ loadPlans().then(p=>{ if(p&&$('buyOverlay').classList.contains('on')){ try{ SEL_TIER_KEY=defaultTierKey(); renderBuyPlans(); if(isV2()){ renderBuyGrid(); applyBuyHeader(); renderBuyDock(); } }catch(_){ } } }); } // live tiers may rename keys, so re-derive the default
 }
-function closeBuy(){ const m=document.querySelector('#buyOverlay .modal'); if(m){ m.style.transform=''; m.style.transition=''; } $('buyOverlay').classList.remove('on'); acctReturn(); }
+function closeBuy(){ const m=document.querySelector('#buyOverlay .modal'); if(m){ m.style.transform=''; m.style.transition=''; } dismissPlanSheet(); $('buyOverlay').classList.remove('on'); acctReturn(); }
 
 // ===== 6c BRANDED CHECKOUT — Stripe Payment Element on our own page (never the hosted page). =====
 // intent from POST /app/checkout-intent {kind, annual} → { mode, clientSecret, publishableKey, amountCents }.
@@ -8954,5 +9058,5 @@ async function submitSchedule(){
 }
 boot();
 </script>
-<script>!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);posthog.init("phc_xYyBl7VcEYqf4emnV42blLSKQZM0CtxjgEVUSBpS2uL",{api_host:"https://us.i.posthog.com",defaults:"2025-05-24"})</script><script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a1fd961ddfaa2889',t:'MTc4NDg0MDEzMA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);posthog.init("phc_xYyBl7VcEYqf4emnV42blLSKQZM0CtxjgEVUSBpS2uL",{api_host:"https://us.i.posthog.com",defaults:"2025-05-24"})</script><script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a1ff6572aa69d147',t:'MTc4NDg1OTEwOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
