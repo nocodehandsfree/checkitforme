@@ -6458,7 +6458,7 @@ function showResult(o, cid){
       : `<div class="topcta">${primaryCta}</div>`}
     <div class="callsec">
       ${canTranslate?`<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><button class="tbtn" id="tbtn" onclick="toggleTranslate()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg> <span id="tbtn_l">${t('res.translate','Translate')}</span></button></div>`:''}
-      ${combinedTimelineHTML(resultSteps, o.transcript||'', finalElapsed, {cls, title:vTitle, term:termLabel, ts:o.ts, used:(o.status==='pending'?'':((o.charged===true||(o.charged===undefined&&o.status==='completed'))?t('res.used','1 check used'):t('res.nocharge','No check, no charge')))})}
+      ${combinedTimelineHTML(resultSteps, o.transcript||'', finalElapsed, {cls, title:vTitle, term:termLabel, ts:o.ts, used:(o.charged===true?t('res.used','1 check used'):'')})} <!-- the note appears ONLY when a check was really spent; a free one says nothing here, and the headline copy already carries "No check, no charge" (owner 07-24) -->
     </div>
     ${o.status==='pending' ? '' : (inStock ? inActions : '')}
     ${o.status==='pending' ? '' : upsell}`;
@@ -7905,7 +7905,7 @@ async function zoneExpand(cid,btn){ if(!cid) return; const body=btn.nextElementS
     // word, so an old check never reads differently from the verdict it shipped with (owner 07-24).
     const _nm=(o.statusKey&&RSTATUSES[o.statusKey]&&vT)?vT:'';
     const term = v.cls==='pend'?t('term.getting','Getting result…'):_nm?_nm:v.cls==='in'?t('term.in','In stock.'):v.cls==='out'?t('term.out','Not in stock'):v.cls==='soon'?t('term.soon2','Restock confirmed'):t('term.unk','No clear answer');
-    const used = (o.charged===true||(o.charged===undefined&&o.status==='completed'))?t('res.used','1 check used'):t('res.nocharge','No check, no charge');
+    const used = o.charged===true?t('res.used','1 check used'):''; // silent unless a check was really spent (owner 07-24)
     const tx=o.transcript||'';
     body.innerHTML=`<div style="background:#1B1B20;padding:14px 14px 4px;border-radius:0 0 14px 14px;text-align:left;overflow:hidden">
       <div class="rverdict ${v.cls}">

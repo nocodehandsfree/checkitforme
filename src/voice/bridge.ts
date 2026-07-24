@@ -124,6 +124,34 @@ function ulawByteToLinear(u: number): number {
   t <<= (u & 0x70) >> 4;
   return (u & 0x80) ? (ULAW_BIAS - t) : (t - ULAW_BIAS);
 }
+// ---- Call-progress tone detection (ringback / busy / dial tone) ----
+// The phone network builds these from a FIXED pair of pure tones, published in the North American
+// plan: ringback 440+480 Hz, busy and reorder 480+620 Hz, dial tone 350+440 Hz. So "is this the desk
+// ringing or a person talking?" is not a judgement call, it is a measurement: check how much of the
+// frame's energy sits exactly on those frequencies. A tone puts nearly all of it there. Speech never
+// does, because a voice carries a pitch around 85 to 255 Hz plus formants spread across the band.
+// This replaced an amplitude-steadiness guess that real line noise walked straight through, letting
+// the billed agent open onto an empty ringing line (owner 07-24, two Target checks nobody answered).
+const TONE_HZ = [350, 440, 480, 620];
+/** Share (0..1) of a frame's energy sitting on the call-progress tone frequencies. ~1 = a pure tone
+ *  pair, well under 0.2 for speech. Goertzel per frequency, normalized so a clean tone reads 1. */
+function toneShare(b64: string): number {
+  let buf: Buffer; try { buf = Buffer.from(b64, "base64"); } catch { return 0; }
+  const N = buf.length;
+  if (N < 80) return 0;
+  const x = new Float64Array(N);
+  let total = 0;
+  for (let i = 0; i < N; i++) { const v = ulawByteToLinear(buf[i]); x[i] = v; total += v * v; }
+  if (total <= 0) return 0;
+  let tone = 0;
+  for (const hz of TONE_HZ) {
+    const coeff = 2 * Math.cos((2 * Math.PI * hz) / 8000);
+    let s0 = 0, s1 = 0, s2 = 0;
+    for (let i = 0; i < N; i++) { s0 = x[i] + coeff * s1 - s2; s2 = s1; s1 = s0; }
+    tone += s1 * s1 + s2 * s2 - coeff * s1 * s2; // |X(f)|^2
+  }
+  return tone / (total * (N / 2)); // normalized: a clean single tone at a listed frequency → ~1
+}
 /** Mean absolute amplitude of a base64 μ-law frame (~0 silence, higher = louder). */
 function frameEnergy(b64: string): number {
   let buf: Buffer; try { buf = Buffer.from(b64, "base64"); } catch { return 0; }
@@ -186,7 +214,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   let giveUpTimer: NodeJS.Timeout | null = null; // armed at connect when ctx.giveUpSeconds is set
   let humanWords = false;     // a real store-side transcript line arrived (letters, not "..." junk)
   let earArmed = false;       // smart join: the menu is done, the ear is open for a real voice
-  const loudE: number[] = []; // recent above-threshold frame energies — shape tells ringback from speech
+  const loudE: number[] = []; // recent above-threshold frame energies (amplitude steadiness, secondary)
+  const loudT: number[] = []; // per-frame share of energy on the phone network's tone frequencies
   let toneLogged = false;     // log the "it's a tone" verdict once per call, not per frame
   // SECOND-RING TRACKING (owner 07-24). After the menu transfers us, the DESK rings — a separate
   // ring from the one before pickup. Detecting it POSITIVELY (not just "that wasn't a human") gives
@@ -340,6 +369,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     const e = frameEnergy(b64);
     if (e > VOICE_THRESH) {
       loudE.push(e); if (loudE.length > 150) loudE.shift();
+      loudT.push(toneShare(b64)); if (loudT.length > 150) loudT.shift();
       // RINGBACK IS NOT A HUMAN (owner 07-24: Charlie billed 20s on two Target calls nobody answered).
       // After a transfer the desk rings, and a US ringback burst is 2s of loud audio = ~100 frames —
       // more than double the 45-frame gate, so the ear declared "human" on the RING and opened the
@@ -347,7 +377,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // is a steady dual tone (near-constant amplitude, tiny variation), while speech swings hard
       // frame to frame across syllables. So once the gate is met, require real modulation too.
       if ((voiced += 1) >= need) {
-        if (isSteadyTone(loudE)) {
+        if (isCallProgressTone() || isSteadyTone(loudE)) {
           // Positively THE DESK RINGING. Mark the state, stamp the log step once, and stay off.
           if (!inRing) {
             inRing = true;
@@ -363,15 +393,28 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     } else {
       // Gap between bursts: a burst that just ended is one completed ring.
       if (inRing) { inRing = false; ringCount++; log(`ear: ring ${ringCount} went unanswered`); if (ringCount >= RINGS_UNANSWERED && !connecting && !humanWords) { log(`give-up: ${ringCount} rings unanswered — nobody is coming, hanging up (Charlie never joined)`); try { twilio.close(); } catch { /* best effort */ } } }
-      voiced = Math.max(0, voiced - leak); if (voiced === 0) loudE.length = 0;
+      voiced = Math.max(0, voiced - leak); if (voiced === 0) { loudE.length = 0; loudT.length = 0; }
     }
   }
   /** True when the recent loud frames look like a machine tone rather than speech. Speech energy
    *  varies wildly across syllables (coefficient of variation well above 0.2); a ringback/hold tone
    *  holds an almost constant amplitude (CV under ~0.1). Needs a full gate's worth of samples so a
    *  short burst can't be judged on noise. */
+  /** THE primary "that is the network, not a person" test: across the loud frames we just heard, is
+   *  the energy parked on the published call-progress frequencies? A clean tone reads near 1 and a
+   *  noisy real-world one still reads high, while speech stays far below, so the bar sits at 0.45.
+   *  Median, not mean, so one odd frame cannot swing the verdict either way. */
+  function isCallProgressTone(): boolean {
+    if (loudT.length < 40) return false;        // too little evidence → treat as speech (never block a real human)
+    const w = [...loudT].sort((a, b) => a - b);
+    return w[Math.floor(w.length / 2)] >= 0.45;
+  }
   function isSteadyTone(samples: number[]): boolean {
     if (samples.length < 40) return false;      // too little evidence → treat as speech (never block a real human)
+    // Amplitude steadiness is the WEAK signal: a real line adds noise, so live ringback measured well
+    // above the flatness bar a synthesized tone sits at, and the agent still joined an empty line
+    // (owner 07-24, Target). It stays only as a secondary confirmation. The primary test is the
+    // frequency one below, which keys off the published tone pairs instead of guesswork.
     const w = samples.slice(-100);
     const mean = w.reduce((s, v) => s + v, 0) / w.length;
     if (mean <= 0) return false;
