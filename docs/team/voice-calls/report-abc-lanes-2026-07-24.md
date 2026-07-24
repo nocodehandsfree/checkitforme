@@ -94,3 +94,54 @@ the later, tighter number — which is how Bravo's $0.013 listening budget got s
 - **Bravo** — same, plus the words. Designed to choose them by listening; today it recites them.
 - **Charlie** — needs to join at the human and not one second earlier. That part now works: as of
   today the agent joins only on a real voice and ringing is identified by its tone frequencies.
+
+## CHARLIE'S REAL COST — answered from the ElevenLabs account (2026-07-24)
+
+The owner's method: the plan is a flat monthly fee for a credit allowance, so divide.
+
+Live from `/v1/user/subscription` and `/v1/usage/character-stats`, current billing period
+(2026-07-07 → 2026-08-06):
+
+| Fact | Value |
+|---|---|
+| Plan | **creator**, $22/month |
+| Allowance | **145,094 credits** |
+| Price per credit | **$0.0001516** |
+| Charlie credits used | Conversational AI 21,720 + ConvAI LLM 26,907 = **48,627** |
+| Agent minutes used | **67.2 min** across 103 conversations |
+| **Charlie's real rate** | **723 credits/min = $0.1096/min = $0.00183/sec** |
+
+| Talk time | Credits | Cost |
+|---|---|---|
+| 10s | 121 | **1.8¢** |
+| 20s | 241 | **3.7¢** |
+| 30s | 362 | **5.5¢** |
+
+**The Calc page says 20s of Charlie is 2.8¢. It really costs 3.7¢ — 31% low.** The code's other
+assumption (1,200 credits/min, ~$0.22/min) is 66% too HIGH. Neither figure in our docs was right.
+The brain costs more than the voice: 400 credits/min for the LLM, 323 for the speech.
+
+**ElevenLabs does not round to the minute.** 103 conversations averaging 39s burned 472 credits each
+— less than a minute's worth apiece — so Charlie bills by the second. Only Twilio has the 60s cliff.
+
+### What a real check costs, every number now measured
+
+Navigation finishes in time for the whole call to fit inside one minute, 20s of talk:
+
+| Piece | Cost |
+|---|---|
+| Twilio line (1 whole minute) | 1.4¢ |
+| Alpha or Bravo navigation | 0¢ |
+| Charlie, 20s | 3.7¢ |
+| Fixed overhead | 0.1¢ |
+| **Total** | **5.2¢** |
+
+**We are 0.2¢ over the 5-cent ceiling at 20 seconds of talk, before anything goes wrong.** The $22
+allowance covers about **600 checks a month**.
+
+### What this settles about putting Charlie back on the menu
+
+At $0.00183/sec, a 40-second menu walk with Charlie listening costs **7.3¢ of agent time alone** —
+the whole check lands near 12¢. Confirmed with real billing, not the rate card: the agent can never
+go back on the menu as the default. Navigation has to stay free, which is what Alpha and Bravo are
+for and why the missing piece must be a $0 way to know WHEN each prompt ends.
