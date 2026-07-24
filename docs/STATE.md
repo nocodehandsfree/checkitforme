@@ -14,13 +14,14 @@ git. Last updated: 2026-07-24 (Target trees mapped; calling emergency root-cause
 - Restock "By store" shows real store logos instead of two-letter boxes (Live needs a promote).
 - Call rows show the status ICON only (tap for words); five squashed store logos fixed on live data.
 
-## Target: 59 stores called in 24 states — you were right, there is basically ONE menu (07-24)
-- 55 of 59 stores put the service desk on 2, exactly what we press today. Four stores have no service
-  desk option at all, so our 2 lands in groceries: Mission Hills, North Hollywood, UC San Diego and
-  one in Boston. We cannot tell those four apart from our store list, but every store reads its
-  department list out loud before we choose, so we can hear which kind it is.
-- A person really answers 30 to 45 seconds in, not the 16 the setting says.
-- Nothing changed. Options written up in docs/team/voice-calls/report-target-trees-2026-07-24.md.
+## Target: 70 stores called — the store number tells us which menu it has (07-24)
+- Target's own store number is already on every store we have. Number 3000 or higher = a small city
+  or campus store with no service desk (press 3 for the person). Below 3000 = a full store with the
+  service desk on 2, which is what we already press. 11 out of 11 in a blind test. About 111 stores
+  are in the high group; roughly 73 stores are missing their number and need it filled in.
+- The Calc page under-counts the phone bill: the phone company charges by the whole minute, so a call
+  that runs one second past 60 costs double. Real limit is 40 seconds to reach a person, not 70.
+- Nothing changed. Detail in docs/team/voice-calls/report-target-trees-2026-07-24.md.
 
 ## Two work streams from before (unchanged)
 1. **Site fixes (five) — DONE on staging, waiting on you.** Check them on your phone, then say
@@ -30,7 +31,7 @@ git. Last updated: 2026-07-24 (Target trees mapped; calling emergency root-cause
 ## Decisions waiting on YOU
 - Say "promote" to push the finished work to the real site (five site fixes + alerts and zone-lane
   fixes ride along).
-- Target: per-store second key, or let the caller listen and pick the desk (see above).
+- Target: use the store number to pick the right key, or have the caller listen (see above).
 - Light pass vs full rebuild of the Admin.
 - Hide the fake (simulated) poll rows from the Admin feedback queue? (yes / no)
 
