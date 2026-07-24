@@ -5774,7 +5774,7 @@ async function startCheckLive(){
     if(!_id){ finalizeLive(_id); return; }
     appApi('/pub/live/'+encodeURIComponent(_id)).then(lv=>{ if(lv&&lv.live===false) finalizeLive(_id); }).catch(()=>{});
   }catch(e){} };
-  liveStage(2); startRingback(); // dialing to ringing: play the ring in the listen feed from the first second
+  liveStage(2); // ring tone DISABLED 07.24: it kept playing through the whole pre-stream nav (16 to 48s of keypad/voice navigation for chains like Target and CVS), so a call that was actually navigating fine sounded like it was ringing forever and got hung up on. startRingback stays defined but is no longer called.
   let cid=null;
   POLL=setInterval(async()=>{ try{
     if(secs>=210){ clearInterval(POLL);clearInterval(elT); finalizeLive(cid); return; }
