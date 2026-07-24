@@ -2065,15 +2065,12 @@ html[data-skin="v2"] #authOverlay.on .modal,html[data-skin="v2"] #againOverlay.o
 html[data-skin="v2"] #authOverlay .modal>.x,html[data-skin="v2"] #againOverlay .modal>.x,html[data-skin="v2"] #cidOverlay .modal>.x,html[data-skin="v2"] #kcallOverlay .modal>.x,html[data-skin="v2"] #leadOverlay .modal>.x,html[data-skin="v2"] #paidOverlay .modal>.x,html[data-skin="v2"] #scoreOverlay .modal>.x,html[data-skin="v2"] #shareOverlay .modal>.x,html[data-skin="v2"] #waitlistOverlay .modal>.x{display:none!important}
 
 html[data-skin="v2"] #buyOverlay .modal{overflow-y:auto;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
-  /* Continue dock: sticks to the foot of the scrolling buy sheet so Continue is never below the fold.
-     Same dock look as the zones basket the owner likes (owner 07-23). */
-  /* Continue dock = the zones-basket recipe exactly: a floating INSET rounded card. Opaque so nothing
-     shows through it, but inset from the edges so the sheet's bottom scroll-edge glass stays clear around
-     it (a full-width band, transparent OR gray, breaks that glass). Owner 07-23. */
-  html[data-skin="v2"] #buyOverlay .buydock{position:sticky;bottom:14px;z-index:6;display:flex;align-items:center;gap:12px;margin:16px 0 0;padding:11px 14px;border-radius:20px;background:linear-gradient(180deg,#2F2F37,#26262C);box-shadow:0 22px 46px -14px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.07),inset 0 1px 0 rgba(255,255,255,.09)}
-  html[data-skin="v2"] #buyOverlay .buydock .cta{margin:0;flex:1;width:auto}
-  html[data-skin="v2"] #buyOverlay .buydock-plan{flex:0 0 auto;max-width:42%;font-size:12.5px;font-weight:600;color:#8A8A96;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  html[data-skin="v2"] #buyOverlay .buydock-plan b{color:#fff;font-weight:800}
+  /* Continue is a plain full-width button in normal flow, like every other page. A sticky/floating element
+     at the sheet's bottom edge sits on the iOS scroll-edge glass and kills it (GOTCHAS), so it stays in flow.
+     The proper slide-up is the zones-basket architecture: a float OUTSIDE the scroll container. Owner 07-23. */
+  html[data-skin="v2"] #buyOverlay .buydock{margin-top:16px}
+  html[data-skin="v2"] #buyOverlay .buydock .cta{width:100%;margin:0}
+  html[data-skin="v2"] #buyOverlay .buydock-plan{display:none}
   html[data-skin="v2"] .billcyc-in{margin:0!important;padding:4px}
   html[data-skin="v2"] .billcyc-in button{padding:7px 12px;font-size:12px;flex:0 0 auto}
   /* Pay-as-you-go: Continue is a plain button, not the floating slide-up dock (owner 07-23). */
@@ -8348,7 +8345,7 @@ function openBuy(reason){
     let dock=$('buyDock');
     if(!dock){ dock=document.createElement('div'); dock.id='buyDock'; dock.className='buydock';
       dock.innerHTML=`<div class="buydock-plan" id="buyDockPlan"></div><button class="cta" id="buy_cta" type="button" onclick="buyContinue()"><span>${t('buy6b.cta','Continue')}</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>`;
-      const note=$('buy_note'); note.parentElement.appendChild(dock); } // dock is the LAST child so it floats over the list, the note scrolls above it
+      const note=$('buy_note'); note.parentElement.insertBefore(dock,note); } // plain button in flow, above the secure-checkout note (glass-safe)
     applyBuyHeader();
     renderBuyDock();
   }catch(_){} }
