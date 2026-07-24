@@ -204,6 +204,7 @@ __BRAND_HEAD__
     box-shadow:0 -12px 44px rgba(0,0,0,.65), 0 0 30px color-mix(in srgb,var(--accent,#FFCB05) 9%,transparent);
     transform:translateY(112%);transition:transform .28s cubic-bezier(.32,.72,0,1);touch-action:none}
   .csheet.on{transform:translateY(0)}
+  .csheet.planpick{z-index:4100} /* the plan slide-up sits ABOVE the buy overlay (z-index 4000) */
   .csheet-handle{width:46px;height:5px;border-radius:3px;background:#3E3E46;margin:6px auto 16px}
   .csheet-head{display:flex;align-items:center;gap:14px}
   .csheet-ic{width:56px;height:56px;border-radius:15px;background:var(--sheet);border:1px solid var(--border);display:grid;place-items:center;font-size:26px;flex:0 0 auto;overflow:hidden}
@@ -2386,6 +2387,18 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   <div class="csheet-reach" id="cs_reach" style="display:none;margin-top:9px;text-align:center;font-size:12.5px;font-weight:600;color:#8A8A96"></div>
 </div>
 
+
+<!-- Plan slider. Slides up from the bottom when you pick a plan (Plans tab), the SAME slide-up as the
+     store call sheet. It is a top-level FIXED sheet (outside the buy sheet's scroll), so it never touches
+     the buy sheet's bottom scroll-edge glass. -->
+<div class="csheet planpick" id="planSheet" aria-hidden="true">
+  <div class="csheet-handle"></div>
+  <div class="csheet-head">
+    <div style="min-width:0;flex:1"><div class="csheet-nm" id="planSheetName"></div><div class="csheet-addr" id="planSheetSub"></div></div>
+    <div id="planSheetPrice" style="flex:0 0 auto;font-weight:900;font-size:22px;letter-spacing:-.4px;text-align:right;white-space:nowrap"></div>
+  </div>
+  <button class="csheet-call" id="planSheetCta" onclick="planSheetContinue()"><span data-i18n="buy6b.cta">Continue</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
+</div>
 
 <footer class="site-footer">
   <nav class="foot-links">
@@ -8200,15 +8213,27 @@ function applyBuyHeader(){
 // The Continue dock at the foot of the buy sheet: shows what's ringed (plan or pack) and slides up.
 function renderBuyDock(){
   const dock=$('buyDock'); if(!dock) return;
+  // Plans uses the slide-up plan sheet (planSheet); only pay-as-you-go keeps a plain in-flow Continue here.
+  dock.style.display=(BUY_MODE==='packs')?'':'none';
   const plan=$('buyDockPlan');
   if(BUY_MODE==='packs'){ const packs=paygBundles(); const pk=packs[Math.max(0,Math.min(packs.length-1,PACK_IDX))];
     if(plan&&pk) plan.innerHTML=`<b>${pk.checks} ${t('plan.checks','checks')}</b> · ${money(pk.cents)}`; }
-  else { const _t=tiers(); const ti=_t.find(x=>x.key===SEL_TIER_KEY)||_t.find(x=>x.key===defaultTierKey())||_t[0];
-    if(plan&&ti){ const per=BILLING_ANNUAL?t('plan.yr','/yr'):t('plan.mo','/mo'); plan.innerHTML=`<b>${esc(ti.name)}</b> · ${tierPrice(ti)}${per}`; } }
-  // Pay-as-you-go is short, so nothing falls below the fold: Continue is a plain button there, not the
-  // floating slide-up dock (owner 07-23). Plans stays a slide-up because its list runs long.
   dock.classList.add('up'); dock.classList.toggle('flat', BUY_MODE==='packs');
 }
+// The plan slider (Plans tab): slides up when you pick a plan, showing that plan + Continue, the same way
+// the store call sheet works. It is a FIXED top-level sheet (outside the buy sheet scroll) so it never
+// touches the buy sheet's bottom scroll-edge glass. Tapping another plan re-paints it (owner 07-23).
+function openPlanSheet(){
+  if(!isV2()||BUY_MODE==='packs') return;
+  const _t=tiers(); const ti=_t.find(x=>x.key===SEL_TIER_KEY)||_t.find(x=>x.key===defaultTierKey())||_t[0]; if(!ti) return;
+  const per=BILLING_ANNUAL?t('plan.yr','/yr'):t('plan.mo','/mo');
+  const nm=$('planSheetName'); if(nm) nm.innerHTML=esc(ti.name)+(ti.featured?` <span style="color:var(--green);font-size:12px;font-weight:700;margin-left:6px">${t('plan.popular','most popular')}</span>`:'');
+  const sub=$('planSheetSub'); if(sub) sub.textContent=(ti.checks||0).toLocaleString()+' '+t('plan.checksmo','checks/mo');
+  const pr=$('planSheetPrice'); if(pr) pr.innerHTML=`${tierPrice(ti)}<span style="font-size:13px;color:#8A8A96;font-weight:700">${per}</span>`;
+  const sh=$('planSheet'); if(sh){ sh.classList.add('on'); sh.setAttribute('aria-hidden','false'); }
+}
+function dismissPlanSheet(){ const sh=$('planSheet'); if(sh){ sh.classList.remove('on'); sh.setAttribute('aria-hidden','true'); } }
+function planSheetContinue(){ dismissPlanSheet(); buyContinue(); }
 function renderBuyPlans(){
   const member=!!(ACCOUNT&&ACCOUNT.subscription==='active'), comp=!!(ACCOUNT&&ACCOUNT.comp);
   const per=BILLING_ANNUAL?t('plan.yr','/yr'):t('plan.mo','/mo');
@@ -8222,13 +8247,11 @@ function renderBuyPlans(){
     // the right with a green "save 17%" nudge so the yearly discount stays visible.
     if(BUY_MODE!=='packs'){
       const planName=comp?t('plan.unlimited','Unlimited'):(()=>{ const _ti=(tiers()||[]).find(x=>x.key===(ACCOUNT&&ACCOUNT.subTier)); return _ti?esc(_ti.name):t('plan.member','Member'); })();
-      html+=`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 0 16px">
+      html+=`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 0 6px">
         <div style="min-width:0;font-size:12.5px;font-weight:600;color:#8A8A96">${tf('plan.online',"You're on the {p} plan",{p:`<b style="color:#FFF">${planName}</b>`})}</div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:0 0 auto">
-          <div class="ho-toggle billcyc billcyc-in"><button class="${!BILLING_ANNUAL?'on':''}" data-an="false" onclick="setCycle(false,this)">${t('plan.mo3','Monthly')}</button><button class="${BILLING_ANNUAL?'on':''}" data-an="true" onclick="setCycle(true,this)">${t('plan.an3','Annual')}</button></div>
-          <span style="font-size:10px;font-weight:700;color:#4ADE80;letter-spacing:.02em">${t('plan.save17','Save 17% yearly')}</span>
-        </div>
-      </div>`;
+        <div class="ho-toggle billcyc billcyc-in" style="flex:0 0 auto"><button class="${!BILLING_ANNUAL?'on':''}" data-an="false" onclick="setCycle(false,this)">${t('plan.mo3','Monthly')}</button><button class="${BILLING_ANNUAL?'on':''}" data-an="true" onclick="setCycle(true,this)">${t('plan.an3','Annual')}</button></div>
+      </div>
+      <div style="text-align:right;margin:0 0 14px;font-size:10.5px;font-weight:800;color:#4ADE80;letter-spacing:.04em">${t('plan.save17','Save 17% yearly')}</div>`;
     }
   }
   else if(member||comp){
@@ -8276,7 +8299,7 @@ let SEL_TIER_KEY=null, BUY_MODE='plans', PACK_IDX=1;
 // One source of truth for "which tier is selected when you haven't tapped anything" (items 26-27):
 // your CURRENT plan if you're on one, else the featured tier. Continue buys exactly what's ringed.
 function defaultTierKey(){ const _t=tiers(); const cur=ACCOUNT&&ACCOUNT.subTier; if(cur&&_t.some(x=>x.key===cur)) return cur; const f=_t.find(x=>x.featured); return (f||_t[0]||{}).key||null; }
-function setBuyMode(m,btn){ BUY_MODE=m; document.querySelectorAll('#buymode button').forEach(b=>b.classList.toggle('on',b===btn)); applyBuyHeader(); renderBuyPlans(); renderBuyDock(); }
+function setBuyMode(m,btn){ BUY_MODE=m; document.querySelectorAll('#buymode button').forEach(b=>b.classList.toggle('on',b===btn)); dismissPlanSheet(); applyBuyHeader(); renderBuyPlans(); renderBuyDock(); }
 function setPackIdx(i){ const packs=paygBundles(); PACK_IDX=Math.max(0,Math.min(packs.length-1, i|0));
   const pk=packs[PACK_IDX]; if(!pk) return;
   const rng=$('payg_rng'); if(rng){ if(+rng.value!==PACK_IDX) rng.value=PACK_IDX; rng.style.setProperty('--fill',(packs.length>1?(PACK_IDX/(packs.length-1)*100):100)+'%'); } // green fill tracks the thumb edge-to-edge
@@ -8286,7 +8309,7 @@ function setPackIdx(i){ const packs=paygBundles(); PACK_IDX=Math.max(0,Math.min(
   if(per) per.textContent=t('plan.percheck','about')+' $'+(pk.cents/pk.checks/100).toFixed(2)+' '+t('plan.percheck2','per check')+' · '+t('plan.noexpire','checks never expire');
   renderBuyDock(); }
 function pickTier(k){
-  if(isV2()){ SEL_TIER_KEY=k; renderBuyPlans(); renderBuyGrid(); renderBuyDock(); return; } // 6b comp: tap selects (ring moves + grid + dock re-paint for the ringed tier), CONTINUE in the dock buys
+  if(isV2()){ SEL_TIER_KEY=k; renderBuyPlans(); renderBuyGrid(); openPlanSheet(); return; } // tap a plan → ring moves + the plan slider comes up from the bottom with that plan + Continue
   buyContinue();
 }
 function buyContinue(){
@@ -8355,7 +8378,7 @@ function openBuy(reason){
   // Live plans may not be cached yet on first open — fetch, then re-render tiles + grid in place.
   if(!PLANS){ loadPlans().then(p=>{ if(p&&$('buyOverlay').classList.contains('on')){ try{ SEL_TIER_KEY=defaultTierKey(); renderBuyPlans(); if(isV2()){ renderBuyGrid(); applyBuyHeader(); renderBuyDock(); } }catch(_){ } } }); } // live tiers may rename keys, so re-derive the default
 }
-function closeBuy(){ const m=document.querySelector('#buyOverlay .modal'); if(m){ m.style.transform=''; m.style.transition=''; } $('buyOverlay').classList.remove('on'); acctReturn(); }
+function closeBuy(){ const m=document.querySelector('#buyOverlay .modal'); if(m){ m.style.transform=''; m.style.transition=''; } dismissPlanSheet(); $('buyOverlay').classList.remove('on'); acctReturn(); }
 
 // ===== 6c BRANDED CHECKOUT — Stripe Payment Element on our own page (never the hosted page). =====
 // intent from POST /app/checkout-intent {kind, annual} → { mode, clientSecret, publishableKey, amountCents }.
