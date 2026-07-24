@@ -38,9 +38,7 @@ Never change a setting behind Admin's back; if Admin can show it, the change goe
   set question · package question · restock-day ask on any no · voicemail status · echo gate 520/150.
 - Shipment TIME capture ("tomorrow around 2 PM" → `shipment_time_heard`) still NOT live-verified.
 
-## Mapping — 99.9% covered; data verified intact 07-24
-- 110,516 / 110,622 stores front-end callable. Last 0.1% = 7 micro-chains (~105 stores) quarantined
-  `nophone` (a DATA gap, not nav). Map on PROD — hand-set staging nav is overwritten in 3 min.
+## Mapping — 99.9% covered; data verified intact 07-24. Map on PROD (staging hand-edits overwritten).
 
 ## OPEN (priority order)
 1. OWNER drive-test: one Target or CVS check on staging, 60–90s. Expect: ring tone ~3s, then the
@@ -49,8 +47,9 @@ Never change a setting behind Admin's back; if Admin can show it, the change goe
 2. Status hammer-test on Fun (staging), then the queued CVS/Walgreens zone run (owner listens).
 3. Call/log investigation (STATE.md): a real Fun-store transcript came back cut off — chase the
    capture gap. Design only near the engine; nothing ships without the owner's word.
-4. First-word capture REAL fix (listen-then-talk gate) — DESIGN ONLY. Bail enforcement wiring off;
-   A2P: set TWILIO_MESSAGING_SERVICE_SID when approval lands.
+4. 03:2x: give-up cap WIRED (owner-named): bail.ringMaxSeconds (35s, Admin bail switch was already
+   ON) ends a call when no store-side words arrive post-connect. NOT live-fired yet — needs one
+   real no-pickup call. Prod gets it on promote. First-word capture gate still DESIGN ONLY.
 
 ## Traps
 - Never run the full suite for a small change. Never deploy while the owner is mid-test-call.
