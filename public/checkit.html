@@ -5560,23 +5560,27 @@ const AGENT_NAV_RE=/^(no|yes|yeah|okay|ok|zero|one|two|three|four|five|six|seven
 // ignored and we hold the current step until a real voice or the verdict arrives.
 function isHumanSpeech(txt){ const s=String(txt||'').trim(); return /[a-zA-ZÀ-ɏ]{2,}/.test(s); }
 function stageForLines(lines, pitched){
-  let st=3, routed=false, human=false;
+  // Base is 2 (still ringing). We only reach "We've connected" (3) once the store side produces REAL
+  // content: a menu, a hold recording, or a human voice. A bare carrier answer flag or ringback noise
+  // is NOT a connection (owner 07.24: Target rang out to nobody, yet the log said "We've connected").
+  let st=2, routed=false, human=false, connected=false;
   for(const l of (lines||[])){
     const m=String(l).match(/^(Agent|Clerk):\s*(.*)$/); if(!m) continue;
     const txt=m[2]||'';
     if(m[1]==='Agent'){
-      if(AGENT_ASK.test(txt)) return 8;                            // our stock question — a human is on the line
-      if(TRANSFER_RE.test(txt)){ routed=true; st=Math.max(st,6); } // "general" = transferring + ringing the front
-      else if(!human && AGENT_NAV_RE.test(txt.trim())) st=Math.max(st,5); // a real menu pick, pre-human only
+      if(AGENT_ASK.test(txt)) return 8;                            // our stock question means a human is on the line
+      if(TRANSFER_RE.test(txt)){ routed=true; st=Math.max(st,6); connected=true; } // "general" = transferring + ringing the front
+      else if(!human && AGENT_NAV_RE.test(txt.trim())){ st=Math.max(st,5); connected=true; } // a real menu pick, pre-human only
     } else {
-      // A non-agent voice that ISN'T an automated menu or hold recording is a real PERSON — direct answer
-      // OR post-transfer. Menu/hold badging only applies BEFORE a human has been heard, so a clerk's
-      // "hold on, let me check" mid-conversation can never re-paint the call as an IVR.
-      if(!human && (IVR_RE.test(txt) || HOLD_RE.test(txt))) st=Math.max(st,4); // automated menu / hold recording
-      else if(isHumanSpeech(txt)){ human=true; st=Math.max(st,7); } // a real person picked up (real words only, never noise)
-      // else the line is transcription noise (ringback or silence heard as a junk line). Ignore it and hold the step.
+      // A store side voice that is NOT an automated menu or hold recording is a real PERSON (direct answer
+      // or post transfer). Menu/hold badging only applies BEFORE a human has been heard, so a clerk's
+      // "hold on, let me check" mid conversation can never re paint the call as an IVR.
+      if(!human && (IVR_RE.test(txt) || HOLD_RE.test(txt))){ st=Math.max(st,4); connected=true; } // automated menu / hold recording = the line engaged
+      else if(isHumanSpeech(txt)){ human=true; st=Math.max(st,7); connected=true; } // a real person picked up (real words only, never noise)
+      // else the line is transcription noise (ringback or silence heard as a junk line). Ignore it and hold on ringing.
     }
   }
+  if(connected) st=Math.max(st,3); // reached "We've connected" only from real content above, never a flag or noise
   return pitched ? Math.max(st,8) : st;
 }
 // Paint the live card's store header (logo + name + full address) — the SAME shell as the verdict card,
@@ -5780,10 +5784,11 @@ async function startCheckLive(){
       // (no wasted cycle), instead of sitting on "Ringing…".
       const bs=await api('/pub/bridge/'+r.room);
       lvlog('bridge prog='+(bs&&bs.callProgress?bs.callProgress.status:'-')+' cid='+(bs&&bs.conversationId?'Y':'n')+(bs&&bs.error?' err='+bs.error:''));
-      // Twilio says the call was ANSWERED → show "We've connected" NOW, even if the agent hasn't
-      // engaged yet (owner 07-10 call 6: the log sat on "waiting" ~35s into a connected call).
-      if(bs&&bs.callProgress&&/^(in-progress|answered)$/.test(bs.callProgress.status)) liveStage(3);
-      if(bs&&bs.conversationId){ cid=bs.conversationId; LIVE_CID=cid; liveStage(3);
+      // "We've connected" no longer fires on the carrier ANSWERED flag or on the agent opening. Target's
+      // system trips that flag at ~3s and then rings out to nobody, which faked a connection (owner 07.24).
+      // The step now advances ONLY from real store content (stageForLines), so a rang out call honestly
+      // stays on "It's ringing" and ends on "Nobody answered".
+      if(bs&&bs.conversationId){ cid=bs.conversationId; LIVE_CID=cid;
         // Only show steps that ACTUALLY happen. We used to auto-advance to "Listening to the menu" on a 3.5s
         // timer to fill the gap — but on a store that answers directly (no IVR) that step never occurred and
         // it was misleading. Stages now advance ONLY from real transcript signals (stageForLines), so a
