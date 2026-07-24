@@ -1,56 +1,56 @@
 # VOICE-CALLS — checkpoint (current state)
 
-> System: the calling engine + voice tuning + phone-tree mapping (call lanes, workflows/routing,
-> bridge plumbing, verdicts, call cost, chain nav recipes). `src/voice/` is FROZEN (machine-blocked).
-> Charter: `handoff.md` + `MAPPING-MANUAL.md`. Volatile — REPLACE stale lines, newest on top, ≤60 lines.
+> The calling engine + voice tuning + phone-tree mapping. `src/voice/` is FROZEN (machine-locked;
+> owner-named task + repo-root `.unlock` to open). Charter: handoff.md + MAPPING-MANUAL.md. <=60 lines.
 
 ## LAW — ADMIN IS THE RECORD OF TRUTH (owner, absolute)
 Never change a setting behind Admin's back; if Admin can show it, the change goes THROUGH Admin data.
 
-## 07-24 — TARGET: 59 stores called, 24 states. ONE menu, 93% the same → nothing changed
-- First menu identical everywhere (1 hours · 2 department · 3 pharmacy [· 4 optical]); digits buffer
-  during the greeting. Department list: **shape A, 55/59 — `2 = guest service desk`**, extras appended
-  at 3+ (food, apparel, HR, Starbucks) and 2 NEVER moves. **Shape B, 4/59 — no desk option at all,
-  `2 = food and beverage`, person on 3**: Mission Hills · Victory Blvd NoHo · UCSD Price Center ·
-  Cambridge St Boston (3 of 4 small-format; we hold no size/format field to predict them).
-- 0 is INVALID in the department list; an invalid press makes Target RE-READ the whole list (free
-  retry ~10s, no redial), 3 bad entries = "Goodbye". 0 at the FIRST menu works in 50–73s, failed at 2.
-- Real time-to-human on the right key: 30 · 33 · 36 · 40 · 45s — navSeconds 16 is 15–30s early (locked
-  07-10 off two runs that heard NOTHING back and ended `done`, never `human`).
-- The angle: the store READS its list out loud, so `parseMenuOptions` can match "guest service … 2"
-  as plain text — zero AI, cheap lane, self-corrects on shape B. Unpriced: Twilio speech recognition
-  on a live check. Write-up + 4 ways to apply it: `report-target-trees-2026-07-24.md`.
-- Target chain row UNTOUCHED (navRecipe/navSeconds/answerPath/phoneTreeDefault); no other chain called.
-
-## 07-24 — "system is down" night: RESOLVED (full story in git log 793f663/30af536)
-- Broken engine build reverted 01:31 UTC; engine bytes == baseline verified; prompt self-heals on
-  boot; nav rows + phones intact both envs; prod consumer never affected. Call screen no longer sits
-  on "It's ringing" (ANSWERED → "We've connected"); LISTEN-FROM-PICKUP shipped + proven live.
+## 07-24 THE ANSWER TO "WHY DO MENU CALLS FAIL": we already own a LISTENING navigator
+- `src/calls/navigator.ts` (40KB, works) drives a call through a menu by HEARING it: Twilio
+  `<Gather input="speech">` + an LLM decides each step, `listenFirst` acts the moment the menu asks
+  for input, LIVE_HUMAN_RE spots a real person. It is wired ONLY to the Admin Tree Trainer
+  (`/api/admin/trainer/*` -> placeNavCall). NOTHING WAS DELETED.
+- LIVE checks do NOT use it. They replay the recorded recipe on a STOPWATCH via TwiML
+  `<Pause>`/`<Say>`/`<Play digits>` before `<Connect>`. That is the documented design
+  ("everything cheap until human"), not a regression.
+- THAT is why the owner remembers it working every time: the trainer listens and reaches a human
+  reliably (navLog seconds-to-human: CVS [60,58,58], Walgreens [34], Target [16], Walmart [10]).
+  Live calls fire blind and drift whenever a store's greeting differs from the mapped one.
+- Confirmed stale/wrong for the OWNER'S stores (he listened live 07-24): CVS says "no" at 26s,
+  before the healthcare-provider question, so the menu loops. Walmart presses 9 at 4s, inside the
+  greeting, and lands on an extension nobody answers. Target presses 2@8/2@16 on a store that asks
+  for a department immediately. One chain recipe does NOT fit the individual stores.
+- **NEXT MOVE (owner leaning yes, not started): reuse navigator.ts on LIVE Bravo/voice chains
+  instead of building anything new.** Flag-gated, CVS only first, owner listening. Do NOT rebuild
+  from scratch. Do NOT ship without his word.
 
 ## Voice/tuning state (verified live on staging 07-21 late)
-- Agent default both envs: **Branson HD `1P1JhCcLzeMmkvLi1BkG`** (clean 29s re-clone; old Branson kept
-  for a one-move revert). Speed 0.85 (workflow tuning + vt_speed). Persona off.
+- Agent default both envs: **Branson HD `1P1JhCcLzeMmkvLi1BkG`** (clean 29s re-clone). Old Branson
+  kept for one-move revert. Speed 0.85 (workflow tuning + vt_speed). Persona off.
 - Prompt rules verified live: no dashes spoken · one register, max one "!" · greet-back HARD RULE ·
   set question · package question · restock-day ask on any no · voicemail status · echo gate 520/150.
 - Shipment TIME capture ("tomorrow around 2 PM" → `shipment_time_heard`) still NOT live-verified.
 
-## Mapping — 99.9% covered; data intact 07-24 (the "weekend rewrite" was a timestamp misread).
-Map on PROD (staging hand-edits overwritten).
+## Mapping — 99.9% covered, data intact (HT/BL mapped Jun 25, B&N Jul 10). Map on PROD.
 
-## 07-24 late — VAD dead-gate fix LIVE on staging (owner-authorized, .unlock flow, 5d56acc6)
-- "Charlie listening to phone trees": every gate version read ctx.dtmf/ctx.say, which takeBridgeDtmf/
-  Say CONSUME at TwiML build — always empty by media time, so the ear armed on every timerless nav
-  chain. Fix: setBridgeContext stamps hadDtmf/hadSay (never consumed) and the ear's no-nav-plan test
-  reads those; rides with the smart-join (earArmed) line. tsc + 13 tests green.
+## 07-24 late — engine fixes LIVE on staging (owner-authorized .unlock; 5d56acc6, afd7262a, 6c488e43)
+- Dead VAD gate fixed (hadDtmf/hadSay survive TwiML build). Ringback now identified by its
+  published tone frequencies (Goertzel 350/440/480/620, median share >= 0.45), so the billed
+  agent never opens on a ringing line. Ring bursts counted; 6 unanswered = hang up.
+- Log: "Ringing the front desk…" step (n:6) live + persisted; closing line = the REAL status;
+  charge note only when actually charged.
 
 ## OPEN (priority order)
-1. OWNER drive-test: one Target or CVS check on staging, 60–90s. Expect ring ~3s, the REAL menu
-   audible, steps advancing, agent talks to the human. Closes 07-23 + proves listen-from-pickup.
-2. Status hammer-test on Fun (staging), then the queued CVS/Walgreens zone run (owner listens).
-3. Call/log investigation: a real Fun-store transcript came back cut off — chase the capture gap.
-4. SMART JOIN restored (owner-named): ear DEAF through the recipe, arms at last-step+2s, Charlie
-   joins only on a real voice, give-up at max(earFrom, learned)+20s, never billed. NOT live-fired —
-   the owner's next Target/CVS call proves it (watch /pub/bridge-debug for EAR). Prod on promote.
+1. **DECISION PENDING (owner leaning yes):** reuse navigator.ts on LIVE Bravo chains.
+   Flag-gated, CVS only first, owner listening. Do NOT rebuild from scratch, do NOT ship
+   without his word.
+2. Mapper: sample 5 Target + Walmart + CVS stores. Question to answer: does one chain recipe
+   fit all stores, or do they vary? If they vary, hand back, do not average it away.
+3. Owner drive-test on staging: nobody-answers should log the ring step, cost under a penny,
+   no agent time, and say nothing in the charge slot.
+4. Status hammer-test on Fun, then a zone sweep (zones use the SAME engine as a single check).
+5. Self-learning corpus pass = first post-launch build (above Delta).
 
 ## Traps
 - Never run the full suite for a small change. Never deploy while the owner is mid-test-call.
