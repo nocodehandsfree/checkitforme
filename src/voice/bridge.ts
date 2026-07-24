@@ -26,11 +26,6 @@ export interface BridgeContext {
   // Deterministic hand-off: open ElevenLabs at this many seconds from connect (the LEARNED time-to-human
   // from the locked recipe). Far more reliable than VAD, which trips on the IVR's own recorded voice.
   connectAtSec?: number;
-  // Variable-ring chains (department pickup): time-to-human swings call to call, so connectAtSec is only
-  // an AVERAGE. Wait for the human with VAD (armed AFTER the menu window, so it can't trip on the
-  // greeting), using connectAtSec as an EARLY floor and holdMaxSeconds as the hard ceiling — never a
-  // fixed open onto ringback. On steady chains (this false) the deterministic timer is kept as-is.
-  ringVariable?: boolean;
   holdMaxSeconds?: number; // fallback: connect anyway after this many seconds even if no human is detected
   // Per-call VOICE + TTS tuning from the assigned workflow (Voice→Designer). Applied as a minimal
   // conversation_config_override.tts ONLY when set — default calls send no override (the override path
@@ -168,7 +163,6 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   let connecting = false;     // true once we've committed to opening ElevenLabs (buffer from here)
   let humanAtMs = 0;          // when a human was detected (connect-on-human)
   let lastDtmfMs = 0;         // ms-after-start of the last scheduled keypress (VAD waits past this)
-  let humanListenFromMs = 0;  // variable-ring: don't let VAD listen for a human until past this (the menu window)
   let voiced = 0;             // consecutive voiced frames
   const startMs = Date.now();
   const VOICE_THRESH = 350;   // μ-law mean-abs energy that counts as "someone's talking" (tunable)
@@ -289,7 +283,6 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   function maybeDetectHuman(b64: string) {
     if (connecting) return;
     if (Date.now() - startMs < lastDtmfMs + (lastDtmfMs ? 1500 : 300)) return; // settle after keypad nav; on a direct dial only skip the connect click, so the OPENING greeting still counts
-    if (Date.now() - startMs < humanListenFromMs) return; // variable-ring: stay deaf until past the menu window, so the greeting/menu can't be mistaken for the human
     // Direct-dial stores (no keypad nav) ring straight to a person. Detect the greeting FAST and tolerate
     // the pause right after it — a quick "Hello, Fun store" then silence used to take ~20s to trip the old
     // 0.9s-unbroken gate, so the agent sat silent and the caller hung up (owner 07-07). Tree stores keep
@@ -310,18 +303,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       if (!ctx && room) ctx = contexts.get(room);
       if (ctx?.dtmf) scheduleDtmf(ctx.dtmf);
       if (ctx?.connectOnHuman) {
-        if (ctx.connectAtSec && ctx.connectAtSec > 0 && !ctx.ringVariable) {
-          // Steady chain: open the agent at the learned time-to-human. Deterministic, no VAD guesswork.
+        if (ctx.connectAtSec && ctx.connectAtSec > 0) {
+          // Deterministic: open the agent at the learned time-to-human. No VAD guesswork.
           log(`twilio start room=${room.slice(0, 8)} -> connect-on-human TIMER: connect at ${ctx.connectAtSec}s`);
           dtmfTimers.push(setTimeout(() => triggerConnect("recipe-timer"), ctx.connectAtSec * 1000));
-        } else if (ctx.connectAtSec && ctx.connectAtSec > 0 && ctx.ringVariable) {
-          // Variable-ring chain: WAIT for the human. VAD listens only AFTER the average tree time (so it
-          // can't trip on the greeting/menu), opening the agent the moment a person actually speaks; the
-          // hold ceiling is the hard backstop so we never wait forever. This is the ROI rule for stores
-          // whose department pickup swings call to call (HomeGoods) — no fixed open onto ringback.
-          humanListenFromMs = ctx.connectAtSec * 1000;
-          log(`twilio start room=${room.slice(0, 8)} -> connect-on-human VAD (variable ring): listen from ${ctx.connectAtSec}s, ceiling ${ctx.holdMaxSeconds ?? 45}s`);
-          dtmfTimers.push(setTimeout(() => triggerConnect("hold-ceiling"), (ctx.holdMaxSeconds ?? 45) * 1000));
         } else {
           log(`twilio start room=${room.slice(0, 8)} -> connect-on-human (VAD; deferring ElevenLabs until a human)`);
           dtmfTimers.push(setTimeout(() => triggerConnect("hold-timeout"), (ctx.holdMaxSeconds ?? 45) * 1000));
@@ -343,7 +328,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       if (suppress) { if (++echoDropped % 200 === 1) log(`echo gate: suppressing agent playback echo (dropped=${echoDropped})`); }
       else if (eleven && ready) eleven.send(JSON.stringify({ user_audio_chunk: b64 }));
       else if (connecting) pending.push(b64);          // committed to connect → buffer for the agent
-      else if (ctx?.connectOnHuman && (ctx.ringVariable || (!ctx.connectAtSec && !ctx.dtmf && !ctx.say))) maybeDetectHuman(b64); // VAD for bare direct dials, AND for variable-ring chains — but there it's gated to listen only PAST the menu window (humanListenFromMs), so it can't open the agent on the IVR's own recorded greeting (the B&N 3:42p bug). STEADY mapped chains still use the deterministic timer only, never VAD.
+      else if (ctx?.connectOnHuman && !ctx.connectAtSec && !ctx.dtmf && !ctx.say) maybeDetectHuman(b64); // VAD ONLY when there is NO nav plan at all — no timer AND no keypad AND no spoken plan (Mapper's 770ffa0 boolean, owner-ordered 07-21). The old OR let VAD arm on TIMER chains whenever dtmf/say were already consumed at TwiML build (B&N 3:42p: timer 29s armed, ear opened the agent on the recorded greeting at 8s). A mapped chain's timer is the ONLY door; the ear is for bare direct dials.
     } else if (m.event === "stop") { log("twilio stop"); signalEnd(); if (eleven) eleven.close(); }
   });
   twilio.on("close", () => { activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); if (eleven) eleven.close(); });
