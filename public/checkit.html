@@ -3117,7 +3117,7 @@ const I18N={ es:{
   'stn.too_busy':'{store} estaba saturado. Sin cargo.',
   'sub.in':'<b>{s}</b> tiene <b>{c}</b>. Ve por ello antes de que se agote.','sub.in.named':'<b>{s}</b> tiene <b>{p}</b>. Ve por ello antes de que se agote.',
   'sub.out':'<b>{s}</b> no tiene <b>{c}</b> en stock ahora mismo.','sub.soldout':'{s} está agotado de <b>{c}</b> ahora mismo.',
-  'term.in':'En stock','term.out':'No está en stock','term.soon':'Reabastecimiento confirmado · {d}','term.soon2':'Reabastecimiento confirmado','term.unk':'Sin respuesta clara','term.getting':'Obteniendo el resultado…',
+  'term.in':'En stock','term.out':'No está en stock','term.soon':'{s} · {d}','term.soon2':'Reabastecimiento confirmado','term.unk':'Sin respuesta clara','term.getting':'Obteniendo el resultado…',
   'res.conversation':'Conversación','res.result':'Resultado',
   'pre.again.body':'{o} {a}. ¿Verificar de nuevo?','pre.again.no':'Ahora no',
   'rail.backcal':'Volver al calendario','rail.noneday':'Sin verificaciones ese día','rail.noneday2':'Sin verificaciones este día.','rail.pickanother':'← Elegir otro día',
@@ -6412,11 +6412,18 @@ function showResult(o, cid){
   // "Restock confirmed": only append "· {day}" when the clerk named a REAL day — a generic "soon"
   // adds nothing, so drop the word and the dot (owner 07-10 call 3).
   const _rawDay=String(o.shipmentDay||'').trim().toLowerCase();
-  const termLabel = cls==='in' ? t('term.in',"In stock.")
+  // THE LAST LINE OF THE LOG IS THE TRUE RESOLUTION (owner 07-24). It closes the call, so it must be
+  // the REAL status, word for word, never a generic stand-in for its colour. "Sold out" must not read
+  // as "Not in stock"; "Nobody answered" must not read as "No clear answer". Whenever the call carries
+  // a named status we print that status's own label; the per-tone wording is only a fallback for a
+  // call with no status on it at all. Restock keeps its day tag, since that is real detail, not a swap.
+  const _named = (o.statusKey && RSTATUSES[o.statusKey] && vTitle) ? vTitle : '';
+  const termLabel = cls==='pend' ? t('term.getting','Getting result…')
+    : cls==='soon' ? ((!_rawDay||_rawDay==='soon'||_rawDay==='pronto') ? (_named||t('term.soon2','Restock confirmed')) : tf('term.soon','{s} · {d}',{s:(_named||t('term.soon2','Restock confirmed')),d:esc(fmtShipDay(o.shipmentDay))}))
+    : _named ? _named
+    : cls==='in' ? t('term.in',"In stock.")
     : cls==='out' ? t('term.out','Not in stock')
-    : cls==='soon' ? ((!_rawDay||_rawDay==='soon'||_rawDay==='pronto') ? t('term.soon2','Restock confirmed') : tf('term.soon','Restock confirmed · {d}',{d:esc(fmtShipDay(o.shipmentDay))}))
-    : cls==='unk' ? ((o.statusKey&&RSTATUSES[o.statusKey]&&vTitle)?vTitle:t('term.unk','No clear answer')) /* a NAMED unk status (nobody answered, voicemail, left on hold) keeps its own words; the log must never contradict the headline above it (owner 07-24) */
-    : cls==='pend' ? t('term.getting','Getting result…') : '';
+    : cls==='unk' ? t('term.unk','No clear answer') : '';
   // Feedback survey ONLY when the status genuinely IS "we couldn't call it" — a named unk status
   // (voicemail, left_on_hold, nobody_answered…) keeps its own registry title; forcing those to
   // "Couldn't tell" was the status-lying class the owner keeps catching (07-22).
@@ -7894,7 +7901,10 @@ async function zoneExpand(cid,btn){ if(!cid) return; const body=btn.nextElementS
     const v=deriveVerdict(o, lbl, sh);
     const vT=String(v.title).replace(/[\s!?.:：]+$/,'');
     const when=o.ts?`${new Date(o.ts).toLocaleDateString(LANG==='es'?'es-ES':'en-US',{weekday:'short',month:'short',day:'numeric'})} · ${new Date(o.ts).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'})}`:'';
-    const term = v.cls==='in'?t('term.in','In stock.'):v.cls==='out'?t('term.out','Not in stock'):v.cls==='soon'?t('term.soon2','Restock confirmed'):v.cls==='pend'?t('term.getting','Getting result…'):t('term.unk','No clear answer');
+    // Same law as the result page: the closing line of a replayed log is the REAL status, word for
+    // word, so an old check never reads differently from the verdict it shipped with (owner 07-24).
+    const _nm=(o.statusKey&&RSTATUSES[o.statusKey]&&vT)?vT:'';
+    const term = v.cls==='pend'?t('term.getting','Getting result…'):_nm?_nm:v.cls==='in'?t('term.in','In stock.'):v.cls==='out'?t('term.out','Not in stock'):v.cls==='soon'?t('term.soon2','Restock confirmed'):t('term.unk','No clear answer');
     const used = (o.charged===true||(o.charged===undefined&&o.status==='completed'))?t('res.used','1 check used'):t('res.nocharge','No check, no charge');
     const tx=o.transcript||'';
     body.innerHTML=`<div style="background:#1B1B20;padding:14px 14px 4px;border-radius:0 0 14px 14px;text-align:left;overflow:hidden">
