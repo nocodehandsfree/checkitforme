@@ -27,6 +27,11 @@ export interface BridgeContext {
   // from the locked recipe). Far more reliable than VAD, which trips on the IVR's own recorded voice.
   connectAtSec?: number;
   holdMaxSeconds?: number; // fallback: connect anyway after this many seconds even if no human is detected
+  // Give-up cap (bail.ringMaxSeconds, gated on bail.enabled): once the billed agent has joined, if NO
+  // real human words arrive within this many seconds, hang the call up. Bounds the "desk rings out,
+  // nobody ever answers" case, where the agent otherwise sits billing on a ringing line (the 07-24
+  // 16-cent Target call). Voicemail and menus produce words, so they clear it; only true no-pickup fires it.
+  giveUpSeconds?: number;
   // Per-call VOICE + TTS tuning from the assigned workflow (Voice→Designer). Applied as a minimal
   // conversation_config_override.tts ONLY when set — default calls send no override (the override path
   // is otherwise left untouched, since overriding prompt/first-message there once hung calls up).
@@ -164,6 +169,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   let humanAtMs = 0;          // when a human was detected (connect-on-human)
   let lastDtmfMs = 0;         // ms-after-start of the last scheduled keypress (VAD waits past this)
   let voiced = 0;             // consecutive voiced frames
+  let giveUpTimer: NodeJS.Timeout | null = null; // armed at connect when ctx.giveUpSeconds is set
+  let humanWords = false;     // a real store-side transcript line arrived (letters, not "..." junk)
   const startMs = Date.now();
   const VOICE_THRESH = 350;   // μ-law mean-abs energy that counts as "someone's talking" (tunable)
   const VOICE_FRAMES = 45;    // ~0.9s of sustained voice → treat as a human (tunable)
@@ -231,7 +238,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + ms;
         }
       } else if (m.type === "user_transcript") {
-        const txt = m.user_transcription_event?.user_transcript; if (txt) try { relayLine?.(room, "Clerk", String(txt)); } catch { /* relay best-effort */ }
+        const txt = m.user_transcription_event?.user_transcript;
+        // Real words on the store side (letters, not ringback transcribed as "...") = someone IS
+        // there — disarm the give-up cap. Voicemail greetings count: the voicemail bail handles those.
+        if (txt && /[a-zA-ZÀ-ɏ]{2,}/.test(String(txt)) && !humanWords) { humanWords = true; if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } }
+        if (txt) try { relayLine?.(room, "Clerk", String(txt)); } catch { /* relay best-effort */ }
         // VOICEMAIL = hang up NOW, not after the greeting plays out (owner 07-22: "as soon as it
         // starts hearing the voice message it should hang up to save us money"). Same phrases the
         // outcome mapper stamps `voicemail` from, so the verdict stays consistent. Closing the
@@ -277,6 +288,17 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     humanAtMs = Date.now();
     log(`connect-on-human: connecting (${reason}) after ${Math.round((humanAtMs - startMs) / 1000)}s nav`);
     connectEleven();
+    // Give-up cap: the agent is now billing. If no real human words land within giveUpSeconds,
+    // nobody is coming to the phone — end the call instead of paying to listen to it ring.
+    const gu = ctx?.giveUpSeconds;
+    if (gu && gu > 0 && !giveUpTimer) {
+      giveUpTimer = setTimeout(() => {
+        if (humanWords) return;
+        log(`give-up: no human words ${gu}s after connect — hanging up (bail.ringMaxSeconds)`);
+        try { if (eleven) eleven.close(); } catch { /* best effort */ }
+        try { twilio.close(); } catch { /* best effort */ }
+      }, gu * 1000);
+    }
   }
   // VAD on inbound (store-side) audio: after the keypad nav has had time to finish, sustained voice
   // ⇒ a human is on the line ⇒ bring in the (billed) agent. Imperfect vs hold music — bench-test/tune.
@@ -331,5 +353,5 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       else if (ctx?.connectOnHuman && !ctx.connectAtSec && !ctx.dtmf && !ctx.say) maybeDetectHuman(b64); // VAD ONLY when there is NO nav plan at all — no timer AND no keypad AND no spoken plan (Mapper's 770ffa0 boolean, owner-ordered 07-21). The old OR let VAD arm on TIMER chains whenever dtmf/say were already consumed at TwiML build (B&N 3:42p: timer 29s armed, ear opened the agent on the recorded greeting at 8s). A mapped chain's timer is the ONLY door; the ear is for bare direct dials.
     } else if (m.event === "stop") { log("twilio stop"); signalEnd(); if (eleven) eleven.close(); }
   });
-  twilio.on("close", () => { activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); if (eleven) eleven.close(); });
+  twilio.on("close", () => { activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (eleven) eleven.close(); });
 }

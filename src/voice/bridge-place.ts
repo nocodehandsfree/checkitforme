@@ -46,7 +46,7 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
   // Dial AS the customer's verified number when we have it (phone-first model); else the house line.
   const from = opts?.from || process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const pol = await getPolicy();
-  setBridgeContext(room, { agentId: opts?.agentId || config.voice.agentId, apiKey: opts?.apiKey || undefined, dynamicVars, onConversationId, dtmf: dtmf || undefined, say: opts?.say || undefined, connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: opts?.connectAtSec, holdMaxSeconds: pol.bail.holdMaxSeconds, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
+  setBridgeContext(room, { agentId: opts?.agentId || config.voice.agentId, apiKey: opts?.apiKey || undefined, dynamicVars, onConversationId, dtmf: dtmf || undefined, say: opts?.say || undefined, connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: opts?.connectAtSec, holdMaxSeconds: pol.bail.holdMaxSeconds, giveUpSeconds: pol.bail.enabled && pol.bail.ringMaxSeconds > 0 ? pol.bail.ringMaxSeconds : undefined, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
   const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
   // INLINE the TwiML instead of a Url callback (owner 07-17: "no cutoffs — listen from the very
   // first thing I say"). With Url, Twilio answers the call and THEN phones our server for
