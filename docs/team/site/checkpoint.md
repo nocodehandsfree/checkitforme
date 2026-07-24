@@ -16,9 +16,11 @@ tsx has NO hot-reload — restart after edits. Headless→staging TLS is proxy-b
   Check" + bare `check-brandmark`, no plus); feature grid hidden on PAYG; "You're on the <name> plan" (comp
   = Unlimited, no check) shown ONLY on Plans and only if on a plan; monthly/annual inline right of that line
   with a green "Save 17% yearly" nudge.
-- CONTINUE = plain in-flow button (reverted). A sticky/floating dock at the sheet bottom KILLS the iOS
-  scroll-edge glass (new GOTCHAS entry). **FOLLOW-UP (fresh chat): build the Continue slide-up the
-  zones-basket way: absolute in the OVERLAY, OUTSIDE the scroll container, never a sticky scroll child.**
+- CONTINUE (Plans) = plan-pick slide-up `#planSheet`: a FIXED top-level sheet (reuses `.csheet` + a
+  `.planpick` z-index over the buy overlay), OUTSIDE the buy scroll so it never touches the bottom glass.
+  `pickTier`→`openPlanSheet`, `planSheetContinue`→`buyContinue`; PAYG keeps its plain in-flow button.
+  LESSON (GOTCHAS): a sticky/floating element INSIDE the scroll at the bottom edge kills the iOS glass.
+  Owner still to confirm on phone: the slide-up feel + that the Plans bottom glass is clean.
 
 ## 07-23 — the five site fixes SHIPPED (PR #92 @4f6c4a6, LIVE on staging + Admin; owner confirms on phone)
 - **In-stock banner toggle:** new Admin policy flag `inStockBanner` gates the `#finds` banner (default ON).
