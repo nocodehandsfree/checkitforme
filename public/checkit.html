@@ -5775,7 +5775,7 @@ async function startCheckLive(){
     appApi('/pub/live/'+encodeURIComponent(_id)).then(lv=>{ if(lv&&lv.live===false) finalizeLive(_id); }).catch(()=>{});
   }catch(e){} };
   liveStage(2); // ring tone DISABLED 07.24: it kept playing through the whole pre-stream nav (16 to 48s of keypad/voice navigation for chains like Target and CVS), so a call that was actually navigating fine sounded like it was ringing forever and got hung up on. startRingback stays defined but is no longer called.
-  let cid=null;
+  let cid=null, ansAt=0; // ansAt is when the carrier said the store's system answered (per call, this closure)
   POLL=setInterval(async()=>{ try{
     if(secs>=210){ clearInterval(POLL);clearInterval(elT); finalizeLive(cid); return; }
     if(!cid){
@@ -5784,10 +5784,6 @@ async function startCheckLive(){
       // (no wasted cycle), instead of sitting on "Ringing…".
       const bs=await api('/pub/bridge/'+r.room);
       lvlog('bridge prog='+(bs&&bs.callProgress?bs.callProgress.status:'-')+' cid='+(bs&&bs.conversationId?'Y':'n')+(bs&&bs.error?' err='+bs.error:''));
-      // "We've connected" no longer fires on the carrier ANSWERED flag or on the agent opening. Target's
-      // system trips that flag at ~3s and then rings out to nobody, which faked a connection (owner 07.24).
-      // The step now advances ONLY from real store content (stageForLines), so a rang out call honestly
-      // stays on "It's ringing" and ends on "Nobody answered".
       if(bs&&bs.conversationId){ cid=bs.conversationId; LIVE_CID=cid;
         // Only show steps that ACTUALLY happen. We used to auto-advance to "Listening to the menu" on a 3.5s
         // timer to fill the gap — but on a store that answers directly (no IVR) that step never occurred and
@@ -5795,8 +5791,19 @@ async function startCheckLive(){
         // direct-answer call shows: connected → a person picked up → asking. (We sit on "We've connected"
         // during an IVR's untranscribed opening monologue — honest, if briefly quiet.)
         try{ history.replaceState({},'','/?call='+encodeURIComponent(cid)); }catch(e){} }
-      // (no premature "Answered" here — the bridge engaging isn't a person; we only leave Calling/Answering when a real transcript line lands)
-      else return; // still ringing / connecting
+      else {
+        // The store's phone SYSTEM answering IS real progress the caller must see. Menu chains walk
+        // their tree in silence BEFORE any agent joins (Target ~16s, CVS ~67s: the presses/spoken menu
+        // words run inside the TwiML, and for voice chains the audio stream doesn't even start until
+        // they finish). Sitting on "It's ringing" made every working menu call look dead and get
+        // hung up on (owner 07.24, the "system is down" night). Carrier ANSWERED shows "We've connected";
+        // still no agent 6s later means the locked recipe is navigating, so "Working through the menu…".
+        // The VERDICT never comes from this flag: a rang-out call still ends "Nobody answered" (the
+        // transcript decides), so this cannot fake a result. It only stops hiding a live one.
+        const cp=bs&&bs.callProgress?String(bs.callProgress.status||''):'';
+        if(cp==='answered'||cp==='in-progress'){ if(!ansAt)ansAt=Date.now(); liveStage((Date.now()-ansAt>6000)?5:3); }
+        return; // no agent conversation yet, keep polling
+      }
     }
     const o=await appApi('/pub/live/'+encodeURIComponent(cid));
     lvlog('live tx='+((o&&o.transcript)?o.transcript.length:0)+' live='+(o?String(o.live):'-')+(o&&o.error?' err='+o.error:''));

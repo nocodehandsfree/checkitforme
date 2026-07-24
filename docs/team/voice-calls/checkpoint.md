@@ -5,45 +5,51 @@
 > Charter: `handoff.md` + `MAPPING-MANUAL.md`. Volatile — REPLACE stale lines, newest on top, ≤60 lines.
 
 ## LAW — ADMIN IS THE RECORD OF TRUTH (owner, absolute)
-Never change a setting behind Admin's back. It happened twice (persona off via API on staging only;
-Branson HD set as default while Admin showed old Branson) — owner rightly furious. If Admin can show it,
-the change goes THROUGH Admin data so the screen always matches.
+Never change a setting behind Admin's back. If Admin can show it, the change goes THROUGH Admin data
+so the screen always matches.
 
-## 07-21 — instant-connect incident + recovery (READ FIRST)
-- The 07-20 "first-word capture" made Charlie talk over greeting recordings at B&N / Hot Topic /
-  BoxLunch in the owner's zone test. Trust damage severe. Rolled back (8b4b6d7 / 2593e1b).
-- Calling code VERIFIED back to July-18 state. Only 3 protective deltas remain, none touch connect
-  timing: CVS say-plan VAD exclusion, zones dial the single-check engine, post-call shipment-time capture.
-- STILL BROKEN — mapping DATA not code: B&N stamped "ring varies" (kills press-0@6s + 29s timer → VAD
-  trips on the recording); HT/BoxLunch "answers directly". Restore = mapping (map on PROD, nav syncs down).
+## 07-24 — "system is down" night: root cause + evidence (READ FIRST)
+- The prior session's engine build (9f78b95 era) broke tree calls: the agent joined mute (skip-turn
+  loop; EL convs show 0–3 empty msgs) or never joined at all. Every owner test 00:48–01:23 UTC ran
+  on THAT build. The revert (793f663) only went LIVE at 01:31 UTC — after his testing window.
+- The EL agent prompt is re-pushed from prompts.ts on every boot ("[boot] agent brain synced"), so
+  the broken build's prompt damage self-healed when the revert deployed. Verified live prompt is
+  byte-identical to baseline prompts.ts.
+- Post-revert verified tonight: engine bytes == baseline 30af536 (whole src/ diffs clean) · chain nav
+  rows intact BOTH envs (Target `2@8,2@16` · Walmart `9@4` · CVS voice 67s · Walgreens `0@8..32`, all
+  locked) · store phones staging==prod · Twilio: every call ANSWERED, zero rang-out · bridge debug on
+  the 01:44 Target call armed "connect at 16s" correctly. PROD consumer site never affected.
+- Owner's two post-revert tests died at 10s and 48s: HE hung up pre-join, because the call screen sat
+  on "It's ringing" in silence for the whole menu walk (presses/say run inside TwiML; voice chains
+  stream no audio until nav ends). Fix shipped via the .unlock flow: checkit.html now advances to
+  "We've connected" on carrier ANSWERED and "Working through the menu…" 6s later. Verdicts stay
+  transcript-only ("Nobody answered" cannot be faked by the flag).
+- Twilio numbers 19–79s on the broken night = calls navigating then sitting mute, NOT ringing out.
 
 ## Voice/tuning state (verified live on staging 07-21 late)
-- Agent default both envs: **Branson HD `1P1JhCcLzeMmkvLi1BkG`** (clean 29s re-clone). Old Branson kept
-  for one-move revert. Speed 0.85 (workflow tuning + vt_speed). Persona off.
-- Prompt rules verified live: no dashes spoken · one register, max one "!", never on goodbye · greet-back
-  HARD RULE · set question · package question · restock-day ask on any no · voicemail status · echo gate 520/150.
-- NEW 07-20: shipment TIME capture ("tomorrow around 2 PM" → `shipment_time_heard` + consumer card). NOT live-verified.
+- Agent default both envs: **Branson HD `1P1JhCcLzeMmkvLi1BkG`** (clean 29s re-clone). Old Branson
+  kept for one-move revert. Speed 0.85 (workflow tuning + vt_speed). Persona off.
+- Prompt rules verified live: no dashes spoken · one register, max one "!" · greet-back HARD RULE ·
+  set question · package question · restock-day ask on any no · voicemail status · echo gate 520/150.
+- Shipment TIME capture ("tomorrow around 2 PM" → `shipment_time_heard`) still NOT live-verified.
 
-## Mapping — 99.9% covered, go-live ready, nothing running
-- 110,516 / 110,622 stores front-end callable. Last 0.1% = 7 micro-chains (~105 stores) whose loaded
-  numbers were Google answer-box fabrications, quarantined to `nophone` both envs (a DATA gap, not nav).
-  Real numbers (owner pulls from chain locators/Maps pins, DD ingests) → Mapper takes ONE pass.
-- Engine LIVE on prod: no-downgrade guard + skip-rings-direct; independents/co-ops = DIRECT in code
-  (boot backfill; nav-sync skips them); daily cap 60. Map on PROD — hand-set staging nav is overwritten in 3 min.
+## Mapping — 99.9% covered; data verified intact 07-24
+- 110,516 / 110,622 stores front-end callable. Last 0.1% = 7 micro-chains (~105 stores) quarantined
+  `nophone` (a DATA gap, not nav). Map on PROD — hand-set staging nav is overwritten in 3 min.
 
 ## OPEN (priority order)
-1. Owner verifies after a mapping-data restore: one B&N + one Hot Topic staging call — agent waits
-   through the recording silently (the steady-state gate).
-2. Status hammer-test on Fun (staging): yes+detail · no→restock-day (with TIME) · sold-out · voicemail ·
-   Spanish · silent pickup. Then zones again (CVS/Walgreens run is queued — owner listens).
-3. **Call/log investigation (STATE.md work stream):** a real Fun-store transcript came back cut off —
-   chase the call-engine capture gap in the call log. Design only near the engine; nothing ships without the owner's word.
-4. First-word capture REAL fix (listen-then-talk gate) — DESIGN ONLY. Bail enforcement (voicemail/IVR
-   caps) — policy UI exists, live wiring off; A2P: set TWILIO_MESSAGING_SERVICE_SID when approval lands.
+1. OWNER drive-test: one Target check on staging, let it run 60–90s. Expect: We've connected →
+   Working through the menu… → a staff/desk outcome. That closes the 07-23 emergency.
+2. Status hammer-test on Fun (staging), then the queued CVS/Walgreens zone run (owner listens).
+3. Call/log investigation (STATE.md): a real Fun-store transcript came back cut off — chase the
+   capture gap. Design only near the engine; nothing ships without the owner's word.
+4. First-word capture REAL fix (listen-then-talk gate) — DESIGN ONLY. Bail enforcement wiring off;
+   A2P: set TWILIO_MESSAGING_SERVICE_SID when approval lands.
 
 ## Traps
-- Never run the full suite for a small change (orphans servers/browsers, burns compute; stop = `scripts/kill-tests.sh`).
-- Owner's live-transcript stall = usually HIS signal dropping. Verify on a strong-signal call first.
-- Never deploy while the owner is mid-test-call (rollouts killed two live calls). Prompt edits reach the
-  agent only via push. #1 mapping trap: auto-nav 0-hammers when it can't parse → FALSE "no human"; a no-answer ≠ unmappable.
+- Never run the full suite for a small change. Never deploy while the owner is mid-test-call.
+- Owner's live-transcript stall = usually HIS signal dropping; verify on a strong-signal call first.
+- #1 mapping trap: auto-nav 0-hammers when it can't parse → FALSE "no human"; a no-answer ≠ unmappable.
+- Rapid staging deploys mid-incident split the evidence: check WHICH deployment served a given call
+  before blaming code (deploy created 01:30:56 went live 01:31:41 — his tests predated it).
 - Delta SHELVED (built, tests green, zero stores). Charlie for all.
