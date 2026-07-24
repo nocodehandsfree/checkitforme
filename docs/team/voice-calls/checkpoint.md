@@ -25,10 +25,12 @@ so the screen always matches.
   "We've connected" on carrier ANSWERED and "Working through the menu…" 6s later. Verdicts stay
   transcript-only ("Nobody answered" cannot be faked by the flag).
 - Twilio numbers 19–79s on the broken night = calls navigating then sitting mute, NOT ringing out.
-- 02:3x: LISTEN-FROM-PICKUP shipped (owner-named): TwiML now opens a <Start><Stream> fork to the
-  existing /twilio-media tap BEFORE the nav verbs, so listeners hear menu + presses + ring-through
-  live; fork mutes via bridgeLiveRooms once the real bridge owns the room (no doubled audio). Ring
-  tone re-enabled in checkit.html, now dying at first real frame (~3s pickup), never through nav.
+- 02:4x LISTEN-FROM-PICKUP shipped + PROVEN (owner-named, .unlock src/voice): the <Start><Stream>
+  fork to /twilio-media rides the INLINE TwiML in bridge-place.ts (real calls never fetch
+  /twiml/bridge — it is a fallback; first attempt there did nothing). Driven live on a Fun call:
+  Twilio stream-started callback logged, fork frames (inbound+outbound) from pickup, bridge takeover
+  clean, no doubled audio (bridgeLiveRooms mute). Ring tone back, dies at first real frame.
+  NOTE: listen-through-nav died 07-17 with the inline-TwiML no-cutoffs change, NOT on 07-23.
 
 ## Voice/tuning state (verified live on staging 07-21 late)
 - Agent default both envs: **Branson HD `1P1JhCcLzeMmkvLi1BkG`** (clean 29s re-clone). Old Branson
