@@ -53,7 +53,11 @@ case "$ACTION" in
     curl -sf -A "$UA" -H "x-admin-token: $TOK" -H "x-commit: $COMMIT" -H "content-type: text/html" \
       --data-binary @public/app.html -X POST "$BASE/api/admin/ui-deploy"; echo
     # Verify it actually serves (content marker beats trusting the 200 — /api/* 401s lie, pages don't).
+    # Download to a file, THEN grep. Never `curl | grep -q`: grep exits at the first match, curl dies
+    # with SIGPIPE (exit 23), and `set -o pipefail` reports a perfectly good deploy as a failure.
     sleep 1
-    if curl -sf "$BASE/" | grep -q "grpnav"; then echo "✓ THE Admin is serving the new shell ($COMMIT)."
+    SERVED="$(mktemp)"; trap 'rm -f "$SERVED"' EXIT
+    if curl -sf -A "$UA" "$BASE/" -o "$SERVED" && grep -q "grpnav" "$SERVED"; then
+      echo "✓ THE Admin is serving the new shell ($COMMIT)."
     else echo "⚠ deploy accepted but the shell marker wasn't seen — check $BASE by hand." >&2; exit 1; fi ;;
 esac
