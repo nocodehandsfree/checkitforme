@@ -5774,7 +5774,7 @@ async function startCheckLive(){
     if(!_id){ finalizeLive(_id); return; }
     appApi('/pub/live/'+encodeURIComponent(_id)).then(lv=>{ if(lv&&lv.live===false) finalizeLive(_id); }).catch(()=>{});
   }catch(e){} };
-  liveStage(2); // ring tone DISABLED 07.24: it kept playing through the whole pre-stream nav (16 to 48s of keypad/voice navigation for chains like Target and CVS), so a call that was actually navigating fine sounded like it was ringing forever and got hung up on. startRingback stays defined but is no longer called.
+  liveStage(2); startRingback(); // ring until the FIRST real audio frame. The server now forks call audio from store PICKUP (not after the menu walk), so this dies at about 3s when the real line lands. It must never again outlive pickup and play through a 16 to 67s navigation (the 07.24 lesson).
   let cid=null, ansAt=0; // ansAt is when the carrier said the store's system answered (per call, this closure)
   POLL=setInterval(async()=>{ try{
     if(secs>=210){ clearInterval(POLL);clearInterval(elT); finalizeLive(cid); return; }

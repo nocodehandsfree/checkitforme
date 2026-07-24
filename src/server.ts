@@ -1051,7 +1051,14 @@ app.all("/twiml/bridge", (c) => {
       prev = at;
     }
   }
-  const xml = `<?xml version="1.0" encoding="UTF-8"?><Response>${play}<Connect><Stream url="wss://${config.staging.on ? STAGING_HOST : RAILWAY_HOST}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
+  // Live-listen from PICKUP (owner 07.24): fork the call audio to /twilio-media the moment the
+  // store's system answers, so a listener hears the menu, our presses and spoken menu words, and
+  // the ring-through to a human WHILE the nav verbs above are still running. <Start> is
+  // non-blocking; the fork is listen-only and goes quiet the instant the real bridge socket takes
+  // over the room (bridgeLiveRooms), so listeners never hear doubled audio.
+  const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
+  const fork = `<Start><Stream url="wss://${host}/twilio-media?room=${room}" track="both_tracks"><Parameter name="room" value="${room}" /></Stream></Start>`;
+  const xml = `<?xml version="1.0" encoding="UTF-8"?><Response>${fork}${play}<Connect><Stream url="wss://${host}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
   return c.body(xml, 200, { "Content-Type": "text/xml" });
 });
 
@@ -6517,8 +6524,13 @@ const wssTwilio = new WebSocketServer({ noServer: true });
 const wssListen = new WebSocketServer({ noServer: true });
 const wssBridge = new WebSocketServer({ noServer: true });
 
+// Rooms whose REAL bridge socket is up. The pickup fork (/twilio-media) keeps streaming for the
+// whole call, so once the bridge owns the room's audio the fork must go quiet, or every listener
+// hears the store twice (two jitter buffers a beat apart).
+const bridgeLiveRooms = new Set<string>();
 // Full agent bridge: Twilio call audio <-> ElevenLabs ConvAI WS, forked to browser listeners.
 wssBridge.on("connection", (ws: WebSocket, _req: unknown, room: string) => {
+  if (room) { bridgeLiveRooms.add(room); ws.on("close", () => bridgeLiveRooms.delete(room)); }
   handleTwilioBridge(ws, room, fanout, relayLine, relayEnd); // fanout(audio) + relayLine(live transcript) + relayEnd(call-over) — bridge passes its resolved room
 });
 wssListen.on("connection", (ws: WebSocket, _req: unknown, room: string) => { if (room) addListener(room, ws); else bridgeLog("listen socket connected with NO room — audio cannot be routed"); });
@@ -6528,7 +6540,7 @@ wssTwilio.on("connection", (ws: WebSocket, _req: unknown, qRoom: string) => {
     let m: { event?: string; start?: { customParameters?: { room?: string }; streamSid?: string }; media?: { payload?: string; track?: string } };
     try { m = JSON.parse(data.toString()); } catch { return; }
     if (m.event === "start") room = m.start?.customParameters?.room || room || m.start?.streamSid || "";
-    else if (m.event === "media" && m.media?.payload && room) fanout(room, m.media.payload, m.media.track || "inbound");
+    else if (m.event === "media" && m.media?.payload && room && !bridgeLiveRooms.has(room)) fanout(room, m.media.payload, m.media.track || "inbound");
   });
 });
 

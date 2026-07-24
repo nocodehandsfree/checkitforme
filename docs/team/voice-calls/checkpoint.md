@@ -25,6 +25,10 @@ so the screen always matches.
   "We've connected" on carrier ANSWERED and "Working through the menu…" 6s later. Verdicts stay
   transcript-only ("Nobody answered" cannot be faked by the flag).
 - Twilio numbers 19–79s on the broken night = calls navigating then sitting mute, NOT ringing out.
+- 02:3x: LISTEN-FROM-PICKUP shipped (owner-named): TwiML now opens a <Start><Stream> fork to the
+  existing /twilio-media tap BEFORE the nav verbs, so listeners hear menu + presses + ring-through
+  live; fork mutes via bridgeLiveRooms once the real bridge owns the room (no doubled audio). Ring
+  tone re-enabled in checkit.html, now dying at first real frame (~3s pickup), never through nav.
 
 ## Voice/tuning state (verified live on staging 07-21 late)
 - Agent default both envs: **Branson HD `1P1JhCcLzeMmkvLi1BkG`** (clean 29s re-clone). Old Branson
@@ -38,8 +42,9 @@ so the screen always matches.
   `nophone` (a DATA gap, not nav). Map on PROD — hand-set staging nav is overwritten in 3 min.
 
 ## OPEN (priority order)
-1. OWNER drive-test: one Target check on staging, let it run 60–90s. Expect: We've connected →
-   Working through the menu… → a staff/desk outcome. That closes the 07-23 emergency.
+1. OWNER drive-test: one Target or CVS check on staging, 60–90s. Expect: ring tone ~3s, then the
+   REAL store menu audible, presses/words heard, steps advancing, agent talks to the human. Closes
+   the 07-23 emergency AND proves listen-from-pickup.
 2. Status hammer-test on Fun (staging), then the queued CVS/Walgreens zone run (owner listens).
 3. Call/log investigation (STATE.md): a real Fun-store transcript came back cut off — chase the
    capture gap. Design only near the engine; nothing ships without the owner's word.
