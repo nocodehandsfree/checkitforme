@@ -186,6 +186,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   let giveUpTimer: NodeJS.Timeout | null = null; // armed at connect when ctx.giveUpSeconds is set
   let humanWords = false;     // a real store-side transcript line arrived (letters, not "..." junk)
   let earArmed = false;       // smart join: the menu is done, the ear is open for a real voice
+  const loudE: number[] = []; // recent above-threshold frame energies — shape tells ringback from speech
+  let toneLogged = false;     // log the "it's a tone" verdict once per call, not per frame
   const startMs = Date.now();
   const VOICE_THRESH = 350;   // μ-law mean-abs energy that counts as "someone's talking" (tunable)
   const VOICE_FRAMES = 45;    // ~0.9s of sustained voice → treat as a human (tunable)
@@ -327,8 +329,32 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     const direct = !lastDtmfMs;
     const need = direct ? 22 : VOICE_FRAMES;   // ~0.45s of voice on a direct dial vs ~0.9s through a tree
     const leak = direct ? 0.34 : 1;            // slow leak so the pause between greeting words doesn't reset progress
-    if (frameEnergy(b64) > VOICE_THRESH) { if ((voiced += 1) >= need) triggerConnect("human"); }
-    else voiced = Math.max(0, voiced - leak);
+    const e = frameEnergy(b64);
+    if (e > VOICE_THRESH) {
+      loudE.push(e); if (loudE.length > 150) loudE.shift();
+      // RINGBACK IS NOT A HUMAN (owner 07-24: Charlie billed 20s on two Target calls nobody answered).
+      // After a transfer the desk rings, and a US ringback burst is 2s of loud audio = ~100 frames —
+      // more than double the 45-frame gate, so the ear declared "human" on the RING and opened the
+      // billed agent into an empty line. Energy alone cannot tell them apart; SHAPE can: a ringback
+      // is a steady dual tone (near-constant amplitude, tiny variation), while speech swings hard
+      // frame to frame across syllables. So once the gate is met, require real modulation too.
+      if ((voiced += 1) >= need) {
+        if (isSteadyTone(loudE)) { if (!toneLogged) { toneLogged = true; log(`ear: steady tone (ringback/hold), NOT a human — staying deaf, Charlie not billed`); } }
+        else triggerConnect("human");
+      }
+    } else { voiced = Math.max(0, voiced - leak); if (voiced === 0) loudE.length = 0; }
+  }
+  /** True when the recent loud frames look like a machine tone rather than speech. Speech energy
+   *  varies wildly across syllables (coefficient of variation well above 0.2); a ringback/hold tone
+   *  holds an almost constant amplitude (CV under ~0.1). Needs a full gate's worth of samples so a
+   *  short burst can't be judged on noise. */
+  function isSteadyTone(samples: number[]): boolean {
+    if (samples.length < 40) return false;      // too little evidence → treat as speech (never block a real human)
+    const w = samples.slice(-100);
+    const mean = w.reduce((s, v) => s + v, 0) / w.length;
+    if (mean <= 0) return false;
+    const cv = Math.sqrt(w.reduce((s, v) => s + (v - mean) * (v - mean), 0) / w.length) / mean;
+    return cv < 0.12;
   }
 
   twilio.on("message", (data: Buffer) => {
