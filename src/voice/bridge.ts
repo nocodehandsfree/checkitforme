@@ -168,7 +168,7 @@ function dtmfTone(digit: string, ms = 280): Buffer {
 }
 
 // Handle one Twilio bridge socket. `fanout` forwards audio frames to browser listeners in a room.
-export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (room: string, b64: string, track: string) => void, relayLine?: (room: string, role: string, text: string) => void, relayEnd?: (room: string) => void) {
+export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (room: string, b64: string, track: string) => void, relayLine?: (room: string, role: string, text: string) => void, relayEnd?: (room: string) => void, onStage?: (room: string, n: number, atSec: number) => void) {
   let streamSid = "";
   let eleven: WebSocket | null = null;
   let ready = false;
@@ -188,6 +188,14 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   let earArmed = false;       // smart join: the menu is done, the ear is open for a real voice
   const loudE: number[] = []; // recent above-threshold frame energies — shape tells ringback from speech
   let toneLogged = false;     // log the "it's a tone" verdict once per call, not per frame
+  // SECOND-RING TRACKING (owner 07-24). After the menu transfers us, the DESK rings — a separate
+  // ring from the one before pickup. Detecting it POSITIVELY (not just "that wasn't a human") gives
+  // three things: an honest log step with real seconds, certainty that Charlie must stay off, and a
+  // deterministic "nobody is coming" once enough rings go unanswered.
+  let inRing = false;         // currently inside a ring burst
+  let ringCount = 0;          // completed ring bursts on the transferred leg
+  let firstRingAtMs = 0;      // when the desk started ringing (for the log step)
+  const RINGS_UNANSWERED = 6; // ~36s of a US 2s-on/4s-off cadence → nobody is coming
   const startMs = Date.now();
   const VOICE_THRESH = 350;   // μ-law mean-abs energy that counts as "someone's talking" (tunable)
   const VOICE_FRAMES = 45;    // ~0.9s of sustained voice → treat as a human (tunable)
@@ -339,10 +347,24 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // is a steady dual tone (near-constant amplitude, tiny variation), while speech swings hard
       // frame to frame across syllables. So once the gate is met, require real modulation too.
       if ((voiced += 1) >= need) {
-        if (isSteadyTone(loudE)) { if (!toneLogged) { toneLogged = true; log(`ear: steady tone (ringback/hold), NOT a human — staying deaf, Charlie not billed`); } }
-        else triggerConnect("human");
+        if (isSteadyTone(loudE)) {
+          // Positively THE DESK RINGING. Mark the state, stamp the log step once, and stay off.
+          if (!inRing) {
+            inRing = true;
+            if (!firstRingAtMs) {
+              firstRingAtMs = Date.now();
+              log(`ear: the desk is ringing (second ring) — Charlie stays off until someone picks up`);
+              try { onStage?.(room, 6, Math.max(0, Math.round((firstRingAtMs - startMs) / 1000))); } catch { /* best-effort */ }
+            }
+          }
+          if (!toneLogged) { toneLogged = true; log(`ear: steady tone (ringback/hold), NOT a human — staying deaf, Charlie not billed`); }
+        } else triggerConnect("human"); // modulated speech = a real person. A ring that STOPS and turns into a voice lands here.
       }
-    } else { voiced = Math.max(0, voiced - leak); if (voiced === 0) loudE.length = 0; }
+    } else {
+      // Gap between bursts: a burst that just ended is one completed ring.
+      if (inRing) { inRing = false; ringCount++; log(`ear: ring ${ringCount} went unanswered`); if (ringCount >= RINGS_UNANSWERED && !connecting && !humanWords) { log(`give-up: ${ringCount} rings unanswered — nobody is coming, hanging up (Charlie never joined)`); try { twilio.close(); } catch { /* best effort */ } } }
+      voiced = Math.max(0, voiced - leak); if (voiced === 0) loudE.length = 0;
+    }
   }
   /** True when the recent loud frames look like a machine tone rather than speech. Speech energy
    *  varies wildly across syllables (coefficient of variation well above 0.2); a ringback/hold tone

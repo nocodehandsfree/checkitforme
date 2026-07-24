@@ -6534,11 +6534,21 @@ const wssBridge = new WebSocketServer({ noServer: true });
 // Rooms whose REAL bridge socket is up. The pickup fork (/twilio-media) keeps streaming for the
 // whole call, so once the bridge owns the room's audio the fork must go quiet, or every listener
 // hears the store twice (two jitter buffers a beat apart).
+// Live STAGE events from the bridge (the ladder step the page shows). The bridge is the only thing
+// that hears the desk ringing after a transfer — that phase happens before ElevenLabs ever joins, so
+// it can never come from the transcript. Pushing it live keeps the log honest (owner 07-24).
+const relayStage = (room: string, n: number, atSec: number) => {
+  const set = rooms.get(room);
+  bridgeLog(`relayStage ${n} at ${atSec}s listeners=${set ? set.size : 0}`);
+  if (!set) return;
+  const msg = JSON.stringify({ stage: { n, at: atSec } });
+  for (const ws of set) if (ws.readyState === 1) ws.send(msg);
+};
 const bridgeLiveRooms = new Set<string>();
 // Full agent bridge: Twilio call audio <-> ElevenLabs ConvAI WS, forked to browser listeners.
 wssBridge.on("connection", (ws: WebSocket, _req: unknown, room: string) => {
   if (room) { bridgeLiveRooms.add(room); ws.on("close", () => bridgeLiveRooms.delete(room)); }
-  handleTwilioBridge(ws, room, fanout, relayLine, relayEnd); // fanout(audio) + relayLine(live transcript) + relayEnd(call-over) — bridge passes its resolved room
+  handleTwilioBridge(ws, room, fanout, relayLine, relayEnd, relayStage); // fanout(audio) + relayLine(live transcript) + relayEnd(call-over) + relayStage(ladder step) — bridge passes its resolved room
 });
 wssListen.on("connection", (ws: WebSocket, _req: unknown, room: string) => { if (room) addListener(room, ws); else bridgeLog("listen socket connected with NO room — audio cannot be routed"); });
 wssTwilio.on("connection", (ws: WebSocket, _req: unknown, qRoom: string) => {

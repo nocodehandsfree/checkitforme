@@ -105,6 +105,12 @@ export function chainNavPlan(ch?: {
   let prev = -1, len = 0;
   acts.forEach((s, i) => { const at = stepAt(s, i, prev); prev = at; len = at; steps.push({ n: 5, at }); });
   if (!acts.length && ch.dtmfShortcut) { steps.push({ n: 5, at: FIRST_AT }); len = FIRST_AT; }
+  // THE SECOND RING (owner 07-24): once the last press/word lands, the menu hands us off and the DESK
+  // starts ringing — a separate ring from the one before pickup, and the phase where nobody-answers
+  // calls actually die. It's a known fact of the mapped route (it begins when nav ends), so the log
+  // states it with real seconds instead of jumping silently from "working through the menu" to a
+  // verdict. Live calls stamp their OWN measured time for this step from the bridge's ring detector.
+  if (len) steps.push({ n: 6, at: len + 2 });
   return { steps, len: len ? len + 2 : 0 }; // +2s: the last press/word plays out before <Connect>
 }
 

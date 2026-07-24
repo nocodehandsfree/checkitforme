@@ -3107,7 +3107,7 @@ const I18N={ es:{
   'hist.today.cta':'Verificar una tienda','hist.today.none':'Sin verificaciones hoy',
   'hist.signin.title':'Inicia sesión para ver tus verificaciones','hist.signin.sub':'Tus verificaciones anteriores están guardadas en tu cuenta.','hist.signin.cta':'Iniciar sesión',
   'hist.today.sub':'Selecciona un día abajo para ver tus verificaciones anteriores.','hist.today.sub0':'Selecciona un día abajo para ver tus verificaciones anteriores.',
-  'live.s1':'Llamando a la tienda…','live.s2':'Está timbrando…','live.s3':'Conectamos','live.s4':'Escuchando el menú…','live.s5':'Navegando el menú…','live.s6':'Transferido al mostrador','live.s7':'Contestó el personal','live.s8':'Preguntando por {p}',
+  'live.s1':'Llamando a la tienda…','live.s2':'Está timbrando…','live.s3':'Conectamos','live.s4':'Escuchando el menú…','live.s5':'Navegando el menú…','live.s6':'Timbrando en el mostrador…','live.s7':'Contestó el personal','live.s8':'Preguntando por {p}',
   'live.item':'tu producto','live.store':'la tienda','live.waitperson':'Buscando a una persona…','live.noconvo':'No hay conversación en vivo en esta llamada.',
   'step.one':'paso','step.many':'pasos','step.ringing':'Llamando a la tienda…',
   'note.fbk':'No pudimos entender bien la respuesta.<br>Lee la conversación y dinos qué opinas.',
@@ -5386,7 +5386,7 @@ function liveStageLabel(n){
   const resCat=(typeof LASTRES!=='undefined'&&LASTRES&&Array.isArray(LASTRES.cats)&&LASTRES.cats[0])||'';
   const prod=(SEL_PRODUCT||askedCat||catLabel()||resCat||t('live.item','your item'));
   // Active-voice steps (the result design). Stage 1 is the roll-up handle ("Ringing the store…").
-  return ({1:t('live.s1','Ringing the store…'),2:t('live.s2',"It's ringing…"),3:t('live.s3',"We've connected"),4:t('live.s4','Listening to the menu…'),5:t('live.s5','Working through the menu…'),6:t('live.s6','Transferred to the front'),7:t('live.s7','Staff picked up'),8:tf('live.s8','Asking about {p}',{p:prod})})[n]||'';
+  return ({1:t('live.s1','Ringing the store…'),2:t('live.s2',"It's ringing…"),3:t('live.s3',"We've connected"),4:t('live.s4','Listening to the menu…'),5:t('live.s5','Working through the menu…'),6:t('live.s6','Ringing the front desk…'),7:t('live.s7','Staff picked up'),8:tf('live.s8','Asking about {p}',{p:prod})})[n]||'';
 }
 function liveStage(n){
   if(!n||n<=LIVE_STAGE) return;
@@ -5749,6 +5749,9 @@ async function startCheckLive(){
   ws.onopen=()=>lvlog('ws open'); ws.onerror=()=>lvlog('ws ERROR');
   ws.onmessage=ev=>{ if(myGen!==CALL_GEN){ try{ws.close();}catch(e){} return; } try{ const d=JSON.parse(ev.data); // a socket from an earlier call must never play/inject into a newer one
     if(d.audio){ if(AUDIO_CTX) playMu(d.audio,d.track); }
+    // Ladder step straight from the call itself (the desk ringing after the menu). That phase happens
+    // before the agent ever joins, so it can never come from the transcript. The bridge measures it.
+    else if(d.stage&&d.stage.n){ liveStage(d.stage.n); }
     else if(d.line&&d.line.text){ if(!LIVE_TR.length) lvlog('ws first line'); LIVE_TR.push(d.line.role+': '+d.line.text); LIVE_TRANSCRIPT=LIVE_TR.join('\n'); if(d.line.role==='Agent'&&AGENT_ASK.test(d.line.text))AGENT_PITCHED=true; liveStage(stageForLines(LIVE_TR,AGENT_PITCHED)); renderLiveMsg(); } // real-time steps + human script, as the call happens
     // Instant flip: the bridge tells us the moment the call ends → finalize NOW (snappy, like the live
     // transcript). Crucially we do NOT clearInterval(POLL) here — the POLL keeps running as the safety net,
