@@ -76,7 +76,14 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
       prev = at;
     }
   }
-  const inlineTwiml = `<?xml version="1.0" encoding="UTF-8"?><Response>${play}<Connect><Stream url="wss://${host}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
+  // Live-listen from PICKUP (owner 07.24): a non-blocking <Start><Stream> fork opens the call audio
+  // to /twilio-media the moment the store's system answers, so a listener hears the menu, the
+  // presses/spoken words above, and the ring-through WHILE ${play} is still running. Without it the
+  // stream below only starts AFTER the whole nav walk, which is why menu calls sounded dead. The
+  // fork goes quiet the instant the real bridge socket owns the room (bridgeLiveRooms in server.ts),
+  // so audio never doubles. statusCallback logs start/stop/error into the bridge ring buffer.
+  const fork = `<Start><Stream url="wss://${host}/twilio-media?room=${room}" track="both_tracks" statusCallback="https://${host}/twiml/stream-status?room=${room}" statusCallbackMethod="POST"><Parameter name="room" value="${room}" /></Stream></Start>`;
+  const inlineTwiml = `<?xml version="1.0" encoding="UTF-8"?><Response>${fork}${play}<Connect><Stream url="wss://${host}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
   const body = new URLSearchParams({ To: e164(toNumber), From: from, Twiml: inlineTwiml });
   // REAL call-progress feed: Twilio POSTs each transition so the live timeline shows what's actually
   // happening (dialing → ringing → answered → done) instead of guessing from timers.
