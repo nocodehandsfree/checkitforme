@@ -51,8 +51,15 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
   // where a human can actually be. No recipe steps → no earFromSec → direct-dial behavior unchanged.
   let navEnd = 0;
   for (const s of [dtmf || "", opts?.say || ""]) for (const m of s.matchAll(/@\s*(\d+(?:\.\d+)?)/g)) navEnd = Math.max(navEnd, Number(m[1]));
-  const earFromSec = navEnd > 0 && opts?.connectAtSec ? Math.round(navEnd + 2) : undefined;
-  setBridgeContext(room, { agentId: opts?.agentId || config.voice.agentId, apiKey: opts?.apiKey || undefined, dynamicVars, onConversationId, dtmf: dtmf || undefined, say: opts?.say || undefined, connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: opts?.connectAtSec, holdMaxSeconds: pol.bail.holdMaxSeconds, giveUpSeconds: pol.bail.enabled && pol.bail.ringMaxSeconds > 0 ? pol.bail.ringMaxSeconds : undefined, earFromSec, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
+  // TIME BASE (the 07-24 late-ear bug): recipe times are measured FROM ANSWER, but the presses/words
+  // ride the TwiML BEFORE <Connect>, so the bridge stream only starts once nav is DONE. Everything
+  // the bridge times must therefore be shifted to bridge-start = answer + navEnd: the ear opens ~2s
+  // in (the menu is already over when the stream begins), and the learned time-to-human becomes
+  // (connectAtSec − navEnd), the transfer-hold remainder. Without this shift the ear sat deaf for a
+  // whole extra menu-length while the desk was already ringing (owner heard it, 03:42 Target call).
+  const earFromSec = navEnd > 0 && opts?.connectAtSec ? 2 : undefined;
+  const connectAtSecAdj = opts?.connectAtSec && navEnd > 0 ? Math.max(2, Math.round(opts.connectAtSec - navEnd)) : opts?.connectAtSec;
+  setBridgeContext(room, { agentId: opts?.agentId || config.voice.agentId, apiKey: opts?.apiKey || undefined, dynamicVars, onConversationId, dtmf: dtmf || undefined, say: opts?.say || undefined, connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: connectAtSecAdj, holdMaxSeconds: pol.bail.holdMaxSeconds, giveUpSeconds: pol.bail.enabled && pol.bail.ringMaxSeconds > 0 ? pol.bail.ringMaxSeconds : undefined, earFromSec, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
   const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
   // INLINE the TwiML instead of a Url callback (owner 07-17: "no cutoffs — listen from the very
   // first thing I say"). With Url, Twilio answers the call and THEN phones our server for
