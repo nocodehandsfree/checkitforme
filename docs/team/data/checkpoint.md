@@ -12,6 +12,18 @@
   · data/stores-master/** · both intel jsons (DB stays the live store source).
 
 ## Data — in progress / open
+- **07-24 TARGET STORE NUMBERS BACKFILLED — 72 rows, BOTH envs LIVE.** Every Target row nationally
+  (1,746) now carries `externalStoreId` except one. Source: Target's own store sitemap
+  (`target.com/sitemap_stores-index.xml.gz` → `/sl/<slug>/<id>` pages carry address + phone in the
+  page JSON). Matched on phone AND normalized address; 71/72 agreed on both, 1 on phone (LA Mid City
+  3294, comma inside the address line). Zero dupes, zero collisions with the 1,673 numbers already
+  held. Applied via `PATCH /api/retailers/:id` to PROD then STAGING (store-sync is staging→prod ONLY,
+  so prod-first edits do NOT flow back — patch both). CA split: 48 of 323 are ≥3000 (shape B).
+  ⚠️ redsky `nearby_stores_v1` works for ~1 call then Akamai-blocks the sandbox IP for hours — the
+  sitemap + `/sl/` page route has no such wall (347 pages pulled back-to-back, zero blocks).
+- **OPEN — one dead store:** retailer 106506 `Target E Bayshore Rd`, 1775 E Bayshore Rd, East Palo
+  Alto 94303. Permanently closed (absent from Target's sitemap; confirmed by press + Yelp). Has no
+  store number and never will. Awaiting owner's yes to set `active:false`.
 - **07-22 LOGO FLAGS both envs LIVE (curated):** logo_wide=true on 15 wide wordmarks; Publix
   logo_wide=false; TJ Maxx logo_dark=false; Walmart + Tom Thumb stay square. Via PATCH /api/chains/:id.
 - **⚠️ OPEN BUG — CSS/site lane, not data:** the small "Calling" chip does NOT stretch wide logos even
