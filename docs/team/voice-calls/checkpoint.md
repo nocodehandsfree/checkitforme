@@ -4,18 +4,12 @@
 
 ## LAW — ADMIN IS THE RECORD OF TRUTH (owner, absolute): never change a setting behind Admin's back.
 
-## 07-24 THE ANSWER TO "WHY DO MENU CALLS FAIL": we already own a LISTENING navigator
-- `src/calls/navigator.ts` (works) walks a menu by HEARING it: Twilio `<Gather input="speech">` + an
-  LLM per step, `listenFirst` acts when the menu asks for input, LIVE_HUMAN_RE spots a person. Wired
-  ONLY to the Admin Tree Trainer (`/api/admin/trainer/*`). NOTHING WAS DELETED.
-- LIVE checks do NOT use it — they replay the recipe on a STOPWATCH (`<Pause>/<Say>/<Play digits>`
-  before `<Connect>`): the documented "cheap until human" design, not a regression. The trainer
-  reaches a human reliably (navLog: CVS [60,58,58], Walgreens [34], Target [16], Walmart [10]);
-  live calls fire blind and drift whenever a store's greeting differs from the mapped one.
-- Confirmed wrong for the OWNER'S stores (heard live 07-24): CVS says "no" at 26s, before the
-  healthcare-provider question, so the menu loops. Walmart presses 9 at 4s inside the greeting,
-  hitting an extension nobody answers. Target presses 2@8/2@16 where the store asks for a department
-  at once. ONE chain recipe does NOT fit the individual stores.
+## 07-24 WHY MENU CALLS FAIL (detail in the two reports below)
+- We own a LISTENING navigator (`src/calls/navigator.ts`) but it is wired ONLY to the Admin Tree
+  Trainer. LIVE checks replay the recipe on a STOPWATCH and drift when a greeting differs.
+- Heard live 07-24: CVS says "no" at 26s, BEFORE the healthcare-provider question, so the menu loops.
+  Walmart presses 9 at 4s inside the greeting. Target presses 2@8/2@16 where the store asks for a
+  department at once. ONE chain recipe does NOT fit the individual stores.
 - ZONES ride the SAME path — a zone store dials `bridgeStoreCall` exactly like a single check
   (server.ts:3667), so whatever lands on live checks lands on zones, cost per store included.
 
@@ -32,20 +26,22 @@
   live; closing line = REAL status, charge note only when actually charged.
 
 ## OPEN (priority order)
-1. **LIVE LISTENING NAV — NOT a drop-in. Owner wants it built; exact spec below.**
-   navigator.ts drives its OWN Twilio call, NOT the bridge. Pointing live checks at it as-is LOSES
-   live listen, transcript relay, the verdict/charging path, and its confirm mode gives no in-stock
-   verdict — same regression class as the reverted native-EL path. CORRECT BUILD: keep the bridge,
-   move the LISTENING BRAIN onto the fork audio we now have from pickup (`<Start><Stream>` ->
-   /twilio-media). (a) fork audio -> a cheap NON-Twilio STT; (b) reuse navigator.ts logic verbatim
-   (parseMenuOptions, listenFirst/askedForInput, LIVE_HUMAN_RE, ROUTING_RE); (c) fire reactively via
-   Twilio REST call-update TwiML, not the pre-scheduled plan; (d) recipe = FALLBACK when STT is
-   silent. Flag-gated, CVS first, owner listening.
-   **COST CORRECTION (real bills 07-24): "STT is a fraction of a cent" is WRONG for Gather — Twilio
-   speech-recognition is $0.02 per 15s INTERVAL, min 1 per `<Gather>`. Today: $8.98 STT vs $2.09
-   line over 104 trainer calls (~4.3 intervals each = 8.6¢/call, past the 5¢ ceiling on its own);
-   month to date $55.98. NEVER put `<Gather input="speech">` on a live check.** That is why step (a)
-   says non-Twilio: the fork itself measured $0.0044/min. Price the STT BEFORE building.
+1. **ROOT CAUSE FOUND — the owner is right, a model DID listen: the ELEVENLABS AGENT itself, live on
+   the line from pickup.** Its nav instructions are STILL in `prompts.ts:82-88` ("say the menu word —
+   'No' / 'Front' / 'General'") + `{{phone_tree}}`; phoneTreeDefault is plain English because it was
+   written FOR the agent to read. Walked back by three cost fixes: `7f67f5a1` (06-22, Polly words on a
+   TIMER, "no agent during nav") -> `9f78b95c` (07-23, one nav source = the recipe) -> `b1290194` /
+   `5d56acc6` (07-24, ear deaf through the recipe). Now NOTHING listens, so the timer drifts and CVS
+   says "no" before the question. Cannot just revert: agent-on-menu = 5.6c for a 40s walk.
+   **THE FIX = COUNT PROMPTS, NOT SECONDS.** The bridge already streams AND analyses store audio from
+   pickup (Goertzel tone + VAD), so firing step N after the Nth speech burst costs $0 — no STT, no
+   LLM, no agent. Recipe becomes "2 after prompt 1, 2 after prompt 2"; the mapper already records
+   exactly that (`reactivePress`, navigator.ts:337). Timer stays as the FALLBACK, store facts (Target
+   `externalStoreId`) as a third layer. Proof + the 5 cost layers:
+   `report-how-nav-used-to-work-2026-07-24.md`. NOT BUILT — prompt-boundary accuracy is untested.
+   **If a transcriber is ever needed, NEVER Twilio `<Gather input="speech">`: measured $0.02 per 15s
+   interval = ~8.6c/call ($8.98 vs $2.09 of line over 104 trainer calls today; $55.98 month to date).
+   Fork the audio we already stream ($0.0044/min) to a non-Twilio STT and price it first.**
 2. Mapper: TARGET DONE (70 stores/24 states — stores vary, `externalStoreId` >=3000 = no guest-service
    option, person on 3; 73 CA rows lack a number -> DD). Time-to-human 30–45s vs navSeconds 16. Chain
    row UNTOUCHED. Detail: `report-target-trees-2026-07-24.md`. Walmart + CVS still to sample.
