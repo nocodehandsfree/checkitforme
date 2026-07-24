@@ -5,8 +5,7 @@
 > Charter: `handoff.md` + `MAPPING-MANUAL.md`. Volatile — REPLACE stale lines, newest on top, ≤60 lines.
 
 ## LAW — ADMIN IS THE RECORD OF TRUTH (owner, absolute)
-Never change a setting behind Admin's back. If Admin can show it, the change goes THROUGH Admin data
-so the screen always matches.
+Never change a setting behind Admin's back; if Admin can show it, the change goes THROUGH Admin data.
 
 ## 07-24 — "system is down" night: root cause + evidence (READ FIRST)
 - The prior session's engine build (9f78b95 era) broke tree calls: the agent joined mute (skip-turn
@@ -55,7 +54,6 @@ so the screen always matches.
 
 ## Traps
 - Never run the full suite for a small change. Never deploy while the owner is mid-test-call.
-- Owner's live-transcript stall = usually HIS signal dropping; verify on a strong-signal call first.
 - #1 mapping trap: auto-nav 0-hammers when it can't parse → FALSE "no human"; a no-answer ≠ unmappable.
 - Rapid staging deploys mid-incident split the evidence: check WHICH deployment served a given call
   before blaming code (deploy created 01:30:56 went live 01:31:41 — his tests predated it).
