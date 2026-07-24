@@ -44,6 +44,16 @@ this wrong erodes user trust in the whole product. Data integrity ALWAYS wins.
      the chain's website mirrors live stock, so we show it with live stock + buy link, no call. e.g.
      **Micro Center**. ONLY when a `/pub/stock` feed exists — else it renders a dead "checking…" state,
      so mute instead. (Schema doc: `docs/data/store-schema.md` §5, muted row fixed 2026-07-04.)
+   - **ONE store that has CLOSED → mute it, never delete it** (owner's standing instruction,
+     2026-07-24). A chain uses `muted`; a single store's mute switch is **`active=false`**, and it must
+     ship WITH a note so the next person knows why: `notes` starts with `CLOSED.` then the date you
+     confirmed it and where the proof came from. Do this the moment a closure is confirmed — a closed
+     store still on the list gets dialed and the customer waits on a dead line. Proof standard: gone
+     from the chain's OWN store list, ideally backed by a second source. Leave every other field alone
+     (the row stays reversible, and a store that reopens flips back with one flag).
+     e.g. `106506 Target E Bayshore Rd, East Palo Alto` — active=false 2026-07-24, notes
+     `CLOSED. Permanently closed, confirmed 2026-07-24. Gone from Target's own store list; …`.
+     PATCH BOTH ENVIRONMENTS: store-sync only runs staging → prod, so a prod-first edit never flows back.
 
 **5. "Absolutely certain" has a standard.** Shelf presence = the chain's OWN online store lists the SKU
    (chain-level) OR a machine is on site (per-store). Social-media / anecdotal sightings = NOT certain →

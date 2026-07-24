@@ -21,9 +21,10 @@
   so prod-first edits do NOT flow back — patch both). CA split: 48 of 323 are ≥3000 (shape B).
   ⚠️ redsky `nearby_stores_v1` works for ~1 call then Akamai-blocks the sandbox IP for hours — the
   sitemap + `/sl/` page route has no such wall (347 pages pulled back-to-back, zero blocks).
-- **OPEN — one dead store:** retailer 106506 `Target E Bayshore Rd`, 1775 E Bayshore Rd, East Palo
-  Alto 94303. Permanently closed (absent from Target's sitemap; confirmed by press + Yelp). Has no
-  store number and never will. Awaiting owner's yes to set `active:false`.
+- **07-24 CLOSED-STORE RULE (owner, standing):** a store confirmed closed gets MUTED, not deleted —
+  `active:false` + a `notes` line starting `CLOSED.` with the date and the proof. Full rule in
+  handoff.md §CORE PRINCIPLES 4. First application: retailer 106506 `Target E Bayshore Rd`, East Palo
+  Alto 94303 — muted on BOTH envs, verified gone from `/pub/stores/near` (46 other stores still show).
 - **07-22 LOGO FLAGS both envs LIVE (curated):** logo_wide=true on 15 wide wordmarks; Publix
   logo_wide=false; TJ Maxx logo_dark=false; Walmart + Tom Thumb stay square. Via PATCH /api/chains/:id.
 - **⚠️ OPEN BUG — CSS/site lane, not data:** the small "Calling" chip does NOT stretch wide logos even

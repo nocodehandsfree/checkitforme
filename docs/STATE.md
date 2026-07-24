@@ -19,7 +19,8 @@ git. Last updated: 2026-07-24 (Target store numbers filled; calling emergency ro
   Below 3000 = a full store with the desk on 2, which is what we already press. 11 of 11 in a blind test.
 - The store number is now on EVERY Target we have. The 73 California ones that were blank: 72 filled
   from Target's own store pages, address and phone both matched, live on the real site and staging.
-  The last one, East Palo Alto on E Bayshore Rd, is closed for good (see the decision below).
+  The last one, East Palo Alto on E Bayshore Rd, is closed for good, so it is now muted with a
+  note saying so. New rule: any store we find closed gets muted the same way, never deleted.
 - The Calc page under-counts the phone bill: the phone company charges by the whole minute, so a call
   one second past 60 costs double. Real limit is 40 seconds to a person, not 70. Detail in the report.
 
@@ -31,7 +32,6 @@ git. Last updated: 2026-07-24 (Target store numbers filled; calling emergency ro
 - Say "promote" to push the finished work to the real site (five site fixes + alerts and zone-lane
   fixes ride along).
 - Target: use the store number to pick the right key, or have the caller listen (see above).
-- East Palo Alto Target is closed for good. Hide it? (yes / no)
 - Light pass vs full rebuild of the Admin.
 - Hide the fake (simulated) poll rows from the Admin feedback queue? (yes / no)
 
