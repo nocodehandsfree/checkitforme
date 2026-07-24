@@ -46,7 +46,13 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
   // Dial AS the customer's verified number when we have it (phone-first model); else the house line.
   const from = opts?.from || process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const pol = await getPolicy();
-  setBridgeContext(room, { agentId: opts?.agentId || config.voice.agentId, apiKey: opts?.apiKey || undefined, dynamicVars, onConversationId, dtmf: dtmf || undefined, say: opts?.say || undefined, connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: opts?.connectAtSec, holdMaxSeconds: pol.bail.holdMaxSeconds, giveUpSeconds: pol.bail.enabled && pol.bail.ringMaxSeconds > 0 ? pol.bail.ringMaxSeconds : undefined, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
+  // Smart join: find when the recipe's LAST press/word fires ("2@8,2@16" → 16; "no@26,front@38,
+  // general@48" → 48). The ear opens 2s after that — deaf through the whole menu, listening only
+  // where a human can actually be. No recipe steps → no earFromSec → direct-dial behavior unchanged.
+  let navEnd = 0;
+  for (const s of [dtmf || "", opts?.say || ""]) for (const m of s.matchAll(/@\s*(\d+(?:\.\d+)?)/g)) navEnd = Math.max(navEnd, Number(m[1]));
+  const earFromSec = navEnd > 0 && opts?.connectAtSec ? Math.round(navEnd + 2) : undefined;
+  setBridgeContext(room, { agentId: opts?.agentId || config.voice.agentId, apiKey: opts?.apiKey || undefined, dynamicVars, onConversationId, dtmf: dtmf || undefined, say: opts?.say || undefined, connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: opts?.connectAtSec, holdMaxSeconds: pol.bail.holdMaxSeconds, giveUpSeconds: pol.bail.enabled && pol.bail.ringMaxSeconds > 0 ? pol.bail.ringMaxSeconds : undefined, earFromSec, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
   const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
   // INLINE the TwiML instead of a Url callback (owner 07-17: "no cutoffs — listen from the very
   // first thing I say"). With Url, Twilio answers the call and THEN phones our server for

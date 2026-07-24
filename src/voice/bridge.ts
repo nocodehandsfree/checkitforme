@@ -32,6 +32,10 @@ export interface BridgeContext {
   // nobody ever answers" case, where the agent otherwise sits billing on a ringing line (the 07-24
   // 16-cent Target call). Voicemail and menus produce words, so they clear it; only true no-pickup fires it.
   giveUpSeconds?: number;
+  // Smart join (owner design): the second the recipe's LAST press/word is done (+ settle), open the
+  // ear. Charlie joins on a real voice, never on a timer; no voice by earFromSec+giveUpSeconds ends
+  // the call with Charlie never billed. Requires giveUpSeconds (bail on) so a call can't ride forever.
+  earFromSec?: number;
   // Per-call VOICE + TTS tuning from the assigned workflow (Voice→Designer). Applied as a minimal
   // conversation_config_override.tts ONLY when set — default calls send no override (the override path
   // is otherwise left untouched, since overriding prompt/first-message there once hung calls up).
@@ -171,6 +175,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   let voiced = 0;             // consecutive voiced frames
   let giveUpTimer: NodeJS.Timeout | null = null; // armed at connect when ctx.giveUpSeconds is set
   let humanWords = false;     // a real store-side transcript line arrived (letters, not "..." junk)
+  let earArmed = false;       // smart join: the menu is done, the ear is open for a real voice
   const startMs = Date.now();
   const VOICE_THRESH = 350;   // μ-law mean-abs energy that counts as "someone's talking" (tunable)
   const VOICE_FRAMES = 45;    // ~0.9s of sustained voice → treat as a human (tunable)
@@ -327,8 +332,30 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       if (ctx?.connectOnHuman) {
         if (ctx.connectAtSec && ctx.connectAtSec > 0) {
           // Deterministic: open the agent at the learned time-to-human. No VAD guesswork.
-          log(`twilio start room=${room.slice(0, 8)} -> connect-on-human TIMER: connect at ${ctx.connectAtSec}s`);
-          dtmfTimers.push(setTimeout(() => triggerConnect("recipe-timer"), ctx.connectAtSec * 1000));
+          if (ctx.earFromSec && ctx.earFromSec > 0 && ctx.giveUpSeconds && ctx.giveUpSeconds > 0) {
+            // SMART JOIN (owner design, restored 07-24): deaf while the recipe walks the menu — the
+            // ear can never hear a recorded menu voice (the 07-20 mistake was listening DURING the
+            // menu). The ear opens right after the last press/word; Charlie joins only on a real
+            // voice. Nobody ever answers → Charlie never joins; the call ends at ear+ringMaxSeconds
+            // for a phone-line-only cost. The learned time (connectAtSec) stays on the recipe as
+            // its record; it no longer blind-joins when the smart path is armed.
+            const earAt = ctx.earFromSec, quit = ctx.giveUpSeconds;
+            // The give-up clock starts at the LEARNED arrival time, not at menu-end: on chains with a
+            // transfer hold (CVS: menu done 48s, human ~67s) quitting at menu-end+20s would hang up
+            // right as staff normally pick up.
+            const quitAt = Math.max(earAt, ctx.connectAtSec || 0) + quit;
+            log(`twilio start room=${room.slice(0, 8)} -> connect-on-human EAR: deaf through the menu until ${earAt}s, join on a real voice, give up at ${quitAt}s if nobody comes`);
+            dtmfTimers.push(setTimeout(() => { earArmed = true; }, earAt * 1000));
+            dtmfTimers.push(setTimeout(() => {
+              if (connecting || humanWords) return;
+              log(`give-up: no voice by ${quitAt}s — nobody is coming, hanging up (Charlie never joined)`);
+              try { if (eleven) eleven.close(); } catch { /* best effort */ }
+              try { twilio.close(); } catch { /* best effort */ }
+            }, quitAt * 1000));
+          } else {
+            log(`twilio start room=${room.slice(0, 8)} -> connect-on-human TIMER: connect at ${ctx.connectAtSec}s`);
+            dtmfTimers.push(setTimeout(() => triggerConnect("recipe-timer"), ctx.connectAtSec * 1000));
+          }
         } else {
           log(`twilio start room=${room.slice(0, 8)} -> connect-on-human (VAD; deferring ElevenLabs until a human)`);
           dtmfTimers.push(setTimeout(() => triggerConnect("hold-timeout"), (ctx.holdMaxSeconds ?? 45) * 1000));
@@ -350,7 +377,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       if (suppress) { if (++echoDropped % 200 === 1) log(`echo gate: suppressing agent playback echo (dropped=${echoDropped})`); }
       else if (eleven && ready) eleven.send(JSON.stringify({ user_audio_chunk: b64 }));
       else if (connecting) pending.push(b64);          // committed to connect → buffer for the agent
-      else if (ctx?.connectOnHuman && !ctx.connectAtSec && !ctx.dtmf && !ctx.say) maybeDetectHuman(b64); // VAD ONLY when there is NO nav plan at all — no timer AND no keypad AND no spoken plan (Mapper's 770ffa0 boolean, owner-ordered 07-21). The old OR let VAD arm on TIMER chains whenever dtmf/say were already consumed at TwiML build (B&N 3:42p: timer 29s armed, ear opened the agent on the recorded greeting at 8s). A mapped chain's timer is the ONLY door; the ear is for bare direct dials.
+      else if (earArmed || (ctx?.connectOnHuman && !ctx.connectAtSec && !ctx.dtmf && !ctx.say)) maybeDetectHuman(b64); // The ear runs in exactly two states: (1) bare direct dials — no nav plan at all (Mapper's 770ffa0 boolean, owner-ordered 07-21: never DURING a menu, where it trips on the recorded greeting — B&N 3:42p); (2) earArmed — the smart join, where the recipe has FINISHED the menu and the ear opens for the real human voice (owner design, restored 07-24).
     } else if (m.event === "stop") { log("twilio stop"); signalEnd(); if (eleven) eleven.close(); }
   });
   twilio.on("close", () => { activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (eleven) eleven.close(); });

@@ -47,9 +47,10 @@ Never change a setting behind Admin's back; if Admin can show it, the change goe
 2. Status hammer-test on Fun (staging), then the queued CVS/Walgreens zone run (owner listens).
 3. Call/log investigation (STATE.md): a real Fun-store transcript came back cut off — chase the
    capture gap. Design only near the engine; nothing ships without the owner's word.
-4. 03:2x: give-up cap WIRED (owner-named): bail.ringMaxSeconds (35s, Admin bail switch was already
-   ON) ends a call when no store-side words arrive post-connect. NOT live-fired yet — needs one
-   real no-pickup call. Prod gets it on promote. First-word capture gate still DESIGN ONLY.
+4. 03:4x SMART JOIN restored (owner-named): ear DEAF through the recipe, arms at last-step+2s,
+   Charlie joins only on a real voice; give-up at max(earFrom, learned-time)+ringMax(20s) with
+   Charlie never billed. Post-join word-check cap stays as backstop. NOT live-fired yet — owner's
+   next Target/CVS call is the proof (watch /pub/bridge-debug for the EAR line). Prod on promote.
 
 ## Traps
 - Never run the full suite for a small change. Never deploy while the owner is mid-test-call.
