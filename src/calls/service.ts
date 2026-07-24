@@ -612,8 +612,8 @@ async function finalizeDeltaSession(s: TdSession): Promise<void> {
     callSeconds: Math.round((Date.now() - s.startMs) / 1000),
   }).where(eq(callResults.id, chk.callId));
 
-  // Charge one credit on a definitive in/out answer, exactly once (atomic).
-  if (chk.finderUserId && status === "completed" && definitive) await chargeCallOnce(chk.callId, chk.finderUserId);
+  // Charge one credit on a billable outcome (real answer OR engaged-no-answer), exactly once (atomic).
+  if (chk.finderUserId && status === "completed" && billableOutcome(statusKey, definitive, transcript)) await chargeCallOnce(chk.callId, chk.finderUserId);
 
   if (confirmed === true) {
     await notifyInStock(chk.retailerName, chk.categoryLabel, chk.retailerId, dayHeard || undefined);
@@ -891,6 +891,20 @@ export async function getCreditStatus() {
  *  the race guard, so concurrent finalizers (poller + webhook + retries, across instances) can't
  *  double-bill. Returns true only if a credit was actually taken (comp accounts are marked charged
  *  but pay nothing). */
+/** Owner billing ruling (07-22): a check is BILLABLE when the store gave a real answer (definitive)
+ *  OR a human engaged and burned real minutes without answering — left on hold, too busy, language
+ *  barrier, or an unclear call that was nonetheless a real two-way conversation. Stays FREE: nobody
+ *  answered, voicemail, busy, bad number, closed, cancelled, failed — calls that never engaged or
+ *  cost cents. Protects call ROI without ever billing silence. Keep in lockstep with the support
+ *  credit machine's BAD_KEYS (credits.ts) — billing and auto-refunds must never fight. */
+export function billableOutcome(statusKey: string | null | undefined, definitive: boolean, transcript?: string | null): boolean {
+  if (definitive) return true;
+  const k = statusKey || "";
+  if (k === "left_on_hold" || k === "too_busy" || k === "language_barrier") return true;
+  if (k === "no_clear_answer" && transcript && /^Agent:/m.test(transcript) && /^Clerk:/m.test(transcript)) return true;
+  return false;
+}
+
 export async function chargeCallOnce(callId: number, finderUserId: string): Promise<boolean> {
   const won = await db.update(callResults).set({ chargedAt: Math.floor(Date.now() / 1000) })
     .where(and(eq(callResults.id, callId), isNull(callResults.chargedAt)));
@@ -972,7 +986,7 @@ export async function ingestPending(): Promise<number> {
     // Server-side billing: charge the finder ONE credit on a DEFINITIVE answer, exactly once.
     // (chargeCallOnce is atomic — the poller, the webhook, and any retry can't double-bill.)
     // A conflict/unsure verdict (the two reads disagreed) is free — we never bill a verdict we doubt.
-    if (row.finderUserId && outcome.status === "completed" && definitive) {
+    if (row.finderUserId && outcome.status === "completed" && billableOutcome(finalStatusKey, definitive, outcome.transcript)) {
       await chargeCallOnce(row.id, row.finderUserId);
     }
 

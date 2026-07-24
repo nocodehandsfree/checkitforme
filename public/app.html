@@ -2879,16 +2879,31 @@ function fbTranscript(id){
   const r=FB_ROWS.find(x=>x.id===id); if(!r||!r.transcript) return;
   openSheet(r.store||'Transcript', agoTs(r.created_at), bubbles(r.transcript)||`<div class="meta" style="white-space:pre-wrap">${esch(r.transcript)}</div>`);
 }
+let FB_UNCLEAR=[];
 async function loadFbUnclear(){
   const el=document.getElementById('fb_unclear'); if(!el) return;
   try{
     const rc=await srcApi('/api/results?limit=120');
     const all=(rc&&Array.isArray(rc.rows)?rc.rows:[]).filter(r=>r.statusKey==='no_clear_answer');
-    const unk=all.slice(0,8); // a strip, not a wall — the Calls log holds the rest
+    FB_UNCLEAR=all;
+    const unk=all.slice(0,8); // a strip, not a wall. The Calls log holds the rest.
     if(!unk.length){ el.innerHTML=''; return; }
-    el.innerHTML=`<div class="k-eyebrow">Unclear checks · Fun included</div><div class="k-pills" style="margin-top:0">${unk.map(r=>`<span class="k-pill" style="color:#F4D03F">${esch(String(r.retailer||('#'+r.retailerId)).split('—')[0].trim())} · ${agoTs(r.startedAt)}</span>`).join('')}${all.length>8?`<span class="k-pill">+${all.length-8} more in Calls</span>`:''}</div>`;
+    const nm=r=>esch(String(r.retailer||('#'+r.retailerId)).split(new RegExp('['+String.fromCharCode(0x2014,0x2013)+']'))[0].trim());
+    el.innerHTML=`<div class="k-eyebrow">Couldn’t tell · tap to read and fix</div><div class="k-pills" style="margin-top:0">${unk.map((r,i)=>`<button class="k-pill" style="color:#F4D03F;cursor:pointer;border:0;font:inherit" onclick="fbUnclearSheet(${i})">${nm(r)} · ${agoTs(r.startedAt)}</button>`).join('')}${all.length>8?`<span class="k-pill">+${all.length-8} more in Calls</span>`:''}</div>`;
   }catch(_){ el.innerHTML=''; }
 }
+// Tap a "couldn't tell" pill to read the actual call, then jump straight to the status editor to add a
+// new status for a reason we have not captured yet. This is the loop for catching new scenarios.
+function fbUnclearSheet(i){
+  const r=FB_UNCLEAR[i]; if(!r) return;
+  const store=String(r.retailer||('#'+r.retailerId)).split(new RegExp('['+String.fromCharCode(0x2014,0x2013)+']'))[0].trim();
+  const heard=r.summary?`<div class="k-eyebrow" style="margin-top:14px">What we heard</div><div class="meta" style="white-space:pre-wrap">${esch(r.summary)}</div>`:'';
+  openSheet(store, 'Couldn’t tell · '+agoTs(r.startedAt),
+    (r.transcript?`<div class="k-eyebrow" style="margin-top:0">The call</div>${bubbles(r.transcript)}`:'<div class="empty" style="padding:12px 0">No transcript captured for this call.</div>')
+    +heard
+    +`<div class="btnrow" style="margin-top:18px"><button class="act" onclick="newStatusFrom()">+ New status for this</button></div><div class="meta" style="margin-top:8px;font-size:11.5px;color:#8A8A96">If this call failed for a reason we have no status for yet, add one so the next call like it reads right.</div>`);
+}
+function newStatusFrom(){ closeSheet(); showSection('statuses'); setTimeout(()=>{ const f=document.getElementById('st_new_label'); if(f){ try{ f.scrollIntoView({behavior:'smooth',block:'center'}); f.focus(); }catch(_){ } } },140); }
 // Review/correct write to the SOURCE the row came from — a staging disagreement fixes the staging record.
 async function fbReview(id){ const r=await srcApi('/api/feedback/'+id+'/review',{method:'POST',headers:{'content-type':'application/json'},body:'{}'}); toast((r&&r.ok)?'Marked reviewed':"Couldn't update"); loadFeedback(); }
 async function fbCorrect(id,verdict){ const r=await srcApi('/api/feedback/'+id+'/review',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({correct:verdict})}); toast((r&&r.ok)?'Corrected + reviewed':"Couldn't update"); loadFeedback(); }
@@ -4857,8 +4872,15 @@ const FLAG_GROUPS=[
     ['referrals','Referrals','Free-check loop · both sides earn'],
     ['shareCards','Share cards','Shareable found-it cards'],
     ['stockSignals','Live stock feed','Real-time stock rail on the site'],
+    ['inStockBanner','In-stock banner','The scrolling "Found!" banner at the top of the site'],
     ['driverHandoff','Driver hand-off demo','Demo under an in-stock result'],
     ['liveListen','Live-listen','Customers hear calls + can hang up'],
+  ]},
+  {title:'Product types (what the site offers)',flags:[
+    ['productPokemon','Pokémon','Offer Pokémon in the product switcher · when only one is on, the switcher disappears'],
+    ['productOnePiece','One Piece','Offer One Piece in the product switcher'],
+    ['productTopps','Topps NBA','Offer Topps NBA in the product switcher'],
+    ['productNeedoh','NeeDoh','Offer NeeDoh in the product switcher'],
   ]},
   {title:'Admin & Global',flags:[
     ['oneCheckPerStorePerDay','Fresh-result cache (24h)','Reuse a recent result instead of re-calling'],

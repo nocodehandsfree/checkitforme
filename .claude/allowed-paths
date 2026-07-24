@@ -1,0 +1,19 @@
+# Sprawl gate (REBUILD_PLAN) — where NEW files may be created without sign-off.
+# Generated from the tree as it exists after Phase 0 (2026-07-22). One glob per line.
+# Everything else (new root files, new folders, new docs/ locations) is blocked by
+# .claude/hooks/sprawl-gate.sh — write "PM: <path> — <why>" in your checkpoint instead.
+docs/STATE.md
+src/**
+public/**
+scripts/**
+tests/**
+workers/**
+drizzle/**
+data/**
+.claude/**
+docs/team/**
+docs/specs/**
+docs/tasks/**
+docs/archive/**
+docs/design/truth/**
+docs/design/comps/inbox/**

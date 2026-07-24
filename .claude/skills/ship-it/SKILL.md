@@ -22,6 +22,10 @@ description: >-
 3. **Push — it's part of building, not after it.** `git add -A && git commit && git push` to `staging`
    in the SAME turn. `staging.checkitforme.com` only shows what's PUSHED (Railway auto-deploys on
    push), so unpushed work = the owner can't test it = NOT done.
+   **Then PROVE it deployed: `bash scripts/verify-live.sh`.** It reads the build stamp every served
+   page carries and prints LIVE / NOT-LIVE per site. **"Done" REQUIRES this output pasted in your
+   report — every time, no exceptions.** NOT-LIVE right after a push = the deploy is still rolling;
+   confirm `/api/health`, re-run ONCE. You never say "pushed / shipped / fixed" without it.
 4. **Drive it yourself on staging like a real user.** Open the actual flow on
    `staging.checkitforme.com` and do the thing — click the button, submit the form, walk the path.
    Not "the test passes" — the *feature works in the running app*. **The owner is not your tester:**
@@ -41,6 +45,7 @@ description: >-
    - **Built** — one plain line.
    - **Drove it** — `URL → action → what I saw`, per contract item. Device-only blind spot →
      "pushed, check your phone."
+   - **Live** — the pasted `bash scripts/verify-live.sh` output (mandatory; see step 3).
    - **Left** — what you did NOT check.
    No Drove-it line = not done; a bare "done / fixed / should be good" gets bounced unread.
    **"Should work" is banned.** For user-facing work, PM drives it again as the gate before the

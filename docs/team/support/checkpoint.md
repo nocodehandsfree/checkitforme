@@ -1,83 +1,42 @@
-# Support — checkpoint
-**What this is:** current state. Newest on top, ≤80 lines.
-> **⚖️ BOOT LAW: read `SUPPORT-MANUAL.md` (this folder) FULLY before any task — the technology,
-> anchored to code. Pass its comprehension gate (§7) before acting.**
+# SUPPORT — checkpoint (current state)
 
-## ⚖️ STANDING ORDERS (permanent — obey on every task, they survive every session)
-1. **Lane:** the support messenger (site panel + `src/support/`), the credit machine, RAG over the
-   book, support Admin pieces (screens ride Addie's ship-admin). The CALLING ENGINE (`src/voice/`)
-   is FROZEN — machine-blocked. Store data is DD's lane. The book is Copper's — read, never write.
-2. **Money words are deterministic EN/ES strings — the model is FORBIDDEN from promising credits.**
-   Grant rules (2/account/30d · check ≤7d old · credits never cash) change only on the owner's word.
-3. **ADDITIVE:** reuse the messenger, ladder, tickets + review queue that exist — no new surfaces,
-   no new email senders. Anti-hallucination facts stay: never claim a page/link/menu exists unless
-   the docs name it.
-4. Copy per `COPY_STYLE_GUIDE.md`, EN+ES same commit. **Done** = drive the real flow with real
-   clicks + Done Report (Built/Drove/Left). Never run the full suite unprompted, never in background.
+> System: the customer-chat support agent (site panel + `src/support/`), the credit machine, RAG over
+> the book, and its model training. `src/voice/` is FROZEN; store data is DD's lane; the book is read-only.
+> Charter: `handoff.md` + `SUPPORT-MANUAL.md`. Volatile — REPLACE stale lines, newest on top, ≤60 lines.
 
-## OPEN / blockers (top of mind)
-- **PM: promote wanted — chat origin stamping (src/server.ts, ladder.ts, schema/bootstrap).** Server
-  live on staging + driven green; the real Admin (prod) shows source/account only AFTER a promote.
-  Rides with anything else queued. Admin UI (public/app.html render block) rides Addie's ship-admin.
-- **BLOCKER — new chats NOT reaching the Admin dashboard (owner 07-16).** Live chats the owner
-  creates on the site are not appearing in Admin ▸ Support (that's why I couldn't find his "never got
-  the email confirmation" chat — Admin only shows the one old chat id 1). The chat pipe into the Admin
-  DB is broken/unwired. **PM: get Addie on it** — new support conversations must land in the Admin
-  list. (Root cause likely the site DB vs Admin DB split; Admin reads the prod/api DB, site writes its
-  own. Needs the write/read to line up so operators see live chats.)
-- **Owner action, in flight:** he started a Target chat and will work WITH the support agent live to
-  push it toward good, detailed responses (email-confirmation scenario). Once that lands in Admin
-  (blocker above), Teach the corrected answer so it serves verbatim.
-- **"I never got the email confirmation" — plan agreed, not built.** Quick fix: Copper adds a book
-  entry (spam/Promotions, sender, wait a few min, re-enter email to RESEND, fix a typo) + Teach it.
-  Real fix (my lane, mirrors the credit machine): a deterministic email helper — signed-in, checks
-  emailVerifiedAt, resends the confirm email on the spot (plumbing exists: re-saving the same pending
-  address auto-resends via sendConfirmEmail), optionally reads Brevo delivery status. No human.
-- **Discord bot module** — build dark (lights up when owner drops the bot token). Plugs into
-  answerSupport() in src/support/ladder.ts. Not started.
-- **check-history readout** — ladder takes checkContext but the readout isn't built (quick follow-up).
+## LAW — money words are deterministic EN/ES strings
+The model is FORBIDDEN from promising credits. Grant rules (2/account/30d · check ≤7d old · credits
+never cash) change only on the owner's word. Money words are never model-authored (stripped behind a wall).
 
-## Log
-- 2026-07-21 — CHAT ORIGIN STAMPING built + driven green on staging. Every chat now records where it
-  opened: `source` (status_page vs messenger), `page_url`, and `check_id` (LASTRES.cid) when opened
-  off a check's status page — stamped on create in answerSupport, backfilled if a later message
-  carries it. Signed-in account renders in the Admin list (was always "Guest") + detail, enriched from
-  accounts (email/plan/credits). Admin: list flags "from a check", detail shows a "Where it came from"
-  block. Additive: reused the messenger + answerSupport + accounts, no new surfaces. schema +
-  idempotent bootstrap ALTERs (source/page_url/check_id). Drove staging: POST a status_page chat →
-  /api/support/chats + /chats/:id both return source+checkId+pageUrl. test-support-endpoints +6 (31/31).
-- 2026-07-16 (3) — Door-aware check_issue greeting LIVE on staging: the post-check glowing corner
-  tab (Webbie's invite tab) opens NEUTRAL ("How did your check go? …add a screenshot"); the apology
-  greeting shows ONLY when someone picks the problem topic by hand. openSupportTopic(cat,src) carries
-  the door; EN+ES; driven via real clicks. Session branch fully merged + retired; nothing promoted.
-  Lexicon note left: CLAUDE.md still says "Admin work → promote" but reality is the decoupled
-  ship-admin path; owner also expects a "Ship paths" section that isn't in the file yet.
-- 2026-07-16 (2) — CREDIT MACHINE built + 20/20 drive green (owner-approved params: 2 grants per
-  account per 30d · check ≤7 days old · credits only, never cash). check_issue chats now run a
-  deterministic verifier BEFORE any model (src/support/credits.ts): signed-in + charged check +
-  telemetry contradicting the charge (BAD_KEYS from the statuses registry: nobody_answered,
-  bad_number, voicemail, busy, left_on_hold, failed… or <25s call) → instant +1 credit via
-  grantCredits, one grant per cid EVER (unique), evidence JSON on the grant row. Telemetry fine →
-  polite no + ticket. Never charged → says so. Vague → asks which store and re-runs. Money words
-  are deterministic EN/ES strings, model is FORBIDDEN from promising credits. Flywheel: grant
-  snapshots store phone + background re-lookup fills suggested_phone for Data. Admin:
-  GET /api/support/credits + Auto-credits peek row (rides Addie's ship-admin). Suite:
-  scripts/test-credit-machine.ts in test-all.sh. NEXT: Discord bot module (dark until token),
-  weekly low-confidence digest.
-- 2026-07-16 — New support topic `check_issue` ("Something's wrong with my check") LIVE on staging:
-  for bad-number / wrong-store / wrong-result reports off the status page. Full path: picker row
-  (2nd, EN+ES), tailored greeting asking which store + what went wrong, screenshot attach on, category
-  hint routes to a human ticket (escalate) so the team can fix the store record. Admin chip = "Check
-  problem". Plus a subtle "Something wrong with this check? Tell us" link on the result/status page →
-  openSupportTopic('check_issue') (opens support straight into the topic). Verified live: agent
-  apologizes + asks details + escalate:true; served HTML carries topic+link+ES. Admin chip label rides
-  Addie's next Admin deploy.
-- 2026-07-15 — Teach box proven live (approve a corrected Q&A → serves verbatim); NOTE prod+staging+api
-  share ONE qdrant (support_qa) so agent memory is global. ADMIN DECOUPLED FROM PROD (owner): Addie
-  ships Admin independently — leave Admin work on staging for her, no promote for Admin-only changes.
-- 2026-07-15 — Anti-hallucination (LIVE): ladder forbids claiming any page/link/menu unless the docs
-  name it + site facts (real footer, NO Contact page, partnerships→Discord).
-- 2026-07-11..15 — Foundations, all LIVE (git log + docs/specs/support-agent/): ladder
-  (cache→free→cheap→big) + RAG over the book, full-screen Messenger (topic picker, R2 screenshots,
-  EN/ES), tickets → support@ via Brevo, review queue, buried human path. Standing note: flip
-  SUPPORT_MODEL_BIG=claude-opus-4-8 once Anthropic is funded.
+## How charging vs crediting works (07-22, use for any check_issue question)
+- **Charge:** bills ONE credit on a definitive answer (`src/calls/service.ts:616`). Owner ruling 07-22:
+  engaged-but-no-answer calls (left on hold, too busy, language barrier) are now DELIBERATELY charged
+  (real human minutes burned). Truly dead calls (no answer, bad number, voicemail, busy) stay no-charge.
+- **Auto-refund (credit machine, BAD_KEYS):** a CHARGED check whose record shows nobody_answered /
+  voicemail / busy / bad_number / closed / failed / admin_hangup (or <25s) → +1 credit back. The 07-22
+  ruling REMOVED left_on_hold / too_busy / language_barrier from BAD_KEYS so billing and refunds don't
+  fight — those route to a human ticket / Admin grant.
+- **Verify a credit in Admin:** Support ▸ "Auto-credits" row → every grant + evidence; balance goes +1.
+
+## 2026-07-22 — the Barnes & Noble fix (whole session, all LIVE on staging)
+- **No more loop:** chat opened off a check's page pins to THAT check and skips "which store"
+  (`credits.ts` matches the pinned ref; client stamps `RAIL_CID`). Store matching ranks by token count so
+  two same-brand stores are told apart. Loop-break to a human after 2 unresolved asks.
+- **"That answered it" hidden until a real answer;** tapping it is a conversational close, chat stays open.
+- **`not_charged` is a resolution now:** explains what went wrong (wentWrong from statusKey), confirms
+  balance intact, gives a next step. No invented UI.
+- **Feels smart:** thinking pause (~1s); a model writes a warm opener in front of the LOCKED verdict,
+  behind a money-word wall. Drove: model close verified LIVE EN+ES, money-word-free. Tests:
+  test-credit-machine 34/34, test-support-endpoints 31/31.
+
+## OPEN / blockers
+- **Owner offer standing:** walk a REAL credit through his Fun store end-to-end (needs a real
+  charged-then-bad call — voice-calls/Fun-store). Not done.
+- **Parked (owner-aware):** one-tap "run it again" INSIDE the chat — bigger build near the call-placing
+  path (againOverlay/preCallGate). Not started.
+- **Promote wanted — chat origin stamping** (source/pageUrl/checkId): live + driven on staging; prod
+  Admin shows it only after a promote. Admin render rides ship-admin.
+- Site chats vs Admin DB split: staging DB is `/data/local.db` (SQLite on the Railway volume) — read live
+  via the site's own `/api/support/chats` (x-admin-token). Prod Admin reads its own DB.
+- Discord bot module — dark until the owner's token; plugs into `answerSupport()`. Not started.
+- Flip `SUPPORT_MODEL_BIG=claude-opus-4-8` once funded. Shared qdrant across prod+staging+api.

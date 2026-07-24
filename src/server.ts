@@ -13,7 +13,7 @@ import { db, client } from "./db/client";
 import {
   alertSends, alertSubscriptions, callResults, categories, chains, communityPosts, customerSchedules, discordChannels, kiosks, kioskReceipts, kioskReports, leads, products, retailers, schedules, scheduleTargets, statuses, storeRequests, supportConversations, supportMessages, supportTickets, waitlist, watches, zones, zoneRetailers,
 } from "./db/schema";
-import { answerSupport, resolveConversation, SUPPORT_MODELS, SUPPORT_CATEGORIES, type SupportCategory } from "./support/ladder";
+import { answerSupport, resolveConversation, warmClose, SUPPORT_MODELS, SUPPORT_CATEGORIES, type SupportCategory } from "./support/ladder";
 import { submitTicket } from "./support/tickets";
 import { addQa, reindexBook, searchBook, getFaq } from "./support/rag";
 import { listCreditGrants } from "./support/credits";
@@ -22,7 +22,7 @@ import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing, backfillDirectChains, isDirectDefaultChain } from "./db/import-data";
-import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
+import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, billableOutcome, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus, learnedSyncTick, learnedSyncStatus } from "./store-sync";
 import { buildSettingsExport, settingsSyncStatus, settingsSyncTick } from "./settings-sync";
 import { concurrencyStatus, acquireCallSlot, releaseCallSlot, governorEnabled } from "./calls/concurrency";
@@ -30,7 +30,7 @@ import { routeCheck, ticketStatus, drainCheckQueue, type QueueArgs, type PlaceRe
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
 import { simStartCall, isSimId, simLive, simResult } from "./staging-sim";
-import { getPolicy, setPolicy, publicPolicy } from "./policy";
+import { getPolicy, setPolicy, publicPolicy, cachedPolicy } from "./policy";
 import { importStores, backfillRegions } from "./stores-import";
 import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
 import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
@@ -154,6 +154,23 @@ app.use("*", async (c, next) => {
   c.header("X-Content-Type-Options", "nosniff");
   c.header("Referrer-Policy", "strict-origin-when-cross-origin");
   if (process.env.RAILWAY_ENVIRONMENT) c.header("Strict-Transport-Security", "max-age=15552000; includeSubDomains");
+});
+
+// ---- Build stamp (REBUILD_PLAN 2026-07-22) ----
+// Every served HTML page carries the git SHA Railway built from, so scripts/verify-live.sh can
+// PROVE what a site is actually serving. "Shipped/pushed/fixed" claims paste that script's output.
+const BUILD_SHA = (process.env.RAILWAY_GIT_COMMIT_SHA || "").slice(0, 12) || "local";
+app.use("*", async (c, next) => {
+  await next();
+  const ct = c.res.headers.get("content-type") || "";
+  if (!ct.includes("text/html") || c.res.status === 101 || !c.res.body) return;
+  const body = await c.res.text();
+  const stamped = body.includes("</head>")
+    ? body.replace("</head>", `<meta name="build" content="${BUILD_SHA}">\n</head>`)
+    : body;
+  const headers = new Headers(c.res.headers);
+  headers.delete("content-length");
+  c.res = new Response(stamped, { status: c.res.status, headers });
 });
 
 // ---- Staging (STAGING=1) — a private replica, NOT password-walled ----
@@ -448,7 +465,7 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
     .replace(/__BRAND_JSON__/g, JSON.stringify({ key: brand.key, name: brand.name, category: brand.category, accent: brand.accent, accent2: brand.accent2 || brand.accent, logoUrl: brand.logoUrl || "", emoji: brand.emoji }))
     .replace(/__BRAND_LOGO__/g, brand.logo || `${brand.emoji} ${brand.name}`)
     .replace(/__BRAND_ART__/g, brand.logoUrl ? `<img src="${brand.logoUrl}" alt="${esc(brand.short)}">` : (brand.art || ""))
-    .replace(/__BRAND_SWITCHER__/g, JSON.stringify({ current: brand.key, list: brandSwitcher() }))
+    .replace(/__BRAND_SWITCHER__/g, JSON.stringify({ current: brand.key, list: brandSwitcher(cachedPolicy().flags) }))
     .replace(/__BRAND_HEADLINE__/g, brand.headline)
     .replace(/__BRAND_SUB__/g, brand.sub);
 }
@@ -3269,7 +3286,7 @@ app.get("/pub/result/:cid", async (c) => {
       shipmentDayHeard: o.shipmentDay, shipmentTimeHeard: (second?.restockTime ?? o.shipmentTime) ?? null, productDetail, summary: o.summary, transcript: o.transcript,
       completedAt: Math.floor(Date.now() / 1000),
     }).where(eq(callResults.id, row.id));
-    if (row.finderUserId && consensus.definitive) await chargeCallOnce(row.id, row.finderUserId);
+    if (row.finderUserId && billableOutcome(consensus.statusKey, consensus.definitive, o.transcript)) await chargeCallOnce(row.id, row.finderUserId);
     return c.json({ ...(o ?? {}), status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey, ts: (row.startedAt || 0) * 1000, productDetail, shipmentDay: o.shipmentDay, shipmentTime: (second?.restockTime ?? o.shipmentTime) ?? null, summary: o.summary, transcript: o.transcript });
   }
   // Truly mid-call → progress only, never a verdict (so a wrong key can't flash before the real one).
@@ -5047,8 +5064,12 @@ app.post("/pub/support/resolve", async (c) => {
   const rl = rlCheck("support", clientIp(c.req.raw.headers), LIMITS.support);
   if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
   const b = await c.req.json().catch(() => ({}));
-  const ok = await resolveConversation(String(b.sessionId || ""), !!b.helped);
-  return c.json({ ok });
+  const helped = !!b.helped;
+  const ok = await resolveConversation(String(b.sessionId || ""), helped);
+  // On "that answered it" the chat stays open and the agent signs off warmly (model-written, with a
+  // fixed fallback). Money words never appear in it.
+  const close = ok && helped ? await warmClose(b.lang === "es" ? "es" : "en") : undefined;
+  return c.json({ ok, close });
 });
 // Escalation form — the only path to a human. Emails the transcript to the support inbox.
 app.post("/pub/support/ticket", async (c) => {
@@ -6417,9 +6438,9 @@ app.post("/webhooks/elevenlabs", async (c) => {
         summary: o.summary, transcript: o.transcript, completedAt: Math.floor(Date.now() / 1000),
       }).where(eq(callResults.id, o.callId));
       if (dayHeard && row) await db.update(retailers).set({ shipmentDay: dayHeard }).where(eq(retailers.id, row.retailerId));
-      // Server-side billing: charge the finder once on a definitive answer (idempotent — the poller
-      // may also try; charged_at guarantees exactly one charge across both paths).
-      if (row?.finderUserId && o.status === "completed" && definitive) {
+      // Server-side billing: charge on a billable outcome (real answer OR engaged-no-answer, owner
+      // 07-22). Idempotent — the poller may also try; charged_at guarantees exactly one charge.
+      if (row?.finderUserId && o.status === "completed" && billableOutcome(statusKey, definitive, o.transcript)) {
         await chargeCallOnce(o.callId, row.finderUserId);
       }
     }
