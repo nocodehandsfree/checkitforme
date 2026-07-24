@@ -23,7 +23,6 @@ Never change a setting behind Admin's back; if Admin can show it, the change goe
   stream no audio until nav ends). Fix shipped via the .unlock flow: checkit.html now advances to
   "We've connected" on carrier ANSWERED and "Working through the menu…" 6s later. Verdicts stay
   transcript-only ("Nobody answered" cannot be faked by the flag).
-- Twilio numbers 19–79s on the broken night = calls navigating then sitting mute, NOT ringing out.
 - 02:4x LISTEN-FROM-PICKUP shipped + PROVEN (owner-named, .unlock src/voice): the <Start><Stream>
   fork to /twilio-media rides the INLINE TwiML in bridge-place.ts (real calls never fetch
   /twiml/bridge — it is a fallback; first attempt there did nothing). Driven live on a Fun call:
@@ -38,7 +37,16 @@ Never change a setting behind Admin's back; if Admin can show it, the change goe
   set question · package question · restock-day ask on any no · voicemail status · echo gate 520/150.
 - Shipment TIME capture ("tomorrow around 2 PM" → `shipment_time_heard`) still NOT live-verified.
 
-## Mapping — 99.9% covered; data verified intact 07-24. Map on PROD (staging hand-edits overwritten).
+## Mapping — 99.9% covered; data verified intact 07-24 (Echo re-confirmed: HT/BL mapped Jun 25,
+B&N Jul 10 — working-era records, the "weekend rewrite" claim was a timestamp misread, NO restore
+needed). Map on PROD (staging hand-edits overwritten).
+
+## 07-24 late — VAD dead-gate fix LIVE on staging (owner-authorized, .unlock flow, 5d56acc6)
+- Root cause of "Charlie listening to phone trees": every gate version read ctx.dtmf/ctx.say, which
+  takeBridgeDtmf/Say CONSUME at TwiML build — so by media time they were ALWAYS empty and the ear
+  armed on every timerless nav chain. That's why 770ffa0 + each rewrite "didn't work."
+- Fix: setBridgeContext stamps hadDtmf/hadSay (never consumed); the ear's no-nav-plan test reads
+  those. Merged WITH the smart-join (earArmed) line, complements it. tsc + 13 bridge tests green.
 
 ## OPEN (priority order)
 1. OWNER drive-test: one Target or CVS check on staging, 60–90s. Expect: ring tone ~3s, then the
