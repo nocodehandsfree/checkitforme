@@ -204,7 +204,6 @@ __BRAND_HEAD__
     box-shadow:0 -12px 44px rgba(0,0,0,.65), 0 0 30px color-mix(in srgb,var(--accent,#FFCB05) 9%,transparent);
     transform:translateY(112%);transition:transform .28s cubic-bezier(.32,.72,0,1);touch-action:none}
   .csheet.on{transform:translateY(0)}
-  .csheet.planpick{z-index:4100} /* the plan slide-up sits ABOVE the buy overlay (z-index 4000) */
   .csheet-handle{width:46px;height:5px;border-radius:3px;background:#3E3E46;margin:6px auto 16px}
   .csheet-head{display:flex;align-items:center;gap:14px}
   .csheet-ic{width:56px;height:56px;border-radius:15px;background:var(--sheet);border:1px solid var(--border);display:grid;place-items:center;font-size:26px;flex:0 0 auto;overflow:hidden}
@@ -2387,18 +2386,6 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   <div class="csheet-reach" id="cs_reach" style="display:none;margin-top:9px;text-align:center;font-size:12.5px;font-weight:600;color:#8A8A96"></div>
 </div>
 
-
-<!-- Plan slider. Slides up from the bottom when you pick a plan (Plans tab), the SAME slide-up as the
-     store call sheet. It is a top-level FIXED sheet (outside the buy sheet's scroll), so it never touches
-     the buy sheet's bottom scroll-edge glass. -->
-<div class="csheet planpick" id="planSheet" aria-hidden="true">
-  <div class="csheet-handle"></div>
-  <div class="csheet-head">
-    <div style="min-width:0;flex:1"><div class="csheet-nm" id="planSheetName"></div><div class="csheet-addr" id="planSheetSub"></div></div>
-    <div id="planSheetPrice" style="flex:0 0 auto;font-weight:900;font-size:22px;letter-spacing:-.4px;text-align:right;white-space:nowrap"></div>
-  </div>
-  <button class="csheet-call" id="planSheetCta" onclick="planSheetContinue()"><span data-i18n="buy6b.cta">Continue</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
-</div>
 
 <footer class="site-footer">
   <nav class="foot-links">
