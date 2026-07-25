@@ -4682,6 +4682,10 @@ app.patch("/api/settings", async (c) => {
   if (b.defaultWorkflow !== undefined) await setSetting("vt_default_workflow", String(b.defaultWorkflow || ""));
   if (b.chainWorkflows !== undefined) await setSetting("vt_chain_workflows", String(b.chainWorkflows || ""));
   if (b.storeWorkflows !== undefined) await setSetting("vt_store_workflows", String(b.storeWorkflows || ""));
+  // Listening navigation (owner 07-25): which chains fire their mapped steps when the recording
+  // stops talking instead of on a stopwatch. "off" (default) | "all" | a comma list of chain names.
+  // Admin owns this value — never set it behind Admin's back.
+  if (b.listenNav !== undefined) await setSetting("listen_nav", String(b.listenNav || "off").trim());
   return c.json(await allSettings());
 });
 
