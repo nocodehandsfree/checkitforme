@@ -72,10 +72,15 @@ general — fixed and pushed the same session.
 |---|---|
 | Twilio line | 84s → 2 billed minutes → **2.8¢** |
 | Charlie on the line | 60s → **11.0¢** |
-| Navigation | **0¢** |
+| Navigation (agent cost) | **0¢** — but see below |
 | **Total** | **≈13.9¢** |
 
-**Navigation is now free and correct. That call was still expensive, and not because of navigation.**
+**CORRECTION (owner, 07-25): navigation is not free.** It adds no AGENT cost, but it spends LINE
+time, and the line bills in whole minutes — so 23s of Target nav costs 0.54¢ and 41s of CVS nav
+costs 0.96¢ AND guarantees a second billed minute. Cheaper navigation buys Charlie more talk time.
+Full model: `report-cost-architecture-2026-07-25.md`.
+
+**Navigation is now correct and cheap. That call was still expensive, and not because of navigation.**
 The clerk said "give me one second, let me ask" and walked away for ~25 seconds with Charlie billing
 the whole time. Talk time, not menu time, is now the entire cost problem.
 
