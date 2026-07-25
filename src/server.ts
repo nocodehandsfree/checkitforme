@@ -5645,6 +5645,58 @@ app.get("/api/admin/data-health", async (c) => {
 // transcript [{role,text}]; the server runs one turn (with an internal tool loop) and returns
 // the reply + a list of actions taken. Admin-gated like the rest of /api/*.
 // Call-timing breakdown for the God view: total / time-to-human (nav) / talk, aggregate + per store.
+// ---- Calc: re-read the MEASURED cost inputs off the real accounts ----
+// Three numbers on the Calc page are measurements, not settings, and they drift the moment the voice
+// or the brain changes. This reads them back from the accounts themselves so the page can never go
+// quietly stale: what the ElevenLabs plan actually includes (the account's real allowance, NOT the
+// number on the price page), how many credits a minute of conversation really burns, and what the
+// phone company is really charging per minute.
+app.get("/api/admin/cost-inputs", async (c) => {
+  const out: Record<string, unknown> = { measuredAt: new Date().toISOString().slice(0, 10) };
+  const elKey = process.env.ELEVENLABS_API_KEY;
+  if (elKey) {
+    try {
+      const sub = await fetch("https://api.elevenlabs.io/v1/user/subscription", { headers: { "xi-api-key": elKey } }).then((r) => r.json()) as { character_limit?: number };
+      if (sub?.character_limit) out.planCredits = sub.character_limit;
+      // Credits a minute = ConvAI credits burned / minutes of conversation, over the days that have both.
+      const now = Date.now(), from = now - 60 * 86400_000;
+      const usage = await fetch(`https://api.elevenlabs.io/v1/usage/character-stats?start_unix=${from}&end_unix=${now}&breakdown_type=product_type`, { headers: { "xi-api-key": elKey } }).then((r) => r.json()) as { time?: number[]; usage?: Record<string, number[]> };
+      const convs = await fetch("https://api.elevenlabs.io/v1/convai/conversations?page_size=100", { headers: { "xi-api-key": elKey } }).then((r) => r.json()) as { conversations?: Array<{ start_time_unix_secs?: number; call_duration_secs?: number }> };
+      const secByDay = new Map<string, number>();
+      for (const cv of convs?.conversations ?? []) {
+        if (!cv.start_time_unix_secs) continue;
+        const day = new Date(cv.start_time_unix_secs * 1000).toISOString().slice(0, 10);
+        secByDay.set(day, (secByDay.get(day) ?? 0) + (cv.call_duration_secs ?? 0));
+      }
+      const times = usage?.time ?? [], conv = usage?.usage?.["Conversational AI"] ?? [], llm = usage?.usage?.["Conversational AI - LLM"] ?? [];
+      let credits = 0, secs = 0;
+      times.forEach((ms, i) => {
+        const day = new Date(ms).toISOString().slice(0, 10), s = secByDay.get(day) ?? 0;
+        if (s > 0 && (conv[i] ?? 0) > 0) { credits += (conv[i] ?? 0) + (llm[i] ?? 0); secs += s; }
+      });
+      if (secs > 0) out.creditsPerMinute = Math.round(credits / (secs / 60));
+    } catch (e) { out.elevenLabsError = String(e); }
+  }
+  const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
+  if (sid && tok) {
+    try {
+      const auth = "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64");
+      const calls = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls.json?PageSize=200`, { headers: { Authorization: auth } }).then((r) => r.json()) as { calls?: Array<{ status?: string; duration?: string; price?: string | null }> };
+      // The per-minute rate we pay most often, derived from whole-minute billing on completed calls.
+      const tally = new Map<number, number>();
+      for (const cl of calls?.calls ?? []) {
+        if (cl.status !== "completed" || !cl.price) continue;
+        const s = Number(cl.duration ?? 0), p = Math.abs(Number(cl.price));
+        if (s <= 0 || p <= 0) continue;
+        const per = Math.round((p / Math.ceil(s / 60)) * 100000) / 100000;
+        tally.set(per, (tally.get(per) ?? 0) + 1);
+      }
+      const top = [...tally.entries()].sort((a, b) => b[1] - a[1])[0];
+      if (top) { out.twilioPerMin = top[0]; out.twilioRateCalls = top[1]; }
+    } catch (e) { out.twilioError = String(e); }
+  }
+  return c.json(out);
+});
 app.get("/api/admin/call-timing", async (c) => {
   const ownerOnly = await ownerOnlyRetailerIds(); // owner-only "Fun"/MVP store excluded from timings
   const stores = await retailerMap();
