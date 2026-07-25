@@ -4,7 +4,17 @@
 // The TwiML + status routes it points at stay in server.ts.
 import { config } from "../config";
 import { getPolicy } from "../policy";
-import { setBridgeContext, takeBridgeDtmf, takeBridgeSay } from "./bridge";
+import { setBridgeContext, takeBridgeDtmf, takeBridgeSay, bridgeLog } from "./bridge";
+import { startListenNav, listenNavOpeningTwiml, type NavStep } from "../calls/listen-nav";
+
+/** Turn the recipe's executable strings ("2@8,2@16" / "no@26,front@38") back into ordered steps.
+ *  Same source of truth either way — only the WHEN changes between the two nav modes. */
+export function parseNavSteps(dtmf?: string | null, say?: string | null): NavStep[] {
+  const steps: NavStep[] = [];
+  for (const m of String(dtmf || "").matchAll(/([0-9*#])\s*@\s*(\d+(?:\.\d+)?)/g)) steps.push({ action: "press", value: m[1], atSec: Number(m[2]) });
+  for (const m of String(say || "").matchAll(/([^,@]+?)\s*@\s*(\d+(?:\.\d+)?)/g)) steps.push({ action: "say", value: m[1].trim(), atSec: Number(m[2]) });
+  return steps.sort((a, b) => a.atSec - b.atSec);
+}
 
 // Twilio's media stream is pinned to the direct Railway domains (verified WS path; avoids Cloudflare).
 export const RAILWAY_HOST = "voice-caller-production-2d6b.up.railway.app";
@@ -38,7 +48,7 @@ export async function attachListenFork(callSid: string, room: string): Promise<v
   } catch (e) { console.error("[listenfork]", e); }
 }
 
-export async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, string>, onConversationId?: (id: string) => void, dtmf?: string | null, opts?: { from?: string; timeLimitSec?: number; connectOnHuman?: boolean; connectAtSec?: number; say?: string | null; voiceId?: string | null; voiceTuning?: Record<string, unknown> | null; apiKey?: string; agentId?: string }): Promise<{ room?: string; error?: string }> {
+export async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, string>, onConversationId?: (id: string) => void, dtmf?: string | null, opts?: { from?: string; timeLimitSec?: number; connectOnHuman?: boolean; connectAtSec?: number; say?: string | null; voiceId?: string | null; voiceTuning?: Record<string, unknown> | null; apiKey?: string; agentId?: string; listenNav?: boolean }): Promise<{ room?: string; error?: string }> {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
@@ -59,7 +69,15 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
   // whole extra menu-length while the desk was already ringing (owner heard it, 03:42 Target call).
   const earFromSec = navEnd > 0 && opts?.connectAtSec ? 2 : undefined;
   const connectAtSecAdj = opts?.connectAtSec && navEnd > 0 ? Math.max(2, Math.round(opts.connectAtSec - navEnd)) : opts?.connectAtSec;
-  setBridgeContext(room, { agentId: opts?.agentId || config.voice.agentId, apiKey: opts?.apiKey || undefined, dynamicVars, onConversationId, dtmf: dtmf || undefined, say: opts?.say || undefined, connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: connectAtSecAdj, holdMaxSeconds: pol.bail.holdMaxSeconds, giveUpSeconds: pol.bail.enabled && pol.bail.ringMaxSeconds > 0 ? pol.bail.ringMaxSeconds : undefined, earFromSec, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
+  // LISTENING NAV (owner 07-25): the mapped steps still say WHAT to press/say, but they fire when the
+  // recording actually stops talking instead of at a fixed second. The steps therefore must NOT be
+  // baked into the TwiML below — they arrive one at a time as call-updates from listen-nav.ts, which
+  // reads the audio fork we already run for live-listen. Costs nothing extra; falls back to the
+  // learned clock if a store never gives a clean pause.
+  const navSteps = parseNavSteps(dtmf, opts?.say);
+  const listening = !!opts?.listenNav && navSteps.length > 0;
+  const mkCtx = () => ({ agentId: opts?.agentId || config.voice.agentId, apiKey: opts?.apiKey || undefined, dynamicVars, onConversationId, dtmf: listening ? undefined : (dtmf || undefined), say: listening ? undefined : (opts?.say || undefined), connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: connectAtSecAdj, holdMaxSeconds: pol.bail.holdMaxSeconds, giveUpSeconds: pol.bail.enabled && pol.bail.ringMaxSeconds > 0 ? pol.bail.ringMaxSeconds : undefined, earFromSec, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
+  setBridgeContext(room, mkCtx());
   const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
   // INLINE the TwiML instead of a Url callback (owner 07-17: "no cutoffs — listen from the very
   // first thing I say"). With Url, Twilio answers the call and THEN phones our server for
@@ -96,7 +114,12 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
   // fork goes quiet the instant the real bridge socket owns the room (bridgeLiveRooms in server.ts),
   // so audio never doubles. statusCallback logs start/stop/error into the bridge ring buffer.
   const fork = `<Start><Stream url="wss://${host}/twilio-media?room=${room}" track="both_tracks" statusCallback="https://${host}/twiml/stream-status?room=${room}" statusCallbackMethod="POST"><Parameter name="room" value="${room}" /></Stream></Start>`;
-  const inlineTwiml = `<?xml version="1.0" encoding="UTF-8"?><Response>${fork}${play}<Connect><Stream url="wss://${host}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
+  const bridgeUrl = `wss://${host}/bridge?room=${room}`;
+  // Listening nav opens with the fork and a WAIT — no nav verbs, no <Connect> yet. Each mapped step
+  // arrives as its own call-update when the store stops talking; the last one hands off to the bridge.
+  const inlineTwiml = listening
+    ? `<?xml version="1.0" encoding="UTF-8"?><Response>${listenNavOpeningTwiml(fork, bridgeUrl, room)}</Response>`
+    : `<?xml version="1.0" encoding="UTF-8"?><Response>${fork}${play}<Connect><Stream url="${bridgeUrl}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
   const body = new URLSearchParams({ To: e164(toNumber), From: from, Twiml: inlineTwiml });
   // REAL call-progress feed: Twilio POSTs each transition so the live timeline shows what's actually
   // happening (dialing → ringing → answered → done) instead of guessing from timers.
@@ -113,5 +136,18 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
   if (!r.ok) return { error: `twilio call failed: ${r.status} ${await r.text()}` };
   const d = (await r.json()) as { sid?: string };
   if (d.sid) { roomCallSids.set(room, d.sid); setTimeout(() => roomCallSids.delete(room), 10 * 60 * 1000); }
+  if (listening && d.sid) {
+    startListenNav({
+      room, callSid: d.sid, steps: navSteps, bridgeUrl,
+      log: (m) => bridgeLog(`[${room.slice(0, 8)}] ${m}`),
+      // The menu really ended HERE, not where the map guessed. Re-stamp the context so the agent's
+      // join window and give-up clock are measured from the real handoff instead of the mapped one.
+      onNavEnd: (realNavEndSec) => {
+        const adj = opts?.connectAtSec ? Math.max(2, Math.round(opts.connectAtSec - realNavEndSec)) : undefined;
+        setBridgeContext(room, { ...mkCtx(), connectAtSec: adj });
+        bridgeLog(`[${room.slice(0, 8)}] listen-nav: menu ended at ${realNavEndSec}s (map said ${navEnd}s) -> agent window re-based to ${adj}s`);
+      },
+    });
+  }
   return { room };
 }

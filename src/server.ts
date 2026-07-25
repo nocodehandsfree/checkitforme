@@ -35,6 +35,7 @@ import { importStores, backfillRegions } from "./stores-import";
 import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
 import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
 import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
+import { listenNavFeed, endListenNav } from "./calls/listen-nav";
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay } from "./calls/tapedeck";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
@@ -6393,7 +6394,7 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
     }
     // Per-store talk cap (chains.maxTalkSeconds) wins over the global bail ceiling when set, so a
     // store the owner marked "wrap fast" gets a tighter Twilio TimeLimit — the cost guarantee.
-  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning });
+  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, listenNav: v.listenNav });
 
   // Governed bookkeeping: point the pre-inserted row at the room (so /pub/result resolves it before
   // connect), release the slot on a dial that never placed, and register a finalizer that frees the
@@ -6624,8 +6625,16 @@ wssTwilio.on("connection", (ws: WebSocket, _req: unknown, qRoom: string) => {
     let m: { event?: string; start?: { customParameters?: { room?: string }; streamSid?: string }; media?: { payload?: string; track?: string } };
     try { m = JSON.parse(data.toString()); } catch { return; }
     if (m.event === "start") room = m.start?.customParameters?.room || room || m.start?.streamSid || "";
-    else if (m.event === "media" && m.media?.payload && room && !bridgeLiveRooms.has(room)) fanout(room, m.media.payload, m.media.track || "inbound");
+    else if (m.event === "media" && m.media?.payload && room) {
+      // LISTENING NAV: this fork is the ONLY audio we have while the phone menu plays (the agent
+      // bridge doesn't exist yet), so it feeds the prompt detector that decides when each mapped
+      // step fires. Free — it is the same fork live-listen already runs. Must come before the
+      // bridgeLiveRooms gate, which only silences the LISTENER fanout, not our own ear.
+      listenNavFeed(room, m.media.payload, m.media.track);
+      if (!bridgeLiveRooms.has(room)) fanout(room, m.media.payload, m.media.track || "inbound");
+    }
   });
+  ws.on("close", () => { if (room) endListenNav(room); });
 });
 
 (httpServer as unknown as import("node:http").Server).on("upgrade", (req, socket, head) => {

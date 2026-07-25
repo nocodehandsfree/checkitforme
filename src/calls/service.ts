@@ -164,7 +164,7 @@ export async function buildRestockVars(
   specificProduct?: string,
   extraCategoryIds?: number[],
   kioskMode?: boolean,
-): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; say: string | null; connectAtSec: number | null; maxTalk: number | null; voiceId: string | null; voiceTuning: Record<string, unknown> | null; dynamicVars: Record<string, string> } | null> {
+): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; say: string | null; connectAtSec: number | null; maxTalk: number | null; voiceId: string | null; voiceTuning: Record<string, unknown> | null; listenNav: boolean; dynamicVars: Record<string, string> } | null> {
   const retailer = (await db.select().from(retailers).where(eq(retailers.id, retailerId)))[0];
   if (!retailer) return null;
   const category = (await db.select().from(categories).where(eq(categories.id, categoryId)))[0];
@@ -211,11 +211,21 @@ export async function buildRestockVars(
     } catch { /* ignore bad recipe */ }
   }
 
+  // LISTENING NAV (owner 07-25): fire each mapped step when the recording actually stops talking
+  // instead of at a fixed second. Setting `listen_nav`: "off" (default) | "all" | a comma list of
+  // chain names. Same recipe either way — only the WHEN changes — so a chain can be flipped on,
+  // listened to, and flipped back with no data migration. Single checks, scheduled checks and ZONE
+  // fires all resolve their call through this one builder, so they all get it together.
+  const lnRaw = ((await getSetting("listen_nav")) || "off").trim().toLowerCase();
+  const listenNav = lnRaw === "all"
+    || (!!chain?.name && lnRaw.split(",").map((x) => x.trim()).filter(Boolean).includes(chain.name.toLowerCase()));
+
   return {
     retailer, category, chainName: chain?.name ?? null,
     // Bridge-level keypad shortcut (chain-wide): pressed by OUR code at a fixed time, not the LLM.
     dtmf: chain?.dtmfShortcut ?? null,
     say,
+    listenNav,
     // ABC deterministic hand-off: open the billed agent at the chain's LEARNED time-to-human.
     // Guarded (connectAtSecFor): direct-answer chains and chains with no tree evidence NEVER get a
     // timer — the timer mutes the agent until it fires (the 2026-07-02 silent-agent bug). null =
@@ -538,7 +548,7 @@ export async function bridgeCheckCall(a: TriggerArgs) {
     // Human reached, billed agent open — hand the row to the normal EL ingest by conv id.
     db.update(callResults).set({ providerCallId: convId, status: "in_progress" }).where(eq(callResults.id, row.id))
       .catch((e) => console.error("bridge check connect update:", e));
-  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, apiKey: acct.apiKey, agentId: acct.agentId });
+  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, apiKey: acct.apiKey, agentId: acct.agentId, listenNav: v.listenNav });
   if (r.error || !r.room) {
     await slot.release(); // dial never placed → free the slot immediately
     await db.update(callResults).set({ status: "failed", summary: r.error || "bridge call failed" }).where(eq(callResults.id, row.id));
