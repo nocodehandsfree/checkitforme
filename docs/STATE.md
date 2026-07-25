@@ -2,39 +2,39 @@
 One screen. Every session updates this at close (≤40 lines). New truth REPLACES old — history is in
 git. Last updated: 2026-07-24 (Target store numbers filled; calling emergency root-caused).
 
-## The calling emergency (07-23 night) — cause found, fixed, one check from you closes it
-- Your failed tests all ran on the prior broken build; the real site was never affected. Engine code,
-  menu maps, store numbers and the agent's brain are identical to the last known-good state.
-- Fixed on staging: the call screen shows real steps · you can hear calls from the moment the store
-  picks up · Charlie joins only on a real human voice · nobody-answers calls end themselves unbilled.
-- YOUR one check: one Target or CVS call on staging, hands off, listening. Then say "promote".
+## The calling emergency (07-23 night) — cause found and fixed
+- Your failed tests ran on the prior broken build; the real site was never affected. Fixed on staging:
+  the call screen shows real steps · you hear calls from pickup · Charlie joins only on a real voice ·
+  nobody-answers calls end themselves unbilled.
 
 ## Admin fixes, live now (07-24)
-- The Live/Staging switch is BACK, top right on every page, with the new icons and plainer wording.
-- Restock "By store" shows real store logos instead of two-letter boxes (Live needs a promote).
-- Call rows show the status ICON only (tap for words); five squashed store logos fixed on live data.
+- The Live/Staging switch is BACK, top right on every page. Restock "By store" shows real store logos
+  (Live needs a promote). Call rows show the status ICON only; five squashed store logos fixed.
+
+## The phone menus are fixed on staging — go try one (07-25)
+- Calls no longer press or speak on a stopwatch. They now wait until the recording actually stops
+  talking, then press. That was the whole bug: a store with a longer greeting got talked over.
+- I drove two real calls. Target Topanga: pressed 8 seconds later, a person answered, real answer with
+  the set name. CVS: said "no" when the question actually ended instead of 10 seconds early, got
+  transferred, a person said nothing came in. Test site only, Target and CVS; the real site untouched.
+- Costs nothing extra. Both calls still ran over 5 cents, NOT from the menu: the clerk walked away for
+  25 seconds with the agent on the line. Talk time is the next thing to fix.
 
 ## Target: 70 stores called — the store number tells us which menu it has (07-24)
-- Number 3000 or higher = a small city or campus store, no service desk, press 3 for the person.
-  Below 3000 = a full store with the desk on 2, which is what we already press. 11 of 11 in a blind test.
-- The store number is now on EVERY Target we have. The 73 California ones that were blank: 72 filled
-  from Target's own store pages, address and phone both matched, live on the real site and staging.
-  The last one, East Palo Alto on E Bayshore Rd, is closed for good, so it is now muted with a
-  note saying so. New rule: any store we find closed gets muted the same way, never deleted.
-- The Calc page under-counts the phone bill: the phone company charges by the whole minute, so a call
-  one second past 60 costs double. Real limit is 40 seconds to a person, not 70. Detail in the report.
+- Number 3000 or higher = a small city or campus store, no service desk, press 3 for the person. Below
+  3000 = a full store with the desk on 2, what we already press. 11 of 11 in a blind test.
+- The store number is now on EVERY Target: 72 of the 73 blank California ones filled from Target's own
+  pages; the last, East Palo Alto, is closed for good and is muted with a note. New rule: a store we
+  find closed gets muted, never deleted.
+- The Calc page under-counted the phone bill (whole minutes, not seconds) — Admin has the fix order.
 
 ## Two work streams from before (unchanged)
 1. **Site fixes (five) — DONE on staging, waiting on you.** Check on your phone, then say "promote".
-2. **Admin spec agent parked** at the Admin `#preview` view — resumes on light-pass vs full-rebuild.
+   **Admin spec agent parked** at `#preview` — resumes on light-pass vs full-rebuild.
 
 ## Decisions waiting on YOU
-- Say "promote" to push the finished work to the real site (five site fixes + alerts and zone-lane
-  fixes ride along).
-- Target: use the store number to pick the right key, or have the caller listen (see above).
+- Say "promote" to push finished work to the real site (five site fixes + alerts and zone-lane fixes).
 - Light pass vs full rebuild of the Admin.
 - Hide the fake (simulated) poll rows from the Admin feedback queue? (yes / no)
-
-## Next actions (no decision needed)
-- Site and Admin work their queued fixes; Data chases the staging store-list overwrite. Full queue
-  with active / parked / dead marked: docs/tasks/INDEX.md.
+## Next actions
+- Site and Admin work their queues; Data chases the staging store-list overwrite. All: docs/tasks/INDEX.md.
