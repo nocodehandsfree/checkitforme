@@ -177,8 +177,12 @@ async function fireNext(room: string, via: "prompt" | "clock"): Promise<void> {
   }
 }
 
-/** Safety net: if the store never gives us a clean pause, fire on the learned time + grace. */
+/** Safety net: if the store never gives us a clean pause, fire on the learned time + grace.
+ *  Clears any pending fallback FIRST: the timer armed for the previous step is now stale, and if it
+ *  survives it fires this step early on the old step's clock. Caught on the first live Topanga call
+ *  (07-25) — step 2 went at 23s off step 1's 23s timer instead of waiting for its own prompt. */
 function armClockFallback(s: Session): void {
+  s.timers.forEach(clearTimeout); s.timers.length = 0;
   const step = s.steps[s.next];
   if (!step) return;
   const dueAt = Math.max(step.atSec + GRACE_SEC, s.lastFiredAtSec + MIN_STEP_GAP_SEC + 1);
