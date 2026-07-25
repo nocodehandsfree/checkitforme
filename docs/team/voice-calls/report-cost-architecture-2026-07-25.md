@@ -16,18 +16,31 @@ navigation effectively costs **1.4¢**, not zero. Cheaper navigation buys Charli
 
 ## The floor nobody can go under
 
-Charlie is **$0.00183/second**, measured off the ElevenLabs account.
+**CORRECTED 07-25 (the first figure was 15% high).** Charlie is **$0.00159/second**, from a clean
+before/after on two calls of known length: character_count 57,362 -> 58,286 = **924 credits for 88
+seconds** of agent time = 630 credits/min. The earlier 723 credits/min came from dividing a whole
+billing period's credits by a conversation list that under-counted the minutes. Always measure the
+rate with a before/after around calls you placed yourself.
 
 | Talk | Charlie alone |
 |---|---|
-| 10s | 1.8¢ |
-| 15s | 2.7¢ |
-| 20s | 3.7¢ |
-| **30s** | **5.5¢** |
+| 15s | 2.4¢ |
+| 20s | 3.2¢ |
+| **30s** | **4.8¢** |
 
-**30 seconds of Charlie is 5.5¢ before a single second of phone line.** So "CVS, hardest tree, 30
-seconds of talk, 5 cents" cannot be built. It is arithmetic, not engineering. The best possible CVS
-call with 30s of talk, with everything below built, is **9.1¢**.
+**Where that leaves us, with Charlie suspended through holds:**
+
+| | 20s talk | 30s talk |
+|---|---|---|
+| Direct store (human ~15s) | **4.7¢** | **5.6¢** |
+| Target / Alpha (human 27s) | **4.7¢** | **5.6¢** |
+| CVS / Bravo (human 64s) | **6.1¢** | **7.0¢** |
+
+**Target is already under 5¢ at 20 seconds of talk. CVS is not, and Charlie is not why** — CVS is
+6.1¢ because the call crosses 60 seconds and pays two whole minutes of line. The fix for CVS is a
+SHORTER ROUTE TO THE HUMAN, not a cheaper agent: get answered inside 40 seconds and it is 4.7¢ like
+everything else. A direct extension that skips the tree (the "learned direct lines" idea in
+COST_MODEL Part II §7) is worth 1.4¢ on every CVS call and nothing else comes close.
 
 ## The one rule that fixes the rest
 
