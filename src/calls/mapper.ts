@@ -233,10 +233,18 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
   // measure the REAL seconds, then optimize from there. Fresh discovery only if the replay misses twice.
   let lockedRecipe: NavRecipe | null = null;
   try { const r = ch.navRecipe ? (JSON.parse(ch.navRecipe) as NavRecipe) : null; if (r && Array.isArray(r.steps) && r.steps.length) lockedRecipe = r; } catch { /* fresh discovery */ }
+  // A VERIFY replay speaks the known words on a timer, so the store's own recordings are never
+  // transcribed and the call teaches us nothing about WHICH recording each step follows. Proved on the
+  // 07-26 CVS Anaheim call: the route verified (62s, faster than the stored 67s) but came back with no
+  // recording plan at all. So a chain whose map has no recording plan yet LISTENS first — one pass that
+  // hears the menu out, with the known path riding along as the recovery playbook — and picks up the
+  // replay from there. Chains that already carry a plan go straight to verify, as before.
+  const hasPromptPlan = (lockedRecipe?.steps || []).some((st) => typeof (st as { afterPrompt?: number }).afterPrompt === "number");
+  const needsListen = !!lockedRecipe && !hasPromptPlan;
 
   const run: MapperRun = {
     chainId, chainName: ch.name,
-    phase: lockedRecipe ? "verify" : "listen", running: true,
+    phase: lockedRecipe && !needsListen ? "verify" : "listen", running: true,
     attempt: 0, callsToday: usedToday,
     usedStores: [], store: null, rotate: false, target, needsTarget: false, reachedSecs: [],
     benchmark: ch.navSeconds ?? null,   // what we're trying to beat (the CVS benchmark readout)

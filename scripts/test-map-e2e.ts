@@ -77,6 +77,23 @@ async function main() {
     ok((await versionsFor(cvs.id)).length === 1, "still one version — history only grows when the route changes");
   }
 
+  console.log("▶ a slower call still hands over what it learned about the recordings");
+  {
+    // The 07-26 CVS finding: a verify replay confirms the route but hears no recordings, so the live
+    // map can be correct and still have no recording plan. The listen pass that follows is often a
+    // second or two slower — its plan must survive that.
+    const noPlan: MapRecipe = { type: "voice", seconds: 40, steps: [{ action: "say", value: "front", atSec: 20 }] };
+    const [ch] = await db.insert(chains).values({ name: "Test Listen Later" }).returning();
+    await proposeVersion({ chainId: ch.id, recipe: noPlan, source: "verify",
+      call: { at: now(), day: "2026-07-26", storeId: 1, seconds: 40, reachedHuman: true, path: "say:front" } });
+    const withPlan: MapRecipe = { type: "voice", seconds: 43, steps: [{ action: "say", value: "front", atSec: 22, afterPrompt: 2 }] };
+    await proposeVersion({ chainId: ch.id, recipe: withPlan, source: "sweep",
+      call: { at: now(), day: "2026-07-26", storeId: 2, seconds: 43, reachedHuman: true, path: "say:front" } });
+    const live = await activeMap(ch.id);
+    ok(live?.recipe.steps[0].afterPrompt === 2, "the recording plan is kept even though the call was slower");
+    ok(live?.seconds === 40, "and the faster time is still the one we ship");
+  }
+
   console.log("▶ a DIFFERENT route waits for a person to approve it");
   let proposedId = 0;
   {

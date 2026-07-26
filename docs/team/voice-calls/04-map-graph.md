@@ -55,6 +55,20 @@ observations + unknowns = the replay trail) · `GET /api/admin/map/unknowns` ·
 `POST /api/admin/map/version/:id/approve|reject` · `POST /api/admin/map/unknown/:id` ·
 `GET|POST /api/admin/map/sweep…`. Dashboard SCREENS belong to Admin — this side only serves the data.
 
+## 6b. What the first real call proved (CVS East La Palma, Anaheim, 07-25 23:10 PT)
+Verify replay of the locked route: said "no" @26s, "front" @38s, "general" @48s, transferred at 62s —
+**faster than the stored 67s**, route confirmed at a second store, confidence 45 → 65 automatically,
+evidence and observation written for replay. Two findings:
+1. **A verify replay teaches no recording plan.** It speaks on a timer, so the store's recordings are
+   never transcribed and `afterPrompt` stays empty. FIXED: a chain whose map has no recording plan now
+   LISTENS first (one pass, known path riding along as the recovery playbook), then replays. And a
+   slower listen pass no longer loses its plan — it is grafted onto the live route (the faster seconds
+   are still what we ship).
+2. **NOT ours to fix — for Echo:** time-to-human was scored on the recording "Okay, transferring you
+   now", not on a person. So the learned 62s is when the transfer message played; the clerk speaks
+   later (~17s, measured 07-25). Every chain that ends in a transfer inherits this, and the paid agent
+   joins that much early. Recommend the runtime treat a transfer announcement as still-navigating.
+
 ## 7. Fixed on the way past
 `lockRecipeToChain` wrote the bare first digit ("4") into `dtmfShortcut`, but the live bridge only
 understands the timed form ("2@8,2@16") and plays NOTHING without it — so every chain locked through

@@ -309,7 +309,20 @@ export async function proposeVersion(opts: {
     // slower re-measure is ring variance, not a worse route.
     const faster = typeof opts.recipe.seconds === "number" && typeof prevActive.seconds === "number"
       && opts.recipe.seconds > 0 && opts.recipe.seconds < prevActive.seconds;
-    const recipe = faster ? opts.recipe : prevActive.recipe;
+    // …but a slower call can still teach us something the live map does not have: WHICH recording each
+    // step follows. That is the whole point of listening, so never throw it away just because the call
+    // took two seconds longer — graft the recording plan onto the live route and keep its faster times.
+    const incomingPlan = opts.recipe.steps.some((s) => typeof s.afterPrompt === "number");
+    const livePlan = prevActive.recipe.steps.some((s) => typeof s.afterPrompt === "number");
+    const addsPlan = incomingPlan && !livePlan;
+    let recipe = prevActive.recipe;
+    if (faster) recipe = opts.recipe;
+    else if (addsPlan) {
+      recipe = {
+        ...prevActive.recipe,
+        steps: prevActive.recipe.steps.map((s, i) => ({ ...s, afterPrompt: opts.recipe.steps[i]?.afterPrompt })),
+      };
+    }
     const seconds = faster ? opts.recipe.seconds : prevActive.seconds;
     await client.execute({
       sql: `UPDATE nav_map_versions SET evidence=?, confidence=?, confidence_label=?, why=?, recipe=?, seconds=? WHERE id=?`,
