@@ -227,13 +227,12 @@ export async function learnedSyncTick(): Promise<{ ok: boolean; updated?: number
       const row = name ? byName.get(name) : null;
       if (!row) continue;
       if (isDirectDefaultChain(name)) { skipped++; continue; } // curated direct default owns its nav
-      // NEWER WINS (owner 07-26): mapping now happens on STAGING — that is where we learn, test and
-      // improve a route before any of it reaches production. This pull was written when the opposite
-      // was true, and it overwrote a freshly-learned staging route within three minutes. So a chain
-      // staging has learned MORE RECENTLY than prod is left alone; prod only fills in what staging
-      // has not learned (or has not touched since prod last did).
-      const mine = Number(row.navUpdatedAt ?? 0), theirs = Number(pc.navUpdatedAt ?? 0);
-      if (mine > theirs) { skipped++; continue; }
+      // THE RECORD WINS, EXCEPT FOR WHAT IT HAS NOT SEEN (owner 07-26). Both environments now run the
+      // same recipes: a mapping call on staging writes to the record (production, the map Admin shows)
+      // and reads the result back through this pull, so the two can never disagree. The one exception
+      // is a route staging learned but could NOT push — flagged unshared, and skipped here so a network
+      // blip does not erase a real mapping call before somebody has looked at it.
+      if (((await getSetting(`map_unshared:${row.id as number}`)) || "").trim()) { skipped++; continue; }
       const desired: Record<string, unknown> = {};
       for (const k of CHAIN_LEARNED) desired[k] = (k in pc) ? pc[k] : row[k];
       // silent-agent invariant: a direct chain must carry NO tree-seconds (a stray value arms the connect

@@ -21,7 +21,7 @@ import { isCallingPaused } from "../redis";
 import { placeNavCall, getNavSession, defaultWorkflowAsk, classifyMode, menuHasCustomerService, NavRecipe, NavStep } from "./navigator";
 import { storeForChain, lockRecipeToChain, recipeFromSteps } from "./trainer-batch";
 import { chainDialable } from "./recipe";
-import { proposeVersion, pathSignature, reportUnknown, MapRecipe, MapStep } from "./mapgraph";
+import { proposeVersion, pathSignature, reportUnknown, recordObservation, MapRecipe, MapStep } from "./mapgraph";
 import { recipeFromCall, evidenceFromCall, CapturedStep } from "./map-capture";
 
 const DAILY_CAP = 60;        // runaway guard only — owner 2026-07-10: the old 12/day cap is gone, a
@@ -29,6 +29,8 @@ const DAILY_CAP = 60;        // runaway guard only — owner 2026-07-10: the old
                              // via the "mapper_daily_cap" setting (0/unset = this default).
 const GAP_SEC = 75;          // spacing between calls to the same chain (politeness + IVR cool-down)
 const CALL_MAX_SEC = 150;    // per-call watch window (slow IVRs take ~95s to a human)
+const TRANSFER_WAIT_SEC = 40; // after "transferring you now", how long we allow for a real voice before
+                              // hanging up. The transfer is NOT the person (the 07-26 CVS finding).
 const BASELINE_TRIES = 5;    // no human in this many attempts → needs-review, stop burning calls
 
 export interface Experiment {
@@ -170,7 +172,10 @@ async function finalizeAndLock(run: MapperRun, chainId: number, recipe: NavRecip
 
 /** The bit of a nav session this file needs to write evidence — kept structural so mapper never has
  *  to reach further into the navigator. */
-interface NavSessionLike { id?: string; steps?: unknown[]; humanAtSec?: number | null; status?: string }
+interface NavSessionLike {
+  id?: string; steps?: unknown[]; humanAtSec?: number | null; status?: string;
+  transferAtSec?: number | null; greeting?: string;
+}
 
 /** Write this call into the versioned map. Best-effort by design: a map-store hiccup must never take
  *  down a mapping run that is holding a live phone call open. */
@@ -192,9 +197,21 @@ async function recordMapVersion(run: MapperRun, chainId: number, recipe: NavReci
     const call = evidenceFromCall({
       navId: session?.id, storeId: run.store?.id, storeName: run.store?.name, steps,
       seconds: recipe.seconds ?? null, reachedHuman: true, path: pathSignature(mapRecipe),
+      greeting: session?.greeting, transferAtSec: session?.transferAtSec ?? null,
       note: `${run.phase} attempt ${run.attempt}`,
     });
     await proposeVersion({ chainId, recipe: mapRecipe, source: run.phase === "verify" ? "verify" : "sweep", call });
+    // THE WAIT AFTER THE TRANSFER, measured. The store announces the hand-off and the person speaks
+    // some seconds later; the paid agent currently opens on the announcement, so this gap is money
+    // burned on every check of this chain. Recorded per call so the dashboard can show it and Echo can
+    // aim at it — Mapper measures, the runtime decides what to do about it.
+    if (typeof session?.transferAtSec === "number" && typeof recipe.seconds === "number" && recipe.seconds > session.transferAtSec) {
+      await recordObservation({
+        chainId, storeId: run.store?.id, navId: session?.id, kind: "transfer-gap",
+        expected: `transfer at ${session.transferAtSec}s`, observed: `person at ${recipe.seconds}s`,
+        detail: { gapSeconds: recipe.seconds - session.transferAtSec, greeting: session?.greeting ?? null },
+      });
+    }
   } catch { /* knowledge is written best-effort — never break a live mapping call */ }
 }
 
@@ -297,11 +314,16 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
         ? known.map((st) => (st.action === "press" ? `press ${st.value}` : `say "${st.value}"`)).join(", then ")
           + ". If the menu restarts, speaks Spanish first, or mentions the pharmacy being closed, keep answering each prompt with these words in this order — they route to the FRONT STORE."
         : undefined;
+      // REACH A PERSON, THEN HANG UP (owner 07-26). A mapping call no longer asks the stock question:
+      // hearing a real voice is the proof the route worked, and their greeting says which desk it was.
+      // Nobody is troubled and the call ends seconds earlier. Both caps below are the ROI guard — a
+      // call that is going nowhere is stopped instead of running to the ceiling.
       const placed = await placeNavCall(
         chainId, store.id, store.name, store.phone,
         undefined, hint, barge, undefined,
-        { product: "Pokémon cards" },
-        { listenFirst: isListen, askVoiceId: ask.voiceId, askText: ask.text, target: run.target },
+        undefined,
+        { listenFirst: isListen, askVoiceId: ask.voiceId, askText: ask.text, target: run.target,
+          maxSec: CALL_MAX_SEC, transferWaitSec: TRANSFER_WAIT_SEC },
       );
       if (placed.error || !placed.id) {
         run.log.push({ n: run.attempt, phase: run.phase, store: store.name, experiment: ex?.label, outcome: "dial failed: " + (placed.error || "?") });

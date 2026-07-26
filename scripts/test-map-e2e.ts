@@ -139,6 +139,24 @@ async function main() {
     ok((await openUnknowns(200)).some((u) => u.chainId === cvs.id && u.kind === "drift"), "drift lands in the review queue with its evidence");
   }
 
+  console.log("▶ the record accepts a route learned on the other environment");
+  {
+    // What /api/admin/map/ingest does once it has resolved the chain by name and the store by phone:
+    // apply it exactly as if the call had happened here, so both environments run the same recipe.
+    const [ch] = await db.insert(chains).values({ name: "Test Shared Chain" }).returning();
+    const shared: MapRecipe = { type: "keypad", seconds: 22, steps: [{ action: "press", value: "3", atSec: 9, afterPrompt: 1 }] };
+    const res = await proposeVersion({
+      chainId: ch.id, recipe: shared, source: "follower", local: true,
+      call: { at: now(), day: "2026-07-26", storeId: 9, seconds: 22, reachedHuman: true, path: "press:3", greeting: "Front store, this is Ana" },
+    });
+    ok(res.activated && res.version.status === "active", "a route learned elsewhere lands on the record and goes live");
+    const live = await activeMap(ch.id);
+    ok(live?.recipe.steps[0].afterPrompt === 1, "with its recording plan intact");
+    ok(live?.evidence.calls[0].greeting === "Front store, this is Ana", "and the greeting proves which desk answered");
+    const chRow = (await db.select().from(chains).where(eq(chains.id, ch.id)))[0];
+    ok(chRow.dtmfShortcut === "3@9", `the chain row both environments read is stamped (${chRow.dtmfShortcut})`);
+  }
+
   console.log("▶ what the dashboard reads");
   {
     const rows = await graphSummary();
