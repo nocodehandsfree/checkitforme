@@ -37,7 +37,7 @@ import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
 import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
 import { listenNavFeed, endListenNav } from "./calls/listen-nav";
 // THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
-import { emit, markNow, closeReceipt, linkCall, rollup, getReceipt } from "./calls/events";
+import { emit, markNow, closeReceipt, linkCall, rollup, getReceipt, type Rollup } from "./calls/events";
 import { installReceiptStore, currentRates } from "./calls/receipt-store";
 import { costCall, money } from "./calls/cost";
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
@@ -1177,34 +1177,39 @@ app.get("/api/calls/:id/receipt", async (c) => {
     ? live.events.map((e) => ({ atSec: e.atSec, kind: e.kind, note: e.note ?? "", detail: e.detail ?? null }))
     : rows.map((r) => ({ atSec: r.atSec, kind: r.kind, note: r.note ?? "", detail: r.detail ? JSON.parse(r.detail) as unknown : null }));
 
-  // Time to answer is read back off the timeline, not off navSeconds: the timeline counts from the
-  // moment we dialled, while navSeconds counts from where the bridge socket opened. Same call, two
-  // different zeroes — so a replay would have disagreed with itself.
-  const humanAt = timeline.find((t) => t.kind === "human_detected")?.atSec ?? null;
-  const sums = live ? rollup(live) : {
-    lane: call.lane ?? "unknown",
+  // A finished call is served from its own stamped row, so a replay always agrees with the numbers
+  // the reports are summing. A null here means we never measured it — not that it was zero.
+  const steps = timeline.filter((t) => t.kind === "alpha_press" || t.kind === "bravo_say");
+  const sums: Rollup = live ? rollup(live) : {
+    lane: (call.lane ?? "unknown") as Rollup["lane"],
     callSecs: call.callSeconds ?? 0,
-    timeToAnswerSecs: humanAt,
-    navSecs: call.navSeconds ?? 0,
-    charlieSecs: call.charlieSeconds ?? 0,
+    navSeconds: call.navSeconds ?? null,
+    talkSeconds: call.talkSeconds ?? null,
+    charlieConnectedSeconds: call.charlieConnectedSeconds ?? 0,
+    charlieTalkingSeconds: call.charlieTalkingSeconds ?? 0,
+    charlieSilentSeconds: call.charlieSilentSeconds ?? 0,
     speakingSecs: call.charlieSpeakingSeconds ?? 0,
     listeningSecs: call.charlieListeningSeconds ?? 0,
-    silentSecs: call.charlieSilentSeconds ?? 0,
-    neededSecs: (call.charlieSpeakingSeconds ?? 0) + (call.charlieListeningSeconds ?? 0),
-    avoidableSecs: call.charlieSilentSeconds ?? 0,
-    stepsFired: timeline.filter((t) => t.kind === "nav_step").length,
-    stepsOnPause: timeline.filter((t) => t.kind === "nav_step" && (t.detail as { via?: string } | null)?.via === "prompt").length,
-    charlieJoined: (call.charlieSeconds ?? 0) > 0,
+    ringSeconds: call.ringSeconds ?? 0,
+    holdSeconds: call.holdSeconds ?? null,
+    billedMinutes: call.billedMinutes ?? Math.ceil((call.callSeconds ?? 0) / 60),
+    menuSeconds: call.menuSeconds ?? null,
+    stepsFired: steps.length,
+    stepsOnPause: steps.filter((t) => (t.detail as { via?: string } | null)?.via === "prompt").length,
+    charlieJoined: (call.charlieConnectedSeconds ?? 0) > 0,
   };
   const cost = live
-    ? costCall({ callSecs: sums.callSecs, charlieSecs: sums.charlieSecs, avoidableSecs: sums.avoidableSecs, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - sums.navSecs)] }, await currentRates())
-    : { lineUsd: call.costLineUsd ?? 0, forkUsd: call.costForkUsd ?? 0, charlieUsd: call.costCharlieUsd ?? 0, clipsUsd: call.costClipsUsd ?? 0, totalUsd: call.costTotalUsd ?? 0, billedMinutes: Math.ceil((call.callSeconds ?? 0) / 60), charlieSecs: call.charlieSeconds ?? 0, avoidableUsd: call.costAvoidableUsd ?? 0 };
+    ? costCall({ callSecs: sums.callSecs, charlieSecs: sums.charlieConnectedSeconds, avoidableSecs: sums.charlieSilentSeconds, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))] }, await currentRates())
+    : { lineUsd: call.costLineUsd ?? 0, forkUsd: call.costForkUsd ?? 0, charlieUsd: call.costCharlieUsd ?? 0, clipsUsd: call.costClipsUsd ?? 0, totalUsd: call.costTotalUsd ?? 0, billedMinutes: sums.billedMinutes, charlieSecs: sums.charlieConnectedSeconds, avoidableUsd: call.costAvoidableUsd ?? 0 };
 
   return c.json({
     call: {
       id: call.id, room: call.room, status: call.status, statusKey: call.statusKey,
       retailerId: call.retailerId, categoryId: call.categoryId, summary: call.summary,
       transcript: call.transcript, startedAt: call.startedAt, completedAt: call.completedAt,
+      // Provenance: which menu version ran, which check this retries, which build served it.
+      mapVersion: call.mapVersion ?? null, attemptOf: call.attemptOf ?? null,
+      engineVersion: call.engineVersion ?? null,
     },
     live: !!live,
     seconds: sums,
@@ -6377,7 +6382,7 @@ app.post("/twiml/bridge-status", async (c) => {
     roomCallProgress.set(room, { status, at: Date.now() });
     // The carrier's own view of the call goes on the receipt — the only truthful source for when the
     // line was actually answered (our sockets open later, and on a menu call much later).
-    if (status === "ringing") emit(room, "ringing", "The store's phone is ringing");
+    if (status === "ringing") emit(room, "ringing", "The store's phone is ringing", { leg: "store" });
     if (status === "in-progress") { markNow(room, "answeredMs"); emit(room, "connected", "The line was answered"); }
     if (["completed", "busy", "failed", "no-answer", "canceled"].includes(status)) {
       setTimeout(() => roomCallProgress.delete(room), 60_000);
@@ -6388,7 +6393,7 @@ app.post("/twiml/bridge-status", async (c) => {
       // The carrier says the call is over — this is the truthful end, so the receipt closes and
       // persists HERE. The finalizer above may still be writing the verdict; the roll-up is stitched
       // onto the call row by the sink, which looks the row up by room.
-      closeReceipt(room, status === "completed" ? "Call ended" : `Call ended (${status})`);
+      closeReceipt(room, status === "completed" ? "Call ended" : `Call ended (${status})`, status);
     }
   }
   return c.body(null, 204);

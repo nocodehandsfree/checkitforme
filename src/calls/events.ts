@@ -20,21 +20,29 @@
 // connected time into speaking / listening / silent is not how we save money; it is how we PROVE how
 // many seconds we paid for that nobody needed. That number is `avoidableSecs`.
 
-/** Everything the runtime can record. The spec's minimum list, plus what the lanes actually do. */
+/**
+ * THE CLOSED SET. These sixteen and no others — the dashboard is built against exactly this list
+ * (Addie, 07-26), so a new kind would silently fall off the screen. Anything finer goes in `detail`,
+ * never in a new kind: which key we pressed, which phrase we said, which leg was ringing, why we
+ * hung up. Never delete an event; the Admin only ever reads them.
+ */
 export type EventKind =
-  // lifecycle
-  | "call_started" | "ringing" | "connected" | "completed"
-  // routing
-  | "lane" | "nav_armed" | "nav_step" | "nav_done"
-  // the doorman: who/what is on the line
-  | "ear_open" | "desk_ringing" | "ring_unanswered" | "human_detected"
-  | "voicemail" | "hold" | "transfer" | "gave_up" | "unknown"
-  // the reasoning layer
-  | "charlie_joined" | "charlie_left"
-  // deterministic conversation lane (Delta)
-  | "delta_decision"
-  // outcome
-  | "inventory_status";
+  | "dialed"          // we asked the carrier to dial. detail: the lane we PLANNED, and the mapped steps
+  | "ringing"         // a phone is ringing. detail.leg: "store" (before pickup) | "desk" (after a transfer)
+  | "connected"       // the line was answered
+  | "ivr_detected"    // this store has a phone menu and we are about to walk it
+  | "alpha_press"     // we sent a keypad tone. detail: the key, the learned second, what triggered it
+  | "bravo_say"       // we said a mapped menu word. detail: the phrase, the learned second, the trigger
+  | "human_detected"  // a real person is on the line
+  | "charlie_join"    // the billed reasoning session opened — the money clock starts here
+  | "charlie_leave"   // it closed
+  | "hold_start"      // the clerk walked away / hold music, with the session still open
+  | "hold_end"
+  | "transfer"        // the menu handed us to another extension
+  | "voicemail"       // a machine, not a person
+  | "unknown"         // something we could not classify. detail says what we saw
+  | "verdict"         // the answer the customer got
+  | "hangup";         // the call ended. detail: why
 
 /** Which lane walked this call to a human. Runtime names, from the spec. */
 export type Lane = "direct" | "alpha" | "bravo" | "delta" | "unknown";
@@ -73,11 +81,17 @@ export interface Meters {
   speakingMs: number;
   /** Store-side audio loud enough to be someone talking, while the agent was connected. */
   listeningMs: number;
+  /** A phone ringing on the far end WHILE the agent was connected and billing — a transfer to a desk
+   *  nobody is at. Identified by the network's own ring frequencies, not guessed from loudness. */
+  ringingMs: number;
+  /** The clerk walked away or put us on hold with the agent still connected. Not measured yet — it
+   *  arrives with the hold-handback work, and stays NULL until then so nobody reads a real zero. */
+  holdMs: number | null;
 }
 
 const zeroMeters = (): Meters => ({
   charlieOpenMs: null, charlieCloseMs: null, answeredMs: null, humanMs: null,
-  navEndMs: null, endMs: null, speakingMs: 0, listeningMs: 0,
+  navEndMs: null, endMs: null, speakingMs: 0, listeningMs: 0, ringingMs: 0, holdMs: null,
 });
 
 export interface Receipt {
@@ -121,8 +135,10 @@ export function openReceipt(room: string, opts?: { lane?: Lane; planned?: Receip
   };
   receipts.set(room, r);
   setTimeout(() => { if (receipts.get(room) === r) receipts.delete(room); }, RECEIPT_TTL_MS);
-  emit(room, "call_started", opts?.note || "Dialing the store", { lane: r.lane, steps: r.planned.length });
-  if (opts?.lane) emit(room, "lane", laneNote(opts.lane), { lane: opts.lane });
+  // The PLANNED lane rides in the detail, never as the row's answer. The row gets the route that
+  // really ran, worked out at the end from what actually fired (Addie: "the real route, not the
+  // chain's guess"). Plan and reality sitting side by side is how a bad map shows itself.
+  emit(room, "dialed", opts?.note || "Dialing the store", { plannedLane: r.lane, plan: r.planned });
   return r;
 }
 
@@ -167,12 +183,18 @@ export function linkProviderCall(room: string, providerCallId: string): void {
   if (r && !r.closed) r.providerCallId = providerCallId;
 }
 
-/** Set (or correct) the lane once the runtime knows which one it really used. */
-export function setLane(room: string, lane: Lane): void {
-  const r = receipts.get(room);
-  if (!r || r.closed || r.lane === lane) return;
-  r.lane = lane;
-  emit(room, "lane", laneNote(lane), { lane });
+/**
+ * The route that ACTUALLY ran, read back off what really fired — not the plan we started with.
+ * A store mapped as a keypad menu that answered on the first ring really ran direct, and the row
+ * must say so, or nobody can tell that a lane has quietly stopped being used.
+ */
+export function actualLane(r: Receipt): Lane {
+  const kinds = new Set(r.events.map((e) => e.kind));
+  if (kinds.has("bravo_say")) return "bravo";
+  if (kinds.has("alpha_press")) return "alpha";
+  // Nothing was pressed or said. If the call got anywhere at all, it rang straight through.
+  if (kinds.has("human_detected") || kinds.has("connected")) return "direct";
+  return "unknown";
 }
 
 /** Stamps: a moment in the call. Every caller measures from ITS OWN start (the bridge socket opens
@@ -189,22 +211,22 @@ export function markNow(room: string, key: StampKey): void {
   } catch { /* recording must never break a call */ }
 }
 
-/** Durations: add milliseconds to a running total. Only the two audio meters accumulate. */
-export function addMs(room: string, key: "speakingMs" | "listeningMs", ms: number): void {
+/** Durations: add milliseconds to a running total. */
+export function addMs(room: string, key: "speakingMs" | "listeningMs" | "ringingMs" | "holdMs", ms: number): void {
   try {
     const r = receipts.get(room);
     if (!r || r.closed || !Number.isFinite(ms) || ms <= 0) return;
-    r.meters[key] += ms;
+    r.meters[key] = (r.meters[key] ?? 0) + ms;
   } catch { /* recording must never break a call */ }
 }
 
 export function getReceipt(room: string): Receipt | null { return receipts.get(room) ?? null; }
 
 /** Close the receipt and hand it to the sink exactly once. */
-export function closeReceipt(room: string, note?: string): Receipt | null {
+export function closeReceipt(room: string, note?: string, reason?: string): Receipt | null {
   const r = receipts.get(room);
   if (!r || r.closed || flushed.has(room)) return null;
-  emit(room, "completed", note || "Call ended");
+  emit(room, "hangup", note || "Call ended", reason ? { reason } : undefined);
   r.closed = true;
   if (r.meters.endMs === null) r.meters.endMs = Math.max(0, Date.now() - r.startMs);
   // A session still open when the line drops was billing right up to the end.
@@ -217,29 +239,42 @@ export function closeReceipt(room: string, note?: string): Receipt | null {
 
 // ---- the roll-up ----------------------------------------------------------------------------
 
-/** The numbers a person actually asks for, derived from a finished receipt. Pure — unit-tested. */
+/**
+ * What a finished check records. These field names ARE the dashboard's contract (Addie, 07-26) —
+ * renaming one silently blanks a column on her screen. Pure, and unit-tested.
+ *
+ * A number that we do not truly measure is `null`, never 0. "We never checked" and "it was zero"
+ * are different facts and a dashboard must be able to tell them apart.
+ */
 export interface Rollup {
+  /** The route that really ran, from what actually fired. Never the chain's guess. */
   lane: Lane;
   /** Whole seconds the carrier leg was up. */
   callSecs: number;
-  /** Seconds from dial until a real person was on the line. Null = never reached one. */
-  timeToAnswerSecs: number | null;
-  /** Seconds spent walking the menu (dial → menu finished). 0 on a direct-dial store. */
-  navSecs: number;
-  /** Seconds the billed reasoning session was open. This is what we pay for. */
-  charlieSecs: number;
-  /** Of those seconds: agent talking / a person talking / nobody talking. They sum to charlieSecs. */
+  /** Dial → a person is on the line. Null = we never reached one. */
+  navSeconds: number | null;
+  /** Person on the line → hang up. Null = we never reached one. */
+  talkSeconds: number | null;
+  /** Session open, total. THIS is what we are billed. */
+  charlieConnectedSeconds: number;
+  /** Of that, seconds somebody was actually speaking. Connected minus this is the waste. */
+  charlieTalkingSeconds: number;
+  /** The waste, spelled out so nobody has to subtract. */
+  charlieSilentSeconds: number;
+  /** The two halves of talking time, kept because they answer different questions. */
   speakingSecs: number;
   listeningSecs: number;
-  silentSecs: number;
-  /** Seconds Charlie was on the line with someone actually talking — what we needed to buy. */
-  neededSecs: number;
-  /** Seconds Charlie was on the line with dead air — what we would like back. */
-  avoidableSecs: number;
-  /** How many mapped steps fired, and how many of those fired on a real pause vs the clock. */
+  /** A desk ringing while the session was open and billing. */
+  ringSeconds: number;
+  /** Clerk away / hold music while the session was open. Null until hold detection ships. */
+  holdSeconds: number | null;
+  /** Whole minutes the carrier charged, rounded up. */
+  billedMinutes: number;
+  /** Seconds spent walking the menu (dial → menu finished). Null on a store with no menu. */
+  menuSeconds: number | null;
+  /** How many mapped steps fired, and how many fired on a real pause instead of the clock. */
   stepsFired: number;
   stepsOnPause: number;
-  /** Did the reasoning layer ever join? */
   charlieJoined: boolean;
 }
 
@@ -253,7 +288,7 @@ export function rollup(r: Receipt): Rollup {
   const talkMs = Math.min(charlieMs, m.speakingMs + m.listeningMs);
   const speakingMs = Math.min(m.speakingMs, talkMs);
   const listeningMs = Math.max(0, talkMs - speakingMs);
-  const steps = r.events.filter((e) => e.kind === "nav_step");
+  const steps = r.events.filter((e) => e.kind === "alpha_press" || e.kind === "bravo_say");
   // The three parts MUST add back up to the billed seconds. Rounding each one on its own lets them
   // miss by a second, which on a dashboard reads as a bug in the meter. So the two measured parts
   // round, and dead air is whatever is left — it is the derived number, not a measured one.
@@ -261,17 +296,24 @@ export function rollup(r: Receipt): Rollup {
   const speakingSecs = Math.min(sec(speakingMs), charlieSecs);
   const listeningSecs = Math.min(sec(listeningMs), charlieSecs - speakingSecs);
   const silentSecs = charlieSecs - speakingSecs - listeningSecs;
+  const callSecs = sec(m.endMs ?? 0);
+  // Ringing on the far end is NOT someone talking, so it comes out of listening before the split —
+  // otherwise a desk ringing into an empty room would read as a conversation we needed to pay for.
+  const ringSeconds = Math.min(sec(m.ringingMs), charlieSecs);
   return {
-    lane: r.lane,
-    callSecs: sec(m.endMs ?? 0),
-    timeToAnswerSecs: m.humanMs !== null ? sec(m.humanMs) : null,
-    navSecs: m.navEndMs !== null ? sec(m.navEndMs) : 0,
-    charlieSecs,
+    lane: actualLane(r),
+    callSecs,
+    navSeconds: m.humanMs !== null ? sec(m.humanMs) : null,
+    talkSeconds: m.humanMs !== null ? Math.max(0, callSecs - sec(m.humanMs)) : null,
+    charlieConnectedSeconds: charlieSecs,
+    charlieTalkingSeconds: speakingSecs + listeningSecs,
+    charlieSilentSeconds: silentSecs,
     speakingSecs,
     listeningSecs,
-    silentSecs,
-    neededSecs: speakingSecs + listeningSecs,
-    avoidableSecs: silentSecs,
+    ringSeconds,
+    holdSeconds: m.holdMs !== null ? sec(m.holdMs) : null,
+    billedMinutes: callSecs > 0 ? Math.ceil(callSecs / 60) : 0,
+    menuSeconds: m.navEndMs !== null ? sec(m.navEndMs) : null,
     stepsFired: steps.length,
     stepsOnPause: steps.filter((e) => e.detail?.via === "prompt").length,
     charlieJoined: m.charlieOpenMs !== null,

@@ -5,8 +5,8 @@
 // the money clock starts when the agent opens, dead air is counted honestly, the lane is stamped
 // from the plan, and the phone line bills whole minutes. No database, no network, no clock games.
 import {
-  openReceipt, emit, markNow, addMs, closeReceipt, rollup, setEventSink, setLane,
-  getReceipt, laneNote, laneFor, _receiptFrom, _reset, type Receipt,
+  openReceipt, emit, markNow, addMs, closeReceipt, rollup, setEventSink,
+  getReceipt, laneNote, laneFor, actualLane, _receiptFrom, _reset, type Receipt, type RtEvent,
 } from "../src/calls/events";
 import { costCall, costPerResult, money, MEASURED_RATES, USD } from "../src/calls/cost";
 
@@ -34,24 +34,43 @@ console.log("▶ a receipt opens at dial and records in call order");
   _reset();
   const r = openReceipt("room-1", { lane: "alpha", planned: [{ action: "press", value: "2", atSec: 8 }] });
   emit("room-1", "ringing", "The store's phone is ringing");
-  emit("room-1", "nav_step", "Pressed 2 at 16s", { via: "prompt" });
-  ok(r.events[0].kind === "call_started", "the first line is always that we dialled");
-  ok(r.events[1].kind === "lane", "the lane is on the receipt before anything happens");
-  ok(r.events.map((e) => e.kind).includes("nav_step"), "menu steps land on the receipt");
+  emit("room-1", "alpha_press", "Pressed 2 at 16s", { via: "prompt" });
+  ok(r.events[0].kind === "dialed", "the first line is always that we dialled");
+  ok((r.events[0].detail as { plannedLane?: string }).plannedLane === "alpha", "the PLANNED lane rides in the detail, not as the answer");
+  ok(r.events.map((e) => e.kind).includes("alpha_press"), "menu steps land on the receipt");
   ok(openReceipt("room-1").events.length === r.events.length, "opening twice does not restart a call");
   ok(getReceipt("room-1") === r, "the receipt is findable by room while the call is live");
 }
 
 // ---------------------------------------------------------------------------------------------
-console.log("▶ the lane can be corrected once the runtime knows better");
+console.log("▶ the row records the route that REALLY ran, not the one we planned");
 {
-  _reset();
-  openReceipt("room-2", { lane: "unknown" });
-  setLane("room-2", "bravo");
-  setLane("room-2", "bravo"); // same lane again
-  const r = getReceipt("room-2")!;
-  ok(r.lane === "bravo", "the corrected lane sticks");
-  ok(r.events.filter((e) => e.kind === "lane").length === 2, "a repeat of the same lane does not write a second line");
+  const ev = (kind: RtEvent["kind"]): RtEvent => ({ atMs: 0, atSec: 0, kind });
+  // Mapped as a keypad store, but it answered on the first ring and nothing was ever pressed.
+  const rang = _receiptFrom({ lane: "alpha", events: [ev("dialed"), ev("connected"), ev("human_detected")] });
+  ok(actualLane(rang) === "direct", "a keypad store that answered straight away really ran direct");
+  ok(rollup(rang).lane === "direct", "and the row says so, so a lane cannot quietly stop being used");
+  ok(actualLane(_receiptFrom({ lane: "direct", events: [ev("alpha_press")] })) === "alpha", "a key was pressed, so it was the keypad lane");
+  ok(actualLane(_receiptFrom({ events: [ev("alpha_press"), ev("bravo_say")] })) === "bravo", "a word had to be said, so it was the spoken lane");
+  ok(actualLane(_receiptFrom({ lane: "bravo", events: [ev("dialed")] })) === "unknown", "a call that never connected claims no lane at all");
+}
+
+// ---------------------------------------------------------------------------------------------
+console.log("▶ a desk ringing while we are billing is not a conversation");
+{
+  // A transfer to a desk nobody is at: 30 billed seconds, 12 of them just ringing.
+  const s = rollup(_receiptFrom({ meters: { charlieOpenMs: 0, charlieCloseMs: 30_000, speakingMs: 3_000, listeningMs: 0, ringingMs: 12_000, endMs: 30_000 } }));
+  ok(s.ringSeconds === 12, "ring seconds are counted as ring seconds, even while the meter runs");
+  ok(s.charlieTalkingSeconds === 3, "ringing never counts as someone talking to us");
+  ok(s.charlieSilentSeconds === 27, "so it lands in the waste, where it belongs");
+}
+
+console.log("▶ a number we do not measure is null, never zero");
+{
+  const s = rollup(_receiptFrom({ meters: { charlieOpenMs: 0, charlieCloseMs: 10_000, endMs: 20_000 } }));
+  ok(s.holdSeconds === null, "hold time is null until hold detection ships, so nobody reads a real zero");
+  ok(s.menuSeconds === null, "a store with no menu reports no menu time, rather than a zero-second menu");
+  ok(s.ringSeconds === 0, "ring seconds ARE measured, so a genuine zero is a zero");
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -63,28 +82,29 @@ console.log("▶ the seconds split honestly: talking + listening + dead air = wh
     meters: { charlieOpenMs: 10_000, charlieCloseMs: 70_000, speakingMs: 20_000, listeningMs: 15_000, endMs: 75_000, humanMs: 10_000 },
   });
   const s = rollup(r);
-  ok(s.charlieSecs === 60, "connected seconds are the whole time the session was open");
+  ok(s.charlieConnectedSeconds === 60, "connected seconds are the whole time the session was open");
   ok(s.speakingSecs === 20 && s.listeningSecs === 15, "talking and listening are measured, not modelled");
-  ok(s.silentSecs === 25, "dead air is what is left over");
-  ok(s.speakingSecs + s.listeningSecs + s.silentSecs === s.charlieSecs, "the three always add back up to the bill");
-  ok(s.neededSecs === 35 && s.avoidableSecs === 25, "needed vs avoidable is the number we drive down");
-  ok(s.timeToAnswerSecs === 10, "time to answer is when a person was really there");
+  ok(s.charlieSilentSeconds === 25, "dead air is what is left over");
+  ok(s.speakingSecs + s.listeningSecs + s.charlieSilentSeconds === s.charlieConnectedSeconds, "the three always add back up to the bill");
+  ok(s.charlieTalkingSeconds === 35 && s.charlieSilentSeconds === 25, "needed vs avoidable is the number we drive down");
+  ok(s.navSeconds === 10, "time to a person is when a person was really there");
+  ok(s.talkSeconds === 65, "talk time runs from the person answering to the hang up");
 }
 
 console.log("▶ dead air can never read negative, even when both sides talk at once");
 {
   // A clerk talking over the agent: speaking + listening exceeds the connected time.
   const s = rollup(_receiptFrom({ meters: { charlieOpenMs: 0, charlieCloseMs: 30_000, speakingMs: 25_000, listeningMs: 20_000, endMs: 30_000 } }));
-  ok(s.silentSecs === 0, "overlap does not invent negative silence");
-  ok(s.speakingSecs + s.listeningSecs === s.charlieSecs, "the overlap is capped at the seconds we were actually billed");
+  ok(s.charlieSilentSeconds === 0, "overlap does not invent negative silence");
+  ok(s.speakingSecs + s.listeningSecs === s.charlieConnectedSeconds, "the overlap is capped at the seconds we were actually billed");
 }
 
 console.log("▶ a call the agent never joined costs nothing in agent time");
 {
   const s = rollup(_receiptFrom({ lane: "alpha", meters: { endMs: 42_000, navEndMs: 23_000 } }));
-  ok(s.charlieSecs === 0 && !s.charlieJoined, "no session, no billed seconds");
-  ok(s.timeToAnswerSecs === null, "nobody answered, so there is no time-to-answer to report");
-  ok(s.navSecs === 23, "the menu time is still recorded");
+  ok(s.charlieConnectedSeconds === 0 && !s.charlieJoined, "no session, no billed seconds");
+  ok(s.navSeconds === null && s.talkSeconds === null, "nobody answered, so there is nothing to report — null, not zero");
+  ok(s.menuSeconds === 23, "the menu time is still recorded");
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -92,9 +112,9 @@ console.log("▶ menu steps record whether the store's pause fired them or the c
 {
   const r = _receiptFrom({
     events: [
-      { atMs: 16_000, atSec: 16, kind: "nav_step", detail: { via: "prompt" } },
-      { atMs: 23_000, atSec: 23, kind: "nav_step", detail: { via: "prompt" } },
-      { atMs: 40_000, atSec: 40, kind: "nav_step", detail: { via: "clock" } },
+      { atMs: 16_000, atSec: 16, kind: "alpha_press", detail: { via: "prompt" } },
+      { atMs: 23_000, atSec: 23, kind: "alpha_press", detail: { via: "prompt" } },
+      { atMs: 40_000, atSec: 40, kind: "alpha_press", detail: { via: "clock" } },
     ],
   });
   const s = rollup(r);
@@ -114,10 +134,10 @@ console.log("▶ closing hands the finished receipt to the sink exactly once");
   closeReceipt("room-3");
   closeReceipt("room-3"); // a late carrier callback must not write the call twice
   ok(seen.length === 1, "one call, one receipt, even if the end arrives twice");
-  ok(seen[0].events.at(-1)?.kind === "completed", "the last line is always that the call ended");
+  ok(seen[0].events.at(-1)?.kind === "hangup", "the last line is always that the call ended");
   ok(seen[0].meters.charlieCloseMs !== null, "a session still open when the line drops is closed out at the end of the call");
-  emit("room-3", "hold", "too late");
-  ok(seen[0].events.filter((e) => e.kind === "hold").length === 0, "nothing can be added after a receipt is closed");
+  emit("room-3", "hold_start", "too late");
+  ok(seen[0].events.filter((e) => e.kind === "hold_start").length === 0, "nothing can be added after a receipt is closed");
 }
 
 console.log("▶ recording never breaks a call");
@@ -125,7 +145,7 @@ console.log("▶ recording never breaks a call");
   _reset();
   setEventSink(() => { throw new Error("the database is down"); });
   openReceipt("room-4");
-  emit("nonexistent-room", "hold", "no receipt for this room");
+  emit("nonexistent-room", "hold_start", "no receipt for this room");
   markNow("nonexistent-room", "humanMs");
   addMs("nonexistent-room", "speakingMs", 100);
   let threw = false;
@@ -201,8 +221,8 @@ console.log("\u25b6 the three parts always add back up, even when the millisecon
 {
   // A real voicemail call: 12.6 connected seconds, 6.4 of a recording talking, none from us.
   const s = rollup(_receiptFrom({ meters: { charlieOpenMs: 3_400, charlieCloseMs: 16_000, speakingMs: 0, listeningMs: 6_400, endMs: 16_500 } }));
-  ok(s.speakingSecs + s.listeningSecs + s.silentSecs === s.charlieSecs, "rounding each part on its own can never make the meter disagree with the bill");
-  ok(s.neededSecs + s.avoidableSecs === s.charlieSecs, "needed plus avoidable is the whole bill");
+  ok(s.speakingSecs + s.listeningSecs + s.charlieSilentSeconds === s.charlieConnectedSeconds, "rounding each part on its own can never make the meter disagree with the bill");
+  ok(s.charlieTalkingSeconds + s.charlieSilentSeconds === s.charlieConnectedSeconds, "talking plus waste is the whole bill");
 }
 
 console.log(`\n${fail === 0 ? "ALL PASS" : "FAILURES"} — ${pass} passed, ${fail} failed`);

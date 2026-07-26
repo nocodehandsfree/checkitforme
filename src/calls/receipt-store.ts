@@ -66,18 +66,29 @@ export async function persistReceipt(r: Receipt): Promise<void> {
     // runs from the hand-off to the end. Counting only one of them was undercounting every call.
     const cost = costCall({
       callSecs: sums.callSecs,
-      charlieSecs: sums.charlieSecs,
-      avoidableSecs: sums.avoidableSecs,
-      forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - sums.navSecs)],
+      charlieSecs: sums.charlieConnectedSeconds,
+      avoidableSecs: sums.charlieSilentSeconds,
+      forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))],
     }, rates);
 
     await db.update(callResults).set({
       room: r.room,
       lane: sums.lane,
-      charlieSeconds: sums.charlieSecs,
+      // navSeconds = dial -> a person is on the line. Only overwrite when the receipt actually
+      // measured it; the provider's own figure stays if we never heard a human.
+      ...(sums.navSeconds !== null ? { navSeconds: sums.navSeconds } : {}),
+      talkSeconds: sums.talkSeconds,
+      charlieConnectedSeconds: sums.charlieConnectedSeconds,
+      charlieTalkingSeconds: sums.charlieTalkingSeconds,
       charlieSpeakingSeconds: sums.speakingSecs,
       charlieListeningSeconds: sums.listeningSecs,
-      charlieSilentSeconds: sums.silentSecs,
+      charlieSilentSeconds: sums.charlieSilentSeconds,
+      ringSeconds: sums.ringSeconds,
+      holdSeconds: sums.holdSeconds,
+      billedMinutes: sums.billedMinutes,
+      menuSeconds: sums.menuSeconds,
+      // Which build served this call, so a regression is findable without guessing.
+      engineVersion: (process.env.RAILWAY_GIT_COMMIT_SHA || "").slice(0, 12) || null,
       costLineUsd: cost.lineUsd,
       costForkUsd: cost.forkUsd,
       costCharlieUsd: cost.charlieUsd,
@@ -101,7 +112,7 @@ export async function recordVerdict(callId: number, statusKey: string | null, su
     const room = (await db.select({ room: callResults.room }).from(callResults).where(eq(callResults.id, callId)))[0]?.room;
     await db.insert(callEvents).values({
       callId, room: room ?? "", atMs: Math.max(0, atSec) * 1000, atSec: Math.max(0, atSec),
-      kind: "inventory_status",
+      kind: "verdict",
       note: summary?.slice(0, 300) || `Answer: ${statusKey ?? "unclear"}`,
       detail: JSON.stringify({ statusKey }),
     });

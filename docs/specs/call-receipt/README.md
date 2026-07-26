@@ -35,15 +35,49 @@ unlike `provider_call_id`, which the voice provider's conversation id replaces m
 - `src/calls/receipt-store.ts` — the only file in the chain that touches the database.
 - `scripts/test-call-events.ts` — 51 tests, the contract in sentences.
 
-## The events
+## No conversation audio. Ever.
 
-`call_started` · `ringing` · `connected` · `lane` · `nav_armed` · `nav_step` · `nav_done` ·
-`ear_open` · `desk_ringing` · `ring_unanswered` · `human_detected` · `voicemail` · `hold` ·
-`transfer` · `gave_up` · `unknown` · `charlie_joined` · `charlie_left` · `delta_decision` ·
-`inventory_status` · `completed`
+We keep the **text transcript** of what staff said, and nothing else. No recording of a conversation
+with a person is captured or stored, on any path. Menu recordings are a different thing and are
+fine — that is a machine reading a script, and it is how the menus get mapped.
 
-Two are declared and not yet emitted: `hold` and `transfer` (they arrive with the hold-handback
-work). `delta_decision` waits on the Delta rewire.
+Anyone adding audio capture to the call path must stop at this line.
+
+## The events — a CLOSED set of sixteen
+
+The dashboard is built against exactly this list, so a seventeenth kind would silently fall off the
+screen. Anything finer goes in `detail`, never in a new kind.
+
+`dialed` · `ringing` · `connected` · `ivr_detected` · `alpha_press` · `bravo_say` ·
+`human_detected` · `charlie_join` · `charlie_leave` · `hold_start` · `hold_end` · `transfer` ·
+`voicemail` · `unknown` · `verdict` · `hangup`
+
+Rules: one clock, started at dial — every event carries `atMs`. `detail` stays small. Events are
+never deleted, and the Admin only ever reads them.
+
+Three are declared and not yet emitted: `hold_start`, `hold_end` and `transfer`. They arrive with
+the hold-handback work.
+
+## What each finished check stamps
+
+| Field | Meaning |
+|---|---|
+| `lane` | the route that ACTUALLY ran, read off what really fired — never the chain's guess |
+| `navSeconds` | dial → a person is on the line |
+| `talkSeconds` | person on the line → hang up |
+| `charlieConnectedSeconds` | session open, total. **This is what we are billed** |
+| `charlieTalkingSeconds` | of that, seconds somebody actually spoke |
+| `charlieSilentSeconds` | connected minus talking — the waste, and the whole point |
+| `ringSeconds` | a desk ringing while the session was open and billing |
+| `holdSeconds` | clerk away / hold music while billing — **null until hold detection ships** |
+| `billedMinutes` | whole minutes the carrier charged, rounded up |
+| `menuSeconds` | dial → the menu finished |
+| `mapVersion` | which saved menu version ran — null until Mapper ships |
+| `attemptOf` | the check this one retries, so tries-per-answer is countable |
+| `engineVersion` | the build that served it, so a regression is findable |
+
+**A number we do not measure is `null`, never `0`.** "We never checked" and "it was zero" are
+different facts and the dashboard must be able to tell them apart.
 
 ## The seconds
 

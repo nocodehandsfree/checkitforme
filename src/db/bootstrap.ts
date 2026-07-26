@@ -197,9 +197,12 @@ export async function bootstrap() {
   await client.execute("CREATE INDEX IF NOT EXISTS call_events_call_idx ON call_events (call_id, at_ms)").catch(() => {});
   await client.execute("CREATE INDEX IF NOT EXISTS call_events_room_idx ON call_events (room, at_ms)").catch(() => {});
   for (const col of [
-    "lane TEXT", "room TEXT",
-    "charlie_seconds INTEGER", "charlie_speaking_seconds INTEGER",
+    "lane TEXT", "room TEXT", "talk_seconds INTEGER", "menu_seconds INTEGER",
+    "charlie_connected_seconds INTEGER", "charlie_talking_seconds INTEGER",
+    "charlie_speaking_seconds INTEGER",
     "charlie_listening_seconds INTEGER", "charlie_silent_seconds INTEGER",
+    "ring_seconds INTEGER", "hold_seconds INTEGER", "billed_minutes INTEGER",
+    "map_version TEXT", "attempt_of INTEGER", "engine_version TEXT",
     "cost_line_usd INTEGER", "cost_fork_usd INTEGER", "cost_charlie_usd INTEGER",
     "cost_clips_usd INTEGER", "cost_total_usd INTEGER", "cost_avoidable_usd INTEGER",
   ]) await client.execute(`ALTER TABLE call_results ADD COLUMN ${col}`).catch(() => {});
