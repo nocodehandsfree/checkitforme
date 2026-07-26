@@ -115,7 +115,7 @@ console.log("▶ closing hands the finished receipt to the sink exactly once");
   closeReceipt("room-3"); // a late carrier callback must not write the call twice
   ok(seen.length === 1, "one call, one receipt, even if the end arrives twice");
   ok(seen[0].events.at(-1)?.kind === "completed", "the last line is always that the call ended");
-  ok(seen[0].meters.charlieCloseMs > 0, "a session left open is closed out at the end of the call");
+  ok(seen[0].meters.charlieCloseMs !== null, "a session still open when the line drops is closed out at the end of the call");
   emit("room-3", "hold", "too late");
   ok(seen[0].events.filter((e) => e.kind === "hold").length === 0, "nothing can be added after a receipt is closed");
 }
@@ -194,6 +194,15 @@ console.log("▶ cost per delivered result — the ROI number");
   ok(costPerResult(1000, 0) === null, "no answers delivered = no cost per result to report");
   ok(money(52_000) === "5.2¢", "money under a dollar reads in cents, the way the owner talks about it");
   ok(money(1_870_000) === "$1.87", "a dollar or more reads in dollars");
+}
+
+
+console.log("\u25b6 the three parts always add back up, even when the milliseconds do not round cleanly");
+{
+  // A real voicemail call: 12.6 connected seconds, 6.4 of a recording talking, none from us.
+  const s = rollup(_receiptFrom({ meters: { charlieOpenMs: 3_400, charlieCloseMs: 16_000, speakingMs: 0, listeningMs: 6_400, endMs: 16_500 } }));
+  ok(s.speakingSecs + s.listeningSecs + s.silentSecs === s.charlieSecs, "rounding each part on its own can never make the meter disagree with the bill");
+  ok(s.neededSecs + s.avoidableSecs === s.charlieSecs, "needed plus avoidable is the whole bill");
 }
 
 console.log(`\n${fail === 0 ? "ALL PASS" : "FAILURES"} — ${pass} passed, ${fail} failed`);

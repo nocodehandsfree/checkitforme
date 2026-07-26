@@ -254,17 +254,24 @@ export function rollup(r: Receipt): Rollup {
   const speakingMs = Math.min(m.speakingMs, talkMs);
   const listeningMs = Math.max(0, talkMs - speakingMs);
   const steps = r.events.filter((e) => e.kind === "nav_step");
+  // The three parts MUST add back up to the billed seconds. Rounding each one on its own lets them
+  // miss by a second, which on a dashboard reads as a bug in the meter. So the two measured parts
+  // round, and dead air is whatever is left — it is the derived number, not a measured one.
+  const charlieSecs = sec(charlieMs);
+  const speakingSecs = Math.min(sec(speakingMs), charlieSecs);
+  const listeningSecs = Math.min(sec(listeningMs), charlieSecs - speakingSecs);
+  const silentSecs = charlieSecs - speakingSecs - listeningSecs;
   return {
     lane: r.lane,
     callSecs: sec(m.endMs ?? 0),
     timeToAnswerSecs: m.humanMs !== null ? sec(m.humanMs) : null,
     navSecs: m.navEndMs !== null ? sec(m.navEndMs) : 0,
-    charlieSecs: sec(charlieMs),
-    speakingSecs: sec(speakingMs),
-    listeningSecs: sec(listeningMs),
-    silentSecs: sec(charlieMs - talkMs),
-    neededSecs: sec(talkMs),
-    avoidableSecs: sec(charlieMs - talkMs),
+    charlieSecs,
+    speakingSecs,
+    listeningSecs,
+    silentSecs,
+    neededSecs: speakingSecs + listeningSecs,
+    avoidableSecs: silentSecs,
     stepsFired: steps.length,
     stepsOnPause: steps.filter((e) => e.detail?.via === "prompt").length,
     charlieJoined: m.charlieOpenMs !== null,

@@ -1165,8 +1165,11 @@ app.get("/api/calls/:id/receipt", async (c) => {
   const call = (await db.select().from(callResults).where(eq(callResults.id, id)))[0];
   if (!call) return c.json({ error: "no such call" }, 404);
 
-  // A call still in flight has its timeline in memory; a finished one has it on disk.
-  const live = call.room ? getReceipt(call.room) : null;
+  // A call still IN FLIGHT is read from memory so it can be watched as it happens. The moment it
+  // ends the database is the truth — the in-memory copy lingers for a few minutes but is missing
+  // everything written after the line dropped, the verdict most of all.
+  const inMemory = call.room ? getReceipt(call.room) : null;
+  const live = inMemory && !inMemory.closed ? inMemory : null;
   const rows = live ? [] : await db.select().from(callEvents).where(eq(callEvents.callId, id)).orderBy(callEvents.atMs);
   const timeline = live
     ? live.events.map((e) => ({ atSec: e.atSec, kind: e.kind, note: e.note ?? "", detail: e.detail ?? null }))
