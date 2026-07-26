@@ -2466,7 +2466,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
      scroller, and the Continue dock floats OUTSIDE that scroller so it never sits on the bottom
      scroll edge (that kills the iOS glass, see GOTCHAS) and never falls below the fold. -->
 <div class="overlay" id="buyOverlay" onclick="if(event.target===this)closeBuy()">
-  <div class="modal" style="position:relative;max-width:430px;text-align:left">
+  <div class="modal" data-fillh="0.82" style="position:relative;max-width:430px;text-align:left">
     <span class="x" onclick="closeBuy()">×</span>
     <div class="buyframe">
       <div class="buy-scroll" id="buy_scroll">
@@ -4234,7 +4234,10 @@ function sheetH_on(ov){ if(!ov||ov.__sh) return; ov.__sh=1;
     // loads a beat after the sheet (owner: "you can't read much like this, 75% of the page"). Form/menu
     // sheets (plain boxes) still open content-sized.
     const fill = cs.display==='flex' && cs.flexDirection.indexOf('column')===0 && cs.overflowY==='hidden';
-    const h = fill ? cap : (Math.min(m.offsetHeight||0, cap)||cap);
+    // A fill sheet opens at the cap unless it names its own share of the screen (data-fillh). The buy
+    // sheet does: at the full cap Pay as you go was a tall empty box under its one card (owner 07-26).
+    const own = parseFloat(m.dataset.fillh||'') || 0;
+    const h = fill ? (own?Math.min(window.innerHeight*own,cap):cap) : (Math.min(m.offsetHeight||0, cap)||cap);
     m.style.position='absolute'; m.style.left='0'; m.style.right='0'; m.style.top=(window.innerHeight-h)+'px'; m.style.bottom='auto';
     m.style.height=(h+TAIL)+'px'; m.style.maxHeight=(h+TAIL)+'px';
     const oy=cs.overflowY;
@@ -8262,18 +8265,34 @@ function applyBuyHeader(){
 function renderBuyDock(){
   const dock=$('buyDock'), plan=$('buyDockPlan'); if(!dock) return;
   let name='', price='', per='';
+  // PLANS: the dock stays DOWN until you actually TAP a plan, the way the zones basket stays down until
+  // you pick a store (owner 07-26: up from the start, it covered the plan rows and blurred them).
+  // PAY AS YOU GO: up from the start, because the one card IS the pick and there is no list to cover.
+  const show = BUY_MODE==='packs' || BUY_PICKED;
   if(BUY_MODE==='packs'){ const packs=paygBundles(); const pk=packs[Math.max(0,Math.min(packs.length-1,PACK_IDX))];
     if(pk){ name=pk.checks+' '+t('plan.checks','checks'); price=money(pk.cents); } }
   else { const _t=tiers(); const ti=_t.find(x=>x.key===SEL_TIER_KEY)||_t.find(x=>x.key===defaultTierKey())||_t[0];
     if(ti){ name=esc(ti.name); price=tierPrice(ti); per=BILLING_ANNUAL?t('plan.yr','/yr'):t('plan.mo','/mo'); } }
   if(plan) plan.innerHTML=name?`<span class="bd-n">${name}</span><span class="bd-p">${price}<i>${per}</i></span>`:'';
   // rise on the next frame so the transform actually animates (a class set pre-paint just snaps up)
-  requestAnimationFrame(()=>{ dock.classList.toggle('up',!!name); buySyncDockPad(); });
+  requestAnimationFrame(()=>{ dock.classList.toggle('up',!!(name&&show)); buySyncDockPad(); });
 }
 // Pad the plan list by the dock's ACTUAL height so the last plan always clears it, the same way
-// zoneSyncBasketPad pads the store list. Measured next frame, after the dock has re-flowed.
+// zoneSyncBasketPad pads the store list. Measured next frame, after the dock has re-flowed. Then, if the
+// dock rose over the plan you just tapped, lift the list so your pick stays in sight (owner 07-26).
 function buySyncDockPad(){ requestAnimationFrame(()=>{ const sc=$('buy_scroll'), dk=$('buyDock');
-  if(!sc||!dk) return; sc.style.paddingBottom=dk.classList.contains('up')?(Math.max(120,dk.offsetHeight+18))+'px':''; }); }
+  if(!sc||!dk) return;
+  const up=dk.classList.contains('up');
+  sc.style.paddingBottom=up?(Math.max(120,dk.offsetHeight+18))+'px':'';
+  if(!up) return;
+  // 140ms, not a frame: re-rendering the list makes the sheet observer re-place the sheet ~60ms later,
+  // and a scroll started before that lands gets wiped. Lift once the sheet has settled.
+  clearTimeout(buySyncDockPad._t); buySyncDockPad._t=setTimeout(()=>{
+    const row=document.querySelector('#buy_plans .plan.sub'); if(!row||!dk.classList.contains('up')) return;
+    const over=row.getBoundingClientRect().bottom-(dk.getBoundingClientRect().top-12);
+    if(over>0) sc.scrollBy({top:over,behavior:'smooth'});
+  },140);
+}); }
 function renderBuyPlans(){
   const member=!!(ACCOUNT&&ACCOUNT.subscription==='active'), comp=!!(ACCOUNT&&ACCOUNT.comp);
   const per=BILLING_ANNUAL?t('plan.yr','/yr'):t('plan.mo','/mo');
@@ -8326,10 +8345,19 @@ function renderBuyPlans(){
   $('buy_plans').innerHTML=html;
 }
 let SEL_TIER_KEY=null, BUY_MODE='plans', PACK_IDX=1;
+let BUY_PICKED=false; // did they TAP a plan this visit? gates the dock, same as ZONES.sel gating the basket
 // One source of truth for "which tier is selected when you haven't tapped anything" (items 26-27):
 // your CURRENT plan if you're on one, else the featured tier. Continue buys exactly what's ringed.
 function defaultTierKey(){ const _t=tiers(); const cur=ACCOUNT&&ACCOUNT.subTier; if(cur&&_t.some(x=>x.key===cur)) return cur; const f=_t.find(x=>x.featured); return (f||_t[0]||{}).key||null; }
-function setBuyMode(m,btn){ BUY_MODE=m; document.querySelectorAll('#buymode button').forEach(b=>b.classList.toggle('on',b===btn)); applyBuyHeader(); renderBuyPlans(); renderBuyDock(); }
+// How much of the screen the sheet takes. The DOCK is bottom-anchored, so it never moves; only the TOP
+// of the sheet does. Pay as you go holds one card, so at the Plans height it was a tall empty box; it
+// gets a lower top so its content meets the dock, a small step instead of the old collapse (owner 07-26).
+// Pay as you go holds a fixed-size card, so a bare share of the screen puts it UNDER the dock on a short
+// phone. Floor it at the 530px that card + the dock need, and never go taller than the Plans height.
+function buySheetHeight(){ const m=document.querySelector('#buyOverlay .modal'); if(!m) return;
+  const vh=window.innerHeight||800;
+  m.dataset.fillh=(BUY_MODE==='packs')?String(Math.min(0.82,Math.max(0.62,530/vh))):'0.82'; }
+function setBuyMode(m,btn){ BUY_MODE=m; document.querySelectorAll('#buymode button').forEach(b=>b.classList.toggle('on',b===btn)); buySheetHeight(); applyBuyHeader(); renderBuyPlans(); renderBuyDock(); }
 function setPackIdx(i){ const packs=paygBundles(); PACK_IDX=Math.max(0,Math.min(packs.length-1, i|0));
   const pk=packs[PACK_IDX]; if(!pk) return;
   const rng=$('payg_rng'); if(rng){ if(+rng.value!==PACK_IDX) rng.value=PACK_IDX; rng.style.setProperty('--fill',(packs.length>1?(PACK_IDX/(packs.length-1)*100):100)+'%'); } // green fill tracks the thumb edge-to-edge
@@ -8339,7 +8367,7 @@ function setPackIdx(i){ const packs=paygBundles(); PACK_IDX=Math.max(0,Math.min(
   if(per) per.textContent=t('plan.percheck','about')+' $'+(pk.cents/pk.checks/100).toFixed(2)+' '+t('plan.percheck2','per check')+' · '+t('plan.noexpire','checks never expire');
   renderBuyDock(); }
 function pickTier(k){
-  if(isV2()){ SEL_TIER_KEY=k; renderBuyPlans(); renderBuyGrid(); renderBuyDock(); return; } // tap selects (ring moves); Continue is the plain button at the foot of the sheet
+  if(isV2()){ SEL_TIER_KEY=k; BUY_PICKED=true; renderBuyPlans(); renderBuyGrid(); renderBuyDock(); return; } // the tap moves the ring AND raises the Continue dock
   buyContinue();
 }
 function buyContinue(){
@@ -8380,7 +8408,7 @@ function openBuy(reason){
   else if(reason==='out'){ $('buy_title').textContent=t('up.out',"You're out of checks"); lead.style.display=''; lead.textContent=t('buy.out.lead',"Your next find is one check away."); }
   else if(reason==='premium'){ $('buy_title').textContent=t('buy.premium.title','That\'s a member perk ⭐'); lead.style.display=''; lead.textContent=t('buy.premium.lead',"We watch the shelves so you don't have to."); }
   else { $('buy_title').textContent=t('buy.title','Pick your plan'); lead.style.display='none'; }
-  const dock0=$('buyDock'); if(dock0) dock0.classList.remove('up'); // start DOWN so the dock rises with the sheet
+  BUY_PICKED=false; buySheetHeight(); const dock0=$('buyDock'); if(dock0) dock0.classList.remove('up'); // every open starts with the dock DOWN and a clean plan list
   renderBuyPlans();
   // 6b (v2), OWNER 05:33 SCREENSHOT PASS: the comp's sheet exactly. Centered lockup + ONE centered
   // 26/900 title (reason titles/leads are old-skin; ⭐ emoji never renders under v2), 4-col raised
