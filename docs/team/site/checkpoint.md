@@ -16,25 +16,26 @@ Railway staging env + `DATABASE_URL=file:<scratch>/local.db PORT=88xx npx tsx sr
   `buySyncDockPad()` pads the list like `zoneSyncBasketPad()`. Nothing sticky on the scroll edge = glass safe.
 - **Round 2:** the dock was UP on open and covered the plan rows. `BUY_PICKED` gates it as `ZONES.sel`
   gates the basket: DOWN until you tap, then the tapped row is lifted clear. That lift MUST be a ~140ms
-  timeout, NOT a rAF (re-rendering makes the sheet observer re-place ~60ms later, wiping an earlier
-  scroll). PAYG keeps the dock up (its card IS the pick) and at the full cap was a tall empty box →
-  `sheetH_on` honours `data-fillh`: 0.82 on Plans, floored 530px on PAYG (a bare fraction put the card
-  UNDER the dock at 375x667). The dock is bottom-anchored, so only the sheet TOP steps.
-- **Round 3 (owner on device):** the dock blended in → depth separates it, NEVER a border (STYLE_GUIDE
-  §1): active-key gradient + an UPWARD shadow that darkens the row behind its top edge + a scale pop.
-  That made it taller and exposed a bug in the lift: it read the dock's LIVE rect mid slide-up, so the
-  scroll came up short. It now measures the RESTING top via `offsetParent`. `#buy_note` (Secure checkout)
-  moved OUT of the scroll and INTO the dock under the button. Feature sheets (`openFeatInfo`) = centred
-  header block (`.fi-icon` tile, `h3`, `.fi-lead` promise) over ONE carved `.fi-pts` well; the points stay
-  LEFT-aligned inside it (centring them all reads worse). Sheet titles come from Admin labels = EN only.
-- Monthly/Annual = small keys inline with "You're on the <plan> plan"; "save 17%" rides INSIDE the Annual
-  key (a loose floating one was rejected before). No overflow at 375/390/430, EN + ES (new `plan.save17s`).
-- Drove `/r` at 375x667 / 390x844 / 430x932, member + not, EN + ES: dock down on open, tapping the LAST
-  plan clears the dock with Continue + the Stripe line on screen, dock never inside the scroller, PAYG
-  clears by 64-112px, Continue → checkout on the tapped plan, zero errors. Language switch re-paints
-  title + grid + dock (it read `/yr` in ES). Dead `openPlanSheet`/`dismissPlanSheet`/`planSheetContinue`
-  + the JS that built the lockup, grid, mode keys, dock all gone.
-  **NOT verified: iOS glass + how it reads on his phone.**
+  timeout, NOT a rAF (re-rendering makes the sheet observer re-place ~60ms later, wiping an earlier scroll).
+  PAYG keeps the dock up (its card IS the pick) and at the full cap was a tall empty box → `sheetH_on`
+  honours `data-fillh`: 0.82 on Plans, floored 530px on PAYG (a bare fraction put the card UNDER the dock
+  at 375x667). The dock is bottom-anchored, so only the sheet TOP steps.
+- **Round 3 (owner on device):** the dock blended in → depth separates it, NEVER a border (STYLE_GUIDE §1):
+  active-key gradient + an UPWARD shadow darkening the row behind its top edge + a scale pop. That made it
+  taller and broke the lift, which read the dock's LIVE rect mid slide-up and came up short; it now measures
+  the RESTING top via `offsetParent`. `#buy_note` (Secure checkout) moved OUT of the scroll INTO the dock.
+  Feature sheets (`openFeatInfo`) = centred header block (`.fi-icon` tile, `h3`, `.fi-lead`) over ONE carved
+  `.fi-pts` well; points stay LEFT-aligned inside it. Sheet titles are Admin labels, so EN only.
+- **OPEN, owner 07-26 on device, START HERE:** tapping a plan jumped STRAIGHT to Checkout (on Operator),
+  skipping the dock. Prime suspect: with the dock already up, its Continue button overlays the lower plan
+  rows, so the tap lands on Continue, not the row. Headless never caught it (it clicks the row element).
+- Monthly/Annual = small keys inline with "You're on the <plan> plan"; "save 17%" INSIDE the Annual key
+  (a loose floating one was rejected). No overflow at 375/390/430, EN + ES (new `plan.save17s`).
+- Drove `/r` at 375x667 / 390x844 / 430x932, member + not, EN + ES: dock down on open, tapping the LAST plan
+  clears the dock with Continue + the Stripe line on screen, dock never inside the scroller, PAYG clears by
+  64-112px, Continue → checkout on the tapped plan, zero errors. Language switch re-paints title + grid +
+  dock (it read `/yr` in ES). Dead `openPlanSheet`/`dismissPlanSheet`/`planSheetContinue` + the JS that
+  built the lockup, grid, mode keys, dock all gone. **NOT verified: iOS glass + how it reads on his phone.**
 
 ## 07-23 — alerts sheet, zones back, five site fixes (LIVE on staging + Admin, NOT promoted)
 - Alerts sheet: original On/Off pill + "Pause all alerts" bar (a slider redesign was rejected), scroll fix, name wrap. Zones back → My checks (acctReturn in popstate).
@@ -56,5 +57,4 @@ Railway staging env + `DATABASE_URL=file:<scratch>/local.db PORT=88xx npx tsx sr
 
 ## Open (owner asks + the site queue)
 - Alerts sheet formatting · logo fidelity in My Zones + call-log header · copy-doc location reconcile ·
-  missing email-confirmation (PROD email likely never re-set post-promote) · Restock SMS → A2P · feature
-  sheet titles are Admin labels, EN only. Frozen-site tasks need the owner-named `.unlock`.
+  missing email-confirmation (PROD email likely never re-set post-promote) · Restock SMS → A2P. Frozen-site tasks need the owner-named `.unlock`.
