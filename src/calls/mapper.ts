@@ -21,6 +21,8 @@ import { isCallingPaused } from "../redis";
 import { placeNavCall, getNavSession, defaultWorkflowAsk, classifyMode, menuHasCustomerService, NavRecipe, NavStep } from "./navigator";
 import { storeForChain, lockRecipeToChain, recipeFromSteps } from "./trainer-batch";
 import { chainDialable } from "./recipe";
+import { proposeVersion, pathSignature, reportUnknown, MapRecipe, MapStep } from "./mapgraph";
+import { recipeFromCall, evidenceFromCall, CapturedStep } from "./map-capture";
 
 const DAILY_CAP = 60;        // runaway guard only — owner 2026-07-10: the old 12/day cap is gone, a
                              // sweep converges every mapped chain in one day. Tune without a deploy
@@ -146,11 +148,16 @@ function markVariance(run: MapperRun, recipe: NavRecipe): void {
 
 /** Persist a reached recipe as the chain's locked path — stamping the owner target + the ring-variance
  *  flag (#A), and, for a department-only tree with NO customer-service option, raising a needs-target
- *  flag (#B) with the captured menu so the owner can pick the desk. Clears the flag once resolved. */
-async function finalizeAndLock(run: MapperRun, chainId: number, recipe: NavRecipe, confidence: number | null): Promise<void> {
+ *  flag (#B) with the captured menu so the owner can pick the desk. Clears the flag once resolved.
+ *
+ *  ALSO (07-26) writes the call into the versioned map: the route we just proved, the recording each
+ *  step follows, and the evidence behind it. The chain row keeps working exactly as before — the map
+ *  is the history and the confidence the row could never hold. */
+async function finalizeAndLock(run: MapperRun, chainId: number, recipe: NavRecipe, confidence: number | null, session?: NavSessionLike): Promise<void> {
   if (run.target && !recipe.target) recipe.target = run.target;
   markVariance(run, recipe);
   await lockRecipeToChain(chainId, recipe, confidence);
+  await recordMapVersion(run, chainId, recipe, session);
   const navigated = recipe.type !== "direct" && (recipe.steps?.length ?? 0) > 0;
   const deptOnly = navigated && !menuHasCustomerService(recipe.menu);
   if (!run.target && deptOnly) {
@@ -159,6 +166,36 @@ async function finalizeAndLock(run: MapperRun, chainId: number, recipe: NavRecip
   } else {
     await setSetting(`nav_needs_target:${chainId}`, ""); // CS path found or owner target set → clear
   }
+}
+
+/** The bit of a nav session this file needs to write evidence — kept structural so mapper never has
+ *  to reach further into the navigator. */
+interface NavSessionLike { id?: string; steps?: unknown[]; humanAtSec?: number | null; status?: string }
+
+/** Write this call into the versioned map. Best-effort by design: a map-store hiccup must never take
+ *  down a mapping run that is holding a live phone call open. */
+async function recordMapVersion(run: MapperRun, chainId: number, recipe: NavRecipe, session?: NavSessionLike): Promise<void> {
+  try {
+    const steps = (session?.steps || []) as CapturedStep[];
+    // Barge wins from the optimize phase = the steps we PROVED can be fired before the recording ends.
+    const bargeProven = new Set(run.experiments.filter((e) => e.kind === "barge" && e.status === "win").map((e) => e.stepIdx));
+    // Prefer the turn-by-turn record (it carries which recording each step followed); fall back to the
+    // recipe we were handed when a call ended without a full record.
+    const captured = steps.length ? recipeFromCall(steps, recipe.seconds ?? null, bargeProven) : null;
+    const mapRecipe: MapRecipe = captured && captured.steps.length === (recipe.steps?.length || 0)
+      ? { ...captured, target: recipe.target, menu: recipe.menu, menuPrompts: recipe.menuPrompts, ringVariable: recipe.ringVariable, seconds: recipe.seconds ?? captured.seconds }
+      : {
+        type: (recipe.type as MapRecipe["type"]) || "direct",
+        steps: (recipe.steps || []).map((s) => ({ action: s.action === "press" ? "press" : "say", value: String(s.value || ""), atSec: Math.round(s.atSec ?? 0) })) as MapStep[],
+        seconds: recipe.seconds ?? 0, target: recipe.target, menu: recipe.menu, menuPrompts: recipe.menuPrompts, ringVariable: recipe.ringVariable,
+      };
+    const call = evidenceFromCall({
+      navId: session?.id, storeId: run.store?.id, storeName: run.store?.name, steps,
+      seconds: recipe.seconds ?? null, reachedHuman: true, path: pathSignature(mapRecipe),
+      note: `${run.phase} attempt ${run.attempt}`,
+    });
+    await proposeVersion({ chainId, recipe: mapRecipe, source: run.phase === "verify" ? "verify" : "sweep", call });
+  } catch { /* knowledge is written best-effort — never break a live mapping call */ }
 }
 
 async function bumpDaily(chainId: number): Promise<number> {
@@ -293,11 +330,11 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
             run.experiments = buildExperiments(run, lockedRecipe as NavRecipe);
             run.phase = run.experiments.length ? "optimize" : "locked";
             run.log.push({ n: run.attempt, phase: "verify", store: store.name, outcome: `re-measured ${secs}s — SLOWER than the locked ${prior}s (ring/menu variance); KEPT the faster recipe`, seconds: secs });
-            if (run.phase === "locked") { await finalizeAndLock(run, chainId, lockedRecipe as NavRecipe, s?.confidence ?? null); break; }
+            if (run.phase === "locked") { await finalizeAndLock(run, chainId, lockedRecipe as NavRecipe, s?.confidence ?? null, s ?? undefined); break; }
             await sleep(GAP_SEC * 1000); continue;
           }
           run.baseline = recipe as NavRecipe; run.best = recipe as NavRecipe;
-          await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null); // usable by live checks NOW
+          await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null, s ?? undefined); // usable by live checks NOW
           run.experiments = buildExperiments(run, recipe as NavRecipe);
           run.phase = run.experiments.length ? "optimize" : "locked";
           run.log.push({ n: run.attempt, phase: wasVerify ? "verify" : "baseline", store: store.name, outcome: `${wasVerify ? `locked map VERIFIED — real time ${secs ?? "?"}s (stored ${run.benchmark ?? "?"}s)` : "human reached — baseline locked"} (${classifyMode((s?.steps || []) as NavStep[]).label})`, seconds: secs });
@@ -319,7 +356,7 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
           // was dropped and the recovery brain saved it at the old time → treat as too-early, back off.
           if (faster) {
             ex.status = "win"; run.best = recipe as NavRecipe;
-            await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null); // earlier → re-lock
+            await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null, s ?? undefined); // earlier → re-lock
             run.log.push({ n: run.attempt, phase: "optimize", store: store.name, experiment: ex.label, outcome: `WIN — ${secs}s (was ${bestSecs}s)`, seconds: secs });
             enqueueBinaryBarge(run, ex.stepIdx, ex.at ?? 0, true);  // it accepted this early — try earlier still
           } else {
@@ -329,7 +366,7 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
           }
         } else if (faster) {
           ex.status = "win"; run.best = recipe as NavRecipe;
-          await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null); // shorter word won → re-lock
+          await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null, s ?? undefined); // shorter word won → re-lock
           run.log.push({ n: run.attempt, phase: "optimize", store: store.name, experiment: ex.label, outcome: `WIN — ${secs}s (was ${bestSecs}s)`, seconds: secs });
         } else if (reached) {
           ex.status = "fail"; // reached a human but not faster — keep the old best

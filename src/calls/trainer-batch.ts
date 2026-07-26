@@ -11,7 +11,7 @@ import { chains, retailers } from "../db/schema";
 import { placeNavCall, getNavSession, defaultWorkflowAsk } from "./navigator";
 import { isCallingPaused, setBatchState, getBatchState } from "../redis";
 import { openState } from "../store-hours";
-import { chainDialable } from "./recipe";
+import { chainDialable, recipeToDtmf } from "./recipe";
 
 type Step = { who?: string; action?: string; value?: string; atSec?: number };
 type Recipe = { type?: string; steps?: Array<{ action?: string; value?: string; atSec?: number }>; seconds?: number; menu?: Array<{ digit: string; label: string }>; menuPrompts?: string[]; ringVariable?: boolean; target?: string };
@@ -54,7 +54,12 @@ export async function lockRecipeToChain(chainId: number, recipe: Recipe, confide
   const targetText = recipe.target ? ` Reaches: ${recipe.target}.` : "";
   const varText = recipe.ringVariable ? " ⚠ Variable ring (department pickup) — time-to-human varies call to call." : "";
   const docText = navText + targetText + varText + menuText;
-  const firstPress = steps.find((s) => s.action === "press");
+  // dtmfShortcut is what the LIVE bridge presses, and it only understands the timed "digit@seconds"
+  // form — it scans for `@` and plays nothing at all when it finds none. This used to write the bare
+  // first digit ("4"), so every chain locked through this path (HomeGoods, Big 5, Barnes & Noble,
+  // GameStop, Kohl's…) pressed NOTHING on live checks while the trainer-locked chains ("2@8,2@16")
+  // worked. One converter for both, exactly as recipe.ts says: recipeToDtmf.
+  const dtmfPlan = recipeToDtmf(recipe as { steps?: Array<{ action?: string; value?: string; atSec?: number }> });
   const now = Math.floor(Date.now() / 1000);
   await db.update(chains).set({
     navType: recipe.type || null, navRecipe: JSON.stringify(recipe),
@@ -63,7 +68,7 @@ export async function lockRecipeToChain(chainId: number, recipe: Recipe, confide
     navLog: JSON.stringify(log.slice(-10)), navUpdatedAt: now,
     // ↓ applied to LIVE consumer calls (navText only — the menu/notes live in treeNote for the owner):
     phoneTreeDefault: navText, treeNote: docText,
-    dtmfShortcut: firstPress ? String(firstPress.value || "") : null,
+    dtmfShortcut: dtmfPlan || null,
     answerPath: steps.map((s) => `${s.action}:${s.value}`).join(">") || null,
     // Direct chains carry no seconds (a stray value mutes the agent — the silent-agent bug).
     ringsDirect: direct, avgTreeSeconds: direct ? null : (typeof recipe.seconds === "number" ? Math.round(recipe.seconds) : null),
