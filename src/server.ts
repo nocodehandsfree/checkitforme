@@ -41,7 +41,7 @@ import { emit, markNow, closeReceipt, linkCall, rollup, getReceipt, type Rollup 
 import { installReceiptStore, currentRates } from "./calls/receipt-store";
 import { costCall, money } from "./calls/cost";
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
-import { graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown } from "./calls/mapgraph";
+import { graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
 import { startSweep, stopSweep, sweepStatus, buildQueue } from "./calls/sweep";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay } from "./calls/tapedeck";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
@@ -6119,6 +6119,42 @@ app.post("/api/admin/map/unknown/:id", async (c) => {
   await resolveUnknown(id, b.status === "dismissed" ? "dismissed" : "resolved", String(b.note || ""));
   return c.json({ ok: true });
 });
+// ---- The record side of the shared map ------------------------------------------------------
+// One set of recipes for both environments (owner 07-26). A follower environment (staging) posts what
+// a mapping call learned HERE, keyed by chain name and store phone — ids are per-database and would
+// cross-wire. Production applies it exactly as if the call had happened here, so the Admin mapping
+// section stays the single source of truth and both environments run the identical recipe.
+app.post("/api/admin/map/ingest", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as {
+    chainName?: string; storePhone?: string | null; storeName?: string | null;
+    recipe?: MapRecipe; source?: string; call?: EvidenceCall; why?: string;
+  };
+  const name = String(b.chainName || "").trim();
+  if (!name || !b.recipe) return c.json({ error: "chainName and recipe required" }, 400);
+  const ch = (await db.select().from(chains).where(eq(chains.name, name)))[0];
+  if (!ch) return c.json({ error: `no chain named ${name}` }, 404);
+  // Map the store by PHONE — the one key both databases agree on.
+  let storeId = 0;
+  if (b.storePhone) {
+    const st = (await db.select().from(retailers).where(eq(retailers.phone, String(b.storePhone))))[0];
+    if (st) storeId = st.id;
+  }
+  const call = b.call ? { ...b.call, storeId: storeId || undefined } : undefined;
+  const res = await proposeVersion({ chainId: ch.id, recipe: b.recipe, source: b.source || "follower", call, why: b.why, local: true });
+  return c.json({ ok: true, version: res.version.version, status: res.version.status, confidence: res.version.confidence, activated: res.activated });
+});
+app.post("/api/admin/map/decide", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { chainName?: string; version?: number; decision?: string; by?: string; why?: string };
+  const ch = (await db.select().from(chains).where(eq(chains.name, String(b.chainName || "").trim())))[0];
+  if (!ch) return c.json({ error: "chain not found" }, 404);
+  const all = await versionsFor(ch.id);
+  const v = all.find((x) => x.version === Number(b.version));
+  if (!v) return c.json({ error: "version not found" }, 404);
+  return c.json(b.decision === "reject"
+    ? await rejectVersion(v.id, String(b.by || "admin"), String(b.why || ""), true)
+    : await approveVersion(v.id, String(b.by || "admin"), true));
+});
+
 // ---- The sweep: call every chain east → west and prove the route to a person ----------------
 app.post("/api/admin/map/sweep/start", async (c) => {
   const b = (await c.req.json().catch(() => ({}))) as { maxCalls?: number; only?: number[] };

@@ -20,8 +20,10 @@
 // never touches src/voice/. The runtime reads `activeMap()`; the mapper writes `proposeVersion()`.
 import { client } from "../db/client";
 import { db } from "../db/client";
-import { chains } from "../db/schema";
+import { chains, retailers } from "../db/schema";
 import { recipeToDtmf } from "./recipe";
+import { isMapFollower, pushVersion, pushDecision } from "./map-authority";
+import { setSetting } from "../db/settings";
 import { eq } from "drizzle-orm";
 
 // ---- shapes ---------------------------------------------------------------------------------
@@ -58,6 +60,8 @@ export interface EvidenceCall {
   reachedHuman: boolean;
   path: string;                    // path signature observed on this call
   transcript?: string[];           // the menu lines we heard (kept only for the winning version)
+  greeting?: string;               // what the person said when they picked up — WHICH desk we reached
+  transferAtSec?: number | null;   // when the machine said "transferring you now"
   note?: string;
 }
 export interface Evidence { calls: EvidenceCall[] }
@@ -287,9 +291,34 @@ function spoken(r: MapRecipe | { steps?: MapStep[] }): string {
  *   • A 0-hammer route is always proposed, never auto-active, whatever its evidence says. */
 export async function proposeVersion(opts: {
   chainId: number; storeId?: number; recipe: MapRecipe; source: string;
-  call?: EvidenceCall; why?: string; autoActivate?: boolean;
+  call?: EvidenceCall; why?: string; autoActivate?: boolean; local?: boolean;
 }): Promise<{ version: MapVersion; activated: boolean; foldedInto?: number }> {
   await ensureMapTables();
+  // ONE SOURCE OF TRUTH: on a follower environment the record lives elsewhere (production, the map
+  // Admin shows). Send it there first so both environments end up on the identical recipe, then fall
+  // through and apply the same thing locally. `local: true` is the authority applying its own write.
+  if (!opts.local && isMapFollower()) {
+    const ch = (await db.select().from(chains).where(eq(chains.id, opts.chainId)))[0];
+    const store = opts.storeId ? (await db.select().from(retailers).where(eq(retailers.id, opts.storeId)))[0] : null;
+    if (ch) {
+      const res = await pushVersion({
+        chainName: ch.name, storePhone: store?.phone ?? null, storeName: store?.name ?? null,
+        recipe: opts.recipe, source: opts.source, call: opts.call, why: opts.why,
+      });
+      if (!res.ok) {
+        // Never lose a mapping call over a network blip — keep it here, say so out loud, and mark the
+        // chain UNSHARED so the read-back from the record cannot quietly overwrite it.
+        await setSetting(`map_unshared:${opts.chainId}`, String(nowSec()));
+        await reportUnknown({
+          chainId: opts.chainId, storeId: opts.storeId, kind: "not-shared",
+          prompt: `Learned a route but could not write it to the shared map: ${res.error || "unknown error"}`,
+          evidence: { navId: opts.call?.navId, recipe: opts.recipe },
+        });
+      } else {
+        await setSetting(`map_unshared:${opts.chainId}`, "");   // safely on the record now
+      }
+    }
+  }
   const storeId = opts.storeId || 0;
   const at = nowSec();
   const call: EvidenceCall | null = opts.call
@@ -386,11 +415,15 @@ async function retire(versionId: number, at: number): Promise<void> {
 
 /** Approve a proposed version → it becomes the map the runtime uses, and the old one retires with
  *  its history intact. */
-export async function approveVersion(id: number, by: string): Promise<{ ok: boolean; error?: string; version?: MapVersion }> {
+export async function approveVersion(id: number, by: string, local = false): Promise<{ ok: boolean; error?: string; version?: MapVersion }> {
   await ensureMapTables();
   const v = await versionById(id);
   if (!v) return { ok: false, error: "version not found" };
   if (v.status === "active") return { ok: true, version: v };
+  if (!local && isMapFollower()) {
+    const ch = (await db.select().from(chains).where(eq(chains.id, v.chainId)))[0];
+    if (ch) await pushDecision({ chainName: ch.name, version: v.version, decision: "approve", by });
+  }
   const at = nowSec();
   const prev = await activeMap(v.chainId, v.storeId);
   if (prev && prev.id !== id) await retire(prev.id, at);
@@ -401,11 +434,15 @@ export async function approveVersion(id: number, by: string): Promise<{ ok: bool
   return { ok: true, version: fresh };
 }
 
-export async function rejectVersion(id: number, by: string, why: string): Promise<{ ok: boolean; error?: string }> {
+export async function rejectVersion(id: number, by: string, why: string, local = false): Promise<{ ok: boolean; error?: string }> {
   await ensureMapTables();
   const v = await versionById(id);
   if (!v) return { ok: false, error: "version not found" };
   if (v.status === "active") return { ok: false, error: "that version is live — approve a different one instead" };
+  if (!local && isMapFollower()) {
+    const ch = (await db.select().from(chains).where(eq(chains.id, v.chainId)))[0];
+    if (ch) await pushDecision({ chainName: ch.name, version: v.version, decision: "reject", by, why });
+  }
   await client.execute({ sql: `UPDATE nav_map_versions SET status='rejected', why=?, approved_by=? WHERE id=?`, args: [why || v.why, by, id] });
   return { ok: true };
 }

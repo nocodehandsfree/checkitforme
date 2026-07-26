@@ -64,6 +64,7 @@ export function promptCount(steps: CapturedStep[]): number {
 export function evidenceFromCall(opts: {
   navId?: string; storeId?: number; storeName?: string; steps: CapturedStep[];
   seconds: number | null; reachedHuman: boolean; path: string; note?: string; at?: number;
+  greeting?: string; transferAtSec?: number | null;
 }): EvidenceCall {
   const at = opts.at || Math.floor(Date.now() / 1000);
   return {
@@ -71,6 +72,7 @@ export function evidenceFromCall(opts: {
     storeId: opts.storeId, storeName: opts.storeName,
     seconds: opts.seconds, promptCount: promptCount(opts.steps),
     reachedHuman: opts.reachedHuman, path: opts.path,
+    greeting: opts.greeting, transferAtSec: opts.transferAtSec ?? null,
     transcript: opts.reachedHuman ? transcriptFromCall(opts.steps) : transcriptFromCall(opts.steps, 6),
     note: opts.note,
   };

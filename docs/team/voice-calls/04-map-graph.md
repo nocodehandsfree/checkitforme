@@ -55,6 +55,21 @@ observations + unknowns = the replay trail) · `GET /api/admin/map/unknowns` ·
 `POST /api/admin/map/version/:id/approve|reject` · `POST /api/admin/map/unknown/:id` ·
 `GET|POST /api/admin/map/sweep…`. Dashboard SCREENS belong to Admin — this side only serves the data.
 
+## 6a. ONE set of recipes, one place (owner 07-26)
+"Staging and production should be using the exact same recipes, powered from the Admin and the mapping
+section — the ultimate source of truth, like the store data API."
+
+- **Production holds the record.** Admin reads and writes it there; production calls read it there.
+- **Staging is a follower.** A mapping call on staging does not keep a private copy: it POSTs what it
+  learned to `/api/admin/map/ingest` on the record, and reads the result back through the existing
+  learned-nav pull. Approving or rejecting a version forwards the same way (`/api/admin/map/decide`).
+- Identity across databases is by chain NAME and store PHONE — the keys store-sync already uses. Ids
+  are per-database and would cross-wire.
+- **A failed push never loses a call:** the route is written locally, flagged `not-shared` in the
+  review queue, and the chain is marked unshared so the read-back cannot overwrite it.
+- `src/calls/map-authority.ts` decides which side this environment is on (production, or a linked
+  follower via STORE_SYNC_URL + STORE_SYNC_TOKEN — the same pair the store-data pipe uses).
+
 ## 6b. What the first real call proved (CVS East La Palma, Anaheim, 07-25 23:10 PT)
 Verify replay of the locked route: said "no" @26s, "front" @38s, "general" @48s, transferred at 62s —
 **faster than the stored 67s**, route confirmed at a second store, confidence 45 → 65 automatically,
@@ -64,10 +79,18 @@ evidence and observation written for replay. Two findings:
    LISTENS first (one pass, known path riding along as the recovery playbook), then replays. And a
    slower listen pass no longer loses its plan — it is grafted onto the live route (the faster seconds
    are still what we ship).
-2. **NOT ours to fix — for Echo:** time-to-human was scored on the recording "Okay, transferring you
-   now", not on a person. So the learned 62s is when the transfer message played; the clerk speaks
-   later (~17s, measured 07-25). Every chain that ends in a transfer inherits this, and the paid agent
-   joins that much early. Recommend the runtime treat a transfer announcement as still-navigating.
+2. **Time-to-human was scored on the recording "Okay, transferring you now", not on a person.** FIXED
+   in the mapping lane: a transfer announcement is now its own moment (`transferAtSec`) and the call
+   keeps waiting for a real voice, so the learned seconds are when a PERSON spoke. The gap between the
+   two is recorded per call as a `transfer-gap` observation — that is the money the paid agent wastes
+   today, measured, for Echo to aim the runtime at.
+
+## 6c. Reach a person, hang up, and never run a call that is going nowhere (owner 07-26)
+- A mapping call no longer asks the stock question. It hangs up the moment a real voice answers, and
+  keeps their greeting as the proof of WHICH desk it reached.
+- ROI guards, both enforced inside the call: a hard stop per call (150s, ceiling 165s) and a bounded
+  wait after a transfer announcement (40s). Past either, we hang up and record why in plain words
+  instead of paying for a call nobody is coming to.
 
 ## 7. Fixed on the way past
 `lockRecipeToChain` wrote the bare first digit ("4") into `dtmfShortcut`, but the live bridge only

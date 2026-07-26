@@ -56,6 +56,20 @@ async function main() {
 
     const badApprove = await fetch(`${BASE}/api/admin/map/version/999999/approve`, { method: "POST", headers: H }).then((r) => r.json()) as { ok: boolean };
     ok(badApprove.ok === false, "approving a version that does not exist fails cleanly");
+
+    // The shared-map endpoints: what the other environment posts when a mapping call learns a route.
+    const ingest = await fetch(`${BASE}/api/admin/map/ingest`, {
+      method: "POST", headers: H,
+      body: JSON.stringify({
+        chainName: one.chain, recipe: { type: "keypad", seconds: 18, steps: [{ action: "press", value: "7", atSec: 6, afterPrompt: 1 }] },
+        source: "follower", call: { at: Math.floor(Date.now() / 1000), day: "2026-07-26", seconds: 18, reachedHuman: true, path: "press:7" },
+      }),
+    }).then((r) => r.json()) as { ok?: boolean; version?: number; status?: string };
+    ok(ingest.ok === true && typeof ingest.version === "number", `a route from the other environment is accepted (v${ingest.version}, ${ingest.status})`);
+    const unknownChain = await fetch(`${BASE}/api/admin/map/ingest`, {
+      method: "POST", headers: H, body: JSON.stringify({ chainName: "No Such Chain Anywhere", recipe: { type: "direct", steps: [], seconds: 0 } }),
+    });
+    ok(unknownChain.status === 404, "a chain the record has never heard of is refused, not invented");
   } finally {
     srv.kill("SIGKILL");
   }
