@@ -1212,7 +1212,9 @@ app.get("/api/calls/:id/receipt", async (c) => {
       id: call.id, room: call.room, status: call.status, statusKey: call.statusKey,
       retailerId: call.retailerId, categoryId: call.categoryId, summary: call.summary,
       transcript: call.transcript, startedAt: call.startedAt, completedAt: call.completedAt,
-      // Provenance: which menu version ran, which check this retries, which build served it.
+      // Provenance: the provider's own id (so a bill can be checked against this call), which menu
+      // version ran, which check this retries, and which build served it.
+      providerCallId: call.providerCallId ?? null,
       mapVersion: call.mapVersion ?? null, attemptOf: call.attemptOf ?? null,
       engineVersion: call.engineVersion ?? null,
     },
