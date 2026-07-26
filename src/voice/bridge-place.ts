@@ -6,6 +6,7 @@ import { config } from "../config";
 import { getPolicy } from "../policy";
 import { setBridgeContext, takeBridgeDtmf, takeBridgeSay, bridgeLog } from "./bridge";
 import { startListenNav, listenNavOpeningTwiml, type NavStep } from "../calls/listen-nav";
+import { openReceipt, emit, closeReceipt, laneFor, type EventKind } from "../calls/events";
 
 /** Turn the recipe's executable strings ("2@8,2@16" / "no@26,front@38") back into ordered steps.
  *  Same source of truth either way — only the WHEN changes between the two nav modes. */
@@ -76,6 +77,13 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
   // learned clock if a store never gives a clean pause.
   const navSteps = parseNavSteps(dtmf, opts?.say);
   const listening = !!opts?.listenNav && navSteps.length > 0;
+  // THE RECEIPT opens here — before the carrier is even asked to dial, so every later second on this
+  // call is measured from the same zero. Nothing below can fail because of it.
+  openReceipt(room, {
+    lane: laneFor(navSteps),
+    planned: navSteps.map((s) => ({ action: s.action, value: s.value, atSec: s.atSec })),
+    note: `Dialing ${e164(toNumber)}`,
+  });
   const mkCtx = () => ({ agentId: opts?.agentId || config.voice.agentId, apiKey: opts?.apiKey || undefined, dynamicVars, onConversationId, dtmf: listening ? undefined : (dtmf || undefined), say: listening ? undefined : (opts?.say || undefined), connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: connectAtSecAdj, holdMaxSeconds: pol.bail.holdMaxSeconds, giveUpSeconds: pol.bail.enabled && pol.bail.ringMaxSeconds > 0 ? pol.bail.ringMaxSeconds : undefined, earFromSec, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
   setBridgeContext(room, mkCtx());
   const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
@@ -133,13 +141,19 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
     headers: { Authorization: "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64"), "content-type": "application/x-www-form-urlencoded" },
     body: body.toString(),
   });
-  if (!r.ok) return { error: `twilio call failed: ${r.status} ${await r.text()}` };
+  if (!r.ok) {
+    const why = `${r.status} ${(await r.text()).slice(0, 160)}`;
+    emit(room, "unknown", "The carrier refused the call", { error: why });
+    closeReceipt(room, "Never dialled");
+    return { error: `twilio call failed: ${why}` };
+  }
   const d = (await r.json()) as { sid?: string };
   if (d.sid) { roomCallSids.set(room, d.sid); setTimeout(() => roomCallSids.delete(room), 10 * 60 * 1000); }
   if (listening && d.sid) {
     startListenNav({
       room, callSid: d.sid, steps: navSteps, bridgeUrl,
       log: (m) => bridgeLog(`[${room.slice(0, 8)}] ${m}`),
+      onEvent: (kind, note, detail) => emit(room, kind as EventKind, note, detail),
       // The menu really ended HERE, not where the map guessed. Re-stamp the context so the agent's
       // join window and give-up clock are measured from the real handoff instead of the mapped one.
       onNavEnd: (realNavEndSec) => {

@@ -11,7 +11,7 @@ import { WebSocketServer, type WebSocket } from "ws";
 import { and, desc, eq, gte, inArray, isNull, like, lte, notInArray, or, sql } from "drizzle-orm";
 import { db, client } from "./db/client";
 import {
-  alertSends, alertSubscriptions, callResults, categories, chains, communityPosts, customerSchedules, discordChannels, kiosks, kioskReceipts, kioskReports, leads, products, retailers, schedules, scheduleTargets, statuses, storeRequests, supportConversations, supportMessages, supportTickets, waitlist, watches, zones, zoneRetailers,
+  alertSends, alertSubscriptions, callEvents, callResults, categories, chains, communityPosts, customerSchedules, discordChannels, kiosks, kioskReceipts, kioskReports, leads, products, retailers, schedules, scheduleTargets, statuses, storeRequests, supportConversations, supportMessages, supportTickets, waitlist, watches, zones, zoneRetailers,
 } from "./db/schema";
 import { answerSupport, resolveConversation, warmClose, SUPPORT_MODELS, SUPPORT_CATEGORIES, type SupportCategory } from "./support/ladder";
 import { submitTicket } from "./support/tickets";
@@ -36,6 +36,10 @@ import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
 import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
 import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
 import { listenNavFeed, endListenNav } from "./calls/listen-nav";
+// THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
+import { emit, markNow, closeReceipt, linkCall, rollup, getReceipt } from "./calls/events";
+import { installReceiptStore, currentRates } from "./calls/receipt-store";
+import { costCall, money } from "./calls/cost";
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay } from "./calls/tapedeck";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
@@ -141,6 +145,7 @@ import { placeBridgeCall, attachListenFork, roomCallSids, roomCallProgress, room
 import { isCallingPaused, setCallingPaused, spendTodayCents, withLock } from "./redis";
 
 assertProdSecurity(); // refuse to boot in prod with an open admin / forgeable sessions
+installReceiptStore(); // every finished call writes its timeline + seconds + cost to the database
 await bootstrap(); // apply migrations + seed catalog if empty
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -1148,6 +1153,56 @@ setDeltaBarge(async (s, _speech) => {
 
 // ---- Health ----
 app.get("/api/health", (c) => c.json({ ok: true, commit: process.env.RAILWAY_GIT_COMMIT_SHA ?? null }));
+
+// ---- THE CALL RECEIPT (owner 07-26) ----------------------------------------------------------
+// Replay one call: what happened, when, how many seconds each piece took, and what it cost. Admin-
+// gated by the /api/* wall. A live call answers from memory (so a call in flight can be watched);
+// a finished one answers from the database. If an engineer cannot explain a runtime decision from
+// this response, the receipt is incomplete.
+app.get("/api/calls/:id/receipt", async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isFinite(id)) return c.json({ error: "bad call id" }, 400);
+  const call = (await db.select().from(callResults).where(eq(callResults.id, id)))[0];
+  if (!call) return c.json({ error: "no such call" }, 404);
+
+  // A call still in flight has its timeline in memory; a finished one has it on disk.
+  const live = call.room ? getReceipt(call.room) : null;
+  const rows = live ? [] : await db.select().from(callEvents).where(eq(callEvents.callId, id)).orderBy(callEvents.atMs);
+  const timeline = live
+    ? live.events.map((e) => ({ atSec: e.atSec, kind: e.kind, note: e.note ?? "", detail: e.detail ?? null }))
+    : rows.map((r) => ({ atSec: r.atSec, kind: r.kind, note: r.note ?? "", detail: r.detail ? JSON.parse(r.detail) as unknown : null }));
+
+  const sums = live ? rollup(live) : {
+    lane: call.lane ?? "unknown",
+    callSecs: call.callSeconds ?? 0,
+    timeToAnswerSecs: call.navSeconds ?? null,
+    navSecs: call.navSeconds ?? 0,
+    charlieSecs: call.charlieSeconds ?? 0,
+    speakingSecs: call.charlieSpeakingSeconds ?? 0,
+    listeningSecs: call.charlieListeningSeconds ?? 0,
+    silentSecs: call.charlieSilentSeconds ?? 0,
+    neededSecs: (call.charlieSpeakingSeconds ?? 0) + (call.charlieListeningSeconds ?? 0),
+    avoidableSecs: call.charlieSilentSeconds ?? 0,
+    stepsFired: timeline.filter((t) => t.kind === "nav_step").length,
+    stepsOnPause: timeline.filter((t) => t.kind === "nav_step" && (t.detail as { via?: string } | null)?.via === "prompt").length,
+    charlieJoined: (call.charlieSeconds ?? 0) > 0,
+  };
+  const cost = live
+    ? costCall({ callSecs: sums.callSecs, charlieSecs: sums.charlieSecs, avoidableSecs: sums.avoidableSecs, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - sums.navSecs)] }, await currentRates())
+    : { lineUsd: call.costLineUsd ?? 0, forkUsd: call.costForkUsd ?? 0, charlieUsd: call.costCharlieUsd ?? 0, clipsUsd: call.costClipsUsd ?? 0, totalUsd: call.costTotalUsd ?? 0, billedMinutes: Math.ceil((call.callSeconds ?? 0) / 60), charlieSecs: call.charlieSeconds ?? 0, avoidableUsd: call.costAvoidableUsd ?? 0 };
+
+  return c.json({
+    call: {
+      id: call.id, room: call.room, status: call.status, statusKey: call.statusKey,
+      retailerId: call.retailerId, categoryId: call.categoryId, summary: call.summary,
+      transcript: call.transcript, startedAt: call.startedAt, completedAt: call.completedAt,
+    },
+    live: !!live,
+    seconds: sums,
+    cost: { ...cost, readable: { total: money(cost.totalUsd), charlie: money(cost.charlieUsd), line: money(cost.lineUsd), wasted: money(cost.avoidableUsd) } },
+    timeline,
+  });
+});
 
 // ---- Ops (admin-gated by the /api/* wall): watchdog + backup visibility, manual backup trigger ----
 app.get("/api/ops/status", (c) => c.json({ env: config.staging.on ? "staging" : "production", watchdog: watchdogState(), backup: backupState() }));
@@ -6277,12 +6332,20 @@ app.post("/twiml/bridge-status", async (c) => {
   const status = String((form as Record<string, unknown>).CallStatus || "");
   if (room && status) {
     roomCallProgress.set(room, { status, at: Date.now() });
+    // The carrier's own view of the call goes on the receipt — the only truthful source for when the
+    // line was actually answered (our sockets open later, and on a menu call much later).
+    if (status === "ringing") emit(room, "ringing", "The store's phone is ringing");
+    if (status === "in-progress") { markNow(room, "answeredMs"); emit(room, "connected", "The line was answered"); }
     if (["completed", "busy", "failed", "no-answer", "canceled"].includes(status)) {
       setTimeout(() => roomCallProgress.delete(room), 60_000);
       // Headless bridge calls (schedules/zones/admin call-now) registered a finalizer so a call
       // that ended without reaching a human still lands a terminal callResults row.
       const fin = roomFinalizers.get(room);
       if (fin) { roomFinalizers.delete(room); try { fin(status); } catch (e) { console.error("bridge finalizer:", e); } }
+      // The carrier says the call is over — this is the truthful end, so the receipt closes and
+      // persists HERE. The finalizer above may still be writing the verdict; the roll-up is stitched
+      // onto the call row by the sink, which looks the row up by room.
+      closeReceipt(room, status === "completed" ? "Call ended" : `Call ended (${status})`);
     }
   }
   return c.body(null, 204);
@@ -6409,7 +6472,8 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
       await db.update(callResults).set({ status: "failed", summary: result.error || "bridge call failed" }).where(eq(callResults.id, slotRowId));
     } else {
       const rid = slotRowId;
-      await db.update(callResults).set({ providerCallId: `bridge:${result.room}` }).where(eq(callResults.id, rid));
+      linkCall(result.room, rid); // stable key for the receipt (providerCallId gets replaced mid-call)
+      await db.update(callResults).set({ providerCallId: `bridge:${result.room}`, room: result.room }).where(eq(callResults.id, rid));
       roomFinalizers.set(result.room, (twilioStatus) => {
         void (async () => {
           const cur = (await db.select().from(callResults).where(eq(callResults.id, rid)))[0];

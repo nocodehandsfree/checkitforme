@@ -109,6 +109,8 @@ interface Session {
   done: boolean;
   log: (s: string) => void;
   onNavEnd?: (navEndSec: number) => void;
+  /** Receipt hook. Kept as a callback so this file stays dependency-free and unit-testable. */
+  onEvent?: (kind: string, note: string, detail?: Record<string, unknown>) => void;
   fired: Array<{ value: string; atSec: number; via: "prompt" | "clock" }>;
 }
 
@@ -159,6 +161,14 @@ async function fireNext(room: string, via: "prompt" | "clock"): Promise<void> {
   s.lastFiredAtSec = at;
   s.fired.push({ value: step.value, atSec: at, via });
   s.log(`listen-nav: ${step.action} "${step.value}" at ${at}s (learned ${step.atSec}s, fired on ${via === "prompt" ? "the prompt ending" : "the clock fallback"})`);
+  // On the receipt: what we did, when, and — the part that catches a drifting map — whether the
+  // store's own pause triggered it or we fell back to the learned second.
+  try {
+    s.onEvent?.("nav_step", step.action === "press"
+      ? `Pressed ${step.value} at ${at}s${via === "prompt" ? ", right after the menu stopped talking" : ", on the learned time (the store never paused)"}`
+      : `Said "${step.value}" at ${at}s${via === "prompt" ? ", right after the menu stopped talking" : ", on the learned time (the store never paused)"}`,
+      { action: step.action, value: step.value, atSec: at, learnedAtSec: step.atSec, via });
+  } catch { /* recording is best-effort */ }
   const verb = step.action === "press"
     ? `<Play digits="${step.value.replace(/[^0-9*#]/g, "").slice(0, 6)}"/>`
     : `<Say voice="Polly.Joanna">${esc(step.value)}</Say>`;
@@ -168,6 +178,7 @@ async function fireNext(room: string, via: "prompt" | "clock"): Promise<void> {
     s.done = true;
     s.timers.forEach(clearTimeout); s.timers.length = 0;
     try { s.onNavEnd?.(at); } catch { /* best-effort */ }
+    try { s.onEvent?.("nav_done", `Menu walked in ${at}s (the map said ${s.steps[s.steps.length - 1]?.atSec ?? at}s)`, { atSec: at, mappedAtSec: s.steps[s.steps.length - 1]?.atSec ?? null }); } catch { /* best-effort */ }
     await updateTwiml(s, `${verb}<Connect><Stream url="${s.bridgeUrl}"><Parameter name="room" value="${s.room}" /></Stream></Connect>`);
     s.log(`listen-nav: menu done at ${at}s -> handing to the bridge`);
     setTimeout(() => sessions.delete(room), 5 * 60 * 1000);
@@ -199,13 +210,14 @@ function armClockFallback(s: Session): void {
 export function startListenNav(opts: {
   room: string; callSid: string; steps: NavStep[]; bridgeUrl: string;
   log?: (s: string) => void; onNavEnd?: (navEndSec: number) => void;
+  onEvent?: (kind: string, note: string, detail?: Record<string, unknown>) => void;
 }): void {
   const log = opts.log || (() => { /* silent */ });
   if (!opts.steps.length || !opts.callSid) return;
   const s: Session = {
     room: opts.room, callSid: opts.callSid, steps: opts.steps, next: 0, startMs: Date.now(),
     lastFiredAtSec: 0, timers: [], bridgeUrl: opts.bridgeUrl, done: false, log,
-    onNavEnd: opts.onNavEnd, fired: [],
+    onNavEnd: opts.onNavEnd, onEvent: opts.onEvent, fired: [],
     det: new PromptDetector(() => { /* replaced below */ }),
   };
   s.det = new PromptDetector((n) => {
@@ -220,6 +232,7 @@ export function startListenNav(opts: {
   });
   sessions.set(opts.room, s);
   log(`listen-nav: armed for ${opts.steps.length} step(s) — firing on prompt endings, clock fallback at learned+${GRACE_SEC}s`);
+  try { opts.onEvent?.("nav_armed", `Ready to walk a ${opts.steps.length} step menu, each step waits for the store to stop talking`, { steps: opts.steps }); } catch { /* best-effort */ }
   armClockFallback(s);
 }
 

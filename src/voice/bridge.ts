@@ -3,6 +3,12 @@
 // frames are relayed live and dropped. This is what unlocks live audio + per-customer caller ID.
 import { WebSocket } from "ws";
 import { config } from "../config";
+// THE RECEIPT (owner 07-26). Recording only — pure, database-free, wrapped so it can never throw
+// into the call path. The bridge is the ONLY place that can honestly measure how Charlie's connected
+// seconds split into talking / listening / dead air, because it is the only place the audio passes
+// through. Every stamp is "now"; the receipt owns the clock, since it started at dial and this
+// socket opens much later.
+import { emit, markNow, addMs, linkProviderCall } from "../calls/events";
 
 export interface BridgeContext {
   agentId: string;
@@ -208,6 +214,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   activeCalls++;
   // connect-on-human state
   let connecting = false;     // true once we've committed to opening ElevenLabs (buffer from here)
+  let connectReason = "no gate — opened at pickup"; // what let the billed agent on; goes on the receipt
   let humanAtMs = 0;          // when a human was detected (connect-on-human)
   let lastDtmfMs = 0;         // ms-after-start of the last scheduled keypress (VAD waits past this)
   let voiced = 0;             // consecutive voiced frames
@@ -251,6 +258,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     log("connectEleven: opening ElevenLabs WS");
     eleven = new WebSocket(url);
     eleven.on("open", () => {
+      // THE BILLED SECOND ZERO. The provider meters from session open, so this is where the money
+      // clock starts — not at first word. Everything after this is seconds we are paying for.
+      markNow(room, "charlieOpenMs");
+      emit(room, "charlie_joined", "The agent is on the line and billing", { reason: connectReason });
       log("eleven WS open -> sending init");
       const init: Record<string, unknown> = { type: "conversation_initiation_client_data", dynamic_variables: c.dynamicVars };
       // Workflow voice: minimal per-call TTS override (voice + any tuning). Only when a workflow set
@@ -277,7 +288,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           return null;
         };
         const convId = find(m);
-        if (convId) { conversations.set(room, convId); setTimeout(() => conversations.delete(room), 10 * 60 * 1000); if (c.connectOnHuman && humanAtMs) navByConv.set(convId, Math.max(0, Math.round((humanAtMs - startMs) / 1000))); log(`metadata: convId=${convId}`); try { c.onConversationId?.(convId); } catch (e) { log(`onConversationId threw: ${String(e).slice(0, 80)}`); } }
+        if (convId) { conversations.set(room, convId); linkProviderCall(room, convId); setTimeout(() => conversations.delete(room), 10 * 60 * 1000); if (c.connectOnHuman && humanAtMs) navByConv.set(convId, Math.max(0, Math.round((humanAtMs - startMs) / 1000))); log(`metadata: convId=${convId}`); try { c.onConversationId?.(convId); } catch (e) { log(`onConversationId threw: ${String(e).slice(0, 80)}`); } }
         else log(`metadata but NO convId: ${JSON.stringify(m).slice(0, 200)}`);
         for (const p of pending) eleven!.send(JSON.stringify({ user_audio_chunk: p }));
         pending.length = 0;
@@ -290,6 +301,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           // Twilio plays queued audio sequentially, so chunks extend the window back-to-back.
           const ms = Math.ceil((b64.length * 3) / 4 / 8);
           agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + ms;
+          addMs(room, "speakingMs", ms); // SPEAKING = audio that really played out, not a guess
         }
       } else if (m.type === "user_transcript") {
         const txt = m.user_transcription_event?.user_transcript;
@@ -303,6 +315,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // stream ends the TwiML <Connect> → Twilio hangs the PSTN leg; the EL leg closes with it.
         if (txt && /\b(leave (?:a|your) message|after the (?:tone|beep)|at the (?:tone|beep)|voice ?mail|mailbox|record your message|is not available|unable to take your call|has been forwarded to)\b/i.test(String(txt))) {
           log(`voicemail greeting detected -> hanging up to save the call minutes`);
+          emit(room, "voicemail", "Reached a machine, hung up straight away");
           signalEnd(); try { eleven?.close(); } catch { /* torn down */ } try { twilio.close(); } catch { /* torn down */ }
         }
       } else if (m.type === "agent_response") {
@@ -314,7 +327,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         agentPlayingUntil = 0; // Twilio's playout buffer was cleared — nothing of ours is on the line now
       }
     });
-    eleven.on("close", (code: number) => { log(`eleven WS close code=${code} (frames in=${frames})`); signalEnd(); if (twilio.readyState === 1) twilio.close(); });
+    eleven.on("close", (code: number) => { markNow(room, "charlieCloseMs"); emit(room, "charlie_left", "The agent is off the line, billing stopped"); log(`eleven WS close code=${code} (frames in=${frames})`); signalEnd(); if (twilio.readyState === 1) twilio.close(); });
     eleven.on("error", (e: Error) => log(`eleven WS error: ${e.message}`));
   }
 
@@ -340,6 +353,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   function triggerConnect(reason: string) {
     if (connecting) return;
     humanAtMs = Date.now();
+    connectReason = reason;
+    if (reason === "human") { markNow(room, "humanMs"); emit(room, "human_detected", "A real person is on the line"); }
+    else emit(room, "unknown", `The agent was let on without hearing a person (${reason})`, { reason });
     log(`connect-on-human: connecting (${reason}) after ${Math.round((humanAtMs - startMs) / 1000)}s nav`);
     connectEleven();
     // Give-up cap: the agent is now billing. If no real human words land within giveUpSeconds,
@@ -348,6 +364,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (gu && gu > 0 && !giveUpTimer) {
       giveUpTimer = setTimeout(() => {
         if (humanWords) return;
+        emit(room, "gave_up", `Nobody spoke in the ${gu}s after the agent joined, hung up`, { afterSecs: gu });
         log(`give-up: no human words ${gu}s after connect — hanging up (bail.ringMaxSeconds)`);
         try { if (eleven) eleven.close(); } catch { /* best effort */ }
         try { twilio.close(); } catch { /* best effort */ }
@@ -383,6 +400,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
             inRing = true;
             if (!firstRingAtMs) {
               firstRingAtMs = Date.now();
+              emit(room, "desk_ringing", "The desk is ringing, the agent stays off");
               log(`ear: the desk is ringing (second ring) — Charlie stays off until someone picks up`);
               try { onStage?.(room, 6, Math.max(0, Math.round((firstRingAtMs - startMs) / 1000))); } catch { /* best-effort */ }
             }
@@ -392,7 +410,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       }
     } else {
       // Gap between bursts: a burst that just ended is one completed ring.
-      if (inRing) { inRing = false; ringCount++; log(`ear: ring ${ringCount} went unanswered`); if (ringCount >= RINGS_UNANSWERED && !connecting && !humanWords) { log(`give-up: ${ringCount} rings unanswered — nobody is coming, hanging up (Charlie never joined)`); try { twilio.close(); } catch { /* best effort */ } } }
+      if (inRing) { inRing = false; ringCount++; emit(room, "ring_unanswered", `Ring ${ringCount} went unanswered`, { ringCount }); log(`ear: ring ${ringCount} went unanswered`); if (ringCount >= RINGS_UNANSWERED && !connecting && !humanWords) { emit(room, "gave_up", `Nobody picked up after ${ringCount} rings, hung up before the agent ever billed`, { ringCount }); log(`give-up: ${ringCount} rings unanswered — nobody is coming, hanging up (Charlie never joined)`); try { twilio.close(); } catch { /* best effort */ } } }
       voiced = Math.max(0, voiced - leak); if (voiced === 0) { loudE.length = 0; loudT.length = 0; }
     }
   }
@@ -446,9 +464,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
             // right as staff normally pick up.
             const quitAt = Math.max(earAt, ctx.connectAtSec || 0) + quit;
             log(`twilio start room=${room.slice(0, 8)} -> connect-on-human EAR: deaf through the menu until ${earAt}s, join on a real voice, give up at ${quitAt}s if nobody comes`);
-            dtmfTimers.push(setTimeout(() => { earArmed = true; }, earAt * 1000));
+            dtmfTimers.push(setTimeout(() => { earArmed = true; emit(room, "ear_open", "Menu finished, now listening for a real person"); }, earAt * 1000));
             dtmfTimers.push(setTimeout(() => {
               if (connecting || humanWords) return;
+              emit(room, "gave_up", "Nobody ever came to the phone, hung up before the agent billed a second");
               log(`give-up: no voice by ${quitAt}s — nobody is coming, hanging up (Charlie never joined)`);
               try { if (eleven) eleven.close(); } catch { /* best effort */ }
               try { twilio.close(); } catch { /* best effort */ }
@@ -473,6 +492,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // Echo gate: while our agent audio is playing (+ reflection tail), only a LOUD inbound frame
       // (a real human barging in) reaches ElevenLabs — attenuated line echo of the agent's own voice
       // is dropped, so it can't come back as a phantom "Clerk:" transcript line.
+      // LISTENING SECONDS: while the agent is connected and NOT playing, store-side audio loud
+      // enough to be a voice is time he spent listening to a person. Measured off the same frames
+      // and the same threshold the ear uses, so the two can never disagree. Everything connected
+      // that is neither speaking nor listening is dead air — the seconds we are trying to delete.
+      if (eleven && ready && Date.now() >= agentPlayingUntil && frameEnergy(b64) > VOICE_THRESH) addMs(room, "listeningMs", 20);
       const echoWindow = Date.now() < agentPlayingUntil + ECHO_TAIL_MS;
       const suppress = echoWindow && frameEnergy(b64) < BARGE_THRESH;
       if (suppress) { if (++echoDropped % 200 === 1) log(`echo gate: suppressing agent playback echo (dropped=${echoDropped})`); }
