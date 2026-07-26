@@ -4319,6 +4319,7 @@ function supH_off(){ const el=$('supWrap'); if(!el||!el.__sh) return; el.__sh=0;
 function openAccount(fromPop){
   if(!isAuthed()) return;
   openAccount._pop=!!fromPop;
+  actReset(); // the week chart opens on today every time, never on a stale week or a cleared day
   try{ alertsPrefetch(); }catch(_){ } // warm the alerts list so the Alerts sheet opens instantly
   const idn=acctIdentity();
   $('acct_name').textContent=idn.primary;
@@ -6856,9 +6857,18 @@ async function openHistEntry(e){
   try{ const sp=new URLSearchParams(location.search); sp.delete('v'); sp.set('call',e.cid); history.replaceState({v:'result'},'',location.pathname+'?'+sp.toString()); }catch(_){}
 }
 // ---- My-checks tabs (6e/6f/6g): in-place panels inside the account pop-up. ----
-let ACT_WOFF=0, ACT_DAY=null, ACT_TONE='';
+// ACT_DAY has THREE states, and keeping them apart is what fixes the week chart (owner 07-26):
+//   undefined = the tab was just opened and nobody has picked a day yet -> land on today
+//   a number  = that day is picked; the green bar and the four counts BOTH mean that day
+//   null      = the day was deliberately cleared -> NO bar is green and the counts mean the week
+// Before this, null meant both "no day picked" and "highlight today", so the chart showed today in
+// green while the counts underneath were the whole week: 1 check today sitting above 44 unclear.
+// Tapping today then read as a jump, because clearing the day left the green bar where it was.
+let ACT_WOFF=0, ACT_DAY, ACT_TONE='';
 function actWeek(d){ ACT_WOFF=Math.max(0,ACT_WOFF+d); ACT_DAY=null; ACT_TONE=''; acctTab('activity',true); } // +1 = a week further back, -1 = toward the present (floor 0 = this week)
 function actPick(i){ ACT_DAY=(ACT_DAY===i?null:i); ACT_TONE=''; acctTab('activity',true); }
+/** Reopening the Activity tab starts fresh on today, the same as a first open. */
+function actReset(){ ACT_WOFF=0; ACT_DAY=undefined; ACT_TONE=''; }
 function actTone(tn){ ACT_TONE=(ACT_TONE===tn?'':tn); acctTab('activity',true); }
 // Auto-checks block inside My checks (owner: manage them where the account lives; shows the product
 // per check so multi-vertical users see what each auto-check is for).
@@ -6928,7 +6938,11 @@ function acctTab(which,fromPop){
     const perDay=dayTs.map((t0,i)=>hist.filter(e=>e.ts>=t0&&e.ts<t0+86400000));
     const mx=Math.max(1,...perDay.map(a=>a.length));
     const todayT=(()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime();})();
-    const selIdx=(ACT_DAY!=null)?ACT_DAY:dayTs.indexOf(todayT); // default highlight = today (if in view)
+    // Land on today the first time the tab is opened, so the green bar and the counts below it agree
+    // from the very first paint. Once a day is cleared, nothing is highlighted and the counts are the
+    // week's — the empty chart is the signal, so no number can look like it belongs to a day.
+    if(ACT_DAY===undefined) ACT_DAY=(ACT_WOFF===0?dayTs.indexOf(todayT):-1)>=0?dayTs.indexOf(todayT):null;
+    const selIdx=(ACT_DAY!=null)?ACT_DAY:-1;
     const dws=(LANG==='es'?['D','L','M','M','J','V','S']:['S','M','T','W','T','F','S']);
     const bars=perDay.map((a,i)=>{ const bh=Math.max(6,Math.round(a.length/mx*64)); const cur=i===selIdx;
       return `<div onclick="actPick(${i})" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer">
@@ -6936,7 +6950,8 @@ function acctTab(which,fromPop){
         <span style="font-size:9.5px;font-weight:700;color:${cur?'#4ADE80':'#7C7C88'}">${dws[i]}</span>
         <span style="font-size:9px;font-weight:600;color:#66666F;margin-top:-3px">${new Date(dayTs[i]).getMonth()+1}/${new Date(dayTs[i]).getDate()}</span>
       </div>`; }).join('');
-    const scope=(selIdx>=0&&ACT_DAY!=null)?perDay[selIdx]:hist.filter(e=>e.ts>=dayTs[0]&&e.ts<dayTs[6]+86400000);
+    // The counts follow the highlight, always. A picked day counts that day; no pick counts the week.
+    const scope=(selIdx>=0)?perDay[selIdx]:hist.filter(e=>e.ts>=dayTs[0]&&e.ts<dayTs[6]+86400000);
     const tones={in:0,out:0,soon:0,unk:0}; scope.forEach(e=>{ tones[railTone(e)]=(tones[railTone(e)]||0)+1; });
     const TONECOL={in:'#4ADE80',out:'#FF8080',soon:'#F5B301',unk:'#9CA3AF'};
     const cell=(nv,lb,tn)=>`<div onclick="actTone('${tn}')" style="text-align:center;cursor:pointer;${ACT_TONE===tn?'background:rgba(255,255,255,.05);border-radius:12px;':''}padding:2px 0"><div style="font-size:18px;font-weight:800;color:${ACT_TONE&&ACT_TONE!==tn?'rgba(255,255,255,.35)':(TONECOL[tn]||'#FFF')}">${nv}</div><div style="margin-top:2px;font-size:9.5px;font-weight:700;letter-spacing:.12em;color:#8A8A96">${lb}</div></div>`;
