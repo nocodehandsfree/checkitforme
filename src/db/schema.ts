@@ -514,14 +514,25 @@ export const callResults = sqliteTable(
     // ---- THE RECEIPT ROLL-UP (owner 07-26) ----
     // Denormalized from call_events at call end so reports never have to replay the timeline. The
     // events stay the ground truth; these are the numbers a dashboard sorts and sums on.
+    // The route that ACTUALLY ran, read back off what really fired — never the chain's guess.
     lane: text("lane"),                  // direct | alpha (keypad) | bravo (spoken) | delta | unknown
     room: text("room"),                  // bridge room id — the join key back to call_events
+    talkSeconds: integer("talk_seconds"),// person on the line -> hang up
+    menuSeconds: integer("menu_seconds"),// dial -> the menu finished (null on a store with no menu)
     // Charlie bills every CONNECTED second whether he talks, listens or sits silent. Splitting them
     // does not save money; it proves how many seconds nobody needed. silent = the seconds we want back.
-    charlieSeconds: integer("charlie_seconds"),
+    charlieConnectedSeconds: integer("charlie_connected_seconds"),
+    charlieTalkingSeconds: integer("charlie_talking_seconds"),
     charlieSpeakingSeconds: integer("charlie_speaking_seconds"),
     charlieListeningSeconds: integer("charlie_listening_seconds"),
     charlieSilentSeconds: integer("charlie_silent_seconds"),
+    ringSeconds: integer("ring_seconds"),   // a desk ringing while the session was open and billing
+    holdSeconds: integer("hold_seconds"),   // clerk away / hold music while billing. NULL = not measured yet
+    billedMinutes: integer("billed_minutes"),
+    // Provenance, so a bad number can be traced instead of argued about.
+    mapVersion: text("map_version"),        // which saved menu version ran (null until Mapper ships)
+    attemptOf: integer("attempt_of"),       // the check this one retries -> tries-per-answer is countable
+    engineVersion: text("engine_version"),  // the build that served it, so a regression is findable
     // Costs in MICRODOLLARS (millionths of a dollar, integers) so totals sum exactly across calls.
     costLineUsd: integer("cost_line_usd"),
     costForkUsd: integer("cost_fork_usd"),

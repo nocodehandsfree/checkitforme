@@ -164,7 +164,7 @@ async function fireNext(room: string, via: "prompt" | "clock"): Promise<void> {
   // On the receipt: what we did, when, and — the part that catches a drifting map — whether the
   // store's own pause triggered it or we fell back to the learned second.
   try {
-    s.onEvent?.("nav_step", step.action === "press"
+    s.onEvent?.(step.action === "press" ? "alpha_press" : "bravo_say", step.action === "press"
       ? `Pressed ${step.value} at ${at}s${via === "prompt" ? ", right after the menu stopped talking" : ", on the learned time (the store never paused)"}`
       : `Said "${step.value}" at ${at}s${via === "prompt" ? ", right after the menu stopped talking" : ", on the learned time (the store never paused)"}`,
       { action: step.action, value: step.value, atSec: at, learnedAtSec: step.atSec, via });
@@ -178,7 +178,8 @@ async function fireNext(room: string, via: "prompt" | "clock"): Promise<void> {
     s.done = true;
     s.timers.forEach(clearTimeout); s.timers.length = 0;
     try { s.onNavEnd?.(at); } catch { /* best-effort */ }
-    try { s.onEvent?.("nav_done", `Menu walked in ${at}s (the map said ${s.steps[s.steps.length - 1]?.atSec ?? at}s)`, { atSec: at, mappedAtSec: s.steps[s.steps.length - 1]?.atSec ?? null }); } catch { /* best-effort */ }
+    // Menu-end is not its own kind (the dashboard reads a closed set) — it rides on the last step.
+  try { s.onEvent?.(step.action === "press" ? "alpha_press" : "bravo_say", `Menu walked in ${at}s (the map said ${s.steps[s.steps.length - 1]?.atSec ?? at}s)`, { last: true, menuEndedAtSec: at, mappedEndAtSec: s.steps[s.steps.length - 1]?.atSec ?? null }); } catch { /* best-effort */ }
     await updateTwiml(s, `${verb}<Connect><Stream url="${s.bridgeUrl}"><Parameter name="room" value="${s.room}" /></Stream></Connect>`);
     s.log(`listen-nav: menu done at ${at}s -> handing to the bridge`);
     setTimeout(() => sessions.delete(room), 5 * 60 * 1000);
@@ -232,7 +233,7 @@ export function startListenNav(opts: {
   });
   sessions.set(opts.room, s);
   log(`listen-nav: armed for ${opts.steps.length} step(s) — firing on prompt endings, clock fallback at learned+${GRACE_SEC}s`);
-  try { opts.onEvent?.("nav_armed", `Ready to walk a ${opts.steps.length} step menu, each step waits for the store to stop talking`, { steps: opts.steps }); } catch { /* best-effort */ }
+  try { opts.onEvent?.("ivr_detected", `This store has a ${opts.steps.length} step menu, each step waits for the store to stop talking`, { steps: opts.steps }); } catch { /* best-effort */ }
   armClockFallback(s);
 }
 
