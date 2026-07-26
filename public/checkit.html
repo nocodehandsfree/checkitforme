@@ -2196,6 +2196,29 @@ html[data-skin="v2"] .ctlv2-bub{background:linear-gradient(180deg,#2D2D34 0%,#27
 html[data-skin="v2"] .ctlv2-bub .who{font-size:10px;font-weight:700;letter-spacing:.13em;color:#8A8A96}
 html[data-skin="v2"] .ctlv2-bub.ai .who{color:#4ADE80}
 html[data-skin="v2"] .ctlv2-bub .tx{margin-top:4px;font-size:15px;font-weight:500;color:rgba(255,255,255,.85)}
+/* READS LIKE A TEXT CHAT (owner 07-26): every bubble was flush left, so the two voices looked like
+   one column of notes. The store sits left, our side sits indented right, and each keeps one squared
+   corner on its own side. That corner is the tail, and it tells you who is talking before you read
+   the label. Text inside stays left-aligned; only the bubble moves. */
+html[data-skin="v2"] .ctlv2-bub{max-width:86%;margin-right:auto;border-bottom-left-radius:6px}
+html[data-skin="v2"] .ctlv2-bub.ai{margin-right:0;margin-left:auto;border-bottom-left-radius:16px;border-bottom-right-radius:6px}
+/* THE CALL FOLDER (owner 07-26): the store's mark was a 20px chip stuck after a word, too small to
+   read on a phone after all the work that went into those logos. The roll-up handle is now a quiet
+   card: "Calling" reads as the tab at the top, the logo is the body, and the step count sits right,
+   so tapping it still folds the log. The card stays low contrast so a bigger logo does not shout. */
+html[data-skin="v2"] .callfold{width:100%;background:linear-gradient(180deg,#26262C 0%,#212127 100%);border-radius:16px;padding:11px 14px 12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+html[data-skin="v2"] .callfold-tab{font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#8A8A96}
+html[data-skin="v2"] .callfold-body{margin-top:9px;display:flex;align-items:center;gap:12px}
+html[data-skin="v2"] .callmark{flex:0 0 auto;width:48px;height:48px;border-radius:14px;background:#1F1F25;display:flex;align-items:center;justify-content:center;overflow:hidden}
+html[data-skin="v2"] .callmark img{max-width:34px;max-height:34px;object-fit:contain}
+html[data-skin="v2"] .callmark .wm{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:900;color:#C2C2D0}
+html[data-skin="v2"] .callmark .wm span{font-size:inherit;font-weight:inherit;color:inherit}
+html[data-skin="v2"] .callmark svg{width:26px;height:26px}
+/* The rail dot rides the tab line, which now sits inside the folder card rather than on a bare row. */
+html[data-skin="v2"] .ctlv2-rail .d1{margin-top:14px}
+html[data-skin="v2"] .callfold-n{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#8A8A96;white-space:nowrap}
+html[data-skin="v2"] details[open] .callfold-n .foldchev{transform:rotate(180deg)}
+html[data-skin="v2"] .callfold-n .foldchev{transition:transform .15s}
 /* ROUND 2 — OWNER SCREENSHOT FIXES */
 /* Account screen (§3/§8): the icon set is ALL accent — no purple on account screens, ever. */
 html[data-skin="v2"] .acctrow>svg *[stroke]:not([stroke="none"]){stroke:var(--accent,#FFCB05)}
@@ -5537,7 +5560,21 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
     return `<div class="ctlv2" style="margin-bottom:22px">
       <div class="ctlv2-rail"><span class="d1"></span><span class="ln" style="background:linear-gradient(180deg,#4ADE80 0%,${live?'#4ADE80 100%':`color-mix(in srgb,#4ADE80 35%,${tone}) 60%,${tone} 100%`})"></span><span class="d2" style="background:${live?'#4ADE80':tone};${live?'box-shadow:0 0 8px rgba(74,222,128,.6)':''}"></span></div>
       <div style="flex:1;min-width:0">
-        <details${status?'':' open'}><summary><span class="ctl-lead${(live&&stepRows.length)?' was':''}" style="display:inline-flex;align-items:center">${t('step.calling','Calling')}${(()=>{const _w=(status&&status.store)||SEL_STORE;return _w&&(_w.logoUrl||_w.name)?`<span class="callwho ${_w.logoDark?'lite':''}${_w.logoWide?' widelogo':''}">${storeFace(_w)}</span>`:'';})()}</span><span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#8A8A96">${stepRows.length+1} ${stepRows.length+1===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg></span></summary>
+        <details${status?'':' open'}><summary>${(()=>{
+          // THE CALL FOLDER (owner 07-26). "Calling" is the tab, the store's logo is the body at a
+          // size a phone can actually read, and the step count sits right. Tapping it still folds
+          // the log, so nothing about the interaction changed.
+          const _w=(status&&status.store)||SEL_STORE;
+          const _n=stepRows.length+1;
+          const _cnt=`${_n} ${_n===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''}`;
+          return `<div class="callfold">
+            <div class="callfold-tab">${t('step.calling','Calling')}</div>
+            <div class="callfold-body">
+              ${_w&&(_w.logoUrl||_w.name)?`<span class="callmark">${storeFace(_w)}</span>`:''}
+              <span class="callfold-n">${_cnt}<svg class="foldchev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+            </div>
+          </div>`;
+        })()}</summary>
           <div class="ctlv2-steps">${stepEls}</div>
         </details>
         <div id="convo_body" style="${bubs?'margin-top:12px;':''}display:flex;flex-direction:column;gap:9px">${bubs}</div>
