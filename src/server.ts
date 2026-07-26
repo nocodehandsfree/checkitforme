@@ -1178,23 +1178,28 @@ app.get("/api/calls/:id/receipt", async (c) => {
   // A finished call is served from its own stamped row, so a replay always agrees with the numbers
   // the reports are summing. A null here means we never measured it — not that it was zero.
   const steps = timeline.filter((t) => t.kind === "alpha_press" || t.kind === "bravo_say");
+  // A row written by an older build has some of these columns and not others. Reporting the ones it
+  // happens to have would put a nonsense pair on screen — nought seconds connected next to a second
+  // of dead air. If the row was never stamped with connected time, the whole agent block reads as
+  // unmeasured, which is the truth.
+  const stamped = call.charlieConnectedSeconds != null;
   const sums: Rollup = live ? rollup(live) : {
     lane: (call.lane ?? "unknown") as Rollup["lane"],
     callSecs: call.callSeconds ?? 0,
     navSeconds: call.navSeconds ?? null,
     talkSeconds: call.talkSeconds ?? null,
-    charlieConnectedSeconds: call.charlieConnectedSeconds ?? 0,
-    charlieTalkingSeconds: call.charlieTalkingSeconds ?? 0,
-    charlieSilentSeconds: call.charlieSilentSeconds ?? 0,
-    speakingSecs: call.charlieSpeakingSeconds ?? 0,
-    listeningSecs: call.charlieListeningSeconds ?? 0,
-    ringSeconds: call.ringSeconds ?? 0,
+    charlieConnectedSeconds: stamped ? call.charlieConnectedSeconds! : 0,
+    charlieTalkingSeconds: stamped ? (call.charlieTalkingSeconds ?? 0) : 0,
+    charlieSilentSeconds: stamped ? (call.charlieSilentSeconds ?? 0) : 0,
+    speakingSecs: stamped ? (call.charlieSpeakingSeconds ?? 0) : 0,
+    listeningSecs: stamped ? (call.charlieListeningSeconds ?? 0) : 0,
+    ringSeconds: stamped ? (call.ringSeconds ?? 0) : 0,
     holdSeconds: call.holdSeconds ?? null,
     billedMinutes: call.billedMinutes ?? Math.ceil((call.callSeconds ?? 0) / 60),
     menuSeconds: call.menuSeconds ?? null,
     stepsFired: steps.length,
     stepsOnPause: steps.filter((t) => (t.detail as { via?: string } | null)?.via === "prompt").length,
-    charlieJoined: (call.charlieConnectedSeconds ?? 0) > 0,
+    charlieJoined: stamped && (call.charlieConnectedSeconds ?? 0) > 0,
   };
   const cost = live
     ? costCall({ callSecs: sums.callSecs, charlieSecs: sums.charlieConnectedSeconds, avoidableSecs: sums.charlieSilentSeconds, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))] }, await currentRates())
