@@ -180,6 +180,28 @@ export async function bootstrap() {
   await client.execute("ALTER TABLE call_results ADD COLUMN status_key TEXT").catch(() => {});
   // Premium follow-up: the product form/set the clerk named ("3-pack blister", "Surging Sparks ETB").
   await client.execute("ALTER TABLE call_results ADD COLUMN product_detail TEXT").catch(() => {});
+  // THE CALL RECEIPT (owner 07-26). Timeline rows live in call_events; these are the roll-up numbers
+  // reports sort and sum on, denormalized at call end so nothing has to replay the timeline.
+  await client.execute(`CREATE TABLE IF NOT EXISTS call_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    call_id INTEGER,
+    room TEXT NOT NULL,
+    at_ms INTEGER NOT NULL,
+    at_sec INTEGER NOT NULL,
+    kind TEXT NOT NULL,
+    note TEXT,
+    detail TEXT,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch())
+  )`).catch(() => {});
+  await client.execute("CREATE INDEX IF NOT EXISTS call_events_call_idx ON call_events (call_id, at_ms)").catch(() => {});
+  await client.execute("CREATE INDEX IF NOT EXISTS call_events_room_idx ON call_events (room, at_ms)").catch(() => {});
+  for (const col of [
+    "lane TEXT", "room TEXT",
+    "charlie_seconds INTEGER", "charlie_speaking_seconds INTEGER",
+    "charlie_listening_seconds INTEGER", "charlie_silent_seconds INTEGER",
+    "cost_line_usd INTEGER", "cost_fork_usd INTEGER", "cost_charlie_usd INTEGER",
+    "cost_clips_usd INTEGER", "cost_total_usd INTEGER", "cost_avoidable_usd INTEGER",
+  ]) await client.execute(`ALTER TABLE call_results ADD COLUMN ${col}`).catch(() => {});
   // Referral growth loop: each account's shareable code + who referred them.
   await client.execute("ALTER TABLE accounts ADD COLUMN referral_code TEXT").catch(() => {});
   await client.execute("ALTER TABLE accounts ADD COLUMN referred_by TEXT").catch(() => {});

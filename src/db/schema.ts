@@ -511,6 +511,24 @@ export const callResults = sqliteTable(
     // Premium follow-up capture: the product form / set the clerk named ("3-pack blister",
     // "Surging Sparks ETB") — kept even when the exact set is unknown. Surfaced on the verdict.
     productDetail: text("product_detail"),
+    // ---- THE RECEIPT ROLL-UP (owner 07-26) ----
+    // Denormalized from call_events at call end so reports never have to replay the timeline. The
+    // events stay the ground truth; these are the numbers a dashboard sorts and sums on.
+    lane: text("lane"),                  // direct | alpha (keypad) | bravo (spoken) | delta | unknown
+    room: text("room"),                  // bridge room id — the join key back to call_events
+    // Charlie bills every CONNECTED second whether he talks, listens or sits silent. Splitting them
+    // does not save money; it proves how many seconds nobody needed. silent = the seconds we want back.
+    charlieSeconds: integer("charlie_seconds"),
+    charlieSpeakingSeconds: integer("charlie_speaking_seconds"),
+    charlieListeningSeconds: integer("charlie_listening_seconds"),
+    charlieSilentSeconds: integer("charlie_silent_seconds"),
+    // Costs in MICRODOLLARS (millionths of a dollar, integers) so totals sum exactly across calls.
+    costLineUsd: integer("cost_line_usd"),
+    costForkUsd: integer("cost_fork_usd"),
+    costCharlieUsd: integer("cost_charlie_usd"),
+    costClipsUsd: integer("cost_clips_usd"),
+    costTotalUsd: integer("cost_total_usd"),
+    costAvoidableUsd: integer("cost_avoidable_usd"), // the dead-air slice, already inside costCharlieUsd
   },
   (t) => ({
     byRetailerCategory: index("call_results_retailer_category_idx").on(t.retailerId, t.categoryId),
@@ -651,3 +669,28 @@ export const supportTickets = sqliteTable("support_tickets", {
   emailedOk: integer("emailed_ok", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at").notNull().default(now),
 });
+
+/**
+ * THE CALL RECEIPT — one row per runtime event on one call (owner 07-26: "I don't have all the
+ * visibility on the code"). Append-only and cheap: a call writes 10-25 rows. Keyed by `room`, which
+ * exists from before the phone rings, so events can be recorded long before a call_results row does.
+ * `callId` is linked in when that row appears. This is the source the replay screen reads.
+ */
+export const callEvents = sqliteTable(
+  "call_events",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    callId: integer("call_id"),        // call_results.id once known (no FK: events outlive deletes)
+    room: text("room").notNull(),      // bridge room id — the correlation key for the whole call
+    atMs: integer("at_ms").notNull(),  // milliseconds from dial
+    atSec: integer("at_sec").notNull(),// whole seconds from dial (what a person reads)
+    kind: text("kind").notNull(),      // call_started | lane | nav_step | human_detected | …
+    note: text("note"),                // plain-English one-liner for the timeline
+    detail: text("detail"),            // json extras (digits, words, why a decision went that way)
+    createdAt: integer("created_at").notNull().default(now),
+  },
+  (t) => ({
+    byCall: index("call_events_call_idx").on(t.callId, t.atMs),
+    byRoom: index("call_events_room_idx").on(t.room, t.atMs),
+  }),
+);

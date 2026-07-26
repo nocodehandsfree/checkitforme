@@ -7,6 +7,8 @@ import { fetchStorePhone } from "../store-phone";
 import {
   accounts, callResults, categories, chains, customerSchedules, retailers, scheduleTargets, schedules, statuses, watches, zoneRetailers, zones,
 } from "../db/schema";
+import { linkCall } from "./events"; // ties the call row to its receipt (the timeline + the seconds)
+import { recordVerdict } from "./receipt-store";
 import { chargeOneCredit, isCompAccount, getAccount } from "../billing";
 import { sendRestockEmailTo, sendAlert, accountLang, localizeResult } from "../alerts";
 import { isCallingPaused } from "../redis";
@@ -555,7 +557,10 @@ export async function bridgeCheckCall(a: TriggerArgs) {
     throw new Error(r.error || "bridge call failed");
   }
   const providerCallId = `bridge:${r.room}`;
-  await db.update(callResults).set({ providerCallId }).where(eq(callResults.id, row.id));
+  // `room` is the receipt's key and nothing ever overwrites it — unlike providerCallId, which the
+  // voice provider's conversation id replaces mid-call. This is the stable join for the timeline.
+  linkCall(r.room, row.id);
+  await db.update(callResults).set({ providerCallId, room: r.room }).where(eq(callResults.id, row.id));
   // If the call ends without ever reaching a human (voicemail hang-up, busy, no answer), no conv id
   // ever lands — the room finalizer closes the row so zone runs / schedules still reach a terminal state.
   roomFinalizers.set(r.room, (twilioStatus) => {
@@ -992,6 +997,9 @@ export async function ingestPending(): Promise<number> {
       // otherwise fall back to the first-human-turn timestamp from the transcript.
       navSeconds: takeBridgeNav(row.providerCallId) ?? outcome.navSecs ?? null,
     }).where(eq(callResults.id, row.id));
+    // Close the timeline with the answer the customer actually got, so a replay ends where the call
+    // ended. Fire-and-forget: a verdict must never wait on bookkeeping.
+    void recordVerdict(row.id, finalStatusKey ?? null, outcome.summary ?? null, outcome.durationSecs ?? 0);
 
     // Server-side billing: charge the finder ONE credit on a DEFINITIVE answer, exactly once.
     // (chargeCallOnce is atomic — the poller, the webhook, and any retry can't double-bill.)
