@@ -4760,6 +4760,9 @@ app.patch("/api/settings", async (c) => {
   // stops talking instead of on a stopwatch. "off" (default) | "all" | a comma list of chain names.
   // Admin owns this value — never set it behind Admin's back.
   if (b.listenNav !== undefined) await setSetting("listen_nav", String(b.listenNav || "off").trim());
+  // Learned-nav mirror (owner 07-26): staging is where we learn a route now, so this pull from
+  // production can be switched OFF for a mapping session. "on" (default) | "off".
+  if (b.learnedSync !== undefined) await setSetting("learned_sync", String(b.learnedSync || "on").trim().toLowerCase());
   return c.json(await allSettings());
 });
 
@@ -6060,8 +6063,10 @@ app.post("/api/admin/trainer/batch", async (c) => {
 app.get("/api/admin/trainer/batch", (c) => c.json(batchStatus()));
 // ---- Mapper: "map until locked" — the auto-continue loop (listen → baseline → optimize → lock) ----
 app.post("/api/admin/mapper/start", async (c) => {
-  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number };
-  return c.json(await startMapper(Number(b.chainId || 0)));
+  // storeId (optional): map THIS store, skipping the 9am-8pm picker — for a store we know is open now,
+  // or one whose menu differs from its chain's.
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; storeId?: number };
+  return c.json(await startMapper(Number(b.chainId || 0), { storeId: Number(b.storeId || 0) || undefined }));
 });
 app.post("/api/admin/mapper/stop", async (c) => {
   const b = (await c.req.json().catch(() => ({}))) as { chainId?: number };
