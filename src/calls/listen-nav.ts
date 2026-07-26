@@ -19,7 +19,14 @@
 // Deliberately dependency-free (no config, no db) so the timing rules stay unit-testable without
 // booting the app: scripts/test-listen-nav.ts.
 
-export interface NavStep { action: "press" | "say"; value: string; atSec: number }
+export interface NavStep {
+  action: "press" | "say"; value: string; atSec: number;
+  /** WHICH recording this step follows, learned during mapping (1-based). The owner's rule made
+   *  data: "say general" belongs after the store finishes reading its options, not at second 41.
+   *  When present it becomes the trigger — the step waits for that many completed recordings — and
+   *  the learned second stays on as the floor and the backstop. Absent = today's behaviour. */
+  afterPrompt?: number;
+}
 
 /** How early a step may fire relative to its learned time. A step becomes ELIGIBLE at
  *  (learned - LEAD) and then waits for the next real prompt boundary. 12s covers the measured
@@ -95,6 +102,50 @@ export class PromptDetector {
   feed(b64: string): void { this.feedEnergy(frameEnergy(b64)); }
 }
 
+// ---- the recording plan (which recording each step waits for) -------------------------------
+// The bridge builds its step list from the flat "value@seconds" strings, which cannot carry
+// `afterPrompt`. Rather than change the frozen call-placing code, the caller STAGES the plan just
+// before dialling and this file claims it by the exact same step list. Key = the steps themselves,
+// so a claim can only ever match a call running the identical route.
+const stagedPlans = new Map<string, { afterPrompt: Array<number | undefined>; at: number }>();
+const PLAN_TTL_MS = 10 * 60 * 1000;
+
+export function navPlanKey(steps: Array<{ action: string; value: string; atSec: number }>): string {
+  return steps.map((s) => `${s.action}:${String(s.value).trim().toLowerCase()}@${Math.round(s.atSec)}`).join(",");
+}
+
+/** Stage which recording each step waits for, for the next call that runs this exact route. */
+export function stageNavPromptPlan(steps: Array<{ action: string; value: string; atSec: number; afterPrompt?: number }>): void {
+  if (!steps.length || !steps.some((s) => typeof s.afterPrompt === "number")) return;
+  const now = Date.now();
+  for (const [k, v] of stagedPlans) if (now - v.at > PLAN_TTL_MS) stagedPlans.delete(k);
+  stagedPlans.set(navPlanKey(steps), { afterPrompt: steps.map((s) => s.afterPrompt), at: now });
+}
+
+/** Should this step fire on the recording that just ended? Pure, so the rule is provable without a
+ *  phone call (scripts/test-listen-nav.ts).
+ *  @param n    which recording just finished (1-based)
+ *  @param at   seconds since the store answered
+ *  Two gates, both of which can only ever DELAY a step — the clock fallback still guarantees it runs:
+ *   1. not before (learned - LEAD), and never within MIN_STEP_GAP of the previous step;
+ *   2. when the map knows which recording this step follows, wait for that recording to finish. */
+export function shouldFireOnPrompt(step: NavStep, n: number, at: number, lastFiredAtSec: number): { fire: boolean; reason: string } {
+  const eligibleAt = Math.max(step.atSec - LEAD_SEC, lastFiredAtSec + MIN_STEP_GAP_SEC);
+  if (at < eligibleAt) return { fire: false, reason: `too early (eligible ${eligibleAt}s)` };
+  if (typeof step.afterPrompt === "number" && n < step.afterPrompt) {
+    return { fire: false, reason: `waits for recording ${step.afterPrompt}` };
+  }
+  return { fire: true, reason: "recording ended" };
+}
+
+/** Merge a staged plan onto the steps the bridge parsed. Same route, same order, same count — or we
+ *  leave the steps exactly as they came and the call behaves like today. */
+function claimPromptPlan(steps: NavStep[]): NavStep[] {
+  const hit = stagedPlans.get(navPlanKey(steps));
+  if (!hit || hit.afterPrompt.length !== steps.length) return steps;
+  return steps.map((s, i) => (typeof hit.afterPrompt[i] === "number" ? { ...s, afterPrompt: hit.afterPrompt[i] } : s));
+}
+
 // ---- the per-call session ------------------------------------------------------------------
 interface Session {
   room: string;
@@ -119,6 +170,11 @@ export function listenNavActive(room: string): boolean { return sessions.has(roo
 /** What actually happened on this call — for the debug log and the call ladder. */
 export function listenNavFired(room: string): Array<{ value: string; atSec: number; via: string }> {
   return sessions.get(room)?.fired ?? [];
+}
+/** How many store recordings played on this call — the free drift measure: a menu that grew or lost
+ *  a recording since we mapped it shows up here with no speech recognition and no model. */
+export function listenNavPromptCount(room: string): number {
+  return sessions.get(room)?.det.count ?? 0;
 }
 
 const esc = (s: string) => s.replace(/[<>&'"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" }[c] as string));
@@ -177,6 +233,7 @@ async function fireNext(room: string, via: "prompt" | "clock"): Promise<void> {
     // Menu walked. Hand the call to the agent bridge exactly as the old TwiML did.
     s.done = true;
     s.timers.forEach(clearTimeout); s.timers.length = 0;
+    keepSummary(s);   // the menu walk is over — freeze what happened for the drift check
     try { s.onNavEnd?.(at); } catch { /* best-effort */ }
     try { s.onEvent?.("nav_done", `Menu walked in ${at}s (the map said ${s.steps[s.steps.length - 1]?.atSec ?? at}s)`, { atSec: at, mappedAtSec: s.steps[s.steps.length - 1]?.atSec ?? null }); } catch { /* best-effort */ }
     await updateTwiml(s, `${verb}<Connect><Stream url="${s.bridgeUrl}"><Parameter name="room" value="${s.room}" /></Stream></Connect>`);
@@ -214,8 +271,9 @@ export function startListenNav(opts: {
 }): void {
   const log = opts.log || (() => { /* silent */ });
   if (!opts.steps.length || !opts.callSid) return;
+  const steps = claimPromptPlan(opts.steps);
   const s: Session = {
-    room: opts.room, callSid: opts.callSid, steps: opts.steps, next: 0, startMs: Date.now(),
+    room: opts.room, callSid: opts.callSid, steps, next: 0, startMs: Date.now(),
     lastFiredAtSec: 0, timers: [], bridgeUrl: opts.bridgeUrl, done: false, log,
     onNavEnd: opts.onNavEnd, onEvent: opts.onEvent, fired: [],
     det: new PromptDetector(() => { /* replaced below */ }),
@@ -225,14 +283,14 @@ export function startListenNav(opts: {
     const step = s.steps[s.next];
     if (!step) return;
     const at = secs(s);
-    // Eligible = we are at or past (learned - LEAD), and far enough from the previous step.
-    const eligibleAt = Math.max(step.atSec - LEAD_SEC, s.lastFiredAtSec + MIN_STEP_GAP_SEC);
-    if (at < eligibleAt) { log(`listen-nav: prompt ${n} ended at ${at}s — too early for "${step.value}" (eligible ${eligibleAt}s), waiting`); return; }
+    const verdict = shouldFireOnPrompt(step, n, at, s.lastFiredAtSec);
+    if (!verdict.fire) { log(`listen-nav: recording ${n} ended at ${at}s — "${step.value}" ${verdict.reason}, waiting`); return; }
     void fireNext(s.room, "prompt");
   });
   sessions.set(opts.room, s);
-  log(`listen-nav: armed for ${opts.steps.length} step(s) — firing on prompt endings, clock fallback at learned+${GRACE_SEC}s`);
-  try { opts.onEvent?.("nav_armed", `Ready to walk a ${opts.steps.length} step menu, each step waits for the store to stop talking`, { steps: opts.steps }); } catch { /* best-effort */ }
+  const onRecording = steps.filter((x) => typeof x.afterPrompt === "number").length;
+  log(`listen-nav: armed for ${steps.length} step(s)${onRecording ? `, ${onRecording} waiting on a specific recording` : ""} — firing on prompt endings, clock fallback at learned+${GRACE_SEC}s`);
+  try { opts.onEvent?.("nav_armed", `Ready to walk a ${steps.length} step menu, each step waits for the store to stop talking`, { steps }); } catch { /* best-effort */ }
   armClockFallback(s);
 }
 
@@ -246,10 +304,28 @@ export function listenNavFeed(room: string, b64: string, track?: string): void {
   s.det.feed(b64);
 }
 
+// What each finished call did, kept briefly after the room is gone so the drift check can still read
+// it when Twilio's terminal callback arrives after the socket closed.
+const summaries = new Map<string, { fired: Array<{ value: string; atSec: number; via: string }>; promptCount: number; navEndSec: number | null; at: number }>();
+const SUMMARY_TTL_MS = 15 * 60 * 1000;
+function keepSummary(s: Session): void {
+  const now = Date.now();
+  for (const [k, v] of summaries) if (now - v.at > SUMMARY_TTL_MS) summaries.delete(k);
+  summaries.set(s.room, { fired: [...s.fired], promptCount: s.det.count, navEndSec: s.fired.length ? s.fired[s.fired.length - 1].atSec : null, at: now });
+}
+/** How the mapped route actually behaved on this call — the input to drift detection. */
+export function listenNavSummary(room: string): { fired: Array<{ value: string; atSec: number; via: string }>; promptCount: number; navEndSec: number | null } | null {
+  const live = sessions.get(room);
+  if (live) return { fired: [...live.fired], promptCount: live.det.count, navEndSec: live.fired.length ? live.fired[live.fired.length - 1].atSec : null };
+  const done = summaries.get(room);
+  return done ? { fired: done.fired, promptCount: done.promptCount, navEndSec: done.navEndSec } : null;
+}
+
 /** Call ended / room torn down. */
 export function endListenNav(room: string): void {
   const s = sessions.get(room);
   if (!s) return;
+  keepSummary(s);
   s.done = true;
   s.timers.forEach(clearTimeout);
   sessions.delete(room);

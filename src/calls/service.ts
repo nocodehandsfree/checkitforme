@@ -65,7 +65,9 @@ async function notifyAutoCheckResult(callId: number): Promise<void> {
 import { config } from "../config";
 import { ElevenLabsProvider } from "../voice/elevenlabs";
 import { takeBridgeNav } from "../voice/bridge";
-import { placeBridgeCall, roomFinalizers } from "../voice/bridge-place";
+import { placeBridgeCall, roomFinalizers, parseNavSteps } from "../voice/bridge-place";
+import { stageNavPromptPlan, listenNavSummary } from "./listen-nav";
+import { reportCallDrift } from "./mapgraph";
 import { learnTreeFromTranscript, consumeTreeRelearn } from "./tree-learn";
 import { connectAtSecFor } from "./recipe";
 import { deltaStoreCall, setDeltaFinalize, tdTranscript, type TdSession } from "./tapedeck";
@@ -221,6 +223,22 @@ export async function buildRestockVars(
   const lnRaw = ((await getSetting("listen_nav")) || "off").trim().toLowerCase();
   const listenNav = lnRaw === "all"
     || (!!chain?.name && lnRaw.split(",").map((x) => x.trim()).filter(Boolean).includes(chain.name.toLowerCase()));
+
+  // WHICH RECORDING each step waits for (owner 07-26). The mapped route now knows that "general" is
+  // said after the store finishes reading its options, not at second 41 — but the plan the bridge
+  // builds is a flat "word@seconds" string with nowhere to put that. So stage it here, keyed by the
+  // exact route, and listening navigation claims it as the call starts. No map data → nothing staged
+  // → the call behaves exactly as it does today.
+  if (listenNav && chain?.navRecipe) {
+    try {
+      const r = JSON.parse(chain.navRecipe) as { steps?: Array<{ action?: string; value?: string; atSec?: number; afterPrompt?: number }> };
+      const parsed = parseNavSteps(chain.dtmfShortcut ?? null, say);
+      const mapped = (r.steps || []).filter((s) => s.action === "press" || s.action === "say");
+      if (parsed.length && parsed.length === mapped.length) {
+        stageNavPromptPlan(parsed.map((p, i) => ({ ...p, afterPrompt: mapped[i]?.afterPrompt })));
+      }
+    } catch { /* unreadable recipe → clock behaviour, unchanged */ }
+  }
 
   return {
     retailer, category, chainName: chain?.name ?? null,
@@ -565,6 +583,20 @@ export async function bridgeCheckCall(a: TriggerArgs) {
   // ever lands — the room finalizer closes the row so zone runs / schedules still reach a terminal state.
   roomFinalizers.set(r.room, (twilioStatus) => {
     void (async () => {
+      // DRIFT (owner 07-26): every real check re-measures the map for free. What we compare is what
+      // the call already produced — how many recordings played, when each step fired, and whether a
+      // step had to fall back to the clock. A step firing on the clock is the early warning that a
+      // store changed its menu, which is exactly what talked over CVS and Walmart. No speech
+      // recognition, no model, so this costs nothing and runs on every check.
+      const chainId = v.retailer.chainId;
+      const summary = listenNavSummary(r.room!);
+      if (chainId && summary && summary.fired.length) {
+        await reportCallDrift({
+          chainId, storeId: v.retailer.id, callId: row.id, navId: `bridge:${r.room}`,
+          fired: summary.fired, promptCount: summary.promptCount, navEndSec: summary.navEndSec,
+          reachedHuman: twilioStatus === "completed",
+        }).catch(() => { /* knowledge is best-effort — never block a verdict */ });
+      }
       const cur = (await db.select().from(callResults).where(eq(callResults.id, row.id)))[0];
       if (!cur || cur.status !== "dialing") return; // conv id landed → EL ingest owns the verdict
       // Twilio's terminal status IS the real reason on this lane (EL never joined): map it to the

@@ -41,6 +41,8 @@ import { emit, markNow, closeReceipt, linkCall, rollup, getReceipt } from "./cal
 import { installReceiptStore, currentRates } from "./calls/receipt-store";
 import { costCall, money } from "./calls/cost";
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
+import { graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown } from "./calls/mapgraph";
+import { startSweep, stopSweep, sweepStatus, buildQueue } from "./calls/sweep";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay } from "./calls/tapedeck";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
 import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, connectAtSecFor, chainDialable, chainNavPlan, type Recipe } from "./calls/recipe";
@@ -6075,6 +6077,40 @@ app.post("/api/admin/mapper/target", async (c) => {
   await setSetting(`nav_needs_target:${chainId}`, ""); // owner chose → clear the needs-target flag
   return c.json({ ok: true, target: target || null });
 });
+// ---- The map: versions, evidence, confidence, drift, unknowns, approvals --------------------
+// Read-only for the dashboard plus the two decisions a human makes (approve / reject a version, close
+// an unknown). The mapping engine writes; nothing here places a call except the sweep endpoints.
+app.get("/api/admin/map/graph", async (c) => c.json({ rows: await graphSummary() }));
+app.get("/api/admin/map/chain/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!id) return c.json({ error: "chainId required" }, 400);
+  return c.json(await chainDetail(id));
+});
+app.post("/api/admin/map/version/:id/approve", async (c) => {
+  const id = Number(c.req.param("id"));
+  return c.json(await approveVersion(id, "admin"));
+});
+app.post("/api/admin/map/version/:id/reject", async (c) => {
+  const id = Number(c.req.param("id"));
+  const b = (await c.req.json().catch(() => ({}))) as { why?: string };
+  return c.json(await rejectVersion(id, "admin", String(b.why || "")));
+});
+app.get("/api/admin/map/unknowns", async (c) => c.json({ unknowns: await openUnknowns(Number(c.req.query("limit") || 100)) }));
+app.post("/api/admin/map/unknown/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  const b = (await c.req.json().catch(() => ({}))) as { status?: string; note?: string };
+  await resolveUnknown(id, b.status === "dismissed" ? "dismissed" : "resolved", String(b.note || ""));
+  return c.json({ ok: true });
+});
+// ---- The sweep: call every chain east → west and prove the route to a person ----------------
+app.post("/api/admin/map/sweep/start", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { maxCalls?: number; only?: number[] };
+  return c.json(await startSweep({ maxCalls: Number(b.maxCalls || 0) || undefined, only: Array.isArray(b.only) ? b.only.map(Number) : undefined }));
+});
+app.post("/api/admin/map/sweep/stop", (c) => c.json(stopSweep()));
+app.get("/api/admin/map/sweep", (c) => c.json(sweepStatus()));
+app.get("/api/admin/map/sweep/queue", async (c) => c.json({ queue: await buildQueue() }));
+
 app.get("/api/admin/agent/models", (c) => c.json(AGENT_MODELS));
 app.post("/api/admin/agent", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as { messages?: Array<{ role: "user" | "assistant"; text: string }>; model?: string };

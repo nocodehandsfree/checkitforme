@@ -9,6 +9,7 @@ import { backfillChainTypes, backfillDirectChains } from "./import-data";
 import { getSetting, setSetting } from "./settings";
 import { seedStockCheckIntel } from "../stock/intel";
 import { seedSellMethods } from "../stock/sellmethods";
+import { ensureMapTables, backfillFromChains } from "../calls/mapgraph";
 
 // Seed any MISSING status rows (never overwrites owner edits — insert-if-absent only).
 async function seedStatuses() {
@@ -354,6 +355,9 @@ export async function bootstrap() {
   await seedUnmappableReasons(); // seed the owner-named unmappable reasons (only where blank — never clobbers a curated edit)
   await seedStockCheckIntel(); // classify chains site-rail vs call-rail (insert-if-absent)
   await seedSellMethods();      // per-chain ways-to-get-it + MSRP flag (insert-if-absent)
+  await ensureMapTables();      // the versioned phone-menu map (versions + evidence + unknowns)
+  const bf = await backfillFromChains(); // carry today's locked recipes in as version 1 (once)
+  if (bf.created) console.log(`Map backfill: ${bf.created} chain map(s) carried over, ${bf.flagged} flagged as key-hammering.`);
   await seedFunStore();         // owner-only "Fun" rehearsal store (only if FUN_STORE_PHONE is set)
   await seedMvpsStore();        // owner-only "MVPs" pitch-demo store (phone set per-demo from Admin)
 }
