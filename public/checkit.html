@@ -2019,6 +2019,15 @@ html[data-skin="v2"] #zmenuOv .modal,html[data-skin="v2"] #emailOv .modal,html[d
 html[data-skin="v2"] #zmenuOv .modal,html[data-skin="v2"] #emailOv .modal,html[data-skin="v2"] #alertsOv .modal,html[data-skin="v2"] #featOv .modal{border:1px solid rgba(255,255,255,.15);border-bottom:0;box-shadow:0 -20px 60px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.07)}
 html[data-skin="v2"] #zmenuOv .modal::before,html[data-skin="v2"] #emailOv .modal::before,html[data-skin="v2"] #alertsOv .modal::before,html[data-skin="v2"] #featOv .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 16px}
 html[data-skin="v2"] #zmenuOv.on .modal,html[data-skin="v2"] #emailOv.on .modal,html[data-skin="v2"] #alertsOv.on .modal,html[data-skin="v2"] #featOv.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
+/* Feature sheets: a centred header block (raised icon tile, name, the promise) over ONE carved well of
+   points. The points used to sit loose on the sheet and read as a list that fell there (owner 07-26). */
+html[data-skin="v2"] #featOv .fi-head{text-align:center;margin:0 0 16px}
+html[data-skin="v2"] #featOv .fi-icon{width:58px;height:58px;margin:2px auto 12px;border-radius:19px;background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);box-shadow:0 10px 20px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.1);display:grid;place-items:center}
+html[data-skin="v2"] #featOv h3{margin:0;font-size:22px;font-weight:900;letter-spacing:-.45px;line-height:1.15;text-align:center}
+html[data-skin="v2"] #featOv .fi-lead{margin:8px auto 0;max-width:18em;font-size:15px;font-weight:700;color:rgba(255,255,255,.8);line-height:1.35}
+html[data-skin="v2"] #featOv .fi-pts{background:#1B1B20;border-radius:18px;padding:4px 16px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
+html[data-skin="v2"] #featOv .fi-pt{display:flex;align-items:flex-start;gap:12px;padding:13px 0;font-size:14.5px;font-weight:600;color:rgba(255,255,255,.9);line-height:1.4}
+html[data-skin="v2"] #featOv .fi-pt>span:first-child{flex:0 0 auto;margin-top:2px;display:flex}
   /* Alerts can hold up to 10 stores, so let the sheet scroll instead of running off-screen (owner 07-23). */
   html[data-skin="v2"] #alertsOv .modal{max-height:86vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 html[data-skin="v2"] #histOverlay .hist-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:2px 18px calc(22px + env(safe-area-inset-bottom))}
@@ -2078,13 +2087,18 @@ html[data-skin="v2"] #buyOverlay .buy-scroll{flex:1;min-height:0;overflow-y:auto
 html[data-skin="v2"] #buyOverlay .buy-scroll>*{flex:0 0 auto}
 html[data-skin="v2"] #buyOverlay .buy-foot{flex:none}
 /* The floating dock, same box as the zones basket: inset 12px so the plan list shows past its edges. */
-html[data-skin="v2"] #buyOverlay .buydock{position:absolute;left:12px;right:12px;bottom:14px;z-index:1000;background:linear-gradient(180deg,#2F2F37,#26262C);box-shadow:0 22px 46px -14px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.07),inset 0 1px 0 rgba(255,255,255,.09);border-radius:20px;padding:11px 13px 13px;transform:translateY(140%);transition:transform .28s cubic-bezier(.2,.8,.3,1)}
-html[data-skin="v2"] #buyOverlay .buydock.up{transform:translateY(0)}
+/* It has to read as a NEW THING that just appeared, not as another row (owner 07-26). Depth does that,
+   never a border (STYLE_GUIDE §1): the active-key gradient lifts it above the row cards, and the UPWARD
+   shadow darkens the plan row behind its top edge, which is what actually detaches it. It pops in scale
+   as it rises. Keep the 12px inset so the list still shows past its sides. */
+html[data-skin="v2"] #buyOverlay .buydock{position:absolute;left:12px;right:12px;bottom:14px;z-index:1000;background:linear-gradient(180deg,#34343E 0%,#292930 100%);box-shadow:0 -10px 26px rgba(0,0,0,.6),0 26px 52px -12px rgba(0,0,0,.92),inset 0 1px 0 rgba(255,255,255,.14);border-radius:22px;padding:12px 14px 14px;transform:translateY(140%) scale(.96);transition:transform .3s cubic-bezier(.2,.9,.3,1)}
+html[data-skin="v2"] #buyOverlay .buydock.up{transform:translateY(0) scale(1)}
 html[data-skin="v2"] #buyOverlay .buydock-plan{display:flex;align-items:baseline;gap:10px;margin:0 4px 9px}
 html[data-skin="v2"] #buyOverlay .buydock-plan .bd-n{flex:1;min-width:0;font-size:14.5px;font-weight:800;color:#FFF;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 html[data-skin="v2"] #buyOverlay .buydock-plan .bd-p{flex:none;font-size:15px;font-weight:800;color:#FFF}
 html[data-skin="v2"] #buyOverlay .buydock-plan .bd-p i{font-style:normal;font-size:11.5px;font-weight:600;color:#8A8A96}
 html[data-skin="v2"] #buyOverlay .buydock #buy_cta{margin-top:0;width:100%;padding:13px 22px}
+html[data-skin="v2"] #buyOverlay .buydock #buy_note{margin:10px 0 1px;text-align:center;font-size:12px;font-weight:600;color:#7C7C88}
 /* Monthly/Annual is a COMPACT key pair on the same line as "You're on the <plan> plan" (owner 07-26
    rejected the full-width bar). "save 17%" rides inside the Annual key, so it can never float loose. */
 html[data-skin="v2"] #buyOverlay .bcrow{display:flex;align-items:center;gap:10px;margin:2px 0 12px}
@@ -2479,11 +2493,12 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
           <button onclick="setBuyMode('packs',this)" data-i18n="buy.tabpayg">Pay as you go</button>
         </div>
         <div id="buy_plans"></div>
-        <div class="meta" id="buy_note" style="text-align:center;margin-top:12px"></div>
       </div>
+      <!-- the secure-checkout line belongs WITH the button, not stranded on the page (owner 07-26) -->
       <div class="buy-foot"><div class="buydock" id="buyDock">
         <div class="buydock-plan" id="buyDockPlan"></div>
         <button class="cta" id="buy_cta" type="button" onclick="buyContinue()"><span data-i18n="buy6b.cta">Continue</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
+        <div class="meta" id="buy_note"></div>
       </div></div>
     </div>
   </div>
@@ -8210,13 +8225,18 @@ const FEAT_INFO={
 function featInfo(key){ const c=FEAT_INFO[key]; return c?(c[LANG]||c.en):null; }
 function openFeatInfo(key){ const info=featInfo(key); if(!info) return;
   const ck='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 12.5l5 5L20 6.5"/></svg>';
-  const pts=(info.pts||[]).map(p=>`<div style="display:flex;align-items:flex-start;gap:11px;font-size:14px;font-weight:600;color:rgba(255,255,255,.86);line-height:1.45"><span style="margin-top:1px">${ck}</span><span>${esc(p)}</span></div>`).join('');
+  // A centred header block (icon tile, name, the promise) over ONE carved well holding the points.
+  // Left-aligned lines loose on the sheet read as a list that fell there; the well makes them a block,
+  // and centring everything would read worse (owner 07-26).
+  const pts=(info.pts||[]).map(p=>`<div class="fi-pt"><span>${ck}</span><span>${esc(p)}</span></div>`).join('');
   const ov=sheetShell('featOv');
   ov.innerHTML=`<div class="modal" style="text-align:left">
-    <div style="display:flex;justify-content:center;margin-bottom:8px"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="${AC1()}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${FEAT_ICON[key]||''}</svg></div>
-    <h3 style="margin:2px 0 14px;text-align:center">${esc(featLabel(key))}</h3>
-    <div style="font-size:16px;font-weight:800;color:#fff;letter-spacing:-.2px;margin-bottom:15px;line-height:1.3">${esc(info.lead)}</div>
-    <div style="display:flex;flex-direction:column;gap:12px">${pts}</div></div>`;
+    <div class="fi-head">
+      <div class="fi-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${AC1()}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${FEAT_ICON[key]||''}</svg></div>
+      <h3>${esc(featLabel(key))}</h3>
+      <div class="fi-lead">${esc(info.lead)}</div>
+    </div>
+    <div class="fi-pts">${pts}</div></div>`;
   ov.classList.add('on'); track('feat_info',{key});
 }
 function featLabel(key){ const f=(PLANS&&PLANS.features||[]).find(x=>x.key===key); return f?f.label:key.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()); }
@@ -8289,7 +8309,10 @@ function buySyncDockPad(){ requestAnimationFrame(()=>{ const sc=$('buy_scroll'),
   // and a scroll started before that lands gets wiped. Lift once the sheet has settled.
   clearTimeout(buySyncDockPad._t); buySyncDockPad._t=setTimeout(()=>{
     const row=document.querySelector('#buy_plans .plan.sub'); if(!row||!dk.classList.contains('up')) return;
-    const over=row.getBoundingClientRect().bottom-(dk.getBoundingClientRect().top-12);
+    // measure the dock's RESTING top, never its live rect: it is mid slide-up at this point, so the live
+    // rect sits low and we would under-scroll and leave the pick tucked under the dock's edge.
+    const par=dk.offsetParent, dockTop=par?par.getBoundingClientRect().top+dk.offsetTop:dk.getBoundingClientRect().top;
+    const over=row.getBoundingClientRect().bottom-(dockTop-14);
     if(over>0) sc.scrollBy({top:over,behavior:'smooth'});
   },140);
 }); }
