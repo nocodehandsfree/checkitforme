@@ -2,11 +2,6 @@
 One screen. Every session updates this at close (≤40 lines). New truth REPLACES old — history is in
 git. Last updated: 2026-07-24 (Target store numbers filled; calling emergency root-caused).
 
-## The calling emergency (07-23 night) — cause found and fixed
-- Your failed tests ran on the prior broken build; the real site was never affected. Fixed on staging:
-  the call screen shows real steps · you hear calls from pickup · Charlie joins only on a real voice ·
-  nobody-answers calls end themselves unbilled.
-
 ## Admin fixes, live now (07-24)
 - The Live/Staging switch is BACK, top right on every page. Restock "By store" shows real store logos
   (Live needs a promote). Call rows show the status ICON only; five squashed store logos fixed.
@@ -23,10 +18,15 @@ git. Last updated: 2026-07-24 (Target store numbers filled; calling emergency ro
 ## Target: 70 stores called — the store number tells us which menu it has (07-24)
 - Number 3000 or higher = a small city or campus store, no service desk, press 3 for the person. Below
   3000 = a full store with the desk on 2, what we already press. 11 of 11 in a blind test.
-- The store number is now on EVERY Target: 72 of the 73 blank California ones filled from Target's own
-  pages; the last, East Palo Alto, is closed for good and is muted with a note. New rule: a store we
-  find closed gets muted, never deleted.
-- The Calc page under-counted the phone bill (whole minutes, not seconds) — Admin has the fix order.
+- The store number is now on EVERY Target: 72 of 73 blank California ones filled; East Palo Alto is
+  closed for good and muted. New rule: a store we find closed gets muted, never deleted.
+
+## The plans page: Continue can't get lost any more (07-26, staging)
+- Tap a plan and a small bar rises from the bottom holding that plan, its price and Continue. It floats
+  over the list like the basket in My Zones, so Continue is always on screen no matter how far you scroll.
+- Pay as you go no longer shrinks the sheet and drops it down the page. Same height on both tabs.
+- Monthly / Annual is now a small pair of keys next to "You're on the ... plan", not the wide bar you
+  rejected. "save 17%" sits inside the Annual key. NOT checked: how it looks on your phone.
 
 ## Two work streams from before (unchanged)
 1. **Site fixes (five) — DONE on staging, waiting on you.** Check on your phone, then say "promote".
