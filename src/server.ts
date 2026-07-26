@@ -1175,10 +1175,14 @@ app.get("/api/calls/:id/receipt", async (c) => {
     ? live.events.map((e) => ({ atSec: e.atSec, kind: e.kind, note: e.note ?? "", detail: e.detail ?? null }))
     : rows.map((r) => ({ atSec: r.atSec, kind: r.kind, note: r.note ?? "", detail: r.detail ? JSON.parse(r.detail) as unknown : null }));
 
+  // Time to answer is read back off the timeline, not off navSeconds: the timeline counts from the
+  // moment we dialled, while navSeconds counts from where the bridge socket opened. Same call, two
+  // different zeroes — so a replay would have disagreed with itself.
+  const humanAt = timeline.find((t) => t.kind === "human_detected")?.atSec ?? null;
   const sums = live ? rollup(live) : {
     lane: call.lane ?? "unknown",
     callSecs: call.callSeconds ?? 0,
-    timeToAnswerSecs: call.navSeconds ?? null,
+    timeToAnswerSecs: humanAt,
     navSecs: call.navSeconds ?? 0,
     charlieSecs: call.charlieSeconds ?? 0,
     speakingSecs: call.charlieSpeakingSeconds ?? 0,
