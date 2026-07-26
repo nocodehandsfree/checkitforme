@@ -15,7 +15,7 @@
 // Safety: hard cap of calls/chain/day, spacing between calls, global kill-switch, per-chain stop.
 import { eq } from "drizzle-orm";
 import { db } from "./../db/client";
-import { chains } from "../db/schema";
+import { chains, retailers } from "../db/schema";
 import { getSetting, setSetting } from "../db/settings";
 import { isCallingPaused } from "../redis";
 import { placeNavCall, getNavSession, defaultWorkflowAsk, classifyMode, menuHasCustomerService, NavRecipe, NavStep } from "./navigator";
@@ -206,7 +206,7 @@ async function bumpDaily(chainId: number): Promise<number> {
 }
 
 /** Start (or resume) mapping a chain until locked. Fire-and-forget; poll mapperState(). */
-export async function startMapper(chainId: number): Promise<{ started?: boolean; error?: string; benchmark?: number | null }> {
+export async function startMapper(chainId: number, opts: { storeId?: number } = {}): Promise<{ started?: boolean; error?: string; benchmark?: number | null }> {
   if (!chainId) return { error: "chainId required" };
   const existing = runs.get(chainId);
   if (existing?.running) return { error: "already mapping this chain" };
@@ -262,7 +262,12 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
       // #3: hold ONE store across attempts — ring variance must not rotate us. Pick a fresh store only on
       // the first attempt or after the held line proved DEAD (disconnected / voicemail / store closed).
       if (!run.store || run.rotate) {
-        const picked = await storeForChain(chainId, run.usedStores, true);
+        // An owner-named store overrides the picker for the whole run — for a store we KNOW is open
+        // right now (a late-evening CVS the 9am–8pm gate would refuse), or to re-map one specific
+        // store whose menu differs from its chain. Rotation is off: this is the store, or nothing.
+        const picked = opts.storeId && !run.rotate
+          ? (await db.select().from(retailers).where(eq(retailers.id, opts.storeId)))[0]
+          : await storeForChain(chainId, run.usedStores, true);
         if (!picked) { run.stopReason = "no store in local daytime hours right now — re-run when stores are open (mornings hit the east coast first)"; run.phase = run.baseline ? run.phase : "needs-review"; break; }
         run.store = { id: picked.id, name: picked.name, phone: picked.phone };
         run.usedStores.push(picked.id); run.rotate = false;
