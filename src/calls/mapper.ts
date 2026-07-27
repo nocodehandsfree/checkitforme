@@ -327,7 +327,8 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
         undefined, hint, barge, undefined,
         undefined,
         { listenFirst: isListen, askVoiceId: ask.voiceId, askText: ask.text, target: run.target,
-          maxSec: CALL_MAX_SEC, transferWaitSec: TRANSFER_WAIT_SEC },
+          maxSec: CALL_MAX_SEC, transferWaitSec: TRANSFER_WAIT_SEC,
+          why: `Mapping ${run.chainName} (${run.phase}, call ${run.attempt})` },
       );
       if (placed.error || !placed.id) {
         run.log.push({ n: run.attempt, phase: run.phase, store: store.name, experiment: ex?.label, outcome: "dial failed: " + (placed.error || "?") });

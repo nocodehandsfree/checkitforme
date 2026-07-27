@@ -58,10 +58,25 @@ export async function persistReceipt(r: Receipt): Promise<void> {
         note: e.note ?? null, detail: e.detail ? JSON.stringify(e.detail).slice(0, 4000) : null,
       })));
     }
-    if (callId == null) return;
-
     const sums = rollup(r);
     const rates = await currentRates();
+    // An ADMIN call (mapping, a rehearsal, the store button) deliberately has no call_results row —
+    // it is not a customer's check and must never land in the customer numbers. It still needs its
+    // seconds and its cost, so they go onto the timeline itself as one summary row. Without this the
+    // receipt would be a list of moments with no money on it.
+    if (callId == null) {
+      const c0 = costCall({
+        callSecs: sums.callSecs, charlieSecs: sums.charlieConnectedSeconds,
+        avoidableSecs: sums.charlieSilentSeconds,
+        forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))],
+      }, rates);
+      await db.insert(callEvents).values({
+        callId: null, room: r.room, atMs: sums.callSecs * 1000, atSec: sums.callSecs, kind: "summary",
+        note: `${sums.callSecs}s · ${(c0.totalUsd * 100).toFixed(1)}¢`,
+        detail: JSON.stringify({ rollup: sums, cost: c0 }).slice(0, 4000),
+      });
+      return;
+    }
     // Both audio forks are billed: the live-listen fork runs the whole call, and the bridge stream
     // runs from the hand-off to the end. Counting only one of them was undercounting every call.
     const cost = costCall({

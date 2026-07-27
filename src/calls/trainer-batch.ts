@@ -192,7 +192,7 @@ export async function startBatch(opts: BatchOpts = {}) {
       if (!store) { state.skipped++; state.done++; state.results.push({ chain: ch.name, outcome: "all stores closed now — retry daytime" }); continue; }
       // Every human contact ends with the real ask ("any Pokémon cards in?") in the workflow voice —
       // a mapping call that reaches a person is never wasted on a silent hangup.
-      const placed = await placeNavCall(ch.id, store.id, store.name, store.phone, undefined, undefined, undefined, undefined, { product: "Pokémon cards" }, { askVoiceId: ask.voiceId, askText: ask.text });
+      const placed = await placeNavCall(ch.id, store.id, store.name, store.phone, undefined, undefined, undefined, undefined, { product: "Pokémon cards" }, { askVoiceId: ask.voiceId, askText: ask.text, why: `Sweep: ${ch.name}` });
       if (placed.error || !placed.id) { state.failed++; state.done++; state.results.push({ chain: ch.name, outcome: "dial failed: " + (placed.error || "?") }); await sleep(gapSec * 1000); continue; }
       const deadline = Date.now() + perCallMaxSec * 1000;
       let s = getNavSession(placed.id);
