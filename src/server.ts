@@ -34,17 +34,18 @@ import { getPolicy, setPolicy, publicPolicy, cachedPolicy } from "./policy";
 import { importStores, backfillRegions } from "./stores-import";
 import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
 import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
-import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
+import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, latestNavSessionForChain, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
 import { listenNavFeed, endListenNav } from "./calls/listen-nav";
 // THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
 import { emit, markNow, closeReceipt, linkCall, rollup, getReceipt, type Rollup } from "./calls/events";
 import { installReceiptStore, currentRates } from "./calls/receipt-store";
 import { costCall, money } from "./calls/cost";
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
-import { graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
+import { graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
+import { recipeFromCall, evidenceFromCall, type CapturedStep } from "./calls/map-capture";
 import { startSweep, stopSweep, sweepStatus, buildQueue } from "./calls/sweep";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay } from "./calls/tapedeck";
-import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
+import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged, lockRecipeToChain } from "./calls/trainer-batch";
 import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, connectAtSecFor, chainDialable, chainNavPlan, type Recipe } from "./calls/recipe";
 import { llm, heli } from "./llm";
 import { opsAlert, watchdogTick, watchdogState, backupTick, backupNow, backupState } from "./ops-watch";
@@ -6026,32 +6027,30 @@ app.post("/api/admin/trainer/runs", async (c) => {
   return c.json({ ok: true, saved: b.runs.length });
 });
 app.post("/api/admin/trainer/lock", async (c) => {
-  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; recipe?: { type?: string; steps?: unknown[]; seconds?: number }; confidence?: number };
+  // The Admin "Map" button ends here. It goes through the SAME writer as the overnight batch, the
+  // mapper and the sweep (lockRecipeToChain), so a route locked by hand lands in the map with its
+  // evidence exactly like one locked by a sweep — no path can put a recipe on live calls silently.
+  const b = (await c.req.json().catch(() => ({}))) as {
+    chainId?: number; recipe?: { type?: string; steps?: unknown[]; seconds?: number }; confidence?: number; navId?: string;
+  };
   if (!b.chainId || !b.recipe) return c.json({ error: "chainId + recipe required" }, 400);
-  const ch = (await db.select().from(chains).where(eq(chains.id, Number(b.chainId))))[0];
-  const log = ch?.navLog ? (JSON.parse(ch.navLog) as number[]) : [];
-  if (typeof b.recipe.seconds === "number") log.push(b.recipe.seconds);
-  // Bridge: write the locked recipe into the LIVE call's phone-tree directions so every real call to
-  // this chain navigates via it (the live agent reads chains.phoneTreeDefault as {{phone_tree}}).
   const recipe = b.recipe as Recipe;
-  const direct = isDirect(recipe);
-  const treeText = recipeToTreeText(recipe);
-  const dtmf = recipeToDtmf(recipe); // "digit@seconds" early-press form the bridge consumes
-  const now = Math.floor(Date.now() / 1000);
-  await db.update(chains).set({
-    navType: b.recipe.type || null, navRecipe: JSON.stringify(b.recipe),
-    navSeconds: direct ? null : (typeof b.recipe.seconds === "number" ? Math.round(b.recipe.seconds) : null),
-    navStatus: "locked", navConfidence: typeof b.confidence === "number" ? b.confidence : null,
-    navLog: JSON.stringify(log.slice(-10)), navUpdatedAt: now,
-    // ↓ applied to live consumer calls (this is the bridge from documentation → real calls):
-    phoneTreeDefault: treeText, treeNote: treeText,
-    dtmfShortcut: dtmf || null,
-    answerPath: recipeAnswerPath(recipe) || null,
-    // Direct-answer chains have no menu, so they must carry NO seconds — a stray value arms the ABC
-    // connect-timer and mutes the agent while a human is already on the line (the silent-agent bug).
-    ringsDirect: direct, avgTreeSeconds: direct ? null : (typeof b.recipe.seconds === "number" ? Math.round(b.recipe.seconds) : null),
-    treeStatus: "learned", treeLearnedAt: now,
-  }).where(eq(chains.id, Number(b.chainId)));
+  // When the lock names the call it came from, that call IS the evidence — its store, its timing, the
+  // greeting that proves which desk answered, and which recording each step followed.
+  let evidence: EvidenceCall | undefined;
+  const sess = b.navId ? getNavSession(String(b.navId)) : latestNavSessionForChain(Number(b.chainId));
+  if (sess) {
+    const steps = (sess.steps || []) as CapturedStep[];
+    const captured = recipeFromCall(steps, sess.humanAtSec ?? null);
+    if (captured.steps.length === (recipe.steps?.length || 0)) recipe.steps = captured.steps as unknown as Recipe["steps"];
+    const store = (await db.select().from(retailers).where(eq(retailers.id, sess.retailerId)))[0];
+    evidence = evidenceFromCall({
+      navId: sess.id, storeId: sess.retailerId, storeName: store?.name, steps,
+      seconds: recipe.seconds ?? null, reachedHuman: true, path: pathSignature(captured),
+      greeting: sess.greeting, transferAtSec: sess.transferAtSec ?? null, note: "locked from Admin",
+    });
+  }
+  await lockRecipeToChain(Number(b.chainId), recipe, typeof b.confidence === "number" ? b.confidence : null, evidence);
   return c.json({ ok: true });
 });
 // Overnight phone-tree batch: dial one store per chain, learn + persist the route. action:

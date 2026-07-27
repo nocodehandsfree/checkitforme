@@ -12,6 +12,7 @@ import { placeNavCall, getNavSession, defaultWorkflowAsk } from "./navigator";
 import { isCallingPaused, setBatchState, getBatchState } from "../redis";
 import { openState } from "../store-hours";
 import { chainDialable, recipeToDtmf } from "./recipe";
+import { proposeVersion, pathSignature, type EvidenceCall } from "./mapgraph";
 
 type Step = { who?: string; action?: string; value?: string; atSec?: number };
 type Recipe = { type?: string; steps?: Array<{ action?: string; value?: string; atSec?: number }>; seconds?: number; menu?: Array<{ digit: string; label: string }>; menuPrompts?: string[]; ringVariable?: boolean; target?: string };
@@ -35,8 +36,11 @@ export function recipeFromSteps(steps: Step[], humanAtSec: number | null): Recip
   return { type, steps: acts, seconds: humanAtSec ?? (steps[steps.length - 1]?.atSec ?? 0) };
 }
 
-/** Persist a HUMAN-CONFIRMED recipe to the chain — applies to live calls (mirrors trainer/lock). */
-export async function lockRecipeToChain(chainId: number, recipe: Recipe, confidence: number | null) {
+/** Persist a HUMAN-CONFIRMED recipe to the chain — applies to live calls — AND record it in the map.
+ *  ONE writer for every path that locks a route (the Admin Map button, the overnight batch, the mapper,
+ *  the sweep), so a route can never reach live calls without its evidence and its version landing too.
+ *  `evidence` is what the call proved; without it the version still lands, carrying only what we know. */
+export async function lockRecipeToChain(chainId: number, recipe: Recipe, confidence: number | null, evidence?: EvidenceCall) {
   const ch = (await db.select().from(chains).where(eq(chains.id, chainId)))[0];
   const log = ch?.navLog ? (JSON.parse(ch.navLog) as number[]) : [];
   if (typeof recipe.seconds === "number") log.push(recipe.seconds);
@@ -74,6 +78,28 @@ export async function lockRecipeToChain(chainId: number, recipe: Recipe, confide
     ringsDirect: direct, avgTreeSeconds: direct ? null : (typeof recipe.seconds === "number" ? Math.round(recipe.seconds) : null),
     treeStatus: "learned", treeLearnedAt: now,
   }).where(eq(chains.id, chainId));
+  // The map is knowledge, the chain row is what the runtime reads — both, always, from here.
+  try {
+    const mapRecipe = {
+      type: (recipe.type as "direct" | "keypad" | "voice") || (direct ? "direct" : "keypad"),
+      steps: steps.map((st) => ({
+        action: st.action === "press" ? ("press" as const) : ("say" as const),
+        value: String(st.value || ""), atSec: Math.round(st.atSec ?? 0),
+        afterPrompt: (st as { afterPrompt?: number }).afterPrompt,
+      })),
+      seconds: typeof recipe.seconds === "number" ? recipe.seconds : 0,
+      target: recipe.target, menu: recipe.menu, menuPrompts: recipe.menuPrompts, ringVariable: recipe.ringVariable,
+    };
+    const at = Math.floor(Date.now() / 1000);
+    await proposeVersion({
+      chainId, recipe: mapRecipe, source: evidence ? "mapping call" : "lock",
+      call: evidence ?? {
+        at, day: new Date(at * 1000).toISOString().slice(0, 10),
+        reachedHuman: true, path: pathSignature(mapRecipe),
+        seconds: typeof recipe.seconds === "number" ? recipe.seconds : null,
+      },
+    });
+  } catch { /* knowledge is best-effort — a map hiccup must never break a locked route */ }
 }
 
 /** Save an UNCONFIRMED route (never reached a human) as a review candidate — does NOT touch live. */

@@ -95,6 +95,16 @@ export interface NavSession {
 
 const sessions = new Map<string, NavSession>();
 export function getNavSession(id: string): NavSession | null { return sessions.get(id) || null; }
+/** The most recent call to this chain that reached a person — how a lock finds its own evidence when
+ *  the caller did not name the call (the Admin Map button sends only the recipe). */
+export function latestNavSessionForChain(chainId: number): NavSession | null {
+  let best: NavSession | null = null;
+  for (const s of sessions.values()) {
+    if (s.chainId !== chainId || s.humanAtSec == null) continue;
+    if (!best || s.startMs > best.startMs) best = s;
+  }
+  return best;
+}
 
 // ---- Menu capture (#2) ---------------------------------------------------------------------------
 // Pull the pressable options out of what the IVR says so the WHOLE tree is visible per chain

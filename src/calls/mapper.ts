@@ -21,7 +21,7 @@ import { isCallingPaused } from "../redis";
 import { placeNavCall, getNavSession, defaultWorkflowAsk, classifyMode, menuHasCustomerService, NavRecipe, NavStep } from "./navigator";
 import { storeForChain, lockRecipeToChain, recipeFromSteps } from "./trainer-batch";
 import { chainDialable } from "./recipe";
-import { proposeVersion, pathSignature, reportUnknown, recordObservation, MapRecipe, MapStep } from "./mapgraph";
+import { pathSignature, reportUnknown, recordObservation, MapRecipe, MapStep, type EvidenceCall } from "./mapgraph";
 import { recipeFromCall, evidenceFromCall, CapturedStep } from "./map-capture";
 
 const DAILY_CAP = 60;        // runaway guard only — owner 2026-07-10: the old 12/day cap is gone, a
@@ -158,8 +158,7 @@ function markVariance(run: MapperRun, recipe: NavRecipe): void {
 async function finalizeAndLock(run: MapperRun, chainId: number, recipe: NavRecipe, confidence: number | null, session?: NavSessionLike): Promise<void> {
   if (run.target && !recipe.target) recipe.target = run.target;
   markVariance(run, recipe);
-  await lockRecipeToChain(chainId, recipe, confidence);
-  await recordMapVersion(run, chainId, recipe, session);
+  await recordMapVersion(run, chainId, recipe, confidence, session);
   const navigated = recipe.type !== "direct" && (recipe.steps?.length ?? 0) > 0;
   const deptOnly = navigated && !menuHasCustomerService(recipe.menu);
   if (!run.target && deptOnly) {
@@ -179,7 +178,8 @@ interface NavSessionLike {
 
 /** Write this call into the versioned map. Best-effort by design: a map-store hiccup must never take
  *  down a mapping run that is holding a live phone call open. */
-async function recordMapVersion(run: MapperRun, chainId: number, recipe: NavRecipe, session?: NavSessionLike): Promise<void> {
+async function recordMapVersion(run: MapperRun, chainId: number, recipe: NavRecipe, confidence: number | null, session?: NavSessionLike): Promise<void> {
+  let evidence: EvidenceCall | undefined;
   try {
     const steps = (session?.steps || []) as CapturedStep[];
     // Barge wins from the optimize phase = the steps we PROVED can be fired before the recording ends.
@@ -194,13 +194,15 @@ async function recordMapVersion(run: MapperRun, chainId: number, recipe: NavReci
         steps: (recipe.steps || []).map((s) => ({ action: s.action === "press" ? "press" : "say", value: String(s.value || ""), atSec: Math.round(s.atSec ?? 0) })) as MapStep[],
         seconds: recipe.seconds ?? 0, target: recipe.target, menu: recipe.menu, menuPrompts: recipe.menuPrompts, ringVariable: recipe.ringVariable,
       };
-    const call = evidenceFromCall({
+    evidence = evidenceFromCall({
       navId: session?.id, storeId: run.store?.id, storeName: run.store?.name, steps,
       seconds: recipe.seconds ?? null, reachedHuman: true, path: pathSignature(mapRecipe),
       greeting: session?.greeting, transferAtSec: session?.transferAtSec ?? null,
       note: `${run.phase} attempt ${run.attempt}`,
     });
-    await proposeVersion({ chainId, recipe: mapRecipe, source: run.phase === "verify" ? "verify" : "sweep", call });
+    // The captured route is richer than the one the run carries: it knows WHICH recording each step
+    // follows. Ship that one to the map.
+    recipe = { ...recipe, steps: mapRecipe.steps as unknown as NavRecipe["steps"] };
     // THE WAIT AFTER THE TRANSFER, measured. The store announces the hand-off and the person speaks
     // some seconds later; the paid agent currently opens on the announcement, so this gap is money
     // burned on every check of this chain. Recorded per call so the dashboard can show it and Echo can
@@ -212,7 +214,9 @@ async function recordMapVersion(run: MapperRun, chainId: number, recipe: NavReci
         detail: { gapSeconds: recipe.seconds - session.transferAtSec, greeting: session?.greeting ?? null },
       });
     }
-  } catch { /* knowledge is written best-effort — never break a live mapping call */ }
+  } catch { /* evidence is best-effort — a bad session must not stop the route being locked */ }
+  // ONE writer: the chain row the runtime reads and the map version land together (trainer-batch.ts).
+  await lockRecipeToChain(chainId, recipe, confidence, evidence);
 }
 
 async function bumpDaily(chainId: number): Promise<number> {

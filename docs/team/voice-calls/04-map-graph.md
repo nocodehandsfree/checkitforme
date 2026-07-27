@@ -92,6 +92,23 @@ evidence and observation written for replay. Two findings:
   wait after a transfer announcement (40s). Past either, we hang up and record why in plain words
   instead of paying for a call nobody is coming to.
 
+## 6d. ONE writer, so no path can put a recipe on live calls silently (07-27)
+`lockRecipeToChain` now stamps the chain row AND records the map version. Every path that locks a
+route goes through it: the Admin **Map** button (`/api/admin/trainer/lock`), the overnight batch, the
+mapper, the sweep. The Admin button sends only `{chainId, recipe, confidence}`, so the lock finds its
+own evidence — `latestNavSessionForChain()` returns the most recent call to that chain that reached a
+person, giving the version its store, timing, greeting and recording plan without any Admin change.
+
+## 6e. What the Chains page shows after a call (checked against the live Admin, 07-27)
+The page reads the CHAIN ROW, which every lock stamps — so all of this fills in on its own:
+status pill Unmapped → Mapped · the step ladder ("Says no" 26s, "Presses 2" 8s) from `navRecipe` ·
+"To a person" from `navSeconds` — now a real voice, not the transfer announcement · cost per check
+and what the menu costs (both derived from lane + seconds) · the ringing rung · the lane colour ·
+"learned <date>" · and the chain list row reading "Bravo 41s".
+**Not wired yet (Addie's side, the data is served):** the Menu versions row is hardcoded to "No saved
+versions yet" — `/api/admin/map/chain/:id` returns the versions, evidence and history. Confidence,
+the review queue and drift have no home on the page yet (`/map/graph`, `/map/unknowns`).
+
 ## 7. Fixed on the way past
 `lockRecipeToChain` wrote the bare first digit ("4") into `dtmfShortcut`, but the live bridge only
 understands the timed form ("2@8,2@16") and plays NOTHING without it — so every chain locked through
