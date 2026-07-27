@@ -41,7 +41,7 @@ import { emit, markNow, closeReceipt, linkCall, rollup, getReceipt, type Rollup 
 import { installReceiptStore, currentRates } from "./calls/receipt-store";
 import { costCall, money } from "./calls/cost";
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
-import { graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
+import { graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
 import { recipeFromCall, evidenceFromCall, type CapturedStep } from "./calls/map-capture";
 import { startSweep, stopSweep, sweepStatus, buildQueue } from "./calls/sweep";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay } from "./calls/tapedeck";
@@ -6112,6 +6112,9 @@ app.post("/api/admin/map/version/:id/reject", async (c) => {
   return c.json(await rejectVersion(id, "admin", String(b.why || "")));
 });
 app.get("/api/admin/map/unknowns", async (c) => c.json({ unknowns: await openUnknowns(Number(c.req.query("limit") || 100)) }));
+// Catch-up: send anything this environment learned while the record was unreachable (production does
+// not carry the map endpoints until the next promote). Safe to run repeatedly.
+app.post("/api/admin/map/reshare", async (c) => c.json(await reshareUnsent()));
 app.post("/api/admin/map/unknown/:id", async (c) => {
   const id = Number(c.req.param("id"));
   const b = (await c.req.json().catch(() => ({}))) as { status?: string; note?: string };

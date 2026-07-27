@@ -23,7 +23,7 @@ import { db } from "../db/client";
 import { chains, retailers } from "../db/schema";
 import { recipeToDtmf } from "./recipe";
 import { isMapFollower, pushVersion, pushDecision } from "./map-authority";
-import { setSetting } from "../db/settings";
+import { setSetting, allSettings } from "../db/settings";
 import { eq } from "drizzle-orm";
 
 // ---- shapes ---------------------------------------------------------------------------------
@@ -658,6 +658,36 @@ export async function chainDetail(chainId: number): Promise<Record<string, unkno
       evidence: r.evidence ? JSON.parse(String(r.evidence)) : null, note: r.note ? String(r.note) : "",
     })),
   };
+}
+
+/** CATCH-UP: push every route this environment learned while the record was unreachable.
+ *
+ *  Production does not have the map endpoints until the next promote, so a route learned on staging
+ *  today lands locally and is flagged unshared. This walks those flags and sends them to the record —
+ *  run it once the record is reachable and nothing that was learned in between is stranded. Safe to
+ *  run any time: an already-shared route just folds in as the same evidence it already carries. */
+export async function reshareUnsent(): Promise<{ pushed: number; failed: number; pending: number }> {
+  await ensureMapTables();
+  if (!isMapFollower()) return { pushed: 0, failed: 0, pending: 0 };
+  const all = await allSettings();
+  const ids = Object.entries(all)
+    .filter(([k, v]) => k.startsWith("map_unshared:") && String(v || "").trim())
+    .map(([k]) => Number(k.slice("map_unshared:".length)))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  let pushed = 0, failed = 0;
+  for (const chainId of ids) {
+    const v = await activeMap(chainId);
+    const ch = (await db.select().from(chains).where(eq(chains.id, chainId)))[0];
+    if (!v || !ch) { await setSetting(`map_unshared:${chainId}`, ""); continue; }
+    const newest = [...(v.evidence.calls || [])].sort((a, b) => b.at - a.at)[0];
+    const store = newest?.storeId ? (await db.select().from(retailers).where(eq(retailers.id, newest.storeId)))[0] : null;
+    const res = await pushVersion({
+      chainName: ch.name, storePhone: store?.phone ?? null, storeName: newest?.storeName ?? null,
+      recipe: v.recipe, source: "catch-up", call: newest, why: v.why,
+    });
+    if (res.ok) { await setSetting(`map_unshared:${chainId}`, ""); pushed++; } else failed++;
+  }
+  return { pushed, failed, pending: failed };
 }
 
 // ---- backfill ---------------------------------------------------------------------------------
