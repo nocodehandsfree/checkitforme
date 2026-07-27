@@ -5782,6 +5782,34 @@ app.get("/api/admin/cost-inputs", async (c) => {
   }
   return c.json(out);
 });
+// The receipt for a call the ADMIN placed. Those calls have no call_results row on purpose (a mapping
+// call is not a customer's check and must stay out of the customer numbers), so they are read by ROOM
+// instead of by call id. Live from memory while the call is still up, from call_events once it ends.
+// Echo's point, 07-27: the call happened and nothing was written down. Now it is.
+app.get("/api/admin/receipt/:room", async (c) => {
+  const room = c.req.param("room");
+  if (!room) return c.json({ error: "room required" }, 400);
+  const live = getReceipt(room);
+  if (live && !live.closed) {
+    const sums = rollup(live);
+    return c.json({
+      room, live: true, note: live.planned.length ? "replaying a learned route" : null,
+      timeline: live.events.map((e) => ({ atSec: e.atSec, kind: e.kind, note: e.note ?? "", detail: e.detail ?? null })),
+      rollup: sums,
+      cost: costCall({ callSecs: sums.callSecs, charlieSecs: sums.charlieConnectedSeconds, avoidableSecs: sums.charlieSilentSeconds, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))] }, await currentRates()),
+    });
+  }
+  const rows = await db.select().from(callEvents).where(eq(callEvents.room, room)).orderBy(callEvents.atMs);
+  if (!rows.length) return c.json({ error: "no receipt for that call" }, 404);
+  const parse = (s: string | null) => { try { return s ? JSON.parse(s) as Record<string, unknown> : null; } catch { return null; } };
+  const summary = parse(rows.find((r) => r.kind === "summary")?.detail ?? null);
+  return c.json({
+    room, live: false,
+    timeline: rows.filter((r) => r.kind !== "summary").map((r) => ({ atSec: r.atSec, kind: r.kind, note: r.note ?? "", detail: parse(r.detail) })),
+    rollup: summary?.rollup ?? null,
+    cost: summary?.cost ?? null,
+  });
+});
 app.get("/api/admin/call-timing", async (c) => {
   const ownerOnly = await ownerOnlyRetailerIds(); // owner-only "Fun"/MVP store excluded from timings
   const stores = await retailerMap();
@@ -5972,7 +6000,7 @@ app.get("/api/admin/trainer/list", async (c) => {
   })) });
 });
 app.post("/api/admin/trainer/document", async (c) => {
-  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; retailerId?: number; model?: string; hint?: string; barge?: { plan: Array<{ action: string; value: string; at: number }> }; reactivePress?: { digit: string; max: number }; confirm?: boolean; product?: string };
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; retailerId?: number; model?: string; hint?: string; barge?: { plan: Array<{ action: string; value: string; at: number }> }; reactivePress?: { digit: string; max: number }; confirm?: boolean; product?: string; why?: string };
   // CONFIRM mode: don't just reach a human — ask "do you have any {product} in stock?" to verify we
   // hit the RIGHT desk. On a chain-level run we ROTATE to a store we haven't asked yet (no script change,
   // just a fresh store) so we never re-ask the same store on a callback.
@@ -5997,7 +6025,7 @@ app.post("/api/admin/trainer/document", async (c) => {
   const _ch = r.chainId != null ? (await db.select().from(chains).where(eq(chains.id, r.chainId)))[0] : undefined;
   if (_ch && !chainDialable(_ch)) return c.json({ error: `${_ch.name} isn't a call target (muted / call-center / check-online) — skipped` }, 400);
   if (b.chainId) await db.update(chains).set({ navStatus: "learning", navUpdatedAt: Math.floor(Date.now() / 1000) }).where(eq(chains.id, Number(b.chainId)));
-  const res = await placeNavCall(r.chainId, r.id, r.name, r.phone, b.model, b.hint, b.barge, b.reactivePress, confirm);
+  const res = await placeNavCall(r.chainId, r.id, r.name, r.phone, b.model, b.hint, b.barge, b.reactivePress, confirm, { why: b.why ? String(b.why).slice(0, 80) : "Admin: map this chain" });
   return res.error ? c.json({ error: res.error }, 400) : c.json({ sessionId: res.id, store: r.name, confirm: !!confirm });
 });
 app.get("/api/admin/trainer/session/:id", (c) => {

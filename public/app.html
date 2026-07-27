@@ -1330,10 +1330,16 @@
   </section>
 
     <section id="trees">
-    <div class="k-title">Chains</div>
-    <div class="k-sub" id="set_pickcount"></div>
-    <!-- The page's ONE story: how much of the fleet is routed. A slim bar, not a wall of stat tiles. -->
-    <div id="tr_progress" style="margin-top:16px"></div>
+    <!-- ALL CHAINS lives in the page's top-right corner (owner 07-27), shown only while a chain is
+         open. It used to sit below the title, which read like a heading rather than a way back. -->
+    <div class="row" style="align-items:flex-start;gap:12px">
+      <div style="flex:1;min-width:0">
+        <div class="k-title">Chains</div>
+        <div class="k-sub" id="set_pickcount"></div>
+      </div>
+      <button class="k-key" id="set_allchains" onclick="setBackToChains()" style="margin:0;flex:0 0 auto;display:none">ALL CHAINS</button>
+    </div>
+    <div id="tr_progress"></div>
     <div id="set_pickwrap">
       <input id="set_search" placeholder="Search chains…" oninput="filterChainPicker()" style="margin:16px 0 10px;font-size:14px;padding:12px 15px">
       <div class="k-filters" style="margin:0 0 4px">
@@ -1355,7 +1361,6 @@
          settings card folded into a peek row. Picking a chain REPLACES the list, so nobody scrolls
          past 131 rows to get back to the menu they just opened. "All chains" walks back. -->
     <div id="set_body" style="display:none">
-      <button class="k-key" onclick="setBackToChains()" style="margin:0 0 16px">ALL CHAINS</button>
       <div class="row" style="gap:12px;align-items:center">
         <span id="set_storelogo" class="setlogo"></span>
         <div style="flex:1;min-width:0">
@@ -1372,11 +1377,14 @@
       <div id="set_menuwrap">
           <div id="set_mapping" style="margin-top:10px"></div>
           <div id="set_menufoot" class="meta" style="margin-top:10px"></div>
+          <!-- ONE button (owner 07-27): mapping should always be the same job, and that job includes
+               finding the FASTEST way through the menu. The old pair asked him to choose between a
+               half-map and a full one. The sheet says exactly what is about to happen. -->
           <div class="row" style="gap:8px;margin-top:16px;flex-wrap:wrap">
             <button class="act" id="set_mapbtn" onclick="setMapChain()">Map</button>
-            <button class="ghost" id="set_maploop" onclick="mapperStart()" data-tip="Keeps calling on its own until the fastest safe route to a person is locked. Rotates stores, about 75s between calls, 12 calls a day maximum. Places REAL calls ($).">Until locked</button>
             <button class="ghost" id="set_mapstop" onclick="mapperStop()" style="display:none">Stop</button>
           </div>
+          <div class="meta" id="set_mapnote" style="margin-top:10px;text-transform:none;letter-spacing:0;line-height:1.5"></div>
           <div class="card" id="mapper_live" style="display:none;border-color:var(--tint-purple-border);margin-top:12px">
             <div class="row" style="justify-content:space-between;align-items:center">
               <div class="name" id="mapper_phase">—</div>
@@ -1798,6 +1806,7 @@ function _ensureSheet(){
         sheet.style.transform='translate(-50%,112%)';
         document.body.classList.remove('sheetopen');
         setTimeout(()=>{ sheet.classList.remove('on'); sheet.style.transition=''; _restoreBorrow(); _restoreSheetLayout(); },240);
+        try{ document.dispatchEvent(new CustomEvent('sheetclosed')); }catch(_){ } // swiping away = "no" to askSheet
       } else { sheet.style.transition=''; sheet.style.transform=''; } // snap back up
     }
     y0=null; dy=0; dragging=false;
@@ -1835,7 +1844,10 @@ function _restoreSheetLayout(){ const sh=_sheetEls&&_sheetEls.sheet; if(!sh) ret
 function closeSheet(){ if(!_sheetEls) return;
   // Swiping the sheet down must never drop an edit that is still inside its type-ahead window.
   if(typeof statusFlush==='function') statusFlush();
-  const sh=_sheetEls.sheet; sh.style.transition=''; sh.style.transform=''; document.body.classList.remove('sheetopen'); sh.classList.remove('on'); setTimeout(()=>{ _restoreBorrow(); _restoreSheetLayout(); },300); }
+  const sh=_sheetEls.sheet; sh.style.transition=''; sh.style.transform=''; document.body.classList.remove('sheetopen'); sh.classList.remove('on'); setTimeout(()=>{ _restoreBorrow(); _restoreSheetLayout(); },300);
+  // A sheet can close four ways (button, grabber, swipe, tap outside). askSheet listens for this so
+  // dismissing the sheet reads as "no" instead of leaving the caller waiting forever.
+  try{ document.dispatchEvent(new CustomEvent('sheetclosed')); }catch(_){ } }
 window.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSheet(); });
 // Tap-to-show tooltip — works on mobile (hover doesn't). Tap a hint → bubble; tap again/elsewhere → gone.
 let _tipFor=null;
@@ -2142,18 +2154,10 @@ async function loadTrainer(){
   const ss=document.getElementById('tr_progress'); if(!ss) return;
   const d=await api('/api/admin/trainer/list');
   if(!d||!Array.isArray(d.chains)){ ss.innerHTML=''; return; } // no phantom error — the list below still works
-  const ch=d.chains, isMapped=c=>c.navStatus==='locked';
-  // Owner 07-23: the percent of STORES mapped, broken out by the store's rating (tier).
-  const byRate=new Map();
-  ch.forEach(c=>{ const t=Number(c.tier)||0; const n=Number((c.stores&&c.stores.n)||c.callable||0); const e=byRate.get(t)||{m:0,n:0}; e.n+=n; if(isMapped(c)) e.m+=n; byRate.set(t,e); });
-  const rateRow=t=>{ const e=byRate.get(t); if(!e||!e.n) return ''; const pct=Math.round(e.m/e.n*100); const nm=RATING_CANON[t]||('Tier '+t); const c=(SS_RATING[t]||[])[1]||'#8A8A96';
-    return `<div style="display:flex;align-items:center;gap:12px;padding:6px 0">
-      <span style="flex:0 0 122px;font-size:13px;font-weight:600;color:${c};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t} ${esch(nm)}</span>
-      <span style="flex:1;min-width:0">${trBar(e.m,e.n,5)}</span>
-      <span style="flex:0 0 auto;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;color:${c}">${pct}%</span></div>`; };
-  const rows=[5,4,3,2,1].map(rateRow).join('');
-  ss.innerHTML=`<div class="k-eyebrow" style="margin:0 0 6px">Stores mapped by rating</div>${rows||'<div class="meta">No ratings yet.</div>'}`;
-  renderABCD(ch);
+  // Owner 07-27: the "Stores mapped by rating" bars are cut. Five bars of a number nobody acts on,
+  // sitting above the list, and mostly reading "No ratings yet". The list itself says what is mapped.
+  ss.innerHTML='';
+  renderABCD(d.chains);
 }
 // ABCD — how a call flows: Alpha (keypad) / Bravo (voice) / Charlie (live agent) / Delta (recorded clips).
 // Nav counts reuse the locked-recipe navType (keypad→Alpha, voice→Bravo, direct→Charlie); Delta is the
@@ -2204,10 +2208,36 @@ async function loadRuns(chainId, box){
         <span class="meta">${t}${r.model?(' · '+esch(r.model)):''}</span>
         <span style="margin-left:auto;font-weight:700;color:var(--text-strong)">${secs}</span>
       </summary>
-      <div style="padding:2px 11px 10px">${mx||'<div class="meta" style="padding:6px 0">no steps recorded</div>'}</div>
+      <div style="padding:2px 11px 10px">${mx||'<div class="meta" style="padding:6px 0">no steps recorded</div>'}
+        ${r.navId?`<button class="ghost" style="margin-top:8px" onclick="event.stopPropagation();openNavReceipt('${esch(r.navId)}')">The whole call</button>`:''}</div>
     </details>`;
   }).join('');
   return runs.length;
+}
+// The receipt for a call the ADMIN placed. These have no customer check behind them, so they are read
+// by room. Before 07-27 an Admin call left nothing at all: no timeline, no seconds, no cost.
+async function openNavReceipt(room){
+  const box=document.createElement('div');
+  box.innerHTML='<div class="meta">Loading…</div>';
+  openSheet('The whole call','',box);
+  const d=await api('/api/admin/receipt/'+encodeURIComponent(room));
+  if(!d||d.error){ box.innerHTML='<div class="empty">Nothing was recorded for this call. Only calls placed since 27 July have a receipt.</div>'; return; }
+  const KIND={dialed:'Dialled',ringing:'Ringing',connected:'The line was answered',ivr_detected:'A phone menu',alpha_press:'Pressed a key',bravo_say:'Said a word',human_detected:'A person answered',transfer:'Handed on',voicemail:'A machine',hangup:'Call ended',verdict:'Answer'};
+  const c=d.cost||{}, s=d.rollup||{};
+  const money=n=>(Number(n||0)*100).toFixed(1)+'¢';
+  const rungs=(d.timeline||[]).map((e,i,a)=>chainRung({
+    at:(e.atSec||0)+'s', t:esch(e.note||KIND[e.kind]||e.kind),
+    c:e.kind==='human_detected'?'var(--green)':e.kind==='ringing'||e.kind==='transfer'?'var(--yellow)':'var(--muted)',
+    lc:'rgba(255,255,255,.14)',
+    tc:e.kind==='human_detected'?'var(--green)':'var(--text-strong)',
+  },i===a.length-1)).join('');
+  box.innerHTML=(d.cost?`<div class="stats" style="margin-bottom:16px">`
+      +`<div class="stat"><div class="n">${money(c.totalUsd)}</div><div class="l">What it cost</div></div>`
+      +`<div class="stat"><div class="n">${s.callSecs!=null?s.callSecs+'s':''}</div><div class="l">On the line</div></div>`
+      +`<div class="stat"><div class="n">${s.navSeconds!=null?s.navSeconds+'s':''}</div><div class="l">To a person</div></div>`
+    +`</div>`:'')
+    +(rungs?`<div class="mladder">${rungs}</div>`:'<div class="empty">No steps recorded.</div>')
+    +(d.live?'<div class="meta" style="margin-top:10px">This call is still going.</div>':'');
 }
 // ---- Delta (Fun): rehearse the Delta lane — recorded clips + cheap classifier, no live agent ----
 let TD_POLL=null, TD_ID=null;
@@ -2240,13 +2270,24 @@ async function tdPoll(){
 // ---- Mapper: "Map until locked" — the auto-continue loop. Start it, then this panel narrates every
 // attempt (phase, experiment, win/unsafe) live until the fastest safe path is locked. ----
 let MAPPER_POLL=null;
+// THE mapping job. One button, one process, every time: hear the menu, keep calling until a person
+// actually answers, then shave seconds off the route until it cannot get faster, then stop.
 async function mapperStart(){
   const chainId=Number((document.getElementById('set_chain')||{}).value||0);
   if(!chainId){ toast('Pick a chain first'); return; }
-  const nm=(document.querySelector('#set_picker .pickrow.on b')||{}).textContent||'this chain';
-  if(!confirm('Map '+nm+' until locked?\n\nPlaces REAL calls on its own (~75s apart, 12/day cap), sticking to ONE store until a human answers (rotates only on a dead line), aiming for customer service / front. Every human hears the real Pokémon-cards ask.')) return;
+  const ch=(CHAINS||[]).find(c=>c.id===chainId);
+  const nm=(ch&&ch.name)||'this chain';
+  const ok=await askSheet('Map '+nm+'?',[
+    '<b style="color:#fff">This places REAL calls to real stores, and they cost money.</b>',
+    'It calls once and listens to the whole menu.',
+    'Then it keeps calling until a person actually answers. That route is saved straight away, so checks get the benefit immediately.',
+    'Then it tries one change per call to reach the person faster: a shorter word, pressing earlier. Only the changes that work are kept.',
+    'It stops on its own when nothing is left to improve.',
+    'About 75 seconds between calls, 60 calls a day at most. Everyone who answers hears the real Pokémon cards question, so no call is wasted. You can stop it at any time.',
+  ],'Start mapping');
+  if(!ok) return;
   const r=await api('/api/admin/mapper/start',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chainId})});
-  if(r&&r.started){ toast('Mapping until locked'); mapperPollStart(); }
+  if(r&&r.started){ toast('Mapping '+nm); mapperPollStart(); }
   else toast((r&&r.error)?('Mapper: '+r.error):'Could not start the mapper');
 }
 async function mapperStop(){
@@ -2298,10 +2339,14 @@ async function mapperPoll(){
 }
 async function trDocument(chainId,name,opts){
   opts=opts||{};
-  const msg=opts.confirm
-    ? 'Place a REAL call to a '+name+' store now? It reaches a human, then asks "do you have any '+(opts.product||'Pokémon cards')+' in stock?" to confirm the right desk.'
-    : 'Place a REAL call to a '+name+' store now? The nav-learner will dial it to map the phone menu.';
-  if(!confirm(msg)) return;
+  const ok=await askSheet('Call a '+name+' store now?',[
+    '<b style="color:#fff">This is a REAL call to a real store, and it costs money.</b>',
+    opts.confirm
+      ? 'It walks the phone menu to a person, then asks whether they have any '+(opts.product||'Pokémon cards')+' in stock, which proves we reached the right desk.'
+      : 'It walks the phone menu and writes down every step and how long each one takes.',
+    'You can watch it happen below, and open the whole call afterwards.',
+  ],'Call now');
+  if(!ok) return;
   TR_CHAIN=chainId; TR_STORE=name; TR_RESULT=null; TR_CONFIRM=!!opts.confirm; TR_OPTS=opts;
   const live=document.getElementById('tr_live'); live.style.display='';
   document.getElementById('tr_live_store').textContent=name;
@@ -2980,6 +3025,26 @@ function sheetFromHolder(id,title,sub){
   const holder=document.getElementById(id); if(!holder) return;
   holder.style.display=''; // holders live hidden in their section; unhide while borrowed by the sheet
   openSheet(title||'', sub||'', holder);
+}
+// ---- ASK BEFORE A REAL CALL ---------------------------------------------------------------------
+// The browser's own confirm() cannot be styled at all, so every "place a REAL call?" prompt used to
+// arrive as a system box in the middle of our page, and the tap that opened it left the button's
+// tooltip hanging around behind it. This is the same sheet everything else in the Admin uses.
+// askSheet(title, lines[], okLabel) -> Promise<boolean>. Lines are plain sentences, not a paragraph.
+function askSheet(title, lines, okLabel){
+  return new Promise(resolve=>{
+    let done=false;
+    const finish=v=>{ if(done) return; done=true; document.removeEventListener('sheetclosed',onClose); resolve(v); };
+    const onClose=()=>finish(false); // swiped away or tapped outside = no
+    const box=document.createElement('div');
+    box.innerHTML=(lines||[]).map(l=>`<div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.55;margin-bottom:10px;color:var(--text-body)">${l}</div>`).join('')
+      +`<div class="row" style="gap:8px;margin-top:18px"><button class="act" style="flex:1">${okLabel||'Yes'}</button><button class="ghost" style="flex:1">Cancel</button></div>`;
+    const [ok,no]=box.querySelectorAll('button');
+    ok.onclick=()=>{ closeSheet(); finish(true); };
+    no.onclick=()=>{ closeSheet(); finish(false); };
+    document.addEventListener('sheetclosed',onClose);
+    openSheet(title,'',box);
+  });
 }
 function dashHeroDots(el){
   const i=Math.round(el.scrollLeft/el.clientWidth);
@@ -4085,6 +4150,7 @@ function setPickChain(){
   // Picking a chain REPLACES the list. The old page left 131 rows sitting above the detail, so
   // getting back to the menu meant scrolling the whole way down again on a phone.
   const pw=document.getElementById('set_pickwrap'); if(pw) pw.style.display='none';
+  const ac=document.getElementById('set_allchains'); if(ac) ac.style.display='';
   try{ document.getElementById('trees').scrollIntoView({behavior:'smooth',block:'start'}); }catch(_){ }
 }
 // Inline-commit helpers — every Store/Call control saves on its own (no grouped Save).
@@ -4362,6 +4428,11 @@ function renderChainMapping(ch){
     sp.innerHTML=`<span style="display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:${cfg[0]};background:${cfg[1]};border:1px solid ${cfg[2]};border-radius:20px;padding:3px 10px">${status==='learning'?'<span class="navspin"></span>':ssDot(cfg[0])}${cfg[3]}</span>`;
   }
   const mb=document.getElementById('set_mapbtn'); if(mb) mb.textContent=isLocked?'Re-map':'Map';
+  // One gray line instead of an info dot buried in a button label (owner 07-27).
+  const note=document.getElementById('set_mapnote');
+  if(note) note.textContent=isLocked
+    ? 'Re-mapping calls real stores again and keeps the fastest route it can find. It replaces what is above only if it beats it.'
+    : 'Mapping calls real stores until a person answers, then keeps making the route faster until it cannot improve.';
   renderChainRows(ch,lane,nav);
 }
 // The five peek rows. Each carries the ONE fact worth seeing without opening it.
@@ -4382,11 +4453,16 @@ function renderChainRows(ch,lane,nav){
 function setBackToChains(){
   const pw=document.getElementById('set_pickwrap'), body=document.getElementById('set_body');
   if(pw) pw.style.display=''; if(body) body.style.display='none';
+  const ac=document.getElementById('set_allchains'); if(ac) ac.style.display='none';
   const sel=document.getElementById('set_chain'); if(sel) sel.value='';
   try{ document.getElementById('trees').scrollIntoView({behavior:'smooth',block:'start'}); }catch(_){ }
 }
 // Map / Re-map the selected chain: places one real navigator call, shown live in the Mapping card.
-function setMapChain(){ const id=Number(document.getElementById('set_chain').value); const ch=CHAINS.find(c=>c.id===id); if(!ch){ toast('Pick a chain first'); return; } trDocument(id, ch.name); }
+// ONE mapping button (owner 07-27): "if we're going to re-map something it should follow the exact
+// same process every time, which includes making sure we can get through the menu the fastest."
+// The old one-shot (trDocument) only heard the menu once and stopped, which is half a map. It still
+// exists for the single store-call button elsewhere; mapping a CHAIN always runs the full job.
+function setMapChain(){ mapperStart(); }
 // Confirm-stock run: reach a human, ask if they have the product, classify right-desk vs redirect.
 function setConfirmChain(){ const id=Number(document.getElementById('set_chain').value); const ch=CHAINS.find(c=>c.id===id); if(!ch){ toast('Pick a chain first'); return; } trDocument(id, ch.name, {confirm:true, product:'Pokémon cards'}); }
 // (Removed: the old grouped Save + voicemail toggle. Every Settings control now commits inline,

@@ -11,6 +11,7 @@ import { llm } from "../llm";
 import { config } from "../config";
 import { getSetting } from "../db/settings";
 import { rotatePick } from "./rotate";
+import { openReceipt, emit, markNow, closeReceipt } from "./events";
 
 const HOST = config.staging.on ? "voice-caller-staging-production.up.railway.app" : "voice-caller-production-2d6b.up.railway.app";
 // The live-turn brain. Groq's llama-3.3-70b won the 2026-07-10 bench: correct on every classify line
@@ -261,8 +262,12 @@ export async function tapedeckCall(phone: string, workflowName?: string): Promis
   const turn = deltaTurnTuning(wf.tuning);
   const session: TdSession = { id, phone: to, startMs: Date.now(), status: "dialing", steps: [], turns: 0, clips: clips as Buffer[], clipText: texts, stage: "opener", needType: false, workflow: wf.name, mode: "bench", waitSecs: turn.waitSecs, endpoint: turn.endpoint, hints: deltaHints("Pokémon cards") };
   sessions.set(id, session);
+  // The rehearsal call gets the same receipt a real check does, so it can be opened afterwards
+  // instead of vanishing. No `call_results` row: a rehearsal is not a customer's check.
+  openReceipt(`delta:${id}`, { lane: "delta", note: "Voice rehearsal call" });
+  emit(`delta:${id}`, "dialed", `Rehearsal call to ${to}`, { workflow: wf.name, voiceId });
   const r = await placeTwilioCall(session, to);
-  if (r.error) { sessions.delete(id); return { error: r.error }; }
+  if (r.error) { emit(`delta:${id}`, "hangup", "The carrier refused the call", { why: r.error }); closeReceipt(`delta:${id}`, r.error, "dial-failed"); sessions.delete(id); return { error: r.error }; }
   setTimeout(() => sessions.delete(id), 15 * 60 * 1000);
   return { id };
 }
@@ -495,6 +500,11 @@ export function tapedeckEnded(id: string): void {
   const s = sessions.get(id);
   if (!s) return;
   if (s.status !== "done") s.status = s.steps.length > 1 ? "done" : "failed";
+  if (s.mode === "bench") { // the rehearsal's receipt closes here; a store call is closed by the bridge
+    markNow(`delta:${id}`, "endMs");
+    emit(`delta:${id}`, "hangup", s.status === "done" ? "Rehearsal finished" : "Nobody picked up", { turns: s.turns });
+    closeReceipt(`delta:${id}`, undefined, s.status);
+  }
   // Twilio hung up before we reached a wrap clip (early hangup / no answer). Still record a verdict.
   finalizeIfStore(s);
   try { deltaRelayEnd?.(s); } catch { /* relay best-effort */ }

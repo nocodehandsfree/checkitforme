@@ -34,6 +34,20 @@ Full authority: `docs/design/copy/COPY_STYLE_GUIDE.md` (open it for ANY string c
 - The book (readme.com customer docs, branch `v1.0`) is also this lane now; publishing how-to:
   `docs/archive/team/copy/how-to-publish.md`.
 
+## iOS chrome tint is LOCKED (owner order 2026-07-27)
+`scripts/qa-tint-lock.mjs` (in test-all + CI) enforces it. Break an invariant and the ship fails.
+- iOS Safari paints BOTH its edges (status strip + bottom bar) with the page's ONE root background
+  COLOR. Not painted pixels, not theme-color. One colour, both edges, no way to split them.
+- So the root stays neutral `#1D1D22` and the verdict colour blooms in the MIDDLE only: neutral 0px
+  → tone 110/230px → neutral by `100dvh`. Stretch a tone to either edge and you tint the chrome.
+- `--bg` must equal the root colour, or the page bottom seams against the bar. Never recolour the
+  root in-page in v2. Never add a theme-color meta. `setThemeTone()` stays a no-op.
+- Nothing may paint over the page's bottom edge. A PARKED sheet casts no shadow
+  (`.csheet:not(.on){box-shadow:none}`, needed in base AND v2) — a parked sheet's upward shadow was
+  darkening the last 40px and seaming against the bar (07-27).
+- You cannot see any of this headless. If you think an invariant is wrong, take it to the owner.
+  Never edit the gate to make a change pass.
+
 ## Logo display rules (Logo lane retired 2026-07-22 — rules folded in)
 Assets = `public/logos/chains/<slug>.png` + `_meta.json` flags (`w:1` wide wordmark → 44×34 box;
 `d:1` needs a light plate). Full system + pipeline: `docs/data/store-logos.md`.
