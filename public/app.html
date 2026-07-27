@@ -1370,6 +1370,7 @@
         <span id="set_mapstatus" style="flex:0 0 auto"></span>
       </div>
       <div id="set_vitals" style="margin-top:16px"></div>
+      <div id="set_pending" style="display:none"></div>
       <div class="row" style="align-items:baseline;margin-top:24px">
         <div class="k-eyebrow" style="margin:0">Phone menu</div>
         <div id="set_menuver" class="meta" style="margin-left:auto"></div>
@@ -1425,6 +1426,11 @@
         <div class="pk-fact" id="pk_setver"></div>
         <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
+      <button class="peek" id="set_reviewrow" style="display:none" onclick="sheetFromHolder('ds_setreview','Needs a look','Things the mapper flagged on this chain.')">
+        <div class="pk-main"><div class="pk-t">Needs a look</div></div>
+        <div class="pk-fact" id="pk_setreview"></div>
+        <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
       <button class="peek" onclick="sheetFromHolder('ds_setruns','Mapping calls','Real calls this chain placed to learn its menu.')">
         <div class="pk-main"><div class="pk-t">Mapping calls</div></div>
         <div class="pk-fact" id="pk_setruns"></div>
@@ -1435,6 +1441,7 @@
         <div id="ds_setdata"><div id="set_data"></div></div>
         <div id="ds_setcall"><div id="set_call"></div></div>
         <div id="ds_setver"><div id="set_versions"></div></div>
+        <div id="ds_setreview"><div id="set_review"></div></div>
         <div id="ds_setruns"><div id="set_runs"><div class="meta">Loading…</div></div></div>
       </div>
     </div>
@@ -4110,8 +4117,23 @@ const NAV_MODE={ keypad:{m:'Alpha',sub:'keypad tones',c:'#60a5fa'}, voice:{m:'Br
 // so they remain unmute-able from Settings.
 function chainOpts(q){ const f=(q||'').trim().toLowerCase(); return CHAINS.filter(ch=>(!f||(ch.name||'').toLowerCase().includes(f))).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(ch=>`<option value="${ch.id}">${esch(ch.name)}${ch.muted?' · muted':(ch.repackOnly?' · repack':'')}</option>`).join(''); }
 function setFilterChains(q){ const sel=document.getElementById('set_chain'); if(!sel) return; const cur=sel.value; sel.innerHTML='<option value="">Select a chain</option>'+chainOpts(q); if([...sel.options].some(o=>o.value===cur)) sel.value=cur; }
+// The map graph: one row per chain carrying how much we TRUST its route, how many routes are waiting
+// on the owner, and what still needs review. Loaded once with the chain list and read from memory.
+let MAPG={};
+async function loadMapGraph(){
+  const d=await api('/api/admin/map/graph');
+  MAPG={}; ((d&&d.rows)||[]).forEach(r=>{ if(r&&r.chainId!=null&&!r.storeId) MAPG[r.chainId]=r; });
+}
+const mapRow=id=>MAPG[id]||null;
+// Trust reads as a colour: proved is green, seen once is quiet, needs review is the amber that means
+// somebody has to look. Same three-colour scale as the ratings chip, never a rainbow.
+function confColor(label){
+  return label==='verified'?'var(--green)':label==='observed multiple times'?'var(--green)'
+    :label==='needs review'?'#F59E0B':label==='unknown'?'var(--text-muted)':'var(--muted)';
+}
 async function loadChains(){
   CHAINS = await api('/api/chains') || [];
+  await loadMapGraph();
   const sel=document.getElementById('set_chain'); if(!sel) return;
   const cur=sel.value;
   sel.innerHTML='<option value="">Select a chain</option>'+chainOpts();
@@ -4231,7 +4253,12 @@ function buildChainPicker(){
     const route=locked
       ? `<span style="color:${ln?lnc:'#8A8A96'};font-weight:700">${ln||'mapped'}</span>`+(nv!=null?` <span style="color:#8A8A96">${nv}s</span>`:'')
       : '<span style="color:#F59E0B;font-weight:700">unmapped</span>';
-    const meta=[nStores?nStores+' store'+(nStores===1?'':'s'):null, ch.muted?'muted':null, route].filter(Boolean).join(' · ');
+    // How much we TRUST the route, and whether a new one is sitting there waiting for him. A waiting
+    // route outranks everything else on the line: it is the only part he has to act on.
+    const g=mapRow(ch.id);
+    const trust=g&&g.proposed>0 ? '<span style="color:#F59E0B;font-weight:700">1 waiting</span>'
+      : (locked&&g&&g.confidenceLabel&&g.confidenceLabel!=='unknown') ? `<span style="color:${confColor(g.confidenceLabel)}">${esch(g.confidenceLabel)}</span>` : null;
+    const meta=[nStores?nStores+' store'+(nStores===1?'':'s'):null, ch.muted?'muted':null, route, trust].filter(Boolean).join(' · ');
     return `<div class="pickrow${String(ch.id)===cur?' on':''}" data-id="${ch.id}" data-name="${esch((ch.name||'').toLowerCase())}" data-tier="${ch.tier??''}" data-type="${esch((ch.type||'').toLowerCase())}" data-mapped="${locked?1:0}" onclick="pickChainRow(${ch.id})"${ch.muted?' style="opacity:.5"':''}>
       <span class="setlogo">${logoTile(ch)}</span>
       <span style="flex:1;min-width:0"><span style="display:block;color:#fff;font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esch(ch.name)}</span>
@@ -4390,12 +4417,21 @@ function renderChainMapping(ch){
       +`<div class="stat"><div class="n">${chainCents(chainMenuCents(lane,nav))}</div><div class="l">The menu costs</div></div>`
       +`</div>`;
   }
-  // --- version line beside the PHONE MENU eyebrow: when it was last learned.
+  // --- beside the PHONE MENU eyebrow: which version is running, and how much we trust it.
+  const g=mapRow(ch.id);
   const ver=document.getElementById('set_menuver');
   if(ver){
-    const d=ch.navUpdatedAt?new Date(ch.navUpdatedAt):(ch.treeLearnedAt?new Date(ch.treeLearnedAt*1000):null);
-    ver.textContent=isLocked&&d?('learned '+d.toLocaleDateString([],{month:'short',day:'numeric'})):'';
+    if(isLocked&&g&&g.version!=null){
+      const lbl=g.confidenceLabel&&g.confidenceLabel!=='unknown'?g.confidenceLabel:'';
+      ver.innerHTML=`v${g.version}`+(lbl?` · <span style="color:${confColor(g.confidenceLabel)}">${esch(lbl)}</span>`:'');
+    } else {
+      const d=ch.navUpdatedAt?new Date(ch.navUpdatedAt):(ch.treeLearnedAt?new Date(ch.treeLearnedAt*1000):null);
+      ver.textContent=isLocked&&d?('learned '+d.toLocaleDateString([],{month:'short',day:'numeric'})):'';
+    }
   }
+  // --- a route waiting on him. This is the only thing on the page he has to DECIDE, so it sits above
+  // the menu it would replace, not buried in a list.
+  renderPendingRoute(ch,g);
   // --- the ladder itself.
   const foot=document.getElementById('set_menufoot');
   if(!isLocked){
@@ -4405,7 +4441,12 @@ function renderChainMapping(ch){
     const DASH=String.fromCharCode(8211); // an en dash inside a RANGE, which the copy guide allows.
     const steps=chainSteps(ch), rungs=[];
     const first=steps.length?steps[0].at:null;
-    if(first!=null&&first>0) rungs.push({at:'0'+DASH+first+'s',t:'Greeting plays',sub:ch.phoneTreeDefault?esch(ch.phoneTreeDefault):''});
+    // The greeting is what the STORE actually says, captured on a mapping call. It is NOT
+    // phoneTreeDefault: that is our own instruction to the caller ("To reach a live person: say no,
+    // then...") and printing it here told him the store said something it never said. Blank until a
+    // mapping call captures the real wording.
+    let heard=''; try{ const r=ch.navRecipe?JSON.parse(ch.navRecipe):null; heard=(r&&r.menuPrompts&&r.menuPrompts[0])||''; }catch(e){}
+    if(first!=null&&first>0) rungs.push({at:'0'+DASH+first+'s',t:'Greeting plays',sub:heard?esch(heard):''});
     steps.forEach(s=>rungs.push({at:s.at!=null?s.at+'s':'',t:s.t}));
     const lastAt=steps.length&&steps[steps.length-1].at!=null?steps[steps.length-1].at:null;
     // Ringing is billed line time with nothing happening, so it always gets its own amber rung: after
@@ -4435,6 +4476,54 @@ function renderChainMapping(ch){
     : 'Mapping calls real stores until a person answers, then keeps making the route faster until it cannot improve.';
   renderChainRows(ch,lane,nav);
 }
+// ---- A ROUTE WAITING ON HIM ---------------------------------------------------------------------
+// The status pill only ever said Mapped / Learning / Unmapped, so a new route the mapper proposed had
+// nowhere to appear. Nothing reaches a real check until he taps Use it.
+let PENDING=null;
+function renderPendingRoute(ch,g){
+  const box=document.getElementById('set_pending'); if(!box) return;
+  PENDING=null;
+  if(!g||!g.proposed){ box.style.display='none'; box.innerHTML=''; return; }
+  box.style.display='';
+  box.innerHTML='<div class="meta">Loading…</div>';
+  api('/api/admin/map/chain/'+ch.id).then(d=>{
+    const v=(((d||{}).versions)||[]).find(x=>x.status==='proposed');
+    if(!v){ box.style.display='none'; return; }
+    PENDING=v;
+    const faster=(g.seconds!=null&&v.seconds!=null)?(g.seconds-v.seconds):null;
+    box.innerHTML=`<div class="card" style="border-color:rgba(245,158,11,.4);margin:16px 0 0">`
+      +`<div class="row" style="align-items:center;gap:8px"><span class="name">A new route is waiting for you</span></div>`
+      +`<div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(v.summary||'')}</div>`
+      +(v.seconds!=null?`<div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${v.seconds}s to a person${faster!=null&&faster!==0?` · ${Math.abs(faster)}s ${faster>0?'faster':'slower'} than the one running now`:''}</div>`:'')
+      +(v.why?`<div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">Seen on ${esch(whyWords(v.why))}</div>`:'')
+      +`<div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">`
+      +`<button class="act" onclick="mapApprove(${v.id},${ch.id})">Use it</button>`
+      +`<button class="ghost" onclick="mapReject(${v.id},${ch.id})">Keep the old one</button></div>`
+      +`<div class="meta" style="margin-top:10px;text-transform:none;letter-spacing:0">Nothing changes for a real check until you tap Use it.</div>`
+      +`</div>`;
+  }).catch(()=>{ box.style.display='none'; });
+}
+async function mapApprove(versionId,chainId){
+  const ok=await askSheet('Use the new route?',[
+    'Real checks switch to it straight away, and the route running now is retired.',
+    'You can map again at any time if it turns out worse.',
+  ],'Use it');
+  if(!ok) return;
+  const r=await api('/api/admin/map/version/'+versionId+'/approve',{method:'POST'});
+  if(!r||r.error){ toast(mapWriteErr(r)); return; }
+  toast('Live checks use the new route'); await loadMapGraph(); await ssReload();
+}
+async function mapReject(versionId,chainId){
+  const ok=await askSheet('Keep the route you have?',['The new one is set aside and real checks carry on unchanged.'],'Keep the old one');
+  if(!ok) return;
+  const r=await api('/api/admin/map/version/'+versionId+'/reject',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({why:'owner kept the existing route'})});
+  if(!r||r.error){ toast(mapWriteErr(r)); return; }
+  toast('Kept the route you have'); await loadMapGraph(); await ssReload();
+}
+// Approvals are WRITES, so they always go to the real site. Until the promote the real site has no
+// idea what a map version is, and a bare "couldn't save" would send him hunting a bug that isn't there.
+const mapWriteErr=r=>((r&&r.status===404)||(r&&/404|not found/i.test(String(r.error||''))))
+  ? 'Not on the real site yet. Say "promote" first.' : "Couldn't save that";
 // The five peek rows. Each carries the ONE fact worth seeing without opening it.
 function renderChainRows(ch,lane,nav){
   const set=(id,html,color)=>{ const e=document.getElementById(id); if(!e) return; e.innerHTML=html||''; e.style.color=color||''; };
@@ -4444,10 +4533,60 @@ function renderChainRows(ch,lane,nav){
   const scm=ch.stockCheckMethod?String(ch.stockCheckMethod).split(/[·|]/)[0].trim():'';
   set('pk_setdata',esch([ch.isMSRP!==false?'MSRP':'', scm].filter(Boolean).join(' · ')));
   set('pk_setcall',esch([ch.maxTalkSeconds!=null?ch.maxTalkSeconds+'s max talk':'', ch.callTarget===false?'not dialled':''].filter(Boolean).join(' · ')));
-  // Saved versions land when the mapper starts writing them. Until then the row says so plainly.
-  set('pk_setver','');
-  const vw=document.getElementById('set_versions');
-  if(vw) vw.innerHTML='<div class="empty">No saved versions yet. Mapping calls create the first one.</div>';
+  const g=mapRow(ch.id);
+  set('pk_setver', g&&g.proposed>0?'1 waiting':(g&&g.version!=null?'v'+g.version:''), g&&g.proposed>0?'#F59E0B':'');
+  set('pk_setreview', g&&g.openUnknowns>0?String(g.openUnknowns):'', g&&g.openUnknowns>0?'#F59E0B':'');
+  const rv=document.getElementById('set_reviewrow'); if(rv) rv.style.display=(g&&g.openUnknowns>0)?'':'none';
+  renderMapVersions(ch.id);
+}
+// Every saved version of this chain's menu, newest first, with the calls that prove it. The one that
+// real checks run is marked; a proposed one carries the same Use it / Keep the old one decision.
+async function renderMapVersions(chainId){
+  const vw=document.getElementById('set_versions'), rw=document.getElementById('set_review');
+  if(vw) vw.innerHTML='<div class="meta">Loading…</div>';
+  const d=await api('/api/admin/map/chain/'+chainId);
+  const vs=((d||{}).versions)||[], uk=((d||{}).unknowns)||[];
+  if(vw) vw.innerHTML = vs.length ? vs.slice().sort((a,b)=>(b.version||0)-(a.version||0)).map(v=>{
+    const S={active:['var(--green)','Running now'],proposed:['#F59E0B','Waiting for you'],retired:['var(--text-muted)','Retired'],rejected:['var(--text-muted)','Set aside']}[v.status]||['var(--muted)',v.status];
+    const calls=((v.evidence&&v.evidence.calls)||[]).slice(0,6);
+    return `<div class="card" style="margin:0 0 10px">
+      <div class="row" style="align-items:center;gap:8px">
+        <span class="name">v${v.version}</span>
+        <span style="margin-left:auto;font-size:10.5px;font-weight:700;color:${S[0]};background:${S[0]==='var(--green)'?'rgba(74,222,128,.12)':'var(--surface-2)'};border-radius:20px;padding:3px 10px">${esch(S[1])}</span>
+      </div>
+      <div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(v.summary||'')}</div>
+      <div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${v.seconds!=null?v.seconds+'s to a person':''}${v.confidenceLabel&&v.confidenceLabel!=='unknown'?` · <span style="color:${confColor(v.confidenceLabel)}">${esch(v.confidenceLabel)}</span>`:''}${v.why?' · '+esch(whyWords(v.why)):''}</div>
+      ${calls.length?`<div class="k-eyebrow" style="margin:14px 0 6px">The calls that proved it</div>`+calls.map(cl=>
+        `<div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5;padding:3px 0">${esch(cl.day||'')} · ${esch(cl.storeName||'a store')}${cl.seconds!=null?' · '+cl.seconds+'s':''} · ${cl.reachedHuman?'<span style="color:var(--green)">a person answered</span>':'<span style="color:var(--muted)">nobody answered</span>'}${cl.transferAtSec!=null?' · handed on at '+cl.transferAtSec+'s':''}${cl.greeting?'<br>“'+esch(String(cl.greeting).slice(0,120))+'”':''}</div>`).join(''):''}
+      ${v.status==='proposed'?`<div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap"><button class="act" onclick="closeSheet();mapApprove(${v.id},${chainId})">Use it</button><button class="ghost" onclick="closeSheet();mapReject(${v.id},${chainId})">Keep the old one</button></div>`:''}
+    </div>`;
+  }).join('') : '<div class="empty">No saved versions yet. Mapping calls create the first one.</div>';
+  if(rw) rw.innerHTML = uk.length ? uk.map(u=>mapUnknownCard(u,chainId)).join('') : '<div class="empty">Nothing to review on this chain.</div>';
+}
+// The engine writes "2 call(s), 1 store(s), 2 day(s)". Nobody reads "(s)" on a phone.
+const whyWords=s=>String(s||'').replace(/(\d+)\s+(\w+?)\(s\)/g,(m,n,w)=>n+' '+w+(Number(n)===1?'':'s'));
+// What is wrong, in his words. The raw kinds are engine vocabulary and mean nothing on a phone.
+const UNKNOWN_WHAT={
+  'hammer-route':'The route is just pressing the same key over and over, not a real menu',
+  'unproven-direct':'We claim a person answers straight away, but no call has proved it',
+  'route-changed':'The menu changed since we learned it',
+  'drift':'The menu is drifting away from what we learned',
+  'not-shared':'This route is not shared with the rest of the chain',
+};
+function mapUnknownCard(u,chainId){
+  return `<div class="card" style="margin:0 0 10px">
+    <div class="name" style="font-size:13.5px">${esch(UNKNOWN_WHAT[u.kind]||u.kind||'Needs a look')}</div>
+    ${u.prompt?`<div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(u.prompt)}</div>`:''}
+    <div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${u.count>1?'Seen '+u.count+' times':'Seen once'}${u.firstSeen?' · first on '+new Date(u.firstSeen*1000).toLocaleDateString([],{month:'short',day:'numeric'}):''}</div>
+    <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
+      <button class="act" onclick="mapUnknown(${u.id},'resolved',${chainId})">Fixed</button>
+      <button class="ghost" onclick="mapUnknown(${u.id},'dismissed',${chainId})">Not a problem</button>
+    </div></div>`;
+}
+async function mapUnknown(id,status,chainId){
+  const r=await api('/api/admin/map/unknown/'+id,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({status,note:status==='resolved'?'marked fixed from Admin':'marked not a problem from Admin'})});
+  if(!r||r.error){ toast(mapWriteErr(r)); return; }
+  toast(status==='resolved'?'Marked fixed':'Set aside'); await loadMapGraph(); await renderMapVersions(chainId);
 }
 // Walk back to the chain list from a chain detail.
 function setBackToChains(){
