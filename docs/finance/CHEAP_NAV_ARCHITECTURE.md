@@ -66,8 +66,8 @@ moment. Signals, cheapest first:
 
 ## Status / sequencing
 
-- **Smallest first step:** the `connectOnHuman` flag (keypad chains) — nav is free DTMF, EL engages only
-  on pickup. Lowest risk, already partially scaffolded.
+- **Smallest first step — SHIPPED:** the `connectOnHuman` flag (keypad chains) is live — nav is free DTMF,
+  EL engages only on pickup. This is the cheap path zone/keypad calls run on today.
 - **Then** the voice-tree broker (STT + Haiku + cheap TTS) — the CVS case, the biggest saver.
 - **NOT a same-night change before a demo** — the current all-Sonnet-through-EL path is what's polished
   and working. Stage this immediately after the demo locks.

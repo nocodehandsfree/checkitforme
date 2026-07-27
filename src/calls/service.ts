@@ -7,6 +7,8 @@ import { fetchStorePhone } from "../store-phone";
 import {
   accounts, callResults, categories, chains, customerSchedules, retailers, scheduleTargets, schedules, statuses, watches, zoneRetailers, zones,
 } from "../db/schema";
+import { linkCall } from "./events"; // ties the call row to its receipt (the timeline + the seconds)
+import { recordVerdict } from "./receipt-store";
 import { chargeOneCredit, isCompAccount, getAccount } from "../billing";
 import { sendRestockEmailTo, sendAlert, accountLang, localizeResult } from "../alerts";
 import { isCallingPaused } from "../redis";
@@ -63,7 +65,9 @@ async function notifyAutoCheckResult(callId: number): Promise<void> {
 import { config } from "../config";
 import { ElevenLabsProvider } from "../voice/elevenlabs";
 import { takeBridgeNav } from "../voice/bridge";
-import { placeBridgeCall, roomFinalizers } from "../voice/bridge-place";
+import { placeBridgeCall, roomFinalizers, parseNavSteps } from "../voice/bridge-place";
+import { stageNavPromptPlan, listenNavSummary } from "./listen-nav";
+import { reportCallDrift } from "./mapgraph";
 import { learnTreeFromTranscript, consumeTreeRelearn } from "./tree-learn";
 import { connectAtSecFor } from "./recipe";
 import { deltaStoreCall, setDeltaFinalize, tdTranscript, type TdSession } from "./tapedeck";
@@ -164,7 +168,7 @@ export async function buildRestockVars(
   specificProduct?: string,
   extraCategoryIds?: number[],
   kioskMode?: boolean,
-): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; say: string | null; connectAtSec: number | null; maxTalk: number | null; voiceId: string | null; voiceTuning: Record<string, unknown> | null; dynamicVars: Record<string, string> } | null> {
+): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; say: string | null; connectAtSec: number | null; maxTalk: number | null; voiceId: string | null; voiceTuning: Record<string, unknown> | null; listenNav: boolean; dynamicVars: Record<string, string> } | null> {
   const retailer = (await db.select().from(retailers).where(eq(retailers.id, retailerId)))[0];
   if (!retailer) return null;
   const category = (await db.select().from(categories).where(eq(categories.id, categoryId)))[0];
@@ -211,11 +215,37 @@ export async function buildRestockVars(
     } catch { /* ignore bad recipe */ }
   }
 
+  // LISTENING NAV (owner 07-25): fire each mapped step when the recording actually stops talking
+  // instead of at a fixed second. Setting `listen_nav`: "off" (default) | "all" | a comma list of
+  // chain names. Same recipe either way — only the WHEN changes — so a chain can be flipped on,
+  // listened to, and flipped back with no data migration. Single checks, scheduled checks and ZONE
+  // fires all resolve their call through this one builder, so they all get it together.
+  const lnRaw = ((await getSetting("listen_nav")) || "off").trim().toLowerCase();
+  const listenNav = lnRaw === "all"
+    || (!!chain?.name && lnRaw.split(",").map((x) => x.trim()).filter(Boolean).includes(chain.name.toLowerCase()));
+
+  // WHICH RECORDING each step waits for (owner 07-26). The mapped route now knows that "general" is
+  // said after the store finishes reading its options, not at second 41 — but the plan the bridge
+  // builds is a flat "word@seconds" string with nowhere to put that. So stage it here, keyed by the
+  // exact route, and listening navigation claims it as the call starts. No map data → nothing staged
+  // → the call behaves exactly as it does today.
+  if (listenNav && chain?.navRecipe) {
+    try {
+      const r = JSON.parse(chain.navRecipe) as { steps?: Array<{ action?: string; value?: string; atSec?: number; afterPrompt?: number }> };
+      const parsed = parseNavSteps(chain.dtmfShortcut ?? null, say);
+      const mapped = (r.steps || []).filter((s) => s.action === "press" || s.action === "say");
+      if (parsed.length && parsed.length === mapped.length) {
+        stageNavPromptPlan(parsed.map((p, i) => ({ ...p, afterPrompt: mapped[i]?.afterPrompt })));
+      }
+    } catch { /* unreadable recipe → clock behaviour, unchanged */ }
+  }
+
   return {
     retailer, category, chainName: chain?.name ?? null,
     // Bridge-level keypad shortcut (chain-wide): pressed by OUR code at a fixed time, not the LLM.
     dtmf: chain?.dtmfShortcut ?? null,
     say,
+    listenNav,
     // ABC deterministic hand-off: open the billed agent at the chain's LEARNED time-to-human.
     // Guarded (connectAtSecFor): direct-answer chains and chains with no tree evidence NEVER get a
     // timer — the timer mutes the agent until it fires (the 2026-07-02 silent-agent bug). null =
@@ -538,18 +568,35 @@ export async function bridgeCheckCall(a: TriggerArgs) {
     // Human reached, billed agent open — hand the row to the normal EL ingest by conv id.
     db.update(callResults).set({ providerCallId: convId, status: "in_progress" }).where(eq(callResults.id, row.id))
       .catch((e) => console.error("bridge check connect update:", e));
-  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, apiKey: acct.apiKey, agentId: acct.agentId });
+  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, apiKey: acct.apiKey, agentId: acct.agentId, listenNav: v.listenNav });
   if (r.error || !r.room) {
     await slot.release(); // dial never placed → free the slot immediately
     await db.update(callResults).set({ status: "failed", summary: r.error || "bridge call failed" }).where(eq(callResults.id, row.id));
     throw new Error(r.error || "bridge call failed");
   }
   const providerCallId = `bridge:${r.room}`;
-  await db.update(callResults).set({ providerCallId }).where(eq(callResults.id, row.id));
+  // `room` is the receipt's key and nothing ever overwrites it — unlike providerCallId, which the
+  // voice provider's conversation id replaces mid-call. This is the stable join for the timeline.
+  linkCall(r.room, row.id);
+  await db.update(callResults).set({ providerCallId, room: r.room }).where(eq(callResults.id, row.id));
   // If the call ends without ever reaching a human (voicemail hang-up, busy, no answer), no conv id
   // ever lands — the room finalizer closes the row so zone runs / schedules still reach a terminal state.
   roomFinalizers.set(r.room, (twilioStatus) => {
     void (async () => {
+      // DRIFT (owner 07-26): every real check re-measures the map for free. What we compare is what
+      // the call already produced — how many recordings played, when each step fired, and whether a
+      // step had to fall back to the clock. A step firing on the clock is the early warning that a
+      // store changed its menu, which is exactly what talked over CVS and Walmart. No speech
+      // recognition, no model, so this costs nothing and runs on every check.
+      const chainId = v.retailer.chainId;
+      const summary = listenNavSummary(r.room!);
+      if (chainId && summary && summary.fired.length) {
+        await reportCallDrift({
+          chainId, storeId: v.retailer.id, callId: row.id, navId: `bridge:${r.room}`,
+          fired: summary.fired, promptCount: summary.promptCount, navEndSec: summary.navEndSec,
+          reachedHuman: twilioStatus === "completed",
+        }).catch(() => { /* knowledge is best-effort — never block a verdict */ });
+      }
       const cur = (await db.select().from(callResults).where(eq(callResults.id, row.id)))[0];
       if (!cur || cur.status !== "dialing") return; // conv id landed → EL ingest owns the verdict
       // Twilio's terminal status IS the real reason on this lane (EL never joined): map it to the
@@ -612,8 +659,8 @@ async function finalizeDeltaSession(s: TdSession): Promise<void> {
     callSeconds: Math.round((Date.now() - s.startMs) / 1000),
   }).where(eq(callResults.id, chk.callId));
 
-  // Charge one credit on a definitive in/out answer, exactly once (atomic).
-  if (chk.finderUserId && status === "completed" && definitive) await chargeCallOnce(chk.callId, chk.finderUserId);
+  // Charge one credit on a billable outcome (real answer OR engaged-no-answer), exactly once (atomic).
+  if (chk.finderUserId && status === "completed" && billableOutcome(statusKey, definitive, transcript)) await chargeCallOnce(chk.callId, chk.finderUserId);
 
   if (confirmed === true) {
     await notifyInStock(chk.retailerName, chk.categoryLabel, chk.retailerId, dayHeard || undefined);
@@ -891,6 +938,20 @@ export async function getCreditStatus() {
  *  the race guard, so concurrent finalizers (poller + webhook + retries, across instances) can't
  *  double-bill. Returns true only if a credit was actually taken (comp accounts are marked charged
  *  but pay nothing). */
+/** Owner billing ruling (07-22): a check is BILLABLE when the store gave a real answer (definitive)
+ *  OR a human engaged and burned real minutes without answering — left on hold, too busy, language
+ *  barrier, or an unclear call that was nonetheless a real two-way conversation. Stays FREE: nobody
+ *  answered, voicemail, busy, bad number, closed, cancelled, failed — calls that never engaged or
+ *  cost cents. Protects call ROI without ever billing silence. Keep in lockstep with the support
+ *  credit machine's BAD_KEYS (credits.ts) — billing and auto-refunds must never fight. */
+export function billableOutcome(statusKey: string | null | undefined, definitive: boolean, transcript?: string | null): boolean {
+  if (definitive) return true;
+  const k = statusKey || "";
+  if (k === "left_on_hold" || k === "too_busy" || k === "language_barrier") return true;
+  if (k === "no_clear_answer" && transcript && /^Agent:/m.test(transcript) && /^Clerk:/m.test(transcript)) return true;
+  return false;
+}
+
 export async function chargeCallOnce(callId: number, finderUserId: string): Promise<boolean> {
   const won = await db.update(callResults).set({ chargedAt: Math.floor(Date.now() / 1000) })
     .where(and(eq(callResults.id, callId), isNull(callResults.chargedAt)));
@@ -968,11 +1029,14 @@ export async function ingestPending(): Promise<number> {
       // otherwise fall back to the first-human-turn timestamp from the transcript.
       navSeconds: takeBridgeNav(row.providerCallId) ?? outcome.navSecs ?? null,
     }).where(eq(callResults.id, row.id));
+    // Close the timeline with the answer the customer actually got, so a replay ends where the call
+    // ended. Fire-and-forget: a verdict must never wait on bookkeeping.
+    void recordVerdict(row.id, finalStatusKey ?? null, outcome.summary ?? null, outcome.durationSecs ?? 0);
 
     // Server-side billing: charge the finder ONE credit on a DEFINITIVE answer, exactly once.
     // (chargeCallOnce is atomic — the poller, the webhook, and any retry can't double-bill.)
     // A conflict/unsure verdict (the two reads disagreed) is free — we never bill a verdict we doubt.
-    if (row.finderUserId && outcome.status === "completed" && definitive) {
+    if (row.finderUserId && outcome.status === "completed" && billableOutcome(finalStatusKey, definitive, outcome.transcript)) {
       await chargeCallOnce(row.id, row.finderUserId);
     }
 

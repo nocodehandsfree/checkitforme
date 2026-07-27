@@ -1,0 +1,336 @@
+// THE CALL RECEIPT — every runtime decision on every call, with its real second.
+//
+// WHY (owner, 07-26): "It's hard for me to answer you because I don't have all the visibility on the
+// code." Two days were lost to mistakes that were invisible until someone read logs by hand — the
+// agent opening during the menu, the keypad and spoken lanes silently not being used at all. A call
+// that leaves no record can go wrong for days. This module makes every call leave one.
+//
+// DESIGN RULES
+//  1. PURE + SINK-REGISTERED. No db, no config, no vendor names in here. The server registers a sink
+//     (setEventSink) exactly like tapedeck registers its finalize hook — so the bridge and the
+//     navigator can record without importing the database, and every rule below is unit-testable
+//     without booting the app (scripts/test-call-events.ts).
+//  2. NEVER ON THE CALL PATH. Recording is best-effort and wrapped: a bad sink can never drop a call.
+//  3. ROOM IS THE KEY. The room id exists from before the phone rings, long before we have a
+//     conversation id or a call_results row — so the receipt opens on the room and the call id is
+//     linked in later, whenever it turns up.
+//
+// The seconds are the point. Charlie bills every second he is CONNECTED, whether he is talking,
+// listening or sitting in silence — muting saves nothing, only closing the socket does. So splitting
+// connected time into speaking / listening / silent is not how we save money; it is how we PROVE how
+// many seconds we paid for that nobody needed. That number is `avoidableSecs`.
+
+/**
+ * THE CLOSED SET. These sixteen and no others — the dashboard is built against exactly this list
+ * (Addie, 07-26), so a new kind would silently fall off the screen. Anything finer goes in `detail`,
+ * never in a new kind: which key we pressed, which phrase we said, which leg was ringing, why we
+ * hung up. Never delete an event; the Admin only ever reads them.
+ */
+export type EventKind =
+  | "dialed"          // we asked the carrier to dial. detail: the lane we PLANNED, and the mapped steps
+  | "ringing"         // a phone is ringing. detail.leg: "store" (before pickup) | "desk" (after a transfer)
+  | "connected"       // the line was answered
+  | "ivr_detected"    // this store has a phone menu and we are about to walk it
+  | "alpha_press"     // we sent a keypad tone. detail: the key, the learned second, what triggered it
+  | "bravo_say"       // we said a mapped menu word. detail: the phrase, the learned second, the trigger
+  | "human_detected"  // a real person is on the line
+  | "charlie_join"    // the billed reasoning session opened — the money clock starts here
+  | "charlie_leave"   // it closed
+  | "hold_start"      // the clerk walked away / hold music, with the session still open
+  | "hold_end"
+  | "transfer"        // the menu handed us to another extension
+  | "voicemail"       // a machine, not a person
+  | "unknown"         // something we could not classify. detail says what we saw
+  | "verdict"         // the answer the customer got
+  | "summary"         // the seconds and the cost, written onto the timeline itself. ONLY used by a
+                      // call with no call_results row (Admin's own calls: mapping, rehearsals, the
+                      // store button) — those roll up nowhere else, so without this the numbers die
+                      // with the process and the receipt is a timeline with no money on it.
+  | "hangup";         // the call ended. detail: why
+
+/** Which lane walked this call to a human. Runtime names, from the spec. */
+export type Lane = "direct" | "alpha" | "bravo" | "delta" | "unknown";
+
+export interface RtEvent {
+  /** Milliseconds from the moment we asked the carrier to dial. */
+  atMs: number;
+  /** Whole seconds from dial — what a human reads on the timeline. */
+  atSec: number;
+  kind: EventKind;
+  /** Plain-English one-liner for the timeline. Never a code identifier. */
+  note?: string;
+  /** Structured extras (digits pressed, words spoken, why a decision went the way it did). */
+  detail?: Record<string, unknown>;
+}
+
+/** Raw seconds meters, accumulated live by the bridge as audio flows. Milliseconds internally so
+ *  nothing is lost to rounding until the very end. */
+export interface Meters {
+  // STAMPS — a moment, or null because it never happened. Deliberately NOT zero: a receipt starts
+  // its clock at dial, so "millisecond 0" is a real moment, and reading 0 as "never" would quietly
+  // erase anything that happened in the first instant of a call.
+  /** When the billed reasoning session opened / closed, ms from dial. */
+  charlieOpenMs: number | null;
+  charlieCloseMs: number | null;
+  /** The line was answered (the carrier's own "in-progress"), ms from dial. */
+  answeredMs: number | null;
+  /** A real person was detected, ms from dial. */
+  humanMs: number | null;
+  /** The menu finished, ms from dial. */
+  navEndMs: number | null;
+  /** The call ended, ms from dial. */
+  endMs: number | null;
+  // DURATIONS — running totals, always a number.
+  /** Agent audio actually played out onto the line. */
+  speakingMs: number;
+  /** Store-side audio loud enough to be someone talking, while the agent was connected. */
+  listeningMs: number;
+  /** A phone ringing on the far end WHILE the agent was connected and billing — a transfer to a desk
+   *  nobody is at. Identified by the network's own ring frequencies, not guessed from loudness. */
+  ringingMs: number;
+  /** The clerk walked away or put us on hold with the agent still connected. Not measured yet — it
+   *  arrives with the hold-handback work, and stays NULL until then so nobody reads a real zero. */
+  holdMs: number | null;
+}
+
+const zeroMeters = (): Meters => ({
+  charlieOpenMs: null, charlieCloseMs: null, answeredMs: null, humanMs: null,
+  navEndMs: null, endMs: null, speakingMs: 0, listeningMs: 0, ringingMs: 0, holdMs: null,
+});
+
+export interface Receipt {
+  room: string;
+  startMs: number;
+  /** call_results.id — linked in whenever the row exists (may be after the call starts). */
+  callId?: number;
+  /** Provider-side conversation id, for cross-checking a bill. */
+  providerCallId?: string;
+  lane: Lane;
+  /** What the map told us to do, so a replay shows plan vs reality side by side. */
+  planned: Array<{ action: string; value: string; atSec: number }>;
+  events: RtEvent[];
+  meters: Meters;
+  closed: boolean;
+}
+
+const receipts = new Map<string, Receipt>();
+/** Rooms whose receipt was already flushed — a late event must not resurrect one. */
+const flushed = new Set<string>();
+
+/** How long a receipt lives in memory before it is dropped (a call that never reported an end). */
+const RECEIPT_TTL_MS = 15 * 60 * 1000;
+
+// ---- the sink -------------------------------------------------------------------------------
+// Registered by the server so this module never imports the database. Same idiom as tapedeck's
+// finalize hook: the engine stays pure, the app wires the plumbing.
+type Sink = (r: Receipt) => void | Promise<void>;
+let sink: Sink | null = null;
+export function setEventSink(fn: Sink): void { sink = fn; }
+
+// ---- recording ------------------------------------------------------------------------------
+
+/** Open a receipt for a call. Called at dial, before the phone rings. Idempotent per room. */
+export function openReceipt(room: string, opts?: { lane?: Lane; planned?: Receipt["planned"]; callId?: number; note?: string }): Receipt {
+  const existing = receipts.get(room);
+  if (existing) return existing;
+  const r: Receipt = {
+    room, startMs: Date.now(), callId: opts?.callId, lane: opts?.lane ?? "unknown",
+    planned: opts?.planned ?? [], events: [], meters: zeroMeters(), closed: false,
+  };
+  receipts.set(room, r);
+  setTimeout(() => { if (receipts.get(room) === r) receipts.delete(room); }, RECEIPT_TTL_MS);
+  // The PLANNED lane rides in the detail, never as the row's answer. The row gets the route that
+  // really ran, worked out at the end from what actually fired (Addie: "the real route, not the
+  // chain's guess"). Plan and reality sitting side by side is how a bad map shows itself.
+  emit(room, "dialed", opts?.note || "Dialing the store", { plannedLane: r.lane, plan: r.planned });
+  return r;
+}
+
+/** Which lane is walking this call, decided from the plan we are about to run — never guessed after
+ *  the fact. Presses only = keypad (Alpha), any spoken word = spoken menu (Bravo), no steps at all =
+ *  the phone rings a person (Direct). This is the stamp that makes "the lanes weren't even being
+ *  used" visible on day one instead of two days later (owner 07-26). */
+export function laneFor(steps: Array<{ action: string }>): Lane {
+  if (!steps.length) return "direct";
+  return steps.some((s) => s.action === "say") ? "bravo" : "alpha";
+}
+
+/** Plain-English name for a lane — this text is what a person reads on the timeline. */
+export function laneNote(lane: Lane): string {
+  return lane === "direct" ? "Rings a person directly, no menu"
+    : lane === "alpha" ? "Keypad menu, presses the mapped numbers"
+    : lane === "bravo" ? "Spoken menu, says the mapped words"
+    : lane === "delta" ? "Recorded lines and a cheap listener, no live agent"
+    : "No map for this store yet";
+}
+
+/** Record one runtime event. Best-effort: never throws into the call path. */
+export function emit(room: string, kind: EventKind, note?: string, detail?: Record<string, unknown>): void {
+  try {
+    const r = receipts.get(room);
+    if (!r || r.closed) return;
+    const atMs = Date.now() - r.startMs;
+    r.events.push({ atMs, atSec: Math.round(atMs / 1000), kind, note, detail });
+    if (r.events.length > 400) r.events.splice(0, r.events.length - 400); // runaway guard
+  } catch { /* recording must never break a call */ }
+}
+
+/** Attach the call_results row id once it exists. */
+export function linkCall(room: string, callId: number): void {
+  const r = receipts.get(room);
+  if (r && !r.closed) r.callId = callId;
+}
+
+/** Attach the provider's conversation id so a receipt can be checked against a bill. */
+export function linkProviderCall(room: string, providerCallId: string): void {
+  const r = receipts.get(room);
+  if (r && !r.closed) r.providerCallId = providerCallId;
+}
+
+/**
+ * The route that ACTUALLY ran, read back off what really fired — not the plan we started with.
+ * A store mapped as a keypad menu that answered on the first ring really ran direct, and the row
+ * must say so, or nobody can tell that a lane has quietly stopped being used.
+ */
+export function actualLane(r: Receipt): Lane {
+  const kinds = new Set(r.events.map((e) => e.kind));
+  if (kinds.has("bravo_say")) return "bravo";
+  if (kinds.has("alpha_press")) return "alpha";
+  // Nothing was pressed or said. If the call got anywhere at all, it rang straight through.
+  if (kinds.has("human_detected") || kinds.has("connected")) return "direct";
+  return "unknown";
+}
+
+/** Stamps: a moment in the call. Every caller measures from ITS OWN start (the bridge socket opens
+ *  long after we dialled), so nobody may pass a duration — they say "now" and the receipt, which is
+ *  the only thing that knows when we dialled, does the arithmetic. First write wins: a human is
+ *  detected once. */
+const STAMPS = ["answeredMs", "humanMs", "navEndMs", "charlieOpenMs", "charlieCloseMs", "endMs"] as const;
+export type StampKey = typeof STAMPS[number];
+export function markNow(room: string, key: StampKey): void {
+  try {
+    const r = receipts.get(room);
+    if (!r || r.closed || r.meters[key] !== null) return; // first write wins: a person is detected once
+    r.meters[key] = Math.max(0, Date.now() - r.startMs);
+  } catch { /* recording must never break a call */ }
+}
+
+/** Durations: add milliseconds to a running total. */
+export function addMs(room: string, key: "speakingMs" | "listeningMs" | "ringingMs" | "holdMs", ms: number): void {
+  try {
+    const r = receipts.get(room);
+    if (!r || r.closed || !Number.isFinite(ms) || ms <= 0) return;
+    r.meters[key] = (r.meters[key] ?? 0) + ms;
+  } catch { /* recording must never break a call */ }
+}
+
+export function getReceipt(room: string): Receipt | null { return receipts.get(room) ?? null; }
+
+/** Close the receipt and hand it to the sink exactly once. */
+export function closeReceipt(room: string, note?: string, reason?: string): Receipt | null {
+  const r = receipts.get(room);
+  if (!r || r.closed || flushed.has(room)) return null;
+  emit(room, "hangup", note || "Call ended", reason ? { reason } : undefined);
+  r.closed = true;
+  if (r.meters.endMs === null) r.meters.endMs = Math.max(0, Date.now() - r.startMs);
+  // A session still open when the line drops was billing right up to the end.
+  if (r.meters.charlieOpenMs !== null && r.meters.charlieCloseMs === null) r.meters.charlieCloseMs = r.meters.endMs;
+  flushed.add(room);
+  setTimeout(() => flushed.delete(room), RECEIPT_TTL_MS);
+  try { void sink?.(r); } catch { /* persistence is best-effort */ }
+  return r;
+}
+
+// ---- the roll-up ----------------------------------------------------------------------------
+
+/**
+ * What a finished check records. These field names ARE the dashboard's contract (Addie, 07-26) —
+ * renaming one silently blanks a column on her screen. Pure, and unit-tested.
+ *
+ * A number that we do not truly measure is `null`, never 0. "We never checked" and "it was zero"
+ * are different facts and a dashboard must be able to tell them apart.
+ */
+export interface Rollup {
+  /** The route that really ran, from what actually fired. Never the chain's guess. */
+  lane: Lane;
+  /** Whole seconds the carrier leg was up. */
+  callSecs: number;
+  /** Dial → a person is on the line. Null = we never reached one. */
+  navSeconds: number | null;
+  /** Person on the line → hang up. Null = we never reached one. */
+  talkSeconds: number | null;
+  /** Session open, total. THIS is what we are billed. */
+  charlieConnectedSeconds: number;
+  /** Of that, seconds somebody was actually speaking. Connected minus this is the waste. */
+  charlieTalkingSeconds: number;
+  /** The waste, spelled out so nobody has to subtract. */
+  charlieSilentSeconds: number;
+  /** The two halves of talking time, kept because they answer different questions. */
+  speakingSecs: number;
+  listeningSecs: number;
+  /** A desk ringing while the session was open and billing. */
+  ringSeconds: number;
+  /** Clerk away / hold music while the session was open. Null until hold detection ships. */
+  holdSeconds: number | null;
+  /** Whole minutes the carrier charged, rounded up. */
+  billedMinutes: number;
+  /** Seconds spent walking the menu (dial → menu finished). Null on a store with no menu. */
+  menuSeconds: number | null;
+  /** How many mapped steps fired, and how many fired on a real pause instead of the clock. */
+  stepsFired: number;
+  stepsOnPause: number;
+  charlieJoined: boolean;
+}
+
+/** Split a finished receipt into the seconds that matter. Everything rounds ONCE, at the end. */
+export function rollup(r: Receipt): Rollup {
+  const m = r.meters;
+  const sec = (ms: number) => Math.max(0, Math.round(ms / 1000));
+  const charlieMs = m.charlieOpenMs !== null && m.charlieCloseMs !== null ? Math.max(0, m.charlieCloseMs - m.charlieOpenMs) : 0;
+  // Speaking and listening are measured independently and can overlap (a clerk talking over the
+  // agent). Cap their sum at the connected time so silence can never read negative.
+  const talkMs = Math.min(charlieMs, m.speakingMs + m.listeningMs);
+  const speakingMs = Math.min(m.speakingMs, talkMs);
+  const listeningMs = Math.max(0, talkMs - speakingMs);
+  const steps = r.events.filter((e) => e.kind === "alpha_press" || e.kind === "bravo_say");
+  // The three parts MUST add back up to the billed seconds. Rounding each one on its own lets them
+  // miss by a second, which on a dashboard reads as a bug in the meter. So the two measured parts
+  // round, and dead air is whatever is left — it is the derived number, not a measured one.
+  const charlieSecs = sec(charlieMs);
+  const speakingSecs = Math.min(sec(speakingMs), charlieSecs);
+  const listeningSecs = Math.min(sec(listeningMs), charlieSecs - speakingSecs);
+  const silentSecs = charlieSecs - speakingSecs - listeningSecs;
+  const callSecs = sec(m.endMs ?? 0);
+  // Ringing on the far end is NOT someone talking, so it comes out of listening before the split —
+  // otherwise a desk ringing into an empty room would read as a conversation we needed to pay for.
+  const ringSeconds = Math.min(sec(m.ringingMs), charlieSecs);
+  return {
+    lane: actualLane(r),
+    callSecs,
+    navSeconds: m.humanMs !== null ? sec(m.humanMs) : null,
+    talkSeconds: m.humanMs !== null ? Math.max(0, callSecs - sec(m.humanMs)) : null,
+    charlieConnectedSeconds: charlieSecs,
+    charlieTalkingSeconds: speakingSecs + listeningSecs,
+    charlieSilentSeconds: silentSecs,
+    speakingSecs,
+    listeningSecs,
+    ringSeconds,
+    holdSeconds: m.holdMs !== null ? sec(m.holdMs) : null,
+    billedMinutes: callSecs > 0 ? Math.ceil(callSecs / 60) : 0,
+    menuSeconds: m.navEndMs !== null ? sec(m.navEndMs) : null,
+    stepsFired: steps.length,
+    stepsOnPause: steps.filter((e) => e.detail?.via === "prompt").length,
+    charlieJoined: m.charlieOpenMs !== null,
+  };
+}
+
+/** For tests and for the replay API: a receipt built from raw parts without touching the clock. */
+export function _receiptFrom(parts: { room?: string; lane?: Lane; events?: RtEvent[]; meters?: Partial<Meters> }): Receipt {
+  return {
+    room: parts.room ?? "test", startMs: 0, lane: parts.lane ?? "unknown", planned: [],
+    events: parts.events ?? [], meters: { ...zeroMeters(), ...(parts.meters ?? {}) }, closed: true,
+  };
+}
+
+/** Test-only: forget every in-memory receipt. */
+export function _reset(): void { receipts.clear(); flushed.clear(); sink = null; }

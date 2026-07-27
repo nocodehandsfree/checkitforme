@@ -3,6 +3,12 @@
 // frames are relayed live and dropped. This is what unlocks live audio + per-customer caller ID.
 import { WebSocket } from "ws";
 import { config } from "../config";
+// THE RECEIPT (owner 07-26). Recording only — pure, database-free, wrapped so it can never throw
+// into the call path. The bridge is the ONLY place that can honestly measure how Charlie's connected
+// seconds split into talking / listening / dead air, because it is the only place the audio passes
+// through. Every stamp is "now"; the receipt owns the clock, since it started at dial and this
+// socket opens much later.
+import { emit, markNow, addMs, linkProviderCall } from "../calls/events";
 
 export interface BridgeContext {
   agentId: string;
@@ -27,14 +33,33 @@ export interface BridgeContext {
   // from the locked recipe). Far more reliable than VAD, which trips on the IVR's own recorded voice.
   connectAtSec?: number;
   holdMaxSeconds?: number; // fallback: connect anyway after this many seconds even if no human is detected
+  // Give-up cap (bail.ringMaxSeconds, gated on bail.enabled): once the billed agent has joined, if NO
+  // real human words arrive within this many seconds, hang the call up. Bounds the "desk rings out,
+  // nobody ever answers" case, where the agent otherwise sits billing on a ringing line (the 07-24
+  // 16-cent Target call). Voicemail and menus produce words, so they clear it; only true no-pickup fires it.
+  giveUpSeconds?: number;
+  // Smart join (owner design): the second the recipe's LAST press/word is done (+ settle), open the
+  // ear. Charlie joins on a real voice, never on a timer; no voice by earFromSec+giveUpSeconds ends
+  // the call with Charlie never billed. Requires giveUpSeconds (bail on) so a call can't ride forever.
+  earFromSec?: number;
   // Per-call VOICE + TTS tuning from the assigned workflow (Voice→Designer). Applied as a minimal
   // conversation_config_override.tts ONLY when set — default calls send no override (the override path
   // is otherwise left untouched, since overriding prompt/first-message there once hung calls up).
   voiceId?: string;
   voiceTuning?: Record<string, unknown>;
+  // PERMANENT record that this call HAD a nav plan. `dtmf`/`say` are CONSUMED (nulled) by
+  // takeBridgeDtmf/takeBridgeSay when the inline TwiML is built — before the media stream ever
+  // starts — so any later gate reading them sees empty and thinks the store is direct. That dead
+  // gate let VAD run on tree stores, trip on the IVR's recording, and open the billed agent into
+  // the middle of the phone tree (owner 07-22: "Charlie was listening to phone trees"). These
+  // flags are stamped at context-set time and never consumed, so the VAD gate stays truthful.
+  hadDtmf?: boolean;
+  hadSay?: boolean;
 }
 const contexts = new Map<string, BridgeContext>();
 export function setBridgeContext(room: string, ctx: BridgeContext) {
+  ctx.hadDtmf = !!ctx.dtmf;
+  ctx.hadSay = !!ctx.say;
   contexts.set(room, ctx);
   setTimeout(() => contexts.delete(room), 5 * 60 * 1000); // auto-expire
 }
@@ -105,6 +130,34 @@ function ulawByteToLinear(u: number): number {
   t <<= (u & 0x70) >> 4;
   return (u & 0x80) ? (ULAW_BIAS - t) : (t - ULAW_BIAS);
 }
+// ---- Call-progress tone detection (ringback / busy / dial tone) ----
+// The phone network builds these from a FIXED pair of pure tones, published in the North American
+// plan: ringback 440+480 Hz, busy and reorder 480+620 Hz, dial tone 350+440 Hz. So "is this the desk
+// ringing or a person talking?" is not a judgement call, it is a measurement: check how much of the
+// frame's energy sits exactly on those frequencies. A tone puts nearly all of it there. Speech never
+// does, because a voice carries a pitch around 85 to 255 Hz plus formants spread across the band.
+// This replaced an amplitude-steadiness guess that real line noise walked straight through, letting
+// the billed agent open onto an empty ringing line (owner 07-24, two Target checks nobody answered).
+const TONE_HZ = [350, 440, 480, 620];
+/** Share (0..1) of a frame's energy sitting on the call-progress tone frequencies. ~1 = a pure tone
+ *  pair, well under 0.2 for speech. Goertzel per frequency, normalized so a clean tone reads 1. */
+function toneShare(b64: string): number {
+  let buf: Buffer; try { buf = Buffer.from(b64, "base64"); } catch { return 0; }
+  const N = buf.length;
+  if (N < 80) return 0;
+  const x = new Float64Array(N);
+  let total = 0;
+  for (let i = 0; i < N; i++) { const v = ulawByteToLinear(buf[i]); x[i] = v; total += v * v; }
+  if (total <= 0) return 0;
+  let tone = 0;
+  for (const hz of TONE_HZ) {
+    const coeff = 2 * Math.cos((2 * Math.PI * hz) / 8000);
+    let s0 = 0, s1 = 0, s2 = 0;
+    for (let i = 0; i < N; i++) { s0 = x[i] + coeff * s1 - s2; s2 = s1; s1 = s0; }
+    tone += s1 * s1 + s2 * s2 - coeff * s1 * s2; // |X(f)|^2
+  }
+  return tone / (total * (N / 2)); // normalized: a clean single tone at a listed frequency → ~1
+}
 /** Mean absolute amplitude of a base64 μ-law frame (~0 silence, higher = louder). */
 function frameEnergy(b64: string): number {
   let buf: Buffer; try { buf = Buffer.from(b64, "base64"); } catch { return 0; }
@@ -149,7 +202,7 @@ function dtmfTone(digit: string, ms = 280): Buffer {
 }
 
 // Handle one Twilio bridge socket. `fanout` forwards audio frames to browser listeners in a room.
-export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (room: string, b64: string, track: string) => void, relayLine?: (room: string, role: string, text: string) => void, relayEnd?: (room: string) => void) {
+export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (room: string, b64: string, track: string) => void, relayLine?: (room: string, role: string, text: string) => void, relayEnd?: (room: string) => void, onStage?: (room: string, n: number, atSec: number) => void) {
   let streamSid = "";
   let eleven: WebSocket | null = null;
   let ready = false;
@@ -161,9 +214,24 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   activeCalls++;
   // connect-on-human state
   let connecting = false;     // true once we've committed to opening ElevenLabs (buffer from here)
+  let connectReason = "no gate — opened at pickup"; // what let the billed agent on; goes on the receipt
   let humanAtMs = 0;          // when a human was detected (connect-on-human)
   let lastDtmfMs = 0;         // ms-after-start of the last scheduled keypress (VAD waits past this)
   let voiced = 0;             // consecutive voiced frames
+  let giveUpTimer: NodeJS.Timeout | null = null; // armed at connect when ctx.giveUpSeconds is set
+  let humanWords = false;     // a real store-side transcript line arrived (letters, not "..." junk)
+  let earArmed = false;       // smart join: the menu is done, the ear is open for a real voice
+  const loudE: number[] = []; // recent above-threshold frame energies (amplitude steadiness, secondary)
+  const loudT: number[] = []; // per-frame share of energy on the phone network's tone frequencies
+  let toneLogged = false;     // log the "it's a tone" verdict once per call, not per frame
+  // SECOND-RING TRACKING (owner 07-24). After the menu transfers us, the DESK rings — a separate
+  // ring from the one before pickup. Detecting it POSITIVELY (not just "that wasn't a human") gives
+  // three things: an honest log step with real seconds, certainty that Charlie must stay off, and a
+  // deterministic "nobody is coming" once enough rings go unanswered.
+  let inRing = false;         // currently inside a ring burst
+  let ringCount = 0;          // completed ring bursts on the transferred leg
+  let firstRingAtMs = 0;      // when the desk started ringing (for the log step)
+  const RINGS_UNANSWERED = 6; // ~36s of a US 2s-on/4s-off cadence → nobody is coming
   const startMs = Date.now();
   const VOICE_THRESH = 350;   // μ-law mean-abs energy that counts as "someone's talking" (tunable)
   const VOICE_FRAMES = 45;    // ~0.9s of sustained voice → treat as a human (tunable)
@@ -190,6 +258,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     log("connectEleven: opening ElevenLabs WS");
     eleven = new WebSocket(url);
     eleven.on("open", () => {
+      // THE BILLED SECOND ZERO. The provider meters from session open, so this is where the money
+      // clock starts — not at first word. Everything after this is seconds we are paying for.
+      markNow(room, "charlieOpenMs");
+      emit(room, "charlie_join", "The agent is on the line and billing", { reason: connectReason });
       log("eleven WS open -> sending init");
       const init: Record<string, unknown> = { type: "conversation_initiation_client_data", dynamic_variables: c.dynamicVars };
       // Workflow voice: minimal per-call TTS override (voice + any tuning). Only when a workflow set
@@ -216,7 +288,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           return null;
         };
         const convId = find(m);
-        if (convId) { conversations.set(room, convId); setTimeout(() => conversations.delete(room), 10 * 60 * 1000); if (c.connectOnHuman && humanAtMs) navByConv.set(convId, Math.max(0, Math.round((humanAtMs - startMs) / 1000))); log(`metadata: convId=${convId}`); try { c.onConversationId?.(convId); } catch (e) { log(`onConversationId threw: ${String(e).slice(0, 80)}`); } }
+        if (convId) { conversations.set(room, convId); linkProviderCall(room, convId); setTimeout(() => conversations.delete(room), 10 * 60 * 1000); if (c.connectOnHuman && humanAtMs) navByConv.set(convId, Math.max(0, Math.round((humanAtMs - startMs) / 1000))); log(`metadata: convId=${convId}`); try { c.onConversationId?.(convId); } catch (e) { log(`onConversationId threw: ${String(e).slice(0, 80)}`); } }
         else log(`metadata but NO convId: ${JSON.stringify(m).slice(0, 200)}`);
         for (const p of pending) eleven!.send(JSON.stringify({ user_audio_chunk: p }));
         pending.length = 0;
@@ -229,15 +301,21 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           // Twilio plays queued audio sequentially, so chunks extend the window back-to-back.
           const ms = Math.ceil((b64.length * 3) / 4 / 8);
           agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + ms;
+          addMs(room, "speakingMs", ms); // SPEAKING = audio that really played out, not a guess
         }
       } else if (m.type === "user_transcript") {
-        const txt = m.user_transcription_event?.user_transcript; if (txt) try { relayLine?.(room, "Clerk", String(txt)); } catch { /* relay best-effort */ }
+        const txt = m.user_transcription_event?.user_transcript;
+        // Real words on the store side (letters, not ringback transcribed as "...") = someone IS
+        // there — disarm the give-up cap. Voicemail greetings count: the voicemail bail handles those.
+        if (txt && /[a-zA-ZÀ-ɏ]{2,}/.test(String(txt)) && !humanWords) { humanWords = true; if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } }
+        if (txt) try { relayLine?.(room, "Clerk", String(txt)); } catch { /* relay best-effort */ }
         // VOICEMAIL = hang up NOW, not after the greeting plays out (owner 07-22: "as soon as it
         // starts hearing the voice message it should hang up to save us money"). Same phrases the
         // outcome mapper stamps `voicemail` from, so the verdict stays consistent. Closing the
         // stream ends the TwiML <Connect> → Twilio hangs the PSTN leg; the EL leg closes with it.
         if (txt && /\b(leave (?:a|your) message|after the (?:tone|beep)|at the (?:tone|beep)|voice ?mail|mailbox|record your message|is not available|unable to take your call|has been forwarded to)\b/i.test(String(txt))) {
           log(`voicemail greeting detected -> hanging up to save the call minutes`);
+          emit(room, "voicemail", "Reached a machine, hung up straight away");
           signalEnd(); try { eleven?.close(); } catch { /* torn down */ } try { twilio.close(); } catch { /* torn down */ }
         }
       } else if (m.type === "agent_response") {
@@ -249,7 +327,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         agentPlayingUntil = 0; // Twilio's playout buffer was cleared — nothing of ours is on the line now
       }
     });
-    eleven.on("close", (code: number) => { log(`eleven WS close code=${code} (frames in=${frames})`); signalEnd(); if (twilio.readyState === 1) twilio.close(); });
+    eleven.on("close", (code: number) => { markNow(room, "charlieCloseMs"); emit(room, "charlie_leave", "The agent is off the line, billing stopped", { code }); log(`eleven WS close code=${code} (frames in=${frames})`); signalEnd(); if (twilio.readyState === 1) twilio.close(); });
     eleven.on("error", (e: Error) => log(`eleven WS error: ${e.message}`));
   }
 
@@ -275,8 +353,23 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   function triggerConnect(reason: string) {
     if (connecting) return;
     humanAtMs = Date.now();
+    connectReason = reason;
+    if (reason === "human") { markNow(room, "humanMs"); emit(room, "human_detected", "A real person is on the line"); }
+    else emit(room, "unknown", `The agent was let on without hearing a person (${reason})`, { reason });
     log(`connect-on-human: connecting (${reason}) after ${Math.round((humanAtMs - startMs) / 1000)}s nav`);
     connectEleven();
+    // Give-up cap: the agent is now billing. If no real human words land within giveUpSeconds,
+    // nobody is coming to the phone — end the call instead of paying to listen to it ring.
+    const gu = ctx?.giveUpSeconds;
+    if (gu && gu > 0 && !giveUpTimer) {
+      giveUpTimer = setTimeout(() => {
+        if (humanWords) return;
+        emit(room, "hangup", `Nobody spoke in the ${gu}s after the agent joined, hung up`, { reason: "no_words", afterSecs: gu });
+        log(`give-up: no human words ${gu}s after connect — hanging up (bail.ringMaxSeconds)`);
+        try { if (eleven) eleven.close(); } catch { /* best effort */ }
+        try { twilio.close(); } catch { /* best effort */ }
+      }, gu * 1000);
+    }
   }
   // VAD on inbound (store-side) audio: after the keypad nav has had time to finish, sustained voice
   // ⇒ a human is on the line ⇒ bring in the (billed) agent. Imperfect vs hold music — bench-test/tune.
@@ -290,8 +383,61 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     const direct = !lastDtmfMs;
     const need = direct ? 22 : VOICE_FRAMES;   // ~0.45s of voice on a direct dial vs ~0.9s through a tree
     const leak = direct ? 0.34 : 1;            // slow leak so the pause between greeting words doesn't reset progress
-    if (frameEnergy(b64) > VOICE_THRESH) { if ((voiced += 1) >= need) triggerConnect("human"); }
-    else voiced = Math.max(0, voiced - leak);
+    const e = frameEnergy(b64);
+    if (e > VOICE_THRESH) {
+      loudE.push(e); if (loudE.length > 150) loudE.shift();
+      loudT.push(toneShare(b64)); if (loudT.length > 150) loudT.shift();
+      // RINGBACK IS NOT A HUMAN (owner 07-24: Charlie billed 20s on two Target calls nobody answered).
+      // After a transfer the desk rings, and a US ringback burst is 2s of loud audio = ~100 frames —
+      // more than double the 45-frame gate, so the ear declared "human" on the RING and opened the
+      // billed agent into an empty line. Energy alone cannot tell them apart; SHAPE can: a ringback
+      // is a steady dual tone (near-constant amplitude, tiny variation), while speech swings hard
+      // frame to frame across syllables. So once the gate is met, require real modulation too.
+      if ((voiced += 1) >= need) {
+        if (isCallProgressTone() || isSteadyTone(loudE)) {
+          // Positively THE DESK RINGING. Mark the state, stamp the log step once, and stay off.
+          if (!inRing) {
+            inRing = true;
+            if (!firstRingAtMs) {
+              firstRingAtMs = Date.now();
+              emit(room, "ringing", "The desk is ringing, the agent stays off", { leg: "desk" });
+              log(`ear: the desk is ringing (second ring) — Charlie stays off until someone picks up`);
+              try { onStage?.(room, 6, Math.max(0, Math.round((firstRingAtMs - startMs) / 1000))); } catch { /* best-effort */ }
+            }
+          }
+          if (!toneLogged) { toneLogged = true; log(`ear: steady tone (ringback/hold), NOT a human — staying deaf, Charlie not billed`); }
+        } else triggerConnect("human"); // modulated speech = a real person. A ring that STOPS and turns into a voice lands here.
+      }
+    } else {
+      // Gap between bursts: a burst that just ended is one completed ring.
+      if (inRing) { inRing = false; ringCount++; emit(room, "ringing", `Ring ${ringCount} went unanswered`, { leg: "desk", ring: ringCount, answered: false }); log(`ear: ring ${ringCount} went unanswered`); if (ringCount >= RINGS_UNANSWERED && !connecting && !humanWords) { emit(room, "hangup", `Nobody picked up after ${ringCount} rings, hung up before the agent ever billed`, { reason: "nobody_came", ring: ringCount }); log(`give-up: ${ringCount} rings unanswered — nobody is coming, hanging up (Charlie never joined)`); try { twilio.close(); } catch { /* best effort */ } } }
+      voiced = Math.max(0, voiced - leak); if (voiced === 0) { loudE.length = 0; loudT.length = 0; }
+    }
+  }
+  /** True when the recent loud frames look like a machine tone rather than speech. Speech energy
+   *  varies wildly across syllables (coefficient of variation well above 0.2); a ringback/hold tone
+   *  holds an almost constant amplitude (CV under ~0.1). Needs a full gate's worth of samples so a
+   *  short burst can't be judged on noise. */
+  /** THE primary "that is the network, not a person" test: across the loud frames we just heard, is
+   *  the energy parked on the published call-progress frequencies? A clean tone reads near 1 and a
+   *  noisy real-world one still reads high, while speech stays far below, so the bar sits at 0.45.
+   *  Median, not mean, so one odd frame cannot swing the verdict either way. */
+  function isCallProgressTone(): boolean {
+    if (loudT.length < 40) return false;        // too little evidence → treat as speech (never block a real human)
+    const w = [...loudT].sort((a, b) => a - b);
+    return w[Math.floor(w.length / 2)] >= 0.45;
+  }
+  function isSteadyTone(samples: number[]): boolean {
+    if (samples.length < 40) return false;      // too little evidence → treat as speech (never block a real human)
+    // Amplitude steadiness is the WEAK signal: a real line adds noise, so live ringback measured well
+    // above the flatness bar a synthesized tone sits at, and the agent still joined an empty line
+    // (owner 07-24, Target). It stays only as a secondary confirmation. The primary test is the
+    // frequency one below, which keys off the published tone pairs instead of guesswork.
+    const w = samples.slice(-100);
+    const mean = w.reduce((s, v) => s + v, 0) / w.length;
+    if (mean <= 0) return false;
+    const cv = Math.sqrt(w.reduce((s, v) => s + (v - mean) * (v - mean), 0) / w.length) / mean;
+    return cv < 0.12;
   }
 
   twilio.on("message", (data: Buffer) => {
@@ -305,8 +451,31 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       if (ctx?.connectOnHuman) {
         if (ctx.connectAtSec && ctx.connectAtSec > 0) {
           // Deterministic: open the agent at the learned time-to-human. No VAD guesswork.
-          log(`twilio start room=${room.slice(0, 8)} -> connect-on-human TIMER: connect at ${ctx.connectAtSec}s`);
-          dtmfTimers.push(setTimeout(() => triggerConnect("recipe-timer"), ctx.connectAtSec * 1000));
+          if (ctx.earFromSec && ctx.earFromSec > 0 && ctx.giveUpSeconds && ctx.giveUpSeconds > 0) {
+            // SMART JOIN (owner design, restored 07-24): deaf while the recipe walks the menu — the
+            // ear can never hear a recorded menu voice (the 07-20 mistake was listening DURING the
+            // menu). The ear opens right after the last press/word; Charlie joins only on a real
+            // voice. Nobody ever answers → Charlie never joins; the call ends at ear+ringMaxSeconds
+            // for a phone-line-only cost. The learned time (connectAtSec) stays on the recipe as
+            // its record; it no longer blind-joins when the smart path is armed.
+            const earAt = ctx.earFromSec, quit = ctx.giveUpSeconds;
+            // The give-up clock starts at the LEARNED arrival time, not at menu-end: on chains with a
+            // transfer hold (CVS: menu done 48s, human ~67s) quitting at menu-end+20s would hang up
+            // right as staff normally pick up.
+            const quitAt = Math.max(earAt, ctx.connectAtSec || 0) + quit;
+            log(`twilio start room=${room.slice(0, 8)} -> connect-on-human EAR: deaf through the menu until ${earAt}s, join on a real voice, give up at ${quitAt}s if nobody comes`);
+            dtmfTimers.push(setTimeout(() => { earArmed = true; emit(room, "ivr_detected", "Menu finished, now listening for a real person", { earOpenedAtSec: earAt }); }, earAt * 1000));
+            dtmfTimers.push(setTimeout(() => {
+              if (connecting || humanWords) return;
+              emit(room, "hangup", "Nobody ever came to the phone, hung up before the agent billed a second", { reason: "nobody_came" });
+              log(`give-up: no voice by ${quitAt}s — nobody is coming, hanging up (Charlie never joined)`);
+              try { if (eleven) eleven.close(); } catch { /* best effort */ }
+              try { twilio.close(); } catch { /* best effort */ }
+            }, quitAt * 1000));
+          } else {
+            log(`twilio start room=${room.slice(0, 8)} -> connect-on-human TIMER: connect at ${ctx.connectAtSec}s`);
+            dtmfTimers.push(setTimeout(() => triggerConnect("recipe-timer"), ctx.connectAtSec * 1000));
+          }
         } else {
           log(`twilio start room=${room.slice(0, 8)} -> connect-on-human (VAD; deferring ElevenLabs until a human)`);
           dtmfTimers.push(setTimeout(() => triggerConnect("hold-timeout"), (ctx.holdMaxSeconds ?? 45) * 1000));
@@ -323,13 +492,26 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // Echo gate: while our agent audio is playing (+ reflection tail), only a LOUD inbound frame
       // (a real human barging in) reaches ElevenLabs — attenuated line echo of the agent's own voice
       // is dropped, so it can't come back as a phantom "Clerk:" transcript line.
+      // LISTENING SECONDS: while the agent is connected and NOT playing, store-side audio loud
+      // enough to be a voice is time he spent listening to a person. Measured off the same frames
+      // and the same threshold the ear uses, so the two can never disagree. Everything connected
+      // that is neither speaking nor listening is dead air — the seconds we are trying to delete.
+      //
+      // RINGING IS NOT LISTENING. After a transfer the desk rings, and a ring burst is loud enough
+      // to sail past a voice threshold — which would book an empty ringing room as a conversation we
+      // needed to pay for. The same published tone frequencies the ear uses before pickup separate
+      // them here, so ring seconds are counted as ring seconds even while we are being billed.
+      if (eleven && ready && Date.now() >= agentPlayingUntil && frameEnergy(b64) > VOICE_THRESH) {
+        if (toneShare(b64) >= 0.45) addMs(room, "ringingMs", 20);
+        else addMs(room, "listeningMs", 20);
+      }
       const echoWindow = Date.now() < agentPlayingUntil + ECHO_TAIL_MS;
       const suppress = echoWindow && frameEnergy(b64) < BARGE_THRESH;
       if (suppress) { if (++echoDropped % 200 === 1) log(`echo gate: suppressing agent playback echo (dropped=${echoDropped})`); }
       else if (eleven && ready) eleven.send(JSON.stringify({ user_audio_chunk: b64 }));
       else if (connecting) pending.push(b64);          // committed to connect → buffer for the agent
-      else if (ctx?.connectOnHuman && !ctx.connectAtSec && !ctx.dtmf && !ctx.say) maybeDetectHuman(b64); // VAD ONLY when there is NO nav plan at all — no timer AND no keypad AND no spoken plan (Mapper's 770ffa0 boolean, owner-ordered 07-21). The old OR let VAD arm on TIMER chains whenever dtmf/say were already consumed at TwiML build (B&N 3:42p: timer 29s armed, ear opened the agent on the recorded greeting at 8s). A mapped chain's timer is the ONLY door; the ear is for bare direct dials.
+      else if (earArmed || (ctx?.connectOnHuman && !ctx.connectAtSec && !ctx.hadDtmf && !ctx.hadSay)) maybeDetectHuman(b64); // The ear runs in exactly two states: (1) bare direct dials — no nav plan at all (Mapper's 770ffa0 boolean, owner-ordered 07-21: never DURING a menu, where it trips on the recorded greeting — B&N 3:42p); (2) earArmed — the smart join, where the recipe has FINISHED the menu and the ear opens for the real human voice (owner design, restored 07-24). State (1) MUST read hadDtmf/hadSay, NOT ctx.dtmf/ctx.say: those are consumed at TwiML build (takeBridgeDtmf/Say), so by media time they are ALWAYS empty and the ear armed on every timerless keypad/voice chain — the agent opened into the recording and billed through the tree (owner 07-22).
     } else if (m.event === "stop") { log("twilio stop"); signalEnd(); if (eleven) eleven.close(); }
   });
-  twilio.on("close", () => { activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); if (eleven) eleven.close(); });
+  twilio.on("close", () => { activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (eleven) eleven.close(); });
 }

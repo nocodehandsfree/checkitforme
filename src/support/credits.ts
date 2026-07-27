@@ -22,9 +22,12 @@ const SHORT_CALL_SECS = 25;     // charged but connected under this → nobody r
 // statusKeys that mean the customer did NOT get what they paid for. A charged check carrying one
 // of these is machine-verifiable evidence on its own. Keys mirror the statuses registry seeded in
 // db/bootstrap.ts (nobody_answered, bad_number, …) — keep in sync with it, not with guesses.
+// Keys that auto-refund a CHARGED check. Owner billing ruling 07-22: engaged-but-no-answer calls
+// (left on hold, too busy, language barrier) are now DELIBERATELY charged — real minutes were
+// burned by a real human — so they must NOT auto-refund here, or billing and refunds fight.
+// The relief valve for angry edge cases stays the human ticket + Admin grant.
 const BAD_KEYS = new Set([
-  "nobody_answered", "voicemail", "busy", "bad_number", "left_on_hold", "too_busy",
-  "language_barrier", "closed", "failed", "admin_hangup",
+  "nobody_answered", "voicemail", "busy", "bad_number", "closed", "failed", "admin_hangup",
 ]);
 
 export type CreditOutcome =

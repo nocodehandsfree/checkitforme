@@ -47,6 +47,11 @@ export interface Policy {
     cheapBridgeAll: boolean;         // cost saver: route the NON-live check paths (scheduled checks, zone fires, admin call-now, /pub+/app check) through the connect-on-human bridge w/ Mapper recipes — OFF until tested per path
     oneCheckPerStorePerDay: boolean; // anti-abuse + cost: reuse a recent result instead of re-calling the same store+product within 24h
     transcriptAuth: boolean;         // privacy: a finder-attributed call's result/transcript is readable only by that finder or admin — OFF until the consumer UI sends the session token on /pub/result + /pub/live
+    inStockBanner: boolean;          // consumer: show the recent in-stock "Found!" finds banner at the top of the site (off = hidden)
+    productPokemon: boolean;         // consumer: Pokémon is offered in the product switcher (off = removed from the switcher)
+    productOnePiece: boolean;        // consumer: One Piece is offered in the product switcher
+    productTopps: boolean;           // consumer: Topps NBA is offered in the product switcher
+    productNeedoh: boolean;          // consumer: NeeDoh is offered in the product switcher
   };
   // Bail library: proactive call-cutoff rules (cost control). `enabled` is the master switch —
   // OFF by default so nothing changes on live calls until the enforcement is wired AND tested.
@@ -100,6 +105,8 @@ export const DEFAULT_POLICY: Policy = {
     community: false, communityAutoApprove: false, referrals: true, kioskReceipts: true,
     liveListen: false, stockSignals: true, requirePhoneSignup: false, connectOnHuman: false,
     cheapBridgeAll: false, oneCheckPerStorePerDay: false, transcriptAuth: false,
+    inStockBanner: true,
+    productPokemon: true, productOnePiece: true, productTopps: true, productNeedoh: true,
   },
   bail: {
     enabled: false,
@@ -137,6 +144,10 @@ export async function getPolicy(): Promise<Policy> {
   cache = { p, t: Date.now() };
   return p;
 }
+
+/** Last-loaded policy without awaiting (5s module cache), or DEFAULT_POLICY before the first load.
+ *  For sync render paths (e.g. baking the product switcher into the page) that can't await getPolicy. */
+export function cachedPolicy(): Policy { return cache ? cache.p : DEFAULT_POLICY; }
 
 export async function setPolicy(patch: Partial<Policy>): Promise<Policy> {
   let cur: Partial<Policy> = {};

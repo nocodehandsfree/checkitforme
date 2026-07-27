@@ -3,7 +3,7 @@
 import { bootstrap } from "../src/db/bootstrap";
 import { db, client } from "../src/db/client";
 import { accounts, callResults, categories, retailers, supportCreditGrants, supportConversations } from "../src/db/schema";
-import { answerSupport } from "../src/support/ladder";
+import { answerSupport, warmClose } from "../src/support/ladder";
 import { eq } from "drizzle-orm";
 
 let pass = 0, fail = 0;
@@ -149,6 +149,13 @@ async function main() {
   ok("ambiguous question → answered=false", res.answered === false, `answered=${res.answered}`);
   res = await answerSupport("sess-ans-1", "Barnes & Noble Thousand Oaks", { category: "check_issue", account: { id: USER } });
   ok("real answer → answered=true", res.answered === true, `answered=${res.answered}`);
+
+  console.log("\n== 14. warm close: always lands, never a money word (fallback when the model is down) ==");
+  const closeEn = await warmClose("en");
+  const closeEs = await warmClose("es");
+  const MONEY = /credit|check|charge|refund|\bfree\b|money|cr[eé]dito|cheque|cobr|reembols|gratis|dinero|\d/i;
+  ok("EN close lands and is money-word-free", closeEn.length > 0 && !MONEY.test(closeEn), closeEn);
+  ok("ES close lands and is money-word-free", closeEs.length > 0 && !MONEY.test(closeEs), closeEs);
 
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

@@ -64,6 +64,16 @@ worse than no comment. Several entries below started as wrong comments.)
   REAL test send, one variable per iteration. Owner's requirement: the dark look, everywhere.
 
 ## Infra / branches
+- **`ship-admin.sh` is NOT git — an Admin shipped from an unmerged branch WILL be silently wiped**
+  (cost us the whole Admin design system, 07-23→07-24). ship-admin POSTs `public/app.html` as a server-side
+  *override*; it happily ships from any branch, and the next ship-admin run from `staging` replaces that
+  override with staging's copy. That's exactly what happened: the master Live/Staging switch + Lucide/copy
+  sweeps were shipped live off `claude/admin-design-system-spec-mgthjd`, never merged, then overwritten at
+  23:32 UTC by a ship from staging commit f96c161. The owner saw the switch vanish and blamed the same-night
+  calling-engine revert — which was innocent (it touched 5 server files, zero Admin UI). **Rule: merge to
+  `staging` FIRST, then ship-admin.** To check what's actually live: `bash scripts/ship-admin.sh --status`
+  returns the override's commit — if that commit isn't an ancestor of `staging`, the Admin is living on
+  borrowed time. Restored in 2de7f24.
 - **Admin traffic does NOT reliably arrive on a host starting with `admin.`/`caller.`** — prod edge
   routing can hand the app other hostnames for the same service. The app's real admin-vs-consumer
   decision is brand resolution (`resolveBrand(host).key === "runner"` and not `runner.*` = admin), in
@@ -152,6 +162,16 @@ worse than no comment. Several entries below started as wrong comments.)
   reflecting. UNRESOLVED — never reproduced in headless Chromium. Needs a real iPhone to bisect.
   Do NOT keep changing approved design (brandmark position, border, wash) to chase it — that was
   the mistake here; isolate it on-device first.
+- **A sticky/floating element at a v2 sheet's BOTTOM edge kills the iOS scroll-edge glass** (owner
+  07-23, the plans-sheet Continue; 3 wasted round trips). iOS 26 paints a translucent scroll-edge glass
+  at the top/bottom of the v2 sheets; the overlay is `background:transparent` ON PURPOSE so it works
+  (the /sheetpeek variant-E note in the CSS). Put ANY element on that bottom edge inside the scrolling
+  `.modal` (position:sticky or fixed, a full-width band, transparent OR opaque) and it covers the edge:
+  the glass turns into a flat gray band, or content shows through it. Chromium NEVER shows this, only the
+  device. Fix: bottom CTAs stay a plain button in normal FLOW, exactly like every other page (account
+  sheet "Run a check", buy sheet Continue). If you need a slide-up that floats over a long list, copy the
+  zones basket EXACTLY: it is `position:absolute` in the OVERLAY, floating OUTSIDE the inner scroll
+  container (`#zones .zf-scroll`), it is never a sticky child of the scroll. Do not reinvent it.
 - **A MAPPED CHAIN IS UNTOUCHABLE — nothing may flag it out of the call lane except a remap** (owner
   law 2026-07-20, the Walgreens incident). Found: 18 mapped big-box chains (Walgreens, Target, Costco…)
   carried `stockCheckMethod=site` — a classification from `data/stock_check_intel.json` that PREDATES

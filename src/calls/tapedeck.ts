@@ -11,6 +11,7 @@ import { llm } from "../llm";
 import { config } from "../config";
 import { getSetting } from "../db/settings";
 import { rotatePick } from "./rotate";
+import { openReceipt, emit, markNow, closeReceipt } from "./events";
 
 const HOST = config.staging.on ? "voice-caller-staging-production.up.railway.app" : "voice-caller-production-2d6b.up.railway.app";
 // The live-turn brain. Groq's llama-3.3-70b won the 2026-07-10 bench: correct on every classify line
@@ -43,6 +44,7 @@ export interface TdSession {
   onHold?: boolean;  // clerk said "hold on, let me check" — wait patiently, don't treat quiet as a no-answer
   forked?: boolean;  // audio fork to the listen room already opened (guard against TwiML refetch → double audio)
   workflow: string; // which workflow drove this call (shown in the log)
+  oneTurn?: boolean; // this workflow asks ONE question that gets the set and the format together
   waitSecs?: number;  // mid-call wait for ANY reply before the silence path (workflow Reply timeout)
   endpoint?: string;  // Twilio speechTimeout: "auto" | seconds — how fast we reply after they stop (Beat)
   hints?: string;     // Twilio ASR vocabulary bias — the product words clerks actually say ("tin" not "10")
@@ -134,12 +136,17 @@ export const DEFAULT_FOLLOWUPS: Record<string, string[]> = {
   wait: ["No rush, take your time.", "No worries, whenever you're ready."],
 };
 
-interface TdWorkflow { name: string; voiceId: string; voices: string[]; openers: string[]; tuning: Record<string, unknown>; followups: Record<string, string[]>; lane: string }
+interface TdWorkflow { name: string; voiceId: string; voices: string[]; openers: string[]; tuning: Record<string, unknown>; followups: Record<string, string[]>; lane: string;
+  /** ONE TURN (owner 07-27): this workflow asks a single question that gets the set AND the format
+   *  together, instead of asking for one then the other. Every extra turn is 6 to 10 seconds with the
+   *  meter running, so dropping one is the cheapest saving on the whole call. Declared by DATA, not a
+   *  flag: a workflow that ships an empty `type` list is saying "I already asked that". */
+  oneTurn: boolean }
 
 /** Resolve a workflow for the D-lane: by name if given, else the global default. Pulls voice, voice
  *  strip, openers, tuning, lane and (optional) follow-up scripts, same source the live lane uses. */
 export async function resolveTapedeckWorkflow(name?: string): Promise<TdWorkflow> {
-  const fb: TdWorkflow = { name: "default", voiceId: config.voice.defaultVoiceId, voices: [], openers: ["Heyy! I was just checking, do you have any {category} in stock right now?"], tuning: {}, followups: DEFAULT_FOLLOWUPS, lane: "charlie" };
+  const fb: TdWorkflow = { name: "default", voiceId: config.voice.defaultVoiceId, voices: [], openers: ["Heyy! I was just checking, do you have any {category} in stock right now?"], tuning: {}, followups: DEFAULT_FOLLOWUPS, lane: "charlie", oneTurn: false };
   try {
     const [wfsRaw, defName] = await Promise.all([getSetting("vt_workflows"), getSetting("vt_default_workflow")]);
     const wfs = JSON.parse(wfsRaw || "[]") as Array<Record<string, unknown>>;
@@ -150,13 +157,17 @@ export async function resolveTapedeckWorkflow(name?: string): Promise<TdWorkflow
     const voices = Array.isArray(wf.voices) ? (wf.voices as unknown[]).map(String).filter(Boolean) : [];
     const fu = (wf.followups && typeof wf.followups === "object") ? (wf.followups as Record<string, string[]>) : {};
     const slot = (k: string) => (Array.isArray(fu[k]) && fu[k].length ? fu[k].map(String) : DEFAULT_FOLLOWUPS[k]);
+    // A workflow that DECLARES an empty `type` list is telling us its set question already asks for
+    // the format, so there is nothing left to ask. Absent = the old two question flow, unchanged.
+    const oneTurn = Object.prototype.hasOwnProperty.call(fu, "type") && !(Array.isArray(fu.type) && fu.type.filter(Boolean).length > 0);
     return {
       name: String(wf.name || "default"),
       voiceId: (typeof wf.voiceId === "string" && wf.voiceId) || voices[0] || config.voice.defaultVoiceId,
       voices, openers,
       tuning: (wf.tuning && typeof wf.tuning === "object") ? (wf.tuning as Record<string, unknown>) : {},
-      followups: { set: slot("set"), type: slot("type"), no: slot("no"), wrap: slot("wrap"), clarify: slot("clarify"), escalate: slot("escalate"), hello: slot("hello"), wrapNo: slot("wrapNo"), wait: slot("wait") },
+      followups: { set: slot("set"), type: oneTurn ? [] : slot("type"), no: slot("no"), wrap: slot("wrap"), clarify: slot("clarify"), escalate: slot("escalate"), hello: slot("hello"), wrapNo: slot("wrapNo"), wait: slot("wait") },
       lane: typeof wf.lane === "string" ? wf.lane : "charlie",
+      oneTurn,
     };
   } catch { return fb; }
 }
@@ -203,6 +214,10 @@ async function synthClip(voiceId: string, text: string, tuning: Record<string, u
 async function synthClips(wf: TdWorkflow, voiceId: string, cat: string): Promise<{ texts: string[]; clips: (Buffer | null)[] }> {
   const fu = (slot: keyof typeof DEFAULT_FOLLOWUPS) => {
     const arr = wf.followups[slot];
+    // An empty list on a ONE TURN workflow means the question was folded into another one. Return
+    // nothing so the clip is never synthesized and never played, instead of silently falling back to
+    // the default and asking a second question the owner deliberately removed.
+    if (wf.oneTurn && slot === "type") return "";
     return rotatePick(`fu:${wf.name}:${slot}`, arr && arr.length ? arr : DEFAULT_FOLLOWUPS[slot]) || DEFAULT_FOLLOWUPS[slot][0];
   };
   const openers = wf.openers && wf.openers.length ? wf.openers : ["Heyy! I was just checking, do you have any {category} in stock right now?"];
@@ -218,7 +233,9 @@ async function synthClips(wf: TdWorkflow, voiceId: string, cat: string): Promise
     fillCat(fu("wrapNo"), cat),
     fillCat(fu("wait"), cat),
   ];
-  const clips = await Promise.all(texts.map((t) => synthClip(voiceId, t, wf.tuning)));
+  // A slot with no text is deliberately absent (the one-turn flow has no separate format question).
+  // Never synthesize it: every character is billed, and a clip that can never play is pure waste.
+  const clips = await Promise.all(texts.map((t) => (t && t.trim() ? synthClip(voiceId, t, wf.tuning) : Promise.resolve(null))));
   return { texts, clips };
 }
 
@@ -255,14 +272,18 @@ export async function tapedeckCall(phone: string, workflowName?: string): Promis
   const wf = await resolveTapedeckWorkflow(workflowName);
   const voiceId = rotatePick(`voice:${wf.name}`, wf.voices) || wf.voiceId; // same round-robin counter Charlie advances
   const { texts, clips } = await synthClips(wf, voiceId, "Pokémon cards");
-  if (clips.some((c) => !c)) return { error: "clip synthesis failed — check ElevenLabs credits" };
+  if (clips.some((c, i) => !c && !!(texts[i] || "").trim())) return { error: "clip synthesis failed — check ElevenLabs credits" };
 
   const id = crypto.randomUUID().slice(0, 8);
   const turn = deltaTurnTuning(wf.tuning);
-  const session: TdSession = { id, phone: to, startMs: Date.now(), status: "dialing", steps: [], turns: 0, clips: clips as Buffer[], clipText: texts, stage: "opener", needType: false, workflow: wf.name, mode: "bench", waitSecs: turn.waitSecs, endpoint: turn.endpoint, hints: deltaHints("Pokémon cards") };
+  const session: TdSession = { id, phone: to, startMs: Date.now(), status: "dialing", steps: [], turns: 0, clips: clips as Buffer[], clipText: texts, stage: "opener", needType: false, workflow: wf.name, oneTurn: wf.oneTurn, mode: "bench", waitSecs: turn.waitSecs, endpoint: turn.endpoint, hints: deltaHints("Pokémon cards") };
   sessions.set(id, session);
+  // The rehearsal call gets the same receipt a real check does, so it can be opened afterwards
+  // instead of vanishing. No `call_results` row: a rehearsal is not a customer's check.
+  openReceipt(`delta:${id}`, { lane: "delta", note: "Voice rehearsal call" });
+  emit(`delta:${id}`, "dialed", `Rehearsal call to ${to}`, { workflow: wf.name, voiceId });
   const r = await placeTwilioCall(session, to);
-  if (r.error) { sessions.delete(id); return { error: r.error }; }
+  if (r.error) { emit(`delta:${id}`, "hangup", "The carrier refused the call", { why: r.error }); closeReceipt(`delta:${id}`, r.error, "dial-failed"); sessions.delete(id); return { error: r.error }; }
   setTimeout(() => sessions.delete(id), 15 * 60 * 1000);
   return { id };
 }
@@ -276,13 +297,13 @@ export async function deltaStoreCall(check: DeltaCheck, workflowName?: string): 
   const wf = await resolveTapedeckWorkflow(workflowName);
   const voiceId = rotatePick(`voice:${wf.name}`, wf.voices) || wf.voiceId; // same round-robin counter Charlie advances
   const { texts, clips } = await synthClips(wf, voiceId, check.categoryLabel);
-  if (clips.some((c) => !c)) return { error: "clip synthesis failed — check ElevenLabs credits" };
+  if (clips.some((c, i) => !c && !!(texts[i] || "").trim())) return { error: "clip synthesis failed — check ElevenLabs credits" };
 
   const id = crypto.randomUUID().slice(0, 8);
   const turn = deltaTurnTuning(wf.tuning);
   const session: TdSession = {
     id, phone: to, startMs: Date.now(), status: "dialing", steps: [], turns: 0, clips: clips as Buffer[], clipText: texts,
-    stage: "opener", needType: false, workflow: wf.name, mode: "store", check,
+    stage: "opener", needType: false, workflow: wf.name, oneTurn: wf.oneTurn, mode: "store", check,
     waitSecs: turn.waitSecs, endpoint: turn.endpoint, hints: deltaHints(check.categoryLabel),
     resConfirmed: null, resStatusKey: "no_clear_answer", resProduct: null, resDay: null,
   };
@@ -317,12 +338,16 @@ export function tapedeckTwiml(id: string): string {
  *  which clip to play, the next stage, and any verdict/state changes. The off-script "question" (barge)
  *  case is handled by the caller before this runs. Slots: 1 set · 2 type · 3 restock-day · 4 wrap · 5 clarify. */
 export interface DeltaDecision { clip: number; next: Stage; confirmed?: boolean | null; statusKey?: string; setClarified?: boolean; setNeedType?: boolean; note: string }
-export function deltaDecide(o: { stage: Stage; label: string; gotSet: boolean; gotType: boolean; clarified: boolean; needType: boolean }): DeltaDecision {
+export function deltaDecide(o: { stage: Stage; label: string; gotSet: boolean; gotType: boolean; clarified: boolean; needType: boolean; oneTurn?: boolean }): DeltaDecision {
   const { stage, label, gotSet, gotType } = o;
   if (stage === "opener") {
     if (label === "no" || label === "day") return { clip: 3, next: "askedDay", confirmed: false, statusKey: "not_in_stock", note: "out → ask the restock day" };
     if (label === "yes" || label === "product") {
       if (gotSet && gotType) return { clip: 4, next: "done", confirmed: true, statusKey: "in_stock", note: "named the set + type already → wrap" };
+      // ONE TURN: a single question gets the set and the format together, so whatever comes back we
+      // are done asking. Never a second question, even when the clerk answers only half of it —
+      // half an answer is worth more than the seconds a follow up costs (owner 07-27).
+      if (o.oneTurn) return { clip: 1, next: "askedSet", confirmed: true, statusKey: "in_stock", setNeedType: false, note: "in stock → the one question that gets the set AND the format" };
       if (!gotSet) return { clip: 1, next: "askedSet", confirmed: true, statusKey: "in_stock", setNeedType: !gotType, note: "in stock → ask the SET first" };
       return { clip: 2, next: "askedType", confirmed: true, statusKey: "in_stock", note: "had the set → ask packs/tin" };
     }
@@ -459,7 +484,7 @@ Phone transcription mishears words: "10" or "ten" where a product type belongs a
   }
 
   // Decide the next clip + stage (pure, unit-tested). Then apply the verdict/state changes.
-  const d = deltaDecide({ stage: s.stage, label, gotSet, gotType, clarified: !!s.clarified, needType: s.needType });
+  const d = deltaDecide({ stage: s.stage, label, gotSet, gotType, clarified: !!s.clarified, needType: s.needType, oneTurn: !!s.oneTurn });
   if (d.setClarified) s.clarified = true;
   if (d.setNeedType !== undefined) s.needType = d.setNeedType;
   if (d.confirmed !== undefined) s.resConfirmed = d.confirmed;
@@ -495,6 +520,11 @@ export function tapedeckEnded(id: string): void {
   const s = sessions.get(id);
   if (!s) return;
   if (s.status !== "done") s.status = s.steps.length > 1 ? "done" : "failed";
+  if (s.mode === "bench") { // the rehearsal's receipt closes here; a store call is closed by the bridge
+    markNow(`delta:${id}`, "endMs");
+    emit(`delta:${id}`, "hangup", s.status === "done" ? "Rehearsal finished" : "Nobody picked up", { turns: s.turns });
+    closeReceipt(`delta:${id}`, undefined, s.status);
+  }
   // Twilio hung up before we reached a wrap clip (early hangup / no answer). Still record a verdict.
   finalizeIfStore(s);
   try { deltaRelayEnd?.(s); } catch { /* relay best-effort */ }

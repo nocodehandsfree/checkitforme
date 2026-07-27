@@ -20,4 +20,8 @@ loops/site-redesign/proofs/
 # Playwright launch-gate artifacts
 test-results/
 playwright-report/
+
+# Per-task gate unlocks (REBUILD_PLAN) — absence is the permanent default; never commit these.
+.unlock
+.unlock-bg
 .unlock-voice

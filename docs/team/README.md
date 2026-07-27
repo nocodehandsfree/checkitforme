@@ -1,19 +1,20 @@
-# team/ — one folder per agent. Your folder is the ONLY place you start.
-| Folder | Agent | Owns |
-|---|---|---|
-| `devops/` | Pops | backend, infra, security, deploys, API contract, these docs |
-| `website/` | Webbie | the consumer site (checkit.html) + /pub |
-| `admin/` | Addie | the admin dashboard (app.html) + /api |
-| `data/` | DD | store rows, importer, chains, store logos |
-| `mapping/` | Mapper | phone-tree mapper → locked call recipes |
-| `voice/` | Echo | voice tech: call lanes ABC/Delta/Charlie, recordings, verdicts, cost per call |
-| `copy/` | Copper | every word everywhere: site, admin, emails/SMS, and the book (readme.com) |
-| `design/` | CD | comps, brand, look & feel |
-| `logo/` | Logo | store + brand logo assets — every logo looks good and renders |
-| `support/` | Support | the customer-service / in-app messenger support agent |
-| `pm/` | PM | orchestrates the lanes, guards the rules, checks work, runs the staging→prod promote (not a code lane) |
-| `ideas/` | Ideas | ranked product/business/growth ideas grounded in what's built; hands picks to lanes |
-| `lexicon/` | Lexicon | the librarian: docs pruning, archiving, map accuracy (weekly pass) |
+# team/ — one folder per SYSTEM. Your system's folder is where you start.
+Phase 4 flip (2026-07-22, `docs/shared/REBUILD_PLAN.md`): personas retired. Work is organized by
+SYSTEM, not by persona. Chats are named by task ("Task: fix the alerts row"), not "You are <Name>".
 
-**Every folder = `handoff.md`** (stable: who you are, your lane — rarely changes) **+ `checkpoint.md`**
-(volatile: current state — update at every "Checkpoint"). Boot = CLAUDE.md (loads automatically) + your two files. Nothing else.
+| Folder | System | Owns |
+|---|---|---|
+| `site/` | Site | the consumer web app (`public/checkit.html`) + consumer routes + design + ALL copy |
+| `admin/` | Admin | the one operator dashboard (`public/app.html`) + `/api` |
+| `voice-calls/` | Voice-calls | the calling engine + voice tuning + phone-tree mapping |
+| `data/` | Data | store rows, importer, chains, the sync pipes + backend/infra/deploys/promotes |
+| `support/` | Support | the customer-chat support agent + its model training |
+
+**External:** CD (design comps, writes via MCP) submits ONLY to `docs/design/comps/inbox/` — no folder here.
+**Retired systems** (archived in `docs/archive/team/`): the persona lanes (Webbie, Addie, DD, Support,
+Mapper, Echo, Pops/Ops) folded into the five systems above — mapping → voice-calls, ops → data.
+
+**Every folder = `handoff.md`** (stable charter, rarely changes) **+ `checkpoint.md`** (current state,
+REPLACE stale content, ≤60 lines — the doc-cap gate blocks a push/close while any checkpoint is over).
+Boot ritual: pull staging → read `docs/STATE.md` → read your system's `checkpoint.md` → read the task
+queue index (`docs/tasks/INDEX.md`) → name the ONE task you're taking. Nothing else until a task needs it.

@@ -9,24 +9,30 @@
 //   OPTIMIZE  one experiment per call against the baseline: shorter words ("front", not "front
 //             store services") and earlier barges. A menu that loops/regresses = that spot is
 //             barge-unsafe → keep the last good version. Wins re-lock the chain with the faster path.
+//             Judged on the MENU walk, not on time-to-human — the desk pickup is the noisy half — and
+//             each experiment dials a FRESH store, so no one desk is hung up on over and over.
 //   LOCKED    nothing left to test. Stamp Alpha/Bravo/Charlie and stop.
-// Every call runs confirm-mode: any human contact ends with the real "any Pokémon cards in?" ask in
-// the default workflow's voice (Branson global) — a mapping call is never wasted on a silent hangup.
+// A mapping call REACHES a person and hangs up (owner 07-26): a real voice is the proof the route
+// worked, and their greeting records which desk answered. It never asks the stock question.
 // Safety: hard cap of calls/chain/day, spacing between calls, global kill-switch, per-chain stop.
 import { eq } from "drizzle-orm";
 import { db } from "./../db/client";
-import { chains } from "../db/schema";
+import { chains, retailers } from "../db/schema";
 import { getSetting, setSetting } from "../db/settings";
 import { isCallingPaused } from "../redis";
 import { placeNavCall, getNavSession, defaultWorkflowAsk, classifyMode, menuHasCustomerService, NavRecipe, NavStep } from "./navigator";
 import { storeForChain, lockRecipeToChain, recipeFromSteps } from "./trainer-batch";
 import { chainDialable } from "./recipe";
+import { pathSignature, reportUnknown, recordObservation, MapRecipe, MapStep, type EvidenceCall } from "./mapgraph";
+import { recipeFromCall, evidenceFromCall, CapturedStep } from "./map-capture";
 
 const DAILY_CAP = 60;        // runaway guard only — owner 2026-07-10: the old 12/day cap is gone, a
                              // sweep converges every mapped chain in one day. Tune without a deploy
                              // via the "mapper_daily_cap" setting (0/unset = this default).
 const GAP_SEC = 75;          // spacing between calls to the same chain (politeness + IVR cool-down)
 const CALL_MAX_SEC = 150;    // per-call watch window (slow IVRs take ~95s to a human)
+const TRANSFER_WAIT_SEC = 40; // after "transferring you now", how long we allow for a real voice before
+                              // hanging up. The transfer is NOT the person (the 07-26 CVS finding).
 const BASELINE_TRIES = 5;    // no human in this many attempts → needs-review, stop burning calls
 
 export interface Experiment {
@@ -49,6 +55,7 @@ export interface MapperRun {
   target?: string;               // #1: owner-set desk to reach ("customer service" default)
   needsTarget?: boolean;         // #B: department-only tree, no CS option — owner should pick a target
   reachedSecs: number[];         // #A: every human-reached time this run, to measure ring variance
+  bestMenuSecs?: number;         // the fastest MENU walk proved so far — what experiments are judged on
   bargeState?: Record<number, { lo: number; hi: number }>; // per-step binary-search bounds for "earliest second the IVR accepts"
   benchmark: number | null;      // the chain's navSeconds BEFORE this run (the CVS comparison)
   baseline: NavRecipe | null;
@@ -146,11 +153,15 @@ function markVariance(run: MapperRun, recipe: NavRecipe): void {
 
 /** Persist a reached recipe as the chain's locked path — stamping the owner target + the ring-variance
  *  flag (#A), and, for a department-only tree with NO customer-service option, raising a needs-target
- *  flag (#B) with the captured menu so the owner can pick the desk. Clears the flag once resolved. */
-async function finalizeAndLock(run: MapperRun, chainId: number, recipe: NavRecipe, confidence: number | null): Promise<void> {
+ *  flag (#B) with the captured menu so the owner can pick the desk. Clears the flag once resolved.
+ *
+ *  ALSO (07-26) writes the call into the versioned map: the route we just proved, the recording each
+ *  step follows, and the evidence behind it. The chain row keeps working exactly as before — the map
+ *  is the history and the confidence the row could never hold. */
+async function finalizeAndLock(run: MapperRun, chainId: number, recipe: NavRecipe, confidence: number | null, session?: NavSessionLike): Promise<void> {
   if (run.target && !recipe.target) recipe.target = run.target;
   markVariance(run, recipe);
-  await lockRecipeToChain(chainId, recipe, confidence);
+  await recordMapVersion(run, chainId, recipe, confidence, session);
   const navigated = recipe.type !== "direct" && (recipe.steps?.length ?? 0) > 0;
   const deptOnly = navigated && !menuHasCustomerService(recipe.menu);
   if (!run.target && deptOnly) {
@@ -161,6 +172,56 @@ async function finalizeAndLock(run: MapperRun, chainId: number, recipe: NavRecip
   }
 }
 
+/** The bit of a nav session this file needs to write evidence — kept structural so mapper never has
+ *  to reach further into the navigator. */
+interface NavSessionLike {
+  id?: string; steps?: unknown[]; humanAtSec?: number | null; status?: string;
+  transferAtSec?: number | null; greeting?: string;
+}
+
+/** Write this call into the versioned map. Best-effort by design: a map-store hiccup must never take
+ *  down a mapping run that is holding a live phone call open. */
+async function recordMapVersion(run: MapperRun, chainId: number, recipe: NavRecipe, confidence: number | null, session?: NavSessionLike): Promise<void> {
+  let evidence: EvidenceCall | undefined;
+  try {
+    const steps = (session?.steps || []) as CapturedStep[];
+    // Barge wins from the optimize phase = the steps we PROVED can be fired before the recording ends.
+    const bargeProven = new Set(run.experiments.filter((e) => e.kind === "barge" && e.status === "win").map((e) => e.stepIdx));
+    // Prefer the turn-by-turn record (it carries which recording each step followed); fall back to the
+    // recipe we were handed when a call ended without a full record.
+    const captured = steps.length ? recipeFromCall(steps, recipe.seconds ?? null, bargeProven) : null;
+    const mapRecipe: MapRecipe = captured && captured.steps.length === (recipe.steps?.length || 0)
+      ? { ...captured, target: recipe.target, menu: recipe.menu, menuPrompts: recipe.menuPrompts, ringVariable: recipe.ringVariable, seconds: recipe.seconds ?? captured.seconds }
+      : {
+        type: (recipe.type as MapRecipe["type"]) || "direct",
+        steps: (recipe.steps || []).map((s) => ({ action: s.action === "press" ? "press" : "say", value: String(s.value || ""), atSec: Math.round(s.atSec ?? 0) })) as MapStep[],
+        seconds: recipe.seconds ?? 0, target: recipe.target, menu: recipe.menu, menuPrompts: recipe.menuPrompts, ringVariable: recipe.ringVariable,
+      };
+    evidence = evidenceFromCall({
+      navId: session?.id, storeId: run.store?.id, storeName: run.store?.name, steps,
+      seconds: recipe.seconds ?? null, reachedHuman: true, path: pathSignature(mapRecipe),
+      greeting: session?.greeting, transferAtSec: session?.transferAtSec ?? null,
+      note: `${run.phase} attempt ${run.attempt}`,
+    });
+    // The captured route is richer than the one the run carries: it knows WHICH recording each step
+    // follows. Ship that one to the map.
+    recipe = { ...recipe, steps: mapRecipe.steps as unknown as NavRecipe["steps"] };
+    // THE WAIT AFTER THE TRANSFER, measured. The store announces the hand-off and the person speaks
+    // some seconds later; the paid agent currently opens on the announcement, so this gap is money
+    // burned on every check of this chain. Recorded per call so the dashboard can show it and Echo can
+    // aim at it — Mapper measures, the runtime decides what to do about it.
+    if (typeof session?.transferAtSec === "number" && typeof recipe.seconds === "number" && recipe.seconds > session.transferAtSec) {
+      await recordObservation({
+        chainId, storeId: run.store?.id, navId: session?.id, kind: "transfer-gap",
+        expected: `transfer at ${session.transferAtSec}s`, observed: `person at ${recipe.seconds}s`,
+        detail: { gapSeconds: recipe.seconds - session.transferAtSec, greeting: session?.greeting ?? null },
+      });
+    }
+  } catch { /* evidence is best-effort — a bad session must not stop the route being locked */ }
+  // ONE writer: the chain row the runtime reads and the map version land together (trainer-batch.ts).
+  await lockRecipeToChain(chainId, recipe, confidence, evidence);
+}
+
 async function bumpDaily(chainId: number): Promise<number> {
   const key = `mapper_calls:${chainId}:${today()}`;
   const n = Number((await getSetting(key)) || 0) + 1;
@@ -169,7 +230,7 @@ async function bumpDaily(chainId: number): Promise<number> {
 }
 
 /** Start (or resume) mapping a chain until locked. Fire-and-forget; poll mapperState(). */
-export async function startMapper(chainId: number): Promise<{ started?: boolean; error?: string; benchmark?: number | null }> {
+export async function startMapper(chainId: number, opts: { storeId?: number } = {}): Promise<{ started?: boolean; error?: string; benchmark?: number | null }> {
   if (!chainId) return { error: "chainId required" };
   const existing = runs.get(chainId);
   if (existing?.running) return { error: "already mapping this chain" };
@@ -196,10 +257,18 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
   // measure the REAL seconds, then optimize from there. Fresh discovery only if the replay misses twice.
   let lockedRecipe: NavRecipe | null = null;
   try { const r = ch.navRecipe ? (JSON.parse(ch.navRecipe) as NavRecipe) : null; if (r && Array.isArray(r.steps) && r.steps.length) lockedRecipe = r; } catch { /* fresh discovery */ }
+  // A VERIFY replay speaks the known words on a timer, so the store's own recordings are never
+  // transcribed and the call teaches us nothing about WHICH recording each step follows. Proved on the
+  // 07-26 CVS Anaheim call: the route verified (62s, faster than the stored 67s) but came back with no
+  // recording plan at all. So a chain whose map has no recording plan yet LISTENS first — one pass that
+  // hears the menu out, with the known path riding along as the recovery playbook — and picks up the
+  // replay from there. Chains that already carry a plan go straight to verify, as before.
+  const hasPromptPlan = (lockedRecipe?.steps || []).some((st) => typeof (st as { afterPrompt?: number }).afterPrompt === "number");
+  const needsListen = !!lockedRecipe && !hasPromptPlan;
 
   const run: MapperRun = {
     chainId, chainName: ch.name,
-    phase: lockedRecipe ? "verify" : "listen", running: true,
+    phase: lockedRecipe && !needsListen ? "verify" : "listen", running: true,
     attempt: 0, callsToday: usedToday,
     usedStores: [], store: null, rotate: false, target, needsTarget: false, reachedSecs: [],
     benchmark: ch.navSeconds ?? null,   // what we're trying to beat (the CVS benchmark readout)
@@ -225,7 +294,12 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
       // #3: hold ONE store across attempts — ring variance must not rotate us. Pick a fresh store only on
       // the first attempt or after the held line proved DEAD (disconnected / voicemail / store closed).
       if (!run.store || run.rotate) {
-        const picked = await storeForChain(chainId, run.usedStores, true);
+        // An owner-named store overrides the picker for the whole run — for a store we KNOW is open
+        // right now (a late-evening CVS the 9am–8pm gate would refuse), or to re-map one specific
+        // store whose menu differs from its chain. Rotation is off: this is the store, or nothing.
+        const picked = opts.storeId && !run.rotate
+          ? (await db.select().from(retailers).where(eq(retailers.id, opts.storeId)))[0]
+          : await storeForChain(chainId, run.usedStores, true);
         if (!picked) { run.stopReason = "no store in local daytime hours right now — re-run when stores are open (mornings hit the east coast first)"; run.phase = run.baseline ? run.phase : "needs-review"; break; }
         run.store = { id: picked.id, name: picked.name, phone: picked.phone };
         run.usedStores.push(picked.id); run.rotate = false;
@@ -247,11 +321,17 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
         ? known.map((st) => (st.action === "press" ? `press ${st.value}` : `say "${st.value}"`)).join(", then ")
           + ". If the menu restarts, speaks Spanish first, or mentions the pharmacy being closed, keep answering each prompt with these words in this order — they route to the FRONT STORE."
         : undefined;
+      // REACH A PERSON, THEN HANG UP (owner 07-26). A mapping call no longer asks the stock question:
+      // hearing a real voice is the proof the route worked, and their greeting says which desk it was.
+      // Nobody is troubled and the call ends seconds earlier. Both caps below are the ROI guard — a
+      // call that is going nowhere is stopped instead of running to the ceiling.
       const placed = await placeNavCall(
         chainId, store.id, store.name, store.phone,
         undefined, hint, barge, undefined,
-        { product: "Pokémon cards" },
-        { listenFirst: isListen, askVoiceId: ask.voiceId, askText: ask.text, target: run.target },
+        undefined,
+        { listenFirst: isListen, askVoiceId: ask.voiceId, askText: ask.text, target: run.target,
+          maxSec: CALL_MAX_SEC, transferWaitSec: TRANSFER_WAIT_SEC,
+          why: `Mapping ${run.chainName} (${run.phase}, call ${run.attempt})` },
       );
       if (placed.error || !placed.id) {
         run.log.push({ n: run.attempt, phase: run.phase, store: store.name, experiment: ex?.label, outcome: "dial failed: " + (placed.error || "?") });
@@ -273,6 +353,12 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
       const reached = !!(s && (s.status === "human" || s.humanAtSec != null || s.confirmResult === "answered") && s.confirmResult !== "redirect");
       const recipe = s ? (s.recipe ?? recipeFromSteps(s.steps as NavStep[], s.humanAtSec)) : null;
       const secs = recipe?.seconds ?? null;
+      // THE MENU IS WHAT WE ARE OPTIMISING, not the desk (owner 07-27). Time-to-human = the menu walk
+      // PLUS however long that particular desk takes to pick up, and the desk is the noisy half: the
+      // same route can read 44s at one store and 62s at another purely on who was standing there. So
+      // an experiment is judged on the MENU: from pickup to the moment the menu hands us on. That is
+      // measurable at any store, which is what lets us stop hammering one desk (below).
+      const menuSecs = s?.transferAtSec ?? [...((s?.steps || []) as NavStep[])].reverse().find((st) => st.who === "us")?.atSec ?? null;
       // #3: rotate to a fresh store ONLY on a confirmed dead line; ring-outs / menu-loops keep the same
       // store (per owner). #A: record every reached time so markVariance can spot department-ring swings.
       if (!reached && s?.deadLine) run.rotate = true;
@@ -293,11 +379,12 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
             run.experiments = buildExperiments(run, lockedRecipe as NavRecipe);
             run.phase = run.experiments.length ? "optimize" : "locked";
             run.log.push({ n: run.attempt, phase: "verify", store: store.name, outcome: `re-measured ${secs}s — SLOWER than the locked ${prior}s (ring/menu variance); KEPT the faster recipe`, seconds: secs });
-            if (run.phase === "locked") { await finalizeAndLock(run, chainId, lockedRecipe as NavRecipe, s?.confidence ?? null); break; }
+            if (run.phase === "locked") { await finalizeAndLock(run, chainId, lockedRecipe as NavRecipe, s?.confidence ?? null, s ?? undefined); break; }
             await sleep(GAP_SEC * 1000); continue;
           }
           run.baseline = recipe as NavRecipe; run.best = recipe as NavRecipe;
-          await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null); // usable by live checks NOW
+          if (typeof menuSecs === "number") run.bestMenuSecs = menuSecs;
+          await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null, s ?? undefined); // usable by live checks NOW
           run.experiments = buildExperiments(run, recipe as NavRecipe);
           run.phase = run.experiments.length ? "optimize" : "locked";
           run.log.push({ n: run.attempt, phase: wasVerify ? "verify" : "baseline", store: store.name, outcome: `${wasVerify ? `locked map VERIFIED — real time ${secs ?? "?"}s (stored ${run.benchmark ?? "?"}s)` : "human reached — baseline locked"} (${classifyMode((s?.steps || []) as NavStep[]).label})`, seconds: secs });
@@ -312,15 +399,20 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
           if (baselineMisses >= BASELINE_TRIES) { run.phase = "needs-review"; run.stopReason = `no human in ${BASELINE_TRIES} attempts`; break; }
         }
       } else if (run.phase === "optimize" && ex) {
-        const bestSecs = run.best?.seconds ?? Infinity;
-        const faster = reached && recipe && typeof secs === "number" && secs < bestSecs - 1;
+        // Never hang up on the same desk twice in a row while testing (owner 07-27): each experiment
+        // goes to a FRESH store of the same chain. Comparing menu times makes that safe — it is the
+        // same recorded menu at every store, so a different store is a fair test, not a muddier one.
+        run.rotate = true;
+        const bestSecs = run.bestMenuSecs ?? run.best?.seconds ?? Infinity;
+        const faster = reached && recipe && typeof menuSecs === "number" && menuSecs < bestSecs - 1;
         if (ex.kind === "barge") {
           // A faster time PROVES the early press/word landed. "Reached but not faster" means the press
           // was dropped and the recovery brain saved it at the old time → treat as too-early, back off.
           if (faster) {
             ex.status = "win"; run.best = recipe as NavRecipe;
-            await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null); // earlier → re-lock
-            run.log.push({ n: run.attempt, phase: "optimize", store: store.name, experiment: ex.label, outcome: `WIN — ${secs}s (was ${bestSecs}s)`, seconds: secs });
+            if (typeof menuSecs === "number") run.bestMenuSecs = menuSecs;
+            await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null, s ?? undefined); // earlier → re-lock
+            run.log.push({ n: run.attempt, phase: "optimize", store: store.name, experiment: ex.label, outcome: `WIN — menu ${menuSecs}s (was ${bestSecs}s), person at ${secs ?? "?"}s`, seconds: secs });
             enqueueBinaryBarge(run, ex.stepIdx, ex.at ?? 0, true);  // it accepted this early — try earlier still
           } else {
             ex.status = "fail";
@@ -329,11 +421,12 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
           }
         } else if (faster) {
           ex.status = "win"; run.best = recipe as NavRecipe;
-          await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null); // shorter word won → re-lock
-          run.log.push({ n: run.attempt, phase: "optimize", store: store.name, experiment: ex.label, outcome: `WIN — ${secs}s (was ${bestSecs}s)`, seconds: secs });
+          if (typeof menuSecs === "number") run.bestMenuSecs = menuSecs;
+          await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null, s ?? undefined); // shorter word won → re-lock
+          run.log.push({ n: run.attempt, phase: "optimize", store: store.name, experiment: ex.label, outcome: `WIN — menu ${menuSecs}s (was ${bestSecs}s), person at ${secs ?? "?"}s`, seconds: secs });
         } else if (reached) {
-          ex.status = "fail"; // reached a human but not faster — keep the old best
-          run.log.push({ n: run.attempt, phase: "optimize", store: store.name, experiment: ex.label, outcome: `no gain (${secs ?? "?"}s vs ${bestSecs}s) — kept best`, seconds: secs });
+          ex.status = "fail"; // reached a human but the menu was no faster — keep the old best
+          run.log.push({ n: run.attempt, phase: "optimize", store: store.name, experiment: ex.label, outcome: `no gain (menu ${menuSecs ?? "?"}s vs ${bestSecs}s) — kept best`, seconds: secs });
         } else {
           ex.status = "fail"; // looped / lost the menu → that tweak is unsafe (e.g. barge point that restarts CVS)
           run.log.push({ n: run.attempt, phase: "optimize", store: store.name, experiment: ex.label, outcome: `unsafe — menu lost (${s?.status || "timeout"}); kept best`, seconds: secs });

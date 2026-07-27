@@ -9,6 +9,7 @@ import { getSetting, setSetting } from "../db/settings";
 import { db } from "../db/client";
 import { chains } from "../db/schema";
 import { eq } from "drizzle-orm";
+import { openReceipt, emit, markNow, closeReceipt } from "./events";
 
 // Twilio webhooks must come back to THIS service — staging maps from staging, prod from prod.
 const RAILWAY_HOST = config.staging.on ? "voice-caller-staging-production.up.railway.app" : "voice-caller-production-2d6b.up.railway.app";
@@ -19,6 +20,13 @@ const RAILWAY_HOST = config.staging.on ? "voice-caller-staging-production.up.rai
 // the reliable flash-lite and pass a smarter model per-run when one is healthy. TODO: wire a reliable
 // smart mapper (Groq llama-3.3-70b or gpt-4o-mini via the gateway) as the default once verified.
 export const NAV_MODEL = "gemini-2.5-flash-lite";
+
+/** Ceiling on ONE mapping call. Slow trees (Walgreens ~95s) still fit; anything past this is a call
+ *  that is not going to reach anyone and is only costing money. */
+const MAX_CALL_SEC = 165;
+/** How long we wait for a real voice after the store says it is transferring us. Past this the desk
+ *  is not answering — hang up and say so, rather than calling the announcement a human. */
+const TRANSFER_WAIT_SEC = 40;
 
 // A live person is on the line (a short greeting/question said TO us). Used as a backstop in auto-0
 // mode so we hang up the instant someone answers instead of beeping 0 at them.
@@ -73,7 +81,17 @@ export interface NavSession {
   // Confirm ask pre-synthesized in the workflow's ElevenLabs voice (Branson) — Polly is the fallback.
   askAudio?: Buffer; askText?: string;
   lastActTurn?: number; escaped?: boolean; routingSeen?: boolean; routedAtSec?: number; autoZeros?: number; persisted?: boolean;
+  // Receipt bookkeeping: how many steps have been mirrored, and the one-shot moments (see navSync).
+  emitted?: number; ivrSeen?: boolean; transferEmitted?: boolean; humanEmitted?: boolean; deadEmitted?: boolean;
+  why?: string;             // what the ADMIN pressed to cause this call, for the receipt's note
   deadLine?: boolean; // a TRUE dead end (voicemail / disconnected / store closed) — mapper rotates stores
+  // The machine's "transferring you now" moment, kept apart from humanAtSec (which is now only ever a
+  // real voice). The gap between the two is what the paid agent currently wastes on every transfer.
+  transferAtSec?: number | null;
+  greeting?: string;        // the first thing the person said — proof of WHICH desk we reached
+  maxSec?: number;          // hard stop for this call (ROI guard); default MAX_CALL_SEC
+  transferWaitSec?: number; // how long to wait for a person after an announced transfer
+  stopReason?: string;      // why this call ended, in plain words (kept as evidence)
   status: "dialing" | "navigating" | "human" | "failed" | "done";
   type: "direct" | "keypad" | "voice" | null;
   humanAtSec: number | null; confidence: number; callSid?: string; recipe: NavRecipe | null;
@@ -81,6 +99,42 @@ export interface NavSession {
 
 const sessions = new Map<string, NavSession>();
 export function getNavSession(id: string): NavSession | null { return sessions.get(id) || null; }
+/** The most recent call to this chain that reached a person — how a lock finds its own evidence when
+ *  the caller did not name the call (the Admin Map button sends only the recipe). */
+export function latestNavSessionForChain(chainId: number): NavSession | null {
+  let best: NavSession | null = null;
+  for (const s of sessions.values()) {
+    if (s.chainId !== chainId || s.humanAtSec == null) continue;
+    if (!best || s.startMs > best.startMs) best = s;
+  }
+  return best;
+}
+
+// ---- THE RECEIPT ------------------------------------------------------------------------------
+// Every call the ADMIN places (the store call button, the map pin, mapping calls) runs through here.
+// Until now none of them wrote anything down: no timeline, no seconds, no cost, nothing to open
+// afterwards. A check placed from the website has had a receipt since 07-26. Same phone call, so it
+// gets the same receipt — keyed by the nav session id as the room. No `call_results` row is created:
+// a mapping call is not a customer's check and must never land in the customer numbers. The receipt
+// store already handles an unattached timeline (`findCallId` returns null and writes it anyway).
+//
+// Steps are mirrored ONE place rather than at each of the dozen `steps.push` sites, so a new step
+// can never be added without its event. Recording must never break a call: everything is best-effort.
+function navSync(s: NavSession): void {
+  try {
+    const from = s.emitted ?? 0;
+    for (let i = from; i < s.steps.length; i++) {
+      const st = s.steps[i];
+      if (st.who === "ivr") { if (!s.ivrSeen) { s.ivrSeen = true; emit(s.id, "ivr_detected", "This store has a phone menu", { heard: st.text.slice(0, 200) }); } continue; }
+      if (st.action === "press") emit(s.id, "alpha_press", `Pressed ${st.value ?? ""}`.trim(), { key: st.value, atSec: st.atSec, why: st.text });
+      else if (st.action === "say") emit(s.id, "bravo_say", `Said "${st.value ?? ""}"`, { phrase: st.value, atSec: st.atSec, why: st.text });
+    }
+    s.emitted = s.steps.length;
+    if (s.transferAtSec != null && !s.transferEmitted) { s.transferEmitted = true; emit(s.id, "transfer", "The menu handed us on", { atSec: s.transferAtSec }); }
+    if (s.humanAtSec != null && !s.humanEmitted) { s.humanEmitted = true; markNow(s.id, "humanMs"); markNow(s.id, "navEndMs"); emit(s.id, "human_detected", "A person is on the line", { atSec: s.humanAtSec, greeting: s.greeting }); }
+    if (s.deadLine && !s.deadEmitted) { s.deadEmitted = true; emit(s.id, "voicemail", "A machine, not a person", { why: s.stopReason }); }
+  } catch { /* recording must never break a call */ }
+}
 
 // ---- Menu capture (#2) ---------------------------------------------------------------------------
 // Pull the pressable options out of what the IVR says so the WHOLE tree is visible per chain
@@ -180,6 +234,8 @@ Return ONLY JSON: {"action":"say|press|wait|human|fail","value":"<word or digit,
 /** Initial TwiML when Twilio fetches the call's instructions. */
 export function navInitialTwiml(id: string): string {
   const s = sessions.get(id); if (s) s.status = "navigating";
+  // Twilio only fetches this once the line is actually answered, so it IS the connect moment.
+  markNow(id, "answeredMs"); emit(id, "connected", "The line was answered");
   // BARGE mode: we already KNOW the path, so fire the words on a timer — speaking OVER the IVR instead
   // of waiting for each prompt to finish. `at` = seconds from connect to speak each step. Then listen
   // for the transfer. Each round we shave the times earlier until the store stops accepting it.
@@ -207,11 +263,25 @@ export function navInitialTwiml(id: string): string {
 /** We've reached a live person. Plain training mode → hang up before troubling them. CONFIRM mode →
  *  ask the one stock question ONCE, then listen for their reply (classified next turn). */
 function reachHuman(s: NavSession, atSec: number, id: string, viaRouting = false): string {
-  s.humanAtSec = s.humanAtSec ?? atSec; // path-confirmed moment (first of transfer/person)
+  // A TRANSFER ANNOUNCEMENT IS NOT A PERSON (owner 07-26, proved on the CVS Anaheim call): the store
+  // said "Okay, transferring you now" at 62s and we booked that as the human. The clerk speaks ~17s
+  // later, so every learned time-to-human on a transfer chain was that much early — and the paid agent
+  // joins on that number. So the announcement is recorded as its own moment and we keep waiting for a
+  // real voice, in EVERY mode. The wait is bounded below (transferWaitSec).
+  if (viaRouting) {
+    s.routingSeen = true;
+    s.routedAtSec = s.routedAtSec ?? atSec;
+    s.transferAtSec = s.transferAtSec ?? atSec;
+    return twiml(gather(id));
+  }
+  s.humanAtSec = s.humanAtSec ?? atSec; // a real voice — THIS is time-to-human
+  // What they said is the proof of WHICH desk we reached — the only check left once a mapping call
+  // hangs up instead of asking a question.
+  if (!s.greeting) {
+    const last = [...s.steps].reverse().find((st) => st.who === "ivr" && st.text);
+    if (last) s.greeting = last.text.slice(0, 200);
+  }
   if (s.confirm && !s.confirm.asked) {
-    // Transfer ANNOUNCED ("transferring you now") isn't a person — hold the question until the real
-    // human greets us (next live utterance), so the ask never plays into hold music.
-    if (viaRouting) { s.routingSeen = true; s.routedAtSec = atSec; return twiml(gather(id)); }
     s.confirm.asked = true; s.confirm.askedAtSec = atSec;
     const q = s.askText || `Hi! Real quick — do you have any ${s.confirm.product} in stock right now?`;
     s.steps.push({ who: "us", text: `asked: "${q}"`, atSec, action: "say", value: q });
@@ -257,13 +327,32 @@ export async function defaultWorkflowAsk(): Promise<{ text: string; voiceId: str
   } catch { return fallback; }
 }
 
-/** One navigation turn — Twilio posts what the store said; we decide and return the next TwiML. */
+/** One navigation turn — Twilio posts what the store said; we decide and return the next TwiML.
+ *  Wrapped so the receipt is mirrored on EVERY exit path: this turn returns TwiML from a dozen
+ *  branches, and a branch that forgot to record would be a silent hole in the timeline. */
 export async function navStep(id: string, speech: string): Promise<string> {
+  try { return await navTurn(id, speech); }
+  finally { const s = sessions.get(id); if (s) navSync(s); }
+}
+async function navTurn(id: string, speech: string): Promise<string> {
   const s = sessions.get(id);
   if (!s) return twiml(`<Hangup/>`);
   const atSec = Math.round((Date.now() - s.startMs) / 1000);
   s.turns++;
-  if (s.turns > 22 || atSec > 165) { finish(s, "failed"); return twiml(`<Hangup/>`); } // safety stop (slow IVRs like Walgreens take ~95s to a human)
+  // ROI GUARD (owner 07-26): a mapping call that is going nowhere costs the same as one that works, so
+  // it gets a hard stop — no call runs past its cap, whatever the menu does. Callers set their own cap
+  // (the sweep uses a tighter one than a slow-IVR discovery run); MAX_CALL_SEC is the ceiling.
+  const cap = Math.min(s.maxSec ?? MAX_CALL_SEC, MAX_CALL_SEC);
+  if (s.turns > 22 || atSec > cap) {
+    s.stopReason = s.turns > 22 ? "too many turns" : `no person within ${cap}s`;
+    finish(s, "failed"); return twiml(`<Hangup/>`);
+  }
+  // Transferred, then nobody picked up. The route DID reach the transfer, but no person ever spoke —
+  // so we hang up and record exactly that, instead of booking the announcement as a human.
+  if (s.routedAtSec != null && s.humanAtSec == null && atSec - s.routedAtSec > (s.transferWaitSec ?? TRANSFER_WAIT_SEC)) {
+    s.stopReason = `transferred at ${s.routedAtSec}s, nobody picked up`;
+    finish(s, "failed"); return twiml(`<Hangup/>`);
+  }
   if (speech && speech.trim()) {
     s.steps.push({ who: "ivr", text: speech.trim().slice(0, 300), atSec });
     // #2: harvest the pressable options from any menu line into the chain's menu tree + keep the raw
@@ -440,10 +529,13 @@ async function persistRun(s: NavSession): Promise<void> {
     const arr = JSON.parse((await getSetting(key)) || "[]") as unknown[];
     const { mode, label } = classifyMode(s.steps);
     arr.push({
-      ts: Date.now(), store: s.retailerName, retailerId: s.retailerId, model: s.model || NAV_MODEL, mode, label,
+      // navId doubles as the receipt's room, so the run log can open the whole call afterwards.
+      ts: Date.now(), navId: s.id, why: s.why ?? null,
+      store: s.retailerName, retailerId: s.retailerId, model: s.model || NAV_MODEL, mode, label,
       outcome: s.status, seconds: s.humanAtSec ?? (s.steps[s.steps.length - 1]?.atSec ?? null),
       // Confirm-mode result: did we reach the RIGHT desk (answered) or get sent elsewhere (redirect → where)?
       confirm: s.confirm ? (s.confirmResult ?? "asked") : null, redirectTo: s.redirectTo ?? null,
+      transferAtSec: s.transferAtSec ?? null, greeting: s.greeting ?? null, stopReason: s.stopReason ?? null,
       // #2/#6: the menu tree we heard + the desk we aimed for, so each attempt is auditable after expiry.
       menu: s.menu && s.menu.length ? s.menu : null, target: s.target ?? null,
       steps: s.steps.map((st) => ({ who: st.who, text: st.text, atSec: st.atSec, action: st.action ?? null, value: st.value ?? null })),
@@ -465,15 +557,24 @@ async function recordConfirmAsked(chainId: number, retailerId: number): Promise<
 }
 
 /** Place the documentation call; returns the session id the admin polls for live progress. */
-export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { listenFirst?: boolean; askVoiceId?: string; askText?: string; target?: string }): Promise<{ id?: string; error?: string }> {
+export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { listenFirst?: boolean; askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string }): Promise<{ id?: string; error?: string }> {
   if (!config.callsEnabled) return { error: "calls disabled on this preview deploy" };
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const from = process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
   const id = crypto.randomUUID().slice(0, 8);
-  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined, listenFirst: extra?.listenFirst, askText: extra?.askText, target: extra?.target };
+  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined, listenFirst: extra?.listenFirst, askText: extra?.askText, target: extra?.target, maxSec: extra?.maxSec, transferWaitSec: extra?.transferWaitSec };
   sessions.set(id, session);
+  session.why = extra?.why;
+  // The receipt opens at DIAL, before anything can go wrong, so even a call the carrier refuses
+  // leaves a record of having been tried.
+  openReceipt(id, {
+    lane: barge?.plan?.length ? (barge.plan.every((p) => p.action === "press") ? "alpha" : "bravo") : "unknown",
+    note: extra?.why || "Admin call",
+    planned: barge?.plan?.length ? barge.plan.map((p) => ({ action: p.action, value: p.value, atSec: p.at })) : undefined,
+  });
+  emit(id, "dialed", `Dialling ${retailerName}`, { phone, chainId, retailerId, why: extra?.why || "Admin call" });
   // Synthesize the ask in the workflow voice NOW (fire-and-forget) — ready long before any human is.
   if (confirm && extra?.askVoiceId) void synthAsk(session, extra.askVoiceId, extra.askText || `Hi! Real quick — do you have any ${confirm.product} in stock right now?`);
   const body = new URLSearchParams({
@@ -486,12 +587,28 @@ export async function placeNavCall(chainId: number | null, retailerId: number, r
     headers: { Authorization: "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64"), "content-type": "application/x-www-form-urlencoded" },
     body: body.toString(),
   });
-  if (!r.ok) { sessions.delete(id); return { error: `twilio ${r.status}: ${(await r.text()).slice(0, 120)}` }; }
+  if (!r.ok) {
+    const why = `twilio ${r.status}: ${(await r.text()).slice(0, 120)}`;
+    emit(id, "hangup", "The carrier refused the call", { why });
+    closeReceipt(id, why, "dial-failed");
+    sessions.delete(id);
+    return { error: why };
+  }
   const d = (await r.json()) as { sid?: string };
   if (d.sid) session.callSid = d.sid;
   return { id };
 }
-export function navEnded(id: string) { const s = sessions.get(id); if (!s) return; if (s.status !== "human" && s.status !== "failed") s.status = "done"; if (s.confirm && s.chainId != null) void recordConfirmAsked(s.chainId, s.retailerId); if (s.chainId != null) void markNavOutcome(s.chainId, s.humanAtSec != null); void persistRun(s); }
+export function navEnded(id: string) {
+  const s = sessions.get(id); if (!s) return;
+  if (s.status !== "human" && s.status !== "failed") s.status = "done";
+  navSync(s); // catch any step the last turn added before the line dropped
+  markNow(id, "endMs");
+  emit(id, "hangup", s.stopReason || (s.humanAtSec != null ? "Reached a person" : "Never reached a person"), { status: s.status, humanAtSec: s.humanAtSec });
+  closeReceipt(id, s.stopReason, s.status);
+  if (s.confirm && s.chainId != null) void recordConfirmAsked(s.chainId, s.retailerId);
+  if (s.chainId != null) void markNavOutcome(s.chainId, s.humanAtSec != null);
+  void persistRun(s);
+}
 
 /** Reflect a run's outcome on the chain so the admin shows where mapping stands (not just stuck on
  *  "learning"): reached a human → "review" (a recipe to lock); never reached one → "attempted"

@@ -11,9 +11,9 @@ import { WebSocketServer, type WebSocket } from "ws";
 import { and, desc, eq, gte, inArray, isNull, like, lte, notInArray, or, sql } from "drizzle-orm";
 import { db, client } from "./db/client";
 import {
-  alertSends, alertSubscriptions, callResults, categories, chains, communityPosts, customerSchedules, discordChannels, kiosks, kioskReceipts, kioskReports, leads, products, retailers, schedules, scheduleTargets, statuses, storeRequests, supportConversations, supportMessages, supportTickets, waitlist, watches, zones, zoneRetailers,
+  alertSends, alertSubscriptions, callEvents, callResults, categories, chains, communityPosts, customerSchedules, discordChannels, kiosks, kioskReceipts, kioskReports, leads, products, retailers, schedules, scheduleTargets, statuses, storeRequests, supportConversations, supportMessages, supportTickets, waitlist, watches, zones, zoneRetailers,
 } from "./db/schema";
-import { answerSupport, resolveConversation, SUPPORT_MODELS, SUPPORT_CATEGORIES, type SupportCategory } from "./support/ladder";
+import { answerSupport, resolveConversation, warmClose, SUPPORT_MODELS, SUPPORT_CATEGORIES, type SupportCategory } from "./support/ladder";
 import { submitTicket } from "./support/tickets";
 import { addQa, reindexBook, searchBook, getFaq } from "./support/rag";
 import { listCreditGrants } from "./support/credits";
@@ -22,7 +22,7 @@ import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing, backfillDirectChains, isDirectDefaultChain } from "./db/import-data";
-import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
+import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, billableOutcome, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus, learnedSyncTick, learnedSyncStatus } from "./store-sync";
 import { buildSettingsExport, settingsSyncStatus, settingsSyncTick } from "./settings-sync";
 import { concurrencyStatus, acquireCallSlot, releaseCallSlot, governorEnabled } from "./calls/concurrency";
@@ -30,14 +30,22 @@ import { routeCheck, ticketStatus, drainCheckQueue, type QueueArgs, type PlaceRe
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
 import { simStartCall, isSimId, simLive, simResult } from "./staging-sim";
-import { getPolicy, setPolicy, publicPolicy } from "./policy";
+import { getPolicy, setPolicy, publicPolicy, cachedPolicy } from "./policy";
 import { importStores, backfillRegions } from "./stores-import";
 import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
 import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
-import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
+import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, latestNavSessionForChain, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
+import { listenNavFeed, endListenNav } from "./calls/listen-nav";
+// THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
+import { emit, markNow, closeReceipt, linkCall, rollup, getReceipt, type Rollup } from "./calls/events";
+import { installReceiptStore, currentRates } from "./calls/receipt-store";
+import { costCall, money } from "./calls/cost";
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
+import { graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
+import { recipeFromCall, evidenceFromCall, type CapturedStep } from "./calls/map-capture";
+import { startSweep, stopSweep, sweepStatus, buildQueue } from "./calls/sweep";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay } from "./calls/tapedeck";
-import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
+import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged, lockRecipeToChain } from "./calls/trainer-batch";
 import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, connectAtSecFor, chainDialable, chainNavPlan, type Recipe } from "./calls/recipe";
 import { llm, heli } from "./llm";
 import { opsAlert, watchdogTick, watchdogState, backupTick, backupNow, backupState } from "./ops-watch";
@@ -140,6 +148,7 @@ import { placeBridgeCall, attachListenFork, roomCallSids, roomCallProgress, room
 import { isCallingPaused, setCallingPaused, spendTodayCents, withLock } from "./redis";
 
 assertProdSecurity(); // refuse to boot in prod with an open admin / forgeable sessions
+installReceiptStore(); // every finished call writes its timeline + seconds + cost to the database
 await bootstrap(); // apply migrations + seed catalog if empty
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -154,6 +163,23 @@ app.use("*", async (c, next) => {
   c.header("X-Content-Type-Options", "nosniff");
   c.header("Referrer-Policy", "strict-origin-when-cross-origin");
   if (process.env.RAILWAY_ENVIRONMENT) c.header("Strict-Transport-Security", "max-age=15552000; includeSubDomains");
+});
+
+// ---- Build stamp (REBUILD_PLAN 2026-07-22) ----
+// Every served HTML page carries the git SHA Railway built from, so scripts/verify-live.sh can
+// PROVE what a site is actually serving. "Shipped/pushed/fixed" claims paste that script's output.
+const BUILD_SHA = (process.env.RAILWAY_GIT_COMMIT_SHA || "").slice(0, 12) || "local";
+app.use("*", async (c, next) => {
+  await next();
+  const ct = c.res.headers.get("content-type") || "";
+  if (!ct.includes("text/html") || c.res.status === 101 || !c.res.body) return;
+  const body = await c.res.text();
+  const stamped = body.includes("</head>")
+    ? body.replace("</head>", `<meta name="build" content="${BUILD_SHA}">\n</head>`)
+    : body;
+  const headers = new Headers(c.res.headers);
+  headers.delete("content-length");
+  c.res = new Response(stamped, { status: c.res.status, headers });
 });
 
 // ---- Staging (STAGING=1) — a private replica, NOT password-walled ----
@@ -448,7 +474,7 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
     .replace(/__BRAND_JSON__/g, JSON.stringify({ key: brand.key, name: brand.name, category: brand.category, accent: brand.accent, accent2: brand.accent2 || brand.accent, logoUrl: brand.logoUrl || "", emoji: brand.emoji }))
     .replace(/__BRAND_LOGO__/g, brand.logo || `${brand.emoji} ${brand.name}`)
     .replace(/__BRAND_ART__/g, brand.logoUrl ? `<img src="${brand.logoUrl}" alt="${esc(brand.short)}">` : (brand.art || ""))
-    .replace(/__BRAND_SWITCHER__/g, JSON.stringify({ current: brand.key, list: brandSwitcher() }))
+    .replace(/__BRAND_SWITCHER__/g, JSON.stringify({ current: brand.key, list: brandSwitcher(cachedPolicy().flags) }))
     .replace(/__BRAND_HEADLINE__/g, brand.headline)
     .replace(/__BRAND_SUB__/g, brand.sub);
 }
@@ -1004,6 +1030,13 @@ app.get("/sitemap.xml", (c) => {
 // TwiML Twilio fetches when OUR bridge call connects: stream the call's audio to our WS.
 // Twilio's media stream is pinned to the direct Railway domain (verified WS path; avoids Cloudflare).
 // Hosts live in bridge-place.ts (placeBridgeCall builds its callback URLs from them too).
+// Twilio's own report on the pickup fork (stream-started / stream-stopped / stream-error). Logged
+// into the bridge ring buffer so a silent fork failure names its reason instead of just not playing.
+app.all("/twiml/stream-status", async (c) => {
+  const b = await c.req.text().catch(() => "");
+  bridgeLog(`stream-status room=${(c.req.query("room") || "").slice(0, 8)} ${b.slice(0, 220)}`);
+  return c.body("ok", 200);
+});
 app.all("/twiml/bridge", (c) => {
   const room = c.req.query("room") || "";
   // Chain keypad shortcut (e.g. B&N "0@3"): send it as REAL carrier DTMF via <Play digits>
@@ -1034,7 +1067,14 @@ app.all("/twiml/bridge", (c) => {
       prev = at;
     }
   }
-  const xml = `<?xml version="1.0" encoding="UTF-8"?><Response>${play}<Connect><Stream url="wss://${config.staging.on ? STAGING_HOST : RAILWAY_HOST}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
+  // Live-listen from PICKUP (owner 07.24): fork the call audio to /twilio-media the moment the
+  // store's system answers, so a listener hears the menu, our presses and spoken menu words, and
+  // the ring-through to a human WHILE the nav verbs above are still running. <Start> is
+  // non-blocking; the fork is listen-only and goes quiet the instant the real bridge socket takes
+  // over the room (bridgeLiveRooms), so listeners never hear doubled audio.
+  const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
+  const fork = `<Start><Stream url="wss://${host}/twilio-media?room=${room}" track="both_tracks" statusCallback="https://${host}/twiml/stream-status?room=${room}" statusCallbackMethod="POST"><Parameter name="room" value="${room}" /></Stream></Start>`;
+  const xml = `<?xml version="1.0" encoding="UTF-8"?><Response>${fork}${play}<Connect><Stream url="wss://${host}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
   return c.body(xml, 200, { "Content-Type": "text/xml" });
 });
 
@@ -1116,6 +1156,75 @@ setDeltaBarge(async (s, _speech) => {
 
 // ---- Health ----
 app.get("/api/health", (c) => c.json({ ok: true, commit: process.env.RAILWAY_GIT_COMMIT_SHA ?? null }));
+
+// ---- THE CALL RECEIPT (owner 07-26) ----------------------------------------------------------
+// Replay one call: what happened, when, how many seconds each piece took, and what it cost. Admin-
+// gated by the /api/* wall. A live call answers from memory (so a call in flight can be watched);
+// a finished one answers from the database. If an engineer cannot explain a runtime decision from
+// this response, the receipt is incomplete.
+app.get("/api/calls/:id/receipt", async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isFinite(id)) return c.json({ error: "bad call id" }, 400);
+  const call = (await db.select().from(callResults).where(eq(callResults.id, id)))[0];
+  if (!call) return c.json({ error: "no such call" }, 404);
+
+  // A call still IN FLIGHT is read from memory so it can be watched as it happens. The moment it
+  // ends the database is the truth — the in-memory copy lingers for a few minutes but is missing
+  // everything written after the line dropped, the verdict most of all.
+  const inMemory = call.room ? getReceipt(call.room) : null;
+  const live = inMemory && !inMemory.closed ? inMemory : null;
+  const rows = live ? [] : await db.select().from(callEvents).where(eq(callEvents.callId, id)).orderBy(callEvents.atMs);
+  const timeline = live
+    ? live.events.map((e) => ({ atSec: e.atSec, kind: e.kind, note: e.note ?? "", detail: e.detail ?? null }))
+    : rows.map((r) => ({ atSec: r.atSec, kind: r.kind, note: r.note ?? "", detail: r.detail ? JSON.parse(r.detail) as unknown : null }));
+
+  // A finished call is served from its own stamped row, so a replay always agrees with the numbers
+  // the reports are summing. A null here means we never measured it — not that it was zero.
+  const steps = timeline.filter((t) => t.kind === "alpha_press" || t.kind === "bravo_say");
+  // A row written by an older build has some of these columns and not others. Reporting the ones it
+  // happens to have would put a nonsense pair on screen — nought seconds connected next to a second
+  // of dead air. If the row was never stamped with connected time, the whole agent block reads as
+  // unmeasured, which is the truth.
+  const stamped = call.charlieConnectedSeconds != null;
+  const sums: Rollup = live ? rollup(live) : {
+    lane: (call.lane ?? "unknown") as Rollup["lane"],
+    callSecs: call.callSeconds ?? 0,
+    navSeconds: call.navSeconds ?? null,
+    talkSeconds: call.talkSeconds ?? null,
+    charlieConnectedSeconds: stamped ? call.charlieConnectedSeconds! : 0,
+    charlieTalkingSeconds: stamped ? (call.charlieTalkingSeconds ?? 0) : 0,
+    charlieSilentSeconds: stamped ? (call.charlieSilentSeconds ?? 0) : 0,
+    speakingSecs: stamped ? (call.charlieSpeakingSeconds ?? 0) : 0,
+    listeningSecs: stamped ? (call.charlieListeningSeconds ?? 0) : 0,
+    ringSeconds: stamped ? (call.ringSeconds ?? 0) : 0,
+    holdSeconds: call.holdSeconds ?? null,
+    billedMinutes: call.billedMinutes ?? Math.ceil((call.callSeconds ?? 0) / 60),
+    menuSeconds: call.menuSeconds ?? null,
+    stepsFired: steps.length,
+    stepsOnPause: steps.filter((t) => (t.detail as { via?: string } | null)?.via === "prompt").length,
+    charlieJoined: stamped && (call.charlieConnectedSeconds ?? 0) > 0,
+  };
+  const cost = live
+    ? costCall({ callSecs: sums.callSecs, charlieSecs: sums.charlieConnectedSeconds, avoidableSecs: sums.charlieSilentSeconds, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))] }, await currentRates())
+    : { lineUsd: call.costLineUsd ?? 0, forkUsd: call.costForkUsd ?? 0, charlieUsd: call.costCharlieUsd ?? 0, clipsUsd: call.costClipsUsd ?? 0, totalUsd: call.costTotalUsd ?? 0, billedMinutes: sums.billedMinutes, charlieSecs: sums.charlieConnectedSeconds, avoidableUsd: call.costAvoidableUsd ?? 0 };
+
+  return c.json({
+    call: {
+      id: call.id, room: call.room, status: call.status, statusKey: call.statusKey,
+      retailerId: call.retailerId, categoryId: call.categoryId, summary: call.summary,
+      transcript: call.transcript, startedAt: call.startedAt, completedAt: call.completedAt,
+      // Provenance: the provider's own id (so a bill can be checked against this call), which menu
+      // version ran, which check this retries, and which build served it.
+      providerCallId: call.providerCallId ?? null,
+      mapVersion: call.mapVersion ?? null, attemptOf: call.attemptOf ?? null,
+      engineVersion: call.engineVersion ?? null,
+    },
+    live: !!live,
+    seconds: sums,
+    cost: { ...cost, readable: { total: money(cost.totalUsd), charlie: money(cost.charlieUsd), line: money(cost.lineUsd), wasted: money(cost.avoidableUsd) } },
+    timeline,
+  });
+});
 
 // ---- Ops (admin-gated by the /api/* wall): watchdog + backup visibility, manual backup trigger ----
 app.get("/api/ops/status", (c) => c.json({ env: config.staging.on ? "staging" : "production", watchdog: watchdogState(), backup: backupState() }));
@@ -3199,6 +3308,7 @@ app.get("/pub/result/:cid", async (c) => {
       return c.json({
         status: row.status, confirmed: row.confirmed, statusKey: row.statusKey,
         productDetail: row.productDetail, shipmentDay: row.shipmentDayHeard ?? null, shipmentTime: row.shipmentTimeHeard ?? null,
+        charged: !!row.chargedAt, // the page must say "1 check used" only when a check REALLY was spent
         summary: row.summary ?? "", transcript: row.transcript ?? "",
         durationSecs: row.callSeconds ?? undefined,
       });
@@ -3246,6 +3356,7 @@ app.get("/pub/result/:cid", async (c) => {
       productDetail: row.productDetail,      // e.g. "3-pack blister · Surging Sparks" — null if not captured
       shipmentDay: row.shipmentDayHeard ?? (o?.shipmentDay ?? null),
       shipmentTime: row.shipmentTimeHeard ?? (o?.shipmentTime ?? null),
+      charged: !!row.chargedAt, // the page must say "1 check used" only when a check REALLY was spent
       summary: row.summary ?? o?.summary ?? "",
       transcript: row.transcript ?? o?.transcript ?? "",
     });
@@ -3269,8 +3380,8 @@ app.get("/pub/result/:cid", async (c) => {
       shipmentDayHeard: o.shipmentDay, shipmentTimeHeard: (second?.restockTime ?? o.shipmentTime) ?? null, productDetail, summary: o.summary, transcript: o.transcript,
       completedAt: Math.floor(Date.now() / 1000),
     }).where(eq(callResults.id, row.id));
-    if (row.finderUserId && consensus.definitive) await chargeCallOnce(row.id, row.finderUserId);
-    return c.json({ ...(o ?? {}), status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey, ts: (row.startedAt || 0) * 1000, productDetail, shipmentDay: o.shipmentDay, shipmentTime: (second?.restockTime ?? o.shipmentTime) ?? null, summary: o.summary, transcript: o.transcript });
+    if (row.finderUserId && billableOutcome(consensus.statusKey, consensus.definitive, o.transcript)) await chargeCallOnce(row.id, row.finderUserId);
+    return c.json({ ...(o ?? {}), status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey, ts: (row.startedAt || 0) * 1000, productDetail, shipmentDay: o.shipmentDay, shipmentTime: (second?.restockTime ?? o.shipmentTime) ?? null, charged: row.finderUserId ? consensus.definitive : false, summary: o.summary, transcript: o.transcript });
   }
   // Truly mid-call → progress only, never a verdict (so a wrong key can't flash before the real one).
   return c.json(o ? { ...o, ts: row?.startedAt ? row.startedAt * 1000 : undefined } : { status: "in_progress", transcript: "", summary: "", ts: row?.startedAt ? row.startedAt * 1000 : undefined });
@@ -3752,7 +3863,7 @@ app.get("/app/history", async (c) => {
       cid: r.providerCallId, storeId: r.retailerId, storeName: sName,
       categoryId: r.categoryId, category: cats.get(r.categoryId) || "",
       ts: (r.startedAt || 0) * 1000, status: r.status, confirmed: r.confirmed,
-      statusKey: r.statusKey, productDetail: r.productDetail, shipmentDay: r.shipmentDayHeard, shipmentTime: r.shipmentTimeHeard ?? null, zoneRunId: r.zoneRunId || null,
+      statusKey: r.statusKey, productDetail: r.productDetail, shipmentDay: r.shipmentDayHeard, shipmentTime: r.shipmentTimeHeard ?? null, charged: !!r.chargedAt, zoneRunId: r.zoneRunId || null,
       logoUrl: l.url, logoWide: l.wide, logoDark: l.dark,
     };
   }));
@@ -3934,11 +4045,11 @@ app.get("/api/admin/restock-intel", async (c) => {
   const rows = (await db.select().from(callResults).where(eq(callResults.status, "completed"))).filter((r) => !ownerOnly.has(r.retailerId) && (r.startedAt || 0) >= statsSince);
   const confirmed = rows.filter((r) => r.confirmed === true);
   // Per-store: how often a confirmation lands + the shipment day staff gave (the gold).
-  const byStore = new Map<number, { id: number; store: string; location: string | null; chain: string; region: string | null; confirms: number; last: number; days: Record<string, number> }>();
+  const byStore = new Map<number, { id: number; store: string; location: string | null; chain: string; chainId: number | null; region: string | null; confirms: number; last: number; days: Record<string, number> }>();
   for (const r of confirmed) {
     const s = stores.get(r.retailerId); if (!s) continue;
     let e = byStore.get(r.retailerId);
-    if (!e) { e = { id: r.retailerId, store: s.name.split("—")[0].trim(), location: s.location ?? null, chain: "", region: s.region ?? null, confirms: 0, last: 0, days: {} }; byStore.set(r.retailerId, e); }
+    if (!e) { e = { id: r.retailerId, store: s.name.split("—")[0].trim(), location: s.location ?? null, chain: "", chainId: s.chainId ?? null, region: s.region ?? null, confirms: 0, last: 0, days: {} }; byStore.set(r.retailerId, e); }
     e.confirms++;
     const at = r.completedAt ?? r.startedAt; if (at > e.last) e.last = at;
     if (r.shipmentDayHeard) e.days[r.shipmentDayHeard] = (e.days[r.shipmentDayHeard] || 0) + 1;
@@ -3956,8 +4067,20 @@ app.get("/api/admin/restock-intel", async (c) => {
   // Per-category split (which brand line lands most).
   const catTally: Record<string, number> = {};
   for (const r of confirmed) { const label = cats.get(r.categoryId) || String(r.categoryId); catTally[label] = (catTally[label] || 0) + 1; }
+  // Paint each row with the SAME logo every other store list uses: chainLogoInfo(chainName) + the
+  // chain's type, resolved through the store's chainId (never a name guess). Without these fields the
+  // Admin's "By store" list fell back to a made-up two-letter monogram (owner 07-24).
+  const rsChains = await cachedChains();
+  const rsChainName = new Map(rsChains.map((x) => [x.id, x.name]));
+  const rsChainType = new Map(rsChains.map((x) => [x.id, x.type]));
   const topStores = [...byStore.values()].sort((a, b) => b.confirms - a.confirms || b.last - a.last).slice(0, 25)
-    .map((e) => ({ ...e, bestDay: Object.entries(e.days).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null }));
+    .map((e) => {
+      const chainName = (e.chainId != null && rsChainName.get(e.chainId)) || e.store.split(/—|–| - /)[0];
+      const l = chainLogoInfo(chainName);
+      return { ...e, bestDay: Object.entries(e.days).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null,
+        storeType: (e.chainId != null && rsChainType.get(e.chainId)) || "Other",
+        logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
+    });
   const prodNet = parseProducts(confirmed);
   const catNet: Record<string, number> = {};
   for (const r of confirmed) { const cl = cats.get(r.categoryId) || "?"; catNet[cl] = (catNet[cl] || 0) + 1; }
@@ -3995,7 +4118,8 @@ app.get("/api/admin/restock-intel", async (c) => {
     productForms: prodNet.forms,
     productSets: prodNet.sets,
     byCategory: Object.entries(catNet).sort((a, b) => b[1] - a[1]).map(([category, n]) => ({ category, n })),
-    topStores: topStores.map((e) => ({ id: e.id, store: e.store, location: e.location, region: e.region, confirms: e.confirms, last: e.last, bestDay: e.bestDay })),
+    topStores: topStores.map((e) => ({ id: e.id, store: e.store, location: e.location, region: e.region, confirms: e.confirms, last: e.last, bestDay: e.bestDay,
+      chainId: e.chainId, storeType: e.storeType, logoUrl: e.logoUrl, logoWide: e.logoWide, logoDark: e.logoDark })),
     answerFunnel,
     statsSince,
   });
@@ -4635,6 +4759,13 @@ app.patch("/api/settings", async (c) => {
   if (b.defaultWorkflow !== undefined) await setSetting("vt_default_workflow", String(b.defaultWorkflow || ""));
   if (b.chainWorkflows !== undefined) await setSetting("vt_chain_workflows", String(b.chainWorkflows || ""));
   if (b.storeWorkflows !== undefined) await setSetting("vt_store_workflows", String(b.storeWorkflows || ""));
+  // Listening navigation (owner 07-25): which chains fire their mapped steps when the recording
+  // stops talking instead of on a stopwatch. "off" (default) | "all" | a comma list of chain names.
+  // Admin owns this value — never set it behind Admin's back.
+  if (b.listenNav !== undefined) await setSetting("listen_nav", String(b.listenNav || "off").trim());
+  // Learned-nav mirror (owner 07-26): staging is where we learn a route now, so this pull from
+  // production can be switched OFF for a mapping session. "on" (default) | "off".
+  if (b.learnedSync !== undefined) await setSetting("learned_sync", String(b.learnedSync || "on").trim().toLowerCase());
   return c.json(await allSettings());
 });
 
@@ -5047,8 +5178,12 @@ app.post("/pub/support/resolve", async (c) => {
   const rl = rlCheck("support", clientIp(c.req.raw.headers), LIMITS.support);
   if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
   const b = await c.req.json().catch(() => ({}));
-  const ok = await resolveConversation(String(b.sessionId || ""), !!b.helped);
-  return c.json({ ok });
+  const helped = !!b.helped;
+  const ok = await resolveConversation(String(b.sessionId || ""), helped);
+  // On "that answered it" the chat stays open and the agent signs off warmly (model-written, with a
+  // fixed fallback). Money words never appear in it.
+  const close = ok && helped ? await warmClose(b.lang === "es" ? "es" : "en") : undefined;
+  return c.json({ ok, close });
 });
 // Escalation form — the only path to a human. Emails the transcript to the support inbox.
 app.post("/pub/support/ticket", async (c) => {
@@ -5595,6 +5730,86 @@ app.get("/api/admin/data-health", async (c) => {
 // transcript [{role,text}]; the server runs one turn (with an internal tool loop) and returns
 // the reply + a list of actions taken. Admin-gated like the rest of /api/*.
 // Call-timing breakdown for the God view: total / time-to-human (nav) / talk, aggregate + per store.
+// ---- Calc: re-read the MEASURED cost inputs off the real accounts ----
+// Three numbers on the Calc page are measurements, not settings, and they drift the moment the voice
+// or the brain changes. This reads them back from the accounts themselves so the page can never go
+// quietly stale: what the ElevenLabs plan actually includes (the account's real allowance, NOT the
+// number on the price page), how many credits a minute of conversation really burns, and what the
+// phone company is really charging per minute.
+app.get("/api/admin/cost-inputs", async (c) => {
+  const out: Record<string, unknown> = { measuredAt: new Date().toISOString().slice(0, 10) };
+  const elKey = process.env.ELEVENLABS_API_KEY;
+  if (elKey) {
+    try {
+      const sub = await fetch("https://api.elevenlabs.io/v1/user/subscription", { headers: { "xi-api-key": elKey } }).then((r) => r.json()) as { character_limit?: number };
+      if (sub?.character_limit) out.planCredits = sub.character_limit;
+      // Credits a minute = ConvAI credits burned / minutes of conversation, over the days that have both.
+      const now = Date.now(), from = now - 60 * 86400_000;
+      const usage = await fetch(`https://api.elevenlabs.io/v1/usage/character-stats?start_unix=${from}&end_unix=${now}&breakdown_type=product_type`, { headers: { "xi-api-key": elKey } }).then((r) => r.json()) as { time?: number[]; usage?: Record<string, number[]> };
+      const convs = await fetch("https://api.elevenlabs.io/v1/convai/conversations?page_size=100", { headers: { "xi-api-key": elKey } }).then((r) => r.json()) as { conversations?: Array<{ start_time_unix_secs?: number; call_duration_secs?: number }> };
+      const secByDay = new Map<string, number>();
+      for (const cv of convs?.conversations ?? []) {
+        if (!cv.start_time_unix_secs) continue;
+        const day = new Date(cv.start_time_unix_secs * 1000).toISOString().slice(0, 10);
+        secByDay.set(day, (secByDay.get(day) ?? 0) + (cv.call_duration_secs ?? 0));
+      }
+      const times = usage?.time ?? [], conv = usage?.usage?.["Conversational AI"] ?? [], llm = usage?.usage?.["Conversational AI - LLM"] ?? [];
+      let credits = 0, secs = 0;
+      times.forEach((ms, i) => {
+        const day = new Date(ms).toISOString().slice(0, 10), s = secByDay.get(day) ?? 0;
+        if (s > 0 && (conv[i] ?? 0) > 0) { credits += (conv[i] ?? 0) + (llm[i] ?? 0); secs += s; }
+      });
+      if (secs > 0) out.creditsPerMinute = Math.round(credits / (secs / 60));
+    } catch (e) { out.elevenLabsError = String(e); }
+  }
+  const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
+  if (sid && tok) {
+    try {
+      const auth = "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64");
+      const calls = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls.json?PageSize=200`, { headers: { Authorization: auth } }).then((r) => r.json()) as { calls?: Array<{ status?: string; duration?: string; price?: string | null }> };
+      // The per-minute rate we pay most often, derived from whole-minute billing on completed calls.
+      const tally = new Map<number, number>();
+      for (const cl of calls?.calls ?? []) {
+        if (cl.status !== "completed" || !cl.price) continue;
+        const s = Number(cl.duration ?? 0), p = Math.abs(Number(cl.price));
+        if (s <= 0 || p <= 0) continue;
+        const per = Math.round((p / Math.ceil(s / 60)) * 100000) / 100000;
+        tally.set(per, (tally.get(per) ?? 0) + 1);
+      }
+      const top = [...tally.entries()].sort((a, b) => b[1] - a[1])[0];
+      if (top) { out.twilioPerMin = top[0]; out.twilioRateCalls = top[1]; }
+    } catch (e) { out.twilioError = String(e); }
+  }
+  return c.json(out);
+});
+// The receipt for a call the ADMIN placed. Those calls have no call_results row on purpose (a mapping
+// call is not a customer's check and must stay out of the customer numbers), so they are read by ROOM
+// instead of by call id. Live from memory while the call is still up, from call_events once it ends.
+// Echo's point, 07-27: the call happened and nothing was written down. Now it is.
+app.get("/api/admin/receipt/:room", async (c) => {
+  const room = c.req.param("room");
+  if (!room) return c.json({ error: "room required" }, 400);
+  const live = getReceipt(room);
+  if (live && !live.closed) {
+    const sums = rollup(live);
+    return c.json({
+      room, live: true, note: live.planned.length ? "replaying a learned route" : null,
+      timeline: live.events.map((e) => ({ atSec: e.atSec, kind: e.kind, note: e.note ?? "", detail: e.detail ?? null })),
+      rollup: sums,
+      cost: costCall({ callSecs: sums.callSecs, charlieSecs: sums.charlieConnectedSeconds, avoidableSecs: sums.charlieSilentSeconds, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))] }, await currentRates()),
+    });
+  }
+  const rows = await db.select().from(callEvents).where(eq(callEvents.room, room)).orderBy(callEvents.atMs);
+  if (!rows.length) return c.json({ error: "no receipt for that call" }, 404);
+  const parse = (s: string | null) => { try { return s ? JSON.parse(s) as Record<string, unknown> : null; } catch { return null; } };
+  const summary = parse(rows.find((r) => r.kind === "summary")?.detail ?? null);
+  return c.json({
+    room, live: false,
+    timeline: rows.filter((r) => r.kind !== "summary").map((r) => ({ atSec: r.atSec, kind: r.kind, note: r.note ?? "", detail: parse(r.detail) })),
+    rollup: summary?.rollup ?? null,
+    cost: summary?.cost ?? null,
+  });
+});
 app.get("/api/admin/call-timing", async (c) => {
   const ownerOnly = await ownerOnlyRetailerIds(); // owner-only "Fun"/MVP store excluded from timings
   const stores = await retailerMap();
@@ -5785,7 +6000,7 @@ app.get("/api/admin/trainer/list", async (c) => {
   })) });
 });
 app.post("/api/admin/trainer/document", async (c) => {
-  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; retailerId?: number; model?: string; hint?: string; barge?: { plan: Array<{ action: string; value: string; at: number }> }; reactivePress?: { digit: string; max: number }; confirm?: boolean; product?: string };
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; retailerId?: number; model?: string; hint?: string; barge?: { plan: Array<{ action: string; value: string; at: number }> }; reactivePress?: { digit: string; max: number }; confirm?: boolean; product?: string; why?: string };
   // CONFIRM mode: don't just reach a human — ask "do you have any {product} in stock?" to verify we
   // hit the RIGHT desk. On a chain-level run we ROTATE to a store we haven't asked yet (no script change,
   // just a fresh store) so we never re-ask the same store on a callback.
@@ -5810,7 +6025,7 @@ app.post("/api/admin/trainer/document", async (c) => {
   const _ch = r.chainId != null ? (await db.select().from(chains).where(eq(chains.id, r.chainId)))[0] : undefined;
   if (_ch && !chainDialable(_ch)) return c.json({ error: `${_ch.name} isn't a call target (muted / call-center / check-online) — skipped` }, 400);
   if (b.chainId) await db.update(chains).set({ navStatus: "learning", navUpdatedAt: Math.floor(Date.now() / 1000) }).where(eq(chains.id, Number(b.chainId)));
-  const res = await placeNavCall(r.chainId, r.id, r.name, r.phone, b.model, b.hint, b.barge, b.reactivePress, confirm);
+  const res = await placeNavCall(r.chainId, r.id, r.name, r.phone, b.model, b.hint, b.barge, b.reactivePress, confirm, { why: b.why ? String(b.why).slice(0, 80) : "Admin: map this chain" });
   return res.error ? c.json({ error: res.error }, 400) : c.json({ sessionId: res.id, store: r.name, confirm: !!confirm });
 });
 app.get("/api/admin/trainer/session/:id", (c) => {
@@ -5840,32 +6055,30 @@ app.post("/api/admin/trainer/runs", async (c) => {
   return c.json({ ok: true, saved: b.runs.length });
 });
 app.post("/api/admin/trainer/lock", async (c) => {
-  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; recipe?: { type?: string; steps?: unknown[]; seconds?: number }; confidence?: number };
+  // The Admin "Map" button ends here. It goes through the SAME writer as the overnight batch, the
+  // mapper and the sweep (lockRecipeToChain), so a route locked by hand lands in the map with its
+  // evidence exactly like one locked by a sweep — no path can put a recipe on live calls silently.
+  const b = (await c.req.json().catch(() => ({}))) as {
+    chainId?: number; recipe?: { type?: string; steps?: unknown[]; seconds?: number }; confidence?: number; navId?: string;
+  };
   if (!b.chainId || !b.recipe) return c.json({ error: "chainId + recipe required" }, 400);
-  const ch = (await db.select().from(chains).where(eq(chains.id, Number(b.chainId))))[0];
-  const log = ch?.navLog ? (JSON.parse(ch.navLog) as number[]) : [];
-  if (typeof b.recipe.seconds === "number") log.push(b.recipe.seconds);
-  // Bridge: write the locked recipe into the LIVE call's phone-tree directions so every real call to
-  // this chain navigates via it (the live agent reads chains.phoneTreeDefault as {{phone_tree}}).
   const recipe = b.recipe as Recipe;
-  const direct = isDirect(recipe);
-  const treeText = recipeToTreeText(recipe);
-  const dtmf = recipeToDtmf(recipe); // "digit@seconds" early-press form the bridge consumes
-  const now = Math.floor(Date.now() / 1000);
-  await db.update(chains).set({
-    navType: b.recipe.type || null, navRecipe: JSON.stringify(b.recipe),
-    navSeconds: direct ? null : (typeof b.recipe.seconds === "number" ? Math.round(b.recipe.seconds) : null),
-    navStatus: "locked", navConfidence: typeof b.confidence === "number" ? b.confidence : null,
-    navLog: JSON.stringify(log.slice(-10)), navUpdatedAt: now,
-    // ↓ applied to live consumer calls (this is the bridge from documentation → real calls):
-    phoneTreeDefault: treeText, treeNote: treeText,
-    dtmfShortcut: dtmf || null,
-    answerPath: recipeAnswerPath(recipe) || null,
-    // Direct-answer chains have no menu, so they must carry NO seconds — a stray value arms the ABC
-    // connect-timer and mutes the agent while a human is already on the line (the silent-agent bug).
-    ringsDirect: direct, avgTreeSeconds: direct ? null : (typeof b.recipe.seconds === "number" ? Math.round(b.recipe.seconds) : null),
-    treeStatus: "learned", treeLearnedAt: now,
-  }).where(eq(chains.id, Number(b.chainId)));
+  // When the lock names the call it came from, that call IS the evidence — its store, its timing, the
+  // greeting that proves which desk answered, and which recording each step followed.
+  let evidence: EvidenceCall | undefined;
+  const sess = b.navId ? getNavSession(String(b.navId)) : latestNavSessionForChain(Number(b.chainId));
+  if (sess) {
+    const steps = (sess.steps || []) as CapturedStep[];
+    const captured = recipeFromCall(steps, sess.humanAtSec ?? null);
+    if (captured.steps.length === (recipe.steps?.length || 0)) recipe.steps = captured.steps as unknown as Recipe["steps"];
+    const store = (await db.select().from(retailers).where(eq(retailers.id, sess.retailerId)))[0];
+    evidence = evidenceFromCall({
+      navId: sess.id, storeId: sess.retailerId, storeName: store?.name, steps,
+      seconds: recipe.seconds ?? null, reachedHuman: true, path: pathSignature(captured),
+      greeting: sess.greeting, transferAtSec: sess.transferAtSec ?? null, note: "locked from Admin",
+    });
+  }
+  await lockRecipeToChain(Number(b.chainId), recipe, typeof b.confidence === "number" ? b.confidence : null, evidence);
   return c.json({ ok: true });
 });
 // Overnight phone-tree batch: dial one store per chain, learn + persist the route. action:
@@ -5879,8 +6092,10 @@ app.post("/api/admin/trainer/batch", async (c) => {
 app.get("/api/admin/trainer/batch", (c) => c.json(batchStatus()));
 // ---- Mapper: "map until locked" — the auto-continue loop (listen → baseline → optimize → lock) ----
 app.post("/api/admin/mapper/start", async (c) => {
-  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number };
-  return c.json(await startMapper(Number(b.chainId || 0)));
+  // storeId (optional): map THIS store, skipping the 9am-8pm picker — for a store we know is open now,
+  // or one whose menu differs from its chain's.
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; storeId?: number };
+  return c.json(await startMapper(Number(b.chainId || 0), { storeId: Number(b.storeId || 0) || undefined }));
 });
 app.post("/api/admin/mapper/stop", async (c) => {
   const b = (await c.req.json().catch(() => ({}))) as { chainId?: number };
@@ -5906,6 +6121,79 @@ app.post("/api/admin/mapper/target", async (c) => {
   await setSetting(`nav_needs_target:${chainId}`, ""); // owner chose → clear the needs-target flag
   return c.json({ ok: true, target: target || null });
 });
+// ---- The map: versions, evidence, confidence, drift, unknowns, approvals --------------------
+// Read-only for the dashboard plus the two decisions a human makes (approve / reject a version, close
+// an unknown). The mapping engine writes; nothing here places a call except the sweep endpoints.
+app.get("/api/admin/map/graph", async (c) => c.json({ rows: await graphSummary() }));
+app.get("/api/admin/map/chain/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!id) return c.json({ error: "chainId required" }, 400);
+  return c.json(await chainDetail(id));
+});
+app.post("/api/admin/map/version/:id/approve", async (c) => {
+  const id = Number(c.req.param("id"));
+  return c.json(await approveVersion(id, "admin"));
+});
+app.post("/api/admin/map/version/:id/reject", async (c) => {
+  const id = Number(c.req.param("id"));
+  const b = (await c.req.json().catch(() => ({}))) as { why?: string };
+  return c.json(await rejectVersion(id, "admin", String(b.why || "")));
+});
+app.get("/api/admin/map/unknowns", async (c) => c.json({ unknowns: await openUnknowns(Number(c.req.query("limit") || 100)) }));
+// Catch-up: send anything this environment learned while the record was unreachable (production does
+// not carry the map endpoints until the next promote). Safe to run repeatedly.
+app.post("/api/admin/map/reshare", async (c) => c.json(await reshareUnsent()));
+app.post("/api/admin/map/unknown/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  const b = (await c.req.json().catch(() => ({}))) as { status?: string; note?: string };
+  await resolveUnknown(id, b.status === "dismissed" ? "dismissed" : "resolved", String(b.note || ""));
+  return c.json({ ok: true });
+});
+// ---- The record side of the shared map ------------------------------------------------------
+// One set of recipes for both environments (owner 07-26). A follower environment (staging) posts what
+// a mapping call learned HERE, keyed by chain name and store phone — ids are per-database and would
+// cross-wire. Production applies it exactly as if the call had happened here, so the Admin mapping
+// section stays the single source of truth and both environments run the identical recipe.
+app.post("/api/admin/map/ingest", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as {
+    chainName?: string; storePhone?: string | null; storeName?: string | null;
+    recipe?: MapRecipe; source?: string; call?: EvidenceCall; why?: string;
+  };
+  const name = String(b.chainName || "").trim();
+  if (!name || !b.recipe) return c.json({ error: "chainName and recipe required" }, 400);
+  const ch = (await db.select().from(chains).where(eq(chains.name, name)))[0];
+  if (!ch) return c.json({ error: `no chain named ${name}` }, 404);
+  // Map the store by PHONE — the one key both databases agree on.
+  let storeId = 0;
+  if (b.storePhone) {
+    const st = (await db.select().from(retailers).where(eq(retailers.phone, String(b.storePhone))))[0];
+    if (st) storeId = st.id;
+  }
+  const call = b.call ? { ...b.call, storeId: storeId || undefined } : undefined;
+  const res = await proposeVersion({ chainId: ch.id, recipe: b.recipe, source: b.source || "follower", call, why: b.why, local: true });
+  return c.json({ ok: true, version: res.version.version, status: res.version.status, confidence: res.version.confidence, activated: res.activated });
+});
+app.post("/api/admin/map/decide", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { chainName?: string; version?: number; decision?: string; by?: string; why?: string };
+  const ch = (await db.select().from(chains).where(eq(chains.name, String(b.chainName || "").trim())))[0];
+  if (!ch) return c.json({ error: "chain not found" }, 404);
+  const all = await versionsFor(ch.id);
+  const v = all.find((x) => x.version === Number(b.version));
+  if (!v) return c.json({ error: "version not found" }, 404);
+  return c.json(b.decision === "reject"
+    ? await rejectVersion(v.id, String(b.by || "admin"), String(b.why || ""), true)
+    : await approveVersion(v.id, String(b.by || "admin"), true));
+});
+
+// ---- The sweep: call every chain east → west and prove the route to a person ----------------
+app.post("/api/admin/map/sweep/start", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { maxCalls?: number; only?: number[] };
+  return c.json(await startSweep({ maxCalls: Number(b.maxCalls || 0) || undefined, only: Array.isArray(b.only) ? b.only.map(Number) : undefined }));
+});
+app.post("/api/admin/map/sweep/stop", (c) => c.json(stopSweep()));
+app.get("/api/admin/map/sweep", (c) => c.json(sweepStatus()));
+app.get("/api/admin/map/sweep/queue", async (c) => c.json({ queue: await buildQueue() }));
+
 app.get("/api/admin/agent/models", (c) => c.json(AGENT_MODELS));
 app.post("/api/admin/agent", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as { messages?: Array<{ role: "user" | "assistant"; text: string }>; model?: string };
@@ -6170,12 +6458,20 @@ app.post("/twiml/bridge-status", async (c) => {
   const status = String((form as Record<string, unknown>).CallStatus || "");
   if (room && status) {
     roomCallProgress.set(room, { status, at: Date.now() });
+    // The carrier's own view of the call goes on the receipt — the only truthful source for when the
+    // line was actually answered (our sockets open later, and on a menu call much later).
+    if (status === "ringing") emit(room, "ringing", "The store's phone is ringing", { leg: "store" });
+    if (status === "in-progress") { markNow(room, "answeredMs"); emit(room, "connected", "The line was answered"); }
     if (["completed", "busy", "failed", "no-answer", "canceled"].includes(status)) {
       setTimeout(() => roomCallProgress.delete(room), 60_000);
       // Headless bridge calls (schedules/zones/admin call-now) registered a finalizer so a call
       // that ended without reaching a human still lands a terminal callResults row.
       const fin = roomFinalizers.get(room);
       if (fin) { roomFinalizers.delete(room); try { fin(status); } catch (e) { console.error("bridge finalizer:", e); } }
+      // The carrier says the call is over — this is the truthful end, so the receipt closes and
+      // persists HERE. The finalizer above may still be writing the verdict; the roll-up is stitched
+      // onto the call row by the sink, which looks the row up by room.
+      closeReceipt(room, status === "completed" ? "Call ended" : `Call ended (${status})`, status);
     }
   }
   return c.body(null, 204);
@@ -6291,7 +6587,7 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
     }
     // Per-store talk cap (chains.maxTalkSeconds) wins over the global bail ceiling when set, so a
     // store the owner marked "wrap fast" gets a tighter Twilio TimeLimit — the cost guarantee.
-  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning });
+  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, listenNav: v.listenNav });
 
   // Governed bookkeeping: point the pre-inserted row at the room (so /pub/result resolves it before
   // connect), release the slot on a dial that never placed, and register a finalizer that frees the
@@ -6302,7 +6598,8 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
       await db.update(callResults).set({ status: "failed", summary: result.error || "bridge call failed" }).where(eq(callResults.id, slotRowId));
     } else {
       const rid = slotRowId;
-      await db.update(callResults).set({ providerCallId: `bridge:${result.room}` }).where(eq(callResults.id, rid));
+      linkCall(result.room, rid); // stable key for the receipt (providerCallId gets replaced mid-call)
+      await db.update(callResults).set({ providerCallId: `bridge:${result.room}`, room: result.room }).where(eq(callResults.id, rid));
       roomFinalizers.set(result.room, (twilioStatus) => {
         void (async () => {
           const cur = (await db.select().from(callResults).where(eq(callResults.id, rid)))[0];
@@ -6417,9 +6714,9 @@ app.post("/webhooks/elevenlabs", async (c) => {
         summary: o.summary, transcript: o.transcript, completedAt: Math.floor(Date.now() / 1000),
       }).where(eq(callResults.id, o.callId));
       if (dayHeard && row) await db.update(retailers).set({ shipmentDay: dayHeard }).where(eq(retailers.id, row.retailerId));
-      // Server-side billing: charge the finder once on a definitive answer (idempotent — the poller
-      // may also try; charged_at guarantees exactly one charge across both paths).
-      if (row?.finderUserId && o.status === "completed" && definitive) {
+      // Server-side billing: charge on a billable outcome (real answer OR engaged-no-answer, owner
+      // 07-22). Idempotent — the poller may also try; charged_at guarantees exactly one charge.
+      if (row?.finderUserId && o.status === "completed" && billableOutcome(statusKey, definitive, o.transcript)) {
         await chargeCallOnce(o.callId, row.finderUserId);
       }
     }
@@ -6496,9 +6793,24 @@ const wssTwilio = new WebSocketServer({ noServer: true });
 const wssListen = new WebSocketServer({ noServer: true });
 const wssBridge = new WebSocketServer({ noServer: true });
 
+// Rooms whose REAL bridge socket is up. The pickup fork (/twilio-media) keeps streaming for the
+// whole call, so once the bridge owns the room's audio the fork must go quiet, or every listener
+// hears the store twice (two jitter buffers a beat apart).
+// Live STAGE events from the bridge (the ladder step the page shows). The bridge is the only thing
+// that hears the desk ringing after a transfer — that phase happens before ElevenLabs ever joins, so
+// it can never come from the transcript. Pushing it live keeps the log honest (owner 07-24).
+const relayStage = (room: string, n: number, atSec: number) => {
+  const set = rooms.get(room);
+  bridgeLog(`relayStage ${n} at ${atSec}s listeners=${set ? set.size : 0}`);
+  if (!set) return;
+  const msg = JSON.stringify({ stage: { n, at: atSec } });
+  for (const ws of set) if (ws.readyState === 1) ws.send(msg);
+};
+const bridgeLiveRooms = new Set<string>();
 // Full agent bridge: Twilio call audio <-> ElevenLabs ConvAI WS, forked to browser listeners.
 wssBridge.on("connection", (ws: WebSocket, _req: unknown, room: string) => {
-  handleTwilioBridge(ws, room, fanout, relayLine, relayEnd); // fanout(audio) + relayLine(live transcript) + relayEnd(call-over) — bridge passes its resolved room
+  if (room) { bridgeLiveRooms.add(room); ws.on("close", () => bridgeLiveRooms.delete(room)); }
+  handleTwilioBridge(ws, room, fanout, relayLine, relayEnd, relayStage); // fanout(audio) + relayLine(live transcript) + relayEnd(call-over) + relayStage(ladder step) — bridge passes its resolved room
 });
 wssListen.on("connection", (ws: WebSocket, _req: unknown, room: string) => { if (room) addListener(room, ws); else bridgeLog("listen socket connected with NO room — audio cannot be routed"); });
 wssTwilio.on("connection", (ws: WebSocket, _req: unknown, qRoom: string) => {
@@ -6507,8 +6819,16 @@ wssTwilio.on("connection", (ws: WebSocket, _req: unknown, qRoom: string) => {
     let m: { event?: string; start?: { customParameters?: { room?: string }; streamSid?: string }; media?: { payload?: string; track?: string } };
     try { m = JSON.parse(data.toString()); } catch { return; }
     if (m.event === "start") room = m.start?.customParameters?.room || room || m.start?.streamSid || "";
-    else if (m.event === "media" && m.media?.payload && room) fanout(room, m.media.payload, m.media.track || "inbound");
+    else if (m.event === "media" && m.media?.payload && room) {
+      // LISTENING NAV: this fork is the ONLY audio we have while the phone menu plays (the agent
+      // bridge doesn't exist yet), so it feeds the prompt detector that decides when each mapped
+      // step fires. Free — it is the same fork live-listen already runs. Must come before the
+      // bridgeLiveRooms gate, which only silences the LISTENER fanout, not our own ear.
+      listenNavFeed(room, m.media.payload, m.media.track);
+      if (!bridgeLiveRooms.has(room)) fanout(room, m.media.payload, m.media.track || "inbound");
+    }
   });
+  ws.on("close", () => { if (room) endListenNav(room); });
 });
 
 (httpServer as unknown as import("node:http").Server).on("upgrade", (req, socket, head) => {

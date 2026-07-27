@@ -105,7 +105,7 @@ function slug(s: string): string {
  * Curated core-SKU overlay for current-era Pokémon sets (booster packs/bundles/blisters the Drops DB
  * lacks per set). Kept in its OWN file (data/pokemon-catalog-supplement.json) so `sync-dropsdb` never
  * overwrites it. Insert-if-absent by externalId, so it's safe to run on every boot and additive to the
- * Drops DB snapshot. Regenerate with `npx tsx scripts/gen-pokemon-catalog.ts`. Returns rows inserted.
+ * Drops DB snapshot. Regenerate with `npx tsx scripts/archive/gen-pokemon-catalog.ts`. Returns rows inserted.
  */
 export async function seedCatalogSupplement(): Promise<number> {
   let data: DropsDb;

@@ -37,8 +37,8 @@ two lies that failed — never trust either. Render, and look.
 1. **`docs/design/STYLE_GUIDE.md`** — the look: every token, type size, radius, depth, component rule.
 2. **`docs/design/copy/COPY_STYLE_GUIDE.md`** — the words. Owns EVERY customer-facing string. On any
    wording conflict, the copy guide wins over a comp.
-3. **The matching comp board** (`docs/design/comps/`, see its `README.md`):
-   - Website / `public/checkit.html` → **`WEBSITE_COMPS.dc.html`**
+3. **The matching reference** (`docs/design/comps/`, see its `README.md`):
+   - Website / `public/checkit.html` → FROZEN post-rebuild; reference is the LIVE SITE, snapshotted in `docs/design/truth/`
    - Admin / `public/app.html` → **`ADMIN_COMPS.dc.html`**
 4. **`docs/design/brand/BRAND.md`** — logo, brandmark, colors/geometry. **`docs/design/emails/`** for
    email mocks (email must be TABLE HTML + inline styles — flex/grid never render in mail).
@@ -54,13 +54,12 @@ two lies that failed — never trust either. Render, and look.
 - **Admin has its own grammar:** five page types (LIVE · REPORT · LOG · CRUD · CONSOLE) + one report
   grammar (range · hero · wells · one list · footnote). Build a new admin section by picking a page
   type, not inventing a layout. **Every NEW admin feature gets comped in `ADMIN_COMPS.dc.html` FIRST,
-  then built** (owner standing rule). Same for the site + `WEBSITE_COMPS.dc.html`.
+  then built** (owner standing rule). The consumer site is frozen — match the live-site truth snapshot, not a board.
 
 ## Drift-prone facts (recheck, don't trust this line)
-- Comp filenames + boards: `ls docs/design/comps/` (as of 2026-07-11: WEBSITE_COMPS, ADMIN_COMPS,
-  MY_ZONES_COMP + vendor/).
-- There is **no** `COPY_STYLE_GUIDE_ADMIN.md` yet — admin copy follows the main copy guide until Copy
-  writes it. Recheck: `ls docs/design/copy/`.
+- Comp filenames + boards: `ls docs/design/comps/` (post-rebuild: `ADMIN_COMPS` is the one active board
+  + `vendor/`; the old consumer boards `WEBSITE_COMPS`/`MY_ZONES_COMP` are in `docs/archive/`).
+- Admin copy has its own guide now: `docs/design/copy/COPY_STYLE_GUIDE_ADMIN.md`. Recheck: `ls docs/design/copy/`.
 - The redesign ("v2") is now the unconditional render — there is no `?skin=` preview gate anymore
   (see the `known-problems` skill). Recheck: `grep -n "data-skin" public/checkit.html`.
 

@@ -41,6 +41,49 @@ const estCost = (model: string, inChars: number, outChars: number): number => {
 // costs trust; a cache miss costs one free-model call.
 const CACHE_MIN = 0.92;
 
+// The money-safety wall for model-written warmth. The credit machine's verdict sentences carry the
+// ONLY money words a customer ever reads (owner law). A model may add a warm human touch AROUND that
+// verdict, but if its line contains ANY money word, price, or number we throw it away and fall back.
+// This is what lets us make the agent feel smart without ever letting it author a money promise.
+const MONEY_WORDS = /credit|check|charge|refund|\bfree\b|money|cash|dollar|price|cr[eé]dito|cheque|cobr|reembols|gratis|dinero|precio/i;
+const cleanTouch = (raw: string, maxLen: number): string => {
+  const line = (raw || "").trim().replace(/^["']+|["']+$/g, "").trim();
+  if (!line) return "";
+  if (/[-—]/.test(line)) return "";        // no dashes inside sentences (copy law)
+  if (/\d|\$/.test(line)) return "";        // no numbers or prices
+  if (MONEY_WORDS.test(line)) return "";    // never a money word
+  if (line.length > maxLen) return "";      // keep it short
+  return line;
+};
+
+/** A short, warm, money-word-free opener that shows we heard the customer and are looking into it.
+ * Prepended to a check_issue verdict so the reply reads like a person, not a script. Empty on any
+ * doubt (model down, keys absent, or the line tripped the money wall) — the verdict still stands. */
+async function empathyOpener(userMessage: string, lang: string): Promise<string> {
+  const es = lang === "es";
+  try {
+    const raw = await llm(SUPPORT_MODELS.cheap, [
+      { role: "system", content: `You are a warm support agent for Check It For Me. The customer just told you something went wrong with a check we ran for them. Write ONE short, warm opening line that shows you heard them and are looking into it. ${es ? "Reply in Spanish." : "Reply in English."} Hard rules: one sentence, under 11 words, plain friend voice, no dashes, no emoji. Do NOT state any outcome, and NEVER mention credits, checks, charges, refunds, money, prices, or any number. Output only the sentence.` },
+      { role: "user", content: userMessage.slice(0, 300) },
+    ], { job: "support-empathy", maxTokens: 40, temperature: 0.8 });
+    return cleanTouch(raw, 90);
+  } catch { return ""; }
+}
+
+/** A short warm sign-off when the customer says the answer helped. Model-written for variety, with a
+ * deterministic fallback so the close always lands. Money-word-free, same wall as the opener. */
+export async function warmClose(lang: string): Promise<string> {
+  const es = lang === "es";
+  const fallback = es ? "Me alegra haber ayudado. ¿Hay algo más en que pueda ayudarte?" : "Glad I could help. Anything else I can do for you?";
+  try {
+    const raw = await llm(SUPPORT_MODELS.cheap, [
+      { role: "system", content: `You are a warm support agent for Check It For Me. The customer just said your answer helped. Write ONE short, warm closing line: be glad you helped and ask if there is anything else. ${es ? "Reply in Spanish." : "Reply in English."} Hard rules: one short sentence, plain friend voice, no dashes, no emoji. Do NOT mention credits, checks, charges, refunds, money, or numbers. Output only the line.` },
+      { role: "user", content: es ? "Eso resolvió mi duda." : "That answered it." },
+    ], { job: "support-close", maxTokens: 40, temperature: 0.8 });
+    return cleanTouch(raw, 120) || fallback;
+  } catch { return fallback; }
+}
+
 const SYSTEM = `You are the support agent for Check It For Me, the service that phone-checks retail stores for collectible-card stock so customers don't have to. The customer currency is a "check" (one call to one store about one thing); the literal phone call is a "call"; the AI that calls stores is "Check AI".
 Rules, all hard:
 - Answer ONLY from the reference passages provided. If they don't answer the question, say you're not sure instead of guessing. NEVER invent policy, prices, or features.
@@ -146,10 +189,19 @@ export async function answerSupport(sessionId: string, userMessage: string, opts
           .where(eq(supportConversations.id, convo.id));
       }
       if (terminal || out.kind === "ambiguous" || firstAsk) {
-        const r = creditReply(out, convo.lang || opts.lang || "en");
+        const lng = convo.lang || opts.lang || "en";
+        const r = creditReply(out, lng);
+        // Make the verdict feel human: a model-written warm opener sits in FRONT of the locked money
+        // sentence. It can never touch the money words (money wall), and it's skipped for the
+        // "which store" question and the sign-in nudge, which aren't verdicts.
+        let reply = r.reply;
+        if (out.kind !== "ambiguous" && out.kind !== "guest") {
+          const opener = await empathyOpener(userMessage, lng);
+          if (opener) reply = `${opener} ${reply}`;
+        }
         // "ambiguous" is a question back to the customer, not an answer → the widget keeps the
         // "That answered it" button hidden until a real answer lands.
-        return finish(convo.id, r.reply, 0, "credit-machine", r.escalate, 0, now, out.kind !== "ambiguous");
+        return finish(convo.id, reply, 0, "credit-machine", r.escalate, 0, now, out.kind !== "ambiguous");
       }
     } catch (e) {
       // Verifier down ≠ chat down: log and let the normal ladder answer (its hint forbids promises).

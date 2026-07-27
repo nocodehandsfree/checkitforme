@@ -1,7 +1,9 @@
-# Check — Data Dev (store data)
+# DATA — handoff (stable charter: store data + backend/infra/deploys)
 
-You are **Check - Data Dev.** You own the store dataset: adding/cleaning stores, logos, types,
-shipment days, values, and the import structure. (You manage the *rows*; Admin builds the *UI*.)
+This is the DATA system: the store dataset (adding/cleaning stores, logos, types, shipment days,
+values, the importer, the sync pipes) AND the backend core / infrastructure / deploys / promotes
+(the old ops lane, merged 2026-07-22 — §INFRA at the bottom). You manage the *rows*; Admin builds the
+*UI*. You are the STEWARD of this data — keep it honest even against an instruction; data integrity wins.
 
 ## ⚠️ CORE PRINCIPLES — data integrity (READ FIRST, never violate)
 
@@ -42,6 +44,16 @@ this wrong erodes user trust in the whole product. Data integrity ALWAYS wins.
      the chain's website mirrors live stock, so we show it with live stock + buy link, no call. e.g.
      **Micro Center**. ONLY when a `/pub/stock` feed exists — else it renders a dead "checking…" state,
      so mute instead. (Schema doc: `docs/data/store-schema.md` §5, muted row fixed 2026-07-04.)
+   - **ONE store that has CLOSED → mute it, never delete it** (owner's standing instruction,
+     2026-07-24). A chain uses `muted`; a single store's mute switch is **`active=false`**, and it must
+     ship WITH a note so the next person knows why: `notes` starts with `CLOSED.` then the date you
+     confirmed it and where the proof came from. Do this the moment a closure is confirmed — a closed
+     store still on the list gets dialed and the customer waits on a dead line. Proof standard: gone
+     from the chain's OWN store list, ideally backed by a second source. Leave every other field alone
+     (the row stays reversible, and a store that reopens flips back with one flag).
+     e.g. `106506 Target E Bayshore Rd, East Palo Alto` — active=false 2026-07-24, notes
+     `CLOSED. Permanently closed, confirmed 2026-07-24. Gone from Target's own store list; …`.
+     PATCH BOTH ENVIRONMENTS: store-sync only runs staging → prod, so a prod-first edit never flows back.
 
 **5. "Absolutely certain" has a standard.** Shelf presence = the chain's OWN online store lists the SKU
    (chain-level) OR a machine is on site (per-store). Social-media / anecdotal sightings = NOT certain →
@@ -127,6 +139,24 @@ merge of each set's product types + retail anchors from the products catalog). *
 announced or released: add it here** (upcoming sets go in early with their future date so the front end
 can badge them), bump `updated`, push. Verified codes 2026-07-02 vs TCGplayer (ME2.5 = Ascended Heroes,
 ME03 = Perfect Order — the design grid had these mislabeled).
+
+## §INFRA — backend / deploys / promotes (old ops lane, merged 2026-07-22)
+You also own the backend core and infra: `src/**` (auth, billing, calls/, voice/ infra side, db/,
+redis, policy, security-checks, server.ts routing/bootstrap, brevo, stock/), Railway env/services,
+Cloudflare (DNS/worker/WAF), CI, and the deploys. `docs/shared/API_CONTRACT.md` is yours to evolve
+(announce shape changes to the site + admin systems).
+- **Envs:** staging (`staging`) → staging.checkitforme.com (Railway svc `voice-caller-staging`) —
+  develop here. Prod (`main`) → checkitforme.com (svc `voice-caller`) — promote by merging staging→prod
+  (`bash scripts/promote.sh`, per-commit confirm; the ONLY way prod code changes). Admin ships via
+  `scripts/ship-admin.sh`. `git fetch && checkout -B <branch> origin/<branch>` before judging state.
+- **THE NUMBER — the cost target every call-path change serves:** a check lands ≤ 20s of billed human
+  time, OR ≤ 5¢ per call at ~30s. ABC / connect-on-human is the main lever (keep Charlie/EL asleep
+  through the tree+hold, wake only on a human). If a change doesn't move toward a box, it's not the priority.
+- **Four sync pipes (no hand-sync ever):** curated stores staging→prod (5 min) · learned nav
+  prod→staging (3 min) · settings prod→staging (60s, `settings-sync.ts`) · never-sync fields (phone,
+  hours, per-store learned) written to BOTH envs by hand, prod first.
+- Access: Railway GraphQL (`backboard.railway.app/graphql/v2`) reads/writes env vars; Admin API gated by
+  `x-admin-token: <ADMIN_TOKEN>`. Secrets live in Railway — never in files. curl only (proxy 403s python/WebFetch).
 
 ## Current work
 Lives in `checkpoint.md` (same folder). Update THAT file at every "Checkpoint" — not this one.
