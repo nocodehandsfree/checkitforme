@@ -383,6 +383,9 @@
   .peek .pk-chev{flex:0 0 auto;width:15px;height:15px;color:#5C5C68}
   .peek .pk-bar{height:6px;background:#1B1B20;border-radius:999px;box-shadow:inset 0 2px 4px rgba(0,0,0,.45);margin-top:8px;overflow:hidden}
   .peek .pk-bar>i{display:block;height:100%;border-radius:999px}
+  /* Carved well for the phone-menu ladder (STYLE_GUIDE §1 carved tokens). Depth separates it from
+     the page; no hairline border. Holds the same timeline rungs the call sheet draws. */
+  .mladder{background:var(--terminal);border-radius:16px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:16px 18px}
   /* ONE sheet — bottom slide-up. Dismiss on grabber / swipe-down / tap-outside (DATA_DISPLAY §1). */
   /* PROVEN (design 07-17, /sheetpeek variant E, owner-verified on device): NEVER cover the page with a
      fixed dim overlay — a full-screen layer (even transparent) is what kills iOS 26's scroll-edge glass
@@ -1328,7 +1331,7 @@
 
     <section id="trees">
     <div class="k-title">Chains</div>
-    <div class="k-sub" id="set_pickcount">Per-chain settings and phone routes</div>
+    <div class="k-sub" id="set_pickcount"></div>
     <!-- The page's ONE story: how much of the fleet is routed. A slim bar, not a wall of stat tiles. -->
     <div id="tr_progress" style="margin-top:16px"></div>
     <div id="set_pickwrap">
@@ -1348,28 +1351,31 @@
       </button>
     </div>
     <div id="trees_details" style="display:none"><div id="ds_abcd"><div id="abcd_flow"></div></div></div>
+    <!-- CHAIN DETAIL (comp 2f): the phone menu is the page. Vitals, then the step ladder, then every
+         settings card folded into a peek row. Picking a chain REPLACES the list, so nobody scrolls
+         past 131 rows to get back to the menu they just opened. "All chains" walks back. -->
     <div id="set_body" style="display:none">
-      <div class="card" id="set_storewrap">
-        <div class="row" style="gap:10px;align-items:center"><span id="set_storelogo" class="setlogo"></span><span class="name">Store settings</span></div>
-        <div id="set_store" style="margin-top:16px"></div>
+      <button class="k-key" onclick="setBackToChains()" style="margin:0 0 16px">ALL CHAINS</button>
+      <div class="row" style="gap:12px;align-items:center">
+        <span id="set_storelogo" class="setlogo"></span>
+        <div style="flex:1;min-width:0">
+          <div id="set_chname" class="k-title" style="margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+          <div id="set_chmeta" class="meta" style="margin-top:2px"></div>
+        </div>
+        <span id="set_mapstatus" style="flex:0 0 auto"></span>
       </div>
-      <div class="card" id="set_datawrap">
-        <div class="name">Store data</div>
-        <div id="set_data" style="margin-top:16px"></div>
+      <div id="set_vitals" style="margin-top:16px"></div>
+      <div class="row" style="align-items:baseline;margin-top:24px">
+        <div class="k-eyebrow" style="margin:0">Phone menu</div>
+        <div id="set_menuver" class="meta" style="margin-left:auto"></div>
       </div>
-      <div class="card" id="set_callwrap">
-        <div class="name">Call settings</div>
-        <div id="set_call" style="margin-top:16px"></div>
-      </div>
-      <div class="card" id="set_mapwrap">
-        <div class="row" style="align-items:center"><span class="name">Mapping</span><span id="set_mapstatus" style="margin-left:auto"></span></div>
-        <div style="margin-top:16px">
-          <div id="set_mapping" class="meta" style="margin-top:2px">—</div>
+      <div id="set_menuwrap">
+          <div id="set_mapping" style="margin-top:10px"></div>
+          <div id="set_menufoot" class="meta" style="margin-top:10px"></div>
           <div class="row" style="gap:8px;margin-top:16px;flex-wrap:wrap">
             <button class="act" id="set_mapbtn" onclick="setMapChain()">Map</button>
-            <button class="ghost" id="set_maploop" onclick="mapperStart()">Map until locked</button>
+            <button class="ghost" id="set_maploop" onclick="mapperStart()" data-tip="Keeps calling on its own until the fastest safe route to a person is locked. Rotates stores, about 75s between calls, 12 calls a day maximum. Places REAL calls ($).">Until locked</button>
             <button class="ghost" id="set_mapstop" onclick="mapperStop()" style="display:none">Stop</button>
-            <span class="meta" data-tip="Map = one call. Map until locked = keeps calling on its own (listen → reach a human → speed the path up) until the fastest safe path is locked. Rotates stores, ~75s between calls, 12-call daily cap, every human hears the real Pokémon-cards ask in the workflow voice." style="align-self:center"></span>
           </div>
           <div class="card" id="mapper_live" style="display:none;border-color:var(--tint-purple-border);margin-top:12px">
             <div class="row" style="justify-content:space-between;align-items:center">
@@ -1387,11 +1393,41 @@
             <div id="tr_live_feed" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto"></div>
             <div id="tr_live_result" style="margin-top:12px;display:none"></div>
           </div>
-          <div style="margin-top:16px">
-            <div class="name" style="font-size:13px">Call log</div>
-            <div id="set_runs"><div class="meta">Loading…</div></div>
-          </div>
-        </div>
+      </div>
+      <!-- Everything that used to sit open in four stacked cards. One eyebrow, five peek rows, each
+           one lifting its holder into the shared sheet (same Lego as the Live page). -->
+      <div class="k-eyebrow" style="margin-top:24px">Settings</div>
+      <button class="peek" onclick="sheetFromHolder('ds_setstore','Store settings','')">
+        <div class="pk-main"><div class="pk-t">Store settings</div></div>
+        <div class="pk-fact" id="pk_setstore"></div>
+        <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      <button class="peek" onclick="sheetFromHolder('ds_setdata','Store data','')">
+        <div class="pk-main"><div class="pk-t">Store data</div></div>
+        <div class="pk-fact" id="pk_setdata"></div>
+        <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      <button class="peek" onclick="sheetFromHolder('ds_setcall','Call settings','')">
+        <div class="pk-main"><div class="pk-t">Call settings</div></div>
+        <div class="pk-fact" id="pk_setcall"></div>
+        <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      <button class="peek" onclick="sheetFromHolder('ds_setver','Menu versions','Every saved version of this menu. Nothing reaches a real check until you approve it.')">
+        <div class="pk-main"><div class="pk-t">Menu versions</div></div>
+        <div class="pk-fact" id="pk_setver"></div>
+        <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      <button class="peek" onclick="sheetFromHolder('ds_setruns','Mapping calls','Real calls this chain placed to learn its menu.')">
+        <div class="pk-main"><div class="pk-t">Mapping calls</div></div>
+        <div class="pk-fact" id="pk_setruns"></div>
+        <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      <div id="set_holders" style="display:none">
+        <div id="ds_setstore"><div id="set_store"></div></div>
+        <div id="ds_setdata"><div id="set_data"></div></div>
+        <div id="ds_setcall"><div id="set_call"></div></div>
+        <div id="ds_setver"><div id="set_versions"></div></div>
+        <div id="ds_setruns"><div id="set_runs"><div class="meta">Loading…</div></div></div>
       </div>
     </div>
     </section>
@@ -2146,7 +2182,7 @@ async function loadRuns(chainId, box){
   box.innerHTML='<div class="meta" style="padding:4px 0">Loading…</div>'; // clear the previous chain's log while we fetch
   const d=await api('/api/admin/trainer/runs?chainId='+chainId);
   const runs=(d&&d.runs)||[];
-  if(!runs.length){ box.innerHTML='<div class="meta" style="padding:4px 0">No runs yet.</div>'; return; }
+  if(!runs.length){ box.innerHTML='<div class="empty">No mapping calls yet. Tap Map to place one.</div>'; return 0; }
   const MODEC={alpha:'#60a5fa',bravo:'var(--yellow)',charlie:'var(--green)'};
   const OUT={human:'var(--green)',failed:'var(--red)',done:'var(--yellow)'};
   box.innerHTML=runs.map((r,i)=>{
@@ -2171,6 +2207,7 @@ async function loadRuns(chainId, box){
       <div style="padding:2px 11px 10px">${mx||'<div class="meta" style="padding:6px 0">no steps recorded</div>'}</div>
     </details>`;
   }).join('');
+  return runs.length;
 }
 // ---- Delta (Fun): rehearse the Delta lane — recorded clips + cheap classifier, no live agent ----
 let TD_POLL=null, TD_ID=null;
@@ -2401,7 +2438,11 @@ const CALC={ storeType:'Alpha', nav:30, talk:20, revenue:0.2, lane:'charlie', de
   ready:false };
 // MEASURED, NOT SETTINGS. Each one was read off a real account on the date shown. They drift when the
 // voice or the brain changes, so the Calc shows them with their date and can re-read them on demand.
-const CALC_MEASURED={ creditsPerMinute:723, measuredAt:'2026-07-24',
+// CORRECTED 2026-07-25: 723 was 15% high. It came from dividing a whole billing period's credits by
+// a conversation list that under-counted the minutes. The real rate is a clean before/after around two
+// calls of known length: 924 credits for 88 seconds = 630 a minute = $0.00159/s
+// (docs/team/voice-calls/report-cost-architecture-2026-07-25.md).
+const CALC_MEASURED={ creditsPerMinute:630, measuredAt:'2026-07-25',
   src:{ creditsPerMinute:'ElevenLabs usage breakdown', planCredits:'the account, not the price page', twilioPerMin:'Twilio usage records' } };
 // ElevenLabs plans. `credits` is the monthly allowance, and it is what turns the flat fee into a price
 // per second. Creator is read from OUR account (145,094, NOT the 100,000 the price page advertises).
@@ -4035,13 +4076,16 @@ function setPickChain(){
     callTarget:ch.callTarget!==false, answerPath:ch.answerPath||'',
     wf:(WF.chains&&WF.chains[ch.id])||'',
     storesN:st.n, cCallable:st.callable, cKiosk:st.kiosk, cOnline:st.online, cVerified:st.verified };
+  const nm=document.getElementById('set_chname'); if(nm) nm.textContent=ch.name||'';
   ssRenderStore(); ssRenderData(); ssRenderCall();
-  renderChainMapping(ch); loadRuns(id, document.getElementById('set_runs'));
-  // Picking a chain collapses the (long) picker and jumps straight to the detail panel — no more
-  // scrolling past the whole chain list to find the mapping you just opened.
-  const pw=document.getElementById('set_pickwrap'); if(pw) pw.open=false;
-  const pk=document.getElementById('set_picked'); if(pk) pk.textContent='· '+ch.name+' (tap to change)';
-  try{ body.scrollIntoView({behavior:'smooth',block:'start'}); }catch(_){ }
+  renderChainMapping(ch);
+  loadRuns(id, document.getElementById('set_runs')).then((n)=>{
+    const pk=document.getElementById('pk_setruns'); if(pk) pk.textContent=n?String(n):'';
+  }).catch(()=>{});
+  // Picking a chain REPLACES the list. The old page left 131 rows sitting above the detail, so
+  // getting back to the menu meant scrolling the whole way down again on a phone.
+  const pw=document.getElementById('set_pickwrap'); if(pw) pw.style.display='none';
+  try{ document.getElementById('trees').scrollIntoView({behavior:'smooth',block:'start'}); }catch(_){ }
 }
 // Inline-commit helpers — every Store/Call control saves on its own (no grouped Save).
 async function ssReload(){ const id=SS&&SS.id; CHAINS=await api('/api/chains')||CHAINS; const sel=document.getElementById('set_chain'); if(sel){ const cur=sel.value; sel.innerHTML='<option value="">Select a chain</option>'+chainOpts(''); sel.value=cur; } buildChainPicker(); if(id&&CHAINS.find(c=>c.id===id)) setPickChain(); }
@@ -4109,14 +4153,19 @@ function buildChainPicker(){
   // Comp 2e: muted sinks to the bottom, graded above ungraded, then A–Z — noise last.
   const live=(CHAINS||[]).slice().sort((a,b)=>
     (a.muted?1:0)-(b.muted?1:0) || (b.tier||0)-(a.tier||0) || (a.name||'').localeCompare(b.name||''));
-  // Comp 2e: grade chip = color is the bucket (good/ok/weak), number is the grade. Unrated = no chip.
-  const GRADE={5:['Best','#4ADE80'],4:['Reliable','#4ADE80'],3:['Spotty','#F59E0B'],2:['MSRP','#EF4444']};
-  const chip=t=>{ const g=GRADE[t]; return g?`<span style="display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;background:${g[1]}21;flex:0 0 auto"><span style="font-size:13px;font-weight:900;color:${g[1]}">${t}</span><span style="font-size:10.5px;font-weight:700;color:${g[1]}">${g[0]}</span></span>`:''; };
+  const chip=t=>{ const g=CH_GRADE[t]; return g?`<span style="display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;background:${g[1]}21;flex:0 0 auto"><span style="font-size:13px;font-weight:900;color:${g[1]}">${t}</span><span style="font-size:10.5px;font-weight:700;color:${g[1]}">${g[0]}</span></span>`:''; };
   el.innerHTML=live.map(ch=>{
     const locked=ch.navStatus==='locked';
     const nStores=Number((ch.stores&&ch.stores.n)||ch.callable||0);
     // Color with intent: mapped is the NORM (quiet gray) · unmapped is the exception that needs routing (amber).
-    const meta=[nStores?nStores+' store'+(nStores===1?'':'s'):null, ch.muted?'muted':null, locked?'<span style="color:#8A8A96">mapped</span>':'<span style="color:#F59E0B;font-weight:700">unmapped</span>'].filter(Boolean).join(' · ');
+    // A mapped chain shows its ROUTE and how long it takes to reach a person, so the list is scannable
+    // without opening anything. The word "mapped" said less than "Bravo 41s" does.
+    const ln=chainLane(ch), lnc=ln==='Alpha'?'#F4B740':ln==='Bravo'?'#38BDF8':'#4ADE80';
+    const nv=ch.navSeconds!=null?ch.navSeconds:(ch.avgTreeSeconds!=null?ch.avgTreeSeconds:null);
+    const route=locked
+      ? `<span style="color:${ln?lnc:'#8A8A96'};font-weight:700">${ln||'mapped'}</span>`+(nv!=null?` <span style="color:#8A8A96">${nv}s</span>`:'')
+      : '<span style="color:#F59E0B;font-weight:700">unmapped</span>';
+    const meta=[nStores?nStores+' store'+(nStores===1?'':'s'):null, ch.muted?'muted':null, route].filter(Boolean).join(' · ');
     return `<div class="pickrow${String(ch.id)===cur?' on':''}" data-id="${ch.id}" data-name="${esch((ch.name||'').toLowerCase())}" data-tier="${ch.tier??''}" data-type="${esch((ch.type||'').toLowerCase())}" data-mapped="${locked?1:0}" onclick="pickChainRow(${ch.id})"${ch.muted?' style="opacity:.5"':''}>
       <span class="setlogo">${logoTile(ch)}</span>
       <span style="flex:1;min-width:0"><span style="display:block;color:#fff;font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esch(ch.name)}</span>
@@ -4128,6 +4177,9 @@ function buildChainPicker(){
   const tf=document.getElementById('set_ftype'); if(tf){ const cur=tf.value; tf.innerHTML='<option value="">All types</option>'+types.map(t=>`<option value="${esch(String(t).toLowerCase())}">${esch(t)}</option>`).join(''); if([...tf.options].some(o=>o.value===cur)) tf.value=cur; }
   filterChainPicker();
 }
+// Comp 2e: grade chip = color is the bucket (good/ok/weak), number is the grade. Unrated = no chip.
+// Shared with the chain detail's Store settings row, so one grade is never worded two ways.
+const CH_GRADE={5:['Best','#4ADE80'],4:['Reliable','#4ADE80'],3:['Spotty','#F59E0B'],2:['MSRP','#EF4444']};
 // Comp 2e: long list ends in a Show-more key, never a wall of 131 rows.
 let CH_LIMIT=30;
 function chainsShowMore(){ CH_LIMIT+=100; filterChainPicker(); }
@@ -4149,7 +4201,7 @@ function filterChainPicker(){
   });
   const more=document.getElementById('set_more');
   if(more){ more.style.display=hidden?'':'none'; more.textContent='SHOW '+Math.min(100,hidden)+' MORE'; }
-  const cnt=document.getElementById('set_pickcount'); if(cnt) cnt.textContent=(shown+hidden)+' chains · settings and phone routes';
+  const cnt=document.getElementById('set_pickcount'); if(cnt) cnt.textContent=(shown+hidden)+' chains';
 }
 // Pick a row → load it into the editor below (via the hidden set_chain the editor already reads).
 function pickChainRow(id){
@@ -4200,44 +4252,132 @@ function ssRenderCall(){
 async function ssToggleCallTarget(){ if(!SS) return; const v=!SS.callTarget; if(await ssPatch('callTarget',v)){ SS.callTarget=v; ssRenderCall(); toast(v?'Phoning this chain':'Will not dial this chain'); } }
 async function ssSetHangup(b){ if(!SS) return; SS.vm=b; if(await ssPatch('hangupOnVoicemail',b)) toast(b?'Hang up: on':'Hang up: off'); }
 async function ssSetMaxTalk(v){ if(!SS) return; SS.maxTalk=v; if(await ssPatch('maxTalkSeconds',Number(v)||null)) toast('Max talk saved'); }
-// Mapping is READ-ONLY: stats + recipe + the two learned fields (dtmf, phone-tree) the navigator/lock
-// writes. Status is a pill in the section header (separated from the Map / Confirm action buttons).
-// Lifecycle drives off navStatus: unmapped → grey / blank · learning → spinner · locked → green
-// "Mapped" with the recipe + learned fields populated. (DevOps advances navStatus server-side once a
-// confirmed run reaches a human, so a one-shot map doesn't get stuck on "learning".)
+// ---- CHAIN DETAIL (comp 2f) --------------------------------------------------------------------
+// The phone menu IS the page. Three vitals, then the learned route drawn as a step ladder using the
+// SAME timeline treatment as the call sheet (comp 1d): dot, connector, bold step, gray second.
+// Everything else folds into peek rows. Still READ-ONLY here: the navigator/lock writes navRecipe,
+// dtmfShortcut and phoneTreeDefault. navStatus drives the lifecycle (unmapped / learning / locked).
+const CHAIN_TALK=20; // the standard check the cost model banks on: 20 seconds of talking.
+// One check on this chain in cents, through the Calc page's own cost function, so the forecast and
+// this page can never disagree about what a check costs.
+const chainCostCents=(type,nav)=>calcCompute(type,nav||0,CHAIN_TALK,CALC.rates,'charlie',0).total*100;
+// What the MENU costs: this chain's check minus the same check on a line that picks up directly.
+// On a 41s menu that is a whole second billed minute (docs/finance/COST_MODEL.md).
+const chainMenuCents=(type,nav)=>Math.max(0,chainCostCents(type,nav)-chainCostCents('Direct',0));
+const chainCents=c=>(c<0.05?'0':c<10?c.toFixed(1):String(Math.round(c)))+'¢';
+const chainLane=ch=>ch.navType==='keypad'?'Alpha':ch.navType==='voice'?'Bravo':ch.navType==='direct'?'Direct':null;
+// The learned route, normalised to ONE list whatever wrote it: the recipe JSON first, then the
+// keypad shortcut. These are the same fields the old page printed twice as read-only blobs.
+function chainSteps(ch){
+  const out=[];
+  try{ const r=ch.navRecipe?JSON.parse(ch.navRecipe):null; const steps=(r&&(Array.isArray(r)?r:r.steps))||[];
+    for(const s of steps){
+      if(s.action==='press') out.push({at:s.atSec,t:'Presses '+esch(String(s.value))});
+      else if(s.action==='wait') out.push({at:s.atSec,t:'Waits'});
+      else if(s.value) out.push({at:s.atSec,t:'Says "'+esch(String(s.value))+'"'});
+    }
+  }catch(e){}
+  if(!out.length&&ch.dtmfShortcut) ch.dtmfShortcut.split(',').forEach(p=>{
+    const m=p.trim().match(/^([0-9*#])@(\d+)/);
+    if(m) out.push({at:Number(m[2]),t:'Presses '+m[1]}); else if(p.trim()) out.push({at:null,t:'Presses '+esch(p.trim())});
+  });
+  return out.sort((a,b)=>(a.at==null?0:a.at)-(b.at==null?0:b.at));
+}
+// One rung. Same shape as the call sheet's timeline so there is only ever one of these in the Admin.
+function chainRung(s,last){
+  const c=s.c||'var(--green)', lc=s.lc||'rgba(74,222,128,.28)';
+  return `<div style="display:flex;gap:12px">`
+    +`<div style="display:flex;flex-direction:column;align-items:center;flex:0 0 auto;padding-top:5px">`
+    +`<span style="width:9px;height:9px;border-radius:50%;background:${c};flex:0 0 auto"></span>`
+    +(last?'':`<span style="width:2px;flex:1;background:${lc};margin:3px 0"></span>`)+`</div>`
+    +`<div style="flex:1;min-width:0;padding-bottom:${last?'0':'14px'}">`
+    +`<div style="display:flex;align-items:baseline;gap:8px">`
+    +`<span style="font-size:13.5px;font-weight:700;color:${s.tc||'var(--text-strong)'}">${s.t}</span>`
+    +`<span style="margin-left:auto;font-size:12px;font-weight:700;color:var(--muted);flex:0 0 auto">${s.at||''}</span></div>`
+    +(s.sub?`<div style="font-size:12px;font-weight:500;color:rgba(255,255,255,.55);margin-top:3px;line-height:1.45">${s.sub}</div>`:'')
+    +`</div></div>`;
+}
 function renderChainMapping(ch){
   const el=document.getElementById('set_mapping'); if(!el) return;
-  const status = (ch.navStatus==='locked'||ch.navStatus==='learning') ? ch.navStatus : 'unmapped';
-  const isLocked = status==='locked';
-  const nm = isLocked ? NAV_MODE[ch.navType || (ch.dtmfShortcut?'keypad':((ch.ringsDirect||ch.answerPath==='direct_human')?'direct':(ch.phoneTreeDefault?'voice':null)))] : null;
-  let recipe = isLocked ? '' : (status==='learning' ? '… mapping in progress' : '— not mapped yet');
-  if(isLocked){
-    try{ const r=ch.navRecipe?JSON.parse(ch.navRecipe):null; const steps=(r&&(Array.isArray(r)?r:r.steps))||[];
-      if(steps.length) recipe=steps.map(s=>s.action==='press'?('press '+s.value+'@'+s.atSec+'s'):(s.action==='wait'?('wait@'+s.atSec+'s'):('say "'+esch(s.value)+'"@'+s.atSec+'s'))).join('  →  ');
-      else if(ch.dtmfShortcut) recipe=ch.dtmfShortcut.split(',').map(p=>{const m=p.trim().match(/^([0-9])@(\d+)/);return m?('press '+m[1]+' @ '+m[2]+'s'):p.trim();}).join('  →  ');
-    }catch(e){}
-    if(!recipe) recipe='picked up directly';
+  const status=(ch.navStatus==='locked'||ch.navStatus==='learning')?ch.navStatus:'unmapped';
+  const isLocked=status==='locked';
+  const lane=chainLane(ch)||(ch.dtmfShortcut?'Alpha':(ch.phoneTreeDefault?'Bravo':((ch.ringsDirect||ch.answerPath==='direct_human')?'Direct':null)));
+  const nav=ch.navSeconds!=null?ch.navSeconds:(ch.avgTreeSeconds!=null?ch.avgTreeSeconds:null);
+  // --- header line under the name: stores, then the lane in its own colour.
+  const meta=document.getElementById('set_chmeta');
+  if(meta){
+    const n=(ch.stores&&ch.stores.n)||0;
+    const lc=lane==='Alpha'?'#F4B740':lane==='Bravo'?'#38BDF8':lane==='Direct'?'var(--green)':'var(--muted)';
+    meta.innerHTML=`${n} store${n===1?'':'s'}`+(lane?` · <span style="color:${lc};font-weight:700">${lane}</span>`:'');
   }
-  const t2h = isLocked ? (ch.navSeconds!=null?ch.navSeconds+'s':(ch.avgTreeSeconds?ch.avgTreeSeconds+'s':'—')) : '—';
-  const mapped = isLocked ? (ch.navUpdatedAt?new Date(ch.navUpdatedAt).toLocaleDateString([],{month:'short',day:'numeric'}):(ch.treeLearnedAt?new Date(ch.treeLearnedAt*1000).toLocaleDateString([],{month:'short',day:'numeric'}):'—')) : '—';
-  const ro=(lbl,val)=>`<div style="margin-top:12px"><div style="font-size:12.5px;font-weight:700;color:var(--text-strong);letter-spacing:-.1px;margin-bottom:4px">${lbl} <span class="meta" style="font-weight:500;color:var(--muted);font-size:12.5px">· learned · read-only</span></div><div class="meta" style="line-height:1.5;color:var(--text-body)">${(isLocked&&val)?esch(val):'—'}</div></div>`;
-  el.innerHTML=
-    `<div class="stats">`
-    +`<div class="stat"><div class="n" style="font-size:19px${nm?'':';color:var(--muted)'}">${nm?nm.m:'—'}</div><div class="l">mode${nm?' · '+nm.sub:''}</div></div>`
-    +`<div class="stat"><div class="n" style="font-size:19px">${t2h}</div><div class="l">time-to-human</div></div>`
-    +`<div class="stat"><div class="n" style="font-size:15px">${mapped}</div><div class="l">last mapped</div></div>`
-    +`</div>`
-    +`<div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5"><b style="color:#fff">Recipe:</b> ${recipe}</div>`
-    +ro('Keypad shortcut',ch.dtmfShortcut)
-    +ro('Phone menu default',ch.phoneTreeDefault);
+  // --- vitals: what a check costs here, how long to a person, what the menu itself costs.
+  const vit=document.getElementById('set_vitals');
+  if(vit){
+    // An unmapped chain has no honest number to show, so the vitals go away entirely rather than
+    // filling the hero with a word. The pill and the ladder's empty state already say the state.
+    const known=isLocked&&lane&&nav!=null;
+    vit.style.display=known?'':'none';
+    if(known) vit.innerHTML=
+      `<div class="heroc" style="margin:0"><div><div class="hn" style="color:var(--green)">${chainCents(chainCostCents(lane,nav))}</div><div class="hl">Cost per check</div></div></div>`
+      +`<div class="stats" style="margin-top:9px">`
+      +`<div class="stat"><div class="n">${nav}s</div><div class="l">To a person</div></div>`
+      +`<div class="stat"><div class="n">${chainCents(chainMenuCents(lane,nav))}</div><div class="l">The menu costs</div></div>`
+      +`</div>`;
+  }
+  // --- version line beside the PHONE MENU eyebrow: when it was last learned.
+  const ver=document.getElementById('set_menuver');
+  if(ver){
+    const d=ch.navUpdatedAt?new Date(ch.navUpdatedAt):(ch.treeLearnedAt?new Date(ch.treeLearnedAt*1000):null);
+    ver.textContent=isLocked&&d?('learned '+d.toLocaleDateString([],{month:'short',day:'numeric'})):'';
+  }
+  // --- the ladder itself.
+  const foot=document.getElementById('set_menufoot');
+  if(!isLocked){
+    el.innerHTML=`<div class="empty">${status==='learning'?'Mapping in progress. The route lands here when it locks.':'Not mapped yet. Tap Map to place one call and learn the menu.'}</div>`;
+    if(foot) foot.textContent='';
+  } else {
+    const steps=chainSteps(ch), rungs=[];
+    const first=steps.length?steps[0].at:null;
+    if(first!=null&&first>0) rungs.push({at:'0'+String.fromCharCode(8211)+first+'s',t:'Greeting plays',sub:ch.phoneTreeDefault?esch(ch.phoneTreeDefault):''});
+    steps.forEach(s=>rungs.push({at:s.at!=null?s.at+'s':'',t:s.t}));
+    const lastAt=steps.length&&steps[steps.length-1].at!=null?steps[steps.length-1].at:null;
+    if(nav!=null&&lastAt!=null&&nav>lastAt) rungs.push({at:lastAt+String.fromCharCode(8211)+nav+'s',t:'Rings the desk',sub:(nav-lastAt)+'s of ringing',c:'var(--yellow)',lc:'rgba(255,203,5,.28)'});
+    if(nav!=null) rungs.push({at:nav+'s',t:'A person answers',tc:'var(--green)'});
+    if(!rungs.length) rungs.push({at:'0s',t:'A person answers',tc:'var(--green)'});
+    el.innerHTML=`<div class="mladder">${rungs.map((r,i)=>chainRung(r,i===rungs.length-1)).join('')}</div>`;
+    if(foot) foot.textContent=(nav!=null&&lane?`${nav}s to a person · the menu costs ${chainCents(chainMenuCents(lane,nav))} a check.`:'');
+  }
+  // --- status pill beside the chain name.
   const sp=document.getElementById('set_mapstatus');
   if(sp){
-    const cfg = isLocked?['var(--green)','rgba(74,222,128,.12)','rgba(74,222,128,.4)','Mapped']
-      : status==='learning'?['var(--yellow)','rgba(244,208,63,.12)','rgba(244,208,63,.4)','learning…']
-      : ['var(--text-muted)','var(--surface-2)','var(--border)','unmapped'];
+    const cfg=isLocked?['var(--green)','rgba(74,222,128,.12)','rgba(74,222,128,.4)','Mapped']
+      :status==='learning'?['var(--yellow)','rgba(244,208,63,.12)','rgba(244,208,63,.4)','Learning']
+      :['var(--text-muted)','var(--surface-2)','var(--border)','Unmapped'];
     sp.innerHTML=`<span style="display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:${cfg[0]};background:${cfg[1]};border:1px solid ${cfg[2]};border-radius:20px;padding:3px 10px">${status==='learning'?'<span class="navspin"></span>':ssDot(cfg[0])}${cfg[3]}</span>`;
   }
-  const mb=document.getElementById('set_mapbtn'); if(mb) mb.textContent = isLocked?'Re-map':'Map';
+  const mb=document.getElementById('set_mapbtn'); if(mb) mb.textContent=isLocked?'Re-map':'Map';
+  renderChainRows(ch,lane,nav);
+}
+// The five peek rows. Each carries the ONE fact worth seeing without opening it.
+function renderChainRows(ch,lane,nav){
+  const set=(id,html,color)=>{ const e=document.getElementById(id); if(!e) return; e.innerHTML=html||''; e.style.color=color||''; };
+  // The SHORT grade word (comp 2e's chip), never the long "Best near you". A long fact wraps the row
+  // label onto a second line, and labels never wrap.
+  set('pk_setstore',esch((ch.type||'Other')+' · '+(CH_GRADE[ch.tier]?CH_GRADE[ch.tier][0]:'Unrated')));
+  const scm=ch.stockCheckMethod?String(ch.stockCheckMethod).split(/[·|]/)[0].trim():'';
+  set('pk_setdata',esch([ch.isMSRP!==false?'MSRP':'', scm].filter(Boolean).join(' · ')));
+  set('pk_setcall',esch([ch.maxTalkSeconds!=null?ch.maxTalkSeconds+'s max talk':'', ch.callTarget===false?'not dialled':''].filter(Boolean).join(' · ')));
+  // Saved versions land when the mapper starts writing them. Until then the row says so plainly.
+  set('pk_setver','');
+  const vw=document.getElementById('set_versions');
+  if(vw) vw.innerHTML='<div class="empty">No saved versions yet. Mapping calls create the first one.</div>';
+}
+// Walk back to the chain list from a chain detail.
+function setBackToChains(){
+  const pw=document.getElementById('set_pickwrap'), body=document.getElementById('set_body');
+  if(pw) pw.style.display=''; if(body) body.style.display='none';
+  const sel=document.getElementById('set_chain'); if(sel) sel.value='';
+  try{ document.getElementById('trees').scrollIntoView({behavior:'smooth',block:'start'}); }catch(_){ }
 }
 // Map / Re-map the selected chain: places one real navigator call, shown live in the Mapping card.
 function setMapChain(){ const id=Number(document.getElementById('set_chain').value); const ch=CHAINS.find(c=>c.id===id); if(!ch){ toast('Pick a chain first'); return; } trDocument(id, ch.name); }
