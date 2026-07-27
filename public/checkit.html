@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r181" />
+<meta name="x-rev" content="glassfix-r182" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -202,8 +202,15 @@ __BRAND_HEAD__
     background:#0e0e12;border:1px solid color-mix(in srgb,var(--accent,#FFCB05) 30%,transparent);border-bottom:none;
     border-radius:22px 22px 0 0;padding:8px 18px calc(20px + env(safe-area-inset-bottom));
     box-shadow:0 -12px 44px rgba(0,0,0,.65), 0 0 30px color-mix(in srgb,var(--accent,#FFCB05) 9%,transparent);
-    transform:translateY(112%);transition:transform .28s cubic-bezier(.32,.72,0,1);touch-action:none}
+    transform:translateY(112%);transition:transform .28s cubic-bezier(.32,.72,0,1),box-shadow .28s cubic-bezier(.32,.72,0,1);touch-action:none}
   .csheet.on{transform:translateY(0)}
+  /* PARKED = NO SHADOW (owner 07-27). The sheet sits translated off-screen below the fold, but its big
+     UPWARD shadow still painted over the last ~40px of the page — so the page bottom went dark while
+     Safari's bar stayed the true page colour, giving a visible seam above the bar. Measured: the page
+     ramped #1D1D22 -> #19191D, then stepped back up at the bar. Killing the shadow while parked makes
+     the page flat into the bar (dip 13 -> 0). It fades back in with the slide-up, so an OPEN sheet is
+     unchanged. Footer hairline untouched — the owner wants that. */
+  .csheet:not(.on){box-shadow:none}
   .csheet-handle{width:46px;height:5px;border-radius:3px;background:#3E3E46;margin:6px auto 16px}
   .csheet-head{display:flex;align-items:center;gap:14px}
   .csheet-ic{width:56px;height:56px;border-radius:15px;background:var(--sheet);border:1px solid var(--border);display:grid;place-items:center;font-size:26px;flex:0 0 auto;overflow:hidden}
@@ -1479,6 +1486,7 @@ html[data-skin="v2"] .cta{background:linear-gradient(#20202A,#20202A) padding-bo
 html[data-skin="v2"] .csheet .cta,html[data-skin="v2"] .csheet-call{background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,color-mix(in srgb,var(--accent,#FFCB05) 55%,#FFF) 0%,var(--accent,#FFCB05) 55%,color-mix(in srgb,var(--accent,#FFCB05) 45%,#000) 100%) border-box;border:2.5px solid transparent;border-radius:999px;color:var(--accent,#FFCB05);font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;box-shadow:0 12px 28px -8px color-mix(in srgb,var(--accent,#FFCB05) 40%,transparent)}
 /* Bottom sheet (P2/§5.11): big-card surface, top radius 28, 40×5 grabber; keys raised. */
 html[data-skin="v2"] .csheet{background:#26262B;border:0;border-radius:28px 28px 0 0;box-shadow:0 -24px 48px -12px rgba(0,0,0,.7)}
+html[data-skin="v2"] .csheet:not(.on){box-shadow:none} /* parked = no shadow (see the base .csheet note); this skin's selector outranks the base rule, so it must repeat here */
 html[data-skin="v2"] .csheet-handle{width:40px;height:5px;background:rgba(255,255,255,.22)}
 /* P2 EXACTNESS — dim rgba(5,6,9,.6); pad 10/22/30; head gap 13; logo tile raised w/ 42px art;
    name 20/800/-.3; meta 13/600 #8A8A96 (Open = #4ADE80); product line 14 w/ accent-800 name +
