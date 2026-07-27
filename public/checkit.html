@@ -315,6 +315,11 @@ __BRAND_HEAD__
      dark by one viewport). Two sources, same paint: html.tone-* (server-baked ?tone= deep-links,
      first paint, no JS) and html:has(body.rview.rv-*) (in-page verdicts; ensureToneLoaded's one-shot
      reload guarantees the chrome updates even if iOS doesn't re-read the colour live). */
+  /* LOCKED — iOS CHROME TINT. This block, the tone washes, and the standalone block below are enforced
+     by `scripts/qa-tint-lock.mjs` (runs in test-all + CI). Change a colour, a gradient stop, or the root
+     rule and the SHIP FAILS. That is deliberate: this cost an all-day on-device hunt and has been broken
+     more than once by edits that looked fine in a headless browser. Read the lock file's header first,
+     and if you think an invariant is wrong, take it to the owner — never edit the gate to pass. */
   /* MIDDLE BLOOM (owner 07-09): in BROWSER Safari the page stays GRAY wherever it touches Apple's
      furniture. Safari paints its two chrome pieces (status-bar strip + bottom plate) with the page's
      ONE declared colour — the root's — so the root keeps the base dark and BOTH pieces blend invisibly,
