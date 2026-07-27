@@ -4,57 +4,57 @@
 > `bash scripts/ship-admin.sh` (never waits on a promote); server halves ride the promote train.
 > Charter + standing rules: `handoff.md`. Volatile — REPLACE stale lines, newest on top, ≤60 lines.
 
-## 2026-07-27 — Chains rebuilt: the phone menu IS the page (comp 2f, SHIPPED to THE Admin @9f51aa4)
-- Was four cards open at once, ~4 phone screens, menu dead last and thinnest. Now ONE screen: picking a
-  chain REPLACES the list (`ALL CHAINS` walks back) · three vitals (cost per check · to a person · what
-  the menu costs) · the learned route as a STEP LADDER reusing the call sheet's timeline (comp 1d) ·
-  Store settings / Store data / Call settings / Menu versions / Mapping calls folded into `.peek` rows.
-  `chainCostCents` / `chainMenuCents` / `chainSteps` / `chainRung` + `.mladder`. Cost runs through the
-  Calc page's own `calcCompute`, so the forecast and this page can never disagree.
-- Ladder reads `navRecipe` first, then `dtmfShortcut`: works on TODAY's rows, richer when the mapper
-  writes real steps. Chain LIST rows read "Bravo 41s" instead of the word "mapped". Menu versions is a
-  deliberate stub until the mapper writes versions.
-- ⚠️ FIXED A MONEY BUG: `CALC_MEASURED.creditsPerMinute` was 723, 15% high. Measured is 630 (924 credits
-  / 88s of known calls, report-cost-architecture-2026-07-25.md). Every Calc number moved.
-- DROVE IT against all 131 REAL chain rows pulled off the live Admin: CVS 6.1¢ / 1.4¢ menu / 19s ringing
-  after the menu ends · Walgreens 4.7¢ pressing 0 four times · Ross "Picks up directly". Matches
-  COST_MODEL.md. tsc + qa-design clean. NOT checked: this box's browser cannot reach the internet, so
-  nothing was clicked on the real admin.checkitforme.com and chain LOGOS never loaded (external URLs).
+## 2026-07-27 late — Admin calls write a receipt + ONE mapping button (SHIPPED @67ab8cf)
+- ECHO'S GAP, exact: website checks run service.ts + the bridge, which open a receipt. EVERY Admin button
+  runs `navigator.ts`, which emitted NOTHING. Fixed: navigator opens a receipt at dial and emits the whole
+  timeline; `navSync()` mirrors steps in ONE place, `navStep` is wrapped so no branch exits unrecorded.
+  Tapedeck's rehearsal too. NO `call_results` row on purpose (a mapping call is not a customer's check and
+  must stay out of the customer numbers) — seconds + cost ride the timeline as a new `summary` event.
+  `GET /api/admin/receipt/:room`; run rows carry `navId` (= the room) + `why`.
+- 🔴 PM: PROMOTE WANTED. The receipt code is `src/` (staging at push, prod only on a promote) and Admin
+  writes always hit prod, so Admin calls do not record until then.
+- Owner: ONE mapping button. Re-map runs the FULL mapper now (hear the menu, reach a person, shave
+  seconds until it cannot improve); one-shot `trDocument` stays for the single store-call button.
+  `askSheet()` replaces `confirm()` (unstylable; the opening tap left the tooltip hanging behind it) —
+  `closeSheet` + the swipe path fire `sheetclosed` so a dismissal reads as "no". Info dot became one gray
+  line. Cut "Stores mapped by rating"; ALL CHAINS moved to the page's top right.
+- Drove it locally on the 131 real chains: one button, sheet right, Cancel leaves no sheet and no tooltip,
+  receipt renders 2.8¢ / 71s / 62s over 7 steps. NOT verified: no real call placed, no browser on the Admin.
+
+## 2026-07-27 — Chains rebuilt: the phone menu IS the page (comp 2f, shipped @9f51aa4)
+- ONE screen: picking a chain REPLACES the list · three vitals (cost per check · to a person · what the
+  menu costs) · the route as a STEP LADDER reusing the call sheet's timeline (comp 1d) · the rest in
+  `.peek` rows. `chainCostCents`/`chainMenuCents`/`chainSteps`/`chainRung` + `.mladder`. Cost runs through
+  the Calc page's `calcCompute`. Ladder reads `navRecipe` then `dtmfShortcut`; list rows read "Bravo 41s".
+- ⚠️ MONEY BUG FIXED: `CALC_MEASURED.creditsPerMinute` 723 was 15% high; measured 630. Drove all 131 real
+  chains: CVS 6.1¢ / 1.4¢ menu / 19s ringing after the menu · Walgreens 4.7¢ pressing 0 four times · Ross
+  "Picks up directly". Matches COST_MODEL.md.
 - PM: `qa-design` FAILS on `public/checkit.html` (#34343E/#292930, buy dock) from the plans-sheet merge,
-  NOT from Admin. Frozen consumer file, needs an owner-named unlock.
+  NOT Admin. Frozen consumer file, needs an owner-named unlock.
 
-## 2026-07-26 — Ops dashboard contract, awaiting the data (docs/specs/admin-ops-dashboard/CONTRACT.md)
-- Owner settled: no conversation audio (menu recordings only, text transcript) · tucked into existing
-  pages, no new nav · hero is ONE number, what a check costs · CLEAN SLATE, no backfill (old rows are
-  false because Charlie listened when he should not have). Screens beyond Chains stay ON HOLD until real
-  checks exist. §8 is the recording shape handed to the calling engine (per-check lane, the seconds
-  split, billed minutes, map version, retry chain, engine build, `call_events` with a CLOSED kind list).
-- THE WORD IS CHECK, never "call", anywhere the owner reads it (owner, twice).
+## 2026-07-26 — Ops dashboard contract (docs/specs/admin-ops-dashboard/CONTRACT.md)
+- Owner settled: no conversation audio · no new nav · hero is ONE number, what a check costs · CLEAN
+  SLATE, no backfill. Screens beyond Chains ON HOLD until real checks exist. THE WORD IS CHECK.
 
-## Shipped earlier (detail in git; keep only what a future session would trip on)
+## Shipped earlier (detail in git; only what a future session would trip on)
 - 🔴 **ship-admin's override is NOT git.** Ship from a branch never merged to `staging` and the next ship
   from staging WIPES it (f96c161 did). ALWAYS merge to staging first; `--status` shows the live override
   commit, and if it is not an ancestor of staging the Admin is on borrowed time. Full story in GOTCHAS.
-- 07-24 logos: `topStores` carries chainId/logoUrl/logoWide/logoDark via `chainLogoInfo` (through
-  chainId, NEVER a name guess); rows call `logoTile`; `w` picks draw size, split at ~1.48 aspect, set in
-  the LIVE `chains` table (DB beats `_meta.json`). Server half still awaits a promote.
-- 07-23 design system: additive `.ds-*` scale 28/22/15/14/12, Lucide via `dsIco()`, hidden `/#preview`
-  master, header Live/Staging switch (`api()` GETs staging when CALL_SRC==='staging'; writes ALWAYS
-  prod). 24 bigger reworks remain in `copy-icon-audit.md` MANUAL.
-- 07-22 support: transcripts everywhere reuse the site's `.ctlv2-bub` via `bubbles()`, one transcript
-  look, never a second UI. **OPEN owner decision, NOT built:** hide `sim_` poll rows from Feedback?
+- Logos: `topStores` carries chainId/logoUrl/logoWide/logoDark via `chainLogoInfo` (never a name guess);
+  `w` picks draw size, split at ~1.48 aspect, set in the LIVE `chains` table (DB beats `_meta.json`).
+- `api()` GETs staging when CALL_SRC==='staging'; **writes ALWAYS go to prod** (so an Admin action runs
+  prod code). 24 bigger reworks left in `copy-icon-audit.md` MANUAL.
+- **OPEN owner decision, NOT built:** hide `sim_` poll rows from Feedback?
 
 ## Reference (read before touching)
-- **NEVER invent copy, grep + reuse** (owner caught invented defaults twice). ⚠️ The Alerts editor
-  shipped but the SITE still reads hardcoded share/referral/zones copy (site lane owns wiring it).
-- **Alerts** (src/alerts.ts + calls/notify.ts): events in `alerts_json`, bilingual via accounts.language,
-  confirm-gate + HMAC unsubscribe, FROM noreply@. Email colors LOCKED. Sheet-glass LOCKED
-  (`qa-admin-glass`, 11 invariants). POST-PROMOTE TODO: re-set the owner's email on PROD.
-- **Design bar + KIT** (app.html `<style>`; comps `ADMIN_COMPS.dc.html`): hero = ONE number/word + honest
-  spark; `.peek`; ONE sheet openSheet/closeSheet; carved inputs; `.k-range`/hero/wells/pills;
-  `.k-eyebrow`/title/sub/note; `logoTile` for ANY store row; `.mladder` for a step ladder. RENDER the
-  comp board before building (`scripts/render-comps.ts`), never read it as text.
-
-## Open (queue in docs/tasks/INDEX.md: 22 page-cleanups + 18 audit findings)
-- Owner asks: store LOGOS on the site alerts view (site lane) · premium toggle matrix in Plans (backend
-  done, UI missing) · per-customer account view (`docs/specs/admin-user-view.md`).
+- **NEVER invent copy, grep + reuse.** ⚠️ The Alerts editor shipped but the SITE still reads hardcoded
+  share/referral/zones copy (site lane owns wiring it).
+- **Alerts** (src/alerts.ts + calls/notify.ts): events in `alerts_json`, bilingual, confirm-gate + HMAC
+  unsubscribe, FROM noreply@. Email colors LOCKED. Sheet-glass LOCKED (`qa-admin-glass`, 11 invariants).
+  POST-PROMOTE TODO: re-set the owner's email on PROD.
+- **Design bar + KIT** (app.html `<style>`; comps `ADMIN_COMPS.dc.html`): hero = ONE number + honest spark;
+  `.peek`; ONE sheet openSheet/closeSheet/`askSheet` (NEVER the browser's `confirm()`); carved inputs;
+  `.k-range`/hero/wells/pills; `.k-eyebrow`/title/sub/note; `logoTile` for ANY store row; `.mladder` for a
+  step ladder. RENDER the comp board first (`scripts/render-comps.ts`), never read it as text.
+- Queue in docs/tasks/INDEX.md (22 page-cleanups + 18 audit findings). Owner asks: store LOGOS on the site
+  alerts view · premium toggle matrix in Plans (backend done, UI missing) · per-customer account view.
