@@ -65,5 +65,20 @@ eq(deltaSilence({ stage: "askedSet", silence: 3, onHold: true }), { action: "nud
 eq(deltaSilence({ stage: "askedSet", silence: 4, onHold: true, canBarge: true }), { action: "barge", clip: -1 }, "dragging hold on a real store call → Charlie sits it out");
 eq(deltaSilence({ stage: "askedSet", silence: 4, onHold: true, canBarge: false }), { action: "wrap", clip: 8 }, "dragging hold with no barge (bench) → neutral wrap");
 
+
+// --- ONE TURN (owner 07-27): a single question gets the set AND the format, so we never ask twice ---
+const D1 = (stage: string, label: string, gotSet = false, gotType = false, needType = false) =>
+  deltaDecide({ stage: stage as never, label, gotSet, gotType, clarified: false, needType, oneTurn: true });
+eq(D1("opener", "yes").clip, 1, "one turn: in stock -> the single combined question");
+eq(D1("opener", "yes").setNeedType, false, "one turn: nothing is still owed after it, ever");
+eq(D1("opener", "yes").next, "askedSet", "one turn: the combined question lands on the same stage");
+eq(D1("askedSet", "product", true, false, false).clip, 4, "one turn: any answer to it wraps the call");
+eq(D1("askedSet", "unclear", false, false, false).clip, 4, "one turn: even half an answer wraps, rather than paying for a follow up");
+eq(D1("opener", "yes", true, true).clip, 4, "one turn: they named both up front -> wrap without asking at all");
+eq(D1("opener", "no").clip, 3, "one turn: a no still asks the restock day");
+// The two question flow is untouched.
+eq(D("opener", "yes").setNeedType, true, "two question flow still owes the type after the set");
+eq(D("askedSet", "product", false, false, false, true).clip, 2, "two question flow still asks the format second");
+
 if (fail) { console.error(`delta: ${fail} test(s) FAILED`); process.exit(1); }
 console.log("delta: all passed");
