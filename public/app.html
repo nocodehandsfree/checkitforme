@@ -4336,16 +4336,22 @@ function renderChainMapping(ch){
     el.innerHTML=`<div class="empty">${status==='learning'?'Mapping in progress. The route lands here when it locks.':'Not mapped yet. Tap Map to place one call and learn the menu.'}</div>`;
     if(foot) foot.textContent='';
   } else {
+    const DASH=String.fromCharCode(8211); // an en dash inside a RANGE, which the copy guide allows.
     const steps=chainSteps(ch), rungs=[];
     const first=steps.length?steps[0].at:null;
-    if(first!=null&&first>0) rungs.push({at:'0'+String.fromCharCode(8211)+first+'s',t:'Greeting plays',sub:ch.phoneTreeDefault?esch(ch.phoneTreeDefault):''});
+    if(first!=null&&first>0) rungs.push({at:'0'+DASH+first+'s',t:'Greeting plays',sub:ch.phoneTreeDefault?esch(ch.phoneTreeDefault):''});
     steps.forEach(s=>rungs.push({at:s.at!=null?s.at+'s':'',t:s.t}));
     const lastAt=steps.length&&steps[steps.length-1].at!=null?steps[steps.length-1].at:null;
-    if(nav!=null&&lastAt!=null&&nav>lastAt) rungs.push({at:lastAt+String.fromCharCode(8211)+nav+'s',t:'Rings the desk',sub:(nav-lastAt)+'s of ringing',c:'var(--yellow)',lc:'rgba(255,203,5,.28)'});
-    if(nav!=null) rungs.push({at:nav+'s',t:'A person answers',tc:'var(--green)'});
-    if(!rungs.length) rungs.push({at:'0s',t:'A person answers',tc:'var(--green)'});
+    // Ringing is billed line time with nothing happening, so it always gets its own amber rung: after
+    // the last menu step, or from the very start on a line with no menu at all.
+    const ringFrom=lastAt!=null?lastAt:0;
+    if(nav!=null&&nav>ringFrom) rungs.push({at:ringFrom+DASH+nav+'s',t:steps.length?'Rings the desk':'Rings',sub:(nav-ringFrom)+'s of ringing',c:'var(--yellow)',lc:'rgba(255,203,5,.28)'});
+    if(nav===0&&!steps.length) rungs.push({t:'Picks up directly',at:'',tc:'var(--green)'});
+    else rungs.push({at:(nav!=null?nav+'s':''),t:'A person answers',tc:'var(--green)'});
     el.innerHTML=`<div class="mladder">${rungs.map((r,i)=>chainRung(r,i===rungs.length-1)).join('')}</div>`;
-    if(foot) foot.textContent=(nav!=null&&lane?`${nav}s to a person · the menu costs ${chainCents(chainMenuCents(lane,nav))} a check.`:'');
+    if(foot) foot.textContent=!lane?''
+      :(nav===0?'Picks up directly. There is no menu to get through.'
+      :nav!=null?`${nav}s to a person · the menu costs ${chainCents(chainMenuCents(lane,nav))} a check.`:'');
   }
   // --- status pill beside the chain name.
   const sp=document.getElementById('set_mapstatus');
