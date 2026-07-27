@@ -99,46 +99,6 @@ export interface NavSession {
 
 const sessions = new Map<string, NavSession>();
 export function getNavSession(id: string): NavSession | null { return sessions.get(id) || null; }
-/** EVERY MAPPING CALL LEAVES A RECORD (Echo, 07-27). A customer check writes a full receipt keyed by
- *  its bridge room; a mapping call has no room — it is placed straight on the carrier — so this is the
- *  same story in the receipt's own vocabulary, keyed by the call id. Ringing every store once is a
- *  one-time chance to learn how long each menu really takes, and it must not pass unrecorded.
- *
- *  Pure read: it never writes, so the receipt side owns when and where this lands. Kinds are the
- *  CLOSED sixteen; anything finer rides in `detail`. */
-export function navCallSummary(id: string): {
-  key: string; chainId: number | null; retailerId: number; phone: string; startedAt: number;
-  endedAtSec: number | null; status: string; stopReason: string | null;
-  events: Array<{ kind: string; atSec: number; detail: Record<string, unknown> }>;
-} | null {
-  const s = sessions.get(id);
-  if (!s) return null;
-  const events: Array<{ kind: string; atSec: number; detail: Record<string, unknown> }> = [];
-  const lane = s.type === "keypad" ? "alpha" : s.type === "voice" ? "bravo" : "direct";
-  events.push({ kind: "dialed", atSec: 0, detail: { lane, mapping: true, listenFirst: !!s.listenFirst, plan: s.barge?.plan ?? null } });
-  let sawMenu = false;
-  for (const st of s.steps) {
-    if (st.who === "ivr") {
-      if (!sawMenu) { sawMenu = true; events.push({ kind: "ivr_detected", atSec: st.atSec, detail: { heard: st.text.slice(0, 200) } }); }
-      continue;
-    }
-    if (st.action === "press") events.push({ kind: "alpha_press", atSec: st.atSec, detail: { key: st.value, trigger: s.barge ? "learned second" : "heard the menu" } });
-    else if (st.action === "say") events.push({ kind: "bravo_say", atSec: st.atSec, detail: { phrase: st.value, trigger: s.barge ? "learned second" : "heard the menu" } });
-  }
-  if (s.transferAtSec != null) events.push({ kind: "transfer", atSec: s.transferAtSec, detail: { announced: true } });
-  if (s.humanAtSec != null) {
-    events.push({ kind: "human_detected", atSec: s.humanAtSec, detail: { greeting: s.greeting ?? null, afterTransferSec: s.transferAtSec != null ? s.humanAtSec - s.transferAtSec : null } });
-  }
-  const endedAtSec = Math.round((Date.now() - s.startMs) / 1000);
-  // A mapping call NEVER opens the billed agent, so there is no charlie_join here by design — the
-  // receipt's agent seconds are zero and its cost is the phone line plus the cheap speech lane.
-  events.push({ kind: "hangup", atSec: endedAtSec, detail: { why: s.stopReason ?? (s.status === "human" ? "reached a person, hung up" : s.status), mapping: true } });
-  return {
-    key: `map:${s.id}`, chainId: s.chainId, retailerId: s.retailerId, phone: s.phone,
-    startedAt: s.startMs, endedAtSec, status: s.status, stopReason: s.stopReason ?? null, events,
-  };
-}
-
 /** The most recent call to this chain that reached a person — how a lock finds its own evidence when
  *  the caller did not name the call (the Admin Map button sends only the recipe). */
 export function latestNavSessionForChain(chainId: number): NavSession | null {
