@@ -11,31 +11,32 @@ Railway staging env + `DATABASE_URL=file:<scratch>/local.db PORT=88xx npx tsx sr
 
 ## 07-26 — PLANS/checkout sheet REBUILT on the zones architecture (LIVE on staging, NOT promoted)
 - `#buyOverlay .modal` = a FIXED frame (flex column + `overflow:hidden`) like `#zones .modal`, so
-  `sheetH_on` treats it as a FILL sheet. `.buy-scroll` = the one scroller (mirrors `.zf-scroll`).
-- `#buyDock` = `position:absolute` in the frame, OUTSIDE that scroller, same box as `#zones .zbasket`;
-  `buySyncDockPad()` pads the list like `zoneSyncBasketPad()`. Nothing sticky on the scroll edge = glass safe.
-- **R2:** `BUY_PICKED` gates the dock like `ZONES.sel` gates the basket — DOWN until you tap, then the
-  pick is lifted clear. The lift MUST be a ~140ms timeout, NOT a rAF (re-render makes the sheet observer
-  re-place ~60ms later, wiping an earlier scroll). PAYG keeps it up (its card IS the pick); `sheetH_on`
-  honours `data-fillh` — 0.82 on Plans, floored 530px on PAYG (a bare fraction put the card UNDER the dock
-  at 375x667). The dock is bottom-anchored, so only the sheet TOP steps between tabs.
-- **R3:** depth makes the dock read as a panel, NEVER a border (STYLE_GUIDE §1): active-key gradient + an
-  UPWARD shadow + a scale pop. `#buy_note` moved OUT of the scroll INTO the dock. Feature sheets
-  (`openFeatInfo`) = centred header block (`.fi-icon`, `h3`, `.fi-lead`) over ONE carved `.fi-pts` well;
-  points stay LEFT-aligned inside it. Their titles are Admin labels, so EN only.
-- **Round 4 — FIXED, tapping a plan jumped to Checkout.** Reproduced with `page.touchscreen.tap`, NOT
-  `el.click()`: the dock physically covered the lower rows, so the tap hit Continue and bought whatever
-  was ringed. Padding never fixes this, rows still REST under the dock. `.buy-foot` now RESERVES the
-  dock's band (dock resting top → sheet bottom) so the flex:1 scroller shrinks and nothing tappable hides;
-  the under-bar `::after` spacer is suppressed while it is up. Cost: ~150px less visible list when the
-  dock is up. Checkout head (`.co-head`/`.co-back`/`.co-title`) DELETED, the handle + swipe already go
-  back. ALWAYS test sheets with real touch taps, element clicks cannot see an overlay.
-- Monthly/Annual = small keys inline with "You're on the <plan> plan"; "save 17%" INSIDE the Annual key (a loose floating one was rejected). No overflow at 375/390/430, EN + ES (new `plan.save17s`).
-- Drove `/r` at 375/390/430 wide, member + not, EN + ES, with REAL touch taps: dock down on open, no visible
-  plan under the dock, every plan tap hits the plan, last plan reachable, Continue → checkout on the tapped
-  plan, PAYG clears by 64-112px, zero errors. Language switch re-paints title + grid + dock. Dead
-  `openPlanSheet`/`dismissPlanSheet`/`planSheetContinue` + the JS that built the lockup, grid, mode keys and
-  dock are gone. **NOT verified: iOS glass + how it reads on his phone.**
+  `sheetH_on` treats it as a FILL sheet; `.buy-scroll` is the one scroller. `#buyDock` = `position:absolute`
+  in the frame, OUTSIDE that scroller (same box as `#zones .zbasket`), so the iOS scroll-edge glass lives.
+- `BUY_PICKED` gates the dock like `ZONES.sel` gates the basket: DOWN until you tap. The lift-your-pick
+  scroll MUST be a ~140ms timeout, NOT a rAF (a re-render re-places the sheet ~60ms later and wipes it).
+  `sheetH_on` honours `data-fillh`: 0.82 on Plans, floored 530px on PAYG. Dock depth, never a border
+  (STYLE_GUIDE §1). `#buy_note` lives IN the dock. Feature sheets = centred header + one carved
+  `.fi-pts` well, points LEFT-aligned; their titles are Admin labels, so EN only.
+- **R5 checkout SPEED:** it loaded in two visible stages because nothing started until the tap and then
+  4 things ran serially. MEASURED: js.stripe.com/v3 = 1.06MB, 0.61s (0.41s of it just TLS);
+  `/app/checkout-intent` on staging TEST keys = 3.7s the FIRST time per account (it creates the Stripe
+  customer) then 0.2-0.4s. Fix: `preconnect` in the head · `openBuy` warms `loadStripeJs()` while they
+  read plans · `openCheckout` fires the intent and the library TOGETHER · `#co_pay_el` reserves 230px so
+  the sheet stops growing twice. TRAP FIXED: a failed warm-up used to be cached forever and pushed every
+  checkout that session to the hosted page; `loadStripeJs` now forgets a failed attempt.
+  **js.stripe.com is BLOCKED from the headless browser here** (proved by direct script injection), so the
+  real Payment Element cannot be rendered or measured in this sandbox. 230px is off the owner's screenshot.
+- **R4 — tapping a plan jumped to Checkout, FIXED.** Reproduced with `page.touchscreen.tap`, NOT
+  `el.click()`: the dock covered the lower rows so the tap hit Continue. Padding never fixes this, rows
+  still REST under the dock. `.buy-foot` now RESERVES the dock's band (resting top → sheet bottom) so the
+  scroller shrinks and nothing tappable hides; the under-bar `::after` spacer is off while it is up. Cost
+  ~150px of visible list. Checkout head (`.co-head`/`.co-back`/`.co-title`) DELETED. ALWAYS test sheets
+  with real touch taps, element clicks cannot see an overlay.
+- Monthly/Annual = small keys inline with the "You're on the <plan> plan" line; "save 17%" INSIDE the Annual key (a loose floating one was rejected). No overflow at 375/390/430, EN + ES (`plan.save17s`).
+- Drove `/r` at 375/390/430, member + not, EN + ES, REAL touch taps: dock down on open, no visible plan
+  under the dock, every plan tap hits the plan, last plan reachable, Continue → checkout on the tapped plan,
+  PAYG clears by 64-112px, zero errors. **NOT verified: iOS glass + on-device speed + how it reads.**
 
 ## 07-23 — alerts sheet, zones back, five site fixes (LIVE on staging + Admin, NOT promoted)
 - Alerts sheet: original On/Off pill + "Pause all alerts" bar (a slider redesign was rejected), scroll fix, name wrap. Zones back → My checks (acctReturn in popstate).
@@ -49,8 +50,7 @@ Railway staging env + `DATABASE_URL=file:<scratch>/local.db PORT=88xx npx tsx sr
 
 ## Lessons that stay true (+ OPEN BUG)
 - **OPEN BUG, thin GREEN LINE on the /s card bottom edge, iPhone only.** Never reproduces headless. Suspect
-  `.cin{overflow:hidden;border-radius:999px}` clipping the shine. NEXT: bisect ON DEVICE, one change at a
-  time; never alter the approved design. In GOTCHAS.
+  `.cin{overflow:hidden;border-radius:999px}` clipping the shine. NEXT: bisect ON DEVICE, one at a time. In GOTCHAS.
 - iOS: Chromium CANNOT catch iOS paint — his phone is the rig; ship one change, "check your phone."
 - Copy an existing pattern WHOLE. Half-copying the zones basket (floating box, but up from the start) reproduced the exact mess it was meant to fix.
 - 'in_stock' substring-matches 'not_in_stock' — match negatives first/exact. RENDER the comp and read EVERY state before touching a designed head (removed the zone ring once and burned a cycle).
