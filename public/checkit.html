@@ -66,6 +66,12 @@ __BRAND_HEAD__
      the design in Inter. One origin, one file, no third-party dependency. -->
 <link rel="preload" href="/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin>
 <style>@font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;src:url(/fonts/inter-var-latin.woff2) format('woff2')}</style>
+<!-- Checkout speed (owner 07-27): opening the TLS connection to Stripe took 0.4s of the wait, and it was
+     only opened after the tap. Warm it here so the payment library and its card form land on a live
+     connection. Nothing is downloaded by these, so a browser that never reaches checkout pays nothing. -->
+<link rel="preconnect" href="https://js.stripe.com" crossorigin>
+<link rel="dns-prefetch" href="https://js.stripe.com">
+<link rel="preconnect" href="https://m.stripe.network" crossorigin>
 <!-- Auth is 100% phone/SMS (Twilio). Clerk was fully removed — no external auth bundle loads. -->
 <style>
   :root{
@@ -2139,7 +2145,12 @@ html[data-skin="v2"] .co-change{font-size:11px;font-weight:700;color:#FFCB05;cur
 html[data-skin="v2"] .co-div{display:flex;align-items:center;gap:12px;margin:18px 0 14px;color:#7C7C88}
 html[data-skin="v2"] .co-div::before,html[data-skin="v2"] .co-div::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.08)}
 html[data-skin="v2"] .co-div span{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#7C7C88}
-html[data-skin="v2"] #co_pay_el{min-height:48px}
+/* Hold the card form's height from the start. It used to be 48px, so the sheet grew twice on the way in
+   (our loading line → Stripe's own skeleton → the real form) and the two stages read as two page loads.
+   Reserving it means the sheet opens near its final size and the contents just fill in (owner 07-27).
+   230px is measured off the owner's screenshot of Stripe's own skeleton: js.stripe.com is blocked in the
+   headless browser here, so the real element could not be rendered to measure. Adjust on device. */
+html[data-skin="v2"] #co_pay_el{min-height:230px}
 html[data-skin="v2"] .co-loading{color:#8A8A96;font-size:13px;font-weight:600;text-align:center;padding:16px 0}
 html[data-skin="v2"] .co-err{color:#FF7B7B;font-size:12.5px;font-weight:600;margin-top:10px;min-height:0;text-align:center}
 html[data-skin="v2"] #co_cta{display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:16px;background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%) border-box;border:2.5px solid transparent;border-radius:999px;color:#FFF;font-size:13px;font-weight:800;letter-spacing:.08em;padding:14px 24px;box-shadow:0 12px 28px -8px rgba(25,177,69,.45);cursor:pointer;text-transform:uppercase}
@@ -8482,6 +8493,10 @@ function openBuy(reason){
   }catch(_){} }
   setI('buy_note', `${ICO.lock('#7a7a88')} ${t('buy.secure2','Secure checkout via Stripe')}`);
   track('buy_open',{reason:reason||'manual'});
+  // Start Stripe's payment library NOW, while they read the plans, instead of after they tap Continue.
+  // It is ~1MB and used to sit in the critical path, which is most of the first loading stage the owner
+  // saw. loadStripeJs caches its promise, so this is fetched once and openCheckout just reuses it.
+  try{ loadStripeJs().catch(()=>{}); }catch(_){ }
   $('buyOverlay').classList.add('on'); sheetPush('buy');
   // Live plans may not be cached yet on first open — fetch, then re-render tiles + grid in place.
   if(!PLANS){ loadPlans().then(p=>{ if(p&&$('buyOverlay').classList.contains('on')){ try{ SEL_TIER_KEY=defaultTierKey(); renderBuyPlans(); if(isV2()){ renderBuyGrid(); applyBuyHeader(); renderBuyDock(); } }catch(_){ } } }); } // live tiers may rename keys, so re-derive the default
@@ -8494,9 +8509,13 @@ let CO=null, _stripe=null, _coElements=null, _stripeJsP=null;
 function setT(id,v){ const e=$(id); if(e) e.textContent=v; }
 function loadStripeJs(){ if(window.Stripe) return Promise.resolve(window.Stripe);
   if(_stripeJsP) return _stripeJsP;
-  _stripeJsP=new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://js.stripe.com/v3'; s.async=true;
+  const p=new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://js.stripe.com/v3'; s.async=true;
     s.onload=()=>window.Stripe?res(window.Stripe):rej(new Error('no Stripe')); s.onerror=()=>rej(new Error('stripe.js blocked')); document.head.appendChild(s); });
-  return _stripeJsP; }
+  _stripeJsP=p;
+  // Now that we warm this up early, a blip while they were only BROWSING plans must not poison the real
+  // tap: forget the failed attempt so Continue tries again instead of falling back to the hosted page.
+  p.catch(()=>{ if(_stripeJsP===p) _stripeJsP=null; });
+  return p; }
 // Elements appearance = the 6c comp: dark, carved #1B1B20 wells, green primary, Inter.
 function coAppearance(){ return { theme:'night', variables:{ colorPrimary:'#19B145', colorBackground:'#1B1B20', colorText:'#ffffff',
     colorTextSecondary:'#8A8A96', colorTextPlaceholder:'#6b6b78', colorDanger:'#ff6b6b',
@@ -8518,10 +8537,15 @@ async function openCheckout(kind, annual, amountCents, planLabel, planSub){
   const cta=$('co_cta'); if(cta) cta.disabled=true;
   $('coOverlay').classList.add('on'); sheetPush('co'); track('checkout_open',{kind});
   try{
-    const r=await appApi('/app/checkout-intent',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind,annual:!!annual})});
+    // Fire BOTH at once. Our server call and the Stripe library have nothing to do with each other, but
+    // they used to run one after the other, so the wait was the sum of the two (owner 07-27). The library
+    // is normally already warm from openBuy, which leaves only our own round trip on the clock.
+    const intentP=appApi('/app/checkout-intent',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind,annual:!!annual})});
+    const stripeP=loadStripeJs();
+    const r=await intentP;
     if(!r||r.error||!r.clientSecret||!r.publishableKey){ return coFallback(); }
     if(r.amountCents){ CO.amountCents=r.amountCents; setT('co_price', money(r.amountCents)); setT('co_cta_label', coCtaLabel()); }
-    const Stripe=await loadStripeJs();
+    const Stripe=await stripeP;
     _stripe=Stripe(r.publishableKey);
     _coElements=_stripe.elements({ clientSecret:r.clientSecret, appearance:coAppearance() });
     const pe=_coElements.create('payment', { layout:'tabs' });
