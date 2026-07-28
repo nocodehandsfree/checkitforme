@@ -1287,6 +1287,10 @@ app.get("/api/calls/:id/receipt", async (c) => {
       engineVersion: call.engineVersion ?? null,
     },
     live: !!live,
+    // Did the receipt ever price this check? A row from before the new engine has no cost at all,
+    // and reporting its cost as nought reads as "this call was free" instead of "we never recorded
+    // it". The replay uses this to show the timeline and say so, rather than print a row of noughts.
+    stamped: live ? true : call.costTotalUsd != null,
     seconds: sums,
     cost: { ...cost, readable: { total: money(cost.totalUsd), charlie: money(cost.charlieUsd), line: money(cost.lineUsd), wasted: money(cost.avoidableUsd) } },
     timeline,

@@ -871,7 +871,7 @@
     <div class="k-eyebrow">Reports</div>
     <button class="peek" id="pk_cost_row" onclick="dashSheet('cost')">
       <div class="pk-ic" style="background:rgba(74,222,128,.14)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/><path d="M3 12h2"/></svg></div>
-      <div class="pk-main"><div class="pk-t">Cost per check</div><div class="pk-m">What finished checks really cost</div></div>
+      <div class="pk-main"><div class="pk-t">Cost per check</div></div>
       <div class="pk-fact" id="pk_cost"></div>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
@@ -2276,11 +2276,16 @@ async function openReceiptInto(url){
     lc:'rgba(255,255,255,.14)',
     tc:e.kind==='human_detected'?'var(--green)':'var(--text-strong)',
   },i===a.length-1)).join('');
-  box.innerHTML=(d.cost?`<div class="stats" style="margin-bottom:16px">`
+  // A check from before the new calling engine was never priced. Printing its cost as nought reads
+  // as "this one was free"; the truth is that nobody wrote it down, so say that instead.
+  // A stamped check always costs SOMETHING (the carrier bills a whole minute the moment we dial), so
+  // a total of nought means nobody wrote this one down, whether or not the server sends the flag yet.
+  const priced=d.stamped!==false&&d.cost&&Number(c.totalUsd||0)>0;
+  box.innerHTML=(priced?`<div class="stats" style="margin-bottom:16px">`
       +`<div class="stat"><div class="n">${esch(cash)}</div><div class="l">What it cost</div></div>`
       +`<div class="stat"><div class="n">${s.callSecs!=null?s.callSecs+'s':''}</div><div class="l">On the line</div></div>`
       +`<div class="stat"><div class="n">${s.navSeconds!=null?s.navSeconds+'s':''}</div><div class="l">Time to Staff</div></div>`
-    +`</div>`:'')
+    +`</div>`:'<div class="k-note" style="padding-top:0">This check ran before the new calling engine, so its seconds and its cost were never written down.</div>')
     +(rungs?`<div class="mladder">${rungs}</div>`:'<div class="empty">No steps recorded.</div>')
     +(d.live?'<div class="meta" style="margin-top:10px">This call is still going.</div>':'');
 }
@@ -3250,7 +3255,7 @@ function dashHeroDots(el){
 }
 function dashSheet(key){
   const titles={cost:'Cost per check',money:'Money',pulse:'Members',timing:'Call time',health:'Call health',credits:'Credits'};
-  const subs={cost:'Added up from finished checks. Nothing here is a forecast.',money:'Revenue, profit and margin',pulse:'Signups, scores and activity today',timing:'Time to reach a person vs talk time',health:'Real calls vs test calls',credits:'Voice credits · estimated over the last 31 days'};
+  const subs={cost:'Added up from finished checks',money:'Revenue, profit and margin',pulse:'Signups, scores and activity today',timing:'Time to reach a person vs talk time',health:'Real calls vs test calls',credits:'Voice credits · estimated over the last 31 days'};
   sheetFromHolder('ds_'+key, titles[key], subs[key]);
 }
 // ---- WHAT OUR CHECKS COST (contract: docs/specs/admin-ops-dashboard/CONTRACT.md §5) ----------------
@@ -3290,7 +3295,10 @@ async function loadOpsCost(){
     body.innerHTML='<div class="empty">No finished checks in the record yet. Every check from here on lands here on its own. Checks from before the new calling engine, cancelled checks and your test stores are never counted.</div>';
     return;
   }
-  const st=(n,l)=>`<div class="stat"><div class="n">${esch(String(n))}</div><div class="l">${esch(l)}</div></div>`;
+  // The report grammar: one hero answer, then a PAIR of wells. Three across a phone squeezed every
+  // label onto two lines, and a label that wraps is a label that is too long; the tracked uppercase
+  // well did the same to "tries per answer". Two of the report tile, and both labels sit on one line.
+  const well=(n,l)=>`<div class="stat"><div class="n">${esch(String(n))}</div><div class="l">${esch(l)}</div></div>`;
   // One row shape for every list on this sheet: what it is, how many checks, what it cost.
   const row=(ico,label,meta,fact2,col)=>`<div class="peek" style="cursor:default">`
     +(ico?`<span class="pk-ic" style="background:rgba(255,255,255,.05)">${ico}</span>`:'')
@@ -3300,10 +3308,11 @@ async function loadOpsCost(){
   const checks=n=>n+(n===1?' check':' checks');
   const a=d.agent, ans=d.answers;
   body.innerHTML=
-    `<div class="heroc" style="margin:2px 0 14px"><div><div class="hn">${esch(d.readable.perCheck)}</div><div class="hl">Cost per check</div></div></div>`
-    +`<div class="stats">${st(d.checks,'checks counted')}`
-      +(ans.triesPerAnswer!=null?st(ans.triesPerAnswer,'tries per answer'):'')
-      +(d.readable.perAnswer?st(d.readable.perAnswer,'cost per answer'):'')+`</div>`
+    `<div class="heroc" style="margin:2px 0 14px"><div><div class="hn">${esch(d.readable.perCheck)}</div><div class="hl">Cost per check</div>`
+      +`<div class="trend dn">${esch(checks(d.checks))}</div></div></div>`
+    +`<div class="stats">`
+      +(ans.triesPerAnswer!=null?well(ans.triesPerAnswer,'tries per answer'):'')
+      +(d.readable.perAnswer?well(d.readable.perAnswer,'cost per answer'):'')+`</div>`
     +`<div class="k-eyebrow">What happened</div>`
     +d.byOutcome.map(s=>row(s.icon?statusIcon(s.icon,s.color,22):'',s.label,checks(s.checks),s.perCheck,s.color)).join('')
     +`<div class="k-eyebrow">How we got in</div>`
