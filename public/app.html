@@ -1900,9 +1900,7 @@ function openSheet(title,sub,body){
   // Same sequence as sheetBodyLock() in checkit.html: show, wait two frames, nudge, THEN lock.
   requestAnimationFrame(()=>{ document.body.classList.add('sheetopen'); sh.classList.add('on');
     requestAnimationFrame(()=>{ pokeChrome();
-      // one more frame before locking: pokeChrome scrolls 1px and scrolls BACK on the next frame, and
-      // locking in between would strand the page 1px off for as long as the sheet is open.
-      requestAnimationFrame(()=>{ document.documentElement.style.overflow='hidden'; document.body.style.overflow='hidden'; }); }); });
+      document.documentElement.style.overflow='hidden'; document.body.style.overflow='hidden'; }); });
   try{ setTimeout(decorateChrome,20); }catch(_){}
 }
 function _restoreBorrow(){ if(!_sheetBorrow) return; const b=_sheetBorrow; _sheetBorrow=null; if(b.home){ if(b.next) b.home.insertBefore(b.node,b.next); else b.home.appendChild(b.node); } }
@@ -1978,11 +1976,15 @@ function showGroup(g, sectionId){
 }
 // Designed empty state (site pattern 5.15): dashed panel, tinted icon, short headline, one gray line.
 function emptyState(ico,tint,title,sub,lucide){ return `<div class="empty"><span class="em-ic" style="background:${tint}1f">${lucide?lucideSvg(ico,21,tint):ICO(ico,21,tint,2)}</span><div class="em-t">${esch(title)}</div><div class="em-s">${esch(sub)}</div></div>`; }
-function pokeChrome(){
-  try{ if(document.activeElement&&document.activeElement.blur) document.activeElement.blur(); }catch(_){ }
-  try{ const de=document.documentElement; const cur=getComputedStyle(de).backgroundColor; de.style.backgroundColor=cur; void de.offsetHeight; requestAnimationFrame(()=>{ de.style.backgroundColor=''; }); }catch(_){ }
-  try{ const y=window.scrollY; window.scrollTo(0,y+1); requestAnimationFrame(()=>window.scrollTo(0,y)); }catch(_){ }
-}
+// The re-snapshot, byte for byte the site's sheetGlassNudge. A real document scroll is the ONLY thing
+// that makes iOS re-take the image it blurs behind the bars, and it must be JUST that.
+// This used to also re-stamp the ROOT background-color inline. That is the documented poison: touching
+// the root colour makes iOS re-sample the ROOT (#1D1D22, the dark page grey) for the bar strip instead
+// of ghosting what is actually on screen (the sheet, #26262B), which is the dark band the owner saw on
+// 07-28. The site never touches the root colour, and qa-admin-glass has asserted that for months.
+// Both scrolls stay SYNCHRONOUS: with a frame between them the scroll-back can land after the scroll
+// lock and strand the page 1px off.
+function pokeChrome(){ try{ const y=window.scrollY||0; window.scrollTo(0,y+1); window.scrollTo(0,y); }catch(_){ } }
 function showSection(id, fromGroup){
   const g=SECTION_GROUP[id]; if(!g) return;
   if(!fromGroup && g!==CUR_GROUP){ showGroup(g, id); return; }

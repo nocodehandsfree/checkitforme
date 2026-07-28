@@ -63,6 +63,14 @@ has(/_restoreSheetLayout[\s\S]{0,400}?pokeChrome\(\)/,
     ? ok("openSheet nudges BEFORE locking scroll")
     : no("openSheet nudges BEFORE locking scroll");
 })();
+// 13. The nudge must be a SCROLL AND NOTHING ELSE. pokeChrome used to also re-stamp the root
+//     background-color inline; that makes iOS re-sample the ROOT grey for the bar strip instead of
+//     ghosting the sheet on screen, which is exactly the dark band the owner reported (07-28). Check 10
+//     below only caught the CSS form of this, so the JS form sat there unnoticed.
+absent(/documentElement[\s\S]{0,80}?style\.backgroundColor\s*=/, 
+  "the nudge never re-stamps the root background-color (JS form)");
+absent(/function pokeChrome[\s\S]{0,300}?\.blur\(\)/,
+  "the nudge does not blur focus (site parity: scroll only)");
 // 10. Root colour is NEVER recolored in-page on sheet open (iOS re-samples root → poison).
 absent(/:has\([^)]*\.sheet[^)]*\)[^{]*\{[^}]*background/i,
   "root colour never recolored on sheet open");
