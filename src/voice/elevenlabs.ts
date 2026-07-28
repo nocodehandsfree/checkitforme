@@ -17,7 +17,7 @@ import type {
   StartCallResult,
   VoiceProvider,
 } from "./provider";
-import { PREMIUM_FOLLOWUP, FREE_NO_FOLLOWUP, ASK_SHIPMENT_DAY, SOFT_TIMEOUT_FALLBACK } from "./prompts";
+import { PREMIUM_FOLLOWUP, FREE_NO_FOLLOWUP, ASK_SHIPMENT_DAY, SOFT_TIMEOUT_FALLBACK, oneTurnFollowup, oneTurnShipmentDay } from "./prompts";
 import { assertCallsEnabled } from "../config";
 
 export interface ElevenLabsConfig {
@@ -64,12 +64,15 @@ export class ElevenLabsProvider implements VoiceProvider {
             personality: p.personalityTone ?? "",
             opening_line: p.openingLine ?? "",
             other_categories: (p.otherCategories ?? []).join(", "),
-            ask_shipment_day: p.askShipmentDay ? ASK_SHIPMENT_DAY : "",
+            // ONE QUESTION, THEN WRAP: a workflow that folds the set and the format into a single
+            // question replaces BOTH follow-up instructions with its own wording. Same data the
+            // recorded-clip lane reads, so the two lanes cannot ask a different number of questions.
+            ask_shipment_day: p.askShipmentDay ? (p.foldedQuestions ? oneTurnShipmentDay(p.foldedQuestions.no) : ASK_SHIPMENT_DAY) : "",
             // Kiosk-only store: the prompt branches on this to ask about the vending kiosk
             // (working/stocked) instead of a shelf shipment. "" = normal shelf check.
             kiosk_mode: p.kioskMode ? "true" : "",
             // Premium gate: subscribers' calls ask the product-type follow-up; free calls end fast.
-            premium_followup: p.premiumFollowup === false ? FREE_NO_FOLLOWUP : PREMIUM_FOLLOWUP,
+            premium_followup: p.premiumFollowup === false ? FREE_NO_FOLLOWUP : (p.foldedQuestions ? oneTurnFollowup(p.foldedQuestions.set) : PREMIUM_FOLLOWUP),
           },
         },
       }),

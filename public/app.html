@@ -1350,13 +1350,7 @@
       <select id="set_chain" onchange="setPickChain()" style="display:none"><option value="">Select a chain</option></select>
       <div id="set_picker"><div class="empty">Loading…</div></div>
       <button class="k-key" id="set_more" onclick="chainsShowMore()" style="display:none">SHOW MORE</button>
-      <!-- Reference, not content — demoted to a footnote at the very bottom of the list. -->
-      <button class="peek" style="margin-top:20px" onclick="sheetFromHolder('ds_abcd','How a call flows','Alpha keypad · Bravo voice menu · Charlie live agent · Delta recorded clips')">
-        <div class="pk-main"><div class="pk-t">How a call flows</div><div class="pk-m">Alpha · Bravo · Charlie · Delta</div></div>
-        <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-      </button>
     </div>
-    <div id="trees_details" style="display:none"><div id="ds_abcd"><div id="abcd_flow"></div></div></div>
     <!-- CHAIN DETAIL (comp 2f): the phone menu is the page. Vitals, then the step ladder, then every
          settings card folded into a peek row. Picking a chain REPLACES the list, so nobody scrolls
          past 131 rows to get back to the menu they just opened. "All chains" walks back. -->
@@ -1413,22 +1407,22 @@
            RECIPE on top, and everything behind it in four sheets: the whole menu, every round of
            calls, the versions we have held (nothing is ever deleted), and anything needing a look. -->
       <div class="k-eyebrow" style="margin-top:24px">Mapping</div>
-      <button class="peek" onclick="sheetFromHolder('ds_setmenu','Menu','Every line the store plays, and what we say back.')">
+      <button class="peek" onclick="sheetFromHolder('ds_setmenu','Menu','')">
         <div class="pk-main"><div class="pk-t">Menu</div></div>
         <div class="pk-fact" id="pk_setmenu"></div>
         <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
-      <button class="peek" onclick="sheetFromHolder('ds_setruns','Calls','Every call we placed to learn this menu, newest first.')">
+      <button class="peek" onclick="sheetFromHolder('ds_setruns','Calls','')">
         <div class="pk-main"><div class="pk-t">Calls</div></div>
         <div class="pk-fact" id="pk_setruns"></div>
         <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
-      <button class="peek" onclick="sheetFromHolder('ds_setver','Versions','Every recipe we have held for this chain. Nothing is deleted.')">
+      <button class="peek" onclick="sheetFromHolder('ds_setver','Versions','')">
         <div class="pk-main"><div class="pk-t">Versions</div></div>
         <div class="pk-fact" id="pk_setver"></div>
         <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
-      <button class="peek" id="set_reviewrow" style="display:none" onclick="sheetFromHolder('ds_setreview','Review','Things the mapper flagged on this chain.')">
+      <button class="peek" id="set_reviewrow" style="display:none" onclick="sheetFromHolder('ds_setreview','Review','')">
         <div class="pk-main"><div class="pk-t">Review</div></div>
         <div class="pk-fact" id="pk_setreview"></div>
         <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
@@ -1445,9 +1439,9 @@
              online / stock-verified toggles (ssStoreBulk) exist ONLY here. Hiding them took away the
              only way to manage them. Check before you cut. -->
         <div id="ds_setall">
-          <div class="k-eyebrow" style="margin:0 0 10px">Store</div><div id="set_store"></div>
-          <div class="k-eyebrow" style="margin:22px 0 10px">Data</div><div id="set_data"></div>
-          <div class="k-eyebrow" style="margin:22px 0 10px">Calls</div><div id="set_call"></div>
+          <div class="k-eyebrow" style="margin:0 0 12px">Chain</div><div id="set_store"></div>
+          <div class="k-eyebrow" style="margin:26px 0 12px">Stock</div><div id="set_data"></div>
+          <div class="k-eyebrow" style="margin:26px 0 12px">Calls</div><div id="set_call"></div>
         </div>
         <div id="ds_setruns"><div id="set_runs"></div></div>
         <div id="ds_setmenu"><div id="set_menu"></div></div>
@@ -2196,29 +2190,10 @@ async function loadTrainer(){
   // Owner 07-27: the "Stores mapped by rating" bars are cut. Five bars of a number nobody acts on,
   // sitting above the list, and mostly reading "No ratings yet". The list itself says what is mapped.
   ss.innerHTML='';
-  renderABCD(d.chains);
 }
 // ABCD — how a call flows: Alpha (keypad) / Bravo (voice) / Charlie (live agent) / Delta (recorded clips).
 // Nav counts reuse the locked-recipe navType (keypad→Alpha, voice→Bravo, direct→Charlie); Delta is the
 // recorded-agent rehearsal lane (not a navType yet).
-function renderABCD(ch){
-  ch=Array.isArray(ch)?ch:[];
-  const el=document.getElementById('abcd_flow'); if(!el) return;
-  const lock=t=>ch.filter(c=>c.navStatus==='locked'&&c.navType===t).length;
-  const lanes=[
-    ['A','Alpha','#60a5fa','Presses digits through a phone menu. Locked recipe, zero AI.','~$0 nav',lock('keypad')+' chains'],
-    ['B','Bravo','#F4D03F','Says the menu words to navigate. Locked recipe, zero AI.','~$0 nav',lock('voice')+' chains'],
-    ['C','Charlie','#4ADE80','A real agent joins the moment a human answers and does the talking.','~5¢/check',lock('direct')+' ring direct'],
-    ['D','Delta','#a78bfa','Runs the whole talk on pre-recorded clips + a cheap classifier; escalates to Charlie only off-script.','~2.5¢/check','rehearsal'],
-  ];
-  el.innerHTML='<div class="meta" style="text-transform:none;margin-bottom:10px">Dial → <b>navigate</b> the menu (Alpha keypad / Bravo voice, via the locked recipe) → <b>human</b> → <b>Charlie</b> or <b>Delta</b> handles the conversation.</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
-    +lanes.map(L=>`<div style="background:var(--surface-1);border:none;border-left:3px solid ${L[2]};border-radius:10px;padding:10px 11px">
-      <div style="display:flex;align-items:baseline;gap:7px"><span style="font-weight:800;color:${L[2]}">${L[0]}</span><span style="font-weight:700;font-size:13.5px">${L[1]}</span><span class="meta" style="margin-left:auto;font-size:10.5px">${L[4]}</span></div>
-      <div class="meta" style="font-size:11.5px;margin-top:4px;text-transform:none">${L[3]}</div>
-      <div class="meta" style="font-size:10.5px;margin-top:5px">${L[5]}</div>
-    </div>`).join('')+'</div>';
-}
 // Expandable per-chain call log: every learner run with its Alpha/Bravo/Charlie path + the step matrix.
 async function loadRuns(chainId, box){
   if(!box||!chainId) return;
@@ -4395,7 +4370,9 @@ function ssRenderStore(){
   // CLEAR-ONLY (a blanket "kiosk ON" would falsely mark every store a kiosk → all tier-5 + Kiosk tab).
   const maj=k=>SS['c'+k]>SS.storesN/2;
   const tog=(on,onclick)=>`<button type="button" onclick="${onclick}" style="width:48px;padding:5px;border-radius:8px;border:1px solid ${on?'var(--green)':'var(--border)'};background:${on?'rgba(74,222,128,.14)':'var(--surface-1)'};color:${on?'var(--green)':'var(--text-muted)'};font-weight:700;cursor:pointer;font-size:12.5px">${on?'ON':'OFF'}</button>`;
-  const row=(lbl,tip,cnt,ctrl)=>`<div class="setrow"><div class="setlbl">${lbl} <span data-tip="${esch(tip)}"></span></div><div class="row" style="gap:10px;align-items:center"><span class="meta" style="font-size:10.5px">${cnt}/${SS.storesN}</span>${ctrl}</div></div>`;
+  // "7523/7523" is a database fraction, not something a person reads. Say how many stores, in words.
+  const howMany=c=>{ const n=SS.storesN||0; if(!n) return ''; if(c>=n) return 'All '+n.toLocaleString(); if(!c) return 'None'; return c.toLocaleString()+' of '+n.toLocaleString(); };
+  const row=(lbl,tip,cnt,ctrl)=>`<div class="setrow"><div class="setlbl">${lbl} <span data-tip="${esch(tip)}"></span></div><div class="row" style="gap:10px;align-items:center"><span class="meta" style="font-size:10.5px">${howMany(cnt)}</span>${ctrl}</div></div>`;
   el.innerHTML=
     `<div style="font-size:13px;color:var(--text-muted);margin:2px 0 7px">Status</div>`
     +(SS.repack?`<div class="row" style="gap:8px;align-items:center;margin-bottom:9px"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#FBBF24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.4);border-radius:20px;padding:3px 11px">${ssDot('#FBBF24')}Repack-only</span><button class="ghost" onclick="ssClearRepack()" style="font-size:12.5px;padding:5px 10px">Clear</button></div>`:'')
@@ -4503,15 +4480,15 @@ function pickChainRow(id){
 // Store Data: store FACTS (chain fields) — its OWN Save (isMSRP / stock-check confidence / sell methods).
 function ssRenderData(){
   const el=document.getElementById('set_data'); if(!el||!SS) return;
-  const sccOpts=[['','—'],['confirmed','confirmed'],['probable','probable']];
-  const scmOpts=[['','—'],['site','site · read the website'],['call','call · phone the store']];
+  const sccOpts=[['','Not set'],['confirmed','Confirmed'],['probable','Probable']];
+  const scmOpts=[['','Not set'],['site','Read the website'],['call','Phone the store']];
   el.innerHTML=
-    `<div class="row" style="gap:7px;align-items:center;margin:2px 0 16px"><label style="display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;color:var(--text-body)"><input type="checkbox" id="set_msrp" ${SS.isMSRP?'checked':''}> Sells at MSRP (the store's own shelf)</label><span data-tip="We price the store's own shelf at retail. Not a reseller that may mark it up."></span></div>`
-    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Stock-check method <span data-tip="How we check this chain's stock. Read their website (site) or phone the store (call)."></span></div>`
+    `<div class="row" style="gap:7px;align-items:center;margin:2px 0 16px"><label style="display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;color:var(--text-body)"><input type="checkbox" id="set_msrp" ${SS.isMSRP?'checked':''}> Sells at MSRP</label><span data-tip="We price the store's own shelf at retail. Not a reseller that may mark it up."></span></div>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">How we check <span data-tip="Read the chain website, or phone the store."></span></div>`
     +`<select id="set_scm" style="margin-bottom:16px">${scmOpts.map(([v,l])=>`<option value="${v}"${(SS.scm||'')===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
-    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Stock-check confidence <span data-tip="How sure we are it carries: confirmed (seen/called) vs probable (expected, unverified)."></span></div>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">How sure we are <span data-tip="Confirmed means somebody saw it or called. Probable means we expect it but have not checked."></span></div>`
     +`<select id="set_scc" style="margin-bottom:16px">${sccOpts.map(([v,l])=>`<option value="${v}"${(SS.scc||'')===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
-    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Sell methods <span data-tip="Ways to get it (comma-separated): in_store, pickup, ship."></span></div>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Ways to buy <span data-tip="Comma separated. In store, pickup, ship."></span></div>`
     +`<input id="set_sell" value="${esch(SS.sellMethods)}" placeholder="in_store,pickup,ship" style="margin-bottom:16px">`
     +`<div class="row" style="gap:12px;align-items:center"><button class="act" onclick="ssSaveData()">Save</button><span class="meta" id="set_datamsg"></span></div>`;
 }
@@ -4597,7 +4574,7 @@ async function renderChainSheets(ch,nav){
 
   // MENU — every line the store plays and what we say back, on one timeline.
   const tl=menuTimeline(active,nav), mw=document.getElementById('set_menu');
-  set('pk_setmenu', tl?String(tl.rows.filter(r=>r.who!=='us').length)+' lines':'');
+  set('pk_setmenu', tl?String(tl.rows.filter(r=>r.who!=='us').length)+' steps':'');
   if(mw) mw.innerHTML = tl ? menuLadder(tl.rows)
     +`<div class="meta" style="margin-top:10px;text-transform:none;letter-spacing:0;line-height:1.5">Heard on a call to ${esch(tl.call.storeName||'a store')}${tl.call.day?', '+esch(tl.call.day):''}.</div>`
     : '<div class="empty">No call has recorded this menu yet. Tap Re-map to place one.</div>';
@@ -4612,7 +4589,7 @@ async function renderChainSheets(ch,nav){
         <span class="name" style="font-size:13.5px">${esch(c.storeName||'A store')}</span>
         <span class="meta" style="margin-left:auto">${esch(c.day||'')}</span></div>
       <div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">
-        ${c.reachedHuman?'<span style="color:var(--green)">Reached Staff</span>':'<span style="color:var(--muted)">Reached nobody</span>'}${c.seconds!=null?' \u00b7 '+c.seconds+'s':''}${(c.transcript||[]).length?' \u00b7 '+c.transcript.length+' lines heard':''}
+        ${c.reachedHuman?'<span style="color:var(--green)">Reached Staff</span>':'<span style="color:var(--muted)">Reached nobody</span>'}${c.seconds!=null?' \u00b7 '+c.seconds+'s':''}${(c.transcript||[]).length?' \u00b7 '+c.transcript.length+' steps heard':''}
       </div>
       ${c.path?`<div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">We tried: ${esch(String(c.path).replace(/say:/g,'say ').replace(/press:/g,'press ').replace(/>/g,' \u2192 '))}</div>`:''}
       ${(c.transcript||[]).length?`<div style="margin-top:10px">${menuLadder(((c.transcript||[]).map(t=>{const m=String(t).match(/^\s*(\d+)s\s+([\s\S]*)$/);return {at:m?Number(m[1]):null,who:'store',text:(m?m[2]:String(t)).trim()};})))}</div>`:''}
@@ -4624,10 +4601,11 @@ async function renderChainSheets(ch,nav){
   if(vw) vw.innerHTML = versions.length ? versions.slice().sort((a,b)=>(b.version||0)-(a.version||0)).map(v=>{
     const S={active:['var(--green)','Live'],proposed:['#F59E0B','Waiting for you'],retired:['var(--text-muted)','Retired'],rejected:['var(--text-muted)','Set aside']}[v.status]||['var(--muted)',v.status];
     return `<div class="card" style="margin:0 0 10px">
-      <div class="row" style="align-items:center;gap:8px"><span class="name">Recipe ${v.version}</span>
+      <div class="row" style="align-items:center;gap:8px"><span class="name">${esch(versionName(v))}</span>
+        <span class="meta">${esch(versionWhen(v))}</span>
         <span style="margin-left:auto;font-size:10.5px;font-weight:700;color:${S[0]}">${esch(S[1])}</span></div>
-      <div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(v.summary||'')}</div>
-      <div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${v.seconds!=null?v.seconds+'s to Staff':''}${v.confidenceLabel&&v.confidenceLabel!=='unknown'?` \u00b7 <span style="color:${confColor(v.confidenceLabel)}">${esch(v.confidenceLabel)}</span>`:''}${v.why?' \u00b7 '+esch(whyWords(v.why)):''}</div>
+      <div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(routeWords(v))}</div>
+      <div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${v.seconds!=null?v.seconds+'s to Staff':''}${v.confidenceLabel&&v.confidenceLabel!=='unknown'?` \u00b7 <span style="color:${confColor(v.confidenceLabel)}">${esch(cap(v.confidenceLabel))}</span>`:''}</div>
       ${v.status==='proposed'?`<div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap"><button class="act" onclick="closeSheet();mapApprove(${v.id},${ch.id})">Use it</button><button class="ghost" onclick="closeSheet();mapReject(${v.id},${ch.id})">Keep current</button></div>`:''}
     </div>`;
   }).join('') : '<div class="empty">No recipes saved yet.</div>';
@@ -4637,6 +4615,22 @@ async function renderChainSheets(ch,nav){
   const rr=document.getElementById('set_reviewrow'); if(rr) rr.style.display=unknowns.length?'':'none';
   const uw=document.getElementById('set_review');
   if(uw) uw.innerHTML = unknowns.length ? unknowns.map(u=>mapUnknownCard(u,ch.id)).join('') : '';
+}
+const cap=t=>{ t=String(t||''); return t?t[0].toUpperCase()+t.slice(1):''; };
+// A chain recipe is the chain's. A store recipe belongs to ONE store, so it is named after that
+// store: two rows both reading "Recipe 1" (the chain's and one store's) told the owner nothing.
+const versionWhen=v=>v.createdAt?new Date(v.createdAt*1000).toLocaleDateString([],{month:'short',day:'numeric'}):'';
+function versionName(v){
+  if(v.storeId){ const c=((v.evidence&&v.evidence.calls)||[]).find(x=>x.storeName); return c&&c.storeName?c.storeName:'One store'; }
+  return 'Recipe '+v.version;
+}
+// The route in plain words, built from the steps. NEVER the mapper's own summary: that is engineer
+// shorthand written for engineers, and it carries the dashes the copy guide bans outright.
+function routeWords(v){
+  const st=((v.recipe&&v.recipe.steps)||[]);
+  if(!st.length) return v.navType==='direct'?'Staff answers, no menu':'No steps recorded';
+  const w=st.map(x=>x.action==='press'?`press ${x.value}`:x.action==='wait'?'wait':`say "${x.value}"`).join(', then ');
+  return w?w[0].toUpperCase()+w.slice(1):'';
 }
 // One ladder, used by the Menu sheet and by each round. STORE is the recording, WE is us, STAFF is
 // the person who picked up.
@@ -4657,13 +4651,14 @@ function menuLadder(rows){
       </div></div>`;
   }).join('')+`</div>`;
 }
+const plainText=t=>String(t||'').replace(/\s*—\s*/g,'. ').replace(/\s+-\s+/g,'. ').replace(/\.\s*\./g,'.');
 const whyWords=s=>String(s||'').replace(/(\d+)\s+(\w+?)\(s\)/g,(m,n,w)=>n+' '+w+(Number(n)===1?'':'s'));
 const UNKNOWN_WHAT={
   'hammer-route':'The recipe just presses the same key over and over',
   'unproven-direct':'We claim Staff answers straight away, but no call has proved it',
   'route-changed':'The menu changed since we learned it',
   'drift':'The menu is drifting from what we learned',
-  'store-exception':'One store went its own way',
+  'store-exception':'One store needs its own recipe',
   'route-failing':'This recipe keeps reaching nobody',
   'greeting-not-direct':'A recording answers, not Staff',
   'not-shared':'This recipe is not shared with the chain',
@@ -4671,7 +4666,7 @@ const UNKNOWN_WHAT={
 function mapUnknownCard(u,chainId){
   return `<div class="card" style="margin:0 0 10px">
     <div class="name" style="font-size:13.5px">${esch(UNKNOWN_WHAT[u.kind]||String(u.kind||'').replace(/-/g,' '))}</div>
-    ${u.prompt?`<div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(u.prompt)}</div>`:''}
+    ${(!UNKNOWN_WHAT[u.kind]&&u.prompt)?`<div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(plainText(u.prompt))}</div>`:''}
     <div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${u.count>1?'Seen '+u.count+' times':'Seen once'}${u.firstSeen?' \u00b7 first on '+new Date(u.firstSeen*1000).toLocaleDateString([],{month:'short',day:'numeric'}):''}</div>
     <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
       <button class="act" onclick="mapUnknown(${u.id},'resolved',${chainId})">Fixed</button>
@@ -5866,28 +5861,59 @@ function wfmSeedDelta(w){
   if(!w||(w.lane||'charlie')!=='delta') return false;
   if(!w.followups||typeof w.followups!=='object') w.followups={};
   let seeded=false;
-  for(const [slot] of DELTA_FU_SLOTS){ if(!Array.isArray(w.followups[slot])||!w.followups[slot].length){ w.followups[slot]=DELTA_FU_DEFAULTS[slot].slice(); seeded=true; } }
+  // An EMPTY list that is already there is a DECLARATION ("this question is folded into the one above"),
+  // not a missing value. Refilling it silently turned a one question workflow back into a two question
+  // one on the next save, which is exactly the bug the owner heard on a real call.
+  for(const [slot] of DELTA_FU_SLOTS){ if(!Array.isArray(w.followups[slot])){ w.followups[slot]=DELTA_FU_DEFAULTS[slot].slice(); seeded=true; } }
   return seeded;
 }
 function wfmFu(w,slot){ const f=w&&w.followups&&w.followups[slot]; return (Array.isArray(f)&&f.length)?f:DELTA_FU_DEFAULTS[slot]||[]; }
 // Each variant gets its OWN row (owner 07-15: one big box read like one long speech). A slot's rows
 // are different ways to say the SAME line; the call picks the next row each call, like the openers.
-function wfmDeltaEditor(wi,w){ if((w.lane||'charlie')!=='delta') return '';
+// THE LIVE AGENT ASKS THESE TOO (owner 07-28). Until now only the recorded-clip workflows could set
+// their follow-up wording, so a live-agent store was stuck on the built-in two question flow and the
+// owner heard it ask twice on a real Fun store call. Same two boxes, same save path; a live-agent
+// workflow that has them set asks ONE of them and wraps.
+const CHARLIE_FU_SLOTS=[
+  ['set','When they HAVE it'],
+  ['no','When they DON’T have it']
+];
+function wfmDeltaEditor(wi,w){
+  const charlie=(w.lane||'charlie')!=='delta';
   const box=([slot,label])=>{
-    const rows=wfmFu(w,slot).map((t,vi)=>`<div class="wfmop"><textarea rows="1" oninput="wfmGrow(this)" onchange="wfmEditFu(${wi},'${slot}',${vi},this.value)">${esch(t)}</textarea><button class="ghost opdel" onclick="wfmDelFu(${wi},'${slot}',${vi})" title="Remove">${lucideSvg('x',14,'currentColor')}</button></div>`).join('');
+    // A recorded workflow always PLAYS a line, so an unset slot shows the built-in it will use. A live
+    // agent with nothing set is still on the old two question flow, so showing a built-in here would
+    // claim a script that is not running. Empty stays empty.
+    const cur=charlie ? ((w&&w.followups&&Array.isArray(w.followups[slot]))?w.followups[slot]:[]) : wfmFu(w,slot);
+    const rows=cur.map((t,vi)=>`<div class="wfmop"><textarea rows="1" oninput="wfmGrow(this)" onchange="wfmEditFu(${wi},'${slot}',${vi},this.value)">${esch(t)}</textarea><button class="ghost opdel" onclick="wfmDelFu(${wi},'${slot}',${vi})" title="Remove">${lucideSvg('x',14,'currentColor')}</button></div>`).join('');
     return `<div style="margin-top:14px"><span class="meta" style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--text-strong)">${label}</span>
       <div class="wfmops">${rows}
       <div class="wfmadd"><input id="wfmfu_${wi}_${slot}" placeholder="Add another way to say it" onkeydown="if(event.key==='Enter')wfmAddFu(${wi},'${slot}')"><button class="act" onclick="wfmAddFu(${wi},'${slot}')">Add</button></div></div></div>`;
   };
+  const head=charlie
+    ? `<label>The two questions it asks <span data-tip="It asks ONE of these, takes whatever it gets, then says goodbye."></span></label>
+       <div class="meta" style="margin:4px 0 2px">One question, then it wraps. It never asks a second one, even on half an answer. Leave both empty to go back to the old two question flow. {category} fills in.</div>`
+    : `<label>Delta lines · everything a call can say <span data-tip="These ARE the recorded clips. {category} fills in."></span></label>
+       <div class="meta" style="margin:4px 0 2px">Each row under a heading is a different way to say that ONE line. A call picks the next row each time, same as the openers. Keep one row to always say the same thing.</div>`;
   return `<div class="wfmmeta" style="grid-template-columns:1fr;border-top:1px dashed var(--border);margin-top:2px;padding-top:12px">
-    <div><label>Delta lines · everything a call can say <span data-tip="These ARE the recorded clips. {category} fills in."></span></label>
-    <div class="meta" style="margin:4px 0 2px">Each row under a heading is a different way to say that ONE line. A call picks the next row each time, same as the openers. Keep one row to always say the same thing.</div>
-    ${DELTA_FU_SLOTS.map(box).join('')}
+    <div>${head}
+    ${(charlie?CHARLIE_FU_SLOTS:DELTA_FU_SLOTS).map(box).join('')}
     </div></div>`;
 }
-async function wfmAddFu(wi,slot){ const inp=document.getElementById(`wfmfu_${wi}_${slot}`); const t=((inp&&inp.value)||'').trim(); if(!t) return; const w=WF.list[wi]; if(!w) return; if(!w.followups||typeof w.followups!=='object') w.followups={}; if(!Array.isArray(w.followups[slot])||!w.followups[slot].length) w.followups[slot]=(DELTA_FU_DEFAULTS[slot]||[]).slice(); w.followups[slot].push(t); renderWorkflowMgr(); await wfmSaveList(); toast('Added · rotates with the others'); }
-async function wfmDelFu(wi,slot,vi){ const w=WF.list[wi]; if(!w||!w.followups||!Array.isArray(w.followups[slot])) return; w.followups[slot].splice(vi,1); const restored=!w.followups[slot].length; if(restored) w.followups[slot]=(DELTA_FU_DEFAULTS[slot]||[]).slice(); renderWorkflowMgr(); await wfmSaveList(); toast(restored?'Last one removed · built-in line restored':'Removed'); }
-async function wfmEditFu(wi,slot,vi,text){ const w=WF.list[wi]; if(!w||!w.followups||!Array.isArray(w.followups[slot])) return; const t=(text||'').trim(); if(!t) return wfmDelFu(wi,slot,vi); w.followups[slot][vi]=t; await wfmSaveList(); }
+// A live-agent workflow declares the one-question fold the same way a recorded one does: by shipping
+// an EMPTY type list. Called whenever its questions are touched, so the fold is never half-declared.
+function wfmDeclareFold(w){ if(!w||(w.lane||'charlie')==='delta') return; if(!w.followups||typeof w.followups!=='object') w.followups={}; w.followups.type=[]; }
+async function wfmAddFu(wi,slot){ const inp=document.getElementById(`wfmfu_${wi}_${slot}`); const t=((inp&&inp.value)||'').trim(); if(!t) return; const w=WF.list[wi]; if(!w) return; const charlie=(w.lane||'charlie')!=='delta'; if(!w.followups||typeof w.followups!=='object') w.followups={};
+  // Seeding the built-ins first is right for a recorded workflow (every clip must exist) and wrong for
+  // a live agent, where it would silently add back the two question wording he just replaced.
+  if(!Array.isArray(w.followups[slot])||(!w.followups[slot].length&&!charlie)) w.followups[slot]=charlie?[]:(DELTA_FU_DEFAULTS[slot]||[]).slice();
+  w.followups[slot].push(t); wfmDeclareFold(w); renderWorkflowMgr(); await wfmSaveList(); toast('Added · rotates with the others'); }
+async function wfmDelFu(wi,slot,vi){ const w=WF.list[wi]; if(!w||!w.followups||!Array.isArray(w.followups[slot])) return; const charlie=(w.lane||'charlie')!=='delta'; w.followups[slot].splice(vi,1);
+  // Emptying a live agent's question means "stop asking it", not "put the built in back". Restoring a
+  // default here is how a deliberately removed question comes back to life on the next call.
+  const restored=!w.followups[slot].length&&!charlie; if(restored) w.followups[slot]=(DELTA_FU_DEFAULTS[slot]||[]).slice();
+  renderWorkflowMgr(); await wfmSaveList(); toast(restored?'Last one removed · built-in line restored':'Removed'); }
+async function wfmEditFu(wi,slot,vi,text){ const w=WF.list[wi]; if(!w||!w.followups||!Array.isArray(w.followups[slot])) return; const t=(text||'').trim(); if(!t) return wfmDelFu(wi,slot,vi); w.followups[slot][vi]=t; wfmDeclareFold(w); await wfmSaveList(); }
 async function wfmClone(wi){ const w=WF.list[wi]; if(!w) return; const name=(prompt('Name for the cloned workflow:', w.name+' copy')||'').trim(); if(!name) return; if(WF.list.some(x=>x.name===name)){ toast('A workflow named “'+name+'” already exists'); return; } const copy=JSON.parse(JSON.stringify(w)); copy.name=name; copy.savedAt=Date.now(); WF.list.push(copy); renderWorkflowMgr(); await wfmSaveList(); toast('Cloned as “'+name+'” · edit then assign'); }
 // ---- Round-trip: open an existing workflow back in the Designer (the only place to tweak tuning) ----
 let EDIT_TARGET=null; // a workflow staged to load into the Designer once its async loaders settle

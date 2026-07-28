@@ -124,6 +124,32 @@ The instant you know yes or no, wrap in ONE line and end the call immediately â€
 export const ASK_SHIPMENT_DAY = `If they are out of it, sold out, or don't have it right now, warmly ask when they expect their next shipment or restock, e.g. "ah okay, no worries, any idea when you might get more in?". This INCLUDES when they volunteer that more is coming ("we're getting a restock soon", "we should have more this week"): don't just accept "soon", ask once for the specific day, e.g. "oh nice, any idea what day that usually lands?". Keep it to that ONE quick question, take whatever they give you, then wrap up.`;
 
 export const PREMIUM_FOLLOWUP = `If they ALREADY named BOTH the set AND the product type in their answer (e.g. "yeah, the Ascended Heroes tin", "just the 151 booster boxes"), you already have it, so warmly acknowledge ("oh perfect, thank you so much") and END the call. Otherwise ask about the SET FIRST, in one short line. Put the QUESTION first and the example AFTER it, as its own little tag, so it reads as one smooth question and not a list (owner 07-18): "oh nice, do you know the name of the set? Like Chaos Rising?". If they seem confused by "set" ("what do you mean?"), clarify with the example: "like the name on the pack, Chaos Rising or one of the others". AFTER they answer the set, ask the product type, kept SHORT and fast so it flows as one breath (owner 07-18, do not ramp through a long list): "does that come in a pack? or like a box?". Always ask the SET before the product type. Ask only for a piece they have NOT already given, and NEVER re-ask something they already said. One short question at a time. If they DON'T know the set ("not sure", "no idea"), do NOT give up yet: go straight to the product type, short and easy: "no worries, are they packs, or a box or tin?". If they don't know the product type either, instantly "no worries, thank you so much, have a good one" and END. Keep it to these two quick questions at most, then end_call. Do NOT wait in silence.`;
+/**
+ * ONE QUESTION, THEN WRAP (owner 07-28). The two constants above are the OLD two question flow and
+ * stay exactly as they are. A workflow may instead fold the set and the format into a single
+ * question, and when it does the agent is handed these instead.
+ *
+ * Why it matters more than it looks: every extra turn is six to ten seconds with the meter running,
+ * so dropping one is the cheapest saving on the whole call. Half an answer is worth more than the
+ * seconds a follow up costs, which is why these say take whatever comes back and stop.
+ *
+ * The workflow's own DATA declares it (see declaresOneTurn in the recorded-clip lane), so the two
+ * lanes read ONE decision instead of two copies drifting apart. An empty question falls back to the
+ * old flow rather than shipping the agent a blank instruction.
+ */
+export function oneTurnFollowup(question: string): string {
+  const q = (question || "").trim();
+  if (!q) return PREMIUM_FOLLOWUP;
+  return `If they ALREADY named BOTH the set AND the product type in their answer (e.g. "yeah, the Ascended Heroes tin", "just the 151 booster boxes"), you already have it, so warmly acknowledge ("oh perfect, thank you so much") and END the call. Otherwise ask EXACTLY ONE question and say it WORD FOR WORD, exactly as written here, with nothing added and nothing dropped: "${q}". Do not shorten it, do not reword it, do not make it sound more natural. It is written the way it is on purpose. Then take whatever they give you, even when it answers only half of it, warmly wrap ("perfect, thank you so much, have a good one") and end_call. NEVER ask a second question. Do not split the set and the format into two asks, do not circle back for the piece they left out, do not ask them to repeat it. If they don't know at all, say "no worries, thank you so much, have a good one" and END. Do NOT wait in silence.`;
+}
+
+/** The same one question rule for a no / sold out. Fills {{ask_shipment_day}} on a folded workflow. */
+export function oneTurnShipmentDay(question: string): string {
+  const q = (question || "").trim();
+  if (!q) return ASK_SHIPMENT_DAY;
+  return `If they are out of it, sold out, or don't have it right now, ask EXACTLY ONE question and say it WORD FOR WORD, exactly as written here, with nothing added and nothing dropped: "${q}". Do not shorten it, do not reword it, do not make it sound more natural. Asking "when is your next shipment coming in" when the line asks for the DAY OR TIME loses half the answer, which is the whole reason it is written out. This INCLUDES when they volunteer that more is coming ("we're getting a restock soon", "we should have more this week"): ask it once rather than accepting "soon". Then take whatever they give you, warmly wrap and end_call. NEVER ask a second question and never ask them to narrow it down further.`;
+}
+
 /** Spoken fallback when the pause-filler feature is on and no custom line is set. Copy law: no dash. */
 export const SOFT_TIMEOUT_FALLBACK = "Yeah, hi, I'm here!";
 
