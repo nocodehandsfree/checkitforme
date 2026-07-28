@@ -295,6 +295,25 @@ check("12.3", "The provider's own transcription is not reintroduced", () =>
   (!/speechModel|input="speech"/.test(BRIDGE + PLACE)) || "speech recognition is back on the live path");
 // A LIVE SETTING, so it is checked against the live system rather than the source — with a token in
 // the environment this really can fail, and without one it says so instead of pretending.
+// THE JOINING AGENT MUST ACCEPT WHAT THE RUNTIME SENDS IT. It is a clone of the live agent, and a
+// clone made without platform_settings loses the allow-list of what a call may override. The runtime
+// sends a voice override on every workflow call, so the provider then refuses the WHOLE call at the
+// instant somebody picks up — "Override for field 'voice_id' is not allowed by config". That is
+// exactly what broke the owner's first live test, and it is invisible from the source.
+if (process.env.ELEVENLABS_API_KEY && process.env.ELEVENLABS_MIDCALL_AGENT_ID && process.env.ELEVENLABS_AGENT_ID
+    && process.env.ELEVENLABS_API_KEY !== "test") {
+  const get = async (id: string) => (await (await fetch(`https://api.elevenlabs.io/v1/convai/agents/${id}`,
+    { headers: { "xi-api-key": process.env.ELEVENLABS_API_KEY as string } })).json()) as Record<string, unknown>;
+  const tts = (a: Record<string, unknown>) => JSON.stringify(((((a.platform_settings as Record<string, unknown>)
+    ?.overrides as Record<string, unknown>)?.conversation_config_override as Record<string, unknown>)?.tts) ?? null);
+  const live = await get(process.env.ELEVENLABS_AGENT_ID);
+  const join = await get(process.env.ELEVENLABS_MIDCALL_AGENT_ID);
+  check("5.10", "The joining agent allows the same per-call overrides as the live agent", () =>
+    tts(live) === tts(join) || `live allows ${tts(live)} but the joining agent allows ${tts(join)} — a call using it is REFUSED`);
+} else {
+  phone("5.10", "The joining agent allows the same per-call overrides as the live agent", "re-run with the real ELEVENLABS_* env to check the live agents");
+}
+
 if (process.env.ADMIN_TOKEN && process.env.CHECK_HOST) {
   const r = await fetch(`${process.env.CHECK_HOST}/api/settings`, { headers: { "x-admin-token": process.env.ADMIN_TOKEN } });
   const st = await r.json() as Record<string, string>;

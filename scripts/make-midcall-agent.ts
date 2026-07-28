@@ -54,7 +54,14 @@ async function main() {
   cc.agent = agent;
 
   const name = `${String(src.name ?? "Check")} — joining mid call`;
-  const body = JSON.stringify({ name, conversation_config: cc });
+  // COPY platform_settings TOO, and this is not tidiness.
+  //
+  // It carries the ALLOW-LIST of what a call may override per-call, and the runtime sends a voice
+  // override on every workflow call. A clone created without it is refused by the provider with
+  // "Override for field 'voice_id' is not allowed by config" — which fails the WHOLE call, at the
+  // moment a real person has just picked up. That happened on the owner's first live test
+  // (2026-07-28) because the create call sent only conversation_config.
+  const body = JSON.stringify({ name, conversation_config: cc, platform_settings: src.platform_settings });
 
   if (!apply) {
     console.log(`WOULD ${existing ? `PATCH ${existing}` : "CREATE"}: ${name}`);
