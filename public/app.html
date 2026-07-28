@@ -1413,22 +1413,22 @@
            RECIPE on top, and everything behind it in four sheets: the whole menu, every round of
            calls, the versions we have held (nothing is ever deleted), and anything needing a look. -->
       <div class="k-eyebrow" style="margin-top:24px">Mapping</div>
-      <button class="peek" onclick="sheetFromHolder('ds_setmenu','Menu','Every line the store plays, and what we say back.')">
+      <button class="peek" onclick="sheetFromHolder('ds_setmenu','Menu','')">
         <div class="pk-main"><div class="pk-t">Menu</div></div>
         <div class="pk-fact" id="pk_setmenu"></div>
         <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
-      <button class="peek" onclick="sheetFromHolder('ds_setruns','Calls','Every call we placed to learn this menu, newest first.')">
+      <button class="peek" onclick="sheetFromHolder('ds_setruns','Calls','')">
         <div class="pk-main"><div class="pk-t">Calls</div></div>
         <div class="pk-fact" id="pk_setruns"></div>
         <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
-      <button class="peek" onclick="sheetFromHolder('ds_setver','Versions','Every recipe we have held for this chain. Nothing is deleted.')">
+      <button class="peek" onclick="sheetFromHolder('ds_setver','Versions','')">
         <div class="pk-main"><div class="pk-t">Versions</div></div>
         <div class="pk-fact" id="pk_setver"></div>
         <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
-      <button class="peek" id="set_reviewrow" style="display:none" onclick="sheetFromHolder('ds_setreview','Review','Things the mapper flagged on this chain.')">
+      <button class="peek" id="set_reviewrow" style="display:none" onclick="sheetFromHolder('ds_setreview','Review','')">
         <div class="pk-main"><div class="pk-t">Review</div></div>
         <div class="pk-fact" id="pk_setreview"></div>
         <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
@@ -1445,9 +1445,9 @@
              online / stock-verified toggles (ssStoreBulk) exist ONLY here. Hiding them took away the
              only way to manage them. Check before you cut. -->
         <div id="ds_setall">
-          <div class="k-eyebrow" style="margin:0 0 10px">Store</div><div id="set_store"></div>
-          <div class="k-eyebrow" style="margin:22px 0 10px">Data</div><div id="set_data"></div>
-          <div class="k-eyebrow" style="margin:22px 0 10px">Calls</div><div id="set_call"></div>
+          <div class="k-eyebrow" style="margin:0 0 12px">Chain</div><div id="set_store"></div>
+          <div class="k-eyebrow" style="margin:26px 0 12px">Stock</div><div id="set_data"></div>
+          <div class="k-eyebrow" style="margin:26px 0 12px">Calls</div><div id="set_call"></div>
         </div>
         <div id="ds_setruns"><div id="set_runs"></div></div>
         <div id="ds_setmenu"><div id="set_menu"></div></div>
@@ -4395,7 +4395,9 @@ function ssRenderStore(){
   // CLEAR-ONLY (a blanket "kiosk ON" would falsely mark every store a kiosk → all tier-5 + Kiosk tab).
   const maj=k=>SS['c'+k]>SS.storesN/2;
   const tog=(on,onclick)=>`<button type="button" onclick="${onclick}" style="width:48px;padding:5px;border-radius:8px;border:1px solid ${on?'var(--green)':'var(--border)'};background:${on?'rgba(74,222,128,.14)':'var(--surface-1)'};color:${on?'var(--green)':'var(--text-muted)'};font-weight:700;cursor:pointer;font-size:12.5px">${on?'ON':'OFF'}</button>`;
-  const row=(lbl,tip,cnt,ctrl)=>`<div class="setrow"><div class="setlbl">${lbl} <span data-tip="${esch(tip)}"></span></div><div class="row" style="gap:10px;align-items:center"><span class="meta" style="font-size:10.5px">${cnt}/${SS.storesN}</span>${ctrl}</div></div>`;
+  // "7523/7523" is a database fraction, not something a person reads. Say how many stores, in words.
+  const howMany=c=>{ const n=SS.storesN||0; if(!n) return ''; if(c>=n) return 'All '+n.toLocaleString(); if(!c) return 'None'; return c.toLocaleString()+' of '+n.toLocaleString(); };
+  const row=(lbl,tip,cnt,ctrl)=>`<div class="setrow"><div class="setlbl">${lbl} <span data-tip="${esch(tip)}"></span></div><div class="row" style="gap:10px;align-items:center"><span class="meta" style="font-size:10.5px">${howMany(cnt)}</span>${ctrl}</div></div>`;
   el.innerHTML=
     `<div style="font-size:13px;color:var(--text-muted);margin:2px 0 7px">Status</div>`
     +(SS.repack?`<div class="row" style="gap:8px;align-items:center;margin-bottom:9px"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#FBBF24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.4);border-radius:20px;padding:3px 11px">${ssDot('#FBBF24')}Repack-only</span><button class="ghost" onclick="ssClearRepack()" style="font-size:12.5px;padding:5px 10px">Clear</button></div>`:'')
@@ -4503,15 +4505,15 @@ function pickChainRow(id){
 // Store Data: store FACTS (chain fields) — its OWN Save (isMSRP / stock-check confidence / sell methods).
 function ssRenderData(){
   const el=document.getElementById('set_data'); if(!el||!SS) return;
-  const sccOpts=[['','—'],['confirmed','confirmed'],['probable','probable']];
-  const scmOpts=[['','—'],['site','site · read the website'],['call','call · phone the store']];
+  const sccOpts=[['','Not set'],['confirmed','Confirmed'],['probable','Probable']];
+  const scmOpts=[['','Not set'],['site','Read the website'],['call','Phone the store']];
   el.innerHTML=
-    `<div class="row" style="gap:7px;align-items:center;margin:2px 0 16px"><label style="display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;color:var(--text-body)"><input type="checkbox" id="set_msrp" ${SS.isMSRP?'checked':''}> Sells at MSRP (the store's own shelf)</label><span data-tip="We price the store's own shelf at retail. Not a reseller that may mark it up."></span></div>`
-    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Stock-check method <span data-tip="How we check this chain's stock. Read their website (site) or phone the store (call)."></span></div>`
+    `<div class="row" style="gap:7px;align-items:center;margin:2px 0 16px"><label style="display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;color:var(--text-body)"><input type="checkbox" id="set_msrp" ${SS.isMSRP?'checked':''}> Sells at MSRP</label><span data-tip="We price the store's own shelf at retail. Not a reseller that may mark it up."></span></div>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">How we check <span data-tip="Read the chain website, or phone the store."></span></div>`
     +`<select id="set_scm" style="margin-bottom:16px">${scmOpts.map(([v,l])=>`<option value="${v}"${(SS.scm||'')===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
-    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Stock-check confidence <span data-tip="How sure we are it carries: confirmed (seen/called) vs probable (expected, unverified)."></span></div>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">How sure we are <span data-tip="Confirmed means somebody saw it or called. Probable means we expect it but have not checked."></span></div>`
     +`<select id="set_scc" style="margin-bottom:16px">${sccOpts.map(([v,l])=>`<option value="${v}"${(SS.scc||'')===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
-    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Sell methods <span data-tip="Ways to get it (comma-separated): in_store, pickup, ship."></span></div>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Ways to buy <span data-tip="Comma separated. In store, pickup, ship."></span></div>`
     +`<input id="set_sell" value="${esch(SS.sellMethods)}" placeholder="in_store,pickup,ship" style="margin-bottom:16px">`
     +`<div class="row" style="gap:12px;align-items:center"><button class="act" onclick="ssSaveData()">Save</button><span class="meta" id="set_datamsg"></span></div>`;
 }
@@ -4597,7 +4599,7 @@ async function renderChainSheets(ch,nav){
 
   // MENU — every line the store plays and what we say back, on one timeline.
   const tl=menuTimeline(active,nav), mw=document.getElementById('set_menu');
-  set('pk_setmenu', tl?String(tl.rows.filter(r=>r.who!=='us').length)+' lines':'');
+  set('pk_setmenu', tl?String(tl.rows.filter(r=>r.who!=='us').length)+' steps':'');
   if(mw) mw.innerHTML = tl ? menuLadder(tl.rows)
     +`<div class="meta" style="margin-top:10px;text-transform:none;letter-spacing:0;line-height:1.5">Heard on a call to ${esch(tl.call.storeName||'a store')}${tl.call.day?', '+esch(tl.call.day):''}.</div>`
     : '<div class="empty">No call has recorded this menu yet. Tap Re-map to place one.</div>';
@@ -4612,7 +4614,7 @@ async function renderChainSheets(ch,nav){
         <span class="name" style="font-size:13.5px">${esch(c.storeName||'A store')}</span>
         <span class="meta" style="margin-left:auto">${esch(c.day||'')}</span></div>
       <div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">
-        ${c.reachedHuman?'<span style="color:var(--green)">Reached Staff</span>':'<span style="color:var(--muted)">Reached nobody</span>'}${c.seconds!=null?' \u00b7 '+c.seconds+'s':''}${(c.transcript||[]).length?' \u00b7 '+c.transcript.length+' lines heard':''}
+        ${c.reachedHuman?'<span style="color:var(--green)">Reached Staff</span>':'<span style="color:var(--muted)">Reached nobody</span>'}${c.seconds!=null?' \u00b7 '+c.seconds+'s':''}${(c.transcript||[]).length?' \u00b7 '+c.transcript.length+' steps heard':''}
       </div>
       ${c.path?`<div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">We tried: ${esch(String(c.path).replace(/say:/g,'say ').replace(/press:/g,'press ').replace(/>/g,' \u2192 '))}</div>`:''}
       ${(c.transcript||[]).length?`<div style="margin-top:10px">${menuLadder(((c.transcript||[]).map(t=>{const m=String(t).match(/^\s*(\d+)s\s+([\s\S]*)$/);return {at:m?Number(m[1]):null,who:'store',text:(m?m[2]:String(t)).trim()};})))}</div>`:''}
@@ -4624,10 +4626,11 @@ async function renderChainSheets(ch,nav){
   if(vw) vw.innerHTML = versions.length ? versions.slice().sort((a,b)=>(b.version||0)-(a.version||0)).map(v=>{
     const S={active:['var(--green)','Live'],proposed:['#F59E0B','Waiting for you'],retired:['var(--text-muted)','Retired'],rejected:['var(--text-muted)','Set aside']}[v.status]||['var(--muted)',v.status];
     return `<div class="card" style="margin:0 0 10px">
-      <div class="row" style="align-items:center;gap:8px"><span class="name">Recipe ${v.version}</span>
+      <div class="row" style="align-items:center;gap:8px"><span class="name">${esch(versionName(v))}</span>
+        <span class="meta">${esch(versionWhen(v))}</span>
         <span style="margin-left:auto;font-size:10.5px;font-weight:700;color:${S[0]}">${esch(S[1])}</span></div>
-      <div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(v.summary||'')}</div>
-      <div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${v.seconds!=null?v.seconds+'s to Staff':''}${v.confidenceLabel&&v.confidenceLabel!=='unknown'?` \u00b7 <span style="color:${confColor(v.confidenceLabel)}">${esch(v.confidenceLabel)}</span>`:''}${v.why?' \u00b7 '+esch(whyWords(v.why)):''}</div>
+      <div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(routeWords(v))}</div>
+      <div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${v.seconds!=null?v.seconds+'s to Staff':''}${v.confidenceLabel&&v.confidenceLabel!=='unknown'?` \u00b7 <span style="color:${confColor(v.confidenceLabel)}">${esch(cap(v.confidenceLabel))}</span>`:''}</div>
       ${v.status==='proposed'?`<div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap"><button class="act" onclick="closeSheet();mapApprove(${v.id},${ch.id})">Use it</button><button class="ghost" onclick="closeSheet();mapReject(${v.id},${ch.id})">Keep current</button></div>`:''}
     </div>`;
   }).join('') : '<div class="empty">No recipes saved yet.</div>';
@@ -4637,6 +4640,22 @@ async function renderChainSheets(ch,nav){
   const rr=document.getElementById('set_reviewrow'); if(rr) rr.style.display=unknowns.length?'':'none';
   const uw=document.getElementById('set_review');
   if(uw) uw.innerHTML = unknowns.length ? unknowns.map(u=>mapUnknownCard(u,ch.id)).join('') : '';
+}
+const cap=t=>{ t=String(t||''); return t?t[0].toUpperCase()+t.slice(1):''; };
+// A chain recipe is the chain's. A store recipe belongs to ONE store, so it is named after that
+// store: two rows both reading "Recipe 1" (the chain's and one store's) told the owner nothing.
+const versionWhen=v=>v.createdAt?new Date(v.createdAt*1000).toLocaleDateString([],{month:'short',day:'numeric'}):'';
+function versionName(v){
+  if(v.storeId){ const c=((v.evidence&&v.evidence.calls)||[]).find(x=>x.storeName); return c&&c.storeName?c.storeName:'One store'; }
+  return 'Recipe '+v.version;
+}
+// The route in plain words, built from the steps. NEVER the mapper's own summary: that is engineer
+// shorthand written for engineers, and it carries the dashes the copy guide bans outright.
+function routeWords(v){
+  const st=((v.recipe&&v.recipe.steps)||[]);
+  if(!st.length) return v.navType==='direct'?'Staff answers, no menu':'No steps recorded';
+  const w=st.map(x=>x.action==='press'?`press ${x.value}`:x.action==='wait'?'wait':`say "${x.value}"`).join(', then ');
+  return w?w[0].toUpperCase()+w.slice(1):'';
 }
 // One ladder, used by the Menu sheet and by each round. STORE is the recording, WE is us, STAFF is
 // the person who picked up.
@@ -4657,13 +4676,14 @@ function menuLadder(rows){
       </div></div>`;
   }).join('')+`</div>`;
 }
+const plainText=t=>String(t||'').replace(/\s*—\s*/g,'. ').replace(/\s+-\s+/g,'. ').replace(/\.\s*\./g,'.');
 const whyWords=s=>String(s||'').replace(/(\d+)\s+(\w+?)\(s\)/g,(m,n,w)=>n+' '+w+(Number(n)===1?'':'s'));
 const UNKNOWN_WHAT={
   'hammer-route':'The recipe just presses the same key over and over',
   'unproven-direct':'We claim Staff answers straight away, but no call has proved it',
   'route-changed':'The menu changed since we learned it',
   'drift':'The menu is drifting from what we learned',
-  'store-exception':'One store went its own way',
+  'store-exception':'One store needs its own recipe',
   'route-failing':'This recipe keeps reaching nobody',
   'greeting-not-direct':'A recording answers, not Staff',
   'not-shared':'This recipe is not shared with the chain',
@@ -4671,7 +4691,7 @@ const UNKNOWN_WHAT={
 function mapUnknownCard(u,chainId){
   return `<div class="card" style="margin:0 0 10px">
     <div class="name" style="font-size:13.5px">${esch(UNKNOWN_WHAT[u.kind]||String(u.kind||'').replace(/-/g,' '))}</div>
-    ${u.prompt?`<div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(u.prompt)}</div>`:''}
+    ${(!UNKNOWN_WHAT[u.kind]&&u.prompt)?`<div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(plainText(u.prompt))}</div>`:''}
     <div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${u.count>1?'Seen '+u.count+' times':'Seen once'}${u.firstSeen?' \u00b7 first on '+new Date(u.firstSeen*1000).toLocaleDateString([],{month:'short',day:'numeric'}):''}</div>
     <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
       <button class="act" onclick="mapUnknown(${u.id},'resolved',${chainId})">Fixed</button>
