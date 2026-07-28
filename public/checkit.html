@@ -1507,7 +1507,7 @@ html[data-skin="v2"] .csheet .cta,html[data-skin="v2"] .csheet-call{background:l
 /* Bottom sheet (P2/§5.11): big-card surface, top radius 28, 40×5 grabber; keys raised. */
 html[data-skin="v2"] .csheet{background:#26262B;border:0;border-radius:28px 28px 0 0;box-shadow:0 -24px 48px -12px rgba(0,0,0,.7)}
 html[data-skin="v2"] .csheet:not(.on){box-shadow:none} /* parked = no shadow (see the base .csheet note); this skin's selector outranks the base rule, so it must repeat here */
-html[data-skin="v2"] .csheet-handle{width:40px;height:5px;background:rgba(255,255,255,.22)}
+html[data-skin="v2"] .csheet-handle{width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4)}
 /* P2 EXACTNESS — dim rgba(5,6,9,.6); pad 10/22/30; head gap 13; logo tile raised w/ 42px art;
    name 20/800/-.3; meta 13/600 #8A8A96 (Open = #4ADE80); product line 14 w/ accent-800 name +
    muted-white suffix; CTA capsule 14/24: waves-phone + label LEFT, arrow RIGHT (space-between). */
@@ -2019,12 +2019,13 @@ html[data-skin="v2"] #buy_note{font-size:13px;font-weight:600;color:#8A8A96;marg
 /* 6a comp = BOTTOM SHEET (was a centered pop-up): r28 top, grabber, pad 10/22/30. */
 html[data-skin="v2"] #upsellOverlay{align-items:flex-end;padding:0}
 html[data-skin="v2"] #upsellOverlay .modal{max-width:520px;width:100%;margin:0 auto;border-radius:28px 28px 0 0;padding:8px 22px calc(30px + env(safe-area-inset-bottom))}
-html[data-skin="v2"] #upsellOverlay .modal::before{content:'';display:block;width:40px;height:5px;border-radius:999px;background:rgba(255,255,255,.22);margin:6px auto 18px}
+html[data-skin="v2"] #upsellOverlay .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 16px}
+html[data-skin="v2"] #upsellOverlay.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
 /* 6a/6d capsules: WHITE tracked label + arrow, space-between (comp). */
 html[data-skin="v2"] #up6a_cta,html[data-skin="v2"] #p6d_cta{display:flex;align-items:center;justify-content:space-between;color:#FFF;padding:14px 24px}
 /* 6d: green header band + overlapping stat tiles + raised NOW-LIVE card. */
 html[data-skin="v2"] .p6d-head{background:#266440;padding:10px 18px 50px;text-align:center;border-radius:26px 26px 0 0}
-html[data-skin="v2"] .p6d-bar{width:40px;height:5px;border-radius:999px;background:rgba(255,255,255,.35);margin:0 auto 22px}
+html[data-skin="v2"] .p6d-bar{width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:0 auto 22px}
 html[data-skin="v2"] .p6d-stats{margin:-28px 18px 0;display:flex;gap:10px}
 html[data-skin="v2"] .p6d-live{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:16px;padding:15px 16px;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)}
 html[data-skin="v2"] .p6d-live .buygrid-h{color:#8A8A96}
@@ -2142,8 +2143,8 @@ html:not([data-skin="v2"]) #buyOverlay #buy6blogo,html:not([data-skin="v2"]) #bu
 /* 6c CHECKOUT (v2) — branded on-site Stripe Elements page. Bottom sheet, comp tokens: raised order
    card, carved "or pay with card" divider, Payment Element in the well, green SUBSCRIBE ring capsule. */
 html[data-skin="v2"] #coOverlay{align-items:flex-end;padding:0}
-html[data-skin="v2"] #coOverlay .modal{width:100%;max-width:520px;margin:0 auto;border-radius:28px 28px 0 0;max-height:92vh;overflow-y:auto;background:#26262B;padding:8px 20px calc(22px + env(safe-area-inset-bottom));transform:translateY(24px);opacity:0;transition:transform .28s cubic-bezier(.2,.8,.3,1),opacity .2s}
-html[data-skin="v2"] #coOverlay.on .modal{transform:none;opacity:1}
+html[data-skin="v2"] #coOverlay .modal{width:100%;max-width:520px;margin:0 auto;border-radius:28px 28px 0 0;max-height:92vh;overflow-y:auto;background:#26262B;padding:8px 20px calc(22px + env(safe-area-inset-bottom))}
+html[data-skin="v2"] #coOverlay.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
 html[data-skin="v2"] #coOverlay .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:6px auto 16px}
 html[data-skin="v2"] .co-summary{display:flex;align-items:center;gap:12px;margin-top:6px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:16px;padding:14px 16px;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)}
 html[data-skin="v2"] .co-logo{width:44px;height:44px;flex-shrink:0;border-radius:12px;background:#1F1F25;display:grid;place-items:center}
@@ -4395,7 +4396,7 @@ function openAccount(fromPop){
     // Approved 3C/4A header (owner 07-11 comp, docs/specs/mychecks-header): watermark check top-right,
     // MY CHECKS eyebrow, phone leads big with the email beneath. Sign out lives at the sheet FOOT and
     // the plan reads under Manage plan — neither renders up here anymore.
-    head.innerHTML=`<div style="display:flex;justify-content:center;align-items:flex-end;height:46px;padding-bottom:8px;background:#26262B"><span style="width:40px;height:5px;border-radius:999px;background:#3E3E46"></span></div><div class="wash">
+    head.innerHTML=`<div style="display:flex;justify-content:center;align-items:flex-end;height:46px;padding-bottom:8px;background:#26262B"><span style="width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4)"></span></div><div class="wash">
         <svg class="acwm" width="180" height="180" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#8CF7B4"/><path d="M6.5 12.4 L10.3 16 L17.5 8" stroke="#20693F" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <div style="position:relative"><span style="font-size:10.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.8)">${t('acct.checks','My checks')}</span></div>
         <div style="position:relative;margin-top:16px">
@@ -8653,6 +8654,7 @@ sheetDrag('pageOverlay', ()=>closePage()); // footer pages are a bottom sheet no
 sheetDrag('acctOverlay', ()=>{ try{ closeAccount(true); }catch(_){ } }); // sheetDrag already ran the slide-down → instant hide
 sheetDrag('coOverlay', ()=>{ try{ closeCheckout(); }catch(_){ } });
 sheetDrag('storeReqOverlay', ()=>{ try{ closeStoreReq(); }catch(_){ } });
+sheetDrag('upsellOverlay', ()=>{ try{ closeUpsell(); }catch(_){ } }); // it was the one slide-up you could not swipe away
 sheetDrag('zones', ()=>{ try{ if(ZONES.building||ZONES.viewRun){ ZONES.viewRun=false; renderZonesList(); } else { backFromZones(); } }catch(_){ } }); // builder/report -> zones list. Poll keeps running so the card shows live progress + the doorway drops back in
 sheetDrag('histOverlay', ()=>{ try{ closeHistory(); }catch(_){ } });  // drag Check history down to dismiss
 sheetDrag('watchOverlay', ()=>{ try{ closeWatch(); }catch(_){ } });
