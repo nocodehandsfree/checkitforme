@@ -428,7 +428,10 @@ __BRAND_HEAD__
   }
   body{text-wrap:pretty} /* CLASS-LEVEL wrap law (owner 07-22): the browser avoids orphan last lines on EVERY string, every page — Safari 26/Chrome support it, others ignore it harmlessly */
   .rsub{color:#b4b4c2;font-size:13.5px;font-weight:650;line-height:1.55;margin-top:12px} /* smaller than before but still pronounced (owner 07-15) */
-  .rsub .subln{display:block} /* first sentence on line 1, the rest on line 2 (owner 07.23 two line law) */
+  /* first sentence on line 1, the rest on line 2 (owner 07.23 two line law). NOT scoped to .rsub: sentLines
+     eats the space between the sentences when it splits them, so anywhere the spans stayed inline the two
+     ran together ("watching.Flip each on"). It was doing that in the alerts sheet. (owner 07-27) */
+  .subln{display:block}
   .rsub b{color:#fff;font-weight:800} .rsub .y{color:#fff;font-weight:800} /* product name neutral white — no per-vertical accent on a result */
   .rstore-line{color:#cfcfe0;font-size:13px;font-weight:600;margin-top:8px;line-height:1.4}
   .rstore-line b{color:#fff;font-weight:800} .rstore-line .ad{color:var(--muted);font-weight:500}
@@ -1325,8 +1328,14 @@ __BRAND_HEAD__
   .alsw button{padding:8px 6px;font-size:12px}
   .alrm{background:rgba(255,123,123,.12);border:0;border-radius:12px;padding:9px;color:#FF9B9B;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
   .alrow-off{opacity:.55}
-  /* Alerts rows (owner 07-23): the original On/Off pill + remove, unchanged. The only tweak is the store
-     name now wraps to 2 lines (base .store .nm clamp) instead of a single-line cut, so long names show. */
+  /* Alerts rows (owner 07-23 + 07-27): the original On/Off pill + remove, unchanged. Letting the name wrap
+     to 2 lines was not enough. The pill and the bin left it barely 140px, so long chain names STILL cut
+     ("Barnes & Noble…") and every city ellipsised. The controls now drop to their own line, which gives
+     the name and the city the full width of the row. */
+  .alrow{flex-wrap:wrap;row-gap:6px}
+  .alrow .altxt{flex:1 1 0;min-width:0}
+  .alrow .lo{white-space:normal;overflow:visible;text-overflow:clip}
+  .alrow .alctl{flex:0 0 100%;display:flex;align-items:center;justify-content:flex-end;gap:8px}
   .alpause{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)}
   .almk{padding:12px 14px;border-radius:14px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.28);color:#F5C368;font-size:13px;font-weight:700;line-height:1.45;text-align:center}
   .ho-stepper{display:flex;align-items:center;justify-content:space-between;background:var(--terminal);border:1px solid var(--border);border-radius:13px;padding:8px 10px}
@@ -3219,7 +3228,7 @@ const I18N={ es:{
   'zones.locph':'Busca un código postal o ciudad…','zones.go':'Ir','zones.list':'Lista','zones.map':'Mapa',
   'zones.radius':'Radio','zones.addallshort':'Agregar todo','zones.selstore':'tienda seleccionada','zones.selstores':'tiendas seleccionadas',
   'zones.typloc':'Escribe primero un código postal o ciudad.','zones.located':'Centrado en {q}','zones.noplace':'No encontramos ese lugar.',
-  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas','zones.cap10':'Una zona verifica hasta 10 tiendas a la vez.','hold.meta':'Buscando {p}','hold.meta.generic':'Revisando el estante','hold.head':'Estamos a tope.','hold.sub':'Un momento.','zones.limit10':'Llegaste al límite de 10 tiendas','zones.clearall':'Borrar todo','zones.title2':'Zonas','zones.checkingzone':'Verificando la zona {n} ahora','zones.checkingyours':'Verificando tu zona ahora','zones.allchecked':'Las {n} verificadas','zones.stopone.q':'¿Dejar de verificar {s}?','zones.stopone.yes':'Dejar de verificar','zones.stopone.no':'Continuar','zones.stoppedone':'Detuvimos esa tienda','zones.azone':'Zona','zones.zoneword':'zona','zones.new2':'Nueva zona','zones.edit2':'Editar zona','zones.locph2':'Código postal o ciudad…','zones.save2':'Guardar','zones.empty1':'Aún no tienes zonas.','zones.empty2':'Guarda las tiendas cercanas como una zona. Luego revísalas todas con un toque.','zones.nonein':'Ninguna disponible','zones.checkzone2':'Revisar zona','zones.skipped':', así que las saltamos.','zones.alldone':'Las {n} revisadas · listo','zones.zonecheck':'Chequeo de zona','zones.hadit':'{i} de {n} tiendas lo tenían.','zones.sharetext':'Texto para compartir','zones.sharego':'Compartir','zones.ago':'atrás','zones.starting2':'Empezando…','zones.rin2':'Disponible.','zones.rout2':'Sin stock.','zones.runk2':'Sin respuesta.','zones.result':'Resultado','zones.confirmed':'Confirmado.','hold.timer':'Tu revisión empieza en','em.title':'Tu correo','step.calling':'Llamando','watch.verify.h':'Revisa tu correo para confirmarlo.','watch.verify.hsms':'Te enviaremos un texto para confirmar tu celular.','watch.then2':'Luego te avisamos al instante<br>cuando se confirme en stock.','em.sub':'Las alertas y avisos de reposición llegan aquí.','em.new':'Danos tu nuevo correo','em.first':'Danos tu correo','em.empty':'Escribe tu nuevo correo primero','em.same':'Ese ya es tu correo','em.resent':'Confirmación enviada. Revisa tu correo.','em.again':'Enviarla de nuevo','em.done':'Correo confirmado. Alertas activas.','em.badlink':'Ese enlace no funcionó. Toca Enviarla de nuevo.','em.ph':'tu@correo.com','em.save':'Guardar correo','em.saving':'Guardando…','em.confirm':'Revisa tu correo para confirmar','em.add':'Agrega tu correo para alertas','alerts.title':'Alertas','alerts.sub':'Maneja tus alertas de correo y texto.','alerts.row.at':'{p} en {s}','alerts.d.remail':'Te manda un correo al volver.','alerts.d.rsms':'Te manda un texto al volver.','alerts.d.semail':'Verifica la tienda sola. Resultado al correo.','alerts.d.ssms':'Verifica la tienda sola. Resultado por texto.','alerts.none':'Aún no has creado alertas.','alerts.off':'Apagar','alerts.mute':'Silenciar','alerts.unmute':'Activar','alerts.stop':'Parar','alerts.d.muted':'Silenciada. No llega nada hasta activarla.','alerts.mutedpill':'Silenciada. Actívala cuando quieras.','alerts.unmutedpill':'Activada. Te avisaremos.','alerts.stopped':'Cancelamos {x}','alerts.name.restock':'las alertas de reposición de {s}','alerts.name.sched':'las alertas de auto chequeo de {s}','alerts.thatstore':'esa tienda','alerts.thisalert':'esta alerta','alerts.k.sched':'Auto-verificación','alerts.k.restock':'Alerta de reposición','alerts.c.sms':'texto','alerts.c.email':'correo','alerts.acheck':'Una verificación','acct.row.alerts':'Alertas','acct.row.alerts.sub':'Avisos de reposición y autoverificación.',
+  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas','zones.cap10':'Una zona verifica hasta 10 tiendas a la vez.','hold.meta':'Buscando {p}','hold.meta.generic':'Revisando el estante','hold.head':'Estamos a tope.','hold.sub':'Un momento.','zones.limit10':'Llegaste al límite de 10 tiendas','zones.clearall':'Borrar todo','zones.title2':'Zonas','zones.checkingzone':'Verificando la zona {n} ahora','zones.checkingyours':'Verificando tu zona ahora','zones.allchecked':'Las {n} verificadas','zones.stopone.q':'¿Dejar de verificar {s}?','zones.stopone.yes':'Dejar de verificar','zones.stopone.no':'Continuar','zones.stoppedone':'Detuvimos esa tienda','zones.azone':'Zona','zones.zoneword':'zona','zones.new2':'Nueva zona','zones.edit2':'Editar zona','zones.locph2':'Código postal o ciudad…','zones.save2':'Guardar','zones.empty1':'Aún no tienes zonas.','zones.empty2':'Guarda las tiendas cercanas como una zona. Luego revísalas todas con un toque.','zones.nonein':'Ninguna disponible','zones.checkzone2':'Revisar zona','zones.skipped':', así que las saltamos.','zones.alldone':'Las {n} revisadas · listo','zones.zonecheck':'Chequeo de zona','zones.hadit':'{i} de {n} tiendas lo tenían.','zones.sharetext':'Texto para compartir','zones.sharego':'Compartir','zones.ago':'atrás','zones.starting2':'Empezando…','zones.rin2':'Disponible.','zones.rout2':'Sin stock.','zones.runk2':'Sin respuesta.','zones.result':'Resultado','zones.confirmed':'Confirmado.','hold.timer':'Tu revisión empieza en','em.title':'Tu correo','step.calling':'Llamando','watch.verify.h':'Revisa tu correo para confirmarlo.','watch.verify.hsms':'Te enviaremos un texto para confirmar tu celular.','watch.then2':'Luego te avisamos al instante<br>cuando se confirme en stock.','em.sub':'Las alertas y avisos de reposición llegan aquí.','em.new':'Danos tu nuevo correo','em.first':'Danos tu correo','em.empty':'Escribe tu nuevo correo primero','em.same':'Ese ya es tu correo','em.resent':'Confirmación enviada. Revisa tu correo.','em.again':'Enviarla de nuevo','em.done':'Correo confirmado. Alertas activas.','em.badlink':'Ese enlace no funcionó. Toca Enviarla de nuevo.','em.ph':'tu@correo.com','em.save':'Guardar correo','em.saving':'Guardando…','em.confirm':'Revisa tu correo para confirmar','em.add':'Agrega tu correo para alertas','alerts.title':'Alertas','alerts.row.at':'{p} en {s}','alerts.d.remail':'Te manda un correo al volver.','alerts.d.rsms':'Te manda un texto al volver.','alerts.d.semail':'Verifica la tienda sola. Resultado al correo.','alerts.d.ssms':'Verifica la tienda sola. Resultado por texto.','alerts.none':'Aún no has creado alertas.','alerts.off':'Apagar','alerts.mute':'Silenciar','alerts.unmute':'Activar','alerts.stop':'Parar','alerts.d.muted':'Silenciada. No llega nada hasta activarla.','alerts.mutedpill':'Silenciada. Actívala cuando quieras.','alerts.unmutedpill':'Activada. Te avisaremos.','alerts.stopped':'Cancelamos {x}','alerts.name.restock':'las alertas de reposición de {s}','alerts.name.sched':'las alertas de auto chequeo de {s}','alerts.thatstore':'esa tienda','alerts.thisalert':'esta alerta','alerts.k.sched':'Auto-verificación','alerts.k.restock':'Alerta de reposición','alerts.c.sms':'texto','alerts.c.email':'correo','alerts.acheck':'Una verificación','acct.row.alerts':'Alertas','acct.row.alerts.sub':'Avisos de reposición y autoverificación.',
   'watch.on':'Te avisamos por correo cuando vuelva','watch.askemail':'¿A qué correo te avisamos?','watch.cta2':'Vigilar esta tienda','watch.inbox':'Revisa tu correo','watch.inboxsub':'Confirma tu correo y lo activamos.','alerts.sub':'Cada tienda que vigilas. Prende o apaga cada una.','alerts.pauseall':'Pausar todas las alertas','alerts.on':'Activas','alerts.paused':'En pausa','alerts.rowon':'On','alerts.rowoff':'Off','alerts.remove':'Quitar','alerts.none':'Aún no vigilas ninguna tienda.','alerts.makeroom':'Vigilas {n} tiendas. Quita una para agregar esta.','alerts.added':'Ahora vigilas {s}.','alerts.stopped':'Quitamos {x}.','alerts.set':'Tu {type} de {store} está lista. Gestiónala en Mis verificaciones > Alertas.','alerts.type.restock':'Alerta de reposición','alerts.type.auto':'Auto-verificación','zones.checkinglive':'Verificando en vivo','zones.callingstores':'Llamando a las tiendas…','zones.allcheckeddone':'Todas verificadas','zones.notpill':'no','zones.noansw':'sin respuesta','zones.callingnow':'llamando ahora','zones.waitingslot':'esperando turno',
   'feat.d.zone_sweeps':'Guarda tus tiendas como una zona. Un toque las llama todas a la vez. Mira las respuestas llegar en vivo. Cada tienda cuesta una verificación. Sin respuesta, sin cargo.','feat.d.restock_alerts':'Deja de revisar. Te avisamos. Toca Avísame cuando vuelva en un resultado. Vigilamos esa tienda por ti. Apenas llegue producto, te avisamos. Un aviso por reposición, nada de spam.','feat.d.scheduled_checks':'Las tiendas reponen con ritmo. La autoverificación corre en sus días de envío. La respuesta te espera en el celular. Cancela cuando quieras en Mis verificaciones.','feat.d.any_town':'Las cuentas gratis buscan cerca de casa. Cualquier ciudad te suelta la correa. Busca cualquier código postal o ciudad. El mapa salta ahí. Más de 100,000 tiendas.','feat.d.store_holds':'¿Lo encontraste pero estás a 20 minutos? Le pedimos al personal que te aparte uno. Con tu nombre, en la misma llamada.','feat.d.your_voice':'Elige la voz que llama por ti. Quien contesta escucha una voz amable y natural.','feat.d.thrift_hunts':'Colecciones viejas acaban en tiendas de segunda. Precios de risa, nadie las revisó. Activa Thrift y llamamos a las de tu zona. Preguntamos qué hay en la vitrina hoy.','feat.d.hobby_hunts':'Un muro de Pokémon para explorar. Cada era, cada set, cada producto. Con precios de lista. Elige tu objetivo. Cada llamada pide exactamente eso.',
   'zones.untitled':'Zona sin nombre','zones.store':'tienda','zones.stores':'tiendas',
@@ -3484,7 +3493,7 @@ function renderFooter(){
 // "Don't see your store?" submission.
 function openStoreReq(){ ['sr_name','sr_city','sr_note','sr_contact'].forEach(id=>{const e=$(id);if(e){e.value='';markFld(e,false);}}); $('sr_err').textContent='';
   const bd=$('sr_body'), dn=$('sr_done'); if(bd)bd.style.display=''; if(dn)dn.style.display='none'; // reset to the form (not a leftover success state)
-  track('storereq_open'); $('storeReqOverlay').classList.add('on'); sheetPush('storereq'); setTimeout(()=>{try{$('sr_name').focus();}catch(e){}},80); }
+  track('storereq_open'); $('storeReqOverlay').classList.add('on'); sheetPush('storereq'); setTimeout(()=>{try{$('sr_name').focus({preventScroll:true});}catch(e){}},80); }
 function closeStoreReq(){ $('storeReqOverlay').classList.remove('on'); acctReturn(); }
 
 // ---- Support Messenger (Intercom-style: right tab → full-screen panel, bottom tabs) ----
@@ -3702,7 +3711,7 @@ function openSupportForm(){ if(SUP_SID) appApi('/pub/support/resolve',{method:'P
   supShow('form',{title:t('sup.form.title','Leave it with us'),back:true,tabs:false});
   $('supf_err').textContent=''; const shot=$('supf_shot');
   if(SUP_SHOT){ shot.style.display='flex'; shot.innerHTML=`<img src="${esc(SUP_SHOT)}"><span>${esc(t('sup.shotok','Screenshot attached'))}</span>`; } else shot.style.display='none';
-  setTimeout(()=>{try{$('supf_name').focus();}catch(e){}},80); }
+  setTimeout(()=>{try{$('supf_name').focus({preventScroll:true});}catch(e){}},80); }
 async function submitSupportTicket(){
   const name=($('supf_name').value||'').trim(), email=($('supf_email').value||'').trim(), msg=($('supf_msg').value||'').trim();
   const bad=(el,is)=>{ if(typeof markFld==='function') markFld(el,is); };
@@ -3926,7 +3935,7 @@ async function refreshAuth(){
   if(AUTH_PENDING && isAuthed()){ const n=AUTH_PENDING; AUTH_PENDING=null; setTimeout(n,40); }
 }
 // --- Launch waitlist: capture out-of-area visitors (also demand-by-region intel) ---
-function openWaitlist(){ $('wl_err').textContent=''; $('wl_contact').value=''; track('waitlist_open'); $('waitlistOverlay').classList.add('on'); setTimeout(()=>{try{$('wl_contact').focus();}catch(e){}},80); }
+function openWaitlist(){ $('wl_err').textContent=''; $('wl_contact').value=''; track('waitlist_open'); $('waitlistOverlay').classList.add('on'); setTimeout(()=>{try{$('wl_contact').focus({preventScroll:true});}catch(e){}},80); }
 function closeWaitlist(){ $('waitlistOverlay').classList.remove('on'); acctReturn(); }
 async function submitWaitlist(){
   const c=($('wl_contact').value||'').trim();
@@ -4134,7 +4143,7 @@ function openAuth(mode){
   $('auth_step_email').style.display=''; $('auth_step_code').style.display='none';
   $('auth_err').textContent=''; $('auth_codeerr').textContent='';
   clearTimeout(AUTH_KNOWN_T); AUTH_KNOWN_SEQ++; AUTH_RETURNING=false; setAuthLead(); // fresh start each open
-  setTimeout(()=>{try{$('auth_phone').focus();}catch(e){}},90);
+  setTimeout(()=>{try{$('auth_phone').focus({preventScroll:true});}catch(e){}},90);
 }
 function closeAuth(){ $('authOverlay').classList.remove('on');
   if(AUTH_MODE==='edit'){ AUTH_MODE=''; try{ openAccount(); }catch(_){ } } // change-number came FROM My checks — every way out (verify, swipe, backdrop) lands back there, never the page behind (owner 07-16)
@@ -4190,7 +4199,7 @@ async function phoneStart(resend){
   const sent=$('auth_codesent'), hint=$('auth_devhint');
   if(r.dev){ if(sent)sent.style.display='none'; if(hint)hint.style.display=''; if(ci&&r.devCode) ci.value=r.devCode; }
   else { if(sent)sent.style.display=''; if(hint)hint.style.display='none'; }
-  setTimeout(()=>{try{$('auth_code').focus();}catch(_){}},90);
+  setTimeout(()=>{try{$('auth_code').focus({preventScroll:true});}catch(_){}},90);
 }
 // Step 2 — confirm the code → save our session token → we're in.
 async function phoneVerify(){
@@ -4210,7 +4219,7 @@ async function phoneVerify(){
   track('auth_success',{flow:'phone'});
   closeAuth(); toast(t('auth.welcome',"✓ You're in"),'neutral'); refreshAuth(); // neutral grey, not the celebratory green (owner 07-07); closeAuth itself returns an edit flow to My checks
 }
-function authBack(){ authStep('email'); $('auth_codeerr').textContent=''; setTimeout(()=>{try{$('auth_phone').focus();}catch(e){}},60); }
+function authBack(){ authStep('email'); $('auth_codeerr').textContent=''; setTimeout(()=>{try{$('auth_phone').focus({preventScroll:true});}catch(e){}},60); }
 // Custom account sheet
 // Account identity that scales as we collect more: name (if any) → formatted phone → email. `primary`
 // is the best single label; `secondary` carries the rest, muted. Avatar = name initial, else a call glyph.
@@ -4430,7 +4439,7 @@ function openScorePop(){
     try{ sheetDrag('scorePostOv', ()=>closeScorePop()); }catch(_){ } } // bottom-sheet swipe-down to dismiss (owner 07-07)
   const c=$('composer');
   if(c){ if(!openScorePop._home){ openScorePop._home={parent:c.parentElement,next:c.nextElementSibling}; } $('scorePostHost').appendChild(c); c.style.display=''; }
-  ov.classList.add('on'); try{ succFilter(); }catch(_){ } track('score_pop_open'); // surface the in-stock store list right away
+  ov.classList.add('on'); sheetPush('scorepop'); try{ succFilter(); }catch(_){ } track('score_pop_open'); // surface the in-stock store list right away
 }
 function closeScorePop(){
   const ov=$('scorePostOv'); if(ov)ov.classList.remove('on');
@@ -5262,7 +5271,7 @@ function pickProduct(){ SEL_PRODUCT=$('prodsel').value||''; }
 // ---- Email gate: one free check requires an email ----
 function leadCaptured(){ return !!localStorage.getItem('runnr_lead_email'); }
 function ensureLead(next){ LEAD_PENDING=next||null; openLead(); return false; }
-function openLead(){ $('lead_err').textContent=''; $('leadOverlay').classList.add('on'); setTimeout(()=>{ const e=$('lead_email'); if(e)e.focus(); },50); }
+function openLead(){ $('lead_err').textContent=''; $('leadOverlay').classList.add('on'); setTimeout(()=>{ const e=$('lead_email'); if(e)e.focus({preventScroll:true}); },50); }
 function closeLead(){ $('leadOverlay').classList.remove('on'); }
 async function submitLead(){
   const e=($('lead_email').value||'').trim();
@@ -6119,7 +6128,7 @@ function sheetPush(tag){ try{ if(!(history.state&&history.state.v==='sheet'&&his
 window.addEventListener('popstate',(ev)=>{
   // Back with a sheet open closes THAT sheet and stays put (owner 07-10 item 6).
   try{
-    const OPEN=[['coOverlay',()=>closeCheckout()],['buyOverlay',()=>closeBuy()],['pageOverlay',()=>closePage()],['histOverlay',()=>closeHistory()],['watchOverlay',()=>closeWatch()],['scheduleOverlay',()=>closeSchedule()],['storeReqOverlay',()=>closeStoreReq()],['alertsOv',()=>closeAlerts()]];
+    const OPEN=[['coOverlay',()=>closeCheckout()],['buyOverlay',()=>closeBuy()],['pageOverlay',()=>closePage()],['histOverlay',()=>closeHistory()],['watchOverlay',()=>closeWatch()],['scheduleOverlay',()=>closeSchedule()],['storeReqOverlay',()=>closeStoreReq()],['alertsOv',()=>closeAlerts()],['featOv',()=>closeFeatInfo()],['emailOv',()=>closeEmailSheet()],['scorePostOv',()=>closeScorePop()]];
     for(const [id,fn] of OPEN){ const o=$(id); if(o&&o.classList.contains('on')){ try{ fn(); }catch(_){ o.classList.remove('on'); } return; } }
   }catch(_){ }
   // Zones: back leaves the zones screen for wherever you were; forward re-enters it.
@@ -7460,8 +7469,9 @@ function editEmail(){ const ov=sheetShell('emailOv');
     <input id="em_in" type="email" class="kin" placeholder="${t('em.ph','you@email.com')}" style="width:100%;box-sizing:border-box;margin-bottom:12px">
     <div id="em_err" style="color:#ff6b6b;font-size:13px;min-height:16px"></div>
     <button class="cta" id="em_btn" style="width:100%" onclick="saveEmail()">${t('em.save','Save email')} →</button></div>`;
-  ov.classList.add('on'); setTimeout(()=>{ try{ $('em_in').focus(); }catch(_){ } },80);
+  ov.classList.add('on'); sheetPush('email'); setTimeout(()=>{ try{ $('em_in').focus({preventScroll:true}); }catch(_){ } },80);
 }
+function closeEmailSheet(){ const o=$('emailOv'); if(o) o.classList.remove('on'); }
 async function saveEmail(){ const e=($('em_in').value||'').trim().toLowerCase();
   if(!e){ markFld($('em_in'),true); toast(t('em.empty','Type your new email first'),'neutral'); return; } // never close silently on an empty box (owner 07-16)
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)){ markFld($('em_in'),true); return; }
@@ -7520,10 +7530,10 @@ async function openAlerts(opts){ opts=opts||{}; ALERTS_MAKEROOM=!!opts.makeRoom;
     const rows = subs.length? subs.map(x=>{
       const so=alertStoreObj(x), off=!!x.muted;
       const name=esc(so.name||x.storeName||t('alerts.acheck','A check')), loc=esc(so.location||x.storeLocation||'');
-      return `<div class="store${off||paused?' alrow-off':''}" style="cursor:default;margin-top:10px">
+      return `<div class="store alrow${off||paused?' alrow-off':''}" style="cursor:default;margin-top:10px">
         <div class="ic ${so.logoDark?'lite':''} ${so.logoWide?'widelogo':''}">${storeFace(so)}</div>
-        <div style="min-width:0;flex:1"><div class="nm">${name}</div><div class="lo" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${loc}</div></div>
-        <div style="display:flex;align-items:center;gap:8px;flex:0 0 auto">
+        <div class="altxt"><div class="nm">${name}</div><div class="lo">${loc}</div></div>
+        <div class="alctl">
           <div class="ho-toggle alsw" style="width:108px;flex:0 0 auto"><button class="${!off?'on':''}" onclick="alertSetOn(${x.id},1)">${t('alerts.rowon','On')}</button><button class="${off?'on':''}" onclick="alertSetOn(${x.id},0)">${t('alerts.rowoff','Off')}</button></div>
           <button class="alrm" onclick="alertStop(${x.id})" aria-label="${t('alerts.remove','Remove')}">${Z_ICO_TRASH}</button>
         </div></div>`;}).join('')
@@ -8282,7 +8292,9 @@ function openFeatInfo(key){ const info=featInfo(key); if(!info) return;
       <div class="fi-lead">${esc(info.lead)}</div>
     </div>
     <div class="fi-pts">${pts}</div></div>`;
-  ov.classList.add('on'); track('feat_info',{key});
+  ov.classList.add('on'); sheetPush('feat'); track('feat_info',{key});
+}
+function closeFeatInfo(){ const o=$('featOv'); if(o) o.classList.remove('on');
 }
 function featLabel(key){ const f=(PLANS&&PLANS.features||[]).find(x=>x.key===key); return f?f.label:key.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()); }
 // The tier tiles: live tiers straight off /pub/plans (fallback to a static ladder only if the fetch failed).
@@ -8737,7 +8749,7 @@ function openWatchConfirm(st, status){
     if(sub) sub.innerHTML=t('watch.askemail','Where should we email you?');
     if(inp){ inp.style.display=''; inp.value=(ACCOUNT&&ACCOUNT.email)||''; inp.type='email'; inp.inputMode='email'; inp.placeholder=t('em.ph','you@email.com'); }
     if(btn){ btn.textContent=t('watch.cta2','Watch this store')+' →'; btn.disabled=false; btn.onclick=submitWatchEmail; }
-    ov.classList.add('on'); sheetPush('watch'); setTimeout(()=>{try{$('watch_contact').focus();}catch(e){}},80);
+    ov.classList.add('on'); sheetPush('watch'); setTimeout(()=>{try{$('watch_contact').focus({preventScroll:true});}catch(e){}},80);
   } else { // pending: the address is on file but not confirmed yet
     paintInboxState(); ov.classList.add('on'); sheetPush('watch');
   }
