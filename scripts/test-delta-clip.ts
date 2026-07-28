@@ -135,6 +135,43 @@ console.log("▶ the clerk says hello: the question goes out, the agent connects
   restore(); tw.close(); f.close();
 }
 
+console.log("\n▶ he starts warming up LATE, so his meter does not run through the whole question");
+{
+  // He bills from the second his session opens, so warming him up at the start of a five second
+  // question would buy five seconds of dead air on every call. He starts two seconds before the end.
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const { tw } = await callToHello(f, 5000, "room-late");
+  await sleep(200);
+  ok(f.inits.length === 0, "not connected at all through the first stretch of the question");
+  console.log("  …and the clerk answering in that window is still held, not dropped");
+  tw.media(frame(LOUD(160, 1)));
+  await sleep(2900);                       // now past clip end minus the two second lead
+  ok(f.inits.length === 1, "connected by the time the question is finishing");
+  ok(f.chunks.length === 0, "still nothing delivered — the question has not ended yet");
+  await sleep(2400);                       // past the end of the five second question
+  ok(f.chunks.length >= 1, "and the words spoken before he even existed were released to him");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ a clip shorter than the warm-up lead still gets an agent");
+{
+  // The trap this guards: the gate clears the clip timers when it opens, and a warm-up timer caught
+  // in that sweep would leave the clerk talking to an agent that never connected.
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const { tw } = await callToHello(f, 400, "room-short");
+  tw.say({ event: "mark", mark: { name: "delta-opening" } });   // carrier confirms it immediately
+  await sleep(250);
+  ok(f.inits.length === 1, "he was opened anyway the moment the question ended");
+  tw.media(frame(LOUD()));
+  await sleep(60);
+  ok(f.chunks.length > 0, "and the conversation reaches him");
+  restore(); tw.close(); f.close();
+}
+
 console.log("\n▶ the clip's own length ends it when no mark ever arrives");
 {
   _reset();

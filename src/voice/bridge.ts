@@ -270,12 +270,23 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   let charlieGateOpen = true;   // true = today's behaviour, agent talks the moment he is ready
   let clipText = "";            // the question Delta asked, handed to the agent as context
   const clipTimers: NodeJS.Timeout[] = [];
+  let prewarmTimer: NodeJS.Timeout | null = null;
   const CLIP_MARK = "delta-opening";
   /** A breath after the clip so the agent can never clip its own tail. */
   const CLIP_SETTLE_MS = 250;
   /** If every signal fails, open him anyway this long after the clip should have ended. A slightly
    *  early agent is recoverable; a live clerk saying hello into silence is not. */
   const CLIP_BACKSTOP_MS = 4000;
+  /** How early to start connecting him, measured back from the END of the clip.
+   *
+   *  He bills from the second his session opens, talking or not, so every moment he spends warming
+   *  up behind a clip is dead air we chose to buy. A real opening question measured 5.1 seconds, so
+   *  starting him with it would buy five of them on every call. Opening a session takes well under a
+   *  second; two is generous cover and keeps the rest.
+   *
+   *  Being late is safe by construction: the gate opens on its own signals whatever he is doing, and
+   *  whatever the clerk said meanwhile is already buffered and released the moment he reports ready. */
+  const PREWARM_LEAD_MS = 2000;
   log(`twilio connected room=${room.slice(0, 8)} ctx=${!!ctx}`);
 
   /** Release everything the clerk said while we were still asking. Only ever runs with the gate
@@ -293,6 +304,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (charlieGateOpen) return;
     charlieGateOpen = true;
     clipTimers.forEach(clearTimeout); clipTimers.length = 0;
+    // The question ended sooner than his warm-up was due to start — a short clip, or the carrier
+    // confirming early. Open him NOW rather than let the conversation begin with nobody on our end.
+    if (!eleven) { if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } void connectEleven(); }
     emit(room, "charlie_join", "Question asked, the agent has the conversation from here", { handover: true, via, held: pending.length });
     log(`delta: clip finished (${via}) -> agent gate open, releasing ${pending.length} buffered frame(s)`);
     flushPending();
@@ -315,6 +329,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (twilio.readyState !== 1 || !streamSid) { log("delta: socket not ready, no clip -> agent opens as usual"); return false; }
     charlieGateOpen = false;
     clipText = clip.text;
+    // Buffer inbound audio from THIS moment, not from when his session starts opening. He is now
+    // connecting later than the clip begins, and a clerk who answers in that window must still be
+    // held rather than fed to the human detector, which would drop their words entirely.
+    connecting = true;
     for (const frame of toMediaFrames(clip.audio)) {
       twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: frame } }));
       fanout(room, frame, "agent"); // a listener hears the question, same as they hear the agent
@@ -461,8 +479,18 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // DELTA ASKS, THE AGENT ANSWERS. Only on a real person: a clip played at a hold-timeout or a
     // recipe timer would be a question asked into a menu. Everything else about the call is
     // unchanged, and a store with no clip or no joining agent takes exactly today's path.
-    if (reason === "human" && ctx?.openingClip && ctx?.midCallAgentId) startOpeningClip(ctx.openingClip);
-    connectEleven();
+    const clip = reason === "human" && ctx?.openingClip && ctx?.midCallAgentId ? ctx.openingClip : null;
+    const playing = clip ? startOpeningClip(clip) : false;
+    if (playing && clip) {
+      // Start him late enough that his session opens as the question finishes, instead of billing
+      // through the whole of it. Kept OUT of clipTimers on purpose: those are cleared the moment the
+      // gate opens, and clearing this one would leave the clerk talking to an agent that never
+      // connected. A call that ends first never opens him at all.
+      const lead = Math.max(0, clip.ms - PREWARM_LEAD_MS);
+      if (lead > 0) prewarmTimer = setTimeout(() => { prewarmTimer = null; if (!ended && twilio.readyState === 1) void connectEleven(); }, lead);
+      else void connectEleven();
+      log(`delta: warming the agent up ${Math.round(lead)}ms in, so his meter starts as the question ends`);
+    } else connectEleven();
     // Give-up cap: the agent is now billing. If no real human words land within giveUpSeconds,
     // nobody is coming to the phone — end the call instead of paying to listen to it ring.
     const gu = ctx?.giveUpSeconds;
@@ -626,5 +654,5 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       if (m.mark?.name === CLIP_MARK) openCharlieGate("the carrier confirmed the clip played");
     } else if (m.event === "stop") { log("twilio stop"); signalEnd(); if (eleven) eleven.close(); }
   });
-  twilio.on("close", () => { activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (eleven) eleven.close(); });
+  twilio.on("close", () => { activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (eleven) eleven.close(); });
 }
