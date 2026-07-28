@@ -8,6 +8,37 @@ agent is switched on only while an actual conversation is happening.**
 
 ---
 
+## 0. Before you write a single line
+
+**Do not write code in your first session.** The engineer who wrote this spec built the wrong thing
+earlier the same day by skimming one file instead of reading it. The system is not large, but it is
+dense with decisions that were paid for in real calls, and the comments carry the reasons.
+
+Read these in full. Not grep, not the first fifty lines.
+
+| File | Why |
+|---|---|
+| `src/voice/bridge.ts` | the whole runtime. Every trap in section 12 is a comment in here |
+| `src/calls/listen-nav.ts` | the Ear. The prompt detector and the unsafe side channel |
+| `src/voice/bridge-place.ts` | how a call is actually placed, and where the receipt opens |
+| `src/calls/events.ts` | the closed event set and the meters |
+| `src/calls/receipt-store.ts` | the only file in the receipt chain that touches the database |
+| `src/calls/tapedeck.ts` | Delta as it exists today, including the mid-call handoff that works |
+| `src/calls/mapgraph.ts` | Mapper's side. Section 10 depends on knowing what is already built |
+| `docs/team/voice-calls/checkpoint.md` | what was tried, what failed, what is live |
+
+**Then, before building, write back a short orientation** the owner can check in under a minute:
+
+1. Where audio leaves us and reaches the phone, named by function.
+2. How the runtime knows our own audio is playing, and why that matters to the Ear.
+3. What happens today between "a person is detected" and "the agent is billing".
+4. Which single change in this spec you believe is riskiest, and why.
+
+If you cannot write those four from memory after reading, read again. Getting this wrong costs real
+calls to real stores, and the owner hears every one of them.
+
+---
+
 ## 1. The shape
 
 Four parts. Each owns one thing and nothing else.
