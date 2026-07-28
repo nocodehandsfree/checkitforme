@@ -869,7 +869,7 @@
     </div>
     <div class="herog" id="d_hero"></div>
     <div class="k-eyebrow">Reports</div>
-    <button class="peek" onclick="dashSheet('cost')">
+    <button class="peek" id="pk_cost_row" onclick="dashSheet('cost')">
       <div class="pk-ic" style="background:rgba(74,222,128,.14)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/><path d="M3 12h2"/></svg></div>
       <div class="pk-main"><div class="pk-t">Cost per check</div><div class="pk-m">What finished checks really cost</div></div>
       <div class="pk-fact" id="pk_cost"></div>
@@ -3260,7 +3260,15 @@ function dashSheet(key){
 // statuses table and the route wording is the calling engine's own. This function does no arithmetic
 // and holds no scale of its own, so nothing here can drift from what a call really did.
 async function loadOpsCost(){
-  const d=await api('/api/admin/check-costs?days=7'); if(!d||d.error) return;
+  const d=await api('/api/admin/check-costs?days=7');
+  // The Admin shell ships live the moment it is merged, but the server half rides the promote train.
+  // Until it lands the reply is an error, and a blank hero leading the swipe reads as a broken page.
+  // So the card and its row are simply not there yet, and the dashboard is exactly what it was.
+  const card=document.querySelector('button.heroc'), pk=document.getElementById('pk_cost_row');
+  const dot=document.querySelectorAll('#d_herodots span')[3];
+  const show=v=>{ if(card) card.style.display=v?'':'none'; if(pk) pk.style.display=v?'':'none'; if(dot) dot.style.display=v?'':'none'; };
+  if(!d||d.error){ show(false); return; }
+  show(true);
   const hn=document.getElementById('d_cost'), sub=document.getElementById('d_cost_sub'), sp=document.getElementById('d_cost_spark');
   const fact=document.getElementById('pk_cost');
   // Nothing stamped yet is the honest state on a clean slate, not a nought. Say it once, show no number.
