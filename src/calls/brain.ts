@@ -13,6 +13,15 @@
 // A SWITCH, NOT A MIGRATION. It is a setting, so it can be killed from a phone mid-incident the way
 // the menu flag can. Off is exactly today's behaviour and always works.
 //
+// ⚠️ BLOCKED ON A VOICE DECISION, NOT ON CODE (found 2026-07-28, proven both ways against the live
+// account). The provider refuses a custom brain on any agent using an INSTANT VOICE CLONE:
+//   "Custom LLM is not allowed when using agents with Instant Voice Clones."
+// Every voice we call with — Branson HD, Branson, Fungie — is a clone, so the switch cannot engage
+// today. The identical agent WAS accepted with a premade voice, so nothing here is wrong; the
+// blocker is entirely which voice the store hears. Settling it costs either money (converting to a
+// professional clone) or the brand voice (calling with a stock one), and both are the owner's call.
+// Until then `ourBrainAgentId` stays unset and every call quietly uses the hosted model.
+//
 // NO CONVERSATION AUDIO, AND NOW NO CONVERSATION TEXT EITHER. What passes through here is the
 // transcript the provider already holds, used to produce the next line and then dropped. It is never
 // written to disk, to a log, or to the receipt. The receipt records WHICH brain answered and how

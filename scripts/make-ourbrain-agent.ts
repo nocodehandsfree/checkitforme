@@ -29,6 +29,25 @@ if (!key || !source || !brainUrl || !brainKey) {
 type Cfg = Record<string, unknown>;
 const get = (o: Cfg | undefined, k: string): Cfg | undefined => (o?.[k] as Cfg | undefined);
 
+const SECRET_NAME = "check_brain_key";
+
+/** The shared secret, stored once on the provider's side and referenced by id. Re-running is safe:
+ *  an existing secret of this name is reused rather than duplicated. */
+async function ensureSecret(): Promise<string> {
+  const list = await fetch("https://api.elevenlabs.io/v1/convai/secrets", { headers: { "xi-api-key": key } });
+  if (list.ok) {
+    const d = await list.json() as { secrets?: Array<{ secret_id?: string; name?: string }> };
+    const found = d.secrets?.find((s) => s.name === SECRET_NAME);
+    if (found?.secret_id) return found.secret_id;
+  }
+  const r = await fetch("https://api.elevenlabs.io/v1/convai/secrets", {
+    method: "POST", headers: { "xi-api-key": key, "content-type": "application/json" },
+    body: JSON.stringify({ type: "new", name: SECRET_NAME, value: brainKey }),
+  });
+  if (!r.ok) { console.error("could not store the brain secret:", r.status, (await r.text()).slice(0, 200)); process.exit(1); }
+  return (await r.json() as { secret_id: string }).secret_id;
+}
+
 async function main() {
   const r = await fetch(`${API}/${source}`, { headers: { "xi-api-key": key } });
   if (!r.ok) { console.error("read source agent:", r.status, (await r.text()).slice(0, 200)); process.exit(1); }
@@ -40,8 +59,11 @@ async function main() {
   if (!String(prompt.prompt ?? "")) { console.error("source agent has no prompt — refusing to clone an empty one"); process.exit(1); }
   // The ONLY change. Everything else about how this agent behaves is the live agent's, so a tuning
   // change over there is one re-run away from being true over here too.
+  // The key is stored ONCE with the provider as a named secret and referenced by id from here, so it
+  // never rides in an agent definition, a commit or a chat. `--apply` creates it if it is missing.
+  const secretId = await ensureSecret();
   prompt.llm = "custom-llm";
-  prompt.custom_llm = { url: brainUrl, model_id: "check-brain", api_key: { secret_id: null, secret_value: brainKey } };
+  prompt.custom_llm = { url: brainUrl, model_id: "check-brain", api_key: { secret_id: secretId } };
   agent.prompt = prompt;
   cc.agent = agent;
 

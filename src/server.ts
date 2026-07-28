@@ -285,6 +285,12 @@ app.use("/api/*", async (c, next) => {
 // signed `admin_session` cookie minted by /admin-login. (Consumer endpoints live under /pub + /app.)
 app.use("/api/*", async (c, next) => {
   if (c.req.path === "/api/health") return next();
+  // The brain endpoint is called by the VOICE PROVIDER'S servers mid-conversation, not by a person
+  // in Admin, so an admin token is the wrong key for it and would have to be shipped to a third
+  // party to work. It carries its own shared secret instead, checked inside the route, and with that
+  // secret unset the route is closed rather than open. Exempted here for the same reason /api/health
+  // is: it is not part of the operator dashboard.
+  if (c.req.path === "/api/brain/chat/completions") return next();
   if (config.adminToken && c.req.header("x-admin-token") === config.adminToken) return next();
   const adminCookie = getCookie(c, "admin_session");
   if (adminCookie) { const s = await verifySession(adminCookie); if (s && s.id === "admin") return next(); }
