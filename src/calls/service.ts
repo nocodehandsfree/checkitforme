@@ -66,8 +66,8 @@ import { config } from "../config";
 import { ElevenLabsProvider } from "../voice/elevenlabs";
 import { takeBridgeNav } from "../voice/bridge";
 import { placeBridgeCall, roomFinalizers, parseNavSteps } from "../voice/bridge-place";
-import { listenNavSummary, type NavStep } from "./listen-nav";
-import { reportCallDrift, activeMap } from "./mapgraph";
+import { type NavStep } from "./listen-nav";
+import { activeMap } from "./mapgraph";
 import { learnTreeFromTranscript, consumeTreeRelearn } from "./tree-learn";
 import { connectAtSecFor } from "./recipe";
 import { deltaStoreCall, setDeltaFinalize, tdTranscript, type TdSession } from "./tapedeck";
@@ -620,20 +620,12 @@ export async function bridgeCheckCall(a: TriggerArgs) {
   // ever lands — the room finalizer closes the row so zone runs / schedules still reach a terminal state.
   roomFinalizers.set(r.room, (twilioStatus) => {
     void (async () => {
-      // DRIFT (owner 07-26): every real check re-measures the map for free. What we compare is what
-      // the call already produced — how many recordings played, when each step fired, and whether a
-      // step had to fall back to the clock. A step firing on the clock is the early warning that a
-      // store changed its menu, which is exactly what talked over CVS and Walmart. No speech
-      // recognition, no model, so this costs nothing and runs on every check.
-      const chainId = v.retailer.chainId;
-      const summary = listenNavSummary(r.room!);
-      if (chainId && summary && summary.fired.length) {
-        await reportCallDrift({
-          chainId, storeId: v.retailer.id, callId: row.id, navId: `bridge:${r.room}`,
-          fired: summary.fired, promptCount: summary.promptCount, navEndSec: summary.navEndSec,
-          reachedHuman: twilioStatus === "completed",
-        }).catch(() => { /* knowledge is best-effort — never block a verdict */ });
-      }
+      // DRIFT IS REPORTED FROM THE RECEIPT, NOT HERE. It used to be reported at this point, from the
+      // listening-navigation session — which meant a check on the plain path reported nothing at all,
+      // and once the map started reading the receipt too, a listening call reported the SAME drift
+      // twice: two observations, two hits to the same confidence score, one call. The receipt is the
+      // source of truth and it covers every check, so this is its job alone now
+      // (mapgraph.learnFromReceipt, wired at onReceiptClosed).
       const cur = (await db.select().from(callResults).where(eq(callResults.id, row.id)))[0];
       if (!cur || cur.status !== "dialing") return; // conv id landed → EL ingest owns the verdict
       // Twilio's terminal status IS the real reason on this lane (EL never joined): map it to the

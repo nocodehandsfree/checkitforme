@@ -533,14 +533,31 @@ export async function proposeVersion(opts: {
       }
     }
   }
-  let storeId = opts.storeId || 0;
+  // WHICH STORE WE CALLED is context, not scope. A mapping call is placed at some store, but what it
+  // proves is the CHAIN's route — it only becomes a store-level version when it disagrees with a
+  // chain route that already exists (§10.2). Conflating the two meant the very first mapping call for
+  // a chain filed itself as an exception for one store and the chain row was never stamped at all:
+  // every chain would have come out of the sweep unmapped. Caught by the whole-life simulation.
+  const calledAt = opts.storeId || 0;
+  let storeId = 0;                       // the SCOPE of the version we are about to write
   const at = nowSec();
-  const call: EvidenceCall | null = opts.call
+  let call: EvidenceCall | null = opts.call
     ? { ...opts.call, at: opts.call.at || at, day: opts.call.day || dayOf(opts.call.at || at), path: opts.call.path || pathSignature(opts.recipe) }
     : null;
+  // WHEN, in the store's own clock, filled HERE rather than trusted to each caller (spec §10.4). A
+  // menu at nine at night is often not the daytime menu, and one caller forgetting to stamp it would
+  // leave a hole in the evidence that nothing later can fill.
+  if (call && (call.hourLocal == null || call.dow == null)) {
+    const when = await storeLocalTime(call.storeId || calledAt || 0);
+    call = { ...call, hourLocal: call.hourLocal ?? when.hour, dow: call.dow ?? when.dow };
+  }
 
-  const prevActive = await activeMap(opts.chainId, storeId);
-  const sameRoute = !!prevActive && prevActive.storeId === storeId && pathSignature(prevActive.recipe) === pathSignature(opts.recipe);
+  // What this store runs today: its own exception if it has one, otherwise the chain's route.
+  const prevActive = await activeMap(opts.chainId, calledAt);
+  // Folding only ever happens into a version of the SAME scope this call would write to. A call that
+  // matches a store's own exception folds there; one that matches the chain route folds into that.
+  const sameRoute = !!prevActive && pathSignature(prevActive.recipe) === pathSignature(opts.recipe);
+  if (sameRoute && prevActive) storeId = prevActive.storeId;
   const hammer = isHammerPath(opts.recipe);
 
   // Same route confirmed again → fold the evidence into the live version and re-score it. The map
@@ -601,17 +618,15 @@ export async function proposeVersion(opts: {
   // almost always that store, not the chain — and letting one odd call rewrite the chain would break
   // five hundred stores at once. So: the exception is recorded against THAT STORE, and the chain route
   // only moves once STORES_TO_MOVE_CHAIN separate stores have walked the same new route.
-  if (prevActive && !sameRoute && storeId && prevActive.storeId === 0 && call?.reachedHuman) {
-    const agreeing = await storesAgreeingOn(opts.chainId, pathSignature(opts.recipe), storeId);
+  if (prevActive && !sameRoute && calledAt && prevActive.storeId === 0 && call?.reachedHuman) {
+    const agreeing = await storesAgreeingOn(opts.chainId, pathSignature(opts.recipe), calledAt);
     if (agreeing.length < STORES_TO_MOVE_CHAIN) {
-      const res = await proposeStoreException(opts, call, agreeing.length);
-      return res;
+      return proposeStoreException({ ...opts, storeId: calledAt }, call, agreeing.length);
     }
     // Enough stores now walk this route that it is the chain's route, not an exception. Fall through
     // and propose it at CHAIN level — the store must be cleared here or the promotion would silently
     // file itself as yet another store exception and the chain would never move at all.
     opts = { ...opts, storeId: 0, why: `${agreeing.length} stores now walk this route (${agreeing.join(", ")})` };
-    storeId = 0;
   }
 
   // A new route (or the first one ever).
@@ -1121,20 +1136,28 @@ export async function learnFromReceipt(r: {
     learned.push(`route reached nobody: ${why}`);
   }
 
-  // What the call walked, into the graph. No text on a customer check — the Ear counts recordings, it
-  // does not transcribe them — so the prompts are anonymous nodes keyed by where they sat in the call.
+  // WHAT THE CALL WALKED, MEASURED AGAINST THE MAP. This is spec §10's first wiring gap closed from
+  // this side: drift used to be reported only by calls running listening navigation, so an ordinary
+  // check on the plain path told us nothing. Every check with a receipt reports now.
+  //
+  // It does NOT feed the graph. A customer check produces no prompt text — the Ear counts recordings,
+  // it does not transcribe them — and a node with no words cannot be matched to the same prompt heard
+  // on another call. Guessing at that would fill the graph with duplicates. Mapping calls, which do
+  // transcribe, are what grow the graph.
   const actions = events.filter((e) => e.kind === "alpha_press" || e.kind === "bravo_say").map((e) => ({
-    action: (e.kind === "alpha_press" ? "press" : "say") as "press" | "say",
     value: String(e.detail?.key ?? e.detail?.phrase ?? ""), atSec: e.atSec ?? 0,
+    via: String(e.detail?.via ?? e.detail?.trigger ?? "prompt"),
   })).filter((a) => a.value);
-  if (actions.length && personAt != null) {
-    await recordObservation({
-      chainId, storeId, versionId: map?.id ?? null, navId, callId: r.callId,
-      kind: "live-check", expected: map ? pathSignature(map.recipe) : undefined,
-      observed: actions.map((a) => a.value).join(">"), drift: false,
-      hourLocal: when.hour, dow: when.dow, detail: { personAt, transferAt },
+  if (actions.length) {
+    const d = await reportCallDrift({
+      chainId, storeId, navId, callId: r.callId, fired: actions,
+      reachedHuman: personAt != null,
+      navEndSec: actions.length ? actions[actions.length - 1].atSec : null,
+      promptCount: events.filter((e) => e.kind === "ivr_detected").length,
     });
-    learned.push(`walked ${actions.length} step(s), person at ${personAt}s`);
+    learned.push(d.drift
+      ? `route drifted: ${d.reasons[0]}`
+      : `walked ${actions.length} step(s)${personAt != null ? `, person at ${personAt}s` : ""} — matches the map`);
   }
   return { learned };
 }
