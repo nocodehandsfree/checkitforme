@@ -41,6 +41,7 @@ import { emit, markNow, closeReceipt, linkCall, rollup, getReceipt, type Rollup 
 import { installReceiptStore, currentRates, onReceiptClosed } from "./calls/receipt-store";
 import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
+import { opsRollup, type CheckRow } from "./calls/ops";
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
 import { graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, graphFor, learnFromReceipt, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
 import { recipeFromCall, evidenceFromCall, type CapturedStep } from "./calls/map-capture";
@@ -5859,6 +5860,40 @@ app.get("/api/admin/cost-inputs", async (c) => {
 // receipt bills a real call with, so the Calc page and the Chains page read it rather than keeping
 // their own copy. A second copy is how a forecast and a bill quietly stop agreeing.
 app.get("/api/admin/call-rates", async (c) => c.json(await currentRates()));
+// WHAT OUR CHECKS ACTUALLY COST — the live readout behind the dashboard hero. Every figure is summed
+// off the columns the receipt stamped on a finished check; nothing here is modelled, and a check the
+// receipt never stamped is not counted (the owner's clean slate, 07-26: the old rows are false). The
+// maths is pure and unit-tested in `src/calls/ops.ts` — this only fetches the rows and the scales.
+app.get("/api/admin/check-costs", async (c) => {
+  const days = Math.max(1, Math.min(90, Number(c.req.query("days") || 7)));
+  const [rows, statusRows, ownerOnly, since] = await Promise.all([
+    db.select().from(callResults),
+    db.select().from(statuses).orderBy(statuses.sort),
+    ownerOnlyRetailerIds(),
+    getStatsSince(),
+  ]);
+  const report = opsRollup(
+    rows as unknown as CheckRow[],
+    statusRows.map((s) => ({ key: s.key, label: s.label, emoji: s.emoji, color: s.color, tone: s.tone })),
+    { ownerOnly, since, nowSec: Math.floor(Date.now() / 1000), sparkDays: days },
+  );
+  // The same money strings the receipt prints, so a total on the dashboard and a cost on one check
+  // are never formatted two different ways. Every figure the page shows is rendered HERE, by
+  // `money()` in the cost module — the page holds no money formatter of its own to drift from it.
+  const say = (s: { perCheckUsd: number; totalUsd: number }) => ({ ...s, perCheck: money(s.perCheckUsd), total: money(s.totalUsd) });
+  return c.json({
+    ...report,
+    byOutcome: report.byOutcome.map(say),
+    byRoute: report.byRoute.map(say),
+    readable: {
+      perCheck: report.perCheckUsd != null ? money(report.perCheckUsd) : null,
+      total: money(report.totalUsd),
+      avoidable: money(report.agent.avoidableUsd),
+      perAnswer: report.answers.costPerAnswerUsd != null ? money(report.answers.costPerAnswerUsd) : null,
+      days: report.days.map((d) => (d.perCheckUsd != null ? money(d.perCheckUsd) : null)),
+    },
+  });
+});
 // The flat monthly bills that are NOT per call: hosting, the database, sign-in, the phone numbers, the
 // gateway, email. They do not move when one more check runs, but they decide what a check costs once
 // volume is spread over them, which is the whole question the Calc page exists to answer.
@@ -5884,14 +5919,20 @@ app.get("/api/admin/receipt/:room", async (c) => {
   if (!room) return c.json({ error: "room required" }, 400);
   // Same envelope as GET /api/calls/:id/receipt — { live, seconds, cost, timeline } — so the replay
   // viewer reads one shape and never branches on which kind of call it opened.
+  // The money is spelled out HERE, by the cost module, exactly as GET /api/calls/:id/receipt does it.
+  // The costs are microdollars, and a page that formatted them itself printed a five-cent call as
+  // 5,282,200¢. One printer, one envelope, no second formatter anywhere.
+  const readable = (cost: { totalUsd: number; charlieUsd: number; lineUsd: number; avoidableUsd: number }) =>
+    ({ total: money(cost.totalUsd), charlie: money(cost.charlieUsd), line: money(cost.lineUsd), wasted: money(cost.avoidableUsd) });
   const live = getReceipt(room);
   if (live && !live.closed) {
     const sums = rollup(live);
+    const cost = costCall({ callSecs: sums.callSecs, charlieSecs: sums.charlieConnectedSeconds, avoidableSecs: sums.charlieSilentSeconds, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))] }, await currentRates());
     return c.json({
       room, live: true,
       timeline: live.events.map((e) => ({ atSec: e.atSec, kind: e.kind, note: e.note ?? "", detail: e.detail ?? null })),
       seconds: sums,
-      cost: costCall({ callSecs: sums.callSecs, charlieSecs: sums.charlieConnectedSeconds, avoidableSecs: sums.charlieSilentSeconds, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))] }, await currentRates()),
+      cost: { ...cost, readable: readable(cost) },
     });
   }
   const rows = await db.select().from(callEvents).where(eq(callEvents.room, room)).orderBy(callEvents.atMs);
@@ -5900,11 +5941,12 @@ app.get("/api/admin/receipt/:room", async (c) => {
   // An unattached call rolls its seconds and cost onto the LAST event's detail (receipt-store.ts),
   // because there is no call_results row to stamp and the event set is a closed sixteen.
   const tail = parse(rows[rows.length - 1]?.detail ?? null);
+  const tailCost = (tail?.cost ?? null) as { totalUsd: number; charlieUsd: number; lineUsd: number; avoidableUsd: number } | null;
   return c.json({
     room, live: false,
     timeline: rows.map((r) => ({ atSec: r.atSec, kind: r.kind, note: r.note ?? "", detail: parse(r.detail) })),
     seconds: tail?.seconds ?? null,
-    cost: tail?.cost ?? null,
+    cost: tailCost ? { ...tailCost, readable: readable(tailCost) } : null,
   });
 });
 app.get("/api/admin/call-timing", async (c) => {

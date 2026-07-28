@@ -319,6 +319,9 @@
   .heroc .spark{margin-left:auto;display:flex;align-items:flex-end;gap:3px;height:44px}
   .heroc .spark i{width:5px;border-radius:2px;background:rgba(74,222,128,.35);min-height:3px}
   .heroc .spark i.hi{background:var(--green)}
+  /* A hero card that drills in is a button; it must still LOOK exactly like the card beside it. */
+  button.heroc{border:none;font-family:inherit;text-align:left;cursor:pointer;-webkit-appearance:none;appearance:none}
+  button.heroc:active{transform:translateY(1px)}
   #d_heroswipe::-webkit-scrollbar{display:none}
   /* Peek-row icon slot — one tinted icon per report so the eye scans by color, not by reading. */
   .peek .pk-ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:0 0 auto}
@@ -825,6 +828,16 @@
     <div class="k-title">Today</div>
     <div class="k-sub" id="d_date">Loading…</div>
     <div id="d_heroswipe" style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;margin:16px 0 8px;scrollbar-width:none" onscroll="dashHeroDots(this)">
+      <!-- THE ops number (contract §5): what a check costs us, summed off finished checks. Tap it for
+           the drill-down. It leads the swipe; checks today / 7d / 30d follow, unchanged. -->
+      <button class="heroc" style="flex:0 0 100%;scroll-snap-align:start;margin:0" onclick="dashSheet('cost')">
+        <div>
+          <div class="hn m" id="d_cost"></div>
+          <div class="hl">Cost per check</div>
+          <div class="trend" id="d_cost_sub" style="display:none"></div>
+        </div>
+        <div class="spark" id="d_cost_spark"></div>
+      </button>
       <div class="heroc" style="flex:0 0 100%;scroll-snap-align:start;margin:0">
         <div>
           <div class="hn m" id="d_checks">—</div>
@@ -852,9 +865,16 @@
       <span style="width:6px;height:6px;border-radius:50%;background:var(--green)"></span>
       <span style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.18)"></span>
       <span style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.18)"></span>
+      <span style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.18)"></span>
     </div>
     <div class="herog" id="d_hero"></div>
     <div class="k-eyebrow">Reports</div>
+    <button class="peek" onclick="dashSheet('cost')">
+      <div class="pk-ic" style="background:rgba(74,222,128,.14)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/><path d="M3 12h2"/></svg></div>
+      <div class="pk-main"><div class="pk-t">Cost per check</div><div class="pk-m">What finished checks really cost</div></div>
+      <div class="pk-fact" id="pk_cost"></div>
+      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
     <button class="peek" onclick="dashSheet('money')">
       <div class="pk-ic" style="background:rgba(74,222,128,.14)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
       <div class="pk-main"><div class="pk-t">Money</div></div>
@@ -888,6 +908,7 @@
     </button>
     <!-- hidden detail holders — the existing loaders populate these; dashSheet() lifts them into the shared sheet -->
     <div id="dash_details" style="display:none">
+      <div id="ds_cost"><div id="d_cost_body"></div></div>
       <div id="ds_money"><div class="stats" id="d_money"></div><a class="goto" href="#calc" onclick="closeSheet();showSection('calc');return false">Open the full money view in Calc →</a></div>
       <div id="ds_pulse"><div id="gw_pulse">Loading…</div></div>
       <div id="ds_timing"><div class="stats" id="d_timing"></div><div id="d_timing_model"></div><div id="d_timing_status"></div><div class="k-eyebrow">Per-store averages</div><div id="d_timing_stores"></div></div>
@@ -1916,7 +1937,7 @@ const NAV_GROUPS={
   launch:   {label:'Launch',   ico:'trophy',tabs:[['gtm','Go-to-Market','check']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), alerts:()=>loadAlerts(), dash:()=>{loadDash();loadGwPulse();loadCallHealth();loadCredits();}, calc:()=>calcInit(), plans:()=>loadPlans(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), feedback:()=>loadFeedback(), support:()=>loadSupport(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();}, gtm:()=>loadGtm() };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), alerts:()=>loadAlerts(), dash:()=>{loadDash();loadOpsCost();loadGwPulse();loadCallHealth();loadCredits();}, calc:()=>calcInit(), plans:()=>loadPlans(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), feedback:()=>loadFeedback(), support:()=>loadSupport(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();}, gtm:()=>loadGtm() };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 let NAV_RESTORING=false, NAV_BOOTED=false; // browser Back/Forward walks the admin's own tab history
 let FB_OPEN=0; // unreviewed poll disagreements — count badge on the Calls ▸ Feedback tab
@@ -2238,9 +2259,17 @@ async function openReceiptInto(url){
   openSheet('The whole call','',box);
   const d=await api(url);
   if(!d||d.error){ box.innerHTML='<div class="empty">Nothing was recorded for this call. Only calls placed since 27 July have a receipt.</div>'; return; }
-  const KIND={dialed:'Dialled',ringing:'Ringing',connected:'The line was answered',ivr_detected:'A phone menu',alpha_press:'Pressed a key',bravo_say:'Said a word',human_detected:'A person answered',transfer:'Handed on',voicemail:'A machine',hangup:'Call ended',verdict:'Answer'};
+  // ALL SIXTEEN kinds the calling engine can write (src/calls/events.ts). The set is closed, so this
+  // map is complete by definition. A missing one used to fall through and print its code name.
+  const KIND={dialed:'Dialled',ringing:'Ringing',connected:'The line was answered',ivr_detected:'A phone menu',
+    alpha_press:'Pressed a key',bravo_say:'Said a word',human_detected:'A person answered',
+    charlie_join:'Check AI joined, the money clock starts',charlie_leave:'Check AI left',
+    hold_start:'Put on hold',hold_end:'Back off hold',transfer:'Handed on',voicemail:'A machine',
+    unknown:'Something we could not place',verdict:'Answer',hangup:'Call ended'};
   const c=d.cost||{}, s=d.seconds||d.rollup||{};
-  const money=n=>(Number(n||0)*100).toFixed(1)+'¢';
+  // The costs come back in millionths of a dollar and the receipt prints them for us. Never format
+  // them here: this line used to read a five cent call as 5,282,200¢.
+  const cash=(c.readable&&c.readable.total)||'';
   const rungs=(d.timeline||[]).map((e,i,a)=>chainRung({
     at:(e.atSec||0)+'s', t:esch(e.note||KIND[e.kind]||e.kind),
     c:e.kind==='human_detected'?'var(--green)':e.kind==='ringing'||e.kind==='transfer'?'var(--yellow)':'var(--muted)',
@@ -2248,7 +2277,7 @@ async function openReceiptInto(url){
     tc:e.kind==='human_detected'?'var(--green)':'var(--text-strong)',
   },i===a.length-1)).join('');
   box.innerHTML=(d.cost?`<div class="stats" style="margin-bottom:16px">`
-      +`<div class="stat"><div class="n">${money(c.totalUsd)}</div><div class="l">What it cost</div></div>`
+      +`<div class="stat"><div class="n">${esch(cash)}</div><div class="l">What it cost</div></div>`
       +`<div class="stat"><div class="n">${s.callSecs!=null?s.callSecs+'s':''}</div><div class="l">On the line</div></div>`
       +`<div class="stat"><div class="n">${s.navSeconds!=null?s.navSeconds+'s':''}</div><div class="l">Time to Staff</div></div>`
     +`</div>`:'')
@@ -3220,9 +3249,65 @@ function dashHeroDots(el){
   dots.forEach((d,k)=>{ d.style.background=k===i?'var(--green)':'rgba(255,255,255,.18)'; });
 }
 function dashSheet(key){
-  const titles={money:'Money',pulse:'Members',timing:'Call time',health:'Call health',credits:'Credits'};
-  const subs={money:'Revenue, profit and margin',pulse:'Signups, scores and activity today',timing:'Time to reach a person vs talk time',health:'Real calls vs test calls',credits:'Voice credits · estimated over the last 31 days'};
+  const titles={cost:'Cost per check',money:'Money',pulse:'Members',timing:'Call time',health:'Call health',credits:'Credits'};
+  const subs={cost:'Added up from finished checks. Nothing here is a forecast.',money:'Revenue, profit and margin',pulse:'Signups, scores and activity today',timing:'Time to reach a person vs talk time',health:'Real calls vs test calls',credits:'Voice credits · estimated over the last 31 days'};
   sheetFromHolder('ds_'+key, titles[key], subs[key]);
+}
+// ---- WHAT OUR CHECKS COST (contract: docs/specs/admin-ops-dashboard/CONTRACT.md §5) ----------------
+// The hero of the day: one number, what a check costs us, and every drill-down under it. EVERY figure
+// on this screen arrives finished from /api/admin/check-costs. The seconds are the columns the
+// receipt stamped, the money strings are printed by the cost module, the outcome scale is the owner's
+// statuses table and the route wording is the calling engine's own. This function does no arithmetic
+// and holds no scale of its own, so nothing here can drift from what a call really did.
+async function loadOpsCost(){
+  const d=await api('/api/admin/check-costs?days=7'); if(!d||d.error) return;
+  const hn=document.getElementById('d_cost'), sub=document.getElementById('d_cost_sub'), sp=document.getElementById('d_cost_spark');
+  const fact=document.getElementById('pk_cost');
+  // Nothing stamped yet is the honest state on a clean slate, not a nought. Say it once, show no number.
+  if(!d.checks){
+    if(hn){ hn.textContent=''; hn.className='hn m'; }
+    if(sub){ sub.style.display='inline-flex'; sub.className='trend dn'; sub.textContent='no finished checks yet'; }
+    if(sp) sp.innerHTML='';
+    if(fact){ fact.textContent='none yet'; fact.className='pk-fact'; }
+  } else {
+    if(hn){ hn.textContent=d.readable.perCheck; hn.className='hn'; }
+    if(sub){ sub.style.display='inline-flex'; sub.className='trend dn'; sub.textContent=d.checks+(d.checks===1?' check':' checks'); }
+    if(fact){ fact.textContent=d.readable.perCheck; fact.className='pk-fact g'; }
+    // Honest spark: bars only for days that had a check, tallest bar = the dearest day.
+    const vals=d.days.map(x=>x.perCheckUsd||0), mx=Math.max.apply(null,vals.concat([1]));
+    if(sp) sp.innerHTML=d.days.map((x,i)=>x.checks?`<i${i===d.days.length-1?' class="hi"':''} style="height:${Math.max(7,Math.round(x.perCheckUsd/mx*100))}%"></i>`:'<i style="height:3%"></i>').join('');
+  }
+  const body=document.getElementById('d_cost_body'); if(!body) return;
+  if(!d.checks){
+    body.innerHTML='<div class="empty">No finished checks in the record yet. Every check from here on lands here on its own. Checks from before the new calling engine, cancelled checks and your test stores are never counted.</div>';
+    return;
+  }
+  const st=(n,l)=>`<div class="stat"><div class="n">${esch(String(n))}</div><div class="l">${esch(l)}</div></div>`;
+  // One row shape for every list on this sheet: what it is, how many checks, what it cost.
+  const row=(ico,label,meta,fact2,col)=>`<div class="peek" style="cursor:default">`
+    +(ico?`<span class="pk-ic" style="background:rgba(255,255,255,.05)">${ico}</span>`:'')
+    +`<span class="pk-main"><span class="pk-t" style="display:block">${esch(label)}</span>`
+    +(meta?`<span class="pk-m" style="display:block">${esch(meta)}</span>`:'')+`</span>`
+    +`<span class="pk-fact"${col?` style="color:${esch(col)}"`:''}>${esch(fact2)}</span></div>`;
+  const checks=n=>n+(n===1?' check':' checks');
+  const a=d.agent, ans=d.answers;
+  body.innerHTML=
+    `<div class="heroc" style="margin:2px 0 14px"><div><div class="hn">${esch(d.readable.perCheck)}</div><div class="hl">Cost per check</div></div></div>`
+    +`<div class="stats">${st(d.checks,'checks counted')}`
+      +(ans.triesPerAnswer!=null?st(ans.triesPerAnswer,'tries per answer'):'')
+      +(d.readable.perAnswer?st(d.readable.perAnswer,'cost per answer'):'')+`</div>`
+    +`<div class="k-eyebrow">What happened</div>`
+    +d.byOutcome.map(s=>row(s.icon?statusIcon(s.icon,s.color,22):'',s.label,checks(s.checks),s.perCheck,s.color)).join('')
+    +`<div class="k-eyebrow">How we got in</div>`
+    +d.byRoute.map(s=>row('',s.label,checks(s.checks),s.perCheck)).join('')
+    +(a.n?`<div class="k-eyebrow">Where the seconds went</div>`
+      +row('','Check AI talking','',a.speakingSecs+'s')
+      +row('','Staff talking','',a.listeningSecs+'s')
+      +row('','Nobody talking',d.readable.avoidable+' of the bill',a.silentSecs+'s','#F59E0B')
+      +`<div class="k-note" style="padding-top:6px">Check AI bills every second he is connected, talking or not. Measured on ${checks(a.n)}.</div>`:'')
+    +(d.clock.length?`<div class="k-eyebrow">The clock</div>`
+      +d.clock.map(c=>row('',c.label,checks(c.n),c.avgSecs+'s')).join(''):'')
+    +`<div class="k-note">Added up from every finished check the receipt stamped. Checks from before the new calling engine, cancelled checks and your test stores are never counted.</div>`;
 }
 
 // ---- Bail library: per-rule toggles saved to policy.bail (enforcement stays staged) ----
@@ -5621,7 +5706,10 @@ function openCallSheet(id){
     `<div style="display:flex;align-items:center;gap:8px;margin:6px 0 2px"><span style="width:8px;height:8px;border-radius:50%;background:${vv.c};box-shadow:0 0 8px ${vv.c};flex:0 0 auto"></span><span style="font-size:19px;font-weight:900;letter-spacing:-.4px;color:${vv.c}">${esch(vv.t)}</span></div>`
     +(vv.n?`<div style="font-size:13px;font-weight:500;color:rgba(255,255,255,.72);margin-top:4px;line-height:1.5">${esch(vv.n)}</div>`:'')
     +(r.summary?`<div style="font-size:13px;font-weight:500;color:rgba(255,255,255,.72);margin-top:8px;line-height:1.5">${esch(r.summary)}</div>`:'')
-    +(r.transcript?`<div style="margin-top:14px">${bubbles(r.transcript)}</div>`:'<div class="empty" style="padding:18px 0">No transcript captured for this call.</div>');
+    +(r.transcript?`<div style="margin-top:14px">${bubbles(r.transcript)}</div>`:'<div class="empty" style="padding:18px 0">No transcript captured for this call.</div>')
+    // Why a check went the way it did, without opening a log: its own timeline, its own seconds and
+    // what it cost, off the receipt the calling engine wrote (contract §5, block 1 to 4).
+    +`<button class="k-key" onclick="openCallReceipt('${esch(String(r.id))}')">THE WHOLE CALL</button>`;
   openSheet(r.retailer||'Store', esch(sub), body);
 }
 
