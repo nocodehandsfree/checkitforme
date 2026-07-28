@@ -109,20 +109,24 @@ export class PromptDetector {
   feed(b64: string): void { this.feedEnergy(frameEnergy(b64)); }
 }
 
-/** A greeting this short is a person, not a menu. Measured menus read their options for seconds;
- *  "Target Topanga, this is Bob" is over in two. */
+/** Fallbacks ONLY. The live values come from the `call_tuning` setting the Admin reads and are
+ *  passed in, because every one of these has to be tuned against real calls and none of that can
+ *  wait on a release (owner, 07-28). Kept here so this file still needs no config to be tested. */
 const PERSON_GREETING_MAX_MS = 3500;
-/** …and then they WAIT for you. A recorded menu pauses well under a second between phrases, so an
- *  unbroken wait this long after a short opening means somebody picked up and is listening. */
 const PERSON_WAIT_MS = 2500;
 
 /** Has a real person answered instead of the menu we mapped? Pure, so the rule that decides whether
  *  we fire keypad tones at a human is provable without a phone call.
  *  Deliberately narrow: only BEFORE the first mapped step, only on the very first thing we heard.
  *  Once a menu has started walking, a pause is just a pause. */
-export function looksLikeAPerson(o: { stepsFired: number; promptCount: number; lastPromptMs: number; quietMs: number }): boolean {
+export function looksLikeAPerson(
+  o: { stepsFired: number; promptCount: number; lastPromptMs: number; quietMs: number },
+  t?: { personGreetingMaxMs?: number; personWaitMs?: number },
+): boolean {
   if (o.stepsFired > 0 || o.promptCount !== 1) return false;
-  return o.lastPromptMs > 0 && o.lastPromptMs <= PERSON_GREETING_MAX_MS && o.quietMs >= PERSON_WAIT_MS;
+  const maxGreeting = t?.personGreetingMaxMs ?? PERSON_GREETING_MAX_MS;
+  const wait = t?.personWaitMs ?? PERSON_WAIT_MS;
+  return o.lastPromptMs > 0 && o.lastPromptMs <= maxGreeting && o.quietMs >= wait;
 }
 
 // ---- the recording plan (which recording each step waits for) -------------------------------
@@ -153,22 +157,19 @@ export function looksLikeAPerson(o: { stepsFired: number; promptCount: number; l
 // What it does NOT do is judge what anyone SAID. "Hold on, let me go check" is words, and words are
 // Charlie's. This is only the shape of the sound.
 
-/** No voice at all for this long, mid conversation, and the person has gone. Deliberately generous:
- *  a clerk thinking about the question, or turning to look at a shelf, must never read as a hold. */
+/** Fallbacks ONLY — the live values arrive from the `call_tuning` setting via the constructor.
+ *  Every one of these has to be tuned against real calls, so none of them may need a release. */
 const HOLD_QUIET_MS = 6000;
-/** Unbroken sound for this long is not a person talking. Real speech never fills a window this size
- *  without a gap. */
 const HOLD_MUSIC_MS = 6000;
-/** The window used to decide "is this speech or is this continuous sound". */
 const VOICED_WINDOW_MS = 3000;
-/** A window this densely voiced cannot be a person talking. Measured against speech, which sits far
- *  below even when someone is talking quickly. */
 const MUSIC_VOICED_FRACTION = 0.96;
-/** A gap this long and the person who comes back may not be the person who left, so Charlie has to
- *  be told rather than carry on as though no time passed and greet a new clerk as the old one. */
 const NEW_PERSON_AFTER_MS = 20000;
 
 export type HoldReason = "quiet" | "music" | "transfer";
+export interface EarTuning {
+  holdQuietMs?: number; holdMusicMs?: number; musicWindowMs?: number;
+  musicVoicedFraction?: number; newPersonAfterMs?: number;
+}
 
 /**
  * Streaming, pure and synchronous, so every threshold above is provable without a phone call.
@@ -187,12 +188,23 @@ export class ConversationEar {
   /** Total time spent on hold. THIS is `holdSeconds` on the receipt, which has been null since the
    *  receipt shipped because nothing measured it. */
   holdMs = 0;
+  private readonly quietMax: number;
+  private readonly musicMax: number;
+  private readonly windowMs: number;
+  private readonly voicedFrac: number;
+  private readonly newPersonMs: number;
   constructor(private on: {
     holdStart: (reason: HoldReason, atMs: number) => void;
     /** @param gapMs how long they were gone. @param maybeNewPerson long enough that it may not be
      *  the same person, so Charlie must be told. */
     holdEnd: (gapMs: number, maybeNewPerson: boolean, atMs: number) => void;
-  }) {}
+  }, t?: EarTuning) {
+    this.quietMax = t?.holdQuietMs ?? HOLD_QUIET_MS;
+    this.musicMax = t?.holdMusicMs ?? HOLD_MUSIC_MS;
+    this.windowMs = t?.musicWindowMs ?? VOICED_WINDOW_MS;
+    this.voicedFrac = t?.musicVoicedFraction ?? MUSIC_VOICED_FRACTION;
+    this.newPersonMs = t?.newPersonAfterMs ?? NEW_PERSON_AFTER_MS;
+  }
 
   /** @param energy frame energy, same measure the rest of the call path uses.
    *  @param isTone this frame sits on the phone network's own ring/busy frequencies. */
@@ -201,7 +213,7 @@ export class ConversationEar {
     if (this.reason) this.holdMs += FRAME_MS;
     const loud = energy > VOICE_THRESH;
     this.voiced.push(loud && !isTone);
-    while (this.voiced.length * FRAME_MS > VOICED_WINDOW_MS) this.voiced.shift();
+    while (this.voiced.length * FRAME_MS > this.windowMs) this.voiced.shift();
 
     // A ringing line after we already reached a person is a transfer, and it is the one signal that
     // needs no waiting at all — the frequencies are unambiguous.
@@ -209,14 +221,14 @@ export class ConversationEar {
 
     if (loud) {
       this.soundMs += FRAME_MS; this.quietMs = 0;
-      const full = this.voiced.length * FRAME_MS >= VOICED_WINDOW_MS
-        && this.voiced.filter(Boolean).length / this.voiced.length >= MUSIC_VOICED_FRACTION;
-      if (full && this.soundMs >= HOLD_MUSIC_MS) this.enter("music");
+      const full = this.voiced.length * FRAME_MS >= this.windowMs
+        && this.voiced.filter(Boolean).length / this.voiced.length >= this.voicedFrac;
+      if (full && this.soundMs >= this.musicMax) this.enter("music");
       // Sound with gaps in it is a person. If we thought they were away, they are back.
       else if (!full) { this.heardVoiceMs += FRAME_MS; this.leave(); }
     } else {
       this.soundMs = 0; this.quietMs += FRAME_MS;
-      if (this.quietMs >= HOLD_QUIET_MS) this.enter("quiet");
+      if (this.quietMs >= this.quietMax) this.enter("quiet");
     }
   }
 
@@ -237,7 +249,7 @@ export class ConversationEar {
     if (!this.reason) return;
     const gap = this.elapsed - this.holdStartedAt;
     this.reason = null;
-    this.on.holdEnd(gap, gap >= NEW_PERSON_AFTER_MS, this.elapsed);
+    this.on.holdEnd(gap, gap >= this.newPersonMs, this.elapsed);
   }
 }
 
@@ -277,6 +289,7 @@ interface Session {
   /** Abandon the remaining steps when a real person answers instead of the mapped menu. On unless
    *  something explicitly turns it off, so the default is never firing tones at a human. */
   abortOnHuman?: boolean;
+  tuning?: { personGreetingMaxMs?: number; personWaitMs?: number };
 }
 
 const sessions = new Map<string, Session>();
@@ -384,6 +397,8 @@ export function startListenNav(opts: {
   log?: (s: string) => void; onNavEnd?: (navEndSec: number) => void;
   onEvent?: (kind: string, note: string, detail?: Record<string, unknown>) => void;
   abortOnHuman?: boolean;
+  /** Tunables from the setting the Admin reads, passed in so this file needs no config. */
+  tuning?: { personGreetingMaxMs?: number; personWaitMs?: number };
 }): void {
   const log = opts.log || (() => { /* silent */ });
   if (!opts.steps.length || !opts.callSid) return;
@@ -391,7 +406,7 @@ export function startListenNav(opts: {
   const s: Session = {
     room: opts.room, callSid: opts.callSid, steps, next: 0, startMs: Date.now(),
     lastFiredAtSec: 0, timers: [], bridgeUrl: opts.bridgeUrl, done: false, log,
-    onNavEnd: opts.onNavEnd, onEvent: opts.onEvent, fired: [], abortOnHuman: opts.abortOnHuman,
+    onNavEnd: opts.onNavEnd, onEvent: opts.onEvent, fired: [], abortOnHuman: opts.abortOnHuman, tuning: opts.tuning,
     det: new PromptDetector(() => { /* replaced below */ }),
   };
   s.det = new PromptDetector((n) => {
@@ -422,7 +437,7 @@ export function listenNavFeed(room: string, b64: string, track?: string): void {
   // a menu that now answers directly means our tones go off in a real human's ear. Today we would
   // keep pressing all the way down the list. Now the remaining steps are abandoned and the call
   // goes straight to the conversation.
-  if (s.abortOnHuman !== false && looksLikeAPerson({ stepsFired: s.next, promptCount: s.det.count, lastPromptMs: s.det.lastPromptMs, quietMs: s.det.quietMs })) {
+  if (s.abortOnHuman !== false && looksLikeAPerson({ stepsFired: s.next, promptCount: s.det.count, lastPromptMs: s.det.lastPromptMs, quietMs: s.det.quietMs }, s.tuning)) {
     void handToConversation(s, "someone answered before the menu, the rest of the keys were never pressed");
   }
 }

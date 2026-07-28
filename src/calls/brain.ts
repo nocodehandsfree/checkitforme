@@ -36,15 +36,15 @@ export async function brainModel(): Promise<string> {
   try { return (await getSetting("call_brain_model")) || DEFAULT_BRAIN_MODEL; } catch { return DEFAULT_BRAIN_MODEL; }
 }
 /**
- * Groq's llama-3.3-70b, and not by default-choice: it already won a bench on this exact job on
- * 2026-07-10, correct on every classify line at 300 to 700ms, and it is the model the recorded-clip
- * lane has been running live ever since. A phone call cannot wait for a slow think, and the system
- * prompt has already settled everything there is to reason about.
+ * THE MODEL THE OWNER APPROVED, and the only one this may default to. It is the same model the
+ * hosted agent runs today, so moving the thinking to our own account changes WHO IS BILLED and
+ * nothing a store can hear.
  *
- * Free-tier Gemini is deliberately not here: it 429'd mid call once and turned clear answers into
- * "unclear". It is banned from the live path.
+ * An engineer swapped this for a cheaper model on 2026-07-28 after hitting a wall, without asking.
+ * That is exactly the change that can make a call sound nothing like the one that was signed off,
+ * and it must not happen again: a different model here is an owner's decision, not a workaround.
  */
-const DEFAULT_BRAIN_MODEL = "groq:llama-3.3-70b-versatile";
+const DEFAULT_BRAIN_MODEL = "claude-sonnet-4-6";
 
 /** Shared secret the voice provider presents, so this endpoint cannot be driven by anyone else.
  *  Lives in Railway variables on both services, never in a chat and never in a commit. */
@@ -60,6 +60,87 @@ export function brainKeyOk(header: string | null): boolean {
 }
 
 interface ChatMsg { role: string; content: unknown }
+
+// ---- WHAT THIS ENDPOINT ACCEPTS, AND WHAT PROVES THE CALLER ----------------------------------
+//
+// BE PRECISE ABOUT THIS, because it is the one route on the server that is not behind the admin
+// login. The voice provider's custom-model integration sends a plain bearer token — the secret we
+// stored with them — and does NOT sign its requests. So there is no signature to verify, and
+// anything claiming otherwise would be a comment that lies. What proves the caller is:
+//
+//   1. THE SHARED SECRET, which only exists in two places: their vault and our Railway variables.
+//      Compared in constant time so it cannot be learned one character at a time from timing.
+//      Unset = the route is CLOSED, never open.
+//   2. THE SHAPE. Only the handful of fields a chat turn actually needs are read; everything else
+//      is ignored, and anything oversized is refused before a model is ever called.
+//   3. NO REPLAYS. The same exact body inside a short window is rejected, so a captured request
+//      cannot be fired back at us to burn tokens on our account.
+//   4. A CEILING. Even with the right secret, a fixed number of turns a minute get through.
+//
+// What this endpoint can do at worst, with the secret, is spend our own model budget. It cannot
+// read a customer, place a call, or reach the database: it only forwards a turn to a model.
+
+/** The most a real turn ever needs. A live call sends a system prompt and a short transcript. */
+const MAX_MESSAGES = 60;
+const MAX_BODY_CHARS = 60_000;
+/** How long an identical body is treated as a replay. Long enough to stop a captured request being
+ *  fired back, short enough that a genuine repeated turn on a long call is never blocked. */
+const REPLAY_WINDOW_MS = 60_000;
+/** Turns a minute, even with the right secret. A phone call needs a handful; a runaway needs stopping. */
+const MAX_TURNS_PER_MIN = 120;
+
+const seen = new Map<string, number>();
+const recent: number[] = [];
+
+/** Cheap, stable fingerprint of a body — enough to spot the identical request twice, and it is
+ *  never stored anywhere or logged, so no conversation text is retained by this guard. */
+function fingerprint(s: string): string {
+  let h1 = 0x811c9dc5, h2 = 0x01000193;
+  for (let i = 0; i < s.length; i++) {
+    h1 = Math.imul(h1 ^ s.charCodeAt(i), 0x01000193);
+    h2 = Math.imul(h2 + s.charCodeAt(i), 0x85ebca6b) ^ (h2 >>> 13);
+  }
+  return `${(h1 >>> 0).toString(36)}${(h2 >>> 0).toString(36)}:${s.length}`;
+}
+
+export type BrainReject = "too-big" | "bad-shape" | "replay" | "too-many";
+
+/**
+ * Everything that has to be true before a model is called. Pure and testable, so the rules are
+ * provable without a phone call or a network.
+ */
+export function checkBrainRequest(raw: string, now = Date.now()): { ok: true; body: { messages: ChatMsg[]; max_tokens?: number; temperature?: number } } | { ok: false; why: BrainReject } {
+  if (raw.length > MAX_BODY_CHARS) return { ok: false, why: "too-big" };
+  let parsed: unknown;
+  try { parsed = JSON.parse(raw); } catch { return { ok: false, why: "bad-shape" }; }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return { ok: false, why: "bad-shape" };
+  const p = parsed as Record<string, unknown>;
+  if (!Array.isArray(p.messages) || !p.messages.length || p.messages.length > MAX_MESSAGES) return { ok: false, why: "bad-shape" };
+  for (const m of p.messages) {
+    if (!m || typeof m !== "object") return { ok: false, why: "bad-shape" };
+    const role = (m as ChatMsg).role;
+    if (role !== "system" && role !== "user" && role !== "assistant") return { ok: false, why: "bad-shape" };
+  }
+  // The ceiling, before the replay check, so a flood of DIFFERENT bodies is stopped too.
+  while (recent.length && now - recent[0] > 60_000) recent.shift();
+  if (recent.length >= MAX_TURNS_PER_MIN) return { ok: false, why: "too-many" };
+  const fp = fingerprint(raw);
+  for (const [k, at] of seen) if (now - at > REPLAY_WINDOW_MS) seen.delete(k);
+  if (seen.has(fp)) return { ok: false, why: "replay" };
+  seen.set(fp, now);
+  recent.push(now);
+  // ONLY these fields are read. Anything else the caller sent is dropped on the floor rather than
+  // forwarded, so a field we have never heard of can never reach a model with our money behind it.
+  const num = (v: unknown, lo: number, hi: number) => (typeof v === "number" && Number.isFinite(v) && v >= lo && v <= hi ? v : undefined);
+  return { ok: true, body: {
+    messages: p.messages as ChatMsg[],
+    max_tokens: num(p.max_tokens, 1, 1000),
+    temperature: num(p.temperature, 0, 2),
+  } };
+}
+
+/** Test-only: forget the replay and rate windows. */
+export function _resetBrainGuards(): void { seen.clear(); recent.length = 0; }
 
 /** Flatten whatever shape the caller sent into plain text. Content can be a string or a list of
  *  parts; a call must never fail because of a shape we did not expect. */
@@ -100,13 +181,15 @@ export async function brainCompletion(body: {
   const enc = new TextEncoder();
 
   const ask = { system, turns, maxTokens: Math.min(300, body.max_tokens ?? 200), temperature: body.temperature };
-  // RUNG ONE OF THE LADDER: one immediate retry on a different account before anything gives up.
-  // A clerk is holding a phone, so this is one quick second chance, not a patient backoff.
+  // RUNG ONE OF THE LADDER: one immediate retry, tight timeout, on THE SAME MODEL. Never a second,
+  // cheaper model — a voice that changes character mid call is worse than the failure it is
+  // covering, and which model speaks to a store is the owner's decision. If this retry fails too,
+  // the runtime moves to rung two and hands the call to the provider's hosted agent instead.
   let upstream: AsyncGenerator<string>;
   try { upstream = await openStream(model, ask); }
   catch (e) {
-    console.error("[brain] first try failed, retrying on the fallback account:", String(e).slice(0, 160));
-    upstream = await openStream(FALLBACK_BRAIN_MODEL, ask);
+    console.error("[brain] first try failed, one immediate retry:", String(e).slice(0, 160));
+    upstream = await openStream(model, ask);
   }
 
   const stream = new ReadableStream<Uint8Array>({
@@ -126,10 +209,6 @@ export async function brainCompletion(body: {
   });
   return { stream, model };
 }
-
-/** The second account we try, on a different provider from the first on purpose: an outage that
- *  takes out one is unlikely to take out both, which is the entire value of a retry. */
-const FALLBACK_BRAIN_MODEL = "gpt-4o-mini";
 
 interface Ask { system: string; turns: Array<{ role: string; content: string }>; maxTokens: number; temperature?: number }
 
@@ -206,4 +285,4 @@ async function* sse(body: ReadableStream<Uint8Array>, pick: (ev: unknown) => str
   }
 }
 
-export const _test = { textOf, chunk, brainProvider, DEFAULT_BRAIN_MODEL, FALLBACK_BRAIN_MODEL };
+export const _test = { textOf, chunk, brainProvider, fingerprint, DEFAULT_BRAIN_MODEL, MAX_MESSAGES, MAX_BODY_CHARS, MAX_TURNS_PER_MIN };

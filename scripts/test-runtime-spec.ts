@@ -6,11 +6,12 @@
 // REAL database wherever a claim is about the database, because "the one-hour block will not count a
 // dropped call" is exactly the kind of thing that is true in a comment and false in a query.
 import { rollup, _receiptFrom, navOutcomeOf, openReceipt, openSegment, closeSegment, getReceipt, startMeter, addMs, emit, closeReceipt, _reset } from "../src/calls/events";
-import { _test as brainTest } from "../src/calls/brain";
+import { _test as brainTest, checkBrainRequest, _resetBrainGuards } from "../src/calls/brain";
 import { RECONNECT_OPENER, RECONNECT_OPENER_ES } from "../src/calls/service";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
+const okk = ok;
 
 // ================================================================================================
 console.log("▶ §2.1 one call, one receipt — a reopened agent is a numbered PART, never a second call");
@@ -109,6 +110,51 @@ console.log("\n▶ §7 the brain endpoint speaks the format the voice provider e
   ok(brainTest.textOf("plain") === "plain", "plain text content is read");
   ok(brainTest.textOf([{ text: "a" }, { text: "b" }]) === "ab", "a list of parts is flattened, never dropped");
   ok(brainTest.textOf(undefined) === "", "an unexpected shape is empty, never a crash on a live call");
+}
+
+console.log("\n▶ §7 the one route that is NOT behind the admin login — what it will accept");
+{
+  // It is the only door on the server without the admin lock, so what gets through it matters more
+  // than anywhere else. The provider does not sign these requests, so the shared secret is what
+  // proves the caller; everything below is what proves the REQUEST.
+  const ok = (m: unknown[]) => JSON.stringify({ messages: m });
+  const turn = [{ role: "system", content: "rules" }, { role: "user", content: "we have some" }];
+  _resetBrainGuards();
+  const good = checkBrainRequest(ok(turn));
+  okk(good.ok === true, "a real turn is accepted");
+  okk(good.ok === true && good.body.messages.length === 2, "…and only the messages come through");
+
+  _resetBrainGuards();
+  okk(checkBrainRequest("not json").ok === false, "junk is refused before any model is called");
+  okk(checkBrainRequest(JSON.stringify({ messages: [] })).ok === false, "an empty turn is refused");
+  okk(checkBrainRequest(JSON.stringify({ messages: [{ role: "root", content: "x" }] })).ok === false, "an unknown speaker is refused");
+  okk(checkBrainRequest(JSON.stringify({ messages: Array(200).fill({ role: "user", content: "x" }) })).ok === false, "an absurd number of turns is refused");
+  okk(checkBrainRequest(JSON.stringify({ messages: [{ role: "user", content: "x".repeat(70_000) }] })).ok === false, "an oversized body is refused on length, before it is even parsed");
+
+  _resetBrainGuards();
+  const first = checkBrainRequest(ok(turn));
+  const again = checkBrainRequest(ok(turn));
+  okk(first.ok === true && again.ok === false && again.why === "replay", "the identical request twice is a replay and is refused — a captured call cannot be fired back to burn our tokens");
+
+  _resetBrainGuards();
+  let refusedAt = 0;
+  for (let i = 0; i < brainTest.MAX_TURNS_PER_MIN + 5; i++) {
+    const r = checkBrainRequest(JSON.stringify({ messages: [{ role: "user", content: `turn ${i}` }] }));
+    if (!r.ok && r.why === "too-many" && !refusedAt) refusedAt = i;
+  }
+  okk(refusedAt === brainTest.MAX_TURNS_PER_MIN, `even with the right secret there is a ceiling (stopped at ${refusedAt} a minute)`);
+
+  _resetBrainGuards();
+  const extra = checkBrainRequest(JSON.stringify({ messages: turn, tools: [{ evil: true }], stream_options: { x: 1 }, max_tokens: 99999, temperature: 50 }));
+  okk(extra.ok === true, "fields we never agreed to do not break the call");
+  okk(extra.ok === true && !("tools" in extra.body), "…they are dropped, never forwarded to a model with our money behind it");
+  okk(extra.ok === true && extra.body.max_tokens === undefined && extra.body.temperature === undefined, "and out-of-range numbers are ignored rather than obeyed");
+}
+
+console.log("\n▶ §7 the model is the one the owner approved");
+{
+  okk(brainTest.DEFAULT_BRAIN_MODEL === "claude-sonnet-4-6", `the default brain is ${brainTest.DEFAULT_BRAIN_MODEL}, not a cheaper substitute`);
+  okk(brainTest.brainProvider(brainTest.DEFAULT_BRAIN_MODEL).kind === "anthropic", "…and it routes to our own account");
 }
 
 console.log(`\n════════════════════════════════\n  PASS: ${pass}   FAIL: ${fail}\n════════════════════════════════`);

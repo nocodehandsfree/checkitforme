@@ -70,6 +70,7 @@ import { type NavStep } from "./listen-nav";
 import { activeMap } from "./mapgraph";
 import { learnTreeFromTranscript, consumeTreeRelearn } from "./tree-learn";
 import { connectAtSecFor } from "./recipe";
+import { callTuning } from "./tuning";
 import { deltaStoreCall, setDeltaFinalize, tdTranscript, type TdSession } from "./tapedeck";
 import type { AgentTuning } from "../voice/provider";
 import { notifyInStock, notifyContact } from "./notify";
@@ -114,9 +115,9 @@ function composePersona(p: AnyObj | undefined): string {
   return bits.join(" ").trim();
 }
 
-/** How long "I just got disconnected" still sounds like the truth. Past this the clerk has taken
- *  other calls and it reads as strange, so the normal greeting is the better line. */
-const RECONNECT_WINDOW_MIN = 15;
+/** The voice a workflow gets when nobody set one. Never empty: a call with no voice used to fall
+ *  silently onto the old path, which is worse than a check that did not happen. */
+export function defaultVoiceId(): string { return config.voice.defaultVoiceId; }
 /** The opener for a store we were cut off from moments ago. No dash inside the sentence (copy law),
  *  one register, and it gets straight to the question rather than dwelling on our own problem. */
 export const RECONNECT_OPENER = "Hi, sorry, I just got disconnected. I was checking to see if you have any {category} in stock right now?";
@@ -124,13 +125,24 @@ export const RECONNECT_OPENER = "Hi, sorry, I just got disconnected. I was check
  *  which the map already has a field for. */
 export const RECONNECT_OPENER_ES = "Hola, perdón, se me cortó la llamada. Estaba viendo si tienen {category} en stock ahora mismo.";
 
-/** Did our last try at this exact store, for this exact product, break on OUR end just now? Only a
- *  genuinely dropped call counts: a store that was closed, busy or simply did not pick up is not
- *  something we should apologise for. */
-export async function recentlyDropped(retailerId: number, categoryId: number): Promise<boolean> {
+/**
+ * Did OUR LAST CALL — this customer, this store, this product — break on our end moments ago?
+ *
+ * ALL FOUR MATTER, and the customer most of all (owner, 07-28). We dial AS the customer's own
+ * verified number, so a different customer checking the same store is a different number ringing
+ * the clerk's phone. "I just got disconnected" from a number they have never spoken to is a
+ * stranger claiming a conversation that never happened, which is worse than a normal greeting and
+ * is exactly what the shelf life exists to avoid.
+ *
+ * Only a genuinely dropped call counts. A store that was closed, busy, or simply did not pick up is
+ * not something we should apologise for.
+ */
+export async function recentlyDropped(retailerId: number, categoryId: number, finderUserId?: string | null): Promise<boolean> {
+  if (!finderUserId) return false;   // no known caller = we cannot claim we were the one cut off
   try {
-    const since = Math.floor(Date.now() / 1000) - RECONNECT_WINDOW_MIN * 60;
+    const since = Math.floor(Date.now() / 1000) - (await callTuning()).reconnectWindowMin * 60;
     const row = (await db.select({ id: callResults.id }).from(callResults).where(and(
+      eq(callResults.finderUserId, finderUserId),
       eq(callResults.retailerId, retailerId),
       eq(callResults.categoryId, categoryId),
       eq(callResults.statusKey, "call_dropped"),
@@ -185,9 +197,12 @@ export async function resolveWorkflow(retailerId: number, chainId: number | null
   const persona = Array.isArray(personas) ? personas.find((p) => p && p.name === wf.persona) : undefined;
   // Voice strip: `voices` (array) rotates per call, same round-robin as openers. Legacy workflows
   // that only carry the single `voiceId` behave as a 1-voice strip — identical to before.
+  // EVERY WORKFLOW HAS A VOICE (owner, 07-28). A workflow with none used to mean the call quietly
+  // fell back to the old path with nothing saying which stores that happened to. The default is
+  // filled in here so the case stops existing, rather than being handled everywhere downstream.
   const voices = Array.isArray(wf.voices) && (wf.voices as unknown[]).length
     ? (wf.voices as unknown[]).map(String).filter(Boolean)
-    : (wf.voiceId ? [String(wf.voiceId)] : []);
+    : (wf.voiceId ? [String(wf.voiceId)] : [defaultVoiceId()]);
   return {
     name: String(wf.name),
     voiceId: wf.voiceId ? String(wf.voiceId) : undefined,
@@ -221,6 +236,9 @@ export async function buildRestockVars(
   specificProduct?: string,
   extraCategoryIds?: number[],
   kioskMode?: boolean,
+  /** WHO is checking. We dial as their own verified number, so the reconnect opener can only apply
+   *  to the customer whose call was actually cut off — see recentlyDropped. */
+  finderUserId?: string | null,
 ): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; say: string | null; connectAtSec: number | null; maxTalk: number | null; voiceId: string | null; voiceTuning: Record<string, unknown> | null; listenNav: boolean; navSteps: NavStep[]; mapVersion: number | null; mapVersionId: number | null; dynamicVars: Record<string, string> } | null> {
   const retailer = (await db.select().from(retailers).where(eq(retailers.id, retailerId)))[0];
   if (!retailer) return null;
@@ -256,12 +274,14 @@ export async function buildRestockVars(
   const openerTemplate = rotatePick(workflow ? "opener:" + workflow.name : "opener", openerVariants) || (await getSetting("vt_opening")) || DEFAULT_OPENER;
   let openingLine = openerTemplate.replace(/\{category\}/g, category.label);
   // CALLING STRAIGHT BACK AFTER A DROPPED CALL (spec: the live call runtime, section 8).
-  // If our last try at this exact store for this exact product broke on our end minutes ago, the
-  // clerk remembers being cut off, and the normal greeting reads as a second cold call.
+  // Only when THIS customer's own last call to this store, for this product, broke on our end
+  // moments ago. We dial as their number, so it has to be the same number the clerk was cut off
+  // from — otherwise a stranger is claiming a conversation that never happened.
   //
-  // The line has a SHELF LIFE, which is why the window is minutes: forty minutes later "I just got
-  // disconnected" is strange rather than natural, so it falls back to the normal greeting.
-  if (await recentlyDropped(retailerId, categoryId)) {
+  // Never automatic: we do not ring back on our own. This only ever runs because the customer
+  // started another check themselves. And the line has a SHELF LIFE, minutes not hours, because
+  // later on "I just got disconnected" is strange rather than natural.
+  if (await recentlyDropped(retailerId, categoryId, finderUserId)) {
     openingLine = RECONNECT_OPENER.replace(/\{category\}/g, category.label);
   }
   const clarification = specificityClause((specificProduct ?? "").trim());
@@ -619,7 +639,7 @@ export async function bridgeCheckCall(a: TriggerArgs) {
   const wf = await resolveWorkflow(retailer.id, retailer.chainId ?? null).catch(() => null);
   if (wf?.lane === "delta") return triggerCall(a); // D-lane is already the cheap engine for its stores
 
-  const v = await buildRestockVars(a.retailerId, a.categoryId, a.specificProduct ?? a.clarification, undefined, a.kioskMode);
+  const v = await buildRestockVars(a.retailerId, a.categoryId, a.specificProduct ?? a.clarification, undefined, a.kioskMode, a.finderUserId ?? null);
   if (!v) throw new Error("restock vars unavailable");
 
   const [row] = await db.insert(callResults).values({
