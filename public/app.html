@@ -1411,17 +1411,21 @@
            in the database; it simply stopped being something he has to read. -->
       <div class="k-eyebrow" style="margin-top:24px">Status</div>
       <div id="set_status" class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5;margin-top:6px"></div>
-      <button class="peek" style="margin-top:20px" onclick="sheetFromHolder('ds_setall','Call settings','How a mapping call behaves on this chain.')">
-        <div class="pk-main"><div class="pk-t">Call settings</div></div>
+      <button class="peek" style="margin-top:20px" onclick="sheetFromHolder('ds_setall','Settings','')">
+        <div class="pk-main"><div class="pk-t">Settings</div></div>
         <div class="pk-fact" id="pk_setall"></div>
         <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
       <div id="set_holders" style="display:none">
-        <!-- CALL settings only. Type, rating, callable, kiosk, online, stock-verified, MSRP and sell
-             methods are STORE fields, edited under Stores, and repeating them here was two places to
-             change one thing. This page maps chains; these are the settings a mapping call obeys. -->
-        <div id="ds_setall"><div id="set_call"></div></div>
-        <div style="display:none"><div id="set_store"></div><div id="set_data"></div></div>
+        <!-- ALL THREE, and they stay. 07-28 I hid Store and Data claiming they were editable under
+             Stores. They are NOT: mute, the chain's type, its rating, and the bulk callable / kiosk /
+             online / stock-verified toggles (ssStoreBulk) exist ONLY here. Hiding them took away the
+             only way to manage them. Check before you cut. -->
+        <div id="ds_setall">
+          <div class="k-eyebrow" style="margin:0 0 10px">Store</div><div id="set_store"></div>
+          <div class="k-eyebrow" style="margin:22px 0 10px">Data</div><div id="set_data"></div>
+          <div class="k-eyebrow" style="margin:22px 0 10px">Calls</div><div id="set_call"></div>
+        </div>
         <div id="ds_setruns"><div id="set_runs"></div></div>
       </div>
     </div>
@@ -4731,10 +4735,8 @@ const mapWriteErr=r=>((r&&r.status===404)||(r&&/404|not found/i.test(String(r.er
 function renderChainRows(ch,lane,nav){
   const e=document.getElementById('pk_setall');
   if(e){
-    const bits=[];
-    if(ch.callTarget===false) bits.push('Not dialled');
-    if(ch.maxTalkSeconds!=null) bits.push(ch.maxTalkSeconds+'s max talk');
-    e.textContent=bits.join(' · ');
+    const rating=CH_GRADE[ch.tier]?CH_GRADE[ch.tier][0]:'Unrated';
+    e.textContent=ch.callTarget===false?'Not dialled':[ch.type||'Other',rating].join(' · ');
     e.style.color=ch.callTarget===false?'#F59E0B':'';
   }
   renderChainStatus(ch);
