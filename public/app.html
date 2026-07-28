@@ -1412,8 +1412,8 @@
         <div class="pk-fact" id="pk_setmenu"></div>
         <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
-      <button class="peek" onclick="sheetFromHolder('ds_setruns','Calls','')">
-        <div class="pk-main"><div class="pk-t">Calls</div></div>
+      <button class="peek" onclick="sheetFromHolder('ds_setruns','Mapping calls','Every call we made to learn this menu.')">
+        <div class="pk-main"><div class="pk-t">Mapping calls</div></div>
         <div class="pk-fact" id="pk_setruns"></div>
         <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
@@ -4579,21 +4579,17 @@ async function renderChainSheets(ch,nav){
     +`<div class="meta" style="margin-top:10px;text-transform:none;letter-spacing:0;line-height:1.5">Heard on a call to ${esch(tl.call.storeName||'a store')}${tl.call.day?', '+esch(tl.call.day):''}.</div>`
     : '<div class="empty">No call has recorded this menu yet. Tap Re-map to place one.</div>';
 
-  // CALLS — every round, newest first, so the convergence is readable.
-  const rounds=[]; versions.forEach(v=>((v.evidence&&v.evidence.calls)||[]).forEach(c=>rounds.push({v,c})));
-  rounds.sort((a,b)=>(b.c.at||0)-(a.c.at||0));
-  set('pk_setruns', rounds.length?String(rounds.length):'');
+  // MAPPING CALLS. One call per card, newest first (comp 2g). The old card was built from a
+  // version's evidence summary, which had our own replies stripped out, so a call read as nonsense.
+  // This reads `chainDetail.calls`: the whole conversation, both sides, with the second each line
+  // landed, and it ends on the recipe the call produced.
+  const calls=((d||{}).calls)||[];
+  const today=new Date().toDateString();
+  const todayN=calls.filter(c=>c.at&&new Date(c.at*1000).toDateString()===today).length;
+  set('pk_setruns', calls.length?(todayN?todayN+' today':String(calls.length)):'');
   const rw=document.getElementById('set_runs');
-  if(rw) rw.innerHTML = rounds.length ? rounds.map(({v,c})=>`<div class="card" style="margin:0 0 10px">
-      <div class="row" style="align-items:center;gap:8px">
-        <span class="name" style="font-size:13.5px">${esch(c.storeName||'A store')}</span>
-        <span class="meta" style="margin-left:auto">${esch(c.day||'')}</span></div>
-      <div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">
-        ${c.reachedHuman?'<span style="color:var(--green)">Reached Staff</span>':'<span style="color:var(--muted)">Reached nobody</span>'}${c.seconds!=null?' \u00b7 '+c.seconds+'s':''}${(c.transcript||[]).length?' \u00b7 '+c.transcript.length+' steps heard':''}
-      </div>
-      ${c.path?`<div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">We tried: ${esch(String(c.path).replace(/say:/g,'say ').replace(/press:/g,'press ').replace(/>/g,' \u2192 '))}</div>`:''}
-      ${(c.transcript||[]).length?`<div style="margin-top:10px">${menuLadder(((c.transcript||[]).map(t=>{const m=String(t).match(/^\s*(\d+)s\s+([\s\S]*)$/);return {at:m?Number(m[1]):null,who:'store',text:(m?m[2]:String(t)).trim()};})))}</div>`:''}
-    </div>`).join('') : '<div class="empty">No calls yet. Tap Re-map to place one.</div>';
+  if(rw) rw.innerHTML = calls.length ? mappingCallsHtml(calls,versions)
+    : '<div class="empty">No mapping calls yet. Tap Re-map to place one.</div>';
 
   // VERSIONS — every recipe we have held. Nothing is deleted (04-map-graph.md section 2).
   set('pk_setver', versions.length?String(versions.length):'', versions.some(v=>v.status==='proposed')?'#F59E0B':'');
@@ -4617,6 +4613,97 @@ async function renderChainSheets(ch,nav){
   if(uw) uw.innerHTML = unknowns.length ? unknowns.map(u=>mapUnknownCard(u,ch.id)).join('') : '';
 }
 const cap=t=>{ t=String(t||''); return t?t[0].toUpperCase()+t.slice(1):''; };
+
+// ---- MAPPING CALLS, THE SHEET (comp 2g) ---------------------------------------------------------
+// The owner opens this to read ONE call top to bottom and see the recipe it produced. So: two cards,
+// then a Show more key. Never every call at once, because the sheet is for reading one call, not for
+// scrolling all of them.
+function mappingCallsHtml(calls,versions){
+  const rest=calls.slice(2);
+  return calls.slice(0,2).map(c=>mappingCallCard(c,versions)).join('')
+    +(rest.length?`<div id="set_runs_more" style="display:none">${rest.map(c=>mappingCallCard(c,versions)).join('')}</div>`
+      +`<div style="display:grid;place-items:center;margin-top:6px"><button class="ghost" onclick="mapCallsMore(this)">Show ${rest.length} more</button></div>`:'')
+    +`<div class="meta" style="margin-top:14px;text-transform:none;letter-spacing:0;line-height:1.5">A call only changes the menu when it beats the one we have.</div>`;
+}
+function mapCallsMore(btn){
+  const m=document.getElementById('set_runs_more'); if(m) m.style.display='';
+  if(btn&&btn.parentNode) btn.parentNode.remove();
+}
+// One call: who we rang and when, how it ended, the conversation, then what it produced.
+function mappingCallCard(c,versions){
+  const ok=!!c.reachedHuman;
+  const pill=ok?['g','Reached Staff','var(--green)']
+    :[ 'a', c.transferAtSec!=null?'Transferred, nobody came':'Reached nobody', '#F59E0B'];
+  const prod=callProduced(c,versions);
+  const rungs=callRungs(c);
+  return `<div class="card" style="margin:0 0 10px">`
+    +`<div style="display:flex;align-items:baseline;gap:8px">`
+    +`<div style="font-size:13.5px;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(c.store||'A store')}</div>`
+    +`<div style="font-size:11.5px;font-weight:700;color:var(--text-tertiary);flex:0 0 auto">${callWhen(c.at)}</div></div>`
+    +`<div style="display:flex;align-items:center;gap:8px;margin-top:8px">`
+    +`<span class="pill ${pill[0]}" style="gap:6px">${ssDot(pill[2])}${pill[1]}</span>`
+    +(c.seconds!=null?`<span style="font-size:11.5px;font-weight:700;color:var(--muted)">${c.seconds}s</span>`:'')+`</div>`
+    +`<div class="mladder" style="margin-top:13px">${rungs.map((r,i,a)=>callRung(r,i===a.length-1)).join('')}</div>`
+    +`<div style="margin-top:12px;display:flex;align-items:baseline;gap:8px">`
+    +`<span style="font-size:10.5px;font-weight:700;letter-spacing:.15em;color:#8A8A96">PRODUCED</span>`
+    +`<span style="margin-left:auto;font-size:12px;font-weight:700;color:${prod?'var(--green)':'var(--muted)'}">${prod?esch(prod):'Nothing changed'}</span>`
+    +`</div></div>`;
+}
+// The conversation as rows. The store's own lines stay as they were spoken; ours are read off the
+// action and its value, so the engineering exhaust ("(barge @8s)") never reaches his screen.
+function callRungs(c){
+  const rows=(c.turns||[]).map(t=>({who:t.who,at:t.atSec,text:t.who==='us'?usWords(t):String(t.text||'')}))
+    .filter(r=>r.text);
+  const end=c.seconds!=null?c.seconds:null;
+  if(c.reachedHuman){
+    // The line Staff said when they picked up is the ANSWER, not one more recording, so it is
+    // promoted out of the gray lines instead of being printed twice.
+    let i=c.greeting?rows.map(r=>r.text).lastIndexOf(c.greeting):-1;
+    if(i<0&&end!=null) for(let j=rows.length-1;j>=0;j--){ if(rows[j].who==='them'&&rows[j].at!=null&&rows[j].at>=end-3){ i=j; break; } }
+    const g=c.greeting||(i>=0?rows[i].text:'');
+    if(i>=0) rows.splice(i,1);
+    rows.push({who:'staff',at:end,text:'Staff answered'+(g?' · "'+g+'"':'')});
+  } else rows.push({who:'end',at:end,text:'Hung up · nobody picked up'});
+  return rows;
+}
+const usWords=t=>t.action==='press'?`Pressed ${t.value}`
+  :(t.action==='say'&&t.value)?(/^asked/i.test(String(t.text||''))?`Asked "${t.value}"`:`Said "${t.value}"`)
+  :cap(String(t.text||'').replace(/\s*\([^()]*\)\s*$/,''));
+// The store small and gray, us bold with a green dot. That contrast IS the feature: the eye follows
+// what we did. A call that failed ends amber, never green.
+function callRung(r,last){
+  const S=r.who==='them'?[6,'#5C5C68','12px','500','rgba(255,255,255,.55)']
+    :r.who==='end'?[9,'#F59E0B','13.5px','700','#F59E0B']
+    :[9,'var(--green)','13.5px','700','var(--text-strong)'];
+  return `<div style="display:flex;gap:12px">`
+    +`<div style="display:flex;flex-direction:column;align-items:center;flex:0 0 auto;padding-top:5px">`
+    +`<span style="width:${S[0]}px;height:${S[0]}px;border-radius:50%;background:${S[1]};flex:0 0 auto"></span>`
+    +(last?'':`<span style="width:2px;flex:1;background:rgba(255,255,255,.10);margin:3px 0"></span>`)+`</div>`
+    +`<div style="flex:1;min-width:0;padding-bottom:${last?'0':'12px'}">`
+    +`<div style="display:flex;align-items:baseline;gap:8px">`
+    +`<span style="font-size:${S[2]};font-weight:${S[3]};color:${S[4]};line-height:1.45">${r.who==='them'?'"'+esch(r.text)+'"':esch(r.text)}</span>`
+    +`<span style="margin-left:auto;font-size:12px;font-weight:700;color:var(--muted);flex:0 0 auto">${r.at!=null?r.at+'s':''}</span>`
+    +`</div></div></div>`;
+}
+// WHAT THE CALL PRODUCED. The only line tying a conversation to a recipe: the version whose evidence
+// carries this call, and how much faster it is than the one it replaced. No match = nothing changed.
+function callProduced(c,versions){
+  if(!c.navId) return null;
+  const v=(versions||[]).find(x=>((x.evidence&&x.evidence.calls)||[]).some(e=>e&&e.navId===c.navId));
+  if(!v) return null;
+  const prev=(versions||[]).filter(x=>x.storeId===v.storeId&&x.version<v.version)
+    .sort((a,b)=>(b.version||0)-(a.version||0))[0];
+  const faster=(prev&&prev.seconds!=null&&v.seconds!=null)?prev.seconds-v.seconds:null;
+  return (v.label||('Recipe '+v.version))+(faster!=null&&faster>0?' · '+faster+'s faster':'');
+}
+// The hour it happened, and the day too once it is not today. A menu at 9pm is often not the daytime
+// menu, so the clock is part of reading the call, not decoration.
+function callWhen(at){
+  if(!at) return '';
+  const d=new Date(at*1000), t=d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+  return d.toDateString()===new Date().toDateString()?t
+    :d.toLocaleDateString([],{month:'short',day:'numeric'})+', '+t;
+}
 // A chain recipe is the chain's. A store recipe belongs to ONE store, so it is named after that
 // store: two rows both reading "Recipe 1" (the chain's and one store's) told the owner nothing.
 const versionWhen=v=>v.createdAt?new Date(v.createdAt*1000).toLocaleDateString([],{month:'short',day:'numeric'}):'';

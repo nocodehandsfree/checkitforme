@@ -23,24 +23,24 @@ number is in `src/calls/tuning.ts`.** Agent `agent_2301kyk2rwgyfg8r50xk9enqwy2r`
 = staging `ELEVENLABS_MIDCALL_AGENT_ID`, **PROD NOT SET**. Secret `check_brain_key` ↔ Railway
 `BRAIN_API_KEY` (**staging only, REMOVED from prod**). **NO VOICE = NO CHECK**, refused loudly.
 ## 07-28 MAPPING CALLS NOW HAVE THE EAR — the SHARED one (2 real CVS calls drove it)
-- Alhambra 11654 → 91s ("this is Catalina"), 65→95. Mulholland 1 → 84s and that 84 was a LIE: hold
-  music, nobody spoke. **A `PickupEar` was built here and DELETED the same night — §10 says ONE shared
-  Ear. Do not build it again.** `navigator` opens the same `<Start><Stream>` fork and feeds
-  `PromptDetector` + `ConversationEar` (`navMediaFeed`); fork dies → behaves exactly as before.
-- The Ear is a **VETO, never a green light**: words AND not-music/not-quiet. Ring frequencies are in
+- Mulholland 1 → 84s and that 84 was a LIE: hold music, nobody spoke. **A `PickupEar` was built here
+  and DELETED the same night; §10 says ONE shared Ear, do not build it again.** `navigator` forks the
+  same `<Start><Stream>` into `PromptDetector` + `ConversationEar`; fork dies → same as before.
+- The Ear is a **VETO, never a green light**: words AND not-music/not-quiet. Ring frequencies live in
   the LOCKED bridge, so a ringing desk can still look like a voice; a veto cannot invent a person.
 - **Anchors come off the Ear's recording count** (`earPrompts`) so what we learn and what the runtime
   fires on cannot disagree. `greetingFrom()` = THIS turn's words, never a routing line.
   `looksLikeDirectPickup()` = a store that already played a recording does not answer direct.
-- **SPOKEN menus captured** (`parseSpokenOptions`) — CVS reads departments aloud and we kept nothing.
-  Chain row adds first/best/saved seconds + calls + stores; `chainDetail.calls` = every call
-  turn-by-turn. **Comp 2g exists; app.html NOT built yet.**
+- **SPOKEN menus captured** (`parseSpokenOptions`); `chainDetail.calls` = every call turn-by-turn.
+  **Comp 2g SHIPPED 07-28** (chain → Mapping calls): 2 cards then Show more, PRODUCED = the version
+  whose evidence carries that `navId` + how much faster than the one before. DRIVEN in Chromium, 15
+  asserts. **PM: chain-row first/best/savedSeconds are served and on NO screen; no comp for them.**
 - **PM: bail's else-branch blind-joins Charlie on a stopwatch if bail is off** (locked bridge; owner has it). `.unlock` is blocked by the sprawl gate.
 ## VERIFIED / NOT VERIFIED
 - **DRIVEN:** `test-delta-clip.ts` = REAL ws provider + real carrier socket, 38 asserts. + 53
   runtime-spec · 33 listen-nav · 15 dropped-call (REAL db) · 63 receipt · 62 mapgraph · 90 map-e2e ·
-  76 map-sim · 13 bridge. tsc clean. `navPlanFromVersion` on staging's REAL Target + CVS =
-  byte-identical. `test-spec-line-by-line.ts`: 1 FAIL (7.12 salvage, NOT built). 
+  76 map-sim · 13 bridge · 15 mapping-calls sheet (Chromium). tsc clean. `navPlanFromVersion` on
+  staging's REAL Target + CVS = byte-identical. `test-spec-line-by-line.ts`: 1 FAIL (7.12, NOT built).
 - **REAL FUN CALLS 07-28 (owner):** waits for his greeting, asks ONCE, got "next Tuesday", wrapped in 28s, transcript rendered. **KNOWN, HE CHOSE TO LEAVE IT:** the held greeting flushes to the agent WITH the answer, so both land as ONE `user_transcript` ("This is Bob.Um, I'm sorry, we don't."); the name at the START needs OUR OWN speech-to-text (we hold sound, not words) = a pause + a cost per call.
   **STILL OPEN: cost per delivered answer** (§11), and 3 `charlie_join` + a real `holdSeconds` on a call.
 ## CROSS-CHECK — nobody marks their own homework (owner, 07-28). **Echo's audit of §10: all six of
