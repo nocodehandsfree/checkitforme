@@ -260,6 +260,18 @@ export function navInitialTwiml(id: string): string {
   return twiml(`<Pause length="1"/>${gather(id)}`); // let the greeting start, then listen
 }
 
+/** The words that prove WHICH desk answered. Only what was said on the turn we reached them counts:
+ *  on the 07-28 Mulholland call the newest line in the log was the machine's own "Okay, transferring
+ *  you now" from 27s earlier, and it got filed as the desk that picked up. A routing line is never a
+ *  greeting and an older line is never this person's — an empty greeting beats a false one. */
+export function greetingFrom(steps: NavStep[], atSec: number): string | undefined {
+  const last = [...(steps || [])].reverse().find((st) => st.who === "ivr" && st.text);
+  if (!last) return undefined;
+  if (Math.abs((last.atSec ?? 0) - atSec) > 2) return undefined;
+  if (ROUTING_RE.test(last.text)) return undefined;
+  return last.text.slice(0, 200);
+}
+
 /** We've reached a live person. Plain training mode → hang up before troubling them. CONFIRM mode →
  *  ask the one stock question ONCE, then listen for their reply (classified next turn). */
 function reachHuman(s: NavSession, atSec: number, id: string, viaRouting = false): string {
@@ -276,11 +288,11 @@ function reachHuman(s: NavSession, atSec: number, id: string, viaRouting = false
   }
   s.humanAtSec = s.humanAtSec ?? atSec; // a real voice — THIS is time-to-human
   // What they said is the proof of WHICH desk we reached — the only check left once a mapping call
-  // hangs up instead of asking a question.
-  if (!s.greeting) {
-    const last = [...s.steps].reverse().find((st) => st.who === "ivr" && st.text);
-    if (last) s.greeting = last.text.slice(0, 200);
-  }
+  // hangs up instead of asking a question. It has to be what was said ON THIS TURN: on the 07-28
+  // Mulholland call the last thing in the log was the machine's own "Okay, transferring you now" from
+  // 27s earlier, and that got filed as the desk that answered. A routing line is never a greeting, and
+  // an older line is never this person's — better an empty greeting than a false one.
+  if (!s.greeting) s.greeting = greetingFrom(s.steps, atSec);
   if (s.confirm && !s.confirm.asked) {
     s.confirm.asked = true; s.confirm.askedAtSec = atSec;
     const q = s.askText || `Hi! Real quick — do you have any ${s.confirm.product} in stock right now?`;
@@ -463,6 +475,12 @@ async function navTurn(id: string, speech: string): Promise<string> {
   const d = await decide(s, speech || "");
   if (d.type) s.type = d.type;
   s.confidence = d.confidence;
+  // A PERSON HAS TO SAY SOMETHING. Silence and hold music both come back from the speech gather as
+  // nothing, and on the 07-28 Mulholland call the model called one of those turns "human" 27s after the
+  // transfer — so 84s went into the map as time-to-human with not one word of proof, which is the exact
+  // number the paid agent joins on. No words, no person: keep listening. The transfer wait still bounds
+  // it, so a line nobody picks up ends honestly as "transferred, nobody picked up".
+  if (d.action === "human" && !(speech && speech.trim())) return twiml(gather(id));
   if (d.action === "human") return reachHuman(s, atSec, id, !!(speech && ROUTING_RE.test(speech))); // person OR announced transfer → confirm waits for the person
   if (d.action === "press" && d.value) {
     const digits = d.value.replace(/[^0-9*#]/g, "").slice(0, 6);

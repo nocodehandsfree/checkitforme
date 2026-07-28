@@ -18,6 +18,7 @@ import {
   type MapRecipe,
 } from "../src/calls/mapgraph";
 import { lockRecipeToChain } from "../src/calls/trainer-batch";
+import { greetingFrom } from "../src/calls/navigator";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -175,6 +176,24 @@ async function main() {
     ok(row.drift30d >= 1, "drift seen in the last 30 days");
     ok(row.promptTriggered === true, "and it shows the steps fire on the recording, not a stopwatch");
     ok(row.hammer === false, "not key-hammering");
+  }
+
+  console.log("\n▶ WHO ANSWERED — the greeting has to be this person, on this turn");
+  {
+    // Straight off the 07-28 CVS Mulholland call: the machine says it is transferring at 57s, then
+    // 27 seconds of hold music, then we book a person at 84s. The newest line in the log is still the
+    // machine's, and it was being filed as the desk that answered.
+    const log = [
+      { who: "ivr" as const, text: "To better assist you, pharmacy or front door services?", atSec: 32 },
+      { who: "us" as const, text: 'said "front"', atSec: 33 },
+      { who: "ivr" as const, text: "Okay, transferring you now.", atSec: 57 },
+    ];
+    ok(greetingFrom(log, 84) === undefined, "a transfer announcement 27s old is not the person who answered");
+    ok(greetingFrom(log, 58) === undefined, "and it is not the person even on the very next second");
+    const answered = [...log, { who: "ivr" as const, text: "CVS Mulholland, this is Dana, how can I help?", atSec: 84 }];
+    ok(greetingFrom(answered, 84) === "CVS Mulholland, this is Dana, how can I help?", "what they actually said is the greeting");
+    ok(greetingFrom(answered, 85) === "CVS Mulholland, this is Dana, how can I help?", "a second of lag still counts as this turn");
+    ok(greetingFrom([], 84) === undefined, "nothing said, nothing claimed");
   }
 
   console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);
