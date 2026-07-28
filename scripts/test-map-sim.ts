@@ -18,7 +18,7 @@ import {
   type MapRecipe,
 } from "../src/calls/mapgraph";
 import { lockRecipeToChain } from "../src/calls/trainer-batch";
-import { greetingFrom } from "../src/calls/navigator";
+import { greetingFrom, looksLikeDirectPickup } from "../src/calls/navigator";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -194,6 +194,29 @@ async function main() {
     ok(greetingFrom(answered, 84) === "CVS Mulholland, this is Dana, how can I help?", "what they actually said is the greeting");
     ok(greetingFrom(answered, 85) === "CVS Mulholland, this is Dana, how can I help?", "a second of lag still counts as this turn");
     ok(greetingFrom([], 84) === undefined, "nothing said, nothing claimed");
+  }
+
+
+  console.log("▶ A STORE THAT ALREADY PLAYED US A RECORDING DOES NOT ANSWER DIRECT");
+  {
+    const ivr = (text: string, atSec: number) => ({ who: "ivr" as const, text, atSec });
+    // 07-28 CVS Tarzana: sixteen seconds of recording ending "…are you a healthcare provider?", and
+    // the speech-to-text handed back the tail of it. Three words, no menu language, turn 2.
+    const afterRecording = [
+      ivr("Thank you for calling CVS, Pharmacy. If this is an emergency, please hang up and dial 911. I am your virtual assistant and calls are recorded to improve call Quality.", 16),
+      ivr("A healthcare provider.", 20),
+    ];
+    ok(!looksLikeDirectPickup(afterRecording, 2, "A healthcare provider."),
+      "a fragment of the recording is not a person picking up");
+    // The real thing: they answer, and it is the first and only thing on the line.
+    ok(looksLikeDirectPickup([ivr("Gateway WinCo.", 4)], 1, "Gateway WinCo."),
+      "a store that just says its name on the first line does answer direct");
+    ok(looksLikeDirectPickup([ivr("Bakery, this is Sam", 5)], 2, "Bakery, this is Sam"),
+      "and so does a person giving their name");
+    ok(!looksLikeDirectPickup([ivr("Press 2 for pharmacy", 4)], 1, "Press 2 for pharmacy"),
+      "a menu is still a menu");
+    ok(!looksLikeDirectPickup([ivr("Thank you for calling, please listen to the following options carefully", 4)], 1,
+      "Thank you for calling, please listen to the following options carefully"), "and so is a long opening line");
   }
 
   console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);

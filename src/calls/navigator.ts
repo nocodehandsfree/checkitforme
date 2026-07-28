@@ -286,6 +286,27 @@ function earFork(id: string): string {
     + `<Parameter name="room" value="${id}" /></Stream></Start>`;
 }
 
+/**
+ * A store that answers DIRECT, with a short greeting and no menu at all: "Gateway WinCo.", "Bakery,
+ * this is Sam". We have to call it on the very first line, because waiting for a second one leaves
+ * dead air while they keep saying hello.
+ *
+ * The bar is that it is the FIRST thing on the line. On 07-28 CVS Tarzana played us sixteen seconds
+ * of recording ending "…are you a healthcare provider?", the speech-to-text handed back the fragment
+ * "A healthcare provider." — three words, no menu language — and we filed the whole store as
+ * answering direct in twenty seconds. A store that has already played us a recording is not a store
+ * that answers direct, however short the next fragment happens to be.
+ *
+ * @param steps the call so far, INCLUDING the line being judged (already pushed by the caller).
+ */
+export function looksLikeDirectPickup(steps: NavStep[], turns: number, speech: string): boolean {
+  const t = (speech || "").trim();
+  if (!t || turns > 2) return false;
+  if (t.split(/\s+/).length > 4) return false;
+  if (/press|menu|para |website|hours|dial|closed|extension|welcome|recorded|automated/i.test(t)) return false;
+  return steps.filter((st) => st.who === "ivr" && String(st.text || "").trim()).length <= 1;
+}
+
 /** The words that prove WHICH desk answered. Only what was said on the turn we reached them counts:
  *  on the 07-28 Mulholland call the newest line in the log was the machine's own "Okay, transferring
  *  you now" from 27s earlier, and it got filed as the desk that picked up. A routing line is never a
@@ -444,11 +465,7 @@ async function navTurn(id: string, speech: string): Promise<string> {
   // an LLM round-trip) leaves dead air while they keep saying "hello" until we hang up. looksLikeLivePerson
   // already excludes "press N" menus + long recordings, so it won't trip on an opening IVR. Map mode →
   // hang up instantly; confirm mode → ask the one stock question.
-  // Direct pickup, store-name greeting ("Gateway WinCo.", "Bakery, this is Sam"): the FIRST thing on
-  // the line, ≤4 words, with zero menu language = a person. IVRs open with long recorded sentences.
-  const firstShortPickup = s.turns <= 2 && !!speech && speech.trim().split(/\s+/).length <= 4
-    && !/press|menu|para |website|hours|dial|closed|extension|welcome|recorded|automated/i.test(speech);
-  if (speech && (looksLikeLivePerson(speech) || firstShortPickup)) return reachHuman(s, atSec, id);
+  if (speech && (looksLikeLivePerson(speech) || looksLikeDirectPickup(s.steps, s.turns, speech))) return reachHuman(s, atSec, id);
   // FAST-FAIL only on TRUE dead-ends: an actual voicemail box, or the STORE itself closed.
   // NEVER on "pharmacy is closed" — the front store is open and is exactly where we're going
   // (pharmacy can't sell Pokémon cards anyway). Live-observed funnel: "connect you to our
