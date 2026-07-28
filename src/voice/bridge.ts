@@ -793,21 +793,31 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       if (ctx?.connectOnHuman) {
         if (ctx.connectAtSec && ctx.connectAtSec > 0) {
           // Deterministic: open the agent at the learned time-to-human. No VAD guesswork.
-          if (ctx.earFromSec && ctx.earFromSec > 0 && ctx.giveUpSeconds && ctx.giveUpSeconds > 0) {
+          // THE EAR IS NOT OPTIONAL, AND IT NEVER DEPENDED ON BAIL (owner 07-28). This condition used
+          // to require giveUpSeconds, which is only set when bail is switched ON in Admin. So turning
+          // bail off silently dropped every call back to the `else` below: the agent opening on a
+          // STOPWATCH, straight into a ringing desk or a transfer message. That is the exact behaviour
+          // two days were spent killing, reachable by an operator toggling an unrelated switch.
+          // The two are now separate concerns, as they always should have been:
+          //   the EAR decides WHEN the agent may open (always, on a real voice, never on a clock)
+          //   BAIL decides WHETHER we hang up on a call nobody answers (a cap, and optional)
+          if (ctx.earFromSec && ctx.earFromSec > 0) {
             // SMART JOIN (owner design, restored 07-24): deaf while the recipe walks the menu — the
             // ear can never hear a recorded menu voice (the 07-20 mistake was listening DURING the
             // menu). The ear opens right after the last press/word; Charlie joins only on a real
             // voice. Nobody ever answers → Charlie never joins; the call ends at ear+ringMaxSeconds
             // for a phone-line-only cost. The learned time (connectAtSec) stays on the recipe as
             // its record; it no longer blind-joins when the smart path is armed.
-            const earAt = ctx.earFromSec, quit = ctx.giveUpSeconds;
+            const earAt = ctx.earFromSec, quit = ctx.giveUpSeconds || 0;
             // The give-up clock starts at the LEARNED arrival time, not at menu-end: on chains with a
             // transfer hold (CVS: menu done 48s, human ~67s) quitting at menu-end+20s would hang up
             // right as staff normally pick up.
             const quitAt = Math.max(earAt, ctx.connectAtSec || 0) + quit;
-            log(`twilio start room=${room.slice(0, 8)} -> connect-on-human EAR: deaf through the menu until ${earAt}s, join on a real voice, give up at ${quitAt}s if nobody comes`);
+            log(`twilio start room=${room.slice(0, 8)} -> connect-on-human EAR: deaf through the menu until ${earAt}s, join on a real voice${quit > 0 ? `, give up at ${quitAt}s if nobody comes` : " (no give-up cap: bail is off)"}`);
             dtmfTimers.push(setTimeout(() => { earArmed = true; emit(room, "ivr_detected", "Menu finished, now listening for a real person", { earOpenedAtSec: earAt }); }, earAt * 1000));
-            dtmfTimers.push(setTimeout(() => {
+            // The give-up cap is bail's job and only exists when bail is on. Without it the call still
+            // ends on the carrier's own time limit; the agent simply never opens without a real voice.
+            if (quit > 0) dtmfTimers.push(setTimeout(() => {
               if (connecting || humanWords) return;
               emit(room, "hangup", "Nobody ever came to the phone, hung up before the agent billed a second", { reason: "nobody_came" });
               log(`give-up: no voice by ${quitAt}s — nobody is coming, hanging up (Charlie never joined)`);
