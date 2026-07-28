@@ -32,7 +32,8 @@ then they ride the next promote to prod):**
 ## Other open site fixes (consumer site is frozen: each needs an owner-named `.unlock`)
 | Task | System | Status |
 |---|---|---|
-| [Feature names stay English on the Spanish site](feature-labels-spanish.md) | admin | active (for Addie) |
+| [Admin: iOS bottom tint breaks on any slide-up](admin-glass-nudge.md) | admin | active (root cause found; HOLD until the current Admin chat is done) |
+| [Feature names stay English on the Spanish site](feature-labels-spanish.md) | admin | done 07-27 |
 | [Reconcile COPY_CHANGES_APPROVED.md location](copy-changes-approved-reconcile.md) | site | active |
 | [Alerts sheet formatting](alerts-sheet-formatting.md) | site | done 07-27 |
 | [Logo fidelity in My Zones + call-log header](logo-fidelity-zones-calllog.md) | site | done 07-27 (owner confirmed) |
