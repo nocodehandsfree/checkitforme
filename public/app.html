@@ -2484,7 +2484,7 @@ const CALC={ storeType:'Alpha', nav:30, talk:20, revenue:0.2, lane:'charlie', re
   // navForkPerMin sits at ZERO because listening while we navigate is not switched on yet. When it
   // ships it is $0.0044/min, measured. The line is on the page today so the day it costs something the
   // page shows it instead of hiding it.
-  rates:{ twilioPerMin:0.014, navForkPerMin:0, navSttPerSec:0, overhead:0.001, deltaClipPerCall:0 },
+  rates:{ twilioPerMin:0.014, navForkPerMin:0, navSttPerSec:0, overhead:0, deltaClipPerCall:0 },
   plans:[{name:'Family',price:4.99,checks:15},{name:'Collector',price:9.99,checks:30},{name:'Hunter',price:19.99,checks:100},{name:'Operator',price:49.99,checks:300}],
   ready:false };
 // MEASURED, NOT SETTINGS. Each one was read off a real account on the date shown. They drift when the
@@ -2640,9 +2640,9 @@ function calcCompute(storeType,nav,talk,r,lane,esc){
   // became the one clip that asks the first question while the agent warms up (the live-call runtime
   // spec, §1). So it is a line on every call, not a fork in the road.
   const agentPerSec=calcAgentPerSec(), charlieTalk=agentPerSec*talk, p=calcPlan();
-  items.push({label:'The recorded opener',detail:(r.deltaClipPerCall>0?'one clip, played to every person who answers':'cached · costs nothing after the first time'),accent:'#C084FC',amount:r.deltaClipPerCall});
+  items.push({label:'The recorded opener',detail:(r.deltaClipPerCall>0?'one clip, played to every person who answers':'not playing on live calls yet'),accent:'#C084FC',amount:r.deltaClipPerCall});
   items.push({label:'Charlie talking',detail:`${talk}s · your $${p.fee} ${p.name} plan spread over what it buys`,accent:'var(--purple)',amount:charlieTalk});
-  items.push({label:'Fixed overhead / call',detail:'flat',accent:'var(--text-muted)',amount:r.overhead});
+  if(r.overhead>0) items.push({label:'Fixed overhead / call',detail:'flat',accent:'var(--text-muted)',amount:r.overhead});
   return { items, total: items.reduce((s,i)=>s+i.amount,0) };
 }
 function calcPerCheck(){
@@ -2848,7 +2848,8 @@ function calcShell(){
     <div class="name">The rates</div>
     <div class="k-sub" style="margin:2px 0 0">Read off the real accounts. The calling engine bills with these exact numbers.</div>
     <div id="calc_measured" style="margin-top:14px"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">${rate('Phone line','twilioPerMin','/min')}${rate('Fixed overhead','overhead','/call')}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">${rate('Phone line','twilioPerMin','/min')}${rate('Listening while navigating','navForkPerMin','/min')}</div>
+    <div class="meta" style="margin-top:10px;text-transform:none;letter-spacing:0;line-height:1.5">Nothing on this page charges for something we do not actually pay. Listening while we navigate reads $0 because it is not switched on; it is $0.0044 a minute the day it is. Our own flat bills are not guessed at per call, they are the Monthly services card above.</div>
     <div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border-dashed);font-size:11.5px;line-height:1.55;color:var(--text-tertiary)">
       <div><b style="color:var(--text-strong)">Charlie is not on this list on purpose.</b> He is a monthly subscription, so his price per second is worked out from the plan you picked above. Change the plan and every number on this page re-prices itself.</div>
       <div style="margin-top:6px"><b style="color:#F59E0B">Never use the phone company's own transcription.</b> Measured at $0.02 per 15 seconds, about 8.6 cents a call, which is more than the whole check costs today.</div>
