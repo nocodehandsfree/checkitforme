@@ -6,15 +6,14 @@ git. Last updated: 2026-07-28 (the new calling engine is finished, waiting on si
   menu step by step with its seconds. CVS 6.6¢, and you can SEE its 19 seconds of ringing. Every
   chain shows how much we trust its route; 33 are flagged. A better way through a menu appears as a
   card above the old one: **Use it** or **Keep the old one**. NOT checked on a phone.
-- ⚠️ The agent rate behind every price read 15% CHEAP. A real Target check is 5.2¢, not 4.7¢. Fixed,
-  and the page now reads the calling engine's own rate so the two cannot drift apart again.
-
 ## The store map is real knowledge, and every check writes a receipt (07-26/28)
 - Every mapping call keeps its proof; repeat calls raise trust, a changed route waits for your yes. One
   store answering differently gets its own route, live only where the normal route had already failed
   there; a whole chain needs three stores agreeing.
 - **Mapping calls can hear now** (07-28, two real CVS calls): the same listening piece your paid calls
-  use, so nobody counts as answering unless they speak. We keep the menu a store reads OUT LOUD too, and Chains shows how much FASTER we got. **Left: the screen showing a call turn by turn** — design + data ready, `docs/specs/mapping-admin/`.
+  use, so nobody counts as answering unless they speak. We keep the menu a store reads OUT LOUD too.
+- **You can read a mapping call now (07-28).** Open a chain, tap **Mapping calls**: the store's lines
+  gray, ours bold, second by second, and each call ends in the recipe it produced or "Nothing changed".
 ## The new calling engine is finished and waiting on your six test calls (07-28, staging)
 - The store hears the question the second they say hello, in our own voice, while the thinking part
   warms up behind it. It can't talk over their answer, anything said early is held and handed over
