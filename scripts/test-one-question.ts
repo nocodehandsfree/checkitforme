@@ -30,6 +30,8 @@ ok(f.includes(FOLD), "the agent is given the workflow's OWN question, word for w
 ok(/EXACTLY ONE question/.test(f), "it is told exactly one question");
 ok(/NEVER ask a second question/.test(f), "a second question is forbidden outright");
 ok(/only half/.test(f), "half an answer still wraps, rather than paying for a follow up");
+ok(/WORD FOR WORD/.test(f), "the wording is not a suggestion the agent may improve on");
+ok(/do not reword it/.test(f), "rewording is named and forbidden");
 ok(!/AFTER they answer the set, ask the product type/.test(f), "the two question instruction is gone, not merely reworded");
 ok(f !== PREMIUM_FOLLOWUP, "a folded workflow does not get the two question script");
 ok(oneTurnFollowup("") === PREMIUM_FOLLOWUP, "an empty question falls back to the old flow, never a blank instruction");
@@ -41,6 +43,8 @@ const n = oneTurnShipmentDay(NOFOLD);
 ok(n.includes(NOFOLD), "the restock ask is the workflow's own line");
 ok(/EXACTLY ONE question/.test(n), "the restock ask is one question too");
 ok(/NEVER ask a second question/.test(n), "no narrowing-down follow up on a no");
+ok(/WORD FOR WORD/.test(n), "the restock line is said as written, not paraphrased");
+ok(/DAY OR TIME/.test(n), "and it is told WHY: a paraphrase loses the day and the time");
 ok(n !== ASK_SHIPMENT_DAY, "a folded workflow does not get the old restock script");
 ok(oneTurnShipmentDay("") === ASK_SHIPMENT_DAY, "an empty restock line falls back to the old one");
 
