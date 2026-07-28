@@ -109,10 +109,19 @@ phone("3.4", "Charlie resumes naturally: no second greeting, no lost context", "
 // ── §4 THE CALL, SECOND BY SECOND ──────────────────────────────────────────────────────────────
 check("4.1", "The clip plays only when a REAL PERSON is detected, never on a timer", () =>
   /reason === "human" && ctx\?\.openingClip/.test(BRIDGE) || "the clip can fire without a person");
+// 4.2 and 4.3 are ALSO driven end to end against real sockets in test-delta-clip.ts, which is the
+// stronger proof; these read the source so the mechanism cannot be quietly removed.
 check("4.2", "Charlie is prewarmed WHILE the clip plays, not after it", () =>
-  /prewarmTimer = setTimeout/.test(BRIDGE) && /clip\.ms - PREWARM_LEAD_MS/.test(BRIDGE) || "no prewarm during the clip");
+  /prewarmTimer = setTimeout/.test(BRIDGE) && /\.ms - PREWARM_LEAD_MS/.test(BRIDGE) || "no prewarm during the clip");
 check("4.3", "Clerk speech that starts early is HELD, not dropped", () =>
-  /else if \(connecting\) pending\.push\(b64\)/.test(BRIDGE) || "early speech is not buffered");
+  /else if \(connecting\) \{ if \(Date\.now\(\) >= agentPlayingUntil \+ ECHO_TAIL_MS\) pending\.push\(b64\); \}/.test(BRIDGE)
+  || "early speech is not buffered");
+check("4.3b", "…but our OWN voice echoing back is never buffered as the clerk", () =>
+  /Date\.now\(\) >= agentPlayingUntil \+ ECHO_TAIL_MS\) pending\.push/.test(BRIDGE)
+  || "the line's reflection of our own clip can be handed to the agent as the clerk");
+check("4.3c", "The question waits for the greeting to finish before it starts", () =>
+  /waitQuietMs >= GREETING_END_MS \|\| waitTotalMs >= GREETING_MAX_WAIT_MS/.test(BRIDGE)
+  || "the question can talk over the greeting");
 check("4.4", "Charlie's input opens only when the clip ends", () =>
   /eleven && ready && charlieGateOpen/.test(BRIDGE) || "his input is not gated on the clip");
 check("4.5", "Charlie's output is suppressed while the clip plays", () =>
