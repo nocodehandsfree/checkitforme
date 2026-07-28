@@ -50,7 +50,12 @@ pages that already exist. No new page, no new domain (LAW 4).
 5. ⬜ Store + retailer explorers, then the review queue. Still waiting on clean checks.
 6. Proof: `scripts/test-ops-rollup.ts` 34/34 over the EIGHT real stamped checks off staging; driven
    in a phone-sized browser on the shipped Admin bytes, both with and without the server half.
-   `verify-live.sh` output goes here at the promote, which this still needs.
+   `verify-live.sh` at `3a655ca0` (docs-only commit; the code is `b5d3515c`):
+   ```
+   staging  https://staging.checkitforme.com/ -> serving b5d3515cb88a  (the code, live)
+   prod     https://checkitforme.com/         -> serving 55badd886004  (origin/main, awaiting promote)
+   admin    https://admin.checkitforme.com/   -> shell override b5d3515c, server 55badd886004
+   ```
 
 **🔴 The record is still empty on purpose.** The only stamped checks anywhere are on the Fun test
 store, which is excluded, so the screen reads "no finished checks yet" until a real customer check
