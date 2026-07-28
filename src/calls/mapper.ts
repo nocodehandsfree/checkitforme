@@ -101,6 +101,10 @@ function buildExperiments(run: MapperRun, recipe: NavRecipe): Experiment[] {
         out.push({ kind: "shorten", stepIdx: i, value: words[0].toLowerCase(), label: `say "${words[0].toLowerCase()}" instead of "${st.value}"`, status: "pending" });
       }
     }
+    // A step we have ALREADY PROVED cannot be barged is never tested again (owner 07-27: at CVS you
+    // can barge in with "general" but not with "front"). That fact was learned by a real call that
+    // looped the menu; re-proving it costs another call and another loop every single run.
+    if ((st as { bargeSafe?: boolean }).bargeSafe === false) continue;
     const prevAt = i === 0 ? 0 : (steps[i - 1].atSec ?? 0);
     const at = st.atSec ?? 0;
     if (at - prevAt > 3) {
@@ -216,7 +220,12 @@ async function recordMapVersion(run: MapperRun, chainId: number, recipe: NavReci
       reachedHuman: true, seconds: recipe.seconds ?? null, outcome: "person",
     });
     // The captured route is richer than the one the run carries: it knows WHICH recording each step
-    // follows. Ship that one to the map.
+    // follows. But the run may hold a fact the fresh capture cannot see — a step proved unbargeable by
+    // a call that looped — so carry those forward rather than letting a later call forget them.
+    mapRecipe.steps = mapRecipe.steps.map((st, i) => {
+      const known = (recipe.steps?.[i] as { bargeSafe?: boolean } | undefined)?.bargeSafe;
+      return known === false ? { ...st, bargeSafe: false } : st;
+    });
     recipe = { ...recipe, steps: mapRecipe.steps as unknown as NavRecipe["steps"] };
     // THE WAIT AFTER THE TRANSFER, measured. The store announces the hand-off and the person speaks
     // some seconds later; the paid agent currently opens on the announcement, so this gap is money
@@ -435,7 +444,15 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
             enqueueBinaryBarge(run, ex.stepIdx, ex.at ?? 0, true);  // it accepted this early — try earlier still
           } else {
             ex.status = "fail";
-            run.log.push({ n: run.attempt, phase: "optimize", store: store.name, experiment: ex.label, outcome: reached ? `@${ex.at}s dropped — recovery reached @${secs ?? "?"}s; backing off` : `@${ex.at}s too early — looped (${s?.status || "timeout"}); backing off`, seconds: secs });
+            // A LOOP is not a bad guess, it is a fact about this menu: the step cannot be barged. Write
+            // it onto the step so it survives this run and every future one — this is exactly the CVS
+            // "front" knowledge, stored instead of remembered by a person.
+            if (!reached && run.best?.steps?.[ex.stepIdx]) {
+              (run.best.steps[ex.stepIdx] as { bargeSafe?: boolean }).bargeSafe = false;
+              run.experiments = run.experiments.filter((e) => !(e.kind === "barge" && e.stepIdx === ex.stepIdx && e.status === "pending"));
+              await finalizeAndLock(run, chainId, run.best, null, s ?? undefined); // remember it
+            }
+            run.log.push({ n: run.attempt, phase: "optimize", store: store.name, experiment: ex.label, outcome: reached ? `@${ex.at}s dropped — recovery reached @${secs ?? "?"}s; backing off` : `@${ex.at}s too early — looped (${s?.status || "timeout"}); this step cannot be barged, remembered`, seconds: secs });
             enqueueBinaryBarge(run, ex.stepIdx, ex.at ?? 0, false); // too early — search later
           }
         } else if (faster) {

@@ -158,6 +158,30 @@ async function main() {
     ok(chRow.dtmfShortcut === "3@9", `the chain row both environments read is stamped (${chRow.dtmfShortcut})`);
   }
 
+  console.log("▶ a fact learned the hard way is never forgotten");
+  {
+    // The CVS knowledge, as data: "general" can be said early, "front" cannot — saying it early loops
+    // the whole menu. That was learned by a real call. It must survive every later call.
+    const [ch] = await db.insert(chains).values({ name: "Test Barge Memory" }).returning();
+    const learned: MapRecipe = { type: "voice", seconds: 48, steps: [
+      { action: "say", value: "front", atSec: 38, afterPrompt: 2, bargeSafe: false },
+      { action: "say", value: "general", atSec: 48, afterPrompt: 3, bargeSafe: true },
+    ] };
+    await proposeVersion({ chainId: ch.id, recipe: learned, source: "sweep",
+      call: { at: now(), day: "2026-07-27", storeId: 901, seconds: 48, reachedHuman: true, path: "say:front>say:general" } });
+    // A later call walks the same route and knows nothing about barging.
+    const plain: MapRecipe = { type: "voice", seconds: 50, steps: [
+      { action: "say", value: "front", atSec: 38 }, { action: "say", value: "general", atSec: 48 },
+    ] };
+    await proposeVersion({ chainId: ch.id, recipe: plain, source: "verify",
+      call: { at: now(), day: "2026-07-27", storeId: 902, seconds: 50, reachedHuman: true, path: "say:front>say:general" } });
+    const live = (await activeMap(ch.id))!;
+    ok(live.recipe.steps[0].bargeSafe === false, "still remembers you cannot barge in with front");
+    ok(live.recipe.steps[1].bargeSafe === true, "and that you can with general");
+    ok(live.recipe.steps[0].afterPrompt === 2, "and which recording each waits for");
+    ok(live.seconds === 48, "while keeping the faster time");
+  }
+
   console.log("▶ the graph: prompts are nodes, what we did are edges");
   {
     const [ch] = await db.insert(chains).values({ name: "Test Graph Mart" }).returning();

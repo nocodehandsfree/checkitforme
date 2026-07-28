@@ -544,18 +544,33 @@ export async function proposeVersion(opts: {
     // slower re-measure is ring variance, not a worse route.
     const faster = typeof opts.recipe.seconds === "number" && typeof prevActive.seconds === "number"
       && opts.recipe.seconds > 0 && opts.recipe.seconds < prevActive.seconds;
-    // …but a slower call can still teach us something the live map does not have: WHICH recording each
-    // step follows. That is the whole point of listening, so never throw it away just because the call
-    // took two seconds longer — graft the recording plan onto the live route and keep its faster times.
-    const incomingPlan = opts.recipe.steps.some((s) => typeof s.afterPrompt === "number");
-    const livePlan = prevActive.recipe.steps.some((s) => typeof s.afterPrompt === "number");
-    const addsPlan = incomingPlan && !livePlan;
+    // …but a slower call can still teach us things the live map does not have: WHICH recording each
+    // step follows, and WHICH steps cannot be barged (the CVS "front" fact). Both are learned by real
+    // calls that cost real money, so they are never thrown away just because the call ran two seconds
+    // long — they are grafted onto the live route, which keeps its own faster times.
+    const knows = (r: MapRecipe, i: number) => ({
+      afterPrompt: r.steps[i]?.afterPrompt,
+      bargeSafe: r.steps[i]?.bargeSafe,
+    });
+    const addsKnowledge = opts.recipe.steps.some((s, i) => {
+      const live = prevActive.recipe.steps[i];
+      return (typeof s.afterPrompt === "number" && typeof live?.afterPrompt !== "number")
+        || (typeof s.bargeSafe === "boolean" && typeof live?.bargeSafe !== "boolean");
+    });
     let recipe = prevActive.recipe;
     if (faster) recipe = opts.recipe;
-    else if (addsPlan) {
+    else if (addsKnowledge) {
       recipe = {
         ...prevActive.recipe,
-        steps: prevActive.recipe.steps.map((s, i) => ({ ...s, afterPrompt: opts.recipe.steps[i]?.afterPrompt })),
+        steps: prevActive.recipe.steps.map((s, i) => {
+          const inc = knows(opts.recipe, i);
+          return {
+            ...s,
+            afterPrompt: s.afterPrompt ?? inc.afterPrompt,
+            // false is a HARD fact ("this looped the menu") and outranks not-knowing.
+            bargeSafe: inc.bargeSafe === false ? false : (s.bargeSafe ?? inc.bargeSafe),
+          };
+        }),
       };
     }
     const seconds = faster ? opts.recipe.seconds : prevActive.seconds;
