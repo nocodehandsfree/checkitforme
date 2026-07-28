@@ -14,9 +14,8 @@
 - **§8/9.** `call_dropped`: **never written `completed`** — the only status the one-hour block matches,
   VERIFIED on a real db. Receipt bills Charlie as the SUM of open stretches, else closing him for a
   hold reads FREE. **The TRANSCRIPT is OURS**; `transcriptPatch` stops the provider overwriting it.
-- **ONE QUESTION, THEN WRAP, BOTH LANES.** `declaresOneTurn` (tapedeck): an EMPTY `followups.type`
-  means set+format folded into the `set` line. Clip lane skips clip 2; live agent gets
-  `oneTurnFollowup`/`oneTurnShipmentDay`, on the bridge AND the old direct path.
+- **ONE QUESTION, THEN WRAP, BOTH LANES.** `declaresOneTurn` (tapedeck): an EMPTY `followups.type` means set+format folded into the `set` line. Clip lane skips clip 2; live agent gets `oneTurnFollowup`/`oneTurnShipmentDay`, on the bridge AND the old direct path.
+  Branson Global carries his two lines; both say **WORD FOR WORD**, because told to ask "in your own natural voice" the agent rewrote his restock line and lost the day and the time (real Fun call 07-28).
 ## SWITCHES + WHAT WE MADE IN THE ACCOUNTS — do not delete these wondering what they are.
 `cheapBridgeAll` **THE BIG ONE: OFF = nothing above runs, every check takes the old path** ·
 `stopKeysOnHuman` ON · `ourBrain` blocked §7 · `closeAgentOnHold` OFF till Gate Zero. **Every guessed
@@ -42,9 +41,8 @@ number is in `src/calls/tuning.ts`.** Agent `agent_2301kyk2rwgyfg8r50xk9enqwy2r`
   runtime-spec · 33 listen-nav · 15 dropped-call (REAL db) · 63 receipt · 62 mapgraph · 90 map-e2e ·
   76 map-sim · 13 bridge. tsc clean. `navPlanFromVersion` on staging's REAL Target + CVS =
   byte-identical. `test-spec-line-by-line.ts`: 1 FAIL (7.12 salvage, NOT built). 
-- **NOT VERIFIED: ANY REAL PHONE CALL** (Fun rings the OWNER'S phone): clip audible, no double
-  greeting, no talk-over, receipt = 3 `charlie_join` + `mapVersion` + a real `holdSeconds`. **STILL
-  OPEN: cost per delivered answer** (§11) — needs real calls, deliberately not marked done.
+- **REAL FUN CALLS 07-28 (owner):** waits for his greeting, asks ONCE, got "next Tuesday", wrapped in 28s, transcript rendered. **KNOWN, HE CHOSE TO LEAVE IT:** the held greeting flushes to the agent WITH the answer, so both land as ONE `user_transcript` ("This is Bob.Um, I'm sorry, we don't."); the name at the START needs OUR OWN speech-to-text (we hold sound, not words) = a pause + a cost per call.
+  **STILL OPEN: cost per delivered answer** (§11), and 3 `charlie_join` + a real `holdSeconds` on a call.
 ## CROSS-CHECK — nobody marks their own homework (owner, 07-28). **Echo's audit of §10: all six of
 Mapper's items present**, ONE ear, drift reported ONCE. Clean. **Mapper's audit of §§0-9+12: DONE —
 `scripts/test-spec-sweep.ts` = 85 pass, 0 fail, 9 named as needing a phone; proved it BITES first
