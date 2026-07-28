@@ -202,7 +202,7 @@ async function main() {
     ok(row.avgTreeSeconds === 21, `and carries the real wait (${row.avgTreeSeconds}s), which a direct chain never may`);
     ok(row.navType === "greeting" && row.answerPath === "greeting_then_transfer", "with its own shape, not a menu and not direct");
     ok(!row.dtmfShortcut, "nothing is pressed at a store with nothing to press");
-    ok(String(row.phoneTreeDefault).includes("nothing to press"), `and the live-call note says to wait: "${row.phoneTreeDefault}"`);
+    ok(/nothing to press/i.test(String(row.phoneTreeDefault)), `and the live-call note says to wait: "${row.phoneTreeDefault}"`);
     // The agent's join time is the whole point: it must NOT open at pickup.
     ok(connectAtSecFor(row) === 21, `the agent is told to open at ${connectAtSecFor(row)}s, not at pickup`);
     ok(connectAtSecFor({ navType: "direct", ringsDirect: true, avgTreeSeconds: 19 }) === null, "a genuinely direct chain still gets NO timer — the silent-agent guard holds");

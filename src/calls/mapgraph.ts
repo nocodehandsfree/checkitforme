@@ -482,17 +482,17 @@ const dayOf = (sec: number) => new Date(sec * 1000).toISOString().slice(0, 10);
 /** Plain-English "what changed" — this is what the owner reads in the version list, so it never
  *  contains a path signature or a field name. */
 function describeChange(prev: MapVersion | null, next: MapRecipe): string {
-  if (!prev) return next.steps.length ? `First map: ${spoken(next)}` : "First map: a person answers directly";
+  if (!prev) return next.steps.length ? `First map: ${spoken(next)}` : "First map: Staff answer directly";
   const same = pathSignature(prev.recipe) === pathSignature(next);
   if (!same) return `Route changed — was ${spoken(prev.recipe)}, now ${spoken(next)}`;
   const before = prev.seconds ?? 0, after = next.seconds ?? 0;
-  if (after && before && after < before - 1) return `Same route, ${before - after}s faster to a person (${after}s)`;
+  if (after && before && after < before - 1) return `Same route, ${before - after}s faster to Staff (${after}s)`;
   if (after && before && after > before + 1) return `Same route, ${after - before}s slower (${after}s)`;
   return "Same route, confirmed again";
 }
 function spoken(r: MapRecipe | { steps?: MapStep[] }): string {
   const steps = (r?.steps || []) as MapStep[];
-  if (!steps.length) return "a person answers directly";
+  if (!steps.length) return "Staff answer directly";
   return steps.map((s) => (s.action === "press" ? `press ${s.value}` : `say "${s.value}"`)).join(", then ");
 }
 
@@ -651,7 +651,7 @@ export async function proposeVersion(opts: {
   // activates itself.
   const activate = !hammer && (opts.autoActivate ?? !prevActive) && !!call?.reachedHuman;
   const summary = describeChange(prevActive, opts.recipe);
-  const why = opts.why || (hammer ? "Auto-caller pressed the same key repeatedly — needs a real map" : scored.why);
+  const why = opts.why || (hammer ? "Auto-caller pressed the same key repeatedly. Not a mapped route." : scored.why);
 
   const ins = await client.execute({
     sql: `INSERT INTO nav_map_versions (chain_id, store_id, version, status, nav_type, recipe, seconds, confidence,
@@ -745,10 +745,10 @@ async function proposeStoreException(
   const scored = scoreConfidence(evidence, at);
   const broken = await chainRouteFailingAt(opts.chainId, storeId);
   const goLive = broken;                       // see the rule above: only when waiting would do harm
-  const summary = `This store walks its own route: ${spoken(opts.recipe)}`;
+  const summary = `This store has its own route: ${spoken(opts.recipe)}`;
   const why = goLive
-    ? `Live for this store only — the chain route has been failing here. ${agreeing} of ${STORES_TO_MOVE_CHAIN} stores needed before the chain route itself changes.`
-    : `Waiting for approval — the chain route has not failed at this store. ${agreeing} of ${STORES_TO_MOVE_CHAIN} stores needed before the chain route itself changes.`;
+    ? `Live for this store only. The chain route was failing here. ${agreeing} of ${STORES_TO_MOVE_CHAIN} stores must agree before the chain route changes.`
+    : `Waiting for your approval. The chain route has not failed at this store. ${agreeing} of ${STORES_TO_MOVE_CHAIN} stores must agree before the chain route changes.`;
   const ins = await client.execute({
     sql: `INSERT INTO nav_map_versions (chain_id, store_id, version, status, nav_type, recipe, seconds, confidence,
       confidence_label, evidence, source, summary, why, created_at, approved_at, approved_by)
@@ -761,7 +761,7 @@ async function proposeStoreException(
   if (goLive && existing && existing.storeId === storeId) await retire(existing.id, at);
   await reportUnknown({
     chainId: opts.chainId, storeId, kind: "store-exception",
-    prompt: `${summary} — ${goLive ? "live for this store, the chain route was failing here" : "waiting for your yes"}`,
+    prompt: `${summary}. ${goLive ? "Live for this store, the chain route was failing here." : "Waiting for your approval."}`,
     evidence: { versionId: Number(ins.lastInsertRowid || 0), navId: call.navId, agreeing, live: goLive },
   });
   // The flag says what actually happened. Anything reading it — the dashboard, a caller, a test — must
@@ -798,12 +798,16 @@ export async function rejectVersion(id: number, by: string, why: string, local =
   await ensureMapTables();
   const v = await versionById(id);
   if (!v) return { ok: false, error: "version not found" };
-  if (v.status === "active") return { ok: false, error: "that version is live — approve a different one instead" };
+  if (v.status === "active") return { ok: false, error: "that version is already live" };
   if (!local && isMapFollower()) {
     const ch = (await db.select().from(chains).where(eq(chains.id, v.chainId)))[0];
     if (ch) await pushDecision({ chainName: ch.name, version: v.version, decision: "reject", by, why });
   }
-  await client.execute({ sql: `UPDATE nav_map_versions SET status='rejected', why=?, approved_by=? WHERE id=?`, args: [why || v.why, by, id] });
+  // Say WHY it was set aside, in the same slot the live cards use for "why this route". Without the
+  // prefix the reason reads as a description of the route itself, which is what the owner saw on the
+  // Chains screen on 07-28: a rejection note sitting where the route summary belongs.
+  const note = why ? `Set aside: ${why}` : (v.why || "Set aside.");
+  await client.execute({ sql: `UPDATE nav_map_versions SET status='rejected', why=?, approved_by=? WHERE id=?`, args: [note, by, id] });
   return { ok: true };
 }
 
@@ -819,9 +823,9 @@ async function stampChainFromVersion(v: MapVersion): Promise<void> {
   const greeting = v.recipe.type === "greeting";
   const direct = !greeting && (v.recipe.type === "direct" || !v.recipe.steps.length);
   const navText = direct
-    ? "A live person usually answers directly — no phone menu to work through."
+    ? "Staff usually answer directly. No phone menu to work through."
     : greeting
-      ? "A recording answers first and hands you to a person. There is nothing to press or say, just wait."
+      ? "A recording answers first, then hands you to Staff. Nothing to press or say, just wait."
       : "To reach a live person: " + spoken(v.recipe) + ".";
   // The live bridge only understands the timed "digit@seconds" form (a bare digit presses nothing).
   const dtmfPlan = recipeToDtmf(v.recipe);
@@ -945,7 +949,7 @@ export async function reportCallDrift(o: {
     const slip = Math.abs(f.atSec - step.atSec);
     if (slip > 12) reasons.push(`"${f.value}" landed at ${f.atSec}s, ${slip}s off the mapped ${step.atSec}s`);
   }
-  if (!o.reachedHuman && expected.length) reasons.push("the mapped route did not reach a person");
+  if (!o.reachedHuman && expected.length) reasons.push("the mapped route did not reach Staff");
   const drift = reasons.length > 0;
   await recordObservation({
     chainId: o.chainId, storeId: o.storeId, versionId: map.id, navId: o.navId, callId: o.callId,
@@ -1015,7 +1019,7 @@ export async function graphSummary(): Promise<GraphRow[]> {
       chainId: ch.id, chain: ch.name, storeId: 0,
       mapped: !!active || !!ch.navRecipe,
       navType: active?.navType || ch.navType || (ch.ringsDirect ? "direct" : ""),
-      route: recipe ? spoken(recipe) : (ch.ringsDirect ? "a person answers directly" : ""),
+      route: recipe ? spoken(recipe) : (ch.ringsDirect ? "Staff answer directly" : ""),
       seconds: active?.seconds ?? ch.navSeconds ?? null,
       confidence: active?.confidence ?? ch.navConfidence ?? 0,
       confidenceLabel: active?.confidenceLabel || (ch.navConfidence ? "observed once" : "unknown"),
@@ -1123,7 +1127,7 @@ export async function learnFromReceipt(r: {
       : "a recording";
     await reportUnknown({
       chainId, storeId, kind: "direct-store-has-a-recording",
-      prompt: `We call this store direct, but a real check heard ${shape}${personAt != null ? ` — a person at ${personAt}s` : ""}`,
+      prompt: `Mapped as direct, but a real check heard ${shape}${personAt != null ? `, Staff at ${personAt}s` : ""}`,
       evidence: { navId, callId: r.callId, personAt, transferAt, room: r.room },
     });
     await recordObservation({
@@ -1212,7 +1216,7 @@ export async function recordFailedAttempt(o: {
   const flagged = recentFails >= FAILS_TO_FLAG;
   const score = flagged ? Math.max(20, Math.min(scored.score, 40)) : scored.score;
   const label: ConfidenceLabel = flagged ? "needs review" : scored.label;
-  const why = flagged ? `${recentFails} of the last ${recent.length} calls did not reach a person` : scored.why;
+  const why = flagged ? `${recentFails} of the last ${recent.length} calls did not reach Staff` : scored.why;
   await client.execute({
     sql: `UPDATE nav_map_versions SET evidence=?, confidence=?, confidence_label=?, why=? WHERE id=?`,
     args: [JSON.stringify(evidence), score, label, why, map.id],
@@ -1221,7 +1225,7 @@ export async function recordFailedAttempt(o: {
   if (flagged) {
     await reportUnknown({
       chainId: o.chainId, storeId: o.storeId, kind: "route-failing",
-      prompt: `${recentFails} of the last ${recent.length} calls on this route did not reach a person (${o.reason})`,
+      prompt: `${recentFails} of the last ${recent.length} calls on this route did not reach Staff (${o.reason})`,
       evidence: { versionId: map.id, navId: o.navId, callId: o.callId },
     });
   }
@@ -1268,8 +1272,8 @@ export async function backfillFromChains(): Promise<{ created: number; flagged: 
         VALUES (?,0,1,'active',?,?,?,?,?,?,'backfill',?,?,?,?, 'backfill')`,
       args: [ch.id, recipe.type || (direct ? "direct" : "keypad"), JSON.stringify(recipe),
         direct ? null : (ch.navSeconds ?? null), confidence, label, JSON.stringify(evidence),
-        direct ? "Carried over: a person answers directly" : `Carried over: ${spoken(recipe)}`,
-        hammer ? "Auto-caller pressed the same key repeatedly — needs a real map" : scored.why,
+        direct ? "Carried over: Staff answer directly" : `Carried over: ${spoken(recipe)}`,
+        hammer ? "Auto-caller pressed the same key repeatedly. Not a mapped route." : scored.why,
         at, ch.navUpdatedAt || at],
     });
     created++;
@@ -1284,7 +1288,7 @@ export async function backfillFromChains(): Promise<{ created: number; flagged: 
     if (direct && !ch.navRecipe) {
       await reportUnknown({
         chainId: ch.id, kind: "unproven-direct",
-        prompt: "Marked \"a person answers directly\" — never proved by a call. A recorded greeting here would put the paid agent on a machine.",
+        prompt: "Mapped as Staff answering directly, never proved by a call. A recording here puts Check AI on a machine.",
         evidence: null,
       });
     }

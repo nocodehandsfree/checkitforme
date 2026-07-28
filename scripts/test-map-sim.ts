@@ -18,7 +18,7 @@ import {
   type MapRecipe,
 } from "../src/calls/mapgraph";
 import { lockRecipeToChain } from "../src/calls/trainer-batch";
-import { greetingFrom, looksLikeDirectPickup } from "../src/calls/navigator";
+import { greetingFrom, looksLikeDirectPickup, parseSpokenOptions, isMenuLine, parseMenuOptions, mergeMenu } from "../src/calls/navigator";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -217,6 +217,33 @@ async function main() {
       "a menu is still a menu");
     ok(!looksLikeDirectPickup([ivr("Thank you for calling, please listen to the following options carefully", 4)], 1,
       "Thank you for calling, please listen to the following options carefully"), "and so is a long opening line");
+  }
+
+
+  console.log("▶ THE MENU A STORE SPEAKS OUT LOUD — the one we were throwing away");
+  {
+    // Both lines are verbatim from the 07-28 CVS calls, speech-to-text commas and all.
+    const asked = "To better assist. You please let me know if you are calling in for pharmacy or front door services.";
+    const listed = "Just a moment. Please, I'm looking up the information for you for this store. I can assist you with beauty and fragrance OTC, Health photo services, and General Store, inquiries.";
+
+    ok(isMenuLine(asked), "a store asking which department you want IS a menu");
+    ok(isMenuLine(listed), "and a store reading its departments out loud IS a menu");
+    const a = parseSpokenOptions(asked).map((o) => o.label);
+    ok(a.includes("pharmacy") && a.some((l) => /front door/i.test(l)), `both choices captured: ${a.join(" · ")}`);
+    const b = parseSpokenOptions(listed).map((o) => o.label);
+    ok(b.some((l) => /general store/i.test(l)), `and the one we actually want is in the list: ${b.join(" · ")}`);
+    ok(b.some((l) => /beauty and fragrance/i.test(l)), "a department whose own name contains 'and' is not cut in half");
+    ok(parseSpokenOptions(asked).every((o) => o.say && !o.digit), "a spoken choice records the WORD to say, not a key to press");
+
+    // The keypad menus that already worked must keep working, and the two kinds must live together.
+    const keypad = "For the pharmacy press 1, for guest services press 2";
+    ok(isMenuLine(keypad), "a press-a-number menu is still a menu");
+    ok(parseSpokenOptions(keypad).length === 0, "and it is never read as a spoken one");
+    const both = mergeMenu(parseMenuOptions(keypad), parseSpokenOptions(listed));
+    ok(both.filter((o) => o.digit).length === 2 && both.filter((o) => o.say).length >= 2,
+      `pressed and spoken choices sit side by side (${both.length} in all)`);
+    ok(!isMenuLine("Thank you for calling CVS, Pharmacy. If this is an emergency, please hang up and dial 911."),
+      "a plain greeting is not a menu");
   }
 
   console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);

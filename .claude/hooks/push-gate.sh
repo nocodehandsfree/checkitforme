@@ -13,6 +13,11 @@ case "$cmd" in
     if ! bash scripts/checkpoint-lint.sh >&2; then
       exit 2
     fi
+    # The three runtime-spec rules that used to live only in prose (07-28): one shared Ear, every
+    # call leaves a receipt, and the Admin word is Staff.
+    if ! bash scripts/spec-gates.sh >&2; then
+      exit 2
+    fi
     ;;
 esac
 

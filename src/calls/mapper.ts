@@ -321,7 +321,7 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
         const picked = opts.storeId && !run.rotate
           ? (await db.select().from(retailers).where(eq(retailers.id, opts.storeId)))[0]
           : await storeForChain(chainId, run.usedStores, true);
-        if (!picked) { run.stopReason = "no store in local daytime hours right now — re-run when stores are open (mornings hit the east coast first)"; run.phase = run.baseline ? run.phase : "needs-review"; break; }
+        if (!picked) { run.stopReason = "no store in local daytime hours right now. Re-run when stores are open; mornings hit the east coast first."; run.phase = run.baseline ? run.phase : "needs-review"; break; }
         run.store = { id: picked.id, name: picked.name, phone: picked.phone };
         run.usedStores.push(picked.id); run.rotate = false;
       }
@@ -477,7 +477,7 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
     if (run.phase === "locked" && run.best) {
       await finalizeAndLock(run, chainId, run.best, null); // final state (idempotent)
       run.stopReason = run.stopReason || (run.needsTarget
-        ? "locked, but no customer-service option in the menu — pick a target desk to re-map"
+        ? "Locked, but the menu has no customer-service option. Pick a target desk and re-map."
         : "nothing left to learn");
     } else if (run.stop) run.phase = "stopped";
     run.running = false; run.updatedAt = Date.now();

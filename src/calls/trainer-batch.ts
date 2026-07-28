@@ -15,7 +15,7 @@ import { chainDialable, recipeToDtmf } from "./recipe";
 import { proposeVersion, pathSignature, type EvidenceCall } from "./mapgraph";
 
 type Step = { who?: string; action?: string; value?: string; atSec?: number };
-type Recipe = { type?: string; steps?: Array<{ action?: string; value?: string; atSec?: number }>; seconds?: number; menu?: Array<{ digit: string; label: string }>; menuPrompts?: string[]; ringVariable?: boolean; target?: string };
+type Recipe = { type?: string; steps?: Array<{ action?: string; value?: string; atSec?: number }>; seconds?: number; menu?: Array<{ digit: string; label: string; say?: string }>; menuPrompts?: string[]; ringVariable?: boolean; target?: string };
 
 const state = {
   running: false, stop: false, total: 0, done: 0, learned: 0, review: 0, skipped: 0, failed: 0,
@@ -52,14 +52,15 @@ export async function lockRecipeToChain(chainId: number, recipe: Recipe, confide
   const direct = !greeting && (recipe.type === "direct" || steps.length === 0);
   // navText drives LIVE consumer calls — keep it to the navigation instruction only (unchanged).
   const navText = direct
-    ? "A live person usually answers directly — no phone menu to work through."
+    ? "Staff usually answer directly. No phone menu to work through."
     : greeting
-      ? "A recording answers first and hands you to a person. There is nothing to press or say, just wait."
+      ? "A recording answers first, then hands you to Staff. Nothing to press or say, just wait."
       : "To reach a live person: " + steps.map((s) => (s.action === "press" ? `press ${s.value}` : `say "${s.value}"`)).join(", then ") + ".";
   // docText is the DOCUMENTED tree the owner reads (#2/#6): nav path + target desk + menu options +
   // ring-variance warning. Kept out of phoneTreeDefault so it never changes live-call behavior.
   const menuText = Array.isArray(recipe.menu) && recipe.menu.length
-    ? " Menu options heard: " + recipe.menu.map((o) => `[${o.digit}] ${o.label || "?"}`).join("; ") + "."
+    // A spoken menu has no digit to show, so it reads as the word you answer with instead.
+    ? " Menu options heard: " + recipe.menu.map((o) => (o.digit ? `[${o.digit}] ${o.label || "?"}` : `say "${o.say || o.label}"`)).join("; ") + "."
     : "";
   const targetText = recipe.target ? ` Reaches: ${recipe.target}.` : "";
   const varText = recipe.ringVariable ? " ⚠ Variable ring (department pickup) — time-to-human varies call to call." : "";

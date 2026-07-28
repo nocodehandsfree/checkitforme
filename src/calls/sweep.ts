@@ -110,7 +110,7 @@ export async function buildQueue(): Promise<SweepItem[]> {
  *  chain has a menu we never mapped — it gets flagged and handed to the normal mapping lane. */
 async function proveDirect(item: SweepItem): Promise<void> {
   const store = await storeForChain(item.chainId, [], true);
-  if (!store) { item.status = "skipped"; item.outcome = "no store open right now — will come round again"; return; }
+  if (!store) { item.status = "skipped"; item.outcome = "no store open right now. Will come round again."; return; }
   const ask = await defaultWorkflowAsk();
   const placed = await placeNavCall(
     item.chainId, store.id, store.name, store.phone,
@@ -151,7 +151,7 @@ async function proveDirect(item: SweepItem): Promise<void> {
     });
     await proposeVersion({
       chainId: item.chainId, recipe, source: "sweep", call,
-      why: "A recording answers and hands you to a person. Nothing to press, but nobody is there at pickup.",
+      why: "A recording answers, then hands you to Staff. Nothing to press, and nobody is there at pickup.",
     });
     item.status = "done";
     item.outcome = `a recording answers, person at ${s?.humanAtSec ?? "?"}s — not direct, and nothing to press`;
@@ -167,7 +167,7 @@ async function proveDirect(item: SweepItem): Promise<void> {
   if (heardMenu || acted) {
     // The "direct" claim is wrong — there IS something in front of the human.
     item.status = "done";
-    item.outcome = "has a recording/menu — queued for real mapping";
+    item.outcome = "has a recording or menu. Queued for mapping.";
     await reportUnknown({
       chainId: item.chainId, kind: "wrongly-direct",
       prompt: `Marked "answers directly" but a recording answered: ${steps.find((st) => st.who === "ivr")?.text?.slice(0, 160) || "menu heard"}`,
@@ -184,7 +184,7 @@ async function proveDirect(item: SweepItem): Promise<void> {
       navId: placed.id, storeId: store.id, storeName: store.name, steps,
       seconds: s?.humanAtSec ?? null, reachedHuman: true, path: pathSignature(recipe), note: "direct proving call",
     });
-    await proposeVersion({ chainId: item.chainId, recipe: { ...recipe, type: "direct", steps: [] }, source: "sweep", call, why: "Proved: a person answers with no menu" });
+    await proposeVersion({ chainId: item.chainId, recipe: { ...recipe, type: "direct", steps: [] }, source: "sweep", call, why: "Proved: Staff answer with no menu" });
     item.status = "done"; item.outcome = `person answered directly at ${s?.humanAtSec ?? "?"}s — proved`; item.seconds = s?.humanAtSec ?? null;
     return;
   }

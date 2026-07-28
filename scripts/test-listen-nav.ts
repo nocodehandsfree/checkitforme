@@ -4,7 +4,7 @@
 // The detector's whole job: say "a prompt just ENDED" when a recording stops talking, so a mapped
 // step fires on the pause instead of on a stopwatch. These tests feed it synthetic frame energies —
 // no audio, no network — so the timing rules are provable.
-import { PromptDetector, ConversationEar, PickupEar, frameEnergy, looksLikeAPerson, _test, type HoldReason } from "../src/calls/listen-nav";
+import { PromptDetector, ConversationEar, frameEnergy, looksLikeAPerson, _test, type HoldReason } from "../src/calls/listen-nav";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -217,82 +217,6 @@ console.log("▶ nobody has spoken yet, so nobody can have left");
   ok(t.said.length === 0, "a ringing line before we ever reached a person is not a transfer either");
 }
 
-
-// ── THE PICKUP EAR — what the mapping call was missing ────────────────────────────────────────
-// Twilio's speech gather hands back an empty string for silence, for hold music AND for a desk that
-// is ringing. On 07-28 at CVS Mulholland that is how we booked a person at 84s having heard nothing
-// at all. These feed the ear the three things it has to tell apart.
-const pear = () => new PickupEar();
-/** Somebody talking: bursts with real gaps between the words. */
-const pTalk = (e: PickupEar, ms: number) => {
-  for (let i = 0; i < Math.round(ms / _test.FRAME_MS); i++) e.feedFrame(i % 10 < 7 ? LOUD : QUIET, 0);
-};
-/** Hold music: sound that never breaks. */
-const pMusic = (e: PickupEar, ms: number) => { for (let i = 0; i < Math.round(ms / _test.FRAME_MS); i++) e.feedFrame(LOUD, 0); };
-/** The network ringing a desk: loud, and sitting on the published ring frequencies. */
-const pRing = (e: PickupEar, ms: number) => { for (let i = 0; i < Math.round(ms / _test.FRAME_MS); i++) e.feedFrame(LOUD, 0.9); };
-const pQuiet = (e: PickupEar, ms: number) => { for (let i = 0; i < Math.round(ms / _test.FRAME_MS); i++) e.feedFrame(QUIET, 0); };
-
-console.log("▶ the pickup ear: hold music is not somebody saying hello");
-{
-  const e = pear();
-  pMusic(e, 20000);
-  ok(!e.somebodyIsThere, "twenty seconds of unbroken music and nobody has said a word");
-  ok(e.now === "music", "and the ear knows it is music");
-  ok(e.stillTrying, "which means the store is still working on it — do not hang up");
-}
-
-console.log("▶ …and a ringing desk is not somebody either");
-{
-  const e = pear();
-  pRing(e, 30000);
-  ok(!e.somebodyIsThere, "thirty seconds of ringing and nobody has picked up");
-  ok(e.now === "ringing", "the ear hears the ring for what it is");
-  ok(e.stillTrying, "still ringing = still worth holding on");
-}
-
-console.log("▶ …and silence is nobody at all");
-{
-  const e = pear();
-  pQuiet(e, 30000);
-  ok(!e.somebodyIsThere, "a dead quiet line has nobody on it");
-  ok(!e.stillTrying, "and nothing is happening, so the ordinary wait applies");
-}
-
-console.log("▶ but a person saying hello IS somebody");
-{
-  const e = pear();
-  pRing(e, 12000);
-  ok(!e.somebodyIsThere, "still nobody while it rings");
-  pTalk(e, 1500);
-  ok(e.somebodyIsThere, "they pick up and say hello — now somebody is there");
-  ok(e.now === "voice", "the ear calls it a voice");
-  ok(!e.stillTrying, "and we are no longer waiting on anything");
-  ok((e.voiceAtMs ?? 0) >= 12000 && (e.voiceAtMs ?? 0) <= 14000, `and it knows when: ${e.voiceAtMs}ms in`);
-}
-
-console.log("▶ the whole Mulholland transfer, replayed");
-{
-  const e = pear();
-  // The recorded menu talks to us for 30s — with gaps, exactly like a person.
-  pTalk(e, 30000);
-  ok(e.somebodyIsThere, "the machine's own voice reads as a voice, which is why the next line matters");
-  e.resetVoice();                       // "Okay, transferring you now."
-  ok(!e.somebodyIsThere, "the moment it says it is transferring us, the slate is wiped");
-  pMusic(e, 27000);                     // the 27 seconds that got booked as a person
-  ok(!e.somebodyIsThere, "twenty-seven seconds of hold music never becomes a person");
-  const beforeClerk = e.voiceAtMs;
-  pTalk(e, 2000);                       // "CVS Mulholland, this is Dana, how can I help you?"
-  ok(beforeClerk == null && e.somebodyIsThere, "and the clerk who actually picks up does");
-  ok((e.voiceAtMs ?? 0) - 57000 < 2000, `and we know inside two seconds of them speaking (${(e.voiceAtMs ?? 0) - 57000}ms)`);
-}
-
-console.log("▶ a short cough is not a pickup");
-{
-  const e = pear();
-  pTalk(e, 200);
-  ok(!e.somebodyIsThere, "a fifth of a second of noise proves nothing");
-}
 
 console.log(`\n${fail === 0 ? "PASS" : "FAIL"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);
