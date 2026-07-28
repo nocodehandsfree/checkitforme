@@ -24,9 +24,9 @@ async function main() {
     }
     if (!up) { console.error(out.slice(-2000)); throw new Error("server never came up"); }
 
-    const graph = await fetch(`${BASE}/api/admin/map/graph`, { headers: H }).then((r) => r.json()) as { rows: Array<Record<string, unknown>> };
-    ok(Array.isArray(graph.rows) && graph.rows.length > 0, `the map screen loads ${graph.rows?.length} chain rows`);
-    const mapped = graph.rows.filter((r) => r.mapped);
+    const rows0 = await fetch(`${BASE}/api/admin/map/graph`, { headers: H }).then((r) => r.json()) as { rows: Array<Record<string, unknown>> };
+    ok(Array.isArray(rows0.rows) && rows0.rows.length > 0, `the map screen loads ${rows0.rows?.length} chain rows`);
+    const mapped = rows0.rows.filter((r) => r.mapped);
     ok(mapped.length > 0, `${mapped.length} of them carry a route`);
     ok(mapped.every((r) => typeof r.confidence === "number" && typeof r.confidenceLabel === "string"), "every mapped row shows how much we trust it");
 
@@ -66,6 +66,9 @@ async function main() {
       }),
     }).then((r) => r.json()) as { ok?: boolean; version?: number; status?: string };
     ok(ingest.ok === true && typeof ingest.version === "number", `a route from the other environment is accepted (v${ingest.version}, ${ingest.status})`);
+    const graph = await fetch(`${BASE}/api/admin/map/graph/${one.chainId}`, { headers: H }).then((r) => r.json()) as { nodes: unknown[]; edges: unknown[] };
+    ok(Array.isArray(graph.nodes) && Array.isArray(graph.edges), "the graph behind a chain loads (prompts + what we did)");
+
     const unknownChain = await fetch(`${BASE}/api/admin/map/ingest`, {
       method: "POST", headers: H, body: JSON.stringify({ chainName: "No Such Chain Anywhere", recipe: { type: "direct", steps: [], seconds: 0 } }),
     });

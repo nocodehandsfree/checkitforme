@@ -23,7 +23,7 @@ import { isCallingPaused } from "../redis";
 import { placeNavCall, getNavSession, defaultWorkflowAsk, classifyMode, menuHasCustomerService, NavRecipe, NavStep } from "./navigator";
 import { storeForChain, lockRecipeToChain, recipeFromSteps } from "./trainer-batch";
 import { chainDialable } from "./recipe";
-import { pathSignature, reportUnknown, recordObservation, MapRecipe, MapStep, type EvidenceCall } from "./mapgraph";
+import { pathSignature, reportUnknown, recordObservation, recordCallPath, recordFailedAttempt, storeLocalTime, MapRecipe, MapStep, type EvidenceCall } from "./mapgraph";
 import { recipeFromCall, evidenceFromCall, CapturedStep } from "./map-capture";
 
 const DAILY_CAP = 60;        // runaway guard only — owner 2026-07-10: the old 12/day cap is gone, a
@@ -197,11 +197,23 @@ async function recordMapVersion(run: MapperRun, chainId: number, recipe: NavReci
         steps: (recipe.steps || []).map((s) => ({ action: s.action === "press" ? "press" : "say", value: String(s.value || ""), atSec: Math.round(s.atSec ?? 0) })) as MapStep[],
         seconds: recipe.seconds ?? 0, target: recipe.target, menu: recipe.menu, menuPrompts: recipe.menuPrompts, ringVariable: recipe.ringVariable,
       };
+    const when = await storeLocalTime(run.store?.id || 0);
     evidence = evidenceFromCall({
       navId: session?.id, storeId: run.store?.id, storeName: run.store?.name, steps,
       seconds: recipe.seconds ?? null, reachedHuman: true, path: pathSignature(mapRecipe),
       greeting: session?.greeting, transferAtSec: session?.transferAtSec ?? null,
+      hourLocal: when.hour, dow: when.dow,
       note: `${run.phase} attempt ${run.attempt}`,
+    });
+    mapRecipe.language = evidence.language;
+    // THE GRAPH: every prompt this call heard becomes a node, every action an edge to where it landed.
+    // The flat route above is what the runtime executes; this is the knowledge underneath it, and it
+    // is the only thing that can answer "we have never heard this prompt before".
+    await recordCallPath({
+      chainId, storeId: run.store?.id,
+      prompts: steps.filter((st) => st.who === "ivr" && st.text).map((st) => ({ text: String(st.text), atSec: Math.round(st.atSec ?? 0) })),
+      actions: mapRecipe.steps.map((st) => ({ action: st.action, value: st.value, atSec: st.atSec, afterPrompt: st.afterPrompt })),
+      reachedHuman: true, seconds: recipe.seconds ?? null, outcome: "person",
     });
     // The captured route is richer than the one the run carries: it knows WHICH recording each step
     // follows. Ship that one to the map.
@@ -395,6 +407,13 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
           if (verifyMisses >= 2) run.phase = "listen"; // the stored map may be stale — rediscover
         } else {
           baselineMisses++; run.phase = "baseline";
+          // A call that reached nobody proves nothing about the route, so it changes nothing — but it
+          // COUNTS (runtime spec §10.5), or a route that stopped working keeps looking healthy.
+          await recordFailedAttempt({
+            chainId, storeId: store.id, navId: s?.id,
+            reason: (s as { stopReason?: string } | null)?.stopReason || `no human (${s?.status || "timeout"})`,
+            seconds: secs, promptCount: (s?.steps as NavStep[] | undefined)?.filter((st) => st.who === "ivr").length,
+          }).catch(() => { /* evidence is best-effort */ });
           run.log.push({ n: run.attempt, phase: "baseline", store: store.name, outcome: `no human (${s?.status || "timeout"})${s?.confirmResult === "redirect" ? " — redirected: " + (s?.redirectTo || "") : ""}`, seconds: secs });
           if (baselineMisses >= BASELINE_TRIES) { run.phase = "needs-review"; run.stopReason = `no human in ${BASELINE_TRIES} attempts`; break; }
         }

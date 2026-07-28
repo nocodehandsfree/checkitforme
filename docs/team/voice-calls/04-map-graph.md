@@ -109,6 +109,34 @@ and what the menu costs (both derived from lane + seconds) · the ringing rung �
 versions yet" — `/api/admin/map/chain/:id` returns the versions, evidence and history. Confidence,
 the review queue and drift have no home on the page yet (`/map/graph`, `/map/unknowns`).
 
+## 6f. THE GRAPH, and the four rules from the runtime spec §10 (07-27)
+Built to `docs/specs/live-call-runtime/README.md` §10. The flat route is untouched — the runtime
+still executes that — and this is the knowledge underneath it.
+
+- **Nodes and edges.** `nav_nodes` = a prompt we have heard; `nav_edges` = an action that led from one
+  prompt to the next, with how often it was taken, how often it reached a person, and where it landed.
+  Fed by `recordCallPath()` from mapping calls and (once the runtime calls it) ordinary checks.
+  Node identity is `promptFingerprint()`: accents stripped, digits and number WORDS dropped, the six
+  longest remaining words sorted. "press 1" and "press one" are one prompt; a new menu is a new node,
+  which is what makes *we have never heard this prompt* answerable. Read: `GET /api/admin/map/graph/:id`.
+- **One store never moves a chain.** A store whose route disagrees with the chain's writes a
+  STORE-LEVEL version — live for that store, since it was already failing on the chain route — filed
+  as a `store-exception` review item. The chain route only moves once **three** separate stores walk
+  the same new route, and even then it is proposed, never swapped in. `lockRecipeToChain` asks the map
+  BEFORE stamping the chain row, so an exception can never touch the row 500 stores read.
+- **Language.** `MapRecipe.language`, on every node, on every evidence call and on every observation.
+  `guessLanguage()` is a marker match, no model: a bilingual opener reads as `mixed`, no evidence stays
+  `unknown` rather than defaulting to English. Discovery and execution stay deferred.
+- **Hour and weekday, in the STORE's clock**, on every observation (`storeLocalTime()`). A menu at 9pm
+  is often not the daytime menu; a server hour would say nothing about that.
+- **Failed calls count.** `recordFailedAttempt()` files the failure as evidence and as an observation.
+  It never changes a route — a call that reached nobody proves nothing about where the route goes — but
+  three failures in the last five calls caps confidence at 40 "needs review" and raises a
+  `route-failing` item, so a route that stopped working stops looking healthy.
+
+**Not ours, by the spec:** the prompt-anchor side channel (`stageNavPromptPlan`) is the runtime's to
+replace with an atomic read off the active version. Left alone deliberately.
+
 ## 7. Fixed on the way past
 `lockRecipeToChain` wrote the bare first digit ("4") into `dtmfShortcut`, but the live bridge only
 understands the timed form ("2@8,2@16") and plays NOTHING without it — so every chain locked through

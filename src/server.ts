@@ -41,7 +41,7 @@ import { emit, markNow, closeReceipt, linkCall, rollup, getReceipt, type Rollup 
 import { installReceiptStore, currentRates } from "./calls/receipt-store";
 import { costCall, money } from "./calls/cost";
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
-import { graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
+import { graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, graphFor, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
 import { recipeFromCall, evidenceFromCall, type CapturedStep } from "./calls/map-capture";
 import { startSweep, stopSweep, sweepStatus, buildQueue } from "./calls/sweep";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay } from "./calls/tapedeck";
@@ -6138,6 +6138,12 @@ app.post("/api/admin/map/version/:id/reject", async (c) => {
   const id = Number(c.req.param("id"));
   const b = (await c.req.json().catch(() => ({}))) as { why?: string };
   return c.json(await rejectVersion(id, "admin", String(b.why || "")));
+});
+// The graph behind a chain: every prompt we have heard and every action that led from one to another.
+app.get("/api/admin/map/graph/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!id) return c.json({ error: "chainId required" }, 400);
+  return c.json(await graphFor(id, Number(c.req.query("storeId") || 0)));
 });
 app.get("/api/admin/map/unknowns", async (c) => c.json({ unknowns: await openUnknowns(Number(c.req.query("limit") || 100)) }));
 // Catch-up: send anything this environment learned while the record was unreachable (production does

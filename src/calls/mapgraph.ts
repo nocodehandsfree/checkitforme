@@ -46,7 +46,13 @@ export interface MapRecipe {
   menu?: Array<{ digit: string; label: string }>;
   menuPrompts?: string[];
   ringVariable?: boolean;
+  /** WHICH LANGUAGE this route was learned in (runtime spec §10.3). Discovery and execution are
+   *  deferred, but the field is here now: retrofitting it later means rewriting every stored route,
+   *  and a menu that answers in Spanish is a different menu, not a drifted one. */
+  language?: Language;
 }
+/** ISO-ish and deliberately small. `null`/absent = we have not looked. */
+export type Language = "en" | "es" | "mixed" | "unknown";
 
 /** One mapping/verify call, kept as the reason a version is trusted. */
 export interface EvidenceCall {
@@ -62,6 +68,11 @@ export interface EvidenceCall {
   transcript?: string[];           // the menu lines we heard (kept only for the winning version)
   greeting?: string;               // what the person said when they picked up — WHICH desk we reached
   transferAtSec?: number | null;   // when the machine said "transferring you now"
+  /** WHEN, in the STORE's own clock (runtime spec §10.4). A menu at 9pm is often not the daytime
+   *  menu, and without this we would chase a "failure" that only means we called after hours. */
+  hourLocal?: number | null;       // 0-23 where the store is
+  dow?: number | null;             // 0 = Sunday, in the store's week
+  language?: Language;
   note?: string;
 }
 export interface Evidence { calls: EvidenceCall[] }
@@ -131,6 +142,47 @@ export async function ensureMapTables(): Promise<void> {
     detail TEXT
   )`);
   await client.execute(`CREATE INDEX IF NOT EXISTS nav_observations_chain ON nav_observations (chain_id, at)`);
+  // WHEN and IN WHAT LANGUAGE (runtime spec §10.3/§10.4): stores run different menus after hours and
+  // around holidays, and a menu that answers in Spanish is not the same menu. Without these two we
+  // chase failures that only mean we called at nine at night. Local to the STORE, not to a server.
+  for (const col of ["hour_local INTEGER", "dow INTEGER", "language TEXT"]) {
+    await client.execute(`ALTER TABLE nav_observations ADD COLUMN ${col}`).catch(() => { /* already there */ });
+  }
+  // THE GRAPH (runtime spec §10.1). A flat recipe can say "press 2 at 8 seconds" and nothing else —
+  // not which prompt led here, not that this store branches differently, not that we have never heard
+  // this prompt before. The Ear produces nodes and edges naturally: a prompt ended, we did something,
+  // here is where we landed. A node is a PROMPT we have heard; an edge is an action that led from one
+  // to the next. The flat route stays exactly as it is — the runtime reads that — and the graph is the
+  // knowledge underneath it, which is what makes "we have never heard this prompt" answerable.
+  await client.execute(`CREATE TABLE IF NOT EXISTS nav_nodes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chain_id INTEGER NOT NULL,
+    store_id INTEGER NOT NULL DEFAULT 0,
+    fingerprint TEXT NOT NULL,
+    label TEXT,
+    kind TEXT NOT NULL DEFAULT 'menu',
+    language TEXT,
+    heard_count INTEGER NOT NULL DEFAULT 1,
+    first_seen INTEGER NOT NULL,
+    last_seen INTEGER NOT NULL
+  )`);
+  await client.execute(`CREATE UNIQUE INDEX IF NOT EXISTS nav_nodes_key ON nav_nodes (chain_id, store_id, fingerprint)`);
+  await client.execute(`CREATE TABLE IF NOT EXISTS nav_edges (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chain_id INTEGER NOT NULL,
+    store_id INTEGER NOT NULL DEFAULT 0,
+    from_node INTEGER NOT NULL,
+    action TEXT NOT NULL,
+    value TEXT NOT NULL,
+    to_node INTEGER,
+    outcome TEXT,
+    taken_count INTEGER NOT NULL DEFAULT 1,
+    reached_count INTEGER NOT NULL DEFAULT 0,
+    avg_seconds INTEGER,
+    first_seen INTEGER NOT NULL,
+    last_seen INTEGER NOT NULL
+  )`);
+  await client.execute(`CREATE UNIQUE INDEX IF NOT EXISTS nav_edges_key ON nav_edges (chain_id, store_id, from_node, action, value)`);
   await client.execute(`CREATE TABLE IF NOT EXISTS nav_unknowns (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     chain_id INTEGER NOT NULL,
@@ -205,6 +257,160 @@ export function isHammerPath(r: { steps?: Array<{ action?: string; value?: strin
   if (steps.length < 2) return false;
   const vals = steps.map((s) => String(s.value || ""));
   return vals.every((v) => v === vals[0]) && steps.every((s) => s.action === "press");
+}
+
+// ---- the graph: prompts as nodes, what we did as edges ----------------------------------------
+
+/** Words that carry no identity — every menu has them, so they cannot tell two menus apart. */
+const STOPWORDS = new Set(["the", "for", "and", "you", "your", "our", "please", "to", "a", "of", "if", "is",
+  "this", "that", "at", "in", "on", "or", "we", "us", "with", "call", "calling", "thank", "thanks", "may", "can",
+  // Number WORDS go too. Speech-to-text writes "press 1" one call and "press one" the next; the digit
+  // is already stripped, so leaving the word in would make the same menu look like two menus.
+  "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+  "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez"]);
+
+/** A STABLE KEY for a prompt heard over a phone line. Speech-to-text never returns the same string
+ *  twice — a word drops, a number is spelled out — so keying a node on the raw text would mint a new
+ *  node every call and the graph would be noise. Instead: lowercase, drop punctuation and digits and
+ *  filler, then keep the six longest remaining words in alphabetical order. Two hearings of the same
+ *  recording collapse to one key; two genuinely different menus do not. */
+export function promptFingerprint(text: string): string {
+  const words = String(text || "").toLowerCase()
+    // Strip accents first, or "español" would survive as the fragment "espa" and a store that spells
+    // it without the tilde would key differently from one that spells it with.
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !STOPWORDS.has(w));
+  if (!words.length) return "";
+  const uniq = [...new Set(words)].sort((a, b) => b.length - a.length || a.localeCompare(b)).slice(0, 6);
+  return uniq.sort().join("-");
+}
+
+/** A cheap, honest guess at the language of a prompt — no model, no service. Discovery proper is
+ *  deferred (runtime spec §10.3); this fills the field when the answer is obvious and says `unknown`
+ *  the rest of the time rather than guessing at English by default. */
+export function guessLanguage(text: string): Language {
+  const t = String(text || "").toLowerCase();
+  if (!t.trim()) return "unknown";
+  const es = /(para español|oprima|marque|presione|gracias por llamar|farmacia|tienda|espere)/.test(t);
+  // "Thanks for calling CVS. Para español oprima nueve" is the real shape of a bilingual menu — an
+  // English opener with a Spanish option — so the English markers have to include the opener itself
+  // or that line reads as pure Spanish and we would map the wrong menu.
+  const en = /(press|thanks? (you )?for calling|please hold|store|pharmacy|for english|say)/.test(t);
+  if (es && en) return "mixed";
+  if (es) return "es";
+  if (en) return "en";
+  return "unknown";
+}
+
+/** What the store said, in order, and what we did about it — one call's worth. */
+export interface CallPath {
+  chainId: number;
+  storeId?: number;
+  prompts: Array<{ text: string; atSec: number }>;
+  actions: Array<{ action: "press" | "say"; value: string; atSec: number; afterPrompt?: number }>;
+  reachedHuman: boolean;
+  seconds?: number | null;
+  outcome?: string;                 // person | no-answer | transfer-no-pickup | menu-lost
+}
+
+async function upsertNode(chainId: number, storeId: number, fp: string, label: string, kind: string, lang: Language, at: number): Promise<number> {
+  const found = await client.execute({
+    sql: `SELECT id FROM nav_nodes WHERE chain_id=? AND store_id=? AND fingerprint=? LIMIT 1`,
+    args: [chainId, storeId, fp],
+  });
+  if (found.rows.length) {
+    const id = Number((found.rows[0] as any).id);
+    await client.execute({ sql: `UPDATE nav_nodes SET heard_count=heard_count+1, last_seen=?, label=COALESCE(NULLIF(label,''),?) WHERE id=?`, args: [at, label, id] });
+    return id;
+  }
+  const ins = await client.execute({
+    sql: `INSERT INTO nav_nodes (chain_id, store_id, fingerprint, label, kind, language, heard_count, first_seen, last_seen)
+          VALUES (?,?,?,?,?,?,1,?,?)`,
+    args: [chainId, storeId, fp, label.slice(0, 300), kind, lang, at, at],
+  });
+  return Number(ins.lastInsertRowid || 0);
+}
+
+/** Fold ONE call into the graph: every prompt becomes a node, every action becomes an edge from the
+ *  prompt it answered to the prompt it produced. Runs on mapping calls and on ordinary checks alike —
+ *  it is the same shape either way — and it never touches the flat route the runtime executes. */
+export async function recordCallPath(p: CallPath): Promise<{ nodes: number; edges: number; newPrompts: number }> {
+  await ensureMapTables();
+  const at = nowSec();
+  const storeId = p.storeId || 0;
+  let nodes = 0, edges = 0, newPrompts = 0;
+  // Prompt i is the node an action taken after i-1 completed recordings answered.
+  const nodeIds: number[] = [];
+  for (const pr of p.prompts) {
+    const fp = promptFingerprint(pr.text);
+    if (!fp) { nodeIds.push(0); continue; }
+    const before = await client.execute({ sql: `SELECT id FROM nav_nodes WHERE chain_id=? AND store_id=? AND fingerprint=? LIMIT 1`, args: [p.chainId, storeId, fp] });
+    if (!before.rows.length) newPrompts++;
+    nodeIds.push(await upsertNode(p.chainId, storeId, fp, pr.text, "menu", guessLanguage(pr.text), at));
+    nodes++;
+  }
+  for (let i = 0; i < p.actions.length; i++) {
+    const a = p.actions[i];
+    // The prompt this action answered: the one it waited for, else the last one heard before it.
+    const fromIdx = typeof a.afterPrompt === "number" ? a.afterPrompt - 1
+      : p.prompts.reduce((best, pr, idx) => (pr.atSec <= a.atSec ? idx : best), -1);
+    const from = nodeIds[fromIdx] ?? 0;
+    if (!from) continue;
+    // Where it landed: the next prompt heard, or the end of the call.
+    const toIdx = p.prompts.findIndex((pr) => pr.atSec > a.atSec);
+    const to = toIdx >= 0 ? (nodeIds[toIdx] || null) : null;
+    const last = i === p.actions.length - 1;
+    const outcome = to ? null : (last ? (p.outcome || (p.reachedHuman ? "person" : "unknown")) : null);
+    const secs = typeof p.seconds === "number" ? Math.round(p.seconds) : null;
+    const hit = await client.execute({
+      sql: `SELECT id, taken_count, reached_count, avg_seconds FROM nav_edges WHERE chain_id=? AND store_id=? AND from_node=? AND action=? AND value=? LIMIT 1`,
+      args: [p.chainId, storeId, from, a.action, a.value],
+    });
+    if (hit.rows.length) {
+      const row = hit.rows[0] as any;
+      const taken = Number(row.taken_count || 1) + 1;
+      const reached = Number(row.reached_count || 0) + (p.reachedHuman ? 1 : 0);
+      const avg = secs != null ? Math.round((Number(row.avg_seconds ?? secs) * (taken - 1) + secs) / taken) : row.avg_seconds ?? null;
+      await client.execute({
+        sql: `UPDATE nav_edges SET to_node=COALESCE(?, to_node), outcome=COALESCE(?, outcome), taken_count=?, reached_count=?, avg_seconds=?, last_seen=? WHERE id=?`,
+        args: [to, outcome, taken, reached, avg, at, Number(row.id)],
+      });
+    } else {
+      await client.execute({
+        sql: `INSERT INTO nav_edges (chain_id, store_id, from_node, action, value, to_node, outcome, taken_count, reached_count, avg_seconds, first_seen, last_seen)
+              VALUES (?,?,?,?,?,?,?,1,?,?,?,?)`,
+        args: [p.chainId, storeId, from, a.action, a.value, to, outcome, p.reachedHuman ? 1 : 0, secs, at, at],
+      });
+    }
+    edges++;
+  }
+  return { nodes, edges, newPrompts };
+}
+
+/** The graph for one chain, for the dashboard and for answering "have we ever heard this prompt?". */
+export async function graphFor(chainId: number, storeId = 0): Promise<{
+  nodes: Array<Record<string, unknown>>; edges: Array<Record<string, unknown>>;
+}> {
+  await ensureMapTables();
+  const [n, e] = await Promise.all([
+    client.execute({ sql: `SELECT * FROM nav_nodes WHERE chain_id=? AND store_id=? ORDER BY heard_count DESC LIMIT 200`, args: [chainId, storeId] }),
+    client.execute({ sql: `SELECT * FROM nav_edges WHERE chain_id=? AND store_id=? ORDER BY taken_count DESC LIMIT 400`, args: [chainId, storeId] }),
+  ]);
+  return {
+    nodes: n.rows.map((r: any) => ({
+      id: Number(r.id), fingerprint: String(r.fingerprint), label: r.label ? String(r.label) : "",
+      kind: String(r.kind), language: r.language ? String(r.language) : null,
+      heard: Number(r.heard_count), firstSeen: Number(r.first_seen), lastSeen: Number(r.last_seen),
+    })),
+    edges: e.rows.map((r: any) => ({
+      id: Number(r.id), from: Number(r.from_node), to: r.to_node == null ? null : Number(r.to_node),
+      action: String(r.action), value: String(r.value), outcome: r.outcome ? String(r.outcome) : null,
+      taken: Number(r.taken_count), reached: Number(r.reached_count),
+      avgSeconds: r.avg_seconds == null ? null : Number(r.avg_seconds),
+    })),
+  };
 }
 
 // ---- reading the map ------------------------------------------------------------------------
@@ -319,7 +525,7 @@ export async function proposeVersion(opts: {
       }
     }
   }
-  const storeId = opts.storeId || 0;
+  let storeId = opts.storeId || 0;
   const at = nowSec();
   const call: EvidenceCall | null = opts.call
     ? { ...opts.call, at: opts.call.at || at, day: opts.call.day || dayOf(opts.call.at || at), path: opts.call.path || pathSignature(opts.recipe) }
@@ -367,6 +573,24 @@ export async function proposeVersion(opts: {
     return { version: refreshed, activated: false, foldedInto: prevActive.id };
   }
 
+  // ONE STORE DISAGREEING IS A STORE EXCEPTION, NEVER A CHAIN CHANGE (runtime spec §10.2).
+  // Franklin's Ace is one store out of many. If a store walks a different route to its person, that is
+  // almost always that store, not the chain — and letting one odd call rewrite the chain would break
+  // five hundred stores at once. So: the exception is recorded against THAT STORE, and the chain route
+  // only moves once STORES_TO_MOVE_CHAIN separate stores have walked the same new route.
+  if (prevActive && !sameRoute && storeId && prevActive.storeId === 0 && call?.reachedHuman) {
+    const agreeing = await storesAgreeingOn(opts.chainId, pathSignature(opts.recipe), storeId);
+    if (agreeing.length < STORES_TO_MOVE_CHAIN) {
+      const res = await proposeStoreException(opts, call, agreeing.length);
+      return res;
+    }
+    // Enough stores now walk this route that it is the chain's route, not an exception. Fall through
+    // and propose it at CHAIN level — the store must be cleared here or the promotion would silently
+    // file itself as yet another store exception and the chain would never move at all.
+    opts = { ...opts, storeId: 0, why: `${agreeing.length} stores now walk this route (${agreeing.join(", ")})` };
+    storeId = 0;
+  }
+
   // A new route (or the first one ever).
   const evidence: Evidence = { calls: call ? [call] : [] };
   const scored = scoreConfidence(evidence, at);
@@ -407,6 +631,71 @@ export async function proposeVersion(opts: {
     });
   }
   return { version: (await versionById(id))!, activated: false };
+}
+
+/** How many separate stores must walk a new route before it becomes the CHAIN's route. Three, because
+ *  two can be a coincidence of one bad afternoon and one is just a store being itself. */
+const STORES_TO_MOVE_CHAIN = 3;
+
+/** Which stores have an ACTIVE store-level route matching this path (plus the one calling in). Used to
+ *  decide when an exception has stopped being an exception. */
+async function storesAgreeingOn(chainId: number, path: string, includeStoreId?: number): Promise<number[]> {
+  const r = await client.execute({
+    sql: `SELECT store_id, recipe FROM nav_map_versions WHERE chain_id=? AND store_id>0 AND status='active'`,
+    args: [chainId],
+  });
+  const ids = new Set<number>(includeStoreId ? [includeStoreId] : []);
+  for (const row of r.rows) {
+    const rec = (() => { try { return JSON.parse(String((row as any).recipe)) as MapRecipe; } catch { return null; } })();
+    if (rec && pathSignature(rec) === path) ids.add(Number((row as any).store_id));
+  }
+  return [...ids];
+}
+
+/** Record a store walking its own route. It goes live FOR THAT STORE — the store is already proving
+ *  the chain route wrong there, so leaving it on a route that does not work helps nobody — and it is
+ *  filed as a review item so a pattern across stores is visible rather than buried. */
+async function proposeStoreException(
+  opts: { chainId: number; storeId?: number; recipe: MapRecipe; source: string; why?: string },
+  call: EvidenceCall, agreeing: number,
+): Promise<{ version: MapVersion; activated: boolean; foldedInto?: number }> {
+  const storeId = opts.storeId as number;
+  const at = nowSec();
+  const existing = await activeMap(opts.chainId, storeId);
+  if (existing && existing.storeId === storeId && pathSignature(existing.recipe) === pathSignature(opts.recipe)) {
+    // The same exception again — evidence, not a new version.
+    const evidence: Evidence = { calls: [...(existing.evidence.calls || []), call].slice(-25) };
+    const scored = scoreConfidence(evidence, at);
+    await client.execute({
+      sql: `UPDATE nav_map_versions SET evidence=?, confidence=?, confidence_label=?, why=? WHERE id=?`,
+      args: [JSON.stringify(evidence), scored.score, scored.label, scored.why, existing.id],
+    });
+    return { version: (await versionById(existing.id))!, activated: false, foldedInto: existing.id };
+  }
+  const maxRow = await client.execute({
+    sql: `SELECT COALESCE(MAX(version),0) AS v FROM nav_map_versions WHERE chain_id=? AND store_id=?`,
+    args: [opts.chainId, storeId],
+  });
+  const version = Number((maxRow.rows[0] as any)?.v || 0) + 1;
+  const evidence: Evidence = { calls: [call] };
+  const scored = scoreConfidence(evidence, at);
+  const summary = `This store walks its own route: ${spoken(opts.recipe)}`;
+  const why = `${agreeing} of ${STORES_TO_MOVE_CHAIN} stores needed before the chain route changes`;
+  const ins = await client.execute({
+    sql: `INSERT INTO nav_map_versions (chain_id, store_id, version, status, nav_type, recipe, seconds, confidence,
+      confidence_label, evidence, source, summary, why, created_at, approved_at, approved_by)
+      VALUES (?,?,?,'active',?,?,?,?,?,?,?,?,?,?,?,'store-exception')`,
+    args: [opts.chainId, storeId, version, opts.recipe.type || null, JSON.stringify(opts.recipe),
+      opts.recipe.seconds ?? null, scored.score, scored.label, JSON.stringify(evidence), opts.source,
+      summary, why, at, at],
+  });
+  if (existing && existing.storeId === storeId) await retire(existing.id, at);
+  await reportUnknown({
+    chainId: opts.chainId, storeId, kind: "store-exception",
+    prompt: `${summary} — the chain route stays as it is until ${STORES_TO_MOVE_CHAIN} stores agree`,
+    evidence: { versionId: Number(ins.lastInsertRowid || 0), navId: call.navId, agreeing },
+  });
+  return { version: (await versionById(Number(ins.lastInsertRowid || 0)))!, activated: false };
 }
 
 async function retire(versionId: number, at: number): Promise<void> {
@@ -479,14 +768,38 @@ async function stampChainFromVersion(v: MapVersion): Promise<void> {
 export async function recordObservation(o: {
   chainId: number; storeId?: number; versionId?: number | null; navId?: string; callId?: number;
   kind: string; expected?: string; observed?: string; drift?: boolean; detail?: unknown;
+  hourLocal?: number | null; dow?: number | null; language?: Language;
 }): Promise<void> {
   await ensureMapTables();
+  // WHEN it happened, in the store's own clock, on EVERY observation (runtime spec §10.4). When the
+  // caller does not know the store, we look it up rather than store a server hour that means nothing.
+  let hour = o.hourLocal ?? null, dow = o.dow ?? null;
+  if ((hour == null || dow == null) && o.storeId) {
+    const when = await storeLocalTime(o.storeId);
+    hour = hour ?? when.hour; dow = dow ?? when.dow;
+  }
   await client.execute({
-    sql: `INSERT INTO nav_observations (chain_id, store_id, version_id, nav_id, call_id, at, kind, expected, observed, drift, detail)
-          VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+    sql: `INSERT INTO nav_observations (chain_id, store_id, version_id, nav_id, call_id, at, kind, expected, observed, drift, detail, hour_local, dow, language)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     args: [o.chainId, o.storeId || 0, o.versionId ?? null, o.navId ?? null, o.callId ?? null, nowSec(),
-      o.kind, o.expected ?? null, o.observed ?? null, o.drift ? 1 : 0, o.detail ? JSON.stringify(o.detail) : null],
+      o.kind, o.expected ?? null, o.observed ?? null, o.drift ? 1 : 0, o.detail ? JSON.stringify(o.detail) : null,
+      hour, dow, o.language ?? null],
   });
+}
+
+/** The hour and weekday where the STORE is, right now. A menu at 9pm local is often not the daytime
+ *  menu; a server hour would tell us nothing about that. */
+export async function storeLocalTime(storeId: number, at = new Date()): Promise<{ hour: number | null; dow: number | null }> {
+  if (!storeId) return { hour: null, dow: null };
+  const st = (await db.select({ tz: retailers.timezone }).from(retailers).where(eq(retailers.id, storeId)))[0];
+  const tz = st?.tz || "America/Chicago";
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", hour12: false, weekday: "short" }).formatToParts(at);
+    const hour = Number(parts.find((x) => x.type === "hour")?.value ?? NaN);
+    const wk = String(parts.find((x) => x.type === "weekday")?.value || "");
+    const dow = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(wk);
+    return { hour: Number.isFinite(hour) ? hour % 24 : null, dow: dow >= 0 ? dow : null };
+  } catch { return { hour: null, dow: null }; }
 }
 
 /** An unknown is a first-class review item, never a discarded log line. Repeats fold into one row
@@ -688,6 +1001,63 @@ export async function reshareUnsent(): Promise<{ pushed: number; failed: number;
     if (res.ok) { await setSetting(`map_unshared:${chainId}`, ""); pushed++; } else failed++;
   }
   return { pushed, failed, pending: failed };
+}
+
+/** FAILED CALLS ARE EVIDENCE (runtime spec §10.5). A call that never reached a person must not change
+ *  a route — it proves nothing about where the route goes — but it must COUNT, or a route that stopped
+ *  working keeps looking healthy right up until a customer pays for it.
+ *
+ *  So a failure is folded into the live version's evidence (where scoreConfidence already ignores it
+ *  for scoring) and the recent record is checked: three of the last five calls failing drops the
+ *  confidence and raises a review item. The route itself is untouched — that is the point. */
+const FAIL_WINDOW = 5;
+const FAILS_TO_FLAG = 3;
+
+export async function recordFailedAttempt(o: {
+  chainId: number; storeId?: number; navId?: string; callId?: number;
+  reason: string; seconds?: number | null; promptCount?: number; language?: Language;
+}): Promise<{ counted: boolean; recentFails: number; flagged: boolean }> {
+  await ensureMapTables();
+  const at = nowSec();
+  const when = await storeLocalTime(o.storeId || 0);
+  const map = await activeMap(o.chainId, o.storeId || 0);
+  await recordObservation({
+    chainId: o.chainId, storeId: o.storeId, versionId: map?.id ?? null, navId: o.navId, callId: o.callId,
+    kind: "failed-attempt", expected: map ? pathSignature(map.recipe) : undefined,
+    observed: o.reason, drift: false, language: o.language,
+    hourLocal: when.hour, dow: when.dow,
+    detail: { reason: o.reason, seconds: o.seconds ?? null, promptCount: o.promptCount ?? null },
+  });
+  if (!map) return { counted: true, recentFails: 0, flagged: false };
+  // Fold it into the evidence so the failure is visible next to the calls that worked.
+  const evidence: Evidence = {
+    calls: [...(map.evidence.calls || []), {
+      at, day: dayOf(at), storeId: o.storeId, seconds: o.seconds ?? null, promptCount: o.promptCount,
+      reachedHuman: false, path: pathSignature(map.recipe), hourLocal: when.hour, dow: when.dow,
+      language: o.language, note: o.reason,
+    }].slice(-25),
+  };
+  const recent = evidence.calls.slice(-FAIL_WINDOW);
+  const recentFails = recent.filter((c) => !c.reachedHuman).length;
+  const scored = scoreConfidence(evidence, at);
+  // A run of failures is the signal. Below the bar we still store the failure and leave trust alone.
+  const flagged = recentFails >= FAILS_TO_FLAG;
+  const score = flagged ? Math.max(20, Math.min(scored.score, 40)) : scored.score;
+  const label: ConfidenceLabel = flagged ? "needs review" : scored.label;
+  const why = flagged ? `${recentFails} of the last ${recent.length} calls did not reach a person` : scored.why;
+  await client.execute({
+    sql: `UPDATE nav_map_versions SET evidence=?, confidence=?, confidence_label=?, why=? WHERE id=?`,
+    args: [JSON.stringify(evidence), score, label, why, map.id],
+  });
+  if (!map.storeId) await db.update(chains).set({ navConfidence: score }).where(eq(chains.id, o.chainId));
+  if (flagged) {
+    await reportUnknown({
+      chainId: o.chainId, storeId: o.storeId, kind: "route-failing",
+      prompt: `${recentFails} of the last ${recent.length} calls on this route did not reach a person (${o.reason})`,
+      evidence: { versionId: map.id, navId: o.navId, callId: o.callId },
+    });
+  }
+  return { counted: true, recentFails, flagged };
 }
 
 // ---- backfill ---------------------------------------------------------------------------------

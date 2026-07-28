@@ -65,6 +65,37 @@ export async function lockRecipeToChain(chainId: number, recipe: Recipe, confide
   // worked. One converter for both, exactly as recipe.ts says: recipeToDtmf.
   const dtmfPlan = recipeToDtmf(recipe as { steps?: Array<{ action?: string; value?: string; atSec?: number }> });
   const now = Math.floor(Date.now() / 1000);
+
+  // THE MAP DECIDES WHERE THIS BELONGS, BEFORE ANYTHING TOUCHES LIVE CALLS. A route proved at ONE
+  // store that disagrees with the chain is that store's exception, not the chain changing its mind
+  // (runtime spec §10.2) — so it must not stamp the chain row that five hundred stores read. We ask
+  // the map first and only stamp when the answer is "this is the chain's route".
+  const mapRecipe = {
+    type: (recipe.type as "direct" | "keypad" | "voice") || (direct ? "direct" : "keypad"),
+    steps: steps.map((st) => ({
+      action: st.action === "press" ? ("press" as const) : ("say" as const),
+      value: String(st.value || ""), atSec: Math.round(st.atSec ?? 0),
+      afterPrompt: (st as { afterPrompt?: number }).afterPrompt,
+    })),
+    seconds: typeof recipe.seconds === "number" ? recipe.seconds : 0,
+    target: recipe.target, menu: recipe.menu, menuPrompts: recipe.menuPrompts,
+    ringVariable: recipe.ringVariable, language: evidence?.language,
+  };
+  let chainLevel = true;
+  try {
+    const res = await proposeVersion({
+      chainId, recipe: mapRecipe, source: evidence ? "mapping call" : "lock",
+      storeId: evidence?.storeId,
+      call: evidence ?? {
+        at: now, day: new Date(now * 1000).toISOString().slice(0, 10),
+        reachedHuman: true, path: pathSignature(mapRecipe),
+        seconds: typeof recipe.seconds === "number" ? recipe.seconds : null,
+      },
+    });
+    chainLevel = res.version.storeId === 0;
+  } catch { /* the map is best-effort; a hiccup there must never stop a proven route going live */ }
+  if (!chainLevel) return;   // a store exception: recorded, live for that store, chain row untouched
+
   await db.update(chains).set({
     navType: recipe.type || null, navRecipe: JSON.stringify(recipe),
     navSeconds: direct ? null : (typeof recipe.seconds === "number" ? Math.round(recipe.seconds) : null),
@@ -78,28 +109,6 @@ export async function lockRecipeToChain(chainId: number, recipe: Recipe, confide
     ringsDirect: direct, avgTreeSeconds: direct ? null : (typeof recipe.seconds === "number" ? Math.round(recipe.seconds) : null),
     treeStatus: "learned", treeLearnedAt: now,
   }).where(eq(chains.id, chainId));
-  // The map is knowledge, the chain row is what the runtime reads — both, always, from here.
-  try {
-    const mapRecipe = {
-      type: (recipe.type as "direct" | "keypad" | "voice") || (direct ? "direct" : "keypad"),
-      steps: steps.map((st) => ({
-        action: st.action === "press" ? ("press" as const) : ("say" as const),
-        value: String(st.value || ""), atSec: Math.round(st.atSec ?? 0),
-        afterPrompt: (st as { afterPrompt?: number }).afterPrompt,
-      })),
-      seconds: typeof recipe.seconds === "number" ? recipe.seconds : 0,
-      target: recipe.target, menu: recipe.menu, menuPrompts: recipe.menuPrompts, ringVariable: recipe.ringVariable,
-    };
-    const at = Math.floor(Date.now() / 1000);
-    await proposeVersion({
-      chainId, recipe: mapRecipe, source: evidence ? "mapping call" : "lock",
-      call: evidence ?? {
-        at, day: new Date(at * 1000).toISOString().slice(0, 10),
-        reachedHuman: true, path: pathSignature(mapRecipe),
-        seconds: typeof recipe.seconds === "number" ? recipe.seconds : null,
-      },
-    });
-  } catch { /* knowledge is best-effort — a map hiccup must never break a locked route */ }
 }
 
 /** Save an UNCONFIRMED route (never reached a human) as a review candidate — does NOT touch live. */

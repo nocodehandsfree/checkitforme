@@ -5,7 +5,7 @@
 //
 // Everything here is pure — no DB, no network, no phone calls — so the rules that decide what we
 // trust are provable on their own.
-import { scoreConfidence, pathSignature, isHammerPath, _test as mg, type Evidence } from "../src/calls/mapgraph";
+import { scoreConfidence, pathSignature, isHammerPath, promptFingerprint, guessLanguage, _test as mg, type Evidence } from "../src/calls/mapgraph";
 import { recipeFromCall, transcriptFromCall, promptCount } from "../src/calls/map-capture";
 import { shouldFireOnPrompt, navPlanKey, stageNavPromptPlan } from "../src/calls/listen-nav";
 import { _test as sw } from "../src/calls/sweep";
@@ -134,6 +134,25 @@ console.log("▶ paths and plain-English change notes");
   ok(mg.describeChange(null, { type: "voice", steps: [{ action: "say", value: "front", atSec: 20 }], seconds: 40 }).startsWith("First map"), "first map says so");
   ok(mg.describeChange(prev, { type: "voice", steps: [{ action: "say", value: "front", atSec: 20 }], seconds: 31 }).includes("9s faster"), "a faster same route reads as faster");
   ok(mg.describeChange(prev, { type: "keypad", steps: [{ action: "press", value: "0", atSec: 5 }], seconds: 40 }).startsWith("Route changed"), "a new route reads as changed");
+}
+
+console.log("▶ a prompt keeps the same identity across speech-to-text wobble");
+{
+  const a = promptFingerprint("For the pharmacy press 1, for the front store press 2");
+  const b = promptFingerprint("for the pharmacy press one for the front store press 2.");
+  ok(a === b && !!a, `"press 1" and "press one" are the same prompt (${a})`);
+  ok(promptFingerprint("Thanks for calling CVS. Para español oprima nueve") === promptFingerprint("thanks for calling cvs, para espanol oprima nueve"),
+    "spelled with or without the tilde is the same prompt");
+  ok(promptFingerprint("Our hours have changed, we close at nine") !== a, "a genuinely different menu is a different prompt");
+  ok(promptFingerprint("   ") === "", "silence has no fingerprint, and never becomes a node");
+}
+
+console.log("▶ language is read off what the store said, and guessed at nothing");
+{
+  ok(guessLanguage("Para español oprima nueve") === "es", "Spanish is recognised");
+  ok(guessLanguage("For the pharmacy press 1") === "en", "English is recognised");
+  ok(guessLanguage("Thanks for calling. Para español oprima nueve") === "mixed", "a menu offering both is mixed");
+  ok(guessLanguage("") === "unknown" && guessLanguage("mmm hmm") === "unknown", "no evidence stays unknown, never defaults to English");
 }
 
 console.log("▶ the sweep dials east first");

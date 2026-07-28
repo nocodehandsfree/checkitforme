@@ -11,7 +11,7 @@
 // The navigator hears the menu one recording at a time (each <Gather> speech result IS one finished
 // recording), so the count of recordings before each action is already fact on every mapping call —
 // no new audio plumbing, no speech-recognition bill.
-import type { MapRecipe, MapStep, EvidenceCall } from "./mapgraph";
+import { guessLanguage, type MapRecipe, type MapStep, type EvidenceCall, type Language } from "./mapgraph";
 
 /** The navigator's per-turn record, loosened so this file needs no runtime import from navigator. */
 export interface CapturedStep { who?: string; text?: string; atSec?: number; action?: string; value?: string }
@@ -60,11 +60,27 @@ export function promptCount(steps: CapturedStep[]): number {
   return (steps || []).filter((s) => s.who === "ivr" && String(s.text || "").trim()).length;
 }
 
+/** The language the STORE spoke on this call, from the menu lines themselves. One clear Spanish line
+ *  is enough to say so; a menu with both is "mixed"; silence stays unknown rather than assumed. */
+export function languageOfCall(steps: CapturedStep[]): Language {
+  const seen = new Set<Language>();
+  for (const s of steps || []) {
+    if (s.who !== "ivr" || !s.text) continue;
+    const g = guessLanguage(s.text);
+    if (g !== "unknown") seen.add(g);
+  }
+  if (seen.has("mixed") || (seen.has("es") && seen.has("en"))) return "mixed";
+  if (seen.has("es")) return "es";
+  if (seen.has("en")) return "en";
+  return "unknown";
+}
+
 /** Package one mapping call as evidence: what happened, where, when, and how fast. */
 export function evidenceFromCall(opts: {
   navId?: string; storeId?: number; storeName?: string; steps: CapturedStep[];
   seconds: number | null; reachedHuman: boolean; path: string; note?: string; at?: number;
   greeting?: string; transferAtSec?: number | null;
+  hourLocal?: number | null; dow?: number | null; language?: Language;
 }): EvidenceCall {
   const at = opts.at || Math.floor(Date.now() / 1000);
   return {
@@ -73,6 +89,10 @@ export function evidenceFromCall(opts: {
     seconds: opts.seconds, promptCount: promptCount(opts.steps),
     reachedHuman: opts.reachedHuman, path: opts.path,
     greeting: opts.greeting, transferAtSec: opts.transferAtSec ?? null,
+    hourLocal: opts.hourLocal ?? null, dow: opts.dow ?? null,
+    // What language the menu spoke, read off the lines we heard. Free, and the field has to be
+    // populated from the first call or it is worthless when discovery proper arrives.
+    language: opts.language ?? languageOfCall(opts.steps),
     transcript: opts.reachedHuman ? transcriptFromCall(opts.steps) : transcriptFromCall(opts.steps, 6),
     note: opts.note,
   };

@@ -9,7 +9,8 @@ import { db } from "../src/db/client";
 import { chains } from "../src/db/schema";
 import {
   proposeVersion, approveVersion, activeMap, versionsFor, graphSummary, chainDetail,
-  openUnknowns, reportCallDrift, backfillFromChains, type MapRecipe,
+  openUnknowns, reportCallDrift, backfillFromChains, recordCallPath, graphFor,
+  recordFailedAttempt, promptFingerprint, guessLanguage, storeLocalTime, type MapRecipe,
 } from "../src/calls/mapgraph";
 
 let pass = 0, fail = 0;
@@ -155,6 +156,84 @@ async function main() {
     ok(live?.evidence.calls[0].greeting === "Front store, this is Ana", "and the greeting proves which desk answered");
     const chRow = (await db.select().from(chains).where(eq(chains.id, ch.id)))[0];
     ok(chRow.dtmfShortcut === "3@9", `the chain row both environments read is stamped (${chRow.dtmfShortcut})`);
+  }
+
+  console.log("▶ the graph: prompts are nodes, what we did are edges");
+  {
+    const [ch] = await db.insert(chains).values({ name: "Test Graph Mart" }).returning();
+    const call1 = {
+      chainId: ch.id, storeId: 501, reachedHuman: true, seconds: 40, outcome: "person",
+      prompts: [
+        { text: "Thanks for calling Graph Mart. Para español oprima nueve.", atSec: 0 },
+        { text: "For the pharmacy press 1, for the front store press 2", atSec: 12 },
+      ],
+      actions: [{ action: "press" as const, value: "2", atSec: 16, afterPrompt: 2 }],
+    };
+    const r1 = await recordCallPath(call1);
+    ok(r1.nodes === 2 && r1.edges === 1, `two prompts, one action (${r1.nodes} nodes, ${r1.edges} edges)`);
+    ok(r1.newPrompts === 2, "both prompts are new the first time we hear them");
+    // The SAME menu, transcribed slightly differently — must not mint new nodes.
+    const r2 = await recordCallPath({ ...call1,
+      prompts: [
+        { text: "Thanks for calling Graph Mart, para español oprima nueve", atSec: 0 },
+        { text: "for the pharmacy press one for the front store press 2.", atSec: 11 },
+      ],
+    });
+    ok(r2.newPrompts === 0, "speech-to-text wobble does NOT create duplicate prompts");
+    const g = await graphFor(ch.id, 501);
+    ok(g.nodes.length === 2, `the graph holds two prompts (${g.nodes.length})`);
+    ok(g.edges.length === 1 && g.edges[0].taken === 2, "the edge counts both times we took it");
+    ok(g.edges[0].outcome === "person", "and remembers it landed on a person");
+    ok(g.nodes.some((n) => n.language === "mixed" || n.language === "es"), "the Spanish line is marked as such");
+    // A prompt we have never heard is answerable now — the whole point of the graph.
+    const heard = await recordCallPath({ ...call1, prompts: [{ text: "Our hours have changed, we now close at nine", atSec: 0 }], actions: [] });
+    ok(heard.newPrompts === 1, "a prompt we have never heard reads as new");
+  }
+
+  console.log("▶ one store disagreeing is a store exception, never a chain change");
+  {
+    const [ch] = await db.insert(chains).values({ name: "Test Ace Hardware" }).returning();
+    const chainRoute: MapRecipe = { type: "keypad", seconds: 30, steps: [{ action: "press", value: "2", atSec: 8 }] };
+    await proposeVersion({ chainId: ch.id, recipe: chainRoute, source: "sweep",
+      call: { at: now(), day: "2026-07-27", storeId: 601, seconds: 30, reachedHuman: true, path: "press:2" } });
+    // Franklin's Ace answers differently.
+    const odd: MapRecipe = { type: "keypad", seconds: 25, steps: [{ action: "press", value: "4", atSec: 7 }] };
+    const ex = await proposeVersion({ chainId: ch.id, storeId: 777, recipe: odd, source: "sweep",
+      call: { at: now(), day: "2026-07-27", storeId: 777, seconds: 25, reachedHuman: true, path: "press:4" } });
+    ok(ex.version.storeId === 777, "the exception is recorded against THAT store");
+    ok(ex.version.status === "active", "and goes live for that store, which was failing on the chain route");
+    const chainLive = await activeMap(ch.id);
+    ok(chainLive?.recipe.steps[0].value === "2", "the CHAIN route is untouched — 500 stores keep working");
+    ok((await activeMap(ch.id, 777))?.recipe.steps[0].value === "4", "that one store gets its own route");
+    ok((await openUnknowns(300)).some((u) => u.chainId === ch.id && u.kind === "store-exception"), "and it is queued so a pattern is visible");
+    // Two more stores agree → now it is the chain's route, and even then only as a proposal.
+    await proposeVersion({ chainId: ch.id, storeId: 778, recipe: odd, source: "sweep",
+      call: { at: now(), day: "2026-07-27", storeId: 778, seconds: 25, reachedHuman: true, path: "press:4" } });
+    const third = await proposeVersion({ chainId: ch.id, storeId: 779, recipe: odd, source: "sweep",
+      call: { at: now(), day: "2026-07-27", storeId: 779, seconds: 25, reachedHuman: true, path: "press:4" } });
+    ok(third.version.storeId === 0, "the third store makes it a chain-level question");
+    ok(third.version.status === "proposed", "still proposed, never silently swapped");
+    ok((await activeMap(ch.id))?.recipe.steps[0].value === "2", "the chain keeps its route until somebody approves");
+  }
+
+  console.log("▶ failed calls count without changing the route");
+  {
+    const [ch] = await db.insert(chains).values({ name: "Test Failing Chain" }).returning();
+    const route: MapRecipe = { type: "keypad", seconds: 30, steps: [{ action: "press", value: "0", atSec: 5 }] };
+    await proposeVersion({ chainId: ch.id, recipe: route, source: "sweep",
+      call: { at: now(), day: "2026-07-27", storeId: 801, seconds: 30, reachedHuman: true, path: "press:0" } });
+    const before = (await activeMap(ch.id))!;
+    const f1 = await recordFailedAttempt({ chainId: ch.id, storeId: 801, reason: "nobody picked up" });
+    ok(f1.counted && !f1.flagged, "one failure is recorded but changes nothing");
+    ok((await activeMap(ch.id))!.recipe.steps[0].value === "0", "the route is untouched by a failure");
+    await recordFailedAttempt({ chainId: ch.id, storeId: 801, reason: "nobody picked up" });
+    const f3 = await recordFailedAttempt({ chainId: ch.id, storeId: 801, reason: "menu changed, got lost" });
+    ok(f3.flagged, `three failures in five calls raises the flag (${f3.recentFails} recent)`);
+    const after = (await activeMap(ch.id))!;
+    ok(after.confidence < before.confidence, `trust drops (${before.confidence} → ${after.confidence})`);
+    ok(after.confidenceLabel === "needs review", "and it stops looking healthy");
+    ok(after.recipe.steps[0].value === "0", "the route STILL has not changed — failures never rewrite a map");
+    ok((await openUnknowns(300)).some((u) => u.chainId === ch.id && u.kind === "route-failing"), "it lands in the review queue");
   }
 
   console.log("▶ what the dashboard reads");
