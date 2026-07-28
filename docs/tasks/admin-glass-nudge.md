@@ -40,9 +40,32 @@ re-snapshot is not one of them, so it has been passing green the whole time.
 **Reference:** `sheetGlassNudge` + `sheetBodyLock` + `sheetBodyMaybeUnlock` in `public/checkit.html`.
 Copy that ordering exactly rather than inventing a variant. GOTCHAS has the full glass story.
 
-**Status:** open (owner: hold until the current Admin chat is finished)
+**Status:** done (2026-07-28, Admin LIVE @527a48f)
 
 **Verify-live output (paste on close — a task without it is NOT closed):**
 ```
-(none yet)
+→ shipping public/app.html @ 527a48f to https://admin.checkitforme.com …
+{"ok":true,"commit":"527a48f","at":1785258342,"bytes":639284}
+✓ THE Admin is serving the new shell (527a48f).
+
+read back off https://admin.checkitforme.com/ :
+  pokeChrome()                        x4   (defined + called on open + called on close)
+  240px + env(safe-area-inset-bottom) x1   (the scroll-end spacer)
 ```
+
+**What shipped:** `openSheet` now shows the sheet, waits two frames, calls `pokeChrome()`, waits one
+more frame (pokeChrome scrolls 1px and back on the NEXT frame, so locking in between stranded the page
+1px off), THEN locks scroll. `_restoreSheetLayout` nudges on the way out. `.sh-body` scroll-end spacer
+70px → 240px (the 120px overshoot + the ~90px toolbar + tap margin). Grab handle unified to the site's
+44x6 at 40%.
+
+**Driven** at 390x844, signed into Admin: nudge order on open reads `nudge, nudge, lock`, and fires
+again on close. Lowest tappable element in the workflow sheet, the global-openers sheet and a 20-row
+worst case all land 42px+ clear of the toolbar; before the fix the same element sat 128px UNDER it.
+
+**The guard:** `scripts/qa-admin-glass.mjs` gained 4 checks (pokeChrome called on open, called on
+close, called BEFORE the lock, spacer clears overshoot + toolbar). Its old check pinned the 70px
+spacer, so it had been certifying the bug. Run against the PRE-FIX file it now reports 4 failures;
+against the fixed file 15 pass / 0 fail.
+
+**Left for the owner:** the tint itself. Chromium cannot render iOS glass.
