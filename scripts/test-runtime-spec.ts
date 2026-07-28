@@ -5,7 +5,8 @@
 // driven end to end against real sockets in test-delta-clip.ts; this covers the rest, and it uses a
 // REAL database wherever a claim is about the database, because "the one-hour block will not count a
 // dropped call" is exactly the kind of thing that is true in a comment and false in a query.
-import { rollup, _receiptFrom, navOutcomeOf, openReceipt, openSegment, closeSegment, getReceipt, startMeter, addMs, emit, closeReceipt, _reset } from "../src/calls/events";
+import { rollup, _receiptFrom, navOutcomeOf, openReceipt, openSegment, closeSegment, getReceipt, startMeter, addMs, emit, closeReceipt, recordLine, transcriptOf, _reset } from "../src/calls/events";
+import { ConversationEar } from "../src/calls/listen-nav";
 import { _test as brainTest, checkBrainRequest, _resetBrainGuards } from "../src/calls/brain";
 import { RECONNECT_OPENER, RECONNECT_OPENER_ES } from "../src/calls/service";
 
@@ -149,6 +150,46 @@ console.log("\n▶ §7 the one route that is NOT behind the admin login — what
   okk(extra.ok === true, "fields we never agreed to do not break the call");
   okk(extra.ok === true && !("tools" in extra.body), "…they are dropped, never forwarded to a model with our money behind it");
   okk(extra.ok === true && extra.body.max_tokens === undefined && extra.body.temperature === undefined, "and out-of-range numbers are ignored rather than obeyed");
+}
+
+console.log("\n▶ hard rule 2: the transcript is OURS, written live, not read back from the provider");
+{
+  _reset();
+  openReceipt("r4");
+  recordLine("r4", "Agent", "do you have any Pokemon cards in stock?");
+  recordLine("r4", "Clerk", "yeah we got a few booster packs");
+  recordLine("r4", "Agent", "   ");                       // nothing said
+  const r = getReceipt("r4")!;
+  okk(r.transcript.length === 2, "empty lines are not recorded as turns");
+  okk(transcriptOf(r) === "Agent: do you have any Pokemon cards in stock?\nClerk: yeah we got a few booster packs", "the conversation reads back in the order it happened");
+  okk(r.transcript.every((l) => typeof l.atMs === "number"), "every line carries its own second on the call's clock");
+  okk(!JSON.stringify(r.transcript).includes("audio"), "text only — no audio on any path");
+}
+
+console.log("\n▶ §5 the ear's last two jobs: extended dead air, and the line going away");
+{
+  const said: string[] = [];
+  const e = new ConversationEar({
+    holdStart: () => { /* covered elsewhere */ }, holdEnd: () => { /* covered elsewhere */ },
+    deadAir: (ms) => said.push(`dead:${Math.round(ms / 1000)}s`),
+    disconnected: () => said.push("gone"),
+  });
+  const LOUD = 550, QUIET = 20;
+  const talk = (ms: number) => { for (let i = 0; i < ms / 20; i++) e.feed(i % 5 === 4 ? QUIET : LOUD); };
+  const hush = (ms: number) => { for (let i = 0; i < ms / 20; i++) e.feed(QUIET); };
+  talk(3000); hush(20000);
+  okk(said.length === 0, "twenty seconds of quiet is a wait, not dead air");
+  hush(30000);
+  okk(said[0]?.startsWith("dead:"), `far past a normal wait it says so once (${said[0]})`);
+  const before = said.length;
+  hush(20000);
+  okk(said.length === before, "…and only once, not every frame after");
+  talk(2000); hush(50000);
+  okk(said.filter((s) => s.startsWith("dead:")).length === 2, "somebody speaking resets it, so a second silence is heard again");
+  // A dropped line stops sending audio ENTIRELY. That is an absence, and no silence detector can
+  // see it — it has to be reported by whoever owns the socket.
+  e.lineGone(); e.lineGone();
+  okk(said.filter((s) => s === "gone").length === 1, "the line going away is reported exactly once, not heard and not repeated");
 }
 
 console.log("\n▶ §7 the model is the one the owner approved");

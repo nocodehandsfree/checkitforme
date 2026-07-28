@@ -15,7 +15,7 @@
 import { eq, or, and, inArray } from "drizzle-orm";
 import { db } from "../db/client";
 import { callEvents, callResults } from "../db/schema";
-import { rollup, setEventSink, type Receipt } from "./events";
+import { rollup, transcriptOf, setEventSink, type Receipt } from "./events";
 import { costCall, MEASURED_RATES, type Rates } from "./cost";
 import { getSetting } from "../db/settings";
 
@@ -113,6 +113,10 @@ export async function persistReceipt(r: Receipt): Promise<void> {
       ...(r.attemptOf != null ? { attemptOf: r.attemptOf } : {}),
       // Which brain answered (null when he never joined — never a stand-in for "we didn't look"),
       // what the walk to a person achieved, and how many stretches he was open for.
+      // WHAT WE HEARD, as the record (hard rule 2). Only written when we actually captured lines —
+      // a call the provider transcribed and we did not must keep the provider's copy rather than be
+      // blanked by ours. Text only; no audio reaches disk on any path.
+      ...(r.transcript.length ? { transcript: transcriptOf(r) } : {}),
       brain: sums.brain,
       navOutcome: sums.navOutcome,
       charlieSegments: sums.charlieSegments || null,

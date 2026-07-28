@@ -8,7 +8,7 @@ import { config } from "../config";
 // seconds split into talking / listening / dead air, because it is the only place the audio passes
 // through. Every stamp is "now"; the receipt owns the clock, since it started at dial and this
 // socket opens much later.
-import { emit, markNow, addMs, linkProviderCall, openSegment, closeSegment, startMeter } from "../calls/events";
+import { emit, markNow, addMs, linkProviderCall, openSegment, closeSegment, startMeter, recordLine } from "../calls/events";
 // The Ear that stays on the call while a person is talking to us. Pure and dependency-free on
 // purpose, so every threshold in it is provable without a phone call.
 import { ConversationEar, type HoldReason } from "../calls/listen-nav";
@@ -584,6 +584,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // Real words on the store side (letters, not ringback transcribed as "...") = someone IS
         // there — disarm the give-up cap. Voicemail greetings count: the voicemail bail handles those.
         if (txt && /[a-zA-ZÀ-ɏ]{2,}/.test(String(txt)) && !humanWords) { humanWords = true; if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } }
+        // OUR record of what was said, written live against this call's own clock — not read back
+        // from the provider afterwards (hard rule 2). Text only, never audio.
+        if (txt) recordLine(room, "Clerk", String(txt));
         if (txt) try { relayLine?.(room, "Clerk", String(txt)); } catch { /* relay best-effort */ }
         // VOICEMAIL = hang up NOW, not after the greeting plays out (owner 07-22: "as soon as it
         // starts hearing the voice message it should hang up to save us money"). Same phrases the
@@ -595,7 +598,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           signalEnd(); try { eleven?.close(); } catch { /* torn down */ } try { twilio.close(); } catch { /* torn down */ }
         }
       } else if (m.type === "agent_response") {
-        const txt = m.agent_response_event?.agent_response; if (txt) try { relayLine?.(room, "Agent", String(txt)); } catch { /* relay best-effort */ }
+        const txt = m.agent_response_event?.agent_response;
+        if (txt) recordLine(room, "Agent", String(txt));
+        if (txt) try { relayLine?.(room, "Agent", String(txt)); } catch { /* relay best-effort */ }
       } else if (m.type === "ping") {
         eleven!.send(JSON.stringify({ type: "pong", event_id: m.ping_event?.event_id }));
       } else if (m.type === "interruption") {
@@ -643,7 +648,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // From here somebody is on the line, so from here it is worth knowing when they stop being on
       // the line. The meter flips from "never checked" to a real measured zero at the same moment.
       startMeter(room, "holdMs");
-      convEar = new ConversationEar({ holdStart: beginHold, holdEnd: endHold }, tune);
+      convEar = new ConversationEar({
+        holdStart: beginHold, holdEnd: endHold,
+        // NOBODY IS COMING BACK. Not the same as stepping away to check a shelf: this is a handset
+        // left on a counter. Recorded, and the give-up cap owns what to do about it.
+        deadAir: (quietMs) => emit(room, "unknown", `Nothing has been said for ${Math.round(quietMs / 1000)}s, the line is dead air`, { deadAirSec: Math.round(quietMs / 1000) }),
+        // THE LINE IS GONE. A dropped leg stops sending audio entirely, which is an absence no
+        // silence detector can see — so it is reported by whoever owns the socket, not heard.
+        disconnected: () => emit(room, "hangup", "The line dropped from the far end", { reason: "carrier_gone" }),
+      }, tune);
     }
     else emit(room, "unknown", `The agent was let on without hearing a person (${reason})`, { reason });
     log(`connect-on-human: connecting (${reason}) after ${Math.round((humanAtMs - startMs) / 1000)}s nav`);
@@ -833,5 +846,5 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       if (m.mark?.name === CLIP_MARK) openCharlieGate("the carrier confirmed the clip played");
     } else if (m.event === "stop") { log("twilio stop"); signalEnd(); if (eleven) eleven.close(); }
   });
-  twilio.on("close", () => { activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (eleven) eleven.close(); });
+  twilio.on("close", () => { try { convEar?.lineGone(); } catch { /* recording is best-effort */ } activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (eleven) eleven.close(); });
 }

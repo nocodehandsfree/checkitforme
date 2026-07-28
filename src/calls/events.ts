@@ -127,6 +127,9 @@ export interface Receipt {
   attemptOf?: number | null;
   /** Every stretch the agent was connected for. One entry on an ordinary call. */
   segments: CharlieSegment[];
+  /** WHAT WAS SAID, as we heard it live (hard rule 2). Text only — never audio, on any path. The
+   *  provider's own post-call version becomes supporting evidence, not the record. */
+  transcript: Array<{ atMs: number; who: "Agent" | "Clerk"; text: string }>;
   events: RtEvent[];
   meters: Meters;
   closed: boolean;
@@ -155,7 +158,7 @@ export function openReceipt(room: string, opts?: { lane?: Lane; planned?: Receip
   const r: Receipt = {
     room, startMs: Date.now(), callId: opts?.callId, lane: opts?.lane ?? "unknown",
     planned: opts?.planned ?? [], events: [], meters: zeroMeters(), closed: false,
-    mapVersion: opts?.mapVersion ?? null, attemptOf: opts?.attemptOf ?? null, segments: [],
+    mapVersion: opts?.mapVersion ?? null, attemptOf: opts?.attemptOf ?? null, segments: [], transcript: [],
   };
   receipts.set(room, r);
   setTimeout(() => { if (receipts.get(room) === r) receipts.delete(room); }, RECEIPT_TTL_MS);
@@ -193,6 +196,34 @@ export function emit(room: string, kind: EventKind, note?: string, detail?: Reco
     r.events.push({ atMs, atSec: Math.round(atMs / 1000), kind, note, detail });
     if (r.events.length > 400) r.events.splice(0, r.events.length - 400); // runaway guard
   } catch { /* recording must never break a call */ }
+}
+
+/**
+ * ONE LINE OF WHAT WAS SAID, AS WE HEARD IT (spec: the live call runtime, hard rule 2).
+ *
+ * "Our receipt is the source of truth for the transcript, the timings and the verdict. The voice
+ * provider's post-call webhook becomes supporting evidence, not the record." The timings and the
+ * verdict were already ours; the words were not — they were read back from the provider afterwards,
+ * which means a call whose webhook never lands has no transcript at all, and a provider that
+ * rewrites its own history rewrites ours.
+ *
+ * So each line is recorded HERE, live, in the order it happened, against the same clock as every
+ * other event on this call. TEXT ONLY — no audio, ever, on any path.
+ */
+export function recordLine(room: string, who: "Agent" | "Clerk", text: string): void {
+  try {
+    const r = receipts.get(room);
+    if (!r || r.closed) return;
+    const t = String(text || "").trim();
+    if (!t) return;
+    r.transcript.push({ atMs: Math.max(0, Date.now() - r.startMs), who, text: t.slice(0, 1000) });
+    if (r.transcript.length > 300) r.transcript.splice(0, r.transcript.length - 300); // runaway guard
+  } catch { /* recording must never break a call */ }
+}
+
+/** The conversation as WE heard it, oldest first. */
+export function transcriptOf(r: Receipt): string {
+  return r.transcript.map((l) => `${l.who}: ${l.text}`).join("\n");
 }
 
 /** Attach the call_results row id once it exists. */
@@ -432,11 +463,11 @@ export function rollup(r: Receipt): Rollup {
 }
 
 /** For tests and for the replay API: a receipt built from raw parts without touching the clock. */
-export function _receiptFrom(parts: { room?: string; lane?: Lane; events?: RtEvent[]; meters?: Partial<Meters>; planned?: Receipt["planned"]; segments?: CharlieSegment[] }): Receipt {
+export function _receiptFrom(parts: { room?: string; lane?: Lane; events?: RtEvent[]; meters?: Partial<Meters>; planned?: Receipt["planned"]; segments?: CharlieSegment[]; transcript?: Receipt["transcript"] }): Receipt {
   return {
     room: parts.room ?? "test", startMs: 0, lane: parts.lane ?? "unknown", planned: parts.planned ?? [],
     events: parts.events ?? [], meters: { ...zeroMeters(), ...(parts.meters ?? {}) }, closed: true,
-    segments: parts.segments ?? [],
+    segments: parts.segments ?? [], transcript: parts.transcript ?? [],
   };
 }
 
