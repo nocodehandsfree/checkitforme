@@ -105,6 +105,12 @@ export async function persistReceipt(r: Receipt): Promise<void> {
       menuSeconds: sums.menuSeconds,
       // Which build served this call, so a regression is findable without guessing.
       engineVersion: (process.env.RAILWAY_GIT_COMMIT_SHA || "").slice(0, 12) || null,
+      // WHICH saved menu version walked this call, and which check it retries. Both columns have
+      // existed since the receipt shipped and both sat empty; a map that misbehaved on a paying
+      // customer was untraceable to the version somebody approved. Only written when we actually
+      // know — never a 0 or an empty string standing in for "we never checked".
+      ...(r.mapVersion != null ? { mapVersion: String(r.mapVersion) } : {}),
+      ...(r.attemptOf != null ? { attemptOf: r.attemptOf } : {}),
       costLineUsd: cost.lineUsd,
       costForkUsd: cost.forkUsd,
       costCharlieUsd: cost.charlieUsd,

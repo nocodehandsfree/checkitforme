@@ -66,8 +66,8 @@ import { config } from "../config";
 import { ElevenLabsProvider } from "../voice/elevenlabs";
 import { takeBridgeNav } from "../voice/bridge";
 import { placeBridgeCall, roomFinalizers, parseNavSteps } from "../voice/bridge-place";
-import { stageNavPromptPlan, listenNavSummary } from "./listen-nav";
-import { reportCallDrift } from "./mapgraph";
+import { listenNavSummary, type NavStep } from "./listen-nav";
+import { reportCallDrift, activeMap } from "./mapgraph";
 import { learnTreeFromTranscript, consumeTreeRelearn } from "./tree-learn";
 import { connectAtSecFor } from "./recipe";
 import { deltaStoreCall, setDeltaFinalize, tdTranscript, type TdSession } from "./tapedeck";
@@ -112,6 +112,33 @@ function composePersona(p: AnyObj | undefined): string {
   // tight"). Personas set the VIBE only; the role is never up for grabs.
   bits.push("No matter what the persona above says: you are ALWAYS the caller on a live phone call, speaking ONLY to the store employee who answered. Never narrate what you're doing or about to do, never announce you'll call anyone, never address anyone except the person on the line.");
   return bits.join(" ").trim();
+}
+
+/**
+ * ONE VERSION IN, ONE PLAN OUT (spec: the live call runtime, section 10).
+ *
+ * Everything a call needs in order to walk a menu — what to press, what to say, and which recording
+ * each of those waits for — comes out of the SAME saved version here, or it does not come out at
+ * all. That is the whole guarantee: pieces from two versions of one route can never be mixed on a
+ * live call, because there is only ever one version on the table.
+ *
+ * Pure, so the guarantee is provable without a database or a phone call.
+ */
+export function navPlanFromVersion(
+  recipeSteps?: Array<{ action?: string; value?: string; atSec?: number; afterPrompt?: number }> | null,
+): { steps: NavStep[]; dtmf: string; say: string } {
+  const steps: NavStep[] = (recipeSteps ?? [])
+    .filter((s) => (s.action === "press" || s.action === "say") && String(s.value ?? "").trim())
+    .map((s) => ({ action: s.action as "press" | "say", value: String(s.value).trim(), atSec: Math.round(s.atSec ?? 0), afterPrompt: s.afterPrompt }))
+    .sort((a, b) => a.atSec - b.atSec);
+  // The carrier only understands the timed form. A press with no usable digit is dropped rather
+  // than sent as a bare "@8", which is the shape that once made whole chains press nothing at all.
+  const dtmf = steps.filter((s) => s.action === "press")
+    .map((s) => ({ d: s.value.replace(/[^0-9*#]/g, ""), at: s.atSec }))
+    .filter((x) => x.d).map((x) => `${x.d}@${x.at}`).join(",");
+  const say = steps.filter((s) => s.action === "say")
+    .map((s) => `${s.value.replace(/[,@]/g, " ").trim()}@${s.atSec}`).join(",");
+  return { steps, dtmf, say };
 }
 
 /** Resolve a store's assigned workflow: store override → chain default → global default. */
@@ -168,7 +195,7 @@ export async function buildRestockVars(
   specificProduct?: string,
   extraCategoryIds?: number[],
   kioskMode?: boolean,
-): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; say: string | null; connectAtSec: number | null; maxTalk: number | null; voiceId: string | null; voiceTuning: Record<string, unknown> | null; listenNav: boolean; dynamicVars: Record<string, string> } | null> {
+): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; say: string | null; connectAtSec: number | null; maxTalk: number | null; voiceId: string | null; voiceTuning: Record<string, unknown> | null; listenNav: boolean; navSteps: NavStep[]; mapVersion: number | null; mapVersionId: number | null; dynamicVars: Record<string, string> } | null> {
   const retailer = (await db.select().from(retailers).where(eq(retailers.id, retailerId)))[0];
   if (!retailer) return null;
   const category = (await db.select().from(categories).where(eq(categories.id, categoryId)))[0];
@@ -204,10 +231,29 @@ export async function buildRestockVars(
   const openingLine = openerTemplate.replace(/\{category\}/g, category.label);
   const clarification = specificityClause((specificProduct ?? "").trim());
 
-  // Bravo voice nav: build the spoken plan ("no@26,front@38,…") from the locked recipe so the bridge
-  // speaks it with cheap TTS before opening the agent — keeps voice-IVR stores (CVS) cheap.
-  let say: string | null = null;
-  if (chain?.navType === "voice" && chain.navRecipe) {
+  // THE MAP, READ ONCE, AS ONE THING (spec: the live call runtime, section 10).
+  //
+  // What we press, what we say, which recording each step waits for and how long the walk takes all
+  // describe the SAME saved version of this store's menu, so they must be read together or not at
+  // all. They used to come from three places: the chain's keypad column, the chain's recipe column,
+  // and an in-memory side channel keyed by the SHAPE of the step list — claimed by whichever call
+  // happened to be running an identical-looking route, expiring after ten minutes, dying on every
+  // restart and carrying no version at all. Two versions of one route could therefore have their
+  // pieces mixed on a live call. One read, one version, no mixing.
+  //
+  // It also brings STORE EXCEPTIONS to the runtime for the first time. activeMap prefers a map saved
+  // for this exact store over the chain's, which is the whole point of store exceptions — one branch
+  // answering differently no longer has to be wrong on every call.
+  const mapV = chain ? await activeMap(chain.id, retailer.id).catch(() => null) : null;
+  const plan = navPlanFromVersion(mapV?.recipe?.steps);
+  const mapSteps = plan.steps;
+
+  // The two executable strings the carrier understands, built from that one version. No saved
+  // version (or nothing worth running in it) falls back to the chain row exactly as before, so a
+  // chain the backfill never carried over behaves the way it does today.
+  const dtmf = plan.dtmf || (chain?.dtmfShortcut ?? null);
+  let say: string | null = plan.say || null;
+  if (!say && !mapSteps.length && chain?.navType === "voice" && chain.navRecipe) {
     try {
       const r = JSON.parse(chain.navRecipe) as { steps?: Array<{ action?: string; value?: string; atSec?: number }> };
       const ss = (r.steps ?? []).filter((s) => s.action === "say" && s.value);
@@ -224,28 +270,19 @@ export async function buildRestockVars(
   const listenNav = lnRaw === "all"
     || (!!chain?.name && lnRaw.split(",").map((x) => x.trim()).filter(Boolean).includes(chain.name.toLowerCase()));
 
-  // WHICH RECORDING each step waits for (owner 07-26). The mapped route now knows that "general" is
-  // said after the store finishes reading its options, not at second 41 — but the plan the bridge
-  // builds is a flat "word@seconds" string with nowhere to put that. So stage it here, keyed by the
-  // exact route, and listening navigation claims it as the call starts. No map data → nothing staged
-  // → the call behaves exactly as it does today.
-  if (listenNav && chain?.navRecipe) {
-    try {
-      const r = JSON.parse(chain.navRecipe) as { steps?: Array<{ action?: string; value?: string; atSec?: number; afterPrompt?: number }> };
-      const parsed = parseNavSteps(chain.dtmfShortcut ?? null, say);
-      const mapped = (r.steps || []).filter((s) => s.action === "press" || s.action === "say");
-      if (parsed.length && parsed.length === mapped.length) {
-        stageNavPromptPlan(parsed.map((p, i) => ({ ...p, afterPrompt: mapped[i]?.afterPrompt })));
-      }
-    } catch { /* unreadable recipe → clock behaviour, unchanged */ }
-  }
-
   return {
     retailer, category, chainName: chain?.name ?? null,
-    // Bridge-level keypad shortcut (chain-wide): pressed by OUR code at a fixed time, not the LLM.
-    dtmf: chain?.dtmfShortcut ?? null,
+    // Bridge-level keypad shortcut: pressed by OUR code at a fixed time, not the LLM.
+    dtmf,
     say,
     listenNav,
+    // The steps as the saved version really holds them, anchors and all, handed straight to the
+    // call instead of being re-derived from the flat strings above and re-united with its anchors
+    // by luck. Empty = nothing mapped, and the flat strings are all there is.
+    navSteps: mapSteps,
+    // Which saved version ran, so the receipt can say so and a bad call is traceable to a decision.
+    mapVersion: mapV?.version ?? null,
+    mapVersionId: mapV?.id ?? null,
     // ABC deterministic hand-off: open the billed agent at the chain's LEARNED time-to-human.
     // Guarded (connectAtSecFor): direct-answer chains and chains with no tree evidence NEVER get a
     // timer — the timer mutes the agent until it fires (the 2026-07-02 silent-agent bug). null =
@@ -568,7 +605,7 @@ export async function bridgeCheckCall(a: TriggerArgs) {
     // Human reached, billed agent open — hand the row to the normal EL ingest by conv id.
     db.update(callResults).set({ providerCallId: convId, status: "in_progress" }).where(eq(callResults.id, row.id))
       .catch((e) => console.error("bridge check connect update:", e));
-  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, apiKey: acct.apiKey, agentId: acct.agentId, listenNav: v.listenNav });
+  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, apiKey: acct.apiKey, agentId: acct.agentId, listenNav: v.listenNav, navSteps: v.navSteps, mapVersion: v.mapVersion });
   if (r.error || !r.room) {
     await slot.release(); // dial never placed → free the slot immediately
     await db.update(callResults).set({ status: "failed", summary: r.error || "bridge call failed" }).where(eq(callResults.id, row.id));

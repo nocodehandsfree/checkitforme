@@ -106,6 +106,10 @@ export interface Receipt {
   lane: Lane;
   /** What the map told us to do, so a replay shows plan vs reality side by side. */
   planned: Array<{ action: string; value: string; atSec: number }>;
+  /** WHICH saved version of the store's menu ran this call. Null = no saved version, not version 0. */
+  mapVersion?: number | null;
+  /** The check this one is a retry of, so tries-per-answer is countable. */
+  attemptOf?: number | null;
   events: RtEvent[];
   meters: Meters;
   closed: boolean;
@@ -128,12 +132,13 @@ export function setEventSink(fn: Sink): void { sink = fn; }
 // ---- recording ------------------------------------------------------------------------------
 
 /** Open a receipt for a call. Called at dial, before the phone rings. Idempotent per room. */
-export function openReceipt(room: string, opts?: { lane?: Lane; planned?: Receipt["planned"]; callId?: number; note?: string }): Receipt {
+export function openReceipt(room: string, opts?: { lane?: Lane; planned?: Receipt["planned"]; callId?: number; note?: string; mapVersion?: number | null; attemptOf?: number | null }): Receipt {
   const existing = receipts.get(room);
   if (existing) return existing;
   const r: Receipt = {
     room, startMs: Date.now(), callId: opts?.callId, lane: opts?.lane ?? "unknown",
     planned: opts?.planned ?? [], events: [], meters: zeroMeters(), closed: false,
+    mapVersion: opts?.mapVersion ?? null, attemptOf: opts?.attemptOf ?? null,
   };
   receipts.set(room, r);
   setTimeout(() => { if (receipts.get(room) === r) receipts.delete(room); }, RECEIPT_TTL_MS);

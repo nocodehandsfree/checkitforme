@@ -50,7 +50,7 @@ export async function attachListenFork(callSid: string, room: string): Promise<v
   } catch (e) { console.error("[listenfork]", e); }
 }
 
-export async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, string>, onConversationId?: (id: string) => void, dtmf?: string | null, opts?: { from?: string; timeLimitSec?: number; connectOnHuman?: boolean; connectAtSec?: number; say?: string | null; voiceId?: string | null; voiceTuning?: Record<string, unknown> | null; apiKey?: string; agentId?: string; listenNav?: boolean }): Promise<{ room?: string; error?: string }> {
+export async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, string>, onConversationId?: (id: string) => void, dtmf?: string | null, opts?: { from?: string; timeLimitSec?: number; connectOnHuman?: boolean; connectAtSec?: number; say?: string | null; voiceId?: string | null; voiceTuning?: Record<string, unknown> | null; apiKey?: string; agentId?: string; listenNav?: boolean; navSteps?: NavStep[]; mapVersion?: number | null }): Promise<{ room?: string; error?: string }> {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
@@ -76,13 +76,20 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
   // baked into the TwiML below — they arrive one at a time as call-updates from listen-nav.ts, which
   // reads the audio fork we already run for live-listen. Costs nothing extra; falls back to the
   // learned clock if a store never gives a clean pause.
-  const navSteps = parseNavSteps(dtmf, opts?.say);
+  // The steps as the saved map really holds them, anchors included, when the caller read them off
+  // one version. Re-deriving them from the flat strings is the fallback for callers that only have
+  // those (an Admin one-off, a bench call) and loses nothing except the anchors, which those calls
+  // never had either.
+  const navSteps = opts?.navSteps?.length ? opts.navSteps : parseNavSteps(dtmf, opts?.say);
   const listening = !!opts?.listenNav && navSteps.length > 0;
   // THE RECEIPT opens here — before the carrier is even asked to dial, so every later second on this
   // call is measured from the same zero. Nothing below can fail because of it.
   openReceipt(room, {
     lane: laneFor(navSteps),
     planned: navSteps.map((s) => ({ action: s.action, value: s.value, atSec: s.atSec })),
+    // WHICH saved version of the menu this call ran. The column has existed and sat empty since the
+    // receipt shipped; without it "the map was wrong" is untraceable to a decision anyone made.
+    mapVersion: opts?.mapVersion ?? null,
     note: `Dialing ${e164(toNumber)}`,
   });
   // DELTA'S QUESTION, READY BEFORE THE PHONE RINGS (spec: the live call runtime, section 4).
@@ -169,6 +176,9 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
   if (listening && d.sid) {
     startListenNav({
       room, callSid: d.sid, steps: navSteps, bridgeUrl,
+      // Killable from Admin without a deploy if it ever misreads a menu as a person, but ON by
+      // default: pressing keys into a live human's ear is the worse failure of the two.
+      abortOnHuman: pol.flags?.stopKeysOnHuman !== false,
       log: (m) => bridgeLog(`[${room.slice(0, 8)}] ${m}`),
       onEvent: (kind, note, detail) => emit(room, kind as EventKind, note, detail),
       // The menu really ended HERE, not where the map guessed. Re-stamp the context so the agent's

@@ -79,6 +79,12 @@ export class PromptDetector {
   private voicedRun = 0;
   /** Completed prompts so far. */
   count = 0;
+  /** How long the most recently completed prompt talked for. A recorded menu prompt runs seconds;
+   *  a person saying "Target Topanga, this is Bob" does not. */
+  lastPromptMs = 0;
+  /** Unbroken silence since that prompt ended, reset the instant anything is said. A menu's own
+   *  pauses sit well under a second; a line waiting for YOU to talk keeps going. */
+  quietMs = 0;
   /** @param onBoundary called with the prompt index (1-based) when a prompt finishes. */
   constructor(private onBoundary: (n: number) => void) {}
   feedEnergy(e: number): void {
@@ -86,41 +92,49 @@ export class PromptDetector {
       this.voicedRun++;
       this.silenceMs = 0;
       // Two voiced frames in a row start a burst — one stray loud frame does not.
-      if (this.voicedRun >= 2) { this.speaking = true; this.speechMs += FRAME_MS; }
+      if (this.voicedRun >= 2) { this.speaking = true; this.speechMs += FRAME_MS; this.quietMs = 0; }
     } else {
       this.voicedRun = 0;
       if (this.speaking) {
         this.silenceMs += FRAME_MS;
         if (this.silenceMs >= END_SILENCE_MS) {
           const wasReal = this.speechMs >= MIN_SPEECH_MS;
+          const spoke = this.speechMs;
           this.speaking = false; this.speechMs = 0; this.silenceMs = 0;
-          if (wasReal) { this.count++; this.onBoundary(this.count); }
+          if (wasReal) { this.count++; this.lastPromptMs = spoke; this.quietMs = END_SILENCE_MS; this.onBoundary(this.count); }
         }
-      }
+      } else if (this.count) this.quietMs += FRAME_MS;
     }
   }
   feed(b64: string): void { this.feedEnergy(frameEnergy(b64)); }
 }
 
+/** A greeting this short is a person, not a menu. Measured menus read their options for seconds;
+ *  "Target Topanga, this is Bob" is over in two. */
+const PERSON_GREETING_MAX_MS = 3500;
+/** …and then they WAIT for you. A recorded menu pauses well under a second between phrases, so an
+ *  unbroken wait this long after a short opening means somebody picked up and is listening. */
+const PERSON_WAIT_MS = 2500;
+
+/** Has a real person answered instead of the menu we mapped? Pure, so the rule that decides whether
+ *  we fire keypad tones at a human is provable without a phone call.
+ *  Deliberately narrow: only BEFORE the first mapped step, only on the very first thing we heard.
+ *  Once a menu has started walking, a pause is just a pause. */
+export function looksLikeAPerson(o: { stepsFired: number; promptCount: number; lastPromptMs: number; quietMs: number }): boolean {
+  if (o.stepsFired > 0 || o.promptCount !== 1) return false;
+  return o.lastPromptMs > 0 && o.lastPromptMs <= PERSON_GREETING_MAX_MS && o.quietMs >= PERSON_WAIT_MS;
+}
+
 // ---- the recording plan (which recording each step waits for) -------------------------------
-// The bridge builds its step list from the flat "value@seconds" strings, which cannot carry
-// `afterPrompt`. Rather than change the frozen call-placing code, the caller STAGES the plan just
-// before dialling and this file claims it by the exact same step list. Key = the steps themselves,
-// so a claim can only ever match a call running the identical route.
-const stagedPlans = new Map<string, { afterPrompt: Array<number | undefined>; at: number }>();
-const PLAN_TTL_MS = 10 * 60 * 1000;
-
-export function navPlanKey(steps: Array<{ action: string; value: string; atSec: number }>): string {
-  return steps.map((s) => `${s.action}:${String(s.value).trim().toLowerCase()}@${Math.round(s.atSec)}`).join(",");
-}
-
-/** Stage which recording each step waits for, for the next call that runs this exact route. */
-export function stageNavPromptPlan(steps: Array<{ action: string; value: string; atSec: number; afterPrompt?: number }>): void {
-  if (!steps.length || !steps.some((s) => typeof s.afterPrompt === "number")) return;
-  const now = Date.now();
-  for (const [k, v] of stagedPlans) if (now - v.at > PLAN_TTL_MS) stagedPlans.delete(k);
-  stagedPlans.set(navPlanKey(steps), { afterPrompt: steps.map((s) => s.afterPrompt), at: now });
-}
+// GONE, DELIBERATELY (spec: the live call runtime, section 10). This file used to hold a side
+// channel: the caller stashed the anchors in a module-level map keyed by the SHAPE of the step list,
+// with a ten-minute expiry, and a call claimed whichever entry happened to look like the route it
+// was running. It died on every restart, it carried no version, and two saved versions of one route
+// could have their pieces mixed on a live call.
+//
+// The steps now arrive complete. Whoever places the call reads the route AND its anchors off the
+// same active version in one go (service.ts → buildRestockVars → activeMap) and hands them straight
+// down. Nothing here has to guess which plan belongs to which call, because nothing is staged.
 
 /** Should this step fire on the recording that just ended? Pure, so the rule is provable without a
  *  phone call (scripts/test-listen-nav.ts).
@@ -136,14 +150,6 @@ export function shouldFireOnPrompt(step: NavStep, n: number, at: number, lastFir
     return { fire: false, reason: `waits for recording ${step.afterPrompt}` };
   }
   return { fire: true, reason: "recording ended" };
-}
-
-/** Merge a staged plan onto the steps the bridge parsed. Same route, same order, same count — or we
- *  leave the steps exactly as they came and the call behaves like today. */
-function claimPromptPlan(steps: NavStep[]): NavStep[] {
-  const hit = stagedPlans.get(navPlanKey(steps));
-  if (!hit || hit.afterPrompt.length !== steps.length) return steps;
-  return steps.map((s, i) => (typeof hit.afterPrompt[i] === "number" ? { ...s, afterPrompt: hit.afterPrompt[i] } : s));
 }
 
 // ---- the per-call session ------------------------------------------------------------------
@@ -163,6 +169,9 @@ interface Session {
   /** Receipt hook. Kept as a callback so this file stays dependency-free and unit-testable. */
   onEvent?: (kind: string, note: string, detail?: Record<string, unknown>) => void;
   fired: Array<{ value: string; atSec: number; via: "prompt" | "clock" }>;
+  /** Abandon the remaining steps when a real person answers instead of the mapped menu. On unless
+   *  something explicitly turns it off, so the default is never firing tones at a human. */
+  abortOnHuman?: boolean;
 }
 
 const sessions = new Map<string, Session>();
@@ -269,14 +278,15 @@ export function startListenNav(opts: {
   room: string; callSid: string; steps: NavStep[]; bridgeUrl: string;
   log?: (s: string) => void; onNavEnd?: (navEndSec: number) => void;
   onEvent?: (kind: string, note: string, detail?: Record<string, unknown>) => void;
+  abortOnHuman?: boolean;
 }): void {
   const log = opts.log || (() => { /* silent */ });
   if (!opts.steps.length || !opts.callSid) return;
-  const steps = claimPromptPlan(opts.steps);
+  const steps = opts.steps;
   const s: Session = {
     room: opts.room, callSid: opts.callSid, steps, next: 0, startMs: Date.now(),
     lastFiredAtSec: 0, timers: [], bridgeUrl: opts.bridgeUrl, done: false, log,
-    onNavEnd: opts.onNavEnd, onEvent: opts.onEvent, fired: [],
+    onNavEnd: opts.onNavEnd, onEvent: opts.onEvent, fired: [], abortOnHuman: opts.abortOnHuman,
     det: new PromptDetector(() => { /* replaced below */ }),
   };
   s.det = new PromptDetector((n) => {
@@ -303,6 +313,28 @@ export function listenNavFeed(room: string, b64: string, track?: string): void {
   // track and would otherwise register as prompts.
   if (track && track !== "inbound") return;
   s.det.feed(b64);
+  // NEVER PRESS KEYS AT A PERSON (spec: the live call runtime, section 10). A store we mapped with
+  // a menu that now answers directly means our tones go off in a real human's ear. Today we would
+  // keep pressing all the way down the list. Now the remaining steps are abandoned and the call
+  // goes straight to the conversation.
+  if (s.abortOnHuman !== false && looksLikeAPerson({ stepsFired: s.next, promptCount: s.det.count, lastPromptMs: s.det.lastPromptMs, quietMs: s.det.quietMs })) {
+    void handToConversation(s, "someone answered before the menu, the rest of the keys were never pressed");
+  }
+}
+
+/** Abandon the mapped walk and hand the live call to the agent bridge — the same handoff the last
+ *  mapped step performs, minus the step. */
+async function handToConversation(s: Session, why: string): Promise<void> {
+  if (s.done) return;
+  s.done = true;
+  s.timers.forEach(clearTimeout); s.timers.length = 0;
+  const at = secs(s);
+  keepSummary(s);
+  s.log(`listen-nav: ${why} (at ${at}s, ${s.steps.length - s.next} step(s) abandoned)`);
+  try { s.onEvent?.("human_detected", `A person answered at ${at}s, so we stopped working through the menu`, { atSec: at, stepsAbandoned: s.steps.length - s.next, reason: "person-answered" }); } catch { /* best-effort */ }
+  try { s.onNavEnd?.(at); } catch { /* best-effort */ }
+  await updateTwiml(s, `<Connect><Stream url="${s.bridgeUrl}"><Parameter name="room" value="${s.room}" /></Stream></Connect>`);
+  setTimeout(() => sessions.delete(s.room), 5 * 60 * 1000);
 }
 
 // What each finished call did, kept briefly after the room is gone so the drift check can still read
