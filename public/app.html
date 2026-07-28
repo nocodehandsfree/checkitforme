@@ -1754,6 +1754,28 @@ async function srcApi(p,opts={}){
     return await r.json();
   }catch(_){ return {error:'staging_down'}; }
 }
+// THE VOICE WORKFLOW FOLLOWS THE LIVE/STAGING SWITCH, ON READS **AND** WRITES.
+//
+// Every other setting on this dashboard is one configuration the owner edits on the live service,
+// which is why CONFIG_READS above pins them to prod. The voice workflow is the deliberate exception:
+// staging and production are ALLOWED to run different workflows (that is exactly why the settings
+// sync skips the vt_* keys on purpose), so a rehearsal call on the staging site can use a different
+// voice, speed and script than the one customers hear.
+//
+// Owner 07-28: the header said Staging, he set Branson HD and speed 0.91 in the Designer, and it
+// saved to LIVE. His staging test calls kept the old plain Branson at 0.85 and he heard a slow
+// agent with no idea why. The Designer must edit the environment the switch is pointing at.
+// Anything routed through here is voice workflow ONLY. Never plans, policy flags or statuses.
+async function vtApi(p,opts={}){
+  if(CALL_SRC!=='staging') return api(p,opts);
+  try{
+    const r=await fetch(STG_ORIGIN+p,Object.assign({},opts,{credentials:'include'}));
+    if(r.status===401) return {error:'staging_auth'};
+    try{ return await r.json(); }catch(_){ return {error:'bad_response'}; }
+  }catch(_){ return {error:'staging_down'}; }
+}
+// The word for the environment the voice pages are editing right now, for toasts and headings.
+const vtEnvName=()=>CALL_SRC==='staging'?'Staging':'Live';
 function setCallSrc(s,reload){ CALL_SRC=s; localStorage.setItem('call_src',s); document.querySelectorAll('.src-filter').forEach(el=>{el.value=s;}); if(typeof renderEnvTog==='function') renderEnvTog(); if(reload) reload(); }
 // Shell-level Live/Staging switch (SPEC Part 1, in the header). It reuses the existing CALL_SRC
 // read-routing engine, so flipping it routes srcApi() reads to staging exactly the way the per-page
@@ -3269,7 +3291,7 @@ async function loadVoices(){
 // #5 voice/script rotation — opener variants + a voice pool that live calls round-robin through.
 async function loadRotation(voices){
   const box=document.getElementById('rot_voices'); if(!box) return;
-  const s=await api('/api/settings')||{};
+  const s=await vtApi('/api/settings')||{};
   const pool=new Set(((s.vt_voice_pool||'').split(',').map(x=>x.trim()).filter(Boolean)));
   // Two clean groups (owner 07-15): the voices you cloned up top, the stock library tucked below a
   // divider, so the page isn't one wall of voices.
@@ -3299,7 +3321,7 @@ function renderOpeners(){
 async function persistOpeners(){
   const active=OPENERS.filter(o=>o.on).map(o=>o.text).join('\n');
   const library=JSON.stringify(OPENERS.map(o=>({text:o.text,on:o.on})));
-  await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({openerVariants:active, openerLibrary:library})});
+  await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({openerVariants:active, openerLibrary:library})});
 }
 async function addOpener(){
   const ta=document.getElementById('rot_opener_new'); const t=(ta.value||'').trim();
@@ -3313,7 +3335,7 @@ async function saveRotation(btn){
   const voicePool=[...document.querySelectorAll('.rotvoice:checked')].map(c=>c.value).join(',');
   const openerVariants=OPENERS.filter(x=>x.on).map(x=>x.text).join('\n');
   const library=JSON.stringify(OPENERS.map(x=>({text:x.text,on:x.on})));
-  const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({voicePool,openerVariants,openerLibrary:library})});
+  const r=await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({voicePool,openerVariants,openerLibrary:library})});
   btn.textContent=o; btn.disabled=false;
   const m=document.getElementById('rot_msg'); if(m) m.textContent=(r&&!r.error)?'Saved. Live calls rotate these voices and scripts.':"Couldn't save the scripts";
 }
@@ -3450,13 +3472,13 @@ async function pnDelete(i){ const p=PERSONAS[i]; if(!p) return; if(!confirm('Del
   if(WF_PERSONA===p.name) WF_PERSONA='';
   if(PN_EDIT===i) pnCancel(); else if(PN_EDIT>i) PN_EDIT--;
   PERSONAS.splice(i,1);
-  await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({personas:JSON.stringify(PERSONAS)})});
+  await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({personas:JSON.stringify(PERSONAS)})});
   renderPersonas(); toast('Deleted');
 }
-async function loadPersonas(){ pnBaseRender(); const s=await api('/api/settings')||{}; try{ PERSONAS=JSON.parse(s.vt_personas||'[]'); }catch(e){ PERSONAS=[]; } if(!Array.isArray(PERSONAS)) PERSONAS=[];
+async function loadPersonas(){ pnBaseRender(); const s=await vtApi('/api/settings')||{}; try{ PERSONAS=JSON.parse(s.vt_personas||'[]'); }catch(e){ PERSONAS=[]; } if(!Array.isArray(PERSONAS)) PERSONAS=[];
   // One-time cleanup: drop any seeded "(sample)" placeholder persona (the owner asked to remove 'Friendly Local (sample)').
   const _n0=PERSONAS.length; PERSONAS=PERSONAS.filter(p=>p&&!/\(sample\)/i.test(String(p.name||'')));
-  if(PERSONAS.length!==_n0){ try{ await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({personas:JSON.stringify(PERSONAS)})}); }catch(e){} }
+  if(PERSONAS.length!==_n0){ try{ await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({personas:JSON.stringify(PERSONAS)})}); }catch(e){} }
   pnEditHint(); renderPersonas(); }
 async function savePersona(){ const name=v('pn_name'); if(!name){ toast('Name the persona first'); return; }
   const p={name, base:PN_SEL, tone:v('pn_tone'), slang:document.getElementById('pn_slang').checked, swear:document.getElementById('pn_swear').checked, affection:document.getElementById('pn_affection').checked, greet:v('pn_greet')};
@@ -3465,12 +3487,12 @@ async function savePersona(){ const name=v('pn_name'); if(!name){ toast('Name th
   else { const idx=PERSONAS.findIndex(x=>x.name===name); if(idx>=0){ oldName=name; PERSONAS[idx]=p; updated=true; } else PERSONAS.push(p); }
   if(updated && oldName && WF_PERSONA===oldName) WF_PERSONA=name;  // follow a rename
   WF_PERSONA=name;  // saving a persona SELECTS it for the workflow you're building (owner 07-16: no re-attach dance)
-  const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({personas:JSON.stringify(PERSONAS)})});
+  const r=await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({personas:JSON.stringify(PERSONAS)})});
   PN_EDIT=-1; pnClearForm(); pnEditHint(); renderPersonas(); closeSheet();
   toast((r&&!r.error)?(updated?'Persona updated · selected for this workflow':'Persona saved · selected for this workflow'):"Couldn't save the persona"); }
 async function saveWorkflow(){ const name=v('wf_name'); if(!name){ toast('Name the workflow first'); return; }
   const wf={name, voiceId:(document.getElementById('vs_select')||{}).value||'', tuning:sandboxBody(), openers:OPENERS.filter(o=>o.on).map(o=>o.text), persona:WF_PERSONA, lane:desLane(), savedAt:Date.now()};
-  let WFS=[]; const s=await api('/api/settings')||{}; try{ WFS=JSON.parse(s.vt_workflows||'[]'); }catch(e){}
+  let WFS=[]; const s=await vtApi('/api/settings')||{}; try{ WFS=JSON.parse(s.vt_workflows||'[]'); }catch(e){}
   const i=WFS.findIndex(w=>w.name===name);
   // Preserve the voice-rotation strip (managed in Workflows) across a Designer re-save: the Designer's
   // picked voice becomes slot #1 of the strip; the rest of the rotation is kept.
@@ -3480,9 +3502,11 @@ async function saveWorkflow(){ const name=v('wf_name'); if(!name){ toast('Name t
   if(i>=0 && WFS[i].followups) wf.followups=WFS[i].followups;
   wfmSeedDelta(wf);
   if(i>=0) WFS[i]=wf; else WFS.push(wf);
-  const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({workflows:JSON.stringify(WFS)})});
+  const r=await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({workflows:JSON.stringify(WFS)})});
   if(window.WF) WF.list=WFS;  // keep the assignment pickers (Settings/Chains/Stores) in sync without a reload
-  document.getElementById('wf_msg').textContent = (r&&!r.error)?'Saved. Set it as the default in Calls → Settings.':"Couldn't save the workflow."; toast((r&&!r.error)?'Workflow saved':"Couldn't save the workflow"); }
+  // Always name the environment. The switch at the top decides which one this wrote to, and a save
+  // that does not say so is how the owner ended up testing a workflow he had already changed.
+  document.getElementById('wf_msg').textContent = (r&&!r.error)?('Saved to '+vtEnvName()+'. Set it as the default in Calls → Settings.'):"Couldn't save the workflow."; toast((r&&!r.error)?('Workflow saved to '+vtEnvName()):"Couldn't save the workflow"); }
 async function vsSetActive(){
   const id=document.getElementById('vs_select').value; if(!id) return;
   const r=await api('/api/voices/active',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({voiceId:id})});
@@ -5662,7 +5686,7 @@ async function toggleLiveListen(){
 // vt_workflows setting; assignments are name maps the call bridge resolves per call (store→chain→default).
 let WF={list:[],def:'',chains:{},stores:{}};
 async function loadWorkflows(){
-  const s=await api('/api/settings')||{};
+  const s=await vtApi('/api/settings')||{};
   try{ WF.list=JSON.parse(s.vt_workflows||'[]')||[]; }catch(e){ WF.list=[]; }
   WF.def=s.vt_default_workflow||'';
   try{ WF.chains=JSON.parse(s.vt_chain_workflows||'{}')||{}; }catch(e){ WF.chains={}; }
@@ -5682,7 +5706,7 @@ async function loadWorkflowMgr(){
   // a persona is saved and bound (owner 07-16: "there's none there" while the binding was fine).
   try{ if(!PERSONAS.length && typeof loadPersonas==='function') await loadPersonas(); }catch(e){}
   if(!WFM_VOICES.length){ const d=await api('/api/voices'); WFM_VOICES=(d&&d.voices)||[]; }
-  const s=await api('/api/settings')||{}; WFM_GLOBAL=wfgFrom(s);
+  const s=await vtApi('/api/settings')||{}; WFM_GLOBAL=wfgFrom(s);
   WFM_ASSIGN=await api('/api/admin/workflow-assignments')||{};
   renderWorkflowMgr();
 }
@@ -5696,7 +5720,7 @@ function wfgFrom(s){
 async function wfgSave(){
   const active=WFM_GLOBAL.filter(o=>o.on).map(o=>o.text).join('\n');
   const library=JSON.stringify(WFM_GLOBAL.map(o=>({text:o.text,on:o.on})));
-  await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({openerVariants:active,openerLibrary:library})});
+  await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({openerVariants:active,openerLibrary:library})});
   try{ if(Array.isArray(OPENERS)){ OPENERS=WFM_GLOBAL.map(o=>({text:o.text,on:o.on})); if(typeof renderOpeners==='function')renderOpeners(); } }catch(e){}
 }
 async function wfgAdd(){ const inp=document.getElementById('wfg_add'); const t=((inp&&inp.value)||'').trim(); if(!t) return; WFM_GLOBAL.push({text:t,on:true}); renderWorkflowMgr(); await wfgSave(); toast('Opener added'); }
@@ -5805,7 +5829,7 @@ function wfSheet(wi){
   if(_sheetEls) _sheetEls.body.querySelectorAll('.wfmop textarea').forEach(wfmGrow);
 }
 function wfmGrow(t){ if(!t) return; t.style.height='auto'; t.style.height=(t.scrollHeight)+'px'; }
-async function wfmSaveList(){ const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({workflows:JSON.stringify(WF.list)})}); return !!(r&&!r.error); }
+async function wfmSaveList(){ const r=await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({workflows:JSON.stringify(WF.list)})}); return !!(r&&!r.error); }
 async function wfmAddOpener(wi){ const inp=document.getElementById('wfmadd_'+wi); const t=((inp&&inp.value)||'').trim(); if(!t) return; const w=WF.list[wi]; if(!w) return; if(!Array.isArray(w.openers)) w.openers=[]; w.openers.push(t); renderWorkflowMgr(); await wfmSaveList(); toast('Opener added'); }
 async function wfmDelOpener(wi,oi){ const w=WF.list[wi]; if(!w||!Array.isArray(w.openers)) return; w.openers.splice(oi,1); renderWorkflowMgr(); await wfmSaveList(); toast('Opener removed'); }
 async function wfmEditOpener(wi,oi,text){ const w=WF.list[wi]; if(!w||!Array.isArray(w.openers)) return; const t=(text||'').trim(); if(!t){ w.openers.splice(oi,1); renderWorkflowMgr(); } else { w.openers[oi]=t; } await wfmSaveList(); }
@@ -5902,8 +5926,8 @@ function applyWorkflowToDesigner(w){
   const msg=g('wf_msg'); if(msg) msg.textContent='Editing “'+w.name+'”. change anything (including tuning), then Save workflow to overwrite it.';
   toast('Loaded “'+w.name+'” into the Designer');
 }
-async function wfmSetDefault(wi){ const w=WF.list[wi]; if(!w) return; WF.def=w.name; const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:w.name})}); renderWorkflowMgr(); toast((r&&!r.error)?(w.name+' powers all stores now'):'Could not set default'); }
-async function wfmDelete(wi){ const w=WF.list[wi]; if(!w) return; if(!confirm('Delete workflow “'+w.name+'”?\nStores assigned to it fall back to the default.')) return; const wasDef=WF.def===w.name; WF.list=WF.list.filter((x,i)=>i!==wi); if(wasDef){ WF.def=''; await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:''})}); } WFM_SHEET=null; closeSheet(); renderWorkflowMgr(); await wfmSaveList(); toast('Workflow deleted'); }
+async function wfmSetDefault(wi){ const w=WF.list[wi]; if(!w) return; WF.def=w.name; const r=await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:w.name})}); renderWorkflowMgr(); toast((r&&!r.error)?(w.name+' powers all stores now'):'Could not set default'); }
+async function wfmDelete(wi){ const w=WF.list[wi]; if(!w) return; if(!confirm('Delete workflow “'+w.name+'”?\nStores assigned to it fall back to the default.')) return; const wasDef=WF.def===w.name; WF.list=WF.list.filter((x,i)=>i!==wi); if(wasDef){ WF.def=''; await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:''})}); } WFM_SHEET=null; closeSheet(); renderWorkflowMgr(); await wfmSaveList(); toast('Workflow deleted'); }
 // Reset this workflow's opener rotation so the next call to it starts at opener #1 (predictable testing).
 async function wfmResetRotation(wi){ const w=WF.list[wi]; if(!w) return; const r=await api('/api/admin/reset-rotation',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({workflow:w.name})}); toast((r&&r.ok)?'Rotation reset · next call uses opener #1':'Could not reset rotation'); }
 // Testing tab — the Fun-store test-call log (workflow · opener used · status · timing). Owner-only data.
@@ -5957,19 +5981,19 @@ async function loadDefaultWorkflow(){
 }
 async function saveDefaultWorkflow(){
   WF.def=document.getElementById('set_default_wf').value;
-  const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:WF.def})});
+  const r=await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:WF.def})});
   toast((r&&!r.error)?(WF.def?('Default workflow: '+WF.def):'Default workflow cleared'):"Couldn't save the default workflow");
 }
 // per-chain assignment (Phone Trees / Mute list) — applies to every store in the chain.
 async function setChainWorkflow(id,name){
   if(name) WF.chains[id]=name; else delete WF.chains[id];
-  const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({chainWorkflows:JSON.stringify(WF.chains)})});
+  const r=await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({chainWorkflows:JSON.stringify(WF.chains)})});
   toast((r&&!r.error)?'Chain workflow saved':"Couldn't save the chain workflow");
 }
 // per-store override (store row) — beats the chain + default.
 async function setStoreWorkflow(id,name){
   if(name) WF.stores[id]=name; else delete WF.stores[id];
-  const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({storeWorkflows:JSON.stringify(WF.stores)})});
+  const r=await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({storeWorkflows:JSON.stringify(WF.stores)})});
   toast((r&&!r.error)?'Store workflow saved':"Couldn't save the store workflow");
 }
 const v = (id) => document.getElementById(id).value.trim();
