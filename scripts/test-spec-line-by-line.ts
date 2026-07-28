@@ -101,7 +101,13 @@ check("3.1", "A tool exists that records each run and refuses a verdict on fewer
 });
 check("3.2", "It prefers a per-conversation cost and falls back to the account difference", () => {
   const gz = src("scripts/gate-zero.ts");
-  return (/latestConversation/.test(gz) && /accountCredits/.test(gz)) || "only one measuring method";
+  return (/conversationsSince/.test(gz) && /accountCredits/.test(gz)) || "only one measuring method";
+});
+// A held call CLOSES the session and opens another, so one call is several conversations. Pricing
+// only the last one would price the tail of the call and call it the call.
+check("3.2b", "…and it sums every conversation the call opened, not just the last", () => {
+  const gz = src("scripts/gate-zero.ts");
+  return (/start_time_unix_secs/.test(gz) && /ids: string\[\]/.test(gz)) || "it still prices one conversation";
 });
 phone("3.3", "The gated 30 seconds bills at roughly 5% of the active rate", "six real calls");
 phone("3.4", "Charlie resumes naturally: no second greeting, no lost context", "a human has to hear it");
