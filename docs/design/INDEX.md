@@ -789,24 +789,28 @@ range (`offset` + `limit`). Ranges run to the next `id=` — a navigation aid, n
 | wl_region | select | 6846–6966 |  |
 | wl_notify_out | div | 6846–6966 |  |
 
-## docs/design/comps/ADMIN_COMPS.dc.html (807 lines, 16 sections)
+## docs/design/comps/ADMIN_COMPS.dc.html (979 lines, 20 sections)
 
 | id | element | lines | description |
 |---|---|---|---|
-| 2a | div | 85–141 |  |
-| 2b | div | 142–175 |  |
-| 2c | div | 176–224 |  |
-| 2d | div | 225–265 |  |
-| 2e | div | 266–315 |  |
-| 2f | div | 316–359 |  |
-| 2g | div | 360–402 |  |
-| 1a | div | 403–443 |  |
-| 1b | div | 444–510 |  |
-| 1c | div | 511–560 |  |
-| 1d | div | 561–592 |  |
-| 1e | div | 593–630 |  |
-| 1f | div | 631–656 |  |
-| 1g | div | 657–710 |  |
-| 1h | div | 711–760 |  |
-| 1i | div | 761–807 |  |
+| 2a | div | 89–145 |  |
+| 2b | div | 146–179 |  |
+| 2c | div | 180–228 |  |
+| 2d | div | 229–269 |  |
+| 2e | div | 270–319 |  |
+| 2f | div | 320–368 |  |
+| 2g | div | 369–411 |  |
+| 2h | div | 412–456 |  |
+| 2i | div | 457–495 |  |
+| 2j | div | 496–538 |  |
+| 2k | div | 539–574 |  |
+| 1a | div | 575–615 |  |
+| 1b | div | 616–682 |  |
+| 1c | div | 683–732 |  |
+| 1d | div | 733–764 |  |
+| 1e | div | 765–802 |  |
+| 1f | div | 803–828 |  |
+| 1g | div | 829–882 |  |
+| 1h | div | 883–932 |  |
+| 1i | div | 933–979 |  |
 
