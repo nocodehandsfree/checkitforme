@@ -374,7 +374,7 @@ range (`offset` + `limit`). Ranges run to the next `id=` — a navigation aid, n
 | ho_done | div | 8858–8860 | ${t('ho.done.title',"Bonus released. You're done.")} |
 | ho_donep | p | 8861–9216 |  |
 
-## public/app.html (6546 lines, 402 sections)
+## public/app.html (6551 lines, 402 sections)
 
 | id | element | lines | description |
 |---|---|---|---|
@@ -747,39 +747,39 @@ range (`offset` + `limit`). Ranges run to the next `id=` — a navigation aid, n
 | calc_svc | div | 2840–2842 |  |
 | calc_svc_save | button.act | 2843–2844 |  |
 | calc_svc_out | div | 2845–2849 |  |
-| calc_measured | div | 2850–2855 |  |
-| calc_refresh_btn | button.act | 2856–2856 |  |
-| calc_refresh_note | div | 2857–2861 |  |
-| calc_usageval | span | 2862–2862 |  |
-| calc_usage | input | 2863–2863 |  |
-| calc_plans | table | 2864–2869 |  |
-| calc_rev | input | 2870–2870 |  |
-| calc_margin | div | 2871–2871 |  |
-| calc_return | div | 2872–2873 |  |
-| calc_sentence | div | 2874–3718 |  |
-| sup_teach_q | textarea | 3719–3719 |  |
-| sup_teach_a | textarea | 3720–3859 |  |
-| ds_sitype | div | 3860–4298 |  |
-| ds_siregion | div | 3860–4298 |  |
-| ds_sichecks | div | 3860–4298 |  |
-| set_ratemsg | span.meta | 4299–4402 |  |
-| set_msrp | input | 4403–4404 |  |
-| set_scm | select | 4405–4406 |  |
-| set_scc | select | 4407–4408 |  |
-| set_sell | input | 4409–4409 |  |
-| set_datamsg | span.meta | 4410–4427 |  |
-| set_maxtalk | input | 4428–4428 |  |
-| set_vm | input | 4429–4432 |  |
-| set_wf | select | 4433–5141 |  |
-| iconpick_q | input | 5142–5588 |  |
-| iconpick_grid | div.iconpick-grid | 5142–5588 |  |
-| wfg_add | input | 5589–6291 |  |
-| rs_details | div | 6292–6425 |  |
-| ds_rsfunnel | div | 6292–6425 |  |
-| ds_rsdays | div | 6292–6425 |  |
-| ds_rsland | div | 6292–6425 |  |
-| wl_region | select | 6426–6546 |  |
-| wl_notify_out | div | 6426–6546 |  |
+| calc_measured | div | 2850–2856 |  |
+| calc_refresh_btn | button.act | 2857–2857 |  |
+| calc_refresh_note | div | 2858–2862 |  |
+| calc_usageval | span | 2863–2863 |  |
+| calc_usage | input | 2864–2864 |  |
+| calc_plans | table | 2865–2870 |  |
+| calc_rev | input | 2871–2871 |  |
+| calc_margin | div | 2872–2872 |  |
+| calc_return | div | 2873–2874 |  |
+| calc_sentence | div | 2875–3719 |  |
+| sup_teach_q | textarea | 3720–3720 |  |
+| sup_teach_a | textarea | 3721–3860 |  |
+| ds_sitype | div | 3861–4299 |  |
+| ds_siregion | div | 3861–4299 |  |
+| ds_sichecks | div | 3861–4299 |  |
+| set_ratemsg | span.meta | 4300–4403 |  |
+| set_msrp | input | 4404–4405 |  |
+| set_scm | select | 4406–4407 |  |
+| set_scc | select | 4408–4409 |  |
+| set_sell | input | 4410–4410 |  |
+| set_datamsg | span.meta | 4411–4428 |  |
+| set_maxtalk | input | 4429–4429 |  |
+| set_vm | input | 4430–4433 |  |
+| set_wf | select | 4434–5142 |  |
+| iconpick_q | input | 5143–5589 |  |
+| iconpick_grid | div.iconpick-grid | 5143–5589 |  |
+| wfg_add | input | 5590–6296 |  |
+| rs_details | div | 6297–6430 |  |
+| ds_rsfunnel | div | 6297–6430 |  |
+| ds_rsdays | div | 6297–6430 |  |
+| ds_rsland | div | 6297–6430 |  |
+| wl_region | select | 6431–6551 |  |
+| wl_notify_out | div | 6431–6551 |  |
 
 ## docs/design/comps/ADMIN_COMPS.dc.html (762 lines, 15 sections)
 
