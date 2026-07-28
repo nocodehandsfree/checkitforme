@@ -86,9 +86,24 @@ export interface Meters {
   /** A phone ringing on the far end WHILE the agent was connected and billing — a transfer to a desk
    *  nobody is at. Identified by the network's own ring frequencies, not guessed from loudness. */
   ringingMs: number;
-  /** The clerk walked away or put us on hold with the agent still connected. Not measured yet — it
-   *  arrives with the hold-handback work, and stays NULL until then so nobody reads a real zero. */
+  /** The clerk walked away or put us on hold with the agent still connected. Null until a call
+   *  actually runs the ear that measures it, so "we never checked" still reads differently from
+   *  "it was zero". */
   holdMs: number | null;
+}
+
+/** One stretch of the reasoning agent being connected. Normally there is exactly one. If he is
+ *  closed for a hold and reopened when somebody comes back, each session is a NUMBERED SEGMENT of
+ *  the same call — never a separate call (hard rule 1). The Twilio call and our room id stay
+ *  canonical across all of them. */
+export interface CharlieSegment {
+  n: number;                       // 1-based
+  providerCallId?: string;         // the provider's own conversation id for this segment
+  openMs: number;                  // ms from dial
+  closeMs: number | null;          // null = still open
+  /** Which brain served it: the provider's hosted model, or our own account (section 7). */
+  brain: "hosted" | "ours";
+  why?: string;                    // why this segment started, when it is not the first
 }
 
 const zeroMeters = (): Meters => ({
@@ -110,6 +125,8 @@ export interface Receipt {
   mapVersion?: number | null;
   /** The check this one is a retry of, so tries-per-answer is countable. */
   attemptOf?: number | null;
+  /** Every stretch the agent was connected for. One entry on an ordinary call. */
+  segments: CharlieSegment[];
   events: RtEvent[];
   meters: Meters;
   closed: boolean;
@@ -138,7 +155,7 @@ export function openReceipt(room: string, opts?: { lane?: Lane; planned?: Receip
   const r: Receipt = {
     room, startMs: Date.now(), callId: opts?.callId, lane: opts?.lane ?? "unknown",
     planned: opts?.planned ?? [], events: [], meters: zeroMeters(), closed: false,
-    mapVersion: opts?.mapVersion ?? null, attemptOf: opts?.attemptOf ?? null,
+    mapVersion: opts?.mapVersion ?? null, attemptOf: opts?.attemptOf ?? null, segments: [],
   };
   receipts.set(room, r);
   setTimeout(() => { if (receipts.get(room) === r) receipts.delete(room); }, RECEIPT_TTL_MS);
@@ -184,10 +201,39 @@ export function linkCall(room: string, callId: number): void {
   if (r && !r.closed) r.callId = callId;
 }
 
-/** Attach the provider's conversation id so a receipt can be checked against a bill. */
+/** Attach the provider's conversation id so a receipt can be checked against a bill. The FIRST one
+ *  stays the call's id; later segments carry their own (see openSegment). */
 export function linkProviderCall(room: string, providerCallId: string): void {
   const r = receipts.get(room);
-  if (r && !r.closed) r.providerCallId = providerCallId;
+  if (!r || r.closed) return;
+  if (!r.providerCallId) r.providerCallId = providerCallId;
+  const open = r.segments.find((s) => s.closeMs === null);
+  if (open && !open.providerCallId) open.providerCallId = providerCallId;
+}
+
+/**
+ * The agent's session opened. One call can have several of these — he may be closed for a hold and
+ * reopened when somebody comes back — and they are numbered stretches of ONE call, never separate
+ * calls. Returns the segment number so the caller can log it.
+ */
+export function openSegment(room: string, brain: "hosted" | "ours", why?: string): number {
+  try {
+    const r = receipts.get(room);
+    if (!r || r.closed) return 1;
+    const n = r.segments.length + 1;
+    r.segments.push({ n, openMs: Math.max(0, Date.now() - r.startMs), closeMs: null, brain, why });
+    return n;
+  } catch { return 1; }
+}
+
+/** The agent's session closed. Silent when there is nothing open — a double close must not throw. */
+export function closeSegment(room: string): void {
+  try {
+    const r = receipts.get(room);
+    if (!r || r.closed) return;
+    const open = [...r.segments].reverse().find((s) => s.closeMs === null);
+    if (open) open.closeMs = Math.max(0, Date.now() - r.startMs);
+  } catch { /* recording must never break a call */ }
 }
 
 /**
@@ -224,6 +270,20 @@ export function addMs(room: string, key: "speakingMs" | "listeningMs" | "ringing
     const r = receipts.get(room);
     if (!r || r.closed || !Number.isFinite(ms) || ms <= 0) return;
     r.meters[key] = (r.meters[key] ?? 0) + ms;
+  } catch { /* recording must never break a call */ }
+}
+
+/**
+ * "We are now measuring this." Turns a meter that means "never checked" (null) into a real,
+ * measured zero — which is a different fact, and the dashboard has to be able to tell them apart.
+ * Called when the ear that measures hold time actually attaches to a call; a call that never got
+ * that far keeps its null and says so honestly.
+ */
+export function startMeter(room: string, key: "holdMs"): void {
+  try {
+    const r = receipts.get(room);
+    if (!r || r.closed) return;
+    if (r.meters[key] === null) r.meters[key] = 0;
   } catch { /* recording must never break a call */ }
 }
 
@@ -283,13 +343,52 @@ export interface Rollup {
   stepsFired: number;
   stepsOnPause: number;
   charlieJoined: boolean;
+  /** How many times his session was opened on this call. More than one = he was closed for a hold
+   *  and brought back. */
+  charlieSegments: number;
+  /** WHICH brain served this call: the voice provider's hosted model, or our own account. Null when
+   *  he never joined. Without this the cost comparison the switch exists to prove is unprovable. */
+  brain: "hosted" | "ours" | "mixed" | null;
+  /** What the walk to a person actually achieved, for Mapper. It reads the record; nothing calls it. */
+  navOutcome: NavOutcome;
+}
+
+/**
+ * The navigation outcome Mapper reads off the receipt (section 10). Deliberately only the half the
+ * Ear can honestly judge — "wrong department" needs somebody to understand *this is the pharmacy*,
+ * which is words, which is Charlie, and that half is assembled from the conversation.
+ */
+export type NavOutcome =
+  | "reached_a_person"        // somebody answered and we talked to them
+  | "still_ringing"           // the menu finished and the desk just rang out
+  | "never_reached_anyone"    // the call ended without a person
+  | "route_failed"            // we had mapped steps and they did not run
+  | "no_route";               // nothing was mapped for this store
+
+export function navOutcomeOf(r: Receipt): NavOutcome {
+  const kinds = new Set(r.events.map((e) => e.kind));
+  const planned = r.planned.length;
+  const fired = r.events.filter((e) => e.kind === "alpha_press" || e.kind === "bravo_say").length;
+  if (r.meters.humanMs !== null || kinds.has("human_detected")) return "reached_a_person";
+  if (planned && fired < planned) return "route_failed";
+  // The desk was ringing and nobody ever came. Distinct from "we never got anywhere": the route
+  // worked, the store just did not pick up, and those two must not be confused in the evidence.
+  if (r.events.some((e) => e.kind === "ringing" && e.detail?.leg === "desk")) return "still_ringing";
+  return planned ? "never_reached_anyone" : "no_route";
 }
 
 /** Split a finished receipt into the seconds that matter. Everything rounds ONCE, at the end. */
 export function rollup(r: Receipt): Rollup {
   const m = r.meters;
   const sec = (ms: number) => Math.max(0, Math.round(ms / 1000));
-  const charlieMs = m.charlieOpenMs !== null && m.charlieCloseMs !== null ? Math.max(0, m.charlieCloseMs - m.charlieOpenMs) : 0;
+  // BILLED TIME IS THE SUM OF THE STRETCHES HE WAS ACTUALLY OPEN, not first-open to last-close.
+  // When he is closed for a hold and reopened, the gap between segments is time nobody paid for, and
+  // measuring it as one long session would invent a cost that never existed — which would make the
+  // saving from closing him invisible, i.e. exactly backwards.
+  const segMs = r.segments.filter((s) => s.closeMs !== null).reduce((t, s) => t + Math.max(0, (s.closeMs as number) - s.openMs), 0);
+  const charlieMs = r.segments.length
+    ? segMs
+    : (m.charlieOpenMs !== null && m.charlieCloseMs !== null ? Math.max(0, m.charlieCloseMs - m.charlieOpenMs) : 0);
   // Speaking and listening are measured independently and can overlap (a clerk talking over the
   // agent). Cap their sum at the connected time so silence can never read negative.
   const talkMs = Math.min(charlieMs, m.speakingMs + m.listeningMs);
@@ -324,14 +423,20 @@ export function rollup(r: Receipt): Rollup {
     stepsFired: steps.length,
     stepsOnPause: steps.filter((e) => e.detail?.via === "prompt").length,
     charlieJoined: m.charlieOpenMs !== null,
+    charlieSegments: r.segments.length,
+    brain: !r.segments.length ? null
+      : r.segments.every((s) => s.brain === "ours") ? "ours"
+      : r.segments.every((s) => s.brain === "hosted") ? "hosted" : "mixed",
+    navOutcome: navOutcomeOf(r),
   };
 }
 
 /** For tests and for the replay API: a receipt built from raw parts without touching the clock. */
-export function _receiptFrom(parts: { room?: string; lane?: Lane; events?: RtEvent[]; meters?: Partial<Meters> }): Receipt {
+export function _receiptFrom(parts: { room?: string; lane?: Lane; events?: RtEvent[]; meters?: Partial<Meters>; planned?: Receipt["planned"]; segments?: CharlieSegment[] }): Receipt {
   return {
-    room: parts.room ?? "test", startMs: 0, lane: parts.lane ?? "unknown", planned: [],
+    room: parts.room ?? "test", startMs: 0, lane: parts.lane ?? "unknown", planned: parts.planned ?? [],
     events: parts.events ?? [], meters: { ...zeroMeters(), ...(parts.meters ?? {}) }, closed: true,
+    segments: parts.segments ?? [],
   };
 }
 

@@ -136,6 +136,111 @@ export function looksLikeAPerson(o: { stepsFired: number; promptCount: number; l
 // same active version in one go (service.ts → buildRestockVars → activeMap) and hands them straight
 // down. Nothing here has to guess which plan belongs to which call, because nothing is staged.
 
+// ---- THE EAR DURING THE CONVERSATION -------------------------------------------------------
+// The detector above walks the MENU. This one stays on the call afterwards, while a person is
+// talking to us, and answers one question the runtime cannot otherwise ask: is anybody still there?
+//
+// It is acoustic and it is free. No speech recognition, no model — the provider's own transcription
+// is 8.6¢ a call, more than a whole check costs, and is deliberately not used.
+//
+// The three things it can honestly tell apart, and nothing more:
+//   • QUIET — nobody is making any sound. The clerk put the handset down and walked off.
+//   • MUSIC — sound that never stops. Speech breathes; it has gaps between syllables and words, so
+//     a window of real talking is never fully voiced. Hold music and a hold tone are continuous.
+//   • A RINGING LINE — the published call-progress frequencies, which the bridge already measures
+//     for exactly this reason. Ringing AFTER we reached a person means we were transferred.
+//
+// What it does NOT do is judge what anyone SAID. "Hold on, let me go check" is words, and words are
+// Charlie's. This is only the shape of the sound.
+
+/** No voice at all for this long, mid conversation, and the person has gone. Deliberately generous:
+ *  a clerk thinking about the question, or turning to look at a shelf, must never read as a hold. */
+const HOLD_QUIET_MS = 6000;
+/** Unbroken sound for this long is not a person talking. Real speech never fills a window this size
+ *  without a gap. */
+const HOLD_MUSIC_MS = 6000;
+/** The window used to decide "is this speech or is this continuous sound". */
+const VOICED_WINDOW_MS = 3000;
+/** A window this densely voiced cannot be a person talking. Measured against speech, which sits far
+ *  below even when someone is talking quickly. */
+const MUSIC_VOICED_FRACTION = 0.96;
+/** A gap this long and the person who comes back may not be the person who left, so Charlie has to
+ *  be told rather than carry on as though no time passed and greet a new clerk as the old one. */
+const NEW_PERSON_AFTER_MS = 20000;
+
+export type HoldReason = "quiet" | "music" | "transfer";
+
+/**
+ * Streaming, pure and synchronous, so every threshold above is provable without a phone call.
+ * Feed it one frame at a time from the moment a real person is on the line.
+ */
+export class ConversationEar {
+  private voiced: boolean[] = [];      // recent frames, for the speech-vs-continuous-sound test
+  private quietMs = 0;                 // unbroken silence
+  private soundMs = 0;                 // unbroken sound
+  private heardVoiceMs = 0;            // total time a person has actually been talking to us
+  /** On hold right now, and why. Null = someone is with us. */
+  reason: HoldReason | null = null;
+  /** When the current hold started, in ms since this ear was attached. */
+  private holdStartedAt = 0;
+  private elapsed = 0;
+  /** Total time spent on hold. THIS is `holdSeconds` on the receipt, which has been null since the
+   *  receipt shipped because nothing measured it. */
+  holdMs = 0;
+  constructor(private on: {
+    holdStart: (reason: HoldReason, atMs: number) => void;
+    /** @param gapMs how long they were gone. @param maybeNewPerson long enough that it may not be
+     *  the same person, so Charlie must be told. */
+    holdEnd: (gapMs: number, maybeNewPerson: boolean, atMs: number) => void;
+  }) {}
+
+  /** @param energy frame energy, same measure the rest of the call path uses.
+   *  @param isTone this frame sits on the phone network's own ring/busy frequencies. */
+  feed(energy: number, isTone = false): void {
+    this.elapsed += FRAME_MS;
+    if (this.reason) this.holdMs += FRAME_MS;
+    const loud = energy > VOICE_THRESH;
+    this.voiced.push(loud && !isTone);
+    while (this.voiced.length * FRAME_MS > VOICED_WINDOW_MS) this.voiced.shift();
+
+    // A ringing line after we already reached a person is a transfer, and it is the one signal that
+    // needs no waiting at all — the frequencies are unambiguous.
+    if (isTone && loud) { this.enter("transfer"); this.quietMs = 0; this.soundMs += FRAME_MS; return; }
+
+    if (loud) {
+      this.soundMs += FRAME_MS; this.quietMs = 0;
+      const full = this.voiced.length * FRAME_MS >= VOICED_WINDOW_MS
+        && this.voiced.filter(Boolean).length / this.voiced.length >= MUSIC_VOICED_FRACTION;
+      if (full && this.soundMs >= HOLD_MUSIC_MS) this.enter("music");
+      // Sound with gaps in it is a person. If we thought they were away, they are back.
+      else if (!full) { this.heardVoiceMs += FRAME_MS; this.leave(); }
+    } else {
+      this.soundMs = 0; this.quietMs += FRAME_MS;
+      if (this.quietMs >= HOLD_QUIET_MS) this.enter("quiet");
+    }
+  }
+
+  private enter(reason: HoldReason): void {
+    if (this.reason) return;                       // already away; do not re-announce
+    if (!this.heardVoiceMs) return;                // never had anybody, so nobody left
+    this.reason = reason;
+    // BACKDATE to the moment they actually went, not the moment we were sure. We only declare a hold
+    // after six seconds of evidence, so timing it from the declaration would report a seven second
+    // absence as one second — and the whole point of the number is how long nobody was there.
+    const already = reason === "quiet" ? this.quietMs : reason === "music" ? this.soundMs : 0;
+    this.holdStartedAt = Math.max(0, this.elapsed - already);
+    this.holdMs += already;
+    this.on.holdStart(reason, this.holdStartedAt);
+  }
+
+  private leave(): void {
+    if (!this.reason) return;
+    const gap = this.elapsed - this.holdStartedAt;
+    this.reason = null;
+    this.on.holdEnd(gap, gap >= NEW_PERSON_AFTER_MS, this.elapsed);
+  }
+}
+
 /** Should this step fire on the recording that just ended? Pure, so the rule is provable without a
  *  phone call (scripts/test-listen-nav.ts).
  *  @param n    which recording just finished (1-based)
@@ -374,4 +479,5 @@ export function listenNavOpeningTwiml(fork: string, bridgeUrl: string, room: str
   return `${fork}<Pause length="${DEADMAN_SEC}"/><Connect><Stream url="${bridgeUrl}"><Parameter name="room" value="${esc(room)}" /></Stream></Connect>`;
 }
 
-export const _test = { LEAD_SEC, GRACE_SEC, MIN_SPEECH_MS, END_SILENCE_MS, VOICE_THRESH, FRAME_MS };
+export const _test = { LEAD_SEC, GRACE_SEC, MIN_SPEECH_MS, END_SILENCE_MS, VOICE_THRESH, FRAME_MS,
+  HOLD_QUIET_MS, HOLD_MUSIC_MS, NEW_PERSON_AFTER_MS, PERSON_GREETING_MAX_MS, PERSON_WAIT_MS };

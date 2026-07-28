@@ -39,6 +39,7 @@ import { listenNavFeed, endListenNav } from "./calls/listen-nav";
 // THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
 import { emit, markNow, closeReceipt, linkCall, rollup, getReceipt, type Rollup } from "./calls/events";
 import { installReceiptStore, currentRates, onReceiptClosed } from "./calls/receipt-store";
+import { brainCompletion, brainKeyOk } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
 import { graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, graphFor, learnFromReceipt, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
@@ -284,6 +285,12 @@ app.use("/api/*", async (c, next) => {
 // signed `admin_session` cookie minted by /admin-login. (Consumer endpoints live under /pub + /app.)
 app.use("/api/*", async (c, next) => {
   if (c.req.path === "/api/health") return next();
+  // The brain endpoint is called by the VOICE PROVIDER'S servers mid-conversation, not by a person
+  // in Admin, so an admin token is the wrong key for it and would have to be shipped to a third
+  // party to work. It carries its own shared secret instead, checked inside the route, and with that
+  // secret unset the route is closed rather than open. Exempted here for the same reason /api/health
+  // is: it is not part of the operator dashboard.
+  if (c.req.path === "/api/brain/chat/completions") return next();
   if (config.adminToken && c.req.header("x-admin-token") === config.adminToken) return next();
   const adminCookie = getCookie(c, "admin_session");
   if (adminCookie) { const s = await verifySession(adminCookie); if (s && s.id === "admin") return next(); }
@@ -1173,6 +1180,35 @@ setDeltaBarge(async (s, _speech) => {
 // ---- Health ----
 app.get("/api/health", (c) => c.json({ ok: true, commit: process.env.RAILWAY_GIT_COMMIT_SHA ?? null }));
 
+// ---- THE BRAIN, ON OUR OWN ACCOUNT (spec: the live call runtime, section 7) ----
+// The voice provider calls THIS mid-conversation when the brain switch is on, instead of using its
+// own hosted model. It speaks the industry-standard streaming chat-completions format, so nothing
+// about the call or the agent changes; only who is billed for the thinking. Measured: the brain is
+// 400 of the 723 credits a minute we burn.
+//
+// Deliberately NOT behind the admin token: the caller is the voice provider's servers, not a person
+// in Admin. It carries its own shared secret from Railway, and with that secret unset the endpoint
+// is closed rather than open.
+//
+// Nothing here is logged or stored. The transcript arrives, produces one line, and is dropped.
+app.post("/api/brain/chat/completions", async (c) => {
+  if (!brainKeyOk(c.req.header("authorization") ?? c.req.header("x-api-key") ?? null)) {
+    return c.json({ error: "unauthorized" }, 401);
+  }
+  try {
+    const body = await c.req.json() as Parameters<typeof brainCompletion>[0];
+    const { stream } = await brainCompletion(body);
+    return new Response(stream, {
+      headers: { "content-type": "text/event-stream", "cache-control": "no-cache", connection: "keep-alive" },
+    });
+  } catch (e) {
+    // A failure here must be LOUD to the provider so its own retry and our ladder can act. Never a
+    // 200 with an apology in it — that would be spoken to the store as though it were an answer.
+    console.error("[brain]", e);
+    return c.json({ error: "brain unavailable" }, 502);
+  }
+});
+
 // ---- THE CALL RECEIPT (owner 07-26) ----------------------------------------------------------
 // Replay one call: what happened, when, how many seconds each piece took, and what it cost. Admin-
 // gated by the /api/* wall. A live call answers from memory (so a call in flight can be watched);
@@ -1219,6 +1255,12 @@ app.get("/api/calls/:id/receipt", async (c) => {
     stepsFired: steps.length,
     stepsOnPause: steps.filter((t) => (t.detail as { via?: string } | null)?.via === "prompt").length,
     charlieJoined: stamped && (call.charlieConnectedSeconds ?? 0) > 0,
+    // Read back off the timeline the row already carries, so a finished call answers the same
+    // questions a live one does: how many times the agent was opened, which brain served him, and
+    // what the walk to a person actually achieved.
+    charlieSegments: timeline.filter((t) => t.kind === "charlie_join" && (t.detail as { segment?: number } | null)?.segment != null).length,
+    brain: (call.brain ?? null) as Rollup["brain"],
+    navOutcome: (call.navOutcome ?? "no_route") as Rollup["navOutcome"],
   };
   const cost = live
     ? costCall({ callSecs: sums.callSecs, charlieSecs: sums.charlieConnectedSeconds, avoidableSecs: sums.charlieSilentSeconds, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))] }, await currentRates())

@@ -4,7 +4,7 @@
 // The detector's whole job: say "a prompt just ENDED" when a recording stops talking, so a mapped
 // step fires on the pause instead of on a stopwatch. These tests feed it synthetic frame energies —
 // no audio, no network — so the timing rules are provable.
-import { PromptDetector, frameEnergy, looksLikeAPerson, _test } from "../src/calls/listen-nav";
+import { PromptDetector, ConversationEar, frameEnergy, looksLikeAPerson, _test, type HoldReason } from "../src/calls/listen-nav";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -134,6 +134,87 @@ console.log("▶ …and it does NOT misfire on a real recorded menu");
 {
   ok(!looksLikeAPerson({ stepsFired: 1, promptCount: 1, lastPromptMs: 2000, quietMs: 9000 }), "once the menu walk has started, a pause is just a pause");
   ok(!looksLikeAPerson({ stepsFired: 0, promptCount: 1, lastPromptMs: 0, quietMs: 9000 }), "silence with nothing said at all is not a person");
+}
+
+// ---- the ear during the conversation ---------------------------------------------------------
+const LOUD_E = _test.VOICE_THRESH + 200, QUIET_E = 20;
+/** Build an ear and a log of what it announced. */
+function ear() {
+  const said: string[] = [];
+  const e = new ConversationEar({
+    holdStart: (r) => said.push(`away:${r}`),
+    holdEnd: (gap, nu) => said.push(`back:${Math.round(gap / 1000)}s${nu ? ":newperson" : ""}`),
+  });
+  return { e, said };
+}
+/** Someone talking: sound with the gaps real speech has. */
+const talk = (e: ConversationEar, ms: number) => {
+  for (let i = 0; i < Math.round(ms / _test.FRAME_MS); i++) e.feed(i % 5 === 4 ? QUIET_E : LOUD_E);
+};
+const silence = (e: ConversationEar, ms: number) => { for (let i = 0; i < Math.round(ms / _test.FRAME_MS); i++) e.feed(QUIET_E); };
+/** Hold music: sound that never stops. */
+const music = (e: ConversationEar, ms: number) => { for (let i = 0; i < Math.round(ms / _test.FRAME_MS); i++) e.feed(LOUD_E); };
+const ringing = (e: ConversationEar, ms: number) => { for (let i = 0; i < Math.round(ms / _test.FRAME_MS); i++) e.feed(LOUD_E, true); };
+
+console.log("▶ the clerk puts the phone down and walks off");
+{
+  const { e, said } = ear();
+  talk(e, 3000);
+  silence(e, 3000);
+  ok(said.length === 0, "three seconds of thinking is not a hold");
+  silence(e, 3500);
+  ok(said[0] === "away:quiet", "six seconds of nothing and they have gone");
+  talk(e, 1000);
+  ok(said[1] === "back:7s", "they come back and we know how long they were away");
+  ok(e.holdMs >= 6000 && e.holdMs <= 8000, `and the seconds are counted (${e.holdMs}ms) — holdSeconds has been null since the receipt shipped`);
+}
+
+console.log("▶ hold music is not a person talking");
+{
+  const { e, said } = ear();
+  talk(e, 3000);
+  music(e, 7000);
+  ok(said[0] === "away:music", "sound that never breaks is music, not somebody speaking");
+  talk(e, 1000);
+  ok(String(said[1]).startsWith("back:"), "real speech, with its gaps, ends the hold");
+}
+
+console.log("▶ …and a fast talker is NEVER mistaken for music");
+{
+  const { e, said } = ear();
+  talk(e, 3000);
+  for (let i = 0; i < 500; i++) e.feed(i % 12 === 11 ? QUIET_E : LOUD_E); // 10s, barely any gaps
+  ok(said.length === 0, "ten seconds of someone talking quickly is still someone talking");
+}
+
+console.log("▶ a transfer: the desk starts ringing after we already had a person");
+{
+  const { e, said } = ear();
+  talk(e, 3000);
+  ringing(e, 400);
+  ok(said[0] === "away:transfer", "a ringing line after a person = we were transferred, known immediately");
+}
+
+console.log("▶ a long gap means the person coming back may be somebody new");
+{
+  const { e, said } = ear();
+  talk(e, 3000);
+  silence(e, 25000);
+  talk(e, 1000);
+  ok(String(said[1]).endsWith(":newperson"), "over twenty seconds away and Charlie must be told it may be someone else");
+  const short = ear();
+  talk(short.e, 3000); silence(short.e, 8000); talk(short.e, 1000);
+  ok(!String(short.said[1]).includes("newperson"), "a short hold is the same person, no warning needed");
+}
+
+console.log("▶ nobody has spoken yet, so nobody can have left");
+{
+  const { e, said } = ear();
+  silence(e, 30000);
+  ok(said.length === 0, "silence before anyone ever spoke is not a hold");
+  const t = ear();
+  ringing(t.e, 5000);
+  ok(t.said.length === 0, "a ringing line before we ever reached a person is not a transfer either");
 }
 
 console.log(`\n${fail === 0 ? "PASS" : "FAIL"} — ${pass} passed, ${fail} failed`);

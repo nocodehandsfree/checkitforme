@@ -53,6 +53,8 @@ export interface Policy {
     productTopps: boolean;           // consumer: Topps NBA is offered in the product switcher
     productNeedoh: boolean;          // consumer: NeeDoh is offered in the product switcher
     stopKeysOnHuman: boolean;        // calls: a store mapped with a menu that answers directly gets the rest of its keypad tones abandoned, not fired into a real person's ear. ON — turn it off only if a menu is ever misread as a person
+    ourBrain: boolean;               // calls: the agent's THINKING runs on our own account instead of the voice provider's hosted model. The brain is 400 of the 723 credits a minute we burn. OFF = exactly today's behaviour, which always works
+    closeAgentOnHold: boolean;       // calls: when the person walks away, CLOSE the agent's session rather than just muting him. Muting saves nothing; only closing does. OFF until Gate Zero measures whether a gated stream really bills as silence
   };
   // Bail library: proactive call-cutoff rules (cost control). `enabled` is the master switch —
   // OFF by default so nothing changes on live calls until the enforcement is wired AND tested.
@@ -109,6 +111,7 @@ export const DEFAULT_POLICY: Policy = {
     inStockBanner: true,
     productPokemon: true, productOnePiece: true, productTopps: true, productNeedoh: true,
     stopKeysOnHuman: true,
+    ourBrain: false, closeAgentOnHold: false,
   },
   bail: {
     enabled: false,

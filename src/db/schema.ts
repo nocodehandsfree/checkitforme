@@ -533,6 +533,16 @@ export const callResults = sqliteTable(
     mapVersion: text("map_version"),        // which saved menu version ran (null until Mapper ships)
     attemptOf: integer("attempt_of"),       // the check this one retries -> tries-per-answer is countable
     engineVersion: text("engine_version"),  // the build that served it, so a regression is findable
+    // WHICH BRAIN answered: "hosted" = the voice provider's model, "ours" = our own account, "mixed"
+    // = the fallback ladder swapped mid call. Without this the cost comparison the switch exists to
+    // prove cannot be made. NULL = the agent never joined, never a stand-in for "we didn't look".
+    brain: text("brain"),
+    // What the walk to a person actually achieved, for the map's evidence: reached_a_person ·
+    // still_ringing · never_reached_anyone · route_failed · no_route.
+    navOutcome: text("nav_outcome"),
+    // How many times the agent's session was opened. More than one = he was closed for a wait and
+    // brought back as a numbered part of this SAME call, never a second call.
+    charlieSegments: integer("charlie_segments"),
     // Costs in MICRODOLLARS (millionths of a dollar, integers) so totals sum exactly across calls.
     costLineUsd: integer("cost_line_usd"),
     costForkUsd: integer("cost_fork_usd"),
