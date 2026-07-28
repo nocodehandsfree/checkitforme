@@ -23,7 +23,7 @@ import { db } from "../db/client";
 import { chains, retailers } from "../db/schema";
 import { recipeToDtmf } from "./recipe";
 import { isMapFollower, pushVersion, pushDecision } from "./map-authority";
-import { setSetting, allSettings } from "../db/settings";
+import { setSetting, getSetting, allSettings } from "../db/settings";
 import { eq } from "drizzle-orm";
 
 // ---- shapes ---------------------------------------------------------------------------------
@@ -985,6 +985,24 @@ async function decayConfidence(versionId: number): Promise<void> {
 
 // ---- the dashboard read ----------------------------------------------------------------------
 
+/** One line of a mapping call, as the owner reads it. */
+export interface MapTurn {
+  who: "them" | "us"; atSec: number; text: string; action: string | null; value: string | null;
+}
+/** One mapping call: the conversation, and how it ended. */
+export interface MapCall {
+  navId: string; at: number; store: string; storeId: number | null;
+  reachedHuman: boolean; seconds: number | null; transferAtSec: number | null;
+  greeting: string | null; stopReason: string | null; why: string | null;
+  turns: MapTurn[];
+}
+type RawRun = {
+  navId?: string; ts?: number; store?: string; retailerId?: number; outcome?: string;
+  seconds?: number | null; transferAtSec?: number | null; greeting?: string | null;
+  stopReason?: string | null; why?: string | null;
+  steps?: Array<{ who?: string; text?: string; atSec?: number; action?: string | null; value?: string | null }>;
+};
+
 export interface GraphRow {
   chainId: number; chain: string; storeId: number;
   mapped: boolean; navType: string; route: string; seconds: number | null;
@@ -1049,6 +1067,38 @@ export async function graphSummary(): Promise<GraphRow[]> {
 }
 
 /**
+ * THE CALLS BEHIND A CHAIN'S MAP, newest first — the turn-by-turn the owner reads.
+ *
+ * The learner has always written this down (`nav_runs:{chainId}`): who spoke, what they said, and
+ * the second it happened, for both sides of the line. Nothing new is recorded here; it is joined in
+ * so one screen can show the conversation AND the recipe that came out of it.
+ */
+async function callsForChain(chainId: number): Promise<MapCall[]> {
+  let runs: RawRun[] = [];
+  try { runs = JSON.parse((await getSetting(`nav_runs:${chainId}`)) || "[]") as RawRun[]; } catch { runs = []; }
+  return runs.slice().reverse().map((r) => ({
+    navId: String(r.navId || ""),
+    at: Math.round(Number(r.ts || 0) / 1000),
+    store: String(r.store || ""),
+    storeId: r.retailerId == null ? null : Number(r.retailerId),
+    reachedHuman: String(r.outcome || "") === "human",
+    seconds: r.seconds == null ? null : Number(r.seconds),
+    transferAtSec: r.transferAtSec == null ? null : Number(r.transferAtSec),
+    greeting: r.greeting ? String(r.greeting) : null,
+    stopReason: r.stopReason ? String(r.stopReason) : null,
+    why: r.why ? String(r.why) : null,
+    // The conversation. "them" is the store, "us" is what we said or pressed back.
+    turns: (Array.isArray(r.steps) ? r.steps : []).map((st) => ({
+      who: st.who === "us" ? ("us" as const) : ("them" as const),
+      atSec: Math.round(Number(st.atSec || 0)),
+      text: String(st.text || ""),
+      action: st.action ? String(st.action) : null,
+      value: st.value ? String(st.value) : null,
+    })),
+  }));
+}
+
+/**
  * THE IMPROVEMENT, from evidence we already keep. Every call behind the live route carries the
  * seconds it took, so "we were at 67 and we are at 62" needs no new column and no new call — it was
  * simply never handed to the screen. One call is a measurement, not a trend, so the numbers stay null
@@ -1089,13 +1139,19 @@ function trendOf(all: MapVersion[], active: MapVersion | null, recipe: MapRecipe
  *  the replay trail for a single map. */
 export async function chainDetail(chainId: number): Promise<Record<string, unknown>> {
   await ensureMapTables();
-  const [vs, obs, unk] = await Promise.all([
+  const [vs, obs, unk, runs] = await Promise.all([
     versionsFor(chainId),
     client.execute({ sql: `SELECT * FROM nav_observations WHERE chain_id=? ORDER BY at DESC LIMIT 50`, args: [chainId] }),
     client.execute({ sql: `SELECT * FROM nav_unknowns WHERE chain_id=? ORDER BY status='open' DESC, last_seen DESC LIMIT 50`, args: [chainId] }),
+    callsForChain(chainId),
   ]);
   return {
     versions: vs,
+    // EVERY CALL, TOP TO BOTTOM. The whole conversation was always recorded — both sides, with the
+    // second each line landed — it just lived on a different screen's data while this one carried a
+    // store-only summary with our own replies stripped out, which is why a call read as nonsense
+    // here (owner, 07-28). One record now: read the call, then see the recipe it produced.
+    calls: runs,
     observations: obs.rows.map((r: any) => ({
       id: Number(r.id), at: Number(r.at), kind: String(r.kind), navId: r.nav_id ? String(r.nav_id) : null,
       callId: r.call_id == null ? null : Number(r.call_id), expected: r.expected ? String(r.expected) : "",

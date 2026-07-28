@@ -34,8 +34,12 @@ function serveDesign(): Promise<{ port: number; close: () => void }> {
       try {
         const f = join(DESIGN, decodeURIComponent((req.url || "/").split("?")[0]).replace(/^\/+/, ""));
         if (!f.startsWith(DESIGN)) { r.writeHead(403); r.end(); return; }
+        // READ FIRST, then send. A missing file used to throw after the 200 header had already gone
+        // out, and the catch below crashed the whole renderer trying to send a 404 on top of it — so
+        // one absent asset meant an agent could never see the comp at all (07-28).
+        const body = readFileSync(f);
         r.writeHead(200, { "content-type": f.endsWith(".html") ? "text/html" : "application/octet-stream" });
-        r.end(readFileSync(f));
+        r.end(body);
       } catch { r.writeHead(404); r.end(); }
     });
     srv.listen(0, "127.0.0.1", () => res({ port: (srv.address() as { port: number }).port, close: () => srv.close() }));
@@ -48,18 +52,29 @@ async function main() {
   const browser = await chromium.launch({ executablePath: chromePath(), args: ["--no-sandbox"] });
   const width = mode === "board" ? 1500 : Number(a3 || 390);
   const ctx = await browser.newContext({ viewport: { width, height: 1100 }, deviceScaleFactor: mode === "board" ? 1 : 2 });
-  // CDN React -> the vendored copies; external fonts/logos abort quietly (offline sandbox).
+  // CDN React and the fonts come from docs/design/comps/vendor/ when it is there. It is NOT there
+  // after the rebuild, and the admin board is plain HTML that needs neither — so a missing vendor
+  // file now aborts the request quietly instead of throwing, which used to kill the whole render and
+  // leave an agent unable to see any comp at all (07-28).
+  const vendored = (rel: string): Buffer | null => {
+    try { return readFileSync(join(DESIGN, "vendor", rel)); } catch { return null; }
+  };
   await ctx.route("**://unpkg.com/**", (route) => {
     const f = route.request().url().includes("react-dom") ? "react-dom.production.min.js" : "react.production.min.js";
-    route.fulfill({ body: readFileSync(join(DESIGN, "vendor", f), "utf8"), contentType: "application/javascript" });
+    const body = vendored(f);
+    if (body) route.fulfill({ body: body.toString("utf8"), contentType: "application/javascript" }); else route.abort();
   });
-  // Fonts render TRUTHFULLY from the vendored files (aborting them hid font/weight crimes from
-  // verification — the 2026-07-02 "wrong font, no pop" miss). Logos still abort (offline sandbox).
-  await ctx.route(/https:\/\/fonts\.googleapis\.com\//, (r) =>
-    r.fulfill({ body: readFileSync(join(DESIGN, "vendor/fonts/inter.css"), "utf8"), contentType: "text/css" }));
+  // Fonts render TRUTHFULLY from the vendored files when present (aborting them hid font/weight
+  // crimes from verification — the 2026-07-02 "wrong font, no pop" miss). Logos always abort.
+  await ctx.route(/https:\/\/fonts\.googleapis\.com\//, (r) => {
+    const body = vendored("fonts/inter.css");
+    if (body) r.fulfill({ body: body.toString("utf8"), contentType: "text/css" }); else r.abort();
+  });
   await ctx.route(/https:\/\/fonts\.gstatic\.com\//, (r) => r.abort());
-  await ctx.route(/\/inter-\d+\.woff2$/, (r) =>
-    r.fulfill({ body: readFileSync(join(DESIGN, "vendor/fonts", r.request().url().split("/").pop() as string)), contentType: "font/woff2" }));
+  await ctx.route(/\/inter-\d+\.woff2$/, (r) => {
+    const body = vendored(`fonts/${r.request().url().split("/").pop()}`);
+    if (body) r.fulfill({ body, contentType: "font/woff2" }); else r.abort();
+  });
   await ctx.route(/https:\/\/(checkitforme\.com|logos\.)/, (r) => r.abort());
   // Signed-in renders: CIFM_TOKEN=<phone-session JWT> (localStorage key the app reads is cifm_token).
   if (process.env.CIFM_TOKEN) await ctx.addInitScript((t: string) => { try { localStorage.setItem("cifm_token", t); } catch { /* no storage */ } }, process.env.CIFM_TOKEN);
@@ -67,7 +82,10 @@ async function main() {
 
   if (mode === "board") {
     const srv = await serveDesign();
-    await page.goto(`http://127.0.0.1:${srv.port}/WEBSITE_COMPS.dc.html`, { waitUntil: "load", timeout: 60000 });
+    // The consumer boards moved to docs/archive/ in the rebuild; ADMIN_COMPS is the one active board.
+    // Name it as the argument to render a different one: `render-comps.ts board ADMIN_COMPS.dc.html`.
+    const board = a1 || (existsSync(join(DESIGN, "WEBSITE_COMPS.dc.html")) ? "WEBSITE_COMPS.dc.html" : "ADMIN_COMPS.dc.html");
+    await page.goto(`http://127.0.0.1:${srv.port}/${board}`, { waitUntil: "load", timeout: 60000 });
     await page.waitForTimeout(6000);
     const h = await page.evaluate(() => document.documentElement.scrollHeight);
     const n = Math.min(20, Math.ceil(h / 1100));
