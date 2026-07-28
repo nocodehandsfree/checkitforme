@@ -58,6 +58,33 @@ export function frameEnergy(b64: string): number {
   return sum / buf.length;
 }
 
+// The phone network builds ringback, busy and dial tone from a FIXED pair of pure tones, published
+// in the North American plan: ringback 440+480 Hz, busy/reorder 480+620, dial tone 350+440. So "is
+// the desk ringing or is somebody talking?" is a measurement, not a judgement — a tone puts nearly
+// all of a frame's energy on those frequencies and a voice never can. The paid-agent bridge has had
+// this since 07-24; it lives here now so the mapping calls can hear it too (`src/voice/` is locked,
+// so its copy stays where it is — the frequencies are physics and cannot drift apart).
+const TONE_HZ = [350, 440, 480, 620];
+/** Share (0..1) of a frame's energy sitting on the call-progress tone frequencies. ~1 = a pure tone
+ *  pair, well under 0.2 for speech. Goertzel per frequency, normalized so a clean tone reads 1. */
+export function toneShare(b64: string): number {
+  let buf: Buffer; try { buf = Buffer.from(b64, "base64"); } catch { return 0; }
+  const N = buf.length;
+  if (N < 80) return 0;
+  const x = new Float64Array(N);
+  let total = 0;
+  for (let i = 0; i < N; i++) { const v = ulawByteToLinear(buf[i]); x[i] = v; total += v * v; }
+  if (total <= 0) return 0;
+  let tone = 0;
+  for (const hz of TONE_HZ) {
+    const coeff = 2 * Math.cos((2 * Math.PI * hz) / 8000);
+    let s0 = 0, s1 = 0, s2 = 0;
+    for (let i = 0; i < N; i++) { s0 = x[i] + coeff * s1 - s2; s2 = s1; s1 = s0; }
+    tone += s1 * s1 + s2 * s2 - coeff * s1 * s2;
+  }
+  return tone / (total * (N / 2));
+}
+
 /** Speech/silence thresholds. VOICE_THRESH matches the bridge's ear (350) so the two agree about
  *  what counts as sound on the line. */
 const VOICE_THRESH = 350;
@@ -250,6 +277,79 @@ export class ConversationEar {
     const gap = this.elapsed - this.holdStartedAt;
     this.reason = null;
     this.on.holdEnd(gap, gap >= this.newPersonMs, this.elapsed);
+  }
+}
+
+// ---- the pickup ear (mapping calls) --------------------------------------------------------
+/** Enough voice, with real gaps in it, to call somebody present. A "hello" is ~400ms. */
+const PICKUP_VOICE_MS = 500;
+/** A tone this pure is the network ringing a desk, not a person. */
+const TONE_SHARE_MIN = 0.45;
+
+export type LineSound = "quiet" | "ringing" | "music" | "voice";
+
+/**
+ * WHAT IS ON THE LINE RIGHT NOW — the ear a mapping call needs after the store says "transferring
+ * you now". It exists because on the 07-28 CVS Mulholland call we booked a person at 84s having heard
+ * nothing at all: hold music and silence both arrive at the speech gather as an empty string, so the
+ * text-only lane cannot tell "nobody there" from "somebody said hello". The audio can.
+ *
+ * Streaming, pure and synchronous — every threshold above is provable without a phone call.
+ */
+export class PickupEar {
+  private voiced: boolean[] = [];   // recent frames, for the speech-vs-continuous-sound test
+  private soundMs = 0;              // unbroken sound, for the music test
+  private voiceMs = 0;              // time a voice with gaps in it has been talking
+  private elapsedMs = 0;
+  /** What the line is doing as of the last frame. */
+  now: LineSound = "quiet";
+  /** Somebody has been heard talking — this is the whole point. Never true for music or ringing. */
+  get somebodyIsThere(): boolean { return this.voiceMs >= PICKUP_VOICE_MS; }
+  /** Ms since this ear was attached, when a voice first crossed the bar. Null until it does. */
+  voiceAtMs: number | null = null;
+  /** The desk is audibly still ringing (or the line is still playing us something) — the store is
+   *  working on it, so a mapping call that gave up now would be giving up too early. */
+  get stillTrying(): boolean { return this.now === "ringing" || this.now === "music"; }
+
+  constructor(private t?: EarTuning) {}
+
+  /** Forget every voice heard so far. Called the moment the store says it is transferring us: the
+   *  recorded menu talks with gaps in it exactly like a person does, so without this the ear would
+   *  answer "yes, somebody is there" using the machine's own voice from thirty seconds earlier. */
+  resetVoice(): void { this.voiceMs = 0; this.voiceAtMs = null; this.voiced = []; this.soundMs = 0; }
+
+  /** @param b64 one inbound (store-side) media frame, base64 μ-law 8kHz, 20ms. */
+  feed(b64: string): void {
+    const e = frameEnergy(b64);
+    this.feedFrame(e, e > VOICE_THRESH ? toneShare(b64) : 0);
+  }
+
+  /** The same decision from raw numbers, so the tests can hand it a made-up line. */
+  feedFrame(energy: number, tone = 0): void {
+    this.elapsedMs += FRAME_MS;
+    const loud = energy > VOICE_THRESH;
+    if (loud && tone >= TONE_SHARE_MIN) {           // the network's own ring — never a person
+      this.now = "ringing"; this.soundMs += FRAME_MS; this.voiced.push(false);
+    } else if (loud) {
+      this.soundMs += FRAME_MS; this.voiced.push(true);
+    } else {
+      this.soundMs = 0; this.voiced.push(false);
+      this.now = "quiet";
+    }
+    const window = this.t?.musicWindowMs ?? VOICED_WINDOW_MS;
+    while (this.voiced.length * FRAME_MS > window) this.voiced.shift();
+    if (!loud || tone >= TONE_SHARE_MIN) return;
+
+    // JUDGE NOTHING UNTIL THE WINDOW IS FULL. Sound that never breaks is music; speech always has
+    // gaps between the words — but you cannot tell them apart from the first second, because music
+    // has not had a chance to prove it is unbroken yet. Deciding early is exactly how three seconds
+    // of hold music read as somebody saying hello the first time this was written.
+    if (this.voiced.length * FRAME_MS < window) return;
+    const unbroken = this.voiced.filter(Boolean).length / this.voiced.length >= (this.t?.musicVoicedFraction ?? MUSIC_VOICED_FRACTION);
+    if (unbroken) { this.now = "music"; return; }
+    this.now = "voice";
+    this.voiceMs += FRAME_MS;
+    if (this.voiceAtMs == null && this.somebodyIsThere) this.voiceAtMs = this.elapsedMs;
   }
 }
 
@@ -495,4 +595,5 @@ export function listenNavOpeningTwiml(fork: string, bridgeUrl: string, room: str
 }
 
 export const _test = { LEAD_SEC, GRACE_SEC, MIN_SPEECH_MS, END_SILENCE_MS, VOICE_THRESH, FRAME_MS,
-  HOLD_QUIET_MS, HOLD_MUSIC_MS, NEW_PERSON_AFTER_MS, PERSON_GREETING_MAX_MS, PERSON_WAIT_MS };
+  HOLD_QUIET_MS, HOLD_MUSIC_MS, NEW_PERSON_AFTER_MS, PERSON_GREETING_MAX_MS, PERSON_WAIT_MS,
+  PICKUP_VOICE_MS, TONE_SHARE_MIN, VOICED_WINDOW_MS, MUSIC_VOICED_FRACTION };

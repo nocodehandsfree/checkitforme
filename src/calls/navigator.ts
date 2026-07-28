@@ -10,6 +10,7 @@ import { db } from "../db/client";
 import { chains } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { openReceipt, emit, markNow, closeReceipt } from "./events";
+import { PickupEar } from "./listen-nav";
 
 // Twilio webhooks must come back to THIS service — staging maps from staging, prod from prod.
 const RAILWAY_HOST = config.staging.on ? "voice-caller-staging-production.up.railway.app" : "voice-caller-production-2d6b.up.railway.app";
@@ -27,6 +28,9 @@ const MAX_CALL_SEC = 165;
 /** How long we wait for a real voice after the store says it is transferring us. Past this the desk
  *  is not answering — hang up and say so, rather than calling the announcement a human. */
 const TRANSFER_WAIT_SEC = 40;
+/** …unless the ear can still hear the desk ringing, in which case the store is demonstrably working
+ *  on it and we hold on this long instead. Still inside MAX_CALL_SEC, so nothing runs away. */
+const TRANSFER_HOLD_MAX_SEC = 70;
 
 // A live person is on the line (a short greeting/question said TO us). Used as a backstop in auto-0
 // mode so we hang up the instant someone answers instead of beeping 0 at them.
@@ -95,9 +99,22 @@ export interface NavSession {
   status: "dialing" | "navigating" | "human" | "failed" | "done";
   type: "direct" | "keypad" | "voice" | null;
   humanAtSec: number | null; confidence: number; callSid?: string; recipe: NavRecipe | null;
+  /** THE EAR. Twilio's speech gather returns an empty string for silence, for hold music and for a
+   *  ringing desk alike, so on text alone this lane cannot tell "nobody is there" from "somebody just
+   *  said hello" — which is how the 07-28 Mulholland call booked a person nobody had heard. The audio
+   *  fork answers it. Present only once the fork connects; every use is optional so a call whose fork
+   *  never arrives behaves exactly as it did before. */
+  ear?: PickupEar;
 }
 
 const sessions = new Map<string, NavSession>();
+/** One inbound (store-side) media frame from the /twilio-media fork. The room IS the session id. */
+export function navMediaFeed(room: string, b64: string, track?: string): void {
+  const s = sessions.get(room);
+  if (!s || s.status === "human" || s.status === "failed") return;
+  if (track && track !== "inbound") return;         // our own words come back on the outbound track
+  (s.ear = s.ear || new PickupEar()).feed(b64);
+}
 export function getNavSession(id: string): NavSession | null { return sessions.get(id) || null; }
 /** The most recent call to this chain that reached a person — how a lock finds its own evidence when
  *  the caller did not name the call (the Admin Map button sends only the recipe). */
@@ -239,8 +256,9 @@ export function navInitialTwiml(id: string): string {
   // BARGE mode: we already KNOW the path, so fire the words on a timer — speaking OVER the IVR instead
   // of waiting for each prompt to finish. `at` = seconds from connect to speak each step. Then listen
   // for the transfer. Each round we shave the times earlier until the store stops accepting it.
+  const ear = earFork(id);
   if (s && s.barge?.plan?.length) {
-    let inner = ""; let prev = 0;
+    let inner = ear; let prev = 0;
     for (const st of s.barge.plan) {
       const wait = Math.max(0, Math.round((st.at ?? 0) - prev));
       if (wait > 0) inner += `<Pause length="${wait}"/>`;
@@ -257,7 +275,15 @@ export function navInitialTwiml(id: string): string {
     s.type = s.barge.plan.every((p) => p.action === "press") ? "keypad" : "voice";
     return twiml(`${inner}${gather(id)}`);
   }
-  return twiml(`<Pause length="1"/>${gather(id)}`); // let the greeting start, then listen
+  return twiml(`${ear}<Pause length="1"/>${gather(id)}`); // let the greeting start, then listen
+}
+
+/** Fork the store's audio to our ear for the whole call. `<Start><Stream>` survives every TwiML
+ *  replacement the gather loop makes, so it is set up once here and never again. Additive: if the
+ *  fork never connects the call runs exactly as it did before, on text alone. */
+function earFork(id: string): string {
+  return `<Start><Stream url="wss://${RAILWAY_HOST}/twilio-media?room=${id}" track="inbound_track">`
+    + `<Parameter name="room" value="${id}" /></Stream></Start>`;
 }
 
 /** The words that prove WHICH desk answered. Only what was said on the turn we reached them counts:
@@ -361,9 +387,18 @@ async function navTurn(id: string, speech: string): Promise<string> {
   }
   // Transferred, then nobody picked up. The route DID reach the transfer, but no person ever spoke —
   // so we hang up and record exactly that, instead of booking the announcement as a human.
-  if (s.routedAtSec != null && s.humanAtSec == null && atSec - s.routedAtSec > (s.transferWaitSec ?? TRANSFER_WAIT_SEC)) {
-    s.stopReason = `transferred at ${s.routedAtSec}s, nobody picked up`;
-    finish(s, "failed"); return twiml(`<Hangup/>`);
+  // Transferred, then nobody picked up. The route DID reach the transfer, but no person ever spoke.
+  // How long we hold on is the EAR's call now: if the desk is audibly still ringing, or the line is
+  // still playing us hold music, the store is working on it and giving up would throw away a route
+  // that was about to succeed (Alhambra answered in 10s, Mulholland took 27s — the ring is the store's
+  // and it varies). A quiet line gets the ordinary wait, and nothing runs past the hard ceiling.
+  if (s.routedAtSec != null && s.humanAtSec == null) {
+    const held = atSec - s.routedAtSec;
+    const wait = s.ear?.stillTrying ? Math.max(s.transferWaitSec ?? TRANSFER_WAIT_SEC, TRANSFER_HOLD_MAX_SEC) : (s.transferWaitSec ?? TRANSFER_WAIT_SEC);
+    if (held > wait) {
+      s.stopReason = `transferred at ${s.routedAtSec}s, nobody picked up`;
+      finish(s, "failed"); return twiml(`<Hangup/>`);
+    }
   }
   if (speech && speech.trim()) {
     s.steps.push({ who: "ivr", text: speech.trim().slice(0, 300), atSec });
@@ -381,7 +416,10 @@ async function navTurn(id: string, speech: string): Promise<string> {
     // WHEN the machine said it was handing us on. It used to be stamped only if the brain happened to
     // call that same turn "human"; on the 07-28 Alhambra call it did not, so "Okay, transferring you
     // now" at 81s went unrecorded and the 10s the paid agent would have wasted was never measured.
-    if (s.transferAtSec == null) { s.transferAtSec = atSec; s.routedAtSec = s.routedAtSec ?? atSec; }
+    if (s.transferAtSec == null) {
+      s.transferAtSec = atSec; s.routedAtSec = s.routedAtSec ?? atSec;
+      s.ear?.resetVoice(); // from here on, a voice in our ear is a PERSON, not the menu still talking
+    }
   }
   // CONFIRM mode: we already asked "do you have {product}?" — this turn is their answer. Classify it.
   // A redirect ("that's the X dept / let me transfer you") = wrong desk → capture where + hang up.
@@ -475,12 +513,12 @@ async function navTurn(id: string, speech: string): Promise<string> {
   const d = await decide(s, speech || "");
   if (d.type) s.type = d.type;
   s.confidence = d.confidence;
-  // A PERSON HAS TO SAY SOMETHING. Silence and hold music both come back from the speech gather as
-  // nothing, and on the 07-28 Mulholland call the model called one of those turns "human" 27s after the
-  // transfer — so 84s went into the map as time-to-human with not one word of proof, which is the exact
-  // number the paid agent joins on. No words, no person: keep listening. The transfer wait still bounds
-  // it, so a line nobody picks up ends honestly as "transferred, nobody picked up".
-  if (d.action === "human" && !(speech && speech.trim())) return twiml(gather(id));
+  // A PERSON HAS TO BE HEARD. Silence, hold music and a ringing desk all come back from the speech
+  // gather as nothing, and on the 07-28 Mulholland call the model called one of those turns "human"
+  // 27s after the transfer — so 84s went into the map as time-to-human with no proof at all, which is
+  // the exact number the paid agent joins on. Words are the best proof; failing that the EAR will do,
+  // because it can hear the difference the text cannot. Neither → keep listening.
+  if (d.action === "human" && !(speech && speech.trim()) && !s.ear?.somebodyIsThere) return twiml(gather(id));
   if (d.action === "human") return reachHuman(s, atSec, id, !!(speech && ROUTING_RE.test(speech))); // person OR announced transfer → confirm waits for the person
   if (d.action === "press" && d.value) {
     const digits = d.value.replace(/[^0-9*#]/g, "").slice(0, 6);
