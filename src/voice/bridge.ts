@@ -394,6 +394,13 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + clip.ms;
     twilio.send(JSON.stringify({ event: "mark", streamSid, mark: { name: CLIP_MARK } }));
     emit(room, "charlie_join", `Asked the question, warming the agent up behind it`, { prewarm: true, clipMs: clip.ms, question: clip.text });
+    // THE QUESTION WE ACTUALLY ASKED IS A LINE OF THE CONVERSATION. It is played from a recording
+    // rather than generated, so nothing in the provider's transcript knows it happened — which left
+    // our own record missing the single most important line on the call, and left the live view with
+    // no way to know we had asked. It then sat on "Staff picked up" forever, and any short word the
+    // agent said next got painted as walking a phone menu at a store with no menu at all.
+    recordLine(room, "Agent", clip.text);
+    try { relayLine?.(room, "Agent", clip.text); } catch { /* relay best-effort */ }
     log(`delta: playing the opening question (${clip.ms}ms) while the agent connects`);
     // Signal 2, which also reads signal 3 when it lands.
     clipTimers.push(setTimeout(function done() {
