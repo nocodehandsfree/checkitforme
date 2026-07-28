@@ -42,11 +42,9 @@ export type EventKind =
   | "voicemail"       // a machine, not a person
   | "unknown"         // something we could not classify. detail says what we saw
   | "verdict"         // the answer the customer got
-  | "summary"         // the seconds and the cost, written onto the timeline itself. ONLY used by a
-                      // call with no call_results row (Admin's own calls: mapping, rehearsals, the
-                      // store button) — those roll up nowhere else, so without this the numbers die
-                      // with the process and the receipt is a timeline with no money on it.
-  | "hangup";         // the call ended. detail: why
+  | "hangup";         // the call ended. detail: why. On a call with no call_results row (Admin's own
+                      // calls) `detail` also carries the seconds and the cost, because they roll up
+                      // nowhere else. THE SET STAYS SIXTEEN — finer detail goes in `detail`.
 
 /** Which lane walked this call to a human. Runtime names, from the spec. */
 export type Lane = "direct" | "alpha" | "bravo" | "delta" | "unknown";

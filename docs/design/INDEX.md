@@ -4,7 +4,7 @@ Built by `node scripts/gen-index.mjs`; a hook regenerates it when a source file 
 **The law: NEVER open these files whole.** Find your section here, then Read ONLY the line
 range (`offset` + `limit`). Ranges run to the next `id=` — a navigation aid, not exact DOM bounds.
 
-## public/checkit.html (9189 lines, 365 sections)
+## public/checkit.html (9204 lines, 365 sections)
 
 | id | element | lines | description |
 |---|---|---|---|
@@ -358,23 +358,23 @@ range (`offset` + `limit`). Ranges run to the next `id=` — a navigation aid, n
 | payg_n | span | 8402–8402 |  |
 | payg_p | span | 8402–8402 |  |
 | payg_rng | input.rng | 8403–8404 |  |
-| payg_per | div | 8405–8577 |  |
-| co_loading | div.co-loading | 8578–8779 |  |
-| ho_dropchip | span | 8780–8783 |  |
-| ho_steps | div | 8784–8785 |  |
-| ho_drop | div.ho-toggle | 8786–8789 |  |
-| ho_drophint | p.hint | 8790–8793 |  |
-| ho_bonus | span | 8794–8799 |  |
-| ho_app | div.ho-seg | 8800–8803 |  |
-| ho_appname | b | 8804–8804 |  |
-| ho_open | a.ho-btn.violet | 8805–8807 |  |
-| ho_msg | div.ho-msg | 8808–8818 |  |
-| ho_dv3 | li | 8819–8827 |  |
-| ho_stars | div.ho-stars | 8828–8830 |  |
-| ho_done | div | 8831–8833 | ${t('ho.done.title',"Bonus released. You're done.")} |
-| ho_donep | p | 8834–9189 |  |
+| payg_per | div | 8405–8592 |  |
+| co_loading | div.co-loading | 8593–8794 |  |
+| ho_dropchip | span | 8795–8798 |  |
+| ho_steps | div | 8799–8800 |  |
+| ho_drop | div.ho-toggle | 8801–8804 |  |
+| ho_drophint | p.hint | 8805–8808 |  |
+| ho_bonus | span | 8809–8814 |  |
+| ho_app | div.ho-seg | 8815–8818 |  |
+| ho_appname | b | 8819–8819 |  |
+| ho_open | a.ho-btn.violet | 8820–8822 |  |
+| ho_msg | div.ho-msg | 8823–8833 |  |
+| ho_dv3 | li | 8834–8842 |  |
+| ho_stars | div.ho-stars | 8843–8845 |  |
+| ho_done | div | 8846–8848 | ${t('ho.done.title',"Bonus released. You're done.")} |
+| ho_donep | p | 8849–9204 |  |
 
-## public/app.html (6456 lines, 403 sections)
+## public/app.html (6469 lines, 403 sections)
 
 | id | element | lines | description |
 |---|---|---|---|
@@ -713,74 +713,74 @@ range (`offset` + `limit`). Ranges run to the next `id=` — a navigation aid, n
 | agentLog | div | 1698–1699 |  |
 | agentInput | textarea | 1700–1700 |  |
 | agentSend | button.agent-send | 1701–2335 |  |
-| mapper_target_in | input | 2336–2696 |  |
-| calc_percheck | div | 2697–2697 |  |
-| calc_total | b | 2698–2699 |  |
-| calc_lanelbl | span | 2698–2699 |  |
-| calc_chip | div | 2700–2700 |  |
-| calc_strip | div | 2701–2701 |  |
-| calc_legend | div | 2702–2702 |  |
-| calc_cliff | div | 2703–2708 |  |
-| calc_planrate | div | 2709–2710 |  |
-| calc_allow | div | 2711–2711 |  |
-| calc_allow_bar | div | 2712–2716 |  |
-| calc_chain | select | 2717–2719 |  |
-| calc_navval | span | 2720–2720 |  |
-| calc_nav | input | 2721–2721 |  |
-| calc_navnote | div | 2722–2722 |  |
-| calc_talkval | span | 2723–2723 |  |
-| calc_talk | input | 2724–2726 |  |
-| calc_lane_delta | button | 2727–2727 |  |
-| calc_lane_charlie | button | 2728–2729 |  |
-| calc_esc_wrap | div | 2730–2730 |  |
-| calc_escval | span | 2731–2731 |  |
-| calc_esc | input | 2732–2734 |  |
-| calc_reachval | span | 2735–2735 |  |
-| calc_reach | input | 2736–2741 |  |
-| calc_mchecksval | span | 2742–2742 |  |
-| calc_mchecks | input | 2743–2743 |  |
-| calc_mchecksnote | div | 2744–2745 |  |
-| calc_atonce | div.n | 2746–2746 |  |
-| calc_planfee | div.n | 2747–2748 |  |
-| calc_planlbl | div.l | 2747–2748 |  |
-| calc_conc_bar | div | 2749–2749 |  |
-| calc_conc_legend | div | 2750–2755 |  |
-| calc_concnote | div | 2756–2759 |  |
-| calc_breakdown | div | 2760–2774 |  |
-| calc_measured | div | 2775–2775 |  |
-| calc_refresh_btn | button.act | 2776–2776 |  |
-| calc_refresh_note | div | 2777–2781 |  |
-| calc_matrix | table | 2782–2786 |  |
-| calc_usageval | span | 2787–2787 |  |
-| calc_usage | input | 2788–2788 |  |
-| calc_plans | table | 2789–2794 |  |
-| calc_rev | input | 2795–2795 |  |
-| calc_margin | div | 2796–2796 |  |
-| calc_return | div | 2797–2798 |  |
-| calc_sentence | div | 2799–3639 |  |
-| sup_teach_q | textarea | 3640–3640 |  |
-| sup_teach_a | textarea | 3641–3780 |  |
-| ds_sitype | div | 3781–4208 |  |
-| ds_siregion | div | 3781–4208 |  |
-| ds_sichecks | div | 3781–4208 |  |
-| set_ratemsg | span.meta | 4209–4312 |  |
-| set_msrp | input | 4313–4314 |  |
-| set_scm | select | 4315–4316 |  |
-| set_scc | select | 4317–4318 |  |
-| set_sell | input | 4319–4319 |  |
-| set_datamsg | span.meta | 4320–4337 |  |
-| set_maxtalk | input | 4338–4338 |  |
-| set_vm | input | 4339–4342 |  |
-| set_wf | select | 4343–5051 |  |
-| iconpick_q | input | 5052–5498 |  |
-| iconpick_grid | div.iconpick-grid | 5052–5498 |  |
-| wfg_add | input | 5499–6201 |  |
-| rs_details | div | 6202–6335 |  |
-| ds_rsfunnel | div | 6202–6335 |  |
-| ds_rsdays | div | 6202–6335 |  |
-| ds_rsland | div | 6202–6335 |  |
-| wl_region | select | 6336–6456 |  |
-| wl_notify_out | div | 6336–6456 |  |
+| mapper_target_in | input | 2336–2698 |  |
+| calc_percheck | div | 2699–2699 |  |
+| calc_total | b | 2700–2701 |  |
+| calc_lanelbl | span | 2700–2701 |  |
+| calc_chip | div | 2702–2702 |  |
+| calc_strip | div | 2703–2703 |  |
+| calc_legend | div | 2704–2704 |  |
+| calc_cliff | div | 2705–2710 |  |
+| calc_planrate | div | 2711–2712 |  |
+| calc_allow | div | 2713–2713 |  |
+| calc_allow_bar | div | 2714–2718 |  |
+| calc_chain | select | 2719–2721 |  |
+| calc_navval | span | 2722–2722 |  |
+| calc_nav | input | 2723–2723 |  |
+| calc_navnote | div | 2724–2724 |  |
+| calc_talkval | span | 2725–2725 |  |
+| calc_talk | input | 2726–2728 |  |
+| calc_lane_delta | button | 2729–2729 |  |
+| calc_lane_charlie | button | 2730–2731 |  |
+| calc_esc_wrap | div | 2732–2732 |  |
+| calc_escval | span | 2733–2733 |  |
+| calc_esc | input | 2734–2736 |  |
+| calc_reachval | span | 2737–2737 |  |
+| calc_reach | input | 2738–2743 |  |
+| calc_mchecksval | span | 2744–2744 |  |
+| calc_mchecks | input | 2745–2745 |  |
+| calc_mchecksnote | div | 2746–2747 |  |
+| calc_atonce | div.n | 2748–2748 |  |
+| calc_planfee | div.n | 2749–2750 |  |
+| calc_planlbl | div.l | 2749–2750 |  |
+| calc_conc_bar | div | 2751–2751 |  |
+| calc_conc_legend | div | 2752–2757 |  |
+| calc_concnote | div | 2758–2761 |  |
+| calc_breakdown | div | 2762–2776 |  |
+| calc_measured | div | 2777–2777 |  |
+| calc_refresh_btn | button.act | 2778–2778 |  |
+| calc_refresh_note | div | 2779–2783 |  |
+| calc_matrix | table | 2784–2788 |  |
+| calc_usageval | span | 2789–2789 |  |
+| calc_usage | input | 2790–2790 |  |
+| calc_plans | table | 2791–2796 |  |
+| calc_rev | input | 2797–2797 |  |
+| calc_margin | div | 2798–2798 |  |
+| calc_return | div | 2799–2800 |  |
+| calc_sentence | div | 2801–3641 |  |
+| sup_teach_q | textarea | 3642–3642 |  |
+| sup_teach_a | textarea | 3643–3782 |  |
+| ds_sitype | div | 3783–4221 |  |
+| ds_siregion | div | 3783–4221 |  |
+| ds_sichecks | div | 3783–4221 |  |
+| set_ratemsg | span.meta | 4222–4325 |  |
+| set_msrp | input | 4326–4327 |  |
+| set_scm | select | 4328–4329 |  |
+| set_scc | select | 4330–4331 |  |
+| set_sell | input | 4332–4332 |  |
+| set_datamsg | span.meta | 4333–4350 |  |
+| set_maxtalk | input | 4351–4351 |  |
+| set_vm | input | 4352–4355 |  |
+| set_wf | select | 4356–5064 |  |
+| iconpick_q | input | 5065–5511 |  |
+| iconpick_grid | div.iconpick-grid | 5065–5511 |  |
+| wfg_add | input | 5512–6214 |  |
+| rs_details | div | 6215–6348 |  |
+| ds_rsfunnel | div | 6215–6348 |  |
+| ds_rsdays | div | 6215–6348 |  |
+| ds_rsland | div | 6215–6348 |  |
+| wl_region | select | 6349–6469 |  |
+| wl_notify_out | div | 6349–6469 |  |
 
 ## docs/design/comps/ADMIN_COMPS.dc.html (762 lines, 15 sections)
 

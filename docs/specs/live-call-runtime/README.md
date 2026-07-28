@@ -8,6 +8,37 @@ agent is switched on only while an actual conversation is happening.**
 
 ---
 
+## 0. Before you write a single line
+
+**Do not write code in your first session.** The engineer who wrote this spec built the wrong thing
+earlier the same day by skimming one file instead of reading it. The system is not large, but it is
+dense with decisions that were paid for in real calls, and the comments carry the reasons.
+
+Read these in full. Not grep, not the first fifty lines.
+
+| File | Why |
+|---|---|
+| `src/voice/bridge.ts` | the whole runtime. Every trap in section 12 is a comment in here |
+| `src/calls/listen-nav.ts` | the Ear. The prompt detector and the unsafe side channel |
+| `src/voice/bridge-place.ts` | how a call is actually placed, and where the receipt opens |
+| `src/calls/events.ts` | the closed event set and the meters |
+| `src/calls/receipt-store.ts` | the only file in the receipt chain that touches the database |
+| `src/calls/tapedeck.ts` | Delta as it exists today, including the mid-call handoff that works |
+| `src/calls/mapgraph.ts` | Mapper's side. Section 10 depends on knowing what is already built |
+| `docs/team/voice-calls/checkpoint.md` | what was tried, what failed, what is live |
+
+**Then, before building, write back a short orientation** the owner can check in under a minute:
+
+1. Where audio leaves us and reaches the phone, named by function.
+2. How the runtime knows our own audio is playing, and why that matters to the Ear.
+3. What happens today between "a person is detected" and "the agent is billing".
+4. Which single change in this spec you believe is riskiest, and why.
+
+If you cannot write those four from memory after reading, read again. Getting this wrong costs real
+calls to real stores, and the owner hears every one of them.
+
+---
+
 ## 1. The shape
 
 Four parts. Each owns one thing and nothing else.
@@ -37,10 +68,14 @@ version one, not behind a flag.
    restarted, those are numbered segments *inside* the same call, never separate calls.
 2. **Our receipt is the source of truth** for the transcript, the timings and the verdict. The voice
    provider's post-call webhook becomes supporting evidence, not the record.
-3. **No conversation audio is ever persisted.** Audio may pass through the bridge and sit in RAM for
-   the handoff buffer. It is discarded immediately after use. Nothing reaches disk, logs or object
-   storage. Text, events, timings and costs only. This rule already exists in
+3. **No conversation audio is ever persisted.** Live call audio may pass through the bridge and sit
+   in RAM for the handoff buffer. It is discarded immediately after use. Nothing reaches disk, logs
+   or object storage. Text, events, timings and costs only. This rule already exists in
    `docs/specs/call-receipt/README.md` and it does not bend for this work.
+   **One deliberate exception, and only this one:** our own synthesized clips — Delta's question, the
+   closing lines, the reconnect opener — MAY be cached and reused. They contain no store audio and no
+   customer audio; they are our own script in our own voice. Re-synthesizing them on every call costs
+   roughly 7¢ per call, measured, which is more than a whole conversation. Cache them.
 4. **Every path that dials a store runs this runtime.** Customer checks, scheduled checks, zone
    sweeps, every Admin button, mapping calls, on staging and on production. No exceptions. A call
    that does not produce a receipt is a bug, not a special case.
@@ -106,6 +141,21 @@ Charlie closes the call
 ```
 
 Charlie never joins cold, never speaks first, and never talks over the beginning of the answer.
+
+### Knowing the clip finished — use three signals, not one
+
+Opening Charlie must never depend on a single new message arriving. Whichever of these lands first
+opens him, with a small margin so he cannot overlap the tail of the clip:
+
+1. **Twilio's `mark`** — the accurate one, and new code.
+2. **The clip's own length** — exact arithmetic, not a guess. Phone audio is 8 bytes per
+   millisecond, so a clip we synthesized has a known duration the moment we build it.
+3. **The playout clock the bridge already keeps** (`agentPlayingUntil`) — it already adds each
+   chunk's real playing time as it is sent, which is how the echo gate works. It costs nothing to
+   read and it is already proven on every call.
+
+If all three somehow fail, **open Charlie anyway**. A slightly early agent is recoverable; a live
+clerk saying hello into silence is not.
 
 ---
 
