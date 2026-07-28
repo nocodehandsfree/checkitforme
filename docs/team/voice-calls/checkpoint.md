@@ -32,10 +32,11 @@ number is in `src/calls/tuning.ts`.** Agent `agent_2301kyk2rwgyfg8r50xk9enqwy2r`
   fires on cannot disagree. `greetingFrom()` = THIS turn's words, never a routing line.
   `looksLikeDirectPickup()` = a store that already played a recording does not answer direct.
 - **SPOKEN menus captured** (`parseSpokenOptions`); `chainDetail.calls` = every call turn-by-turn.
-  **Comp 2g SHIPPED 07-28** (chain → Mapping calls): 2 cards then Show more, PRODUCED = the version
-  whose evidence carries that `navId` + how much faster than the one before. DRIVEN in Chromium, 15
-  asserts. **PM: chain-row first/best/savedSeconds are served and on NO screen; no comp for them.**
+  **Comp 2g SHIPPED 07-28** (chain → Mapping calls), driven in Chromium, 15 asserts.
 - **PM: bail's else-branch blind-joins Charlie on a stopwatch if bail is off** (locked bridge; owner has it). `.unlock` is blocked by the sprawl gate.
+## 07-28 CHAIN PAGE REBUILD: comps + every string DONE, **PARKED ON THE OWNER'S GO** (waiting on Echo).
+**`docs/specs/mapping-admin/plan.md` is the whole box** (his calls, the re-listen job, the CVS cleanup);
+strings in `copy.md`; comps 2f rev + 2h/2i/2j/2k on the board. Do not restate them here.
 ## VERIFIED / NOT VERIFIED
 - **DRIVEN:** `test-delta-clip.ts` = REAL ws provider + real carrier socket, 38 asserts. + 53
   runtime-spec · 33 listen-nav · 15 dropped-call (REAL db) · 63 receipt · 62 mapgraph · 90 map-e2e ·
