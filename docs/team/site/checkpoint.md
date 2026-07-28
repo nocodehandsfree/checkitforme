@@ -17,26 +17,28 @@ Railway staging env + `DATABASE_URL=file:<scratch>/local.db PORT=88xx npx tsx sr
   scroll MUST be a ~140ms timeout, NOT a rAF (a re-render re-places the sheet ~60ms later and wipes it).
   `sheetH_on` honours `data-fillh`: 0.82 Plans, floored 530px PAYG. Dock depth, never a border. `#buy_note`
   lives IN the dock. Feature sheets = centred header + one carved `.fi-pts` well, points LEFT-aligned.
-- **R6 checkout FEEL:** the sheet still slid up EMPTY, waited on our call, then swapped in the form. Now
-  `openCheckout` holds the sheet: Continue goes disabled + "Opening…" (`co.opening`, EN+ES), the element
-  is MOUNTED first, THEN the sheet slides up so it lands finished. 2s failsafe opens it anyway; every exit
-  path releases the button. Drove it with a stand-in for stripe.js: sheet stays closed on tap, opens at
-  ~530ms with the form mounted, button restored; blocked-Stripe opened at 2040ms.
-- **R5 checkout SPEED.** MEASURED: js.stripe.com/v3 = 1.06MB, 0.61s (0.41s just TLS); `/app/checkout-intent`
-  on staging TEST keys = 3.7s the FIRST time per account (it creates the Stripe customer) then 0.2-0.4s.
-  Fix: `preconnect` in the head · `openBuy` warms `loadStripeJs()` while they read plans · the intent and
-  the library run TOGETHER · `#co_pay_el` reserves 230px. TRAP FIXED: a failed warm-up used to be cached
-  forever and pushed every checkout that session to the hosted page; a failed attempt is now forgotten.
-  **js.stripe.com is BLOCKED from the headless browser here** (proved by direct injection), so the real
-  Payment Element cannot be rendered or measured. Use a stand-in for `window.Stripe` to test ordering.
-- **R4 — tapping a plan jumped to Checkout, FIXED.** Reproduced with `page.touchscreen.tap`, NOT
-  `el.click()`: the dock covered the lower rows so the tap hit Continue. Padding never fixes this, rows
-  still REST under it. `.buy-foot` now RESERVES the dock's band so the scroller shrinks and nothing
-  tappable hides (~150px of list); the under-bar `::after` spacer is off while it is up. Checkout head
-  (`.co-head`/`.co-back`/`.co-title`) DELETED. ALWAYS test sheets with REAL touch taps.
+- **07-27 sweep (LIVE on staging):** alerts sub ran two sentences together because `sentLines()` eats the
+  space and `.subln{display:block}` was scoped to `.rsub` — UNSCOPED it. Alert rows stacked (`.alrow`,
+  controls drop to their own line) so long names + cities stop clipping; dead duplicate ES `alerts.sub`
+  key removed. Edit-email / post-score / feature sheets now `sheetPush` + are in the popstate list, so
+  back closes them. **Autofocus in a sheet SCROLLS the document and strands the sheet mid-screen** (the
+  email sheet sat 280px off the bottom edge): all 9 in-sheet focus calls now use `preventScroll:true`.
+  Owner closed logo-fidelity + the iOS bottom tint himself. LEFT: feature-sheet titles are Admin labels,
+  so EN only — needs a Spanish label field in Admin (flagged, not built).
+- **Checkout speed/feel (R5+R6).** MEASURED: js.stripe.com/v3 = 1.06MB, 0.61s (0.41s just TLS);
+  `/app/checkout-intent` = 3.7s the FIRST time per account (it creates the Stripe customer) then 0.2-0.4s.
+  `preconnect` in the head · `openBuy` warms `loadStripeJs()` · intent + library fire TOGETHER · a failed
+  warm-up is FORGOTTEN (it used to be cached and pushed every checkout that session to the hosted page).
+  `openCheckout` holds the sheet: Continue reads "Opening…" (`co.opening`), the element mounts FIRST, then
+  the sheet slides up already formed; 2s failsafe; every exit path releases the button.
+  **js.stripe.com is BLOCKED from the headless browser here** — stub `window.Stripe` to test ordering.
+- **R4 — a plan tap jumped to Checkout, FIXED.** Repro needs `page.touchscreen.tap`, NOT `el.click()`:
+  the dock covered the lower rows so the tap hit Continue. Padding never fixes it, rows still REST under
+  it. `.buy-foot` RESERVES the dock's band so the scroller shrinks (~150px of list) and the under-bar
+  `::after` spacer is off while up. Checkout head DELETED. ALWAYS test sheets with REAL touch taps.
 - Monthly/Annual = small keys inline with the "You're on the <plan> plan" line; "save 17%" INSIDE the Annual key (a loose floating one was rejected). No overflow at 375/390/430, EN + ES (`plan.save17s`).
-- Drove `/r` at 375/390/430, member + not, EN + ES, REAL touch taps: dock down on open, no plan under the
-  dock, every tap hits the plan, PAYG clears 64-112px, zero errors. **NOT verified: iOS glass, on-device speed.**
+- Drove `/r` at 375/390/430, member + not, EN + ES, REAL taps: dock down on open, no plan under it, every
+  tap hits the plan, PAYG clears 64-112px, zero errors. **NOT verified: on-device speed + feel.**
 
 ## 07-23 — alerts sheet, zones back, five site fixes (LIVE on staging + Admin, NOT promoted)
 - Alerts sheet: original On/Off pill + "Pause all alerts" bar (a slider redesign was rejected), scroll fix, name wrap. Zones back → My checks (acctReturn in popstate).
@@ -48,9 +50,7 @@ Railway staging env + `DATABASE_URL=file:<scratch>/local.db PORT=88xx npx tsx sr
   half (`alerts_paused_at`, pause-all, fan-out) is prod-only. **STATE: promote wanted.** Zone report head
   keeps CD's comp RING; status is LEFT-aligned, never the zone name.
 
-## Lessons that stay true (+ OPEN BUG)
-- **OPEN BUG, thin GREEN LINE on the /s card bottom edge, iPhone only.** Never reproduces headless. Suspect
-  `.cin{overflow:hidden;border-radius:999px}` clipping the shine. NEXT: bisect ON DEVICE, one at a time. In GOTCHAS.
+## Lessons that stay true
 - iOS: Chromium CANNOT catch iOS paint — his phone is the rig; ship one change, "check your phone."
 - Copy an existing pattern WHOLE. Half-copying the zones basket (floating box, but up from the start) reproduced the exact mess it was meant to fix.
 - 'in_stock' substring-matches 'not_in_stock' — match negatives first/exact. RENDER the comp and read EVERY state before touching a designed head (removed the zone ring once and burned a cycle).
