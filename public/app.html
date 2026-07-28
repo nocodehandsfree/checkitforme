@@ -1350,13 +1350,7 @@
       <select id="set_chain" onchange="setPickChain()" style="display:none"><option value="">Select a chain</option></select>
       <div id="set_picker"><div class="empty">Loading…</div></div>
       <button class="k-key" id="set_more" onclick="chainsShowMore()" style="display:none">SHOW MORE</button>
-      <!-- Reference, not content — demoted to a footnote at the very bottom of the list. -->
-      <button class="peek" style="margin-top:20px" onclick="sheetFromHolder('ds_abcd','How a call flows','Alpha keypad · Bravo voice menu · Charlie live agent · Delta recorded clips')">
-        <div class="pk-main"><div class="pk-t">How a call flows</div><div class="pk-m">Alpha · Bravo · Charlie · Delta</div></div>
-        <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-      </button>
     </div>
-    <div id="trees_details" style="display:none"><div id="ds_abcd"><div id="abcd_flow"></div></div></div>
     <!-- CHAIN DETAIL (comp 2f): the phone menu is the page. Vitals, then the step ladder, then every
          settings card folded into a peek row. Picking a chain REPLACES the list, so nobody scrolls
          past 131 rows to get back to the menu they just opened. "All chains" walks back. -->
@@ -2196,29 +2190,10 @@ async function loadTrainer(){
   // Owner 07-27: the "Stores mapped by rating" bars are cut. Five bars of a number nobody acts on,
   // sitting above the list, and mostly reading "No ratings yet". The list itself says what is mapped.
   ss.innerHTML='';
-  renderABCD(d.chains);
 }
 // ABCD — how a call flows: Alpha (keypad) / Bravo (voice) / Charlie (live agent) / Delta (recorded clips).
 // Nav counts reuse the locked-recipe navType (keypad→Alpha, voice→Bravo, direct→Charlie); Delta is the
 // recorded-agent rehearsal lane (not a navType yet).
-function renderABCD(ch){
-  ch=Array.isArray(ch)?ch:[];
-  const el=document.getElementById('abcd_flow'); if(!el) return;
-  const lock=t=>ch.filter(c=>c.navStatus==='locked'&&c.navType===t).length;
-  const lanes=[
-    ['A','Alpha','#60a5fa','Presses digits through a phone menu. Locked recipe, zero AI.','~$0 nav',lock('keypad')+' chains'],
-    ['B','Bravo','#F4D03F','Says the menu words to navigate. Locked recipe, zero AI.','~$0 nav',lock('voice')+' chains'],
-    ['C','Charlie','#4ADE80','A real agent joins the moment a human answers and does the talking.','~5¢/check',lock('direct')+' ring direct'],
-    ['D','Delta','#a78bfa','Runs the whole talk on pre-recorded clips + a cheap classifier; escalates to Charlie only off-script.','~2.5¢/check','rehearsal'],
-  ];
-  el.innerHTML='<div class="meta" style="text-transform:none;margin-bottom:10px">Dial → <b>navigate</b> the menu (Alpha keypad / Bravo voice, via the locked recipe) → <b>human</b> → <b>Charlie</b> or <b>Delta</b> handles the conversation.</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
-    +lanes.map(L=>`<div style="background:var(--surface-1);border:none;border-left:3px solid ${L[2]};border-radius:10px;padding:10px 11px">
-      <div style="display:flex;align-items:baseline;gap:7px"><span style="font-weight:800;color:${L[2]}">${L[0]}</span><span style="font-weight:700;font-size:13.5px">${L[1]}</span><span class="meta" style="margin-left:auto;font-size:10.5px">${L[4]}</span></div>
-      <div class="meta" style="font-size:11.5px;margin-top:4px;text-transform:none">${L[3]}</div>
-      <div class="meta" style="font-size:10.5px;margin-top:5px">${L[5]}</div>
-    </div>`).join('')+'</div>';
-}
 // Expandable per-chain call log: every learner run with its Alpha/Bravo/Charlie path + the step matrix.
 async function loadRuns(chainId, box){
   if(!box||!chainId) return;
