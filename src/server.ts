@@ -38,10 +38,10 @@ import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, latest
 import { listenNavFeed, endListenNav } from "./calls/listen-nav";
 // THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
 import { emit, markNow, closeReceipt, linkCall, rollup, getReceipt, type Rollup } from "./calls/events";
-import { installReceiptStore, currentRates } from "./calls/receipt-store";
+import { installReceiptStore, currentRates, onReceiptClosed } from "./calls/receipt-store";
 import { costCall, money } from "./calls/cost";
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
-import { graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, graphFor, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
+import { graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, graphFor, learnFromReceipt, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
 import { recipeFromCall, evidenceFromCall, type CapturedStep } from "./calls/map-capture";
 import { startSweep, stopSweep, sweepStatus, buildQueue } from "./calls/sweep";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay } from "./calls/tapedeck";
@@ -149,6 +149,22 @@ import { isCallingPaused, setCallingPaused, spendTodayCents, withLock } from "./
 
 assertProdSecurity(); // refuse to boot in prod with an open admin / forgeable sessions
 installReceiptStore(); // every finished call writes its timeline + seconds + cost to the database
+// …and every finished call also teaches the map (owner 07-27: "one customer calling up Franklin's and
+// we had a voice menu — those aren't just lost"). Mapper READS the receipt the Ear already wrote; it
+// never opens a second listener. A check can flag a store, never rewrite a route: that still takes a
+// mapping call. Wrapped so a map hiccup can never cost us a receipt.
+onReceiptClosed(async (r) => {
+  const room = r.room;
+  const callId = r.callId;
+  const row = callId ? (await db.select().from(callResults).where(eq(callResults.id, callId)))[0] : null;
+  const store = row?.retailerId ? (await db.select().from(retailers).where(eq(retailers.id, row.retailerId)))[0] : null;
+  if (!store?.chainId) return;
+  const res = await learnFromReceipt({
+    room, callId, chainId: store.chainId, storeId: store.id,
+    events: r.events.map((e) => ({ kind: String(e.kind), atSec: e.atSec, detail: e.detail })),
+  });
+  if (res.learned.length) console.log(`[map] learned from call ${callId ?? room}: ${res.learned.join(" · ")}`);
+});
 await bootstrap(); // apply migrations + seed catalog if empty
 
 const here = dirname(fileURLToPath(import.meta.url));

@@ -158,6 +158,25 @@ direct is what let the paid agent open on the recording and start talking.
 the agent opens at the person, not at pickup. The Ear should still expect hold music on these — the
 seconds are a floor, not a promise.
 
+## 6h. EVERY CALL TEACHES US, including ones nobody meant as mapping (owner 07-27)
+"One customer calling up Franklin's and we had a voice menu — those aren't just lost forever."
+
+`learnFromReceipt()` reads the receipt the Ear already wrote. **No second listener** (spec §10), no
+transcription, no cost. Wired at the one place the receipt closes: `onReceiptClosed()` in
+`receipt-store.ts`, registered in `server.ts` beside `installReceiptStore()`. A watcher can never
+break or delay a receipt.
+
+What one ordinary check can prove:
+- **A store we call direct played a menu or a recording** → flagged `direct-store-has-a-recording`
+  with the call attached and the second the person actually arrived; trust in "answers directly"
+  drops on the spot. **The route is NOT rewritten** — one check is one call, and §10.2 says that is a
+  store exception at most. Correcting it still takes a mapping call.
+- **The route ran and reached nobody** → counts as a failed attempt against the route's health.
+- **Which steps ran and when a person answered** → an observation carrying the receipt's call id.
+
+So the anomaly the owner described gets caught by a paying customer's call, not only by a sweep — and
+the sweep's proving pass would have found it anyway. Two nets, one Ear.
+
 ## 7. Fixed on the way past
 `lockRecipeToChain` wrote the bare first digit ("4") into `dtmfShortcut`, but the live bridge only
 understands the timed form ("2@8,2@16") and plays NOTHING without it — so every chain locked through

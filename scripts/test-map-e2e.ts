@@ -11,7 +11,7 @@ import { connectAtSecFor } from "../src/calls/recipe";
 import {
   proposeVersion, approveVersion, activeMap, versionsFor, graphSummary, chainDetail,
   openUnknowns, reportCallDrift, backfillFromChains, recordCallPath, graphFor, pathSignature,
-  recordFailedAttempt, promptFingerprint, guessLanguage, storeLocalTime, type MapRecipe,
+  recordFailedAttempt, promptFingerprint, guessLanguage, storeLocalTime, learnFromReceipt, type MapRecipe,
 } from "../src/calls/mapgraph";
 
 let pass = 0, fail = 0;
@@ -157,6 +157,33 @@ async function main() {
     ok(live?.evidence.calls[0].greeting === "Front store, this is Ana", "and the greeting proves which desk answered");
     const chRow = (await db.select().from(chains).where(eq(chains.id, ch.id)))[0];
     ok(chRow.dtmfShortcut === "3@9", `the chain row both environments read is stamped (${chRow.dtmfShortcut})`);
+  }
+
+  console.log("▶ an ordinary customer check teaches us, even one nobody meant as mapping");
+  {
+    // The owner's case: a customer checks Franklin's, and the store turns out to have a voice menu we
+    // never knew about. That call must not be lost — and it must not rewrite the route either.
+    const [ch] = await db.insert(chains).values({ name: "Test Franklins", ringsDirect: true }).returning();
+    await proposeVersion({ chainId: ch.id, recipe: { type: "direct", steps: [], seconds: 0 }, source: "sweep",
+      call: { at: now(), day: "2026-07-27", storeId: 970, seconds: 0, reachedHuman: true, path: "direct" } });
+    const before = (await activeMap(ch.id))!;
+    const res = await learnFromReceipt({
+      room: "r-franklins", callId: 4242, chainId: ch.id, storeId: 970,
+      events: [
+        { kind: "dialed", atSec: 0 }, { kind: "connected", atSec: 3 },
+        { kind: "ivr_detected", atSec: 4, detail: { heard: "press 1 for the pharmacy" } },
+        { kind: "human_detected", atSec: 29 }, { kind: "hangup", atSec: 60, detail: { why: "done" } },
+      ],
+    });
+    ok(res.learned.some((l) => l.includes("not direct")), `the check reports what it found: "${res.learned[0]}"`);
+    const flagged = (await openUnknowns(300)).find((u) => u.chainId === ch.id && u.kind === "direct-store-has-a-recording");
+    ok(!!flagged, "it is flagged for review with the call attached");
+    ok(String(flagged?.prompt).includes("29s"), `and says when the person actually arrived: "${flagged?.prompt}"`);
+    const after = (await activeMap(ch.id))!;
+    ok(after.confidence < before.confidence, `trust in "answers directly" drops (${before.confidence} → ${after.confidence})`);
+    ok(after.recipe.type === "direct", "but the route is NOT rewritten — one check is one call");
+    const obs = (await chainDetail(ch.id)).observations as Array<Record<string, unknown>>;
+    ok(obs.some((o) => o.callId === 4242 && o.drift === true), "the observation carries the receipt's call id");
   }
 
   console.log("▶ a greeting then hold music is NOT a direct answer");

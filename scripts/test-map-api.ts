@@ -18,7 +18,9 @@ async function main() {
   srv.stderr.on("data", (d) => { out += String(d); });
   try {
     let up = false;
-    for (let i = 0; i < 60 && !up; i++) {
+    // A fresh database seeds the whole catalog on first boot, which takes well over a minute — the
+    // old 60-second wait passed only because a previous run had left a seeded file behind.
+    for (let i = 0; i < 240 && !up; i++) {
       await wait(1000);
       up = await fetch(`${BASE}/api/health`).then((r) => r.ok).catch(() => false);
     }
@@ -26,6 +28,21 @@ async function main() {
 
     const rows0 = await fetch(`${BASE}/api/admin/map/graph`, { headers: H }).then((r) => r.json()) as { rows: Array<Record<string, unknown>> };
     ok(Array.isArray(rows0.rows) && rows0.rows.length > 0, `the map screen loads ${rows0.rows?.length} chain rows`);
+    // A brand-new database has chains but no routes yet. Learn one the way the other environment does,
+    // so this test stands on its own instead of on whatever a previous run happened to leave behind.
+    if (!rows0.rows.some((r) => r.mapped)) {
+      await fetch(`${BASE}/api/admin/map/ingest`, {
+        method: "POST", headers: H,
+        body: JSON.stringify({
+          chainName: rows0.rows[0].chain,
+          recipe: { type: "keypad", seconds: 24, steps: [{ action: "press", value: "2", atSec: 8, afterPrompt: 1 }] },
+          source: "test-setup",
+          call: { at: Math.floor(Date.now() / 1000), day: "2026-07-27", seconds: 24, reachedHuman: true, path: "press:2" },
+        }),
+      });
+      const again = await fetch(`${BASE}/api/admin/map/graph`, { headers: H }).then((r) => r.json()) as { rows: Array<Record<string, unknown>> };
+      rows0.rows = again.rows;
+    }
     const mapped = rows0.rows.filter((r) => r.mapped);
     ok(mapped.length > 0, `${mapped.length} of them carry a route`);
     ok(mapped.every((r) => typeof r.confidence === "number" && typeof r.confidenceLabel === "string"), "every mapped row shows how much we trust it");

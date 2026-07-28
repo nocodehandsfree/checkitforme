@@ -1059,6 +1059,86 @@ export async function reshareUnsent(): Promise<{ pushed: number; failed: number;
   return { pushed, failed, pending: failed };
 }
 
+/** EVERY CALL TEACHES US SOMETHING — including the ordinary customer check nobody meant as mapping.
+ *
+ *  The owner's case (07-27): a customer checks Franklin's, the store turns out to have a voice menu we
+ *  had no idea about. That call must not be lost. It is not lost, and it does not need a second
+ *  listener: the Ear already writes what it heard onto the receipt, so Mapper reads the record.
+ *
+ *  Three things a finished receipt can prove without a word of transcription:
+ *   • a store we call DIRECT played a menu   → the label is wrong, and the paid agent was on the line
+ *   • a store we call DIRECT played a recording and handed on → the third shape (a greeting)
+ *   • the route ran and reached nobody       → the failure counts against the route's health
+ *
+ *  It never rewrites a route on its own. A customer check is one call at one store, which is exactly
+ *  the case §10.2 says must become a store exception or a review item, never a chain change. */
+export async function learnFromReceipt(r: {
+  room?: string; callId?: number; chainId?: number | null; storeId?: number | null;
+  events?: Array<{ kind: string; atSec?: number; detail?: Record<string, unknown> }>;
+}): Promise<{ learned: string[] }> {
+  const learned: string[] = [];
+  const chainId = Number(r.chainId || 0);
+  if (!chainId) return { learned };
+  await ensureMapTables();
+  const storeId = Number(r.storeId || 0) || undefined;
+  const events = r.events || [];
+  const at = (k: string) => events.find((e) => e.kind === k)?.atSec ?? null;
+  const has = (k: string) => events.some((e) => e.kind === k);
+  const navId = r.room ? `bridge:${r.room}` : undefined;
+  const when = await storeLocalTime(storeId || 0);
+  const map = await activeMap(chainId, storeId || 0);
+  const calledDirect = !map || map.recipe.type === "direct";
+  const menuHeard = has("ivr_detected");
+  const personAt = at("human_detected");
+  const transferAt = at("transfer");
+
+  // The anomaly the owner asked about: we believed a person answers, and a machine did.
+  if (calledDirect && menuHeard) {
+    const shape = has("alpha_press") || has("bravo_say") ? "a menu we had to work through"
+      : transferAt != null ? "a recording that hands you on"
+      : "a recording";
+    await reportUnknown({
+      chainId, storeId, kind: "direct-store-has-a-recording",
+      prompt: `We call this store direct, but a real check heard ${shape}${personAt != null ? ` — a person at ${personAt}s` : ""}`,
+      evidence: { navId, callId: r.callId, personAt, transferAt, room: r.room },
+    });
+    await recordObservation({
+      chainId, storeId, versionId: map?.id ?? null, navId, callId: r.callId,
+      kind: "unknown", expected: "direct_human", observed: shape, drift: true,
+      hourLocal: when.hour, dow: when.dow,
+      detail: { personAt, transferAt, note: "heard on an ordinary customer check" },
+    });
+    learned.push(personAt != null ? `not direct: ${shape}, person at ${personAt}s` : `not direct: ${shape}`);
+    // Trust in "this store answers directly" drops on the spot. The route is NOT rewritten — one
+    // check is one call, and a mapping call has to prove the real route before anything changes.
+    if (map && !map.storeId) await decayConfidence(map.id);
+  }
+
+  // The route ran and nobody was there. Counts against the route's health, changes nothing.
+  if (!calledDirect && personAt == null && has("hangup")) {
+    const why = String(events.find((e) => e.kind === "hangup")?.detail?.why || "no person on the call");
+    await recordFailedAttempt({ chainId, storeId, navId, callId: r.callId, reason: why, seconds: at("hangup") });
+    learned.push(`route reached nobody: ${why}`);
+  }
+
+  // What the call walked, into the graph. No text on a customer check — the Ear counts recordings, it
+  // does not transcribe them — so the prompts are anonymous nodes keyed by where they sat in the call.
+  const actions = events.filter((e) => e.kind === "alpha_press" || e.kind === "bravo_say").map((e) => ({
+    action: (e.kind === "alpha_press" ? "press" : "say") as "press" | "say",
+    value: String(e.detail?.key ?? e.detail?.phrase ?? ""), atSec: e.atSec ?? 0,
+  })).filter((a) => a.value);
+  if (actions.length && personAt != null) {
+    await recordObservation({
+      chainId, storeId, versionId: map?.id ?? null, navId, callId: r.callId,
+      kind: "live-check", expected: map ? pathSignature(map.recipe) : undefined,
+      observed: actions.map((a) => a.value).join(">"), drift: false,
+      hourLocal: when.hour, dow: when.dow, detail: { personAt, transferAt },
+    });
+    learned.push(`walked ${actions.length} step(s), person at ${personAt}s`);
+  }
+  return { learned };
+}
+
 /** FAILED CALLS ARE EVIDENCE (runtime spec §10.5). A call that never reached a person must not change
  *  a route — it proves nothing about where the route goes — but it must COUNT, or a route that stopped
  *  working keeps looking healthy right up until a customer pays for it.

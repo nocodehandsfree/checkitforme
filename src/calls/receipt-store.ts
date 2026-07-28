@@ -142,6 +142,18 @@ export async function recordVerdict(callId: number, statusKey: string | null, su
 }
 
 /** Wire the recorder to the database. Called once at boot. */
+/** Anyone who wants to READ a finished call — the map learns from ordinary checks this way, without
+ *  opening a listener of its own. Watchers never block the receipt and can never break it. */
+type Watcher = (r: Receipt) => void | Promise<void>;
+const watchers: Watcher[] = [];
+export function onReceiptClosed(fn: Watcher): void { watchers.push(fn); }
+
 export function installReceiptStore(): void {
-  setEventSink((r) => { void persistReceipt(r); });
+  setEventSink((r) => {
+    void persistReceipt(r);
+    for (const w of watchers) {
+      try { void Promise.resolve(w(r)).catch((e) => console.error("receipt watcher:", String(e).slice(0, 160))); }
+      catch (e) { console.error("receipt watcher:", String(e).slice(0, 160)); }
+    }
+  });
 }
