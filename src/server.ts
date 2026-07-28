@@ -34,7 +34,7 @@ import { getPolicy, setPolicy, publicPolicy, cachedPolicy } from "./policy";
 import { importStores, backfillRegions } from "./stores-import";
 import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
 import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
-import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, latestNavSessionForChain, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
+import { placeNavCall, navInitialTwiml, navStep, navEnded, navMediaFeed, getNavSession, latestNavSessionForChain, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
 import { listenNavFeed, endListenNav } from "./calls/listen-nav";
 // THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
 import { emit, markNow, closeReceipt, linkCall, rollup, getReceipt, type Rollup } from "./calls/events";
@@ -6924,6 +6924,11 @@ wssTwilio.on("connection", (ws: WebSocket, _req: unknown, qRoom: string) => {
       // step fires. Free — it is the same fork live-listen already runs. Must come before the
       // bridgeLiveRooms gate, which only silences the LISTENER fanout, not our own ear.
       listenNavFeed(room, m.media.payload, m.media.track);
+      // MAPPING CALLS listen on the SAME fork with the SAME two classes (runtime spec §1: the Ear
+      // owns the whole call, dial to hangup; §10: there is exactly one of them). The room is the nav
+      // session id, so only a mapping call's own frames ever reach it, and a room that is not a
+      // mapping call is ignored.
+      navMediaFeed(room, m.media.payload, m.media.track);
       if (!bridgeLiveRooms.has(room)) fanout(room, m.media.payload, m.media.track || "inbound");
     }
   });

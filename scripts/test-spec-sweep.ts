@@ -60,6 +60,12 @@ console.log("\n▶ §0  Before you write a single line");
 console.log("\n▶ §1  The shape — four parts, each owning one thing");
 {
   const ear = read("src/calls/listen-nav.ts");
+  // "The Ear owns the whole call, from dial to hangup" — on EVERY path that dials a store, which
+  // §2.4 spells out as including mapping calls. This is the statement that sat unbuilt.
+  const nav = read("src/calls/navigator.ts");
+  ok(/<Start><Stream/.test(nav), "the Ear is on mapping calls too: the audio fork is opened when the call starts");
+  ok(/PromptDetector|ConversationEar/.test(nav), "and it listens with the EXISTING Ear, not one of its own");
+  ok(/navMediaFeed/.test(read("src/server.ts")), "the fork actually reaches it — the feed is wired at the socket");
   ok(!/from "\.\.\/llm"|from "\.\.\/db\/|from "\.\.\/config"/.test(ear),
     "the Ear reasons about nothing: no model, no database, no config imported into it");
   ok(!/\bllm\(/.test(ear), "and it never calls a model, so it can never become a second agent");

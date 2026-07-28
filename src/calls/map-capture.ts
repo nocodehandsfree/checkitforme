@@ -14,7 +14,7 @@
 import { guessLanguage, type MapRecipe, type MapStep, type EvidenceCall, type Language } from "./mapgraph";
 
 /** The navigator's per-turn record, loosened so this file needs no runtime import from navigator. */
-export interface CapturedStep { who?: string; text?: string; atSec?: number; action?: string; value?: string }
+export interface CapturedStep { who?: string; text?: string; atSec?: number; action?: string; value?: string; earPrompts?: number }
 
 const isAction = (s: CapturedStep) => (s.action === "press" || s.action === "say") && !!s.value;
 /** The confirm question ("asked: do you have…") is training scaffolding, not navigation — the same
@@ -42,7 +42,13 @@ export function recipeFromCall(steps: CapturedStep[], humanAtSec: number | null,
       atSec: Math.max(0, Math.round(s.atSec ?? 0)),
       // The recording this action followed. 0 would mean "before the store said anything", which is
       // never a thing we can trigger on — leave it off and let the clock cover that step.
-      afterPrompt: !dirty && prompts > 0 ? prompts : undefined,
+      //
+      // The EAR's count wins when the audio fork was on the call: it is the same prompt detector a
+      // live call fires on, so what we learn and what the runtime counts are the same number. Falling
+      // back to counting speech-to-text turns miscounts whenever the transcriber splits one recording
+      // into two lines or glues two together — which is exactly what happened on 07-28 at CVS.
+      afterPrompt: !dirty && typeof s.earPrompts === "number" && s.earPrompts > 0 ? s.earPrompts
+        : (!dirty && prompts > 0 ? prompts : undefined),
       bargeSafe: bargeProven?.has(acts.length) || undefined,
     });
   }

@@ -19,6 +19,7 @@ import {
 } from "../src/calls/mapgraph";
 import { lockRecipeToChain } from "../src/calls/trainer-batch";
 import { greetingFrom, looksLikeDirectPickup, parseSpokenOptions, isMenuLine, parseMenuOptions, mergeMenu } from "../src/calls/navigator";
+import { recipeFromCall } from "../src/calls/map-capture";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -244,6 +245,31 @@ async function main() {
       `pressed and spoken choices sit side by side (${both.length} in all)`);
     ok(!isMenuLine("Thank you for calling CVS, Pharmacy. If this is an emergency, please hang up and dial 911."),
       "a plain greeting is not a menu");
+  }
+
+
+  console.log("▶ THE EAR COUNTS THE RECORDINGS, NOT THE TRANSCRIBER");
+  {
+    // The 07-28 CVS problem in one shape: the store plays ONE long recording and the transcriber
+    // hands it back as two lines. Counting those lines says two recordings; the Ear heard one, and
+    // the Ear is what a live call fires on.
+    const split = [
+      { who: "ivr", text: "Thank you for calling CVS, Pharmacy.", atSec: 10 },
+      { who: "ivr", text: "Are you a healthcare provider?", atSec: 16 },
+      { who: "us", text: 'said "no"', atSec: 18, action: "say", value: "no", earPrompts: 1 },
+      { who: "ivr", text: "Pharmacy or front door services?", atSec: 26 },
+      { who: "us", text: 'said "front"', atSec: 28, action: "say", value: "front", earPrompts: 2 },
+    ];
+    const r = recipeFromCall(split, 60);
+    ok(r.steps[0].afterPrompt === 1, `the first word waits for recording 1, not 2 (got ${r.steps[0].afterPrompt})`);
+    ok(r.steps[1].afterPrompt === 2, `and the second waits for 2, not 3 (got ${r.steps[1].afterPrompt})`);
+
+    // No fork on the call — nothing stamped — and the old counting still works exactly as before.
+    const noEar = split.map(({ earPrompts, ...rest }) => rest);
+    const r2 = recipeFromCall(noEar, 60);
+    ok(r2.steps[0].afterPrompt === 2 && r2.steps[1].afterPrompt === 3,
+      "with no Ear on the call it falls back to counting lines, unchanged");
+    ok(r.steps[0].value === "no" && r2.steps[0].value === "no", "and the route itself is the same either way");
   }
 
   console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);

@@ -10,6 +10,12 @@ import { db } from "../db/client";
 import { chains } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { openReceipt, emit, markNow, closeReceipt } from "./events";
+// THE EAR — the one that already exists. Section 1 of the runtime spec gives it the whole call, dial
+// to hangup, and section 10 says there is exactly one of them. A mapping call used to run on Twilio's
+// speech text alone, which returns an empty string for silence, for hold music and for a desk that is
+// ringing, so it could not tell "nobody is there" from "somebody just said hello". These are the same
+// two classes the paid-agent calls listen with. Nothing new is built here.
+import { PromptDetector, ConversationEar, frameEnergy as earFrameEnergy, type HoldReason } from "./listen-nav";
 
 // Twilio webhooks must come back to THIS service — staging maps from staging, prod from prod.
 const RAILWAY_HOST = config.staging.on ? "voice-caller-staging-production.up.railway.app" : "voice-caller-production-2d6b.up.railway.app";
@@ -52,7 +58,15 @@ const ROUTING_RE = /transferr?ing|connect(ing)? you|please hold|hold (on )?(whil
 const REDIRECT_RE = /transfer|connect(ing)? you|that('?s| is| would be) the |you('?d| would| will)? ?(have to|need to|want to|gotta)? ?(ask|call|talk to|check with|go to)|over to|let me get you|i'?ll get you|hold on|the .{0,18}(department|desk|counter|section)|guest services|customer service desk|electronics|toy|that'?s (handled|done) by/i;
 
 export type NavAction = "say" | "press" | "wait" | "human" | "fail";
-export interface NavStep { who: "ivr" | "us"; text: string; atSec: number; action?: NavAction; value?: string }
+export interface NavStep {
+  who: "ivr" | "us"; text: string; atSec: number; action?: NavAction; value?: string;
+  /** How many store recordings the EAR had heard finish when we did this. Stamped at the moment we
+   *  act, from the same prompt detector a live call fires on, so the anchor we learn and the anchor
+   *  the runtime counts are the same number. Counting the speech-to-text turns instead — which is
+   *  what this used to do — miscounts whenever the transcriber splits one recording into two lines
+   *  or glues two into one. Absent when the audio fork never connected. */
+  earPrompts?: number;
+}
 // One choice the store offered us, and what it routes to. Best-effort from messy speech-to-text.
 // `digit` is set on a keypad menu ("press 2 for guest services"). `say` is set on a SPOKEN menu, where
 // the store lists its departments out loud and you answer with a word — CVS, Walgreens and every
@@ -101,9 +115,45 @@ export interface NavSession {
   status: "dialing" | "navigating" | "human" | "failed" | "done";
   type: "direct" | "keypad" | "voice" | null;
   humanAtSec: number | null; confidence: number; callSid?: string; recipe: NavRecipe | null;
+  /** What the Ear is hearing right now, and how many store recordings have finished. Present only
+   *  once the audio fork connects; every use is optional, so a call whose fork never arrives behaves
+   *  exactly as it did before, on text alone. */
+  ear?: { det: PromptDetector; conv: ConversationEar; hold: HoldReason | null; recordings: number };
 }
 
 const sessions = new Map<string, NavSession>();
+/**
+ * One inbound (store-side) media frame from the /twilio-media fork. The room IS the nav session id,
+ * so only this call's own audio ever reaches it.
+ *
+ * Wired 07-28 on the owner's order: the Ear belongs on every call that dials a store, and it was
+ * never on this one. Both objects below are the EXISTING ones from listen-nav — the same prompt
+ * detector that decides when a live call's mapped step fires, and the same hold ear that tells the
+ * paid agent somebody walked away.
+ */
+export function navMediaFeed(room: string, b64: string, track?: string): void {
+  const s = sessions.get(room);
+  if (!s || s.status === "human" || s.status === "failed") return;
+  if (track && track !== "inbound") return;         // our own words come back on the outbound track
+  if (!s.ear) {
+    const ear: NonNullable<NavSession["ear"]> = {
+      det: new PromptDetector(() => { /* replaced below */ }),
+      conv: new ConversationEar({
+        holdStart: (reason) => { ear.hold = reason; },
+        holdEnd: () => { ear.hold = null; },
+      }),
+      hold: null, recordings: 0,
+    };
+    ear.det = new PromptDetector((n) => { ear.recordings = n; });
+    s.ear = ear;
+  }
+  // isTone is left false deliberately: the ring-frequency test lives in the machine-locked bridge, so
+  // the Ear here cannot yet tell a ringing desk from a voice. That is why what it hears is only ever
+  // used to VETO (see navStep) and never to declare a person — a veto cannot invent one.
+  s.ear.det.feed(b64);
+  s.ear.conv.feed(earFrameEnergy(b64));
+}
+
 export function getNavSession(id: string): NavSession | null { return sessions.get(id) || null; }
 /** The most recent call to this chain that reached a person — how a lock finds its own evidence when
  *  the caller did not name the call (the Admin Map button sends only the recipe). */
@@ -296,25 +346,34 @@ export function navInitialTwiml(id: string): string {
   // BARGE mode: we already KNOW the path, so fire the words on a timer — speaking OVER the IVR instead
   // of waiting for each prompt to finish. `at` = seconds from connect to speak each step. Then listen
   // for the transfer. Each round we shave the times earlier until the store stops accepting it.
+  const ear = earFork(id);
   if (s && s.barge?.plan?.length) {
-    let inner = ""; let prev = 0;
+    let inner = ear; let prev = 0;
     for (const st of s.barge.plan) {
       const wait = Math.max(0, Math.round((st.at ?? 0) - prev));
       if (wait > 0) inner += `<Pause length="${wait}"/>`;
       if (st.action === "press" && st.value) {
         const digits = st.value.replace(/[^0-9*#]/g, "").slice(0, 6);
         inner += `<Play digits="${digits}"/>`;
-        s.steps.push({ who: "us", text: `pressed ${digits} (barge @${st.at}s)`, atSec: Math.round(st.at), action: "press", value: digits });
+        s.steps.push({ who: "us", text: `pressed ${digits} (barge @${st.at}s)`, atSec: Math.round(st.at), action: "press", value: digits , earPrompts: s.ear?.recordings });
       } else if (st.value) {
         inner += `<Say voice="Polly.Joanna">${esc(st.value)}</Say>`;
-        s.steps.push({ who: "us", text: `said "${st.value}" (barge @${st.at}s)`, atSec: Math.round(st.at), action: "say", value: st.value });
+        s.steps.push({ who: "us", text: `said "${st.value}" (barge @${st.at}s)`, atSec: Math.round(st.at), action: "say", value: st.value , earPrompts: s.ear?.recordings });
       }
       prev = st.at ?? prev;
     }
     s.type = s.barge.plan.every((p) => p.action === "press") ? "keypad" : "voice";
     return twiml(`${inner}${gather(id)}`);
   }
-  return twiml(`<Pause length="1"/>${gather(id)}`); // let the greeting start, then listen
+  return twiml(`${ear}<Pause length="1"/>${gather(id)}`); // let the greeting start, then listen
+}
+
+/** Fork the store's audio to the Ear for the whole call. `<Start><Stream>` survives every TwiML
+ *  replacement the gather loop makes (documented trap), so it is set up once here and never again.
+ *  Purely additive: if the fork never connects, the call runs exactly as it did before. */
+function earFork(id: string): string {
+  return `<Start><Stream url="wss://${RAILWAY_HOST}/twilio-media?room=${id}" track="inbound_track">`
+    + `<Parameter name="room" value="${id}" /></Stream></Start>`;
 }
 
 /**
@@ -374,7 +433,7 @@ function reachHuman(s: NavSession, atSec: number, id: string, viaRouting = false
   if (s.confirm && !s.confirm.asked) {
     s.confirm.asked = true; s.confirm.askedAtSec = atSec;
     const q = s.askText || `Hi! Real quick — do you have any ${s.confirm.product} in stock right now?`;
-    s.steps.push({ who: "us", text: `asked: "${q}"`, atSec, action: "say", value: q });
+    s.steps.push({ who: "us", text: `asked: "${q}"`, atSec, action: "say", value: q , earPrompts: s.ear?.recordings });
     // Speak in the workflow's own voice when the synth is ready; otherwise the stock phone voice.
     const speak = s.askAudio ? `<Play>https://${RAILWAY_HOST}/nav/ask-audio?session=${id}</Play>` : `<Say voice="Polly.Joanna">${esc(q)}</Say>`;
     return twiml(`${speak}${gather(id)}`); // wait for their answer
@@ -536,7 +595,7 @@ async function navTurn(id: string, speech: string): Promise<string> {
   if (s.reactivePress && s.reactivePress.count < s.reactivePress.max) {
     if (speech && speech.trim()) {
       const dg = s.reactivePress.digit; s.reactivePress.count++; s.type = "keypad";
-      s.steps.push({ who: "us", text: `pressed ${dg} (after prompt ${s.reactivePress.count})`, atSec, action: "press", value: dg });
+      s.steps.push({ who: "us", text: `pressed ${dg} (after prompt ${s.reactivePress.count})`, atSec, action: "press", value: dg , earPrompts: s.ear?.recordings });
       return twiml(`<Play digits="${dg}"/>${gather(id)}`);
     }
     return twiml(gather(id)); // silence so far — keep listening for the prompt
@@ -550,7 +609,7 @@ async function navTurn(id: string, speech: string): Promise<string> {
     const low = " " + speech.toLowerCase() + " ";
     const next = s.barge.plan.find((p) => p.action !== "press" && p.value && low.includes(" " + p.value.toLowerCase()) && !saidAlready.has(p.value));
     if (next) {
-      s.steps.push({ who: "us", text: `said "${next.value}" (recovery — prompt named it)`, atSec, action: "say", value: next.value });
+      s.steps.push({ who: "us", text: `said "${next.value}" (recovery — prompt named it)`, atSec, action: "say", value: next.value , earPrompts: s.ear?.recordings });
       s.lastActTurn = s.turns;
       return twiml(`<Say voice="Polly.Joanna">${esc(next.value)}</Say>${gather(id)}`);
     }
@@ -558,21 +617,30 @@ async function navTurn(id: string, speech: string): Promise<string> {
   const d = await decide(s, speech || "");
   if (d.type) s.type = d.type;
   s.confidence = d.confidence;
-  // A PERSON HAS TO SAY SOMETHING. Silence, hold music and a ringing desk all come back from the
-  // speech gather as nothing, and on the 07-28 Mulholland call the model called one of those turns
-  // "human" 27s after the transfer — so 84s went into the map as time-to-human with no proof at all,
-  // which is the exact number the paid agent joins on. No words, no person: keep listening. Telling
-  // those three apart needs the shared Ear on this call (spec section 10) — Echo's wiring, not ours.
+  // A PERSON HAS TO SAY SOMETHING, AND THE EAR HAS TO AGREE. Silence, hold music and a ringing desk
+  // all come back from the speech gather as nothing, and on the 07-28 Mulholland call the model
+  // called one of those turns "human" 27 seconds after the transfer — 84s went into the map as
+  // time-to-human with no proof at all, which is the exact number the paid agent joins on.
+  //   • no words at all  → not a person. Keep listening.
+  //   • words, but the Ear says the line is playing hold music or sitting silent → not a person
+  //     either; that is the recording bleeding into the transcript.
+  // The Ear is only ever a VETO here, never the thing that declares somebody present, because the
+  // ring-frequency test still lives in the machine-locked bridge and without it a ringing desk can
+  // still look like a voice with gaps in it. A veto cannot invent a person; a green light could.
   if (d.action === "human" && !(speech && speech.trim())) return twiml(gather(id));
+  if (d.action === "human" && s.ear && (s.ear.hold === "music" || s.ear.hold === "quiet")) {
+    emit(id, "unknown", "That was the line, not a person — still waiting", { heard: s.ear.hold, atSec });
+    return twiml(gather(id));
+  }
   if (d.action === "human") return reachHuman(s, atSec, id, !!(speech && ROUTING_RE.test(speech))); // person OR announced transfer → confirm waits for the person
   if (d.action === "press" && d.value) {
     const digits = d.value.replace(/[^0-9*#]/g, "").slice(0, 6);
-    s.steps.push({ who: "us", text: `pressed ${digits}`, atSec, action: "press", value: digits });
+    s.steps.push({ who: "us", text: `pressed ${digits}`, atSec, action: "press", value: digits , earPrompts: s.ear?.recordings });
     s.lastActTurn = s.turns;
     return twiml(`<Play digits="${digits}"/>${gather(id)}`);
   }
   if (d.action === "say" && d.value) {
-    s.steps.push({ who: "us", text: `said "${d.value}"`, atSec, action: "say", value: d.value });
+    s.steps.push({ who: "us", text: `said "${d.value}"`, atSec, action: "say", value: d.value , earPrompts: s.ear?.recordings });
     s.lastActTurn = s.turns;
     return twiml(`<Say voice="Polly.Joanna">${esc(d.value)}</Say>${gather(id)}`);
   }
@@ -591,7 +659,7 @@ async function navTurn(id: string, speech: string): Promise<string> {
         return reachHuman(s, atSec, id);
       }
       s.autoZeros = (s.autoZeros ?? 0) + 1; s.type = "keypad";
-      s.steps.push({ who: "us", text: "pressed 0 (auto-operator)", atSec, action: "press", value: "0" });
+      s.steps.push({ who: "us", text: "pressed 0 (auto-operator)", atSec, action: "press", value: "0" , earPrompts: s.ear?.recordings });
       s.lastActTurn = s.turns;
       return twiml(`<Play digits="0"/>${gather(id)}`);
     }
