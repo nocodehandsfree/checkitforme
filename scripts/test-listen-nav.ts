@@ -4,7 +4,7 @@
 // The detector's whole job: say "a prompt just ENDED" when a recording stops talking, so a mapped
 // step fires on the pause instead of on a stopwatch. These tests feed it synthetic frame energies —
 // no audio, no network — so the timing rules are provable.
-import { PromptDetector, frameEnergy, _test } from "../src/calls/listen-nav";
+import { PromptDetector, frameEnergy, looksLikeAPerson, _test } from "../src/calls/listen-nav";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -101,6 +101,39 @@ console.log("▶ frameEnergy: silence reads low, tone reads high");
   const loud = Buffer.alloc(160, 0x00).toString("base64");    // μ-law 0x00 ≈ full scale
   ok(frameEnergy(loud) > _test.VOICE_THRESH, "a full-scale frame reads above the voice gate");
   ok(frameEnergy("") === 0, "an empty payload is 0, never NaN");
+}
+
+console.log("▶ a person picked up instead of the menu: stop pressing keys");
+{
+  // A store mapped with a phone menu that now answers directly. If we keep going we fire keypad
+  // tones into a real person's ear, which is exactly what happens today.
+  const d = new PromptDetector(() => { /* boundaries not needed here */ });
+  feed(d, 2000, true);                        // "Target Topanga, this is Bob"
+  feed(d, _test.END_SILENCE_MS + 100, false); // …and they stop
+  const mid = { stepsFired: 0, promptCount: d.count, lastPromptMs: d.lastPromptMs, quietMs: d.quietMs };
+  ok(!looksLikeAPerson(mid), "not called yet at the moment they stop talking — a menu pauses there too");
+  feed(d, 2600, false);                       // they are WAITING for us
+  ok(looksLikeAPerson({ ...mid, quietMs: d.quietMs }), "a short greeting then a long wait = somebody answered");
+}
+
+console.log("▶ …and it does NOT misfire on a real recorded menu");
+{
+  const d = new PromptDetector(() => { /* none */ });
+  feed(d, 6000, true);                        // a menu reading its options
+  feed(d, _test.END_SILENCE_MS + 100, false);
+  feed(d, 4000, false);                       // even a long gap before the next prompt
+  ok(!looksLikeAPerson({ stepsFired: 0, promptCount: d.count, lastPromptMs: d.lastPromptMs, quietMs: d.quietMs }), "a long recording is never a person, however long the gap after it");
+}
+{
+  const d = new PromptDetector(() => { /* none */ });
+  feed(d, 2000, true); feed(d, _test.END_SILENCE_MS + 100, false);
+  feed(d, 400, false); feed(d, 2000, true); feed(d, _test.END_SILENCE_MS + 100, false);
+  feed(d, 3000, false);
+  ok(!looksLikeAPerson({ stepsFired: 0, promptCount: d.count, lastPromptMs: d.lastPromptMs, quietMs: d.quietMs }), "a menu of short prompts is not a person — only the very FIRST thing we hear can be");
+}
+{
+  ok(!looksLikeAPerson({ stepsFired: 1, promptCount: 1, lastPromptMs: 2000, quietMs: 9000 }), "once the menu walk has started, a pause is just a pause");
+  ok(!looksLikeAPerson({ stepsFired: 0, promptCount: 1, lastPromptMs: 0, quietMs: 9000 }), "silence with nothing said at all is not a person");
 }
 
 console.log(`\n${fail === 0 ? "PASS" : "FAIL"} — ${pass} passed, ${fail} failed`);

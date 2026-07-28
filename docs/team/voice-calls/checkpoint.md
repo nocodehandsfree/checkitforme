@@ -4,57 +4,57 @@
 
 ## LAW — ADMIN IS THE RECORD OF TRUTH (owner, absolute): never change a setting behind Admin's back.
 
+## 07-28 THE LIVE CALL RUNTIME — §4/5/10 on staging. READ `docs/specs/live-call-runtime/` FIRST.
+> §3 Gate Zero is UNANSWERED and still gates §6 (hold). Nothing here touches hold or handback.
+- **Delta is now ONE CLIP through the bridge**, not a whole-call engine. On a real person the clip
+  plays out the media stream, Charlie is PREWARMED behind it on a DEDICATED joining agent, and his
+  I/O stays shut until it ends. Early clerk speech lands in the existing `pending[]`, released whole
+  at the gate. `clip-cache.ts` = μ-law 8kHz + cached, killing the ~7¢/call resynth.
+- **THREE SIGNALS end the clip**, first wins: Twilio `mark` · its own length (8 B/ms) · `agentPlayingUntil`
+  (re-read when the length timer lands, so real audio can only DELAY). All three miss → backstop at
+  +4s: an early agent is recoverable, a clerk in silence is not.
+- **JOINING AGENT, NEVER A PER-CALL OVERRIDE** (that once hung calls up). `make-midcall-agent.ts`
+  clones the live agent + prepends the wait-silently rule. Staging `ELEVENLABS_MIDCALL_AGENT_ID` =
+  `agent_2301kyk2rwgyfg8r50xk9enqwy2r`; **UNSET = no clip, today's path exactly.** PROD NOT SET. Clip
+  ONLY when `opts.voiceId` is set (workflow strip) so clip voice == agent voice.
+- **Charlie warms up 2s BEFORE the clip ends, not at its start** — a real clip measured **5.1s** and he
+  bills from socket open. `prewarmTimer` is kept OUT of `clipTimers` (the gate clears those) or a
+  short clip leaves the clerk with NO agent at all.
+- **THE MAP IS READ ONCE** (`activeMap` → `navPlanFromVersion`, pure + tested): presses, spoken words
+  and `afterPrompt` anchors all off ONE version. `stageNavPromptPlan` DELETED — keyed on step-list
+  SHAPE, 10min expiry, died on restart, could mix two versions live. Same read finally gives the
+  runtime STORE EXCEPTIONS and fills `mapVersion` on the receipt.
+- **STOP PRESSING KEYS AT A PERSON** (`looksLikeAPerson`): first thing heard SHORT (≤3.5s) then an
+  unbroken wait (≥2.5s) → abandon remaining steps. Narrow on purpose: only before step 1, only on
+  prompt 1. Kill switch `flags.stopKeysOnHuman` (ON).
+- **DRIVEN:** `test-delta-clip.ts` = a REAL ws server as the provider + a real socket as the carrier,
+  watching both wires. 23 asserts + 21 listen-nav · 55 mapgraph · 64 map-e2e · 63 receipt · 13 bridge.
+  `ulaw_8000` PROVEN live (40496 B, 8 B/ms, cache 0ms identical); `navPlanFromVersion` on staging's
+  REAL Target + CVS = byte-identical to the chain rows → switching the source moves NO route.
+- **NOT VERIFIED: any real phone call** — the Fun store rings the OWNER'S phone. Needs one real call:
+  clip audible, no double greeting, no talk-over, receipt shows 3 `charlie_join` lines + `mapVersion`.
+  **`reportCallDrift` + callId were ALREADY wired** (service.ts roomFinalizers) — do not rebuild them.
+  Fun 106361 moved OFF "Branson Delta Test" (old whole-call Delta) → "Branson Global" on staging.
 ## Voice/tuning + engine state (verified live 07-21/07-24)
 - Default agent both envs **Branson HD `1P1JhCcLzeMmkvLi1BkG`**, speed 0.85, persona off. Prompt rules
   live: no dashes · one register, max one "!" · greet-back HARD RULE · set + package question · restock
   ask on any no · voicemail status · echo gate 520/150. Shipment TIME capture NOT live-verified.
-- Ringback identified by its published tone frequencies (Goertzel 350/440/480/620, median >= .45) so the
-  agent never opens on a ringing line; 6 unanswered rings = hang up.
-
-## 07-26 THE CALL RECEIPT — on staging (owner-ordered; spec `02-spec-runtime-echo.md`)
-**Full detail: `docs/specs/call-receipt/README.md`. Read it before touching any of this.**
-- Every bridged call writes a timeline + seconds + cost. `GET /api/calls/:id/receipt`. `events.ts` PURE
-  · `cost.ts` MICRODOLLARS · `receipt-store.ts` the only db file. `call_events` + roll-up cols on
-  `call_results`; **`room` is the join key** — providerCallId gets replaced mid-call.
-- **ADDIE'S CONTRACT: EventKind is a CLOSED 16** — finer detail goes in `detail`, never a 17th kind.
-  `lane` = the route that ACTUALLY ran. **Unmeasured = NULL, never 0.** Charlie seconds split talking /
-  listening / DEAD AIR; dead air DERIVED so parts can't disagree with the bill.
-- **NO CONVERSATION AUDIO on any path, ever — transcript only. Menu recordings are separate and fine.**
-- **DRIVEN (Fun 191/192):** whole timeline read off DISK with the verdict line; 3 defects caught+fixed.
-- **NOT verified live: the Addie rename** (`91450a52`). FIRST THING: one Fun call → confirm
-  `live:false`, a `verdict` line, lane `direct`. Rows 191/192 predate it → null cols.
-- **FOUND, not built:** admin `/api/call-now` still rides the OLD direct path — no room, no receipt
-  (GTM `cheap-lane-wiring`). Every Delta call re-synthesizes its 10 clips (~6.9¢) — cache them → ~$0.
-
-## 07-26 THE MAP IS VERSIONED KNOWLEDGE (built, tests green, NOT driven on a real call yet)
-**Full detail: `04-map-graph.md`.** `src/calls/mapgraph.ts` + `map-capture.ts` + `sweep.ts`.
-- Every mapping call writes a VERSION with its evidence; confidence is COMPUTED (calls × stores × days
-  × agreement × age), never typed. A changed route waits for approval, the same route again only raises
-  confidence, replaced versions retire. Backfill carries the 87 locked recipes in as v1 ("observed
-  once"); the 16 hammer routes start ≤30 "needs review" and queue up, as do 46 unproven directs.
-- **Steps now fire on the RECORDING they follow** (`afterPrompt`), learned free on the mapping call;
-  learned seconds stay as floor + backstop, so listening can only delay a step, never lose it.
-- **Drift on every real check, $0:** recordings played, when each step fired, clock-fallback used, human
-  reached. Drift drops confidence and files a review item with the call attached.
-- API for Addie (data only): `/api/admin/map/graph` · `/map/chain/:id` · `/map/unknowns` ·
-  `/map/version/:id/approve|reject` · `/map/sweep{,/start,/stop,/queue}`.
-- **BUG FIXED:** `lockRecipeToChain` wrote a bare digit into `dtmfShortcut`; the bridge only understands
-  "2@8,2@16" and plays NOTHING without a time — every chain locked by the mapper/batch pressed nothing
-  live (HomeGoods, Big 5, B&N, GameStop, Kohl's…). Both writers use `recipeToDtmf`. Tests 43 + 35 + 13.
-
+- Ringback by its published tone frequencies (Goertzel 350/440/480/620, median >= .45) so the agent
+  never opens on a ringing line; 6 unanswered rings = hang up.
+- **MONEY (07-24):** Charlie **$0.00183/s**, per SECOND, meters SILENCE — only CLOSING the socket saves.
+  Twilio WHOLE MINUTES ($0.0140/min). Baseline 5.2c. Rates `src/calls/cost.ts`.
+- Receipt (`docs/specs/call-receipt/`): EventKind a CLOSED 16 · `room` is the join key · unmeasured =
+  NULL never 0 · NO conversation audio ever, our own clips the one cached exception.
 ## OPEN (priority order)
-0. **MORNING 07-27: `POST /api/admin/map/sweep/start {maxCalls}`** — east→west, capped at 250 calls
-   (~8.6c each). Prove the 46 directs → unmapped → re-verify. Reach a human, hang up, keep the perfect
-   recipe. NOT verified: any live call on the new map; the queue against real store rows.
-1. **MONEY, MEASURED (07-24):** Charlie **$0.00183/s** (20s = 3.7c), billed per SECOND, meters SILENCE —
-   only CLOSING the socket saves. Twilio WHOLE MINUTES ($0.0140/min); its speech recognition $0.02/15s =
-   NEVER on a live check. Baseline 5.2c; 116 calls → 32 answers. Rates in `src/calls/cost.ts`.
-2. **NEXT BUILD: keep Charlie off the line when no human is talking.** Joins ~17s early on CVS; sits
-   through a 25s clerk walk-away; emits EMPTY turns (~12s dead air/call, likely the 26% "couldn't tell").
-   Muting saves $0 — only CLOSING the socket does, and reopening orphans the transcript. The receipt
-   MEASURES the prize (`charlieSilentSeconds`). Then the owner drive-test + a zone sweep on the new nav.
+0. **GATE ZERO — 6 calls, 3 each way, before ANY hold work** (§3). Needs the owner to play clerk, or a
+   test store that is NOT his phone. Blocks §6 entirely.
+1. **§7 brain on our own account** — Admin switch, fallback ladder, stamp which brain ran. ~5x on that
+   line, independent of everything else. Not started.
+2. **§8 the dropped call** — new status + Spanish same commit, never charge, must not trip the one-hour
+   block (`findRecentCheck` matches only `completed` — VERIFY on a real drop).
+3. `POST /api/admin/map/sweep/start {maxCalls}` east→west, 250 cap. Prove the 46 directs.
 ## Traps
 - Never run the full suite for a small change; never deploy while the owner is mid-test-call.
-- #1 mapping trap: auto-nav 0-hammers when it can't parse → FALSE "no human"; a no-answer ≠ unmappable.
-- Delta (`tapedeck.ts`) is NOT vapour: it dials, plays clips, classifies, hands the SAME live call to
-  Charlie (`deltaBarge`). Shelved only for want of a stop-talking ear — listen-nav's detector is one.
+- `/api/call-now` still rides the OLD direct path — no room, no receipt (spec rule 4 says it must).
+- Auto-nav 0-hammers when it can't parse → FALSE "no human"; a no-answer ≠ unmappable. Old whole-call
+  Delta (`tapedeck.ts`) STAYS in the tree and still works — no store points at it.

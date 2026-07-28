@@ -7,7 +7,8 @@
 // trust are provable on their own.
 import { scoreConfidence, pathSignature, isHammerPath, promptFingerprint, guessLanguage, _test as mg, type Evidence } from "../src/calls/mapgraph";
 import { recipeFromCall, transcriptFromCall, promptCount } from "../src/calls/map-capture";
-import { shouldFireOnPrompt, navPlanKey, stageNavPromptPlan } from "../src/calls/listen-nav";
+import { shouldFireOnPrompt } from "../src/calls/listen-nav";
+import { navPlanFromVersion } from "../src/calls/service";
 import { _test as sw } from "../src/calls/sweep";
 
 let pass = 0, fail = 0;
@@ -117,13 +118,24 @@ console.log("▶ a step waits for ITS recording, and lateness never loses it");
   ok(!shouldFireOnPrompt({ action: "say", value: "front", atSec: 20, afterPrompt: 2 }, 2, 17, 16).fire, "two steps can't fire on one pause");
 }
 
-console.log("▶ the recording plan reaches the live call by exact route");
+console.log("▶ one version in, one plan out — pieces from two versions can never be mixed");
 {
-  const steps = [{ action: "say", value: "no", atSec: 16, afterPrompt: 2 }, { action: "say", value: "general", atSec: 41, afterPrompt: 3 }];
-  stageNavPromptPlan(steps);
-  const asBridgeParsesIt = [{ action: "say", value: "no", atSec: 16 }, { action: "say", value: "general", atSec: 41 }];
-  ok(navPlanKey(steps) === navPlanKey(asBridgeParsesIt), "the key ignores the plan and matches on the route itself");
-  ok(navPlanKey(asBridgeParsesIt) !== navPlanKey([{ action: "say", value: "no", atSec: 16 }]), "a different route is a different key");
+  // What we press, what we say and which recording each waits for all come out of the SAME saved
+  // version, in one call. This replaced a side channel that matched a plan to a call by the SHAPE
+  // of its step list, so a second version of the same route could lend its anchors to the first.
+  const v2 = [{ action: "say", value: "no", atSec: 16, afterPrompt: 2 }, { action: "say", value: "general", atSec: 41, afterPrompt: 3 }];
+  const p = navPlanFromVersion(v2);
+  ok(p.say === "no@16,general@41", "the spoken plan reads off the version");
+  ok(p.steps.map((s) => s.afterPrompt).join(",") === "2,3", "and its anchors come with it, on the same steps");
+  // The identical-looking route from a DIFFERENT version carries that version's anchors and only
+  // its own. Same shape, different answer — which is exactly what the old key could not tell apart.
+  const other = navPlanFromVersion([{ action: "say", value: "no", atSec: 16, afterPrompt: 1 }, { action: "say", value: "general", atSec: 41 }]);
+  ok(other.steps.map((s) => s.afterPrompt ?? "-").join(",") === "1,-", "a look-alike route keeps ITS anchors, not the other version's");
+  ok(navPlanFromVersion(null).steps.length === 0 && navPlanFromVersion([]).dtmf === "", "no version = nothing to run, not a half plan");
+
+  const keys = navPlanFromVersion([{ action: "press", value: "2", atSec: 8 }, { action: "press", value: "", atSec: 16 }]);
+  ok(keys.dtmf === "2@8", "a press with no usable digit is dropped, never sent as a bare time");
+  ok(navPlanFromVersion([{ action: "press", value: "3", atSec: 20 }, { action: "press", value: "1", atSec: 4 }]).dtmf === "1@4,3@20", "steps run in the order the store hears them");
 }
 
 console.log("▶ paths and plain-English change notes");
