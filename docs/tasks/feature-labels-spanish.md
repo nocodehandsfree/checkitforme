@@ -39,9 +39,33 @@ hobby_hunts       Cacerías de tiendas de cartas
 
 **Do NOT** hardcode these in `public/checkit.html`. Admin owns these names; the site reads them.
 
-**Status:** open
+**Status:** done (2026-07-27, staging @566a206)
 
 **Verify-live output (paste on close — a task without it is NOT closed):**
 ```
-(none yet)
+HEAD = 566a206d5c02 · origin/main = 55badd886004
+staging  https://staging.checkitforme.com/ → LIVE (serving HEAD)
+prod     https://checkitforme.com/ → NOT-LIVE (serving 55badd886004) — expected until the next promote
+admin    https://admin.checkitforme.com/ → NOT-LIVE (serving 55badd886004) — expected until the next promote
+
+staging /pub/plans, read live:
+  zone_sweeps        Zone sweeps      Barridos de zona
+  restock_alerts     Restock alerts   Alertas de reabastecimiento
+  scheduled_checks   Auto checks      Verificaciones programadas
+  any_town           Any town         Cualquier ciudad
+  store_holds        Store holds      Apartados en tienda
+  your_voice         Your voice       Tu voz
+  thrift_hunts       Thrift hunts     Cacerías thrift
+  hobby_hunts        Hobby hunts      Cacerías de tiendas de cartas
 ```
+
+**Driven, in Spanish.** The six tiles and the pop-up title both read Spanish:
+```
+grid on screen: Barridos de zona · Alertas de reabastecimiento · Verificaciones programadas ·
+                Cualquier ciudad · Cacerías thrift · Cacerías de tiendas de cartas
+pop-up title  : Barridos de zona
+```
+The browser in the build environment cannot reach the internet, so the page was driven locally
+against the exact bytes and the exact `/pub/plans` payload staging serves, with the site set to
+Spanish. Screenshots taken of the grid and of an open pop-up. The consumer page was re-snapshotted
+into `docs/design/truth/` as the lock requires.

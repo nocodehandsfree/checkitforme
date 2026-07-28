@@ -8,18 +8,33 @@ import { getSetting, setSetting } from "./db/settings";
 // ---- Premium feature catalog (the "EVERY PLAN GETS" grid) ----
 // Subscription-only entitlements, toggled PER TIER in Admin (data, not hardcoded). PAYG gets none.
 // Labels are the owner's simple names (2026-07-03 image); keys are stable ids the app gates on.
-export const FEATURES: { key: string; label: string }[] = [
+// Every service carries BOTH names. A Spanish customer used to meet English service names in the
+// middle of Spanish copy on the last screen before paying: the pop-up bodies were translated, the
+// titles were not. `labelEs` is the Spanish name and the site reads it when the site is in Spanish.
+// These exact words already ship on the site under buy6b.f1..f8, reused rather than reinvented.
+export const FEATURES: { key: string; label: string; labelEs: string }[] = [
   // exact_products left the catalog 2026-07-15 (owner): exact-product asks are for EVERY account now,
   // not a premium service. premiumAsks stays true everywhere for the existing call-gating call-sites.
-  { key: "zone_sweeps",    label: "Zone sweeps" },       // every store near you, one tap
-  { key: "restock_alerts", label: "Restock alerts" },
-  { key: "scheduled_checks", label: "Auto checks" },     // recurring call on your days/times → email report
-  { key: "any_town",       label: "Any town" },          // search past the 20-mile radius
-  { key: "store_holds",    label: "Store holds" },       // ask the store to hold a product (voice flow in testing)
-  { key: "your_voice",     label: "Your voice" },        // personalize the agent voice (in testing)
-  { key: "thrift_hunts",   label: "Thrift hunts" },      // thrift stores & secondhand shops
-  { key: "hobby_hunts",    label: "Hobby hunts" },       // the set wall + card shops (owner 07-15)
+  { key: "zone_sweeps",    label: "Zone sweeps",    labelEs: "Barridos de zona" },       // every store near you, one tap
+  { key: "restock_alerts", label: "Restock alerts", labelEs: "Alertas de reabastecimiento" },
+  { key: "scheduled_checks", label: "Auto checks",  labelEs: "Verificaciones programadas" }, // recurring call → email report
+  { key: "any_town",       label: "Any town",       labelEs: "Cualquier ciudad" },       // search past the 20-mile radius
+  { key: "store_holds",    label: "Store holds",    labelEs: "Apartados en tienda" },    // ask the store to hold (in testing)
+  { key: "your_voice",     label: "Your voice",     labelEs: "Tu voz" },                 // personalize the agent voice (in testing)
+  { key: "thrift_hunts",   label: "Thrift hunts",   labelEs: "Cacerías thrift" },        // thrift stores & secondhand shops
+  { key: "hobby_hunts",    label: "Hobby hunts",    labelEs: "Cacerías de tiendas de cartas" }, // set wall + card shops
 ];
+/** The owner's own wording, saved from Admin, laid over the catalog above. A blank box falls back to
+ *  the catalog, and a blank Spanish name falls back to the English one, so nothing can ever render
+ *  empty on the money page. Admin owns these names; the site only ever reads them. */
+export function featureCatalog(cfg?: PlansConfig): { key: string; label: string; labelEs: string }[] {
+  const over = cfg?.featureLabels ?? {};
+  return FEATURES.map((f) => {
+    const o = over[f.key] ?? {};
+    const label = (o.label ?? "").trim() || f.label;
+    return { key: f.key, label, labelEs: (o.labelEs ?? "").trim() || f.labelEs || label };
+  });
+}
 export const FEATURE_KEYS = FEATURES.map((f) => f.key);
 // Launch state (owner 2026-07-15): store_holds + your_voice aren't built yet, so they default OFF —
 // checking them on in Admin is all it takes for their box to reappear on the site, no code change.
@@ -47,6 +62,9 @@ export interface Bundle { checks: number; cents: number; priceId: string | null;
 export interface PlansConfig {
   tiers: Tier[];
   payg: { stripeProductId: string | null; bundles: Bundle[] };
+  /** Owner overrides for the service NAMES, per key: `{ label, labelEs }`. Absent or blank falls
+   *  back to the catalog, so this can never blank out a tile on the plans page. */
+  featureLabels?: Record<string, { label?: string; labelEs?: string }>;
 }
 
 /** Annual default: 12 months at −17% (matches the site comps). Owner can override per tier. */
@@ -111,7 +129,16 @@ export function normalizePlans(raw: unknown): PlansConfig {
     .map((b) => ({ checks: Math.max(1, Math.round(Number(b.checks) || 0)), cents: clampCents(b.cents), priceId: b.priceId ?? null, pubCents: b.pubCents ?? null }))
     .filter((b) => b.checks > 0)
     .sort((a, b) => a.checks - b.checks);
-  return { tiers, payg: { stripeProductId: r.payg?.stripeProductId ?? null, bundles } };
+  // Service NAME overrides, cleaned the same way as everything else: catalog keys only, trimmed,
+  // length-capped, and a blank dropped entirely so it falls back rather than saving an empty name.
+  const rawL = (r.featureLabels && typeof r.featureLabels === "object" ? r.featureLabels : {}) as Record<string, { label?: unknown; labelEs?: unknown }>;
+  const featureLabels: PlansConfig["featureLabels"] = {};
+  for (const k of FEATURE_KEYS) {
+    const en = String(rawL[k]?.label ?? "").trim().slice(0, 40);
+    const es = String(rawL[k]?.labelEs ?? "").trim().slice(0, 40);
+    if (en || es) featureLabels[k] = { ...(en ? { label: en } : {}), ...(es ? { labelEs: es } : {}) };
+  }
+  return { tiers, payg: { stripeProductId: r.payg?.stripeProductId ?? null, bundles }, featureLabels };
 }
 
 export async function getPlans(): Promise<PlansConfig> {
@@ -133,7 +160,7 @@ export function bundleSync(b: Bundle): "in_sync" | "pending" {
 }
 export function plansSyncView(cfg: PlansConfig) {
   return {
-    features: FEATURES, // catalog so Admin renders the toggle-matrix columns
+    features: featureCatalog(cfg), // catalog so Admin renders the toggle-matrix columns, both names
     tiers: cfg.tiers.map((t) => ({ ...t, sync: tierSync(t) })),
     payg: { ...cfg.payg, bundles: cfg.payg.bundles.map((b) => ({ ...b, sync: bundleSync(b) })) },
   };
@@ -144,7 +171,7 @@ export function plansSyncView(cfg: PlansConfig) {
  *  "EVERY PLAN GETS" grid). PAYG has NO premium features — Website hides them for pay-as-you-go. */
 export function publicPlans(cfg: PlansConfig) {
   return {
-    features: FEATURES,
+    features: featureCatalog(cfg), // {key, label, labelEs} — the site picks by its own language
     everyPlanGets: FEATURE_KEYS.filter((k) => cfg.tiers.length > 0 && cfg.tiers.every((t) => t.features[k])),
     tiers: cfg.tiers.map((t) => ({ key: t.key, name: t.name, monthlyCents: t.monthlyCents, annualCents: t.annualCents, checksPerMonth: t.checksPerMonth, premiumAsks: t.premiumAsks, features: t.features })),
     payg: cfg.payg.bundles.map((b) => ({ checks: b.checks, cents: b.cents })),

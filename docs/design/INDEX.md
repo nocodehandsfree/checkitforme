@@ -4,377 +4,377 @@ Built by `node scripts/gen-index.mjs`; a hook regenerates it when a source file 
 **The law: NEVER open these files whole.** Find your section here, then Read ONLY the line
 range (`offset` + `limit`). Ranges run to the next `id=` — a navigation aid, not exact DOM bounds.
 
-## public/checkit.html (9216 lines, 365 sections)
+## public/checkit.html (9221 lines, 365 sections)
 
 | id | element | lines | description |
 |---|---|---|---|
-| v2skin | style | 1416–2279 |  |
-| vsw | div.vsw | 2280–2280 |  |
-| vsw_trig | button.vsw-trig | 2281–2281 |  |
-| vsw_menu | div.vsw-menu | 2282–2284 |  |
-| hcalwrap | div.hcal | 2285–2285 |  |
-| calbtn | button.railcal | 2285–2285 |  |
-| railcalpop | div | 2285–2285 |  |
-| authpill | div.pill.account | 2286–2288 |  |
-| creditN | span | 2286–2288 |  |
-| finds | div.ticker | 2289–2292 |  |
-| builder | div | 2293–2294 | __BRAND_HEADLINE__ |
-| heroart | div.heroart | 2295–2298 | __BRAND_HEADLINE__ |
-| truststrip | div.truststrip | 2299–2299 |  |
-| tsi1 | span.tsi | 2300–2301 |  |
-| tsi2 | span.tsi | 2302–2303 |  |
-| tsi3 | span.tsi | 2304–2306 |  |
-| findcard | div.card | 2307–2307 |  |
-| modetabs | div.modetabs | 2308–2308 |  |
-| mti_call | span.mti | 2309–2309 |  |
-| mti_kiosk | span.mti | 2310–2311 |  |
-| findbody | div | 2312–2313 |  |
-| search | input | 2314–2314 |  |
-| findbtn | button.locbtn | 2315–2316 |  |
-| rchips | div | 2317–2317 |  |
-| rsl_val | span | 2318–2318 |  |
-| rng | input.rng | 2319–2319 |  |
-| rng_ticks | div.rng-ticks | 2320–2323 |  |
-| kioskhint | div | 2324–2326 |  |
-| khspark | span | 2324–2326 |  |
-| listhdr | div.listhdr | 2327–2327 |  |
-| lh_label | span.lh-label | 2328–2328 |  |
-| store_count | div.opencount | 2329–2329 |  |
-| maptoggle | button.maptgl | 2330–2331 |  |
-| storelist | div.storelist | 2332–2332 |  |
-| mapview | div | 2333–2333 |  |
-| maplegend | div | 2334–2337 |  |
-| catcard | div.card | 2338–2339 |  |
-| chips | div.chips | 2340–2340 |  |
-| prodwrap | div | 2341–2342 |  |
-| prodsel | select | 2343–2346 |  |
-| checkBtn | button.callkey | 2347–2347 |  |
-| chargefoot | div.foot | 2348–2350 |  |
-| sellmeta | div | 2351–2354 |  |
-| schedCard | div.card | 2355–2356 |  |
-| schedList | div | 2357–2363 |  |
-| demo | details.demo | 2364–2365 |  |
-| demobody | div.demobody | 2366–2369 |  |
-| scoresRow | div | 2370–2370 |  |
-| scoresIco | span | 2371–2371 |  |
-| scoresRowBody | div.scoresrow | 2372–2376 |  |
-| live | div | 2377–2377 |  |
-| muteBanner | div | 2378–2378 |  |
-| live_rhead | div.rhead.live | 2379–2380 |  |
-| live_chip | span.railchip | 2381–2382 |  |
-| live_store2 | div.rhead-store | 2383–2383 |  |
-| live_addr | div.rhead-addr | 2384–2387 |  |
-| hangup_btn | button | 2388–2388 |  |
-| live_msgbox | div | 2389–2392 |  |
-| result | div | 2393–2395 |  |
-| holdCard | div | 2396–2397 | We're slammed. |
-| hc_head | h1.hc-head | 2398–2398 | We're slammed. |
-| hc_sub | p.hc-sub | 2399–2399 |  |
-| hc_lbl | span.hc-lbl | 2400–2403 |  |
-| hc_val | span.hc-val | 2400–2403 |  |
-| history | div | 2404–2406 |  |
-| handoff | div | 2407–2409 |  |
-| hobby | div | 2410–2412 |  |
-| success | div | 2413–2414 |  |
-| scTrophy | span | 2415–2416 |  |
-| succToggle | button.postbtn | 2417–2418 |  |
-| succCam | span | 2417–2418 |  |
-| composer | div.card | 2419–2421 |  |
-| succ_store | input | 2422–2422 |  |
-| succloc | button.locbtn | 2423–2424 | Find stores near me |
-| succ_storelist | div | 2425–2426 |  |
-| succ_prod | input | 2427–2428 |  |
-| succ_file | input | 2429–2429 |  |
-| succ_filelabel | label.filepick | 2430–2430 |  |
-| succ_fileico | span.fpi | 2430–2430 |  |
-| succ_filetext | span | 2430–2430 |  |
-| succ_prev | div | 2431–2431 |  |
-| succ_img | img | 2431–2431 |  |
-| succ_btn | button.cta.sm | 2432–2432 |  |
-| succ_err | div | 2433–2434 |  |
-| succ_wall | div | 2435–2443 |  |
-| histOverlay | div.overlay | 2444–2444 |  |
-| histmodal | div.modal | 2444–2444 |  |
-| zones | div.overlay | 2445–2448 |  |
-| zmodal | div.modal | 2445–2448 |  |
-| csheetBd | div.csheet-bd | 2449–2449 |  |
-| csheet | div.csheet | 2450–2450 |  |
-| csheetHandle | div.csheet-handle | 2451–2454 |  |
-| cs_ic | div.csheet-ic | 2455–2455 |  |
-| cs_nm | div.csheet-nm | 2456–2457 |  |
-| cs_addr | div.csheet-addr | 2456–2457 |  |
-| cs_prod | div.csheet-prod | 2458–2458 |  |
-| cs_call | button.csheet-call | 2459–2459 |  |
-| cs_ghost | span.cs-ghost | 2459–2459 |  |
-| cs_reach | div.csheet-reach | 2460–2473 |  |
-| footSocials | div.foot-social | 2474–2474 |  |
-| lsw | div.vsw.lsw | 2475–2475 |  |
-| lsw_trig | button.vsw-trig | 2476–2476 |  |
-| lsw_menu | div.vsw-menu | 2477–2480 |  |
-| footMark | span.foot-fav | 2481–2481 |  |
-| footYear | span | 2482–2488 |  |
-| paidOverlay | div.overlay | 2489–2494 |  |
-| paid_sub | div | 2495–2496 |  |
-| paid_stats | div.p6d-stats | 2497–2500 |  |
-| paid_feats | div | 2501–2503 |  |
-| p6d_cta | button.cta | 2504–2510 |  |
-| upsellOverlay | div.overlay | 2511–2514 |  |
-| up6a_rows | div | 2515–2515 |  |
-| up6a_cta | button.cta | 2516–2522 |  |
-| buyOverlay | div.overlay | 2523–2526 |  |
-| buy_scroll | div.buy-scroll | 2527–2527 | Get more checks |
-| buy6blogo | div.buy6b-logo | 2528–2528 | Get more checks |
-| buy_title | h3 | 2529–2529 | Get more checks |
-| buy_lead | div.meta | 2530–2530 |  |
-| buy_grid | div | 2531–2531 |  |
-| buymode | div.ho-toggle | 2532–2535 |  |
-| buy_plans | div | 2536–2538 |  |
-| buyDock | div.buydock | 2539–2539 |  |
-| buyDockPlan | div.buydock-plan | 2540–2540 |  |
-| buy_cta | button.cta | 2541–2541 |  |
-| buy_note | div.meta | 2542–2550 |  |
-| coOverlay | div.overlay | 2551–2551 |  |
-| coModal | div.modal | 2552–2557 |  |
-| co_plan | div.co-plan | 2558–2558 |  |
-| co_sub | div.co-sub | 2559–2561 |  |
-| co_price | div.co-price | 2562–2566 |  |
-| co_pay_el | div | 2567–2567 |  |
-| co_loading | div.co-loading | 2567–2567 |  |
-| co_err | div.co-err | 2568–2568 |  |
-| co_cta | button.cta | 2569–2569 |  |
-| co_cta_label | span | 2570–2572 |  |
-| co_trust | div.co-trust | 2573–2577 |  |
-| leadOverlay | div.overlay | 2578–2580 |  |
-| leadmark | div | 2581–2583 | Your first check is free |
-| lead_email | input | 2584–2584 |  |
-| lead_btn | button.cta | 2585–2585 |  |
-| lead_err | div | 2586–2589 |  |
-| shareOverlay | div.overlay | 2590–2592 | Share the find |
-| shareIco | span.mico | 2593–2603 | Share the find |
-| watchOverlay | div.overlay | 2604–2606 |  |
-| watchIco | span.mico | 2607–2608 | Tell me when it's back |
-| watch_sub | div.meta | 2609–2609 |  |
-| watch_contact | input | 2610–2610 |  |
-| watch_err | div | 2611–2611 |  |
-| watch_btn | button.cta | 2612–2615 |  |
-| scheduleOverlay | div.overlay | 2616–2618 |  |
-| schIco | span.mico | 2619–2620 | Auto-check |
-| sch_store | b | 2621–2622 |  |
-| sch_cat | b | 2621–2622 |  |
-| sch_days | div | 2623–2624 |  |
-| sch_time | input | 2625–2626 |  |
-| sch_contact | input | 2627–2627 |  |
-| sch_err | div | 2628–2628 |  |
-| sch_btn | button.cta | 2629–2632 |  |
-| storeReqOverlay | div.overlay | 2633–2635 |  |
-| sr_body | div | 2636–2636 | Add your store |
-| srMark | div | 2637–2640 | Add your store |
-| sr_name | input | 2641–2642 |  |
-| sr_city | input | 2643–2644 |  |
-| sr_note | input | 2645–2646 |  |
-| sr_contact | input | 2647–2647 |  |
-| sr_err | div | 2648–2648 |  |
-| sr_btn | button.cta | 2649–2650 |  |
-| sr_done | div | 2651–2651 | Store submitted 🙌 |
-| sr_donemark | div | 2652–2653 | Store submitted 🙌 |
-| sr_donebody | span | 2654–2659 |  |
-| waitlistOverlay | div.overlay | 2660–2662 |  |
-| wlMark | div | 2663–2665 | We'll email you when we launch here |
-| wl_contact | input | 2666–2666 |  |
-| wl_err | div | 2667–2667 |  |
-| wl_btn | button.cta | 2668–2672 |  |
-| authOverlay | div.overlay | 2673–2675 |  |
-| auth_logo | div | 2676–2677 |  |
-| auth_step_email | div | 2678–2678 |  |
-| auth_lead | div.meta | 2679–2679 |  |
-| auth_phonerow | div | 2680–2681 |  |
-| auth_phone | input | 2682–2683 |  |
-| auth_err | div | 2684–2684 |  |
-| auth_send | button.cta.sm | 2685–2687 |  |
-| auth_step_code | div | 2688–2689 | Check your phone |
-| auth_codesent | div.meta | 2690–2690 |  |
-| auth_codeto | b | 2690–2690 |  |
-| auth_devhint | div | 2691–2691 |  |
-| auth_code | input | 2692–2692 |  |
-| auth_codeerr | div | 2693–2693 |  |
-| auth_verify | button.cta.sm | 2694–2700 |  |
-| acctOverlay | div.overlay | 2701–2704 |  |
-| acct_avatar | div | 2705–2706 |  |
-| acct_name | div | 2707–2707 |  |
-| acct_sub | div | 2708–2710 |  |
-| acct_cred | div | 2711–2712 |  |
-| acct_checks_row | button.acctrow | 2713–2713 |  |
-| acctHist | span | 2713–2713 |  |
-| acct_plan | button.acctrow | 2714–2714 |  |
-| acctStar | span | 2714–2714 |  |
-| acct_planlbl | span | 2714–2714 |  |
-| acct_cid | button.acctrow | 2715–2716 |  |
-| acctCid | span | 2715–2716 |  |
-| acct_cidlbl | span | 2715–2716 |  |
-| earndemo | details.demo.acctearn | 2717–2717 |  |
-| earnIcon | span | 2718–2720 |  |
-| earnGrid | div.earnmod-grid | 2721–2722 |  |
-| earnStoreIcon | div.ei | 2723–2727 |  |
-| refBlock | div | 2728–2728 |  |
-| refIcon | span | 2729–2731 |  |
-| refer_link | span | 2732–2732 |  |
-| refer_copylbl | span.tickcopy | 2733–2734 |  |
-| refer_count | div.meta | 2735–2736 |  |
-| shT1 | span | 2737–2737 |  |
-| shT2 | span | 2738–2738 |  |
-| shT3 | span | 2739–2750 |  |
-| cidOverlay | div.overlay | 2751–2753 |  |
-| cid_logo | div | 2754–2754 | Call from your own number |
-| cid_step_intro | div | 2755–2757 | Call from your own number |
-| cid_start | button.cta.sm | 2758–2758 |  |
-| cid_err | div | 2759–2760 | 📞 We're calling you now |
-| cid_step_verify | div | 2761–2763 | 📞 We're calling you now |
-| cid_code | div | 2764–2764 |  |
-| cid_status | span | 2765–2765 |  |
-| cid_verr | div | 2766–2767 |  |
-| cid_step_done | div | 2768–2777 | Your number is verified |
-| kcallOverlay | div.overlay | 2778–2780 |  |
-| kcall_logo | div | 2781–2781 | this store |
-| kcall_store | h3 | 2782–2782 | this store |
-| kcall_cat | b | 2783–2789 |  |
-| againOverlay | div.overlay | 2790–2793 |  |
-| again_logo | div | 2794–2794 | this store |
-| again_store | h3 | 2795–2796 | this store |
-| again_body | p | 2797–2797 |  |
-| again_yes | button.csheet-call | 2798–2798 |  |
-| again_no | a | 2799–2802 |  |
-| scoreOverlay | div.overlay | 2803–2806 |  |
-| scoreIco | span.mico | 2807–2809 | You scored! |
-| score_file | input | 2810–2810 |  |
-| score_prev | div | 2811–2812 |  |
-| score_img | img | 2811–2812 |  |
-| score_caption | input | 2813–2814 |  |
-| score_handle | input | 2815–2815 |  |
-| score_err | div | 2816–2816 |  |
-| score_btn | button.cta | 2817–2820 |  |
-| receiptOverlay | div.overlay | 2821–2823 |  |
-| rcptMark | div | 2824–2828 | Kiosk receipt = free check |
-| rcpt_email | span | 2829–2829 |  |
-| rcpt_state | div | 2830–2830 |  |
-| rcpt_msg | span | 2831–2832 |  |
-| rcpt_done | div | 2833–2836 |  |
-| kioskOverlay | div.overlay | 2837–2839 |  |
-| kMark | div | 2840–2842 | Report a kiosk refresh |
-| kIco | span.mico | 2840–2842 | Report a kiosk refresh |
-| kiosk_reward | b | 2843–2844 |  |
-| k_label | input | 2845–2846 |  |
-| k_minutes | input | 2847–2848 |  |
-| k_interval | select | 2849–2856 |  |
-| k_note | input | 2857–2858 |  |
-| k_contact | input | 2859–2859 |  |
-| k_err | div | 2860–2860 |  |
-| k_btn | button.cta | 2861–2865 |  |
-| pageOverlay | div.overlay | 2866–2868 |  |
-| pg_title | h3 | 2869–2869 |  |
-| pg_body | div | 2870–2873 |  |
-| supTab | button.suplaunch | 2874–2877 |  |
-| supWrap | div.supwrap | 2878–2878 |  |
-| sup_hd | div.sup-hd | 2879–2879 |  |
-| sup_back | button.hbtn | 2880–2881 |  |
-| sup_htitle | b | 2882–2886 |  |
-| sup_hsub | span | 2882–2886 |  |
-| supv_home | div.sup-view.on | 2887–2891 | How can we help? |
-| sup_banner | div.sup-banner | 2892–2896 |  |
-| sup_recent_lbl | div.sup-recent | 2897–2897 |  |
-| sup_home_recent | div | 2898–2901 |  |
-| supv_msgs | div.sup-view | 2902–2902 |  |
-| sup_convos | div | 2903–2908 |  |
-| supv_help | div.sup-view | 2909–2910 |  |
-| sup_q | input | 2911–2911 |  |
-| sup_faq_list | div.sup-faq | 2912–2914 |  |
-| supv_topic | div.sup-view | 2915–2917 |  |
-| sup_topics | div | 2918–2921 |  |
-| supv_chat | div.sup-view | 2922–2922 |  |
-| sup_msgs | div.supmsgs | 2923–2924 |  |
-| sup_help | div.suphelp | 2925–2926 |  |
-| sup_human | button | 2927–2929 |  |
-| sup_clip | button.supclip.hide | 2930–2930 |  |
-| sup_file | input | 2931–2931 |  |
-| sup_in | textarea | 2932–2932 |  |
-| sup_send | button.supsend | 2933–2938 |  |
-| supv_form | div.sup-view | 2939–2943 | Leave it with us |
-| supf_name | input | 2944–2945 |  |
-| supf_email | input | 2946–2947 |  |
-| supf_msg | input | 2948–2948 |  |
-| supf_shot | div.sup-shot | 2949–2949 |  |
-| supf_err | div | 2950–2950 |  |
-| supf_btn | button.cta | 2951–2955 |  |
-| supv_done | div.sup-view | 2956–2964 |  |
-| sup_tabs | div.sup-tabs | 2965–2965 |  |
-| supt_home | button | 2966–2966 |  |
-| supt_msgs | button | 2967–2967 |  |
-| supt_help | button | 2968–2971 |  |
-| toast | div.toast | 2972–3058 |  |
-| khspark | span | 3059–3146 |  |
-| sch_store | b | 3147–3157 |  |
-| sch_cat | b | 3147–3157 |  |
-| kiosk_reward | b | 3158–3215 |  |
-| ho_appname | b | 3216–4111 |  |
-| creditN | span | 4112–4410 |  |
-| acctv2panel | div | 4411–4435 |  |
-| scorePostHost | div | 4436–4457 | '+t('sc.pop.title','Post your score')+' |
-| inviteHost | div | 4458–5380 | '+t('ref.tagline','Give a check, get a check')+' |
-| smlive | div.smline | 5381–5388 |  |
-| smbuy | a.smbtn | 5389–5528 |  |
-| tbtn | button.tbtn | 5529–5582 |  |
-| tbtn_l | span | 5529–5582 |  |
-| convo_body | div | 5529–5582 |  |
-| convo_body | div | 5583–5609 |  |
-| convo_body | div | 5610–6400 |  |
-| tbtn | button.tbtn | 6401–6401 |  |
-| proofbody | div | 6402–6525 |  |
-| fbk | div.fbk | 6526–6535 |  |
-| rnav | div.rnav | 6536–6549 |  |
-| tbtn | button.tbtn | 6550–6836 |  |
-| tbtn_l | span | 6550–6836 |  |
-| todaycal | div | 6837–6953 |  |
-| acctScheds | div | 6954–7031 |  |
-| myStoresBlock | div | 7032–7205 |  |
-| hobEraSearch | input | 7206–7206 |  |
-| hobEraGrid | div | 7207–7207 |  |
-| hobEraNone | div | 7208–7468 |  |
-| em_in | input | 7469–7469 |  |
-| em_err | div | 7470–7470 |  |
-| em_btn | button.cta | 7471–7520 |  |
-| alertsList | div | 7521–7594 |  |
-| zrn_in | input | 7595–7652 |  |
-| z_loc | input | 7653–7658 |  |
-| zmap | div | 7659–7661 |  |
-| zBasket | div.zbasket${n?'.up':''} | 7662–7663 |  |
-| zChips | div.zchips | 7664–7667 |  |
-| z_name | input | 7668–7800 |  |
-| z_save | button.zbksave | 7668–7800 |  |
-| zca_go | button.zc-go | 7801–7801 |  |
-| zca_no | button | 7802–7923 |  |
-| z_ringarc | circle | 7924–7925 |  |
-| z_ringnum | div | 7926–7930 |  |
-| z_calling | span | 7931–7932 |  |
-| z_pills | div | 7933–8413 |  |
-| payg_n | span | 8414–8414 |  |
-| payg_p | span | 8414–8414 |  |
-| payg_rng | input.rng | 8415–8416 |  |
-| payg_per | div | 8417–8604 |  |
-| co_loading | div.co-loading | 8605–8806 |  |
-| ho_dropchip | span | 8807–8810 |  |
-| ho_steps | div | 8811–8812 |  |
-| ho_drop | div.ho-toggle | 8813–8816 |  |
-| ho_drophint | p.hint | 8817–8820 |  |
-| ho_bonus | span | 8821–8826 |  |
-| ho_app | div.ho-seg | 8827–8830 |  |
-| ho_appname | b | 8831–8831 |  |
-| ho_open | a.ho-btn.violet | 8832–8834 |  |
-| ho_msg | div.ho-msg | 8835–8845 |  |
-| ho_dv3 | li | 8846–8854 |  |
-| ho_stars | div.ho-stars | 8855–8857 |  |
-| ho_done | div | 8858–8860 | ${t('ho.done.title',"Bonus released. You're done.")} |
-| ho_donep | p | 8861–9216 |  |
+| v2skin | style | 1416–2280 |  |
+| vsw | div.vsw | 2281–2281 |  |
+| vsw_trig | button.vsw-trig | 2282–2282 |  |
+| vsw_menu | div.vsw-menu | 2283–2285 |  |
+| hcalwrap | div.hcal | 2286–2286 |  |
+| calbtn | button.railcal | 2286–2286 |  |
+| railcalpop | div | 2286–2286 |  |
+| authpill | div.pill.account | 2287–2289 |  |
+| creditN | span | 2287–2289 |  |
+| finds | div.ticker | 2290–2293 |  |
+| builder | div | 2294–2295 | __BRAND_HEADLINE__ |
+| heroart | div.heroart | 2296–2299 | __BRAND_HEADLINE__ |
+| truststrip | div.truststrip | 2300–2300 |  |
+| tsi1 | span.tsi | 2301–2302 |  |
+| tsi2 | span.tsi | 2303–2304 |  |
+| tsi3 | span.tsi | 2305–2307 |  |
+| findcard | div.card | 2308–2308 |  |
+| modetabs | div.modetabs | 2309–2309 |  |
+| mti_call | span.mti | 2310–2310 |  |
+| mti_kiosk | span.mti | 2311–2312 |  |
+| findbody | div | 2313–2314 |  |
+| search | input | 2315–2315 |  |
+| findbtn | button.locbtn | 2316–2317 |  |
+| rchips | div | 2318–2318 |  |
+| rsl_val | span | 2319–2319 |  |
+| rng | input.rng | 2320–2320 |  |
+| rng_ticks | div.rng-ticks | 2321–2324 |  |
+| kioskhint | div | 2325–2327 |  |
+| khspark | span | 2325–2327 |  |
+| listhdr | div.listhdr | 2328–2328 |  |
+| lh_label | span.lh-label | 2329–2329 |  |
+| store_count | div.opencount | 2330–2330 |  |
+| maptoggle | button.maptgl | 2331–2332 |  |
+| storelist | div.storelist | 2333–2333 |  |
+| mapview | div | 2334–2334 |  |
+| maplegend | div | 2335–2338 |  |
+| catcard | div.card | 2339–2340 |  |
+| chips | div.chips | 2341–2341 |  |
+| prodwrap | div | 2342–2343 |  |
+| prodsel | select | 2344–2347 |  |
+| checkBtn | button.callkey | 2348–2348 |  |
+| chargefoot | div.foot | 2349–2351 |  |
+| sellmeta | div | 2352–2355 |  |
+| schedCard | div.card | 2356–2357 |  |
+| schedList | div | 2358–2364 |  |
+| demo | details.demo | 2365–2366 |  |
+| demobody | div.demobody | 2367–2370 |  |
+| scoresRow | div | 2371–2371 |  |
+| scoresIco | span | 2372–2372 |  |
+| scoresRowBody | div.scoresrow | 2373–2377 |  |
+| live | div | 2378–2378 |  |
+| muteBanner | div | 2379–2379 |  |
+| live_rhead | div.rhead.live | 2380–2381 |  |
+| live_chip | span.railchip | 2382–2383 |  |
+| live_store2 | div.rhead-store | 2384–2384 |  |
+| live_addr | div.rhead-addr | 2385–2388 |  |
+| hangup_btn | button | 2389–2389 |  |
+| live_msgbox | div | 2390–2393 |  |
+| result | div | 2394–2396 |  |
+| holdCard | div | 2397–2398 | We're slammed. |
+| hc_head | h1.hc-head | 2399–2399 | We're slammed. |
+| hc_sub | p.hc-sub | 2400–2400 |  |
+| hc_lbl | span.hc-lbl | 2401–2404 |  |
+| hc_val | span.hc-val | 2401–2404 |  |
+| history | div | 2405–2407 |  |
+| handoff | div | 2408–2410 |  |
+| hobby | div | 2411–2413 |  |
+| success | div | 2414–2415 |  |
+| scTrophy | span | 2416–2417 |  |
+| succToggle | button.postbtn | 2418–2419 |  |
+| succCam | span | 2418–2419 |  |
+| composer | div.card | 2420–2422 |  |
+| succ_store | input | 2423–2423 |  |
+| succloc | button.locbtn | 2424–2425 | Find stores near me |
+| succ_storelist | div | 2426–2427 |  |
+| succ_prod | input | 2428–2429 |  |
+| succ_file | input | 2430–2430 |  |
+| succ_filelabel | label.filepick | 2431–2431 |  |
+| succ_fileico | span.fpi | 2431–2431 |  |
+| succ_filetext | span | 2431–2431 |  |
+| succ_prev | div | 2432–2432 |  |
+| succ_img | img | 2432–2432 |  |
+| succ_btn | button.cta.sm | 2433–2433 |  |
+| succ_err | div | 2434–2435 |  |
+| succ_wall | div | 2436–2444 |  |
+| histOverlay | div.overlay | 2445–2445 |  |
+| histmodal | div.modal | 2445–2445 |  |
+| zones | div.overlay | 2446–2449 |  |
+| zmodal | div.modal | 2446–2449 |  |
+| csheetBd | div.csheet-bd | 2450–2450 |  |
+| csheet | div.csheet | 2451–2451 |  |
+| csheetHandle | div.csheet-handle | 2452–2455 |  |
+| cs_ic | div.csheet-ic | 2456–2456 |  |
+| cs_nm | div.csheet-nm | 2457–2458 |  |
+| cs_addr | div.csheet-addr | 2457–2458 |  |
+| cs_prod | div.csheet-prod | 2459–2459 |  |
+| cs_call | button.csheet-call | 2460–2460 |  |
+| cs_ghost | span.cs-ghost | 2460–2460 |  |
+| cs_reach | div.csheet-reach | 2461–2474 |  |
+| footSocials | div.foot-social | 2475–2475 |  |
+| lsw | div.vsw.lsw | 2476–2476 |  |
+| lsw_trig | button.vsw-trig | 2477–2477 |  |
+| lsw_menu | div.vsw-menu | 2478–2481 |  |
+| footMark | span.foot-fav | 2482–2482 |  |
+| footYear | span | 2483–2489 |  |
+| paidOverlay | div.overlay | 2490–2495 |  |
+| paid_sub | div | 2496–2497 |  |
+| paid_stats | div.p6d-stats | 2498–2501 |  |
+| paid_feats | div | 2502–2504 |  |
+| p6d_cta | button.cta | 2505–2511 |  |
+| upsellOverlay | div.overlay | 2512–2515 |  |
+| up6a_rows | div | 2516–2516 |  |
+| up6a_cta | button.cta | 2517–2523 |  |
+| buyOverlay | div.overlay | 2524–2527 |  |
+| buy_scroll | div.buy-scroll | 2528–2528 | Get more checks |
+| buy6blogo | div.buy6b-logo | 2529–2529 | Get more checks |
+| buy_title | h3 | 2530–2530 | Get more checks |
+| buy_lead | div.meta | 2531–2531 |  |
+| buy_grid | div | 2532–2532 |  |
+| buymode | div.ho-toggle | 2533–2536 |  |
+| buy_plans | div | 2537–2539 |  |
+| buyDock | div.buydock | 2540–2540 |  |
+| buyDockPlan | div.buydock-plan | 2541–2541 |  |
+| buy_cta | button.cta | 2542–2542 |  |
+| buy_note | div.meta | 2543–2551 |  |
+| coOverlay | div.overlay | 2552–2552 |  |
+| coModal | div.modal | 2553–2558 |  |
+| co_plan | div.co-plan | 2559–2559 |  |
+| co_sub | div.co-sub | 2560–2562 |  |
+| co_price | div.co-price | 2563–2567 |  |
+| co_pay_el | div | 2568–2568 |  |
+| co_loading | div.co-loading | 2568–2568 |  |
+| co_err | div.co-err | 2569–2569 |  |
+| co_cta | button.cta | 2570–2570 |  |
+| co_cta_label | span | 2571–2573 |  |
+| co_trust | div.co-trust | 2574–2578 |  |
+| leadOverlay | div.overlay | 2579–2581 |  |
+| leadmark | div | 2582–2584 | Your first check is free |
+| lead_email | input | 2585–2585 |  |
+| lead_btn | button.cta | 2586–2586 |  |
+| lead_err | div | 2587–2590 |  |
+| shareOverlay | div.overlay | 2591–2593 | Share the find |
+| shareIco | span.mico | 2594–2604 | Share the find |
+| watchOverlay | div.overlay | 2605–2607 |  |
+| watchIco | span.mico | 2608–2609 | Tell me when it's back |
+| watch_sub | div.meta | 2610–2610 |  |
+| watch_contact | input | 2611–2611 |  |
+| watch_err | div | 2612–2612 |  |
+| watch_btn | button.cta | 2613–2616 |  |
+| scheduleOverlay | div.overlay | 2617–2619 |  |
+| schIco | span.mico | 2620–2621 | Auto-check |
+| sch_store | b | 2622–2623 |  |
+| sch_cat | b | 2622–2623 |  |
+| sch_days | div | 2624–2625 |  |
+| sch_time | input | 2626–2627 |  |
+| sch_contact | input | 2628–2628 |  |
+| sch_err | div | 2629–2629 |  |
+| sch_btn | button.cta | 2630–2633 |  |
+| storeReqOverlay | div.overlay | 2634–2636 |  |
+| sr_body | div | 2637–2637 | Add your store |
+| srMark | div | 2638–2641 | Add your store |
+| sr_name | input | 2642–2643 |  |
+| sr_city | input | 2644–2645 |  |
+| sr_note | input | 2646–2647 |  |
+| sr_contact | input | 2648–2648 |  |
+| sr_err | div | 2649–2649 |  |
+| sr_btn | button.cta | 2650–2651 |  |
+| sr_done | div | 2652–2652 | Store submitted 🙌 |
+| sr_donemark | div | 2653–2654 | Store submitted 🙌 |
+| sr_donebody | span | 2655–2660 |  |
+| waitlistOverlay | div.overlay | 2661–2663 |  |
+| wlMark | div | 2664–2666 | We'll email you when we launch here |
+| wl_contact | input | 2667–2667 |  |
+| wl_err | div | 2668–2668 |  |
+| wl_btn | button.cta | 2669–2673 |  |
+| authOverlay | div.overlay | 2674–2676 |  |
+| auth_logo | div | 2677–2678 |  |
+| auth_step_email | div | 2679–2679 |  |
+| auth_lead | div.meta | 2680–2680 |  |
+| auth_phonerow | div | 2681–2682 |  |
+| auth_phone | input | 2683–2684 |  |
+| auth_err | div | 2685–2685 |  |
+| auth_send | button.cta.sm | 2686–2688 |  |
+| auth_step_code | div | 2689–2690 | Check your phone |
+| auth_codesent | div.meta | 2691–2691 |  |
+| auth_codeto | b | 2691–2691 |  |
+| auth_devhint | div | 2692–2692 |  |
+| auth_code | input | 2693–2693 |  |
+| auth_codeerr | div | 2694–2694 |  |
+| auth_verify | button.cta.sm | 2695–2701 |  |
+| acctOverlay | div.overlay | 2702–2705 |  |
+| acct_avatar | div | 2706–2707 |  |
+| acct_name | div | 2708–2708 |  |
+| acct_sub | div | 2709–2711 |  |
+| acct_cred | div | 2712–2713 |  |
+| acct_checks_row | button.acctrow | 2714–2714 |  |
+| acctHist | span | 2714–2714 |  |
+| acct_plan | button.acctrow | 2715–2715 |  |
+| acctStar | span | 2715–2715 |  |
+| acct_planlbl | span | 2715–2715 |  |
+| acct_cid | button.acctrow | 2716–2717 |  |
+| acctCid | span | 2716–2717 |  |
+| acct_cidlbl | span | 2716–2717 |  |
+| earndemo | details.demo.acctearn | 2718–2718 |  |
+| earnIcon | span | 2719–2721 |  |
+| earnGrid | div.earnmod-grid | 2722–2723 |  |
+| earnStoreIcon | div.ei | 2724–2728 |  |
+| refBlock | div | 2729–2729 |  |
+| refIcon | span | 2730–2732 |  |
+| refer_link | span | 2733–2733 |  |
+| refer_copylbl | span.tickcopy | 2734–2735 |  |
+| refer_count | div.meta | 2736–2737 |  |
+| shT1 | span | 2738–2738 |  |
+| shT2 | span | 2739–2739 |  |
+| shT3 | span | 2740–2751 |  |
+| cidOverlay | div.overlay | 2752–2754 |  |
+| cid_logo | div | 2755–2755 | Call from your own number |
+| cid_step_intro | div | 2756–2758 | Call from your own number |
+| cid_start | button.cta.sm | 2759–2759 |  |
+| cid_err | div | 2760–2761 | 📞 We're calling you now |
+| cid_step_verify | div | 2762–2764 | 📞 We're calling you now |
+| cid_code | div | 2765–2765 |  |
+| cid_status | span | 2766–2766 |  |
+| cid_verr | div | 2767–2768 |  |
+| cid_step_done | div | 2769–2778 | Your number is verified |
+| kcallOverlay | div.overlay | 2779–2781 |  |
+| kcall_logo | div | 2782–2782 | this store |
+| kcall_store | h3 | 2783–2783 | this store |
+| kcall_cat | b | 2784–2790 |  |
+| againOverlay | div.overlay | 2791–2794 |  |
+| again_logo | div | 2795–2795 | this store |
+| again_store | h3 | 2796–2797 | this store |
+| again_body | p | 2798–2798 |  |
+| again_yes | button.csheet-call | 2799–2799 |  |
+| again_no | a | 2800–2803 |  |
+| scoreOverlay | div.overlay | 2804–2807 |  |
+| scoreIco | span.mico | 2808–2810 | You scored! |
+| score_file | input | 2811–2811 |  |
+| score_prev | div | 2812–2813 |  |
+| score_img | img | 2812–2813 |  |
+| score_caption | input | 2814–2815 |  |
+| score_handle | input | 2816–2816 |  |
+| score_err | div | 2817–2817 |  |
+| score_btn | button.cta | 2818–2821 |  |
+| receiptOverlay | div.overlay | 2822–2824 |  |
+| rcptMark | div | 2825–2829 | Kiosk receipt = free check |
+| rcpt_email | span | 2830–2830 |  |
+| rcpt_state | div | 2831–2831 |  |
+| rcpt_msg | span | 2832–2833 |  |
+| rcpt_done | div | 2834–2837 |  |
+| kioskOverlay | div.overlay | 2838–2840 |  |
+| kMark | div | 2841–2843 | Report a kiosk refresh |
+| kIco | span.mico | 2841–2843 | Report a kiosk refresh |
+| kiosk_reward | b | 2844–2845 |  |
+| k_label | input | 2846–2847 |  |
+| k_minutes | input | 2848–2849 |  |
+| k_interval | select | 2850–2857 |  |
+| k_note | input | 2858–2859 |  |
+| k_contact | input | 2860–2860 |  |
+| k_err | div | 2861–2861 |  |
+| k_btn | button.cta | 2862–2866 |  |
+| pageOverlay | div.overlay | 2867–2869 |  |
+| pg_title | h3 | 2870–2870 |  |
+| pg_body | div | 2871–2874 |  |
+| supTab | button.suplaunch | 2875–2878 |  |
+| supWrap | div.supwrap | 2879–2879 |  |
+| sup_hd | div.sup-hd | 2880–2880 |  |
+| sup_back | button.hbtn | 2881–2882 |  |
+| sup_htitle | b | 2883–2887 |  |
+| sup_hsub | span | 2883–2887 |  |
+| supv_home | div.sup-view.on | 2888–2892 | How can we help? |
+| sup_banner | div.sup-banner | 2893–2897 |  |
+| sup_recent_lbl | div.sup-recent | 2898–2898 |  |
+| sup_home_recent | div | 2899–2902 |  |
+| supv_msgs | div.sup-view | 2903–2903 |  |
+| sup_convos | div | 2904–2909 |  |
+| supv_help | div.sup-view | 2910–2911 |  |
+| sup_q | input | 2912–2912 |  |
+| sup_faq_list | div.sup-faq | 2913–2915 |  |
+| supv_topic | div.sup-view | 2916–2918 |  |
+| sup_topics | div | 2919–2922 |  |
+| supv_chat | div.sup-view | 2923–2923 |  |
+| sup_msgs | div.supmsgs | 2924–2925 |  |
+| sup_help | div.suphelp | 2926–2927 |  |
+| sup_human | button | 2928–2930 |  |
+| sup_clip | button.supclip.hide | 2931–2931 |  |
+| sup_file | input | 2932–2932 |  |
+| sup_in | textarea | 2933–2933 |  |
+| sup_send | button.supsend | 2934–2939 |  |
+| supv_form | div.sup-view | 2940–2944 | Leave it with us |
+| supf_name | input | 2945–2946 |  |
+| supf_email | input | 2947–2948 |  |
+| supf_msg | input | 2949–2949 |  |
+| supf_shot | div.sup-shot | 2950–2950 |  |
+| supf_err | div | 2951–2951 |  |
+| supf_btn | button.cta | 2952–2956 |  |
+| supv_done | div.sup-view | 2957–2965 |  |
+| sup_tabs | div.sup-tabs | 2966–2966 |  |
+| supt_home | button | 2967–2967 |  |
+| supt_msgs | button | 2968–2968 |  |
+| supt_help | button | 2969–2972 |  |
+| toast | div.toast | 2973–3059 |  |
+| khspark | span | 3060–3147 |  |
+| sch_store | b | 3148–3158 |  |
+| sch_cat | b | 3148–3158 |  |
+| kiosk_reward | b | 3159–3216 |  |
+| ho_appname | b | 3217–4112 |  |
+| creditN | span | 4113–4411 |  |
+| acctv2panel | div | 4412–4436 |  |
+| scorePostHost | div | 4437–4458 | '+t('sc.pop.title','Post your score')+' |
+| inviteHost | div | 4459–5381 | '+t('ref.tagline','Give a check, get a check')+' |
+| smlive | div.smline | 5382–5389 |  |
+| smbuy | a.smbtn | 5390–5529 |  |
+| tbtn | button.tbtn | 5530–5583 |  |
+| tbtn_l | span | 5530–5583 |  |
+| convo_body | div | 5530–5583 |  |
+| convo_body | div | 5584–5610 |  |
+| convo_body | div | 5611–6401 |  |
+| tbtn | button.tbtn | 6402–6402 |  |
+| proofbody | div | 6403–6526 |  |
+| fbk | div.fbk | 6527–6536 |  |
+| rnav | div.rnav | 6537–6550 |  |
+| tbtn | button.tbtn | 6551–6837 |  |
+| tbtn_l | span | 6551–6837 |  |
+| todaycal | div | 6838–6954 |  |
+| acctScheds | div | 6955–7032 |  |
+| myStoresBlock | div | 7033–7206 |  |
+| hobEraSearch | input | 7207–7207 |  |
+| hobEraGrid | div | 7208–7208 |  |
+| hobEraNone | div | 7209–7469 |  |
+| em_in | input | 7470–7470 |  |
+| em_err | div | 7471–7471 |  |
+| em_btn | button.cta | 7472–7521 |  |
+| alertsList | div | 7522–7595 |  |
+| zrn_in | input | 7596–7653 |  |
+| z_loc | input | 7654–7659 |  |
+| zmap | div | 7660–7662 |  |
+| zBasket | div.zbasket${n?'.up':''} | 7663–7664 |  |
+| zChips | div.zchips | 7665–7668 |  |
+| z_name | input | 7669–7801 |  |
+| z_save | button.zbksave | 7669–7801 |  |
+| zca_go | button.zc-go | 7802–7802 |  |
+| zca_no | button | 7803–7924 |  |
+| z_ringarc | circle | 7925–7926 |  |
+| z_ringnum | div | 7927–7931 |  |
+| z_calling | span | 7932–7933 |  |
+| z_pills | div | 7934–8417 |  |
+| payg_n | span | 8418–8418 |  |
+| payg_p | span | 8418–8418 |  |
+| payg_rng | input.rng | 8419–8420 |  |
+| payg_per | div | 8421–8608 |  |
+| co_loading | div.co-loading | 8609–8811 |  |
+| ho_dropchip | span | 8812–8815 |  |
+| ho_steps | div | 8816–8817 |  |
+| ho_drop | div.ho-toggle | 8818–8821 |  |
+| ho_drophint | p.hint | 8822–8825 |  |
+| ho_bonus | span | 8826–8831 |  |
+| ho_app | div.ho-seg | 8832–8835 |  |
+| ho_appname | b | 8836–8836 |  |
+| ho_open | a.ho-btn.violet | 8837–8839 |  |
+| ho_msg | div.ho-msg | 8840–8850 |  |
+| ho_dv3 | li | 8851–8859 |  |
+| ho_stars | div.ho-stars | 8860–8862 |  |
+| ho_done | div | 8863–8865 | ${t('ho.done.title',"Bonus released. You're done.")} |
+| ho_donep | p | 8866–9221 |  |
 
-## public/app.html (6551 lines, 402 sections)
+## public/app.html (6598 lines, 406 sections)
 
 | id | element | lines | description |
 |---|---|---|---|
@@ -713,73 +713,77 @@ range (`offset` + `limit`). Ranges run to the next `id=` — a navigation aid, n
 | agentLog | div | 1698–1699 |  |
 | agentInput | textarea | 1700–1700 |  |
 | agentSend | button.agent-send | 1701–2335 |  |
-| mapper_target_in | input | 2336–2774 |  |
-| calc_percheck | div | 2775–2775 |  |
-| calc_total | b | 2776–2777 |  |
-| calc_lanelbl | span | 2776–2777 |  |
-| calc_chip | div | 2778–2778 |  |
-| calc_strip | div | 2779–2779 |  |
-| calc_legend | div | 2780–2780 |  |
-| calc_cliff | div | 2781–2786 |  |
-| calc_planrate | div | 2787–2788 |  |
-| calc_allow | div | 2789–2789 |  |
-| calc_allow_bar | div | 2790–2793 |  |
-| calc_realnote | div | 2794–2795 |  |
-| calc_chain | select | 2796–2798 |  |
-| calc_navval | span | 2799–2799 |  |
-| calc_nav | input | 2800–2800 |  |
-| calc_navnote | div | 2801–2801 |  |
-| calc_talkval | span | 2802–2802 |  |
-| calc_talk | input | 2803–2804 |  |
-| calc_reachval | span | 2805–2805 |  |
-| calc_reach | input | 2806–2811 |  |
-| calc_mchecksval | span | 2812–2812 |  |
-| calc_mchecks | input | 2813–2813 |  |
-| calc_mchecksnote | div | 2814–2815 |  |
-| calc_atonce | div.n | 2816–2816 |  |
-| calc_planfee | div.n | 2817–2818 |  |
-| calc_planlbl | div.l | 2817–2818 |  |
-| calc_conc_bar | div | 2819–2819 |  |
-| calc_conc_legend | div | 2820–2825 |  |
-| calc_concnote | div | 2826–2829 |  |
-| calc_breakdown | div | 2830–2831 |  |
-| calc_flatline | div | 2832–2839 |  |
-| calc_svc | div | 2840–2842 |  |
-| calc_svc_save | button.act | 2843–2844 |  |
-| calc_svc_out | div | 2845–2849 |  |
-| calc_measured | div | 2850–2856 |  |
-| calc_refresh_btn | button.act | 2857–2857 |  |
-| calc_refresh_note | div | 2858–2862 |  |
-| calc_usageval | span | 2863–2863 |  |
-| calc_usage | input | 2864–2864 |  |
-| calc_plans | table | 2865–2870 |  |
-| calc_rev | input | 2871–2871 |  |
-| calc_margin | div | 2872–2872 |  |
-| calc_return | div | 2873–2874 |  |
-| calc_sentence | div | 2875–3719 |  |
-| sup_teach_q | textarea | 3720–3720 |  |
-| sup_teach_a | textarea | 3721–3860 |  |
-| ds_sitype | div | 3861–4299 |  |
-| ds_siregion | div | 3861–4299 |  |
-| ds_sichecks | div | 3861–4299 |  |
-| set_ratemsg | span.meta | 4300–4403 |  |
-| set_msrp | input | 4404–4405 |  |
-| set_scm | select | 4406–4407 |  |
-| set_scc | select | 4408–4409 |  |
-| set_sell | input | 4410–4410 |  |
-| set_datamsg | span.meta | 4411–4428 |  |
-| set_maxtalk | input | 4429–4429 |  |
-| set_vm | input | 4430–4433 |  |
-| set_wf | select | 4434–5142 |  |
-| iconpick_q | input | 5143–5589 |  |
-| iconpick_grid | div.iconpick-grid | 5143–5589 |  |
-| wfg_add | input | 5590–6296 |  |
-| rs_details | div | 6297–6430 |  |
-| ds_rsfunnel | div | 6297–6430 |  |
-| ds_rsdays | div | 6297–6430 |  |
-| ds_rsland | div | 6297–6430 |  |
-| wl_region | select | 6431–6551 |  |
-| wl_notify_out | div | 6431–6551 |  |
+| mapper_target_in | input | 2336–2797 |  |
+| calc_percheck | div | 2798–2798 |  |
+| calc_total | b | 2799–2800 |  |
+| calc_lanelbl | span | 2799–2800 |  |
+| calc_chip | div | 2801–2801 |  |
+| calc_strip | div | 2802–2802 |  |
+| calc_legend | div | 2803–2803 |  |
+| calc_cliff | div | 2804–2809 |  |
+| calc_planrate | div | 2810–2813 |  |
+| calc_brain_them | button | 2814–2814 |  |
+| calc_brain_us | button | 2815–2816 |  |
+| calc_brain_rate | div | 2817–2817 |  |
+| calc_brain_note | div | 2818–2820 |  |
+| calc_allow | div | 2821–2821 |  |
+| calc_allow_bar | div | 2822–2825 |  |
+| calc_realnote | div | 2826–2827 |  |
+| calc_chain | select | 2828–2830 |  |
+| calc_navval | span | 2831–2831 |  |
+| calc_nav | input | 2832–2832 |  |
+| calc_navnote | div | 2833–2833 |  |
+| calc_talkval | span | 2834–2834 |  |
+| calc_talk | input | 2835–2836 |  |
+| calc_reachval | span | 2837–2837 |  |
+| calc_reach | input | 2838–2843 |  |
+| calc_mchecksval | span | 2844–2844 |  |
+| calc_mchecks | input | 2845–2845 |  |
+| calc_mchecksnote | div | 2846–2847 |  |
+| calc_atonce | div.n | 2848–2848 |  |
+| calc_planfee | div.n | 2849–2850 |  |
+| calc_planlbl | div.l | 2849–2850 |  |
+| calc_conc_bar | div | 2851–2851 |  |
+| calc_conc_legend | div | 2852–2857 |  |
+| calc_concnote | div | 2858–2861 |  |
+| calc_breakdown | div | 2862–2863 |  |
+| calc_flatline | div | 2864–2871 |  |
+| calc_svc | div | 2872–2874 |  |
+| calc_svc_save | button.act | 2875–2876 |  |
+| calc_svc_out | div | 2877–2881 |  |
+| calc_measured | div | 2882–2888 |  |
+| calc_refresh_btn | button.act | 2889–2889 |  |
+| calc_refresh_note | div | 2890–2894 |  |
+| calc_usageval | span | 2895–2895 |  |
+| calc_usage | input | 2896–2896 |  |
+| calc_plans | table | 2897–2902 |  |
+| calc_rev | input | 2903–2903 |  |
+| calc_margin | div | 2904–2904 |  |
+| calc_return | div | 2905–2906 |  |
+| calc_sentence | div | 2907–3766 |  |
+| sup_teach_q | textarea | 3767–3767 |  |
+| sup_teach_a | textarea | 3768–3907 |  |
+| ds_sitype | div | 3908–4346 |  |
+| ds_siregion | div | 3908–4346 |  |
+| ds_sichecks | div | 3908–4346 |  |
+| set_ratemsg | span.meta | 4347–4450 |  |
+| set_msrp | input | 4451–4452 |  |
+| set_scm | select | 4453–4454 |  |
+| set_scc | select | 4455–4456 |  |
+| set_sell | input | 4457–4457 |  |
+| set_datamsg | span.meta | 4458–4475 |  |
+| set_maxtalk | input | 4476–4476 |  |
+| set_vm | input | 4477–4480 |  |
+| set_wf | select | 4481–5189 |  |
+| iconpick_q | input | 5190–5636 |  |
+| iconpick_grid | div.iconpick-grid | 5190–5636 |  |
+| wfg_add | input | 5637–6343 |  |
+| rs_details | div | 6344–6477 |  |
+| ds_rsfunnel | div | 6344–6477 |  |
+| ds_rsdays | div | 6344–6477 |  |
+| ds_rsland | div | 6344–6477 |  |
+| wl_region | select | 6478–6598 |  |
+| wl_notify_out | div | 6478–6598 |  |
 
 ## docs/design/comps/ADMIN_COMPS.dc.html (762 lines, 15 sections)
 

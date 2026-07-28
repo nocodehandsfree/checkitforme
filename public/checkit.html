@@ -2167,7 +2167,14 @@ html[data-skin="v2"] #co_cta{display:flex;align-items:center;justify-content:spa
 html[data-skin="v2"] #co_cta:disabled{opacity:.55;cursor:default;box-shadow:none}
 html[data-skin="v2"] .co-trust{font-size:12.5px;font-weight:600;color:#8A8A96;margin-top:12px;text-align:center}
 html[data-skin="v2"] .co-trust b{color:rgba(255,255,255,.75);font-weight:800}
-html[data-skin="v2"] #acctOverlay .modal{padding:0;overflow-y:auto;overflow-x:hidden;border-radius:28px 28px 0 0;padding-bottom:env(safe-area-inset-bottom);height:86vh} /* FIXED height so the sheet's top edge is identical across Overview/Activity/Earn (owner 07-05: min-height let taller tabs grow past it, so Earn dropped lower) — content scrolls inside */
+/* FIXED height so the top edge is identical across Overview/Activity/Earn (owner 07-05: min-height let
+   taller tabs grow past it, so Earn dropped lower). Raised 86vh → 92vh (owner 07-27): at 86 the content
+   was 41px taller than the visible box, so "Run a check" and "Sign out" sat under the iOS toolbar with
+   almost no scroll left to lift them. The ::after below is the real guarantee. */
+html[data-skin="v2"] #acctOverlay .modal{padding:0;overflow-y:auto;overflow-x:hidden;border-radius:28px 28px 0 0;padding-bottom:env(safe-area-inset-bottom);height:92vh;max-height:92vh} /* max-height too: the shared acct/buy/page rule above caps at 86vh and would clamp this straight back */
+/* Scroll-end spacer, same one zones/history/plans get: the sheet box overshoots under the iOS toolbar, so
+   without this the LAST thing on the sheet can never be scrolled clear of it. My checks was missing it. */
+body.sheetopen #acctOverlay .modal::after{content:'';display:block;height:calc(120px + env(safe-area-inset-bottom))}
 html[data-skin="v2"] #acctOverlay .modal>*:not(.acctv2head):not(.x){display:none} /* legacy rows too — the v2 overview panel replaces them (6e comp rows) */
 html[data-skin="v2"] #acctv2panel{padding-bottom:22px!important}
 /* Capsule w/ WHITE tracked label + right arrow (comp CTA shape) — shared. */
@@ -8297,7 +8304,10 @@ function openFeatInfo(key){ const info=featInfo(key); if(!info) return;
 }
 function closeFeatInfo(){ const o=$('featOv'); if(o) o.classList.remove('on');
 }
-function featLabel(key){ const f=(PLANS&&PLANS.features||[]).find(x=>x.key===key); return f?f.label:key.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()); }
+// The service NAME, in the reader's language. Admin owns both names and ships them on PLANS.features;
+// the site picks, it never translates. A Spanish reader used to get English titles on the six tiles
+// and their pop-ups while the body copy around them was Spanish, on the last screen before paying.
+function featLabel(key){ const f=(PLANS&&PLANS.features||[]).find(x=>x.key===key); if(!f) return key.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()); return (LANG!=='en'&&f.labelEs)||f.label; }
 // The tier tiles: live tiers straight off /pub/plans (fallback to a static ladder only if the fetch failed).
 function tiers(){
   if(PLANS&&PLANS.tiers&&PLANS.tiers.length){

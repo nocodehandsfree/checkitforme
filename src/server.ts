@@ -3937,6 +3937,9 @@ app.post("/api/admin/plans", async (c) => {
         const ex = cur.tiers.find((x) => x.key === t.key);
         return { ...ex, ...t, stripeProductId: ex?.stripeProductId ?? null, monthlyPriceId: ex?.monthlyPriceId ?? null, annualPriceId: ex?.annualPriceId ?? null, pub: ex?.pub ?? null };
       }),
+      // The service NAMES ride the same save as everything else on the page (owner's brief). Omitted
+      // entirely = leave what is stored; sent = replace it, so clearing a box really clears it.
+      featureLabels: body.featureLabels === undefined ? cur.featureLabels : body.featureLabels,
       payg: { stripeProductId: cur.payg.stripeProductId, bundles: (body.payg || []).map((b: Record<string, unknown>) => {
         const ex = cur.payg.bundles.find((x) => x.checks === Number(b.checks));
         return { ...b, priceId: ex?.priceId ?? null, pubCents: ex?.pubCents ?? null };
