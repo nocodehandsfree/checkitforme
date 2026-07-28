@@ -5782,6 +5782,10 @@ app.get("/api/admin/cost-inputs", async (c) => {
   }
   return c.json(out);
 });
+// The rates every cost on every screen is built from. ONE table: `src/calls/cost.ts` is what the
+// receipt bills a real call with, so the Calc page and the Chains page read it rather than keeping
+// their own copy. A second copy is how a forecast and a bill quietly stop agreeing.
+app.get("/api/admin/call-rates", async (c) => c.json(await currentRates()));
 // The receipt for a call the ADMIN placed. Those calls have no call_results row on purpose (a mapping
 // call is not a customer's check and must stay out of the customer numbers), so they are read by ROOM
 // instead of by call id. Live from memory while the call is still up, from call_events once it ends.
@@ -5789,25 +5793,29 @@ app.get("/api/admin/cost-inputs", async (c) => {
 app.get("/api/admin/receipt/:room", async (c) => {
   const room = c.req.param("room");
   if (!room) return c.json({ error: "room required" }, 400);
+  // Same envelope as GET /api/calls/:id/receipt — { live, seconds, cost, timeline } — so the replay
+  // viewer reads one shape and never branches on which kind of call it opened.
   const live = getReceipt(room);
   if (live && !live.closed) {
     const sums = rollup(live);
     return c.json({
-      room, live: true, note: live.planned.length ? "replaying a learned route" : null,
+      room, live: true,
       timeline: live.events.map((e) => ({ atSec: e.atSec, kind: e.kind, note: e.note ?? "", detail: e.detail ?? null })),
-      rollup: sums,
+      seconds: sums,
       cost: costCall({ callSecs: sums.callSecs, charlieSecs: sums.charlieConnectedSeconds, avoidableSecs: sums.charlieSilentSeconds, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))] }, await currentRates()),
     });
   }
   const rows = await db.select().from(callEvents).where(eq(callEvents.room, room)).orderBy(callEvents.atMs);
   if (!rows.length) return c.json({ error: "no receipt for that call" }, 404);
   const parse = (s: string | null) => { try { return s ? JSON.parse(s) as Record<string, unknown> : null; } catch { return null; } };
-  const summary = parse(rows.find((r) => r.kind === "summary")?.detail ?? null);
+  // An unattached call rolls its seconds and cost onto the LAST event's detail (receipt-store.ts),
+  // because there is no call_results row to stamp and the event set is a closed sixteen.
+  const tail = parse(rows[rows.length - 1]?.detail ?? null);
   return c.json({
     room, live: false,
-    timeline: rows.filter((r) => r.kind !== "summary").map((r) => ({ atSec: r.atSec, kind: r.kind, note: r.note ?? "", detail: parse(r.detail) })),
-    rollup: summary?.rollup ?? null,
-    cost: summary?.cost ?? null,
+    timeline: rows.map((r) => ({ atSec: r.atSec, kind: r.kind, note: r.note ?? "", detail: parse(r.detail) })),
+    seconds: tail?.seconds ?? null,
+    cost: tail?.cost ?? null,
   });
 });
 app.get("/api/admin/call-timing", async (c) => {

@@ -2490,11 +2490,13 @@ const CALC={ storeType:'Alpha', nav:30, talk:20, revenue:0.2, lane:'charlie', de
   ready:false };
 // MEASURED, NOT SETTINGS. Each one was read off a real account on the date shown. They drift when the
 // voice or the brain changes, so the Calc shows them with their date and can re-read them on demand.
-// CORRECTED 2026-07-25: 723 was 15% high. It came from dividing a whole billing period's credits by
-// a conversation list that under-counted the minutes. The real rate is a clean before/after around two
-// calls of known length: 924 credits for 88 seconds = 630 a minute = $0.00159/s
-// (docs/team/voice-calls/report-cost-architecture-2026-07-25.md).
-const CALC_MEASURED={ creditsPerMinute:630, measuredAt:'2026-07-25',
+// MEASURED, and the ENGINE owns the number. `src/calls/cost.ts` is what the receipt bills a real call
+// with, so these are seeded from it at boot via /api/admin/call-rates and this literal is only the
+// fallback when that call fails. 723 credits a minute = $0.0018272/s, measured 07-24 against the live
+// account: voice 323 + brain 400. A 630 reading taken on 07-25 was rejected. It only holds if the
+// brain runs on OUR OWN account, which is section 7 of the live-call-runtime spec and is not built.
+// Never hand-edit this to disagree with cost.ts; a forecast that disagrees with the bill is worthless.
+const CALC_MEASURED={ creditsPerMinute:723, measuredAt:'2026-07-24',
   src:{ creditsPerMinute:'ElevenLabs usage breakdown', planCredits:'the account, not the price page', twilioPerMin:'Twilio usage records' } };
 // ElevenLabs plans. `credits` is the monthly allowance, and it is what turns the flat fee into a price
 // per second. Creator is read from OUR account (145,094, NOT the 100,000 the price page advertises).
@@ -4120,6 +4122,16 @@ function setFilterChains(q){ const sel=document.getElementById('set_chain'); if(
 // The map graph: one row per chain carrying how much we TRUST its route, how many routes are waiting
 // on the owner, and what still needs review. Loaded once with the chain list and read from memory.
 let MAPG={};
+// Pull the ENGINE's rates in so every cost on screen is built from the same table the receipt bills
+// a real call with. Best-effort: the literals above stand in if this fails, and they match cost.ts.
+let RATES_SYNCED=false;
+async function syncCallRates(){
+  if(RATES_SYNCED) return; RATES_SYNCED=true;
+  const r=await api('/api/admin/call-rates'); if(!r||r.error) return;
+  if(typeof r.charlieCreditsPerMin==='number'&&r.charlieCreditsPerMin>0) CALC_MEASURED.creditsPerMinute=r.charlieCreditsPerMin;
+  if(typeof r.linePerMinUsd==='number'&&r.linePerMinUsd>0) CALC.rates.twilioPerMin=r.linePerMinUsd;
+  if(typeof calcUpdate==='function'&&CALC.ready) try{ calcUpdate(); }catch(e){}
+}
 async function loadMapGraph(){
   const d=await api('/api/admin/map/graph');
   MAPG={}; ((d&&d.rows)||[]).forEach(r=>{ if(r&&r.chainId!=null&&!r.storeId) MAPG[r.chainId]=r; });
@@ -4133,6 +4145,7 @@ function confColor(label){
 }
 async function loadChains(){
   CHAINS = await api('/api/chains') || [];
+  await syncCallRates();
   await loadMapGraph();
   const sel=document.getElementById('set_chain'); if(!sel) return;
   const cur=sel.value;
