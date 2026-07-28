@@ -22,7 +22,7 @@ import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing, backfillDirectChains, isDirectDefaultChain } from "./db/import-data";
-import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, billableOutcome, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
+import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, billableOutcome, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, transcriptPatch, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus, learnedSyncTick, learnedSyncStatus } from "./store-sync";
 import { buildSettingsExport, settingsSyncStatus, settingsSyncTick } from "./settings-sync";
 import { concurrencyStatus, acquireCallSlot, releaseCallSlot, governorEnabled } from "./calls/concurrency";
@@ -3443,11 +3443,15 @@ app.get("/pub/result/:cid", async (c) => {
     const productDetail = productDetailLabel(second);
     await db.update(callResults).set({
       status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey,
-      shipmentDayHeard: o.shipmentDay, shipmentTimeHeard: (second?.restockTime ?? o.shipmentTime) ?? null, productDetail, summary: o.summary, transcript: o.transcript,
+      shipmentDayHeard: o.shipmentDay, shipmentTimeHeard: (second?.restockTime ?? o.shipmentTime) ?? null, productDetail, summary: o.summary,
+      // Ours if we recorded any, theirs only when we did not (transcriptPatch). This on-demand
+      // finalize is what a customer refreshing the page hits, so it was blanking the transcript
+      // the receipt had already written the second they looked.
+      ...(await transcriptPatch(row.id, o.transcript)),
       completedAt: Math.floor(Date.now() / 1000),
     }).where(eq(callResults.id, row.id));
     if (row.finderUserId && billableOutcome(consensus.statusKey, consensus.definitive, o.transcript)) await chargeCallOnce(row.id, row.finderUserId);
-    return c.json({ ...(o ?? {}), status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey, ts: (row.startedAt || 0) * 1000, productDetail, shipmentDay: o.shipmentDay, shipmentTime: (second?.restockTime ?? o.shipmentTime) ?? null, charged: row.finderUserId ? consensus.definitive : false, summary: o.summary, transcript: o.transcript });
+    return c.json({ ...(o ?? {}), status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey, ts: (row.startedAt || 0) * 1000, productDetail, shipmentDay: o.shipmentDay, shipmentTime: (second?.restockTime ?? o.shipmentTime) ?? null, charged: row.finderUserId ? consensus.definitive : false, summary: o.summary, transcript: (row.transcript && row.transcript.trim()) || o.transcript });
   }
   // Truly mid-call → progress only, never a verdict (so a wrong key can't flash before the real one).
   return c.json(o ? { ...o, ts: row?.startedAt ? row.startedAt * 1000 : undefined } : { status: "in_progress", transcript: "", summary: "", ts: row?.startedAt ? row.startedAt * 1000 : undefined });

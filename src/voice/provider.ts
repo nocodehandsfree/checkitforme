@@ -45,6 +45,10 @@ export interface StartCallParams {
   /** Premium feature: ask the one product-type follow-up after a YES (and capture it). Default true;
    *  free (non-subscriber) consumer calls pass false to skip it and end faster. Fills `premium_followup`. */
   premiumFollowup?: boolean;
+  /** ONE QUESTION INSTEAD OF TWO. Set when the store's workflow folds the set and the format into a
+   *  single question (its follow-up data declares it). Both lines are the workflow's own wording, and
+   *  they replace the two-question follow-up and the restock-day push. Absent = nothing changes. */
+  foldedQuestions?: { set: string; no: string };
 }
 
 export interface StartCallResult {

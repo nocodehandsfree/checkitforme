@@ -75,7 +75,7 @@ import { deltaStoreCall, setDeltaFinalize, tdTranscript, type TdSession } from "
 import type { AgentTuning } from "../voice/provider";
 import { notifyInStock, notifyContact } from "./notify";
 import { getSetting, setSetting } from "../db/settings";
-import { specificityClause, RESTOCK_PROMPT, VOICE_DEFAULTS, PREMIUM_FOLLOWUP, ASK_SHIPMENT_DAY } from "../voice/prompts";
+import { specificityClause, RESTOCK_PROMPT, VOICE_DEFAULTS, PREMIUM_FOLLOWUP, ASK_SHIPMENT_DAY, oneTurnFollowup, oneTurnShipmentDay } from "../voice/prompts";
 import { classifyVerdict, reconcile, productDetailLabel } from "../voice/verdict";
 
 const DEFAULT_OPENER = "Heyy! I was just checking to see if you guys got any {category} in?";
@@ -83,12 +83,17 @@ const DEFAULT_OPENER = "Heyy! I was just checking to see if you guys got any {ca
 // Round-robin rotation lives in rotate.ts, shared with the D-lane so both lanes advance the SAME
 // counters (owner 2026-07-15: two voices on a workflow must alternate call to call, either lane).
 import { rotatePick, resetRotation } from "./rotate";
+import { declaresOneTurn } from "./tapedeck";   // ONE definition of the one-question fold, shared by both lanes
 export { resetRotation };
 
 // ---- Workflows: the Voice→Designer "voice + script + persona + voice tuning" bundle, assignable
 // per store / per chain / as the global default. resolveWorkflow picks one for a store and composes
 // its persona; buildRestockVars applies it to the call (opener rotation, {{personality}}, voice). ----
-export interface AppliedWorkflow { name: string; voiceId?: string; voices: string[]; tuning?: Record<string, unknown>; openers: string[]; personality: string; lane: string }
+export interface AppliedWorkflow { name: string; voiceId?: string; voices: string[]; tuning?: Record<string, unknown>; openers: string[]; personality: string; lane: string;
+  /** ONE QUESTION INSTEAD OF TWO, declared by the workflow's own follow-up DATA (declaresOneTurn).
+   *  `setLine` is the folded in-stock question, `noLine` the restock-day one. The recorded-clip lane
+   *  plays them as clips; the live-agent lane hands them to the agent as its follow-up instruction. */
+  oneTurn: boolean; setLine: string; noLine: string }
 type AnyObj = Record<string, unknown>;
 const jparse = (s: string | null, fb: unknown) => { try { return s ? JSON.parse(s) : fb; } catch { return fb; } };
 
@@ -203,6 +208,8 @@ export async function resolveWorkflow(retailerId: number, chainId: number | null
   const voices = Array.isArray(wf.voices) && (wf.voices as unknown[]).length
     ? (wf.voices as unknown[]).map(String).filter(Boolean)
     : (wf.voiceId ? [String(wf.voiceId)] : [defaultVoiceId()]);
+  const fu = (wf.followups && typeof wf.followups === "object") ? (wf.followups as Record<string, unknown>) : undefined;
+  const fuList = (k: string) => { const v = fu?.[k]; return Array.isArray(v) ? v.map(String).filter(Boolean) : []; };
   return {
     name: String(wf.name),
     voiceId: wf.voiceId ? String(wf.voiceId) : undefined,
@@ -212,11 +219,39 @@ export async function resolveWorkflow(retailerId: number, chainId: number | null
     personality: composePersona(persona),
     // Which call lane this workflow runs: "delta" = cheap recorded-clip D-lane, else the live agent.
     lane: typeof wf.lane === "string" ? wf.lane : "charlie",
+    // THE ONE QUESTION FOLD, read from the SAME follow-up data the recorded-clip lane reads. A
+    // workflow that runs the live agent used to have no way to say "ask once" at all, so a store
+    // moved onto a folded workflow still got the old two question flow and the owner heard the
+    // second question on a real call (07-28). Rotates like every other scripted line.
+    oneTurn: declaresOneTurn(fu), setLine: rotatePick(`fu:${String(wf.name)}:set`, fuList("set")) || "", noLine: rotatePick(`fu:${String(wf.name)}:no`, fuList("no")) || "",
   };
 }
 
 const VOICEMAIL_INSTRUCTION =
   "If you reach a voicemail, answering machine, or automated recording (a recorded greeting, an automated menu with no live person, or a beep) — do NOT say anything and end the call immediately. Never leave a message.";
+
+/**
+ * WHAT WE HEARD IS THE RECORD. The provider's copy is supporting evidence (receipt spec, rule 2).
+ *
+ * A bridged call records every line live, on our own clock, starting with the recorded question we
+ * played the moment somebody picked up. The provider only ever sees the stretch its own agent was on,
+ * so its copy begins mid conversation, and on a call where the agent never spoke it does not exist at
+ * all. Writing it over ours DELETED the customer's transcript: on a real Fun store call the finished
+ * result opened with the clerk answering a question that was nowhere on the page, and on another it
+ * came back as a single stray line (owner, 07-28).
+ *
+ * So ours wins whenever we have any. Theirs fills in only for the old direct path, which streams
+ * nothing to us and therefore records nothing of its own. Re-read at write time rather than trusting
+ * a row fetched earlier, because the receipt flushes on hangup and this runs off a later webhook.
+ */
+export async function transcriptPatch(callId: number, theirs: string | null | undefined): Promise<{ transcript?: string }> {
+  try {
+    const mine = (await db.select({ t: callResults.transcript }).from(callResults).where(eq(callResults.id, callId)))[0]?.t;
+    if (mine && mine.trim()) return {};
+  } catch { /* a failed read must never cost us the provider's copy */ }
+  const t = (theirs || "").trim();
+  return t ? { transcript: t } : {};
+}
 
 /** Kiosk-only store: has a vending kiosk but no staffed counter that sells packs. The agent asks
  *  whether the kiosk is working/stocked rather than about a shelf shipment. Callers may also pass an
@@ -366,13 +401,17 @@ export async function buildRestockVars(
       // Restock-day push is STANDARD on every live check (owner 07-16: "standard for any not in
       // stock") — this path shipped "" while every other path asked, so live checks never captured
       // the day. One source of truth in prompts.ts.
-      ask_shipment_day: ASK_SHIPMENT_DAY,
+      // ONE QUESTION, THEN WRAP. A workflow whose follow-up data folds the set and the format into
+      // a single question swaps BOTH of these for their one-question form. Any other workflow gets
+      // exactly what it got before. The Fun store ran a folded workflow on 07-28 and the agent still
+      // asked twice, because until now only the recorded-clip lane could read the fold.
+      ask_shipment_day: workflow?.oneTurn ? oneTurnShipmentDay(workflow.noLine) : ASK_SHIPMENT_DAY,
       // Kiosk-only store → the prompt asks about the vending kiosk, not a shelf shipment.
       // Explicit request flag wins; otherwise inferred from the store's flags.
       kiosk_mode: (kioskMode ?? kioskOnly(retailer)) ? "true" : "",
       // Preview / admin / scheduled paths default to the premium follow-up; the consumer trigger
       // path overrides this to the free (no-follow-up) text for non-subscribers.
-      premium_followup: PREMIUM_FOLLOWUP,
+      premium_followup: workflow?.oneTurn ? oneTurnFollowup(workflow.setLine) : PREMIUM_FOLLOWUP,
     },
   };
 }
@@ -595,6 +634,9 @@ export async function triggerCall(a: TriggerArgs) {
       kioskMode: a.kioskMode ?? kioskOnly(retailer),
       // Premium gate: subscribers (and comp/owner) get the product-type follow-up; free finders skip it.
       premiumFollowup: await finderIsPremium(a.finderUserId),
+      // ONE QUESTION, THEN WRAP, when the store's workflow declares the fold. Same resolution the
+      // bridge lane does, so the switch being on or off can never change how many questions we ask.
+      foldedQuestions: wf?.oneTurn ? { set: wf.setLine, no: wf.noLine } : undefined,
     });
     linkProviderCall(directRoom, providerCallId);
     emit(directRoom, "connected", "The provider is placing the call on its own line", { providerCallId, callSid: callSid ?? null });
@@ -1136,7 +1178,8 @@ export async function ingestPending(): Promise<number> {
       shipmentTimeHeard: restockTimeHeard ?? outcome.shipmentTime ?? null,
       productDetail,
       summary: outcome.summary,
-      transcript: outcome.transcript,
+      // Ours if we recorded any, theirs only when we did not. See transcriptPatch.
+      ...(await transcriptPatch(row.id, outcome.transcript)),
       completedAt: now(),
       callSeconds: outcome.durationSecs ?? null,
       // connect-on-human: the bridge measured true time-to-human (ElevenLabs only joined at pickup);

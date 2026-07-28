@@ -5861,28 +5861,59 @@ function wfmSeedDelta(w){
   if(!w||(w.lane||'charlie')!=='delta') return false;
   if(!w.followups||typeof w.followups!=='object') w.followups={};
   let seeded=false;
-  for(const [slot] of DELTA_FU_SLOTS){ if(!Array.isArray(w.followups[slot])||!w.followups[slot].length){ w.followups[slot]=DELTA_FU_DEFAULTS[slot].slice(); seeded=true; } }
+  // An EMPTY list that is already there is a DECLARATION ("this question is folded into the one above"),
+  // not a missing value. Refilling it silently turned a one question workflow back into a two question
+  // one on the next save, which is exactly the bug the owner heard on a real call.
+  for(const [slot] of DELTA_FU_SLOTS){ if(!Array.isArray(w.followups[slot])){ w.followups[slot]=DELTA_FU_DEFAULTS[slot].slice(); seeded=true; } }
   return seeded;
 }
 function wfmFu(w,slot){ const f=w&&w.followups&&w.followups[slot]; return (Array.isArray(f)&&f.length)?f:DELTA_FU_DEFAULTS[slot]||[]; }
 // Each variant gets its OWN row (owner 07-15: one big box read like one long speech). A slot's rows
 // are different ways to say the SAME line; the call picks the next row each call, like the openers.
-function wfmDeltaEditor(wi,w){ if((w.lane||'charlie')!=='delta') return '';
+// THE LIVE AGENT ASKS THESE TOO (owner 07-28). Until now only the recorded-clip workflows could set
+// their follow-up wording, so a live-agent store was stuck on the built-in two question flow and the
+// owner heard it ask twice on a real Fun store call. Same two boxes, same save path; a live-agent
+// workflow that has them set asks ONE of them and wraps.
+const CHARLIE_FU_SLOTS=[
+  ['set','When they HAVE it'],
+  ['no','When they DON’T have it']
+];
+function wfmDeltaEditor(wi,w){
+  const charlie=(w.lane||'charlie')!=='delta';
   const box=([slot,label])=>{
-    const rows=wfmFu(w,slot).map((t,vi)=>`<div class="wfmop"><textarea rows="1" oninput="wfmGrow(this)" onchange="wfmEditFu(${wi},'${slot}',${vi},this.value)">${esch(t)}</textarea><button class="ghost opdel" onclick="wfmDelFu(${wi},'${slot}',${vi})" title="Remove">${lucideSvg('x',14,'currentColor')}</button></div>`).join('');
+    // A recorded workflow always PLAYS a line, so an unset slot shows the built-in it will use. A live
+    // agent with nothing set is still on the old two question flow, so showing a built-in here would
+    // claim a script that is not running. Empty stays empty.
+    const cur=charlie ? ((w&&w.followups&&Array.isArray(w.followups[slot]))?w.followups[slot]:[]) : wfmFu(w,slot);
+    const rows=cur.map((t,vi)=>`<div class="wfmop"><textarea rows="1" oninput="wfmGrow(this)" onchange="wfmEditFu(${wi},'${slot}',${vi},this.value)">${esch(t)}</textarea><button class="ghost opdel" onclick="wfmDelFu(${wi},'${slot}',${vi})" title="Remove">${lucideSvg('x',14,'currentColor')}</button></div>`).join('');
     return `<div style="margin-top:14px"><span class="meta" style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--text-strong)">${label}</span>
       <div class="wfmops">${rows}
       <div class="wfmadd"><input id="wfmfu_${wi}_${slot}" placeholder="Add another way to say it" onkeydown="if(event.key==='Enter')wfmAddFu(${wi},'${slot}')"><button class="act" onclick="wfmAddFu(${wi},'${slot}')">Add</button></div></div></div>`;
   };
+  const head=charlie
+    ? `<label>The two questions it asks <span data-tip="It asks ONE of these, takes whatever it gets, then says goodbye."></span></label>
+       <div class="meta" style="margin:4px 0 2px">One question, then it wraps. It never asks a second one, even on half an answer. Leave both empty to go back to the old two question flow. {category} fills in.</div>`
+    : `<label>Delta lines · everything a call can say <span data-tip="These ARE the recorded clips. {category} fills in."></span></label>
+       <div class="meta" style="margin:4px 0 2px">Each row under a heading is a different way to say that ONE line. A call picks the next row each time, same as the openers. Keep one row to always say the same thing.</div>`;
   return `<div class="wfmmeta" style="grid-template-columns:1fr;border-top:1px dashed var(--border);margin-top:2px;padding-top:12px">
-    <div><label>Delta lines · everything a call can say <span data-tip="These ARE the recorded clips. {category} fills in."></span></label>
-    <div class="meta" style="margin:4px 0 2px">Each row under a heading is a different way to say that ONE line. A call picks the next row each time, same as the openers. Keep one row to always say the same thing.</div>
-    ${DELTA_FU_SLOTS.map(box).join('')}
+    <div>${head}
+    ${(charlie?CHARLIE_FU_SLOTS:DELTA_FU_SLOTS).map(box).join('')}
     </div></div>`;
 }
-async function wfmAddFu(wi,slot){ const inp=document.getElementById(`wfmfu_${wi}_${slot}`); const t=((inp&&inp.value)||'').trim(); if(!t) return; const w=WF.list[wi]; if(!w) return; if(!w.followups||typeof w.followups!=='object') w.followups={}; if(!Array.isArray(w.followups[slot])||!w.followups[slot].length) w.followups[slot]=(DELTA_FU_DEFAULTS[slot]||[]).slice(); w.followups[slot].push(t); renderWorkflowMgr(); await wfmSaveList(); toast('Added · rotates with the others'); }
-async function wfmDelFu(wi,slot,vi){ const w=WF.list[wi]; if(!w||!w.followups||!Array.isArray(w.followups[slot])) return; w.followups[slot].splice(vi,1); const restored=!w.followups[slot].length; if(restored) w.followups[slot]=(DELTA_FU_DEFAULTS[slot]||[]).slice(); renderWorkflowMgr(); await wfmSaveList(); toast(restored?'Last one removed · built-in line restored':'Removed'); }
-async function wfmEditFu(wi,slot,vi,text){ const w=WF.list[wi]; if(!w||!w.followups||!Array.isArray(w.followups[slot])) return; const t=(text||'').trim(); if(!t) return wfmDelFu(wi,slot,vi); w.followups[slot][vi]=t; await wfmSaveList(); }
+// A live-agent workflow declares the one-question fold the same way a recorded one does: by shipping
+// an EMPTY type list. Called whenever its questions are touched, so the fold is never half-declared.
+function wfmDeclareFold(w){ if(!w||(w.lane||'charlie')==='delta') return; if(!w.followups||typeof w.followups!=='object') w.followups={}; w.followups.type=[]; }
+async function wfmAddFu(wi,slot){ const inp=document.getElementById(`wfmfu_${wi}_${slot}`); const t=((inp&&inp.value)||'').trim(); if(!t) return; const w=WF.list[wi]; if(!w) return; const charlie=(w.lane||'charlie')!=='delta'; if(!w.followups||typeof w.followups!=='object') w.followups={};
+  // Seeding the built-ins first is right for a recorded workflow (every clip must exist) and wrong for
+  // a live agent, where it would silently add back the two question wording he just replaced.
+  if(!Array.isArray(w.followups[slot])||(!w.followups[slot].length&&!charlie)) w.followups[slot]=charlie?[]:(DELTA_FU_DEFAULTS[slot]||[]).slice();
+  w.followups[slot].push(t); wfmDeclareFold(w); renderWorkflowMgr(); await wfmSaveList(); toast('Added · rotates with the others'); }
+async function wfmDelFu(wi,slot,vi){ const w=WF.list[wi]; if(!w||!w.followups||!Array.isArray(w.followups[slot])) return; const charlie=(w.lane||'charlie')!=='delta'; w.followups[slot].splice(vi,1);
+  // Emptying a live agent's question means "stop asking it", not "put the built in back". Restoring a
+  // default here is how a deliberately removed question comes back to life on the next call.
+  const restored=!w.followups[slot].length&&!charlie; if(restored) w.followups[slot]=(DELTA_FU_DEFAULTS[slot]||[]).slice();
+  renderWorkflowMgr(); await wfmSaveList(); toast(restored?'Last one removed · built-in line restored':'Removed'); }
+async function wfmEditFu(wi,slot,vi,text){ const w=WF.list[wi]; if(!w||!w.followups||!Array.isArray(w.followups[slot])) return; const t=(text||'').trim(); if(!t) return wfmDelFu(wi,slot,vi); w.followups[slot][vi]=t; wfmDeclareFold(w); await wfmSaveList(); }
 async function wfmClone(wi){ const w=WF.list[wi]; if(!w) return; const name=(prompt('Name for the cloned workflow:', w.name+' copy')||'').trim(); if(!name) return; if(WF.list.some(x=>x.name===name)){ toast('A workflow named “'+name+'” already exists'); return; } const copy=JSON.parse(JSON.stringify(w)); copy.name=name; copy.savedAt=Date.now(); WF.list.push(copy); renderWorkflowMgr(); await wfmSaveList(); toast('Cloned as “'+name+'” · edit then assign'); }
 // ---- Round-trip: open an existing workflow back in the Designer (the only place to tweak tuning) ----
 let EDIT_TARGET=null; // a workflow staged to load into the Designer once its async loaders settle
