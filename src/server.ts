@@ -1148,7 +1148,7 @@ setDeltaBarge(async (s, _speech) => {
   const chk = s.check;
   if (!chk) return null;
   try {
-    const v = await buildRestockVars(chk.retailerId, chk.categoryId, undefined, [], undefined);
+    const v = await buildRestockVars(chk.retailerId, chk.categoryId, undefined, [], undefined, chk.finderUserId ?? null);
     if (!v || !v.retailer?.phone) return null;
     const pol = await getPolicy();
     // Reuse the D-lane listen room ("delta:<session>") so a consumer watching the call live keeps
@@ -6634,7 +6634,7 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
   } catch (e) { return { error: String((e as Error)?.message || e) }; }
   // Resolve the SAME three-tier vars (global + chain + store phone tree, clarification, etc.) the
   // scheduled calls use — Listen-live was previously running on the bare global prompt only.
-  const v = await buildRestockVars(retailerId, primary, specificProduct, extras, kioskMode);
+  const v = await buildRestockVars(retailerId, primary, specificProduct, extras, kioskMode, finder?.userId ?? null);
   if (!v || !v.retailer.phone) return { error: "store not found" };
   // Phone-first: dial AS the finder's own VERIFIED number (caller_id) when present. Plus the hard
   // duration cap from policy (the cost guarantee).

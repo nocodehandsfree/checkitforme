@@ -65,15 +65,26 @@ async function main() {
     ok(rows.every((r) => r.confirmed == null), "and none of them claims a yes or a no");
   }
 
-  console.log("\n▶ calling straight back opens differently, and only for a while");
+  console.log("\n▶ calling straight back opens differently — same customer, same store, same product only");
   {
-    ok(await recentlyDropped(store.id, cat.id) === true, "minutes after a dropped call, the reconnect opener applies");
-    // Age the row past the shelf life. Forty minutes later "I just got disconnected" is strange.
+    ok(await recentlyDropped(store.id, cat.id, USER) === true, "the customer who was cut off gets the reconnect opener");
+
+    // THE ONE THAT MATTERS (owner, 07-28). We dial as the CUSTOMER'S own verified number, so a
+    // different customer checking the same store is a different number ringing the clerk's phone.
+    // "I just got disconnected" from a number they have never spoken to is a stranger claiming a
+    // conversation that never happened — worse than simply saying hello.
+    ok(await recentlyDropped(store.id, cat.id, "phone:+13105559999") === false, "a DIFFERENT customer checking the same store gets the normal greeting, because it is their number ringing, not ours");
+    ok(await recentlyDropped(store.id, cat.id, null) === false, "and with no known caller we never claim to have been cut off");
+
+    const [other] = await db.insert(retailers).values({ name: "Another store", phone: "+13105550999", location: "LA" }).returning();
+    ok(await recentlyDropped(other.id, cat.id, USER) === false, "it never leaks to a different store");
+    const [cat2] = await db.insert(categories).values({ label: "One Piece", slug: "onepiece-test" }).returning().catch(() => [null as never]);
+    if (cat2) ok(await recentlyDropped(store.id, cat2.id, USER) === false, "nor to a different product at the same store");
+
+    // Age the row past the shelf life. Later on "I just got disconnected" is strange, not natural.
     await db.update(callResults).set({ startedAt: now() - 40 * 60 })
       .where(eq(callResults.statusKey, "call_dropped"));
-    ok(await recentlyDropped(store.id, cat.id) === false, "forty minutes later it falls back to the normal greeting");
-    const [other] = await db.insert(retailers).values({ name: "Another store", phone: "+13105550999", location: "LA" }).returning();
-    ok(await recentlyDropped(other.id, cat.id) === false, "and it never leaks to a different store");
+    ok(await recentlyDropped(store.id, cat.id, USER) === false, "and once the line is stale it falls back to the normal greeting");
   }
 
   console.log(`\n════════════════════════════════\n  PASS: ${pass}   FAIL: ${fail}\n════════════════════════════════`);
