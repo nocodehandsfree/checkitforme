@@ -1,0 +1,122 @@
+// OUR OWN VOICE, IN PHONE FORMAT, SYNTHESIZED ONCE.
+//
+// Two jobs, and they are the same job:
+//
+//  1. Delta's opening question has to go down the Twilio media stream, and that stream only carries
+//     μ-law 8kHz. The MP3 the rest of the app synthesizes physically cannot ride it, so a clip
+//     destined for the bridge is asked for in `ulaw_8000` and arrives ready to send.
+//  2. Every clip we play is our own script in our own voice. Re-recording the identical line on
+//     every call was measured at roughly 7¢ a call — more than a whole check costs — so a clip is
+//     synthesized once and reused.
+//
+// THE AUDIO RULE AND ITS ONE EXCEPTION (spec `docs/specs/live-call-runtime/README.md`, rule 3).
+// Live call audio is NEVER persisted: not the clerk, not the conversation, not to disk, not to logs,
+// not to object storage. That rule does not bend. What is cached here is the opposite thing — audio
+// WE generated from OUR script before the phone ever rang. It contains no store audio and no customer
+// audio. Anyone tidying this cache away in the name of privacy is deleting the wrong thing: the
+// privacy rule lives in the bridge, which drops every inbound frame the moment it has been relayed.
+//
+// The cache is in memory, keyed by exactly what makes a clip sound different — the voice, the words
+// and the tuning. A deploy starts it cold, which costs one synthesis per distinct line and then
+// nothing, and it can never serve a stale clip because a changed line is a different key.
+import { config } from "../config";
+
+/** μ-law 8kHz: one byte per sample, 8000 samples a second — so bytes and milliseconds are the same
+ *  arithmetic everywhere in the call path. The bridge's playout clock uses this identity too. */
+export const ULAW_BYTES_PER_MS = 8;
+
+/** One 20ms Twilio media frame. */
+export const ULAW_FRAME_BYTES = 160;
+
+export interface PhoneClip {
+  /** Raw μ-law 8kHz bytes, ready to be chunked into media frames. */
+  audio: Buffer;
+  /** Exactly how long it plays for. Not an estimate — bytes ÷ 8. This is one of the three signals
+   *  that tells the runtime the clip has finished. */
+  ms: number;
+  /** The words, kept for the transcript and the receipt. Never the audio. */
+  text: string;
+  voiceId: string;
+}
+
+/** How many distinct clips we keep. Each is a few seconds of 8kHz audio (~8KB/second), so a
+ *  hundred of them is well under 10MB and covers every opener × voice combination in use. */
+const MAX_CLIPS = 100;
+const cache = new Map<string, PhoneClip>();
+
+/** Test/ops visibility: how many clips are held and roughly how much memory they use. */
+export function clipCacheStats(): { clips: number; bytes: number } {
+  let bytes = 0;
+  for (const c of cache.values()) bytes += c.audio.length;
+  return { clips: cache.size, bytes };
+}
+
+/** Test-only: empty the cache. */
+export function _resetClipCache(): void { cache.clear(); }
+
+function keyFor(voiceId: string, text: string, tuning: Record<string, unknown>): string {
+  // The tuning keys that actually change the sound. Everything else on a workflow (its name, its
+  // openers list) does not, and must not split the cache.
+  const t = ["stability", "similarity_boost", "similarity", "style", "speed", "modelId"]
+    .map((k) => `${k}=${String(tuning?.[k] ?? "")}`).join("&");
+  return `${voiceId}|${t}|${text.trim()}`;
+}
+
+/** Voice settings, identical to the ones the MP3 path uses, so a cached phone clip and a rehearsal
+ *  clip of the same line are the same performance. */
+function voiceSettings(tuning: Record<string, unknown>): Record<string, number> {
+  const vs: Record<string, number> = {
+    stability: typeof tuning.stability === "number" ? tuning.stability : 0.4,
+    similarity_boost: typeof tuning.similarity_boost === "number" ? tuning.similarity_boost
+      : (typeof tuning.similarity === "number" ? tuning.similarity : 0.85),
+  };
+  if (typeof tuning.style === "number") vs.style = tuning.style;
+  if (typeof tuning.speed === "number" && tuning.speed >= 0.7 && tuning.speed <= 1.2 && tuning.speed !== 1) vs.speed = tuning.speed;
+  return vs;
+}
+
+/**
+ * The opening clip in phone format, from the cache when we have already said this exact line in this
+ * exact voice. Returns null when synthesis fails — every caller must treat that as "no clip" and
+ * fall back to the behaviour that does not need one, never as a reason to drop the call.
+ */
+export async function phoneClip(voiceId: string, text: string, tuning: Record<string, unknown> = {}, apiKey?: string): Promise<PhoneClip | null> {
+  const words = (text || "").trim();
+  if (!voiceId || !words) return null;
+  const key = keyFor(voiceId, words, tuning);
+  const hit = cache.get(key);
+  if (hit) {
+    // Freshen: re-inserting moves it to the end of the map's order, so the oldest UNUSED clip is
+    // the one that falls out when we hit the ceiling, not simply the oldest one.
+    cache.delete(key); cache.set(key, hit);
+    return hit;
+  }
+  const modelId = tuning.modelId === "eleven_flash_v2" ? "eleven_flash_v2" : "eleven_turbo_v2";
+  try {
+    const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=ulaw_8000`, {
+      method: "POST",
+      headers: { "xi-api-key": apiKey || config.voice.apiKey, "content-type": "application/json" },
+      body: JSON.stringify({ text: words, model_id: modelId, voice_settings: voiceSettings(tuning) }),
+    });
+    if (!r.ok) { console.error("[clip] synth", r.status, (await r.text()).slice(0, 120)); return null; }
+    const audio = Buffer.from(await r.arrayBuffer());
+    if (!audio.length) return null;
+    const clip: PhoneClip = { audio, ms: Math.round(audio.length / ULAW_BYTES_PER_MS), text: words, voiceId };
+    cache.set(key, clip);
+    while (cache.size > MAX_CLIPS) { const oldest = cache.keys().next().value; if (oldest === undefined) break; cache.delete(oldest); }
+    return clip;
+  } catch (e) { console.error("[clip] synth", e); return null; }
+}
+
+/**
+ * Split a clip into 20ms media frames, base64 as Twilio wants them. Pure, so the framing is provable
+ * without a phone call. A trailing part-frame is sent as-is rather than padded: μ-law silence is not
+ * a zero byte, so padding would put a click on the end of every line we say.
+ */
+export function toMediaFrames(audio: Buffer): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < audio.length; i += ULAW_FRAME_BYTES) {
+    out.push(audio.subarray(i, Math.min(i + ULAW_FRAME_BYTES, audio.length)).toString("base64"));
+  }
+  return out;
+}

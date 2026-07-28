@@ -9,6 +9,9 @@ import { config } from "../config";
 // through. Every stamp is "now"; the receipt owns the clock, since it started at dial and this
 // socket opens much later.
 import { emit, markNow, addMs, linkProviderCall } from "../calls/events";
+// Delta's opening question: our own line, our own voice, already in phone format and already paid
+// for. The bridge only PLAYS it — synthesis and caching live outside the call path (clip-cache.ts).
+import { toMediaFrames } from "../calls/clip-cache";
 
 export interface BridgeContext {
   agentId: string;
@@ -55,6 +58,18 @@ export interface BridgeContext {
   // flags are stamped at context-set time and never consumed, so the VAD gate stays truthful.
   hadDtmf?: boolean;
   hadSay?: boolean;
+  // ---- DELTA ASKS FIRST (spec: docs/specs/live-call-runtime/README.md, sections 4 and 5) ----
+  // The opening question as ONE pre-recorded clip in phone format (μ-law 8kHz), synthesized and
+  // cached before we dialled. Delta is not an agent: it never interprets an answer and it never
+  // decides a call is finished. It exists so the clerk hears the question the instant they say
+  // hello, while the expensive agent is still connecting behind it.
+  openingClip?: { audio: Buffer; ms: number; text: string };
+  // The agent that joins a conversation ALREADY IN PROGRESS: configured once, empty greeting,
+  // standing instruction to wait silently for the answer. A DEDICATED AGENT, deliberately, because
+  // overriding the prompt or the first message per call once hung calls up — the whole design would
+  // otherwise rest on the one thing already known to break. Without this id the clip never plays and
+  // the call behaves exactly as it does today.
+  midCallAgentId?: string;
 }
 const contexts = new Map<string, BridgeContext>();
 export function setBridgeContext(room: string, ctx: BridgeContext) {
@@ -247,13 +262,91 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   // after the agent — not just echo, which comes back well attenuated (≲300). Gate lower + shorter.
   const ECHO_TAIL_MS = 150;   // reflection tail after playback ends (was 250)
   const BARGE_THRESH = 520;   // inbound energy that still counts as a human talking (was 900)
+  // ---- Delta's clip, and the gate it holds shut ----
+  // While the clip plays, the agent is CONNECTING but not conversing: he receives no audio and none
+  // of his audio reaches the line. The clerk hears one voice asking one question. The moment the
+  // clip is done the gate opens, everything the clerk said in the meantime is released to him, and
+  // he owns every turn from there.
+  let charlieGateOpen = true;   // true = today's behaviour, agent talks the moment he is ready
+  let clipText = "";            // the question Delta asked, handed to the agent as context
+  const clipTimers: NodeJS.Timeout[] = [];
+  const CLIP_MARK = "delta-opening";
+  /** A breath after the clip so the agent can never clip its own tail. */
+  const CLIP_SETTLE_MS = 250;
+  /** If every signal fails, open him anyway this long after the clip should have ended. A slightly
+   *  early agent is recoverable; a live clerk saying hello into silence is not. */
+  const CLIP_BACKSTOP_MS = 4000;
   log(`twilio connected room=${room.slice(0, 8)} ctx=${!!ctx}`);
+
+  /** Release everything the clerk said while we were still asking. Only ever runs with the gate
+   *  open and the agent ready, so a buffered word can never be delivered to a session that is not
+   *  listening yet. */
+  function flushPending() {
+    if (!eleven || !ready || !charlieGateOpen) return;
+    for (const p of pending) eleven.send(JSON.stringify({ user_audio_chunk: p }));
+    pending.length = 0;
+  }
+
+  /** The clip is over: hand the conversation to the agent. Idempotent — three signals race to call
+   *  this and a backstop calls it if all three miss, so it must only ever act once. */
+  function openCharlieGate(via: string) {
+    if (charlieGateOpen) return;
+    charlieGateOpen = true;
+    clipTimers.forEach(clearTimeout); clipTimers.length = 0;
+    emit(room, "charlie_join", "Question asked, the agent has the conversation from here", { handover: true, via, held: pending.length });
+    log(`delta: clip finished (${via}) -> agent gate open, releasing ${pending.length} buffered frame(s)`);
+    flushPending();
+  }
+
+  /**
+   * Play Delta's question down the line, in code, exactly the way keypad tones already go out.
+   * Returns false when the socket is not in a state to carry it, in which case the caller must
+   * behave as though there were no clip at all.
+   *
+   * THE THREE SIGNALS that tell us it finished, whichever lands first:
+   *   1. Twilio's `mark` — the accurate one, handled in the message loop below.
+   *   2. The clip's own length — exact arithmetic (μ-law 8kHz is 8 bytes per millisecond), known
+   *      the moment the clip was built.
+   *   3. The playout clock the bridge already keeps (`agentPlayingUntil`), which is how the echo
+   *      gate works and is proven on every call. Checked when the length timer lands, so audio that
+   *      is genuinely still playing can only ever DELAY the handover.
+   */
+  function startOpeningClip(clip: { audio: Buffer; ms: number; text: string }): boolean {
+    if (twilio.readyState !== 1 || !streamSid) { log("delta: socket not ready, no clip -> agent opens as usual"); return false; }
+    charlieGateOpen = false;
+    clipText = clip.text;
+    for (const frame of toMediaFrames(clip.audio)) {
+      twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: frame } }));
+      fanout(room, frame, "agent"); // a listener hears the question, same as they hear the agent
+    }
+    // Our own voice is on the line now, so the echo gate and the playout clock must both know —
+    // otherwise the line's reflection of this clip comes straight back as "the clerk answering".
+    // Deliberately NOT counted as speaking seconds: the agent is connected and silent through the
+    // clip, and that is exactly the dead air the receipt exists to show us.
+    agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + clip.ms;
+    twilio.send(JSON.stringify({ event: "mark", streamSid, mark: { name: CLIP_MARK } }));
+    emit(room, "charlie_join", `Asked the question, warming the agent up behind it`, { prewarm: true, clipMs: clip.ms, question: clip.text });
+    log(`delta: playing the opening question (${clip.ms}ms) while the agent connects`);
+    // Signal 2, which also reads signal 3 when it lands.
+    clipTimers.push(setTimeout(function done() {
+      const left = agentPlayingUntil - Date.now();
+      if (left > 0) { clipTimers.push(setTimeout(done, Math.min(left, 1000))); return; } // still playing → wait
+      openCharlieGate("the clip finished playing");
+    }, clip.ms + CLIP_SETTLE_MS));
+    // The backstop. Nothing below this line may leave a clerk talking to nobody.
+    clipTimers.push(setTimeout(() => openCharlieGate("nothing confirmed the clip, opened anyway"), clip.ms + CLIP_BACKSTOP_MS));
+    return true;
+  }
 
   async function connectEleven() {
     if (!ctx) { log("connectEleven: NO CONTEXT"); return; }
     connecting = true; // from now, buffer inbound audio for the agent
     const c = ctx; // narrowed
-    const url = await signedUrl(c.agentId, c.apiKey);
+    // Joining mid-conversation is a different agent, not a different prompt: one configured once,
+    // with no greeting and a standing instruction to wait for the answer. Only ever used when the
+    // clip is actually playing, so every other call opens the same agent it always has.
+    const joining = !charlieGateOpen && !!c.midCallAgentId;
+    const url = await signedUrl(joining ? c.midCallAgentId! : c.agentId, c.apiKey);
     if (!url) { log("connectEleven: no signed url -> abort"); return; }
     log("connectEleven: opening ElevenLabs WS");
     eleven = new WebSocket(url);
@@ -263,7 +356,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       markNow(room, "charlieOpenMs");
       emit(room, "charlie_join", "The agent is on the line and billing", { reason: connectReason });
       log("eleven WS open -> sending init");
-      const init: Record<string, unknown> = { type: "conversation_initiation_client_data", dynamic_variables: c.dynamicVars };
+      // The question Delta already asked rides in as context, so the joining agent knows what the
+      // clerk is answering and never asks it a second time.
+      // `opening_line` is a variable the agents already declare, so this adds no new surface.
+      const vars = joining && clipText ? { ...c.dynamicVars, opening_line: clipText } : c.dynamicVars;
+      const init: Record<string, unknown> = { type: "conversation_initiation_client_data", dynamic_variables: vars };
       // Workflow voice: minimal per-call TTS override (voice + any tuning). Only when a workflow set
       // one — default calls send nothing extra, so the historically-flaky override path stays dormant.
       if (c.voiceId) {
@@ -290,11 +387,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         const convId = find(m);
         if (convId) { conversations.set(room, convId); linkProviderCall(room, convId); setTimeout(() => conversations.delete(room), 10 * 60 * 1000); if (c.connectOnHuman && humanAtMs) navByConv.set(convId, Math.max(0, Math.round((humanAtMs - startMs) / 1000))); log(`metadata: convId=${convId}`); try { c.onConversationId?.(convId); } catch (e) { log(`onConversationId threw: ${String(e).slice(0, 80)}`); } }
         else log(`metadata but NO convId: ${JSON.stringify(m).slice(0, 200)}`);
-        for (const p of pending) eleven!.send(JSON.stringify({ user_audio_chunk: p }));
-        pending.length = 0;
+        // Held back while Delta is still asking — openCharlieGate releases them the instant the
+        // clip is done, in order, so an early answer reaches him complete instead of half-heard.
+        flushPending();
       } else if (m.type === "audio") {
         const b64 = m.audio_event?.audio_base_64;
-        if (b64 && twilio.readyState === 1) {
+        // He is warming up behind the question, not talking over it. Nothing he produces before the
+        // gate opens reaches the line.
+        if (b64 && !charlieGateOpen) { log("delta: agent tried to speak during the clip, suppressed"); }
+        else if (b64 && twilio.readyState === 1) {
           twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: b64 } }));
           fanout(room, b64, "agent");
           // Extend the echo-gate window by this chunk's real playout time (μ-law 8kHz = 8 bytes/ms);
@@ -357,6 +458,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (reason === "human") { markNow(room, "humanMs"); emit(room, "human_detected", "A real person is on the line"); }
     else emit(room, "unknown", `The agent was let on without hearing a person (${reason})`, { reason });
     log(`connect-on-human: connecting (${reason}) after ${Math.round((humanAtMs - startMs) / 1000)}s nav`);
+    // DELTA ASKS, THE AGENT ANSWERS. Only on a real person: a clip played at a hold-timeout or a
+    // recipe timer would be a question asked into a menu. Everything else about the call is
+    // unchanged, and a store with no clip or no joining agent takes exactly today's path.
+    if (reason === "human" && ctx?.openingClip && ctx?.midCallAgentId) startOpeningClip(ctx.openingClip);
     connectEleven();
     // Give-up cap: the agent is now billing. If no real human words land within giveUpSeconds,
     // nobody is coming to the phone — end the call instead of paying to listen to it ring.
@@ -441,7 +546,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   }
 
   twilio.on("message", (data: Buffer) => {
-    let m: { event?: string; start?: { streamSid?: string; customParameters?: { room?: string } }; media?: { payload?: string } };
+    let m: { event?: string; start?: { streamSid?: string; customParameters?: { room?: string } }; media?: { payload?: string }; mark?: { name?: string } };
     try { m = JSON.parse(data.toString()); } catch { return; }
     if (m.event === "start") {
       streamSid = m.start?.streamSid || streamSid;
@@ -508,10 +613,18 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       const echoWindow = Date.now() < agentPlayingUntil + ECHO_TAIL_MS;
       const suppress = echoWindow && frameEnergy(b64) < BARGE_THRESH;
       if (suppress) { if (++echoDropped % 200 === 1) log(`echo gate: suppressing agent playback echo (dropped=${echoDropped})`); }
-      else if (eleven && ready) eleven.send(JSON.stringify({ user_audio_chunk: b64 }));
+      // A clerk who starts answering before we have finished asking is the normal case, not an edge
+      // case. Their words go into the SAME buffer the bridge has always used while the agent
+      // connects, and are released to him whole the moment the gate opens.
+      else if (eleven && ready && charlieGateOpen) eleven.send(JSON.stringify({ user_audio_chunk: b64 }));
       else if (connecting) pending.push(b64);          // committed to connect → buffer for the agent
       else if (earArmed || (ctx?.connectOnHuman && !ctx.connectAtSec && !ctx.hadDtmf && !ctx.hadSay)) maybeDetectHuman(b64); // The ear runs in exactly two states: (1) bare direct dials — no nav plan at all (Mapper's 770ffa0 boolean, owner-ordered 07-21: never DURING a menu, where it trips on the recorded greeting — B&N 3:42p); (2) earArmed — the smart join, where the recipe has FINISHED the menu and the ear opens for the real human voice (owner design, restored 07-24). State (1) MUST read hadDtmf/hadSay, NOT ctx.dtmf/ctx.say: those are consumed at TwiML build (takeBridgeDtmf/Say), so by media time they are ALWAYS empty and the ear armed on every timerless keypad/voice chain — the agent opened into the recording and billed through the tree (owner 07-22).
+    } else if (m.event === "mark") {
+      // SIGNAL 1, the accurate one: the carrier finished playing everything queued before this mark,
+      // so Delta's question has actually reached the clerk's ear. New code, and deliberately not the
+      // only way we can learn this — see startOpeningClip.
+      if (m.mark?.name === CLIP_MARK) openCharlieGate("the carrier confirmed the clip played");
     } else if (m.event === "stop") { log("twilio stop"); signalEnd(); if (eleven) eleven.close(); }
   });
-  twilio.on("close", () => { activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (eleven) eleven.close(); });
+  twilio.on("close", () => { activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (eleven) eleven.close(); });
 }

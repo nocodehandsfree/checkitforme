@@ -7,6 +7,7 @@ import { getPolicy } from "../policy";
 import { setBridgeContext, takeBridgeDtmf, takeBridgeSay, bridgeLog } from "./bridge";
 import { startListenNav, listenNavOpeningTwiml, type NavStep } from "../calls/listen-nav";
 import { openReceipt, emit, closeReceipt, laneFor, type EventKind } from "../calls/events";
+import { phoneClip } from "../calls/clip-cache";
 
 /** Turn the recipe's executable strings ("2@8,2@16" / "no@26,front@38") back into ordered steps.
  *  Same source of truth either way — only the WHEN changes between the two nav modes. */
@@ -84,7 +85,23 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
     planned: navSteps.map((s) => ({ action: s.action, value: s.value, atSec: s.atSec })),
     note: `Dialing ${e164(toNumber)}`,
   });
-  const mkCtx = () => ({ agentId: opts?.agentId || config.voice.agentId, apiKey: opts?.apiKey || undefined, dynamicVars, onConversationId, dtmf: listening ? undefined : (dtmf || undefined), say: listening ? undefined : (opts?.say || undefined), connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: connectAtSecAdj, holdMaxSeconds: pol.bail.holdMaxSeconds, giveUpSeconds: pol.bail.enabled && pol.bail.ringMaxSeconds > 0 ? pol.bail.ringMaxSeconds : undefined, earFromSec, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
+  // DELTA'S QUESTION, READY BEFORE THE PHONE RINGS (spec: the live call runtime, section 4).
+  // The clerk should hear the question the moment they say hello, so it cannot be synthesized at
+  // pickup — it is built (or, after the first time, read straight out of the cache) while the
+  // carrier is still dialling. Two deliberate conditions:
+  //   • a joining agent must be configured, or there is nobody to hand the answer to;
+  //   • the call must already carry a voice override, so the clip and the agent are the SAME voice.
+  //     Without that guarantee the clerk would hear two different people, and we are not turning on
+  //     the per-call override path for calls that today send none.
+  // Either missing → no clip, and the call runs exactly as it does today.
+  let openingClip: { audio: Buffer; ms: number; text: string } | undefined;
+  const question = dynamicVars.opening_line || "";
+  if (config.voice.midCallAgentId && opts?.voiceId && question) {
+    const c = await phoneClip(opts.voiceId, question, opts?.voiceTuning || {}, opts?.apiKey);
+    if (c) openingClip = { audio: c.audio, ms: c.ms, text: c.text };
+    else emit(room, "unknown", "Could not prepare the opening question, the agent will ask it himself");
+  }
+  const mkCtx = () => ({ agentId: opts?.agentId || config.voice.agentId, openingClip, midCallAgentId: config.voice.midCallAgentId, apiKey: opts?.apiKey || undefined, dynamicVars, onConversationId, dtmf: listening ? undefined : (dtmf || undefined), say: listening ? undefined : (opts?.say || undefined), connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: connectAtSecAdj, holdMaxSeconds: pol.bail.holdMaxSeconds, giveUpSeconds: pol.bail.enabled && pol.bail.ringMaxSeconds > 0 ? pol.bail.ringMaxSeconds : undefined, earFromSec, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
   setBridgeContext(room, mkCtx());
   const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
   // INLINE the TwiML instead of a Url callback (owner 07-17: "no cutoffs — listen from the very
