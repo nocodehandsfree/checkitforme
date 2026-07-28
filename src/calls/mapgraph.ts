@@ -93,6 +93,10 @@ export interface MapVersion {
   chainId: number;
   storeId: number;                 // 0 = the chain-wide map; >0 = this store differs (Target 3000+)
   version: number;
+  /** What to CALL this version on screen. A store's own route numbers itself from 1, exactly like the
+   *  chain's, so the owner's Chains page showed two different things both labelled "v1" on 07-28.
+   *  The number alone is ambiguous; the scope is what makes it readable. */
+  label: string;
   status: "proposed" | "active" | "retired" | "rejected";
   navType: string;
   recipe: MapRecipe;
@@ -431,6 +435,7 @@ function rowToVersion(r: any): MapVersion {
   const parse = <T,>(s: unknown, fallback: T): T => { try { return JSON.parse(String(s)) as T; } catch { return fallback; } };
   return {
     id: Number(r.id), chainId: Number(r.chain_id), storeId: Number(r.store_id || 0), version: Number(r.version),
+    label: Number(r.store_id || 0) ? `This store v${Number(r.version)}` : `Chain v${Number(r.version)}`,
     status: String(r.status) as MapVersion["status"], navType: String(r.nav_type || ""),
     recipe: parse<MapRecipe>(r.recipe, { type: "direct", steps: [], seconds: 0 }),
     seconds: r.seconds == null ? null : Number(r.seconds),
@@ -986,6 +991,16 @@ export interface GraphRow {
   confidence: number; confidenceLabel: string; version: number | null; versionId: number | null;
   lastVerified: number | null; proposed: number; openUnknowns: number; drift30d: number;
   hammer: boolean; promptTriggered: boolean;
+  /** HOW IT IS IMPROVING, not just where it stands. The owner's question on 07-28: the screen showed
+   *  "62s" and nothing about the 67s it used to be. Every call we have ever made to this chain is
+   *  already stored as evidence, so the trend costs one pass over data we hold. Null until two calls
+   *  exist, because one measurement is not a trend. */
+  firstSeconds: number | null;   // the slowest we were when we first learned this route
+  bestSeconds: number | null;    // the fastest we have ever proved
+  savedSeconds: number | null;   // first minus now, positive = faster than when we started
+  calls: number;                 // how many calls stand behind the live route
+  stores: number;                // how many different stores agree on it
+  menuOptions: number;           // choices captured from the store's own menu, spoken or pressed
 }
 
 /** One row per chain for the Admin map screen: what we press/say, how fast it gets to a person, how
@@ -1028,8 +1043,46 @@ export async function graphSummary(): Promise<GraphRow[]> {
       proposed, openUnknowns: nUnknown.get(ch.id) || 0, drift30d: nDrift.get(ch.id) || 0,
       hammer: isHammerPath(recipe),
       promptTriggered: !!recipe?.steps?.some((s) => typeof s.afterPrompt === "number"),
+      ...trendOf(list, active, recipe),
     };
   });
+}
+
+/**
+ * THE IMPROVEMENT, from evidence we already keep. Every call behind the live route carries the
+ * seconds it took, so "we were at 67 and we are at 62" needs no new column and no new call — it was
+ * simply never handed to the screen. One call is a measurement, not a trend, so the numbers stay null
+ * until there are two.
+ */
+function trendOf(all: MapVersion[], active: MapVersion | null, recipe: MapRecipe | null): {
+  firstSeconds: number | null; bestSeconds: number | null; savedSeconds: number | null;
+  calls: number; stores: number; menuOptions: number;
+} {
+  const menuOptions = (recipe?.menu || []).length;
+  // EVERY call this chain has ever proved, across every version — not just the live one. The whole
+  // point of the number is that the route got faster, and getting faster means a NEW version, whose
+  // own evidence starts empty. Reading the active version alone would reset the history at the exact
+  // moment there was an improvement worth showing.
+  // Oldest version first, so "where we started" really is the start: the list arrives newest-first.
+  const calls = all.filter((v) => v.storeId === 0)
+    .slice().sort((a, b) => a.version - b.version)
+    .flatMap((v) => v.evidence?.calls || []).filter((c) => c.reachedHuman);
+  // Stable: calls made in the same second (a simulated run, or a burst) keep the order they were
+  // recorded in, so the first measurement cannot be decided by a coin toss.
+  const timed = calls.filter((c) => typeof c.seconds === "number" && (c.seconds as number) > 0)
+    .map((c, i) => ({ c, i }))
+    .sort((a, b) => ((a.c.at || 0) - (b.c.at || 0)) || (a.i - b.i))
+    .map((x) => x.c);
+  const stores = new Set(calls.map((c) => c.storeId).filter(Boolean)).size;
+  if (timed.length < 2) {
+    return { firstSeconds: null, bestSeconds: timed[0]?.seconds ?? null, savedSeconds: null,
+      calls: calls.length, stores, menuOptions };
+  }
+  const first = timed[0].seconds as number;
+  const best = Math.min(...timed.map((c) => c.seconds as number));
+  const nowSecs = active?.seconds ?? best;
+  return { firstSeconds: first, bestSeconds: best, savedSeconds: Math.round(first - nowSecs),
+    calls: calls.length, stores, menuOptions };
 }
 
 /** Everything behind one chain: its versions, its evidence, its unknowns, its recent observations —

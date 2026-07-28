@@ -272,6 +272,28 @@ async function main() {
     ok(r.steps[0].value === "no" && r2.steps[0].value === "no", "and the route itself is the same either way");
   }
 
+
+  console.log("▶ WHAT THE OWNER SEES: not just where we are, but that it is getting better");
+  {
+    const row = (await graphSummary()).find((r) => r.chainId === chain.id)!;
+    ok(typeof row.calls === "number" && row.calls >= 2, `how many calls stand behind the route (${row.calls})`);
+    ok(row.stores >= 2, `and how many different stores agree (${row.stores})`);
+    ok(row.firstSeconds !== null && row.bestSeconds !== null,
+      `where we started and the best we have ever done (${row.firstSeconds}s → ${row.bestSeconds}s)`);
+    ok((row.savedSeconds ?? 0) > 0, `and the improvement in plain seconds (${row.savedSeconds}s faster)`);
+    ok(typeof row.menuOptions === "number", "plus how much of the store's own menu we captured");
+
+    const one = (await graphSummary()).find((r) => r.calls === 1);
+    if (one) ok(one.savedSeconds === null, "one call is a measurement, not a trend — no improvement is claimed");
+    else ok(true, "no single-call chain in this run to check the null case against");
+
+    const vs = await versionsFor(chain.id, 0);
+    ok(vs.every((v) => v.label.startsWith("Chain v")), `a chain route is labelled by scope: "${vs[0].label}"`);
+    const store = (await versionsFor(chain.id, odd.id)).filter((v) => v.storeId === odd.id);
+    ok(store.every((v) => v.label.startsWith("This store v")),
+      `and one store's own route can never read as the chain's: "${store[0]?.label}"`);
+  }
+
   console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }
