@@ -166,9 +166,14 @@ const MUSIC_VOICED_FRACTION = 0.96;
 const NEW_PERSON_AFTER_MS = 20000;
 
 export type HoldReason = "quiet" | "music" | "transfer";
+/** Nobody has made a sound for a very long time. Different from "they walked away to go and look":
+ *  at this point the line is probably not a conversation any more — the handset was put down and
+ *  forgotten, or the far end went away without hanging up. The runtime decides what to do about it;
+ *  the ear only says that it happened. */
+const DEAD_AIR_MS = 45000;
 export interface EarTuning {
   holdQuietMs?: number; holdMusicMs?: number; musicWindowMs?: number;
-  musicVoicedFraction?: number; newPersonAfterMs?: number;
+  musicVoicedFraction?: number; newPersonAfterMs?: number; deadAirMs?: number;
 }
 
 /**
@@ -193,18 +198,38 @@ export class ConversationEar {
   private readonly windowMs: number;
   private readonly voicedFrac: number;
   private readonly newPersonMs: number;
+  private readonly deadAirMs: number;
+  private deadAirCalled = false;
   constructor(private on: {
     holdStart: (reason: HoldReason, atMs: number) => void;
     /** @param gapMs how long they were gone. @param maybeNewPerson long enough that it may not be
      *  the same person, so Charlie must be told. */
     holdEnd: (gapMs: number, maybeNewPerson: boolean, atMs: number) => void;
+    /** NOBODY IS COMING BACK. Fired once, when quiet has run far past a normal wait. */
+    deadAir?: (quietMs: number, atMs: number) => void;
+    /** THE LINE IS GONE. Fired once, when the audio itself stops arriving — a dropped carrier leg
+     *  sends nothing at all, which is silence a silence-detector can never see. */
+    disconnected?: (atMs: number) => void;
   }, t?: EarTuning) {
+    this.deadAirMs = t?.deadAirMs ?? DEAD_AIR_MS;
     this.quietMax = t?.holdQuietMs ?? HOLD_QUIET_MS;
     this.musicMax = t?.holdMusicMs ?? HOLD_MUSIC_MS;
     this.windowMs = t?.musicWindowMs ?? VOICED_WINDOW_MS;
     this.voicedFrac = t?.musicVoicedFraction ?? MUSIC_VOICED_FRACTION;
     this.newPersonMs = t?.newPersonAfterMs ?? NEW_PERSON_AFTER_MS;
   }
+
+  /**
+   * NO AUDIO IS ARRIVING AT ALL. Called by whoever owns the socket, not by feed(), because that is
+   * the whole point: a line that has genuinely gone away stops sending frames, so the ear is never
+   * asked anything again and cannot notice on its own. Silence and absence are different facts.
+   */
+  lineGone(): void {
+    if (this.gone) return;
+    this.gone = true;
+    this.on.disconnected?.(this.elapsed);
+  }
+  private gone = false;
 
   /** @param energy frame energy, same measure the rest of the call path uses.
    *  @param isTone this frame sits on the phone network's own ring/busy frequencies. */
@@ -225,10 +250,16 @@ export class ConversationEar {
         && this.voiced.filter(Boolean).length / this.voiced.length >= this.voicedFrac;
       if (full && this.soundMs >= this.musicMax) this.enter("music");
       // Sound with gaps in it is a person. If we thought they were away, they are back.
-      else if (!full) { this.heardVoiceMs += FRAME_MS; this.leave(); }
+      else if (!full) { this.heardVoiceMs += FRAME_MS; this.deadAirCalled = false; this.leave(); }
     } else {
       this.soundMs = 0; this.quietMs += FRAME_MS;
       if (this.quietMs >= this.quietMax) this.enter("quiet");
+      // Far past a normal wait. Somebody stepping away to check a shelf comes back; this does not,
+      // and it is the shape of a handset put down on a counter and forgotten.
+      if (this.quietMs >= this.deadAirMs && !this.deadAirCalled) {
+        this.deadAirCalled = true;
+        this.on.deadAir?.(this.quietMs, this.elapsed);
+      }
     }
   }
 
