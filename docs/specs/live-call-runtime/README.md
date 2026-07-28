@@ -377,6 +377,25 @@ would keep pressing.
 
 ---
 
+## 10b. Cross-check — nobody marks their own homework
+
+**Owner's rule, 07-28, after a night that cost us one.** Echo audits Mapper's section against the
+code. Mapper audits Echo's. Neither signs off on their own.
+
+It exists because both of us read only the part with our name on it and each reported the whole
+document as done. Section 4's law — every path that dials a store runs this runtime, mapping calls
+named — sat unbuilt for weeks while both sides believed it was covered, and the fix for it was a
+second listener that section 10 forbids in plain words. Five minutes of the other side reading it
+would have caught both.
+
+- **Never say "built to spec" about a document you only read your half of.** Say which sections you
+  checked and which you did not.
+- **An audit is greps and file reads against the claims, not a re-reading of the prose.** Report what
+  you verified, what failed, and what you could not check without a phone.
+- **What a machine can check, a machine checks** — `scripts/spec-gates.sh`, run by the push hook.
+  Every rule broken on 07-28 was one that lived only in prose; every rule that held was one a hook
+  enforced. When a cross-check finds a rule that could have been a gate, make it one.
+
 ## 11. Done means
 
 - Gate Zero answered with numbers, three runs each way, written down.
