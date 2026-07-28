@@ -50,6 +50,9 @@ export interface MapRecipe {
   menu?: Array<{ digit: string; label: string }>;
   menuPrompts?: string[];
   ringVariable?: boolean;
+  /** Whether the recording anchors came from a CLEAN call or one where the store repeated itself.
+   *  Anchors from a re-prompted call are one recording too high and must never outlive a clean one. */
+  anchorsFrom?: "clean" | "reprompt";
   /** WHICH LANGUAGE this route was learned in (runtime spec §10.3). Discovery and execution are
    *  deferred, but the field is here now: retrofitting it later means rewriting every stored route,
    *  and a menu that answers in Spanish is a different menu, not a drifted one. */
@@ -577,7 +580,12 @@ export async function proposeVersion(opts: {
       afterPrompt: r.steps[i]?.afterPrompt,
       bargeSafe: r.steps[i]?.bargeSafe,
     });
-    const addsKnowledge = opts.recipe.steps.some((s, i) => {
+    // A CLEAN call replaces anchors learned from a call where the store repeated itself: those are one
+    // recording too high, so a live call would wait for a recording that never comes and fall back to
+    // the clock every time (CVS Alhambra, 07-28).
+    const cleansAnchors = opts.recipe.anchorsFrom === "clean" && prevActive.recipe.anchorsFrom === "reprompt"
+      && opts.recipe.steps.some((s) => typeof s.afterPrompt === "number");
+    const addsKnowledge = cleansAnchors || opts.recipe.steps.some((s, i) => {
       const live = prevActive.recipe.steps[i];
       return (typeof s.afterPrompt === "number" && typeof live?.afterPrompt !== "number")
         || (typeof s.bargeSafe === "boolean" && typeof live?.bargeSafe !== "boolean");
@@ -587,11 +595,12 @@ export async function proposeVersion(opts: {
     else if (addsKnowledge) {
       recipe = {
         ...prevActive.recipe,
+        anchorsFrom: cleansAnchors ? "clean" : prevActive.recipe.anchorsFrom,
         steps: prevActive.recipe.steps.map((s, i) => {
           const inc = knows(opts.recipe, i);
           return {
             ...s,
-            afterPrompt: s.afterPrompt ?? inc.afterPrompt,
+            afterPrompt: cleansAnchors ? inc.afterPrompt : (s.afterPrompt ?? inc.afterPrompt),
             // false is a HARD fact ("this looped the menu") and outranks not-knowing.
             bargeSafe: inc.bargeSafe === false ? false : (s.bargeSafe ?? inc.bargeSafe),
           };

@@ -209,6 +209,24 @@ async function main() {
     ok(pathSignature(greeting) !== pathSignature({ type: "direct", steps: [], seconds: 0 }), "a greeting and a real direct answer are never the same route");
   }
 
+  console.log("▶ a clean call fixes anchors a messy call got wrong");
+  {
+    const [ch] = await db.insert(chains).values({ name: "Test Anchor Repair" }).returning();
+    const dirty: MapRecipe = { type: "voice", seconds: 91, anchorsFrom: "reprompt",
+      steps: [{ action: "say", value: "no", atSec: 51, afterPrompt: 3 }] };
+    await proposeVersion({ chainId: ch.id, recipe: dirty, source: "sweep",
+      call: { at: now(), day: "2026-07-28", storeId: 991, seconds: 91, reachedHuman: true, path: "say:no" } });
+    ok((await activeMap(ch.id))!.recipe.steps[0].afterPrompt === 3, "the messy call's anchor is what we have to start with");
+    const clean: MapRecipe = { type: "voice", seconds: 95, anchorsFrom: "clean",
+      steps: [{ action: "say", value: "no", atSec: 30, afterPrompt: 2 }] };
+    await proposeVersion({ chainId: ch.id, recipe: clean, source: "sweep",
+      call: { at: now(), day: "2026-07-28", storeId: 992, seconds: 95, reachedHuman: true, path: "say:no" } });
+    const live = (await activeMap(ch.id))!;
+    ok(live.recipe.steps[0].afterPrompt === 2, "a CLEAN call corrects it, even though that call was slower");
+    ok(live.recipe.anchorsFrom === "clean", "and the route is marked clean now");
+    ok(live.seconds === 91, "while the faster time is still the one we ship");
+  }
+
   console.log("▶ a fact learned the hard way is never forgotten");
   {
     // The CVS knowledge, as data: "general" can be said early, "front" cannot — saying it early loops

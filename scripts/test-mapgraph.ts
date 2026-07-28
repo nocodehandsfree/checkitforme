@@ -6,7 +6,7 @@
 // Everything here is pure — no DB, no network, no phone calls — so the rules that decide what we
 // trust are provable on their own.
 import { scoreConfidence, pathSignature, isHammerPath, promptFingerprint, guessLanguage, _test as mg, type Evidence } from "../src/calls/mapgraph";
-import { recipeFromCall, transcriptFromCall, promptCount } from "../src/calls/map-capture";
+import { recipeFromCall, transcriptFromCall, promptCount, callHadAReprompt } from "../src/calls/map-capture";
 import { shouldFireOnPrompt } from "../src/calls/listen-nav";
 import { navPlanFromVersion } from "../src/calls/service";
 import { _test as sw } from "../src/calls/sweep";
@@ -146,6 +146,33 @@ console.log("▶ paths and plain-English change notes");
   ok(mg.describeChange(null, { type: "voice", steps: [{ action: "say", value: "front", atSec: 20 }], seconds: 40 }).startsWith("First map"), "first map says so");
   ok(mg.describeChange(prev, { type: "voice", steps: [{ action: "say", value: "front", atSec: 20 }], seconds: 31 }).includes("9s faster"), "a faster same route reads as faster");
   ok(mg.describeChange(prev, { type: "keypad", steps: [{ action: "press", value: "0", atSec: 5 }], seconds: 40 }).startsWith("Route changed"), "a new route reads as changed");
+}
+
+console.log("▶ a call where the store repeated itself teaches timing, not anchors");
+{
+  // CVS Alhambra, 07-28, verbatim: the assistant asked, we sat through it, it re-prompted, and every
+  // anchor after that came back one recording too high (3/4/5 for a route whose clean shape is 2/3/4).
+  const messy = [
+    { who: "ivr", text: "Thank you for calling CVS, Pharmacy.", atSec: 10 },
+    { who: "ivr", text: "I am your virtual assistant. Are you a healthcare provider?", atSec: 30 },
+    { who: "ivr", text: "sorry I'm not understanding please confirm if you are a healthcare provider", atSec: 51 },
+    { who: "us", action: "say", value: "no", atSec: 51 },
+    { who: "ivr", text: "please let me know if you are calling in for pharmacy or front door services", atSec: 63 },
+    { who: "us", action: "say", value: "front", atSec: 63 },
+  ];
+  ok(callHadAReprompt(messy), "the re-prompt is recognised");
+  const r = recipeFromCall(messy, 91);
+  ok(r.steps.every((s) => s.afterPrompt === undefined), "so NO anchors are learned from it");
+  ok(r.anchorsFrom === "reprompt", "and it says where it came from");
+  ok(r.seconds === 91, "the timing is still true and still kept");
+  const clean = [
+    { who: "ivr", text: "Thank you for calling CVS, Pharmacy.", atSec: 10 },
+    { who: "ivr", text: "Are you a healthcare provider?", atSec: 28 },
+    { who: "us", action: "say", value: "no", atSec: 30 },
+  ];
+  ok(!callHadAReprompt(clean), "a clean call is not flagged");
+  ok(recipeFromCall(clean, 60).steps[0].afterPrompt === 2, "and it anchors on the recording it actually followed");
+  ok(recipeFromCall(clean, 60).anchorsFrom === "clean", "marked clean, so it can replace dirty anchors later");
 }
 
 console.log("▶ a prompt keeps the same identity across speech-to-text wobble");

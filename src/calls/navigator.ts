@@ -364,7 +364,13 @@ async function navTurn(id: string, speech: string): Promise<string> {
       if (s.menuPrompts.length > 12) s.menuPrompts = s.menuPrompts.slice(-12);
     }
   }
-  if (speech && ROUTING_RE.test(speech)) s.routingSeen = true; // routed to a person → next greeting is human
+  if (speech && ROUTING_RE.test(speech)) {
+    s.routingSeen = true;                       // routed to a person → next greeting is human
+    // WHEN the machine said it was handing us on. It used to be stamped only if the brain happened to
+    // call that same turn "human"; on the 07-28 Alhambra call it did not, so "Okay, transferring you
+    // now" at 81s went unrecorded and the 10s the paid agent would have wasted was never measured.
+    if (s.transferAtSec == null) { s.transferAtSec = atSec; s.routedAtSec = s.routedAtSec ?? atSec; }
+  }
   // CONFIRM mode: we already asked "do you have {product}?" — this turn is their answer. Classify it.
   // A redirect ("that's the X dept / let me transfer you") = wrong desk → capture where + hang up.
   // Anything else (a real reply, yes/no/"we're out") = right desk → lock this path. Silence after a
@@ -409,7 +415,16 @@ async function navTurn(id: string, speech: string): Promise<string> {
     const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim().slice(0, 80);
     // The menu ASKED for input ("press 1…", "para español…", "say yes/no") — listening longer adds
     // nothing and SHORT menus (Family Dollar) hang up if you don't answer within ~20s. Act now.
-    const askedForInput = !!speech && /press (\d|one|two|three)|para espa[ñn]ol|by saying|please say|say (yes|no)\b|enter your/i.test(speech);
+    // A menu does not have to say "press 1" to be asking us something. CVS's virtual assistant asks
+    // "are you a healthcare provider?" in plain words, and on 07-28 the listen-first pass sat through
+    // it: the store re-prompted with "sorry I'm not understanding", the call ran 91s instead of 62s,
+    // AND the extra recording shifted every anchor we learned. A direct question is an ask.
+    const askedForInput = !!speech && (
+      /press (\d|one|two|three)|para espa[ñn]ol|by saying|please say|say (yes|no)\b|enter your/i.test(speech)
+      || /\b(are|is|do|did|would|can|may) (you|this|that)\b[^.?]*\?/i.test(speech)
+      || /\b(are|do|is) you\b[^.]{0,60}$/i.test(speech.trim())
+      || /let me know if|please confirm|which (one|department)|calling (in )?for/i.test(speech)
+    );
     if (speech && speech.trim()) {
       s.heard = s.heard || [];
       const n = norm(speech);

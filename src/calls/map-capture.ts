@@ -28,6 +28,9 @@ const isScaffold = (s: CapturedStep) => String(s.text || "").startsWith("asked:"
  * @param bargeProven step indexes proven safe to fire before the recording finishes (mapper wins)
  */
 export function recipeFromCall(steps: CapturedStep[], humanAtSec: number | null, bargeProven?: Set<number>): MapRecipe {
+  // On a call where the store repeated itself, the recording count is inflated — so we keep the route
+  // and the timing but NOT the anchors, and say where they came from so a clean call can replace them.
+  const dirty = callHadAReprompt(steps);
   const acts: MapStep[] = [];
   let prompts = 0;                 // completed store recordings heard so far
   for (const s of steps || []) {
@@ -39,12 +42,15 @@ export function recipeFromCall(steps: CapturedStep[], humanAtSec: number | null,
       atSec: Math.max(0, Math.round(s.atSec ?? 0)),
       // The recording this action followed. 0 would mean "before the store said anything", which is
       // never a thing we can trigger on — leave it off and let the clock cover that step.
-      afterPrompt: prompts > 0 ? prompts : undefined,
+      afterPrompt: !dirty && prompts > 0 ? prompts : undefined,
       bargeSafe: bargeProven?.has(acts.length) || undefined,
     });
   }
   const type: MapRecipe["type"] = acts.length === 0 ? "direct" : (acts.every((a) => a.action === "press") ? "keypad" : "voice");
-  return { type, steps: acts, seconds: humanAtSec ?? (steps?.[steps.length - 1]?.atSec ?? 0) };
+  return {
+    type, steps: acts, seconds: humanAtSec ?? (steps?.[steps.length - 1]?.atSec ?? 0),
+    anchorsFrom: dirty ? "reprompt" : "clean",
+  };
 }
 
 /** The menu lines this call heard, kept as the transcript evidence behind the version. Capped: the
@@ -58,6 +64,24 @@ export function transcriptFromCall(steps: CapturedStep[], max = 12): string[] {
  *  can re-measure for free. */
 export function promptCount(steps: CapturedStep[]): number {
   return (steps || []).filter((s) => s.who === "ivr" && String(s.text || "").trim()).length;
+}
+
+/** Did the store have to REPEAT itself on this call? "Sorry, I'm not understanding", "please confirm",
+ *  a prompt we already heard — any of those means an extra recording played that would not play on a
+ *  normal call. The seconds are still true, but the ANCHORS are not: every step after the re-prompt
+ *  learned a recording number one too high, and a live call would then wait for a recording that never
+ *  comes. Proved on CVS Alhambra, 07-28: the anchors came back 3/4/5 when the clean route is 2/3/4. */
+export function callHadAReprompt(steps: CapturedStep[]): boolean {
+  const lines = (steps || []).filter((s) => s.who === "ivr" && s.text).map((s) => String(s.text));
+  if (lines.some((t) => /sorry,? (i'?m )?not understanding|didn'?t (quite )?(catch|get) that|please confirm|let'?s try (that )?again|i did not understand/i.test(t))) return true;
+  // The same recording twice is the other shape of the same problem.
+  const seen = new Set<string>();
+  for (const t of lines) {
+    const k = t.toLowerCase().replace(/[^a-z ]/g, "").slice(0, 40).trim();
+    if (k.length > 12 && seen.has(k)) return true;
+    seen.add(k);
+  }
+  return false;
 }
 
 /** The language the STORE spoke on this call, from the menu lines themselves. One clear Spanish line
