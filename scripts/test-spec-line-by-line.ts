@@ -109,10 +109,19 @@ phone("3.4", "Charlie resumes naturally: no second greeting, no lost context", "
 // ── §4 THE CALL, SECOND BY SECOND ──────────────────────────────────────────────────────────────
 check("4.1", "The clip plays only when a REAL PERSON is detected, never on a timer", () =>
   /reason === "human" && ctx\?\.openingClip/.test(BRIDGE) || "the clip can fire without a person");
+// 4.2 and 4.3 are ALSO driven end to end against real sockets in test-delta-clip.ts, which is the
+// stronger proof; these read the source so the mechanism cannot be quietly removed.
 check("4.2", "Charlie is prewarmed WHILE the clip plays, not after it", () =>
-  /prewarmTimer = setTimeout/.test(BRIDGE) && /clip\.ms - PREWARM_LEAD_MS/.test(BRIDGE) || "no prewarm during the clip");
+  /prewarmTimer = setTimeout/.test(BRIDGE) && /\.ms - PREWARM_LEAD_MS/.test(BRIDGE) || "no prewarm during the clip");
 check("4.3", "Clerk speech that starts early is HELD, not dropped", () =>
-  /else if \(connecting\) pending\.push\(b64\)/.test(BRIDGE) || "early speech is not buffered");
+  /else if \(connecting\) \{ if \(Date\.now\(\) >= agentPlayingUntil \+ ECHO_TAIL_MS\) pending\.push\(b64\); \}/.test(BRIDGE)
+  || "early speech is not buffered");
+check("4.3b", "…but our OWN voice echoing back is never buffered as the clerk", () =>
+  /Date\.now\(\) >= agentPlayingUntil \+ ECHO_TAIL_MS\) pending\.push/.test(BRIDGE)
+  || "the line's reflection of our own clip can be handed to the agent as the clerk");
+check("4.3c", "The question waits for the greeting to finish before it starts", () =>
+  /waitQuietMs >= GREETING_END_MS \|\| waitTotalMs >= GREETING_MAX_WAIT_MS/.test(BRIDGE)
+  || "the question can talk over the greeting");
 check("4.4", "Charlie's input opens only when the clip ends", () =>
   /eleven && ready && charlieGateOpen/.test(BRIDGE) || "his input is not gated on the clip");
 check("4.5", "Charlie's output is suppressed while the clip plays", () =>
@@ -193,8 +202,11 @@ check("7.10", "LADDER 3: that fails too → treat as a dropped call", () =>
   /dropCall\("we could not open an agent/.test(BRIDGE) || "no drop on total failure");
 check("7.11", "After he has spoken there is NO live model swap", () =>
   /charlieSpoke = true/.test(BRIDGE) || "nothing records that he spoke");
+// NOT the word "degraded" — that matched a COMMENT and passed a check on nothing, which is exactly
+// the kind of soft assertion that makes a green number worthless. It has to find the real thing: a
+// verdict extracted from what we already heard, and the call marked degraded rather than dropped.
 check("7.12", "A usable answer already in the transcript is never thrown away (degraded close)", () =>
-  /degraded/i.test(BRIDGE + SERVICE) || "no degraded-but-delivered path exists");
+  /statusKey: "degraded|degraded_/.test(SERVICE + BRIDGE) || "NOT BUILT: an answer already heard is not salvaged when the brain dies mid-call");
 check("7.13", "The model is the one the owner approved", () =>
   brainTest.DEFAULT_BRAIN_MODEL === "claude-sonnet-4-6" || `default is ${brainTest.DEFAULT_BRAIN_MODEL}`);
 check("7.14", "The endpoint refuses anything that is not a real turn", () => {

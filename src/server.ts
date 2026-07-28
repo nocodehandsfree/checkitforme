@@ -6595,16 +6595,23 @@ app.post("/pub/bridge-hangup", async (c) => {
   // confirmed=null) so it's never mislabeled "nobody answered". Because this status is NOT in the
   // ingest pending set (dialing/in_progress/queued), the verdict + charge path skips it automatically.
   // statusKey drives the display pill (verdictKey reads statusKey first), so set both.
+  // Customer-initiated stop -> statusKey user_cancelled ("Check cancelled"); status stays
+  // admin_hangup so the non-result/no-charge semantics are byte-identical (owner 07-21).
+  //
+  // MATCH ON THE ROOM, NOT ONLY THE CONVERSATION ID. This used to run only when the voice provider
+  // had already handed us a conversation id, which on the new runtime may never happen — the agent
+  // opens late, behind the recorded question. So pressing Stop before then stamped nothing, the
+  // finalizer later wrote "nobody answered", and the owner was told a call he had personally
+  // answered and cancelled had gone unanswered (live Fun call, 07-28). The room exists from before
+  // the phone rings and never changes, so it always matches.
   const convId = bridgeConversationId(room);
-  if (convId) {
-    // Customer-initiated stop -> statusKey user_cancelled ("Check cancelled"); status stays
-    // admin_hangup so the non-result/no-charge semantics are byte-identical (owner 07-21).
-    await db.update(callResults)
-      .set({ status: "admin_hangup", statusKey: "user_cancelled", confirmed: null, completedAt: Math.floor(Date.now() / 1000) })
-      .where(and(eq(callResults.providerCallId, convId),
-        inArray(callResults.status, ["dialing", "in_progress", "queued"])))
-      .catch((e) => console.error("admin_hangup stamp:", e));
-  }
+  const ids = [`bridge:${room}`, convId].filter(Boolean) as string[];
+  await db.update(callResults)
+    .set({ status: "admin_hangup", statusKey: "user_cancelled", confirmed: null, completedAt: Math.floor(Date.now() / 1000) })
+    .where(and(
+      or(eq(callResults.room, room), inArray(callResults.providerCallId, ids)),
+      inArray(callResults.status, ["dialing", "in_progress", "queued"])))
+    .catch((e) => console.error("admin_hangup stamp:", e));
   if (sid && tok && callSid) {
     await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}.json`, {
       method: "POST",

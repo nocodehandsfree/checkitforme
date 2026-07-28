@@ -110,6 +110,9 @@ async function callToHello(f: Fake, clipMs: number, room: string) {
   tw.say({ event: "start", start: { streamSid: "MZ_test", customParameters: { room } } });
   await sleep(350); // past the connect-click settle window
   for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  // …and then they STOP. The question waits for the end of the greeting, so the silence is what
+  // actually starts it — feeding only speech would hang here, which is the behaviour we want.
+  for (let i = 0; i < 45; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
   return { tw, clipFrames: toMediaFrames(audio).length };
 }
 
@@ -261,6 +264,7 @@ async function callWithHold(f: Fake, room: string, holdStrategy: "gate" | "reope
   tw.say({ event: "start", start: { streamSid: "MZ_h", customParameters: { room } } });
   await sleep(350);
   for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < 45; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
   await sleep(120);
   return tw;
 }
@@ -323,6 +327,7 @@ console.log("\n▶ the other strategy: close him for the wait, bring him back as
   ok(tw.readyState === 1, "the phone line itself stays up, so the store hears nothing unusual");
   speak(tw, 30);
   await sleep(150);
+  if (f.sockets.length !== 2) { const { bridgeDebug } = await import("../src/voice/bridge"); console.log(bridgeDebug().slice(-12).join("\n")); }
   ok(f.sockets.length === 2, "somebody came back, so he is opened again");
   const joins = (getReceipt("room-reopen")?.events || []).filter((e) => e.kind === "charlie_join");
   ok(joins.some((j) => j.detail?.segment === 2), "and the receipt calls it part 2 of the SAME call, never a second call");

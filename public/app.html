@@ -1372,7 +1372,7 @@
       <div id="set_vitals" style="margin-top:16px"></div>
       <div id="set_pending" style="display:none"></div>
       <div class="row" style="align-items:baseline;margin-top:24px">
-        <div class="k-eyebrow" style="margin:0">Menu</div>
+        <div class="k-eyebrow" style="margin:0">Recipe</div>
         <div id="set_menuver" class="meta" style="margin-left:auto"></div>
       </div>
       <div id="set_menuwrap">
@@ -1409,20 +1409,50 @@
            proved, needs a look, mapping calls) came off this screen 07-28: the owner manages a chain,
            not a version history, and a broken chain is an agent's job, not his. The data is untouched
            in the database; it simply stopped being something he has to read. -->
-      <div class="k-eyebrow" style="margin-top:24px">Status</div>
-      <div id="set_status" class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5;margin-top:6px"></div>
-      <button class="peek" style="margin-top:20px" onclick="sheetFromHolder('ds_setall','Settings','')">
+      <!-- Mapping is iterative: call, call, call, until a route proves out. So the page carries the
+           RECIPE on top, and everything behind it in four sheets: the whole menu, every round of
+           calls, the versions we have held (nothing is ever deleted), and anything needing a look. -->
+      <div class="k-eyebrow" style="margin-top:24px">Mapping</div>
+      <button class="peek" onclick="sheetFromHolder('ds_setmenu','Menu','Every line the store plays, and what we say back.')">
+        <div class="pk-main"><div class="pk-t">Menu</div></div>
+        <div class="pk-fact" id="pk_setmenu"></div>
+        <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      <button class="peek" onclick="sheetFromHolder('ds_setruns','Calls','Every call we placed to learn this menu, newest first.')">
+        <div class="pk-main"><div class="pk-t">Calls</div></div>
+        <div class="pk-fact" id="pk_setruns"></div>
+        <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      <button class="peek" onclick="sheetFromHolder('ds_setver','Versions','Every recipe we have held for this chain. Nothing is deleted.')">
+        <div class="pk-main"><div class="pk-t">Versions</div></div>
+        <div class="pk-fact" id="pk_setver"></div>
+        <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      <button class="peek" id="set_reviewrow" style="display:none" onclick="sheetFromHolder('ds_setreview','Review','Things the mapper flagged on this chain.')">
+        <div class="pk-main"><div class="pk-t">Review</div></div>
+        <div class="pk-fact" id="pk_setreview"></div>
+        <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+      <div class="k-eyebrow" style="margin-top:24px">Chain</div>
+      <button class="peek" onclick="sheetFromHolder('ds_setall','Settings','')">
         <div class="pk-main"><div class="pk-t">Settings</div></div>
         <div class="pk-fact" id="pk_setall"></div>
         <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
       <div id="set_holders" style="display:none">
+        <!-- ALL THREE, and they stay. 07-28 I hid Store and Data claiming they were editable under
+             Stores. They are NOT: mute, the chain's type, its rating, and the bulk callable / kiosk /
+             online / stock-verified toggles (ssStoreBulk) exist ONLY here. Hiding them took away the
+             only way to manage them. Check before you cut. -->
         <div id="ds_setall">
           <div class="k-eyebrow" style="margin:0 0 10px">Store</div><div id="set_store"></div>
           <div class="k-eyebrow" style="margin:22px 0 10px">Data</div><div id="set_data"></div>
           <div class="k-eyebrow" style="margin:22px 0 10px">Calls</div><div id="set_call"></div>
         </div>
         <div id="ds_setruns"><div id="set_runs"></div></div>
+        <div id="ds_setmenu"><div id="set_menu"></div></div>
+        <div id="ds_setver"><div id="set_versions"></div></div>
+        <div id="ds_setreview"><div id="set_review"></div></div>
       </div>
     </div>
     </section>
@@ -1724,6 +1754,28 @@ async function srcApi(p,opts={}){
     return await r.json();
   }catch(_){ return {error:'staging_down'}; }
 }
+// THE VOICE WORKFLOW FOLLOWS THE LIVE/STAGING SWITCH, ON READS **AND** WRITES.
+//
+// Every other setting on this dashboard is one configuration the owner edits on the live service,
+// which is why CONFIG_READS above pins them to prod. The voice workflow is the deliberate exception:
+// staging and production are ALLOWED to run different workflows (that is exactly why the settings
+// sync skips the vt_* keys on purpose), so a rehearsal call on the staging site can use a different
+// voice, speed and script than the one customers hear.
+//
+// Owner 07-28: the header said Staging, he set Branson HD and speed 0.91 in the Designer, and it
+// saved to LIVE. His staging test calls kept the old plain Branson at 0.85 and he heard a slow
+// agent with no idea why. The Designer must edit the environment the switch is pointing at.
+// Anything routed through here is voice workflow ONLY. Never plans, policy flags or statuses.
+async function vtApi(p,opts={}){
+  if(CALL_SRC!=='staging') return api(p,opts);
+  try{
+    const r=await fetch(STG_ORIGIN+p,Object.assign({},opts,{credentials:'include'}));
+    if(r.status===401) return {error:'staging_auth'};
+    try{ return await r.json(); }catch(_){ return {error:'bad_response'}; }
+  }catch(_){ return {error:'staging_down'}; }
+}
+// The word for the environment the voice pages are editing right now, for toasts and headings.
+const vtEnvName=()=>CALL_SRC==='staging'?'Staging':'Live';
 function setCallSrc(s,reload){ CALL_SRC=s; localStorage.setItem('call_src',s); document.querySelectorAll('.src-filter').forEach(el=>{el.value=s;}); if(typeof renderEnvTog==='function') renderEnvTog(); if(reload) reload(); }
 // Shell-level Live/Staging switch (SPEC Part 1, in the header). It reuses the existing CALL_SRC
 // read-routing engine, so flipping it routes srcApi() reads to staging exactly the way the per-page
@@ -3239,7 +3291,7 @@ async function loadVoices(){
 // #5 voice/script rotation — opener variants + a voice pool that live calls round-robin through.
 async function loadRotation(voices){
   const box=document.getElementById('rot_voices'); if(!box) return;
-  const s=await api('/api/settings')||{};
+  const s=await vtApi('/api/settings')||{};
   const pool=new Set(((s.vt_voice_pool||'').split(',').map(x=>x.trim()).filter(Boolean)));
   // Two clean groups (owner 07-15): the voices you cloned up top, the stock library tucked below a
   // divider, so the page isn't one wall of voices.
@@ -3269,7 +3321,7 @@ function renderOpeners(){
 async function persistOpeners(){
   const active=OPENERS.filter(o=>o.on).map(o=>o.text).join('\n');
   const library=JSON.stringify(OPENERS.map(o=>({text:o.text,on:o.on})));
-  await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({openerVariants:active, openerLibrary:library})});
+  await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({openerVariants:active, openerLibrary:library})});
 }
 async function addOpener(){
   const ta=document.getElementById('rot_opener_new'); const t=(ta.value||'').trim();
@@ -3283,7 +3335,7 @@ async function saveRotation(btn){
   const voicePool=[...document.querySelectorAll('.rotvoice:checked')].map(c=>c.value).join(',');
   const openerVariants=OPENERS.filter(x=>x.on).map(x=>x.text).join('\n');
   const library=JSON.stringify(OPENERS.map(x=>({text:x.text,on:x.on})));
-  const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({voicePool,openerVariants,openerLibrary:library})});
+  const r=await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({voicePool,openerVariants,openerLibrary:library})});
   btn.textContent=o; btn.disabled=false;
   const m=document.getElementById('rot_msg'); if(m) m.textContent=(r&&!r.error)?'Saved. Live calls rotate these voices and scripts.':"Couldn't save the scripts";
 }
@@ -3420,13 +3472,13 @@ async function pnDelete(i){ const p=PERSONAS[i]; if(!p) return; if(!confirm('Del
   if(WF_PERSONA===p.name) WF_PERSONA='';
   if(PN_EDIT===i) pnCancel(); else if(PN_EDIT>i) PN_EDIT--;
   PERSONAS.splice(i,1);
-  await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({personas:JSON.stringify(PERSONAS)})});
+  await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({personas:JSON.stringify(PERSONAS)})});
   renderPersonas(); toast('Deleted');
 }
-async function loadPersonas(){ pnBaseRender(); const s=await api('/api/settings')||{}; try{ PERSONAS=JSON.parse(s.vt_personas||'[]'); }catch(e){ PERSONAS=[]; } if(!Array.isArray(PERSONAS)) PERSONAS=[];
+async function loadPersonas(){ pnBaseRender(); const s=await vtApi('/api/settings')||{}; try{ PERSONAS=JSON.parse(s.vt_personas||'[]'); }catch(e){ PERSONAS=[]; } if(!Array.isArray(PERSONAS)) PERSONAS=[];
   // One-time cleanup: drop any seeded "(sample)" placeholder persona (the owner asked to remove 'Friendly Local (sample)').
   const _n0=PERSONAS.length; PERSONAS=PERSONAS.filter(p=>p&&!/\(sample\)/i.test(String(p.name||'')));
-  if(PERSONAS.length!==_n0){ try{ await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({personas:JSON.stringify(PERSONAS)})}); }catch(e){} }
+  if(PERSONAS.length!==_n0){ try{ await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({personas:JSON.stringify(PERSONAS)})}); }catch(e){} }
   pnEditHint(); renderPersonas(); }
 async function savePersona(){ const name=v('pn_name'); if(!name){ toast('Name the persona first'); return; }
   const p={name, base:PN_SEL, tone:v('pn_tone'), slang:document.getElementById('pn_slang').checked, swear:document.getElementById('pn_swear').checked, affection:document.getElementById('pn_affection').checked, greet:v('pn_greet')};
@@ -3435,12 +3487,12 @@ async function savePersona(){ const name=v('pn_name'); if(!name){ toast('Name th
   else { const idx=PERSONAS.findIndex(x=>x.name===name); if(idx>=0){ oldName=name; PERSONAS[idx]=p; updated=true; } else PERSONAS.push(p); }
   if(updated && oldName && WF_PERSONA===oldName) WF_PERSONA=name;  // follow a rename
   WF_PERSONA=name;  // saving a persona SELECTS it for the workflow you're building (owner 07-16: no re-attach dance)
-  const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({personas:JSON.stringify(PERSONAS)})});
+  const r=await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({personas:JSON.stringify(PERSONAS)})});
   PN_EDIT=-1; pnClearForm(); pnEditHint(); renderPersonas(); closeSheet();
   toast((r&&!r.error)?(updated?'Persona updated · selected for this workflow':'Persona saved · selected for this workflow'):"Couldn't save the persona"); }
 async function saveWorkflow(){ const name=v('wf_name'); if(!name){ toast('Name the workflow first'); return; }
   const wf={name, voiceId:(document.getElementById('vs_select')||{}).value||'', tuning:sandboxBody(), openers:OPENERS.filter(o=>o.on).map(o=>o.text), persona:WF_PERSONA, lane:desLane(), savedAt:Date.now()};
-  let WFS=[]; const s=await api('/api/settings')||{}; try{ WFS=JSON.parse(s.vt_workflows||'[]'); }catch(e){}
+  let WFS=[]; const s=await vtApi('/api/settings')||{}; try{ WFS=JSON.parse(s.vt_workflows||'[]'); }catch(e){}
   const i=WFS.findIndex(w=>w.name===name);
   // Preserve the voice-rotation strip (managed in Workflows) across a Designer re-save: the Designer's
   // picked voice becomes slot #1 of the strip; the rest of the rotation is kept.
@@ -3450,9 +3502,11 @@ async function saveWorkflow(){ const name=v('wf_name'); if(!name){ toast('Name t
   if(i>=0 && WFS[i].followups) wf.followups=WFS[i].followups;
   wfmSeedDelta(wf);
   if(i>=0) WFS[i]=wf; else WFS.push(wf);
-  const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({workflows:JSON.stringify(WFS)})});
+  const r=await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({workflows:JSON.stringify(WFS)})});
   if(window.WF) WF.list=WFS;  // keep the assignment pickers (Settings/Chains/Stores) in sync without a reload
-  document.getElementById('wf_msg').textContent = (r&&!r.error)?'Saved. Set it as the default in Calls → Settings.':"Couldn't save the workflow."; toast((r&&!r.error)?'Workflow saved':"Couldn't save the workflow"); }
+  // Always name the environment. The switch at the top decides which one this wrote to, and a save
+  // that does not say so is how the owner ended up testing a workflow he had already changed.
+  document.getElementById('wf_msg').textContent = (r&&!r.error)?('Saved to '+vtEnvName()+'. Set it as the default in Calls → Settings.'):"Couldn't save the workflow."; toast((r&&!r.error)?('Workflow saved to '+vtEnvName()):"Couldn't save the workflow"); }
 async function vsSetActive(){
   const id=document.getElementById('vs_select').value; if(!id) return;
   const r=await api('/api/voices/active',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({voiceId:id})});
@@ -4311,9 +4365,6 @@ function setPickChain(){
   const nm=document.getElementById('set_chname'); if(nm) nm.textContent=ch.name||'';
   ssRenderStore(); ssRenderData(); ssRenderCall();
   renderChainMapping(ch);
-  loadRuns(id, document.getElementById('set_runs')).then((n)=>{
-    const pk=document.getElementById('pk_setruns'); if(pk) pk.textContent=n?String(n):'';
-  }).catch(()=>{});
   // Picking a chain REPLACES the list. The old page left 131 rows sitting above the detail, so
   // getting back to the menu meant scrolling the whole way down again on a phone.
   const pw=document.getElementById('set_pickwrap'); if(pw) pw.style.display='none';
@@ -4535,6 +4586,154 @@ function chainRung(s,last){
     +(s.sub?`<div style="font-size:12px;font-weight:500;color:rgba(255,255,255,.55);margin-top:3px;line-height:1.45">${s.sub}</div>`:'')
     +`</div></div>`;
 }
+// ---- THE FOUR MAPPING SHEETS -------------------------------------------------------------------
+// Filled from ONE read of the chain map. Words per COPY_STYLE_GUIDE_ADMIN: a precise noun, never a
+// sentence, and the glossary term (Staff, check, recipe, locked).
+async function renderChainSheets(ch,nav){
+  const d=await loadChainMap(ch.id);
+  const versions=((d||{}).versions)||[], unknowns=((d||{}).unknowns)||[];
+  const active=versions.find(v=>v.status==='active')||versions[0];
+  const set=(id,t,c)=>{ const e=document.getElementById(id); if(e){ e.textContent=t||''; e.style.color=c||''; } };
+
+  // MENU — every line the store plays and what we say back, on one timeline.
+  const tl=menuTimeline(active,nav), mw=document.getElementById('set_menu');
+  set('pk_setmenu', tl?String(tl.rows.filter(r=>r.who!=='us').length)+' lines':'');
+  if(mw) mw.innerHTML = tl ? menuLadder(tl.rows)
+    +`<div class="meta" style="margin-top:10px;text-transform:none;letter-spacing:0;line-height:1.5">Heard on a call to ${esch(tl.call.storeName||'a store')}${tl.call.day?', '+esch(tl.call.day):''}.</div>`
+    : '<div class="empty">No call has recorded this menu yet. Tap Re-map to place one.</div>';
+
+  // CALLS — every round, newest first, so the convergence is readable.
+  const rounds=[]; versions.forEach(v=>((v.evidence&&v.evidence.calls)||[]).forEach(c=>rounds.push({v,c})));
+  rounds.sort((a,b)=>(b.c.at||0)-(a.c.at||0));
+  set('pk_setruns', rounds.length?String(rounds.length):'');
+  const rw=document.getElementById('set_runs');
+  if(rw) rw.innerHTML = rounds.length ? rounds.map(({v,c})=>`<div class="card" style="margin:0 0 10px">
+      <div class="row" style="align-items:center;gap:8px">
+        <span class="name" style="font-size:13.5px">${esch(c.storeName||'A store')}</span>
+        <span class="meta" style="margin-left:auto">${esch(c.day||'')}</span></div>
+      <div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">
+        ${c.reachedHuman?'<span style="color:var(--green)">Reached Staff</span>':'<span style="color:var(--muted)">Reached nobody</span>'}${c.seconds!=null?' \u00b7 '+c.seconds+'s':''}${(c.transcript||[]).length?' \u00b7 '+c.transcript.length+' lines heard':''}
+      </div>
+      ${c.path?`<div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">We tried: ${esch(String(c.path).replace(/say:/g,'say ').replace(/press:/g,'press ').replace(/>/g,' \u2192 '))}</div>`:''}
+      ${(c.transcript||[]).length?`<div style="margin-top:10px">${menuLadder(((c.transcript||[]).map(t=>{const m=String(t).match(/^\s*(\d+)s\s+([\s\S]*)$/);return {at:m?Number(m[1]):null,who:'store',text:(m?m[2]:String(t)).trim()};})))}</div>`:''}
+    </div>`).join('') : '<div class="empty">No calls yet. Tap Re-map to place one.</div>';
+
+  // VERSIONS — every recipe we have held. Nothing is deleted (04-map-graph.md section 2).
+  set('pk_setver', versions.length?String(versions.length):'', versions.some(v=>v.status==='proposed')?'#F59E0B':'');
+  const vw=document.getElementById('set_versions');
+  if(vw) vw.innerHTML = versions.length ? versions.slice().sort((a,b)=>(b.version||0)-(a.version||0)).map(v=>{
+    const S={active:['var(--green)','Live'],proposed:['#F59E0B','Waiting for you'],retired:['var(--text-muted)','Retired'],rejected:['var(--text-muted)','Set aside']}[v.status]||['var(--muted)',v.status];
+    return `<div class="card" style="margin:0 0 10px">
+      <div class="row" style="align-items:center;gap:8px"><span class="name">Recipe ${v.version}</span>
+        <span style="margin-left:auto;font-size:10.5px;font-weight:700;color:${S[0]}">${esch(S[1])}</span></div>
+      <div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(v.summary||'')}</div>
+      <div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${v.seconds!=null?v.seconds+'s to Staff':''}${v.confidenceLabel&&v.confidenceLabel!=='unknown'?` \u00b7 <span style="color:${confColor(v.confidenceLabel)}">${esch(v.confidenceLabel)}</span>`:''}${v.why?' \u00b7 '+esch(whyWords(v.why)):''}</div>
+      ${v.status==='proposed'?`<div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap"><button class="act" onclick="closeSheet();mapApprove(${v.id},${ch.id})">Use it</button><button class="ghost" onclick="closeSheet();mapReject(${v.id},${ch.id})">Keep current</button></div>`:''}
+    </div>`;
+  }).join('') : '<div class="empty">No recipes saved yet.</div>';
+
+  // REVIEW — only when there is something to look at.
+  set('pk_setreview', unknowns.length?String(unknowns.length):'', unknowns.length?'#F59E0B':'');
+  const rr=document.getElementById('set_reviewrow'); if(rr) rr.style.display=unknowns.length?'':'none';
+  const uw=document.getElementById('set_review');
+  if(uw) uw.innerHTML = unknowns.length ? unknowns.map(u=>mapUnknownCard(u,ch.id)).join('') : '';
+}
+// One ladder, used by the Menu sheet and by each round. STORE is the recording, WE is us, STAFF is
+// the person who picked up.
+function menuLadder(rows){
+  const WHO={store:['STORE','var(--muted)'],us:['WE','#38BDF8'],staff:['STAFF','var(--green)']};
+  return `<div class="mladder">`+rows.map((r,i,a)=>{
+    const w=WHO[r.who]||WHO.store, next=a[i+1], gap=(r.at!=null&&next&&next.at!=null)?next.at-r.at:null;
+    return `<div style="display:flex;gap:12px">
+      <div style="display:flex;flex-direction:column;align-items:center;flex:0 0 auto;padding-top:5px">
+        <span style="width:9px;height:9px;border-radius:50%;background:${w[1]};flex:0 0 auto"></span>
+        ${i===a.length-1?'':`<span style="width:2px;flex:1;background:rgba(255,255,255,.14);margin:3px 0"></span>`}</div>
+      <div style="flex:1;min-width:0;padding-bottom:${i===a.length-1?'0':'14px'}">
+        <div style="display:flex;align-items:baseline;gap:8px">
+          <span style="font-size:10px;font-weight:700;letter-spacing:.12em;color:${w[1]};flex:0 0 auto">${w[0]}</span>
+          <span style="margin-left:auto;font-size:12px;font-weight:700;color:var(--muted);flex:0 0 auto">${r.at!=null?r.at+'s':''}</span></div>
+        <div style="font-size:13.5px;font-weight:${r.who==='us'?'700':'500'};color:${r.who==='us'?'var(--text-strong)':'rgba(255,255,255,.78)'};margin-top:3px;line-height:1.45">${esch(r.text)}</div>
+        ${gap!=null&&gap>0?`<div style="font-size:11px;font-weight:600;color:var(--text-tertiary);margin-top:4px">${gap}s later</div>`:''}
+      </div></div>`;
+  }).join('')+`</div>`;
+}
+const whyWords=s=>String(s||'').replace(/(\d+)\s+(\w+?)\(s\)/g,(m,n,w)=>n+' '+w+(Number(n)===1?'':'s'));
+const UNKNOWN_WHAT={
+  'hammer-route':'The recipe just presses the same key over and over',
+  'unproven-direct':'We claim Staff answers straight away, but no call has proved it',
+  'route-changed':'The menu changed since we learned it',
+  'drift':'The menu is drifting from what we learned',
+  'store-exception':'One store went its own way',
+  'route-failing':'This recipe keeps reaching nobody',
+  'greeting-not-direct':'A recording answers, not Staff',
+  'not-shared':'This recipe is not shared with the chain',
+};
+function mapUnknownCard(u,chainId){
+  return `<div class="card" style="margin:0 0 10px">
+    <div class="name" style="font-size:13.5px">${esch(UNKNOWN_WHAT[u.kind]||String(u.kind||'').replace(/-/g,' '))}</div>
+    ${u.prompt?`<div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(u.prompt)}</div>`:''}
+    <div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${u.count>1?'Seen '+u.count+' times':'Seen once'}${u.firstSeen?' \u00b7 first on '+new Date(u.firstSeen*1000).toLocaleDateString([],{month:'short',day:'numeric'}):''}</div>
+    <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
+      <button class="act" onclick="mapUnknown(${u.id},'resolved',${chainId})">Fixed</button>
+      <button class="ghost" onclick="mapUnknown(${u.id},'dismissed',${chainId})">Not a problem</button>
+    </div></div>`;
+}
+async function mapUnknown(id,status,chainId){
+  const r=await api('/api/admin/map/unknown/'+id,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({status,note:status==='resolved'?'marked fixed from Admin':'marked not a problem from Admin'})});
+  if(!r||r.error){ toast(mapWriteErr(r)); return; }
+  toast(status==='resolved'?'Marked fixed':'Set aside'); delete CHAIN_MAP[chainId];
+  await loadMapGraph(); await renderChainSheets((CHAINS||[]).find(c=>c.id===chainId)||{id:chainId},null);
+}
+// The route on its own: what WE do, with the ringing and the answer around it. Shown until the heard
+// menu lands, and it is all there is on a chain nobody has recorded yet.
+function routeRungs(ch,nav,DASH){
+  const steps=chainSteps(ch), rungs=[];
+  let heard=''; try{ const r=ch.navRecipe?JSON.parse(ch.navRecipe):null; heard=(r&&r.menuPrompts&&r.menuPrompts[0])||''; }catch(e){}
+  const first=steps.length?steps[0].at:null;
+  if(first!=null&&first>0) rungs.push({at:'0'+DASH+first+'s',t:'Greeting plays',sub:heard?esch(heard):''});
+  steps.forEach(st=>rungs.push({at:st.at!=null?st.at+'s':'',t:st.t}));
+  const lastAt=steps.length&&steps[steps.length-1].at!=null?steps[steps.length-1].at:null;
+  const ringFrom=lastAt!=null?lastAt:0;
+  if(nav!=null&&nav>ringFrom) rungs.push({at:ringFrom+DASH+nav+'s',t:steps.length?'Rings the desk':'Rings',sub:(nav-ringFrom)+'s of ringing',c:'var(--yellow)',lc:'rgba(255,203,5,.28)'});
+  if(nav===0&&!steps.length) rungs.push({t:'Staff answers, no menu',at:'',tc:'var(--green)'});
+  else rungs.push({at:(nav!=null?nav+'s':''),t:'Staff answers',tc:'var(--green)'});
+  return rungs;
+}
+// ONE read of a chain's map, shared by the menu, the status line and the waiting-route card. Three
+// separate fetches for the same thing was silly and made them disagree while they landed.
+const CHAIN_MAP={};
+async function loadChainMap(id){
+  if(CHAIN_MAP[id]) return CHAIN_MAP[id];
+  const d=await api('/api/admin/map/chain/'+id).catch(()=>null);
+  CHAIN_MAP[id]=d||{versions:[],observations:[],unknowns:[]};
+  return CHAIN_MAP[id];
+}
+// THE MENU, AS HEARD. What the store actually says at each second, and what we do in reply, on ONE
+// timeline. The route alone ("press 2 at 8s") never told the owner whether the route made sense,
+// because it hides the thing being navigated. `transcript` lines arrive as "16s Thank you for
+// calling…"; the recipe carries our own actions with their second. Merged and sorted, they read like
+// the call actually went.
+function menuTimeline(v, nav){
+  const calls=((v&&v.evidence&&v.evidence.calls)||[]).filter(c=>(c.transcript||[]).length);
+  if(!calls.length) return null;
+  // The fullest call is the best picture of the menu; a call that hung up early shows less of it.
+  const call=calls.slice().sort((a,b)=>(b.transcript||[]).length-(a.transcript||[]).length)[0];
+  const rows=[];
+  for(const line of (call.transcript||[])){
+    const m=String(line).match(/^\s*(\d+)s\s+([\s\S]*)$/);
+    rows.push({ at:m?Number(m[1]):null, who:'store', text:(m?m[2]:String(line)).trim() });
+  }
+  const steps=((v&&v.recipe&&v.recipe.steps)||[]);
+  for(const st of steps){
+    rows.push({ at:st.atSec!=null?Number(st.atSec):null, who:'us',
+      text:st.action==='press'?`Press ${st.value}`:st.action==='wait'?'Wait':`Say “${st.value}”`});
+  }
+  rows.sort((a,b)=>(a.at==null?1e9:a.at)-(b.at==null?1e9:b.at));
+  // The last thing heard, at or after a person arrived, is Staff speaking rather than the machine.
+  const human=call.reachedHuman?(nav!=null?nav:call.seconds):null;
+  if(human!=null) for(let i=rows.length-1;i>=0;i--){ if(rows[i].who==='store'&&rows[i].at!=null&&rows[i].at>=human-3){ rows[i].who='staff'; break; } }
+  return { rows, call };
+}
 function renderChainMapping(ch){
   const el=document.getElementById('set_mapping'); if(!el) return;
   const status=(ch.navStatus==='locked'||ch.navStatus==='learning')?ch.navStatus:'unmapped';
@@ -4566,10 +4765,14 @@ function renderChainMapping(ch){
   const g=mapRow(ch.id);
   const ver=document.getElementById('set_menuver');
   if(ver){
-    // WHEN, not which version. A version number and a confidence phrase are engineering exhaust:
-    // they never change what the owner does with this screen.
+    // HOW MUCH THE MAPPER TRUSTS THIS ROUTE, in his own computed words. He works it out from calls,
+    // stores, days, agreement and age (04-map-graph.md §2) and "verified" is him saying he has found
+    // the right recipe. Never invent a second scale beside it.
     const dt=ch.navUpdatedAt?new Date(ch.navUpdatedAt):(ch.treeLearnedAt?new Date(ch.treeLearnedAt*1000):null);
-    ver.textContent=isLocked&&dt?dt.toLocaleDateString([],{month:'short',day:'numeric'}):'';
+    const cl=g&&g.confidenceLabel&&g.confidenceLabel!=='unknown'?g.confidenceLabel:'';
+    ver.innerHTML=!isLocked?''
+      :(cl?`<span style="color:${confColor(cl)};font-weight:700">${esch(cl[0].toUpperCase()+cl.slice(1))}</span>`:'')
+       +(dt?`<span style="color:var(--muted)">${cl?' · ':''}${dt.toLocaleDateString([],{month:'short',day:'numeric'})}</span>`:'');
   }
   // --- a route waiting on him. This is the only thing on the page he has to DECIDE, so it sits above
   // the menu it would replace, not buried in a list.
@@ -4581,23 +4784,10 @@ function renderChainMapping(ch){
     if(foot) foot.textContent='';
   } else {
     const DASH=String.fromCharCode(8211); // an en dash inside a RANGE, which the copy guide allows.
-    const steps=chainSteps(ch), rungs=[];
-    const first=steps.length?steps[0].at:null;
-    // The greeting is what the STORE actually says, captured on a mapping call. It is NOT
-    // phoneTreeDefault: that is our own instruction to the caller ("To reach a live person: say no,
-    // then...") and printing it here told him the store said something it never said. Blank until a
-    // mapping call captures the real wording.
-    let heard=''; try{ const r=ch.navRecipe?JSON.parse(ch.navRecipe):null; heard=(r&&r.menuPrompts&&r.menuPrompts[0])||''; }catch(e){}
-    if(first!=null&&first>0) rungs.push({at:'0'+DASH+first+'s',t:'Greeting plays',sub:heard?esch(heard):''});
-    steps.forEach(s=>rungs.push({at:s.at!=null?s.at+'s':'',t:s.t}));
-    const lastAt=steps.length&&steps[steps.length-1].at!=null?steps[steps.length-1].at:null;
-    // Ringing is billed line time with nothing happening, so it always gets its own amber rung: after
-    // the last menu step, or from the very start on a line with no menu at all.
-    const ringFrom=lastAt!=null?lastAt:0;
-    if(nav!=null&&nav>ringFrom) rungs.push({at:ringFrom+DASH+nav+'s',t:steps.length?'Rings the desk':'Rings',sub:(nav-ringFrom)+'s of ringing',c:'var(--yellow)',lc:'rgba(255,203,5,.28)'});
-    if(nav===0&&!steps.length) rungs.push({t:'Staff answers, no menu',at:'',tc:'var(--green)'});
-    else rungs.push({at:(nav!=null?nav+'s':''),t:'Staff answers',tc:'var(--green)'});
-    el.innerHTML=`<div class="mladder">${rungs.map((r,i)=>chainRung(r,i===rungs.length-1)).join('')}</div>`;
+    // THE RECIPE, and only the recipe. What we run now, short enough to read at a glance. The full
+    // menu, the rounds of calls and the version history each have their own sheet: this page answers
+    // "what do we do on this chain", not "everything we know about it".
+    el.innerHTML=`<div class="mladder">${routeRungs(ch,nav,DASH).map((r,i,a)=>chainRung(r,i===a.length-1)).join('')}</div>`;
     if(foot) foot.textContent=!lane?''
       :(nav===0?'No menu. Staff answers the line.'
       :nav!=null?`${nav}s to Staff · the menu adds ${chainCents(chainMenuCents(lane,nav))} a check.`:'');
@@ -4628,7 +4818,7 @@ function renderPendingRoute(ch,g){
   if(!g||!g.proposed){ box.style.display='none'; box.innerHTML=''; return; }
   box.style.display='';
   box.innerHTML='<div class="meta">Loading…</div>';
-  api('/api/admin/map/chain/'+ch.id).then(d=>{
+  loadChainMap(ch.id).then(d=>{
     const v=(((d||{}).versions)||[]).find(x=>x.status==='proposed');
     if(!v){ box.style.display='none'; return; }
     PENDING=v;
@@ -4671,30 +4861,13 @@ const mapWriteErr=r=>((r&&r.status===404)||(r&&/404|not found/i.test(String(r.er
 // (docs/design/copy/COPY_STYLE_GUIDE_ADMIN.md), and it uses the glossary word: Staff, check, lane,
 // locked. No version numbers, no confidence wording, no evidence lists.
 function renderChainRows(ch,lane,nav){
-  const rating=CH_GRADE[ch.tier]?CH_GRADE[ch.tier][0]:'Unrated';
   const e=document.getElementById('pk_setall');
-  if(e) e.textContent=[ch.type||'Other',rating].join(' · ');
-  renderChainStatus(ch);
-}
-// One line: is this chain's route holding up, and when did we last see it work. Anything worse than
-// working is an AGENT'S job, so this says what is wrong and stops. It never opens a report.
-async function renderChainStatus(ch){
-  const el=document.getElementById('set_status'); if(!el) return;
-  const locked=ch.navStatus==='locked';
-  el.textContent=locked?'Checking…':(ch.navStatus==='learning'?'Mapping now.':'Not mapped. Tap Map to learn the menu.');
-  if(!locked) return;
-  const d=await api('/api/admin/map/chain/'+ch.id).catch(()=>null);
-  const obs=((d||{}).observations)||[];
-  const recent=obs.slice(0,5);
-  const failed=recent.filter(o=>o.kind==='failed-attempt').length;
-  const worked=recent.filter(o=>o.kind==='verify').length;
-  const last=obs[0]&&obs[0].at?new Date(obs[0].at*1000).toLocaleDateString([],{month:'short',day:'numeric'}):null;
-  const waiting=(((d||{}).versions)||[]).some(v=>v.status==='proposed');
-  if(waiting){ el.innerHTML='<span style="color:#F59E0B;font-weight:700">A new route is waiting for you</span> · see above'; return; }
-  if(!obs.length){ el.textContent='Locked. No calls have run it yet.'; return; }
-  if(failed>=3){ el.innerHTML=`<span style="color:var(--red);font-weight:700">Failing</span> · ${failed} of the last ${recent.length} calls reached nobody`+(last?` · ${esch(last)}`:''); return; }
-  if(failed){ el.innerHTML=`<span style="color:#F59E0B;font-weight:700">Patchy</span> · ${worked} of the last ${recent.length} calls reached Staff`+(last?` · ${esch(last)}`:''); return; }
-  el.innerHTML=`<span style="color:var(--green);font-weight:700">Working</span> · ${worked} of the last ${recent.length} calls reached Staff`+(last?` · ${esch(last)}`:'');
+  if(e){
+    const rating=CH_GRADE[ch.tier]?CH_GRADE[ch.tier][0]:'Unrated';
+    e.textContent=ch.callTarget===false?'Not dialled':[ch.type||'Other',rating].join(' \u00b7 ');
+    e.style.color=ch.callTarget===false?'#F59E0B':'';
+  }
+  renderChainSheets(ch,nav);
 }
 // Every saved version of this chain's menu, newest first, with the calls that prove it. The one that
 // real checks run is marked; a proposed one carries the same Use it / Keep the old one decision.
@@ -5513,7 +5686,7 @@ async function toggleLiveListen(){
 // vt_workflows setting; assignments are name maps the call bridge resolves per call (store→chain→default).
 let WF={list:[],def:'',chains:{},stores:{}};
 async function loadWorkflows(){
-  const s=await api('/api/settings')||{};
+  const s=await vtApi('/api/settings')||{};
   try{ WF.list=JSON.parse(s.vt_workflows||'[]')||[]; }catch(e){ WF.list=[]; }
   WF.def=s.vt_default_workflow||'';
   try{ WF.chains=JSON.parse(s.vt_chain_workflows||'{}')||{}; }catch(e){ WF.chains={}; }
@@ -5533,7 +5706,7 @@ async function loadWorkflowMgr(){
   // a persona is saved and bound (owner 07-16: "there's none there" while the binding was fine).
   try{ if(!PERSONAS.length && typeof loadPersonas==='function') await loadPersonas(); }catch(e){}
   if(!WFM_VOICES.length){ const d=await api('/api/voices'); WFM_VOICES=(d&&d.voices)||[]; }
-  const s=await api('/api/settings')||{}; WFM_GLOBAL=wfgFrom(s);
+  const s=await vtApi('/api/settings')||{}; WFM_GLOBAL=wfgFrom(s);
   WFM_ASSIGN=await api('/api/admin/workflow-assignments')||{};
   renderWorkflowMgr();
 }
@@ -5547,7 +5720,7 @@ function wfgFrom(s){
 async function wfgSave(){
   const active=WFM_GLOBAL.filter(o=>o.on).map(o=>o.text).join('\n');
   const library=JSON.stringify(WFM_GLOBAL.map(o=>({text:o.text,on:o.on})));
-  await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({openerVariants:active,openerLibrary:library})});
+  await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({openerVariants:active,openerLibrary:library})});
   try{ if(Array.isArray(OPENERS)){ OPENERS=WFM_GLOBAL.map(o=>({text:o.text,on:o.on})); if(typeof renderOpeners==='function')renderOpeners(); } }catch(e){}
 }
 async function wfgAdd(){ const inp=document.getElementById('wfg_add'); const t=((inp&&inp.value)||'').trim(); if(!t) return; WFM_GLOBAL.push({text:t,on:true}); renderWorkflowMgr(); await wfgSave(); toast('Opener added'); }
@@ -5656,7 +5829,7 @@ function wfSheet(wi){
   if(_sheetEls) _sheetEls.body.querySelectorAll('.wfmop textarea').forEach(wfmGrow);
 }
 function wfmGrow(t){ if(!t) return; t.style.height='auto'; t.style.height=(t.scrollHeight)+'px'; }
-async function wfmSaveList(){ const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({workflows:JSON.stringify(WF.list)})}); return !!(r&&!r.error); }
+async function wfmSaveList(){ const r=await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({workflows:JSON.stringify(WF.list)})}); return !!(r&&!r.error); }
 async function wfmAddOpener(wi){ const inp=document.getElementById('wfmadd_'+wi); const t=((inp&&inp.value)||'').trim(); if(!t) return; const w=WF.list[wi]; if(!w) return; if(!Array.isArray(w.openers)) w.openers=[]; w.openers.push(t); renderWorkflowMgr(); await wfmSaveList(); toast('Opener added'); }
 async function wfmDelOpener(wi,oi){ const w=WF.list[wi]; if(!w||!Array.isArray(w.openers)) return; w.openers.splice(oi,1); renderWorkflowMgr(); await wfmSaveList(); toast('Opener removed'); }
 async function wfmEditOpener(wi,oi,text){ const w=WF.list[wi]; if(!w||!Array.isArray(w.openers)) return; const t=(text||'').trim(); if(!t){ w.openers.splice(oi,1); renderWorkflowMgr(); } else { w.openers[oi]=t; } await wfmSaveList(); }
@@ -5753,8 +5926,8 @@ function applyWorkflowToDesigner(w){
   const msg=g('wf_msg'); if(msg) msg.textContent='Editing “'+w.name+'”. change anything (including tuning), then Save workflow to overwrite it.';
   toast('Loaded “'+w.name+'” into the Designer');
 }
-async function wfmSetDefault(wi){ const w=WF.list[wi]; if(!w) return; WF.def=w.name; const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:w.name})}); renderWorkflowMgr(); toast((r&&!r.error)?(w.name+' powers all stores now'):'Could not set default'); }
-async function wfmDelete(wi){ const w=WF.list[wi]; if(!w) return; if(!confirm('Delete workflow “'+w.name+'”?\nStores assigned to it fall back to the default.')) return; const wasDef=WF.def===w.name; WF.list=WF.list.filter((x,i)=>i!==wi); if(wasDef){ WF.def=''; await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:''})}); } WFM_SHEET=null; closeSheet(); renderWorkflowMgr(); await wfmSaveList(); toast('Workflow deleted'); }
+async function wfmSetDefault(wi){ const w=WF.list[wi]; if(!w) return; WF.def=w.name; const r=await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:w.name})}); renderWorkflowMgr(); toast((r&&!r.error)?(w.name+' powers all stores now'):'Could not set default'); }
+async function wfmDelete(wi){ const w=WF.list[wi]; if(!w) return; if(!confirm('Delete workflow “'+w.name+'”?\nStores assigned to it fall back to the default.')) return; const wasDef=WF.def===w.name; WF.list=WF.list.filter((x,i)=>i!==wi); if(wasDef){ WF.def=''; await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:''})}); } WFM_SHEET=null; closeSheet(); renderWorkflowMgr(); await wfmSaveList(); toast('Workflow deleted'); }
 // Reset this workflow's opener rotation so the next call to it starts at opener #1 (predictable testing).
 async function wfmResetRotation(wi){ const w=WF.list[wi]; if(!w) return; const r=await api('/api/admin/reset-rotation',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({workflow:w.name})}); toast((r&&r.ok)?'Rotation reset · next call uses opener #1':'Could not reset rotation'); }
 // Testing tab — the Fun-store test-call log (workflow · opener used · status · timing). Owner-only data.
@@ -5808,19 +5981,19 @@ async function loadDefaultWorkflow(){
 }
 async function saveDefaultWorkflow(){
   WF.def=document.getElementById('set_default_wf').value;
-  const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:WF.def})});
+  const r=await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:WF.def})});
   toast((r&&!r.error)?(WF.def?('Default workflow: '+WF.def):'Default workflow cleared'):"Couldn't save the default workflow");
 }
 // per-chain assignment (Phone Trees / Mute list) — applies to every store in the chain.
 async function setChainWorkflow(id,name){
   if(name) WF.chains[id]=name; else delete WF.chains[id];
-  const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({chainWorkflows:JSON.stringify(WF.chains)})});
+  const r=await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({chainWorkflows:JSON.stringify(WF.chains)})});
   toast((r&&!r.error)?'Chain workflow saved':"Couldn't save the chain workflow");
 }
 // per-store override (store row) — beats the chain + default.
 async function setStoreWorkflow(id,name){
   if(name) WF.stores[id]=name; else delete WF.stores[id];
-  const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({storeWorkflows:JSON.stringify(WF.stores)})});
+  const r=await vtApi('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({storeWorkflows:JSON.stringify(WF.stores)})});
   toast((r&&!r.error)?'Store workflow saved':"Couldn't save the store workflow");
 }
 const v = (id) => document.getElementById(id).value.trim();

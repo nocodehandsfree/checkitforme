@@ -99,5 +99,25 @@ console.log("\n▶ THE CLOSED SET OF SIXTEEN EVENT KINDS HAS NOT GROWN.");
   ok(kinds.length === 16, `${kinds.length} event kinds (must be exactly 16): ${kinds.join(" ")}`);
 }
 
+
+console.log("\n\u25b6 THE EAR NEVER DEPENDS ON BAIL BEING SWITCHED ON.");
+{
+  // The agent must never open on a stopwatch. That gate used to require `giveUpSeconds`, which only
+  // exists when bail is enabled in Admin — so switching bail off silently put every call back on the
+  // timer, straight into a ringing desk. An operator toggling an unrelated switch could undo two
+  // days of work and nothing would say so. The ear decides WHEN the agent opens; bail decides
+  // WHETHER we hang up on a call nobody answers. Separate concerns, and they stay separate.
+  const src = read("src/voice/bridge.ts");
+  const gate = /if \(ctx\.earFromSec && ctx\.earFromSec > 0([^)]*)\)\s*\{/.exec(src);
+  ok(!!gate, "the smart-join gate is still where it was");
+  ok(!!gate && !/giveUpSeconds/.test(gate[1] || ""),
+    gate && /giveUpSeconds/.test(gate[1] || "")
+      ? "REGRESSION: the ear is gated on bail again — turning bail off puts the agent back on a stopwatch"
+      : "the ear arms on its own, bail on or off");
+  // And the give-up timer, which IS bail's, must only be armed when bail actually handed us a cap.
+  ok(/if \(quit > 0\) dtmfTimers\.push/.test(src),
+    "the give-up cap is only armed when bail gave us one");
+}
+
 console.log(`\n════════════════════════════════\n  PASS: ${pass}   FAIL: ${fail}\n════════════════════════════════`);
 process.exit(fail === 0 ? 0 : 1);
