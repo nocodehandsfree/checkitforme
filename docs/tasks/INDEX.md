@@ -24,6 +24,11 @@ then they ride the next promote to prod):**
 |---|---|---|
 | [Call log transcript comes back cut off](call-log-transcript-cutoff.md) | voice-calls | active |
 
+**Stream 3 — the ops dashboard:**
+| Task | System | Status |
+|---|---|---|
+| [The ops dashboard: build it on real checks](admin-ops-dashboard.md) | admin | active — THE next admin build |
+
 ## Other open site fixes (consumer site is frozen: each needs an owner-named `.unlock`)
 | Task | System | Status |
 |---|---|---|
