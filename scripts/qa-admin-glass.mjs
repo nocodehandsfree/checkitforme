@@ -51,7 +51,7 @@ has(/\.sh-body\s*\{[^}]*padding:[^}]*2[0-9]{2}px[^}]*safe-area-inset-bottom/,
 has(/function pokeChrome\s*\(/, "pokeChrome (the re-snapshot) is defined");
 has(/requestAnimationFrame\([^)]*\)\s*=>\s*\{\s*pokeChrome\(\)/,
   "openSheet CALLS pokeChrome (not just defines it)");
-has(/_restoreSheetLayout[\s\S]{0,400}?pokeChrome\(\)/,
+has(/_restoreSheetLayout[\s\S]{0,1600}?pokeChrome\(\)/,
   "close re-snapshots too (pokeChrome in _restoreSheetLayout)");
 // 12. ORDER: the nudge must run BEFORE the scroll lock. Locking first makes the nudge impossible.
 //     Asserted structurally: inside openSheet, pokeChrome() appears before overflow='hidden'.
@@ -63,6 +63,16 @@ has(/_restoreSheetLayout[\s\S]{0,400}?pokeChrome\(\)/,
     ? ok("openSheet nudges BEFORE locking scroll")
     : no("openSheet nudges BEFORE locking scroll");
 })();
+// 14. A CLOSED SHEET MUST LEAVE THE BOTTOM EDGE. It used to stay in the DOM as a position:fixed,
+//     ~1000px tall element parked at bottom:0, only translated off screen. A fixed element on the
+//     bottom edge lives in the UI layer iOS never ghosts, so from the FIRST open-and-close of any sheet
+//     the bar went flat grey and stayed that way until a reload (owner 07-28: "it paints that bottom a
+//     darker gray when I slide it down, and a refresh fixes it"). The site has always done this:
+//     .overlay{display:none} / .overlay.on{display:flex}.
+has(/_restoreSheetLayout[\s\S]{0,1600}?style\.display\s*=\s*['"]none['"]/,
+  "closing a sheet HIDES it (nothing fixed left on the bottom edge)");
+has(/function openSheet[\s\S]{0,2000}?sh\.style\.display\s*=\s*['"]{2}/,
+  "openSheet un-hides the sheet before the slide-up");
 // 13. The nudge must be a SCROLL AND NOTHING ELSE. pokeChrome used to also re-stamp the root
 //     background-color inline; that makes iOS re-sample the ROOT grey for the bar strip instead of
 //     ghosting the sheet on screen, which is exactly the dark band the owner reported (07-28). Check 10

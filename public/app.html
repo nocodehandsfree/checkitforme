@@ -1831,6 +1831,7 @@ let _sheetEls=null;
 function _ensureSheet(){
   if(_sheetEls) return _sheetEls;
   const sheet=document.createElement('div'); sheet.className='sheet';
+  sheet.style.display='none'; // born HIDDEN — see openSheet/_restoreSheetLayout for why this matters
   sheet.innerHTML='<div class="grab"></div><div class="sh-title"></div><div class="sh-sub"></div><div class="sh-body"></div>';
   document.body.appendChild(sheet);
   // Tap OUTSIDE the sheet closes it — via a document listener, NOT a full-screen scrim (which would kill
@@ -1892,6 +1893,9 @@ function openSheet(title,sub,body){
   // overshooting ~120px under the bar — so the iOS scroll-edge glass ghosts its rows through the toolbar
   // (a fixed sheet lives in the UI layer Safari never ghosts). Background scroll locked; root colour constant.
   const sc=window.scrollY||document.documentElement.scrollTop||0, sh=s.sheet;
+  // Show it a frame BEFORE .on is added, so the browser lays it out at the off-screen
+  // translate(-50%,100%) first and the slide-up still animates.
+  sh.style.display='';
   sh.style.transform=''; // back to the CSS off-screen start translate(-50%,100%) before the slide-up
   sh.style.position='absolute'; sh.style.top=(sc+window.innerHeight*0.14)+'px'; sh.style.bottom='auto'; sh.style.height=(window.innerHeight*0.86+120)+'px';
   // ORDER MATTERS. iOS only re-takes the image it blurs behind the toolbar when the DOCUMENT actually
@@ -1906,6 +1910,13 @@ function openSheet(title,sub,body){
 function _restoreBorrow(){ if(!_sheetBorrow) return; const b=_sheetBorrow; _sheetBorrow=null; if(b.home){ if(b.next) b.home.insertBefore(b.node,b.next); else b.home.appendChild(b.node); } }
 // Undo variant-H layout: back to the fixed off-screen resting state + unlock scroll (call AFTER the slide-down).
 function _restoreSheetLayout(){ const sh=_sheetEls&&_sheetEls.sheet; if(!sh) return; sh.style.position=''; sh.style.top=''; sh.style.bottom=''; sh.style.height=''; sh.style.transform=''; document.documentElement.style.overflow=''; document.body.style.overflow='';
+  // HIDE IT. A closed sheet used to stay in the DOM as a position:fixed, ~1000px tall element parked at
+  // bottom:0, merely translated off screen. A fixed element on the bottom edge lives in the UI layer iOS
+  // never ghosts, so from the first time you opened and closed ANY sheet the bar went flat grey and
+  // stayed that way until a reload — which is exactly what the owner described on 07-28. The site has
+  // always done this: `.overlay{display:none}` / `.overlay.on{display:flex}`. Nothing at the bottom edge
+  // when there is no sheet.
+  sh.style.display='none';
   try{ pokeChrome(); }catch(_){ } } // re-snapshot on the way OUT too, or the bar keeps the sheet's ghost
 function closeSheet(){ if(!_sheetEls) return;
   // Swiping the sheet down must never drop an edit that is still inside its type-ahead window.
