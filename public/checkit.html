@@ -3069,7 +3069,7 @@ const I18N={ es:{
   'tick.found':'¡Encontrado!','tick.restock':'Reabastecimiento en camino','besttag':'Más probable','bestwhy':'buenas probabilidades ahora',
   'mode.hobby':'Hobby','find.hobby':'① Encuentra una tienda de cartas','find.hobbystore':'① Ahora elige una tienda de cartas','hob.hunting':'BUSCANDO','hob.shopprices':'PRECIOS DE TIENDA','empty.hobby':'No hay tiendas de cartas en {r} mi.<br>Amplía el radio.','hob.pickexact':'Elige el set o producto exacto',
   'mode.thrift':'Segundas','find.thrift':'① Encuentra una tienda de segunda mano','empty.thrift':'No hay tiendas de segunda mano en {r} mi.<br>Amplía el radio.',
-  'co.title':'Pago','co.change':'Cambiar','co.orcard':'O paga con tarjeta','co.loading':'Cargando pago seguro…','co.subscribe':'Suscribirse','co.pay':'Pagar','co.cancel':'Cancela cuando quieras','co.secured':'Protegido por','co.processing':'Procesando…','co.failed':'El pago no se procesó. Inténtalo de nuevo.','co.redirect':'Abriendo pago seguro…','co.checksmo':'verificaciones al mes','co.monthly':'mensual','co.annual':'anual','co.paygsub':'Pago único · las verificaciones no caducan',
+  'co.title':'Pago','co.change':'Cambiar','co.orcard':'O paga con tarjeta','co.loading':'Cargando pago seguro…','co.subscribe':'Suscribirse','co.pay':'Pagar','co.cancel':'Cancela cuando quieras','co.secured':'Protegido por','co.processing':'Procesando…','co.opening':'Abriendo…','co.failed':'El pago no se procesó. Inténtalo de nuevo.','co.redirect':'Abriendo pago seguro…','co.checksmo':'verificaciones al mes','co.monthly':'mensual','co.annual':'anual','co.paygsub':'Pago único · las verificaciones no caducan',
   'ph.quoted':'Precio indicado','ph.overmsrp':'sobre el precio de lista','ph.title':'Precios encontrados','ph.best':'MEJOR','ph.oos':'agotado',
   'plan.member':'Miembro',
   'buy.tabplans':'Planes','buy.tabpayg':'Por uso','plan.on':'Tienes','plan.checks':'verificaciones','plan.percheck':'aprox.','plan.percheck2':'por verificación','plan.noexpire':'no caducan','acct.stat.run2':'Verificaciones hoy','acct.perweek2':'Verificaciones esta semana','auth.newcell':'Danos tu nuevo celular','auth.cell.title':'Tu celular','ph.cellmail':'tu correo',
@@ -8535,15 +8535,28 @@ async function openCheckout(kind, annual, amountCents, planLabel, planSub){
   setI('co_trust', `${t('co.cancel','Cancel anytime')} · ${ICO.lock('#7a7a88')} ${t('co.secured','Secured by')} <b>Stripe</b>`);
   setT('co_err',''); const ld=$('co_loading'); if(ld) ld.style.display='';
   const cta=$('co_cta'); if(cta) cta.disabled=true;
-  $('coOverlay').classList.add('on'); sheetPush('co'); track('checkout_open',{kind});
+  // WAIT ON THE BUTTON THEY TAPPED, not on an empty sheet. The sheet used to slide up bare, sit there
+  // through our server call, and then swap its contents for the card form. That read as two page loads
+  // and is where people give up (owner 07-27). Now Continue says "Opening…" while we fetch, and the sheet
+  // only slides up once the form is mounting, so it arrives already formed. FAILSAFE: if the fetch drags
+  // past 2s we open anyway, because a button stuck on "Opening…" feels broken.
+  const bcta=$('buy_cta'), bspan=bcta&&bcta.querySelector('span');
+  const wasLabel=bspan?bspan.textContent:'';
+  if(bcta) bcta.disabled=true; if(bspan) bspan.textContent=t('co.opening','Opening…');
+  let opened=false;
+  const releaseBtn=()=>{ if(bcta) bcta.disabled=false; if(bspan) bspan.textContent=wasLabel||t('buy6b.cta','Continue'); };
+  const openSheet=()=>{ if(opened) return; opened=true; releaseBtn();
+    $('coOverlay').classList.add('on'); sheetPush('co'); track('checkout_open',{kind}); };
+  const failsafe=setTimeout(openSheet,2000);
+  const bail=()=>{ clearTimeout(failsafe); releaseBtn(); coFallback(); };
   try{
     // Fire BOTH at once. Our server call and the Stripe library have nothing to do with each other, but
-    // they used to run one after the other, so the wait was the sum of the two (owner 07-27). The library
-    // is normally already warm from openBuy, which leaves only our own round trip on the clock.
+    // they used to run one after the other, so the wait was the sum of the two. The library is normally
+    // already warm from openBuy, which leaves only our own round trip on the clock.
     const intentP=appApi('/app/checkout-intent',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind,annual:!!annual})});
     const stripeP=loadStripeJs();
     const r=await intentP;
-    if(!r||r.error||!r.clientSecret||!r.publishableKey){ return coFallback(); }
+    if(!r||r.error||!r.clientSecret||!r.publishableKey){ return bail(); }
     if(r.amountCents){ CO.amountCents=r.amountCents; setT('co_price', money(r.amountCents)); setT('co_cta_label', coCtaLabel()); }
     const Stripe=await stripeP;
     _stripe=Stripe(r.publishableKey);
@@ -8551,8 +8564,10 @@ async function openCheckout(kind, annual, amountCents, planLabel, planSub){
     const pe=_coElements.create('payment', { layout:'tabs' });
     const host=$('co_pay_el'); if(host){ host.innerHTML=''; pe.mount(host); }
     pe.on('ready',()=>{ const l=$('co_loading'); if(l) l.style.display='none'; const c=$('co_cta'); if(c) c.disabled=false; });
-    pe.on('loaderror',()=>coFallback());
-  }catch(e){ coFallback(); }
+    pe.on('loaderror',()=>{ openSheet(); coFallback(); });
+    // Mount first, THEN slide up: the form renders into the sheet as it travels, so what lands is finished.
+    clearTimeout(failsafe); openSheet();
+  }catch(e){ bail(); }
 }
 function coFallback(){ // no on-page intent (Stripe key absent / Stripe.js blocked) → hosted Stripe redirect
   setT('co_err', t('co.redirect','Opening secure checkout…'));
