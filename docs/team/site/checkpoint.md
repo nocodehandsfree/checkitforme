@@ -17,42 +17,42 @@ Railway staging env + `DATABASE_URL=file:<scratch>/local.db PORT=88xx npx tsx sr
   scroll MUST be a ~140ms timeout, NOT a rAF (a re-render re-places the sheet ~60ms later and wipes it).
   `sheetH_on` honours `data-fillh`: 0.82 Plans, floored 530px PAYG. Dock depth, never a border. `#buy_note`
   lives IN the dock. Feature sheets = centred header + one carved `.fi-pts` well, points LEFT-aligned.
-- **07-27 LEGO PASS — `scripts/sheet-recipe-audit.mjs` is the test, it must print 1 recipe.** It opens
-  every slide-up and groups them by what they RENDER (anchor · surface · radius · handle · entrance).
-  Found FOUR recipes: checkout faded in with the 24px nudge the owner killed on 07-05, the upsell had a
-  smaller dimmer handle + no slide + no drag, and My checks/call sheet/p6d each hand-built the grab handle
-  (40x5 in three colours) instead of the shared 44x6 rgba(.4). All fixed: 24 sheets, ONE recipe. Run it
-  before shipping any new sheet — it says whether the thing snapped on or got rebuilt.
-- **07-27 sweep:** alerts sub ran two sentences together (`sentLines()` eats the space and
-  `.subln{display:block}` was scoped to `.rsub`, now UNSCOPED). Alert rows stacked (`.alrow`) so long names
-  + cities stop clipping; dead duplicate ES `alerts.sub` removed. Edit-email/post-score/feature sheets now
-  `sheetPush` + sit in the popstate list. **Autofocus in a sheet SCROLLS the document and strands the sheet
-  mid-screen** (email sat 280px off the bottom): all 9 in-sheet focus calls use `preventScroll:true`.
-  Owner closed logo-fidelity + the iOS tint. Admin owes Spanish service names: `feature-labels-spanish.md`.
-- **Checkout speed/feel.** MEASURED: js.stripe.com/v3 = 1.06MB, 0.61s (0.41s just TLS); the intent call =
-  3.7s the FIRST time per account (it creates the Stripe customer) then 0.2-0.4s. `preconnect` in the head ·
-  `openBuy` warms `loadStripeJs()` · intent + library fire TOGETHER · a failed warm-up is FORGOTTEN (cached,
-  it used to push every checkout that session to the hosted page). `openCheckout` HOLDS the sheet: Continue
-  reads "Opening…", the element mounts FIRST, then the sheet slides up already formed; 2s failsafe; every
-  exit path releases the button. **js.stripe.com is BLOCKED headless here** — stub `window.Stripe` to test.
+- **07-27 LEGO PASS — `scripts/sheet-recipe-audit.mjs` must print 1 recipe.** It opens every slide-up and
+  groups them by what they RENDER (anchor · surface · radius · handle · entrance). Found FOUR; fixed to
+  ONE across 24 sheets. Run it before shipping any new sheet: it says whether it snapped on or got rebuilt.
+- **07-27 sweep:** alerts sub ran two sentences together (`.subln{display:block}` was scoped to `.rsub`,
+  now UNSCOPED). Alert rows stacked (`.alrow`). **Autofocus in a sheet SCROLLS the document and strands
+  the sheet mid-screen** (email sat 280px off the bottom): all 9 focus calls use `preventScroll:true`.
+  Edit-email/post-score/feature sheets now `sheetPush` + sit in the popstate list.
+- **Checkout speed/feel.** MEASURED: js.stripe.com/v3 = 1.06MB, 0.61s; the intent call = 3.7s the FIRST
+  time per account (creates the Stripe customer) then 0.2-0.4s. `preconnect` · `openBuy` warms
+  `loadStripeJs()` · intent + library fire TOGETHER · a failed warm-up is FORGOTTEN. `openCheckout` HOLDS
+  the sheet: Continue reads "Opening…", element mounts FIRST, then it slides up formed; 2s failsafe.
+  **js.stripe.com is BLOCKED headless here** — stub `window.Stripe` to test ordering.
 - **A plan tap jumped to Checkout, FIXED.** Repro needs `page.touchscreen.tap`, NOT `el.click()`: the dock
   covered the lower rows so the tap hit Continue. Padding never fixes it. `.buy-foot` RESERVES the dock's
   band so the scroller shrinks (~150px of list). ALWAYS test sheets with REAL touch taps.
 - Monthly/Annual = small keys inline with the "You're on the <plan> plan" line; "save 17%" INSIDE the Annual key. No overflow at 375/390/430, EN + ES (`plan.save17s`).
 - Drove `/r` at 375/390/430, member + not, EN + ES, REAL taps: all green. **NOT verified: on-device feel.**
 ## 07-23 — alerts sheet, zones back, five site fixes (LIVE on staging + Admin, NOT promoted)
-- Alerts: original On/Off pill + "Pause all alerts" bar (a slider redesign was rejected). Zones back → My checks (acctReturn in popstate).
-- Plans KEEPERS (don't undo): per-tab header (Plans "Check+ Premium Plans" + mark; PAYG "Pay by the Check", bare brandmark); grid hidden on PAYG; "You're on the <name> plan" only on Plans.
-- Five fixes @4f6c4a6: Admin `inStockBanner` gates the `#finds` banner · `product*` flags filter
-  `brandSwitcher()` · `openAlerts` back via `sheetPush` (email + score sheets still share that gap) ·
-  `zonePollTick` calls `ensureHistCache()` so zone checks reach Activity · `.alrow` stacked for long names.
-- 07-21: ONE email-alert path (`watchStore`) + Alerts list, logos, On/Off, master pause, 10 slots; server
-  half (`alerts_paused_at`, pause-all, fan-out) is prod-only. **STATE: promote wanted.** Zone report head
-  keeps CD's comp RING; status is LEFT-aligned, never the zone name.
+- Alerts KEEPER: original On/Off pill + "Pause all alerts" bar (a slider redesign was rejected).
+- Plans KEEPERS (don't undo): per-tab header (Plans "Check+ Premium Plans" + mark; PAYG "Pay by the
+  Check", bare brandmark); grid hidden on PAYG; "You're on the <name> plan" only on Plans.
+- Five fixes @4f6c4a6 (banner flag · product flags · alerts back button · zone checks reach Activity ·
+  `.alrow` long names). 07-21 email alerts: server half is prod-only, **promote wanted**.
+
+## 07-28 — ADMIN sheet glass FIXED (LIVE @2ca41b5). Full story: `docs/tasks/admin-glass-nudge.md`.
+- **Cause: a closed `.sheet` never left the bottom edge** (position:fixed, bottom:0, just translated off).
+  A fixed element there sits in the UI layer iOS never ghosts. Site does `.overlay{display:none}`; Admin
+  now hides its sheet on close. Also fixed on the way: `pokeChrome` was never called AND was re-stamping
+  the root colour (the poison); `.sh-body` spacer 70→240px so last rows clear the toolbar.
+- **The move that found it: snapshot the whole page before open vs after close and DIFF it.** One thing
+  differed. Two ships were wasted theorising about the glass first. `qa-admin-glass.mjs` 10→19 checks.
 
 ## Lessons that stay true
 - iOS: Chromium CANNOT catch iOS paint — his phone is the rig; ship one change, "check your phone."
-- Copy an existing pattern WHOLE. Half-copying the zones basket (floating box, but up from the start) reproduced the exact mess it was meant to fix.
+- Copy an existing pattern WHOLE. Half-copying the zones basket reproduced the exact mess it fixed.
+- A bug that SURVIVES closing the sheet is leftover STATE. Diff the page before/after, do not theorise.
 - 'in_stock' substring-matches 'not_in_stock' — match negatives first/exact. RENDER the comp and read EVERY state before touching a designed head (removed the zone ring once and burned a cycle).
 
 ## Open (owner asks + the site queue)

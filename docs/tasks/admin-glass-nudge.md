@@ -40,32 +40,55 @@ re-snapshot is not one of them, so it has been passing green the whole time.
 **Reference:** `sheetGlassNudge` + `sheetBodyLock` + `sheetBodyMaybeUnlock` in `public/checkit.html`.
 Copy that ordering exactly rather than inventing a variant. GOTCHAS has the full glass story.
 
-**Status:** done (2026-07-28, Admin LIVE @527a48f)
+**Status:** done (2026-07-28, Admin LIVE @2ca41b5)
 
-**Verify-live output (paste on close — a task without it is NOT closed):**
+## THE ACTUAL CAUSE — read this, not the diagnosis above
+
+The diagnosis at the top of this file was WRONG, and it cost two ships to find out. Keeping it because
+the two things it named were also genuinely broken and were also fixed. But neither was the tint.
+
+**A closed sheet never left the bottom edge.** `.sheet` is created lazily on first open and was then
+kept in the DOM forever as a `position:fixed`, bottom:0, ~1000px tall element, merely translated off
+screen. A fixed element on the bottom edge lives in the UI layer iOS never ghosts, so the bar went flat
+grey and STAYED that way. The site has always done the opposite: `.overlay{display:none}` /
+`.overlay.on{display:flex}`.
+
+The owner's repro is what cracked it, and it maps exactly: fine on load (the element does not exist
+yet) · breaks the moment you slide a sheet DOWN (element now exists, parked) · survives closing the tab
+· a refresh fixes it (fresh DOM). **Nothing about caching. Nothing he had to clear.**
+
+**How it was found:** snapshot the whole page (root/body inline styles, classes, computed background,
+doc height, scroll, filters, the sheet's own box) BEFORE opening a sheet, then again after closing one,
+and diff. Exactly one thing differed. Do that first next time instead of theorising about the glass.
+
+**What shipped, in order:**
+1. `pokeChrome()` existed but nothing called it. Wired into open (before the scroll lock) and close.
+2. `pokeChrome` was ALSO re-stamping the root background-color inline. That is the documented poison:
+   it makes iOS re-sample the root grey instead of ghosting the sheet. It is now the site's
+   `sheetGlassNudge` byte for byte, a scroll and nothing else, both scrolls synchronous.
+3. **The real one:** the sheet is born hidden, shown one frame before `.on` so the slide-up still
+   animates, and hidden again once the slide-down finishes.
+4. Separately: `.sh-body` scroll-end spacer 70px → 240px, so the last rows clear the toolbar. Grab
+   handle unified to the site's 44x6 at 40%.
+
+**Guard:** `scripts/qa-admin-glass.mjs` went from 10 checks to 19. The new ones cover the JS form of the
+root recolour (the old check only caught the CSS form), the nudge being called on open/close and before
+the lock, the spacer size, and the closed sheet being hidden. Each new check was run against the build
+it was meant to catch and confirmed to FAIL there first.
+
+**Verify-live output:**
 ```
-→ shipping public/app.html @ 527a48f to https://admin.checkitforme.com …
-{"ok":true,"commit":"527a48f","at":1785258342,"bytes":639284}
-✓ THE Admin is serving the new shell (527a48f).
+→ shipping public/app.html @ 2ca41b5 to https://admin.checkitforme.com …
+{"ok":true,"commit":"2ca41b5","at":1785266699,"bytes":640303}
+✓ THE Admin is serving the new shell (2ca41b5).
+read back live: sh.style.display='none' present x1
 
-read back off https://admin.checkitforme.com/ :
-  pokeChrome()                        x4   (defined + called on open + called on close)
-  240px + env(safe-area-inset-bottom) x1   (the scroll-end spacer)
+lifecycle driven at 390x844:
+   60ms after open  top=408 (mid slide-up)
+  700ms after open  top=118 (settled at 14vh)
+  150ms into close  top=934 (sliding down)
+ 1200ms after close display:none, zero box
+before/after page diff: nothing left on the bottom edge
 ```
 
-**What shipped:** `openSheet` now shows the sheet, waits two frames, calls `pokeChrome()`, waits one
-more frame (pokeChrome scrolls 1px and back on the NEXT frame, so locking in between stranded the page
-1px off), THEN locks scroll. `_restoreSheetLayout` nudges on the way out. `.sh-body` scroll-end spacer
-70px → 240px (the 120px overshoot + the ~90px toolbar + tap margin). Grab handle unified to the site's
-44x6 at 40%.
-
-**Driven** at 390x844, signed into Admin: nudge order on open reads `nudge, nudge, lock`, and fires
-again on close. Lowest tappable element in the workflow sheet, the global-openers sheet and a 20-row
-worst case all land 42px+ clear of the toolbar; before the fix the same element sat 128px UNDER it.
-
-**The guard:** `scripts/qa-admin-glass.mjs` gained 4 checks (pokeChrome called on open, called on
-close, called BEFORE the lock, spacer clears overshoot + toolbar). Its old check pinned the 70px
-spacer, so it had been certifying the bug. Run against the PRE-FIX file it now reports 4 failures;
-against the fixed file 15 pass / 0 fail.
-
-**Left for the owner:** the tint itself. Chromium cannot render iOS glass.
+**Owner confirmed the tint on his phone 07-28.**
