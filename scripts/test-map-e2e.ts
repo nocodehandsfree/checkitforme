@@ -222,15 +222,25 @@ async function main() {
       call: { at: now(), day: "2026-07-27", storeId: 601, seconds: 30, reachedHuman: true, path: "press:2" } });
     // Franklin's Ace answers differently.
     const odd: MapRecipe = { type: "keypad", seconds: 25, steps: [{ action: "press", value: "4", atSec: 7 }] };
+    const quiet = await proposeVersion({ chainId: ch.id, storeId: 776, recipe: odd, source: "sweep",
+      call: { at: now(), day: "2026-07-27", storeId: 776, seconds: 25, reachedHuman: true, path: "press:4" } });
+    ok(quiet.version.status === "proposed" && quiet.activated === false,
+      "a store that just answers differently WAITS for approval — the owner's rule holds");
+    ok((await activeMap(ch.id, 776))?.recipe.steps[0].value === "2", "and that store keeps running the chain route meanwhile");
+
+    // Store 777 has actually been FAILING on the chain route. Waiting there does harm, not good.
+    await recordFailedAttempt({ chainId: ch.id, storeId: 777, reason: "the mapped route reached nobody" });
     const ex = await proposeVersion({ chainId: ch.id, storeId: 777, recipe: odd, source: "sweep",
       call: { at: now(), day: "2026-07-27", storeId: 777, seconds: 25, reachedHuman: true, path: "press:4" } });
     ok(ex.version.storeId === 777, "the exception is recorded against THAT store");
-    ok(ex.version.status === "active", "and goes live for that store, which was failing on the chain route");
+    ok(ex.version.status === "active", "it goes live for that store, where the chain route was proven broken");
+    ok(ex.activated === true, "and the flag says live, because it IS live");
     const chainLive = await activeMap(ch.id);
     ok(chainLive?.recipe.steps[0].value === "2", "the CHAIN route is untouched — 500 stores keep working");
     ok((await activeMap(ch.id, 777))?.recipe.steps[0].value === "4", "that one store gets its own route");
     ok((await openUnknowns(300)).some((u) => u.chainId === ch.id && u.kind === "store-exception"), "and it is queued so a pattern is visible");
     // Two more stores agree → now it is the chain's route, and even then only as a proposal.
+    await recordFailedAttempt({ chainId: ch.id, storeId: 778, reason: "the mapped route reached nobody" });
     await proposeVersion({ chainId: ch.id, storeId: 778, recipe: odd, source: "sweep",
       call: { at: now(), day: "2026-07-27", storeId: 778, seconds: 25, reachedHuman: true, path: "press:4" } });
     const third = await proposeVersion({ chainId: ch.id, storeId: 779, recipe: odd, source: "sweep",

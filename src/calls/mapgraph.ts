@@ -667,9 +667,26 @@ async function storesAgreeingOn(chainId: number, path: string, includeStoreId?: 
   return [...ids];
 }
 
-/** Record a store walking its own route. It goes live FOR THAT STORE — the store is already proving
- *  the chain route wrong there, so leaving it on a route that does not work helps nobody — and it is
- *  filed as a review item so a pattern across stores is visible rather than buried. */
+/** Has the chain's route actually FAILED at this store recently? A failed attempt or a drift we
+ *  recorded there is the evidence. This is the difference between "this store answers differently"
+ *  and "this store is broken", and it decides whether an exception may go live without being asked. */
+async function chainRouteFailingAt(chainId: number, storeId: number, withinDays = 30): Promise<boolean> {
+  const since = nowSec() - withinDays * DAY;
+  const r = await client.execute({
+    sql: `SELECT COUNT(*) AS n FROM nav_observations
+          WHERE chain_id=? AND store_id=? AND at>? AND (kind='failed-attempt' OR drift=1)`,
+    args: [chainId, storeId, since],
+  });
+  return Number((r.rows[0] as any)?.n || 0) > 0;
+}
+
+/** Record a store walking its own route.
+ *
+ *  THE OWNER'S STANDING RULE IS THAT A CHANGED ROUTE WAITS FOR HIS YES, so this only goes live by
+ *  itself in the one case where waiting does harm: the chain's route is ALREADY PROVEN BROKEN at this
+ *  store (a failed call or a drift recorded there). Then leaving it on a route that does not work
+ *  helps nobody, and the blast radius is one store. With no such evidence it is PROPOSED and waits,
+ *  exactly like a chain change. Either way it is filed as a review item so the pattern is visible. */
 async function proposeStoreException(
   opts: { chainId: number; storeId?: number; recipe: MapRecipe; source: string; why?: string },
   call: EvidenceCall, agreeing: number,
@@ -694,23 +711,30 @@ async function proposeStoreException(
   const version = Number((maxRow.rows[0] as any)?.v || 0) + 1;
   const evidence: Evidence = { calls: [call] };
   const scored = scoreConfidence(evidence, at);
+  const broken = await chainRouteFailingAt(opts.chainId, storeId);
+  const goLive = broken;                       // see the rule above: only when waiting would do harm
   const summary = `This store walks its own route: ${spoken(opts.recipe)}`;
-  const why = `${agreeing} of ${STORES_TO_MOVE_CHAIN} stores needed before the chain route changes`;
+  const why = goLive
+    ? `Live for this store only — the chain route has been failing here. ${agreeing} of ${STORES_TO_MOVE_CHAIN} stores needed before the chain route itself changes.`
+    : `Waiting for approval — the chain route has not failed at this store. ${agreeing} of ${STORES_TO_MOVE_CHAIN} stores needed before the chain route itself changes.`;
   const ins = await client.execute({
     sql: `INSERT INTO nav_map_versions (chain_id, store_id, version, status, nav_type, recipe, seconds, confidence,
       confidence_label, evidence, source, summary, why, created_at, approved_at, approved_by)
-      VALUES (?,?,?,'active',?,?,?,?,?,?,?,?,?,?,?,'store-exception')`,
-    args: [opts.chainId, storeId, version, opts.recipe.type || null, JSON.stringify(opts.recipe),
-      opts.recipe.seconds ?? null, scored.score, scored.label, JSON.stringify(evidence), opts.source,
-      summary, why, at, at],
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    args: [opts.chainId, storeId, version, goLive ? "active" : "proposed", opts.recipe.type || null,
+      JSON.stringify(opts.recipe), opts.recipe.seconds ?? null, scored.score, scored.label,
+      JSON.stringify(evidence), opts.source, summary, why, at, goLive ? at : null,
+      goLive ? "store-exception" : null],
   });
-  if (existing && existing.storeId === storeId) await retire(existing.id, at);
+  if (goLive && existing && existing.storeId === storeId) await retire(existing.id, at);
   await reportUnknown({
     chainId: opts.chainId, storeId, kind: "store-exception",
-    prompt: `${summary} — the chain route stays as it is until ${STORES_TO_MOVE_CHAIN} stores agree`,
-    evidence: { versionId: Number(ins.lastInsertRowid || 0), navId: call.navId, agreeing },
+    prompt: `${summary} — ${goLive ? "live for this store, the chain route was failing here" : "waiting for your yes"}`,
+    evidence: { versionId: Number(ins.lastInsertRowid || 0), navId: call.navId, agreeing, live: goLive },
   });
-  return { version: (await versionById(Number(ins.lastInsertRowid || 0)))!, activated: false };
+  // The flag says what actually happened. Anything reading it — the dashboard, a caller, a test — must
+  // never be told a live route is not live (Echo, 07-27).
+  return { version: (await versionById(Number(ins.lastInsertRowid || 0)))!, activated: goLive };
 }
 
 async function retire(versionId: number, at: number): Promise<void> {
