@@ -126,6 +126,12 @@ console.log("▶ the clerk says hello: the question goes out, the agent connects
   ok(tw.marks().length === 1 && (tw.marks()[0].mark as { name: string }).name === "delta-opening", "a mark rides behind it so the carrier can tell us when it finished");
   ok(f.agentIdsAsked[0] === "agent_joining", "the agent that opened is the one configured to JOIN a conversation, not the normal one");
   ok(f.inits.length === 1, "the agent was connecting while the question was still playing (prewarmed, not after)");
+  // The question is played from a recording, so nothing in the provider's transcript knows it was
+  // asked. It has to be recorded as a line of the conversation or our own record is missing the most
+  // important thing said on the call — and the live view has no way to know we got that far.
+  const said = (getReceipt("room-clip")?.transcript ?? []);
+  ok(said.length === 1 && said[0].who === "Agent", "the question we asked is a line of the transcript, not a silent event");
+  ok(said[0]?.text.includes("Pokemon cards in stock"), `…and it is the words the store actually heard (${said[0]?.text})`);
 
   console.log("▶ the clerk answers early: held, not lost, not delivered yet");
   tw.media(frame(LOUD(160, 1)));
