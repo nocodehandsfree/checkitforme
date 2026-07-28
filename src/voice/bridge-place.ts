@@ -8,6 +8,7 @@ import { setBridgeContext, takeBridgeDtmf, takeBridgeSay, bridgeLog } from "./br
 import { startListenNav, listenNavOpeningTwiml, type NavStep } from "../calls/listen-nav";
 import { openReceipt, emit, closeReceipt, laneFor, type EventKind } from "../calls/events";
 import { phoneClip } from "../calls/clip-cache";
+import { callTuning } from "../calls/tuning";
 
 /** Turn the recipe's executable strings ("2@8,2@16" / "no@26,front@38") back into ordered steps.
  *  Same source of truth either way — only the WHEN changes between the two nav modes. */
@@ -101,20 +102,35 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
   //     Without that guarantee the clerk would hear two different people, and we are not turning on
   //     the per-call override path for calls that today send none.
   // Either missing → no clip, and the call runs exactly as it does today.
+  //
+  // NO VOICE = NO CHECK (owner, 07-28). This used to fall through to the old path with nothing
+  // recording that it had, so "which stores are quietly running the old way" was unanswerable. A
+  // check that did not happen is better than one that silently ran differently. Every workflow now
+  // carries a voice by default, so reaching this at all is a configuration fault, not a normal case.
   let openingClip: { audio: Buffer; ms: number; text: string } | undefined;
   const question = dynamicVars.opening_line || "";
-  if (config.voice.midCallAgentId && opts?.voiceId && question) {
+  if (config.voice.midCallAgentId && question) {
+    if (!opts?.voiceId) {
+      emit(room, "unknown", "This store has no voice set, so the check was refused rather than run the old way", { fault: "no-voice" });
+      closeReceipt(room, "Refused: no voice is set", "no-voice");
+      return { error: "no voice is set for this store's workflow, so the check was refused. Set one in Admin, Voice, Workflows." };
+    }
     const c = await phoneClip(opts.voiceId, question, opts?.voiceTuning || {}, opts?.apiKey);
     if (c) openingClip = { audio: c.audio, ms: c.ms, text: c.text };
-    else emit(room, "unknown", "Could not prepare the opening question, the agent will ask it himself");
+    // We HAVE a voice but could not record the line. The call still runs, the old way — and it says
+    // so on the receipt, so "which calls ran the old path" stays a question the log already answers.
+    else emit(room, "unknown", "Could not record the opening question, so this call ran the old way", { fault: "clip-failed", fellBackToOldPath: true });
   }
   // WHICH BRAIN, and WHAT TO DO ON A HOLD. Both are settings rather than environment variables, so
   // either can be killed from a phone mid incident without a deploy. The hold strategy defaults to
   // keeping the agent open, which cannot change what the store hears; the money-saving alternative
   // is built and waits on the measurement (Gate Zero) rather than on an opinion.
   const holdStrategy = pol.flags?.closeAgentOnHold ? "reopen" as const : "gate" as const;
+  // Every number the runtime guesses at, resolved ONCE per call from the setting the Admin reads.
+  // Passed in rather than imported, so the ear's timing rules stay testable without a database.
+  const tuning = await callTuning();
   const mkCtx = () => ({ agentId: opts?.agentId || config.voice.agentId, openingClip, midCallAgentId: config.voice.midCallAgentId,
-    ourBrain: !!pol.flags?.ourBrain, ourBrainAgentId: config.voice.ourBrainAgentId, holdStrategy, apiKey: opts?.apiKey || undefined, dynamicVars, onConversationId, dtmf: listening ? undefined : (dtmf || undefined), say: listening ? undefined : (opts?.say || undefined), connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: connectAtSecAdj, holdMaxSeconds: pol.bail.holdMaxSeconds, giveUpSeconds: pol.bail.enabled && pol.bail.ringMaxSeconds > 0 ? pol.bail.ringMaxSeconds : undefined, earFromSec, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
+    ourBrain: !!pol.flags?.ourBrain, ourBrainAgentId: config.voice.ourBrainAgentId, holdStrategy, tuning, apiKey: opts?.apiKey || undefined, dynamicVars, onConversationId, dtmf: listening ? undefined : (dtmf || undefined), say: listening ? undefined : (opts?.say || undefined), connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: connectAtSecAdj, holdMaxSeconds: pol.bail.holdMaxSeconds, giveUpSeconds: pol.bail.enabled && pol.bail.ringMaxSeconds > 0 ? pol.bail.ringMaxSeconds : undefined, earFromSec, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
   setBridgeContext(room, mkCtx());
   const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
   // INLINE the TwiML instead of a Url callback (owner 07-17: "no cutoffs — listen from the very
@@ -185,6 +201,7 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
       // Killable from Admin without a deploy if it ever misreads a menu as a person, but ON by
       // default: pressing keys into a live human's ear is the worse failure of the two.
       abortOnHuman: pol.flags?.stopKeysOnHuman !== false,
+      tuning,
       log: (m) => bridgeLog(`[${room.slice(0, 8)}] ${m}`),
       onEvent: (kind, note, detail) => emit(room, kind as EventKind, note, detail),
       // The menu really ended HERE, not where the map guessed. Re-stamp the context so the agent's

@@ -39,7 +39,7 @@ import { listenNavFeed, endListenNav } from "./calls/listen-nav";
 // THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
 import { emit, markNow, closeReceipt, linkCall, rollup, getReceipt, type Rollup } from "./calls/events";
 import { installReceiptStore, currentRates, onReceiptClosed } from "./calls/receipt-store";
-import { brainCompletion, brainKeyOk } from "./calls/brain";
+import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
 import { graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, graphFor, learnFromReceipt, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
@@ -1195,9 +1195,17 @@ app.post("/api/brain/chat/completions", async (c) => {
   if (!brainKeyOk(c.req.header("authorization") ?? c.req.header("x-api-key") ?? null)) {
     return c.json({ error: "unauthorized" }, 401);
   }
+  // The secret proved WHO is calling. This proves WHAT they sent is a real turn and not a replay,
+  // a flood, or a shape we never agreed to — checked before a model with our money behind it is
+  // ever reached. See the contract at the top of src/calls/brain.ts.
+  const raw = await c.req.text();
+  const check = checkBrainRequest(raw);
+  if (!check.ok) {
+    console.error("[brain] refused:", check.why);
+    return c.json({ error: check.why }, check.why === "too-many" ? 429 : 400);
+  }
   try {
-    const body = await c.req.json() as Parameters<typeof brainCompletion>[0];
-    const { stream } = await brainCompletion(body);
+    const { stream } = await brainCompletion(check.body);
     return new Response(stream, {
       headers: { "content-type": "text/event-stream", "cache-control": "no-cache", connection: "keep-alive" },
     });

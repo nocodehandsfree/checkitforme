@@ -70,6 +70,7 @@ import { type NavStep } from "./listen-nav";
 import { activeMap } from "./mapgraph";
 import { learnTreeFromTranscript, consumeTreeRelearn } from "./tree-learn";
 import { connectAtSecFor } from "./recipe";
+import { callTuning } from "./tuning";
 import { deltaStoreCall, setDeltaFinalize, tdTranscript, type TdSession } from "./tapedeck";
 import type { AgentTuning } from "../voice/provider";
 import { notifyInStock, notifyContact } from "./notify";
@@ -114,9 +115,9 @@ function composePersona(p: AnyObj | undefined): string {
   return bits.join(" ").trim();
 }
 
-/** How long "I just got disconnected" still sounds like the truth. Past this the clerk has taken
- *  other calls and it reads as strange, so the normal greeting is the better line. */
-const RECONNECT_WINDOW_MIN = 15;
+/** The voice a workflow gets when nobody set one. Never empty: a call with no voice used to fall
+ *  silently onto the old path, which is worse than a check that did not happen. */
+export function defaultVoiceId(): string { return config.voice.defaultVoiceId; }
 /** The opener for a store we were cut off from moments ago. No dash inside the sentence (copy law),
  *  one register, and it gets straight to the question rather than dwelling on our own problem. */
 export const RECONNECT_OPENER = "Hi, sorry, I just got disconnected. I was checking to see if you have any {category} in stock right now?";
@@ -129,7 +130,7 @@ export const RECONNECT_OPENER_ES = "Hola, perdón, se me cortó la llamada. Esta
  *  something we should apologise for. */
 export async function recentlyDropped(retailerId: number, categoryId: number): Promise<boolean> {
   try {
-    const since = Math.floor(Date.now() / 1000) - RECONNECT_WINDOW_MIN * 60;
+    const since = Math.floor(Date.now() / 1000) - (await callTuning()).reconnectWindowMin * 60;
     const row = (await db.select({ id: callResults.id }).from(callResults).where(and(
       eq(callResults.retailerId, retailerId),
       eq(callResults.categoryId, categoryId),
@@ -185,9 +186,12 @@ export async function resolveWorkflow(retailerId: number, chainId: number | null
   const persona = Array.isArray(personas) ? personas.find((p) => p && p.name === wf.persona) : undefined;
   // Voice strip: `voices` (array) rotates per call, same round-robin as openers. Legacy workflows
   // that only carry the single `voiceId` behave as a 1-voice strip — identical to before.
+  // EVERY WORKFLOW HAS A VOICE (owner, 07-28). A workflow with none used to mean the call quietly
+  // fell back to the old path with nothing saying which stores that happened to. The default is
+  // filled in here so the case stops existing, rather than being handled everywhere downstream.
   const voices = Array.isArray(wf.voices) && (wf.voices as unknown[]).length
     ? (wf.voices as unknown[]).map(String).filter(Boolean)
-    : (wf.voiceId ? [String(wf.voiceId)] : []);
+    : (wf.voiceId ? [String(wf.voiceId)] : [defaultVoiceId()]);
   return {
     name: String(wf.name),
     voiceId: wf.voiceId ? String(wf.voiceId) : undefined,

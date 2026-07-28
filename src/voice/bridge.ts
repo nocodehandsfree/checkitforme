@@ -12,6 +12,7 @@ import { emit, markNow, addMs, linkProviderCall, openSegment, closeSegment, star
 // The Ear that stays on the call while a person is talking to us. Pure and dependency-free on
 // purpose, so every threshold in it is provable without a phone call.
 import { ConversationEar, type HoldReason } from "../calls/listen-nav";
+import { TUNING_DEFAULTS, type CallTuning } from "../calls/tuning";
 // Delta's opening question: our own line, our own voice, already in phone format and already paid
 // for. The bridge only PLAYS it — synthesis and caching live outside the call path (clip-cache.ts).
 import { toMediaFrames } from "../calls/clip-cache";
@@ -89,6 +90,9 @@ export interface BridgeContext {
   /** The agent wired to our own brain. Same voice, same rules — only the thinking is ours. Absent
    *  means the switch cannot engage and every call uses the hosted model, which always works. */
   ourBrainAgentId?: string;
+  /** Every number this runtime would otherwise guess at, resolved from the setting the Admin reads
+   *  so all of them can be tuned against real calls without a release. */
+  tuning?: CallTuning;
 }
 const contexts = new Map<string, BridgeContext>();
 export function setBridgeContext(room: string, ctx: BridgeContext) {
@@ -252,6 +256,8 @@ function dtmfTone(digit: string, ms = 280): Buffer {
 // Handle one Twilio bridge socket. `fanout` forwards audio frames to browser listeners in a room.
 export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (room: string, b64: string, track: string) => void, relayLine?: (room: string, role: string, text: string) => void, relayEnd?: (room: string) => void, onStage?: (room: string, n: number, atSec: number) => void) {
   let streamSid = "";
+  // Every number this runtime would otherwise guess at, from the setting the Admin reads.
+  const tune: CallTuning = contexts.get(room)?.tuning ?? TUNING_DEFAULTS;
   let eleven: WebSocket | null = null;
   let ready = false;
   let frames = 0;
@@ -306,10 +312,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   let prewarmTimer: NodeJS.Timeout | null = null;
   const CLIP_MARK = "delta-opening";
   /** A breath after the clip so the agent can never clip its own tail. */
-  const CLIP_SETTLE_MS = 250;
+  const CLIP_SETTLE_MS = tune.clipSettleMs;
   /** If every signal fails, open him anyway this long after the clip should have ended. A slightly
    *  early agent is recoverable; a live clerk saying hello into silence is not. */
-  const CLIP_BACKSTOP_MS = 4000;
+  const CLIP_BACKSTOP_MS = tune.clipBackstopMs;
   /** How early to start connecting him, measured back from the END of the clip.
    *
    *  He bills from the second his session opens, talking or not, so every moment he spends warming
@@ -319,7 +325,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *
    *  Being late is safe by construction: the gate opens on its own signals whatever he is doing, and
    *  whatever the clerk said meanwhile is already buffered and released the moment he reports ready. */
-  const PREWARM_LEAD_MS = 2000;
+  const PREWARM_LEAD_MS = tune.prewarmLeadMs;
   // ---- hold and transfer ----
   let onHold = false;             // the person is away; the agent must not be fed or heard
   let holdReason: HoldReason | null = null;
@@ -637,7 +643,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // From here somebody is on the line, so from here it is worth knowing when they stop being on
       // the line. The meter flips from "never checked" to a real measured zero at the same moment.
       startMeter(room, "holdMs");
-      convEar = new ConversationEar({ holdStart: beginHold, holdEnd: endHold });
+      convEar = new ConversationEar({ holdStart: beginHold, holdEnd: endHold }, tune);
     }
     else emit(room, "unknown", `The agent was let on without hearing a person (${reason})`, { reason });
     log(`connect-on-human: connecting (${reason}) after ${Math.round((humanAtMs - startMs) / 1000)}s nav`);
