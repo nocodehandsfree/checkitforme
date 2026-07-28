@@ -162,14 +162,16 @@ console.log("\n▶ §6  Hold and transfer");
   ok(/newPerson|maybeNewPerson/i.test(bridge + read("src/calls/listen-nav.ts")),
     "and warned that a long gap may mean somebody new");
   ok(/never spoken aloud|contextual_update/.test(bridge), "told, not spoken aloud to the store");
-  ok(/closeAgentOnHold/.test(read("src/policy.ts")), "which of the two shapes runs is one switch, decided by Gate Zero");
+  // The owner settled this himself on 07-28 and deleted the switch: closing the agent for a hold is
+  // "the basis of the whole design". Both shapes stay in the code; one of them now runs, always.
+  ok(/p\.flags\.closeAgentOnHold = true/.test(read("src/policy.ts")), "closing him for a hold is how it works, not a switch");
 }
 
 // ================================================================================================
 console.log("\n▶ §7  The brain, on our own account");
 {
   ok(/ourBrain/.test(read("src/policy.ts")), "the brain is a setting, killable from a phone, not an environment variable");
-  ok(/ourBrain/.test(read("public/app.html")), "and it is on the Admin screen where the other call switches live");
+  ok(/Charlie on Anthropic API/.test(read("public/app.html")), "and it is on the Admin screen where the global call settings live");
   ok(/ourBrain: false/.test(read("src/policy.ts")), "off by default = exactly today's behaviour, which always works");
   const ev = read("src/calls/events.ts");
   ok(/brain: "hosted" \| "ours"/.test(ev), "the receipt stamps which brain served the call — the whole point is provability");

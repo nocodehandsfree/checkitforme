@@ -175,12 +175,24 @@ check("6.5", "Charlie is TOLD there was a gap", () => /contextual_update/.test(B
 check("6.6", "…and warned the person may be someone new", () => /may be someone new/.test(BRIDGE) || "no new-person warning");
 check("6.7", "BOTH shapes are built so the measurement can pick", () =>
   /holdStrategy === "reopen"/.test(BRIDGE) && /"gate"/.test(BRIDGE) || "only one shape exists");
-check("6.8", "Neither shape is chosen yet — the safe one is the default", () =>
-  /closeAgentOnHold: false/.test(src("src/policy.ts")) || "a shape was picked before Gate Zero");
+// The owner picked the shape himself on 07-28, before Gate Zero, and deleted the switch: closing the
+// agent for a hold "is the basis of the whole design". Both shapes stay built (6.7); one now runs.
+check("6.8", "Closing him for a hold is how it works, not a switch", () => {
+  const p = src("src/policy.ts");
+  return (/p\.flags\.closeAgentOnHold = true/.test(p) && !/'closeAgentOnHold'/.test(APP))
+    || "it is still a switch, or it is not forced on";
+});
 
 // ── §7 THE BRAIN ───────────────────────────────────────────────────────────────────────────────
-check("7.1", "The switch lives in Admin beside the other call switches", () =>
-  /'ourBrain','Think on our own account'/.test(APP) || "no Admin switch");
+// Renamed and moved by the owner, 07-28: "Charlie on Anthropic API", under Calls, App, where the
+// global call settings live. Off, and blocked on a business call rather than on code.
+check("7.1", "The switch lives in Admin under Calls, App", () => {
+  const app = APP.slice(APP.indexOf('<section id="settings">'), APP.indexOf('<section id="designer">'));
+  return (/Charlie on Anthropic API/.test(app) && /toggleOurBrain\(\)/.test(app))
+    || "the brain switch is not on the Calls App screen";
+});
+check("7.1b", "…and nowhere else, so there is one switch for one thing", () =>
+  (!/'ourBrain','/.test(APP)) || "it is still in the Policy flag list too");
 check("7.2", "It is a SETTING, not an environment variable", () =>
   /flags\?\.ourBrain/.test(PLACE) || "the switch is not a setting");
 check("7.3", "Off = the provider's hosted model, exactly today's behaviour", () =>
@@ -297,6 +309,36 @@ phone("11.2", "A hold happens and he comes back without greeting again", "a huma
 phone("11.3", "The brain switch flips both ways and the receipt says which ran", "blocked: the voice clone rule");
 phone("11.4", "A dropped call charges nobody and does not lock the customer out", "the DB half is proven; the live half needs a real drop");
 phone("11.5", "Cost per delivered answer re-measured against the real baseline", "needs real calls");
+
+// ── THE OWNER'S ORDERS, 07-28 ──────────────────────────────────────────────────────────────────
+// Not in the spec document: four instructions given after it, each one a rule that was only ever
+// prose until it cost him something. They are here because this file is where a rule stops being an
+// opinion. See docs/team/voice-calls/checkpoint.md.
+check("O.1", "The Live/Staging switch steers the call-lane flags, reads AND writes", () => {
+  const envFlagWrite = /const envFlag=isEnvFlag\(key\), where=envFlag\?envApi:api/.test(APP);
+  const envFlagRead = /POL_ENV=CALL_SRC==='live'\?POL:\(await envApi\('\/api\/policy'\)\)/.test(APP);
+  return (envFlagWrite && envFlagRead) || "a call-lane flag still reads or writes Live from the staging side";
+});
+check("O.2", "…and the mirror protects exactly the flags the switch steers", () => {
+  const admin = (APP.match(/const ENV_FLAGS=\[([^\]]+)\]/) || [])[1] || "";
+  const sync = (src("src/settings-sync.ts").match(/KEEP_LOCAL_FLAGS = \[([^\]]+)\]/) || [])[1] || "";
+  const set = (s: string) => s.split(",").map((x) => x.trim().replace(/['"]/g, "")).filter(Boolean).sort().join(",");
+  return (set(admin) !== "" && set(admin) === set(sync))
+    || `the two lists disagree: Admin [${set(admin)}] vs the mirror [${set(sync)}]`;
+});
+check("O.3", "Stopping the keypad when Staff answer is not a switch", () => {
+  const p = src("src/policy.ts");
+  return (/p\.flags\.stopKeysOnHuman = true/.test(p) && !/'stopKeysOnHuman'/.test(APP))
+    || "it is still a switch, or it is not forced on";
+});
+// Both services already carry a policy blob with these saved as false, so DEFAULTING them true is
+// not enough: the forcing has to happen AFTER the stored blob is merged in, or the old value wins.
+check("O.4", "A saved blob cannot turn either of the baked-in two back off", () => {
+  const p = src("src/policy.ts");
+  const merged = p.indexOf("const p = merge(DEFAULT_POLICY, over)");
+  const forced = p.indexOf("p.flags.closeAgentOnHold = true");
+  return (merged > 0 && forced > merged) || "the stored blob is merged over the forcing, so a saved false wins";
+});
 
 // ── §12 TRAPS ──────────────────────────────────────────────────────────────────────────────────
 check("12.1", "src/voice/** is still machine-locked", () => /^src\/voice\/\*\*$/m.test(LOCKS) || "the lock was removed");

@@ -52,9 +52,13 @@ export interface Policy {
     productOnePiece: boolean;        // consumer: One Piece is offered in the product switcher
     productTopps: boolean;           // consumer: Topps NBA is offered in the product switcher
     productNeedoh: boolean;          // consumer: NeeDoh is offered in the product switcher
-    stopKeysOnHuman: boolean;        // calls: a store mapped with a menu that answers directly gets the rest of its keypad tones abandoned, not fired into a real person's ear. ON — turn it off only if a menu is ever misread as a person
-    ourBrain: boolean;               // calls: the agent's THINKING runs on our own account instead of the voice provider's hosted model. The brain is 400 of the 723 credits a minute we burn. OFF = exactly today's behaviour, which always works
-    closeAgentOnHold: boolean;       // calls: when the person walks away, CLOSE the agent's session rather than just muting him. Muting saves nothing; only closing does. OFF until Gate Zero measures whether a gated stream really bills as silence
+    // BAKED IN, NOT SWITCHES (owner, 2026-07-28). Both were engineering hedges the owner never asked
+    // for, and he deleted them: "both become simply how the system works, always on, no switch."
+    // They stay in the shape because the (machine-locked) bridge reads them, and getPolicy() forces
+    // them true below, so no stored blob and no stale mirror can turn either one off again.
+    stopKeysOnHuman: boolean;        // calls: a store mapped with a menu that answers directly gets the rest of its keypad tones abandoned, not fired into a real person's ear. ALWAYS ON: it is a bug fix, not a preference
+    closeAgentOnHold: boolean;       // calls: when Staff walk away, CLOSE the agent's session rather than just muting him. Muting saves nothing; only closing does. ALWAYS ON: the whole design rests on paying for a conversation and nothing else
+    ourBrain: boolean;               // calls: the agent's THINKING runs on our own account instead of the voice provider's hosted model. The brain is 400 of the 723 credits a minute we burn. OFF = exactly today's behaviour, which always works. A real switch, in Admin under Calls, App
   };
   // Bail library: proactive call-cutoff rules (cost control). `enabled` is the master switch —
   // OFF by default so nothing changes on live calls until the enforcement is wired AND tested.
@@ -110,8 +114,8 @@ export const DEFAULT_POLICY: Policy = {
     cheapBridgeAll: false, oneCheckPerStorePerDay: false, transcriptAuth: false,
     inStockBanner: true,
     productPokemon: true, productOnePiece: true, productTopps: true, productNeedoh: true,
-    stopKeysOnHuman: true,
-    ourBrain: false, closeAgentOnHold: false,
+    stopKeysOnHuman: true, closeAgentOnHold: true, // baked in, forced true in getPolicy()
+    ourBrain: false,
   },
   bail: {
     enabled: false,
@@ -145,6 +149,12 @@ export async function getPolicy(): Promise<Policy> {
   let over: Partial<Policy> = {};
   try { over = JSON.parse((await getSetting("policy_json")) || "{}"); } catch { /* ignore */ }
   const p = merge(DEFAULT_POLICY, over);
+  // THE TWO THAT ARE NOT SWITCHES (owner, 2026-07-28). Stopping the keypad the moment Staff answer,
+  // and hanging up the thinking on a hold, are how the system works. Forced here rather than merely
+  // defaulted so a policy blob already saved with either one false (both services carry one) cannot
+  // quietly bring the old behaviour back, and so the raw-JSON escape hatch cannot either.
+  p.flags.stopKeysOnHuman = true;
+  p.flags.closeAgentOnHold = true;
   if (!p.ga4Id) p.ga4Id = process.env.GA4_ID || "";
   cache = { p, t: Date.now() };
   return p;

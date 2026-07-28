@@ -1187,6 +1187,13 @@
       <div class="pk-main"><div class="pk-t">Default workflow</div><div class="pk-m">Unless a chain overrides</div></div>
       <select class="k-filter" id="set_default_wf" onchange="saveDefaultWorkflow()" style="max-width:44vw"><option value="">Loading…</option></select>
     </div>
+    <!-- Section 7 of the live call runtime spec: the brain switch lives beside the call-engine
+         settings, and it is a setting rather than an environment variable so it can be killed from a
+         phone mid incident. Steered by the header Live/Staging switch, reads and writes both. -->
+    <div class="peek static">
+      <div class="pk-main"><div class="pk-t">Charlie on Anthropic API</div><div class="pk-m">The thinking runs on our own account<span id="brainEnv"></span> · blocked: our voice is a clone and they don’t allow it</div></div>
+      <button class="k-switch" id="brainToggle" onclick="toggleOurBrain()" aria-label="Charlie on Anthropic API"></button>
+    </div>
     <button class="peek" onclick="sheetFromHolder('ds_policy','Advanced policy','Raw JSON, merged over the defaults. Dev escape hatch.')">
       <div class="pk-main"><div class="pk-t">Advanced policy</div><div class="pk-m">Raw JSON, dev escape hatch</div></div>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
@@ -1775,19 +1782,27 @@ async function srcApi(p,opts={}){
     return await r.json();
   }catch(_){ return {error:'staging_down'}; }
 }
-// THE VOICE WORKFLOW FOLLOWS THE LIVE/STAGING SWITCH, ON READS **AND** WRITES.
+// THE SETTINGS THAT FOLLOW THE LIVE/STAGING SWITCH, ON READS **AND** WRITES.
 //
-// Every other setting on this dashboard is one configuration the owner edits on the live service,
-// which is why CONFIG_READS above pins them to prod. The voice workflow is the deliberate exception:
-// staging and production are ALLOWED to run different workflows (that is exactly why the settings
-// sync skips the vt_* keys on purpose), so a rehearsal call on the staging site can use a different
-// voice, speed and script than the one customers hear.
+// Almost everything on this dashboard is ONE configuration the owner edits on the live service,
+// which is why CONFIG_READS above pins it to prod. There are exactly two exceptions, and both are
+// things the two environments are ALLOWED to disagree about:
+//   • THE VOICE WORKFLOW (the vt_* keys). Staging may run a different voice, speed and script than
+//     the one customers hear. That is exactly why the settings sync skips those keys on purpose.
+//   • THE CALL-LANE FLAGS (ENV_FLAGS below). Staging tests the calling engine ahead of prod, and
+//     src/settings-sync.ts KEEP_LOCAL_FLAGS preserves staging's own values through every mirror.
+//     The two lists are the same list and must never drift.
 //
-// Owner 07-28: the header said Staging, he set Branson HD and speed 0.91 in the Designer, and it
-// saved to LIVE. His staging test calls kept the old plain Branson at 0.85 and he heard a slow
-// agent with no idea why. The Designer must edit the environment the switch is pointing at.
-// Anything routed through here is voice workflow ONLY. Never plans, policy flags or statuses.
-async function vtApi(p,opts={}){
+// Owner 07-28, the voice: the header said Staging, he set Branson HD and speed 0.91 in the Designer,
+// and it saved to LIVE. His staging test calls kept the old plain Branson at 0.85 and he heard a
+// slow agent with no idea why.
+// Owner 07-28, the flags: the New calling engine switch read and wrote LIVE from either side, so the
+// engine could not be turned on for staging, the only place he makes a test call.
+//
+// Reads and writes always go to the SAME service, so a control can never show one environment's
+// answer while editing the other. Nothing else may be routed through here: not plans, not pricing,
+// not the policy at large, not statuses.
+async function envApi(p,opts={}){
   if(CALL_SRC!=='staging') return api(p,opts);
   try{
     const r=await fetch(STG_ORIGIN+p,Object.assign({},opts,{credentials:'include'}));
@@ -1795,6 +1810,13 @@ async function vtApi(p,opts={}){
     try{ return await r.json(); }catch(_){ return {error:'bad_response'}; }
   }catch(_){ return {error:'staging_down'}; }
 }
+// The voice workflow's own name for the same engine, so a call site reads as the thing it edits.
+async function vtApi(p,opts={}){ return envApi(p,opts); }
+// The call-lane flags. The ONLY policy flags an environment may hold its own value for. Keep this
+// list byte-identical to KEEP_LOCAL_FLAGS in src/settings-sync.ts: a flag steered here but missing
+// there gets stomped back by the prod mirror within a minute, silently, mid test.
+const ENV_FLAGS=['cheapBridgeAll','connectOnHuman','ourBrain'];
+const isEnvFlag=k=>ENV_FLAGS.indexOf(k)>=0;
 // The word for the environment the voice pages are editing right now, for toasts and headings.
 const vtEnvName=()=>CALL_SRC==='staging'?'Staging':'Live';
 function setCallSrc(s,reload){ CALL_SRC=s; localStorage.setItem('call_src',s); document.querySelectorAll('.src-filter').forEach(el=>{el.value=s;}); if(typeof renderEnvTog==='function') renderEnvTog(); if(reload) reload(); }
@@ -1960,7 +1982,7 @@ const NAV_GROUPS={
   launch:   {label:'Launch',   ico:'trophy',tabs:[['gtm','Go-to-Market','check']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), alerts:()=>loadAlerts(), dash:()=>{loadDash();loadOpsCost();loadGwPulse();loadCallHealth();loadCredits();}, calc:()=>calcInit(), plans:()=>loadPlans(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), feedback:()=>loadFeedback(), support:()=>loadSupport(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();}, gtm:()=>loadGtm() };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), alerts:()=>loadAlerts(), dash:()=>{loadDash();loadOpsCost();loadGwPulse();loadCallHealth();loadCredits();}, calc:()=>calcInit(), plans:()=>loadPlans(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), feedback:()=>loadFeedback(), support:()=>loadSupport(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadOurBrain();loadAdvancedPolicy();}, gtm:()=>loadGtm() };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 let NAV_RESTORING=false, NAV_BOOTED=false; // browser Back/Forward walks the admin's own tab history
 let FB_OPEN=0; // unreviewed poll disagreements — count badge on the Calls ▸ Feedback tab
@@ -5896,6 +5918,21 @@ async function toggleLiveListen(){
   await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({flags:{liveListen:!on}})});
   await loadLiveListen(); toast(!on?'Customers now hear calls live':'Live audio is testing-only again');
 }
+// Charlie on Anthropic API: a call-lane flag, so it reads and writes the environment the header
+// switch names. Off everywhere until the voice question is settled (see src/calls/brain.ts).
+async function loadOurBrain(){
+  const b=document.getElementById('brainToggle'); if(!b) return;
+  const p=await envApi('/api/policy'); if(!p||p.error) return;
+  const on=!!(p.flags&&p.flags.ourBrain);
+  b.classList.toggle('on',on); b.dataset.on=on?'1':'';
+  const n=document.getElementById('brainEnv'); if(n) n.textContent=CALL_SRC==='live'?'':(' · '+vtEnvName());
+}
+async function toggleOurBrain(){
+  const b=document.getElementById('brainToggle'); const on=b&&b.dataset.on==='1';
+  const r=await envApi('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({flags:{ourBrain:!on}})});
+  if(!r||r.error){ toast('Could not save the flag'); return; }
+  await loadOurBrain(); toast('Charlie on Anthropic API '+(!on?'on':'off')+(CALL_SRC==='live'?'':' · '+vtEnvName()));
+}
 // Voice → Designer workflows + the cascade assignment (default → chain → store). The library is the
 // vt_workflows setting; assignments are name maps the call bridge resolves per call (store→chain→default).
 let WF={list:[],def:'',chains:{},stores:{}};
@@ -6244,7 +6281,8 @@ async function setStoreWorkflow(id,name){
 const v = (id) => document.getElementById(id).value.trim();
 
 // --- Growth & Policy ---
-let POL=null;
+let POL=null;        // the LIVE service's policy: pricing, rewards, every flag the owner edits once
+let POL_ENV=null;    // the policy of the environment the header switch names (call-lane flags only)
 // Grouped feature flags: [key, label, info-tip]. connect-on-human + require-phone are intentionally
 // absent — both are baked in (always on), not owner-toggleable. Toggling any flag is GLOBAL (all users).
 const FLAG_GROUPS=[
@@ -6275,11 +6313,11 @@ const FLAG_GROUPS=[
     ['productTopps','Topps NBA','Offer Topps NBA in the product switcher'],
     ['productNeedoh','NeeDoh','Offer NeeDoh in the product switcher'],
   ]},
-  {title:'How calls are made',flags:[
+  // Steered by the header Live/Staging switch, reads and writes both (see envApi). Two switches that
+  // used to sit here are gone on purpose (owner 07-28): stopping the keypad when Staff answer and
+  // hanging up the thinking on a hold are simply how the system works now, always on, no switch.
+  {title:'How calls are made',env:true,flags:[
     ['cheapBridgeAll','New calling engine','Asks the question the moment they pick up · off = the old way'],
-    ['stopKeysOnHuman','Stop keys when a person answers','Never beep the keypad into someone’s ear'],
-    ['ourBrain','Think on our own account','Cheaper thinking · blocked: our voice is a clone and they don’t allow it'],
-    ['closeAgentOnHold','Hang up the thinking on a hold','Stops the meter when staff walk away · needs the six test calls first'],
   ]},
   {title:'Admin & Global',flags:[
     ['oneCheckPerStorePerDay','Fresh-result cache (24h)','Reuse a recent result instead of re-calling'],
@@ -6505,10 +6543,12 @@ async function sendAlertTest(k,channel){
 // so a save can redraw the switches from the saved policy without refetching the whole page.
 function renderGwFlags(){
   const el=document.getElementById('gw_flags'); if(!el) return;
-  const f=(POL&&POL.flags)||{};
+  // Two sources on purpose: the call-lane group shows the environment the header switch names, every
+  // other group shows Live, because Live is the only place those are edited.
+  const f=(POL&&POL.flags)||{}, e=(POL_ENV&&POL_ENV.flags)||f;
   el.innerHTML=FLAG_GROUPS.map(g=>
-    `<div class="meta" style="font-weight:700;color:var(--text-muted);margin:14px 0 2px">${g.title}</div>`+
-    g.flags.map(fl=>{const k=fl[0],on=!!f[k];return `<div class="peek static">
+    `<div class="meta" style="font-weight:700;color:var(--text-muted);margin:14px 0 2px">${g.title}${g.env&&CALL_SRC!=='live'?' · '+vtEnvName():''}</div>`+
+    g.flags.map(fl=>{const k=fl[0],on=!!(g.env?e:f)[k];return `<div class="peek static">
       <div class="pk-main"><div class="pk-t">${esch(fl[1])}</div><div class="pk-m">${esch(String(fl[2]))}</div></div>
       <button class="k-switch${on?' on':''}" onclick="toggleFlag('${k}',${on?'false':'true'},'${esch(fl[1])}')" aria-label="${esch(fl[1])}"></button>
     </div>`;}).join('')
@@ -6516,6 +6556,10 @@ function renderGwFlags(){
 }
 async function loadGrowth(){
   POL=await api('/api/policy');
+  // The call-lane flags live in whichever environment the header switch names, so they are read from
+  // there. On Live that is the same document, and the second fetch never happens.
+  POL_ENV=CALL_SRC==='live'?POL:(await envApi('/api/policy'));
+  if(!POL_ENV||POL_ENV.error) POL_ENV=POL;
   if(!POL||POL.error){ document.getElementById('gw_flags').textContent='Could not load policy.'; return; }
   renderGwFlags();
   // pricing
@@ -6780,9 +6824,17 @@ async function loadGwIntel(){
 }
 // The PATCH returns the whole saved policy, so redraw from THAT rather than firing a second read.
 // One round trip, and the switch can never disagree with what was actually stored.
+// A call-lane flag is written to the environment the header switch names, the same place it was read
+// from. Every other flag is written to Live, where it was read from. Neither can cross.
 async function toggleFlag(key,on,label){
-  const r=await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({flags:{[key]:on}})});
-  if(r&&!r.error&&r.flags){ POL=r; renderGwFlags(); toast((label||key)+(on?' on':' off')); }
+  const envFlag=isEnvFlag(key), where=envFlag?envApi:api;
+  const r=await where('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({flags:{[key]:on}})});
+  if(r&&!r.error&&r.flags){
+    if(!envFlag||CALL_SRC==='live') POL=r;
+    if(envFlag||CALL_SRC==='live') POL_ENV=r;
+    renderGwFlags();
+    toast((label||key)+(on?' on':' off')+(envFlag&&CALL_SRC!=='live'?' · '+vtEnvName():''));
+  }
   else { toast('Could not save the flag'); loadGrowth(); }
 }
 // Membership + PAYG numbers live in Plans; this page shows them read-only and links across.
