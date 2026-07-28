@@ -8297,7 +8297,10 @@ function openFeatInfo(key){ const info=featInfo(key); if(!info) return;
 }
 function closeFeatInfo(){ const o=$('featOv'); if(o) o.classList.remove('on');
 }
-function featLabel(key){ const f=(PLANS&&PLANS.features||[]).find(x=>x.key===key); return f?f.label:key.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()); }
+// The service NAME, in the reader's language. Admin owns both names and ships them on PLANS.features;
+// the site picks, it never translates. A Spanish reader used to get English titles on the six tiles
+// and their pop-ups while the body copy around them was Spanish, on the last screen before paying.
+function featLabel(key){ const f=(PLANS&&PLANS.features||[]).find(x=>x.key===key); if(!f) return key.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()); return (LANG!=='en'&&f.labelEs)||f.label; }
 // The tier tiles: live tiers straight off /pub/plans (fallback to a static ladder only if the fetch failed).
 function tiers(){
   if(PLANS&&PLANS.tiers&&PLANS.tiers.length){
