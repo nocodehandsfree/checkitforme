@@ -1431,6 +1431,11 @@
         <div class="pk-fact" id="pk_setreview"></div>
         <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
+      <button class="peek" id="set_obsrow" style="display:none" onclick="sheetFromHolder('ds_setobs','What calls proved','Every call that tested this route, mapping or ordinary check.')">
+        <div class="pk-main"><div class="pk-t">What calls proved</div></div>
+        <div class="pk-fact" id="pk_setobs"></div>
+        <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
       <button class="peek" onclick="sheetFromHolder('ds_setruns','Mapping calls','Real calls this chain placed to learn its menu.')">
         <div class="pk-main"><div class="pk-t">Mapping calls</div></div>
         <div class="pk-fact" id="pk_setruns"></div>
@@ -1442,6 +1447,7 @@
         <div id="ds_setcall"><div id="set_call"></div></div>
         <div id="ds_setver"><div id="set_versions"></div></div>
         <div id="ds_setreview"><div id="set_review"></div></div>
+        <div id="ds_setobs"><div id="set_obs"></div></div>
         <div id="ds_setruns"><div id="set_runs"><div class="meta">Loading…</div></div></div>
       </div>
     </div>
@@ -2223,14 +2229,16 @@ async function loadRuns(chainId, box){
 }
 // The receipt for a call the ADMIN placed. These have no customer check behind them, so they are read
 // by room. Before 07-27 an Admin call left nothing at all: no timeline, no seconds, no cost.
-async function openNavReceipt(room){
+async function openCallReceipt(id){ return openReceiptInto('/api/calls/'+id+'/receipt'); }
+async function openNavReceipt(room){ return openReceiptInto('/api/admin/receipt/'+encodeURIComponent(room)); }
+async function openReceiptInto(url){
   const box=document.createElement('div');
   box.innerHTML='<div class="meta">Loading…</div>';
   openSheet('The whole call','',box);
-  const d=await api('/api/admin/receipt/'+encodeURIComponent(room));
+  const d=await api(url);
   if(!d||d.error){ box.innerHTML='<div class="empty">Nothing was recorded for this call. Only calls placed since 27 July have a receipt.</div>'; return; }
   const KIND={dialed:'Dialled',ringing:'Ringing',connected:'The line was answered',ivr_detected:'A phone menu',alpha_press:'Pressed a key',bravo_say:'Said a word',human_detected:'A person answered',transfer:'Handed on',voicemail:'A machine',hangup:'Call ended',verdict:'Answer'};
-  const c=d.cost||{}, s=d.rollup||{};
+  const c=d.cost||{}, s=d.seconds||d.rollup||{};
   const money=n=>(Number(n||0)*100).toFixed(1)+'¢';
   const rungs=(d.timeline||[]).map((e,i,a)=>chainRung({
     at:(e.atSec||0)+'s', t:esch(e.note||KIND[e.kind]||e.kind),
@@ -4720,11 +4728,38 @@ async function renderMapVersions(chainId){
       <div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(v.summary||'')}</div>
       <div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${v.seconds!=null?v.seconds+'s to a person':''}${v.confidenceLabel&&v.confidenceLabel!=='unknown'?` · <span style="color:${confColor(v.confidenceLabel)}">${esch(v.confidenceLabel)}</span>`:''}${v.why?' · '+esch(whyWords(v.why)):''}</div>
       ${calls.length?`<div class="k-eyebrow" style="margin:14px 0 6px">The calls that proved it</div>`+calls.map(cl=>
-        `<div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5;padding:3px 0">${esch(cl.day||'')} · ${esch(cl.storeName||'a store')}${cl.seconds!=null?' · '+cl.seconds+'s':''} · ${cl.reachedHuman?'<span style="color:var(--green)">a person answered</span>':'<span style="color:var(--muted)">nobody answered</span>'}${cl.transferAtSec!=null?' · handed on at '+cl.transferAtSec+'s':''}${cl.greeting?'<br>“'+esch(String(cl.greeting).slice(0,120))+'”':''}</div>`).join(''):''}
+        `<div style="padding:8px 0;border-top:1px solid var(--border)">
+          <div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5">${esch(cl.day||'')} · ${esch(cl.storeName||'a store')}${cl.seconds!=null?' · '+cl.seconds+'s':''} · ${cl.reachedHuman?'<span style="color:var(--green)">a person answered</span>':'<span style="color:var(--muted)">nobody answered</span>'}${cl.transferAtSec!=null?' · handed on at '+cl.transferAtSec+'s':''}</div>
+          ${(cl.transcript&&cl.transcript.length)?`<div class="mladder" style="margin-top:8px;padding:12px 14px">${cl.transcript.map((t,ti,ta)=>{
+              const m=String(t).match(/^\s*(\d+)s\s+([\s\S]*)$/);
+              return chainRung({at:m?m[1]+'s':'',t:esch(m?m[2]:String(t)),c:'var(--muted)',lc:'rgba(255,255,255,.14)'},ti===ta.length-1);
+            }).join('')}</div>`
+           :'<div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">Nothing was written down on this call.</div>'}
+        </div>`).join(''):''}
       ${v.status==='proposed'?`<div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap"><button class="act" onclick="closeSheet();mapApprove(${v.id},${chainId})">Use it</button><button class="ghost" onclick="closeSheet();mapReject(${v.id},${chainId})">Keep the old one</button></div>`:''}
     </div>`;
   }).join('') : '<div class="empty">No saved versions yet. Mapping calls create the first one.</div>';
   if(rw) rw.innerHTML = uk.length ? uk.map(u=>mapUnknownCard(u,chainId)).join('') : '<div class="empty">Nothing to review on this chain.</div>';
+  // What real calls have proved since the route was saved. The mapper files one of these on every
+  // call, including ordinary customer checks, and the page was dropping all of them on the floor.
+  const ow=document.getElementById('set_obs'), obs=((d||{}).observations)||[];
+  const po=document.getElementById('pk_setobs'); if(po) po.textContent=obs.length?String(obs.length):'';
+  const orow=document.getElementById('set_obsrow'); if(orow) orow.style.display=obs.length?'':'none';
+  if(ow) ow.innerHTML = obs.length ? obs.map(o=>{
+    const K={verify:['var(--green)','The route ran and worked'],drift:['#F59E0B','The route drifted'],
+      'failed-attempt':['var(--red)','The route reached nobody'],'transfer-gap':['#F59E0B','Waited after the hand-off'],
+      'store-exception':['#38BDF8','This store went its own way']}[o.kind]||['var(--muted)',String(o.kind||'').replace(/-/g,' ')];
+    const det=o.detail&&typeof o.detail==='object'?o.detail:{};
+    const when=o.at?new Date(o.at*1000).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
+    return `<div class="card" style="margin:0 0 10px">
+      <div class="row" style="align-items:center;gap:8px"><span class="name" style="font-size:13.5px;color:${K[0]}">${esch(K[1])}</span><span class="meta" style="margin-left:auto">${esch(when)}</span></div>
+      ${o.observed?`<div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(String(o.observed))}</div>`:''}
+      ${det.gapSeconds?`<div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${det.gapSeconds}s of waiting after it said it was transferring us${det.greeting?`, then “${esch(String(det.greeting).slice(0,70))}”`:''}</div>`:''}
+      ${det.reason?`<div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${esch(String(det.reason))}</div>`:''}
+      ${o.callId?`<button class="ghost" style="margin-top:10px" onclick="closeSheet();openCallReceipt(${o.callId})">The whole call</button>`
+                :'<div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;color:var(--muted)">No check is attached to this one.</div>'}
+    </div>`;
+  }).join('') : '<div class="empty">No calls have tested this route yet.</div>';
 }
 // The engine writes "2 call(s), 1 store(s), 2 day(s)". Nobody reads "(s)" on a phone.
 const whyWords=s=>String(s||'').replace(/(\d+)\s+(\w+?)\(s\)/g,(m,n,w)=>n+' '+w+(Number(n)===1?'':'s'));
