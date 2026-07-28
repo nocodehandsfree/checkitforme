@@ -202,8 +202,11 @@ check("7.10", "LADDER 3: that fails too → treat as a dropped call", () =>
   /dropCall\("we could not open an agent/.test(BRIDGE) || "no drop on total failure");
 check("7.11", "After he has spoken there is NO live model swap", () =>
   /charlieSpoke = true/.test(BRIDGE) || "nothing records that he spoke");
+// NOT the word "degraded" — that matched a COMMENT and passed a check on nothing, which is exactly
+// the kind of soft assertion that makes a green number worthless. It has to find the real thing: a
+// verdict extracted from what we already heard, and the call marked degraded rather than dropped.
 check("7.12", "A usable answer already in the transcript is never thrown away (degraded close)", () =>
-  /degraded/i.test(BRIDGE + SERVICE) || "no degraded-but-delivered path exists");
+  /statusKey: "degraded|degraded_/.test(SERVICE + BRIDGE) || "NOT BUILT: an answer already heard is not salvaged when the brain dies mid-call");
 check("7.13", "The model is the one the owner approved", () =>
   brainTest.DEFAULT_BRAIN_MODEL === "claude-sonnet-4-6" || `default is ${brainTest.DEFAULT_BRAIN_MODEL}`);
 check("7.14", "The endpoint refuses anything that is not a real turn", () => {
