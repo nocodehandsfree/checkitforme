@@ -17,7 +17,13 @@
   status the one-hour block matches — VERIFIED on a real db); same customer+store+product back <2min →
   `RECONNECT_OPENER`, never automatic. Receipt adds Charlie SEGMENTS (billed = SUM of open stretches,
   else closing him reads FREE) · `brain` · `navOutcome` · `holdSeconds` · **the TRANSCRIPT is OURS**,
-  live per line (rule 2), text only. **§10** one version in, one plan out; `stageNavPromptPlan` DELETED.
+  live per line (rule 2), text only, and `transcriptPatch` STOPS the provider's copy overwriting it
+  (it starts mid-call, so the recorded question vanished and a silent call read empty). **§10** one
+  version in, one plan out; `stageNavPromptPlan` DELETED.
+- **ONE QUESTION, THEN WRAP, ON BOTH LANES.** `declaresOneTurn` (tapedeck) is the ONE rule: a workflow
+  whose `followups.type` is an EMPTY array has folded set+format into its `set` line. Clip lane skips
+  clip 2; live agent gets `oneTurnFollowup`/`oneTurnShipmentDay` instead of `PREMIUM_FOLLOWUP`/
+  `ASK_SHIPMENT_DAY`, on the bridge AND the old direct path. Branson Global carries his two lines.
 ## SWITCHES + WHAT WE MADE IN THE ACCOUNTS — do not delete these wondering what they are.
 `cheapBridgeAll` **THE BIG ONE: OFF = nothing above runs; every check takes the old path** ·
 `stopKeysOnHuman` (ON) · `ourBrain` (blocked §7) · `closeAgentOnHold` (OFF till Gate Zero). **Every
@@ -27,17 +33,9 @@ guessed number is in `src/calls/tuning.ts`** (`call_tuning`, with reasons + boun
 (**staging only, REMOVED from prod**: unset = closed, a promote must not arm it). **NO VOICE = NO
 CHECK**, refused loudly; any other fallback stamps `fellBackToOldPath`.
 ## 07-28 MAPPING CALLS NOW HAVE AN EAR (2 real CVS calls drove it)
-- Alhambra 11654 → person 91s ("this is Catalina"), map 65→95. Mulholland 1 → 84s and that 84 was a
-  LIE: hold music, nobody spoke. The nav lane is Twilio speech-gather only, which returns "" for
-  silence, hold music AND a ringing desk — deaf, and the bridge's ear was never wired to it.
-- `PickupEar` (listen-nav, pure): quiet · ringing (published tone frequencies; `toneShare` moved here
-  from the LOCKED bridge) · music (sound that never breaks) · voice (has gaps). **Judges nothing until
-  a full 3s window** — earlier made 3s of music read "hello". WIPED on the transfer line so the menu's
-  own voice is never the person. Nav opens a `<Start><Stream>` fork keyed on the session id (survives
-  TwiML replacement, set once); a call whose fork dies behaves exactly as before.
-- No-words human ONLY if the ear heard somebody. Transfer wait 40s → **70s while audibly still ringing**
-  (Alhambra 10s vs Mulholland 27s — the ring is the store's). `greetingFrom()` takes only THIS turn's
-  words, never a routing line. **Time-to-human is what the paid agent joins on — guard it.**
+- Alhambra 11654 → person 91s ("this is Catalina"), map 65→95. Mulholland 1 → 84s and that 84 was a LIE: hold music, nobody spoke. The nav lane is Twilio speech-gather only, which returns "" for silence, hold music AND a ringing desk — deaf, and the bridge's ear was never wired to it.
+- `PickupEar` (listen-nav, pure): quiet · ringing (published tone frequencies; `toneShare` moved here from the LOCKED bridge) · music (sound that never breaks) · voice (has gaps). **Judges nothing until a full 3s window** — earlier made 3s of music read "hello". WIPED on the transfer line so the menu's own voice is never the person. Nav opens a `<Start><Stream>` fork keyed on the session id (survives TwiML replacement, set once); a call whose fork dies behaves exactly as before.
+- No-words human ONLY if the ear heard somebody. Transfer wait 40s → **70s while audibly still ringing** (Alhambra 10s vs Mulholland 27s — the ring is the store's). `greetingFrom()` takes only THIS turn's words, never a routing line. **Time-to-human is what the paid agent joins on — guard it.**
 ## VERIFIED / NOT VERIFIED
 - **DRIVEN:** `test-delta-clip.ts` = a REAL ws server as provider + real socket as carrier, both wires
   watched, 38 asserts. + 6 GATES · 53 runtime-spec · 52 listen-nav · 15 dropped-call (REAL db) · 63

@@ -19,15 +19,15 @@ git. Last updated: 2026-07-28 (the new calling engine is finished, waiting on si
 - The store hears the question the second they say hello, in our own voice, while the thinking part
   warms up behind it. It can't talk over their answer, and anything they say early is held and handed
   over whole. If staff walk away we now hear that and stop paying for the silence.
-- **Turn it on before you test: Admin → Global → How calls are made → New calling engine.** It was
-  off, and with it off a test call quietly takes the old path and sounds like nothing changed.
-- We were re-recording the same lines on every call, about 7¢ each. Recorded once now.
-- **Stopped a real problem:** a store mapped as a menu that now answers directly was getting keypad
-  beeps fired into a live person's ear. We stop the moment somebody answers.
+- **Turn it on before you test: Admin → Global → How calls are made → New calling engine.** It reads
+  OFF right now, and with it off a test call quietly takes the old path. We were also re-recording the
+  same lines on every call, about 7¢ each. Recorded once now.
+- **Stopped a real problem:** a store mapped as a menu that now answers directly was getting keypad beeps fired into a live person's ear. We stop the moment somebody answers.
 - **Waiting on YOU:** the six test calls, and whether we pay to upgrade our voice. The phone company
   won't let us use our own cheaper thinking with a copied voice, and that is over half of every call.
 - **Fixed 07-28 from your test calls:** it no longer rushes your greeting, no longer hears its own
-  recorded voice as the clerk, and Stop now writes "cancelled" instead of "nobody answered".
+  recorded voice as the clerk, and Stop now writes "cancelled" instead of "nobody answered". It asks
+  ONE question and wraps, and the conversation shows up on the finished check again.
 - **The Live/Staging switch now steers the Designer.** It used to save your workflow to Live whichever
   side you were on, so Branson HD at 0.91 never reached your staging calls. Both sides hold it now.
 ## Target: 3000 or higher = small store, press 3; below 3000 = desk on 2. 11 of 11 blind (07-24).
