@@ -38,8 +38,12 @@ export interface MapStep {
   afterPrompt?: number;   // fire after this many completed recordings (1-based); undefined = clock only
   bargeSafe?: boolean;    // proven we can speak/press before the recording finishes without looping
 }
+/** THE THIRD SHAPE (owner 07-27). A store can answer with a recording — "thank you for calling Barnes
+ *  & Noble" — then hold music, then a person, with NOTHING for us to press or say. That is not
+ *  "direct" (a person is not there at pickup) and it is not a menu (there is no choice to make), and
+ *  having no name for it is exactly what let the paid agent start talking to the greeting. */
 export interface MapRecipe {
-  type: "direct" | "keypad" | "voice";
+  type: "direct" | "keypad" | "voice" | "greeting";
   steps: MapStep[];
   seconds: number;                 // learned time-to-human
   target?: string;                 // the desk this path reaches
@@ -243,9 +247,13 @@ export function scoreConfidence(ev: Evidence, nowSec = Math.floor(Date.now() / 1
 }
 
 /** Compact signature of the real path, e.g. `say:no>say:front>say:general`. Two versions with the
- *  same signature are the same ROUTE even if the seconds moved. */
-export function pathSignature(r: { steps?: Array<{ action?: string; value?: string }> } | null | undefined): string {
-  return (r?.steps || []).map((s) => `${s.action}:${String(s.value || "").toLowerCase().trim()}`).join(">") || "direct";
+ *  same signature are the same ROUTE even if the seconds moved. A route with no steps is either a
+ *  person at pickup or a greeting we simply wait through — and those are NOT the same thing, so they
+ *  never share a signature. */
+export function pathSignature(r: { steps?: Array<{ action?: string; value?: string }>; type?: string } | null | undefined): string {
+  const steps = (r?.steps || []).map((s) => `${s.action}:${String(s.value || "").toLowerCase().trim()}`).join(">");
+  if (steps) return steps;
+  return r?.type === "greeting" ? "greeting" : "direct";
 }
 
 /** Is this recipe the auto-caller hammering 0 rather than a mapped route? Sixteen chains carry one
@@ -781,10 +789,16 @@ export async function rejectVersion(id: number, by: string, why: string, local =
  *  writer. */
 async function stampChainFromVersion(v: MapVersion): Promise<void> {
   if (v.storeId) return;
-  const direct = v.recipe.type === "direct" || !v.recipe.steps.length;
+  // A GREETING route has no steps and is NOT direct — a recording answers, then a person. Reading
+  // "no steps" as "direct" here is the same mistake that put the paid agent on the line talking to
+  // "thank you for calling Barnes & Noble" (owner 07-27), so it is named explicitly.
+  const greeting = v.recipe.type === "greeting";
+  const direct = !greeting && (v.recipe.type === "direct" || !v.recipe.steps.length);
   const navText = direct
     ? "A live person usually answers directly — no phone menu to work through."
-    : "To reach a live person: " + spoken(v.recipe) + ".";
+    : greeting
+      ? "A recording answers first and hands you to a person. There is nothing to press or say, just wait."
+      : "To reach a live person: " + spoken(v.recipe) + ".";
   // The live bridge only understands the timed "digit@seconds" form (a bare digit presses nothing).
   const dtmfPlan = recipeToDtmf(v.recipe);
   await db.update(chains).set({
@@ -794,8 +808,11 @@ async function stampChainFromVersion(v: MapVersion): Promise<void> {
     navUpdatedAt: nowSec(),
     phoneTreeDefault: navText,
     dtmfShortcut: dtmfPlan || null,
-    answerPath: pathSignature(v.recipe) === "direct" ? "direct_human" : pathSignature(v.recipe),
+    answerPath: greeting ? "greeting_then_transfer"
+      : pathSignature(v.recipe) === "direct" ? "direct_human" : pathSignature(v.recipe),
     ringsDirect: direct,
+    // The wait is the whole point of a greeting chain, so it MUST carry its seconds. A truly direct
+    // chain still carries none — a stray value there mutes the agent on a live human.
     avgTreeSeconds: direct ? null : (v.seconds ?? null),
     treeStatus: v.confidenceLabel === "verified" ? "verified" : "learned",
     treeLearnedAt: nowSec(),

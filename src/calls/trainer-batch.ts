@@ -45,11 +45,17 @@ export async function lockRecipeToChain(chainId: number, recipe: Recipe, confide
   const log = ch?.navLog ? (JSON.parse(ch.navLog) as number[]) : [];
   if (typeof recipe.seconds === "number") log.push(recipe.seconds);
   const steps = Array.isArray(recipe.steps) ? recipe.steps : [];
-  const direct = recipe.type === "direct" || steps.length === 0;
+  // A GREETING route has no steps but is NOT direct: a recording plays, often hold music follows, and
+  // a person arrives seconds later. Treating it as direct is what put the paid agent on the line
+  // talking to "thank you for calling Barnes & Noble" (owner 07-27).
+  const greeting = recipe.type === "greeting";
+  const direct = !greeting && (recipe.type === "direct" || steps.length === 0);
   // navText drives LIVE consumer calls — keep it to the navigation instruction only (unchanged).
   const navText = direct
     ? "A live person usually answers directly — no phone menu to work through."
-    : "To reach a live person: " + steps.map((s) => (s.action === "press" ? `press ${s.value}` : `say "${s.value}"`)).join(", then ") + ".";
+    : greeting
+      ? "A recording answers first and hands you to a person. There is nothing to press or say, just wait."
+      : "To reach a live person: " + steps.map((s) => (s.action === "press" ? `press ${s.value}` : `say "${s.value}"`)).join(", then ") + ".";
   // docText is the DOCUMENTED tree the owner reads (#2/#6): nav path + target desk + menu options +
   // ring-variance warning. Kept out of phoneTreeDefault so it never changes live-call behavior.
   const menuText = Array.isArray(recipe.menu) && recipe.menu.length
@@ -71,7 +77,7 @@ export async function lockRecipeToChain(chainId: number, recipe: Recipe, confide
   // (runtime spec §10.2) — so it must not stamp the chain row that five hundred stores read. We ask
   // the map first and only stamp when the answer is "this is the chain's route".
   const mapRecipe = {
-    type: (recipe.type as "direct" | "keypad" | "voice") || (direct ? "direct" : "keypad"),
+    type: (recipe.type as "direct" | "keypad" | "voice" | "greeting") || (direct ? "direct" : "keypad"),
     steps: steps.map((st) => ({
       action: st.action === "press" ? ("press" as const) : ("say" as const),
       value: String(st.value || ""), atSec: Math.round(st.atSec ?? 0),
@@ -104,8 +110,9 @@ export async function lockRecipeToChain(chainId: number, recipe: Recipe, confide
     // ↓ applied to LIVE consumer calls (navText only — the menu/notes live in treeNote for the owner):
     phoneTreeDefault: navText, treeNote: docText,
     dtmfShortcut: dtmfPlan || null,
-    answerPath: steps.map((s) => `${s.action}:${s.value}`).join(">") || null,
-    // Direct chains carry no seconds (a stray value mutes the agent — the silent-agent bug).
+    answerPath: steps.map((s) => `${s.action}:${s.value}`).join(">") || (greeting ? "greeting_then_transfer" : null),
+    // Direct chains carry no seconds (a stray value mutes the agent — the silent-agent bug). A GREETING
+    // chain is the opposite case: it MUST carry its seconds, because that wait is the whole point.
     ringsDirect: direct, avgTreeSeconds: direct ? null : (typeof recipe.seconds === "number" ? Math.round(recipe.seconds) : null),
     treeStatus: "learned", treeLearnedAt: now,
   }).where(eq(chains.id, chainId));

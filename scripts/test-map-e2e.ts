@@ -7,9 +7,10 @@ import { eq } from "drizzle-orm";
 import { bootstrap } from "../src/db/bootstrap";
 import { db } from "../src/db/client";
 import { chains } from "../src/db/schema";
+import { connectAtSecFor } from "../src/calls/recipe";
 import {
   proposeVersion, approveVersion, activeMap, versionsFor, graphSummary, chainDetail,
-  openUnknowns, reportCallDrift, backfillFromChains, recordCallPath, graphFor,
+  openUnknowns, reportCallDrift, backfillFromChains, recordCallPath, graphFor, pathSignature,
   recordFailedAttempt, promptFingerprint, guessLanguage, storeLocalTime, type MapRecipe,
 } from "../src/calls/mapgraph";
 
@@ -156,6 +157,29 @@ async function main() {
     ok(live?.evidence.calls[0].greeting === "Front store, this is Ana", "and the greeting proves which desk answered");
     const chRow = (await db.select().from(chains).where(eq(chains.id, ch.id)))[0];
     ok(chRow.dtmfShortcut === "3@9", `the chain row both environments read is stamped (${chRow.dtmfShortcut})`);
+  }
+
+  console.log("▶ a greeting then hold music is NOT a direct answer");
+  {
+    // Barnes & Noble: "thank you for calling", hold music, then a person. Nothing to press — but
+    // nobody is on the line at pickup, and calling that "direct" is what put the paid agent on the
+    // line talking to a recording.
+    const [ch] = await db.insert(chains).values({ name: "Test Greeting Books", ringsDirect: true }).returning();
+    const greeting: MapRecipe = { type: "greeting", steps: [], seconds: 21,
+      menuPrompts: ["Thank you for calling Barnes and Noble, please hold"] };
+    const r = await proposeVersion({ chainId: ch.id, recipe: greeting, source: "sweep",
+      call: { at: now(), day: "2026-07-27", storeId: 950, seconds: 21, reachedHuman: true, path: "greeting", transferAtSec: 6 } });
+    ok(r.activated, "the proving call replaces the unproven direct claim");
+    const row = (await db.select().from(chains).where(eq(chains.id, ch.id)))[0];
+    ok(row.ringsDirect === false, "the chain STOPS being marked as answering directly");
+    ok(row.avgTreeSeconds === 21, `and carries the real wait (${row.avgTreeSeconds}s), which a direct chain never may`);
+    ok(row.navType === "greeting" && row.answerPath === "greeting_then_transfer", "with its own shape, not a menu and not direct");
+    ok(!row.dtmfShortcut, "nothing is pressed at a store with nothing to press");
+    ok(String(row.phoneTreeDefault).includes("nothing to press"), `and the live-call note says to wait: "${row.phoneTreeDefault}"`);
+    // The agent's join time is the whole point: it must NOT open at pickup.
+    ok(connectAtSecFor(row) === 21, `the agent is told to open at ${connectAtSecFor(row)}s, not at pickup`);
+    ok(connectAtSecFor({ navType: "direct", ringsDirect: true, avgTreeSeconds: 19 }) === null, "a genuinely direct chain still gets NO timer — the silent-agent guard holds");
+    ok(pathSignature(greeting) !== pathSignature({ type: "direct", steps: [], seconds: 0 }), "a greeting and a real direct answer are never the same route");
   }
 
   console.log("▶ a fact learned the hard way is never forgotten");

@@ -137,6 +137,27 @@ still executes that — and this is the knowledge underneath it.
 **Not ours, by the spec:** the prompt-anchor side channel (`stageNavPromptPlan`) is the runtime's to
 replace with an atomic read off the active version. Left alone deliberately.
 
+## 6g. THE THIRD SHAPE: a greeting is not a direct answer (owner 07-27)
+"Thank you for calling Barnes & Noble", hold music, then a person. Nothing to press — but nobody is on
+the line at pickup. The data had only two words for this, `direct` or `has a menu`, and calling it
+direct is what let the paid agent open on the recording and start talking.
+
+- New route type **`greeting`**: no steps, but a REAL wait. `answerPath = greeting_then_transfer`.
+- `ringsDirect` stays FALSE and the chain **carries its seconds** — which a truly direct chain must
+  never do (the silent-agent guard still holds: `connectAtSecFor` returns null for a real direct
+  chain and the greeting chain's own wait for this one).
+- Three writers had the same blind spot — "no steps" read as "direct": `lockRecipeToChain`,
+  `stampChainFromVersion` (the approval path) and `chainNavPlan`. All three now name it.
+- `pathSignature` gives it its own signature, so a greeting and a real direct answer can never fold
+  into each other as the same route.
+- The sweep's proving call classifies THREE outcomes now: a person at pickup (direct), a recording
+  then a person (greeting, with the wait measured), or a menu (into the mapping lane). It files a
+  `greeting-not-direct` review item so the pattern across the 46 claimed-direct chains is visible.
+
+**For the runtime:** the wait is on the chain row as `avgTreeSeconds` with `navType = greeting`, so
+the agent opens at the person, not at pickup. The Ear should still expect hold music on these — the
+seconds are a floor, not a promise.
+
 ## 7. Fixed on the way past
 `lockRecipeToChain` wrote the bare first digit ("4") into `dtmfShortcut`, but the live bridge only
 understands the timed form ("2@8,2@16") and plays NOTHING without it — so every chain locked through

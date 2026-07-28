@@ -27,7 +27,7 @@ import { chainDialable } from "./recipe";
 import { startMapper, mapperState, stopMapper } from "./mapper";
 import { storeForChain } from "./trainer-batch";
 import { placeNavCall, getNavSession, defaultWorkflowAsk, NavStep } from "./navigator";
-import { proposeVersion, pathSignature, reportUnknown, recordObservation, MapRecipe } from "./mapgraph";
+import { proposeVersion, pathSignature, reportUnknown, recordObservation, type MapRecipe } from "./mapgraph";
 import { recipeFromCall, evidenceFromCall, CapturedStep } from "./map-capture";
 
 /** Hard ceiling on calls in one sweep — the runaway guard. Tune without a deploy via the
@@ -128,9 +128,41 @@ async function proveDirect(item: SweepItem): Promise<void> {
     await sleep(3000);
   }
   const steps = (s?.steps || []) as CapturedStep[];
+  // A MENU asks you to choose. A GREETING just talks at you and hands you on — "thank you for calling
+  // Barnes & Noble", then hold music, then a person. Both mean the chain is not "direct", but they
+  // need completely different handling, and having only one word for them is what put the paid agent
+  // on the line talking to a recording (owner 07-27).
   const heardMenu = steps.some((st) => st.who === "ivr" && /press \d|para español|main menu|for .{3,30}, press|say the name|automated/i.test(String(st.text || "")));
+  const heardRecording = steps.some((st) => st.who === "ivr" && String(st.text || "").trim().split(/\s+/).length > 4);
   const reached = !!(s && (s.status === "human" || s.humanAtSec != null || s.confirmResult === "answered"));
   const acted = steps.some((st) => st.who === "us" && (st.action === "press" || st.action === "say"));
+
+  // Nothing to press, but a recording answered and a person came later: the third shape. It gets its
+  // own route type so the runtime knows to WAIT rather than treating pickup as a person.
+  if (!heardMenu && !acted && reached && (heardRecording || s?.transferAtSec != null)) {
+    const recipe: MapRecipe = {
+      type: "greeting", steps: [], seconds: s?.humanAtSec ?? 0,
+      menuPrompts: steps.filter((st) => st.who === "ivr" && st.text).slice(0, 3).map((st) => String(st.text).slice(0, 240)),
+    };
+    const call = evidenceFromCall({
+      navId: placed.id, storeId: store.id, storeName: store.name, steps,
+      seconds: s?.humanAtSec ?? null, reachedHuman: true, path: pathSignature(recipe),
+      greeting: s?.greeting, transferAtSec: s?.transferAtSec ?? null, note: "direct proving call",
+    });
+    await proposeVersion({
+      chainId: item.chainId, recipe, source: "sweep", call,
+      why: "A recording answers and hands you to a person. Nothing to press, but nobody is there at pickup.",
+    });
+    item.status = "done";
+    item.outcome = `a recording answers, person at ${s?.humanAtSec ?? "?"}s — not direct, and nothing to press`;
+    item.seconds = s?.humanAtSec ?? null;
+    await reportUnknown({
+      chainId: item.chainId, kind: "greeting-not-direct",
+      prompt: `Marked "answers directly" but a recording answers first and a person arrives at ${s?.humanAtSec ?? "?"}s`,
+      evidence: { navId: placed.id, storeId: store.id, storeName: store.name, transferAtSec: s?.transferAtSec ?? null },
+    });
+    return;
+  }
 
   if (heardMenu || acted) {
     // The "direct" claim is wrong — there IS something in front of the human.
