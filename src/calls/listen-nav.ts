@@ -1,3 +1,35 @@
+// ██ THIS FILE IS THE EAR. THERE IS ONLY ONE. DO NOT BUILD ANOTHER. ██
+//
+// If you are here because you need to know what is happening on a live call — whether a menu has
+// stopped talking, whether a person answered, whether they walked away, whether the line is ringing
+// — it is ALREADY BUILT, below, and you should import it rather than write your own.
+//
+// On 2026-07-28 two engineers working from the same spec each started building their own audio
+// detection. Two ears drift: they disagree about what counts as sound, and then nobody can explain
+// why one call behaved differently from another. `scripts/test-runtime-gates.ts` now FAILS THE BUILD
+// if audio decoding appears in any file other than this one and the (machine-locked) bridge, so this
+// is not a request.
+//
+// WHAT IS ALREADY HERE, and what each thing answers:
+//   frameEnergy(frame)      is there any sound on the line at all?
+//   toneShare(frame)        is that the phone network's own ring/busy tone, rather than a voice?
+//                           (published frequencies, measured — never guessed from loudness)
+//   PromptDetector          a recorded menu prompt just ENDED. Also exposes how long it talked for
+//                           and how long it has been quiet since.
+//   looksLikeAPerson(…)     a HUMAN answered instead of the menu we mapped — so stop pressing keys.
+//   PickupEar               what the line is doing right now: quiet · ringing · music · a voice.
+//   ConversationEar         mid-conversation: they walked away (quiet), hold music, a transfer, they
+//                           came back (and whether it may be a different person), extended dead air,
+//                           and the line going away entirely.
+//
+// Every threshold in here is a FALLBACK ONLY — the live values come from the `call_tuning` setting
+// the Admin reads and are passed in, because all of them have to be tuned against real calls.
+//
+// If this file genuinely cannot answer your question, ADD IT HERE and unit-test it here. Do not
+// start a second listener.
+//
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+//
 // LISTENING NAVIGATION — fire each mapped step when the recording actually STOPS TALKING,
 // instead of at a fixed second on a stopwatch.
 //
