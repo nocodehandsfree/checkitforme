@@ -5786,6 +5786,22 @@ app.get("/api/admin/cost-inputs", async (c) => {
 // receipt bills a real call with, so the Calc page and the Chains page read it rather than keeping
 // their own copy. A second copy is how a forecast and a bill quietly stop agreeing.
 app.get("/api/admin/call-rates", async (c) => c.json(await currentRates()));
+// The flat monthly bills that are NOT per call: hosting, the database, sign-in, the phone numbers, the
+// gateway, email. They do not move when one more check runs, but they decide what a check costs once
+// volume is spread over them, which is the whole question the Calc page exists to answer.
+app.get("/api/admin/monthly-services", async (c) => {
+  const raw = (await getSetting("calc_services")) || "[]";
+  try { return c.json({ services: JSON.parse(raw) as unknown[] }); } catch { return c.json({ services: [] }); }
+});
+app.post("/api/admin/monthly-services", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { services?: Array<{ name?: string; usd?: number }> };
+  const clean = (b.services ?? [])
+    .filter((s) => s && String(s.name ?? "").trim())
+    .slice(0, 24)
+    .map((s) => ({ name: String(s.name).trim().slice(0, 40), usd: Math.max(0, Number(s.usd) || 0) }));
+  await setSetting("calc_services", JSON.stringify(clean));
+  return c.json({ ok: true, services: clean });
+});
 // The receipt for a call the ADMIN placed. Those calls have no call_results row on purpose (a mapping
 // call is not a customer's check and must stay out of the customer numbers), so they are read by ROOM
 // instead of by call id. Live from memory while the call is still up, from call_events once it ends.
