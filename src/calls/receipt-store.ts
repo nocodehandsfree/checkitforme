@@ -111,6 +111,11 @@ export async function persistReceipt(r: Receipt): Promise<void> {
       // know — never a 0 or an empty string standing in for "we never checked".
       ...(r.mapVersion != null ? { mapVersion: String(r.mapVersion) } : {}),
       ...(r.attemptOf != null ? { attemptOf: r.attemptOf } : {}),
+      // Which brain answered (null when he never joined — never a stand-in for "we didn't look"),
+      // what the walk to a person achieved, and how many stretches he was open for.
+      brain: sums.brain,
+      navOutcome: sums.navOutcome,
+      charlieSegments: sums.charlieSegments || null,
       costLineUsd: cost.lineUsd,
       costForkUsd: cost.forkUsd,
       costCharlieUsd: cost.charlieUsd,

@@ -108,7 +108,13 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
     if (c) openingClip = { audio: c.audio, ms: c.ms, text: c.text };
     else emit(room, "unknown", "Could not prepare the opening question, the agent will ask it himself");
   }
-  const mkCtx = () => ({ agentId: opts?.agentId || config.voice.agentId, openingClip, midCallAgentId: config.voice.midCallAgentId, apiKey: opts?.apiKey || undefined, dynamicVars, onConversationId, dtmf: listening ? undefined : (dtmf || undefined), say: listening ? undefined : (opts?.say || undefined), connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: connectAtSecAdj, holdMaxSeconds: pol.bail.holdMaxSeconds, giveUpSeconds: pol.bail.enabled && pol.bail.ringMaxSeconds > 0 ? pol.bail.ringMaxSeconds : undefined, earFromSec, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
+  // WHICH BRAIN, and WHAT TO DO ON A HOLD. Both are settings rather than environment variables, so
+  // either can be killed from a phone mid incident without a deploy. The hold strategy defaults to
+  // keeping the agent open, which cannot change what the store hears; the money-saving alternative
+  // is built and waits on the measurement (Gate Zero) rather than on an opinion.
+  const holdStrategy = pol.flags?.closeAgentOnHold ? "reopen" as const : "gate" as const;
+  const mkCtx = () => ({ agentId: opts?.agentId || config.voice.agentId, openingClip, midCallAgentId: config.voice.midCallAgentId,
+    ourBrain: !!pol.flags?.ourBrain, ourBrainAgentId: config.voice.ourBrainAgentId, holdStrategy, apiKey: opts?.apiKey || undefined, dynamicVars, onConversationId, dtmf: listening ? undefined : (dtmf || undefined), say: listening ? undefined : (opts?.say || undefined), connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: connectAtSecAdj, holdMaxSeconds: pol.bail.holdMaxSeconds, giveUpSeconds: pol.bail.enabled && pol.bail.ringMaxSeconds > 0 ? pol.bail.ringMaxSeconds : undefined, earFromSec, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
   setBridgeContext(room, mkCtx());
   const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
   // INLINE the TwiML instead of a Url callback (owner 07-17: "no cutoffs — listen from the very

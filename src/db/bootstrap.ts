@@ -37,6 +37,12 @@ async function seedStatuses() {
     // Customer pressed Stop (live view "Stop & hang up", zone "Stop all"/stop-one). Same non-result
     // semantics as admin_hangup (the row's STATUS is admin_hangup — only the display key differs).
     ["user_cancelled", "·", "Check cancelled", "unk", "#9CA3AF", "You stopped this check from happening."],
+    // THE DROPPED CALL (spec: the live call runtime, section 8). Something on our side broke mid
+    // call, so we hung up and said nothing — a dead line is unremarkable to a store, while a promise
+    // to call back that we might not keep is not. Same family as left_on_hold and admin_hangup: it
+    // is never charged, and it must never be written as "completed", or the one-hour block would
+    // lock a customer out of the very store whose check we just broke.
+    ["call_dropped", "↺", "Call cut out", "unk", "#9CA3AF", "The call broke on our end, so nothing was checked. No charge, and you can try again right now."],
   ];
   // 07-21 copy fix (owner): "call" -> "check", drop "from the dashboard". Fill-only — applies just
   // while the row still has the original seed text, so a dashboard edit is never overwritten.
@@ -203,6 +209,9 @@ export async function bootstrap() {
     "charlie_listening_seconds INTEGER", "charlie_silent_seconds INTEGER",
     "ring_seconds INTEGER", "hold_seconds INTEGER", "billed_minutes INTEGER",
     "map_version TEXT", "attempt_of INTEGER", "engine_version TEXT",
+    // Which brain answered, what the walk to a person achieved, and how many times the agent's
+    // session had to be opened. All three self-heal on boot the same way every column above does.
+    "brain TEXT", "nav_outcome TEXT", "charlie_segments INTEGER",
     "cost_line_usd INTEGER", "cost_fork_usd INTEGER", "cost_charlie_usd INTEGER",
     "cost_clips_usd INTEGER", "cost_total_usd INTEGER", "cost_avoidable_usd INTEGER",
   ]) await client.execute(`ALTER TABLE call_results ADD COLUMN ${col}`).catch(() => {});

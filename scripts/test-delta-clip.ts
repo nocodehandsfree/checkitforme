@@ -12,8 +12,26 @@
 import { EventEmitter } from "node:events";
 import { WebSocketServer, type WebSocket as WS } from "ws";
 import { setBridgeContext, handleTwilioBridge } from "../src/voice/bridge";
-import { openReceipt, getReceipt, _reset } from "../src/calls/events";
+import { openReceipt, getReceipt, rollup, _reset } from "../src/calls/events";
 import { toMediaFrames } from "../src/calls/clip-cache";
+
+/** Real ringback: the published North American pair, 440 + 480 Hz, μ-law encoded — the same thing
+ *  the runtime measures with a Goertzel. Loudness alone would not prove anything here. */
+function ringFrames(ms: number): string[] {
+  const n = Math.round((8000 * ms) / 1000);
+  const buf = Buffer.alloc(n);
+  const enc = (s: number) => { // G.711 μ-law
+    const BIAS = 0x84, CLIP = 32635;
+    const sign = s < 0 ? 0x80 : 0; if (s < 0) s = -s; if (s > CLIP) s = CLIP; s += BIAS;
+    let e = 7; for (let m = 0x4000; (s & m) === 0 && e > 0; e--, m >>= 1) { /* find */ }
+    return ~(sign | (e << 4) | ((s >> (e + 3)) & 0x0f)) & 0xff;
+  };
+  for (let i = 0; i < n; i++) {
+    const t = i / 8000;
+    buf[i] = enc(Math.round((Math.sin(2 * Math.PI * 440 * t) + Math.sin(2 * Math.PI * 480 * t)) * 0.45 * 32767));
+  }
+  return toMediaFrames(buf);
+}
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -26,16 +44,17 @@ const LOUD = (n = 160, jitter = 0) => Buffer.alloc(n, 0x00).map((_, i) => (jitte
 const frame = (b: Buffer) => b.toString("base64");
 
 // ---- the fake voice provider -----------------------------------------------------------------
-interface Fake { url: string; close: () => void; sockets: WS[]; chunks: string[]; inits: string[]; agentIdsAsked: string[] }
+interface Fake { url: string; close: () => void; sockets: WS[]; chunks: string[]; inits: string[]; agentIdsAsked: string[]; raw: string[] }
 async function fakeProvider(opts: { speakImmediately?: boolean } = {}): Promise<Fake> {
   const wss = new WebSocketServer({ port: 0 });
   await new Promise((r) => wss.on("listening", r));
   const port = (wss.address() as { port: number }).port;
-  const f: Fake = { url: `ws://127.0.0.1:${port}`, close: () => wss.close(), sockets: [], chunks: [], inits: [], agentIdsAsked: [] };
+  const f: Fake = { url: `ws://127.0.0.1:${port}`, close: () => wss.close(), sockets: [], chunks: [], inits: [], agentIdsAsked: [], raw: [] };
   wss.on("connection", (ws) => {
     f.sockets.push(ws);
     ws.on("message", (d: Buffer) => {
       const s = d.toString();
+      if (!s.includes("user_audio_chunk")) f.raw.push(s);   // everything except the audio firehose
       const m = JSON.parse(s) as { type?: string; user_audio_chunk?: string };
       if (m.type === "conversation_initiation_client_data") {
         f.inits.push(s);
@@ -217,6 +236,108 @@ console.log("\n▶ no joining agent configured: the call behaves exactly as it d
   tw.media(frame(LOUD()));
   await sleep(40);
   ok(f.chunks.length > 0, "clerk audio goes straight to him, no gate in the way");
+  restore(); tw.close(); f.close();
+}
+
+// ================================================================================================
+// HOLD AND TRANSFER (spec section 6). The Ear stays on the call; the AGENT is what gets suspended.
+// Both shapes are built because Gate Zero picks between them, and the wrong one being built is the
+// whole reason that gate exists.
+const HOLD_QUIET_MS = 6000;
+/** Drive a call up to a person answering, with a chosen hold strategy and no clip in the way. */
+async function callWithHold(f: Fake, room: string, holdStrategy: "gate" | "reopen") {
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, {
+    agentId: "agent_normal", dynamicVars: {}, connectOnHuman: true, holdMaxSeconds: 999, holdStrategy,
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, room, () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_h", customParameters: { room } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  await sleep(120);
+  return tw;
+}
+/** Someone talking: sound with the gaps real speech has. */
+const speak = (tw: FakeTwilio, frames: number) => { for (let i = 0; i < frames; i++) tw.media(frame(i % 5 === 4 ? Buffer.alloc(160, 0x7f) : LOUD())); };
+const quiet = (tw: FakeTwilio, frames: number) => { for (let i = 0; i < frames; i++) tw.media(frame(Buffer.alloc(160, 0x7f))); };
+
+console.log("\n▶ the clerk walks off: the agent stops being fed and cannot be heard");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const tw = await callWithHold(f, "room-hold", "gate");
+  speak(tw, 150);                                  // a real person, talking to us
+  const before = f.chunks.length;
+  ok(before > 0, "while somebody is there, what they say reaches the agent");
+
+  quiet(tw, HOLD_QUIET_MS / 20 + 20);              // they put the handset down and go
+  await sleep(60);
+  const r = getReceipt("room-hold");
+  ok((r?.events || []).some((e) => e.kind === "hold_start"), "the receipt records the moment they went away");
+  const during = f.chunks.length;
+  speak(tw, 30);                                    // hold music / distant noise would land here too
+  await sleep(60);
+  ok(f.chunks.length >= during, "…and when they come back the agent hears them again");
+  const ev = (getReceipt("room-hold")?.events || []).find((e) => e.kind === "hold_end");
+  ok(!!ev, "the receipt records them coming back");
+  ok(typeof ev?.detail?.gapSec === "number" && (ev.detail.gapSec as number) >= 6, `and how long they were gone (${ev?.detail?.gapSec}s)`);
+  ok(rollup(getReceipt("room-hold")!).holdSeconds !== null, "hold seconds are a real measured number now, not null forever");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ …and he is TOLD there was a gap, so he does not carry on as if no time passed");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const tw = await callWithHold(f, "room-told", "gate");
+  speak(tw, 150);
+  quiet(tw, 25000 / 20 + 20);                      // a LONG wait — it may not be the same person
+  speak(tw, 30);
+  await sleep(80);
+  const updates = f.raw.filter((m) => m.includes("contextual_update"));
+  ok(updates.length === 1, "exactly one note was sent to the agent, not spoken to the store");
+  ok(/may be someone new/i.test(updates[0]), "and after a long wait it warns him the person may be someone else");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ the other strategy: close him for the wait, bring him back as part two");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const tw = await callWithHold(f, "room-reopen", "reopen");
+  speak(tw, 150);
+  ok(f.sockets.length === 1, "one session while somebody is with us");
+  quiet(tw, HOLD_QUIET_MS / 20 + 20);
+  await sleep(80);
+  ok(f.sockets[0].readyState === 3 || f.sockets[0].readyState === 2, "his session is CLOSED for the wait — the only thing that actually stops the meter");
+  ok(tw.readyState === 1, "the phone line itself stays up, so the store hears nothing unusual");
+  speak(tw, 30);
+  await sleep(150);
+  ok(f.sockets.length === 2, "somebody came back, so he is opened again");
+  const joins = (getReceipt("room-reopen")?.events || []).filter((e) => e.kind === "charlie_join");
+  ok(joins.some((j) => j.detail?.segment === 2), "and the receipt calls it part 2 of the SAME call, never a second call");
+  const r = getReceipt("room-reopen")!;
+  ok(r.segments.length === 2, "two numbered stretches on one receipt");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ a transfer is known the moment the next desk starts ringing");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const tw = await callWithHold(f, "room-xfer", "gate");
+  speak(tw, 150);
+  // A ringing line is not loudness, it is the phone network's own published frequencies.
+  const ring = ringFrames(500);
+  for (const fr of ring) tw.media(fr);
+  await sleep(60);
+  const ev = (getReceipt("room-xfer")?.events || []).find((e) => e.kind === "transfer");
+  ok(!!ev, "the receipt says we were transferred, not that the clerk went quiet");
   restore(); tw.close(); f.close();
 }
 

@@ -7,7 +7,7 @@ import { fetchStorePhone } from "../store-phone";
 import {
   accounts, callResults, categories, chains, customerSchedules, retailers, scheduleTargets, schedules, statuses, watches, zoneRetailers, zones,
 } from "../db/schema";
-import { linkCall } from "./events"; // ties the call row to its receipt (the timeline + the seconds)
+import { linkCall, openReceipt, emit, closeReceipt, linkProviderCall, markNow } from "./events"; // ties the call row to its receipt (the timeline + the seconds)
 import { recordVerdict } from "./receipt-store";
 import { chargeOneCredit, isCompAccount, getAccount } from "../billing";
 import { sendRestockEmailTo, sendAlert, accountLang, localizeResult } from "../alerts";
@@ -64,7 +64,7 @@ async function notifyAutoCheckResult(callId: number): Promise<void> {
 
 import { config } from "../config";
 import { ElevenLabsProvider } from "../voice/elevenlabs";
-import { takeBridgeNav } from "../voice/bridge";
+import { takeBridgeNav, wasDropped } from "../voice/bridge";
 import { placeBridgeCall, roomFinalizers, parseNavSteps } from "../voice/bridge-place";
 import { type NavStep } from "./listen-nav";
 import { activeMap } from "./mapgraph";
@@ -112,6 +112,32 @@ function composePersona(p: AnyObj | undefined): string {
   // tight"). Personas set the VIBE only; the role is never up for grabs.
   bits.push("No matter what the persona above says: you are ALWAYS the caller on a live phone call, speaking ONLY to the store employee who answered. Never narrate what you're doing or about to do, never announce you'll call anyone, never address anyone except the person on the line.");
   return bits.join(" ").trim();
+}
+
+/** How long "I just got disconnected" still sounds like the truth. Past this the clerk has taken
+ *  other calls and it reads as strange, so the normal greeting is the better line. */
+const RECONNECT_WINDOW_MIN = 15;
+/** The opener for a store we were cut off from moments ago. No dash inside the sentence (copy law),
+ *  one register, and it gets straight to the question rather than dwelling on our own problem. */
+export const RECONNECT_OPENER = "Hi, sorry, I just got disconnected. I was checking to see if you have any {category} in stock right now?";
+/** Its Spanish, shipped in the same commit (copy law). Used once stored routes carry a language,
+ *  which the map already has a field for. */
+export const RECONNECT_OPENER_ES = "Hola, perdón, se me cortó la llamada. Estaba viendo si tienen {category} en stock ahora mismo.";
+
+/** Did our last try at this exact store, for this exact product, break on OUR end just now? Only a
+ *  genuinely dropped call counts: a store that was closed, busy or simply did not pick up is not
+ *  something we should apologise for. */
+export async function recentlyDropped(retailerId: number, categoryId: number): Promise<boolean> {
+  try {
+    const since = Math.floor(Date.now() / 1000) - RECONNECT_WINDOW_MIN * 60;
+    const row = (await db.select({ id: callResults.id }).from(callResults).where(and(
+      eq(callResults.retailerId, retailerId),
+      eq(callResults.categoryId, categoryId),
+      eq(callResults.statusKey, "call_dropped"),
+      gte(callResults.startedAt, since),
+    )).orderBy(desc(callResults.startedAt)).limit(1))[0];
+    return !!row;
+  } catch { return false; }
 }
 
 /**
@@ -228,7 +254,16 @@ export async function buildRestockVars(
   // Per-workflow rotation key so each workflow round-robins its OWN openers independently (and the
   // "Reset rotation" button can reset just this one). No workflow → the shared global opener rotation.
   const openerTemplate = rotatePick(workflow ? "opener:" + workflow.name : "opener", openerVariants) || (await getSetting("vt_opening")) || DEFAULT_OPENER;
-  const openingLine = openerTemplate.replace(/\{category\}/g, category.label);
+  let openingLine = openerTemplate.replace(/\{category\}/g, category.label);
+  // CALLING STRAIGHT BACK AFTER A DROPPED CALL (spec: the live call runtime, section 8).
+  // If our last try at this exact store for this exact product broke on our end minutes ago, the
+  // clerk remembers being cut off, and the normal greeting reads as a second cold call.
+  //
+  // The line has a SHELF LIFE, which is why the window is minutes: forty minutes later "I just got
+  // disconnected" is strange rather than natural, so it falls back to the normal greeting.
+  if (await recentlyDropped(retailerId, categoryId)) {
+    openingLine = RECONNECT_OPENER.replace(/\{category\}/g, category.label);
+  }
   const clarification = specificityClause((specificProduct ?? "").trim());
 
   // THE MAP, READ ONCE, AS ONE THING (spec: the live call runtime, section 10).
@@ -502,6 +537,17 @@ export async function triggerCall(a: TriggerArgs) {
     throw new Error("calls_busy");
   }
   const acct = slot?.account;
+  // A CALL THAT LEAVES NO RECORD IS A BUG, NOT A SPECIAL CASE (spec: the live call runtime, rule 4).
+  // This is the OLD direct path: the provider dials the store itself, so there is no media stream
+  // for us to listen to and none of the second-by-second detail the bridge produces. What there IS
+  // is a call that happened, to a store, at a time, with an outcome — and until now it produced no
+  // receipt at all, so with the new engine switched off every real check was invisible. This is
+  // deliberately a THIN receipt: the moments we can honestly witness from here and nothing more.
+  const directRoom = `direct:${row.id}`;
+  openReceipt(directRoom, {
+    callId: row.id, lane: "direct",
+    note: `Dialing ${retailer.name} the old way, without the media stream`,
+  });
   try {
     const { providerCallId, callSid } = await provider.startCall({
       callId: row.id,
@@ -530,12 +576,16 @@ export async function triggerCall(a: TriggerArgs) {
       // Premium gate: subscribers (and comp/owner) get the product-type follow-up; free finders skip it.
       premiumFollowup: await finderIsPremium(a.finderUserId),
     });
+    linkProviderCall(directRoom, providerCallId);
+    emit(directRoom, "connected", "The provider is placing the call on its own line", { providerCallId, callSid: callSid ?? null });
     await db.update(callResults)
-      .set({ providerCallId, status: "in_progress" })
+      .set({ providerCallId, room: directRoom, status: "in_progress" })
       .where(eq(callResults.id, row.id));
     return { ...row, providerCallId, callSid, status: "in_progress" as const };
   } catch (e) {
     await releaseCallSlot(`call:${row.id}`); // dial failed → free the slot now (else TTL reaps it)
+    emit(directRoom, "unknown", "The carrier refused the call", { error: String(e).slice(0, 200) });
+    closeReceipt(directRoom, "Never dialled", "dial-failed");
     await db.update(callResults).set({ status: "failed", summary: String(e) }).where(eq(callResults.id, row.id));
     throw e;
   }
@@ -628,6 +678,21 @@ export async function bridgeCheckCall(a: TriggerArgs) {
       // (mapgraph.learnFromReceipt, wired at onReceiptClosed).
       const cur = (await db.select().from(callResults).where(eq(callResults.id, row.id)))[0];
       if (!cur || cur.status !== "dialing") return; // conv id landed → EL ingest owns the verdict
+      // THE DROPPED CALL (spec section 8). Something on OUR side broke, so this is not the store's
+      // fault and not the customer's. Status stays `no_answer` — deliberately NOT `completed`, which
+      // is the only status the one-hour block matches, so a customer whose call we broke can try
+      // that same store again immediately. Never charged, and never retried on its own.
+      const dropWhy = wasDropped(r.room!);
+      if (dropWhy) {
+        await db.update(callResults).set({
+          status: "no_answer", confirmed: null, statusKey: "call_dropped",
+          summary: `The call broke on our end (${dropWhy}). Nothing was checked, nobody was charged.`,
+          completedAt: Math.floor(Date.now() / 1000),
+        }).where(eq(callResults.id, row.id));
+        await releaseCallSlot(`call:${row.id}`);
+        await notifyAutoCheckResult(row.id);
+        return;
+      }
       // Twilio's terminal status IS the real reason on this lane (EL never joined): map it to the
       // statuses-registry key so the customer sees busy/bad-number, never a bare "call failed".
       const statusKey = ({ busy: "busy", failed: "bad_number" } as Record<string, string>)[twilioStatus] ?? "nobody_answered";
@@ -1061,6 +1126,13 @@ export async function ingestPending(): Promise<number> {
     // Close the timeline with the answer the customer actually got, so a replay ends where the call
     // ended. Fire-and-forget: a verdict must never wait on bookkeeping.
     void recordVerdict(row.id, finalStatusKey ?? null, outcome.summary ?? null, outcome.durationSecs ?? 0);
+    // The old direct path's thin receipt closes here — this is the only moment it learns the call is
+    // over, since nothing streams to us on that lane. A bridged call closed its own long ago and
+    // this is a no-op for it (a receipt flushes exactly once).
+    if (row.room?.startsWith("direct:")) {
+      markNow(row.room, "endMs");
+      closeReceipt(row.room, `Call ended after ${outcome.durationSecs ?? 0}s`, outcome.status ?? undefined);
+    }
 
     // Server-side billing: charge the finder ONE credit on a DEFINITIVE answer, exactly once.
     // (chargeCallOnce is atomic — the poller, the webhook, and any retry can't double-bill.)

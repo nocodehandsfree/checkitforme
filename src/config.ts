@@ -17,6 +17,10 @@ export const config = {
     // override — overriding prompt or first message per call once hung calls up. Unset = no clip
     // plays and every call takes exactly today's path.
     midCallAgentId: process.env.ELEVENLABS_MIDCALL_AGENT_ID,
+    // Same agent, same voice, same rules — but its thinking runs on OUR account instead of the
+    // provider's hosted model (the brain is 400 of the 723 credits a minute we burn). Unset means
+    // the brain switch cannot engage and every call uses the hosted model, which always works.
+    ourBrainAgentId: process.env.ELEVENLABS_OURBRAIN_AGENT_ID,
     phoneNumberId: req("ELEVENLABS_PHONE_NUMBER_ID"),
     webhookSecret: process.env.ELEVENLABS_WEBHOOK_SECRET,
     defaultVoiceId: process.env.ELEVENLABS_VOICE_ID ?? "pm9SHWV7dZpfvnpJ6hSK", // owner's cloned voice
