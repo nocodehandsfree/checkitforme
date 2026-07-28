@@ -1372,7 +1372,7 @@
       <div id="set_vitals" style="margin-top:16px"></div>
       <div id="set_pending" style="display:none"></div>
       <div class="row" style="align-items:baseline;margin-top:24px">
-        <div class="k-eyebrow" style="margin:0">Phone menu</div>
+        <div class="k-eyebrow" style="margin:0">Menu</div>
         <div id="set_menuver" class="meta" style="margin-left:auto"></div>
       </div>
       <div id="set_menuwrap">
@@ -1405,50 +1405,24 @@
       </div>
       <!-- Everything that used to sit open in four stacked cards. One eyebrow, five peek rows, each
            one lifting its holder into the shared sheet (same Lego as the Live page). -->
-      <div class="k-eyebrow" style="margin-top:24px">Settings</div>
-      <button class="peek" onclick="sheetFromHolder('ds_setstore','Store settings','')">
-        <div class="pk-main"><div class="pk-t">Store settings</div></div>
-        <div class="pk-fact" id="pk_setstore"></div>
-        <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-      </button>
-      <button class="peek" onclick="sheetFromHolder('ds_setdata','Store data','')">
-        <div class="pk-main"><div class="pk-t">Store data</div></div>
-        <div class="pk-fact" id="pk_setdata"></div>
-        <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-      </button>
-      <button class="peek" onclick="sheetFromHolder('ds_setcall','Call settings','')">
-        <div class="pk-main"><div class="pk-t">Call settings</div></div>
-        <div class="pk-fact" id="pk_setcall"></div>
-        <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-      </button>
-      <button class="peek" onclick="sheetFromHolder('ds_setver','Menu versions','Every saved version of this menu. Nothing reaches a real check until you approve it.')">
-        <div class="pk-main"><div class="pk-t">Menu versions</div></div>
-        <div class="pk-fact" id="pk_setver"></div>
-        <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-      </button>
-      <button class="peek" id="set_reviewrow" style="display:none" onclick="sheetFromHolder('ds_setreview','Needs a look','Things the mapper flagged on this chain.')">
-        <div class="pk-main"><div class="pk-t">Needs a look</div></div>
-        <div class="pk-fact" id="pk_setreview"></div>
-        <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-      </button>
-      <button class="peek" id="set_obsrow" style="display:none" onclick="sheetFromHolder('ds_setobs','What calls proved','Every call that tested this route, mapping or ordinary check.')">
-        <div class="pk-main"><div class="pk-t">What calls proved</div></div>
-        <div class="pk-fact" id="pk_setobs"></div>
-        <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-      </button>
-      <button class="peek" onclick="sheetFromHolder('ds_setruns','Mapping calls','Real calls this chain placed to learn its menu.')">
-        <div class="pk-main"><div class="pk-t">Mapping calls</div></div>
-        <div class="pk-fact" id="pk_setruns"></div>
+      <!-- STATUS, then ONE settings row. Seven rows of engineering exhaust (menu versions, what calls
+           proved, needs a look, mapping calls) came off this screen 07-28: the owner manages a chain,
+           not a version history, and a broken chain is an agent's job, not his. The data is untouched
+           in the database; it simply stopped being something he has to read. -->
+      <div class="k-eyebrow" style="margin-top:24px">Status</div>
+      <div id="set_status" class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5;margin-top:6px"></div>
+      <button class="peek" style="margin-top:20px" onclick="sheetFromHolder('ds_setall','Settings','')">
+        <div class="pk-main"><div class="pk-t">Settings</div></div>
+        <div class="pk-fact" id="pk_setall"></div>
         <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
       <div id="set_holders" style="display:none">
-        <div id="ds_setstore"><div id="set_store"></div></div>
-        <div id="ds_setdata"><div id="set_data"></div></div>
-        <div id="ds_setcall"><div id="set_call"></div></div>
-        <div id="ds_setver"><div id="set_versions"></div></div>
-        <div id="ds_setreview"><div id="set_review"></div></div>
-        <div id="ds_setobs"><div id="set_obs"></div></div>
-        <div id="ds_setruns"><div id="set_runs"><div class="meta">Loading…</div></div></div>
+        <div id="ds_setall">
+          <div class="k-eyebrow" style="margin:0 0 10px">Store</div><div id="set_store"></div>
+          <div class="k-eyebrow" style="margin:22px 0 10px">Data</div><div id="set_data"></div>
+          <div class="k-eyebrow" style="margin:22px 0 10px">Calls</div><div id="set_call"></div>
+        </div>
+        <div id="ds_setruns"><div id="set_runs"></div></div>
       </div>
     </div>
     </section>
@@ -2249,7 +2223,7 @@ async function openReceiptInto(url){
   box.innerHTML=(d.cost?`<div class="stats" style="margin-bottom:16px">`
       +`<div class="stat"><div class="n">${money(c.totalUsd)}</div><div class="l">What it cost</div></div>`
       +`<div class="stat"><div class="n">${s.callSecs!=null?s.callSecs+'s':''}</div><div class="l">On the line</div></div>`
-      +`<div class="stat"><div class="n">${s.navSeconds!=null?s.navSeconds+'s':''}</div><div class="l">To a person</div></div>`
+      +`<div class="stat"><div class="n">${s.navSeconds!=null?s.navSeconds+'s':''}</div><div class="l">Time to Staff</div></div>`
     +`</div>`:'')
     +(rungs?`<div class="mladder">${rungs}</div>`:'<div class="empty">No steps recorded.</div>')
     +(d.live?'<div class="meta" style="margin-top:10px">This call is still going.</div>':'');
@@ -4572,7 +4546,7 @@ function renderChainMapping(ch){
   if(meta){
     const n=(ch.stores&&ch.stores.n)||0;
     const lc=lane==='Alpha'?'#F4B740':lane==='Bravo'?'#38BDF8':lane==='Direct'?'var(--green)':'var(--muted)';
-    meta.innerHTML=`${n} store${n===1?'':'s'}`+(lane?` · <span style="color:${lc};font-weight:700">${lane}</span>`:'');
+    meta.innerHTML=`${n.toLocaleString()} store${n===1?'':'s'}`+(lane?` · <span style="color:${lc};font-weight:700">${lane}</span>`:'');
   }
   // --- vitals: what a check costs here, how long to a person, what the menu itself costs.
   const vit=document.getElementById('set_vitals');
@@ -4584,21 +4558,18 @@ function renderChainMapping(ch){
     if(known) vit.innerHTML=
       `<div class="heroc" style="margin:0"><div><div class="hn" style="color:var(--green)">${chainCents(chainCostCents(lane,nav))}</div><div class="hl">Cost per check</div></div></div>`
       +`<div class="stats" style="margin-top:9px">`
-      +`<div class="stat"><div class="n">${nav}s</div><div class="l">To a person</div></div>`
-      +`<div class="stat"><div class="n">${chainCents(chainMenuCents(lane,nav))}</div><div class="l">The menu costs</div></div>`
+      +`<div class="stat"><div class="n">${nav}s</div><div class="l">Time to Staff</div></div>`
+      +`<div class="stat"><div class="n">${chainCents(chainMenuCents(lane,nav))}</div><div class="l">Menu cost</div></div>`
       +`</div>`;
   }
   // --- beside the PHONE MENU eyebrow: which version is running, and how much we trust it.
   const g=mapRow(ch.id);
   const ver=document.getElementById('set_menuver');
   if(ver){
-    if(isLocked&&g&&g.version!=null){
-      const lbl=g.confidenceLabel&&g.confidenceLabel!=='unknown'?g.confidenceLabel:'';
-      ver.innerHTML=`v${g.version}`+(lbl?` · <span style="color:${confColor(g.confidenceLabel)}">${esch(lbl)}</span>`:'');
-    } else {
-      const d=ch.navUpdatedAt?new Date(ch.navUpdatedAt):(ch.treeLearnedAt?new Date(ch.treeLearnedAt*1000):null);
-      ver.textContent=isLocked&&d?('learned '+d.toLocaleDateString([],{month:'short',day:'numeric'})):'';
-    }
+    // WHEN, not which version. A version number and a confidence phrase are engineering exhaust:
+    // they never change what the owner does with this screen.
+    const dt=ch.navUpdatedAt?new Date(ch.navUpdatedAt):(ch.treeLearnedAt?new Date(ch.treeLearnedAt*1000):null);
+    ver.textContent=isLocked&&dt?dt.toLocaleDateString([],{month:'short',day:'numeric'}):'';
   }
   // --- a route waiting on him. This is the only thing on the page he has to DECIDE, so it sits above
   // the menu it would replace, not buried in a list.
@@ -4624,12 +4595,12 @@ function renderChainMapping(ch){
     // the last menu step, or from the very start on a line with no menu at all.
     const ringFrom=lastAt!=null?lastAt:0;
     if(nav!=null&&nav>ringFrom) rungs.push({at:ringFrom+DASH+nav+'s',t:steps.length?'Rings the desk':'Rings',sub:(nav-ringFrom)+'s of ringing',c:'var(--yellow)',lc:'rgba(255,203,5,.28)'});
-    if(nav===0&&!steps.length) rungs.push({t:'Picks up directly',at:'',tc:'var(--green)'});
-    else rungs.push({at:(nav!=null?nav+'s':''),t:'A person answers',tc:'var(--green)'});
+    if(nav===0&&!steps.length) rungs.push({t:'Staff answers, no menu',at:'',tc:'var(--green)'});
+    else rungs.push({at:(nav!=null?nav+'s':''),t:'Staff answers',tc:'var(--green)'});
     el.innerHTML=`<div class="mladder">${rungs.map((r,i)=>chainRung(r,i===rungs.length-1)).join('')}</div>`;
     if(foot) foot.textContent=!lane?''
-      :(nav===0?'Picks up directly. There is no menu to get through.'
-      :nav!=null?`${nav}s to a person · the menu costs ${chainCents(chainMenuCents(lane,nav))} a check.`:'');
+      :(nav===0?'No menu. Staff answers the line.'
+      :nav!=null?`${nav}s to Staff · the menu adds ${chainCents(chainMenuCents(lane,nav))} a check.`:'');
   }
   // --- status pill beside the chain name.
   const sp=document.getElementById('set_mapstatus');
@@ -4643,8 +4614,8 @@ function renderChainMapping(ch){
   // One gray line instead of an info dot buried in a button label (owner 07-27).
   const note=document.getElementById('set_mapnote');
   if(note) note.textContent=isLocked
-    ? 'Re-mapping calls real stores again and keeps the fastest route it can find. It replaces what is above only if it beats it.'
-    : 'Mapping calls real stores until a person answers, then keeps making the route faster until it cannot improve.';
+    ? 'Re-map places real calls and keeps the fastest route it finds. It only replaces the route above if it beats it.'
+    : 'Map places real calls until Staff answers, then keeps shortening the route until it cannot improve.';
   renderChainRows(ch,lane,nav);
 }
 // ---- A ROUTE WAITING ON HIM ---------------------------------------------------------------------
@@ -4662,130 +4633,74 @@ function renderPendingRoute(ch,g){
     if(!v){ box.style.display='none'; return; }
     PENDING=v;
     const faster=(g.seconds!=null&&v.seconds!=null)?(g.seconds-v.seconds):null;
+    // The ONE decision on this page. What the new route says, what it buys, and two buttons. No
+    // version number, no confidence wording, no evidence list: none of that changes his answer.
     box.innerHTML=`<div class="card" style="border-color:rgba(245,158,11,.4);margin:16px 0 0">`
-      +`<div class="row" style="align-items:center;gap:8px"><span class="name">A new route is waiting for you</span></div>`
+      +`<div class="name">The menu changed</div>`
       +`<div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(v.summary||'')}</div>`
-      +(v.seconds!=null?`<div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${v.seconds}s to a person${faster!=null&&faster!==0?` · ${Math.abs(faster)}s ${faster>0?'faster':'slower'} than the one running now`:''}</div>`:'')
-      +(v.why?`<div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">Seen on ${esch(whyWords(v.why))}</div>`:'')
+      +(v.seconds!=null?`<div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${v.seconds}s to Staff${faster!=null&&faster!==0?` · ${Math.abs(faster)}s ${faster>0?'faster':'slower'} than now`:''}</div>`:'')
       +`<div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">`
       +`<button class="act" onclick="mapApprove(${v.id},${ch.id})">Use it</button>`
-      +`<button class="ghost" onclick="mapReject(${v.id},${ch.id})">Keep the old one</button></div>`
-      +`<div class="meta" style="margin-top:10px;text-transform:none;letter-spacing:0">Nothing changes for a real check until you tap Use it.</div>`
+      +`<button class="ghost" onclick="mapReject(${v.id},${ch.id})">Keep current</button></div>`
+      +`<div class="meta" style="margin-top:10px;text-transform:none;letter-spacing:0">Checks keep running the current route until you tap Use it.</div>`
       +`</div>`;
   }).catch(()=>{ box.style.display='none'; });
 }
 async function mapApprove(versionId,chainId){
   const ok=await askSheet('Use the new route?',[
-    'Real checks switch to it straight away, and the route running now is retired.',
-    'You can map again at any time if it turns out worse.',
+    'Checks switch to it straight away. The current route is retired.',
+    'You can re-map at any time if it turns out worse.',
   ],'Use it');
   if(!ok) return;
   const r=await api('/api/admin/map/version/'+versionId+'/approve',{method:'POST'});
   if(!r||r.error){ toast(mapWriteErr(r)); return; }
-  toast('Live checks use the new route'); await loadMapGraph(); await ssReload();
+  toast('Checks now use the new route'); await loadMapGraph(); await ssReload();
 }
 async function mapReject(versionId,chainId){
-  const ok=await askSheet('Keep the route you have?',['The new one is set aside and real checks carry on unchanged.'],'Keep the old one');
+  const ok=await askSheet('Keep the current route?',['The new one is set aside. Checks carry on unchanged.'],'Keep current');
   if(!ok) return;
   const r=await api('/api/admin/map/version/'+versionId+'/reject',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({why:'owner kept the existing route'})});
   if(!r||r.error){ toast(mapWriteErr(r)); return; }
-  toast('Kept the route you have'); await loadMapGraph(); await ssReload();
+  toast('Kept the current route'); await loadMapGraph(); await ssReload();
 }
 // Approvals are WRITES, so they always go to the real site. Until the promote the real site has no
 // idea what a map version is, and a bare "couldn't save" would send him hunting a bug that isn't there.
 const mapWriteErr=r=>((r&&r.status===404)||(r&&/404|not found/i.test(String(r.error||''))))
   ? 'Not on the real site yet. Say "promote" first.' : "Couldn't save that";
-// The five peek rows. Each carries the ONE fact worth seeing without opening it.
+// ONE settings row and ONE status line. A label here is a precise noun and never a sentence
+// (docs/design/copy/COPY_STYLE_GUIDE_ADMIN.md), and it uses the glossary word: Staff, check, lane,
+// locked. No version numbers, no confidence wording, no evidence lists.
 function renderChainRows(ch,lane,nav){
-  const set=(id,html,color)=>{ const e=document.getElementById(id); if(!e) return; e.innerHTML=html||''; e.style.color=color||''; };
-  // The SHORT grade word (comp 2e's chip), never the long "Best near you". A long fact wraps the row
-  // label onto a second line, and labels never wrap.
-  set('pk_setstore',esch((ch.type||'Other')+' · '+(CH_GRADE[ch.tier]?CH_GRADE[ch.tier][0]:'Unrated')));
-  const scm=ch.stockCheckMethod?String(ch.stockCheckMethod).split(/[·|]/)[0].trim():'';
-  set('pk_setdata',esch([ch.isMSRP!==false?'MSRP':'', scm].filter(Boolean).join(' · ')));
-  set('pk_setcall',esch([ch.maxTalkSeconds!=null?ch.maxTalkSeconds+'s max talk':'', ch.callTarget===false?'not dialled':''].filter(Boolean).join(' · ')));
-  const g=mapRow(ch.id);
-  set('pk_setver', g&&g.proposed>0?'1 waiting':(g&&g.version!=null?'v'+g.version:''), g&&g.proposed>0?'#F59E0B':'');
-  set('pk_setreview', g&&g.openUnknowns>0?String(g.openUnknowns):'', g&&g.openUnknowns>0?'#F59E0B':'');
-  const rv=document.getElementById('set_reviewrow'); if(rv) rv.style.display=(g&&g.openUnknowns>0)?'':'none';
-  renderMapVersions(ch.id);
+  const rating=CH_GRADE[ch.tier]?CH_GRADE[ch.tier][0]:'Unrated';
+  const e=document.getElementById('pk_setall');
+  if(e) e.textContent=[ch.type||'Other',rating].join(' · ');
+  renderChainStatus(ch);
+}
+// One line: is this chain's route holding up, and when did we last see it work. Anything worse than
+// working is an AGENT'S job, so this says what is wrong and stops. It never opens a report.
+async function renderChainStatus(ch){
+  const el=document.getElementById('set_status'); if(!el) return;
+  const locked=ch.navStatus==='locked';
+  el.textContent=locked?'Checking…':(ch.navStatus==='learning'?'Mapping now.':'Not mapped. Tap Map to learn the menu.');
+  if(!locked) return;
+  const d=await api('/api/admin/map/chain/'+ch.id).catch(()=>null);
+  const obs=((d||{}).observations)||[];
+  const recent=obs.slice(0,5);
+  const failed=recent.filter(o=>o.kind==='failed-attempt').length;
+  const worked=recent.filter(o=>o.kind==='verify').length;
+  const last=obs[0]&&obs[0].at?new Date(obs[0].at*1000).toLocaleDateString([],{month:'short',day:'numeric'}):null;
+  const waiting=(((d||{}).versions)||[]).some(v=>v.status==='proposed');
+  if(waiting){ el.innerHTML='<span style="color:#F59E0B;font-weight:700">A new route is waiting for you</span> · see above'; return; }
+  if(!obs.length){ el.textContent='Locked. No calls have run it yet.'; return; }
+  if(failed>=3){ el.innerHTML=`<span style="color:var(--red);font-weight:700">Failing</span> · ${failed} of the last ${recent.length} calls reached nobody`+(last?` · ${esch(last)}`:''); return; }
+  if(failed){ el.innerHTML=`<span style="color:#F59E0B;font-weight:700">Patchy</span> · ${worked} of the last ${recent.length} calls reached Staff`+(last?` · ${esch(last)}`:''); return; }
+  el.innerHTML=`<span style="color:var(--green);font-weight:700">Working</span> · ${worked} of the last ${recent.length} calls reached Staff`+(last?` · ${esch(last)}`:'');
 }
 // Every saved version of this chain's menu, newest first, with the calls that prove it. The one that
 // real checks run is marked; a proposed one carries the same Use it / Keep the old one decision.
-async function renderMapVersions(chainId){
-  const vw=document.getElementById('set_versions'), rw=document.getElementById('set_review');
-  if(vw) vw.innerHTML='<div class="meta">Loading…</div>';
-  const d=await api('/api/admin/map/chain/'+chainId);
-  const vs=((d||{}).versions)||[], uk=((d||{}).unknowns)||[];
-  if(vw) vw.innerHTML = vs.length ? vs.slice().sort((a,b)=>(b.version||0)-(a.version||0)).map(v=>{
-    const S={active:['var(--green)','Running now'],proposed:['#F59E0B','Waiting for you'],retired:['var(--text-muted)','Retired'],rejected:['var(--text-muted)','Set aside']}[v.status]||['var(--muted)',v.status];
-    const calls=((v.evidence&&v.evidence.calls)||[]).slice(0,6);
-    return `<div class="card" style="margin:0 0 10px">
-      <div class="row" style="align-items:center;gap:8px">
-        <span class="name">v${v.version}</span>
-        <span style="margin-left:auto;font-size:10.5px;font-weight:700;color:${S[0]};background:${S[0]==='var(--green)'?'rgba(74,222,128,.12)':'var(--surface-2)'};border-radius:20px;padding:3px 10px">${esch(S[1])}</span>
-      </div>
-      <div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(v.summary||'')}</div>
-      <div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${v.seconds!=null?v.seconds+'s to a person':''}${v.confidenceLabel&&v.confidenceLabel!=='unknown'?` · <span style="color:${confColor(v.confidenceLabel)}">${esch(v.confidenceLabel)}</span>`:''}${v.why?' · '+esch(whyWords(v.why)):''}</div>
-      ${calls.length?`<div class="k-eyebrow" style="margin:14px 0 6px">The calls that proved it</div>`+calls.map(cl=>
-        `<div style="padding:8px 0;border-top:1px solid var(--border)">
-          <div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5">${esch(cl.day||'')} · ${esch(cl.storeName||'a store')}${cl.seconds!=null?' · '+cl.seconds+'s':''} · ${cl.reachedHuman?'<span style="color:var(--green)">a person answered</span>':'<span style="color:var(--muted)">nobody answered</span>'}${cl.transferAtSec!=null?' · handed on at '+cl.transferAtSec+'s':''}</div>
-          ${(cl.transcript&&cl.transcript.length)?`<div class="mladder" style="margin-top:8px;padding:12px 14px">${cl.transcript.map((t,ti,ta)=>{
-              const m=String(t).match(/^\s*(\d+)s\s+([\s\S]*)$/);
-              return chainRung({at:m?m[1]+'s':'',t:esch(m?m[2]:String(t)),c:'var(--muted)',lc:'rgba(255,255,255,.14)'},ti===ta.length-1);
-            }).join('')}</div>`
-           :'<div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">Nothing was written down on this call.</div>'}
-        </div>`).join(''):''}
-      ${v.status==='proposed'?`<div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap"><button class="act" onclick="closeSheet();mapApprove(${v.id},${chainId})">Use it</button><button class="ghost" onclick="closeSheet();mapReject(${v.id},${chainId})">Keep the old one</button></div>`:''}
-    </div>`;
-  }).join('') : '<div class="empty">No saved versions yet. Mapping calls create the first one.</div>';
-  if(rw) rw.innerHTML = uk.length ? uk.map(u=>mapUnknownCard(u,chainId)).join('') : '<div class="empty">Nothing to review on this chain.</div>';
-  // What real calls have proved since the route was saved. The mapper files one of these on every
-  // call, including ordinary customer checks, and the page was dropping all of them on the floor.
-  const ow=document.getElementById('set_obs'), obs=((d||{}).observations)||[];
-  const po=document.getElementById('pk_setobs'); if(po) po.textContent=obs.length?String(obs.length):'';
-  const orow=document.getElementById('set_obsrow'); if(orow) orow.style.display=obs.length?'':'none';
-  if(ow) ow.innerHTML = obs.length ? obs.map(o=>{
-    const K={verify:['var(--green)','The route ran and worked'],drift:['#F59E0B','The route drifted'],
-      'failed-attempt':['var(--red)','The route reached nobody'],'transfer-gap':['#F59E0B','Waited after the hand-off'],
-      'store-exception':['#38BDF8','This store went its own way']}[o.kind]||['var(--muted)',String(o.kind||'').replace(/-/g,' ')];
-    const det=o.detail&&typeof o.detail==='object'?o.detail:{};
-    const when=o.at?new Date(o.at*1000).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
-    return `<div class="card" style="margin:0 0 10px">
-      <div class="row" style="align-items:center;gap:8px"><span class="name" style="font-size:13.5px;color:${K[0]}">${esch(K[1])}</span><span class="meta" style="margin-left:auto">${esch(when)}</span></div>
-      ${o.observed?`<div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(String(o.observed))}</div>`:''}
-      ${det.gapSeconds?`<div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${det.gapSeconds}s of waiting after it said it was transferring us${det.greeting?`, then “${esch(String(det.greeting).slice(0,70))}”`:''}</div>`:''}
-      ${det.reason?`<div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${esch(String(det.reason))}</div>`:''}
-      ${o.callId?`<button class="ghost" style="margin-top:10px" onclick="closeSheet();openCallReceipt(${o.callId})">The whole call</button>`
-                :'<div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;color:var(--muted)">No check is attached to this one.</div>'}
-    </div>`;
-  }).join('') : '<div class="empty">No calls have tested this route yet.</div>';
-}
-// The engine writes "2 call(s), 1 store(s), 2 day(s)". Nobody reads "(s)" on a phone.
-const whyWords=s=>String(s||'').replace(/(\d+)\s+(\w+?)\(s\)/g,(m,n,w)=>n+' '+w+(Number(n)===1?'':'s'));
-// What is wrong, in his words. The raw kinds are engine vocabulary and mean nothing on a phone.
-const UNKNOWN_WHAT={
-  'hammer-route':'The route is just pressing the same key over and over, not a real menu',
-  'unproven-direct':'We claim a person answers straight away, but no call has proved it',
-  'route-changed':'The menu changed since we learned it',
-  'drift':'The menu is drifting away from what we learned',
-  'not-shared':'This route is not shared with the rest of the chain',
-};
-function mapUnknownCard(u,chainId){
-  return `<div class="card" style="margin:0 0 10px">
-    <div class="name" style="font-size:13.5px">${esch(UNKNOWN_WHAT[u.kind]||u.kind||'Needs a look')}</div>
-    ${u.prompt?`<div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(u.prompt)}</div>`:''}
-    <div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${u.count>1?'Seen '+u.count+' times':'Seen once'}${u.firstSeen?' · first on '+new Date(u.firstSeen*1000).toLocaleDateString([],{month:'short',day:'numeric'}):''}</div>
-    <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
-      <button class="act" onclick="mapUnknown(${u.id},'resolved',${chainId})">Fixed</button>
-      <button class="ghost" onclick="mapUnknown(${u.id},'dismissed',${chainId})">Not a problem</button>
-    </div></div>`;
-}
-async function mapUnknown(id,status,chainId){
-  const r=await api('/api/admin/map/unknown/'+id,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({status,note:status==='resolved'?'marked fixed from Admin':'marked not a problem from Admin'})});
-  if(!r||r.error){ toast(mapWriteErr(r)); return; }
-  toast(status==='resolved'?'Marked fixed':'Set aside'); await loadMapGraph(); await renderMapVersions(chainId);
-}
+// The version list, the review queue and the observation history used to render here. They came off
+// the owner's screen 07-28: he manages a chain, not a version history, and a broken chain is an
+// agent's job. The rows are gone, the data and the endpoints are untouched.
 // Walk back to the chain list from a chain detail.
 function setBackToChains(){
   const pw=document.getElementById('set_pickwrap'), body=document.getElementById('set_body');
