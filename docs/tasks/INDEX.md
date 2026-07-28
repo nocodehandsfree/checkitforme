@@ -27,9 +27,10 @@ then they ride the next promote to prod):**
 ## Other open site fixes (consumer site is frozen: each needs an owner-named `.unlock`)
 | Task | System | Status |
 |---|---|---|
-| [Alerts sheet formatting](alerts-sheet-formatting.md) | site | active |
-| [Logo fidelity in My Zones + call-log header](logo-fidelity-zones-calllog.md) | site | active |
+| [Feature names stay English on the Spanish site](feature-labels-spanish.md) | admin | active (for Addie) |
 | [Reconcile COPY_CHANGES_APPROVED.md location](copy-changes-approved-reconcile.md) | site | active |
+| [Alerts sheet formatting](alerts-sheet-formatting.md) | site | done 07-27 |
+| [Logo fidelity in My Zones + call-log header](logo-fidelity-zones-calllog.md) | site | done 07-27 (owner confirmed) |
 
 ## ⏸ Parked (paused on purpose — owner-gated, blocked, or fires at a promote)
 | Task | System | Status |

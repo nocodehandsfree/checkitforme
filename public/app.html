@@ -2475,7 +2475,7 @@ const CALC_STORE={ Direct:{label:'Direct',sub:'human picks up',nav:0,nc:'var(--t
 const calcMoney=n=>'$'+(n<0?'-':'')+Math.abs(n).toFixed(3);
 // Charlie is the DEFAULT lane: he is what actually runs today. Delta is a plan, not a built thing, so
 // it must never be the number a session plans against (owner 07-24).
-const CALC={ storeType:'Alpha', nav:30, talk:20, revenue:0.2, lane:'charlie', reach:28, usage:50,
+const CALC={ storeType:'Alpha', nav:30, talk:20, revenue:0.2, lane:'charlie', reach:28, usage:50, ownBrain:false,
   plan:'Creator',      // ONE selection. It sets the agent's price AND how many calls can run at once.
   monthlyChecks:20000, // drives the "Calls at once" section
   conc:{ daysPerMonth:30, busyHourFrac:0.15, avgCallMin:1.5 }, // busy-hour concurrency assumptions (editable)
@@ -2484,7 +2484,7 @@ const CALC={ storeType:'Alpha', nav:30, talk:20, revenue:0.2, lane:'charlie', re
   // navForkPerMin sits at ZERO because listening while we navigate is not switched on yet. When it
   // ships it is $0.0044/min, measured. The line is on the page today so the day it costs something the
   // page shows it instead of hiding it.
-  rates:{ twilioPerMin:0.014, navForkPerMin:0, navSttPerSec:0, overhead:0, deltaClipPerCall:0 },
+  rates:{ twilioPerMin:0.014, navForkPerMin:0, navSttPerSec:0, overhead:0, deltaClipPerCall:0, ownBrainPerMin:0.012 },
   plans:[{name:'Family',price:4.99,checks:15},{name:'Collector',price:9.99,checks:30},{name:'Hunter',price:19.99,checks:100},{name:'Operator',price:49.99,checks:300}],
   ready:false };
 // MEASURED, NOT SETTINGS. Each one was read off a real account on the date shown. They drift when the
@@ -2570,7 +2570,12 @@ function calcSvcOut(){
 // account: voice 323 + brain 400. A 630 reading taken on 07-25 was rejected. It only holds if the
 // brain runs on OUR OWN account, which is section 7 of the live-call-runtime spec and is not built.
 // Never hand-edit this to disagree with cost.ts; a forecast that disagrees with the bill is worthless.
-const CALC_MEASURED={ creditsPerMinute:723, measuredAt:'2026-07-24',
+// The blended 723 is TWO things and the page could not tell them apart, which hid the single biggest
+// saving available: the voice provider hosts Charlie's brain and bills it at their rate. Measured
+// 2026-07-24 and set out in section 7 of the live-call-runtime spec: voice 323 + brain 400 = 723.
+// Running the brain on OUR OWN account is worth about 5x on that line, and it is a switch, not a
+// migration. Off = exactly what we pay today.
+const CALC_MEASURED={ creditsPerMinute:723, voiceCreditsPerMinute:323, brainCreditsPerMinute:400, measuredAt:'2026-07-24',
   src:{ creditsPerMinute:'ElevenLabs usage breakdown', planCredits:'the account, not the price page', twilioPerMin:'Twilio usage records' } };
 // ElevenLabs plans. `credits` is the monthly allowance, and it is what turns the flat fee into a price
 // per second. Creator is read from OUR account (145,094, NOT the 100,000 the price page advertises).
@@ -2584,14 +2589,31 @@ const calcPickPlan=n=>CALC_VOICE_PLANS.find(p=>p.atOnce>=n)||CALC_VOICE_PLANS[CA
 // THE AGENT IS PRICED ONCE. The monthly fee IS the agent cost; a per-second rate is only that fee
 // spread over what the allowance buys. Charging a separate per-second rate on top counted the same
 // money twice. Derive it, so changing plan re-prices the whole page on its own.
+// The voice provider's credits burn per second, for whatever we still buy from them. When the brain
+// moves to our own account we only buy the VOICE, so the credit burn drops with it.
+function calcVoiceCreditsPerMin(){
+  return CALC.ownBrain ? (CALC_MEASURED.voiceCreditsPerMinute||0) : (CALC_MEASURED.creditsPerMinute||0);
+}
+// VOICE ONLY, always. We buy the speaking from them whichever way the brain runs, at the same rate.
+// The thinking is priced separately by calcBrainPerSec, and hosted voice + hosted brain add back up
+// to the blended 723 exactly. Using the blended figure here and then adding a brain line on top was
+// charging for the thinking twice.
 function calcAgentPerSec(){
   const p=calcPlan(), c=p.credits||1;
-  return (p.fee/c)*(CALC_MEASURED.creditsPerMinute||0)/60;
+  return (p.fee/c)*(CALC_MEASURED.voiceCreditsPerMinute||0)/60;
+}
+/** What Charlie's THINKING costs a second. Hosted = their share of the plan. Ours = our own bill. */
+function calcBrainPerSec(){
+  if(CALC.ownBrain) return (CALC.rates.ownBrainPerMin||0)/60;
+  const p=calcPlan(), c=p.credits||1;
+  return (p.fee/c)*(CALC_MEASURED.brainCreditsPerMinute||0)/60;
 }
 // Credits the month would burn, against what the plan actually includes. Running past the allowance
 // is the most expensive surprise in the model and the page never used to mention it.
 function calcAllowance(){
-  const p=calcPlan(), perCheck=(CALC.talk||0)*(CALC_MEASURED.creditsPerMinute||0)/60;
+  // Moving the brain off their account cuts the credit burn too, so the plan stretches further. That
+  // is most of the point of the switch and the allowance bar has to show it.
+  const p=calcPlan(), perCheck=(CALC.talk||0)*calcVoiceCreditsPerMin()/60;
   const needed=(CALC.monthlyChecks||0)*perCheck;
   const capacity=perCheck>0?Math.floor((p.credits||0)/perCheck):0;
   const pct=p.credits?needed/p.credits*100:0;
@@ -2639,9 +2661,10 @@ function calcCompute(storeType,nav,talk,r,lane,esc){
   // The recorded opener plays on EVERY call now. Delta stopped being a lane you choose between and
   // became the one clip that asks the first question while the agent warms up (the live-call runtime
   // spec, §1). So it is a line on every call, not a fork in the road.
-  const agentPerSec=calcAgentPerSec(), charlieTalk=agentPerSec*talk, p=calcPlan();
+  const charlieTalk=calcAgentPerSec()*talk, p=calcPlan();
   items.push({label:'The recorded opener',detail:(r.deltaClipPerCall>0?'one clip, played to every person who answers':'not playing on live calls yet'),accent:'#C084FC',amount:r.deltaClipPerCall});
-  items.push({label:'Charlie talking',detail:`${talk}s · your $${p.fee} ${p.name} plan spread over what it buys`,accent:'var(--purple)',amount:charlieTalk});
+  items.push({label:"Charlie's voice",detail:`${talk}s · your $${p.fee} ${p.name} plan spread over what it buys`,accent:'var(--purple)',amount:charlieTalk});
+  items.push({label:"Charlie's thinking",detail:CALC.ownBrain?`${talk}s · our own account · $${CALC.rates.ownBrainPerMin}/min`:`${talk}s · the voice company hosts it and bills us for it`,accent:CALC.ownBrain?'#38BDF8':'#F59E0B',amount:calcBrainPerSec()*talk});
   if(r.overhead>0) items.push({label:'Fixed overhead / call',detail:'flat',accent:'var(--text-muted)',amount:r.overhead});
   return { items, total: items.reduce((s,i)=>s+i.amount,0) };
 }
@@ -2785,6 +2808,15 @@ function calcShell(){
     <div style="font-size:13px;color:var(--text-muted);margin-bottom:10px">One choice. It sets what Charlie costs a second AND how many calls can run at once.</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">${CALC_VOICE_PLANS.map(p=>`<button type="button" id="calc_plan_${p.name}" onclick="calcSetVoicePlan('${p.name}')" style="padding:11px;border-radius:11px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-muted);cursor:pointer;text-align:left;font:inherit"><span style="display:block;font-weight:700;font-size:13px">${p.name}</span><span style="display:block;font-size:10.5px;color:var(--text-tertiary);margin-top:2px">$${p.fee}/mo</span></button>`).join('')}</div>
     <div id="calc_planrate" style="margin-top:12px;font-size:12.5px;line-height:1.5;color:var(--text-muted)"></div>
+    <div style="margin:16px 0 0;padding-top:14px;border-top:1px solid var(--border)">
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">Who runs Charlie's thinking <span data-tip="The voice company hosts the thinking today and bills us for it at their rate. Running it on our own account is the single biggest saving on this page."></span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button type="button" id="calc_brain_them" onclick="calcSetBrain(false)" style="padding:11px;border-radius:11px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-muted);cursor:pointer;text-align:left;font:inherit"><span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot('#F59E0B')}They do</span><span style="font-size:10.5px;color:var(--text-tertiary)">what we pay today</span></button>
+        <button type="button" id="calc_brain_us" onclick="calcSetBrain(true)" style="padding:11px;border-radius:11px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-muted);cursor:pointer;text-align:left;font:inherit"><span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot('#38BDF8')}We do</span><span style="font-size:10.5px;color:var(--text-tertiary)">our own account</span></button>
+      </div>
+      <div id="calc_brain_rate" style="margin-top:12px;display:none">${rate('Our own thinking','ownBrainPerMin','/min')}</div>
+      <div id="calc_brain_note" style="margin-top:10px;font-size:11.5px;line-height:1.55;color:var(--text-tertiary)"></div>
+    </div>
     <div class="k-eyebrow">Does the plan cover the month</div>
     <div id="calc_allow" style="font-size:13px;line-height:1.55"></div>
     <div id="calc_allow_bar" style="display:flex;height:10px;border-radius:6px;overflow:hidden;margin-top:10px;background:var(--surface-1);border:1px solid var(--border)"></div>
@@ -2878,6 +2910,7 @@ function calcShell(){
 function calcPick(t){ CALC.storeType=t; CALC.nav=CALC_STORE[t].nav; calcSync(); calcUpdate(); }
 function calcSetNav(v){ CALC.nav=parseInt(v,10)||0; calcUpdate(); }
 function calcSetTalk(v){ CALC.talk=parseInt(v,10)||0; calcUpdate(); }
+function calcSetBrain(mine){ CALC.ownBrain=!!mine; calcSync(); calcUpdate(); } // calcSync paints the pick
 function calcSetRate(k,v){ const n=v===''?0:parseFloat(v); CALC.rates[k]=isNaN(n)?0:n; calcUpdate(); }
 function calcSetRev(v){ CALC.revenue=v===''?0:(parseFloat(v)||0); calcUpdate(); }
 function calcSetVoicePlan(n){ CALC.plan=n; calcSync(); calcUpdate(); }
@@ -2948,6 +2981,20 @@ function calcSync(){
     b.style.borderColor=on?c:'var(--border)'; b.style.background=on?(c[0]==='#'?c+'22':'var(--surface-2)'):'var(--surface-1)'; b.style.color=on?'var(--text-primary)':'var(--text-muted)'; });
   const ns=document.getElementById('calc_nav'); if(ns){ ns.value=CALC.nav; ns.disabled=CALC.storeType==='Direct'; ns.style.opacity=CALC.storeType==='Direct'?.4:1; }
   const nn=document.getElementById('calc_navnote'); if(nn) nn.style.display=CALC.storeType==='Direct'?'block':'none';
+  // Whose brain: paint the pick, show the rate box only when it is ours, and put the saving in words.
+  [['them','#F59E0B',false],['us','#38BDF8',true]].forEach(([k,c,mine])=>{
+    const b=document.getElementById('calc_brain_'+k); if(!b) return; const on=CALC.ownBrain===mine;
+    b.style.borderColor=on?c:'var(--border)'; b.style.background=on?c+'1a':'var(--surface-1)'; b.style.color=on?'var(--text-primary)':'var(--text-muted)';
+  });
+  const brw=document.getElementById('calc_brain_rate'); if(brw) brw.style.display=CALC.ownBrain?'block':'none';
+  const bn=document.getElementById('calc_brain_note');
+  if(bn){
+    const pl=calcPlan(), hosted=(pl.fee/(pl.credits||1))*(CALC_MEASURED.brainCreditsPerMinute||0), ours=CALC.rates.ownBrainPerMin||0;
+    const save=hosted-ours, x=ours>0?hosted/ours:0;
+    bn.innerHTML=CALC.ownBrain
+      ? `Their rate for the same thinking is $${hosted.toFixed(4)} a minute, so this saves $${Math.max(0,save).toFixed(4)} a minute${x>1.2?`, about ${x.toFixed(1)}x`:''}. It also cuts the credits we burn, so the plan above stretches further. NOT BUILT YET: this is a forecast.`
+      : `They host it and bill $${hosted.toFixed(4)} a minute for it, which is ${Math.round(((CALC_MEASURED.brainCreditsPerMinute||0)/(CALC_MEASURED.creditsPerMinute||1))*100)}% of what we pay them. This is what we pay today.`;
+  }
   [['charlie','var(--purple)']].forEach(([l,c])=>{ const b=document.getElementById('calc_lane_'+l); if(!b) return; const on=CALC.lane===l;
     b.style.borderColor=on?c:'var(--border)'; b.style.background=on?(c[0]==='#'?c+'22':'var(--surface-2)'):'var(--surface-1)'; b.style.color=on?'var(--text-primary)':'var(--text-muted)'; });
   CALC_VOICE_PLANS.forEach(p=>{ const b=document.getElementById('calc_plan_'+p.name); if(!b) return; const on=CALC.plan===p.name;
@@ -2967,8 +3014,8 @@ function calcUpdate(){
   // nav and talk parts it is made of are already spelled out.
   set('calc_chip',`<span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(st.nc)}${st.label}</span><span style="font-size:10.5px;color:var(--text-muted)">${isDirect?'no menu':CALC.nav+'s menu'}</span>`);
   // ---- The plan drives the price, and the price is shown as one plain sentence ----
-  const pl=calcPlan(), aps=calcAgentPerSec();
-  set('calc_planrate',`Your $${pl.fee} ${pl.name} plan includes ${pl.credits.toLocaleString()} credits a month. At ${CALC_MEASURED.creditsPerMinute} credits a minute that makes Charlie <b style="color:var(--text-strong)">${calcMoney(aps*60)} a minute</b>, so ${CALC.talk}s of talking costs <b style="color:var(--text-strong)">${calcMoney(aps*CALC.talk)}</b>.${pl.measured?'':' <span style="color:#F59E0B">This plan\'s allowance is the published number, not one we have read off a real account.</span>'}`);
+  const pl=calcPlan(), aps=calcAgentPerSec()+calcBrainPerSec(); // voice + thinking = the whole agent
+  set('calc_planrate',`Your $${pl.fee} ${pl.name} plan includes ${pl.credits.toLocaleString()} credits a month. At ${calcVoiceCreditsPerMin()} credits a minute${CALC.ownBrain?' for the voice alone':''} Charlie costs <b style="color:var(--text-strong)">${calcMoney(aps*60)} a minute</b> all in, so ${CALC.talk}s of talking costs <b style="color:var(--text-strong)">${calcMoney(aps*CALC.talk)}</b>.${pl.measured?'':' <span style="color:#F59E0B">This plan\'s allowance is the published number, not one we have read off a real account.</span>'}`);
   // ---- Does the allowance cover the month ----
   const al=calcAllowance(), allowEl=document.getElementById('calc_allow');
   if(allowEl){
@@ -5834,6 +5881,10 @@ const FLAG_GROUPS=[
     ['productOnePiece','One Piece','Offer One Piece in the product switcher'],
     ['productTopps','Topps NBA','Offer Topps NBA in the product switcher'],
     ['productNeedoh','NeeDoh','Offer NeeDoh in the product switcher'],
+  ]},
+  {title:'How calls are made',flags:[
+    ['cheapBridgeAll','New calling engine','Asks the question the moment they pick up · off = the old way'],
+    ['stopKeysOnHuman','Stop keys when a person answers','Never beep the keypad into someone’s ear'],
   ]},
   {title:'Admin & Global',flags:[
     ['oneCheckPerStorePerDay','Fresh-result cache (24h)','Reuse a recent result instead of re-calling'],

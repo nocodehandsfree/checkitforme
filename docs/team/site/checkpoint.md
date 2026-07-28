@@ -17,32 +17,32 @@ Railway staging env + `DATABASE_URL=file:<scratch>/local.db PORT=88xx npx tsx sr
   scroll MUST be a ~140ms timeout, NOT a rAF (a re-render re-places the sheet ~60ms later and wipes it).
   `sheetH_on` honours `data-fillh`: 0.82 Plans, floored 530px PAYG. Dock depth, never a border. `#buy_note`
   lives IN the dock. Feature sheets = centred header + one carved `.fi-pts` well, points LEFT-aligned.
-- **07-27 sweep (LIVE on staging):** alerts sub ran two sentences together because `sentLines()` eats the
-  space and `.subln{display:block}` was scoped to `.rsub` — UNSCOPED it. Alert rows stacked (`.alrow`,
-  controls drop to their own line) so long names + cities stop clipping; dead duplicate ES `alerts.sub`
-  key removed. Edit-email / post-score / feature sheets now `sheetPush` + are in the popstate list, so
-  back closes them. **Autofocus in a sheet SCROLLS the document and strands the sheet mid-screen** (the
-  email sheet sat 280px off the bottom edge): all 9 in-sheet focus calls now use `preventScroll:true`.
-  Owner closed logo-fidelity + the iOS bottom tint himself. LEFT: feature-sheet titles are Admin labels,
-  so EN only — needs a Spanish label field in Admin (flagged, not built).
-- **Checkout speed/feel (R5+R6).** MEASURED: js.stripe.com/v3 = 1.06MB, 0.61s (0.41s just TLS);
-  `/app/checkout-intent` = 3.7s the FIRST time per account (it creates the Stripe customer) then 0.2-0.4s.
-  `preconnect` in the head · `openBuy` warms `loadStripeJs()` · intent + library fire TOGETHER · a failed
-  warm-up is FORGOTTEN (it used to be cached and pushed every checkout that session to the hosted page).
-  `openCheckout` holds the sheet: Continue reads "Opening…" (`co.opening`), the element mounts FIRST, then
-  the sheet slides up already formed; 2s failsafe; every exit path releases the button.
-  **js.stripe.com is BLOCKED from the headless browser here** — stub `window.Stripe` to test ordering.
-- **R4 — a plan tap jumped to Checkout, FIXED.** Repro needs `page.touchscreen.tap`, NOT `el.click()`:
-  the dock covered the lower rows so the tap hit Continue. Padding never fixes it, rows still REST under
-  it. `.buy-foot` RESERVES the dock's band so the scroller shrinks (~150px of list) and the under-bar
-  `::after` spacer is off while up. Checkout head DELETED. ALWAYS test sheets with REAL touch taps.
-- Monthly/Annual = small keys inline with the "You're on the <plan> plan" line; "save 17%" INSIDE the Annual key (a loose floating one was rejected). No overflow at 375/390/430, EN + ES (`plan.save17s`).
-- Drove `/r` at 375/390/430, member + not, EN + ES, REAL taps: dock down on open, no plan under it, every
-  tap hits the plan, PAYG clears 64-112px, zero errors. **NOT verified: on-device speed + feel.**
-
+- **07-27 LEGO PASS — `scripts/sheet-recipe-audit.mjs` is the test, it must print 1 recipe.** It opens
+  every slide-up and groups them by what they RENDER (anchor · surface · radius · handle · entrance).
+  Found FOUR recipes: checkout faded in with the 24px nudge the owner killed on 07-05, the upsell had a
+  smaller dimmer handle + no slide + no drag, and My checks/call sheet/p6d each hand-built the grab handle
+  (40x5 in three colours) instead of the shared 44x6 rgba(.4). All fixed: 24 sheets, ONE recipe. Run it
+  before shipping any new sheet — it says whether the thing snapped on or got rebuilt.
+- **07-27 sweep:** alerts sub ran two sentences together (`sentLines()` eats the space and
+  `.subln{display:block}` was scoped to `.rsub`, now UNSCOPED). Alert rows stacked (`.alrow`) so long names
+  + cities stop clipping; dead duplicate ES `alerts.sub` removed. Edit-email/post-score/feature sheets now
+  `sheetPush` + sit in the popstate list. **Autofocus in a sheet SCROLLS the document and strands the sheet
+  mid-screen** (email sat 280px off the bottom): all 9 in-sheet focus calls use `preventScroll:true`.
+  Owner closed logo-fidelity + the iOS tint. Admin owes Spanish service names: `feature-labels-spanish.md`.
+- **Checkout speed/feel.** MEASURED: js.stripe.com/v3 = 1.06MB, 0.61s (0.41s just TLS); the intent call =
+  3.7s the FIRST time per account (it creates the Stripe customer) then 0.2-0.4s. `preconnect` in the head ·
+  `openBuy` warms `loadStripeJs()` · intent + library fire TOGETHER · a failed warm-up is FORGOTTEN (cached,
+  it used to push every checkout that session to the hosted page). `openCheckout` HOLDS the sheet: Continue
+  reads "Opening…", the element mounts FIRST, then the sheet slides up already formed; 2s failsafe; every
+  exit path releases the button. **js.stripe.com is BLOCKED headless here** — stub `window.Stripe` to test.
+- **A plan tap jumped to Checkout, FIXED.** Repro needs `page.touchscreen.tap`, NOT `el.click()`: the dock
+  covered the lower rows so the tap hit Continue. Padding never fixes it. `.buy-foot` RESERVES the dock's
+  band so the scroller shrinks (~150px of list). ALWAYS test sheets with REAL touch taps.
+- Monthly/Annual = small keys inline with the "You're on the <plan> plan" line; "save 17%" INSIDE the Annual key. No overflow at 375/390/430, EN + ES (`plan.save17s`).
+- Drove `/r` at 375/390/430, member + not, EN + ES, REAL taps: all green. **NOT verified: on-device feel.**
 ## 07-23 — alerts sheet, zones back, five site fixes (LIVE on staging + Admin, NOT promoted)
-- Alerts sheet: original On/Off pill + "Pause all alerts" bar (a slider redesign was rejected), scroll fix, name wrap. Zones back → My checks (acctReturn in popstate).
-- Plans sheet KEEPERS (don't undo): per-tab header (Plans "Check+ Premium Plans" + Check+ mark; PAYG "Pay by the Check" + bare `check-brandmark`); grid hidden on PAYG; "You're on the <name> plan" only on Plans.
+- Alerts: original On/Off pill + "Pause all alerts" bar (a slider redesign was rejected). Zones back → My checks (acctReturn in popstate).
+- Plans KEEPERS (don't undo): per-tab header (Plans "Check+ Premium Plans" + mark; PAYG "Pay by the Check", bare brandmark); grid hidden on PAYG; "You're on the <name> plan" only on Plans.
 - Five fixes @4f6c4a6: Admin `inStockBanner` gates the `#finds` banner · `product*` flags filter
   `brandSwitcher()` · `openAlerts` back via `sheetPush` (email + score sheets still share that gap) ·
   `zonePollTick` calls `ensureHistCache()` so zone checks reach Activity · `.alrow` stacked for long names.
