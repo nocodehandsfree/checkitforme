@@ -35,6 +35,7 @@ then they ride the next promote to prod):**
 | [The calling engine, round 2 (Echo)](echo-engine-round-2.md) | voice-calls | active |
 | [Chain section rebuild — GO](../specs/mapping-admin/plan.md) | voice-calls + admin | active (un-parked 07-29) |
 | [The Admin dashboard, continued (new Addie)](addie-dashboard-continue.md) | admin | active |
+| [Voice ▸ Testing becomes the new-engine scorecard](admin-testing-new-engine.md) | admin | queued behind Addie's jobs 1+2 |
 
 ## Other open site fixes (consumer site is frozen: each needs an owner-named `.unlock`)
 | Task | System | Status |
