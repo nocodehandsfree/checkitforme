@@ -1,7 +1,7 @@
 # The chain page rebuild, and how we re-map with the new tech
 
-**Approved in design 2026-07-28. PARKED on the owner's go while Echo builds.** Comps are on the board
-(2f revised, 2h, 2i, 2j, 2k). Every string is pre-written in `copy.md`. Nothing here starts without him.
+**Approved in design 2026-07-28. GO — the owner said build it, 2026-07-29.** Comps are on the board
+(2f revised, 2h, 2i, 2j, 2k). Every string is pre-written in `copy.md`. Work the build order in order.
 
 ---
 

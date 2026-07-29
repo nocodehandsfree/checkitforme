@@ -29,6 +29,13 @@ then they ride the next promote to prod):**
 |---|---|---|
 | [The ops dashboard: build it on real checks](admin-ops-dashboard.md) | admin | active — THE next admin build |
 
+**Stream 4 — the three boxes (owner, 07-29 · each is ONE chat, prompt = "Task: <file>. Boot."):**
+| Task | System | Status |
+|---|---|---|
+| [The calling engine, round 2 (Echo)](echo-engine-round-2.md) | voice-calls | active |
+| [Chain section rebuild — GO](../specs/mapping-admin/plan.md) | voice-calls + admin | active (un-parked 07-29) |
+| [The Admin dashboard, continued (new Addie)](addie-dashboard-continue.md) | admin | active |
+
 ## Other open site fixes (consumer site is frozen: each needs an owner-named `.unlock`)
 | Task | System | Status |
 |---|---|---|
