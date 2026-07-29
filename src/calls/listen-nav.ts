@@ -198,6 +198,22 @@ const MUSIC_VOICED_FRACTION = 0.96;
 const NEW_PERSON_AFTER_MS = 20000;
 
 export type HoldReason = "quiet" | "music" | "transfer";
+/** HOW MUCH RINGING BEFORE WE CALL IT A TRANSFER. One frame used to be enough, and one frame is
+ *  twenty milliseconds — so a single syllable that happened to sit near the network's tone
+ *  frequencies announced a transfer on a store with no menu at all (real receipt, 07-28: ten
+ *  "handed on" lines on a direct-dial call where nobody was ever transferred). A real ringback burst
+ *  in North America runs two full seconds, so this bar is met by any genuine ring and cannot be met
+ *  by a word. */
+const TRANSFER_TONE_MS = 600;
+/** …and how much real speech before we say somebody is BACK. The mirror of the same bug: one
+ *  not-quite-a-tone frame in the middle of a ring cadence read as "a person is talking", which ended
+ *  a hold that had lasted nothing, and then the next ring started another one. That flapping is what
+ *  put ten of each on one receipt. A spoken word runs about three hundred milliseconds, so this
+ *  clears on anybody actually saying something and never on a click, a beep or a gap in hold music. */
+const BACK_VOICE_MS = 400;
+/** A gap longer than this breaks a run of speech. Syllables inside a word sit well under it; the
+ *  pause after "hello" does not. */
+const VOICE_GAP_MS = 300;
 /** Nobody has made a sound for a very long time. Different from "they walked away to go and look":
  *  at this point the line is probably not a conversation any more — the handset was put down and
  *  forgotten, or the far end went away without hanging up. The runtime decides what to do about it;
@@ -206,6 +222,7 @@ const DEAD_AIR_MS = 45000;
 export interface EarTuning {
   holdQuietMs?: number; holdMusicMs?: number; musicWindowMs?: number;
   musicVoicedFraction?: number; newPersonAfterMs?: number; deadAirMs?: number;
+  transferToneMs?: number; backVoiceMs?: number;
 }
 
 /**
@@ -232,6 +249,12 @@ export class ConversationEar {
   private readonly newPersonMs: number;
   private readonly deadAirMs: number;
   private deadAirCalled = false;
+  /** Unbroken run of the network's own ring/busy tone. A transfer needs a real burst of it. */
+  private toneRunMs = 0;
+  /** Unbroken run of speech-shaped sound. Somebody being BACK needs a real run of it. */
+  private voiceRunMs = 0;
+  private readonly transferToneMs: number;
+  private readonly backVoiceMs: number;
   constructor(private on: {
     holdStart: (reason: HoldReason, atMs: number) => void;
     /** @param gapMs how long they were gone. @param maybeNewPerson long enough that it may not be
@@ -249,6 +272,8 @@ export class ConversationEar {
     this.windowMs = t?.musicWindowMs ?? VOICED_WINDOW_MS;
     this.voicedFrac = t?.musicVoicedFraction ?? MUSIC_VOICED_FRACTION;
     this.newPersonMs = t?.newPersonAfterMs ?? NEW_PERSON_AFTER_MS;
+    this.transferToneMs = t?.transferToneMs ?? TRANSFER_TONE_MS;
+    this.backVoiceMs = t?.backVoiceMs ?? BACK_VOICE_MS;
   }
 
   /**
@@ -272,19 +297,34 @@ export class ConversationEar {
     this.voiced.push(loud && !isTone);
     while (this.voiced.length * FRAME_MS > this.windowMs) this.voiced.shift();
 
-    // A ringing line after we already reached a person is a transfer, and it is the one signal that
-    // needs no waiting at all — the frequencies are unambiguous.
-    if (isTone && loud) { this.enter("transfer"); this.quietMs = 0; this.soundMs += FRAME_MS; return; }
+    // A ringing line after we already reached a person is a transfer. The FREQUENCIES are
+    // unambiguous, but one frame of them is not: twenty milliseconds of a voice can land on them by
+    // accident, and treating that as a transfer is what wrote ten false "handed on" lines onto a
+    // direct-dial call. So the tone has to actually RUN. A genuine ringback burst is two seconds.
+    if (isTone && loud) {
+      this.toneRunMs += FRAME_MS; this.voiceRunMs = 0;
+      this.quietMs = 0; this.soundMs += FRAME_MS;
+      if (this.toneRunMs >= this.transferToneMs) this.enter("transfer");
+      return;
+    }
+    this.toneRunMs = 0;
 
     if (loud) {
       this.soundMs += FRAME_MS; this.quietMs = 0;
       const full = this.voiced.length * FRAME_MS >= this.windowMs
         && this.voiced.filter(Boolean).length / this.voiced.length >= this.voicedFrac;
-      if (full && this.soundMs >= this.musicMax) this.enter("music");
-      // Sound with gaps in it is a person. If we thought they were away, they are back.
-      else if (!full) { this.heardVoiceMs += FRAME_MS; this.deadAirCalled = false; this.leave(); }
+      if (full && this.soundMs >= this.musicMax) { this.voiceRunMs = 0; this.enter("music"); }
+      // Sound with gaps in it is a person. If we thought they were away, they are back — but only
+      // once they have actually said SOMETHING. A single frame ending a hold is the other half of the
+      // flapping bug: it ended a hold that had lasted nothing, and the next ring opened another one.
+      else if (!full) {
+        this.heardVoiceMs += FRAME_MS; this.voiceRunMs += FRAME_MS; this.deadAirCalled = false;
+        if (this.voiceRunMs >= this.backVoiceMs) this.leave();
+      }
     } else {
       this.soundMs = 0; this.quietMs += FRAME_MS;
+      // A pause long enough to break a word breaks the run of speech with it.
+      if (this.quietMs >= VOICE_GAP_MS) this.voiceRunMs = 0;
       if (this.quietMs >= this.quietMax) this.enter("quiet");
       // Far past a normal wait. Somebody stepping away to check a shelf comes back; this does not,
       // and it is the shape of a handset put down on a counter and forgotten.
@@ -302,7 +342,7 @@ export class ConversationEar {
     // BACKDATE to the moment they actually went, not the moment we were sure. We only declare a hold
     // after six seconds of evidence, so timing it from the declaration would report a seven second
     // absence as one second — and the whole point of the number is how long nobody was there.
-    const already = reason === "quiet" ? this.quietMs : reason === "music" ? this.soundMs : 0;
+    const already = reason === "quiet" ? this.quietMs : reason === "music" ? this.soundMs : this.toneRunMs;
     this.holdStartedAt = Math.max(0, this.elapsed - already);
     this.holdMs += already;
     this.on.holdStart(reason, this.holdStartedAt);
@@ -310,9 +350,15 @@ export class ConversationEar {
 
   private leave(): void {
     if (!this.reason) return;
-    const gap = this.elapsed - this.holdStartedAt;
+    // They came back when they STARTED talking, not when we had heard enough of it to be sure. The
+    // run of speech that convinced us is theirs, not the hold's, so it comes off both numbers —
+    // otherwise every hold reads a few hundred milliseconds longer than it was.
+    const back = Math.max(0, this.elapsed - this.voiceRunMs);
+    const gap = Math.max(0, back - this.holdStartedAt);
+    this.holdMs = Math.max(0, this.holdMs - this.voiceRunMs);
     this.reason = null;
-    this.on.holdEnd(gap, gap >= this.newPersonMs, this.elapsed);
+    this.voiceRunMs = 0;
+    this.on.holdEnd(gap, gap >= this.newPersonMs, back);
   }
 }
 
@@ -558,4 +604,5 @@ export function listenNavOpeningTwiml(fork: string, bridgeUrl: string, room: str
 }
 
 export const _test = { LEAD_SEC, GRACE_SEC, MIN_SPEECH_MS, END_SILENCE_MS, VOICE_THRESH, FRAME_MS,
-  HOLD_QUIET_MS, HOLD_MUSIC_MS, NEW_PERSON_AFTER_MS, PERSON_GREETING_MAX_MS, PERSON_WAIT_MS };
+  HOLD_QUIET_MS, HOLD_MUSIC_MS, NEW_PERSON_AFTER_MS, PERSON_GREETING_MAX_MS, PERSON_WAIT_MS,
+  TRANSFER_TONE_MS, BACK_VOICE_MS, VOICE_GAP_MS };

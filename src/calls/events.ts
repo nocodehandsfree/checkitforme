@@ -199,6 +199,32 @@ export function emit(room: string, kind: EventKind, note?: string, detail?: Reco
 }
 
 /**
+ * ADD FACTS TO AN EVENT ALREADY ON THE TIMELINE. The last one of its kind, which is the one still
+ * being lived through.
+ *
+ * WHY (owner, 07-28: "it opens charlie_join three times"): one agent joining one call used to write
+ * three lines that all read as the agent joining — the recorded question starting, his session
+ * opening, and the handover when the question finished. The event set is a closed sixteen and the
+ * Admin prints the note of every line, so three of them read as three joins on a call with one.
+ *
+ * The three are ONE story with details, not three events. The details are worth keeping (which
+ * signal confirmed the question had played, how many frames of the answer we were holding), so they
+ * are attached to the single line rather than each getting one of their own. Best-effort, like every
+ * other recorder here — a missing event is simply not amended.
+ */
+export function amend(room: string, kind: EventKind, patch: Record<string, unknown>): void {
+  try {
+    const r = receipts.get(room);
+    if (!r || r.closed) return;
+    for (let i = r.events.length - 1; i >= 0; i--) {
+      if (r.events[i].kind !== kind) continue;
+      r.events[i].detail = { ...(r.events[i].detail ?? {}), ...patch };
+      return;
+    }
+  } catch { /* recording must never break a call */ }
+}
+
+/**
  * ONE LINE OF WHAT WAS SAID, AS WE HEARD IT (spec: the live call runtime, hard rule 2).
  *
  * "Our receipt is the source of truth for the transcript, the timings and the verdict. The voice
@@ -459,6 +485,71 @@ export function rollup(r: Receipt): Rollup {
       : r.segments.every((s) => s.brain === "ours") ? "ours"
       : r.segments.every((s) => s.brain === "hosted") ? "hosted" : "mixed",
     navOutcome: navOutcomeOf(r),
+  };
+}
+
+/**
+ * THE STAMPED ROW, READ BACK AS THE SAME ROLL-UP A LIVE CALL PRODUCES.
+ *
+ * WHY THIS EXISTS (owner, 07-28): "one envelope, two answers." A finished call was rolled up in two
+ * different places — by call id it came back complete, and by room it came back with the seconds and
+ * the cost NULL, because the by-room reader only knew how to find them on the LAST EVENT'S DETAIL.
+ * That is only where they live for a call with no call_results row (an Admin one-off). An ATTACHED
+ * call stamps them on the row instead, and nothing was reading them back off it. Same call, same
+ * envelope, two different answers depending on which door you came in.
+ *
+ * So the read-back lives HERE, once, next to the roll-up it has to agree with. Pure — the caller
+ * hands in the row and the timeline it already loaded.
+ *
+ * A number the row never stamped stays NULL. A row written by an older build has some of these
+ * columns and not others, and reporting the ones it happens to have would put a nonsense pair on
+ * screen: nought seconds connected beside a second of dead air. So if the connected time was never
+ * stamped, the whole agent block reads as unmeasured, which is the truth.
+ */
+export interface StampedCall {
+  lane?: string | null;
+  callSeconds?: number | null;
+  navSeconds?: number | null;
+  talkSeconds?: number | null;
+  charlieConnectedSeconds?: number | null;
+  charlieTalkingSeconds?: number | null;
+  charlieSpeakingSeconds?: number | null;
+  charlieListeningSeconds?: number | null;
+  charlieSilentSeconds?: number | null;
+  ringSeconds?: number | null;
+  holdSeconds?: number | null;
+  billedMinutes?: number | null;
+  menuSeconds?: number | null;
+  brain?: string | null;
+  navOutcome?: string | null;
+  charlieSegments?: number | null;
+}
+export function rollupFromRow(call: StampedCall, timeline: Array<{ kind: string; detail?: unknown }>): Rollup {
+  const steps = timeline.filter((t) => t.kind === "alpha_press" || t.kind === "bravo_say");
+  const stamped = call.charlieConnectedSeconds != null;
+  // How many stretches the agent was open for. The row carries it on every call written by the new
+  // engine; older rows do not, so it is read back off the timeline the same way it always was.
+  const joins = timeline.filter((t) => t.kind === "charlie_join" && (t.detail as { segment?: number } | null)?.segment != null).length;
+  return {
+    lane: (call.lane ?? "unknown") as Lane,
+    callSecs: call.callSeconds ?? 0,
+    navSeconds: call.navSeconds ?? null,
+    talkSeconds: call.talkSeconds ?? null,
+    charlieConnectedSeconds: stamped ? call.charlieConnectedSeconds! : 0,
+    charlieTalkingSeconds: stamped ? (call.charlieTalkingSeconds ?? 0) : 0,
+    charlieSilentSeconds: stamped ? (call.charlieSilentSeconds ?? 0) : 0,
+    speakingSecs: stamped ? (call.charlieSpeakingSeconds ?? 0) : 0,
+    listeningSecs: stamped ? (call.charlieListeningSeconds ?? 0) : 0,
+    ringSeconds: stamped ? (call.ringSeconds ?? 0) : 0,
+    holdSeconds: call.holdSeconds ?? null,
+    billedMinutes: call.billedMinutes ?? Math.ceil((call.callSeconds ?? 0) / 60),
+    menuSeconds: call.menuSeconds ?? null,
+    stepsFired: steps.length,
+    stepsOnPause: steps.filter((t) => (t.detail as { via?: string } | null)?.via === "prompt").length,
+    charlieJoined: stamped && (call.charlieConnectedSeconds ?? 0) > 0,
+    charlieSegments: call.charlieSegments ?? joins,
+    brain: (call.brain ?? null) as Rollup["brain"],
+    navOutcome: (call.navOutcome ?? "no_route") as NavOutcome,
   };
 }
 

@@ -37,7 +37,7 @@ import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
 import { placeNavCall, navInitialTwiml, navStep, navEnded, navMediaFeed, getNavSession, latestNavSessionForChain, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
 import { listenNavFeed, endListenNav } from "./calls/listen-nav";
 // THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
-import { emit, markNow, closeReceipt, linkCall, rollup, getReceipt, type Rollup } from "./calls/events";
+import { emit, markNow, closeReceipt, linkCall, rollup, rollupFromRow, getReceipt, type Rollup } from "./calls/events";
 import { installReceiptStore, currentRates, onReceiptClosed } from "./calls/receipt-store";
 import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
@@ -1241,36 +1241,9 @@ app.get("/api/calls/:id/receipt", async (c) => {
 
   // A finished call is served from its own stamped row, so a replay always agrees with the numbers
   // the reports are summing. A null here means we never measured it — not that it was zero.
-  const steps = timeline.filter((t) => t.kind === "alpha_press" || t.kind === "bravo_say");
-  // A row written by an older build has some of these columns and not others. Reporting the ones it
-  // happens to have would put a nonsense pair on screen — nought seconds connected next to a second
-  // of dead air. If the row was never stamped with connected time, the whole agent block reads as
-  // unmeasured, which is the truth.
-  const stamped = call.charlieConnectedSeconds != null;
-  const sums: Rollup = live ? rollup(live) : {
-    lane: (call.lane ?? "unknown") as Rollup["lane"],
-    callSecs: call.callSeconds ?? 0,
-    navSeconds: call.navSeconds ?? null,
-    talkSeconds: call.talkSeconds ?? null,
-    charlieConnectedSeconds: stamped ? call.charlieConnectedSeconds! : 0,
-    charlieTalkingSeconds: stamped ? (call.charlieTalkingSeconds ?? 0) : 0,
-    charlieSilentSeconds: stamped ? (call.charlieSilentSeconds ?? 0) : 0,
-    speakingSecs: stamped ? (call.charlieSpeakingSeconds ?? 0) : 0,
-    listeningSecs: stamped ? (call.charlieListeningSeconds ?? 0) : 0,
-    ringSeconds: stamped ? (call.ringSeconds ?? 0) : 0,
-    holdSeconds: call.holdSeconds ?? null,
-    billedMinutes: call.billedMinutes ?? Math.ceil((call.callSeconds ?? 0) / 60),
-    menuSeconds: call.menuSeconds ?? null,
-    stepsFired: steps.length,
-    stepsOnPause: steps.filter((t) => (t.detail as { via?: string } | null)?.via === "prompt").length,
-    charlieJoined: stamped && (call.charlieConnectedSeconds ?? 0) > 0,
-    // Read back off the timeline the row already carries, so a finished call answers the same
-    // questions a live one does: how many times the agent was opened, which brain served him, and
-    // what the walk to a person actually achieved.
-    charlieSegments: timeline.filter((t) => t.kind === "charlie_join" && (t.detail as { segment?: number } | null)?.segment != null).length,
-    brain: (call.brain ?? null) as Rollup["brain"],
-    navOutcome: (call.navOutcome ?? "no_route") as Rollup["navOutcome"],
-  };
+  // ONE reader for a stamped row (rollupFromRow, in src/calls/events.ts beside the roll-up it has to
+  // agree with), so this route and the by-room one can never answer differently about the same call.
+  const sums: Rollup = live ? rollup(live) : rollupFromRow(call, timeline);
   const cost = live
     ? costCall({ callSecs: sums.callSecs, charlieSecs: sums.charlieConnectedSeconds, avoidableSecs: sums.charlieSilentSeconds, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))] }, await currentRates())
     : { lineUsd: call.costLineUsd ?? 0, forkUsd: call.costForkUsd ?? 0, charlieUsd: call.costCharlieUsd ?? 0, clipsUsd: call.costClipsUsd ?? 0, totalUsd: call.costTotalUsd ?? 0, billedMinutes: sums.billedMinutes, charlieSecs: sums.charlieConnectedSeconds, avoidableUsd: call.costAvoidableUsd ?? 0 };
@@ -5933,7 +5906,7 @@ app.get("/api/admin/receipt/:room", async (c) => {
     const sums = rollup(live);
     const cost = costCall({ callSecs: sums.callSecs, charlieSecs: sums.charlieConnectedSeconds, avoidableSecs: sums.charlieSilentSeconds, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))] }, await currentRates());
     return c.json({
-      room, live: true,
+      room, live: true, stamped: true,
       timeline: live.events.map((e) => ({ atSec: e.atSec, kind: e.kind, note: e.note ?? "", detail: e.detail ?? null })),
       seconds: sums,
       cost: { ...cost, readable: readable(cost) },
@@ -5942,15 +5915,37 @@ app.get("/api/admin/receipt/:room", async (c) => {
   const rows = await db.select().from(callEvents).where(eq(callEvents.room, room)).orderBy(callEvents.atMs);
   if (!rows.length) return c.json({ error: "no receipt for that call" }, 404);
   const parse = (s: string | null) => { try { return s ? JSON.parse(s) as Record<string, unknown> : null; } catch { return null; } };
-  // An unattached call rolls its seconds and cost onto the LAST event's detail (receipt-store.ts),
+  const timeline = rows.map((r) => ({ atSec: r.atSec, kind: r.kind, note: r.note ?? "", detail: parse(r.detail) }));
+  // An UNATTACHED call rolls its seconds and cost onto the LAST event's detail (receipt-store.ts),
   // because there is no call_results row to stamp and the event set is a closed sixteen.
   const tail = parse(rows[rows.length - 1]?.detail ?? null);
-  const tailCost = (tail?.cost ?? null) as { totalUsd: number; charlieUsd: number; lineUsd: number; avoidableUsd: number } | null;
+  let seconds = (tail?.seconds ?? null) as Rollup | null;
+  let cost = (tail?.cost ?? null) as { totalUsd: number; charlieUsd: number; lineUsd: number; avoidableUsd: number } | null;
+  // …but an ATTACHED call stamps them on the ROW instead, and this route only ever looked at the
+  // tail — so the same finished call came back complete by call id and with the seconds and the cost
+  // NULL by room. One envelope, two answers (owner 07-28). Now the row is the second place we look,
+  // read by the SAME function the by-id route uses, so the two cannot drift apart again.
+  if (!seconds || !cost) {
+    const callId = rows.find((r) => r.callId != null)?.callId ?? null;
+    const attached = (await db.select().from(callResults)
+      .where(callId != null ? eq(callResults.id, callId) : eq(callResults.room, room)).limit(1))[0];
+    if (attached) {
+      if (!seconds) seconds = rollupFromRow(attached, timeline);
+      // A cost of nought is not a cost: the carrier bills a whole minute the moment we dial, so a row
+      // with no total was written before this engine priced anything. Say nothing rather than free.
+      if (!cost && attached.costTotalUsd != null) cost = {
+        totalUsd: attached.costTotalUsd, charlieUsd: attached.costCharlieUsd ?? 0,
+        lineUsd: attached.costLineUsd ?? 0, avoidableUsd: attached.costAvoidableUsd ?? 0,
+      };
+    }
+  }
   return c.json({
     room, live: false,
-    timeline: rows.map((r) => ({ atSec: r.atSec, kind: r.kind, note: r.note ?? "", detail: parse(r.detail) })),
-    seconds: tail?.seconds ?? null,
-    cost: tailCost ? { ...tailCost, readable: readable(tailCost) } : null,
+    timeline,
+    seconds,
+    // Same flag the by-id route sends, so the one viewer can tell "never written down" from "free".
+    stamped: !!cost,
+    cost: cost ? { ...cost, readable: readable(cost) } : null,
   });
 });
 app.get("/api/admin/call-timing", async (c) => {

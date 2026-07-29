@@ -20,6 +20,8 @@ export interface CallTuning {
   musicWindowMs: number;
   musicVoicedFraction: number;
   newPersonAfterMs: number;
+  transferToneMs: number;
+  backVoiceMs: number;
   // ---- the recorded question ----
   prewarmLeadMs: number;
   clipSettleMs: number;
@@ -38,6 +40,8 @@ export const TUNING_DEFAULTS: CallTuning = {
   musicWindowMs: 3000,
   musicVoicedFraction: 0.96,
   newPersonAfterMs: 20000,
+  transferToneMs: 600,
+  backVoiceMs: 400,
   prewarmLeadMs: 2000,
   clipSettleMs: 250,
   clipBackstopMs: 4000,
@@ -53,6 +57,8 @@ export const TUNING_WHY: Record<keyof CallTuning, string> = {
   musicWindowMs: "How much recent audio we look at to decide speech versus continuous sound.",
   musicVoicedFraction: "How solidly filled that window has to be before we call it music. Speech never fills it.",
   newPersonAfterMs: "A gap longer than this and whoever comes back may not be who left, so the agent is warned.",
+  transferToneMs: "How long a phone has to be ringing before we say we were handed on. A real ring runs two seconds, so anything shorter was a voice that happened to sound like one.",
+  backVoiceMs: "How much talking we need to hear before we say somebody is back. About one word. Less than this and a click or a gap in hold music ends a wait that never ended.",
   prewarmLeadMs: "How early the agent starts connecting, measured back from the end of the recorded question. He bills from the second he connects.",
   clipSettleMs: "A breath after the recorded question so the agent cannot clip its own tail.",
   clipBackstopMs: "If nothing confirms the question finished, hand over anyway this long after it should have. A clerk talking to silence is the worse failure.",
@@ -65,6 +71,7 @@ const LIMITS: Record<keyof CallTuning, [number, number]> = {
   holdQuietMs: [2000, 60000], holdMusicMs: [2000, 60000],
   musicWindowMs: [500, 10000], musicVoicedFraction: [0.5, 1],
   newPersonAfterMs: [5000, 300000],
+  transferToneMs: [200, 5000], backVoiceMs: [100, 3000],
   prewarmLeadMs: [0, 10000], clipSettleMs: [0, 3000], clipBackstopMs: [500, 20000],
   reconnectWindowMin: [1, 120],
 };

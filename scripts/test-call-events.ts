@@ -5,7 +5,7 @@
 // the money clock starts when the agent opens, dead air is counted honestly, the lane is stamped
 // from the plan, and the phone line bills whole minutes. No database, no network, no clock games.
 import {
-  openReceipt, emit, markNow, addMs, closeReceipt, rollup, setEventSink,
+  openReceipt, emit, amend, markNow, addMs, closeReceipt, rollup, rollupFromRow, setEventSink,
   getReceipt, laneNote, laneFor, actualLane, _receiptFrom, _reset, type Receipt, type RtEvent,
 } from "../src/calls/events";
 import { costCall, costPerResult, money, MEASURED_RATES, USD } from "../src/calls/cost";
@@ -223,6 +223,49 @@ console.log("\u25b6 the three parts always add back up, even when the millisecon
   const s = rollup(_receiptFrom({ meters: { charlieOpenMs: 3_400, charlieCloseMs: 16_000, speakingMs: 0, listeningMs: 6_400, endMs: 16_500 } }));
   ok(s.speakingSecs + s.listeningSecs + s.charlieSilentSeconds === s.charlieConnectedSeconds, "rounding each part on its own can never make the meter disagree with the bill");
   ok(s.charlieTalkingSeconds + s.charlieSilentSeconds === s.charlieConnectedSeconds, "talking plus waste is the whole bill");
+}
+
+// ONE ENVELOPE, ONE ANSWER (owner 07-28). The same finished call came back complete when it was
+// asked for by call id and with the seconds and the cost NULL when it was asked for by room, because
+// the by-room reader only knew where an UNATTACHED call keeps them. Both routes now read a stamped
+// row through this one function, so they cannot answer differently again.
+console.log("▶ a stamped row reads back as the same roll-up a live call produces");
+{
+  const row = {
+    lane: "direct", callSeconds: 19, navSeconds: 1, talkSeconds: 18,
+    charlieConnectedSeconds: 19, charlieTalkingSeconds: 7, charlieSpeakingSeconds: 5,
+    charlieListeningSeconds: 2, charlieSilentSeconds: 12, ringSeconds: 0, holdSeconds: 0,
+    billedMinutes: 1, menuSeconds: null, brain: "hosted", navOutcome: "reached_a_person",
+    charlieSegments: 1,
+  };
+  const s = rollupFromRow(row, [{ kind: "charlie_join", detail: { segment: 1 } }]);
+  ok(s.charlieConnectedSeconds === 19 && s.charlieSilentSeconds === 12, "the agent's seconds come back off the row, not as nulls");
+  ok(s.brain === "hosted" && s.navOutcome === "reached_a_person", "and so does which brain ran it and what the walk achieved");
+  ok(s.holdSeconds === 0, "a measured zero stays a measured zero");
+  ok(rollupFromRow({ ...row, holdSeconds: null }, []).holdSeconds === null, "…and a hold we never measured stays null, never a zero");
+}
+
+console.log("▶ a row from before the engine priced anything reads as unmeasured, not as free");
+{
+  const s = rollupFromRow({ callSeconds: 30, charlieConnectedSeconds: null, charlieSilentSeconds: 4 }, []);
+  ok(s.charlieConnectedSeconds === 0 && s.charlieSilentSeconds === 0, "no connected time stamped = the whole agent block reads unmeasured, never nought-connected-with-dead-air");
+  ok(s.billedMinutes === 1, "the carrier still billed a whole minute, and that we do know");
+}
+
+// ONE AGENT JOINING IS ONE LINE (owner 07-28: "it opens charlie_join three times"). The recorded
+// question starting and the handover when it finished are details of the join, not joins of their own.
+console.log("▶ facts can be added to the line already on the timeline, instead of writing another one");
+{
+  _reset();
+  openReceipt("r-amend");
+  emit("r-amend", "charlie_join", "The agent is on the line and billing", { segment: 1, brain: "hosted" });
+  amend("r-amend", "charlie_join", { handoverVia: "the carrier confirmed the clip played", heldFrames: 103 });
+  const r = getReceipt("r-amend") as Receipt;
+  const joins = r.events.filter((e) => e.kind === "charlie_join");
+  ok(joins.length === 1, "one agent joining is still exactly one line");
+  ok(joins[0].detail?.heldFrames === 103 && joins[0].detail?.segment === 1, "the new facts land on it without losing the old ones");
+  amend("r-amend", "hold_start", { reason: "quiet" });
+  ok(r.events.filter((e) => e.kind === "hold_start").length === 0, "amending an event that never happened writes nothing");
 }
 
 console.log(`\n${fail === 0 ? "ALL PASS" : "FAILURES"} — ${pass} passed, ${fail} failed`);

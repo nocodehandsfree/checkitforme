@@ -8,7 +8,7 @@ import { config } from "../config";
 // seconds split into talking / listening / dead air, because it is the only place the audio passes
 // through. Every stamp is "now"; the receipt owns the clock, since it started at dial and this
 // socket opens much later.
-import { emit, markNow, addMs, linkProviderCall, openSegment, closeSegment, startMeter, recordLine } from "../calls/events";
+import { emit, amend, markNow, addMs, linkProviderCall, openSegment, closeSegment, startMeter, recordLine } from "../calls/events";
 // The Ear that stays on the call while a person is talking to us. Pure and dependency-free on
 // purpose, so every threshold in it is provable without a phone call.
 import { ConversationEar, type HoldReason } from "../calls/listen-nav";
@@ -308,6 +308,13 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   // he owns every turn from there.
   let charlieGateOpen = true;   // true = today's behaviour, agent talks the moment he is ready
   let clipText = "";            // the question Delta asked, handed to the agent as context
+  let clipMs = 0;               // how long the question ran, for the one join line's detail
+  // ONE AGENT JOINING IS ONE LINE ON THE TIMELINE (owner 07-28: "it opens charlie_join three times").
+  // The question starting and the handover when it finished are DETAILS of that join, not joins of
+  // their own — the event set is a closed sixteen and the Admin prints every line's note, so three of
+  // them read as three separate agents on a call that had one. Whichever happens first (the gate can
+  // beat the session open on a short clip) leaves its facts here; the other side picks them up.
+  let joinFacts: Record<string, unknown> = {};
   const clipTimers: NodeJS.Timeout[] = [];
   let prewarmTimer: NodeJS.Timeout | null = null;
   let opening = false;          // a session is being opened right now
@@ -365,8 +372,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     clipTimers.forEach(clearTimeout); clipTimers.length = 0;
     // The question ended sooner than his warm-up was due to start — a short clip, or the carrier
     // confirming early. Open him NOW rather than let the conversation begin with nobody on our end.
+    // THE HANDOVER IS A DETAIL OF THE JOIN, NOT A SECOND JOIN. Which signal confirmed the question
+    // had played, and how much of the answer we were holding while it did, are exactly what you want
+    // when a call goes wrong — so they are kept, on the one line that says the agent joined.
+    joinFacts = { ...joinFacts, handoverVia: via, heldFrames: pending.length };
+    amend(room, "charlie_join", joinFacts);
     if (!eleven) { if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } void connectEleven(); }
-    emit(room, "charlie_join", "Question asked, the agent has the conversation from here", { handover: true, via, held: pending.length });
     log(`delta: clip finished (${via}) -> agent gate open, releasing ${pending.length} buffered frame(s)`);
     flushPending();
   }
@@ -388,6 +399,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (twilio.readyState !== 1 || !streamSid) { log("delta: socket not ready, no clip -> agent opens as usual"); return false; }
     charlieGateOpen = false;
     clipText = clip.text;
+    clipMs = clip.ms;
     // Buffer inbound audio from THIS moment, not from when his session starts opening. He is now
     // connecting later than the clip begins, and a clerk who answers in that window must still be
     // held rather than fed to the human detector, which would drop their words entirely.
@@ -402,7 +414,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // clip, and that is exactly the dead air the receipt exists to show us.
     agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + clip.ms;
     twilio.send(JSON.stringify({ event: "mark", streamSid, mark: { name: CLIP_MARK } }));
-    emit(room, "charlie_join", `Asked the question, warming the agent up behind it`, { prewarm: true, clipMs: clip.ms, question: clip.text });
+    // NOT a join: the agent has not opened, is not billing, and cannot be heard. It used to write a
+    // "charlie_join" line here, which is how one agent came to join three times on one receipt. The
+    // question itself is not lost — recordLine below puts it on the transcript at its real second,
+    // where it belongs, and its length rides the real join line.
+    joinFacts = { ...joinFacts, question: clip.text, clipMs: clip.ms };
     // THE QUESTION WE ACTUALLY ASKED IS A LINE OF THE CONVERSATION. It is played from a recording
     // rather than generated, so nothing in the provider's transcript knows it happened — which left
     // our own record missing the single most important line on the call, and left the live view with
@@ -446,10 +462,16 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   function beginHold(reason: HoldReason, atMs: number) {
     if (onHold) return;
     onHold = true; holdReason = reason; heldWords = [];
-    const note = reason === "transfer" ? "The menu handed us on and the next desk is ringing"
+    // EVERY WAIT THAT ENDS HAS TO HAVE STARTED. A transfer used to write ONLY its own line, and then
+    // the wait it caused ended with a "back off hold" that had no "put on hold" anywhere above it —
+    // a receipt you cannot read straight through (owner 07-28). Being handed on and being made to
+    // wait are two facts, so a real transfer now says both, in that order. No new event kinds: the
+    // set is a closed sixteen and both of these are already in it.
+    if (reason === "transfer") emit(room, "transfer", "The menu handed us on and the next desk is ringing", { reason, atMs });
+    const note = reason === "transfer" ? "Waiting on the next desk to pick up"
       : reason === "music" ? "Hold music, the person has stepped away"
       : "The line went quiet, the person has stepped away";
-    emit(room, reason === "transfer" ? "transfer" : "hold_start", note, { reason, atMs });
+    emit(room, "hold_start", note, { reason, atMs });
     if (ctx?.holdStrategy === "reopen") {
       // Close him. This is the only thing that actually stops the meter — muting saves nothing.
       // The call, the room and the receipt all continue; when somebody comes back he opens again as
@@ -551,7 +573,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // A NUMBERED STRETCH of this one call, never a separate call (hard rule 1). Ordinary calls
       // have exactly one; a call where he was closed for a wait has two or more.
       const n = openSegment(room, segmentBrain, segmentWhy);
-      emit(room, "charlie_join", n === 1 ? "The agent is on the line and billing" : `The agent is back on the line (part ${n} of this call)`, { reason: connectReason, segment: n, brain: segmentBrain, why: segmentWhy });
+      // THE ONE LINE that says the agent joined. Everything the recorded question and the handover
+      // know about this join rides in its detail rather than writing lines of its own.
+      emit(room, "charlie_join", n === 1 ? "The agent is on the line and billing" : `The agent is back on the line (part ${n} of this call)`, { reason: connectReason, segment: n, brain: segmentBrain, why: segmentWhy, ...joinFacts });
       log("eleven WS open -> sending init");
       // The question Delta already asked rides in as context, so the joining agent knows what the
       // clerk is answering and never asks it a second time.

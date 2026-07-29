@@ -146,14 +146,14 @@ console.log("▶ the clerk says hello: the question goes out, the agent connects
   tw.say({ event: "mark", mark: { name: "delta-opening" } });
   await sleep(60);
   ok(f.chunks.length >= 2, `the held words were released whole (${f.chunks.length} frames)`);
-  // Three lines, in the order they happened: we asked and started warming him up, the money clock
-  // started when his session opened, then he took the conversation. Same event kind throughout —
-  // the closed set of sixteen does not grow, the detail carries the difference.
+  // ONE LINE, not three (owner 07-28: "it opens charlie_join three times"). Three things happened —
+  // we asked the question, his session opened and started billing, then he took the conversation —
+  // but ONE agent joined ONE call, and the Admin prints every line's note, so three of them read as
+  // three agents. The other two are details of the join, and every one of those details is kept.
   const joins = (getReceipt("room-clip")?.events || []).filter((e) => e.kind === "charlie_join");
-  ok(joins.length === 3, `the timeline tells the whole story in order (${joins.map((j) => j.note).join(" | ")})`);
-  ok(!!joins[0]?.detail?.prewarm && joins[0]?.detail?.clipMs === 1000, "line one: the question we asked and how long it ran");
-  const handover = joins.find((j) => j.detail?.handover);
-  ok(handover?.detail?.via === "the carrier confirmed the clip played", "the receipt says WHICH signal ended the clip");
+  ok(joins.length === 1, `one agent joining is one line (${joins.map((j) => j.note).join(" | ")})`);
+  ok(joins[0]?.detail?.clipMs === 1000 && typeof joins[0]?.detail?.question === "string", "and it carries the question we asked and how long it ran");
+  ok(joins[0]?.detail?.handoverVia === "the carrier confirmed the clip played", "the receipt still says WHICH signal ended the clip");
 
   console.log("▶ from here the agent owns every turn");
   const before = f.chunks.length;
@@ -211,8 +211,8 @@ console.log("\n▶ the clip's own length ends it when no mark ever arrives");
   ok(f.chunks.length === 0, "still held at 120ms into a 300ms clip");
   await sleep(500);                       // past clip + settle, with no mark at all
   ok(f.chunks.length >= 1, "the clip's known length opened the gate on its own");
-  const handover = (getReceipt("room-length")?.events || []).find((e) => e.detail?.handover);
-  ok(String(handover?.detail?.via || "").includes("finished playing"), "the receipt names the length signal, not the mark");
+  const handover = (getReceipt("room-length")?.events || []).find((e) => e.detail?.handoverVia);
+  ok(String(handover?.detail?.handoverVia || "").includes("finished playing"), "the receipt names the length signal, not the mark");
   restore(); tw.close(); f.close();
 }
 
@@ -343,12 +343,23 @@ console.log("\n▶ a transfer is known the moment the next desk starts ringing")
   const restore = stubSignedUrl(f);
   const tw = await callWithHold(f, "room-xfer", "gate");
   speak(tw, 150);
-  // A ringing line is not loudness, it is the phone network's own published frequencies.
-  const ring = ringFrames(500);
+  // A ringing line is not loudness, it is the phone network's own published frequencies — and it has
+  // to actually KEEP ringing. Half a second used to be enough, and half a second of a voice can land
+  // on those frequencies by accident: that wrote ten false "handed on" lines onto a direct-dial call
+  // with no menu at all (receipt 199, 07-28). A real ringback burst runs two full seconds.
+  const short = ringFrames(400);
+  for (const fr of short) tw.media(fr);
+  await sleep(60);
+  ok(!(getReceipt("room-xfer")?.events || []).some((e) => e.kind === "transfer"), "a flicker on the tone frequencies is not a transfer");
+  const ring = ringFrames(1200);
   for (const fr of ring) tw.media(fr);
   await sleep(60);
-  const ev = (getReceipt("room-xfer")?.events || []).find((e) => e.kind === "transfer");
-  ok(!!ev, "the receipt says we were transferred, not that the clerk went quiet");
+  const evs = getReceipt("room-xfer")?.events || [];
+  const ev = evs.find((e) => e.kind === "transfer");
+  ok(!!ev, "a phone that keeps ringing IS a transfer, and the receipt says so");
+  // EVERY WAIT THAT ENDS HAS TO HAVE STARTED. A transfer used to write only its own line, so the
+  // "back off hold" that followed had no "put on hold" above it anywhere.
+  ok(evs.some((e) => e.kind === "hold_start" && e.detail?.reason === "transfer"), "…and the wait it caused is opened too, so the timeline reads straight through");
   restore(); tw.close(); f.close();
 }
 
