@@ -372,6 +372,11 @@
   .k-switch::after{content:'';position:absolute;top:2.5px;left:2.5px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.3);transition:left .18s}
   .k-switch.on{background:var(--green);box-shadow:inset 0 1px 2px rgba(0,0,0,.2)}
   .k-switch.on::after{left:21.5px}
+  /* THE console number. The switch's sibling for a row that holds a figure instead of an on or off.
+     Same raised pill as select.k-filter (line 331) without the chevron, so a console reads as one set. */
+  input.k-num,input.k-txt{width:auto;max-width:32vw;background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:999px;padding:9px 15px;font-size:13px;font-weight:700;color:#fff;flex:0 0 auto;font-family:inherit}
+  input.k-num{text-align:right;font-variant-numeric:tabular-nums}
+  input.k-num:focus,input.k-txt:focus{outline:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1),0 0 0 2px rgba(74,222,128,.55)}
   .k-sub{font-size:12.5px;font-weight:600;color:#8A8A96;margin:2px 0 16px}
   .k-note{font-size:11.5px;font-weight:600;color:#5C5C68;padding:16px 4px 0;line-height:1.5}
   .k-raise{background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
@@ -1161,12 +1166,17 @@
     <div class="k-sub">Flags, pricing and customer queues</div>
     <div class="k-eyebrow">Feature flags · live on tap</div>
     <div id="gw_flags" class="meta">Loading…</div>
+    <!-- Pricing STAYS here: the comp says "Flags and pricing stay as a console" (ADMIN_COMPS 1i note).
+         What changed is the grammar. A console has no save key ("Toggles save on tap"), so the old
+         two-column grid of bare number boxes plus a Save pricing key became console rows that each
+         save when you leave the field. The web-analytics ID left for App: it is an app-wide default,
+         not pricing, and it was the only thing under this eyebrow that was neither. -->
     <div class="k-eyebrow">Pricing and rewards</div>
-    <div id="gw_pricing" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
-    <div class="btnrow"><button class="act" onclick="savePolicyForm()">Save pricing</button></div>
+    <div id="gw_pricing"></div>
     <div id="gw_plansmirror"></div>
     <div class="k-eyebrow">Queues</div>
     <div id="gw_queues"></div>
+    <div class="k-note">Every number saves when you leave the field, and customers see it straight away.</div>
     <div id="gw_qholders" style="display:none">
       <div id="gw_watches"></div>
       <div id="gw_community"></div>
@@ -1193,6 +1203,12 @@
     <div class="peek static">
       <div class="pk-main"><div class="pk-t">Charlie on Anthropic API</div><div class="pk-m">The thinking runs on our own account<span id="brainEnv"></span> · blocked: our voice is a clone and they don’t allow it</div></div>
       <button class="k-switch" id="brainToggle" onclick="toggleOurBrain()" aria-label="Charlie on Anthropic API"></button>
+    </div>
+    <!-- Came off Policy 07-29: an analytics ID is an app-wide default, not pricing, and it was the one
+         thing under Policy's "Pricing and rewards" eyebrow that was neither. Same field, same save. -->
+    <div class="peek static">
+      <div class="pk-main"><div class="pk-t">Web analytics ID</div><div class="pk-m">The measurement ID the site reports visits to</div></div>
+      <input class="k-txt" id="set_ga4" value="" spellcheck="false" data-tip="The Google Analytics measurement ID the consumer site sends page views to. Blank turns analytics off." aria-label="Web analytics ID" onchange="saveGa4(this)">
     </div>
     <button class="peek" onclick="sheetFromHolder('ds_policy','Advanced policy','Raw JSON, merged over the defaults. Dev escape hatch.')">
       <div class="pk-main"><div class="pk-t">Advanced policy</div><div class="pk-m">Raw JSON, dev escape hatch</div></div>
@@ -6562,23 +6578,52 @@ async function loadGrowth(){
   if(!POL_ENV||POL_ENV.error) POL_ENV=POL;
   if(!POL||POL.error){ document.getElementById('gw_flags').textContent='Could not load policy.'; return; }
   renderGwFlags();
-  // pricing
-  const p=POL.pricing||{}, sub=p.sub||{};
-  const fld=(id,lbl,val)=>`<label class="meta" style="display:block">${lbl}<input id="${id}" value="${esch(val)}" inputmode="numeric" style="display:block;width:90px;margin-top:4px;background:var(--terminal);color:#fff;border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:12px;padding:10px 12px"></label>`;
-  document.getElementById('gw_pricing').innerHTML=
-    fld('gw_percall','Per-check price (¢)',p.perCallCents)+
-    fld('gw_minpur','Minimum top-up (¢)',p.minPurchaseCents)+
-    fld('gw_free','Free checks (new visitor)',p.freeChecks)+
-    fld('gw_kreward','Kiosk reward (checks)',(POL.rewards||{}).kioskRefreshChecks)+
-    fld('gw_referral','Referral reward (checks · both)',(POL.rewards||{}).referralChecks)+
-    fld('gw_storeadd','Store-add reward (checks · on go-live)',(POL.rewards||{}).storeAddChecks)+
-    fld('gw_headstart','Members see finds first (minutes)',(POL.finds||{}).headstartMin)+
-    fld('gw_ga4','Web analytics ID',POL.ga4Id||'');
+  renderGwPricing();
   // Memberships + PAYG bundles are OWNED BY PLANS (vt_plans → Stripe). Mirror them read-only here so
   // this page can never drift from the Plans tab again (owner 07-13: pricing must match Plans).
   loadGwPlansMirror();
   renderGwQueues();
-  loadGwPulse(); loadGwIntel(); loadGwKiosks(); loadGwWatches(); loadGwCommunity(); loadGwWaitlist(); loadGwStoreReqs();
+  // Pulse, kiosks and restock intel are NOT loaded here any more. Pulse's card lives on Live
+  // (`ds_pulse`) and kiosks on Kiosk (`gw_kiosks`), and each of those tabs already loads its own in
+  // TAB_LOADERS, so Policy was fetching and painting two other pages every time it opened.
+  loadGwWatches(); loadGwCommunity(); loadGwWaitlist(); loadGwStoreReqs();
+}
+// PRICING as console rows (comp 1i). Same anatomy as a flag row: label, one plain line saying what it
+// changes, control on the right. `k` is the dotted path in the policy document, so a row writes back
+// exactly the field it read and nothing else on the page is patched by accident.
+const GW_PRICE_ROWS=[
+  ['pricing.perCallCents','Per-check price','What one check costs a customer, in cents.','¢'],
+  ['pricing.minPurchaseCents','Minimum top-up','The smallest amount someone can add at once, in cents.','¢'],
+  ['pricing.freeChecks','Free checks','How many checks a brand-new visitor gets before paying.','checks'],
+  ['rewards.kioskRefreshChecks','Kiosk reward','Checks earned for refreshing a kiosk time.','checks'],
+  ['rewards.referralChecks','Referral reward','Checks both sides earn on a referral.','checks'],
+  ['rewards.storeAddChecks','Store-add reward','Checks earned when a store they asked for goes live.','checks'],
+  ['finds.headstartMin','Members see finds first','How long members see a find before everyone else, in minutes.','min'],
+];
+const polGet=(o,k)=>k.split('.').reduce((v,part)=>(v==null?v:v[part]),o);
+function renderGwPricing(){
+  const el=document.getElementById('gw_pricing'); if(!el) return;
+  el.innerHTML=GW_PRICE_ROWS.map(([k,label,says,unit])=>{
+    const v=polGet(POL,k);
+    return `<div class="peek static">
+      <div class="pk-main"><div class="pk-t">${esch(label)}</div><div class="pk-m">${esch(says)}</div></div>
+      <input class="k-num" id="gwp_${k.replace(/\./g,'_')}" value="${esch(v==null?'':v)}" inputmode="numeric"
+        size="${String(unit).length+4}" data-tip="${esch(says)}" aria-label="${esch(label)} in ${esch(unit)}"
+        onchange="saveGwPrice('${k}',this)">
+    </div>`;
+  }).join('');
+}
+// One field, one PATCH. The response is the whole saved policy, so POL is replaced from what was
+// actually stored rather than from what was typed, and a rejected value snaps back on its own.
+async function saveGwPrice(key,input){
+  const n=Number(input.value);
+  if(!isFinite(n)){ toast('That needs to be a number'); input.value=polGet(POL,key)??''; return; }
+  const path=key.split('.'), patch={};
+  // `finds` carries more than this one field, so merge rather than replace it.
+  patch[path[0]]=Object.assign({},(POL&&POL[path[0]])||{},{[path[1]]:n});
+  const r=await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(patch)});
+  if(r&&!r.error){ POL=r; const saved=polGet(POL,key); input.value=saved==null?'':saved; toast('Saved'); }
+  else { toast('Could not save that'); input.value=polGet(POL,key)??''; }
 }
 // The four queues fold into peek rows (comp note: Policy splits in two — console up top, queues below).
 // Each loader renders into its hidden holder and stamps its row's fact; a tap opens the holder in the sheet.
@@ -6800,28 +6845,9 @@ async function openStoreRestock(id){
     ${(d.products.sets||[]).length?'<div class="k-eyebrow">Sets</div>'+(d.products.sets||[]).map(x=>`<span class="k-pill" style="margin:0 4px 6px 0;display:inline-block">${esch(x.set)} <b>${x.n}</b></span>`).join(''):''}
     <div class="k-eyebrow">By category</div>${(d.byCategory||[]).map(x=>rsBar(x.category,x.n,bcMax)).join('')||'<div class="meta">—</div>'}`);
 }
-async function loadGwIntel(){
-  const el=document.getElementById('gw_intel'); if(!el) return;
-  const d=await api('/api/admin/restock-intel');
-  if(!d||d.error){ el.textContent='No intel yet.'; return; }
-  const t=d.totals||{};
-  const days=(d.shipmentDays||[]).map(x=>`${esch(x.day)} (${x.n})`).join(' · ')||'none yet';
-  const ago=s=>{ if(!s)return ''; const m=Math.floor(Date.now()/1000)-s; if(m<3600)return Math.max(1,Math.floor(m/60))+'m ago'; if(m<86400)return Math.floor(m/3600)+'h ago'; return Math.floor(m/86400)+'d ago'; };
-  const rows=(d.topStores||[]).map(s=>{
-    const sub=[s.bestDay?('best '+esch(s.bestDay)):'', ago(s.last)].filter(Boolean).join(' · ');
-    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--border)">
-      <div style="flex:1;min-width:0"><div style="font-size:13px"><b style="color:#e8e8f0">${esch(s.store)}</b>${s.region?` <span class="meta">· ${esch(s.region)}</span>`:''}</div>${sub?`<div class="meta" style="font-size:12.5px">${sub}</div>`:''}</div>
-      <div style="flex:0 0 auto;text-align:right"><b style="color:var(--green);font-size:15px">${s.confirms}</b> <span class="meta" style="font-size:10.5px">hits</span></div>
-    </div>`;
-  }).join('');
-  const st=(n,l,g)=>`<div class="stat${g?' green':''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
-  el.innerHTML=
-    `<div class="stats">`+
-      st(t.confirms||0,'confirmed restocks')+st((t.confirmRate||0)+'%','hit rate · '+(t.checks||0)+' checks')+st(t.confirms7d||0,'last 7 days',1)+st(t.confirms30d||0,'last 30 days')+
-    `</div>`+
-    `<div class="meta" style="margin:2px 0 4px"><b style="color:#c7c7d2">Shipment days heard:</b> ${days}</div>`+
-    (rows||'<div class="meta" style="padding:6px 0">No confirmed restocks logged yet.</div>');
-}
+// loadGwIntel is GONE (07-29). Its `gw_intel` holder came off Policy when the block was found to
+// duplicate the Restock page, which owns /api/admin/restock-intel through loadRestock(). The
+// function had no element left to render into, so it was dead code sitting on a live page.
 // The PATCH returns the whole saved policy, so redraw from THAT rather than firing a second read.
 // One round trip, and the switch can never disagree with what was actually stored.
 // A call-lane flag is written to the environment the header switch names, the same place it was read
@@ -6850,14 +6876,12 @@ async function loadGwPlansMirror(){
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>`;
 }
-async function savePolicyForm(){
-  const n=id=>{const x=Number(document.getElementById(id).value);return isFinite(x)?x:undefined;};
-  const patch={pricing:{perCallCents:n('gw_percall'),minPurchaseCents:n('gw_minpur'),freeChecks:n('gw_free')},
-    rewards:{kioskRefreshChecks:n('gw_kreward'),referralChecks:n('gw_referral'),storeAddChecks:n('gw_storeadd')},
-    finds:Object.assign({},POL.finds,{headstartMin:n('gw_headstart')}),
-    ga4Id:document.getElementById('gw_ga4').value.trim()};
-  await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(patch)});
-  toast('Pricing saved'); loadGrowth();
+// The analytics ID, saved on its own from the App console. Every other number on Policy saves itself
+// the same way through saveGwPrice, which is why the Save pricing key is gone.
+async function saveGa4(input){
+  const r=await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({ga4Id:input.value.trim()})});
+  if(r&&!r.error){ POL=r; input.value=POL.ga4Id||''; toast('Saved'); }
+  else { toast('Could not save that'); input.value=(POL&&POL.ga4Id)||''; }
 }
 async function savePolicyJson(){
   let body; try{ body=JSON.parse(document.getElementById('gw_json').value); }catch(e){ toast('Invalid JSON'); return; }
@@ -6865,7 +6889,8 @@ async function savePolicyJson(){
   toast('Policy saved'); loadAdvancedPolicy();
 }
 // Advanced JSON card now lives under Calls → App (dev escape-hatch); load POL + fill the editor on its own.
-async function loadAdvancedPolicy(){ const el=document.getElementById('gw_json'); if(!el) return; POL=await api('/api/policy')||POL; el.value=JSON.stringify(POL,null,2); }
+async function loadAdvancedPolicy(){ const el=document.getElementById('gw_json'); if(!el) return; POL=await api('/api/policy')||POL; el.value=JSON.stringify(POL,null,2);
+  const g=document.getElementById('set_ga4'); if(g) g.value=(POL&&POL.ga4Id)||''; }
 async function importStoresJson(){
   const msg=document.getElementById('gw_import_msg');
   let body; try{ body=JSON.parse(document.getElementById('gw_import').value); }catch(e){ msg.style.color='#ff6b6b'; msg.textContent='Invalid JSON'; return; }
