@@ -37,4 +37,4 @@ git. Last updated: 2026-07-28 (the new engine is on for staging and waiting on y
 Use it / Keep the old one buttons are live. **Nobody has seen any of it: the real site still shows
 the coming-soon splash.** Walk it on your phone before you lift that.
 ## Waiting on YOU: hide the fake (simulated) poll rows from the Admin feedback queue? (yes / no)
-Next: Site + Admin queues; Data chases the staging store list. Everything: docs/tasks/INDEX.md.
+New 07-29 on a PR: three agent guard rails (look first · no new Admin pages · recite the task first). Next: Site + Admin queues; everything: docs/tasks/INDEX.md.

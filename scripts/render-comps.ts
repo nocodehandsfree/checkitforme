@@ -8,7 +8,7 @@
 //   ./node_modules/.bin/tsx scripts/render-comps.ts url <url> <name> [width]  # any (local) URL
 // Output: loops/site-redesign/render/*.png — gitignored; view locally, never commit.
 import { createServer } from "node:http";
-import { readFileSync, mkdirSync, existsSync, readdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
@@ -106,5 +106,10 @@ async function main() {
     process.exit(1);
   }
   await browser.close();
+  // Proof-of-looking for the edit gate: an edit to public/app.html is blocked until this file is
+  // fresh (see .claude/hooks/edit-gate.py). Written only after a render actually completed.
+  const state = join(here, "../.claude/state");
+  mkdirSync(state, { recursive: true });
+  writeFileSync(join(state, "comp-rendered"), `${new Date().toISOString()} ${mode} ${a1 || ""}\n`);
 }
 main().catch((e) => { console.error(String(e).slice(0, 300)); process.exit(1); });
