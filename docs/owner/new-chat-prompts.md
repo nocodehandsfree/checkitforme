@@ -9,6 +9,15 @@ That one line is enough. CLAUDE.md (loads automatically) makes the agent: pull s
 `docs/STATE.md` → read the right SYSTEM's `docs/team/<system>/checkpoint.md` → read the task queue
 (`docs/tasks/INDEX.md`) → state which task it's taking. The agent picks its system from the task itself.
 
+**Never paste a long handoff essay from the last agent.** Anything worth carrying forward belongs in
+the checkpoint (the new agent reads it at boot anyway); mistakes belong in GOTCHAS or the checkpoint.
+A prompt should only add what the FILES can't know: what you saw on your phone, what you decided.
+Rip the rest out — you were right to.
+
+**Check the first reply.** A hook makes every new agent's first reply recite the box back: the task,
+the done-when, and the EXISTING pieces it will build on, by name. Read that recitation. If it names
+the wrong pieces or invents ones, correct it there — one message now beats a wrong build later.
+
 ## The five systems (the agent maps the task to one)
 - **site** — the consumer app (checkitforme.com), design, and copy.
 - **admin** — the operator dashboard (admin.checkitforme.com).

@@ -61,6 +61,11 @@
           },
           {
             "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/nav-gate.sh\"",
+            "timeout": 15
+          },
+          {
+            "type": "command",
             "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/index-regen.sh\"",
             "timeout": 30
           }

@@ -9,7 +9,9 @@ n=$(cat "$f" 2>/dev/null || echo 0)
 case "$n" in (*[!0-9]*|"") n=0 ;; esac
 n=$((n + 1))
 printf '%s' "$n" > "$f"
-if [ "$n" -ge 25 ]; then
+if [ "$n" -eq 1 ]; then
+  jq -n '{hookSpecificOutput:{hookEventName:"UserPromptSubmit",additionalContext:"FIRST TURN — RECITE THE BOX before any tool call. Your first reply states, in a few short lines: the ONE task you are taking, its done-when, and the EXISTING pieces you will snap onto (name the file or section — LAW 1). UI work adds: what the rendered comp shows for this screen. Cannot name the existing piece? Say so and STOP; do not fill the gap by inventing. A wrong recitation here costs the owner one message; a wrong build costs him a cycle."}}'
+elif [ "$n" -ge 25 ]; then
   jq -n '{hookSpecificOutput:{hookEventName:"UserPromptSubmit",additionalContext:"Context is aging — tell the owner it is handoff time after this task."}}'
 fi
 exit 0

@@ -30,4 +30,12 @@ Discipline comes from these, not from hoping.
 23. **Never rip out a fix you don't understand.** A line that looks pointless is usually load-bearing — someone earned it against a mistake you can't see (the iOS sheet transparency once cost a full day, reverted because a "cleanup" dropped the one line holding it). Before you remove or rewrite working code, know WHY it works. If your change breaks it, don't rebuild from scratch — find the one piece you dropped and restore it.
 24. **UI work: the comp is the source of truth, not the prose — RENDER it and LOOK, don't grep it.** The style/copy guides are words *describing* the comps (`docs/design/comps/*.dc.html`); the comp file is the truth, and it's a rendered PICTURE — a text search of it returns nearly nothing, and trusting that emptiness is how off-brand screens ship. Render it to a PNG (`scripts/render-comps.ts` / `admin-preview.mjs` / `zones-preview.mjs` — see the `build-on-brand` skill) and open the image; for every button/badge/row/icon, name which comp element you're copying. Can't see it in the render → you're inventing → stop. Building from the written component list instead of the file is how an off-brand page ships (a landing-page cycle was wasted this way, 2026-07-18). And a server-rendered consumer page (`renderShare` etc. in `src/server.ts`) is UI too — it gets the same comp, and wrap its `<style>` in the `/*CP*/…/*CPEND*/` markers so `qa-design` covers it (server pages had ZERO design coverage before).
 
+25. **Write every doc for a stranger.** Checkpoints, handoffs, and STATE are read by an agent with
+    ZERO shared context — gloss every codename on first use ("Charlie (the live call agent)"), no bare
+    §refs without the doc's path, no compression that only the writer can decode. The size caps force
+    you to CUT content, never to abbreviate it into dialect: a line a stranger can't parse is worth
+    less than no line. Same disease as UI copy — invented shorthand is how "think on our own account"
+    shipped to a screen. If a fact needs more room than the cap allows, it goes in git history or a
+    task file, and the doc keeps one plain pointer.
+
 — after Karpathy, *Field Notes on Getting a Language Model to Write Code You Will Not Rewrite*.
