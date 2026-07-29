@@ -374,8 +374,8 @@
   .k-switch.on::after{left:21.5px}
   /* THE console number. The switch's sibling for a row that holds a figure instead of an on or off.
      Same raised pill as select.k-filter (line 331) without the chevron, so a console reads as one set. */
-  input.k-num,input.k-txt{width:auto;max-width:32vw;background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:999px;padding:9px 15px;font-size:13px;font-weight:700;color:#fff;flex:0 0 auto;font-family:inherit}
-  input.k-num{text-align:right;font-variant-numeric:tabular-nums}
+  input.k-num,input.k-txt{box-sizing:border-box;max-width:32vw;background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:999px;padding:9px 15px;font-size:13px;font-weight:700;color:#fff;flex:0 0 auto;font-family:inherit}
+  input.k-num{width:78px;text-align:right;font-variant-numeric:tabular-nums}
   input.k-num:focus,input.k-txt:focus{outline:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1),0 0 0 2px rgba(74,222,128,.55)}
   .k-sub{font-size:12.5px;font-weight:600;color:#8A8A96;margin:2px 0 16px}
   .k-note{font-size:11.5px;font-weight:600;color:#5C5C68;padding:16px 4px 0;line-height:1.5}
@@ -6591,25 +6591,26 @@ async function loadGrowth(){
 // PRICING as console rows (comp 1i). Same anatomy as a flag row: label, one plain line saying what it
 // changes, control on the right. `k` is the dotted path in the policy document, so a row writes back
 // exactly the field it read and nothing else on the page is patched by accident.
+// [policy path, label, the line ON the row, the plain tooltip]. The row line is kept short on purpose:
+// .pk-m never wraps, so anything long is clipped with an ellipsis. Shorten, do not wrap (copy guide).
 const GW_PRICE_ROWS=[
-  ['pricing.perCallCents','Per-check price','What one check costs a customer, in cents.','¢'],
-  ['pricing.minPurchaseCents','Minimum top-up','The smallest amount someone can add at once, in cents.','¢'],
-  ['pricing.freeChecks','Free checks','How many checks a brand-new visitor gets before paying.','checks'],
-  ['rewards.kioskRefreshChecks','Kiosk reward','Checks earned for refreshing a kiosk time.','checks'],
-  ['rewards.referralChecks','Referral reward','Checks both sides earn on a referral.','checks'],
-  ['rewards.storeAddChecks','Store-add reward','Checks earned when a store they asked for goes live.','checks'],
-  ['finds.headstartMin','Members see finds first','How long members see a find before everyone else, in minutes.','min'],
+  ['pricing.perCallCents','Per-check price','In cents, per check','What a customer pays for one check, in cents.'],
+  ['pricing.minPurchaseCents','Minimum top-up','In cents, smallest add','The smallest amount someone can add to their balance at once, in cents.'],
+  ['pricing.freeChecks','Free checks','A new visitor gets these','How many checks a brand new visitor gets before they pay for one.'],
+  ['rewards.kioskRefreshChecks','Kiosk reward','For a kiosk refresh','Checks earned for refreshing when a kiosk was last stocked.'],
+  ['rewards.referralChecks','Referral reward','Both sides earn these','Checks both the referrer and the friend earn on a referral.'],
+  ['rewards.storeAddChecks','Store-add reward','When their store lands','Checks earned when a store the customer asked for goes live.'],
+  ['finds.headstartMin','Members see finds first','Minutes ahead','How long a member sees a find before it reaches everyone else, in minutes.'],
 ];
 const polGet=(o,k)=>k.split('.').reduce((v,part)=>(v==null?v:v[part]),o);
 function renderGwPricing(){
   const el=document.getElementById('gw_pricing'); if(!el) return;
-  el.innerHTML=GW_PRICE_ROWS.map(([k,label,says,unit])=>{
+  el.innerHTML=GW_PRICE_ROWS.map(([k,label,says,tip])=>{
     const v=polGet(POL,k);
     return `<div class="peek static">
       <div class="pk-main"><div class="pk-t">${esch(label)}</div><div class="pk-m">${esch(says)}</div></div>
       <input class="k-num" id="gwp_${k.replace(/\./g,'_')}" value="${esch(v==null?'':v)}" inputmode="numeric"
-        size="${String(unit).length+4}" data-tip="${esch(says)}" aria-label="${esch(label)} in ${esch(unit)}"
-        onchange="saveGwPrice('${k}',this)">
+        data-tip="${esch(tip)}" aria-label="${esch(label)}" onchange="saveGwPrice('${k}',this)">
     </div>`;
   }).join('');
 }
