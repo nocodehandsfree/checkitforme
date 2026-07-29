@@ -129,9 +129,9 @@ worse than no comment. Several entries below started as wrong comments.)
   Google → every admin-preview.mjs screenshot rendered in DejaVu with different metrics. "Looks
   clean" verdicts were judged against a typeface the owner never sees. **The design is only the
   design in Inter** (same lesson checkit.html learned on 07-14 with DNS ad-blockers).
-- Fix shipped: app.html self-hosts `/fonts/inter-var-latin.woff2` (the site's exact recipe) and
-  admin-preview.mjs routes `/fonts/**` from public/. If you judge a render, FIRST confirm the
-  headline is actually Inter (compare a lowercase 'g').
+- Fix shipped: app.html self-hosts `/fonts/inter-var-latin.woff2` (the site's exact recipe), and the
+  render tool (`scripts/render-comps.ts` — admin-preview.mjs is archived) serves the vendored fonts.
+  If you judge a render, FIRST confirm the headline is actually Inter (compare a lowercase 'g').
 
 ## Share/landing (/s): a gradient fading to a TRANSPARENT color leaves a green haze on iOS
 - Symptom: owner's iPhone showed a faint green tint/line across the BOTTOM of the /s card; every
