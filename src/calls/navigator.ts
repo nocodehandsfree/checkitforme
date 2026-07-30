@@ -637,7 +637,13 @@ async function navTurn(id: string, speech: string): Promise<string> {
       if (s.menuPrompts.length > 12) s.menuPrompts = s.menuPrompts.slice(-12);
     }
   }
-  if (speech && ROUTING_RE.test(speech)) {
+  // A MENU CANNOT BE FINISHED WITH US WHILE OUR ROUTE STILL HAS A STEP LEFT (owner, 07-30). CVS said
+  // "just say what you'd like to do and I can connect you" — an OFFER to connect, mid menu — and the
+  // handoff test read it as the handoff, so a re-listen hung up one step short and filed a 47s route
+  // that had never said its last word. A route we already hold tells us how many answers it takes, so
+  // an offer to connect before the last one is just another prompt to answer.
+  const routeUnfinished = !!(s.relisten && s.barge?.plan?.length && (s.planIdx ?? 0) < s.barge.plan.length);
+  if (speech && ROUTING_RE.test(speech) && !routeUnfinished) {
     s.routingSeen = true;                       // routed to a person → next greeting is human
     // WHEN the machine said it was handing us on. It used to be stamped only if the brain happened to
     // call that same turn "human"; on the 07-28 Alhambra call it did not, so "Okay, transferring you

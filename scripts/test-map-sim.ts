@@ -462,6 +462,13 @@ async function main() {
     ok(/const fragment = line\.split[\s\S]{0,200}?TAIL_WORDS && !isMenuLine\(line\)\s*\n?\s*&& !looksLikeQuestion\(line\) && !ROUTING_RE\.test\(line\)/.test(src),
       "and only a short line that is neither a menu, a question, nor the handoff can be a remainder");
     ok(/const TAIL_WORDS = 14;/.test(src), "long enough to hold a cut sentence, short enough that a real prompt cannot fit");
+    // CVS: "just say what you'd like to do and I can connect you" is an OFFER to connect, mid menu.
+    // Read as the handoff it made a re-listen hang up one step short and file a route that had never
+    // said its last word.
+    ok(/const routeUnfinished = !!\(s\.relisten && s\.barge\?\.plan\?\.length && \(s\.planIdx \?\? 0\) < s\.barge\.plan\.length\)/.test(src),
+      "a route with a step still to walk cannot be finished with us");
+    ok(/if \(speech && ROUTING_RE\.test\(speech\) && !routeUnfinished\)/.test(src),
+      "so an offer to connect before the last answer is read as one more prompt, not the handoff");
     ok(/if \(spokeOver && fragment && prevIvr\) prevIvr\.text = /.test(src),
       "it is joined onto the line it belongs to, never listed as its own step");
 
