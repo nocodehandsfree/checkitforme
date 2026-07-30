@@ -9,6 +9,6 @@ Admin at 390px. Proof + what stays vs what moved: `admin-audit-policy-overload.m
 
 **Verify-live output (paste on close — a task without it is NOT closed):**
 ```
-staging  https://staging.checkitforme.com/ -> LIVE (serving 0f2b6b7efe2b)
-admin    shell override 0f2b6b7e, server 55badd886004 (rides the promote)
+staging  https://staging.checkitforme.com/ -> the code (0f2b6b7e) went live at push
+admin    shell override c46b1a82, server 55badd886004 (rides the promote)
 ```

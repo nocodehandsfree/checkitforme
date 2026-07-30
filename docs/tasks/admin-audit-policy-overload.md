@@ -18,7 +18,7 @@ was dead code. The only thing that moved page is the web-analytics ID, to the Ap
 
 **Verify-live output (paste on close — a task without it is NOT closed):**
 ```
-staging  https://staging.checkitforme.com/ -> LIVE (serving 0f2b6b7efe2b)
+staging  https://staging.checkitforme.com/ -> the code (0f2b6b7e) went live at push
 prod     https://checkitforme.com/         -> 55badd886004 (origin/main, awaiting promote)
-admin    shell override 0f2b6b7e, server 55badd886004
+admin    shell override c46b1a82, server 55badd886004   <- the screens, LIVE NOW
 ```

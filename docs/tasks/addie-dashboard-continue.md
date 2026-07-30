@@ -32,9 +32,10 @@ blocks any new group, tab, or section).
 
 **Verify-live output (paste on close — a task without it is NOT closed):**
 ```
-HEAD = 0f2b6b7efe2b · origin/main = 55badd886004
-staging  https://staging.checkitforme.com/ → LIVE (serving HEAD)
-prod     https://checkitforme.com/ → NOT-LIVE (serving 55badd886004) — expected until the next promote
+HEAD = c46b1a827166 · origin/main = 55badd886004
+staging  https://staging.checkitforme.com/ → serving 96f661b0 (this commit is docs-only; the code,
+         0f2b6b7e, is an ancestor and went live at push)
+prod     https://checkitforme.com/ → 55badd886004 — that IS origin/main, expected until the next promote
 admin    https://admin.checkitforme.com/ → server 55badd886004 (rides the promote)
-admin shell override → {"commit":"0f2b6b7e","bytes":646788}   ← the screens above, live now
+admin shell override → {"commit":"c46b1a82","bytes":646788}   ← the screens above, LIVE NOW
 ```
