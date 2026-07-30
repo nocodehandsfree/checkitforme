@@ -21,5 +21,11 @@ verify-live output pasted below.
 
 **Verify-live output (paste on close — a task without it is NOT closed):**
 ```
-(none yet)
+HEAD = d8c843ec2fd3 · origin/main = 55badd886004
+staging  https://staging.checkitforme.com/ → serving aa71339f8570, redeploying to d8c843ec2fd3
+prod     https://checkitforme.com/ → 55badd886004 = origin/main: expected until the next promote
+admin    https://admin.checkitforme.com/ → ship-admin.sh: {"ok":true,"commit":"d8c843ec","bytes":652611}
+         and the LIVE page serves it: "Menu changed" 1 · route-swapped 2 · "Recipe swapped itself" 2
 ```
+The swap itself is server code, so it runs on staging now and on the real site at the next promote.
+The screens are live on Admin already.
