@@ -20,7 +20,7 @@ import {
   type MapRecipe, type EvidenceCall,
 } from "../src/calls/mapgraph";
 import { lockRecipeToChain } from "../src/calls/trainer-batch";
-import { greetingFrom, looksLikeDirectPickup, menuStillTalking, parseSpokenOptions, isMenuLine, parseMenuOptions, mergeMenu } from "../src/calls/navigator";
+import { greetingFrom, looksLikeDirectPickup, menuStillTalking, parseSpokenOptions, isMenuLine, parseMenuOptions, mergeMenu, looksLikeQuestion, isReprompt } from "../src/calls/navigator";
 import { recipeFromCall } from "../src/calls/map-capture";
 
 let pass = 0, fail = 0;
@@ -440,12 +440,19 @@ async function main() {
     const src = readFileSync("src/calls/navigator.ts", "utf8");
     ok(/s\?\.relisten && s\.barge\?\.plan\?\.length[\s\S]{0,400}?return twiml\(`\$\{ear\}<Pause length="1"\/>\$\{gather\(id\)\}`\)/.test(src),
       "a re-listen opens the listener at the greeting instead of running a silent timed block");
-    ok(/if \(s\.relisten && s\.barge\?\.plan\?\.length\) \{[\s\S]{0,1400}?return twiml\(gather\(id\)\)/.test(src),
+    ok(/if \(s\.relisten && s\.barge\?\.plan\?\.length\) \{[\s\S]{0,3000}?return twiml\(gather\(id\)\)/.test(src),
       "and it fires its known steps from the listening loop, reopening the listener after each one");
-    ok(/const named = [\s\S]{0,200}?includes\(" " \+ step\.value\.toLowerCase\(\)\)/.test(src),
-      "a step goes early when the prompt names its own word");
-    ok(/named \|\| atSec >= \(step\.at \?\? 0\)/.test(src),
-      "and still goes on its own second when the store says nothing");
+    ok(/const named = [\s\S]{0,240}?includes\(" " \+ step\.value\.toLowerCase\(\)\)/.test(src),
+      "a step goes when the prompt names its own word");
+    ok(/named \|\| isMenuLine\(said\) \|\| looksLikeQuestion\(said\)/.test(src),
+      "otherwise it answers the prompt that is asking, never a clock the menu has drifted away from");
+    ok(!/atSec >= \(step\.at \?\? 0\)/.test(src),
+      "the clock cannot walk the route ahead of the menu at all");
+    ok(/if \(said && isReprompt\(said\)\)[\s\S]{0,400}?said "\$\{last\.value\}" again/.test(src),
+      "a re-prompt repeats the SAME answer instead of spending the next one");
+    ok(looksLikeQuestion("are you a healthcare provider?"), "a question with no options in it is still a cue to answer");
+    ok(!looksLikeQuestion("Thank you for calling CVS Pharmacy."), "but a greeting is not");
+    ok(isReprompt("Sorry, I'm not understanding please confirm"), "and CVS's own re-prompt is read as one");
 
     const cap = readFileSync("src/calls/map-capture.ts", "utf8");
     ok(/\(opts\.reachedHuman \|\| opts\.endedOnRing\) \? transcriptFromCall\(opts\.steps\)/.test(cap),

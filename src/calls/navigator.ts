@@ -280,6 +280,22 @@ export function parseSpokenOptions(text: string): MenuOption[] {
 }
 
 /** Does this line offer us choices at all — pressed or spoken? Those are the lines worth keeping. */
+/** The menu asking us something. A tree does not always read a list ("are you a healthcare provider?"
+ *  is one question with no options in it), so a re-listen needs to recognise a question as its cue to
+ *  answer, not only a menu of choices. */
+export function looksLikeQuestion(text: string): boolean {
+  const t = String(text || "").trim();
+  if (!t) return false;
+  if (/\?/.test(t)) return true;
+  return /\b(please (say|tell|let me know)|say (yes|no)\b|which (one|department)|how (can|may) i)\b/i.test(t);
+}
+
+/** The menu did not hear us and is asking again. Same shapes `callHadAReprompt` reads after the fact,
+ *  but needed live, mid-check, so the answer can be repeated instead of the next one being wasted. */
+export function isReprompt(text: string): boolean {
+  return /sorry,? (i'?m )?not understanding|didn'?t (quite )?(catch|get) that|please confirm|let'?s try (that )?again|i did not understand/i.test(String(text || ""));
+}
+
 export function isMenuLine(text: string): boolean {
   const t = String(text || "");
   if (/press \d|press the|option \d|\bfor [a-z].{0,40}\bpress\b/i.test(t)) return true;
@@ -687,15 +703,33 @@ async function navTurn(id: string, speech: string): Promise<string> {
   // own second is the fallback, so a store that stays quiet still gets walked. Either way the listener
   // reopens straight after, which is how the menu ends up on the page in the store's own words.
   if (s.relisten && s.barge?.plan?.length) {
+    const said = (speech || "").trim();
+    // A RE-PROMPT IS NOT THE NEXT QUESTION. "Sorry, I'm not understanding" means the menu did not hear
+    // our last answer, so we say THAT answer again and do not advance. Walking on here is how a check
+    // ends up answering "front door services?" with the word meant for the question after it.
+    if (said && isReprompt(said)) {
+      const last = s.planIdx ? s.barge.plan[s.planIdx - 1] : null;
+      if (last?.value && last.action !== "press") {
+        s.lastActTurn = s.turns;
+        s.steps.push({ who: "us", text: `said "${last.value}" again (the menu asked twice)`, atSec, action: "say", value: last.value, earPrompts: s.ear?.recordings });
+        return twiml(`<Say voice="Polly.Joanna">${esc(last.value)}</Say>${gather(id)}`);
+      }
+    }
     const idx = s.planIdx ?? 0;
     const step = s.barge.plan[idx];
-    if (step) {
-      const named = !!(step.action !== "press" && step.value && speech
-        && (" " + speech.toLowerCase() + " ").includes(" " + step.value.toLowerCase()));
-      if (named || atSec >= (step.at ?? 0)) {
+    if (step && said) {
+      // ANSWER THE PROMPT, NEVER THE CLOCK. The route's recorded seconds come from one check on one
+      // afternoon; a store that reads a line slowly, or repeats itself once, puts every later second
+      // out by ten or more. Live proof on CVS Lanett, 07-30: firing on the clock said "front" over
+      // "Or press 2 to continue" and then "general" at the question "front door services?", which is
+      // the wrong word at the wrong door. The menu asking is the only honest cue, so one question gets
+      // one answer, in order. A prompt naming our own word is better still and is taken first.
+      const named = !!(step.action !== "press" && step.value
+        && (" " + said.toLowerCase() + " ").includes(" " + step.value.toLowerCase()));
+      if (named || isMenuLine(said) || looksLikeQuestion(said)) {
         s.planIdx = idx + 1;
         s.lastActTurn = s.turns;
-        const why = named ? "the prompt named it" : "on its second";
+        const why = named ? "the prompt named it" : "answering this prompt";
         if (step.action === "press" && step.value) {
           const digits = step.value.replace(/[^0-9*#]/g, "").slice(0, 6);
           s.steps.push({ who: "us", text: `pressed ${digits} (${why})`, atSec, action: "press", value: digits, earPrompts: s.ear?.recordings });
