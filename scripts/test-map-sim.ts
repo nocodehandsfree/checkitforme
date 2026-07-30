@@ -7,6 +7,7 @@
 //
 // Run: env DATABASE_URL=file:./.t-mapsim.db ELEVENLABS_API_KEY=test ELEVENLABS_AGENT_ID=test \
 //      ELEVENLABS_PHONE_NUMBER_ID=test ./node_modules/.bin/tsx scripts/test-map-sim.ts
+import { readFileSync } from "node:fs";
 import { eq } from "drizzle-orm";
 import { bootstrap } from "../src/db/bootstrap";
 import { db } from "../src/db/client";
@@ -352,6 +353,24 @@ async function main() {
     ok(!!note && !!(note.evidence as Record<string, unknown> | null)?.versionId, "with the route it swapped to attached");
   }
 
+
+  console.log("▶ THE RE-LISTEN CALL — walks the known menu, hangs up the instant the desk rings");
+  {
+    // The whole point of the mode, asserted on the rules that make it safe rather than on a phone.
+    const src = readFileSync("src/calls/navigator.ts", "utf8");
+    ok(/if \(s\.relisten\) \{[\s\S]{0,240}?finish\(s, "mapped"\); return twiml\(`<Hangup\/>`\)/.test(src),
+      "an announced handoff ends the call on the spot, with no wait for a person");
+    ok(/RE-LISTEN NEVER TROUBLES STAFF[\s\S]{0,400}?finish\(s, "human"\); return twiml\(`<Hangup\/>`\)/.test(src),
+      "and if somebody picks up anyway it hangs up rather than asking them anything");
+    ok(/const lockable = status === "human" && !s\.relisten/.test(src),
+      "a re-listen can never write a recipe, so a route we already know cannot be rewritten by it");
+    ok(/seconds: s\.relisten[\s\S]{0,160}?s\.transferAtSec \?\?/.test(src),
+      "and it reports the MENU's seconds, never the moment a person spoke");
+    // The number the runtime opens the paid agent on must stay the time to STAFF.
+    const live = (await activeMap(chain.id))!;
+    ok(typeof live.seconds === "number" && live.seconds > 0,
+      `the live route still carries time to Staff for the agent to open on (${live.seconds}s)`);
+  }
 
   console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

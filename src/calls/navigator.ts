@@ -111,6 +111,11 @@ export interface NavSession {
   greeting?: string;        // the first thing the person said — proof of WHICH desk we reached
   maxSec?: number;          // hard stop for this call (ROI guard); default MAX_CALL_SEC
   transferWaitSec?: number; // how long to wait for a person after an announced transfer
+  /** RE-LISTEN: run the recipe we already hold, write down every line the store plays, and hang up
+   *  the INSTANT the desk starts ringing (owner, 07-29: "yes the instant it rings"). Never asks
+   *  anything, never waits for a person, so no Staff are troubled and no paid agent is opened. This
+   *  is the whole difference between re-mapping a chain we know and discovering one we do not. */
+  relisten?: boolean;
   stopReason?: string;      // why this call ended, in plain words (kept as evidence)
   status: "dialing" | "navigating" | "human" | "failed" | "done";
   type: "direct" | "keypad" | "voice" | null;
@@ -441,6 +446,15 @@ function reachHuman(s: NavSession, atSec: number, id: string, viaRouting = false
     s.transferAtSec = s.transferAtSec ?? atSec;
     return twiml(gather(id));
   }
+  // RE-LISTEN NEVER TROUBLES STAFF. If somebody picks up before the menu ever handed us on, this
+  // chain answers direct now: that is worth knowing and it is recorded, but the call ends on the spot
+  // rather than asking them anything.
+  if (s.relisten) {
+    s.humanAtSec = s.humanAtSec ?? atSec;
+    if (!s.greeting) s.greeting = greetingFrom(s.steps, atSec);
+    s.stopReason = "a person answered, no menu";
+    finish(s, "human"); return twiml(`<Hangup/>`);
+  }
   s.humanAtSec = s.humanAtSec ?? atSec; // a real voice — THIS is time-to-human
   // What they said is the proof of WHICH desk we reached — the only check left once a mapping call
   // hangs up instead of asking a question. It has to be what was said ON THIS TURN: on the 07-28
@@ -545,6 +559,14 @@ async function navTurn(id: string, speech: string): Promise<string> {
     // now" at 81s went unrecorded and the 10s the paid agent would have wasted was never measured.
     if (s.transferAtSec == null) {
       s.transferAtSec = atSec; s.routedAtSec = s.routedAtSec ?? atSec;
+    }
+    // RE-LISTEN ENDS HERE. The machine has handed us on, which means the desk is ringing, which means
+    // the phone system is finished with us and so are we. Waiting the extra 40s for somebody to lift
+    // the handset would ring a real desk for nothing and teach us a number we do not want: how long
+    // Staff took, not how long the menu took.
+    if (s.relisten) {
+      s.stopReason = "menu done, desk ringing";
+      finish(s, "mapped"); return twiml(`<Hangup/>`);
     }
   }
   // CONFIRM mode: we already asked "do you have {product}?" — this turn is their answer. Classify it.
@@ -704,11 +726,17 @@ async function navTurn(id: string, speech: string): Promise<string> {
   return twiml(gather(id)); // wait: keep listening
 }
 
-function finish(s: NavSession, status: "human" | "failed") {
-  s.status = status;
+/** `mapped` = a RE-LISTEN finished: the menu was walked and the desk started ringing. Deliberately
+ *  NOT lockable. The route did not change, so this call must never write a recipe, and above all must
+ *  never write a `seconds`: the ring moment is earlier than the moment Staff speak, and the runtime
+ *  opens the paid agent on time-to-Staff. A re-listen that quietly lowered that number would put
+ *  Charlie on a ringing desk at every store in the chain. What this call is for is the MENU, and that
+ *  rides on the run log. */
+function finish(s: NavSession, status: "human" | "failed" | "mapped") {
+  s.status = status === "mapped" ? "done" : status;
   // In confirm mode, only a path that ENDED at the right desk (answered, not redirected) is lockable —
   // a redirect means we navigated to the wrong human, so we capture it but don't present it as the recipe.
-  const lockable = status === "human" && (!s.confirm || s.confirmResult !== "redirect");
+  const lockable = status === "human" && !s.relisten && (!s.confirm || s.confirmResult !== "redirect");
   if (lockable) {
     // The confirm question itself is training scaffolding, not part of the navigation recipe — drop it.
     const acts = s.steps
@@ -751,7 +779,11 @@ async function persistRun(s: NavSession): Promise<void> {
       // navId doubles as the receipt's room, so the run log can open the whole call afterwards.
       ts: Date.now(), navId: s.id, why: s.why ?? null,
       store: s.retailerName, retailerId: s.retailerId, model: s.model || NAV_MODEL, mode, label,
-      outcome: s.status, seconds: s.humanAtSec ?? (s.steps[s.steps.length - 1]?.atSec ?? null),
+      outcome: s.status, relisten: s.relisten ? true : undefined,
+      // A re-listen reports the MENU's seconds (the handoff, else its last step), never a person's.
+      seconds: s.relisten
+        ? (s.transferAtSec ?? s.steps.filter((st) => st.who === "us").slice(-1)[0]?.atSec ?? s.humanAtSec ?? null)
+        : (s.humanAtSec ?? (s.steps[s.steps.length - 1]?.atSec ?? null)),
       // Confirm-mode result: did we reach the RIGHT desk (answered) or get sent elsewhere (redirect → where)?
       confirm: s.confirm ? (s.confirmResult ?? "asked") : null, redirectTo: s.redirectTo ?? null,
       transferAtSec: s.transferAtSec ?? null, greeting: s.greeting ?? null, stopReason: s.stopReason ?? null,
@@ -776,14 +808,14 @@ async function recordConfirmAsked(chainId: number, retailerId: number): Promise<
 }
 
 /** Place the documentation call; returns the session id the admin polls for live progress. */
-export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { listenFirst?: boolean; askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string }): Promise<{ id?: string; error?: string }> {
+export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { listenFirst?: boolean; askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string; relisten?: boolean }): Promise<{ id?: string; error?: string }> {
   if (!config.callsEnabled) return { error: "calls disabled on this preview deploy" };
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const from = process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
   const id = crypto.randomUUID().slice(0, 8);
-  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined, listenFirst: extra?.listenFirst, askText: extra?.askText, target: extra?.target, maxSec: extra?.maxSec, transferWaitSec: extra?.transferWaitSec };
+  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined, listenFirst: extra?.listenFirst, askText: extra?.askText, target: extra?.target, maxSec: extra?.maxSec, transferWaitSec: extra?.transferWaitSec, relisten: extra?.relisten };
   sessions.set(id, session);
   session.why = extra?.why;
   // The receipt opens at DIAL, before anything can go wrong, so even a call the carrier refuses
