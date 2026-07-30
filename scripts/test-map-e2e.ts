@@ -141,6 +141,32 @@ async function main() {
     ok((await openUnknowns(200)).some((u) => u.chainId === cvs.id && u.kind === "drift"), "drift lands in the review queue with its evidence");
   }
 
+  // §11: "reportCallDrift fires on ordinary customer checks." It was reported as done and it was not:
+  // the tests above hand reportCallDrift a tidy list, so they never checked that the RECEIPT of a real
+  // customer check produces one. It did not. A mapping call writes the key it pressed as `key`; an
+  // ordinary check writes it as `value`; the reader only knew the first, so every ordinary check
+  // handed it an empty list and drift was never reported on a paying customer's check at all.
+  // This drives the real receipt shape end to end, which is the only version of this test that counts.
+  console.log("▶ an ORDINARY customer check reports drift off its own receipt, not a tidy list");
+  {
+    const before = (await activeMap(cvs.id))!.confidence;
+    // Exactly what listen-nav writes onto the receipt when it walks a menu on a customer's check.
+    const res = await learnFromReceipt({
+      room: "cust-check-1", callId: 5150, chainId: cvs.id, storeId: 33,
+      events: [
+        { kind: "dialed", atSec: 0 },
+        { kind: "ivr_detected", atSec: 1, detail: { steps: [{ action: "say", value: "front", atSec: 19 }] } },
+        { kind: "bravo_say", atSec: 47, detail: { action: "say", value: "front", atSec: 47, learnedAtSec: 19, via: "clock" } },
+        { kind: "human_detected", atSec: 52 },
+        { kind: "hangup", atSec: 70 },
+      ],
+    });
+    ok(res.learned.some((l) => /drifted/.test(l)), `the check's own receipt reported the drift (${res.learned.join(" · ")})`);
+    ok((await activeMap(cvs.id))!.confidence < before, "and trust in the route dropped off an ordinary check");
+    const obs = (await chainDetail(cvs.id)).observations as Array<Record<string, unknown>>;
+    ok(obs.some((o) => o.callId === 5150 && o.kind === "live-check"), "the observation carries the check's own call id");
+  }
+
   console.log("▶ the record accepts a route learned on the other environment");
   {
     // What /api/admin/map/ingest does once it has resolved the chain by name and the store by phone:
@@ -345,7 +371,9 @@ async function main() {
     const row = rows.find((r) => r.chainId === cvs.id)!;
     ok(!!row && row.mapped, "the chain shows as mapped");
     ok(row.route === 'say "front"', `the route reads in plain words: ${row.route}`);
-    ok(row.drift30d === 1, "drift in the last 30 days is counted");
+    // Two: the tidy-list drift above, and the one an ordinary customer check reported off its own
+    // receipt. An ordinary check counting here is the whole point of §10's first wiring gap.
+    ok(row.drift30d === 2, `drift in the last 30 days is counted (${row.drift30d})`);
     ok(row.promptTriggered, "and it shows the steps fire on the recording, not a stopwatch");
     ok(rows.some((r) => r.hammer), "key-hammering chains are visible as such");
     const detail = await chainDetail(cvs.id);

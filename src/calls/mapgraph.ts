@@ -1266,8 +1266,14 @@ export async function learnFromReceipt(r: {
   // it does not transcribe them — and a node with no words cannot be matched to the same prompt heard
   // on another call. Guessing at that would fill the graph with duplicates. Mapping calls, which do
   // transcribe, are what grow the graph.
+  // TWO WRITERS, TWO SHAPES, AND THIS ONLY EVER READ ONE OF THEM. A mapping call records the key it
+  // pressed as `key` and the phrase it said as `phrase` (navigator.ts); an ordinary check records
+  // both as `value` (listen-nav.ts). Reading only the first pair meant every ordinary check produced
+  // an empty list, the `if` below never ran, and drift was never reported on a customer's check at
+  // all — the exact wiring gap §10 says is ours, reported as closed while it was silently open
+  // (§10b: nobody marks their own homework). Read every shape a writer actually writes.
   const actions = events.filter((e) => e.kind === "alpha_press" || e.kind === "bravo_say").map((e) => ({
-    value: String(e.detail?.key ?? e.detail?.phrase ?? ""), atSec: e.atSec ?? 0,
+    value: String(e.detail?.key ?? e.detail?.phrase ?? e.detail?.value ?? ""), atSec: e.atSec ?? 0,
     via: String(e.detail?.via ?? e.detail?.trigger ?? "prompt"),
   })).filter((a) => a.value);
   if (actions.length) {
