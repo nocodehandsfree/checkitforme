@@ -38,6 +38,8 @@ then they ride the next promote to prod):**
 | [Voice ▸ Testing becomes the new-engine scorecard](admin-testing-new-engine.md) | admin | **UNBLOCKED: Addie's jobs 1+2 are done** |
 | [Check status page: loud retry + headline states](site-check-status-loud-retry.md) | site | active (owner-named unlock) |
 | [Unify the Admin: gate FIRST, then page by page](admin-unify-pass.md) | admin | queued after the Testing scorecard |
+| [The wrong-department save (Echo)](echo-wrong-department-save.md) | voice-calls | active |
+| [Routes swap themselves at three stores (Mapper)](mapper-auto-swap.md) | voice-calls + admin | active |
 
 ## Other open site fixes (consumer site is frozen: each needs an owner-named `.unlock`)
 | Task | System | Status |
