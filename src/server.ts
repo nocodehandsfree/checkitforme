@@ -6223,7 +6223,7 @@ app.get("/api/admin/trainer/list", async (c) => {
   })) });
 });
 app.post("/api/admin/trainer/document", async (c) => {
-  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; retailerId?: number; model?: string; hint?: string; barge?: { plan: Array<{ action: string; value: string; at: number }> }; reactivePress?: { digit: string; max: number }; confirm?: boolean; product?: string; why?: string; relisten?: boolean };
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; retailerId?: number; model?: string; hint?: string; barge?: { plan: Array<{ action: string; value: string; at: number; early?: boolean }> }; reactivePress?: { digit: string; max: number }; confirm?: boolean; product?: string; why?: string; relisten?: boolean };
   // CONFIRM mode: don't just reach a human — ask "do you have any {product} in stock?" to verify we
   // hit the RIGHT desk. On a chain-level run we ROTATE to a store we haven't asked yet (no script change,
   // just a fresh store) so we never re-ask the same store on a callback.

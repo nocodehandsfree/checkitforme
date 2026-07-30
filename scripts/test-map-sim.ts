@@ -438,16 +438,23 @@ async function main() {
   console.log("▶ THE MENU IS WRITTEN DOWN, LINE BY LINE");
   {
     const src = readFileSync("src/calls/navigator.ts", "utf8");
-    ok(/s\?\.relisten && s\.barge\?\.plan\?\.length[\s\S]{0,400}?return twiml\(`\$\{ear\}<Pause length="1"\/>\$\{gather\(id\)\}`\)/.test(src),
-      "a re-listen opens the listener at the greeting instead of running a silent timed block");
-    ok(/if \(s\.relisten && s\.barge\?\.plan\?\.length\) \{[\s\S]{0,3000}?return twiml\(gather\(id\)\)/.test(src),
+    ok(/if \(s\?\.barge\?\.plan\?\.length\) s\.type[\s\S]{0,200}?return twiml\(`\$\{ear\}<Pause length="1"\/>\$\{gather\(id\)\}`\)/.test(src),
+      "every check with a route opens the listener at the greeting instead of running a silent timed block");
+    ok(!/<Pause length="\$\{wait\}"/.test(src),
+      "the silent timed block is GONE, so no check can ever be deaf through the menu again");
+    ok(/if \(s\.barge\?\.plan\?\.length\) \{[\s\S]{0,4000}?return twiml\(gather\(id\)\)/.test(src),
       "and it fires its known steps from the listening loop, reopening the listener after each one");
     ok(/const named = [\s\S]{0,240}?includes\(" " \+ step\.value\.toLowerCase\(\)\)/.test(src),
       "a step goes when the prompt names its own word");
     ok(/named \|\| isMenuLine\(said\) \|\| looksLikeQuestion\(said\)/.test(src),
       "otherwise it answers the prompt that is asking, never a clock the menu has drifted away from");
-    ok(!/atSec >= \(step\.at \?\? 0\)/.test(src),
-      "the clock cannot walk the route ahead of the menu at all");
+    // ONE BEHAVIOUR FOR EVERY MAPPING CHECK (owner, 07-30). The clock may move exactly one step, the
+    // one a speed-up run is testing; every other step still answers the prompt that asks it, so two
+    // checks of the same store cannot produce two different records.
+    ok(/if \(step\?\.early && atSec >= \(step\.at \?\? 0\)\)/.test(src),
+      "only the ONE step being tested early may fire on the clock");
+    ok((src.match(/atSec >= \(step\.at \?\? 0\)/g) || []).length === 1,
+      "and nothing else in the route is allowed to walk ahead of the menu");
     ok(/if \(said && isReprompt\(said\)\)[\s\S]{0,400}?said "\$\{last\.value\}" again/.test(src),
       "a re-prompt repeats the SAME answer instead of spending the next one");
     ok(looksLikeQuestion("are you a healthcare provider?"), "a question with no options in it is still a cue to answer");
@@ -469,7 +476,7 @@ async function main() {
     // CVS: "just say what you'd like to do and I can connect you" is an OFFER to connect, mid menu.
     // Read as the handoff it made a re-listen hang up one step short and file a route that had never
     // said its last word.
-    ok(/const routeUnfinished = !!\(s\.relisten && s\.barge\?\.plan\?\.length && \(s\.planIdx \?\? 0\) < s\.barge\.plan\.length\)/.test(src),
+    ok(/const routeUnfinished = !!\(s\.barge\?\.plan\?\.length && \(s\.planIdx \?\? 0\) < s\.barge\.plan\.length\)/.test(src),
       "a route with a step still to walk cannot be finished with us");
     ok(/if \(speech && ROUTING_RE\.test\(speech\) && !routeUnfinished\)/.test(src),
       "so an offer to connect before the last answer is read as one more prompt, not the handoff");

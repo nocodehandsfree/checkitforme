@@ -83,6 +83,11 @@ Big-card shadow `0 24px 48px -12px rgba(0,0,0,.7)` · row-card shadow
 - **Verdict tones** — in stock `#4ADE80` · out `#EF4444` (`#FF7B7B` on wash) · unclear `#FBBF24` ·
   restock-soon `#F59E0B`. **Over-retail prices are `#F59E0B`** (alarming, never error-red).
   Page washes fade to `#1D1D22` at 460px: in `#266440` · out `#6B2427` · unclear `#6C5419`.
+- **Model tones (Admin, owner 07-30)** — Alpha `#818CF8` · Bravo `#38BDF8` · Direct `#6B6B7B`, from
+  the ONE source `LANE_C` in app.html. One cool band, so a list repeating them on every row reads as
+  one colour warming up instead of three fighting. Nothing warm belongs in this set: warm means
+  something is wrong, and **`needs review` is `#EF4444`**. Alpha was gold, the same colour the page
+  used for needs review, so a working chain read as a problem.
 - Text: primary `#fff` · body `rgba(255,255,255,.72–.85)` · muted `#8A8A96` · tertiary `#7C7C88` ·
   faint `#5C5C68`/`#6B6B7B` · embossed idle `#CDCDD8`/`#B9B9C4`.
 - One accent per element. Icon sets on a screen are uniform (account = all yellow — no purple/gold mix).

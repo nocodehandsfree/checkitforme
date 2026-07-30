@@ -136,11 +136,15 @@ function enqueueBinaryBarge(run: MapperRun, stepIdx: number, mid: number, accept
 }
 
 /** Apply one experiment to the best recipe → a timed barge plan for the next call. */
-function planFor(recipe: NavRecipe, ex: Experiment): Array<{ action: string; value: string; at: number }> {
+function planFor(recipe: NavRecipe, ex: Experiment): Array<{ action: string; value: string; at: number; early?: boolean }> {
   return (recipe.steps || []).map((st, i) => ({
     action: st.action || "say",
     value: ex.kind === "shorten" && i === ex.stepIdx ? (ex.value || st.value || "") : (st.value || ""),
     at: ex.kind === "barge" && i === ex.stepIdx ? (ex.at ?? st.atSec ?? 0) : (st.atSec ?? 0),
+    // ONE STEP FIRES ON THE CLOCK, the one this run is asking about. Everything else answers its own
+    // prompt, exactly like every other check, so the only thing that changed between two checks of the
+    // same store is the thing we are testing.
+    early: ex.kind === "barge" && i === ex.stepIdx ? true : undefined,
   }));
 }
 

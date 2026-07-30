@@ -1459,8 +1459,8 @@
         <div class="pk-fact" id="pk_setmenu"></div>
         <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
-      <button class="peek" onclick="sheetFromHolder('ds_setruns','Mapping calls','')">
-        <div class="pk-main"><div class="pk-t">Mapping calls</div></div>
+      <button class="peek" onclick="sheetFromHolder('ds_setruns','Mapped checks','')">
+        <div class="pk-main"><div class="pk-t">Mapped checks</div></div>
         <div class="pk-fact" id="pk_setruns"></div>
         <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
@@ -2283,8 +2283,10 @@ async function loadRuns(chainId, box){
   box.innerHTML='<div class="meta" style="padding:4px 0">Loading…</div>'; // clear the previous chain's log while we fetch
   const d=await api('/api/admin/trainer/runs?chainId='+chainId);
   const runs=(d&&d.runs)||[];
-  if(!runs.length){ box.innerHTML='<div class="empty">No mapping calls yet. Tap Map to place one.</div>'; return 0; }
-  const MODEC={alpha:'#60a5fa',bravo:'var(--yellow)',charlie:'var(--green)'};
+  if(!runs.length){ box.innerHTML='<div class="empty">No mapped checks yet. Tap Map to place one.</div>'; return 0; }
+  // The SAME colour a model wears everywhere else. This log had Alpha blue and Bravo yellow, which is
+  // both of them wearing the other one's colour on a second screen.
+  const MODEC={alpha:LANE_C.Alpha,bravo:LANE_C.Bravo,charlie:'var(--green)'};
   const OUT={human:'var(--green)',failed:'var(--red)',done:'var(--yellow)'};
   box.innerHTML=runs.map((r,i)=>{
     const col=OUT[r.outcome]||'var(--muted)';
@@ -2612,7 +2614,14 @@ async function tlBatch(kind){ const n=Number(document.getElementById('tl_count')
 // Nav defaults are the MEASURED median time to reach a person across our locked recipes (2026-07-24):
 // keypad 46s over 41 chains, voice 67s (CVS, the only mapped voice tree), direct 21s over 29 chains.
 // They were 30 and 50, which were invented. Pick a chain in the Scenario card for that chain's own time.
-const CALC_STORE={ Direct:{label:'Direct',sub:'human picks up',nav:0,nc:'var(--text-muted)'}, Alpha:{label:'Alpha',sub:'keypad tones',nav:46,nc:'#F4B740'}, Bravo:{label:'Bravo',sub:'voice menu',nav:67,nc:'#38BDF8'} };
+// THE MODEL, IN ITS OWN COLOUR. ONE SOURCE, read by every screen that names a model (owner, 07-30).
+// The three sit side by side on the spectrum on purpose: a list of chains reads as one colour warming
+// up, not three colours fighting, and it repeats on every row without tiring the eye. Alpha was gold,
+// which was the same colour as "needs review", so a working chain looked like a problem. Nothing warm
+// belongs in this set: warm is reserved for something being wrong, and red now only ever means that.
+const LANE_C={ Alpha:'#818CF8', Bravo:'#38BDF8', Direct:'#6B6B7B' };
+const laneColor=l=>LANE_C[l]||'var(--muted)';
+const CALC_STORE={ Direct:{label:'Direct',sub:'human picks up',nav:0,nc:LANE_C.Direct}, Alpha:{label:'Alpha',sub:'keypad tones',nav:46,nc:LANE_C.Alpha}, Bravo:{label:'Bravo',sub:'voice menu',nav:67,nc:LANE_C.Bravo} };
 const calcMoney=n=>'$'+(n<0?'-':'')+Math.abs(n).toFixed(3);
 // Charlie is the DEFAULT lane: he is what actually runs today. Delta is a plan, not a built thing, so
 // it must never be the number a session plans against (owner 07-24).
@@ -2788,7 +2797,7 @@ function calcCompute(storeType,nav,talk,r,lane,esc){
   // Getting through the menu. Both lines are listed even while they cost nothing, so the day the new
   // navigation ships with a real price the page SHOWS it instead of quietly swallowing it.
   const navLbl=storeType==='Bravo'?'Getting through the voice menu':storeType==='Alpha'?'Getting through the keypad menu':'Getting to a person';
-  const navAcc=storeType==='Bravo'?'#38BDF8':storeType==='Alpha'?'#F4B740':'var(--text-tertiary)';
+  const navAcc=storeType==='Bravo'?LANE_C.Bravo:storeType==='Alpha'?LANE_C.Alpha:'var(--text-tertiary)';
   if(storeType==='Direct') items.push({label:navLbl,detail:'direct line · nothing to navigate',accent:navAcc,amount:0});
   else {
     items.push({label:navLbl,detail:`${nav}s · the keys and the words cost nothing`,accent:navAcc,amount:0});
@@ -4655,7 +4664,7 @@ function buildChainPicker(){
     // Color with intent: mapped is the NORM (quiet gray) · unmapped is the exception that needs routing (amber).
     // A mapped chain shows its ROUTE and how long it takes to reach a person, so the list is scannable
     // without opening anything. The word "mapped" said less than "Bravo 41s" does.
-    const ln=chainLane(ch), lnc=ln==='Alpha'?'#F4B740':ln==='Bravo'?'#38BDF8':'#4ADE80';
+    const ln=chainLane(ch), lnc=laneColor(ln);
     const nv=ch.navSeconds!=null?ch.navSeconds:(ch.avgTreeSeconds!=null?ch.avgTreeSeconds:null);
     const route=locked
       ? `<span style="color:${ln?lnc:'#8A8A96'};font-weight:700">${ln||'mapped'}</span>`+(nv!=null?` <span style="color:#8A8A96">${nv}s</span>`:'')
@@ -4666,7 +4675,7 @@ function buildChainPicker(){
     // a waiting route stay, because both are work.
     const g=mapRow(ch.id);
     const trust=g&&g.proposed>0 ? '<span style="color:#F59E0B;font-weight:700">1 waiting</span>'
-      : (locked&&g&&g.confidenceLabel==='needs review') ? '<span style="color:#F59E0B;font-weight:700">needs review</span>' : null;
+      : (locked&&g&&g.confidenceLabel==='needs review') ? '<span style="color:var(--red);font-weight:700">needs review</span>' : null;
     const meta=[nStores?nStores+' store'+(nStores===1?'':'s'):null, ch.muted?'muted':null, route, trust].filter(Boolean).join(' · ');
     return `<div class="pickrow${String(ch.id)===cur?' on':''}" data-id="${ch.id}" data-name="${esch((ch.name||'').toLowerCase())}" data-tier="${ch.tier??''}" data-type="${esch((ch.type||'').toLowerCase())}" data-mapped="${locked?1:0}" data-changed="${(g&&(g.proposed>0||g.drift30d>0||g.openUnknowns>0))?1:0}" onclick="pickChainRow(${ch.id})"${ch.muted?' style="opacity:.5"':''}>
       <span class="setlogo">${logoTile(ch)}</span>
@@ -4835,7 +4844,7 @@ async function renderChainSheets(ch,nav){
   set('pk_setruns', calls.length?(todayN?todayN+' today':String(calls.length)):'');
   const rw=document.getElementById('set_runs');
   if(rw) rw.innerHTML = calls.length ? mappingCallsHtml(calls,versions)
-    : '<div class="empty">No mapping calls yet. Tap Re-map to place one.</div>';
+    : '<div class="empty">No mapped checks yet. Tap Re-map to place one.</div>';
 
   // RECIPES (comp 2i) — what is live and what it replaced, each with its nav time and the date it
   // locked. Attempts that were set aside are not recipes, so they sit behind one key: a rejected route
@@ -4965,18 +4974,40 @@ function dayWords(d){
 // then a Show more key. Never every call at once, because the sheet is for reading one call, not for
 // scrolling all of them.
 function mappingCallsHtml(calls,versions){
+  const gains=gainByCheck(calls);
+  const card=c=>mappingCallCard(c,versions,gains.get(c));
   const rest=calls.slice(2);
-  return calls.slice(0,2).map(c=>mappingCallCard(c,versions)).join('')
-    +(rest.length?`<div id="set_runs_more" style="display:none">${rest.map(c=>mappingCallCard(c,versions)).join('')}</div>`
+  return calls.slice(0,2).map(card).join('')
+    +(rest.length?`<div id="set_runs_more" style="display:none">${rest.map(card).join('')}</div>`
       +`<div style="display:grid;place-items:center;margin-top:6px"><button class="ghost" onclick="mapCallsMore(this)">Show ${rest.length} more</button></div>`:'')
     ;
+}
+// THE SPEED GAIN SITS ON EACH CHECK, against the check before it (owner, 07-30). It was briefly put on
+// the vitals at the top of the chain page, where it said nothing about which try earned it. Every
+// mapping check we hold already carries the seconds it took, so this is placement, not new maths.
+// NAV TIME is the number that improves: getting faster is the menu, and how long Staff then take to
+// lift the handset is theirs. A check that hung up on the ring has no time to Staff at all, so reading
+// `seconds` would leave the whole column blank on exactly the checks that map best.
+function checkNavSecs(calls){
+  const anyNav=(calls||[]).some(c=>typeof c.transferAtSec==='number'&&c.transferAtSec>0);
+  return (calls||[]).map(c=>{ const v=anyNav?c.transferAtSec:c.seconds; return (typeof v==='number'&&v>0)?v:null; });
+}
+// Oldest first, so "the check before" is the one that really came before. The list arrives newest
+// first, and a check with no time of its own is skipped rather than breaking the chain: the next one
+// is then compared with the last check that actually had a number.
+function gainByCheck(calls){
+  const list=(calls||[]).slice(), nav=checkNavSecs(list);
+  const order=list.map((c,i)=>({c,i})).sort((a,b)=>((Number(a.c.at)||0)-(Number(b.c.at)||0))||(a.i-b.i));
+  const out=new Map(); let prev=null;
+  for(const x of order){ const n=nav[x.i]; if(n==null) continue; if(prev!=null) out.set(x.c,prev-n); prev=n; }
+  return out;
 }
 function mapCallsMore(btn){
   const m=document.getElementById('set_runs_more'); if(m) m.style.display='';
   if(btn&&btn.parentNode) btn.parentNode.remove();
 }
 // One call: who we rang and when, how it ended, the conversation, then what it produced.
-function mappingCallCard(c,versions){
+function mappingCallCard(c,versions,gain){
   const ok=!!c.reachedHuman;
   // ONLY WORDS THE STATUSES SCREEN ALREADY OWNS (owner, 07-30). This said "Nobody answered" on a
   // check we ended ourselves, which is two untruths in one line: the desk WAS ringing, and we are
@@ -4986,13 +5017,16 @@ function mappingCallCard(c,versions){
     :['a','Nobody answered','#F59E0B'];
   const prod=callProduced(c,versions);
   const rungs=callRungs(c);
+  // The check's own nav time, so the gain beside it is measured against the same thing.
+  const navS=(typeof c.transferAtSec==='number'&&c.transferAtSec>0)?c.transferAtSec:c.seconds;
   return `<div class="card" style="margin:0 0 10px">`
     +`<div style="display:flex;align-items:baseline;gap:8px">`
     +`<div style="font-size:13.5px;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(c.store||'A store')}</div>`
     +`<div style="font-size:11.5px;font-weight:700;color:var(--text-tertiary);flex:0 0 auto">${callWhen(c.at)}</div></div>`
     +`<div style="display:flex;align-items:center;gap:8px;margin-top:8px">`
     +`<span class="pill ${pill[0]}" style="gap:6px">${ssDot(pill[2])}${pill[1]}</span>`
-    +(c.seconds!=null?`<span style="font-size:11.5px;font-weight:700;color:var(--muted)">${c.seconds}s</span>`:'')+`</div>`
+    +(navS!=null?`<span style="font-size:11.5px;font-weight:700;color:var(--muted)">${navS}s</span>`:'')
+    +(gain?`<span style="font-size:11.5px;font-weight:700;color:${gain>0?'var(--green)':'var(--muted)'}">${Math.abs(gain)}s ${gain>0?'faster':'slower'}</span>`:'')+`</div>`
     +`<div class="mladder" style="margin-top:13px">${rungs.map((r,i,a)=>callRung(r,i===a.length-1)).join('')}</div>`
     +`<div style="margin-top:12px;display:flex;align-items:baseline;gap:8px">`
     +`<span style="font-size:10.5px;font-weight:700;letter-spacing:.15em;color:#8A8A96">PRODUCED</span>`
@@ -5129,7 +5163,7 @@ function routeWords(v){
 // Read off the steps themselves so the ladder can never name a different model than it is showing.
 function menuLadder(rows){
   const pressed=rows.some(r=>r.who==='us'&&/^press/i.test(String(r.text||'')));
-  const L=pressed?['ALPHA','#F4B740']:['BRAVO','#38BDF8'];
+  const L=pressed?['ALPHA',LANE_C.Alpha]:['BRAVO',LANE_C.Bravo];
   const WHO={store:['STORE','var(--muted)'],us:L,staff:['STAFF','var(--green)']};
   return `<div class="mladder">`+rows.map((r,i,a)=>{
     const w=WHO[r.who]||WHO.store, next=a[i+1], gap=(r.at!=null&&next&&next.at!=null)?next.at-r.at:null;
@@ -5248,7 +5282,7 @@ async function mapUnknown(id,status,chainId){
 // THE LADDER ENDS WHEN THE DESK STARTS RINGING (owner, 07-28). It used to finish on "Staff answers",
 // which put somebody else's reaction time inside our number and made a good route look slow. The desk
 // ringing is the last thing the phone system does to us, so that is the last rung. Who picked up, and
-// what they said, is in Mapping calls, where reading one call is the point.
+// what they said, is in Mapped checks, where reading one check is the point.
 function routeRungs(ch,nav,DASH){
   const steps=chainSteps(ch), rungs=[];
   let heard=''; try{ const r=ch.navRecipe?JSON.parse(ch.navRecipe):null; heard=(r&&r.menuPrompts&&r.menuPrompts[0])||''; }catch(e){}
@@ -5312,7 +5346,7 @@ function renderChainMapping(ch){
   const meta=document.getElementById('set_chmeta');
   if(meta){
     const n=(ch.stores&&ch.stores.n)||0;
-    const lc=lane==='Alpha'?'#F4B740':lane==='Bravo'?'#38BDF8':lane==='Direct'?'var(--green)':'var(--muted)';
+    const lc=laneColor(lane);
     meta.innerHTML=`${n.toLocaleString()} store${n===1?'':'s'}`+(lane?` · <span style="color:${lc};font-weight:700">${lane}</span>`:'');
   }
   // --- vitals: what a check costs here, how long to a person, what the menu itself costs.
@@ -5342,12 +5376,16 @@ function renderChainMapping(ch){
     // THE DATE THE RECIPE WAS LOCKED IN, in seconds like every other stamp we hold. This read
     // `navUpdatedAt` as milliseconds and printed January 1970 on every chain (owner, 07-30), and it was
     // the wrong field besides: it moves when a chain starts learning, not when its route locked.
+    // AND THE WORD SAYS WHICH DATE IT IS (owner, 07-30). A bare "Jun 25" beside a menu reads as the
+    // last time we checked, and it is not: it is the day the recipe we run now was locked in. The
+    // Recipes sheet already calls the same stamp Locked, and one thing cannot have two names on two
+    // screens, so this one says Locked as well.
     const lockedAt=(g&&g.lastVerified)||ch.navUpdatedAt||ch.treeLearnedAt||null;
     const dt=lockedAt?new Date(lockedAt*1000):null;
     const cl=g&&g.confidenceLabel==='needs review'?'Needs review':'';
     ver.innerHTML=!isLocked?''
-      :(cl?`<span style="color:#F59E0B;font-weight:700">${cl}</span>`:'')
-       +(dt?`<span style="color:var(--muted)">${cl?' \u00b7 ':''}${dt.toLocaleDateString([],{month:'short',day:'numeric'})}</span>`:'');
+      :(cl?`<span style="color:var(--red);font-weight:700">${cl}</span>`:'')
+       +(dt?`<span style="color:var(--muted)">${cl?' \u00b7 ':''}Locked ${dt.toLocaleDateString([],{month:'short',day:'numeric'})}</span>`:'');
   }
   // --- a route waiting on him. This is the only thing on the page he has to DECIDE, so it sits above
   // the menu it would replace, not buried in a list.

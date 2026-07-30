@@ -102,7 +102,9 @@ export interface NavRecipe {
 export interface NavSession {
   id: string; chainId: number | null; retailerId: number; retailerName: string; phone: string;
   startMs: number; steps: NavStep[]; turns: number; model?: string; hint?: string;
-  barge?: { plan: Array<{ action: string; value: string; at: number }> };
+  // `early` marks the ONE step an optimising run is testing ahead of its prompt. Every other step
+  // waits for the prompt that asks it, so two checks of the same store record the same menu.
+  barge?: { plan: Array<{ action: string; value: string; at: number; early?: boolean }> };
   reactivePress?: { digit: string; max: number; count: number };
   // CONFIRM mode: instead of hanging up at the human, ASK "do you have any {product} in stock?" to
   // verify we reached the RIGHT desk (where the cards live). Their reply classifies the run:
@@ -395,34 +397,15 @@ export function navInitialTwiml(id: string): string {
   // of waiting for each prompt to finish. `at` = seconds from connect to speak each step. Then listen
   // for the transfer. Each round we shave the times earlier until the store stops accepting it.
   const ear = earFork(id);
-  // A RE-LISTEN LISTENS. The whole point of walking a route we already hold is to write down what the
-  // store SAYS at each second, so the owner can read the menu in the store's own words and see where
-  // a step could move earlier. The timed block below is deaf by construction: it is one long stretch
-  // of pauses and speech with the listener opened only at the END, so a re-listen used to record one
-  // line of a four-line menu. So a re-listen takes the ordinary listening loop instead, and fires its
-  // known steps from `navTurn` as the menu plays. Same route, same words, every line written down.
-  if (s?.relisten && s.barge?.plan?.length) {
-    s.type = s.barge.plan.every((p) => p.action === "press") ? "keypad" : "voice";
-    return twiml(`${ear}<Pause length="1"/>${gather(id)}`);
-  }
-  if (s && s.barge?.plan?.length) {
-    let inner = ear; let prev = 0;
-    for (const st of s.barge.plan) {
-      const wait = Math.max(0, Math.round((st.at ?? 0) - prev));
-      if (wait > 0) inner += `<Pause length="${wait}"/>`;
-      if (st.action === "press" && st.value) {
-        const digits = st.value.replace(/[^0-9*#]/g, "").slice(0, 6);
-        inner += `<Play digits="${digits}"/>`;
-        s.steps.push({ who: "us", text: `pressed ${digits} (barge @${st.at}s)`, atSec: Math.round(st.at), action: "press", value: digits , earPrompts: s.ear?.recordings });
-      } else if (st.value) {
-        inner += `<Say voice="Polly.Joanna">${esc(st.value)}</Say>`;
-        s.steps.push({ who: "us", text: `said "${st.value}" (barge @${st.at}s)`, atSec: Math.round(st.at), action: "say", value: st.value , earPrompts: s.ear?.recordings });
-      }
-      prev = st.at ?? prev;
-    }
-    s.type = s.barge.plan.every((p) => p.action === "press") ? "keypad" : "voice";
-    return twiml(`${inner}${gather(id)}`);
-  }
+  // ONE BEHAVIOUR FOR EVERY MAPPING CHECK (owner, 07-30: "every time we try back it needs to be
+  // working the exact same way or the results could be different"). There used to be two: a re-listen
+  // took the ordinary listening loop, while a speed-up check played the whole route on one timer with
+  // the listener opened only at the END — deaf by construction, so it recorded one line of a four-line
+  // menu and produced a different record of the same store. Now every check with a route walks it the
+  // same way: the listening loop below, steps fired from `navTurn` as the menu plays. The one step a
+  // speed-up run is testing early carries `early` and fires on its second; that is the whole
+  // difference between two checks, which is what makes the comparison honest.
+  if (s?.barge?.plan?.length) s.type = s.barge.plan.every((p) => p.action === "press") ? "keypad" : "voice";
   return twiml(`${ear}<Pause length="1"/>${gather(id)}`); // let the greeting start, then listen
 }
 
@@ -645,7 +628,7 @@ async function navTurn(id: string, speech: string): Promise<string> {
   // handoff test read it as the handoff, so a re-listen hung up one step short and filed a 47s route
   // that had never said its last word. A route we already hold tells us how many answers it takes, so
   // an offer to connect before the last one is just another prompt to answer.
-  const routeUnfinished = !!(s.relisten && s.barge?.plan?.length && (s.planIdx ?? 0) < s.barge.plan.length);
+  const routeUnfinished = !!(s.barge?.plan?.length && (s.planIdx ?? 0) < s.barge.plan.length);
   if (speech && ROUTING_RE.test(speech) && !routeUnfinished) {
     s.routingSeen = true;                       // routed to a person → next greeting is human
     // WHEN the machine said it was handing us on. It used to be stamped only if the brain happened to
@@ -734,12 +717,12 @@ async function navTurn(id: string, speech: string): Promise<string> {
     }
     return twiml(gather(id)); // silence so far — keep listening for the prompt
   }
-  // A RE-LISTEN WALKS ITS ROUTE ONE STEP AT A TIME, between listens. No model in the loop: the route
-  // is already proved, so the only decision left is WHEN to fire the next step. The prompt naming our
-  // own word is the best moment there is, because it proves the menu reached that question; the step's
-  // own second is the fallback, so a store that stays quiet still gets walked. Either way the listener
-  // reopens straight after, which is how the menu ends up on the page in the store's own words.
-  if (s.relisten && s.barge?.plan?.length) {
+  // EVERY MAPPING CHECK WALKS ITS ROUTE ONE STEP AT A TIME, between listens. No model in the loop: the
+  // route is already proved, so the only decision left is WHEN to fire the next step. The prompt naming
+  // our own word is the best moment there is, because it proves the menu reached that question; the
+  // step's own second is the fallback, so a store that stays quiet still gets walked. Either way the
+  // listener reopens straight after, which is how the menu ends up on the page in the store's own words.
+  if (s.barge?.plan?.length) {
     const said = (speech || "").trim();
     // A RE-PROMPT IS NOT THE NEXT QUESTION. "Sorry, I'm not understanding" means the menu did not hear
     // our last answer, so we say THAT answer again and do not advance. Walking on here is how a check
@@ -754,6 +737,24 @@ async function navTurn(id: string, speech: string): Promise<string> {
     }
     const idx = s.planIdx ?? 0;
     const step = s.barge.plan[idx];
+    // THE ONE STEP BEING TESTED EARLY, and only that one. A speed-up run asks a single question — can
+    // this word land at 9s instead of 14s — so exactly one step fires on the clock and the rest of the
+    // route runs identically to every other check. Never widen this to the whole plan: firing the
+    // whole route on recorded seconds is what made a check walk ahead of a slow menu and answer the
+    // wrong question (CVS Lanett, 07-30).
+    if (step?.early && atSec >= (step.at ?? 0)) {
+      s.planIdx = idx + 1;
+      s.lastActTurn = s.turns;
+      if (step.action === "press" && step.value) {
+        const digits = step.value.replace(/[^0-9*#]/g, "").slice(0, 6);
+        s.steps.push({ who: "us", text: `pressed ${digits} (trying it earlier)`, atSec, action: "press", value: digits, earPrompts: s.ear?.recordings });
+        return twiml(`<Play digits="${digits}"/>${gather(id)}`);
+      }
+      if (step.value) {
+        s.steps.push({ who: "us", text: `said "${step.value}" (trying it earlier)`, atSec, action: "say", value: step.value, earPrompts: s.ear?.recordings });
+        return twiml(`<Say voice="Polly.Joanna">${esc(step.value)}</Say>${gather(id)}`);
+      }
+    }
     if (step && said) {
       // ANSWER THE PROMPT, NEVER THE CLOCK. The route's recorded seconds come from one check on one
       // afternoon; a store that reads a line slowly, or repeats itself once, puts every later second
@@ -780,20 +781,9 @@ async function navTurn(id: string, speech: string): Promise<string> {
     }
     return twiml(gather(id)); // not this step's moment yet — keep listening, keep writing it down
   }
-  // MECHANICAL RECOVERY after a timed plan: if the menu is still prompting and the prompt NAMES one of
-  // our known-path words ("…pharmacy or FRONT door services?", "…GENERAL store inquiries…"), say that
-  // word immediately — no model in the loop. The LLM goes passive after a barge plan (live-observed:
-  // three re-prompts, zero replies), but the proven words always route to the front store.
-  if (s.barge?.plan?.length && speech && speech.trim()) {
-    const saidAlready = new Set(s.steps.filter((st) => st.who === "us" && st.action === "say" && (st.atSec ?? 0) >= atSec - 1).map((st) => st.value));
-    const low = " " + speech.toLowerCase() + " ";
-    const next = s.barge.plan.find((p) => p.action !== "press" && p.value && low.includes(" " + p.value.toLowerCase()) && !saidAlready.has(p.value));
-    if (next) {
-      s.steps.push({ who: "us", text: `said "${next.value}" (recovery — prompt named it)`, atSec, action: "say", value: next.value , earPrompts: s.ear?.recordings });
-      s.lastActTurn = s.turns;
-      return twiml(`<Say voice="Polly.Joanna">${esc(next.value)}</Say>${gather(id)}`);
-    }
-  }
+  // The mechanical recovery that used to sit here (say a known word when the prompt names it, because
+  // the model went passive behind a timed plan) is GONE, and must not come back: the walk above is
+  // that behaviour for every check with a route, and it can no longer be reached from here.
   const d = await decide(s, speech || "");
   if (d.type) s.type = d.type;
   s.confidence = d.confidence;
@@ -979,7 +969,7 @@ async function recordConfirmAsked(chainId: number, retailerId: number): Promise<
 }
 
 /** Place the documentation call; returns the session id the admin polls for live progress. */
-export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { listenFirst?: boolean; askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string; relisten?: boolean; callerRecords?: boolean }): Promise<{ id?: string; error?: string }> {
+export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number; early?: boolean }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { listenFirst?: boolean; askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string; relisten?: boolean; callerRecords?: boolean }): Promise<{ id?: string; error?: string }> {
   if (!config.callsEnabled) return { error: "calls disabled on this preview deploy" };
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
