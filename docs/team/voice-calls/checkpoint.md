@@ -38,9 +38,9 @@ every string `copy.md` (**a control panel talks to nobody**), comps 2f rev + 2h/
   no Ear → published 6s cadence), never asks, and IS lockable (owner: that call is the v1 recipe).
 - **EVERY call feeds the map now** — `recordNavCall` (map-capture) called from `finish`. Before this the
   Re-map button wrote to the run log and NOWHERE else. Sweep + mapper pass `callerRecords:true`.
-- **07-30 RAILWAY BUILDER STALL (PM, owner's go): platform-side.** Nothing picked up since 16:47Z. Cancelled
-  the 27-min wedge + superseded dupes (`deploymentCancel` errors once — RETRY lands) and forced
-  `serviceInstanceDeploy` — still QUEUED. All mapper work IS on staging branch; builds when Railway recovers.
+- **07-30 RAILWAY QUEUE RESOLVED — root cause: upstream GitHub outage** (the SUCCESS deploy's queuedReason
+  says so; Railway couldn't fetch the repo, ~16:47–17:40Z). Staging serves 279f1890, `/api/health` ok.
+  Trap: `deploymentCancel` on a wedged deploy errors once — retry lands. Re-listen check UNBLOCKED.
 ## VERIFIED / NOT VERIFIED
 - **DRIVEN 07-29:** 42 delta-clip (REAL ws provider + real carrier socket) · 43 listen-nav · 72 receipt · 24 one-question+reader · 93 map-e2e · 76 map-sim · 62 mapgraph · 53 runtime-spec · 15 dropped-call (REAL db) · 13 bridge · 9 runtime-gates. tsc + spec gates clean. **line-by-line 97/98 · sweep 85/85 + 9 need a phone.**
 - **REAL STAGING CHECKS 204 + 205 (me, Fun store, on HEAD).** 204: 8 events, exactly one of each — **0 false
