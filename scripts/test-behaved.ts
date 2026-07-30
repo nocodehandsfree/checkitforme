@@ -35,15 +35,16 @@ head("SHAPE");
   const r = behaved({ timeline: cleanDirect, rollup: { stepsFired: 0, stepsOnPause: 0, charlieSegments: 1 }, agentLines: [OPENER, "Perfect, thank you so much!"] });
   // THE ORDER IS THE SCREEN. The four he walked keep their places; the two the wrong-department save
   // added sit under them, so a row never moves out from under his thumb.
-  ok("five rows, fixed order", r.map((x) => x.key).join(",")
-    === "no_keypad_at_person,meter_stopped_on_hold,mapping_held,asked_to_be_put_through,asked_the_new_person", r.map((x) => x.key));
+  // ONLY CHARLIE ON THIS CARD (owner 07-30). Walking a menu is the map's job, not his, and it is not
+  // a test: it either works or the check fails, and the check failing is the report.
+  ok("three rows, fixed order, all of them about Charlie", r.map((x) => x.key).join(",")
+    === "meter_stopped_on_hold,asked_to_be_put_through,asked_the_new_person", r.map((x) => x.key));
   ok("an ordinary check shows a gray dash on both wrong-department rows, never a cross",
     row(r, "asked_to_be_put_through").pass === null && row(r, "asked_the_new_person").pass === null);
   ok("every row ships a label, a tooltip and a why", r.every((x) => !!x.label && !!x.tip && !!x.why));
   ok("a clean Fun-store check ticks nothing it cannot fail", r.filter((x) => x.pass === true).length === 0, r.filter((x) => x.pass === true).map((x) => x.key));
   ok("pass is only true, false or null", r.every((x) => x.pass === true || x.pass === false || x.pass === null));
   // A DIRECT STORE HAS NO MENU, so a tick would read as "we expect a keypad" (owner 07-30).
-  ok("a clean direct check: the keypad row is a DASH, never a tick", row(r, "no_keypad_at_person").pass === null, row(r, "no_keypad_at_person").why);
   ok("a clean direct check: nobody held us, so the meter row is null", row(r, "meter_stopped_on_hold").pass === null);
   // HIS OWN WORDS (owner 07-30), asserted so they cannot drift back into ours.
   ok("…and it says it in his words", row(r, "meter_stopped_on_hold").why === "Nobody dropped Charlie on this check.", row(r, "meter_stopped_on_hold").why);
@@ -51,29 +52,8 @@ head("SHAPE");
   // OPERATOR GRADE, NOT CONVERSATIONAL (owner 07-30, admin copy guide: a label is a precise noun or
   // a plain verb, never a sentence). Asserted so nobody writes chat into a control panel again.
   ok("the labels are the operator's words", r.map((x) => x.label).join(" · ")
-    === "No keypad detected · Meter stopped · Mapping held · Transfer requested · Re-asked after transfer", r.map((x) => x.label));
+    === "Meter stopped · Transfer requested · Re-asked after transfer", r.map((x) => x.label));
   ok("no gray line runs past one line on a phone", r.every((x) => x.why.length <= 110), r.filter((x) => x.why.length > 110).map((x) => x.why));
-  ok("a clean direct check: mapping held is a DASH, there is no map to hold", row(r, "mapping_held").pass === null, row(r, "mapping_held").why);
-}
-
-head("NO KEYPAD AT A PERSON");
-{
-  const at = (tl: BehavedEvent[]) => row(behaved({ timeline: tl, agentLines: [OPENER] }), "no_keypad_at_person");
-  ok("a direct store with no press is a dash", at(cleanDirect).pass === null);
-  // A BRAVO STORE SAYS THE MENU WORD AND NEVER PRESSES A KEY, so it cannot pass this either.
-  const bravo: BehavedEvent[] = [ev("dialed", 0, { plannedLane: "bravo", plan: [{ action: "say", value: "front", atSec: 16 }] }),
-    ev("bravo_say", 16, { phrase: "front", via: "prompt" }), ev("human_detected", 67), ev("hangup", 86)];
-  ok("a Bravo store is a dash too, it never presses a key", at(bravo).pass === null, at(bravo).why);
-  ok("a press AT the person fails", at([...cleanDirect, ev("alpha_press", 19, { key: "1" })]).pass === false);
-  ok("a press AFTER the person fails", at([...cleanDirect, ev("alpha_press", 22, { key: "1" })]).pass === false);
-  ok("presses BEFORE Staff answer are fine", at([ev("dialed", 0), ev("alpha_press", 8, { key: "3" }), ev("human_detected", 19)]).pass === true);
-  ok("no person is null, never a tick", at([ev("dialed", 0), ev("ringing", 2), ev("hangup", 30)]).pass === null);
-  // A MAPPED store is the only place this row can really pass or fail.
-  const mappedClean: BehavedEvent[] = [
-    ev("dialed", 0, { plannedLane: "alpha", plan: [{ action: "press", value: "1", atSec: 7 }] }),
-    ev("alpha_press", 7, { key: "1", via: "prompt" }), ev("human_detected", 30), ev("hangup", 60)];
-  ok("a mapped store with the keys before pickup PASSES", at(mappedClean).pass === true, at(mappedClean).why);
-  ok("…and a key after pickup FAILS", at([...mappedClean, ev("alpha_press", 33, { key: "0" })]).pass === false);
 }
 
 head("METER STOPPED ON HOLD");
@@ -96,33 +76,6 @@ head("METER STOPPED ON HOLD");
   const lateClose: BehavedEvent[] = [ev("dialed", 0, { plan: [] }), ev("human_detected", 10), ev("charlie_join", 10), ev("hold_start", 20), ev("hold_end", 50), ev("charlie_leave", 70), ev("hangup", 70)];
   ok("a close after somebody came back does NOT count as stopping for the hold", at(lateClose).pass === false);
   ok("no hold at all is null", at(cleanDirect).pass === null);
-}
-
-head("MAPPING HELD");
-{
-  const at = (tl: BehavedEvent[], sums?: Record<string, number>) => row(behaved({ timeline: tl, rollup: sums ?? null, agentLines: [OPENER] }), "mapping_held");
-  ok("direct, nothing fired: a dash, not a tick", at(cleanDirect, { stepsFired: 0, stepsOnPause: 0 }).pass === null);
-  const firedAtDirect = [...cleanDirect, ev("alpha_press", 6, { key: "1", via: "prompt" })];
-  ok("a step fired at a direct store fails", at(firedAtDirect).pass === false);
-  const blindJoin: BehavedEvent[] = [ev("dialed", 0, { plan: [] }), ev("ringing", 2), ev("charlie_join", 4), ev("hangup", 40)];
-  ok("Charlie opening with nobody on the line still fails", at(blindJoin).pass === false);
-  const early: BehavedEvent[] = [ev("dialed", 0, { plan: [] }), ev("charlie_join", 5), ev("human_detected", 19), ev("hangup", 40)];
-  ok("Charlie opening before Staff still fails", at(early).pass === false);
-  ok("the reason spells out how early", /14s before/.test(at(early).why));
-  const noJoin: BehavedEvent[] = [ev("dialed", 0, { plan: [] }), ev("ringing", 2), ev("hangup", 30)];
-  ok("no Charlie and no steps is null", at(noJoin).pass === null);
-
-  const mapped = (via: string): BehavedEvent[] => [
-    ev("dialed", 0, { plannedLane: "alpha", plan: [{ action: "press", value: "1", atSec: 7 }, { action: "press", value: "3", atSec: 14 }] }),
-    ev("ivr_detected", 4), ev("alpha_press", 7, { key: "1", via }), ev("alpha_press", 14, { key: "3", via }),
-    ev("human_detected", 22), ev("charlie_join", 22), ev("hangup", 50),
-  ];
-  ok("mapped, every step on the store's recording, passes", at(mapped("prompt")).pass === true);
-  ok("mapped, a step on the clock, fails", at(mapped("clock")).pass === false);
-  ok("mapped, the roll-up's own counts are believed over the timeline", at(mapped("prompt"), { stepsFired: 2, stepsOnPause: 1 }).pass === false);
-  const nothingFired: BehavedEvent[] = [ev("dialed", 0, { plannedLane: "alpha", plan: [{ action: "press", value: "1", atSec: 7 }] }), ev("human_detected", 30), ev("charlie_join", 30), ev("hangup", 50)];
-  ok("mapped, the map had a step and none fired, fails", at(nothingFired).pass === false);
-  ok("no dialed event at all is null", at([ev("hangup", 10)]).pass === null);
 }
 
 head("THE WORDS OFF A FINISHED ROW");
@@ -174,7 +127,6 @@ head("THE WRONG-DEPARTMENT SAVE");
   ok("…off the clock, naming both seconds", /31s/.test(row(r, "asked_the_new_person").why) && /33s/.test(row(r, "asked_the_new_person").why));
   ok("Charlie was dropped, and the row says the TRANSFER did it rather than Staff",
     row(r, "meter_stopped_on_hold").pass === true && /the transfer dropped charlie/i.test(row(r, "meter_stopped_on_hold").why), row(r, "meter_stopped_on_hold").why);
-  ok("the keypad row is a dash on this direct store", row(r, "no_keypad_at_person").pass === null);
 }
 
 head("…and every way it can go wrong");

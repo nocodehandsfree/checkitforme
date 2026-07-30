@@ -1,11 +1,15 @@
 // CHARLIE BEHAVIOR — the pass/fail rows the owner reads on one test check.
 //
-// WHY (owner, 07-29): he places a test check and the only way to know whether the engine did what it
-// was built to do was to read the whole thing line by line, at night, on a phone. The failures that
-// matter are invisible in the answer: a keypad tone fired at Staff who are already talking, Charlie
-// left billing through a two minute wait, and a map that quietly stopped working all end in a
-// perfectly good answer. This turns the record the engine already writes into words he reads at a
-// glance.
+// WHY (owner, 07-29): he places a test check and the only way to know whether Charlie did what he was
+// built to do was to read the whole thing line by line, at night, on a phone. The failures that matter
+// are invisible in the answer: Charlie left billing through a two minute wait, and Charlie answering
+// a stranger mid sentence after a transfer, both end in a perfectly good answer.
+//
+// ONLY CHARLIE (owner 07-30). Walking a phone menu is not Charlie and it is not a test: it either
+// works or the check fails, and the check failing is the report. Three rows went for that reason —
+// "Asked once" (the workflow locks one question), "Mapping held" and "No keypad detected" (both are
+// the map doing its job, not Charlie doing his). If a row cannot tell him something about Charlie
+// that a working check would hide, it does not belong on this card.
 //
 // DESIGN RULES
 //  1. PURE. No db, no config, no clock, no vendor names. It takes a check's steps, its roll-up and
@@ -30,8 +34,7 @@
 // still holds: no db, no config, no clock.
 import { askedToBePutThrough as saysPutMeThrough } from "../voice/prompts";
 
-export type BehavedKey = "no_keypad_at_person" | "meter_stopped_on_hold" | "mapping_held"
-  | "asked_to_be_put_through" | "asked_the_new_person";
+export type BehavedKey = "meter_stopped_on_hold" | "asked_to_be_put_through" | "asked_the_new_person";
 
 export interface BehavedRow {
   key: BehavedKey;
@@ -52,10 +55,8 @@ export interface BehavedEvent {
   detail?: Record<string, unknown> | null;
 }
 
-/** The slice of the roll-up this reads. Everything optional: an older row stamped none of it. */
+/** The slice of the roll-up this reads. Optional: an older row stamped none of it. */
 export interface BehavedSums {
-  stepsFired?: number | null;
-  stepsOnPause?: number | null;
   charlieSegments?: number | null;
 }
 
@@ -125,32 +126,10 @@ export function behaved(input: BehavedInput): BehavedRow[] {
   const wrongDept = tl.find((e) => (e.detail || {}).wrongDepartment === true) || null;
 
   return [
-    noKeypadAtPerson(sec(first("human_detected")), every("alpha_press"), tl),
     meterStoppedOnHold(tl, sums),
-    mappingHeld(tl, sums, sec(first("human_detected")), sec(first("charlie_join"))),
     askedToBePutThrough(turns, wrongDept),
     askedTheNewPerson(turns, handedOver, maybeNew),
   ];
-}
-
-/**
- * ONLY A KEYPAD STORE CAN PASS OR FAIL THIS (owner 07-30, twice). A store that answers direct never
- * had a key to press. A Bravo store SAYS the menu word and never presses one either, so ticking it
- * was the same lie in a second costume. The row appears only when Alpha actually pressed keys on
- * this check, and is a gray dash on everything else — which means he will not see it until it means
- * something, and when he does see it, it is about a real risk: a store we mapped with a keypad menu
- * that now answers direct would get beeped in the ear.
- */
-function noKeypadAtPerson(humanAt: number | null, presses: BehavedEvent[], tl: BehavedEvent[]): BehavedRow {
-  const row = (pass: boolean | null, why: string): BehavedRow => ({
-    key: "no_keypad_at_person", label: "No keypad detected", pass, why,
-    tip: "Only scores on a store where Alpha presses keys. The tones must stop the moment Staff answer, or a store that used to have a keypad menu and now answers direct gets beeped in the ear.",
-  });
-  if (!presses.length) return row(null, "No keypad on this check. Nothing to press.");
-  if (humanAt == null) return row(null, "Nobody answered. Nothing to press at.");
-  const after = presses.filter((e) => Number(e.atSec ?? 0) >= humanAt);
-  if (!after.length) return row(true, `0 keys pressed after Staff answered at ${humanAt}s.`);
-  return row(false, `${plural(after.length, "key", "keys")} pressed after Staff answered at ${humanAt}s.`);
 }
 
 /**
@@ -240,37 +219,3 @@ function askedTheNewPerson(turns: AgentTurn[], handedOver: BehavedEvent[], maybe
   return row(false, `New Staff at ${back}s. 1 question on the whole check, so they were never asked.`);
 }
 
-/**
- * A direct-pickup store must have nothing fired at it and the agent must open AT the person — the
- * silent-agent guard. A mapped store must fire every step on the store's own recording ending, never
- * on a stopwatch, because a stopwatch is what talks over a menu that paused a beat longer today.
- */
-function mappingHeld(tl: BehavedEvent[], sums: BehavedSums, humanAt: number | null, joinAt: number | null): BehavedRow {
-  const row = (pass: boolean | null, why: string): BehavedRow => ({
-    key: "mapping_held", label: "Mapping held", pass, why,
-    tip: "Direct store: 0 steps fired and Charlie joined at pickup. Mapped store: every step fired on the store's own recording, never on a stopwatch.",
-  });
-  const dialed = tl.find((e) => e.kind === "dialed");
-  if (!dialed) return row(null, "No start recorded. The planned route is unknown.");
-  const d = dialed.detail || {};
-  const plan = Array.isArray(d.plan) ? (d.plan as unknown[]) : null;
-  const plannedLane = typeof d.plannedLane === "string" ? d.plannedLane : null;
-  const mapped = plan ? plan.length > 0 : plannedLane === "alpha" || plannedLane === "bravo";
-  const steps = tl.filter((e) => e.kind === "alpha_press" || e.kind === "bravo_say");
-  const fired = Number(sums.stepsFired ?? steps.length);
-  const onPause = Number(sums.stepsOnPause ?? steps.filter((e) => (e.detail || {}).via === "prompt").length);
-
-  if (!mapped) {
-    // A DIRECT STORE HAS NO MAP TO HOLD. Ticking that every time is the same noise as the keypad row
-    // was: it can only ever pass, so it says nothing (owner 07-30). A step firing at a store that
-    // answers direct is still a real fault, so that one still crosses.
-    if (fired > 0) return row(false, `Direct store. ${plural(fired, "step", "steps")} fired at it anyway.`);
-    if (joinAt != null && humanAt != null && joinAt < humanAt) return row(false, `Charlie joined at ${joinAt}s, ${humanAt - joinAt}s before Staff were there.`);
-    if (joinAt != null && humanAt == null) return row(false, `Charlie joined at ${joinAt}s with nobody on the line.`);
-    return row(null, "Direct store, no map to hold.");
-  }
-  const planned = plan ? plan.length : fired;
-  if (fired === 0) return row(false, `${plural(planned, "step", "steps")} mapped for this store. 0 fired.`);
-  if (onPause === fired) return row(true, `${fired} of ${plural(fired, "step", "steps")} fired on the store's recording, none on the clock.`);
-  return row(false, `${fired - onPause} of ${plural(fired, "step", "steps")} fired on the clock, not the store's recording.`);
-}
