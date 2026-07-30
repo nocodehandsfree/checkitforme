@@ -5,7 +5,7 @@ git. Last updated: 2026-07-30 (a wrong department no longer loses the check; Cha
 - Reaching the pharmacy counter used to fail the check and the customer paid to try again. Now we ask once to be
   put through, stop paying while they hand us over, and ask again when somebody new picks up. Same check, one
   answer, and it tells us that store's route is dropping us at the wrong desk.
-- **A switch, default on**, Voice → App: "If we reach the wrong department, ask Staff to transfer us". Off = never
+- **A switch, default on**, Calls → App: "If we reach the wrong department, ask Staff to transfer us". Off = never
   ask, exactly like before, if you ever want it paid-plans-only.
 - **I could not test the real thing:** someone has to answer as Staff and say "this is the pharmacy", and that is
   your phone. Everything the system does around those words I drove and watched work.
