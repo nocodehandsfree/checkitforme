@@ -83,12 +83,12 @@ has(/html\[data-skin="v2"\]\s*\.csheet:not\(\.on\)\s*\{\s*box-shadow:\s*none\s*\
 // 14. The footer must stay transparent. Any fill there paints a band that the bottom bar won't match.
 has(/html\[data-skin="v2"\]\s*\.site-footer\s*\{\s*background:\s*transparent/,
   "footer stays transparent (a fill would band the page bottom against the bar)");
-// 14b. THE CHECK STATUS PAGE MUST SCROLL (owner 07-30). It was the one page short enough to fit on a
-// screen, and iOS only keeps its bottom bar see-through over a page that scrolls — so on this page
-// alone the bar painted solid. Holding main at a full viewport pushes the footer past the fold. dvh is
-// the SHORT viewport (bars out), so the page still overflows once the bars minimise. Do not remove.
-has(/body\.lview\s+main\s*\{[^}]*min-height:\s*100dvh/,
-  "check status page holds a full viewport, so it scrolls and the bottom bar stays see-through");
+// 14b. NEVER pad the check status page out to force a scroll (tried 07-30, reverted same day). The
+// live view follows the conversation by scrolling to the page bottom as each line lands, so dead space
+// under the log strands the newest line off-screen and kills the scroll-back reveal at the end. The
+// solid bottom bar on this page is still open; it does NOT get fixed with page height.
+absent(/body\.lview\s+main\s*\{[^}]*min-height/,
+  "check status page is never padded to a forced height (it would break the follow-along scroll)");
 
 // ── E. Chrome must not change while you scroll ──
 // 15. The bottom stays "as boring as possible" (owner). No scroll handler may repaint the chrome.
