@@ -32,7 +32,7 @@ then they ride the next promote to prod):**
 **Stream 4 — the three boxes (owner, 07-29 · each is ONE chat, prompt = "Task: <file>. Boot."):**
 | Task | System | Status |
 |---|---|---|
-| [The calling engine, round 2 (Echo)](echo-engine-round-2.md) | voice-calls | active |
+| [The calling engine, round 2 (Echo)](echo-engine-round-2.md) | voice-calls | done 07-29 (staging LIVE; **PM: promote wanted**) |
 | [Chain section rebuild — GO](../specs/mapping-admin/plan.md) | voice-calls + admin | active (un-parked 07-29) |
 | [The Admin dashboard, continued (new Addie)](addie-dashboard-continue.md) | admin | **jobs 1+2 DONE 07-29** |
 | [Voice ▸ Testing becomes the new-engine scorecard](admin-testing-new-engine.md) | admin | **UNBLOCKED: Addie's jobs 1+2 are done** |
