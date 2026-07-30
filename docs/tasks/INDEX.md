@@ -56,7 +56,8 @@ then they ride the next promote to prod):**
 |---|---|---|
 | [First promote after the rebuild — prod + admin LIVE in verify-live](first-promote-after-rebuild.md) | data | parked (fires at the owner's promote) |
 | [One Admin, two environments: shell-level Live/Staging switch](admin-audit-env-switch.md) | data + admin | parked (owner-gated headline; scope with owner) |
-| [Alerts can't actually send — launch blocker](admin-audit-alerts-providers-blocker.md) | data | parked (launch-critical; blocked on Twilio A2P + Brevo) |
+| [Alerts can't actually send — launch blocker](admin-audit-alerts-providers-blocker.md) | data | parked (launch-critical; Twilio A2P APPROVED 07-30 — see the registration task; Brevo still open) |
+| [Twilio texting registration — run the paid steps](twilio-a2p-registration.md) | data | parked (owner-gated: ~$20 once + $1.50/mo; fires on his go) |
 | [Element catalog extraction (the long-term 888K shrink)](element-catalog.md) | site + admin | parked (owner-gated, big scope) |
 | [Zone run on CVS/Walgreens since the engine rebuild](zones-cvs-walgreens-verify.md) | voice-calls | parked (real calls; owner listens) |
 | [Real-card test (O1) — the owner's move](real-card-test.md) | owner | parked (blocked by staging-424; owner walks it) |
