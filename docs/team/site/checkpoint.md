@@ -18,8 +18,12 @@
   instead of waiting for their "done" stamp (the 1s-vs-10s swing). Less than full data waits as before.
 - **DRIVEN ON THE REAL STAGING SITE** (relay recipe below): newest line 160px clear · pending strip on,
   wordmark 218px clear, parked at tail · reveal to top · verdict renders · zero page errors. Gate change
-  proven over a mocked provider (6/6) + `test-transcript-owner` all green. iOS paint + one real Fun
-  check (the 10s swing gone) stay on HIS phone.
+  proven over a mocked provider (6/6) + `test-transcript-owner` all green.
+- **The remaining "solid bottom" (owner 16:04 screenshot) is Safari's EXPANDED bar, NOT our paint.**
+  Floor pixels measured `#1d1d22` == root on homepage AND verdict (relay drive, both). iOS collapses
+  its bar to the clear pill ONLY on a finger scroll; this page scrolls ITSELF (follow-along, park,
+  reveal), and the settled-verdict tone reload re-expands the bar at the exact reveal moment. The one
+  input we own (root colour) is right and gate-locked. Owner has the research; his call what trades.
 - **DO NOT pad the check status page to force a scroll** (`body.lview main{min-height:100dvh}`,
   reverted 07-30): it strands the newest line and kills the reveal; `qa-tint-lock` 14b refuses it.
 - **A comp that leaves the homepage showing is a LIE.** The real view also hides `#builder` and adds
