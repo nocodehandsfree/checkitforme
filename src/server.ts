@@ -4460,7 +4460,9 @@ app.get("/api/admin/test-calls", async (c) => {
     return {
       id: r.id, started: r.startedAt,
       store: nm.split("—")[0].trim() || `#${r.retailerId}`,
-      category: cat, status: r.statusKey || r.status, confirmed: r.confirmed,
+      // BOTH, not one merged field: the verdict renderer reads `statusKey` against the owner's
+      // statuses registry FIRST, and a merged value made an in-stock check read as nobody answered.
+      category: cat, status: r.statusKey || r.status, statusKey: r.statusKey || null, confirmed: r.confirmed,
       workflow: wf?.name || null, opener: matchOpener(r.transcript, wf, cat),
       navSec: nav ?? null, callSec: call ?? null,
       talkSec: call != null && nav != null ? Math.max(0, call - nav) : null,
