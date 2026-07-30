@@ -30,12 +30,12 @@ sitting on an element that opens a sheet.
 **The Cost per check sheet — FINAL strings (owner 07-30, word for word). Label = noun, ONE number,
 no sub sentence (the guide's own rule; the shipped sub-lines broke it):**
 - Title `Cost per check`
-- Row `Goal` · `.06` — ⓘ `A third of the cheapest plan (.20 a check). Under this, every plan holds 67%.`
-- Row `Today` · `.05 to .09` — ⓘ `Test checks: .053 direct, .085 worst menu (CVS). Real checks replace this.`
+- Row `Goal` · `.067` — ⓘ `A third of the cheapest plan (.20 a check). Under this, every plan holds 67%.`
+- Row `Today` · `.053 to .085` — ⓘ `Test checks: .053 direct, .085 worst menu (CVS). Real checks replace this.`
 - The `4.2¢` row and the `Stay under the ceiling…` footnote: DELETED. No mystery numbers.
 - Empty state: `No checks yet.`
-- **Money reads like dollars everywhere: `.06`, never `6.7¢`** (owner ruling — it's one code path,
-  `money()`, so it's one fix). Rows round to the cent; exact tenths live in the ⓘ.
+- **Money reads like dollars, THREE decimals, everywhere: `.053`, never `5.3¢`** (owner ruling
+  07-30 — `money()` is the one code path, so it's one fix).
 
 **From the page-1 confession (07-30) — three more laws, now permanent:**
 - **Driving a screen = TAPPING it at 390px, mid-scroll included** — watching what a bubble covers,
