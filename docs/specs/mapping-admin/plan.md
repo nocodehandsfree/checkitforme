@@ -93,13 +93,21 @@ greeting, never a routing line and never a chopped question. `looksLikeDirectPic
 
 ---
 
-## 5. Build order, once he says go
+## 5. Build order
 
-1. Bin the bad CVS data, add the filing rule.
-2. Nav stops at the ring. Fix the 62 vs 67 disagreement. Pull `forkPerMinUsd` into the Admin rates.
-3. Chain page to comp 2f: nav hero, nav cost, ladder ends at the desk ringing.
-4. Menu conditions (2h).
-5. Recipes (2i), Review (2j), Settings (2k).
-6. The re-listen job.
+1. **DONE** The filing rule: `menuStillTalking` in `navigator.ts`, 7 asserts in `test-map-sim.ts`.
+2. **DONE** Nav time (`navSecondsOf`), the 62 vs 67 disagreement, `forkPerMinUsd` into the Admin rates.
+3. **DONE** Chain page to comp 2f: nav hero, nav cost, reached Staff, ladder ends at the desk ringing.
+4. **DONE** Recipes (2i): Tree Recipe vN, nav time, locked date, set aside behind one key.
+5. Menu conditions (2h).
+6. Review (2j) and Settings (2k).
+7. The re-listen job.
+8. Bin the bad CVS data. It waited for the filing rule so the same calls cannot come straight back.
 
 Every screen ships against `copy.md`. Every step gets driven in a browser before it is called done.
+
+### What the runtime must never inherit from the screen
+
+`navSeconds` is for reading. `seconds` (time to Staff) is what `connectAtSecFor` opens the paid agent
+on, and it stays that way. Opening the agent at nav time would put Charlie on a desk that is still
+ringing, which is the waste this whole engine was rebuilt to remove.
