@@ -464,7 +464,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    */
   function dropCall(why: string) {
     markDropped(room, why);
-    emit(room, "hangup", "The call broke on our end, so we hung up without saying anything", { reason: "dropped", why });
+    emit(room, "hangup", "The check broke on our end, so we hung up without saying anything", { reason: "dropped", why });
     log(`dropped: ${why} — hanging up silently, nobody is charged`);
     try { eleven?.close(); } catch { /* torn down */ }
     signalEnd();
@@ -495,7 +495,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       log(`hold (${reason}): closing the agent — the meter stops until somebody comes back`);
       closeSegment(room);
       markNow(room, "charlieCloseMs");
-      emit(room, "charlie_leave", "The agent was closed for the wait, billing stopped", { reason, strategy: "reopen" });
+      emit(room, "charlie_leave", "Charlie was dropped for the wait, the meter stopped", { reason, strategy: "reopen" });
       try { eleven?.close(); } catch { /* torn down */ }
       eleven = null; ready = false; connecting = false;
     } else {
@@ -606,7 +606,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       const n = openSegment(room, segmentBrain, segmentWhy);
       // THE ONE LINE that says the agent joined. Everything the recorded question and the handover
       // know about this join rides in its detail rather than writing lines of its own.
-      emit(room, "charlie_join", n === 1 ? "The agent is on the line and billing" : `The agent is back on the line (part ${n} of this call)`, { reason: connectReason, segment: n, brain: segmentBrain, why: segmentWhy, ...joinFacts });
+      emit(room, "charlie_join", n === 1 ? "Charlie joined, the meter starts" : `Charlie reconnected, part ${n} of this check`, { reason: connectReason, segment: n, brain: segmentBrain, why: segmentWhy, ...joinFacts });
       log("eleven WS open -> sending init");
       // The question Delta already asked rides in as context, so the joining agent knows what the
       // clerk is answering and never asks it a second time.
@@ -716,7 +716,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     });
     eleven.on("close", (code: number) => {
       closeSegment(room); markNow(room, "charlieCloseMs");
-      emit(room, "charlie_leave", "The agent is off the line, billing stopped", { code });
+      emit(room, "charlie_leave", "Charlie left, the meter stopped", { code });
       log(`eleven WS close code=${code} (frames in=${frames})`);
       // A close we ASKED for during a wait is not the end of the call — the line is still up and
       // somebody is coming back. Only an unexpected close ends things.
@@ -750,7 +750,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     humanAtMs = Date.now();
     connectReason = reason;
     if (reason === "human") {
-      markNow(room, "humanMs"); emit(room, "human_detected", "A real person is on the line");
+      markNow(room, "humanMs"); emit(room, "human_detected", "Staff answered");
       // From here somebody is on the line, so from here it is worth knowing when they stop being on
       // the line. The meter flips from "never checked" to a real measured zero at the same moment.
       startMeter(room, "holdMs");
@@ -764,7 +764,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         disconnected: () => emit(room, "hangup", "The line dropped from the far end", { reason: "carrier_gone" }),
       }, tune);
     }
-    else emit(room, "unknown", `The agent was let on without hearing a person (${reason})`, { reason });
+    else emit(room, "unknown", `Charlie was let on without hearing Staff (${reason})`, { reason });
     log(`connect-on-human: connecting (${reason}) after ${Math.round((humanAtMs - startMs) / 1000)}s nav`);
     // DELTA ASKS, THE AGENT ANSWERS. Only on a real person: a clip played at a hold-timeout or a
     // recipe timer would be a question asked into a menu. Everything else about the call is
@@ -786,7 +786,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (gu && gu > 0 && !giveUpTimer) {
       giveUpTimer = setTimeout(() => {
         if (humanWords) return;
-        emit(room, "hangup", `Nobody spoke in the ${gu}s after the agent joined, hung up`, { reason: "no_words", afterSecs: gu });
+        emit(room, "hangup", `Nobody spoke in the ${gu}s after Charlie joined, hung up`, { reason: "no_words", afterSecs: gu });
         log(`give-up: no human words ${gu}s after connect — hanging up (bail.ringMaxSeconds)`);
         try { if (eleven) eleven.close(); } catch { /* best effort */ }
         try { twilio.close(); } catch { /* best effort */ }
@@ -822,7 +822,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
             inRing = true;
             if (!firstRingAtMs) {
               firstRingAtMs = Date.now();
-              emit(room, "ringing", "The desk is ringing, the agent stays off", { leg: "desk" });
+              emit(room, "ringing", "The desk is ringing, Charlie stays off", { leg: "desk" });
               log(`ear: the desk is ringing (second ring) — Charlie stays off until someone picks up`);
               try { onStage?.(room, 6, Math.max(0, Math.round((firstRingAtMs - startMs) / 1000))); } catch { /* best-effort */ }
             }
@@ -832,7 +832,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       }
     } else {
       // Gap between bursts: a burst that just ended is one completed ring.
-      if (inRing) { inRing = false; ringCount++; emit(room, "ringing", `Ring ${ringCount} went unanswered`, { leg: "desk", ring: ringCount, answered: false }); log(`ear: ring ${ringCount} went unanswered`); if (ringCount >= RINGS_UNANSWERED && !connecting && !humanWords) { emit(room, "hangup", `Nobody picked up after ${ringCount} rings, hung up before the agent ever billed`, { reason: "nobody_came", ring: ringCount }); log(`give-up: ${ringCount} rings unanswered — nobody is coming, hanging up (Charlie never joined)`); try { twilio.close(); } catch { /* best effort */ } } }
+      if (inRing) { inRing = false; ringCount++; emit(room, "ringing", `Ring ${ringCount} went unanswered`, { leg: "desk", ring: ringCount, answered: false }); log(`ear: ring ${ringCount} went unanswered`); if (ringCount >= RINGS_UNANSWERED && !connecting && !humanWords) { emit(room, "hangup", `Nobody picked up after ${ringCount} rings, hung up before Charlie ever billed`, { reason: "nobody_came", ring: ringCount }); log(`give-up: ${ringCount} rings unanswered — nobody is coming, hanging up (Charlie never joined)`); try { twilio.close(); } catch { /* best effort */ } } }
       voiced = Math.max(0, voiced - leak); if (voiced === 0) { loudE.length = 0; loudT.length = 0; }
     }
   }
@@ -899,7 +899,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
             // ends on the carrier's own time limit; the agent simply never opens without a real voice.
             if (quit > 0) dtmfTimers.push(setTimeout(() => {
               if (connecting || humanWords) return;
-              emit(room, "hangup", "Nobody ever came to the phone, hung up before the agent billed a second", { reason: "nobody_came" });
+              emit(room, "hangup", "Nobody ever came to the phone, hung up before Charlie billed a second", { reason: "nobody_came" });
               log(`give-up: no voice by ${quitAt}s — nobody is coming, hanging up (Charlie never joined)`);
               try { if (eleven) eleven.close(); } catch { /* best effort */ }
               try { twilio.close(); } catch { /* best effort */ }

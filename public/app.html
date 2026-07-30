@@ -953,7 +953,7 @@
   </section>
   <section id="testing">
     <div class="k-title">Test calls</div>
-    <div class="k-sub" id="testing_sub">Every check you place on Staging. These never touch real-store stats.</div>
+    <div class="k-sub" id="testing_sub">All checks placed on staging. These never touch real-store stats.</div>
     <div id="testing_src"></div>
     <div id="testing_summary"></div>
     <div id="testing_log"><div class="empty">Loading…</div></div>
@@ -2327,10 +2327,10 @@ async function openReceiptInto(url,o){
   if(!d||d.error){ box.innerHTML='<div class="empty">Nothing was recorded for this call. Only calls placed since 27 July have a receipt.</div>'; return; }
   // ALL SIXTEEN kinds the calling engine can write (src/calls/events.ts). The set is closed, so this
   // map is complete by definition. A missing one used to fall through and print its code name.
-  const KIND={dialed:'Dialled',ringing:'Ringing',connected:'The line was answered',ivr_detected:'A phone menu',
-    alpha_press:'Pressed a key',bravo_say:'Said a word',human_detected:'A person answered',
-    charlie_join:'Check AI joined, the money clock starts',charlie_leave:'Check AI left',
-    hold_start:'Put on hold',hold_end:'Back off hold',transfer:'Handed on',voicemail:'A machine',
+  const KIND={dialed:'Dialled',ringing:'Ringing',connected:'The store picked up',ivr_detected:'A phone menu',
+    alpha_press:'Pressed a key',bravo_say:'Said a word',human_detected:'Staff answered',
+    charlie_join:'Charlie joined, the meter starts',charlie_leave:'Charlie left, the meter stopped',
+    hold_start:'Charlie dropped, Staff away',hold_end:'Staff back, Charlie reconnected',transfer:'Transferred',voicemail:'A machine',
     unknown:'Something we could not place',verdict:'Answer',hangup:'Call ended'};
   const c=d.cost||{}, s=d.seconds||d.rollup||{};
   // The costs come back in millionths of a dollar and the receipt prints them for us. Never format
@@ -2347,11 +2347,10 @@ async function openReceiptInto(url,o){
   // A stamped check always costs SOMETHING (the carrier bills a whole minute the moment we dial), so
   // a total of nought means nobody wrote this one down, whether or not the server sends the flag yet.
   const priced=d.stamped!==false&&d.cost&&Number(c.totalUsd||0)>0;
-  box.innerHTML=(o.behaved?behavedCard(d.behaved)+splitCard(c,priced):'')
+  box.innerHTML=(o.behaved?behavedCard(d.behaved)+splitCard(c,priced,d.timeline):'')
     +(priced?`<div class="stats" style="margin-bottom:16px">`
-      +`<div class="stat"><div class="n">${esch(cash)}</div><div class="l">What it cost</div></div>`
-      +`<div class="stat"><div class="n">${s.callSecs!=null?s.callSecs+'s':''}</div><div class="l">On the line</div></div>`
-      +`<div class="stat"><div class="n">${s.navSeconds!=null?s.navSeconds+'s':''}</div><div class="l">Time to Staff</div></div>`
+      +`<div class="stat"><div class="n">${s.callSecs?s.callSecs+'s':'—'}</div><div class="l">Total check time</div></div>`
+      +`<div class="stat"><div class="n">${s.navSeconds!=null?s.navSeconds+'s':'—'}</div><div class="l">Time to Staff</div></div>`
     +`</div>`:'<div class="k-note" style="padding-top:0">This check ran before the new calling engine, so its seconds and its cost were never written down.</div>')
     +(rungs?`<div class="mladder">${rungs}</div>`:'<div class="empty">No steps recorded.</div>')
     +(d.live?'<div class="meta" style="margin-top:10px">This call is still going.</div>':'');
@@ -2379,14 +2378,23 @@ function behavedCard(rows){
 }
 // The two buckets the owner reads first: getting to a person, then Charlie's own seconds. Same printer
 // as every other money line on this dashboard, so nothing here formats a cent by hand.
-function splitCard(c,priced){
+function splitCard(c,priced,tl){
   const rd=(c&&c.readable)||null;
   if(!priced||!rd) return '';
   const row=(l,v,tip)=>`<div class="row" style="padding:6px 0"><span class="grow" style="font-size:13px;font-weight:700;color:var(--text-strong)" data-tip="${esch(tip)}">${l}</span><span style="font-size:14px;font-weight:800;color:var(--text-strong)">${esch(v)}</span></div>`;
+  // WHICH MODEL WALKED THE MENU (owner 07-30). Alpha presses keys, Bravo says the menu word, and a
+  // store that answers direct walked no menu at all — three different facts that were all called Menu.
+  const d0=((tl||[]).find(e=>e.kind==='dialed')||{}).detail||{};
+  const lane=String(d0.plannedLane||'');
+  const steps=(tl||[]).filter(e=>e.kind==='alpha_press'||e.kind==='bravo_say');
+  const model=steps.some(e=>e.kind==='alpha_press')||lane==='alpha'?'Alpha'
+    :steps.some(e=>e.kind==='bravo_say')||lane==='bravo'?'Bravo':'';
+  const menuLabel=model?('Menu · '+model):'Getting to Staff';
   return `<div class="card" style="margin-bottom:14px;padding:16px 18px">
-    <div class="k-eyebrow" style="margin:0 0 4px">Where the money went</div>
-    ${row('Menu',rd.menu||rd.line||'',"The phone line plus listening our way to a person, before anybody spoke.")}
-    ${row('Charlie',rd.charlie||'',"Every second the conversation agent was connected. He bills whether he talks or listens.")}
+    <div class="k-eyebrow" style="margin:0 0 4px">Check cost</div>
+    ${row(menuLabel,rd.menu||rd.line||'',model?("The phone line plus "+model+" walking the store's menu, before anybody spoke. Alpha presses keys, Bravo says the menu word."):"The phone line up to the moment Staff answered. This store has no menu to walk.")}
+    ${row('Charlie',rd.charlie||'',"Every second Charlie was connected. He bills whether he talks or listens.")}
+    ${row('Total',rd.total||'',"Everything this one check cost.")}
   </div>`;
 }
 // ---- Delta (Fun): rehearse the Delta lane — recorded clips + cheap classifier, no live agent ----

@@ -42,7 +42,8 @@ head("SHAPE");
   ok("every row ships a label, a tooltip and a why", r.every((x) => !!x.label && !!x.tip && !!x.why));
   ok("pass is only true, false or null", r.every((x) => x.pass === true || x.pass === false || x.pass === null));
   ok("a clean direct check: asked once", row(r, "asked_once").pass === true);
-  ok("a clean direct check: no keypad at a person", row(r, "no_keypad_at_person").pass === true);
+  // A DIRECT STORE HAS NO MENU, so a tick would read as "we expect a keypad" (owner 07-30).
+  ok("a clean direct check: the keypad row is a DASH, never a tick", row(r, "no_keypad_at_person").pass === null, row(r, "no_keypad_at_person").why);
   ok("a clean direct check: nobody held us, so the meter row is null", row(r, "meter_stopped_on_hold").pass === null);
   // HIS OWN WORDS (owner 07-30), asserted so they cannot drift back into ours.
   ok("…and it says it in his words", row(r, "meter_stopped_on_hold").why === "Nobody dropped Charlie on this check.", row(r, "meter_stopped_on_hold").why);
@@ -70,11 +71,17 @@ head("ASKED ONCE");
 head("NO KEYPAD AT A PERSON");
 {
   const at = (tl: BehavedEvent[]) => row(behaved({ timeline: tl, agentLines: [OPENER] }), "no_keypad_at_person");
-  ok("a person and no press passes", at(cleanDirect).pass === true);
+  ok("a direct store with no press is a dash", at(cleanDirect).pass === null);
   ok("a press AT the person fails", at([...cleanDirect, ev("alpha_press", 19, { key: "1" })]).pass === false);
   ok("a press AFTER the person fails", at([...cleanDirect, ev("alpha_press", 22, { key: "1" })]).pass === false);
   ok("presses BEFORE the person are fine", at([ev("dialed", 0), ev("alpha_press", 8, { key: "3" }), ev("human_detected", 19)]).pass === true);
   ok("no person is null, never a tick", at([ev("dialed", 0), ev("ringing", 2), ev("hangup", 30)]).pass === null);
+  // A MAPPED store is the only place this row can really pass or fail.
+  const mappedClean: BehavedEvent[] = [
+    ev("dialed", 0, { plannedLane: "alpha", plan: [{ action: "press", value: "1", atSec: 7 }] }),
+    ev("alpha_press", 7, { key: "1", via: "prompt" }), ev("human_detected", 30), ev("hangup", 60)];
+  ok("a mapped store with the keys before pickup PASSES", at(mappedClean).pass === true, at(mappedClean).why);
+  ok("…and a key after pickup FAILS", at([...mappedClean, ev("alpha_press", 33, { key: "0" })]).pass === false);
 }
 
 head("METER STOPPED ON HOLD");
@@ -178,7 +185,7 @@ head("THE WRONG-DEPARTMENT SAVE");
   ok("…off the clock, naming both seconds", /31s/.test(row(r, "asked_the_new_person").why) && /33s/.test(row(r, "asked_the_new_person").why));
   ok("Charlie was dropped, and the row says the TRANSFER did it rather than Staff",
     row(r, "meter_stopped_on_hold").pass === true && /the transfer dropped charlie/i.test(row(r, "meter_stopped_on_hold").why), row(r, "meter_stopped_on_hold").why);
-  ok("no keypad at a person still passes", row(r, "no_keypad_at_person").pass === true);
+  ok("the keypad row is a dash on this direct store", row(r, "no_keypad_at_person").pass === null);
 }
 
 head("…and every way it can go wrong");

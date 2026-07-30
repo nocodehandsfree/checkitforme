@@ -133,7 +133,7 @@ export function behaved(input: BehavedInput): BehavedRow[] {
 
   return [
     askedOnce(turns, maybeNew.length),
-    noKeypadAtPerson(sec(first("human_detected")), every("alpha_press")),
+    noKeypadAtPerson(sec(first("human_detected")), every("alpha_press"), tl),
     meterStoppedOnHold(tl, sums),
     mappingHeld(tl, sums, sec(first("human_detected")), sec(first("charlie_join"))),
     askedToBePutThrough(turns, wrongDept),
@@ -166,11 +166,21 @@ function askedOnce(turns: AgentTurn[], newPeople: number): BehavedRow {
   return row(null, "No stock question recognised in Charlie\u2019s lines. Not counted.");
 }
 
-function noKeypadAtPerson(humanAt: number | null, presses: BehavedEvent[]): BehavedRow {
+/**
+ * A GREEN TICK HERE USED TO READ AS "WE EXPECT A KEYPAD" (owner 07-30). On a store that answers
+ * direct there is no menu, so there was never a key to press and nothing to get right — ticking that
+ * is the same lie as crossing it. It only scores on a store we actually mapped a menu for.
+ */
+function noKeypadAtPerson(humanAt: number | null, presses: BehavedEvent[], tl: BehavedEvent[]): BehavedRow {
   const row = (pass: boolean | null, why: string): BehavedRow => ({
     key: "no_keypad_at_person", label: "No keypad detected", pass, why,
     tip: "Keypad tones must stop the moment Staff answer. A store mapped with a menu that now answers direct would otherwise get beeped in the ear.",
   });
+  const d = (tl.find((e) => e.kind === "dialed")?.detail || {}) as Record<string, unknown>;
+  const plan = Array.isArray(d.plan) ? (d.plan as unknown[]) : null;
+  const lane = typeof d.plannedLane === "string" ? d.plannedLane : null;
+  const mapped = plan ? plan.length > 0 : lane === "alpha" || lane === "bravo";
+  if (!mapped && !presses.length) return row(null, "Direct store, no menu. Nothing to press.");
   if (humanAt == null) return row(null, "Nobody answered. Nothing to press at.");
   const after = presses.filter((e) => Number(e.atSec ?? 0) >= humanAt);
   if (!after.length) return row(true, `0 keys pressed after Staff answered at ${humanAt}s.`);

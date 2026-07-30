@@ -524,15 +524,21 @@ export interface StampedCall {
   navOutcome?: string | null;
   charlieSegments?: number | null;
 }
-export function rollupFromRow(call: StampedCall, timeline: Array<{ kind: string; detail?: unknown }>): Rollup {
+export function rollupFromRow(call: StampedCall, timeline: Array<{ kind: string; atSec?: number | null; detail?: unknown }>): Rollup {
   const steps = timeline.filter((t) => t.kind === "alpha_press" || t.kind === "bravo_say");
+  // HOW LONG THE WHOLE CHECK TOOK. The row's own column is only ever written by the OLD path, off the
+  // number the voice provider hands back — so on every check the new engine placed it is null, and
+  // the screen printed a 33 second check as 0s (owner 07-30). The timeline is right here and its last
+  // line is the hang-up, which is the same second by construction. Read it rather than print a nought.
+  const lastSec = timeline.length ? Number(timeline[timeline.length - 1].atSec ?? 0) : 0;
+  const callSecs = call.callSeconds ?? (lastSec > 0 ? lastSec : 0);
   const stamped = call.charlieConnectedSeconds != null;
   // How many stretches the agent was open for. The row carries it on every call written by the new
   // engine; older rows do not, so it is read back off the timeline the same way it always was.
   const joins = timeline.filter((t) => t.kind === "charlie_join" && (t.detail as { segment?: number } | null)?.segment != null).length;
   return {
     lane: (call.lane ?? "unknown") as Lane,
-    callSecs: call.callSeconds ?? 0,
+    callSecs,
     navSeconds: call.navSeconds ?? null,
     talkSeconds: call.talkSeconds ?? null,
     charlieConnectedSeconds: stamped ? call.charlieConnectedSeconds! : 0,
@@ -542,7 +548,7 @@ export function rollupFromRow(call: StampedCall, timeline: Array<{ kind: string;
     listeningSecs: stamped ? (call.charlieListeningSeconds ?? 0) : 0,
     ringSeconds: stamped ? (call.ringSeconds ?? 0) : 0,
     holdSeconds: call.holdSeconds ?? null,
-    billedMinutes: call.billedMinutes ?? Math.ceil((call.callSeconds ?? 0) / 60),
+    billedMinutes: call.billedMinutes ?? (callSecs > 0 ? Math.ceil(callSecs / 60) : 0),
     menuSeconds: call.menuSeconds ?? null,
     stepsFired: steps.length,
     stepsOnPause: steps.filter((t) => (t.detail as { via?: string } | null)?.via === "prompt").length,
