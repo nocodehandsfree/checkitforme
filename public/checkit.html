@@ -2094,6 +2094,13 @@ html[data-skin="v2"] #histOverlay .hist-scroll{flex:1 1 auto;min-height:0;overfl
    reserves the whole under-bar band, and the spacer would just add 160px of blank to scroll through. */
 body.sheetopen #zones .zf-scroll::after,body.sheetopen #histOverlay .hist-scroll::after,body.sheetopen #pageOverlay #pg_body::after,body.sheetopen #buyOverlay:not(:has(.buydock.up)) .buy-scroll::after{content:'';display:block;flex:0 0 auto;height:calc(160px + env(safe-area-inset-bottom))} /* clears the 120px under-bar overshoot AND lifts the last row a comfortable tap above the iOS toolbar (a flush-to-edge link was untappable) */
 body.sheetopen #zones .zbasket.up,body.sheetopen #buyOverlay .buydock.up{bottom:134px} /* 14px float above the sheet's 120px under-bar overshoot */
+/* Check status page (owner 07-30): the page ends with a clear strip the height of Safari's bottom bar,
+   the SAME measured recipe as the sheet spacers above, so the footer wordmark never sits half-hidden
+   under the bar. Safe ONLY because renderLiveMsg aims the follow-along at the NEWEST line, never at the
+   document end (gate 14b remembers the forced-height mistake this replaces). showResult drops body.lview,
+   so the strip leaves with the live view and the verdict page is untouched. */
+body.lview::after{content:'';display:block;height:calc(160px + env(safe-area-inset-bottom))}
+body.lview #convo_body>*,body.lview #live_msgbox{scroll-margin-bottom:calc(160px + env(safe-area-inset-bottom))} /* scrollIntoView lands the newest line a comfortable read above the iOS toolbar */
 
 /* Footer links (About/FAQ/Terms/Privacy/Contact) slide up as a bottom sheet, like every other panel.
    Flex column: the grab handle + title stay pinned; only the body scrolls (owner 07-06: the top used to
@@ -5689,11 +5696,17 @@ function deriveSteps(transcript){
 // happens (finalElapsed=null → the latest step shows as the current one, no closing time yet).
 function renderLiveMsg(){ const box=$('live_msgbox'); if(box) box.innerHTML=combinedTimelineHTML(LIVE_STEPS, LIVE_TRANSCRIPT, null);
   // Follow the conversation as it happens (owner 07-15): stick to the newest bubble unless the user
-  // scrolled up to reread; scrolling back down re-arms the follow.
-  if(window.LIVE_FOLLOW!==false){ requestAnimationFrame(()=>{ try{ window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'}); }catch(_){ try{ window.scrollTo(0,document.body.scrollHeight); }catch(__){} } }); } }
+  // scrolled up to reread; scrolling back down re-arms the follow. The target is the NEWEST LINE, not
+  // document.body.scrollHeight: the page now ends with a bar-clearing strip (see body.lview::after), and
+  // a bottom-of-document target would park the newest line above dead space (the reverted 07-30 mistake).
+  // scroll-margin-bottom on the line does the bar clearance; the strip guarantees the room to scroll.
+  if(window.LIVE_FOLLOW!==false){ requestAnimationFrame(()=>{ try{ const tgt=(box&&box.querySelector('#convo_body>*:last-child'))||box; tgt.scrollIntoView({block:'end',inline:'nearest',behavior:'smooth'}); }catch(_){ try{ window.scrollTo(0,document.body.scrollHeight); }catch(__){} } }); } }
 window.LIVE_FOLLOW=true;
 window.addEventListener('scroll',()=>{ try{ const lv=$('live'); if(!lv||lv.classList.contains('hidden')) return;
-  window.LIVE_FOLLOW=(window.innerHeight+window.scrollY)>=(document.body.scrollHeight-140); }catch(_){ } },{passive:true});
+  // Armed while the newest line is on screen. The old rule measured distance to the DOCUMENT end; the
+  // clear strip would sit inside that window and disarm the follow the moment it came into play.
+  const tgt=document.querySelector('#convo_body>*:last-child')||$('live_msgbox');
+  window.LIVE_FOLLOW=!tgt||tgt.getBoundingClientRect().top<window.innerHeight; }catch(_){ } },{passive:true});
 // Furthest stage the transcript so far justifies. Two rules learned from live CVS calls:
 //  - "Transferring to the front" (6) only fires when the agent says the FINAL transfer word ("general") —
 //    NOT on "front" (that's still navigating, 5). After that the call rings through to the front.
