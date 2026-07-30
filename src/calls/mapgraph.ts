@@ -1253,6 +1253,51 @@ export async function chainDetail(chainId: number): Promise<Record<string, unkno
  *  today lands locally and is flagged unshared. This walks those flags and sends them to the record —
  *  run it once the record is reachable and nothing that was learned in between is stranded. Safe to
  *  run any time: an already-shared route just folds in as the same evidence it already carries. */
+/** START THIS CHAIN OVER, keeping the route it runs.
+ *
+ *  Owner, 07-30: the CVS history was made by calls placed before the system was right — a recording's
+ *  own tail filed as a person, a routing line filed as a greeting, and calls that reached the map
+ *  through no path at all. Reading a page built on those is worse than reading an empty one.
+ *
+ *  So this clears the HISTORY and keeps the ROUTE. Gone: every mapping call in the log, every review
+ *  item, every observation, and the recipes that were retired or set aside. Kept: the one live recipe,
+ *  because a re-listen has to walk a route to record one, and this is the route real checks run today.
+ *  Its evidence is emptied and it is renumbered to v1, so the next call is genuinely its first.
+ *
+ *  Nothing a customer touches changes: the steps, the timings and the chain row are untouched. */
+export async function resetChainHistory(chainId: number): Promise<{
+  callsCleared: number; versionsDeleted: number; unknownsDeleted: number; observationsDeleted: number;
+  keptRecipe: string | null;
+}> {
+  await ensureMapTables();
+  let callsCleared = 0;
+  try { callsCleared = (JSON.parse((await getSetting(`nav_runs:${chainId}`)) || "[]") as unknown[]).length; } catch { callsCleared = 0; }
+  await setSetting(`nav_runs:${chainId}`, "[]");
+
+  const live = await activeMap(chainId);
+  const del = await client.execute({
+    sql: `DELETE FROM nav_map_versions WHERE chain_id=?${live ? " AND id<>?" : ""}`,
+    args: live ? [chainId, live.id] : [chainId],
+  });
+  const unk = await client.execute({ sql: `DELETE FROM nav_unknowns WHERE chain_id=?`, args: [chainId] });
+  const obs = await client.execute({ sql: `DELETE FROM nav_observations WHERE chain_id=?`, args: [chainId] });
+
+  if (live) {
+    // Empty evidence, back to v1, and no trust yet — the next call earns it.
+    await client.execute({
+      sql: `UPDATE nav_map_versions SET version=1, evidence=?, confidence=0, confidence_label=?, why=? WHERE id=?`,
+      args: [JSON.stringify({ calls: [] }), "unknown", "history cleared, awaiting its first call", live.id],
+    });
+  }
+  return {
+    callsCleared,
+    versionsDeleted: Number(del.rowsAffected || 0),
+    unknownsDeleted: Number(unk.rowsAffected || 0),
+    observationsDeleted: Number(obs.rowsAffected || 0),
+    keptRecipe: live ? spoken(live.recipe) : null,
+  };
+}
+
 export async function reshareUnsent(): Promise<{ pushed: number; failed: number; pending: number }> {
   await ensureMapTables();
   if (!isMapFollower()) return { pushed: 0, failed: 0, pending: 0 };

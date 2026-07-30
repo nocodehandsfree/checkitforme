@@ -15,7 +15,7 @@ import { chains, retailers } from "../src/db/schema";
 import { connectAtSecFor, recipeToDtmf } from "../src/calls/recipe";
 import {
   proposeVersion, approveVersion, activeMap, versionsFor, chainDetail, graphFor, graphSummary,
-  openUnknowns, recordCallPath, recordFailedAttempt, learnFromReceipt, reportCallDrift,
+  openUnknowns, recordCallPath, recordFailedAttempt, learnFromReceipt, reportCallDrift, resetChainHistory,
   type MapRecipe,
 } from "../src/calls/mapgraph";
 import { lockRecipeToChain } from "../src/calls/trainer-batch";
@@ -25,6 +25,7 @@ import { recipeFromCall } from "../src/calls/map-capture";
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
 const now = () => Math.floor(Date.now() / 1000);
+const pathSig = (r: MapRecipe) => (r.steps || []).map((x) => `${x.action}:${x.value}@${x.atSec}`).join(">");
 const ev = (kind: string, atSec: number, detail?: Record<string, unknown>) => ({ kind, atSec, detail });
 
 async function main() {
@@ -374,6 +375,22 @@ async function main() {
     const live = (await activeMap(chain.id))!;
     ok(typeof live.seconds === "number" && live.seconds > 0,
       `the live route still carries time to Staff for the agent to open on (${live.seconds}s)`);
+  }
+
+  console.log("▶ STARTING A CHAIN OVER — the history goes, the route stays");
+  {
+    const before = (await activeMap(chain.id))!;
+    const res = await resetChainHistory(chain.id);
+    const after = (await activeMap(chain.id))!;
+    ok(res.keptRecipe !== null, `the route it runs is kept: "${res.keptRecipe}"`);
+    ok(pathSig(after.recipe) === pathSig(before.recipe), "and it is the SAME route, step for step, so real checks are untouched");
+    ok(after.evidence.calls.length === 0, "its evidence is emptied, so the next call is genuinely its first");
+    ok(after.version === 1, `and it is back to v1 (${after.version})`);
+    ok(after.confidence === 0, "with no trust yet, because nothing has proved it since");
+    ok((await versionsFor(chain.id)).length === 1, "every retired and set-aside recipe is gone");
+    ok(((await chainDetail(chain.id)).calls as unknown[]).length === 0, "the mapping calls list is empty");
+    ok(((await chainDetail(chain.id)).unknowns as unknown[]).length === 0, "and nothing is left waiting in Review");
+    ok(!(await openUnknowns(400)).some((u) => u.chainId === chain.id), "including in the queue every chain shares");
   }
 
   console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);

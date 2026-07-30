@@ -44,7 +44,7 @@ import { costCall, money } from "./calls/cost";
 import { behaved, agentLinesFrom } from "./calls/behaved";
 import { opsRollup, type CheckRow } from "./calls/ops";
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
-import { activeMap, graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, graphFor, learnFromReceipt, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
+import { activeMap, resetChainHistory, graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, graphFor, learnFromReceipt, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
 import { recipeFromCall, evidenceFromCall, type CapturedStep } from "./calls/map-capture";
 import { startSweep, stopSweep, sweepStatus, buildQueue } from "./calls/sweep";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay } from "./calls/tapedeck";
@@ -6356,6 +6356,15 @@ app.post("/api/admin/map/version/:id/reject", async (c) => {
   return c.json(await rejectVersion(id, "admin", String(b.why || "")));
 });
 // The graph behind a chain: every prompt we have heard and every action that led from one to another.
+// START A CHAIN OVER, keeping the route it runs. Clears the mapping calls, the review items, the
+// observations and the recipes that were retired or set aside; the live recipe stays (a re-listen has
+// to walk one) with its evidence emptied and its number reset to 1. Owner-asked, 07-30: the CVS
+// history was made before the system was right, and a page built on bad calls is worse than an empty one.
+app.post("/api/admin/map/chain/:id/reset", async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!id) return c.json({ error: "chainId required" }, 400);
+  return c.json(await resetChainHistory(id));
+});
 app.get("/api/admin/map/graph/:id", async (c) => {
   const id = Number(c.req.param("id"));
   if (!id) return c.json({ error: "chainId required" }, 400);
