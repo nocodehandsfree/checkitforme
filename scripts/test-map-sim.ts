@@ -321,6 +321,37 @@ async function main() {
     ok(store.every((v) => v.label.startsWith("This store v")),
       `and one store's own route can never read as the chain's: "${store[0]?.label}"`);
   }
+  console.log("\n▶ THREE STORES AGREE — the chain route swaps itself and files the note");
+  {
+    // Franklin already runs press:4 as its own route (above). Two more stores walking the same new
+    // route is the whole bar: at three, waiting for a tap only means every check in between runs a
+    // route we already know is stale.
+    const oddRoute: MapRecipe = { type: "keypad", seconds: 30, steps: [{ action: "press", value: "4", atSec: 9, afterPrompt: 1 }] };
+    const call = (storeId: number, day: string) =>
+      ({ at: now(), day, storeId, seconds: 30, reachedHuman: true, path: "press:4" });
+    // Whatever the chain runs by now, after everything above. The bar is what matters, not the digit.
+    const before = (await activeMap(chain.id))!.recipe.steps[0].value;
+
+    // Store two. Whatever happens to its OWN route, two stores is still a coincidence, so the thing
+    // that must not move is the chain.
+    const two = await proposeVersion({ chainId: chain.id, storeId: east.id, recipe: oddRoute, source: "sweep", call: call(east.id, "2026-07-31") });
+    ok(two.version.storeId === east.id, "store two is filed against that store, never against the chain");
+    ok((await activeMap(chain.id))!.recipe.steps[0].value === before, `and at two stores the chain still presses ${before}`);
+
+    const swap = await proposeVersion({ chainId: chain.id, storeId: west.id, recipe: oddRoute, source: "sweep", call: call(west.id, "2026-08-02") });
+    ok(swap.activated === true && swap.version.status === "active" && swap.version.storeId === 0,
+      "at three stores the CHAIN route swaps itself, with nobody asked");
+    ok((await activeMap(chain.id))!.recipe.steps[0].value === "4", "every store runs the new route now");
+    const row = (await db.select().from(chains).where(eq(chains.id, chain.id)))[0];
+    ok(row.dtmfShortcut === "4@9", `and the row 500 stores read moved with it (${row.dtmfShortcut})`);
+
+    const note = (await openUnknowns(400)).find((u) => u.chainId === chain.id && u.kind === "route-swapped");
+    ok(!!note, "a note is filed, because a swap is never silent");
+    ok(!!note && /Swapped automatically/.test(note.prompt) && /3 stores agree/.test(note.prompt),
+      `and it says what happened and why: "${note?.prompt.slice(0, 60)}"`);
+    ok(!!note && !!(note.evidence as Record<string, unknown> | null)?.versionId, "with the route it swapped to attached");
+  }
+
 
   console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

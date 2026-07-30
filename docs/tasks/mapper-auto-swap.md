@@ -1,6 +1,6 @@
 # Routes swap themselves at three stores, and the owner just gets the note (decision 07-29)
 
-**System:** voice-calls + admin · **Status:** active
+**System:** voice-calls + admin · **Status:** DONE 07-30
 **What:** the owner no longer taps "Use it" for maintenance. When THREE separate stores walk the same
 new route, the chain's route swaps itself and files a note. Nothing is ever silent.
 

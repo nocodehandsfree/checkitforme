@@ -1395,7 +1395,7 @@
       <div class="k-filters" style="margin:0 0 4px">
         <select class="k-filter" id="set_frate" onchange="filterChainPicker()"><option value="">All ratings</option><option value="5">5 Best Chance</option><option value="4">4 Mostly Reliable</option><option value="3">3 Spotty</option><option value="2">2 Over MSRP</option><option value="1">1 Unknown</option></select>
         <select class="k-filter" id="set_ftype" onchange="filterChainPicker()"><option value="">All types</option></select>
-        <select class="k-filter" id="set_fmap" onchange="filterChainPicker()"><option value="">All</option><option value="mapped">Mapped</option><option value="unmapped">Unmapped</option></select>
+        <select class="k-filter" id="set_fmap" onchange="filterChainPicker()"><option value="">All</option><option value="mapped">Mapped</option><option value="unmapped">Unmapped</option><option value="changed">Menu changed</option></select>
       </div>
       <select id="set_chain" onchange="setPickChain()" style="display:none"><option value="">Select a chain</option></select>
       <div id="set_picker"><div class="empty">Loading…</div></div>
@@ -4603,7 +4603,7 @@ function buildChainPicker(){
     const trust=g&&g.proposed>0 ? '<span style="color:#F59E0B;font-weight:700">1 waiting</span>'
       : (locked&&g&&g.confidenceLabel&&g.confidenceLabel!=='unknown') ? `<span style="color:${confColor(g.confidenceLabel)}">${esch(g.confidenceLabel)}</span>` : null;
     const meta=[nStores?nStores+' store'+(nStores===1?'':'s'):null, ch.muted?'muted':null, route, trust].filter(Boolean).join(' · ');
-    return `<div class="pickrow${String(ch.id)===cur?' on':''}" data-id="${ch.id}" data-name="${esch((ch.name||'').toLowerCase())}" data-tier="${ch.tier??''}" data-type="${esch((ch.type||'').toLowerCase())}" data-mapped="${locked?1:0}" onclick="pickChainRow(${ch.id})"${ch.muted?' style="opacity:.5"':''}>
+    return `<div class="pickrow${String(ch.id)===cur?' on':''}" data-id="${ch.id}" data-name="${esch((ch.name||'').toLowerCase())}" data-tier="${ch.tier??''}" data-type="${esch((ch.type||'').toLowerCase())}" data-mapped="${locked?1:0}" data-changed="${(g&&(g.proposed>0||g.drift30d>0||g.openUnknowns>0))?1:0}" onclick="pickChainRow(${ch.id})"${ch.muted?' style="opacity:.5"':''}>
       <span class="setlogo">${logoTile(ch)}</span>
       <span style="flex:1;min-width:0"><span style="display:block;color:#fff;font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esch(ch.name)}</span>
       <span style="display:block;font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px">${meta}</span></span>
@@ -4632,6 +4632,10 @@ function filterChainPicker(){
     if(q && !(name.includes(q)||subseq(name))) ok=false;
     if(ftype && type!==ftype) ok=false;
     if(fmap==='mapped'&&!mapped) ok=false; if(fmap==='unmapped'&&mapped) ok=false;
+    // MENU CHANGED: the chains whose route moved under us. Drift a check noticed, a route waiting on
+    // him, or one that swapped itself at three stores. One view instead of opening 130 chains to find
+    // the four that moved.
+    if(fmap==='changed'&&r.getAttribute('data-changed')!=='1') ok=false;
     if(frate&&String(tier)!==String(frate)) ok=false;
     if(ok&&shown>=CH_LIMIT){ hidden++; ok=false; } // beyond the fold: Show-more reveals (comp 2e)
     r.style.display=ok?'':'none'; if(ok) shown++;
@@ -4959,6 +4963,8 @@ function menuLadder(rows){
 const plainText=t=>String(t||'').replace(/\s*—\s*/g,'. ').replace(/\s+-\s+/g,'. ').replace(/\.\s*\./g,'.');
 const whyWords=s=>String(s||'').replace(/(\d+)\s+(\w+?)\(s\)/g,(m,n,w)=>n+' '+w+(Number(n)===1?'':'s'));
 const UNKNOWN_WHAT={
+  // A swap already happened. This one is a NOTE, not a question, so it never carries a decision.
+  'route-swapped':'Recipe swapped itself',
   'hammer-route':'The recipe just presses the same key over and over',
   'unproven-direct':'We claim Staff answers straight away, but no call has proved it',
   'route-changed':'The menu changed since we learned it',
@@ -4969,6 +4975,18 @@ const UNKNOWN_WHAT={
   'not-shared':'This recipe is not shared with the chain',
 };
 function mapUnknownCard(u,chainId){
+  // A NOTE, NEVER A DECISION (owner 07-29). Three stores walking the same new route is the answer,
+  // not a question, so the route already swapped and this card only reports it. It carries the count
+  // and the route in its own words, and the one thing left to do is clear it.
+  if(u.kind==='route-swapped') return `<div class="card" style="margin:0 0 10px">
+    <div class="row" style="align-items:center;gap:8px">
+      <span class="name" style="font-size:13.5px">Recipe swapped itself</span>
+      <span style="margin-left:auto;font-size:10.5px;font-weight:800;color:var(--green)">Live</span></div>
+    <div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(plainText(u.prompt))}</div>
+    <div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${u.firstSeen?new Date(u.firstSeen*1000).toLocaleDateString([],{month:'short',day:'numeric'}):''}</div>
+    <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
+      <button class="ghost" onclick="mapUnknown(${u.id},'resolved',${chainId})">Clear</button>
+    </div></div>`;
   return `<div class="card" style="margin:0 0 10px">
     <div class="name" style="font-size:13.5px">${esch(UNKNOWN_WHAT[u.kind]||String(u.kind||'').replace(/-/g,' '))}</div>
     ${(!UNKNOWN_WHAT[u.kind]&&u.prompt)?`<div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(plainText(u.prompt))}</div>`:''}

@@ -560,6 +560,9 @@ export async function proposeVersion(opts: {
     call = { ...call, hourLocal: call.hourLocal ?? when.hour, dow: call.dow ?? when.dow };
   }
 
+  // How many stores forced an automatic chain swap, or 0 when this is not one. Set only where the
+  // three-store bar is met, and read at the end so the note says the count out loud.
+  let autoSwap = 0;
   // What this store runs today: its own exception if it has one, otherwise the chain's route.
   const prevActive = await activeMap(opts.chainId, calledAt);
   // Folding only ever happens into a version of the SAME scope this call would write to. A call that
@@ -640,7 +643,16 @@ export async function proposeVersion(opts: {
     // Enough stores now walk this route that it is the chain's route, not an exception. Fall through
     // and propose it at CHAIN level — the store must be cleared here or the promotion would silently
     // file itself as yet another store exception and the chain would never move at all.
-    opts = { ...opts, storeId: 0, why: `${agreeing.length} stores now walk this route (${agreeing.join(", ")})` };
+    //
+    // AND AT THREE STORES IT SWAPS ITSELF (owner, 07-29). Three separate stores walking the same new
+    // route is not a question, it is the answer: waiting for a tap only means every check between now
+    // and that tap runs a route we already know is stale. So it goes live and files a note instead of
+    // an approval. Nothing is silent — the note carries the count, the stores and the calls, and it
+    // sits in the review queue until he clears it. Below three, "Use it / Keep the old one" is
+    // untouched, and a single store that disagrees still gets its own route, exactly as before.
+    autoSwap = agreeing.length;
+    opts = { ...opts, storeId: 0, autoActivate: true,
+      why: `${agreeing.length} stores now walk this route (${agreeing.join(", ")})` };
   }
 
   // A new route (or the first one ever).
@@ -671,6 +683,18 @@ export async function proposeVersion(opts: {
     if (prevActive) await retire(prevActive.id, at);
     const v = (await versionById(id))!;
     await stampChainFromVersion(v);
+    // A SWAP IS NEVER SILENT. It went live without being asked, so the note is the whole point: it
+    // says what changed, how many stores forced it, and carries the call, and it stays in the review
+    // queue until he clears it. Filed AFTER the stamp so a note can never exist for a route that
+    // failed to go live.
+    if (autoSwap) {
+      await reportUnknown({
+        chainId: opts.chainId, storeId: 0, kind: "route-swapped",
+        prompt: `Swapped automatically · ${autoSwap} stores agree: ${spoken(opts.recipe)}`
+          + (prevActive ? ` (was ${spoken(prevActive.recipe)})` : ""),
+        evidence: { versionId: id, navId: call?.navId, seconds: opts.recipe.seconds, stores: autoSwap },
+      });
+    }
     return { version: v, activated: true };
   }
   // A proposed replacement is a review item, not a silent file — it shows up in the queue with its
