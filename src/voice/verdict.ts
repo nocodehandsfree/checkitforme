@@ -5,6 +5,7 @@
 // finder is NOT charged. The same pass also captures the product form/set the clerk named
 // ("3-pack blister", "Surging Sparks ETB") — kept even when the exact set is unknown.
 import { llm } from "../llm";
+import { liveReadFor } from "./live-read";
 
 // Cheapest brain that reliably reads a short transcript. Same model the navigator hands off on.
 export const VERDICT_MODEL = "gemini-2.5-flash-lite";
@@ -135,12 +136,17 @@ export async function consensusFor(
   transcript: string,
   category: string,
   specificProduct?: string,
+  room?: string | null,
 ): Promise<{ consensus: Consensus; second: ClerkVerdict | null }> {
   // A hard sold-out / doesn't-carry decides it below before the second read is ever looked at, so
   // there is nothing a second opinion could change and no reason to spend one.
-  const second = (el.soldOut || el.doesNotSell)
-    ? null
-    : await classifyVerdict(transcript, category, specificProduct).catch(() => null);
+  if (el.soldOut || el.doesNotSell) return { consensus: reconcile(el, null), second: null };
+  // READ AS IT GOES (owner 07-30): the reader already ran DURING the check, on the lines as they
+  // landed, so on a normal finish the answer is sitting here and the customer waits on nothing. The
+  // model call below is now the fallback — a check too short to read, or a restart mid-check. Same
+  // reader, same merge, same rule: this only changes WHEN the read happened, never what it decides.
+  const ready = liveReadFor(room);
+  const second = ready ?? await classifyVerdict(transcript, category, specificProduct).catch(() => null);
   return { consensus: reconcile(el, second), second };
 }
 

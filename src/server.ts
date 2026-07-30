@@ -37,7 +37,7 @@ import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
 import { placeNavCall, navInitialTwiml, navStep, navEnded, navMediaFeed, getNavSession, latestNavSessionForChain, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
 import { listenNavFeed, endListenNav } from "./calls/listen-nav";
 // THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
-import { emit, markNow, closeReceipt, linkCall, rollup, rollupFromRow, getReceipt, type Rollup } from "./calls/events";
+import { emit, markNow, closeReceipt, linkCall, rollup, rollupFromRow, getReceipt, setLineHook, type Rollup } from "./calls/events";
 import { installReceiptStore, currentRates, onReceiptClosed } from "./calls/receipt-store";
 import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
@@ -58,6 +58,7 @@ import { cachedCategories, cachedChains, cachedRetailers, categoryLabelMap, reta
 import { haversineMi, bboxAround } from "./geo";
 import { ingestSignals, recentStockNear, latestForRetailer } from "./stock/signals";
 import { classifyVerdict, reconcile, consensusFor, productDetailLabel } from "./voice/verdict";
+import { noteLiveLine, dropLiveRead } from "./voice/live-read";
 import { seedStockCheckIntel } from "./stock/intel";
 import { seedSellMethods } from "./stock/sellmethods";
 import { r2Config, presignPut, photoKey } from "./r2";
@@ -152,6 +153,10 @@ import { isCallingPaused, setCallingPaused, spendTodayCents, withLock } from "./
 
 assertProdSecurity(); // refuse to boot in prod with an open admin / forgeable sessions
 installReceiptStore(); // every finished call writes its timeline + seconds + cost to the database
+// READ AS IT GOES (owner 07-30): every line reaches the reader the moment it is spoken, so the
+// verdict is ready at hang-up instead of being started then. Registered, not imported, because
+// calls/events.ts stays free of model/db code by design. See src/voice/live-read.ts.
+setLineHook(noteLiveLine);
 // …and every finished call also teaches the map (owner 07-27: "one customer calling up Franklin's and
 // we had a voice menu — those aren't just lost"). Mapper READS the receipt the Ear already wrote; it
 // never opens a second listener. A check can flag a store, never rewrite a route: that still takes a
@@ -3419,7 +3424,7 @@ app.get("/pub/result/:cid", async (c) => {
     // when the live read had no opinion, so a disagreement with a confirmed IN STOCK never landed here.
     const { consensus, second } = await consensusFor(
       { confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey },
-      o.transcript, label || "the product",
+      o.transcript, label || "the product", undefined, row.room,
     );
     const productDetail = productDetailLabel(second);
     await db.update(callResults).set({
@@ -3432,6 +3437,7 @@ app.get("/pub/result/:cid", async (c) => {
       completedAt: Math.floor(Date.now() / 1000),
     }).where(eq(callResults.id, row.id));
     if (row.finderUserId && billableOutcome(consensus.statusKey, consensus.definitive, o.transcript)) await chargeCallOnce(row.id, row.finderUserId);
+    dropLiveRead(row.room); // verdict written — let the room's live read go
     return c.json({ ...(o ?? {}), status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey, ts: (row.startedAt || 0) * 1000, productDetail, shipmentDay: o.shipmentDay, shipmentTime: (second?.restockTime ?? o.shipmentTime) ?? null, charged: row.finderUserId ? consensus.definitive : false, summary: o.summary, transcript: (row.transcript && row.transcript.trim()) || o.transcript });
   }
   // Truly mid-call → progress only, never a verdict (so a wrong key can't flash before the real one).
@@ -6953,7 +6959,7 @@ app.post("/webhooks/elevenlabs", async (c) => {
         // src/voice/verdict.ts. It used to consult the reader only when the live read was unclear.
         const { consensus, second } = await consensusFor(
           { confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey },
-          o.transcript, label || "the product",
+          o.transcript, label || "the product", undefined, row?.room,
         );
         confirmed = consensus.confirmed; statusKey = consensus.statusKey; definitive = consensus.definitive;
         productDetail = productDetailLabel(second);

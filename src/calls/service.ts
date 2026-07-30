@@ -77,6 +77,7 @@ import { notifyInStock, notifyContact } from "./notify";
 import { getSetting, setSetting } from "../db/settings";
 import { specificityClause, RESTOCK_PROMPT, VOICE_DEFAULTS, PREMIUM_FOLLOWUP, ASK_SHIPMENT_DAY, oneTurnFollowup, oneTurnShipmentDay } from "../voice/prompts";
 import { consensusFor, productDetailLabel } from "../voice/verdict";
+import { armLiveRead, dropLiveRead } from "../voice/live-read";
 
 const DEFAULT_OPENER = "Heyy! I was just checking to see if you guys got any {category} in?";
 
@@ -611,6 +612,7 @@ export async function triggerCall(a: TriggerArgs) {
     callId: row.id, lane: "direct",
     note: `Dialing ${retailer.name} the old way, without the media stream`,
   });
+  armLiveRead(directRoom, category.label, a.specificProduct ?? a.clarification); // read as it goes (owner 07-30)
   try {
     const { providerCallId, callSid } = await provider.startCall({
       callId: row.id,
@@ -734,6 +736,9 @@ export async function bridgeCheckCall(a: TriggerArgs) {
   // `room` is the receipt's key and nothing ever overwrites it — unlike providerCallId, which the
   // voice provider's conversation id replaces mid-call. This is the stable join for the timeline.
   linkCall(r.room, row.id);
+  // READ AS IT GOES (owner 07-30): arm the reader for this room now, so it reads the conversation
+  // while it happens and the verdict is ready at hang-up instead of being started then.
+  armLiveRead(r.room, category.label, a.specificProduct ?? a.clarification);
   await db.update(callResults).set({ providerCallId, room: r.room }).where(eq(callResults.id, row.id));
   // If the call ends without ever reaching a human (voicemail hang-up, busy, no answer), no conv id
   // ever lands — the room finalizer closes the row so zone runs / schedules still reach a terminal state.
@@ -1163,7 +1168,7 @@ export async function ingestPending(): Promise<number> {
       // ignored and the customer was charged for a green we were not sure of.
       const { consensus, second } = await consensusFor(
         { confirmed: primaryConfirmed, soldOut: outcome.soldOut, doesNotSell: outcome.doesNotSell, statusKey: outcome.statusKey },
-        outcome.transcript, primaryLabel || "the product",
+        outcome.transcript, primaryLabel || "the product", undefined, row.room,
       );
       finalConfirmed = consensus.confirmed;
       finalStatusKey = consensus.statusKey;
@@ -1193,6 +1198,7 @@ export async function ingestPending(): Promise<number> {
     // Close the timeline with the answer the customer actually got, so a replay ends where the call
     // ended. Fire-and-forget: a verdict must never wait on bookkeeping.
     void recordVerdict(row.id, finalStatusKey ?? null, outcome.summary ?? null, outcome.durationSecs ?? 0);
+    dropLiveRead(row.room); // verdict written — let the room's live read go
     // The old direct path's thin receipt closes here — this is the only moment it learns the call is
     // over, since nothing streams to us on that lane. A bridged call closed its own long ago and
     // this is a no-op for it (a receipt flushes exactly once).

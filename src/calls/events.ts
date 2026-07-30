@@ -148,6 +148,13 @@ const RECEIPT_TTL_MS = 15 * 60 * 1000;
 type Sink = (r: Receipt) => void | Promise<void>;
 let sink: Sink | null = null;
 export function setEventSink(fn: Sink): void { sink = fn; }
+// READ AS IT GOES (owner 07-30): a second hook, registered the same way the sink is, so every line
+// reaches the reader WHILE the check is still running and the verdict is ready at hang-up. Registered
+// (not imported) because rule 1 above keeps this module free of db/config/vendor code — the reader
+// pulls in a model client, so it can never be imported here. Unset in tests; the calls are no-ops.
+type LineHook = (room: string, who: "Agent" | "Clerk", text: string) => void;
+let lineHook: LineHook | null = null;
+export function setLineHook(fn: LineHook): void { lineHook = fn; }
 
 // ---- recording ------------------------------------------------------------------------------
 
@@ -244,6 +251,9 @@ export function recordLine(room: string, who: "Agent" | "Clerk", text: string): 
     if (!t) return;
     r.transcript.push({ atMs: Math.max(0, Date.now() - r.startMs), who, text: t.slice(0, 1000) });
     if (r.transcript.length > 300) r.transcript.splice(0, r.transcript.length - 300); // runaway guard
+    // READ AS IT GOES: hand the line to the reader now, while the check is still running, so the
+    // verdict is ready the moment Charlie hangs up. Costs nothing on the line. See voice/live-read.ts.
+    try { lineHook?.(room, who, t); } catch { /* the reader must never break a check */ }
   } catch { /* recording must never break a call */ }
 }
 
