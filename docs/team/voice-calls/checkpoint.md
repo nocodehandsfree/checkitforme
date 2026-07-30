@@ -7,21 +7,26 @@
 - **§7 BRAIN — BUILT, BLOCKED ON A VOICE DECISION, NOT CODE.** ⚠️ They REFUSE a custom brain on an INSTANT VOICE CLONE and Branson/HD/Fungie all are. Only route NOT behind the admin login; `..._OURBRAIN_AGENT_ID` unset.
 - `call_dropped` is **never written `completed`** (the only status the one-hour block matches); Charlie bills as the SUM of open stretches. **`rollupFromRow` is the ONLY reader of a stamped call row**, both receipt routes use it.
 - **ONE QUESTION, BOTH LANES.** `declaresOneTurn` (tapedeck): an EMPTY `followups.type` = set+format folded into the `set` line. Branson Global's lines say **WORD FOR WORD** or the agent rewrites them and loses the day.
-## 07-29 THE READER RULE WAS HALF-WIRED. Three of five finalize paths passed `needSecond ? second : null`, false exactly when the live read had an opinion, so live=IN + reader=OUT became a green AND a charge. **`consensusFor` (verdict.ts) reconciles ALWAYS**; **spec gate 4 FAILS THE PUSH** if a caller takes that decision back.
-## 07-29 `Test — One Question` on Branson HD = THE WORKFLOW HIS SIX CALLS RUN (staging, Fun store). `scripts/make-test-workflow.ts` is the definition AND the writer (dry-run unless `--apply`); the test reads that same constant. One approved question, no rotation, because Gate Zero needs one configuration. **`vt_*` is staging-only.**
+## 07-29 THE READER RULE WAS HALF-WIRED. Three of five finalize paths passed `needSecond ? second : null`, false exactly when the live read had an opinion, so live=IN + reader=OUT became a green AND a charge. **`consensusFor` reconciles ALWAYS**; **spec gate 4 FAILS THE PUSH** otherwise. `Test — One Question` (Branson HD, Fun store) = THE WORKFLOW HIS SIX CALLS RUN; `scripts/make-test-workflow.ts` is the definition AND the writer. **`vt_*` is staging-only.**
 ## SWITCHES + WHAT WE MADE IN THE ACCOUNTS — do not delete these wondering what they are.
-`cheapBridgeAll` **THE BIG ONE: OFF = every check takes the old path. ON for STAGING**, prod OFF till a promote ·
-`ourBrain` blocked §7, renamed **Charlie on Anthropic API**, on Calls ▸ App. **`stopKeysOnHuman` +
-`closeAgentOnHold` ARE NO LONGER SWITCHES**: forced true in `getPolicy` AFTER the merge, because both saved blobs carry false. **Every guessed number is in `src/calls/tuning.ts`.** Agent `agent_2301kyk2rwgyfg8r50xk9enqwy2r` = staging `ELEVENLABS_MIDCALL_AGENT_ID`, **PROD NOT SET**; `check_brain_key` ↔ `BRAIN_API_KEY` (staging only).
+`cheapBridgeAll` **THE BIG ONE: OFF = every check takes the old path. ON for STAGING**, prod OFF till a promote · `ourBrain` blocked §7 (**Charlie on Anthropic API**) · `askForTransfer` ON. **`stopKeysOnHuman` + `closeAgentOnHold` ARE NO LONGER SWITCHES**: forced true in `getPolicy` AFTER the merge, because both saved blobs carry false. **Every guessed number is in `src/calls/tuning.ts`.** Agent `agent_2301kyk2rwgyfg8r50xk9enqwy2r` = staging `ELEVENLABS_MIDCALL_AGENT_ID`, **PROD NOT SET**; `check_brain_key` ↔ `BRAIN_API_KEY` (staging only).
 **`ENV_FLAGS` (app.html) must equal `KEEP_LOCAL_FLAGS` (settings-sync)** or the prod mirror stomps a staging test inside a minute; a spec check compares the lists. **A NEW call flag goes in BOTH.**
-## 07-30 THE WRONG-DEPARTMENT SAVE — SHIPPED, switch `askForTransfer` DEFAULT ON, Calls ▸ App (comp 1i). Rule in
-`prompts.ts` gated on `{{ask_for_transfer}}` (kiosk shape); BOTH lanes send it off the ONE switch. **Wrong
-department is WORDS, never the Ear (§10)** — `heardWrongDepartment` (pure, beside its rule) is read where the
-voicemail phrases are → `unknown` + `wrongDepartment:true` → `learnFromReceipt` files kind `wrong-department` and
-decays the route. TWO REAL GAPS CLOSED: **a hand-over is ALWAYS a new person** (the 20s stopwatch left Charlie
-mid-answer with a stranger) and **the gap note was NEVER sent on a reopen** (the branch returned before it; now
-held and sent when the new session is ready). Gates **O.5 · O.6 · O.7**; **7.1b fixed** (it grepped `'ourBrain',`
-so ANY second call-lane flag failed a Policy-screen check).
+## 07-30 THE WRONG-DEPARTMENT SAVE — SHIPPED, `askForTransfer` DEFAULT ON, Calls ▸ App (comp 1i). Rule in
+`prompts.ts` on `{{ask_for_transfer}}` (kiosk shape); BOTH lanes read the ONE switch. **Wrong department is WORDS,
+never the Ear (§10)**: `heardWrongDepartment` (pure, beside its rule) read where the voicemail phrases are →
+`unknown`+`wrongDepartment:true` → `learnFromReceipt` kind `wrong-department` + decay. THREE GAPS CLOSED: **a
+hand-over is ALWAYS a new person** (the 20s stopwatch left Charlie mid-answer with a stranger) · **the gap note
+was NEVER sent on a reopen** (the branch returned first) · **a SILENT hand-over** (no ringback = a quiet pause to
+the ear) is caught because he ASKED to be put through — `askedToBePutThrough` in prompts.ts is the ONE copy, read
+by the bridge AND the scorecard. Gates **O.5 · O.6 · O.7**; **7.1b fixed** (it grepped `'ourBrain',`).
+## 07-30 TESTING = CHARLIE BEHAVIOR, five rows, HIS words (he rewrote it line by line). Lists EVERY staging check
+(`config.staging.on` in `/api/admin/test-calls`), 10 a page. **ONLY ROWS THAT CAN FAIL:** `asked_once` DELETED
+(the workflow locks one question); `mapping_held` + `no_keypad_at_person` DASH unless a map ran / Alpha really
+pressed keys (a Bravo store never presses one, so ticking it was a lie). A clean Fun check ticks NOTHING. Copy is
+ASSERTED in `test-behaved.ts` so it cannot drift back into sentences. Steps = **Staff greeting · Charlie joined ·
+Charlie dropped · Charlie left · Check ended**, ONE fact per line. Cost = **Menu Nav (Alpha|Bravo|None) · Charlie
+· Total**. **BUG FIXED: `callSeconds` is only written by the OLD path, so every new-engine check printed 0s;
+`rollupFromRow` reads the last step.** Ladder for his six calls: `echo-wrong-department-save.md` §5.
 ## THE ONE EAR — **a `PickupEar` was built here and DELETED the same night; §10 says never build a second.** The
 Ear is a **VETO, never a green light**, cannot invent a person, and anchors come off its own recording count.
 - **PM: bail's else-branch blind-joins Charlie on a stopwatch if bail is off** (locked bridge; owner has it). **The `.unlock` flow WORKS** — the sprawl gate only hooks Write, so `printf 'src/voice/**\n' > .unlock` opens it; fix that scope ONLY then DELETE it (a spec check fails while one is left lying around).
@@ -35,23 +40,18 @@ every string `copy.md` (**a control panel talks to nobody**), comps 2f rev + 2h/
   Lanett (11373) landed: nav 68s · v1 "observed once" · Review empty · `seconds` null. THE PAGE HAS TWO COPIES OF
   EVERY RULE — `versionNavSecs` and `menuLadder` live in app.html and BOTH had to learn `endedOnRing`/the model
   name. **Fix a mapgraph reader → grep app.html for its twin** or the sheet contradicts the hero.
-- **NEXT: Walgreens (chain 10), and it is NOT a re-listen.** Its live v1 is the hammer route `press 0 ×4`,
-  `why` = "Auto-caller pressed the same key repeatedly". Re-map it fresh (no `relisten`), 9 stores, ALL Pacific.
-  It is keypad, so it proves the ladder prints **ALPHA**; CVS proved BRAVO.
+- **NEXT: Walgreens (chain 10), NOT a re-listen.** Live v1 is the hammer route `press 0 ×4`. Re-map fresh, 9
+  stores, ALL Pacific. Keypad, so it proves the ladder prints **ALPHA**; CVS proved BRAVO.
 - **07-30 RAILWAY QUEUE — upstream GitHub outage, twice.** `deploymentCancel` on a wedged deploy errors once, the retry lands; every push queues another build and they run one at a time.
 ## VERIFIED / NOT VERIFIED
-- **DRIVEN 07-30:** 61 delta-clip (REAL ws provider + real carrier socket) · 65 prompts · 100 map-e2e (same 2
-  PRE-EXISTING fails: "still proposed, never silently swapped" — Chains work, not mine) · 43 listen-nav · 72
-  receipt · 24 one-question+reader · 13 bridge · 9 runtime-gates. tsc + spec gates clean. **line-by-line 99/101**
-  (7.12 only) · sweep + 9 need a phone.
-- **REAL STAGING CHECKS 204 + 205 (Fun store).** 204: 8 events, one of each — **0 false transfers** (199 had 10)
-  · **0 unpaired hold_end** · **charlie_join ONCE**. `in_stock`, 5.3¢. 205 drove the Testing workflow.
-- **07-30 LIVE ON STAGING (`75639af6`):** the switch reads ON; the Fun store's rendered instructions carry the
-  rule with the flag `"true"`; flipping it OFF makes them say never ask; flipped back ON and left ON.
-- **STILL OPEN, needs REAL CUSTOMER checks (test-store calls never count):** §11 cost per delivered answer · a real
-  `holdSeconds` > 0 on a live call. **7.12 NOT BUILT** (an answer already heard is thrown away when the brain dies).
-- **NOT PROVEN, needs HIS phone: the save with a real human at the far end.** I cannot be Staff and say "this is
-  the pharmacy", so the words Charlie picks and how the hand-over sounds are unproven. Everything around them is.
+- **DRIVEN 07-30:** 69 delta-clip (REAL ws provider + real carrier socket, incl. the SILENT hand-over) · 65
+  prompts · 60 behaved · 100 map-e2e (same 2 PRE-EXISTING fails, Chains work) · 43 listen-nav · 72 receipt · 13
+  bridge · 9 runtime-gates. tsc + spec gates clean. **line-by-line 99/101** (7.12 only).
+- **07-30 LIVE ON STAGING:** the switch reads ON; the Fun store's rendered instructions carry the rule with the
+  flag `"true"`; flipping it OFF makes them say never ask; flipped back ON and left ON. Checks 204/205 clean.
+- **STILL OPEN, needs REAL CUSTOMER checks:** §11 cost per delivered answer · a real `holdSeconds` > 0. **7.12
+  NOT BUILT.** **NOT PROVEN, needs HIS phone:** the save with a real human saying "this is the pharmacy" — the
+  words Charlie picks and how the hand-over sounds. Everything around them is proven.
 ## Engine — Branson HD `1P1JhCcLzeMmkvLi1BkG` speed 0.91 (BOTH envs) · echo gate 520/150 · ringback by published
 tone frequencies, 6 rings = hang up · **Charlie $0.00183/s, meters SILENCE** · Twilio WHOLE MINUTES · 5.2c base ·
 **all FOUR dial paths open a receipt** (bridge-place · navigator · tapedeck · provider-native `direct:<id>`).
