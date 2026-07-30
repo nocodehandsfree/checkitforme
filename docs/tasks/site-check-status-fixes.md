@@ -88,6 +88,11 @@ It is NOT what makes the verdict slow — he asked, and the answer is no.
   two emails for one in-stock result. He deliberately left the duplicate row in place so it can be
   reproduced — **do not delete his data to make it look fixed.** Stop the duplicate at subscribe
   time AND fold the existing duplicates so one store sends one email.
+  Owner 07-30: a repeat subscribe shows the bottom notification "You've already set an alert for
+  this store" (pill rules: one line, fragment, Spanish twin in the same commit).
+  Scoped: `/pub/watch` inserts blind (src/server.ts ~:2614) · the sender emails once per ROW
+  (`notifyWatches`, src/calls/service.ts ~:19) so it dedupes by person, rows stay · copy key
+  `alerts.sub` (EN ~:7595, ES ~:3278). OWNER SAYS BUILD NOTHING until his go.
 - **Copy change** (ships with its length-checked Spanish in the SAME commit, both lines, no dashes):
   - line 1: `Manage your In Stock alerts.`
   - line 2: `Delete or Pause them below.`
