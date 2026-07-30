@@ -36,5 +36,5 @@ git. Last updated: 2026-07-30 (check status page has its big step window; verdic
   once and waits · no keypad beeps once you are talking · after a hold it asks you again if you might be new.
 - **Waiting on YOU:** the six calls, and whether we pay to upgrade our voice — the phone company won't let us use
   our own cheaper thinking with a copied voice, over half of every check.
-## PROMOTED 07-27 — the five site fixes, the rebuilt plans and checkout, the call recording and the Use it / Keep the old one buttons are live. **Nobody has seen any of it: the real site still shows the coming-soon splash.**
+## PROMOTED 07-30 (owner's go, PM drove it) — everything built since the 27th is on the real site and Admin: the chain page's server half, the Testing scorecard's server half, the wrong-department save, Spanish names on the plans. The new engine stays OFF on the real site until you flip it; customers still see the coming-soon splash.
 ## Waiting on YOU: hide the fake (simulated) poll rows from the Admin feedback queue? (yes / no) · Next: docs/tasks/INDEX.md.

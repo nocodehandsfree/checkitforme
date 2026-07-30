@@ -54,7 +54,7 @@ then they ride the next promote to prod):**
 ## ⏸ Parked (paused on purpose — owner-gated, blocked, or fires at a promote)
 | Task | System | Status |
 |---|---|---|
-| [First promote after the rebuild — prod + admin LIVE in verify-live](first-promote-after-rebuild.md) | data | parked (fires at the owner's promote) |
+| [First promote after the rebuild — prod + admin LIVE in verify-live](first-promote-after-rebuild.md) | data | **done 07-30** (promote @731b21de; prod + admin serve it, health ok) |
 | [One Admin, two environments: shell-level Live/Staging switch](admin-audit-env-switch.md) | data + admin | parked (owner-gated headline; scope with owner) |
 | [Alerts can't actually send — launch blocker](admin-audit-alerts-providers-blocker.md) | data | parked (launch-critical; Twilio A2P APPROVED 07-30 — see the registration task; Brevo still open) |
 | [Twilio texting registration — run the paid steps](twilio-a2p-registration.md) | data | parked (owner-gated: ~$20 once + $1.50/mo; fires on his go) |
