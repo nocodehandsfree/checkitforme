@@ -374,7 +374,7 @@ range (`offset` + `limit`). Ranges run to the next `id=` — a navigation aid, n
 | ho_done | div | 8871–8873 | ${t('ho.done.title',"Bonus released. You're done.")} |
 | ho_donep | p | 8874–9229 |  |
 
-## public/app.html (7072 lines, 413 sections)
+## public/app.html (7136 lines, 414 sections)
 
 | id | element | lines | description |
 |---|---|---|---|
@@ -769,28 +769,29 @@ range (`offset` + `limit`). Ranges run to the next `id=` — a navigation aid, n
 | calc_sentence | div | 3040–3969 |  |
 | sup_teach_q | textarea | 3970–3970 |  |
 | sup_teach_a | textarea | 3971–4110 |  |
-| ds_sitype | div | 4111–4548 |  |
-| ds_siregion | div | 4111–4548 |  |
-| ds_sichecks | div | 4111–4548 |  |
-| set_ratemsg | span.meta | 4549–4652 |  |
-| set_msrp | input | 4653–4654 |  |
-| set_scm | select | 4655–4656 |  |
-| set_scc | select | 4657–4658 |  |
-| set_sell | input | 4659–4659 |  |
-| set_datamsg | span.meta | 4660–4677 |  |
-| set_maxtalk | input | 4678–4678 |  |
-| set_vm | input | 4679–4682 |  |
-| set_wf | select | 4683–4790 |  |
-| set_runs_more | div | 4791–5586 |  |
-| iconpick_q | input | 5587–6051 |  |
-| iconpick_grid | div.iconpick-grid | 5587–6051 |  |
-| wfg_add | input | 6052–6828 |  |
-| rs_details | div | 6829–6951 |  |
-| ds_rsfunnel | div | 6829–6951 |  |
-| ds_rsdays | div | 6829–6951 |  |
-| ds_rsland | div | 6829–6951 |  |
-| wl_region | select | 6952–7072 |  |
-| wl_notify_out | div | 6952–7072 |  |
+| ds_sitype | div | 4111–4552 |  |
+| ds_siregion | div | 4111–4552 |  |
+| ds_sichecks | div | 4111–4552 |  |
+| set_ratemsg | span.meta | 4553–4656 |  |
+| set_msrp | input | 4657–4658 |  |
+| set_scm | select | 4659–4660 |  |
+| set_scc | select | 4661–4662 |  |
+| set_sell | input | 4663–4663 |  |
+| set_datamsg | span.meta | 4664–4681 |  |
+| set_maxtalk | input | 4682–4682 |  |
+| set_vm | input | 4683–4686 |  |
+| set_wf | select | 4687–4777 |  |
+| set_ver_aside | div | 4778–4797 |  |
+| set_runs_more | div | 4798–5650 |  |
+| iconpick_q | input | 5651–6115 |  |
+| iconpick_grid | div.iconpick-grid | 5651–6115 |  |
+| wfg_add | input | 6116–6892 |  |
+| rs_details | div | 6893–7015 |  |
+| ds_rsfunnel | div | 6893–7015 |  |
+| ds_rsdays | div | 6893–7015 |  |
+| ds_rsland | div | 6893–7015 |  |
+| wl_region | select | 7016–7136 |  |
+| wl_notify_out | div | 7016–7136 |  |
 
 ## docs/design/comps/ADMIN_COMPS.dc.html (979 lines, 20 sections)
 

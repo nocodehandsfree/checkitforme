@@ -397,6 +397,24 @@ export function looksLikeDirectPickup(steps: NavStep[], turns: number, speech: s
   return steps.filter((st) => st.who === "ivr" && String(st.text || "").trim()).length <= 1;
 }
 
+/** THE MENU IS STILL TALKING and what we just heard is a piece of it, not a person.
+ *
+ *  True only for the exact shape that fooled us on CVS Tarzana (07-27): we have not acted once, the
+ *  store has already read out two or more recordings, nothing announced a handoff, and the words do
+ *  not read like a person. A store that really picks up cold has at most one recording behind it, so
+ *  this cannot swallow a direct answer, and it stops applying the moment we say or press anything. */
+export function menuStillTalking(
+  s: { steps: NavStep[]; turns: number; routingSeen?: boolean },
+  speech: string,
+): boolean {
+  if (s.routingSeen) return false;                                  // handed on → the next voice is the desk
+  if (ROUTING_RE.test(speech || "")) return false;                  // being handed on right now
+  if (looksLikeLivePerson(speech || "")) return false;              // the words themselves are a person
+  if (looksLikeDirectPickup(s.steps, s.turns, speech || "")) return false; // a cold pickup, one recording behind it
+  if (s.steps.some((st) => st.who === "us")) return false;          // we have already acted; trust the read
+  return s.steps.filter((st) => st.who === "ivr" && String(st.text || "").trim()).length >= 2;
+}
+
 /** The words that prove WHICH desk answered. Only what was said on the turn we reached them counts:
  *  on the 07-28 Mulholland call the newest line in the log was the machine's own "Okay, transferring
  *  you now" from 27s earlier, and it got filed as the desk that picked up. A routing line is never a
@@ -630,6 +648,23 @@ async function navTurn(id: string, speech: string): Promise<string> {
   if (d.action === "human" && !(speech && speech.trim())) return twiml(gather(id));
   if (d.action === "human" && s.ear && (s.ear.hold === "music" || s.ear.hold === "quiet")) {
     emit(id, "unknown", "That was the line, not a person — still waiting", { heard: s.ear.hold, atSec });
+    return twiml(gather(id));
+  }
+  // AND THE MODEL'S WORD IS NOT PROOF EITHER — the CVS Tarzana call, 07-27. The recording asked "Are
+  // you a healthcare provider?" and the transcriber delivered only its tail, "A healthcare provider.",
+  // on its own line. The brain read three words with no "press N" in them and called it a person at
+  // 20s. That one line became a store recipe claiming CVS answers direct, off a call where nobody
+  // spoke and we had not said a single word of the route yet.
+  //
+  // So the shape that call had is vetoed outright: nothing of ours has fired, the store has already
+  // played two or more recordings, no handoff was announced, and the words do not read like a person.
+  // That is the menu still talking. Kept deliberately narrow so it cannot silence a REAL person:
+  //   • a store that picks up cold has at most one recording behind it (looksLikeDirectPickup),
+  //   • a store that announced a handoff is exempt (routingSeen), so the next voice is the desk,
+  //   • words that read like a person are exempt (looksLikeLivePerson),
+  //   • and once we have acted even once, the model is trusted as before.
+  if (d.action === "human" && menuStillTalking(s, speech || "")) {
+    emit(id, "unknown", "That read like the recording, not a person", { heard: (speech || "").slice(0, 120), atSec });
     return twiml(gather(id));
   }
   if (d.action === "human") return reachHuman(s, atSec, id, !!(speech && ROUTING_RE.test(speech))); // person OR announced transfer → confirm waits for the person

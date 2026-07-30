@@ -1019,6 +1019,36 @@ export interface GraphRow {
   calls: number;                 // how many calls stand behind the live route
   stores: number;                // how many different stores agree on it
   menuOptions: number;           // choices captured from the store's own menu, spoken or pressed
+  /** NAV TIME — the part of the call that is ours. Owner, 07-28: mapping's job ends once the phone
+   *  system is navigated and the desk starts ringing, and whether Staff pick up in two seconds or
+   *  twenty is not the menu being slow. `seconds` (time to a person) STAYS the number the runtime
+   *  opens the paid agent on; this is the number the screen shows. */
+  navSeconds: number | null;
+  /** Of the calls that ran this recipe, the share that ended with Staff on the line. Null until one
+   *  has run it, because a number we have not measured is never a zero. */
+  reachedPct: number | null;
+}
+
+/** When the menu is finished with us: the moment the store announced the handoff, or failing that the
+ *  second our last step fired. Derived from evidence we already hold, so no column and no migration.
+ *  A chain that answers direct has no menu to get through, so it is zero, never null. */
+export function navSecondsOf(recipe: MapRecipe | null, ev: EvidenceCall[]): number | null {
+  if (!recipe) return null;
+  if (recipe.type === "direct" || pathSignature(recipe) === "direct") return 0;
+  // The fastest handoff we have actually measured. Only reached calls count: a call that never got
+  // through has no menu-end to report.
+  const announced = ev.filter((c) => c.reachedHuman && typeof c.transferAtSec === "number")
+    .map((c) => c.transferAtSec as number).filter((n) => n > 0);
+  if (announced.length) return Math.min(...announced);
+  const steps = (recipe.steps || []).map((s) => Number(s.atSec)).filter((n) => Number.isFinite(n) && n > 0);
+  return steps.length ? Math.max(...steps) : null;
+}
+
+/** How often this recipe actually lands on Staff. Failed calls are evidence (runtime spec §10.5), so a
+ *  route that keeps reaching nobody must stop looking healthy. */
+export function reachedPctOf(ev: EvidenceCall[]): number | null {
+  if (!ev.length) return null;
+  return Math.round((ev.filter((c) => c.reachedHuman).length / ev.length) * 100);
 }
 
 /** One row per chain for the Admin map screen: what we press/say, how fast it gets to a person, how
@@ -1061,6 +1091,8 @@ export async function graphSummary(): Promise<GraphRow[]> {
       proposed, openUnknowns: nUnknown.get(ch.id) || 0, drift30d: nDrift.get(ch.id) || 0,
       hammer: isHammerPath(recipe),
       promptTriggered: !!recipe?.steps?.some((s) => typeof s.afterPrompt === "number"),
+      navSeconds: navSecondsOf(recipe, active?.evidence?.calls || []),
+      reachedPct: reachedPctOf(active?.evidence?.calls || []),
       ...trendOf(list, active, recipe),
     };
   });

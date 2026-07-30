@@ -18,7 +18,7 @@ import {
   type MapRecipe,
 } from "../src/calls/mapgraph";
 import { lockRecipeToChain } from "../src/calls/trainer-batch";
-import { greetingFrom, looksLikeDirectPickup, parseSpokenOptions, isMenuLine, parseMenuOptions, mergeMenu } from "../src/calls/navigator";
+import { greetingFrom, looksLikeDirectPickup, menuStillTalking, parseSpokenOptions, isMenuLine, parseMenuOptions, mergeMenu } from "../src/calls/navigator";
 import { recipeFromCall } from "../src/calls/map-capture";
 
 let pass = 0, fail = 0;
@@ -218,6 +218,34 @@ async function main() {
       "a menu is still a menu");
     ok(!looksLikeDirectPickup([ivr("Thank you for calling, please listen to the following options carefully", 4)], 1,
       "Thank you for calling, please listen to the following options carefully"), "and so is a long opening line");
+  }
+
+  console.log("▶ THE MODEL'S WORD IS NOT PROOF EITHER — the Tarzana call that became a false recipe");
+  {
+    const ivr = (text: string, atSec: number) => ({ who: "ivr" as const, text, atSec });
+    const us = (text: string, atSec: number) => ({ who: "us" as const, text, atSec });
+    // Verbatim from the call. Both lines are the same recording; the transcriber split it and handed
+    // back the tail on its own line, and the brain answered "human" at 20 seconds.
+    const tarzana = [
+      ivr("Thank you for calling CVS, Pharmacy. If this is an emergency, please hang up and dial 911. I am your virtual assistant and calls are recorded to improve call Quality.", 16),
+      ivr("A healthcare provider.", 20),
+    ];
+    ok(menuStillTalking({ steps: tarzana, turns: 2 }, "A healthcare provider."),
+      "the recording's own tail is vetoed, whatever the model called it");
+
+    // It must NOT be able to silence a real person. Every exit is checked.
+    ok(!menuStillTalking({ steps: tarzana, turns: 2 }, "CVS Tarzana, this is Dana"),
+      "words that read like a person are never vetoed");
+    ok(!menuStillTalking({ steps: tarzana, turns: 2, routingSeen: true }, "A healthcare provider."),
+      "a store that announced a handoff is exempt: the next voice is the desk");
+    ok(!menuStillTalking({ steps: tarzana, turns: 2 }, "Okay, transferring you now."),
+      "and so is the handoff line itself");
+    ok(!menuStillTalking({ steps: [...tarzana, us('said "no"', 21)], turns: 3 }, "Yeah?"),
+      "once we have acted even once, the read is trusted again");
+    ok(!menuStillTalking({ steps: [ivr("Gateway WinCo.", 4)], turns: 1 }, "Gateway WinCo."),
+      "a cold pickup has one recording behind it, so it is never vetoed");
+    ok(!menuStillTalking({ steps: [], turns: 1 }, "Hello?"),
+      "and neither is a line that answers before it plays anything");
   }
 
 

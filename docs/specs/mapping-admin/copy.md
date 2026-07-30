@@ -146,6 +146,9 @@ Corrections to what is live today, same rules.
 | Key | `Show 4 more` |
 | Empty | `No mapping calls. Re-map to place one.` |
 
+**Cut:** the sub line `Every call we made to learn this menu.` The sheet is called Mapping calls and every
+card is one call, so the line only repeats the title back.
+
 **Cut:** the foot line `A call only changes the menu when it beats the one we have`.
 
 **Fix:** a recipe that was set aside must not read green. `Set aside` is gray, like `No change`.

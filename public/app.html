@@ -1462,13 +1462,13 @@
         <div class="pk-fact" id="pk_setmenu"></div>
         <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
-      <button class="peek" onclick="sheetFromHolder('ds_setruns','Mapping calls','Every call we made to learn this menu.')">
+      <button class="peek" onclick="sheetFromHolder('ds_setruns','Mapping calls','')">
         <div class="pk-main"><div class="pk-t">Mapping calls</div></div>
         <div class="pk-fact" id="pk_setruns"></div>
         <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
-      <button class="peek" onclick="sheetFromHolder('ds_setver','Versions','')">
-        <div class="pk-main"><div class="pk-t">Versions</div></div>
+      <button class="peek" onclick="sheetFromHolder('ds_setver','Recipes','')">
+        <div class="pk-main"><div class="pk-t">Recipes</div></div>
         <div class="pk-fact" id="pk_setver"></div>
         <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
@@ -4458,6 +4458,10 @@ async function syncCallRates(){
   const r=await api('/api/admin/call-rates'); if(!r||r.error) return;
   if(typeof r.charlieCreditsPerMin==='number'&&r.charlieCreditsPerMin>0) CALC_MEASURED.creditsPerMinute=r.charlieCreditsPerMin;
   if(typeof r.linePerMinUsd==='number'&&r.linePerMinUsd>0) CALC.rates.twilioPerMin=r.linePerMinUsd;
+  // The listening fork. The engine has billed it on every call since the Ear went on the nav call
+  // (`forkPerMinUsd` in cost.ts) and this page counted it as zero, so every price here was light.
+  // Never re-type the number: read the engine's, the same way the line rate is read.
+  if(typeof r.forkPerMinUsd==='number'&&r.forkPerMinUsd>0) CALC.rates.navForkPerMin=r.forkPerMinUsd;
   if(typeof calcUpdate==='function'&&CALC.ready) try{ calcUpdate(); }catch(e){}
 }
 async function loadMapGraph(){
@@ -4690,13 +4694,15 @@ async function ssSetMaxTalk(v){ if(!SS) return; SS.maxTalk=v; if(await ssPatch('
 // SAME timeline treatment as the call sheet (comp 1d): dot, connector, bold step, gray second.
 // Everything else folds into peek rows. Still READ-ONLY here: the navigator/lock writes navRecipe,
 // dtmfShortcut and phoneTreeDefault. navStatus drives the lifecycle (unmapped / learning / locked).
-const CHAIN_TALK=20; // the standard check the cost model banks on: 20 seconds of talking.
-// One check on this chain in cents, through the Calc page's own cost function, so the forecast and
-// this page can never disagree about what a check costs.
-const chainCostCents=(type,nav)=>calcCompute(type,nav||0,CHAIN_TALK,CALC.rates,'charlie',0).total*100;
-// What the MENU costs: this chain's check minus the same check on a line that picks up directly.
-// On a 41s menu that is a whole second billed minute (docs/finance/COST_MODEL.md).
-const chainMenuCents=(type,nav)=>Math.max(0,chainCostCents(type,nav)-chainCostCents('Direct',0));
+// WHAT THE MENU COSTS, and nothing past it. Owner, 07-28: "I don't care about the price of CVS past
+// the cost to get through the menu, because we're assuming 20 seconds of Charlie but that might not
+// be the case." He was right, so the guess is gone from this page. Two things are actually billed
+// while we navigate and both are measured: the phone line, in WHOLE minutes, and the audio fork we
+// listen on. Charlie is not on the line yet, so he costs nothing here.
+const chainNavCents=nav=>{
+  const s=Math.max(0,Number(nav)||0); if(!s) return 0;
+  return (Math.ceil(s/60)*CALC.rates.twilioPerMin + (s/60)*(CALC.rates.navForkPerMin||0))*100;
+};
 const chainCents=c=>(c<0.05?'0':c<10?c.toFixed(1):String(Math.round(c)))+'¢';
 const chainLane=ch=>ch.navType==='keypad'?'Alpha':ch.navType==='voice'?'Bravo':ch.navType==='direct'?'Direct':null;
 // The learned route, normalised to ONE list whatever wrote it: the recipe JSON first, then the
@@ -4758,20 +4764,21 @@ async function renderChainSheets(ch,nav){
   if(rw) rw.innerHTML = calls.length ? mappingCallsHtml(calls,versions)
     : '<div class="empty">No mapping calls yet. Tap Re-map to place one.</div>';
 
-  // VERSIONS — every recipe we have held. Nothing is deleted (04-map-graph.md section 2).
-  set('pk_setver', versions.length?String(versions.length):'', versions.some(v=>v.status==='proposed')?'#F59E0B':'');
+  // RECIPES (comp 2i) — what is live and what it replaced, each with its nav time and the date it
+  // locked. Attempts that were set aside are not recipes, so they sit behind one key: a rejected route
+  // sitting in the list is what made CVS look three recipes deep when it holds one. A recipe waiting
+  // for a yes never appears here either; that decision is on the page that opened this sheet.
+  const held=versions.filter(v=>v.status==='active'||v.status==='retired');
+  const aside=versions.filter(v=>v.status==='rejected');
+  const liveV=held.find(v=>v.status==='active')||held[0];
+  set('pk_setver', liveV?('v'+liveV.version+' live'):'');
   const vw=document.getElementById('set_versions');
-  if(vw) vw.innerHTML = versions.length ? versions.slice().sort((a,b)=>(b.version||0)-(a.version||0)).map(v=>{
-    const S={active:['var(--green)','Live'],proposed:['#F59E0B','Waiting for you'],retired:['var(--text-muted)','Retired'],rejected:['var(--text-muted)','Set aside']}[v.status]||['var(--muted)',v.status];
-    return `<div class="card" style="margin:0 0 10px">
-      <div class="row" style="align-items:center;gap:8px"><span class="name">${esch(versionName(v))}</span>
-        <span class="meta">${esch(versionWhen(v))}</span>
-        <span style="margin-left:auto;font-size:10.5px;font-weight:700;color:${S[0]}">${esch(S[1])}</span></div>
-      <div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(routeWords(v))}</div>
-      <div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${v.seconds!=null?v.seconds+'s to Staff':''}${v.confidenceLabel&&v.confidenceLabel!=='unknown'?` \u00b7 <span style="color:${confColor(v.confidenceLabel)}">${esch(cap(v.confidenceLabel))}</span>`:''}</div>
-      ${v.status==='proposed'?`<div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap"><button class="act" onclick="closeSheet();mapApprove(${v.id},${ch.id})">Use it</button><button class="ghost" onclick="closeSheet();mapReject(${v.id},${ch.id})">Keep current</button></div>`:''}
-    </div>`;
-  }).join('') : '<div class="empty">No recipes saved yet.</div>';
+  if(vw) vw.innerHTML = held.length
+    ? held.slice().sort((a,b)=>(b.version||0)-(a.version||0)).map(recipeCard).join('')
+      +(aside.length?`<div id="set_ver_aside" style="display:none">${aside.slice().sort((a,b)=>(b.version||0)-(a.version||0)).map(recipeCard).join('')}</div>`
+        +`<div style="display:grid;place-items:center;margin-top:6px"><button class="ghost" onclick="mapAsideMore(this)">Show ${aside.length} set aside</button></div>`:'')
+      +recipeGap(held)
+    : '<div class="empty">No recipe yet. Tap Re-map to learn one.</div>';
 
   // REVIEW — only when there is something to look at.
   set('pk_setreview', unknowns.length?String(unknowns.length):'', unknowns.length?'#F59E0B':'');
@@ -4871,12 +4878,56 @@ function callWhen(at){
   return d.toDateString()===new Date().toDateString()?t
     :d.toLocaleDateString([],{month:'short',day:'numeric'})+', '+t;
 }
-// A chain recipe is the chain's. A store recipe belongs to ONE store, so it is named after that
-// store: two rows both reading "Recipe 1" (the chain's and one store's) told the owner nothing.
-const versionWhen=v=>v.createdAt?new Date(v.createdAt*1000).toLocaleDateString([],{month:'short',day:'numeric'}):'';
+// THE OWNER'S OWN NAME FOR IT (07-28): "Tree Recipe v1, v2, with a date on when the recipe was locked.
+// Total Nav Time." A store's own route is named after the store, because two rows both reading v1, one
+// the chain's and one a single store's, told him nothing.
+// LOCKED is the date it became the route real checks run, which is `approvedAt`, not the date somebody
+// proposed it. A retired one keeps the date it was live from.
+const versionWhen=v=>{
+  const at=v.approvedAt||v.createdAt;
+  return at?new Date(at*1000).toLocaleDateString([],{month:'short',day:'numeric'}):'';
+};
 function versionName(v){
-  if(v.storeId){ const c=((v.evidence&&v.evidence.calls)||[]).find(x=>x.storeName); return c&&c.storeName?c.storeName:'One store'; }
-  return 'Recipe '+v.version;
+  if(v.storeId){ const c=((v.evidence&&v.evidence.calls)||[]).find(x=>x.storeName); return (c&&c.storeName?c.storeName:'One store')+' v'+v.version; }
+  return 'Tree Recipe v'+v.version;
+}
+// ONE recipe card: its name, whether it is the one running, its nav time and the date it locked, then
+// the route in plain words. No confidence wording and no evidence counts; neither changes a decision.
+function recipeCard(v){
+  const S={active:['var(--green)','Live'],retired:['var(--text-muted)','Retired'],rejected:['var(--text-muted)','Set aside']}[v.status]||['var(--muted)',v.status];
+  const ns=versionNavSecs(v), dim=v.status==='active'?'':'color:var(--text-muted)';
+  return `<div class="card" style="margin:0 0 10px">`
+    +`<div class="row" style="align-items:center;gap:8px"><span class="name" style="${dim}">${esch(versionName(v))}</span>`
+    +`<span style="margin-left:auto;font-size:10.5px;font-weight:700;color:${S[0]}">${esch(S[1])}</span></div>`
+    +`<div class="stats" style="margin-top:12px">`
+    +`<div class="stat"><div class="n" style="${dim}">${ns!=null?ns+'s':''}</div><div class="l">Nav time</div></div>`
+    +`<div class="stat"><div class="n" style="${dim}">${esch(versionWhen(v))}</div><div class="l">Locked</div></div>`
+    +`</div>`
+    +`<div class="meta" style="margin-top:12px;text-transform:none;letter-spacing:0;line-height:1.5;color:${v.status==='active'?'var(--text-body)':'var(--text-muted)'}">${esch(routeWords(v))}</div>`
+    +`</div>`;
+}
+function mapAsideMore(btn){
+  const m=document.getElementById('set_ver_aside'); if(m) m.style.display='';
+  if(btn&&btn.parentNode) btn.parentNode.remove();
+}
+// How much the live recipe beat the one before it. Only when both proved a nav time, and only when it
+// actually got faster: a made up improvement is worse than none.
+function recipeGap(held){
+  const live=held.find(v=>v.status==='active'); if(!live) return '';
+  const prev=held.filter(v=>v.status!=='active'&&(v.version||0)<(live.version||0)).sort((a,b)=>(b.version||0)-(a.version||0))[0];
+  const a=versionNavSecs(live), b=prev?versionNavSecs(prev):null;
+  if(a==null||b==null||b<=a) return '';
+  return `<div class="meta" style="margin-top:14px;text-transform:none;letter-spacing:0">v${live.version} · ${b-a}s faster</div>`;
+}
+// The nav time this recipe proved: the handoff it measured, or failing that the second its last step
+// fires. Same rule as the chain row, so the sheet and the page cannot disagree.
+function versionNavSecs(v){
+  const ev=((v.evidence&&v.evidence.calls)||[]);
+  const announced=ev.filter(c=>c.reachedHuman&&typeof c.transferAtSec==='number'&&c.transferAtSec>0).map(c=>c.transferAtSec);
+  if(announced.length) return Math.min.apply(null,announced);
+  const steps=(((v.recipe&&v.recipe.steps)||[]).map(s=>Number(s.atSec)).filter(n=>isFinite(n)&&n>0));
+  if(steps.length) return Math.max.apply(null,steps);
+  return (v.recipe&&v.recipe.type==='direct')?0:null;
 }
 // The route in plain words, built from the steps. NEVER the mapper's own summary: that is engineer
 // shorthand written for engineers, and it carries the dashes the copy guide bans outright.
@@ -4935,17 +4986,18 @@ async function mapUnknown(id,status,chainId){
 }
 // The route on its own: what WE do, with the ringing and the answer around it. Shown until the heard
 // menu lands, and it is all there is on a chain nobody has recorded yet.
+// THE LADDER ENDS WHEN THE DESK STARTS RINGING (owner, 07-28). It used to finish on "Staff answers",
+// which put somebody else's reaction time inside our number and made a good route look slow. The desk
+// ringing is the last thing the phone system does to us, so that is the last rung. Who picked up, and
+// what they said, is in Mapping calls, where reading one call is the point.
 function routeRungs(ch,nav,DASH){
   const steps=chainSteps(ch), rungs=[];
   let heard=''; try{ const r=ch.navRecipe?JSON.parse(ch.navRecipe):null; heard=(r&&r.menuPrompts&&r.menuPrompts[0])||''; }catch(e){}
   const first=steps.length?steps[0].at:null;
   if(first!=null&&first>0) rungs.push({at:'0'+DASH+first+'s',t:'Greeting plays',sub:heard?esch(heard):''});
   steps.forEach(st=>rungs.push({at:st.at!=null?st.at+'s':'',t:st.t}));
-  const lastAt=steps.length&&steps[steps.length-1].at!=null?steps[steps.length-1].at:null;
-  const ringFrom=lastAt!=null?lastAt:0;
-  if(nav!=null&&nav>ringFrom) rungs.push({at:ringFrom+DASH+nav+'s',t:steps.length?'Rings the desk':'Rings',sub:(nav-ringFrom)+'s of ringing',c:'var(--yellow)',lc:'rgba(255,203,5,.28)'});
-  if(nav===0&&!steps.length) rungs.push({t:'Staff answers, no menu',at:'',tc:'var(--green)'});
-  else rungs.push({at:(nav!=null?nav+'s':''),t:'Staff answers',tc:'var(--green)'});
+  if(!steps.length) rungs.push({t:'Staff answer the line',at:'',tc:'var(--green)'});
+  else rungs.push({at:(nav!=null?nav+'s':''),t:'Rings the desk',tc:'var(--green)'});
   return rungs;
 }
 // ONE read of a chain's map, shared by the menu, the status line and the waiting-route card. Three
@@ -4988,7 +5040,15 @@ function renderChainMapping(ch){
   const status=(ch.navStatus==='locked'||ch.navStatus==='learning')?ch.navStatus:'unmapped';
   const isLocked=status==='locked';
   const lane=chainLane(ch)||(ch.dtmfShortcut?'Alpha':(ch.phoneTreeDefault?'Bravo':((ch.ringsDirect||ch.answerPath==='direct_human')?'Direct':null)));
-  const nav=ch.navSeconds!=null?ch.navSeconds:(ch.avgTreeSeconds!=null?ch.avgTreeSeconds:null);
+  // ONE SOURCE for both numbers. The chains row and the map row disagreed (67s here, 62s on the map
+  // screen) because this page read the column the lock last stamped and the map read the live version.
+  // The map row wins, always. `navSecs` = through the menu, `toStaff` = the moment a person spoke.
+  const g0=mapRow(ch.id);
+  const toStaff=(g0&&g0.seconds!=null)?g0.seconds:(ch.navSeconds!=null?ch.navSeconds:(ch.avgTreeSeconds!=null?ch.avgTreeSeconds:null));
+  // NAV TIME, the part that is ours. Owner, 07-28: mapping's job ends once the phone system is
+  // navigated and the desk starts ringing; how long Staff take to lift the handset is not the menu
+  // being slow. The runtime still opens the paid agent on time-to-Staff; only the screen changed.
+  const nav=(g0&&g0.navSeconds!=null)?g0.navSeconds:toStaff;
   // --- header line under the name: stores, then the lane in its own colour.
   const meta=document.getElementById('set_chmeta');
   if(meta){
@@ -5003,11 +5063,15 @@ function renderChainMapping(ch){
     // filling the hero with a word. The pill and the ladder's empty state already say the state.
     const known=isLocked&&lane&&nav!=null;
     vit.style.display=known?'':'none';
+    // Tile two is the route's health: of the calls that ran this recipe, how many ended with Staff on
+    // the line. Null until a call has run it, and a number we do not have is never printed as a zero.
+    const reach=(g0&&g0.reachedPct!=null)?g0.reachedPct:null;
     if(known) vit.innerHTML=
-      `<div class="heroc" style="margin:0"><div><div class="hn" style="color:var(--green)">${chainCents(chainCostCents(lane,nav))}</div><div class="hl">Cost per check</div></div></div>`
+      `<div class="heroc" style="margin:0"><div><div class="hn" style="color:var(--green)">${nav}s</div><div class="hl">Nav time</div></div></div>`
       +`<div class="stats" style="margin-top:9px">`
-      +`<div class="stat"><div class="n">${nav}s</div><div class="l">Time to Staff</div></div>`
-      +`<div class="stat"><div class="n">${chainCents(chainMenuCents(lane,nav))}</div><div class="l">Menu cost</div></div>`
+      +`<div class="stat"><div class="n">${chainCents(chainNavCents(nav))}</div><div class="l">Nav cost</div></div>`
+      +(reach!=null?`<div class="stat"><div class="n" style="color:${reach>=90?'var(--green)':reach>=60?'var(--yellow)':'#F59E0B'}">${reach}%</div><div class="l">Reached Staff</div></div>`
+        :`<div class="stat"><div class="n">${toStaff!=null?toStaff+'s':''}</div><div class="l">To Staff</div></div>`)
       +`</div>`;
   }
   // --- beside the PHONE MENU eyebrow: which version is running, and how much we trust it.
@@ -5038,8 +5102,8 @@ function renderChainMapping(ch){
     // "what do we do on this chain", not "everything we know about it".
     el.innerHTML=`<div class="mladder">${routeRungs(ch,nav,DASH).map((r,i,a)=>chainRung(r,i===a.length-1)).join('')}</div>`;
     if(foot) foot.textContent=!lane?''
-      :(nav===0?'No menu. Staff answers the line.'
-      :nav!=null?`${nav}s to Staff · the menu adds ${chainCents(chainMenuCents(lane,nav))} a check.`:'');
+      :(nav===0?'No menu. Staff answer the line.'
+      :nav!=null?`${nav}s nav · ${chainCents(chainNavCents(nav))} per check`:'');
   }
   // --- status pill beside the chain name.
   const sp=document.getElementById('set_mapstatus');
