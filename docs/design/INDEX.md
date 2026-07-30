@@ -375,7 +375,7 @@ range (`offset` + `limit`). Ranges run to the next `id=` — a navigation aid, n
 | ho_done | div | 8932–8934 | ${t('ho.done.title',"Bonus released. You're done.")} |
 | ho_donep | p | 8935–9290 |  |
 
-## public/app.html (7399 lines, 404 sections)
+## public/app.html (7403 lines, 404 sections)
 
 | id | element | lines | description |
 |---|---|---|---|
@@ -773,16 +773,16 @@ range (`offset` + `limit`). Ranges run to the next `id=` — a navigation aid, n
 | set_vm | input | 4755–4758 |  |
 | set_wf | select | 4759–4850 |  |
 | set_ver_aside | div | 4851–4930 |  |
-| set_runs_more | div | 4931–5869 |  |
-| iconpick_q | input | 5870–6348 |  |
-| iconpick_grid | div.iconpick-grid | 5870–6348 |  |
-| wfg_add | input | 6349–7155 |  |
-| rs_details | div | 7156–7278 |  |
-| ds_rsfunnel | div | 7156–7278 |  |
-| ds_rsdays | div | 7156–7278 |  |
-| ds_rsland | div | 7156–7278 |  |
-| wl_region | select | 7279–7399 |  |
-| wl_notify_out | div | 7279–7399 |  |
+| set_runs_more | div | 4931–5873 |  |
+| iconpick_q | input | 5874–6352 |  |
+| iconpick_grid | div.iconpick-grid | 5874–6352 |  |
+| wfg_add | input | 6353–7159 |  |
+| rs_details | div | 7160–7282 |  |
+| ds_rsfunnel | div | 7160–7282 |  |
+| ds_rsdays | div | 7160–7282 |  |
+| ds_rsland | div | 7160–7282 |  |
+| wl_region | select | 7283–7403 |  |
+| wl_notify_out | div | 7283–7403 |  |
 
 ## docs/design/comps/ADMIN_COMPS.dc.html (979 lines, 20 sections)
 

@@ -1214,21 +1214,35 @@ function trendOf(all: MapVersion[], active: MapVersion | null, recipe: MapRecipe
   const calls = all.filter((v) => v.storeId === 0)
     .slice().sort((a, b) => a.version - b.version)
     .flatMap((v) => v.evidence?.calls || []).filter((c) => c.reachedHuman || c.endedOnRing);
+  // THE NUMBER THAT IMPROVES IS NAV TIME, not time to Staff. Getting faster is entirely about the
+  // menu: saying the short word, answering sooner. How long Staff then take to lift the handset is
+  // theirs, not ours, and a check that hangs up on the ring never learns it at all — so reading
+  // `seconds` left this blank forever once re-listens became the normal way to map.
   // Stable: calls made in the same second (a simulated run, or a burst) keep the order they were
   // recorded in, so the first measurement cannot be decided by a coin toss.
-  const timed = calls.filter((c) => typeof c.seconds === "number" && (c.seconds as number) > 0)
+  // A chain mapped before the handoff moment was recorded has only time-to-Staff to show. Falling back
+  // for the WHOLE set, never call by call, so one trend is never half one measurement and half another.
+  const anyNav = calls.some((c) => typeof c.transferAtSec === "number" && (c.transferAtSec as number) > 0);
+  const navOf = (c: EvidenceCall) => {
+    const v = anyNav ? c.transferAtSec : c.seconds;
+    return typeof v === "number" && v > 0 ? v : null;
+  };
+  const timed = calls.filter((c) => navOf(c) != null)
     .map((c, i) => ({ c, i }))
     .sort((a, b) => ((a.c.at || 0) - (b.c.at || 0)) || (a.i - b.i))
     .map((x) => x.c);
   const stores = new Set(calls.map((c) => c.storeId).filter(Boolean)).size;
   if (timed.length < 2) {
-    return { firstSeconds: null, bestSeconds: timed[0]?.seconds ?? null, savedSeconds: null,
+    return { firstSeconds: null, bestSeconds: timed[0] ? navOf(timed[0]) : null, savedSeconds: null,
       calls: calls.length, stores, menuOptions };
   }
-  const first = timed[0].seconds as number;
-  const best = Math.min(...timed.map((c) => c.seconds as number));
-  const nowSecs = active?.seconds ?? best;
-  return { firstSeconds: first, bestSeconds: best, savedSeconds: Math.round(first - nowSecs),
+  const first = navOf(timed[0]) as number;
+  const best = Math.min(...timed.map((c) => navOf(c) as number));
+  // Against where we are NOW, which is the average of the live route's own checks, so a lucky single
+  // fast check cannot claim an improvement the route does not actually deliver.
+  const nowSecs = navSecondsOf(recipe, active?.evidence?.calls || []) ?? best;
+  const saved = Math.round(first - nowSecs);
+  return { firstSeconds: first, bestSeconds: best, savedSeconds: saved > 0 ? saved : null,
     calls: calls.length, stores, menuOptions };
 }
 

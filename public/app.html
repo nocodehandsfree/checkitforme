@@ -4895,16 +4895,55 @@ function renderMenuByCondition(ch, active, nav, calls){
   };
   const cd=MENU_CONDS.find(x=>x.key===cur)||MENU_CONDS[0];
   const mine=byCond[cur];
-  // THE NEWEST CHECK, always (owner, 07-30). What this shows is what the menu says NOW, so the last
-  // time we listened is the only honest answer. It used to pick the check with the most lines, which
-  // meant an older check kept the screen long after a newer one had heard the menu properly.
-  const call=mine.slice().sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0))[0]||null;
-  const tl=call?menuTimeline({evidence:{calls:[call]},recipe:active&&active.recipe},nav):null;
+  // WHAT THE MENU SAYS, AGREED, not what one check happened to hear (owner, 07-30). The phone company
+  // mis-hears words, so a single check is one opinion: CVS's "front store services" came back as
+  // "front door services" and that one bad hearing became the record. Every check we hold votes on
+  // each line and the wording heard most often wins, so more checks settle the words instead of
+  // overwriting them. The agreement is printed underneath, because he has to be able to see when the
+  // menu is settled and when it is still one check's guess.
+  const agreed=agreedMenu(mine);
+  const tl=agreed.call?menuTimeline({evidence:{calls:[agreed.call]},recipe:active&&active.recipe},nav):null;
   box.innerHTML=`<div style="display:flex;gap:7px;flex-wrap:wrap">${MENU_CONDS.map(pill).join('')}</div>`
     +(tl
       ? `<div style="margin-top:14px">${menuLadder(tl.rows)}</div>`
-        +`<div class="meta" style="margin-top:10px;text-transform:none;letter-spacing:0">${esch(tl.call.storeName||'A store')}${tl.call.day?' · '+dayWords(tl.call.day):''}</div>`
+        +`<div class="meta" style="margin-top:10px;text-transform:none;letter-spacing:0">${esch(agreedWords(agreed))}</div>`
       : `<div style="margin-top:14px" class="empty">Not heard<div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${esch(cd.how)}</div></div>`);
+}
+// THE AGREED MENU. Each check writes its lines down in order, so line one of every check is the same
+// moment of the same menu. For each line the wording heard most often wins; a tie goes to the longest,
+// because the longer version is the one that was not cut short. Returns a stand-in check carrying the
+// agreed wording, so everything downstream reads it exactly like a real one.
+function agreedMenu(calls){
+  const good=(calls||[]).filter(c=>((c.transcript||[]).length));
+  if(!good.length) return {call:null,checks:0,settled:0,lines:0};
+  const newest=good.slice().sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0))[0];
+  const depth=Math.max(...good.map(c=>(c.transcript||[]).length));
+  const out=[]; let settled=0;
+  for(let i=0;i<depth;i++){
+    const seen=new Map();
+    for(const c of good){
+      const raw=(c.transcript||[])[i]; if(!raw) continue;
+      const body=String(raw).replace(/^\s*\d+s\s+/,'');
+      const key=body.toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,' ').trim();
+      if(!key) continue;
+      const hit=seen.get(key)||{n:0,raw:''};
+      hit.n++; if(String(raw).length>hit.raw.length) hit.raw=String(raw);
+      seen.set(key,hit);
+    }
+    if(!seen.size) continue;
+    const best=[...seen.values()].sort((a,b)=>(b.n-a.n)||(b.raw.length-a.raw.length))[0];
+    if(best.n>1) settled++;
+    out.push(best.raw);
+  }
+  return {call:{...newest,transcript:out},checks:good.length,settled,lines:out.length};
+}
+// One gray line saying how settled the wording is, because "is this right yet" is a real question.
+function agreedWords(a){
+  if(!a||!a.call) return '';
+  const store=a.call.storeName||'A store';
+  if(a.checks<2) return `${store} · heard once`;
+  if(a.settled>=a.lines) return `${store} · every line agreed across ${a.checks} checks`;
+  return `${store} · ${a.settled} of ${a.lines} lines agreed across ${a.checks} checks`;
 }
 function pickMenuCondition(chainId,key){
   MENU_COND[chainId]=key;
@@ -5292,7 +5331,11 @@ function renderChainMapping(ch){
       +`<div class="stat"><div class="n">${chainCents(chainNavCents(nav))}</div><div class="l">Nav cost</div></div>`
       +(reach!=null?`<div class="stat"><div class="n" style="color:${reach>=90?'var(--green)':reach>=60?'var(--yellow)':'#F59E0B'}">${reach}%</div><div class="l">Reached Staff</div></div>`
         :`<div class="stat"><div class="n">${toStaff!=null?toStaff+'s':''}</div><div class="l">To Staff</div></div>`)
-      +`</div>`;
+      +`</div>`
+      // HOW MUCH FASTER WE HAVE MADE IT, which is the whole point of calling a chain more than once.
+      // Only when we have actually improved on where we started; a made up gain is worse than none.
+      +((g0&&g0.savedSeconds>0&&g0.firstSeconds!=null)
+        ? `<div class="meta" style="margin-top:11px;text-transform:none;letter-spacing:0;color:var(--green)">${g0.savedSeconds}s faster than the first check (${g0.firstSeconds}s)</div>` : '');
   }
   // --- beside the PHONE MENU eyebrow: when this route last changed, and nothing else. The scoring
   // words ("observed once", "observed multiple times") came off every screen (owner, 07-30): they are
@@ -5300,7 +5343,11 @@ function renderChainMapping(ch){
   const g=mapRow(ch.id);
   const ver=document.getElementById('set_menuver');
   if(ver){
-    const dt=ch.navUpdatedAt?new Date(ch.navUpdatedAt):(ch.treeLearnedAt?new Date(ch.treeLearnedAt*1000):null);
+    // THE DATE THE RECIPE WAS LOCKED IN, in seconds like every other stamp we hold. This read
+    // `navUpdatedAt` as milliseconds and printed January 1970 on every chain (owner, 07-30), and it was
+    // the wrong field besides: it moves when a chain starts learning, not when its route locked.
+    const lockedAt=(g&&g.lastVerified)||ch.navUpdatedAt||ch.treeLearnedAt||null;
+    const dt=lockedAt?new Date(lockedAt*1000):null;
     const cl=g&&g.confidenceLabel==='needs review'?'Needs review':'';
     ver.innerHTML=!isLocked?''
       :(cl?`<span style="color:#F59E0B;font-weight:700">${cl}</span>`:'')

@@ -487,12 +487,20 @@ async function main() {
     // longest one. A stale check kept the screen after a newer one had heard the menu properly.
     ok(!/sort\(\(a,b\)=>\(\(b\.transcript\|\|\[\]\)\.length\)-\(\(a\.transcript\|\|\[\]\)\.length\)\)/.test(page),
       "the menu is no longer taken from whichever check happened to have the most lines");
-    ok((page.match(/const call=[a-z]+\.slice\(\)\.sort\(\(a,b\)=>\(Number\(b\.at\)\|\|0\)-\(Number\(a\.at\)\|\|0\)\)/g) || []).length === 2,
-      "both readers of the menu take the newest check instead");
+    ok(/const call=calls\.slice\(\)\.sort\(\(a,b\)=>\(Number\(b\.at\)\|\|0\)-\(Number\(a\.at\)\|\|0\)\)/.test(page),
+      "and where one check must be picked, it is the newest, never the longest");
     // Only the comments explaining the removal may still carry the words; no rendered string may.
     ok(!/confColor/.test(page), "the colour scale those words needed is gone with them");
     ok(!page.split("\n").some((l) => !l.trim().startsWith("//") && /observed once|observed multiple times/.test(l)),
       "and no screen scores itself at him in words he cannot act on");
+
+    // THE WORDING IS VOTED ON, not taken from whichever check ran last. The phone company mis-hears:
+    // CVS's "front store services" came back as "front door services" and became the record.
+    ok(/function agreedMenu\(calls\)/.test(page), "every check we hold votes on each line of the menu");
+    ok(/const best=\[\.\.\.seen\.values\(\)\]\.sort\(\(a,b\)=>\(b\.n-a\.n\)\|\|\(b\.raw\.length-a\.raw\.length\)\)\[0\]/.test(page),
+      "the wording heard most often wins, and a tie goes to the version that was not cut short");
+    ok(/lines agreed across \$\{a\.checks\} checks/.test(page), "and the screen says how settled it is, so he can see when it is still one guess");
+    ok(/s faster than the first check/.test(page), "the chain page shows how much faster we have made the menu");
 
     const cap = readFileSync("src/calls/map-capture.ts", "utf8");
     ok(/\(opts\.reachedHuman \|\| opts\.endedOnRing\) \? transcriptFromCall\(opts\.steps\)/.test(cap),
