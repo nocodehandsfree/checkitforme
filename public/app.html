@@ -5052,7 +5052,7 @@ function recipeGap(held){
 // fires. Same rule as the chain row, so the sheet and the page cannot disagree.
 function versionNavSecs(v){
   const ev=((v.evidence&&v.evidence.calls)||[]);
-  const announced=ev.filter(c=>c.reachedHuman&&typeof c.transferAtSec==='number'&&c.transferAtSec>0).map(c=>c.transferAtSec);
+  const announced=ev.filter(c=>(c.reachedHuman||c.endedOnRing)&&typeof c.transferAtSec==='number'&&c.transferAtSec>0).map(c=>c.transferAtSec);
   if(announced.length) return Math.min.apply(null,announced);
   const steps=(((v.recipe&&v.recipe.steps)||[]).map(s=>Number(s.atSec)).filter(n=>isFinite(n)&&n>0));
   if(steps.length) return Math.max.apply(null,steps);
@@ -5068,8 +5068,14 @@ function routeWords(v){
 }
 // One ladder, used by the Menu sheet and by each round. STORE is the recording, WE is us, STAFF is
 // the person who picked up.
+// NAME THE MODEL THAT NAVIGATED, never "we" (owner, 07-30). Alpha presses the keypad, Bravo speaks
+// the menu. The header line beside the chain name already names one of them in its own colour, so
+// the ladder saying "WE" was the page inventing a second word for a thing that has a name.
+// Read off the steps themselves so the ladder can never name a different model than it is showing.
 function menuLadder(rows){
-  const WHO={store:['STORE','var(--muted)'],us:['WE','#38BDF8'],staff:['STAFF','var(--green)']};
+  const pressed=rows.some(r=>r.who==='us'&&/^press/i.test(String(r.text||'')));
+  const L=pressed?['ALPHA','#F4B740']:['BRAVO','#38BDF8'];
+  const WHO={store:['STORE','var(--muted)'],us:L,staff:['STAFF','var(--green)']};
   return `<div class="mladder">`+rows.map((r,i,a)=>{
     const w=WHO[r.who]||WHO.store, next=a[i+1], gap=(r.at!=null&&next&&next.at!=null)?next.at-r.at:null;
     return `<div style="display:flex;gap:12px">
