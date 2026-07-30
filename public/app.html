@@ -1192,6 +1192,15 @@
       <div class="pk-main"><div class="pk-t">Charlie on Anthropic API</div><div class="pk-m">The thinking runs on our own account<span id="brainEnv"></span> · blocked: our voice is a clone and they don’t allow it</div></div>
       <button class="k-switch" id="brainToggle" onclick="toggleOurBrain()" aria-label="Charlie on Anthropic API"></button>
     </div>
+    <!-- THE WRONG-DEPARTMENT SAVE (owner 07-29). Landing on the pharmacy counter used to end the
+         check and the customer paid for a retry. A switch and not a hardwire because the owner may
+         later limit it to the paid plans. A call-lane flag, so it reads and writes the environment
+         the header Live/Staging switch names. Comp 1i, the CONSOLE page: the same toggle row as
+         "Customers hear calls live", meaning a title, one gray line, and a switch that saves on tap. -->
+    <div class="peek static">
+      <div class="pk-main"><div class="pk-t">If we reach the wrong department, ask Staff to transfer us</div><div class="pk-m">We ask again on the same check instead of failing<span id="xferEnv"></span></div></div>
+      <button class="k-switch" id="xferToggle" onclick="toggleAskForTransfer()" aria-label="If we reach the wrong department, ask Staff to transfer us"></button>
+    </div>
     <!-- Came off Policy 07-29: an analytics ID is an app-wide default, not pricing, and it was the one
          thing under Policy's "Pricing and rewards" eyebrow that was neither. Same field, same save. -->
     <div class="peek static">
@@ -1819,7 +1828,7 @@ async function vtApi(p,opts={}){ return envApi(p,opts); }
 // The call-lane flags. The ONLY policy flags an environment may hold its own value for. Keep this
 // list byte-identical to KEEP_LOCAL_FLAGS in src/settings-sync.ts: a flag steered here but missing
 // there gets stomped back by the prod mirror within a minute, silently, mid test.
-const ENV_FLAGS=['cheapBridgeAll','connectOnHuman','ourBrain'];
+const ENV_FLAGS=['cheapBridgeAll','connectOnHuman','ourBrain','askForTransfer'];
 const isEnvFlag=k=>ENV_FLAGS.indexOf(k)>=0;
 // The word for the environment the voice pages are editing right now, for toasts and headings.
 const vtEnvName=()=>CALL_SRC==='staging'?'Staging':'Live';
@@ -1986,7 +1995,7 @@ const NAV_GROUPS={
   launch:   {label:'Launch',   ico:'trophy',tabs:[['gtm','Go-to-Market','check']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), alerts:()=>loadAlerts(), dash:()=>{loadDash();loadOpsCost();loadGwPulse();}, calc:()=>{calcInit();loadCredits();}, plans:()=>loadPlans(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>{loadResults();loadCallHealth();}, feedback:()=>loadFeedback(), support:()=>loadSupport(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadOurBrain();loadAdvancedPolicy();}, gtm:()=>loadGtm() };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), alerts:()=>loadAlerts(), dash:()=>{loadDash();loadOpsCost();loadGwPulse();}, calc:()=>{calcInit();loadCredits();}, plans:()=>loadPlans(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>{loadResults();loadCallHealth();}, feedback:()=>loadFeedback(), support:()=>loadSupport(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadOurBrain();loadAskForTransfer();loadAdvancedPolicy();}, gtm:()=>loadGtm() };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 let NAV_RESTORING=false, NAV_BOOTED=false; // browser Back/Forward walks the admin's own tab history
 let FB_OPEN=0; // unreviewed poll disagreements — count badge on the Calls ▸ Feedback tab
@@ -6074,6 +6083,21 @@ async function toggleOurBrain(){
   const r=await envApi('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({flags:{ourBrain:!on}})});
   if(!r||r.error){ toast('Could not save the flag'); return; }
   await loadOurBrain(); toast('Charlie on Anthropic API '+(!on?'on':'off')+(CALL_SRC==='live'?'':' · '+vtEnvName()));
+}
+// THE WRONG-DEPARTMENT SAVE. A call-lane flag like the two above, so it reads and writes whichever
+// environment the header switch names, and the prod mirror leaves staging's value alone.
+async function loadAskForTransfer(){
+  const b=document.getElementById('xferToggle'); if(!b) return;
+  const p=await envApi('/api/policy'); if(!p||p.error) return;
+  const on=!!(p.flags&&p.flags.askForTransfer);
+  b.classList.toggle('on',on); b.dataset.on=on?'1':'';
+  const n=document.getElementById('xferEnv'); if(n) n.textContent=CALL_SRC==='live'?'':(' · '+vtEnvName());
+}
+async function toggleAskForTransfer(){
+  const b=document.getElementById('xferToggle'); const on=b&&b.dataset.on==='1';
+  const r=await envApi('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({flags:{askForTransfer:!on}})});
+  if(!r||r.error){ toast('Could not save the switch'); return; }
+  await loadAskForTransfer(); toast('Asking to be transferred '+(!on?'on':'off')+(CALL_SRC==='live'?'':' · '+vtEnvName()));
 }
 // Voice → Designer workflows + the cascade assignment (default → chain → store). The library is the
 // vt_workflows setting; assignments are name maps the call bridge resolves per call (store→chain→default).

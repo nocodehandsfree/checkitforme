@@ -58,6 +58,12 @@ export interface Policy {
     // them true below, so no stored blob and no stale mirror can turn either one off again.
     stopKeysOnHuman: boolean;        // calls: a store mapped with a menu that answers directly gets the rest of its keypad tones abandoned, not fired into a real person's ear. ALWAYS ON: it is a bug fix, not a preference
     closeAgentOnHold: boolean;       // calls: when Staff walk away, CLOSE the agent's session rather than just muting him. Muting saves nothing; only closing does. ALWAYS ON: the whole design rests on paying for a conversation and nothing else
+    // THE WRONG-DEPARTMENT SAVE (owner 07-29). Landing on the pharmacy counter used to end the check:
+    // it failed, and the customer paid for a retry. Now the agent asks to be put through, waits with
+    // the meter OFF, and asks again when somebody new picks up — the answer lands on the SAME check.
+    // A switch and not a hardwire on purpose: the owner may later limit it to the paid plans, and that
+    // must be a config change rather than a rebuild. Default ON.
+    askForTransfer: boolean;         // calls: if we reach the wrong department, ask Staff to put us through instead of giving up
     ourBrain: boolean;               // calls: the agent's THINKING runs on our own account instead of the voice provider's hosted model. The brain is 400 of the 723 credits a minute we burn. OFF = exactly today's behaviour, which always works. A real switch, in Admin under Calls, App
   };
   // Bail library: proactive call-cutoff rules (cost control). `enabled` is the master switch —
@@ -115,6 +121,7 @@ export const DEFAULT_POLICY: Policy = {
     inStockBanner: true,
     productPokemon: true, productOnePiece: true, productTopps: true, productNeedoh: true,
     stopKeysOnHuman: true, closeAgentOnHold: true, // baked in, forced true in getPolicy()
+    askForTransfer: true,
     ourBrain: false,
   },
   bail: {

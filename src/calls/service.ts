@@ -409,6 +409,10 @@ export async function buildRestockVars(
       // Kiosk-only store → the prompt asks about the vending kiosk, not a shelf shipment.
       // Explicit request flag wins; otherwise inferred from the store's flags.
       kiosk_mode: (kioskMode ?? kioskOnly(retailer)) ? "true" : "",
+      // THE WRONG-DEPARTMENT SAVE. One switch, read here so BOTH lanes ask the same thing: landing on
+      // the pharmacy counter asks to be put through instead of ending the check. "" = the prompt's
+      // whole section is inert and the call behaves exactly as it does today.
+      ask_for_transfer: (await getPolicy()).flags.askForTransfer ? "true" : "",
       // Preview / admin / scheduled paths default to the premium follow-up; the consumer trigger
       // path overrides this to the free (no-follow-up) text for non-subscribers.
       premium_followup: workflow?.oneTurn ? oneTurnFollowup(workflow.setLine) : PREMIUM_FOLLOWUP,
@@ -632,6 +636,9 @@ export async function triggerCall(a: TriggerArgs) {
       personalityTone: wf?.personality || undefined,
       // Kiosk-only store → agent asks about the vending kiosk. Explicit request flag wins; else inferred.
       kioskMode: a.kioskMode ?? kioskOnly(retailer),
+      // THE WRONG-DEPARTMENT SAVE, read from the one switch. Both lanes send the same value, so
+      // turning it off can never leave one lane asking to be put through and the other giving up.
+      askForTransfer: (await getPolicy()).flags.askForTransfer,
       // Premium gate: subscribers (and comp/owner) get the product-type follow-up; free finders skip it.
       premiumFollowup: await finderIsPremium(a.finderUserId),
       // ONE QUESTION, THEN WRAP, when the store's workflow declares the fold. Same resolution the

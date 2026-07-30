@@ -1307,6 +1307,30 @@ export async function learnFromReceipt(r: {
     if (map && !map.storeId) await decayConfidence(map.id);
   }
 
+  // WE LANDED IN THE WRONG DEPARTMENT (owner 07-29, the wrong-department save). The agent noticed it
+  // in words and the bridge wrote it onto the receipt; from here it is drift like any other, which is
+  // the point — the save rescues the check AND teaches the map in the same call. It never rewrites a
+  // route: one check is one call (§10.2), so it raises a review item and lowers trust, nothing more.
+  const wrongDept = events.find((e) => e.kind === "unknown" && e.detail?.wrongDepartment === true);
+  if (wrongDept) {
+    const why = String(wrongDept.detail?.why || "we reached a desk that could not answer");
+    const said = wrongDept.detail?.said ?? null;
+    await reportUnknown({
+      chainId, storeId, kind: "wrong-department", prompt: why,
+      evidence: { navId, callId: r.callId, said, atSec: wrongDept.atSec ?? null, transferAt, versionId: map?.id ?? null },
+    });
+    await recordObservation({
+      chainId, storeId, versionId: map?.id ?? null, navId, callId: r.callId,
+      kind: "live-check", expected: map ? pathSignature(map.recipe) : "the front of the store",
+      observed: why, drift: true, hourLocal: when.hour, dow: when.dow,
+      detail: { wrongDepartment: true, said, transferAt, note: "heard on an ordinary customer check" },
+    });
+    // The route walked us to a desk that could not answer, so it is not the healthy route the
+    // dashboard says it is — same treatment any other drift gets, on the spot.
+    if (map) await decayConfidence(map.id);
+    learned.push(`wrong department: ${why}`);
+  }
+
   // The route ran and nobody was there. Counts against the route's health, changes nothing.
   if (!calledDirect && personAt == null && has("hangup")) {
     const why = String(events.find((e) => e.kind === "hangup")?.detail?.why || "no person on the call");

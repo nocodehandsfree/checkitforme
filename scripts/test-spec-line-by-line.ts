@@ -207,8 +207,13 @@ check("7.1", "The switch lives in Admin under Calls, App", () => {
   return (/Charlie on Anthropic API/.test(app) && /toggleOurBrain\(\)/.test(app))
     || "the brain switch is not on the Calls App screen";
 });
+// The rule is "it has ONE switch, on the Calls App screen, and it is not ALSO a row in the Policy
+// flag list". This used to be checked by grepping for `'ourBrain','`, which is not that rule: it
+// matched any list where the key had something after it, so appending a second call-lane flag to
+// ENV_FLAGS failed a check about the Policy screen. A Policy row is written `['key','Label','note']`,
+// so that is what to look for (§10b: a gate that fails on a legitimate change is a broken gate).
 check("7.1b", "…and nowhere else, so there is one switch for one thing", () =>
-  (!/'ourBrain','/.test(APP)) || "it is still in the Policy flag list too");
+  (!/\['ourBrain'/.test(APP)) || "it is still a row in the Policy flag list too");
 check("7.2", "It is a SETTING, not an environment variable", () =>
   /flags\?\.ourBrain/.test(PLACE) || "the switch is not a setting");
 check("7.3", "Off = the provider's hosted model, exactly today's behaviour", () =>
@@ -355,6 +360,31 @@ check("O.4", "A saved blob cannot turn either of the baked-in two back off", () 
   const forced = p.indexOf("p.flags.closeAgentOnHold = true");
   return (merged > 0 && forced > merged) || "the stored blob is merged over the forcing, so a saved false wins";
 });
+
+// THE WRONG-DEPARTMENT SAVE (owner 07-29). Not in the spec document: the owner ruled it after it.
+// A switch and not a hardwire, because he may later limit it to the paid plans, and both lanes must
+// read the SAME switch or turning it off leaves one lane asking to be put through and the other
+// giving up on the same store.
+check("O.5", "Asking to be put through is a switch, default on, and both lanes read it", () => {
+  const p = src("src/policy.ts");
+  const app = APP.slice(APP.indexOf('<section id="settings">'), APP.indexOf('<section id="designer">'));
+  if (!/askForTransfer: boolean/.test(p) || !/askForTransfer: true/.test(p)) return "the flag is missing or does not default on";
+  if (!/toggleAskForTransfer\(\)/.test(app) || !/ask Staff to transfer us/.test(app)) return "the switch is not on the Calls App screen with its plain label";
+  if (!/ask_for_transfer/.test(src("src/calls/service.ts")) || !/ask_for_transfer/.test(src("src/voice/elevenlabs.ts")))
+    return "one of the two lanes never sends it, so the two lanes disagree";
+  return /\{\{ask_for_transfer\}\}/.test(src("src/voice/prompts.ts")) || "the prompt has no section for it, so the flag does nothing";
+});
+// Charlie is the one who notices, and the Ear must never be the one that judges it (spec §10 says so
+// in plain words). A phrase test on OUR OWN transcript is the whole mechanism.
+check("O.6", "A wrong department is judged on words, never by the Ear", () => {
+  if (/wrongDepartment|heardWrongDepartment/.test(src("src/calls/listen-nav.ts"))) return "the Ear is judging it, which §10 forbids";
+  if (!/heardWrongDepartment/.test(BRIDGE)) return "nothing reads it off the transcript, so the receipt never carries it";
+  return /kind: "wrong-department"/.test(src("src/calls/mapgraph.ts")) || "landing wrong is not filed to the map, so the save never teaches";
+});
+// A hand-over is always somebody new, however fast it was. Timing that decision left the agent
+// carrying on mid answer with a stranger, which is the save failing at its last step.
+check("O.7", "A transfer always tells the agent the person may be new", () =>
+  /maybeNewPerson \|\| was === "transfer"/.test(BRIDGE) || "a quick transfer is still read as the same person");
 
 // ── §12 TRAPS ──────────────────────────────────────────────────────────────────────────────────
 check("12.1", "src/voice/** is still machine-locked", () => /^src\/voice\/\*\*$/m.test(LOCKS) || "the lock was removed");

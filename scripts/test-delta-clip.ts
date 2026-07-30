@@ -363,5 +363,66 @@ console.log("\n▶ a transfer is known the moment the next desk starts ringing")
   restore(); tw.close(); f.close();
 }
 
+// ================================================================================================
+// THE WRONG-DEPARTMENT SAVE, driven end to end on the real bridge (owner 07-29).
+//
+// The store hands us to the pharmacy counter. Staff there say so. Today that ended the check: it
+// failed and the customer paid to have it tried again. What has to happen instead, in order, is the
+// whole reason this exists — so it is driven here rather than asserted piece by piece:
+//
+//   Staff say "this is the pharmacy" → the receipt CARRIES it, read off our own words → the desk
+//   starts ringing → the agent is CLOSED so the meter stops through the hand-over → somebody new
+//   picks up → he is opened again as part two of the SAME check and TOLD the person may be new.
+//
+// The last step is the one that used to be decided by a stopwatch: a hand-over faster than twenty
+// seconds read as the same person, so he carried on mid answer with a stranger.
+console.log("\n▶ the wrong department: Staff say so, the meter stops through the hand-over, he comes back told");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const tw = await callWithHold(f, "room-wrongdept", "reopen");
+  speak(tw, 150);                                   // a real person, talking to us
+  ok(f.sockets.length === 1, "one session while the first person is with us");
+
+  // What the provider sends us the moment it transcribes them. This is the ONLY way a wrong
+  // department can be known: it is words, and the Ear cannot read words (runtime spec §10).
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Hi, this is the pharmacy." } }));
+  await sleep(80);
+  const wd = (getReceipt("room-wrongdept")?.events || []).find((e) => e.detail?.wrongDepartment === true);
+  ok(!!wd, "the receipt says we reached the wrong department");
+  ok(String(wd?.detail?.said || "").includes("pharmacy"), `and keeps what Staff actually said: "${wd?.detail?.said}"`);
+  ok(String(wd?.note || "").includes("wrong department"), `in plain words on the timeline: "${wd?.note}"`);
+  ok(wd?.kind === "unknown", "on an existing event kind, so the closed set of sixteen stays sixteen");
+
+  // They put us through. A QUICK hand-over on purpose, about a second: the old rule would have
+  // called that the same person, which is exactly the bug this proves is gone.
+  for (const fr of ringFrames(1200)) tw.media(fr);
+  await sleep(80);
+  const evs1 = getReceipt("room-wrongdept")?.events || [];
+  ok(evs1.some((e) => e.kind === "transfer"), "the ringing desk is read as a hand-over");
+  ok(evs1.some((e) => e.kind === "hold_start" && e.detail?.reason === "transfer"), "…and the wait it caused is opened, so the timeline reads straight through");
+  ok(f.sockets[0].readyState === 3 || f.sockets[0].readyState === 2, "his session is CLOSED for the hand-over, so we pay nothing while nobody is talking");
+  ok(evs1.some((e) => e.kind === "charlie_leave" && e.detail?.strategy === "reopen"), "the receipt says the billing stopped");
+  ok(tw.readyState === 1, "the phone line itself never drops, so it is still the SAME check");
+
+  speak(tw, 30);                                    // somebody new picks up
+  await sleep(200);
+  const r = getReceipt("room-wrongdept")!;
+  const back = r.events.find((e) => e.kind === "hold_end");
+  ok(!!back && (back.detail?.gapSec as number) < 20, `they were only gone ${back?.detail?.gapSec}s, which the old rule read as the same person`);
+  ok(back?.detail?.maybeNewPerson === true, "a hand-over is a NEW person however fast it was");
+  ok(String(back?.note || "").includes("may not be the same person"), `and the timeline says so: "${back?.note}"`);
+  ok(f.sockets.length === 2, "he is opened again for whoever picked up");
+  ok(r.events.filter((e) => e.kind === "charlie_join").some((j) => j.detail?.segment === 2), "as part 2 of the SAME check, never a second call");
+  ok(r.segments.length === 2, "two numbered stretches on one receipt, so the gap costs nothing");
+  // THE NOTE HE WAS CLOSED FOR. Sent on the NEW session, never spoken onto the line.
+  const notes = f.raw.filter((m) => m.includes("contextual_update"));
+  ok(notes.length === 1, `exactly one note reached him, not spoken to the store (${notes.length})`);
+  ok(/may be someone new/i.test(notes[0] || ""), "and it warns him the person may be someone new, so he asks again instead of carrying on");
+  ok(!tw.outMedia().some((m) => JSON.stringify(m).includes("contextual_update")), "the note never went down the phone line");
+  restore(); tw.close(); f.close();
+}
+
 console.log(`\n════════════════════════════════\n  PASS: ${pass}   FAIL: ${fail}\n════════════════════════════════`);
 process.exit(fail === 0 ? 0 : 1);
