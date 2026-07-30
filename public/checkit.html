@@ -3032,6 +3032,7 @@ function chainCarriesBrand(st){
   return allow.some(a=>(st.name||'').toLowerCase().includes(a));
 }
 let POLICY={flags:{driverHandoff:true,restockAlerts:true,shareCards:true,kiosks:true,specificSets:true},packs:[],sub:{cents:499},perCallCents:25,headstartMin:10,kioskRefreshChecks:1}; // owner-tunable, loaded at boot
+let POLICY_KNOWN=false; // true once /pub/policy has ANSWERED. Until then the extras that default on (driver handoff, share) stay hidden: the optimistic defaults above flashed "Too far?" on the pending screen while the feature was switched off (owner 07-30).
 let LEAD_PENDING=null, AUTH_PENDING=null;
 const $=id=>document.getElementById(id);
 const markFld=(el,on)=>{ if(!el)return; el.classList.toggle('fld-err',!!on); if(on&&!el.__fldClr){ el.__fldClr=1; el.addEventListener('input',()=>el.classList.remove('fld-err'),{once:false}); } };
@@ -3845,6 +3846,7 @@ async function boot(){
   CATS=Array.isArray(c)?c:[];
   if(Array.isArray(st)) st.forEach(x=>RSTATUSES[x.key]=x);
   if(pol&&!pol.error){ const flags=Object.assign({},POLICY.flags,pol.flags||{}); POLICY=Object.assign(POLICY,pol); POLICY.flags=flags; }
+  POLICY_KNOWN=true; // the policy ask has resolved (even a failed fetch counts: defaults apply from here, nothing flashes before it)
   // SMS dark (flags.smsAlerts off) → the alert inputs ask for email from first paint, not just on
   // open. Drop the i18n-ph attr too or the language pass re-stamps "email or phone" right back.
   if(!smsAlertsOn()){ try{ [ $('watch_contact'), $('sch_contact') ].forEach(el=>{ if(el){ el.removeAttribute('data-i18n-ph'); el.placeholder=t('em.ph','you@email.com'); } }); }catch(_){ } }
@@ -6476,11 +6478,11 @@ function showResult(o, cid){
     const tileBtn=(ic,ti,su,fn)=>`<button class="is1t" onclick="${fn}"><span class="tl">${ic}</span><span><span class="a">${esc(ti)}</span><span class="b">${esc(su)}</span></span></button>`;
     void arr; // retired (owner 07-10 items 53-56): one arrow only — the share icon, far right, pointing up
     const upR='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg>';
-    return (F.shareCards!==false?`<button class="smbtn is1s" onclick="shareFind()"><span>${t('res.share','Share your score')}</span>${upR}</button>`:'')
-      +`<div class="is1g">${F.driverHandoff!==false?tileBtn(truck,dT,dS,'openDriverDemo()'):''}${F.community?tileBtn(cam,cT,cS,'openScorePop()'):''}</div>`;
+    return (POLICY_KNOWN&&F.shareCards!==false?`<button class="smbtn is1s" onclick="shareFind()"><span>${t('res.share','Share your score')}</span>${upR}</button>`:'')
+      +`<div class="is1g">${POLICY_KNOWN&&F.driverHandoff!==false?tileBtn(truck,dT,dS,'openDriverDemo()'):''}${F.community?tileBtn(cam,cT,cS,'openScorePop()'):''}</div>`; /* default-on extras render only once the policy answer is in (POLICY_KNOWN): they used to flash on the pending screen with the feature off */
   })() : [
-    F.shareCards!==false?`<button class="act2 gr" onclick="shareFind()">${ICO.mega('currentColor')} ${t('res.share','Share your score')}</button>`:'',
-    F.driverHandoff!==false?`<button class="act2" onclick="openDriverDemo()">${ICO.truck('#fff')} ${t('res.driver','Too far? Have a local grab it')}</button>`:'',
+    POLICY_KNOWN&&F.shareCards!==false?`<button class="act2 gr" onclick="shareFind()">${ICO.mega('currentColor')} ${t('res.share','Share your score')}</button>`:'',
+    POLICY_KNOWN&&F.driverHandoff!==false?`<button class="act2" onclick="openDriverDemo()">${ICO.truck('#fff')} ${t('res.driver','Too far? Have a local grab it')}</button>`:'',
     F.community?`<button class="act2" onclick="openSuccess()">${ICO.cam('#fff')} ${t('res.score','Grabbed it? Post your score')}</button>`:'',
   ].join('')) : '';
   // Restock section: PREMIUM gets the real "we'll text you" signup; non-premium gets a simple "check
