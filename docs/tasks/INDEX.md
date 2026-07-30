@@ -24,19 +24,40 @@ then they ride the next promote to prod):**
 |---|---|---|
 | [Call log transcript comes back cut off](call-log-transcript-cutoff.md) | voice-calls | active |
 
+**Stream 3 — the ops dashboard:**
+| Task | System | Status |
+|---|---|---|
+| [The ops dashboard: build it on real checks](admin-ops-dashboard.md) | admin | active — THE next admin build |
+
+**Stream 4 — the three boxes (owner, 07-29 · each is ONE chat, prompt = "Task: <file>. Boot."):**
+| Task | System | Status |
+|---|---|---|
+| [The calling engine, round 2 (Echo)](echo-engine-round-2.md) | voice-calls | done 07-29 (staging LIVE; **PM: promote wanted**) |
+| [Chain section rebuild — GO](../specs/mapping-admin/plan.md) | voice-calls + admin | active (un-parked 07-29) |
+| [The Admin dashboard, continued (new Addie)](addie-dashboard-continue.md) | admin | **jobs 1+2 DONE 07-29** |
+| [Voice ▸ Testing becomes the new-engine scorecard](admin-testing-new-engine.md) | admin | **SHIPPED 07-30** (@5b1f325, driven). Admin live · **PM: promote wanted** for the server half |
+| [Check status page: the phone's own bars, then alerts](site-check-status-fixes.md) | site | status-page fixes **SHIPPED to staging 07-30** (PR #100, driven local, iOS paint = his phone). Alerts SECOND, untouched until sign-off |
+| [Check status page: loud retry + headline states](site-check-status-loud-retry.md) | site | active — headline states + step window SHIPPED 07-30 (@ec6e2d0, staging). Loud retry + the counter still unbuilt |
+| [Unify the Admin: gate FIRST, then page by page](admin-unify-pass.md) | admin | **step 1 (gate) + page 1 (Live/dash) DONE + LIVE 07-30, dash SEALED.** Next page = App (settings) |
+| [The wrong-department save (Echo)](echo-wrong-department-save.md) | voice-calls | BUILT + shipped to staging 07-30 · all four items done · only a real check with a human saying "this is the pharmacy" is left, and that needs his phone |
+| [Routes swap themselves at three stores (Mapper)](mapper-auto-swap.md) | voice-calls + admin | done 07-29 (screens LIVE; engine rides the promote) |
+
 ## Other open site fixes (consumer site is frozen: each needs an owner-named `.unlock`)
 | Task | System | Status |
 |---|---|---|
-| [Alerts sheet formatting](alerts-sheet-formatting.md) | site | active |
-| [Logo fidelity in My Zones + call-log header](logo-fidelity-zones-calllog.md) | site | active |
+| [Admin: iOS bottom tint breaks on any slide-up](admin-glass-nudge.md) | admin | done 07-28 (LIVE @527a48f) |
+| [Feature names stay English on the Spanish site](feature-labels-spanish.md) | admin | done 07-27 |
 | [Reconcile COPY_CHANGES_APPROVED.md location](copy-changes-approved-reconcile.md) | site | active |
+| [Alerts sheet formatting](alerts-sheet-formatting.md) | site | done 07-27 |
+| [Logo fidelity in My Zones + call-log header](logo-fidelity-zones-calllog.md) | site | done 07-27 (owner confirmed) |
 
 ## ⏸ Parked (paused on purpose — owner-gated, blocked, or fires at a promote)
 | Task | System | Status |
 |---|---|---|
 | [First promote after the rebuild — prod + admin LIVE in verify-live](first-promote-after-rebuild.md) | data | parked (fires at the owner's promote) |
 | [One Admin, two environments: shell-level Live/Staging switch](admin-audit-env-switch.md) | data + admin | parked (owner-gated headline; scope with owner) |
-| [Alerts can't actually send — launch blocker](admin-audit-alerts-providers-blocker.md) | data | parked (launch-critical; blocked on Twilio A2P + Brevo) |
+| [Alerts can't actually send — launch blocker](admin-audit-alerts-providers-blocker.md) | data | parked (launch-critical; Twilio A2P APPROVED 07-30 — see the registration task; Brevo still open) |
+| [Twilio texting registration — run the paid steps](twilio-a2p-registration.md) | data | parked (owner-gated: ~$20 once + $1.50/mo; fires on his go) |
 | [Element catalog extraction (the long-term 888K shrink)](element-catalog.md) | site + admin | parked (owner-gated, big scope) |
 | [Zone run on CVS/Walgreens since the engine rebuild](zones-cvs-walgreens-verify.md) | voice-calls | parked (real calls; owner listens) |
 | [Real-card test (O1) — the owner's move](real-card-test.md) | owner | parked (blocked by staging-424; owner walks it) |
@@ -68,7 +89,7 @@ Live [dash](admin-cleanup-dash.md) · Users [users](admin-cleanup-users.md) · R
 | [Alert copy is prod-only — not mirrored to staging](admin-audit-alerts-not-mirrored.md) | wiring | admin + site | active |
 | [Real prod calls with no staging rehearsal](admin-audit-realcall-no-rehearsal.md) | wiring | data + voice-calls | active |
 | [Alerts diverges from its comp (CRUD vs LOG)](admin-audit-alerts-comp-diverge.md) | comp | admin | active |
-| [Policy page overloaded — split per comp](admin-audit-policy-overload.md) | comp | admin | active |
+| [Policy page overloaded — split per comp](admin-audit-policy-overload.md) | comp | admin | **DONE 07-29** |
 | [No comp for Calc/Fun/Users/Search](admin-audit-comps-missing.md) | comp | CD + admin | active |
 | [Lane codenames + tuning jargon leak into the UI](admin-audit-lane-codenames-copy.md) | copy | site + admin | active |
 | [Small Admin copy fixes (wrong toast, dev-speak, raw values)](admin-audit-copy-bugs.md) | copy | site | active |

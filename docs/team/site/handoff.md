@@ -15,7 +15,7 @@ This is the SITE system: **checkitforme.com** (`public/checkit.html`) — consum
   Build on **staging** (`staging` → staging.checkitforme.com), then promote to prod. Push collides?
   `git pull --no-rebase`, push again; gnarly conflict → ping DevOps.
 - **Open ONLY when a task needs it:** endpoints → `docs/shared/API_CONTRACT.md` (build to the shapes; changes = ask
-  DevOps) · weird bug → `docs/shared/GOTCHAS.md` · copy → the COPY QUEUE in docs/archive/loops/site-redesign/MANIFEST.md (Copy lane processes it) · store/stock shapes
+  DevOps) · weird bug → `docs/shared/GOTCHAS.md` · copy → `docs/design/copy/COPY_STYLE_GUIDE.md` (copy is THIS lane's own job now, see below — the old Copy-lane queue is archived) · store/stock shapes
   → `docs/shared/STOCK_AND_GEO_API.md` · team map + one-branch rule → `/CLAUDE.md`.
 
 ## Copy is YOURS now (Copper retired 2026-07-22 — essentials folded in)

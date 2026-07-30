@@ -10,6 +10,12 @@ import { db } from "../db/client";
 import { chains } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { openReceipt, emit, markNow, closeReceipt } from "./events";
+// THE EAR — the one that already exists. Section 1 of the runtime spec gives it the whole call, dial
+// to hangup, and section 10 says there is exactly one of them. A mapping call used to run on Twilio's
+// speech text alone, which returns an empty string for silence, for hold music and for a desk that is
+// ringing, so it could not tell "nobody is there" from "somebody just said hello". These are the same
+// two classes the paid-agent calls listen with. Nothing new is built here.
+import { PromptDetector, ConversationEar, frameEnergy as earFrameEnergy, type HoldReason } from "./listen-nav";
 
 // Twilio webhooks must come back to THIS service — staging maps from staging, prod from prod.
 const RAILWAY_HOST = config.staging.on ? "voice-caller-staging-production.up.railway.app" : "voice-caller-production-2d6b.up.railway.app";
@@ -26,6 +32,17 @@ export const NAV_MODEL = "gemini-2.5-flash-lite";
 const MAX_CALL_SEC = 165;
 /** How long we wait for a real voice after the store says it is transferring us. Past this the desk
  *  is not answering — hang up and say so, rather than calling the announcement a human. */
+// US ringback is a published cadence: two seconds of tone, four of silence. So the SECOND ring starts
+// six seconds after the first. Only used when the audio fork never arrived and the Ear cannot count.
+const RING_CYCLE_SEC = 6;
+/** How long after our own answer a short store line still counts as the REMAINDER of the recording we
+ *  spoke over, rather than a new prompt. Measured on CVS Lanett over five checks: a cut sentence comes
+ *  back within four seconds, while the store's NEXT prompt is always nine or more away, because it has
+ *  to act on our answer first. Five is the gap between those two, and it is the whole discriminator. */
+const TAIL_SEC = 5;
+/** The longest a remainder can be. A cut sentence runs to about a dozen words; anything longer that
+ *  is neither a menu nor a question is a line in its own right. */
+const TAIL_WORDS = 14;
 const TRANSFER_WAIT_SEC = 40;
 
 // A live person is on the line (a short greeting/question said TO us). Used as a backstop in auto-0
@@ -52,11 +69,31 @@ const ROUTING_RE = /transferr?ing|connect(ing)? you|please hold|hold (on )?(whil
 const REDIRECT_RE = /transfer|connect(ing)? you|that('?s| is| would be) the |you('?d| would| will)? ?(have to|need to|want to|gotta)? ?(ask|call|talk to|check with|go to)|over to|let me get you|i'?ll get you|hold on|the .{0,18}(department|desk|counter|section)|guest services|customer service desk|electronics|toy|that'?s (handled|done) by/i;
 
 export type NavAction = "say" | "press" | "wait" | "human" | "fail";
-export interface NavStep { who: "ivr" | "us"; text: string; atSec: number; action?: NavAction; value?: string }
-// One pressable option heard in the IVR (#2): the digit + what it routes to. Best-effort from messy STT.
-export interface MenuOption { digit: string; label: string }
+export interface NavStep {
+  who: "ivr" | "us"; text: string; atSec: number; action?: NavAction; value?: string;
+  /** How many store recordings the EAR had heard finish when we did this. Stamped at the moment we
+   *  act, from the same prompt detector a live call fires on, so the anchor we learn and the anchor
+   *  the runtime counts are the same number. Counting the speech-to-text turns instead — which is
+   *  what this used to do — miscounts whenever the transcriber splits one recording into two lines
+   *  or glues two into one. Absent when the audio fork never connected. */
+  earPrompts?: number;
+}
+// One choice the store offered us, and what it routes to. Best-effort from messy speech-to-text.
+// `digit` is set on a keypad menu ("press 2 for guest services"). `say` is set on a SPOKEN menu, where
+// the store lists its departments out loud and you answer with a word — CVS, Walgreens and every
+// "virtual assistant" tree work this way, and we used to throw those lines away entirely because they
+// never contain the word "press".
+export interface MenuOption { digit: string; label: string; say?: string }
+/** How a menu option is identified, whichever kind it is. */
+export const optionKey = (o: MenuOption): string => o.digit || `say:${(o.say || o.label).toLowerCase()}`;
 export interface NavRecipe {
-  type: string; steps: { action: string; value: string; atSec: number }[]; seconds: number;
+  /** `seconds` is TIME TO STAFF and stays that. Null when the call ended on the ring, because nobody
+   *  picked up and nothing about the ring tells us how long they would have taken. Downstream,
+   *  `connectAtSecFor` turns null into "no timer", so the paid agent waits for a real voice. */
+  type: string; steps: { action: string; value: string; atSec: number }[]; seconds: number | null;
+  /** Getting through the phone system: the handoff we measured, else the last step. Always known on a
+   *  call that reached the ring, which is the number the chain page reads. */
+  navSeconds?: number | null;
   menu?: MenuOption[];         // the pressable department/option tree we heard (chain property)
   menuPrompts?: string[];      // the raw IVR menu lines, for the owner to read when STT parsing is fuzzy
   ringVariable?: boolean;      // time-to-human depends on a department picking up (variance high) — #A
@@ -91,13 +128,64 @@ export interface NavSession {
   greeting?: string;        // the first thing the person said — proof of WHICH desk we reached
   maxSec?: number;          // hard stop for this call (ROI guard); default MAX_CALL_SEC
   transferWaitSec?: number; // how long to wait for a person after an announced transfer
+  /** RE-LISTEN: run the recipe we already hold, write down every line the store plays, and hang up
+   *  the INSTANT the desk starts ringing (owner, 07-29: "yes the instant it rings"). Never asks
+   *  anything, never waits for a person, so no Staff are troubled and no paid agent is opened. This
+   *  is the whole difference between re-mapping a chain we know and discovering one we do not. */
+  relisten?: boolean;
+  /** The sweep and the auto-mapper fold their own calls into the map. Everything else, the Re-map
+   *  button included, is folded by `finish`, so a call can never teach the map nothing (owner 07-30). */
+  callerRecords?: boolean;
+  ringsHeard?: number;      // how many real ring bursts the Ear counted before we hung up
+  /** WE hung up, on the ring, on purpose. Rides on the run log so the chain page can name the state
+   *  it actually was ("Admin hung up") instead of guessing "nobody picked up" from the missing human. */
+  endedOnRing?: boolean;
+  /** How far a RE-LISTEN has walked its known route. The plan is fired one step at a time from
+   *  `navTurn` so the listener stays open between steps and every menu line is written down. */
+  planIdx?: number;
   stopReason?: string;      // why this call ended, in plain words (kept as evidence)
   status: "dialing" | "navigating" | "human" | "failed" | "done";
   type: "direct" | "keypad" | "voice" | null;
   humanAtSec: number | null; confidence: number; callSid?: string; recipe: NavRecipe | null;
+  /** What the Ear is hearing right now, and how many store recordings have finished. Present only
+   *  once the audio fork connects; every use is optional, so a call whose fork never arrives behaves
+   *  exactly as it did before, on text alone. */
+  ear?: { det: PromptDetector; conv: ConversationEar; hold: HoldReason | null; recordings: number };
 }
 
 const sessions = new Map<string, NavSession>();
+/**
+ * One inbound (store-side) media frame from the /twilio-media fork. The room IS the nav session id,
+ * so only this call's own audio ever reaches it.
+ *
+ * Wired 07-28 on the owner's order: the Ear belongs on every call that dials a store, and it was
+ * never on this one. Both objects below are the EXISTING ones from listen-nav — the same prompt
+ * detector that decides when a live call's mapped step fires, and the same hold ear that tells the
+ * paid agent somebody walked away.
+ */
+export function navMediaFeed(room: string, b64: string, track?: string): void {
+  const s = sessions.get(room);
+  if (!s || s.status === "human" || s.status === "failed") return;
+  if (track && track !== "inbound") return;         // our own words come back on the outbound track
+  if (!s.ear) {
+    const ear: NonNullable<NavSession["ear"]> = {
+      det: new PromptDetector(() => { /* replaced below */ }),
+      conv: new ConversationEar({
+        holdStart: (reason) => { ear.hold = reason; },
+        holdEnd: () => { ear.hold = null; },
+      }),
+      hold: null, recordings: 0,
+    };
+    ear.det = new PromptDetector((n) => { ear.recordings = n; });
+    s.ear = ear;
+  }
+  // isTone is left false deliberately: the ring-frequency test lives in the machine-locked bridge, so
+  // the Ear here cannot yet tell a ringing desk from a voice. That is why what it hears is only ever
+  // used to VETO (see navStep) and never to declare a person — a veto cannot invent one.
+  s.ear.det.feed(b64);
+  s.ear.conv.feed(earFrameEnergy(b64));
+}
+
 export function getNavSession(id: string): NavSession | null { return sessions.get(id) || null; }
 /** The most recent call to this chain that reached a person — how a lock finds its own evidence when
  *  the caller did not name the call (the Admin Map button sends only the recipe). */
@@ -162,11 +250,78 @@ export function parseMenuOptions(text: string): MenuOption[] {
   }
   return [...found].map(([digit, label]) => ({ digit, label })).sort((a, b) => a.digit.localeCompare(b.digit));
 }
-/** Merge freshly-heard options into the running menu (union by digit; keep the first real label). */
+/**
+ * A SPOKEN menu — the store reads its departments out loud and you answer with a word. There is no
+ * "press" anywhere in the line, which is why every one of these used to be discarded: CVS told us
+ * "I can assist you with beauty and fragrance, OTC, health, photo services, and General Store
+ * inquiries" and we kept nothing but the one word we happened to say back.
+ *
+ * Best-effort by design. The raw line is always kept alongside (`menuPrompts`) because the
+ * speech-to-text puts commas in odd places, and the raw line is the thing to trust when it does.
+ */
+export function parseSpokenOptions(text: string): MenuOption[] {
+  const t = String(text || "").replace(/\s+/g, " ").trim();
+  if (!t || /\bpress \d|\bpress the\b/i.test(t)) return [];   // that is a keypad menu, handled above
+  const out: MenuOption[] = [];
+  const add = (label: string) => {
+    const l = cleanLabel(label).replace(/^(and|or)\s+/i, "").replace(/^[^a-z0-9]+/i, "");
+    if (l.length < 3 || l.length > 45) return;
+    if (out.some((o) => o.label.toLowerCase() === l.toLowerCase())) return;
+    out.push({ digit: "", label: l, say: l });
+  };
+  // "say <word> for <thing>" — the store names the word to speak.
+  for (const m of t.matchAll(/\bsay "?([a-z][a-z '&/-]{1,30}?)"? (?:for|to) ([a-z][a-z0-9 '&/-]{1,44})/gi)) {
+    const l = cleanLabel(m[2]);
+    if (l.length >= 3 && l.length <= 45 && !out.some((o) => o.label.toLowerCase() === l.toLowerCase())) {
+      out.push({ digit: "", label: l, say: cleanLabel(m[1]) });
+    }
+  }
+  // A read-out list: "I can assist you with A, B and C" / "are you calling in for A or B".
+  const LEAD = /(?:assist you with|help you with|choose from|options are|calling (?:in )?for|looking for|would you like)\s+(.+)$/i;
+  const lead = LEAD.exec(t);
+  if (lead) {
+    let tail = lead[1].replace(/[.?!]+\s*$/, "");
+    tail = tail.replace(/\b(?:today|please|sir|ma'?am)\b/gi, "");
+    // Commas first when the line has them; the speech-to-text sprays them, but splitting on "and"
+    // instead would cut "beauty and fragrance" in half.
+    const parts = tail.includes(",") ? tail.split(",") : tail.split(/\s+\bor\b\s+|\s+\band\b\s+/i);
+    for (const p of parts) add(p);
+  }
+  return out;
+}
+
+/** Does this line offer us choices at all — pressed or spoken? Those are the lines worth keeping. */
+/** The menu asking us something. A tree does not always read a list ("are you a healthcare provider?"
+ *  is one question with no options in it), so a re-listen needs to recognise a question as its cue to
+ *  answer, not only a menu of choices. */
+export function looksLikeQuestion(text: string): boolean {
+  const t = String(text || "").trim();
+  if (!t) return false;
+  if (/\?/.test(t)) return true;
+  return /\b(please (say|tell|let me know)|say (yes|no)\b|which (one|department)|how (can|may) i)\b/i.test(t);
+}
+
+/** The menu did not hear us and is asking again. Same shapes `callHadAReprompt` reads after the fact,
+ *  but needed live, mid-check, so the answer can be repeated instead of the next one being wasted. */
+export function isReprompt(text: string): boolean {
+  return /sorry,? (i'?m )?not understanding|didn'?t (quite )?(catch|get) that|please confirm|let'?s try (that )?again|i did not understand/i.test(String(text || ""));
+}
+
+export function isMenuLine(text: string): boolean {
+  const t = String(text || "");
+  if (/press \d|press the|option \d|\bfor [a-z].{0,40}\bpress\b/i.test(t)) return true;
+  return parseSpokenOptions(t).length >= 2;   // one stray phrase is not a menu; a list of choices is
+}
+
+/** Merge freshly-heard options into the running menu (union by option; keep the first real label). */
 export function mergeMenu(prev: MenuOption[] | undefined, next: MenuOption[]): MenuOption[] {
-  const by = new Map((prev || []).map((o) => [o.digit, o.label] as const));
-  for (const o of next) if (!by.has(o.digit) || (o.label && !by.get(o.digit))) by.set(o.digit, o.label);
-  return [...by].map(([digit, label]) => ({ digit, label })).sort((a, b) => a.digit.localeCompare(b.digit));
+  const by = new Map((prev || []).map((o) => [optionKey(o), o] as const));
+  for (const o of next) {
+    const k = optionKey(o);
+    const had = by.get(k);
+    if (!had || (o.label && !had.label)) by.set(k, o);
+  }
+  return [...by.values()].sort((a, b) => optionKey(a).localeCompare(optionKey(b)));
 }
 // A customer-service / front-desk / operator / general path — what we PREFER to reach (#1) and whose
 // ABSENCE flags a department-only chain that needs an owner-chosen target (#B).
@@ -239,25 +394,95 @@ export function navInitialTwiml(id: string): string {
   // BARGE mode: we already KNOW the path, so fire the words on a timer — speaking OVER the IVR instead
   // of waiting for each prompt to finish. `at` = seconds from connect to speak each step. Then listen
   // for the transfer. Each round we shave the times earlier until the store stops accepting it.
+  const ear = earFork(id);
+  // A RE-LISTEN LISTENS. The whole point of walking a route we already hold is to write down what the
+  // store SAYS at each second, so the owner can read the menu in the store's own words and see where
+  // a step could move earlier. The timed block below is deaf by construction: it is one long stretch
+  // of pauses and speech with the listener opened only at the END, so a re-listen used to record one
+  // line of a four-line menu. So a re-listen takes the ordinary listening loop instead, and fires its
+  // known steps from `navTurn` as the menu plays. Same route, same words, every line written down.
+  if (s?.relisten && s.barge?.plan?.length) {
+    s.type = s.barge.plan.every((p) => p.action === "press") ? "keypad" : "voice";
+    return twiml(`${ear}<Pause length="1"/>${gather(id)}`);
+  }
   if (s && s.barge?.plan?.length) {
-    let inner = ""; let prev = 0;
+    let inner = ear; let prev = 0;
     for (const st of s.barge.plan) {
       const wait = Math.max(0, Math.round((st.at ?? 0) - prev));
       if (wait > 0) inner += `<Pause length="${wait}"/>`;
       if (st.action === "press" && st.value) {
         const digits = st.value.replace(/[^0-9*#]/g, "").slice(0, 6);
         inner += `<Play digits="${digits}"/>`;
-        s.steps.push({ who: "us", text: `pressed ${digits} (barge @${st.at}s)`, atSec: Math.round(st.at), action: "press", value: digits });
+        s.steps.push({ who: "us", text: `pressed ${digits} (barge @${st.at}s)`, atSec: Math.round(st.at), action: "press", value: digits , earPrompts: s.ear?.recordings });
       } else if (st.value) {
         inner += `<Say voice="Polly.Joanna">${esc(st.value)}</Say>`;
-        s.steps.push({ who: "us", text: `said "${st.value}" (barge @${st.at}s)`, atSec: Math.round(st.at), action: "say", value: st.value });
+        s.steps.push({ who: "us", text: `said "${st.value}" (barge @${st.at}s)`, atSec: Math.round(st.at), action: "say", value: st.value , earPrompts: s.ear?.recordings });
       }
       prev = st.at ?? prev;
     }
     s.type = s.barge.plan.every((p) => p.action === "press") ? "keypad" : "voice";
     return twiml(`${inner}${gather(id)}`);
   }
-  return twiml(`<Pause length="1"/>${gather(id)}`); // let the greeting start, then listen
+  return twiml(`${ear}<Pause length="1"/>${gather(id)}`); // let the greeting start, then listen
+}
+
+/** Fork the store's audio to the Ear for the whole call. `<Start><Stream>` survives every TwiML
+ *  replacement the gather loop makes (documented trap), so it is set up once here and never again.
+ *  Purely additive: if the fork never connects, the call runs exactly as it did before. */
+function earFork(id: string): string {
+  return `<Start><Stream url="wss://${RAILWAY_HOST}/twilio-media?room=${id}" track="inbound_track">`
+    + `<Parameter name="room" value="${id}" /></Stream></Start>`;
+}
+
+/**
+ * A store that answers DIRECT, with a short greeting and no menu at all: "Gateway WinCo.", "Bakery,
+ * this is Sam". We have to call it on the very first line, because waiting for a second one leaves
+ * dead air while they keep saying hello.
+ *
+ * The bar is that it is the FIRST thing on the line. On 07-28 CVS Tarzana played us sixteen seconds
+ * of recording ending "…are you a healthcare provider?", the speech-to-text handed back the fragment
+ * "A healthcare provider." — three words, no menu language — and we filed the whole store as
+ * answering direct in twenty seconds. A store that has already played us a recording is not a store
+ * that answers direct, however short the next fragment happens to be.
+ *
+ * @param steps the call so far, INCLUDING the line being judged (already pushed by the caller).
+ */
+export function looksLikeDirectPickup(steps: NavStep[], turns: number, speech: string): boolean {
+  const t = (speech || "").trim();
+  if (!t || turns > 2) return false;
+  if (t.split(/\s+/).length > 4) return false;
+  if (/press|menu|para |website|hours|dial|closed|extension|welcome|recorded|automated/i.test(t)) return false;
+  return steps.filter((st) => st.who === "ivr" && String(st.text || "").trim()).length <= 1;
+}
+
+/** THE MENU IS STILL TALKING and what we just heard is a piece of it, not a person.
+ *
+ *  True only for the exact shape that fooled us on CVS Tarzana (07-27): we have not acted once, the
+ *  store has already read out two or more recordings, nothing announced a handoff, and the words do
+ *  not read like a person. A store that really picks up cold has at most one recording behind it, so
+ *  this cannot swallow a direct answer, and it stops applying the moment we say or press anything. */
+export function menuStillTalking(
+  s: { steps: NavStep[]; turns: number; routingSeen?: boolean },
+  speech: string,
+): boolean {
+  if (s.routingSeen) return false;                                  // handed on → the next voice is the desk
+  if (ROUTING_RE.test(speech || "")) return false;                  // being handed on right now
+  if (looksLikeLivePerson(speech || "")) return false;              // the words themselves are a person
+  if (looksLikeDirectPickup(s.steps, s.turns, speech || "")) return false; // a cold pickup, one recording behind it
+  if (s.steps.some((st) => st.who === "us")) return false;          // we have already acted; trust the read
+  return s.steps.filter((st) => st.who === "ivr" && String(st.text || "").trim()).length >= 2;
+}
+
+/** The words that prove WHICH desk answered. Only what was said on the turn we reached them counts:
+ *  on the 07-28 Mulholland call the newest line in the log was the machine's own "Okay, transferring
+ *  you now" from 27s earlier, and it got filed as the desk that picked up. A routing line is never a
+ *  greeting and an older line is never this person's — an empty greeting beats a false one. */
+export function greetingFrom(steps: NavStep[], atSec: number): string | undefined {
+  const last = [...(steps || [])].reverse().find((st) => st.who === "ivr" && st.text);
+  if (!last) return undefined;
+  if (Math.abs((last.atSec ?? 0) - atSec) > 2) return undefined;
+  if (ROUTING_RE.test(last.text)) return undefined;
+  return last.text.slice(0, 200);
 }
 
 /** We've reached a live person. Plain training mode → hang up before troubling them. CONFIRM mode →
@@ -274,17 +499,26 @@ function reachHuman(s: NavSession, atSec: number, id: string, viaRouting = false
     s.transferAtSec = s.transferAtSec ?? atSec;
     return twiml(gather(id));
   }
+  // RE-LISTEN NEVER TROUBLES STAFF. If somebody picks up before the menu ever handed us on, this
+  // chain answers direct now: that is worth knowing and it is recorded, but the call ends on the spot
+  // rather than asking them anything.
+  if (s.relisten) {
+    s.humanAtSec = s.humanAtSec ?? atSec;
+    if (!s.greeting) s.greeting = greetingFrom(s.steps, atSec);
+    s.stopReason = "a person answered, no menu";
+    finish(s, "human"); return twiml(`<Hangup/>`);
+  }
   s.humanAtSec = s.humanAtSec ?? atSec; // a real voice — THIS is time-to-human
   // What they said is the proof of WHICH desk we reached — the only check left once a mapping call
-  // hangs up instead of asking a question.
-  if (!s.greeting) {
-    const last = [...s.steps].reverse().find((st) => st.who === "ivr" && st.text);
-    if (last) s.greeting = last.text.slice(0, 200);
-  }
+  // hangs up instead of asking a question. It has to be what was said ON THIS TURN: on the 07-28
+  // Mulholland call the last thing in the log was the machine's own "Okay, transferring you now" from
+  // 27s earlier, and that got filed as the desk that answered. A routing line is never a greeting, and
+  // an older line is never this person's — better an empty greeting than a false one.
+  if (!s.greeting) s.greeting = greetingFrom(s.steps, atSec);
   if (s.confirm && !s.confirm.asked) {
     s.confirm.asked = true; s.confirm.askedAtSec = atSec;
     const q = s.askText || `Hi! Real quick — do you have any ${s.confirm.product} in stock right now?`;
-    s.steps.push({ who: "us", text: `asked: "${q}"`, atSec, action: "say", value: q });
+    s.steps.push({ who: "us", text: `asked: "${q}"`, atSec, action: "say", value: q , earPrompts: s.ear?.recordings });
     // Speak in the workflow's own voice when the synth is ready; otherwise the stock phone voice.
     const speak = s.askAudio ? `<Play>https://${RAILWAY_HOST}/nav/ask-audio?session=${id}</Play>` : `<Say voice="Polly.Joanna">${esc(q)}</Say>`;
     return twiml(`${speak}${gather(id)}`); // wait for their answer
@@ -347,24 +581,88 @@ async function navTurn(id: string, speech: string): Promise<string> {
     s.stopReason = s.turns > 22 ? "too many turns" : `no person within ${cap}s`;
     finish(s, "failed"); return twiml(`<Hangup/>`);
   }
+  // HANG UP ON THE SECOND RING (owner, 07-30). The handoff announcement alone does not prove the desk
+  // is really ringing, so a re-listen waits for two real ring bursts, counted by the Ear off the same
+  // tone test that declares a transfer. Two is enough to prove the desk rang and still leaves nobody
+  // to answer it. No Ear on the call (the audio fork never arrived) falls back to the published US
+  // cadence, two seconds of ring and four of silence, so the second ring begins six seconds in.
+  if (s.relisten && s.routedAtSec != null && s.humanAtSec == null) {
+    const rings = s.ear?.conv?.rings ?? 0;
+    const bySound = rings >= 2;
+    const byClock = !s.ear && atSec - s.routedAtSec >= RING_CYCLE_SEC;
+    if (bySound || byClock) {
+      s.ringsHeard = rings;
+      s.stopReason = bySound ? `hung up on ring ${rings}` : "hung up on the second ring (by the clock)";
+      finish(s, "mapped"); return twiml(`<Hangup/>`);
+    }
+  }
   // Transferred, then nobody picked up. The route DID reach the transfer, but no person ever spoke —
   // so we hang up and record exactly that, instead of booking the announcement as a human.
+  // Transferred, then nobody picked up. The route DID reach the transfer, but no person ever spoke —
+  // so we hang up and record exactly that, instead of booking the announcement as a human. How long to
+  // hold on wants the shared Ear (a desk still audibly ringing deserves longer than a dead line):
+  // spec section 10, Echo's to wire, not a second listener of ours.
   if (s.routedAtSec != null && s.humanAtSec == null && atSec - s.routedAtSec > (s.transferWaitSec ?? TRANSFER_WAIT_SEC)) {
     s.stopReason = `transferred at ${s.routedAtSec}s, nobody picked up`;
     finish(s, "failed"); return twiml(`<Hangup/>`);
   }
   if (speech && speech.trim()) {
-    s.steps.push({ who: "ivr", text: speech.trim().slice(0, 300), atSec });
+    // THE TAIL OF A LINE WE SPOKE OVER IS NOT A NEW LINE (owner, 07-30). Answering the instant the
+    // prompt makes sense means cutting the recording mid-sentence, and the rest of that sentence comes
+    // back on the next turn as its own stray fragment. On CVS Lanett "…photo services and General
+    // Store inquiries" ran on into "tell me what you'd like to do", and the page showed a menu step
+    // reading "You'd like to do." A recipe cannot be right if the menu beside it says something the
+    // menu never said as its own line, so the remainder is joined onto the line it belongs to.
+    const line = speech.trim().slice(0, 300);
+    const last = s.steps[s.steps.length - 1];
+    const spokeOver = !!last && last.who === "us" && atSec - (last.atSec ?? 0) <= TAIL_SEC;
+    // THE HANDOFF IS ITS OWN MOMENT, never a tail. "Okay, transferring you now" is short and is not a
+    // question, so the first version of this rule swallowed it into the menu line above and the record
+    // lost the one line that says the menu was finished with us.
+    // Long enough to hold the rest of a sentence ("if you'd like to do and I can connect" is nine
+    // words), short enough that a real prompt cannot fit. A remainder MAY read as a question: the
+    // transcriber gave the same cut tail back as "You'd like to do." once and "Would you like to do?"
+    // the next time, and both are the end of the sentence we spoke over. The four-second window and
+    // the menu test do the separating; punctuation the transcriber guessed at cannot.
+    const fragment = line.split(/\s+/).length <= TAIL_WORDS && !isMenuLine(line) && !ROUTING_RE.test(line);
+    const prevIvr = [...s.steps].reverse().find((st) => st.who === "ivr" && st.text);
+    if (spokeOver && fragment && prevIvr) prevIvr.text = `${prevIvr.text} ${line}`.slice(0, 300);
+    else s.steps.push({ who: "ivr", text: line, atSec });
     // #2: harvest the pressable options from any menu line into the chain's menu tree + keep the raw
     // line (STT is fuzzy, so the owner can read the exact wording when the parse is imperfect).
-    if (/press \d|press the|option \d|\bfor [a-z].{0,40}\bpress\b/i.test(speech)) {
-      const opts = parseMenuOptions(speech);
+    // EVERY choice the store offers, pressed OR spoken. This used to test for the word "press" and
+    // nothing else, so a store that reads its departments out loud — CVS, and every "virtual
+    // assistant" tree — had its whole menu thrown away and we kept only the one word we said back.
+    if (isMenuLine(speech)) {
+      const opts = [...parseMenuOptions(speech), ...parseSpokenOptions(speech)];
       if (opts.length) s.menu = mergeMenu(s.menu, opts);
       (s.menuPrompts = s.menuPrompts || []).push(speech.trim().slice(0, 240));
       if (s.menuPrompts.length > 12) s.menuPrompts = s.menuPrompts.slice(-12);
     }
   }
-  if (speech && ROUTING_RE.test(speech)) s.routingSeen = true; // routed to a person → next greeting is human
+  // A MENU CANNOT BE FINISHED WITH US WHILE OUR ROUTE STILL HAS A STEP LEFT (owner, 07-30). CVS said
+  // "just say what you'd like to do and I can connect you" — an OFFER to connect, mid menu — and the
+  // handoff test read it as the handoff, so a re-listen hung up one step short and filed a 47s route
+  // that had never said its last word. A route we already hold tells us how many answers it takes, so
+  // an offer to connect before the last one is just another prompt to answer.
+  const routeUnfinished = !!(s.relisten && s.barge?.plan?.length && (s.planIdx ?? 0) < s.barge.plan.length);
+  if (speech && ROUTING_RE.test(speech) && !routeUnfinished) {
+    s.routingSeen = true;                       // routed to a person → next greeting is human
+    // WHEN the machine said it was handing us on. It used to be stamped only if the brain happened to
+    // call that same turn "human"; on the 07-28 Alhambra call it did not, so "Okay, transferring you
+    // now" at 81s went unrecorded and the 10s the paid agent would have wasted was never measured.
+    if (s.transferAtSec == null) {
+      s.transferAtSec = atSec; s.routedAtSec = s.routedAtSec ?? atSec;
+    }
+    // RE-LISTEN ENDS HERE. The machine has handed us on, which means the desk is ringing, which means
+    // the phone system is finished with us and so are we. Waiting the extra 40s for somebody to lift
+    // the handset would ring a real desk for nothing and teach us a number we do not want: how long
+    // Staff took, not how long the menu took.
+    if (s.relisten) {
+      s.stopReason = "menu done, desk ringing";
+      finish(s, "mapped"); return twiml(`<Hangup/>`);
+    }
+  }
   // CONFIRM mode: we already asked "do you have {product}?" — this turn is their answer. Classify it.
   // A redirect ("that's the X dept / let me transfer you") = wrong desk → capture where + hang up.
   // Anything else (a real reply, yes/no/"we're out") = right desk → lock this path. Silence after a
@@ -388,11 +686,7 @@ async function navTurn(id: string, speech: string): Promise<string> {
   // an LLM round-trip) leaves dead air while they keep saying "hello" until we hang up. looksLikeLivePerson
   // already excludes "press N" menus + long recordings, so it won't trip on an opening IVR. Map mode →
   // hang up instantly; confirm mode → ask the one stock question.
-  // Direct pickup, store-name greeting ("Gateway WinCo.", "Bakery, this is Sam"): the FIRST thing on
-  // the line, ≤4 words, with zero menu language = a person. IVRs open with long recorded sentences.
-  const firstShortPickup = s.turns <= 2 && !!speech && speech.trim().split(/\s+/).length <= 4
-    && !/press|menu|para |website|hours|dial|closed|extension|welcome|recorded|automated/i.test(speech);
-  if (speech && (looksLikeLivePerson(speech) || firstShortPickup)) return reachHuman(s, atSec, id);
+  if (speech && (looksLikeLivePerson(speech) || looksLikeDirectPickup(s.steps, s.turns, speech))) return reachHuman(s, atSec, id);
   // FAST-FAIL only on TRUE dead-ends: an actual voicemail box, or the STORE itself closed.
   // NEVER on "pharmacy is closed" — the front store is open and is exactly where we're going
   // (pharmacy can't sell Pokémon cards anyway). Live-observed funnel: "connect you to our
@@ -409,7 +703,16 @@ async function navTurn(id: string, speech: string): Promise<string> {
     const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim().slice(0, 80);
     // The menu ASKED for input ("press 1…", "para español…", "say yes/no") — listening longer adds
     // nothing and SHORT menus (Family Dollar) hang up if you don't answer within ~20s. Act now.
-    const askedForInput = !!speech && /press (\d|one|two|three)|para espa[ñn]ol|by saying|please say|say (yes|no)\b|enter your/i.test(speech);
+    // A menu does not have to say "press 1" to be asking us something. CVS's virtual assistant asks
+    // "are you a healthcare provider?" in plain words, and on 07-28 the listen-first pass sat through
+    // it: the store re-prompted with "sorry I'm not understanding", the call ran 91s instead of 62s,
+    // AND the extra recording shifted every anchor we learned. A direct question is an ask.
+    const askedForInput = !!speech && (
+      /press (\d|one|two|three)|para espa[ñn]ol|by saying|please say|say (yes|no)\b|enter your/i.test(speech)
+      || /\b(are|is|do|did|would|can|may) (you|this|that)\b[^.?]*\?/i.test(speech)
+      || /\b(are|do|is) you\b[^.]{0,60}$/i.test(speech.trim())
+      || /let me know if|please confirm|which (one|department)|calling (in )?for/i.test(speech)
+    );
     if (speech && speech.trim()) {
       s.heard = s.heard || [];
       const n = norm(speech);
@@ -426,10 +729,56 @@ async function navTurn(id: string, speech: string): Promise<string> {
   if (s.reactivePress && s.reactivePress.count < s.reactivePress.max) {
     if (speech && speech.trim()) {
       const dg = s.reactivePress.digit; s.reactivePress.count++; s.type = "keypad";
-      s.steps.push({ who: "us", text: `pressed ${dg} (after prompt ${s.reactivePress.count})`, atSec, action: "press", value: dg });
+      s.steps.push({ who: "us", text: `pressed ${dg} (after prompt ${s.reactivePress.count})`, atSec, action: "press", value: dg , earPrompts: s.ear?.recordings });
       return twiml(`<Play digits="${dg}"/>${gather(id)}`);
     }
     return twiml(gather(id)); // silence so far — keep listening for the prompt
+  }
+  // A RE-LISTEN WALKS ITS ROUTE ONE STEP AT A TIME, between listens. No model in the loop: the route
+  // is already proved, so the only decision left is WHEN to fire the next step. The prompt naming our
+  // own word is the best moment there is, because it proves the menu reached that question; the step's
+  // own second is the fallback, so a store that stays quiet still gets walked. Either way the listener
+  // reopens straight after, which is how the menu ends up on the page in the store's own words.
+  if (s.relisten && s.barge?.plan?.length) {
+    const said = (speech || "").trim();
+    // A RE-PROMPT IS NOT THE NEXT QUESTION. "Sorry, I'm not understanding" means the menu did not hear
+    // our last answer, so we say THAT answer again and do not advance. Walking on here is how a check
+    // ends up answering "front door services?" with the word meant for the question after it.
+    if (said && isReprompt(said)) {
+      const last = s.planIdx ? s.barge.plan[s.planIdx - 1] : null;
+      if (last?.value && last.action !== "press") {
+        s.lastActTurn = s.turns;
+        s.steps.push({ who: "us", text: `said "${last.value}" again (the menu asked twice)`, atSec, action: "say", value: last.value, earPrompts: s.ear?.recordings });
+        return twiml(`<Say voice="Polly.Joanna">${esc(last.value)}</Say>${gather(id)}`);
+      }
+    }
+    const idx = s.planIdx ?? 0;
+    const step = s.barge.plan[idx];
+    if (step && said) {
+      // ANSWER THE PROMPT, NEVER THE CLOCK. The route's recorded seconds come from one check on one
+      // afternoon; a store that reads a line slowly, or repeats itself once, puts every later second
+      // out by ten or more. Live proof on CVS Lanett, 07-30: firing on the clock said "front" over
+      // "Or press 2 to continue" and then "general" at the question "front door services?", which is
+      // the wrong word at the wrong door. The menu asking is the only honest cue, so one question gets
+      // one answer, in order. A prompt naming our own word is better still and is taken first.
+      const named = !!(step.action !== "press" && step.value
+        && (" " + said.toLowerCase() + " ").includes(" " + step.value.toLowerCase()));
+      if (named || isMenuLine(said) || looksLikeQuestion(said)) {
+        s.planIdx = idx + 1;
+        s.lastActTurn = s.turns;
+        const why = named ? "the prompt named it" : "answering this prompt";
+        if (step.action === "press" && step.value) {
+          const digits = step.value.replace(/[^0-9*#]/g, "").slice(0, 6);
+          s.steps.push({ who: "us", text: `pressed ${digits} (${why})`, atSec, action: "press", value: digits, earPrompts: s.ear?.recordings });
+          return twiml(`<Play digits="${digits}"/>${gather(id)}`);
+        }
+        if (step.value) {
+          s.steps.push({ who: "us", text: `said "${step.value}" (${why})`, atSec, action: "say", value: step.value, earPrompts: s.ear?.recordings });
+          return twiml(`<Say voice="Polly.Joanna">${esc(step.value)}</Say>${gather(id)}`);
+        }
+      }
+    }
+    return twiml(gather(id)); // not this step's moment yet — keep listening, keep writing it down
   }
   // MECHANICAL RECOVERY after a timed plan: if the menu is still prompting and the prompt NAMES one of
   // our known-path words ("…pharmacy or FRONT door services?", "…GENERAL store inquiries…"), say that
@@ -440,7 +789,7 @@ async function navTurn(id: string, speech: string): Promise<string> {
     const low = " " + speech.toLowerCase() + " ";
     const next = s.barge.plan.find((p) => p.action !== "press" && p.value && low.includes(" " + p.value.toLowerCase()) && !saidAlready.has(p.value));
     if (next) {
-      s.steps.push({ who: "us", text: `said "${next.value}" (recovery — prompt named it)`, atSec, action: "say", value: next.value });
+      s.steps.push({ who: "us", text: `said "${next.value}" (recovery — prompt named it)`, atSec, action: "say", value: next.value , earPrompts: s.ear?.recordings });
       s.lastActTurn = s.turns;
       return twiml(`<Say voice="Polly.Joanna">${esc(next.value)}</Say>${gather(id)}`);
     }
@@ -448,15 +797,47 @@ async function navTurn(id: string, speech: string): Promise<string> {
   const d = await decide(s, speech || "");
   if (d.type) s.type = d.type;
   s.confidence = d.confidence;
+  // A PERSON HAS TO SAY SOMETHING, AND THE EAR HAS TO AGREE. Silence, hold music and a ringing desk
+  // all come back from the speech gather as nothing, and on the 07-28 Mulholland call the model
+  // called one of those turns "human" 27 seconds after the transfer — 84s went into the map as
+  // time-to-human with no proof at all, which is the exact number the paid agent joins on.
+  //   • no words at all  → not a person. Keep listening.
+  //   • words, but the Ear says the line is playing hold music or sitting silent → not a person
+  //     either; that is the recording bleeding into the transcript.
+  // The Ear is only ever a VETO here, never the thing that declares somebody present, because the
+  // ring-frequency test still lives in the machine-locked bridge and without it a ringing desk can
+  // still look like a voice with gaps in it. A veto cannot invent a person; a green light could.
+  if (d.action === "human" && !(speech && speech.trim())) return twiml(gather(id));
+  if (d.action === "human" && s.ear && (s.ear.hold === "music" || s.ear.hold === "quiet")) {
+    emit(id, "unknown", "That was the line, not a person — still waiting", { heard: s.ear.hold, atSec });
+    return twiml(gather(id));
+  }
+  // AND THE MODEL'S WORD IS NOT PROOF EITHER — the CVS Tarzana call, 07-27. The recording asked "Are
+  // you a healthcare provider?" and the transcriber delivered only its tail, "A healthcare provider.",
+  // on its own line. The brain read three words with no "press N" in them and called it a person at
+  // 20s. That one line became a store recipe claiming CVS answers direct, off a call where nobody
+  // spoke and we had not said a single word of the route yet.
+  //
+  // So the shape that call had is vetoed outright: nothing of ours has fired, the store has already
+  // played two or more recordings, no handoff was announced, and the words do not read like a person.
+  // That is the menu still talking. Kept deliberately narrow so it cannot silence a REAL person:
+  //   • a store that picks up cold has at most one recording behind it (looksLikeDirectPickup),
+  //   • a store that announced a handoff is exempt (routingSeen), so the next voice is the desk,
+  //   • words that read like a person are exempt (looksLikeLivePerson),
+  //   • and once we have acted even once, the model is trusted as before.
+  if (d.action === "human" && menuStillTalking(s, speech || "")) {
+    emit(id, "unknown", "That read like the recording, not a person", { heard: (speech || "").slice(0, 120), atSec });
+    return twiml(gather(id));
+  }
   if (d.action === "human") return reachHuman(s, atSec, id, !!(speech && ROUTING_RE.test(speech))); // person OR announced transfer → confirm waits for the person
   if (d.action === "press" && d.value) {
     const digits = d.value.replace(/[^0-9*#]/g, "").slice(0, 6);
-    s.steps.push({ who: "us", text: `pressed ${digits}`, atSec, action: "press", value: digits });
+    s.steps.push({ who: "us", text: `pressed ${digits}`, atSec, action: "press", value: digits , earPrompts: s.ear?.recordings });
     s.lastActTurn = s.turns;
     return twiml(`<Play digits="${digits}"/>${gather(id)}`);
   }
   if (d.action === "say" && d.value) {
-    s.steps.push({ who: "us", text: `said "${d.value}"`, atSec, action: "say", value: d.value });
+    s.steps.push({ who: "us", text: `said "${d.value}"`, atSec, action: "say", value: d.value , earPrompts: s.ear?.recordings });
     s.lastActTurn = s.turns;
     return twiml(`<Say voice="Polly.Joanna">${esc(d.value)}</Say>${gather(id)}`);
   }
@@ -475,7 +856,7 @@ async function navTurn(id: string, speech: string): Promise<string> {
         return reachHuman(s, atSec, id);
       }
       s.autoZeros = (s.autoZeros ?? 0) + 1; s.type = "keypad";
-      s.steps.push({ who: "us", text: "pressed 0 (auto-operator)", atSec, action: "press", value: "0" });
+      s.steps.push({ who: "us", text: "pressed 0 (auto-operator)", atSec, action: "press", value: "0" , earPrompts: s.ear?.recordings });
       s.lastActTurn = s.turns;
       return twiml(`<Play digits="0"/>${gather(id)}`);
     }
@@ -485,11 +866,21 @@ async function navTurn(id: string, speech: string): Promise<string> {
   return twiml(gather(id)); // wait: keep listening
 }
 
-function finish(s: NavSession, status: "human" | "failed") {
-  s.status = status;
+/** `mapped` = a RE-LISTEN finished: the menu was walked and the desk started ringing. Deliberately
+ *  NOT lockable. The route did not change, so this call must never write a recipe, and above all must
+ *  never write a `seconds`: the ring moment is earlier than the moment Staff speak, and the runtime
+ *  opens the paid agent on time-to-Staff. A re-listen that quietly lowered that number would put
+ *  Charlie on a ringing desk at every store in the chain. What this call is for is the MENU, and that
+ *  rides on the run log. */
+function finish(s: NavSession, status: "human" | "failed" | "mapped") {
+  s.status = status === "mapped" ? "done" : status;
+  s.endedOnRing = status === "mapped";
   // In confirm mode, only a path that ENDED at the right desk (answered, not redirected) is lockable —
   // a redirect means we navigated to the wrong human, so we capture it but don't present it as the recipe.
-  const lockable = status === "human" && (!s.confirm || s.confirmResult !== "redirect");
+  // A CALL THAT ENDED ON THE RING IS A GOOD MAP (owner, 07-30). It walked the whole phone system and
+  // proved the desk rings at the end of it, which is the entire job. So it produces a recipe like any
+  // other, with one difference below: it never claims a time to Staff, because nobody picked up.
+  const lockable = (status === "human" || status === "mapped") && (!s.confirm || s.confirmResult !== "redirect");
   if (lockable) {
     // The confirm question itself is training scaffolding, not part of the navigation recipe — drop it.
     const acts = s.steps
@@ -498,7 +889,13 @@ function finish(s: NavSession, status: "human" | "failed") {
     const type = acts.length === 0 ? "direct" : (acts.every((a) => a.action === "press") ? "keypad" : "voice");
     s.type = type;
     s.recipe = {
-      type, steps: acts, seconds: s.humanAtSec ?? (s.steps[s.steps.length - 1]?.atSec ?? 0),
+      type, steps: acts,
+      // TIME TO STAFF, or nothing. A ring-ended call never learned it, and guessing it from the ring
+      // moment would be the worst kind of wrong: `connectAtSecFor` opens the paid agent on this
+      // number, so a low one puts Charlie on a desk that is still ringing. Null means no timer, and
+      // no timer means the agent waits for a real voice, which is the safe behaviour we already have.
+      seconds: s.humanAtSec ?? (status === "mapped" ? null : (s.steps[s.steps.length - 1]?.atSec ?? 0)),
+      navSeconds: s.transferAtSec ?? (acts[acts.length - 1]?.atSec ?? null),
       // #2/#6: carry the captured menu tree + raw lines with the recipe so they persist per chain.
       menu: s.menu && s.menu.length ? s.menu : undefined,
       menuPrompts: s.menuPrompts && s.menuPrompts.length ? s.menuPrompts : undefined,
@@ -507,6 +904,24 @@ function finish(s: NavSession, status: "human" | "failed") {
   }
   if (s.confirm?.asked && s.chainId != null) void recordConfirmAsked(s.chainId, s.retailerId); // rotate off this store next time
   void persistRun(s); // log this run so the admin can watch the learner's history per chain
+  // AND INTO THE MAP. Owner, 07-30: he pressed Re-map, a real CVS was called, its menu was walked
+  // perfectly, and the chain page showed nothing. Only the sweep and the auto-mapper folded their own
+  // calls in, so the one button he actually presses taught the map nothing. The fold now happens where
+  // every path already ends. Best-effort on purpose: a map write that fails must never take a call
+  // down with it.
+  if (!s.callerRecords && s.chainId != null) {
+    void import("./map-capture")
+      .then((m) => m.recordNavCall({
+        id: s.id, chainId: s.chainId, retailerId: s.retailerId, retailerName: s.retailerName,
+        steps: s.steps as never, humanAtSec: s.humanAtSec, transferAtSec: s.transferAtSec ?? null,
+        greeting: s.greeting, recipe: s.recipe as never, relisten: s.relisten, status: s.status,
+        // WE ended it, on the ring, on purpose. `s.status` is already "done" by here, so the reason
+        // has to travel on its own or the map books a perfect re-listen as a call that missed Staff.
+        endedOnRing: status === "mapped",
+      }))
+      .then((r) => emit(s.id, "unknown", `Map updated: ${r.why}`, { recorded: r.recorded }))
+      .catch((e) => console.error("[navigator] recordNavCall", e));
+  }
   setTimeout(() => sessions.delete(s.id), 5 * 60 * 1000); // let the admin read it, then drop
 }
 
@@ -532,7 +947,14 @@ async function persistRun(s: NavSession): Promise<void> {
       // navId doubles as the receipt's room, so the run log can open the whole call afterwards.
       ts: Date.now(), navId: s.id, why: s.why ?? null,
       store: s.retailerName, retailerId: s.retailerId, model: s.model || NAV_MODEL, mode, label,
-      outcome: s.status, seconds: s.humanAtSec ?? (s.steps[s.steps.length - 1]?.atSec ?? null),
+      outcome: s.status, relisten: s.relisten ? true : undefined,
+      // WE ended it, on the ring, on purpose. Without this the screen has to guess from "no human"
+      // and lands on "nobody picked up", which is the one thing that did not happen.
+      endedOnRing: s.endedOnRing ? true : undefined,
+      // A re-listen reports the MENU's seconds (the handoff, else its last step), never a person's.
+      seconds: s.relisten
+        ? (s.transferAtSec ?? s.steps.filter((st) => st.who === "us").slice(-1)[0]?.atSec ?? s.humanAtSec ?? null)
+        : (s.humanAtSec ?? (s.steps[s.steps.length - 1]?.atSec ?? null)),
       // Confirm-mode result: did we reach the RIGHT desk (answered) or get sent elsewhere (redirect → where)?
       confirm: s.confirm ? (s.confirmResult ?? "asked") : null, redirectTo: s.redirectTo ?? null,
       transferAtSec: s.transferAtSec ?? null, greeting: s.greeting ?? null, stopReason: s.stopReason ?? null,
@@ -557,14 +979,14 @@ async function recordConfirmAsked(chainId: number, retailerId: number): Promise<
 }
 
 /** Place the documentation call; returns the session id the admin polls for live progress. */
-export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { listenFirst?: boolean; askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string }): Promise<{ id?: string; error?: string }> {
+export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { listenFirst?: boolean; askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string; relisten?: boolean; callerRecords?: boolean }): Promise<{ id?: string; error?: string }> {
   if (!config.callsEnabled) return { error: "calls disabled on this preview deploy" };
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const from = process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
   const id = crypto.randomUUID().slice(0, 8);
-  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined, listenFirst: extra?.listenFirst, askText: extra?.askText, target: extra?.target, maxSec: extra?.maxSec, transferWaitSec: extra?.transferWaitSec };
+  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined, listenFirst: extra?.listenFirst, askText: extra?.askText, target: extra?.target, maxSec: extra?.maxSec, transferWaitSec: extra?.transferWaitSec, relisten: extra?.relisten, callerRecords: extra?.callerRecords };
   sessions.set(id, session);
   session.why = extra?.why;
   // The receipt opens at DIAL, before anything can go wrong, so even a call the carrier refuses

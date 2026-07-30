@@ -143,6 +143,23 @@ interface TdWorkflow { name: string; voiceId: string; voices: string[]; openers:
    *  flag: a workflow that ships an empty `type` list is saying "I already asked that". */
   oneTurn: boolean }
 
+/**
+ * DOES THIS WORKFLOW ASK ONE QUESTION INSTEAD OF TWO? The workflow's own DATA says so: a follow-up
+ * block that DECLARES an empty `type` list is telling us its set question already asks for the
+ * format, so there is nothing left to ask. Absent = the old two question flow, unchanged.
+ *
+ * Lives here, exported, because BOTH lanes have to read the same answer. The recorded-clip lane uses
+ * it to skip the second clip; the live-agent lane (buildRestockVars) uses it to swap the follow-up
+ * instruction the agent is given. Two copies of this rule would drift, and the drift would only ever
+ * show up as an agent asking a question the owner deliberately removed, on a real call.
+ */
+export function declaresOneTurn(followups: Record<string, unknown> | null | undefined): boolean {
+  if (!followups || typeof followups !== "object") return false;
+  if (!Object.prototype.hasOwnProperty.call(followups, "type")) return false;
+  const t = (followups as Record<string, unknown>).type;
+  return !(Array.isArray(t) && t.filter(Boolean).length > 0);
+}
+
 /** Resolve a workflow for the D-lane: by name if given, else the global default. Pulls voice, voice
  *  strip, openers, tuning, lane and (optional) follow-up scripts, same source the live lane uses. */
 export async function resolveTapedeckWorkflow(name?: string): Promise<TdWorkflow> {
@@ -157,9 +174,7 @@ export async function resolveTapedeckWorkflow(name?: string): Promise<TdWorkflow
     const voices = Array.isArray(wf.voices) ? (wf.voices as unknown[]).map(String).filter(Boolean) : [];
     const fu = (wf.followups && typeof wf.followups === "object") ? (wf.followups as Record<string, string[]>) : {};
     const slot = (k: string) => (Array.isArray(fu[k]) && fu[k].length ? fu[k].map(String) : DEFAULT_FOLLOWUPS[k]);
-    // A workflow that DECLARES an empty `type` list is telling us its set question already asks for
-    // the format, so there is nothing left to ask. Absent = the old two question flow, unchanged.
-    const oneTurn = Object.prototype.hasOwnProperty.call(fu, "type") && !(Array.isArray(fu.type) && fu.type.filter(Boolean).length > 0);
+    const oneTurn = declaresOneTurn(fu);
     return {
       name: String(wf.name || "default"),
       voiceId: (typeof wf.voiceId === "string" && wf.voiceId) || voices[0] || config.voice.defaultVoiceId,

@@ -1,3 +1,35 @@
+// ██ THIS FILE IS THE EAR. THERE IS ONLY ONE. DO NOT BUILD ANOTHER. ██
+//
+// If you are here because you need to know what is happening on a live call — whether a menu has
+// stopped talking, whether a person answered, whether they walked away, whether the line is ringing
+// — it is ALREADY BUILT, below, and you should import it rather than write your own.
+//
+// On 2026-07-28 two engineers working from the same spec each started building their own audio
+// detection. Two ears drift: they disagree about what counts as sound, and then nobody can explain
+// why one call behaved differently from another. `scripts/test-runtime-gates.ts` now FAILS THE BUILD
+// if audio decoding appears in any file other than this one and the (machine-locked) bridge, so this
+// is not a request.
+//
+// WHAT IS ALREADY HERE, and what each thing answers:
+//   frameEnergy(frame)      is there any sound on the line at all?
+//   toneShare(frame)        is that the phone network's own ring/busy tone, rather than a voice?
+//                           (published frequencies, measured — never guessed from loudness)
+//   PromptDetector          a recorded menu prompt just ENDED. Also exposes how long it talked for
+//                           and how long it has been quiet since.
+//   looksLikeAPerson(…)     a HUMAN answered instead of the menu we mapped — so stop pressing keys.
+//   PickupEar               what the line is doing right now: quiet · ringing · music · a voice.
+//   ConversationEar         mid-conversation: they walked away (quiet), hold music, a transfer, they
+//                           came back (and whether it may be a different person), extended dead air,
+//                           and the line going away entirely.
+//
+// Every threshold in here is a FALLBACK ONLY — the live values come from the `call_tuning` setting
+// the Admin reads and are passed in, because all of them have to be tuned against real calls.
+//
+// If this file genuinely cannot answer your question, ADD IT HERE and unit-test it here. Do not
+// start a second listener.
+//
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+//
 // LISTENING NAVIGATION — fire each mapped step when the recording actually STOPS TALKING,
 // instead of at a fixed second on a stopwatch.
 //
@@ -79,6 +111,12 @@ export class PromptDetector {
   private voicedRun = 0;
   /** Completed prompts so far. */
   count = 0;
+  /** How long the most recently completed prompt talked for. A recorded menu prompt runs seconds;
+   *  a person saying "Target Topanga, this is Bob" does not. */
+  lastPromptMs = 0;
+  /** Unbroken silence since that prompt ended, reset the instant anything is said. A menu's own
+   *  pauses sit well under a second; a line waiting for YOU to talk keeps going. */
+  quietMs = 0;
   /** @param onBoundary called with the prompt index (1-based) when a prompt finishes. */
   constructor(private onBoundary: (n: number) => void) {}
   feedEnergy(e: number): void {
@@ -86,40 +124,253 @@ export class PromptDetector {
       this.voicedRun++;
       this.silenceMs = 0;
       // Two voiced frames in a row start a burst — one stray loud frame does not.
-      if (this.voicedRun >= 2) { this.speaking = true; this.speechMs += FRAME_MS; }
+      if (this.voicedRun >= 2) { this.speaking = true; this.speechMs += FRAME_MS; this.quietMs = 0; }
     } else {
       this.voicedRun = 0;
       if (this.speaking) {
         this.silenceMs += FRAME_MS;
         if (this.silenceMs >= END_SILENCE_MS) {
           const wasReal = this.speechMs >= MIN_SPEECH_MS;
+          const spoke = this.speechMs;
           this.speaking = false; this.speechMs = 0; this.silenceMs = 0;
-          if (wasReal) { this.count++; this.onBoundary(this.count); }
+          if (wasReal) { this.count++; this.lastPromptMs = spoke; this.quietMs = END_SILENCE_MS; this.onBoundary(this.count); }
         }
-      }
+      } else if (this.count) this.quietMs += FRAME_MS;
     }
   }
   feed(b64: string): void { this.feedEnergy(frameEnergy(b64)); }
 }
 
-// ---- the recording plan (which recording each step waits for) -------------------------------
-// The bridge builds its step list from the flat "value@seconds" strings, which cannot carry
-// `afterPrompt`. Rather than change the frozen call-placing code, the caller STAGES the plan just
-// before dialling and this file claims it by the exact same step list. Key = the steps themselves,
-// so a claim can only ever match a call running the identical route.
-const stagedPlans = new Map<string, { afterPrompt: Array<number | undefined>; at: number }>();
-const PLAN_TTL_MS = 10 * 60 * 1000;
+/** Fallbacks ONLY. The live values come from the `call_tuning` setting the Admin reads and are
+ *  passed in, because every one of these has to be tuned against real calls and none of that can
+ *  wait on a release (owner, 07-28). Kept here so this file still needs no config to be tested. */
+const PERSON_GREETING_MAX_MS = 3500;
+const PERSON_WAIT_MS = 2500;
 
-export function navPlanKey(steps: Array<{ action: string; value: string; atSec: number }>): string {
-  return steps.map((s) => `${s.action}:${String(s.value).trim().toLowerCase()}@${Math.round(s.atSec)}`).join(",");
+/** Has a real person answered instead of the menu we mapped? Pure, so the rule that decides whether
+ *  we fire keypad tones at a human is provable without a phone call.
+ *  Deliberately narrow: only BEFORE the first mapped step, only on the very first thing we heard.
+ *  Once a menu has started walking, a pause is just a pause. */
+export function looksLikeAPerson(
+  o: { stepsFired: number; promptCount: number; lastPromptMs: number; quietMs: number },
+  t?: { personGreetingMaxMs?: number; personWaitMs?: number },
+): boolean {
+  if (o.stepsFired > 0 || o.promptCount !== 1) return false;
+  const maxGreeting = t?.personGreetingMaxMs ?? PERSON_GREETING_MAX_MS;
+  const wait = t?.personWaitMs ?? PERSON_WAIT_MS;
+  return o.lastPromptMs > 0 && o.lastPromptMs <= maxGreeting && o.quietMs >= wait;
 }
 
-/** Stage which recording each step waits for, for the next call that runs this exact route. */
-export function stageNavPromptPlan(steps: Array<{ action: string; value: string; atSec: number; afterPrompt?: number }>): void {
-  if (!steps.length || !steps.some((s) => typeof s.afterPrompt === "number")) return;
-  const now = Date.now();
-  for (const [k, v] of stagedPlans) if (now - v.at > PLAN_TTL_MS) stagedPlans.delete(k);
-  stagedPlans.set(navPlanKey(steps), { afterPrompt: steps.map((s) => s.afterPrompt), at: now });
+// ---- the recording plan (which recording each step waits for) -------------------------------
+// GONE, DELIBERATELY (spec: the live call runtime, section 10). This file used to hold a side
+// channel: the caller stashed the anchors in a module-level map keyed by the SHAPE of the step list,
+// with a ten-minute expiry, and a call claimed whichever entry happened to look like the route it
+// was running. It died on every restart, it carried no version, and two saved versions of one route
+// could have their pieces mixed on a live call.
+//
+// The steps now arrive complete. Whoever places the call reads the route AND its anchors off the
+// same active version in one go (service.ts → buildRestockVars → activeMap) and hands them straight
+// down. Nothing here has to guess which plan belongs to which call, because nothing is staged.
+
+// ---- THE EAR DURING THE CONVERSATION -------------------------------------------------------
+// The detector above walks the MENU. This one stays on the call afterwards, while a person is
+// talking to us, and answers one question the runtime cannot otherwise ask: is anybody still there?
+//
+// It is acoustic and it is free. No speech recognition, no model — the provider's own transcription
+// is 8.6¢ a call, more than a whole check costs, and is deliberately not used.
+//
+// The three things it can honestly tell apart, and nothing more:
+//   • QUIET — nobody is making any sound. The clerk put the handset down and walked off.
+//   • MUSIC — sound that never stops. Speech breathes; it has gaps between syllables and words, so
+//     a window of real talking is never fully voiced. Hold music and a hold tone are continuous.
+//   • A RINGING LINE — the published call-progress frequencies, which the bridge already measures
+//     for exactly this reason. Ringing AFTER we reached a person means we were transferred.
+//
+// What it does NOT do is judge what anyone SAID. "Hold on, let me go check" is words, and words are
+// Charlie's. This is only the shape of the sound.
+
+/** Fallbacks ONLY — the live values arrive from the `call_tuning` setting via the constructor.
+ *  Every one of these has to be tuned against real calls, so none of them may need a release. */
+const HOLD_QUIET_MS = 6000;
+const HOLD_MUSIC_MS = 6000;
+const VOICED_WINDOW_MS = 3000;
+const MUSIC_VOICED_FRACTION = 0.96;
+const NEW_PERSON_AFTER_MS = 20000;
+
+export type HoldReason = "quiet" | "music" | "transfer";
+/** HOW MUCH RINGING BEFORE WE CALL IT A TRANSFER. One frame used to be enough, and one frame is
+ *  twenty milliseconds — so a single syllable that happened to sit near the network's tone
+ *  frequencies announced a transfer on a store with no menu at all (real receipt, 07-28: ten
+ *  "handed on" lines on a direct-dial call where nobody was ever transferred). A real ringback burst
+ *  in North America runs two full seconds, so this bar is met by any genuine ring and cannot be met
+ *  by a word. */
+const TRANSFER_TONE_MS = 600;
+/** …and how much real speech before we say somebody is BACK. The mirror of the same bug: one
+ *  not-quite-a-tone frame in the middle of a ring cadence read as "a person is talking", which ended
+ *  a hold that had lasted nothing, and then the next ring started another one. That flapping is what
+ *  put ten of each on one receipt. A spoken word runs about three hundred milliseconds, so this
+ *  clears on anybody actually saying something and never on a click, a beep or a gap in hold music. */
+const BACK_VOICE_MS = 400;
+/** A gap longer than this breaks a run of speech. Syllables inside a word sit well under it; the
+ *  pause after "hello" does not. */
+const VOICE_GAP_MS = 300;
+/** Nobody has made a sound for a very long time. Different from "they walked away to go and look":
+ *  at this point the line is probably not a conversation any more — the handset was put down and
+ *  forgotten, or the far end went away without hanging up. The runtime decides what to do about it;
+ *  the ear only says that it happened. */
+const DEAD_AIR_MS = 45000;
+export interface EarTuning {
+  holdQuietMs?: number; holdMusicMs?: number; musicWindowMs?: number;
+  musicVoicedFraction?: number; newPersonAfterMs?: number; deadAirMs?: number;
+  transferToneMs?: number; backVoiceMs?: number;
+}
+
+/**
+ * Streaming, pure and synchronous, so every threshold above is provable without a phone call.
+ * Feed it one frame at a time from the moment a real person is on the line.
+ */
+export class ConversationEar {
+  private voiced: boolean[] = [];      // recent frames, for the speech-vs-continuous-sound test
+  private quietMs = 0;                 // unbroken silence
+  private soundMs = 0;                 // unbroken sound
+  private heardVoiceMs = 0;            // total time a person has actually been talking to us
+  /** On hold right now, and why. Null = someone is with us. */
+  reason: HoldReason | null = null;
+  /** When the current hold started, in ms since this ear was attached. */
+  private holdStartedAt = 0;
+  private elapsed = 0;
+  /** Total time spent on hold. THIS is `holdSeconds` on the receipt, which has been null since the
+   *  receipt shipped because nothing measured it. */
+  holdMs = 0;
+  private readonly quietMax: number;
+  private readonly musicMax: number;
+  private readonly windowMs: number;
+  private readonly voicedFrac: number;
+  private readonly newPersonMs: number;
+  private readonly deadAirMs: number;
+  private deadAirCalled = false;
+  /** Unbroken run of the network's own ring/busy tone. A transfer needs a real burst of it. */
+  private toneRunMs = 0;
+  /** HOW MANY TIMES THE DESK HAS RUNG. Counted off the same tone burst that declares a transfer, so
+   *  it is the real thing and not a stopwatch: one count per burst, the moment that burst proves
+   *  itself. A mapping call hangs up on the second one (owner, 07-30), which is enough to prove the
+   *  desk is really ringing and still leaves nobody to answer it. */
+  rings = 0;
+  private ringCounted = false;
+  /** Unbroken run of speech-shaped sound. Somebody being BACK needs a real run of it. */
+  private voiceRunMs = 0;
+  private readonly transferToneMs: number;
+  private readonly backVoiceMs: number;
+  constructor(private on: {
+    holdStart: (reason: HoldReason, atMs: number) => void;
+    /** @param gapMs how long they were gone. @param maybeNewPerson long enough that it may not be
+     *  the same person, so Charlie must be told. */
+    holdEnd: (gapMs: number, maybeNewPerson: boolean, atMs: number) => void;
+    /** NOBODY IS COMING BACK. Fired once, when quiet has run far past a normal wait. */
+    deadAir?: (quietMs: number, atMs: number) => void;
+    /** THE LINE IS GONE. Fired once, when the audio itself stops arriving — a dropped carrier leg
+     *  sends nothing at all, which is silence a silence-detector can never see. */
+    disconnected?: (atMs: number) => void;
+  }, t?: EarTuning) {
+    this.deadAirMs = t?.deadAirMs ?? DEAD_AIR_MS;
+    this.quietMax = t?.holdQuietMs ?? HOLD_QUIET_MS;
+    this.musicMax = t?.holdMusicMs ?? HOLD_MUSIC_MS;
+    this.windowMs = t?.musicWindowMs ?? VOICED_WINDOW_MS;
+    this.voicedFrac = t?.musicVoicedFraction ?? MUSIC_VOICED_FRACTION;
+    this.newPersonMs = t?.newPersonAfterMs ?? NEW_PERSON_AFTER_MS;
+    this.transferToneMs = t?.transferToneMs ?? TRANSFER_TONE_MS;
+    this.backVoiceMs = t?.backVoiceMs ?? BACK_VOICE_MS;
+  }
+
+  /**
+   * NO AUDIO IS ARRIVING AT ALL. Called by whoever owns the socket, not by feed(), because that is
+   * the whole point: a line that has genuinely gone away stops sending frames, so the ear is never
+   * asked anything again and cannot notice on its own. Silence and absence are different facts.
+   */
+  lineGone(): void {
+    if (this.gone) return;
+    this.gone = true;
+    this.on.disconnected?.(this.elapsed);
+  }
+  private gone = false;
+
+  /** @param energy frame energy, same measure the rest of the call path uses.
+   *  @param isTone this frame sits on the phone network's own ring/busy frequencies. */
+  feed(energy: number, isTone = false): void {
+    this.elapsed += FRAME_MS;
+    if (this.reason) this.holdMs += FRAME_MS;
+    const loud = energy > VOICE_THRESH;
+    this.voiced.push(loud && !isTone);
+    while (this.voiced.length * FRAME_MS > this.windowMs) this.voiced.shift();
+
+    // A ringing line after we already reached a person is a transfer. The FREQUENCIES are
+    // unambiguous, but one frame of them is not: twenty milliseconds of a voice can land on them by
+    // accident, and treating that as a transfer is what wrote ten false "handed on" lines onto a
+    // direct-dial call. So the tone has to actually RUN. A genuine ringback burst is two seconds.
+    if (isTone && loud) {
+      this.toneRunMs += FRAME_MS; this.voiceRunMs = 0;
+      this.quietMs = 0; this.soundMs += FRAME_MS;
+      if (this.toneRunMs >= this.transferToneMs) {
+        // One count per burst. The flag clears when the tone stops, so a single long ring can never
+        // count as two and the gap between rings is what separates them.
+        if (!this.ringCounted) { this.ringCounted = true; this.rings++; }
+        this.enter("transfer");
+      }
+      return;
+    }
+    this.toneRunMs = 0; this.ringCounted = false;
+
+    if (loud) {
+      this.soundMs += FRAME_MS; this.quietMs = 0;
+      const full = this.voiced.length * FRAME_MS >= this.windowMs
+        && this.voiced.filter(Boolean).length / this.voiced.length >= this.voicedFrac;
+      if (full && this.soundMs >= this.musicMax) { this.voiceRunMs = 0; this.enter("music"); }
+      // Sound with gaps in it is a person. If we thought they were away, they are back — but only
+      // once they have actually said SOMETHING. A single frame ending a hold is the other half of the
+      // flapping bug: it ended a hold that had lasted nothing, and the next ring opened another one.
+      else if (!full) {
+        this.heardVoiceMs += FRAME_MS; this.voiceRunMs += FRAME_MS; this.deadAirCalled = false;
+        if (this.voiceRunMs >= this.backVoiceMs) this.leave();
+      }
+    } else {
+      this.soundMs = 0; this.quietMs += FRAME_MS;
+      // A pause long enough to break a word breaks the run of speech with it.
+      if (this.quietMs >= VOICE_GAP_MS) this.voiceRunMs = 0;
+      if (this.quietMs >= this.quietMax) this.enter("quiet");
+      // Far past a normal wait. Somebody stepping away to check a shelf comes back; this does not,
+      // and it is the shape of a handset put down on a counter and forgotten.
+      if (this.quietMs >= this.deadAirMs && !this.deadAirCalled) {
+        this.deadAirCalled = true;
+        this.on.deadAir?.(this.quietMs, this.elapsed);
+      }
+    }
+  }
+
+  private enter(reason: HoldReason): void {
+    if (this.reason) return;                       // already away; do not re-announce
+    if (!this.heardVoiceMs) return;                // never had anybody, so nobody left
+    this.reason = reason;
+    // BACKDATE to the moment they actually went, not the moment we were sure. We only declare a hold
+    // after six seconds of evidence, so timing it from the declaration would report a seven second
+    // absence as one second — and the whole point of the number is how long nobody was there.
+    const already = reason === "quiet" ? this.quietMs : reason === "music" ? this.soundMs : this.toneRunMs;
+    this.holdStartedAt = Math.max(0, this.elapsed - already);
+    this.holdMs += already;
+    this.on.holdStart(reason, this.holdStartedAt);
+  }
+
+  private leave(): void {
+    if (!this.reason) return;
+    // They came back when they STARTED talking, not when we had heard enough of it to be sure. The
+    // run of speech that convinced us is theirs, not the hold's, so it comes off both numbers —
+    // otherwise every hold reads a few hundred milliseconds longer than it was.
+    const back = Math.max(0, this.elapsed - this.voiceRunMs);
+    const gap = Math.max(0, back - this.holdStartedAt);
+    this.holdMs = Math.max(0, this.holdMs - this.voiceRunMs);
+    this.reason = null;
+    this.voiceRunMs = 0;
+    this.on.holdEnd(gap, gap >= this.newPersonMs, back);
+  }
 }
 
 /** Should this step fire on the recording that just ended? Pure, so the rule is provable without a
@@ -136,14 +387,6 @@ export function shouldFireOnPrompt(step: NavStep, n: number, at: number, lastFir
     return { fire: false, reason: `waits for recording ${step.afterPrompt}` };
   }
   return { fire: true, reason: "recording ended" };
-}
-
-/** Merge a staged plan onto the steps the bridge parsed. Same route, same order, same count — or we
- *  leave the steps exactly as they came and the call behaves like today. */
-function claimPromptPlan(steps: NavStep[]): NavStep[] {
-  const hit = stagedPlans.get(navPlanKey(steps));
-  if (!hit || hit.afterPrompt.length !== steps.length) return steps;
-  return steps.map((s, i) => (typeof hit.afterPrompt[i] === "number" ? { ...s, afterPrompt: hit.afterPrompt[i] } : s));
 }
 
 // ---- the per-call session ------------------------------------------------------------------
@@ -163,6 +406,10 @@ interface Session {
   /** Receipt hook. Kept as a callback so this file stays dependency-free and unit-testable. */
   onEvent?: (kind: string, note: string, detail?: Record<string, unknown>) => void;
   fired: Array<{ value: string; atSec: number; via: "prompt" | "clock" }>;
+  /** Abandon the remaining steps when a real person answers instead of the mapped menu. On unless
+   *  something explicitly turns it off, so the default is never firing tones at a human. */
+  abortOnHuman?: boolean;
+  tuning?: { personGreetingMaxMs?: number; personWaitMs?: number };
 }
 
 const sessions = new Map<string, Session>();
@@ -269,14 +516,17 @@ export function startListenNav(opts: {
   room: string; callSid: string; steps: NavStep[]; bridgeUrl: string;
   log?: (s: string) => void; onNavEnd?: (navEndSec: number) => void;
   onEvent?: (kind: string, note: string, detail?: Record<string, unknown>) => void;
+  abortOnHuman?: boolean;
+  /** Tunables from the setting the Admin reads, passed in so this file needs no config. */
+  tuning?: { personGreetingMaxMs?: number; personWaitMs?: number };
 }): void {
   const log = opts.log || (() => { /* silent */ });
   if (!opts.steps.length || !opts.callSid) return;
-  const steps = claimPromptPlan(opts.steps);
+  const steps = opts.steps;
   const s: Session = {
     room: opts.room, callSid: opts.callSid, steps, next: 0, startMs: Date.now(),
     lastFiredAtSec: 0, timers: [], bridgeUrl: opts.bridgeUrl, done: false, log,
-    onNavEnd: opts.onNavEnd, onEvent: opts.onEvent, fired: [],
+    onNavEnd: opts.onNavEnd, onEvent: opts.onEvent, fired: [], abortOnHuman: opts.abortOnHuman, tuning: opts.tuning,
     det: new PromptDetector(() => { /* replaced below */ }),
   };
   s.det = new PromptDetector((n) => {
@@ -303,6 +553,28 @@ export function listenNavFeed(room: string, b64: string, track?: string): void {
   // track and would otherwise register as prompts.
   if (track && track !== "inbound") return;
   s.det.feed(b64);
+  // NEVER PRESS KEYS AT A PERSON (spec: the live call runtime, section 10). A store we mapped with
+  // a menu that now answers directly means our tones go off in a real human's ear. Today we would
+  // keep pressing all the way down the list. Now the remaining steps are abandoned and the call
+  // goes straight to the conversation.
+  if (s.abortOnHuman !== false && looksLikeAPerson({ stepsFired: s.next, promptCount: s.det.count, lastPromptMs: s.det.lastPromptMs, quietMs: s.det.quietMs }, s.tuning)) {
+    void handToConversation(s, "someone answered before the menu, the rest of the keys were never pressed");
+  }
+}
+
+/** Abandon the mapped walk and hand the live call to the agent bridge — the same handoff the last
+ *  mapped step performs, minus the step. */
+async function handToConversation(s: Session, why: string): Promise<void> {
+  if (s.done) return;
+  s.done = true;
+  s.timers.forEach(clearTimeout); s.timers.length = 0;
+  const at = secs(s);
+  keepSummary(s);
+  s.log(`listen-nav: ${why} (at ${at}s, ${s.steps.length - s.next} step(s) abandoned)`);
+  try { s.onEvent?.("human_detected", `A person answered at ${at}s, so we stopped working through the menu`, { atSec: at, stepsAbandoned: s.steps.length - s.next, reason: "person-answered" }); } catch { /* best-effort */ }
+  try { s.onNavEnd?.(at); } catch { /* best-effort */ }
+  await updateTwiml(s, `<Connect><Stream url="${s.bridgeUrl}"><Parameter name="room" value="${s.room}" /></Stream></Connect>`);
+  setTimeout(() => sessions.delete(s.room), 5 * 60 * 1000);
 }
 
 // What each finished call did, kept briefly after the room is gone so the drift check can still read
@@ -342,4 +614,6 @@ export function listenNavOpeningTwiml(fork: string, bridgeUrl: string, room: str
   return `${fork}<Pause length="${DEADMAN_SEC}"/><Connect><Stream url="${bridgeUrl}"><Parameter name="room" value="${esc(room)}" /></Stream></Connect>`;
 }
 
-export const _test = { LEAD_SEC, GRACE_SEC, MIN_SPEECH_MS, END_SILENCE_MS, VOICE_THRESH, FRAME_MS };
+export const _test = { LEAD_SEC, GRACE_SEC, MIN_SPEECH_MS, END_SILENCE_MS, VOICE_THRESH, FRAME_MS,
+  HOLD_QUIET_MS, HOLD_MUSIC_MS, NEW_PERSON_AFTER_MS, PERSON_GREETING_MAX_MS, PERSON_WAIT_MS,
+  TRANSFER_TONE_MS, BACK_VOICE_MS, VOICE_GAP_MS };

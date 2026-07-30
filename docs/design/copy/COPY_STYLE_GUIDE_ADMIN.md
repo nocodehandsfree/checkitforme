@@ -58,6 +58,11 @@ sentence and not a joke. Precision beats charm.
    one from Search or Chains.")
 6. **Owner-live warnings are copy, not just behavior.** If a save is instantly live for customers,
    the screen should say it near the control.
+7. **Money reads like dollars, THREE decimals: `.053`, never `5.3¢`** (owner, 07-30). One format,
+   every figure, every screen — `money()` is the one code path that prints it.
+8. **A report row is a NOUN and ONE number** (owner, 07-30). No sentence under a label. The reader
+   built this tool — explaining his own screen back to him is clutter, not clarity. An ⓘ exists only
+   where a number needs its source named, in one terse line.
 
 ## Admin glossary (use these exact words in comps and labels)
 | Word | Means |

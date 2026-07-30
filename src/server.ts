@@ -22,7 +22,7 @@ import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing, backfillDirectChains, isDirectDefaultChain } from "./db/import-data";
-import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, billableOutcome, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
+import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, billableOutcome, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, transcriptPatch, triggerCall, findRecentCheck, navPlanFromVersion, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus, learnedSyncTick, learnedSyncStatus } from "./store-sync";
 import { buildSettingsExport, settingsSyncStatus, settingsSyncTick } from "./settings-sync";
 import { concurrencyStatus, acquireCallSlot, releaseCallSlot, governorEnabled } from "./calls/concurrency";
@@ -34,14 +34,17 @@ import { getPolicy, setPolicy, publicPolicy, cachedPolicy } from "./policy";
 import { importStores, backfillRegions } from "./stores-import";
 import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
 import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
-import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, latestNavSessionForChain, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
+import { placeNavCall, navInitialTwiml, navStep, navEnded, navMediaFeed, getNavSession, latestNavSessionForChain, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
 import { listenNavFeed, endListenNav } from "./calls/listen-nav";
 // THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
-import { emit, markNow, closeReceipt, linkCall, rollup, getReceipt, type Rollup } from "./calls/events";
-import { installReceiptStore, currentRates } from "./calls/receipt-store";
+import { emit, markNow, closeReceipt, linkCall, rollup, rollupFromRow, getReceipt, setLineHook, type Rollup } from "./calls/events";
+import { installReceiptStore, currentRates, onReceiptClosed } from "./calls/receipt-store";
+import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
+import { behaved, agentLinesFrom } from "./calls/behaved";
+import { opsRollup, type CheckRow } from "./calls/ops";
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
-import { graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
+import { activeMap, resetChainHistory, graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, graphFor, learnFromReceipt, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
 import { recipeFromCall, evidenceFromCall, type CapturedStep } from "./calls/map-capture";
 import { startSweep, stopSweep, sweepStatus, buildQueue } from "./calls/sweep";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay } from "./calls/tapedeck";
@@ -54,7 +57,8 @@ import { createSchedule, listSchedulesDetailed, deleteSchedule, customerSchedule
 import { cachedCategories, cachedChains, cachedRetailers, categoryLabelMap, retailerMap, invalidateRefCache } from "./refcache";
 import { haversineMi, bboxAround } from "./geo";
 import { ingestSignals, recentStockNear, latestForRetailer } from "./stock/signals";
-import { classifyVerdict, reconcile, productDetailLabel } from "./voice/verdict";
+import { classifyVerdict, reconcile, consensusFor, productDetailLabel } from "./voice/verdict";
+import { noteLiveLine, dropLiveRead } from "./voice/live-read";
 import { seedStockCheckIntel } from "./stock/intel";
 import { seedSellMethods } from "./stock/sellmethods";
 import { r2Config, presignPut, photoKey } from "./r2";
@@ -149,6 +153,26 @@ import { isCallingPaused, setCallingPaused, spendTodayCents, withLock } from "./
 
 assertProdSecurity(); // refuse to boot in prod with an open admin / forgeable sessions
 installReceiptStore(); // every finished call writes its timeline + seconds + cost to the database
+// READ AS IT GOES (owner 07-30): every line reaches the reader the moment it is spoken, so the
+// verdict is ready at hang-up instead of being started then. Registered, not imported, because
+// calls/events.ts stays free of model/db code by design. See src/voice/live-read.ts.
+setLineHook(noteLiveLine);
+// …and every finished call also teaches the map (owner 07-27: "one customer calling up Franklin's and
+// we had a voice menu — those aren't just lost"). Mapper READS the receipt the Ear already wrote; it
+// never opens a second listener. A check can flag a store, never rewrite a route: that still takes a
+// mapping call. Wrapped so a map hiccup can never cost us a receipt.
+onReceiptClosed(async (r) => {
+  const room = r.room;
+  const callId = r.callId;
+  const row = callId ? (await db.select().from(callResults).where(eq(callResults.id, callId)))[0] : null;
+  const store = row?.retailerId ? (await db.select().from(retailers).where(eq(retailers.id, row.retailerId)))[0] : null;
+  if (!store?.chainId) return;
+  const res = await learnFromReceipt({
+    room, callId, chainId: store.chainId, storeId: store.id,
+    events: r.events.map((e) => ({ kind: String(e.kind), atSec: e.atSec, detail: e.detail })),
+  });
+  if (res.learned.length) console.log(`[map] learned from call ${callId ?? room}: ${res.learned.join(" · ")}`);
+});
 await bootstrap(); // apply migrations + seed catalog if empty
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -268,6 +292,12 @@ app.use("/api/*", async (c, next) => {
 // signed `admin_session` cookie minted by /admin-login. (Consumer endpoints live under /pub + /app.)
 app.use("/api/*", async (c, next) => {
   if (c.req.path === "/api/health") return next();
+  // The brain endpoint is called by the VOICE PROVIDER'S servers mid-conversation, not by a person
+  // in Admin, so an admin token is the wrong key for it and would have to be shipped to a third
+  // party to work. It carries its own shared secret instead, checked inside the route, and with that
+  // secret unset the route is closed rather than open. Exempted here for the same reason /api/health
+  // is: it is not part of the operator dashboard.
+  if (c.req.path === "/api/brain/chat/completions") return next();
   if (config.adminToken && c.req.header("x-admin-token") === config.adminToken) return next();
   const adminCookie = getCookie(c, "admin_session");
   if (adminCookie) { const s = await verifySession(adminCookie); if (s && s.id === "admin") return next(); }
@@ -1125,7 +1155,7 @@ setDeltaBarge(async (s, _speech) => {
   const chk = s.check;
   if (!chk) return null;
   try {
-    const v = await buildRestockVars(chk.retailerId, chk.categoryId, undefined, [], undefined);
+    const v = await buildRestockVars(chk.retailerId, chk.categoryId, undefined, [], undefined, chk.finderUserId ?? null);
     if (!v || !v.retailer?.phone) return null;
     const pol = await getPolicy();
     // Reuse the D-lane listen room ("delta:<session>") so a consumer watching the call live keeps
@@ -1157,6 +1187,43 @@ setDeltaBarge(async (s, _speech) => {
 // ---- Health ----
 app.get("/api/health", (c) => c.json({ ok: true, commit: process.env.RAILWAY_GIT_COMMIT_SHA ?? null }));
 
+// ---- THE BRAIN, ON OUR OWN ACCOUNT (spec: the live call runtime, section 7) ----
+// The voice provider calls THIS mid-conversation when the brain switch is on, instead of using its
+// own hosted model. It speaks the industry-standard streaming chat-completions format, so nothing
+// about the call or the agent changes; only who is billed for the thinking. Measured: the brain is
+// 400 of the 723 credits a minute we burn.
+//
+// Deliberately NOT behind the admin token: the caller is the voice provider's servers, not a person
+// in Admin. It carries its own shared secret from Railway, and with that secret unset the endpoint
+// is closed rather than open.
+//
+// Nothing here is logged or stored. The transcript arrives, produces one line, and is dropped.
+app.post("/api/brain/chat/completions", async (c) => {
+  if (!brainKeyOk(c.req.header("authorization") ?? c.req.header("x-api-key") ?? null)) {
+    return c.json({ error: "unauthorized" }, 401);
+  }
+  // The secret proved WHO is calling. This proves WHAT they sent is a real turn and not a replay,
+  // a flood, or a shape we never agreed to — checked before a model with our money behind it is
+  // ever reached. See the contract at the top of src/calls/brain.ts.
+  const raw = await c.req.text();
+  const check = checkBrainRequest(raw);
+  if (!check.ok) {
+    console.error("[brain] refused:", check.why);
+    return c.json({ error: check.why }, check.why === "too-many" ? 429 : 400);
+  }
+  try {
+    const { stream } = await brainCompletion(check.body);
+    return new Response(stream, {
+      headers: { "content-type": "text/event-stream", "cache-control": "no-cache", connection: "keep-alive" },
+    });
+  } catch (e) {
+    // A failure here must be LOUD to the provider so its own retry and our ladder can act. Never a
+    // 200 with an apology in it — that would be spoken to the store as though it were an answer.
+    console.error("[brain]", e);
+    return c.json({ error: "brain unavailable" }, 502);
+  }
+});
+
 // ---- THE CALL RECEIPT (owner 07-26) ----------------------------------------------------------
 // Replay one call: what happened, when, how many seconds each piece took, and what it cost. Admin-
 // gated by the /api/* wall. A live call answers from memory (so a call in flight can be watched);
@@ -1180,30 +1247,9 @@ app.get("/api/calls/:id/receipt", async (c) => {
 
   // A finished call is served from its own stamped row, so a replay always agrees with the numbers
   // the reports are summing. A null here means we never measured it — not that it was zero.
-  const steps = timeline.filter((t) => t.kind === "alpha_press" || t.kind === "bravo_say");
-  // A row written by an older build has some of these columns and not others. Reporting the ones it
-  // happens to have would put a nonsense pair on screen — nought seconds connected next to a second
-  // of dead air. If the row was never stamped with connected time, the whole agent block reads as
-  // unmeasured, which is the truth.
-  const stamped = call.charlieConnectedSeconds != null;
-  const sums: Rollup = live ? rollup(live) : {
-    lane: (call.lane ?? "unknown") as Rollup["lane"],
-    callSecs: call.callSeconds ?? 0,
-    navSeconds: call.navSeconds ?? null,
-    talkSeconds: call.talkSeconds ?? null,
-    charlieConnectedSeconds: stamped ? call.charlieConnectedSeconds! : 0,
-    charlieTalkingSeconds: stamped ? (call.charlieTalkingSeconds ?? 0) : 0,
-    charlieSilentSeconds: stamped ? (call.charlieSilentSeconds ?? 0) : 0,
-    speakingSecs: stamped ? (call.charlieSpeakingSeconds ?? 0) : 0,
-    listeningSecs: stamped ? (call.charlieListeningSeconds ?? 0) : 0,
-    ringSeconds: stamped ? (call.ringSeconds ?? 0) : 0,
-    holdSeconds: call.holdSeconds ?? null,
-    billedMinutes: call.billedMinutes ?? Math.ceil((call.callSeconds ?? 0) / 60),
-    menuSeconds: call.menuSeconds ?? null,
-    stepsFired: steps.length,
-    stepsOnPause: steps.filter((t) => (t.detail as { via?: string } | null)?.via === "prompt").length,
-    charlieJoined: stamped && (call.charlieConnectedSeconds ?? 0) > 0,
-  };
+  // ONE reader for a stamped row (rollupFromRow, in src/calls/events.ts beside the roll-up it has to
+  // agree with), so this route and the by-room one can never answer differently about the same call.
+  const sums: Rollup = live ? rollup(live) : rollupFromRow(call, timeline);
   const cost = live
     ? costCall({ callSecs: sums.callSecs, charlieSecs: sums.charlieConnectedSeconds, avoidableSecs: sums.charlieSilentSeconds, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))] }, await currentRates())
     : { lineUsd: call.costLineUsd ?? 0, forkUsd: call.costForkUsd ?? 0, charlieUsd: call.costCharlieUsd ?? 0, clipsUsd: call.costClipsUsd ?? 0, totalUsd: call.costTotalUsd ?? 0, billedMinutes: sums.billedMinutes, charlieSecs: sums.charlieConnectedSeconds, avoidableUsd: call.costAvoidableUsd ?? 0 };
@@ -1220,6 +1266,10 @@ app.get("/api/calls/:id/receipt", async (c) => {
       engineVersion: call.engineVersion ?? null,
     },
     live: !!live,
+    // Did the receipt ever price this check? A row from before the new engine has no cost at all,
+    // and reporting its cost as nought reads as "this call was free" instead of "we never recorded
+    // it". The replay uses this to show the timeline and say so, rather than print a row of noughts.
+    stamped: live ? true : call.costTotalUsd != null,
     seconds: sums,
     cost: { ...cost, readable: { total: money(cost.totalUsd), charlie: money(cost.charlieUsd), line: money(cost.lineUsd), wasted: money(cost.avoidableUsd) } },
     timeline,
@@ -3369,19 +3419,26 @@ app.get("/pub/result/:cid", async (c) => {
   // first verdict the UI ever shows is already the final one.
   if (row && o && o.status === "completed") {
     const label = (await db.select({ label: categories.label }).from(categories).where(eq(categories.id, row.categoryId)))[0]?.label;
-    // Speed: only spend the verdict-DECIDING second read when ElevenLabs was UNCLEAR (the case it
-    // actually rescues). A decisive yes still gets an extraction-only read for the set/product form.
-    const needSecond = o.confirmed === null && !o.soldOut && !o.doesNotSell;
-    const second = (needSecond || o.confirmed === true) ? await classifyVerdict(o.transcript, label || "the product") : null;
-    const consensus = reconcile({ confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey }, needSecond ? second : null);
+    // THE READER RULE (owner 07-29), one shared implementation — consensusFor in src/voice/verdict.ts.
+    // This is the FIRST verdict a customer ever sees, and it used to consult the second reader only
+    // when the live read had no opinion, so a disagreement with a confirmed IN STOCK never landed here.
+    const { consensus, second } = await consensusFor(
+      { confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey },
+      o.transcript, label || "the product", undefined, row.room,
+    );
     const productDetail = productDetailLabel(second);
     await db.update(callResults).set({
       status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey,
-      shipmentDayHeard: o.shipmentDay, shipmentTimeHeard: (second?.restockTime ?? o.shipmentTime) ?? null, productDetail, summary: o.summary, transcript: o.transcript,
+      shipmentDayHeard: o.shipmentDay, shipmentTimeHeard: (second?.restockTime ?? o.shipmentTime) ?? null, productDetail, summary: o.summary,
+      // Ours if we recorded any, theirs only when we did not (transcriptPatch). This on-demand
+      // finalize is what a customer refreshing the page hits, so it was blanking the transcript
+      // the receipt had already written the second they looked.
+      ...(await transcriptPatch(row.id, o.transcript)),
       completedAt: Math.floor(Date.now() / 1000),
     }).where(eq(callResults.id, row.id));
     if (row.finderUserId && billableOutcome(consensus.statusKey, consensus.definitive, o.transcript)) await chargeCallOnce(row.id, row.finderUserId);
-    return c.json({ ...(o ?? {}), status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey, ts: (row.startedAt || 0) * 1000, productDetail, shipmentDay: o.shipmentDay, shipmentTime: (second?.restockTime ?? o.shipmentTime) ?? null, charged: row.finderUserId ? consensus.definitive : false, summary: o.summary, transcript: o.transcript });
+    dropLiveRead(row.room); // verdict written — let the room's live read go
+    return c.json({ ...(o ?? {}), status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey, ts: (row.startedAt || 0) * 1000, productDetail, shipmentDay: o.shipmentDay, shipmentTime: (second?.restockTime ?? o.shipmentTime) ?? null, charged: row.finderUserId ? consensus.definitive : false, summary: o.summary, transcript: (row.transcript && row.transcript.trim()) || o.transcript });
   }
   // Truly mid-call → progress only, never a verdict (so a wrong key can't flash before the real one).
   return c.json(o ? { ...o, ts: row?.startedAt ? row.startedAt * 1000 : undefined } : { status: "in_progress", transcript: "", summary: "", ts: row?.startedAt ? row.startedAt * 1000 : undefined });
@@ -3921,6 +3978,9 @@ app.post("/api/admin/plans", async (c) => {
         const ex = cur.tiers.find((x) => x.key === t.key);
         return { ...ex, ...t, stripeProductId: ex?.stripeProductId ?? null, monthlyPriceId: ex?.monthlyPriceId ?? null, annualPriceId: ex?.annualPriceId ?? null, pub: ex?.pub ?? null };
       }),
+      // The service NAMES ride the same save as everything else on the page (owner's brief). Omitted
+      // entirely = leave what is stored; sent = replace it, so clearing a box really clears it.
+      featureLabels: body.featureLabels === undefined ? cur.featureLabels : body.featureLabels,
       payg: { stripeProductId: cur.payg.stripeProductId, bundles: (body.payg || []).map((b: Record<string, unknown>) => {
         const ex = cur.payg.bundles.find((x) => x.checks === Number(b.checks));
         return { ...b, priceId: ex?.priceId ?? null, pubCents: ex?.pubCents ?? null };
@@ -4388,21 +4448,49 @@ app.get("/api/admin/test-calls", async (c) => {
     const label = best >= 0 && bestScore >= 0.5 ? String.fromCharCode(65 + best) : null;
     return { label, said: line, template: best >= 0 ? openers[best] : null };
   };
+  // Log rows carry the SAME logo fields every other store list on the dashboard uses, so the tile is
+  // never a name guess (docs/data/store-logos.md).
+  const chainRows = await cachedChains();
+  const chainNames = new Map(chainRows.map((ch) => [ch.id, ch.name]));
+  const chainTypes = new Map(chainRows.map((ch) => [ch.id, ch.type]));
+  // WHAT COUNTS AS A TEST CHECK (owner 07-30). He places every one of them from the website, and he
+  // needs to see the store he actually tested — a CVS check has to land here, not just the Fun store.
+  //
+  // THREE WAYS IN, AND THE THIRD IS WHY THIS WORKS ON PRODUCTION TOO:
+  //   • on STAGING, everything: nobody but him is on it, so every check there is a test by definition
+  //   • an owner-only store (Fun, MVPs) on either environment
+  //   • a check HE placed himself, by his own account, on either environment
+  // A real customer's check must never wander onto this screen, which is exactly what the third rule
+  // keeps out: it is his account or it does not list.
+  const master = "phone:" + (process.env.OWNER_PHONE || "+13106662331").trim();
   const all = (await db.select().from(callResults))
-    .filter((r) => ownerOnly.has(r.retailerId))
+    .filter((r) => config.staging.on || ownerOnly.has(r.retailerId) || r.finderUserId === master)
     .sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
   const rows = all.map((r) => {
     const wf = wfFor(r.retailerId);
     const cat = cats.get(r.categoryId) || "";
     const nav = r.navSeconds, call = r.callSeconds;
+    const st = stores.get(r.retailerId);
+    const nm = st?.name || `#${r.retailerId}`;
+    const l = chainLogoInfo((st?.chainId && chainNames.get(st.chainId)) || nm.split(/—|–| - /)[0]);
     return {
       id: r.id, started: r.startedAt,
-      store: stores.get(r.retailerId)?.name?.split("—")[0].trim() || `#${r.retailerId}`,
-      category: cat, status: r.statusKey || r.status, confirmed: r.confirmed,
+      store: nm.split("—")[0].trim() || `#${r.retailerId}`,
+      // BOTH, not one merged field: the verdict renderer reads `statusKey` against the owner's
+      // statuses registry FIRST, and a merged value made an in-stock check read as nobody answered.
+      category: cat, status: r.statusKey || r.status, statusKey: r.statusKey || null, confirmed: r.confirmed,
       workflow: wf?.name || null, opener: matchOpener(r.transcript, wf, cat),
       navSec: nav ?? null, callSec: call ?? null,
       talkSec: call != null && nav != null ? Math.max(0, call - nav) : null,
       summary: r.summary || null,
+      // The join key back to the receipt, so a row opens the SAME sheet the Calls page opens.
+      room: r.room || null,
+      // The route that really ran, and what the check really cost. A row with no stamped total was
+      // written before this engine priced anything, so it says nothing rather than "free".
+      lane: r.lane || null,
+      cost: r.costTotalUsd != null ? money(r.costTotalUsd) : null,
+      chainId: st?.chainId ?? null, storeType: (st?.chainId && chainTypes.get(st.chainId)) || "Other",
+      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark,
     };
   });
   const timed = rows.filter((r) => r.callSec != null);
@@ -5782,6 +5870,91 @@ app.get("/api/admin/cost-inputs", async (c) => {
   }
   return c.json(out);
 });
+// The rates every cost on every screen is built from. ONE table: `src/calls/cost.ts` is what the
+// receipt bills a real call with, so the Calc page and the Chains page read it rather than keeping
+// their own copy. A second copy is how a forecast and a bill quietly stop agreeing.
+app.get("/api/admin/call-rates", async (c) => c.json(await currentRates()));
+// WHAT OUR CHECKS ACTUALLY COST — the live readout behind the dashboard hero. Every figure is summed
+// off the columns the receipt stamped on a finished check; nothing here is modelled, and a check the
+// receipt never stamped is not counted (the owner's clean slate, 07-26: the old rows are false). The
+// maths is pure and unit-tested in `src/calls/ops.ts` — this only fetches the rows and the scales.
+app.get("/api/admin/check-costs", async (c) => {
+  const days = Math.max(1, Math.min(90, Number(c.req.query("days") || 7)));
+  const [rows, statusRows, ownerOnly, since] = await Promise.all([
+    db.select().from(callResults),
+    db.select().from(statuses).orderBy(statuses.sort),
+    ownerOnlyRetailerIds(),
+    getStatsSince(),
+  ]);
+  const report = opsRollup(
+    rows as unknown as CheckRow[],
+    statusRows.map((s) => ({ key: s.key, label: s.label, emoji: s.emoji, color: s.color, tone: s.tone })),
+    { ownerOnly, since, nowSec: Math.floor(Date.now() / 1000), sparkDays: days },
+  );
+  // The same money strings the receipt prints, so a total on the dashboard and a cost on one check
+  // are never formatted two different ways. Every figure the page shows is rendered HERE, by
+  // `money()` in the cost module — the page holds no money formatter of its own to drift from it.
+  const say = (s: { perCheckUsd: number; totalUsd: number }) => ({ ...s, perCheck: money(s.perCheckUsd), total: money(s.totalUsd) });
+  // ---- THE BASELINE (owner 07-29) ----------------------------------------------------------------
+  // A check has to cost less than a THIRD of what it earns, or his 67% margin floor breaks. He set
+  // that floor against the $9.99 / 50 checks plan: 20¢ earned a check, so 6.6¢ is the ceiling. It is
+  // read from the LIVE plan prices here, so changing a price moves the ceiling with it instead of
+  // leaving a stale number on the dashboard. The thinnest plan is carried too, because that is the
+  // one a ceiling really has to survive, and the two differ enough for him to want to see both.
+  const BASELINE_PLAN = "collector"; // the plan the 67% floor was priced against (owner 07-29)
+  const MARGIN_FLOOR_DIVISOR = 3;    // "a third of what a check earns" — his words
+  const centsToUsd = (cents: number) => Math.round(cents * 10_000); // 1¢ = 10,000 microdollars
+  const plans = await getPlans();
+  const earning = plans.tiers
+    .filter((t) => t.checksPerMonth > 0 && t.monthlyCents > 0)
+    .map((t) => ({ name: t.name, key: t.key, perCheckUsd: centsToUsd(t.monthlyCents / t.checksPerMonth) }));
+  const ref = earning.find((t) => t.key === BASELINE_PLAN) ?? earning[0] ?? null;
+  const thinnest = earning.length ? earning.reduce((a, b) => (b.perCheckUsd < a.perCheckUsd ? b : a)) : null;
+  const ceilingOf = (t: { perCheckUsd: number }) => Math.round(t.perCheckUsd / MARGIN_FLOOR_DIVISOR);
+  const baseline = ref ? {
+    plan: ref.name,
+    earnsPerCheck: money(ref.perCheckUsd),
+    ceilingUsd: ceilingOf(ref),
+    ceiling: money(ceilingOf(ref)),
+    thinnestPlan: thinnest && thinnest.key !== ref.key ? thinnest.name : null,
+    thinnestCeiling: thinnest && thinnest.key !== ref.key ? money(ceilingOf(thinnest)) : null,
+    // What one check actually cost the last time it was driven end to end, before any prod check was
+    // stamped. The moment real checks land, "How we got in" below is the live version of these two
+    // and the screen shows THAT instead. Update these only from a check you drove yourself.
+    measuredOn: "2026-07-29",
+    measuredDirect: "5.3¢",
+    measuredWorstMenu: "8.5¢",
+  } : null;
+  return c.json({
+    ...report,
+    byOutcome: report.byOutcome.map(say),
+    byRoute: report.byRoute.map(say),
+    baseline,
+    readable: {
+      perCheck: report.perCheckUsd != null ? money(report.perCheckUsd) : null,
+      total: money(report.totalUsd),
+      avoidable: money(report.agent.avoidableUsd),
+      perAnswer: report.answers.costPerAnswerUsd != null ? money(report.answers.costPerAnswerUsd) : null,
+      days: report.days.map((d) => (d.perCheckUsd != null ? money(d.perCheckUsd) : null)),
+    },
+  });
+});
+// The flat monthly bills that are NOT per call: hosting, the database, sign-in, the phone numbers, the
+// gateway, email. They do not move when one more check runs, but they decide what a check costs once
+// volume is spread over them, which is the whole question the Calc page exists to answer.
+app.get("/api/admin/monthly-services", async (c) => {
+  const raw = (await getSetting("calc_services")) || "[]";
+  try { return c.json({ services: JSON.parse(raw) as unknown[] }); } catch { return c.json({ services: [] }); }
+});
+app.post("/api/admin/monthly-services", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { services?: Array<{ name?: string; usd?: number }> };
+  const clean = (b.services ?? [])
+    .filter((s) => s && String(s.name ?? "").trim())
+    .slice(0, 24)
+    .map((s) => ({ name: String(s.name).trim().slice(0, 40), usd: Math.max(0, Number(s.usd) || 0) }));
+  await setSetting("calc_services", JSON.stringify(clean));
+  return c.json({ ok: true, services: clean });
+});
 // The receipt for a call the ADMIN placed. Those calls have no call_results row on purpose (a mapping
 // call is not a customer's check and must stay out of the customer numbers), so they are read by ROOM
 // instead of by call id. Live from memory while the call is still up, from call_events once it ends.
@@ -5789,25 +5962,75 @@ app.get("/api/admin/cost-inputs", async (c) => {
 app.get("/api/admin/receipt/:room", async (c) => {
   const room = c.req.param("room");
   if (!room) return c.json({ error: "room required" }, 400);
+  // Same envelope as GET /api/calls/:id/receipt — { live, seconds, cost, timeline } — so the replay
+  // viewer reads one shape and never branches on which kind of call it opened.
+  // The money is spelled out HERE, by the cost module, exactly as GET /api/calls/:id/receipt does it.
+  // The costs are microdollars, and a page that formatted them itself printed a five-cent call as
+  // 5,282,200¢. One printer, one envelope, no second formatter anywhere.
+  // `menu` is the walk to a person — the carrier leg plus the listening fork — which is the half of
+  // the money the owner reads first, against Charlie's seconds. Two buckets, nothing else.
+  const readable = (cost: { totalUsd: number; charlieUsd: number; lineUsd: number; forkUsd?: number; avoidableUsd: number }) =>
+    ({ total: money(cost.totalUsd), charlie: money(cost.charlieUsd), line: money(cost.lineUsd),
+       menu: money(cost.lineUsd + (cost.forkUsd ?? 0)), wasted: money(cost.avoidableUsd) });
   const live = getReceipt(room);
   if (live && !live.closed) {
     const sums = rollup(live);
+    const cost = costCall({ callSecs: sums.callSecs, charlieSecs: sums.charlieConnectedSeconds, avoidableSecs: sums.charlieSilentSeconds, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))] }, await currentRates());
+    const timeline = live.events.map((e) => ({ atSec: e.atSec, kind: e.kind, note: e.note ?? "", detail: e.detail ?? null }));
     return c.json({
-      room, live: true, note: live.planned.length ? "replaying a learned route" : null,
-      timeline: live.events.map((e) => ({ atSec: e.atSec, kind: e.kind, note: e.note ?? "", detail: e.detail ?? null })),
-      rollup: sums,
-      cost: costCall({ callSecs: sums.callSecs, charlieSecs: sums.charlieConnectedSeconds, avoidableSecs: sums.charlieSilentSeconds, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))] }, await currentRates()),
+      room, live: true, stamped: true,
+      timeline,
+      seconds: sums,
+      cost: { ...cost, readable: readable(cost) },
+      // The pass/fail rows, off the record this envelope already carries — no second route and no new
+      // listening (src/calls/behaved.ts). A LIVE check knows WHEN each line was said, and the
+      // wrong-department rows need that: "did he ask the person who just picked up" is a question
+      // about order in time. A finished row has a flat transcript and falls back to the line order.
+      behaved: behaved({
+        timeline, rollup: sums,
+        agentLines: live.transcript.filter((l) => l.who === "Agent")
+          .map((l) => ({ text: l.text, atSec: Math.round(l.atMs / 1000) })),
+      }),
     });
   }
   const rows = await db.select().from(callEvents).where(eq(callEvents.room, room)).orderBy(callEvents.atMs);
   if (!rows.length) return c.json({ error: "no receipt for that call" }, 404);
   const parse = (s: string | null) => { try { return s ? JSON.parse(s) as Record<string, unknown> : null; } catch { return null; } };
-  const summary = parse(rows.find((r) => r.kind === "summary")?.detail ?? null);
+  const timeline = rows.map((r) => ({ atSec: r.atSec, kind: r.kind, note: r.note ?? "", detail: parse(r.detail) }));
+  // An UNATTACHED call rolls its seconds and cost onto the LAST event's detail (receipt-store.ts),
+  // because there is no call_results row to stamp and the event set is a closed sixteen.
+  const tail = parse(rows[rows.length - 1]?.detail ?? null);
+  let seconds = (tail?.seconds ?? null) as Rollup | null;
+  let cost = (tail?.cost ?? null) as { totalUsd: number; charlieUsd: number; lineUsd: number; forkUsd?: number; avoidableUsd: number } | null;
+  // …but an ATTACHED call stamps them on the ROW instead, and this route only ever looked at the
+  // tail — so the same finished call came back complete by call id and with the seconds and the cost
+  // NULL by room. One envelope, two answers (owner 07-28). Now the row is the second place we look,
+  // read by the SAME function the by-id route uses, so the two cannot drift apart again.
+  // The row is ALSO where the words live, and the four behaved rows need them, so it is read once
+  // here rather than conditionally inside the fallback.
+  const callId = rows.find((r) => r.callId != null)?.callId ?? null;
+  const attached = (await db.select().from(callResults)
+    .where(callId != null ? eq(callResults.id, callId) : eq(callResults.room, room)).limit(1))[0];
+  if (!seconds || !cost) {
+    if (attached) {
+      if (!seconds) seconds = rollupFromRow(attached, timeline);
+      // A cost of nought is not a cost: the carrier bills a whole minute the moment we dial, so a row
+      // with no total was written before this engine priced anything. Say nothing rather than free.
+      if (!cost && attached.costTotalUsd != null) cost = {
+        totalUsd: attached.costTotalUsd, charlieUsd: attached.costCharlieUsd ?? 0,
+        lineUsd: attached.costLineUsd ?? 0, forkUsd: attached.costForkUsd ?? 0,
+        avoidableUsd: attached.costAvoidableUsd ?? 0,
+      };
+    }
+  }
   return c.json({
     room, live: false,
-    timeline: rows.filter((r) => r.kind !== "summary").map((r) => ({ atSec: r.atSec, kind: r.kind, note: r.note ?? "", detail: parse(r.detail) })),
-    rollup: summary?.rollup ?? null,
-    cost: summary?.cost ?? null,
+    timeline,
+    seconds,
+    // Same flag the by-id route sends, so the one viewer can tell "never written down" from "free".
+    stamped: !!cost,
+    cost: cost ? { ...cost, readable: readable(cost) } : null,
+    behaved: behaved({ timeline, rollup: seconds, agentLines: agentLinesFrom(attached?.transcript) }),
   });
 });
 app.get("/api/admin/call-timing", async (c) => {
@@ -6000,7 +6223,7 @@ app.get("/api/admin/trainer/list", async (c) => {
   })) });
 });
 app.post("/api/admin/trainer/document", async (c) => {
-  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; retailerId?: number; model?: string; hint?: string; barge?: { plan: Array<{ action: string; value: string; at: number }> }; reactivePress?: { digit: string; max: number }; confirm?: boolean; product?: string; why?: string };
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; retailerId?: number; model?: string; hint?: string; barge?: { plan: Array<{ action: string; value: string; at: number }> }; reactivePress?: { digit: string; max: number }; confirm?: boolean; product?: string; why?: string; relisten?: boolean };
   // CONFIRM mode: don't just reach a human — ask "do you have any {product} in stock?" to verify we
   // hit the RIGHT desk. On a chain-level run we ROTATE to a store we haven't asked yet (no script change,
   // just a fresh store) so we never re-ask the same store on a callback.
@@ -6025,8 +6248,23 @@ app.post("/api/admin/trainer/document", async (c) => {
   const _ch = r.chainId != null ? (await db.select().from(chains).where(eq(chains.id, r.chainId)))[0] : undefined;
   if (_ch && !chainDialable(_ch)) return c.json({ error: `${_ch.name} isn't a call target (muted / call-center / check-online) — skipped` }, 400);
   if (b.chainId) await db.update(chains).set({ navStatus: "learning", navUpdatedAt: Math.floor(Date.now() / 1000) }).where(eq(chains.id, Number(b.chainId)));
-  const res = await placeNavCall(r.chainId, r.id, r.name, r.phone, b.model, b.hint, b.barge, b.reactivePress, confirm, { why: b.why ? String(b.why).slice(0, 80) : "Admin: map this chain" });
-  return res.error ? c.json({ error: res.error }, 400) : c.json({ sessionId: res.id, store: r.name, confirm: !!confirm });
+  // RE-LISTEN: we already hold this chain's route, so walk THAT and hang up the instant the desk
+  // rings. The plan comes straight off the live version (`navPlanFromVersion`, the same builder a
+  // real check uses), so the call re-listens to the exact route customers run, never a fresh guess.
+  let barge = b.barge;
+  const relisten = b.relisten === true;
+  if (relisten) {
+    const live = r.chainId != null ? await activeMap(r.chainId, r.id) : null;
+    if (!live) return c.json({ error: "nothing to re-listen to: this chain has no route yet" }, 400);
+    const plan = navPlanFromVersion(live.recipe?.steps);
+    if (!plan.steps.length && live.recipe?.type !== "direct") {
+      return c.json({ error: "the live route has no steps to walk" }, 400);
+    }
+    barge = { plan: plan.steps.map((st) => ({ action: st.action, value: st.value, at: st.atSec })) };
+  }
+  const res = await placeNavCall(r.chainId, r.id, r.name, r.phone, b.model, b.hint, barge, b.reactivePress, confirm,
+    { why: b.why ? String(b.why).slice(0, 80) : (relisten ? "Re-listen" : "Admin: map this chain"), relisten });
+  return res.error ? c.json({ error: res.error }, 400) : c.json({ sessionId: res.id, store: r.name, confirm: !!confirm, relisten });
 });
 app.get("/api/admin/trainer/session/:id", (c) => {
   const s = getNavSession(c.req.param("id"));
@@ -6138,6 +6376,21 @@ app.post("/api/admin/map/version/:id/reject", async (c) => {
   const id = Number(c.req.param("id"));
   const b = (await c.req.json().catch(() => ({}))) as { why?: string };
   return c.json(await rejectVersion(id, "admin", String(b.why || "")));
+});
+// The graph behind a chain: every prompt we have heard and every action that led from one to another.
+// START A CHAIN OVER, keeping the route it runs. Clears the mapping calls, the review items, the
+// observations and the recipes that were retired or set aside; the live recipe stays (a re-listen has
+// to walk one) with its evidence emptied and its number reset to 1. Owner-asked, 07-30: the CVS
+// history was made before the system was right, and a page built on bad calls is worse than an empty one.
+app.post("/api/admin/map/chain/:id/reset", async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!id) return c.json({ error: "chainId required" }, 400);
+  return c.json(await resetChainHistory(id));
+});
+app.get("/api/admin/map/graph/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!id) return c.json({ error: "chainId required" }, 400);
+  return c.json(await graphFor(id, Number(c.req.query("storeId") || 0)));
 });
 app.get("/api/admin/map/unknowns", async (c) => c.json({ unknowns: await openUnknowns(Number(c.req.query("limit") || 100)) }));
 // Catch-up: send anything this environment learned while the record was unreachable (production does
@@ -6471,7 +6724,7 @@ app.post("/twiml/bridge-status", async (c) => {
       // The carrier says the call is over — this is the truthful end, so the receipt closes and
       // persists HERE. The finalizer above may still be writing the verdict; the roll-up is stitched
       // onto the call row by the sink, which looks the row up by room.
-      closeReceipt(room, status === "completed" ? "Call ended" : `Call ended (${status})`, status);
+      closeReceipt(room, status === "completed" ? "Check ended" : `Check ended (${status})`, status);
     }
   }
   return c.body(null, 204);
@@ -6496,16 +6749,23 @@ app.post("/pub/bridge-hangup", async (c) => {
   // confirmed=null) so it's never mislabeled "nobody answered". Because this status is NOT in the
   // ingest pending set (dialing/in_progress/queued), the verdict + charge path skips it automatically.
   // statusKey drives the display pill (verdictKey reads statusKey first), so set both.
+  // Customer-initiated stop -> statusKey user_cancelled ("Check cancelled"); status stays
+  // admin_hangup so the non-result/no-charge semantics are byte-identical (owner 07-21).
+  //
+  // MATCH ON THE ROOM, NOT ONLY THE CONVERSATION ID. This used to run only when the voice provider
+  // had already handed us a conversation id, which on the new runtime may never happen — the agent
+  // opens late, behind the recorded question. So pressing Stop before then stamped nothing, the
+  // finalizer later wrote "nobody answered", and the owner was told a call he had personally
+  // answered and cancelled had gone unanswered (live Fun call, 07-28). The room exists from before
+  // the phone rings and never changes, so it always matches.
   const convId = bridgeConversationId(room);
-  if (convId) {
-    // Customer-initiated stop -> statusKey user_cancelled ("Check cancelled"); status stays
-    // admin_hangup so the non-result/no-charge semantics are byte-identical (owner 07-21).
-    await db.update(callResults)
-      .set({ status: "admin_hangup", statusKey: "user_cancelled", confirmed: null, completedAt: Math.floor(Date.now() / 1000) })
-      .where(and(eq(callResults.providerCallId, convId),
-        inArray(callResults.status, ["dialing", "in_progress", "queued"])))
-      .catch((e) => console.error("admin_hangup stamp:", e));
-  }
+  const ids = [`bridge:${room}`, convId].filter(Boolean) as string[];
+  await db.update(callResults)
+    .set({ status: "admin_hangup", statusKey: "user_cancelled", confirmed: null, completedAt: Math.floor(Date.now() / 1000) })
+    .where(and(
+      or(eq(callResults.room, room), inArray(callResults.providerCallId, ids)),
+      inArray(callResults.status, ["dialing", "in_progress", "queued"])))
+    .catch((e) => console.error("admin_hangup stamp:", e));
   if (sid && tok && callSid) {
     await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}.json`, {
       method: "POST",
@@ -6535,7 +6795,7 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
   } catch (e) { return { error: String((e as Error)?.message || e) }; }
   // Resolve the SAME three-tier vars (global + chain + store phone tree, clarification, etc.) the
   // scheduled calls use — Listen-live was previously running on the bare global prompt only.
-  const v = await buildRestockVars(retailerId, primary, specificProduct, extras, kioskMode);
+  const v = await buildRestockVars(retailerId, primary, specificProduct, extras, kioskMode, finder?.userId ?? null);
   if (!v || !v.retailer.phone) return { error: "store not found" };
   // Phone-first: dial AS the finder's own VERIFIED number (caller_id) when present. Plus the hard
   // duration cap from policy (the cost guarantee).
@@ -6699,11 +6959,12 @@ app.post("/webhooks/elevenlabs", async (c) => {
       let restockDayHeard: string | null = null;
       if (o.status === "completed") {
         const label = row ? (await db.select({ label: categories.label }).from(categories).where(eq(categories.id, row.categoryId)))[0]?.label : undefined;
-        // Verdict-deciding second read only when EL was unclear; on a confirmed YES it still runs for
-        // EXTRACTION ONLY (set + product form), which decisive calls used to drop (owner 07-10 call 8).
-        const needSecond = o.confirmed === null && !o.soldOut && !o.doesNotSell;
-        const second = (needSecond || o.confirmed === true) ? await classifyVerdict(o.transcript, label || "the product") : null;
-        const consensus = reconcile({ confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey }, needSecond ? second : null);
+        // THE READER RULE (owner 07-29), one shared implementation — consensusFor in
+        // src/voice/verdict.ts. It used to consult the reader only when the live read was unclear.
+        const { consensus, second } = await consensusFor(
+          { confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey },
+          o.transcript, label || "the product", undefined, row?.room,
+        );
         confirmed = consensus.confirmed; statusKey = consensus.statusKey; definitive = consensus.definitive;
         productDetail = productDetailLabel(second);
         restockDayHeard = second?.restockDay ?? null; // staff-volunteered restock day, captured even unprompted
@@ -6825,6 +7086,11 @@ wssTwilio.on("connection", (ws: WebSocket, _req: unknown, qRoom: string) => {
       // step fires. Free — it is the same fork live-listen already runs. Must come before the
       // bridgeLiveRooms gate, which only silences the LISTENER fanout, not our own ear.
       listenNavFeed(room, m.media.payload, m.media.track);
+      // MAPPING CALLS listen on the SAME fork with the SAME two classes (runtime spec §1: the Ear
+      // owns the whole call, dial to hangup; §10: there is exactly one of them). The room is the nav
+      // session id, so only a mapping call's own frames ever reach it, and a room that is not a
+      // mapping call is ignored.
+      navMediaFeed(room, m.media.payload, m.media.track);
       if (!bridgeLiveRooms.has(room)) fanout(room, m.media.payload, m.media.track || "inbound");
     }
   });

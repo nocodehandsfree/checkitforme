@@ -1,40 +1,40 @@
 # STATE — the owner's single source of truth
 One screen. Every session updates this at close (≤40 lines). New truth REPLACES old — history is in
-git. Last updated: 2026-07-27 (Chains rebuilt; Admin's own calls now write themselves down).
-
-## The Chains page tells you what needs YOU now (07-27)
-- Every chain shows how much we trust its route: proved, seen once, or needs a look. On the list too,
-  so you can scan for the weak ones. 33 things are flagged for review right now.
-- When the mapper finds a better way through a menu, a card appears above the old one: what it says,
-  how many seconds it saves, and the calls that proved it. **Use it** or **Keep the old one**. Nothing
-  reaches a real check until you tap. Those two buttons need the promote before they work.
-- Menu versions is real: every saved version, which is running, and the calls behind it. And the
-  greeting line no longer quotes OUR instructions back at you as if the store said them.
-
-## The Chains page is rebuilt, live on your Admin now (07-27)
-- Tap a chain and the list gets out of the way. One screen: what a check costs there, how long to a
-  person, what the menu costs, then the menu as a list of steps with the second each one fires at.
-  CVS 6.1¢, and you can SEE the 19 seconds of ringing after its menu ends. NOT checked on a phone.
-- Every call you start from Admin used to vanish: no timeline, no seconds, no cost. Now you can open
-  any mapping call and see the whole thing. Mapping is one button too: Re-map always runs the whole
-  job, fastest-route hunt included, and a sheet spells out what will happen before you tap.
-- The agent rate behind every Calc number was 15% too high. Fixed. The dashboard plan is written and
-  waiting on real checks: `docs/specs/admin-ops-dashboard/CONTRACT.md`.
-
-## The store map is real knowledge, and every check writes a receipt (07-26)
-- Every mapping call keeps its proof: what we said, which recording we said it after, how fast we
-  reached a person. Repeat calls raise trust, a route that CHANGES waits for your yes, nothing gets
-  overwritten. The old map hid two things: 16 chains were just the robot mashing 0, and 46 claim "a
-  person answers" with no call behind it. Half the keypad chains stored a key with no timing, so
-  checks pressed NOTHING. All fixed. **Called a CVS in Anaheim at 11pm to prove it:** desk in 62
-  seconds, and it caught us counting "a person answered" 17 seconds early, off the transfer message.
-- Open any check and see the whole call with real seconds and money: dialed, ringing, every menu step,
-  when a person answered, when the agent joined and left. Dead air is the number we drive down.
-
-## Target: 3000 or higher = small store, press 3; below 3000 = desk on 2. 11 of 11 blind (07-24).
-## Decisions waiting on YOU
-- **Say "promote"** and three things go live at once: the five site fixes, the call recording, and the
-  Use it / Keep the old one buttons. Check the site fixes on your phone first.
-- Hide the fake (simulated) poll rows from the Admin feedback queue? (yes / no)
-## Next actions
-- Site + Admin work their queues; Data chases the staging store-list overwrite. All: docs/tasks/INDEX.md.
+git. Last updated: 2026-07-30 (check status page has its big step window; verdicts read as they happen).
+## The check status page tells you where the check is, in one big line (07-30, on staging)
+- The glowing box now says `Calling` → `Getting through the menu` → `Talking to Staff` instead of just the
+  store name, with the store's mark big behind it. The step log and the scroll-back reveal are untouched.
+- **Both fixes are on staging, check your phone:** the conversation now follows its newest line and the
+  page ends clear of Safari's bottom bar, and "Too far?" can no longer flash while its switch is off.
+  Task: `docs/tasks/site-check-status-fixes.md`. Alerts (no double subscribing, new wording) is second.
+## Verdicts are worked out while the check runs, not after it (07-30, on staging)
+- We used to wait until the check ended to start reading what Staff said. Now it is read as it happens, so the
+  answer is ready the moment we hang up. Nothing changed on the line and the two-reads-must-agree rule is intact.
+- **Still slow:** we wait on ElevenLabs' own read. Dropping it needs your call — the trade-off is in the task file.
+## A wrong department no longer costs you the check (07-30, on staging)
+- We ask once to be put through, stop paying while they hand us over, and ask again when somebody new
+  picks up. A switch in Calls → App turns it off. Only your phone can test the real words.
+## The bottom bar can never go dark again, and Live is cleaned (07-30, live on Admin)
+- **The tint is nailed down**, three ways it used to break are refused before anything goes live. Still cannot see
+  an iPhone. **Live is cleaned:** Cost per check opens on **The baseline**, your 6.7¢ ceiling off your real prices.
+- Prices are switch rows (07-29): type a number, tap away, saved, **no Save button**. A word bounces back.
+## Chains: the page is rebuilt and every mapping call now lands on it (07-30)
+- Tap a chain: **nav time** (getting through their phone menu, the part we control), what that costs, and how
+  often the recipe reaches Staff. **Menu** has Daytime · After 9pm · Spanish. **Recipes** shows v1, v2 with the
+  date each locked. **Review** names the store and its buttons now DO the thing they say.
+- **The big fix:** Re-map called a real store and told the chain page nothing. Every call feeds the map now.
+  **Re-map hangs up on the second ring** of the desk, so it never troubles Staff, and that call becomes the
+  recipe. A call that ends on the ring counts as the good map it is, and **Reached Staff shows nothing instead
+  of 0%** until a call actually waits for one.
+- **CVS is mapped and proven** (07-30): **nav time 54s**, the average of two checks at 49s and 58s, so a new
+  check nudges the number instead of overwriting it. **The menu is written down line by line in CVS's own
+  words.** The stopwatch is gone: one question gets one answer, and if the menu asks twice we say the same
+  answer again. A check we ended reads **Admin hung up**, never "nobody answered", because the desk was ringing
+  and we are the ones who stopped. "Observed once" is off every screen.
+## The new calling engine is ON for staging. Your six test calls are the last thing (07-28/29)
+- **Nothing to flip.** A check from staging.checkitforme.com goes through the new engine. **Listen for:** it asks
+  once and waits · no keypad beeps once you are talking · after a hold it asks you again if you might be new.
+- **Waiting on YOU:** the six calls, and whether we pay to upgrade our voice — the phone company won't let us use
+  our own cheaper thinking with a copied voice, over half of every check.
+## PROMOTED 07-27 — the five site fixes, the rebuilt plans and checkout, the call recording and the Use it / Keep the old one buttons are live. **Nobody has seen any of it: the real site still shows the coming-soon splash.**
+## Waiting on YOU: hide the fake (simulated) poll rows from the Admin feedback queue? (yes / no) · Next: docs/tasks/INDEX.md.

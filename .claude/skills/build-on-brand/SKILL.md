@@ -22,11 +22,14 @@ emptiness convince you "there's no comp for this" is EXACTLY how off-brand scree
 (2026-07-02 paint-not-structure; the 2026-07-18 landing cycle; the zones report). Render it to an
 image and open the image. One command; it removes every excuse:
 
-- **Website / consumer pages** → `./node_modules/.bin/tsx scripts/render-comps.ts board`
-  then OPEN the PNGs in `loops/site-redesign/render/board-*.png`.
-- **Admin pages** → `node scripts/admin-preview.mjs <section> out.png 390`, then open the PNG.
-- **My Zones / zone-report flow** → boot the local server, then `node scripts/zones-preview.mjs`
-  (usage in the script header) → open `shots/*.png`.
+- **Admin pages** → `./node_modules/.bin/tsx scripts/render-comps.ts board` renders the ADMIN
+  board; OPEN the PNGs in `loops/site-redesign/render/board-*.png`. To see a page as it IS
+  before changing it: boot the local server and `render-comps.ts url <local url> <name>`.
+  (The old `admin-preview.mjs` / `zones-preview.mjs` live in `scripts/archive/` — don't reach for them.)
+- **Website / consumer pages** → FROZEN; the reference is the live site, snapshotted in
+  `docs/design/truth/*.html`. Render the page you're unlocking with `render-comps.ts url`.
+- **The edit gate enforces this:** an Edit to `public/app.html` is BLOCKED until a real render has
+  run (it writes `.claude/state/comp-rendered`). Never touch that file by hand — run the render.
 
 Then, for every piece on your screen, name which comp element you're copying from the rendered
 image. Can't see it there? You're inventing — STOP. Rendering takes one command; guessing costs a
@@ -46,6 +49,9 @@ two lies that failed — never trust either. Render, and look.
 ## Non-negotiables
 - **Match the guide, don't freestyle.** The guide beats what's currently in the code. Think the guide
   is wrong? Flag it, don't invent. NEVER re-introduce a reverted design.
+- **A live page the owner has personally shaped BEATS an older comp** (owner, 07-30 — sub-lines were
+  re-added to a deliberately stripped dashboard because a board still showed them). When the live
+  page and the board disagree, ask in one line; never treat the older drawing as an order.
 - **Use the existing icons/components.** No invented tokens, colors, sizes, or spacing —
   `scripts/qa-design.ts` (in `bash scripts/test-all.sh`) fails on off-system values and banned terms.
 - **Copy laws (from CLAUDE.md — memorize):** no dashes inside a sentence · no bad line wraps · **every

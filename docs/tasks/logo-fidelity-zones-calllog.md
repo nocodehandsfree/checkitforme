@@ -3,9 +3,10 @@
 **What:** Owner saw both break; fixes 9e175a0 + zones r164 landed AFTER his test and are NOT verified. Related: store-row logo fallback bug (old design checkpoint). Drive staging first — may already be fixed.
 **Done when:** My Zones rows + call-log header show correct chain logos on staging, driven and seen.
 **Lane:** Webbie
-**Status:** open
+**Status:** done
 
 **Verify-live output (paste on close — a task without it is NOT closed):**
 ```
-(none yet)
+Owner confirmed on device 07-27: logos look right in My Zones and the call-log header. The fixes that
+landed after his original test (9e175a0 + zones r164) hold. Closed on his sighting, not a fresh drive.
 ```

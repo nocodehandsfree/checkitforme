@@ -4,55 +4,49 @@
 > design implementation, and ALL copy. Charter + standing rules: `handoff.md` (same folder).
 > Volatile — REPLACE stale lines, newest on top, ≤60 lines. History lives in git.
 
+## 07-30 — CHECK STATUS: bottom-bar fix + pill gate SHIPPED to staging (PR #100) · step window live
+- **Both status-page fixes are on staging, awaiting his phone.** (1) `renderLiveMsg` follows the NEWEST
+  LINE (`scrollIntoView block:'end'`), never `document.body.scrollHeight`; the live view ends with the
+  sheets' own `calc(160px + env(safe-area-inset-bottom))` strip (`body.lview::after`) + same-size
+  `scroll-margin-bottom`. The re-arm listener now tracks newest-line VISIBILITY — the old distance-to-
+  document-end rule would have been disarmed by the strip. `showResult` drops `lview`, so the strip is
+  gone before the reveal. (2) `POLICY_KNOWN` gates the default-on extras (driver handoff, share): no
+  more "Too far?" flash on pending while the feature is off. Driven local through the REAL `lview`
+  path: newest line 160px clear each render, disarm/re-arm both ways, no yank while reading back,
+  reveal returns to top, wordmark 218px clear at full scroll, zero page errors. iOS paint NOT verified.
+- **DO NOT pad the check status page to force a scroll** (`body.lview main{min-height:100dvh}`,
+  reverted 07-30): it strands the newest line and kills the reveal; `qa-tint-lock` 14b refuses it.
+- **A comp that leaves the homepage showing is a LIE.** The real view also hides `#builder` and adds
+  `body.lview` (`startLive` ~:5864). He caught mine. Drive that exact path or your screenshots lie.
+- **The step window is live** (@ec6e2d0): eyebrow + ONE big 22px state line, mark 212px off the
+  top-right. Reads `LIVE_STAGE` only; the pipe is untouched.
+- **Verdict speed (@92fb2d4):** the reader runs DURING the check (`src/voice/live-read.ts`, hooked by
+  REGISTRATION). Finalize merge 692ms → 1ms, same verdict. Still slow: ElevenLabs' own read — facts
+  and the open question are in the task file; answered to the owner 07-30, awaiting his call.
+
 ## Verify recipe that works (07-26)
 Railway staging env + `DATABASE_URL=file:<scratch>/local.db PORT=88xx npx tsx src/server.ts`. CONSUMER page
 = `/r` (`/` on localhost is Admin). Playwright: DEFAULT-import `playwright-core/index.js` (CJS) +
 `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`. `ACCOUNT` is script-scoped, stub with a BARE assignment. No hot-reload. Headless→staging TLS is blocked: drive LOCAL.
 
-## 07-26 — PLANS/checkout sheet REBUILT on the zones architecture (LIVE on staging, NOT promoted)
-- `#buyOverlay .modal` = a FIXED frame (flex column + `overflow:hidden`) like `#zones .modal`, so
-  `sheetH_on` treats it as a FILL sheet; `.buy-scroll` is the one scroller. `#buyDock` = `position:absolute`
-  in the frame, OUTSIDE that scroller (same box as `#zones .zbasket`), so the iOS scroll-edge glass lives.
-- `BUY_PICKED` gates the dock like `ZONES.sel` gates the basket: DOWN until you tap. The lift-your-pick
-  scroll MUST be a ~140ms timeout, NOT a rAF (a re-render re-places the sheet ~60ms later and wipes it).
-  `sheetH_on` honours `data-fillh`: 0.82 on Plans, floored 530px on PAYG. Dock depth, never a border
-  (STYLE_GUIDE §1). `#buy_note` lives IN the dock. Feature sheets = centred header + one carved
-  `.fi-pts` well, points LEFT-aligned; their titles are Admin labels, so EN only.
-- **R5 checkout SPEED:** it loaded in two visible stages because nothing started until the tap and then
-  4 things ran serially. MEASURED: js.stripe.com/v3 = 1.06MB, 0.61s (0.41s of it just TLS);
-  `/app/checkout-intent` on staging TEST keys = 3.7s the FIRST time per account (it creates the Stripe
-  customer) then 0.2-0.4s. Fix: `preconnect` in the head · `openBuy` warms `loadStripeJs()` while they
-  read plans · `openCheckout` fires the intent and the library TOGETHER · `#co_pay_el` reserves 230px so
-  the sheet stops growing twice. TRAP FIXED: a failed warm-up used to be cached forever and pushed every
-  checkout that session to the hosted page; `loadStripeJs` now forgets a failed attempt.
-  **js.stripe.com is BLOCKED from the headless browser here** (proved by direct script injection), so the
-  real Payment Element cannot be rendered or measured in this sandbox. 230px is off the owner's screenshot.
-- **R4 — tapping a plan jumped to Checkout, FIXED.** Reproduced with `page.touchscreen.tap`, NOT
-  `el.click()`: the dock covered the lower rows so the tap hit Continue. Padding never fixes this, rows
-  still REST under the dock. `.buy-foot` now RESERVES the dock's band (resting top → sheet bottom) so the
-  scroller shrinks and nothing tappable hides; the under-bar `::after` spacer is off while it is up. Cost
-  ~150px of visible list. Checkout head (`.co-head`/`.co-back`/`.co-title`) DELETED. ALWAYS test sheets
-  with real touch taps, element clicks cannot see an overlay.
-- Monthly/Annual = small keys inline with the "You're on the <plan> plan" line; "save 17%" INSIDE the Annual key (a loose floating one was rejected). No overflow at 375/390/430, EN + ES (`plan.save17s`).
-- Drove `/r` at 375/390/430, member + not, EN + ES, REAL touch taps: dock down on open, no visible plan
-  under the dock, every plan tap hits the plan, last plan reachable, Continue → checkout on the tapped plan,
-  PAYG clears by 64-112px, zero errors. **NOT verified: iOS glass + on-device speed + how it reads.**
+## 07-26/27 — PLANS + checkout sheet, and the ONE sheet recipe (LIVE on staging, NOT promoted)
+- Every slide-up renders from ONE recipe; `scripts/sheet-recipe-audit.mjs` must print 1. Run it before
+  shipping any new sheet. Plans/PAYG keepers, the dock, the Stripe warm-up and the real-touch lesson
+  (`page.touchscreen.tap`, never `el.click()`) are all in git @4f6c4a6 and the 07-26/27 commits.
+- Autofocus in a sheet SCROLLS the document and strands the sheet: all focus calls use `preventScroll:true`.
 
-## 07-23 — alerts sheet, zones back, five site fixes (LIVE on staging + Admin, NOT promoted)
-- Alerts sheet: original On/Off pill + "Pause all alerts" bar (a slider redesign was rejected), scroll fix, name wrap. Zones back → My checks (acctReturn in popstate).
-- Plans sheet KEEPERS (don't undo): per-tab header (Plans "Check+ Premium Plans" + Check+ mark; PAYG "Pay by the Check" + bare `check-brandmark`); grid hidden on PAYG; "You're on the <name> plan" only on Plans.
-- Five fixes @4f6c4a6: Admin `inStockBanner` gates the `#finds` banner · `product*` flags filter
-  `brandSwitcher()` · `openAlerts` back via `sheetPush` (email + score sheets still share that gap) ·
-  `zonePollTick` calls `ensureHistCache()` so zone checks reach Activity · `.alrow` stacked for long names.
-- 07-21: ONE email-alert path (`watchStore`) + Alerts list, logos, On/Off, master pause, 10 slots; server
-  half (`alerts_paused_at`, pause-all, fan-out) is prod-only. **STATE: promote wanted.** Zone report head
-  keeps CD's comp RING; status is LEFT-aligned, never the zone name.
+## 07-28 — ADMIN sheet glass FIXED (LIVE @2ca41b5). Full story: `docs/tasks/admin-glass-nudge.md`.
+- **Cause: a closed `.sheet` never left the bottom edge** (position:fixed, bottom:0, just translated off).
+  A fixed element there sits in the UI layer iOS never ghosts. Site does `.overlay{display:none}`; Admin
+  now hides its sheet on close. Also fixed on the way: `pokeChrome` was never called AND was re-stamping
+  the root colour (the poison); `.sh-body` spacer 70→240px so last rows clear the toolbar.
+- **The move that found it: snapshot the whole page before open vs after close and DIFF it.** One thing
+  differed. Two ships were wasted theorising about the glass first. `qa-admin-glass.mjs` 10→19 checks.
 
-## Lessons that stay true (+ OPEN BUG)
-- **OPEN BUG, thin GREEN LINE on the /s card bottom edge, iPhone only.** Never reproduces headless. Suspect
-  `.cin{overflow:hidden;border-radius:999px}` clipping the shine. NEXT: bisect ON DEVICE, one at a time. In GOTCHAS.
+## Lessons that stay true
 - iOS: Chromium CANNOT catch iOS paint — his phone is the rig; ship one change, "check your phone."
-- Copy an existing pattern WHOLE. Half-copying the zones basket (floating box, but up from the start) reproduced the exact mess it was meant to fix.
+- Copy an existing pattern WHOLE. Half-copying the zones basket reproduced the exact mess it fixed.
+- A bug that SURVIVES closing the sheet is leftover STATE. Diff the page before/after, do not theorise.
 - 'in_stock' substring-matches 'not_in_stock' — match negatives first/exact. RENDER the comp and read EVERY state before touching a designed head (removed the zone ring once and burned a cycle).
 
 ## Open (owner asks + the site queue)

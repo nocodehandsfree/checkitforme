@@ -109,6 +109,74 @@ and what the menu costs (both derived from lane + seconds) · the ringing rung �
 versions yet" — `/api/admin/map/chain/:id` returns the versions, evidence and history. Confidence,
 the review queue and drift have no home on the page yet (`/map/graph`, `/map/unknowns`).
 
+## 6f. THE GRAPH, and the four rules from the runtime spec §10 (07-27)
+Built to `docs/specs/live-call-runtime/README.md` §10. The flat route is untouched — the runtime
+still executes that — and this is the knowledge underneath it.
+
+- **Nodes and edges.** `nav_nodes` = a prompt we have heard; `nav_edges` = an action that led from one
+  prompt to the next, with how often it was taken, how often it reached a person, and where it landed.
+  Fed by `recordCallPath()` from mapping calls and (once the runtime calls it) ordinary checks.
+  Node identity is `promptFingerprint()`: accents stripped, digits and number WORDS dropped, the six
+  longest remaining words sorted. "press 1" and "press one" are one prompt; a new menu is a new node,
+  which is what makes *we have never heard this prompt* answerable. Read: `GET /api/admin/map/graph/:id`.
+- **One store never moves a chain.** A store whose route disagrees with the chain's writes a
+  STORE-LEVEL version — live for that store, since it was already failing on the chain route — filed
+  as a `store-exception` review item. The chain route only moves once **three** separate stores walk
+  the same new route, and even then it is proposed, never swapped in. `lockRecipeToChain` asks the map
+  BEFORE stamping the chain row, so an exception can never touch the row 500 stores read.
+- **Language.** `MapRecipe.language`, on every node, on every evidence call and on every observation.
+  `guessLanguage()` is a marker match, no model: a bilingual opener reads as `mixed`, no evidence stays
+  `unknown` rather than defaulting to English. Discovery and execution stay deferred.
+- **Hour and weekday, in the STORE's clock**, on every observation (`storeLocalTime()`). A menu at 9pm
+  is often not the daytime menu; a server hour would say nothing about that.
+- **Failed calls count.** `recordFailedAttempt()` files the failure as evidence and as an observation.
+  It never changes a route — a call that reached nobody proves nothing about where the route goes — but
+  three failures in the last five calls caps confidence at 40 "needs review" and raises a
+  `route-failing` item, so a route that stopped working stops looking healthy.
+
+**Not ours, by the spec:** the prompt-anchor side channel (`stageNavPromptPlan`) is the runtime's to
+replace with an atomic read off the active version. Left alone deliberately.
+
+## 6g. THE THIRD SHAPE: a greeting is not a direct answer (owner 07-27)
+"Thank you for calling Barnes & Noble", hold music, then a person. Nothing to press — but nobody is on
+the line at pickup. The data had only two words for this, `direct` or `has a menu`, and calling it
+direct is what let the paid agent open on the recording and start talking.
+
+- New route type **`greeting`**: no steps, but a REAL wait. `answerPath = greeting_then_transfer`.
+- `ringsDirect` stays FALSE and the chain **carries its seconds** — which a truly direct chain must
+  never do (the silent-agent guard still holds: `connectAtSecFor` returns null for a real direct
+  chain and the greeting chain's own wait for this one).
+- Three writers had the same blind spot — "no steps" read as "direct": `lockRecipeToChain`,
+  `stampChainFromVersion` (the approval path) and `chainNavPlan`. All three now name it.
+- `pathSignature` gives it its own signature, so a greeting and a real direct answer can never fold
+  into each other as the same route.
+- The sweep's proving call classifies THREE outcomes now: a person at pickup (direct), a recording
+  then a person (greeting, with the wait measured), or a menu (into the mapping lane). It files a
+  `greeting-not-direct` review item so the pattern across the 46 claimed-direct chains is visible.
+
+**For the runtime:** the wait is on the chain row as `avgTreeSeconds` with `navType = greeting`, so
+the agent opens at the person, not at pickup. The Ear should still expect hold music on these — the
+seconds are a floor, not a promise.
+
+## 6h. EVERY CALL TEACHES US, including ones nobody meant as mapping (owner 07-27)
+"One customer calling up Franklin's and we had a voice menu — those aren't just lost forever."
+
+`learnFromReceipt()` reads the receipt the Ear already wrote. **No second listener** (spec §10), no
+transcription, no cost. Wired at the one place the receipt closes: `onReceiptClosed()` in
+`receipt-store.ts`, registered in `server.ts` beside `installReceiptStore()`. A watcher can never
+break or delay a receipt.
+
+What one ordinary check can prove:
+- **A store we call direct played a menu or a recording** → flagged `direct-store-has-a-recording`
+  with the call attached and the second the person actually arrived; trust in "answers directly"
+  drops on the spot. **The route is NOT rewritten** — one check is one call, and §10.2 says that is a
+  store exception at most. Correcting it still takes a mapping call.
+- **The route ran and reached nobody** → counts as a failed attempt against the route's health.
+- **Which steps ran and when a person answered** → an observation carrying the receipt's call id.
+
+So the anomaly the owner described gets caught by a paying customer's call, not only by a sweep — and
+the sweep's proving pass would have found it anyway. Two nets, one Ear.
+
 ## 7. Fixed on the way past
 `lockRecipeToChain` wrote the bare first digit ("4") into `dtmfShortcut`, but the live bridge only
 understands the timed form ("2@8,2@16") and plays NOTHING without it — so every chain locked through

@@ -4,7 +4,7 @@
 // The detector's whole job: say "a prompt just ENDED" when a recording stops talking, so a mapped
 // step fires on the pause instead of on a stopwatch. These tests feed it synthetic frame energies —
 // no audio, no network — so the timing rules are provable.
-import { PromptDetector, frameEnergy, _test } from "../src/calls/listen-nav";
+import { PromptDetector, ConversationEar, frameEnergy, looksLikeAPerson, _test, type HoldReason } from "../src/calls/listen-nav";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -102,6 +102,178 @@ console.log("▶ frameEnergy: silence reads low, tone reads high");
   ok(frameEnergy(loud) > _test.VOICE_THRESH, "a full-scale frame reads above the voice gate");
   ok(frameEnergy("") === 0, "an empty payload is 0, never NaN");
 }
+
+console.log("▶ a person picked up instead of the menu: stop pressing keys");
+{
+  // A store mapped with a phone menu that now answers directly. If we keep going we fire keypad
+  // tones into a real person's ear, which is exactly what happens today.
+  const d = new PromptDetector(() => { /* boundaries not needed here */ });
+  feed(d, 2000, true);                        // "Target Topanga, this is Bob"
+  feed(d, _test.END_SILENCE_MS + 100, false); // …and they stop
+  const mid = { stepsFired: 0, promptCount: d.count, lastPromptMs: d.lastPromptMs, quietMs: d.quietMs };
+  ok(!looksLikeAPerson(mid), "not called yet at the moment they stop talking — a menu pauses there too");
+  feed(d, 2600, false);                       // they are WAITING for us
+  ok(looksLikeAPerson({ ...mid, quietMs: d.quietMs }), "a short greeting then a long wait = somebody answered");
+}
+
+console.log("▶ …and it does NOT misfire on a real recorded menu");
+{
+  const d = new PromptDetector(() => { /* none */ });
+  feed(d, 6000, true);                        // a menu reading its options
+  feed(d, _test.END_SILENCE_MS + 100, false);
+  feed(d, 4000, false);                       // even a long gap before the next prompt
+  ok(!looksLikeAPerson({ stepsFired: 0, promptCount: d.count, lastPromptMs: d.lastPromptMs, quietMs: d.quietMs }), "a long recording is never a person, however long the gap after it");
+}
+{
+  const d = new PromptDetector(() => { /* none */ });
+  feed(d, 2000, true); feed(d, _test.END_SILENCE_MS + 100, false);
+  feed(d, 400, false); feed(d, 2000, true); feed(d, _test.END_SILENCE_MS + 100, false);
+  feed(d, 3000, false);
+  ok(!looksLikeAPerson({ stepsFired: 0, promptCount: d.count, lastPromptMs: d.lastPromptMs, quietMs: d.quietMs }), "a menu of short prompts is not a person — only the very FIRST thing we hear can be");
+}
+{
+  ok(!looksLikeAPerson({ stepsFired: 1, promptCount: 1, lastPromptMs: 2000, quietMs: 9000 }), "once the menu walk has started, a pause is just a pause");
+  ok(!looksLikeAPerson({ stepsFired: 0, promptCount: 1, lastPromptMs: 0, quietMs: 9000 }), "silence with nothing said at all is not a person");
+}
+
+// ---- the ear during the conversation ---------------------------------------------------------
+const LOUD_E = _test.VOICE_THRESH + 200, QUIET_E = 20;
+/** Build an ear and a log of what it announced. */
+function ear() {
+  const said: string[] = [];
+  const e = new ConversationEar({
+    holdStart: (r) => said.push(`away:${r}`),
+    holdEnd: (gap, nu) => said.push(`back:${Math.round(gap / 1000)}s${nu ? ":newperson" : ""}`),
+  });
+  return { e, said };
+}
+/** Someone talking: sound with the gaps real speech has. */
+const talk = (e: ConversationEar, ms: number) => {
+  for (let i = 0; i < Math.round(ms / _test.FRAME_MS); i++) e.feed(i % 5 === 4 ? QUIET_E : LOUD_E);
+};
+const silence = (e: ConversationEar, ms: number) => { for (let i = 0; i < Math.round(ms / _test.FRAME_MS); i++) e.feed(QUIET_E); };
+/** Hold music: sound that never stops. */
+const music = (e: ConversationEar, ms: number) => { for (let i = 0; i < Math.round(ms / _test.FRAME_MS); i++) e.feed(LOUD_E); };
+const ringing = (e: ConversationEar, ms: number) => { for (let i = 0; i < Math.round(ms / _test.FRAME_MS); i++) e.feed(LOUD_E, true); };
+
+console.log("▶ the clerk puts the phone down and walks off");
+{
+  const { e, said } = ear();
+  talk(e, 3000);
+  silence(e, 3000);
+  ok(said.length === 0, "three seconds of thinking is not a hold");
+  silence(e, 3500);
+  ok(said[0] === "away:quiet", "six seconds of nothing and they have gone");
+  talk(e, 1000);
+  ok(said[1] === "back:7s", "they come back and we know how long they were away");
+  ok(e.holdMs >= 6000 && e.holdMs <= 8000, `and the seconds are counted (${e.holdMs}ms) — holdSeconds has been null since the receipt shipped`);
+}
+
+console.log("▶ hold music is not a person talking");
+{
+  const { e, said } = ear();
+  talk(e, 3000);
+  music(e, 7000);
+  ok(said[0] === "away:music", "sound that never breaks is music, not somebody speaking");
+  // A bit over a second, not the instant of the first gap. Coming back now needs a real run of
+  // speech, because ONE frame that was not music used to end the wait — see the flapping bug below.
+  // It costs nothing: the first words are buffered and handed over whole either way.
+  talk(e, 1500);
+  ok(String(said[1]).startsWith("back:"), "real speech, with its gaps, ends the hold");
+}
+
+console.log("▶ …and a fast talker is NEVER mistaken for music");
+{
+  const { e, said } = ear();
+  talk(e, 3000);
+  for (let i = 0; i < 500; i++) e.feed(i % 12 === 11 ? QUIET_E : LOUD_E); // 10s, barely any gaps
+  ok(said.length === 0, "ten seconds of someone talking quickly is still someone talking");
+}
+
+console.log("▶ a transfer: the desk starts ringing after we already had a person");
+{
+  const { e, said } = ear();
+  talk(e, 3000);
+  // 400ms of tone used to be a transfer "known immediately". A real call proved that wrong: a voice
+  // can land on the network's frequencies for a fraction of a second, and that read as being handed
+  // on ten times over on a store with no menu (receipt 199). A real ringback burst is two seconds.
+  ringing(e, 400);
+  ok(said.length === 0, "less than half a second of tone is a voice, not a ringing phone");
+  ringing(e, 400);
+  ok(said[0] === "away:transfer", "a ringing line that keeps ringing = we were transferred");
+}
+
+console.log("▶ a long gap means the person coming back may be somebody new");
+{
+  const { e, said } = ear();
+  talk(e, 3000);
+  silence(e, 25000);
+  talk(e, 1000);
+  ok(String(said[1]).endsWith(":newperson"), "over twenty seconds away and Charlie must be told it may be someone else");
+  const short = ear();
+  talk(short.e, 3000); silence(short.e, 8000); talk(short.e, 1000);
+  ok(!String(short.said[1]).includes("newperson"), "a short hold is the same person, no warning needed");
+}
+
+console.log("▶ nobody has spoken yet, so nobody can have left");
+{
+  const { e, said } = ear();
+  silence(e, 30000);
+  ok(said.length === 0, "silence before anyone ever spoke is not a hold");
+  const t = ear();
+  ringing(t.e, 5000);
+  ok(t.said.length === 0, "a ringing line before we ever reached a person is not a transfer either");
+}
+
+// THE FLAPPING BUG, from a real receipt (call 199, staging, 07-28): ten "handed on" lines and ten
+// "back off hold" lines on a DIRECT-DIAL call that was never transferred and never held. One frame
+// of tone opened a transfer and the next frame that was not a tone closed it, over and over. Both
+// halves now need a real run of evidence, so a stray frame cannot say anything at all.
+console.log("▶ one stray frame cannot invent a transfer, and cannot end a wait");
+{
+  const { e, said } = ear();
+  talk(e, 3000);
+  // A single frame that happens to sit on the network's tone frequencies, mid conversation.
+  e.feed(LOUD_E, true);
+  talk(e, 1000);
+  ok(said.length === 0, "one frame of tone in the middle of somebody talking is not a transfer");
+
+  const b = ear();
+  talk(b.e, 3000);
+  ringing(b.e, 2000);                    // a real ringback burst: two full seconds
+  ok(b.said[0] === "away:transfer", "two seconds of ringing IS a transfer");
+  b.e.feed(LOUD_E);                      // one loud frame that is not a tone — a click, not a person
+  ok(b.said.length === 1, "one frame that is not a tone does not mean somebody came back");
+  ringing(b.e, 4000);
+  ok(b.said.length === 1, "and the ringing carrying on does not open a second transfer");
+  talk(b.e, 1000);
+  ok(b.said.length === 2 && b.said[1].startsWith("back:"), "somebody actually speaking ends it, once");
+}
+
+console.log("▶ a whole ring cadence is ONE transfer, not one per burst");
+{
+  const { e, said } = ear();
+  talk(e, 3000);
+  // US ringback: two seconds on, four off, over and over. The gaps used to end the hold.
+  for (let i = 0; i < 5; i++) { ringing(e, 2000); silence(e, 4000); }
+  ok(said.filter((s) => s === "away:transfer").length === 1, `five rings are one transfer, not five (${said.length} lines)`);
+  ok(said.filter((s) => s.startsWith("back:")).length === 0, "and nobody came back, because nobody spoke");
+  talk(e, 1000);
+  // Thirty seconds of ringing, timed from the FIRST ring — not from the burst we happened to be on
+  // when somebody finally picked up. And long enough that whoever answers may not be who left.
+  ok(said.length === 2 && said[1] === "back:30s:newperson", `they pick up and the whole wait is one wait (${said[1]})`);
+}
+
+console.log("▶ the wait is measured to when they STARTED talking, not when we were sure");
+{
+  const { e } = ear();
+  talk(e, 3000);
+  silence(e, 10000);
+  talk(e, 2000);
+  // 10s away. The run of speech that convinced us is theirs, so it must not be inside the wait.
+  ok(e.holdMs >= 9500 && e.holdMs <= 10500, `the wait is the wait, not the wait plus our proof (${e.holdMs}ms)`);
+}
+
 
 console.log(`\n${fail === 0 ? "PASS" : "FAIL"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

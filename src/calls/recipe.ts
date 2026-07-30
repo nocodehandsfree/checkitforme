@@ -94,6 +94,11 @@ export function chainNavPlan(ch?: {
 } | null): { steps: { n: number; at: number }[]; len: number } | null {
   if (!ch) return null;
   if (ch.navType === "direct" || ch.ringsDirect === true || ch.answerPath === "direct_human") return null;
+  // A greeting chain has a real story to tell even with no steps: the recording, then the wait.
+  if (ch.navType === "greeting" || ch.answerPath === "greeting_then_transfer") {
+    const wait = ch.avgTreeSeconds ?? 0;
+    return { steps: [{ n: 4, at: 1 }, ...(wait > 2 ? [{ n: 6, at: 2 }] : [])], len: 0 };
+  }
   let acts: RecipeStep[] = [];
   try {
     const r = ch.navRecipe ? (JSON.parse(ch.navRecipe) as Recipe) : null;
@@ -126,8 +131,13 @@ export function connectAtSecFor(chain?: {
 } | null): number | null {
   if (!chain) return null;
   if (chain.navType === "direct" || chain.ringsDirect === true || chain.answerPath === "direct_human") return null;
-  const hasTree = chain.navType === "voice" || chain.navType === "keypad" || !!chain.navRecipe ||
-    !!chain.dtmfShortcut || chain.answerPath === "simple_ivr" || chain.answerPath === "deep_ivr";
+  // A GREETING chain has nothing to press, but a person is NOT there at pickup: a recording answers,
+  // hold music plays, someone arrives seconds later. It is the case that used to be mislabelled
+  // "direct", which is how the paid agent ended up talking to "thank you for calling Barnes & Noble".
+  // It has no steps, so the tests below would all miss it — it is named explicitly (owner 07-27).
+  const hasTree = chain.navType === "voice" || chain.navType === "keypad" || chain.navType === "greeting" ||
+    !!chain.navRecipe || !!chain.dtmfShortcut || chain.answerPath === "simple_ivr" ||
+    chain.answerPath === "deep_ivr" || chain.answerPath === "greeting_then_transfer";
   const s = chain.avgTreeSeconds ?? 0;
   return hasTree && s > 0 ? s : null;
 }

@@ -1,0 +1,56 @@
+# The Admin's map of surfaces, FROZEN (CLAUDE.md LAW 4). nav-gate.py blocks any Edit/Write
+# to public/app.html that adds a nav group, tab, or <section> not on this list. A new one
+# exists ONLY when the owner names it: he says the word, THEN this list grows in the same
+# commit as the code. Removing a line here is fine (cutting is allowed, inventing is not).
+group:godview
+group:stores
+group:calls
+group:voice
+group:help
+group:launch
+tab:dash
+tab:users
+tab:restock
+tab:alerts
+tab:growth
+tab:calc
+tab:plans
+tab:retailers
+tab:search
+tab:add
+tab:receipts
+tab:results
+tab:feedback
+tab:statuses
+tab:trees
+tab:settings
+tab:designer
+tab:workflows
+tab:testing
+tab:fun
+tab:support
+tab:gtm
+section:dash
+section:calc
+section:plans
+section:users
+section:restock
+section:alerts
+section:workflows
+section:testing
+section:retailers
+section:search
+section:add
+section:feedback
+section:support
+section:results
+section:catalog
+section:receipts
+section:growth
+section:settings
+section:designer
+section:trees
+section:statuses
+section:fun
+section:gtm
+section:preview

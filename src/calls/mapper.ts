@@ -23,7 +23,7 @@ import { isCallingPaused } from "../redis";
 import { placeNavCall, getNavSession, defaultWorkflowAsk, classifyMode, menuHasCustomerService, NavRecipe, NavStep } from "./navigator";
 import { storeForChain, lockRecipeToChain, recipeFromSteps } from "./trainer-batch";
 import { chainDialable } from "./recipe";
-import { pathSignature, reportUnknown, recordObservation, MapRecipe, MapStep, type EvidenceCall } from "./mapgraph";
+import { pathSignature, reportUnknown, recordObservation, recordCallPath, recordFailedAttempt, storeLocalTime, MapRecipe, MapStep, type EvidenceCall } from "./mapgraph";
 import { recipeFromCall, evidenceFromCall, CapturedStep } from "./map-capture";
 
 const DAILY_CAP = 60;        // runaway guard only — owner 2026-07-10: the old 12/day cap is gone, a
@@ -101,6 +101,10 @@ function buildExperiments(run: MapperRun, recipe: NavRecipe): Experiment[] {
         out.push({ kind: "shorten", stepIdx: i, value: words[0].toLowerCase(), label: `say "${words[0].toLowerCase()}" instead of "${st.value}"`, status: "pending" });
       }
     }
+    // A step we have ALREADY PROVED cannot be barged is never tested again (owner 07-27: at CVS you
+    // can barge in with "general" but not with "front"). That fact was learned by a real call that
+    // looped the menu; re-proving it costs another call and another loop every single run.
+    if ((st as { bargeSafe?: boolean }).bargeSafe === false) continue;
     const prevAt = i === 0 ? 0 : (steps[i - 1].atSec ?? 0);
     const at = st.atSec ?? 0;
     if (at - prevAt > 3) {
@@ -197,14 +201,31 @@ async function recordMapVersion(run: MapperRun, chainId: number, recipe: NavReci
         steps: (recipe.steps || []).map((s) => ({ action: s.action === "press" ? "press" : "say", value: String(s.value || ""), atSec: Math.round(s.atSec ?? 0) })) as MapStep[],
         seconds: recipe.seconds ?? 0, target: recipe.target, menu: recipe.menu, menuPrompts: recipe.menuPrompts, ringVariable: recipe.ringVariable,
       };
+    const when = await storeLocalTime(run.store?.id || 0);
     evidence = evidenceFromCall({
       navId: session?.id, storeId: run.store?.id, storeName: run.store?.name, steps,
       seconds: recipe.seconds ?? null, reachedHuman: true, path: pathSignature(mapRecipe),
       greeting: session?.greeting, transferAtSec: session?.transferAtSec ?? null,
+      hourLocal: when.hour, dow: when.dow,
       note: `${run.phase} attempt ${run.attempt}`,
     });
+    mapRecipe.language = evidence.language;
+    // THE GRAPH: every prompt this call heard becomes a node, every action an edge to where it landed.
+    // The flat route above is what the runtime executes; this is the knowledge underneath it, and it
+    // is the only thing that can answer "we have never heard this prompt before".
+    await recordCallPath({
+      chainId, storeId: run.store?.id,
+      prompts: steps.filter((st) => st.who === "ivr" && st.text).map((st) => ({ text: String(st.text), atSec: Math.round(st.atSec ?? 0) })),
+      actions: mapRecipe.steps.map((st) => ({ action: st.action, value: st.value, atSec: st.atSec, afterPrompt: st.afterPrompt })),
+      reachedHuman: true, seconds: recipe.seconds ?? null, outcome: "person",
+    });
     // The captured route is richer than the one the run carries: it knows WHICH recording each step
-    // follows. Ship that one to the map.
+    // follows. But the run may hold a fact the fresh capture cannot see — a step proved unbargeable by
+    // a call that looped — so carry those forward rather than letting a later call forget them.
+    mapRecipe.steps = mapRecipe.steps.map((st, i) => {
+      const known = (recipe.steps?.[i] as { bargeSafe?: boolean } | undefined)?.bargeSafe;
+      return known === false ? { ...st, bargeSafe: false } : st;
+    });
     recipe = { ...recipe, steps: mapRecipe.steps as unknown as NavRecipe["steps"] };
     // THE WAIT AFTER THE TRANSFER, measured. The store announces the hand-off and the person speaks
     // some seconds later; the paid agent currently opens on the announcement, so this gap is money
@@ -300,7 +321,7 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
         const picked = opts.storeId && !run.rotate
           ? (await db.select().from(retailers).where(eq(retailers.id, opts.storeId)))[0]
           : await storeForChain(chainId, run.usedStores, true);
-        if (!picked) { run.stopReason = "no store in local daytime hours right now — re-run when stores are open (mornings hit the east coast first)"; run.phase = run.baseline ? run.phase : "needs-review"; break; }
+        if (!picked) { run.stopReason = "no store in local daytime hours right now. Re-run when stores are open; mornings hit the east coast first."; run.phase = run.baseline ? run.phase : "needs-review"; break; }
         run.store = { id: picked.id, name: picked.name, phone: picked.phone };
         run.usedStores.push(picked.id); run.rotate = false;
       }
@@ -331,6 +352,9 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
         undefined,
         { listenFirst: isListen, askVoiceId: ask.voiceId, askText: ask.text, target: run.target,
           maxSec: CALL_MAX_SEC, transferWaitSec: TRANSFER_WAIT_SEC,
+          // This loop folds its own calls into the map below, with the barge wins and the phase note
+          // attached. `finish` must not fold them a second time.
+          callerRecords: true,
           why: `Mapping ${run.chainName} (${run.phase}, call ${run.attempt})` },
       );
       if (placed.error || !placed.id) {
@@ -395,6 +419,13 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
           if (verifyMisses >= 2) run.phase = "listen"; // the stored map may be stale — rediscover
         } else {
           baselineMisses++; run.phase = "baseline";
+          // A call that reached nobody proves nothing about the route, so it changes nothing — but it
+          // COUNTS (runtime spec §10.5), or a route that stopped working keeps looking healthy.
+          await recordFailedAttempt({
+            chainId, storeId: store.id, navId: s?.id,
+            reason: (s as { stopReason?: string } | null)?.stopReason || `no human (${s?.status || "timeout"})`,
+            seconds: secs, promptCount: (s?.steps as NavStep[] | undefined)?.filter((st) => st.who === "ivr").length,
+          }).catch(() => { /* evidence is best-effort */ });
           run.log.push({ n: run.attempt, phase: "baseline", store: store.name, outcome: `no human (${s?.status || "timeout"})${s?.confirmResult === "redirect" ? " — redirected: " + (s?.redirectTo || "") : ""}`, seconds: secs });
           if (baselineMisses >= BASELINE_TRIES) { run.phase = "needs-review"; run.stopReason = `no human in ${BASELINE_TRIES} attempts`; break; }
         }
@@ -416,7 +447,15 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
             enqueueBinaryBarge(run, ex.stepIdx, ex.at ?? 0, true);  // it accepted this early — try earlier still
           } else {
             ex.status = "fail";
-            run.log.push({ n: run.attempt, phase: "optimize", store: store.name, experiment: ex.label, outcome: reached ? `@${ex.at}s dropped — recovery reached @${secs ?? "?"}s; backing off` : `@${ex.at}s too early — looped (${s?.status || "timeout"}); backing off`, seconds: secs });
+            // A LOOP is not a bad guess, it is a fact about this menu: the step cannot be barged. Write
+            // it onto the step so it survives this run and every future one — this is exactly the CVS
+            // "front" knowledge, stored instead of remembered by a person.
+            if (!reached && run.best?.steps?.[ex.stepIdx]) {
+              (run.best.steps[ex.stepIdx] as { bargeSafe?: boolean }).bargeSafe = false;
+              run.experiments = run.experiments.filter((e) => !(e.kind === "barge" && e.stepIdx === ex.stepIdx && e.status === "pending"));
+              await finalizeAndLock(run, chainId, run.best, null, s ?? undefined); // remember it
+            }
+            run.log.push({ n: run.attempt, phase: "optimize", store: store.name, experiment: ex.label, outcome: reached ? `@${ex.at}s dropped — recovery reached @${secs ?? "?"}s; backing off` : `@${ex.at}s too early — looped (${s?.status || "timeout"}); this step cannot be barged, remembered`, seconds: secs });
             enqueueBinaryBarge(run, ex.stepIdx, ex.at ?? 0, false); // too early — search later
           }
         } else if (faster) {
@@ -441,7 +480,7 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
     if (run.phase === "locked" && run.best) {
       await finalizeAndLock(run, chainId, run.best, null); // final state (idempotent)
       run.stopReason = run.stopReason || (run.needsTarget
-        ? "locked, but no customer-service option in the menu — pick a target desk to re-map"
+        ? "Locked, but the menu has no customer-service option. Pick a target desk and re-map."
         : "nothing left to learn");
     } else if (run.stop) run.phase = "stopped";
     run.running = false; run.updatedAt = Date.now();

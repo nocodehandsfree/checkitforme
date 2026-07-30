@@ -15,7 +15,10 @@ import { chainDialable, recipeToDtmf } from "./recipe";
 import { proposeVersion, pathSignature, type EvidenceCall } from "./mapgraph";
 
 type Step = { who?: string; action?: string; value?: string; atSec?: number };
-type Recipe = { type?: string; steps?: Array<{ action?: string; value?: string; atSec?: number }>; seconds?: number; menu?: Array<{ digit: string; label: string }>; menuPrompts?: string[]; ringVariable?: boolean; target?: string };
+// `seconds` is TIME TO STAFF and may be null: a call that ended on the desk ringing walked the whole
+// phone system but never learned how long Staff take. Null flows through to no join timer, so the
+// paid agent waits for a real voice rather than opening on a number nobody measured.
+type Recipe = { type?: string; steps?: Array<{ action?: string; value?: string; atSec?: number }>; seconds?: number | null; navSeconds?: number | null; menu?: Array<{ digit: string; label: string; say?: string }>; menuPrompts?: string[]; ringVariable?: boolean; target?: string };
 
 const state = {
   running: false, stop: false, total: 0, done: 0, learned: 0, review: 0, skipped: 0, failed: 0,
@@ -45,15 +48,22 @@ export async function lockRecipeToChain(chainId: number, recipe: Recipe, confide
   const log = ch?.navLog ? (JSON.parse(ch.navLog) as number[]) : [];
   if (typeof recipe.seconds === "number") log.push(recipe.seconds);
   const steps = Array.isArray(recipe.steps) ? recipe.steps : [];
-  const direct = recipe.type === "direct" || steps.length === 0;
+  // A GREETING route has no steps but is NOT direct: a recording plays, often hold music follows, and
+  // a person arrives seconds later. Treating it as direct is what put the paid agent on the line
+  // talking to "thank you for calling Barnes & Noble" (owner 07-27).
+  const greeting = recipe.type === "greeting";
+  const direct = !greeting && (recipe.type === "direct" || steps.length === 0);
   // navText drives LIVE consumer calls — keep it to the navigation instruction only (unchanged).
   const navText = direct
-    ? "A live person usually answers directly — no phone menu to work through."
-    : "To reach a live person: " + steps.map((s) => (s.action === "press" ? `press ${s.value}` : `say "${s.value}"`)).join(", then ") + ".";
+    ? "Staff usually answer directly. No phone menu to work through."
+    : greeting
+      ? "A recording answers first, then hands you to Staff. Nothing to press or say, just wait."
+      : "To reach a live person: " + steps.map((s) => (s.action === "press" ? `press ${s.value}` : `say "${s.value}"`)).join(", then ") + ".";
   // docText is the DOCUMENTED tree the owner reads (#2/#6): nav path + target desk + menu options +
   // ring-variance warning. Kept out of phoneTreeDefault so it never changes live-call behavior.
   const menuText = Array.isArray(recipe.menu) && recipe.menu.length
-    ? " Menu options heard: " + recipe.menu.map((o) => `[${o.digit}] ${o.label || "?"}`).join("; ") + "."
+    // A spoken menu has no digit to show, so it reads as the word you answer with instead.
+    ? " Menu options heard: " + recipe.menu.map((o) => (o.digit ? `[${o.digit}] ${o.label || "?"}` : `say "${o.say || o.label}"`)).join("; ") + "."
     : "";
   const targetText = recipe.target ? ` Reaches: ${recipe.target}.` : "";
   const varText = recipe.ringVariable ? " ⚠ Variable ring (department pickup) — time-to-human varies call to call." : "";
@@ -65,6 +75,37 @@ export async function lockRecipeToChain(chainId: number, recipe: Recipe, confide
   // worked. One converter for both, exactly as recipe.ts says: recipeToDtmf.
   const dtmfPlan = recipeToDtmf(recipe as { steps?: Array<{ action?: string; value?: string; atSec?: number }> });
   const now = Math.floor(Date.now() / 1000);
+
+  // THE MAP DECIDES WHERE THIS BELONGS, BEFORE ANYTHING TOUCHES LIVE CALLS. A route proved at ONE
+  // store that disagrees with the chain is that store's exception, not the chain changing its mind
+  // (runtime spec §10.2) — so it must not stamp the chain row that five hundred stores read. We ask
+  // the map first and only stamp when the answer is "this is the chain's route".
+  const mapRecipe = {
+    type: (recipe.type as "direct" | "keypad" | "voice" | "greeting") || (direct ? "direct" : "keypad"),
+    steps: steps.map((st) => ({
+      action: st.action === "press" ? ("press" as const) : ("say" as const),
+      value: String(st.value || ""), atSec: Math.round(st.atSec ?? 0),
+      afterPrompt: (st as { afterPrompt?: number }).afterPrompt,
+    })),
+    seconds: typeof recipe.seconds === "number" ? recipe.seconds : 0,
+    target: recipe.target, menu: recipe.menu, menuPrompts: recipe.menuPrompts,
+    ringVariable: recipe.ringVariable, language: evidence?.language,
+  };
+  let chainLevel = true;
+  try {
+    const res = await proposeVersion({
+      chainId, recipe: mapRecipe, source: evidence ? "mapping call" : "lock",
+      storeId: evidence?.storeId,
+      call: evidence ?? {
+        at: now, day: new Date(now * 1000).toISOString().slice(0, 10),
+        reachedHuman: true, path: pathSignature(mapRecipe),
+        seconds: typeof recipe.seconds === "number" ? recipe.seconds : null,
+      },
+    });
+    chainLevel = res.version.storeId === 0;
+  } catch { /* the map is best-effort; a hiccup there must never stop a proven route going live */ }
+  if (!chainLevel) return;   // a store exception: recorded, live for that store, chain row untouched
+
   await db.update(chains).set({
     navType: recipe.type || null, navRecipe: JSON.stringify(recipe),
     navSeconds: direct ? null : (typeof recipe.seconds === "number" ? Math.round(recipe.seconds) : null),
@@ -73,33 +114,12 @@ export async function lockRecipeToChain(chainId: number, recipe: Recipe, confide
     // ↓ applied to LIVE consumer calls (navText only — the menu/notes live in treeNote for the owner):
     phoneTreeDefault: navText, treeNote: docText,
     dtmfShortcut: dtmfPlan || null,
-    answerPath: steps.map((s) => `${s.action}:${s.value}`).join(">") || null,
-    // Direct chains carry no seconds (a stray value mutes the agent — the silent-agent bug).
+    answerPath: steps.map((s) => `${s.action}:${s.value}`).join(">") || (greeting ? "greeting_then_transfer" : null),
+    // Direct chains carry no seconds (a stray value mutes the agent — the silent-agent bug). A GREETING
+    // chain is the opposite case: it MUST carry its seconds, because that wait is the whole point.
     ringsDirect: direct, avgTreeSeconds: direct ? null : (typeof recipe.seconds === "number" ? Math.round(recipe.seconds) : null),
     treeStatus: "learned", treeLearnedAt: now,
   }).where(eq(chains.id, chainId));
-  // The map is knowledge, the chain row is what the runtime reads — both, always, from here.
-  try {
-    const mapRecipe = {
-      type: (recipe.type as "direct" | "keypad" | "voice") || (direct ? "direct" : "keypad"),
-      steps: steps.map((st) => ({
-        action: st.action === "press" ? ("press" as const) : ("say" as const),
-        value: String(st.value || ""), atSec: Math.round(st.atSec ?? 0),
-        afterPrompt: (st as { afterPrompt?: number }).afterPrompt,
-      })),
-      seconds: typeof recipe.seconds === "number" ? recipe.seconds : 0,
-      target: recipe.target, menu: recipe.menu, menuPrompts: recipe.menuPrompts, ringVariable: recipe.ringVariable,
-    };
-    const at = Math.floor(Date.now() / 1000);
-    await proposeVersion({
-      chainId, recipe: mapRecipe, source: evidence ? "mapping call" : "lock",
-      call: evidence ?? {
-        at, day: new Date(at * 1000).toISOString().slice(0, 10),
-        reachedHuman: true, path: pathSignature(mapRecipe),
-        seconds: typeof recipe.seconds === "number" ? recipe.seconds : null,
-      },
-    });
-  } catch { /* knowledge is best-effort — a map hiccup must never break a locked route */ }
 }
 
 /** Save an UNCONFIRMED route (never reached a human) as a review candidate — does NOT touch live. */
@@ -204,11 +224,11 @@ export async function startBatch(opts: BatchOpts = {}) {
       if (s && s.status === "human") {
         const recipe = s.recipe ?? recipeFromSteps(s.steps as Step[], s.humanAtSec);
         await lockRecipeToChain(ch.id, recipe, s.confidence ?? null);
-        state.learned++; state.results.push({ chain: ch.name, outcome: `learned (${recipe.type})`, seconds: recipe.seconds });
+        state.learned++; state.results.push({ chain: ch.name, outcome: `learned (${recipe.type})`, seconds: recipe.seconds ?? undefined });
       } else if (s && Array.isArray(s.steps) && (s.steps as Step[]).some((st) => st.who === "us")) {
         const recipe = recipeFromSteps(s.steps as Step[], s.humanAtSec);
         await saveCandidate(ch.id, recipe, s.confidence ?? null);
-        state.review++; state.results.push({ chain: ch.name, outcome: `review-candidate (${s?.status || "timeout"})`, seconds: recipe.seconds });
+        state.review++; state.results.push({ chain: ch.name, outcome: `review-candidate (${s?.status || "timeout"})`, seconds: recipe.seconds ?? undefined });
       } else {
         state.failed++; state.results.push({ chain: ch.name, outcome: `no route (${s?.status || "timeout"})` });
       }

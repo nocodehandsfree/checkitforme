@@ -13,6 +13,17 @@ case "$cmd" in
     if ! bash scripts/checkpoint-lint.sh >&2; then
       exit 2
     fi
+    # The three runtime-spec rules that used to live only in prose (07-28): one shared Ear, every
+    # call leaves a receipt, and the Admin word is Staff.
+    if ! bash scripts/spec-gates.sh >&2; then
+      exit 2
+    fi
+    # 3) THE iOS CHROME TINT (owner order 07-30): the bottom edge where the Safari url bar sits can
+    #    never go back to the darker band. Covers the website AND the Admin. A push that breaks it
+    #    is refused here, not discovered on his phone.
+    if ! node scripts/qa-tint-lock.mjs >&2; then
+      exit 2
+    fi
     ;;
 esac
 

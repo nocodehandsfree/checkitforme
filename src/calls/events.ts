@@ -42,11 +42,9 @@ export type EventKind =
   | "voicemail"       // a machine, not a person
   | "unknown"         // something we could not classify. detail says what we saw
   | "verdict"         // the answer the customer got
-  | "summary"         // the seconds and the cost, written onto the timeline itself. ONLY used by a
-                      // call with no call_results row (Admin's own calls: mapping, rehearsals, the
-                      // store button) — those roll up nowhere else, so without this the numbers die
-                      // with the process and the receipt is a timeline with no money on it.
-  | "hangup";         // the call ended. detail: why
+  | "hangup";         // the call ended. detail: why. On a call with no call_results row (Admin's own
+                      // calls) `detail` also carries the seconds and the cost, because they roll up
+                      // nowhere else. THE SET STAYS SIXTEEN — finer detail goes in `detail`.
 
 /** Which lane walked this call to a human. Runtime names, from the spec. */
 export type Lane = "direct" | "alpha" | "bravo" | "delta" | "unknown";
@@ -88,9 +86,24 @@ export interface Meters {
   /** A phone ringing on the far end WHILE the agent was connected and billing — a transfer to a desk
    *  nobody is at. Identified by the network's own ring frequencies, not guessed from loudness. */
   ringingMs: number;
-  /** The clerk walked away or put us on hold with the agent still connected. Not measured yet — it
-   *  arrives with the hold-handback work, and stays NULL until then so nobody reads a real zero. */
+  /** The clerk walked away or put us on hold with the agent still connected. Null until a call
+   *  actually runs the ear that measures it, so "we never checked" still reads differently from
+   *  "it was zero". */
   holdMs: number | null;
+}
+
+/** One stretch of the reasoning agent being connected. Normally there is exactly one. If he is
+ *  closed for a hold and reopened when somebody comes back, each session is a NUMBERED SEGMENT of
+ *  the same call — never a separate call (hard rule 1). The Twilio call and our room id stay
+ *  canonical across all of them. */
+export interface CharlieSegment {
+  n: number;                       // 1-based
+  providerCallId?: string;         // the provider's own conversation id for this segment
+  openMs: number;                  // ms from dial
+  closeMs: number | null;          // null = still open
+  /** Which brain served it: the provider's hosted model, or our own account (section 7). */
+  brain: "hosted" | "ours";
+  why?: string;                    // why this segment started, when it is not the first
 }
 
 const zeroMeters = (): Meters => ({
@@ -108,6 +121,15 @@ export interface Receipt {
   lane: Lane;
   /** What the map told us to do, so a replay shows plan vs reality side by side. */
   planned: Array<{ action: string; value: string; atSec: number }>;
+  /** WHICH saved version of the store's menu ran this call. Null = no saved version, not version 0. */
+  mapVersion?: number | null;
+  /** The check this one is a retry of, so tries-per-answer is countable. */
+  attemptOf?: number | null;
+  /** Every stretch the agent was connected for. One entry on an ordinary call. */
+  segments: CharlieSegment[];
+  /** WHAT WAS SAID, as we heard it live (hard rule 2). Text only — never audio, on any path. The
+   *  provider's own post-call version becomes supporting evidence, not the record. */
+  transcript: Array<{ atMs: number; who: "Agent" | "Clerk"; text: string }>;
   events: RtEvent[];
   meters: Meters;
   closed: boolean;
@@ -126,16 +148,24 @@ const RECEIPT_TTL_MS = 15 * 60 * 1000;
 type Sink = (r: Receipt) => void | Promise<void>;
 let sink: Sink | null = null;
 export function setEventSink(fn: Sink): void { sink = fn; }
+// READ AS IT GOES (owner 07-30): a second hook, registered the same way the sink is, so every line
+// reaches the reader WHILE the check is still running and the verdict is ready at hang-up. Registered
+// (not imported) because rule 1 above keeps this module free of db/config/vendor code — the reader
+// pulls in a model client, so it can never be imported here. Unset in tests; the calls are no-ops.
+type LineHook = (room: string, who: "Agent" | "Clerk", text: string) => void;
+let lineHook: LineHook | null = null;
+export function setLineHook(fn: LineHook): void { lineHook = fn; }
 
 // ---- recording ------------------------------------------------------------------------------
 
 /** Open a receipt for a call. Called at dial, before the phone rings. Idempotent per room. */
-export function openReceipt(room: string, opts?: { lane?: Lane; planned?: Receipt["planned"]; callId?: number; note?: string }): Receipt {
+export function openReceipt(room: string, opts?: { lane?: Lane; planned?: Receipt["planned"]; callId?: number; note?: string; mapVersion?: number | null; attemptOf?: number | null }): Receipt {
   const existing = receipts.get(room);
   if (existing) return existing;
   const r: Receipt = {
     room, startMs: Date.now(), callId: opts?.callId, lane: opts?.lane ?? "unknown",
     planned: opts?.planned ?? [], events: [], meters: zeroMeters(), closed: false,
+    mapVersion: opts?.mapVersion ?? null, attemptOf: opts?.attemptOf ?? null, segments: [], transcript: [],
   };
   receipts.set(room, r);
   setTimeout(() => { if (receipts.get(room) === r) receipts.delete(room); }, RECEIPT_TTL_MS);
@@ -175,16 +205,102 @@ export function emit(room: string, kind: EventKind, note?: string, detail?: Reco
   } catch { /* recording must never break a call */ }
 }
 
+/**
+ * ADD FACTS TO AN EVENT ALREADY ON THE TIMELINE. The last one of its kind, which is the one still
+ * being lived through.
+ *
+ * WHY (owner, 07-28: "it opens charlie_join three times"): one agent joining one call used to write
+ * three lines that all read as the agent joining — the recorded question starting, his session
+ * opening, and the handover when the question finished. The event set is a closed sixteen and the
+ * Admin prints the note of every line, so three of them read as three joins on a call with one.
+ *
+ * The three are ONE story with details, not three events. The details are worth keeping (which
+ * signal confirmed the question had played, how many frames of the answer we were holding), so they
+ * are attached to the single line rather than each getting one of their own. Best-effort, like every
+ * other recorder here — a missing event is simply not amended.
+ */
+export function amend(room: string, kind: EventKind, patch: Record<string, unknown>): void {
+  try {
+    const r = receipts.get(room);
+    if (!r || r.closed) return;
+    for (let i = r.events.length - 1; i >= 0; i--) {
+      if (r.events[i].kind !== kind) continue;
+      r.events[i].detail = { ...(r.events[i].detail ?? {}), ...patch };
+      return;
+    }
+  } catch { /* recording must never break a call */ }
+}
+
+/**
+ * ONE LINE OF WHAT WAS SAID, AS WE HEARD IT (spec: the live call runtime, hard rule 2).
+ *
+ * "Our receipt is the source of truth for the transcript, the timings and the verdict. The voice
+ * provider's post-call webhook becomes supporting evidence, not the record." The timings and the
+ * verdict were already ours; the words were not — they were read back from the provider afterwards,
+ * which means a call whose webhook never lands has no transcript at all, and a provider that
+ * rewrites its own history rewrites ours.
+ *
+ * So each line is recorded HERE, live, in the order it happened, against the same clock as every
+ * other event on this call. TEXT ONLY — no audio, ever, on any path.
+ */
+export function recordLine(room: string, who: "Agent" | "Clerk", text: string): void {
+  try {
+    const r = receipts.get(room);
+    if (!r || r.closed) return;
+    const t = String(text || "").trim();
+    if (!t) return;
+    r.transcript.push({ atMs: Math.max(0, Date.now() - r.startMs), who, text: t.slice(0, 1000) });
+    if (r.transcript.length > 300) r.transcript.splice(0, r.transcript.length - 300); // runaway guard
+    // READ AS IT GOES: hand the line to the reader now, while the check is still running, so the
+    // verdict is ready the moment Charlie hangs up. Costs nothing on the line. See voice/live-read.ts.
+    try { lineHook?.(room, who, t); } catch { /* the reader must never break a check */ }
+  } catch { /* recording must never break a call */ }
+}
+
+/** The conversation as WE heard it, oldest first. */
+export function transcriptOf(r: Receipt): string {
+  return r.transcript.map((l) => `${l.who}: ${l.text}`).join("\n");
+}
+
 /** Attach the call_results row id once it exists. */
 export function linkCall(room: string, callId: number): void {
   const r = receipts.get(room);
   if (r && !r.closed) r.callId = callId;
 }
 
-/** Attach the provider's conversation id so a receipt can be checked against a bill. */
+/** Attach the provider's conversation id so a receipt can be checked against a bill. The FIRST one
+ *  stays the call's id; later segments carry their own (see openSegment). */
 export function linkProviderCall(room: string, providerCallId: string): void {
   const r = receipts.get(room);
-  if (r && !r.closed) r.providerCallId = providerCallId;
+  if (!r || r.closed) return;
+  if (!r.providerCallId) r.providerCallId = providerCallId;
+  const open = r.segments.find((s) => s.closeMs === null);
+  if (open && !open.providerCallId) open.providerCallId = providerCallId;
+}
+
+/**
+ * The agent's session opened. One call can have several of these — he may be closed for a hold and
+ * reopened when somebody comes back — and they are numbered stretches of ONE call, never separate
+ * calls. Returns the segment number so the caller can log it.
+ */
+export function openSegment(room: string, brain: "hosted" | "ours", why?: string): number {
+  try {
+    const r = receipts.get(room);
+    if (!r || r.closed) return 1;
+    const n = r.segments.length + 1;
+    r.segments.push({ n, openMs: Math.max(0, Date.now() - r.startMs), closeMs: null, brain, why });
+    return n;
+  } catch { return 1; }
+}
+
+/** The agent's session closed. Silent when there is nothing open — a double close must not throw. */
+export function closeSegment(room: string): void {
+  try {
+    const r = receipts.get(room);
+    if (!r || r.closed) return;
+    const open = [...r.segments].reverse().find((s) => s.closeMs === null);
+    if (open) open.closeMs = Math.max(0, Date.now() - r.startMs);
+  } catch { /* recording must never break a call */ }
 }
 
 /**
@@ -224,13 +340,27 @@ export function addMs(room: string, key: "speakingMs" | "listeningMs" | "ringing
   } catch { /* recording must never break a call */ }
 }
 
+/**
+ * "We are now measuring this." Turns a meter that means "never checked" (null) into a real,
+ * measured zero — which is a different fact, and the dashboard has to be able to tell them apart.
+ * Called when the ear that measures hold time actually attaches to a call; a call that never got
+ * that far keeps its null and says so honestly.
+ */
+export function startMeter(room: string, key: "holdMs"): void {
+  try {
+    const r = receipts.get(room);
+    if (!r || r.closed) return;
+    if (r.meters[key] === null) r.meters[key] = 0;
+  } catch { /* recording must never break a call */ }
+}
+
 export function getReceipt(room: string): Receipt | null { return receipts.get(room) ?? null; }
 
 /** Close the receipt and hand it to the sink exactly once. */
 export function closeReceipt(room: string, note?: string, reason?: string): Receipt | null {
   const r = receipts.get(room);
   if (!r || r.closed || flushed.has(room)) return null;
-  emit(room, "hangup", note || "Call ended", reason ? { reason } : undefined);
+  emit(room, "hangup", note || "Check ended", reason ? { reason } : undefined);
   r.closed = true;
   if (r.meters.endMs === null) r.meters.endMs = Math.max(0, Date.now() - r.startMs);
   // A session still open when the line drops was billing right up to the end.
@@ -280,13 +410,52 @@ export interface Rollup {
   stepsFired: number;
   stepsOnPause: number;
   charlieJoined: boolean;
+  /** How many times his session was opened on this call. More than one = he was closed for a hold
+   *  and brought back. */
+  charlieSegments: number;
+  /** WHICH brain served this call: the voice provider's hosted model, or our own account. Null when
+   *  he never joined. Without this the cost comparison the switch exists to prove is unprovable. */
+  brain: "hosted" | "ours" | "mixed" | null;
+  /** What the walk to a person actually achieved, for Mapper. It reads the record; nothing calls it. */
+  navOutcome: NavOutcome;
+}
+
+/**
+ * The navigation outcome Mapper reads off the receipt (section 10). Deliberately only the half the
+ * Ear can honestly judge — "wrong department" needs somebody to understand *this is the pharmacy*,
+ * which is words, which is Charlie, and that half is assembled from the conversation.
+ */
+export type NavOutcome =
+  | "reached_a_person"        // somebody answered and we talked to them
+  | "still_ringing"           // the menu finished and the desk just rang out
+  | "never_reached_anyone"    // the call ended without a person
+  | "route_failed"            // we had mapped steps and they did not run
+  | "no_route";               // nothing was mapped for this store
+
+export function navOutcomeOf(r: Receipt): NavOutcome {
+  const kinds = new Set(r.events.map((e) => e.kind));
+  const planned = r.planned.length;
+  const fired = r.events.filter((e) => e.kind === "alpha_press" || e.kind === "bravo_say").length;
+  if (r.meters.humanMs !== null || kinds.has("human_detected")) return "reached_a_person";
+  if (planned && fired < planned) return "route_failed";
+  // The desk was ringing and nobody ever came. Distinct from "we never got anywhere": the route
+  // worked, the store just did not pick up, and those two must not be confused in the evidence.
+  if (r.events.some((e) => e.kind === "ringing" && e.detail?.leg === "desk")) return "still_ringing";
+  return planned ? "never_reached_anyone" : "no_route";
 }
 
 /** Split a finished receipt into the seconds that matter. Everything rounds ONCE, at the end. */
 export function rollup(r: Receipt): Rollup {
   const m = r.meters;
   const sec = (ms: number) => Math.max(0, Math.round(ms / 1000));
-  const charlieMs = m.charlieOpenMs !== null && m.charlieCloseMs !== null ? Math.max(0, m.charlieCloseMs - m.charlieOpenMs) : 0;
+  // BILLED TIME IS THE SUM OF THE STRETCHES HE WAS ACTUALLY OPEN, not first-open to last-close.
+  // When he is closed for a hold and reopened, the gap between segments is time nobody paid for, and
+  // measuring it as one long session would invent a cost that never existed — which would make the
+  // saving from closing him invisible, i.e. exactly backwards.
+  const segMs = r.segments.filter((s) => s.closeMs !== null).reduce((t, s) => t + Math.max(0, (s.closeMs as number) - s.openMs), 0);
+  const charlieMs = r.segments.length
+    ? segMs
+    : (m.charlieOpenMs !== null && m.charlieCloseMs !== null ? Math.max(0, m.charlieCloseMs - m.charlieOpenMs) : 0);
   // Speaking and listening are measured independently and can overlap (a clerk talking over the
   // agent). Cap their sum at the connected time so silence can never read negative.
   const talkMs = Math.min(charlieMs, m.speakingMs + m.listeningMs);
@@ -321,14 +490,91 @@ export function rollup(r: Receipt): Rollup {
     stepsFired: steps.length,
     stepsOnPause: steps.filter((e) => e.detail?.via === "prompt").length,
     charlieJoined: m.charlieOpenMs !== null,
+    charlieSegments: r.segments.length,
+    brain: !r.segments.length ? null
+      : r.segments.every((s) => s.brain === "ours") ? "ours"
+      : r.segments.every((s) => s.brain === "hosted") ? "hosted" : "mixed",
+    navOutcome: navOutcomeOf(r),
+  };
+}
+
+/**
+ * THE STAMPED ROW, READ BACK AS THE SAME ROLL-UP A LIVE CALL PRODUCES.
+ *
+ * WHY THIS EXISTS (owner, 07-28): "one envelope, two answers." A finished call was rolled up in two
+ * different places — by call id it came back complete, and by room it came back with the seconds and
+ * the cost NULL, because the by-room reader only knew how to find them on the LAST EVENT'S DETAIL.
+ * That is only where they live for a call with no call_results row (an Admin one-off). An ATTACHED
+ * call stamps them on the row instead, and nothing was reading them back off it. Same call, same
+ * envelope, two different answers depending on which door you came in.
+ *
+ * So the read-back lives HERE, once, next to the roll-up it has to agree with. Pure — the caller
+ * hands in the row and the timeline it already loaded.
+ *
+ * A number the row never stamped stays NULL. A row written by an older build has some of these
+ * columns and not others, and reporting the ones it happens to have would put a nonsense pair on
+ * screen: nought seconds connected beside a second of dead air. So if the connected time was never
+ * stamped, the whole agent block reads as unmeasured, which is the truth.
+ */
+export interface StampedCall {
+  lane?: string | null;
+  callSeconds?: number | null;
+  navSeconds?: number | null;
+  talkSeconds?: number | null;
+  charlieConnectedSeconds?: number | null;
+  charlieTalkingSeconds?: number | null;
+  charlieSpeakingSeconds?: number | null;
+  charlieListeningSeconds?: number | null;
+  charlieSilentSeconds?: number | null;
+  ringSeconds?: number | null;
+  holdSeconds?: number | null;
+  billedMinutes?: number | null;
+  menuSeconds?: number | null;
+  brain?: string | null;
+  navOutcome?: string | null;
+  charlieSegments?: number | null;
+}
+export function rollupFromRow(call: StampedCall, timeline: Array<{ kind: string; atSec?: number | null; detail?: unknown }>): Rollup {
+  const steps = timeline.filter((t) => t.kind === "alpha_press" || t.kind === "bravo_say");
+  // HOW LONG THE WHOLE CHECK TOOK. The row's own column is only ever written by the OLD path, off the
+  // number the voice provider hands back — so on every check the new engine placed it is null, and
+  // the screen printed a 33 second check as 0s (owner 07-30). The timeline is right here and its last
+  // line is the hang-up, which is the same second by construction. Read it rather than print a nought.
+  const lastSec = timeline.length ? Number(timeline[timeline.length - 1].atSec ?? 0) : 0;
+  const callSecs = call.callSeconds ?? (lastSec > 0 ? lastSec : 0);
+  const stamped = call.charlieConnectedSeconds != null;
+  // How many stretches the agent was open for. The row carries it on every call written by the new
+  // engine; older rows do not, so it is read back off the timeline the same way it always was.
+  const joins = timeline.filter((t) => t.kind === "charlie_join" && (t.detail as { segment?: number } | null)?.segment != null).length;
+  return {
+    lane: (call.lane ?? "unknown") as Lane,
+    callSecs,
+    navSeconds: call.navSeconds ?? null,
+    talkSeconds: call.talkSeconds ?? null,
+    charlieConnectedSeconds: stamped ? call.charlieConnectedSeconds! : 0,
+    charlieTalkingSeconds: stamped ? (call.charlieTalkingSeconds ?? 0) : 0,
+    charlieSilentSeconds: stamped ? (call.charlieSilentSeconds ?? 0) : 0,
+    speakingSecs: stamped ? (call.charlieSpeakingSeconds ?? 0) : 0,
+    listeningSecs: stamped ? (call.charlieListeningSeconds ?? 0) : 0,
+    ringSeconds: stamped ? (call.ringSeconds ?? 0) : 0,
+    holdSeconds: call.holdSeconds ?? null,
+    billedMinutes: call.billedMinutes ?? (callSecs > 0 ? Math.ceil(callSecs / 60) : 0),
+    menuSeconds: call.menuSeconds ?? null,
+    stepsFired: steps.length,
+    stepsOnPause: steps.filter((t) => (t.detail as { via?: string } | null)?.via === "prompt").length,
+    charlieJoined: stamped && (call.charlieConnectedSeconds ?? 0) > 0,
+    charlieSegments: call.charlieSegments ?? joins,
+    brain: (call.brain ?? null) as Rollup["brain"],
+    navOutcome: (call.navOutcome ?? "no_route") as NavOutcome,
   };
 }
 
 /** For tests and for the replay API: a receipt built from raw parts without touching the clock. */
-export function _receiptFrom(parts: { room?: string; lane?: Lane; events?: RtEvent[]; meters?: Partial<Meters> }): Receipt {
+export function _receiptFrom(parts: { room?: string; lane?: Lane; events?: RtEvent[]; meters?: Partial<Meters>; planned?: Receipt["planned"]; segments?: CharlieSegment[]; transcript?: Receipt["transcript"] }): Receipt {
   return {
-    room: parts.room ?? "test", startMs: 0, lane: parts.lane ?? "unknown", planned: [],
+    room: parts.room ?? "test", startMs: 0, lane: parts.lane ?? "unknown", planned: parts.planned ?? [],
     events: parts.events ?? [], meters: { ...zeroMeters(), ...(parts.meters ?? {}) }, closed: true,
+    segments: parts.segments ?? [], transcript: parts.transcript ?? [],
   };
 }
 

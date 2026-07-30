@@ -7,7 +7,7 @@ import { fetchStorePhone } from "../store-phone";
 import {
   accounts, callResults, categories, chains, customerSchedules, retailers, scheduleTargets, schedules, statuses, watches, zoneRetailers, zones,
 } from "../db/schema";
-import { linkCall } from "./events"; // ties the call row to its receipt (the timeline + the seconds)
+import { linkCall, openReceipt, emit, closeReceipt, linkProviderCall, markNow } from "./events"; // ties the call row to its receipt (the timeline + the seconds)
 import { recordVerdict } from "./receipt-store";
 import { chargeOneCredit, isCompAccount, getAccount } from "../billing";
 import { sendRestockEmailTo, sendAlert, accountLang, localizeResult } from "../alerts";
@@ -64,30 +64,37 @@ async function notifyAutoCheckResult(callId: number): Promise<void> {
 
 import { config } from "../config";
 import { ElevenLabsProvider } from "../voice/elevenlabs";
-import { takeBridgeNav } from "../voice/bridge";
+import { takeBridgeNav, wasDropped } from "../voice/bridge";
 import { placeBridgeCall, roomFinalizers, parseNavSteps } from "../voice/bridge-place";
-import { stageNavPromptPlan, listenNavSummary } from "./listen-nav";
-import { reportCallDrift } from "./mapgraph";
+import { type NavStep } from "./listen-nav";
+import { activeMap } from "./mapgraph";
 import { learnTreeFromTranscript, consumeTreeRelearn } from "./tree-learn";
 import { connectAtSecFor } from "./recipe";
+import { callTuning } from "./tuning";
 import { deltaStoreCall, setDeltaFinalize, tdTranscript, type TdSession } from "./tapedeck";
 import type { AgentTuning } from "../voice/provider";
 import { notifyInStock, notifyContact } from "./notify";
 import { getSetting, setSetting } from "../db/settings";
-import { specificityClause, RESTOCK_PROMPT, VOICE_DEFAULTS, PREMIUM_FOLLOWUP, ASK_SHIPMENT_DAY } from "../voice/prompts";
-import { classifyVerdict, reconcile, productDetailLabel } from "../voice/verdict";
+import { specificityClause, RESTOCK_PROMPT, VOICE_DEFAULTS, PREMIUM_FOLLOWUP, ASK_SHIPMENT_DAY, oneTurnFollowup, oneTurnShipmentDay } from "../voice/prompts";
+import { consensusFor, productDetailLabel } from "../voice/verdict";
+import { armLiveRead, dropLiveRead } from "../voice/live-read";
 
 const DEFAULT_OPENER = "Heyy! I was just checking to see if you guys got any {category} in?";
 
 // Round-robin rotation lives in rotate.ts, shared with the D-lane so both lanes advance the SAME
 // counters (owner 2026-07-15: two voices on a workflow must alternate call to call, either lane).
 import { rotatePick, resetRotation } from "./rotate";
+import { declaresOneTurn } from "./tapedeck";   // ONE definition of the one-question fold, shared by both lanes
 export { resetRotation };
 
 // ---- Workflows: the Voice→Designer "voice + script + persona + voice tuning" bundle, assignable
 // per store / per chain / as the global default. resolveWorkflow picks one for a store and composes
 // its persona; buildRestockVars applies it to the call (opener rotation, {{personality}}, voice). ----
-export interface AppliedWorkflow { name: string; voiceId?: string; voices: string[]; tuning?: Record<string, unknown>; openers: string[]; personality: string; lane: string }
+export interface AppliedWorkflow { name: string; voiceId?: string; voices: string[]; tuning?: Record<string, unknown>; openers: string[]; personality: string; lane: string;
+  /** ONE QUESTION INSTEAD OF TWO, declared by the workflow's own follow-up DATA (declaresOneTurn).
+   *  `setLine` is the folded in-stock question, `noLine` the restock-day one. The recorded-clip lane
+   *  plays them as clips; the live-agent lane hands them to the agent as its follow-up instruction. */
+  oneTurn: boolean; setLine: string; noLine: string }
 type AnyObj = Record<string, unknown>;
 const jparse = (s: string | null, fb: unknown) => { try { return s ? JSON.parse(s) : fb; } catch { return fb; } };
 
@@ -114,6 +121,70 @@ function composePersona(p: AnyObj | undefined): string {
   return bits.join(" ").trim();
 }
 
+/** The voice a workflow gets when nobody set one. Never empty: a call with no voice used to fall
+ *  silently onto the old path, which is worse than a check that did not happen. */
+export function defaultVoiceId(): string { return config.voice.defaultVoiceId; }
+/** The opener for a store we were cut off from moments ago. No dash inside the sentence (copy law),
+ *  one register, and it gets straight to the question rather than dwelling on our own problem. */
+export const RECONNECT_OPENER = "Hi, sorry, I just got disconnected. I was checking to see if you have any {category} in stock right now?";
+/** Its Spanish, shipped in the same commit (copy law). Used once stored routes carry a language,
+ *  which the map already has a field for. */
+export const RECONNECT_OPENER_ES = "Hola, perdón, se me cortó la llamada. Estaba viendo si tienen {category} en stock ahora mismo.";
+
+/**
+ * Did OUR LAST CALL — this customer, this store, this product — break on our end moments ago?
+ *
+ * ALL FOUR MATTER, and the customer most of all (owner, 07-28). We dial AS the customer's own
+ * verified number, so a different customer checking the same store is a different number ringing
+ * the clerk's phone. "I just got disconnected" from a number they have never spoken to is a
+ * stranger claiming a conversation that never happened, which is worse than a normal greeting and
+ * is exactly what the shelf life exists to avoid.
+ *
+ * Only a genuinely dropped call counts. A store that was closed, busy, or simply did not pick up is
+ * not something we should apologise for.
+ */
+export async function recentlyDropped(retailerId: number, categoryId: number, finderUserId?: string | null): Promise<boolean> {
+  if (!finderUserId) return false;   // no known caller = we cannot claim we were the one cut off
+  try {
+    const since = Math.floor(Date.now() / 1000) - (await callTuning()).reconnectWindowMin * 60;
+    const row = (await db.select({ id: callResults.id }).from(callResults).where(and(
+      eq(callResults.finderUserId, finderUserId),
+      eq(callResults.retailerId, retailerId),
+      eq(callResults.categoryId, categoryId),
+      eq(callResults.statusKey, "call_dropped"),
+      gte(callResults.startedAt, since),
+    )).orderBy(desc(callResults.startedAt)).limit(1))[0];
+    return !!row;
+  } catch { return false; }
+}
+
+/**
+ * ONE VERSION IN, ONE PLAN OUT (spec: the live call runtime, section 10).
+ *
+ * Everything a call needs in order to walk a menu — what to press, what to say, and which recording
+ * each of those waits for — comes out of the SAME saved version here, or it does not come out at
+ * all. That is the whole guarantee: pieces from two versions of one route can never be mixed on a
+ * live call, because there is only ever one version on the table.
+ *
+ * Pure, so the guarantee is provable without a database or a phone call.
+ */
+export function navPlanFromVersion(
+  recipeSteps?: Array<{ action?: string; value?: string; atSec?: number; afterPrompt?: number }> | null,
+): { steps: NavStep[]; dtmf: string; say: string } {
+  const steps: NavStep[] = (recipeSteps ?? [])
+    .filter((s) => (s.action === "press" || s.action === "say") && String(s.value ?? "").trim())
+    .map((s) => ({ action: s.action as "press" | "say", value: String(s.value).trim(), atSec: Math.round(s.atSec ?? 0), afterPrompt: s.afterPrompt }))
+    .sort((a, b) => a.atSec - b.atSec);
+  // The carrier only understands the timed form. A press with no usable digit is dropped rather
+  // than sent as a bare "@8", which is the shape that once made whole chains press nothing at all.
+  const dtmf = steps.filter((s) => s.action === "press")
+    .map((s) => ({ d: s.value.replace(/[^0-9*#]/g, ""), at: s.atSec }))
+    .filter((x) => x.d).map((x) => `${x.d}@${x.at}`).join(",");
+  const say = steps.filter((s) => s.action === "say")
+    .map((s) => `${s.value.replace(/[,@]/g, " ").trim()}@${s.atSec}`).join(",");
+  return { steps, dtmf, say };
+}
+
 /** Resolve a store's assigned workflow: store override → chain default → global default. */
 export async function resolveWorkflow(retailerId: number, chainId: number | null): Promise<AppliedWorkflow | null> {
   const [libS, defS, chainS, storeS, personaS] = await Promise.all([
@@ -132,9 +203,14 @@ export async function resolveWorkflow(retailerId: number, chainId: number | null
   const persona = Array.isArray(personas) ? personas.find((p) => p && p.name === wf.persona) : undefined;
   // Voice strip: `voices` (array) rotates per call, same round-robin as openers. Legacy workflows
   // that only carry the single `voiceId` behave as a 1-voice strip — identical to before.
+  // EVERY WORKFLOW HAS A VOICE (owner, 07-28). A workflow with none used to mean the call quietly
+  // fell back to the old path with nothing saying which stores that happened to. The default is
+  // filled in here so the case stops existing, rather than being handled everywhere downstream.
   const voices = Array.isArray(wf.voices) && (wf.voices as unknown[]).length
     ? (wf.voices as unknown[]).map(String).filter(Boolean)
-    : (wf.voiceId ? [String(wf.voiceId)] : []);
+    : (wf.voiceId ? [String(wf.voiceId)] : [defaultVoiceId()]);
+  const fu = (wf.followups && typeof wf.followups === "object") ? (wf.followups as Record<string, unknown>) : undefined;
+  const fuList = (k: string) => { const v = fu?.[k]; return Array.isArray(v) ? v.map(String).filter(Boolean) : []; };
   return {
     name: String(wf.name),
     voiceId: wf.voiceId ? String(wf.voiceId) : undefined,
@@ -144,11 +220,39 @@ export async function resolveWorkflow(retailerId: number, chainId: number | null
     personality: composePersona(persona),
     // Which call lane this workflow runs: "delta" = cheap recorded-clip D-lane, else the live agent.
     lane: typeof wf.lane === "string" ? wf.lane : "charlie",
+    // THE ONE QUESTION FOLD, read from the SAME follow-up data the recorded-clip lane reads. A
+    // workflow that runs the live agent used to have no way to say "ask once" at all, so a store
+    // moved onto a folded workflow still got the old two question flow and the owner heard the
+    // second question on a real call (07-28). Rotates like every other scripted line.
+    oneTurn: declaresOneTurn(fu), setLine: rotatePick(`fu:${String(wf.name)}:set`, fuList("set")) || "", noLine: rotatePick(`fu:${String(wf.name)}:no`, fuList("no")) || "",
   };
 }
 
 const VOICEMAIL_INSTRUCTION =
   "If you reach a voicemail, answering machine, or automated recording (a recorded greeting, an automated menu with no live person, or a beep) — do NOT say anything and end the call immediately. Never leave a message.";
+
+/**
+ * WHAT WE HEARD IS THE RECORD. The provider's copy is supporting evidence (receipt spec, rule 2).
+ *
+ * A bridged call records every line live, on our own clock, starting with the recorded question we
+ * played the moment somebody picked up. The provider only ever sees the stretch its own agent was on,
+ * so its copy begins mid conversation, and on a call where the agent never spoke it does not exist at
+ * all. Writing it over ours DELETED the customer's transcript: on a real Fun store call the finished
+ * result opened with the clerk answering a question that was nowhere on the page, and on another it
+ * came back as a single stray line (owner, 07-28).
+ *
+ * So ours wins whenever we have any. Theirs fills in only for the old direct path, which streams
+ * nothing to us and therefore records nothing of its own. Re-read at write time rather than trusting
+ * a row fetched earlier, because the receipt flushes on hangup and this runs off a later webhook.
+ */
+export async function transcriptPatch(callId: number, theirs: string | null | undefined): Promise<{ transcript?: string }> {
+  try {
+    const mine = (await db.select({ t: callResults.transcript }).from(callResults).where(eq(callResults.id, callId)))[0]?.t;
+    if (mine && mine.trim()) return {};
+  } catch { /* a failed read must never cost us the provider's copy */ }
+  const t = (theirs || "").trim();
+  return t ? { transcript: t } : {};
+}
 
 /** Kiosk-only store: has a vending kiosk but no staffed counter that sells packs. The agent asks
  *  whether the kiosk is working/stocked rather than about a shelf shipment. Callers may also pass an
@@ -168,7 +272,10 @@ export async function buildRestockVars(
   specificProduct?: string,
   extraCategoryIds?: number[],
   kioskMode?: boolean,
-): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; say: string | null; connectAtSec: number | null; maxTalk: number | null; voiceId: string | null; voiceTuning: Record<string, unknown> | null; listenNav: boolean; dynamicVars: Record<string, string> } | null> {
+  /** WHO is checking. We dial as their own verified number, so the reconnect opener can only apply
+   *  to the customer whose call was actually cut off — see recentlyDropped. */
+  finderUserId?: string | null,
+): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; say: string | null; connectAtSec: number | null; maxTalk: number | null; voiceId: string | null; voiceTuning: Record<string, unknown> | null; listenNav: boolean; navSteps: NavStep[]; mapVersion: number | null; mapVersionId: number | null; dynamicVars: Record<string, string> } | null> {
   const retailer = (await db.select().from(retailers).where(eq(retailers.id, retailerId)))[0];
   if (!retailer) return null;
   const category = (await db.select().from(categories).where(eq(categories.id, categoryId)))[0];
@@ -201,13 +308,43 @@ export async function buildRestockVars(
   // Per-workflow rotation key so each workflow round-robins its OWN openers independently (and the
   // "Reset rotation" button can reset just this one). No workflow → the shared global opener rotation.
   const openerTemplate = rotatePick(workflow ? "opener:" + workflow.name : "opener", openerVariants) || (await getSetting("vt_opening")) || DEFAULT_OPENER;
-  const openingLine = openerTemplate.replace(/\{category\}/g, category.label);
+  let openingLine = openerTemplate.replace(/\{category\}/g, category.label);
+  // CALLING STRAIGHT BACK AFTER A DROPPED CALL (spec: the live call runtime, section 8).
+  // Only when THIS customer's own last call to this store, for this product, broke on our end
+  // moments ago. We dial as their number, so it has to be the same number the clerk was cut off
+  // from — otherwise a stranger is claiming a conversation that never happened.
+  //
+  // Never automatic: we do not ring back on our own. This only ever runs because the customer
+  // started another check themselves. And the line has a SHELF LIFE, minutes not hours, because
+  // later on "I just got disconnected" is strange rather than natural.
+  if (await recentlyDropped(retailerId, categoryId, finderUserId)) {
+    openingLine = RECONNECT_OPENER.replace(/\{category\}/g, category.label);
+  }
   const clarification = specificityClause((specificProduct ?? "").trim());
 
-  // Bravo voice nav: build the spoken plan ("no@26,front@38,…") from the locked recipe so the bridge
-  // speaks it with cheap TTS before opening the agent — keeps voice-IVR stores (CVS) cheap.
-  let say: string | null = null;
-  if (chain?.navType === "voice" && chain.navRecipe) {
+  // THE MAP, READ ONCE, AS ONE THING (spec: the live call runtime, section 10).
+  //
+  // What we press, what we say, which recording each step waits for and how long the walk takes all
+  // describe the SAME saved version of this store's menu, so they must be read together or not at
+  // all. They used to come from three places: the chain's keypad column, the chain's recipe column,
+  // and an in-memory side channel keyed by the SHAPE of the step list — claimed by whichever call
+  // happened to be running an identical-looking route, expiring after ten minutes, dying on every
+  // restart and carrying no version at all. Two versions of one route could therefore have their
+  // pieces mixed on a live call. One read, one version, no mixing.
+  //
+  // It also brings STORE EXCEPTIONS to the runtime for the first time. activeMap prefers a map saved
+  // for this exact store over the chain's, which is the whole point of store exceptions — one branch
+  // answering differently no longer has to be wrong on every call.
+  const mapV = chain ? await activeMap(chain.id, retailer.id).catch(() => null) : null;
+  const plan = navPlanFromVersion(mapV?.recipe?.steps);
+  const mapSteps = plan.steps;
+
+  // The two executable strings the carrier understands, built from that one version. No saved
+  // version (or nothing worth running in it) falls back to the chain row exactly as before, so a
+  // chain the backfill never carried over behaves the way it does today.
+  const dtmf = plan.dtmf || (chain?.dtmfShortcut ?? null);
+  let say: string | null = plan.say || null;
+  if (!say && !mapSteps.length && chain?.navType === "voice" && chain.navRecipe) {
     try {
       const r = JSON.parse(chain.navRecipe) as { steps?: Array<{ action?: string; value?: string; atSec?: number }> };
       const ss = (r.steps ?? []).filter((s) => s.action === "say" && s.value);
@@ -224,28 +361,19 @@ export async function buildRestockVars(
   const listenNav = lnRaw === "all"
     || (!!chain?.name && lnRaw.split(",").map((x) => x.trim()).filter(Boolean).includes(chain.name.toLowerCase()));
 
-  // WHICH RECORDING each step waits for (owner 07-26). The mapped route now knows that "general" is
-  // said after the store finishes reading its options, not at second 41 — but the plan the bridge
-  // builds is a flat "word@seconds" string with nowhere to put that. So stage it here, keyed by the
-  // exact route, and listening navigation claims it as the call starts. No map data → nothing staged
-  // → the call behaves exactly as it does today.
-  if (listenNav && chain?.navRecipe) {
-    try {
-      const r = JSON.parse(chain.navRecipe) as { steps?: Array<{ action?: string; value?: string; atSec?: number; afterPrompt?: number }> };
-      const parsed = parseNavSteps(chain.dtmfShortcut ?? null, say);
-      const mapped = (r.steps || []).filter((s) => s.action === "press" || s.action === "say");
-      if (parsed.length && parsed.length === mapped.length) {
-        stageNavPromptPlan(parsed.map((p, i) => ({ ...p, afterPrompt: mapped[i]?.afterPrompt })));
-      }
-    } catch { /* unreadable recipe → clock behaviour, unchanged */ }
-  }
-
   return {
     retailer, category, chainName: chain?.name ?? null,
-    // Bridge-level keypad shortcut (chain-wide): pressed by OUR code at a fixed time, not the LLM.
-    dtmf: chain?.dtmfShortcut ?? null,
+    // Bridge-level keypad shortcut: pressed by OUR code at a fixed time, not the LLM.
+    dtmf,
     say,
     listenNav,
+    // The steps as the saved version really holds them, anchors and all, handed straight to the
+    // call instead of being re-derived from the flat strings above and re-united with its anchors
+    // by luck. Empty = nothing mapped, and the flat strings are all there is.
+    navSteps: mapSteps,
+    // Which saved version ran, so the receipt can say so and a bad call is traceable to a decision.
+    mapVersion: mapV?.version ?? null,
+    mapVersionId: mapV?.id ?? null,
     // ABC deterministic hand-off: open the billed agent at the chain's LEARNED time-to-human.
     // Guarded (connectAtSecFor): direct-answer chains and chains with no tree evidence NEVER get a
     // timer — the timer mutes the agent until it fires (the 2026-07-02 silent-agent bug). null =
@@ -274,13 +402,21 @@ export async function buildRestockVars(
       // Restock-day push is STANDARD on every live check (owner 07-16: "standard for any not in
       // stock") — this path shipped "" while every other path asked, so live checks never captured
       // the day. One source of truth in prompts.ts.
-      ask_shipment_day: ASK_SHIPMENT_DAY,
+      // ONE QUESTION, THEN WRAP. A workflow whose follow-up data folds the set and the format into
+      // a single question swaps BOTH of these for their one-question form. Any other workflow gets
+      // exactly what it got before. The Fun store ran a folded workflow on 07-28 and the agent still
+      // asked twice, because until now only the recorded-clip lane could read the fold.
+      ask_shipment_day: workflow?.oneTurn ? oneTurnShipmentDay(workflow.noLine) : ASK_SHIPMENT_DAY,
       // Kiosk-only store → the prompt asks about the vending kiosk, not a shelf shipment.
       // Explicit request flag wins; otherwise inferred from the store's flags.
       kiosk_mode: (kioskMode ?? kioskOnly(retailer)) ? "true" : "",
+      // THE WRONG-DEPARTMENT SAVE. One switch, read here so BOTH lanes ask the same thing: landing on
+      // the pharmacy counter asks to be put through instead of ending the check. "" = the prompt's
+      // whole section is inert and the call behaves exactly as it does today.
+      ask_for_transfer: (await getPolicy()).flags.askForTransfer ? "true" : "",
       // Preview / admin / scheduled paths default to the premium follow-up; the consumer trigger
       // path overrides this to the free (no-follow-up) text for non-subscribers.
-      premium_followup: PREMIUM_FOLLOWUP,
+      premium_followup: workflow?.oneTurn ? oneTurnFollowup(workflow.setLine) : PREMIUM_FOLLOWUP,
     },
   };
 }
@@ -465,6 +601,18 @@ export async function triggerCall(a: TriggerArgs) {
     throw new Error("calls_busy");
   }
   const acct = slot?.account;
+  // A CALL THAT LEAVES NO RECORD IS A BUG, NOT A SPECIAL CASE (spec: the live call runtime, rule 4).
+  // This is the OLD direct path: the provider dials the store itself, so there is no media stream
+  // for us to listen to and none of the second-by-second detail the bridge produces. What there IS
+  // is a call that happened, to a store, at a time, with an outcome — and until now it produced no
+  // receipt at all, so with the new engine switched off every real check was invisible. This is
+  // deliberately a THIN receipt: the moments we can honestly witness from here and nothing more.
+  const directRoom = `direct:${row.id}`;
+  openReceipt(directRoom, {
+    callId: row.id, lane: "direct",
+    note: `Dialing ${retailer.name} the old way, without the media stream`,
+  });
+  armLiveRead(directRoom, category.label, a.specificProduct ?? a.clarification); // read as it goes (owner 07-30)
   try {
     const { providerCallId, callSid } = await provider.startCall({
       callId: row.id,
@@ -490,15 +638,25 @@ export async function triggerCall(a: TriggerArgs) {
       personalityTone: wf?.personality || undefined,
       // Kiosk-only store → agent asks about the vending kiosk. Explicit request flag wins; else inferred.
       kioskMode: a.kioskMode ?? kioskOnly(retailer),
+      // THE WRONG-DEPARTMENT SAVE, read from the one switch. Both lanes send the same value, so
+      // turning it off can never leave one lane asking to be put through and the other giving up.
+      askForTransfer: (await getPolicy()).flags.askForTransfer,
       // Premium gate: subscribers (and comp/owner) get the product-type follow-up; free finders skip it.
       premiumFollowup: await finderIsPremium(a.finderUserId),
+      // ONE QUESTION, THEN WRAP, when the store's workflow declares the fold. Same resolution the
+      // bridge lane does, so the switch being on or off can never change how many questions we ask.
+      foldedQuestions: wf?.oneTurn ? { set: wf.setLine, no: wf.noLine } : undefined,
     });
+    linkProviderCall(directRoom, providerCallId);
+    emit(directRoom, "connected", "The provider is placing the call on its own line", { providerCallId, callSid: callSid ?? null });
     await db.update(callResults)
-      .set({ providerCallId, status: "in_progress" })
+      .set({ providerCallId, room: directRoom, status: "in_progress" })
       .where(eq(callResults.id, row.id));
     return { ...row, providerCallId, callSid, status: "in_progress" as const };
   } catch (e) {
     await releaseCallSlot(`call:${row.id}`); // dial failed → free the slot now (else TTL reaps it)
+    emit(directRoom, "unknown", "The carrier refused the call", { error: String(e).slice(0, 200) });
+    closeReceipt(directRoom, "Never dialled", "dial-failed");
     await db.update(callResults).set({ status: "failed", summary: String(e) }).where(eq(callResults.id, row.id));
     throw e;
   }
@@ -532,7 +690,7 @@ export async function bridgeCheckCall(a: TriggerArgs) {
   const wf = await resolveWorkflow(retailer.id, retailer.chainId ?? null).catch(() => null);
   if (wf?.lane === "delta") return triggerCall(a); // D-lane is already the cheap engine for its stores
 
-  const v = await buildRestockVars(a.retailerId, a.categoryId, a.specificProduct ?? a.clarification, undefined, a.kioskMode);
+  const v = await buildRestockVars(a.retailerId, a.categoryId, a.specificProduct ?? a.clarification, undefined, a.kioskMode, a.finderUserId ?? null);
   if (!v) throw new Error("restock vars unavailable");
 
   const [row] = await db.insert(callResults).values({
@@ -568,7 +726,7 @@ export async function bridgeCheckCall(a: TriggerArgs) {
     // Human reached, billed agent open — hand the row to the normal EL ingest by conv id.
     db.update(callResults).set({ providerCallId: convId, status: "in_progress" }).where(eq(callResults.id, row.id))
       .catch((e) => console.error("bridge check connect update:", e));
-  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, apiKey: acct.apiKey, agentId: acct.agentId, listenNav: v.listenNav });
+  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, apiKey: acct.apiKey, agentId: acct.agentId, listenNav: v.listenNav, navSteps: v.navSteps, mapVersion: v.mapVersion });
   if (r.error || !r.room) {
     await slot.release(); // dial never placed → free the slot immediately
     await db.update(callResults).set({ status: "failed", summary: r.error || "bridge call failed" }).where(eq(callResults.id, row.id));
@@ -578,27 +736,37 @@ export async function bridgeCheckCall(a: TriggerArgs) {
   // `room` is the receipt's key and nothing ever overwrites it — unlike providerCallId, which the
   // voice provider's conversation id replaces mid-call. This is the stable join for the timeline.
   linkCall(r.room, row.id);
+  // READ AS IT GOES (owner 07-30): arm the reader for this room now, so it reads the conversation
+  // while it happens and the verdict is ready at hang-up instead of being started then.
+  armLiveRead(r.room, category.label, a.specificProduct ?? a.clarification);
   await db.update(callResults).set({ providerCallId, room: r.room }).where(eq(callResults.id, row.id));
   // If the call ends without ever reaching a human (voicemail hang-up, busy, no answer), no conv id
   // ever lands — the room finalizer closes the row so zone runs / schedules still reach a terminal state.
   roomFinalizers.set(r.room, (twilioStatus) => {
     void (async () => {
-      // DRIFT (owner 07-26): every real check re-measures the map for free. What we compare is what
-      // the call already produced — how many recordings played, when each step fired, and whether a
-      // step had to fall back to the clock. A step firing on the clock is the early warning that a
-      // store changed its menu, which is exactly what talked over CVS and Walmart. No speech
-      // recognition, no model, so this costs nothing and runs on every check.
-      const chainId = v.retailer.chainId;
-      const summary = listenNavSummary(r.room!);
-      if (chainId && summary && summary.fired.length) {
-        await reportCallDrift({
-          chainId, storeId: v.retailer.id, callId: row.id, navId: `bridge:${r.room}`,
-          fired: summary.fired, promptCount: summary.promptCount, navEndSec: summary.navEndSec,
-          reachedHuman: twilioStatus === "completed",
-        }).catch(() => { /* knowledge is best-effort — never block a verdict */ });
-      }
+      // DRIFT IS REPORTED FROM THE RECEIPT, NOT HERE. It used to be reported at this point, from the
+      // listening-navigation session — which meant a check on the plain path reported nothing at all,
+      // and once the map started reading the receipt too, a listening call reported the SAME drift
+      // twice: two observations, two hits to the same confidence score, one call. The receipt is the
+      // source of truth and it covers every check, so this is its job alone now
+      // (mapgraph.learnFromReceipt, wired at onReceiptClosed).
       const cur = (await db.select().from(callResults).where(eq(callResults.id, row.id)))[0];
       if (!cur || cur.status !== "dialing") return; // conv id landed → EL ingest owns the verdict
+      // THE DROPPED CALL (spec section 8). Something on OUR side broke, so this is not the store's
+      // fault and not the customer's. Status stays `no_answer` — deliberately NOT `completed`, which
+      // is the only status the one-hour block matches, so a customer whose call we broke can try
+      // that same store again immediately. Never charged, and never retried on its own.
+      const dropWhy = wasDropped(r.room!);
+      if (dropWhy) {
+        await db.update(callResults).set({
+          status: "no_answer", confirmed: null, statusKey: "call_dropped",
+          summary: `The call broke on our end (${dropWhy}). Nothing was checked, nobody was charged.`,
+          completedAt: Math.floor(Date.now() / 1000),
+        }).where(eq(callResults.id, row.id));
+        await releaseCallSlot(`call:${row.id}`);
+        await notifyAutoCheckResult(row.id);
+        return;
+      }
       // Twilio's terminal status IS the real reason on this lane (EL never joined): map it to the
       // statuses-registry key so the customer sees busy/bad-number, never a bare "call failed".
       const statusKey = ({ busy: "busy", failed: "bad_number" } as Record<string, string>)[twilioStatus] ?? "nobody_answered";
@@ -638,8 +806,7 @@ async function finalizeDeltaSession(s: TdSession): Promise<void> {
   // verdict to an honest "no clear answer" (not charged), and its extraction fixes transcription
   // mishears in the product label ("Scarlet and Violet 10" → tin) before anything is shown or stored.
   if (answered) {
-    const second = await classifyVerdict(transcript, chk.categoryLabel).catch(() => null);
-    const consensus = reconcile({ confirmed, statusKey }, second);
+    const { consensus, second } = await consensusFor({ confirmed, statusKey }, transcript, chk.categoryLabel);
     confirmed = consensus.confirmed; statusKey = consensus.statusKey; definitive = consensus.definitive; agreed = consensus.agreed;
     const label = productDetailLabel(second);
     if (label) productDetail = label; // the second read's trade-name mapping beats raw ASR text
@@ -995,15 +1162,13 @@ export async function ingestPending(): Promise<number> {
     let restockDayHeard: string | null = null;
     let restockTimeHeard: string | null = null;
     if (outcome.status === "completed") {
-      // Speed: the second read decides the VERDICT only when EL was unclear (the case it rescues);
-      // decisive EL answers stand. But on a confirmed YES we still run it for EXTRACTION ONLY — it's
-      // what captures the set + product form the clerk named ("3-pack blister · Pitch Black"), which
-      // decisive calls used to drop entirely (owner 07-10 call 8).
-      const needSecond = primaryConfirmed === null && !outcome.soldOut && !outcome.doesNotSell;
-      const second = (needSecond || primaryConfirmed === true) ? await classifyVerdict(outcome.transcript, primaryLabel || "the product") : null;
-      const consensus = reconcile(
+      // THE READER RULE (owner 07-29), one shared implementation — see consensusFor in
+      // src/voice/verdict.ts. This used to run the second read for EXTRACTION ONLY on a decisive
+      // answer and hand `null` to the merge, so a reader that disagreed with a confirmed IN STOCK was
+      // ignored and the customer was charged for a green we were not sure of.
+      const { consensus, second } = await consensusFor(
         { confirmed: primaryConfirmed, soldOut: outcome.soldOut, doesNotSell: outcome.doesNotSell, statusKey: outcome.statusKey },
-        needSecond ? second : null,
+        outcome.transcript, primaryLabel || "the product", undefined, row.room,
       );
       finalConfirmed = consensus.confirmed;
       finalStatusKey = consensus.statusKey;
@@ -1022,7 +1187,8 @@ export async function ingestPending(): Promise<number> {
       shipmentTimeHeard: restockTimeHeard ?? outcome.shipmentTime ?? null,
       productDetail,
       summary: outcome.summary,
-      transcript: outcome.transcript,
+      // Ours if we recorded any, theirs only when we did not. See transcriptPatch.
+      ...(await transcriptPatch(row.id, outcome.transcript)),
       completedAt: now(),
       callSeconds: outcome.durationSecs ?? null,
       // connect-on-human: the bridge measured true time-to-human (ElevenLabs only joined at pickup);
@@ -1032,6 +1198,14 @@ export async function ingestPending(): Promise<number> {
     // Close the timeline with the answer the customer actually got, so a replay ends where the call
     // ended. Fire-and-forget: a verdict must never wait on bookkeeping.
     void recordVerdict(row.id, finalStatusKey ?? null, outcome.summary ?? null, outcome.durationSecs ?? 0);
+    dropLiveRead(row.room); // verdict written — let the room's live read go
+    // The old direct path's thin receipt closes here — this is the only moment it learns the call is
+    // over, since nothing streams to us on that lane. A bridged call closed its own long ago and
+    // this is a no-op for it (a receipt flushes exactly once).
+    if (row.room?.startsWith("direct:")) {
+      markNow(row.room, "endMs");
+      closeReceipt(row.room, `Check ended after ${outcome.durationSecs ?? 0}s`, outcome.status ?? undefined);
+    }
 
     // Server-side billing: charge the finder ONE credit on a DEFINITIVE answer, exactly once.
     // (chargeCallOnce is atomic — the poller, the webhook, and any retry can't double-bill.)

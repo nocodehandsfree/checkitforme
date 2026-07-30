@@ -12,6 +12,15 @@ export const config = {
     // run here, so the owner hears the EXACT store-call brain with draft settings. Live store
     // calls are untouched until "Apply to all stores".
     benchAgentId: process.env.ELEVENLABS_BENCH_AGENT_ID,
+    // Joins a conversation ALREADY IN PROGRESS: no greeting, waits silently for the answer to the
+    // question Delta's clip just asked. A dedicated agent configured once, never a per-call prompt
+    // override — overriding prompt or first message per call once hung calls up. Unset = no clip
+    // plays and every call takes exactly today's path.
+    midCallAgentId: process.env.ELEVENLABS_MIDCALL_AGENT_ID,
+    // Same agent, same voice, same rules — but its thinking runs on OUR account instead of the
+    // provider's hosted model (the brain is 400 of the 723 credits a minute we burn). Unset means
+    // the brain switch cannot engage and every call uses the hosted model, which always works.
+    ourBrainAgentId: process.env.ELEVENLABS_OURBRAIN_AGENT_ID,
     phoneNumberId: req("ELEVENLABS_PHONE_NUMBER_ID"),
     webhookSecret: process.env.ELEVENLABS_WEBHOOK_SECRET,
     defaultVoiceId: process.env.ELEVENLABS_VOICE_ID ?? "pm9SHWV7dZpfvnpJ6hSK", // owner's cloned voice

@@ -5,9 +5,10 @@
 //
 // Everything here is pure — no DB, no network, no phone calls — so the rules that decide what we
 // trust are provable on their own.
-import { scoreConfidence, pathSignature, isHammerPath, _test as mg, type Evidence } from "../src/calls/mapgraph";
-import { recipeFromCall, transcriptFromCall, promptCount } from "../src/calls/map-capture";
-import { shouldFireOnPrompt, navPlanKey, stageNavPromptPlan } from "../src/calls/listen-nav";
+import { scoreConfidence, pathSignature, isHammerPath, promptFingerprint, guessLanguage, _test as mg, type Evidence } from "../src/calls/mapgraph";
+import { recipeFromCall, transcriptFromCall, promptCount, callHadAReprompt } from "../src/calls/map-capture";
+import { shouldFireOnPrompt } from "../src/calls/listen-nav";
+import { navPlanFromVersion } from "../src/calls/service";
 import { _test as sw } from "../src/calls/sweep";
 
 let pass = 0, fail = 0;
@@ -117,13 +118,24 @@ console.log("▶ a step waits for ITS recording, and lateness never loses it");
   ok(!shouldFireOnPrompt({ action: "say", value: "front", atSec: 20, afterPrompt: 2 }, 2, 17, 16).fire, "two steps can't fire on one pause");
 }
 
-console.log("▶ the recording plan reaches the live call by exact route");
+console.log("▶ one version in, one plan out — pieces from two versions can never be mixed");
 {
-  const steps = [{ action: "say", value: "no", atSec: 16, afterPrompt: 2 }, { action: "say", value: "general", atSec: 41, afterPrompt: 3 }];
-  stageNavPromptPlan(steps);
-  const asBridgeParsesIt = [{ action: "say", value: "no", atSec: 16 }, { action: "say", value: "general", atSec: 41 }];
-  ok(navPlanKey(steps) === navPlanKey(asBridgeParsesIt), "the key ignores the plan and matches on the route itself");
-  ok(navPlanKey(asBridgeParsesIt) !== navPlanKey([{ action: "say", value: "no", atSec: 16 }]), "a different route is a different key");
+  // What we press, what we say and which recording each waits for all come out of the SAME saved
+  // version, in one call. This replaced a side channel that matched a plan to a call by the SHAPE
+  // of its step list, so a second version of the same route could lend its anchors to the first.
+  const v2 = [{ action: "say", value: "no", atSec: 16, afterPrompt: 2 }, { action: "say", value: "general", atSec: 41, afterPrompt: 3 }];
+  const p = navPlanFromVersion(v2);
+  ok(p.say === "no@16,general@41", "the spoken plan reads off the version");
+  ok(p.steps.map((s) => s.afterPrompt).join(",") === "2,3", "and its anchors come with it, on the same steps");
+  // The identical-looking route from a DIFFERENT version carries that version's anchors and only
+  // its own. Same shape, different answer — which is exactly what the old key could not tell apart.
+  const other = navPlanFromVersion([{ action: "say", value: "no", atSec: 16, afterPrompt: 1 }, { action: "say", value: "general", atSec: 41 }]);
+  ok(other.steps.map((s) => s.afterPrompt ?? "-").join(",") === "1,-", "a look-alike route keeps ITS anchors, not the other version's");
+  ok(navPlanFromVersion(null).steps.length === 0 && navPlanFromVersion([]).dtmf === "", "no version = nothing to run, not a half plan");
+
+  const keys = navPlanFromVersion([{ action: "press", value: "2", atSec: 8 }, { action: "press", value: "", atSec: 16 }]);
+  ok(keys.dtmf === "2@8", "a press with no usable digit is dropped, never sent as a bare time");
+  ok(navPlanFromVersion([{ action: "press", value: "3", atSec: 20 }, { action: "press", value: "1", atSec: 4 }]).dtmf === "1@4,3@20", "steps run in the order the store hears them");
 }
 
 console.log("▶ paths and plain-English change notes");
@@ -134,6 +146,52 @@ console.log("▶ paths and plain-English change notes");
   ok(mg.describeChange(null, { type: "voice", steps: [{ action: "say", value: "front", atSec: 20 }], seconds: 40 }).startsWith("First map"), "first map says so");
   ok(mg.describeChange(prev, { type: "voice", steps: [{ action: "say", value: "front", atSec: 20 }], seconds: 31 }).includes("9s faster"), "a faster same route reads as faster");
   ok(mg.describeChange(prev, { type: "keypad", steps: [{ action: "press", value: "0", atSec: 5 }], seconds: 40 }).startsWith("Route changed"), "a new route reads as changed");
+}
+
+console.log("▶ a call where the store repeated itself teaches timing, not anchors");
+{
+  // CVS Alhambra, 07-28, verbatim: the assistant asked, we sat through it, it re-prompted, and every
+  // anchor after that came back one recording too high (3/4/5 for a route whose clean shape is 2/3/4).
+  const messy = [
+    { who: "ivr", text: "Thank you for calling CVS, Pharmacy.", atSec: 10 },
+    { who: "ivr", text: "I am your virtual assistant. Are you a healthcare provider?", atSec: 30 },
+    { who: "ivr", text: "sorry I'm not understanding please confirm if you are a healthcare provider", atSec: 51 },
+    { who: "us", action: "say", value: "no", atSec: 51 },
+    { who: "ivr", text: "please let me know if you are calling in for pharmacy or front door services", atSec: 63 },
+    { who: "us", action: "say", value: "front", atSec: 63 },
+  ];
+  ok(callHadAReprompt(messy), "the re-prompt is recognised");
+  const r = recipeFromCall(messy, 91);
+  ok(r.steps.every((s) => s.afterPrompt === undefined), "so NO anchors are learned from it");
+  ok(r.anchorsFrom === "reprompt", "and it says where it came from");
+  ok(r.seconds === 91, "the timing is still true and still kept");
+  const clean = [
+    { who: "ivr", text: "Thank you for calling CVS, Pharmacy.", atSec: 10 },
+    { who: "ivr", text: "Are you a healthcare provider?", atSec: 28 },
+    { who: "us", action: "say", value: "no", atSec: 30 },
+  ];
+  ok(!callHadAReprompt(clean), "a clean call is not flagged");
+  ok(recipeFromCall(clean, 60).steps[0].afterPrompt === 2, "and it anchors on the recording it actually followed");
+  ok(recipeFromCall(clean, 60).anchorsFrom === "clean", "marked clean, so it can replace dirty anchors later");
+}
+
+console.log("▶ a prompt keeps the same identity across speech-to-text wobble");
+{
+  const a = promptFingerprint("For the pharmacy press 1, for the front store press 2");
+  const b = promptFingerprint("for the pharmacy press one for the front store press 2.");
+  ok(a === b && !!a, `"press 1" and "press one" are the same prompt (${a})`);
+  ok(promptFingerprint("Thanks for calling CVS. Para español oprima nueve") === promptFingerprint("thanks for calling cvs, para espanol oprima nueve"),
+    "spelled with or without the tilde is the same prompt");
+  ok(promptFingerprint("Our hours have changed, we close at nine") !== a, "a genuinely different menu is a different prompt");
+  ok(promptFingerprint("   ") === "", "silence has no fingerprint, and never becomes a node");
+}
+
+console.log("▶ language is read off what the store said, and guessed at nothing");
+{
+  ok(guessLanguage("Para español oprima nueve") === "es", "Spanish is recognised");
+  ok(guessLanguage("For the pharmacy press 1") === "en", "English is recognised");
+  ok(guessLanguage("Thanks for calling. Para español oprima nueve") === "mixed", "a menu offering both is mixed");
+  ok(guessLanguage("") === "unknown" && guessLanguage("mmm hmm") === "unknown", "no evidence stays unknown, never defaults to English");
 }
 
 console.log("▶ the sweep dials east first");

@@ -5,6 +5,28 @@ Non-obvious traps that cost real time. Add one the moment you learn it; delete o
 worse than no comment. Several entries below started as wrong comments.)
 
 ## Compute / testing
+- **Driving the live Admin (or the site) in a real browser from an agent container: Chromium CANNOT
+  reach the internet** (07-29, cost most of a session). The egress proxy resets Chromium's CONNECT, and
+  no combination of `--proxy-server`, `--ignore-certificate-errors`, playwright's `proxy:` option or
+  `NODE_EXTRA_CA_CERTS` fixes it. `curl` reaches everything. **The recipe:** ONE node script that (1)
+  starts a `node:http` server on 127.0.0.1 which forwards every path to `https://admin.checkitforme.com`
+  through `execFile('curl', ['-sS','-X',method,url,'-H','x-admin-token: …'])`, then (2) launches
+  playwright-core at `http://127.0.0.1:<port>`. Live bytes, live data, and the browser only ever talks
+  to loopback. One process start-to-finish, so no background task and no compute gate to unlock.
+  Companion facts: the Admin shell is served at `/`, not `/app.html` (which 404s) ·
+  `node_modules/playwright` is an EMPTY dir, import `playwright-core` · chromium lives at
+  `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` and needs `--no-sandbox` · top-level `const`s in
+  `app.html` (`CHAINS`, `POL`) are NOT on `window`, so name them bare inside `page.evaluate` · a chain
+  row opens with `pickChainRow(id)`.
+  **Three more, all found the hard way 07-30 building that mirror:** (1) a `curl -w` format that starts
+  with `@` is read as a FILENAME (`option -w: error encountered when reading a file`) — pick a marker
+  like `~~X~~`. (2) Read the status and the content type off `-w` AFTER the body, never off `-i`: the
+  egress proxy prepends its own `HTTP/1.1 200 Connection Established` block, so header parsing types
+  every response as a download and the navigation dies with `Download is starting`. (3) The pages that
+  follow the Live/Staging switch fetch `https://staging.checkitforme.com` CROSS-ORIGIN with
+  credentials, so anything you fulfil for that origin needs `access-control-allow-origin` (the exact
+  loopback origin) plus `access-control-allow-credentials: true`, or the browser drops the response and
+  the page truthfully reports "Could not reach the staging site".
 - **`scripts/test-all.sh` spawns local servers + headless browsers — don't run it reflexively, and never
   leave it orphaned** (owner 07-20, it was killing his compute + morale). The `smoke:`/`qa:` lines each
   boot a server (ports 8788-8798) and Chromium. If the run is killed partway (OOM, worker restart), those
@@ -129,9 +151,9 @@ worse than no comment. Several entries below started as wrong comments.)
   Google → every admin-preview.mjs screenshot rendered in DejaVu with different metrics. "Looks
   clean" verdicts were judged against a typeface the owner never sees. **The design is only the
   design in Inter** (same lesson checkit.html learned on 07-14 with DNS ad-blockers).
-- Fix shipped: app.html self-hosts `/fonts/inter-var-latin.woff2` (the site's exact recipe) and
-  admin-preview.mjs routes `/fonts/**` from public/. If you judge a render, FIRST confirm the
-  headline is actually Inter (compare a lowercase 'g').
+- Fix shipped: app.html self-hosts `/fonts/inter-var-latin.woff2` (the site's exact recipe), and the
+  render tool (`scripts/render-comps.ts` — admin-preview.mjs is archived) serves the vendored fonts.
+  If you judge a render, FIRST confirm the headline is actually Inter (compare a lowercase 'g').
 
 ## Share/landing (/s): a gradient fading to a TRANSPARENT color leaves a green haze on iOS
 - Symptom: owner's iPhone showed a faint green tint/line across the BOTTOM of the /s card; every

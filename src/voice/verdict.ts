@@ -5,6 +5,7 @@
 // finder is NOT charged. The same pass also captures the product form/set the clerk named
 // ("3-pack blister", "Surging Sparks ETB") — kept even when the exact set is unknown.
 import { llm } from "../llm";
+import { liveReadFor } from "./live-read";
 
 // Cheapest brain that reliably reads a short transcript. Same model the navigator hands off on.
 export const VERDICT_MODEL = "gemini-2.5-flash-lite";
@@ -112,6 +113,43 @@ export interface Consensus {
  *   (a high-confidence second read also rescues an answer the EL extraction missed).
  * - both unclear → honest "no clear answer" (preserving a "left on hold" near-miss).
  */
+/**
+ * THE READER RULE, IN ONE PLACE (owner 07-29): "when the second reader disagrees with Charlie's
+ * status, the customer gets couldn't-tell and NO charge — never a wrong answer."
+ *
+ * That was NOT how it worked. Three of the five finalize paths decided for themselves whether the
+ * second read was worth consulting — `needSecond ? second : null` — and `needSecond` was false
+ * whenever the live extraction already had an opinion. So on the one case that matters most, the live
+ * read saying IN STOCK while the transcript reader said NOT IN STOCK, the disagreement was discarded
+ * and the customer was shown a green and charged for it. A false red was never checked either,
+ * because on a decisive "no" the reader was not even run.
+ *
+ * Getting the second opinion is no longer a caller's decision. Every finalize path calls THIS, so the
+ * rule cannot be applied on one path and skipped on another — which is exactly how it drifted. The
+ * read is cheap (Flash-Lite over a short transcript) and it already ran on most calls.
+ *
+ * @returns the reconciled verdict AND the second read itself, because the same pass is what captures
+ *          the product form and the set the clerk named.
+ */
+export async function consensusFor(
+  el: ElRead,
+  transcript: string,
+  category: string,
+  specificProduct?: string,
+  room?: string | null,
+): Promise<{ consensus: Consensus; second: ClerkVerdict | null }> {
+  // A hard sold-out / doesn't-carry decides it below before the second read is ever looked at, so
+  // there is nothing a second opinion could change and no reason to spend one.
+  if (el.soldOut || el.doesNotSell) return { consensus: reconcile(el, null), second: null };
+  // READ AS IT GOES (owner 07-30): the reader already ran DURING the check, on the lines as they
+  // landed, so on a normal finish the answer is sitting here and the customer waits on nothing. The
+  // model call below is now the fallback — a check too short to read, or a restart mid-check. Same
+  // reader, same merge, same rule: this only changes WHEN the read happened, never what it decides.
+  const ready = liveReadFor(room);
+  const second = ready ?? await classifyVerdict(transcript, category, specificProduct).catch(() => null);
+  return { consensus: reconcile(el, second), second };
+}
+
 export function reconcile(el: ElRead, second: ClerkVerdict | null): Consensus {
   // Hard NO wins outright.
   if (el.soldOut) return { confirmed: false, definitive: true, statusKey: "sold_out", agreed: true };

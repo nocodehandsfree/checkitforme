@@ -5,9 +5,14 @@
 > (four pipes, ONE DIALABLE RULE, never-sync fields, map-on-PROD) live in `handoff.md`.
 > Volatile — REPLACE stale lines, newest on top, ≤60 lines. History lives in git.
 
-## The rebuild landed (2026-07-22) — gates live + demoed blocking
-- Path locks (.claude/locks + .unlock flow) · copy gate · sprawl gate · compute gate · build stamp +
-  `scripts/verify-live.sh` · section INDEX · turn-counter handoff nudge. Phase 4/5/6 completion in flight.
+## Gates (07-22 rebuild, all live · +3 on 07-29, owner's agent-quality pass, PR branch)
+- 07-22: path locks (.claude/locks + .unlock) · copy · sprawl · compute · build stamp + verify-live ·
+  section INDEX · handoff nudge. Phases 4/5/6 done 07-23.
+- 07-29: ① LOOK gate — `public/app.html` edits blocked until a real render ran (`render-comps.ts`
+  writes `.claude/state/comp-rendered`; never hand-touch it). ② NAV gate — Admin groups/tabs/sections
+  frozen to `.claude/nav-allowlist`; grows only on the owner's word, same commit. ③ turn 1 injects
+  "recite the box". Plus AGENT_RULES 25 (write docs for a stranger) + build-on-brand's dead
+  `admin-preview.mjs` render commands fixed to `render-comps.ts`.
 - Owner-approved locks: src/voice/** · public/checkit.html · src/calls/recipe.ts · src/calls/tree-learn.ts
   · data/stores-master/** · both intel jsons (DB stays the live store source).
 
@@ -21,16 +26,13 @@
   so prod-first edits do NOT flow back — patch both). CA split: 48 of 323 are ≥3000 (shape B).
   ⚠️ redsky `nearby_stores_v1` works for ~1 call then Akamai-blocks the sandbox IP for hours — the
   sitemap + `/sl/` page route has no such wall (347 pages pulled back-to-back, zero blocks).
-- **07-24 CLOSED-STORE RULE (owner, standing):** a store confirmed closed gets MUTED, not deleted —
-  `active:false` + a `notes` line starting `CLOSED.` with the date and the proof. Full rule in
-  handoff.md §CORE PRINCIPLES 4. First application: retailer 106506 `Target E Bayshore Rd`, East Palo
-  Alto 94303 — muted on BOTH envs, verified gone from `/pub/stores/near` (46 other stores still show).
-- **07-22 LOGO FLAGS both envs LIVE (curated):** logo_wide=true on 15 wide wordmarks; Publix
-  logo_wide=false; TJ Maxx logo_dark=false; Walmart + Tom Thumb stay square. Via PATCH /api/chains/:id.
+- **07-24 CLOSED-STORE RULE (owner, standing):** a confirmed-closed store gets MUTED, never deleted —
+  `active:false` + a `notes` line starting `CLOSED.` with date + proof (full rule: handoff.md §CORE
+  PRINCIPLES 4). First: retailer 106506 Target E Bayshore Rd — muted BOTH envs, gone from stores/near.
+- **07-22 LOGO FLAGS both envs LIVE (curated):** 15 wide wordmarks; Publix not wide; TJ Maxx not dark; Walmart + Tom Thumb square. Via PATCH /api/chains/:id.
 - **⚠️ OPEN BUG — CSS/site lane, not data:** the small "Calling" chip does NOT stretch wide logos even
   with logo_wide=true (~15px crushed). `.callwho.widelogo` not winning. **Routed to site lane.**
-- **07-22 shipped STAGING — promote wanted:** openHistEntry re-pulls live store logo so a REOPENED old
-  call shows the current logo (checkit.html). New checks already right on prod.
+- **07-22 shipped STAGING — promote wanted:** openHistEntry re-pulls the live logo so a reopened old call shows the current one (checkit.html).
 - **7 kiosk chains need REAL numbers** (nophone both envs): H-E-B, Lucky, FoodMaxx, Metro Market,
   Stop & Shop, Pak N Save, Uwajimaya. Owner pulls from locators/Maps pins → DD ingests → Mapper finishes.
 - **HOURS backfill PAUSED (owner resumes):** ~3,300 hourless. `handoffs/hours_needed_fresh.csv` → owner
