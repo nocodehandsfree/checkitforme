@@ -27,13 +27,18 @@ Ear is a **VETO, never a green light**, cannot invent a person, and anchors come
 - **PM: bail's else-branch blind-joins Charlie on a stopwatch if bail is off** (locked bridge; owner has it). **The `.unlock` flow WORKS** — the sprawl gate only hooks Write, so `printf 'src/voice/**\n' > .unlock` opens it; fix that scope ONLY then DELETE it (a spec check fails while one is left lying around).
 ## 07-30 CHAIN PAGE + RE-LISTEN: ALL BUILT + SHIPPED to Admin. Box `docs/specs/mapping-admin/plan.md`,
 every string `copy.md` (**a control panel talks to nobody**), comps 2f rev + 2h/2i/2j/2k all built.
-- **`menuStillTalking`**: the MODEL's "human" is NOT proof. Tarzana's "A healthcare provider." was the recording's own tail and became a store recipe. Vetoes ONLY that shape; 7 asserts cover every exit.
-- **NAV TIME ≠ time to Staff.** `navSecondsOf` is for READING; `seconds` is what `connectAtSecFor` opens Charlie on, or he joins a ringing desk. A ring-ended call writes `seconds: null` ON PURPOSE = no timer = the agent waits for a voice. **Never let a ring moment become `seconds`.**
+- **`menuStillTalking`**: the MODEL's "human" is NOT proof. Tarzana's "A healthcare provider." was the recording's own tail and became a store recipe. Vetoes ONLY that shape; 7 asserts cover every exit. **NAV TIME ≠ time to Staff:** `navSecondsOf` is for READING; `seconds` is what `connectAtSecFor` opens Charlie on. A ring-ended call writes `seconds: null` ON PURPOSE = no timer = the agent waits for a voice. **Never let a ring moment become `seconds`.**
 - **A RING-ENDED CALL IS A GOOD MAP, NOT A MISS** — `EvidenceCall.endedOnRing` (set in `finish` off `status==="mapped"`; `s.status` is already "done" by then, so it MUST travel on its own). FOUR readers were guessing off `reachedHuman` alone and all read a perfect re-listen as a failure: `navSecondsOf` · `trendOf` calls/stores · `scoreConfidence` · the recent-fails flag. **`reachedPctOf` counts ONLY calls that waited for Staff** → null, never a false 0%.
 - **RE-LISTEN** (`relisten` on placeNavCall + `/api/admin/trainer/document`): walks the KNOWN route off `navPlanFromVersion`, **hangs up on the SECOND REAL RING** (`ConversationEar.rings`, one count per burst; no Ear → published 6s cadence), never asks, and IS lockable (owner: that call is the v1 recipe).
-- **EVERY call feeds the map now** — `recordNavCall` (map-capture) called from `finish`. Before this the Re-map button wrote to the run log and NOWHERE else. Sweep + mapper pass `callerRecords:true`.
-- **07-30 RAILWAY QUEUE RESOLVED — it was an upstream GitHub outage** (the SUCCESS deploy's queuedReason says so).
-  Trap: `deploymentCancel` on a wedged deploy errors once, the retry lands.
+- **EVERY call feeds the map now** — `recordNavCall` (map-capture) from `finish`; sweep + mapper pass `callerRecords:true`.
+- **CVS (chain 5) IS DONE + PROVEN 07-30.** `resetChainHistory` wiped its 11 pre-fix calls, then ONE re-listen to
+  Lanett (11373) landed: nav 68s · v1 "observed once" · Review empty · `seconds` null. THE PAGE HAS TWO COPIES OF
+  EVERY RULE — `versionNavSecs` and `menuLadder` live in app.html and BOTH had to learn `endedOnRing`/the model
+  name. **Fix a mapgraph reader → grep app.html for its twin** or the sheet contradicts the hero.
+- **NEXT: Walgreens (chain 10), and it is NOT a re-listen.** Its live v1 is the hammer route `press 0 ×4`,
+  `why` = "Auto-caller pressed the same key repeatedly". Re-map it fresh (no `relisten`), 9 stores, ALL Pacific.
+  It is keypad, so it proves the ladder prints **ALPHA**; CVS proved BRAVO.
+- **07-30 RAILWAY QUEUE — upstream GitHub outage, twice.** `deploymentCancel` on a wedged deploy errors once, the retry lands; every push queues another build and they run one at a time.
 ## VERIFIED / NOT VERIFIED
 - **DRIVEN 07-30:** 61 delta-clip (REAL ws provider + real carrier socket) · 65 prompts · 100 map-e2e (same 2
   PRE-EXISTING fails: "still proposed, never silently swapped" — Chains work, not mine) · 43 listen-nav · 72
