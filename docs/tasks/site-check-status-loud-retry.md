@@ -33,6 +33,16 @@ technology being smart. Transparency + managed expectations = patience + trust.
 loud-retry state renders (drive it with a forced route-drift if no real one appears) · EN + ES at
 375/390/430 with no bad wraps · verify-live output pasted below.
 
+**How to ship it — the owner is ruthless on UI/UX, so this is the law for this task:**
+1. Render the CURRENT page from the truth snapshot first and match it exactly. The new states
+   inherit the page's existing type, spacing, and tokens. You invent ZERO new styles.
+2. **One state per push, smallest change first.** After each push: "pushed, check your phone" and
+   STOP until he answers. Never one big rewrite. He kills anything that isn't right on sight — a
+   small push dies cheap, a big one dies expensive.
+3. Torn between two looks? Screenshot both, ask, and wait. Never pick for him.
+4. The unlock covers ONLY the check-status section. If your diff touches one line outside it, stop
+   and say so.
+
 **Verify-live output (paste on close — a task without it is NOT closed):**
 ```
 (none yet)
