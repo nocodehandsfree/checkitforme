@@ -26,11 +26,11 @@ git. Last updated: 2026-07-30 (check status page has its big step window; verdic
   **Re-map hangs up on the second ring** of the desk, so it never troubles Staff, and that call becomes the
   recipe. A call that ends on the ring counts as the good map it is, and **Reached Staff shows nothing instead
   of 0%** until a call actually waits for one.
-- **CVS is mapped and proven** (07-30, two real checks): **nav time 53s**, the average of 51s and 55s, so a new
+- **CVS is mapped and proven** (07-30): **nav time 54s**, the average of two checks at 49s and 58s, so a new
   check nudges the number instead of overwriting it. **The menu is written down line by line in CVS's own
-  words**, which it was not before: a re-listen used to fire its answers on a stopwatch and start listening
-  only afterwards. **The stopwatch is gone.** One question gets one answer, and if the menu asks twice we say
-  the same answer again instead of spending the next one.
+  words.** The stopwatch is gone: one question gets one answer, and if the menu asks twice we say the same
+  answer again. A check we ended reads **Admin hung up**, never "nobody answered", because the desk was ringing
+  and we are the ones who stopped. "Observed once" is off every screen.
 ## The new calling engine is ON for staging. Your six test calls are the last thing (07-28/29)
 - **Nothing to flip.** A check from staging.checkitforme.com goes through the new engine. **Listen for:** it asks
   once and waits · no keypad beeps once you are talking · after a hold it asks you again if you might be new.
