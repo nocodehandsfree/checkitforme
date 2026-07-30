@@ -4538,12 +4538,6 @@ async function loadMapGraph(){
   MAPG={}; ((d&&d.rows)||[]).forEach(r=>{ if(r&&r.chainId!=null&&!r.storeId) MAPG[r.chainId]=r; });
 }
 const mapRow=id=>MAPG[id]||null;
-// Trust reads as a colour: proved is green, seen once is quiet, needs review is the amber that means
-// somebody has to look. Same three-colour scale as the ratings chip, never a rainbow.
-function confColor(label){
-  return label==='verified'?'var(--green)':label==='observed multiple times'?'var(--green)'
-    :label==='needs review'?'#F59E0B':label==='unknown'?'var(--text-muted)':'var(--muted)';
-}
 async function loadChains(){
   CHAINS = await api('/api/chains') || [];
   await syncCallRates();
@@ -4666,11 +4660,13 @@ function buildChainPicker(){
     const route=locked
       ? `<span style="color:${ln?lnc:'#8A8A96'};font-weight:700">${ln||'mapped'}</span>`+(nv!=null?` <span style="color:#8A8A96">${nv}s</span>`:'')
       : '<span style="color:#F59E0B;font-weight:700">unmapped</span>';
-    // How much we TRUST the route, and whether a new one is sitting there waiting for him. A waiting
-    // route outranks everything else on the line: it is the only part he has to act on.
+    // A ROUTE WAITING ON HIM, and nothing else. "Observed once" and "observed multiple times" came off
+    // this line (owner, 07-30): they are how the map scores itself, not a state he acts on, and a list
+    // of 130 chains reading "observed once" says nothing he can do anything about. "Needs review" and
+    // a waiting route stay, because both are work.
     const g=mapRow(ch.id);
     const trust=g&&g.proposed>0 ? '<span style="color:#F59E0B;font-weight:700">1 waiting</span>'
-      : (locked&&g&&g.confidenceLabel&&g.confidenceLabel!=='unknown') ? `<span style="color:${confColor(g.confidenceLabel)}">${esch(g.confidenceLabel)}</span>` : null;
+      : (locked&&g&&g.confidenceLabel==='needs review') ? '<span style="color:#F59E0B;font-weight:700">needs review</span>' : null;
     const meta=[nStores?nStores+' store'+(nStores===1?'':'s'):null, ch.muted?'muted':null, route, trust].filter(Boolean).join(' · ');
     return `<div class="pickrow${String(ch.id)===cur?' on':''}" data-id="${ch.id}" data-name="${esch((ch.name||'').toLowerCase())}" data-tier="${ch.tier??''}" data-type="${esch((ch.type||'').toLowerCase())}" data-mapped="${locked?1:0}" data-changed="${(g&&(g.proposed>0||g.drift30d>0||g.openUnknowns>0))?1:0}" onclick="pickChainRow(${ch.id})"${ch.muted?' style="opacity:.5"':''}>
       <span class="setlogo">${logoTile(ch)}</span>
@@ -4899,8 +4895,10 @@ function renderMenuByCondition(ch, active, nav, calls){
   };
   const cd=MENU_CONDS.find(x=>x.key===cur)||MENU_CONDS[0];
   const mine=byCond[cur];
-  // The fullest call in this condition is the best picture of what it plays.
-  const call=mine.slice().sort((a,b)=>((b.transcript||[]).length)-((a.transcript||[]).length))[0]||null;
+  // THE NEWEST CHECK, always (owner, 07-30). What this shows is what the menu says NOW, so the last
+  // time we listened is the only honest answer. It used to pick the check with the most lines, which
+  // meant an older check kept the screen long after a newer one had heard the menu properly.
+  const call=mine.slice().sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0))[0]||null;
   const tl=call?menuTimeline({evidence:{calls:[call]},recipe:active&&active.recipe},nav):null;
   box.innerHTML=`<div style="display:flex;gap:7px;flex-wrap:wrap">${MENU_CONDS.map(pill).join('')}</div>`
     +(tl
@@ -4941,9 +4939,12 @@ function mapCallsMore(btn){
 // One call: who we rang and when, how it ended, the conversation, then what it produced.
 function mappingCallCard(c,versions){
   const ok=!!c.reachedHuman;
-  // ONE WORD PER THING: a call nobody picked up is "Nobody answered", the same words the Statuses
-  // screen already uses for it. Inventing a second name for a state we already name was mine to fix.
-  const pill=ok?['g','Reached Staff','var(--green)']:['a','Nobody answered','#F59E0B'];
+  // ONLY WORDS THE STATUSES SCREEN ALREADY OWNS (owner, 07-30). This said "Nobody answered" on a
+  // check we ended ourselves, which is two untruths in one line: the desk WAS ringing, and we are
+  // the ones who stopped. He added "Admin hung up" for exactly this, so it is the word used.
+  const pill=ok?['g','Reached Staff','var(--green)']
+    :c.endedOnRing?['g','Admin hung up','var(--green)']
+    :['a','Nobody answered','#F59E0B'];
   const prod=callProduced(c,versions);
   const rungs=callRungs(c);
   return `<div class="card" style="margin:0 0 10px">`
@@ -4973,7 +4974,8 @@ function callRungs(c){
     const g=c.greeting||(i>=0?rows[i].text:'');
     if(i>=0) rows.splice(i,1);
     rows.push({who:'staff',at:end,text:'Staff answered'+(g?' · "'+g+'"':'')});
-  } else rows.push({who:'end',at:end,text:'Hung up · nobody picked up'});
+  } else if(c.endedOnRing) rows.push({who:'ring',at:c.transferAtSec!=null?c.transferAtSec:end,text:'Admin hung up · the desk was ringing'});
+  else rows.push({who:'end',at:end,text:'Nobody answered'});
   return rows;
 }
 const usWords=t=>t.action==='press'?`Pressed ${t.value}`
@@ -4984,6 +4986,8 @@ const usWords=t=>t.action==='press'?`Pressed ${t.value}`
 function callRung(r,last){
   const S=r.who==='them'?[6,'#5C5C68','12px','500','rgba(255,255,255,.55)']
     :r.who==='end'?[9,'#F59E0B','13.5px','700','#F59E0B']
+    // We ended it and the route worked, so it reads green like the rest of a good check, never amber.
+    :r.who==='ring'?[9,'var(--green)','13.5px','700','var(--green)']
     :[9,'var(--green)','13.5px','700','var(--text-strong)'];
   return `<div style="display:flex;gap:12px">`
     +`<div style="display:flex;flex-direction:column;align-items:center;flex:0 0 auto;padding-top:5px">`
@@ -5233,8 +5237,8 @@ async function loadChainMap(id){
 function menuTimeline(v, nav){
   const calls=((v&&v.evidence&&v.evidence.calls)||[]).filter(c=>(c.transcript||[]).length);
   if(!calls.length) return null;
-  // The fullest call is the best picture of the menu; a call that hung up early shows less of it.
-  const call=calls.slice().sort((a,b)=>(b.transcript||[]).length-(a.transcript||[]).length)[0];
+  // The NEWEST check, never the longest. What the menu says now is the last thing we heard it say.
+  const call=calls.slice().sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0))[0];
   const rows=[];
   for(const line of (call.transcript||[])){
     const m=String(line).match(/^\s*(\d+)s\s+([\s\S]*)$/);
@@ -5290,18 +5294,17 @@ function renderChainMapping(ch){
         :`<div class="stat"><div class="n">${toStaff!=null?toStaff+'s':''}</div><div class="l">To Staff</div></div>`)
       +`</div>`;
   }
-  // --- beside the PHONE MENU eyebrow: which version is running, and how much we trust it.
+  // --- beside the PHONE MENU eyebrow: when this route last changed, and nothing else. The scoring
+  // words ("observed once", "observed multiple times") came off every screen (owner, 07-30): they are
+  // how the map talks to itself, not a state he acts on. "Needs review" survives, because it is work.
   const g=mapRow(ch.id);
   const ver=document.getElementById('set_menuver');
   if(ver){
-    // HOW MUCH THE MAPPER TRUSTS THIS ROUTE, in his own computed words. He works it out from calls,
-    // stores, days, agreement and age (04-map-graph.md §2) and "verified" is him saying he has found
-    // the right recipe. Never invent a second scale beside it.
     const dt=ch.navUpdatedAt?new Date(ch.navUpdatedAt):(ch.treeLearnedAt?new Date(ch.treeLearnedAt*1000):null);
-    const cl=g&&g.confidenceLabel&&g.confidenceLabel!=='unknown'?g.confidenceLabel:'';
+    const cl=g&&g.confidenceLabel==='needs review'?'Needs review':'';
     ver.innerHTML=!isLocked?''
-      :(cl?`<span style="color:${confColor(cl)};font-weight:700">${esch(cl[0].toUpperCase()+cl.slice(1))}</span>`:'')
-       +(dt?`<span style="color:var(--muted)">${cl?' · ':''}${dt.toLocaleDateString([],{month:'short',day:'numeric'})}</span>`:'');
+      :(cl?`<span style="color:#F59E0B;font-weight:700">${cl}</span>`:'')
+       +(dt?`<span style="color:var(--muted)">${cl?' \u00b7 ':''}${dt.toLocaleDateString([],{month:'short',day:'numeric'})}</span>`:'');
   }
   // --- a route waiting on him. This is the only thing on the page he has to DECIDE, so it sits above
   // the menu it would replace, not buried in a list.

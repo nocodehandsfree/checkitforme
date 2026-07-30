@@ -464,6 +464,24 @@ async function main() {
     ok(/if \(spokeOver && fragment && prevIvr\) prevIvr\.text = /.test(src),
       "it is joined onto the line it belongs to, never listed as its own step");
 
+    // THE SCREEN USES ONLY WORDS THE STATUSES SCREEN OWNS (owner, 07-30). It said "nobody picked up"
+    // on a check we ended ourselves while the desk was ringing, which is two untruths in one line.
+    const page = readFileSync("public/app.html", "utf8");
+    ok(!/nobody picked up/i.test(page), "no check is ever described as one nobody picked up");
+    ok(/c\.endedOnRing\?\['g','Admin hung up'/.test(page), "a check WE ended reads 'Admin hung up', the status he approved");
+    ok(/c\.endedOnRing\) rows\.push\(\{who:'ring'[\s\S]{0,120}?Admin hung up · the desk was ringing/.test(page),
+      "and the last rung says the same, naming the desk as ringing");
+    // The menu on the page is what the menu says NOW, so it comes off the newest check, never the
+    // longest one. A stale check kept the screen after a newer one had heard the menu properly.
+    ok(!/sort\(\(a,b\)=>\(\(b\.transcript\|\|\[\]\)\.length\)-\(\(a\.transcript\|\|\[\]\)\.length\)\)/.test(page),
+      "the menu is no longer taken from whichever check happened to have the most lines");
+    ok((page.match(/const call=[a-z]+\.slice\(\)\.sort\(\(a,b\)=>\(Number\(b\.at\)\|\|0\)-\(Number\(a\.at\)\|\|0\)\)/g) || []).length === 2,
+      "both readers of the menu take the newest check instead");
+    // Only the comments explaining the removal may still carry the words; no rendered string may.
+    ok(!/confColor/.test(page), "the colour scale those words needed is gone with them");
+    ok(!page.split("\n").some((l) => !l.trim().startsWith("//") && /observed once|observed multiple times/.test(l)),
+      "and no screen scores itself at him in words he cannot act on");
+
     const cap = readFileSync("src/calls/map-capture.ts", "utf8");
     ok(/\(opts\.reachedHuman \|\| opts\.endedOnRing\) \? transcriptFromCall\(opts\.steps\)/.test(cap),
       "a check that walked the whole route keeps EVERY line it heard, not the first six");

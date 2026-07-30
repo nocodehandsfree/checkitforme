@@ -1043,12 +1043,15 @@ export interface MapCall {
   navId: string; at: number; store: string; storeId: number | null;
   reachedHuman: boolean; seconds: number | null; transferAtSec: number | null;
   greeting: string | null; stopReason: string | null; why: string | null;
+  /** WE hung up, on the ring, on purpose. The screen must not read a missing human as "nobody
+   *  picked up" when the phone was ringing and we chose to stop (owner, 07-30). */
+  endedOnRing: boolean;
   turns: MapTurn[];
 }
 type RawRun = {
   navId?: string; ts?: number; store?: string; retailerId?: number; outcome?: string;
   seconds?: number | null; transferAtSec?: number | null; greeting?: string | null;
-  stopReason?: string | null; why?: string | null;
+  stopReason?: string | null; why?: string | null; endedOnRing?: boolean;
   steps?: Array<{ who?: string; text?: string; atSec?: number; action?: string | null; value?: string | null }>;
 };
 
@@ -1177,6 +1180,7 @@ async function callsForChain(chainId: number): Promise<MapCall[]> {
     greeting: r.greeting ? String(r.greeting) : null,
     stopReason: r.stopReason ? String(r.stopReason) : null,
     why: r.why ? String(r.why) : null,
+    endedOnRing: !!r.endedOnRing,
     // The conversation. "them" is the store, "us" is what we said or pressed back.
     turns: (Array.isArray(r.steps) ? r.steps : []).map((st) => ({
       who: st.who === "us" ? ("us" as const) : ("them" as const),

@@ -132,6 +132,9 @@ export interface NavSession {
    *  button included, is folded by `finish`, so a call can never teach the map nothing (owner 07-30). */
   callerRecords?: boolean;
   ringsHeard?: number;      // how many real ring bursts the Ear counted before we hung up
+  /** WE hung up, on the ring, on purpose. Rides on the run log so the chain page can name the state
+   *  it actually was ("Admin hung up") instead of guessing "nobody picked up" from the missing human. */
+  endedOnRing?: boolean;
   /** How far a RE-LISTEN has walked its known route. The plan is fired one step at a time from
    *  `navTurn` so the listener stays open between steps and every menu line is written down. */
   planIdx?: number;
@@ -852,6 +855,7 @@ async function navTurn(id: string, speech: string): Promise<string> {
  *  rides on the run log. */
 function finish(s: NavSession, status: "human" | "failed" | "mapped") {
   s.status = status === "mapped" ? "done" : status;
+  s.endedOnRing = status === "mapped";
   // In confirm mode, only a path that ENDED at the right desk (answered, not redirected) is lockable —
   // a redirect means we navigated to the wrong human, so we capture it but don't present it as the recipe.
   // A CALL THAT ENDED ON THE RING IS A GOOD MAP (owner, 07-30). It walked the whole phone system and
@@ -925,6 +929,9 @@ async function persistRun(s: NavSession): Promise<void> {
       ts: Date.now(), navId: s.id, why: s.why ?? null,
       store: s.retailerName, retailerId: s.retailerId, model: s.model || NAV_MODEL, mode, label,
       outcome: s.status, relisten: s.relisten ? true : undefined,
+      // WE ended it, on the ring, on purpose. Without this the screen has to guess from "no human"
+      // and lands on "nobody picked up", which is the one thing that did not happen.
+      endedOnRing: s.endedOnRing ? true : undefined,
       // A re-listen reports the MENU's seconds (the handoff, else its last step), never a person's.
       seconds: s.relisten
         ? (s.transferAtSec ?? s.steps.filter((st) => st.who === "us").slice(-1)[0]?.atSec ?? s.humanAtSec ?? null)
