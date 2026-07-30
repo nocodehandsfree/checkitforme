@@ -16,6 +16,6 @@ case "$w" in (*[!0-9]*|"") w=0 ;; esac
 if [ "$n" -eq 1 ]; then
   jq -n '{hookSpecificOutput:{hookEventName:"UserPromptSubmit",additionalContext:"FIRST TURN — RECITE THE BOX before any tool call. Your first reply states, in a few short lines: the ONE task you are taking, its done-when, and the EXISTING pieces you will snap onto (name the file or section — LAW 1). UI work adds: what the rendered comp shows for this screen. Cannot name the existing piece? Say so and STOP; do not fill the gap by inventing. A wrong recitation here costs the owner one message; a wrong build costs him a cycle."}}'
 elif [ "$w" -ge 100 ] || [ "$n" -ge 25 ]; then
-  jq -n --arg w "$w" '{hookSpecificOutput:{hookEventName:"UserPromptSubmit",additionalContext:("Memory is heavy: \($w) rounds of work in this chat. Finish the task in front of you, close it out (checkpoint + STATE + push), and tell the owner this chat is done — new work goes to a fresh chat with a one-line Task prompt. Do not take on anything new here.")}}'
+  jq -n --arg w "$w" '{hookSpecificOutput:{hookEventName:"UserPromptSubmit",additionalContext:("Memory is heavy (\($w) rounds of work this chat). Finish the task in front of you, close it out (checkpoint + STATE + push), and TELL the owner this chat is aging — recommend a fresh chat for anything new. His call, never yours: if he says continue here, continue here.")}}'
 fi
 exit 0

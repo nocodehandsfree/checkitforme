@@ -21,6 +21,25 @@ page is touched, so a cleaned page can never rot back.
 - A page = its `<section>` plus its `TAB_LOADERS` loader body, plus a `chrome` page for the shared
   shell. Wired into `test-all.sh` AND `ship-admin.sh` (both gates run before any Admin ship).
 
+**LAW, learned 07-30 on the Cost per check sheet: the building agent NEVER composes control-panel
+copy.** The exact strings ship pre-written in the task (the chain page proved this works; the
+freestyle sheet proved the opposite). A number nobody can explain in one plain sentence is a row
+that DIES — never ship a figure with a mystery label. And ⓘ bubbles get their OWN tap zone, never
+sitting on an element that opens a sheet.
+
+**The Cost per check sheet, rewritten (owner reviewing — apply on his yes, word for word):**
+- Title `Cost per check` · sub `Added up from real customer checks`
+- Row `The goal` / sub `Keep a check under this and every plan makes money` / `6.7¢` — ⓘ "Your
+  cheapest plan charges 20¢ a check. Spending a third of that keeps the 67% margin you set."
+- Row `What a check costs today` / sub `from our own test checks, until real ones land` /
+  `5.3¢ to 8.5¢` — ⓘ "5.3¢ at a store that picks up directly. 8.5¢ through the longest phone menu
+  we have, CVS. Real customer checks replace these numbers as they land."
+- The `On your thinnest plan · Operator earns less · 4.2¢` row: explain it in one plain sentence
+  or DELETE it. No mystery numbers.
+- The `Stay under the ceiling…` footnote: DELETE (the goal row already says it).
+- Empty state: `No customer checks yet. The first real check starts this record. Test calls, and
+  checks made before the new calling engine, are never counted.`
+
 **Step 2 — page by page, ONE per session,** in this order: Live (dash) · App (settings) · Calc ·
 the rest per `docs/tasks/INDEX.md` cleanup list. Each page: gate green · driven at 390px · copy per
 `COPY_STYLE_GUIDE_ADMIN.md` (his words: a check · Staff · dropped/reconnected Charlie · nav time ·
