@@ -536,6 +536,30 @@ __BRAND_HEAD__
   .rhead.out .rhead-stat{color:var(--red)}
   .rhead.unk .rhead-stat{color:#FBBF24}
   .rhead.soon .rhead-stat{color:#F59E0B}
+  /* THE STEP WINDOW (2026-07-30). The glowing live header carries ONE headline state at a time:
+     Calling → Getting through the menu → Talking to Staff. The verdict is state four and it lands on
+     the result page, which keeps its own 40px headline. So this line is deliberately smaller (the
+     card-question size, STYLE_GUIDE §4) and never competes with it. One line, never wraps. */
+  /* THE STEP WINDOW (owner 07-30). The customer cannot hear the check, so this box IS the show. The
+     store's own logo blooms out of the top-right corner (the same watermark move as My checks and the
+     share card), the store name demotes to an eyebrow, and ONE big line says where we are right now.
+     Scoped to .rhead.live so the finished result header is untouched. */
+  .rhead.live{position:relative}
+  .rhead.live .rhead-top{display:block;padding:24px 16px 28px;position:relative;z-index:1}
+  /* The mark is strongest in the corner and fades out before it reaches the headline, so a long state
+     never reads muddy over it. Mask, not a lower opacity: the corner still has real presence. */
+  .rhead.live .railchip{position:absolute;top:-38px;right:-34px;width:168px;height:168px;border:0;border-radius:0;background:none;box-shadow:none;opacity:.17;z-index:0;pointer-events:none;transform:none!important;place-items:center;-webkit-mask-image:linear-gradient(235deg,#000 26%,rgba(0,0,0,.35) 58%,transparent 82%);mask-image:linear-gradient(235deg,#000 26%,rgba(0,0,0,.35) 58%,transparent 82%)}
+  .rhead.live .railchip img{width:150px;height:150px;max-height:none;object-fit:contain}
+  .rhead.live .railchip .wm span{font-size:60px;color:#fff;letter-spacing:-.03em}
+  .rhead.live .rhead-store{font-size:10.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.8);line-height:1.2}
+  .rhead.live .rhead-addr{display:none}
+  /* Sized to fit the longest state ("Getting through the menu") on ONE line at 375. The verdict page
+     keeps the 40px headline, so this stays under it. Never wraps, never ellipsizes. */
+  .lh-state{margin-top:13px;font-size:clamp(23px,6.3vw,28px);font-weight:900;letter-spacing:-1px;line-height:1.1;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lh-state:empty{display:none}
+  /* Each new state arrives with the verdict page's own blur-and-rise, so the box visibly MOVES
+     forward every time the check does. Reduced motion falls back to the resting state. */
+  @media (prefers-reduced-motion:no-preference){ .lh-state{animation:rTitleIn .55s cubic-bezier(.2,.8,.2,1) both} }
   /* logged-out homepage = the focused view (hero + check card). Retired modules hidden for everyone. */
   #truststrip,#demo{display:none!important}
   /* "Earn free checks" lives in the account panel — styled to match the rows above it (black bar). */
@@ -2390,6 +2414,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
         <div class="rhead-id">
           <div class="rhead-store" id="live_store2"></div>
           <div class="rhead-addr" id="live_addr"></div>
+          <div class="lh-state" id="lh_state"></div>
         </div>
       </div>
     </div>
@@ -3202,6 +3227,7 @@ const I18N={ es:{
   'hist.today.cta':'Verificar una tienda','hist.today.none':'Sin verificaciones hoy',
   'hist.signin.title':'Inicia sesión para ver tus verificaciones','hist.signin.sub':'Tus verificaciones anteriores están guardadas en tu cuenta.','hist.signin.cta':'Iniciar sesión',
   'hist.today.sub':'Selecciona un día abajo para ver tus verificaciones anteriores.','hist.today.sub0':'Selecciona un día abajo para ver tus verificaciones anteriores.',
+  'live.h1':'Llamando','live.h2':'Pasando el menú','live.h3':'Hablando con Staff',
   'live.s1':'Llamando a la tienda…','live.s2':'Está timbrando…','live.s3':'Conectamos…','live.s4':'Escuchando el menú…','live.s5':'Navegando el menú…','live.s6':'Timbrando en el mostrador…','live.s7':'Contestó el personal','live.s8':'Preguntando por {p}',
   'live.item':'tu producto','live.store':'la tienda','live.waitperson':'Buscando a una persona…','live.noconvo':'No hay conversación en vivo en esta llamada.',
   'step.one':'paso','step.many':'pasos','step.ringing':'Llamando a la tienda…',
@@ -3388,7 +3414,7 @@ function setLang(l){ LANG=l; localStorage.setItem('runnr_lang',l); applyLang();
   try{ document.querySelectorAll('.modetab[data-mode="hobby"],.modetab[data-mode="thrift"]').forEach(b=>b.remove()); ensureModeChips(); document.querySelectorAll('.modetab').forEach(b=>b.classList.toggle('on',b.dataset.mode===MODE)); }catch(e){} // injected chips carry baked labels — rebuild them in the new language
   // …including whatever view/sheet is open right now — no hard refresh needed.
   try{
-    if($('live') && !$('live').classList.contains('hidden')) renderLiveMsg(); // flip mid-call → re-localize the live step log too
+    if($('live') && !$('live').classList.contains('hidden')){ renderLiveHead(); renderLiveMsg(); } // flip mid-call → re-localize the headline state and the live step log too
     if(NAV_VIEW==='result'&&LASTRES) showResult(LASTRES,RAIL_CID);
     if($('buyOverlay')&&$('buyOverlay').classList.contains('on')){ renderBuyPlans(); if(isV2()){ try{ applyBuyHeader(); renderBuyGrid(); renderBuyDock(); }catch(_){ } } setI('buy_note', `${ICO.lock('#7a7a88')} ${t('buy.secure2','Secure checkout via Stripe')}`); } // the title, the service grid and the dock price all carry copy too
     if($('acctOverlay')&&$('acctOverlay').classList.contains('on')) openAccount();
@@ -5487,12 +5513,28 @@ function liveStageLabel(n){
   // Active-voice steps (the result design). Stage 1 is the roll-up handle ("Ringing the store…").
   return ({1:t('live.s1','Ringing the store…'),2:t('live.s2',"It's ringing…"),3:t('live.s3',"We've connected…"),4:t('live.s4','Listening to the menu…'),5:t('live.s5','Working through the menu…'),6:t('live.s6','Ringing the front desk…'),7:t('live.s7','Staff picked up'),8:tf('live.s8','Asking about {p}',{p:prod})})[n]||'';
 }
+// THE STEP WINDOW (2026-07-30). The customer cannot hear the call, so the glowing header says where we
+// are in ONE big line. Three live states, then the verdict takes over on the result page (state four).
+// This READS the stage pipe and nothing else: 1-3 = still getting the line, 4-6 = the menu, 7-8 = a person.
+function liveHeadLabel(n){
+  if(n>=7) return t('live.h3','Talking to Staff');
+  if(n>=4) return t('live.h2','Getting through the menu');
+  return t('live.h1','Calling');
+}
+function renderLiveHead(){
+  const el=$('lh_state'); if(!el) return;
+  const txt=liveHeadLabel(LIVE_STAGE||1);
+  if(el.textContent===txt) return;   // same state → no re-run of the rise-in
+  el.textContent=txt;
+  try{ el.style.animation='none'; void el.offsetWidth; el.style.animation=''; }catch(_){ }
+}
 function liveStage(n){
   if(!n||n<=LIVE_STAGE) return;
   LIVE_STAGE=n;
   const at=LIVE_T0?((Date.now()-LIVE_T0)/1000):0;
   LIVE_STEPS.push({n, label:liveStageLabel(n), at});  // log it with the elapsed time it started
   const el=$('phase'); if(el) el.textContent=liveStageLabel(n); // back-compat if a #phase element exists
+  renderLiveHead();
   renderLiveMsg();
 }
 // ---- The two-section call box: live STEPS (system font, timed) on top, the human SCRIPT below ----
@@ -5825,6 +5867,7 @@ async function startCheckLive(){
   const _mb=$('muteBanner'); if(_mb) _mb.style.display='none'; // owner asked to drop the 'flip off silent' note
   LIVE_STEPS=[]; LIVE_TR=[]; LIVE_TRANSCRIPT=''; AGENT_PITCHED=false; LIVE_STAGE=0; LIVE_DONE=false; window.LIVE_CANCELLED=false; LIVE_T0=Date.now(); window.LIVE_FOLLOW=true; window._livePend=false;
   fillLiveHeader(); const _lr=$('live_rhead'); if(_lr)_lr.className='rhead live';
+  { const _lh=$('lh_state'); if(_lh) _lh.textContent=''; } // clear last call's state so the window never opens on a stale headline
   liveStage(1); // logs step 1 + renders the call box (steps on top, empty script below)
   let secs=0; const elT=setInterval(()=>{ secs+=1; },1000); // counts toward the hard cap only — no on-screen timer
   LIVE_TIMERS=[elT];
