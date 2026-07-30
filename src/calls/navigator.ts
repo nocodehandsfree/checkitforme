@@ -611,7 +611,11 @@ async function navTurn(id: string, speech: string): Promise<string> {
     const line = speech.trim().slice(0, 300);
     const last = s.steps[s.steps.length - 1];
     const spokeOver = !!last && last.who === "us" && atSec - (last.atSec ?? 0) <= TAIL_SEC;
-    const fragment = line.split(/\s+/).length <= 8 && !isMenuLine(line) && !looksLikeQuestion(line);
+    // THE HANDOFF IS ITS OWN MOMENT, never a tail. "Okay, transferring you now" is short and is not a
+    // question, so the first version of this rule swallowed it into the menu line above and the record
+    // lost the one line that says the menu was finished with us.
+    const fragment = line.split(/\s+/).length <= 8 && !isMenuLine(line)
+      && !looksLikeQuestion(line) && !ROUTING_RE.test(line);
     const prevIvr = [...s.steps].reverse().find((st) => st.who === "ivr" && st.text);
     if (spokeOver && fragment && prevIvr) prevIvr.text = `${prevIvr.text} ${line}`.slice(0, 300);
     else s.steps.push({ who: "ivr", text: line, atSec });

@@ -459,8 +459,8 @@ async function main() {
     // as a menu step of its own.
     ok(/const spokeOver = [\s\S]{0,200}?atSec - \(last\.atSec \?\? 0\) <= TAIL_SEC/.test(src),
       "a store line arriving right after our own answer is tested as the remainder of what we cut");
-    ok(/const fragment = line\.split[\s\S]{0,140}?!isMenuLine\(line\) && !looksLikeQuestion\(line\)/.test(src),
-      "and only a short line that is neither a menu nor a question can be a remainder");
+    ok(/const fragment = line\.split[\s\S]{0,200}?!isMenuLine\(line\)\s*\n?\s*&& !looksLikeQuestion\(line\) && !ROUTING_RE\.test\(line\)/.test(src),
+      "and only a short line that is neither a menu, a question, nor the handoff can be a remainder");
     ok(/if \(spokeOver && fragment && prevIvr\) prevIvr\.text = /.test(src),
       "it is joined onto the line it belongs to, never listed as its own step");
 
