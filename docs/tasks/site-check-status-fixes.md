@@ -1,4 +1,4 @@
-# Check status page: the phone's own bars, then the alerts list
+# Check status page: the bottom bar, then the alerts list
 
 **System:** site · **Status:** active · **Owner-named 2026-07-30.**
 **This task IS the unlock authority** for the check-status section of `public/checkit.html` and for
@@ -9,21 +9,20 @@ start the alerts work until the check status page is signed off on his phone.**
 
 ---
 
-## 1. THE ONE TO GET RIGHT — content slides under the phone's own bars
+## 1. THE ONE TO GET RIGHT — content slides under Safari's bottom bar
 
-**What he sees (staging, iPhone, Safari):**
-- **Bottom:** as each new line of the conversation lands, the page slides up and the Check wordmark
-  in the footer ends up half-hidden behind Safari's address bar (the solid grey strip at the bottom).
-- **Top:** on the "The call just finished. Pulling the result." screen, that text sits behind the
-  iPhone's status bar — the clock and battery row. It reads as text under the clock.
+**What he sees (staging, iPhone, Safari):** as each new line of the conversation lands, the page
+slides up and the Check wordmark in the footer ends up half-hidden behind Safari's address bar (the
+solid grey strip at the bottom).
 
-**Both are the same root cause.** The live view follows the conversation by scrolling to the very end
+**The top of the page is NOT in scope.** I flagged the pending text passing under the status bar and
+he looked and said there is no issue up there. Do not chase it.
+
+**Root cause.** The live view follows the conversation by scrolling to the very end
 of the document (`renderLiveMsg`, `public/checkit.html` ~:5643 — `window.scrollTo({top:
 document.body.scrollHeight})`). The document's true end sits behind Safari's bottom bar. On every
 other page the CUSTOMER scrolls, and Safari tucks its own bar away when a human scrolls; it does not
-do that for a scroll the page performs on itself. The top is the same scroll seen from the other end:
-when the check finishes, `showResult` flips to the pending screen while the page is still carrying
-the live view's scroll position, so the pending text has already travelled up under the status bar.
+do that for a scroll the page performs on itself.
 
 ### ⚠️ HOW I GOT THIS WRONG — do not repeat it
 
@@ -52,10 +51,6 @@ rejected it the same day and it was reverted in `20169ae`.** Why it was wrong:
    comment *"clears the 120px under-bar overshoot AND lifts the last row a comfortable tap above the
    iOS toolbar (a flush-to-edge link was untappable)"*. Every slide-up sheet already uses this
    recipe. Copy it WHOLE (LAW 1) — half-copying a working pattern is how the zones basket was broken.
-3. **The top.** When the check ends and the pending screen appears, put the page back to the top so
-   the pending text is not still carrying the live view's scroll. `showResult` already scrolls to top
-   when the verdict SETTLES (~:6362) — the pending flip needs the same treatment.
-
 **Do them in one push, in that order, and re-check that the reveal still works** — the reveal is:
 follow the conversation down live → check ends → page scrolls back to the top → verdict appears.
 Break that and he will bounce it again.
