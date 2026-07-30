@@ -92,8 +92,17 @@ export class ElevenLabsProvider implements VoiceProvider {
     if (!res.ok) return null;
     const d = (await res.json()) as ElevenLabsConversation;
 
-    // Not finished yet — let the poller try again later.
-    if (!["done", "completed", "failed"].includes(d.status)) return null;
+    // Not finished yet — let the poller try again later. ONE exception (owner 07-30): "processing"
+    // means the phone side already hung up and only ElevenLabs' after-call analysis is still cooking.
+    // The words are complete (they streamed live), so a connected check finalizes NOW from the
+    // transcript + the second read instead of holding the customer for their stamp — that stamp was
+    // the whole 1s-vs-10s verdict swing. Strictly guarded: processing passes only with real turns AND
+    // a real duration, so a half-written record can never mislabel a check; anything less keeps
+    // waiting for "done" exactly as before.
+    const processingReady = d.status === "processing"
+      && (d.transcript?.length ?? 0) > 0
+      && (d.metadata?.call_duration_secs ?? 0) > 0;
+    if (!processingReady && !["done", "completed", "failed"].includes(d.status)) return null;
     // EL flips to "done" a beat BEFORE it finishes transcribing/analyzing. In that gap the transcript is
     // still empty, and normalize() would mislabel a CONNECTED call (call_duration_secs > 0) as "no
     // answer" — the "nobody answered, then not-in-stock only after reload" bug. If it's done but neither
