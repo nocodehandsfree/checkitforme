@@ -38,6 +38,9 @@ const RING_CYCLE_SEC = 6;
 /** How long after our own answer a short store line still counts as the REMAINDER of the recording we
  *  spoke over, rather than a new prompt. A real next prompt takes longer than this to arrive. */
 const TAIL_SEC = 8;
+/** The longest a remainder can be. A cut sentence runs to about a dozen words; anything longer that
+ *  is neither a menu nor a question is a line in its own right. */
+const TAIL_WORDS = 14;
 const TRANSFER_WAIT_SEC = 40;
 
 // A live person is on the line (a short greeting/question said TO us). Used as a backstop in auto-0
@@ -614,7 +617,10 @@ async function navTurn(id: string, speech: string): Promise<string> {
     // THE HANDOFF IS ITS OWN MOMENT, never a tail. "Okay, transferring you now" is short and is not a
     // question, so the first version of this rule swallowed it into the menu line above and the record
     // lost the one line that says the menu was finished with us.
-    const fragment = line.split(/\s+/).length <= 8 && !isMenuLine(line)
+    // Long enough to hold the rest of a sentence ("if you'd like to do and I can connect" is nine
+    // words), short enough that a real prompt cannot fit: a genuine next prompt is a menu or a
+    // question, and both are excluded above regardless of length.
+    const fragment = line.split(/\s+/).length <= TAIL_WORDS && !isMenuLine(line)
       && !looksLikeQuestion(line) && !ROUTING_RE.test(line);
     const prevIvr = [...s.steps].reverse().find((st) => st.who === "ivr" && st.text);
     if (spokeOver && fragment && prevIvr) prevIvr.text = `${prevIvr.text} ${line}`.slice(0, 300);
