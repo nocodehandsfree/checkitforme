@@ -1,4 +1,4 @@
-// THE FOUR PASS/FAIL ROWS, unit-tested with no app and no database (src/calls/behaved.ts).
+// THE PASS/FAIL ROWS THE OWNER READS ON ONE TEST CHECK, unit-tested with no app and no database (src/calls/behaved.ts).
 //
 // Run: ./node_modules/.bin/tsx scripts/test-behaved.ts
 //
@@ -33,7 +33,12 @@ const cleanDirect: BehavedEvent[] = [
 head("SHAPE");
 {
   const r = behaved({ timeline: cleanDirect, rollup: { stepsFired: 0, stepsOnPause: 0, charlieSegments: 1 }, agentLines: [OPENER, "Perfect, thank you so much!"] });
-  ok("four rows, fixed order", r.map((x) => x.key).join(",") === "asked_once,no_keypad_at_person,meter_stopped_on_hold,mapping_held", r.map((x) => x.key));
+  // THE ORDER IS THE SCREEN. The four he walked keep their places; the two the wrong-department save
+  // added sit under them, so a row never moves out from under his thumb.
+  ok("six rows, fixed order", r.map((x) => x.key).join(",")
+    === "asked_once,no_keypad_at_person,meter_stopped_on_hold,mapping_held,asked_to_be_put_through,asked_the_new_person", r.map((x) => x.key));
+  ok("an ordinary check shows a gray dash on both wrong-department rows, never a cross",
+    row(r, "asked_to_be_put_through").pass === null && row(r, "asked_the_new_person").pass === null);
   ok("every row ships a label, a tooltip and a why", r.every((x) => !!x.label && !!x.tip && !!x.why));
   ok("pass is only true, false or null", r.every((x) => x.pass === true || x.pass === false || x.pass === null));
   ok("a clean direct check: asked once", row(r, "asked_once").pass === true);
@@ -121,6 +126,97 @@ head("THE WORDS OFF A FINISHED ROW");
   ok("the opener survives intact", lines[0] === OPENER, lines[0]);
   ok("an empty transcript is an empty list", agentLinesFrom(null).length === 0);
   ok("scored off a real row, that call asked once", row(behaved({ timeline: cleanDirect, agentLines: lines }), "asked_once").pass === true);
+}
+
+
+// ================================================================================================
+// THE WRONG-DEPARTMENT SAVE, as the owner reads it on one test check.
+//
+// The shape of a saved check: we reach the pharmacy counter, Staff say so, the agent asks once to be
+// put through, the desk rings, the agent is closed for the hand-over, somebody new picks up and IS
+// asked. Six rows, and the trap is the first one: asking the new person is a SECOND question on the
+// check, and the old rule counted questions per check, so a perfect save would have scored a cross.
+const SAY_TRANSFER = "Oh gotcha, could you put me through to whoever handles the Pokémon?";
+const savedCheck: BehavedEvent[] = [
+  ev("dialed", 0, { plannedLane: "direct", plan: [] }),
+  ev("connected", 4),
+  ev("human_detected", 8),
+  ev("charlie_join", 8, { segment: 1 }),
+  ev("unknown", 16, { wrongDepartment: true, why: "Staff said we reached another counter", said: "Hi, this is the pharmacy." }),
+  ev("transfer", 22, { reason: "transfer" }),
+  ev("hold_start", 22, { reason: "transfer" }),
+  ev("charlie_leave", 22, { strategy: "reopen" }),
+  ev("hold_end", 31, { gapSec: 9, maybeNewPerson: true, reason: "transfer" }),
+  ev("charlie_join", 31, { segment: 2 }),
+  ev("verdict", 44),
+  ev("charlie_leave", 46),
+  ev("hangup", 46),
+];
+const savedTurns = [
+  { text: OPENER, atSec: 9 },
+  { text: SAY_TRANSFER, atSec: 18 },
+  { text: "Heyy, do you have any Pokemon in stock right now?", atSec: 33 },
+  { text: "Perfect, thank you so much, have a good one.", atSec: 45 },
+];
+
+head("THE WRONG-DEPARTMENT SAVE");
+{
+  const r = behaved({ timeline: savedCheck, rollup: { stepsFired: 0, stepsOnPause: 0, charlieSegments: 2 }, agentLines: savedTurns });
+  ok("asked once STILL passes, because the second question went to a second person",
+    row(r, "asked_once").pass === true, row(r, "asked_once").why);
+  ok("asked to be put through passes, once", row(r, "asked_to_be_put_through").pass === true, row(r, "asked_to_be_put_through").why);
+  ok("…and it prints what Staff actually said", /this is the pharmacy/i.test(row(r, "asked_to_be_put_through").why));
+  ok("the new person was asked", row(r, "asked_the_new_person").pass === true, row(r, "asked_the_new_person").why);
+  ok("…off the clock, naming both seconds", /31s/.test(row(r, "asked_the_new_person").why) && /33s/.test(row(r, "asked_the_new_person").why));
+  ok("the meter stopped, and it says HAND-OVER rather than hold",
+    row(r, "meter_stopped_on_hold").pass === true && /hand-over/i.test(row(r, "meter_stopped_on_hold").why), row(r, "meter_stopped_on_hold").why);
+  ok("no keypad at a person still passes", row(r, "no_keypad_at_person").pass === true);
+}
+
+head("…and every way it can go wrong");
+{
+  // He carried on with the new person instead of asking them. The exact bug the 20 second stopwatch
+  // used to cause, and the one row that catches it.
+  const r = behaved({ timeline: savedCheck, rollup: { charlieSegments: 2 }, agentLines: [
+    { text: OPENER, atSec: 9 }, { text: SAY_TRANSFER, atSec: 18 },
+    { text: "So do you have them then?", atSec: 34 }] });
+  ok("carried on with the new person: asked the new person FAILS", row(r, "asked_the_new_person").pass === false, row(r, "asked_the_new_person").why);
+  ok("…and asked once does NOT also cross, so one miss prints one cross", row(r, "asked_once").pass === true);
+}
+{
+  // Landed wrong and hung up instead of asking to be put through.
+  const r = behaved({ timeline: savedCheck.slice(0, 5), agentLines: [{ text: OPENER, atSec: 9 }] });
+  ok("never asked to be put through: FAILS", row(r, "asked_to_be_put_through").pass === false, row(r, "asked_to_be_put_through").why);
+  ok("and the new-person row is a dash, because nobody new ever came on", row(r, "asked_the_new_person").pass === null);
+}
+{
+  // Asked twice with NOBODY new on the line. Still a fail, exactly as it always was.
+  const r = behaved({ timeline: cleanDirect, rollup: { charlieSegments: 1 }, agentLines: [
+    { text: OPENER, atSec: 9 }, { text: "Sorry, do you have any Pokemon in stock right now?", atSec: 14 }] });
+  ok("two questions and one person still FAILS asked once", row(r, "asked_once").pass === false, row(r, "asked_once").why);
+}
+{
+  // A finished row: a flat transcript with no clock on it. The rows must still answer, and say so.
+  const lines = agentLinesFrom(`Agent: ${OPENER}\nClerk: this is the pharmacy\nAgent: ${SAY_TRANSFER}\nClerk: hold on\nAgent: Heyy, do you have any Pokemon in stock right now?`);
+  const r = behaved({ timeline: savedCheck, rollup: { charlieSegments: 2 }, agentLines: lines });
+  ok("with no clock, the new person is still scored off the order", row(r, "asked_the_new_person").pass === true, row(r, "asked_the_new_person").why);
+  ok("…and it says the clock was not what it read", /order of what was said/.test(row(r, "asked_the_new_person").why));
+  ok("asked once holds up without a clock too", row(r, "asked_once").pass === true);
+}
+{
+  // A long walk away is ALSO somebody new (the engine says so), and it buys the same second question.
+  const walked: BehavedEvent[] = [
+    ev("dialed", 0, { plannedLane: "direct", plan: [] }), ev("human_detected", 6), ev("charlie_join", 6, { segment: 1 }),
+    ev("hold_start", 20, { reason: "quiet" }), ev("charlie_leave", 20, { strategy: "reopen" }),
+    ev("hold_end", 55, { gapSec: 35, maybeNewPerson: true, reason: "quiet" }), ev("charlie_join", 55, { segment: 2 }),
+    ev("hangup", 70),
+  ];
+  const r = behaved({ timeline: walked, rollup: { charlieSegments: 2 }, agentLines: [
+    { text: OPENER, atSec: 7 }, { text: "Heyy, do you have any Pokemon in stock right now?", atSec: 57 }] });
+  ok("a long wait is a new person too: asked once passes", row(r, "asked_once").pass === true, row(r, "asked_once").why);
+  ok("…the new person was asked", row(r, "asked_the_new_person").pass === true);
+  ok("…and being put through is a dash, because we never landed wrong", row(r, "asked_to_be_put_through").pass === null);
+  ok("…and the meter row says hold, not hand-over", /hold/i.test(row(r, "meter_stopped_on_hold").why) && !/hand-over/i.test(row(r, "meter_stopped_on_hold").why), row(r, "meter_stopped_on_hold").why);
 }
 
 console.log(`\n${fail ? "FAIL" : "PASS"}  ${pass} passed, ${fail} failed`);

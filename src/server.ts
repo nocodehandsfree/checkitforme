@@ -5966,9 +5966,15 @@ app.get("/api/admin/receipt/:room", async (c) => {
       timeline,
       seconds: sums,
       cost: { ...cost, readable: readable(cost) },
-      // The four pass/fail rows, off the record this envelope already carries — no second route and
-      // no new listening (src/calls/behaved.ts).
-      behaved: behaved({ timeline, rollup: sums, agentLines: live.transcript.filter((l) => l.who === "Agent").map((l) => l.text) }),
+      // The pass/fail rows, off the record this envelope already carries — no second route and no new
+      // listening (src/calls/behaved.ts). A LIVE check knows WHEN each line was said, and the
+      // wrong-department rows need that: "did he ask the person who just picked up" is a question
+      // about order in time. A finished row has a flat transcript and falls back to the line order.
+      behaved: behaved({
+        timeline, rollup: sums,
+        agentLines: live.transcript.filter((l) => l.who === "Agent")
+          .map((l) => ({ text: l.text, atSec: Math.round(l.atMs / 1000) })),
+      }),
     });
   }
   const rows = await db.select().from(callEvents).where(eq(callEvents.room, room)).orderBy(callEvents.atMs);

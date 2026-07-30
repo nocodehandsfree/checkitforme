@@ -19,10 +19,17 @@
 //     engine broke" and a tick reads as "we checked and it was fine"; both are lies. Same law the
 //     dashboard already runs on: a cost that was never stamped is never printed as nought.
 //
-// The order of the four is fixed and matches the screen the owner walked (docs/tasks/
-// admin-testing-new-engine.md). Adding a fifth means changing the screen, which is his call.
+// The order is fixed and matches the screen the owner walked (docs/tasks/admin-testing-new-engine.md).
+// He called the fifth and sixth on 07-30, for the wrong-department save, so they are APPENDED: the four
+// he already knows keep their places and their meaning, and the two new ones sit under them.
+//
+// THE TRAP THE FIFTH ROW EXPOSED. "Asked once" counted asks per CHECK. That was right while a check
+// only ever had one person on it. The save puts a SECOND person on the line, and asking them is the
+// whole point — so the old rule would have printed a red cross on a check that behaved perfectly. The
+// rule is one question PER PERSON, and the allowance grows by one every time somebody new picks up.
 
-export type BehavedKey = "asked_once" | "no_keypad_at_person" | "meter_stopped_on_hold" | "mapping_held";
+export type BehavedKey = "asked_once" | "no_keypad_at_person" | "meter_stopped_on_hold" | "mapping_held"
+  | "asked_to_be_put_through" | "asked_the_new_person";
 
 export interface BehavedRow {
   key: BehavedKey;
@@ -50,12 +57,20 @@ export interface BehavedSums {
   charlieSegments?: number | null;
 }
 
+/** One thing the agent said. `atSec` is null on a finished row: the stored transcript is flat text with
+ *  no clock on it. A LIVE check has the second, which is the one the owner watches while he tests. */
+export interface AgentTurn { text: string; atSec?: number | null }
+
 export interface BehavedInput {
   timeline: BehavedEvent[];
   rollup?: BehavedSums | null;
-  /** Every line the agent said, in order. Text only — no audio, on any path. */
-  agentLines?: string[];
+  /** Every line the agent said, in order. Text only — no audio, on any path. Plain strings are
+   *  accepted so a caller with no clock (a finished row) does not have to invent one. */
+  agentLines?: Array<string | AgentTurn>;
 }
+
+const asTurn = (l: string | AgentTurn): AgentTurn =>
+  typeof l === "string" ? { text: l.trim(), atSec: null } : { text: String(l.text || "").trim(), atSec: l.atSec ?? null };
 
 /**
  * THE STOCK QUESTION, as opposed to a follow-up. The opener always names the thing we are asking
@@ -87,27 +102,51 @@ export function behaved(input: BehavedInput): BehavedRow[] {
   const sec = (e: BehavedEvent | undefined) => (e ? Number(e.atSec ?? 0) : null);
   const first = (kind: string) => tl.find((e) => e.kind === kind);
   const every = (kind: string) => tl.filter((e) => e.kind === kind);
-  const lines = (input.agentLines || []).map((s) => String(s || "").trim()).filter(Boolean);
+  const turns = (input.agentLines || []).map(asTurn).filter((t) => t.text);
   const sums = input.rollup || {};
+  // SOMEBODY NEW PICKED UP. Written by the engine on every wait that ended with a different person:
+  // a hand-over is always one of these, and so is a long enough walk away. Each one buys the agent
+  // one more question, because the person who just answered never heard the first.
+  const newPeople = tl.filter((e) => e.kind === "hold_end" && (e.detail || {}).maybeNewPerson === true);
+  // Where we landed on a desk that could not answer. Read off the words on the check itself.
+  const wrongDept = tl.find((e) => (e.detail || {}).wrongDepartment === true) || null;
 
   return [
-    askedOnce(lines),
+    askedOnce(turns, newPeople.length),
     noKeypadAtPerson(sec(first("human_detected")), every("alpha_press")),
     meterStoppedOnHold(tl, sums),
     mappingHeld(tl, sums, sec(first("human_detected")), sec(first("charlie_join"))),
+    askedToBePutThrough(turns, wrongDept),
+    askedTheNewPerson(turns, newPeople),
   ];
 }
 
-function askedOnce(lines: string[]): BehavedRow {
+/**
+ * ONE QUESTION PER PERSON. Not one per check: a hand-over puts somebody new on the line who never
+ * heard the first question, and asking them is the save working, not a fault. The allowance is one
+ * plus however many times somebody new picked up.
+ */
+function askedOnce(turns: AgentTurn[], newPeople: number): BehavedRow {
   const row = (pass: boolean | null, why: string): BehavedRow => ({
     key: "asked_once", label: "Asked once", pass, why,
-    tip: "One question, then the wrap. A second ask after a hold is a fail.",
+    tip: "One question per person on the line. A second ask with nobody new is a fail; asking again after a hand-over is not.",
   });
-  if (!lines.length) return row(null, "Nothing the agent said was written down on this check, so there is nothing to count.");
-  const asks = lines.filter(isAsk), greets = lines.filter(isGreeting);
-  if (asks.length > 1) return row(false, `The agent asked for the stock ${plural(asks.length, "time", "times")} on one check.`);
-  if (greets.length > 1) return row(false, `The agent opened with a greeting ${plural(greets.length, "time", "times")}, so somebody was greeted twice.`);
-  if (asks.length === 1) return row(true, "One question, then the wrap.");
+  if (!turns.length) return row(null, "Nothing the agent said was written down on this check, so there is nothing to count.");
+  const asks = turns.filter((t) => isAsk(t.text)), greets = turns.filter((t) => isGreeting(t.text));
+  const allowed = 1 + newPeople;
+  if (asks.length > allowed) {
+    return row(false, newPeople
+      ? `${plural(newPeople, "person", "people")} came on the line and the agent asked for the stock ${plural(asks.length, "time", "times")}, which is ${asks.length - allowed} more than there were people to ask.`
+      : `The agent asked for the stock ${plural(asks.length, "time", "times")} on one check.`);
+  }
+  if (greets.length > 1 + newPeople) return row(false, `The agent opened with a greeting ${plural(greets.length, "time", "times")}, so somebody was greeted twice.`);
+  if (asks.length >= 1) {
+    // A check with a hand-over and only ONE ask still passes HERE: nobody was asked twice. Whether the
+    // new person was asked at all is its own row below, so one miss never prints two crosses.
+    return row(true, newPeople && asks.length > 1
+      ? `${plural(asks.length, "question", "questions")} across ${plural(1 + newPeople, "person", "people")}, so nobody was asked twice.`
+      : "One question, then the wrap.");
+  }
   return row(null, "No stock question was recognised in what the agent said, so this one cannot be counted either way.");
 }
 
@@ -136,20 +175,74 @@ function meterStoppedOnHold(tl: BehavedEvent[], sums: BehavedSums): BehavedRow {
   const holdIdx = tl.map((e, i) => (e.kind === "hold_start" ? i : -1)).filter((i) => i >= 0);
   if (!holdIdx.length) return row(null, "Nobody put us on hold on this check, so the meter was never asked to stop.");
   const nextOf = (from: number, kind: string) => tl.findIndex((e, i) => i > from && e.kind === kind);
+  // A WAIT AND A HAND-OVER ARE THE SAME MECHANISM AND DIFFERENT EVENTS TO HIM. Both stop the meter;
+  // only one of them means somebody else is about to pick up. Say which one he is reading.
+  const anyTransfer = holdIdx.some((h) => (tl[h].detail || {}).reason === "transfer");
+  const word = anyTransfer ? "the hand-over" : "the hold";
   for (const h of holdIdx) {
     const at = Number(tl[h].atSec ?? 0);
+    const why = (tl[h].detail || {}).reason === "transfer" ? "Handed over" : "Put on hold";
     const end = nextOf(h, "hold_end");
     const leave = nextOf(h, "charlie_leave");
     // The close has to land inside the hold. A close that only turns up after somebody came back is
     // the end of the call, not the meter stopping for the wait.
-    if (leave < 0 || (end >= 0 && leave > end)) return row(false, `Put on hold at ${at}s and the agent stayed on the line, billing through the wait.`);
+    if (leave < 0 || (end >= 0 && leave > end)) return row(false, `${why} at ${at}s and the agent stayed on the line, billing through the wait.`);
     if (end < 0) continue; // held to the end of the call — closing was the whole job
-    if (nextOf(end, "charlie_join") < 0) return row(false, `The agent closed for the hold at ${at}s and never came back when somebody returned at ${Number(tl[end].atSec ?? 0)}s.`);
+    if (nextOf(end, "charlie_join") < 0) return row(false, `The agent closed at ${at}s and never came back when somebody returned at ${Number(tl[end].atSec ?? 0)}s.`);
   }
   const parts = Number(sums.charlieSegments ?? 0);
   return row(true, parts > 1
-    ? `Closed for the hold and came back as part ${parts} of the same check.`
-    : "Closed for the hold and came back as a new part of the same check.");
+    ? `Closed for ${word} and came back as part ${parts} of the same check.`
+    : `Closed for ${word} and came back as a new part of the same check.`);
+}
+
+/** What the agent says when it asks to be handed on. Never "transfer me to the pharmacy": the ask is
+ *  always toward somebody who CAN answer, which is what these shapes have in common. */
+const ASK_TRANSFER = /\b(?:put (?:me|us) (?:through|thru)|transfer (?:me|us)|connect me|get me (?:through|over|to)|(?:who|whoever|someone|somebody|anyone) (?:who )?(?:handles|deals with|knows about|looks after|takes care of)|speak (?:to|with) (?:someone|somebody|whoever))\b/i;
+
+/**
+ * THE SAVE ITSELF. Only ever asked when the check landed on a desk that could not answer, so on every
+ * ordinary check this is a gray dash — there was nothing to be saved from.
+ */
+function askedToBePutThrough(turns: AgentTurn[], wrongDept: BehavedEvent | null): BehavedRow {
+  const row = (pass: boolean | null, why: string): BehavedRow => ({
+    key: "asked_to_be_put_through", label: "Asked to be put through", pass, why,
+    tip: "Only counts when Staff said we reached the wrong department. Then the agent must ask once to be handed on, never hang up and never make Staff go and look.",
+  });
+  if (!wrongDept) return row(null, "Nobody said we had reached the wrong department, so there was nothing to be put through from.");
+  const said = String((wrongDept.detail || {}).said || "").trim();
+  const at = wrongDept.atSec == null ? "" : ` at ${Number(wrongDept.atSec)}s`;
+  const heard = said ? ` Staff said "${said}".` : "";
+  if (!turns.length) return row(null, `We landed in the wrong department${at}, but nothing the agent said was written down.${heard}`);
+  const asks = turns.filter((t) => ASK_TRANSFER.test(t.text));
+  if (!asks.length) return row(false, `We landed in the wrong department${at} and the agent never asked to be put through.${heard}`);
+  if (asks.length > 1) return row(false, `The agent asked to be put through ${plural(asks.length, "time", "times")}, and once is the rule.${heard}`);
+  return row(true, `We landed in the wrong department${at} and the agent asked once to be put through.${heard}`);
+}
+
+/**
+ * AND THE LAST STEP, which is the one that used to be decided by a stopwatch. Somebody new is on the
+ * line and never heard the question. A LIVE check has the second on every line, so this is exact; a
+ * finished one has a flat transcript with no clock, and then the order of the lines is all there is.
+ */
+function askedTheNewPerson(turns: AgentTurn[], newPeople: BehavedEvent[]): BehavedRow {
+  const row = (pass: boolean | null, why: string): BehavedRow => ({
+    key: "asked_the_new_person", label: "Asked the new person", pass, why,
+    tip: "When somebody new picks up they never heard the question, so the agent must ask them. Carrying on mid answer with a stranger is a fail.",
+  });
+  if (!newPeople.length) return row(null, "The same person was on the line the whole check, so nobody new had to be asked.");
+  if (!turns.length) return row(null, "Somebody new came on, but nothing the agent said was written down.");
+  const back = Number(newPeople[0].atSec ?? 0);
+  const asks = turns.filter((t) => isAsk(t.text));
+  const timed = turns.some((t) => t.atSec != null);
+  if (timed) {
+    const after = asks.filter((t) => t.atSec != null && Number(t.atSec) >= back);
+    if (!after.length) return row(false, `Somebody new came on at ${back}s and the agent carried on without asking them.`);
+    return row(true, `Somebody new came on at ${back}s and the agent asked them at ${Number(after[0].atSec)}s.`);
+  }
+  // No clock on this record. Two questions and a new person is the save working; one is not.
+  if (asks.length > 1) return row(true, `Somebody new came on at ${back}s and the agent asked again, read off the order of what was said rather than the clock.`);
+  return row(false, `Somebody new came on at ${back}s and only one question was asked on the whole check, so they were never asked.`);
 }
 
 /**
