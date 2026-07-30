@@ -109,6 +109,27 @@ sounds, are unproven. Everything the runtime does around those words is proven a
 calls. Also unchanged and still open: a same-person hold reopens Charlie on the full instructions, so he greets
 and asks again rather than carrying on; the note tells him to carry on, but the re-ask is the shape today.
 
+
+---
+
+## 5. THE TEST LADDER — one at a time, with him on the Fun store (07-30)
+
+He runs them; I place each check on his word and read the scorecard back. **One test, then stop.** The
+Fun store is 106361 (`Test — One Question`, answers direct). Place with `POST /api/call-now` on
+STAGING `{retailerId:106361, categoryId:<Pokémon>}` — staging has `cheapBridgeAll` on, so it takes the
+new engine. Read it back with `/api/admin/receipt/:room` and quote the six rows.
+
+| # | What he does | What must happen | The rows that must move |
+|---|---|---|---|
+| 1 | Answers, gets asked, says "hold on let me go check", puts the phone down **40s**, comes back and says "yeah we got some" | Charlie is dropped the moment he walks off and reconnected when he returns. He may ask again or carry on, both fine | Meter stopped = tick and says **hold** · Asked once = tick · Asked the new person = **gray dash** · Put through = **gray dash** · NOT ONE cross |
+| 2 | Answers **"Pharmacy, this is Joe"** | Charlie asks ONCE to be put through. Never "go and look for me", never hangs up | Put through = tick, and it prints what he said |
+| 2b | …then "sure, hold on", silent **10s**, comes back in a different voice: "front register" | Charlie is dropped for the wait and asks the Pokémon question AGAIN to the new voice. A SILENT hand-over, which is the case that used to fail | Asked the new person = tick · Meter stopped = tick and says **hand-over** · Asked once = tick |
+| 3 | Answers "Pharmacy", then when asked says **"there's nobody up front right now"** | Charlie wraps warmly and ends. No nagging, no second ask to be put through | Put through = tick (once) · Asked the new person = gray dash |
+| 4 | I turn the switch OFF first. He answers "Pharmacy, this is Joe" | Charlie does **not** ask to be put through. Takes whatever answer and wraps | Put through = **cross** (correct: the switch is off, so we did not save it) |
+| 5 | Answers straight away and answers the question | The plain check still works, nothing regressed | All four original rows tick or dash, no cross |
+
+**Test 4's cross is the one to explain to him before he runs it**, or it reads as a fault.
+
 **Verify-live output:**
 ```
 HEAD = 75639af6d4ea · origin/main = 55badd886004
