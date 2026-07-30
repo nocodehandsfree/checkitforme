@@ -20,6 +20,15 @@ THE THREE — obey on every single turn:
    If the job truly needed one, kill it the second you're done — never leave it lingering,
    never start one just to wait on a deploy, a promote, or another agent.
 
+4. HIS WORDS ONLY (owner law 07-29). The models are Alpha (keypad) · Bravo (spoken menu) ·
+   Charlie (the conversation agent) · Delta (recorded clips, parked). It is a CHECK — never a
+   call, line, room, or session. The person at a store is Staff. Charlie's meter stopping on a
+   hold is "dropped Charlie"; coming back is "reconnected Charlie". Every cost rolls into two
+   buckets: nav time and talk time. Words he did not coin (receipt, room, door, lane, "the
+   thinking"…) NEVER appear in a reply to him — say it plainly instead, and any term you must
+   introduce gets a plain-words definition in the same sentence. This law covers replies, docs,
+   and every Admin label.
+
 Say "Protocol" → re-read the full rules in CLAUDE.md and rebuild the last reply to match.
 EOF
 jq -n --arg c "$RULES" '{hookSpecificOutput:{hookEventName:"UserPromptSubmit",additionalContext:$c}}'
