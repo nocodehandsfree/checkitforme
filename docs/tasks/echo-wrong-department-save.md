@@ -1,8 +1,8 @@
 # Echo's whole box: the wrong-department save + three more (owner decisions 07-29)
 
-**System:** voice-calls · **Status:** active — **items 1, 2 and 3 DONE and shipped 07-30. Item 4 (the save)
-NOT STARTED**, and it is the one that needs a fresh chat: it opens the locked bridge, adds a call flag to both
-flag lists, and touches an Admin screen (which needs a comp render first).
+**System:** voice-calls · **Status:** ALL FOUR ITEMS BUILT AND SHIPPED TO STAGING (07-30). The save is driven on
+the real bridge and on live staging; the ONE thing left is a real check where a human says "this is the
+pharmacy" and puts us through, which needs his phone. See item 4.
 **Owner ruling 07-30:** "disagrees" = one reader says in stock, the other says not. A merely UNSURE second
 reader does not downgrade a confident answer. Keep it that way.
 **What:** when Staff say we reached the wrong department, Charlie asks them to transfer us and asks
@@ -66,22 +66,55 @@ and I proved the gate fails on the pre-fix code and passes on this one, so it is
 
 ## 3. The six test calls — in my reply to the owner, per the box. No calls placed for him.
 
-## 4. The wrong-department save — NOT STARTED
+## 4. The wrong-department save — BUILT AND SHIPPED TO STAGING 07-30
 
-Every piece it needs now works, which is why it should be its own chat rather than a tail on this one:
+Nothing new was built. Every piece already worked and this snapped onto them, exactly as the box said:
 
-- **Noticing it is Charlie's job, not the Ear's** (spec §10 says so in plain words: the Ear cannot judge "wrong
-  department", that needs words). So it is a standing rule in the prompt library (`src/voice/prompts.ts`), the
-  same shape as the one-question instructions, telling the agent to ask to be put through.
-- **The transfer wait is already built and now reliable:** `ConversationEar` transfer (fixed 07-29, it used to
-  fire on one frame), `reopen` closing Charlie so the meter stops, and `tellCharlieAboutTheGap` warning him the
-  person may be new. The re-ask after a hold is designed; it has never been proven on a real transfer.
-- **The drift filing is already built:** `learnFromReceipt` → `reportUnknown` / `reportCallDrift`. It needs one
-  new unknown kind for "we landed in the wrong department".
-- **The flag** must go in BOTH `ENV_FLAGS` (public/app.html) and `KEEP_LOCAL_FLAGS` (src/settings-sync.ts), or
-  the prod mirror stomps it inside a minute. Plain label, default ON. The Admin edit needs a comp render first.
+- **Charlie notices it, never the Ear** (spec §10). A standing rule in `src/voice/prompts.ts`, gated on a
+  per-call flag in the same shape kiosk mode already uses. Both lanes send the same value off the same switch
+  (`buildRestockVars` and `ElevenLabsProvider.startCall`), so it can never be on for one lane and off for the
+  other. The phrase test that RECORDS it (`heardWrongDepartment`) is pure and sits beside the rule it partners
+  with; it is read in the same place the voicemail phrases are read, on our own transcript.
+- **The wait is the existing one:** the transfer detector, `reopen` closing Charlie so the meter stops, and
+  `tellCharlieAboutTheGap`. Two real gaps found and closed on the way:
+  - **A hand-over is ALWAYS a new person.** `maybeNewPerson` came off a twenty-second stopwatch, right for
+    somebody walking to a shelf and wrong for a hand-over. A quick transfer left Charlie carrying on mid answer
+    with a stranger, which is this save failing at its last step.
+  - **The note was never sent at all when Charlie was closed for the wait.** The reopen branch returned before
+    it, so the reopened Charlie started knowing nothing. It is held now and delivered the instant his new
+    session reports ready, before a single buffered word reaches him.
+- **The drift filing** is `learnFromReceipt` with one new unknown kind, `wrong-department`: a review item with
+  what Staff actually said, an observation marked as drift, and trust in that route dropped on the spot. The
+  route is never rewritten off one check (§10.2).
+- **The flag** `askForTransfer` is in BOTH `ENV_FLAGS` and `KEEP_LOCAL_FLAGS`, default ON, on Calls ▸ App with
+  the owner's own label. Comp render done first: **1i, the CONSOLE page**, the same toggle row as "Customers
+  hear calls live". Spec check O.2 compares the two lists and passes.
+- Three new spec checks hold it: **O.5** (a switch, default on, both lanes read it), **O.6** (judged on words,
+  never by the Ear), **O.7** (a transfer always says the person may be new). Check **7.1b was fixed**: it
+  grepped `'ourBrain',` so any second call-lane flag failed a check about the Policy screen.
 
-**Verify-live output (paste on close — a task without it is NOT closed):**
+**DRIVEN — the whole save, on the real bridge with real sockets** (`scripts/test-delta-clip.ts`, 61 asserts,
+was 42). Staff say "this is the pharmacy" → the receipt carries it and what they said → the desk rings → his
+session CLOSES and the receipt says the billing stopped → the phone line never drops → somebody new picks up
+after **1 second** → `maybeNewPerson` is TRUE anyway → he opens as **part 2 of the same check** → **exactly one**
+note reaches him, saying the person may be someone new, and it never goes down the phone line.
+
+**DRIVEN ON LIVE STAGING** (commit `75639af6`): the switch reads ON; the instructions the Fun store's check will
+actually run render the rule with the flag `"true"` and the category filled in; flipping the switch OFF makes the
+same instructions say never ask to be put through; flipping it back ON restores it. Switch left ON.
+
+**NOT VERIFIED — needs his phone.** No real check where a human said "this is the pharmacy" and put us through.
+I cannot be Staff at the far end, so the words Charlie actually chooses to ask with, and how the hand-over
+sounds, are unproven. Everything the runtime does around those words is proven above. Same category as §3's six
+calls. Also unchanged and still open: a same-person hold reopens Charlie on the full instructions, so he greets
+and asks again rather than carrying on; the note tells him to carry on, but the re-ask is the shape today.
+
+**Verify-live output:**
 ```
-(pending — items 1-3 shipped, item 4 not started; not closed)
+HEAD = 75639af6d4ea · origin/main = 55badd886004
+staging  https://staging.checkitforme.com/ → LIVE (serving HEAD)
+prod     https://checkitforme.com/ → NOT-LIVE (serving 55badd886004, HEAD is 75639af6d4ea) — that IS origin/main: expected until the next promote
+admin    https://admin.checkitforme.com/ → NOT-LIVE (serving 55badd886004, HEAD is 75639af6d4ea) — that IS origin/main: expected until the next promote
 ```
+The Admin shell ships on its own path: `ship-admin.sh` reported `{"ok":true,"commit":"75639af6"}` and
+admin.checkitforme.com serves the new row ("If we reach the wrong department, ask Staff to transfer us").
