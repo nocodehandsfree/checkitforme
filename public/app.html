@@ -2327,11 +2327,11 @@ async function openReceiptInto(url,o){
   if(!d||d.error){ box.innerHTML='<div class="empty">Nothing was recorded for this call. Only calls placed since 27 July have a receipt.</div>'; return; }
   // ALL SIXTEEN kinds the calling engine can write (src/calls/events.ts). The set is closed, so this
   // map is complete by definition. A missing one used to fall through and print its code name.
-  const KIND={dialed:'Dialled',ringing:'Ringing',connected:'The store picked up',ivr_detected:'A phone menu',
-    alpha_press:'Pressed a key',bravo_say:'Said a word',human_detected:'Staff answered',
-    charlie_join:'Charlie joined, the meter starts',charlie_leave:'Charlie left, the meter stopped',
-    hold_start:'Charlie dropped, Staff away',hold_end:'Staff back, Charlie reconnected',transfer:'Transferred',voicemail:'A machine',
-    unknown:'Something we could not place',verdict:'Answer',hangup:'Call ended'};
+  const KIND={dialed:'Dialled',ringing:'Ringing',connected:'The line was answered',ivr_detected:'A phone menu',
+    alpha_press:'Pressed a key',bravo_say:'Said a word',human_detected:'Staff greeting',
+    charlie_join:'Charlie joined',charlie_leave:'Charlie left',
+    hold_start:'Staff stepped away',hold_end:'Staff back',transfer:'Transferred',voicemail:'A machine',
+    unknown:'Something we could not place',verdict:'Answer',hangup:'Check ended'};
   const c=d.cost||{}, s=d.seconds||d.rollup||{};
   // The costs come back in millionths of a dollar and the receipt prints them for us. Never format
   // them here: this line used to read a five cent call as 5,282,200¢.
@@ -2389,10 +2389,10 @@ function splitCard(c,priced,tl){
   const steps=(tl||[]).filter(e=>e.kind==='alpha_press'||e.kind==='bravo_say');
   const model=steps.some(e=>e.kind==='alpha_press')||lane==='alpha'?'Alpha'
     :steps.some(e=>e.kind==='bravo_say')||lane==='bravo'?'Bravo':'';
-  const menuLabel=model?('Menu · '+model):'Getting to Staff';
+  const menuLabel='Menu ('+(model||'None')+')';
   return `<div class="card" style="margin-bottom:14px;padding:16px 18px">
     <div class="k-eyebrow" style="margin:0 0 4px">Check cost</div>
-    ${row(menuLabel,rd.menu||rd.line||'',model?("The phone line plus "+model+" walking the store's menu, before anybody spoke. Alpha presses keys, Bravo says the menu word."):"The phone line up to the moment Staff answered. This store has no menu to walk.")}
+    ${row(menuLabel,rd.menu||rd.line||'',model?("The phone line plus "+model+" walking the store's menu, before anybody spoke. Alpha presses keys, Bravo says the menu word."):"The phone line up to the moment Staff picked up. This store has no menu, so no model walked one.")}
     ${row('Charlie',rd.charlie||'',"Every second Charlie was connected. He bills whether he talks or listens.")}
     ${row('Total',rd.total||'',"Everything this one check cost.")}
   </div>`;

@@ -483,10 +483,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // a receipt you cannot read straight through (owner 07-28). Being handed on and being made to
     // wait are two facts, so a real transfer now says both, in that order. No new event kinds: the
     // set is a closed sixteen and both of these are already in it.
-    if (reason === "transfer") emit(room, "transfer", "The menu handed us on and the next desk is ringing", { reason, atMs });
+    if (reason === "transfer") emit(room, "transfer", "Transferred, the next desk is ringing", { reason, atMs });
     const note = reason === "transfer" ? "Waiting on the next desk to pick up"
-      : reason === "music" ? "Hold music, the person has stepped away"
-      : "The line went quiet, the person has stepped away";
+      : reason === "music" ? "Staff stepped away, hold music"
+      : "Staff stepped away, the line went quiet";
     emit(room, "hold_start", note, { reason, atMs });
     if (ctx?.holdStrategy === "reopen") {
       // Close him. This is the only thing that actually stops the meter — muting saves nothing.
@@ -495,7 +495,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       log(`hold (${reason}): closing the agent — the meter stops until somebody comes back`);
       closeSegment(room);
       markNow(room, "charlieCloseMs");
-      emit(room, "charlie_leave", "Charlie was dropped for the wait, the meter stopped", { reason, strategy: "reopen" });
+      emit(room, "charlie_leave", "Charlie dropped", { reason, strategy: "reopen" });
       try { eleven?.close(); } catch { /* torn down */ }
       eleven = null; ready = false; connecting = false;
     } else {
@@ -521,7 +521,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     const asked = expectHandover;
     if (expectHandover) expectHandover = false;
     addMs(room, "holdMs", gapMs);   // the number that has been null on every receipt until now
-    emit(room, "hold_end", `Somebody is back after ${secs}s${newPerson ? ", and it may not be the same person" : ""}`, { gapSec: secs, maybeNewPerson: newPerson, reason: was, ...(asked ? { afterAskingToBePutThrough: true } : {}) });
+    emit(room, "hold_end", `Staff back after ${secs}s${newPerson ? ", and it may not be the same person" : ""}`, { gapSec: secs, maybeNewPerson: newPerson, reason: was, ...(asked ? { afterAskingToBePutThrough: true } : {}) });
     if (ctx?.holdStrategy === "reopen" && !eleven) {
       log(`hold over after ${secs}s: opening the agent again as the next segment of this call`);
       // HE WAS CLOSED, SO HE CANNOT BE TOLD YET, AND HE STILL HAS TO BE TOLD. The note is held and
@@ -606,7 +606,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       const n = openSegment(room, segmentBrain, segmentWhy);
       // THE ONE LINE that says the agent joined. Everything the recorded question and the handover
       // know about this join rides in its detail rather than writing lines of its own.
-      emit(room, "charlie_join", n === 1 ? "Charlie joined, the meter starts" : `Charlie reconnected, part ${n} of this check`, { reason: connectReason, segment: n, brain: segmentBrain, why: segmentWhy, ...joinFacts });
+      emit(room, "charlie_join", n === 1 ? "Charlie joined" : `Charlie reconnected, part ${n} of this check`, { reason: connectReason, segment: n, brain: segmentBrain, why: segmentWhy, ...joinFacts });
       log("eleven WS open -> sending init");
       // The question Delta already asked rides in as context, so the joining agent knows what the
       // clerk is answering and never asks it a second time.
@@ -716,7 +716,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     });
     eleven.on("close", (code: number) => {
       closeSegment(room); markNow(room, "charlieCloseMs");
-      emit(room, "charlie_leave", "Charlie left, the meter stopped", { code });
+      emit(room, "charlie_leave", "Charlie left", { code });
       log(`eleven WS close code=${code} (frames in=${frames})`);
       // A close we ASKED for during a wait is not the end of the call — the line is still up and
       // somebody is coming back. Only an unexpected close ends things.
@@ -750,7 +750,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     humanAtMs = Date.now();
     connectReason = reason;
     if (reason === "human") {
-      markNow(room, "humanMs"); emit(room, "human_detected", "Staff answered");
+      markNow(room, "humanMs"); emit(room, "human_detected", "Staff greeting");
       // From here somebody is on the line, so from here it is worth knowing when they stop being on
       // the line. The meter flips from "never checked" to a real measured zero at the same moment.
       startMeter(room, "holdMs");

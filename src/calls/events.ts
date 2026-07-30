@@ -360,7 +360,7 @@ export function getReceipt(room: string): Receipt | null { return receipts.get(r
 export function closeReceipt(room: string, note?: string, reason?: string): Receipt | null {
   const r = receipts.get(room);
   if (!r || r.closed || flushed.has(room)) return null;
-  emit(room, "hangup", note || "Call ended", reason ? { reason } : undefined);
+  emit(room, "hangup", note || "Check ended", reason ? { reason } : undefined);
   r.closed = true;
   if (r.meters.endMs === null) r.meters.endMs = Math.max(0, Date.now() - r.startMs);
   // A session still open when the line drops was billing right up to the end.

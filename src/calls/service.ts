@@ -1204,7 +1204,7 @@ export async function ingestPending(): Promise<number> {
     // this is a no-op for it (a receipt flushes exactly once).
     if (row.room?.startsWith("direct:")) {
       markNow(row.room, "endMs");
-      closeReceipt(row.room, `Call ended after ${outcome.durationSecs ?? 0}s`, outcome.status ?? undefined);
+      closeReceipt(row.room, `Check ended after ${outcome.durationSecs ?? 0}s`, outcome.status ?? undefined);
     }
 
     // Server-side billing: charge the finder ONE credit on a DEFINITIVE answer, exactly once.

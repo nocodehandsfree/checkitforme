@@ -6720,7 +6720,7 @@ app.post("/twiml/bridge-status", async (c) => {
       // The carrier says the call is over — this is the truthful end, so the receipt closes and
       // persists HERE. The finalizer above may still be writing the verdict; the roll-up is stitched
       // onto the call row by the sink, which looks the row up by room.
-      closeReceipt(room, status === "completed" ? "Call ended" : `Call ended (${status})`, status);
+      closeReceipt(room, status === "completed" ? "Check ended" : `Check ended (${status})`, status);
     }
   }
   return c.body(null, 204);
