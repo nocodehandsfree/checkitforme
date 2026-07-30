@@ -423,6 +423,33 @@ async function main() {
     const missed = { ...ring, navId: "sim-missed", endedOnRing: undefined, reachedHuman: false } as EvidenceCall;
     ok(reachedPctOf([ring, stayed]) === 100, "one ring call plus one that reached Staff reads 100%, not 50%");
     ok(reachedPctOf([ring, stayed, missed]) === 50, "and a call that genuinely missed Staff still drags it down");
+
+    // NAV TIME IS THE TYPICAL MENU, NOT THE LUCKIEST RUN (owner, 07-30). A menu does not run at one
+    // speed, and the fastest time we ever caught is the one number guaranteed not to happen again.
+    const slow = { ...ring, navId: "sim-slow", transferAtSec: 80 } as EvidenceCall;
+    const quick = { ...ring, navId: "sim-quick", transferAtSec: 62 } as EvidenceCall;
+    ok(navSecondsOf(live.recipe, [ring, slow, quick]) === 70, "three checks at 68s, 80s and 62s average to 70s");
+    ok(navSecondsOf(live.recipe, [ring, quick]) === 65, "a faster check NUDGES the number down to 65s, it does not overwrite it with 62s");
+    ok(navSecondsOf(live.recipe, [ring, slow]) === 74, "and a slower one pulls it up, which the fastest-wins rule could never do");
+  }
+
+  // THE MENU IN THE STORE'S OWN WORDS is the reason a re-listen exists. It used to fire every step on
+  // one silent timer and open its listener only at the end, so a four line menu arrived as one line.
+  console.log("▶ THE MENU IS WRITTEN DOWN, LINE BY LINE");
+  {
+    const src = readFileSync("src/calls/navigator.ts", "utf8");
+    ok(/s\?\.relisten && s\.barge\?\.plan\?\.length[\s\S]{0,400}?return twiml\(`\$\{ear\}<Pause length="1"\/>\$\{gather\(id\)\}`\)/.test(src),
+      "a re-listen opens the listener at the greeting instead of running a silent timed block");
+    ok(/if \(s\.relisten && s\.barge\?\.plan\?\.length\) \{[\s\S]{0,1400}?return twiml\(gather\(id\)\)/.test(src),
+      "and it fires its known steps from the listening loop, reopening the listener after each one");
+    ok(/const named = [\s\S]{0,200}?includes\(" " \+ step\.value\.toLowerCase\(\)\)/.test(src),
+      "a step goes early when the prompt names its own word");
+    ok(/named \|\| atSec >= \(step\.at \?\? 0\)/.test(src),
+      "and still goes on its own second when the store says nothing");
+
+    const cap = readFileSync("src/calls/map-capture.ts", "utf8");
+    ok(/\(opts\.reachedHuman \|\| opts\.endedOnRing\) \? transcriptFromCall\(opts\.steps\)/.test(cap),
+      "a check that walked the whole route keeps EVERY line it heard, not the first six");
   }
 
   console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);

@@ -5061,7 +5061,9 @@ function recipeGap(held){
 function versionNavSecs(v){
   const ev=((v.evidence&&v.evidence.calls)||[]);
   const announced=ev.filter(c=>(c.reachedHuman||c.endedOnRing)&&typeof c.transferAtSec==='number'&&c.transferAtSec>0).map(c=>c.transferAtSec);
-  if(announced.length) return Math.min.apply(null,announced);
+  // AVERAGED, never the fastest (owner, 07-30). Same rule as the chain row, so the sheet and the top
+  // of the page cannot disagree. A new check nudges this number rather than overwriting it.
+  if(announced.length) return Math.round(announced.reduce((a,b)=>a+b,0)/announced.length);
   const steps=(((v.recipe&&v.recipe.steps)||[]).map(s=>Number(s.atSec)).filter(n=>isFinite(n)&&n>0));
   if(steps.length) return Math.max.apply(null,steps);
   return (v.recipe&&v.recipe.type==='direct')?0:null;

@@ -129,6 +129,9 @@ export interface NavSession {
    *  button included, is folded by `finish`, so a call can never teach the map nothing (owner 07-30). */
   callerRecords?: boolean;
   ringsHeard?: number;      // how many real ring bursts the Ear counted before we hung up
+  /** How far a RE-LISTEN has walked its known route. The plan is fired one step at a time from
+   *  `navTurn` so the listener stays open between steps and every menu line is written down. */
+  planIdx?: number;
   stopReason?: string;      // why this call ended, in plain words (kept as evidence)
   status: "dialing" | "navigating" | "human" | "failed" | "done";
   type: "direct" | "keypad" | "voice" | null;
@@ -365,6 +368,16 @@ export function navInitialTwiml(id: string): string {
   // of waiting for each prompt to finish. `at` = seconds from connect to speak each step. Then listen
   // for the transfer. Each round we shave the times earlier until the store stops accepting it.
   const ear = earFork(id);
+  // A RE-LISTEN LISTENS. The whole point of walking a route we already hold is to write down what the
+  // store SAYS at each second, so the owner can read the menu in the store's own words and see where
+  // a step could move earlier. The timed block below is deaf by construction: it is one long stretch
+  // of pauses and speech with the listener opened only at the END, so a re-listen used to record one
+  // line of a four-line menu. So a re-listen takes the ordinary listening loop instead, and fires its
+  // known steps from `navTurn` as the menu plays. Same route, same words, every line written down.
+  if (s?.relisten && s.barge?.plan?.length) {
+    s.type = s.barge.plan.every((p) => p.action === "press") ? "keypad" : "voice";
+    return twiml(`${ear}<Pause length="1"/>${gather(id)}`);
+  }
   if (s && s.barge?.plan?.length) {
     let inner = ear; let prev = 0;
     for (const st of s.barge.plan) {
@@ -667,6 +680,34 @@ async function navTurn(id: string, speech: string): Promise<string> {
       return twiml(`<Play digits="${dg}"/>${gather(id)}`);
     }
     return twiml(gather(id)); // silence so far — keep listening for the prompt
+  }
+  // A RE-LISTEN WALKS ITS ROUTE ONE STEP AT A TIME, between listens. No model in the loop: the route
+  // is already proved, so the only decision left is WHEN to fire the next step. The prompt naming our
+  // own word is the best moment there is, because it proves the menu reached that question; the step's
+  // own second is the fallback, so a store that stays quiet still gets walked. Either way the listener
+  // reopens straight after, which is how the menu ends up on the page in the store's own words.
+  if (s.relisten && s.barge?.plan?.length) {
+    const idx = s.planIdx ?? 0;
+    const step = s.barge.plan[idx];
+    if (step) {
+      const named = !!(step.action !== "press" && step.value && speech
+        && (" " + speech.toLowerCase() + " ").includes(" " + step.value.toLowerCase()));
+      if (named || atSec >= (step.at ?? 0)) {
+        s.planIdx = idx + 1;
+        s.lastActTurn = s.turns;
+        const why = named ? "the prompt named it" : "on its second";
+        if (step.action === "press" && step.value) {
+          const digits = step.value.replace(/[^0-9*#]/g, "").slice(0, 6);
+          s.steps.push({ who: "us", text: `pressed ${digits} (${why})`, atSec, action: "press", value: digits, earPrompts: s.ear?.recordings });
+          return twiml(`<Play digits="${digits}"/>${gather(id)}`);
+        }
+        if (step.value) {
+          s.steps.push({ who: "us", text: `said "${step.value}" (${why})`, atSec, action: "say", value: step.value, earPrompts: s.ear?.recordings });
+          return twiml(`<Say voice="Polly.Joanna">${esc(step.value)}</Say>${gather(id)}`);
+        }
+      }
+    }
+    return twiml(gather(id)); // not this step's moment yet — keep listening, keep writing it down
   }
   // MECHANICAL RECOVERY after a timed plan: if the menu is still prompting and the prompt NAMES one of
   // our known-path words ("…pharmacy or FRONT door services?", "…GENERAL store inquiries…"), say that

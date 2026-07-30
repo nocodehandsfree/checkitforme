@@ -1084,13 +1084,16 @@ export interface GraphRow {
 export function navSecondsOf(recipe: MapRecipe | null, ev: EvidenceCall[]): number | null {
   if (!recipe) return null;
   if (recipe.type === "direct" || pathSignature(recipe) === "direct") return 0;
-  // The fastest handoff we have actually measured. A call counts when it got all the way through the
-  // menu — the store either handed us to a person, or announced the handoff and we hung up on the ring
-  // (a re-listen). Both measured the same thing: the second the menu was finished with us. A call that
-  // never got through has no menu-end to report and is excluded by having no transfer moment.
+  // THE TYPICAL HANDOFF, AVERAGED, never the fastest (owner, 07-30). A menu does not run at one speed:
+  // it depends on the store, the hour and how fast the recording is read, and the fastest run we ever
+  // caught is the one number guaranteed not to happen again. Averaging also means a new call NUDGES
+  // this figure instead of overwriting it, which is what "how long does this menu take" actually means.
+  // A call counts when it got all the way through the menu: the store either handed us to a person, or
+  // announced the handoff and we hung up on the ring (a re-listen). A call that never got through has
+  // no menu-end to report and is excluded by having no transfer moment.
   const announced = ev.filter((c) => (c.reachedHuman || c.endedOnRing) && typeof c.transferAtSec === "number")
     .map((c) => c.transferAtSec as number).filter((n) => n > 0);
-  if (announced.length) return Math.min(...announced);
+  if (announced.length) return Math.round(announced.reduce((a, b) => a + b, 0) / announced.length);
   const steps = (recipe.steps || []).map((s) => Number(s.atSec)).filter((n) => Number.isFinite(n) && n > 0);
   return steps.length ? Math.max(...steps) : null;
 }

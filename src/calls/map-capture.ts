@@ -124,7 +124,9 @@ export function evidenceFromCall(opts: {
     // What language the menu spoke, read off the lines we heard. Free, and the field has to be
     // populated from the first call or it is worthless when discovery proper arrives.
     language: opts.language ?? languageOfCall(opts.steps),
-    transcript: opts.reachedHuman ? transcriptFromCall(opts.steps) : transcriptFromCall(opts.steps, 6),
+    // THE MENU IN THE STORE'S OWN WORDS is the reason a re-listen exists, so a check that walked the
+    // whole route keeps every line it heard. Only a check that never got through is trimmed.
+    transcript: (opts.reachedHuman || opts.endedOnRing) ? transcriptFromCall(opts.steps) : transcriptFromCall(opts.steps, 6),
     note: opts.note,
   };
 }
