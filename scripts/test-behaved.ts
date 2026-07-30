@@ -60,9 +60,13 @@ head("NO KEYPAD AT A PERSON");
 {
   const at = (tl: BehavedEvent[]) => row(behaved({ timeline: tl, agentLines: [OPENER] }), "no_keypad_at_person");
   ok("a direct store with no press is a dash", at(cleanDirect).pass === null);
+  // A BRAVO STORE SAYS THE MENU WORD AND NEVER PRESSES A KEY, so it cannot pass this either.
+  const bravo: BehavedEvent[] = [ev("dialed", 0, { plannedLane: "bravo", plan: [{ action: "say", value: "front", atSec: 16 }] }),
+    ev("bravo_say", 16, { phrase: "front", via: "prompt" }), ev("human_detected", 67), ev("hangup", 86)];
+  ok("a Bravo store is a dash too, it never presses a key", at(bravo).pass === null, at(bravo).why);
   ok("a press AT the person fails", at([...cleanDirect, ev("alpha_press", 19, { key: "1" })]).pass === false);
   ok("a press AFTER the person fails", at([...cleanDirect, ev("alpha_press", 22, { key: "1" })]).pass === false);
-  ok("presses BEFORE the person are fine", at([ev("dialed", 0), ev("alpha_press", 8, { key: "3" }), ev("human_detected", 19)]).pass === true);
+  ok("presses BEFORE Staff answer are fine", at([ev("dialed", 0), ev("alpha_press", 8, { key: "3" }), ev("human_detected", 19)]).pass === true);
   ok("no person is null, never a tick", at([ev("dialed", 0), ev("ringing", 2), ev("hangup", 30)]).pass === null);
   // A MAPPED store is the only place this row can really pass or fail.
   const mappedClean: BehavedEvent[] = [

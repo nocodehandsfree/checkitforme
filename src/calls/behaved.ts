@@ -134,20 +134,19 @@ export function behaved(input: BehavedInput): BehavedRow[] {
 }
 
 /**
- * A GREEN TICK HERE USED TO READ AS "WE EXPECT A KEYPAD" (owner 07-30). On a store that answers
- * direct there is no menu, so there was never a key to press and nothing to get right — ticking that
- * is the same lie as crossing it. It only scores on a store we actually mapped a menu for.
+ * ONLY A KEYPAD STORE CAN PASS OR FAIL THIS (owner 07-30, twice). A store that answers direct never
+ * had a key to press. A Bravo store SAYS the menu word and never presses one either, so ticking it
+ * was the same lie in a second costume. The row appears only when Alpha actually pressed keys on
+ * this check, and is a gray dash on everything else — which means he will not see it until it means
+ * something, and when he does see it, it is about a real risk: a store we mapped with a keypad menu
+ * that now answers direct would get beeped in the ear.
  */
 function noKeypadAtPerson(humanAt: number | null, presses: BehavedEvent[], tl: BehavedEvent[]): BehavedRow {
   const row = (pass: boolean | null, why: string): BehavedRow => ({
     key: "no_keypad_at_person", label: "No keypad detected", pass, why,
-    tip: "Keypad tones must stop the moment Staff answer. A store mapped with a menu that now answers direct would otherwise get beeped in the ear.",
+    tip: "Only scores on a store where Alpha presses keys. The tones must stop the moment Staff answer, or a store that used to have a keypad menu and now answers direct gets beeped in the ear.",
   });
-  const d = (tl.find((e) => e.kind === "dialed")?.detail || {}) as Record<string, unknown>;
-  const plan = Array.isArray(d.plan) ? (d.plan as unknown[]) : null;
-  const lane = typeof d.plannedLane === "string" ? d.plannedLane : null;
-  const mapped = plan ? plan.length > 0 : lane === "alpha" || lane === "bravo";
-  if (!mapped && !presses.length) return row(null, "Direct store, no menu. Nothing to press.");
+  if (!presses.length) return row(null, "No keypad on this check. Nothing to press.");
   if (humanAt == null) return row(null, "Nobody answered. Nothing to press at.");
   const after = presses.filter((e) => Number(e.atSec ?? 0) >= humanAt);
   if (!after.length) return row(true, `0 keys pressed after Staff answered at ${humanAt}s.`);
