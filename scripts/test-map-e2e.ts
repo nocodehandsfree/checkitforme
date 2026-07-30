@@ -212,6 +212,56 @@ async function main() {
     ok(obs.some((o) => o.callId === 4242 && o.drift === true), "the observation carries the receipt's call id");
   }
 
+  // THE WRONG-DEPARTMENT SAVE, the teaching half. The check itself is rescued on the line (the agent
+  // asks to be put through); what has to be true HERE is that the landing is filed as drift, so a
+  // route that keeps dropping us on the pharmacy counter stops reading as healthy.
+  console.log("▶ landing in the wrong department is filed like any other drift");
+  {
+    const [ch] = await db.insert(chains).values({ name: "Test Wrong Dept" }).returning();
+    await proposeVersion({ chainId: ch.id, recipe: { type: "keypad", seconds: 20, steps: [{ action: "press", value: "2", atSec: 8 }] }, source: "sweep",
+      call: { at: now(), day: "2026-07-30", storeId: 771, seconds: 20, reachedHuman: true, path: "press:2" } });
+    const before = (await activeMap(ch.id))!;
+    const res = await learnFromReceipt({
+      room: "r-wrongdept", callId: 6001, chainId: ch.id, storeId: 771,
+      events: [
+        { kind: "dialed", atSec: 0 }, { kind: "connected", atSec: 3 },
+        { kind: "alpha_press", atSec: 8, detail: { key: "2", atSec: 8, via: "prompt" } },
+        { kind: "human_detected", atSec: 24 },
+        // What the bridge writes when it reads it off our own transcript.
+        { kind: "unknown", atSec: 31, detail: { wrongDepartment: true, why: "Staff said we reached another counter", said: "Hi, this is the pharmacy." } },
+        { kind: "transfer", atSec: 38, detail: { reason: "transfer" } },
+        { kind: "hold_start", atSec: 38 }, { kind: "hold_end", atSec: 55, detail: { gapSec: 17, maybeNewPerson: true } },
+        { kind: "verdict", atSec: 78 }, { kind: "hangup", atSec: 80, detail: { why: "done" } },
+      ],
+    });
+    ok(res.learned.some((l) => /wrong department/.test(l)), `the check says it landed wrong: "${res.learned.join(" · ")}"`);
+    const flagged = (await openUnknowns(400)).find((u) => u.chainId === ch.id && u.kind === "wrong-department");
+    ok(!!flagged, "it lands in the review queue as its own kind");
+    ok(String((flagged?.evidence as Record<string, unknown> | null)?.said || "").includes("pharmacy"), `the evidence keeps what Staff actually said: "${(flagged?.evidence as Record<string, unknown> | null)?.said}"`);
+    ok(String(flagged?.prompt).includes("Staff"), `the reason is in the owner's words: "${flagged?.prompt}"`);
+    const after = (await activeMap(ch.id))!;
+    ok(after.confidence < before.confidence, `trust in the route drops (${before.confidence} → ${after.confidence})`);
+    ok(after.recipe.steps[0].value === "2", "and the route is NOT rewritten off one check");
+    const obs = (await chainDetail(ch.id)).observations as Array<Record<string, unknown>>;
+    ok(obs.some((o) => o.callId === 6001 && o.drift === true), "the observation carries the check's call id");
+    // The same call must not be filed twice for one landing, or one bad route reads as many.
+    const twice = (await openUnknowns(400)).filter((u) => u.chainId === ch.id && u.kind === "wrong-department").length;
+    ok(twice === 1, `one landing, one review item (${twice})`);
+  }
+  console.log("▶ a check that landed on the right desk files nothing");
+  {
+    const [ch] = await db.insert(chains).values({ name: "Test Right Dept" }).returning();
+    await proposeVersion({ chainId: ch.id, recipe: { type: "direct", steps: [], seconds: 0 }, source: "sweep",
+      call: { at: now(), day: "2026-07-30", storeId: 772, seconds: 0, reachedHuman: true, path: "direct" } });
+    await learnFromReceipt({
+      room: "r-rightdept", callId: 6002, chainId: ch.id, storeId: 772,
+      events: [{ kind: "dialed", atSec: 0 }, { kind: "human_detected", atSec: 6 },
+        { kind: "unknown", atSec: 40, detail: { deadAirSec: 45 } }, { kind: "hangup", atSec: 60, detail: { why: "done" } }],
+    });
+    ok(!(await openUnknowns(400)).some((u) => u.chainId === ch.id && u.kind === "wrong-department"),
+      "an unrelated unknown on the receipt is not read as a wrong department");
+  }
+
   console.log("▶ a greeting then hold music is NOT a direct answer");
   {
     // Barnes & Noble: "thank you for calling", hold music, then a person. Nothing to press — but

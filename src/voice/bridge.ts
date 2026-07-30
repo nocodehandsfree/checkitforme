@@ -16,6 +16,10 @@ import { TUNING_DEFAULTS, type CallTuning } from "../calls/tuning";
 // Delta's opening question: our own line, our own voice, already in phone format and already paid
 // for. The bridge only PLAYS it — synthesis and caching live outside the call path (clip-cache.ts).
 import { toMediaFrames } from "../calls/clip-cache";
+// The wrong-department phrase test. It lives beside the standing rule that tells the agent to ask to
+// be put through, so the words we act on and the words we look for cannot drift apart. Pure, so it is
+// provable without a phone call.
+import { heardWrongDepartment } from "./prompts";
 
 export interface BridgeContext {
   agentId: string;
@@ -346,6 +350,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   let onHold = false;             // the person is away; the agent must not be fed or heard
   let holdReason: HoldReason | null = null;
   let heldWords: string[] = [];   // the first thing they say on coming back, so it is never lost
+  /** Recorded once: we landed somewhere that cannot answer. Read off the words, not the audio. */
+  let wrongDept = false;
+  /** A gap the agent has not been told about yet, because he was CLOSED for it. Delivered the moment
+   *  his new session reports ready — see the metadata handler. Without this the reopened agent knows
+   *  nothing about the wait, which on a hand-over means he is talking to a stranger blind. */
+  let gapNote: { secs: number; newPerson: boolean } | null = null;
   let convEar: ConversationEar | null = null;   // attached the moment a real person is on the line
   let segmentBrain: "hosted" | "ours" = "hosted";
   // THE LADDER (section 7). Once our own brain has failed on this call we do not try it again on
@@ -493,10 +503,20 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     const was = holdReason;
     onHold = false; holdReason = null;
     const secs = Math.round(gapMs / 1000);
+    // A HAND-OVER IS ALWAYS A NEW PERSON. The twenty-second bar is right for somebody stepping away
+    // to look at a shelf and coming back: same person, same conversation. Being handed to another desk
+    // is the opposite fact — whoever picks up never heard the question, however fast the hand-over
+    // was. Timing it decided that for us, so a quick transfer left the agent carrying on mid answer
+    // with a stranger, which is exactly the wrong-department save failing at the last step.
+    const newPerson = maybeNewPerson || was === "transfer";
     addMs(room, "holdMs", gapMs);   // the number that has been null on every receipt until now
-    emit(room, "hold_end", `Somebody is back after ${secs}s${maybeNewPerson ? ", and it may not be the same person" : ""}`, { gapSec: secs, maybeNewPerson, reason: was });
+    emit(room, "hold_end", `Somebody is back after ${secs}s${newPerson ? ", and it may not be the same person" : ""}`, { gapSec: secs, maybeNewPerson: newPerson, reason: was });
     if (ctx?.holdStrategy === "reopen" && !eleven) {
       log(`hold over after ${secs}s: opening the agent again as the next segment of this call`);
+      // HE WAS CLOSED, SO HE CANNOT BE TOLD YET, AND HE STILL HAS TO BE TOLD. The note is held and
+      // sent the instant his new session reports ready. Skipping it is how a reopened agent greets a
+      // brand new person as though they had been on the line the whole time.
+      gapNote = { secs, newPerson };
       void connectEleven(`back after a ${secs}s wait`);
       // The buffer is the existing one: everything said from here is held until his session reports
       // ready, then released whole, exactly as it is on the opening handoff.
@@ -505,7 +525,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     }
     // He stayed open through the wait, so he has been fed nothing and believes no time has passed.
     // TELL HIM, or he carries straight on and greets a new clerk as the old one.
-    tellCharlieAboutTheGap(secs, maybeNewPerson);
+    tellCharlieAboutTheGap(secs, newPerson);
     for (const w of heldWords) { try { eleven?.send(JSON.stringify({ user_audio_chunk: w })); } catch { /* best effort */ } }
     heldWords = [];
   }
@@ -611,6 +631,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // Held back while Delta is still asking — openCharlieGate releases them the instant the
         // clip is done, in order, so an early answer reaches him complete instead of half-heard.
         flushPending();
+        // THE WAIT HE SLEPT THROUGH. This session was opened because somebody came back, so it starts
+        // with no idea a gap happened at all. Told here, before a single held word reaches him.
+        if (gapNote) { const g = gapNote; gapNote = null; tellCharlieAboutTheGap(g.secs, g.newPerson); }
       } else if (m.type === "audio") {
         const b64 = m.audio_event?.audio_base_64;
         // He is warming up behind the question, not talking over it. Nothing he produces before the
@@ -642,6 +665,20 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // starts hearing the voice message it should hang up to save us money"). Same phrases the
         // outcome mapper stamps `voicemail` from, so the verdict stays consistent. Closing the
         // stream ends the TwiML <Connect> → Twilio hangs the PSTN leg; the EL leg closes with it.
+        // WE LANDED IN THE WRONG DEPARTMENT. Not something the Ear can ever say (spec §10: it needs
+        // somebody to understand *this is the pharmacy*, which is words), so it is read here, off our
+        // own transcript, next to the voicemail phrases. Recorded ONCE: the save is one ask, and a
+        // second line about the same landing would fold into the same review item anyway. Nothing on
+        // the line changes because of this — the agent is what does the asking. This only makes sure
+        // the receipt CARRIES it, so the map learns from a check that had to be saved.
+        if (txt && !wrongDept) {
+          const wd = heardWrongDepartment(String(txt));
+          if (wd) {
+            wrongDept = true;
+            emit(room, "unknown", `We reached the wrong department: ${wd.why}`, { wrongDepartment: true, why: wd.why, said: wd.said });
+            log(`wrong department: ${wd.why}`);
+          }
+        }
         if (txt && /\b(leave (?:a|your) message|after the (?:tone|beep)|at the (?:tone|beep)|voice ?mail|mailbox|record your message|is not available|unable to take your call|has been forwarded to)\b/i.test(String(txt))) {
           log(`voicemail greeting detected -> hanging up to save the call minutes`);
           emit(room, "voicemail", "Reached a machine, hung up straight away");

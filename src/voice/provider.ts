@@ -42,6 +42,10 @@ export interface StartCallParams {
   /** Kiosk-only store (vending machine, no staffed counter): the agent asks if the kiosk is
    *  working/stocked instead of asking about a shelf shipment. Exposed to the prompt as `kiosk_mode`. */
   kioskMode?: boolean;
+  /** THE WRONG-DEPARTMENT SAVE (policy.flags.askForTransfer). On = if we land somewhere that cannot
+   *  answer, the agent asks to be put through and asks again when somebody new picks up, instead of
+   *  the check failing and the customer paying for a retry. Exposed to the prompt as `ask_for_transfer`. */
+  askForTransfer?: boolean;
   /** Premium feature: ask the one product-type follow-up after a YES (and capture it). Default true;
    *  free (non-subscriber) consumer calls pass false to skip it and end faster. Fills `premium_followup`. */
   premiumFollowup?: boolean;

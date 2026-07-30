@@ -36,7 +36,7 @@ import { eq } from "drizzle-orm";
 // SAME LIST AS `ENV_FLAGS` in public/app.html, which is what the Admin's Live/Staging switch steers.
 // A flag the Admin writes to staging but this list does not protect is stomped back by the prod
 // mirror inside a minute, silently, in the middle of a test call (owner 07-28).
-const KEEP_LOCAL_FLAGS = ["cheapBridgeAll", "connectOnHuman", "ourBrain"] as const;
+const KEEP_LOCAL_FLAGS = ["cheapBridgeAll", "connectOnHuman", "ourBrain", "askForTransfer"] as const;
 // Stripe publish artifacts inside vt_plans that must stay per-environment (test vs live mode).
 const TIER_LOCAL_KEYS = ["stripeProductId", "monthlyPriceId", "annualPriceId", "pub"] as const;
 

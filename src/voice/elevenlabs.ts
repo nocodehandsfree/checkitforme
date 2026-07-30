@@ -71,6 +71,9 @@ export class ElevenLabsProvider implements VoiceProvider {
             // Kiosk-only store: the prompt branches on this to ask about the vending kiosk
             // (working/stocked) instead of a shelf shipment. "" = normal shelf check.
             kiosk_mode: p.kioskMode ? "true" : "",
+            // THE WRONG-DEPARTMENT SAVE. Same switch the bridge lane reads: ask to be put through
+            // rather than losing the check. "" = the prompt's section is inert (today's behaviour).
+            ask_for_transfer: p.askForTransfer ? "true" : "",
             // Premium gate: subscribers' calls ask the product-type follow-up; free calls end fast.
             premium_followup: p.premiumFollowup === false ? FREE_NO_FOLLOWUP : (p.foldedQuestions ? oneTurnFollowup(p.foldedQuestions.set) : PREMIUM_FOLLOWUP),
           },

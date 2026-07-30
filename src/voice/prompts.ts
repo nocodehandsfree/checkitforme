@@ -35,6 +35,9 @@ If there is no specific instruction above, then ANY {{category}} counts toward a
 # Kiosk mode (only applies when the flag below is "true")
 This call's kiosk flag is "{{kiosk_mode}}". If it is "true", this store has a self-serve {{category}} VENDING KIOSK (a machine), not a staffed shelf — so CHANGE your goal: do NOT ask about a shipment or shelf stock. Instead, warmly ask whether their {{category}} card machine/kiosk is up and running and stocked with cards RIGHT NOW — e.g. "Heyy! Is your {{category}} card machine up and working, and does it have cards in it right now?". A working, stocked machine = YES; broken / empty / "we don't have one" = NO. Everything else (warmth, one short sentence, silence handling, wrap-up) stays exactly the same. If the flag is not "true", ignore this whole section.
 
+# If we reached the wrong department (only applies when the flag below is "true")
+This call's transfer flag is "{{ask_for_transfer}}". If it is "true" AND it turns out you are talking to a part of the store that cannot answer about {{category}} (they say "this is the pharmacy", "this is photo", "you want the front", "that's a different department", "I can't see those from back here"), do NOT hang up and do NOT ask them to go and look for you. Ask ONCE, warmly, in one short sentence, to be put through: "oh gotcha, could you put me through to whoever handles the {{category}}?". Then use skip_turn and wait quietly while they hand you over, through ringing, silence or hold music, a minute or more if that is what it takes. When somebody new comes on, treat them as a brand new person: a short warm hello, then ask your {{category}} question again from the start, the same way you asked it the first time. Ask to be put through only ONCE on a call. If they say there is nobody to put you through to, or somebody comes back and still cannot answer, wrap up warmly and end_call. If the flag is not "true", never ask to be put through: take whatever answer they can give you and wrap up.
+
 If the clerk VOLUNTEERS the specific product they have ("we've got Knockout packs", "just the 151 tins"), make a mental note of that exact product name — you don't need to ask for it, but capture it if they say it.
 
 **A "let me check" is NOT your answer yet — WAIT for it. THIS IS CRITICAL.** Clerks very often give a quick gut reaction first ("I don't think so", "we haven't", "not that I know of") and THEN offer to actually check — "let me look", "let me double-check", "let me go see", "hold on a sec". That first off-the-cuff reaction is NOT the answer, and it is NOT a reason to hang up. The instant they say they'll check/look/go see, say a warm "no worries, take your time." and use skip_turn to wait — quietly, through long silence or hold music, a minute or two if that's what it takes — for what they come back with. They're walking to the shelf or the back room; do NOT re-prompt them, rush them, or hang up while they're gone. ONLY the answer they give you AFTER they finish checking counts as your yes or no. Hanging up on a "let me check" is the worst thing you can do — you'll report the wrong answer.
@@ -148,6 +151,45 @@ export function oneTurnShipmentDay(question: string): string {
   const q = (question || "").trim();
   if (!q) return ASK_SHIPMENT_DAY;
   return `If they are out of it, sold out, or don't have it right now, ask EXACTLY ONE question and say it WORD FOR WORD, exactly as written here, with nothing added and nothing dropped: "${q}". Do not shorten it, do not reword it, do not make it sound more natural. Asking "when is your next shipment coming in" when the line asks for the DAY OR TIME loses half the answer, which is the whole reason it is written out. This INCLUDES when they volunteer that more is coming ("we're getting a restock soon", "we should have more this week"): ask it once rather than accepting "soon". Then take whatever they give you, warmly wrap and end_call. NEVER ask a second question and never ask them to narrow it down further.`;
+}
+
+/**
+ * WE LANDED IN THE WRONG DEPARTMENT — read off the words, because it cannot be read off the audio.
+ *
+ * The runtime spec (§10) says this in plain terms: the Ear cannot judge "wrong department", because
+ * that needs somebody to understand *this is the pharmacy*, which is words. So it is NOT a second
+ * listener and it is not audio maths — it is a phrase test on OUR OWN transcript, run in exactly the
+ * place the voicemail phrases are already run, and it lives here beside the rule that tells the agent
+ * what to do about it so the two can never drift apart.
+ *
+ * Deliberately narrow. A false positive files drift against a route that is fine, so it takes an
+ * explicit statement (a named counter, a different department, being sent to the front) or an offer
+ * to put us through. "The pharmacy is closed" and "let me check with the front" are NOT this.
+ *
+ * @param line one thing Staff said. @returns null, or a stable short reason plus what they said.
+ */
+export type WrongDepartment = { why: string; said: string };
+/** Counters that answer for themselves and cannot see the shop floor. */
+const OTHER_COUNTER = "pharmacy|photo(?: lab| centre| center)?|deli|bakery|optical|vision cent(?:er|re)|garden(?: cent(?:er|re))?|automotive|tire cent(?:er|re)|auto cent(?:er|re)|meat department|produce|money cent(?:er|re)|western union|salon|grooming|vet clinic";
+export function heardWrongDepartment(line: string): WrongDepartment | null {
+  const t = String(line || "").trim();
+  if (!t) return null;
+  const said = t.slice(0, 200);
+  // They named where we actually are, and it is not the shop floor.
+  if (new RegExp(`\\b(?:this is|you(?:'ve| have)? reached|you got|i'm in|we're)\\s+(?:the\\s+)?(?:${OTHER_COUNTER})\\b`, "i").test(t))
+    return { why: "Staff said we reached another counter", said };
+  // They named it as the wrong place, without naming which place.
+  if (/\b(?:wrong|different|another|other)\s+(?:department|desk|extension|counter|line)\b/i.test(t)
+    || /\b(?:not|isn'?t|aren'?t|ain'?t|isnt|arent)\s+(?:the|my|our)\s+department\b/i.test(t))
+    return { why: "Staff said this is the wrong department", said };
+  // They sent us to the front of the store, which is where we were trying to land.
+  if (/\b(?:you(?:'ll| will)?\s+(?:want|need)|(?:you should|try|call|ask)\s+(?:the\s+)?)\s*(?:the\s+)?(?:front(?:\s+(?:store|end|desk|counter|of the store))?|main store|general (?:store|line)|customer service)\b/i.test(t))
+    return { why: "Staff said we want the front of the store", said };
+  // They offered to hand us on. Landing somewhere that has to hand us on IS landing wrong.
+  if (/\b(?:transfer|put|get|connect|forward|send)(?:ring)?\s+(?:you|ya)\s+(?:through|over|back)?\s*(?:to|with)?\b/i.test(t)
+    && !/\bvoice ?mail|message\b/i.test(t))
+    return { why: "Staff offered to put us through to somebody else", said };
+  return null;
 }
 
 /** Spoken fallback when the pause-filler feature is on and no custom line is set. Copy law: no dash. */
