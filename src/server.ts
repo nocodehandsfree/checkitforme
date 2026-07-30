@@ -4447,8 +4447,14 @@ app.get("/api/admin/test-calls", async (c) => {
   const chainRows = await cachedChains();
   const chainNames = new Map(chainRows.map((ch) => [ch.id, ch.name]));
   const chainTypes = new Map(chainRows.map((ch) => [ch.id, ch.type]));
+  // WHAT COUNTS AS A TEST CHECK (owner 07-30). He places every one of them from the website, and he
+  // needs to see the store he actually tested — a CVS check has to land here or the mapping row on it
+  // can never mean anything, because the Fun store has no menu to hold or lose.
+  //
+  // On STAGING every check is a test by definition: nobody but him is on it. On production only the
+  // owner-only stores are, and real customer checks must never wander onto this screen.
   const all = (await db.select().from(callResults))
-    .filter((r) => ownerOnly.has(r.retailerId))
+    .filter((r) => config.staging.on || ownerOnly.has(r.retailerId))
     .sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
   const rows = all.map((r) => {
     const wf = wfFor(r.retailerId);

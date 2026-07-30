@@ -953,7 +953,7 @@
   </section>
   <section id="testing">
     <div class="k-title">Test calls</div>
-    <div class="k-sub" id="testing_sub">Fun store and owner-only stores. These never touch real-store stats.</div>
+    <div class="k-sub" id="testing_sub">Every check you place on Staging. These never touch real-store stats.</div>
     <div id="testing_src"></div>
     <div id="testing_summary"></div>
     <div id="testing_log"><div class="empty">Loading…</div></div>
@@ -2322,7 +2322,7 @@ async function openReceiptInto(url,o){
   o=o||{};
   const box=document.createElement('div');
   box.innerHTML='<div class="meta">Loading…</div>';
-  openSheet('The whole call','',box);
+  openSheet('','',box);
   const d=await (o.src?srcApi:api)(url);
   if(!d||d.error){ box.innerHTML='<div class="empty">Nothing was recorded for this call. Only calls placed since 27 July have a receipt.</div>'; return; }
   // ALL SIXTEEN kinds the calling engine can write (src/calls/events.ts). The set is closed, so this
@@ -2369,7 +2369,7 @@ function behavedCard(rows){
     return `<span style="width:26px;height:26px;border-radius:50%;background:${m[0]}26;display:grid;place-items:center;flex:0 0 auto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${m[0]}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${m[1]}</svg></span>`;
   };
   return `<div class="card" style="margin-bottom:14px;padding:16px 18px">
-    <div class="k-eyebrow" style="margin:0 0 4px">Did the new engine behave</div>
+    <div class="k-eyebrow" style="margin:0 0 4px">Charlie behavior</div>
     ${rows.map(r=>`<div class="row" style="align-items:flex-start;padding:8px 0">
       <span class="grow">
         <span style="display:block;font-size:13.5px;font-weight:700;color:var(--text-strong)" data-tip="${esch(r.tip||'')}">${esch(r.label||'')}</span>

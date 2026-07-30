@@ -44,6 +44,9 @@ head("SHAPE");
   ok("a clean direct check: asked once", row(r, "asked_once").pass === true);
   ok("a clean direct check: no keypad at a person", row(r, "no_keypad_at_person").pass === true);
   ok("a clean direct check: nobody held us, so the meter row is null", row(r, "meter_stopped_on_hold").pass === null);
+  // HIS OWN WORDS (owner 07-30), asserted so they cannot drift back into ours.
+  ok("…and it says it in his words", row(r, "meter_stopped_on_hold").why === "Nobody dropped Charlie on this check.", row(r, "meter_stopped_on_hold").why);
+  ok("the row is called Meter stopped", row(r, "meter_stopped_on_hold").label === "Meter stopped", row(r, "meter_stopped_on_hold").label);
   ok("a clean direct check: mapping held", row(r, "mapping_held").pass === true);
 }
 
@@ -168,8 +171,8 @@ head("THE WRONG-DEPARTMENT SAVE");
   ok("…and it prints what Staff actually said", /this is the pharmacy/i.test(row(r, "asked_to_be_put_through").why));
   ok("the new person was asked", row(r, "asked_the_new_person").pass === true, row(r, "asked_the_new_person").why);
   ok("…off the clock, naming both seconds", /31s/.test(row(r, "asked_the_new_person").why) && /33s/.test(row(r, "asked_the_new_person").why));
-  ok("the meter stopped, and it says HAND-OVER rather than hold",
-    row(r, "meter_stopped_on_hold").pass === true && /hand-over/i.test(row(r, "meter_stopped_on_hold").why), row(r, "meter_stopped_on_hold").why);
+  ok("Charlie was dropped, and the row says the HAND-OVER did it rather than Staff",
+    row(r, "meter_stopped_on_hold").pass === true && /the hand-over dropped charlie/i.test(row(r, "meter_stopped_on_hold").why), row(r, "meter_stopped_on_hold").why);
   ok("no keypad at a person still passes", row(r, "no_keypad_at_person").pass === true);
 }
 
@@ -219,7 +222,7 @@ head("…and every way it can go wrong");
   ok("…and the new-person row is a DASH, because a walk away is not a hand-over", row(r, "asked_the_new_person").pass === null, row(r, "asked_the_new_person").why);
   ok("…and it says why there is nothing to require", /may or may not have been the same person/.test(row(r, "asked_the_new_person").why));
   ok("…and being put through is a dash, because we never landed wrong", row(r, "asked_to_be_put_through").pass === null);
-  ok("…and the meter row says hold, not hand-over", /hold/i.test(row(r, "meter_stopped_on_hold").why) && !/hand-over/i.test(row(r, "meter_stopped_on_hold").why), row(r, "meter_stopped_on_hold").why);
+  ok("…and the row says STAFF dropped Charlie, not a hand-over", /the staff dropped charlie/i.test(row(r, "meter_stopped_on_hold").why) && !/hand-over/i.test(row(r, "meter_stopped_on_hold").why), row(r, "meter_stopped_on_hold").why);
 }
 
 {

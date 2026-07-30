@@ -189,11 +189,11 @@ function noKeypadAtPerson(humanAt: number | null, presses: BehavedEvent[]): Beha
  */
 function meterStoppedOnHold(tl: BehavedEvent[], sums: BehavedSums): BehavedRow {
   const row = (pass: boolean | null, why: string): BehavedRow => ({
-    key: "meter_stopped_on_hold", label: "Meter stopped on hold", pass, why,
-    tip: "Charlie closed when the hold started and came back as a new part of the same check. The parts are on the steps below.",
+    key: "meter_stopped_on_hold", label: "Meter stopped", pass, why,
+    tip: "Charlie is dropped the moment Staff walk away or hand us on, so we stop paying, and comes back as a new part of the same check.",
   });
   const holdIdx = tl.map((e, i) => (e.kind === "hold_start" ? i : -1)).filter((i) => i >= 0);
-  if (!holdIdx.length) return row(null, "Nobody put us on hold on this check, so the meter was never asked to stop.");
+  if (!holdIdx.length) return row(null, "Nobody dropped Charlie on this check.");
   const nextOf = (from: number, kind: string) => tl.findIndex((e, i) => i > from && e.kind === kind);
   // A WAIT AND A HAND-OVER ARE THE SAME MECHANISM AND DIFFERENT EVENTS TO HIM. Both stop the meter;
   // only one of them means somebody else is about to pick up. Say which one he is reading.
@@ -201,19 +201,20 @@ function meterStoppedOnHold(tl: BehavedEvent[], sums: BehavedSums): BehavedRow {
   const word = anyTransfer ? "the hand-over" : "the hold";
   for (const h of holdIdx) {
     const at = Number(tl[h].atSec ?? 0);
-    const why = (tl[h].detail || {}).reason === "transfer" ? "Handed over" : "Put on hold";
+    const who = (tl[h].detail || {}).reason === "transfer" ? "We were handed on" : "The staff walked away";
     const end = nextOf(h, "hold_end");
     const leave = nextOf(h, "charlie_leave");
     // The close has to land inside the hold. A close that only turns up after somebody came back is
     // the end of the call, not the meter stopping for the wait.
-    if (leave < 0 || (end >= 0 && leave > end)) return row(false, `${why} at ${at}s and the agent stayed on the line, billing through the wait.`);
+    if (leave < 0 || (end >= 0 && leave > end)) return row(false, `${who} at ${at}s and Charlie was NOT dropped, so we kept paying through the wait.`);
     if (end < 0) continue; // held to the end of the call — closing was the whole job
-    if (nextOf(end, "charlie_join") < 0) return row(false, `The agent closed at ${at}s and never came back when somebody returned at ${Number(tl[end].atSec ?? 0)}s.`);
+    if (nextOf(end, "charlie_join") < 0) return row(false, `Charlie was dropped at ${at}s and never came back when somebody returned at ${Number(tl[end].atSec ?? 0)}s.`);
   }
   const parts = Number(sums.charlieSegments ?? 0);
+  const who = anyTransfer ? "The hand-over" : "The staff";
   return row(true, parts > 1
-    ? `Closed for ${word} and came back as part ${parts} of the same check.`
-    : `Closed for ${word} and came back as a new part of the same check.`);
+    ? `${who} dropped Charlie, and the meter successfully stopped. He came back as part ${parts} of the same check.`
+    : `${who} dropped Charlie, and the meter successfully stopped.`);
 }
 
 /**
