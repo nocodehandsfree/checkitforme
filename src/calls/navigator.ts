@@ -36,8 +36,10 @@ const MAX_CALL_SEC = 165;
 // six seconds after the first. Only used when the audio fork never arrived and the Ear cannot count.
 const RING_CYCLE_SEC = 6;
 /** How long after our own answer a short store line still counts as the REMAINDER of the recording we
- *  spoke over, rather than a new prompt. A real next prompt takes longer than this to arrive. */
-const TAIL_SEC = 8;
+ *  spoke over, rather than a new prompt. Measured on CVS Lanett over five checks: a cut sentence comes
+ *  back within four seconds, while the store's NEXT prompt is always nine or more away, because it has
+ *  to act on our answer first. Five is the gap between those two, and it is the whole discriminator. */
+const TAIL_SEC = 5;
 /** The longest a remainder can be. A cut sentence runs to about a dozen words; anything longer that
  *  is neither a menu nor a question is a line in its own right. */
 const TAIL_WORDS = 14;
@@ -618,10 +620,11 @@ async function navTurn(id: string, speech: string): Promise<string> {
     // question, so the first version of this rule swallowed it into the menu line above and the record
     // lost the one line that says the menu was finished with us.
     // Long enough to hold the rest of a sentence ("if you'd like to do and I can connect" is nine
-    // words), short enough that a real prompt cannot fit: a genuine next prompt is a menu or a
-    // question, and both are excluded above regardless of length.
-    const fragment = line.split(/\s+/).length <= TAIL_WORDS && !isMenuLine(line)
-      && !looksLikeQuestion(line) && !ROUTING_RE.test(line);
+    // words), short enough that a real prompt cannot fit. A remainder MAY read as a question: the
+    // transcriber gave the same cut tail back as "You'd like to do." once and "Would you like to do?"
+    // the next time, and both are the end of the sentence we spoke over. The four-second window and
+    // the menu test do the separating; punctuation the transcriber guessed at cannot.
+    const fragment = line.split(/\s+/).length <= TAIL_WORDS && !isMenuLine(line) && !ROUTING_RE.test(line);
     const prevIvr = [...s.steps].reverse().find((st) => st.who === "ivr" && st.text);
     if (spokeOver && fragment && prevIvr) prevIvr.text = `${prevIvr.text} ${line}`.slice(0, 300);
     else s.steps.push({ who: "ivr", text: line, atSec });

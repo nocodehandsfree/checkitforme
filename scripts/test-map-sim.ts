@@ -459,9 +459,13 @@ async function main() {
     // as a menu step of its own.
     ok(/const spokeOver = [\s\S]{0,200}?atSec - \(last\.atSec \?\? 0\) <= TAIL_SEC/.test(src),
       "a store line arriving right after our own answer is tested as the remainder of what we cut");
-    ok(/const fragment = line\.split[\s\S]{0,200}?TAIL_WORDS && !isMenuLine\(line\)\s*\n?\s*&& !looksLikeQuestion\(line\) && !ROUTING_RE\.test\(line\)/.test(src),
-      "and only a short line that is neither a menu, a question, nor the handoff can be a remainder");
+    ok(/const fragment = line\.split[\s\S]{0,200}?TAIL_WORDS && !isMenuLine\(line\) && !ROUTING_RE\.test\(line\)/.test(src),
+      "and only a short line that is neither a menu nor the handoff can be a remainder");
     ok(/const TAIL_WORDS = 14;/.test(src), "long enough to hold a cut sentence, short enough that a real prompt cannot fit");
+    // The same cut tail came back as "You'd like to do." once and "Would you like to do?" the next
+    // time. Punctuation the transcriber guessed at cannot be what decides; the four-second gap can.
+    ok(/const TAIL_SEC = 5;/.test(src), "a remainder is what lands within seconds of our answer, measured on five real checks");
+    ok(!/const fragment = [\s\S]{0,200}?looksLikeQuestion/.test(src), "so a remainder that reads as a question is still a remainder");
     // CVS: "just say what you'd like to do and I can connect you" is an OFFER to connect, mid menu.
     // Read as the handoff it made a re-listen hang up one step short and file a route that had never
     // said its last word.
