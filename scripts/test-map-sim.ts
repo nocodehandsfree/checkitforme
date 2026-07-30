@@ -362,8 +362,12 @@ async function main() {
       "an announced handoff ends the call on the spot, with no wait for a person");
     ok(/RE-LISTEN NEVER TROUBLES STAFF[\s\S]{0,400}?finish\(s, "human"\); return twiml\(`<Hangup\/>`\)/.test(src),
       "and if somebody picks up anyway it hangs up rather than asking them anything");
-    ok(/const lockable = status === "human" && !s\.relisten/.test(src),
-      "a re-listen can never write a recipe, so a route we already know cannot be rewritten by it");
+    ok(/const lockable = \(status === "human" \|\| status === "mapped"\)/.test(src),
+      "a call that ended on the ring IS a good map, so it produces a recipe like any other");
+    ok(/seconds: s\.humanAtSec \?\? \(status === "mapped" \? null/.test(src),
+      "but it NEVER claims a time to Staff, because nobody picked up");
+    ok(/if \(s\.relisten && s\.routedAtSec != null && s\.humanAtSec == null\)[\s\S]{0,400}?rings >= 2/.test(src),
+      "and it hangs up on the second REAL ring, counted by the Ear, not on a stopwatch");
     ok(/seconds: s\.relisten[\s\S]{0,160}?s\.transferAtSec \?\?/.test(src),
       "and it reports the MENU's seconds, never the moment a person spoke");
     // The number the runtime opens the paid agent on must stay the time to STAFF.

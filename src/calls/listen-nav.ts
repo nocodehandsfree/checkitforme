@@ -251,6 +251,12 @@ export class ConversationEar {
   private deadAirCalled = false;
   /** Unbroken run of the network's own ring/busy tone. A transfer needs a real burst of it. */
   private toneRunMs = 0;
+  /** HOW MANY TIMES THE DESK HAS RUNG. Counted off the same tone burst that declares a transfer, so
+   *  it is the real thing and not a stopwatch: one count per burst, the moment that burst proves
+   *  itself. A mapping call hangs up on the second one (owner, 07-30), which is enough to prove the
+   *  desk is really ringing and still leaves nobody to answer it. */
+  rings = 0;
+  private ringCounted = false;
   /** Unbroken run of speech-shaped sound. Somebody being BACK needs a real run of it. */
   private voiceRunMs = 0;
   private readonly transferToneMs: number;
@@ -304,10 +310,15 @@ export class ConversationEar {
     if (isTone && loud) {
       this.toneRunMs += FRAME_MS; this.voiceRunMs = 0;
       this.quietMs = 0; this.soundMs += FRAME_MS;
-      if (this.toneRunMs >= this.transferToneMs) this.enter("transfer");
+      if (this.toneRunMs >= this.transferToneMs) {
+        // One count per burst. The flag clears when the tone stops, so a single long ring can never
+        // count as two and the gap between rings is what separates them.
+        if (!this.ringCounted) { this.ringCounted = true; this.rings++; }
+        this.enter("transfer");
+      }
       return;
     }
-    this.toneRunMs = 0;
+    this.toneRunMs = 0; this.ringCounted = false;
 
     if (loud) {
       this.soundMs += FRAME_MS; this.quietMs = 0;

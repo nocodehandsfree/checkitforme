@@ -32,6 +32,9 @@ export const NAV_MODEL = "gemini-2.5-flash-lite";
 const MAX_CALL_SEC = 165;
 /** How long we wait for a real voice after the store says it is transferring us. Past this the desk
  *  is not answering — hang up and say so, rather than calling the announcement a human. */
+// US ringback is a published cadence: two seconds of tone, four of silence. So the SECOND ring starts
+// six seconds after the first. Only used when the audio fork never arrived and the Ear cannot count.
+const RING_CYCLE_SEC = 6;
 const TRANSFER_WAIT_SEC = 40;
 
 // A live person is on the line (a short greeting/question said TO us). Used as a backstop in auto-0
@@ -76,7 +79,13 @@ export interface MenuOption { digit: string; label: string; say?: string }
 /** How a menu option is identified, whichever kind it is. */
 export const optionKey = (o: MenuOption): string => o.digit || `say:${(o.say || o.label).toLowerCase()}`;
 export interface NavRecipe {
-  type: string; steps: { action: string; value: string; atSec: number }[]; seconds: number;
+  /** `seconds` is TIME TO STAFF and stays that. Null when the call ended on the ring, because nobody
+   *  picked up and nothing about the ring tells us how long they would have taken. Downstream,
+   *  `connectAtSecFor` turns null into "no timer", so the paid agent waits for a real voice. */
+  type: string; steps: { action: string; value: string; atSec: number }[]; seconds: number | null;
+  /** Getting through the phone system: the handoff we measured, else the last step. Always known on a
+   *  call that reached the ring, which is the number the chain page reads. */
+  navSeconds?: number | null;
   menu?: MenuOption[];         // the pressable department/option tree we heard (chain property)
   menuPrompts?: string[];      // the raw IVR menu lines, for the owner to read when STT parsing is fuzzy
   ringVariable?: boolean;      // time-to-human depends on a department picking up (variance high) — #A
@@ -119,6 +128,7 @@ export interface NavSession {
   /** The sweep and the auto-mapper fold their own calls into the map. Everything else, the Re-map
    *  button included, is folded by `finish`, so a call can never teach the map nothing (owner 07-30). */
   callerRecords?: boolean;
+  ringsHeard?: number;      // how many real ring bursts the Ear counted before we hung up
   stopReason?: string;      // why this call ended, in plain words (kept as evidence)
   status: "dialing" | "navigating" | "human" | "failed" | "done";
   type: "direct" | "keypad" | "voice" | null;
@@ -531,6 +541,21 @@ async function navTurn(id: string, speech: string): Promise<string> {
     s.stopReason = s.turns > 22 ? "too many turns" : `no person within ${cap}s`;
     finish(s, "failed"); return twiml(`<Hangup/>`);
   }
+  // HANG UP ON THE SECOND RING (owner, 07-30). The handoff announcement alone does not prove the desk
+  // is really ringing, so a re-listen waits for two real ring bursts, counted by the Ear off the same
+  // tone test that declares a transfer. Two is enough to prove the desk rang and still leaves nobody
+  // to answer it. No Ear on the call (the audio fork never arrived) falls back to the published US
+  // cadence, two seconds of ring and four of silence, so the second ring begins six seconds in.
+  if (s.relisten && s.routedAtSec != null && s.humanAtSec == null) {
+    const rings = s.ear?.conv?.rings ?? 0;
+    const bySound = rings >= 2;
+    const byClock = !s.ear && atSec - s.routedAtSec >= RING_CYCLE_SEC;
+    if (bySound || byClock) {
+      s.ringsHeard = rings;
+      s.stopReason = bySound ? `hung up on ring ${rings}` : "hung up on the second ring (by the clock)";
+      finish(s, "mapped"); return twiml(`<Hangup/>`);
+    }
+  }
   // Transferred, then nobody picked up. The route DID reach the transfer, but no person ever spoke —
   // so we hang up and record exactly that, instead of booking the announcement as a human.
   // Transferred, then nobody picked up. The route DID reach the transfer, but no person ever spoke —
@@ -739,7 +764,10 @@ function finish(s: NavSession, status: "human" | "failed" | "mapped") {
   s.status = status === "mapped" ? "done" : status;
   // In confirm mode, only a path that ENDED at the right desk (answered, not redirected) is lockable —
   // a redirect means we navigated to the wrong human, so we capture it but don't present it as the recipe.
-  const lockable = status === "human" && !s.relisten && (!s.confirm || s.confirmResult !== "redirect");
+  // A CALL THAT ENDED ON THE RING IS A GOOD MAP (owner, 07-30). It walked the whole phone system and
+  // proved the desk rings at the end of it, which is the entire job. So it produces a recipe like any
+  // other, with one difference below: it never claims a time to Staff, because nobody picked up.
+  const lockable = (status === "human" || status === "mapped") && (!s.confirm || s.confirmResult !== "redirect");
   if (lockable) {
     // The confirm question itself is training scaffolding, not part of the navigation recipe — drop it.
     const acts = s.steps
@@ -748,7 +776,13 @@ function finish(s: NavSession, status: "human" | "failed" | "mapped") {
     const type = acts.length === 0 ? "direct" : (acts.every((a) => a.action === "press") ? "keypad" : "voice");
     s.type = type;
     s.recipe = {
-      type, steps: acts, seconds: s.humanAtSec ?? (s.steps[s.steps.length - 1]?.atSec ?? 0),
+      type, steps: acts,
+      // TIME TO STAFF, or nothing. A ring-ended call never learned it, and guessing it from the ring
+      // moment would be the worst kind of wrong: `connectAtSecFor` opens the paid agent on this
+      // number, so a low one puts Charlie on a desk that is still ringing. Null means no timer, and
+      // no timer means the agent waits for a real voice, which is the safe behaviour we already have.
+      seconds: s.humanAtSec ?? (status === "mapped" ? null : (s.steps[s.steps.length - 1]?.atSec ?? 0)),
+      navSeconds: s.transferAtSec ?? (acts[acts.length - 1]?.atSec ?? null),
       // #2/#6: carry the captured menu tree + raw lines with the recipe so they persist per chain.
       menu: s.menu && s.menu.length ? s.menu : undefined,
       menuPrompts: s.menuPrompts && s.menuPrompts.length ? s.menuPrompts : undefined,

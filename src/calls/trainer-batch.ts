@@ -15,7 +15,10 @@ import { chainDialable, recipeToDtmf } from "./recipe";
 import { proposeVersion, pathSignature, type EvidenceCall } from "./mapgraph";
 
 type Step = { who?: string; action?: string; value?: string; atSec?: number };
-type Recipe = { type?: string; steps?: Array<{ action?: string; value?: string; atSec?: number }>; seconds?: number; menu?: Array<{ digit: string; label: string; say?: string }>; menuPrompts?: string[]; ringVariable?: boolean; target?: string };
+// `seconds` is TIME TO STAFF and may be null: a call that ended on the desk ringing walked the whole
+// phone system but never learned how long Staff take. Null flows through to no join timer, so the
+// paid agent waits for a real voice rather than opening on a number nobody measured.
+type Recipe = { type?: string; steps?: Array<{ action?: string; value?: string; atSec?: number }>; seconds?: number | null; navSeconds?: number | null; menu?: Array<{ digit: string; label: string; say?: string }>; menuPrompts?: string[]; ringVariable?: boolean; target?: string };
 
 const state = {
   running: false, stop: false, total: 0, done: 0, learned: 0, review: 0, skipped: 0, failed: 0,
@@ -221,11 +224,11 @@ export async function startBatch(opts: BatchOpts = {}) {
       if (s && s.status === "human") {
         const recipe = s.recipe ?? recipeFromSteps(s.steps as Step[], s.humanAtSec);
         await lockRecipeToChain(ch.id, recipe, s.confidence ?? null);
-        state.learned++; state.results.push({ chain: ch.name, outcome: `learned (${recipe.type})`, seconds: recipe.seconds });
+        state.learned++; state.results.push({ chain: ch.name, outcome: `learned (${recipe.type})`, seconds: recipe.seconds ?? undefined });
       } else if (s && Array.isArray(s.steps) && (s.steps as Step[]).some((st) => st.who === "us")) {
         const recipe = recipeFromSteps(s.steps as Step[], s.humanAtSec);
         await saveCandidate(ch.id, recipe, s.confidence ?? null);
-        state.review++; state.results.push({ chain: ch.name, outcome: `review-candidate (${s?.status || "timeout"})`, seconds: recipe.seconds });
+        state.review++; state.results.push({ chain: ch.name, outcome: `review-candidate (${s?.status || "timeout"})`, seconds: recipe.seconds ?? undefined });
       } else {
         state.failed++; state.results.push({ chain: ch.name, outcome: `no route (${s?.status || "timeout"})` });
       }
