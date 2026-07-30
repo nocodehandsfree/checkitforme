@@ -709,6 +709,24 @@ export async function proposeVersion(opts: {
   return { version: (await versionById(id))!, activated: false };
 }
 
+/** FOLD ONE CALL'S EVIDENCE ONTO A VERSION, without touching the route or its seconds.
+ *
+ *  What a re-listen produces: we already hold the recipe, so the call is not proposing anything. It
+ *  heard the menu again, and this time it measured the handoff. That belongs on the version as proof,
+ *  and NOTHING else about the version may move — above all not `seconds`, which is the number the
+ *  runtime opens the paid agent on. Trust is re-scored because a fresh call is fresh evidence. */
+export async function addEvidence(versionId: number, call: EvidenceCall): Promise<void> {
+  await ensureMapTables();
+  const v = await versionById(versionId);
+  if (!v) return;
+  const calls = [...(v.evidence.calls || []), call].slice(-25);
+  const scored = scoreConfidence({ calls });
+  await client.execute({
+    sql: `UPDATE nav_map_versions SET evidence=?, confidence=?, confidence_label=? WHERE id=?`,
+    args: [JSON.stringify({ calls }), scored.score, scored.label, versionId],
+  });
+}
+
 /** How many separate stores must walk a new route before it becomes the CHAIN's route. Three, because
  *  two can be a coincidence of one bad afternoon and one is just a store being itself. */
 const STORES_TO_MOVE_CHAIN = 3;

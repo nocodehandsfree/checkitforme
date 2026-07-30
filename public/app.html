@@ -4336,7 +4336,7 @@ function storeDetailsHTML(r){
   }
   if(r.distributor) h+=`<div class="stcdrow"><span class="stcdlab">Distributor</span><span class="stcdval">${esch(r.distributor)}</span></div>`;
   if(carries.length) h+=`<div class="stcdrow"><span class="stcdlab">Carries</span><span class="stcdval">${carries.map(esch).join(' · ')}</span></div>`;
-  if(window.WF&&WF.list&&WF.list.length){ const inh=(r.chainId&&WF.chains&&WF.chains[r.chainId])||WF.def||''; h+=`<div class="stcdrow"><span class="stcdlab">Workflow</span><span class="stcdval"><select onclick="event.stopPropagation()" onchange="event.stopPropagation();setStoreWorkflow(${r.id},this.value)" style="max-width:100%">${wfOptions(WF.stores[r.id]||'', inh?('Default · '+esch(inh)):'Default')}</select></span></div>`; }
+  if(window.WF&&WF.list&&WF.list.length){ const inh=(r.chainId&&WF.chains&&WF.chains[r.chainId])||WF.def||''; h+=`<div class="stcdrow"><span class="stcdlab">Workflow</span><span class="stcdval"><select onclick="event.stopPropagation()" onchange="event.stopPropagation();setStoreWorkflow(${r.id},this.value)" style="max-width:100%">${wfOptions(WF.stores[r.id]||'', 'Same as everywhere')}</select></span></div>`; }
   return h;
 }
 // Product logos for the verticals we actually support, one line. Per-logo [h,w] because the source art
@@ -4740,18 +4740,22 @@ async function ssSaveData(){
 function ssRenderCall(){
   const el=document.getElementById('set_call'); if(!el||!SS) return;
   const tog=(on,onclick)=>`<button type="button" onclick="${onclick}" style="width:48px;padding:5px;border-radius:8px;border:1px solid ${on?'var(--green)':'var(--border)'};background:${on?'rgba(74,222,128,.14)':'var(--surface-1)'};color:${on?'var(--green)':'var(--text-muted)'};font-weight:700;cursor:pointer;font-size:12.5px">${on?'ON':'OFF'}</button>`;
+  // MAX TALK IS GONE (owner, 07-30). It was never talk time: the number went to the phone company as
+  // a hard cutoff on the WHOLE call, so 45 would have ended a CVS call at 45s, before Staff ever
+  // picked up on a 57s menu. Nothing was set on any of the 130 chains, so nothing changed by removing
+  // it. The cutoff he actually wanted already exists and is on: Global hangs up after 60s on hold.
   el.innerHTML=
     `<div class="row" style="gap:26px;align-items:center;flex-wrap:wrap;margin:2px 0 4px">`
-    +`<div class="row" style="gap:9px;align-items:center"><input id="set_maxtalk" type="number" min="0" placeholder="45" value="${esch(SS.maxTalk)}" onchange="ssSetMaxTalk(this.value)" style="width:68px;padding:9px 10px;font-size:15px;text-align:center"><div style="font-weight:700;font-size:13px;line-height:1.15">Max talk <span data-tip="Hard cap on how long the caller talks to a person before wrapping up."></span><div class="meta" style="font-size:10.5px;font-weight:500">seconds</div></div></div>`
     +`<div class="row" style="gap:9px;align-items:flex-start"><input type="checkbox" id="set_vm" ${SS.vm?'checked':''} onchange="ssSetHangup(this.checked)" style="margin-top:2px"><div style="line-height:1.25"><div style="display:flex;align-items:center;gap:5px"><label for="set_vm" style="font-weight:700;font-size:13px;color:var(--text-body);cursor:pointer;text-transform:none;letter-spacing:0;display:inline;margin:0">Hang up</label><span data-tip="Voicemail or a closed / recorded line → hang up at once. No message, no charge."></span></div><div class="meta" style="font-size:10.5px;margin-top:1px">voicemail / closed</div></div></div>`
     +`</div>`
     +`<div class="setrow" style="justify-content:flex-end;gap:11px"><div class="setlbl">Phone this chain <span data-tip="ON = we call this chain's stores to check stock. OFF = listed, but never dialed."></span></div>${tog(SS.callTarget,'ssToggleCallTarget()')}</div>`
-    +`<div style="font-size:13px;color:var(--text-muted);margin:16px 0 6px">Default workflow <span data-tip="Voice / script for every store of this chain. Overrides the global default."></span></div>`
-    +`<select id="set_wf" onchange="setChainWorkflow(SS.id,this.value)">${wfOptions(SS.wf, WF.def?('Default · '+WF.def):'Default')}</select>`;
+    +`<div style="font-size:13px;color:var(--text-muted);margin:16px 0 6px">Workflow</div>`
+    +`<select id="set_wf" onchange="setChainWorkflow(SS.id,this.value)">${wfOptions(SS.wf,'Same as everywhere')}</select>`
+    +`<div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5">Which voice and script every ${esch(SS.name||'store')} store gets.${WF.def?' Right now that is '+esch(WF.def)+'.':''}</div>`
+    +`<div class="meta" style="margin-top:14px;text-transform:none;letter-spacing:0">Live on save</div>`;
 }
 async function ssToggleCallTarget(){ if(!SS) return; const v=!SS.callTarget; if(await ssPatch('callTarget',v)){ SS.callTarget=v; ssRenderCall(); toast(v?'Phoning this chain':'Will not dial this chain'); } }
 async function ssSetHangup(b){ if(!SS) return; SS.vm=b; if(await ssPatch('hangupOnVoicemail',b)) toast(b?'Hang up: on':'Hang up: off'); }
-async function ssSetMaxTalk(v){ if(!SS) return; SS.maxTalk=v; if(await ssPatch('maxTalkSeconds',Number(v)||null)) toast('Max talk saved'); }
 // ---- CHAIN DETAIL (comp 2f) --------------------------------------------------------------------
 // The phone menu IS the page. Three vitals, then the learned route drawn as a step ladder using the
 // SAME timeline treatment as the call sheet (comp 1d): dot, connector, bold step, gray second.
@@ -4808,12 +4812,12 @@ async function renderChainSheets(ch,nav){
   const active=versions.find(v=>v.status==='active')||versions[0];
   const set=(id,t,c)=>{ const e=document.getElementById(id); if(e){ e.textContent=t||''; e.style.color=c||''; } };
 
-  // MENU — every line the store plays and what we say back, on one timeline.
-  const tl=menuTimeline(active,nav), mw=document.getElementById('set_menu');
-  set('pk_setmenu', tl?String(tl.rows.filter(r=>r.who!=='us').length)+' steps':'');
-  if(mw) mw.innerHTML = tl ? menuLadder(tl.rows)
-    +`<div class="meta" style="margin-top:10px;text-transform:none;letter-spacing:0">${esch(tl.call.storeName||'A store')}${tl.call.day?' \u00b7 '+dayWords(tl.call.day):''}</div>`
-    : '<div class="empty">No call has recorded this menu yet. Tap Re-map to place one.</div>';
+  // MENU, BY CONDITION (comp 2h). One phone tree says different things after the pharmacy shuts and in
+  // a Spanish speaking neighbourhood, and the same recipe gets through all of them. Filing those as
+  // the map breaking is what made a 9pm call read as a broken chain (owner, 07-28). Nothing new is
+  // recorded here: every call already stamps the store's local hour and the language it heard, so this
+  // groups evidence we hold rather than collecting any.
+  renderMenuByCondition(ch, active, nav, (d||{}).calls||[]);
 
   // MAPPING CALLS. One call per card, newest first (comp 2g). The old card was built from a
   // version's evidence summary, which had our own replies stripped out, so a call read as nonsense.
@@ -4854,6 +4858,55 @@ async function renderChainSheets(ch,nav){
   if(uw) uw.innerHTML = open.length ? open.map(u=>mapUnknownCard(u,ch.id,expected)).join('') : '';
 }
 const cap=t=>{ t=String(t||''); return t?t[0].toUpperCase()+t.slice(1):''; };
+
+// ---- MENU, BY CONDITION (comp 2h) --------------------------------------------------------------
+// The owner's finding: CVS reads a different menu after the pharmacy shuts, and a Spanish speaking
+// neighbourhood hears it in Spanish. Same recipe walks all three. Three conditions, one ladder.
+const MENU_COND = {};                                    // chainId -> which pill is selected
+const MENU_CONDS = [
+  { key:'day',     label:'Daytime',   fits:c=>condHour(c)!=null && condHour(c)>=8 && condHour(c)<21 && !condSpanish(c), how:'Map during the day' },
+  { key:'night',   label:'After 9pm', fits:c=>condHour(c)!=null && (condHour(c)>=21||condHour(c)<8), how:'Requires a call after 9pm' },
+  { key:'spanish', label:'Spanish',   fits:c=>condSpanish(c), how:'Requires a call to a Spanish speaking store' },
+];
+const condHour=c=>(c&&typeof c.hourLocal==='number')?c.hourLocal:null;
+const condSpanish=c=>{ const l=c&&c.language; return l==='es'||l==='mixed'; };
+function renderMenuByCondition(ch, active, nav, calls){
+  const box=document.getElementById('set_menu'); if(!box) return;
+  const ev=((active&&active.evidence&&active.evidence.calls)||[]);
+  // Every call we hold, from the recipe's own evidence and from the call log, so a condition fills in
+  // from whatever proved it.
+  const byCond={};
+  MENU_CONDS.forEach(cd=>{ byCond[cd.key]=ev.filter(cd.fits); });
+  const heard=MENU_CONDS.filter(cd=>byCond[cd.key].length).length;
+  const e=document.getElementById('pk_setmenu');
+  if(e){ e.textContent=`${heard} of ${MENU_CONDS.length}`; e.style.color=heard?'':'var(--text-muted)'; }
+  const cur=MENU_COND[ch.id]||'day';
+  const pill=cd=>{
+    const on=cd.key===cur, has=byCond[cd.key].length>0;
+    return `<button onclick="pickMenuCondition(${ch.id},'${cd.key}')" style="border:0;cursor:pointer;padding:8px 15px;border-radius:999px;font-size:12px;font-weight:${on?'800':'700'};`
+      +(on?`background:linear-gradient(180deg,#31313A,#28282E);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:var(--green)`
+          :`background:var(--terminal);box-shadow:inset 0 2px 5px rgba(0,0,0,.4);color:${has?'#8A8A96':'var(--text-tertiary)'}`)+`">${esch(cd.label)}</button>`;
+  };
+  const cd=MENU_CONDS.find(x=>x.key===cur)||MENU_CONDS[0];
+  const mine=byCond[cur];
+  // The fullest call in this condition is the best picture of what it plays.
+  const call=mine.slice().sort((a,b)=>((b.transcript||[]).length)-((a.transcript||[]).length))[0]||null;
+  const tl=call?menuTimeline({evidence:{calls:[call]},recipe:active&&active.recipe},nav):null;
+  box.innerHTML=`<div style="display:flex;gap:7px;flex-wrap:wrap">${MENU_CONDS.map(pill).join('')}</div>`
+    +(tl
+      ? `<div style="margin-top:14px">${menuLadder(tl.rows)}</div>`
+        +`<div class="meta" style="margin-top:10px;text-transform:none;letter-spacing:0">${esch(tl.call.storeName||'A store')}${tl.call.day?' · '+dayWords(tl.call.day):''}</div>`
+      : `<div style="margin-top:14px" class="empty">Not heard<div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${esch(cd.how)}</div></div>`);
+}
+function pickMenuCondition(chainId,key){
+  MENU_COND[chainId]=key;
+  const ch=(CHAINS||[]).find(c=>c.id===chainId)||{id:chainId};
+  loadChainMap(chainId).then(d=>{
+    const vs=((d||{}).versions)||[];
+    renderMenuByCondition(ch, vs.find(v=>v.status==='active')||vs[0], null, (d||{}).calls||[]);
+  });
+}
+
 // A stored day is "2026-07-28". Nobody reads that. Every date on this page is "Jul 28".
 function dayWords(d){
   const m=String(d||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); if(!m) return esch(String(d||''));
@@ -4893,7 +4946,7 @@ function mappingCallCard(c,versions){
     +`<div class="mladder" style="margin-top:13px">${rungs.map((r,i,a)=>callRung(r,i===a.length-1)).join('')}</div>`
     +`<div style="margin-top:12px;display:flex;align-items:baseline;gap:8px">`
     +`<span style="font-size:10.5px;font-weight:700;letter-spacing:.15em;color:#8A8A96">PRODUCED</span>`
-    +`<span style="margin-left:auto;font-size:12px;font-weight:700;color:${prod?'var(--green)':'var(--muted)'}">${prod?esch(prod):'Nothing changed'}</span>`
+    +`<span style="margin-left:auto;font-size:12px;font-weight:700;color:${(prod&&!prod.aside)?'var(--green)':'var(--muted)'}">${prod?esch(prod.text)+(prod.aside?' \u00b7 set aside':''):'No change'}</span>`
     +`</div></div>`;
 }
 // The conversation as rows. The store's own lines stay as they were spoken; ours are read off the
@@ -4938,10 +4991,13 @@ function callProduced(c,versions){
   if(!c.navId) return null;
   const v=(versions||[]).find(x=>((x.evidence&&x.evidence.calls)||[]).some(e=>e&&e.navId===c.navId));
   if(!v) return null;
+  // A RECIPE THAT WAS SET ASIDE IS NOT A WIN. It read green like a live one, so a call that produced
+  // something we then threw away looked like the call that improved the chain (copy.md section 6).
+  if(v.status==='rejected') return { text:v.label||('Tree Recipe v'+v.version), aside:true };
   const prev=(versions||[]).filter(x=>x.storeId===v.storeId&&x.version<v.version)
     .sort((a,b)=>(b.version||0)-(a.version||0))[0];
   const faster=(prev&&prev.seconds!=null&&v.seconds!=null)?prev.seconds-v.seconds:null;
-  return (v.label||('Recipe '+v.version))+(faster!=null&&faster>0?' · '+faster+'s faster':'');
+  return { text:(v.label||('Tree Recipe v'+v.version))+(faster!=null&&faster>0?' · '+faster+'s faster':''), aside:false };
 }
 // The hour it happened, and the day too once it is not today. A menu at 9pm is often not the daytime
 // menu, so the clock is part of reading the call, not decoration.
@@ -5414,7 +5470,7 @@ function renderChainList(){
         ${ch.hasTree?'<span class="chip-sm">tree</span>':''}${ch.muted?'<span class="chip-sm" style="color:var(--green);background:rgba(74,222,128,.12)">muted</span>':''}
         <div class="meta" style="font-size:12.5px">${PATH_LBL[ch.answerPath]||'unclassified'}${ch.calls30d?` · ${ch.calls30d} calls/30d · ${ch.confirms30d} confirms`:' · no calls yet'}</div>
       </div>
-      ${WF.list.length?`<select onchange="setChainWorkflow(${ch.id},this.value)" style="font-size:12.5px;padding:5px 8px;max-width:140px" title="Workflow for every ${esch(ch.name)} store">${wfOptions(WF.chains[ch.id]||'', WF.def?('Default · '+WF.def):'Default')}</select>`:''}
+      ${WF.list.length?`<select onchange="setChainWorkflow(${ch.id},this.value)" style="font-size:12.5px;padding:5px 8px;max-width:140px" title="Workflow for every ${esch(ch.name)} store">${wfOptions(WF.chains[ch.id]||'', 'Same as everywhere')}</select>`:''}
       <button class="ghost" style="font-size:12.5px;padding:6px 12px;${ch.muted?'color:var(--green);border-color:rgba(74,222,128,.4)':''}" onclick="quickChain(${ch.id},'muted',${!ch.muted})">${ch.muted?'Unmute':'Mute'}</button>
       <button class="ghost" style="font-size:12.5px;padding:6px 10px" onclick="quickChain(${ch.id},'repackOnly',${!ch.repackOnly})">${ch.repackOnly?'Not repack':'Repack'}</button>
     </div>`).join('');
@@ -6175,8 +6231,13 @@ async function loadWorkflows(){
   try{ WF.stores=JSON.parse(s.vt_store_workflows||'{}')||{}; }catch(e){ WF.stores={}; }
 }
 // <option> list for a workflow picker. placeholder = the "fall back to the level above" choice.
+// ONE BRANSON GLOBAL (owner, 07-30). The inherit row used to read "Default · Branson Global" while
+// Branson Global also sat in the list below it, so the same workflow appeared twice and picking either
+// looked identical. The inherit row now says what it MEANS and never borrows a name; which workflow
+// that currently is goes in the gray line under the control, where it cannot be mistaken for a choice.
 function wfOptions(sel,placeholder){
-  return `<option value="">${esch(placeholder||'—')}</option>`+WF.list.map(w=>`<option value="${esch(w.name)}"${w.name===sel?' selected':''}>${esch(w.name)}</option>`).join('');
+  return `<option value="">${esch(placeholder||'Same as everywhere')}</option>`
+    +WF.list.map(w=>`<option value="${esch(w.name)}"${w.name===sel?' selected':''}>${esch(w.name)}</option>`).join('');
 }
 // ---- Workflows manager (Voice → Workflows): per-workflow opener editing + the global default ----
 // Each workflow owns its opener list (string[]) — the call path rotates them round-robin. Edits here

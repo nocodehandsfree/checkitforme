@@ -116,6 +116,9 @@ export interface NavSession {
    *  anything, never waits for a person, so no Staff are troubled and no paid agent is opened. This
    *  is the whole difference between re-mapping a chain we know and discovering one we do not. */
   relisten?: boolean;
+  /** The sweep and the auto-mapper fold their own calls into the map. Everything else, the Re-map
+   *  button included, is folded by `finish`, so a call can never teach the map nothing (owner 07-30). */
+  callerRecords?: boolean;
   stopReason?: string;      // why this call ended, in plain words (kept as evidence)
   status: "dialing" | "navigating" | "human" | "failed" | "done";
   type: "direct" | "keypad" | "voice" | null;
@@ -754,6 +757,21 @@ function finish(s: NavSession, status: "human" | "failed" | "mapped") {
   }
   if (s.confirm?.asked && s.chainId != null) void recordConfirmAsked(s.chainId, s.retailerId); // rotate off this store next time
   void persistRun(s); // log this run so the admin can watch the learner's history per chain
+  // AND INTO THE MAP. Owner, 07-30: he pressed Re-map, a real CVS was called, its menu was walked
+  // perfectly, and the chain page showed nothing. Only the sweep and the auto-mapper folded their own
+  // calls in, so the one button he actually presses taught the map nothing. The fold now happens where
+  // every path already ends. Best-effort on purpose: a map write that fails must never take a call
+  // down with it.
+  if (!s.callerRecords && s.chainId != null) {
+    void import("./map-capture")
+      .then((m) => m.recordNavCall({
+        id: s.id, chainId: s.chainId, retailerId: s.retailerId, retailerName: s.retailerName,
+        steps: s.steps as never, humanAtSec: s.humanAtSec, transferAtSec: s.transferAtSec ?? null,
+        greeting: s.greeting, recipe: s.recipe as never, relisten: s.relisten, status: s.status,
+      }))
+      .then((r) => emit(s.id, "unknown", `Map updated: ${r.why}`, { recorded: r.recorded }))
+      .catch((e) => console.error("[navigator] recordNavCall", e));
+  }
   setTimeout(() => sessions.delete(s.id), 5 * 60 * 1000); // let the admin read it, then drop
 }
 
@@ -808,14 +826,14 @@ async function recordConfirmAsked(chainId: number, retailerId: number): Promise<
 }
 
 /** Place the documentation call; returns the session id the admin polls for live progress. */
-export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { listenFirst?: boolean; askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string; relisten?: boolean }): Promise<{ id?: string; error?: string }> {
+export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { listenFirst?: boolean; askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string; relisten?: boolean; callerRecords?: boolean }): Promise<{ id?: string; error?: string }> {
   if (!config.callsEnabled) return { error: "calls disabled on this preview deploy" };
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const from = process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
   const id = crypto.randomUUID().slice(0, 8);
-  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined, listenFirst: extra?.listenFirst, askText: extra?.askText, target: extra?.target, maxSec: extra?.maxSec, transferWaitSec: extra?.transferWaitSec, relisten: extra?.relisten };
+  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined, listenFirst: extra?.listenFirst, askText: extra?.askText, target: extra?.target, maxSec: extra?.maxSec, transferWaitSec: extra?.transferWaitSec, relisten: extra?.relisten, callerRecords: extra?.callerRecords };
   sessions.set(id, session);
   session.why = extra?.why;
   // The receipt opens at DIAL, before anything can go wrong, so even a call the carrier refuses

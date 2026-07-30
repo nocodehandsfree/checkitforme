@@ -127,3 +127,72 @@ export function evidenceFromCall(opts: {
     note: opts.note,
   };
 }
+
+/**
+ * EVERY MAPPING CALL FEEDS THE MAP, whoever placed it.
+ *
+ * The owner's finding, 07-30: he pressed Re-map, we called a real CVS, walked its menu perfectly, and
+ * the chain page showed nothing. The call was in the list and nowhere else. Only the sweep and the
+ * auto-mapper folded their own calls in; a call placed from Admin went to the log and stopped, so the
+ * one button he actually presses taught the map nothing.
+ *
+ * So the fold moved to where every path already ends. `callerRecords` is how the sweep and the mapper
+ * say "mine, I fold it myself", and nothing else has to remember.
+ *
+ * A RE-LISTEN NEVER PROPOSES. It is not discovering a route, it is listening to one we hold, so it
+ * writes what it heard (the graph, the menu, the handoff moment) and leaves the recipe alone.
+ */
+export async function recordNavCall(s: {
+  id: string; chainId: number | null; retailerId: number; retailerName?: string;
+  steps: CapturedStep[]; humanAtSec: number | null; transferAtSec?: number | null;
+  greeting?: string; recipe?: MapRecipe | null; relisten?: boolean; status: string;
+}): Promise<{ recorded: boolean; why: string }> {
+  const chainId = Number(s.chainId || 0);
+  if (!chainId) return { recorded: false, why: "no chain on this call" };
+  const mod = await import("./mapgraph");
+  const steps = s.steps || [];
+  const reachedHuman = s.humanAtSec != null;
+  const prompts = steps.filter((st) => st.who === "ivr" && st.text)
+    .map((st) => ({ text: String(st.text), atSec: Math.round(st.atSec ?? 0) }));
+  const actions = steps.filter((st) => st.who === "us")
+    .map((st) => ({ action: (st.action === "press" ? "press" : "say") as "press" | "say", value: String(st.value || ""), atSec: Math.round(st.atSec ?? 0), afterPrompt: st.earPrompts }));
+
+  // THE GRAPH FIRST, always. Every prompt heard is knowledge even when the call failed, and it is the
+  // only thing that can ever answer "we have never heard this prompt before".
+  await mod.recordCallPath({
+    chainId, storeId: s.retailerId,
+    prompts, actions,
+    reachedHuman, seconds: s.humanAtSec, outcome: reachedHuman ? "person" : String(s.status || "failed"),
+  });
+
+  const when = await mod.storeLocalTime(s.retailerId);
+  const evidence = evidenceFromCall({
+    navId: s.id, storeId: s.retailerId, storeName: s.retailerName, steps,
+    seconds: s.relisten ? null : s.humanAtSec, reachedHuman,
+    path: s.recipe ? mod.pathSignature(s.recipe) : actions.map((a) => `${a.action}:${a.value}`).join(">"),
+    greeting: s.greeting, transferAtSec: s.transferAtSec ?? null,
+    hourLocal: when.hour, dow: when.dow,
+    note: s.relisten ? "re-listen" : "admin call",
+  });
+
+  if (s.relisten) {
+    // What we came for: the handoff moment and the menu, folded onto the route that is already live.
+    // No version, no seconds, so a listen can never move the number the paid agent opens on.
+    const live = await mod.activeMap(chainId, s.retailerId);
+    if (!live) return { recorded: true, why: "graph only: this chain has no live recipe" };
+    await mod.addEvidence(live.id, evidence);
+    await mod.recordObservation({
+      chainId, storeId: s.retailerId, versionId: live.id, navId: s.id, kind: "verify",
+      expected: mod.pathSignature(live.recipe), observed: evidence.path, drift: evidence.path !== mod.pathSignature(live.recipe),
+      detail: { transferAtSec: s.transferAtSec ?? null, relisten: true },
+    });
+    return { recorded: true, why: `folded onto ${live.label}` };
+  }
+
+  if (!s.recipe || !reachedHuman) {
+    await mod.recordFailedAttempt({ chainId, storeId: s.retailerId, navId: s.id, reason: String(s.status || "no route proved"), seconds: s.humanAtSec });
+    return { recorded: true, why: "graph only: no route proved on this call" };
+  }
+  const res = await mod.proposeVersion({ chainId, storeId: s.retailerId, recipe: s.recipe, source: "admin", call: evidence });
+  return { recorded: true, why: res.activated ? "went live" : `waiting for approval (${res.version.label})` };
+}

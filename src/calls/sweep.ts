@@ -116,7 +116,9 @@ async function proveDirect(item: SweepItem): Promise<void> {
     item.chainId, store.id, store.name, store.phone,
     undefined, undefined, undefined, undefined,
     { product: "Pokémon cards" },
-    { listenFirst: true, askVoiceId: ask.voiceId, askText: ask.text },
+    // The sweep folds its own result below (it decides direct-vs-menu from what it hears), so `finish`
+    // must not fold it a second time.
+    { listenFirst: true, askVoiceId: ask.voiceId, askText: ask.text, callerRecords: true },
   );
   if (placed.error || !placed.id) { item.status = "failed"; item.outcome = "dial failed: " + (placed.error || "?"); return; }
   state.calls++; item.calls++;

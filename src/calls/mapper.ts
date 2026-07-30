@@ -352,6 +352,9 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
         undefined,
         { listenFirst: isListen, askVoiceId: ask.voiceId, askText: ask.text, target: run.target,
           maxSec: CALL_MAX_SEC, transferWaitSec: TRANSFER_WAIT_SEC,
+          // This loop folds its own calls into the map below, with the barge wins and the phase note
+          // attached. `finish` must not fold them a second time.
+          callerRecords: true,
           why: `Mapping ${run.chainName} (${run.phase}, call ${run.attempt})` },
       );
       if (placed.error || !placed.id) {

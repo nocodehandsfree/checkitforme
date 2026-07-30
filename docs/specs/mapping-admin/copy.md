@@ -43,14 +43,13 @@ itself. The first draft of this file failed that test twice over ("Route changes
 | Section | `RECIPE` · right `Tree Recipe v2 · Jul 28` |
 | Ladder steps | `Greeting plays` · `Says "no"` · `Says "front"` · `Says "general"` · `Rings the desk` |
 | Ladder second line | the quoted menu line, or `39 of 41` |
-| Under the ladder | `41s nav · 1.4¢ per check` |
 | Buttons | `Re-map` · `Until locked` |
-| Under the buttons | `Places real calls. Replaces the recipe only if faster.` |
 | `MAPPING` rows | `Menu` `2 of 3` · `Mapping calls` `3 today` · `Recipes` `v2 live` · `Review` `1 waiting` |
 | `CHAIN` row | `Settings` `Pharmacy · Tier 5` |
 | Not mapped | `No recipe. Re-map to learn one.` |
 
-**Cut:** `COST PER CHECK`, which rested on a guessed 20s of Charlie · `TO A PERSON`, because the wait
+**Cut 07-30:** the line under the ladder (the tiles say both numbers) · the note under Re-map
+(the confirm carries the money). **Cut:** `COST PER CHECK`, which rested on a guessed 20s of Charlie · `TO A PERSON`, because the wait
 for Staff is not nav · `A person answers` as a ladder step · `our job is done here`.
 
 ---
@@ -63,8 +62,7 @@ for Staff is not nav · `A person answers` as a ladder step · `our job is done 
 | Conditions | `Daytime` · `After 9pm` · `Spanish` |
 | Ladder | store lines quoted, ours as `Says "no"`, last rung `Rings the desk` |
 | Foot | `CVS Alhambra · Jul 28, 2:14 PM` |
-| Empty condition | `Not heard` · `Requires a call after 9pm` · button `Map` |
-| Under that button | `One real call. Hangs up at the ring.` |
+| Empty condition | `Not heard` · `Requires a call after 9pm` |
 
 **Cut:** the sub line. The three condition pills say what the screen is.
 
@@ -93,8 +91,8 @@ waiting for approval is not listed here; that decision sits on the chain page.
 | Slot | Copy |
 |---|---|
 | Title | `Review` |
-| Card name | `CVS Tarzana · answers direct` |
-| Card date | `Jul 27, 10:14 PM` |
+| Card name | `CVS Tarzana · answers differently` |
+| Card date | `Jul 27` |
 | Well | `EXPECTED` `Say "no", then "front", then "general"` · `HEARD` `Staff at 20s, no menu` |
 | Buttons | `Own recipe` · `Ignore` |
 | Under the buttons | `CVS Tarzana only` |
@@ -139,10 +137,10 @@ Corrections to what is live today, same rules.
 
 | Slot | Copy |
 |---|---|
-| Pill | `Reached Staff` · `Transferred, no answer` · `No answer` |
+| Pill | `Reached Staff` · `Nobody answered` (the seeded status label, never a second name for it) |
 | Last rung, reached | `Staff answered · "CVS Mulholland, this is Dana"` |
 | Last rung, failed | `Hung up, nobody picked up` |
-| Produced | `PRODUCED` · `Tree Recipe v2 · 5s faster` or `No change` |
+| Produced | `PRODUCED` · `Tree Recipe v2 · 5s faster` · `Tree Recipe v3 · set aside` (gray) · `No change` |
 | Key | `Show 4 more` |
 | Empty | `No mapping calls. Re-map to place one.` |
 
@@ -152,3 +150,20 @@ card is one call, so the line only repeats the title back.
 **Cut:** the foot line `A call only changes the menu when it beats the one we have`.
 
 **Fix:** a recipe that was set aside must not read green. `Set aside` is gray, like `No change`.
+
+---
+
+## 7. Built 07-30
+
+Every line above is on the screen now. What landed last, and why it was wrong before:
+
+- **A date is `Jul 28`.** The Menu foot printed the stored `2026-07-28`.
+- **`Nobody answered`** replaces `Transferred, nobody came`. The Statuses screen already owns those
+  words; a second name for one state is a second name too many.
+- **Review shows only what is still open.** A card already cleared kept coming back.
+- **The Review buttons act.** `Own recipe` puts that store's route live, `Re-map` places a call. They
+  used to flip a status column and nothing else.
+- **`Max talk` is deleted.** It was a hard cutoff on the whole call, not talk time.
+- **One `Same as everywhere`.** The inherit row borrowed the default workflow's name, so Branson
+  Global appeared twice in one list, in all three pickers.
+- **A set-aside recipe reads gray**, never green.
