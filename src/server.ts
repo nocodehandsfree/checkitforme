@@ -41,6 +41,7 @@ import { emit, markNow, closeReceipt, linkCall, rollup, rollupFromRow, getReceip
 import { installReceiptStore, currentRates, onReceiptClosed } from "./calls/receipt-store";
 import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
+import { behaved, agentLinesFrom } from "./calls/behaved";
 import { opsRollup, type CheckRow } from "./calls/ops";
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
 import { graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, graphFor, learnFromReceipt, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
@@ -4439,6 +4440,11 @@ app.get("/api/admin/test-calls", async (c) => {
     const label = best >= 0 && bestScore >= 0.5 ? String.fromCharCode(65 + best) : null;
     return { label, said: line, template: best >= 0 ? openers[best] : null };
   };
+  // Log rows carry the SAME logo fields every other store list on the dashboard uses, so the tile is
+  // never a name guess (docs/data/store-logos.md).
+  const chainRows = await cachedChains();
+  const chainNames = new Map(chainRows.map((ch) => [ch.id, ch.name]));
+  const chainTypes = new Map(chainRows.map((ch) => [ch.id, ch.type]));
   const all = (await db.select().from(callResults))
     .filter((r) => ownerOnly.has(r.retailerId))
     .sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
@@ -4446,14 +4452,25 @@ app.get("/api/admin/test-calls", async (c) => {
     const wf = wfFor(r.retailerId);
     const cat = cats.get(r.categoryId) || "";
     const nav = r.navSeconds, call = r.callSeconds;
+    const st = stores.get(r.retailerId);
+    const nm = st?.name || `#${r.retailerId}`;
+    const l = chainLogoInfo((st?.chainId && chainNames.get(st.chainId)) || nm.split(/—|–| - /)[0]);
     return {
       id: r.id, started: r.startedAt,
-      store: stores.get(r.retailerId)?.name?.split("—")[0].trim() || `#${r.retailerId}`,
+      store: nm.split("—")[0].trim() || `#${r.retailerId}`,
       category: cat, status: r.statusKey || r.status, confirmed: r.confirmed,
       workflow: wf?.name || null, opener: matchOpener(r.transcript, wf, cat),
       navSec: nav ?? null, callSec: call ?? null,
       talkSec: call != null && nav != null ? Math.max(0, call - nav) : null,
       summary: r.summary || null,
+      // The join key back to the receipt, so a row opens the SAME sheet the Calls page opens.
+      room: r.room || null,
+      // The route that really ran, and what the check really cost. A row with no stamped total was
+      // written before this engine priced anything, so it says nothing rather than "free".
+      lane: r.lane || null,
+      cost: r.costTotalUsd != null ? money(r.costTotalUsd) : null,
+      chainId: st?.chainId ?? null, storeType: (st?.chainId && chainTypes.get(st.chainId)) || "Other",
+      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark,
     };
   });
   const timed = rows.filter((r) => r.callSec != null);
@@ -5899,17 +5916,24 @@ app.get("/api/admin/receipt/:room", async (c) => {
   // The money is spelled out HERE, by the cost module, exactly as GET /api/calls/:id/receipt does it.
   // The costs are microdollars, and a page that formatted them itself printed a five-cent call as
   // 5,282,200¢. One printer, one envelope, no second formatter anywhere.
-  const readable = (cost: { totalUsd: number; charlieUsd: number; lineUsd: number; avoidableUsd: number }) =>
-    ({ total: money(cost.totalUsd), charlie: money(cost.charlieUsd), line: money(cost.lineUsd), wasted: money(cost.avoidableUsd) });
+  // `menu` is the walk to a person — the carrier leg plus the listening fork — which is the half of
+  // the money the owner reads first, against Charlie's seconds. Two buckets, nothing else.
+  const readable = (cost: { totalUsd: number; charlieUsd: number; lineUsd: number; forkUsd?: number; avoidableUsd: number }) =>
+    ({ total: money(cost.totalUsd), charlie: money(cost.charlieUsd), line: money(cost.lineUsd),
+       menu: money(cost.lineUsd + (cost.forkUsd ?? 0)), wasted: money(cost.avoidableUsd) });
   const live = getReceipt(room);
   if (live && !live.closed) {
     const sums = rollup(live);
     const cost = costCall({ callSecs: sums.callSecs, charlieSecs: sums.charlieConnectedSeconds, avoidableSecs: sums.charlieSilentSeconds, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))] }, await currentRates());
+    const timeline = live.events.map((e) => ({ atSec: e.atSec, kind: e.kind, note: e.note ?? "", detail: e.detail ?? null }));
     return c.json({
       room, live: true, stamped: true,
-      timeline: live.events.map((e) => ({ atSec: e.atSec, kind: e.kind, note: e.note ?? "", detail: e.detail ?? null })),
+      timeline,
       seconds: sums,
       cost: { ...cost, readable: readable(cost) },
+      // The four pass/fail rows, off the record this envelope already carries — no second route and
+      // no new listening (src/calls/behaved.ts).
+      behaved: behaved({ timeline, rollup: sums, agentLines: live.transcript.filter((l) => l.who === "Agent").map((l) => l.text) }),
     });
   }
   const rows = await db.select().from(callEvents).where(eq(callEvents.room, room)).orderBy(callEvents.atMs);
@@ -5920,22 +5944,25 @@ app.get("/api/admin/receipt/:room", async (c) => {
   // because there is no call_results row to stamp and the event set is a closed sixteen.
   const tail = parse(rows[rows.length - 1]?.detail ?? null);
   let seconds = (tail?.seconds ?? null) as Rollup | null;
-  let cost = (tail?.cost ?? null) as { totalUsd: number; charlieUsd: number; lineUsd: number; avoidableUsd: number } | null;
+  let cost = (tail?.cost ?? null) as { totalUsd: number; charlieUsd: number; lineUsd: number; forkUsd?: number; avoidableUsd: number } | null;
   // …but an ATTACHED call stamps them on the ROW instead, and this route only ever looked at the
   // tail — so the same finished call came back complete by call id and with the seconds and the cost
   // NULL by room. One envelope, two answers (owner 07-28). Now the row is the second place we look,
   // read by the SAME function the by-id route uses, so the two cannot drift apart again.
+  // The row is ALSO where the words live, and the four behaved rows need them, so it is read once
+  // here rather than conditionally inside the fallback.
+  const callId = rows.find((r) => r.callId != null)?.callId ?? null;
+  const attached = (await db.select().from(callResults)
+    .where(callId != null ? eq(callResults.id, callId) : eq(callResults.room, room)).limit(1))[0];
   if (!seconds || !cost) {
-    const callId = rows.find((r) => r.callId != null)?.callId ?? null;
-    const attached = (await db.select().from(callResults)
-      .where(callId != null ? eq(callResults.id, callId) : eq(callResults.room, room)).limit(1))[0];
     if (attached) {
       if (!seconds) seconds = rollupFromRow(attached, timeline);
       // A cost of nought is not a cost: the carrier bills a whole minute the moment we dial, so a row
       // with no total was written before this engine priced anything. Say nothing rather than free.
       if (!cost && attached.costTotalUsd != null) cost = {
         totalUsd: attached.costTotalUsd, charlieUsd: attached.costCharlieUsd ?? 0,
-        lineUsd: attached.costLineUsd ?? 0, avoidableUsd: attached.costAvoidableUsd ?? 0,
+        lineUsd: attached.costLineUsd ?? 0, forkUsd: attached.costForkUsd ?? 0,
+        avoidableUsd: attached.costAvoidableUsd ?? 0,
       };
     }
   }
@@ -5946,6 +5973,7 @@ app.get("/api/admin/receipt/:room", async (c) => {
     // Same flag the by-id route sends, so the one viewer can tell "never written down" from "free".
     stamped: !!cost,
     cost: cost ? { ...cost, readable: readable(cost) } : null,
+    behaved: behaved({ timeline, rollup: seconds, agentLines: agentLinesFrom(attached?.transcript) }),
   });
 });
 app.get("/api/admin/call-timing", async (c) => {
