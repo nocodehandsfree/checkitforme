@@ -17,8 +17,8 @@
 - Runs in `test-all.sh` AND as a `ship-admin.sh` preflight (with the glass lock) — no Admin ships past it.
   Ordinary English is not a violation (a kiosk receipt IS a receipt, "room to think" is not a room) —
   that is what `unless:` on a rule is for.
-- 🔴 **The page sweep (step 2) is BLOCKED and nobody is on it:** the Testing scorecard
-  (`admin-testing-new-engine.md`) has no branch and no code — only its box. Nothing to merge for them.
+- The page sweep (step 2) is UNBLOCKED: the Testing scorecard merged to staging 07-30 (@5abfaf9b) while this
+  was building, and the gate caught a hover-only `title=` in it at once. **Next page: Live (dash).**
 ## 2026-07-29 — Policy is a console (@0f2b6b7e) — only the durable parts kept, rest in git
 - 🔴 **THE THIRD "CHECK BEFORE YOU CUT" WIN:** the queue said cut Policy's pricing form; the comp says
   the OPPOSITE. Only the GRAMMAR was wrong. **Read the comp line before you believe an audit note.**

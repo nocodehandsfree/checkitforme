@@ -72,16 +72,20 @@ const UNTRUE = [
 
 // ── 4. HIS WORDS (owner law 07-29). Words he never coined must not appear as an Admin label.
 //       A check is a CHECK. The person at a store is Staff. Money is nav time + talk time.
-// A word only breaks the law when it NAMES part of a check. Ordinary English keeps its meaning:
-// a KIOSK receipt really is a paper receipt a shopper emails in, and "room to think" is not a room.
+// A word only breaks the law when it is a LABEL the owner reads. Two things are not violations:
+// a field or variable name (`r.room`, `/receipt/:room`, `lane:'delta'` — the API's words, not his),
+// and ordinary English (a KIOSK receipt a shopper emails in really is a receipt; "room to think"
+// is not a room). PROSE is what this catches. `unless:` carries the English exceptions.
+const CODE = "(?<![.\\w$:/-])"; // not a property, key, path segment or part of a longer name
+const NOT_ID = "(?![\\w$]*\\s*[:=(])"; // not being declared, keyed or called
 const BORROWED = [
-  { why: 'a check is a "check" — never a room', re: /\brooms?\b/gi,
+  { why: 'a check is a "check" — never a room', re: new RegExp(CODE + "rooms?\\b" + NOT_ID, "gi"),
     unless: /room to (think|breathe|talk)|more room|no room|legroom/i },
-  { why: 'a check is a "check" — never a lane', re: /\blanes?\b/gi },
-  { why: 'a check is a "check" — never a receipt', re: /\breceipts?\b/gi,
+  { why: 'a check is a "check" — never a lane', re: new RegExp(CODE + "lanes?\\b" + NOT_ID, "gi") },
+  { why: 'a check is a "check" — never a receipt', re: new RegExp(CODE + "receipts?\\b" + NOT_ID, "gi"),
     unless: /kiosk|shopper|stripe|invoice|vendor|bill|email|machine id|paper/i },
   { why: '"the thinking" is not his word — say what it is', re: /\bthe thinking\b/gi },
-  { why: 'a check is a "check" — never a door', re: /\bdoors?\b/gi },
+  { why: 'a check is a "check" — never a door', re: new RegExp(CODE + "doors?\\b" + NOT_ID, "gi") },
 ];
 
 // ── page slicing ───────────────────────────────────────────────────────────────────────────────

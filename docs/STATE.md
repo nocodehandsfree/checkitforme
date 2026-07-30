@@ -5,7 +5,7 @@ git. Last updated: 2026-07-30 (the engine waits on six calls; the store-picker s
 - The cleanup rules are now a machine check that runs before any Admin change goes live. Once a screen is cleaned it
   is locked: put back a hover-only hint, a "click here" line, or a line you called untrue and the change is refused.
   It lists **18 problems across 9 screens** today; none locked yet, so nothing is blocked.
-- **The cleanup itself waits on the new engine's test scorecard and nobody is building that** — no work exists for it anywhere, only the note. Say the word and I build it first.
+- **The test-call scorecard landed on staging tonight, so the cleanup is clear to start** — first screen is Live (the dashboard), with your baseline line and the old meters retired. The check refused two things in that new scorecard within a minute of it landing.
 ## The Policy screen sets your prices the way every other switch works (07-29, live on Admin now)
 - Prices sit in the same rows as the on/off switches. **No Save button any more:** type a number, tap away, it is
   saved and customers see it. A word bounces back. Every price stayed put; your analytics ID moved to App.

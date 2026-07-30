@@ -1,8 +1,8 @@
 # Unify the Admin — the gate FIRST, then one page per session
 
 **System:** admin · **Status:** active — **STEP 1 (the gate) IS DONE AND LIVE 07-30 (@10c3faa5).**
-Step 2 (page by page) still waits on the Testing scorecard (`admin-testing-new-engine.md`), which as of
-07-30 has NO branch, NO commits and NO code in `app.html` — only its box. One agent in `app.html` at a time.
+Step 2 (page by page) is **UNBLOCKED** — the Testing scorecard merged to staging 07-30 (@5abfaf9b), and the
+gate refused two things in it on sight. **Next page: Live (dash).** One agent in `app.html` at a time.
 **Why (owner, 07-29):** six agents have tried a whole-Admin cleanup and every one died mid-pass.
 This attempt is different the same way the rebuild was: the rules become a MACHINE GATE before any
 page is touched, so a cleaned page can never rot back.
