@@ -56,7 +56,7 @@ import { createSchedule, listSchedulesDetailed, deleteSchedule, customerSchedule
 import { cachedCategories, cachedChains, cachedRetailers, categoryLabelMap, retailerMap, invalidateRefCache } from "./refcache";
 import { haversineMi, bboxAround } from "./geo";
 import { ingestSignals, recentStockNear, latestForRetailer } from "./stock/signals";
-import { classifyVerdict, reconcile, productDetailLabel } from "./voice/verdict";
+import { classifyVerdict, reconcile, consensusFor, productDetailLabel } from "./voice/verdict";
 import { seedStockCheckIntel } from "./stock/intel";
 import { seedSellMethods } from "./stock/sellmethods";
 import { r2Config, presignPut, photoKey } from "./r2";
@@ -3413,11 +3413,13 @@ app.get("/pub/result/:cid", async (c) => {
   // first verdict the UI ever shows is already the final one.
   if (row && o && o.status === "completed") {
     const label = (await db.select({ label: categories.label }).from(categories).where(eq(categories.id, row.categoryId)))[0]?.label;
-    // Speed: only spend the verdict-DECIDING second read when ElevenLabs was UNCLEAR (the case it
-    // actually rescues). A decisive yes still gets an extraction-only read for the set/product form.
-    const needSecond = o.confirmed === null && !o.soldOut && !o.doesNotSell;
-    const second = (needSecond || o.confirmed === true) ? await classifyVerdict(o.transcript, label || "the product") : null;
-    const consensus = reconcile({ confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey }, needSecond ? second : null);
+    // THE READER RULE (owner 07-29), one shared implementation — consensusFor in src/voice/verdict.ts.
+    // This is the FIRST verdict a customer ever sees, and it used to consult the second reader only
+    // when the live read had no opinion, so a disagreement with a confirmed IN STOCK never landed here.
+    const { consensus, second } = await consensusFor(
+      { confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey },
+      o.transcript, label || "the product",
+    );
     const productDetail = productDetailLabel(second);
     await db.update(callResults).set({
       status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey,
@@ -6850,11 +6852,12 @@ app.post("/webhooks/elevenlabs", async (c) => {
       let restockDayHeard: string | null = null;
       if (o.status === "completed") {
         const label = row ? (await db.select({ label: categories.label }).from(categories).where(eq(categories.id, row.categoryId)))[0]?.label : undefined;
-        // Verdict-deciding second read only when EL was unclear; on a confirmed YES it still runs for
-        // EXTRACTION ONLY (set + product form), which decisive calls used to drop (owner 07-10 call 8).
-        const needSecond = o.confirmed === null && !o.soldOut && !o.doesNotSell;
-        const second = (needSecond || o.confirmed === true) ? await classifyVerdict(o.transcript, label || "the product") : null;
-        const consensus = reconcile({ confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey }, needSecond ? second : null);
+        // THE READER RULE (owner 07-29), one shared implementation — consensusFor in
+        // src/voice/verdict.ts. It used to consult the reader only when the live read was unclear.
+        const { consensus, second } = await consensusFor(
+          { confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey },
+          o.transcript, label || "the product",
+        );
         confirmed = consensus.confirmed; statusKey = consensus.statusKey; definitive = consensus.definitive;
         productDetail = productDetailLabel(second);
         restockDayHeard = second?.restockDay ?? null; // staff-volunteered restock day, captured even unprompted

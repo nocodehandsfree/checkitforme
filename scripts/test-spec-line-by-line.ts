@@ -152,9 +152,19 @@ check("5.2c", "Ear: transfer", () => /"transfer"/.test(EAR) || "no transfer");
 check("5.2d", "Ear: a new person", () => /maybeNewPerson/.test(EAR) || "no new-person signal");
 check("5.2e", "Ear: extended dead air", () => /deadAir/.test(EAR) || "no extended dead air");
 check("5.2f", "Ear: disconnect", () => /lineGone|disconnected/.test(EAR) || "no disconnect");
+// Checks the STATEMENT, not one line of code. It used to grep for the exact ternary
+// `reason === "transfer" ? "transfer" : "hold_start"`, which meant a transfer wrote its own line and
+// nothing else — so the `hold_end` that followed had no `hold_start` above it anywhere and the
+// timeline could not be read straight through (owner 07-28, receipt 199). Fixing that correctly broke
+// this assertion, which is the assertion's fault: all three kinds reaching the receipt is the spec.
 check("5.3", "All of it feeds the same receipt", () =>
-  /emit\(room, reason === "transfer" \? "transfer" : "hold_start"/.test(BRIDGE)
-  && /emit\(room, "hold_end"/.test(BRIDGE) || "hold events never reach the receipt");
+  (/emit\(room, "transfer"/.test(BRIDGE) ? true : "a transfer never reaches the receipt")
+  && (/emit\(room, "hold_start"/.test(BRIDGE) ? true : "a hold never reaches the receipt")
+  && (/emit\(room, "hold_end"/.test(BRIDGE) ? true : "the end of a hold never reaches the receipt"));
+check("5.3b", "…and a wait that ENDS always has a start above it", () =>
+  // The transfer line and the hold_start it opens are two separate emits, in that order.
+  /emit\(room, "transfer"[\s\S]{0,400}?emit\(room, "hold_start"/.test(BRIDGE)
+  || "a transfer does not open the wait it causes");
 check("5.4", "The clip is phone-format audio, not the MP3 we generate today", () =>
   /output_format=ulaw_8000/.test(src("src/calls/clip-cache.ts")) || "the clip is not phone format");
 check("5.5", "The old whole-call Delta stays in the tree", () =>

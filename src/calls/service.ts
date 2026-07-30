@@ -76,7 +76,7 @@ import type { AgentTuning } from "../voice/provider";
 import { notifyInStock, notifyContact } from "./notify";
 import { getSetting, setSetting } from "../db/settings";
 import { specificityClause, RESTOCK_PROMPT, VOICE_DEFAULTS, PREMIUM_FOLLOWUP, ASK_SHIPMENT_DAY, oneTurnFollowup, oneTurnShipmentDay } from "../voice/prompts";
-import { classifyVerdict, reconcile, productDetailLabel } from "../voice/verdict";
+import { consensusFor, productDetailLabel } from "../voice/verdict";
 
 const DEFAULT_OPENER = "Heyy! I was just checking to see if you guys got any {category} in?";
 
@@ -794,8 +794,7 @@ async function finalizeDeltaSession(s: TdSession): Promise<void> {
   // verdict to an honest "no clear answer" (not charged), and its extraction fixes transcription
   // mishears in the product label ("Scarlet and Violet 10" → tin) before anything is shown or stored.
   if (answered) {
-    const second = await classifyVerdict(transcript, chk.categoryLabel).catch(() => null);
-    const consensus = reconcile({ confirmed, statusKey }, second);
+    const { consensus, second } = await consensusFor({ confirmed, statusKey }, transcript, chk.categoryLabel);
     confirmed = consensus.confirmed; statusKey = consensus.statusKey; definitive = consensus.definitive; agreed = consensus.agreed;
     const label = productDetailLabel(second);
     if (label) productDetail = label; // the second read's trade-name mapping beats raw ASR text
@@ -1151,15 +1150,13 @@ export async function ingestPending(): Promise<number> {
     let restockDayHeard: string | null = null;
     let restockTimeHeard: string | null = null;
     if (outcome.status === "completed") {
-      // Speed: the second read decides the VERDICT only when EL was unclear (the case it rescues);
-      // decisive EL answers stand. But on a confirmed YES we still run it for EXTRACTION ONLY — it's
-      // what captures the set + product form the clerk named ("3-pack blister · Pitch Black"), which
-      // decisive calls used to drop entirely (owner 07-10 call 8).
-      const needSecond = primaryConfirmed === null && !outcome.soldOut && !outcome.doesNotSell;
-      const second = (needSecond || primaryConfirmed === true) ? await classifyVerdict(outcome.transcript, primaryLabel || "the product") : null;
-      const consensus = reconcile(
+      // THE READER RULE (owner 07-29), one shared implementation — see consensusFor in
+      // src/voice/verdict.ts. This used to run the second read for EXTRACTION ONLY on a decisive
+      // answer and hand `null` to the merge, so a reader that disagreed with a confirmed IN STOCK was
+      // ignored and the customer was charged for a green we were not sure of.
+      const { consensus, second } = await consensusFor(
         { confirmed: primaryConfirmed, soldOut: outcome.soldOut, doesNotSell: outcome.doesNotSell, statusKey: outcome.statusKey },
-        needSecond ? second : null,
+        outcome.transcript, primaryLabel || "the product",
       );
       finalConfirmed = consensus.confirmed;
       finalStatusKey = consensus.statusKey;

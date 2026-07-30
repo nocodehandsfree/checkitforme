@@ -58,5 +58,26 @@ for f in $ADMIN_COPY; do
   fi
 done
 
+# ── 4. THE READER RULE IS NOT A CALLER'S CHOICE ───────────────────────────────────────────────
+# "When the second reader disagrees with Charlie's status, the customer gets couldn't-tell and NO
+# charge — never a wrong answer" (owner 07-29). The merge always had the rule. What broke it was
+# each finalize path deciding for itself whether the reader was worth consulting: three of them
+# passed `needSecond ? second : null`, and needSecond was false exactly when the live read had an
+# opinion — so a reader disagreeing with a confirmed IN STOCK was thrown away and the customer was
+# charged for a green nobody was sure of. Getting the second opinion is now consensusFor's job.
+# A conditional handed to reconcile() means somebody has taken that decision back.
+# Two shapes of the same mistake. The `needSecond` flag IS the decision that must not exist (it was
+# spread over two lines in one of the three, so matching the reconcile() line alone missed it), and a
+# reconcile() handed a conditional or a bare null on its own line is the flag under another name.
+bad=$(grep -rn 'needSecond' src --include=*.ts | grep -v '^src/voice/verdict.ts:' || true)
+bad="$bad
+$(grep -rn 'reconcile(' src --include=*.ts | grep -v '^src/voice/verdict.ts:' | grep -E '\?[^:]*:\s*null|,\s*null\s*\)' || true)"
+if [ -n "$(printf '%s' "$bad" | tr -d '[:space:]')" ]; then
+  say "SPEC GATE 4 — the reader rule is being skipped: a caller decides whether to consult the second read."
+  say "$bad" | grep -v '^$' | head -5
+  say "             Call consensusFor() (src/voice/verdict.ts) instead — it always reconciles."
+  fail=1
+fi
+
 if [ "$fail" = 0 ]; then echo "spec gates: ok"; fi
 exit $fail
