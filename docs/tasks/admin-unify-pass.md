@@ -1,19 +1,24 @@
 # Unify the Admin — the gate FIRST, then one page per session
 
-**System:** admin · **Status:** active — starts AFTER the Testing scorecard task
-(`admin-testing-new-engine.md`); one agent in `app.html` at a time.
+**System:** admin · **Status:** active — **STEP 1 (the gate) IS DONE AND LIVE 07-30 (@10c3faa5).**
+Step 2 (page by page) still waits on the Testing scorecard (`admin-testing-new-engine.md`), which as of
+07-30 has NO branch, NO commits and NO code in `app.html` — only its box. One agent in `app.html` at a time.
 **Why (owner, 07-29):** six agents have tried a whole-Admin cleanup and every one died mid-pass.
 This attempt is different the same way the rebuild was: the rules become a MACHINE GATE before any
 page is touched, so a cleaned page can never rot back.
 
-**Step 1 — build `scripts/qa-admin-unify.mjs` (the gate) BEFORE touching any page.** It fails when
-a page has any of:
-- more than ONE info-icon pattern (pick the standard from the comp board; every `data-tip` uses it);
-- on-page directional copy ("click here to…", "use this to…") — that text belongs in a tooltip;
-- a named list of UNTRUE lines the owner has called out, seeded from: any label implying Delta
-  runs today · Clerk sign-up references · "estimated" wording on a number we now sum from real
-  checks. Keep the banned list IN the script, commented, so it grows.
-Wire it into the ship path like `qa-admin-glass`. Prove it fails on today's Admin, then start.
+**Step 1 — `scripts/qa-admin-unify.mjs` — DONE 07-30.** How to use it:
+- `node scripts/qa-admin-unify.mjs --page dash` — what a page's session runs; fails until clean.
+- `--all` = enforce everywhere (fails today: 18 findings on 9 pages) · `--audit` = look, enforce nothing.
+- Default = THE SHIP GATE: only pages listed in `SEALED` are enforced, so the sweep never bricks a ship.
+  **Sealing a page is the LAST step of its session** (after it is driven at 390px), in the same commit.
+- Checked per page: a second way to mark a hint (`title=` is hover-only and dead on a phone · a typed
+  ⓘ · a bespoke hint class — the ONE standard is `data-tip` + the single `::after` rule) · on-page
+  directional copy · the UNTRUE list (Delta reading as live · Clerk sign-in · "estimated" on a number
+  we sum from real checks) · his words (room / lane / receipt / "the thinking" naming part of a check).
+  Both banned lists live in the script, commented, so they GROW — add the line the owner rejects.
+- A page = its `<section>` plus its `TAB_LOADERS` loader body, plus a `chrome` page for the shared
+  shell. Wired into `test-all.sh` AND `ship-admin.sh` (both gates run before any Admin ship).
 
 **Step 2 — page by page, ONE per session,** in this order: Live (dash) · App (settings) · Calc ·
 the rest per `docs/tasks/INDEX.md` cleanup list. Each page: gate green · driven at 390px · copy per
@@ -36,5 +41,12 @@ named. The task closes when every page in the cleanup list has had its pass.
 
 **Verify-live output (paste per page — a page without it is NOT done):**
 ```
-(none yet)
+STEP 1, the gate (07-30) — no page touched, so the proof is the gate itself + the ship path:
+  $ node scripts/qa-admin-unify.mjs --all   → unify-gate PASS: 18  FAIL: 9  (exit 1: it bites today)
+  $ node scripts/qa-admin-unify.mjs         → PASS: 2 FAIL: 0 · sealed 0/25, 18 findings waiting
+  $ (dash added to SEALED as a test)        → FAIL: 1, exit 1 — a sealed page that rots blocks the ship
+  $ bash scripts/ship-admin.sh             → gates ran, then "✓ THE Admin is serving the new shell (10c3faa5)"
+  $ bash scripts/ship-admin.sh --status    → {"source":"override","commit":"10c3faa5", bytes 652611}
+  verify-live.sh: admin/prod read 55badd88 = origin/main, expected — the page override is not the
+  bundle stamp; --status is the Admin's own truth. staging was still redeploying (no server code changed).
 ```

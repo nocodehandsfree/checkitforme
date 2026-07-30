@@ -35,9 +35,9 @@ then they ride the next promote to prod):**
 | [The calling engine, round 2 (Echo)](echo-engine-round-2.md) | voice-calls | done 07-29 (staging LIVE; **PM: promote wanted**) |
 | [Chain section rebuild — GO](../specs/mapping-admin/plan.md) | voice-calls + admin | active (un-parked 07-29) |
 | [The Admin dashboard, continued (new Addie)](addie-dashboard-continue.md) | admin | **jobs 1+2 DONE 07-29** |
-| [Voice ▸ Testing becomes the new-engine scorecard](admin-testing-new-engine.md) | admin | **UNBLOCKED: Addie's jobs 1+2 are done** |
+| [Voice ▸ Testing becomes the new-engine scorecard](admin-testing-new-engine.md) | admin | **UNBLOCKED, NOT STARTED — no branch, no code 07-30. It blocks the unify sweep.** |
 | [Check status page: loud retry + headline states](site-check-status-loud-retry.md) | site | active (owner-named unlock) |
-| [Unify the Admin: gate FIRST, then page by page](admin-unify-pass.md) | admin | queued after the Testing scorecard |
+| [Unify the Admin: gate FIRST, then page by page](admin-unify-pass.md) | admin | **step 1, the gate: DONE + LIVE 07-30**; the page sweep waits on the scorecard |
 | [The wrong-department save (Echo)](echo-wrong-department-save.md) | voice-calls | active |
 | [Routes swap themselves at three stores (Mapper)](mapper-auto-swap.md) | voice-calls + admin | active |
 
