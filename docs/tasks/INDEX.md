@@ -38,7 +38,7 @@ then they ride the next promote to prod):**
 | [Voice ▸ Testing becomes the new-engine scorecard](admin-testing-new-engine.md) | admin | **SHIPPED 07-30** (@5b1f325, driven). Admin live · **PM: promote wanted** for the server half |
 | [Check status page: loud retry + headline states](site-check-status-loud-retry.md) | site | active — needs a NEW chat (prior agent never opened it, backed out clean) |
 | [Unify the Admin: gate FIRST, then page by page](admin-unify-pass.md) | admin | **step 1 (gate) + page 1 (Live/dash) DONE + LIVE 07-30, dash SEALED.** Next page = App (settings) |
-| [The wrong-department save (Echo)](echo-wrong-department-save.md) | voice-calls | active — the ONE open Echo item (items 1-3 done; fresh chat) |
+| [The wrong-department save (Echo)](echo-wrong-department-save.md) | voice-calls | BUILT + shipped to staging 07-30 · all four items done · only a real check with a human saying "this is the pharmacy" is left, and that needs his phone |
 | [Routes swap themselves at three stores (Mapper)](mapper-auto-swap.md) | voice-calls + admin | done 07-29 (screens LIVE; engine rides the promote) |
 
 ## Other open site fixes (consumer site is frozen: each needs an owner-named `.unlock`)
