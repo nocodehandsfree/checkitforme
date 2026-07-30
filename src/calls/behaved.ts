@@ -168,13 +168,13 @@ function askedOnce(turns: AgentTurn[], newPeople: number): BehavedRow {
 
 function noKeypadAtPerson(humanAt: number | null, presses: BehavedEvent[]): BehavedRow {
   const row = (pass: boolean | null, why: string): BehavedRow => ({
-    key: "no_keypad_at_person", label: "No keys after pickup", pass, why,
-    tip: "Zero keypad tones after Staff answer. A store that used to have a menu and now answers direct would otherwise get beeped at.",
+    key: "no_keypad_at_person", label: "No keypad detected", pass, why,
+    tip: "Keypad tones must stop the moment Staff answer. A store mapped with a menu that now answers direct would otherwise get beeped in the ear.",
   });
-  if (humanAt == null) return row(null, "Nobody answered. No pickup to press at.");
+  if (humanAt == null) return row(null, "Nobody answered. Nothing to press at.");
   const after = presses.filter((e) => Number(e.atSec ?? 0) >= humanAt);
-  if (!after.length) return row(true, `Staff answered at ${humanAt}s. 0 keys pressed after.`);
-  return row(false, `Staff answered at ${humanAt}s. ${plural(after.length, "key", "keys")} pressed after.`);
+  if (!after.length) return row(true, `0 keys pressed after Staff answered at ${humanAt}s.`);
+  return row(false, `${plural(after.length, "key", "keys")} pressed after Staff answered at ${humanAt}s.`);
 }
 
 /**

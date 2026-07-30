@@ -50,7 +50,7 @@ head("SHAPE");
   // OPERATOR GRADE, NOT CONVERSATIONAL (owner 07-30, admin copy guide: a label is a precise noun or
   // a plain verb, never a sentence). Asserted so nobody writes chat into a control panel again.
   ok("the labels are the operator's words", r.map((x) => x.label).join(" · ")
-    === "Asked once · No keys after pickup · Meter stopped · Mapping held · Transfer requested · Re-asked after transfer", r.map((x) => x.label));
+    === "Asked once · No keypad detected · Meter stopped · Mapping held · Transfer requested · Re-asked after transfer", r.map((x) => x.label));
   ok("no gray line runs past one line on a phone", r.every((x) => x.why.length <= 110), r.filter((x) => x.why.length > 110).map((x) => x.why));
   ok("a clean direct check: mapping held", row(r, "mapping_held").pass === true);
 }
