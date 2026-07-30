@@ -1214,10 +1214,17 @@ export async function chainDetail(chainId: number): Promise<Record<string, unkno
       observed: r.observed ? String(r.observed) : "", drift: Number(r.drift) === 1,
       detail: r.detail ? JSON.parse(String(r.detail)) : null,
     })),
-    unknowns: unk.rows.map((r: any) => ({
-      id: Number(r.id), kind: String(r.kind), prompt: r.prompt ? String(r.prompt) : "",
-      status: String(r.status), count: Number(r.seen_count), firstSeen: Number(r.first_seen), lastSeen: Number(r.last_seen),
-      evidence: r.evidence ? JSON.parse(String(r.evidence)) : null, note: r.note ? String(r.note) : "",
+    // WHICH STORE, by name. A review card that cannot say "CVS Tarzana" is asking him to decide
+    // something about a store it will not name (owner, 07-30).
+    unknowns: await Promise.all(unk.rows.map(async (r: any) => {
+      const storeId = Number(r.store_id || 0);
+      const store = storeId ? (await db.select().from(retailers).where(eq(retailers.id, storeId)))[0] : null;
+      return {
+        id: Number(r.id), kind: String(r.kind), prompt: r.prompt ? String(r.prompt) : "",
+        status: String(r.status), count: Number(r.seen_count), firstSeen: Number(r.first_seen), lastSeen: Number(r.last_seen),
+        evidence: r.evidence ? JSON.parse(String(r.evidence)) : null, note: r.note ? String(r.note) : "",
+        storeId: storeId || null, storeName: store?.name ?? null,
+      };
     })),
   };
 }

@@ -4812,7 +4812,7 @@ async function renderChainSheets(ch,nav){
   const tl=menuTimeline(active,nav), mw=document.getElementById('set_menu');
   set('pk_setmenu', tl?String(tl.rows.filter(r=>r.who!=='us').length)+' steps':'');
   if(mw) mw.innerHTML = tl ? menuLadder(tl.rows)
-    +`<div class="meta" style="margin-top:10px;text-transform:none;letter-spacing:0;line-height:1.5">Heard on a call to ${esch(tl.call.storeName||'a store')}${tl.call.day?', '+esch(tl.call.day):''}.</div>`
+    +`<div class="meta" style="margin-top:10px;text-transform:none;letter-spacing:0">${esch(tl.call.storeName||'A store')}${tl.call.day?' \u00b7 '+dayWords(tl.call.day):''}</div>`
     : '<div class="empty">No call has recorded this menu yet. Tap Re-map to place one.</div>';
 
   // MAPPING CALLS. One call per card, newest first (comp 2g). The old card was built from a
@@ -4844,12 +4844,21 @@ async function renderChainSheets(ch,nav){
     : '<div class="empty">No recipe yet. Tap Re-map to learn one.</div>';
 
   // REVIEW — only when there is something to look at.
-  set('pk_setreview', unknowns.length?String(unknowns.length):'', unknowns.length?'#F59E0B':'');
-  const rr=document.getElementById('set_reviewrow'); if(rr) rr.style.display=unknowns.length?'':'none';
+  // ONLY WHAT IS STILL OPEN. A card he already cleared was coming back, so the row counted decisions
+  // that had been made (owner, 07-30).
+  const open=unknowns.filter(u=>u.status==='open');
+  set('pk_setreview', open.length?String(open.length)+' waiting':'', open.length?'#F59E0B':'');
+  const rr=document.getElementById('set_reviewrow'); if(rr) rr.style.display=open.length?'':'none';
   const uw=document.getElementById('set_review');
-  if(uw) uw.innerHTML = unknowns.length ? unknowns.map(u=>mapUnknownCard(u,ch.id)).join('') : '';
+  const expected=active?routeWords(active):'';
+  if(uw) uw.innerHTML = open.length ? open.map(u=>mapUnknownCard(u,ch.id,expected)).join('') : '';
 }
 const cap=t=>{ t=String(t||''); return t?t[0].toUpperCase()+t.slice(1):''; };
+// A stored day is "2026-07-28". Nobody reads that. Every date on this page is "Jul 28".
+function dayWords(d){
+  const m=String(d||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); if(!m) return esch(String(d||''));
+  return new Date(Number(m[1]),Number(m[2])-1,Number(m[3])).toLocaleDateString([],{month:'short',day:'numeric'});
+}
 
 // ---- MAPPING CALLS, THE SHEET (comp 2g) ---------------------------------------------------------
 // The owner opens this to read ONE call top to bottom and see the recipe it produced. So: two cards,
@@ -4860,7 +4869,7 @@ function mappingCallsHtml(calls,versions){
   return calls.slice(0,2).map(c=>mappingCallCard(c,versions)).join('')
     +(rest.length?`<div id="set_runs_more" style="display:none">${rest.map(c=>mappingCallCard(c,versions)).join('')}</div>`
       +`<div style="display:grid;place-items:center;margin-top:6px"><button class="ghost" onclick="mapCallsMore(this)">Show ${rest.length} more</button></div>`:'')
-    +`<div class="meta" style="margin-top:14px;text-transform:none;letter-spacing:0;line-height:1.5">A call only changes the menu when it beats the one we have.</div>`;
+    ;
 }
 function mapCallsMore(btn){
   const m=document.getElementById('set_runs_more'); if(m) m.style.display='';
@@ -4869,8 +4878,9 @@ function mapCallsMore(btn){
 // One call: who we rang and when, how it ended, the conversation, then what it produced.
 function mappingCallCard(c,versions){
   const ok=!!c.reachedHuman;
-  const pill=ok?['g','Reached Staff','var(--green)']
-    :[ 'a', c.transferAtSec!=null?'Transferred, nobody came':'Reached nobody', '#F59E0B'];
+  // ONE WORD PER THING: a call nobody picked up is "Nobody answered", the same words the Statuses
+  // screen already uses for it. Inventing a second name for a state we already name was mine to fix.
+  const pill=ok?['g','Reached Staff','var(--green)']:['a','Nobody answered','#F59E0B'];
   const prod=callProduced(c,versions);
   const rungs=callRungs(c);
   return `<div class="card" style="margin:0 0 10px">`
@@ -5021,44 +5031,99 @@ function menuLadder(rows){
 }
 const plainText=t=>String(t||'').replace(/\s*—\s*/g,'. ').replace(/\s+-\s+/g,'. ').replace(/\.\s*\./g,'.');
 const whyWords=s=>String(s||'').replace(/(\d+)\s+(\w+?)\(s\)/g,(m,n,w)=>n+' '+w+(Number(n)===1?'':'s'));
+// WHAT HAPPENED, naming the store. The old card said "One store needs its own recipe" with no store,
+// no date, and two buttons that changed nothing (owner, 07-28 and again 07-30). Every card now says
+// which store, when, what was expected against what was heard, and its two buttons do what they say.
 const UNKNOWN_WHAT={
-  // A swap already happened. This one is a NOTE, not a question, so it never carries a decision.
   'route-swapped':'Recipe swapped itself',
-  'hammer-route':'The recipe just presses the same key over and over',
-  'unproven-direct':'We claim Staff answers straight away, but no call has proved it',
-  'route-changed':'The menu changed since we learned it',
-  'drift':'The menu is drifting from what we learned',
-  'store-exception':'One store needs its own recipe',
-  'route-failing':'This recipe keeps reaching nobody',
+  'store-exception':'answers differently',
+  'route-changed':'The menu changed',
+  'drift':'The menu is drifting',
+  'route-failing':'Recipe reaching nobody',
+  'hammer-route':'Recipe presses one key over and over',
+  'unproven-direct':'No call has proved Staff answer direct',
   'greeting-not-direct':'A recording answers, not Staff',
-  'not-shared':'This recipe is not shared with the chain',
+  'not-shared':'Recipe not shared with the chain',
 };
-function mapUnknownCard(u,chainId){
-  // A NOTE, NEVER A DECISION (owner 07-29). Three stores walking the same new route is the answer,
-  // not a question, so the route already swapped and this card only reports it. It carries the count
-  // and the route in its own words, and the one thing left to do is clear it.
+// The two buttons, per kind: what the green one DOES, and what it changes. `null` = a note to clear.
+const UNKNOWN_ACT={
+  'store-exception':['Own recipe','store'],
+  'route-changed':['Use the new one','chain'],
+  'drift':['Re-map','chain'],
+  'route-failing':['Re-map','chain'],
+  'hammer-route':['Re-map','chain'],
+  'unproven-direct':['Re-map','chain'],
+  'greeting-not-direct':['Re-map','chain'],
+};
+const unkWhen=u=>u.firstSeen?new Date(u.firstSeen*1000).toLocaleDateString([],{month:'short',day:'numeric'}):'';
+// EXPECTED against HEARD, in a carved well. Both come off the item we already store; where we have no
+// heard line the well is dropped rather than printed empty.
+function unkWell(u,expected){
+  const heard=plainText(u.prompt||'').replace(/^Heard a different route:\s*/i,'');
+  if(!expected&&!heard) return '';
+  const row=(lab,val,strong)=>`<div style="display:flex;gap:10px;align-items:baseline${lab==='HEARD'?';margin-top:10px':''}">`
+    +`<span style="font-size:9.5px;font-weight:700;letter-spacing:.12em;color:#8A8A96;flex:0 0 66px">${lab}</span>`
+    +`<span style="font-size:12.5px;font-weight:${strong?'700':'500'};color:${strong?'#fff':'rgba(255,255,255,.55)'};flex:1;line-height:1.45">${esch(val)}</span></div>`;
+  return `<div style="margin-top:13px;background:var(--terminal);border-radius:16px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:14px 16px">`
+    +(expected?row('EXPECTED',expected,false):'')+(heard?row('HEARD',heard,true):'')+`</div>`;
+}
+function mapUnknownCard(u,chainId,expected){
+  const store=u.storeName||'';
+  // A NOTE, NEVER A DECISION. The route already swapped itself; the only thing left is to clear it.
   if(u.kind==='route-swapped') return `<div class="card" style="margin:0 0 10px">
     <div class="row" style="align-items:center;gap:8px">
       <span class="name" style="font-size:13.5px">Recipe swapped itself</span>
       <span style="margin-left:auto;font-size:10.5px;font-weight:800;color:var(--green)">Live</span></div>
     <div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(plainText(u.prompt))}</div>
-    <div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${u.firstSeen?new Date(u.firstSeen*1000).toLocaleDateString([],{month:'short',day:'numeric'}):''}</div>
+    <div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${unkWhen(u)}</div>
     <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
       <button class="ghost" onclick="mapUnknown(${u.id},'resolved',${chainId})">Clear</button>
     </div></div>`;
+  const act=UNKNOWN_ACT[u.kind];
+  const what=UNKNOWN_WHAT[u.kind]||String(u.kind||'').replace(/-/g,' ');
+  // "CVS Tarzana · answers differently" reads as a fact about a store. Without a store name it is the
+  // chain that is wrong, so the finding stands on its own.
+  const title=store?`${store} · ${what}`:cap(what);
   return `<div class="card" style="margin:0 0 10px">
-    <div class="name" style="font-size:13.5px">${esch(UNKNOWN_WHAT[u.kind]||String(u.kind||'').replace(/-/g,' '))}</div>
-    ${(!UNKNOWN_WHAT[u.kind]&&u.prompt)?`<div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(plainText(u.prompt))}</div>`:''}
-    <div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${u.count>1?'Seen '+u.count+' times':'Seen once'}${u.firstSeen?' \u00b7 first on '+new Date(u.firstSeen*1000).toLocaleDateString([],{month:'short',day:'numeric'}):''}</div>
-    <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
-      <button class="act" onclick="mapUnknown(${u.id},'resolved',${chainId})">Fixed</button>
-      <button class="ghost" onclick="mapUnknown(${u.id},'dismissed',${chainId})">Not a problem</button>
-    </div></div>`;
+    <div class="row" style="align-items:baseline;gap:8px">
+      <span class="name" style="font-size:13.5px;flex:1;min-width:0">${esch(title)}</span>
+      <span style="font-size:11.5px;font-weight:700;color:var(--text-tertiary);flex:0 0 auto">${unkWhen(u)}</span></div>
+    ${unkWell(u,expected||'')}
+    ${act?`<div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
+      <button class="act" style="white-space:nowrap" onclick="mapUnknownDo(${u.id},${chainId},'${esch(u.kind)}',${(u.evidence&&u.evidence.versionId)||0})">${esch(act[0])}</button>
+      <button class="ghost" onclick="mapUnknown(${u.id},'dismissed',${chainId})">Ignore</button>
+    </div>
+    <div class="meta" style="margin-top:11px;text-transform:none;letter-spacing:0">${act[1]==='store'&&store?esch(store)+' only':'Every store on this chain'}</div>`
+    :`<div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
+      <button class="ghost" onclick="mapUnknown(${u.id},'resolved',${chainId})">Clear</button></div>`}
+    </div>`;
+}
+// THE BUTTON DOES THE THING IT NAMES (owner, 07-30). "Own recipe" puts that store's own route live.
+// "Use the new one" puts the new chain route live. "Re-map" places a real call. Only then is the item
+// cleared, so nothing reads as decided until the decision actually happened.
+async function mapUnknownDo(id,chainId,kind,versionId){
+  if(versionId){
+    const ok=await askSheet(kind==='store-exception'?'Give this store its own recipe?':'Use the new recipe?',
+      kind==='store-exception'
+        ? ['Only this store changes. Every other store on the chain keeps the current recipe.']
+        : ['Every store on this chain switches to it. The current recipe is retired.'],
+      kind==='store-exception'?'Own recipe':'Use it');
+    if(!ok) return;
+    const r=await api('/api/admin/map/version/'+versionId+'/approve',{method:'POST'});
+    if(!r||r.error){ toast(mapWriteErr(r)); return; }
+  } else {
+    const ok=await askSheet('Re-map this chain?',['Places a real call to one store. Nobody is asked anything.'],'Re-map');
+    if(!ok) return;
+    const r=await api('/api/admin/trainer/document',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({chainId,relisten:true,why:'Re-map from Review'})});
+    if(!r||r.error){ toast(mapWriteErr(r)); return; }
+  }
+  await mapUnknown(id,'resolved',chainId);
 }
 async function mapUnknown(id,status,chainId){
   const r=await api('/api/admin/map/unknown/'+id,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({status,note:status==='resolved'?'marked fixed from Admin':'marked not a problem from Admin'})});
   if(!r||r.error){ toast(mapWriteErr(r)); return; }
-  toast(status==='resolved'?'Marked fixed':'Set aside'); delete CHAIN_MAP[chainId];
+  toast(status==='resolved'?'Done':'Ignored'); delete CHAIN_MAP[chainId];
   await loadMapGraph(); await renderChainSheets((CHAINS||[]).find(c=>c.id===chainId)||{id:chainId},null);
 }
 // The route on its own: what WE do, with the ringing and the answer around it. Shown until the heard
@@ -5178,9 +5243,9 @@ function renderChainMapping(ch){
     // menu, the rounds of calls and the version history each have their own sheet: this page answers
     // "what do we do on this chain", not "everything we know about it".
     el.innerHTML=`<div class="mladder">${routeRungs(ch,nav,DASH).map((r,i,a)=>chainRung(r,i===a.length-1)).join('')}</div>`;
-    if(foot) foot.textContent=!lane?''
-      :(nav===0?'No menu. Staff answer the line.'
-      :nav!=null?`${nav}s nav · ${chainCents(chainNavCents(nav))} per check`:'');
+    // No foot line: the two tiles above already carry nav time and nav cost, and saying them twice on
+    // one screen is clutter (owner, 07-30). The only case worth a word is a chain with no menu at all.
+    if(foot) foot.textContent=(lane&&nav===0)?'No menu. Staff answer the line.':'';
   }
   // --- status pill beside the chain name.
   const sp=document.getElementById('set_mapstatus');
@@ -5192,10 +5257,10 @@ function renderChainMapping(ch){
   }
   const mb=document.getElementById('set_mapbtn'); if(mb) mb.textContent=isLocked?'Re-map':'Map';
   // One gray line instead of an info dot buried in a button label (owner 07-27).
+  // The note under the buttons is gone (owner, 07-30). What it has to say is that this spends money,
+  // and the button's own confirm says that at the moment it matters.
   const note=document.getElementById('set_mapnote');
-  if(note) note.textContent=isLocked
-    ? 'Re-map places real calls and keeps the fastest route it finds. It only replaces the route above if it beats it.'
-    : 'Map places real calls until Staff answers, then keeps shortening the route until it cannot improve.';
+  if(note) note.textContent='';
   renderChainRows(ch,lane,nav);
 }
 // ---- A ROUTE WAITING ON HIM ---------------------------------------------------------------------
