@@ -1,6 +1,7 @@
 # Check status page: the bottom bar, then the alerts list
 
-**System:** site · **Status:** active · **Owner-named 2026-07-30.**
+**System:** site · **Status:** active — §1 and §2 SHIPPED to staging 07-30 (PR #100), awaiting the
+owner's phone; §3 alerts NOT started (owner-ordered second). · **Owner-named 2026-07-30.**
 **This task IS the unlock authority** for the check-status section of `public/checkit.html` and for
 `public/checkit.html` generally: write the exact glob into `.unlock`, fix ONLY that scope, delete it after.
 

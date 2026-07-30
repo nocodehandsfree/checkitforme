@@ -4,9 +4,9 @@ git. Last updated: 2026-07-30 (check status page has its big step window; verdic
 ## The check status page tells you where the check is, in one big line (07-30, on staging)
 - The glowing box now says `Calling` → `Getting through the menu` → `Talking to Staff` instead of just the
   store name, with the store's mark big behind it. The step log and the scroll-back reveal are untouched.
-- **Open, and next up:** the conversation still slides under Safari's bottom bar. A first attempt at
-  that made it worse and was reverted the same day.
-  Handed off in `docs/tasks/site-check-status-fixes.md`. Alerts (no double subscribing, new wording) is second.
+- **Both fixes are on staging, check your phone:** the conversation now follows its newest line and the
+  page ends clear of Safari's bottom bar, and "Too far?" can no longer flash while its switch is off.
+  Task: `docs/tasks/site-check-status-fixes.md`. Alerts (no double subscribing, new wording) is second.
 ## Verdicts are worked out while the check runs, not after it (07-30, on staging)
 - We used to wait until the check ended to start reading what Staff said. Now it is read as it happens, so the
   answer is ready the moment we hang up. Nothing changed on the line and the two-reads-must-agree rule is intact.

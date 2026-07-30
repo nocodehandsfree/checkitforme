@@ -424,6 +424,9 @@
      body.lview still rides along for the transparent header + pill treatment below. */
   #live{position:relative}
   body.lview header{background:transparent;border-bottom-color:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
+  /* DO NOT pad this page out to force a scroll (tried 07-30, reverted same day). The live view follows
+     the conversation by scrolling to the page bottom as each line lands; dead space below the log
+     strands the newest line off-screen and kills the reveal. The page's own height is the design. */
   body.lview main{padding-top:18px}
   /* Header chips sit ON the green like the result view's (same recipe as body.rview.rv-in). */
   body.lview .pill,body.lview .vsw-trig,body.lview .railcal{background:rgba(74,222,128,.05);border-color:rgba(74,222,128,.16)}
@@ -551,6 +554,30 @@
   .rhead.out .rhead-stat{color:var(--red)}
   .rhead.unk .rhead-stat{color:#FBBF24}
   .rhead.soon .rhead-stat{color:#F59E0B}
+  /* THE STEP WINDOW (2026-07-30). The glowing live header carries ONE headline state at a time:
+     Calling → Getting through the menu → Talking to Staff. The verdict is state four and it lands on
+     the result page, which keeps its own 40px headline. So this line is deliberately smaller (the
+     card-question size, STYLE_GUIDE §4) and never competes with it. One line, never wraps. */
+  /* THE STEP WINDOW (owner 07-30). The customer cannot hear the check, so this box IS the show. The
+     store's own logo blooms out of the top-right corner (the same watermark move as My checks and the
+     share card), the store name demotes to an eyebrow, and ONE big line says where we are right now.
+     Scoped to .rhead.live so the finished result header is untouched. */
+  .rhead.live{position:relative}
+  .rhead.live .rhead-top{display:block;padding:30px 18px 36px;position:relative;z-index:1}
+  /* The mark is strongest in the corner and fades out before it reaches the headline, so a long state
+     never reads muddy over it. Mask, not a lower opacity: the corner still has real presence. */
+  .rhead.live .railchip{position:absolute;top:-46px;right:-40px;width:212px;height:212px;border:0;border-radius:0;background:none;box-shadow:none;opacity:.17;z-index:0;pointer-events:none;transform:none!important;place-items:center;-webkit-mask-image:linear-gradient(238deg,#000 42%,rgba(0,0,0,.45) 72%,transparent 96%);mask-image:linear-gradient(238deg,#000 42%,rgba(0,0,0,.45) 72%,transparent 96%)}
+  .rhead.live .railchip img{width:190px;height:190px;max-height:none;object-fit:contain}
+  .rhead.live .railchip .wm span{font-size:76px;color:#fff;letter-spacing:-.03em}
+  .rhead.live .rhead-store{font-size:10.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.8);line-height:1.2}
+  .rhead.live .rhead-addr{display:none}
+  /* Sized to fit the longest state ("Getting through the menu") on ONE line at 375. The verdict page
+     keeps the 40px headline, so this stays under it. Never wraps, never ellipsizes. */
+  .lh-state{margin-top:16px;font-size:clamp(23px,6.3vw,28px);font-weight:900;letter-spacing:-1px;line-height:1.1;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lh-state:empty{display:none}
+  /* Each new state arrives with the verdict page's own blur-and-rise, so the box visibly MOVES
+     forward every time the check does. Reduced motion falls back to the resting state. */
+  @media (prefers-reduced-motion:no-preference){ .lh-state{animation:rTitleIn .55s cubic-bezier(.2,.8,.2,1) both} }
   /* logged-out homepage = the focused view (hero + check card). Retired modules hidden for everyone. */
   #truststrip,#demo{display:none!important}
   /* "Earn free checks" lives in the account panel — styled to match the rows above it (black bar). */
@@ -2082,6 +2109,13 @@ html[data-skin="v2"] #histOverlay .hist-scroll{flex:1 1 auto;min-height:0;overfl
    reserves the whole under-bar band, and the spacer would just add 160px of blank to scroll through. */
 body.sheetopen #zones .zf-scroll::after,body.sheetopen #histOverlay .hist-scroll::after,body.sheetopen #pageOverlay #pg_body::after,body.sheetopen #buyOverlay:not(:has(.buydock.up)) .buy-scroll::after{content:'';display:block;flex:0 0 auto;height:calc(160px + env(safe-area-inset-bottom))} /* clears the 120px under-bar overshoot AND lifts the last row a comfortable tap above the iOS toolbar (a flush-to-edge link was untappable) */
 body.sheetopen #zones .zbasket.up,body.sheetopen #buyOverlay .buydock.up{bottom:134px} /* 14px float above the sheet's 120px under-bar overshoot */
+/* Check status page (owner 07-30): the page ends with a clear strip the height of Safari's bottom bar,
+   the SAME measured recipe as the sheet spacers above, so the footer wordmark never sits half-hidden
+   under the bar. Safe ONLY because renderLiveMsg aims the follow-along at the NEWEST line, never at the
+   document end (gate 14b remembers the forced-height mistake this replaces). showResult drops body.lview,
+   so the strip leaves with the live view and the verdict page is untouched. */
+body.lview::after{content:'';display:block;height:calc(160px + env(safe-area-inset-bottom))}
+body.lview #convo_body>*,body.lview #live_msgbox{scroll-margin-bottom:calc(160px + env(safe-area-inset-bottom))} /* scrollIntoView lands the newest line a comfortable read above the iOS toolbar */
 
 /* Footer links (About/FAQ/Terms/Privacy/Contact) slide up as a bottom sheet, like every other panel.
    Flex column: the grab handle + title stay pinned; only the body scrolls (owner 07-06: the top used to
@@ -2293,7 +2327,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   html[data-skin="v2"] .ckarc1,html[data-skin="v2"] .ckarc2,html[data-skin="v2"] .rpill .d{animation:none}
 }
 /*V2END*/</style>
-<meta name="build" content="d18d027748f7">
+<meta name="build" content="8f91ac5ed944">
 </head>
 <body>
 <!-- Hard-refresh of a result deep-link: apply the verdict treatment (wash + transparent nav) NOW, so
@@ -2406,6 +2440,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
         <div class="rhead-id">
           <div class="rhead-store" id="live_store2"></div>
           <div class="rhead-addr" id="live_addr"></div>
+          <div class="lh-state" id="lh_state"></div>
         </div>
       </div>
     </div>
@@ -3020,6 +3055,7 @@ function chainCarriesBrand(st){
   return allow.some(a=>(st.name||'').toLowerCase().includes(a));
 }
 let POLICY={flags:{driverHandoff:true,restockAlerts:true,shareCards:true,kiosks:true,specificSets:true},packs:[],sub:{cents:499},perCallCents:25,headstartMin:10,kioskRefreshChecks:1}; // owner-tunable, loaded at boot
+let POLICY_KNOWN=false; // true once /pub/policy has ANSWERED. Until then the extras that default on (driver handoff, share) stay hidden: the optimistic defaults above flashed "Too far?" on the pending screen while the feature was switched off (owner 07-30).
 let LEAD_PENDING=null, AUTH_PENDING=null;
 const $=id=>document.getElementById(id);
 const markFld=(el,on)=>{ if(!el)return; el.classList.toggle('fld-err',!!on); if(on&&!el.__fldClr){ el.__fldClr=1; el.addEventListener('input',()=>el.classList.remove('fld-err'),{once:false}); } };
@@ -3218,6 +3254,7 @@ const I18N={ es:{
   'hist.today.cta':'Verificar una tienda','hist.today.none':'Sin verificaciones hoy',
   'hist.signin.title':'Inicia sesión para ver tus verificaciones','hist.signin.sub':'Tus verificaciones anteriores están guardadas en tu cuenta.','hist.signin.cta':'Iniciar sesión',
   'hist.today.sub':'Selecciona un día abajo para ver tus verificaciones anteriores.','hist.today.sub0':'Selecciona un día abajo para ver tus verificaciones anteriores.',
+  'live.h1':'Llamando','live.h2':'Pasando el menú','live.h3':'Hablando con Staff',
   'live.s1':'Llamando a la tienda…','live.s2':'Está timbrando…','live.s3':'Conectamos…','live.s4':'Escuchando el menú…','live.s5':'Navegando el menú…','live.s6':'Timbrando en el mostrador…','live.s7':'Contestó el personal','live.s8':'Preguntando por {p}',
   'live.item':'tu producto','live.store':'la tienda','live.waitperson':'Buscando a una persona…','live.noconvo':'No hay conversación en vivo en esta llamada.',
   'step.one':'paso','step.many':'pasos','step.ringing':'Llamando a la tienda…',
@@ -3404,7 +3441,7 @@ function setLang(l){ LANG=l; localStorage.setItem('runnr_lang',l); applyLang();
   try{ document.querySelectorAll('.modetab[data-mode="hobby"],.modetab[data-mode="thrift"]').forEach(b=>b.remove()); ensureModeChips(); document.querySelectorAll('.modetab').forEach(b=>b.classList.toggle('on',b.dataset.mode===MODE)); }catch(e){} // injected chips carry baked labels — rebuild them in the new language
   // …including whatever view/sheet is open right now — no hard refresh needed.
   try{
-    if($('live') && !$('live').classList.contains('hidden')) renderLiveMsg(); // flip mid-call → re-localize the live step log too
+    if($('live') && !$('live').classList.contains('hidden')){ renderLiveHead(); renderLiveMsg(); } // flip mid-call → re-localize the headline state and the live step log too
     if(NAV_VIEW==='result'&&LASTRES) showResult(LASTRES,RAIL_CID);
     if($('buyOverlay')&&$('buyOverlay').classList.contains('on')){ renderBuyPlans(); if(isV2()){ try{ applyBuyHeader(); renderBuyGrid(); renderBuyDock(); }catch(_){ } } setI('buy_note', `${ICO.lock('#7a7a88')} ${t('buy.secure2','Secure checkout via Stripe')}`); } // the title, the service grid and the dock price all carry copy too
     if($('acctOverlay')&&$('acctOverlay').classList.contains('on')) openAccount();
@@ -3832,6 +3869,7 @@ async function boot(){
   CATS=Array.isArray(c)?c:[];
   if(Array.isArray(st)) st.forEach(x=>RSTATUSES[x.key]=x);
   if(pol&&!pol.error){ const flags=Object.assign({},POLICY.flags,pol.flags||{}); POLICY=Object.assign(POLICY,pol); POLICY.flags=flags; }
+  POLICY_KNOWN=true; // the policy ask has resolved (even a failed fetch counts: defaults apply from here, nothing flashes before it)
   // SMS dark (flags.smsAlerts off) → the alert inputs ask for email from first paint, not just on
   // open. Drop the i18n-ph attr too or the language pass re-stamps "email or phone" right back.
   if(!smsAlertsOn()){ try{ [ $('watch_contact'), $('sch_contact') ].forEach(el=>{ if(el){ el.removeAttribute('data-i18n-ph'); el.placeholder=t('em.ph','you@email.com'); } }); }catch(_){ } }
@@ -5503,12 +5541,28 @@ function liveStageLabel(n){
   // Active-voice steps (the result design). Stage 1 is the roll-up handle ("Ringing the store…").
   return ({1:t('live.s1','Ringing the store…'),2:t('live.s2',"It's ringing…"),3:t('live.s3',"We've connected…"),4:t('live.s4','Listening to the menu…'),5:t('live.s5','Working through the menu…'),6:t('live.s6','Ringing the front desk…'),7:t('live.s7','Staff picked up'),8:tf('live.s8','Asking about {p}',{p:prod})})[n]||'';
 }
+// THE STEP WINDOW (2026-07-30). The customer cannot hear the call, so the glowing header says where we
+// are in ONE big line. Three live states, then the verdict takes over on the result page (state four).
+// This READS the stage pipe and nothing else: 1-3 = still getting the line, 4-6 = the menu, 7-8 = a person.
+function liveHeadLabel(n){
+  if(n>=7) return t('live.h3','Talking to Staff');
+  if(n>=4) return t('live.h2','Getting through the menu');
+  return t('live.h1','Calling');
+}
+function renderLiveHead(){
+  const el=$('lh_state'); if(!el) return;
+  const txt=liveHeadLabel(LIVE_STAGE||1);
+  if(el.textContent===txt) return;   // same state → no re-run of the rise-in
+  el.textContent=txt;
+  try{ el.style.animation='none'; void el.offsetWidth; el.style.animation=''; }catch(_){ }
+}
 function liveStage(n){
   if(!n||n<=LIVE_STAGE) return;
   LIVE_STAGE=n;
   const at=LIVE_T0?((Date.now()-LIVE_T0)/1000):0;
   LIVE_STEPS.push({n, label:liveStageLabel(n), at});  // log it with the elapsed time it started
   const el=$('phase'); if(el) el.textContent=liveStageLabel(n); // back-compat if a #phase element exists
+  renderLiveHead();
   renderLiveMsg();
 }
 // ---- The two-section call box: live STEPS (system font, timed) on top, the human SCRIPT below ----
@@ -5602,7 +5656,7 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
     return `<div class="ctlv2" style="margin-bottom:22px">
       <div class="ctlv2-rail"><span class="d1"></span><span class="ln" style="background:linear-gradient(180deg,#4ADE80 0%,${live?'#4ADE80 100%':`color-mix(in srgb,#4ADE80 35%,${tone}) 60%,${tone} 100%`})"></span><span class="d2" style="background:${live?'#4ADE80':tone};${live?'box-shadow:0 0 8px rgba(74,222,128,.6)':''}"></span></div>
       <div style="flex:1;min-width:0">
-        <details${status?'':' open'}><summary><span class="ctl-lead${(live&&stepRows.length)?' was':''}" style="display:inline-flex;align-items:center">${t('step.calling','Calling')}${(()=>{const _w=(status&&status.store)||SEL_STORE;return _w&&(_w.logoUrl||_w.name)?`<span class="callwho ${_w.logoDark?'lite':''}${_w.logoWide?' widelogo':''}">${storeFace(_w)}</span>`:'';})()}</span><span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#8A8A96">${stepRows.length+1} ${stepRows.length+1===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg></span></summary>
+        <details${status?'':' open'}><summary><span class="ctl-lead${(live&&stepRows.length)?' was':''}" style="display:inline-flex;align-items:center">${t('step.calling','Calling')}</span><span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:#8A8A96">${stepRows.length+1} ${stepRows.length+1===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg></span></summary>
           <div class="ctlv2-steps">${stepEls}</div>
         </details>
         <div id="convo_body" style="${bubs?'margin-top:12px;':''}display:flex;flex-direction:column;gap:9px">${bubs}</div>
@@ -5623,7 +5677,7 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
   }).join('');
   // Roll-up handle: lead with "Ringing the store…" (drop the "Calling {store}" header) + total steps · secs.
   const totalS = finalElapsed!=null ? Math.round(finalElapsed) : (n>0 ? Math.round(steps[n-1].at) : 0);
-  const reach = n ? `<details class="reach" open><summary><span class="ctl-dot"></span><span class="reach-lbl" style="display:inline-flex;align-items:center">${t('step.calling','Calling')}${SEL_STORE&&(SEL_STORE.logoUrl||SEL_STORE.name)?`<span class="callwho ${SEL_STORE.logoDark?'lite':''}${SEL_STORE.logoWide?' widelogo':''}">${storeFace(SEL_STORE)}</span>`:''}</span><span class="reach-n">${n} ${n===1?t('step.one','step'):t('step.many','steps')}${totalS?` · <span class="cs-count">${totalS}</span>s`:''}</span><span class="reach-chev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary><div class="reach-steps">${stepRows}</div></details>` : '';
+  const reach = n ? `<details class="reach" open><summary><span class="ctl-dot"></span><span class="reach-lbl" style="display:inline-flex;align-items:center">${t('step.calling','Calling')}</span><span class="reach-n">${n} ${n===1?t('step.one','step'):t('step.many','steps')}${totalS?` · <span class="cs-count">${totalS}</span>s`:''}</span><span class="reach-chev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary><div class="reach-steps">${stepRows}</div></details>` : '';
   // Conversation: a "Conversation" label (green dot) then the bubbles — NO per-bubble dots.
   const convLabel = human.length ? `<div class="ctl-conv"><span class="ctl-dot"></span><span class="conv-lbl">${t('res.conversation','Conversation')}</span></div>` : '';
   const convo = human.length
@@ -5658,11 +5712,17 @@ function deriveSteps(transcript){
 // happens (finalElapsed=null → the latest step shows as the current one, no closing time yet).
 function renderLiveMsg(){ const box=$('live_msgbox'); if(box) box.innerHTML=combinedTimelineHTML(LIVE_STEPS, LIVE_TRANSCRIPT, null);
   // Follow the conversation as it happens (owner 07-15): stick to the newest bubble unless the user
-  // scrolled up to reread; scrolling back down re-arms the follow.
-  if(window.LIVE_FOLLOW!==false){ requestAnimationFrame(()=>{ try{ window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'}); }catch(_){ try{ window.scrollTo(0,document.body.scrollHeight); }catch(__){} } }); } }
+  // scrolled up to reread; scrolling back down re-arms the follow. The target is the NEWEST LINE, not
+  // document.body.scrollHeight: the page now ends with a bar-clearing strip (see body.lview::after), and
+  // a bottom-of-document target would park the newest line above dead space (the reverted 07-30 mistake).
+  // scroll-margin-bottom on the line does the bar clearance; the strip guarantees the room to scroll.
+  if(window.LIVE_FOLLOW!==false){ requestAnimationFrame(()=>{ try{ const tgt=(box&&box.querySelector('#convo_body>*:last-child'))||box; tgt.scrollIntoView({block:'end',inline:'nearest',behavior:'smooth'}); }catch(_){ try{ window.scrollTo(0,document.body.scrollHeight); }catch(__){} } }); } }
 window.LIVE_FOLLOW=true;
 window.addEventListener('scroll',()=>{ try{ const lv=$('live'); if(!lv||lv.classList.contains('hidden')) return;
-  window.LIVE_FOLLOW=(window.innerHeight+window.scrollY)>=(document.body.scrollHeight-140); }catch(_){ } },{passive:true});
+  // Armed while the newest line is on screen. The old rule measured distance to the DOCUMENT end; the
+  // clear strip would sit inside that window and disarm the follow the moment it came into play.
+  const tgt=document.querySelector('#convo_body>*:last-child')||$('live_msgbox');
+  window.LIVE_FOLLOW=!tgt||tgt.getBoundingClientRect().top<window.innerHeight; }catch(_){ } },{passive:true});
 // Furthest stage the transcript so far justifies. Two rules learned from live CVS calls:
 //  - "Transferring to the front" (6) only fires when the agent says the FINAL transfer word ("general") —
 //    NOT on "front" (that's still navigating, 5). After that the call rings through to the front.
@@ -5841,6 +5901,7 @@ async function startCheckLive(){
   const _mb=$('muteBanner'); if(_mb) _mb.style.display='none'; // owner asked to drop the 'flip off silent' note
   LIVE_STEPS=[]; LIVE_TR=[]; LIVE_TRANSCRIPT=''; AGENT_PITCHED=false; LIVE_STAGE=0; LIVE_DONE=false; window.LIVE_CANCELLED=false; LIVE_T0=Date.now(); window.LIVE_FOLLOW=true; window._livePend=false;
   fillLiveHeader(); const _lr=$('live_rhead'); if(_lr)_lr.className='rhead live';
+  { const _lh=$('lh_state'); if(_lh) _lh.textContent=''; } // clear last call's state so the window never opens on a stale headline
   liveStage(1); // logs step 1 + renders the call box (steps on top, empty script below)
   let secs=0; const elT=setInterval(()=>{ secs+=1; },1000); // counts toward the hard cap only — no on-screen timer
   LIVE_TIMERS=[elT];
@@ -6446,11 +6507,11 @@ function showResult(o, cid){
     const tileBtn=(ic,ti,su,fn)=>`<button class="is1t" onclick="${fn}"><span class="tl">${ic}</span><span><span class="a">${esc(ti)}</span><span class="b">${esc(su)}</span></span></button>`;
     void arr; // retired (owner 07-10 items 53-56): one arrow only — the share icon, far right, pointing up
     const upR='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg>';
-    return (F.shareCards!==false?`<button class="smbtn is1s" onclick="shareFind()"><span>${t('res.share','Share your score')}</span>${upR}</button>`:'')
-      +`<div class="is1g">${F.driverHandoff!==false?tileBtn(truck,dT,dS,'openDriverDemo()'):''}${F.community?tileBtn(cam,cT,cS,'openScorePop()'):''}</div>`;
+    return (POLICY_KNOWN&&F.shareCards!==false?`<button class="smbtn is1s" onclick="shareFind()"><span>${t('res.share','Share your score')}</span>${upR}</button>`:'')
+      +`<div class="is1g">${POLICY_KNOWN&&F.driverHandoff!==false?tileBtn(truck,dT,dS,'openDriverDemo()'):''}${F.community?tileBtn(cam,cT,cS,'openScorePop()'):''}</div>`; /* default-on extras render only once the policy answer is in (POLICY_KNOWN): they used to flash on the pending screen with the feature off */
   })() : [
-    F.shareCards!==false?`<button class="act2 gr" onclick="shareFind()">${ICO.mega('currentColor')} ${t('res.share','Share your score')}</button>`:'',
-    F.driverHandoff!==false?`<button class="act2" onclick="openDriverDemo()">${ICO.truck('#fff')} ${t('res.driver','Too far? Have a local grab it')}</button>`:'',
+    POLICY_KNOWN&&F.shareCards!==false?`<button class="act2 gr" onclick="shareFind()">${ICO.mega('currentColor')} ${t('res.share','Share your score')}</button>`:'',
+    POLICY_KNOWN&&F.driverHandoff!==false?`<button class="act2" onclick="openDriverDemo()">${ICO.truck('#fff')} ${t('res.driver','Too far? Have a local grab it')}</button>`:'',
     F.community?`<button class="act2" onclick="openSuccess()">${ICO.cam('#fff')} ${t('res.score','Grabbed it? Post your score')}</button>`:'',
   ].join('')) : '';
   // Restock section: PREMIUM gets the real "we'll text you" signup; non-premium gets a simple "check
@@ -9240,5 +9301,5 @@ async function submitSchedule(){
 }
 boot();
 </script>
-<script>!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);posthog.init("phc_xYyBl7VcEYqf4emnV42blLSKQZM0CtxjgEVUSBpS2uL",{api_host:"https://us.i.posthog.com",defaults:"2025-05-24"})</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a22084542c81d90d',t:'MTc4NTIwNjQwMw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);posthog.init("phc_xYyBl7VcEYqf4emnV42blLSKQZM0CtxjgEVUSBpS2uL",{api_host:"https://us.i.posthog.com",defaults:"2025-05-24"})</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a23702823a7bb06c',t:'MTc4NTQ0MjI1OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

@@ -4,24 +4,25 @@
 > design implementation, and ALL copy. Charter + standing rules: `handoff.md` (same folder).
 > Volatile — REPLACE stale lines, newest on top, ≤60 lines. History lives in git.
 
-## 07-30 — CHECK STATUS: step window SHIPPED · a forced page height was REVERTED · read-as-it-goes
-- **The step window is live** (@ec6e2d0). The glowing header lost the store-name row: eyebrow (store,
-  10.5/700 tracked caps) + ONE big state line, `Calling` → `Getting through the menu` → `Talking to
-  Staff`, the store mark 212px bleeding off the top-right under a soft fade. 22px not the table's 24 —
-  the longest state sat 9px off the card edge at 375. Reads `LIVE_STAGE` only; the pipe is untouched.
-  Tiny 20px `.callwho` logo beside "Calling" removed (owner: killed once before for being too small).
-- **DO NOT pad the check status page to force a scroll.** I shipped `body.lview main{min-height:100dvh}`
-  to chase the solid iOS bottom bar; it strands the newest line and kills the scroll-back reveal.
-  Reverted same day, and `qa-tint-lock` 14b now FAILS a push that re-adds it. The real fix is two
-  halves together: aim the follow-along at the NEWEST LINE (not `document.body.scrollHeight`), THEN add
-  the clear strip using the repo's own `calc(160px + env(safe-area-inset-bottom))` recipe (~:2095).
-  Full write-up + the rest of the open list: `docs/tasks/site-check-status-fixes.md`.
+## 07-30 — CHECK STATUS: bottom-bar fix + pill gate SHIPPED to staging (PR #100) · step window live
+- **Both status-page fixes are on staging, awaiting his phone.** (1) `renderLiveMsg` follows the NEWEST
+  LINE (`scrollIntoView block:'end'`), never `document.body.scrollHeight`; the live view ends with the
+  sheets' own `calc(160px + env(safe-area-inset-bottom))` strip (`body.lview::after`) + same-size
+  `scroll-margin-bottom`. The re-arm listener now tracks newest-line VISIBILITY — the old distance-to-
+  document-end rule would have been disarmed by the strip. `showResult` drops `lview`, so the strip is
+  gone before the reveal. (2) `POLICY_KNOWN` gates the default-on extras (driver handoff, share): no
+  more "Too far?" flash on pending while the feature is off. Driven local through the REAL `lview`
+  path: newest line 160px clear each render, disarm/re-arm both ways, no yank while reading back,
+  reveal returns to top, wordmark 218px clear at full scroll, zero page errors. iOS paint NOT verified.
+- **DO NOT pad the check status page to force a scroll** (`body.lview main{min-height:100dvh}`,
+  reverted 07-30): it strands the newest line and kills the reveal; `qa-tint-lock` 14b refuses it.
 - **A comp that leaves the homepage showing is a LIE.** The real view also hides `#builder` and adds
   `body.lview` (`startLive` ~:5864). He caught mine. Drive that exact path or your screenshots lie.
-- **Verdict speed (@92fb2d4):** the reader now runs DURING the check off our own live record
-  (`src/voice/live-read.ts`, hooked into `recordLine` by REGISTRATION, never an import). Finalize merge
-  692ms → 1ms, same verdict. Reader measured ~0.9s median — it was never the big cost. What is still
-  slow is ElevenLabs' own read; the facts and the open question are in the task file.
+- **The step window is live** (@ec6e2d0): eyebrow + ONE big 22px state line, mark 212px off the
+  top-right. Reads `LIVE_STAGE` only; the pipe is untouched.
+- **Verdict speed (@92fb2d4):** the reader runs DURING the check (`src/voice/live-read.ts`, hooked by
+  REGISTRATION). Finalize merge 692ms → 1ms, same verdict. Still slow: ElevenLabs' own read — facts
+  and the open question are in the task file; answered to the owner 07-30, awaiting his call.
 
 ## Verify recipe that works (07-26)
 Railway staging env + `DATABASE_URL=file:<scratch>/local.db PORT=88xx npx tsx src/server.ts`. CONSUMER page
