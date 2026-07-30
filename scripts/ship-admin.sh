@@ -51,6 +51,7 @@ case "$ACTION" in
     # THE GATES run before every Admin ship (they read the committed page, not a dirty copy):
     # the sheet-glass lock, and the unify gate for every page that has had its pass.
     node scripts/qa-admin-glass.mjs >/dev/null || { echo "✗ sheet-glass LOCK broken — not shipping. Run: node scripts/qa-admin-glass.mjs" >&2; exit 1; }
+    node scripts/qa-tint-lock.mjs >/dev/null || { echo "✗ iOS chrome-tint LOCK broken — not shipping (the bottom bar would go dark). Run: node scripts/qa-tint-lock.mjs" >&2; exit 1; }
     node scripts/qa-admin-unify.mjs || { echo "✗ unify gate failed — not shipping. A sealed page regrew a problem (above)." >&2; exit 1; }
     COMMIT="$(git rev-parse --short HEAD)"
     echo "→ shipping public/app.html @ $COMMIT to $BASE …"

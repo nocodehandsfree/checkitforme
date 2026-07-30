@@ -23,8 +23,8 @@ const ONLY = (() => { const i = argv.indexOf("--page"); return i >= 0 ? argv[i +
 
 // ── SEALED: pages that have had their unify pass. Order = the order they were done. ───────────
 const SEALED = [
-  // "dash",   ← Live, first up
-  // "settings", "calc", …
+  "dash", // Live — passed 07-30: baseline line in, Call time / Call health / voice credits out, driven at 390px
+  // "settings", "calc", …  ← next up, in that order
 ];
 
 // ── 1. ONE info-icon pattern. The standard is the tap-to-show hint: data-tip + the single ⓘ

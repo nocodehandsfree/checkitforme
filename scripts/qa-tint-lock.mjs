@@ -29,11 +29,14 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 const here = dirname(fileURLToPath(import.meta.url));
 const html = readFileSync(join(here, "../public/checkit.html"), "utf8");
+const admin = readFileSync(join(here, "../public/app.html"), "utf8");
 let pass = 0, fail = 0;
 const ok = (m) => { pass++; console.log(`  ✓ ${m}`); };
 const no = (m) => { fail++; console.log(`  ✗ ${m}`); };
 const has = (re, m) => (re.test(html) ? ok(m) : no(m));
 const absent = (re, m) => (re.test(html) ? no(m) : ok(m));
+const aHas = (re, m) => (re.test(admin) ? ok(m) : no(m));
+const aAbsent = (re, m) => (re.test(admin) ? no(m) : ok(m));
 
 console.log("\n▭▭▭ iOS chrome-tint LOCK ▭▭▭");
 
@@ -86,5 +89,68 @@ has(/html\[data-skin="v2"\]\s*\.site-footer\s*\{\s*background:\s*transparent/,
 absent(/addEventListener\(\s*['"]scroll['"][^)]*\)[^;]{0,200}(theme-color|documentElement\.style\.background)/i,
   "no scroll-triggered chrome repaint (the bottom stays boring)");
 
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// THE ADMIN (public/app.html) — same iOS behaviour, same lock (owner order 2026-07-30:
+// "make sure the tint is locked and it can never go back to that darker colour border on the
+// bottom where the Safari url is"). The Admin wears the WEBSITE's proven recipe: one root
+// colour for both bar strips, the page floor on that same colour, nothing repainting it.
+// Three separate bugs produced that darker bottom band, and each one is pinned below:
+//   * the root colour drifting away from the page floor → a seam right above the bar;
+//   * a fixed, filled element parked on the bottom edge (the closed sheet) → the bar sat in
+//     the UI layer iOS never re-samples and went flat grey until a reload;
+//   * the sheet nudge re-stamping the root background-colour → iOS re-sampled the root grey.
+// The sheet mechanics themselves are owned by qa-admin-glass; the two checks restated here are
+// restated ON PURPOSE, because they are what the owner SEES at the bottom edge.
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+console.log("\n▭▭▭ iOS chrome-tint LOCK — THE ADMIN ▭▭▭");
+
+// ── A. One colour, and the page floor matches it ──
+aHas(/html\{[^}]*background:\s*#1D1D22/i,
+  "Admin root background is #1D1D22 (the colour iOS paints BOTH bar strips)");
+aHas(/--bg:\s*#1D1D22/i,
+  "Admin --bg matches the root exactly (page floor == chrome, no darker band above the bar)");
+aHas(/html\{[^}]*color-scheme:\s*dark/i,
+  "color-scheme:dark stays on the root (without it iOS paints its own light furniture)");
+aHas(/body\{[^}]*background:\s*var\(--bg\)/i,
+  "the page itself is painted with var(--bg) — the floor never diverges from the root");
+aHas(/body\{[^}]*padding:\s*env\(safe-area-inset-top\)\s*0\s*env\(safe-area-inset-bottom\)/i,
+  "both safe areas are painted by the page (the website recipe — no unpainted strip)");
+
+// ── B. The metas: theme-color is the trap, black-translucent + viewport-fit are the recipe ──
+aAbsent(/<meta[^>]+name=["']theme-color["']/i,
+  "no theme-color meta on the Admin (one meta would tint both edges and fight the root colour)");
+aHas(/apple-mobile-web-app-status-bar-style["']\s+content=["']black-translucent/i,
+  "status bar stays black-translucent (the strips read the page, not a solid fill)");
+aHas(/viewport-fit=cover/i,
+  "viewport-fit=cover keeps the page under both bars (nothing to leave a pale gap)");
+
+// ── C. The bottom edge: NOTHING filled may be parked there ──
+// A position:fixed, filled element sitting on bottom:0 lives in the layer iOS never re-samples,
+// so the bar froze on a dark ghost of it (owner 07-28: "it paints that bottom a darker gray when
+// I slide it down, and a refresh fixes it"). The sheet is the ONLY one allowed, and only because
+// it is display:none the moment it closes. A new one appearing here fails this lock.
+(() => {
+  const parked = [...admin.matchAll(/([^{}\n]{1,60})\{([^}]*position:\s*fixed[^}]*)\}/g)]
+    .filter(([, , body]) => /bottom:\s*0/.test(body) && /background:\s*(#|rgb|var\(--(bg|sheet))/i.test(body))
+    .map(([, sel]) => sel.trim().split(/\s*,\s*/).pop().trim());
+  const stray = parked.filter((s) => !/^\.sheet$/.test(s));
+  stray.length === 0
+    ? ok(`only the sheet is parked on the bottom edge (${parked.length} filled fixed rule${parked.length === 1 ? "" : "s"}, allow-listed)`)
+    : no(`a filled element is parked on the bottom edge: ${stray.join(" · ")} — iOS will ghost it into the bar. Hide it, or don't fill it.`);
+})();
+aHas(/_restoreSheetLayout[\s\S]{0,1600}?style\.display\s*=\s*['"]none['"]/,
+  "a closed sheet is HIDDEN, not parked off-screen (this WAS the darker-bar bug, 07-28)");
+aAbsent(/documentElement[\s\S]{0,80}?style\.backgroundColor\s*=/,
+  "nothing re-stamps the root background-colour in-page (that re-sampling WAS the dark band)");
+aAbsent(/<meta[^>]+name=["']theme-color["']|setThemeTone\s*\([^)]*\)\s*\{[^}]*content/i,
+  "no code path recreates a theme-color meta on the Admin");
+
+// ── D. The bottom stays boring while you scroll ──
+aAbsent(/addEventListener\(\s*['"]scroll['"][^)]*\)[^;]{0,200}(theme-color|documentElement\.style\.background)/i,
+  "no scroll handler repaints the Admin chrome (the bottom stays boring)");
+
 console.log(`\n  tint lock PASS: ${pass}  FAIL: ${fail}\n`);
+if (fail) console.error("✗ THE iOS CHROME TINT IS BROKEN. This is the bottom edge the owner reads every day, found\n" +
+  "  over an all-day on-device hunt and re-broken three times since. You cannot see it in a headless\n" +
+  "  browser. Restore the invariant above — do NOT edit this lock to make a change pass.\n");
 process.exit(fail ? 1 : 0);

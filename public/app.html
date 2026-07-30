@@ -882,39 +882,20 @@
     <div class="k-eyebrow">Reports</div>
     <button class="peek" id="pk_cost_row" onclick="dashSheet('cost')">
       <div class="pk-ic" style="background:rgba(74,222,128,.14)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/><path d="M3 12h2"/></svg></div>
-      <div class="pk-main"><div class="pk-t">Cost per check</div></div>
+      <div class="pk-main"><div class="pk-t">Cost per check</div><div class="pk-m" data-tip="What one finished check costs us, added up from the checks we have priced, against the ceiling your margin floor sets.">Against your ceiling</div></div>
       <div class="pk-fact" id="pk_cost"></div>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
     <button class="peek" onclick="dashSheet('money')">
       <div class="pk-ic" style="background:rgba(74,222,128,.14)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-      <div class="pk-main"><div class="pk-t">Money</div></div>
-      <div class="pk-fact g" id="pk_money">—</div>
+      <div class="pk-main"><div class="pk-t">Money</div><div class="pk-m" data-tip="Revenue, profit, margin and monthly income. The full view lives in Calc.">Opens the full view in Calc</div></div>
+      <div class="pk-fact g" id="pk_money">none yet</div>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
     <button class="peek" onclick="dashSheet('pulse')">
       <div class="pk-ic" style="background:rgba(167,139,250,.14)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></svg></div>
-      <div class="pk-main"><div class="pk-t">Members</div></div>
-      <div class="pk-fact" id="pk_pulse">—</div>
-      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-    </button>
-    <button class="peek" onclick="dashSheet('timing')">
-      <div class="pk-ic" style="background:rgba(96,165,250,.14)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
-      <div class="pk-main"><div class="pk-t">Call time</div></div>
-      <div class="pk-fact" id="pk_timing">—</div>
-      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-    </button>
-    <button class="peek" onclick="dashSheet('health')">
-      <div class="pk-ic" style="background:rgba(96,165,250,.14)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2 6 4-14 2 8h6"/></svg></div>
-      <div class="pk-main"><div class="pk-t">Call health</div></div>
-      <div class="pk-fact" id="pk_health">—</div>
-      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-    </button>
-    <button class="peek" onclick="dashSheet('credits')">
-      <div class="pk-ic" style="background:rgba(245,158,11,.14)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg></div>
-      <div class="pk-main"><div class="pk-t">Credits</div></div>
-      <div class="pk-bar" style="width:64px;margin:0"><i id="pk_credit_bar" style="width:0%;background:var(--green)"></i></div>
-      <div class="pk-fact" id="pk_credits">—</div>
+      <div class="pk-main"><div class="pk-t">Members</div><div class="pk-m" data-tip="Signups, member scores and everything that happened on accounts today.">Signups and scores today</div></div>
+      <div class="pk-fact" id="pk_pulse">none yet</div>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
     <!-- hidden detail holders — the existing loaders populate these; dashSheet() lifts them into the shared sheet -->
@@ -922,15 +903,11 @@
       <div id="ds_cost"><div id="d_cost_body"></div></div>
       <div id="ds_money"><div class="stats" id="d_money"></div><a class="goto" href="#calc" onclick="closeSheet();showSection('calc');return false">Open the full money view in Calc →</a></div>
       <div id="ds_pulse"><div id="gw_pulse">Loading…</div></div>
-      <div id="ds_timing"><div class="stats" id="d_timing"></div><div id="d_timing_model"></div><div id="d_timing_status"></div><div class="k-eyebrow">Per-store averages</div><div id="d_timing_stores"></div></div>
-      <div id="ds_health"><div id="d_health" class="meta">Loading…</div><a class="goto" href="#results" onclick="closeSheet();showSection('results');return false">Open the call log in Calls →</a></div>
-      <div id="ds_credits">
-        <div style="height:10px;background:var(--terminal);border-radius:6px;overflow:hidden;margin:4px 0 8px"><div id="credit_bar" style="height:100%;width:0%;background:var(--green);transition:width .3s"></div></div>
-        <div id="credit_body" class="meta">Loading…</div>
-        <div id="credit_stats" class="meta" style="margin-top:6px"></div>
-        <div class="meta" id="credit_src" style="margin-top:6px"></div>
-        <div id="credit_limit_wrap" style="display:none;margin-top:12px"><div class="hint" style="margin-bottom:8px">Estimate from the last 31 days.</div><div class="row" style="gap:8px"><input id="credit_limit" type="number" placeholder="Plan size, e.g. 100000" style="flex:1"><button class="ghost" onclick="saveCreditLimit()">Save</button></div></div>
-      </div>
+      <!-- RETIRED 07-30 (owner): Call time and Call health left this page, and the voice-credit card
+           went with them. Call time is the cost drill's own "Where the seconds went" and "The clock",
+           and per-chain time to a person lives on Chains. Call health moved WHOLE into Calls, where
+           the log it audits lives (comp 1b: "call health opens a report inside Calls"). The voice
+           balance moved beside the voice plan in Calc, which is where that plan is chosen. -->
     </div>
   </section>
   <section id="calc"><div id="calc_root"></div></section>
@@ -1142,6 +1119,17 @@
       </select>
     </div>
     <div id="resultList"><div class="empty">Loading…</div></div>
+    <!-- Call health lives HERE now, not on Live (owner 07-30, comp 1b: "call health opens a report
+         inside Calls"). It audits this log: what is real, what was never dialed, what came in twice. -->
+    <button class="peek" style="margin-top:14px" onclick="sheetFromHolder('ds_health','Call health','What is real in this log, and what cannot be proved')">
+      <div class="pk-ic" style="background:rgba(96,165,250,.14)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2 6 4-14 2 8h6"/></svg></div>
+      <div class="pk-main"><div class="pk-t">Call health</div><div class="pk-m" data-tip="Real checks against test-store checks, rows that were never dialed, and anything that came in twice. Nothing is deleted from here.">Real checks against test checks</div></div>
+      <div class="pk-fact" id="pk_health">none yet</div>
+      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+    <div id="results_details" style="display:none">
+      <div id="ds_health"><div id="d_health" class="meta">Loading…</div></div>
+    </div>
   </section>
 
 
@@ -1998,7 +1986,7 @@ const NAV_GROUPS={
   launch:   {label:'Launch',   ico:'trophy',tabs:[['gtm','Go-to-Market','check']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), alerts:()=>loadAlerts(), dash:()=>{loadDash();loadOpsCost();loadGwPulse();loadCallHealth();loadCredits();}, calc:()=>calcInit(), plans:()=>loadPlans(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), feedback:()=>loadFeedback(), support:()=>loadSupport(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadOurBrain();loadAdvancedPolicy();}, gtm:()=>loadGtm() };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), alerts:()=>loadAlerts(), dash:()=>{loadDash();loadOpsCost();loadGwPulse();}, calc:()=>{calcInit();loadCredits();}, plans:()=>loadPlans(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>{loadResults();loadCallHealth();}, feedback:()=>loadFeedback(), support:()=>loadSupport(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadOurBrain();loadAdvancedPolicy();}, gtm:()=>loadGtm() };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 let NAV_RESTORING=false, NAV_BOOTED=false; // browser Back/Forward walks the admin's own tab history
 let FB_OPEN=0; // unreviewed poll disagreements — count badge on the Calls ▸ Feedback tab
@@ -2596,21 +2584,9 @@ async function tlBatch(kind){ const n=Number(document.getElementById('tl_count')
   const r=await api('/api/admin/tree/'+kind,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({count:n})});
   if(msg)msg.textContent=(r&&r.placed!=null)?`Placed ${r.placed} ${kind} call(s)${r.names&&r.names.length?': '+r.names.join(', '):''}. Results fill in as calls finish. Hit Refresh.`:"Couldn't place the calls. Hit Refresh and retry.";
 }
-async function loadCallTiming(){
-  const d=await api('/api/admin/call-timing'); const el=document.getElementById('d_timing'); if(!el) return;
-  const md=document.getElementById('d_timing_model'), stt=document.getElementById('d_timing_status'), se=document.getElementById('d_timing_stores');
-  if(!d||d.error||!d.aggregate||!d.aggregate.calls){ el.innerHTML='<div class="meta">No timed calls yet. This fills in as calls come through.</div>'; if(md)md.innerHTML=''; if(stt)stt.innerHTML=''; if(se)se.innerHTML=''; return; }
-  const a=d.aggregate, tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
-  el.innerHTML = tile(secsFmt(a.avgTalkSec),'avg talk','green')+tile(secsFmt(a.avgNavSec),'avg to human')+tile(secsFmt(a.avgCallSec),'avg call')+tile(a.totalMinutes+'m','total minutes')+tile(a.calls,'calls timed');
-  const _pk=document.getElementById('pk_timing'); if(_pk){ _pk.textContent=secsFmt(a.avgNavSec); _pk.className='pk-fact'; }
-  // By model (Charlie direct · Alpha tone tree · Bravo voice tree) — the split that matters: time-to-human + talk per call type.
-  if(md) md.innerHTML=(d.byModel&&d.byModel.length)?('<div class="rgrp" style="margin-top:12px">By model · all-time <span data-tip="Alpha and Bravo talk time still counts phone-menu time until we tag the live-human handoff per call. Charlie (direct) is exact."></span></div>'
-    +d.byModel.map(m=>`<div class="repline"><span class="rl"><b style="color:#e8e8f0">${esch(m.model)}</b> <span class="meta">· ${esch(m.type)} · ${m.n} call${m.n===1?'':'s'}</span></span><b>${secsFmt(m.avgNavSec)} to human · <span style="color:var(--green)">${secsFmt(m.avgTalkSec)} talk</span> · ${secsFmt(m.avgCallSec)} call</b></div>`).join('')):'';
-  // Talk time per verdict.
-  if(stt) stt.innerHTML=(d.byStatus&&d.byStatus.length)?('<div class="rgrp" style="margin-top:12px">Talk time by status</div>'
-    +d.byStatus.map(s=>{const lbl=(STATUSES[s.key]&&STATUSES[s.key].label)||s.key;return `<div class="repline"><span class="rl">${esch(lbl)} <span class="meta">· ${s.n} call${s.n===1?'':'s'}</span></span><b><span style="color:var(--green)">${secsFmt(s.avgTalkSec)} talk</span> · ${secsFmt(s.avgCallSec)} call</b></div>`;}).join('')):'';
-  if(se) se.innerHTML=(d.byStore||[]).map(s=>`<div class="repline"><span class="rl">${esch(s.name)} <span class="meta">· ${s.n} calls</span></span><b>${secsFmt(s.avgTalkSec)} talk · ${secsFmt(s.avgNavSec)} nav · ${secsFmt(s.avgCallSec)} call</b></div>`).join('')||'<div class="meta">—</div>';
-}
+// Call time RETIRED 07-30 (owner): the cost drill's "Where the seconds went" and "The clock" are
+// the live version of it, and per-chain time to a person lives on Chains. /api/admin/call-timing
+// still answers, so nothing on the server was cut.
 // ---- God view · Calc sub-nav: per-call unit economics (Alpha keypad / Bravo voice-menu / Charlie agent) ----
 // Vanilla-JS port of the CallCOGS calculator so the owner can play with the cost model live. Pure client-side:
 // pick a store type, drag nav/talk seconds, edit the rate card → live all-in cost, breakdown, matrix + margin.
@@ -2979,6 +2955,10 @@ function calcShell(){
     <div style="font-size:13px;color:var(--text-muted);margin-bottom:10px">One choice. It sets what Charlie costs a second AND how many calls can run at once.</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">${CALC_VOICE_PLANS.map(p=>`<button type="button" id="calc_plan_${p.name}" onclick="calcSetVoicePlan('${p.name}')" style="padding:11px;border-radius:11px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-muted);cursor:pointer;text-align:left;font:inherit"><span style="display:block;font-weight:700;font-size:13px">${p.name}</span><span style="display:block;font-size:10.5px;color:var(--text-tertiary);margin-top:2px">$${p.fee}/mo</span></button>`).join('')}</div>
     <div id="calc_planrate" style="margin-top:12px;font-size:12.5px;line-height:1.5;color:var(--text-muted)"></div>
+    <!-- The live voice balance, moved off Live 07-30 (owner: not worth a card at $22/mo). It sits with
+         the plan it belongs to: one line, plus the plan-size box when we can only estimate. -->
+    <div id="credit_line" class="k-note" style="margin-top:10px">Voice balance loading…</div>
+    <div id="credit_limit_wrap" style="display:none;margin-top:10px"><div class="row" style="gap:8px"><input id="credit_limit" class="k-num" type="number" style="flex:1" placeholder="Plan size"><button class="ghost" onclick="saveCreditLimit()">Save</button></div></div>
     <div style="margin:16px 0 0;padding-top:14px;border-top:1px solid var(--border)">
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">Who runs Charlie's thinking <span data-tip="The voice company hosts the thinking today and bills us for it at their rate. Running it on our own account is the single biggest saving on this page."></span></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
@@ -3276,7 +3256,6 @@ function calcUpdate(){
   calcRenderPlans();
 }
 async function loadDash(){
-  loadCallTiming();
   const $$=v=>'$'+((v||0)/100).toFixed(2);
   const [o,m,ri,c]=await Promise.all([api('/api/admin/overview'),api('/api/admin/metrics'),api('/api/admin/restock-intel'),api('/api/credits')]);
   const de=document.getElementById('d_date'); if(de) de.textContent=new Date().toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'});
@@ -3302,12 +3281,15 @@ async function loadDash(){
   // ---- Two vitals: color reads the state before the number does. ----
   const af=(ri&&ri.answerFunnel)||{}; const reach=af.dialed?Math.round((af.reachedHuman/af.dialed)*100):null;
   const pctLeft=(c&&c.limit)?Math.max(0,Math.min(100,Math.round((c.remaining/c.limit)*100))):null;
-  const margin=(m&&m.marginPct!=null)?Math.round(m.marginPct):null;
+  // Honest data only (owner law): margin off no revenue is not 0%, it is nothing to report yet.
+  const margin=(m&&m.marginPct!=null&&(m.revenueCents||0)>0)?Math.round(m.marginPct):null;
   const v=(n,l,cls)=>`<div class="v"><div class="n ${cls}">${n}</div><div class="l">${esch(l)}</div></div>`;
   const hero=document.getElementById('d_hero');
+  // Two vitals: how often we reach a person, and the margin his floor is set against. The voice-credit
+  // vital left with its card (owner 07-30) — the balance sits beside the voice plan in Calc now.
   if(hero) hero.innerHTML=
-    v(reach==null?'—':reach+'%','Reach · 30d',reach==null?'m':(reach>=60?'g':reach>=30?'a':'r'))+
-    v(pctLeft==null?'—':pctLeft+'%','Credits left',pctLeft==null?'m':(pctLeft>40?'g':pctLeft>15?'a':'r'));
+    v(reach==null?'none yet':reach+'%','Reach · 30d',reach==null?'m':(reach>=60?'g':reach>=30?'a':'r'))+
+    v(margin==null?'none yet':margin+'%','Margin',margin==null?'m':(margin>=67?'g':margin>=50?'a':'r'));
   // ---- Peek-row facts (the headline stays on the row; the sheet holds the full report). ----
   const set=(id,txt,cls)=>{ const e=document.getElementById(id); if(e){ e.textContent=txt; if(cls!==undefined) e.className='pk-fact'+(cls?' '+cls:''); } };
   if(o&&!o.error) CHAIN_STATS=o.chainStats||[];
@@ -3316,13 +3298,7 @@ async function loadDash(){
       st($$(m.revenueCents),'revenue')+st($$(m.profitCents),m.profitCents>=0?'profit':'loss',m.profitCents>=0?'green':'')+
       st(margin!=null?margin+'%':'—','margin',(margin||0)>0?'green':'')+st($$(m.mrrCents)+'/mo','MRR (monthly)')+
       st($$(m.cogs?.totalCents),'Costs')+st(m.callsMade!=null?m.callsMade:'—','paid calls')+st(m.users,'users')+st(m.subscribers,'members');
-    set('pk_money',`$${Math.round((m.profitCents||0)/100)} · ${margin!=null?margin+'%':'—'}`, m.profitCents>=0?'g':'r');
-  }
-  if(af.dialed) set('pk_health',`${af.dialed} · ${reach}%`, reach>=60?'g':reach>=30?'a':'r');
-  if(c&&!c.error){
-    const kLeft=c.remaining!=null?Math.round(c.remaining/1000)+'k':'—';
-    set('pk_credits',kLeft, pctLeft==null?'':(pctLeft>40?'g':pctLeft>15?'a':'r'));
-    const bar=document.getElementById('pk_credit_bar'); if(bar&&pctLeft!=null){ bar.style.width=pctLeft+'%'; bar.style.background=pctLeft>40?'var(--green)':pctLeft>15?'#F59E0B':'var(--red)'; }
+    set('pk_money', margin!=null?`$${Math.round((m.profitCents||0)/100)} · ${margin}%`:'none yet', m.profitCents>=0?'g':'r');
   }
 }
 // Lift a hidden detail holder into the shared sheet (borrowed live, returned on close).
@@ -3357,8 +3333,8 @@ function dashHeroDots(el){
   dots.forEach((d,k)=>{ d.style.background=k===i?'var(--green)':'rgba(255,255,255,.18)'; });
 }
 function dashSheet(key){
-  const titles={cost:'Cost per check',money:'Money',pulse:'Members',timing:'Call time',health:'Call health',credits:'Credits'};
-  const subs={cost:'Added up from finished checks',money:'Revenue, profit and margin',pulse:'Signups, scores and activity today',timing:'Time to reach a person vs talk time',health:'Real calls vs test calls',credits:'Voice credits · estimated over the last 31 days'};
+  const titles={cost:'Cost per check',money:'Money',pulse:'Members'};
+  const subs={cost:'Added up from the checks we have priced',money:'Revenue, profit and margin',pulse:'Signups, scores and activity today'};
   sheetFromHolder('ds_'+key, titles[key], subs[key]);
 }
 // ---- WHAT OUR CHECKS COST (contract: docs/specs/admin-ops-dashboard/CONTRACT.md §5) ----------------
@@ -3394,8 +3370,16 @@ async function loadOpsCost(){
     if(sp) sp.innerHTML=d.days.map((x,i)=>x.checks?`<i${i===d.days.length-1?' class="hi"':''} style="height:${Math.max(7,Math.round(x.perCheckUsd/mx*100))}%"></i>`:'<i style="height:3%"></i>').join('');
   }
   const body=document.getElementById('d_cost_body'); if(!body) return;
+  const row=(ico,label,meta,fact2,col)=>`<div class="peek" style="cursor:default">`
+    +(ico?`<span class="pk-ic" style="background:rgba(255,255,255,.05)">${ico}</span>`:'')
+    +`<span class="pk-main"><span class="pk-t" style="display:block">${esch(label)}</span>`
+    +(meta?`<span class="pk-m" style="display:block">${esch(meta)}</span>`:'')+`</span>`
+    +`<span class="pk-fact"${col?` style="color:${esch(col)}"`:''}>${esch(fact2)}</span></div>`;
   if(!d.checks){
-    body.innerHTML='<div class="empty">No finished checks in the record yet. Every check from here on lands here on its own. Checks from before the new calling engine, cancelled checks and your test stores are never counted.</div>';
+    // Nothing priced yet, but the BASELINE is still true and it is the number he checks against, so
+    // the ceiling shows from day one and only the summed half waits for a real check.
+    body.innerHTML=baselineBlock(d)
+      +'<div class="empty">No finished checks in the record yet. Every check from here on lands here on its own. Checks from before the new calling engine, cancelled checks and your test stores are never counted.</div>';
     return;
   }
   // The report grammar: one hero answer, then a PAIR of wells. Three across a phone squeezed every
@@ -3403,16 +3387,12 @@ async function loadOpsCost(){
   // well did the same to "tries per answer". Two of the report tile, and both labels sit on one line.
   const well=(n,l)=>`<div class="stat"><div class="n">${esch(String(n))}</div><div class="l">${esch(l)}</div></div>`;
   // One row shape for every list on this sheet: what it is, how many checks, what it cost.
-  const row=(ico,label,meta,fact2,col)=>`<div class="peek" style="cursor:default">`
-    +(ico?`<span class="pk-ic" style="background:rgba(255,255,255,.05)">${ico}</span>`:'')
-    +`<span class="pk-main"><span class="pk-t" style="display:block">${esch(label)}</span>`
-    +(meta?`<span class="pk-m" style="display:block">${esch(meta)}</span>`:'')+`</span>`
-    +`<span class="pk-fact"${col?` style="color:${esch(col)}"`:''}>${esch(fact2)}</span></div>`;
   const checks=n=>n+(n===1?' check':' checks');
   const a=d.agent, ans=d.answers;
   body.innerHTML=
     `<div class="heroc" style="margin:2px 0 14px"><div><div class="hn">${esch(d.readable.perCheck)}</div><div class="hl">Cost per check</div>`
       +`<div class="trend dn">${esch(checks(d.checks))}</div></div></div>`
+    +baselineBlock(d)
     +`<div class="stats">`
       +(ans.triesPerAnswer!=null?well(ans.triesPerAnswer,'tries per answer'):'')
       +(d.readable.perAnswer?well(d.readable.perAnswer,'cost per answer'):'')+`</div>`
@@ -3427,7 +3407,39 @@ async function loadOpsCost(){
       +`<div class="k-note" style="padding-top:6px">Check AI bills every second he is connected, talking or not. Measured on ${checks(a.n)}.</div>`:'')
     +(d.clock.length?`<div class="k-eyebrow">The clock</div>`
       +d.clock.map(c=>row('',c.label,checks(c.n),c.avgSecs+'s')).join(''):'')
-    +`<div class="k-note">Added up from every finished check the receipt stamped. Checks from before the new calling engine, cancelled checks and your test stores are never counted.</div>`;
+    +`<div class="k-note">Added up from every finished check we have priced. Checks from before the new calling engine, cancelled checks and your test stores are never counted.</div>`;
+}
+// ---- THE BASELINE (owner 07-29) ------------------------------------------------------------------
+// What a check has to beat. The ceiling is a third of what a check earns on the plan he priced his
+// margin floor against, worked out from the LIVE plan prices on the server, so changing a price moves
+// the ceiling instead of leaving a stale number here. This function prints; it computes nothing.
+function baselineBlock(d){
+  const b=d.baseline; if(!b) return '';
+  const over=(d.perCheckUsd!=null && b.ceilingUsd!=null && d.perCheckUsd>b.ceilingUsd);
+  const byCost=(d.byRoute||[]).slice().sort((x,y)=>x.perCheckUsd-y.perCheckUsd);
+  const cheapest=byCost[0], dearest=byCost[byCost.length-1];
+  // Same row as everywhere else on this sheet, with the 07-29 rule: the sub line CLIPS at about 34
+  // characters, so the whole sentence rides in the tooltip and nothing important gets cut off screen.
+  const brow=(label,short,tip,fact,col)=>`<div class="peek" style="cursor:default">`
+    +`<span class="pk-main"><span class="pk-t" style="display:block">${esch(label)}</span>`
+    +`<span class="pk-m" style="display:block" data-tip="${esch(tip)}">${esch(short)}</span></span>`
+    +`<span class="pk-fact"${col?` style="color:${esch(col)}"`:''}>${esch(fact)}</span></div>`;
+  return `<div class="k-eyebrow">The baseline</div>`
+    +brow('Your ceiling',`a third of ${b.earnsPerCheck} on ${b.plan}`,
+      `A check has to cost less than a third of what it earns, or your margin floor breaks. On the ${b.plan} plan a check earns ${b.earnsPerCheck}, so the ceiling is ${b.ceiling}. Change that price and this moves with it.`,
+      b.ceiling, over?'var(--red)':'var(--green)')
+    +(b.thinnestCeiling?brow('On your thinnest plan',`${b.thinnestPlan} earns less`,
+      `${b.thinnestPlan} earns the least on a check of any plan you sell, so a check has to come in under ${b.thinnestCeiling} for that plan to hold your floor too.`,
+      b.thinnestCeiling,'#F59E0B'):'')
+    +(d.checks && cheapest && dearest && cheapest.key!==dearest.key
+        ? brow('Cheapest way in',cheapest.label,`The cheapest way into a store so far, over ${cheapest.checks} check${cheapest.checks===1?'':'s'}.`,cheapest.perCheck)
+          +brow('Dearest way in',dearest.label,`The dearest way into a store so far, over ${dearest.checks} check${dearest.checks===1?'':'s'}.`,dearest.perCheck)
+        : brow('Measured by hand','direct store, then worst menu',
+            `Driven end to end on ${b.measuredOn}: ${b.measuredDirect} into a store that answers directly, ${b.measuredWorstMenu} through the worst phone menu. Real checks replace these two lines the moment they start landing.`,
+            b.measuredDirect+' to '+b.measuredWorstMenu))
+    +`<div class="k-note" style="padding-top:6px">${over
+        ? 'A check costs more than your ceiling right now, so this month sits under your margin floor.'
+        : 'Stay under the ceiling and every plan keeps your margin floor.'}</div>`;
 }
 
 // ---- Bail library: per-rule toggles saved to policy.bail (enforcement stays staged) ----
@@ -5996,28 +6008,22 @@ function loadStats(rs){
 // --- ElevenLabs credits ---
 const fmtN = (n) => (n==null) ? '—' : Number(n).toLocaleString();
 async function loadCredits(){
-  const c = await api('/api/credits'); if(!c || c.error) return;
-  document.getElementById('credit_src').textContent = c.source==='live' ? 'live balance' : 'estimated · last 31d';
+  const line=document.getElementById('credit_line'); if(!line) return;   // lives on Calc now
+  const c=await api('/api/credits');
+  if(!c || c.error){ line.textContent='Voice balance unavailable.'; return; }
+  const wrap=document.getElementById('credit_limit_wrap');
   if(c.limit){
-    const pctLeft = Math.max(0, Math.min(100, Math.round((c.remaining/c.limit)*100)));
-    const _sc=document.getElementById('drs_credits'); if(_sc) _sc.innerHTML=`${pctLeft}% left <span class="chev">▾</span>`;
-    document.getElementById('credit_body').innerHTML =
-      `<b style="color:#fff;font-size:16px">${fmtN(c.remaining)}</b> credits left of ${fmtN(c.limit)} <span style="color:var(--muted)">(${pctLeft}% left)</span>`;
-    const bar=document.getElementById('credit_bar');           // bar shows what's LEFT (full = plenty)
-    bar.style.width = pctLeft+'%';
-    bar.style.background = pctLeft<=10?'#EF4444':pctLeft<=25?'#FBBF24':'var(--green)';
-    document.getElementById('credit_stats').innerHTML =
-      `~<b style="color:#fff">${fmtN(c.callsLeft)} calls</b> left <span style="color:var(--muted)">· We're billed for the whole call (ring · menu · hold · talk)</span>`
-      + (c.source==='estimated' ? ` · ${fmtN(c.used)} used in last 31d` : '')
+    const pctLeft=Math.max(0,Math.min(100,Math.round((c.remaining/c.limit)*100)));
+    const col=pctLeft<=10?'var(--red)':pctLeft<=25?'#FBBF24':'var(--green)';
+    // "checks left" = what is left divided by what one whole check costs in voice credits. We are
+    // billed for every second we are connected, so ring, menu, hold and talk are all in that number.
+    line.innerHTML=`<b style="color:${col}">${pctLeft}% of your voice plan left</b> · about ${fmtN(c.callsLeft)} more checks`
+      + (c.source==='estimated' ? ` · counted off the last 31 days, not a live balance` : '')
       + (c.resetUnix ? ` · resets ${new Date(c.resetUnix*1000).toLocaleDateString()}` : '');
   } else {
-    document.getElementById('credit_body').innerHTML =
-      `<b style="color:#fff;font-size:16px">${fmtN(c.used)}</b> credits used <span style="color:var(--muted)">(last 31 days)</span>`;
-    document.getElementById('credit_bar').style.width = '0%';
-    document.getElementById('credit_stats').innerHTML =
-      `${fmtN(c.used)} credits used so far · enter your plan size below to see what's left`;
+    line.innerHTML=`<b style="color:#fff">${fmtN(c.used)}</b> voice credits used in the last 31 days. Your plan size is not set, so there is no number left to show.`;
   }
-  document.getElementById('credit_limit_wrap').style.display = c.source==='live' ? 'none' : 'block';
+  if(wrap) wrap.style.display = c.source==='live' ? 'none' : 'block';
 }
 async function saveCreditLimit(){
   const v = Number(document.getElementById('credit_limit').value)||0;
@@ -6814,7 +6820,11 @@ async function startFresh(clear){
 async function loadCallHealth(){
   const el=document.getElementById('d_health'); if(!el) return;
   const [a,p]=await Promise.all([api('/api/admin/calls-audit'), api('/api/admin/purge-undefined-calls?dry=1')]);
-  if(!a||a.error){ el.textContent='No call data yet.'; return; }
+  if(!a||a.error){ el.textContent='No checks in the log yet.'; return; }
+  // The row's own headline: how many were really dialed, and how many of those we cannot prove.
+  const pkh=document.getElementById('pk_health');
+  if(pkh){ const bad=(p&&!p.error)?p.flagged:0; const real=(a.total||0)-(a.neverDialed||0);
+    pkh.textContent=`${real} real · ${bad} unprovable`; pkh.className='pk-fact'+(bad?' a':' g'); }
   const tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   const fdt=o=>(o&&o.at)?new Date(o.at*1000).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'—';
   const fd=o=>o?`${esch(o.store)} <span class="meta" style="font-weight:500">· ${fdt(o)}</span>`:'—';
@@ -7193,7 +7203,7 @@ async function agentSend(){
     const sec=SECTION_GROUP[want]?want:'dash';
     showGroup(SECTION_GROUP[sec], sec); })();
   await Promise.all([loadCatalog()]);
-  await Promise.all([loadStoreIntel(),loadResults(),loadSettings(),loadLiveStrip(),loadCredits(),loadTestStores(),loadChains(),loadSandbox(),loadStatusReg(),loadDash(),loadLiveListen(),loadWorkflows()]);
+  await Promise.all([loadStoreIntel(),loadResults(),loadSettings(),loadLiveStrip(),loadTestStores(),loadChains(),loadSandbox(),loadStatusReg(),loadDash(),loadLiveListen(),loadWorkflows()]);
   const sp=new URLSearchParams(location.search);
   restorePersist();
   decorateChrome();
@@ -7203,7 +7213,7 @@ async function agentSend(){
   setInterval(()=>{ if(!document.querySelector('#resultList details[open]')) loadResults(); }, 8000);   // live-refresh, but never collapse a row you're reading
   // NOTE: do NOT poll loadRetailers — at 100k stores that re-pulls a huge query every few seconds.
   setInterval(()=>{ if(document.getElementById('dash').classList.contains('active')) loadDash(); }, 12000); // god view stays live
-  setInterval(loadCredits, 30000);  // refresh credit balance periodically
+  // no credit polling: the voice balance is a line on Calc now, read when that page opens.
   setInterval(()=>{ if(MAP && document.getElementById('map_card')?.open) loadMap(); }, 8000);
 })();
 </script>

@@ -5879,10 +5879,41 @@ app.get("/api/admin/check-costs", async (c) => {
   // are never formatted two different ways. Every figure the page shows is rendered HERE, by
   // `money()` in the cost module — the page holds no money formatter of its own to drift from it.
   const say = (s: { perCheckUsd: number; totalUsd: number }) => ({ ...s, perCheck: money(s.perCheckUsd), total: money(s.totalUsd) });
+  // ---- THE BASELINE (owner 07-29) ----------------------------------------------------------------
+  // A check has to cost less than a THIRD of what it earns, or his 67% margin floor breaks. He set
+  // that floor against the $9.99 / 50 checks plan: 20¢ earned a check, so 6.6¢ is the ceiling. It is
+  // read from the LIVE plan prices here, so changing a price moves the ceiling with it instead of
+  // leaving a stale number on the dashboard. The thinnest plan is carried too, because that is the
+  // one a ceiling really has to survive, and the two differ enough for him to want to see both.
+  const BASELINE_PLAN = "collector"; // the plan the 67% floor was priced against (owner 07-29)
+  const MARGIN_FLOOR_DIVISOR = 3;    // "a third of what a check earns" — his words
+  const centsToUsd = (cents: number) => Math.round(cents * 10_000); // 1¢ = 10,000 microdollars
+  const plans = await getPlans();
+  const earning = plans.tiers
+    .filter((t) => t.checksPerMonth > 0 && t.monthlyCents > 0)
+    .map((t) => ({ name: t.name, key: t.key, perCheckUsd: centsToUsd(t.monthlyCents / t.checksPerMonth) }));
+  const ref = earning.find((t) => t.key === BASELINE_PLAN) ?? earning[0] ?? null;
+  const thinnest = earning.length ? earning.reduce((a, b) => (b.perCheckUsd < a.perCheckUsd ? b : a)) : null;
+  const ceilingOf = (t: { perCheckUsd: number }) => Math.round(t.perCheckUsd / MARGIN_FLOOR_DIVISOR);
+  const baseline = ref ? {
+    plan: ref.name,
+    earnsPerCheck: money(ref.perCheckUsd),
+    ceilingUsd: ceilingOf(ref),
+    ceiling: money(ceilingOf(ref)),
+    thinnestPlan: thinnest && thinnest.key !== ref.key ? thinnest.name : null,
+    thinnestCeiling: thinnest && thinnest.key !== ref.key ? money(ceilingOf(thinnest)) : null,
+    // What one check actually cost the last time it was driven end to end, before any prod check was
+    // stamped. The moment real checks land, "How we got in" below is the live version of these two
+    // and the screen shows THAT instead. Update these only from a check you drove yourself.
+    measuredOn: "2026-07-29",
+    measuredDirect: "5.3¢",
+    measuredWorstMenu: "8.5¢",
+  } : null;
   return c.json({
     ...report,
     byOutcome: report.byOutcome.map(say),
     byRoute: report.byRoute.map(say),
+    baseline,
     readable: {
       perCheck: report.perCheckUsd != null ? money(report.perCheckUsd) : null,
       total: money(report.totalUsd),
