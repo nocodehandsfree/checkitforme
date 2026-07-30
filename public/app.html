@@ -6523,6 +6523,7 @@ function tcIcon(key){
 // the repeated status name read as a wall). A row opens the SAME whole-call sheet the Calls page
 // opens, with the four pass/fail rows on top of it.
 let TEST_CALLS=[];
+const TEST_PAGE=10; let TEST_SHOWN=TEST_PAGE;
 async function loadTesting(){
   const sum=document.getElementById('testing_summary'), log=document.getElementById('testing_log');
   if(!sum||!log) return;
@@ -6540,7 +6541,10 @@ async function loadTesting(){
   sum.innerHTML=`<div class="k-hero"><span class="n">${d.count||0}</span><span class="l">test calls</span></div>
     <div class="k-wells">${well(secsFmt(s.avgNavSec||0),'To a person','')}${well(secsFmt(s.avgTalkSec||0),'Avg talk','g')}${well(secsFmt(s.avgCallSec||0),'Avg total','')}</div>`;
   let html='', lastDay=null;
-  TEST_CALLS.forEach(r=>{
+  // TEN AT A TIME (owner 07-30). Two hundred checks in one screen is a page that has to render two
+  // hundred logo tiles before he can read the newest one. Same raised key every other log on this
+  // dashboard uses, and it APPENDS in place — the comp bans a floating pager.
+  TEST_CALLS.slice(0,TEST_SHOWN).forEach(r=>{
     const day=dayLabel(r.started);
     if(day!==lastDay){ html+=`<div class="k-eyebrow">${esch(day)}</div>`; lastDay=day; }
     const vv=customerVerdict(r);
@@ -6561,9 +6565,11 @@ async function loadTesting(){
       ? `<button class="peek" onclick="openTestReceipt('${esch(String(r.room))}')">${head}</button>`
       : `<div class="peek static">${head}</div>`;
   });
+  const hidden=TEST_CALLS.length-TEST_SHOWN;
+  if(hidden>0) html+=`<button class="k-key" onclick="TEST_SHOWN+=${TEST_PAGE};loadTesting()">SHOW ${Math.min(TEST_PAGE,hidden)} MORE</button>`;
   log.innerHTML=html;
 }
-// A test check opens the SAME sheet the Calls page opens, plus the four pass/fail rows. It reads the
+// A test check opens the SAME sheet the Calls page opens, plus the pass/fail rows. It reads the
 // service the header switch names: a staging test check has no receipt on production.
 async function openTestReceipt(room){ return openReceiptInto('/api/admin/receipt/'+encodeURIComponent(room),{src:true,behaved:true}); }
 // Settings → the one global default workflow.

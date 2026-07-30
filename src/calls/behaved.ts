@@ -149,36 +149,32 @@ export function behaved(input: BehavedInput): BehavedRow[] {
 function askedOnce(turns: AgentTurn[], newPeople: number): BehavedRow {
   const row = (pass: boolean | null, why: string): BehavedRow => ({
     key: "asked_once", label: "Asked once", pass, why,
-    tip: "One question per person on the line. A second ask with nobody new is a fail; asking again after a hand-over is not.",
+    tip: "One stock question per person on the check. A second question with nobody new is a fail. Asking again after a transfer is not.",
   });
-  if (!turns.length) return row(null, "Nothing the agent said was written down on this check, so there is nothing to count.");
+  if (!turns.length) return row(null, "No Charlie lines recorded. Nothing to count.");
   const asks = turns.filter((t) => isAsk(t.text)), greets = turns.filter((t) => isGreeting(t.text));
   const allowed = 1 + newPeople;
   if (asks.length > allowed) {
-    return row(false, newPeople
-      ? `${plural(newPeople, "person", "people")} came on the line and the agent asked for the stock ${plural(asks.length, "time", "times")}, which is ${asks.length - allowed} more than there were people to ask.`
-      : `The agent asked for the stock ${plural(asks.length, "time", "times")} on one check.`);
+    return row(false, `${plural(asks.length, "question", "questions")}, ${plural(1 + newPeople, "person", "people")} on the check. ${asks.length - allowed} too many.`);
   }
-  if (greets.length > 1 + newPeople) return row(false, `The agent opened with a greeting ${plural(greets.length, "time", "times")}, so somebody was greeted twice.`);
+  if (greets.length > 1 + newPeople) return row(false, `${plural(greets.length, "greeting", "greetings")}, ${plural(1 + newPeople, "person", "people")} on the check. Somebody was greeted twice.`);
   if (asks.length >= 1) {
     // A check with a hand-over and only ONE ask still passes HERE: nobody was asked twice. Whether the
     // new person was asked at all is its own row below, so one miss never prints two crosses.
-    return row(true, newPeople && asks.length > 1
-      ? `${plural(asks.length, "question", "questions")} across ${plural(1 + newPeople, "person", "people")}, so nobody was asked twice.`
-      : "One question, then the wrap.");
+    return row(true, `${plural(asks.length, "question", "questions")}, ${plural(1 + newPeople, "person", "people")} on the check.`);
   }
-  return row(null, "No stock question was recognised in what the agent said, so this one cannot be counted either way.");
+  return row(null, "No stock question recognised in Charlie\u2019s lines. Not counted.");
 }
 
 function noKeypadAtPerson(humanAt: number | null, presses: BehavedEvent[]): BehavedRow {
   const row = (pass: boolean | null, why: string): BehavedRow => ({
-    key: "no_keypad_at_person", label: "No keypad at a person", pass, why,
-    tip: "Zero keypad presses after a person was heard.",
+    key: "no_keypad_at_person", label: "No keys after pickup", pass, why,
+    tip: "Zero keypad tones after Staff answer. A store that used to have a menu and now answers direct would otherwise get beeped at.",
   });
-  if (humanAt == null) return row(null, "Nobody ever came on the line, so there was no person to beep at.");
+  if (humanAt == null) return row(null, "Nobody answered. No pickup to press at.");
   const after = presses.filter((e) => Number(e.atSec ?? 0) >= humanAt);
-  if (!after.length) return row(true, `A person answered at ${humanAt}s and not one key was pressed after that.`);
-  return row(false, `${plural(after.length, "key press", "key presses")} landed after a person answered at ${humanAt}s.`);
+  if (!after.length) return row(true, `Staff answered at ${humanAt}s. 0 keys pressed after.`);
+  return row(false, `Staff answered at ${humanAt}s. ${plural(after.length, "key", "keys")} pressed after.`);
 }
 
 /**
@@ -198,22 +194,21 @@ function meterStoppedOnHold(tl: BehavedEvent[], sums: BehavedSums): BehavedRow {
   // A WAIT AND A HAND-OVER ARE THE SAME MECHANISM AND DIFFERENT EVENTS TO HIM. Both stop the meter;
   // only one of them means somebody else is about to pick up. Say which one he is reading.
   const anyTransfer = holdIdx.some((h) => (tl[h].detail || {}).reason === "transfer");
-  const word = anyTransfer ? "the hand-over" : "the hold";
-  for (const h of holdIdx) {
+    for (const h of holdIdx) {
     const at = Number(tl[h].atSec ?? 0);
-    const who = (tl[h].detail || {}).reason === "transfer" ? "We were handed on" : "The staff walked away";
+    const who = (tl[h].detail || {}).reason === "transfer" ? "Transfer at" : "Staff walked away at";
     const end = nextOf(h, "hold_end");
     const leave = nextOf(h, "charlie_leave");
     // The close has to land inside the hold. A close that only turns up after somebody came back is
     // the end of the call, not the meter stopping for the wait.
-    if (leave < 0 || (end >= 0 && leave > end)) return row(false, `${who} at ${at}s and Charlie was NOT dropped, so we kept paying through the wait.`);
+    if (leave < 0 || (end >= 0 && leave > end)) return row(false, `${who} at ${at}s. Charlie NOT dropped, meter kept running through the wait.`);
     if (end < 0) continue; // held to the end of the call — closing was the whole job
-    if (nextOf(end, "charlie_join") < 0) return row(false, `Charlie was dropped at ${at}s and never came back when somebody returned at ${Number(tl[end].atSec ?? 0)}s.`);
+    if (nextOf(end, "charlie_join") < 0) return row(false, `Charlie dropped at ${at}s. Never reconnected when Staff returned at ${Number(tl[end].atSec ?? 0)}s.`);
   }
   const parts = Number(sums.charlieSegments ?? 0);
-  const who = anyTransfer ? "The hand-over" : "The staff";
+  const who = anyTransfer ? "The transfer" : "The staff";
   return row(true, parts > 1
-    ? `${who} dropped Charlie, and the meter successfully stopped. He came back as part ${parts} of the same check.`
+    ? `${who} dropped Charlie, and the meter successfully stopped. Reconnected as part ${parts} of the same check.`
     : `${who} dropped Charlie, and the meter successfully stopped.`);
 }
 
@@ -223,18 +218,19 @@ function meterStoppedOnHold(tl: BehavedEvent[], sums: BehavedSums): BehavedRow {
  */
 function askedToBePutThrough(turns: AgentTurn[], wrongDept: BehavedEvent | null): BehavedRow {
   const row = (pass: boolean | null, why: string): BehavedRow => ({
-    key: "asked_to_be_put_through", label: "Asked to be put through", pass, why,
-    tip: "Only counts when Staff said we reached the wrong department. Then the agent must ask once to be handed on, never hang up and never make Staff go and look.",
+    key: "asked_to_be_put_through", label: "Transfer requested", pass, why,
+    tip: "Only counts when Staff said we reached the wrong department. Charlie must then request a transfer once. Hanging up or making Staff go and look is a fail.",
   });
-  if (!wrongDept) return row(null, "Nobody said we had reached the wrong department, so there was nothing to be put through from.");
+  if (!wrongDept) return row(null, "No wrong department reached. No transfer needed.");
   const said = String((wrongDept.detail || {}).said || "").trim();
   const at = wrongDept.atSec == null ? "" : ` at ${Number(wrongDept.atSec)}s`;
-  const heard = said ? ` Staff said "${said}".` : "";
-  if (!turns.length) return row(null, `We landed in the wrong department${at}, but nothing the agent said was written down.${heard}`);
+  const heard = said ? ` Staff: \u201c${said}\u201d` : "";
+  if (!turns.length) return row(null, `Wrong department${at}. No Charlie lines recorded.${heard}`);
   const asks = turns.filter((t) => saysPutMeThrough(t.text));
-  if (!asks.length) return row(false, `We landed in the wrong department${at} and the agent never asked to be put through.${heard}`);
-  if (asks.length > 1) return row(false, `The agent asked to be put through ${plural(asks.length, "time", "times")}, and once is the rule.${heard}`);
-  return row(true, `We landed in the wrong department${at} and the agent asked once to be put through.${heard}`);
+  const when = asks.length && asks[0].atSec != null ? ` at ${Number(asks[0].atSec)}s` : "";
+  if (!asks.length) return row(false, `Wrong department${at}. No transfer requested.${heard}`);
+  if (asks.length > 1) return row(false, `Wrong department${at}. Transfer requested ${plural(asks.length, "time", "times")}, once is the rule.${heard}`);
+  return row(true, `Wrong department${at}. Transfer requested once${when}.${heard}`);
 }
 
 /**
@@ -244,28 +240,28 @@ function askedToBePutThrough(turns: AgentTurn[], wrongDept: BehavedEvent | null)
  */
 function askedTheNewPerson(turns: AgentTurn[], handedOver: BehavedEvent[], maybeNew: BehavedEvent[]): BehavedRow {
   const row = (pass: boolean | null, why: string): BehavedRow => ({
-    key: "asked_the_new_person", label: "Asked the new person", pass, why,
-    tip: "Only counts after a hand-over, where whoever picks up never heard the question. A walk away is a maybe, and the agent judges that one from the voice.",
+    key: "asked_the_new_person", label: "Re-asked after transfer", pass, why,
+    tip: "Only counts after a transfer, where whoever picks up never heard the question. A walk away is a maybe, and Charlie judges that one from the voice.",
   });
   if (!handedOver.length) {
     // A WALK AWAY IS A MAYBE, NOT A FACT. The agent is told the person may be new and decides from the
     // voice; Staff coming back themselves and the agent carrying on is right, so requiring a second
     // question here would cross a check that behaved.
-    if (maybeNew.length) return row(null, `Somebody was away ${plural(Number(maybeNew[0].detail?.gapSec ?? 0), "second", "seconds")} and came back, which may or may not have been the same person, so there is nothing to require here.`);
-    return row(null, "Nobody was handed on to on this check, so there was no new person to ask.");
+    if (maybeNew.length) return row(null, `No transfer. Staff away ${Number(maybeNew[0].detail?.gapSec ?? 0)}s, may be the same person back. Not counted.`);
+    return row(null, "No transfer on this check.");
   }
-  if (!turns.length) return row(null, "We were handed on, but nothing the agent said was written down.");
+  if (!turns.length) return row(null, "Transferred, but no Charlie lines recorded.");
   const back = Number(handedOver[0].atSec ?? 0);
   const asks = turns.filter((t) => isAsk(t.text));
   const timed = turns.some((t) => t.atSec != null);
   if (timed) {
     const after = asks.filter((t) => t.atSec != null && Number(t.atSec) >= back);
-    if (!after.length) return row(false, `We were handed on and somebody new picked up at ${back}s, and the agent carried on without asking them.`);
-    return row(true, `Somebody new picked up at ${back}s and the agent asked them at ${Number(after[0].atSec)}s.`);
+    if (!after.length) return row(false, `New Staff at ${back}s. Question NOT re-asked.`);
+    return row(true, `New Staff at ${back}s. Question re-asked at ${Number(after[0].atSec)}s.`);
   }
   // No clock on this record. Two questions and a new person is the save working; one is not.
-  if (asks.length > 1) return row(true, `Somebody new picked up at ${back}s and the agent asked again, read off the order of what was said rather than the clock.`);
-  return row(false, `Somebody new picked up at ${back}s and only one question was asked on the whole check, so they were never asked.`);
+  if (asks.length > 1) return row(true, `New Staff at ${back}s. Question re-asked. Read off the order of the lines, not the clock.`);
+  return row(false, `New Staff at ${back}s. 1 question on the whole check, so they were never asked.`);
 }
 
 /**
@@ -276,10 +272,10 @@ function askedTheNewPerson(turns: AgentTurn[], handedOver: BehavedEvent[], maybe
 function mappingHeld(tl: BehavedEvent[], sums: BehavedSums, humanAt: number | null, joinAt: number | null): BehavedRow {
   const row = (pass: boolean | null, why: string): BehavedRow => ({
     key: "mapping_held", label: "Mapping held", pass, why,
-    tip: "Direct store: no steps fired and the agent opened at the person. Mapped store: every step fired on the store's recording, never the clock.",
+    tip: "Direct store: 0 steps fired and Charlie joined at pickup. Mapped store: every step fired on the store's own recording, never on a stopwatch.",
   });
   const dialed = tl.find((e) => e.kind === "dialed");
-  if (!dialed) return row(null, "The start of this check was never written down, so what the map planned is unknown.");
+  if (!dialed) return row(null, "No start recorded. The planned route is unknown.");
   const d = dialed.detail || {};
   const plan = Array.isArray(d.plan) ? (d.plan as unknown[]) : null;
   const plannedLane = typeof d.plannedLane === "string" ? d.plannedLane : null;
@@ -289,14 +285,14 @@ function mappingHeld(tl: BehavedEvent[], sums: BehavedSums, humanAt: number | nu
   const onPause = Number(sums.stepsOnPause ?? steps.filter((e) => (e.detail || {}).via === "prompt").length);
 
   if (!mapped) {
-    if (fired > 0) return row(false, `This store answers direct, and ${plural(fired, "menu step", "menu steps")} still fired at it.`);
-    if (joinAt == null) return row(null, "No steps fired, and the agent never joined, so there was nothing to open at.");
-    if (humanAt == null) return row(false, `The agent opened at ${joinAt}s with nobody on the line.`);
-    if (joinAt >= humanAt) return row(true, `No menu steps, and the agent opened at ${joinAt}s, when the person answered.`);
-    return row(false, `The agent opened at ${joinAt}s, ${humanAt - joinAt}s before a person was there.`);
+    if (fired > 0) return row(false, `Direct store. ${plural(fired, "step", "steps")} fired at it anyway.`);
+    if (joinAt == null) return row(null, "0 steps fired. Charlie never joined, so there is nothing to check.");
+    if (humanAt == null) return row(false, `Charlie joined at ${joinAt}s with nobody on the line.`);
+    if (joinAt >= humanAt) return row(true, `Direct store. 0 steps fired. Charlie joined at ${joinAt}s, when Staff answered.`);
+    return row(false, `Charlie joined at ${joinAt}s, ${humanAt - joinAt}s before Staff were there.`);
   }
   const planned = plan ? plan.length : fired;
-  if (fired === 0) return row(false, `The map has ${plural(planned, "step", "steps")} for this store and none of them fired.`);
-  if (onPause === fired) return row(true, `All ${plural(fired, "step", "steps")} fired on the store's own recording, never on the clock.`);
-  return row(false, `${fired - onPause} of ${plural(fired, "step", "steps")} fired on the clock instead of the store's recording.`);
+  if (fired === 0) return row(false, `${plural(planned, "step", "steps")} mapped for this store. 0 fired.`);
+  if (onPause === fired) return row(true, `${fired} of ${plural(fired, "step", "steps")} fired on the store's recording, none on the clock.`);
+  return row(false, `${fired - onPause} of ${plural(fired, "step", "steps")} fired on the clock, not the store's recording.`);
 }

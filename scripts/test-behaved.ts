@@ -47,6 +47,11 @@ head("SHAPE");
   // HIS OWN WORDS (owner 07-30), asserted so they cannot drift back into ours.
   ok("…and it says it in his words", row(r, "meter_stopped_on_hold").why === "Nobody dropped Charlie on this check.", row(r, "meter_stopped_on_hold").why);
   ok("the row is called Meter stopped", row(r, "meter_stopped_on_hold").label === "Meter stopped", row(r, "meter_stopped_on_hold").label);
+  // OPERATOR GRADE, NOT CONVERSATIONAL (owner 07-30, admin copy guide: a label is a precise noun or
+  // a plain verb, never a sentence). Asserted so nobody writes chat into a control panel again.
+  ok("the labels are the operator's words", r.map((x) => x.label).join(" · ")
+    === "Asked once · No keys after pickup · Meter stopped · Mapping held · Transfer requested · Re-asked after transfer", r.map((x) => x.label));
+  ok("no gray line runs past one line on a phone", r.every((x) => x.why.length <= 110), r.filter((x) => x.why.length > 110).map((x) => x.why));
   ok("a clean direct check: mapping held", row(r, "mapping_held").pass === true);
 }
 
@@ -171,8 +176,8 @@ head("THE WRONG-DEPARTMENT SAVE");
   ok("…and it prints what Staff actually said", /this is the pharmacy/i.test(row(r, "asked_to_be_put_through").why));
   ok("the new person was asked", row(r, "asked_the_new_person").pass === true, row(r, "asked_the_new_person").why);
   ok("…off the clock, naming both seconds", /31s/.test(row(r, "asked_the_new_person").why) && /33s/.test(row(r, "asked_the_new_person").why));
-  ok("Charlie was dropped, and the row says the HAND-OVER did it rather than Staff",
-    row(r, "meter_stopped_on_hold").pass === true && /the hand-over dropped charlie/i.test(row(r, "meter_stopped_on_hold").why), row(r, "meter_stopped_on_hold").why);
+  ok("Charlie was dropped, and the row says the TRANSFER did it rather than Staff",
+    row(r, "meter_stopped_on_hold").pass === true && /the transfer dropped charlie/i.test(row(r, "meter_stopped_on_hold").why), row(r, "meter_stopped_on_hold").why);
   ok("no keypad at a person still passes", row(r, "no_keypad_at_person").pass === true);
 }
 
@@ -203,7 +208,7 @@ head("…and every way it can go wrong");
   const lines = agentLinesFrom(`Agent: ${OPENER}\nClerk: this is the pharmacy\nAgent: ${SAY_TRANSFER}\nClerk: hold on\nAgent: Heyy, do you have any Pokemon in stock right now?`);
   const r = behaved({ timeline: savedCheck, rollup: { charlieSegments: 2 }, agentLines: lines });
   ok("with no clock, the new person is still scored off the order", row(r, "asked_the_new_person").pass === true, row(r, "asked_the_new_person").why);
-  ok("…and it says the clock was not what it read", /order of what was said/.test(row(r, "asked_the_new_person").why));
+  ok("…and it says the clock was not what it read", /order of the lines/.test(row(r, "asked_the_new_person").why));
   ok("asked once holds up without a clock too", row(r, "asked_once").pass === true);
 }
 {
@@ -220,9 +225,9 @@ head("…and every way it can go wrong");
   // A WALK AWAY IS NOT PROOF SOMEBODY ELSE PICKED UP. Requiring a second question here would cross a
   // check where Staff went to the shelf, came back themselves, and the agent rightly carried on.
   ok("…and the new-person row is a DASH, because a walk away is not a hand-over", row(r, "asked_the_new_person").pass === null, row(r, "asked_the_new_person").why);
-  ok("…and it says why there is nothing to require", /may or may not have been the same person/.test(row(r, "asked_the_new_person").why));
+  ok("…and it says why there is nothing to require", /may be the same person back/.test(row(r, "asked_the_new_person").why));
   ok("…and being put through is a dash, because we never landed wrong", row(r, "asked_to_be_put_through").pass === null);
-  ok("…and the row says STAFF dropped Charlie, not a hand-over", /the staff dropped charlie/i.test(row(r, "meter_stopped_on_hold").why) && !/hand-over/i.test(row(r, "meter_stopped_on_hold").why), row(r, "meter_stopped_on_hold").why);
+  ok("…and the row says STAFF dropped Charlie, not a transfer", /the staff dropped charlie/i.test(row(r, "meter_stopped_on_hold").why) && !/transfer/i.test(row(r, "meter_stopped_on_hold").why), row(r, "meter_stopped_on_hold").why);
 }
 
 {
