@@ -3,16 +3,8 @@
 **System:** voice-calls · **Status:** active — **items 1, 2 and 3 DONE and shipped 07-30. Item 4 (the save)
 NOT STARTED**, and it is the one that needs a fresh chat: it opens the locked bridge, adds a call flag to both
 flag lists, and touches an Admin screen (which needs a comp render first).
-**Order:** the three quick items first (workflow · reader rule · walkthrough), then the save.
-
-1. **A Testing workflow named "Test — One Question"** on Branson HD: the approved question and its
-   one follow-up, nothing else — the owner's six test calls will run exactly this.
-2. **Prove the reader rule:** when the second reader disagrees with Charlie's status, the customer
-   gets "couldn't tell" and NO charge — never a wrong answer. If that is not how it works today,
-   make it so and prove it.
-3. **The owner's six test calls, written step by step:** one short message per call — what he does,
-   what he should hear, what you check after. Leave it as your reply so it waits for him in the
-   morning. Place no calls yourself.
+**Owner ruling 07-30:** "disagrees" = one reader says in stock, the other says not. A merely UNSURE second
+reader does not downgrade a confident answer. Keep it that way.
 **What:** when Staff say we reached the wrong department, Charlie asks them to transfer us and asks
 again once we land — the check is saved on the same call instead of failing and retrying.
 

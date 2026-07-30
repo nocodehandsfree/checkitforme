@@ -13,6 +13,12 @@ technology being smart. Transparency + managed expectations = patience + trust.
   `Talking to Staff` → the verdict. Big, one at a time.
 - **The counter:** "usually about 90 seconds to reach a person" — from the chain's own measured
   nav time (the number the Chains page already holds). Never promise a person, only the reach time.
+- **The counter's number (Mapper's contract, 07-30 — do not re-derive):** read `navSeconds` off
+  `GET /api/admin/map/graph` — the rule lives there in one place. A store with a greeting but no
+  menu counts as 0 (answers direct). Today only CVS (chain 5, staging) carries a real measured
+  number; the other 92 chains still ride backfilled data — so BUILD against CVS on staging and
+  **ship the counter dark** until the re-mapping round fills real numbers. The four states and the
+  loud retry ship live now; only the counter waits.
 - **Loud retry** is its own proud state, never an apology: "The menu changed. We learned the new
   route and we're calling right back." Same counter, reset. The customer sees the system get
   smarter mid-check.
