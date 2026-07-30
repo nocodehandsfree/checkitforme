@@ -35,6 +35,9 @@ const MAX_CALL_SEC = 165;
 // US ringback is a published cadence: two seconds of tone, four of silence. So the SECOND ring starts
 // six seconds after the first. Only used when the audio fork never arrived and the Ear cannot count.
 const RING_CYCLE_SEC = 6;
+/** How long after our own answer a short store line still counts as the REMAINDER of the recording we
+ *  spoke over, rather than a new prompt. A real next prompt takes longer than this to arrive. */
+const TAIL_SEC = 8;
 const TRANSFER_WAIT_SEC = 40;
 
 // A live person is on the line (a short greeting/question said TO us). Used as a backstop in auto-0
@@ -596,7 +599,19 @@ async function navTurn(id: string, speech: string): Promise<string> {
     finish(s, "failed"); return twiml(`<Hangup/>`);
   }
   if (speech && speech.trim()) {
-    s.steps.push({ who: "ivr", text: speech.trim().slice(0, 300), atSec });
+    // THE TAIL OF A LINE WE SPOKE OVER IS NOT A NEW LINE (owner, 07-30). Answering the instant the
+    // prompt makes sense means cutting the recording mid-sentence, and the rest of that sentence comes
+    // back on the next turn as its own stray fragment. On CVS Lanett "…photo services and General
+    // Store inquiries" ran on into "tell me what you'd like to do", and the page showed a menu step
+    // reading "You'd like to do." A recipe cannot be right if the menu beside it says something the
+    // menu never said as its own line, so the remainder is joined onto the line it belongs to.
+    const line = speech.trim().slice(0, 300);
+    const last = s.steps[s.steps.length - 1];
+    const spokeOver = !!last && last.who === "us" && atSec - (last.atSec ?? 0) <= TAIL_SEC;
+    const fragment = line.split(/\s+/).length <= 8 && !isMenuLine(line) && !looksLikeQuestion(line);
+    const prevIvr = [...s.steps].reverse().find((st) => st.who === "ivr" && st.text);
+    if (spokeOver && fragment && prevIvr) prevIvr.text = `${prevIvr.text} ${line}`.slice(0, 300);
+    else s.steps.push({ who: "ivr", text: line, atSec });
     // #2: harvest the pressable options from any menu line into the chain's menu tree + keep the raw
     // line (STT is fuzzy, so the owner can read the exact wording when the parse is imperfect).
     // EVERY choice the store offers, pressed OR spoken. This used to test for the word "press" and

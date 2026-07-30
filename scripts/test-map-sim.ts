@@ -454,6 +454,16 @@ async function main() {
     ok(!looksLikeQuestion("Thank you for calling CVS Pharmacy."), "but a greeting is not");
     ok(isReprompt("Sorry, I'm not understanding please confirm"), "and CVS's own re-prompt is read as one");
 
+    // THE TAIL OF A LINE WE SPOKE OVER IS NOT A NEW LINE. CVS's "…photo services and General Store
+    // inquiries" ran on into "tell me what you'd like to do", and the page printed "You'd like to do."
+    // as a menu step of its own.
+    ok(/const spokeOver = [\s\S]{0,200}?atSec - \(last\.atSec \?\? 0\) <= TAIL_SEC/.test(src),
+      "a store line arriving right after our own answer is tested as the remainder of what we cut");
+    ok(/const fragment = line\.split[\s\S]{0,140}?!isMenuLine\(line\) && !looksLikeQuestion\(line\)/.test(src),
+      "and only a short line that is neither a menu nor a question can be a remainder");
+    ok(/if \(spokeOver && fragment && prevIvr\) prevIvr\.text = /.test(src),
+      "it is joined onto the line it belongs to, never listed as its own step");
+
     const cap = readFileSync("src/calls/map-capture.ts", "utf8");
     ok(/\(opts\.reachedHuman \|\| opts\.endedOnRing\) \? transcriptFromCall\(opts\.steps\)/.test(cap),
       "a check that walked the whole route keeps EVERY line it heard, not the first six");
