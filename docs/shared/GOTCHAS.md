@@ -18,6 +18,15 @@ worse than no comment. Several entries below started as wrong comments.)
   `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` and needs `--no-sandbox` · top-level `const`s in
   `app.html` (`CHAINS`, `POL`) are NOT on `window`, so name them bare inside `page.evaluate` · a chain
   row opens with `pickChainRow(id)`.
+  **Three more, all found the hard way 07-30 building that mirror:** (1) a `curl -w` format that starts
+  with `@` is read as a FILENAME (`option -w: error encountered when reading a file`) — pick a marker
+  like `~~X~~`. (2) Read the status and the content type off `-w` AFTER the body, never off `-i`: the
+  egress proxy prepends its own `HTTP/1.1 200 Connection Established` block, so header parsing types
+  every response as a download and the navigation dies with `Download is starting`. (3) The pages that
+  follow the Live/Staging switch fetch `https://staging.checkitforme.com` CROSS-ORIGIN with
+  credentials, so anything you fulfil for that origin needs `access-control-allow-origin` (the exact
+  loopback origin) plus `access-control-allow-credentials: true`, or the browser drops the response and
+  the page truthfully reports "Could not reach the staging site".
 - **`scripts/test-all.sh` spawns local servers + headless browsers — don't run it reflexively, and never
   leave it orphaned** (owner 07-20, it was killing his compute + morale). The `smoke:`/`qa:` lines each
   boot a server (ports 8788-8798) and Chromium. If the run is killed partway (OOM, worker restart), those

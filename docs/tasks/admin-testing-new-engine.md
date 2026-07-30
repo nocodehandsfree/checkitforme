@@ -1,6 +1,7 @@
 # Voice ▸ Testing becomes the new-engine scorecard for test calls
 
-**System:** admin · **Status:** active — UNBLOCKED 07-29 (Addie's jobs 1 and 2 are done; one agent in `app.html` at a time still holds).
+**System:** admin · **Status:** SHIPPED 07-30 (`5b1f325`). Admin shell live, server half on staging, prod
+needs the promote. Read the closing note at the bottom before reopening this.
 **What:** the owner's test calls (Fun store included — the exclusion only guards real-store stats)
 need one-glance feedback on how the new engine performed. The `#testing` section exists; update it,
 never add nav (LAW 4).
@@ -58,7 +59,27 @@ driven in a phone-sized browser on shipped Admin bytes · verify-live output pas
 10. Testing follows the header Live/Staging switch on the list AND on the sheet · `npx tsc --noEmit`
     clean · `scripts/test-behaved.ts` green · no new nav entry (LAW 4).
 
-**Verify-live output (paste on close — a task without it is NOT closed):**
+**CLOSED 07-30.** `src/calls/behaved.ts` is the PURE scorer (41 asserts, `scripts/test-behaved.ts`).
+It rides the SAME receipt envelope (`behaved` on `/api/admin/receipt/:room`), no second route. Testing
+renders as comp 1c, copied off `renderResults` which is the same comp. **Three states, not two:** a
+gray dash means this check never put the rule to the test, because a cross for "nobody put us on hold"
+is a lie and a tick is worse. The card shows ONLY when the sheet is opened from Test calls.
+- **Driven on the shipped Admin bytes**, 390px Chromium, header on Staging (test checks live there):
+  138 rows, day eyebrows, `5.4¢ · not in stock` / `1.7¢ · nobody answered`, no sideways scroll. Tapped
+  the newest → the same whole-call sheet, card on top: **tick · tick · gray dash · tick**, tooltip on
+  every row (tapped one, the bubble reads the owner's line), then `Menu 1.9¢` vs `Charlie 3.5¢`, then
+  the 8-step timeline. Zero console errors of ours (leaflet's CDN cannot be reached from a container).
+- **NOT verified:** a red cross and the hold row in the wild. No real check has been held or
+  re-greeted since the engine shipped, so those two paths are proven by the unit tests only. His next
+  Fun call where he walks away for 30s is what proves the hold row on real data.
+- **PM: promote wanted** — the server half (the four rows + `room`/cost on the list) is staging only,
+  so on **Live** the page reads honestly but flat: no rooms, "not priced", rows not tappable.
+
+**Verify-live output:**
 ```
-(none yet)
+HEAD = 5b1f325cc328 · origin/main = 55badd886004
+staging  https://staging.checkitforme.com/ → LIVE (serving HEAD)
+prod     https://checkitforme.com/ → NOT-LIVE (serving 55badd886004, HEAD is 5b1f325cc328) — that IS origin/main: expected until the next promote
+admin    https://admin.checkitforme.com/ → NOT-LIVE (serving 55badd886004, HEAD is 5b1f325cc328) — that IS origin/main: expected until the next promote
+ship-admin --status  {"source":"override","meta":{"commit":"5b1f325","bytes":656993}}
 ```
