@@ -54,7 +54,7 @@ PAGE 1 — LIVE (dash), 07-30 @71b724a5, SEALED
            --status → {"source":"override","commit":"71b724a5","bytes":656879}
   NOT verified: the cost card's server half rides the promote, so on prod Live the baseline stays hidden
   until then (same promote the ops dashboard is waiting on). Never seen on a real iPhone.
-```
+
 STEP 1, the gate (07-30) — no page touched, so the proof is the gate itself + the ship path:
   $ node scripts/qa-admin-unify.mjs --all   → unify-gate PASS: 18  FAIL: 9  (exit 1: it bites today)
   $ node scripts/qa-admin-unify.mjs         → PASS: 2 FAIL: 0 · sealed 0/25, 18 findings waiting
