@@ -500,7 +500,6 @@ async function main() {
     ok(/const best=\[\.\.\.seen\.values\(\)\]\.sort\(\(a,b\)=>\(b\.n-a\.n\)\|\|\(b\.raw\.length-a\.raw\.length\)\)\[0\]/.test(page),
       "the wording heard most often wins, and a tie goes to the version that was not cut short");
     ok(/lines agreed across \$\{a\.checks\} checks/.test(page), "and the screen says how settled it is, so he can see when it is still one guess");
-    ok(/s faster than the first check/.test(page), "the chain page shows how much faster we have made the menu");
 
     const cap = readFileSync("src/calls/map-capture.ts", "utf8");
     ok(/\(opts\.reachedHuman \|\| opts\.endedOnRing\) \? transcriptFromCall\(opts\.steps\)/.test(cap),

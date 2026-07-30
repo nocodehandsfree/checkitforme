@@ -5331,11 +5331,7 @@ function renderChainMapping(ch){
       +`<div class="stat"><div class="n">${chainCents(chainNavCents(nav))}</div><div class="l">Nav cost</div></div>`
       +(reach!=null?`<div class="stat"><div class="n" style="color:${reach>=90?'var(--green)':reach>=60?'var(--yellow)':'#F59E0B'}">${reach}%</div><div class="l">Reached Staff</div></div>`
         :`<div class="stat"><div class="n">${toStaff!=null?toStaff+'s':''}</div><div class="l">To Staff</div></div>`)
-      +`</div>`
-      // HOW MUCH FASTER WE HAVE MADE IT, which is the whole point of calling a chain more than once.
-      // Only when we have actually improved on where we started; a made up gain is worse than none.
-      +((g0&&g0.savedSeconds>0&&g0.firstSeconds!=null)
-        ? `<div class="meta" style="margin-top:11px;text-transform:none;letter-spacing:0;color:var(--green)">${g0.savedSeconds}s faster than the first check (${g0.firstSeconds}s)</div>` : '');
+      +`</div>`;
   }
   // --- beside the PHONE MENU eyebrow: when this route last changed, and nothing else. The scoring
   // words ("observed once", "observed multiple times") came off every screen (owner, 07-30): they are
