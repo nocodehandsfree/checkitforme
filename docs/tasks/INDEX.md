@@ -34,8 +34,8 @@ then they ride the next promote to prod):**
 |---|---|---|
 | [The calling engine, round 2 (Echo)](echo-engine-round-2.md) | voice-calls | active |
 | [Chain section rebuild — GO](../specs/mapping-admin/plan.md) | voice-calls + admin | active (un-parked 07-29) |
-| [The Admin dashboard, continued (new Addie)](addie-dashboard-continue.md) | admin | active |
-| [Voice ▸ Testing becomes the new-engine scorecard](admin-testing-new-engine.md) | admin | queued behind Addie's jobs 1+2 |
+| [The Admin dashboard, continued (new Addie)](addie-dashboard-continue.md) | admin | **jobs 1+2 DONE 07-29** |
+| [Voice ▸ Testing becomes the new-engine scorecard](admin-testing-new-engine.md) | admin | **UNBLOCKED: Addie's jobs 1+2 are done** |
 
 ## Other open site fixes (consumer site is frozen: each needs an owner-named `.unlock`)
 | Task | System | Status |
@@ -83,7 +83,7 @@ Live [dash](admin-cleanup-dash.md) · Users [users](admin-cleanup-users.md) · R
 | [Alert copy is prod-only — not mirrored to staging](admin-audit-alerts-not-mirrored.md) | wiring | admin + site | active |
 | [Real prod calls with no staging rehearsal](admin-audit-realcall-no-rehearsal.md) | wiring | data + voice-calls | active |
 | [Alerts diverges from its comp (CRUD vs LOG)](admin-audit-alerts-comp-diverge.md) | comp | admin | active |
-| [Policy page overloaded — split per comp](admin-audit-policy-overload.md) | comp | admin | active |
+| [Policy page overloaded — split per comp](admin-audit-policy-overload.md) | comp | admin | **DONE 07-29** |
 | [No comp for Calc/Fun/Users/Search](admin-audit-comps-missing.md) | comp | CD + admin | active |
 | [Lane codenames + tuning jargon leak into the UI](admin-audit-lane-codenames-copy.md) | copy | site + admin | active |
 | [Small Admin copy fixes (wrong toast, dev-speak, raw values)](admin-audit-copy-bugs.md) | copy | site | active |

@@ -5,6 +5,19 @@ Non-obvious traps that cost real time. Add one the moment you learn it; delete o
 worse than no comment. Several entries below started as wrong comments.)
 
 ## Compute / testing
+- **Driving the live Admin (or the site) in a real browser from an agent container: Chromium CANNOT
+  reach the internet** (07-29, cost most of a session). The egress proxy resets Chromium's CONNECT, and
+  no combination of `--proxy-server`, `--ignore-certificate-errors`, playwright's `proxy:` option or
+  `NODE_EXTRA_CA_CERTS` fixes it. `curl` reaches everything. **The recipe:** ONE node script that (1)
+  starts a `node:http` server on 127.0.0.1 which forwards every path to `https://admin.checkitforme.com`
+  through `execFile('curl', ['-sS','-X',method,url,'-H','x-admin-token: …'])`, then (2) launches
+  playwright-core at `http://127.0.0.1:<port>`. Live bytes, live data, and the browser only ever talks
+  to loopback. One process start-to-finish, so no background task and no compute gate to unlock.
+  Companion facts: the Admin shell is served at `/`, not `/app.html` (which 404s) ·
+  `node_modules/playwright` is an EMPTY dir, import `playwright-core` · chromium lives at
+  `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` and needs `--no-sandbox` · top-level `const`s in
+  `app.html` (`CHAINS`, `POL`) are NOT on `window`, so name them bare inside `page.evaluate` · a chain
+  row opens with `pickChainRow(id)`.
 - **`scripts/test-all.sh` spawns local servers + headless browsers — don't run it reflexively, and never
   leave it orphaned** (owner 07-20, it was killing his compute + morale). The `smoke:`/`qa:` lines each
   boot a server (ports 8788-8798) and Chromium. If the run is killed partway (OOM, worker restart), those
