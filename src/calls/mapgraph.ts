@@ -75,6 +75,10 @@ export interface EvidenceCall {
   transcript?: string[];           // the menu lines we heard (kept only for the winning version)
   greeting?: string;               // what the person said when they picked up — WHICH desk we reached
   transferAtSec?: number | null;   // when the machine said "transferring you now"
+  /** WE hung up, on the ring, on purpose (a re-listen). The menu was walked in full and the desk was
+   *  proved to ring, so this call MEASURES the menu — but it never tried for Staff, so it must not be
+   *  counted as a call that failed to reach one. Without this a perfect re-listen reads as 0% reached. */
+  endedOnRing?: boolean;
   /** WHEN, in the STORE's own clock (runtime spec §10.4). A menu at 9pm is often not the daytime
    *  menu, and without this we would chase a "failure" that only means we called after hours. */
   hourLocal?: number | null;       // 0-23 where the store is
@@ -221,7 +225,9 @@ const STALE_DAYS = 45;
  *  same and the dashboard can explain the number. The owner's rule from the spec: never trust one
  *  observation; prefer multiple calls, multiple days, multiple stores before raising confidence. */
 export function scoreConfidence(ev: Evidence, nowSec = Math.floor(Date.now() / 1000)): { score: number; label: ConfidenceLabel; why: string } {
-  const calls = (ev?.calls || []).filter((c) => c && c.reachedHuman);
+  // A call proves the ROUTE when it walked the whole menu: a person answered, or the store announced
+  // the handoff and we hung up on the ring (a re-listen). Both walked the same path to the same end.
+  const calls = (ev?.calls || []).filter((c) => c && (c.reachedHuman || c.endedOnRing));
   if (!calls.length) {
     const tried = (ev?.calls || []).length;
     return { score: 0, label: "unknown", why: tried ? `${tried} call(s), no human reached` : "no evidence yet" };
@@ -722,8 +728,9 @@ export async function addEvidence(versionId: number, call: EvidenceCall): Promis
   const calls = [...(v.evidence.calls || []), call].slice(-25);
   const scored = scoreConfidence({ calls });
   await client.execute({
-    sql: `UPDATE nav_map_versions SET evidence=?, confidence=?, confidence_label=? WHERE id=?`,
-    args: [JSON.stringify({ calls }), scored.score, scored.label, versionId],
+    // `why` travels with the score or the screen keeps showing the reason for the PREVIOUS number.
+    sql: `UPDATE nav_map_versions SET evidence=?, confidence=?, confidence_label=?, why=? WHERE id=?`,
+    args: [JSON.stringify({ calls }), scored.score, scored.label, scored.why, versionId],
   });
 }
 
@@ -1077,9 +1084,11 @@ export interface GraphRow {
 export function navSecondsOf(recipe: MapRecipe | null, ev: EvidenceCall[]): number | null {
   if (!recipe) return null;
   if (recipe.type === "direct" || pathSignature(recipe) === "direct") return 0;
-  // The fastest handoff we have actually measured. Only reached calls count: a call that never got
-  // through has no menu-end to report.
-  const announced = ev.filter((c) => c.reachedHuman && typeof c.transferAtSec === "number")
+  // The fastest handoff we have actually measured. A call counts when it got all the way through the
+  // menu — the store either handed us to a person, or announced the handoff and we hung up on the ring
+  // (a re-listen). Both measured the same thing: the second the menu was finished with us. A call that
+  // never got through has no menu-end to report and is excluded by having no transfer moment.
+  const announced = ev.filter((c) => (c.reachedHuman || c.endedOnRing) && typeof c.transferAtSec === "number")
     .map((c) => c.transferAtSec as number).filter((n) => n > 0);
   if (announced.length) return Math.min(...announced);
   const steps = (recipe.steps || []).map((s) => Number(s.atSec)).filter((n) => Number.isFinite(n) && n > 0);
@@ -1089,8 +1098,12 @@ export function navSecondsOf(recipe: MapRecipe | null, ev: EvidenceCall[]): numb
 /** How often this recipe actually lands on Staff. Failed calls are evidence (runtime spec §10.5), so a
  *  route that keeps reaching nobody must stop looking healthy. */
 export function reachedPctOf(ev: EvidenceCall[]): number | null {
-  if (!ev.length) return null;
-  return Math.round((ev.filter((c) => c.reachedHuman).length / ev.length) * 100);
+  // Only calls that STAYED for Staff can answer this. A re-listen hangs up the second the desk starts
+  // ringing, by design, so counting it here would report 0% for a route that worked perfectly. No call
+  // has waited for Staff yet = no number, never a zero.
+  const tried = ev.filter((c) => !c.endedOnRing);
+  if (!tried.length) return null;
+  return Math.round((tried.filter((c) => c.reachedHuman).length / tried.length) * 100);
 }
 
 /** One row per chain for the Admin map screen: what we press/say, how fast it gets to a person, how
@@ -1188,9 +1201,12 @@ function trendOf(all: MapVersion[], active: MapVersion | null, recipe: MapRecipe
   // own evidence starts empty. Reading the active version alone would reset the history at the exact
   // moment there was an improvement worth showing.
   // Oldest version first, so "where we started" really is the start: the list arrives newest-first.
+  // A call counts once it proved the route: a person answered, or the store announced the handoff and
+  // we hung up on the ring. Reading `reachedHuman` alone hid every re-listen, so the chain page said
+  // "no calls" the moment after one had run.
   const calls = all.filter((v) => v.storeId === 0)
     .slice().sort((a, b) => a.version - b.version)
-    .flatMap((v) => v.evidence?.calls || []).filter((c) => c.reachedHuman);
+    .flatMap((v) => v.evidence?.calls || []).filter((c) => c.reachedHuman || c.endedOnRing);
   // Stable: calls made in the same second (a simulated run, or a burst) keep the order they were
   // recorded in, so the first measurement cannot be decided by a coin toss.
   const timed = calls.filter((c) => typeof c.seconds === "number" && (c.seconds as number) > 0)
@@ -1475,7 +1491,8 @@ export async function recordFailedAttempt(o: {
     }].slice(-25),
   };
   const recent = evidence.calls.slice(-FAIL_WINDOW);
-  const recentFails = recent.filter((c) => !c.reachedHuman).length;
+  // A re-listen ends on the ring on purpose, so it is never a failure however many run in a row.
+  const recentFails = recent.filter((c) => !c.reachedHuman && !c.endedOnRing).length;
   const scored = scoreConfidence(evidence, at);
   // A run of failures is the signal. Below the bar we still store the failure and leave trust alone.
   const flagged = recentFails >= FAILS_TO_FLAG;

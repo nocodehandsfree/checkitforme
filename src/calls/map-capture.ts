@@ -109,7 +109,7 @@ export function languageOfCall(steps: CapturedStep[]): Language {
 export function evidenceFromCall(opts: {
   navId?: string; storeId?: number; storeName?: string; steps: CapturedStep[];
   seconds: number | null; reachedHuman: boolean; path: string; note?: string; at?: number;
-  greeting?: string; transferAtSec?: number | null;
+  greeting?: string; transferAtSec?: number | null; endedOnRing?: boolean;
   hourLocal?: number | null; dow?: number | null; language?: Language;
 }): EvidenceCall {
   const at = opts.at || Math.floor(Date.now() / 1000);
@@ -119,6 +119,7 @@ export function evidenceFromCall(opts: {
     seconds: opts.seconds, promptCount: promptCount(opts.steps),
     reachedHuman: opts.reachedHuman, path: opts.path,
     greeting: opts.greeting, transferAtSec: opts.transferAtSec ?? null,
+    endedOnRing: opts.endedOnRing || undefined,
     hourLocal: opts.hourLocal ?? null, dow: opts.dow ?? null,
     // What language the menu spoke, read off the lines we heard. Free, and the field has to be
     // populated from the first call or it is worthless when discovery proper arrives.
@@ -146,6 +147,7 @@ export async function recordNavCall(s: {
   id: string; chainId: number | null; retailerId: number; retailerName?: string;
   steps: CapturedStep[]; humanAtSec: number | null; transferAtSec?: number | null;
   greeting?: string; recipe?: MapRecipe | null; relisten?: boolean; status: string;
+  endedOnRing?: boolean;
 }): Promise<{ recorded: boolean; why: string }> {
   const chainId = Number(s.chainId || 0);
   if (!chainId) return { recorded: false, why: "no chain on this call" };
@@ -171,6 +173,7 @@ export async function recordNavCall(s: {
     seconds: s.relisten ? null : s.humanAtSec, reachedHuman,
     path: s.recipe ? mod.pathSignature(s.recipe) : actions.map((a) => `${a.action}:${a.value}`).join(">"),
     greeting: s.greeting, transferAtSec: s.transferAtSec ?? null,
+    endedOnRing: s.endedOnRing,
     hourLocal: when.hour, dow: when.dow,
     note: s.relisten ? "re-listen" : "admin call",
   });

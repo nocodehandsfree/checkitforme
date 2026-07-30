@@ -802,6 +802,9 @@ function finish(s: NavSession, status: "human" | "failed" | "mapped") {
         id: s.id, chainId: s.chainId, retailerId: s.retailerId, retailerName: s.retailerName,
         steps: s.steps as never, humanAtSec: s.humanAtSec, transferAtSec: s.transferAtSec ?? null,
         greeting: s.greeting, recipe: s.recipe as never, relisten: s.relisten, status: s.status,
+        // WE ended it, on the ring, on purpose. `s.status` is already "done" by here, so the reason
+        // has to travel on its own or the map books a perfect re-listen as a call that missed Staff.
+        endedOnRing: status === "mapped",
       }))
       .then((r) => emit(s.id, "unknown", `Map updated: ${r.why}`, { recorded: r.recorded }))
       .catch((e) => console.error("[navigator] recordNavCall", e));

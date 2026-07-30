@@ -16,7 +16,8 @@ import { connectAtSecFor, recipeToDtmf } from "../src/calls/recipe";
 import {
   proposeVersion, approveVersion, activeMap, versionsFor, chainDetail, graphFor, graphSummary,
   openUnknowns, recordCallPath, recordFailedAttempt, learnFromReceipt, reportCallDrift, resetChainHistory,
-  type MapRecipe,
+  addEvidence, navSecondsOf, reachedPctOf, scoreConfidence,
+  type MapRecipe, type EvidenceCall,
 } from "../src/calls/mapgraph";
 import { lockRecipeToChain } from "../src/calls/trainer-batch";
 import { greetingFrom, looksLikeDirectPickup, menuStillTalking, parseSpokenOptions, isMenuLine, parseMenuOptions, mergeMenu } from "../src/calls/navigator";
@@ -391,6 +392,37 @@ async function main() {
     ok(((await chainDetail(chain.id)).calls as unknown[]).length === 0, "the mapping calls list is empty");
     ok(((await chainDetail(chain.id)).unknowns as unknown[]).length === 0, "and nothing is left waiting in Review");
     ok(!(await openUnknowns(400)).some((u) => u.chainId === chain.id), "including in the queue every chain shares");
+  }
+
+  // A RE-LISTEN IS NOT A FAILED CALL. It walks the menu, the store announces the handoff, and we hang
+  // up on the ring on purpose. Every number on the chain page used to read that as a miss: nav time
+  // fell back to the recipe's own declared timings, "Reached Staff" printed 0%, the call count showed
+  // zero, and trust stayed "unknown" — all for a call that worked perfectly.
+  console.log("▶ A CALL THAT ENDED ON THE RING — a good map, not a miss");
+  {
+    const live = (await activeMap(chain.id))!;
+    const declared = navSecondsOf(live.recipe, []);
+    const ring: EvidenceCall = {
+      navId: "sim-relisten", at: now(), day: new Date().toISOString().slice(0, 10),
+      storeId: east.id, storeName: east.name, seconds: null, reachedHuman: false, endedOnRing: true,
+      path: pathSig(live.recipe), transferAtSec: 68, note: "re-listen",
+    };
+    await addEvidence(live.id, ring);
+    const row = (await graphSummary()).find((r) => r.chainId === chain.id)!;
+
+    ok(navSecondsOf(live.recipe, [ring]) === 68, `nav time is the 68s we MEASURED, not the ${declared}s the recipe declares`);
+    ok(row.navSeconds === 68, "and that is the number the chain page reads");
+    ok(row.calls === 1 && row.stores === 1, `the call counts: ${row.calls} call, ${row.stores} store`);
+    ok(reachedPctOf([ring]) === null, "Reached Staff has no number yet, because no call has waited for Staff");
+    ok(row.reachedPct === null, "so the page shows no percentage rather than a false 0%");
+    ok(scoreConfidence({ calls: [ring] }).label === "observed once", "and it counts toward trust like any call that walked the route");
+
+    // The percentage still tells the truth once calls DO wait for Staff, and the ring call never
+    // dilutes it in either direction.
+    const stayed = { ...ring, navId: "sim-stayed", endedOnRing: undefined, reachedHuman: true, seconds: 84 } as EvidenceCall;
+    const missed = { ...ring, navId: "sim-missed", endedOnRing: undefined, reachedHuman: false } as EvidenceCall;
+    ok(reachedPctOf([ring, stayed]) === 100, "one ring call plus one that reached Staff reads 100%, not 50%");
+    ok(reachedPctOf([ring, stayed, missed]) === 50, "and a call that genuinely missed Staff still drags it down");
   }
 
   console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);
