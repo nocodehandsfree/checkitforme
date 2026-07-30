@@ -27,34 +27,34 @@ ASSERTED in `test-behaved.ts` so it cannot drift back into sentences. Steps = **
 Charlie dropped · Charlie left · Check ended**, ONE fact per line. Cost = **Menu Nav (Alpha|Bravo|None) · Charlie
 · Total**. **BUG FIXED: `callSeconds` is only written by the OLD path, so every new-engine check printed 0s;
 `rollupFromRow` reads the last step.** Ladder for his six calls: `echo-wrong-department-save.md` §5.
-## THE ONE EAR — **a `PickupEar` was built here and DELETED the same night; §10 says never build a second.** The
-Ear is a **VETO, never a green light**, cannot invent a person, and anchors come off its own recording count.
-- **PM: bail's else-branch blind-joins Charlie on a stopwatch if bail is off** (locked bridge; owner has it). **The `.unlock` flow WORKS** — the sprawl gate only hooks Write, so `printf 'src/voice/**\n' > .unlock` opens it; fix that scope ONLY then DELETE it (a spec check fails while one is left lying around).
-## 07-30 CHAIN PAGE + RE-LISTEN: ALL BUILT + SHIPPED to Admin. Box `docs/specs/mapping-admin/plan.md`,
-every string `copy.md` (**a control panel talks to nobody**), comps 2f rev + 2h/2i/2j/2k all built.
-- **`menuStillTalking`**: the MODEL's "human" is NOT proof. Tarzana's "A healthcare provider." was the recording's own tail and became a store recipe. Vetoes ONLY that shape; 7 asserts cover every exit. **NAV TIME ≠ time to Staff:** `navSecondsOf` is for READING; `seconds` is what `connectAtSecFor` opens Charlie on. A ring-ended call writes `seconds: null` ON PURPOSE = no timer = the agent waits for a voice. **Never let a ring moment become `seconds`.**
-- **A RING-ENDED CALL IS A GOOD MAP, NOT A MISS** — `EvidenceCall.endedOnRing` (set in `finish` off `status==="mapped"`; `s.status` is already "done" by then, so it MUST travel on its own). FOUR readers were guessing off `reachedHuman` alone and all read a perfect re-listen as a failure: `navSecondsOf` · `trendOf` calls/stores · `scoreConfidence` · the recent-fails flag. **`reachedPctOf` counts ONLY calls that waited for Staff** → null, never a false 0%.
-- **RE-LISTEN** (`relisten` on placeNavCall + `/api/admin/trainer/document`): walks the KNOWN route off `navPlanFromVersion`, **hangs up on the SECOND REAL RING** (`ConversationEar.rings`, one count per burst; no Ear → published 6s cadence), never asks, and IS lockable (owner: that call is the v1 recipe).
+## THE ONE EAR — **a `PickupEar` was built here and DELETED the same night; §10 says never build a second.** It is a **VETO, never a green light**, cannot invent a person, and anchors come off its own recording count.
+- **PM: bail's else-branch blind-joins Charlie on a stopwatch if bail is off** (locked bridge; owner has it). **`.unlock` WORKS** — the sprawl gate only hooks Write, so `printf 'src/voice/**\n' > .unlock` opens it; fix that scope ONLY, then DELETE it.
+## 07-30 CHAIN PAGE + RE-LISTEN: BUILT + SHIPPED. Box `docs/specs/mapping-admin/plan.md`, strings `copy.md` (**a control panel talks to nobody**), comps 2f rev + 2h/2i/2j/2k.
+- **`menuStillTalking`**: the MODEL's "human" is NOT proof (Tarzana's "A healthcare provider." was the recording's own tail and became a store recipe). **NAV TIME ≠ time to Staff:** `navSecondsOf` is for READING; `seconds` is what `connectAtSecFor` opens Charlie on. A ring-ended call writes `seconds: null` ON PURPOSE = no timer = the agent waits for a voice. **Never let a ring moment become `seconds`.**
+- **A RING-ENDED CALL IS A GOOD MAP, NOT A MISS** — `EvidenceCall.endedOnRing` (set in `finish` off `status==="mapped"`; `s.status` is already "done" by then, so it MUST travel on its own). FOUR readers guessed off `reachedHuman` alone and read a perfect re-listen as a failure: `navSecondsOf` · `trendOf` · `scoreConfidence` · the recent-fails flag. **`reachedPctOf` counts ONLY calls that waited for Staff** → null, never a false 0%.
+- **RE-LISTEN** (`relisten` on placeNavCall + `/api/admin/trainer/document`): walks the KNOWN route, **hangs up on the SECOND REAL RING** (`ConversationEar.rings`, one per burst; no Ear → 6s cadence), never asks, IS lockable.
 - **EVERY call feeds the map now** — `recordNavCall` (map-capture) from `finish`; sweep + mapper pass `callerRecords:true`.
-- **CVS (chain 5) IS DONE + PROVEN 07-30.** `resetChainHistory` wiped its 11 pre-fix calls, then ONE re-listen to
-  Lanett (11373) landed: nav 68s · v1 "observed once" · Review empty · `seconds` null. THE PAGE HAS TWO COPIES OF
-  EVERY RULE — `versionNavSecs` and `menuLadder` live in app.html and BOTH had to learn `endedOnRing`/the model
-  name. **Fix a mapgraph reader → grep app.html for its twin** or the sheet contradicts the hero.
-- **NEXT: Walgreens (chain 10), NOT a re-listen.** Live v1 is the hammer route `press 0 ×4`. Re-map fresh, 9
-  stores, ALL Pacific. Keypad, so it proves the ladder prints **ALPHA**; CVS proved BRAVO.
-- **07-30 RAILWAY QUEUE — upstream GitHub outage, twice.** `deploymentCancel` on a wedged deploy errors once, the retry lands; every push queues another build and they run one at a time.
+- **CVS (chain 5) DONE + PROVEN 07-30, TWO real checks to Lanett (11373):** 51s + 55s → **nav 53s, an AVERAGE**
+  (`Math.min` was wrong; a new check must NUDGE, not overwrite) · v1 "observed multiple times" · Review empty.
+  **THE PAGE HAS TWO COPIES OF EVERY RULE** (`versionNavSecs` + `menuLadder`): fix a mapgraph reader → grep app.html.
+- **THE CLOCK IS GONE FROM A RE-LISTEN.** It ran the route as ONE timed block, listener opened only at the END
+  (4-line menu recorded as 1 line); firing on recorded seconds then walked AHEAD of a late menu (live: "front"
+  over "Or press 2", "general" at the front-door question, CVS re-prompted). Now: ordinary gather loop, steps
+  fired from `navTurn`, cue = the prompt naming our word else `isMenuLine`/`looksLikeQuestion`; `isReprompt`
+  REPEATS the last answer. **Never re-introduce `atSec >=`.**
+- **A BARGE CUTS THE RECORDING MID-SENTENCE**; its tail returns next turn as a stray line ("You'd like to do."). A short non-question within `TAIL_SEC` of our own step is JOINED to the previous store line.
+- **NEXT: Walgreens (chain 10), NOT a re-listen.** Live v1 is the hammer route `press 0 ×4`. Re-map fresh, 9 stores, ALL Pacific. Keypad, so it proves the ladder prints **ALPHA**; CVS proved BRAVO.
+- **RAILWAY 07-30:** `deploymentCancel` on a wedged deploy errors once, retry lands; every push queues a build, run one at a time.
 ## VERIFIED / NOT VERIFIED
-- **DRIVEN 07-30:** 69 delta-clip (REAL ws provider + real carrier socket, incl. the SILENT hand-over) · 65
-  prompts · 60 behaved · 100 map-e2e (same 2 PRE-EXISTING fails, Chains work) · 43 listen-nav · 72 receipt · 13
-  bridge · 9 runtime-gates. tsc + spec gates clean. **line-by-line 99/101** (7.12 only).
-- **07-30 LIVE ON STAGING:** the switch reads ON; the Fun store's rendered instructions carry the rule with the
-  flag `"true"`; flipping it OFF makes them say never ask; flipped back ON and left ON. Checks 204/205 clean.
-- **STILL OPEN, needs REAL CUSTOMER checks:** §11 cost per delivered answer · a real `holdSeconds` > 0. **7.12
-  NOT BUILT.** **NOT PROVEN, needs HIS phone:** the save with a real human saying "this is the pharmacy" — the
-  words Charlie picks and how the hand-over sounds. Everything around them is proven.
+- **DRIVEN 07-30:** 131 map-sim · 69 delta-clip (REAL ws + real carrier socket, incl. the SILENT hand-over) · 65
+  prompts · 60 behaved · 100 map-e2e (2 PRE-EXISTING fails, Chains work) · 43 listen-nav · 72 receipt · 13 bridge
+  · 9 runtime-gates. tsc + spec gates clean. **line-by-line 99/101** (7.12 only).
+- **07-30 LIVE ON STAGING:** the wrong-department switch reads ON; the Fun store's rendered instructions carry the rule; flipping it OFF makes them say never ask; left ON. Checks 204/205 clean.
+- **STILL OPEN, needs REAL CUSTOMER checks:** §11 cost per delivered answer · a real `holdSeconds` > 0. **7.12 NOT
+  BUILT.** **NOT PROVEN, needs HIS phone:** the save with a real human saying "this is the pharmacy". All else is.
 ## Engine — Branson HD `1P1JhCcLzeMmkvLi1BkG` speed 0.91 (BOTH envs) · echo gate 520/150 · ringback by published
 tone frequencies, 6 rings = hang up · **Charlie $0.00183/s, meters SILENCE** · Twilio WHOLE MINUTES · 5.2c base ·
-**all FOUR dial paths open a receipt** (bridge-place · navigator · tapedeck · provider-native `direct:<id>`).
-## Traps — never run the full suite for a small change; never deploy while he is mid-test-call.
-- `/api/*` is admin-gated whole — a route for a THIRD PARTY must be exempted or it 401s silently.
-- Auto-nav 0-hammers when it can't parse → FALSE "no human". Old whole-call Delta STAYS in the tree.
+**all FOUR dial paths open a receipt** (bridge-place · navigator · tapedeck · native `direct:<id>`).
+## Traps — never run the full suite for a small change; never deploy while he is mid-test-call. `/api/*` is
+admin-gated whole (a THIRD-PARTY route must be exempted or it 401s silently). Auto-nav 0-hammers when it cannot
+parse → FALSE "no human". Old whole-call Delta STAYS in the tree.
