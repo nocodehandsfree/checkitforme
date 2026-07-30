@@ -180,7 +180,7 @@ head("…and every way it can go wrong");
   const r = behaved({ timeline: savedCheck, rollup: { charlieSegments: 2 }, agentLines: [
     { text: OPENER, atSec: 9 }, { text: SAY_TRANSFER, atSec: 18 },
     { text: "So do you have them then?", atSec: 34 }] });
-  ok("carried on with the new person: asked the new person FAILS", row(r, "asked_the_new_person").pass === false, row(r, "asked_the_new_person").why);
+  ok("carried on after a HAND-OVER: asked the new person FAILS", row(r, "asked_the_new_person").pass === false, row(r, "asked_the_new_person").why);
   ok("…and asked once does NOT also cross, so one miss prints one cross", row(r, "asked_once").pass === true);
 }
 {
@@ -213,10 +213,29 @@ head("…and every way it can go wrong");
   ];
   const r = behaved({ timeline: walked, rollup: { charlieSegments: 2 }, agentLines: [
     { text: OPENER, atSec: 7 }, { text: "Heyy, do you have any Pokemon in stock right now?", atSec: 57 }] });
-  ok("a long wait is a new person too: asked once passes", row(r, "asked_once").pass === true, row(r, "asked_once").why);
-  ok("…the new person was asked", row(r, "asked_the_new_person").pass === true);
+  ok("a long wait is a maybe-new person: asked once passes, it does not cross", row(r, "asked_once").pass === true, row(r, "asked_once").why);
+  // A WALK AWAY IS NOT PROOF SOMEBODY ELSE PICKED UP. Requiring a second question here would cross a
+  // check where Staff went to the shelf, came back themselves, and the agent rightly carried on.
+  ok("…and the new-person row is a DASH, because a walk away is not a hand-over", row(r, "asked_the_new_person").pass === null, row(r, "asked_the_new_person").why);
+  ok("…and it says why there is nothing to require", /may or may not have been the same person/.test(row(r, "asked_the_new_person").why));
   ok("…and being put through is a dash, because we never landed wrong", row(r, "asked_to_be_put_through").pass === null);
   ok("…and the meter row says hold, not hand-over", /hold/i.test(row(r, "meter_stopped_on_hold").why) && !/hand-over/i.test(row(r, "meter_stopped_on_hold").why), row(r, "meter_stopped_on_hold").why);
+}
+
+{
+  // The check he will run first: Staff say "hold on", walk off, come back THEMSELVES and answer. The
+  // agent carrying on is correct, and not one row may cross.
+  const walkedBack: BehavedEvent[] = [
+    ev("dialed", 0, { plannedLane: "direct", plan: [] }), ev("human_detected", 6), ev("charlie_join", 6, { segment: 1 }),
+    ev("hold_start", 18, { reason: "quiet" }), ev("charlie_leave", 18, { strategy: "reopen" }),
+    ev("hold_end", 60, { gapSec: 42, maybeNewPerson: true, reason: "quiet" }), ev("charlie_join", 60, { segment: 2 }),
+    ev("verdict", 68), ev("hangup", 70),
+  ];
+  const r = behaved({ timeline: walkedBack, rollup: { stepsFired: 0, stepsOnPause: 0, charlieSegments: 2 }, agentLines: [
+    { text: OPENER, atSec: 7 }, { text: "Perfect, thank you so much, have a good one.", atSec: 63 }] });
+  ok("Staff walked off and came back themselves: NOT ONE row crosses",
+    r.every((x) => x.pass !== false), r.filter((x) => x.pass === false).map((x) => x.key));
+  ok("…the meter row ticks", row(r, "meter_stopped_on_hold").pass === true, row(r, "meter_stopped_on_hold").why);
 }
 
 console.log(`\n${fail ? "FAIL" : "PASS"}  ${pass} passed, ${fail} failed`);

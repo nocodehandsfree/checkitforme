@@ -104,20 +104,27 @@ export function behaved(input: BehavedInput): BehavedRow[] {
   const every = (kind: string) => tl.filter((e) => e.kind === kind);
   const turns = (input.agentLines || []).map(asTurn).filter((t) => t.text);
   const sums = input.rollup || {};
-  // SOMEBODY NEW PICKED UP. Written by the engine on every wait that ended with a different person:
-  // a hand-over is always one of these, and so is a long enough walk away. Each one buys the agent
-  // one more question, because the person who just answered never heard the first.
-  const newPeople = tl.filter((e) => e.kind === "hold_end" && (e.detail || {}).maybeNewPerson === true);
+  // SOMEBODY NEW *MAY* HAVE PICKED UP versus somebody new CERTAINLY DID, and the two are not the
+  // same row. A long walk away sets `maybeNewPerson` because it might be a different person — the
+  // agent is told, and then HE decides from the voice. A hand-over is not a maybe: whoever answers
+  // the next desk never heard the question.
+  //
+  // So the allowance to ask again is generous (any maybe), and the REQUIREMENT to ask again is strict
+  // (a hand-over only). Getting that backwards prints a red cross on a check where Staff walked to
+  // the shelf, came back themselves, and the agent rightly carried on — which would be a lie about
+  // the engine, on the one screen he tests from.
+  const maybeNew = tl.filter((e) => e.kind === "hold_end" && (e.detail || {}).maybeNewPerson === true);
+  const handedOver = maybeNew.filter((e) => (e.detail || {}).reason === "transfer");
   // Where we landed on a desk that could not answer. Read off the words on the check itself.
   const wrongDept = tl.find((e) => (e.detail || {}).wrongDepartment === true) || null;
 
   return [
-    askedOnce(turns, newPeople.length),
+    askedOnce(turns, maybeNew.length),
     noKeypadAtPerson(sec(first("human_detected")), every("alpha_press")),
     meterStoppedOnHold(tl, sums),
     mappingHeld(tl, sums, sec(first("human_detected")), sec(first("charlie_join"))),
     askedToBePutThrough(turns, wrongDept),
-    askedTheNewPerson(turns, newPeople),
+    askedTheNewPerson(turns, handedOver, maybeNew),
   ];
 }
 
@@ -225,24 +232,30 @@ function askedToBePutThrough(turns: AgentTurn[], wrongDept: BehavedEvent | null)
  * line and never heard the question. A LIVE check has the second on every line, so this is exact; a
  * finished one has a flat transcript with no clock, and then the order of the lines is all there is.
  */
-function askedTheNewPerson(turns: AgentTurn[], newPeople: BehavedEvent[]): BehavedRow {
+function askedTheNewPerson(turns: AgentTurn[], handedOver: BehavedEvent[], maybeNew: BehavedEvent[]): BehavedRow {
   const row = (pass: boolean | null, why: string): BehavedRow => ({
     key: "asked_the_new_person", label: "Asked the new person", pass, why,
-    tip: "When somebody new picks up they never heard the question, so the agent must ask them. Carrying on mid answer with a stranger is a fail.",
+    tip: "Only counts after a hand-over, where whoever picks up never heard the question. A walk away is a maybe, and the agent judges that one from the voice.",
   });
-  if (!newPeople.length) return row(null, "The same person was on the line the whole check, so nobody new had to be asked.");
-  if (!turns.length) return row(null, "Somebody new came on, but nothing the agent said was written down.");
-  const back = Number(newPeople[0].atSec ?? 0);
+  if (!handedOver.length) {
+    // A WALK AWAY IS A MAYBE, NOT A FACT. The agent is told the person may be new and decides from the
+    // voice; Staff coming back themselves and the agent carrying on is right, so requiring a second
+    // question here would cross a check that behaved.
+    if (maybeNew.length) return row(null, `Somebody was away ${plural(Number(maybeNew[0].detail?.gapSec ?? 0), "second", "seconds")} and came back, which may or may not have been the same person, so there is nothing to require here.`);
+    return row(null, "Nobody was handed on to on this check, so there was no new person to ask.");
+  }
+  if (!turns.length) return row(null, "We were handed on, but nothing the agent said was written down.");
+  const back = Number(handedOver[0].atSec ?? 0);
   const asks = turns.filter((t) => isAsk(t.text));
   const timed = turns.some((t) => t.atSec != null);
   if (timed) {
     const after = asks.filter((t) => t.atSec != null && Number(t.atSec) >= back);
-    if (!after.length) return row(false, `Somebody new came on at ${back}s and the agent carried on without asking them.`);
-    return row(true, `Somebody new came on at ${back}s and the agent asked them at ${Number(after[0].atSec)}s.`);
+    if (!after.length) return row(false, `We were handed on and somebody new picked up at ${back}s, and the agent carried on without asking them.`);
+    return row(true, `Somebody new picked up at ${back}s and the agent asked them at ${Number(after[0].atSec)}s.`);
   }
   // No clock on this record. Two questions and a new person is the save working; one is not.
-  if (asks.length > 1) return row(true, `Somebody new came on at ${back}s and the agent asked again, read off the order of what was said rather than the clock.`);
-  return row(false, `Somebody new came on at ${back}s and only one question was asked on the whole check, so they were never asked.`);
+  if (asks.length > 1) return row(true, `Somebody new picked up at ${back}s and the agent asked again, read off the order of what was said rather than the clock.`);
+  return row(false, `Somebody new picked up at ${back}s and only one question was asked on the whole check, so they were never asked.`);
 }
 
 /**
