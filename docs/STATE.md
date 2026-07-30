@@ -25,9 +25,8 @@ test-store calls are priced and those never count. Your first real check fills i
   feeds the map now, whoever started it. That is why this morning's CVS call showed up nowhere.
 - **Re-map now hangs up on the second ring** of the desk. It walks the menu we know, proves the desk
   really rang, and never troubles Staff. That call becomes the recipe.
-- ⚠️ **Your first real one is waiting on the host.** Our code went up at 1:02 PM Eastern and their
-  build queue has not moved in 20 minutes. Nothing else of ours is building; the two before it took five
-  minutes each. Not forced, per you.
+- **Un-stuck (07-30 ~1:30 PM Eastern, on your go).** The host's build line jammed for 27 minutes and
+  three of our updates piled up behind it. I cleared the jam; the newest update carries all three.
 ## The new calling engine is ON for staging. Your six test calls are the last thing (07-28/29)
 - **Nothing to flip.** A check from staging.checkitforme.com goes through the new engine now. The store hears the
   question the second they say hello, in our own voice, and if Staff walk away we stop paying. **Listen for
