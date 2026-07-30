@@ -4674,8 +4674,10 @@ function buildChainPicker(){
     // of 130 chains reading "observed once" says nothing he can do anything about. "Needs review" and
     // a waiting route stay, because both are work.
     const g=mapRow(ch.id);
-    const trust=g&&g.proposed>0 ? '<span style="color:#F59E0B;font-weight:700">1 waiting</span>'
-      : (locked&&g&&g.confidenceLabel==='needs review') ? '<span style="color:var(--red);font-weight:700">needs review</span>' : null;
+    // Both are two words and neither may break across lines: "needs / review" hanging alone under a
+    // row is the orphan wrap the copy guide forbids, and it happens on every narrow phone.
+    const trust=g&&g.proposed>0 ? '<span style="color:#F59E0B;font-weight:700;white-space:nowrap">1 waiting</span>'
+      : (locked&&g&&g.confidenceLabel==='needs review') ? '<span style="color:var(--red);font-weight:700;white-space:nowrap">needs review</span>' : null;
     const meta=[nStores?nStores+' store'+(nStores===1?'':'s'):null, ch.muted?'muted':null, route, trust].filter(Boolean).join(' · ');
     return `<div class="pickrow${String(ch.id)===cur?' on':''}" data-id="${ch.id}" data-name="${esch((ch.name||'').toLowerCase())}" data-tier="${ch.tier??''}" data-type="${esch((ch.type||'').toLowerCase())}" data-mapped="${locked?1:0}" data-changed="${(g&&(g.proposed>0||g.drift30d>0||g.openUnknowns>0))?1:0}" onclick="pickChainRow(${ch.id})"${ch.muted?' style="opacity:.5"':''}>
       <span class="setlogo">${logoTile(ch)}</span>
