@@ -1,16 +1,16 @@
 # STATE — the owner's single source of truth
 One screen. Every session updates this at close (≤40 lines). New truth REPLACES old — history is in
-git. Last updated: 2026-07-30 (check status page has its big step window; verdicts read as they happen).
+git. Last updated: 2026-07-30 (check status bottom clear on every screen; the verdict wait on ElevenLabs is gone).
 ## The check status page tells you where the check is, in one big line (07-30, on staging)
 - The glowing box now says `Calling` → `Getting through the menu` → `Talking to Staff` instead of just the
   store name, with the store's mark big behind it. The step log and the scroll-back reveal are untouched.
-- **Both fixes are on staging, check your phone:** the conversation now follows its newest line and the
-  page ends clear of Safari's bottom bar, and "Too far?" can no longer flash while its switch is off.
-  Task: `docs/tasks/site-check-status-fixes.md`. Alerts (no double subscribing, new wording) is second.
+- **On staging, driven by machine on the real staging site:** the conversation follows its newest line,
+  the live page AND the pulling-the-result screen both end clear of Safari's bottom bar, and "Too far?"
+  can no longer flash while off. Task: `docs/tasks/site-check-status-fixes.md`. Alerts second.
 ## Verdicts are worked out while the check runs, not after it (07-30, on staging)
-- We used to wait until the check ended to start reading what Staff said. Now it is read as it happens, so the
-  answer is ready the moment we hang up. Nothing changed on the line and the two-reads-must-agree rule is intact.
-- **Still slow:** we wait on ElevenLabs' own read. Dropping it needs your call — the trade-off is in the task file.
+- What Staff says is read as it happens; a shaky read still lands "couldn't tell" with no charge.
+- **The wait on their read is GONE (07-30, your order):** at hang up we settle the answer from our own copy
+  of the words plus our finished read; theirs counts only when already back. One Fun check shows it real.
 ## A wrong department no longer costs you the check (07-30, on staging)
 - We ask once to be put through, stop paying while they hand us over, and ask again when somebody new
   picks up. A switch in Calls → App turns it off. Only your phone can test the real words.

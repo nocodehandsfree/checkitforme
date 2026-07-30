@@ -1,7 +1,10 @@
 # Check status page: the bottom bar, then the alerts list
 
-**System:** site · **Status:** active — §1 and §2 SHIPPED to staging 07-30 (PR #100), awaiting the
-owner's phone; §3 alerts NOT started (owner-ordered second). · **Owner-named 2026-07-30.**
+**System:** site · **Status:** active — §1 + §2 shipped (PR #100), then round 2 07-30 (PR #101): the
+wait screen ("Pulling the result", `body.rv-pend`) carries the same bar-clearing strip and parks on the
+tail, AND the owner ordered the §4 wait dead: verdict at hang up (`src/voice/elevenlabs.ts` accepts
+"processing" with full turns + duration). All driven on the real staging site by relay; iOS paint + one
+real Fun check are HIS. §3 alerts NOT started (owner-ordered second). · **Owner-named 2026-07-30.**
 **This task IS the unlock authority** for the check-status section of `public/checkit.html` and for
 `public/checkit.html` generally: write the exact glob into `.unlock`, fix ONLY that scope, delete it after.
 
@@ -135,9 +138,13 @@ Facts you need before you form an opinion:
 - Also unexamined: the browser polls `/pub/result` every 1s and each tick re-fetches the whole
   conversation from ElevenLabs. Overlapping ticks can enter the finalize branch together.
 
-**→ Answer this in your first reply to him: is there anything else we can do to make the verdict
-appear faster, and what would it cost?** He does not want an essay — give him the one change you
-would make, in his words, and what it risks.
+**RESOLVED 07-30 (owner ruled, in chat):** no new cost, ever. The fix shipped is the gate at
+`src/voice/elevenlabs.ts` `getConversation`: EL's "processing" status (phone side over, their analysis
+cooking) now finalizes immediately when real transcript turns AND a real duration are present — the
+on-demand consensus path (our live read + the word rules) runs at hang up, their read gets its veto
+only when already back (webhook still applies it late). Anything with less data waits for "done"
+exactly as before. The owner also ruled the words themselves need no end-of-check copy: ours is the
+transcript (transcriptPatch already prefers it), theirs only backfills when we recorded nothing.
 
 ---
 
