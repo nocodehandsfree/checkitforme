@@ -1,8 +1,9 @@
 # Unify the Admin — the gate FIRST, then one page per session
 
-**System:** admin · **Status:** active — **STEP 1 (the gate) IS DONE AND LIVE 07-30 (@10c3faa5).**
-Step 2 (page by page) is **UNBLOCKED** — the Testing scorecard merged to staging 07-30 (@5abfaf9b), and the
-gate refused two things in it on sight. **Next page: Live (dash).** One agent in `app.html` at a time.
+**System:** admin · **Status:** active — **STEP 1 (gate) + PAGE 1 (Live/dash) DONE AND LIVE 07-30 (@71b724a5).**
+`dash` is SEALED in the gate. **Next page: App (settings).**
+One agent in `app.html` at a time. ⚠️ The gate calls `title=` the dead hint pattern; Calls and Testing still use
+it on the status icon, where `aria-label` already carries the label. Both drop it on their own pass, together.
 **Why (owner, 07-29):** six agents have tried a whole-Admin cleanup and every one died mid-pass.
 This attempt is different the same way the rebuild was: the rules become a MACHINE GATE before any
 page is touched, so a cleaned page can never rot back.
@@ -40,6 +41,19 @@ talk time — never receipt/room/lane/"the thinking").
 named. The task closes when every page in the cleanup list has had its pass.
 
 **Verify-live output (paste per page — a page without it is NOT done):**
+```
+PAGE 1 — LIVE (dash), 07-30 @71b724a5, SEALED
+  gate:    node scripts/qa-admin-unify.mjs --page dash  → dash clean · then sealed → 1/25 pages
+  driven:  local server + playwright at 390px (GOTCHAS Compute recipe), walked as the owner would:
+           rows read Cost per check / Money / Members, each with its sub line and tip · vitals read
+           Reach 30d + Margin, both "none yet" on an empty record, never a red 0% · the cost drill
+           opens on THE BASELINE: ceiling 6.7¢ "a third of 20.0¢ on Collector", thinnest plan 4.2¢,
+           measured by hand 5.3¢ to 8.5¢ · Call health opens from CALLS · Calc shows the voice balance
+           line + the plan-size box · no clipped sub lines, no sideways scroll, no page errors of ours.
+  ship:    bash scripts/ship-admin.sh → "✓ THE Admin is serving the new shell (71b724a5)"
+           --status → {"source":"override","commit":"71b724a5","bytes":656879}
+  NOT verified: the cost card's server half rides the promote, so on prod Live the baseline stays hidden
+  until then (same promote the ops dashboard is waiting on). Never seen on a real iPhone.
 ```
 STEP 1, the gate (07-30) — no page touched, so the proof is the gate itself + the ship path:
   $ node scripts/qa-admin-unify.mjs --all   → unify-gate PASS: 18  FAIL: 9  (exit 1: it bites today)

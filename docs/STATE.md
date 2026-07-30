@@ -11,21 +11,23 @@ git. Last updated: 2026-07-30 (test calls grade themselves now; the engine still
 - **Set the top switch to Staging** to read it: your test calls happen there, and so does the new engine. On Live
   it is empty until a release. **I have not seen a red cross or a real hold yet** — the next time you call the
   Fun store and walk away for 30 seconds, that is the one that proves the hold row.
-## The Admin can no longer un-clean itself (07-30, live)
-- The cleanup rules are now a machine check that runs before any Admin change goes live. Once a screen is cleaned it
-  is locked: put back a hover-only hint, a "click here" line, or a line you called untrue and the change is refused.
-  **18 problems across 9 screens**; none locked yet, so nothing is blocked. First screen to clean is Live (the dashboard).
-## The Policy screen sets your prices the way every other switch works (07-29, live on Admin)
-- Prices sit in the same rows as the on/off switches. **No Save button any more:** type a number, tap away, it is
-  saved and customers see it. A word bounces back. Every price stayed put; your analytics ID moved to App.
-## The dashboard tells you what a check costs, off real checks (07-28)
-- Slide the top of the dashboard: what a check costs, the last week beside it, then what happened, how we got in,
-  where the seconds went, tries per answer. **It reads "no finished checks yet" and that is TRUE** — only
-  test-store calls are priced and those never count.
-## The Chains page tells you what needs YOU, and the store map is real knowledge (07-26/27/28)
+## The bottom bar can never go dark again, and Live is cleaned (07-30, live on Admin)
+- **The tint is nailed down.** The dark band at the bottom where the Safari address bar sits came from three
+  different mistakes; all three are now refused before anything can go live, on the website and the Admin. I broke
+  it four ways on purpose to prove the check catches it. I still cannot see an iPhone from here.
+- **Live (the dashboard) is cleaned.** Open **Cost per check** and the first thing you read is **The baseline**:
+  your ceiling is 6.7¢, a third of the 20¢ a check earns on the $9.99 plan, worked out from your real prices, so
+  changing a price moves it. Under it, your thinnest plan needs 4.2¢, and the two costs I measured by hand.
+- **Three meters left that page.** Call time is gone for good (the cost drill says it better, and Chains has the
+  per-store version). Call health moved into Calls. Voice credits moved next to the voice plan in Calc, with how
+  many more checks it buys. Nothing was deleted. **Once a screen is cleaned it is locked and cannot rot back.**
+## Policy sets your prices like every other switch (07-29) — prices sit in the switch rows, **no Save button:**
+type a number, tap away, it is saved and customers see it. A word bounces back. Every price stayed put.
+## What a check costs, off real checks (07-28) — it reads "no finished checks yet" and that is TRUE: only
+test-store calls are priced and those never count. Your first real check fills it in, after a release.
+## The Chains page tells you what needs YOU (07-26/27/28)
 - Tap a chain: what a check costs, how long to a person, the menu step by step with its seconds. CVS 6.6¢, and you
-  can SEE its 19 seconds of ringing. 33 chains are flagged, and a better route appears above the old one: **Use
-  it** or **Keep the old one** — a changed route waits for your yes. **Read one:** a chain → **Mapping calls**.
+  can SEE its 19 seconds of ringing. 33 are flagged; a better route appears above the old one and waits for your yes.
 ## The new calling engine is ON for staging. Your six test calls are the last thing (07-28/29)
 - **Nothing to flip.** A check from staging.checkitforme.com goes through the new engine now. The store hears the
   question the second they say hello, in our own voice, and if Staff walk away we stop paying. **Listen for
