@@ -46,8 +46,6 @@ then they ride the next promote to prod):**
 |---|---|---|
 | [Admin: iOS bottom tint breaks on any slide-up](admin-glass-nudge.md) | admin | done 07-28 (LIVE @527a48f) |
 | [Feature names stay English on the Spanish site](feature-labels-spanish.md) | admin | done 07-27 |
-| [Result screen says "try again" with no way to retry the same store](site-result-retry-same-store.md) | site | ready (found 07-30) |
-| [Store picker seconds: menu time only, mapping must prove it](site-reach-menu-time.md) | site | blocked on mapper |
 | [Reconcile COPY_CHANGES_APPROVED.md location](copy-changes-approved-reconcile.md) | site | active |
 | [Alerts sheet formatting](alerts-sheet-formatting.md) | site | done 07-27 |
 | [Logo fidelity in My Zones + call-log header](logo-fidelity-zones-calllog.md) | site | done 07-27 (owner confirmed) |

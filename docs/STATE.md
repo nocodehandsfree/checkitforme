@@ -35,6 +35,4 @@ git. Last updated: 2026-07-30 (test calls grade themselves now; the engine still
   check improves the store map now. **Waiting on YOU:** the six calls, and whether we pay to upgrade our voice —
   the phone company won't let us use our own cheaper thinking with a copied voice, over half of every call.
 ## PROMOTED 07-27 — the five site fixes, the rebuilt plans and checkout, the call recording and the Use it / Keep the old one buttons are live. **Nobody has seen any of it: the real site still shows the coming-soon splash.**
-## HELD (07-30): the "seconds to reach the store" line on the store picker. Every number came from the old data,
-not a mapping call, and 18 of the 42 are routes we flagged as fake. It waits on mapping.
 ## Waiting on YOU: hide the fake (simulated) poll rows from the Admin feedback queue? (yes / no) · Next: docs/tasks/INDEX.md.

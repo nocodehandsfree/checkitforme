@@ -23,24 +23,6 @@ technology being smart. Transparency + managed expectations = patience + trust.
 - The live-call pipe is HANDLE WITH CARE (`stageForLines`/`liveStage`, the socket): UI reads it,
   never rewires it. If the change touches the pipe itself, stop and say so.
 
-## The counter's number is NOT trustworthy yet (added 07-30, decided with the owner)
-
-The counter bullet above says to read "the chain's own measured nav time". **Do not ship that number
-until `site-reach-menu-time.md` lands.** Measured on live data 07-30: all 42 chain numbers a customer
-can currently see are `source: backfill` ("inherited from the chain row, no per-call evidence"), and
-18 of them are routes the map itself flagged `hammer-route`. Worse, that number is measured to the
-moment a PERSON spoke, so it carries the department phone ringing and any hold. The owner will not
-promise that: if a transfer rings for a minute with nobody there, it is not the store's typical wait.
-
-Two corrections to the bullet, agreed with him:
-- The counter is **automated-system time**, up to the handoff and no further. Not time to a person.
-- The wording is `Hang tight. ~65 sec of their automated system.` / `Un momento. ~65 seg de su
-  sistema automático.` "Phone tree" is our word, not the customer's. A store where a person answers
-  at pickup shows **no counter at all**.
-
-So this task can build the four states and the loud-retry state now, and wire the counter to whatever
-`site-reach-menu-time.md` exposes rather than reading `avgTreeSeconds` directly.
-
 **Done when:** a real staging check to the Fun store walks all four states with the counter · the
 loud-retry state renders (drive it with a forced route-drift if no real one appears) · EN + ES at
 375/390/430 with no bad wraps · verify-live output pasted below.
