@@ -975,8 +975,8 @@
     <button class="k-cta" onclick="showSection('designer')"><span>NEW WORKFLOW →</span></button>
   </section>
   <section id="testing">
-    <div class="k-title">Testing</div>
-    <div class="k-sub" id="testing_sub">Fun store test calls</div>
+    <div class="k-title">Test calls</div>
+    <div class="k-sub" id="testing_sub">Fun store and owner-only stores. These never touch real-store stats.</div>
     <div id="testing_src"></div>
     <div id="testing_summary"></div>
     <div id="testing_log"><div class="empty">Loading…</div></div>
@@ -2318,11 +2318,15 @@ async function loadRuns(chainId, box){
 // by room. Before 07-27 an Admin call left nothing at all: no timeline, no seconds, no cost.
 async function openCallReceipt(id){ return openReceiptInto('/api/calls/'+id+'/receipt'); }
 async function openNavReceipt(room){ return openReceiptInto('/api/admin/receipt/'+encodeURIComponent(room)); }
-async function openReceiptInto(url){
+// `o.src` reads the service the header Live/Staging switch names, for the pages that follow it.
+// `o.behaved` adds the four pass/fail rows on top. Only Test calls asks for them: on a customer check
+// they would be noise the owner never asked for.
+async function openReceiptInto(url,o){
+  o=o||{};
   const box=document.createElement('div');
   box.innerHTML='<div class="meta">Loading…</div>';
   openSheet('The whole call','',box);
-  const d=await api(url);
+  const d=await (o.src?srcApi:api)(url);
   if(!d||d.error){ box.innerHTML='<div class="empty">Nothing was recorded for this call. Only calls placed since 27 July have a receipt.</div>'; return; }
   // ALL SIXTEEN kinds the calling engine can write (src/calls/events.ts). The set is closed, so this
   // map is complete by definition. A missing one used to fall through and print its code name.
@@ -2346,13 +2350,47 @@ async function openReceiptInto(url){
   // A stamped check always costs SOMETHING (the carrier bills a whole minute the moment we dial), so
   // a total of nought means nobody wrote this one down, whether or not the server sends the flag yet.
   const priced=d.stamped!==false&&d.cost&&Number(c.totalUsd||0)>0;
-  box.innerHTML=(priced?`<div class="stats" style="margin-bottom:16px">`
+  box.innerHTML=(o.behaved?behavedCard(d.behaved)+splitCard(c,priced):'')
+    +(priced?`<div class="stats" style="margin-bottom:16px">`
       +`<div class="stat"><div class="n">${esch(cash)}</div><div class="l">What it cost</div></div>`
       +`<div class="stat"><div class="n">${s.callSecs!=null?s.callSecs+'s':''}</div><div class="l">On the line</div></div>`
       +`<div class="stat"><div class="n">${s.navSeconds!=null?s.navSeconds+'s':''}</div><div class="l">Time to Staff</div></div>`
     +`</div>`:'<div class="k-note" style="padding-top:0">This check ran before the new calling engine, so its seconds and its cost were never written down.</div>')
     +(rungs?`<div class="mladder">${rungs}</div>`:'<div class="empty">No steps recorded.</div>')
     +(d.live?'<div class="meta" style="margin-top:10px">This call is still going.</div>':'');
+}
+// DID THE NEW ENGINE BEHAVE. Four rows, each a green tick or a red cross, scored on the server off
+// this same receipt (src/calls/behaved.ts). A GRAY DASH is the third answer and it is deliberate: it
+// means this check never put that rule to the test, and a cross there would read as a broken engine.
+// Every row carries the owner's tooltip; the gray line under it is what the record actually showed.
+function behavedCard(rows){
+  if(!Array.isArray(rows)||!rows.length) return '';
+  const mark=p=>{
+    const m=p===true?['#4ADE80','<path d="M5 12l5 5 9-10"/>']
+      :p===false?['#EF4444','<path d="M6 6l12 12M18 6L6 18"/>']
+      :['#9CA3AF','<path d="M6 12h12"/>'];
+    return `<span style="width:26px;height:26px;border-radius:50%;background:${m[0]}26;display:grid;place-items:center;flex:0 0 auto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${m[0]}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${m[1]}</svg></span>`;
+  };
+  return `<div class="card" style="margin-bottom:14px;padding:16px 18px">
+    <div class="k-eyebrow" style="margin:0 0 4px">Did the new engine behave</div>
+    ${rows.map(r=>`<div class="row" style="align-items:flex-start;padding:8px 0">
+      <span class="grow">
+        <span style="display:block;font-size:13.5px;font-weight:700;color:var(--text-strong)" data-tip="${esch(r.tip||'')}">${esch(r.label||'')}</span>
+        <span style="display:block;font-size:11.5px;font-weight:600;color:#8A8A96;line-height:1.45;margin-top:2px">${esch(r.why||'')}</span>
+      </span>${mark(r.pass)}</div>`).join('')}
+  </div>`;
+}
+// The two buckets the owner reads first: getting to a person, then Charlie's own seconds. Same printer
+// as every other money line on this dashboard, so nothing here formats a cent by hand.
+function splitCard(c,priced){
+  const rd=(c&&c.readable)||null;
+  if(!priced||!rd) return '';
+  const row=(l,v,tip)=>`<div class="row" style="padding:6px 0"><span class="grow" style="font-size:13px;font-weight:700;color:var(--text-strong)" data-tip="${esch(tip)}">${l}</span><span style="font-size:14px;font-weight:800;color:var(--text-strong)">${esch(v)}</span></div>`;
+  return `<div class="card" style="margin-bottom:14px;padding:16px 18px">
+    <div class="k-eyebrow" style="margin:0 0 4px">Where the money went</div>
+    ${row('Menu',rd.menu||rd.line||'',"The phone line plus listening our way to a person, before anybody spoke.")}
+    ${row('Charlie',rd.charlie||'',"Every second the conversation agent was connected. He bills whether he talks or listens.")}
+  </div>`;
 }
 // ---- Delta (Fun): rehearse the Delta lane — recorded clips + cheap classifier, no live agent ----
 let TD_POLL=null, TD_ID=null;
@@ -6323,35 +6361,55 @@ function tcIcon(key){
   const [ic,c,label]=M[key]||['q','#9CA3AF',key||'—'];
   return `<span title="${esch(label)}" style="width:26px;height:26px;border-radius:50%;background:${c}26;display:grid;place-items:center;flex:0 0 auto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${I[ic]}</svg></span>`;
 }
+// TEST CALLS. Comp 1c, the LOG page ("Alerts sends, testing logs and support chats reuse this exact
+// anatomy"). Copied off renderResults, which is the same comp: report strip, day eyebrows, then rows
+// of logo tile, name, one gray sub line, and the site's status ICON ALONE on the right (owner 07-24:
+// the repeated status name read as a wall). A row opens the SAME whole-call sheet the Calls page
+// opens, with the four pass/fail rows on top of it.
+let TEST_CALLS=[];
 async function loadTesting(){
   const sum=document.getElementById('testing_summary'), log=document.getElementById('testing_log');
   if(!sum||!log) return;
   { const sp=document.getElementById('testing_src'); if(sp) sp.innerHTML=srcPicker('loadTesting'); }
+  // The owner's OWN status words, so this page and the Calls page can never disagree about a verdict.
+  // One small read, and only if nothing has loaded the registry yet. A page must never paint another.
+  if(!Object.keys(STATUSES).length){ const l=await api('/api/statuses'); if(Array.isArray(l)) l.forEach(s=>{ STATUSES[s.key]=s; }); }
   const d=await srcApi('/api/admin/test-calls');
   if(!d||d.error){ sum.innerHTML=''; log.innerHTML=srcEmpty(d,'<div class="empty">No test calls yet. Call the Fun or MVP store to start logging.</div>'); return; }
   if(!(d.rows||[]).length){ sum.innerHTML=''; log.innerHTML=emptyState('phone','#4ADE80','No test calls yet','Call the Fun store to start the log'); return; }
+  TEST_CALLS=d.rows||[];
   const s=d.summary||{};
   // Report strip over the log (comp: Testing is a LOG with a report strip).
   const well=(n,l,cls)=>`<div class="k-well"><div class="n${cls?' '+cls:''}">${n}</div><div class="l">${l}</div></div>`;
   sum.innerHTML=`<div class="k-hero"><span class="n">${d.count||0}</span><span class="l">test calls</span></div>
-    <div class="k-wells">${well(secsFmt(s.avgNavSec||0),'To human','')}${well(secsFmt(s.avgTalkSec||0),'Avg talk','g')}${well(secsFmt(s.avgCallSec||0),'Avg total','')}</div>
-    <div class="k-eyebrow">Call log</div>`;
-  const when=u=>{ if(!u)return '—'; const dt=new Date(u*1000); return dt.toLocaleDateString([],{month:'short',day:'numeric'})+' '+dt.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}); };
-  const t=v=>v!=null?secsFmt(v):'—';
-  log.innerHTML=((d.rows||[]).map(r=>{
-        const op=r.opener||{};
-        const m=String(op.label||'').match(/(\d+)/);
-        const script=m?('Script '+m[1]):(op.said?'Script ?':'');
-        return `<div class="peek static">
-          <span class="pk-main">
-            <span class="pk-t" style="display:block">${r.workflow?esch(r.workflow):'<span style="color:#8A8A96;font-weight:500">no workflow</span>'}</span>
-            <span class="pk-m" style="display:block">${esch(when(r.started))}${script?` · <span title="${esch(op.said||'')}">${esch(script)}</span>`:''}</span>
-            <span style="display:block;font-family:ui-monospace,monospace;font-size:12px;color:#8A8A96;margin-top:6px">human <span style="color:#CDCDD8">${t(r.navSec)}</span> · talk <span style="color:#4ADE80">${t(r.talkSec)}</span> · total <span style="color:#CDCDD8">${t(r.callSec)}</span></span>
-          </span>
-          ${tcIcon(r.status)}
-        </div>`;
-      }).join('') || emptyState('phone','#4ADE80','No test calls yet','Call the Fun store to start the log'));
+    <div class="k-wells">${well(secsFmt(s.avgNavSec||0),'To a person','')}${well(secsFmt(s.avgTalkSec||0),'Avg talk','g')}${well(secsFmt(s.avgCallSec||0),'Avg total','')}</div>`;
+  let html='', lastDay=null;
+  TEST_CALLS.forEach(r=>{
+    const day=dayLabel(r.started);
+    if(day!==lastDay){ html+=`<div class="k-eyebrow">${esch(day)}</div>`; lastDay=day; }
+    const vv=customerVerdict(r);
+    const time=r.started?new Date(r.started*1000).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'';
+    // A check with no stamped total was placed before the engine priced anything. Say that, never "free".
+    const cash=r.cost||'not priced';
+    const words=vv.t?vv.t.charAt(0).toLowerCase()+vv.t.slice(1):'';
+    const head=`<span class="pk-logo">${logTile({...r,name:r.store})}</span>
+      <span class="pk-main">
+        <span class="pk-t" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(r.store||'')}</span>
+        <span class="pk-m" style="display:block">${r.category?esch(r.category)+' · ':''}${agoTs(r.started)} · ${esch(time)}</span>
+        <span style="display:block;font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:3px"><span style="color:#CDCDD8">${esch(cash)}</span> · ${esch(words)}</span>
+      </span>
+      <span class="pk-st" style="color:${vv.c}" title="${esch(vv.t)}" aria-label="${esch(vv.t)}">${statusIcon(vv.e,vv.c,24)}</span>`;
+    // No room = nothing was written down for this one, so there is no sheet to open. It still belongs
+    // on the log; it just does not pretend to be tappable.
+    html+=r.room
+      ? `<button class="peek" onclick="openTestReceipt('${esch(String(r.room))}')">${head}</button>`
+      : `<div class="peek static">${head}</div>`;
+  });
+  log.innerHTML=html;
 }
+// A test check opens the SAME sheet the Calls page opens, plus the four pass/fail rows. It reads the
+// service the header switch names: a staging test check has no receipt on production.
+async function openTestReceipt(room){ return openReceiptInto('/api/admin/receipt/'+encodeURIComponent(room),{src:true,behaved:true}); }
 // Settings → the one global default workflow.
 async function loadDefaultWorkflow(){
   await loadWorkflows();
