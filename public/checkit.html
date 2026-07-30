@@ -2099,7 +2099,7 @@ body.sheetopen #zones .zbasket.up,body.sheetopen #buyOverlay .buydock.up{bottom:
    under the bar. Safe ONLY because renderLiveMsg aims the follow-along at the NEWEST line, never at the
    document end (gate 14b remembers the forced-height mistake this replaces). showResult drops body.lview,
    so the strip leaves with the live view and the verdict page is untouched. */
-body.lview::after{content:'';display:block;height:calc(160px + env(safe-area-inset-bottom))}
+body.lview::after,body.rv-pend::after{content:'';display:block;height:calc(160px + env(safe-area-inset-bottom))} /* rv-pend: the pulling-the-result screen keeps the SAME clearance. showResult drops lview there, and the wordmark slid back under the bar (owner 07-30 screenshot) */
 body.lview #convo_body>*,body.lview #live_msgbox{scroll-margin-bottom:calc(160px + env(safe-area-inset-bottom))} /* scrollIntoView lands the newest line a comfortable read above the iOS toolbar */
 
 /* Footer links (About/FAQ/Terms/Privacy/Contact) slide up as a bottom sheet, like every other panel.
@@ -6420,6 +6420,11 @@ function showResult(o, cid){
   // real verdict renders _fromLive is false and the scroll never fired — owner 07-17). The pending flip
   // arms a flag; the settled render consumes it.
   if(_fromLive && o && o.status==='pending') window._livePend=true;
+  // While the answer is being pulled, stay parked on the tail of the conversation; the sweep to the
+  // top happens on the settled verdict below. Without the park, the flip's scroll clamp can leave the
+  // footer wordmark under the iOS bar (owner 07-30 screenshot). body.rv-pend carries the same
+  // bar-clearing strip as the live view, so the tail parks clear of the bar.
+  if(o && o.status==='pending' && (_fromLive || window._livePend)) requestAnimationFrame(()=>{ try{ window.scrollTo(0, document.body.scrollHeight); }catch(_){ } });
   if(o && o.status!=='pending' && (_fromLive || window._livePend)){ window._livePend=false; setTimeout(()=>{ try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(_){ window.scrollTo(0,0); } },120); }
   stopLiveTimers(); LIVE_ROOM=null; if($('hangup_btn'))$('hangup_btn').style.display='none';
   $('live').classList.add('hidden'); $('builder').classList.add('hidden'); $('history').classList.add('hidden'); $('success').classList.add('hidden'); const hov=$('handoff'); if(hov)hov.classList.add('hidden'); document.body.classList.remove('fabbed'); document.body.classList.remove('lview'); /* verdict bloom takes over from the live bloom */
