@@ -545,17 +545,17 @@ __BRAND_HEAD__
      share card), the store name demotes to an eyebrow, and ONE big line says where we are right now.
      Scoped to .rhead.live so the finished result header is untouched. */
   .rhead.live{position:relative}
-  .rhead.live .rhead-top{display:block;padding:24px 16px 28px;position:relative;z-index:1}
+  .rhead.live .rhead-top{display:block;padding:30px 18px 36px;position:relative;z-index:1}
   /* The mark is strongest in the corner and fades out before it reaches the headline, so a long state
      never reads muddy over it. Mask, not a lower opacity: the corner still has real presence. */
-  .rhead.live .railchip{position:absolute;top:-38px;right:-34px;width:168px;height:168px;border:0;border-radius:0;background:none;box-shadow:none;opacity:.17;z-index:0;pointer-events:none;transform:none!important;place-items:center;-webkit-mask-image:linear-gradient(235deg,#000 26%,rgba(0,0,0,.35) 58%,transparent 82%);mask-image:linear-gradient(235deg,#000 26%,rgba(0,0,0,.35) 58%,transparent 82%)}
-  .rhead.live .railchip img{width:150px;height:150px;max-height:none;object-fit:contain}
-  .rhead.live .railchip .wm span{font-size:60px;color:#fff;letter-spacing:-.03em}
+  .rhead.live .railchip{position:absolute;top:-46px;right:-40px;width:212px;height:212px;border:0;border-radius:0;background:none;box-shadow:none;opacity:.17;z-index:0;pointer-events:none;transform:none!important;place-items:center;-webkit-mask-image:linear-gradient(238deg,#000 42%,rgba(0,0,0,.45) 72%,transparent 96%);mask-image:linear-gradient(238deg,#000 42%,rgba(0,0,0,.45) 72%,transparent 96%)}
+  .rhead.live .railchip img{width:190px;height:190px;max-height:none;object-fit:contain}
+  .rhead.live .railchip .wm span{font-size:76px;color:#fff;letter-spacing:-.03em}
   .rhead.live .rhead-store{font-size:10.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.8);line-height:1.2}
   .rhead.live .rhead-addr{display:none}
   /* Sized to fit the longest state ("Getting through the menu") on ONE line at 375. The verdict page
      keeps the 40px headline, so this stays under it. Never wraps, never ellipsizes. */
-  .lh-state{margin-top:13px;font-size:clamp(23px,6.3vw,28px);font-weight:900;letter-spacing:-1px;line-height:1.1;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lh-state{margin-top:16px;font-size:clamp(23px,6.3vw,28px);font-weight:900;letter-spacing:-1px;line-height:1.1;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .lh-state:empty{display:none}
   /* Each new state arrives with the verdict page's own blur-and-rise, so the box visibly MOVES
      forward every time the check does. Reduced motion falls back to the resting state. */
