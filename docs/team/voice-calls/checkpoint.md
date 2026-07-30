@@ -19,14 +19,15 @@ hand-over is ALWAYS a new person** (the 20s stopwatch left Charlie mid-answer wi
 was NEVER sent on a reopen** (the branch returned first) · **a SILENT hand-over** (no ringback = a quiet pause to
 the ear) is caught because he ASKED to be put through — `askedToBePutThrough` in prompts.ts is the ONE copy, read
 by the bridge AND the scorecard. Gates **O.5 · O.6 · O.7**; **7.1b fixed** (it grepped `'ourBrain',`).
-## 07-30 TESTING = CHARLIE BEHAVIOR, five rows, HIS words (he rewrote it line by line). Lists EVERY staging check
-(`config.staging.on` in `/api/admin/test-calls`), 10 a page. **ONLY ROWS THAT CAN FAIL:** `asked_once` DELETED
-(the workflow locks one question); `mapping_held` + `no_keypad_at_person` DASH unless a map ran / Alpha really
-pressed keys (a Bravo store never presses one, so ticking it was a lie). A clean Fun check ticks NOTHING. Copy is
-ASSERTED in `test-behaved.ts` so it cannot drift back into sentences. Steps = **Staff greeting · Charlie joined ·
-Charlie dropped · Charlie left · Check ended**, ONE fact per line. Cost = **Menu Nav (Alpha|Bravo|None) · Charlie
-· Total**. **BUG FIXED: `callSeconds` is only written by the OLD path, so every new-engine check printed 0s;
-`rollupFromRow` reads the last step.** Ladder for his six calls: `echo-wrong-department-save.md` §5.
+## 07-30 TESTING = CHARLIE BEHAVIOR, **THREE rows, ONLY Charlie** (he rewrote it line by line). Lists EVERY
+staging check (`config.staging.on` in `/api/admin/test-calls`), 10 a page. **Meter stopped · Transfer requested ·
+Re-asked after transfer.** DELETED, and do NOT put them back: `asked_once` (the workflow locks one question),
+`mapping_held` + `no_keypad_at_person` — **OWNER RULE: walking a menu is not a test, it works or the check fails,
+and the check failing IS the report.** A row belongs here only if a WORKING check could hide it from him. Copy is
+ASSERTED in `test-behaved.ts`. Steps = **Staff greeting · Charlie joined · Charlie dropped · Charlie left · Check
+ended**, ONE fact per line. Cost = **Menu Nav (Alpha|Bravo|None) · Charlie · Total**, no info bubbles. **BUG
+FIXED: `callSeconds` is only written by the OLD path, so every new-engine check printed 0s; `rollupFromRow` reads
+the last step.** Ladder for his six calls: `echo-wrong-department-save.md` §5.
 ## THE ONE EAR — **a `PickupEar` was built here and DELETED the same night; §10 says never build a second.** It is a **VETO, never a green light**, cannot invent a person, and anchors come off its own recording count.
 - **PM: bail's else-branch blind-joins Charlie on a stopwatch if bail is off** (locked bridge; owner has it). **`.unlock` WORKS** — the sprawl gate only hooks Write, so `printf 'src/voice/**\n' > .unlock` opens it; fix that scope ONLY, then DELETE it.
 ## 07-30 CHAIN PAGE + RE-LISTEN: BUILT + SHIPPED. Box `docs/specs/mapping-admin/plan.md`, strings `copy.md` (**a control panel talks to nobody**), comps 2f rev + 2h/2i/2j/2k.
@@ -44,8 +45,7 @@ Charlie dropped · Charlie left · Check ended**, ONE fact per line. Cost = **Me
   REPEATS the last answer. **Never re-introduce `atSec >=`.**
 - **A BARGE CUTS THE RECORDING MID-SENTENCE**; its tail returns next turn as a stray line ("You'd like to do."). A short non-question within `TAIL_SEC` of our own step is JOINED to the previous store line.
 - **NEXT: Walgreens (chain 10), NOT a re-listen.** Live v1 is the hammer route `press 0 ×4`. Re-map fresh, 9 stores, ALL Pacific. Keypad, so it proves the ladder prints **ALPHA**; CVS proved BRAVO.
-- **RAILWAY 07-30:** `deploymentCancel` on a wedged deploy errors once, retry lands; every push queues a build, run one at a time.
-## VERIFIED / NOT VERIFIED
+## VERIFIED / NOT VERIFIED · **RAILWAY:** `deploymentCancel` on a wedged deploy errors once, retry lands; pushes queue and build one at a time.
 - **DRIVEN 07-30:** 131 map-sim · 69 delta-clip (REAL ws + real carrier socket, incl. the SILENT hand-over) · 65
   prompts · 60 behaved · 100 map-e2e (2 PRE-EXISTING fails, Chains work) · 43 listen-nav · 72 receipt · 13 bridge
   · 9 runtime-gates. tsc + spec gates clean. **line-by-line 99/101** (7.12 only).
