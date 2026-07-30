@@ -1,33 +1,33 @@
 # STATE — the owner's single source of truth
 One screen. Every session updates this at close (≤40 lines). New truth REPLACES old — history is in
 git. Last updated: 2026-07-30 (test calls grade themselves now; the engine still waits on your six calls).
-## Your test calls now grade themselves. Open Voice → Testing (07-30, live on Admin)
-- One line each, newest first: **`5.4¢ · not in stock`**. Tap one and the same call sheet you know opens with a
-  new card on top, **Did the new engine behave**, four rows with a green tick or a red cross: asked once · no
-  keypad at a person · meter stopped on hold · mapping held. Under each, in gray, what actually happened on that
-  call; the ⓘ says what would count as a fail. Then the cost split two ways: getting to a person, and Charlie.
-- A row shows a **gray dash** when that call never tested the rule. Nobody put you on hold, so there is nothing to
-  pass or fail, and I will not print a cross for something we never got to try.
-- **Set the top switch to Staging** to read it: your test calls happen there, and so does the new engine. On Live
-  it is empty until a release. **I have not seen a red cross or a real hold yet** — the next time you call the
-  Fun store and walk away for 30 seconds, that is the one that proves the hold row.
+## Your test calls grade themselves. Voice → Testing (07-30, live on Admin, set the switch to Staging)
+- One line each: **`5.4¢ · not in stock`**. Tap one for **Did the new engine behave**, four rows ticked or crossed:
+  asked once · no keypad at a person · meter stopped on hold · mapping held, each with what actually happened. A
+  **gray dash** means that call never tested the rule. **No red cross and no real hold seen yet** — the one that
+  proves it is you calling the Fun store and walking away for 30 seconds.
 ## The bottom bar can never go dark again, and Live is cleaned (07-30, live on Admin)
-- **The tint is nailed down.** The dark band at the bottom where the Safari address bar sits came from three
-  different mistakes; all three are now refused before anything can go live, on the website and the Admin. I broke
-  it four ways on purpose to prove the check catches it. I still cannot see an iPhone from here.
-- **Live (the dashboard) is cleaned.** Open **Cost per check** and the first thing you read is **The baseline**:
-  your ceiling is 6.7¢, a third of the 20¢ a check earns on the $9.99 plan, worked out from your real prices, so
-  changing a price moves it. Under it, your thinnest plan needs 4.2¢, and the two costs I measured by hand.
-- **Three meters left that page.** Call time is gone for good (the cost drill says it better, and Chains has the
-  per-store version). Call health moved into Calls. Voice credits moved next to the voice plan in Calc, with how
-  many more checks it buys. Nothing was deleted. **Once a screen is cleaned it is locked and cannot rot back.**
+- **The tint is nailed down**, three ways it used to break are all refused before anything goes live. Still cannot
+  see an iPhone from here. **Live is cleaned:** Cost per check opens on **The baseline**, your 6.7¢ ceiling worked
+  out from your real prices. Three meters moved off that page, none deleted. A cleaned screen cannot rot back.
 ## Policy sets your prices like every other switch (07-29) — prices sit in the switch rows, **no Save button:**
 type a number, tap away, it is saved and customers see it. A word bounces back. Every price stayed put.
 ## What a check costs, off real checks (07-28) — it reads "no finished checks yet" and that is TRUE: only
 test-store calls are priced and those never count. Your first real check fills it in, after a release.
-## The Chains page tells you what needs YOU (07-26/27/28)
-- Tap a chain: what a check costs, how long to a person, the menu step by step with its seconds. CVS 6.6¢, and you
-  can SEE its 19 seconds of ringing. 33 are flagged; a better route appears above the old one and waits for your yes.
+## Chains: the page is rebuilt and every mapping call now lands on it (07-30)
+- Tap a chain: **nav time** (getting through their phone menu, which is the part we control), what that
+  costs, and how often the recipe reaches Staff. The wait for Staff to pick up is no longer counted
+  against the menu. **Menu** now has Daytime · After 9pm · Spanish, because CVS reads a different menu at
+  night and in Spanish areas and we used to file that as the map breaking. **Recipes** shows Tree Recipe
+  v1, v2 with the date each locked. **Review** names the store, shows what we expected against what we
+  heard, and its buttons now DO the thing they say instead of just ticking the row.
+- **The big fix:** pressing Re-map called a real store and then told the chain page nothing. Every call
+  feeds the map now, whoever started it. That is why this morning's CVS call showed up nowhere.
+- **Re-map now hangs up on the second ring** of the desk. It walks the menu we know, proves the desk
+  really rang, and never troubles Staff. That call becomes the recipe.
+- ⚠️ **Your first real one is waiting on the host.** Our code went up at 1:02 PM Eastern and their
+  build queue has not moved in 20 minutes. Nothing else of ours is building; the two before it took five
+  minutes each. Not forced, per you.
 ## The new calling engine is ON for staging. Your six test calls are the last thing (07-28/29)
 - **Nothing to flip.** A check from staging.checkitforme.com goes through the new engine now. The store hears the
   question the second they say hello, in our own voice, and if Staff walk away we stop paying. **Listen for
