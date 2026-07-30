@@ -424,5 +424,59 @@ console.log("\n▶ the wrong department: Staff say so, the meter stops through t
   restore(); tw.close(); f.close();
 }
 
+
+// THE SILENT HAND-OVER — the one that would have failed on a real store.
+//
+// Plenty of stores put you on a quiet line rather than a ringing one. To the ear that is a person
+// stepping away, and a step away under twenty seconds is the SAME person, so the agent would have
+// been told to carry on and would have answered a stranger mid sentence. The words are the only
+// thing that can say otherwise: he ASKED to be put through, so the next wait that ends is a hand-over
+// however it sounded.
+console.log("\n▶ a SILENT hand-over is still a hand-over, because he asked to be put through");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const tw = await callWithHold(f, "room-silent-xfer", "reopen");
+  speak(tw, 150);
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "This is the pharmacy, hon." } }));
+  await sleep(60);
+  f.sockets[0].send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Oh gotcha, could you put me through to whoever handles the cards?" } }));
+  await sleep(60);
+  // NO ring tone at all. Just quiet, and not for long: the old rule reads this as the same person.
+  quiet(tw, HOLD_QUIET_MS / 20 + 20);
+  await sleep(80);
+  const mid = getReceipt("room-silent-xfer")?.events || [];
+  ok(mid.some((e) => e.kind === "hold_start" && e.detail?.reason === "quiet"), "the ear heard a quiet pause, which is all a silent hand-over sounds like");
+  ok(!mid.some((e) => e.kind === "transfer"), "…and no ringing, so nothing was read as a transfer from the sound");
+  speak(tw, 30);
+  await sleep(200);
+  const r = getReceipt("room-silent-xfer")!;
+  const back = r.events.find((e) => e.kind === "hold_end");
+  ok((back?.detail?.gapSec as number) < 20, `they were gone ${back?.detail?.gapSec}s, well under the bar that used to decide this`);
+  ok(back?.detail?.maybeNewPerson === true, "somebody new anyway, because he had asked to be put through");
+  ok(back?.detail?.afterAskingToBePutThrough === true, "…and the record says WHY, so the screen can tell a hand-over from a wander off");
+  const notes = f.raw.filter((m) => m.includes("contextual_update"));
+  ok(notes.length === 1 && /may be someone new/i.test(notes[0]), "he is told the person may be someone new, so he asks again");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ …and a plain wander off is still just a wander off");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const tw = await callWithHold(f, "room-wander", "reopen");
+  speak(tw, 150);
+  quiet(tw, HOLD_QUIET_MS / 20 + 20);   // nobody said anything about being put through
+  await sleep(60);
+  speak(tw, 30);
+  await sleep(200);
+  const back = (getReceipt("room-wander")?.events || []).find((e) => e.kind === "hold_end");
+  ok(back?.detail?.maybeNewPerson !== true, "a short quiet pause with no ask is NOT somebody new");
+  ok(back?.detail?.afterAskingToBePutThrough === undefined, "and nothing claims a hand-over happened");
+  restore(); tw.close(); f.close();
+}
+
 console.log(`\n════════════════════════════════\n  PASS: ${pass}   FAIL: ${fail}\n════════════════════════════════`);
 process.exit(fail === 0 ? 0 : 1);

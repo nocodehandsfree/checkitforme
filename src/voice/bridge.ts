@@ -19,7 +19,7 @@ import { toMediaFrames } from "../calls/clip-cache";
 // The wrong-department phrase test. It lives beside the standing rule that tells the agent to ask to
 // be put through, so the words we act on and the words we look for cannot drift apart. Pure, so it is
 // provable without a phone call.
-import { heardWrongDepartment } from "./prompts";
+import { heardWrongDepartment, askedToBePutThrough } from "./prompts";
 
 export interface BridgeContext {
   agentId: string;
@@ -352,6 +352,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   let heldWords: string[] = [];   // the first thing they say on coming back, so it is never lost
   /** Recorded once: we landed somewhere that cannot answer. Read off the words, not the audio. */
   let wrongDept = false;
+  /** He has ASKED to be put through, so the next wait that ends is a hand-over however it sounded.
+   *  Plenty of stores hand you to a SILENT line: no ring tone, so the ear can only see a quiet pause,
+   *  and a pause under twenty seconds reads as the same person stepping away. Without this the agent
+   *  is told to carry on and answers a stranger mid sentence, which is the save failing at its last
+   *  step on exactly the stores that need it. Spent when it fires, so one ask covers one hand-over. */
+  let expectHandover = false;
   /** A gap the agent has not been told about yet, because he was CLOSED for it. Delivered the moment
    *  his new session reports ready — see the metadata handler. Without this the reopened agent knows
    *  nothing about the wait, which on a hand-over means he is talking to a stranger blind. */
@@ -508,9 +514,14 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // is the opposite fact — whoever picks up never heard the question, however fast the hand-over
     // was. Timing it decided that for us, so a quick transfer left the agent carrying on mid answer
     // with a stranger, which is exactly the wrong-department save failing at the last step.
-    const newPerson = maybeNewPerson || was === "transfer";
+    const newPerson = maybeNewPerson || was === "transfer" || expectHandover;
+    // WHY it counted as a new person, not just that it did. A silent hand-over and a ringing one are
+    // the same fact and different evidence, and the screen that grades this check has to be able to
+    // tell "we were handed on" from "somebody wandered off", which the sound alone cannot say.
+    const asked = expectHandover;
+    if (expectHandover) expectHandover = false;
     addMs(room, "holdMs", gapMs);   // the number that has been null on every receipt until now
-    emit(room, "hold_end", `Somebody is back after ${secs}s${newPerson ? ", and it may not be the same person" : ""}`, { gapSec: secs, maybeNewPerson: newPerson, reason: was });
+    emit(room, "hold_end", `Somebody is back after ${secs}s${newPerson ? ", and it may not be the same person" : ""}`, { gapSec: secs, maybeNewPerson: newPerson, reason: was, ...(asked ? { afterAskingToBePutThrough: true } : {}) });
     if (ctx?.holdStrategy === "reopen" && !eleven) {
       log(`hold over after ${secs}s: opening the agent again as the next segment of this call`);
       // HE WAS CLOSED, SO HE CANNOT BE TOLD YET, AND HE STILL HAS TO BE TOLD. The note is held and
@@ -686,6 +697,14 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         }
       } else if (m.type === "agent_response") {
         const txt = m.agent_response_event?.agent_response;
+        // HE HAS ASKED TO BE PUT THROUGH. From here the next wait that ends is a hand-over, whether or
+        // not the next desk audibly rings — a silent hand-over is a quiet pause to the ear and nothing
+        // else, and the ear must never be asked to judge this. It is also the ONE line of ours worth
+        // reading: everything else he says changes nothing about how the call is run.
+        if (txt && !expectHandover && askedToBePutThrough(String(txt))) {
+          expectHandover = true;
+          log("wrong department: he asked to be put through, so the next wait is a hand-over");
+        }
         if (txt) recordLine(room, "Agent", String(txt));
         if (txt) try { relayLine?.(room, "Agent", String(txt)); } catch { /* relay best-effort */ }
       } else if (m.type === "ping") {

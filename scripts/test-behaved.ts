@@ -238,5 +238,23 @@ head("…and every way it can go wrong");
   ok("…the meter row ticks", row(r, "meter_stopped_on_hold").pass === true, row(r, "meter_stopped_on_hold").why);
 }
 
+{
+  // A SILENT hand-over: no ringing at all, so the wait reads "quiet" and is short. The runtime stamps
+  // WHY it counted as somebody new, and this screen reads that fact rather than the sound.
+  const silent: BehavedEvent[] = [
+    ev("dialed", 0, { plannedLane: "direct", plan: [] }), ev("human_detected", 6), ev("charlie_join", 6, { segment: 1 }),
+    ev("unknown", 12, { wrongDepartment: true, why: "Staff said we reached another counter", said: "This is the pharmacy." }),
+    ev("hold_start", 20, { reason: "quiet" }), ev("charlie_leave", 20, { strategy: "reopen" }),
+    ev("hold_end", 28, { gapSec: 8, maybeNewPerson: true, reason: "quiet", afterAskingToBePutThrough: true }),
+    ev("charlie_join", 28, { segment: 2 }), ev("verdict", 40), ev("hangup", 42),
+  ];
+  const r = behaved({ timeline: silent, rollup: { charlieSegments: 2 }, agentLines: [
+    { text: OPENER, atSec: 7 }, { text: SAY_TRANSFER, atSec: 15 },
+    { text: "Heyy, do you have any Pokemon in stock right now?", atSec: 30 }] });
+  ok("a silent hand-over still counts as a hand-over", row(r, "asked_the_new_person").pass === true, row(r, "asked_the_new_person").why);
+  ok("…and asked to be put through ticks", row(r, "asked_to_be_put_through").pass === true);
+  ok("…and asked once does not cross on the second question", row(r, "asked_once").pass === true);
+}
+
 console.log(`\n${fail ? "FAIL" : "PASS"}  ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

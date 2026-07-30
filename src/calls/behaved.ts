@@ -28,6 +28,12 @@
 // whole point — so the old rule would have printed a red cross on a check that behaved perfectly. The
 // rule is one question PER PERSON, and the allowance grows by one every time somebody new picks up.
 
+// THE ONE PLACE THE WORDS LIVE. The runtime reads this SAME test to decide the next wait is a
+// hand-over; grading it here off a second copy is how a screen ends up disagreeing with the engine it
+// is grading. The only import in this file, and it carries no dependencies of its own, so rule 1
+// still holds: no db, no config, no clock.
+import { askedToBePutThrough as saysPutMeThrough } from "../voice/prompts";
+
 export type BehavedKey = "asked_once" | "no_keypad_at_person" | "meter_stopped_on_hold" | "mapping_held"
   | "asked_to_be_put_through" | "asked_the_new_person";
 
@@ -114,7 +120,14 @@ export function behaved(input: BehavedInput): BehavedRow[] {
   // the shelf, came back themselves, and the agent rightly carried on — which would be a lie about
   // the engine, on the one screen he tests from.
   const maybeNew = tl.filter((e) => e.kind === "hold_end" && (e.detail || {}).maybeNewPerson === true);
-  const handedOver = maybeNew.filter((e) => (e.detail || {}).reason === "transfer");
+  // A HAND-OVER IS NOT ALWAYS A RINGING DESK. Plenty of stores put you on a silent line, which sounds
+  // to the ear exactly like somebody stepping away. The runtime already knows better, because the
+  // agent ASKED to be put through, and it stamps the wait accordingly — so read the fact it wrote
+  // rather than the sound it heard.
+  const handedOver = maybeNew.filter((e) => {
+    const d = e.detail || {};
+    return d.reason === "transfer" || d.afterAskingToBePutThrough === true;
+  });
   // Where we landed on a desk that could not answer. Read off the words on the check itself.
   const wrongDept = tl.find((e) => (e.detail || {}).wrongDepartment === true) || null;
 
@@ -203,10 +216,6 @@ function meterStoppedOnHold(tl: BehavedEvent[], sums: BehavedSums): BehavedRow {
     : `Closed for ${word} and came back as a new part of the same check.`);
 }
 
-/** What the agent says when it asks to be handed on. Never "transfer me to the pharmacy": the ask is
- *  always toward somebody who CAN answer, which is what these shapes have in common. */
-const ASK_TRANSFER = /\b(?:put (?:me|us) (?:through|thru)|transfer (?:me|us)|connect me|get me (?:through|over|to)|(?:who|whoever|someone|somebody|anyone) (?:who )?(?:handles|deals with|knows about|looks after|takes care of)|speak (?:to|with) (?:someone|somebody|whoever))\b/i;
-
 /**
  * THE SAVE ITSELF. Only ever asked when the check landed on a desk that could not answer, so on every
  * ordinary check this is a gray dash — there was nothing to be saved from.
@@ -221,7 +230,7 @@ function askedToBePutThrough(turns: AgentTurn[], wrongDept: BehavedEvent | null)
   const at = wrongDept.atSec == null ? "" : ` at ${Number(wrongDept.atSec)}s`;
   const heard = said ? ` Staff said "${said}".` : "";
   if (!turns.length) return row(null, `We landed in the wrong department${at}, but nothing the agent said was written down.${heard}`);
-  const asks = turns.filter((t) => ASK_TRANSFER.test(t.text));
+  const asks = turns.filter((t) => saysPutMeThrough(t.text));
   if (!asks.length) return row(false, `We landed in the wrong department${at} and the agent never asked to be put through.${heard}`);
   if (asks.length > 1) return row(false, `The agent asked to be put through ${plural(asks.length, "time", "times")}, and once is the rule.${heard}`);
   return row(true, `We landed in the wrong department${at} and the agent asked once to be put through.${heard}`);

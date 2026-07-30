@@ -192,6 +192,23 @@ export function heardWrongDepartment(line: string): WrongDepartment | null {
   return null;
 }
 
+/**
+ * THE AGENT ASKING TO BE HANDED ON. The mirror of the test above and the other half of the save: what
+ * Staff said told us we landed wrong, and this says we did something about it.
+ *
+ * It matters far beyond a scorecard. Plenty of stores hand you on to a SILENT line, with no ringing at
+ * all, and the audio detector can only ever see a quiet pause, which under twenty seconds reads as the
+ * same person stepping away. The runtime would then tell the agent to carry on, and he would answer a
+ * stranger mid sentence. Once he has ASKED to be put through, the next wait that ends is a hand-over
+ * whatever it sounded like, and the words are the only thing that can say so.
+ *
+ * Never "transfer me to the pharmacy": the ask is always toward somebody who CAN answer.
+ */
+const ASK_TRANSFER = /\b(?:put (?:me|us) (?:through|thru)|transfer (?:me|us)|connect me|get me (?:through|over|to)|(?:who|whoever|someone|somebody|anyone) (?:who )?(?:handles|deals with|knows about|looks after|takes care of)|speak (?:to|with) (?:someone|somebody|whoever))\b/i;
+export function askedToBePutThrough(line: string): boolean {
+  return ASK_TRANSFER.test(String(line || ""));
+}
+
 /** Spoken fallback when the pause-filler feature is on and no custom line is set. Copy law: no dash. */
 export const SOFT_TIMEOUT_FALLBACK = "Yeah, hi, I'm here!";
 
