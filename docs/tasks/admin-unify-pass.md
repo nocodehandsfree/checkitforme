@@ -27,18 +27,22 @@ freestyle sheet proved the opposite). A number nobody can explain in one plain s
 that DIES — never ship a figure with a mystery label. And ⓘ bubbles get their OWN tap zone, never
 sitting on an element that opens a sheet.
 
-**The Cost per check sheet, rewritten (owner reviewing — apply on his yes, word for word):**
-- Title `Cost per check` · sub `Added up from real customer checks`
-- Row `The goal` / sub `Keep a check under this and every plan makes money` / `6.7¢` — ⓘ "Your
-  cheapest plan charges 20¢ a check. Spending a third of that keeps the 67% margin you set."
-- Row `What a check costs today` / sub `from our own test checks, until real ones land` /
-  `5.3¢ to 8.5¢` — ⓘ "5.3¢ at a store that picks up directly. 8.5¢ through the longest phone menu
-  we have, CVS. Real customer checks replace these numbers as they land."
-- The `On your thinnest plan · Operator earns less · 4.2¢` row: explain it in one plain sentence
-  or DELETE it. No mystery numbers.
-- The `Stay under the ceiling…` footnote: DELETE (the goal row already says it).
-- Empty state: `No customer checks yet. The first real check starts this record. Test calls, and
-  checks made before the new calling engine, are never counted.`
+**The Cost per check sheet — FINAL strings (owner 07-30, word for word). Label = noun, ONE number,
+no sub sentence (the guide's own rule; the shipped sub-lines broke it):**
+- Title `Cost per check`
+- Row `Goal` · `.06` — ⓘ `A third of the cheapest plan (.20 a check). Under this, every plan holds 67%.`
+- Row `Today` · `.05 to .09` — ⓘ `Test checks: .053 direct, .085 worst menu (CVS). Real checks replace this.`
+- The `4.2¢` row and the `Stay under the ceiling…` footnote: DELETED. No mystery numbers.
+- Empty state: `No checks yet.`
+- **Money reads like dollars everywhere: `.06`, never `6.7¢`** (owner ruling — it's one code path,
+  `money()`, so it's one fix). Rows round to the cent; exact tenths live in the ⓘ.
+
+**From the page-1 confession (07-30) — three more laws, now permanent:**
+- **Driving a screen = TAPPING it at 390px, mid-scroll included** — watching what a bubble covers,
+  not confirming strings exist. A drive that never touched the controls is not a drive.
+- **The live page the owner shaped BEATS an older comp.** He strips screens on purpose; re-adding
+  what he removed because a board still shows it is the failure. Conflict = one question, no guess.
+- dash was sealed carrying the slop — **page 1 gets its redo with these strings, then re-seals.**
 
 **Step 2 — page by page, ONE per session,** in this order: Live (dash) · App (settings) · Calc ·
 the rest per `docs/tasks/INDEX.md` cleanup list. Each page: gate green · driven at 390px · copy per
