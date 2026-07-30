@@ -2381,7 +2381,9 @@ function behavedCard(rows){
 function splitCard(c,priced,tl){
   const rd=(c&&c.readable)||null;
   if(!priced||!rd) return '';
-  const row=(l,v,tip)=>`<div class="row" style="padding:6px 0"><span class="grow" style="font-size:13px;font-weight:700;color:var(--text-strong)" data-tip="${esch(tip)}">${l}</span><span style="font-size:14px;font-weight:800;color:var(--text-strong)">${esch(v)}</span></div>`;
+  // NO INFO BUBBLES ON THIS CARD (owner 07-30). Three money lines that say what they are do not need
+  // explaining, and one of them was explaining a total.
+  const row=(l,v)=>`<div class="row" style="padding:6px 0"><span class="grow" style="font-size:13px;font-weight:700;color:var(--text-strong)">${l}</span><span style="font-size:14px;font-weight:800;color:var(--text-strong)">${esch(v)}</span></div>`;
   // WHICH MODEL WALKED THE MENU (owner 07-30). Alpha presses keys, Bravo says the menu word, and a
   // store that answers direct walked no menu at all — three different facts that were all called Menu.
   const d0=((tl||[]).find(e=>e.kind==='dialed')||{}).detail||{};
@@ -2389,12 +2391,12 @@ function splitCard(c,priced,tl){
   const steps=(tl||[]).filter(e=>e.kind==='alpha_press'||e.kind==='bravo_say');
   const model=steps.some(e=>e.kind==='alpha_press')||lane==='alpha'?'Alpha'
     :steps.some(e=>e.kind==='bravo_say')||lane==='bravo'?'Bravo':'';
-  const menuLabel='Menu ('+(model||'None')+')';
+  const menuLabel='Menu Nav ('+(model||'None')+')';
   return `<div class="card" style="margin-bottom:14px;padding:16px 18px">
     <div class="k-eyebrow" style="margin:0 0 4px">Check cost</div>
-    ${row(menuLabel,rd.menu||rd.line||'',model?("The phone line plus "+model+" walking the store's menu, before anybody spoke. Alpha presses keys, Bravo says the menu word."):"The phone line up to the moment Staff picked up. This store has no menu, so no model walked one.")}
-    ${row('Charlie',rd.charlie||'',"Every second Charlie was connected. He bills whether he talks or listens.")}
-    ${row('Total',rd.total||'',"Everything this one check cost.")}
+    ${row(menuLabel,rd.menu||rd.line||'')}
+    ${row('Charlie',rd.charlie||'')}
+    ${row('Total',rd.total||'')}
   </div>`;
 }
 // ---- Delta (Fun): rehearse the Delta lane — recorded clips + cheap classifier, no live agent ----

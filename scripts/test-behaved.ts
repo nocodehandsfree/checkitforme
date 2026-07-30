@@ -35,13 +35,13 @@ head("SHAPE");
   const r = behaved({ timeline: cleanDirect, rollup: { stepsFired: 0, stepsOnPause: 0, charlieSegments: 1 }, agentLines: [OPENER, "Perfect, thank you so much!"] });
   // THE ORDER IS THE SCREEN. The four he walked keep their places; the two the wrong-department save
   // added sit under them, so a row never moves out from under his thumb.
-  ok("six rows, fixed order", r.map((x) => x.key).join(",")
-    === "asked_once,no_keypad_at_person,meter_stopped_on_hold,mapping_held,asked_to_be_put_through,asked_the_new_person", r.map((x) => x.key));
+  ok("five rows, fixed order", r.map((x) => x.key).join(",")
+    === "no_keypad_at_person,meter_stopped_on_hold,mapping_held,asked_to_be_put_through,asked_the_new_person", r.map((x) => x.key));
   ok("an ordinary check shows a gray dash on both wrong-department rows, never a cross",
     row(r, "asked_to_be_put_through").pass === null && row(r, "asked_the_new_person").pass === null);
   ok("every row ships a label, a tooltip and a why", r.every((x) => !!x.label && !!x.tip && !!x.why));
+  ok("a clean Fun-store check ticks nothing it cannot fail", r.filter((x) => x.pass === true).length === 0, r.filter((x) => x.pass === true).map((x) => x.key));
   ok("pass is only true, false or null", r.every((x) => x.pass === true || x.pass === false || x.pass === null));
-  ok("a clean direct check: asked once", row(r, "asked_once").pass === true);
   // A DIRECT STORE HAS NO MENU, so a tick would read as "we expect a keypad" (owner 07-30).
   ok("a clean direct check: the keypad row is a DASH, never a tick", row(r, "no_keypad_at_person").pass === null, row(r, "no_keypad_at_person").why);
   ok("a clean direct check: nobody held us, so the meter row is null", row(r, "meter_stopped_on_hold").pass === null);
@@ -51,21 +51,9 @@ head("SHAPE");
   // OPERATOR GRADE, NOT CONVERSATIONAL (owner 07-30, admin copy guide: a label is a precise noun or
   // a plain verb, never a sentence). Asserted so nobody writes chat into a control panel again.
   ok("the labels are the operator's words", r.map((x) => x.label).join(" · ")
-    === "Asked once · No keypad detected · Meter stopped · Mapping held · Transfer requested · Re-asked after transfer", r.map((x) => x.label));
+    === "No keypad detected · Meter stopped · Mapping held · Transfer requested · Re-asked after transfer", r.map((x) => x.label));
   ok("no gray line runs past one line on a phone", r.every((x) => x.why.length <= 110), r.filter((x) => x.why.length > 110).map((x) => x.why));
-  ok("a clean direct check: mapping held", row(r, "mapping_held").pass === true);
-}
-
-head("ASKED ONCE");
-{
-  const one = (lines: string[]) => row(behaved({ timeline: cleanDirect, agentLines: lines }), "asked_once");
-  ok("one stock question passes", one([OPENER]).pass === true);
-  ok("two stock questions fail", one([OPENER, "Sorry, do you have any Pokémon in stock?"]).pass === false);
-  ok("a second greeting fails", one([OPENER, "Hi there, are you still with me?"]).pass === false);
-  ok("the restock follow-up is NOT a second ask", one([OPENER, "Ah okay, any idea when you might get more in?"]).pass === true);
-  ok("the set and pack follow-ups are NOT a second ask", one([OPENER, "Oh nice, do you know the name of the set?", "Does that come in a pack? Or like a box?"]).pass === true);
-  ok("nothing written down is null, never a cross", one([]).pass === null);
-  ok("the reason names the count", /2/.test(one([OPENER, "Do you have any Pokémon in stock?"]).why));
+  ok("a clean direct check: mapping held is a DASH, there is no map to hold", row(r, "mapping_held").pass === null, row(r, "mapping_held").why);
 }
 
 head("NO KEYPAD AT A PERSON");
@@ -109,16 +97,16 @@ head("METER STOPPED ON HOLD");
 head("MAPPING HELD");
 {
   const at = (tl: BehavedEvent[], sums?: Record<string, number>) => row(behaved({ timeline: tl, rollup: sums ?? null, agentLines: [OPENER] }), "mapping_held");
-  ok("direct, nothing fired, agent opened at the person", at(cleanDirect, { stepsFired: 0, stepsOnPause: 0 }).pass === true);
+  ok("direct, nothing fired: a dash, not a tick", at(cleanDirect, { stepsFired: 0, stepsOnPause: 0 }).pass === null);
   const firedAtDirect = [...cleanDirect, ev("alpha_press", 6, { key: "1", via: "prompt" })];
   ok("a step fired at a direct store fails", at(firedAtDirect).pass === false);
   const blindJoin: BehavedEvent[] = [ev("dialed", 0, { plan: [] }), ev("ringing", 2), ev("charlie_join", 4), ev("hangup", 40)];
-  ok("the agent opening with nobody on the line fails", at(blindJoin).pass === false);
+  ok("Charlie opening with nobody on the line still fails", at(blindJoin).pass === false);
   const early: BehavedEvent[] = [ev("dialed", 0, { plan: [] }), ev("charlie_join", 5), ev("human_detected", 19), ev("hangup", 40)];
-  ok("the agent opening before the person fails", at(early).pass === false);
+  ok("Charlie opening before Staff still fails", at(early).pass === false);
   ok("the reason spells out how early", /14s before/.test(at(early).why));
   const noJoin: BehavedEvent[] = [ev("dialed", 0, { plan: [] }), ev("ringing", 2), ev("hangup", 30)];
-  ok("no agent and no steps is null", at(noJoin).pass === null);
+  ok("no Charlie and no steps is null", at(noJoin).pass === null);
 
   const mapped = (via: string): BehavedEvent[] => [
     ev("dialed", 0, { plannedLane: "alpha", plan: [{ action: "press", value: "1", atSec: 7 }, { action: "press", value: "3", atSec: 14 }] }),
@@ -140,7 +128,6 @@ head("THE WORDS OFF A FINISHED ROW");
   ok("only the agent's lines come back", lines.length === 2, lines);
   ok("the opener survives intact", lines[0] === OPENER, lines[0]);
   ok("an empty transcript is an empty list", agentLinesFrom(null).length === 0);
-  ok("scored off a real row, that call asked once", row(behaved({ timeline: cleanDirect, agentLines: lines }), "asked_once").pass === true);
 }
 
 
@@ -177,8 +164,6 @@ const savedTurns = [
 head("THE WRONG-DEPARTMENT SAVE");
 {
   const r = behaved({ timeline: savedCheck, rollup: { stepsFired: 0, stepsOnPause: 0, charlieSegments: 2 }, agentLines: savedTurns });
-  ok("asked once STILL passes, because the second question went to a second person",
-    row(r, "asked_once").pass === true, row(r, "asked_once").why);
   ok("asked to be put through passes, once", row(r, "asked_to_be_put_through").pass === true, row(r, "asked_to_be_put_through").why);
   ok("…and it prints what Staff actually said", /this is the pharmacy/i.test(row(r, "asked_to_be_put_through").why));
   ok("the new person was asked", row(r, "asked_the_new_person").pass === true, row(r, "asked_the_new_person").why);
@@ -196,7 +181,6 @@ head("…and every way it can go wrong");
     { text: OPENER, atSec: 9 }, { text: SAY_TRANSFER, atSec: 18 },
     { text: "So do you have them then?", atSec: 34 }] });
   ok("carried on after a HAND-OVER: asked the new person FAILS", row(r, "asked_the_new_person").pass === false, row(r, "asked_the_new_person").why);
-  ok("…and asked once does NOT also cross, so one miss prints one cross", row(r, "asked_once").pass === true);
 }
 {
   // Landed wrong and hung up instead of asking to be put through.
@@ -208,7 +192,6 @@ head("…and every way it can go wrong");
   // Asked twice with NOBODY new on the line. Still a fail, exactly as it always was.
   const r = behaved({ timeline: cleanDirect, rollup: { charlieSegments: 1 }, agentLines: [
     { text: OPENER, atSec: 9 }, { text: "Sorry, do you have any Pokemon in stock right now?", atSec: 14 }] });
-  ok("two questions and one person still FAILS asked once", row(r, "asked_once").pass === false, row(r, "asked_once").why);
 }
 {
   // A finished row: a flat transcript with no clock on it. The rows must still answer, and say so.
@@ -216,7 +199,6 @@ head("…and every way it can go wrong");
   const r = behaved({ timeline: savedCheck, rollup: { charlieSegments: 2 }, agentLines: lines });
   ok("with no clock, the new person is still scored off the order", row(r, "asked_the_new_person").pass === true, row(r, "asked_the_new_person").why);
   ok("…and it says the clock was not what it read", /order of the lines/.test(row(r, "asked_the_new_person").why));
-  ok("asked once holds up without a clock too", row(r, "asked_once").pass === true);
 }
 {
   // A long walk away is ALSO somebody new (the engine says so), and it buys the same second question.
@@ -228,7 +210,6 @@ head("…and every way it can go wrong");
   ];
   const r = behaved({ timeline: walked, rollup: { charlieSegments: 2 }, agentLines: [
     { text: OPENER, atSec: 7 }, { text: "Heyy, do you have any Pokemon in stock right now?", atSec: 57 }] });
-  ok("a long wait is a maybe-new person: asked once passes, it does not cross", row(r, "asked_once").pass === true, row(r, "asked_once").why);
   // A WALK AWAY IS NOT PROOF SOMEBODY ELSE PICKED UP. Requiring a second question here would cross a
   // check where Staff went to the shelf, came back themselves, and the agent rightly carried on.
   ok("…and the new-person row is a DASH, because a walk away is not a hand-over", row(r, "asked_the_new_person").pass === null, row(r, "asked_the_new_person").why);
@@ -268,7 +249,6 @@ head("…and every way it can go wrong");
     { text: "Heyy, do you have any Pokemon in stock right now?", atSec: 30 }] });
   ok("a silent hand-over still counts as a hand-over", row(r, "asked_the_new_person").pass === true, row(r, "asked_the_new_person").why);
   ok("…and asked to be put through ticks", row(r, "asked_to_be_put_through").pass === true);
-  ok("…and asked once does not cross on the second question", row(r, "asked_once").pass === true);
 }
 
 console.log(`\n${fail ? "FAIL" : "PASS"}  ${pass} passed, ${fail} failed`);

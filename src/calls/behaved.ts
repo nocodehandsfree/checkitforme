@@ -1,15 +1,15 @@
-// DID THE NEW ENGINE BEHAVE — the four pass/fail rows the owner reads on one test check.
+// CHARLIE BEHAVIOR — the pass/fail rows the owner reads on one test check.
 //
-// WHY (owner, 07-29): he places a test check on the Fun store and the only way to know whether the
-// new engine did the four things it was built to do was to read a receipt line by line, at night, on
-// a phone. Three of the four failures are invisible in the verdict: a second question, a keypad tone
-// fired at a person who is already talking, and an agent left billing through a two-minute hold all
-// end in a perfectly good answer. This module turns the record the engine already writes into four
-// words he can read in one glance.
+// WHY (owner, 07-29): he places a test check and the only way to know whether the engine did what it
+// was built to do was to read the whole thing line by line, at night, on a phone. The failures that
+// matter are invisible in the answer: a keypad tone fired at Staff who are already talking, Charlie
+// left billing through a two minute wait, and a map that quietly stopped working all end in a
+// perfectly good answer. This turns the record the engine already writes into words he reads at a
+// glance.
 //
 // DESIGN RULES
-//  1. PURE. No db, no config, no clock, no vendor names. It takes a receipt's timeline, its roll-up
-//     and what the agent said, and returns four rows. Unit-testable without booting the app
+//  1. PURE. No db, no config, no clock, no vendor names. It takes a check's steps, its roll-up and
+//     what Charlie said, and returns the rows. Unit-testable without booting the app
 //     (scripts/test-behaved.ts).
 //  2. NO NEW LISTENING. Every judgement comes off events the engine ALREADY writes — the closed set
 //     of sixteen kinds in docs/specs/admin-ops-dashboard/CONTRACT.md §8. Nothing here asks the
@@ -19,14 +19,10 @@
 //     engine broke" and a tick reads as "we checked and it was fine"; both are lies. Same law the
 //     dashboard already runs on: a cost that was never stamped is never printed as nought.
 //
-// The order is fixed and matches the screen the owner walked (docs/tasks/admin-testing-new-engine.md).
-// He called the fifth and sixth on 07-30, for the wrong-department save, so they are APPENDED: the four
-// he already knows keep their places and their meaning, and the two new ones sit under them.
-//
-// THE TRAP THE FIFTH ROW EXPOSED. "Asked once" counted asks per CHECK. That was right while a check
-// only ever had one person on it. The save puts a SECOND person on the line, and asking them is the
-// whole point — so the old rule would have printed a red cross on a check that behaved perfectly. The
-// rule is one question PER PERSON, and the allowance grows by one every time somebody new picks up.
+// ONLY ROWS THAT CAN REALLY FAIL (owner 07-30). "Asked once" was deleted: Charlie is locked to one
+// question by the workflow and has never done otherwise, so it ticked on every check and said nothing.
+// The one case where a SECOND question is right is a transfer, and "Re-asked after transfer" judges
+// that. A row that can only ever tick is not a check, it is decoration.
 
 // THE ONE PLACE THE WORDS LIVE. The runtime reads this SAME test to decide the next wait is a
 // hand-over; grading it here off a second copy is how a screen ends up disagreeing with the engine it
@@ -34,7 +30,7 @@
 // still holds: no db, no config, no clock.
 import { askedToBePutThrough as saysPutMeThrough } from "../voice/prompts";
 
-export type BehavedKey = "asked_once" | "no_keypad_at_person" | "meter_stopped_on_hold" | "mapping_held"
+export type BehavedKey = "no_keypad_at_person" | "meter_stopped_on_hold" | "mapping_held"
   | "asked_to_be_put_through" | "asked_the_new_person";
 
 export interface BehavedRow {
@@ -82,14 +78,11 @@ const asTurn = (l: string | AgentTurn): AgentTurn =>
  * THE STOCK QUESTION, as opposed to a follow-up. The opener always names the thing we are asking
  * about ("do you have any Pokémon in stock right now?", "do you guys carry Pokémon cards at all?").
  * The follow-ups deliberately do not — "any idea what day that usually lands?", "do you know the
- * name of the set?", "does that come in a pack?" — which is exactly what makes them countable apart.
- * One stock question per check is the whole rule (ONE QUESTION, THEN WRAP).
+ * name of the set?", "does that come in a pack?" — which is what makes them countable apart. It is
+ * what "Re-asked after transfer" looks for: the question, asked again, to whoever picked up.
  */
 const ASK = /\b(in stock|stock right now|carry|carrying|have any|got any|have some|any left)\b/i;
 const isAsk = (line: string) => /\?/.test(line) && ASK.test(line);
-
-/** An opening greeting. A second one on the same check is the re-greeting after a hold. */
-const isGreeting = (line: string) => /^\s*(hi\b|hey\b|hello\b|good (morning|afternoon|evening)\b)/i.test(line);
 
 /** What the agent said, pulled out of the one flat transcript string a finished row stores. */
 export function agentLinesFrom(transcript: string | null | undefined): string[] {
@@ -132,38 +125,12 @@ export function behaved(input: BehavedInput): BehavedRow[] {
   const wrongDept = tl.find((e) => (e.detail || {}).wrongDepartment === true) || null;
 
   return [
-    askedOnce(turns, maybeNew.length),
     noKeypadAtPerson(sec(first("human_detected")), every("alpha_press"), tl),
     meterStoppedOnHold(tl, sums),
     mappingHeld(tl, sums, sec(first("human_detected")), sec(first("charlie_join"))),
     askedToBePutThrough(turns, wrongDept),
     askedTheNewPerson(turns, handedOver, maybeNew),
   ];
-}
-
-/**
- * ONE QUESTION PER PERSON. Not one per check: a hand-over puts somebody new on the line who never
- * heard the first question, and asking them is the save working, not a fault. The allowance is one
- * plus however many times somebody new picked up.
- */
-function askedOnce(turns: AgentTurn[], newPeople: number): BehavedRow {
-  const row = (pass: boolean | null, why: string): BehavedRow => ({
-    key: "asked_once", label: "Asked once", pass, why,
-    tip: "One stock question per person on the check. A second question with nobody new is a fail. Asking again after a transfer is not.",
-  });
-  if (!turns.length) return row(null, "No Charlie lines recorded. Nothing to count.");
-  const asks = turns.filter((t) => isAsk(t.text)), greets = turns.filter((t) => isGreeting(t.text));
-  const allowed = 1 + newPeople;
-  if (asks.length > allowed) {
-    return row(false, `${plural(asks.length, "question", "questions")}, ${plural(1 + newPeople, "person", "people")} on the check. ${asks.length - allowed} too many.`);
-  }
-  if (greets.length > 1 + newPeople) return row(false, `${plural(greets.length, "greeting", "greetings")}, ${plural(1 + newPeople, "person", "people")} on the check. Somebody was greeted twice.`);
-  if (asks.length >= 1) {
-    // A check with a hand-over and only ONE ask still passes HERE: nobody was asked twice. Whether the
-    // new person was asked at all is its own row below, so one miss never prints two crosses.
-    return row(true, `${plural(asks.length, "question", "questions")}, ${plural(1 + newPeople, "person", "people")} on the check.`);
-  }
-  return row(null, "No stock question recognised in Charlie\u2019s lines. Not counted.");
 }
 
 /**
@@ -295,11 +262,13 @@ function mappingHeld(tl: BehavedEvent[], sums: BehavedSums, humanAt: number | nu
   const onPause = Number(sums.stepsOnPause ?? steps.filter((e) => (e.detail || {}).via === "prompt").length);
 
   if (!mapped) {
+    // A DIRECT STORE HAS NO MAP TO HOLD. Ticking that every time is the same noise as the keypad row
+    // was: it can only ever pass, so it says nothing (owner 07-30). A step firing at a store that
+    // answers direct is still a real fault, so that one still crosses.
     if (fired > 0) return row(false, `Direct store. ${plural(fired, "step", "steps")} fired at it anyway.`);
-    if (joinAt == null) return row(null, "0 steps fired. Charlie never joined, so there is nothing to check.");
-    if (humanAt == null) return row(false, `Charlie joined at ${joinAt}s with nobody on the line.`);
-    if (joinAt >= humanAt) return row(true, `Direct store. 0 steps fired. Charlie joined at ${joinAt}s, when Staff answered.`);
-    return row(false, `Charlie joined at ${joinAt}s, ${humanAt - joinAt}s before Staff were there.`);
+    if (joinAt != null && humanAt != null && joinAt < humanAt) return row(false, `Charlie joined at ${joinAt}s, ${humanAt - joinAt}s before Staff were there.`);
+    if (joinAt != null && humanAt == null) return row(false, `Charlie joined at ${joinAt}s with nobody on the line.`);
+    return row(null, "Direct store, no map to hold.");
   }
   const planned = plan ? plan.length : fired;
   if (fired === 0) return row(false, `${plural(planned, "step", "steps")} mapped for this store. 0 fired.`);
