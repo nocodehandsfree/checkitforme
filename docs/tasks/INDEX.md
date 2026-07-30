@@ -8,6 +8,9 @@ small md here (what · done-when · system · status). Owner adds/reorders freel
 **Counts (swept 2026-07-23):** active 53 · parked 6 · dead 1 · total 60.
 Systems: site · admin · voice-calls · data · support (data carries the old ops/infra lane).
 
+## ⭐ NEXT UP — `mapper-handoff.md` (voice-calls). CVS is mapped and proven; four things the owner
+raised on 07-30 must be resolved before any chain is mapped, then Walgreens (chain 10) from nothing.
+
 ## ⭐ Owner work streams (active — started this week)
 **Stream 1 — the five site fixes (SHIPPED to staging @4f6c4a6, PR #92; owner confirms on his phone,
 then they ride the next promote to prod):**
