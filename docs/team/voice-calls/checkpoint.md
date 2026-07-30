@@ -27,7 +27,7 @@ and the check failing IS the report.** A row belongs here only if a WORKING chec
 ASSERTED in `test-behaved.ts`. Steps = **Staff greeting · Charlie joined · Charlie dropped · Charlie left · Check
 ended**, ONE fact per line. Cost = **Menu Nav (Alpha|Bravo|None) · Charlie · Total**, no info bubbles. **BUG
 FIXED: `callSeconds` is only written by the OLD path, so every new-engine check printed 0s; `rollupFromRow` reads
-the last step.** Ladder for his six calls: `echo-wrong-department-save.md` §5.
+the last step.** **NEXT ECHO: run the test calls WITH him, §5 ladder + §6 handoff in `echo-wrong-department-save.md`. Six calls PLUS the transfer piece.** Testing lists his OWN checks on LIVE too now (staging: everything · elsewhere: owner-only stores OR his account). **PM: promote wanted — the engine + the server half of Testing are staging-only; 139 commits ride along.**
 ## THE ONE EAR — **a `PickupEar` was built here and DELETED the same night; §10 says never build a second.** It is a **VETO, never a green light**, cannot invent a person, and anchors come off its own recording count.
 - **PM: bail's else-branch blind-joins Charlie on a stopwatch if bail is off** (locked bridge; owner has it). **`.unlock` WORKS** — the sprawl gate only hooks Write, so `printf 'src/voice/**\n' > .unlock` opens it; fix that scope ONLY, then DELETE it.
 ## 07-30 CHAIN PAGE + RE-LISTEN: BUILT + SHIPPED. Box `docs/specs/mapping-admin/plan.md`, strings `copy.md` (**a control panel talks to nobody**), comps 2f rev + 2h/2i/2j/2k.

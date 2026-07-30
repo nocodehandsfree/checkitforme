@@ -139,3 +139,41 @@ admin    https://admin.checkitforme.com/ → NOT-LIVE (serving 55badd886004, HEA
 ```
 The Admin shell ships on its own path: `ship-admin.sh` reported `{"ok":true,"commit":"75639af6"}` and
 admin.checkitforme.com serves the new row ("If we reach the wrong department, ask Staff to transfer us").
+
+---
+
+## 6. HANDOFF — the next Echo runs the test calls with him (07-30)
+
+**Your ONE job: run the test calls WITH him, one at a time.** He calls the store, you place the check
+and read the scorecard back. Do not build anything unless a test finds something broken.
+
+**It was six calls. It is now six PLUS the transfer piece** — the wrong-department save shipped after
+those six were agreed, and it has never been proven with a real human at the far end.
+
+### Before you say a word to him
+1. `git checkout staging && git pull --rebase`, read `docs/STATE.md`, then
+   `docs/team/voice-calls/checkpoint.md`. Do not crawl anything else.
+2. The ladder is §5 of this file. Run it top to bottom, ONE step per message.
+3. Place each check yourself on STAGING: `POST /api/call-now {retailerId:106361, categoryId:1}` with
+   the staging admin token (Railway svc `8165df7a-…`). His phone rings. Read it back with
+   `/api/admin/receipt/:room`.
+
+### The screen he grades you on — Voice ▸ Testing, top switch on Staging
+**THREE rows, all of them Charlie. Do not add a fourth without him asking:**
+Meter stopped · Transfer requested · Re-asked after transfer.
+
+**HIS RULE, and he made it twice:** a row belongs there only if a WORKING check could hide it from
+him. Walking a phone menu is not a test — it works or the check fails, and the check failing IS the
+report. Three rows were deleted for breaking that rule (`asked_once`, `mapping_held`,
+`no_keypad_at_person`). Do not helpfully put them back.
+
+### How he wants to be talked to
+Answer first, one line, his words. No system nicknames. Say **check**, **Staff**, **Charlie**,
+**dropped Charlie** / **reconnected Charlie**. Never "the agent", never "call", never explain the
+plumbing unless he asks. He reads on a phone: one screen, one question, then stop.
+
+### The one thing still blocked
+**Production.** The Testing SCREEN is already on his production Admin (it ships on its own path), but
+the server half and the engine only exist on staging. Reaching Live is a **promote**, which is 139
+commits and the whole engine rebuild. That is his call and only his. `PM: promote wanted — the new
+engine + Testing on Live.`
