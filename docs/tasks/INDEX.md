@@ -8,8 +8,15 @@ small md here (what · done-when · system · status). Owner adds/reorders freel
 **Counts (swept 2026-07-23):** active 53 · parked 6 · dead 1 · total 60.
 Systems: site · admin · voice-calls · data · support (data carries the old ops/infra lane).
 
-## ⭐ NEXT UP — `mapper-handoff.md` (voice-calls). CVS is mapped and proven; four things the owner
-raised on 07-30 must be resolved before any chain is mapped, then Walgreens (chain 10) from nothing.
+## ⭐ NEXT UP — the PM lane (handoff 07-31 · the law: `docs/specs/mapping-admin/build-contract.md`,
+addendum R1-R6 OVERRIDES the body · the fix list: `audit-code-vs-contract.md` in the same folder)
+Mapping rebuild runs in THREE chunks, one fresh chat each: 1 engine (BUILDING now) · 2 self-healing ·
+3 screens. Owner says "finished" → PM audits that chunk vs the contract with blind readers BEFORE the
+next chunk's box goes out. Owner tests ONCE at the end (fresh CVS, start to finish). In the chunk-1
+audit also re-prove run-resume on a live restart. After chunk 2, box Webbie ONE task: the zone-report
+skip sentence for muted stores (EN + ES; the site is frozen to everyone else). Echo likely needs the
+same spec-vs-build audit — wait for the owner's word. **PM ships NOTHING without the owner's "clear"
+while he is testing — every push restarts staging and kills a live check.**
 
 ## ⭐ Owner work streams (active — started this week)
 **Stream 1 — the five site fixes (SHIPPED to staging @4f6c4a6, PR #92; owner confirms on his phone,
