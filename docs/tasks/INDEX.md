@@ -39,7 +39,8 @@ then they ride the next promote to prod):**
 | [Chain section rebuild — GO](../specs/mapping-admin/plan.md) | voice-calls + admin | active (un-parked 07-29) |
 | [The Admin dashboard, continued (new Addie)](addie-dashboard-continue.md) | admin | **jobs 1+2 DONE 07-29** |
 | [Voice ▸ Testing becomes the new-engine scorecard](admin-testing-new-engine.md) | admin | **SHIPPED 07-30** (@5b1f325, driven). Admin live · **PM: promote wanted** for the server half |
-| [Check status page: the phone's own bars, then alerts](site-check-status-fixes.md) | site | rounds 1+2 **SHIPPED to staging 07-30** (PRs #100 #101: bottom clear on live AND wait screens, verdict at hang up; driven on staging by relay). His phone next. Alerts SECOND |
+| [Check status page: the phone's own bars, then alerts](site-check-status-fixes.md) | site | rounds 1+2 **SHIPPED to staging 07-30** (PRs #100 #101: bottom clear on live AND wait screens, verdict at hang up; driven on staging by relay). Alerts + the no-email root cause SHIPPED 07-31. His phone next |
+| [Go-live site audit: the fix list before customers](go-live-site-audit.md) | site | **findings gathered 07-31** (owner-ordered research, nothing built): short alerts sheet · slow radius reload · ES footer wrap · auto-check gaps · PROD alerts unproven · untried combos. Fixes wait for the owner's go |
 | [Check status page: loud retry + headline states](site-check-status-loud-retry.md) | site | active — headline states + step window SHIPPED 07-30 (@ec6e2d0, staging). Loud retry + the counter still unbuilt |
 | [Unify the Admin: gate FIRST, then page by page](admin-unify-pass.md) | admin | **step 1 (gate) + page 1 (Live/dash) DONE + LIVE 07-30, dash SEALED.** Next page = App (settings) |
 | [The wrong-department save (Echo)](echo-wrong-department-save.md) | voice-calls | BUILT + shipped to staging 07-30 · all four items done · only a real check with a human saying "this is the pharmacy" is left, and that needs his phone |
