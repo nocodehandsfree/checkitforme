@@ -688,6 +688,17 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
             wrongDept = true;
             emit(room, "unknown", `We reached the wrong department: ${wd.why}`, { wrongDepartment: true, why: wd.why, said: wd.said });
             log(`wrong department: ${wd.why}`);
+            // STAFF CAN HAND US ON WITHOUT BEING ASKED, and until now only OUR asking marked the next
+            // wait as a hand-over. So "let me transfer you to electronics" followed by a silent, quick
+            // hand-over read as the same person stepping away, and the agent carried straight on with
+            // a stranger who never heard the question — the exact failure the save exists to prevent,
+            // arriving through the door we did not watch. Their own words are the same evidence ours
+            // are, so they mark it the same way. Only the offer to MOVE us counts; being told we are
+            // in the wrong place predicts nothing until somebody actually asks.
+            if (wd.handingOver && !expectHandover) {
+              expectHandover = true;
+              log("wrong department: STAFF offered to hand us on, so the next wait is a hand-over");
+            }
           }
         }
         if (txt && /\b(leave (?:a|your) message|after the (?:tone|beep)|at the (?:tone|beep)|voice ?mail|mailbox|record your message|is not available|unable to take your call|has been forwarded to)\b/i.test(String(txt))) {

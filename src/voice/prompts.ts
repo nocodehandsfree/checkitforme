@@ -168,24 +168,23 @@ export function oneTurnShipmentDay(question: string): string {
  *
  * @param line one thing Staff said. @returns null, or a stable short reason plus what they said.
  */
-export type WrongDepartment = { why: string; said: string };
+/** `handingOver` = Staff did not merely tell us we are in the wrong place, they said they are moving
+ *  us. That is the one reason that also predicts the NEXT wait, so the runtime can know a hand-over
+ *  is coming without our agent having had to ask for it. Being told "this is the pharmacy" predicts
+ *  nothing: we still have to ask, and until we do, a quiet pause is just somebody stepping away. */
+export type WrongDepartment = { why: string; said: string; handingOver?: true };
 /** Counters that answer for themselves and cannot see the shop floor. */
 const OTHER_COUNTER = "pharmacy|photo(?: lab| centre| center)?|deli|bakery|optical|vision cent(?:er|re)|garden(?: cent(?:er|re))?|automotive|tire cent(?:er|re)|auto cent(?:er|re)|meat department|produce|money cent(?:er|re)|western union|salon|grooming|vet clinic";
 export function heardWrongDepartment(line: string): WrongDepartment | null {
   const t = String(line || "").trim();
   if (!t) return null;
   const said = t.slice(0, 200);
-  // They named where we actually are, and it is not the shop floor.
-  if (new RegExp(`\\b(?:this is|you(?:'ve| have)? reached|you got|i'm in|we're)\\s+(?:the\\s+)?(?:${OTHER_COUNTER})\\b`, "i").test(t))
-    return { why: "Staff said we reached another counter", said };
-  // They named it as the wrong place, without naming which place.
-  if (/\b(?:wrong|different|another|other)\s+(?:department|desk|extension|counter|line)\b/i.test(t)
-    || /\b(?:not|isn'?t|aren'?t|ain'?t|isnt|arent)\s+(?:the|my|our)\s+department\b/i.test(t))
-    return { why: "Staff said this is the wrong department", said };
-  // They sent us to the front of the store, which is where we were trying to land.
-  if (/\b(?:you(?:'ll| will)?\s+(?:want|need)|(?:you should|try|call|ask)\s+(?:the\s+)?)\s*(?:the\s+)?(?:front(?:\s+(?:store|end|desk|counter|of the store))?|main store|general (?:store|line)|customer service)\b/i.test(t))
-    return { why: "Staff said we want the front of the store", said };
-  // They offered to hand us on. Landing somewhere that has to hand us on IS landing wrong.
+  // ARE THEY MOVING US? Worked out ONCE, up here, and attached to whichever reason below fires,
+  // because the two questions are not the same and one sentence can answer both. "Let me transfer you
+  // to a different department" is a wrong department AND a hand-over already underway; it used to
+  // match the wrong-department reason first and return, losing the fact that the phone was about to
+  // change hands. That fact is what tells the runtime the next quiet stretch is a hand-over rather
+  // than somebody stepping away, so losing it left the agent carrying on with a stranger.
   //
   // THE HAND-OVER WORD IS REQUIRED. It used to be optional, which made "put you" on its own enough,
   // so "I'm gonna put you on hold" — the single most common sentence a store says — was read as being
@@ -193,9 +192,21 @@ export function heardWrongDepartment(line: string): WrongDepartment | null {
   // then either a direction (through / over / back) or a preposition that names who we are being given
   // to (to / with). "put you on hold", "can you hold", "let me put you down for one" no longer match;
   // "put you through", "transfer you to the pharmacy", "put you on with the manager" still do.
-  if (/\b(?:transfer|put|get|connect|forward|send)(?:ring)?\s+(?:you|ya)\s+(?:(?:through|over|back)\b|(?:on\s+)?(?:to|with)\s)/i.test(t)
-    && !/\bvoice ?mail|message\b/i.test(t))
-    return { why: "Staff offered to put us through to somebody else", said };
+  const moving = /\b(?:transfer|put|get|connect|forward|send)(?:ring)?\s+(?:you|ya)\s+(?:(?:through|over|back)\b|(?:on\s+)?(?:to|with)\s)/i.test(t)
+    && !/\bvoice ?mail|message\b/i.test(t);
+  const hit = (why: string): WrongDepartment => (moving ? { why, said, handingOver: true } : { why, said });
+  // They named where we actually are, and it is not the shop floor.
+  if (new RegExp(`\\b(?:this is|you(?:'ve| have)? reached|you got|i'm in|we're)\\s+(?:the\\s+)?(?:${OTHER_COUNTER})\\b`, "i").test(t))
+    return hit("Staff said we reached another counter");
+  // They named it as the wrong place, without naming which place.
+  if (/\b(?:wrong|different|another|other)\s+(?:department|desk|extension|counter|line)\b/i.test(t)
+    || /\b(?:not|isn'?t|aren'?t|ain'?t|isnt|arent)\s+(?:the|my|our)\s+department\b/i.test(t))
+    return hit("Staff said this is the wrong department");
+  // They sent us to the front of the store, which is where we were trying to land.
+  if (/\b(?:you(?:'ll| will)?\s+(?:want|need)|(?:you should|try|call|ask)\s+(?:the\s+)?)\s*(?:the\s+)?(?:front(?:\s+(?:store|end|desk|counter|of the store))?|main store|general (?:store|line)|customer service)\b/i.test(t))
+    return hit("Staff said we want the front of the store");
+  // They offered to hand us on. Landing somewhere that has to hand us on IS landing wrong.
+  if (moving) return hit("Staff offered to put us through to somebody else");
   return null;
 }
 

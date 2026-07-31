@@ -62,6 +62,12 @@ for (const [line, why] of [
   ok(!!r && r.said === line, `it keeps what Staff actually said, for the evidence`);
 }
 ok(heardWrongDepartment("Hi, this is the pharmacy.")!.why.includes("Staff"), "the reason says Staff, the word the owner reads");
+// STAFF MOVING US IS ITS OWN FACT, and it is the one that predicts the next wait. Being told we are in
+// the wrong place does not: nobody is carrying the phone anywhere until somebody asks.
+ok(heardWrongDepartment("Let me transfer you to a different department.")!.handingOver === true, "Staff saying they will move us marks a hand-over as coming");
+ok(heardWrongDepartment("I'll put you through to the front.")!.handingOver === true, "…however they word it");
+ok(heardWrongDepartment("Hi, this is the pharmacy.")!.handingOver === undefined, "being told where we landed is NOT somebody carrying the phone away");
+ok(heardWrongDepartment("You'll want the front store for that.")!.handingOver === undefined, "…nor is being told where to call instead");
 
 console.log("▶ heardWrongDepartment: it stayed quiet (a false positive files drift on a healthy route)");
 for (const line of [

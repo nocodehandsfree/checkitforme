@@ -483,6 +483,37 @@ console.log("\n▶ a SILENT hand-over is still a hand-over, because he asked to 
   restore(); tw.close(); f.close();
 }
 
+// AND THE SAME THING WHEN STAFF NEVER GAVE HIM THE CHANCE TO ASK. Plenty of stores just move you:
+// "let me transfer you to electronics", a second of quiet, a stranger. Only OUR asking used to mark
+// the next wait as a hand-over, so this landed as somebody stepping away and the agent carried on
+// mid answer with a person who had never heard the question.
+console.log("\n▶ STAFF offer the transfer and move us fast: still a hand-over, still a new person");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const tw = await callWithHold(f, "room-staff-xfer", "reopen");
+  speak(tw, 150);
+  f.sockets[0].send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Hi, do you have any Pokemon cards in stock right now?" } }));
+  await sleep(40);
+  // Staff move us. Our agent never asks — he has nothing to ask for, they already offered.
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Oh, let me transfer you to electronics." } }));
+  await sleep(60);
+  quiet(tw, HOLD_QUIET_MS / 20 + 20);   // no ring, and nowhere near twenty seconds
+  await sleep(80);
+  speak(tw, 30);
+  await sleep(200);
+  const r = getReceipt("room-staff-xfer")!;
+  const back = r.events.find((e) => e.kind === "hold_end");
+  ok(!r.events.some((e) => e.kind === "transfer"), "no ringing, so the sound said nothing");
+  ok((back?.detail?.gapSec as number) < 20, `they were gone ${back?.detail?.gapSec}s, under the bar that used to decide this`);
+  ok(back?.detail?.maybeNewPerson === true, "somebody new anyway, off THEIR words, with no ask of ours");
+  ok(back?.detail?.afterAskingToBePutThrough === true, "…and the record says it was a hand-over, not a wander off");
+  const notes = f.raw.filter((m) => m.includes("contextual_update"));
+  ok(notes.length === 1 && /may be someone new/i.test(notes[0]), "he is told the person may be someone new, so he asks again");
+  restore(); tw.close(); f.close();
+}
+
 console.log("\n▶ …and a plain wander off is still just a wander off");
 {
   _reset();
