@@ -949,6 +949,7 @@ function finish(s: NavSession, status: "human" | "failed" | "mapped") {
         // has to travel on its own or the map books a perfect re-listen as a call that missed Staff.
         endedOnRing: status === "mapped",
         stage: s.stage ?? (s.relisten ? "speed" : "map"), grade: s.grade, reason: s.failReason,
+        callSid: s.callSid,
       }))
       .then((r) => emit(s.id, "unknown", `Map updated: ${r.why}`, { recorded: r.recorded }))
       .catch((e) => console.error("[navigator] recordNavCall", e));
@@ -983,6 +984,7 @@ async function persistRun(s: NavSession): Promise<void> {
       // and lands on "nobody picked up", which is the one thing that did not happen.
       endedOnRing: s.endedOnRing ? true : undefined,
       stage: s.stage ?? (s.relisten ? "speed" : "map"), grade: s.grade, reason: s.failReason,
+      callSid: s.callSid,
       // A re-listen reports the MENU's seconds (the handoff, else its last step), never a person's.
       seconds: s.relisten
         ? (s.transferAtSec ?? s.steps.filter((st) => st.who === "us").slice(-1)[0]?.atSec ?? s.humanAtSec ?? null)
@@ -1035,6 +1037,10 @@ export async function placeNavCall(chainId: number | null, retailerId: number, r
     To: e164(phone), From: from,
     Url: `https://${RAILWAY_HOST}/nav/twiml?session=${id}`,
     StatusCallback: `https://${RAILWAY_HOST}/nav/ended?session=${id}`, StatusCallbackEvent: "completed",
+    // EVERY mapping check is recorded (owner, 07-30): the recording is what the play button on each
+    // menu line plays, and what a better transcriber re-listens to at lock time. Mapping checks only —
+    // customer checks take a different path entirely.
+    Record: "true",
   });
   const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls.json`, {
     method: "POST",

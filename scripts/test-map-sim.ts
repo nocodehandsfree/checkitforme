@@ -615,6 +615,21 @@ async function main() {
       "a move that broke the walk is remembered as never-again off its graded reason");
   }
 
+  // PIECE SIX: every mapping check is recorded, and each menu line plays its own slice.
+  console.log("▶ THE RECORDING RIDES EVERY CHECK, AND A LINE PLAYS ITS OWN SLICE");
+  {
+    const nav = readFileSync("src/calls/navigator.ts", "utf8");
+    ok(/Record: "true",/.test(nav), "every mapping check is recorded at the carrier");
+    ok((nav.match(/callSid: s\.callSid,/g) || []).length === 2, "and the recording's id rides the run log and the map fold");
+    const srv = readFileSync("src/server.ts", "utf8");
+    ok(/app\.get\("\/api\/admin\/map\/play\/:callSid"/.test(srv), "the page fetches the audio through our own signed route");
+    ok(/^CA\[a-zA-Z0-9\]\{32\}\$/.test("CA".length ? "CA[a-zA-Z0-9]{32}$" : "") || /\/\^CA\[a-zA-Z0-9\]\{32\}\$\//.test(srv), "which refuses anything that is not a call id");
+    const page = readFileSync("public/app.html", "utf8");
+    ok(/menuPlayLine\('\$\{sid\}',\$\{ln\.at\}/.test(page), "each line's play button seeks to that line's own second");
+    ok(/sid&&ln\.at!=null\?/.test(page), "and a check with no recording shows no button, never a dead one");
+    ok(/MENU_AUDIO\.currentTime>=MENU_AUDIO_STOP/.test(page), "playback stops where the next line starts");
+  }
+
   console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }

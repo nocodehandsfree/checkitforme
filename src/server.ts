@@ -6384,6 +6384,23 @@ app.get("/api/admin/map/chain/:id", async (c) => {
   try { menuFixes = JSON.parse((await getSetting(`menu_fix:${id}`)) || "{}"); } catch { menuFixes = {}; }
   return c.json({ ...(await chainDetail(id)), menuFixes });
 });
+// THE PLAY BUTTON'S AUDIO. Every mapping check is recorded at the carrier; this streams one check's
+// recording to the page, where each menu line seeks to its own second. The carrier's media address
+// needs its own sign-in, so the page cannot fetch it directly — this route carries it across.
+app.get("/api/admin/map/play/:callSid", async (c) => {
+  const callSid = String(c.req.param("callSid") || "");
+  if (!/^CA[a-zA-Z0-9]{32}$/.test(callSid)) return c.json({ error: "bad call id" }, 400);
+  const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
+  if (!sid || !tok) return c.json({ error: "twilio not configured" }, 500);
+  const auth = "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64");
+  const list = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}/Recordings.json`, { headers: { Authorization: auth } });
+  if (!list.ok) return c.json({ error: `carrier ${list.status}` }, 502);
+  const recs = ((await list.json()) as { recordings?: Array<{ sid: string }> }).recordings || [];
+  if (!recs.length) return c.json({ error: "no recording for this check" }, 404);
+  const media = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Recordings/${recs[0].sid}.mp3`, { headers: { Authorization: auth } });
+  if (!media.ok || !media.body) return c.json({ error: `carrier ${media.status}` }, 502);
+  return new Response(media.body, { headers: { "content-type": "audio/mpeg", "cache-control": "private, max-age=3600" } });
+});
 app.post("/api/admin/map/chain/:id/menu-line", async (c) => {
   const id = Number(c.req.param("id"));
   if (!id) return c.json({ error: "chainId required" }, 400);

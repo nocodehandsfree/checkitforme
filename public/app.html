@@ -4928,6 +4928,9 @@ function doorMap(ch,call,v){
     const m=String(raw).match(/^\s*(\d+)s\s+([\s\S]*)$/);
     return { at:m?Number(m[1]):null, text:(m?m[2]:String(raw)).trim() };
   });
+  // The recording behind the play buttons: this locked check's own audio. An older check from before
+  // recording began has none, so its lines simply carry no play button — never a button that does nothing.
+  const sid=call.callSid||null;
   // The step that answered each line, by ORDER: the walk answers question one with step one, question
   // two with step two. Matching by seconds put "general" under the transfer line, because the locked
   // recipe's seconds come from an older run than the check on screen.
@@ -4936,6 +4939,7 @@ function doorMap(ch,call,v){
   const laneC=(st)=>st.action==='press'?LANE_C.Alpha:LANE_C.Bravo;
   const opts=((v&&v.recipe&&v.recipe.menu)||[]);
   const pencil='<svg style="vertical-align:-2px;margin-left:6px;cursor:pointer" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5C5C68" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>';
+  const playIco='<svg style="vertical-align:-2px" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8A8A96" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>';
   return lines.map((ln,i)=>{
     const fixed=fixes[i]!=null&&String(fixes[i]).trim();
     const text=fixed||ln.text;
@@ -4963,11 +4967,32 @@ function doorMap(ch,call,v){
       +`<div style="display:flex;flex-direction:column;align-items:center;flex:0 0 auto;padding-top:5px"><span style="width:6px;height:6px;border-radius:50%;background:#5C5C68"></span>`
       +(last?'':`<span style="width:2px;flex:1;background:rgba(255,255,255,.10);margin:3px 0"></span>`)+`</div>`
       +`<div style="flex:1;min-width:0;padding-bottom:${last?'0':'16px'}">`
-      +`<div id="mline_${ch.id}_${i}" data-i="${i}" onclick="menuFixLine(${ch.id},${i})" style="font-size:12px;font-weight:500;color:rgba(255,255,255,.55);line-height:1.5;cursor:text">"${esch(text)}"${pencil}${fixed?'<span style="margin-left:6px;color:var(--text-tertiary);font-size:11px">corrected</span>':''}</div>`
+      +`<div style="display:flex;align-items:baseline;gap:2px">`
+      +`<div id="mline_${ch.id}_${i}" data-i="${i}" onclick="menuFixLine(${ch.id},${i})" style="flex:1;min-width:0;font-size:12px;font-weight:500;color:rgba(255,255,255,.55);line-height:1.5;cursor:text">"${esch(text)}"${pencil}${fixed?'<span style="margin-left:6px;color:var(--text-tertiary);font-size:11px">corrected</span>':''}</div>`
+      +(sid&&ln.at!=null?`<span onclick="menuPlayLine('${sid}',${ln.at},${i+1<lines.length&&lines[i+1].at!=null?lines[i+1].at:'null'})" style="cursor:pointer;flex:0 0 auto;display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#26262B">${playIco}</span>`:'')
+      +`</div>`
       +`<div style="margin-top:2px;font-size:11px;font-weight:700;color:#5C5C68">${ln.at!=null?ln.at+'s':''}</div>`
       +(pills.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${pills.join('')}</div>`:'')
       +`</div></div>`;
   }).join('');
+}
+// One shared player: a line's play button seeks the check's recording to that line's own second and
+// stops where the next line starts, so what plays is exactly the piece on screen.
+let MENU_AUDIO=null, MENU_AUDIO_SID=null, MENU_AUDIO_STOP=null;
+function menuPlayLine(sid,from,to){
+  if(MENU_AUDIO&&MENU_AUDIO_SID===sid){ menuSeekPlay(from,to); return; }
+  if(MENU_AUDIO){ MENU_AUDIO.pause(); MENU_AUDIO=null; }
+  MENU_AUDIO_SID=sid;
+  MENU_AUDIO=new Audio('/api/admin/map/play/'+sid);
+  MENU_AUDIO.addEventListener('loadedmetadata',()=>menuSeekPlay(from,to));
+  MENU_AUDIO.addEventListener('timeupdate',()=>{ if(MENU_AUDIO_STOP!=null&&MENU_AUDIO.currentTime>=MENU_AUDIO_STOP){ MENU_AUDIO.pause(); MENU_AUDIO_STOP=null; } });
+  MENU_AUDIO.load();
+}
+function menuSeekPlay(from,to){
+  if(!MENU_AUDIO) return;
+  MENU_AUDIO.currentTime=Math.max(0,(Number(from)||0)-1);
+  MENU_AUDIO_STOP=(to!=null&&isFinite(to))?Number(to):null;
+  MENU_AUDIO.play().catch(()=>toast('No recording for this check'));
 }
 // Tap the words and they become the edit box, a light outline around it, save where the pencil was.
 // The correction is kept beside what was heard, marked corrected, and no future check overwrites it.

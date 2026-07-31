@@ -151,7 +151,7 @@ export function evidenceFromCall(opts: {
   navId?: string; storeId?: number; storeName?: string; steps: CapturedStep[];
   seconds: number | null; reachedHuman: boolean; path: string; note?: string; at?: number;
   greeting?: string; transferAtSec?: number | null; endedOnRing?: boolean;
-  stage?: CheckStage; grade?: "pass" | "fail"; reason?: CheckFailReason;
+  stage?: CheckStage; grade?: "pass" | "fail"; reason?: CheckFailReason; callSid?: string;
   hourLocal?: number | null; dow?: number | null; language?: Language;
 }): EvidenceCall {
   const at = opts.at || Math.floor(Date.now() / 1000);
@@ -162,7 +162,7 @@ export function evidenceFromCall(opts: {
     reachedHuman: opts.reachedHuman, path: opts.path,
     greeting: opts.greeting, transferAtSec: opts.transferAtSec ?? null,
     endedOnRing: opts.endedOnRing || undefined,
-    stage: opts.stage, grade: opts.grade, reason: opts.reason,
+    stage: opts.stage, grade: opts.grade, reason: opts.reason, callSid: opts.callSid,
     hourLocal: opts.hourLocal ?? null, dow: opts.dow ?? null,
     // What language the menu spoke, read off the lines we heard. Free, and the field has to be
     // populated from the first call or it is worthless when discovery proper arrives.
@@ -194,6 +194,7 @@ export async function recordNavCall(s: {
   greeting?: string; recipe?: MapRecipe | null; relisten?: boolean; status: string;
   endedOnRing?: boolean;
   stage?: CheckStage; grade?: "pass" | "fail"; reason?: CheckFailReason;
+  callSid?: string;
 }): Promise<{ recorded: boolean; why: string }> {
   const chainId = Number(s.chainId || 0);
   if (!chainId) return { recorded: false, why: "no chain on this call" };
@@ -225,7 +226,7 @@ export async function recordNavCall(s: {
     path: s.recipe ? mod.pathSignature(s.recipe) : actions.map((a) => `${a.action}:${a.value}`).join(">"),
     greeting: s.greeting, transferAtSec: s.transferAtSec ?? null,
     endedOnRing: s.endedOnRing,
-    stage: s.stage, grade: s.grade, reason: s.reason,
+    stage: s.stage, grade: s.grade, reason: s.reason, callSid: s.callSid,
     hourLocal: when.hour, dow: when.dow,
     note: s.relisten ? "re-listen" : "admin call",
   });

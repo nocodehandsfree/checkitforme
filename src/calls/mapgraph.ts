@@ -98,6 +98,8 @@ export interface EvidenceCall {
   grade?: "pass" | "fail";
   /** WHY it failed, from the owner's fixed list and no other words. The red pill prints this. */
   reason?: CheckFailReason;
+  /** The carrier's id for this check's recording — what the play button on a menu line plays. */
+  callSid?: string;
   /** WHEN, in the STORE's own clock (runtime spec §10.4). A menu at 9pm is often not the daytime
    *  menu, and without this we would chase a "failure" that only means we called after hours. */
   hourLocal?: number | null;       // 0-23 where the store is
@@ -1068,13 +1070,14 @@ export interface MapCall {
   stage: CheckStage | null;
   grade: "pass" | "fail" | null;
   reason: CheckFailReason | null;
+  callSid: string | null;
   turns: MapTurn[];
 }
 type RawRun = {
   navId?: string; ts?: number; store?: string; retailerId?: number; outcome?: string;
   seconds?: number | null; transferAtSec?: number | null; greeting?: string | null;
   stopReason?: string | null; why?: string | null; endedOnRing?: boolean;
-  stage?: string; grade?: string; reason?: string;
+  stage?: string; grade?: string; reason?: string; callSid?: string;
   steps?: Array<{ who?: string; text?: string; atSec?: number; action?: string | null; value?: string | null }>;
 };
 
@@ -1232,6 +1235,7 @@ async function callsForChain(chainId: number): Promise<MapCall[]> {
     endedOnRing: !!r.endedOnRing,
     stage: (r.stage === "map" || r.stage === "speed" || r.stage === "prove") ? r.stage : null,
     grade: (r.grade === "pass" || r.grade === "fail") ? r.grade : null,
+    callSid: r.callSid ? String(r.callSid) : null,
     reason: (CHECK_FAIL_REASONS as readonly string[]).includes(String(r.reason)) ? r.reason as CheckFailReason : null,
     // The conversation. "them" is the store, "us" is what we said or pressed back.
     turns: (Array.isArray(r.steps) ? r.steps : []).map((st) => ({
