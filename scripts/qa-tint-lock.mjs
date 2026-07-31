@@ -83,12 +83,33 @@ has(/html\[data-skin="v2"\]\s*\.csheet:not\(\.on\)\s*\{\s*box-shadow:\s*none\s*\
 // 14. The footer must stay transparent. Any fill there paints a band that the bottom bar won't match.
 has(/html\[data-skin="v2"\]\s*\.site-footer\s*\{\s*background:\s*transparent/,
   "footer stays transparent (a fill would band the page bottom against the bar)");
-// 14b. NEVER pad the check status page out to force a scroll (tried 07-30, reverted same day). The
-// live view follows the conversation by scrolling to the page bottom as each line lands, so dead space
-// under the log strands the newest line off-screen and kills the scroll-back reveal at the end. The
-// solid bottom bar on this page is still open; it does NOT get fixed with page height.
+// 14b. NEVER pad the check status page out to force a scroll. Tried twice (07-30 and 07-31 by two
+// different agents) and reverted both times: the live view follows the conversation by scrolling to the
+// page bottom as each line lands, so dead space under the log strands the newest line off-screen and
+// kills the scroll-back reveal at the end. Page HEIGHT was never the cause — see 14c for what was.
 absent(/body\.lview\s+main\s*\{[^}]*min-height/,
   "check status page is never padded to a forced height (it would break the follow-along scroll)");
+absent(/#live:not\(\.hidden\)\s*\{[^}]*min-height/,
+  "the live view itself is never padded to a forced height either (same trap, other selector)");
+
+// 14c. THE CLOSED CALL SHEET MUST NOT EXIST AS A FIXED FILLED BOX. This is what actually caused the
+// grey bottom bar on the live check page, proven on device 07-31 by tapping through an isolation page:
+//   no sheet at all              -> bar clear
+//   sheet opened, any variant    -> bar GREY (even with the page scroll-lock removed)
+//   sheet opened, then hidden    -> bar clear, INCLUDING on a short page that cannot scroll
+// A closed .csheet was still position:fixed and filled, merely translated below the fold. iOS drops its
+// bottom bar into the flat grey state when a fixed filled box sits on the bottom edge, and only a page
+// reload restores it — which is exactly why "it goes clear again if I refresh".
+// The park must stay display:none (not opacity/visibility — the box must not exist), must be applied
+// AFTER the slide-down so the close animation survives, and must be lifted before any open or measure.
+has(/\.csheet\.parked\s*\{\s*display:\s*none\s*\}/,
+  "a closed call sheet is display:none (.parked) — no fixed filled box on the bottom edge");
+has(/function\s+csheetPark\s*\(/,
+  "csheetPark exists (parks the sheet after its slide-down, so the animation is untouched)");
+has(/function\s+showCallSheet\s*\(\s*\)\s*\{[^}]*csheetUnpark/,
+  "showCallSheet unparks before opening/measuring (slide-up + csheetH_on sizing unchanged)");
+has(/<div class="csheet parked" id="csheet"/,
+  "the call sheet ships parked, so it is never a fixed filled box before first use");
 
 // ── E. Chrome must not change while you scroll ──
 // 15. The bottom stays "as boring as possible" (owner). No scroll handler may repaint the chrome.
