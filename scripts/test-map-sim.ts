@@ -16,12 +16,12 @@ import { connectAtSecFor, recipeToDtmf } from "../src/calls/recipe";
 import {
   proposeVersion, approveVersion, activeMap, versionsFor, chainDetail, graphFor, graphSummary,
   openUnknowns, recordCallPath, recordFailedAttempt, learnFromReceipt, reportCallDrift, resetChainHistory,
-  addEvidence, navSecondsOf, reachedPctOf, scoreConfidence,
+  addEvidence, navSecondsOf, reachedPctOf, scoreConfidence, sameMenu,
   type MapRecipe, type EvidenceCall,
 } from "../src/calls/mapgraph";
 import { lockRecipeToChain } from "../src/calls/trainer-batch";
 import { greetingFrom, looksLikeDirectPickup, menuStillTalking, parseSpokenOptions, isMenuLine, parseMenuOptions, mergeMenu, looksLikeQuestion, isReprompt } from "../src/calls/navigator";
-import { recipeFromCall } from "../src/calls/map-capture";
+import { recipeFromCall, gradeCheck } from "../src/calls/map-capture";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -511,6 +511,44 @@ async function main() {
     const cap = readFileSync("src/calls/map-capture.ts", "utf8");
     ok(/\(opts\.reachedHuman \|\| opts\.endedOnRing\) \? transcriptFromCall\(opts\.steps\)/.test(cap),
       "a check that walked the whole route keeps EVERY line it heard, not the first six");
+  }
+
+  // THE GRADE AND THE MENU'S IDENTITY — the first piece of the owner's three-stage rebuild (07-30).
+  // A check must earn its way into the record; everything else fails with one reason from his list.
+  console.log("▶ EVERY CHECK IS GRADED, AND A MENU KNOWS ITSELF");
+  {
+    // The same CVS recording, transcribed two different ways on two real checks today.
+    const day1 = "Thank you for calling CVS, Pharmacy. If this is an emergency, please hang up and dial. 911 calls are recorded to improve call Quality, are you a healthcare provider?";
+    const day2 = "Thank you for calling CVS, Pharmacy. If this is an emergency, please hang up and dial 911. I am your virtual assistant and calls are recorded to improve call Quality.";
+    const night = "Thank you for calling CVS Pharmacy. The pharmacy is currently closed. Business hours are 9 AM to 9 PM.";
+    const spanish = "Gracias por llamar a CVS Pharmacy. Para continuar en español, diga sí.";
+    ok(sameMenu(day1, day2), "two transcriptions of one recording read as the SAME menu");
+    ok(!sameMenu(day1, night), "the closed menu is a different menu, however similar its greeting");
+    ok(!sameMenu(day1, spanish), "and the Spanish menu is a different menu");
+
+    const base = { stage: "map" as const, transferHeard: true, ringOrStaff: true };
+    ok(gradeCheck(base).grade === "pass", "handoff announced and the ring heard = pass");
+    ok(gradeCheck({ ...base, expectedGreeting: day1, heardGreeting: day2 }).grade === "pass",
+      "a re-worded transcription of the same greeting still passes");
+    ok(gradeCheck({ ...base, expectedGreeting: day1, heardGreeting: night }).reason === "wrong menu",
+      "the night menu fails as wrong menu and can never touch the daytime map");
+    ok(gradeCheck({ ...base, wrongDepartment: true }).reason === "wrong department",
+      "Staff saying wrong desk fails as wrong department");
+    // Today's real Mulholland check: front barged over the recording, the menu looped, the pharmacy answered.
+    ok(gradeCheck({ stage: "speed", transferHeard: false, ringOrStaff: false, testedEarly: true }).reason === "barge didn't work",
+      "a speed try that broke the walk fails as barge didn't work");
+    ok(gradeCheck({ stage: "map", transferHeard: false, ringOrStaff: false, repromptHeard: true }).reason === "menu repeated itself",
+      "the store asking twice fails as menu repeated itself");
+    ok(gradeCheck({ stage: "map", transferHeard: false, ringOrStaff: false, plannedSteps: 3, saidSteps: 1 }).reason === "menu hung up on us",
+      "dying with answers still owed fails as menu hung up on us");
+    ok(gradeCheck({ ...base, greetingTwice: true }).reason === "sent to beginning of menu",
+      "the greeting playing again fails as sent to beginning of menu");
+    ok(gradeCheck({ stage: "speed", transferHeard: true, ringOrStaff: true, navSeconds: 55, recipeSeconds: 49 }).reason === "not faster",
+      "a clean speed try that did not beat the recipe fails as not faster");
+    ok(gradeCheck({ stage: "speed", transferHeard: true, ringOrStaff: true, navSeconds: 43, recipeSeconds: 49 }).grade === "pass",
+      "and one that beat it passes — the recipe winner");
+    ok(gradeCheck({ stage: "map", transferHeard: false, ringOrStaff: false }).reason === "said wrong words",
+      "a walk that died with no better explanation fails as said wrong words");
   }
 
   console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);

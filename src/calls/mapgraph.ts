@@ -62,6 +62,16 @@ export interface MapRecipe {
 export type Language = "en" | "es" | "mixed" | "unknown";
 
 /** One mapping/verify call, kept as the reason a version is trusted. */
+export type CheckStage = "map" | "speed" | "prove";
+/** The owner's reason list, 07-30, word for word. A failed check carries exactly one. The screens may
+ *  print ONLY these — a state the page does not recognize renders as a collapsed red row, never a
+ *  guess, so inventing a new reason means adding it HERE first. */
+export const CHECK_FAIL_REASONS = [
+  "not faster", "wrong department", "barge didn't work", "said wrong words",
+  "menu repeated itself", "menu hung up on us", "sent to beginning of menu", "wrong menu",
+] as const;
+export type CheckFailReason = typeof CHECK_FAIL_REASONS[number];
+
 export interface EvidenceCall {
   navId?: string;
   at: number;                      // unix seconds
@@ -79,6 +89,15 @@ export interface EvidenceCall {
    *  proved to ring, so this call MEASURES the menu — but it never tried for Staff, so it must not be
    *  counted as a call that failed to reach one. Without this a perfect re-listen reads as 0% reached. */
   endedOnRing?: boolean;
+  /** WHICH STAGE this check ran (owner's three, 07-30): map = mapping menu · speed = optimizing speed
+   *  · prove = proving department. The screen prints the stage as its header and nothing else. */
+  stage?: CheckStage;
+  /** THE GRADE, decided by machine the moment the check ends. A failed check changes NOTHING — not
+   *  the menu, not the recipe, not nav time — it is kept collapsed with its reason. Pass = the menu
+   *  we expected, our words said, the handoff announced and the ring heard (or Staff answered). */
+  grade?: "pass" | "fail";
+  /** WHY it failed, from the owner's fixed list and no other words. The red pill prints this. */
+  reason?: CheckFailReason;
   /** WHEN, in the STORE's own clock (runtime spec §10.4). A menu at 9pm is often not the daytime
    *  menu, and without this we would chase a "failure" that only means we called after hours. */
   hourLocal?: number | null;       // 0-23 where the store is
@@ -1079,6 +1098,32 @@ export interface GraphRow {
   /** Of the calls that ran this recipe, the share that ended with Staff on the line. Null until one
    *  has run it, because a number we have not measured is never a zero. */
   reachedPct: number | null;
+}
+
+/**
+ * WHICH MENU IS THIS — decided from the store's own words, never from a schedule we invented.
+ *
+ * The same store never says its greeting the same way twice: today's checks returned "hang up and
+ * dial. 911 calls are recorded" and "dial 911. I am your virtual assistant" for one recording. So
+ * two greetings are the SAME menu when their opening words line up in order, ignoring the small
+ * differences transcription invents. And the menus that matter most — night, closed — announce
+ * themselves ("the pharmacy is currently closed"), so a closed line ALWAYS makes a different menu,
+ * however similar the greeting. A check on the wrong menu is graded "wrong menu" and quarantined:
+ * it can never touch the recipe it was not walking.
+ */
+const fpTokens = (line: string): string[] =>
+  String(line || "").toLowerCase().replace(/[^a-z ]/g, " ").split(/\s+/).filter((w) => w.length > 2).slice(0, 10);
+export function saysClosed(text: string): boolean {
+  return /\b(closed|cerrado|after hours|reopen|reopens|business hours are)\b/i.test(String(text || ""));
+}
+export function sameMenu(a: string, b: string): boolean {
+  if (saysClosed(a) !== saysClosed(b)) return false;
+  const A = fpTokens(a), B = fpTokens(b);
+  if (A.length < 3 || B.length < 3) return A.join(" ") === B.join(" ");
+  const n = Math.min(A.length, B.length);
+  let hit = 0;
+  for (let i = 0; i < n; i++) if (A[i] === B[i]) hit++;
+  return hit / n >= 0.75;
 }
 
 /** When the menu is finished with us: the moment the store announced the handoff, or failing that the

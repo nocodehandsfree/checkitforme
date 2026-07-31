@@ -11,7 +11,7 @@
 // The navigator hears the menu one recording at a time (each <Gather> speech result IS one finished
 // recording), so the count of recordings before each action is already fact on every mapping call —
 // no new audio plumbing, no speech-recognition bill.
-import { guessLanguage, type MapRecipe, type MapStep, type EvidenceCall, type Language } from "./mapgraph";
+import { guessLanguage, sameMenu, type MapRecipe, type MapStep, type EvidenceCall, type Language, type CheckStage, type CheckFailReason } from "./mapgraph";
 
 /** The navigator's per-turn record, loosened so this file needs no runtime import from navigator. */
 export interface CapturedStep { who?: string; text?: string; atSec?: number; action?: string; value?: string; earPrompts?: number }
@@ -106,6 +106,47 @@ export function languageOfCall(steps: CapturedStep[]): Language {
 }
 
 /** Package one mapping call as evidence: what happened, where, when, and how fast. */
+/**
+ * THE GRADE, decided by machine the moment a check ends (owner, 07-30). A check must EARN its way
+ * into the record: pass = the menu we expected, our words said, the handoff announced and the ring
+ * heard, or Staff answered. Everything else fails with exactly one reason from the owner's list, and
+ * a failed check changes nothing — it is kept collapsed. The reasons are ordered by what they rule
+ * out: the wrong menu first (nothing this check heard belongs to the map it was walking), then the
+ * wrong desk, then the ways a walk dies mid-menu, then — only for a speed try — not faster.
+ */
+export function gradeCheck(o: {
+  stage: CheckStage;
+  expectedGreeting?: string | null;   // the locked menu's opening line, when one is held
+  heardGreeting?: string | null;      // this check's first store line
+  wrongDepartment?: boolean;          // Staff said we reached the wrong desk
+  transferHeard: boolean;             // the store announced the handoff
+  ringOrStaff: boolean;               // the desk rang, or a person answered
+  repromptHeard?: boolean;            // "sorry, I'm not understanding"
+  greetingTwice?: boolean;            // the opening recording played again mid-check
+  plannedSteps?: number;              // answers the route owes
+  saidSteps?: number;                 // answers actually said
+  testedEarly?: boolean;              // this check fired one step ahead of its prompt
+  navSeconds?: number | null;         // this check's menu time
+  recipeSeconds?: number | null;      // the reigning recipe's menu time
+}): { grade: "pass" | "fail"; reason?: CheckFailReason } {
+  if (o.expectedGreeting && o.heardGreeting && !sameMenu(o.expectedGreeting, o.heardGreeting)) {
+    return { grade: "fail", reason: "wrong menu" };
+  }
+  if (o.wrongDepartment) return { grade: "fail", reason: "wrong department" };
+  if (o.greetingTwice) return { grade: "fail", reason: "sent to beginning of menu" };
+  if (!o.transferHeard || !o.ringOrStaff) {
+    if (o.testedEarly) return { grade: "fail", reason: "barge didn't work" };
+    if (o.repromptHeard) return { grade: "fail", reason: "menu repeated itself" };
+    if ((o.saidSteps ?? 0) < (o.plannedSteps ?? 0)) return { grade: "fail", reason: "menu hung up on us" };
+    return { grade: "fail", reason: "said wrong words" };
+  }
+  if (o.stage === "speed" && typeof o.navSeconds === "number" && typeof o.recipeSeconds === "number"
+    && o.navSeconds >= o.recipeSeconds) {
+    return { grade: "fail", reason: "not faster" };
+  }
+  return { grade: "pass" };
+}
+
 export function evidenceFromCall(opts: {
   navId?: string; storeId?: number; storeName?: string; steps: CapturedStep[];
   seconds: number | null; reachedHuman: boolean; path: string; note?: string; at?: number;
