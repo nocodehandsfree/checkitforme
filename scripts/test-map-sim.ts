@@ -650,6 +650,17 @@ async function main() {
       "Recipe winner means this check's route IS the recipe — no live evidence, no crown");
     ok(/\?c\.transferAtSec:null;/.test(page),
       "and the number beside a pill is nav time only, never the whole call with Staff inside it");
+
+    // The writers OUTSIDE the run had to learn the same law.
+    const cap = readFileSync("src/calls/map-capture.ts", "utf8");
+    ok(/if \(s\.stage\) return \{ recorded: true, why: `\$\{s\.stage\} check kept by its run — the map moves once, at lock` \};/.test(cap),
+      "a graded check never files a version or touches live evidence — its run holds it until lock");
+    ok(cap.indexOf("if (s.grade === \"fail\") return") < cap.indexOf("if (s.stage) return"),
+      "and a failed check still changes nothing first, before the run even keeps it");
+    ok(/return \{ error: "the batch trainer is retired/.test(tb),
+      "the one-call batch trainer is retired — a single call can never lock a route again");
+    ok(/await setBatchState\(null\);\n\s*\} catch/.test(tb) || /clea?red, never resurrected/.test(tb),
+      "and a batch flag left by an old deploy is cleared on boot, never resurrected");
   }
 
   console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);

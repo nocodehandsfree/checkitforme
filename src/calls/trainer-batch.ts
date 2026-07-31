@@ -183,8 +183,13 @@ export async function storeForChain(chainId: number, excludeIds?: number[], dayt
 
 interface BatchOpts { onlyMissing?: boolean; perCallMaxSec?: number; gapSec?: number; limit?: number; }
 
-/** Kick off the batch (fire-and-forget). Returns immediately; poll batchStatus(). */
+/** RETIRED (owner, 07-31). One call never proves a route: the batch dialed a chain once, took whatever
+ *  it heard and locked it — exactly the guesswork the mapping runs replaced. Routes are earned now:
+ *  map the menu, optimize the speed, prove the department at three stores, and the map moves once, at
+ *  lock. The body below stays only as a record of what the batch did; nothing can reach it. */
 export async function startBatch(opts: BatchOpts = {}) {
+  void opts;
+  return { error: "the batch trainer is retired — routes come from mapping runs now (map the menu, optimize the speed, prove the department)" };
   if (state.running) return { error: "already running", ...batchStatus() };
   const onlyMissing = opts.onlyMissing !== false;       // default: only chains without a locked tree
   const perCallMaxSec = Math.max(40, opts.perCallMaxSec ?? 120);
@@ -251,11 +256,7 @@ export async function resumeBatchIfFlagged() {
   try {
     const raw = await getBatchState();
     if (!raw) return;
-    const f = JSON.parse(raw) as { active?: boolean; onlyMissing?: boolean; perCallMaxSec?: number; gapSec?: number };
-    if (!f.active || state.running) return;
-    if (await isCallingPaused()) { await setBatchState(null); return; }
-    await sleep(8000); // let DB/redis settle after boot
-    console.log("[trainer-batch] resuming after restart");
-    await startBatch({ onlyMissing: f.onlyMissing, perCallMaxSec: f.perCallMaxSec, gapSec: f.gapSec });
+    // The batch trainer is retired — a flag left by an old deploy is cleared, never resurrected.
+    await setBatchState(null);
   } catch (e) { console.error("[trainer-batch] resume failed", e); }
 }

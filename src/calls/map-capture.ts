@@ -219,6 +219,13 @@ export async function recordNavCall(s: {
   // nav time. The record only ever moves forward on checks that earned it.
   if (s.grade === "fail") return { recorded: true, why: `failed: ${s.reason || "?"} — changed nothing` };
 
+  // A GRADED CHECK BELONGS TO ITS RUN. While a chain is being mapped (map → speed → prove), every
+  // passing check lives in the run's own memory and the map moves exactly ONCE — at lock, when three
+  // stores agree. A mid-run check must never file a version, fold evidence onto the live route, or
+  // touch anything the paid agent reads (owner, 07-31: the half-finished proposals this used to file
+  // are what put the "menu changed" card back on his screen).
+  if (s.stage) return { recorded: true, why: `${s.stage} check kept by its run — the map moves once, at lock` };
+
   const when = await mod.storeLocalTime(s.retailerId);
   const evidence = evidenceFromCall({
     navId: s.id, storeId: s.retailerId, storeName: s.retailerName, steps,
