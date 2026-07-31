@@ -27,10 +27,10 @@ git. Last updated: 2026-07-31 (in stock alerts fixed; logos sized to match; try 
   recipe reaches Staff, the **Menu** by condition, the **Recipes** held, and **Review**.
 - **Re-map hangs up on the second ring** of the desk, so it never troubles Staff, and that check becomes the
   recipe. **Reached Staff shows nothing instead of 0%** until one actually waits for a person.
-- ⚠️ **Mapper said done; the PM re-check says NOT done** (07-31): 2 truly fixed, 4 half-fixed, 17
-  untouched, the Re-map button writes nothing to the map again (yesterday's bug, back), and three
-  decisions from your chats were never built. **The fix list IS the next mapper's task:
-  `docs/specs/mapping-admin/audit-code-vs-contract.md`. No CVS run until it closes.**
+- **The mapping rebuild restarts clean (07-31): your rounds are LAW in the contract now** — store proves
+  once, chain live at one and proven at three, the self-healing mute loop, the screens. A fresh chat
+  builds it in THREE chunks; the PM verifies every chunk against the contract before the next; you test
+  ONCE at the end, a fresh CVS start to finish. Old "done" claims are void; the audit file is the fix list.
 ## The new calling engine is ON for staging. Your six test calls are the last thing (07-28/29)
 - **Nothing to flip.** A check from staging.checkitforme.com goes through the new engine. **Listen for:** it asks
   once and waits · no keypad beeps once you are talking · after a hold it asks you again if you might be new.
