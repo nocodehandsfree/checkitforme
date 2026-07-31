@@ -135,3 +135,38 @@ Known facts that must survive: barge rules per step (`bargeSafe`) · re-prompt =
 ## After the owner says the live page is the record of truth
 Delete comps 3a/3b from the board and lock the mapping surfaces (edit-gate) so no agent can change
 them without an owner-named task. Not before he says so.
+
+## OWNER ROUNDS 07-31 (blessed in the PM chat — these OVERRIDE anything above that disagrees)
+R1. Two levels, both alive. STORE: learn menu first, ALWAYS, never skip even with a held recipe; one
+    real answer from Staff about the product locks that store's route; speed then runs at that SAME
+    store only, hanging up before a person, no answer ever fired on a timer. CHAIN: goes LIVE for
+    customers the moment ONE store proves the department; fully PROVEN at three agreeing stores —
+    and agreements arrive FREE from real customer checks that land right at new stores. We hand-dial
+    extra stores only when a chain has no traffic and we want it proven sooner.
+R2. Self-healing, hands-free. A customer check failing on an unknown menu → that store MUTES (auto:
+    off the website), joins "Menu changed", files ONE re-map job — more failures pool into the same
+    job, never duplicates. Re-map succeeds → auto-unmute, off the list, one history line ("menu
+    changed, re-mapped, back online"). THREE stores of one chain on the same new menu = the CHAIN's
+    menu changed: never mute the chain — set the fast recipe aside, checks fall back to the careful
+    full-words way (still works on an unseen menu), one re-map run relearns the fast route. Healing
+    dials inside the daily cap. The owner reviews NOTHING; "needs review" appears NOWHERE — the flag
+    is "Menu changed", the red alert icon marks the chain, and the list empties itself.
+R3. A muted store's other doors close with it: auto checks on it STOP; a zone run skips it and the
+    zone report says why (same as a closed store). BUILDER: sweep for every other touchpoint of a
+    muted store and handle each the same way — alerts need nothing (an unreachable store sends none).
+R4. Night/Spanish are the SAME route wearing different words, learned as VERSIONS, never breaks:
+    open/close hours + the menu's own closed words decide; a store with no hours on file learns the
+    boundary from when its greeting flips. A 24-hour store IS night-mappable this same way.
+R5. Screens: one continuous TIMELINE per mapping run (same shape as the site's check status page) —
+    learn → prove → speed → locked recipe, fails as small collapsed dots with their reason, ONE
+    Recipe winner ever. Word-editing on Menu ONLY (dashed editable boxes, save + "are you sure"
+    confirm, NO pencil), play per line. DELETE the "Needs your eyes" box. A check's story shows every
+    word we said, in true order — a reprompt can never appear without the answer that caused it.
+    Chains page: report boxes up top (mapped green · unmapped yellow · menu changes red), the filter
+    row on ONE line across the page, and a "Menu changed" choice beside All/Mapped/Unmapped.
+    "Locked" = the date the map really succeeded; no lock, no date. Nav time ends the instant the
+    desk rings. Statuses only from the Statuses list; green ONLY for a confirmed right department,
+    yellow neutral, red bad. Number format stays as built today (owner struck the $ item).
+R6. Build in THREE chunks, one fresh chat each, this contract the law for all three; the PM audits
+    each chunk against it before the next starts: 1 the engine · 2 the self-healing loop · 3 the
+    screens. The owner tests ONCE, at the end: a fresh CVS mapped start to finish while he watches.
