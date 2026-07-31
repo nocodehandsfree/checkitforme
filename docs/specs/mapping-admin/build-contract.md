@@ -99,6 +99,39 @@ Known facts that must survive: barge rules per step (`bargeSafe`) · re-prompt =
 
 9. "Locked" shows the date the map succeeded. No lock, no date.
 
+10. Nav time ends the instant the desk rings. What happens after
+    (Staff picking up, talking) never counts against nav time.
+
+11. The menu's words are sacred. The recipe and Menu can only show what
+    the menu actually said. A misheard line gets fixed, never shown wrong.
+
+12. Proof of the right department is Staff answering about Pokémon.
+    A yes or a no both count - they acknowledged they have the information.
+
+13. Speed is only compared against the same menu - never against
+    a night or Spanish menu.
+
+14. If a store's greeting doesn't match the menu we know, the system
+    remaps that store from the start automatically, like a brand new store.
+
+15. Statuses come only from the Statuses list. "Admin hung up" when we
+    ended it. Never two statuses that contradict each other, and never
+    "nobody answered" when somebody answered.
+
+16. Color law: green only when we reached a person AND confirmed the right
+    department. Yellow is neutral. Red is bad.
+
+17. Chains list: model names in plain text, no colored letters. When work
+    waits, a red alert icon sits next to the chain name - the words
+    "needs review" never appear anywhere.
+
+18. The night menu is a condition, like Spanish. If the menu changes
+    mid-mapping (day to night), we run through the new menu as if it's new.
+    The system uses the store's open and close times (the pharmacy closes
+    before the store does) to assess: "the pharmacy closed - the menu's
+    words changed, nothing else." Same store, same way through - only
+    what's said changes, and that's what threw us off in the past.
+
 ## After the owner says the live page is the record of truth
 Delete comps 3a/3b from the board and lock the mapping surfaces (edit-gate) so no agent can change
 them without an owner-named task. Not before he says so.
