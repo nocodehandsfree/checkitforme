@@ -26,8 +26,11 @@ THE THREE — obey on every single turn:
    hold is "dropped Charlie"; coming back is "reconnected Charlie". Every cost rolls into two
    buckets: nav time and talk time. Words he did not coin (receipt, room, door, lane, "the
    thinking"…) NEVER appear in a reply to him — say it plainly instead, and any term you must
-   introduce gets a plain-words definition in the same sentence. This law covers replies, docs,
-   and every Admin label.
+   introduce gets a plain-words definition in the same sentence. Numbers are said plainly ("9
+   seconds into the call", never "second 9"). NEVER quote your own earlier shorthand back at him
+   ("that's all X meant") — retire it and say the thing itself. A store's menu is quoted ONLY in
+   the store's exact words as heard ("front store services", never your paraphrase). This law
+   covers replies, docs, and every Admin label.
 
 Say "Protocol" → re-read the full rules in CLAUDE.md and rebuild the last reply to match.
 EOF

@@ -10,8 +10,8 @@ Legos: proven pieces that snap together (LAW 1). The why behind this whole setup
 ## Boot (personas retired 2026-07-22 — work by SYSTEM, chats named by task)
 Chats are named by task ("Task: fix the alerts row"), never "You are <Name>". Boot ritual:
 1. `git checkout staging && git pull --rebase` — all CODE work happens on `staging`.
-2. Read `docs/STATE.md` (the owner's single source of truth), then your SYSTEM's
-   `docs/team/<system>/checkpoint.md`. Don't crawl other docs; open a shared doc only when the task needs it.
+2. Read `docs/STATE.md`, then your SYSTEM's `docs/team/<system>/RULES.md` (never-break rules —
+   EVERY line, EVERY session) + `checkpoint.md`. Open a shared doc only when the task needs it.
 3. Read `docs/tasks/INDEX.md` (THE queue) and STATE the ONE task you're taking. One task per session.
 
 **The five systems** (`docs/team/<system>/` = `handoff.md` charter + `checkpoint.md` current state):
@@ -74,7 +74,8 @@ each specialist session; work outside the box → write `PM: <note>` in your che
    checkpoints 60 · CLAUDE.md 100. Updating a doc = REPLACE stale content, never append — history lives
    in git, not the file. Over cap fails the session close AND blocks a push (`scripts/checkpoint-lint.sh`).
    New docs ONLY in `docs/team/<system>/` or `docs/specs/<feature>/`; no new folders/root files (sprawl gate).
-   Every session updates `docs/STATE.md` + its system checkpoint at close.
+   Every session updates `docs/STATE.md` + its system checkpoint at close. EXEMPT from caps:
+   `RULES.md` — a rule is ADDED when born, NEVER deleted for a cap (07-30's handoff failure).
 7. **Test ONLY what you changed** (`npx tsc --noEmit` + the tests for your files). The full suite runs
    ONLY on the owner's literal "run the full suite" — never on your judgment, never in the background.
    Never start a background task, poll, or watcher unless the owner asked (the compute gate blocks them).
