@@ -4,7 +4,7 @@
 wait screen ("Pulling the result", `body.rv-pend`) carries the same bar-clearing strip and parks on the
 tail, AND the owner ordered the §4 wait dead: verdict at hang up (`src/voice/elevenlabs.ts` accepts
 "processing" with full turns + duration). All driven on the real staging site by relay; iOS paint + one
-real Fun check are HIS. §3 alerts NOT started (owner-ordered second). · **Owner-named 2026-07-30.**
+real Fun check are HIS. §3 alerts SHIPPED 07-31 (see §3). · **Owner-named 2026-07-30.**
 **This task IS the unlock authority** for the check-status section of `public/checkit.html` and for
 `public/checkit.html` generally: write the exact glob into `.unlock`, fix ONLY that scope, delete it after.
 
@@ -88,11 +88,15 @@ It is NOT what makes the verdict slow — he asked, and the answer is no.
   two emails for one in-stock result. He deliberately left the duplicate row in place so it can be
   reproduced — **do not delete his data to make it look fixed.** Stop the duplicate at subscribe
   time AND fold the existing duplicates so one store sends one email.
-  Owner 07-30: a repeat subscribe shows the bottom notification "You've already set an alert for
-  this store" (pill rules: one line, fragment, Spanish twin in the same commit).
-  Scoped: `/pub/watch` inserts blind (src/server.ts ~:2614) · the sender emails once per ROW
-  (`notifyWatches`, src/calls/service.ts ~:19) so it dedupes by person, rows stay · copy key
-  `alerts.sub` (EN ~:7595, ES ~:3278). OWNER SAYS BUILD NOTHING until his go.
+  **SHIPPED 07-31 (staging), plus the real root of "no email today":** a check finalizes by THREE
+  paths (page poll, webhook, poller) and only the poller sent alerts; `notifyAfterVerdict`
+  (src/calls/service.ts) is now THE one notifier on all three, claimed once per check. Alerts are
+  STANDING (the one-shot self-off is gone), duplicate rows fold to one email per person,
+  `/pub/watch` re-arms instead of duplicating, a repeat subscribe shows "You've already set an
+  alert for this store" (ES twin shipped), and the subscribe tap re-arms the sender BEFORE the
+  already-pill so an on-looking alert can never hide a dead sender. Proven: 6/6 db checks + the
+  HTTP guard (ok → already → rearmed, one row) + the pill and copy driven at 390px. His two Fun
+  rows stay untouched; one subscribe tap re-arms them. Left: his real Fun check = one email.
 - **Copy change** (ships with its length-checked Spanish in the SAME commit, both lines, no dashes):
   - line 1: `Manage your In Stock alerts.`
   - line 2: `Delete or Pause them below.`
