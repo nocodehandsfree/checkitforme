@@ -16,3 +16,7 @@ that made it law. A rule leaves this file only when the owner himself retires it
 7. Auto-nav failing to parse a menu is NEVER "no human at this chain" — press-test before calling a chain dead.
 8. Screen words come from Statuses, nowhere else; "the check failing IS the report" — a scorecard row
    exists only if a WORKING check could hide the problem from the owner.
+9. A mapping run's memory must NEVER live only in the process: it is saved (`mapper_run:<chain>` in
+   settings) after every attempt and resumed on boot, 90s delayed so old and new never dial together.
+   A stop stays stopped; the call in flight at the restart is logged as not-evidence. Two runs died
+   to teammates' deploys before this (07-30). Proof: `scripts/test-mapper-resume.ts`.

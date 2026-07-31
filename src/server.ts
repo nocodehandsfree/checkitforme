@@ -43,7 +43,7 @@ import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
 import { behaved, agentLinesFrom } from "./calls/behaved";
 import { opsRollup, type CheckRow } from "./calls/ops";
-import { startMapper, stopMapper, mapperState } from "./calls/mapper";
+import { startMapper, stopMapper, mapperState, resumeMapperRuns } from "./calls/mapper";
 import { activeMap, resetChainHistory, graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, graphFor, learnFromReceipt, navSecondsOf, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
 import { recipeFromCall, evidenceFromCall, type CapturedStep } from "./calls/map-capture";
 import { startSweep, stopSweep, sweepStatus, buildQueue } from "./calls/sweep";
@@ -174,6 +174,15 @@ onReceiptClosed(async (r) => {
   if (res.learned.length) console.log(`[map] learned from call ${callId ?? room}: ${res.learned.join(" · ")}`);
 });
 await bootstrap(); // apply migrations + seed catalog if empty
+
+// A redeploy must not kill a mapping run (owner 07-30): any run mid-flight when the old process died
+// resumes from its saved memory here. Delayed past the old process's drain window so the outgoing
+// process and this one never dial stores at the same time.
+setTimeout(() => {
+  resumeMapperRuns()
+    .then((n) => { if (n) console.log(`[mapper] resumed ${n} mapping run(s) after restart`); })
+    .catch((e) => console.error("[mapper] resume failed:", e));
+}, 90_000);
 
 const here = dirname(fileURLToPath(import.meta.url));
 const app = new Hono();

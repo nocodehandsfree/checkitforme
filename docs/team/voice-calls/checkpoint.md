@@ -48,7 +48,8 @@ for the same stamp. **MODEL COLOURS = ONE SOURCE, `LANE_C`**: Alpha `#818CF8` ·
 as needs review). STYLE_GUIDE §3 + comp 2g. **RECORDING BUILT + PROVEN 23:30:** every mapping check records (`Record:"true"`), `callSid` rides run log + evidence, `/api/admin/map/play/:callSid` streamed 418KB real audio; a line's play seeks its second, stops at the next line, no sid = no button. **NIGHT MENU MET LIVE 23:29** (Victory Blvd,
 "pharmacy is currently closed"): the check FAILED and changed nothing. Caveat: reason said "not faster" not "wrong menu" — the reset emptied evidence, no held greeting to compare; the first clean daytime check restores that.
 **NEXT: morning →** `mapper/start {chainId:5}` drives all three stages, owner looks. Then Walgreens (10): ALPHA.
-## VERIFIED / NOT VERIFIED (Railway trap: `deploymentCancel` on a wedged deploy errors once, retry lands)
+## VERIFIED / NOT VERIFIED · **RUNS SURVIVE DEPLOYS 07-30** (RULES.md #9; `scripts/test-mapper-resume.ts` 12
+asserts — saved every attempt, resumed on boot, stop stays stopped). Railway: `deploymentCancel` errors once, retry lands.
 - **DRIVEN 07-30:** 196 map-sim · 62 mapgraph · 100 map-e2e (2 PRE-EXISTING fails) · tsc clean. **REAL CHECKS:** Victory Blvd walked clean (graded pass, 47s); the night check failed and touched nothing.
 - **STILL OPEN:** §11 cost per delivered answer · real `holdSeconds` > 0 · 7.12 · the save with a real human.
 ## Engine — Branson HD `1P1JhCcLzeMmkvLi1BkG` speed 0.91 (BOTH envs) · echo gate 520/150 · ringback by published
