@@ -8902,11 +8902,13 @@ async function watchStore(opts){
   // Full list → open Alerts in make-room mode, remembering this store so a removal re-adds it.
   if(r&&r.error==='cap'){ ALERTS_ME=r; PENDING_WATCH={store:st,categoryId,productLabel}; openAlerts({makeRoom:true}); return; }
   if(!r||r.error){ toast(t('err.generic',"That didn't go through. Give it another try."),'neutral'); return; }
+  // The email sender rides its own row: keep it armed on EVERY subscribe tap, including a repeat
+  // (a spent row quietly re-arms; the endpoint never writes a duplicate). Skipping this on "already"
+  // would leave a switched-off sender behind an on-looking alert = in-stock emails that never come.
+  if(ACCOUNT&&ACCOUNT.email){ try{ api('/pub/watch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:st.id,categoryId,contact:ACCOUNT.email})}); }catch(_){ } }
   // Already set and live → say so and stop (owner 07-30). No second row, no fake "now watching".
   if(r.already && r.status==='on'){ toast(t('watch.already',"You've already set an alert for this store"),'neutral'); return; }
   track('watch_set',{retailerId:st.id,channel:'email'});
-  // Keep the legacy Admin "Restock watches" card fed when there's an address on file.
-  if(ACCOUNT&&ACCOUNT.email){ try{ api('/pub/watch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:st.id,categoryId,contact:ACCOUNT.email})}); }catch(_){ } }
   try{ alertsPrefetch(); }catch(_){ }
   if(r.status==='on'){ alertSetToast(st.name,'alerts.type.restock','Restock Alert'); return; } // confirmed email: instant
   openWatchConfirm(st, r.status); // need_email | pending
