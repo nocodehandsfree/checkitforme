@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r183" />
+<meta name="x-rev" content="glassfix-r182" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -408,16 +408,6 @@ __BRAND_HEAD__
      (liveGlowV2). The verdict tone printing at the end IS the reveal — don't re-add a live wash.
      body.lview still rides along for the transparent header + pill treatment below. */
   #live{position:relative}
-  /* SCROLL ROOM so iOS keeps its SMALL clear bottom bar (owner 07-27). Tapping check hides the whole
-     store list, so the page collapsed to about one screen — and iOS always shows its BIG SOLID bar when
-     a page can't scroll. That solid plate was the "painted" bottom on the live page, and nothing later
-     brings the small bar back (a page scrolling itself never re-shrinks it).
-     This is pure SCROLL ROOM below the content, never a gap above it: the live content still starts at
-     the top, and once the transcript grows past a screen the room is absorbed and nothing shows. It must
-     out-measure body's own 100dvh min-height floor, which is why it's viewport-PLUS (a small padding
-     did nothing — the body floor swallowed it). Nothing about the check, the transcript, the follow
-     scroll, or the reveal is touched. */
-  #live:not(.hidden){min-height:calc(100dvh + 120px)}
   body.lview header{background:transparent;border-bottom-color:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
   /* DO NOT pad this page out to force a scroll (tried 07-30, reverted same day). The live view follows
      the conversation by scrolling to the page bottom as each line lands; dead space below the log
