@@ -5,7 +5,7 @@ import { db } from "../db/client";
 import { openState, fetchStoreHours } from "../store-hours";
 import { fetchStorePhone } from "../store-phone";
 import {
-  accounts, callResults, categories, chains, customerSchedules, retailers, scheduleTargets, schedules, statuses, watches, zoneRetailers, zones,
+  accounts, alertSends, callResults, categories, chains, customerSchedules, retailers, scheduleTargets, schedules, statuses, watches, zoneRetailers, zones,
 } from "../db/schema";
 import { linkCall, openReceipt, emit, closeReceipt, linkProviderCall, markNow } from "./events"; // ties the call row to its receipt (the timeline + the seconds)
 import { recordVerdict } from "./receipt-store";
@@ -15,24 +15,65 @@ import { isCallingPaused } from "../redis";
 import { acquireCallSlot, releaseCallSlot } from "./concurrency";
 import { getPolicy } from "../policy";
 
-/** Notify every active restock-watch for this store+category that it's back in stock, once. */
+/** Notify every active restock-watch for this store+category that it's back in stock.
+ *  STANDING alerts (owner 07-30): a watch stays active until the customer pauses or removes it — the
+ *  old self-switch-off after the first email is why "I'm not getting in stock emails" happened. One
+ *  email per PERSON per result: duplicate rows for the same contact fold into a single send (the
+ *  owner's two Fun-store rows stay in the data and must produce exactly one email). */
 async function notifyWatches(retailerId: number, categoryId: number, store: string, label: string) {
   const open = await db.select().from(watches).where(and(
     eq(watches.retailerId, retailerId), eq(watches.categoryId, categoryId), eq(watches.active, true),
   ));
+  const seen = new Set<string>();
   for (const w of open) {
-    const link = `${config.appUrl}/?store=${retailerId}`;
-    if (w.channel === "email") {
-      // Branded template — no url token, so the CTA becomes "Get directions" (Google Maps to the store).
-      await sendRestockEmailTo(w.contact, { store, product: label }, { tag: `watch r:${retailerId}` });
-    } else {
-      await notifyContact("sms", w.contact,
-        `Back in stock: ${label} at ${store}`,
-        `${store} just confirmed ${label} is in stock. You asked us to watch this one!`,
-        link);
+    const key = `${w.channel}:${String(w.contact).trim().toLowerCase()}`;
+    const dup = seen.has(key);
+    seen.add(key);
+    if (!dup) {
+      const link = `${config.appUrl}/?store=${retailerId}`;
+      if (w.channel === "email") {
+        // Branded template — no url token, so the CTA becomes "Get directions" (Google Maps to the store).
+        await sendRestockEmailTo(w.contact, { store, product: label }, { tag: `watch r:${retailerId}` });
+      } else {
+        await notifyContact("sms", w.contact,
+          `Back in stock: ${label} at ${store}`,
+          `${store} just confirmed ${label} is in stock. You asked us to watch this one!`,
+          link);
+      }
     }
-    await db.update(watches).set({ active: false, notifiedAt: Math.floor(Date.now() / 1000) }).where(eq(watches.id, w.id));
+    await db.update(watches).set({ notifiedAt: Math.floor(Date.now() / 1000) }).where(eq(watches.id, w.id));
   }
+}
+
+/** THE one after-verdict notifier (owner 07-30: "why am I not getting in stock emails").
+ *  A check can be finalized by THREE different paths — the customer's own page poll (the verdict-at-
+ *  hang-up settle), the ElevenLabs webhook, and the poller — and only the poller used to send the
+ *  alerts, so whichever path won the race decided whether the customer got an email. Every finalize
+ *  path now calls THIS, and a claim makes it run once per check: a synchronous in-memory set kills
+ *  the same-process race (overlapping result polls), and an alert_sends ledger row survives restarts. */
+const NOTIFIED_CALLS = new Set<number>();
+export async function notifyAfterVerdict(callId: number): Promise<void> {
+  try {
+    if (!callId || NOTIFIED_CALLS.has(callId)) return;
+    NOTIFIED_CALLS.add(callId);
+    const claim = `call:${callId}`;
+    const prior = await db.select({ id: alertSends.id }).from(alertSends)
+      .where(and(eq(alertSends.event, "verdict_notify"), eq(alertSends.detail, claim))).limit(1);
+    if (prior.length) return;
+    await db.insert(alertSends).values({
+      event: "verdict_notify", channel: "email", status: "sent", detail: claim,
+      monthKey: new Date().toISOString().slice(0, 7),
+    });
+    const row = (await db.select().from(callResults).where(eq(callResults.id, callId)))[0];
+    if (!row) return;
+    if (row.status === "completed" && row.confirmed === true) {
+      const store = (await db.select().from(retailers).where(eq(retailers.id, row.retailerId)))[0];
+      const cat = (await db.select().from(categories).where(eq(categories.id, row.categoryId)))[0];
+      await notifyInStock(store?.name ?? "A store", cat?.label ?? "the product", row.retailerId, row.shipmentDayHeard ?? undefined);
+      await notifyWatches(row.retailerId, row.categoryId, store?.name ?? "A store", cat?.label ?? "the product");
+    }
+    await notifyAutoCheckResult(callId); // no-op unless this check came from an auto-check
+  } catch { /* alerts must never break a finalize */ }
 }
 /** Auto-check results alert: a scheduled check just reached a terminal state → tell the schedule's
  *  owner what happened (in stock, not, nobody answered), on the channel their contact implies.
@@ -829,11 +870,7 @@ async function finalizeDeltaSession(s: TdSession): Promise<void> {
   // Charge one credit on a billable outcome (real answer OR engaged-no-answer), exactly once (atomic).
   if (chk.finderUserId && status === "completed" && billableOutcome(statusKey, definitive, transcript)) await chargeCallOnce(chk.callId, chk.finderUserId);
 
-  if (confirmed === true) {
-    await notifyInStock(chk.retailerName, chk.categoryLabel, chk.retailerId, dayHeard || undefined);
-    await notifyWatches(chk.retailerId, chk.categoryId, chk.retailerName, chk.categoryLabel);
-  }
-  await notifyAutoCheckResult(chk.callId); // no-op unless this call came from an auto-check
+  await notifyAfterVerdict(chk.callId); // the ONE notifier: owner ping + watches + auto-check result, once per check
   if (dayHeard) await db.update(retailers).set({ shipmentDay: dayHeard }).where(eq(retailers.id, chk.retailerId));
 }
 setDeltaFinalize(finalizeDeltaSession);
@@ -1245,12 +1282,9 @@ export async function ingestPending(): Promise<number> {
       }
     }
 
-    if (finalConfirmed === true && primaryLabel) {
-      await notifyInStock(store?.name ?? "A store", primaryLabel, row.retailerId, outcome.shipmentDay);
-      await notifyWatches(row.retailerId, row.categoryId, store?.name ?? "A store", primaryLabel);
-    }
-    // Auto-check: its owner hears the RESULT of every fire, in or out (watches only ping on in-stock).
-    if (row.customerScheduleId) await notifyAutoCheckResult(row.id);
+    // The ONE notifier (owner ping + watches + auto-check result), claimed once per check no matter
+    // which finalize path gets here first.
+    await notifyAfterVerdict(row.id);
 
     // Fan out any additional lines covered in the same call into their own result rows.
     for (const [label, conf] of Object.entries(outcome.categoryResults)) {

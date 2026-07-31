@@ -549,11 +549,17 @@ export async function sendTestAlert(event: AlertEvent, to: string, channelOverri
 }
 
 /** Opt a user into an alert (restock of a store/product). Dedups on the same target; reactivates if muted. */
-export async function alertSubscribe(userId: string, o: { kind?: string; retailerId?: number | null; categoryId?: number | null; productLabel?: string | null; channel?: Channel }): Promise<{ ok: true; id: number }> {
+export async function alertSubscribe(userId: string, o: { kind?: string; retailerId?: number | null; categoryId?: number | null; productLabel?: string | null; channel?: Channel }): Promise<{ ok: true; id: number; already?: boolean }> {
   const kind = o.kind || "restock", channel: Channel = o.channel === "email" ? "email" : "sms";
   const existing = (await db.select().from(alertSubscriptions).where(and(eq(alertSubscriptions.userId, userId), eq(alertSubscriptions.kind, kind))))
     .find((r) => (r.retailerId ?? null) === (o.retailerId ?? null) && (r.productLabel ?? "") === (o.productLabel ?? ""));
-  if (existing) { await db.update(alertSubscriptions).set({ active: 1, channel }).where(eq(alertSubscriptions.id, existing.id)); return { ok: true, id: existing.id }; }
+  if (existing) {
+    // Already ON → tell the caller so the page can say "You've already set an alert for this store"
+    // (owner 07-30) instead of pretending a fresh one was created. OFF → quietly re-arm it.
+    if (existing.active === 1) return { ok: true, id: existing.id, already: true };
+    await db.update(alertSubscriptions).set({ active: 1, channel }).where(eq(alertSubscriptions.id, existing.id));
+    return { ok: true, id: existing.id };
+  }
   const ins = await db.insert(alertSubscriptions).values({ userId, kind, retailerId: o.retailerId ?? null, categoryId: o.categoryId ?? null, productLabel: o.productLabel ?? null, channel }).returning({ id: alertSubscriptions.id });
   return { ok: true, id: ins[0]?.id ?? 0 };
 }
