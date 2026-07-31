@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r183" />
+<meta name="x-rev" content="glassfix-r184" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -3164,6 +3164,7 @@ const I18N={ es:{
   'st.nobody_answered':'Nadie contestó','stn.nobody_answered':'Nadie respondió. Sin cargo.',
   'st.voicemail':'Buzón de voz','stn.voicemail':'Salió una grabación, no una persona. Sin cargo.',
   'st.user_cancelled':'Verificación cancelada','stn.user_cancelled':'Detuviste esta verificación.',
+  'res.cantload':'No pudimos cargar esta verificación','res.cantload.sub':'Inténtalo de nuevo.','res.retry':'Reintentar','res.gohome':'Volver a mis verificaciones',
   'st.busy':'Línea ocupada','stn.busy':'La línea estaba ocupada. Sin cargo.',
   'st.bad_number':'Número equivocado','stn.bad_number':'Ese número no conectó. Sin cargo.',
   'st.closed':'Está cerrado','stn.closed':'{store} está cerrado ahora. Sin cargo.','stn.closed2':'La tienda está cerrada.',
@@ -4596,7 +4597,29 @@ async function restoreCall(cid, storeName, catName){
   // instead of starting a second round-trip (owner 07-14: checks must open faster).
   let o=null; if(window.__callPrefetch){ o=await window.__callPrefetch; window.__callPrefetch=null; }
   if(!o||o.error) o=await appApi('/pub/result/'+encodeURIComponent(cid));
-  if(!o||o.error||o.status==='in_progress'){ if(cached) return; toast(t('toast.callgone',"That check is no longer available")); backToBuilder(); return; }
+  // A REFRESH ON A RESULT MUST STAY ON THAT RESULT (owner 07-31: "pull to refresh takes me back to the
+  // homepage"). Right after a call the verdict is often still settling, so the first read can come back
+  // in_progress or blip an error — and bouncing to the homepage there loses the check the user was
+  // reading. Retry a few times, then, if it still won't load, STAY on the result view and offer a retry.
+  // The homepage is never the answer when the URL names a call.
+  if(!o||o.error||o.status==='in_progress'){
+    for(let i=0;i<4 && (!o||o.error||o.status==='in_progress'); i++){
+      await new Promise(r=>setTimeout(r,900));
+      o=await appApi('/pub/result/'+encodeURIComponent(cid));
+    }
+  }
+  if(!o||o.error||o.status==='in_progress'){
+    if(cached) return;                       // we already painted it from cache — keep that on screen
+    if(o&&o.status==='in_progress'){ showResult({status:'pending',transcript:o.transcript||'',summary:''}, cid); return; } // still running: show it as pending, don't bail
+    try{ const r=$('result'); if(r){ r.classList.remove('hidden'); $('builder').classList.add('hidden');
+      r.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:46vh;gap:14px;text-align:center;padding:24px">'
+        +'<div style="font:800 22px Inter;letter-spacing:-.02em">'+esc(t('res.cantload','We couldn’t load this check'))+'</div>'
+        +'<div style="font:600 14px Inter;color:#8A8A96;line-height:1.5">'+esc(t('res.cantload.sub','Give it another try.'))+'</div>'
+        +'<button class="cta" style="margin-top:6px" onclick="location.reload()">'+esc(t('res.retry','Try again'))+'</button>'
+        +'<a onclick="backToBuilder()" style="font:700 13px Inter;color:var(--green);cursor:pointer;margin-top:2px">'+esc(t('res.gohome','Back to checks'))+'</a></div>';
+      return; } }catch(_){ }
+    toast(t('toast.callgone',"That check is no longer available")); backToBuilder(); return;
+  }
   let srvRow=null;
   if(!known && isAuthed()){ try{ srvRow=(await fetchServerHistory()).find(x=>x.cid===cid)||null; }catch(_){ } }
   if(srvRow&&srvRow.storeName){ SEL_STORE={id:srvRow.storeId,name:srvRow.storeName,logoUrl:srvRow.logoUrl||null,logoWide:!!srvRow.logoWide,logoDark:!!srvRow.logoDark}; // the account's record of THIS call wins over any guess
