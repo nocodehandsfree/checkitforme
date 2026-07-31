@@ -1,6 +1,6 @@
 # STATE — the owner's single source of truth
 One screen. Every session updates this at close (≤40 lines). New truth REPLACES old — history is in
-git. Last updated: 2026-07-31 (in stock alerts fixed; logos sized to match; try backs run the same way).
+git. Last updated: 2026-07-31 (mapping engine rebuilt to your rules, part 1 of 3; CVS junk wiped; Re-map button gone).
 ## Store logos are all the same size now (07-31, LIVE on Admin and the real site)
 - Nine looked shrunken beside BJ's Wholesale. Five (Shaw's, TJ Maxx, Ross, Randalls, Tom Thumb) had a picture
   with a big empty border baked in, and every logo was squeezed into a square, flattening wide ones like
@@ -18,19 +18,16 @@ git. Last updated: 2026-07-31 (in stock alerts fixed; logos sized to match; try 
 ## The bottom bar can never go dark again, and Live is cleaned (07-30, live on Admin)
 - **The tint is nailed down**, three ways it used to break are refused before anything goes live. Cost per
   check opens on **The baseline**, your 6.7¢ ceiling off your real prices.
-## Every try back now runs the exact same way (07-30, on staging)
-- Every mapping check walks the menu the same way; the ONE answer being tested early is the only difference.
-  **Mapping calls is now Mapped checks** and each check shows faster or slower than the check before it. The
-  chains list names the model in plain text; a red alert sits beside a name only when work waits.
-## Chains: the page is rebuilt and every mapping call lands on it (07-30)
-- Tap a chain: **nav time** (getting through their phone menu, the part we control), what it costs, how often the
-  recipe reaches Staff, the **Menu** by condition, the **Recipes** held, and **Review**.
-- **Re-map hangs up on the second ring** of the desk, so it never troubles Staff, and that check becomes the
-  recipe. **Reached Staff shows nothing instead of 0%** until one actually waits for a person.
-- **The mapping rebuild restarts clean (07-31): your rounds are LAW in the contract now** — store proves
-  once, chain live at one and proven at three, the self-healing mute loop, the screens. A fresh chat
-  builds it in THREE chunks; the PM verifies every chunk against the contract before the next; you test
-  ONCE at the end, a fresh CVS start to finish. Old "done" claims are void; the audit file is the fix list.
+## Mapping rebuild, part 1 of 3 (the engine): BUILT, waiting for the review you asked for (07-31)
+- Your rules are in: every store starts with one full check that listens to the whole menu, answers with
+  the full words, reaches a person and asks about Pokémon, even when we already hold a way through. It
+  keeps listening until the menu reads the same twice. One real answer locks the store and the chain goes
+  live; three stores proven for free off real customer checks. Speed comes after, same store, hanging up
+  on the second ring, and nothing we say ever fires on a timer. A failed check changes nothing.
+- **The Re-map button is gone** (your call), and its behind-the-scenes path with it. **The CVS checks the
+  broken build made are wiped on both sites**, the way through kept: say "no", then "front", then "general".
+- All of it sits on a side branch, driven by the test rig (241 checks green). **Staging is untouched until
+  you say "clear".** You test once at the end: a fresh CVS mapped start to finish while you watch.
 ## The new calling engine is ON for staging. Your six test calls are the last thing (07-28/29)
 - **Nothing to flip.** A check from staging.checkitforme.com goes through the new engine. **Listen for:** it asks
   once and waits · no keypad beeps once you are talking · after a hold it asks you again if you might be new.
