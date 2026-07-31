@@ -154,6 +154,8 @@ R2. Self-healing, hands-free. A customer check failing on an unknown menu → th
 R3. A muted store's other doors close with it: auto checks on it STOP; a zone run skips it and the
     zone report says why (same as a closed store). BUILDER: sweep for every other touchpoint of a
     muted store and handle each the same way — alerts need nothing (an unreachable store sends none).
+    The zone-report skip SENTENCE on the consumer site (EN + ES) is WEBBIE's, one boxed task after
+    chunk 2 — the site is frozen to everyone else. The mapping agent builds the skip itself server-side.
 R4. Night/Spanish are the SAME route wearing different words, learned as VERSIONS, never breaks:
     open/close hours + the menu's own closed words decide; a store with no hours on file learns the
     boundary from when its greeting flips. A 24-hour store IS night-mappable this same way.
