@@ -155,6 +155,19 @@ export function markDropped(room: string, why: string): void {
 // room -> ElevenLabs conversation id (so Runnr can poll transcript/result for a bridged call)
 const conversations = new Map<string, string>();
 export function bridgeConversationId(room: string): string | null { return conversations.get(room) ?? null; }
+/**
+ * THE SAME MAP READ THE OTHER WAY. Once Charlie's session exists, the customer's page stops asking
+ * about the check by our own name for it and starts asking by HIS session id — so a guard that only
+ * knew the first name was no guard at all after the first few seconds. His session ends every time he
+ * is dropped for a wait, and the page then read "finished", settled a no-answer verdict and hung the
+ * phone up on Staff who were walking back with the answer (owner, live check 07-31, third time).
+ * Anything asked about a session has to be answerable against the call it belongs to.
+ */
+export function bridgeRoomForConversation(convId: string): string | null {
+  if (!convId) return null;
+  for (const [room, id] of conversations) if (id === convId) return room;
+  return null;
+}
 
 // Live-call count for graceful deploys: a deploy restart once killed the owner's call mid-air
 // (EL "Client disconnected: 1006", 2026-07-02). The SIGTERM handler in server.ts waits on this

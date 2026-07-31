@@ -147,7 +147,7 @@ import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPh
 import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
 import { settings as settingsTbl } from "./db/schema";
-import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, activeBridgeCalls } from "./voice/bridge";
+import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeRoomForConversation, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, activeBridgeCalls } from "./voice/bridge";
 import { placeBridgeCall, attachListenFork, roomCallSids, roomCallProgress, roomFinalizers, RAILWAY_HOST, STAGING_HOST } from "./voice/bridge-place";
 import { isCallingPaused, setCallingPaused, spendTodayCents, withLock } from "./redis";
 
@@ -3383,6 +3383,16 @@ app.get("/pub/result/:cid", async (c) => {
     }
     return c.json({ status: "in_progress", transcript: row?.transcript ?? (s ? tdTranscript(s) : ""), summary: "" });
   }
+  // THE LINE IS STILL UP, SO THERE IS NO RESULT YET. Charlie's session ends every time he is dropped
+  // for a wait, and asking the provider about a finished session gets "done" — which this page reads
+  // as the check being over. It then settled a no-answer verdict and hung the phone up on Staff who
+  // were walking back with the answer (owner, live check 07-31). Our own record knows the difference:
+  // it stays open until the CARRIER ends the call. Same guard as /pub/live, on the other poll.
+  {
+    const liveRoom = bridgeRoomForConversation(cid);
+    const held = liveRoom ? getReceipt(liveRoom) : null;
+    if (held && !held.closed) return c.json({ status: "in_progress", transcript: transcriptOf(held), summary: "" });
+  }
   const o = await provider.getConversation(cid);
   // Prefer the FINALIZED row once it exists — it carries the consensus verdict (the reconciled
   // status_key/confirmed) and the captured product detail, which the live outcome does not. While the
@@ -3493,6 +3503,15 @@ app.get("/pub/live/:cid", async (c) => {
     const convId = bridgeConversationId(room);
     if (convId) dcid = convId;
     else return c.json({ status: "in_progress", transcript: "", summary: "" });
+  }
+  // …AND THE SAME CHECK ASKED ABOUT BY CHARLIE'S SESSION ID. The page swaps to that id the moment his
+  // session exists, so guarding only our own name for the check protected the first few seconds and
+  // nothing after. His session ENDS on every hold, the page read that as the check being finished,
+  // settled a no-answer verdict and hung up the phone on Staff who were coming back with the answer.
+  {
+    const room = bridgeRoomForConversation(dcid);
+    const held = room ? getReceipt(room) : null;
+    if (held) return c.json({ live: !held.closed, status: held.closed ? "done" : "in_progress", transcript: transcriptOf(held) });
   }
   if (dcid.startsWith("delta:")) {
     const s = tdSession(dcid.slice(6));
