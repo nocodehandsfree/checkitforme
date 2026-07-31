@@ -34,7 +34,7 @@ git. Last updated: 2026-07-31 (in stock alerts fixed; logos sized to match; try 
 ## The new calling engine is ON for staging. Your six test calls are the last thing (07-28/29)
 - **Nothing to flip.** A check from staging.checkitforme.com goes through the new engine. **Listen for:** it asks
   once and waits · no keypad beeps once you are talking · after a hold it asks you again if you might be new.
-- **Waiting on YOU:** the six calls, and whether we pay to upgrade our voice (the phone company will not let us
-  use our own cheaper thinking with a copied voice, over half of every check).
+- **Waiting on YOU:** the six calls. **07-31, proven:** ElevenLabs refuses our own cheaper AI on a quick-cloned
+  voice like Branson HD. Email sent asking them to lift it. If no, we re-clone him the long way or do it ourselves.
 ## PROMOTED 07-30 (owner's go, PM drove it) — everything built since the 27th is on the real site and Admin: the chain page's server half, the Testing scorecard's server half, the wrong-department save, Spanish names on the plans. The new engine stays OFF on the real site until you flip it; customers still see the coming-soon splash.
 ## Waiting on YOU: hide the fake (simulated) poll rows from the Admin feedback queue? (yes / no) · Next: docs/tasks/INDEX.md.
