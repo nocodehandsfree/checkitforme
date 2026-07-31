@@ -6378,7 +6378,23 @@ app.get("/api/admin/map/graph", async (c) => c.json({ rows: await graphSummary()
 app.get("/api/admin/map/chain/:id", async (c) => {
   const id = Number(c.req.param("id"));
   if (!id) return c.json({ error: "chainId required" }, 400);
-  return c.json(await chainDetail(id));
+  // The pencil's corrections ride with the detail: keyed by line, kept beside what was heard, and a
+  // future check never overwrites them (owner, 07-30).
+  let menuFixes: Record<string, string> = {};
+  try { menuFixes = JSON.parse((await getSetting(`menu_fix:${id}`)) || "{}"); } catch { menuFixes = {}; }
+  return c.json({ ...(await chainDetail(id)), menuFixes });
+});
+app.post("/api/admin/map/chain/:id/menu-line", async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!id) return c.json({ error: "chainId required" }, 400);
+  const b = (await c.req.json().catch(() => ({}))) as { idx?: number; text?: string };
+  if (typeof b.idx !== "number") return c.json({ error: "idx required" }, 400);
+  let fixes: Record<string, string> = {};
+  try { fixes = JSON.parse((await getSetting(`menu_fix:${id}`)) || "{}"); } catch { fixes = {}; }
+  const text = String(b.text || "").slice(0, 300).trim();
+  if (text) fixes[String(b.idx)] = text; else delete fixes[String(b.idx)];
+  await setSetting(`menu_fix:${id}`, JSON.stringify(fixes));
+  return c.json({ ok: true, fixes });
 });
 app.post("/api/admin/map/version/:id/approve", async (c) => {
   const id = Number(c.req.param("id"));

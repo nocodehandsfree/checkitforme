@@ -4905,56 +4905,81 @@ function renderMenuByCondition(ch, active, nav, calls){
           :`background:var(--terminal);box-shadow:inset 0 2px 5px rgba(0,0,0,.4);color:${has?'#8A8A96':'var(--text-tertiary)'}`)+`">${esch(cd.label)}</button>`;
   };
   const cd=MENU_CONDS.find(x=>x.key===cur)||MENU_CONDS[0];
-  const mine=byCond[cur];
-  // WHAT THE MENU SAYS, AGREED, not what one check happened to hear (owner, 07-30). The phone company
-  // mis-hears words, so a single check is one opinion: CVS's "front store services" came back as
-  // "front door services" and that one bad hearing became the record. Every check we hold votes on
-  // each line and the wording heard most often wins, so more checks settle the words instead of
-  // overwriting them. The agreement is printed underneath, because he has to be able to see when the
-  // menu is settled and when it is still one check's guess.
-  const agreed=agreedMenu(mine);
-  const tl=agreed.call?menuTimeline({evidence:{calls:[agreed.call]},recipe:active&&active.recipe},nav):null;
+  // THE MAP OF DOORS, from the ONE locked run (comp 3b). Never stitched from several checks — the
+  // stitched menu glued a question from one check to Staff talking on another and the order stopped
+  // making sense (owner, 07-30). The newest PASSING check with the menu's words is the locked run.
+  const mine=byCond[cur].filter(c=>((c.transcript||[]).length)&&c.grade!=='fail');
+  const call=mine.slice().sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0))[0]||null;
+  const doors=call?doorMap(ch,call,active):null;
+  const lockAt=active&&(active.approvedAt||active.createdAt);
   box.innerHTML=`<div style="display:flex;gap:7px;flex-wrap:wrap">${MENU_CONDS.map(pill).join('')}</div>`
-    +(tl
-      ? `<div style="margin-top:14px">${menuLadder(tl.rows)}</div>`
-        +`<div class="meta" style="margin-top:10px;text-transform:none;letter-spacing:0">${esch(agreedWords(agreed))}</div>`
+    +(doors
+      ? `<div style="margin-top:14px;background:var(--terminal);border-radius:16px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:16px 16px">${doors}</div>`
+        +`<div class="meta" style="margin-top:10px;text-transform:none;letter-spacing:0">${esch(call.storeName||'A store')}${lockAt?' \u00b7 map recipe locked '+new Date(lockAt*1000).toLocaleDateString([],{month:'short',day:'numeric'}):''}</div>`
       : `<div style="margin-top:14px" class="empty">Not heard<div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${esch(cd.how)}</div></div>`);
 }
-// THE AGREED MENU. Each check writes its lines down in order, so line one of every check is the same
-// moment of the same menu. For each line the wording heard most often wins; a tie goes to the longest,
-// because the longer version is the one that was not cut short. Returns a stand-in check carrying the
-// agreed wording, so everything downstream reads it exactly like a real one.
-function agreedMenu(calls){
-  const good=(calls||[]).filter(c=>((c.transcript||[]).length));
-  if(!good.length) return {call:null,checks:0,settled:0,lines:0};
-  const newest=good.slice().sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0))[0];
-  const depth=Math.max(...good.map(c=>(c.transcript||[]).length));
-  const out=[]; let settled=0;
-  for(let i=0;i<depth;i++){
-    const seen=new Map();
-    for(const c of good){
-      const raw=(c.transcript||[])[i]; if(!raw) continue;
-      const body=String(raw).replace(/^\s*\d+s\s+/,'');
-      const key=body.toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,' ').trim();
-      if(!key) continue;
-      const hit=seen.get(key)||{n:0,raw:''};
-      hit.n++; if(String(raw).length>hit.raw.length) hit.raw=String(raw);
-      seen.set(key,hit);
+// Each question the store asks, its choices underneath: the word we say in its model's color, the
+// proven door green with a check. A line the pencil corrected shows the corrected words, marked, and
+// a future check never overwrites a correction.
+function doorMap(ch,call,v){
+  const fixes=(CHAIN_MAP[ch.id]&&CHAIN_MAP[ch.id].menuFixes)||{};
+  const steps=((v&&v.recipe&&v.recipe.steps)||[]);
+  const lines=(call.transcript||[]).map(raw=>{
+    const m=String(raw).match(/^\s*(\d+)s\s+([\s\S]*)$/);
+    return { at:m?Number(m[1]):null, text:(m?m[2]:String(raw)).trim() };
+  });
+  // The step that answered each line: the latest line at or before the step's own second.
+  const stepFor={};
+  steps.forEach((st,si)=>{
+    let best=-1;
+    lines.forEach((ln,i)=>{ if(ln.at!=null&&st.atSec!=null&&ln.at<=st.atSec) best=i; });
+    if(best>=0&&stepFor[best]==null) stepFor[best]=si;
+  });
+  const laneC=(st)=>st.action==='press'?LANE_C.Alpha:LANE_C.Bravo;
+  const opts=((v&&v.recipe&&v.recipe.menu)||[]);
+  const pencil='<svg style="vertical-align:-2px;margin-left:6px;cursor:pointer" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5C5C68" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>';
+  return lines.map((ln,i)=>{
+    const fixed=fixes[i]!=null&&String(fixes[i]).trim();
+    const text=fixed||ln.text;
+    const si=stepFor[i], st=si!=null?steps[si]:null;
+    const last=i===lines.length-1;
+    // The choices this question offers, read off the options the map already holds for this chain.
+    const low=' '+text.toLowerCase()+' ';
+    const named=opts.filter(o=>{ const w=String(o.label||o.say||'').toLowerCase(); return w&&low.includes(w.split(' ')[0]); });
+    const pills=[];
+    const seen=new Set();
+    for(const o of named){
+      const word=String(o.say||o.label||''); const k=word.toLowerCase(); if(!k||seen.has(k)) continue; seen.add(k);
+      const takes=st&&String(st.value||'').toLowerCase()&&k.startsWith(String(st.value||'').toLowerCase());
+      if(takes) continue; // ours renders below in its model's color, not twice
+      pills.push(`<span style="padding:5px 12px;border-radius:999px;background:#26262B;color:#8A8A96;font-size:11.5px;font-weight:700">${esch(word)}</span>`);
     }
-    if(!seen.size) continue;
-    const best=[...seen.values()].sort((a,b)=>(b.n-a.n)||(b.raw.length-a.raw.length))[0];
-    if(best.n>1) settled++;
-    out.push(best.raw);
-  }
-  return {call:{...newest,transcript:out},checks:good.length,settled,lines:out.length};
+    if(st){
+      const proven=si===steps.length-1&&v&&v.status==='active';
+      pills.unshift(proven
+        ?`<span style="padding:5px 12px;border-radius:999px;background:rgba(74,222,128,.14);color:var(--green);font-size:11.5px;font-weight:800">${esch(st.value)} \u2713</span>`
+        :`<span style="padding:5px 12px;border-radius:999px;background:rgba(56,189,248,.14);color:${laneC(st)};font-size:11.5px;font-weight:800">${esch(st.value)}</span>`);
+    }
+    return `<div style="display:flex;gap:12px">`
+      +`<div style="display:flex;flex-direction:column;align-items:center;flex:0 0 auto;padding-top:5px"><span style="width:6px;height:6px;border-radius:50%;background:#5C5C68"></span>`
+      +(last?'':`<span style="width:2px;flex:1;background:rgba(255,255,255,.10);margin:3px 0"></span>`)+`</div>`
+      +`<div style="flex:1;min-width:0;padding-bottom:${last?'0':'16px'}">`
+      +`<div style="font-size:12px;font-weight:500;color:rgba(255,255,255,.55);line-height:1.5">"${esch(text)}"<span onclick="menuFixLine(${ch.id},${i})">${pencil}</span>${fixed?'<span style="margin-left:6px;color:var(--text-tertiary);font-size:11px">corrected</span>':''}</div>`
+      +`<div style="margin-top:2px;font-size:11px;font-weight:700;color:#5C5C68">${ln.at!=null?ln.at+'s':''}</div>`
+      +(pills.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${pills.join('')}</div>`:'')
+      +`</div></div>`;
+  }).join('');
 }
-// One gray line saying how settled the wording is, because "is this right yet" is a real question.
-function agreedWords(a){
-  if(!a||!a.call) return '';
-  const store=a.call.storeName||'A store';
-  if(a.checks<2) return `${store} · heard once`;
-  if(a.settled>=a.lines) return `${store} · every line agreed across ${a.checks} checks`;
-  return `${store} · ${a.settled} of ${a.lines} lines agreed across ${a.checks} checks`;
+// The pencil: fix a line's words. The correction is kept beside the recording of what was heard and a
+// future check never overwrites it.
+async function menuFixLine(chainId,idx){
+  const d=CHAIN_MAP[chainId]; if(!d) return;
+  const cur=(d.menuFixes&&d.menuFixes[idx])||'';
+  const t=window.prompt('This line, corrected:',cur);
+  if(t==null) return;
+  const r=await api('/api/admin/map/chain/'+chainId+'/menu-line',{method:'POST',body:JSON.stringify({idx,text:t.trim()})});
+  if(r&&!r.error){ d.menuFixes=r.fixes||{}; const ch=(CHAINS||[]).find(c=>c.id===chainId)||{id:chainId};
+    const vs=(d.versions||[]); renderMenuByCondition(ch, vs.find(v=>v.status==='active')||vs[0], null, d.calls||[]); toast('Corrected'); }
 }
 function pickMenuCondition(chainId,key){
   MENU_COND[chainId]=key;
@@ -5158,26 +5183,6 @@ function routeWords(v){
 // NAME THE MODEL THAT NAVIGATED, never "we" (owner, 07-30). Alpha presses the keypad, Bravo speaks
 // the menu. The header line beside the chain name already names one of them in its own colour, so
 // the ladder saying "WE" was the page inventing a second word for a thing that has a name.
-// Read off the steps themselves so the ladder can never name a different model than it is showing.
-function menuLadder(rows){
-  const pressed=rows.some(r=>r.who==='us'&&/^press/i.test(String(r.text||'')));
-  const L=pressed?['ALPHA',LANE_C.Alpha]:['BRAVO',LANE_C.Bravo];
-  const WHO={store:['STORE','var(--muted)'],us:L,staff:['STAFF','var(--green)']};
-  return `<div class="mladder">`+rows.map((r,i,a)=>{
-    const w=WHO[r.who]||WHO.store, next=a[i+1], gap=(r.at!=null&&next&&next.at!=null)?next.at-r.at:null;
-    return `<div style="display:flex;gap:12px">
-      <div style="display:flex;flex-direction:column;align-items:center;flex:0 0 auto;padding-top:5px">
-        <span style="width:9px;height:9px;border-radius:50%;background:${w[1]};flex:0 0 auto"></span>
-        ${i===a.length-1?'':`<span style="width:2px;flex:1;background:rgba(255,255,255,.14);margin:3px 0"></span>`}</div>
-      <div style="flex:1;min-width:0;padding-bottom:${i===a.length-1?'0':'14px'}">
-        <div style="display:flex;align-items:baseline;gap:8px">
-          <span style="font-size:10px;font-weight:700;letter-spacing:.12em;color:${w[1]};flex:0 0 auto">${w[0]}</span>
-          <span style="margin-left:auto;font-size:12px;font-weight:700;color:var(--muted);flex:0 0 auto">${r.at!=null?r.at+'s':''}</span></div>
-        <div style="font-size:13.5px;font-weight:${r.who==='us'?'700':'500'};color:${r.who==='us'?'var(--text-strong)':'rgba(255,255,255,.78)'};margin-top:3px;line-height:1.45">${esch(r.text)}</div>
-        ${gap!=null&&gap>0?`<div style="font-size:11px;font-weight:600;color:var(--text-tertiary);margin-top:4px">${gap}s later</div>`:''}
-      </div></div>`;
-  }).join('')+`</div>`;
-}
 const plainText=t=>String(t||'').replace(/\s*—\s*/g,'. ').replace(/\s+-\s+/g,'. ').replace(/\.\s*\./g,'.');
 const whyWords=s=>String(s||'').replace(/(\d+)\s+(\w+?)\(s\)/g,(m,n,w)=>n+' '+w+(Number(n)===1?'':'s'));
 // WHAT HAPPENED, naming the store. The old card said "One store needs its own recipe" with no store,
@@ -5299,32 +5304,6 @@ async function loadChainMap(id){
   const d=await api('/api/admin/map/chain/'+id).catch(()=>null);
   CHAIN_MAP[id]=d||{versions:[],observations:[],unknowns:[]};
   return CHAIN_MAP[id];
-}
-// THE MENU, AS HEARD. What the store actually says at each second, and what we do in reply, on ONE
-// timeline. The route alone ("press 2 at 8s") never told the owner whether the route made sense,
-// because it hides the thing being navigated. `transcript` lines arrive as "16s Thank you for
-// calling…"; the recipe carries our own actions with their second. Merged and sorted, they read like
-// the call actually went.
-function menuTimeline(v, nav){
-  const calls=((v&&v.evidence&&v.evidence.calls)||[]).filter(c=>(c.transcript||[]).length);
-  if(!calls.length) return null;
-  // The NEWEST check, never the longest. What the menu says now is the last thing we heard it say.
-  const call=calls.slice().sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0))[0];
-  const rows=[];
-  for(const line of (call.transcript||[])){
-    const m=String(line).match(/^\s*(\d+)s\s+([\s\S]*)$/);
-    rows.push({ at:m?Number(m[1]):null, who:'store', text:(m?m[2]:String(line)).trim() });
-  }
-  const steps=((v&&v.recipe&&v.recipe.steps)||[]);
-  for(const st of steps){
-    rows.push({ at:st.atSec!=null?Number(st.atSec):null, who:'us',
-      text:st.action==='press'?`Press ${st.value}`:st.action==='wait'?'Wait':`Say “${st.value}”`});
-  }
-  rows.sort((a,b)=>(a.at==null?1e9:a.at)-(b.at==null?1e9:b.at));
-  // The last thing heard, at or after a person arrived, is Staff speaking rather than the machine.
-  const human=call.reachedHuman?(nav!=null?nav:call.seconds):null;
-  if(human!=null) for(let i=rows.length-1;i>=0;i--){ if(rows[i].who==='store'&&rows[i].at!=null&&rows[i].at>=human-3){ rows[i].who='staff'; break; } }
-  return { rows, call };
 }
 function renderChainMapping(ch){
   const el=document.getElementById('set_mapping'); if(!el) return;

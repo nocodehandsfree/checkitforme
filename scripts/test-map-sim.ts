@@ -506,19 +506,23 @@ async function main() {
     // longest one. A stale check kept the screen after a newer one had heard the menu properly.
     ok(!/sort\(\(a,b\)=>\(\(b\.transcript\|\|\[\]\)\.length\)-\(\(a\.transcript\|\|\[\]\)\.length\)\)/.test(page),
       "the menu is no longer taken from whichever check happened to have the most lines");
-    ok(/const call=calls\.slice\(\)\.sort\(\(a,b\)=>\(Number\(b\.at\)\|\|0\)-\(Number\(a\.at\)\|\|0\)\)/.test(page),
+    ok(/const call=mine\.slice\(\)\.sort\(\(a,b\)=>\(Number\(b\.at\)\|\|0\)-\(Number\(a\.at\)\|\|0\)\)/.test(page),
       "and where one check must be picked, it is the newest, never the longest");
     // Only the comments explaining the removal may still carry the words; no rendered string may.
     ok(!/confColor/.test(page), "the colour scale those words needed is gone with them");
     ok(!page.split("\n").some((l) => !l.trim().startsWith("//") && /observed once|observed multiple times/.test(l)),
       "and no screen scores itself at him in words he cannot act on");
 
-    // THE WORDING IS VOTED ON, not taken from whichever check ran last. The phone company mis-hears:
-    // CVS's "front store services" came back as "front door services" and became the record.
-    ok(/function agreedMenu\(calls\)/.test(page), "every check we hold votes on each line of the menu");
-    ok(/const best=\[\.\.\.seen\.values\(\)\]\.sort\(\(a,b\)=>\(b\.n-a\.n\)\|\|\(b\.raw\.length-a\.raw\.length\)\)\[0\]/.test(page),
-      "the wording heard most often wins, and a tie goes to the version that was not cut short");
-    ok(/lines agreed across \$\{a\.checks\} checks/.test(page), "and the screen says how settled it is, so he can see when it is still one guess");
+    // THE MENU IS THE MAP OF DOORS from the ONE locked run (comp 3b). The stitched menu that voted
+    // line-by-line across checks is DELETED: it glued a question from one check to Staff talking on
+    // another and the order stopped making sense (owner, 07-30).
+    ok(!/function agreedMenu|agreedWords|function menuTimeline|function menuLadder/.test(page),
+      "the stitched menu and the old ladder are deleted, and must not come back");
+    ok(/function doorMap\(ch,call,v\)/.test(page), "the menu renders as the map of doors");
+    ok(/c\.grade!=='fail'/.test(page.slice(page.indexOf('const mine=byCond'))), "built from the newest PASSING check only");
+    ok(/map recipe locked '/.test(page), "the foot names the store and when the map recipe locked");
+    ok(/function menuFixLine\(chainId,idx\)/.test(page), "the pencil fixes a line's words");
+    ok(/fixed\?'<span[\s\S]{0,80}?corrected/.test(page), "and a corrected line says so");
 
     const cap = readFileSync("src/calls/map-capture.ts", "utf8");
     ok(/\(opts\.reachedHuman \|\| opts\.endedOnRing\) \? transcriptFromCall\(opts\.steps\)/.test(cap),
