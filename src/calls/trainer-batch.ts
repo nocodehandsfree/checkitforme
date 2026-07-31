@@ -95,8 +95,9 @@ export async function lockRecipeToChain(chainId: number, recipe: Recipe, confide
   try {
     const res = await proposeVersion({
       chainId, recipe: mapRecipe, source: evidence ? "mapping call" : "lock",
-      // A finished mapping run has EARNED activation: three stores agreed, so its route goes live in
-      // the same stroke instead of waiting as a proposal the owner never asked to judge.
+      // A finished mapping run has EARNED activation: one store proved the department and the wording
+      // settled (owner Update 2), so its route goes live in the same stroke instead of waiting as a
+      // proposal the owner never asked to judge. Speed wins ride the same flag (Update 5).
       autoActivate: opts?.activate || undefined,
       storeId: evidence?.storeId,
       call: evidence ?? {
@@ -109,9 +110,15 @@ export async function lockRecipeToChain(chainId: number, recipe: Recipe, confide
   } catch { /* the map is best-effort; a hiccup there must never stop a proven route going live */ }
   if (!chainLevel) return;   // a store exception: recorded, live for that store, chain row untouched
 
+  // A RING-ENDED WIN NEVER NULLS THE CHAIN'S NUMBERS. A settling listen or a speed win hangs up on
+  // the second ring by design, so its recipe carries seconds:null — that is "nobody measured Staff on
+  // THIS check", not "forget the number the last proven check measured". The held values stand until
+  // a check that actually reached Staff moves them.
+  const secs = typeof recipe.seconds === "number" ? Math.round(recipe.seconds) : (ch?.navSeconds ?? null);
+  const treeSecs = typeof recipe.seconds === "number" ? Math.round(recipe.seconds) : (ch?.avgTreeSeconds ?? null);
   await db.update(chains).set({
     navType: recipe.type || null, navRecipe: JSON.stringify(recipe),
-    navSeconds: direct ? null : (typeof recipe.seconds === "number" ? Math.round(recipe.seconds) : null),
+    navSeconds: direct ? null : secs,
     navStatus: "locked", navConfidence: typeof confidence === "number" ? confidence : null,
     navLog: JSON.stringify(log.slice(-10)), navUpdatedAt: now,
     // ↓ applied to LIVE consumer calls (navText only — the menu/notes live in treeNote for the owner):
@@ -120,7 +127,7 @@ export async function lockRecipeToChain(chainId: number, recipe: Recipe, confide
     answerPath: steps.map((s) => `${s.action}:${s.value}`).join(">") || (greeting ? "greeting_then_transfer" : null),
     // Direct chains carry no seconds (a stray value mutes the agent — the silent-agent bug). A GREETING
     // chain is the opposite case: it MUST carry its seconds, because that wait is the whole point.
-    ringsDirect: direct, avgTreeSeconds: direct ? null : (typeof recipe.seconds === "number" ? Math.round(recipe.seconds) : null),
+    ringsDirect: direct, avgTreeSeconds: direct ? null : treeSecs,
     treeStatus: "learned", treeLearnedAt: now,
   }).where(eq(chains.id, chainId));
 }

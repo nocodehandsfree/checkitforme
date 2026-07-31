@@ -5,9 +5,9 @@
 // save the perfect recipe."
 //
 // What this is NOT: a new calling engine. Every call still goes through the existing mapper
-// (mapper.ts → navigator.ts), which already holds one store per chain, rotates only on a dead line,
-// shortens words ("front", not "front store services"), and binary-searches the earliest second a
-// menu accepts input. This file is the ORDER those runs happen in, plus the two things the mapper
+// (mapper.ts → navigator.ts), which learns the menu first at one held store, locks on a real answer
+// plus settled wording, then optimizes speed — the short word, or cutting in on the menu's own words,
+// never a clock. This file is the ORDER those runs happen in, plus the two things the mapper
 // could not do on its own:
 //   1. VERIFY the 46 chains marked "a person answers directly". A recorded greeting in front of a
 //      human is still a menu, and a chain wrongly marked direct is what let the paid agent talk to a
@@ -210,7 +210,7 @@ async function runMapping(item: SweepItem): Promise<void> {
     if (!run) break;
     item.calls = run.attempt;
     if (!run.running) {
-      item.status = run.phase === "locked" ? "done" : (run.phase === "needs-review" ? "failed" : "done");
+      item.status = run.phase === "locked" ? "done" : (run.phase === "stopped" ? "failed" : "done");
       item.outcome = run.stopReason || run.phase;
       item.seconds = run.best?.seconds ?? null;
       state.calls += run.attempt;

@@ -601,8 +601,13 @@ export async function proposeVersion(opts: {
   const hammer = isHammerPath(opts.recipe);
 
   // Same route confirmed again → fold the evidence into the live version and re-score it. The map
-  // the runtime uses does not move; what changes is how much we trust it.
+  // the runtime uses does not move; what changes is how much we trust it. A finished mapping run
+  // re-proving the same route also refreshes the LOCK STAMP: "Locked" is the date the map really
+  // succeeded (owner Update 9), and this map just succeeded.
   if (sameRoute && prevActive) {
+    if (opts.autoActivate) {
+      await client.execute({ sql: `UPDATE nav_map_versions SET approved_at=? WHERE id=?`, args: [at, prevActive.id] });
+    }
     const evidence: Evidence = { calls: [...(prevActive.evidence.calls || []), ...(call ? [call] : [])].slice(-25) };
     const scored = scoreConfidence(evidence, at);
     // Keep the FASTER measurement (no-downgrade guard, same rule the mapper already follows): a
@@ -664,7 +669,10 @@ export async function proposeVersion(opts: {
   // almost always that store, not the chain — and letting one odd call rewrite the chain would break
   // five hundred stores at once. So: the exception is recorded against THAT STORE, and the chain route
   // only moves once STORES_TO_MOVE_CHAIN separate stores have walked the same new route.
-  if (prevActive && !sameRoute && calledAt && prevActive.storeId === 0 && call?.reachedHuman) {
+  // …but a FINISHED MAPPING RUN is never a store being odd (owner Update 2: one successful map locks
+  // the chain). Its write carries autoActivate, and diverting it to a store exception would leave the
+  // chain forever running the route the run just replaced.
+  if (prevActive && !sameRoute && calledAt && prevActive.storeId === 0 && call?.reachedHuman && !opts.autoActivate) {
     const agreeing = await storesAgreeingOn(opts.chainId, pathSignature(opts.recipe), calledAt);
     if (agreeing.length < STORES_TO_MOVE_CHAIN) {
       return proposeStoreException({ ...opts, storeId: calledAt }, call, agreeing.length);
@@ -694,8 +702,10 @@ export async function proposeVersion(opts: {
   const version = Number((maxRow.rows[0] as any)?.v || 0) + 1;
   // First map for a chain with nothing live can activate straight away — a proven human-reaching path
   // beats no path at all. Anything REPLACING a working route waits for approval, and a hammer never
-  // activates itself.
-  const activate = !hammer && (opts.autoActivate ?? !prevActive) && !!call?.reachedHuman;
+  // activates itself. A call that ended ON THE RING activates like one that reached Staff: it walked
+  // the whole menu and proved the desk rings, and the ring hang-up is how a settling listen or a
+  // speed win ends BY DESIGN — refusing it would mean no run could ever lock without troubling Staff.
+  const activate = !hammer && (opts.autoActivate ?? !prevActive) && !!(call?.reachedHuman || call?.endedOnRing);
   const summary = describeChange(prevActive, opts.recipe);
   const why = opts.why || (hammer ? "Auto-caller pressed the same key repeatedly. Not a mapped route." : scored.why);
 
@@ -1502,6 +1512,24 @@ export async function learnFromReceipt(r: {
     const why = String(events.find((e) => e.kind === "hangup")?.detail?.why || "no person on the call");
     await recordFailedAttempt({ chainId, storeId, navId, callId: r.callId, reason: why, seconds: at("hangup") });
     learned.push(`route reached nobody: ${why}`);
+  }
+
+  // THE SECOND LOCK LEVEL, FOR FREE (owner R1). The chain went live the moment ONE store proved the
+  // department; every real customer check that lands at a NEW store and reaches Staff — who answer
+  // the product question, yes or no alike (Update 12) — is another store agreeing. Three distinct
+  // stores = fully proven. Nobody dials for this; the customers already are.
+  if (map && personAt != null && !wrongDept && storeId) {
+    try {
+      const key = `map_proven:${chainId}`;
+      const proven = new Set<number>(JSON.parse((await getSetting(key)) || "[]") as number[]);
+      if (!proven.has(storeId)) {
+        proven.add(storeId);
+        await setSetting(key, JSON.stringify([...proven].slice(0, 50)));
+        learned.push(proven.size >= 3
+          ? `store ${storeId} agrees — ${proven.size} stores, the chain is fully proven`
+          : `store ${storeId} agrees (${proven.size} of 3 stores)`);
+      }
+    } catch { /* the proof ledger is best-effort — a check must never fail on it */ }
   }
 
   // WHAT THE CALL WALKED, MEASURED AGAINST THE MAP. This is spec §10's first wiring gap closed from

@@ -587,7 +587,12 @@ async function navTurn(id: string, speech: string): Promise<string> {
   if (s.relisten && s.routedAtSec != null && s.humanAtSec == null) {
     const rings = s.ear?.conv?.rings ?? 0;
     const bySound = rings >= 2;
-    const byClock = !s.ear && atSec - s.routedAtSec >= RING_CYCLE_SEC;
+    // The Ear on a mapping call cannot hear the network's ring frequencies (that test lives in the
+    // machine-locked bridge), so when it has counted nothing the published US cadence stands in: two
+    // seconds of ring, four of silence — the SECOND ring begins six seconds after the handoff. This
+    // is the hang-up moment, not an answer: no answer ever fires on a timer, and this is the rule
+    // that keeps every ring hang-up off real Staff (voice-calls RULES line 2).
+    const byClock = rings === 0 && atSec - s.routedAtSec >= RING_CYCLE_SEC;
     if (bySound || byClock) {
       s.ringsHeard = rings;
       s.stopReason = bySound ? `hung up on ring ${rings}` : "hung up on the second ring (by the clock)";
@@ -604,6 +609,7 @@ async function navTurn(id: string, speech: string): Promise<string> {
     s.stopReason = `transferred at ${s.routedAtSec}s, nobody picked up`;
     finish(s, "failed"); return twiml(`<Hangup/>`);
   }
+  let saidWasTail = false; // this turn's speech was the remainder of a line we spoke over
   if (speech && speech.trim()) {
     // THE TAIL OF A LINE WE SPOKE OVER IS NOT A NEW LINE (owner, 07-30). Answering the instant the
     // prompt makes sense means cutting the recording mid-sentence, and the rest of that sentence comes
@@ -624,7 +630,7 @@ async function navTurn(id: string, speech: string): Promise<string> {
     // the menu test do the separating; punctuation the transcriber guessed at cannot.
     const fragment = line.split(/\s+/).length <= TAIL_WORDS && !isMenuLine(line) && !ROUTING_RE.test(line);
     const prevIvr = [...s.steps].reverse().find((st) => st.who === "ivr" && st.text);
-    if (spokeOver && fragment && prevIvr) prevIvr.text = `${prevIvr.text} ${line}`.slice(0, 300);
+    if (spokeOver && fragment && prevIvr) { prevIvr.text = `${prevIvr.text} ${line}`.slice(0, 300); saidWasTail = true; }
     else {
       // SENT TO THE BEGINNING: the opening recording playing again mid-check means the menu started
       // over on us. That is a graded failure, not something the screen should improvise around.
@@ -658,14 +664,10 @@ async function navTurn(id: string, speech: string): Promise<string> {
     if (s.transferAtSec == null) {
       s.transferAtSec = atSec; s.routedAtSec = s.routedAtSec ?? atSec;
     }
-    // RE-LISTEN ENDS HERE. The machine has handed us on, which means the desk is ringing, which means
-    // the phone system is finished with us and so are we. Waiting the extra 40s for somebody to lift
-    // the handset would ring a real desk for nothing and teach us a number we do not want: how long
-    // Staff took, not how long the menu took.
-    if (s.relisten) {
-      s.stopReason = "menu done, desk ringing";
-      finish(s, "mapped"); return twiml(`<Hangup/>`);
-    }
+    // A RE-LISTEN DOES NOT END ON THE ANNOUNCEMENT. The handoff line alone does not prove the desk
+    // is really ringing (voice-calls RULES line 2 — it was wired this way once and real Staff picked
+    // up three times). The call keeps listening from here and the second-ring counter above ends it:
+    // two real ring bursts prove the desk rings and still leave nobody to answer it.
   }
   // CONFIRM mode: we already asked "do you have {product}?" — this turn is their answer. Classify it.
   // A redirect ("that's the X dept / let me transfer you") = wrong desk → capture where + hang up.
@@ -759,21 +761,24 @@ async function navTurn(id: string, speech: string): Promise<string> {
     }
     const idx = s.planIdx ?? 0;
     const step = s.barge.plan[idx];
-    // THE ONE STEP BEING TESTED EARLY, and only that one. A speed-up run asks a single question — can
-    // this word land at 9s instead of 14s — so exactly one step fires on the clock and the rest of the
-    // route runs identically to every other check. Never widen this to the whole plan: firing the
-    // whole route on recorded seconds is what made a check walk ahead of a slow menu and answer the
-    // wrong question (CVS Lanett, 07-30).
-    if (step?.early && atSec >= (step.at ?? 0)) {
+    // THE ONE STEP BEING TESTED EARLY, and only that one — and it fires on the MENU'S OWN WORDS,
+    // never on a clock (owner Update 4: NO answer ever fires on a timer; the clock is dead
+    // everywhere). "Early" means: the recording that follows our last answer IS this step's own
+    // question, so the moment the store starts saying it we answer, instead of waiting for the
+    // question to finish. A menu that will not be cut off re-prompts, the check fails "barge didn't
+    // work", and that question is allowed to finish forever after (bargeSafe + never-again). Firing
+    // on recorded seconds is what walked ahead of a slow menu and answered the wrong question (CVS
+    // Lanett, 07-30) — that behaviour is deleted, not gated.
+    if (step?.early && said && !isReprompt(said) && !saidWasTail) {
       s.planIdx = idx + 1;
       s.lastActTurn = s.turns;
       if (step.action === "press" && step.value) {
         const digits = step.value.replace(/[^0-9*#]/g, "").slice(0, 6);
-        s.steps.push({ who: "us", text: `pressed ${digits} (trying it earlier)`, atSec, action: "press", value: digits, earPrompts: s.ear?.recordings });
+        s.steps.push({ who: "us", text: `pressed ${digits} (cutting in on the menu's words)`, atSec, action: "press", value: digits, earPrompts: s.ear?.recordings });
         return twiml(`<Play digits="${digits}"/>${gather(id)}`);
       }
       if (step.value) {
-        s.steps.push({ who: "us", text: `said "${step.value}" (trying it earlier)`, atSec, action: "say", value: step.value, earPrompts: s.ear?.recordings });
+        s.steps.push({ who: "us", text: `said "${step.value}" (cutting in on the menu's words)`, atSec, action: "say", value: step.value, earPrompts: s.ear?.recordings });
         return twiml(`<Say voice="Polly.Joanna">${esc(step.value)}</Say>${gather(id)}`);
       }
     }

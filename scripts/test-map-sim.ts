@@ -22,6 +22,7 @@ import {
 import { lockRecipeToChain } from "../src/calls/trainer-batch";
 import { greetingFrom, looksLikeDirectPickup, menuStillTalking, parseSpokenOptions, isMenuLine, parseMenuOptions, mergeMenu, looksLikeQuestion, isReprompt } from "../src/calls/navigator";
 import { recipeFromCall, gradeCheck } from "../src/calls/map-capture";
+import { sameWording } from "../src/calls/mapper";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -356,20 +357,22 @@ async function main() {
   }
 
 
-  console.log("▶ THE RE-LISTEN CALL — walks the known menu, hangs up the instant the desk rings");
+  console.log("▶ THE RE-LISTEN CALL — walks the known menu, hangs up on the SECOND RING, every check");
   {
     // The whole point of the mode, asserted on the rules that make it safe rather than on a phone.
     const src = readFileSync("src/calls/navigator.ts", "utf8");
-    ok(/if \(s\.relisten\) \{[\s\S]{0,240}?finish\(s, "mapped"\); return twiml\(`<Hangup\/>`\)/.test(src),
-      "an announced handoff ends the call on the spot, with no wait for a person");
+    ok(!/if \(s\.relisten\) \{\s*\n\s*s\.stopReason = "menu done, desk ringing";/.test(src),
+      "the handoff announcement alone no longer ends the call — the announcement is not the ring (RULES 2)");
+    ok(/if \(s\.relisten && s\.routedAtSec != null && s\.humanAtSec == null\)[\s\S]{0,700}?rings >= 2/.test(src),
+      "every ring hang-up waits for the second ring — re-listen and speed check alike");
+    ok(/const byClock = rings === 0 && atSec - s\.routedAtSec >= RING_CYCLE_SEC;/.test(src),
+      "with the published ring cadence standing in when the Ear has counted nothing");
     ok(/RE-LISTEN NEVER TROUBLES STAFF[\s\S]{0,400}?finish\(s, "human"\); return twiml\(`<Hangup\/>`\)/.test(src),
       "and if somebody picks up anyway it hangs up rather than asking them anything");
     ok(/const lockable = \(status === "human" \|\| status === "mapped"\)/.test(src),
       "a call that ended on the ring IS a good map, so it produces a recipe like any other");
     ok(/seconds: s\.humanAtSec \?\? \(status === "mapped" \? null/.test(src),
       "but it NEVER claims a time to Staff, because nobody picked up");
-    ok(/if \(s\.relisten && s\.routedAtSec != null && s\.humanAtSec == null\)[\s\S]{0,400}?rings >= 2/.test(src),
-      "and it hangs up on the second REAL ring, counted by the Ear, not on a stopwatch");
     ok(/seconds: s\.relisten[\s\S]{0,160}?s\.transferAtSec \?\?/.test(src),
       "and it reports the MENU's seconds, never the moment a person spoke");
     // The number the runtime opens the paid agent on must stay the time to STAFF.
@@ -442,19 +445,21 @@ async function main() {
       "every check with a route opens the listener at the greeting instead of running a silent timed block");
     ok(!/<Pause length="\$\{wait\}"/.test(src),
       "the silent timed block is GONE, so no check can ever be deaf through the menu again");
-    ok(/if \(s\.barge\?\.plan\?\.length\) \{[\s\S]{0,4000}?return twiml\(gather\(id\)\)/.test(src),
+    ok(/if \(s\.barge\?\.plan\?\.length\) \{[\s\S]{0,5000}?return twiml\(gather\(id\)\)/.test(src),
       "and it fires its known steps from the listening loop, reopening the listener after each one");
     ok(/const named = [\s\S]{0,240}?includes\(" " \+ step\.value\.toLowerCase\(\)\)/.test(src),
       "a step goes when the prompt names its own word");
     ok(/named \|\| isMenuLine\(said\) \|\| looksLikeQuestion\(said\)/.test(src),
       "otherwise it answers the prompt that is asking, never a clock the menu has drifted away from");
-    // ONE BEHAVIOUR FOR EVERY MAPPING CHECK (owner, 07-30). The clock may move exactly one step, the
-    // one a speed-up run is testing; every other step still answers the prompt that asks it, so two
-    // checks of the same store cannot produce two different records.
-    ok(/if \(step\?\.early && atSec >= \(step\.at \?\? 0\)\)/.test(src),
-      "only the ONE step being tested early may fire on the clock");
-    ok((src.match(/atSec >= \(step\.at \?\? 0\)/g) || []).length === 1,
-      "and nothing else in the route is allowed to walk ahead of the menu");
+    // NO ANSWER EVER FIRES ON A TIMER — the clock is dead everywhere (owner Update 4). The one step
+    // under test cuts in on the MENU'S OWN WORDS: it answers the first words of its own recording
+    // instead of waiting for the question to finish. Every other step answers the prompt that asks it.
+    ok(!/atSec >= \(step\.at \?\? 0\)/.test(src),
+      "no step fires on the clock — the timed barge is deleted, not gated");
+    ok(/if \(step\?\.early && said && !isReprompt\(said\) && !saidWasTail\)/.test(src),
+      "the ONE step under test cuts in on the menu's own words — never on silence, a re-prompt, or a cut line's tail");
+    ok(/cutting in on the menu's words/.test(src),
+      "and the record says so in plain words");
     ok(/if \(said && isReprompt\(said\)\)[\s\S]{0,400}?said "\$\{last\.value\}" again/.test(src),
       "a re-prompt repeats the SAME answer instead of spending the next one");
     ok(looksLikeQuestion("are you a healthcare provider?"), "a question with no options in it is still a cue to answer");
@@ -480,7 +485,7 @@ async function main() {
       "a route with a step still to walk cannot be finished with us");
     ok(/if \(speech && ROUTING_RE\.test\(speech\) && !routeUnfinished\)/.test(src),
       "so an offer to connect before the last answer is read as one more prompt, not the handoff");
-    ok(/if \(spokeOver && fragment && prevIvr\) prevIvr\.text = /.test(src),
+    ok(/if \(spokeOver && fragment && prevIvr\) \{ prevIvr\.text = [\s\S]{0,80}?saidWasTail = true; \}/.test(src),
       "it is joined onto the line it belongs to, never listed as its own step");
 
     // THE SCREEN USES ONLY WORDS THE STATUSES SCREEN OWNS (owner, 07-30). It said "nobody picked up"
@@ -604,30 +609,66 @@ async function main() {
       "a walk of a held route runs as optimizing speed with the menu it expects and the time to beat");
   }
 
-  // PIECE THREE: the engine runs the owner's three stages and nothing else.
-  console.log("▶ THE ENGINE RUNS THE THREE STAGES");
+  // PIECE THREE: the engine runs the owner's stages under the 07-31 rounds — learn menu FIRST,
+  // always; one proven answer locks the store and the chain goes live; speed after, at the same
+  // store, no timer anywhere; proving arrives free from real customer checks, never a dialing stage.
+  console.log("▶ THE ENGINE: LEARN FIRST, LOCK AT ONE PROVEN STORE, SPEED WITH NO CLOCK");
   {
     const eng = readFileSync("src/calls/mapper.ts", "utf8");
-    ok(/"map" \| "speed" \| "prove" \| "locked" \| "needs-review" \| "stopped"/.test(eng),
-      "the only stages are mapping menu, optimizing speed and proving department");
+    ok(/"map" \| "speed" \| "locked" \| "stopped"/.test(eng),
+      "the stages are mapping menu and optimizing speed — proving is not a dialing stage any more");
     ok(!/"verify" \| "listen" \| "baseline" \| "optimize"|listenFirst|isListen/.test(eng),
       "the old stage names and the listen-first path are gone from the engine");
-    ok(/if \(run\.phase === "speed" && !ex\) run\.phase = "prove";/.test(eng),
-      "speed drains into prove — only proving can lock");
-    ok(/if \(run\.phase === "prove"\) run\.rotate = true;/.test(eng),
-      "proving takes a fresh store every check; mapping and speed hold one store");
-    ok(/relisten: run\.phase === "speed",/.test(eng),
-      "optimizing speed hangs up on the second ring, every check — no Staff, ever");
-    ok(/run\.phase === "map" \|\| run\.phase === "prove" \? \{ product \}/.test(eng),
-      "mapping and proving ask Staff about the product — the answer is the proof of the door");
+    ok(/phase: "map", running: true,/.test(eng),
+      "every run starts at mapping menu — LEARN FIRST, ALWAYS, held recipe or not (Update 1)");
+    ok(!/lockedRecipe && hasPromptPlan \? "speed" : "map"/.test(eng),
+      "the held-recipe shortcut straight to speed is deleted");
+    ok(/const proving = run\.phase === "map" && !run\.doorProven && !askSpent;/.test(eng),
+      "the learn stage's proving check is the only check that asks Staff — once, never more");
+    ok(/relisten: !proving,/.test(eng),
+      "every other check hangs up on the second ring — settle listens and speed checks alike");
+    ok(/proving \? \{ product \} : undefined,/.test(eng),
+      "the ask is about the product — the answer is the proof of the door");
     ok(/const graded = s\?\.grade === "pass";/.test(eng),
       "the loop reads the same machine grade the run log and the map fold carry");
     ok(/if \(!run\.doorsDead\.includes\(door\)\) run\.doorsDead\.push\(door\);/.test(eng),
       "a wrong desk kills that door for good and steers every later check away from it");
-    ok(/if \(run\.provedStores\.length >= 3\) \{ run\.phase = "locked"; break; \}/.test(eng),
-      "three stores agreeing is the only lock");
+    ok(/sameWording\(run\.lastLines, lines\)/.test(eng),
+      "the run keeps listening until the same lines are heard twice in a row");
+    ok(/run\.storeLocked = true;[\s\S]{0,300}?activate: true, stage: "map"/.test(eng),
+      "settled + proven = the store locks and the chain goes LIVE, in one stroke (Update 2)");
+    ok(/await seedProvenStores\(chainId, store\.id\);/.test(eng),
+      "the locked store opens the proof ledger — customer checks at new stores add themselves");
+    ok(/await finalizeAndLock\(run, chainId, run\.best, null, run\.winnerSession, \{ activate: true, stage: "speed" \}\);/.test(eng),
+      "a speed win updates the recipe and the Menu on the spot (Update 5)");
+    ok(!/run\.provedStores/.test(eng) && !/"prove"[^)]*run\.rotate/.test(eng),
+      "no prove-stage dialing exists to reach three stores — real customer checks carry that");
+    ok(/kind: "shorten" \| "cutin";/.test(eng) && !/enqueueBinaryBarge|bargeState|\bat\?\: number/.test(eng),
+      "the experiments are the short word and the cut-in — the binary clock search is deleted");
+    ok(/await rememberNever\(run, `cutin:\$\{stepValue\}`\);/.test(eng) && /await rememberNever\(run, `shorten:/.test(eng),
+      "a losing move is blacklisted DURABLY — no future run spends a call re-proving a loss");
     ok(/reason === "barge didn't work" && run\.best\?\.steps\?\.\[ex\.stepIdx\]/.test(eng),
-      "a move that broke the walk is remembered as never-again off its graded reason");
+      "a move that broke the walk is remembered off its graded reason");
+    ok(/run\.phase === "speed" && !\(await storeOpenNow\(store\.id\)\)/.test(eng),
+      "the open-hours gate is re-read before EVERY speed check, pinned store or not");
+    ok(/const askSpent = run\.askUnresolved \|\| \(await askedAlready\(chainId, store\.id\)\);/.test(eng),
+      "the once-per-store ask ledger is read — a spent ask is never asked again");
+    ok(/MISSES_PER_STORE[\s\S]{0,220}?run\.rotate = true;/.test(eng),
+      "a store that never got us to a person is the ONLY reason to take a fresh one (Update 3)");
+    ok(!/recordFailedAttempt/.test(eng),
+      "a failed check is never folded into evidence or confidence — it lives in the run log, collapsed");
+
+    // The wording-settle comparison itself, driven with real transcription noise.
+    ok(sameWording(
+      ["Thank you for calling CVS, Pharmacy. Are you a healthcare provider?", "Pharmacy or front store services?"],
+      ["Thank you for calling CVS Pharmacy, are you a healthcare provider", "pharmacy, or front store services."]),
+      "two hearings of the same menu read as the same wording, transcription noise and all");
+    ok(!sameWording(
+      ["Thank you for calling CVS, Pharmacy. Are you a healthcare provider?", "Pharmacy or front store services?"],
+      ["Thank you for calling CVS Pharmacy. The pharmacy is currently closed."]),
+      "a different menu never reads as settled wording");
+    ok(!sameWording([], []) && !sameWording(undefined, ["a line"]),
+      "nothing heard can never count as the wording settling");
   }
 
   // PIECE SIX: every mapping check is recorded, and each menu line plays its own slice.
@@ -645,20 +686,28 @@ async function main() {
     ok(/MENU_AUDIO\.currentTime>=MENU_AUDIO_STOP/.test(page), "playback stops where the next line starts");
   }
 
-  // THE 07-31 FIXES, each one the owner caught on the live page.
-  console.log("▶ A RUN'S WORK STAYS ITS OWN UNTIL THREE STORES AGREE");
+  // THE 07-31 FIXES, each one the owner caught on the live page — under the two-level lock.
+  console.log("▶ A RUN'S WORK STAYS ITS OWN UNTIL THE STORE LOCKS — AND ONLY EARNED WRITES LAND");
   {
     const eng = readFileSync("src/calls/mapper.ts", "utf8");
     ok(/const live = await activeMap\(chainId\);/.test(eng),
       "the run starts from the route the MAP holds, never the chain row's older summary");
-    ok((eng.match(/await finalizeAndLock\(/g) || []).length === 1,
-      "there is exactly ONE write, at the lock — no half-finished work reaches the map or the screens");
-    ok(/await finalizeAndLock\(run, chainId, run\.best, null, run\.winnerSession, \{ activate: true \}\);/.test(eng),
-      "and that write ACTIVATES: three stores agreed, so nothing waits as a proposal");
-    ok(/run\.winnerSession = \{ id: s\?\.id/.test(eng),
+    ok((eng.match(/await finalizeAndLock\(/g) || []).length === 2,
+      "exactly TWO writes exist: the store lock, and a speed win updating the recipe (Update 5)");
+    ok(!/finalizeAndLock[\s\S]{0,120}?\}\s*else\s*\{[\s\S]{0,200}?ex\.status = "fail"/.test(eng)
+      && /ex\.status = "fail";(?![\s\S]{0,600}finalizeAndLock)/.test(eng),
+      "a failed check reaches neither of them — a loss changes nothing");
+    ok(/run\.winnerSession = sessionLike\(s\);/.test(eng),
       "the check whose route won rides to the lock with its words and its recording");
     const tb = readFileSync("src/calls/trainer-batch.ts", "utf8");
     ok(/autoActivate: opts\?\.activate \|\| undefined,/.test(tb), "activation flows through the one writer");
+    ok(/const secs = typeof recipe\.seconds === "number" \? Math\.round\(recipe\.seconds\) : \(ch\?\.navSeconds \?\? null\);/.test(tb),
+      "a ring-ended win never nulls the chain's own numbers — the last proven measurement stands");
+    const mg = readFileSync("src/calls/mapgraph.ts", "utf8");
+    ok(/call\?\.reachedHuman && !opts\.autoActivate/.test(mg),
+      "a finished run's write is never diverted into a store exception — one proven store locks the chain");
+    ok(/!!\(call\?\.reachedHuman \|\| call\?\.endedOnRing\)/.test(mg),
+      "and a check that ended on the ring activates like one that reached Staff — that end is by design");
 
     const page = readFileSync("public/app.html", "utf8");
     ok(/const winner=\(calls\|\|\[\]\)\.find\(c=>c\.grade!=='fail'&&c\.navId&&ids\.has\(c\.navId\)\);/.test(page),

@@ -25,12 +25,14 @@ const savedRun = (chainId: number, over: Partial<MapperRun> = {}): MapperRun => 
   usedStores: [11, 12], store: { id: 12, name: "T-Store", phone: "+15550000000" }, rotate: false,
   target: undefined, needsTarget: false, reachedSecs: [61, 58],
   bestMenuSecs: 41, benchmark: 60,
-  provedStores: [12], doorsDead: ["pharmacy"], proveMisses: 0,
+  doorsDead: ["pharmacy"], doorProven: true, storeLocked: true,
   baseline: { steps: [{ action: "say", value: "front store services", atSec: 9 }], seconds: 61 } as MapperRun["baseline"],
   best: { steps: [{ action: "say", value: "front store services", atSec: 9 }], seconds: 58 } as MapperRun["best"],
+  // One experiment saved under the RETIRED shape ("barge", fired on a clock) on purpose: a run saved
+  // by the old build must resume under the new law, the clock-fired kind coerced to a cut-in.
   experiments: [
     { kind: "shorten", stepIdx: 0, value: "front", label: "shorten step 1", status: "fail" },
-    { kind: "barge", stepIdx: 0, at: 5, label: "barge step 1 @5s", status: "pending" },
+    { kind: "barge", stepIdx: 0, at: 5, label: "barge step 1 @5s", status: "pending" } as unknown as MapperRun["experiments"][number],
   ],
   log: [{ n: 6, phase: "speed", store: "T-Store", outcome: "no gain — kept best", seconds: 58 }],
   startedAt: Date.now() - 60_000, updatedAt: Date.now() - 10_000,
@@ -50,6 +52,7 @@ const r = mapperState().runs.find((x) => x.chainId === 9001);
 ok(!!r, "the resumed run is back on the page state");
 ok(!!r && r.attempt === 6 && r.bestMenuSecs === 41 && r.experiments.length === 2, "attempt count, best menu time and experiment list survived the restart intact");
 ok(!!r && r.experiments.some((e) => e.status === "pending"), "the experiment that was mid-test is still pending, ready to retry");
+ok(!!r && r.experiments.every((e) => (e.kind as string) !== "barge"), "a clock-fired experiment saved by the old build resumes as a cut-in — no timer survives a restart");
 ok(!!r && r.log.some((l) => l.outcome.includes("resumed from the last saved step")), "the interrupted attempt is written down as not-evidence");
 await sleep(500); // let the resumed loop hit its daily-cap guard and wrap up
 const r2 = mapperState().runs.find((x) => x.chainId === 9001);
