@@ -14,6 +14,10 @@ export interface CallTuning {
   // ---- is a person there, or is it a menu? ----
   personGreetingMaxMs: number;
   personWaitMs: number;
+  // ---- they picked up: when have they FINISHED saying hello? ----
+  greetingEndMs: number;
+  greetingMaxWaitMs: number;
+  greetingKeepMs: number;
   // ---- has the person gone away? ----
   holdQuietMs: number;
   holdMusicMs: number;
@@ -35,6 +39,9 @@ export interface CallTuning {
 export const TUNING_DEFAULTS: CallTuning = {
   personGreetingMaxMs: 3500,
   personWaitMs: 2500,
+  greetingEndMs: 900,
+  greetingMaxWaitMs: 6000,
+  greetingKeepMs: 3000,
   holdQuietMs: 6000,
   holdMusicMs: 6000,
   musicWindowMs: 3000,
@@ -52,6 +59,9 @@ export const TUNING_DEFAULTS: CallTuning = {
 export const TUNING_WHY: Record<keyof CallTuning, string> = {
   personGreetingMaxMs: "A greeting shorter than this is a person, not a menu. Menus read their options for longer.",
   personWaitMs: "…and then they wait for you. A menu pauses well under a second between phrases.",
+  greetingEndMs: "A pause this long right after they pick up means they have finished saying hello and are waiting for us. Too short and our question talks over the end of their own sentence.",
+  greetingMaxWaitMs: "…and if they simply never stop talking, ask anyway rather than listen forever.",
+  greetingKeepMs: "How much of what Staff said BEFORE we were sure a person was there we keep and hand on, so their first words are never lost.",
   holdQuietMs: "Silence this long, mid conversation, and they have put the phone down and walked off.",
   holdMusicMs: "Unbroken sound this long is hold music. Real speech always has gaps in it.",
   musicWindowMs: "How much recent audio we look at to decide speech versus continuous sound.",
@@ -68,6 +78,7 @@ export const TUNING_WHY: Record<keyof CallTuning, string> = {
 /** Bounds, so a typo in Admin can never produce a call that hangs or a gate that never fires. */
 const LIMITS: Record<keyof CallTuning, [number, number]> = {
   personGreetingMaxMs: [500, 15000], personWaitMs: [500, 15000],
+  greetingEndMs: [200, 5000], greetingMaxWaitMs: [1000, 20000], greetingKeepMs: [0, 10000],
   holdQuietMs: [2000, 60000], holdMusicMs: [2000, 60000],
   musicWindowMs: [500, 10000], musicVoicedFraction: [0.5, 1],
   newPersonAfterMs: [5000, 300000],

@@ -326,10 +326,22 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   /** The question, held until the person who just spoke stops speaking. */
   let pendingClip: { audio: Buffer; ms: number; text: string } | null = null;
   let waitQuietMs = 0;
-  /** A pause this long means they have finished their greeting and are waiting for us. */
-  const GREETING_END_MS = 600;
+  // A PAUSE THIS LONG MEANS THEY HAVE FINISHED SAYING HELLO. 600ms was too short and our question
+  // landed on the end of their own sentence: people breathe mid greeting ("thanks for calling the
+  // Fun store, ... this is Bob"), and a breath is not the end of a turn (owner, live check 07-31).
+  // Both numbers live in the Admin tuning box now, like every other guessed number, so the next
+  // retune is a setting rather than a release.
+  const GREETING_END_MS = tune.greetingEndMs;
   /** …and if they simply never stop, ask anyway rather than listen forever. */
-  const GREETING_MAX_WAIT_MS = 4000;
+  const GREETING_MAX_WAIT_MS = tune.greetingMaxWaitMs;
+  // WHAT THEY SAID BEFORE WE WERE SURE ANYBODY WAS THERE. The ear needs about half a second of voice
+  // to call a person, and buffering only started after that, so the FIRST WORDS of every greeting
+  // were thrown away — the store's own name, and whoever they said they were. The customer then read
+  // a conversation that opened mid sentence, under our question, with no hello at all (owner
+  // screenshot 07-31). A short rolling window of the line is kept from the first voiced frame, and it
+  // goes in front of the buffer the moment we commit, so the greeting arrives whole and in order.
+  const preRoll: string[] = [];
+  const PREROLL_MAX = Math.max(0, Math.round(tune.greetingKeepMs / 20));
   let waitTotalMs = 0;
   /** A breath after the clip so the agent can never clip its own tail. */
   const CLIP_SETTLE_MS = tune.clipSettleMs;
@@ -789,6 +801,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // warms the agent up behind it exactly as before.
       pendingClip = clip; waitQuietMs = 0; waitTotalMs = 0;
       connecting = true;   // buffer from here, so nothing they say in the gap is lost
+      // …and everything from BEFORE here too: their hello started before we were sure of them.
+      if (preRoll.length) { pending.unshift(...preRoll); log(`delta: keeping the ${preRoll.length} frame(s) of hello we heard before we were sure`); preRoll.length = 0; }
       log("delta: person heard, waiting for them to finish before asking");
     } else connectEleven();
     // Give-up cap: the agent is now billing. If no real human words land within giveUpSeconds,
@@ -984,7 +998,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // agent then wrapped up a call nobody had answered (owner, live Fun call 07-28). While our own
       // audio is on the line there is nothing worth keeping.
       else if (connecting) { if (Date.now() >= agentPlayingUntil + ECHO_TAIL_MS) pending.push(b64); }
-      else if (earArmed || (ctx?.connectOnHuman && !ctx.connectAtSec && !ctx.hadDtmf && !ctx.hadSay)) maybeDetectHuman(b64); // The ear runs in exactly two states: (1) bare direct dials — no nav plan at all (Mapper's 770ffa0 boolean, owner-ordered 07-21: never DURING a menu, where it trips on the recorded greeting — B&N 3:42p); (2) earArmed — the smart join, where the recipe has FINISHED the menu and the ear opens for the real human voice (owner design, restored 07-24). State (1) MUST read hadDtmf/hadSay, NOT ctx.dtmf/ctx.say: those are consumed at TwiML build (takeBridgeDtmf/Say), so by media time they are ALWAYS empty and the ear armed on every timerless keypad/voice chain — the agent opened into the recording and billed through the tree (owner 07-22).
+      else if (earArmed || (ctx?.connectOnHuman && !ctx.connectAtSec && !ctx.hadDtmf && !ctx.hadSay)) {
+        // Keep the last few seconds of the line while the ear makes up its mind. Rolling, capped, and
+        // dropped the moment it is handed on or the call ends — no store audio ever outlives the call
+        // (hard rule 3). Steady tones are ringback, not a person, and never worth keeping.
+        if (PREROLL_MAX > 0 && frameEnergy(b64) > VOICE_THRESH && toneShare(b64) < 0.45) {
+          preRoll.push(b64); if (preRoll.length > PREROLL_MAX) preRoll.shift();
+        }
+        maybeDetectHuman(b64);
+      } // The ear runs in exactly two states: (1) bare direct dials — no nav plan at all (Mapper's 770ffa0 boolean, owner-ordered 07-21: never DURING a menu, where it trips on the recorded greeting — B&N 3:42p); (2) earArmed — the smart join, where the recipe has FINISHED the menu and the ear opens for the real human voice (owner design, restored 07-24). State (1) MUST read hadDtmf/hadSay, NOT ctx.dtmf/ctx.say: those are consumed at TwiML build (takeBridgeDtmf/Say), so by media time they are ALWAYS empty and the ear armed on every timerless keypad/voice chain — the agent opened into the recording and billed through the tree (owner 07-22).
     } else if (m.event === "mark") {
       // SIGNAL 1, the accurate one: the carrier finished playing everything queued before this mark,
       // so Delta's question has actually reached the clerk's ear. New code, and deliberately not the
@@ -992,5 +1014,5 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       if (m.mark?.name === CLIP_MARK) openCharlieGate("the carrier confirmed the clip played");
     } else if (m.event === "stop") { log("twilio stop"); signalEnd(); if (eleven) eleven.close(); }
   });
-  twilio.on("close", () => { try { convEar?.lineGone(); } catch { /* recording is best-effort */ } activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (eleven) eleven.close(); });
+  twilio.on("close", () => { try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (eleven) eleven.close(); });
 }

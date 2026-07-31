@@ -112,7 +112,9 @@ async function callToHello(f: Fake, clipMs: number, room: string) {
   for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
   // …and then they STOP. The question waits for the end of the greeting, so the silence is what
   // actually starts it — feeding only speech would hang here, which is the behaviour we want.
-  for (let i = 0; i < 45; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
+  // Comfortably past the "they have finished saying hello" pause, so the scene is not sitting on the
+  // exact boundary of a number the owner can retune from Admin.
+  for (let i = 0; i < 70; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
   return { tw, clipFrames: toMediaFrames(audio).length };
 }
 
@@ -135,7 +137,6 @@ console.log("▶ the clerk says hello: the question goes out, the agent connects
   const said = (getReceipt("room-clip")?.transcript ?? []);
   ok(said.length === 1 && said[0].who === "Agent", "the question we asked is a line of the transcript, not a silent event");
   ok(said[0]?.text.includes("Pokemon cards in stock"), `…and it is the words the store actually heard (${said[0]?.text})`);
-
   console.log("▶ the clerk answers early: held, not lost, not delivered yet");
   tw.media(frame(LOUD(160, 1)));
   tw.media(frame(LOUD(160, 2)));
@@ -145,6 +146,14 @@ console.log("▶ the clerk says hello: the question goes out, the agent connects
   console.log("▶ the carrier confirms the clip played: the gate opens and the words are released");
   tw.say({ event: "mark", mark: { name: "delta-opening" } });
   await sleep(60);
+  // THE HELLO ITSELF SURVIVES, and it is the bulk of what lands here. The ear needs about 22 frames of
+  // voice on a direct dial before it will call anybody a person, and buffering used to start only
+  // after that — so the first half second of every greeting, which is where a store says its own name
+  // and who is speaking, was thrown away. The customer then read a conversation with no hello in it,
+  // opening mid sentence underneath our own question (owner screenshot 07-31). 30 frames of greeting
+  // went down this line before we were sure of them, plus 2 said during the clip: nearly all of them
+  // have to come out the other side.
+  ok(f.chunks.length >= 25, `the greeting said BEFORE we were sure of them is kept and released too (${f.chunks.length} frames)`);
   ok(f.chunks.length >= 2, `the held words were released whole (${f.chunks.length} frames)`);
   // ONE LINE, not three (owner 07-28: "it opens charlie_join three times"). Three things happened —
   // we asked the question, his session opened and started billing, then he took the conversation —
@@ -264,7 +273,7 @@ async function callWithHold(f: Fake, room: string, holdStrategy: "gate" | "reope
   tw.say({ event: "start", start: { streamSid: "MZ_h", customParameters: { room } } });
   await sleep(350);
   for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
-  for (let i = 0; i < 45; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
+  for (let i = 0; i < 70; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
   await sleep(120);
   return tw;
 }
