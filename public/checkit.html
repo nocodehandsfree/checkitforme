@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r184" />
+<meta name="x-rev" content="glassfix-r185" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -416,6 +416,24 @@ __BRAND_HEAD__
      the conversation by scrolling to the page bottom as each line lands; dead space below the log
      strands the newest line off-screen and kills the reveal. The page's own height is the design. */
   body.lview main{padding-top:18px}
+  /* The store card + Stop & hang up stay put; the conversation scrolls beneath them (owner 07-31).
+     position:sticky, NOT a fixed pane with its own scroller — the document itself has to stay the
+     thing that scrolls (a page that can't scroll is what put us back in grey-bar territory), and a
+     fixed filled box parked on an edge is exactly the shape that flips Safari's bar. Offset clears
+     the notch because sticky measures from the viewport, not from body's safe-area padding. */
+  /* body carries overflow-x:hidden site-wide, and "hidden" turns body into its own scrollport — a
+     sticky child would measure against a box that never scrolls and just ride away. "clip" trims the
+     same overflow WITHOUT making a scroll container, so the sticky measures against the viewport,
+     which is what actually scrolls. Scoped to this page; nothing else changes. */
+  body.lview{overflow-x:clip;overflow-y:visible}
+  /* The negative margin + matching padding pull the painted box up over the breathing room above the
+     card, so lines slide UNDER the pin instead of through a transparent slit. main's own 18px keeps
+     the resting layout identical — the margin cancels it, the padding gives it back. */
+  body.lview #live_pin{position:sticky;top:env(safe-area-inset-top);z-index:12;background:var(--bg);margin-top:-18px;padding:18px 0 10px}
+  body.lview #live_pin>*:last-child{margin-bottom:0} /* kill the collapsing margin so no transparent slit opens under the card */
+  /* No footer during the call (owner 07-31). It comes back on its own at the reveal: showResult drops
+     body.lview, and the pulling-the-result screen (rv-pend) is still pre-reveal, so it waits too. */
+  body.lview .site-footer,body.rv-pend .site-footer{display:none}
   /* Header chips sit ON the green like the result view's (same recipe as body.rview.rv-in). */
   body.lview .pill,body.lview .vsw-trig,body.lview .railcal{background:rgba(74,222,128,.05);border-color:rgba(74,222,128,.16)}
   .rpill{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;padding:5px 11px;border-radius:999px}
@@ -2421,17 +2439,21 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   <!-- LIVE -->
   <div id="live" class="hidden">
     <div id="muteBanner" style="display:none;background:rgba(251,191,36,.14);border:1px solid rgba(251,191,36,.4);color:#FBBF24;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-weight:700;font-size:13.5px;text-align:center" data-i18n="live.mute">🔇 Flip your phone off silent so you can hear the call</div>
-    <div class="rhead live" id="live_rhead">
-      <div class="rhead-top">
-        <span class="railchip" id="live_chip" style="display:grid"></span>
-        <div class="rhead-id">
-          <div class="rhead-store" id="live_store2"></div>
-          <div class="rhead-addr" id="live_addr"></div>
-          <div class="lh-state" id="lh_state"></div>
+    <!-- The store card and Stop & hang up ride along at the top while the conversation scrolls
+         underneath (owner 07-31). One sticky wrapper so the two never drift apart. -->
+    <div id="live_pin">
+      <div class="rhead live" id="live_rhead">
+        <div class="rhead-top">
+          <span class="railchip" id="live_chip" style="display:grid"></span>
+          <div class="rhead-id">
+            <div class="rhead-store" id="live_store2"></div>
+            <div class="rhead-addr" id="live_addr"></div>
+            <div class="lh-state" id="lh_state"></div>
+          </div>
         </div>
       </div>
+      <button id="hangup_btn" onclick="hangUpLive()" style="display:none;margin:0 0 14px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.5);color:var(--red);padding:9px 18px;border-radius:10px;font-weight:800;cursor:pointer;font-size:13.5px" data-i18n="live.hangup">■ Stop &amp; hang up</button>
     </div>
-    <button id="hangup_btn" onclick="hangUpLive()" style="display:none;margin:0 0 14px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.5);color:var(--red);padding:9px 18px;border-radius:10px;font-weight:800;cursor:pointer;font-size:13.5px" data-i18n="live.hangup">■ Stop &amp; hang up</button>
     <div id="live_msgbox"></div>
   </div>
 

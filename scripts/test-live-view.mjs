@@ -94,6 +94,28 @@ const reach = await page.evaluate(() => {
 });
 if (reach.ok) ok("conversation is reachable (" + reach.why + ")"); else fail(reach.why);
 
+// The store card + Stop & hang up stay put while the conversation scrolls under them (owner 07-31).
+// It has to be position:sticky on the real document scroll — an inner scroller or a fixed filled box
+// is what put the grey Safari bar back. body's overflow-x:hidden would silently kill the sticky by
+// making body its own scrollport, so this also guards that (see body.lview{overflow-x:clip}).
+const pin = await page.evaluate(() => {
+  const el = document.getElementById("live_pin");
+  if (!el) return { why: "no #live_pin wrapper — the store card + Stop & hang up are no longer pinned together" };
+  const cs = getComputedStyle(el);
+  let docTop = 0, n = el; while (n) { docTop += n.offsetTop; n = n.offsetParent; }
+  const top = Math.round(el.getBoundingClientRect().top);
+  return {
+    sticky: cs.position === "sticky",
+    scrolledPast: docTop - window.scrollY < 0, // without the sticky it would already be off the top
+    top, y: Math.round(window.scrollY),
+    footer: getComputedStyle(document.querySelector(".site-footer")).display,
+  };
+});
+if (!pin.sticky) fail(pin.why || `store card is not sticky during the call (position=${pin.pos})`);
+else if (pin.scrolledPast && pin.top < 0) fail(`store card scrolled away during the call (top=${pin.top} at y=${pin.y}) — a scrollport ancestor is eating the sticky`);
+else ok(`store card + hang-up stay pinned while the conversation scrolls (top=${pin.top} at y=${pin.y})`);
+if (pin.footer === "none") ok("footer is gone during the call"); else fail(`footer showing mid-call (display=${pin.footer})`);
+
 // 3: when the sim ends (~20s total), the verdict must paint — never eternal dots.
 await page.waitForTimeout(16000);
 const end = await page.evaluate(() => ({
@@ -107,9 +129,11 @@ if (end.resultVisible && end.hasVerdict) ok("verdict painted after the call"); e
 const settle = await page.evaluate(() => ({
   y: window.scrollY,
   stepsOpen: (() => { const d = document.querySelector("#result .ctlv2 details, #result .ctl details"); return d ? d.open : null; })(),
+  footer: getComputedStyle(document.querySelector(".site-footer")).display,
 }));
 if (settle.y < 120) ok(`scrolled back to the verdict (y=${Math.round(settle.y)})`); else fail(`stuck down the page after the verdict (y=${Math.round(settle.y)})`);
 if (settle.stepsOpen === false) ok("step log rolled up on the result"); else if (settle.stepsOpen === true) fail("step log still expanded on the result"); else ok("no step log details node (nothing to roll up)");
+if (settle.footer !== "none") ok("footer comes back at the reveal"); else fail("footer never came back after the verdict — the call-page rule is leaking onto the result");
 
 if (jsErrors.length) fail("page JS errors: " + jsErrors.join(" | ")); else ok("zero page JS errors");
 
