@@ -22,7 +22,7 @@ import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing, backfillDirectChains, isDirectDefaultChain } from "./db/import-data";
-import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, billableOutcome, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, transcriptPatch, triggerCall, findRecentCheck, navPlanFromVersion, zoneQuote } from "./calls/service";
+import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, billableOutcome, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, notifyAfterVerdict, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, transcriptPatch, triggerCall, findRecentCheck, navPlanFromVersion, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus, learnedSyncTick, learnedSyncStatus } from "./store-sync";
 import { buildSettingsExport, settingsSyncStatus, settingsSyncTick } from "./settings-sync";
 import { concurrencyStatus, acquireCallSlot, releaseCallSlot, governorEnabled } from "./calls/concurrency";
@@ -2619,7 +2619,16 @@ app.post("/pub/watch", async (c) => {
   const channel = String(b.contact).includes("@") ? "email" : "sms";
   // SMS channel is dark until the toll-free number is approved (flags.smsAlerts) — email only till then.
   if (channel === "sms" && !(await getPolicy()).flags.smsAlerts) return c.json({ error: "email_required" }, 400);
-  await db.insert(watches).values({ contact: b.contact, channel, retailerId: Number(b.retailerId), categoryId: Number(b.categoryId) });
+  // Never a second row for the same person + store + product (owner 07-30: two rows meant two emails).
+  // An active watch already covers them; an inactive one re-arms instead of piling on a new row.
+  const contact = String(b.contact).trim();
+  const existing = await db.select().from(watches).where(and(
+    eq(watches.contact, contact), eq(watches.retailerId, Number(b.retailerId)), eq(watches.categoryId, Number(b.categoryId)),
+  ));
+  if (existing.some((w) => w.active)) return c.json({ ok: true, already: true });
+  const spent = existing.sort((a, z) => z.id - a.id)[0];
+  if (spent) { await db.update(watches).set({ active: true }).where(eq(watches.id, spent.id)); return c.json({ ok: true, rearmed: true }); }
+  await db.insert(watches).values({ contact, channel, retailerId: Number(b.retailerId), categoryId: Number(b.categoryId) });
   return c.json({ ok: true });
 });
 app.get("/api/watches", async (c) => c.json(await db.select().from(watches).orderBy(desc(watches.createdAt))));
@@ -3438,6 +3447,11 @@ app.get("/pub/result/:cid", async (c) => {
     }).where(eq(callResults.id, row.id));
     if (row.finderUserId && billableOutcome(consensus.statusKey, consensus.definitive, o.transcript)) await chargeCallOnce(row.id, row.finderUserId);
     dropLiveRead(row.room); // verdict written — let the room's live read go
+    // This on-demand settle used to be the ONE finalize path that never sent the alerts, so a check
+    // the customer watched to the end produced no in-stock email (owner 07-30). Same notifier as the
+    // poller and the webhook, claimed once per check. Fire-and-forget: the verdict response never
+    // waits on an email provider.
+    void notifyAfterVerdict(row.id);
     return c.json({ ...(o ?? {}), status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey, ts: (row.startedAt || 0) * 1000, productDetail, shipmentDay: o.shipmentDay, shipmentTime: (second?.restockTime ?? o.shipmentTime) ?? null, charged: row.finderUserId ? consensus.definitive : false, summary: o.summary, transcript: (row.transcript && row.transcript.trim()) || o.transcript });
   }
   // Truly mid-call → progress only, never a verdict (so a wrong key can't flash before the real one).
@@ -7025,6 +7039,8 @@ app.post("/webhooks/elevenlabs", async (c) => {
       if (row?.finderUserId && o.status === "completed" && billableOutcome(statusKey, definitive, o.transcript)) {
         await chargeCallOnce(o.callId, row.finderUserId);
       }
+      // The webhook path never sent the alerts either — same ONE notifier, claimed once per check.
+      await notifyAfterVerdict(o.callId);
     }
     return c.json({ ok: true });
   } catch (e) {
