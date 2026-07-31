@@ -4664,24 +4664,24 @@ function buildChainPicker(){
     // Color with intent: mapped is the NORM (quiet gray) · unmapped is the exception that needs routing (amber).
     // A mapped chain shows its ROUTE and how long it takes to reach a person, so the list is scannable
     // without opening anything. The word "mapped" said less than "Bravo 41s" does.
-    const ln=chainLane(ch), lnc=laneColor(ln);
+    // PLAIN TEXT for the model's name (owner, 07-30): the logos already carry colour, so coloured
+    // letters beside them read as noise. The model's own colour lives inside the chain page.
+    const ln=chainLane(ch);
     const nv=ch.navSeconds!=null?ch.navSeconds:(ch.avgTreeSeconds!=null?ch.avgTreeSeconds:null);
     const route=locked
-      ? `<span style="color:${ln?lnc:'#8A8A96'};font-weight:700">${ln||'mapped'}</span>`+(nv!=null?` <span style="color:#8A8A96">${nv}s</span>`:'')
+      ? `<span style="color:#8A8A96;font-weight:700">${ln||'mapped'}</span>`+(nv!=null?` <span style="color:#8A8A96">${nv}s</span>`:'')
       : '<span style="color:#F59E0B;font-weight:700">unmapped</span>';
-    // A ROUTE WAITING ON HIM, and nothing else. "Observed once" and "observed multiple times" came off
-    // this line (owner, 07-30): they are how the map scores itself, not a state he acts on, and a list
-    // of 130 chains reading "observed once" says nothing he can do anything about. "Needs review" and
-    // a waiting route stay, because both are work.
+    // SOMETHING WAITING is an ICON, not words (owner, 07-30): a small red alert beside the name draws
+    // the eye without another label on an already busy row. It appears only when there is real work —
+    // a route waiting on him, or something in Review — never for how the map scores itself.
     const g=mapRow(ch.id);
-    // Both are two words and neither may break across lines: "needs / review" hanging alone under a
-    // row is the orphan wrap the copy guide forbids, and it happens on every narrow phone.
-    const trust=g&&g.proposed>0 ? '<span style="color:#F59E0B;font-weight:700;white-space:nowrap">1 waiting</span>'
-      : (locked&&g&&g.confidenceLabel==='needs review') ? '<span style="color:var(--red);font-weight:700;white-space:nowrap">needs review</span>' : null;
-    const meta=[nStores?nStores+' store'+(nStores===1?'':'s'):null, ch.muted?'muted':null, route, trust].filter(Boolean).join(' · ');
+    const alert=(g&&(g.proposed>0||g.openUnknowns>0))
+      ? ' <svg style="vertical-align:-2px;margin-left:3px" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+      : '';
+    const meta=[nStores?nStores+' store'+(nStores===1?'':'s'):null, ch.muted?'muted':null, route].filter(Boolean).join(' · ');
     return `<div class="pickrow${String(ch.id)===cur?' on':''}" data-id="${ch.id}" data-name="${esch((ch.name||'').toLowerCase())}" data-tier="${ch.tier??''}" data-type="${esch((ch.type||'').toLowerCase())}" data-mapped="${locked?1:0}" data-changed="${(g&&(g.proposed>0||g.drift30d>0||g.openUnknowns>0))?1:0}" onclick="pickChainRow(${ch.id})"${ch.muted?' style="opacity:.5"':''}>
       <span class="setlogo">${logoTile(ch)}</span>
-      <span style="flex:1;min-width:0"><span style="display:block;color:#fff;font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esch(ch.name)}</span>
+      <span style="flex:1;min-width:0"><span style="display:block;color:#fff;font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esch(ch.name)}${alert}</span>
       <span style="display:block;font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px">${meta}</span></span>
       ${chip(ch.tier)}</div>`;
   }).join('')||'<div class="empty" style="padding:16px">No chains loaded.</div>';
@@ -4928,19 +4928,18 @@ function doorMap(ch,call,v){
     const m=String(raw).match(/^\s*(\d+)s\s+([\s\S]*)$/);
     return { at:m?Number(m[1]):null, text:(m?m[2]:String(raw)).trim() };
   });
-  // The step that answered each line: the latest line at or before the step's own second.
+  // The step that answered each line, by ORDER: the walk answers question one with step one, question
+  // two with step two. Matching by seconds put "general" under the transfer line, because the locked
+  // recipe's seconds come from an older run than the check on screen.
   const stepFor={};
-  steps.forEach((st,si)=>{
-    let best=-1;
-    lines.forEach((ln,i)=>{ if(ln.at!=null&&st.atSec!=null&&ln.at<=st.atSec) best=i; });
-    if(best>=0&&stepFor[best]==null) stepFor[best]=si;
-  });
+  steps.forEach((st,si)=>{ if(si<lines.length) stepFor[si]=si; });
   const laneC=(st)=>st.action==='press'?LANE_C.Alpha:LANE_C.Bravo;
   const opts=((v&&v.recipe&&v.recipe.menu)||[]);
   const pencil='<svg style="vertical-align:-2px;margin-left:6px;cursor:pointer" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5C5C68" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>';
   return lines.map((ln,i)=>{
     const fixed=fixes[i]!=null&&String(fixes[i]).trim();
     const text=fixed||ln.text;
+    MLINE_TEXT[ch.id+'_'+i]=text;
     const si=stepFor[i], st=si!=null?steps[si]:null;
     const last=i===lines.length-1;
     // The choices this question offers, read off the options the map already holds for this chain.
@@ -4964,21 +4963,32 @@ function doorMap(ch,call,v){
       +`<div style="display:flex;flex-direction:column;align-items:center;flex:0 0 auto;padding-top:5px"><span style="width:6px;height:6px;border-radius:50%;background:#5C5C68"></span>`
       +(last?'':`<span style="width:2px;flex:1;background:rgba(255,255,255,.10);margin:3px 0"></span>`)+`</div>`
       +`<div style="flex:1;min-width:0;padding-bottom:${last?'0':'16px'}">`
-      +`<div style="font-size:12px;font-weight:500;color:rgba(255,255,255,.55);line-height:1.5">"${esch(text)}"<span onclick="menuFixLine(${ch.id},${i})">${pencil}</span>${fixed?'<span style="margin-left:6px;color:var(--text-tertiary);font-size:11px">corrected</span>':''}</div>`
+      +`<div id="mline_${ch.id}_${i}" data-i="${i}" onclick="menuFixLine(${ch.id},${i})" style="font-size:12px;font-weight:500;color:rgba(255,255,255,.55);line-height:1.5;cursor:text">"${esch(text)}"${pencil}${fixed?'<span style="margin-left:6px;color:var(--text-tertiary);font-size:11px">corrected</span>':''}</div>`
       +`<div style="margin-top:2px;font-size:11px;font-weight:700;color:#5C5C68">${ln.at!=null?ln.at+'s':''}</div>`
       +(pills.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${pills.join('')}</div>`:'')
       +`</div></div>`;
   }).join('');
 }
-// The pencil: fix a line's words. The correction is kept beside the recording of what was heard and a
-// future check never overwrites it.
-async function menuFixLine(chainId,idx){
-  const d=CHAIN_MAP[chainId]; if(!d) return;
-  const cur=(d.menuFixes&&d.menuFixes[idx])||'';
-  const t=window.prompt('This line, corrected:',cur);
-  if(t==null) return;
-  const r=await api('/api/admin/map/chain/'+chainId+'/menu-line',{method:'POST',body:JSON.stringify({idx,text:t.trim()})});
-  if(r&&!r.error){ d.menuFixes=r.fixes||{}; const ch=(CHAINS||[]).find(c=>c.id===chainId)||{id:chainId};
+// Tap the words and they become the edit box, a light outline around it, save where the pencil was.
+// The correction is kept beside what was heard, marked corrected, and no future check overwrites it.
+const MLINE_TEXT={};
+function menuFixLine(chainId,idx){
+  const el=document.getElementById('mline_'+chainId+'_'+idx); if(!el||el.dataset.editing) return;
+  el.dataset.editing='1';
+  const cur=MLINE_TEXT[chainId+'_'+idx]||'';
+  el.innerHTML='<div style="display:flex;gap:8px;align-items:center">'
+    +'<input id="mfix_'+chainId+'_'+idx+'" style="flex:1;min-width:0;background:var(--terminal);border:1px solid rgba(255,255,255,.28);border-radius:10px;padding:8px 11px;font-size:12px;font-weight:500;color:#fff;outline:none">'
+    +'<button onclick="event.stopPropagation();menuFixSave('+chainId+','+idx+')" style="border:0;cursor:pointer;display:grid;place-items:center;width:30px;height:30px;border-radius:10px;background:linear-gradient(180deg,#2E2E35,#25252B);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)">'
+    +'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button></div>';
+  const inp=document.getElementById('mfix_'+chainId+'_'+idx);
+  inp.value=cur; inp.focus();
+  inp.addEventListener('keydown',e=>{ if(e.key==='Enter') menuFixSave(chainId,idx); });
+}
+async function menuFixSave(chainId,idx){
+  const inp=document.getElementById('mfix_'+chainId+'_'+idx); if(!inp) return;
+  const r=await api('/api/admin/map/chain/'+chainId+'/menu-line',{method:'POST',body:JSON.stringify({idx,text:String(inp.value||'').trim()})});
+  const d=CHAIN_MAP[chainId];
+  if(r&&!r.error&&d){ d.menuFixes=r.fixes||{}; const ch=(CHAINS||[]).find(c=>c.id===chainId)||{id:chainId};
     const vs=(d.versions||[]); renderMenuByCondition(ch, vs.find(v=>v.status==='active')||vs[0], null, d.calls||[]); toast('Corrected'); }
 }
 function pickMenuCondition(chainId,key){
@@ -5359,10 +5369,7 @@ function renderChainMapping(ch){
     // screens, so this one says Locked as well.
     const lockedAt=(g&&g.lastVerified)||ch.navUpdatedAt||ch.treeLearnedAt||null;
     const dt=lockedAt?new Date(lockedAt*1000):null;
-    const cl=g&&g.confidenceLabel==='needs review'?'Needs review':'';
-    ver.innerHTML=!isLocked?''
-      :(cl?`<span style="color:var(--red);font-weight:700">${cl}</span>`:'')
-       +(dt?`<span style="color:var(--muted)">${cl?' \u00b7 ':''}Locked ${dt.toLocaleDateString([],{month:'short',day:'numeric'})}</span>`:'');
+    ver.innerHTML=!isLocked?'':(dt?`<span style="color:var(--muted)">Locked ${dt.toLocaleDateString([],{month:'short',day:'numeric'})}</span>`:'');
   }
   // --- a route waiting on him. This is the only thing on the page he has to DECIDE, so it sits above
   // the menu it would replace, not buried in a list.
