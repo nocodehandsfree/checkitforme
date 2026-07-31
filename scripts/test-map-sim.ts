@@ -573,6 +573,32 @@ async function main() {
       "a walk of a held route runs as optimizing speed with the menu it expects and the time to beat");
   }
 
+  // PIECE THREE: the engine runs the owner's three stages and nothing else.
+  console.log("▶ THE ENGINE RUNS THE THREE STAGES");
+  {
+    const eng = readFileSync("src/calls/mapper.ts", "utf8");
+    ok(/"map" \| "speed" \| "prove" \| "locked" \| "needs-review" \| "stopped"/.test(eng),
+      "the only stages are mapping menu, optimizing speed and proving department");
+    ok(!/"verify" \| "listen" \| "baseline" \| "optimize"|listenFirst|isListen/.test(eng),
+      "the old stage names and the listen-first path are gone from the engine");
+    ok(/if \(run\.phase === "speed" && !ex\) run\.phase = "prove";/.test(eng),
+      "speed drains into prove — only proving can lock");
+    ok(/if \(run\.phase === "prove"\) run\.rotate = true;/.test(eng),
+      "proving takes a fresh store every check; mapping and speed hold one store");
+    ok(/relisten: run\.phase === "speed",/.test(eng),
+      "optimizing speed hangs up on the second ring, every check — no Staff, ever");
+    ok(/run\.phase === "map" \|\| run\.phase === "prove" \? \{ product \}/.test(eng),
+      "mapping and proving ask Staff about the product — the answer is the proof of the door");
+    ok(/const graded = s\?\.grade === "pass";/.test(eng),
+      "the loop reads the same machine grade the run log and the map fold carry");
+    ok(/if \(!run\.doorsDead\.includes\(door\)\) run\.doorsDead\.push\(door\);/.test(eng),
+      "a wrong desk kills that door for good and steers every later check away from it");
+    ok(/if \(run\.provedStores\.length >= 3\) \{ run\.phase = "locked"; break; \}/.test(eng),
+      "three stores agreeing is the only lock");
+    ok(/reason === "barge didn't work" && run\.best\?\.steps\?\.\[ex\.stepIdx\]/.test(eng),
+      "a move that broke the walk is remembered as never-again off its graded reason");
+  }
+
   console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }

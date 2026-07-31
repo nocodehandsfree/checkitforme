@@ -1,19 +1,16 @@
-// Mapper — "map until locked". The auto-continue loop the one-shot trainer never had: it keeps
-// calling a chain (rotating stores, spaced out) until the fastest human-confirmed path is learned,
-// then locks it. Stages per chain:
-//   LISTEN    call 1 hears the menu out (listen-first), then acts on the same call if the path is
-//             obvious. A direct human answer = locked in one call.
-//   BASELINE  keep calling (with everything heard so far as a hint) until a human is reached ONCE.
-//             That path locks immediately — live checks benefit right away — and gives the true
-//             time-to-human.
-//   OPTIMIZE  one experiment per call against the baseline: shorter words ("front", not "front
-//             store services") and earlier barges. A menu that loops/regresses = that spot is
-//             barge-unsafe → keep the last good version. Wins re-lock the chain with the faster path.
-//             Judged on the MENU walk, not on time-to-human — the desk pickup is the noisy half — and
-//             each experiment dials a FRESH store, so no one desk is hung up on over and over.
-//   LOCKED    nothing left to test. Stamp Alpha/Bravo/Charlie and stop.
-// A mapping call REACHES a person and hangs up (owner 07-26): a real voice is the proof the route
-// worked, and their greeting records which desk answered. It never asks the stock question.
+// Mapper — the owner's three stages (07-30, docs/specs/mapping-admin/build-contract.md). The goal is
+// never a department name: it is an ANSWER about the product, because a real yes or no from Staff is
+// the only proof of the right door, and that is what lets this scale to any chain with no human help.
+//   MAPPING MENU        one store. Answer every question with the FULL phrase, reach a person, ask
+//                       about the product. The answer proves the door; a wrong desk kills that door
+//                       for good and the next check takes the next one.
+//   OPTIMIZING SPEED    the SAME store, inside its open hours, hang up on the second ring — no Staff,
+//                       ever. ONE change per check; a win becomes the recipe, a loss is thrown away
+//                       and a move that broke the walk is remembered as never-again.
+//   PROVING DEPARTMENT  the finished recipe at DIFFERENT stores, one ask per store, never the same
+//                       store twice. Three stores agree = map recipe locked, dated.
+// Every check is GRADED by machine in finish (navigator) — this loop reads the same verdict the run
+// log and the map fold carry, so it can never disagree with the screens.
 // Safety: hard cap of calls/chain/day, spacing between calls, global kill-switch, per-chain stop.
 import { eq } from "drizzle-orm";
 import { db } from "./../db/client";
@@ -46,7 +43,7 @@ export interface Experiment {
 interface Attempt { n: number; phase: string; store: string; experiment?: string; outcome: string; seconds?: number | null }
 export interface MapperRun {
   chainId: number; chainName: string;
-  phase: "verify" | "listen" | "baseline" | "optimize" | "locked" | "needs-review" | "stopped";
+  phase: "map" | "speed" | "prove" | "locked" | "needs-review" | "stopped";
   running: boolean; stop?: boolean; stopReason?: string;
   attempt: number; callsToday: number;
   usedStores: number[];
@@ -58,6 +55,10 @@ export interface MapperRun {
   bestMenuSecs?: number;         // the fastest MENU walk proved so far — what experiments are judged on
   bargeState?: Record<number, { lo: number; hi: number }>; // per-step binary-search bounds for "earliest second the IVR accepts"
   benchmark: number | null;      // the chain's navSeconds BEFORE this run (the CVS comparison)
+  provedStores: number[];        // stores where Staff gave a real answer on THIS recipe (prove stage)
+  doorsDead: string[];           // menu doors proven to reach the wrong desk — never chosen again
+  expectedGreeting?: string;     // the menu's opening line as heard on the locked run (wrong-menu guard)
+  proveMisses: number;           // prove-stage checks where nobody picked up (next store each time)
   baseline: NavRecipe | null;
   best: NavRecipe | null;
   experiments: Experiment[];
@@ -278,50 +279,51 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
   // #1: the owner-set desk to aim for (customer service by default; a chosen department for dept-only chains).
   const target = ((await getSetting(`nav_target:${chainId}`)) || "").trim() || undefined;
 
-  // Already-mapped chain (e.g. CVS): VERIFY the locked recipe first — replay it as a timed barge plan,
-  // measure the REAL seconds, then optimize from there. Fresh discovery only if the replay misses twice.
+  // A chain whose route we already hold, with the recording each step follows, starts at optimizing
+  // speed. A held route with no recording plan is a route we never properly heard — it starts back at
+  // mapping menu, which is also how a changed menu remaps itself as if brand new (owner, 07-30).
   let lockedRecipe: NavRecipe | null = null;
   try { const r = ch.navRecipe ? (JSON.parse(ch.navRecipe) as NavRecipe) : null; if (r && Array.isArray(r.steps) && r.steps.length) lockedRecipe = r; } catch { /* fresh discovery */ }
-  // A VERIFY replay speaks the known words on a timer, so the store's own recordings are never
-  // transcribed and the call teaches us nothing about WHICH recording each step follows. Proved on the
-  // 07-26 CVS Anaheim call: the route verified (62s, faster than the stored 67s) but came back with no
-  // recording plan at all. So a chain whose map has no recording plan yet LISTENS first — one pass that
-  // hears the menu out, with the known path riding along as the recovery playbook — and picks up the
-  // replay from there. Chains that already carry a plan go straight to verify, as before.
   const hasPromptPlan = (lockedRecipe?.steps || []).some((st) => typeof (st as { afterPrompt?: number }).afterPrompt === "number");
-  const needsListen = !!lockedRecipe && !hasPromptPlan;
 
+  // THE OWNER'S THREE STAGES (07-30, build-contract.md). A chain we have never walked starts at
+  // mapping menu; a chain whose route we already hold and trust starts at optimizing speed. Proving
+  // department always runs before a lock, whatever the entry.
   const run: MapperRun = {
     chainId, chainName: ch.name,
-    phase: lockedRecipe && !needsListen ? "verify" : "listen", running: true,
+    phase: lockedRecipe && hasPromptPlan ? "speed" : "map", running: true,
     attempt: 0, callsToday: usedToday,
     usedStores: [], store: null, rotate: false, target, needsTarget: false, reachedSecs: [],
     benchmark: ch.navSeconds ?? null,   // what we're trying to beat (the CVS benchmark readout)
-    baseline: null, best: null, experiments: [], log: [],
+    provedStores: [], doorsDead: [], proveMisses: 0,
+    baseline: lockedRecipe && hasPromptPlan ? lockedRecipe : null,
+    best: lockedRecipe && hasPromptPlan ? lockedRecipe : null,
+    experiments: [], log: [],
     startedAt: Date.now(), updatedAt: Date.now(),
   };
+  if (run.phase === "speed" && run.best) run.experiments = buildExperiments(run, run.best);
   runs.set(chainId, run);
 
   (async () => {
     const ask = await defaultWorkflowAsk(); // Branson global's opener + voice, fetched once
-    let baselineMisses = 0, verifyMisses = 0;
+    const product = "Pok\u00e9mon cards";
+    let mapMisses = 0;
     while (run.running && !run.stop) {
       run.updatedAt = Date.now();
       // ---- guards ----
       if (await isCallingPaused()) { run.stopReason = "global kill-switch"; break; }
       if (run.callsToday >= cap) { run.stopReason = `daily cap (${cap} calls)`; run.phase = run.baseline ? run.phase : "needs-review"; break; }
-      const ex = run.phase === "optimize" ? run.experiments.find((e) => e.status === "pending") : undefined;
-      if (run.phase === "optimize" && !ex) { // nothing left to test → final lock below
-        run.phase = "locked"; break;
-      }
-      // Daytime gate (#5): storeForChain only returns a store that's OPEN NOW (real hours) and in 9am–8pm
-      // LOCAL — naturally works east → west across the day, the owner's dialing order.
-      // #3: hold ONE store across attempts — ring variance must not rotate us. Pick a fresh store only on
-      // the first attempt or after the held line proved DEAD (disconnected / voicemail / store closed).
+      const ex = run.phase === "speed" ? run.experiments.find((e) => e.status === "pending") : undefined;
+      // NOTHING LEFT TO TEST is not the end — the floor still has to be PROVED at other stores before
+      // anything locks. Speed drains into prove, and only prove can lock.
+      if (run.phase === "speed" && !ex) run.phase = "prove";
+
+      // ---- the store ----
+      // Mapping menu and optimizing speed hold ONE store, so the menu cannot change under us and the
+      // comparison is honest. Proving department takes a FRESH store every check and never the same
+      // store twice, so no desk is ever asked more than once.
+      if (run.phase === "prove") run.rotate = true;
       if (!run.store || run.rotate) {
-        // An owner-named store overrides the picker for the whole run — for a store we KNOW is open
-        // right now (a late-evening CVS the 9am–8pm gate would refuse), or to re-map one specific
-        // store whose menu differs from its chain. Rotation is off: this is the store, or nothing.
         const picked = opts.storeId && !run.rotate
           ? (await db.select().from(retailers).where(eq(retailers.id, opts.storeId)))[0]
           : await storeForChain(chainId, run.usedStores, true);
@@ -331,35 +333,34 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
       }
       const store = run.store;
 
-      // ---- place this attempt's call ----
+      // ---- place this stage's check ----
       run.attempt++; run.callsToday = await bumpDaily(chainId);
-      const isListen = run.phase === "listen";
-      // Verify phase: replay the LOCKED recipe as a timed barge plan (the known "no → front →
-      // general" words at their known seconds). Optimize phase: the current best with one tweak.
-      const replay = run.phase === "verify" && lockedRecipe ? { plan: lockedRecipe.steps.map((st) => ({ action: st.action || "say", value: st.value || "", at: st.atSec ?? 0 })) } : undefined;
-      const barge = ex && run.best ? { plan: planFor(run.best, ex) } : replay;
-      // The PROVEN word-path rides along as the recovery playbook: if a barge misses or the menu
-      // varies (Spanish intro, pharmacy-closed detour), the in-call brain answers each prompt with
-      // the known words in order instead of flailing — the same logic live calls already use.
-      const known = (run.best ?? lockedRecipe)?.steps || [];
-      const hint = known.length
-        ? known.map((st) => (st.action === "press" ? `press ${st.value}` : `say "${st.value}"`)).join(", then ")
-          + ". If the menu restarts, speaks Spanish first, or mentions the pharmacy being closed, keep answering each prompt with these words in this order — they route to the FRONT STORE."
+      const stageWord = run.phase === "map" ? "mapping menu" : run.phase === "speed" ? "optimizing speed" : "proving department";
+      // Speed walks the route we hold with ONE step under test; prove walks it exactly as locked.
+      const barge = run.phase === "speed" && ex && run.best ? { plan: planFor(run.best, ex) }
+        : run.phase === "prove" && run.best ? { plan: (run.best.steps || []).map((st) => ({ action: st.action || "say", value: st.value || "", at: st.atSec ?? 0 })) }
         : undefined;
-      // REACH A PERSON, THEN HANG UP (owner 07-26). A mapping call no longer asks the stock question:
-      // hearing a real voice is the proof the route worked, and their greeting says which desk it was.
-      // Nobody is troubled and the call ends seconds earlier. Both caps below are the ROI guard — a
-      // call that is going nowhere is stopped instead of running to the ceiling.
+      // Mapping menu: the model walks the tree answering each question with the FULL phrase, steered
+      // away from every door already proven wrong, and asks at the person — the answer IS the proof.
+      const dead = run.doorsDead.length ? ` NEVER choose ${run.doorsDead.join(" or ")} — those reach the wrong desk.` : "";
+      const hint = run.phase === "map"
+        ? ((run.best?.steps || []).length
+            ? (run.best!.steps || []).map((st) => (st.action === "press" ? `press ${st.value}` : `say "${st.value}"`)).join(", then ") + "." + dead
+            : (dead || undefined))
+        : undefined;
       const placed = await placeNavCall(
         chainId, store.id, store.name, store.phone,
         undefined, hint, barge, undefined,
-        undefined,
-        { listenFirst: isListen, askVoiceId: ask.voiceId, askText: ask.text, target: run.target,
+        run.phase === "map" || run.phase === "prove" ? { product } : undefined,
+        { askVoiceId: ask.voiceId, askText: ask.text, target: run.target,
           maxSec: CALL_MAX_SEC, transferWaitSec: TRANSFER_WAIT_SEC,
-          // This loop folds its own calls into the map below, with the barge wins and the phase note
-          // attached. `finish` must not fold them a second time.
+          // Optimizing speed never troubles Staff: it hangs up on the second ring, every check.
+          relisten: run.phase === "speed",
+          stage: run.phase === "map" ? "map" : run.phase === "speed" ? "speed" : "prove",
+          expectedGreeting: run.expectedGreeting, recipeSeconds: run.bestMenuSecs,
+          // This loop folds its own calls into the map below. `finish` must not fold them again.
           callerRecords: true,
-          why: `Mapping ${run.chainName} (${run.phase}, call ${run.attempt})` },
+          why: `Mapping ${run.chainName} (${stageWord}, check ${run.attempt})` },
       );
       if (placed.error || !placed.id) {
         run.log.push({ n: run.attempt, phase: run.phase, store: store.name, experiment: ex?.label, outcome: "dial failed: " + (placed.error || "?") });
@@ -367,7 +368,7 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
       }
       run.navId = placed.id;
 
-      // ---- watch the call ----
+      // ---- follow the check to its end ----
       const deadline = Date.now() + CALL_MAX_SEC * 1000;
       let s = getNavSession(placed.id);
       while (Date.now() < deadline) {
@@ -376,105 +377,81 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
         await sleep(3000);
       }
       run.navId = undefined;
-      // Reached = ANY hard evidence of a person/transfer (status, the path-confirmed timestamp, or an
-      // answered confirm) — a raced Twilio "ended" callback must not score a good call as unsafe.
-      const reached = !!(s && (s.status === "human" || s.humanAtSec != null || s.confirmResult === "answered") && s.confirmResult !== "redirect");
+      // THE GRADE IS THE VERDICT — the same machine decision the run log and the map fold carry, so
+      // this loop can never disagree with the screens about one check.
+      const graded = s?.grade === "pass";
+      const reason = s?.failReason;
+      const answered = s?.confirmResult === "answered";
+      const redirected = s?.confirmResult === "redirect";
       const recipe = s ? (s.recipe ?? recipeFromSteps(s.steps as NavStep[], s.humanAtSec)) : null;
       const secs = recipe?.seconds ?? null;
-      // THE MENU IS WHAT WE ARE OPTIMISING, not the desk (owner 07-27). Time-to-human = the menu walk
-      // PLUS however long that particular desk takes to pick up, and the desk is the noisy half: the
-      // same route can read 44s at one store and 62s at another purely on who was standing there. So
-      // an experiment is judged on the MENU: from pickup to the moment the menu hands us on. That is
-      // measurable at any store, which is what lets us stop hammering one desk (below).
       const menuSecs = s?.transferAtSec ?? [...((s?.steps || []) as NavStep[])].reverse().find((st) => st.who === "us")?.atSec ?? null;
-      // #3: rotate to a fresh store ONLY on a confirmed dead line; ring-outs / menu-loops keep the same
-      // store (per owner). #A: record every reached time so markVariance can spot department-ring swings.
-      if (!reached && s?.deadLine) run.rotate = true;
-      if (reached && typeof secs === "number") run.reachedSecs.push(secs);
+      if (!graded && s?.deadLine) run.rotate = true;
+      if (graded && typeof secs === "number") run.reachedSecs.push(secs);
 
       // ---- learn from the outcome ----
-      if (run.phase === "verify" || run.phase === "listen" || run.phase === "baseline") {
-        const wasVerify = run.phase === "verify";
-        if (reached && recipe) {
-          // NEVER downgrade a locked recipe. A verify re-call that reaches a human SLOWER than the
-          // recipe we already ship is ring/menu variance, not a better path — keep the faster recipe
-          // and try to beat it from there, don't overwrite the live time with the slow sample. (Fresh
-          // baseline discovery has no prior lock, so it always keeps what it just found.)
-          const prior = run.benchmark;
-          const slowerThanLocked = wasVerify && !!lockedRecipe && typeof secs === "number" && typeof prior === "number" && secs > prior;
-          if (slowerThanLocked) {
-            run.baseline = lockedRecipe as NavRecipe; run.best = lockedRecipe as NavRecipe;
-            run.experiments = buildExperiments(run, lockedRecipe as NavRecipe);
-            run.phase = run.experiments.length ? "optimize" : "locked";
-            run.log.push({ n: run.attempt, phase: "verify", store: store.name, outcome: `re-measured ${secs}s — SLOWER than the locked ${prior}s (ring/menu variance); KEPT the faster recipe`, seconds: secs });
-            if (run.phase === "locked") { await finalizeAndLock(run, chainId, lockedRecipe as NavRecipe, s?.confidence ?? null, s ?? undefined); break; }
-            await sleep(GAP_SEC * 1000); continue;
-          }
+      if (run.phase === "map") {
+        if (graded && answered && recipe) {
+          // The door is PROVEN — a person at its end gave a real answer about the product. This
+          // becomes the route to beat, live checks benefit immediately, and speed starts.
           run.baseline = recipe as NavRecipe; run.best = recipe as NavRecipe;
           if (typeof menuSecs === "number") run.bestMenuSecs = menuSecs;
-          await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null, s ?? undefined); // usable by live checks NOW
+          run.expectedGreeting = ((s?.steps || []) as NavStep[]).find((st) => st.who === "ivr" && st.text)?.text;
+          run.provedStores = [store.id];
+          await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null, s ?? undefined);
           run.experiments = buildExperiments(run, recipe as NavRecipe);
-          run.phase = run.experiments.length ? "optimize" : "locked";
-          run.log.push({ n: run.attempt, phase: wasVerify ? "verify" : "baseline", store: store.name, outcome: `${wasVerify ? `locked map VERIFIED — real time ${secs ?? "?"}s (stored ${run.benchmark ?? "?"}s)` : "human reached — baseline locked"} (${classifyMode((s?.steps || []) as NavStep[]).label})`, seconds: secs });
-          if (run.phase === "locked") break;
-        } else if (wasVerify) {
-          verifyMisses++;
-          run.log.push({ n: run.attempt, phase: "verify", store: store.name, outcome: `replay missed (${s?.status || "timeout"})${verifyMisses >= 2 ? " — relearning from scratch" : ""}`, seconds: secs });
-          if (verifyMisses >= 2) run.phase = "listen"; // the stored map may be stale — rediscover
+          run.phase = "speed";
+          run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: `right department — Staff answered about ${product} (${classifyMode((s?.steps || []) as NavStep[]).label})`, seconds: secs });
+        } else if (redirected) {
+          // The wrong desk answered. That door is dead for good; the next check takes the next one.
+          const door = (s?.redirectTo || "").slice(0, 40) || ((s?.steps || []) as NavStep[]).filter((st) => st.who === "us").slice(-1)[0]?.value || "that door";
+          if (!run.doorsDead.includes(door)) run.doorsDead.push(door);
+          run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: `wrong department — ${door} is dead, trying the next door`, seconds: secs });
         } else {
-          baselineMisses++; run.phase = "baseline";
-          // A call that reached nobody proves nothing about the route, so it changes nothing — but it
-          // COUNTS (runtime spec §10.5), or a route that stopped working keeps looking healthy.
+          mapMisses++;
           await recordFailedAttempt({
             chainId, storeId: store.id, navId: s?.id,
-            reason: (s as { stopReason?: string } | null)?.stopReason || `no human (${s?.status || "timeout"})`,
+            reason: reason || (s as { stopReason?: string } | null)?.stopReason || `no answer (${s?.status || "timeout"})`,
             seconds: secs, promptCount: (s?.steps as NavStep[] | undefined)?.filter((st) => st.who === "ivr").length,
           }).catch(() => { /* evidence is best-effort */ });
-          run.log.push({ n: run.attempt, phase: "baseline", store: store.name, outcome: `no human (${s?.status || "timeout"})${s?.confirmResult === "redirect" ? " — redirected: " + (s?.redirectTo || "") : ""}`, seconds: secs });
-          if (baselineMisses >= BASELINE_TRIES) { run.phase = "needs-review"; run.stopReason = `no human in ${BASELINE_TRIES} attempts`; break; }
+          run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: reason || `no answer (${s?.status || "timeout"})`, seconds: secs });
+          if (mapMisses >= BASELINE_TRIES) { run.phase = "needs-review"; run.stopReason = `no proven door in ${BASELINE_TRIES} checks`; break; }
         }
-      } else if (run.phase === "optimize" && ex) {
-        // Never hang up on the same desk twice in a row while testing (owner 07-27): each experiment
-        // goes to a FRESH store of the same chain. Comparing menu times makes that safe — it is the
-        // same recorded menu at every store, so a different store is a fair test, not a muddier one.
-        run.rotate = true;
-        const bestSecs = run.bestMenuSecs ?? run.best?.seconds ?? Infinity;
-        const faster = reached && recipe && typeof menuSecs === "number" && menuSecs < bestSecs - 1;
-        if (ex.kind === "barge") {
-          // A faster time PROVES the early press/word landed. "Reached but not faster" means the press
-          // was dropped and the recovery brain saved it at the old time → treat as too-early, back off.
-          if (faster) {
-            ex.status = "win"; run.best = recipe as NavRecipe;
-            if (typeof menuSecs === "number") run.bestMenuSecs = menuSecs;
-            await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null, s ?? undefined); // earlier → re-lock
-            run.log.push({ n: run.attempt, phase: "optimize", store: store.name, experiment: ex.label, outcome: `WIN — menu ${menuSecs}s (was ${bestSecs}s), person at ${secs ?? "?"}s`, seconds: secs });
-            enqueueBinaryBarge(run, ex.stepIdx, ex.at ?? 0, true);  // it accepted this early — try earlier still
-          } else {
-            ex.status = "fail";
-            // A LOOP is not a bad guess, it is a fact about this menu: the step cannot be barged. Write
-            // it onto the step so it survives this run and every future one — this is exactly the CVS
-            // "front" knowledge, stored instead of remembered by a person.
-            if (!reached && run.best?.steps?.[ex.stepIdx]) {
-              (run.best.steps[ex.stepIdx] as { bargeSafe?: boolean }).bargeSafe = false;
-              run.experiments = run.experiments.filter((e) => !(e.kind === "barge" && e.stepIdx === ex.stepIdx && e.status === "pending"));
-              await finalizeAndLock(run, chainId, run.best, null, s ?? undefined); // remember it
-            }
-            run.log.push({ n: run.attempt, phase: "optimize", store: store.name, experiment: ex.label, outcome: reached ? `@${ex.at}s dropped — recovery reached @${secs ?? "?"}s; backing off` : `@${ex.at}s too early — looped (${s?.status || "timeout"}); this step cannot be barged, remembered`, seconds: secs });
-            enqueueBinaryBarge(run, ex.stepIdx, ex.at ?? 0, false); // too early — search later
-          }
-        } else if (faster) {
-          ex.status = "win"; run.best = recipe as NavRecipe;
-          if (typeof menuSecs === "number") run.bestMenuSecs = menuSecs;
-          await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null, s ?? undefined); // shorter word won → re-lock
-          run.log.push({ n: run.attempt, phase: "optimize", store: store.name, experiment: ex.label, outcome: `WIN — menu ${menuSecs}s (was ${bestSecs}s), person at ${secs ?? "?"}s`, seconds: secs });
-        } else if (reached) {
-          ex.status = "fail"; // reached a human but the menu was no faster — keep the old best
-          run.log.push({ n: run.attempt, phase: "optimize", store: store.name, experiment: ex.label, outcome: `no gain (menu ${menuSecs ?? "?"}s vs ${bestSecs}s) — kept best`, seconds: secs });
+      } else if (run.phase === "speed" && ex) {
+        // ONE change per check, graded by machine. A win becomes the recipe; a loss is thrown away
+        // and, for a step that broke the walk, that exact move is remembered as never-again.
+        if (graded && recipe && typeof menuSecs === "number") {
+          ex.status = "win"; run.best = recipe as NavRecipe; run.bestMenuSecs = menuSecs;
+          await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null, s ?? undefined);
+          run.log.push({ n: run.attempt, phase: "speed", store: store.name, experiment: ex.label, outcome: `recipe winner — menu ${menuSecs}s`, seconds: menuSecs });
+          if (ex.kind === "barge") enqueueBinaryBarge(run, ex.stepIdx, ex.at ?? 0, true);
         } else {
-          ex.status = "fail"; // looped / lost the menu → that tweak is unsafe (e.g. barge point that restarts CVS)
-          run.log.push({ n: run.attempt, phase: "optimize", store: store.name, experiment: ex.label, outcome: `unsafe — menu lost (${s?.status || "timeout"}); kept best`, seconds: secs });
+          ex.status = "fail";
+          if (reason === "barge didn't work" && run.best?.steps?.[ex.stepIdx]) {
+            (run.best.steps[ex.stepIdx] as { bargeSafe?: boolean }).bargeSafe = false;
+            run.experiments = run.experiments.filter((e) => !(e.kind === "barge" && e.stepIdx === ex.stepIdx && e.status === "pending"));
+            await finalizeAndLock(run, chainId, run.best, null, s ?? undefined); // remember it for every future run
+          }
+          if (ex.kind === "barge") enqueueBinaryBarge(run, ex.stepIdx, ex.at ?? 0, false);
+          run.log.push({ n: run.attempt, phase: "speed", store: store.name, experiment: ex.label, outcome: reason || "not faster", seconds: menuSecs });
         }
-        if (!run.experiments.some((e) => e.status === "pending")) { run.phase = "locked"; break; }
+      } else if (run.phase === "prove") {
+        if (graded && answered) {
+          run.provedStores.push(store.id);
+          run.log.push({ n: run.attempt, phase: "prove", store: store.name, outcome: `right department — Staff answered about ${product} (${run.provedStores.length} of 3 stores agree)`, seconds: secs });
+          if (run.provedStores.length >= 3) { run.phase = "locked"; break; }
+        } else if (redirected || reason === "wrong department") {
+          // The recipe keeps its speed, but the door was wrong at THIS store — back to mapping to
+          // find the right one, with everything learned still in hand.
+          const door = (s?.redirectTo || "").slice(0, 40) || "that door";
+          if (!run.doorsDead.includes(door)) run.doorsDead.push(door);
+          run.phase = "map"; mapMisses = 0;
+          run.log.push({ n: run.attempt, phase: "prove", store: store.name, outcome: `wrong department at this store — ${door} marked dead, mapping again`, seconds: secs });
+        } else {
+          run.proveMisses++;
+          run.log.push({ n: run.attempt, phase: "prove", store: store.name, outcome: reason || `nobody answered — next store`, seconds: secs });
+          if (run.proveMisses >= 4) { run.phase = "needs-review"; run.stopReason = "nobody picked up at 4 stores"; break; }
+        }
       }
       await sleep(GAP_SEC * 1000);
     }
@@ -485,7 +462,7 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
       await finalizeAndLock(run, chainId, run.best, null); // final state (idempotent)
       run.stopReason = run.stopReason || (run.needsTarget
         ? "Locked, but the menu has no customer-service option. Pick a target desk and re-map."
-        : "nothing left to learn");
+        : "map recipe locked — three stores agree");
     } else if (run.stop) run.phase = "stopped";
     run.running = false; run.updatedAt = Date.now();
   })().catch((e) => {
