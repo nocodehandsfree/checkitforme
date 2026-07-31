@@ -3789,9 +3789,27 @@ function statusBadge(r){
 // Store names follow the no-dash naming scheme, so there's no "Name — Branch" to split — show the
 // name whole. (Removes the last em-dash in the file; the old dash-split was dead logic.)
 function splitName(n){ return {base:(n||'').trim(),branch:''}; }
+// Every chain logo gets the SAME visual AREA in its tile, then clamps to the tile's edges. This is the
+// exact twin of checkit.html's sizeLogo, so a chain row here and a store row on the site read alike.
+// Fitting a logo inside a square box instead sizes it by its longest side, so a wide wordmark
+// (Randalls is 5:1) matched the box's width and came out a few pixels tall next to a squarish mark
+// like BJ's Wholesale. Width is a PERCENT of the tile, so the smaller tiles (setlogo 36px, peek 38px)
+// stay right without re-running. GOTCHA: a cached image fires onload BEFORE layout settles, so the
+// tile still measures 0 wide and the logo would size to nothing. Retry until it has a width.
+function sizeLogo(img, tries){
+  const box = img && img.parentElement; if(!box) return;
+  const W = box.clientWidth, H = box.clientHeight;
+  if(!W || !H){ if((tries||0) < 60) requestAnimationFrame(()=>sizeLogo(img,(tries||0)+1)); return; }
+  const nw = img.naturalWidth, nh = img.naturalHeight; if(!nw || !nh) return;
+  const targetArea = 0.55*W*H, maxW = 0.95*W, maxH = 0.90*H;
+  let sc = Math.sqrt(targetArea/(nw*nh));
+  if(nw*sc > maxW) sc = maxW/nw;
+  if(nh*sc > maxH) sc = maxH/nh;
+  img.style.cssText += `;width:${(100*nw*sc/W).toFixed(2)}%;height:auto;max-width:none;max-height:none;object-fit:contain`;
+}
 function logoTile(o){
   o=o||{};
-  if(o.logoUrl) return `<div class="slogo${o.logoDark?' lite':''}${o.logoWide?' widelogo':''}"><img loading="lazy" decoding="async" src="${esch(o.logoUrl)}" alt=""></div>`;
+  if(o.logoUrl) return `<div class="slogo${o.logoDark?' lite':''}${o.logoWide?' widelogo':''}"><img loading="lazy" decoding="async" src="${esch(o.logoUrl)}" alt="" onload="sizeLogo(this)"></div>`;
   // Same icons the consumer site uses (checkit.html storeFace). The server sends the chain type as
   // `storeType` (older callers pass `type`). Owner 07-13: any NON-CHAIN store without logo art gets
   // the hobby storefront icon like the website — the wordmark tile is only for logoless CHAINS.

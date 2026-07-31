@@ -3395,9 +3395,29 @@ const SVG_TAG   = p => `<svg width="${p}" height="${p}" viewBox="0 0 24 24" fill
 // A store row's face: real logo if we have one; every HOBBY card shop shows the storefront icon (accent)
 // instead of messy name-initials; everyone else keeps their wordmark tile.
 function storeFace(s){
-  if(s&&s.logoUrl) return `<img src="${esc(s.logoUrl)}" alt="" data-nm="${esc(s.name)}" data-st="${esc(s.storeType||'')}" onerror="wmFail(this)">`;
+  if(s&&s.logoUrl) return `<img src="${esc(s.logoUrl)}" alt="" data-nm="${esc(s.name)}" data-st="${esc(s.storeType||'')}" onload="sizeLogo(this)" onerror="wmFail(this)">`;
   if(s&&s.storeType==='Hobby') return SVG_STORE(24);
   return storeWordmark(s&&s.name, s&&s.storeType);
+}
+// Every chain logo gets the SAME visual AREA in its tile, then clamps to the tile's edges. Fitting a
+// logo inside a square box instead sizes it by its longest side, so a wide wordmark (Randalls is 5:1)
+// matched the box's width and came out a few pixels tall next to a squarish mark like BJ's Wholesale.
+// Width is written as a PERCENT of the tile, so it survives the tile changing size (v1 52px, v2 44px,
+// the picker's smaller tiles) without re-running. The inline styles deliberately beat the tile's own
+// width/height/max rules; a logo that never loads keeps the old CSS sizing untouched.
+// GOTCHA: an image already in cache fires onload BEFORE layout has settled, so the tile still measures
+// 0 wide and the logo would size to nothing. Retry on the next frame until the tile has a width.
+// Twin of the same function in app.html, so a chain row in Admin and a store row here read alike.
+function sizeLogo(img, tries){
+  const box = img && img.parentElement; if(!box) return;
+  const W = box.clientWidth, H = box.clientHeight;
+  if(!W || !H){ if((tries||0) < 60) requestAnimationFrame(()=>sizeLogo(img,(tries||0)+1)); return; }
+  const nw = img.naturalWidth, nh = img.naturalHeight; if(!nw || !nh) return;
+  const targetArea = 0.55*W*H, maxW = 0.95*W, maxH = 0.90*H;
+  let sc = Math.sqrt(targetArea/(nw*nh));
+  if(nw*sc > maxW) sc = maxW/nw;
+  if(nh*sc > maxH) sc = maxH/nh;
+  img.style.cssText += `;width:${(100*nw*sc/W).toFixed(2)}%;height:auto;max-width:none;max-height:none;object-fit:contain`;
 }
 // A dead logoUrl must never show the browser's broken-image glyph (Android Chrome paints a visible
 // one where iOS leaves a quiet blank) — swap in the designed monogram tile and drop the logo-only
