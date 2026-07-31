@@ -62,9 +62,11 @@ here is fixed yet. Screens section lands below when its read completes.
 14. **Fail pills — DIFFERS.** A failed check with no stored reason prints the invented
     `did not move us forward` (in neither Statuses nor the seven); `wrong menu` (the eighth reason)
     prints as a pill (`app.html:5100`, `mapgraph.ts:69-72`).
-15. **Last rung — DIFFERS.** `Reached staff` carries a gray tail quoting the greeting; contract says
-    nothing after the status words (`app.html:5139`; a code comment cites an owner note contradicting
-    the contract — RESOLVE WITH THE OWNER which is current).
+15. **Last rung — OWNER RULED 07-31 (to PM, verbatim intent).** The greeting IS quoted — on the first
+    check that fully maps the store, because it is the only proof we reached the right department.
+    After that, never again: speed checks never trouble Staff, so no later card carries a greeting.
+    The contract's bare-status-words line applies to every check EXCEPT that first mapping one.
+    Fold this into the contract text for his blessing.
 16. **Unrecognized state — DIFFERS.** Only `grade==='fail'` collapses; an ungraded check that neither
     reached Staff nor ended on ring renders as a full OPEN card with an amber `Nobody answered` pill —
     a guess (`app.html:5099,5113,5141`).
