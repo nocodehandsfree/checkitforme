@@ -135,6 +135,37 @@ if (settle.y < 120) ok(`scrolled back to the verdict (y=${Math.round(settle.y)})
 if (settle.stepsOpen === false) ok("step log rolled up on the result"); else if (settle.stepsOpen === true) fail("step log still expanded on the result"); else ok("no step log details node (nothing to roll up)");
 if (settle.footer !== "none") ok("footer comes back at the reveal"); else fail("footer never came back after the verdict — the call-page rule is leaking onto the result");
 
+// 6: while the verdict is being pulled, the card does NOT leave with the call (owner 07-31). It stays
+// pinned reading "Getting results", and the result frame skips its own placeholder headline so the same
+// message is never printed twice. Driven here, after every other assertion, so the extra renders cannot
+// disturb them. A page JS error thrown in here still lands in the zero-errors check below.
+const pend = await page.evaluate(() => {
+  document.getElementById("live").classList.remove("hidden"); // put the call screen back up
+  showResult({ status: "pending", transcript: "Clerk: let me check the back.", summary: "" }, "lock-pend");
+  const v = document.querySelector("#result .rverdict");
+  return {
+    on: document.body.classList.contains("pendbox"),
+    liveUp: !document.getElementById("live").classList.contains("hidden"),
+    headline: (document.getElementById("lh_state") || {}).textContent || "",
+    verdict: v ? getComputedStyle(v).display : "missing",
+  };
+});
+if (pend.on && pend.liveUp) ok(`the card stays through the pull ("${pend.headline}")`); else fail(`the card left with the call (pendbox=${pend.on}, liveUp=${pend.liveUp})`);
+if (/getting/i.test(pend.headline)) ok("the card reads as pulling the result"); else fail(`card headline is stale during the pull ("${pend.headline}")`);
+if (pend.verdict === "none") ok("result frame skips its placeholder while the card carries the message"); else fail(`the pulling message is printed twice (rverdict display=${pend.verdict})`);
+
+const drop = await page.evaluate(() => {
+  showResult({ status: "completed", statusKey: "in_stock", confirmed: true, transcript: "Clerk: yes, we have them.", summary: "" }, "lock-done");
+  const v = document.querySelector("#result .rverdict");
+  return {
+    on: document.body.classList.contains("pendbox"),
+    liveHidden: document.getElementById("live").classList.contains("hidden"),
+    verdict: v ? getComputedStyle(v).display : "missing",
+  };
+});
+if (!drop.on && drop.liveHidden) ok("the card disappears the moment the verdict lands"); else fail(`the card outlived the verdict (pendbox=${drop.on}, liveHidden=${drop.liveHidden})`);
+if (drop.verdict !== "none") ok("the verdict paints once the card is gone"); else fail("the verdict stayed hidden after the reveal — the pull-state rule is stuck on");
+
 if (jsErrors.length) fail("page JS errors: " + jsErrors.join(" | ")); else ok("zero page JS errors");
 
 await b.close();

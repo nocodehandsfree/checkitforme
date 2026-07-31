@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r182" />
+<meta name="x-rev" content="glassfix-r186" />
 <title>Check It For Me — Is it in stock?</title>
 <meta name="description" content="Stop driving to sold-out shelves. Check It For Me calls any store for you, asks a real person if it&#39;s in stock, and texts you the answer with proof in ~2 minutes.">
 <link rel="canonical" href="https://staging.checkitforme.com/">
@@ -232,6 +232,9 @@
      the page flat into the bar (dip 13 -> 0). It fades back in with the slide-up, so an OPEN sheet is
      unchanged. Footer hairline untouched — the owner wants that. */
   .csheet:not(.on){box-shadow:none}
+  /* A closed sheet must not exist as a fixed filled box on the bottom edge — that is what flips iOS's
+     bottom bar to flat grey until a reload (see csheetPark). Applied after the slide-down finishes. */
+  .csheet.parked{display:none}
   .csheet-handle{width:46px;height:5px;border-radius:3px;background:#3E3E46;margin:6px auto 16px}
   .csheet-head{display:flex;align-items:center;gap:14px}
   .csheet-ic{width:56px;height:56px;border-radius:15px;background:var(--sheet);border:1px solid var(--border);display:grid;place-items:center;font-size:26px;flex:0 0 auto;overflow:hidden}
@@ -428,6 +431,32 @@
      the conversation by scrolling to the page bottom as each line lands; dead space below the log
      strands the newest line off-screen and kills the reveal. The page's own height is the design. */
   body.lview main{padding-top:18px}
+  /* The store card + Stop & hang up stay put; the conversation scrolls beneath them (owner 07-31).
+     position:sticky, NOT a fixed pane with its own scroller — the document itself has to stay the
+     thing that scrolls (a page that can't scroll is what put us back in grey-bar territory), and a
+     fixed filled box parked on an edge is exactly the shape that flips Safari's bar. Offset clears
+     the notch because sticky measures from the viewport, not from body's safe-area padding. */
+  /* body carries overflow-x:hidden site-wide, and "hidden" turns body into its own scrollport — a
+     sticky child would measure against a box that never scrolls and just ride away. "clip" trims the
+     same overflow WITHOUT making a scroll container, so the sticky measures against the viewport,
+     which is what actually scrolls. Scoped to this page; nothing else changes. */
+  body.lview,body.pendbox{overflow-x:clip;overflow-y:visible}
+  /* The negative margin + matching padding pull the painted box up over the breathing room above the
+     card, so lines slide UNDER the pin instead of through a transparent slit. main's own 18px keeps
+     the resting layout identical — the margin cancels it, the padding gives it back. body.rview also
+     pads main 18px, so the same numbers hold while the verdict is being pulled. */
+  body.lview #live_pin,body.pendbox #live_pin{position:sticky;top:env(safe-area-inset-top);z-index:12;background:var(--bg);margin-top:-18px;padding:18px 0 10px}
+  body.lview #live_pin>*:last-child,body.pendbox #live_pin>*:last-child{margin-bottom:0} /* kill the collapsing margin so no transparent slit opens under the card */
+  /* PULLING THE VERDICT (owner 07-31): the card does NOT leave with the call. It stays pinned, reading
+     "Getting results", and goes the moment the verdict lands. The live step log leaves with the call
+     (the result frame below already carries the steps + conversation), and the result frame skips its
+     own placeholder headline so the same message is never printed twice. body.pendbox is set ONLY on
+     the pending render of a call we just watched — a mid-call refresh still gets today's screen. */
+  body.pendbox #live_msgbox{display:none}
+  body.pendbox #result .rverdict{display:none}
+  /* No footer during the call (owner 07-31). It comes back on its own at the reveal: showResult drops
+     body.lview, and the pulling-the-result screen (rv-pend) is still pre-reveal, so it waits too. */
+  body.lview .site-footer,body.rv-pend .site-footer{display:none}
   /* Header chips sit ON the green like the result view's (same recipe as body.rview.rv-in). */
   body.lview .pill,body.lview .vsw-trig,body.lview .railcal{background:rgba(74,222,128,.05);border-color:rgba(74,222,128,.16)}
   .rpill{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;padding:5px 11px;border-radius:999px}
@@ -2327,7 +2356,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   html[data-skin="v2"] .ckarc1,html[data-skin="v2"] .ckarc2,html[data-skin="v2"] .rpill .d{animation:none}
 }
 /*V2END*/</style>
-<meta name="build" content="b855fe7ef7f7">
+<meta name="build" content="5a0e38b1addd">
 </head>
 <body>
 <!-- Hard-refresh of a result deep-link: apply the verdict treatment (wash + transparent nav) NOW, so
@@ -2434,17 +2463,21 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   <!-- LIVE -->
   <div id="live" class="hidden">
     <div id="muteBanner" style="display:none;background:rgba(251,191,36,.14);border:1px solid rgba(251,191,36,.4);color:#FBBF24;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-weight:700;font-size:13.5px;text-align:center" data-i18n="live.mute">🔇 Flip your phone off silent so you can hear the call</div>
-    <div class="rhead live" id="live_rhead">
-      <div class="rhead-top">
-        <span class="railchip" id="live_chip" style="display:grid"></span>
-        <div class="rhead-id">
-          <div class="rhead-store" id="live_store2"></div>
-          <div class="rhead-addr" id="live_addr"></div>
-          <div class="lh-state" id="lh_state"></div>
+    <!-- The store card and Stop & hang up ride along at the top while the conversation scrolls
+         underneath (owner 07-31). One sticky wrapper so the two never drift apart. -->
+    <div id="live_pin">
+      <div class="rhead live" id="live_rhead">
+        <div class="rhead-top">
+          <span class="railchip" id="live_chip" style="display:grid"></span>
+          <div class="rhead-id">
+            <div class="rhead-store" id="live_store2"></div>
+            <div class="rhead-addr" id="live_addr"></div>
+            <div class="lh-state" id="lh_state"></div>
+          </div>
         </div>
       </div>
+      <button id="hangup_btn" onclick="hangUpLive()" style="display:none;margin:0 0 14px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.5);color:var(--red);padding:9px 18px;border-radius:10px;font-weight:800;cursor:pointer;font-size:13.5px" data-i18n="live.hangup">■ Stop &amp; hang up</button>
     </div>
-    <button id="hangup_btn" onclick="hangUpLive()" style="display:none;margin:0 0 14px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.5);color:var(--red);padding:9px 18px;border-radius:10px;font-weight:800;cursor:pointer;font-size:13.5px" data-i18n="live.hangup">■ Stop &amp; hang up</button>
     <div id="live_msgbox"></div>
   </div>
 
@@ -2506,7 +2539,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
 <!-- Call slider — slides up from the bottom when a store is picked. Swipe down (or tap the backdrop)
      to dismiss. Replaces the inline "Check this store" button. -->
 <div class="csheet-bd" id="csheetBd" onclick="dismissCallSheet()"></div>
-<div class="csheet" id="csheet" aria-hidden="true">
+<div class="csheet parked" id="csheet" aria-hidden="true">
   <div class="csheet-handle" id="csheetHandle"></div>
   <!-- Everything stays (logo + name + address + product). ONLY the button changed: it says "Check this
        store" with the ANIMATED ringing-phone icon (cs-wv sound waves). -->
@@ -3032,7 +3065,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
 
 <script>
 const BRAND = {"key":"runner","name":"<b>Check</b> It For Me","category":"Pokémon","accent":"#FFCB05","accent2":"#EE1515","logoUrl":"","emoji":"📞"};   // injected per subdomain (vertical micro-site)
-window.SWITCHER = {"current":"runner","list":[{"key":"poke","slug":"pokemon","label":"Pokémon","emoji":"⚡","logoUrl":""}]}; // {current, list:[{key,slug,label,emoji}]} for the product switcher
+window.SWITCHER = {"current":"runner","list":[{"key":"poke","slug":"pokemon","label":"Pokémon","emoji":"⚡","logoUrl":""},{"key":"onepiece","slug":"onepiece","label":"One Piece","emoji":"🏴‍☠️","logoUrl":"/logos/products/onepiece.png"},{"key":"topps","slug":"toppsbasketball","label":"Topps NBA","emoji":"🏀","logoUrl":"/logos/products/topps.png?v=3","tag":"NBA Cards"},{"key":"needoh","slug":"needoh","label":"NeeDoh","emoji":"🟢","logoUrl":"/logos/products/needoh.png?v=3"}]}; // {current, list:[{key,slug,label,emoji}]} for the product switcher
 let BRAND_CAT = null;           // resolved category object for a vertical site, else null
 let STORES=[], CATS=[], SEL_STORE=null, SEL_CAT=null, SEL_CATS=[], ASKED_CATS=[], SEL_PRODUCT='', SEL_KIOSK=false, KIOSK_OK=false, POLL=null, LASTRES=null, TRANSLATED=false, ORIGHTML='', MODE='call';
 let RSTATUSES={}; // statuses registry: server-defined verdicts (single source of truth)
@@ -3177,6 +3210,7 @@ const I18N={ es:{
   'st.nobody_answered':'Nadie contestó','stn.nobody_answered':'Nadie respondió. Sin cargo.',
   'st.voicemail':'Buzón de voz','stn.voicemail':'Salió una grabación, no una persona. Sin cargo.',
   'st.user_cancelled':'Verificación cancelada','stn.user_cancelled':'Detuviste esta verificación.',
+  'res.cantload':'No pudimos cargar esta verificación','res.cantload.sub':'Inténtalo de nuevo.','res.retry':'Reintentar','res.gohome':'Volver a mis verificaciones',
   'st.busy':'Línea ocupada','stn.busy':'La línea estaba ocupada. Sin cargo.',
   'st.bad_number':'Número equivocado','stn.bad_number':'Ese número no conectó. Sin cargo.',
   'st.closed':'Está cerrado','stn.closed':'{store} está cerrado ahora. Sin cargo.','stn.closed2':'La tienda está cerrada.',
@@ -3254,7 +3288,7 @@ const I18N={ es:{
   'hist.today.cta':'Verificar una tienda','hist.today.none':'Sin verificaciones hoy',
   'hist.signin.title':'Inicia sesión para ver tus verificaciones','hist.signin.sub':'Tus verificaciones anteriores están guardadas en tu cuenta.','hist.signin.cta':'Iniciar sesión',
   'hist.today.sub':'Selecciona un día abajo para ver tus verificaciones anteriores.','hist.today.sub0':'Selecciona un día abajo para ver tus verificaciones anteriores.',
-  'live.h1':'Llamando','live.h2':'Pasando el menú','live.h3':'Hablando con Staff',
+  'live.h1':'Llamando','live.h2':'Pasando el menú','live.h3':'Hablando con Staff','live.h4':'Obteniendo resultados',
   'live.s1':'Llamando a la tienda…','live.s2':'Está timbrando…','live.s3':'Conectamos…','live.s4':'Escuchando el menú…','live.s5':'Navegando el menú…','live.s6':'Timbrando en el mostrador…','live.s7':'Contestó el personal','live.s8':'Preguntando por {p}',
   'live.item':'tu producto','live.store':'la tienda','live.waitperson':'Buscando a una persona…','live.noconvo':'No hay conversación en vivo en esta llamada.',
   'step.one':'paso','step.many':'pasos','step.ringing':'Llamando a la tienda…',
@@ -3385,9 +3419,29 @@ const SVG_TAG   = p => `<svg width="${p}" height="${p}" viewBox="0 0 24 24" fill
 // A store row's face: real logo if we have one; every HOBBY card shop shows the storefront icon (accent)
 // instead of messy name-initials; everyone else keeps their wordmark tile.
 function storeFace(s){
-  if(s&&s.logoUrl) return `<img src="${esc(s.logoUrl)}" alt="" data-nm="${esc(s.name)}" data-st="${esc(s.storeType||'')}" onerror="wmFail(this)">`;
+  if(s&&s.logoUrl) return `<img src="${esc(s.logoUrl)}" alt="" data-nm="${esc(s.name)}" data-st="${esc(s.storeType||'')}" onload="sizeLogo(this)" onerror="wmFail(this)">`;
   if(s&&s.storeType==='Hobby') return SVG_STORE(24);
   return storeWordmark(s&&s.name, s&&s.storeType);
+}
+// Every chain logo gets the SAME visual AREA in its tile, then clamps to the tile's edges. Fitting a
+// logo inside a square box instead sizes it by its longest side, so a wide wordmark (Randalls is 5:1)
+// matched the box's width and came out a few pixels tall next to a squarish mark like BJ's Wholesale.
+// Width is written as a PERCENT of the tile, so it survives the tile changing size (v1 52px, v2 44px,
+// the picker's smaller tiles) without re-running. The inline styles deliberately beat the tile's own
+// width/height/max rules; a logo that never loads keeps the old CSS sizing untouched.
+// GOTCHA: an image already in cache fires onload BEFORE layout has settled, so the tile still measures
+// 0 wide and the logo would size to nothing. Retry on the next frame until the tile has a width.
+// Twin of the same function in app.html, so a chain row in Admin and a store row here read alike.
+function sizeLogo(img, tries){
+  const box = img && img.parentElement; if(!box) return;
+  const W = box.clientWidth, H = box.clientHeight;
+  if(!W || !H){ if((tries||0) < 60) requestAnimationFrame(()=>sizeLogo(img,(tries||0)+1)); return; }
+  const nw = img.naturalWidth, nh = img.naturalHeight; if(!nw || !nh) return;
+  const targetArea = 0.55*W*H, maxW = 0.95*W, maxH = 0.90*H;
+  let sc = Math.sqrt(targetArea/(nw*nh));
+  if(nw*sc > maxW) sc = maxW/nw;
+  if(nh*sc > maxH) sc = maxH/nh;
+  img.style.cssText += `;width:${(100*nw*sc/W).toFixed(2)}%;height:auto;max-width:none;max-height:none;object-fit:contain`;
 }
 // A dead logoUrl must never show the browser's broken-image glyph (Android Chrome paints a visible
 // one where iOS leaves a quiet blank) — swap in the designed monogram tile and drop the logo-only
@@ -4609,7 +4663,29 @@ async function restoreCall(cid, storeName, catName){
   // instead of starting a second round-trip (owner 07-14: checks must open faster).
   let o=null; if(window.__callPrefetch){ o=await window.__callPrefetch; window.__callPrefetch=null; }
   if(!o||o.error) o=await appApi('/pub/result/'+encodeURIComponent(cid));
-  if(!o||o.error||o.status==='in_progress'){ if(cached) return; toast(t('toast.callgone',"That check is no longer available")); backToBuilder(); return; }
+  // A REFRESH ON A RESULT MUST STAY ON THAT RESULT (owner 07-31: "pull to refresh takes me back to the
+  // homepage"). Right after a call the verdict is often still settling, so the first read can come back
+  // in_progress or blip an error — and bouncing to the homepage there loses the check the user was
+  // reading. Retry a few times, then, if it still won't load, STAY on the result view and offer a retry.
+  // The homepage is never the answer when the URL names a call.
+  if(!o||o.error||o.status==='in_progress'){
+    for(let i=0;i<4 && (!o||o.error||o.status==='in_progress'); i++){
+      await new Promise(r=>setTimeout(r,900));
+      o=await appApi('/pub/result/'+encodeURIComponent(cid));
+    }
+  }
+  if(!o||o.error||o.status==='in_progress'){
+    if(cached) return;                       // we already painted it from cache — keep that on screen
+    if(o&&o.status==='in_progress'){ showResult({status:'pending',transcript:o.transcript||'',summary:''}, cid); return; } // still running: show it as pending, don't bail
+    try{ const r=$('result'); if(r){ r.classList.remove('hidden'); $('builder').classList.add('hidden');
+      r.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:46vh;gap:14px;text-align:center;padding:24px">'
+        +'<div style="font:800 22px Inter;letter-spacing:-.02em">'+esc(t('res.cantload','We couldn’t load this check'))+'</div>'
+        +'<div style="font:600 14px Inter;color:#8A8A96;line-height:1.5">'+esc(t('res.cantload.sub','Give it another try.'))+'</div>'
+        +'<button class="cta" style="margin-top:6px" onclick="location.reload()">'+esc(t('res.retry','Try again'))+'</button>'
+        +'<a onclick="backToBuilder()" style="font:700 13px Inter;color:var(--green);cursor:pointer;margin-top:2px">'+esc(t('res.gohome','Back to checks'))+'</a></div>';
+      return; } }catch(_){ }
+    toast(t('toast.callgone',"That check is no longer available")); backToBuilder(); return;
+  }
   let srvRow=null;
   if(!known && isAuthed()){ try{ srvRow=(await fetchServerHistory()).find(x=>x.cid===cid)||null; }catch(_){ } }
   if(srvRow&&srvRow.storeName){ SEL_STORE={id:srvRow.storeId,name:srvRow.storeName,logoUrl:srvRow.logoUrl||null,logoWide:!!srvRow.logoWide,logoDark:!!srvRow.logoDark}; // the account's record of THIS call wins over any guess
@@ -5400,12 +5476,23 @@ function renderCallSheet(){
     else if(r&&r.kind==='direct'){ re.textContent=t('cs.reach.direct','This store picks up directly'); re.style.display=''; }
     else re.style.display='none'; }
 }
-function showCallSheet(){ const el=$('csheet'); if(!el) return; const already=el.classList.contains('on'); renderCallSheet();
+function showCallSheet(){ const el=$('csheet'); if(!el) return; csheetUnpark(el); const already=el.classList.contains('on'); renderCallSheet();
   if(!already){ // guarantee the slide UP from the bottom: pin to off-screen, reflow, then release to .on
     el.style.transition='none'; el.style.transform='translateY(112%)'; void el.offsetHeight;
     el.style.transition=''; }
   csheetH_on(); el.style.transform=''; el.classList.add('on'); el.setAttribute('aria-hidden','false'); const bd=$('csheetBd'); if(bd) bd.classList.add('on'); }
-function hideCallSheet(){ const el=$('csheet'); if(el){ el.style.transition=''; el.style.transform=''; el.classList.remove('on'); el.setAttribute('aria-hidden','true'); csheetH_off(); } const bd=$('csheetBd'); if(bd) bd.classList.remove('on'); }
+// PARK THE CLOSED CALL SHEET OUT OF EXISTENCE (owner 07-31, proven on device).
+// A closed .csheet is still position:fixed + filled, just translated below the fold. iOS Safari sees a
+// fixed filled box sitting on the bottom edge and drops its bottom bar into the flat GREY state — and
+// nothing brings it back except a page reload. That grey bottom on the live check page was this, not
+// page height (padding the page was tried twice and failed; see qa-tint-lock 14b).
+// Device test, short non-scrolling live page: sheet left parked = grey. Sheet display:none = clear.
+// display:none only AFTER the 280ms slide-down so the close animation is untouched, and unpark before
+// any open/measure so the slide-up and csheetH_on's sizing are unchanged.
+function csheetUnpark(el){ el=el||$('csheet'); if(el){ if(el.__park){ clearTimeout(el.__park); el.__park=0; } el.classList.remove('parked'); } }
+function csheetPark(el){ if(!el) return; if(el.__park) clearTimeout(el.__park);
+  el.__park=setTimeout(()=>{ el.__park=0; if(!el.classList.contains('on')) el.classList.add('parked'); },340); }
+function hideCallSheet(){ const el=$('csheet'); if(el){ el.style.transition=''; el.style.transform=''; el.classList.remove('on'); el.setAttribute('aria-hidden','true'); csheetH_off(); csheetPark(el); } const bd=$('csheetBd'); if(bd) bd.classList.remove('on'); }
 // User-initiated dismiss (tap the backdrop / swipe down): also latch CS_DISMISSED so switching modes
 // (or any re-render) doesn't slide it back up until they pick a store again.
 function dismissCallSheet(){ CS_DISMISSED=true; hideCallSheet(); }
@@ -6147,7 +6234,7 @@ async function finalize(cid){
   saveCheckToHistory(res, cid);
   showResult(res, cid);
 }
-function backToBuilder(){ try{ document.documentElement.classList.remove('restoring'); }catch(_){ } /* deep-link hide must never survive into the homepage */ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } try{ document.body.classList.remove('zoning'); const _z=$('zones'); if(_z) _z.classList.remove('on'); const _h=$('histOverlay'); if(_h) _h.classList.remove('on'); }catch(_){ } /* close any open Check history / My Zones sheet */ TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); document.body.classList.remove('lview'); ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); window._livePend=false; try{ const _st=$('supTab'); if(_st)_st.classList.remove('invite'); }catch(_){ } /* the post-check glow belongs to the result page only */ try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby','zones'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
+function backToBuilder(){ try{ document.documentElement.classList.remove('restoring'); }catch(_){ } /* deep-link hide must never survive into the homepage */ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } try{ document.body.classList.remove('zoning'); const _z=$('zones'); if(_z) _z.classList.remove('on'); const _h=$('histOverlay'); if(_h) _h.classList.remove('on'); }catch(_){ } /* close any open Check history / My Zones sheet */ TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); document.body.classList.remove('lview'); document.body.classList.remove('pendbox'); ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); window._livePend=false; try{ const _st=$('supTab'); if(_st)_st.classList.remove('invite'); }catch(_){ } /* the post-check glow belongs to the result page only */ try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby','zones'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
   // Returning to the builder = a FRESH homepage (as if loaded for the first time). Drop ANY store/
   // category left over from a reopened call so it doesn't show pre-selected in the call CTA (which also
   // auto-scrolled to it). The apex site pre-locks Pokémon via BRAND_CAT, so this must NOT be gated on it
@@ -6440,10 +6527,17 @@ function showResult(o, cid){
   // top happens on the settled verdict below. Without the park, the flip's scroll clamp can leave the
   // footer wordmark under the iOS bar (owner 07-30 screenshot). body.rv-pend carries the same
   // bar-clearing strip as the live view, so the tail parks clear of the bar.
+  // The store card we just watched the call in does NOT leave with the call (owner 07-31): it stays
+  // pinned, reading "Getting results", and goes the moment the verdict lands. Only for a call we were
+  // just watching — reopening or refreshing into a pending check has no card on screen to keep.
+  const _keepBox = !!(o && o.status==='pending' && (_fromLive || window._livePend));
+  document.body.classList.toggle('pendbox', _keepBox);
   if(o && o.status==='pending' && (_fromLive || window._livePend)) requestAnimationFrame(()=>{ try{ window.scrollTo(0, document.body.scrollHeight); }catch(_){ } });
   if(o && o.status!=='pending' && (_fromLive || window._livePend)){ window._livePend=false; setTimeout(()=>{ try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(_){ window.scrollTo(0,0); } },120); }
   stopLiveTimers(); LIVE_ROOM=null; if($('hangup_btn'))$('hangup_btn').style.display='none';
-  $('live').classList.add('hidden'); $('builder').classList.add('hidden'); $('history').classList.add('hidden'); $('success').classList.add('hidden'); const hov=$('handoff'); if(hov)hov.classList.add('hidden'); document.body.classList.remove('fabbed'); document.body.classList.remove('lview'); /* verdict bloom takes over from the live bloom */
+  if(_keepBox){ $('live').classList.remove('hidden'); const _lg=$('lh_state'); if(_lg && _lg.textContent!==t('live.h4','Getting results')){ _lg.textContent=t('live.h4','Getting results'); try{ _lg.style.animation='none'; void _lg.offsetWidth; _lg.style.animation=''; }catch(_){ } } }
+  else $('live').classList.add('hidden');
+  $('builder').classList.add('hidden'); $('history').classList.add('hidden'); $('success').classList.add('hidden'); const hov=$('handoff'); if(hov)hov.classList.add('hidden'); document.body.classList.remove('fabbed'); document.body.classList.remove('lview'); /* verdict bloom takes over from the live bloom */
   { const _fd=$('finds'); if(_fd)_fd.style.display='none'; } // no rotating finds ticker on the result/call page
   LASTRES=o; TRANSLATED=false; ORIGHTML=''; FBK_SENT=false;
   // Verdict = deriveVerdict, THE single status→copy engine (shared with the zone report's unfold).
@@ -9306,5 +9400,5 @@ async function submitSchedule(){
 }
 boot();
 </script>
-<script>!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);posthog.init("phc_xYyBl7VcEYqf4emnV42blLSKQZM0CtxjgEVUSBpS2uL",{api_host:"https://us.i.posthog.com",defaults:"2025-05-24"})</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2377f153af17700',t:'MTc4NTQ0NzM2MA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);posthog.init("phc_xYyBl7VcEYqf4emnV42blLSKQZM0CtxjgEVUSBpS2uL",{api_host:"https://us.i.posthog.com",defaults:"2025-05-24"})</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a23e83109ab92c74',t:'MTc4NTUyMDkyNA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
