@@ -105,9 +105,11 @@ export async function buildQueue(): Promise<SweepItem[]> {
   return items.sort((a, b) => a.rank - b.rank || weight(a) - weight(b) || a.chain.localeCompare(b.chain));
 }
 
-/** ONE proving call to a chain we believe answers directly. Listen-first, no navigation: if a person
- *  says hello, the direct claim is now EVIDENCE instead of an assumption. If a recording answers, the
- *  chain has a menu we never mapped — it gets flagged and handed to the normal mapping lane. */
+/** ONE proving call to a chain we believe answers directly. If a person says hello, the direct claim
+ *  is now EVIDENCE instead of an assumption. If a recording answers, the chain has a menu we never
+ *  mapped — it gets flagged and handed to the normal mapping lane. (The old listen-first mode is
+ *  deleted — the learn walk itself sits quiet while a recording talks and answers when asked, which
+ *  is everything listen-first did.) */
 async function proveDirect(item: SweepItem): Promise<void> {
   const store = await storeForChain(item.chainId, [], true);
   if (!store) { item.status = "skipped"; item.outcome = "no store open right now. Will come round again."; return; }
@@ -118,7 +120,7 @@ async function proveDirect(item: SweepItem): Promise<void> {
     { product: "Pokémon cards" },
     // The sweep folds its own result below (it decides direct-vs-menu from what it hears), so `finish`
     // must not fold it a second time.
-    { listenFirst: true, askVoiceId: ask.voiceId, askText: ask.text, callerRecords: true },
+    { askVoiceId: ask.voiceId, askText: ask.text, callerRecords: true },
   );
   if (placed.error || !placed.id) { item.status = "failed"; item.outcome = "dial failed: " + (placed.error || "?"); return; }
   state.calls++; item.calls++;

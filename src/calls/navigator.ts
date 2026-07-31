@@ -114,8 +114,6 @@ export interface NavSession {
   //  • redirect ("that's the X dept, let me transfer you") → wrong desk; capture where + hang up.
   confirm?: { product: string; asked?: boolean; askedAtSec?: number };
   confirmResult?: "answered" | "redirect"; redirectTo?: string;
-  // LISTEN-FIRST (mapping stage 1): hear the menu out before acting; flips off once a prompt repeats.
-  listenFirst?: boolean; heard?: string[];
   // MENU CAPTURE (#2) + owner TARGET (#1): the pressable tree we heard, the raw menu lines, and the
   // desk the owner wants us to reach (customer service by default; a chosen department for dept-only chains).
   target?: string; menu?: MenuOption[]; menuPrompts?: string[];
@@ -706,34 +704,10 @@ async function navTurn(id: string, speech: string): Promise<string> {
   const PHARM_OK = /pharmacy .{0,30}(closed|hours)/i; // pharmacy-only closure — keep navigating to the front store
   if (speech && DEADEND_RE.test(speech) && !PHARM_OK.test(speech)) { s.deadLine = true; finish(s, "failed"); return twiml(`<Hangup/>`); }
   s.status = "navigating";
-  // LISTEN-FIRST (mapping call 1): hear the menu out before acting — capture every prompt; the moment
-  // a prompt REPEATS (the menu looped, we've heard it all), or after 4 prompts / 50s, flip to acting
-  // mode and navigate on this SAME call. A live person still short-circuits above, so a direct-answer
-  // store never sits in silence.
-  if (s.listenFirst) {
-    const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim().slice(0, 80);
-    // The menu ASKED for input ("press 1…", "para español…", "say yes/no") — listening longer adds
-    // nothing and SHORT menus (Family Dollar) hang up if you don't answer within ~20s. Act now.
-    // A menu does not have to say "press 1" to be asking us something. CVS's virtual assistant asks
-    // "are you a healthcare provider?" in plain words, and on 07-28 the listen-first pass sat through
-    // it: the store re-prompted with "sorry I'm not understanding", the call ran 91s instead of 62s,
-    // AND the extra recording shifted every anchor we learned. A direct question is an ask.
-    const askedForInput = !!speech && (
-      /press (\d|one|two|three)|para espa[ñn]ol|by saying|please say|say (yes|no)\b|enter your/i.test(speech)
-      || /\b(are|is|do|did|would|can|may) (you|this|that)\b[^.?]*\?/i.test(speech)
-      || /\b(are|do|is) you\b[^.]{0,60}$/i.test(speech.trim())
-      || /let me know if|please confirm|which (one|department)|calling (in )?for/i.test(speech)
-    );
-    if (speech && speech.trim()) {
-      s.heard = s.heard || [];
-      const n = norm(speech);
-      const repeated = !!n && s.heard.some((h) => h === n || (n.length > 25 && h.startsWith(n.slice(0, 25))));
-      s.heard.push(n);
-      if (askedForInput || repeated || s.heard.length >= 4 || atSec > 50) s.listenFirst = false; // heard enough → act NOW (fall through to decide)
-      else return twiml(gather(id)); // keep listening
-    } else if (atSec > 50) s.listenFirst = false;
-    else return twiml(gather(id));
-  }
+  // The listen-first block that used to sit here is DELETED (the contract's DELETE list — stage one
+  // replaces it). The learn stage IS the listening: the model answers each question with the full
+  // phrase when it is asked and sits quiet while a recording is still talking, so a separate
+  // stay-silent mode has nothing left to do and must not come back.
   // REACTIVE PRESS: the human way — wait until we HEAR a prompt, then press the digit; repeat for the
   // first `max` prompts (e.g. 0 after Spanish, 0 after the next, 0 after the next), then listen for the
   // person. Synced to the actual prompts, so ring-time/store differences don't throw the timing off.
@@ -1060,14 +1034,14 @@ async function recordConfirmAsked(chainId: number, retailerId: number): Promise<
 }
 
 /** Place the documentation call; returns the session id the admin polls for live progress. */
-export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number; early?: boolean }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { listenFirst?: boolean; askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string; relisten?: boolean; callerRecords?: boolean; stage?: CheckStage; expectedGreeting?: string; recipeSeconds?: number; deadDoors?: string[] }): Promise<{ id?: string; error?: string }> {
+export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number; early?: boolean }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string; relisten?: boolean; callerRecords?: boolean; stage?: CheckStage; expectedGreeting?: string; recipeSeconds?: number; deadDoors?: string[] }): Promise<{ id?: string; error?: string }> {
   if (!config.callsEnabled) return { error: "calls disabled on this preview deploy" };
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const from = process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
   const id = crypto.randomUUID().slice(0, 8);
-  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined, listenFirst: extra?.listenFirst, askText: extra?.askText, target: extra?.target, maxSec: extra?.maxSec, transferWaitSec: extra?.transferWaitSec, relisten: extra?.relisten, callerRecords: extra?.callerRecords, stage: extra?.stage, expectedGreeting: extra?.expectedGreeting, recipeSeconds: extra?.recipeSeconds, deadDoors: extra?.deadDoors };
+  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined, askText: extra?.askText, target: extra?.target, maxSec: extra?.maxSec, transferWaitSec: extra?.transferWaitSec, relisten: extra?.relisten, callerRecords: extra?.callerRecords, stage: extra?.stage, expectedGreeting: extra?.expectedGreeting, recipeSeconds: extra?.recipeSeconds, deadDoors: extra?.deadDoors };
   sessions.set(id, session);
   session.why = extra?.why;
   // The receipt opens at DIAL, before anything can go wrong, so even a call the carrier refuses
