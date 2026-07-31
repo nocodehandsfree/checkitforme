@@ -526,6 +526,8 @@ function driveMapper(run: MapperRun): void {
           // record. Every later check is graded against the menu the proof heard.
           expectedGreeting: proving ? undefined : run.expectedGreeting,
           recipeSeconds: run.bestMenuSecs,
+          // The dead doors are a HARD block in the navigator, not only a sentence in the prompt.
+          deadDoors: proving && run.doorsDead.length ? run.doorsDead : undefined,
           // This loop folds its own calls into the map at the lock. `finish` must not fold them.
           callerRecords: true,
           why: `Mapping ${run.chainName} (${stageWord}, check ${run.attempt})` },

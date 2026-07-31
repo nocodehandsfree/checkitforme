@@ -155,6 +155,11 @@ export interface NavSession {
   recipeSeconds?: number;
   repromptHeard?: boolean;  // the store said it did not understand us
   greetingTwice?: boolean;  // the opening recording played again mid-check: we were sent to the start
+  /** Doors already proven to reach the wrong desk. A HARD block, not a sentence in the prompt: the
+   *  model cannot fire one of these however it decides, because a dead door costs a real call and a
+   *  real Staff hello every time it is re-picked. */
+  deadDoors?: string[];
+  deadDoorRefusals?: number;
   grade?: "pass" | "fail";  // decided by machine in finish; a failed check changes nothing
   failReason?: CheckFailReason;
   /** How far a RE-LISTEN has walked its known route. The plan is fired one step at a time from
@@ -359,7 +364,7 @@ interface Decision { action: NavAction; value: string; type: "direct" | "keypad"
 async function decide(s: NavSession, latest: string): Promise<Decision> {
   const log = s.steps.map((st) => `[${st.atSec}s] ${st.who === "ivr" ? "STORE" : "US"}: ${st.text}`).join("\n");
   const hintBlock = s.hint
-    ? `KNOWN FAST PATH for THIS exact store (learned on an earlier call): ${s.hint}\nFollow it: use these EXACT short single words at the matching prompt, answer the INSTANT the prompt makes sense (barge in — don't wait for it to finish), and NEVER improvise longer phrases. Only deviate if what you hear clearly doesn't match.\n\n`
+    ? `DOORS THAT WORKED BEFORE on this chain (learned on an earlier call): ${s.hint}\nHead for these same doors when the menu offers them — but ALWAYS answer with the full phrase THIS menu speaks, after the question finishes. Only deviate if what you hear clearly doesn't match.\n\n`
     : "";
   // #1: whoever can check shelf stock — customer service / front / operator — by default; the owner can
   // pin a specific desk per chain (used for department-only trees with no CS path).
@@ -381,7 +386,7 @@ Decide the SINGLE next action toward a human:
 - HAND OFF to a human ("human"): the INSTANT a live person is talking with you — a casual store greeting said naturally TO you ("[store name], how can I help?", "this is Mike, what can I do for ya?", "GameStop, what do you need?"). A store name + casual tone + a real question = a person. The moment it feels like a person and not a recording, answer "human" — do NOT keep firing menu words at them.
 - TRANSFER REACHED ("human"): if the system says it is connecting/transferring you to a person ("please hold while I connect you", "transferring you now", "let me get someone for you", "connecting you to the store") — the path is CONFIRMED. Answer "human" NOW; we hang up before troubling a real employee.
 - Voicemail / "no longer in service" / dead end -> "fail".
-- Advance a menu by VOICE -> "say" with a short value. For a normal menu, the option word (front, general, operator, representative, associate, no, yes).
+- Advance a menu by VOICE -> "say" the option EXACTLY as the menu names it — the FULL phrase ("front store services", not "front"; "general store inquiries", not "general"). A yes/no question gets "yes" or "no".
 - OPEN-ENDED from an AUTOMATED system (a clearly robotic / "virtual assistant" voice, or it keeps repeating "I didn't get that, briefly describe why you're calling")? Do NOT answer "yes"/"no" — that loops forever. "Say" a short ROUTING phrase: "talk to a store associate" (under 5 words). But if that same open question is asked by a real-sounding person, that's "human" above, not routing.
 - Advance by KEYPAD -> "press" with a single digit (0 is usually the operator).
 - Recording still mid-sentence, keep listening -> "wait". Use this SPARINGLY — only when a recording is literally still talking. Never "wait" just because you're unsure; pick an action that moves toward a human.
@@ -390,7 +395,7 @@ BE DECISIVE — you are HANDS-FREE, no human is helping you. Every turn must mov
 - PERSIST: if pressing 0 (or your last action) doesn't visibly advance after the next prompt, PRESS 0 AGAIN. Keep pressing 0 once per prompt until a person or a transfer ("connecting you…") happens. Many systems only route to the operator after several 0s.
 - If the SAME tactic fails twice (a spoken word gets ignored or loops), SWITCH: try pressing 0, or press the menu digit for "anything else"/operator. Never repeat a failing move a third time, and never go silent.
 - At a pharmacy/store with departments, never pick "pharmacy" — head to the front/general/operator.
-Pick the FASTEST route to a human and the SHORTEST word that works (e.g. "front" not "front store services", "general" not "general store inquiries"). Act as EARLY as the menu allows — you do NOT have to wait for a prompt to finish; press/say as soon as you know the option (barge in).
+THIS IS A LEARNING CALL. Answer each question with the FULL phrase the menu itself offers, word for word, and let each recording FINISH before you answer — never talk over the store, never shorten. The exact words this call learns are what every later call runs on; making it fast is a different call's job and only works because this one learned the words exactly.
 Classify how this store answers so far: "direct" (a person just answers), "keypad" (responds to key presses), or "voice" (only responds to spoken words).
 
 Return ONLY JSON: {"action":"say|press|wait|human|fail","value":"<word or digit, empty if none>","type":"direct|keypad|voice","confidence":<0-100>,"note":"<8 words max>"}`;
@@ -847,6 +852,26 @@ async function navTurn(id: string, speech: string): Promise<string> {
     return twiml(gather(id));
   }
   if (d.action === "human") return reachHuman(s, atSec, id, !!(speech && ROUTING_RE.test(speech))); // person OR announced transfer → confirm waits for the person
+  // THE HARD BLOCK ON A DEAD DOOR. "Never choose X" in the prompt is a sentence; this is the law: a
+  // door a real answer proved wrong cannot be fired again, whatever the model decides. One refusal is
+  // a nudge (the model sees it in the log and picks again); a second means it has nothing else to
+  // offer, and the check ends honestly instead of ringing the wrong desk a second time.
+  if ((d.action === "say" || d.action === "press") && d.value && (s.deadDoors || []).length) {
+    const v = d.value.toLowerCase();
+    const dead = (s.deadDoors || []).some((door) => {
+      const w = door.toLowerCase();
+      return v.includes(w) || w.includes(v);
+    });
+    if (dead) {
+      s.deadDoorRefusals = (s.deadDoorRefusals ?? 0) + 1;
+      s.steps.push({ who: "us", text: `refused "${d.value}" — that door reaches the wrong desk`, atSec });
+      if (s.deadDoorRefusals >= 2) {
+        s.stopReason = "only doors already proven wrong were left to pick";
+        finish(s, "failed"); return twiml(`<Hangup/>`);
+      }
+      return twiml(gather(id));
+    }
+  }
   if (d.action === "press" && d.value) {
     const digits = d.value.replace(/[^0-9*#]/g, "").slice(0, 6);
     s.steps.push({ who: "us", text: `pressed ${digits}`, atSec, action: "press", value: digits , earPrompts: s.ear?.recordings });
@@ -1035,14 +1060,14 @@ async function recordConfirmAsked(chainId: number, retailerId: number): Promise<
 }
 
 /** Place the documentation call; returns the session id the admin polls for live progress. */
-export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number; early?: boolean }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { listenFirst?: boolean; askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string; relisten?: boolean; callerRecords?: boolean; stage?: CheckStage; expectedGreeting?: string; recipeSeconds?: number }): Promise<{ id?: string; error?: string }> {
+export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number; early?: boolean }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { listenFirst?: boolean; askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string; relisten?: boolean; callerRecords?: boolean; stage?: CheckStage; expectedGreeting?: string; recipeSeconds?: number; deadDoors?: string[] }): Promise<{ id?: string; error?: string }> {
   if (!config.callsEnabled) return { error: "calls disabled on this preview deploy" };
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const from = process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
   const id = crypto.randomUUID().slice(0, 8);
-  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined, listenFirst: extra?.listenFirst, askText: extra?.askText, target: extra?.target, maxSec: extra?.maxSec, transferWaitSec: extra?.transferWaitSec, relisten: extra?.relisten, callerRecords: extra?.callerRecords, stage: extra?.stage, expectedGreeting: extra?.expectedGreeting, recipeSeconds: extra?.recipeSeconds };
+  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined, listenFirst: extra?.listenFirst, askText: extra?.askText, target: extra?.target, maxSec: extra?.maxSec, transferWaitSec: extra?.transferWaitSec, relisten: extra?.relisten, callerRecords: extra?.callerRecords, stage: extra?.stage, expectedGreeting: extra?.expectedGreeting, recipeSeconds: extra?.recipeSeconds, deadDoors: extra?.deadDoors };
   sessions.set(id, session);
   session.why = extra?.why;
   // The receipt opens at DIAL, before anything can go wrong, so even a call the carrier refuses

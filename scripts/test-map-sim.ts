@@ -653,6 +653,22 @@ async function main() {
       "the open-hours gate is re-read before EVERY speed check, pinned store or not");
     ok(/const askSpent = run\.askUnresolved \|\| \(await askedAlready\(chainId, store\.id\)\);/.test(eng),
       "the once-per-store ask ledger is read — a spent ask is never asked again");
+    ok(/deadDoors: proving && run\.doorsDead\.length \? run\.doorsDead : undefined,/.test(eng),
+      "and the dead doors ride to the navigator as a hard block, not only a sentence in the prompt");
+
+    // FULL WORDS IN THE LEARN STAGE (contract stage 1). The learning call's own instructions must say
+    // full phrase and let-the-question-finish — the shortest-word rule belonged to speed experiments,
+    // which are plan-driven and never see this prompt.
+    const nv = readFileSync("src/calls/navigator.ts", "utf8");
+    ok(/THIS IS A LEARNING CALL\. Answer each question with the FULL phrase/.test(nv),
+      "the learn walk answers with the FULL phrase the menu offers");
+    ok(!/SHORTEST word that works/.test(nv) && !/barge in — don't wait for it to finish/.test(nv),
+      "the shortest-word and talk-over instructions are deleted from the learn walk");
+    ok(/the FULL phrase \("front store services", not "front"/.test(nv),
+      "with the owner's own example: front store services, never front");
+    ok(/if \(\(d\.action === "say" \|\| d\.action === "press"\) && d\.value && \(s\.deadDoors \|\| \[\]\)\.length\)/.test(nv)
+      && /refused "\$\{d\.value\}" — that door reaches the wrong desk/.test(nv),
+      "a dead door is HARD-blocked: the model cannot fire it, and a second try ends the check honestly");
     ok(/MISSES_PER_STORE[\s\S]{0,220}?run\.rotate = true;/.test(eng),
       "a store that never got us to a person is the ONLY reason to take a fresh one (Update 3)");
     ok(!/recordFailedAttempt/.test(eng),
