@@ -108,11 +108,14 @@ export function languageOfCall(steps: CapturedStep[]): Language {
 /** Package one mapping call as evidence: what happened, where, when, and how fast. */
 /**
  * THE GRADE, decided by machine the moment a check ends (owner, 07-30). A check must EARN its way
- * into the record: pass = the menu we expected, our words said, the handoff announced and the ring
- * heard, or Staff answered. Everything else fails with exactly one reason from the owner's list, and
- * a failed check changes nothing — it is kept collapsed. The reasons are ordered by what they rule
- * out: the wrong menu first (nothing this check heard belongs to the map it was walking), then the
- * wrong desk, then the ways a walk dies mid-menu, then — only for a speed try — not faster.
+ * into the record: pass = the menu we expected, OUR WORDS SAID (every answer the route owed), the
+ * handoff announced and the ring heard, or Staff answered. Everything else fails with exactly one
+ * reason from the owner's fixed SEVEN, and a failed check changes nothing — it is kept collapsed.
+ *
+ * A DIFFERENT MENU IS NOT A FAILURE REASON. An unmatched greeting means this check was never walking
+ * the map it was graded against — it is a new CONDITION (night, Spanish, changed), so the check fails
+ * with NO reason and `unknownMenu` set, and the caller files it as a condition, quarantined. That is
+ * the fingerprint mechanism from the contract, not an eighth reason.
  */
 export function gradeCheck(o: {
   stage: CheckStage;
@@ -125,12 +128,12 @@ export function gradeCheck(o: {
   greetingTwice?: boolean;            // the opening recording played again mid-check
   plannedSteps?: number;              // answers the route owes
   saidSteps?: number;                 // answers actually said
-  testedEarly?: boolean;              // this check fired one step ahead of its prompt
+  testedEarly?: boolean;              // this check cut in on the menu's own words
   navSeconds?: number | null;         // this check's menu time
   recipeSeconds?: number | null;      // the reigning recipe's menu time
-}): { grade: "pass" | "fail"; reason?: CheckFailReason } {
+}): { grade: "pass" | "fail"; reason?: CheckFailReason; unknownMenu?: boolean } {
   if (o.expectedGreeting && o.heardGreeting && !sameMenu(o.expectedGreeting, o.heardGreeting)) {
-    return { grade: "fail", reason: "wrong menu" };
+    return { grade: "fail", unknownMenu: true };
   }
   if (o.wrongDepartment) return { grade: "fail", reason: "wrong department" };
   if (o.greetingTwice) return { grade: "fail", reason: "sent to beginning of menu" };
@@ -138,6 +141,11 @@ export function gradeCheck(o: {
     if (o.testedEarly) return { grade: "fail", reason: "barge didn't work" };
     if (o.repromptHeard) return { grade: "fail", reason: "menu repeated itself" };
     if ((o.saidSteps ?? 0) < (o.plannedSteps ?? 0)) return { grade: "fail", reason: "menu hung up on us" };
+    return { grade: "fail", reason: "said wrong words" };
+  }
+  // OUR WORDS SAID is a PASS CONDITION, not just a fail label. A check that skipped an answer and
+  // still stumbled onto a ring did not prove the route — it proved a shortcut nobody chose.
+  if ((o.plannedSteps ?? 0) > 0 && (o.saidSteps ?? 0) < (o.plannedSteps ?? 0)) {
     return { grade: "fail", reason: "said wrong words" };
   }
   if (o.stage === "speed" && typeof o.navSeconds === "number" && typeof o.recipeSeconds === "number"

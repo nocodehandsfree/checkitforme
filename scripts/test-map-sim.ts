@@ -16,7 +16,7 @@ import { connectAtSecFor, recipeToDtmf } from "../src/calls/recipe";
 import {
   proposeVersion, approveVersion, activeMap, versionsFor, chainDetail, graphFor, graphSummary,
   openUnknowns, recordCallPath, recordFailedAttempt, learnFromReceipt, reportCallDrift, resetChainHistory,
-  addEvidence, navSecondsOf, reachedPctOf, scoreConfidence, sameMenu,
+  addEvidence, navSecondsOf, reachedPctOf, scoreConfidence, sameMenu, CHECK_FAIL_REASONS,
   type MapRecipe, type EvidenceCall,
 } from "../src/calls/mapgraph";
 import { lockRecipeToChain } from "../src/calls/trainer-batch";
@@ -546,8 +546,17 @@ async function main() {
     ok(gradeCheck(base).grade === "pass", "handoff announced and the ring heard = pass");
     ok(gradeCheck({ ...base, expectedGreeting: day1, heardGreeting: day2 }).grade === "pass",
       "a re-worded transcription of the same greeting still passes");
-    ok(gradeCheck({ ...base, expectedGreeting: day1, heardGreeting: night }).reason === "wrong menu",
-      "the night menu fails as wrong menu and can never touch the daytime map");
+    {
+      // The fixed list is SEVEN. A different menu is a new CONDITION, filed and quarantined — it is
+      // not a reason and no pill exists for it (owner rounds 07-31; the eighth reason is deleted).
+      const g = gradeCheck({ ...base, expectedGreeting: day1, heardGreeting: night });
+      ok(g.grade === "fail" && g.reason === undefined && g.unknownMenu === true,
+        "the night menu fails with NO reason — a new condition, quarantined from the daytime map");
+      ok((CHECK_FAIL_REASONS as readonly string[]).length === 7 && !(CHECK_FAIL_REASONS as readonly string[]).includes("wrong menu"),
+        "the reason list is the owner's seven, word for word, nothing else");
+    }
+    ok(gradeCheck({ ...base, plannedSteps: 3, saidSteps: 2 }).reason === "said wrong words",
+      "OUR WORDS SAID is a pass condition: a skipped answer fails even with the handoff and ring heard");
     ok(gradeCheck({ ...base, wrongDepartment: true }).reason === "wrong department",
       "Staff saying wrong desk fails as wrong department");
     // Today's real Mulholland check: front barged over the recording, the menu looped, the pharmacy answered.
@@ -574,8 +583,14 @@ async function main() {
     const nav = readFileSync("src/calls/navigator.ts", "utf8");
     ok(/const g = gradeCheck\(\{[\s\S]{0,900}?\}\);\s*\n\s*s\.grade = g\.grade; s\.failReason = g\.reason;/.test(nav),
       "finish grades the check by machine before anything is written");
-    ok((nav.match(/stage: s\.stage \?\? \(s\.relisten \? "speed" : "map"\), grade: s\.grade, reason: s\.failReason,/g) || []).length === 2,
+    ok((nav.match(/stage: s\.stage, grade: s\.grade, reason: s\.failReason,/g) || []).length === 2,
       "and the same verdict rides both the run log and the map fold, so screens cannot disagree");
+    ok(/if \(s\.grade == null && s\.status !== "human" && s\.status !== "failed"\) \{[\s\S]{0,300}?finish\(s, "failed"\);/.test(nav),
+      "a check the carrier ended still gets its grade — no check ever ends ungraded");
+    ok(/if \(s\.chainId != null && !s\.stage && s\.grade !== "fail"\) void markNavOutcome/.test(nav),
+      "a failed or run-owned check never stamps the chain's mapping status");
+    ok(/kind: "menu-changed",\s*\n\s*prompt: heard\.slice\(0, 200\),/.test(nav),
+      "an unmatched greeting files a condition in the store's exact words, automatically");
     ok(/s\.repromptHeard = true;/.test(nav), "the store saying it did not understand is written down as a fact");
     ok(/sameMenu\(firstIvr\.text, line\)\) s\.greetingTwice = true;/.test(nav),
       "and the opening recording playing again mid-check is caught as being sent to the start");

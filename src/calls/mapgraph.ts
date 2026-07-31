@@ -63,12 +63,14 @@ export type Language = "en" | "es" | "mixed" | "unknown";
 
 /** One mapping/verify call, kept as the reason a version is trusted. */
 export type CheckStage = "map" | "speed" | "prove";
-/** The owner's reason list, 07-30, word for word. A failed check carries exactly one. The screens may
- *  print ONLY these — a state the page does not recognize renders as a collapsed red row, never a
- *  guess, so inventing a new reason means adding it HERE first. */
+/** The owner's reason list, 07-30, word for word — SEVEN, fixed. A failed check carries exactly one.
+ *  The screens may print ONLY these — a state the page does not recognize renders as a collapsed red
+ *  row, never a guess, so inventing a new reason means adding it HERE first. A check that heard a
+ *  DIFFERENT menu is not on this list on purpose: an unmatched greeting is a new CONDITION (night,
+ *  Spanish, changed), filed automatically and quarantined — never a reason pill. */
 export const CHECK_FAIL_REASONS = [
   "not faster", "wrong department", "barge didn't work", "said wrong words",
-  "menu repeated itself", "menu hung up on us", "sent to beginning of menu", "wrong menu",
+  "menu repeated itself", "menu hung up on us", "sent to beginning of menu",
 ] as const;
 export type CheckFailReason = typeof CHECK_FAIL_REASONS[number];
 
@@ -1115,8 +1117,9 @@ export interface GraphRow {
  * two greetings are the SAME menu when their opening words line up in order, ignoring the small
  * differences transcription invents. And the menus that matter most — night, closed — announce
  * themselves ("the pharmacy is currently closed"), so a closed line ALWAYS makes a different menu,
- * however similar the greeting. A check on the wrong menu is graded "wrong menu" and quarantined:
- * it can never touch the recipe it was not walking.
+ * however similar the greeting. A check on an unmatched menu fails with NO reason pill — it is filed
+ * as a new condition ("menu-changed", the greeting in the store's exact words) and quarantined: it
+ * can never touch the recipe it was not walking. Heard twice = the condition is real.
  */
 const fpTokens = (line: string): string[] =>
   String(line || "").toLowerCase().replace(/[^a-z ]/g, " ").split(/\s+/).filter((w) => w.length > 2).slice(0, 10);

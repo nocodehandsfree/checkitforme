@@ -147,8 +147,9 @@ export interface NavSession {
   /** The owner's three stages (07-30): map = mapping menu · speed = optimizing speed · prove =
    *  proving department. Every mapping check runs as one of them, and the screen prints the stage. */
   stage?: CheckStage;
-  /** The locked menu's opening line, when one is held — the check is graded "wrong menu" if the
-   *  store opens with a different menu (night, Spanish, changed), and then it can change NOTHING. */
+  /** The locked menu's opening line, when one is held. A store opening with a DIFFERENT menu (night,
+   *  Spanish, changed) fails with no reason pill — it is filed as a new condition and quarantined,
+   *  and the check can change NOTHING. */
   expectedGreeting?: string;
   /** The reigning recipe's menu time, for a speed check to beat. Not beaten = failed, "not faster". */
   recipeSeconds?: number;
@@ -904,6 +905,19 @@ function finish(s: NavSession, status: "human" | "failed" | "mapped") {
       navSeconds: s.transferAtSec ?? null, recipeSeconds: s.recipeSeconds ?? null,
     });
     s.grade = g.grade; s.failReason = g.reason;
+    // A GREETING MATCHING NOTHING KNOWN IS A NEW CONDITION, filed automatically and quarantined from
+    // the main map (the contract's fingerprint rule). It is never a reason pill: the check failed
+    // because it was walking a menu we do not hold, and the menu's own opening words — exactly as
+    // heard — are the file. Heard twice (seen_count) is what makes the condition real.
+    if (g.unknownMenu && s.chainId != null && heard) {
+      void import("./mapgraph")
+        .then((m) => m.reportUnknown({
+          chainId: s.chainId as number, storeId: s.retailerId, kind: "menu-changed",
+          prompt: heard.slice(0, 200),
+          evidence: { navId: s.id, storeName: s.retailerName, expected: (s.expectedGreeting || "").slice(0, 200), callSid: s.callSid },
+        }))
+        .catch((e) => console.error("[navigator] menu-changed file", e));
+    }
   }
   // In confirm mode, only a path that ENDED at the right desk (answered, not redirected) is lockable —
   // a redirect means we navigated to the wrong human, so we capture it but don't present it as the recipe.
@@ -948,7 +962,10 @@ function finish(s: NavSession, status: "human" | "failed" | "mapped") {
         // WE ended it, on the ring, on purpose. `s.status` is already "done" by here, so the reason
         // has to travel on its own or the map books a perfect re-listen as a call that missed Staff.
         endedOnRing: status === "mapped",
-        stage: s.stage ?? (s.relisten ? "speed" : "map"), grade: s.grade, reason: s.failReason,
+        // The stage travels RAW. A check only has a stage when a mapping RUN gave it one — coalescing
+        // a stage onto every call made recordNavCall bail on ordinary Admin calls, which is the exact
+        // 07-30 "the button taught the map nothing" bug come back (the 07-31 regression).
+        stage: s.stage, grade: s.grade, reason: s.failReason,
         callSid: s.callSid,
       }))
       .then((r) => emit(s.id, "unknown", `Map updated: ${r.why}`, { recorded: r.recorded }))
@@ -983,7 +1000,7 @@ async function persistRun(s: NavSession): Promise<void> {
       // WE ended it, on the ring, on purpose. Without this the screen has to guess from "no human"
       // and lands on "nobody picked up", which is the one thing that did not happen.
       endedOnRing: s.endedOnRing ? true : undefined,
-      stage: s.stage ?? (s.relisten ? "speed" : "map"), grade: s.grade, reason: s.failReason,
+      stage: s.stage, grade: s.grade, reason: s.failReason,
       callSid: s.callSid,
       // A re-listen reports the MENU's seconds (the handoff, else its last step), never a person's.
       seconds: s.relisten
@@ -1060,13 +1077,23 @@ export async function placeNavCall(chainId: number | null, retailerId: number, r
 }
 export function navEnded(id: string) {
   const s = sessions.get(id); if (!s) return;
+  // EVERY CHECK IS GRADED, including one the carrier ended for us (the store hung up, the line
+  // dropped). A call that never reached finish() used to land here ungraded — no verdict, no reason,
+  // and the mapper read it as a mystery miss. finish() grades it, writes the run log and folds the
+  // map exactly like any other end, and its own guards stop anything running twice.
+  if (s.grade == null && s.status !== "human" && s.status !== "failed") {
+    if (!s.stopReason) s.stopReason = "the store ended the call";
+    finish(s, "failed");
+  }
   if (s.status !== "human" && s.status !== "failed") s.status = "done";
   navSync(s); // catch any step the last turn added before the line dropped
   markNow(id, "endMs");
   emit(id, "hangup", s.stopReason || (s.humanAtSec != null ? "Reached a person" : "Never reached a person"), { status: s.status, humanAtSec: s.humanAtSec });
   closeReceipt(id, s.stopReason, s.status);
   if (s.confirm && s.chainId != null) void recordConfirmAsked(s.chainId, s.retailerId);
-  if (s.chainId != null) void markNavOutcome(s.chainId, s.humanAtSec != null);
+  // A FAILED CHECK CHANGES NOTHING — not even the chain's mapping status stamp. And a check a RUN
+  // owns (it carries a stage) never stamps the chain either: the run's one write at lock does that.
+  if (s.chainId != null && !s.stage && s.grade !== "fail") void markNavOutcome(s.chainId, s.humanAtSec != null);
   void persistRun(s);
 }
 
