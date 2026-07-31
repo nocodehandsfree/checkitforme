@@ -4,57 +4,57 @@
 > design implementation, and ALL copy. Charter + standing rules: `handoff.md` (same folder).
 > Volatile — REPLACE stale lines, newest on top, ≤60 lines. History lives in git.
 
+## 07-31 — CHAIN LOGOS: sized by AREA, nine files re-trimmed (PR #102, staging + Admin live)
+- **TRAP: the stored image beats the repo file.** `chainLogoInfo()` is DB-first and the stored copies
+  had DRIFTED: Shaw's/TJ Maxx/Ross/Randalls/Tom Thumb sat letterboxed in a 256px square (13.7% ink vs
+  BJ's 59.7%). Editing the PNG changes NOTHING for any chain with a `logoUrl`.
+- **Second trap: `POST /api/chains/:id/logo` writes `chainSlug(name)` keys with DASHES (`shaw-s.png`),
+  the migration wrote the FILE name with underscores.** Uploading leaves the old key live: re-fetch the
+  URL and compare bytes every time. Five rows pointed at stale copies before I caught it.
+- **Export rule:** squarish marks pad to BJ's ink ratio (59.7%); wide wordmarks trim TIGHT, since
+  padding a 5:1 mark only steals tile width once the render clamps on it. `sizeLogo()` (twin in
+  checkit.html + app.html) gives equal visual AREA then clamps to 95%/90% of the tile, width in PERCENT
+  so smaller tiles need no re-run. Cached images fire onload before layout: the rAF retry is REQUIRED.
+- Driven in a browser on the live rows: canvas area identical across the squarish marks, every wide mark
+  now on 95% of tile width. Kroger untouched.
+
 ## 07-30 — CHECK STATUS: bottom clear on EVERY screen + verdict at hang up (PRs #100 #101, staging)
-- **Round 2 (owner screenshot: wordmark under the bar on "Pulling the result").** That screen is the
-  PENDING result render — `showResult` drops `lview`, so the live strip left with it. Fix: the existing
-  pending marker `body.rv-pend` now carries the SAME measured strip, and the pending render parks on the
-  conversation tail; the sweep-to-top reveal consumes it. Round 1 (still true): `renderLiveMsg` follows
-  the NEWEST LINE, never `document.body.scrollHeight`; strip + `scroll-margin-bottom` =
-  `calc(160px + env(safe-area-inset-bottom))`; the re-arm listener tracks newest-line VISIBILITY.
-  `POLICY_KNOWN` gates default-on extras (no "Too far?" flash while off).
+- The pending render is its own screen: `showResult` drops `lview`, so `body.rv-pend` carries the SAME
+  measured strip. `renderLiveMsg` follows the NEWEST LINE, never `document.body.scrollHeight`; strip +
+  `scroll-margin-bottom` = `calc(160px + env(safe-area-inset-bottom))`; `POLICY_KNOWN` gates extras.
 - **Verdict at hang up (owner-ordered, `src/voice/elevenlabs.ts` via .unlock):** EL's "processing"
-  status means the phone side is DONE; the gate now passes it when real turns + real duration exist, so
-  the on-demand finalize (word rules + `consensusFor` with the finished live read) runs immediately
-  instead of waiting for their "done" stamp (the 1s-vs-10s swing). Less than full data waits as before.
-- **DRIVEN ON THE REAL STAGING SITE** (relay recipe below): newest line 160px clear · pending strip on,
-  wordmark 218px clear, parked at tail · reveal to top · verdict renders · zero page errors. Gate change
-  proven over a mocked provider (6/6) + `test-transcript-owner` all green.
-- **The remaining "solid bottom" (owner 16:04 screenshot) is Safari's EXPANDED bar, NOT our paint.**
-  Floor pixels measured `#1d1d22` == root on homepage AND verdict (relay drive, both). iOS collapses
-  its bar to the clear pill ONLY on a finger scroll; this page scrolls ITSELF (follow-along, park,
-  reveal), and the settled-verdict tone reload re-expands the bar at the exact reveal moment. The one
-  input we own (root colour) is right and gate-locked. Owner has the research; his call what trades.
+  means the phone side is DONE, so the gate passes it when real turns + duration exist and the finalize
+  runs at once. DRIVEN on the real staging site (relay recipe below), zero page errors.
+- **The remaining "solid bottom" (owner 16:04 screenshot) is Safari's EXPANDED bar, NOT our paint.** iOS
+  collapses its bar ONLY on a finger scroll; this page scrolls ITSELF. Root colour is gate-locked.
 - **DO NOT pad the check status page to force a scroll** (`body.lview main{min-height:100dvh}`,
   reverted 07-30): it strands the newest line and kills the reveal; `qa-tint-lock` 14b refuses it.
 - **A comp that leaves the homepage showing is a LIE.** The real view also hides `#builder` and adds
-  `body.lview` (`startLive` ~:5864). He caught mine. Drive that exact path or your screenshots lie.
-- **The step window is live** (@ec6e2d0): eyebrow + ONE big 22px state line, mark 212px off top-right.
+  `body.lview` (`startLive` ~:5864). Drive that exact path or your screenshots lie. The step window is
+  live (@ec6e2d0): eyebrow + ONE big 22px state line, mark 212px off top-right.
 
 ## Verify recipe that works (07-26)
 Railway staging env + `DATABASE_URL=file:<scratch>/local.db PORT=88xx npx tsx src/server.ts`. CONSUMER page
 = `/r` (`/` on localhost is Admin). Playwright: DEFAULT-import `playwright-core/index.js` (CJS) +
-`/opt/pw-browsers/chromium-1194/chrome-linux/chrome`. `ACCOUNT` is script-scoped, stub with a BARE assignment. No hot-reload. Chromium→staging TLS is blocked DIRECTLY, but a `page.route` relay that fulfills every request via curl (`-H 'Accept-Encoding: identity'`, body to a FILE as bytes) drives the real staging site fine (07-30).
+`/opt/pw-browsers/chromium-1194/chrome-linux/chrome`. `ACCOUNT` is script-scoped, stub with a BARE
+assignment. No hot-reload. Chromium→staging TLS is blocked DIRECTLY; a `page.route` relay that fulfills
+each request via curl (`-H 'Accept-Encoding: identity'`, body to a FILE as bytes) works (07-30).
 
-## 07-26/27 — PLANS + checkout sheet, and the ONE sheet recipe (LIVE on staging, NOT promoted)
-- Every slide-up renders from ONE recipe; `scripts/sheet-recipe-audit.mjs` must print 1. Run it before
-  shipping any new sheet. Plans/PAYG keepers, the dock, the Stripe warm-up and the real-touch lesson
-  (`page.touchscreen.tap`, never `el.click()`) are all in git @4f6c4a6 and the 07-26/27 commits.
-- Autofocus in a sheet SCROLLS the document and strands the sheet: all focus calls use `preventScroll:true`.
-
-## 07-28 — ADMIN sheet glass FIXED (LIVE @2ca41b5). Full story: `docs/tasks/admin-glass-nudge.md`.
-- **Cause: a closed `.sheet` never left the bottom edge** (position:fixed, bottom:0, just translated off).
-  A fixed element there sits in the UI layer iOS never ghosts. Site does `.overlay{display:none}`; Admin
-  now hides its sheet on close. Also fixed on the way: `pokeChrome` was never called AND was re-stamping
-  the root colour (the poison); `.sh-body` spacer 70→240px so last rows clear the toolbar.
-- **The move that found it: snapshot the whole page before open vs after close and DIFF it.** One thing
-  differed. Two ships were wasted theorising about the glass first. `qa-admin-glass.mjs` 10→19 checks.
+## 07-26/27 + 07-28 — PLANS/checkout sheet (staging, git @4f6c4a6) · ADMIN sheet glass (LIVE @2ca41b5)
+- `scripts/sheet-recipe-audit.mjs` must print 1 before any new sheet ships. Real touch is
+  `page.touchscreen.tap`, never `el.click()`. Sheet focus calls all use `preventScroll:true`.
+- Glass: a closed `.sheet` never left the bottom edge, where iOS never ghosts a fixed element; Admin now
+  hides it on close (`docs/tasks/admin-glass-nudge.md`). **Found by diffing the page before/after.**
 
 ## Lessons that stay true
 - iOS: Chromium CANNOT catch iOS paint — his phone is the rig; ship one change, "check your phone."
 - Copy an existing pattern WHOLE. Half-copying the zones basket reproduced the exact mess it fixed.
 - A bug that SURVIVES closing the sheet is leftover STATE. Diff the page before/after, do not theorise.
-- 'in_stock' substring-matches 'not_in_stock' — match negatives first/exact. RENDER the comp and read EVERY state before touching a designed head (removed the zone ring once and burned a cycle).
+- 'in_stock' substring-matches 'not_in_stock': match negatives first/exact. RENDER the comp and read EVERY state before touching a designed head (removed the zone ring once and burned a cycle).
+- **What the site SERVES beats what the repo holds.** Prove it by fetching the live URL and diffing bytes.
 
 ## Open (owner asks + the site queue)
-- Alerts sheet formatting · logo fidelity in My Zones + call-log header · copy-doc location reconcile ·
-  missing email-confirmation (PROD email likely never re-set post-promote) · Restock SMS → A2P. Frozen-site tasks need the owner-named `.unlock`.
+- Alerts sheet formatting · copy-doc location reconcile · missing email-confirmation (PROD email likely
+  never re-set post-promote) · Restock SMS → A2P. Frozen-site tasks need the owner-named `.unlock`.
+  Logo fidelity in My Zones + the call-log header is COVERED by 07-31's shared `sizeLogo`. **PM: promote
+  wanted — the consumer half of the logo sizing (`sizeLogo` in checkit.html) is staging-only.**
