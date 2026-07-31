@@ -26,11 +26,12 @@ git. Last updated: 2026-07-30 (every try back runs the same way; Mapped checks c
 - **Re-map hangs up on the second ring** of the desk, so it never troubles Staff, and that check becomes the
   recipe. A check that ends on the ring counts as the good map it is, and **Reached Staff shows nothing instead
   of 0%** until one actually waits for a person.
-- **CVS is mapped and proven** (07-30): **nav time 54s**, the average of its checks, and the menu is written
-  down line by line in CVS's own words.
-- **You approved the mapping rebuild** (07-30, comps 3a and 3b): three stages on every check — mapping menu,
-  optimizing speed, proving department — every check graded, a failed one collapsed with its reason, and the
-  menu shown as the map of doors from the one locked run. The whole contract is written; the build is next.
+- **The mapping rebuild you approved is BUILT and live** (07-30 night): three stages on every check — mapping
+  menu, optimizing speed, proving department — every check graded by machine, a failed one collapsed with its
+  reason, the menu as the map of doors, tap a line to correct it. Proven live at 10:41pm on a CVS we had never
+  called: walked clean, graded, printed right. **CVS and every stale Review item are cleared**; the morning run
+  maps CVS from nothing through all three stages while you watch. The play-the-line button is the one piece not
+  built yet — it needs the call audio recorded first.
 ## The new calling engine is ON for staging. Your six test calls are the last thing (07-28/29)
 - **Nothing to flip.** A check from staging.checkitforme.com goes through the new engine. **Listen for:** it asks
   once and waits · no keypad beeps once you are talking · after a hold it asks you again if you might be new.
