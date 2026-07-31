@@ -25,13 +25,14 @@ its pill appear on the Menu screen. Night/Spanish/changed menus are all this one
    the door. Wrong desk → door marked dead, next check takes the next-best door. Staff asked once per
    door, never more. Repeat until wording is settled (same lines heard twice in a row).
 2. **Optimizing speed** — SAME store (menu stability), inside its open hours. Hang up on the second
-   ring, every check — no Staff, ever. ONE change per check: the short word, or firing earlier. A win
-   becomes the recipe; a loss is failed `not faster` and that exact move is blacklisted (bargeSafe
-   already exists — front can never be barged at CVS, general can). Nothing new wins = the floor.
-3. **Proving department** — the finished recipe at DIFFERENT stores, one ask per store, never the same
-   store twice. A real yes/no = locked, dated. Wrong department → recipe keeps its speed, the door
-   re-opens, prove again elsewhere. Nobody picks up → next store. Three stores agree = chain locked.
-   A store whose greeting does not fingerprint-match gets its own branch (store exception, exists).
+   ring, every check — no Staff, ever. ONE change per check: the short word, or answering earlier IN
+   THE MENU'S OWN WORDS **(07-31: NO TIMER, EVER — see Update 4)**. A win becomes the recipe; a loss
+   is failed `not faster` and that exact move is blacklisted (bargeSafe already exists — front can
+   never be barged at CVS, general can). Nothing new wins = the floor.
+3. ~~Proving department — three stores agree = chain locked~~ **(replaced 07-31 — see Updates 2 and 3:
+   ONE successful map locks the chain; a new store only when the current store never got us to a
+   person.)** A store whose greeting does not fingerprint-match still gets its own branch (store
+   exception, exists). Wrong desk during the map → door marked dead, next door, SAME store.
 
 Known facts that must survive: barge rules per step (`bargeSafe`) · re-prompt = repeat the SAME answer
 · an offer to connect mid-route is not the handoff (`routeUnfinished`) · a barge tail joins its line
@@ -42,7 +43,8 @@ Known facts that must survive: barge rules per step (`bargeSafe`) · re-prompt =
 - **Chain page top, once locked:** the ladder shows ONLY the recipe steps — no menu copy per step —
   each step with the seconds from the LAST successful check. Nav time, Nav cost, Reached staff stay
   AVERAGES. Date reads `Locked` + date and moves only when the recipe changes.
-- **Mapped checks (3a):** newest on top; top check's pill = `Recipe winner`. Stage header per card:
+- **Mapped checks (3a):** newest on top; ~~top check's pill = `Recipe winner`~~ **(replaced 07-31 —
+  see Update 5: no check says "Recipe winner"; the winner lives in the recipe box and Menu)**. Stage header per card:
   `Mapping menu` / `Optimizing speed` / `Proving department`. Faster/slower vs the check right before,
   said ONCE. No PRODUCED line. Fails collapse to one row, red pill = the reason itself. Last rung of
   an open card says only the colored status words: `Reached staff` (green) or `Admin hung up`
@@ -60,6 +62,42 @@ Known facts that must survive: barge rules per step (`bargeSafe`) · re-prompt =
 - The greeting shown on the Recipes card — Menu owns it.
 - Any `Set aside` string · any status words not in Statuses + the reason list.
 - The mapper's old phase names (`verify`/`listen`/`baseline`/`optimize`) anywhere the owner sees them.
+
+## Updates (07-31, owner approved — a line is ADDED here with its date, never rewritten)
+
+1. Always learn the menu first. Every store we map starts with one full check:
+   listen to the whole menu, answer with the full words, reach a person,
+   ask about Pokémon. Never skip this, even if we already hold a recipe.
+
+2. One successful map locks it. Reached a person, asked about Pokémon,
+   got an answer - proven, locked, done.
+   (This replaces the old "three stores must agree" rule.)
+   Once we got through to a person, we never need to reach one there again.
+
+3. The only reason to try a new store: the current store never got us
+   to a person.
+
+4. Speed comes after the lock, same store, always hanging up before a person.
+   NO answer ever fires on a timer - the clock is dead everywhere.
+   Fast = answering the moment the menu's own words tell us the question,
+   cutting in only where that menu allows it. A menu that won't be cut off
+   ("sorry I'm not understanding") is remembered, and we let that question
+   finish. That is why the fast way works at every store.
+
+5. When a faster way wins, two things update: the recipe box at the top
+   of the page, and the words under Menu. Checks just say their gain,
+   like "6s faster".
+
+6. Menu is where I listen and fix words: a play button per line, tap the
+   words to edit, the pencil turns into a save button. Menu only.
+
+7. Delete the old mapping box ("Needs your eyes"). Everything lives in:
+   the recipe at the top, Mapped checks, and Menu. A run never needs me.
+
+8. A check's story shows every word we said. "sorry I'm not understanding"
+   can never appear without the word we said that caused it.
+
+9. "Locked" shows the date the map succeeded. No lock, no date.
 
 ## After the owner says the live page is the record of truth
 Delete comps 3a/3b from the board and lock the mapping surfaces (edit-gate) so no agent can change
