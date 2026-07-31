@@ -20,7 +20,7 @@ import { isCallingPaused } from "../redis";
 import { placeNavCall, getNavSession, defaultWorkflowAsk, classifyMode, menuHasCustomerService, NavRecipe, NavStep } from "./navigator";
 import { storeForChain, lockRecipeToChain, recipeFromSteps } from "./trainer-batch";
 import { chainDialable } from "./recipe";
-import { pathSignature, reportUnknown, recordObservation, recordCallPath, recordFailedAttempt, storeLocalTime, MapRecipe, MapStep, type EvidenceCall } from "./mapgraph";
+import { pathSignature, reportUnknown, recordObservation, recordCallPath, recordFailedAttempt, storeLocalTime, activeMap, MapRecipe, MapStep, type EvidenceCall } from "./mapgraph";
 import { recipeFromCall, evidenceFromCall, CapturedStep } from "./map-capture";
 
 const DAILY_CAP = 60;        // runaway guard only — owner 2026-07-10: the old 12/day cap is gone, a
@@ -59,6 +59,7 @@ export interface MapperRun {
   doorsDead: string[];           // menu doors proven to reach the wrong desk — never chosen again
   expectedGreeting?: string;     // the menu's opening line as heard on the locked run (wrong-menu guard)
   proveMisses: number;           // prove-stage checks where nobody picked up (next store each time)
+  winnerSession?: NavSessionLike; // the check whose route IS the recipe — written to the map at the lock
   baseline: NavRecipe | null;
   best: NavRecipe | null;
   experiments: Experiment[];
@@ -210,10 +211,10 @@ function markVariance(run: MapperRun, recipe: NavRecipe): void {
  *  ALSO (07-26) writes the call into the versioned map: the route we just proved, the recording each
  *  step follows, and the evidence behind it. The chain row keeps working exactly as before — the map
  *  is the history and the confidence the row could never hold. */
-async function finalizeAndLock(run: MapperRun, chainId: number, recipe: NavRecipe, confidence: number | null, session?: NavSessionLike): Promise<void> {
+async function finalizeAndLock(run: MapperRun, chainId: number, recipe: NavRecipe, confidence: number | null, session?: NavSessionLike, opts?: { activate?: boolean }): Promise<void> {
   if (run.target && !recipe.target) recipe.target = run.target;
   markVariance(run, recipe);
-  await recordMapVersion(run, chainId, recipe, confidence, session);
+  await recordMapVersion(run, chainId, recipe, confidence, session, opts);
   const navigated = recipe.type !== "direct" && (recipe.steps?.length ?? 0) > 0;
   const deptOnly = navigated && !menuHasCustomerService(recipe.menu);
   if (!run.target && deptOnly) {
@@ -228,12 +229,12 @@ async function finalizeAndLock(run: MapperRun, chainId: number, recipe: NavRecip
  *  to reach further into the navigator. */
 interface NavSessionLike {
   id?: string; steps?: unknown[]; humanAtSec?: number | null; status?: string;
-  transferAtSec?: number | null; greeting?: string;
+  transferAtSec?: number | null; greeting?: string; callSid?: string;
 }
 
 /** Write this call into the versioned map. Best-effort by design: a map-store hiccup must never take
  *  down a mapping run that is holding a live phone call open. */
-async function recordMapVersion(run: MapperRun, chainId: number, recipe: NavRecipe, confidence: number | null, session?: NavSessionLike): Promise<void> {
+async function recordMapVersion(run: MapperRun, chainId: number, recipe: NavRecipe, confidence: number | null, session?: NavSessionLike, opts?: { activate?: boolean }): Promise<void> {
   let evidence: EvidenceCall | undefined;
   try {
     const steps = (session?.steps || []) as CapturedStep[];
@@ -255,6 +256,7 @@ async function recordMapVersion(run: MapperRun, chainId: number, recipe: NavReci
       seconds: recipe.seconds ?? null, reachedHuman: true, path: pathSignature(mapRecipe),
       greeting: session?.greeting, transferAtSec: session?.transferAtSec ?? null,
       hourLocal: when.hour, dow: when.dow,
+      stage: "prove", grade: "pass", callSid: session?.callSid,
       note: `${run.phase} attempt ${run.attempt}`,
     });
     mapRecipe.language = evidence.language;
@@ -288,7 +290,7 @@ async function recordMapVersion(run: MapperRun, chainId: number, recipe: NavReci
     }
   } catch { /* evidence is best-effort — a bad session must not stop the route being locked */ }
   // ONE writer: the chain row the runtime reads and the map version land together (trainer-batch.ts).
-  await lockRecipeToChain(chainId, recipe, confidence, evidence);
+  await lockRecipeToChain(chainId, recipe, confidence, evidence, opts);
 }
 
 async function bumpDaily(chainId: number): Promise<number> {
@@ -322,11 +324,21 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
   // #1: the owner-set desk to aim for (customer service by default; a chosen department for dept-only chains).
   const target = ((await getSetting(`nav_target:${chainId}`)) || "").trim() || undefined;
 
-  // A chain whose route we already hold, with the recording each step follows, starts at optimizing
-  // speed. A held route with no recording plan is a route we never properly heard — it starts back at
-  // mapping menu, which is also how a changed menu remaps itself as if brand new (owner, 07-30).
+  // THE RUN STARTS FROM THE ROUTE THE MAP HOLDS (owner, 07-31). It used to read the chain row's older
+  // summary, find nothing usable, and re-learn a chain we had already proven — the 07-31 run walked
+  // CVS from scratch and produced a slower route than the one sitting in the map. The map's live
+  // version is the single truth; the chain row is only a stamped copy for live checks.
   let lockedRecipe: NavRecipe | null = null;
-  try { const r = ch.navRecipe ? (JSON.parse(ch.navRecipe) as NavRecipe) : null; if (r && Array.isArray(r.steps) && r.steps.length) lockedRecipe = r; } catch { /* fresh discovery */ }
+  try {
+    const live = await activeMap(chainId);
+    if (live?.recipe && Array.isArray(live.recipe.steps) && live.recipe.steps.length) {
+      lockedRecipe = {
+        type: live.recipe.type, seconds: live.recipe.seconds ?? null,
+        steps: live.recipe.steps.map((st) => ({ ...st })),
+        menu: live.recipe.menu, menuPrompts: live.recipe.menuPrompts, target: live.recipe.target,
+      } as NavRecipe;
+    }
+  } catch { /* fresh discovery */ }
   const hasPromptPlan = (lockedRecipe?.steps || []).some((st) => typeof (st as { afterPrompt?: number }).afterPrompt === "number");
 
   // THE OWNER'S THREE STAGES (07-30, build-contract.md). A chain we have never walked starts at
@@ -451,12 +463,14 @@ function driveMapper(run: MapperRun): void {
       if (run.phase === "map") {
         if (graded && answered && recipe) {
           // The door is PROVEN — a person at its end gave a real answer about the product. This
-          // becomes the route to beat, live checks benefit immediately, and speed starts.
+          // becomes the route to beat. NOTHING IS WRITTEN YET (owner, 07-31): the run's working state
+          // is its own until three stores agree, so the map, the chain row and the owner's screens
+          // never see half-finished work as if it were a decision or a winner.
           run.baseline = recipe as NavRecipe; run.best = recipe as NavRecipe;
           if (typeof menuSecs === "number") run.bestMenuSecs = menuSecs;
           run.expectedGreeting = ((s?.steps || []) as NavStep[]).find((st) => st.who === "ivr" && st.text)?.text;
           run.provedStores = [store.id];
-          await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null, s ?? undefined);
+          run.winnerSession = { id: s?.id, steps: s?.steps as unknown[], humanAtSec: s?.humanAtSec, status: s?.status, transferAtSec: s?.transferAtSec, greeting: s?.greeting, callSid: s?.callSid };
           run.experiments = buildExperiments(run, recipe as NavRecipe);
           run.phase = "speed";
           run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: `right department — Staff answered about ${product} (${classifyMode((s?.steps || []) as NavStep[]).label})`, seconds: secs });
@@ -480,15 +494,15 @@ function driveMapper(run: MapperRun): void {
         // and, for a step that broke the walk, that exact move is remembered as never-again.
         if (graded && recipe && typeof menuSecs === "number") {
           ex.status = "win"; run.best = recipe as NavRecipe; run.bestMenuSecs = menuSecs;
-          await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null, s ?? undefined);
+          run.winnerSession = { id: s?.id, steps: s?.steps as unknown[], humanAtSec: s?.humanAtSec, status: s?.status, transferAtSec: s?.transferAtSec, greeting: s?.greeting, callSid: s?.callSid };
           run.log.push({ n: run.attempt, phase: "speed", store: store.name, experiment: ex.label, outcome: `recipe winner — menu ${menuSecs}s`, seconds: menuSecs });
           if (ex.kind === "barge") enqueueBinaryBarge(run, ex.stepIdx, ex.at ?? 0, true);
         } else {
           ex.status = "fail";
           if (reason === "barge didn't work" && run.best?.steps?.[ex.stepIdx]) {
+            // Remembered on the run's own copy of the route; it is written into the map at the lock.
             (run.best.steps[ex.stepIdx] as { bargeSafe?: boolean }).bargeSafe = false;
             run.experiments = run.experiments.filter((e) => !(e.kind === "barge" && e.stepIdx === ex.stepIdx && e.status === "pending"));
-            await finalizeAndLock(run, chainId, run.best, null, s ?? undefined); // remember it for every future run
           }
           if (ex.kind === "barge") enqueueBinaryBarge(run, ex.stepIdx, ex.at ?? 0, false);
           run.log.push({ n: run.attempt, phase: "speed", store: store.name, experiment: ex.label, outcome: reason || "not faster", seconds: menuSecs });
@@ -496,6 +510,7 @@ function driveMapper(run: MapperRun): void {
       } else if (run.phase === "prove") {
         if (graded && answered) {
           run.provedStores.push(store.id);
+          run.winnerSession = { id: s?.id, steps: s?.steps as unknown[], humanAtSec: s?.humanAtSec, status: s?.status, transferAtSec: s?.transferAtSec, greeting: s?.greeting, callSid: s?.callSid };
           run.log.push({ n: run.attempt, phase: "prove", store: store.name, outcome: `right department — Staff answered about ${product} (${run.provedStores.length} of 3 stores agree)`, seconds: secs });
           if (run.provedStores.length >= 3) { run.phase = "locked"; break; }
         } else if (redirected || reason === "wrong department") {
@@ -517,7 +532,10 @@ function driveMapper(run: MapperRun): void {
     // ---- wrap up ----
     if (run.stop && !run.stopReason) run.stopReason = "stopped by admin";
     if (run.phase === "locked" && run.best) {
-      await finalizeAndLock(run, chainId, run.best, null); // final state (idempotent)
+      // THE ONE WRITE (owner, 07-31). Three stores agreed, so the run's route becomes the map's live
+      // recipe in a single stroke: version activated, chain row stamped, the winning check's evidence
+      // — words, recording, the lot — folded in so the Menu shows the run that won.
+      await finalizeAndLock(run, chainId, run.best, null, run.winnerSession, { activate: true });
       run.stopReason = run.stopReason || (run.needsTarget
         ? "Locked, but the menu has no customer-service option. Pick a target desk and re-map."
         : "map recipe locked — three stores agree");

@@ -43,7 +43,7 @@ export function recipeFromSteps(steps: Step[], humanAtSec: number | null): Recip
  *  ONE writer for every path that locks a route (the Admin Map button, the overnight batch, the mapper,
  *  the sweep), so a route can never reach live calls without its evidence and its version landing too.
  *  `evidence` is what the call proved; without it the version still lands, carrying only what we know. */
-export async function lockRecipeToChain(chainId: number, recipe: Recipe, confidence: number | null, evidence?: EvidenceCall) {
+export async function lockRecipeToChain(chainId: number, recipe: Recipe, confidence: number | null, evidence?: EvidenceCall, opts?: { activate?: boolean }) {
   const ch = (await db.select().from(chains).where(eq(chains.id, chainId)))[0];
   const log = ch?.navLog ? (JSON.parse(ch.navLog) as number[]) : [];
   if (typeof recipe.seconds === "number") log.push(recipe.seconds);
@@ -95,6 +95,9 @@ export async function lockRecipeToChain(chainId: number, recipe: Recipe, confide
   try {
     const res = await proposeVersion({
       chainId, recipe: mapRecipe, source: evidence ? "mapping call" : "lock",
+      // A finished mapping run has EARNED activation: three stores agreed, so its route goes live in
+      // the same stroke instead of waiting as a proposal the owner never asked to judge.
+      autoActivate: opts?.activate || undefined,
       storeId: evidence?.storeId,
       call: evidence ?? {
         at: now, day: new Date(now * 1000).toISOString().slice(0, 10),

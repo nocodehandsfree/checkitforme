@@ -5055,8 +5055,12 @@ function dayWords(d){
 // scrolling all of them.
 function mappingCallsHtml(calls,versions){
   const gains=gainByCheck(calls);
-  // The top PASSING check is the winner — the recipe that is running now came off it.
-  const winner=(calls||[]).find(c=>c.grade!=='fail');
+  // RECIPE WINNER MEANS "THIS CHECK'S ROUTE IS THE RECIPE" (owner, 07-31). It briefly meant "newest
+  // passing check", which crowned a 91 second walk whose route was never even activated. The winner
+  // is the newest passing check the LIVE recipe's own evidence carries; no live evidence, no crown.
+  const live=(versions||[]).find(v=>v.status==='active'&&!v.storeId);
+  const ids=new Set(((live&&live.evidence&&live.evidence.calls)||[]).map(c=>c.navId).filter(Boolean));
+  const winner=(calls||[]).find(c=>c.grade!=='fail'&&c.navId&&ids.has(c.navId));
   const card=c=>mappingCallCard(c,c===winner,gains.get(c));
   const rest=calls.slice(2);
   return calls.slice(0,2).map(card).join('')
@@ -5093,7 +5097,9 @@ const STAGE_WORD={map:'Mapping menu',speed:'Optimizing speed',prove:'Proving dep
 // check IS the winner and its pill says so.
 function mappingCallCard(c,winner,gain){
   const rungs=callRungs(c);
-  const navS=(typeof c.transferAtSec==='number'&&c.transferAtSec>0)?c.transferAtSec:c.seconds;
+  // NAV TIME ONLY (owner, 07-31): the number beside the pill is when the menu finished with us, never
+  // the whole call with Staff's pickup time inside it. A check that never measured it shows nothing.
+  const navS=(typeof c.transferAtSec==='number'&&c.transferAtSec>0)?c.transferAtSec:null;
   const stage=STAGE_WORD[c.stage]||'';
   const ladder=`<div class="mladder" style="margin-top:13px">${rungs.map((r,i,a)=>callRung(r,i===a.length-1)).join('')}</div>`;
   if(c.grade==='fail'){

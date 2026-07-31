@@ -630,6 +630,28 @@ async function main() {
     ok(/MENU_AUDIO\.currentTime>=MENU_AUDIO_STOP/.test(page), "playback stops where the next line starts");
   }
 
+  // THE 07-31 FIXES, each one the owner caught on the live page.
+  console.log("▶ A RUN'S WORK STAYS ITS OWN UNTIL THREE STORES AGREE");
+  {
+    const eng = readFileSync("src/calls/mapper.ts", "utf8");
+    ok(/const live = await activeMap\(chainId\);/.test(eng),
+      "the run starts from the route the MAP holds, never the chain row's older summary");
+    ok((eng.match(/await finalizeAndLock\(/g) || []).length === 1,
+      "there is exactly ONE write, at the lock — no half-finished work reaches the map or the screens");
+    ok(/await finalizeAndLock\(run, chainId, run\.best, null, run\.winnerSession, \{ activate: true \}\);/.test(eng),
+      "and that write ACTIVATES: three stores agreed, so nothing waits as a proposal");
+    ok(/run\.winnerSession = \{ id: s\?\.id/.test(eng),
+      "the check whose route won rides to the lock with its words and its recording");
+    const tb = readFileSync("src/calls/trainer-batch.ts", "utf8");
+    ok(/autoActivate: opts\?\.activate \|\| undefined,/.test(tb), "activation flows through the one writer");
+
+    const page = readFileSync("public/app.html", "utf8");
+    ok(/const winner=\(calls\|\|\[\]\)\.find\(c=>c\.grade!=='fail'&&c\.navId&&ids\.has\(c\.navId\)\);/.test(page),
+      "Recipe winner means this check's route IS the recipe — no live evidence, no crown");
+    ok(/\?c\.transferAtSec:null;/.test(page),
+      "and the number beside a pill is nav time only, never the whole call with Staff inside it");
+  }
+
   console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }
