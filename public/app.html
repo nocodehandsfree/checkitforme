@@ -2261,7 +2261,7 @@ async function testHelicone(model){
   if(r&&r.ok) el.innerHTML='<span style="color:var(--green)">✓ Helicone OK</span> · model <b>'+escH(r.model)+'</b> · '+r.ms+'ms · sample “'+escH(r.sample||'')+'”'+(r.heliconeConfigured?'':' · <span style="color:#FBBF24">⚠ HELICONE_API_KEY not set</span>');
   else el.innerHTML='<span style="color:#ff6b6b">✗ '+escH((r&&r.error)||'failed')+'</span>'+(r&&r.model?(' · model <b>'+escH(r.model)+'</b>'):'');
 }
-// Trainer = overview only. Per-chain Map/Re-map + call log live under Calls → Settings (a chain).
+// Trainer = overview only. Per-chain Map + call log live under Calls → Settings (a chain).
 // Stats align with Alpha/Bravo/Charlie (locked navType) + mapped/unmapped.
 // Mapped-progress report: the whole fleet at the top, then EACH store category and how much of it is
 // routed (owner 07-17). Bar length shows the laggards at a glance; a category hits green when it's done.
@@ -4864,7 +4864,7 @@ async function renderChainSheets(ch,nav){
   set('pk_setruns', calls.length?(todayN?todayN+' today':String(calls.length)):'');
   const rw=document.getElementById('set_runs');
   if(rw) rw.innerHTML = calls.length ? mappingCallsHtml(calls,versions)
-    : '<div class="empty">No mapped checks yet. Tap Re-map to place one.</div>';
+    : '<div class="empty">No mapped checks yet. Tap Map to run the mapping.</div>';
 
   // RECIPES (comp 2i) — what is live and what it replaced, each with its nav time and the date it
   // locked. Attempts that were set aside are not recipes, so they sit behind one key: a rejected route
@@ -4880,7 +4880,7 @@ async function renderChainSheets(ch,nav){
       +(aside.length?`<div id="set_ver_aside" style="display:none">${aside.slice().sort((a,b)=>(b.version||0)-(a.version||0)).map(recipeCard).join('')}</div>`
         +`<div style="display:grid;place-items:center;margin-top:6px"><button class="ghost" onclick="mapAsideMore(this)">Show ${aside.length} set aside</button></div>`:'')
       +recipeGap(held)
-    : '<div class="empty">No recipe yet. Tap Re-map to learn one.</div>';
+    : '<div class="empty">No recipe yet. Tap Map to learn one.</div>';
 
   // REVIEW — only when there is something to look at.
   // ONLY WHAT IS STILL OPEN. A card he already cleared was coming back, so the row counted decisions
@@ -5259,14 +5259,11 @@ const UNKNOWN_WHAT={
   'not-shared':'Recipe not shared with the chain',
 };
 // The two buttons, per kind: what the green one DOES, and what it changes. `null` = a note to clear.
+// The Re-map button is RETIRED (owner, 07-31): re-mapping is the engine's job and a run never needs
+// him. The kinds that carried it render with Clear only, the card's existing shape.
 const UNKNOWN_ACT={
   'store-exception':['Own recipe','store'],
   'route-changed':['Use the new one','chain'],
-  'drift':['Re-map','chain'],
-  'route-failing':['Re-map','chain'],
-  'hammer-route':['Re-map','chain'],
-  'unproven-direct':['Re-map','chain'],
-  'greeting-not-direct':['Re-map','chain'],
 };
 const unkWhen=u=>u.firstSeen?new Date(u.firstSeen*1000).toLocaleDateString([],{month:'short',day:'numeric'}):'';
 // EXPECTED against HEARD, in a carved well. Both come off the item we already store; where we have no
@@ -5312,25 +5309,19 @@ function mapUnknownCard(u,chainId,expected){
     </div>`;
 }
 // THE BUTTON DOES THE THING IT NAMES (owner, 07-30). "Own recipe" puts that store's own route live.
-// "Use the new one" puts the new chain route live. "Re-map" places a real call. Only then is the item
-// cleared, so nothing reads as decided until the decision actually happened.
+// "Use the new one" puts the new chain route live. Only then is the item cleared, so nothing reads
+// as decided until the decision actually happened. The Re-map branch that placed a call from here is
+// DELETED with its button (owner, 07-31).
 async function mapUnknownDo(id,chainId,kind,versionId){
-  if(versionId){
-    const ok=await askSheet(kind==='store-exception'?'Give this store its own recipe?':'Use the new recipe?',
-      kind==='store-exception'
-        ? ['Only this store changes. Every other store on the chain keeps the current recipe.']
-        : ['Every store on this chain switches to it. The current recipe is retired.'],
-      kind==='store-exception'?'Own recipe':'Use it');
-    if(!ok) return;
-    const r=await api('/api/admin/map/version/'+versionId+'/approve',{method:'POST'});
-    if(!r||r.error){ toast(mapWriteErr(r)); return; }
-  } else {
-    const ok=await askSheet('Re-map this chain?',['Places a real call to one store. Nobody is asked anything.'],'Re-map');
-    if(!ok) return;
-    const r=await api('/api/admin/trainer/document',{method:'POST',headers:{'content-type':'application/json'},
-      body:JSON.stringify({chainId,relisten:true,why:'Re-map from Review'})});
-    if(!r||r.error){ toast(mapWriteErr(r)); return; }
-  }
+  if(!versionId) return;
+  const ok=await askSheet(kind==='store-exception'?'Give this store its own recipe?':'Use the new recipe?',
+    kind==='store-exception'
+      ? ['Only this store changes. Every other store on the chain keeps the current recipe.']
+      : ['Every store on this chain switches to it. The current recipe is retired.'],
+    kind==='store-exception'?'Own recipe':'Use it');
+  if(!ok) return;
+  const r=await api('/api/admin/map/version/'+versionId+'/approve',{method:'POST'});
+  if(!r||r.error){ toast(mapWriteErr(r)); return; }
   await mapUnknown(id,'resolved',chainId);
 }
 async function mapUnknown(id,status,chainId){
@@ -5446,7 +5437,7 @@ function renderChainMapping(ch){
       :['var(--text-muted)','var(--surface-2)','var(--border)','Unmapped'];
     sp.innerHTML=`<span style="display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:${cfg[0]};background:${cfg[1]};border:1px solid ${cfg[2]};border-radius:20px;padding:3px 10px">${status==='learning'?'<span class="navspin"></span>':ssDot(cfg[0])}${cfg[3]}</span>`;
   }
-  const mb=document.getElementById('set_mapbtn'); if(mb) mb.textContent=isLocked?'Re-map':'Map';
+  const mb=document.getElementById('set_mapbtn'); if(mb) mb.textContent='Map'; // Re-map is retired (owner, 07-31). One word, one job: the full mapping run.
   // One gray line instead of an info dot buried in a button label (owner 07-27).
   // The note under the buttons is gone (owner, 07-30). What it has to say is that this spends money,
   // and the button's own confirm says that at the moment it matters.
@@ -5528,7 +5519,7 @@ function setBackToChains(){
   const sel=document.getElementById('set_chain'); if(sel) sel.value='';
   try{ document.getElementById('trees').scrollIntoView({behavior:'smooth',block:'start'}); }catch(_){ }
 }
-// Map / Re-map the selected chain: places one real navigator call, shown live in the Mapping card.
+// Map the selected chain: the full mapping run, shown live in the Mapping card.
 // ONE mapping button (owner 07-27): "if we're going to re-map something it should follow the exact
 // same process every time, which includes making sure we can get through the menu the fastest."
 // The old one-shot (trDocument) only heard the menu once and stopped, which is half a map. It still

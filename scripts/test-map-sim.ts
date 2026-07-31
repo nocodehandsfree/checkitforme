@@ -604,9 +604,16 @@ async function main() {
     ok(/if \(s\.grade === "fail"\) return \{ recorded: true, why: `failed: \$\{s\.reason \|\| "\?"\} — changed nothing` \};/.test(cap),
       "a failed check keeps only the graph and the collapsed log row: no evidence, no version, no score");
 
+    // THE RE-MAP BUTTON IS RETIRED (owner, 07-31) — deleted with its route, and a gate greps it
+    // stays gone. Walking a held route is the engine's job: settle listens and speed checks.
     const srv = readFileSync("src/server.ts", "utf8");
-    ok(/stage: relisten \? "speed" : "map", expectedGreeting, recipeSeconds/.test(srv),
-      "a walk of a held route runs as optimizing speed with the menu it expects and the time to beat");
+    const doc = srv.slice(srv.indexOf('app.post("/api/admin/trainer/document"'), srv.indexOf('app.get("/api/admin/trainer/session'));
+    ok(!/relisten/.test(doc), "the trainer route no longer walks a held route or takes a re-listen flag");
+    ok(!/stage:/.test(doc), "and it stamps no stage, so its calls fold into the map again");
+    const page = readFileSync("public/app.html", "utf8");
+    ok(!/relisten:true/.test(page), "no Admin button places a re-listen call");
+    ok(!/'Re-map'/.test(page) && !/"Re-map"/.test(page) && !/Re-map this chain/.test(page),
+      "and no button, label or sheet says Re-map anywhere on the page");
   }
 
   // PIECE THREE: the engine runs the owner's stages under the 07-31 rounds — learn menu FIRST,

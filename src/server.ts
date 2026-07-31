@@ -22,7 +22,7 @@ import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing, backfillDirectChains, isDirectDefaultChain } from "./db/import-data";
-import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, billableOutcome, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, notifyAfterVerdict, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, transcriptPatch, triggerCall, findRecentCheck, navPlanFromVersion, zoneQuote } from "./calls/service";
+import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, billableOutcome, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, notifyAfterVerdict, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, transcriptPatch, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus, learnedSyncTick, learnedSyncStatus } from "./store-sync";
 import { buildSettingsExport, settingsSyncStatus, settingsSyncTick } from "./settings-sync";
 import { concurrencyStatus, acquireCallSlot, releaseCallSlot, governorEnabled } from "./calls/concurrency";
@@ -44,7 +44,7 @@ import { costCall, money } from "./calls/cost";
 import { behaved, agentLinesFrom } from "./calls/behaved";
 import { opsRollup, type CheckRow } from "./calls/ops";
 import { startMapper, stopMapper, mapperState, resumeMapperRuns } from "./calls/mapper";
-import { activeMap, resetChainHistory, graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, graphFor, learnFromReceipt, navSecondsOf, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
+import { activeMap, resetChainHistory, graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, graphFor, learnFromReceipt, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
 import { recipeFromCall, evidenceFromCall, type CapturedStep } from "./calls/map-capture";
 import { startSweep, stopSweep, sweepStatus, buildQueue } from "./calls/sweep";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay } from "./calls/tapedeck";
@@ -6261,7 +6261,10 @@ app.get("/api/admin/trainer/list", async (c) => {
   })) });
 });
 app.post("/api/admin/trainer/document", async (c) => {
-  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; retailerId?: number; model?: string; hint?: string; barge?: { plan: Array<{ action: string; value: string; at: number; early?: boolean }> }; reactivePress?: { digit: string; max: number }; confirm?: boolean; product?: string; why?: string; relisten?: boolean };
+  // The Re-map/Re-listen branch of this route is DELETED with its button (owner, 07-31). Walking a
+  // held route is the ENGINE's job now (the mapping run's settle listens and speed checks); this
+  // route places only the plain one-store call and the confirm-stock call.
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; retailerId?: number; model?: string; hint?: string; barge?: { plan: Array<{ action: string; value: string; at: number; early?: boolean }> }; reactivePress?: { digit: string; max: number }; confirm?: boolean; product?: string; why?: string };
   // CONFIRM mode: don't just reach a human — ask "do you have any {product} in stock?" to verify we
   // hit the RIGHT desk. On a chain-level run we ROTATE to a store we haven't asked yet (no script change,
   // just a fresh store) so we never re-ask the same store on a callback.
@@ -6286,35 +6289,11 @@ app.post("/api/admin/trainer/document", async (c) => {
   const _ch = r.chainId != null ? (await db.select().from(chains).where(eq(chains.id, r.chainId)))[0] : undefined;
   if (_ch && !chainDialable(_ch)) return c.json({ error: `${_ch.name} isn't a call target (muted / call-center / check-online) — skipped` }, 400);
   if (b.chainId) await db.update(chains).set({ navStatus: "learning", navUpdatedAt: Math.floor(Date.now() / 1000) }).where(eq(chains.id, Number(b.chainId)));
-  // RE-LISTEN: we already hold this chain's route, so walk THAT and hang up the instant the desk
-  // rings. The plan comes straight off the live version (`navPlanFromVersion`, the same builder a
-  // real check uses), so the call re-listens to the exact route customers run, never a fresh guess.
-  let barge = b.barge;
-  const relisten = b.relisten === true;
-  if (relisten) {
-    const live = r.chainId != null ? await activeMap(r.chainId, r.id) : null;
-    if (!live) return c.json({ error: "nothing to re-listen to: this chain has no route yet" }, 400);
-    const plan = navPlanFromVersion(live.recipe?.steps);
-    if (!plan.steps.length && live.recipe?.type !== "direct") {
-      return c.json({ error: "the live route has no steps to walk" }, 400);
-    }
-    barge = { plan: plan.steps.map((st) => ({ action: st.action, value: st.value, at: st.atSec })) };
-  }
-  // The grader's inputs for a walk of a route we already hold: the menu we expect to hear (the locked
-  // run's opening line) and the menu time this check has to beat. Both come off the live version, so
-  // a night menu grades "wrong menu" and a slower walk grades "not faster" with no one deciding.
-  let expectedGreeting: string | undefined; let recipeSeconds: number | undefined;
-  if (relisten && r.chainId != null) {
-    const live = await activeMap(r.chainId, r.id);
-    const ev = live?.evidence?.calls || [];
-    const newest = ev.filter((c) => (c.transcript || []).length).sort((a, b) => (b.at || 0) - (a.at || 0))[0];
-    expectedGreeting = newest?.transcript?.[0]?.replace(/^\s*\d+s\s+/, "");
-    recipeSeconds = navSecondsOf(live?.recipe ?? null, ev) ?? undefined;
-  }
-  const res = await placeNavCall(r.chainId, r.id, r.name, r.phone, b.model, b.hint, barge, b.reactivePress, confirm,
-    { why: b.why ? String(b.why).slice(0, 80) : (relisten ? "Re-listen" : "Admin: map this chain"), relisten,
-      stage: relisten ? "speed" : "map", expectedGreeting, recipeSeconds });
-  return res.error ? c.json({ error: res.error }, 400) : c.json({ sessionId: res.id, store: r.name, confirm: !!confirm, relisten });
+  // No stage rides an Admin call: a stage belongs to a mapping RUN's checks, and stamping one here is
+  // what made the map fold skip this route's calls (the 07-31 regression).
+  const res = await placeNavCall(r.chainId, r.id, r.name, r.phone, b.model, b.hint, b.barge, b.reactivePress, confirm,
+    { why: b.why ? String(b.why).slice(0, 80) : "Admin: map this chain" });
+  return res.error ? c.json({ error: res.error }, 400) : c.json({ sessionId: res.id, store: r.name, confirm: !!confirm });
 });
 app.get("/api/admin/trainer/session/:id", (c) => {
   const s = getNavSession(c.req.param("id"));
