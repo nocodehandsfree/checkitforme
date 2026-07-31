@@ -243,13 +243,29 @@ export function amend(room: string, kind: EventKind, patch: Record<string, unkno
  * So each line is recorded HERE, live, in the order it happened, against the same clock as every
  * other event on this call. TEXT ONLY — no audio, ever, on any path.
  */
-export function recordLine(room: string, who: "Agent" | "Clerk", text: string): void {
+/**
+ * `spokenAtMs` — WHEN THEY SAID IT, when that is not when we heard about it. Staff's hello is spoken
+ * before our question and only becomes words later, after their held audio is handed to the agent and
+ * he transcribes it. Stamped on arrival it lands UNDER our own question, so the customer reads a
+ * conversation where we spoke first and the store answered a question it had not been asked yet
+ * (owner screenshot 07-31). Given a real time, the line is filed where it belongs instead of at the
+ * end. Everything else is unchanged: the clock is this call's own, and it is still text only.
+ */
+export function recordLine(room: string, who: "Agent" | "Clerk", text: string, spokenAtMs?: number): void {
   try {
     const r = receipts.get(room);
     if (!r || r.closed) return;
     const t = String(text || "").trim();
     if (!t) return;
-    r.transcript.push({ atMs: Math.max(0, Date.now() - r.startMs), who, text: t.slice(0, 1000) });
+    const at = Math.max(0, spokenAtMs ?? (Date.now() - r.startMs));
+    const line = { atMs: at, who, text: t.slice(0, 1000) };
+    const last = r.transcript[r.transcript.length - 1];
+    if (last && last.atMs > at) {
+      // Out of order, so put it in its place. Insert BEFORE the first line said later than this one;
+      // ties keep the order they arrived in, which is what a real back-and-forth reads like.
+      const i = r.transcript.findIndex((l) => l.atMs > at);
+      r.transcript.splice(i < 0 ? r.transcript.length : i, 0, line);
+    } else r.transcript.push(line);
     if (r.transcript.length > 300) r.transcript.splice(0, r.transcript.length - 300); // runaway guard
     // READ AS IT GOES: hand the line to the reader now, while the check is still running, so the
     // verdict is ready the moment Charlie hangs up. Costs nothing on the line. See voice/live-read.ts.

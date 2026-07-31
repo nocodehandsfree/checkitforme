@@ -342,6 +342,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   // goes in front of the buffer the moment we commit, so the greeting arrives whole and in order.
   const preRoll: string[] = [];
   const PREROLL_MAX = Math.max(0, Math.round(tune.greetingKeepMs / 20));
+  /** When their hello actually started. Their words only exist once the agent has transcribed the
+   *  audio we held, which is after our question played — so stamped on arrival, the greeting lands
+   *  UNDER the question it came before. This is the time it belongs at, spent on the first line back. */
+  let greetingStartedMs = 0;
   let waitTotalMs = 0;
   /** A breath after the clip so the agent can never clip its own tail. */
   const CLIP_SETTLE_MS = tune.clipSettleMs;
@@ -682,7 +686,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         if (txt && /[a-zA-ZÀ-ɏ]{2,}/.test(String(txt)) && !humanWords) { humanWords = true; if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } }
         // OUR record of what was said, written live against this call's own clock — not read back
         // from the provider afterwards (hard rule 2). Text only, never audio.
-        if (txt) recordLine(room, "Clerk", String(txt));
+        if (txt) { recordLine(room, "Clerk", String(txt), greetingStartedMs || undefined); greetingStartedMs = 0; }
         if (txt) try { relayLine?.(room, "Clerk", String(txt)); } catch { /* relay best-effort */ }
         // VOICEMAIL = hang up NOW, not after the greeting plays out (owner 07-22: "as soon as it
         // starts hearing the voice message it should hang up to save us money"). Same phrases the
@@ -1003,6 +1007,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // dropped the moment it is handed on or the call ends — no store audio ever outlives the call
         // (hard rule 3). Steady tones are ringback, not a person, and never worth keeping.
         if (PREROLL_MAX > 0 && frameEnergy(b64) > VOICE_THRESH && toneShare(b64) < 0.45) {
+          if (!preRoll.length) greetingStartedMs = Math.max(0, Date.now() - startMs);
           preRoll.push(b64); if (preRoll.length > PREROLL_MAX) preRoll.shift();
         }
         maybeDetectHuman(b64);

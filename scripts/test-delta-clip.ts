@@ -155,6 +155,18 @@ console.log("▶ the clerk says hello: the question goes out, the agent connects
   // have to come out the other side.
   ok(f.chunks.length >= 25, `the greeting said BEFORE we were sure of them is kept and released too (${f.chunks.length} frames)`);
   ok(f.chunks.length >= 2, `the held words were released whole (${f.chunks.length} frames)`);
+  // AND THE HELLO READS ABOVE OUR QUESTION, because that is the order it was said in. Staff's words
+  // only exist once the agent has transcribed the audio we held, which is after our question played,
+  // so stamped on arrival the greeting printed UNDERNEATH the question it came before and the
+  // customer read a store answering something nobody had asked yet (owner screenshot 07-31).
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Thanks for calling the Fun store, this is Bob." } }));
+  await sleep(80);
+  {
+    const lines = getReceipt("room-clip")?.transcript ?? [];
+    const hello = lines.findIndex((l) => l.text.includes("this is Bob"));
+    const asked = lines.findIndex((l) => l.text.includes("Pokemon cards in stock"));
+    ok(hello >= 0 && asked >= 0 && hello < asked, `their hello reads ABOVE our question, the order it happened in (hello ${hello}, question ${asked})`);
+  }
   // ONE LINE, not three (owner 07-28: "it opens charlie_join three times"). Three things happened —
   // we asked the question, his session opened and started billing, then he took the conversation —
   // but ONE agent joined ONE call, and the Admin prints every line's note, so three of them read as
