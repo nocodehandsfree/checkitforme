@@ -45,13 +45,12 @@ check card against the check before it, off NAV time (`gainByCheck`/`checkNavSec
 beside the menu is `lastVerified` (the live version's `approvedAt`) labelled **Locked**, the Recipes sheet's word
 for the same stamp. **MODEL COLOURS = ONE SOURCE, `LANE_C`**: Alpha `#818CF8` · Bravo `#38BDF8` · Direct
 `#6B6B7B`, one cool band, **needs review `--red`**, nothing warm in the model set (Alpha was gold, the same colour
-as needs review). STYLE_GUIDE §3 + comp 2g. **NEXT: Walgreens (chain 10), NOT a re-listen:** live v1 is the hammer
-route `press 0 ×4`, 9 stores ALL Pacific, keypad so it proves the ladder prints **ALPHA**; CVS proved BRAVO.
-## VERIFIED / NOT VERIFIED · **RAILWAY:** `deploymentCancel` on a wedged deploy errors once, retry lands.
-- **DRIVEN 07-30:** 148 map-sim · 62 mapgraph · 100 map-e2e (2 PRE-EXISTING fails) · tsc + qa-design clean. **REAL
-  CHECKS on staging:** 4 to CVS; baseline + both speed-up tries wrote the menu down line by line, ONE step reading
-  "trying it earlier". Chain page driven on live rows: Locked date · Mapped checks · the gain on each card.
-- **STILL OPEN, needs REAL CUSTOMER checks:** §11 cost per delivered answer · a real `holdSeconds` > 0. **7.12 NOT BUILT. NOT PROVEN, needs HIS phone:** the save with a real human saying "this is the pharmacy".
+as needs review). STYLE_GUIDE §3 + comp 2g. **RECORDING BUILT + PROVEN 23:30:** every mapping check records (`Record:"true"`), `callSid` rides run log + evidence, `/api/admin/map/play/:callSid` streamed 418KB real audio; a line's play seeks its second, stops at the next line, no sid = no button. **NIGHT MENU MET LIVE 23:29** (Victory Blvd,
+"pharmacy is currently closed"): the check FAILED and changed nothing. Caveat: reason said "not faster" not "wrong menu" — the reset emptied evidence, no held greeting to compare; the first clean daytime check restores that.
+**NEXT: morning →** `mapper/start {chainId:5}` drives all three stages, owner looks. Then Walgreens (10): ALPHA.
+## VERIFIED / NOT VERIFIED (Railway trap: `deploymentCancel` on a wedged deploy errors once, retry lands)
+- **DRIVEN 07-30:** 196 map-sim · 62 mapgraph · 100 map-e2e (2 PRE-EXISTING fails) · tsc clean. **REAL CHECKS:** Victory Blvd walked clean (graded pass, 47s); the night check failed and touched nothing.
+- **STILL OPEN:** §11 cost per delivered answer · real `holdSeconds` > 0 · 7.12 · the save with a real human.
 ## Engine — Branson HD `1P1JhCcLzeMmkvLi1BkG` speed 0.91 (BOTH envs) · echo gate 520/150 · ringback by published
 tone frequencies, 6 rings = hang up · **Charlie $0.00183/s, meters SILENCE** · Twilio WHOLE MINUTES · 5.2c base ·
 **all FOUR dial paths open a receipt** (bridge-place · navigator · tapedeck · native `direct:<id>`). Traps: never
