@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r182" />
+<meta name="x-rev" content="glassfix-r183" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -217,6 +217,9 @@ __BRAND_HEAD__
      the page flat into the bar (dip 13 -> 0). It fades back in with the slide-up, so an OPEN sheet is
      unchanged. Footer hairline untouched — the owner wants that. */
   .csheet:not(.on){box-shadow:none}
+  /* A closed sheet must not exist as a fixed filled box on the bottom edge — that is what flips iOS's
+     bottom bar to flat grey until a reload (see csheetPark). Applied after the slide-down finishes. */
+  .csheet.parked{display:none}
   .csheet-handle{width:46px;height:5px;border-radius:3px;background:#3E3E46;margin:6px auto 16px}
   .csheet-head{display:flex;align-items:center;gap:14px}
   .csheet-ic{width:56px;height:56px;border-radius:15px;background:var(--sheet);border:1px solid var(--border);display:grid;place-items:center;font-size:26px;flex:0 0 auto;overflow:hidden}
@@ -2490,7 +2493,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
 <!-- Call slider — slides up from the bottom when a store is picked. Swipe down (or tap the backdrop)
      to dismiss. Replaces the inline "Check this store" button. -->
 <div class="csheet-bd" id="csheetBd" onclick="dismissCallSheet()"></div>
-<div class="csheet" id="csheet" aria-hidden="true">
+<div class="csheet parked" id="csheet" aria-hidden="true">
   <div class="csheet-handle" id="csheetHandle"></div>
   <!-- Everything stays (logo + name + address + product). ONLY the button changed: it says "Check this
        store" with the ANIMATED ringing-phone icon (cs-wv sound waves). -->
@@ -5384,12 +5387,23 @@ function renderCallSheet(){
     else if(r&&r.kind==='direct'){ re.textContent=t('cs.reach.direct','This store picks up directly'); re.style.display=''; }
     else re.style.display='none'; }
 }
-function showCallSheet(){ const el=$('csheet'); if(!el) return; const already=el.classList.contains('on'); renderCallSheet();
+function showCallSheet(){ const el=$('csheet'); if(!el) return; csheetUnpark(el); const already=el.classList.contains('on'); renderCallSheet();
   if(!already){ // guarantee the slide UP from the bottom: pin to off-screen, reflow, then release to .on
     el.style.transition='none'; el.style.transform='translateY(112%)'; void el.offsetHeight;
     el.style.transition=''; }
   csheetH_on(); el.style.transform=''; el.classList.add('on'); el.setAttribute('aria-hidden','false'); const bd=$('csheetBd'); if(bd) bd.classList.add('on'); }
-function hideCallSheet(){ const el=$('csheet'); if(el){ el.style.transition=''; el.style.transform=''; el.classList.remove('on'); el.setAttribute('aria-hidden','true'); csheetH_off(); } const bd=$('csheetBd'); if(bd) bd.classList.remove('on'); }
+// PARK THE CLOSED CALL SHEET OUT OF EXISTENCE (owner 07-31, proven on device).
+// A closed .csheet is still position:fixed + filled, just translated below the fold. iOS Safari sees a
+// fixed filled box sitting on the bottom edge and drops its bottom bar into the flat GREY state — and
+// nothing brings it back except a page reload. That grey bottom on the live check page was this, not
+// page height (padding the page was tried twice and failed; see qa-tint-lock 14b).
+// Device test, short non-scrolling live page: sheet left parked = grey. Sheet display:none = clear.
+// display:none only AFTER the 280ms slide-down so the close animation is untouched, and unpark before
+// any open/measure so the slide-up and csheetH_on's sizing are unchanged.
+function csheetUnpark(el){ el=el||$('csheet'); if(el){ if(el.__park){ clearTimeout(el.__park); el.__park=0; } el.classList.remove('parked'); } }
+function csheetPark(el){ if(!el) return; if(el.__park) clearTimeout(el.__park);
+  el.__park=setTimeout(()=>{ el.__park=0; if(!el.classList.contains('on')) el.classList.add('parked'); },340); }
+function hideCallSheet(){ const el=$('csheet'); if(el){ el.style.transition=''; el.style.transform=''; el.classList.remove('on'); el.setAttribute('aria-hidden','true'); csheetH_off(); csheetPark(el); } const bd=$('csheetBd'); if(bd) bd.classList.remove('on'); }
 // User-initiated dismiss (tap the backdrop / swipe down): also latch CS_DISMISSED so switching modes
 // (or any re-render) doesn't slide it back up until they pick a store again.
 function dismissCallSheet(){ CS_DISMISSED=true; hideCallSheet(); }
