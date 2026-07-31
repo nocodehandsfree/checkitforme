@@ -47,7 +47,7 @@ for the same stamp. **MODEL COLOURS = ONE SOURCE, `LANE_C`**: Alpha `#818CF8` ·
 `#6B6B7B`, one cool band, **needs review `--red`**, nothing warm in the model set (Alpha was gold, the same colour
 as needs review). STYLE_GUIDE §3 + comp 2g. **NEXT: Walgreens (chain 10), NOT a re-listen:** live v1 is the hammer
 route `press 0 ×4`, 9 stores ALL Pacific, keypad so it proves the ladder prints **ALPHA**; CVS proved BRAVO.
-## VERIFIED / NOT VERIFIED · **RAILWAY:** `deploymentCancel` on a wedged deploy errors once, retry lands.
+## VERIFIED / NOT VERIFIED · **RUNS SURVIVE DEPLOYS 07-30** (RULES.md #9, test-mapper-resume 12 asserts).
 - **DRIVEN 07-30:** 148 map-sim · 62 mapgraph · 100 map-e2e (2 PRE-EXISTING fails) · tsc + qa-design clean. **REAL
   CHECKS on staging:** 4 to CVS; baseline + both speed-up tries wrote the menu down line by line, ONE step reading
   "trying it earlier". Chain page driven on live rows: Locked date · Mapped checks · the gain on each card.

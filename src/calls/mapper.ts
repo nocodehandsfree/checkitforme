@@ -18,7 +18,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "./../db/client";
 import { chains, retailers } from "../db/schema";
-import { getSetting, setSetting } from "../db/settings";
+import { getSetting, setSetting, allSettings } from "../db/settings";
 import { isCallingPaused } from "../redis";
 import { placeNavCall, getNavSession, defaultWorkflowAsk, classifyMode, menuHasCustomerService, NavRecipe, NavStep } from "./navigator";
 import { storeForChain, lockRecipeToChain, recipeFromSteps } from "./trainer-batch";
@@ -64,9 +64,51 @@ export interface MapperRun {
   log: Attempt[];
   startedAt: number; updatedAt: number;
   navId?: string;
+  // Everything below exists so a run SURVIVES a redeploy (owner 07-30: two runs shot in the back by
+  // teammates shipping). These were loop-local variables; on the run they ride the saved copy.
+  lockedRecipe?: NavRecipe | null;  // the chain's recipe as read at start (verify phase + recovery hint)
+  pinnedStoreId?: number;           // owner-named store for the whole run (was opts.storeId)
+  verifyMisses?: number; baselineMisses?: number;
 }
 
 const runs = new Map<number, MapperRun>();
+
+// ---- A run survives a restart (owner 07-30) ----
+// The run's whole memory is saved to the settings table after every attempt; on boot, any run still
+// marked running is reloaded and continues from its next step. The in-flight call at the moment of
+// the restart dies with the old process — it is logged and never counted as evidence. The prod→staging
+// settings mirror copies a fixed whitelist only, so these keys are never stomped (settings-sync.ts).
+const runKey = (chainId: number) => `mapper_run:${chainId}`;
+async function saveRun(run: MapperRun): Promise<void> {
+  try { await setSetting(runKey(run.chainId), JSON.stringify(run)); } catch { /* best effort — the run must not die on a save */ }
+}
+async function clearRun(chainId: number): Promise<void> {
+  try { await setSetting(runKey(chainId), ""); } catch { /* same */ }
+}
+// On SIGTERM (a redeploy draining us) the loop stops BEFORE its next call and leaves the saved copy
+// marked running, so the replacement process resumes it. Without this, old and new would both dial.
+let draining = false;
+process.once("SIGTERM", () => { draining = true; });
+
+/** Boot-time: reload every run that was mid-flight when the last process died and keep it going. */
+export async function resumeMapperRuns(): Promise<number> {
+  const all = await allSettings();
+  let resumed = 0;
+  for (const [k, v] of Object.entries(all)) {
+    if (!k.startsWith("mapper_run:") || !v) continue;
+    let saved: MapperRun | null = null;
+    try { saved = JSON.parse(v) as MapperRun; } catch { continue; }
+    if (!saved?.chainId) continue;
+    if (!saved.running || saved.stop) { await clearRun(saved.chainId); continue; } // finished or stopped stays that way
+    if (runs.get(saved.chainId)?.running) continue;
+    saved.navId = undefined;
+    saved.log.push({ n: saved.attempt, phase: saved.phase, store: saved.store?.name || "", outcome: "restart wiped the call in flight — resumed from the last saved step; that attempt is not evidence" });
+    runs.set(saved.chainId, saved);
+    driveMapper(saved);
+    resumed++;
+  }
+  return resumed;
+}
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -79,6 +121,7 @@ export function stopMapper(chainId: number) {
   const r = runs.get(chainId);
   if (!r || !r.running) return { ok: false, error: "not running" };
   r.stop = true; r.stopReason = "stopped by admin";
+  void saveRun(r); // a restart right after the tap must not resurrect a run the admin stopped
   return { ok: true, stopping: true };
 }
 
@@ -299,14 +342,27 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
     benchmark: ch.navSeconds ?? null,   // what we're trying to beat (the CVS benchmark readout)
     baseline: null, best: null, experiments: [], log: [],
     startedAt: Date.now(), updatedAt: Date.now(),
+    lockedRecipe, pinnedStoreId: opts.storeId, verifyMisses: 0, baselineMisses: 0,
   };
   runs.set(chainId, run);
+  await saveRun(run);
+  driveMapper(run);
 
+  return { started: true, benchmark: run.benchmark };
+}
+
+/** The run loop, callable for a fresh start AND a boot-time resume. Everything it needs lives ON the
+ *  run object so the saved copy is the whole memory. */
+function driveMapper(run: MapperRun): void {
+  const chainId = run.chainId;
   (async () => {
     const ask = await defaultWorkflowAsk(); // Branson global's opener + voice, fetched once
-    let baselineMisses = 0, verifyMisses = 0;
+    const cap = Number((await getSetting("mapper_daily_cap")) || 0) || DAILY_CAP;
+    const lockedRecipe = run.lockedRecipe ?? null;
     while (run.running && !run.stop) {
+      if (draining) { await saveRun(run); return; } // a redeploy is taking over — the next process resumes
       run.updatedAt = Date.now();
+      await saveRun(run); // the whole memory, after every attempt — this line is what survives a restart
       // ---- guards ----
       if (await isCallingPaused()) { run.stopReason = "global kill-switch"; break; }
       if (run.callsToday >= cap) { run.stopReason = `daily cap (${cap} calls)`; run.phase = run.baseline ? run.phase : "needs-review"; break; }
@@ -322,8 +378,8 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
         // An owner-named store overrides the picker for the whole run — for a store we KNOW is open
         // right now (a late-evening CVS the 9am–8pm gate would refuse), or to re-map one specific
         // store whose menu differs from its chain. Rotation is off: this is the store, or nothing.
-        const picked = opts.storeId && !run.rotate
-          ? (await db.select().from(retailers).where(eq(retailers.id, opts.storeId)))[0]
+        const picked = run.pinnedStoreId && !run.rotate
+          ? (await db.select().from(retailers).where(eq(retailers.id, run.pinnedStoreId)))[0]
           : await storeForChain(chainId, run.usedStores, true);
         if (!picked) { run.stopReason = "no store in local daytime hours right now. Re-run when stores are open; mornings hit the east coast first."; run.phase = run.baseline ? run.phase : "needs-review"; break; }
         run.store = { id: picked.id, name: picked.name, phone: picked.phone };
@@ -418,11 +474,11 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
           run.log.push({ n: run.attempt, phase: wasVerify ? "verify" : "baseline", store: store.name, outcome: `${wasVerify ? `locked map VERIFIED — real time ${secs ?? "?"}s (stored ${run.benchmark ?? "?"}s)` : "human reached — baseline locked"} (${classifyMode((s?.steps || []) as NavStep[]).label})`, seconds: secs });
           if (run.phase === "locked") break;
         } else if (wasVerify) {
-          verifyMisses++;
-          run.log.push({ n: run.attempt, phase: "verify", store: store.name, outcome: `replay missed (${s?.status || "timeout"})${verifyMisses >= 2 ? " — relearning from scratch" : ""}`, seconds: secs });
-          if (verifyMisses >= 2) run.phase = "listen"; // the stored map may be stale — rediscover
+          run.verifyMisses = (run.verifyMisses ?? 0) + 1;
+          run.log.push({ n: run.attempt, phase: "verify", store: store.name, outcome: `replay missed (${s?.status || "timeout"})${(run.verifyMisses ?? 0) >= 2 ? " — relearning from scratch" : ""}`, seconds: secs });
+          if ((run.verifyMisses ?? 0) >= 2) run.phase = "listen"; // the stored map may be stale — rediscover
         } else {
-          baselineMisses++; run.phase = "baseline";
+          run.baselineMisses = (run.baselineMisses ?? 0) + 1; run.phase = "baseline";
           // A call that reached nobody proves nothing about the route, so it changes nothing — but it
           // COUNTS (runtime spec §10.5), or a route that stopped working keeps looking healthy.
           await recordFailedAttempt({
@@ -431,7 +487,7 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
             seconds: secs, promptCount: (s?.steps as NavStep[] | undefined)?.filter((st) => st.who === "ivr").length,
           }).catch(() => { /* evidence is best-effort */ });
           run.log.push({ n: run.attempt, phase: "baseline", store: store.name, outcome: `no human (${s?.status || "timeout"})${s?.confirmResult === "redirect" ? " — redirected: " + (s?.redirectTo || "") : ""}`, seconds: secs });
-          if (baselineMisses >= BASELINE_TRIES) { run.phase = "needs-review"; run.stopReason = `no human in ${BASELINE_TRIES} attempts`; break; }
+          if ((run.baselineMisses ?? 0) >= BASELINE_TRIES) { run.phase = "needs-review"; run.stopReason = `no human in ${BASELINE_TRIES} attempts`; break; }
         }
       } else if (run.phase === "optimize" && ex) {
         // Never hang up on the same desk twice in a row while testing (owner 07-27): each experiment
@@ -488,10 +544,10 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
         : "nothing left to learn");
     } else if (run.stop) run.phase = "stopped";
     run.running = false; run.updatedAt = Date.now();
+    await clearRun(chainId); // finished for real — a restart must not resurrect it
   })().catch((e) => {
     run.running = false; run.phase = run.baseline ? run.phase : "needs-review";
     run.stopReason = "engine error: " + String(e).slice(0, 120);
+    void clearRun(chainId); // a crashing run must not resume into the same crash forever
   });
-
-  return { started: true, benchmark: run.benchmark };
 }
