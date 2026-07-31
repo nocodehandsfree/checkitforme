@@ -16,21 +16,21 @@ git. Last updated: 2026-07-30 (every try back runs the same way; Mapped checks c
 - **The tint is nailed down**, three ways it used to break are refused before anything goes live. Still cannot see
   an iPhone. **Live is cleaned:** Cost per check opens on **The baseline**, your 6.7¢ ceiling off your real prices.
 ## Every try back now runs the exact same way (07-30, on staging)
-- There used to be two behaviours. A re-listen answered each question as it heard it; a speed-up try played our
-  whole answer on a timer and barely wrote the menu down. Two records of the same store. Now every mapping check
-  walks the menu the same way, and the ONE answer we are testing early is the only thing that differs.
-- On the chain page: **Mapping calls is now Mapped checks**, and **each check shows how much faster or slower it
-  was than the check before it**. The date beside the menu now says **Locked**, so it reads as what it is.
-- **Colours:** Alpha indigo · Bravo blue · Direct grey, one calm band, the same on every screen.
-  **Needs review is red**, and red now only ever means something is wrong.
+- Every mapping check walks the menu the same way; the ONE answer being tested early is the only difference.
+  **Mapping calls is now Mapped checks** and each check shows faster or slower than the check before it.
+- **Colours:** Alpha indigo · Bravo blue · Direct grey, the same on every screen. **Needs review is red**, and
+  red now only ever means something is wrong.
 ## Chains: the page is rebuilt and every mapping call lands on it (07-30)
 - Tap a chain: **nav time** (getting through their phone menu, the part we control), what it costs, how often the
   recipe reaches Staff, the **Menu** by condition, the **Recipes** held, and **Review**.
 - **Re-map hangs up on the second ring** of the desk, so it never troubles Staff, and that check becomes the
   recipe. A check that ends on the ring counts as the good map it is, and **Reached Staff shows nothing instead
   of 0%** until one actually waits for a person.
-- **CVS is mapped and proven** (07-30): **nav time 54s**, the average of its checks, so a new check nudges the
-  number instead of overwriting it, and the menu is written down line by line in CVS's own words.
+- **CVS is mapped and proven** (07-30): **nav time 54s**, the average of its checks, and the menu is written
+  down line by line in CVS's own words.
+- **You approved the mapping rebuild** (07-30, comps 3a and 3b): three stages on every check — mapping menu,
+  optimizing speed, proving department — every check graded, a failed one collapsed with its reason, and the
+  menu shown as the map of doors from the one locked run. The whole contract is written; the build is next.
 ## The new calling engine is ON for staging. Your six test calls are the last thing (07-28/29)
 - **Nothing to flip.** A check from staging.checkitforme.com goes through the new engine. **Listen for:** it asks
   once and waits · no keypad beeps once you are talking · after a hold it asks you again if you might be new.
