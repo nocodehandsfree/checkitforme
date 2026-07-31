@@ -12,7 +12,7 @@
 import { EventEmitter } from "node:events";
 import { WebSocketServer, type WebSocket as WS } from "ws";
 import { setBridgeContext, handleTwilioBridge } from "../src/voice/bridge";
-import { openReceipt, getReceipt, transcriptOf, rollup, _reset } from "../src/calls/events";
+import { openReceipt, getReceipt, transcriptOf, lineStillUp, closeReceipt, rollup, _reset } from "../src/calls/events";
 import { toMediaFrames } from "../src/calls/clip-cache";
 
 /** Real ringback: the published North American pair, 440 + 480 Hz, μ-law encoded — the same thing
@@ -346,6 +346,11 @@ console.log("\n▶ the other strategy: close him for the wait, bring him back as
     // And the sentence that caused all of it does not get read as being handed to another department.
     ok(!(live.events || []).some((e) => e.detail?.wrongDepartment === true),
       "“I'm gonna put you on hold” is a wait, never a wrong department");
+    // NO VERDICT MAY LAND WHILE THE PHONE IS IN SOMEBODY'S HAND. Closing Charlie ends his conversation
+    // at the provider, and both finalize paths took that as the check being over: they stamped "we got
+    // left on hold", charged for it and sent the alerts while Staff were still walking back with the
+    // answer. This is the one gate they now ask, and it has to say the line is up.
+    ok(lineStillUp("room-reopen"), "no verdict can be stamped while Charlie is dropped, because the line is still up");
   }
   speak(tw, 30);
   await sleep(150);
@@ -355,6 +360,9 @@ console.log("\n▶ the other strategy: close him for the wait, bring him back as
   ok(joins.some((j) => j.detail?.segment === 2), "and the receipt calls it part 2 of the SAME call, never a second call");
   const r = getReceipt("room-reopen")!;
   ok(r.segments.length === 2, "two numbered stretches on one receipt");
+  // …and the gate opens the moment the CARRIER says the line ended, so the check finalizes as normal.
+  closeReceipt("room-reopen", "Check ended", "completed");
+  ok(!lineStillUp("room-reopen"), "once the carrier hangs up the line is down, and the verdict may land");
   restore(); tw.close(); f.close();
 }
 

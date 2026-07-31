@@ -356,6 +356,26 @@ export function startMeter(room: string, key: "holdMs"): void {
 
 export function getReceipt(room: string): Receipt | null { return receipts.get(room) ?? null; }
 
+/**
+ * IS THE PHONE STILL IN SOMEBODY'S HAND? The one honest answer to "has this check finished", and the
+ * only place any finalize is allowed to ask.
+ *
+ * WHY (owner, test 1 on 07-31): Charlie is CLOSED every time Staff walk away — the only thing that
+ * actually stops the meter — and closing him ends his conversation at the provider. The provider then
+ * says the conversation is over, which BOTH finalize paths took as the check being over: they stamped
+ * a verdict ("we got left on hold"), charged for it and fired the alerts, while Staff were still away
+ * looking at a shelf and the line was perfectly alive. Dropping Charlie dropped the whole check.
+ *
+ * The receipt opens when we dial and closes only when the CARRIER says the line ended, so it knows
+ * what the provider cannot. A missing receipt (a restart, an old check swept up later) is not a live
+ * call: say so, and let the finalize run exactly as it always has.
+ */
+export function lineStillUp(room: string | null | undefined): boolean {
+  if (!room) return false;
+  const r = receipts.get(room);
+  return !!r && !r.closed;
+}
+
 /** Close the receipt and hand it to the sink exactly once. */
 export function closeReceipt(room: string, note?: string, reason?: string): Receipt | null {
   const r = receipts.get(room);

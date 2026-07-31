@@ -7,7 +7,7 @@ import { fetchStorePhone } from "../store-phone";
 import {
   accounts, alertSends, callResults, categories, chains, customerSchedules, retailers, scheduleTargets, schedules, statuses, watches, zoneRetailers, zones,
 } from "../db/schema";
-import { linkCall, openReceipt, emit, closeReceipt, linkProviderCall, markNow } from "./events"; // ties the call row to its receipt (the timeline + the seconds)
+import { linkCall, openReceipt, emit, closeReceipt, linkProviderCall, lineStillUp, markNow } from "./events"; // ties the call row to its receipt (the timeline + the seconds)
 import { recordVerdict } from "./receipt-store";
 import { chargeOneCredit, isCompAccount, getAccount } from "../billing";
 import { sendRestockEmailTo, sendAlert, accountLang, localizeResult } from "../alerts";
@@ -1179,6 +1179,11 @@ export async function ingestPending(): Promise<number> {
     if (!row.providerCallId) continue;
     if (row.providerCallId.startsWith("delta:")) continue; // D-lane call — its own finalize hook writes the verdict
     if (row.providerCallId.startsWith("bridge:")) continue; // headless bridge call still dialing — the conv id lands at connect (or the room finalizer closes it)
+    // THE LINE IS STILL UP, SO THE CHECK HAS NOT FINISHED. Charlie's conversation ends every time he
+    // is closed for a hold, and the provider reports that as the conversation being over. Reading it
+    // as the end of the check stamped a verdict on a call that was still running. Left pending on
+    // purpose: the next sweep after the carrier hangs up finalizes it properly.
+    if (lineStillUp(row.room)) continue;
     const outcome = await provider.getConversation(row.providerCallId);
     if (!outcome) continue; // not finished yet
 

@@ -37,7 +37,7 @@ import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
 import { placeNavCall, navInitialTwiml, navStep, navEnded, navMediaFeed, getNavSession, latestNavSessionForChain, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
 import { listenNavFeed, endListenNav } from "./calls/listen-nav";
 // THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
-import { emit, markNow, closeReceipt, linkCall, rollup, rollupFromRow, getReceipt, transcriptOf, setLineHook, type Rollup } from "./calls/events";
+import { emit, markNow, closeReceipt, linkCall, rollup, rollupFromRow, getReceipt, transcriptOf, lineStillUp, setLineHook, type Rollup } from "./calls/events";
 import { installReceiptStore, currentRates, onReceiptClosed } from "./calls/receipt-store";
 import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
@@ -7034,6 +7034,13 @@ app.post("/webhooks/elevenlabs", async (c) => {
     const o = await provider.parseWebhook(c.req.raw);
     if (o.callId) {
       const row = (await db.select().from(callResults).where(eq(callResults.id, o.callId)))[0];
+      // A CLOSED CHARLIE IS NOT A FINISHED CHECK. He is closed on every hold, which ends his
+      // conversation at the provider, which fires this webhook — so a store saying "give me a second"
+      // used to stamp the verdict "we got left on hold", charge for it and send the alerts while the
+      // line was still up and Staff were walking back with the answer. The carrier's own end is the
+      // only end; the receipt is open until then, and the poller finalizes this row the moment it is
+      // genuinely over.
+      if (lineStillUp(row?.room)) return c.json({ ok: true, skipped: "line still up" });
       // Consensus second read — keep the webhook verdict + billing identical to the poller (ingestPending):
       // two non-conflicting reads → a hard verdict (charge); conflict/ambiguity → "no clear answer", no charge.
       let confirmed = o.confirmed, statusKey = o.statusKey;
