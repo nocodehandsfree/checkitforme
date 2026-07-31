@@ -151,6 +151,7 @@ export function evidenceFromCall(opts: {
   navId?: string; storeId?: number; storeName?: string; steps: CapturedStep[];
   seconds: number | null; reachedHuman: boolean; path: string; note?: string; at?: number;
   greeting?: string; transferAtSec?: number | null; endedOnRing?: boolean;
+  stage?: CheckStage; grade?: "pass" | "fail"; reason?: CheckFailReason;
   hourLocal?: number | null; dow?: number | null; language?: Language;
 }): EvidenceCall {
   const at = opts.at || Math.floor(Date.now() / 1000);
@@ -161,6 +162,7 @@ export function evidenceFromCall(opts: {
     reachedHuman: opts.reachedHuman, path: opts.path,
     greeting: opts.greeting, transferAtSec: opts.transferAtSec ?? null,
     endedOnRing: opts.endedOnRing || undefined,
+    stage: opts.stage, grade: opts.grade, reason: opts.reason,
     hourLocal: opts.hourLocal ?? null, dow: opts.dow ?? null,
     // What language the menu spoke, read off the lines we heard. Free, and the field has to be
     // populated from the first call or it is worthless when discovery proper arrives.
@@ -191,6 +193,7 @@ export async function recordNavCall(s: {
   steps: CapturedStep[]; humanAtSec: number | null; transferAtSec?: number | null;
   greeting?: string; recipe?: MapRecipe | null; relisten?: boolean; status: string;
   endedOnRing?: boolean;
+  stage?: CheckStage; grade?: "pass" | "fail"; reason?: CheckFailReason;
 }): Promise<{ recorded: boolean; why: string }> {
   const chainId = Number(s.chainId || 0);
   if (!chainId) return { recorded: false, why: "no chain on this call" };
@@ -210,6 +213,11 @@ export async function recordNavCall(s: {
     reachedHuman, seconds: s.humanAtSec, outcome: reachedHuman ? "person" : String(s.status || "failed"),
   });
 
+  // A FAILED CHECK CHANGES NOTHING (owner, 07-30). The graph above keeps what was heard, the run log
+  // keeps the check collapsed with its reason, and that is ALL: no evidence, no version, no score, no
+  // nav time. The record only ever moves forward on checks that earned it.
+  if (s.grade === "fail") return { recorded: true, why: `failed: ${s.reason || "?"} — changed nothing` };
+
   const when = await mod.storeLocalTime(s.retailerId);
   const evidence = evidenceFromCall({
     navId: s.id, storeId: s.retailerId, storeName: s.retailerName, steps,
@@ -217,6 +225,7 @@ export async function recordNavCall(s: {
     path: s.recipe ? mod.pathSignature(s.recipe) : actions.map((a) => `${a.action}:${a.value}`).join(">"),
     greeting: s.greeting, transferAtSec: s.transferAtSec ?? null,
     endedOnRing: s.endedOnRing,
+    stage: s.stage, grade: s.grade, reason: s.reason,
     hourLocal: when.hour, dow: when.dow,
     note: s.relisten ? "re-listen" : "admin call",
   });

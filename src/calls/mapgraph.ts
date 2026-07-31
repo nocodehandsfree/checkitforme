@@ -1065,12 +1065,16 @@ export interface MapCall {
   /** WE hung up, on the ring, on purpose. The screen must not read a missing human as "nobody
    *  picked up" when the phone was ringing and we chose to stop (owner, 07-30). */
   endedOnRing: boolean;
+  stage: CheckStage | null;
+  grade: "pass" | "fail" | null;
+  reason: CheckFailReason | null;
   turns: MapTurn[];
 }
 type RawRun = {
   navId?: string; ts?: number; store?: string; retailerId?: number; outcome?: string;
   seconds?: number | null; transferAtSec?: number | null; greeting?: string | null;
   stopReason?: string | null; why?: string | null; endedOnRing?: boolean;
+  stage?: string; grade?: string; reason?: string;
   steps?: Array<{ who?: string; text?: string; atSec?: number; action?: string | null; value?: string | null }>;
 };
 
@@ -1226,6 +1230,9 @@ async function callsForChain(chainId: number): Promise<MapCall[]> {
     stopReason: r.stopReason ? String(r.stopReason) : null,
     why: r.why ? String(r.why) : null,
     endedOnRing: !!r.endedOnRing,
+    stage: (r.stage === "map" || r.stage === "speed" || r.stage === "prove") ? r.stage : null,
+    grade: (r.grade === "pass" || r.grade === "fail") ? r.grade : null,
+    reason: (CHECK_FAIL_REASONS as readonly string[]).includes(String(r.reason)) ? r.reason as CheckFailReason : null,
     // The conversation. "them" is the store, "us" is what we said or pressed back.
     turns: (Array.isArray(r.steps) ? r.steps : []).map((st) => ({
       who: st.who === "us" ? ("us" as const) : ("them" as const),

@@ -551,6 +551,28 @@ async function main() {
       "a walk that died with no better explanation fails as said wrong words");
   }
 
+  // PIECE TWO: the grade is wired through the engine — decided in finish before anything is written,
+  // carried on the run log AND the map fold, and a failed check changes nothing.
+  console.log("▶ THE GRADE RIDES EVERY CHECK, AND A FAILED CHECK CHANGES NOTHING");
+  {
+    const nav = readFileSync("src/calls/navigator.ts", "utf8");
+    ok(/const g = gradeCheck\(\{[\s\S]{0,900}?\}\);\s*\n\s*s\.grade = g\.grade; s\.failReason = g\.reason;/.test(nav),
+      "finish grades the check by machine before anything is written");
+    ok((nav.match(/stage: s\.stage \?\? \(s\.relisten \? "speed" : "map"\), grade: s\.grade, reason: s\.failReason,/g) || []).length === 2,
+      "and the same verdict rides both the run log and the map fold, so screens cannot disagree");
+    ok(/s\.repromptHeard = true;/.test(nav), "the store saying it did not understand is written down as a fact");
+    ok(/sameMenu\(firstIvr\.text, line\)\) s\.greetingTwice = true;/.test(nav),
+      "and the opening recording playing again mid-check is caught as being sent to the start");
+
+    const cap = readFileSync("src/calls/map-capture.ts", "utf8");
+    ok(/if \(s\.grade === "fail"\) return \{ recorded: true, why: `failed: \$\{s\.reason \|\| "\?"\} — changed nothing` \};/.test(cap),
+      "a failed check keeps only the graph and the collapsed log row: no evidence, no version, no score");
+
+    const srv = readFileSync("src/server.ts", "utf8");
+    ok(/stage: relisten \? "speed" : "map", expectedGreeting, recipeSeconds/.test(srv),
+      "a walk of a held route runs as optimizing speed with the menu it expects and the time to beat");
+  }
+
   console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }

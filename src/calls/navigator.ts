@@ -16,6 +16,8 @@ import { openReceipt, emit, markNow, closeReceipt } from "./events";
 // ringing, so it could not tell "nobody is there" from "somebody just said hello". These are the same
 // two classes the paid-agent calls listen with. Nothing new is built here.
 import { PromptDetector, ConversationEar, frameEnergy as earFrameEnergy, type HoldReason } from "./listen-nav";
+import { sameMenu, type CheckStage, type CheckFailReason } from "./mapgraph";
+import { gradeCheck } from "./map-capture";
 
 // Twilio webhooks must come back to THIS service — staging maps from staging, prod from prod.
 const RAILWAY_HOST = config.staging.on ? "voice-caller-staging-production.up.railway.app" : "voice-caller-production-2d6b.up.railway.app";
@@ -142,6 +144,18 @@ export interface NavSession {
   /** WE hung up, on the ring, on purpose. Rides on the run log so the chain page can name the state
    *  it actually was ("Admin hung up") instead of guessing "nobody picked up" from the missing human. */
   endedOnRing?: boolean;
+  /** The owner's three stages (07-30): map = mapping menu · speed = optimizing speed · prove =
+   *  proving department. Every mapping check runs as one of them, and the screen prints the stage. */
+  stage?: CheckStage;
+  /** The locked menu's opening line, when one is held — the check is graded "wrong menu" if the
+   *  store opens with a different menu (night, Spanish, changed), and then it can change NOTHING. */
+  expectedGreeting?: string;
+  /** The reigning recipe's menu time, for a speed check to beat. Not beaten = failed, "not faster". */
+  recipeSeconds?: number;
+  repromptHeard?: boolean;  // the store said it did not understand us
+  greetingTwice?: boolean;  // the opening recording played again mid-check: we were sent to the start
+  grade?: "pass" | "fail";  // decided by machine in finish; a failed check changes nothing
+  failReason?: CheckFailReason;
   /** How far a RE-LISTEN has walked its known route. The plan is fired one step at a time from
    *  `navTurn` so the listener stays open between steps and every menu line is written down. */
   planIdx?: number;
@@ -610,7 +624,13 @@ async function navTurn(id: string, speech: string): Promise<string> {
     const fragment = line.split(/\s+/).length <= TAIL_WORDS && !isMenuLine(line) && !ROUTING_RE.test(line);
     const prevIvr = [...s.steps].reverse().find((st) => st.who === "ivr" && st.text);
     if (spokeOver && fragment && prevIvr) prevIvr.text = `${prevIvr.text} ${line}`.slice(0, 300);
-    else s.steps.push({ who: "ivr", text: line, atSec });
+    else {
+      // SENT TO THE BEGINNING: the opening recording playing again mid-check means the menu started
+      // over on us. That is a graded failure, not something the screen should improvise around.
+      const firstIvr = s.steps.find((st) => st.who === "ivr" && st.text);
+      if (firstIvr && s.steps.some((st) => st.who === "us") && sameMenu(firstIvr.text, line)) s.greetingTwice = true;
+      s.steps.push({ who: "ivr", text: line, atSec });
+    }
     // #2: harvest the pressable options from any menu line into the chain's menu tree + keep the raw
     // line (STT is fuzzy, so the owner can read the exact wording when the parse is imperfect).
     // EVERY choice the store offers, pressed OR spoken. This used to test for the word "press" and
@@ -728,6 +748,7 @@ async function navTurn(id: string, speech: string): Promise<string> {
     // our last answer, so we say THAT answer again and do not advance. Walking on here is how a check
     // ends up answering "front door services?" with the word meant for the question after it.
     if (said && isReprompt(said)) {
+      s.repromptHeard = true;
       const last = s.planIdx ? s.barge.plan[s.planIdx - 1] : null;
       if (last?.value && last.action !== "press") {
         s.lastActTurn = s.turns;
@@ -865,6 +886,25 @@ async function navTurn(id: string, speech: string): Promise<string> {
 function finish(s: NavSession, status: "human" | "failed" | "mapped") {
   s.status = status === "mapped" ? "done" : status;
   s.endedOnRing = status === "mapped";
+  // THE GRADE, before anything is written (owner, 07-30): a check must earn its way into the record,
+  // and a failed one changes nothing. Decided here, by machine, from what this check actually did —
+  // both the run log and the map fold read the same verdict, so the screens can never disagree.
+  {
+    const heard = s.steps.find((st) => st.who === "ivr" && st.text)?.text;
+    const said = s.steps.filter((st) => st.who === "us" && !String(st.text).startsWith("asked:")).length;
+    const g = gradeCheck({
+      stage: s.stage ?? (s.relisten ? "speed" : "map"),
+      expectedGreeting: s.expectedGreeting, heardGreeting: heard,
+      wrongDepartment: s.confirmResult === "redirect",
+      transferHeard: s.transferAtSec != null,
+      ringOrStaff: s.endedOnRing || s.humanAtSec != null,
+      repromptHeard: s.repromptHeard, greetingTwice: s.greetingTwice,
+      plannedSteps: s.barge?.plan?.length, saidSteps: said,
+      testedEarly: !!s.barge?.plan?.some((p) => p.early),
+      navSeconds: s.transferAtSec ?? null, recipeSeconds: s.recipeSeconds ?? null,
+    });
+    s.grade = g.grade; s.failReason = g.reason;
+  }
   // In confirm mode, only a path that ENDED at the right desk (answered, not redirected) is lockable —
   // a redirect means we navigated to the wrong human, so we capture it but don't present it as the recipe.
   // A CALL THAT ENDED ON THE RING IS A GOOD MAP (owner, 07-30). It walked the whole phone system and
@@ -908,6 +948,7 @@ function finish(s: NavSession, status: "human" | "failed" | "mapped") {
         // WE ended it, on the ring, on purpose. `s.status` is already "done" by here, so the reason
         // has to travel on its own or the map books a perfect re-listen as a call that missed Staff.
         endedOnRing: status === "mapped",
+        stage: s.stage ?? (s.relisten ? "speed" : "map"), grade: s.grade, reason: s.failReason,
       }))
       .then((r) => emit(s.id, "unknown", `Map updated: ${r.why}`, { recorded: r.recorded }))
       .catch((e) => console.error("[navigator] recordNavCall", e));
@@ -941,6 +982,7 @@ async function persistRun(s: NavSession): Promise<void> {
       // WE ended it, on the ring, on purpose. Without this the screen has to guess from "no human"
       // and lands on "nobody picked up", which is the one thing that did not happen.
       endedOnRing: s.endedOnRing ? true : undefined,
+      stage: s.stage ?? (s.relisten ? "speed" : "map"), grade: s.grade, reason: s.failReason,
       // A re-listen reports the MENU's seconds (the handoff, else its last step), never a person's.
       seconds: s.relisten
         ? (s.transferAtSec ?? s.steps.filter((st) => st.who === "us").slice(-1)[0]?.atSec ?? s.humanAtSec ?? null)
@@ -969,14 +1011,14 @@ async function recordConfirmAsked(chainId: number, retailerId: number): Promise<
 }
 
 /** Place the documentation call; returns the session id the admin polls for live progress. */
-export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number; early?: boolean }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { listenFirst?: boolean; askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string; relisten?: boolean; callerRecords?: boolean }): Promise<{ id?: string; error?: string }> {
+export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number; early?: boolean }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { listenFirst?: boolean; askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string; relisten?: boolean; callerRecords?: boolean; stage?: CheckStage; expectedGreeting?: string; recipeSeconds?: number }): Promise<{ id?: string; error?: string }> {
   if (!config.callsEnabled) return { error: "calls disabled on this preview deploy" };
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const from = process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
   const id = crypto.randomUUID().slice(0, 8);
-  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined, listenFirst: extra?.listenFirst, askText: extra?.askText, target: extra?.target, maxSec: extra?.maxSec, transferWaitSec: extra?.transferWaitSec, relisten: extra?.relisten, callerRecords: extra?.callerRecords };
+  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined, listenFirst: extra?.listenFirst, askText: extra?.askText, target: extra?.target, maxSec: extra?.maxSec, transferWaitSec: extra?.transferWaitSec, relisten: extra?.relisten, callerRecords: extra?.callerRecords, stage: extra?.stage, expectedGreeting: extra?.expectedGreeting, recipeSeconds: extra?.recipeSeconds };
   sessions.set(id, session);
   session.why = extra?.why;
   // The receipt opens at DIAL, before anything can go wrong, so even a call the carrier refuses

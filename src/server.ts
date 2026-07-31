@@ -44,7 +44,7 @@ import { costCall, money } from "./calls/cost";
 import { behaved, agentLinesFrom } from "./calls/behaved";
 import { opsRollup, type CheckRow } from "./calls/ops";
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
-import { activeMap, resetChainHistory, graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, graphFor, learnFromReceipt, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
+import { activeMap, resetChainHistory, graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, graphFor, learnFromReceipt, navSecondsOf, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
 import { recipeFromCall, evidenceFromCall, type CapturedStep } from "./calls/map-capture";
 import { startSweep, stopSweep, sweepStatus, buildQueue } from "./calls/sweep";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay } from "./calls/tapedeck";
@@ -6262,8 +6262,20 @@ app.post("/api/admin/trainer/document", async (c) => {
     }
     barge = { plan: plan.steps.map((st) => ({ action: st.action, value: st.value, at: st.atSec })) };
   }
+  // The grader's inputs for a walk of a route we already hold: the menu we expect to hear (the locked
+  // run's opening line) and the menu time this check has to beat. Both come off the live version, so
+  // a night menu grades "wrong menu" and a slower walk grades "not faster" with no one deciding.
+  let expectedGreeting: string | undefined; let recipeSeconds: number | undefined;
+  if (relisten && r.chainId != null) {
+    const live = await activeMap(r.chainId, r.id);
+    const ev = live?.evidence?.calls || [];
+    const newest = ev.filter((c) => (c.transcript || []).length).sort((a, b) => (b.at || 0) - (a.at || 0))[0];
+    expectedGreeting = newest?.transcript?.[0]?.replace(/^\s*\d+s\s+/, "");
+    recipeSeconds = navSecondsOf(live?.recipe ?? null, ev) ?? undefined;
+  }
   const res = await placeNavCall(r.chainId, r.id, r.name, r.phone, b.model, b.hint, barge, b.reactivePress, confirm,
-    { why: b.why ? String(b.why).slice(0, 80) : (relisten ? "Re-listen" : "Admin: map this chain"), relisten });
+    { why: b.why ? String(b.why).slice(0, 80) : (relisten ? "Re-listen" : "Admin: map this chain"), relisten,
+      stage: relisten ? "speed" : "map", expectedGreeting, recipeSeconds });
   return res.error ? c.json({ error: res.error }, 400) : c.json({ sessionId: res.id, store: r.name, confirm: !!confirm, relisten });
 });
 app.get("/api/admin/trainer/session/:id", (c) => {
