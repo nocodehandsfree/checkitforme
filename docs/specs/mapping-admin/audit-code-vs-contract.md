@@ -87,7 +87,34 @@ here is fixed yet. Screens section lands below when its read completes.
     `map` / `speed` / `prove` to the owner. `agreedMenu`/`agreedWords` and the Recipes-card greeting
     are genuinely gone.
 
+## RE-CHECK 07-31 (after the mapper's "done"; staging @03d87fad) — THIS IS THE FIX LIST
+Two blind re-readers, per item. **FIXED: 2** — the lock stamp now fires only at three-store agreement
+(`mapper.ts:515,534-538`, but see 8) · the old one-call trainer is retired (`trainer-batch.ts:190-192`).
+**PARTLY: 3, 8, 9, 15.** Everything else **STILL BROKEN, unchanged** — 1, 2, 4, 5, 6, 7, 10, 11, 12,
+13, 14, 16, 17, 18, 19, 20 (all evidence lines above re-verified current).
+- 3 partly: `bargeSafe:false` is run-local now, but a failed map check still folds into live evidence
+  and re-scores confidence (`mapper.ts:484` → `mapgraph.ts:1563-1585`) and every ended check writes
+  `chains.navStatus` via `markNavOutcome` (`navigator.ts:1069`).
+- 8 partly: `provedStores` still seeded with the mapping-stage store → only TWO prove stores required
+  (`mapper.ts:472,515`); store exceptions still branch on route, never greeting.
+- 9 partly: the null-seconds bug MOVED — a speed win locks a re-listen recipe carrying `seconds:null`,
+  nulling `navSeconds`/`avgTreeSeconds` (`mapper.ts:496,538` → `trainer-batch.ts:114,123`).
+- 15 partly: greeting quoted on the mapping check (right) AND on every later check that reached Staff
+  (wrong) — no stage/first-check gate (`app.html:5140-5145`).
+
+**REGRESSION (new, urgent):** the Admin Re-map/Re-listen button writes NOTHING to the map again —
+`finish()` coalesces a stage onto every call (`navigator.ts:951`), `recordNavCall` bails on any stage
+(`map-capture.ts:227`), and the button sends a stage with no `callerRecords` (`server.ts:6314-6316`).
+This is the exact 07-30 bug the fold was built to fix.
+
+**Chat decisions never built (owner-agreed, missing from the contract):**
+- A. Two `wrong menu` fails → the chain re-enters mapping from the start automatically. No counter
+  exists anywhere; a greeting mismatch just books a generic miss.
+- B. Day/After-9pm/Spanish must be DISCOVERED (unmatched greeting → filed, quarantined, heard twice =
+  real). Still hard-coded three, computed in the browser from clock + language.
+- C. Owner ruling 07-31: greeting quoted ONLY on the first full-map check (see 15).
+
 ## How to use this
-Merge with the owner's page feedback + the mapper's own line-by-line into ONE fix list. Fix on the
-corrected, owner-blessed contract only. Items 15 and 11 need an owner ruling (contract vs newer note)
-before code moves. Every fix proves itself on the page before it is called done.
+This file is the NEXT AGENT'S box: fix every STILL BROKEN / PARTLY item and the regression, write A,
+B, C into the contract for the owner's blessing, ONE item at a time, each proven on the page (or by a
+driven check) before the next. The contract stays the law; this list is the gap between law and code.

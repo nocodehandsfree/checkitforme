@@ -27,10 +27,10 @@ git. Last updated: 2026-07-31 (in stock alerts fixed; logos sized to match; try 
   recipe reaches Staff, the **Menu** by condition, the **Recipes** held, and **Review**.
 - **Re-map hangs up on the second ring** of the desk, so it never troubles Staff, and that check becomes the
   recipe. **Reached Staff shows nothing instead of 0%** until one actually waits for a person.
-- **The mapping rebuild is BUILT, and the 07-31 fixes you blessed are in** (on staging + Admin): a run keeps
-  its work to itself until three stores agree, then the map moves once; the recipe winner and its seconds are
-  honest; the play button lives on the Menu. **CVS is wiped clean on the real site and staging, route kept.**
-  The old one-call trainer is retired. **Ready for the next CVS run on your go.**
+- ⚠️ **Mapper said done; the PM re-check says NOT done** (07-31): 2 truly fixed, 4 half-fixed, 17
+  untouched, the Re-map button writes nothing to the map again (yesterday's bug, back), and three
+  decisions from your chats were never built. **The fix list IS the next mapper's task:
+  `docs/specs/mapping-admin/audit-code-vs-contract.md`. No CVS run until it closes.**
 ## The new calling engine is ON for staging. Your six test calls are the last thing (07-28/29)
 - **Nothing to flip.** A check from staging.checkitforme.com goes through the new engine. **Listen for:** it asks
   once and waits · no keypad beeps once you are talking · after a hold it asks you again if you might be new.
