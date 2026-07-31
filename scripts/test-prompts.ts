@@ -43,6 +43,12 @@ ok(/never ask to be put through/i.test(RESTOCK_PROMPT), "flag off means it never
 console.log("▶ heardWrongDepartment: it fired");
 for (const [line, why] of [
   ["Hi, this is the pharmacy.", "another counter"],
+  // HOW A COUNTER ACTUALLY ANSWERS THE PHONE. Three of the owner's six test checks open like this.
+  ["Pharmacy, this is Joe.", "another counter"],
+  ["Pharmacy", "another counter"],
+  ["Photo, how can I help you?", "another counter"],
+  ["Deli.", "another counter"],
+  ["Thanks for calling, pharmacy speaking.", "another counter"],
   ["You've reached the photo lab, hon.", "another counter"],
   ["Yeah we're the deli, what do you need?", "another counter"],
   ["Oh that's a different department.", "wrong department"],
@@ -72,6 +78,10 @@ ok(heardWrongDepartment("You'll want the front store for that.")!.handingOver ==
 console.log("▶ heardWrongDepartment: it stayed quiet (a false positive files drift on a healthy route)");
 for (const line of [
   "The pharmacy is closed right now but the store is open.",
+  // MENTIONING a counter is not ANSWERING as one. The name has to end the clause or run into a
+  // greeting; more sentence after it means nobody announced themselves.
+  "The deli closes at eight if you need anything.",
+  "Pharmacy hours are nine to six.",
   "Let me check with the front for you.",
   "Hold on, I'll go look in the back.",
   "Yeah we've got some Pokemon packs in.",

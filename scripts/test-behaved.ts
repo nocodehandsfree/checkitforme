@@ -125,8 +125,10 @@ head("THE WRONG-DEPARTMENT SAVE");
   ok("…and it prints what Staff actually said", /this is the pharmacy/i.test(row(r, "asked_to_be_put_through").why));
   ok("the new person was asked", row(r, "asked_the_new_person").pass === true, row(r, "asked_the_new_person").why);
   ok("…off the clock, naming both seconds", /31s/.test(row(r, "asked_the_new_person").why) && /33s/.test(row(r, "asked_the_new_person").why));
-  ok("Charlie was dropped, and the row says the TRANSFER did it rather than Staff",
-    row(r, "meter_stopped_on_hold").pass === true && /the transfer dropped charlie/i.test(row(r, "meter_stopped_on_hold").why), row(r, "meter_stopped_on_hold").why);
+  // HIS WORD IS HAND-OVER (the test ladder, §5). A ringing desk and a silent move are one event to
+  // him, and the row has to name it the same way whichever way it sounded.
+  ok("Charlie was dropped, and the row says the HAND-OVER did it rather than Staff",
+    row(r, "meter_stopped_on_hold").pass === true && /the hand-over dropped charlie/i.test(row(r, "meter_stopped_on_hold").why), row(r, "meter_stopped_on_hold").why);
 }
 
 head("…and every way it can go wrong");
@@ -205,6 +207,11 @@ head("…and every way it can go wrong");
     { text: "Heyy, do you have any Pokemon in stock right now?", atSec: 30 }] });
   ok("a silent hand-over still counts as a hand-over", row(r, "asked_the_new_person").pass === true, row(r, "asked_the_new_person").why);
   ok("…and asked to be put through ticks", row(r, "asked_to_be_put_through").pass === true);
+  // THE METER ROW HAS TO NAME IT THE SAME WAY. A silent hand-over starts as an ordinary quiet pause,
+  // so reading only the start of the wait called it "the staff stepped away" — the exact confusion
+  // this row exists to remove, on the one screen he grades a hand-over from.
+  ok("…and the meter row calls it the HAND-OVER, not Staff stepping away",
+    /the hand-over dropped charlie/i.test(row(r, "meter_stopped_on_hold").why), row(r, "meter_stopped_on_hold").why);
 }
 
 console.log(`\n${fail ? "FAIL" : "PASS"}  ${pass} passed, ${fail} failed`);

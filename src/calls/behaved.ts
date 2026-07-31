@@ -148,7 +148,13 @@ function meterStoppedOnHold(tl: BehavedEvent[], sums: BehavedSums): BehavedRow {
   const nextOf = (from: number, kind: string) => tl.findIndex((e, i) => i > from && e.kind === kind);
   // A WAIT AND A HAND-OVER ARE THE SAME MECHANISM AND DIFFERENT EVENTS TO HIM. Both stop the meter;
   // only one of them means somebody else is about to pick up. Say which one he is reading.
-  const anyTransfer = holdIdx.some((h) => (tl[h].detail || {}).reason === "transfer");
+  //
+  // A RINGING DESK IS NOT THE ONLY HAND-OVER. Most stores move you on a silent line, and then the
+  // wait STARTS as an ordinary quiet pause and is only known to be a hand-over when it ends. Reading
+  // the start alone called every silent hand-over "the staff stepped away", which is the one thing
+  // this row exists to tell apart. The end of the wait carries the answer, so read that too.
+  const anyTransfer = holdIdx.some((h) => (tl[h].detail || {}).reason === "transfer")
+    || tl.some((e) => e.kind === "hold_end" && ((e.detail || {}).reason === "transfer" || (e.detail || {}).afterAskingToBePutThrough === true));
     for (const h of holdIdx) {
     const at = Number(tl[h].atSec ?? 0);
     const who = (tl[h].detail || {}).reason === "transfer" ? "Transfer at" : "Staff walked away at";
@@ -161,7 +167,7 @@ function meterStoppedOnHold(tl: BehavedEvent[], sums: BehavedSums): BehavedRow {
     if (nextOf(end, "charlie_join") < 0) return row(false, `Charlie dropped at ${at}s. Never reconnected when Staff returned at ${Number(tl[end].atSec ?? 0)}s.`);
   }
   const parts = Number(sums.charlieSegments ?? 0);
-  const who = anyTransfer ? "The transfer" : "The staff";
+  const who = anyTransfer ? "The hand-over" : "The staff";
   return row(true, parts > 1
     ? `${who} dropped Charlie, and the meter successfully stopped. Reconnected as part ${parts} of the same check.`
     : `${who} dropped Charlie, and the meter successfully stopped.`);

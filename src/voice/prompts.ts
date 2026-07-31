@@ -195,6 +195,17 @@ export function heardWrongDepartment(line: string): WrongDepartment | null {
   const moving = /\b(?:transfer|put|get|connect|forward|send)(?:ring)?\s+(?:you|ya)\s+(?:(?:through|over|back)\b|(?:on\s+)?(?:to|with)\s)/i.test(t)
     && !/\bvoice ?mail|message\b/i.test(t);
   const hit = (why: string): WrongDepartment => (moving ? { why, said, handingOver: true } : { why, said });
+  // A STORE ANSWERS WITH ITS OWN NAME AND NOTHING ELSE. "Pharmacy, this is Joe." "Photo, how can I
+  // help?" "Deli." That is how a counter actually picks up the phone, and it was invisible here,
+  // because every pattern below expects the name to arrive INSIDE a sentence ("this is the pharmacy").
+  // Three of the owner's six test checks open exactly this way, so the save's own record would have
+  // shown nothing on all three while the agent quietly did the right thing.
+  //
+  // The name has to END the clause, or run straight into a greeting. That is what keeps "The pharmacy
+  // is closed right now but the store is open" out: the name is followed by more sentence, so nobody
+  // announced themselves, they just mentioned a counter.
+  if (new RegExp(`^(?:\\s*(?:hi|hey|hello|yeah|yes|thanks? (?:you )?for calling|good (?:morning|afternoon|evening))[\\s,!.]+)*(?:the\\s+)?(?:${OTHER_COUNTER})\\s*(?:[,.!?]|$|(?:speaking|this is|how (?:can|may) i)\\b)`, "i").test(t))
+    return hit("Staff said we reached another counter");
   // They named where we actually are, and it is not the shop floor.
   if (new RegExp(`\\b(?:this is|you(?:'ve| have)? reached|you got|i'm in|we're)\\s+(?:the\\s+)?(?:${OTHER_COUNTER})\\b`, "i").test(t))
     return hit("Staff said we reached another counter");
