@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r186" />
+<meta name="x-rev" content="glassfix-r187" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -426,18 +426,21 @@ __BRAND_HEAD__
      same overflow WITHOUT making a scroll container, so the sticky measures against the viewport,
      which is what actually scrolls. Scoped to this page; nothing else changes. */
   body.lview,body.pendbox{overflow-x:clip;overflow-y:visible}
-  /* The negative margin + matching padding pull the painted box up over the breathing room above the
+  /* The card lives in <main>, outside #live, so its parent spans the whole page in BOTH states — see
+     the markup note. Sticky can only travel inside its own parent; inside #live it fell off the top
+     the moment the call ended and that box emptied out.
+     The negative margin + matching padding pull the painted box up over the breathing room above the
      card, so lines slide UNDER the pin instead of through a transparent slit. main's own 18px keeps
      the resting layout identical — the margin cancels it, the padding gives it back. body.rview also
      pads main 18px, so the same numbers hold while the verdict is being pulled. */
-  body.lview #live_pin,body.pendbox #live_pin{position:sticky;top:env(safe-area-inset-top);z-index:12;background:var(--bg);margin-top:-18px;padding:18px 0 10px}
+  #live_pin{display:none}
+  body.lview #live_pin,body.pendbox #live_pin{display:block;position:sticky;top:env(safe-area-inset-top);z-index:12;background:var(--bg);margin-top:-18px;padding:18px 0 10px}
   body.lview #live_pin>*:last-child,body.pendbox #live_pin>*:last-child{margin-bottom:0} /* kill the collapsing margin so no transparent slit opens under the card */
   /* PULLING THE VERDICT (owner 07-31): the card does NOT leave with the call. It stays pinned, reading
-     "Getting results", and goes the moment the verdict lands. The live step log leaves with the call
-     (the result frame below already carries the steps + conversation), and the result frame skips its
+     "Getting results", and goes the moment the verdict lands. #live itself hides as it always did —
+     the result frame below already carries the steps + conversation — and the result frame skips its
      own placeholder headline so the same message is never printed twice. body.pendbox is set ONLY on
      the pending render of a call we just watched — a mid-call refresh still gets today's screen. */
-  body.pendbox #live_msgbox{display:none}
   body.pendbox #result .rverdict{display:none}
   /* No footer during the call (owner 07-31). It comes back on its own at the reveal: showResult drops
      body.lview, and the pulling-the-result screen (rv-pend) is still pre-reveal, so it waits too. */
@@ -2444,24 +2447,30 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     </div>
   </div>
 
+  <!-- The store card and Stop & hang up ride along at the top while the conversation scrolls
+       underneath (owner 07-31). One sticky wrapper so the two never drift apart.
+       IT SITS IN <main>, NOT INSIDE #live, ON PURPOSE. A sticky element can only travel inside its
+       own parent. Parked in #live it rode along fine during the call, then the moment the call ended
+       and #live emptied out, its parent collapsed to the card's own height and the card slid straight
+       off the top while the result frame below kept scrolling. In <main> its parent spans the whole
+       page in BOTH states, so it holds until the reveal. -->
+  <div id="live_pin">
+    <div class="rhead live" id="live_rhead">
+      <div class="rhead-top">
+        <span class="railchip" id="live_chip" style="display:grid"></span>
+        <div class="rhead-id">
+          <div class="rhead-store" id="live_store2"></div>
+          <div class="rhead-addr" id="live_addr"></div>
+          <div class="lh-state" id="lh_state"></div>
+        </div>
+      </div>
+    </div>
+    <button id="hangup_btn" onclick="hangUpLive()" style="display:none;margin:0 0 14px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.5);color:var(--red);padding:9px 18px;border-radius:10px;font-weight:800;cursor:pointer;font-size:13.5px" data-i18n="live.hangup">■ Stop &amp; hang up</button>
+  </div>
+
   <!-- LIVE -->
   <div id="live" class="hidden">
     <div id="muteBanner" style="display:none;background:rgba(251,191,36,.14);border:1px solid rgba(251,191,36,.4);color:#FBBF24;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-weight:700;font-size:13.5px;text-align:center" data-i18n="live.mute">🔇 Flip your phone off silent so you can hear the call</div>
-    <!-- The store card and Stop & hang up ride along at the top while the conversation scrolls
-         underneath (owner 07-31). One sticky wrapper so the two never drift apart. -->
-    <div id="live_pin">
-      <div class="rhead live" id="live_rhead">
-        <div class="rhead-top">
-          <span class="railchip" id="live_chip" style="display:grid"></span>
-          <div class="rhead-id">
-            <div class="rhead-store" id="live_store2"></div>
-            <div class="rhead-addr" id="live_addr"></div>
-            <div class="lh-state" id="lh_state"></div>
-          </div>
-        </div>
-      </div>
-      <button id="hangup_btn" onclick="hangUpLive()" style="display:none;margin:0 0 14px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.5);color:var(--red);padding:9px 18px;border-radius:10px;font-weight:800;cursor:pointer;font-size:13.5px" data-i18n="live.hangup">■ Stop &amp; hang up</button>
-    </div>
     <div id="live_msgbox"></div>
   </div>
 
@@ -6519,9 +6528,10 @@ function showResult(o, cid){
   if(o && o.status==='pending' && (_fromLive || window._livePend)) requestAnimationFrame(()=>{ try{ window.scrollTo(0, document.body.scrollHeight); }catch(_){ } });
   if(o && o.status!=='pending' && (_fromLive || window._livePend)){ window._livePend=false; setTimeout(()=>{ try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(_){ window.scrollTo(0,0); } },120); }
   stopLiveTimers(); LIVE_ROOM=null; if($('hangup_btn'))$('hangup_btn').style.display='none';
-  if(_keepBox){ $('live').classList.remove('hidden'); const _lg=$('lh_state'); if(_lg && _lg.textContent!==t('live.h4','Getting results')){ _lg.textContent=t('live.h4','Getting results'); try{ _lg.style.animation='none'; void _lg.offsetWidth; _lg.style.animation=''; }catch(_){ } } }
-  else $('live').classList.add('hidden');
-  $('builder').classList.add('hidden'); $('history').classList.add('hidden'); $('success').classList.add('hidden'); const hov=$('handoff'); if(hov)hov.classList.add('hidden'); document.body.classList.remove('fabbed'); document.body.classList.remove('lview'); /* verdict bloom takes over from the live bloom */
+  // The card is its own element in <main> now, so #live hides exactly as it always did — body.pendbox
+  // is what keeps the card on screen through the pull.
+  if(_keepBox){ const _lg=$('lh_state'); if(_lg && _lg.textContent!==t('live.h4','Getting results')){ _lg.textContent=t('live.h4','Getting results'); try{ _lg.style.animation='none'; void _lg.offsetWidth; _lg.style.animation=''; }catch(_){ } } }
+  $('live').classList.add('hidden'); $('builder').classList.add('hidden'); $('history').classList.add('hidden'); $('success').classList.add('hidden'); const hov=$('handoff'); if(hov)hov.classList.add('hidden'); document.body.classList.remove('fabbed'); document.body.classList.remove('lview'); /* verdict bloom takes over from the live bloom */
   { const _fd=$('finds'); if(_fd)_fd.style.display='none'; } // no rotating finds ticker on the result/call page
   LASTRES=o; TRANSLATED=false; ORIGHTML=''; FBK_SENT=false;
   // Verdict = deriveVerdict, THE single status→copy engine (shared with the zone report's unfold).

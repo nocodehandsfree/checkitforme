@@ -139,20 +139,53 @@ if (settle.footer !== "none") ok("footer comes back at the reveal"); else fail("
 // pinned reading "Getting results", and the result frame skips its own placeholder headline so the same
 // message is never printed twice. Driven here, after every other assertion, so the extra renders cannot
 // disturb them. A page JS error thrown in here still lands in the zero-errors check below.
-const pend = await page.evaluate(() => {
+await page.evaluate(() => { // the first-free-check upsell pops after the verdict; a dimmed+locked page
+  document.querySelectorAll(".overlay.on").forEach((o) => o.classList.remove("on")); // parks every sticky
+  document.body.classList.remove("sheetopen");                                        // by design, so clear
+  document.documentElement.style.overflow = ""; document.body.style.overflow = "";    // it before measuring
+});
+await page.waitForTimeout(200);
+await page.evaluate(() => {
   document.getElementById("live").classList.remove("hidden"); // put the call screen back up
-  showResult({ status: "pending", transcript: "Clerk: let me check the back.", summary: "" }, "lock-pend");
+  // Reuse the conversation the sim actually produced — a synthetic one may not parse into bubbles, and
+  // a short pull screen would make the scroll assertion below meaningless.
+  const tr = Array.from({ length: 4 }, () => LIVE_TRANSCRIPT || "").join("\n");
+  showResult({ status: "pending", transcript: tr, summary: "" }, "lock-pend");
+});
+await page.waitForTimeout(400);
+// On the real pull screen the step log is OPEN and the whole conversation is printed, which is what
+// makes it scroll (owner's screenshot). Match that here — a short page would prove nothing.
+await page.evaluate(() => document.querySelectorAll("#result details").forEach((d) => (d.open = true)));
+await page.waitForTimeout(150);
+const pend = await page.evaluate(() => {
+  const pin = document.getElementById("live_pin");
   const v = document.querySelector("#result .rverdict");
   return {
     on: document.body.classList.contains("pendbox"),
-    liveUp: !document.getElementById("live").classList.contains("hidden"),
+    shown: pin ? getComputedStyle(pin).display !== "none" : false,
     headline: (document.getElementById("lh_state") || {}).textContent || "",
     verdict: v ? getComputedStyle(v).display : "missing",
   };
 });
-if (pend.on && pend.liveUp) ok(`the card stays through the pull ("${pend.headline}")`); else fail(`the card left with the call (pendbox=${pend.on}, liveUp=${pend.liveUp})`);
+if (pend.on && pend.shown) ok(`the card stays through the pull ("${pend.headline}")`); else fail(`the card left with the call (pendbox=${pend.on}, shown=${pend.shown})`);
 if (/getting/i.test(pend.headline)) ok("the card reads as pulling the result"); else fail(`card headline is stale during the pull ("${pend.headline}")`);
 if (pend.verdict === "none") ok("result frame skips its placeholder while the card carries the message"); else fail(`the pulling message is printed twice (rverdict display=${pend.verdict})`);
+
+// THE ONE THAT WAS MISSED (owner 07-31, screenshot): the pull screen scrolls too, and a sticky element
+// can only travel inside its own parent. Parked inside #live — which empties out the moment the call
+// ends — the card slid off the top while the result frame below kept scrolling. Measure it SCROLLED,
+// not at rest, or this regression walks straight back in.
+const pendScroll = await page.evaluate(() => {
+  window.scrollTo(0, document.documentElement.scrollHeight);
+  return new Promise((r) => setTimeout(() => r({
+    y: Math.round(window.scrollY),
+    grew: document.documentElement.scrollHeight > window.innerHeight + 100,
+    pinTop: Math.round(document.getElementById("live_pin").getBoundingClientRect().top),
+  }), 250));
+});
+if (!pendScroll.grew) fail("the pull screen never got tall enough to scroll — this assertion proved nothing");
+else if (pendScroll.pinTop >= 0) ok(`the card holds while the pull screen scrolls (top=${pendScroll.pinTop} at y=${pendScroll.y})`);
+else fail(`the card slid off the top of the pull screen (top=${pendScroll.pinTop} at y=${pendScroll.y}) — its parent is too short to stick inside`);
 
 const drop = await page.evaluate(() => {
   showResult({ status: "completed", statusKey: "in_stock", confirmed: true, transcript: "Clerk: yes, we have them.", summary: "" }, "lock-done");
