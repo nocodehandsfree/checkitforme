@@ -487,9 +487,21 @@ async function main() {
     // on a check we ended ourselves while the desk was ringing, which is two untruths in one line.
     const page = readFileSync("public/app.html", "utf8");
     ok(!/nobody picked up/i.test(page), "no check is ever described as one nobody picked up");
-    ok(/c\.endedOnRing\?\['g','Admin hung up'/.test(page), "a check WE ended reads 'Admin hung up', the status he approved");
-    ok(/c\.endedOnRing\) rows\.push\(\{who:'ring'[\s\S]{0,120}?Admin hung up · the desk was ringing/.test(page),
-      "and the last rung says the same, naming the desk as ringing");
+    ok(/:c\.endedOnRing\?\['Admin hung up','#FFCB05'/.test(page), "a check WE ended reads 'Admin hung up', the status he approved, in yellow");
+    ok(/c\.endedOnRing\) rows\.push\(\{who:'ring'[\s\S]{0,120}?text:'Admin hung up'\}\)/.test(page),
+      "and the last rung says only the status words — the rung before already says the store was transferring us");
+    // Comp 3a: the stage is the card's header, the winner says so, and a failed check is one row + reason.
+    ok(/const STAGE_WORD=\{map:'Mapping menu',speed:'Optimizing speed',prove:'Proving department'\};/.test(page),
+      "each check is headed by its stage, the owner's three words, no caps lock");
+    ok(/winner\?\['Recipe winner','var\(--green\)'/.test(page), "the top passing check's pill says Recipe winner");
+    ok(/if\(c\.grade==='fail'\)\{/.test(page) && /mapCheckOpen\('\$\{bid\}'\)/.test(page),
+      "a failed check collapses to one row that opens on tap");
+    ok(/if\(x\.c\.grade==='fail'\) continue;/.test(page), "and it never takes part in the faster-or-slower chain");
+    ok(/gain>0\?`<span[\s\S]{0,80}?\$\{gain\}s faster/.test(page) && !/s slower/.test(page),
+      "only a check that moved us forward shows a number — there is no 'slower' anywhere");
+    ok(/text:'Reached staff',tail:g\?/.test(page), "Reached staff carries what Staff said after it, in plain gray");
+    ok(!/function callProduced/.test(page), "the PRODUCED line is deleted");
+    ok(!/Greeting plays/.test(page), "and the top-of-page ladder is the bare steps — the menu's words live under Menu");
     // The menu on the page is what the menu says NOW, so it comes off the newest check, never the
     // longest one. A stale check kept the screen after a newer one had heard the menu properly.
     ok(!/sort\(\(a,b\)=>\(\(b\.transcript\|\|\[\]\)\.length\)-\(\(a\.transcript\|\|\[\]\)\.length\)\)/.test(page),

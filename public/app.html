@@ -4977,63 +4977,72 @@ function dayWords(d){
 // scrolling all of them.
 function mappingCallsHtml(calls,versions){
   const gains=gainByCheck(calls);
-  const card=c=>mappingCallCard(c,versions,gains.get(c));
+  // The top PASSING check is the winner — the recipe that is running now came off it.
+  const winner=(calls||[]).find(c=>c.grade!=='fail');
+  const card=c=>mappingCallCard(c,c===winner,gains.get(c));
   const rest=calls.slice(2);
   return calls.slice(0,2).map(card).join('')
     +(rest.length?`<div id="set_runs_more" style="display:none">${rest.map(card).join('')}</div>`
       +`<div style="display:grid;place-items:center;margin-top:6px"><button class="ghost" onclick="mapCallsMore(this)">Show ${rest.length} more</button></div>`:'')
     ;
 }
-// THE SPEED GAIN SITS ON EACH CHECK, against the check before it (owner, 07-30). It was briefly put on
-// the vitals at the top of the chain page, where it said nothing about which try earned it. Every
-// mapping check we hold already carries the seconds it took, so this is placement, not new maths.
-// NAV TIME is the number that improves: getting faster is the menu, and how long Staff then take to
-// lift the handset is theirs. A check that hung up on the ring has no time to Staff at all, so reading
-// `seconds` would leave the whole column blank on exactly the checks that map best.
+// THE SPEED GAIN SITS ON EACH CHECK, against the check before it (owner, 07-30). Only a check that
+// moved us forward shows a number: a slower try is a FAILED try and is collapsed, so "6s faster"
+// never needs a sentence explaining its baseline.
 function checkNavSecs(calls){
   const anyNav=(calls||[]).some(c=>typeof c.transferAtSec==='number'&&c.transferAtSec>0);
   return (calls||[]).map(c=>{ const v=anyNav?c.transferAtSec:c.seconds; return (typeof v==='number'&&v>0)?v:null; });
 }
-// Oldest first, so "the check before" is the one that really came before. The list arrives newest
-// first, and a check with no time of its own is skipped rather than breaking the chain: the next one
-// is then compared with the last check that actually had a number.
+// Oldest first, so "the check before" is the one that really came before. Failed checks carry no
+// number and are skipped, so the chain of comparisons only ever runs through checks that counted.
 function gainByCheck(calls){
   const list=(calls||[]).slice(), nav=checkNavSecs(list);
   const order=list.map((c,i)=>({c,i})).sort((a,b)=>((Number(a.c.at)||0)-(Number(b.c.at)||0))||(a.i-b.i));
   const out=new Map(); let prev=null;
-  for(const x of order){ const n=nav[x.i]; if(n==null) continue; if(prev!=null) out.set(x.c,prev-n); prev=n; }
+  for(const x of order){ if(x.c.grade==='fail') continue; const n=nav[x.i]; if(n==null) continue; if(prev!=null) out.set(x.c,prev-n); prev=n; }
   return out;
 }
 function mapCallsMore(btn){
   const m=document.getElementById('set_runs_more'); if(m) m.style.display='';
   if(btn&&btn.parentNode) btn.parentNode.remove();
 }
-// One call: who we rang and when, how it ended, the conversation, then what it produced.
-function mappingCallCard(c,versions,gain){
-  const ok=!!c.reachedHuman;
-  // ONLY WORDS THE STATUSES SCREEN ALREADY OWNS (owner, 07-30). This said "Nobody answered" on a
-  // check we ended ourselves, which is two untruths in one line: the desk WAS ringing, and we are
-  // the ones who stopped. He added "Admin hung up" for exactly this, so it is the word used.
-  const pill=ok?['g','Reached Staff','var(--green)']
-    :c.endedOnRing?['g','Admin hung up','var(--green)']
-    :['a','Nobody answered','#F59E0B'];
-  const prod=callProduced(c,versions);
+// A collapsed failed check opens on tap and closes again — the reason is the row, the ladder is the
+// detail behind it.
+function mapCheckOpen(id){ const el=document.getElementById(id); if(el) el.style.display=el.style.display==='none'?'':'none'; }
+const STAGE_WORD={map:'Mapping menu',speed:'Optimizing speed',prove:'Proving department'};
+// One check: who we rang and when, its stage, how it ended, the conversation (comp 3a). A failed
+// check collapses to one row carrying its reason — tap to open. No PRODUCED line: the top passing
+// check IS the winner and its pill says so.
+function mappingCallCard(c,winner,gain){
   const rungs=callRungs(c);
-  // The check's own nav time, so the gain beside it is measured against the same thing.
   const navS=(typeof c.transferAtSec==='number'&&c.transferAtSec>0)?c.transferAtSec:c.seconds;
+  const stage=STAGE_WORD[c.stage]||'';
+  const ladder=`<div class="mladder" style="margin-top:13px">${rungs.map((r,i,a)=>callRung(r,i===a.length-1)).join('')}</div>`;
+  if(c.grade==='fail'){
+    const why=c.reason||'did not move us forward';
+    const bid='chk_'+(c.navId||Math.abs(Number(c.at)||0));
+    return `<div class="card" style="margin:0 0 10px;padding:12px 16px;opacity:.85;cursor:pointer" onclick="mapCheckOpen('${bid}')">`
+      +`<div style="display:flex;align-items:center;gap:8px">`
+      +`<div style="font-size:13px;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)">${esch(c.store||'A store')}</div>`
+      +`<span class="pill" style="gap:6px;background:rgba(248,113,113,.12)">${ssDot('#F87171')}<span style="color:#F87171">${esch(why)}</span></span>`
+      +`<div style="font-size:11.5px;font-weight:700;color:var(--text-tertiary);flex:0 0 auto">${callWhen(c.at)}</div>`
+      +`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5C5C68" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>`
+      +`<div id="${bid}" style="display:none">${stage?`<div style="font-size:11px;font-weight:700;color:#8A8A96;margin-top:10px">${stage}</div>`:''}${ladder}</div></div>`;
+  }
+  const pill=winner?['Recipe winner','var(--green)','rgba(74,222,128,.13)']
+    :c.reachedHuman?['Reached staff','var(--green)','rgba(74,222,128,.13)']
+    :c.endedOnRing?['Admin hung up','#FFCB05','rgba(255,203,5,.13)']
+    :['Nobody answered','#F59E0B','rgba(245,158,11,.13)'];
   return `<div class="card" style="margin:0 0 10px">`
     +`<div style="display:flex;align-items:baseline;gap:8px">`
     +`<div style="font-size:13.5px;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(c.store||'A store')}</div>`
     +`<div style="font-size:11.5px;font-weight:700;color:var(--text-tertiary);flex:0 0 auto">${callWhen(c.at)}</div></div>`
+    +(stage?`<div style="font-size:11px;font-weight:700;color:#8A8A96;margin-top:8px">${stage}</div>`:'')
     +`<div style="display:flex;align-items:center;gap:8px;margin-top:8px">`
-    +`<span class="pill ${pill[0]}" style="gap:6px">${ssDot(pill[2])}${pill[1]}</span>`
+    +`<span class="pill" style="gap:6px;background:${pill[2]}">${ssDot(pill[1])}<span style="color:${pill[1]}">${pill[0]}</span></span>`
     +(navS!=null?`<span style="font-size:11.5px;font-weight:700;color:var(--muted)">${navS}s</span>`:'')
-    +(gain?`<span style="font-size:11.5px;font-weight:700;color:${gain>0?'var(--green)':'var(--muted)'}">${Math.abs(gain)}s ${gain>0?'faster':'slower'}</span>`:'')+`</div>`
-    +`<div class="mladder" style="margin-top:13px">${rungs.map((r,i,a)=>callRung(r,i===a.length-1)).join('')}</div>`
-    +`<div style="margin-top:12px;display:flex;align-items:baseline;gap:8px">`
-    +`<span style="font-size:10.5px;font-weight:700;letter-spacing:.15em;color:#8A8A96">PRODUCED</span>`
-    +`<span style="margin-left:auto;font-size:12px;font-weight:700;color:${(prod&&!prod.aside)?'var(--green)':'var(--muted)'}">${prod?esch(prod.text)+(prod.aside?' \u00b7 set aside':''):'No change'}</span>`
-    +`</div></div>`;
+    +(gain>0?`<span style="font-size:11.5px;font-weight:700;color:var(--green)">${gain}s faster</span>`:'')+`</div>`
+    +ladder+`</div>`;
 }
 // The conversation as rows. The store's own lines stay as they were spoken; ours are read off the
 // action and its value, so the engineering exhaust ("(barge @8s)") never reaches his screen.
@@ -5041,15 +5050,16 @@ function callRungs(c){
   const rows=(c.turns||[]).map(t=>({who:t.who,at:t.atSec,text:t.who==='us'?usWords(t):String(t.text||'')}))
     .filter(r=>r.text);
   const end=c.seconds!=null?c.seconds:null;
+  // THE LAST RUNG SAYS ONLY THE STATUS WORDS, colored — Reached staff, or Admin hung up (owner,
+  // 07-30). What Staff said rides after in plain gray; nothing rides after a hang up, because the
+  // rung before already says the store was transferring us.
   if(c.reachedHuman){
-    // The line Staff said when they picked up is the ANSWER, not one more recording, so it is
-    // promoted out of the gray lines instead of being printed twice.
     let i=c.greeting?rows.map(r=>r.text).lastIndexOf(c.greeting):-1;
     if(i<0&&end!=null) for(let j=rows.length-1;j>=0;j--){ if(rows[j].who==='them'&&rows[j].at!=null&&rows[j].at>=end-3){ i=j; break; } }
     const g=c.greeting||(i>=0?rows[i].text:'');
     if(i>=0) rows.splice(i,1);
-    rows.push({who:'staff',at:end,text:'Staff answered'+(g?' · "'+g+'"':'')});
-  } else if(c.endedOnRing) rows.push({who:'ring',at:c.transferAtSec!=null?c.transferAtSec:end,text:'Admin hung up · the desk was ringing'});
+    rows.push({who:'staff',at:end,text:'Reached staff',tail:g?'\u00b7 "'+g+'"':''});
+  } else if(c.endedOnRing) rows.push({who:'ring',at:c.transferAtSec!=null?c.transferAtSec:end,text:'Admin hung up'});
   else rows.push({who:'end',at:end,text:'Nobody answered'});
   return rows;
 }
@@ -5057,12 +5067,12 @@ const usWords=t=>t.action==='press'?`Pressed ${t.value}`
   :(t.action==='say'&&t.value)?(/^asked/i.test(String(t.text||''))?`Asked "${t.value}"`:`Said "${t.value}"`)
   :cap(String(t.text||'').replace(/\s*\([^()]*\)\s*$/,''));
 // The store small and gray, us bold with a green dot. That contrast IS the feature: the eye follows
-// what we did. A call that failed ends amber, never green.
+// what we did. Only the status words carry their color; anything after them is plain.
 function callRung(r,last){
   const S=r.who==='them'?[6,'#5C5C68','12px','500','rgba(255,255,255,.55)']
     :r.who==='end'?[9,'#F59E0B','13.5px','700','#F59E0B']
-    // We ended it and the route worked, so it reads green like the rest of a good check, never amber.
-    :r.who==='ring'?[9,'var(--green)','13.5px','700','var(--green)']
+    :r.who==='ring'?[9,'#FFCB05','13.5px','700','#FFCB05']
+    :r.who==='staff'?[9,'var(--green)','13.5px','700','var(--green)']
     :[9,'var(--green)','13.5px','700','var(--text-strong)'];
   return `<div style="display:flex;gap:12px">`
     +`<div style="display:flex;flex-direction:column;align-items:center;flex:0 0 auto;padding-top:5px">`
@@ -5070,23 +5080,9 @@ function callRung(r,last){
     +(last?'':`<span style="width:2px;flex:1;background:rgba(255,255,255,.10);margin:3px 0"></span>`)+`</div>`
     +`<div style="flex:1;min-width:0;padding-bottom:${last?'0':'12px'}">`
     +`<div style="display:flex;align-items:baseline;gap:8px">`
-    +`<span style="font-size:${S[2]};font-weight:${S[3]};color:${S[4]};line-height:1.45">${r.who==='them'?'"'+esch(r.text)+'"':esch(r.text)}</span>`
+    +`<span style="font-size:${S[2]};font-weight:${S[3]};color:${S[4]};line-height:1.45">${r.who==='them'?'"'+esch(r.text)+'"':esch(r.text)}${r.tail?'<span style="font-weight:500;color:rgba(255,255,255,.55)"> '+esch(r.tail)+'</span>':''}</span>`
     +`<span style="margin-left:auto;font-size:12px;font-weight:700;color:var(--muted);flex:0 0 auto">${r.at!=null?r.at+'s':''}</span>`
     +`</div></div></div>`;
-}
-// WHAT THE CALL PRODUCED. The only line tying a conversation to a recipe: the version whose evidence
-// carries this call, and how much faster it is than the one it replaced. No match = nothing changed.
-function callProduced(c,versions){
-  if(!c.navId) return null;
-  const v=(versions||[]).find(x=>((x.evidence&&x.evidence.calls)||[]).some(e=>e&&e.navId===c.navId));
-  if(!v) return null;
-  // A RECIPE THAT WAS SET ASIDE IS NOT A WIN. It read green like a live one, so a call that produced
-  // something we then threw away looked like the call that improved the chain (copy.md section 6).
-  if(v.status==='rejected') return { text:v.label||('Tree Recipe v'+v.version), aside:true };
-  const prev=(versions||[]).filter(x=>x.storeId===v.storeId&&x.version<v.version)
-    .sort((a,b)=>(b.version||0)-(a.version||0))[0];
-  const faster=(prev&&prev.seconds!=null&&v.seconds!=null)?prev.seconds-v.seconds:null;
-  return { text:(v.label||('Tree Recipe v'+v.version))+(faster!=null&&faster>0?' · '+faster+'s faster':''), aside:false };
 }
 // The hour it happened, and the day too once it is not today. A menu at 9pm is often not the daytime
 // menu, so the clock is part of reading the call, not decoration.
@@ -5286,10 +5282,10 @@ async function mapUnknown(id,status,chainId){
 // ringing is the last thing the phone system does to us, so that is the last rung. Who picked up, and
 // what they said, is in Mapped checks, where reading one check is the point.
 function routeRungs(ch,nav,DASH){
+  // THE BARE STEPS, nothing else (owner, 07-30): once the recipe is locked, the top of the page shows
+  // the steps and each step's seconds from the last successful check. The menu's own words live under
+  // Menu, so no greeting and no menu copy rides up here.
   const steps=chainSteps(ch), rungs=[];
-  let heard=''; try{ const r=ch.navRecipe?JSON.parse(ch.navRecipe):null; heard=(r&&r.menuPrompts&&r.menuPrompts[0])||''; }catch(e){}
-  const first=steps.length?steps[0].at:null;
-  if(first!=null&&first>0) rungs.push({at:'0'+DASH+first+'s',t:'Greeting plays',sub:heard?esch(heard):''});
   steps.forEach(st=>rungs.push({at:st.at!=null?st.at+'s':'',t:st.t}));
   if(!steps.length) rungs.push({t:'Staff answer the line',at:'',tc:'var(--green)'});
   else rungs.push({at:(nav!=null?nav+'s':''),t:'Rings the desk',tc:'var(--green)'});
