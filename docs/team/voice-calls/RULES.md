@@ -20,3 +20,9 @@ that made it law. A rule leaves this file only when the owner himself retires it
    settings) after every attempt and resumed on boot, 90s delayed so old and new never dial together.
    A stop stays stopped; the call in flight at the restart is logged as not-evidence. Two runs died
    to teammates' deploys before this (07-30). Proof: `scripts/test-mapper-resume.ts`.
+10. ADMIN IS THE RECORD OF TRUTH for voice tuning: a setting changed anywhere (the provider's own
+    dashboard included) is written back to Admin the same session. Workflows/routing live at
+    Admin → Voice → Workflows (`vt_workflows`); "the beat" = the pause before the agent takes its
+    turn, owned by the workflow (see `elevenlabs.ts` turn-taking notes). Two known lies: code
+    comments claim a `call_tuning` Admin screen that DOES NOT EXIST, and Designer/Workflows write
+    PROD voice config (no environment picker shipped) — "just tuning" can touch the real site.

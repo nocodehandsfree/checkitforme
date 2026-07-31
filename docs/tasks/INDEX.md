@@ -15,7 +15,8 @@ PM's FIRST act is auditing it, blind readers vs the contract, then tell the owne
 per item so mapper starts round 2**) · 2 self-healing · 3 screens. Owner says "finished" → PM audits
 that chunk vs the contract BEFORE the next chunk's box goes out. Voice-agent boot gate: any voice
 task box lists the pre-reads (runtime spec §4 · RULES.md · checkpoint · listen-nav + bridge headers)
-and the agent must WRITE BACK the life of one check in ten lines before touching code. Owner tests ONCE at the end (fresh CVS, start to finish). In the chunk-1
++ the team charter `handoff.md` (workflows · every Admin voice surface), and the agent must WRITE
+BACK the life of one check in ten lines before touching code. Owner tests ONCE at the end (fresh CVS, start to finish). In the chunk-1
 audit also re-prove run-resume on a live restart. After chunk 2, box Webbie ONE task: the zone-report
 skip sentence for muted stores (EN + ES; the site is frozen to everyone else). Echo likely needs the
 same spec-vs-build audit — wait for the owner's word. **PM ships NOTHING without the owner's "clear"
