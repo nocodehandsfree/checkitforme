@@ -27,10 +27,10 @@ git. Last updated: 2026-07-31 (in stock alerts fixed; logos sized to match; try 
   recipe reaches Staff, the **Menu** by condition, the **Recipes** held, and **Review**.
 - **Re-map hangs up on the second ring** of the desk, so it never troubles Staff, and that check becomes the
   recipe. **Reached Staff shows nothing instead of 0%** until one actually waits for a person.
-- **The mapping rebuild you approved is BUILT and live** (07-30 night): three stages on every check (mapping
-  menu, optimizing speed, proving department), every check graded by machine, a failed one collapsed with its
-  reason, tap a line to correct it. Proven live at 10:41pm on a CVS we had never called. **CVS and every stale
-  Review item are cleared.** The play-the-line button needs the call audio recorded first.
+- **The mapping rebuild is BUILT, and the 07-31 fixes you blessed are in** (on staging + Admin): a run keeps
+  its work to itself until three stores agree, then the map moves once; the recipe winner and its seconds are
+  honest; the play button lives on the Menu. **CVS is wiped clean on the real site and staging, route kept.**
+  The old one-call trainer is retired. **Ready for the next CVS run on your go.**
 ## The new calling engine is ON for staging. Your six test calls are the last thing (07-28/29)
 - **Nothing to flip.** A check from staging.checkitforme.com goes through the new engine. **Listen for:** it asks
   once and waits · no keypad beeps once you are talking · after a hold it asks you again if you might be new.
