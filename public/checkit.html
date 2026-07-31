@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r187" />
+<meta name="x-rev" content="glassfix-r188" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -416,6 +416,14 @@ __BRAND_HEAD__
      the conversation by scrolling to the page bottom as each line lands; dead space below the log
      strands the newest line off-screen and kills the reveal. The page's own height is the design. */
   body.lview main{padding-top:18px}
+  /* ╔══════════════════════════════════════════════════════════════════════════════════════════╗
+     ║  THE CHECK STATUS PAGE IS LOCKED — owner order, 2026-07-31.                               ║
+     ║  Do not change the pinned card, the footer rule, or the pull screen without the owner's   ║
+     ║  express written consent naming scripts/qa-checkpage-lock.mjs. That gate + the browser    ║
+     ║  lock scripts/test-live-view.mjs both run in CI and will fail your ship. The full story   ║
+     ║  — and the three traps that already cost a day — is written at the top of the gate.       ║
+     ║  A green headless run is NOT proof here: the last regression passed every check I had.    ║
+     ╚══════════════════════════════════════════════════════════════════════════════════════════╝ */
   /* The store card + Stop & hang up stay put; the conversation scrolls beneath them (owner 07-31).
      position:sticky, NOT a fixed pane with its own scroller — the document itself has to stay the
      thing that scrolls (a page that can't scroll is what put us back in grey-bar territory), and a

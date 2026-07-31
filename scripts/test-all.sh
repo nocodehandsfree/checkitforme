@@ -64,6 +64,7 @@ run "qa: admin sheet-glass LOCK (variant H)" "node scripts/qa-admin-glass.mjs"
 run "qa: admin unify gate (sealed pages)" "node scripts/qa-admin-unify.mjs"
 run "qa: site sheet-glass LOCK (variant H)" "node scripts/qa-site-glass.mjs"
 run "qa: iOS chrome-tint LOCK" "node scripts/qa-tint-lock.mjs"
+run "qa: check status page LOCK" "node scripts/qa-checkpage-lock.mjs"
 run "qa: browser suites (v2 redesign)" "bash scripts/qa-browser.sh"
 run "qa: live call view LOCK (sim)" "env PORT=8798 bash scripts/test-live-view.sh"
 

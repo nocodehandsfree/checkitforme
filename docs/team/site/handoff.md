@@ -48,6 +48,37 @@ Full authority: `docs/design/copy/COPY_STYLE_GUIDE.md` (open it for ANY string c
 - You cannot see any of this headless. If you think an invariant is wrong, take it to the owner.
   Never edit the gate to make a change pass.
 
+## The check status page is LOCKED (owner order 2026-07-31)
+The live call screen and the pull screen after it. `scripts/qa-checkpage-lock.mjs` (static, in test-all
++ CI) and `scripts/test-live-view.mjs` (real browser, simulated call) enforce it together. **No agent
+touches this page without the owner's express written consent naming the file.** "It looked fine
+locally" is not consent, and neither is a green headless run — trap 2 below passed every check I had.
+
+What the page does: card pinned at the top through the call, conversation scrolling underneath, no
+footer → call ends, card STAYS and reads "Getting results" while the result frame skips its own
+placeholder → verdict lands, card goes, result prints, footer returns.
+
+- **A fixed filled box parked on an edge flips iOS Safari's bottom bar grey**, recoverable only by
+  reload. The card is `position:sticky` and never `fixed`. Same reason the closed call sheet ships
+  `display:none` (qa-tint-lock).
+- **A sticky element can only travel inside its own parent.** The card first lived inside `#live`. It
+  held beautifully during the call because `#live` was full of conversation; the moment the call ended
+  `#live` emptied out and collapsed to the card's own height, and the card slid off the top while the
+  result frame kept scrolling. It now lives in `<main>`, sibling to `#live` and `#result`. Moving it
+  back measures −443px on a scrolled pull screen. **Do not move it.**
+- **`overflow-x:hidden` on `<body>` silently makes body its own scrollport**, and a sticky child
+  measured against a box that never scrolls just rides away. The `lview`/`pendbox` `overflow-x:clip`
+  override is load-bearing, not tidying.
+- The conversation rides the DOCUMENT scroll. No inner scroller, ever — a page that cannot scroll is
+  what put the grey bar back in the first place.
+- Never pad the live view to a forced height to chase the tint (tried 07-30, reverted same day).
+- `body.pendbox` arms only for a call we were just watching, so reopening or refreshing into a pending
+  check is untouched.
+- **Measure the pull screen SCROLLED, not at rest**, and clear any open sheet first — an open sheet
+  dims and locks the page by design, which parks every sticky on it. Both mistakes were in my own test
+  and are why the regression shipped.
+- If you think an invariant is wrong, take it to the owner. Never edit a gate to make a change pass.
+
 ## Logo display rules (Logo lane retired 2026-07-22 — rules folded in)
 Assets = `public/logos/chains/<slug>.png` + `_meta.json` flags (`w:1` wide wordmark → 44×34 box;
 `d:1` needs a light plate). Full system + pipeline: `docs/data/store-logos.md`.
