@@ -37,7 +37,7 @@ import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
 import { placeNavCall, navInitialTwiml, navStep, navEnded, navMediaFeed, getNavSession, latestNavSessionForChain, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
 import { listenNavFeed, endListenNav } from "./calls/listen-nav";
 // THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
-import { emit, markNow, closeReceipt, linkCall, rollup, rollupFromRow, getReceipt, setLineHook, type Rollup } from "./calls/events";
+import { emit, markNow, closeReceipt, linkCall, rollup, rollupFromRow, getReceipt, transcriptOf, setLineHook, type Rollup } from "./calls/events";
 import { installReceiptStore, currentRates, onReceiptClosed } from "./calls/receipt-store";
 import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
@@ -3475,7 +3475,22 @@ app.get("/pub/live/:cid", async (c) => {
   let dcid = c.req.param("cid");
   // Headless bridge check: same room → conv-id resolution as /pub/result. No conv yet = still dialing.
   if (dcid.startsWith("bridge:")) {
-    const convId = bridgeConversationId(dcid.slice(7));
+    const room = dcid.slice(7);
+    // OUR OWN RECORD, NEVER THE PROVIDER'S SESSION STATUS. Charlie is CLOSED on every hold — that is
+    // the only thing that stops the meter — which ENDS his conversation at the provider. Asking them
+    // "is this still running?" therefore answered "finished" the instant Staff said "hold on, let me
+    // go check", so the customer's page flipped to Getting results and settled a no-answer verdict
+    // while the phone was still in somebody's hand (owner, test 1 on 07-31). It also wiped the
+    // conversation off the page, because the reconnected Charlie is a NEW conversation over there and
+    // the old one's lines are not in it.
+    //
+    // Our receipt is open until the LINE ends and carries every line both sides said across every one
+    // of Charlie's stretches, so it answers both questions truthfully. It lives 15 minutes, well past
+    // any check; if it is gone (a restart, or an old check being reopened) fall through to the
+    // provider exactly as before.
+    const held = getReceipt(room);
+    if (held) return c.json({ live: !held.closed, status: held.closed ? "done" : "in_progress", transcript: transcriptOf(held) });
+    const convId = bridgeConversationId(room);
     if (convId) dcid = convId;
     else return c.json({ status: "in_progress", transcript: "", summary: "" });
   }

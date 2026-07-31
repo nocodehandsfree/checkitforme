@@ -51,6 +51,11 @@ for (const [line, why] of [
   ["You need to call the front desk.", "the front of the store"],
   ["Hold on, let me transfer you to somebody who knows.", "put us through"],
   ["I'll put you through to the front.", "put us through"],
+  // A REAL hand-over still has to fire after the "put you on hold" fix below. The verb plus a
+  // direction, or the verb plus who we are being given to, is what a hand-over always says.
+  ["Let me transfer you to a different department.", "wrong department"],
+  ["I'll put you on with the manager.", "put us through"],
+  ["Let me get you over to somebody in toys.", "put us through"],
 ] as Array<[string, string]>) {
   const r = heardWrongDepartment(line);
   ok(!!r && r.why.toLowerCase().includes(why), `"${line}" → ${r ? r.why : "NOTHING"}`);
@@ -68,6 +73,16 @@ for (const line of [
   "No worries, take your time.",
   "I'm going to transfer you to voicemail.",
   "Thanks for calling, have a good one.",
+  // GOING AWAY TO LOOK IS NOT BEING HANDED ON, and these are the sentences stores actually use.
+  // The first one is verbatim off the owner's own check on 07-31, which was read as a wrong
+  // department, put a cross on his scorecard, and filed drift against a route that was perfectly fine.
+  "I have to go check, okay? I'm gonna put you on hold.",
+  "Hold on a sec.",
+  "Let me go check.",
+  "Give me a sec.",
+  "I'm busy with a customer, can you hold?",
+  "Can I put you on hold for a minute?",
+  "Let me put you down for one second.",
   "",
   "   ",
 ]) {

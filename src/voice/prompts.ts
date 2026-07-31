@@ -186,7 +186,14 @@ export function heardWrongDepartment(line: string): WrongDepartment | null {
   if (/\b(?:you(?:'ll| will)?\s+(?:want|need)|(?:you should|try|call|ask)\s+(?:the\s+)?)\s*(?:the\s+)?(?:front(?:\s+(?:store|end|desk|counter|of the store))?|main store|general (?:store|line)|customer service)\b/i.test(t))
     return { why: "Staff said we want the front of the store", said };
   // They offered to hand us on. Landing somewhere that has to hand us on IS landing wrong.
-  if (/\b(?:transfer|put|get|connect|forward|send)(?:ring)?\s+(?:you|ya)\s+(?:through|over|back)?\s*(?:to|with)?\b/i.test(t)
+  //
+  // THE HAND-OVER WORD IS REQUIRED. It used to be optional, which made "put you" on its own enough,
+  // so "I'm gonna put you on hold" — the single most common sentence a store says — was read as being
+  // handed to another department (owner, test 1 on 07-31). Both halves have to be there now: the verb,
+  // then either a direction (through / over / back) or a preposition that names who we are being given
+  // to (to / with). "put you on hold", "can you hold", "let me put you down for one" no longer match;
+  // "put you through", "transfer you to the pharmacy", "put you on with the manager" still do.
+  if (/\b(?:transfer|put|get|connect|forward|send)(?:ring)?\s+(?:you|ya)\s+(?:(?:through|over|back)\b|(?:on\s+)?(?:to|with)\s)/i.test(t)
     && !/\bvoice ?mail|message\b/i.test(t))
     return { why: "Staff offered to put us through to somebody else", said };
   return null;

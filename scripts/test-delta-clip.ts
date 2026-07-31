@@ -12,7 +12,7 @@
 import { EventEmitter } from "node:events";
 import { WebSocketServer, type WebSocket as WS } from "ws";
 import { setBridgeContext, handleTwilioBridge } from "../src/voice/bridge";
-import { openReceipt, getReceipt, rollup, _reset } from "../src/calls/events";
+import { openReceipt, getReceipt, transcriptOf, rollup, _reset } from "../src/calls/events";
 import { toMediaFrames } from "../src/calls/clip-cache";
 
 /** Real ringback: the published North American pair, 440 + 480 Hz, μ-law encoded — the same thing
@@ -321,10 +321,32 @@ console.log("\n▶ the other strategy: close him for the wait, bring him back as
   const tw = await callWithHold(f, "room-reopen", "reopen");
   speak(tw, 150);
   ok(f.sockets.length === 1, "one session while somebody is with us");
+  // Both sides say a line BEFORE the wait, so the check below is about surviving the drop rather than
+  // about an empty record trivially matching itself.
+  f.sockets[0].send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Hi, do you have any Pokemon cards in stock right now?" } }));
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "I have to go check, okay? I'm gonna put you on hold." } }));
+  await sleep(60);
   quiet(tw, HOLD_QUIET_MS / 20 + 20);
   await sleep(80);
   ok(f.sockets[0].readyState === 3 || f.sockets[0].readyState === 2, "his session is CLOSED for the wait — the only thing that actually stops the meter");
   ok(tw.readyState === 1, "the phone line itself stays up, so the store hears nothing unusual");
+  // WHAT THE CUSTOMER'S PAGE IS TOLD WHILE HE IS CLOSED. This is the exact pair `/pub/live/:cid`
+  // answers a bridge check from, and it is the whole of owner test 1 on 07-31: the page used to ask
+  // the PROVIDER whether the check was still running, and closing Charlie for the wait ends his
+  // conversation over there, so a store saying "hold on, let me go check" flipped the page straight to
+  // Getting results and settled a no-answer verdict while the phone was still in somebody's hand. It
+  // also wiped the conversation, because the reconnected Charlie is a NEW conversation there and the
+  // earlier lines are not in it. Our own record answers both truthfully.
+  {
+    const live = getReceipt("room-reopen")!;
+    const seen = transcriptOf(live);
+    ok(!live.closed, "the customer's page is still told the check is RUNNING while Charlie is dropped for the wait");
+    ok(seen.includes("Pokemon cards in stock") && seen.includes("put you on hold"),
+      "…and BOTH sides of the conversation are still on the page, because it is OUR record, not his session");
+    // And the sentence that caused all of it does not get read as being handed to another department.
+    ok(!(live.events || []).some((e) => e.detail?.wrongDepartment === true),
+      "“I'm gonna put you on hold” is a wait, never a wrong department");
+  }
   speak(tw, 30);
   await sleep(150);
   if (f.sockets.length !== 2) { const { bridgeDebug } = await import("../src/voice/bridge"); console.log(bridgeDebug().slice(-12).join("\n")); }
