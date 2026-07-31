@@ -39,8 +39,8 @@ export interface CallTuning {
 export const TUNING_DEFAULTS: CallTuning = {
   personGreetingMaxMs: 3500,
   personWaitMs: 2500,
-  greetingEndMs: 900,
-  greetingMaxWaitMs: 6000,
+  greetingEndMs: 600,
+  greetingMaxWaitMs: 4000,
   greetingKeepMs: 3000,
   holdQuietMs: 6000,
   holdMusicMs: 6000,
