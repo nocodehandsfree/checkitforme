@@ -18,8 +18,7 @@ git. Last updated: 2026-07-30 (every try back runs the same way; Mapped checks c
 ## Every try back now runs the exact same way (07-30, on staging)
 - Every mapping check walks the menu the same way; the ONE answer being tested early is the only difference.
   **Mapping calls is now Mapped checks** and each check shows faster or slower than the check before it.
-- **Colours:** Alpha indigo · Bravo blue · Direct grey, the same on every screen. **Needs review is red**, and
-  red now only ever means something is wrong.
+- The chains list names the model in plain text; a small red alert sits beside a name only when work waits.
 ## Chains: the page is rebuilt and every mapping call lands on it (07-30)
 - Tap a chain: **nav time** (getting through their phone menu, the part we control), what it costs, how often the
   recipe reaches Staff, the **Menu** by condition, the **Recipes** held, and **Review**.
