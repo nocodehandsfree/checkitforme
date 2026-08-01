@@ -981,14 +981,31 @@ export async function reportUnknown(u: {
   await ensureMapTables();
   const at = nowSec();
   const key = (u.prompt || "").slice(0, 200);
-  const found = await client.execute({
-    sql: `SELECT id, seen_count FROM nav_unknowns WHERE chain_id=? AND store_id=? AND kind=? AND status='open' AND COALESCE(prompt,'')=? LIMIT 1`,
-    args: [u.chainId, u.storeId || 0, u.kind, key],
-  });
-  if (found.rows.length) {
-    const row = found.rows[0] as any;
-    await client.execute({ sql: `UPDATE nav_unknowns SET last_seen=?, seen_count=? WHERE id=?`, args: [at, Number(row.seen_count || 1) + 1, Number(row.id)] });
-    return;
+  // A CONDITION FOLDS BY MENU IDENTITY, not by exact text. The transcriber never hands the same
+  // recording back the same way twice, so exact-match dedup filed the SAME night menu as a new row
+  // every hearing and seen_count never reached two — "heard twice = real" could never fire. A
+  // menu-changed file compares greetings the way the fingerprint does (sameMenu); the FIRST-heard
+  // words are kept on the row, because the menu keeps the store's exact words as first heard.
+  if (u.kind === "menu-changed" && key) {
+    const open = await client.execute({
+      sql: `SELECT id, prompt, seen_count FROM nav_unknowns WHERE chain_id=? AND kind='menu-changed' AND status='open' LIMIT 20`,
+      args: [u.chainId],
+    });
+    const same = open.rows.find((r: any) => sameMenu(String(r.prompt || ""), key));
+    if (same) {
+      await client.execute({ sql: `UPDATE nav_unknowns SET last_seen=?, seen_count=? WHERE id=?`, args: [at, Number((same as any).seen_count || 1) + 1, Number((same as any).id)] });
+      return;
+    }
+  } else {
+    const found = await client.execute({
+      sql: `SELECT id, seen_count FROM nav_unknowns WHERE chain_id=? AND store_id=? AND kind=? AND status='open' AND COALESCE(prompt,'')=? LIMIT 1`,
+      args: [u.chainId, u.storeId || 0, u.kind, key],
+    });
+    if (found.rows.length) {
+      const row = found.rows[0] as any;
+      await client.execute({ sql: `UPDATE nav_unknowns SET last_seen=?, seen_count=? WHERE id=?`, args: [at, Number(row.seen_count || 1) + 1, Number(row.id)] });
+      return;
+    }
   }
   await client.execute({
     sql: `INSERT INTO nav_unknowns (chain_id, store_id, kind, prompt, evidence, first_seen, last_seen, seen_count, status)
@@ -1357,6 +1374,17 @@ export async function chainDetail(chainId: number): Promise<Record<string, unkno
     // agreements arriving free from real customer checks (R1).
     provenStores: proven.stores,
     fullyProven: proven.fullyProven,
+    // THE CONDITIONS, readable (the fingerprint's second half): every unmatched menu filed, in the
+    // store's exact words as FIRST heard, with how many times it has been heard. Heard twice = real
+    // — that is the bar the screens' pills read (chunk 3); nothing renders off one hearing.
+    conditions: unk.rows
+      .filter((r: any) => String(r.kind) === "menu-changed" && String(r.status) === "open")
+      .map((r: any) => ({
+        greeting: r.prompt ? String(r.prompt) : "",
+        heardCount: Number(r.seen_count || 1),
+        real: Number(r.seen_count || 1) >= 2,
+        firstSeen: Number(r.first_seen), lastSeen: Number(r.last_seen),
+      })),
     // EVERY CALL, TOP TO BOTTOM. The whole conversation was always recorded — both sides, with the
     // second each line landed — it just lived on a different screen's data while this one carried a
     // store-only summary with our own replies stripped out, which is why a call read as nonsense

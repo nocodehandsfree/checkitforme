@@ -15,7 +15,7 @@ import { chains, retailers } from "../src/db/schema";
 import { connectAtSecFor, recipeToDtmf } from "../src/calls/recipe";
 import {
   proposeVersion, approveVersion, activeMap, versionsFor, chainDetail, graphFor, graphSummary,
-  openUnknowns, recordCallPath, recordFailedAttempt, learnFromReceipt, reportCallDrift, resetChainHistory,
+  openUnknowns, recordCallPath, recordFailedAttempt, learnFromReceipt, reportCallDrift, resetChainHistory, reportUnknown,
   addEvidence, navSecondsOf, reachedPctOf, scoreConfidence, sameMenu, CHECK_FAIL_REASONS, provenStores, addProvenStore,
   type MapRecipe, type EvidenceCall,
 } from "../src/calls/mapgraph";
@@ -148,6 +148,30 @@ async function main() {
     const mg2 = readFileSync("src/calls/mapgraph.ts", "utf8");
     ok(/await setSetting\(`map_proven:\$\{chainId\}`, ""\);/.test(mg2),
       "and starting a chain over clears the proof with the history");
+  }
+
+  console.log("\n▶ A NEW MENU IS A CONDITION — filed once, real when heard twice");
+  {
+    // ROUND 2 ITEM 10. The same night menu, transcribed two different ways — exact-match dedup filed
+    // these as separate rows forever and "heard twice" could never fire. The fold is by menu identity.
+    const night1 = "Thank you for calling CVS Pharmacy. The pharmacy is currently closed. Business hours are 9 AM to 9 PM.";
+    const night2 = "Thank you for calling CVS, Pharmacy. The pharmacy is currently closed, business hours are 9am to 9pm";
+    const spanish = "Gracias por llamar a CVS Pharmacy. Para continuar en español, diga sí.";
+    await reportUnknown({ chainId: chain.id, storeId: east.id, kind: "menu-changed", prompt: night1 });
+    await reportUnknown({ chainId: chain.id, storeId: west.id, kind: "menu-changed", prompt: night2 });
+    let conds = (await chainDetail(chain.id)).conditions as Array<{ greeting: string; heardCount: number; real: boolean }>;
+    ok(conds.length === 1, "two transcriptions of one menu fold into ONE condition");
+    ok(conds[0].heardCount === 2 && conds[0].real === true, "heard twice = real (the pill's bar, readable)");
+    ok(conds[0].greeting === night1.slice(0, 200), "and the row keeps the store's exact words as FIRST heard");
+    await reportUnknown({ chainId: chain.id, storeId: east.id, kind: "menu-changed", prompt: spanish });
+    conds = (await chainDetail(chain.id)).conditions as Array<{ real: boolean }>;
+    ok(conds.length === 2 && conds.filter((c) => !c.real).length === 1,
+      "a genuinely different menu files its own condition, not yet real on one hearing");
+    // The 24-hour label compare could never match ('Open 24h' vs the real label '24h') — fixed.
+    ok(/st\.label === "24h"/.test(readFileSync("src/calls/mapper.ts", "utf8"))
+      && /st\.label === "24h"/.test(readFileSync("src/calls/trainer-batch.ts", "utf8"))
+      && !/Open 24h/.test(readFileSync("src/calls/mapper.ts", "utf8")),
+      "the 24-hour store gates compare the label the hours code actually returns");
   }
 
   console.log("\n▶ THE MENU MOVES — a check notices before anybody does");

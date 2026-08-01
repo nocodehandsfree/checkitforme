@@ -370,7 +370,7 @@ async function storeOpenNow(storeId: number): Promise<boolean> {
     const r = (await db.select().from(retailers).where(eq(retailers.id, storeId)))[0];
     if (!r) return false;
     const st = openState(r.hours, r.timezone || "America/Chicago", new Date());
-    if (st.label === "Open 24h") return true;
+    if (st.label === "24h") return true;
     if (st.known) return st.open;
     const h = Number(new Intl.DateTimeFormat("en-US", { timeZone: r.timezone || "America/Chicago", hour: "numeric", hour12: false }).format(new Date()));
     return h >= 9 && h < 22;
