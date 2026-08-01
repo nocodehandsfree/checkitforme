@@ -1,36 +1,36 @@
 # STATE — the owner's single source of truth
 One screen. Every session updates this at close (≤40 lines). New truth REPLACES old — history is in
-git. Last updated: 2026-07-31 (mapping engine rebuilt to your rules, part 1 of 3; CVS junk wiped; Re-map button gone).
-## Store logos are all the same size now (07-31, LIVE on Admin and the real site)
-- Nine looked shrunken beside BJ's Wholesale. Five (Shaw's, TJ Maxx, Ross, Randalls, Tom Thumb) had a picture
-  with a big empty border baked in, and every logo was squeezed into a square, flattening wide ones like
-  Randalls. **New pictures live everywhere; the evening-out is on Admin and staging, real site at next promote.**
-## The check status page + the verdict wait (07-30, on staging, driven on the real staging site)
-- The conversation follows its newest line, both screens end clear of Safari's bottom bar, and **the wait on
-  ElevenLabs is GONE (your order):** at hang up we settle from our own words plus our finished read.
+git. Last updated: 2026-08-01 (mapping engine, part 1 of 3: one judge for who is talking; handed off for audit).
+## Store logos are all one size, and the check status page is clean (07-30/31)
+- Logos: new pictures live everywhere; the evening-out is on Admin and staging, real site at next promote.
+- The status page follows its newest line, clears Safari's bottom bar, and **the wait on ElevenLabs is GONE
+  (your order):** at hang up we settle from our own words plus our finished read.
 ## In stock alerts are FIXED (07-31, on staging): why your Fun store email never came
-- Your two rows switched themselves off after their first email, and two of the three ways a check finishes
-  never sent mail at all. Now every finish path sends, alerts stay ON until paused or deleted, one store =
-  ONE email, a repeat subscribe says so. **Your move: tap the Fun store alert once, run a check, one email.**
-## A wrong department no longer costs you the check (07-30, on staging)
-- We ask once to be put through, stop paying while they hand us over, ask again when somebody new picks up. A
-  switch in Calls → App turns it off. Only your phone can test the real words.
-## The bottom bar can never go dark again, and Live is cleaned (07-30, live on Admin)
-- **The tint is nailed down**, three ways it used to break are refused before anything goes live. Cost per
-  check opens on **The baseline**, your 6.7¢ ceiling off your real prices.
-## Mapping rebuild, part 1 of 3 (the engine): fourth pass done — HANDED OFF for the PM's blind audit (08-01)
-- The last list closed one root cause behind three of the problems: **Staff's own words were being read
-  as the store's menu.** A clerk saying "sure, one moment" was taken as the phone system handing us on,
-  so their hello counted as part of the menu and we went back to calling real people just to hang up.
-  Now nothing anyone says after a person picks up can be treated as the menu, anywhere.
-- Also: Staff telling us where the cards are ("over in the toy aisle") no longer gets read as being sent
-  away — that was killing the RIGHT way in, permanently. Starting a chain over now frees the doors it had
-  refused to try again. Door records match each other. A closed store gets a second try later the same day.
+- Rows switched themselves off after one email, and two of the three ways a check finishes never sent mail.
+  Every finish sends now, alerts stay ON until paused. **Your move: tap the Fun store alert, run a check.**
+## A wrong department no longer costs you the check · the bottom bar can never go dark (07-30)
+- We ask once to be put through, stop paying while they hand us over, ask again when somebody new picks up
+  (a switch in Calls → App turns it off; only your phone can test the real words). The tint is nailed down,
+  and cost per check opens on **The baseline**, your 6.7¢ ceiling off your real prices.
+## Mapping rebuild, part 1 of 3 (the engine): fifth pass done — HANDED OFF for the PM's blind audit (08-01)
+- Rebuilt the piece that kept breaking, instead of patching it again. **One judge now answers "is that
+  the store's recording or a person?" for the whole engine**, and it decides in this order: does this
+  match what this store has said on earlier calls (a recording repeats itself word for word, a person
+  never does) · where are we (before the hand-off it's the machine, after the desk rings it's a person)
+  · the words themselves · if still unsure, go quiet for two seconds, because a recording keeps reading
+  and a person stops · and if it STILL can't tell, it's a person. Six scattered guesses are retired.
+- Two rules make calling real people to hang up on them impossible even if that judge is ever wrong: a
+  listening check with nothing to walk is refused before it dials, and a store with nothing to walk locks
+  without another call. A store that plays a recording and then hands you to Staff is now its own kind, so
+  we never start talking over the recording. The first call to a store we've never rung listens to
+  everything and hangs up on nothing, and its menu is remembered from then on.
+- The chain page has two new buttons: **Start over** (clears the checks and old recipes, keeps the way in)
+  and **Free doors** (unblocks the ways in it decided were wrong, keeps everything else).
 - **Two things wait on YOU:** (1) live customer checks still say their answers on a timer — the built
   listening way is switched off, and flipping it changes the cost numbers (a fresh chat builds it on your
   word); (2) should a changed way through still wait for your tap, or switch itself hands-free?
-- Side branch only, 420 + 100 rig checks green; the only 2 red are the ones waiting on your call above.
-  **Staging untouched until you say "clear".** Part 1 closes on the PM's audit, not my word.
+- Side branch only, 451 + 100 rig checks green; the only 2 red wait on your call above. **Staging untouched
+  until you say "clear".** Part 1 closes on the PM's audit, not my word.
 ## The new calling engine is ON for staging. Your six test calls are the last thing (07-28/29)
 - **Nothing to flip.** A check from staging.checkitforme.com goes through the new engine. **Listen for:** it asks
   once and waits · no keypad beeps once you are talking · after a hold it asks you again if you might be new.
