@@ -23,6 +23,7 @@ import { lockRecipeToChain } from "../src/calls/trainer-batch";
 import { greetingFrom, looksLikeDirectPickup, menuStillTalking, parseSpokenOptions, isMenuLine, parseMenuOptions, mergeMenu, looksLikeQuestion, isReprompt, pickedDoorFrom, doorsAskedAt } from "../src/calls/navigator";
 import { recipeFromCall, gradeCheck } from "../src/calls/map-capture";
 import { sameWording } from "../src/calls/mapper";
+import { toneShare, ConversationEar } from "../src/calls/listen-nav";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -357,15 +358,58 @@ async function main() {
   }
 
 
+  console.log("▶ THE RING IS REAL — counted on the network's own tone, and a silent handoff never troubles Staff");
+  {
+    // ROUND 2 ITEM 5. Build real μ-law frames: a ringback tone (440+480 Hz) and speech-shaped noise.
+    const mulaw = (sample: number): number => {
+      const BIAS = 0x84, CLIP = 32635;
+      let s2 = Math.max(-CLIP, Math.min(CLIP, Math.round(sample)));
+      const sign = s2 < 0 ? 0x80 : 0; if (s2 < 0) s2 = -s2;
+      s2 += BIAS;
+      let exp = 7;
+      for (let mask = 0x4000; (s2 & mask) === 0 && exp > 0; exp--, mask >>= 1) { /* find segment */ }
+      const mant = (s2 >> (exp + 3)) & 0x0f;
+      return ~(sign | (exp << 4) | mant) & 0xff;
+    };
+    const frame = (gen: (i: number) => number): string => {
+      const buf = Buffer.alloc(160);
+      for (let i = 0; i < 160; i++) buf[i] = mulaw(gen(i));
+      return buf.toString("base64");
+    };
+    const ringFrame = frame((i) => 8000 * (Math.sin(2 * Math.PI * 440 * i / 8000) + Math.sin(2 * Math.PI * 480 * i / 8000)));
+    let seed = 7;
+    const noiseFrame = frame(() => { seed = (seed * 1103515245 + 12345) % 2147483648; return ((seed / 2147483648) - 0.5) * 16000; });
+    ok(toneShare(ringFrame) >= 0.45, `a ringback frame reads as the network's own tone (${toneShare(ringFrame).toFixed(2)})`);
+    ok(toneShare(noiseFrame) < 0.45, `speech-shaped sound does not (${toneShare(noiseFrame).toFixed(2)})`);
+
+    // The one Ear counts ring BURSTS: a burst must run, and the gap between bursts separates them.
+    const conv = new ConversationEar({ holdStart: () => {}, holdEnd: () => {} });
+    const feed = (n: number, tone: boolean) => { for (let i = 0; i < n; i++) conv.feed(tone ? 1000 : 0, tone); };
+    feed(35, true);   // ~700ms of ring tone = one real burst
+    ok(conv.rings === 1, `one burst = one ring (${conv.rings})`);
+    feed(50, false);  // the silence between rings
+    feed(35, true);
+    ok(conv.rings === 2, `the second burst is the second ring (${conv.rings})`);
+
+    const nv = readFileSync("src/calls/navigator.ts", "utf8");
+    ok(/conv\.feed\(earFrameEnergy\(b64\), earToneShare\(b64\) >= 0\.45\)/.test(nv),
+      "every mapping check feeds the Ear the tone test, the bridge's own bar");
+    ok(/const routeDone = !!\(s\.barge\?\.plan\?\.length && \(s\.planIdx \?\? 0\) >= s\.barge\.plan\.length\);/.test(nv)
+      && /if \(rings > 0 && s\.transferAtSec == null && routeDone\)/.test(nv),
+      "a SILENT handoff arms the ring hang-up too: the route finished and the desk rang — no waiting for a person to hang up on");
+    ok(/const byClock = rings === 0 && s\.routedAtSec != null && atSec - s\.routedAtSec >= RING_CYCLE_SEC;/.test(nv),
+      "the cadence clock stands in only when the Ear counted nothing after an announced handoff");
+  }
+
   console.log("▶ THE RE-LISTEN CALL — walks the known menu, hangs up on the SECOND RING, every check");
   {
     // The whole point of the mode, asserted on the rules that make it safe rather than on a phone.
     const src = readFileSync("src/calls/navigator.ts", "utf8");
     ok(!/if \(s\.relisten\) \{\s*\n\s*s\.stopReason = "menu done, desk ringing";/.test(src),
       "the handoff announcement alone no longer ends the call — the announcement is not the ring (RULES 2)");
-    ok(/if \(s\.relisten && s\.routedAtSec != null && s\.humanAtSec == null\)[\s\S]{0,700}?rings >= 2/.test(src),
+    ok(/if \(s\.relisten && s\.humanAtSec == null\)[\s\S]{0,900}?rings >= 2/.test(src),
       "every ring hang-up waits for the second ring — re-listen and speed check alike");
-    ok(/const byClock = rings === 0 && atSec - s\.routedAtSec >= RING_CYCLE_SEC;/.test(src),
+    ok(/const byClock = rings === 0 && s\.routedAtSec != null && atSec - s\.routedAtSec >= RING_CYCLE_SEC;/.test(src),
       "with the published ring cadence standing in when the Ear has counted nothing");
     ok(/RE-LISTEN NEVER TROUBLES STAFF[\s\S]{0,400}?finish\(s, "human"\); return twiml\(`<Hangup\/>`\)/.test(src),
       "and if somebody picks up anyway it hangs up rather than asking them anything");

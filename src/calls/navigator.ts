@@ -15,7 +15,7 @@ import { openReceipt, emit, markNow, closeReceipt } from "./events";
 // speech text alone, which returns an empty string for silence, for hold music and for a desk that is
 // ringing, so it could not tell "nobody is there" from "somebody just said hello". These are the same
 // two classes the paid-agent calls listen with. Nothing new is built here.
-import { PromptDetector, ConversationEar, frameEnergy as earFrameEnergy, type HoldReason } from "./listen-nav";
+import { PromptDetector, ConversationEar, frameEnergy as earFrameEnergy, toneShare as earToneShare, type HoldReason } from "./listen-nav";
 import { sameMenu, type CheckStage, type CheckFailReason } from "./mapgraph";
 import { gradeCheck } from "./map-capture";
 
@@ -199,11 +199,12 @@ export function navMediaFeed(room: string, b64: string, track?: string): void {
     ear.det = new PromptDetector((n) => { ear.recordings = n; });
     s.ear = ear;
   }
-  // isTone is left false deliberately: the ring-frequency test lives in the machine-locked bridge, so
-  // the Ear here cannot yet tell a ringing desk from a voice. That is why what it hears is only ever
-  // used to VETO (see navStep) and never to declare a person — a veto cannot invent one.
+  // The ring-frequency test is the Ear's own (toneShare, the bridge's measurement copied into
+  // listen-nav), fed with the bridge's 0.45 bar — so the ring counter counts REAL ring bursts and
+  // "hang up on the second ring" stops being a clock wearing the ring's name. What the Ear hears is
+  // still only ever a VETO for declaring a PERSON (see navStep) — a veto cannot invent one.
   s.ear.det.feed(b64);
-  s.ear.conv.feed(earFrameEnergy(b64));
+  s.ear.conv.feed(earFrameEnergy(b64), earToneShare(b64) >= 0.45);
 }
 
 export function getNavSession(id: string): NavSession | null { return sessions.get(id) || null; }
@@ -587,15 +588,21 @@ async function navTurn(id: string, speech: string): Promise<string> {
   // tone test that declares a transfer. Two is enough to prove the desk rang and still leaves nobody
   // to answer it. No Ear on the call (the audio fork never arrived) falls back to the published US
   // cadence, two seconds of ring and four of silence, so the second ring begins six seconds in.
-  if (s.relisten && s.routedAtSec != null && s.humanAtSec == null) {
+  // HANG UP ON THE SECOND RING — armed the moment the desk could be ringing: an ANNOUNCED handoff,
+  // OR the route's last answer already given (a SILENT handoff — many menus say nothing and just
+  // ring the desk; waiting for a person there is how a check ends up hanging up ON Staff, the one
+  // thing a ring hang-up exists to prevent). The Ear counts REAL ring bursts (toneShare); the first
+  // one stamps the handoff moment when no announcement did, because the desk ringing IS the menu
+  // finished with us (owner Update 10). The published cadence (second ring starts six seconds in)
+  // stands in only when the Ear has counted nothing after an announced handoff.
+  if (s.relisten && s.humanAtSec == null) {
     const rings = s.ear?.conv?.rings ?? 0;
-    const bySound = rings >= 2;
-    // The Ear on a mapping call cannot hear the network's ring frequencies (that test lives in the
-    // machine-locked bridge), so when it has counted nothing the published US cadence stands in: two
-    // seconds of ring, four of silence — the SECOND ring begins six seconds after the handoff. This
-    // is the hang-up moment, not an answer: no answer ever fires on a timer, and this is the rule
-    // that keeps every ring hang-up off real Staff (voice-calls RULES line 2).
-    const byClock = rings === 0 && atSec - s.routedAtSec >= RING_CYCLE_SEC;
+    const routeDone = !!(s.barge?.plan?.length && (s.planIdx ?? 0) >= s.barge.plan.length);
+    if (rings > 0 && s.transferAtSec == null && routeDone) {
+      s.transferAtSec = atSec; s.routedAtSec = s.routedAtSec ?? atSec;
+    }
+    const bySound = rings >= 2 && (routeDone || s.routedAtSec != null);
+    const byClock = rings === 0 && s.routedAtSec != null && atSec - s.routedAtSec >= RING_CYCLE_SEC;
     if (bySound || byClock) {
       s.ringsHeard = rings;
       s.stopReason = bySound ? `hung up on ring ${rings}` : "hung up on the second ring (by the clock)";

@@ -90,6 +90,36 @@ export function frameEnergy(b64: string): number {
   return sum / buf.length;
 }
 
+// ---- Call-progress tone detection (ringback / busy / dial tone) ----
+// The phone network builds these from a FIXED pair of pure tones, published in the North American
+// plan: ringback 440+480 Hz, busy and reorder 480+620 Hz, dial tone 350+440 Hz. So "is this the desk
+// ringing or a person talking?" is not a judgement call, it is a measurement: check how much of the
+// frame's energy sits exactly on those frequencies. A tone puts nearly all of it there; speech never
+// does. Copied byte-for-byte from the bridge's ear (src/voice/bridge.ts toneShare) so the two ears
+// cannot disagree about what counts as the network's own tone — the same rule the energy decoder
+// above already follows. This is what lets a mapping check count REAL rings and hang up on the
+// second one, instead of trusting a clock.
+const TONE_HZ = [350, 440, 480, 620];
+/** Share (0..1) of a frame's energy sitting on the call-progress tone frequencies. ~1 = a pure tone
+ *  pair, well under 0.2 for speech. Goertzel per frequency, normalized so a clean tone reads 1. */
+export function toneShare(b64: string): number {
+  let buf: Buffer; try { buf = Buffer.from(b64, "base64"); } catch { return 0; }
+  const N = buf.length;
+  if (N < 80) return 0;
+  const x = new Float64Array(N);
+  let total = 0;
+  for (let i = 0; i < N; i++) { const v = ulawByteToLinear(buf[i]); x[i] = v; total += v * v; }
+  if (total <= 0) return 0;
+  let tone = 0;
+  for (const hz of TONE_HZ) {
+    const coeff = 2 * Math.cos((2 * Math.PI * hz) / 8000);
+    let s0 = 0, s1 = 0, s2 = 0;
+    for (let i = 0; i < N; i++) { s0 = x[i] + coeff * s1 - s2; s2 = s1; s1 = s0; }
+    tone += s1 * s1 + s2 * s2 - coeff * s1 * s2; // |X(f)|^2
+  }
+  return tone / (total * (N / 2)); // normalized: a clean single tone at a listed frequency → ~1
+}
+
 /** Speech/silence thresholds. VOICE_THRESH matches the bridge's ear (350) so the two agree about
  *  what counts as sound on the line. */
 const VOICE_THRESH = 350;
