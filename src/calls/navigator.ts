@@ -823,7 +823,12 @@ async function navTurn(id: string, speech: string): Promise<string> {
     if (s.pauseTested && s.keptTalkingAfterPause === undefined) {
       // Whatever arrived after our silence answers the pause: more store speech means it never
       // stopped for us; anything else (or nothing) means it did.
-      s.keptTalkingAfterPause = isMenuLine(speech) || speech.trim().split(/\s+/).length > 14;
+      // ONLY MENU EVIDENCE ANSWERS THE PAUSE. Counting words was a guess dressed up as a fact: a
+      // person's long answer read as "it kept reading", and that is how Staff got talked over —
+      // in Spanish every single time, because none of our English words for a person matched them.
+      // We never need to recognise a person's words. We only need to know a menu when we hear one;
+      // anything we cannot prove is a menu is a person, whatever language they answer in.
+      s.keptTalkingAfterPause = isMenuLine(speech);
     }
     const verdict = s.pauseTested ? judgeHere(s, speech, atSec) : v;
     // A MACHINE WE CANNOT GET PAST ENDS THE CHECK, BEFORE ANY QUESTION ABOUT A PERSON. A mailbox

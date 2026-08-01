@@ -121,15 +121,17 @@ console.log("\n▶ PRACTICE CHECK 6 — a Spanish-speaking person");
 {
   // Staff answer in Spanish, at length. Our own words for a person are English, so a long Spanish
   // hello used to read as one more recording — and a recording is something we press keys at.
+  // WE NEVER RECOGNISE A PERSON'S WORDS. We only know a menu when we hear one, and anything we
+  // cannot prove is a menu is a person. Charlie handles whatever language they answer in.
   const hola = "Buenas tardes, gracias por llamar a Card Mart, habla María, ¿en qué le puedo servir el día de hoy?";
-  ok(judge({ text: hola, atSec: 33, knownMenuLines: [] }).who === "person",
-    "somebody greeting us in Spanish is a person");
-  ok(judge({ text: "¿Bueno? ¿Sigue ahí?", atSec: 40 }).who === "person",
-    "and somebody asking in Spanish whether we are still there is a person");
+  ok(judge({ text: hola, atSec: 33, knownMenuLines: [], pauseTested: true, keptTalkingAfterPause: false }).who === "person",
+    "somebody greeting us in Spanish is a person — nothing about it proves a menu");
+  ok(judge({ text: "¿Bueno? ¿Sigue ahí?", atSec: 40, pauseTested: true, keptTalkingAfterPause: false }).who === "person",
+    "and so is somebody asking in Spanish whether we are still there");
   ok(judge({ text: "Para español, oprima nueve.", atSec: 3 }).who === "recording",
     "while the menu's own Spanish option is still the recording");
-  ok(judge({ text: hola, atSec: 33, pauseTested: true, keptTalkingAfterPause: true }).who === "person",
-    "and the length of what they said never turns them back into a machine");
+  ok(/s\.keptTalkingAfterPause = isMenuLine\(speech\);/.test(readFileSync("src/calls/navigator.ts", "utf8")),
+    "and after our silence, only a menu's own words call it a machine — never how much they said");
 }
 
 console.log("\n▶ PRACTICE CHECK 7 — Charlie cannot join as the person answers");
