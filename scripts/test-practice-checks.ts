@@ -14,9 +14,10 @@
 //   7 Charlie cannot join as they answer  we never hang up on the person who just picked up
 //
 // Run: ./node_modules/.bin/tsx scripts/test-practice-checks.ts
-import { readFileSync } from "node:fs";
 import { judgeVoice, personStartsAt, type JudgeInput } from "../src/calls/listen-nav";
 import { menuLinesOf } from "../src/calls/mapper";
+import { _test as engine, setMappingHandoff, navEnded } from "../src/calls/navigator";
+import { emit, recordLine } from "../src/calls/events";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -40,8 +41,14 @@ console.log("\n▶ PRACTICE CHECK 1 — instant pickup, no ring (the Fun store, 
   // A turn where nothing at all was said is not a verdict, so it can never be a reason to press.
   ok(judge({ text: "" }).who !== "recording",
     "and silence is never a verdict — nothing may be pressed into a quiet line");
-  ok(/} else if \(d\.value && s\.lastVerdict !== "recording"\) \{\s*\n\s*return twiml\(gather\(id\)\);/.test(readFileSync("src/calls/navigator.ts", "utf8")),
-    "so on a quiet turn we act only on the earpiece's last word, never blind");
+  // DRIVEN: a check walking a saved route, and the store goes quiet before anything is heard.
+  {
+    engine.open({ id: "quiet-1", barge: { plan: [{ action: "press", value: "2", at: 8 }] }, relisten: true });
+    engine.at("quiet-1", 8);
+    const said = await engine.step("quiet-1", "");
+    ok(!/<Play digits=/.test(said), "and on a quiet turn nothing is pressed — the key is held back");
+    engine.end("quiet-1");
+  }
 }
 
 console.log("\n▶ PRACTICE CHECK 2 — a branded hello, then \"one moment\" (the Barnes & Noble shape)");
@@ -130,22 +137,75 @@ console.log("\n▶ PRACTICE CHECK 6 — a Spanish-speaking person");
     "and so is somebody asking in Spanish whether we are still there");
   ok(judge({ text: "Para español, oprima nueve.", atSec: 3 }).who === "recording",
     "while the menu's own Spanish option is still the recording");
-  ok(/s\.keptTalkingAfterPause = isMenuLine\(speech\);/.test(readFileSync("src/calls/navigator.ts", "utf8")),
-    "and after our silence, only a menu's own words call it a machine — never how much they said");
+  // DRIVEN through the engine: the same long Spanish hello, on the check that reaches Staff.
+  {
+    setMappingHandoff(async () => null);
+    engine.open({ id: "es-1", confirm: { product: "Pokémon cards" } });
+    engine.at("es-1", 30);
+    const t1 = await engine.step("es-1", hola);
+    ok(!/<Play digits=/.test(t1) && /<Pause length="2"/.test(t1),
+      "nothing is pressed at them — the check goes quiet to see if the talking carries on");
+    engine.at("es-1", 33);
+    await engine.step("es-1", hola);
+    ok(engine.get("es-1")?.humanAtSec != null,
+      "and when it does not carry on, they are a person — no phrase of theirs was ever matched");
+    engine.end("es-1");
+  }
 }
 
 console.log("\n▶ PRACTICE CHECK 7 — Charlie cannot join as the person answers");
 {
-  // Staff pick up and Charlie cannot be opened. We never hang up on the person who just answered,
-  // and nothing about that way in is spent, because the store was asked nothing.
-  const nav = readFileSync("src/calls/navigator.ts", "utf8");
-  ok(/s\.charlieTries = \(s\.charlieTries \?\? 0\) \+ 1;\s*\n\s*if \(s\.charlieTries < 2\) return twiml\(gather\(id\)\);/.test(nav),
-    "a failed hand-off waits quietly and tries once more, instead of hanging up on them");
-  ok(/if \(s\.confirm\?\.asked && s\.charlieJoined && s\.chainId != null\) void recordConfirmAsked/.test(nav),
-    "and that way in is spent only when Charlie really joined and really asked");
-  ok(!/s\.stopReason = "reached Staff but Charlie could not join";\s*\n\s*finish\(s, "failed"\); return twiml\(`<Hangup\/>`\);\s*\n\s*\}\s*\n\s*finish/.test(nav)
-    || /if \(s\.charlieTries < 2\)/.test(nav),
-    "the old straight-to-hang-up on a failed join is gone");
+  // Staff pick up and Charlie cannot be opened. DRIVEN through the engine: we never hang up on the
+  // person who just answered, and nothing about that way in is spent, because they were asked nothing.
+  setMappingHandoff(async () => null);           // Charlie refuses to open, every time
+  engine.open({ id: "nojoin-1", confirm: { product: "Pokémon cards" } });
+  engine.at("nojoin-1", 31);
+  const first = await engine.step("nojoin-1", "Hello? Are you still there?");
+  ok(!/<Hangup\/>/.test(first), "we do not hang up on the person who just answered");
+  ok(engine.get("nojoin-1")?.status !== "failed", "and the check is still running, quietly listening");
+  engine.at("nojoin-1", 36);
+  const second = await engine.step("nojoin-1", "Hello? Anybody there?");
+  ok(/<Hangup\/>/.test(second), "after one more try it ends, and the store still hears nothing from us");
+  ok(!engine.get("nojoin-1")?.charlieJoined,
+    "Charlie never got on, so that way in was never asked and is not spent");
+  engine.end("nojoin-1");
+  setMappingHandoff(async () => null);
+}
+
+console.log("\n▶ CHARLIE'S WORD ON THE DEPARTMENT — Staff engaged, so the department is proved");
+{
+  // "We might have some, come look" is not a yes and not a no about stock. It IS Staff saying they
+  // hold the information, which is the whole department test (contract Update 12). Driven end to
+  // end: hand the check to Charlie, let Staff speak to him, end the check, read the grade.
+  setMappingHandoff(async () => `<Response><Connect/></Response>`);   // Charlie opens, as he does live
+  engine.open({ id: "dept-1", chainId: null, confirm: { product: "Pokémon cards" }, stage: "map" });
+  engine.at("dept-1", 40);
+  await engine.step("dept-1", "Hello? Are you still there?");
+  const s = engine.get("dept-1")!;
+  ok(s.confirm?.asked === true, "the check is handed to Charlie the moment Staff answer");
+  // What Charlie's half of the check put down: he opened, and Staff spoke to him.
+  emit("dept-1", "charlie_join", "Charlie joined");
+  recordLine("dept-1", "Agent", "Hi, do you have any Pokémon cards in stock right now?");
+  recordLine("dept-1", "Clerk", "We might have some, come look.");
+  navEnded("dept-1");
+  ok(s.confirmResult === "answered",
+    "Staff engaged with the question, so this is the right department — whether they have the cards is not the test");
+  ok(s.grade === "pass", `and the check passes${s.failReason ? ` (it said "${s.failReason}")` : ""}`);
+  ok(s.charlieJoined === true, "Charlie really got on, so that way in counts as asked");
+  engine.end("dept-1");
+
+  // Sent to a desk that cannot answer is the one thing that is NOT the right department.
+  engine.open({ id: "dept-2", confirm: { product: "Pokémon cards" }, stage: "map" });
+  engine.at("dept-2", 40);
+  await engine.step("dept-2", "Hello? Are you still there?");
+  const w = engine.get("dept-2")!;
+  emit("dept-2", "charlie_join", "Charlie joined");
+  emit("dept-2", "unknown", "We reached the wrong department", { wrongDepartment: true, why: "that is the pharmacy" });
+  recordLine("dept-2", "Clerk", "Oh, that's the pharmacy, hold on.");
+  navEnded("dept-2");
+  ok(w.confirmResult === "redirect", "Charlie says wrong department, so that is what the check reads");
+  ok(w.grade === "fail" && w.failReason === "wrong department", `and it fails for that reason (${w.failReason})`);
+  engine.end("dept-2");
 }
 
 console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);

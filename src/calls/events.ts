@@ -258,6 +258,13 @@ export function recordLine(room: string, who: "Agent" | "Clerk", text: string): 
 }
 
 /** The conversation as WE heard it, oldest first. */
+/** Did the STORE's side of this check say anything at all? Counting only — never a reading of what
+ *  was said, which belongs to Charlie. Lives here because this is where the two sides are labelled. */
+export function staffSpokeOn(room: string): boolean {
+  const r = receipts.get(room);
+  return !!r && r.transcript.some((l) => l.who !== "Agent" && String(l.text || "").trim());
+}
+
 export function transcriptOf(r: Receipt): string {
   return r.transcript.map((l) => `${l.who}: ${l.text}`).join("\n");
 }

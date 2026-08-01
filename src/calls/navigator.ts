@@ -9,14 +9,13 @@ import { getSetting, setSetting } from "../db/settings";
 import { db } from "../db/client";
 import { chains } from "../db/schema";
 import { eq } from "drizzle-orm";
-import { openReceipt, emit, markNow, closeReceipt, getReceipt } from "./events";
+import { openReceipt, emit, markNow, closeReceipt, getReceipt, staffSpokeOn } from "./events";
 // THE EAR — the one that already exists. Section 1 of the runtime spec gives it the whole call, dial
 // to hangup, and section 10 says there is exactly one of them. A mapping call used to run on Twilio's
 // speech text alone, which returns an empty string for silence, for hold music and for a desk that is
 // ringing, so it could not tell "nobody is there" from "somebody just said hello". These are the same
 // two classes the paid-agent calls listen with. Nothing new is built here.
 import { PromptDetector, ConversationEar, frameEnergy as earFrameEnergy, toneShare as earToneShare, judgeVoice, personStartsAt, looksLikeADeadEnd, type HoldReason } from "./listen-nav";
-import { liveReadFor, dropLiveRead } from "../voice/live-read";
 import { sameMenu, type CheckStage, type CheckFailReason } from "./mapgraph";
 import { gradeCheck } from "./map-capture";
 
@@ -48,28 +47,11 @@ const TAIL_SEC = 5;
 const TAIL_WORDS = 14;
 const TRANSFER_WAIT_SEC = 40;
 
-// A live person is on the line (a short greeting/question said TO us). Used as a backstop in auto-0
-// mode so we hang up the instant someone answers instead of beeping 0 at them.
-const HUMAN_RE = /can i help you|how (can|may) i help|what can i (do|help)|this is \w+|thanks for (holding|waiting)|you'?re (through|connected)|go ahead|^\s*hello[\s.!?]*$/i;
-// A live PICKUP: after we've already navigated a step, a short utterance that's clearly a person —
-// a greeting ("hello", "hi"), a self-ID ("this is…", "…speaking"), or a bare department answer
-// ("Target electronics", "guest service desk") — with NO "press N" menu. This is the signal we were
-// MISSING: a Target dept employee answers "Hello / Target electronics", which isn't a menu, so we must
-// stop pressing and treat them as the human (confirm mode then asks the stock question).
-const LIVE_HUMAN_RE = /\bhello\b|\bhi\b|\bhowdy\b|\byello\b|this is \w+|\bspeak(s|ing)?\b|how (can|may) i help|can i help|i can help|go ahead|what (can|do) (i|we|you)|^\s*(thanks for calling )?(target )?(electronics|guest services?|service desk|customer service|toys?|sporting goods?)[\s.,!?]*$/i;
-function looksLikeLivePerson(speech: string): boolean {
-  const t = (speech || "").trim();
-  if (!t) return false;
-  if (/press \d|para español|in english|main menu|enter your|spell the|press the/i.test(t)) return false; // still an IVR menu
-  if (t.split(/\s+/).length > 14) return false; // long utterance = recording, not a live greeting
-  return LIVE_HUMAN_RE.test(t);
-}
 // The system just routed us to a person (hold/transfer/"find someone") — after this, a greeting = human.
 const ROUTING_RE = /transferr?ing|connect(ing)? you|please hold|hold (on )?(while|and)|find (someone|somebody)|be with you|getting someone|let me get|one moment/i;
 // CONFIRM mode — the human we reached is sending us somewhere ELSE (wrong desk). We capture where and
 // hang up: "that's the electronics department", "let me transfer you", "you'd have to ask the front",
 // "I'll connect you", "that would be guest services". Anything else = they answered us = right place.
-const REDIRECT_RE = /transfer|connect(ing)? you|that('?s| is| would be) the |you('?d| would| will)? ?(have to|need to|want to|gotta)? ?(ask|call|talk to|check with|go to)|over to|let me get you|i'?ll get you|hold on|the .{0,18}(department|desk|counter|section)|guest services|customer service desk|electronics|toy|that'?s (handled|done) by/i;
 
 export type NavAction = "say" | "press" | "wait" | "human" | "fail";
 export interface NavStep {
@@ -516,8 +498,10 @@ export function menuStillTalking(
 ): boolean {
   if (s.routingSeen) return false;                                  // handed on → the next voice is the desk
   if (ROUTING_RE.test(speech || "")) return false;                  // being handed on right now
-  if (looksLikeLivePerson(speech || "")) return false;              // the words themselves are a person
   if (looksLikeDirectPickup(s.steps, s.turns, speech || "")) return false; // a cold pickup, one recording behind it
+  // AND THE EARPIECE CAN ALWAYS OVERRULE IT. If it hears a person, this veto never silences them.
+  // It asks the one judge — there is no phrase list of how people talk anywhere in here.
+  if (judgeVoice({ text: speech || "", atSec: 0 }).who === "person") return false;
   if (s.steps.some((st) => st.who === "us")) return false;          // we have already acted; trust the read
   return s.steps.filter((st) => st.who === "ivr" && String(st.text || "").trim()).length >= 2;
 }
@@ -802,11 +786,9 @@ async function navTurn(id: string, speech: string): Promise<string> {
   // (Mapping's own answer-listening is DELETED. Charlie owns every word exchanged with Staff: the
   // question, the reply, "one moment", the hold, the wrong desk. There is nothing for this file to
   // classify, and no silence rule of its own to get wrong.)
-  // LIVE PICKUP — fire on the FIRST human utterance, in EVERY mode. A direct store answers "Hello" /
-  // "Store, Bob speak" with no IVR, so we must reach the human on turn 1 — waiting for a 2nd line (or
-  // an LLM round-trip) leaves dead air while they keep saying "hello" until we hang up. looksLikeLivePerson
-  // already excludes "press N" menus + long recordings, so it won't trip on an opening IVR. Map mode →
-  // hang up instantly; confirm mode → ask the one stock question.
+  // LIVE PICKUP — fire on the FIRST voice, in EVERY mode. A store that answers direct says "Hello" /
+  // "Store, Bob speaking" with no menu at all, so we must reach them on the first turn: waiting for a
+  // second line leaves dead air while they keep saying hello until we hang up.
   // A PERSON IS ON THE LINE — the judge decides, weighing the two old tests as evidence rather than
   // letting either answer alone. Its layer 4 asks for a beat of silence when it cannot yet tell; we
   // give it exactly one, then it must answer (and layer 5 answers "person" if it still cannot).
@@ -972,7 +954,6 @@ async function navTurn(id: string, speech: string): Promise<string> {
   // That is the menu still talking. Kept deliberately narrow so it cannot silence a REAL person:
   //   • a store that picks up cold has at most one recording behind it (looksLikeDirectPickup),
   //   • a store that announced a handoff is exempt (routingSeen), so the next voice is the desk,
-  //   • words that read like a person are exempt (looksLikeLivePerson),
   //   • and once we have acted even once, the model is trusted as before.
   if (d.action === "human" && menuStillTalking(s, speech || "")) {
     emit(id, "unknown", "That read like the recording, not a person", { heard: (speech || "").slice(0, 120), atSec });
@@ -1083,11 +1064,12 @@ function finish(s: NavSession, status: "human" | "failed" | "mapped") {
     const evs = rec?.events || [];
     s.charlieJoined = evs.some((e) => String(e.kind) === "charlie_join");
     const wrong = evs.some((e) => String(e.kind) === "unknown" && (e.detail as { wrongDepartment?: boolean } | undefined)?.wrongDepartment === true);
-    // A REAL ANSWER, a yes or a no, is the proof — silence and "no clear answer" prove nothing
-    // (owner Update 12). The reader is the same one every check runs.
-    const said = liveReadFor(s.id)?.inStock;
-    const answered = said === "yes" || said === "no";
-    s.confirmResult = wrong ? "redirect" : (s.charlieJoined && answered ? "answered" : undefined);
+    // STAFF ENGAGED WITH THE QUESTION = the right department. Charlie got on and Staff spoke to him:
+    // that is all mapping counts, and it never looks at WHAT they said. Whether they have the cards
+    // is Charlie's reading and it is not the department test — "we might have some, come look" is
+    // Staff acknowledging they hold the information, which is exactly the proof (contract Update 12).
+    const staffSpoke = staffSpokeOn(s.id);
+    s.confirmResult = wrong ? "redirect" : (s.charlieJoined && staffSpoke ? "answered" : undefined);
     if (wrong) {
       const wd = evs.find((e) => String(e.kind) === "unknown" && (e.detail as { wrongDepartment?: boolean } | undefined)?.wrongDepartment === true);
       const why = String((wd?.detail as { why?: string } | undefined)?.why || "").slice(0, 80);
@@ -1373,10 +1355,30 @@ export async function placeNavCall(chainId: number | null, retailerId: number, r
     // the carrier went quiet would throw away a real answer from Staff.
     finish(live, live.status === "human" ? "human" : "failed");
     closeReceipt(id, live.stopReason, live.status);
-    dropLiveRead(id);
   }, ceiling * 1000);
   return { id };
 }
+/** TEST SEAM — drive a scripted check through this exact engine with no carrier and no money.
+ *  It opens a session and hands the same `navStep` every live turn goes through; nothing here is a
+ *  second copy of any rule. Used by scripts/test-practice-checks.ts. */
+export const _test = {
+  open(seed: Partial<NavSession> & { id: string }): NavSession {
+    const s: NavSession = {
+      chainId: null, retailerId: 0, retailerName: "Practice store", phone: "+15550000000",
+      startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null,
+      confidence: 0, recipe: null, ...seed,
+    } as NavSession;
+    sessions.set(s.id, s);
+    openReceipt(s.id, { note: "practice check" });
+    return s;
+  },
+  /** Move the clock so the next turn lands at this second of the check. */
+  at(id: string, sec: number): void { const s = sessions.get(id); if (s) s.startMs = Date.now() - sec * 1000; },
+  step: navStep,
+  get(id: string): NavSession | undefined { return sessions.get(id); },
+  end(id: string): void { sessions.delete(id); },
+};
+
 export function navEnded(id: string) {
   const s = sessions.get(id); if (!s) return;
   // EVERY CHECK IS GRADED, including one the carrier ended for us (the store hung up, the line
@@ -1398,7 +1400,6 @@ export function navEnded(id: string) {
   markNow(id, "endMs");
   emit(id, "hangup", s.stopReason || (s.humanAtSec != null ? "Reached a person" : "Never reached a person"), { status: s.status, humanAtSec: s.humanAtSec });
   closeReceipt(id, s.stopReason, s.status);
-  dropLiveRead(id); // the reader's copy of this check goes with it
   if (s.confirm?.asked && s.charlieJoined && s.chainId != null) void recordConfirmAsked(s.chainId, s.retailerId, pickedDoorFrom(s.steps), questionBeforePick(s.steps));
   // A FAILED CHECK CHANGES NOTHING — not even the chain's mapping status stamp. And a check a RUN
   // owns (it carries a stage) never stamps the chain either: the run's one write at lock does that.

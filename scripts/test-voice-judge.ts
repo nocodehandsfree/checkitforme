@@ -152,17 +152,16 @@ console.log("\n▶ UNSURE CAN NEVER BECOME 'MACHINE' THROUGH A SIDE DOOR (fix pa
     "and the pause memory is cleared per voice — one answer can never settle every later line");
 }
 
-console.log("\n▶ \"ONE MOMENT\" AFTER OUR QUESTION IS WAITING — not an answer, not being sent away");
+console.log("\n▶ WHAT STAFF SAID IS NOT OURS TO JUDGE — we only know somebody is there");
 {
-  const v = judge({ text: "Sure, one second.", weAskedAtSec: 64, atSec: 66, routeHandoffSeen: true, ringsHeard: 2, mappedRoute: true });
-  ok(v.who === "person", "it is a person talking");
-  ok(v.waiting === true, "and it is them going to look — the check must keep listening, not conclude");
-  ok(judge({ text: "Yeah, we've got some.", weAskedAtSec: 64, atSec: 67, ringsHeard: 2 }).waiting !== true,
-    "a real answer is not waiting");
-  ok(judge({ text: "Oh, that would be the toy department, let me put you through.", weAskedAtSec: 64, atSec: 67, ringsHeard: 2 }).sendingUsAway === true,
-    "and being handed somewhere else is still recognised for what it is");
-  ok(judge({ text: "They're over in the toy aisle, by the registers.", weAskedAtSec: 64, atSec: 67, ringsHeard: 2 }).sendingUsAway !== true,
-    "while Staff telling us WHERE the cards are is an answer, never being sent away");
+  // Them going to look, them handing us elsewhere, their answer: all Charlie's, already built and
+  // tuned. Mapping may know a person is on the line, because that is the moment it hands over.
+  const v = judge({ text: "Sure, one second.", weAskedAtSec: 64, atSec: 66, routeHandoffSeen: true, ringsHeard: 2, ringAtSec: 60, mappedRoute: true });
+  ok(v.who === "person", "it is a person talking, and that is the whole verdict");
+  ok(!("waiting" in v) && !("sendingUsAway" in v),
+    "no reading of what they said rides along — those were deleted, not moved");
+  ok(judge({ text: "Oh, that would be the toy department, let me put you through.", weAskedAtSec: 64, atSec: 67, ringsHeard: 2, ringAtSec: 60 }).who === "person",
+    "being handed somewhere else is a person saying it — Charlie reports the wrong department, not us");
 }
 
 console.log("\n▶ EVIDENCE ORDER, AND THE PERSON'S CLOCK (fix pass 6, items 3-4)");

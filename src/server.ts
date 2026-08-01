@@ -58,7 +58,7 @@ import { cachedCategories, cachedChains, cachedRetailers, categoryLabelMap, reta
 import { haversineMi, bboxAround } from "./geo";
 import { ingestSignals, recentStockNear, latestForRetailer } from "./stock/signals";
 import { classifyVerdict, reconcile, consensusFor, productDetailLabel } from "./voice/verdict";
-import { noteLiveLine, dropLiveRead, armLiveRead } from "./voice/live-read";
+import { noteLiveLine, dropLiveRead } from "./voice/live-read";
 import { seedStockCheckIntel } from "./stock/intel";
 import { seedSellMethods } from "./stock/sellmethods";
 import { r2Config, presignPut, photoKey } from "./r2";
@@ -1192,9 +1192,6 @@ setMappingHandoff(async (s) => {
       voiceId: v.voiceId || undefined,
       voiceTuning: v.voiceTuning || undefined,
     });
-    // The same reader every check runs, on the same record: it reads Staff's answer as it is spoken,
-    // so the run has a real yes or no waiting the moment the check ends.
-    armLiveRead(s.id, cat.label);
     const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
     return `<?xml version="1.0" encoding="UTF-8"?><Response><Stop><Stream name="navtap"/></Stop>`
       + `<Connect><Stream url="wss://${host}/bridge?room=${s.id}"><Parameter name="room" value="${s.id}" /></Stream></Connect></Response>`;

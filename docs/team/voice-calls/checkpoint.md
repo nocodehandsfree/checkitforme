@@ -12,41 +12,29 @@
 - THE ONE EAR: a VETO, never a green light; §10 says never build a second. `.unlock` scope trick: sprawl gate hooks Write only; open ONLY the named scope, then DELETE it.
 ## CHUNK 1 — ROUNDS 1-6 BUILT (08-01), HANDED OFF for the PM's blind milestone-1 audit
 **Fix pass 6 — BACK TO THE SPEC: mapping talks to machines, CHARLIE talks to people.** The whole class of bugs was mapping owning a conversation it was never meant to have. (0) The proving check hands the SAME live call to Charlie; mapping's spoken question, its synthesized audio + route, the answer-listening, the 12s silence rule and the waiting/sent-away classification are DELETED. (Its own second record + watcher were the fault pass 7 deleted — see below.) (1) Nobody presses or speaks unless the earpiece says a machine is talking; unsure = silent. The three self-deciders are gone (cold-pickup overrule, the model's own "human", the auto-operator word list). (2) No made-up "it kept talking" input anywhere; the pause memory clears per voice. (3) A real counted ring, and words addressed to us, outrank a word-match to the remembered menu. (4) The person's clock starts at their first word; unclear lines inside their speech are theirs; a glued hello SPLITS (person starts after the recording). (5) `hangUpAllowed` + `unknownLine` wired for real. (6) A first run feeds the judge its own heard lines. (7) A short recording before Staff kills the direct claim; "please hold" still arms the handoff clock. (8) Freeing the doors reaches a live run.
-**Fix pass 5 — THE ONE JUDGE (`listen-nav.ts`, the one ear's own home; decodes no audio):** every path asks `judgeVoice` — the menu-line cut, the person stamp, the handoff stamp, what kind of reply Staff gave, the sweep's recording test, the wording-settle compare. The six private opinions (LIVE_HUMAN_RE, looksLikeDirectPickup, ROUTING_RE stamping, REDIRECT_RE classify, sweep length test, personLineAtSec) survive ONLY as evidence it weighs. Five layers, first confident answer wins: (1) the store's own remembered menu (`rememberedMenuLines`, read off the live version's transcripts + menuPrompts — a recording repeats verbatim, a person never does; no match ≠ person, it may be an unheard menu, filed) · (2) position on a held route (before handoff = recording, after the ring = person) · (3) the words (choices/para español/menu announcing itself = recording; a reply to us, checking we're there, offering help = person) · (4) the pause (one 2s silence, then it must answer) · (5) still unsure = PERSON. `personStartsAt` dates the person from the FIRST line of their speech and SPLITS a tail-joined hello; "sure, one second" after the ask is WAITING (keep listening); a store with nothing on file is its first check = pure listening, hang up on nothing. ONE `sameSpokenLine` tolerance shared with the fingerprint. **F5-2:** a listening check with no route is REFUSED before it dials (it could never arm its ring hang-up); a proven store with nothing to walk locks with no extra call. **F5-3:** zero-answer route + real pre-person recordings locks as `greeting`, never direct. **F5-4:** a version that would change a chain's SHAPE (direct/menu/greeting) never auto-activates off one background call. **F5-5:** `freeChainDoors` + route + TWO Admin buttons (Free doors · Start over) — the reset had no button at all.
 **Held for the owner's word (PM's own scoping):** item 4 — live customer checks still fire locked
 recipes on elapsed seconds (`bridge-place.ts`/`bridge.ts`, machine-locked; the menu-words way exists
 but defaults off) and their records still call dial-to-person "nav" — flipping it changes the cost
 buckets, his call. And the two pre-existing whole-journey rig failures (a changed route waits for
 approval vs R2's hands-free rule) — re-run 08-01, still the same two, untouched.
-**The 13, in the PM's order:** (1) the dead door is the option WE picked, the ask ledger is per
-store+door (`nav_confirm_asked_doors`, spoken asks only), dead doors durable (`map_doors_dead`), the
-store held — fresh store only when every door is burnt or nobody answers. (2) grading's second pass
-shape: Staff answered and replied — direct-pickup chains pass, and a no-menu store locks on the
-answer alone. (3) silence is never an answer: 12 quiet seconds end the check unresolved, the door's
-ask spent. (5) `toneShare` copied byte-for-byte into listen-nav (the one Ear's home; runtime-gates
-9/9 green) and fed at the bridge's 0.45 bar — rings count for REAL; the ring hang-up arms on an
-announced OR silent handoff (route finished + first ring stamps the handoff moment); the cadence
-clock survives only as the no-tone stand-in. (6) proven-at-three: the bar is `call_results.confirmed`
-true/false through the receipt hook, the ledger is a union, `provenStores`/`chainDetail` read it, a
-pinned-store run's answer joins it, reset clears it. (7) the sweep's direct-proving call is grade-
-gated before every write. (8) a lost carrier callback is closed by a one-shot per-call backstop;
-words-said compares the WORDS (a re-say can no longer stand in for an answer never spoken). (9) no
-free text on mapping rows ("the call never connected"; graph edges person|ring|failed; a failed
-check never reads reached-Staff; a transfer nobody answered is a failure; the Map button pre-stamp
-is gone). (10) menu-changed files fold by menu identity so heard-twice really fires; conditions
-readable in `chainDetail` (real at 2); the 24h gate compares the real label (`24h`). (11) mapping
-nav-finished stamps at the handoff (first-write-wins; pickup-only stores fall back); the speed win's
-seconds backfill is gone. (12) `Set aside` deleted everywhere (the words are `Not used`), the live
-card speaks Mapping menu/Optimizing speed, `copy.md` reconciled (flagged for his blessing). (13) a
-crashed run saves its final state instead of vanishing; resume delay 180s (RULES 9 updated); all
-five mapping rigs wired into `test-all.sh`. (14) behavior tests grew: the fold rules driven against
-a real database (fail writes nothing · staged waits for the lock · a plain Admin pass teaches the
-map), the ledger, the condition fold, rings on synthetic frames, every grading shape. Honesty note:
-a share of map-sim is still source-text asserts (rendering + wiring shapes); behavior coverage now
-carries the engine's laws.
 **FIX PASS 7 (08-01, the owner's correction) — the proving step is NOT a special call; it is a check like every other one, and mapping READS that check's record.** Charlie joins on the CHECK'S OWN record (opened at dial, closed at the carrier's word), and the second record pass 6 invented plus its watcher are DELETED. Graded when the check ENDS, off Charlie's report, never at the hand-off; the category is the run's own product; the setup is awaited before the instructions go back to the carrier; a failed hand-off waits quietly and retries ONCE (never hangs up on the person); a way in is spent only when Charlie really joined.
 **THE SEVEN PRACTICE CHECKS** (`scripts/test-practice-checks.ts`) written FIRST and failing first (16/27): instant pickup no ring · branded hello then "one moment" · voicemail "hello?" · menu dumps to the operator · two Staff on one check · a Spanish-speaking person · Charlie failing to join as they answer. They caught four real faults, each fixed in its own commit: the ring marks only what FOLLOWS it (the earpiece is told WHEN it rang; it is also a floor the walk-back cannot cross) · a store saying its own name is no longer automatically a machine (held for the pause; still the boundary when reading back a finished check) · a mailbox is a dead end BEFORE it is a person, decided in ONE place (`looksLikeADeadEnd`; the navigator's private copy deleted, RULES 11) · Staff answering in Spanish are Staff — NOT by holding Spanish phrases (the owner's correction 08-01: we never recognise a person's words, Charlie handles any language). The pause result is decided by menu evidence alone; the word-count guess that made a long answer read as a recording is deleted. Forged inputs out: the sweep's made-up pause + word-count, and a silent turn is no longer permission to press (`s.lastVerdict`).
-**DRIVEN 08-01 (fix pass 7):** practice-checks **28/28** · voice-judge **49/49** · map-sim **331/331** · listen-nav 43/43 · resume 20/20 · map-api 14/14 · tsc clean. NOT verified: a real phone call — none of this has run against a live store. Side branch `claude/mapping-engine-contract-wecvcy` only; nothing merges without his "clear".
+**PHASE 1 CLOSE (08-01).** (a) THE DEPARTMENT IS CHARLIE'S WORD: wrong department -> redirect;
+otherwise Charlie opened + Staff spoke to him -> answered. The in-stock reading is NOT the department
+test, so "we might have some, come look" passes and no longer burns that store's one try (contract
+Update 12). Mapping arms no reader of its own — `armLiveRead`/`liveReadFor` are out of the mapping
+path entirely. (b) LEFTOVERS DELETED, nothing rewired: `GOING_TO_LOOK`, `SENT_AWAY` and the
+`waiting`/`sendingUsAway` readings (listen-nav), `HUMAN_RE`, `LIVE_HUMAN_RE`, `looksLikeLivePerson`,
+`REDIRECT_RE` (navigator). `menuStillTalking` now asks the ONE judge instead of a phrase list, so it
+can never silence a person. KEPT: remembered menu lines · the pause · the ring. (c) A TEST SEAM
+(`navigator._test`) lets a scripted check run through the real engine — practice checks 1, 6, 7 and
+the department proof are DRIVEN now, and `test-practice-checks.ts` reads no source text at all.
+**STILL SOURCE-TEXT (not in this task's scope):** voice-judge 15 · map-sim 47 · mapper-resume 4.
+**NOTED, NOT FIXED:** on a check walking a saved route, the plan branch answers a prompt that reads
+as a question before the person judge is consulted, so Staff who answer early on a mapped route can
+be pressed at. Out of scope for phase 1 — PM: decide in phase 2.
+**DRIVEN 08-01 (phase 1 close):** practice-checks **36/36** · voice-judge 47/47 · map-sim 331/331 · listen-nav 43/43 · resume 20/20 · mapgraph 62/62 · map-api 14/14 · map-e2e 100/102 (the two known) · tsc clean.
+NOT verified: a real phone call — none of this has run against a live store. Side branch `claude/mapping-engine-contract-wecvcy` only; NOTHING merges to staging (the owner is testing; a restart kills a live check).
 - **OPEN — chunk 2 (self-healing, fresh chat)**: mute/unmute loop, pooled re-map jobs, chain-level menu change (3 stores → fall back to full words), conditions as discovered VERSIONS + boundary learning (R4; the hard-coded day/9pm/Spanish trio still lives in app.html), auto re-map on menu-changed ×2. **Chunk 3**: the screens (R5; stage headers, "slower", fail pills, Menu doors, timeline, "Recipe winner" removal) — re-read against the contract, the old screens list is stale (PM's note).
 ## Engine — Branson HD `1P1JhCcLzeMmkvLi1BkG` speed 0.91 (BOTH envs) · echo gate 520/150 · ringback by published
 tone frequencies, 6 rings = hang up · **Charlie $0.00183/s, meters SILENCE** · Twilio WHOLE MINUTES · 5.2c base ·

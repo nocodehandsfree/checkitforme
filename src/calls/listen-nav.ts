@@ -261,10 +261,6 @@ const CHECKING_ON_US = /\bhello\?|are you (still )?there|you still there|can you
 /** Somebody talking TO US: offering to help, asking what we need, giving their own name. A menu
  *  offers choices; a person offers themselves. */
 const ADDRESSED_TO_US = /how (can|may) i help|can i help you|what can i (do|help)|what do you need|how can i assist you|this is \w+|\w+ speaking|thanks for holding|thank you for holding|what'?s up/i;
-/** Them going to look — after our question this is WAITING, never an answer and never a hand-off. */
-const GOING_TO_LOOK = /^(sure|okay|ok|yeah|alright|yep|hold on|one)\b[^.?!]{0,40}\b(one (moment|sec|second)|a (moment|sec|second)|moment|hold on|let me (check|look|see|go)|i'?ll (check|look|see|go)|give me)\b/i;
-/** Being handed somewhere else. Only counts when the reply carries no news about the product. */
-const SENT_AWAY = /transfer|connect(ing)? you|let me get you|i'?ll get you|you'?d (have to|need to) (ask|call|talk to)|that would be the |that'?s the .{0,20}(department|desk|counter)/i;
 /** News about the product — a yes, a no, a where. An answer, whatever else rides along with it. */
 const ABOUT_THE_PRODUCT = /\b(yes|yeah|yep|no|nope|we do|we don'?t|sold out|out of stock|in stock|we have|we'?ve got|we got|we carry|aisle|section|shelf|by the|near the|next to|over (by|there|here)|behind the|up front)\b/i;
 
@@ -309,10 +305,6 @@ export interface VoiceVerdict {
   /** Heard nothing we hold on file: either a person, or a menu we have never heard. The caller files
    *  it as a condition rather than guessing it into the map. */
   unknownLine?: boolean;
-  /** Them going to look, after our question. Not an answer, not being sent away — keep listening. */
-  waiting?: boolean;
-  /** Being handed somewhere else, with no news about the product in it. */
-  sendingUsAway?: boolean;
   /** FALSE on a store's first ever check: record everything, hang up on nothing. */
   hangUpAllowed?: boolean;
   /** A machine we cannot get past: a mailbox, or the store itself closed. Nothing to navigate and
@@ -337,9 +329,10 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
   const tellsUsSomething = ABOUT_THE_PRODUCT.test(text) || productNamed;
   // What KIND of reply this is, decided once and carried whatever the who turns out to be. Going to
   // look ("sure, one second") is waiting: it answers nothing and hands us nowhere.
-  const waiting = afterOurAsk && GOING_TO_LOOK.test(text) && !tellsUsSomething ? true : undefined;
-  const sendingUsAway = afterOurAsk && !waiting && SENT_AWAY.test(text) && !tellsUsSomething ? true : undefined;
-  const ride = { waiting, sendingUsAway, hangUpAllowed };
+  // WHAT KIND OF REPLY IT WAS IS NOT OURS TO SAY. Them going to look, them handing us elsewhere,
+  // their answer: all Charlie's, already built and tuned. Mapping may know a person is there — that
+  // is the moment it hands over — and nothing more.
+  const ride = { hangUpAllowed };
 
   if (!text) return { who: "unsure", why: "nothing was said", ...ride };
 
@@ -389,10 +382,10 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
   // A branded hello ALONE is held open for the pause below rather than settled here: a recording
   // reads on through the silence, and Staff stop and wait for us.
   const repliedToUs = typeof o.weSpokeAtSec === "number" && o.atSec - o.weSpokeAtSec <= 6 && words <= 40;
-  if (repliedToUs && (tellsUsSomething || waiting || sendingUsAway)) {
+  if (repliedToUs && tellsUsSomething) {
     return { who: "person", why: "a reply to what we just said", ...ride };
   }
-  if (afterOurAsk && (tellsUsSomething || waiting || sendingUsAway)) {
+  if (afterOurAsk && tellsUsSomething) {
     return { who: "person", why: "an answer to the question we asked", ...ride };
   }
 
