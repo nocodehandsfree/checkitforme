@@ -65,18 +65,25 @@ button calls it, and it wipes the chain's whole history — no doors-only clear.
 
 ## FIX PASS 5 — reframed: one design change + hard rules (same mapper chat · evidence @f64c468b)
 Patching faces has failed twice; build it structurally.
-F5-1 (GATES, with F5-2). **Who is talking is decided line by line, and the person is dated from the
-  FIRST line of their speech.** THE OWNER'S TIE-BREAKER IS LAW: on a mapped chain, before the
-  handoff it is the store's recording, after the ring it is a person; on a first call to an unknown
-  store, WHEN UNSURE IT IS A PERSON — being polite to a recording costs seconds, hanging up on a
-  person is the thing we can never do. Every default in this engine flips to that side. (a) When person-detection fires, walk BACK through recent store
-  lines and stamp the person at the start of their speech, not the newest line
-  (`navigator.ts:491-502` + both call sites); (b) a hello that tail-joins onto a store line must
-  SPLIT, not drag the stamp onto the store's line — today a desk answering within 5s of our last
-  press steals the real menu line, wording never settles, the store is unmappable
-  (`navigator.ts:658,669,498`; `mapper.ts:260,695-703`); (c) after the ask, "one moment"/"sure,
-  one second" is WAITING — not an answer, not a redirect; keep listening for the real reply
-  (`navigator.ts:727-730`; today it proves a wrong door and joins the proof ledger).
+F5-1 (GATES, with F5-2). **ONE JUDGE. Build a single shared "recording or person?" decider that
+  every path asks — the menu-line cut, the person stamp, the redirect test, the sweep's recording
+  test, the settle compare. Kill the six scattered private opinions (LIVE_HUMAN_RE at
+  `navigator.ts:58-65`, looksLikeDirectPickup, ROUTING_RE stamping, REDIRECT_RE classify, sweep
+  heardRecording, personLineAtSec) — they may remain as EVIDENCE the judge weighs, never as
+  deciders.** The judge weighs five layers in order, first confident answer wins:
+  (1) THE STORE'S OWN REMEMBERED MENU — recordings repeat verbatim, people never do; from call 2 on,
+  compare against this store's stored opening lines (the fingerprint we already keep) — match =
+  recording; no match = person OR a new condition (file it, never guess person into the map). This
+  also solves greeting-then-transfer chains: the recording matches its own script, the human after
+  the ring does not. (2) POSITION on a mapped chain: before the handoff = recording, after the ring
+  = person (owner law). (3) THE WORDS: press/option/listen-to/para-español/menu-has-changed =
+  recording; a reply to OUR words, or a short post-ring utterance = person. (4) THE PAUSE TEST when
+  still unsure: stay silent ~2s — a recording keeps reading, a person stops or says "hello?".
+  (5) STILL UNSURE = PERSON (owner law; every default flips this way). The judge dates the person
+  from the FIRST line of their speech (walk back; a tail-joined hello SPLITS, never drags the stamp
+  onto a store line). "One moment"/"sure, one second" after the ask is WAITING — not an answer, not
+  a redirect. And the FIRST call to a brand-new store is pure listening: record everything, hang up
+  on nothing that might be a person; after it the store's menu is on file for layer 1 forever.
 F5-2 (GATES, with F5-1). **Troubling Staff must be structurally impossible on listen-only checks:**
   a listen-only check whose plan has no steps NEVER dials (it can never arm its ring hang-up —
   `navigator.ts:624-637,533-538`); a store whose route has no menu steps needs NO wording-settle
