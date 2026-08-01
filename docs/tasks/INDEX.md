@@ -8,7 +8,23 @@ small md here (what · done-when · system · status). Owner adds/reorders freel
 **Counts (swept 2026-07-23):** active 53 · parked 6 · dead 1 · total 60.
 Systems: site · admin · voice-calls · data · support (data carries the old ops/infra lane).
 
-## ⭐ NEXT UP — the PM lane (handoff 07-31 · the law: `docs/specs/mapping-admin/build-contract.md`,
+## ⭐ THE VOICE PM LANE (Echo · handoff 08-01 · one PM chat, this lane ONLY — mapping has its own PM)
+**Your first act: audit what Echo just built.** The law is `docs/team/voice-calls/check-life-audit-2026-08-01.md`
+(84 deciders, 20 flagged, the four faults, the gatekeeper cure) + `RULES.md` #11 (a fix covers the
+WHOLE family, one commit) and #12 (every prior run replays clean on the rig before the owner dials).
+His work: branch `claude/echo-voice-transcript-ordering-9oi0es`, NOT merged, waiting on the owner's
+"clear". He claims a gatekeeper (`src/calls/check-life.ts` + `check_life` table), all three families
+rewired, three faults fixed, 103 rig checks. **VERIFY, do not trust:** send blind readers per family —
+are ALL 20 flagged doors rewired through the gatekeeper (name each), do runs 222-226 replay clean,
+does anything still ask ElevenLabs whether a check is alive, and is the `direct:` lane exception he
+found sound? Report to the owner PASSED or FAILED per item, then the merge decision. History: three
+agents in a row said "done" with 80% missing — mapper twice, Echo once. **Ship nothing without the
+owner's "clear"; a push restarts staging and kills a live check.** Open after the merge: run 6 (his
+phone, the ladder's first pass) · the hold hang-up timer (owner wants one, number undecided) · ONE
+boxed Webbie string: the hold-drop "No charge" wording, EN + ES (owner ruled 08-01: a hold drop IS
+charged) · mapping timing removal touches live checks — coordinate with the mapping PM before it ships.
+
+## ⭐ THE MAPPING PM LANE (handoff 07-31 · the law: `docs/specs/mapping-admin/build-contract.md`,
 addendum R1-R6 OVERRIDES the body · the fix list: `audit-code-vs-contract.md` in the same folder)
 Mapping rebuild runs in THREE chunks, one fresh chat each: 1 engine (**FINISHED per the owner — the
 PM's FIRST act is auditing it, blind readers vs the contract, then tell the owner PASSED or FAILED
