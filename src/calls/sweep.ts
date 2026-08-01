@@ -149,7 +149,11 @@ async function proveDirect(item: SweepItem): Promise<void> {
   const heardMenu = steps.some((st) => st.who === "ivr" && /press \d|para español|main menu|for .{3,30}, press|say the name|automated/i.test(String(st.text || "")));
   const heardRecording = steps.some((st) => st.who === "ivr" && String(st.text || "").trim().split(/\s+/).length > 4);
   const reached = !!(s && (s.status === "human" || s.humanAtSec != null || s.confirmResult === "answered"));
-  const acted = steps.some((st) => st.who === "us" && (st.action === "press" || st.action === "say"));
+  // "Did we act on a menu" must not count the product QUESTION — the ask is scaffolding, said on
+  // every call, person or menu alike. Counting it made every passing direct call read as a menu walk,
+  // which false-flagged every direct chain forever (round-3 item 2).
+  const acted = steps.some((st) => st.who === "us" && (st.action === "press" || st.action === "say")
+    && !String(st.text || "").startsWith("asked:"));
 
   // Nothing to press, but a recording answered and a person came later: the third shape. It gets its
   // own route type so the runtime knows to WAIT rather than treating pickup as a person.
@@ -179,7 +183,10 @@ async function proveDirect(item: SweepItem): Promise<void> {
   }
 
   if (heardMenu || acted) {
-    // The "direct" claim is wrong — there IS something in front of the human.
+    // The "direct" claim is wrong — there IS something in front of the human. The whole label
+    // clears (ringsDirect AND answerPath — half a stamp left the mapper refusing the very chain the
+    // sweep was handing it, and the loop never ended), and a LOCKED chain keeps its status: the
+    // finding queues mapping, it never downgrades a working map.
     item.status = "done";
     item.outcome = "has a recording or menu. Queued for mapping.";
     await reportUnknown({
@@ -187,7 +194,11 @@ async function proveDirect(item: SweepItem): Promise<void> {
       prompt: `Marked "answers directly" but a recording answered: ${steps.find((st) => st.who === "ivr")?.text?.slice(0, 160) || "menu heard"}`,
       evidence: { navId: placed.id, storeId: store.id, storeName: store.name },
     });
-    await db.update(chains).set({ ringsDirect: false, navStatus: "review" }).where(eq(chains.id, item.chainId));
+    const cur = (await db.select({ navStatus: chains.navStatus }).from(chains).where(eq(chains.id, item.chainId)))[0];
+    await db.update(chains).set({
+      ringsDirect: false, answerPath: null,
+      ...(cur?.navStatus === "locked" ? {} : { navStatus: "review" }),
+    }).where(eq(chains.id, item.chainId));
     item.mode = "map";
     await runMapping(item);                       // straight into the mapping lane on the same pass
     return;

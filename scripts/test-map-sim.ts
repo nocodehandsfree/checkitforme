@@ -905,6 +905,14 @@ async function main() {
         const i = sw.indexOf(w, sw.indexOf("async function proveDirect")); return i < 0 ? Infinity : i;
       }));
       ok(gateAt >= 0 && gateAt < firstWrite, "and the gate sits BEFORE every write the call can make");
+      // ROUND 3 ITEM 2: the product question is not "acting on a menu", the label clears WHOLE, and
+      // a locked chain is never downgraded — the endless false-flag loop on direct chains is dead.
+      ok(/const acted = steps\.some\(\(st\) => st\.who === "us" && \(st\.action === "press" \|\| st\.action === "say"\)\s*\n\s*&& !String\(st\.text \|\| ""\)\.startsWith\("asked:"\)\);/.test(sw),
+        "the ask is scaffolding — a passing direct call no longer reads as a menu walk");
+      ok(/ringsDirect: false, answerPath: null,/.test(sw),
+        "the wrong 'answers directly' label clears whole, so the mapper accepts the handoff");
+      ok(/cur\?\.navStatus === "locked" \? \{\} : \{ navStatus: "review" \}/.test(sw),
+        "and a locked chain keeps its status — a finding queues mapping, it never downgrades a map");
     }
     ok(/MISSES_PER_STORE[\s\S]{0,220}?run\.rotate = true;/.test(eng),
       "a store that never got us to a person is the ONLY reason to take a fresh one (Update 3)");
