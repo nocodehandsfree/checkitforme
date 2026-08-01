@@ -361,6 +361,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  where the store's answer should have been (owner screenshot 07-31). They are two turns because
    *  we asked a question in between, and the record has to say so. */
   let pendingSplit = -1;
+  /** Our question, kept off the live view until the store's hello can be shown above it. */
+  let heldQuestion: string | null = null;
+  let questionTimer: NodeJS.Timeout | null = null;
+  /** …and how long we will wait for that hello before showing the question anyway. A store that says
+   *  nothing at all must never leave a customer staring at an empty conversation. */
+  const QUESTION_HOLD_MS = 8000;
   const PREROLL_MAX = Math.max(0, Math.round(tune.greetingKeepMs / 20));
   /** When their hello actually started. Their words only exist once the agent has transcribed the
    *  audio we held, which is after our question played — so stamped on arrival, the greeting lands
@@ -492,7 +498,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // no way to know we had asked. It then sat on "Staff picked up" forever, and any short word the
     // agent said next got painted as walking a phone menu at a store with no menu at all.
     recordLine(room, "Agent", clip.text);
-    try { relayLine?.(room, "Agent", clip.text); } catch { /* relay best-effort */ }
+    // HELD BACK FROM THE LIVE VIEW UNTIL THEIR HELLO CAN GO IN FRONT OF IT. Staff speak first, always,
+    // but their words do not exist until the agent has transcribed the audio we held for him — several
+    // seconds later. Sent the instant it plays, our question is therefore the FIRST thing a customer
+    // watching ever sees, with the store's hello dropping in underneath it afterwards. The record is
+    // already in the right order; this is the one place the screen could still get it wrong. Nobody is
+    // waiting on this line: the page says Talking to Staff throughout, and a few seconds is invisible
+    // on a check that runs half a minute.
+    heldQuestion = clip.text;
+    questionTimer = setTimeout(() => { const q = heldQuestion; heldQuestion = null; questionTimer = null; if (q) { try { relayLine?.(room, "Agent", q); } catch { /* relay best-effort */ } } }, QUESTION_HOLD_MS);
     log(`delta: playing the opening question (${clip.ms}ms) while the agent connects`);
     // Signal 2, which also reads signal 3 when it lands.
     clipTimers.push(setTimeout(function done() {
@@ -722,7 +736,13 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // OUR record of what was said, written live against this call's own clock — not read back
         // from the provider afterwards (hard rule 2). Text only, never audio.
         if (txt) { recordLine(room, "Clerk", String(txt), greetingStartedMs || undefined); greetingStartedMs = 0; }
-        if (txt) try { relayLine?.(room, "Clerk", String(txt)); } catch { /* relay best-effort */ }
+        // Their hello has arrived, so it goes out FIRST and our question follows it, which is the
+        // order the call actually happened in.
+        if (txt && heldQuestion) {
+          const q = heldQuestion; heldQuestion = null;
+          if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; }
+          try { relayLine?.(room, "Clerk", String(txt)); relayLine?.(room, "Agent", q); } catch { /* relay best-effort */ }
+        } else if (txt) try { relayLine?.(room, "Clerk", String(txt)); } catch { /* relay best-effort */ }
         // VOICEMAIL = hang up NOW, not after the greeting plays out (owner 07-22: "as soon as it
         // starts hearing the voice message it should hang up to save us money"). Same phrases the
         // outcome mapper stamps `voicemail` from, so the verdict stays consistent. Closing the
@@ -1054,5 +1074,5 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       if (m.mark?.name === CLIP_MARK) openCharlieGate("the carrier confirmed the clip played");
     } else if (m.event === "stop") { log("twilio stop"); signalEnd(); if (eleven) eleven.close(); }
   });
-  twilio.on("close", () => { try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (eleven) eleven.close(); });
+  twilio.on("close", () => { if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; } if (heldQuestion) { try { relayLine?.(room, "Agent", heldQuestion); } catch { /* best effort */ } heldQuestion = null; } try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (eleven) eleven.close(); });
 }

@@ -96,6 +96,8 @@ function stubSignedUrl(f: Fake) {
 }
 
 /** Walk a call to the moment a real person says hello, with the clip configured. */
+/** What the customer's page is shown, live, in the order it is shown. */
+const relayed: Array<{ role: string; text: string }> = [];
 async function callToHello(f: Fake, clipMs: number, room: string) {
   const audio = Buffer.alloc(clipMs * 8, 0x20); // μ-law 8kHz: 8 bytes per millisecond
   openReceipt(room, { lane: "direct" });
@@ -106,7 +108,7 @@ async function callToHello(f: Fake, clipMs: number, room: string) {
     openingClip: { audio, ms: clipMs, text: "do you have any Pokemon cards in stock?" },
   });
   const tw = new FakeTwilio();
-  handleTwilioBridge(tw as never, room, () => { /* no listeners */ });
+  handleTwilioBridge(tw as never, room, () => { /* no listeners */ }, (_r, role, text) => relayed.push({ role, text }));
   tw.say({ event: "start", start: { streamSid: "MZ_test", customParameters: { room } } });
   await sleep(350); // past the connect-click settle window
   for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
@@ -166,6 +168,15 @@ console.log("▶ the clerk says hello: the question goes out, the agent connects
     ok(gap >= 30, `a real pause separates their hello from their answer, so it is two lines not one (${gap} quiet frames)`);
     ok(f.chunks[f.chunks.length - 1] === QUIET, "the pause comes AFTER their hello, so whatever they say next is its own line");
   }
+  // AND THE LIVE VIEW SHOWS THEM IN THE SAME ORDER. Staff speak first, always, but their words only
+  // exist once the agent has transcribed the audio we held — several seconds later. Sent the instant
+  // it plays, our question was therefore the FIRST thing a watching customer ever saw, with the store's
+  // hello dropping in underneath it (owner, live check 07-31: "the first thing I see is the question").
+  ok(!relayed.some((l) => l.role === "Agent"), "our question is NOT shown live yet, because their hello has not arrived");
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Hi, this is Bob at the phone store." } }));
+  await sleep(80);
+  ok(relayed[0]?.role === "Clerk" && /this is Bob/.test(relayed[0]?.text || ""), `their hello is the FIRST thing shown live (${relayed[0]?.role}: ${relayed[0]?.text})`);
+  ok(relayed[1]?.role === "Agent" && /Pokemon cards in stock/.test(relayed[1]?.text || ""), "…and our question follows it, the order the call happened in");
   // AND THE HELLO READS ABOVE OUR QUESTION, because that is the order it was said in. Staff's words
   // only exist once the agent has transcribed the audio we held, which is after our question played,
   // so stamped on arrival the greeting printed UNDERNEATH the question it came before and the
