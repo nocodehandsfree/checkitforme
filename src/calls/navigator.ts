@@ -239,7 +239,11 @@ function navSync(s: NavSession): void {
       else if (st.action === "say") emit(s.id, "bravo_say", `Said "${st.value ?? ""}"`, { phrase: st.value, atSec: st.atSec, why: st.text });
     }
     s.emitted = s.steps.length;
-    if (s.transferAtSec != null && !s.transferEmitted) { s.transferEmitted = true; emit(s.id, "transfer", "The menu handed us on", { atSec: s.transferAtSec }); }
+    // NAV ENDS THE INSTANT THE DESK RINGS (owner Update 10): the handoff is the menu finished with
+    // us, so it stamps nav's end. Staff picking up later is talk, not nav. markNow is first-write-
+    // wins, so the person-detection stamp below only lands nav's end at a store with NO menu, where
+    // the pickup really is the whole journey.
+    if (s.transferAtSec != null && !s.transferEmitted) { s.transferEmitted = true; markNow(s.id, "navEndMs"); emit(s.id, "transfer", "The menu handed us on", { atSec: s.transferAtSec }); }
     if (s.humanAtSec != null && !s.humanEmitted) { s.humanEmitted = true; markNow(s.id, "humanMs"); markNow(s.id, "navEndMs"); emit(s.id, "human_detected", "A person is on the line", { atSec: s.humanAtSec, greeting: s.greeting }); }
     if (s.deadLine && !s.deadEmitted) { s.deadEmitted = true; emit(s.id, "voicemail", "A machine, not a person", { why: s.stopReason }); }
   } catch { /* recording must never break a call */ }

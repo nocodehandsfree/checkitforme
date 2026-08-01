@@ -651,9 +651,9 @@ function driveMapper(run: MapperRun): void {
         // (owner Update 5); a loss changes nothing and that exact move is never tried again.
         if (graded && recipe && typeof menuSecs === "number") {
           ex.status = "win"; run.best = recipe as NavRecipe; run.bestMenuSecs = menuSecs;
-          // A ring-ended win never measured Staff — the baseline's proven time-to-Staff rides on so
-          // the chain's own numbers are never nulled by a check that was faster (the 07-31 leak).
-          if (run.best.seconds == null && run.baseline?.seconds != null) run.best.seconds = run.baseline.seconds;
+          // A ring-ended win never measured Staff, and it CLAIMS nothing: its own record keeps
+          // seconds null (no number this call did not measure), and the chain row keeps its last
+          // proven numbers through the writer's own fallback (lockRecipeToChain).
           run.winnerSession = sessionLike(s);
           await finalizeAndLock(run, chainId, run.best, null, run.winnerSession, { activate: true, stage: "speed" });
           run.log.push({ n: run.attempt, phase: "speed", store: store.name, experiment: ex.label, outcome: `faster — the recipe and the Menu are updated (menu ${menuSecs}s)`, seconds: menuSecs });

@@ -640,6 +640,12 @@ async function main() {
     const cap = readFileSync("src/calls/map-capture.ts", "utf8");
     ok(/\(opts\.reachedHuman \|\| opts\.endedOnRing\) \? transcriptFromCall\(opts\.steps\)/.test(cap),
       "a check that walked the whole route keeps EVERY line it heard, not the first six");
+    // ROUND 2 ITEM 11: a mapping check's nav time ends at the HANDOFF, and no check claims a number
+    // it did not measure.
+    ok(/transferEmitted = true; markNow\(s\.id, "navEndMs"\); emit\(s\.id, "transfer"/.test(src),
+      "the record's nav-finished stamp lands at the handoff — Staff picking up is talk, not nav (Update 10)");
+    ok(!/run\.best\.seconds = run\.baseline\.seconds/.test(readFileSync("src/calls/mapper.ts", "utf8")),
+      "a ring-ended win no longer writes the earlier check's seconds into its own record");
   }
 
   // THE GRADE AND THE MENU'S IDENTITY — the first piece of the owner's three-stage rebuild (07-30).
