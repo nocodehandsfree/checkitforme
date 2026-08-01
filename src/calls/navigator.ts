@@ -698,9 +698,12 @@ async function navTurn(id: string, speech: string): Promise<string> {
     return twiml(gather(id)); // brief silence — give them a moment to answer
   }
   // Holding the ask for a real person after an announced transfer, but the hold runs long with no
-  // pickup → the path is still CONFIRMED (transfer reached); count it human and hang up politely.
+  // pickup. Nobody spoke, so nothing here is a human — it used to be filed as one, and a check that
+  // reached no person read as reached-Staff. The transfer moment is already on the record; the check
+  // ends as what it was.
   if (s.confirm && !s.confirm.asked && s.routedAtSec != null && atSec - s.routedAtSec > 30 && !(speech && speech.trim())) {
-    finish(s, "human"); return twiml(`<Hangup/>`);
+    s.stopReason = `transferred at ${s.routedAtSec}s, nobody picked up`;
+    finish(s, "failed"); return twiml(`<Hangup/>`);
   }
   // LIVE PICKUP — fire on the FIRST human utterance, in EVERY mode. A direct store answers "Hello" /
   // "Store, Bob speak" with no IVR, so we must reach the human on turn 1 — waiting for a 2nd line (or

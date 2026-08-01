@@ -6291,7 +6291,9 @@ app.post("/api/admin/trainer/document", async (c) => {
   // website is the answer). chainDialable() is the single source so these can never disagree.
   const _ch = r.chainId != null ? (await db.select().from(chains).where(eq(chains.id, r.chainId)))[0] : undefined;
   if (_ch && !chainDialable(_ch)) return c.json({ error: `${_ch.name} isn't a call target (muted / call-center / check-online) — skipped` }, 400);
-  if (b.chainId) await db.update(chains).set({ navStatus: "learning", navUpdatedAt: Math.floor(Date.now() / 1000) }).where(eq(chains.id, Number(b.chainId)));
+  // NO PRE-STAMP. Pressing a button is not a check outcome: this used to write "learning" over any
+  // state, "locked" included, and nothing ever reverted it on a fail. The chain's status moves only
+  // when a check earns it (markNavOutcome, pass-gated).
   // No stage rides an Admin call: a stage belongs to a mapping RUN's checks, and stamping one here is
   // what made the map fold skip this route's calls (the 07-31 regression).
   const res = await placeNavCall(r.chainId, r.id, r.name, r.phone, b.model, b.hint, b.barge, b.reactivePress, confirm,

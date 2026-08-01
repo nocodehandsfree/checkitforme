@@ -1239,7 +1239,10 @@ async function callsForChain(chainId: number): Promise<MapCall[]> {
     at: Math.round(Number(r.ts || 0) / 1000),
     store: String(r.store || ""),
     storeId: r.retailerId == null ? null : Number(r.retailerId),
-    reachedHuman: String(r.outcome || "") === "human",
+    // A FAILED check never reads as reached-Staff, whatever its raw outcome says — a wrong-desk call
+    // does end at a person, but the screens' green belongs only to a check that passed (color law).
+    // What Staff said still rides the turns for anyone who opens the collapsed row.
+    reachedHuman: String(r.outcome || "") === "human" && r.grade !== "fail",
     seconds: r.seconds == null ? null : Number(r.seconds),
     transferAtSec: r.transferAtSec == null ? null : Number(r.transferAtSec),
     greeting: r.greeting ? String(r.greeting) : null,

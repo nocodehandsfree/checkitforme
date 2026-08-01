@@ -237,7 +237,8 @@ export async function recordNavCall(s: {
   await mod.recordCallPath({
     chainId, storeId: s.retailerId,
     prompts, actions,
-    reachedHuman, seconds: s.humanAtSec, outcome: reachedHuman ? "person" : String(s.status || "failed"),
+    // A FIXED vocabulary on the graph, never a raw status: person | ring | failed.
+    reachedHuman, seconds: s.humanAtSec, outcome: reachedHuman ? "person" : (s.endedOnRing ? "ring" : "failed"),
   });
 
   // A FAILED CHECK CHANGES NOTHING (owner, 07-30). The graph above keeps what was heard, the run log

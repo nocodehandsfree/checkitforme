@@ -533,7 +533,7 @@ function driveMapper(run: MapperRun): void {
           why: `Mapping ${run.chainName} (${stageWord}, check ${run.attempt})` },
       );
       if (placed.error || !placed.id) {
-        run.log.push({ n: run.attempt, phase: run.phase, store: store.name, experiment: ex?.label, outcome: "dial failed: " + (placed.error || "?") });
+        run.log.push({ n: run.attempt, phase: run.phase, store: store.name, experiment: ex?.label, outcome: "the call never connected" });
         await sleep(GAP_SEC * 1000); continue;
       }
       run.navId = placed.id;
@@ -617,7 +617,7 @@ function driveMapper(run: MapperRun): void {
           // Nobody was reached. A failed check changes NOTHING — it stays in the run log, collapsed,
           // and is never folded into evidence or confidence (the fold used to move both).
           run.mapMisses = (run.mapMisses ?? 0) + 1;
-          run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: reason || "nobody answered", seconds: secs });
+          run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: reason || (s?.humanAtSec != null ? "Staff answered but the check did not pass" : "nobody answered"), seconds: secs });
           if ((run.mapMisses ?? 0) >= MISSES_PER_STORE) {
             // This store never got us to a person — the one legitimate reason to move (Update 3).
             run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: `no person in ${MISSES_PER_STORE} checks — taking a fresh store` });
@@ -643,7 +643,7 @@ function driveMapper(run: MapperRun): void {
           if ((run.settleTries ?? 0) >= SETTLE_TRIES) { run.stopReason = `the menu never reads the same twice in ${SETTLE_TRIES} listens`; run.phase = "stopped"; break; }
         } else {
           run.mapMisses = (run.mapMisses ?? 0) + 1;
-          run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: reason || "nobody answered", seconds: secs });
+          run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: reason || (s?.humanAtSec != null ? "Staff answered but the check did not pass" : "nobody answered"), seconds: secs });
           if ((run.mapMisses ?? 0) >= MISSES_PER_STORE) { run.stopReason = `no clean walk in ${MISSES_PER_STORE} checks`; run.phase = "stopped"; break; }
         }
       } else if (run.phase === "speed" && ex) {

@@ -122,7 +122,7 @@ async function proveDirect(item: SweepItem): Promise<void> {
     // must not fold it a second time.
     { askVoiceId: ask.voiceId, askText: ask.text, callerRecords: true },
   );
-  if (placed.error || !placed.id) { item.status = "failed"; item.outcome = "dial failed: " + (placed.error || "?"); return; }
+  if (placed.error || !placed.id) { item.status = "failed"; item.outcome = "the call never connected"; return; }
   state.calls++; item.calls++;
   const deadline = Date.now() + PROVE_MAX_SEC * 1000;
   let s = getNavSession(placed.id);

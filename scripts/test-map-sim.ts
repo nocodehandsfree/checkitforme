@@ -727,6 +727,20 @@ async function main() {
     ok(!/relisten:true/.test(page), "no Admin button places a re-listen call");
     ok(!/'Re-map'/.test(page) && !/"Re-map"/.test(page) && !/Re-map this chain/.test(page),
       "and no button, label or sheet says Re-map anywhere on the page");
+    // ROUND 2 ITEM 9: no free text into mapping rows, and honest outcomes everywhere.
+    ok(!/"dial failed: "/.test(readFileSync("src/calls/mapper.ts", "utf8"))
+      && !/"dial failed: "/.test(readFileSync("src/calls/sweep.ts", "utf8")),
+      "a refused dial reads 'the call never connected' — the carrier's raw words stay off mapping rows");
+    ok(/outcome: reachedHuman \? "person" : \(s\.endedOnRing \? "ring" : "failed"\)/.test(readFileSync("src/calls/map-capture.ts", "utf8")),
+      "graph edges carry a fixed vocabulary — person, ring, failed — never a raw status");
+    ok(/Staff answered but the check did not pass/.test(readFileSync("src/calls/mapper.ts", "utf8")),
+      "'nobody answered' can never be written over a check where somebody did");
+    ok(/reachedHuman: String\(r\.outcome \|\| ""\) === "human" && r\.grade !== "fail"/.test(readFileSync("src/calls/mapgraph.ts", "utf8")),
+      "a failed check never reads as reached-Staff on the mapping list");
+    ok(/nobody picked up`;\s*\n\s*finish\(s, "failed"\)/.test(nav),
+      "a transfer nobody answered ends as a failure, never filed as a human");
+    ok(!/navStatus: "learning"/.test(doc),
+      "and the Map button no longer pre-stamps the chain — status moves only when a check earns it");
   }
 
   // PIECE THREE: the engine runs the owner's stages under the 07-31 rounds — learn menu FIRST,
