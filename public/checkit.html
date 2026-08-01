@@ -5798,7 +5798,12 @@ function deriveSteps(transcript){
 // Live call renders the SAME unified timeline the result uses — "Reaching a person" steps + the
 // conversation linked on one line — rebuilt on every new line so it grows in real time as the call
 // happens (finalElapsed=null → the latest step shows as the current one, no closing time yet).
-function renderLiveMsg(){ const box=$('live_msgbox'); if(box) box.innerHTML=combinedTimelineHTML(LIVE_STEPS, LIVE_TRANSCRIPT, null);
+function renderLiveMsg(){ const box=$('live_msgbox'); if(!box) return;
+  // NOTHING NEW = NOTHING MOVES (08-01, the bouncing page): this rebuilt and smooth-scrolled on every
+  // poll tick and every socket line even when the conversation had not changed, so the page jumped up
+  // and down while nothing was happening. Rebuild and follow ONLY when the content really changed.
+  const html=combinedTimelineHTML(LIVE_STEPS, LIVE_TRANSCRIPT, null);
+  if(box.__lastLive===html) return; box.__lastLive=html; box.innerHTML=html;
   // Follow the conversation as it happens (owner 07-15): stick to the newest bubble unless the user
   // scrolled up to reread; scrolling back down re-arms the follow. The target is the NEWEST LINE, not
   // document.body.scrollHeight: the page now ends with a bar-clearing strip (see body.lview::after), and
@@ -6022,7 +6027,12 @@ async function startCheckLive(){
     // Ladder step straight from the call itself (the desk ringing after the menu). That phase happens
     // before the agent ever joins, so it can never come from the transcript. The bridge measures it.
     else if(d.stage&&d.stage.n){ liveStage(d.stage.n); }
-    else if(d.line&&d.line.text){ if(!LIVE_TR.length) lvlog('ws first line'); LIVE_TR.push(d.line.role+': '+d.line.text); LIVE_TRANSCRIPT=LIVE_TR.join('\n'); if(d.line.role==='Agent'&&AGENT_ASK.test(d.line.text))AGENT_PITCHED=true; liveStage(stageForLines(LIVE_TR,AGENT_PITCHED)); renderLiveMsg(); } // real-time steps + human script, as the call happens
+    else if(d.line&&d.line.text){ // real-time steps + human script, as the call happens
+      // The same sentence arriving twice prints once (08-01, the doubled question): the socket and
+      // the poll can each deliver a line, so a fuzzy match against the newest few drops the repeat.
+      const _norm=s=>s.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(); const _k=_norm(d.line.role+': '+d.line.text);
+      if(!LIVE_TR.slice(-4).some(x=>_norm(x)===_k)){
+        if(!LIVE_TR.length) lvlog('ws first line'); LIVE_TR.push(d.line.role+': '+d.line.text); LIVE_TRANSCRIPT=LIVE_TR.join('\n'); if(d.line.role==='Agent'&&AGENT_ASK.test(d.line.text))AGENT_PITCHED=true; liveStage(stageForLines(LIVE_TR,AGENT_PITCHED)); renderLiveMsg(); } }
     // Instant flip: the bridge tells us the moment the call ends → finalize NOW (snappy, like the live
     // transcript). Crucially we do NOT clearInterval(POLL) here — the POLL keeps running as the safety net,
     // so even if this finalize hiccups the POLL still resolves it (that POLL-clearing was the old freeze).

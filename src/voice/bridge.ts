@@ -8,7 +8,7 @@ import { config } from "../config";
 // seconds split into talking / listening / dead air, because it is the only place the audio passes
 // through. Every stamp is "now"; the receipt owns the clock, since it started at dial and this
 // socket opens much later.
-import { emit, amend, markNow, addMs, linkProviderCall, openSegment, closeSegment, startMeter, recordLine } from "../calls/events";
+import { emit, amend, markNow, addMs, linkProviderCall, openSegment, closeSegment, startMeter, recordLine, normSaid } from "../calls/events";
 // The Ear that stays on the call while a person is talking to us. Pure and dependency-free on
 // purpose, so every threshold in it is provable without a phone call.
 import { ConversationEar, type HoldReason } from "../calls/listen-nav";
@@ -103,7 +103,12 @@ export function setBridgeContext(room: string, ctx: BridgeContext) {
   ctx.hadDtmf = !!ctx.dtmf;
   ctx.hadSay = !!ctx.say;
   contexts.set(room, ctx);
-  setTimeout(() => contexts.delete(room), 5 * 60 * 1000); // auto-expire
+  // A LEAK GUARD, NEVER A CLOCK A LIVE CALL CAN RUN INTO (08-01 audit, family 3). This used to be
+  // five minutes — the SAME length as the longest staging call — so exactly at the cap the
+  // hold-reopen rule read an expired context as undefined and a hold-close ended the whole check.
+  // Thirty minutes sits far past any call the carrier allows, and deliberately NOT delete-on-close:
+  // Twilio can reconnect a blipped stream mid-call and the fresh socket must still find its context.
+  setTimeout(() => contexts.delete(room), 30 * 60 * 1000);
 }
 
 // conversation_id -> seconds spent navigating before the human was reached (connect-on-human mode).
@@ -391,6 +396,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   const PREWARM_LEAD_MS = tune.prewarmLeadMs;
   // ---- hold and transfer ----
   let onHold = false;             // the person is away; the agent must not be fed or heard
+  /** Somebody has already stepped away and come back on this call — from here it is a live store
+   *  beyond doubt, and no machine-phrase mishearing may hang it up (family 1). */
+  let everCameBack = false;
   let holdReason: HoldReason | null = null;
   let heldWords: string[] = [];   // the first thing they say on coming back, so it is never lost
   /** Recorded once: we landed somewhere that cannot answer. Read off the words, not the audio. */
@@ -573,7 +581,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   function endHold(gapMs: number, maybeNewPerson: boolean) {
     if (!onHold) return;
     const was = holdReason;
-    onHold = false; holdReason = null;
+    onHold = false; holdReason = null; everCameBack = true;
     const secs = Math.round(gapMs / 1000);
     // A HAND-OVER IS ALWAYS A NEW PERSON. The twenty-second bar is right for somebody stepping away
     // to look at a shelf and coming back: same person, same conversation. Being handed to another desk
@@ -588,8 +596,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (expectHandover) expectHandover = false;
     addMs(room, "holdMs", gapMs);   // the number that has been null on every receipt until now
     emit(room, "hold_end", `Staff back after ${secs}s${newPerson ? ", and it may not be the same person" : ""}`, { gapSec: secs, maybeNewPerson: newPerson, reason: was, ...(asked ? { afterAskingToBePutThrough: true } : {}) });
-    if (ctx?.holdStrategy === "reopen" && !eleven) {
-      log(`hold over after ${secs}s: opening the agent again as the next segment of this call`);
+    // NOBODY IS ON OUR END AND SOMEBODY IS BACK ON THEIRS — open a session, whatever the strategy
+    // (family 2). This used to run only for "reopen"; a hold that began around the opening question
+    // could leave the gate strategy here with no session at all and nothing left to open one, and a
+    // refused open during the hold (the one-door rule above) must always be made good right here.
+    if (!eleven) {
+      log(`hold over after ${secs}s: opening the agent for whoever is back (next segment of this call)`);
       // HE WAS CLOSED, SO HE CANNOT BE TOLD YET, AND HE STILL HAS TO BE TOLD. The note is held and
       // sent the instant his new session reports ready. Skipping it is how a reopened agent greets a
       // brand new person as though they had been on the line the whole time.
@@ -620,6 +632,13 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
 
   async function connectEleven(segmentWhy?: string) {
     if (!ctx) { log("connectEleven: NO CONTEXT"); return; }
+    // EVERY ROAD INTO CHARLIE ENDS AT THIS ONE DOOR (08-01 audit, family 2). The run-5 fix guarded
+    // triggerConnect, but the clip path never passes through it: the warm-up timer, the short-clip
+    // open, the socket-retry open and all four racers into openCharlieGate call HERE directly — so a
+    // hold starting around the question could still open a ghost Charlie into the hold music. The
+    // rule lives at the door itself now: while Staff are away, nothing opens Charlie. endHold clears
+    // the hold BEFORE it reopens him, so the one legitimate road back in still passes.
+    if (onHold) { log(`connectEleven refused (${segmentWhy ?? "clip path"}): Staff are away — only somebody coming back opens Charlie`); return; }
     // ONE SESSION AT A TIME. `connecting` used to be set here and nowhere else, so it doubled as the
     // guard; now that buffering starts earlier it no longer guards anything, and two routes into this
     // (the warm-up timer and the gate opening) could each open a socket. The second one replaced the
@@ -664,6 +683,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     const ws = new WebSocket(url);
     eleven = ws;
     ws.on("open", () => {
+      // Each session gets its own one-shot echo allowance: a reopened session is handed the recorded
+      // question as context again and reports it as its own line again (open fault 4).
+      clipEchoDropped = false;
       // THE BILLED SECOND ZERO. The provider meters from session open, so this is where the money
       // clock starts — not at first word. Everything after this is seconds we are paying for.
       markNow(room, "charlieOpenMs");
@@ -703,7 +725,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           return null;
         };
         const convId = find(m);
-        if (convId) { conversations.set(room, convId); linkProviderCall(room, convId); setTimeout(() => conversations.delete(room), 10 * 60 * 1000); if (c.connectOnHuman && humanAtMs) navByConv.set(convId, Math.max(0, Math.round((humanAtMs - startMs) / 1000))); log(`metadata: convId=${convId}`); try { c.onConversationId?.(convId); } catch (e) { log(`onConversationId threw: ${String(e).slice(0, 80)}`); } }
+        // 30 minutes, not 10 (08-01 audit, family 3): this map used to die five minutes before the
+        // in-memory receipt did, and in that gap the page's session-id poll fell back to the
+        // provider. Past 30 minutes the gatekeeper's database row answers instead — the map is only
+        // the fast path, never the last word.
+        if (convId) { conversations.set(room, convId); linkProviderCall(room, convId); setTimeout(() => conversations.delete(room), 30 * 60 * 1000); if (c.connectOnHuman && humanAtMs) navByConv.set(convId, Math.max(0, Math.round((humanAtMs - startMs) / 1000))); log(`metadata: convId=${convId}`); try { c.onConversationId?.(convId); } catch (e) { log(`onConversationId threw: ${String(e).slice(0, 80)}`); } }
         else log(`metadata but NO convId: ${JSON.stringify(m).slice(0, 200)}`);
         // Held back while Delta is still asking — openCharlieGate releases them the instant the
         // clip is done, in order, so an early answer reaches him complete instead of half-heard.
@@ -735,15 +761,18 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // there — disarm the give-up cap. Voicemail greetings count: the voicemail bail handles those.
         if (txt && /[a-zA-ZÀ-ɏ]{2,}/.test(String(txt)) && !humanWords) { humanWords = true; if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } }
         // OUR record of what was said, written live against this call's own clock — not read back
-        // from the provider afterwards (hard rule 2). Text only, never audio.
-        if (txt) { recordLine(room, "Clerk", String(txt), greetingStartedMs || undefined); greetingStartedMs = 0; }
+        // from the provider afterwards (hard rule 2). Text only, never audio. The record's answer
+        // (fresh or a repeat) gates the relay below, so the page can never show a line twice that
+        // the record holds once (08-01 audit, open fault 4).
+        let freshLine = false;
+        if (txt) { freshLine = recordLine(room, "Clerk", String(txt), greetingStartedMs || undefined); greetingStartedMs = 0; }
         // Their hello has arrived, so it goes out FIRST and our question follows it, which is the
         // order the call actually happened in.
         if (txt && heldQuestion) {
           const q = heldQuestion; heldQuestion = null;
           if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; }
           try { relayLine?.(room, "Clerk", String(txt)); relayLine?.(room, "Agent", q); } catch { /* relay best-effort */ }
-        } else if (txt) try { relayLine?.(room, "Clerk", String(txt)); } catch { /* relay best-effort */ }
+        } else if (txt && freshLine) try { relayLine?.(room, "Clerk", String(txt)); } catch { /* relay best-effort */ }
         // VOICEMAIL = hang up NOW, not after the greeting plays out (owner 07-22: "as soon as it
         // starts hearing the voice message it should hang up to save us money"). Same phrases the
         // outcome mapper stamps `voicemail` from, so the verdict stays consistent. Closing the
@@ -774,17 +803,31 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           }
         }
         if (txt && /\b(leave (?:a|your) message|after the (?:tone|beep)|at the (?:tone|beep)|voice ?mail|mailbox|record your message|is not available|unable to take your call|has been forwarded to)\b/i.test(String(txt))) {
-          log(`voicemail greeting detected -> hanging up to save the call minutes`);
-          emit(room, "voicemail", "Reached a machine, hung up straight away");
-          signalEnd(); try { eleven?.close(); } catch { /* torn down */ } try { twilio.close(); } catch { /* torn down */ }
+          // A MACHINE PHRASE IS ONLY PROOF BEFORE A REAL CONVERSATION (08-01 audit, family 1).
+          // Mid-hold the line plays recordings — "please leave a message after the tone" lives in
+          // plenty of hold loops — and once Staff have stepped away and come back this is a live
+          // store, not a voicemail. This close had no such guard, so a misheard line during a hold
+          // hung up BOTH legs on real Staff. The bail still fires on the case it exists for: a
+          // voicemail greeting at pickup, before anybody was ever away and back.
+          if (onHold || everCameBack) {
+            emit(room, "unknown", "A recorded voice mentioned a message mid call, ignored — a live store, not voicemail", { said: String(txt).slice(0, 120) });
+            log("voicemail phrase during/after a hold ignored — not hanging up on a live store");
+          } else {
+            log(`voicemail greeting detected -> hanging up to save the call minutes`);
+            emit(room, "voicemail", "Reached a machine, hung up straight away");
+            signalEnd(); try { eleven?.close(); } catch { /* torn down */ } try { twilio.close(); } catch { /* torn down */ }
+          }
         }
       } else if (m.type === "agent_response") {
         const txt = m.agent_response_event?.agent_response;
         // THE QUESTION COMES BACK TO US AS IF CHARLIE SAID IT. The recorded question is handed to his
         // session as context, and the session then reports it as a line of its own — but it is already
         // on the record and already on the customer's page from the moment it PLAYED, so this echo
-        // printed the question twice in a row (owner screenshot, 08-01). One echo, dropped once.
-        if (txt && !clipEchoDropped && clipText && String(txt).trim() === clipText.trim()) { clipEchoDropped = true; return; }
+        // printed the question twice in a row (owner screenshot, 08-01). Dropped FUZZILY — the
+        // session's styling of it rarely matches the recording word-perfectly, which is why the
+        // exact-string drop still doubled it — and once per SESSION: every reopened session is handed
+        // the question again and echoes it again (08-01 audit, open fault 4).
+        if (txt && !clipEchoDropped && clipText && normSaid(String(txt)) === normSaid(clipText)) { clipEchoDropped = true; return; }
         // HE HAS ASKED TO BE PUT THROUGH. From here the next wait that ends is a hand-over, whether or
         // not the next desk audibly rings — a silent hand-over is a quiet pause to the ear and nothing
         // else, and the ear must never be asked to judge this. It is also the ONE line of ours worth
@@ -793,8 +836,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           expectHandover = true;
           log("wrong department: he asked to be put through, so the next wait is a hand-over");
         }
-        if (txt) recordLine(room, "Agent", String(txt));
-        if (txt) try { relayLine?.(room, "Agent", String(txt)); } catch { /* relay best-effort */ }
+        // The record's verdict on freshness gates the relay, same as the clerk side (open fault 4).
+        if (txt && recordLine(room, "Agent", String(txt))) try { relayLine?.(room, "Agent", String(txt)); } catch { /* relay best-effort */ }
       } else if (m.type === "ping") {
         eleven!.send(JSON.stringify({ type: "pong", event_id: m.ping_event?.event_id }));
       } else if (m.type === "interruption") {
@@ -819,6 +862,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   const dtmfTimers: NodeJS.Timeout[] = [];
   function sendDigit(digit: string) {
     if (twilio.readyState !== 1 || !streamSid) { log(`dtmf ${digit}: socket not ready, skipped`); return; }
+    // STOP PRESSING THE MOMENT A REAL PERSON ANSWERS (runtime spec §10; 08-01 audit, family 2). The
+    // recipe's scheduled presses kept firing after a person was found — stopKeysOnHuman only covers
+    // the listening-navigation lane — which sends keypad tones into a live human's ear. One guard at
+    // the one place a tone leaves the bridge.
+    if (humanAtMs > 0) {
+      log(`dtmf ${digit}: a person is on the line, press skipped`);
+      emit(room, "unknown", "A mapped keypad press was due after a person answered, skipped", { digit });
+      return;
+    }
     const b64 = dtmfTone(digit).toString("base64");
     twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: b64 } }));
     fanout(room, b64, "agent"); // the live listener hears the beep — confirmation it fired
@@ -1087,5 +1139,5 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       if (m.mark?.name === CLIP_MARK) openCharlieGate("the carrier confirmed the clip played");
     } else if (m.event === "stop") { log("twilio stop"); signalEnd(); if (eleven) eleven.close(); }
   });
-  twilio.on("close", () => { if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; } if (heldQuestion) { try { relayLine?.(room, "Agent", heldQuestion); } catch { /* best effort */ } heldQuestion = null; } try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (eleven) eleven.close(); });
+  twilio.on("close", () => { if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; } if (heldQuestion) { try { relayLine?.(room, "Agent", heldQuestion); } catch { /* best effort */ } heldQuestion = null; } try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (eleven) eleven.close(); /* the context is NOT deleted here: Twilio can reconnect a blipped stream mid-call, and the fresh socket must still find it. The 30-minute leak guard owns cleanup. */ });
 }

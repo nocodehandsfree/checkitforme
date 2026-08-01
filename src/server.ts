@@ -37,7 +37,7 @@ import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
 import { placeNavCall, navInitialTwiml, navStep, navEnded, navMediaFeed, getNavSession, latestNavSessionForChain, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
 import { listenNavFeed, endListenNav } from "./calls/listen-nav";
 // THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
-import { emit, markNow, closeReceipt, linkCall, rollup, rollupFromRow, getReceipt, transcriptOf, lineStillUp, setLineHook, type Rollup } from "./calls/events";
+import { emit, markNow, closeReceipt, linkCall, rollup, rollupFromRow, getReceipt, transcriptOf, setLineHook, normSaid, type Rollup } from "./calls/events";
 import { installReceiptStore, currentRates, onReceiptClosed } from "./calls/receipt-store";
 import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
@@ -148,11 +148,16 @@ import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
 import { settings as settingsTbl } from "./db/schema";
 import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeRoomForConversation, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, activeBridgeCalls } from "./voice/bridge";
+import { installCheckLife, isCheckAlive, noteLineEnded, resolveRoom as lifeRoom } from "./calls/check-life";
 import { placeBridgeCall, attachListenFork, roomCallSids, roomCallProgress, roomFinalizers, RAILWAY_HOST, STAGING_HOST } from "./voice/bridge-place";
 import { isCallingPaused, setCallingPaused, spendTodayCents, withLock } from "./redis";
 
 assertProdSecurity(); // refuse to boot in prod with an open admin / forgeable sessions
 installReceiptStore(); // every finished call writes its timeline + seconds + cost to the database
+// THE GATEKEEPER (08-01 audit): every check's life mirrored to the database as it happens, so
+// "is this check alive?" is answerable after a restart and after every in-memory map has expired.
+// The carrier's line-end is the only end; every finalize path asks check-life, never the provider.
+installCheckLife();
 // READ AS IT GOES (owner 07-30): every line reaches the reader the moment it is spoken, so the
 // verdict is ready at hang-up instead of being started then. Registered, not imported, because
 // calls/events.ts stays free of model/db code by design. See src/voice/live-read.ts.
@@ -2903,6 +2908,15 @@ app.post("/api/admin/restore-calls-from-el", async (c) => {
       const cid = String(conv.conversation_id || "");
       const status = String(conv.status || "");
       if (!cid || existing.has(cid) || (status !== "done" && status !== "completed")) { skipped++; continue; }
+      // A LIVE CHECK MUST NEVER BE RESTORED OVER (08-01 audit, family 1). Mid-call the row still
+      // carries our own name for the check, not the provider's, so the conversation id is not in
+      // `existing` yet — and this inserted a finished duplicate row straight off the provider while
+      // the phone was up. A held Charlie's session reads "done" over there, which is how a restore
+      // running during a hold would double a check the customer is still watching.
+      if (bridgeRoomForConversation(cid) || (await isCheckAlive(cid))) { skipped++; continue; }
+      // …and re-check the database right before writing: a check that connected mid-restore has had
+      // its row repointed at this conversation since `existing` was built.
+      if ((await db.select({ id: callResults.id }).from(callResults).where(eq(callResults.providerCallId, cid)))[0]) { skipped++; existing.add(cid); continue; }
       const dr = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${cid}`, { headers: { "xi-api-key": key } });
       if (!dr.ok) { skipped++; continue; }
       const d = await dr.json() as { conversation_initiation_client_data?: { dynamic_variables?: Record<string, string> }; metadata?: { start_time_unix_secs?: number; call_duration_secs?: number } };
@@ -3372,6 +3386,10 @@ app.get("/pub/result/:cid", async (c) => {
     const s = tdSession(cid.slice(6));
     let row = (await db.select().from(callResults).where(eq(callResults.providerCallId, cid)))[0];
     if (!row && s?.check) row = (await db.select().from(callResults).where(eq(callResults.id, s.check.callId)))[0];
+    // THE D-LANE NEVER GOT THE RUN-1 FIX (08-01 audit, family 1): this branch answered from the row
+    // alone, so anything stamped early could hand out a verdict with the phone still in somebody's
+    // hand. Same gate as every other door now: no result while the line is up.
+    if (await isCheckAlive(cid)) return c.json({ status: "in_progress", transcript: row?.transcript ?? (s ? tdTranscript(s) : ""), summary: "" });
     if (row && row.status && row.status !== "in_progress" && row.status !== "dialing") {
       return c.json({
         status: row.status, confirmed: row.confirmed, statusKey: row.statusKey,
@@ -3392,6 +3410,15 @@ app.get("/pub/result/:cid", async (c) => {
     const liveRoom = bridgeRoomForConversation(cid);
     const held = liveRoom ? getReceipt(liveRoom) : null;
     if (held && !held.closed) return c.json({ status: "in_progress", transcript: transcriptOf(held), summary: "" });
+    // MEMORY IS NOT THE GUARD, THE GATEKEEPER IS (08-01 audit, family 1). After a restart, or once
+    // the in-memory receipt and the conversation-to-room map expire, the lookups above know nothing —
+    // and this door then finalized, CHARGED and alerted off the provider's word while the phone was
+    // still in somebody's hand. The database's answer outlives the process; the row's own transcript
+    // is our record of the conversation so far.
+    if (!held && (await isCheckAlive(cid))) {
+      const r0 = (await db.select().from(callResults).where(eq(callResults.providerCallId, cid)))[0];
+      return c.json({ status: "in_progress", transcript: r0?.transcript ?? "", summary: "" });
+    }
   }
   const o = await provider.getConversation(cid);
   // Prefer the FINALIZED row once it exists — it carries the consensus verdict (the reconciled
@@ -3500,6 +3527,12 @@ app.get("/pub/live/:cid", async (c) => {
     // provider exactly as before.
     const held = getReceipt(room);
     if (held) return c.json({ live: !held.closed, status: held.closed ? "done" : "in_progress", transcript: transcriptOf(held) });
+    // After a restart the in-memory receipt is gone but the check may be mid-call. The gatekeeper's
+    // database answer keeps the page truthful; the row's transcript is what we hold of the talk so far.
+    if (await isCheckAlive(room)) {
+      const r0 = (await db.select().from(callResults).where(eq(callResults.room, room)))[0];
+      return c.json({ live: true, status: "in_progress", transcript: r0?.transcript ?? "" });
+    }
     const convId = bridgeConversationId(room);
     if (convId) dcid = convId;
     else return c.json({ status: "in_progress", transcript: "", summary: "" });
@@ -3512,6 +3545,16 @@ app.get("/pub/live/:cid", async (c) => {
     const room = bridgeRoomForConversation(dcid);
     const held = room ? getReceipt(room) : null;
     if (held) return c.json({ live: !held.closed, status: held.closed ? "done" : "in_progress", transcript: transcriptOf(held) });
+    // …and the same question answered from the DATABASE when memory is gone (08-01 audit, family 1):
+    // the conversation-to-room map dies after ten minutes and dies with every restart, and this poll
+    // then fell through to the provider — whose "done" only means Charlie was dropped for a wait.
+    if (!held) {
+      const room2 = await lifeRoom(dcid);
+      if (room2 && !room2.startsWith("delta:") && (await isCheckAlive(room2))) {
+        const r0 = (await db.select().from(callResults).where(eq(callResults.room, room2)))[0];
+        return c.json({ live: true, status: "in_progress", transcript: r0?.transcript ?? "" });
+      }
+    }
   }
   if (dcid.startsWith("delta:")) {
     const s = tdSession(dcid.slice(6));
@@ -3532,11 +3575,22 @@ app.get("/pub/live/:cid", async (c) => {
           }
         } catch { /* keep the clip turns only */ }
       }
-      const done = elLive === null ? (s.status === "done" || s.status === "failed") : !elLive;
+      // OUR OWN SESSION IS THE AUTHORITY; the provider's status is only a tie-break when we hold
+      // nothing (08-01 audit, family 1). A Charlie closed for a hold reads as finished over there
+      // while the phone is still in somebody's hand — the provider used to OVERRIDE our session here.
+      const aliveOurs = await isCheckAlive(dcid);
+      const done = aliveOurs ? false : (elLive === null ? (s.status === "done" || s.status === "failed") : !elLive);
       return c.json({ live: !done, status: done ? "done" : "in_progress", transcript: [tdTranscript(s), tail].filter(Boolean).join("\n") });
     }
     const row = (await db.select().from(callResults).where(eq(callResults.providerCallId, dcid)))[0];
     return c.json({ live: false, status: row?.status || "done", transcript: row?.transcript || "" });
+  }
+  // THE LAST DOOR STILL ASKING THE PROVIDER (08-01 audit, family 1): this branch turned the raw
+  // session status into live:false with no look at our own record at all. The gatekeeper answers
+  // first; the provider's copy is only consulted for a check we genuinely hold nothing on.
+  if (await isCheckAlive(dcid)) {
+    const r0 = (await db.select().from(callResults).where(eq(callResults.providerCallId, dcid)))[0];
+    return c.json({ live: true, status: "in_progress", transcript: r0?.transcript ?? "" });
   }
   try {
     const r = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${dcid}`, { headers: { "xi-api-key": config.voice.apiKey } });
@@ -6827,6 +6881,10 @@ app.post("/twiml/bridge-status", async (c) => {
       // persists HERE. The finalizer above may still be writing the verdict; the roll-up is stitched
       // onto the call row by the sink, which looks the row up by room.
       closeReceipt(room, status === "completed" ? "Check ended" : `Check ended (${status})`, status);
+      // …and the gatekeeper's row is stamped DIRECTLY, not only through the receipt: after a restart
+      // there is no in-memory receipt left to close, and this callback is then the only witness that
+      // the line ended. Without this stamp a restarted check would read alive until the hard cap.
+      noteLineEnded(room, status);
     }
   }
   return c.body(null, 204);
@@ -7057,9 +7115,11 @@ app.post("/webhooks/elevenlabs", async (c) => {
       // conversation at the provider, which fires this webhook — so a store saying "give me a second"
       // used to stamp the verdict "we got left on hold", charge for it and send the alerts while the
       // line was still up and Staff were walking back with the answer. The carrier's own end is the
-      // only end; the receipt is open until then, and the poller finalizes this row the moment it is
-      // genuinely over.
-      if (lineStillUp(row?.room)) return c.json({ ok: true, skipped: "line still up" });
+      // only end. The GATEKEEPER answers now, not the in-memory receipt (08-01 audit, family 3): the
+      // receipt's fifteen-minute life and every restart made the old guard fail toward "line is
+      // down" — and on the old direct path, where the provider carries the line itself, it failed
+      // the other way and froze this webhook for the receipt's whole life.
+      if (await isCheckAlive(row?.room)) return c.json({ ok: true, skipped: "line still up" });
       // Consensus second read — keep the webhook verdict + billing identical to the poller (ingestPending):
       // two non-conflicting reads → a hard verdict (charge); conflict/ambiguity → "no clear answer", no charge.
       let confirmed = o.confirmed, statusKey = o.statusKey;
@@ -7138,9 +7198,20 @@ const fanout = (room: string, payloadB64: string, track: string) => {
 };
 // Real-time transcript lines from the agent bridge → browser listeners, so the chat bubbles populate
 // AS the call happens (ElevenLabs only returns the full transcript post-call).
+// ONE SENTENCE REACHES THE PAGE ONCE (08-01 audit, open fault 4): the relay had no memory at all, so
+// an echoed or replayed line always printed again however carefully it was recorded. Same fuzzy rule
+// as the record's own dedupe (normSaid), last few lines within ten seconds, per room, every lane.
+const relaySeen = new Map<string, Array<{ k: string; at: number }>>();
 const relayLine = (room: string, role: string, text: string) => {
   const set = rooms.get(room);
   bridgeLog(`relayLine ${role}: ${String(text).slice(0, 32)} listeners=${set ? set.size : 0}`); // diagnose live-transcript delivery
+  const rk = `${role}:${normSaid(String(text))}`;
+  const seen = relaySeen.get(room) ?? [];
+  const nowMs = Date.now();
+  if (seen.some((s) => s.k === rk && nowMs - s.at < 10_000)) { bridgeLog(`relayLine dropped a duplicate ${role} line`); return; }
+  seen.push({ k: rk, at: nowMs });
+  if (seen.length > 6) seen.shift();
+  relaySeen.set(room, seen);
   if (!set) return;
   const msg = JSON.stringify({ line: { role, text } });
   for (const ws of set) if (ws.readyState === 1) ws.send(msg);
@@ -7148,6 +7219,7 @@ const relayLine = (room: string, role: string, text: string) => {
 // Tell browser listeners the moment the bridge tears down (agent/clerk hung up) so the UI flips to
 // the result instantly instead of waiting on the next poll + ElevenLabs status lag.
 const relayEnd = (room: string) => {
+  relaySeen.delete(room); // the check is over — its relay memory goes with it
   const set = rooms.get(room);
   bridgeLog(`relayEnd room=${room.slice(0, 8)} listeners=${set ? set.size : 0}`); // diagnose hang-up→flip
   if (!set) return;

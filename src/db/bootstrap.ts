@@ -348,6 +348,16 @@ export async function bootstrap() {
   await client.execute("ALTER TABLE support_conversations ADD COLUMN source TEXT").catch(() => {});
   await client.execute("ALTER TABLE support_conversations ADD COLUMN page_url TEXT").catch(() => {});
   await client.execute("ALTER TABLE support_conversations ADD COLUMN check_id TEXT").catch(() => {});
+  // THE GATEKEEPER'S STATE (src/calls/check-life.ts, 08-01 audit): a live check's life in the
+  // database, so "is this check alive?" survives restarts and in-memory expiries. The carrier's
+  // line-end is the only end; call_events stays the history, this table is only the present tense.
+  await client.execute(`CREATE TABLE IF NOT EXISTS check_life (
+    room TEXT PRIMARY KEY, call_id INTEGER, provider_call_id TEXT,
+    dialed_at INTEGER NOT NULL, answered_at INTEGER, human_at INTEGER,
+    on_hold INTEGER NOT NULL DEFAULT 0, charlie_open INTEGER NOT NULL DEFAULT 0,
+    segments INTEGER NOT NULL DEFAULT 0, line_ended_at INTEGER, end_reason TEXT,
+    updated_at INTEGER NOT NULL)`);
+  await client.execute("CREATE INDEX IF NOT EXISTS check_life_provider_idx ON check_life(provider_call_id)").catch(() => {});
   // One-time: stock the anonymous free-check pool for launch (each visitor gets 1 free check).
   if (!(await getSetting("pub_credits_initialized"))) {
     await setSetting("pub_credits", "250");

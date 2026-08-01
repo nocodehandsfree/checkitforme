@@ -596,5 +596,108 @@ console.log("\n▶ …and a plain wander off is still just a wander off");
   restore(); tw.close(); f.close();
 }
 
+// ================================================================================================
+// FAMILY 1 OF THE 08-01 CHECK-LIFE AUDIT, the bridge's door: a machine phrase is only proof of a
+// voicemail BEFORE a real conversation. Hold loops play recordings, and "please leave a message
+// after the tone" inside one used to close BOTH legs — hanging up on real Staff mid-hold.
+console.log("\n▶ a 'leave a message' recording heard MID-HOLD does not hang up on real Staff");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const tw = await callWithHold(f, "room-vm-hold", "gate");
+  speak(tw, 150);                                   // a real person, talking to us
+  quiet(tw, HOLD_QUIET_MS / 20 + 20);               // they step away — we are on hold
+  await sleep(60);
+  ok((getReceipt("room-vm-hold")?.events || []).some((e) => e.kind === "hold_start"), "we are on hold");
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "You can leave a message after the tone." } }));
+  await sleep(80);
+  ok(tw.readyState === 1, "the phone line is STILL UP — a hold-loop recording is not a voicemail");
+  ok(!(getReceipt("room-vm-hold")?.events || []).some((e) => e.kind === "voicemail"), "and nothing was stamped voicemail");
+  ok((getReceipt("room-vm-hold")?.events || []).some((e) => String(e.note || "").includes("ignored")), "the receipt says the phrase was heard and ignored");
+  speak(tw, 30);                                    // Staff come back — beyond doubt a live store now
+  await sleep(60);
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Sorry about that, you can always leave a message with our voicemail too." } }));
+  await sleep(80);
+  ok(tw.readyState === 1, "…and after Staff came back, a chatty mention of voicemail still cannot end the check");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ …while a REAL voicemail at pickup still hangs up straight away");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const tw = await callWithHold(f, "room-vm-real", "gate");
+  speak(tw, 150);                                   // the machine's recorded voice trips the human gate — that is the case the bail exists for
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "We are unable to take your call, please leave a message after the beep." } }));
+  await sleep(80);
+  ok(tw.readyState !== 1, "the line was hung up — no hold ever happened, so the machine phrase is proof");
+  ok((getReceipt("room-vm-real")?.events || []).some((e) => e.kind === "voicemail"), "and the receipt says a machine was reached");
+  restore(); tw.close(); f.close();
+}
+
+// ================================================================================================
+// FAMILY 2 OF THE 08-01 AUDIT: nothing may act on the keypad or open Charlie once a real person is
+// found. The recipe's scheduled presses used to keep firing after the answer — keypad tones into a
+// live human's ear (runtime spec §10: "Today we would keep pressing").
+console.log("\n▶ a mapped keypad press due AFTER a person answered is skipped, not sent");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  openReceipt("room-press", { lane: "alpha" });
+  setBridgeContext("room-press", {
+    agentId: "agent_normal", dynamicVars: {},
+    // A mapped press three seconds in, and the agent joining on the learned second before it — the
+    // press is then due AFTER a person has already been found.
+    dtmf: "9@3", connectOnHuman: true, connectAtSec: 1,
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "room-press", () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_p", customParameters: { room: "room-press" } } });
+  await sleep(1400);                                // past connectAtSec — Charlie joined, a person is on the line
+  ok(f.inits.length === 1, "the agent joined at the learned second");
+  const beforePress = tw.outMedia().length;
+  await sleep(2200);                                // past the press's own second
+  ok(tw.outMedia().length === beforePress, "the mapped press was SKIPPED — no keypad tone into a live person's ear");
+  const skipped = (getReceipt("room-press")?.events || []).find((e) => String(e.note || "").includes("keypad press"));
+  ok(!!skipped && skipped.detail?.digit === "9", "and the receipt says which press was skipped and why");
+  restore(); tw.close(); f.close();
+}
+
+// ================================================================================================
+// OPEN FAULT 4 OF THE 08-01 AUDIT: the doubled question and the page that bounces. One sentence
+// prints once however it arrives — the echo drop is fuzzy (transcription never styles the recording
+// word-perfectly), and a line the record already holds is neither recorded nor relayed again.
+console.log("\n▶ one sentence prints once, however it arrives");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const base = relayed.length;
+  const { tw } = await callToHello(f, 400, "room-dupes");
+  tw.say({ event: "mark", mark: { name: "delta-opening" } });
+  await sleep(150);
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Fun store, this is Bob." } }));
+  await sleep(80);
+  // The session echoes our question back STYLED DIFFERENTLY — the exact-string drop missed this.
+  f.sockets[0].send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Do you have any Pokemon cards, in stock?!" } }));
+  await sleep(80);
+  ok((getReceipt("room-dupes")?.transcript ?? []).filter((l) => l.who === "Agent" && /pokemon cards/i.test(l.text)).length === 1,
+    "a restyled echo of our recorded question is still the same sentence: ONE copy on the record");
+  ok(relayed.slice(base).filter((l) => l.role === "Agent" && /pokemon cards/i.test(l.text)).length === 1,
+    "…and ONE copy on the live view");
+  // The same clerk sentence delivered twice (a socket retry, a replayed message) lands once.
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Let me go check on that." } }));
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Let me go check on that!" } }));
+  await sleep(80);
+  ok((getReceipt("room-dupes")?.transcript ?? []).filter((l) => /go check on that/i.test(l.text)).length === 1,
+    "the same clerk sentence arriving twice records once");
+  ok(relayed.slice(base).filter((l) => /go check on that/i.test(l.text)).length === 1,
+    "…and reaches the live view once");
+  restore(); tw.close(); f.close();
+}
+
 console.log(`\n════════════════════════════════\n  PASS: ${pass}   FAIL: ${fail}\n════════════════════════════════`);
 process.exit(fail === 0 ? 0 : 1);
