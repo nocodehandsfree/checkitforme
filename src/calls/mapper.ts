@@ -34,7 +34,7 @@ import { placeNavCall, getNavSession, defaultWorkflowAsk, classifyMode, menuHasC
 import { storeForChain, lockRecipeToChain, recipeFromSteps } from "./trainer-batch";
 import { chainDialable } from "./recipe";
 import { openState } from "../store-hours";
-import { pathSignature, recordObservation, recordCallPath, storeLocalTime, activeMap, sameMenu, MapRecipe, MapStep, type EvidenceCall, type CheckStage } from "./mapgraph";
+import { pathSignature, recordObservation, recordCallPath, storeLocalTime, activeMap, sameMenu, addProvenStore, MapRecipe, MapStep, type EvidenceCall, type CheckStage } from "./mapgraph";
 import { recipeFromCall, evidenceFromCall, CapturedStep } from "./map-capture";
 
 const DAILY_CAP = 60;        // runaway guard only — owner 2026-07-10: the old 12/day cap is gone, a
@@ -347,10 +347,12 @@ async function recordMapVersion(run: MapperRun, chainId: number, recipe: NavReci
 }
 
 /** THE PROOF LEDGER for the chain's second lock level (R1): the stores where a real answer about the
- *  product proved the department. Seeded with the mapping run's store at the store lock; real customer
- *  checks that land at NEW stores add themselves for free (learnFromReceipt). Three = fully proven. */
+ *  product proved the department. The mapping run's store joins at its proven answer — which is also
+ *  the hand-dial path: pin a fresh store, run it, and its answer lands here. Real customer checks at
+ *  NEW stores add themselves for free (learnFromReceipt). A UNION always, never an overwrite: a
+ *  re-lock can never wipe agreements the customers already earned. Three = fully proven. */
 export async function seedProvenStores(chainId: number, storeId: number): Promise<void> {
-  try { await setSetting(`map_proven:${chainId}`, JSON.stringify([storeId])); } catch { /* best effort */ }
+  try { await addProvenStore(chainId, storeId); } catch { /* best effort */ }
 }
 
 async function bumpDaily(chainId: number): Promise<number> {
@@ -576,6 +578,9 @@ function driveMapper(run: MapperRun): void {
           if (typeof menuSecs === "number") run.bestMenuSecs = menuSecs;
           run.expectedGreeting = ((s?.steps || []) as NavStep[]).find((st) => st.who === "ivr" && st.text)?.text;
           run.doorProven = true;
+          // The proven answer joins the proof ledger NOW — this is also the hand-dial path: pin a
+          // fresh store, run it, and its Staff answer counts toward proven-at-three.
+          await addProvenStore(chainId, store.id); // never throws — the ledger is best-effort inside
           run.lastLines = menuLinesOf((s?.steps || []) as NavStep[], s?.transferAtSec ?? s?.humanAtSec);
           run.winnerSession = sessionLike(s);
           if (!run.lastLines.length) {

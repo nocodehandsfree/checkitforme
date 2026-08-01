@@ -170,6 +170,9 @@ onReceiptClosed(async (r) => {
   const res = await learnFromReceipt({
     room, callId, chainId: store.chainId, storeId: store.id,
     events: r.events.map((e) => ({ kind: String(e.kind), atSec: e.atSec, detail: e.detail })),
+    // Did Staff acknowledge the product question — a real yes or a real no? This is the bar a
+    // customer check must clear to count as a store agreeing (R1's proven-at-three).
+    answered: typeof row?.confirmed === "boolean" ? row.confirmed : null,
   });
   if (res.learned.length) console.log(`[map] learned from call ${callId ?? room}: ${res.learned.join(" · ")}`);
 });

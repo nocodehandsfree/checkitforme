@@ -1317,16 +1317,43 @@ function trendOf(all: MapVersion[], active: MapVersion | null, recipe: MapRecipe
 
 /** Everything behind one chain: its versions, its evidence, its unknowns, its recent observations —
  *  the replay trail for a single map. */
+/** THE PROOF LEDGER, read (R1's second lock level). The stores where Staff acknowledged the product
+ *  question — the mapping run's store plus every customer check that landed at a new one. This is
+ *  the reader the ledger was missing: three distinct stores = the chain is fully proven. */
+export async function provenStores(chainId: number): Promise<{ stores: number[]; fullyProven: boolean }> {
+  try {
+    const stores = JSON.parse((await getSetting(`map_proven:${chainId}`)) || "[]") as number[];
+    return { stores, fullyProven: stores.length >= 3 };
+  } catch { return { stores: [], fullyProven: false }; }
+}
+/** Add one agreeing store to the ledger — a UNION, never an overwrite, so a re-lock can never wipe
+ *  the agreements real customer checks already earned. */
+export async function addProvenStore(chainId: number, storeId: number): Promise<{ added: boolean; count: number }> {
+  try {
+    const key = `map_proven:${chainId}`;
+    const proven = new Set<number>(JSON.parse((await getSetting(key)) || "[]") as number[]);
+    if (proven.has(storeId)) return { added: false, count: proven.size };
+    proven.add(storeId);
+    await setSetting(key, JSON.stringify([...proven].slice(0, 50)));
+    return { added: true, count: proven.size };
+  } catch { return { added: false, count: 0 }; } // best-effort — a check must never fail on the ledger
+}
+
 export async function chainDetail(chainId: number): Promise<Record<string, unknown>> {
   await ensureMapTables();
-  const [vs, obs, unk, runs] = await Promise.all([
+  const [vs, obs, unk, runs, proven] = await Promise.all([
     versionsFor(chainId),
     client.execute({ sql: `SELECT * FROM nav_observations WHERE chain_id=? ORDER BY at DESC LIMIT 50`, args: [chainId] }),
     client.execute({ sql: `SELECT * FROM nav_unknowns WHERE chain_id=? ORDER BY status='open' DESC, last_seen DESC LIMIT 50`, args: [chainId] }),
     callsForChain(chainId),
+    provenStores(chainId),
   ]);
   return {
     versions: vs,
+    // The two-level lock, readable: live at one proven store, fully proven at three agreeing —
+    // agreements arriving free from real customer checks (R1).
+    provenStores: proven.stores,
+    fullyProven: proven.fullyProven,
     // EVERY CALL, TOP TO BOTTOM. The whole conversation was always recorded — both sides, with the
     // second each line landed — it just lived on a different screen's data while this one carried a
     // store-only summary with our own replies stripped out, which is why a call read as nonsense
@@ -1379,6 +1406,9 @@ export async function resetChainHistory(chainId: number): Promise<{
   let callsCleared = 0;
   try { callsCleared = (JSON.parse((await getSetting(`nav_runs:${chainId}`)) || "[]") as unknown[]).length; } catch { callsCleared = 0; }
   await setSetting(`nav_runs:${chainId}`, "[]");
+  // Starting over means the PROOF starts over too: the agreements belonged to the history being
+  // cleared, and a fresh map must earn its three stores again.
+  await setSetting(`map_proven:${chainId}`, "");
 
   const live = await activeMap(chainId);
   const del = await client.execute({
@@ -1444,6 +1474,9 @@ export async function reshareUnsent(): Promise<{ pushed: number; failed: number;
 export async function learnFromReceipt(r: {
   room?: string; callId?: number; chainId?: number | null; storeId?: number | null;
   events?: Array<{ kind: string; atSec?: number; detail?: Record<string, unknown> }>;
+  /** Did Staff ACKNOWLEDGE the product question — a real yes or a real no (call_results.confirmed,
+   *  true or false)? Null/absent = no clear answer, and a check with no answer proves nothing. */
+  answered?: boolean | null;
 }): Promise<{ learned: string[] }> {
   const learned: string[] = [];
   const chainId = Number(r.chainId || 0);
@@ -1515,21 +1548,17 @@ export async function learnFromReceipt(r: {
   }
 
   // THE SECOND LOCK LEVEL, FOR FREE (owner R1). The chain went live the moment ONE store proved the
-  // department; every real customer check that lands at a NEW store and reaches Staff — who answer
-  // the product question, yes or no alike (Update 12) — is another store agreeing. Three distinct
-  // stores = fully proven. Nobody dials for this; the customers already are.
-  if (map && personAt != null && !wrongDept && storeId) {
-    try {
-      const key = `map_proven:${chainId}`;
-      const proven = new Set<number>(JSON.parse((await getSetting(key)) || "[]") as number[]);
-      if (!proven.has(storeId)) {
-        proven.add(storeId);
-        await setSetting(key, JSON.stringify([...proven].slice(0, 50)));
-        learned.push(proven.size >= 3
-          ? `store ${storeId} agrees — ${proven.size} stores, the chain is fully proven`
-          : `store ${storeId} agrees (${proven.size} of 3 stores)`);
-      }
-    } catch { /* the proof ledger is best-effort — a check must never fail on it */ }
+  // department; every real customer check that lands at a NEW store and gets a real ANSWER about the
+  // product — a yes or a no, both count, silence and "no clear answer" never do (Update 12) — is
+  // another store agreeing. Three distinct stores = fully proven. Nobody dials for this; the
+  // customers already are. The bar is the check's own verdict, not merely a person being detected.
+  if (map && personAt != null && !wrongDept && storeId && typeof r.answered === "boolean") {
+    const added = await addProvenStore(chainId, storeId);
+    if (added.added) {
+      learned.push(added.count >= 3
+        ? `store ${storeId} agrees — ${added.count} stores, the chain is fully proven`
+        : `store ${storeId} agrees (${added.count} of 3 stores)`);
+    }
   }
 
   // WHAT THE CALL WALKED, MEASURED AGAINST THE MAP. This is spec §10's first wiring gap closed from

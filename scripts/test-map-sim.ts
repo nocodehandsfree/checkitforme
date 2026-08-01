@@ -16,7 +16,7 @@ import { connectAtSecFor, recipeToDtmf } from "../src/calls/recipe";
 import {
   proposeVersion, approveVersion, activeMap, versionsFor, chainDetail, graphFor, graphSummary,
   openUnknowns, recordCallPath, recordFailedAttempt, learnFromReceipt, reportCallDrift, resetChainHistory,
-  addEvidence, navSecondsOf, reachedPctOf, scoreConfidence, sameMenu, CHECK_FAIL_REASONS,
+  addEvidence, navSecondsOf, reachedPctOf, scoreConfidence, sameMenu, CHECK_FAIL_REASONS, provenStores, addProvenStore,
   type MapRecipe, type EvidenceCall,
 } from "../src/calls/mapgraph";
 import { lockRecipeToChain } from "../src/calls/trainer-batch";
@@ -108,6 +108,46 @@ async function main() {
     ok((await activeMap(chain.id))!.confidence >= before, "a clean check never lowers trust");
     const obs = (await chainDetail(chain.id)).observations as Array<Record<string, unknown>>;
     ok(obs.some((o) => o.callId === 9001), "and it is on the record with the receipt's call id");
+  }
+
+  console.log("\n▶ PROVEN AT THREE, FOR FREE — the ledger is real, the bar is a real answer");
+  {
+    // ROUND 2 ITEM 6. The mapping run's store seeds the ledger (union), then customer checks with a
+    // REAL yes-or-no add new stores. Detection of a person alone never counts; overwrites never happen.
+    const { setSetting: put, getSetting: get } = await import("../src/db/settings");
+    await put(`map_proven:${chain.id}`, JSON.stringify([east.id]));
+    const check = (room: string, storeId: number, answered: boolean | null) => learnFromReceipt({
+      room, callId: 9100 + storeId, chainId: chain.id, storeId, answered,
+      events: [ev("dialed", 0), ev("connected", 2), ev("ivr_detected", 3),
+        ev("alpha_press", 15, { key: "2", via: "prompt" }), ev("human_detected", 25), ev("hangup", 70, { why: "done" })],
+    });
+    await check("sim-agree-none", west.id, null);
+    ok(JSON.parse((await get(`map_proven:${chain.id}`)) || "[]").length === 1,
+      "a person detected with NO clear answer is not an agreement — the bar is the verdict");
+    await check("sim-agree-no", west.id, false);
+    let led = JSON.parse((await get(`map_proven:${chain.id}`)) || "[]") as number[];
+    ok(led.length === 2 && led.includes(west.id), "a real NO counts — Staff acknowledged the product (Update 12)");
+    await check("sim-agree-again", west.id, true);
+    ok((JSON.parse((await get(`map_proven:${chain.id}`)) || "[]") as number[]).length === 2,
+      "the same store agreeing twice is still one store");
+    const third = await check("sim-agree-3", odd.id, true);
+    led = JSON.parse((await get(`map_proven:${chain.id}`)) || "[]") as number[];
+    ok(led.length === 3 && third.learned.some((l) => l.includes("fully proven")),
+      "the third distinct store flips the chain to fully proven, and the record says so");
+    const read = await provenStores(chain.id);
+    ok(read.fullyProven === true && read.stores.length === 3, "and the reader reads it — the level really flips");
+    ok((await addProvenStore(chain.id, east.id)).added === false,
+      "the mapping run's seed is a UNION — it can never wipe agreements customers earned");
+    const detail = await chainDetail(chain.id);
+    ok(Array.isArray(detail.provenStores) && detail.fullyProven === true,
+      "the chain's own data carries the two-level lock for the screens to read");
+    await put(`map_proven:${chain.id}`, ""); // leave the sim chain clean for the sections below
+    const eng = readFileSync("src/calls/mapper.ts", "utf8");
+    ok(/await addProvenStore\(chainId, store\.id\); \/\/ never throws/.test(eng),
+      "a pinned-store run's proven answer joins the ledger — the hand-dial path has real code");
+    const mg2 = readFileSync("src/calls/mapgraph.ts", "utf8");
+    ok(/await setSetting\(`map_proven:\$\{chainId\}`, ""\);/.test(mg2),
+      "and starting a chain over clears the proof with the history");
   }
 
   console.log("\n▶ THE MENU MOVES — a check notices before anybody does");
