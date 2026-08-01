@@ -12,8 +12,7 @@ git. Last updated: 2026-07-31 (in stock alerts fixed; logos sized to match; try 
 - Your two rows switched themselves off after their first email, and two of the three ways a check finishes
   never sent mail at all. Now every finish path sends, alerts stay ON until paused or deleted, one store =
   ONE email, a repeat subscribe says so. **Your move: tap the Fun store alert once, run a check, one email.**
-## A wrong department no longer costs you the check (07-30, on staging)
-- We ask once to be put through, stop paying while they hand us over, ask again when somebody new picks up.
+## A wrong department no longer costs you the check (07-30): ask once to be put through, meter off through the hand-over, ask again when somebody new picks up.
 ## The bottom bar can never go dark again, and Live is cleaned (07-30, live on Admin)
 - **The tint is nailed down**, three ways it used to break are refused before anything goes live. Cost per
   check opens on **The baseline**, your 6.7¢ ceiling off your real prices.
