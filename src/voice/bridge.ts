@@ -662,6 +662,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     const agentId = joining ? c.midCallAgentId! : useOurs ? c.ourBrainAgentId! : c.agentId;
     const url = await signedUrl(agentId, c.apiKey);
     opening = false;   // the handshake is decided; from here `eleven` itself is the guard
+    // …AND THE SAME QUESTION AGAIN, because time passed. Fetching the address to open him with takes
+    // a moment, and Staff can step away inside it — the check at the top of this function was true
+    // when it ran and stale by the time we get here, which opens a billing session into hold music.
+    // Somebody coming back always opens him afresh, so refusing here can never lose the agent.
+    if (onHold) { log(`connectEleven refused after the handshake (${segmentWhy ?? "clip path"}): Staff stepped away while we were opening`); return; }
     if (!url) {
       // THE LADDER, RUNG ONE AND TWO (section 7). Our own brain could not be reached and the agent
       // has not said a word yet, so nothing is lost by quietly using the provider's hosted model
@@ -846,12 +851,23 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       }
     });
     eleven.on("close", (code: number) => {
+      // ONLY THE SESSION THAT IS ACTUALLY OURS MAY END THE CHECK. This close belongs to one specific
+      // session, and by the time it arrives that session may already have been replaced: we close him
+      // for a wait, Staff come back FAST, a fresh session is opened — and only then does the old
+      // socket's close land. It read the check as "not on hold any more", fell through, and hung up
+      // the phone on Staff who were back and talking. It also wrote a second "Charlie left" onto a
+      // timeline where the wait had already recorded one. A stale close is bookkeeping that already
+      // happened in beginHold, so it is simply dropped.
+      if (ws !== eleven) { log(`eleven WS close code=${code} from a session we already replaced — ignored, the check is still running`); return; }
       closeSegment(room); markNow(room, "charlieCloseMs");
       emit(room, "charlie_leave", "Charlie left", { code });
       log(`eleven WS close code=${code} (frames in=${frames})`);
-      // A close we ASKED for during a wait is not the end of the call — the line is still up and
-      // somebody is coming back. Only an unexpected close ends things.
-      if (onHold && ctx?.holdStrategy === "reopen") return;
+      // NOBODY IS TALKING TO US, SO NOTHING HE DOES ENDS THE CHECK. A close during a wait used to be
+      // forgiven only when we had asked for it; the other way round — Staff step away and the
+      // provider then drops the session on its own silence timer — hung the phone up on a store that
+      // was coming back. While Staff are away the wait owns what happens next: he is simply not
+      // open, and somebody coming back opens him again.
+      if (onHold) { eleven = null; ready = false; return; }
       signalEnd(); if (twilio.readyState === 1) twilio.close();
     });
     eleven.on("error", (e: Error) => log(`eleven WS error: ${e.message}`));
