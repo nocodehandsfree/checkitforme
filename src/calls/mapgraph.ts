@@ -1437,7 +1437,7 @@ export async function chainDetail(chainId: number): Promise<Record<string, unkno
  *  Nothing a customer touches changes: the steps, the timings and the chain row are untouched. */
 export async function resetChainHistory(chainId: number): Promise<{
   callsCleared: number; versionsDeleted: number; unknownsDeleted: number; observationsDeleted: number;
-  keptRecipe: string | null;
+  keptRecipe: string | null; doorsFreed: number;
 }> {
   await ensureMapTables();
   let callsCleared = 0;
@@ -1446,6 +1446,19 @@ export async function resetChainHistory(chainId: number): Promise<{
   // Starting over means the PROOF starts over too: the agreements belonged to the history being
   // cleared, and a fresh map must earn its three stores again.
   await setSetting(`map_proven:${chainId}`, "");
+  let doorsFreed = 0;
+  try {
+    doorsFreed = (JSON.parse((await getSetting(`map_doors_dead:${chainId}`)) || "[]") as unknown[]).length
+      + (JSON.parse((await getSetting(`nav_confirm_asked_doors:${chainId}`)) || "[]") as unknown[]).length;
+  } catch { doorsFreed = 0; }
+  // AND THE DOORS WE REFUSED TO TRY AGAIN. A door marked wrong, and a door whose one ask is spent,
+  // both outlive the run that learned them on purpose — but they were learned by the same history
+  // being cleared, so starting over must free them or a chain can be permanently unable to map
+  // itself (fix pass 4). Losing moves clear with them.
+  await setSetting(`map_doors_dead:${chainId}`, "");
+  await setSetting(`nav_confirm_asked_doors:${chainId}`, "");
+  await setSetting(`nav_confirm_asked:${chainId}`, "");
+  await setSetting(`map_never:${chainId}`, "");
 
   const live = await activeMap(chainId);
   const del = await client.execute({
@@ -1468,6 +1481,7 @@ export async function resetChainHistory(chainId: number): Promise<{
     unknownsDeleted: Number(unk.rowsAffected || 0),
     observationsDeleted: Number(obs.rowsAffected || 0),
     keptRecipe: live ? spoken(live.recipe) : null,
+    doorsFreed,
   };
 }
 

@@ -481,6 +481,26 @@ export function menuStillTalking(
   return s.steps.filter((st) => st.who === "ivr" && String(st.text || "").trim()).length >= 2;
 }
 
+/** WHEN THE PERSON STARTED TALKING — the moment of the line that triggered person-detection, not the
+ *  moment the detector happened to fire. Two things move those apart: a long hello lands on the line
+ *  before the turn we judge it on, and a hello arriving right after our own answer is JOINED to the
+ *  store line it interrupted (the tail rule), so the person's words live on an earlier line. Stamping
+ *  the detector's turn left that line sitting BEFORE the person cut, and Staff's own words went back
+ *  into the store's menu (fix pass 4, face c). Never later than the turn, so it can only ever be
+ *  safer. */
+export function personLineAtSec(steps: NavStep[], speech: string, atSec: number): number {
+  const said = String(speech || "").trim().toLowerCase();
+  if (!said) return atSec;
+  for (let i = (steps || []).length - 1; i >= 0; i--) {
+    const st = steps[i];
+    if (st.who !== "ivr" || !st.text) continue;
+    const line = String(st.text).toLowerCase();
+    if (line.includes(said) || said.includes(line)) return Math.min(st.atSec ?? atSec, atSec);
+    break; // only the newest store line can be the one we just heard
+  }
+  return atSec;
+}
+
 /** The words that prove WHICH desk answered. Only what was said on the turn we reached them counts:
  *  on the 07-28 Mulholland call the newest line in the log was the machine's own "Okay, transferring
  *  you now" from 27s earlier, and it got filed as the desk that picked up. A routing line is never a
@@ -671,8 +691,13 @@ async function navTurn(id: string, speech: string): Promise<string> {
   // handoff test read it as the handoff, so a re-listen hung up one step short and filed a 47s route
   // that had never said its last word. A route we already hold tells us how many answers it takes, so
   // an offer to connect before the last one is just another prompt to answer.
+  // ONCE A PERSON IS ON THE LINE, NOTHING THEY SAY IS THE MENU. Staff answering "sure, one moment"
+  // matches the handoff pattern word for word — stamping that as the machine handing us on put a
+  // handoff moment AFTER the person, which made their own hello count as a menu line again, and the
+  // wording-settle listens went back to ringing real people (fix pass 4, face a). The store's phone
+  // system is finished with us the moment a person speaks; it cannot hand us on afterwards.
   const routeUnfinished = !!(s.barge?.plan?.length && (s.planIdx ?? 0) < s.barge.plan.length);
-  if (speech && ROUTING_RE.test(speech) && !routeUnfinished) {
+  if (speech && ROUTING_RE.test(speech) && !routeUnfinished && s.humanAtSec == null) {
     s.routingSeen = true;                       // routed to a person → next greeting is human
     // WHEN the machine said it was handing us on. It used to be stamped only if the brain happened to
     // call that same turn "human"; on the 07-28 Alhambra call it did not, so "Okay, transferring you
@@ -693,7 +718,15 @@ async function navTurn(id: string, speech: string): Promise<string> {
   // never claimed proven off dead air. It used to count 9 seconds of quiet as "answered".
   if (s.confirm?.asked && !s.confirmResult) {
     if (speech && speech.trim()) {
-      if (REDIRECT_RE.test(speech)) { s.confirmResult = "redirect"; s.redirectTo = speech.trim().slice(0, 200); }
+      // A REDIRECT IS BEING SENT AWAY, NEVER AN ANSWER ABOUT THE PRODUCT. Staff saying where the
+      // cards are — "they're over in the toy aisle", "that would be the trading card section" —
+      // matches the sent-elsewhere pattern word for word, and reading it that way killed the RIGHT
+      // door chain-wide and durably (fix pass 4, face d). An answer that TELLS us about the product
+      // is an answer: only a reply that hands us off, with no product news in it, is a redirect.
+      const said = speech.trim();
+      const tellsAboutProduct = new RegExp(`\\b(yes|yeah|yep|no|nope|we do|we don'?t|sold out|out of stock|in stock|we have|we've got|we got|we carry|we don'?t carry|aisle|section|shelf|by the|near the|next to)\\b`, "i").test(said)
+        || (s.confirm.product ? new RegExp(String(s.confirm.product).split(/\s+/)[0], "i").test(said) : false);
+      if (REDIRECT_RE.test(said) && !tellsAboutProduct) { s.confirmResult = "redirect"; s.redirectTo = said.slice(0, 200); }
       else s.confirmResult = "answered";
       finish(s, "human"); return twiml(`<Hangup/>`);
     }
@@ -716,7 +749,7 @@ async function navTurn(id: string, speech: string): Promise<string> {
   // an LLM round-trip) leaves dead air while they keep saying "hello" until we hang up. looksLikeLivePerson
   // already excludes "press N" menus + long recordings, so it won't trip on an opening IVR. Map mode →
   // hang up instantly; confirm mode → ask the one stock question.
-  if (speech && (looksLikeLivePerson(speech) || looksLikeDirectPickup(s.steps, s.turns, speech))) return reachHuman(s, atSec, id);
+  if (speech && (looksLikeLivePerson(speech) || looksLikeDirectPickup(s.steps, s.turns, speech))) return reachHuman(s, personLineAtSec(s.steps, speech, atSec), id);
   // FAST-FAIL only on TRUE dead-ends: an actual voicemail box, or the STORE itself closed.
   // NEVER on "pharmacy is closed" — the front store is open and is exactly where we're going
   // (pharmacy can't sell Pokémon cards anyway). Live-observed funnel: "connect you to our
@@ -846,7 +879,7 @@ async function navTurn(id: string, speech: string): Promise<string> {
     emit(id, "unknown", "That read like the recording, not a person", { heard: (speech || "").slice(0, 120), atSec });
     return twiml(gather(id));
   }
-  if (d.action === "human") return reachHuman(s, atSec, id, !!(speech && ROUTING_RE.test(speech))); // person OR announced transfer → confirm waits for the person
+  if (d.action === "human") return reachHuman(s, personLineAtSec(s.steps, speech || "", atSec), id, !!(speech && ROUTING_RE.test(speech))); // person OR announced transfer → confirm waits for the person
   // THE HARD BLOCK ON A DEAD DOOR. "Never choose X" in the prompt is a sentence; this is the law: a
   // door a real answer proved wrong cannot be fired again, whatever the model decides. One refusal is
   // a nudge (the model sees it in the log and picks again); a second means it has nothing else to
@@ -895,7 +928,7 @@ async function navTurn(id: string, speech: string): Promise<string> {
       // STOP the instant a person answers — a clear live greeting/self-ID means a human picked up, so
       // reach them (never beep 0 at a person). The weaker HUMAN_RE still needs the routed/2-zeros gate.
       if (looksLikeLivePerson(speech) || ((s.routingSeen || (s.autoZeros ?? 0) >= 2) && HUMAN_RE.test(speech))) {
-        return reachHuman(s, atSec, id);
+        return reachHuman(s, personLineAtSec(s.steps, speech, atSec), id);
       }
       s.autoZeros = (s.autoZeros ?? 0) + 1; s.type = "keypad";
       s.steps.push({ who: "us", text: "pressed 0 (auto-operator)", atSec, action: "press", value: "0" , earPrompts: s.ear?.recordings });

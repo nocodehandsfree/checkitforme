@@ -247,13 +247,18 @@ function planPlain(recipe: NavRecipe): Array<{ action: string; value: string; at
  *  on-the-spot lock could never fire, and the settle listens it should have prevented dialed real
  *  people and hung up on them (round-3 item 1). */
 export function menuLinesOf(steps: NavStep[], transferAtSec: number | null | undefined, humanAtSec?: number | null): string[] {
+  // THE EARLIER of the two moments wins, and the person's is STRICT. A handoff stamped at or after
+  // the person is not the machine handing us on — it is Staff saying something that reads like it
+  // ("sure, one moment"), and honouring it put their words back into the store's menu (fix pass 4,
+  // face a). Nothing at or after the person can ever be a menu line.
+  const person = typeof humanAtSec === "number" ? humanAtSec : Infinity;
+  const handoff = typeof transferAtSec === "number" ? transferAtSec : Infinity;
   return (steps || [])
     .filter((st) => {
       if (st.who !== "ivr" || !String(st.text || "").trim()) return false;
       const at = st.atSec ?? 0;
-      if (typeof transferAtSec === "number") return at <= transferAtSec;
-      if (typeof humanAtSec === "number") return at < humanAtSec;
-      return true;
+      if (at >= person) return false;                        // strict: the person's own words, never the menu
+      return handoff === Infinity || at <= handoff;          // the handoff line belongs to the menu
     })
     .map((st) => String(st.text));
 }

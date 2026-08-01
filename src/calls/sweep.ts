@@ -147,8 +147,16 @@ async function proveDirect(item: SweepItem): Promise<void> {
   // Barnes & Noble", then hold music, then a person. Both mean the chain is not "direct", but they
   // need completely different handling, and having only one word for them is what put the paid agent
   // on the line talking to a recording (owner 07-27).
-  const heardMenu = steps.some((st) => st.who === "ivr" && /press \d|para español|main menu|for .{3,30}, press|say the name|automated/i.test(String(st.text || "")));
-  const heardRecording = steps.some((st) => st.who === "ivr" && String(st.text || "").trim().split(/\s+/).length > 4);
+  // NOTHING A PERSON SAYS IS A RECORDING. Once Staff are on the line, their hello and their answer
+  // ("we've got a bunch of the new Pokémon sets in, they're over by the registers") are long lines of
+  // speech — counted as the store's own recording, they made a passing DIRECT chain read as a chain
+  // with a recording in front of it, and a bogus route could go live off it (fix pass 4, face b).
+  // So both tests read only what was heard BEFORE the person.
+  const beforePerson = typeof s?.humanAtSec === "number"
+    ? steps.filter((st) => (st.atSec ?? 0) < (s.humanAtSec as number))
+    : steps;
+  const heardMenu = beforePerson.some((st) => st.who === "ivr" && /press \d|para español|main menu|for .{3,30}, press|say the name|automated/i.test(String(st.text || "")));
+  const heardRecording = beforePerson.some((st) => st.who === "ivr" && String(st.text || "").trim().split(/\s+/).length > 4);
   const reached = !!(s && (s.status === "human" || s.humanAtSec != null || s.confirmResult === "answered"));
   // "Did we act on a menu" must not count the product QUESTION — the ask is scaffolding, said on
   // every call, person or menu alike. Counting it made every passing direct call read as a menu walk,

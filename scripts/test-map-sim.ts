@@ -20,7 +20,7 @@ import {
   type MapRecipe, type EvidenceCall,
 } from "../src/calls/mapgraph";
 import { lockRecipeToChain } from "../src/calls/trainer-batch";
-import { greetingFrom, looksLikeDirectPickup, menuStillTalking, parseSpokenOptions, isMenuLine, parseMenuOptions, mergeMenu, looksLikeQuestion, isReprompt, pickedDoorFrom, doorsAskedAt, questionBeforePick } from "../src/calls/navigator";
+import { greetingFrom, looksLikeDirectPickup, menuStillTalking, parseSpokenOptions, isMenuLine, parseMenuOptions, mergeMenu, looksLikeQuestion, isReprompt, pickedDoorFrom, doorsAskedAt, questionBeforePick, personLineAtSec } from "../src/calls/navigator";
 import { recipeFromCall, gradeCheck, recordNavCall } from "../src/calls/map-capture";
 import { sameWording, menuLinesOf } from "../src/calls/mapper";
 import { toneShare, ConversationEar } from "../src/calls/listen-nav";
@@ -600,7 +600,7 @@ async function main() {
     // said its last word.
     ok(/const routeUnfinished = !!\(s\.barge\?\.plan\?\.length && \(s\.planIdx \?\? 0\) < s\.barge\.plan\.length\)/.test(src),
       "a route with a step still to walk cannot be finished with us");
-    ok(/if \(speech && ROUTING_RE\.test\(speech\) && !routeUnfinished\)/.test(src),
+    ok(/if \(speech && ROUTING_RE\.test\(speech\) && !routeUnfinished && s\.humanAtSec == null\)/.test(src),
       "so an offer to connect before the last answer is read as one more prompt, not the handoff");
     ok(/if \(spokeOver && fragment && prevIvr\) \{ prevIvr\.text = [\s\S]{0,80}?saidWasTail = true; \}/.test(src),
       "it is joined onto the line it belongs to, never listed as its own step");
@@ -1005,6 +1005,49 @@ async function main() {
       "a menu store keeps its recordings through the handoff line, and still never the person");
     ok(/if \(run\.phase === "map" && run\.doorProven && !run\.storeLocked && !\(run\.lastLines \|\| \[\]\)\.length && run\.best\) \{\s*\n\s*await lockStore/.test(eng),
       "and a proven door with nothing to settle locks WITHOUT dialing — no settle call can reach Staff");
+
+    // FIX PASS 4, FACE a: STAFF'S OWN WORDS ARE NEVER THE STORE'S MENU. Staff saying "sure, one
+    // moment" reads exactly like the machine handing us on; honouring it stamped a handoff AFTER the
+    // person, their hello re-counted as a menu line, and the settle listens rang real people again.
+    {
+      const direct = [
+        { who: "ivr", text: "Gateway WinCo, this is Sam.", atSec: 4 },
+        { who: "ivr", text: "Sure, one moment.", atSec: 9 },
+      ] as never;
+      ok(menuLinesOf(direct, 9, 4).length === 0,
+        "a handoff stamped AFTER the person cannot resurrect the menu — the person cut is strict and wins");
+      ok(menuLinesOf(direct, null, 4).length === 0, "and with no handoff at all the store still reads as having no menu");
+      const withMenu = [
+        { who: "ivr", text: "For guest services press 2.", atSec: 5 },
+        { who: "ivr", text: "Okay, transferring you now.", atSec: 14 },
+        { who: "ivr", text: "Guest services, this is Dana.", atSec: 30 },
+      ] as never;
+      ok(menuLinesOf(withMenu, 14, 30).length === 2, "a real menu still keeps its recordings through the handoff line");
+      const nv4 = readFileSync("src/calls/navigator.ts", "utf8");
+      ok(/if \(speech && ROUTING_RE\.test\(speech\) && !routeUnfinished && s\.humanAtSec == null\)/.test(nv4),
+        "and no handoff moment is ever stamped once a person is on the line");
+    }
+    // FACE c: the person's moment is the line that TRIGGERED detection, never the turn it fired on —
+    // so a hello joined onto the store line it interrupted cannot sit under the cut.
+    ok(personLineAtSec([
+      { who: "ivr", text: "Thanks for calling. Hello? Hi, this is Sam.", atSec: 12 },
+    ] as never, "Hello? Hi, this is Sam.", 19) === 12,
+      "a hello carried on an earlier line stamps THAT line's moment, so its words stay out of the menu");
+    ok(personLineAtSec([{ who: "ivr", text: "For guest services press 2.", atSec: 5 }] as never, "Hi, Dana here.", 30) === 30,
+      "and an unrelated newest line never drags the person's moment backwards");
+    // FACE b: the sweep's recording test reads only what was heard BEFORE the person.
+    ok(/const beforePerson = typeof s\?\.humanAtSec === "number"/.test(readFileSync("src/calls/sweep.ts", "utf8")),
+      "the direct-proving call judges recordings only from before the person answered");
+    // FACE d: an answer that tells us about the product is an ANSWER, never being sent away.
+    {
+      const nv4 = readFileSync("src/calls/navigator.ts", "utf8");
+      ok(/const tellsAboutProduct = new RegExp\(/.test(nv4) && /REDIRECT_RE\.test\(said\) && !tellsAboutProduct/.test(nv4),
+        "Staff saying where the cards are is an answer — it can no longer kill the right door");
+      const mg4 = readFileSync("src/calls/mapgraph.ts", "utf8");
+      ok(/await setSetting\(`map_doors_dead:\$\{chainId\}`, ""\);/.test(mg4)
+        && /await setSetting\(`nav_confirm_asked_doors:\$\{chainId\}`, ""\);/.test(mg4),
+        "and starting a chain over frees every door it refused to try again");
+    }
     ok(!/finalizeAndLock[\s\S]{0,120}?\}\s*else\s*\{[\s\S]{0,200}?ex\.status = "fail"/.test(eng)
       && /ex\.status = "fail";(?![\s\S]{0,600}finalizeAndLock)/.test(eng),
       "a failed check reaches neither of them — a loss changes nothing");
