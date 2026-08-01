@@ -591,8 +591,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (expectHandover) expectHandover = false;
     addMs(room, "holdMs", gapMs);   // the number that has been null on every receipt until now
     emit(room, "hold_end", `Staff back after ${secs}s${newPerson ? ", and it may not be the same person" : ""}`, { gapSec: secs, maybeNewPerson: newPerson, reason: was, ...(asked ? { afterAskingToBePutThrough: true } : {}) });
-    if (ctx?.holdStrategy === "reopen" && !eleven) {
-      log(`hold over after ${secs}s: opening the agent again as the next segment of this call`);
+    // NOBODY IS ON OUR END AND SOMEBODY IS BACK ON THEIRS — open a session, whatever the strategy
+    // (family 2). This used to run only for "reopen"; a hold that began around the opening question
+    // could leave the gate strategy here with no session at all and nothing left to open one, and a
+    // refused open during the hold (the one-door rule above) must always be made good right here.
+    if (!eleven) {
+      log(`hold over after ${secs}s: opening the agent for whoever is back (next segment of this call)`);
       // HE WAS CLOSED, SO HE CANNOT BE TOLD YET, AND HE STILL HAS TO BE TOLD. The note is held and
       // sent the instant his new session reports ready. Skipping it is how a reopened agent greets a
       // brand new person as though they had been on the line the whole time.
@@ -623,6 +627,13 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
 
   async function connectEleven(segmentWhy?: string) {
     if (!ctx) { log("connectEleven: NO CONTEXT"); return; }
+    // EVERY ROAD INTO CHARLIE ENDS AT THIS ONE DOOR (08-01 audit, family 2). The run-5 fix guarded
+    // triggerConnect, but the clip path never passes through it: the warm-up timer, the short-clip
+    // open, the socket-retry open and all four racers into openCharlieGate call HERE directly — so a
+    // hold starting around the question could still open a ghost Charlie into the hold music. The
+    // rule lives at the door itself now: while Staff are away, nothing opens Charlie. endHold clears
+    // the hold BEFORE it reopens him, so the one legitimate road back in still passes.
+    if (onHold) { log(`connectEleven refused (${segmentWhy ?? "clip path"}): Staff are away — only somebody coming back opens Charlie`); return; }
     // ONE SESSION AT A TIME. `connecting` used to be set here and nowhere else, so it doubled as the
     // guard; now that buffering starts earlier it no longer guards anything, and two routes into this
     // (the warm-up timer and the gate opening) could each open a socket. The second one replaced the
@@ -833,6 +844,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   const dtmfTimers: NodeJS.Timeout[] = [];
   function sendDigit(digit: string) {
     if (twilio.readyState !== 1 || !streamSid) { log(`dtmf ${digit}: socket not ready, skipped`); return; }
+    // STOP PRESSING THE MOMENT A REAL PERSON ANSWERS (runtime spec §10; 08-01 audit, family 2). The
+    // recipe's scheduled presses kept firing after a person was found — stopKeysOnHuman only covers
+    // the listening-navigation lane — which sends keypad tones into a live human's ear. One guard at
+    // the one place a tone leaves the bridge.
+    if (humanAtMs > 0) {
+      log(`dtmf ${digit}: a person is on the line, press skipped`);
+      emit(room, "unknown", "A mapped keypad press was due after a person answered, skipped", { digit });
+      return;
+    }
     const b64 = dtmfTone(digit).toString("base64");
     twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: b64 } }));
     fanout(room, b64, "agent"); // the live listener hears the beep — confirmation it fired

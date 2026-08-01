@@ -637,5 +637,34 @@ console.log("\n▶ …while a REAL voicemail at pickup still hangs up straight a
   restore(); tw.close(); f.close();
 }
 
+// ================================================================================================
+// FAMILY 2 OF THE 08-01 AUDIT: nothing may act on the keypad or open Charlie once a real person is
+// found. The recipe's scheduled presses used to keep firing after the answer — keypad tones into a
+// live human's ear (runtime spec §10: "Today we would keep pressing").
+console.log("\n▶ a mapped keypad press due AFTER a person answered is skipped, not sent");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  openReceipt("room-press", { lane: "alpha" });
+  setBridgeContext("room-press", {
+    agentId: "agent_normal", dynamicVars: {},
+    // A mapped press three seconds in, and the agent joining on the learned second before it — the
+    // press is then due AFTER a person has already been found.
+    dtmf: "9@3", connectOnHuman: true, connectAtSec: 1,
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "room-press", () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_p", customParameters: { room: "room-press" } } });
+  await sleep(1400);                                // past connectAtSec — Charlie joined, a person is on the line
+  ok(f.inits.length === 1, "the agent joined at the learned second");
+  const beforePress = tw.outMedia().length;
+  await sleep(2200);                                // past the press's own second
+  ok(tw.outMedia().length === beforePress, "the mapped press was SKIPPED — no keypad tone into a live person's ear");
+  const skipped = (getReceipt("room-press")?.events || []).find((e) => String(e.note || "").includes("keypad press"));
+  ok(!!skipped && skipped.detail?.digit === "9", "and the receipt says which press was skipped and why");
+  restore(); tw.close(); f.close();
+}
+
 console.log(`\n════════════════════════════════\n  PASS: ${pass}   FAIL: ${fail}\n════════════════════════════════`);
 process.exit(fail === 0 ? 0 : 1);
