@@ -8,22 +8,55 @@ small md here (what · done-when · system · status). Owner adds/reorders freel
 **Counts (swept 2026-07-23):** active 53 · parked 6 · dead 1 · total 60.
 Systems: site · admin · voice-calls · data · support (data carries the old ops/infra lane).
 
-## ⭐ NEXT UP — the PM lane (handoff 07-31 · the law: `docs/specs/mapping-admin/build-contract.md`,
-addendum R1-R6 OVERRIDES the body · the fix list: `audit-code-vs-contract.md` in the same folder)
-The project is THREE MILESTONES, one fresh chat each: 1 engine (**fix pass 3 audited 08-01 on
-`claude/mapping-engine-contract-wecvcy` @c39df451: nothing old regressed, most fixes hold, but ONE
-root remains — Staff's own speech still gets read as the store's menu (four faces). Milestone 1 is
-NOT closed. FIX PASS 4 = F4-1..F4-4 in `audit-code-vs-contract.md`, runs in the SAME mapper chat
-(owner call 08-01); F4-1 gates the close; PM re-audits blind after the push**) ·
-2 self-healing · 3 screens. Builder says "finished" → PM audits
-that chunk vs the contract BEFORE the next chunk's box goes out. Voice-agent boot gate: any voice
-task box lists the pre-reads (runtime spec §4 · RULES.md · checkpoint · listen-nav + bridge headers)
-+ the team charter `handoff.md` (workflows · every Admin voice surface), and the agent must WRITE
-BACK the life of one check in ten lines before touching code. Owner tests ONCE at the end (fresh CVS, start to finish). In the chunk-1
-audit also re-prove run-resume on a live restart. After chunk 2, box Webbie ONE task: the zone-report
-skip sentence for muted stores (EN + ES; the site is frozen to everyone else). Echo likely needs the
-same spec-vs-build audit — wait for the owner's word. **PM ships NOTHING without the owner's "clear"
-while he is testing — every push restarts staging and kills a live check.**
+## ⭐ NEXT UP — the PM lane · HANDOFF 08-01 (new PM reads this whole block first)
+**THE LAW:** `docs/specs/mapping-admin/build-contract.md` (its addendum R1-R6 OVERRIDES the body).
+Spec integrity checked 08-01: unchanged since the owner blessed it, except his own who-does-what
+line at the head. **Never edit the spec** — the PM writes only `audit-code-vs-contract.md`.
+
+**THE SHAPE: three milestones, in order. 1 THE ENGINE · 2 THE SELF-HEALING · 3 THE SCREENS.**
+The owner tests ONCE, at the very end, after all three: a fresh CVS mapped start to finish while he
+watches. No owner testing before that. Each milestone: one builder chat → builder says finished →
+PM audits BLIND (fresh readers who see only the spec + the code, never the builder's claims; PM
+also runs every rig himself) → only then does the next milestone's assignment go out.
+
+**WHERE WE ARE: milestone 1, still open, after six fix passes.** Built and verified: the earpiece
+that decides recording-or-person, one shared decider · a listening check with nothing to walk is
+refused before dialing · a store with no menu locks with no extra check · dead menu options tracked
+per question, per store, clearable from the chain page · nothing written by a failed check · every
+check graded · restart-resume · six test rigs, all in `test-all.sh`. Everything lives on branch
+`claude/mapping-engine-contract-wecvcy` (last audited @5ea839e0). **STAGING IS UNTOUCHED and stays
+that way until the owner says so (his hold, 08-01).** A logo agent is waiting on that same word.
+**What's left (the last pass, in `audit-code-vs-contract.md`):** the proving-the-department step
+must simply BE a live check — the same one that has asked "do you have Pokémon cards?" through
+Charlie for months — aimed at the store being mapped, with mapping READING that check's record.
+The last builder hand-built his own half of that wiring and it never reports back, so every good
+proving check grades failed. Delete it, reuse the live check. Plus a few earpiece fixes and the
+seven practice calls (three times ordered, never written — fail the pass on their absence alone).
+**Careful:** the last builder's own handoff (08-01) reports 473 rig checks green and lists only the
+owner-gated items as unfinished — those numbers are TRUE (the PM ran them) but they are the SAME
+commit the PM failed, and NO rig covers Charlie's report path. Green rigs are not a pass. His
+handoff does not name the show-stopper; this file does.
+
+**THE PM'S OWN LAWS (learned the hard way, 08-01):**
+1. FIRST QUESTION OF EVERY AUDIT: does this BUILD A COPY of a piece we already have? A copy is an
+   automatic fail — no detail review, straight back to the design. Five passes were spent grading
+   the details of a thing that should never have existed.
+2. Assign the DESIGN, never a list of leaks. A leak list gets you patched leaks and a live root.
+3. Never say a builder's work is missing until you have looked at every branch on the server and
+   asked the owner where it is. (A wrong "he pushed nothing" verdict cost a full cycle.)
+4. Reply to the owner in HIS words only — the output style is law, `.claude/output-styles/`.
+   No invented shorthand, ever. He owns the business, not the plumbing.
+5. Ship nothing while he is testing; every push restarts staging and kills a live check.
+
+**AFTER MILESTONE 1 CLOSES:** milestone 2 = the self-healing loop (contract R2/R3: a failing check
+on an unknown menu mutes that store off the website and files ONE re-map job; re-map succeeds →
+auto-unmute; three stores of one chain on the same new menu = the chain's menu changed, set the
+fast recipe aside, never mute the chain; the owner reviews NOTHING). Then box Webbie ONE task: the
+zone-report skip sentence for muted stores, English + Spanish (the site is frozen to everyone
+else). Milestone 3 = the screens (contract R5). Echo may need the same spec-vs-build audit —
+wait for the owner's word. Voice-agent boot gate: every voice task box lists the pre-reads
+(RULES.md every line · the runtime spec · the checkpoint · the team charter) and the agent must
+WRITE BACK the life of one check in ten lines before touching code.
 
 ## ⭐ Owner work streams (active — started this week)
 **Stream 1 — the five site fixes (SHIPPED to staging @4f6c4a6, PR #92; owner confirms on his phone,

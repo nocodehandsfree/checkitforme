@@ -17,18 +17,16 @@ git. Last updated: 2026-07-31 (in stock alerts fixed; logos sized to match; try 
 ## The bottom bar can never go dark again, and Live is cleaned (07-30, live on Admin)
 - **The tint is nailed down**, three ways it used to break are refused before anything goes live. Cost per
   check opens on **The baseline**, your 6.7¢ ceiling off your real prices.
-## Every try back now runs the exact same way (07-30, on staging)
-- Every mapping check walks the menu the same way; the ONE answer being tested early is the only difference.
-  **Mapping calls is now Mapped checks** and each check shows faster or slower than the check before it. The
-  chains list names the model in plain text; a red alert sits beside a name only when work waits.
-## Chains: the page is rebuilt and every mapping call lands on it (07-30)
-- Tap a chain: **nav time** (getting through their phone menu, the part we control), what it costs, how often the
-  recipe reaches Staff, the **Menu** by condition, the **Recipes** held, and **Review**.
-- **Re-map hangs up on the second ring** of the desk, so it never troubles Staff, and that check becomes the
-  recipe. **Reached Staff shows nothing instead of 0%** until one actually waits for a person.
-- **Mapping milestone 1 of 3: NOT closed (fix pass 3 audited 08-01).** Nothing old regressed, but one
-  root remains: Staff's own words ("sure, one moment" · "over in the toy aisle") still get read as the
-  store's menu — hang-ups on real people can return. Fix pass 4 (audit file) — same mapper chat finishes it.
+## The chain page and mapped checks (07-30, on staging)
+- Every mapping check walks the menu the same way; the ONE answer tested early is the only difference. Tap a
+  chain: nav time (getting through their phone menu), what it costs, how often the recipe reaches Staff, the
+  Menu by condition, the Recipes held, and Review. Re-map hangs up on the second ring so it never troubles Staff.
+- **Mapping is milestone 1 of THREE (engine · self-healing · screens). Milestone 1 is NOT closed —
+  six fix passes, audited 08-01.** The engine and its safety rules are real, but the proving step
+  can't report back: Charlie joins and his answer never reaches mapping, so every good proving check
+  is marked failed. Fix: stop hand-building it — the proving check IS a live check, the same one that
+  has asked about Pokémon through Charlie for months. New mapping chat + new PM. **Staging untouched
+  on your hold; you test once, after all three milestones.**
 ## The new calling engine is ON for staging. Your six test checks are the last thing (07-28/29)
 - **08-01, your five test runs found seven real faults; nine fixes are on staging, none phone-proven yet.** The
   worst: a leftover timer opened a second Charlie into your hold. Full ledger for the PM:
