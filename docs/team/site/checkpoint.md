@@ -6,20 +6,21 @@
 
 ## 08-01 — LOGOS: the size rule moves to the SERVER; one tile; the wall becomes the record (staging)
 - **`logoPct` on every store row is the whole idea.** The tile is square, so the width as a PERCENT of it
-  falls out of the artwork's proportions alone and is right at 46px and at 190px with nobody recomputing.
-  Both copies of the browser-side rule are DELETED, and the cached-onload race with them.
+  falls out of the artwork's proportions alone: right at 46px AND at 190px, nobody recomputing. Both copies
+  of the browser-side rule are DELETED, and the cached-onload race with them.
 - **`logoFields`/`withLogo` replace 15 hand-stamps** that resolved the chain 8 different ways (one store
   could get different logos on different screens). `storeChainName` is the only dash-splitter left.
 - **Stored artwork is named by its CONTENT hash.** New picture = new address = it lands everywhere at once;
   no `?v=` to bump, and a rename or a differing chain id (H Mart is 131 on prod, 99 on staging) can't orphan it.
-- **The wall reads the chain rows, not the shipped copies + `_meta.json`.** 111 marks, one tile size.
-- **Repair sweep** (`pushLogoRepairs`) asks prod what it holds and re-pushes logos that differ — the normal
-  push only ever sends what CHANGED, which is why 71 chains sat stale forever. Uploads refused on prod.
-- **ORDER MATTERS: do NOT ship Admin until the promote.** Admin reads prod's API; with no `logoPct` there
-  yet, `logoStyle` returns '' and every logo falls back to fit-inside — a regression on what's live today.
+- **The wall reads the chain rows**, not the shipped copies + `_meta.json`. 111 marks, one tile size.
+- **Repair sweep** (`pushLogoRepairs`) asks prod what it holds and re-pushes logos that differ; the normal
+  push only sends what CHANGED, which is why 71 chains sat stale. Uploads refused on prod.
+- **Admin ships BEFORE the promote and that is safe** (owner 08-01 pushed back, rightly). It reads prod's
+  API, so `logoPct` is absent until the promote; the CSS fallback was retuned to 78/90 plain and 95/90 wide,
+  which lands EXACTLY on the rule for every wide mark and within a pixel elsewhere. Measured, not assumed.
 - Deleted: the 52px pre-redesign tile (v2 is set unconditionally at load, so it never rendered), the zone
-  card's `.ic2`, three skin overrides, and `/api/admin/migrate-logos-to-r2` (it would have written the old
-  file-named copies back over the content-named ones).
+  card's `.ic2`, three skin overrides, and `/api/admin/migrate-logos-to-r2` (it would have overwritten the
+  content-named copies with the old file-named ones).
 
 ## 07-31 — the artwork (superseded above; kept for the trap)
 - **The stored image beats the repo file** — `chainLogoInfo` is DB-first. Editing the PNG changes NOTHING
@@ -43,10 +44,9 @@ assignment. No hot-reload. Chromium→staging TLS is blocked DIRECTLY; a `page.r
 each request via curl (`-H 'Accept-Encoding: identity'`, body to a FILE as bytes) works (07-30).
 
 ## 07-26/27 + 07-28 — PLANS/checkout sheet (staging, git @4f6c4a6) · ADMIN sheet glass (LIVE @2ca41b5)
-- `scripts/sheet-recipe-audit.mjs` must print 1 before any new sheet ships. Real touch is
-  `page.touchscreen.tap`, never `el.click()`. Sheet focus calls all use `preventScroll:true`.
-- Glass: a closed `.sheet` never left the bottom edge, where iOS never ghosts a fixed element; Admin now
-  hides it on close (`docs/tasks/admin-glass-nudge.md`). **Found by diffing the page before/after.**
+- `sheet-recipe-audit.mjs` must print 1 before any new sheet ships. Real touch is `page.touchscreen.tap`,
+  never `el.click()`. Sheet focus calls use `preventScroll:true`. Glass: a closed `.sheet` never left the
+  bottom edge, where iOS never ghosts a fixed element. **Found by diffing the page before/after.**
 
 ## Lessons that stay true
 - iOS: Chromium CANNOT catch iOS paint — his phone is the rig; ship one change, "check your phone."

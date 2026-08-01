@@ -590,8 +590,8 @@
      docs/data/store-logos.md §5 DoD: copy these exact values. 46px tile, 42px mark, wide wordmarks
      44px·auto, dark marks on a #f2f2f5 light plate. No-logo fallback = shared storeWordmark. */
   .slogo{width:46px;height:46px;flex:0 0 auto;border-radius:12px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;overflow:hidden}
-  .slogo img{max-width:78%;max-height:78%;width:auto;height:auto;object-fit:contain}
-  .slogo.widelogo img{max-width:92%;max-height:64%;width:auto;height:auto;object-fit:contain}
+  .slogo img{max-width:78%;max-height:90%;width:auto;height:auto;object-fit:contain}/* fallback only: a measured logo carries its own width inline (logoPct) */
+  .slogo.widelogo img{max-width:95%;max-height:90%;width:auto;height:auto;object-fit:contain}/* fallback only */
   .slogo.lite{background:#f2f2f5}
   .slogo .mono{font-size:13px;font-weight:900;color:#d6d6e0}
   /* shared two-line text wordmark — ported verbatim from checkit.html (storeWordmark fallback) */
