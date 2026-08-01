@@ -160,8 +160,11 @@ async function proveDirect(item: SweepItem): Promise<void> {
   const isRecording = (st: CapturedStep) => st.who === "ivr" && String(st.text || "").trim()
     && judgeVoice({
       text: String(st.text), atSec: st.atSec ?? 0, knownMenuLines: known,
-      ringsHeard: typeof s?.humanAtSec === "number" && (st.atSec ?? 0) >= s.humanAtSec ? 1 : 0,
-      pauseTested: true, keptTalkingAfterPause: String(st.text).trim().split(/\s+/).length > 14,
+      // READING BACK A CHECK THAT IS OVER. The pause never ran on these lines, so a result for it is
+      // a made-up input — and "it kept talking" was decided by counting words, which is how a
+      // person's long answer came back as the store's own recording. Nothing is fed in now: a line
+      // the earpiece cannot call a recording simply is not one (fix pass 7, item 6). The ring is the
+      // same: a count with no moment marks everything, so it is left out rather than guessed.
       product: "Pokémon cards",
     }).who === "recording";
   const heardMenu = steps.some((st) => isRecording(st) && /press \d|para español|main menu|for .{3,30}, press|say the name|automated/i.test(String(st.text || "")));
