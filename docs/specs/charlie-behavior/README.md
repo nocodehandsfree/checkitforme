@@ -69,47 +69,68 @@ All on the Fun store, one at a time.
 over.** "Charlie left" is a third line the code writes when the connection closes behind one of those
 two — it is plumbing showing through and must be DELETED.
 
-## 4. Every step in the log
+## 4. Every step in the log (owner-revised 08-01)
 
-Getting there: Dialling Fun store · The store's phone is ringing · Ring 2 went unanswered · The line
-was answered · Staff greeting
+**THE LOG IS END TO END, exactly like the customer's own check log** (owner reversed the earlier
+"move mapping out": *"it would allow me to see in the testing area a complete end to end log of the
+entire transaction which is huge for myself and any agent"*). The menu walk STAYS — CVS shows about
+six steps there. Both come from the same timeline already, so this is one shape, not two.
 
-The question: The Pokémon question played as a recording *(NOT BUILT YET)* · Charlie started warming
-up *(NOT BUILT YET)* · Charlie joined · Charlie reconnected, part 2 of this check
+Getting there: Dialling Fun store · The store's phone is ringing · The line was answered · Staff
+greeting
+
+Walking the menu (the customer sees these too): Pressed 2 · Said "front" · Menu finished, now
+listening for a real person
+
+The question: The Pokémon question played as a recording *(NOT BUILT YET)* · Charlie warmed up
+*(NOT BUILT YET)* · Charlie joined · Charlie reconnected, part 2 of this check
 
 Waiting: Staff stepped away, the line went quiet · Staff back after 40 seconds · Staff back after 40
 seconds, and it may not be the same person
 
-Department: We reached the wrong department · Charlie asked to be put through · Transferred, the next
-department is ringing · Staff said there was nobody to transfer to
+Department: We reached the wrong department · Charlie asked to be transferred · Transferred, the next
+department is ringing · The department's phone rang 2 times with no answer · Staff said there was
+nobody to transfer to · We were sent back through the phone menu *(NOT BUILT YET)* · The check was
+disconnected during the transfer *(NOT BUILT YET)*
 
-Charlie's words: Charlie asked the question · Charlie wrapped up and thanked them by name *(NOT BUILT
-YET)* · Charlie spoke Spanish throughout *(NOT BUILT YET)*
+Charlie's words: Charlie asked about Pokémon booster boxes *(product type + packaging, filled in —
+NOT BUILT YET)* · Charlie asked when the next delivery lands *(NOT BUILT YET)* · Charlie wrapped up
+and thanked them by name *(NOT BUILT YET)* · Charlie spoke Spanish throughout *(NOT BUILT YET)*
 
-Endings: Charlie dropped · Charlie ended the check · The answer: they have them · Reached a machine,
-hung up straight away · Nobody picked up after 6 rings, hung up before Charlie ever billed · Nobody
-spoke in the 45 seconds after Charlie joined, hung up · The store put us on hold too long, so we hung
-up *(NOT BUILT YET)* · The line dropped from the far end · The check broke on our end, so we hung up
-without saying anything
+Endings: Charlie dropped · Charlie ended the check · The answer: In stock *(the word comes from
+Statuses, nowhere else)* · Reached a machine, hung up straight away · Nobody picked up after 6 rings,
+hung up before Charlie ever billed · Nobody spoke for 35 seconds after Charlie joined, so we hung up ·
+The store put us on hold too long, so we hung up *(NOT BUILT YET)* · The store hung up on us · The
+check was disconnected · Something went wrong on our end, so we hung up. No check, no charge.
 
-**Moving OUT to the mapping section** (owner: walking a menu is not Charlie): Pressed 2 · Said
-"front" · Menu finished, now listening for a real person
+**The rules behind those numbers, verified in code:** 6 unanswered rings at a department = hang up
+(about 36 seconds of the normal American ring pattern) · 35 seconds with nobody speaking after
+Charlie joins = hang up (`bail.ringMaxSeconds`) · a check hangs up at 5 minutes flat, always.
+"Ring 2 went unanswered" only ever counts rings at a DEPARTMENT after a transfer — a plain check
+never shows it.
 
 ## 5. Every pass/fail row, both sides
 
 | # | Row | Pass | Fail |
 |---|---|---|---|
-| 1 | Handed to Charlie | Reached Staff through Alpha and handed to Charlie cleanly. | Nobody was ever handed to Charlie. |
-| 2 | The recorded question played | The question played as a recording, so we paid nothing to ask it. | The recording did not play, so Charlie asked it himself and we paid for it. |
-| 3 | Charlie warmed up in time | Charlie was ready the moment the recording finished. | Charlie was still warming up when the recording ended, so there was dead air. |
-| 4 | We reached the right department | We reached the right department, no transfer needed. | Wrong department and Charlie never asked to be put through. |
-| 5 | Asked to be put through | Wrong department. Charlie asked once to be put through. | Charlie asked more than once. |
-| 6 | Asked the new person | Somebody new picked up and Charlie asked them fresh. | Somebody new picked up and Charlie carried on as if nothing changed. |
-| 7 | Wrapped without nagging | Staff said there was nobody to transfer to and Charlie wrapped up warmly. | Charlie kept pushing after Staff said no. |
-| 8 | Meter stopped | Staff stepped away for 40 seconds, Charlie was dropped, and the meter stopped. Reconnected as part 2 of the same check. | Staff stepped away and Charlie kept billing. |
+| 1 | Handed to Charlie | Reached Staff through Alpha and handed to Charlie. | Staff never picked up, so there was nobody to hand to. *(or)* Our own system never handed the check to Charlie. |
+| 2 | The question played as a recording | The question played as a recording. | The recording could not be made, so Charlie asked it himself. |
+| 3 | Charlie warmed up in time | Charlie warmed up in time. | Charlie warmed up late. There was dead air for 2 seconds. |
+| 4 | We reached the right department | We reached the right department, no transfer needed. | Wrong department and Charlie never asked to be transferred. |
+| 5 | Asked to be transferred | Charlie asked to be transferred. | Charlie asked to be transferred more than once. |
+| 6 | Reacted to a new person | Charlie reacted correctly to a new staff member after the transfer. | Charlie did not react to a new staff member after the transfer. |
+| 7 | Wrapped up when told no | Staff said there was nobody to transfer to and Charlie wrapped up the check. | Charlie kept pushing after Staff said no. |
+| 8 | Meter stopped | Staff stepped away for 40 seconds. Charlie was dropped and the meter stopped. | Staff put us on hold or transferred us and Charlie kept billing. |
 | 9 | Charlie wrapped up | Charlie thanked them by name and ended. | The check ended without Charlie wrapping up. |
 | 10 | Spoke their language | Charlie spoke Spanish throughout. | Charlie answered in English on a Spanish check. |
-| 11 | Charlie ended it | Charlie ended the check himself. | Staff hung up on us. |
+| 11 | Charlie ended the check | Charlie ended the check. | Staff hung up on us. *(or)* The check was disconnected. |
+
+**Row 6 must name WHICH event it is judging** (owner's question, "reacted to what?") — after a
+transfer, or after a wait. Both are a new person; only one of them is expected.
+
+**A row only speaks when it applies** (owner's question on row 4: *"do we want to say we reached the
+right department every time?"*). No — that is what Unused is for. On a plain check rows 4 to 7 are
+Unused and say nothing. A row never claims a pass for something that never happened.
 
 **Three states, never two** (owner): **Used · Unused · Broken.** Unused is a clean result, not a
 failure — a plain check is mostly Unused. A row exists ONLY because a WORKING check could hide the
@@ -137,6 +158,20 @@ assertion in the same commit.
   Ace Hardware (a recording on an unmapped store, on the direct path) is the case it protects.
   Mapping REMEMBERS the answer afterwards; it does not have to work it out again.
 
+## 6b. The statuses (what the customer reads)
+
+**Statuses we already have:** in stock · sold out · left on hold · too busy · language barrier ·
+voicemail · nobody answered · no clear answer.
+
+**Owner's decision 08-01: "left on hold" covers the new hold cap.** No new customer status. From the
+customer's side the outcome is identical — nobody came back. WHO hung up is detail for the log, not
+a different thing for the customer to read.
+
+**Possible new statuses raised 08-01, not yet decided:**
+- Something went wrong on our end. No check, no charge. *(today this reads "the check broke on our
+  end" which is not English — and this is the ONLY free case; a hold drop IS charged.)*
+- The check was disconnected. *(distinct from Staff hanging up — see §8.)*
+
 ## 7. Still to build (Echo, in this order)
 
 1. Charlie opens on the person test, not the crude one (§6 — protects every unmapped store, day one).
@@ -146,7 +181,20 @@ assertion in the same commit.
 5. Then the Testing card shows all of §4 and §5. The page can only show what the engine records, so
    this is one job in this order, not two agents.
 
-## 8. Open — the owner has a long response to §4 and §5 pending
+## 8. Open — decisions the owner still owes
 
-He is reviewing the wording and has questions plus new failure cases to add. NOTHING in §4/§5 is
-approved until he says so. Update this file as each is settled.
+1. **Can we tell Staff hanging up from the line dying?** A human hears the difference. The carrier
+   gives us a reason on every ended check, but "they hung up" and "the line died" may arrive as the
+   same reason. NEEDS A CODE CHECK before row 11's fail wording is final.
+2. **What should happen when the recording cannot be made?** It IS possible today — the code falls
+   back and Charlie asks the question himself, which costs a few cents more. PM's view: that is the
+   right fallback (a check that happens beats one that does not), it just has to be VISIBLE so the
+   owner can see how often. Owner to confirm.
+3. **"I can't hear you, let me call back."** Owner raised this as a behaviour Charlie could have if
+   we run the talking ourselves — he hangs up, calls back, opens differently, possibly to a new
+   person. Not built, not designed. Its own box when the owner wants it.
+4. **Row 10 (language) may not be worth a row** — the voice company handles the translation, so the
+   owner doubts it can fail. Kept for now, lowest priority.
+5. **Row 7 (nagging) is real, verified:** `prompts.ts` tells Charlie to ask ONCE and wrap up if
+   nobody can help. So a nag is Charlie disobeying his instructions, which these agents do. The row
+   earns its place.
