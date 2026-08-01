@@ -125,8 +125,10 @@ console.log("\n▶ ALPHA AND BRAVO ACT ONLY ON THE EARPIECE'S WORD (fix pass 6, 
 {
   const { readFileSync } = await import("node:fs");
   const nav = readFileSync("src/calls/navigator.ts", "utf8");
-  ok(/if \(\(d\.action === "press" \|\| d\.action === "say"\) && d\.value && speech && speech\.trim\(\)\s*\n\s*&& judgeHere\(s, speech, atSec\)\.who !== "recording"\) \{\s*\n\s*return twiml\(gather\(id\)\);/.test(nav),
+  ok(/if \(judgeHere\(s, speech, atSec\)\.who !== "recording"\) return twiml\(gather\(id\)\);/.test(nav),
     "nobody presses and nobody speaks unless a machine is talking — unsure means silent and listening");
+  ok(/} else if \(d\.value && s\.lastVerdict !== "recording"\) \{/.test(nav),
+    "and a turn where nothing was said is not permission either — only the earpiece's last word is");
   ok(!/if \(verdict\.who === "person" \|\| looksLikeDirectPickup/.test(nav),
     "the cold-pickup overrule beside the judge is gone");
   ok(/if \(d\.action === "human"\) \{\s*\n\s*const v = judgeHere/.test(nav),

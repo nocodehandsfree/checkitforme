@@ -40,6 +40,8 @@ console.log("\n▶ PRACTICE CHECK 1 — instant pickup, no ring (the Fun store, 
   // A turn where nothing at all was said is not a verdict, so it can never be a reason to press.
   ok(judge({ text: "" }).who !== "recording",
     "and silence is never a verdict — nothing may be pressed into a quiet line");
+  ok(/} else if \(d\.value && s\.lastVerdict !== "recording"\) \{\s*\n\s*return twiml\(gather\(id\)\);/.test(readFileSync("src/calls/navigator.ts", "utf8")),
+    "so on a quiet turn we act only on the earpiece's last word, never blind");
 }
 
 console.log("\n▶ PRACTICE CHECK 2 — a branded hello, then \"one moment\" (the Barnes & Noble shape)");

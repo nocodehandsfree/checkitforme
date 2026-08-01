@@ -151,6 +151,9 @@ export interface NavSession {
   /** The sweep and the auto-mapper fold their own calls into the map. Everything else, the Re-map
    *  button included, is folded by `finish`, so a call can never teach the map nothing (owner 07-30). */
   callerRecords?: boolean;
+  /** WHAT THE EARPIECE SAID LAST. A turn where nothing was said carries no verdict of its own, so
+   *  this is the only thing that may license a key or a word on a quiet line. */
+  lastVerdict?: "recording" | "person" | "unsure";
   ringsHeard?: number;      // how many real ring bursts the Ear counted before we hung up
   /** WHEN the desk first rang. The ring proves the phone system is finished with us from there on,
    *  and says nothing about the menu that played before it — so every line is judged against this
@@ -644,7 +647,7 @@ function judgeHere(s: NavSession, speech: string, atSec: number) {
   // The moment of the FIRST ring, stamped the turn we first see the ear's count move. Everything
   // before it keeps its own verdict; everything from it on is a person.
   if ((s.ear?.conv?.rings ?? 0) >= 1 && s.ringAtSec == null) s.ringAtSec = atSec;
-  return judgeVoice({
+  const out = judgeVoice({
     text: speech || "", atSec,
     knownMenuLines: s.knownMenuLines,
     mappedRoute: !!s.barge?.plan?.length,
@@ -659,6 +662,10 @@ function judgeHere(s: NavSession, speech: string, atSec: number) {
     // known route has already answered its question by position, so it never gets here.
     pauseTested: s.pauseTested, keptTalkingAfterPause: s.keptTalkingAfterPause,
   });
+  // The earpiece's last word, kept so a turn where nothing at all was said has something honest to
+  // lean on instead of acting blind.
+  if (speech && speech.trim()) s.lastVerdict = out.who;
+  return out;
 }
 
 async function navTurn(id: string, speech: string): Promise<string> {
@@ -1004,9 +1011,18 @@ async function navTurn(id: string, speech: string): Promise<string> {
   }
   // NOBODY PRESSES OR SPEAKS UNTIL THE EARPIECE SAYS A MACHINE IS TALKING. Alpha's keys and Bravo's
   // words are for the store's phone system, never for a person; unsure means stay silent and listen.
-  if ((d.action === "press" || d.action === "say") && d.value && speech && speech.trim()
-    && judgeHere(s, speech, atSec).who !== "recording") {
-    return twiml(gather(id));
+  //
+  // AND A SILENT TURN IS NOT PERMISSION. Nothing was said, so there is no verdict — and the guard
+  // used to be skipped entirely on those turns, which is how a key could go into the ear of somebody
+  // who had picked up and said nothing yet. On a quiet turn we may only act on what the earpiece
+  // last told us: a recording was talking, and nobody has been heard since.
+  if (d.action === "press" || d.action === "say") {
+    if (d.value && speech && speech.trim()) {
+      if (judgeHere(s, speech, atSec).who !== "recording") return twiml(gather(id));
+      s.lastVerdict = "recording";
+    } else if (d.value && s.lastVerdict !== "recording") {
+      return twiml(gather(id));
+    }
   }
   if (d.action === "press" && d.value) {
     const digits = d.value.replace(/[^0-9*#]/g, "").slice(0, 6);
