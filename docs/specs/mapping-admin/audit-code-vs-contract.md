@@ -1,110 +1,76 @@
-# Chunk-1 audit: the engine vs build-contract.md (PM · 08-01 · branch `claude/mapping-engine-contract-wecvcy` @58dd2403)
+# Chunk-1 audit, round 2: the engine vs build-contract.md (PM · 08-01 · branch `claude/mapping-engine-contract-wecvcy` @6d4dd120)
 
-Four blind readers, code against the contract (addendum R1-R6 + Updates ARE the law), plus the PM
-driving every test rig. **CORRECTION on the record:** an earlier version of this file (commit
-b6e693e) declared the chunk-1 work missing and graded staging instead — the PM's own repo copy was
-hiding all but two branches and the PM published a guess. The work was where the mapper said: the
-side branch above. This file grades THAT build. **The mapper's test claims verified true by the PM's
-own runs:** map-sim 241/241 · resume 13/13 · mapgraph 62/62 · map-api 14/14 (= his "89 more"). The
-map-e2e rig (102 checks, not in his claim) fails 2 — the SAME 2 fail on staging's old code
-(pre-existing; both assert a changed route waits for approval, which R2's hands-free rule may retire
-anyway — owner call at chunk 2).
+Round-2 verify: three blind readers over the mapper's 12 fix commits, plus the PM driving every rig.
+Rigs (PM-run): map-sim 296/296 · resume 17/17 · mapgraph 62/62 · map-api 14/14 · all five now wired
+into `test-all.sh` · map-e2e still 100/102 (same 2 pre-existing approval-flow fails as staging —
+owner call at chunk 2) · typecheck clean. Item 4 (live checks answer on a clock) verified UNTOUCHED,
+as ordered — still waiting on the owner's word.
 
-## BUILT AND VERIFIED (a real rebuild — keep all of this)
-Learn the menu first, always, no held-recipe skip (`mapper.ts:417-419,501-503`) · full-phrase
-learning prompt (`navigator.ts:387,396`) · wording must read the same twice before the lock
-(`mapper.ts:219-231,609-617`) · one change per speed check (`mapper.ts:452,202-209`) · a losing move
-is written to a durable never-again list the moment it fails, no lock needed (`mapper.ts:164-169,
-642-651`) · a win becomes the recipe and the chain row on the spot (`mapper.ts:631-638`) · open
-hours re-read before every speed check, pinned stores obey (`mapper.ts:492-495`) · speed graded only
-against this run's own menu (`map-capture.ts:135-137,151-154`) · bargeSafe honored, including inside
-the same run (`mapper.ts:192,642-647`) · a connect offer mid-route is not the handoff
-(`navigator.ts:661-663`) · a barge tail joins its line (`navigator.ts:615-636`) · chain-page nav
-time ends at the handoff, never Staff (`mapgraph.ts:1152-1167`) · an unknown greeting is FILED
-automatically and quarantined, the run stops clean (`navigator.ts:916-924`, `map-capture.ts:228`) ·
-store lock IS the customer go-live: paying checks build from the active map at one locked store
-(`trainer-batch.ts:46-132`, `service.ts:379-422`) · customer checks DO feed the three-store ledger
-(`server.ts:164-175` → `mapgraph.ts:1521-1533`) · listen-first path deleted · menu-voting deleted ·
-Re-map/Re-listen deleted cleanly, and the surviving Admin Map call now really writes to the map on a
-pass (`map-capture.ts:237-267`) · restart-resume is real with a drain flag + 90s boot delay
-(`mapper.ts:116-137,431,448`, `server.ts:181-186`) and its test rig drives the real seam.
+## Round-2 verdict per item
+- **FIXED (9): items 1, 3, 5, 7, 8, 9, 11, 13, 14.** Wrong desk burns the PICKED door, per-door ask
+  ledger, store held, dead doors durable + mechanically blocked (`navigator.ts:852-866,1051-1083`,
+  `mapper.ts:172-179,598-604`). Silence is not an answer (`navigator.ts:692-703`). Rings are really
+  detected (tone frames feed the counter, `server.ts:7163`, `navigator.ts:206-207`,
+  `listen-nav.ts:340-351`); hang-up at two rings; silent handoff stamps the handoff off the first
+  ring. Sweep honors the grade — fail writes nothing (`sweep.ts:140-144`). Words-said compares the
+  actual words; lost carrier callbacks get a backstop grade (`navigator.ts:1129-1152`). No free text
+  on mapping rows; "nobody answered" impossible when Staff answered; pre-stamp gone
+  (`mapgraph.ts:1263-1273`, `server.ts:6295-6301`). Mapping nav time ends at the handoff
+  (first-write-wins stamp, `navigator.ts:243-247`); the backfilled unmeasured number is gone. Crash
+  keeps the run's state with its reason on the live card (`mapper.ts:690-698`); drain overlap closed
+  (180s resume vs 150s max check). Fold rules now driven behaviorally in the rig (~156 behavioral
+  assertions; grade gating + what-a-fail-may-write really executed).
+- **PARTLY (3): items 2, 6, 10.** Direct pickup now PASSES grading (`map-capture.ts:159`) but still
+  cannot LOCK — see R3-1. Proven-at-three: real answer required, union not overwrite, a reader flips
+  `fullyProven` at three (`mapgraph.ts:1344-1361,1587`) — but it is display-only and the no-traffic
+  hand-dial rule has no code (`sweep.ts:85-106`). Heard-twice: tolerant fold works
+  (`mapgraph.ts:990-999`) and the API says `real:true` at two — but NO screen reads it; the review
+  list still renders once-heard rows identically.
+- **Skipped as ordered (1): item 4** — unchanged end to end (`recipe.ts:39-70`,
+  `bridge-place.ts:142-163`, `service.ts:396-403`).
 
-## THE ROUND-2 LIST (ordered by damage; every item cites the mapper-branch code)
+## ROUND 3 (short, ordered; all evidence at @6d4dd120)
+R3-1. **Direct-answer stores: pass but never lock, and the engine now troubles Staff.** The
+  lock-on-the-spot branch requires no heard menu lines, but the person's own hello is counted as a
+  menu line (`mapper.ts:229-234` cutoff `transferAtSec ?? humanAtSec` with `<=`; greeting pushed AT
+  `humanAtSec`, `navigator.ts:653,717`), so the branch is unreachable (`mapper.ts:586-595`). The run
+  then makes up to 5 settle calls that each hang up on a real person (`navigator.ts:511-516`,
+  violating the run's own no-Staff rule) and can file junk "menu changed" rows from two different
+  hellos. Fix shape: exclude the Staff greeting from menu lines (strict `<`, or cut at ring/handoff
+  only) so the on-the-spot lock fires; settle listens must not dial at all when the store is direct.
+R3-2. **The direct-proving side job false-flags every direct chain, forever.** Its "did we act on a
+  menu" test counts the product QUESTION as an action (`sweep.ts:152` counts every us-step; the
+  ask-scaffold exclusion from `map-capture.ts` is not applied), so a passing direct call always takes
+  the has-a-menu branch: stamps `ringsDirect:false, navStatus:"review"` (even over locked), files a
+  false review item, the mapper then refuses the chain (`mapper.ts:397` still sees `direct_human`),
+  and the next sweep re-queues it — an endless loop. Fix: reuse the scaffold exclusion; never stamp
+  over locked; repair the stamp when mapping refuses.
+R3-3. **Re-mapping a proven chain burns its own best door.** The winning door's ask is durably spent
+  (`nav_confirm_asked_doors` never expires), so a re-map is told "doors that worked: X" and "never
+  choose X" in the same breath, refuses twice, and fails the store (`mapper.ts:486-487,506-513`).
+  Fix: a proven door is exempt from the once-per-door block (proof already exists), or re-proving
+  clears that door's spent ask.
+R3-4. **Dead-door block is a value match anywhere in the tree** (`navigator.ts:853-857`) — "1" dead
+  at level 2 blocks "1" at level 1 and can falsely exhaust a store. Scope the block to the menu level
+  (door = question + option, not option alone).
+R3-5. **Heard-twice must change something the owner can see:** the review list should render a
+  once-heard row muted (or not at all) and flip at two — the `real` flag exists, no screen reads it;
+  also the fold scans only 20 open rows unordered (`mapgraph.ts:991-994`) — order + raise or page.
+R3-6. Small, same pass: sweep pass-2 re-queue text mismatch silently drops closed-store mapping
+  chains (`sweep.ts:252` vs `mapper.ts:472`) · proving-call cap 120s vs call cap 165s loses late
+  proofs (`sweep.ts:39`) · ring-ended win persists a fabricated `seconds: 0` on the map version
+  (`trainer-batch.ts:90`, `mapper.ts:302`) — write null · crashed-run trace erased at next boot
+  (`mapper.ts:123`) — keep it visible one boot, and cover the crash path behaviorally · silent-confirm
+  pass/fail disagreement (`grade:"pass"` on `status:"failed"`, pollutes ring variance) · copy.md
+  still SPECIFIES `set aside` (line 143) and `Hung up, nobody picked up` (141) against its own
+  08-01 note — fix the table rows · `prove` key is dead in the check-card header map.
 
-1. **One wrong desk burns the whole store — the contract's "next door, SAME store" is unreachable.**
-   The dead door recorded is the clerk's redirect sentence, not the option we picked
-   (`mapper.ts:586`); the wrong-desk call spends the store's one ask (`navigator.ts:953,1029-1034`)
-   and the next loop abandons the store (`mapper.ts:481-489`); doorsDead is run-local, wiped at run
-   end (`mapper.ts:423,668`). Fix shape: record the PICKED option as the dead door; make the ask
-   ledger per-door; hold the store.
-2. **A store where Staff just pick up (no announced handoff) can never pass, never lock.** Pass
-   requires a heard transfer line (`map-capture.ts:140`); direct pickup grades `said wrong words`,
-   marks the ask unresolved, rotates (`mapper.ts:589-594`) — even when Staff answered the question.
-   Whole chains whose desks answer directly are unmappable in this build.
-3. **Silence counts as Staff's answer.** 9 seconds of quiet after the ask sets "answered"
-   (`navigator.ts:685`) — a clerk who says nothing proves the door. Update 12 requires a real
-   yes-or-no acknowledgment.
-4. **The clock is dead in the engine — but every live customer check still runs on it.** The
-   mapping/speed engine fires answers only on heard menu words (`navigator.ts:751,764-787`) — that
-   half is done. But locked recipes still ship as word@seconds / digit@seconds
-   (`trainer-batch.ts:76,126`, `recipe.ts:47-57`) and live checks fire them on elapsed time
-   (`bridge-place.ts:144-163`, `bridge.ts:750-755`); the menu-words way exists but defaults OFF
-   (`service.ts:401-403`, `listen-nav.ts:380-387`). Update 4 says the clock is dead EVERYWHERE.
-   Decide: flip listen-nav on as the default live path (and its clock fallback stays only as a
-   never-hangs guarantee?), or this is chunk 2/3 scope — owner word needed.
-5. **"Hang up on the second ring" is really a 6-second clock that can trouble Staff.** The ring
-   counter never increments (tones are not fed — `navigator.ts:202-206`, `listen-nav.ts:299-317`),
-   so hang-up waits `RING_CYCLE_SEC` after an ANNOUNCED handoff, checked only on the next turn
-   (`navigator.ts:590-604`); a silent handoff waits until a person answers and hangs up on them
-   (`navigator.ts:506-511`).
-6. **Proven-at-three is write-only bookkeeping.** The ledger bar is "a person was detected", not
-   "answered the product question" (`mapgraph.ts:1521-1533`); it is seeded with the mapping store so
-   three = map store + TWO customers (`mapper.ts:342-344`), the seed OVERWRITES earlier customer
-   agreements on re-lock (`mapper.ts:343`), and NOTHING reads the ledger — no level ever flips. The
-   no-traffic hand-dial clause has no code (`sweep.ts:88-107`).
-7. **The direct-pickup side job (sweep) ignores grades entirely** — on a failed check it still folds
-   evidence, re-scores confidence, can auto-activate a version, stamps the chain row
-   (`sweep.ts:141-200` → `mapgraph.ts:607-665,708`). The single biggest surviving "a failed check
-   changes NOTHING" break.
-8. **Three ways a check still ends ungraded:** dial failure (`navigator.ts:1071-1076`), restart
-   mid-check (in-memory sessions; `mapper.ts:132`), a lost carrier callback (nothing sweeps
-   ungraded sessions). And "our words said" is a step COUNT, not a word check — a re-say inflates
-   it so a never-spoken answer can pass (`navigator.ts:899`, `map-capture.ts:146-150`).
-9. **Free text still leaks into mapping rows:** `dial failed: …` (`mapper.ts:536`, `sweep.ts:125`),
-   `nobody answered` — including when a person answered (`mapper.ts:599,625`), `no answer (timeout)
-   — direct claim still unproven` (`sweep.ts:196-200`), raw statuses onto graph edges
-   (`map-capture.ts:222`); a failed wrong-desk check records outcome "human" and reads as
-   reached-Staff (`navigator.ts:690-691`, `mapgraph.ts:1242`); the Admin Map button pre-stamps the
-   chain "learning" unconditionally, even over "locked", never reverted on a fail (`server.ts:6291`).
-10. **Heard-twice never promotes.** Unknown menus dedup by EXACT text so the same night menu files
-    as new rows each hearing (`mapgraph.ts:985` vs the tolerance at `1134-1147`); `seen_count` has
-    no reader that promotes; night/Spanish as selectable versions of one route: schema and comments
-    only (`mapgraph.ts:56-59,147-166`); no boundary learning; the 24h label compare can never match
-    (`mapper.ts:361` vs `store-hours.ts:134`). (The auto-re-map JOB itself is chunk 2's R2 loop —
-    but filing-to-promotion is this contract's fingerprint section.)
-11. **Per-check nav time still counts ring + pickup wait.** Receipts define nav as dial→person
-    (`events.ts:388-389,479`, `receipt-store.ts:93-95`, `bridge.ts:640,759-764`); mapping receipts
-    stamp menu-finished at person-detection (`navigator.ts:242`); live checks never stamp a nav end
-    at all (`bridge-place.ts:209-213`). Update 10 = nav ends the instant the desk rings. Also: a
-    ring-ended speed win backfills the baseline's seconds into that call's own record
-    (`mapper.ts:296-298,635`) — a number that call never measured.
-12. **`Set aside` still written and shown** (`mapgraph.ts:896`; `app.html:5195,4881,5487`) — and
-    `copy.md:77,80` still SPECIFIES it while the contract deletes it: reconcile for the owner.
-    **Live-run phase label misses the new names** — the run card prints raw `map` / `speed`
-    (`app.html:2478-2479`); the per-check header map is fine.
-13. **Resume holes:** a crash in the loop clears the saved run silently — one DB hiccup and the run
-    vanishes with no flag (`mapper.ts:672`); the resume rig runs in NOTHING (`test-all.sh` has no
-    mapping rigs at all); drain overlap if the old process outlives the 90s boot delay.
-14. **Rig honesty:** ~100 of map-sim's 241 checks assert the code's TEXT (regex over source), not
-    behavior — the finish→record wiring, the stage machine, and all rendering rules have no
-    behavioral test; nothing anywhere drives a real telephony round trip. Wire the five mapping
-    rigs into `test-all.sh` and grow behavior checks in round 2.
-
-## Chunk-3 note
-The old screens findings predate this branch (it touches app.html lightly); re-read the screens
-against the contract at chunk 3 — do not trust the old list.
+## Standing owner decisions (unchanged)
+Item 4: live checks still answer on a stopwatch; the listen-for-menu-words path exists but defaults
+off. · map-e2e's 2 pre-existing fails assert the OLD wait-for-approval behavior R2 retires. · No lock
+of the mapping surfaces until the owner names the live page the record of truth (contract line 135).
 
 ## How to use this
-Round 2 = items 1-14, one at a time, each proven on the page or by a driven check before the next.
-Items 4 (live clock) and the two pre-existing e2e failures (approval vs hands-free) need the OWNER's
-word before code moves. The contract is the law; this list is the gap between law and this branch.
+Round 3 = R3-1 to R3-6, one at a time, each proven by a driven check or on the page before the next.
+R3-1/R3-2 are the gate: until they land, any chain whose stores answer directly cannot finish and
+real Staff get hung up on. The contract is the law; this list is the gap between law and this branch.
