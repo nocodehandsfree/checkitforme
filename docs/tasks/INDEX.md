@@ -10,12 +10,12 @@ Systems: site · admin · voice-calls · data · support (data carries the old o
 
 ## ⭐ NEXT UP — the PM lane (handoff 07-31 · the law: `docs/specs/mapping-admin/build-contract.md`,
 addendum R1-R6 OVERRIDES the body · the fix list: `audit-code-vs-contract.md` in the same folder)
-Mapping rebuild runs in THREE chunks, one fresh chat each: 1 engine (**ROUND 2 AUDITED 08-01 on
-`claude/mapping-engine-contract-wecvcy` @6d4dd120: 9 of 13 items truly fixed, 3 partly, item 4
-owner-gated untouched; rigs 296+17+62+14 green, PM-run. ONE serious new fault: stores where Staff
-answer directly pass but never lock, get hung up on, and the direct-proving job false-flags them
-forever. Round 3 = R3-1..R3-6 in `audit-code-vs-contract.md`; R3-1/R3-2 gate the chunk**) ·
-2 self-healing · 3 screens. Owner says "finished" → PM audits
+The project is THREE MILESTONES, one fresh chat each: 1 engine (**fix pass 3 audited 08-01 on
+`claude/mapping-engine-contract-wecvcy` @c39df451: nothing old regressed, most fixes hold, but ONE
+root remains — Staff's own speech still gets read as the store's menu (four faces). Milestone 1 is
+NOT closed. FIX PASS 4 = F4-1..F4-4 in `audit-code-vs-contract.md`, runs in a FRESH mapper chat
+(the old chat is heavy and handed off); F4-1 gates the close; PM re-audits blind after the push**) ·
+2 self-healing · 3 screens. Builder says "finished" → PM audits
 that chunk vs the contract BEFORE the next chunk's box goes out. Voice-agent boot gate: any voice
 task box lists the pre-reads (runtime spec §4 · RULES.md · checkpoint · listen-nav + bridge headers)
 + the team charter `handoff.md` (workflows · every Admin voice surface), and the agent must WRITE

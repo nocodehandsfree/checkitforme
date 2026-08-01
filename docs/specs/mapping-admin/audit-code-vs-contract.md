@@ -30,48 +30,54 @@ as ordered — still waiting on the owner's word.
 - **Skipped as ordered (1): item 4** — unchanged end to end (`recipe.ts:39-70`,
   `bridge-place.ts:142-163`, `service.ts:396-403`).
 
-## FIX PASS 3 — the milestone-1 remainder (short, ordered; evidence at @6d4dd120)
-R3-1. **Direct-answer stores: pass but never lock, and the engine now troubles Staff.** The
-  lock-on-the-spot branch requires no heard menu lines, but the person's own hello is counted as a
-  menu line (`mapper.ts:229-234` cutoff `transferAtSec ?? humanAtSec` with `<=`; greeting pushed AT
-  `humanAtSec`, `navigator.ts:653,717`), so the branch is unreachable (`mapper.ts:586-595`). The run
-  then makes up to 5 settle calls that each hang up on a real person (`navigator.ts:511-516`,
-  violating the run's own no-Staff rule) and can file junk "menu changed" rows from two different
-  hellos. Fix shape: exclude the Staff greeting from menu lines (strict `<`, or cut at ring/handoff
-  only) so the on-the-spot lock fires; settle listens must not dial at all when the store is direct.
-R3-2. **The direct-proving side job false-flags every direct chain, forever.** Its "did we act on a
-  menu" test counts the product QUESTION as an action (`sweep.ts:152` counts every us-step; the
-  ask-scaffold exclusion from `map-capture.ts` is not applied), so a passing direct call always takes
-  the has-a-menu branch: stamps `ringsDirect:false, navStatus:"review"` (even over locked), files a
-  false review item, the mapper then refuses the chain (`mapper.ts:397` still sees `direct_human`),
-  and the next sweep re-queues it — an endless loop. Fix: reuse the scaffold exclusion; never stamp
-  over locked; repair the stamp when mapping refuses.
-R3-3. **Re-mapping a proven chain burns its own best door.** The winning door's ask is durably spent
-  (`nav_confirm_asked_doors` never expires), so a re-map is told "doors that worked: X" and "never
-  choose X" in the same breath, refuses twice, and fails the store (`mapper.ts:486-487,506-513`).
-  Fix: a proven door is exempt from the once-per-door block (proof already exists), or re-proving
-  clears that door's spent ask.
-R3-4. **Dead-door block is a value match anywhere in the tree** (`navigator.ts:853-857`) — "1" dead
-  at level 2 blocks "1" at level 1 and can falsely exhaust a store. Scope the block to the menu level
-  (door = question + option, not option alone).
-R3-5. **Heard-twice must change something the owner can see:** the review list should render a
-  once-heard row muted (or not at all) and flip at two — the `real` flag exists, no screen reads it;
-  also the fold scans only 20 open rows unordered (`mapgraph.ts:991-994`) — order + raise or page.
-R3-6. Small, same pass: sweep pass-2 re-queue text mismatch silently drops closed-store mapping
-  chains (`sweep.ts:252` vs `mapper.ts:472`) · proving-call cap 120s vs call cap 165s loses late
-  proofs (`sweep.ts:39`) · ring-ended win persists a fabricated `seconds: 0` on the map version
-  (`trainer-batch.ts:90`, `mapper.ts:302`) — write null · crashed-run trace erased at next boot
-  (`mapper.ts:123`) — keep it visible one boot, and cover the crash path behaviorally · silent-confirm
-  pass/fail disagreement (`grade:"pass"` on `status:"failed"`, pollutes ring variance) · copy.md
-  still SPECIFIES `set aside` (line 143) and `Hung up, nobody picked up` (141) against its own
-  08-01 note — fix the table rows · `prove` key is dead in the check-card header map.
+## Fix pass 3 — verdict (three blind readers + PM-run rigs · @c39df451)
+Rigs: map-sim 309/309 · resume 20/20 · mapgraph 62/62 · map-api 14/14 · map-e2e 100/102 (same 2
+pre-existing) · tsc clean. **All NINE older fixes still hold (regression spot-check passed).**
+- **FIXED: R3-4** (dead door = question + option, durable and scoped) · **R3-5** (once-heard menus
+  hidden until heard twice; fold ordered, cap 100) · **R3-6 b/c/d/e/f/g** (late-proof cap, null not
+  zero, crash visible one boot, silent-confirm fails, copy.md table clean, dead key gone).
+- **PARTLY — the three gate items, one shared root left:** the engine still sometimes takes STAFF'S
+  OWN SPEECH for the store's menu. R3-1: core cut fixed (strict < humanAtSec, on-the-spot lock works,
+  locked direct runs make zero extra checks) BUT Staff saying "sure, one moment" matches the handoff
+  pattern and stamps a handoff AFTER the person — the hello re-counts as a menu line and the settle
+  listens hang up on up to 5 real people again (`navigator.ts:675-682`, `mapper.ts:249-259,637`).
+  R3-2: scaffold excluded, locked never overwritten, refusal loop closed BUT the "sounds like a
+  recording" test counts the person's hello/answer (no cut at humanAtSec) so a passing direct chain
+  is misfiled as a greeting chain — a bogus recipe can auto-activate and re-stamp live behavior
+  (`sweep.ts:151,161`, `mapgraph.ts:709`). R3-3: exemption works UNLESS the winning word was
+  shortened — exemption keys on recipe values, the ledger on the full phrase as asked
+  (`mapper.ts:532-538` vs `navigator.ts:1097-1108`).
+
+## FIX PASS 4 — the LAST milestone-1 list (fresh chat; evidence at @c39df451)
+F4-1 (GATES THE MILESTONE). **Staff's voice is never the store's menu — close all four faces:**
+  (a) never stamp a handoff line at or after `humanAtSec` (`navigator.ts:675-682`), and make
+  `menuLinesOf` cut at the EARLIER of handoff/person, strict (`mapper.ts:249-259`);
+  (b) the sweep's recording test cuts at `humanAtSec` so a person's hello/answer never counts
+  (`sweep.ts:151,161`) — no greeting recipe may auto-activate onto a direct chain;
+  (c) stamp `humanAtSec` at the line that TRIGGERED person-detection, not the turn the detector
+  fired, so a long hello can't slip under the cut (`navigator.ts:52-65` + reachHuman);
+  (d) a redirect can never fire on Staff's ANSWER: after the ask, nothing burns a door — today
+  "over in the toy aisle" matches the redirect pattern and durably kills the RIGHT door chain-wide
+  with no clear path (`navigator.ts:71`, `mapper.ts:181-195`); also add an Admin clear for
+  `map_doors_dead` / `nav_confirm_asked_doors`.
+F4-2. **Door bookkeeping matches itself:** the proven-door exemption must exempt the door AS THE
+  LEDGER KEYS IT (full phrase and its shortened winner both); record the question on the ask ledger
+  so spent doors are level-scoped like dead doors (`navigator.ts:1101-1106`, `mapper.ts:538-540`).
+F4-3. **Sweep bookkeeping:** prove-direct calls carry a stage (or exemption) so the carrier-end
+  path can't stamp review on the chain (`navigator.ts:1186`); a closed-store mapping run ends
+  "skipped" not "failed" so pass 2 re-queues it (`sweep.ts:235,264`, `mapper.ts:510`); the mapper's
+  own wait deadline gets the same +30s margin the sweep got (`mapper.ts:595`).
+F4-4. Nit: `conditions[].real` has no reader — drop the field or read it (`mapgraph.ts:1391`).
 
 ## Standing owner decisions (unchanged)
 Item 4: live checks still answer on a stopwatch; the listen-for-menu-words path exists but defaults
-off. · map-e2e's 2 pre-existing fails assert the OLD wait-for-approval behavior R2 retires. · No lock
-of the mapping surfaces until the owner names the live page the record of truth (contract line 135).
+off — one small task, fresh chat, owner unlock. · map-e2e's 2 pre-existing fails assert the OLD
+wait-for-approval behavior R2 retires. · No lock of the mapping surfaces until the owner names the
+live page the record of truth.
 
 ## How to use this
-Fix pass 3 (still milestone 1) = R3-1 to R3-6, one at a time, each proven by a driven check or on the page before the next.
-R3-1/R3-2 are the gate: until they land, any chain whose stores answer directly cannot finish and
-real Staff get hung up on. The contract is the law; this list is the gap between law and this branch.
+Fix pass 4 = F4-1 to F4-4 in a FRESH chat (the round-1-to-3 chat is heavy and handed off): checkout
+branch `claude/mapping-engine-contract-wecvcy`, work F4 in order, one item per commit, each proven
+by a driven check or rig test before the next. F4-1 gates the milestone: until its four faces close,
+direct-answer chains still hang up on real people or get misfiled. The PM re-audits blind after the
+push; MILESTONE 1 closes on that audit. The contract is the law.
