@@ -7,7 +7,8 @@ import { fetchStorePhone } from "../store-phone";
 import {
   accounts, alertSends, callResults, categories, chains, customerSchedules, retailers, scheduleTargets, schedules, statuses, watches, zoneRetailers, zones,
 } from "../db/schema";
-import { linkCall, openReceipt, emit, closeReceipt, linkProviderCall, lineStillUp, markNow } from "./events"; // ties the call row to its receipt (the timeline + the seconds)
+import { linkCall, openReceipt, emit, closeReceipt, linkProviderCall, markNow } from "./events"; // ties the call row to its receipt (the timeline + the seconds)
+import { isCheckAlive } from "./check-life"; // the gatekeeper: the one honest answer to "has this check finished?"
 import { recordVerdict } from "./receipt-store";
 import { chargeOneCredit, isCompAccount, getAccount } from "../billing";
 import { sendRestockEmailTo, sendAlert, accountLang, localizeResult } from "../alerts";
@@ -1182,8 +1183,11 @@ export async function ingestPending(): Promise<number> {
     // THE LINE IS STILL UP, SO THE CHECK HAS NOT FINISHED. Charlie's conversation ends every time he
     // is closed for a hold, and the provider reports that as the conversation being over. Reading it
     // as the end of the check stamped a verdict on a call that was still running. Left pending on
-    // purpose: the next sweep after the carrier hangs up finalizes it properly.
-    if (lineStillUp(row.room)) continue;
+    // purpose: the next sweep after the carrier hangs up finalizes it properly. The GATEKEEPER
+    // answers now, not the in-memory receipt (08-01 audit, family 3) — the database's answer
+    // survives restarts and expiries, and on the old direct path (the provider's own line) it
+    // correctly defers to the provider instead of freezing this sweep behind an open thin receipt.
+    if (await isCheckAlive(row.room)) continue;
     const outcome = await provider.getConversation(row.providerCallId);
     if (!outcome) continue; // not finished yet
 

@@ -103,7 +103,12 @@ export function setBridgeContext(room: string, ctx: BridgeContext) {
   ctx.hadDtmf = !!ctx.dtmf;
   ctx.hadSay = !!ctx.say;
   contexts.set(room, ctx);
-  setTimeout(() => contexts.delete(room), 5 * 60 * 1000); // auto-expire
+  // A LEAK GUARD, NEVER A CLOCK A LIVE CALL CAN RUN INTO (08-01 audit, family 3). This used to be
+  // five minutes — the SAME length as the longest staging call — so exactly at the cap the
+  // hold-reopen rule read an expired context as undefined and a hold-close ended the whole check.
+  // Thirty minutes sits far past any call the carrier allows, and deliberately NOT delete-on-close:
+  // Twilio can reconnect a blipped stream mid-call and the fresh socket must still find its context.
+  setTimeout(() => contexts.delete(room), 30 * 60 * 1000);
 }
 
 // conversation_id -> seconds spent navigating before the human was reached (connect-on-human mode).
@@ -717,7 +722,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           return null;
         };
         const convId = find(m);
-        if (convId) { conversations.set(room, convId); linkProviderCall(room, convId); setTimeout(() => conversations.delete(room), 10 * 60 * 1000); if (c.connectOnHuman && humanAtMs) navByConv.set(convId, Math.max(0, Math.round((humanAtMs - startMs) / 1000))); log(`metadata: convId=${convId}`); try { c.onConversationId?.(convId); } catch (e) { log(`onConversationId threw: ${String(e).slice(0, 80)}`); } }
+        // 30 minutes, not 10 (08-01 audit, family 3): this map used to die five minutes before the
+        // in-memory receipt did, and in that gap the page's session-id poll fell back to the
+        // provider. Past 30 minutes the gatekeeper's database row answers instead — the map is only
+        // the fast path, never the last word.
+        if (convId) { conversations.set(room, convId); linkProviderCall(room, convId); setTimeout(() => conversations.delete(room), 30 * 60 * 1000); if (c.connectOnHuman && humanAtMs) navByConv.set(convId, Math.max(0, Math.round((humanAtMs - startMs) / 1000))); log(`metadata: convId=${convId}`); try { c.onConversationId?.(convId); } catch (e) { log(`onConversationId threw: ${String(e).slice(0, 80)}`); } }
         else log(`metadata but NO convId: ${JSON.stringify(m).slice(0, 200)}`);
         // Held back while Delta is still asking — openCharlieGate releases them the instant the
         // clip is done, in order, so an early answer reaches him complete instead of half-heard.
@@ -1121,5 +1130,5 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       if (m.mark?.name === CLIP_MARK) openCharlieGate("the carrier confirmed the clip played");
     } else if (m.event === "stop") { log("twilio stop"); signalEnd(); if (eleven) eleven.close(); }
   });
-  twilio.on("close", () => { if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; } if (heldQuestion) { try { relayLine?.(room, "Agent", heldQuestion); } catch { /* best effort */ } heldQuestion = null; } try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (eleven) eleven.close(); });
+  twilio.on("close", () => { if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; } if (heldQuestion) { try { relayLine?.(room, "Agent", heldQuestion); } catch { /* best effort */ } heldQuestion = null; } try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (eleven) eleven.close(); /* the context is NOT deleted here: Twilio can reconnect a blipped stream mid-call, and the fresh socket must still find it. The 30-minute leak guard owns cleanup. */ });
 }

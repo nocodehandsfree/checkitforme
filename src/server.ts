@@ -37,7 +37,7 @@ import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
 import { placeNavCall, navInitialTwiml, navStep, navEnded, navMediaFeed, getNavSession, latestNavSessionForChain, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
 import { listenNavFeed, endListenNav } from "./calls/listen-nav";
 // THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
-import { emit, markNow, closeReceipt, linkCall, rollup, rollupFromRow, getReceipt, transcriptOf, lineStillUp, setLineHook, type Rollup } from "./calls/events";
+import { emit, markNow, closeReceipt, linkCall, rollup, rollupFromRow, getReceipt, transcriptOf, setLineHook, type Rollup } from "./calls/events";
 import { installReceiptStore, currentRates, onReceiptClosed } from "./calls/receipt-store";
 import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
@@ -7115,9 +7115,11 @@ app.post("/webhooks/elevenlabs", async (c) => {
       // conversation at the provider, which fires this webhook — so a store saying "give me a second"
       // used to stamp the verdict "we got left on hold", charge for it and send the alerts while the
       // line was still up and Staff were walking back with the answer. The carrier's own end is the
-      // only end; the receipt is open until then, and the poller finalizes this row the moment it is
-      // genuinely over.
-      if (lineStillUp(row?.room)) return c.json({ ok: true, skipped: "line still up" });
+      // only end. The GATEKEEPER answers now, not the in-memory receipt (08-01 audit, family 3): the
+      // receipt's fifteen-minute life and every restart made the old guard fail toward "line is
+      // down" — and on the old direct path, where the provider carries the line itself, it failed
+      // the other way and froze this webhook for the receipt's whole life.
+      if (await isCheckAlive(row?.room)) return c.json({ ok: true, skipped: "line still up" });
       // Consensus second read — keep the webhook verdict + billing identical to the poller (ingestPending):
       // two non-conflicting reads → a hard verdict (charge); conflict/ambiguity → "no clear answer", no charge.
       let confirmed = o.confirmed, statusKey = o.statusKey;
