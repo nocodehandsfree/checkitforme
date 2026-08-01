@@ -37,7 +37,7 @@ import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
 import { placeNavCall, navInitialTwiml, navStep, navEnded, navMediaFeed, getNavSession, latestNavSessionForChain, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
 import { listenNavFeed, endListenNav } from "./calls/listen-nav";
 // THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
-import { emit, markNow, closeReceipt, linkCall, rollup, rollupFromRow, getReceipt, transcriptOf, setLineHook, type Rollup } from "./calls/events";
+import { emit, markNow, closeReceipt, linkCall, rollup, rollupFromRow, getReceipt, transcriptOf, setLineHook, normSaid, type Rollup } from "./calls/events";
 import { installReceiptStore, currentRates, onReceiptClosed } from "./calls/receipt-store";
 import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
@@ -7198,9 +7198,20 @@ const fanout = (room: string, payloadB64: string, track: string) => {
 };
 // Real-time transcript lines from the agent bridge → browser listeners, so the chat bubbles populate
 // AS the call happens (ElevenLabs only returns the full transcript post-call).
+// ONE SENTENCE REACHES THE PAGE ONCE (08-01 audit, open fault 4): the relay had no memory at all, so
+// an echoed or replayed line always printed again however carefully it was recorded. Same fuzzy rule
+// as the record's own dedupe (normSaid), last few lines within ten seconds, per room, every lane.
+const relaySeen = new Map<string, Array<{ k: string; at: number }>>();
 const relayLine = (room: string, role: string, text: string) => {
   const set = rooms.get(room);
   bridgeLog(`relayLine ${role}: ${String(text).slice(0, 32)} listeners=${set ? set.size : 0}`); // diagnose live-transcript delivery
+  const rk = `${role}:${normSaid(String(text))}`;
+  const seen = relaySeen.get(room) ?? [];
+  const nowMs = Date.now();
+  if (seen.some((s) => s.k === rk && nowMs - s.at < 10_000)) { bridgeLog(`relayLine dropped a duplicate ${role} line`); return; }
+  seen.push({ k: rk, at: nowMs });
+  if (seen.length > 6) seen.shift();
+  relaySeen.set(room, seen);
   if (!set) return;
   const msg = JSON.stringify({ line: { role, text } });
   for (const ws of set) if (ws.readyState === 1) ws.send(msg);
@@ -7208,6 +7219,7 @@ const relayLine = (room: string, role: string, text: string) => {
 // Tell browser listeners the moment the bridge tears down (agent/clerk hung up) so the UI flips to
 // the result instantly instead of waiting on the next poll + ElevenLabs status lag.
 const relayEnd = (room: string) => {
+  relaySeen.delete(room); // the check is over — its relay memory goes with it
   const set = rooms.get(room);
   bridgeLog(`relayEnd room=${room.slice(0, 8)} listeners=${set ? set.size : 0}`); // diagnose hang-up→flip
   if (!set) return;

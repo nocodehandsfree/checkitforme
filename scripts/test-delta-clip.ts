@@ -666,5 +666,38 @@ console.log("\n▶ a mapped keypad press due AFTER a person answered is skipped,
   restore(); tw.close(); f.close();
 }
 
+// ================================================================================================
+// OPEN FAULT 4 OF THE 08-01 AUDIT: the doubled question and the page that bounces. One sentence
+// prints once however it arrives — the echo drop is fuzzy (transcription never styles the recording
+// word-perfectly), and a line the record already holds is neither recorded nor relayed again.
+console.log("\n▶ one sentence prints once, however it arrives");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const base = relayed.length;
+  const { tw } = await callToHello(f, 400, "room-dupes");
+  tw.say({ event: "mark", mark: { name: "delta-opening" } });
+  await sleep(150);
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Fun store, this is Bob." } }));
+  await sleep(80);
+  // The session echoes our question back STYLED DIFFERENTLY — the exact-string drop missed this.
+  f.sockets[0].send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Do you have any Pokemon cards, in stock?!" } }));
+  await sleep(80);
+  ok((getReceipt("room-dupes")?.transcript ?? []).filter((l) => l.who === "Agent" && /pokemon cards/i.test(l.text)).length === 1,
+    "a restyled echo of our recorded question is still the same sentence: ONE copy on the record");
+  ok(relayed.slice(base).filter((l) => l.role === "Agent" && /pokemon cards/i.test(l.text)).length === 1,
+    "…and ONE copy on the live view");
+  // The same clerk sentence delivered twice (a socket retry, a replayed message) lands once.
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Let me go check on that." } }));
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Let me go check on that!" } }));
+  await sleep(80);
+  ok((getReceipt("room-dupes")?.transcript ?? []).filter((l) => /go check on that/i.test(l.text)).length === 1,
+    "the same clerk sentence arriving twice records once");
+  ok(relayed.slice(base).filter((l) => /go check on that/i.test(l.text)).length === 1,
+    "…and reaches the live view once");
+  restore(); tw.close(); f.close();
+}
+
 console.log(`\n════════════════════════════════\n  PASS: ${pass}   FAIL: ${fail}\n════════════════════════════════`);
 process.exit(fail === 0 ? 0 : 1);

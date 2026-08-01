@@ -8,7 +8,7 @@ import { config } from "../config";
 // seconds split into talking / listening / dead air, because it is the only place the audio passes
 // through. Every stamp is "now"; the receipt owns the clock, since it started at dial and this
 // socket opens much later.
-import { emit, amend, markNow, addMs, linkProviderCall, openSegment, closeSegment, startMeter, recordLine } from "../calls/events";
+import { emit, amend, markNow, addMs, linkProviderCall, openSegment, closeSegment, startMeter, recordLine, normSaid } from "../calls/events";
 // The Ear that stays on the call while a person is talking to us. Pure and dependency-free on
 // purpose, so every threshold in it is provable without a phone call.
 import { ConversationEar, type HoldReason } from "../calls/listen-nav";
@@ -683,6 +683,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     const ws = new WebSocket(url);
     eleven = ws;
     ws.on("open", () => {
+      // Each session gets its own one-shot echo allowance: a reopened session is handed the recorded
+      // question as context again and reports it as its own line again (open fault 4).
+      clipEchoDropped = false;
       // THE BILLED SECOND ZERO. The provider meters from session open, so this is where the money
       // clock starts — not at first word. Everything after this is seconds we are paying for.
       markNow(room, "charlieOpenMs");
@@ -758,15 +761,18 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // there — disarm the give-up cap. Voicemail greetings count: the voicemail bail handles those.
         if (txt && /[a-zA-ZÀ-ɏ]{2,}/.test(String(txt)) && !humanWords) { humanWords = true; if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } }
         // OUR record of what was said, written live against this call's own clock — not read back
-        // from the provider afterwards (hard rule 2). Text only, never audio.
-        if (txt) { recordLine(room, "Clerk", String(txt), greetingStartedMs || undefined); greetingStartedMs = 0; }
+        // from the provider afterwards (hard rule 2). Text only, never audio. The record's answer
+        // (fresh or a repeat) gates the relay below, so the page can never show a line twice that
+        // the record holds once (08-01 audit, open fault 4).
+        let freshLine = false;
+        if (txt) { freshLine = recordLine(room, "Clerk", String(txt), greetingStartedMs || undefined); greetingStartedMs = 0; }
         // Their hello has arrived, so it goes out FIRST and our question follows it, which is the
         // order the call actually happened in.
         if (txt && heldQuestion) {
           const q = heldQuestion; heldQuestion = null;
           if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; }
           try { relayLine?.(room, "Clerk", String(txt)); relayLine?.(room, "Agent", q); } catch { /* relay best-effort */ }
-        } else if (txt) try { relayLine?.(room, "Clerk", String(txt)); } catch { /* relay best-effort */ }
+        } else if (txt && freshLine) try { relayLine?.(room, "Clerk", String(txt)); } catch { /* relay best-effort */ }
         // VOICEMAIL = hang up NOW, not after the greeting plays out (owner 07-22: "as soon as it
         // starts hearing the voice message it should hang up to save us money"). Same phrases the
         // outcome mapper stamps `voicemail` from, so the verdict stays consistent. Closing the
@@ -817,8 +823,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // THE QUESTION COMES BACK TO US AS IF CHARLIE SAID IT. The recorded question is handed to his
         // session as context, and the session then reports it as a line of its own — but it is already
         // on the record and already on the customer's page from the moment it PLAYED, so this echo
-        // printed the question twice in a row (owner screenshot, 08-01). One echo, dropped once.
-        if (txt && !clipEchoDropped && clipText && String(txt).trim() === clipText.trim()) { clipEchoDropped = true; return; }
+        // printed the question twice in a row (owner screenshot, 08-01). Dropped FUZZILY — the
+        // session's styling of it rarely matches the recording word-perfectly, which is why the
+        // exact-string drop still doubled it — and once per SESSION: every reopened session is handed
+        // the question again and echoes it again (08-01 audit, open fault 4).
+        if (txt && !clipEchoDropped && clipText && normSaid(String(txt)) === normSaid(clipText)) { clipEchoDropped = true; return; }
         // HE HAS ASKED TO BE PUT THROUGH. From here the next wait that ends is a hand-over, whether or
         // not the next desk audibly rings — a silent hand-over is a quiet pause to the ear and nothing
         // else, and the ear must never be asked to judge this. It is also the ONE line of ours worth
@@ -827,8 +836,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           expectHandover = true;
           log("wrong department: he asked to be put through, so the next wait is a hand-over");
         }
-        if (txt) recordLine(room, "Agent", String(txt));
-        if (txt) try { relayLine?.(room, "Agent", String(txt)); } catch { /* relay best-effort */ }
+        // The record's verdict on freshness gates the relay, same as the clerk side (open fault 4).
+        if (txt && recordLine(room, "Agent", String(txt))) try { relayLine?.(room, "Agent", String(txt)); } catch { /* relay best-effort */ }
       } else if (m.type === "ping") {
         eleven!.send(JSON.stringify({ type: "pong", event_id: m.ping_event?.event_id }));
       } else if (m.type === "interruption") {

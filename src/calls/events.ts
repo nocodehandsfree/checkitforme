@@ -261,13 +261,21 @@ export function amend(room: string, kind: EventKind, patch: Record<string, unkno
  * (owner screenshot 07-31). Given a real time, the line is filed where it belongs instead of at the
  * end. Everything else is unchanged: the clock is this call's own, and it is still text only.
  */
-export function recordLine(room: string, who: "Agent" | "Clerk", text: string, spokenAtMs?: number): void {
+export function recordLine(room: string, who: "Agent" | "Clerk", text: string, spokenAtMs?: number): boolean {
   try {
     const r = receipts.get(room);
-    if (!r || r.closed) return;
+    if (!r || r.closed) return true; // no record to guard — the caller may still show the line
     const t = String(text || "").trim();
-    if (!t) return;
+    if (!t) return false;
     const at = Math.max(0, spokenAtMs ?? (Date.now() - r.startMs));
+    // THE SAME SENTENCE SAID ONCE IS RECORDED ONCE (08-01 audit, open fault 4). The question we
+    // played comes back from the agent's session styled differently, a reconnected session can
+    // replay a line, and two delivery paths can each hand over one sentence. Matching is FUZZY —
+    // casing and punctuation never survive transcription — and only against the last few lines
+    // within ten seconds, so a clerk genuinely repeating themselves later still shows. Returns
+    // whether the line was fresh, so a relay can skip exactly what the record skipped.
+    const key = `${who}:${normSaid(t)}`;
+    if (r.transcript.slice(-4).some((l) => Math.abs(l.atMs - at) < 10_000 && `${l.who}:${normSaid(l.text)}` === key)) return false;
     const line = { atMs: at, who, text: t.slice(0, 1000) };
     const last = r.transcript[r.transcript.length - 1];
     if (last && last.atMs > at) {
@@ -280,8 +288,13 @@ export function recordLine(room: string, who: "Agent" | "Clerk", text: string, s
     // READ AS IT GOES: hand the line to the reader now, while the check is still running, so the
     // verdict is ready the moment Charlie hangs up. Costs nothing on the line. See voice/live-read.ts.
     try { lineHook?.(room, who, t); } catch { /* the reader must never break a check */ }
-  } catch { /* recording must never break a call */ }
+    return true;
+  } catch { return true; /* recording must never break a call — and never silence a line over it */ }
 }
+
+/** Casing/punctuation-blind form of one said line — how the dedupe above compares. Exported so the
+ *  bridge's echo drop and any relay use the SAME rule and can never disagree about "the same line". */
+export const normSaid = (s: string): string => s.toLowerCase().replace(/[^a-z0-9à-ɏ]+/gi, " ").trim();
 
 /** The conversation as WE heard it, oldest first. */
 export function transcriptOf(r: Receipt): string {
