@@ -852,8 +852,12 @@ async function main() {
     ok(/run\.phase === "speed" && !\(await storeOpenNow\(store\.id\)\)/.test(eng),
       "the open-hours gate is re-read before EVERY speed check, pinned store or not");
     // ROUND 2 ITEM 1: a wrong desk burns the DOOR, never the store.
-    ok(/const spentDoors = proving \? await doorsAskedAt\(chainId, store\.id\) : \[\];/.test(eng),
+    ok(/const spentDoors = proving \? \(await doorsAskedAt\(chainId, store\.id\)\)\.filter\(\(d\) => !provenDoors\.has\(d\)\) : \[\];/.test(eng),
       "the ask ledger is per DOOR — a spent door is steered around while the store stays held");
+    // ROUND 3 ITEM 3: a re-map never burns its own proven door — the held recipe's doors are exempt
+    // from the spent-ask block, because the proof already exists and the full first check re-asks.
+    ok(/const provenDoors = new Set\(\(run\.lockedRecipe\?\.steps \|\| \[\]\)\.map\(\(st\) => String\(st\.value \|\| ""\)\.toLowerCase\(\)\)\.filter\(Boolean\)\);/.test(eng),
+      "the held recipe's own doors are exempt — 'doors that worked: X' and 'never choose X' can no longer be said in the same breath");
     ok(/const door = pickedDoorFrom\(\(s\?\.steps \|\| \[\]\) as NavStep\[\]\) \|\| \(s\?\.redirectTo \|\| ""\)\.slice\(0, 40\)/.test(eng),
       "the door that dies is the option WE picked, never the clerk's redirect sentence");
     ok(/await rememberDeadDoor\(run, door\);/.test(eng) && /map_doors_dead/.test(eng),

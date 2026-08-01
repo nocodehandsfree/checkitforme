@@ -512,7 +512,12 @@ function driveMapper(run: MapperRun): void {
       // hard-blocked while the STORE stays held, its other doors still askable. The store is only
       // ever abandoned when it never got us to a person (Update 3) or every door is burnt.
       const proving = run.phase === "map" && !run.doorProven;
-      const spentDoors = proving ? await doorsAskedAt(chainId, store.id) : [];
+      // A PROVEN DOOR IS EXEMPT from the spent-ask block (round-3 item 3). The held recipe's own
+      // doors were proven by a real answer — telling a re-map "doors that worked: X" and "never
+      // choose X" in the same breath burned every proven chain's best door and failed the store.
+      // The full first check may re-ask there (owner Update 1); the proof already exists.
+      const provenDoors = new Set((run.lockedRecipe?.steps || []).map((st) => String(st.value || "").toLowerCase()).filter(Boolean));
+      const spentDoors = proving ? (await doorsAskedAt(chainId, store.id)).filter((d) => !provenDoors.has(d)) : [];
       const blockedDoors = [...new Set([...run.doorsDead, ...spentDoors])];
       // Optimizing speed runs inside the store's open hours, re-checked before EVERY check — a run
       // that crosses closing time stops rather than mapping the night menu as if it were the day's.
