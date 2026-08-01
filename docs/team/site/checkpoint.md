@@ -4,34 +4,36 @@
 > design implementation, and ALL copy. Charter + standing rules: `handoff.md` (same folder).
 > Volatile — REPLACE stale lines, newest on top, ≤60 lines. History lives in git.
 
-## 07-31 — CHAIN LOGOS: sized by AREA, nine files re-trimmed (PR #102, staging + Admin live)
-- **TRAP: the stored image beats the repo file.** `chainLogoInfo()` is DB-first and the stored copies
-  had DRIFTED: Shaw's/TJ Maxx/Ross/Randalls/Tom Thumb sat letterboxed in a 256px square (13.7% ink vs
-  BJ's 59.7%). Editing the PNG changes NOTHING for any chain with a `logoUrl`.
-- **Second trap: `POST /api/chains/:id/logo` writes `chainSlug(name)` keys with DASHES (`shaw-s.png`),
-  the migration wrote the FILE name with underscores.** Uploading leaves the old key live: re-fetch the
-  URL and compare bytes every time. Five rows pointed at stale copies before I caught it.
-- **Export rule:** squarish marks pad to BJ's ink ratio (59.7%); wide wordmarks trim TIGHT, since
-  padding a 5:1 mark only steals tile width once the render clamps on it. `sizeLogo()` (twin in
-  checkit.html + app.html) gives equal visual AREA then clamps to 95%/90% of the tile, width in PERCENT
-  so smaller tiles need no re-run. Cached images fire onload before layout: the rAF retry is REQUIRED.
-- Driven in a browser on the live rows: canvas area identical across the squarish marks, every wide mark
-  now on 95% of tile width. Kroger untouched.
+## 08-01 — LOGOS: the size rule moves to the SERVER; one tile; the wall becomes the record (staging)
+- **`logoPct` on every store row is the whole idea.** The tile is square, so the width as a PERCENT of it
+  falls out of the artwork's proportions alone and is right at 46px and at 190px with nobody recomputing.
+  Both copies of the browser-side rule are DELETED, and the cached-onload race with them.
+- **`logoFields`/`withLogo` replace 15 hand-stamps** that resolved the chain 8 different ways (one store
+  could get different logos on different screens). `storeChainName` is the only dash-splitter left.
+- **Stored artwork is named by its CONTENT hash.** New picture = new address = it lands everywhere at once;
+  no `?v=` to bump, and a rename or a differing chain id (H Mart is 131 on prod, 99 on staging) can't orphan it.
+- **The wall reads the chain rows, not the shipped copies + `_meta.json`.** 111 marks, one tile size.
+- **Repair sweep** (`pushLogoRepairs`) asks prod what it holds and re-pushes logos that differ — the normal
+  push only ever sends what CHANGED, which is why 71 chains sat stale forever. Uploads refused on prod.
+- **ORDER MATTERS: do NOT ship Admin until the promote.** Admin reads prod's API; with no `logoPct` there
+  yet, `logoStyle` returns '' and every logo falls back to fit-inside — a regression on what's live today.
+- Deleted: the 52px pre-redesign tile (v2 is set unconditionally at load, so it never rendered), the zone
+  card's `.ic2`, three skin overrides, and `/api/admin/migrate-logos-to-r2` (it would have written the old
+  file-named copies back over the content-named ones).
 
-## 07-30 — CHECK STATUS: bottom clear on EVERY screen + verdict at hang up (PRs #100 #101, staging)
-- The pending render is its own screen: `showResult` drops `lview`, so `body.rv-pend` carries the SAME
-  measured strip. `renderLiveMsg` follows the NEWEST LINE, never `document.body.scrollHeight`; strip +
-  `scroll-margin-bottom` = `calc(160px + env(safe-area-inset-bottom))`; `POLICY_KNOWN` gates extras.
-- **Verdict at hang up (owner-ordered, `src/voice/elevenlabs.ts` via .unlock):** EL's "processing"
-  means the phone side is DONE, so the gate passes it when real turns + duration exist and the finalize
-  runs at once. DRIVEN on the real staging site (relay recipe below), zero page errors.
-- **The remaining "solid bottom" (owner 16:04 screenshot) is Safari's EXPANDED bar, NOT our paint.** iOS
-  collapses its bar ONLY on a finger scroll; this page scrolls ITSELF. Root colour is gate-locked.
-- **DO NOT pad the check status page to force a scroll** (`body.lview main{min-height:100dvh}`,
-  reverted 07-30): it strands the newest line and kills the reveal; `qa-tint-lock` 14b refuses it.
+## 07-31 — the artwork (superseded above; kept for the trap)
+- **The stored image beats the repo file** — `chainLogoInfo` is DB-first. Editing the PNG changes NOTHING
+  for a chain with a `logoUrl`. All 112 re-cut: squarish marks to BJ's ink ratio (59.7%), wide wordmarks
+  solved so the visible mark lands 4.5px clear of every edge.
+
+## 07-30 — CHECK STATUS: bottom clear on every screen + verdict at hang up (PRs #100 #101, staging)
+- The pending render is its OWN screen (`showResult` drops `lview`), so `body.rv-pend` carries the same
+  measured strip. `renderLiveMsg` follows the NEWEST LINE, never `document.body.scrollHeight`.
+- **DO NOT pad the page to force a scroll** (`body.lview main{min-height:100dvh}`, reverted): it strands
+  the newest line and kills the reveal; `qa-tint-lock` 14b refuses it. The leftover "solid bottom" is
+  Safari's EXPANDED bar, not our paint — root colour is gate-locked.
 - **A comp that leaves the homepage showing is a LIE.** The real view also hides `#builder` and adds
-  `body.lview` (`startLive` ~:5864). Drive that exact path or your screenshots lie. The step window is
-  live (@ec6e2d0): eyebrow + ONE big 22px state line, mark 212px off top-right.
+  `body.lview` (`startLive`). Drive that exact path or your screenshots lie.
 
 ## Verify recipe that works (07-26)
 Railway staging env + `DATABASE_URL=file:<scratch>/local.db PORT=88xx npx tsx src/server.ts`. CONSUMER page
@@ -50,11 +52,9 @@ each request via curl (`-H 'Accept-Encoding: identity'`, body to a FILE as bytes
 - iOS: Chromium CANNOT catch iOS paint — his phone is the rig; ship one change, "check your phone."
 - Copy an existing pattern WHOLE. Half-copying the zones basket reproduced the exact mess it fixed.
 - A bug that SURVIVES closing the sheet is leftover STATE. Diff the page before/after, do not theorise.
-- 'in_stock' substring-matches 'not_in_stock': match negatives first/exact. RENDER the comp and read EVERY state before touching a designed head (removed the zone ring once and burned a cycle).
-- **What the site SERVES beats what the repo holds.** Prove it by fetching the live URL and diffing bytes.
+- 'in_stock' substring-matches 'not_in_stock': match negatives first/exact. RENDER the comp and read EVERY state before touching a designed head. **What the site SERVES beats what the repo holds** — fetch the live URL and diff the bytes.
 
 ## Open (owner asks + the site queue)
 - Alerts sheet formatting · copy-doc location reconcile · missing email-confirmation (PROD email likely
   never re-set post-promote) · Restock SMS → A2P. Frozen-site tasks need the owner-named `.unlock`.
-  Logo fidelity in My Zones + the call-log header is COVERED by 07-31's shared `sizeLogo`. **PM: promote
-  wanted — the consumer half of the logo sizing (`sizeLogo` in checkit.html) is staging-only.**
+  **PM: promote wanted — the whole logo system is staging-only, and Admin must NOT ship before it.**

@@ -1,10 +1,12 @@
 # STATE — the owner's single source of truth
 One screen. Every session updates this at close (≤40 lines). New truth REPLACES old — history is in
 git. Last updated: 2026-08-01 (check-life fix + round 2 LIVE on staging, PM-audited; run 6 in the morning).
-## Store logos are all the same size now (07-31, LIVE on Admin and the real site)
-- Nine looked shrunken beside BJ's Wholesale. Five (Shaw's, TJ Maxx, Ross, Randalls, Tom Thumb) had a picture
-  with a big empty border baked in, and every logo was squeezed into a square, flattening wide ones like
-  Randalls. **New pictures live everywhere; the evening-out is on Admin and staging, real site at next promote.**
+## Store logos: all 112 re-cut, and one place now decides their size (07-31/08-01, staging)
+- Same weight, same grey box, clear space all round. New pictures are LIVE on the real site and Admin
+  already; the code half is on staging and needs a promote. **Your move: nothing** (PM reviews it first).
+- **Change a logo in one spot and it now really does change everywhere.** Never true before: the real
+  site, staging and the logo wall each kept their own copy and 71 chains sat quietly stale. The wall is
+  the record of truth now — it shows exactly what a customer sees, so it cannot lie to you.
 ## The check status page + the verdict wait (07-30, on staging)
 - The conversation follows its newest line, both screens clear Safari's bottom bar, and **the wait on ElevenLabs
   is GONE (your order):** at hang up we settle from our own words plus our finished read.
@@ -13,13 +15,11 @@ git. Last updated: 2026-08-01 (check-life fix + round 2 LIVE on staging, PM-audi
   never sent mail at all. Now every finish path sends, alerts stay ON until paused or deleted, one store =
   ONE email, a repeat subscribe says so. **Your move: tap the Fun store alert once, run a check, one email.**
 ## A wrong department no longer costs you the check (07-30): ask once to be put through, meter off through the hand-over, ask again when somebody new picks up.
-## The bottom bar can never go dark again, and Live is cleaned (07-30, live on Admin)
-- **The tint is nailed down**, three ways it used to break are refused before anything goes live. Cost per
-  check opens on **The baseline**, your 6.7¢ ceiling off your real prices.
+## The bottom bar can never go dark again, and Live is cleaned (07-30, live on Admin): the tint is nailed down, three ways it used to break are refused before anything goes live. Cost per check opens on **The baseline**, your 6.7¢ ceiling off your real prices.
 ## Every try back now runs the exact same way (07-30, on staging)
-- Every mapping check walks the menu the same way; the ONE answer being tested early is the only difference.
-  **Mapping calls is now Mapped checks** and each check shows faster or slower than the check before it. The
-  chains list names the model in plain text; a red alert sits beside a name only when work waits.
+- Every mapping check walks the menu the same way; the ONE answer tested early is the only difference.
+  **Mapping calls is now Mapped checks**, each showing faster or slower than the one before. The chains
+  list names the model in plain text; a red alert sits beside a name only when work waits.
 ## Chains: the page is rebuilt and every mapping call lands on it (07-30)
 - Tap a chain: **nav time** (getting through their phone menu, the part we control), what it costs, how often the
   recipe reaches Staff, the **Menu** by condition, the **Recipes** held, and **Review**.
