@@ -74,44 +74,48 @@ still acts WITHOUT asking the earpiece, and when the engine is unsure it keeps w
 going quiet — so Alpha can still press keys at a person in rare shapes, and Staff who says "one
 moment" can still be hung up on at 12 seconds.
 
-## FIX PASS 6 — BACK TO THE SPEC (same mapper chat · evidence @7a6d2205)
-**The spec never gave mapping a voice of its own. Mapping talks to machines; Charlie talks to
-people. The proving check puts CHARLIE on the call — the same Charlie every live check uses — and
-mapping's homegrown way of asking Staff is DELETED, not repaired.**
-0. THE BIG ONE. The proving check joins Charlie exactly like a live check does (the bridge that
-   already exists). Charlie asks about Pokémon, handles "one moment", survives holds — all already
-   built and being tuned by Echo. Mapping DELETES its own asking: the spoken question, the
-   answer-listening, the 12-second silence rule, the waiting words, the "answered" classification
-   (`navigator.ts:719-776`, the ask scaffold, `confirmResult`) — mapping only records what Charlie
-   reports back (asked · answer heard · yes/no · wrong department). Everything Staff-conversation
-   leaves this engine permanently.
-1. Alpha and Bravo act ONLY on the earpiece's word — nobody presses, nobody speaks until the
-   earpiece says a machine is talking; unsure = stay silent and listen. Remove the three leftover
-   self-deciders: the direct-pickup overrule (`navigator.ts:808`), the auto-escape person-words
-   (`navigator.ts:989`), the model declaring "human" + raw handoff stamp bypassing the earpiece
-   (`navigator.ts:941` → `:540-544`).
-2. Unsure can never become "machine" through a side door: remove the hard-coded "it kept talking"
-   inputs (`mapper.ts:270`, `navigator.ts:1070`, `sweep.ts:164`); reset the pause memory per new
-   voice (`navigator.ts:799,805`).
-3. Evidence order: a person-shaped line ("this is Maria", "how can I help") beats "we are inside
-   the menu we hold" (`listen-nav.ts:327-329`); a real counted ring beats a word-match to the
-   remembered menu.
-4. The person's clock starts at the person's first word (`listen-nav.ts:378`) — Charlie's join
-   feeds off this number.
-5. Two flags tests assert but nothing reads: first-call-never-hangs-up (`hangUpAllowed`) and
-   file-a-new-menu (`unknownLine`) — wire them for real.
-6. The store's remembered lines must be available during the FIRST mapping run's listens
-   (`mapgraph.ts:1378-1399` — read the run's own held lines, not only a locked map).
-7. Sweep truth: a short recording ("Please hold.") must not prove a chain "Staff answer directly"
-   (`sweep.ts:160-178,224-231`); greeting evidence must not ride labeled "direct"
-   (`map-capture.ts:55`); "Please hold." must still arm the handoff clock (`navigator.ts:739-741`).
-8. Free doors reaches a live run too (`mapper.ts:169-196` — the run's memory re-writes the
-   cleared lists).
-One spec, nine items, one commit each, each proven on the pretend calls in the rigs first (plus:
-instant pickup no ring · voicemail saying "hello?" · menu dumps to the operator mid-walk · two
-Staff on one check). Push, stop; PM audits blind. MILESTONE 1 closes on that audit.
+## Fix pass 6 — verdict (two blind readers + PM-run rigs · @5ea839e0)
+Rigs green (judge 47/47 · sim 330 · resume 20 · mapgraph 62 · api 14 · e2e 100/102 pre-existing) ·
+tsc clean · 14-point regression sweep holds · NO copies built — Charlie joins through the SAME door
+live checks use (`server.ts:1168-1206`, the barge pattern) and the deletion of mapping's own asking
+is complete. **FAIL anyway — the report back never arrives.** The record for the mapping check's
+room is never opened, so Charlie's join/answer/wrong-department events are dropped
+(`events.ts:200-201`) and the watcher at `server.ts:1191-1198` can never fire; grading runs at the
+hand-off instant, before Charlie asks (`navigator.ts:582-585,1045` → `map-capture.ts:152`) — EVERY
+successful proving check grades fail, spends the door's ask, rotates stores. A failed Charlie join
+hangs up ON the person (`navigator.ts:586-588`); the room's setup races the call instructions
+(fire-and-forget, unlike the barge twin `server.ts:1213`); one counted ring re-labels every earlier
+line "person" so the person's start can land at the call's first second — Charlie's join timer onto
+the menu (`listen-nav.ts:372-407,317`). Sweep still forges a pause result (`sweep.ts:163-165`);
+Alpha can press on a silent turn with no verdict (`navigator.ts:980-993`); "thank(s) for calling" is
+auto-machine (`listen-nav.ts:241`) so a branded Staff hello gets pressed at; voicemail's "hello?"
+joins Charlie (person-check runs before the dead-end check). The SIX practice calls were ordered a
+third time and are still absent — ~14 of the 22 new test checks read source text, not behavior.
+
+## FIX PASS 7 — the plumbing of Charlie's report (same mapper chat · evidence @5ea839e0)
+1. OPEN THE RECORD for the mapping check's room exactly like a live check (open at hand-off, close
+   at call end); Charlie's join · answer heard · yes/no · wrong department land on it and reach the
+   run. Today the watcher listens on a room that never exists.
+2. GRADE WHEN THE CALL ENDS, off Charlie's report — never at the hand-off instant. The run waits
+   for the call to finish, not for "status: human".
+3. A DOOR'S ASK IS SPENT only when the question was actually asked — never on a failed join, a
+   race, or a dropped line (`navigator.ts:582,1105,1322`).
+4. THE JOIN IS SAFE: room context set BEFORE the call instructions return (copy the barge twin);
+   a failed join waits quietly and retries once — never hangs up on the person; the category is the
+   run's product, not whatever sorts first (`server.ts:1176`); no leaked watcher per hand-off.
+5. THE RING MARKS ONLY WHAT FOLLOWS IT: lines before the ring keep their own verdicts
+   (`listen-nav.ts:372-407,317`) — the person's start can never land on the menu.
+6. LAST FORGED INPUTS OUT: sweep's made-up pause (`sweep.ts:163-165`) · no press/say on a silent
+   turn with no verdict (`navigator.ts:980-993`) · a store-brand "thanks for calling…" hello is not
+   auto-machine (`listen-nav.ts:241`) · the dead-end check runs before the person check when "leave
+   a message" is heard.
+7. THE SEVEN PRACTICE CALLS, non-negotiable, driven in the rigs BEFORE the fixes: instant pickup
+   no ring · branded hello then "one moment" · voicemail "hello?" · menu dumps to the operator ·
+   two Staff on one check · a Spanish-speaking person · Charlie's join failing as the person
+   answers. The pass fails on their absence alone.
 
 ## Standing owner decisions (unchanged)
 Live checks still answer on a stopwatch (listen-for-menu-words defaults off) — one small task,
 owner unlock. · e2e's 2 pre-existing fails assert the OLD wait-for-approval behavior R2 retires. ·
-No lock of the mapping surfaces until the owner names the live page the record of truth.
+No lock of the mapping surfaces until the owner names the live page the record of truth. · NOTHING
+merges to staging until the owner's word (his hold, 08-01).
