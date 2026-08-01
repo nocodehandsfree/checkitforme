@@ -66,7 +66,10 @@ button calls it, and it wipes the chain's whole history — no doors-only clear.
 ## FIX PASS 5 — reframed: one design change + hard rules (same mapper chat · evidence @f64c468b)
 Patching faces has failed twice; build it structurally.
 F5-1 (GATES, with F5-2). **Who is talking is decided line by line, and the person is dated from the
-  FIRST line of their speech.** (a) When person-detection fires, walk BACK through recent store
+  FIRST line of their speech.** THE OWNER'S TIE-BREAKER IS LAW: on a mapped chain, before the
+  handoff it is the store's recording, after the ring it is a person; on a first call to an unknown
+  store, WHEN UNSURE IT IS A PERSON — being polite to a recording costs seconds, hanging up on a
+  person is the thing we can never do. Every default in this engine flips to that side. (a) When person-detection fires, walk BACK through recent store
   lines and stamp the person at the start of their speech, not the newest line
   (`navigator.ts:491-502` + both call sites); (b) a hello that tail-joins onto a store line must
   SPLIT, not drag the stamp onto the store's line — today a desk answering within 5s of our last
