@@ -26,3 +26,11 @@ that made it law. A rule leaves this file only when the owner himself retires it
     turn, owned by the workflow (see `elevenlabs.ts` turn-taking notes). Two known lies: code
     comments claim a `call_tuning` Admin screen that DOES NOT EXIST, and Designer/Workflows write
     PROD voice config (no environment picker shipped) — "just tuning" can touch the real site.
+11. A FIX COVERS THE WHOLE FAMILY, never the one door. Found a caller reading the wrong source of
+    truth? Grep out EVERY caller of that source and fix all of them in ONE commit, listed in the fix
+    note. Runs 1-3 on 08-01 were one fault fixed three times through three doors, at the cost of
+    three of the owner's live calls.
+12. THE OWNER'S PHONE NEVER RE-FINDS AN OLD FAULT. Before inviting him to dial again, replay every
+    prior recorded run against the fixed engine on the rig; he dials only after all replay clean.
+    His calls prove new ground only. And on ANY live fault, the engine's own log is read FIRST,
+    before any code is opened (08-01: it showed each fault exactly, and was reached third).
