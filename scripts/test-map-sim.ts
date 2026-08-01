@@ -20,7 +20,7 @@ import {
   type MapRecipe, type EvidenceCall,
 } from "../src/calls/mapgraph";
 import { lockRecipeToChain } from "../src/calls/trainer-batch";
-import { greetingFrom, looksLikeDirectPickup, menuStillTalking, parseSpokenOptions, isMenuLine, parseMenuOptions, mergeMenu, looksLikeQuestion, isReprompt, pickedDoorFrom, doorsAskedAt } from "../src/calls/navigator";
+import { greetingFrom, looksLikeDirectPickup, menuStillTalking, parseSpokenOptions, isMenuLine, parseMenuOptions, mergeMenu, looksLikeQuestion, isReprompt, pickedDoorFrom, doorsAskedAt, questionBeforePick } from "../src/calls/navigator";
 import { recipeFromCall, gradeCheck, recordNavCall } from "../src/calls/map-capture";
 import { sameWording, menuLinesOf } from "../src/calls/mapper";
 import { toneShare, ConversationEar } from "../src/calls/listen-nav";
@@ -860,7 +860,7 @@ async function main() {
       "the held recipe's own doors are exempt — 'doors that worked: X' and 'never choose X' can no longer be said in the same breath");
     ok(/const door = pickedDoorFrom\(\(s\?\.steps \|\| \[\]\) as NavStep\[\]\) \|\| \(s\?\.redirectTo \|\| ""\)\.slice\(0, 40\)/.test(eng),
       "the door that dies is the option WE picked, never the clerk's redirect sentence");
-    ok(/await rememberDeadDoor\(run, door\);/.test(eng) && /map_doors_dead/.test(eng),
+    ok(/await rememberDeadDoor\(run, door, /.test(eng) && /map_doors_dead/.test(eng),
       "and a dead door is DURABLE, chain wide — the next run cannot spend the call again");
     ok(/trying the next door at this store/.test(eng) && !/taking a fresh store rather than asking again/.test(eng),
       "a spent or dead door holds the STORE — the next check takes the next door, same store");
@@ -868,6 +868,23 @@ async function main() {
       "a fresh store only when every door at this one is burnt or nobody ever answers");
     ok(/deadDoors: proving && blockedDoors\.length \? blockedDoors : undefined,/.test(eng),
       "and burnt doors ride to the navigator as a hard block, not only a sentence in the prompt");
+    // ROUND 3 ITEM 4: a door is QUESTION + OPTION. The dead record carries the question it died at
+    // (durable, old bare entries still load), and the navigator's block is scoped to that question.
+    ok(/await rememberDeadDoor\(run, door, questionBeforePick\(\(s\?\.steps \|\| \[\]\) as NavStep\[\]\)\);/.test(eng),
+      "a dying door records the question it answered");
+    ok(questionBeforePick([
+      { who: "ivr", text: "Are you a healthcare provider?", atSec: 16 },
+      { who: "us", text: 'said "no"', atSec: 18, action: "say", value: "no" },
+      { who: "ivr", text: "Pharmacy or front store services?", atSec: 26 },
+      { who: "us", text: 'said "pharmacy"', atSec: 28, action: "say", value: "pharmacy" },
+      { who: "us", text: 'asked: "any Pokémon cards?"', atSec: 40, action: "say", value: "any Pokémon cards?" },
+    ] as never) === "Pharmacy or front store services?",
+      "and the question found is the one right before the pick, the ask excluded");
+    {
+      const nv3 = readFileSync("src/calls/navigator.ts", "utf8");
+      ok(/if \(!entry\.q \|\| !speech \|\| !speech\.trim\(\)\) return true;\s*\n\s*return sameMenu\(entry\.q, speech\) \|\| speech\.toLowerCase\(\)\.includes\(w\);/.test(nv3),
+        "the block fires at that question (or blind), and lets the same digit through at a different one");
+    }
     // Behavioral: the picked door is the last route choice, scaffold excluded; the door ledger reads
     // per store.
     ok(pickedDoorFrom([

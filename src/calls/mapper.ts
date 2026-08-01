@@ -30,7 +30,7 @@ import { db } from "./../db/client";
 import { chains, retailers } from "../db/schema";
 import { getSetting, setSetting, allSettings } from "../db/settings";
 import { isCallingPaused } from "../redis";
-import { placeNavCall, getNavSession, defaultWorkflowAsk, classifyMode, menuHasCustomerService, pickedDoorFrom, doorsAskedAt, NavRecipe, NavStep } from "./navigator";
+import { placeNavCall, getNavSession, defaultWorkflowAsk, classifyMode, menuHasCustomerService, pickedDoorFrom, questionBeforePick, doorsAskedAt, NavRecipe, NavStep } from "./navigator";
 import { storeForChain, lockRecipeToChain, recipeFromSteps } from "./trainer-batch";
 import { chainDialable } from "./recipe";
 import { openState } from "../store-hours";
@@ -70,6 +70,7 @@ export interface MapperRun {
   bestMenuSecs?: number;         // the fastest MENU walk proved so far — what experiments are judged on
   benchmark: number | null;      // the chain's navSeconds BEFORE this run (the comparison readout)
   doorsDead: string[];           // menu doors proven to reach the wrong desk — never chosen again
+  doorsDeadQ?: Record<string, string>; // the question each dead door answered (a door = question + option)
   expectedGreeting?: string;     // the menu's opening line as heard on the proving check
   // ---- the two-level lock's store half ----
   doorProven?: boolean;          // Staff gave a real answer about the product at this store
@@ -168,14 +169,24 @@ async function rememberNever(run: MapperRun, move: string): Promise<void> {
 
 // A DEAD DOOR IS KNOWLEDGE, NOT A RUN'S SCRATCH NOTE. It cost a real call and a real Staff hello to
 // learn that a door reaches the wrong desk; wiping it at run end (as the first build did) meant the
-// next run could spend both again. Keyed by the option WE picked, chain-wide, durable.
+// next run could spend both again. Keyed by the option WE picked PLUS the question it answered —
+// a door is question + option, so "1" dead at one question never blocks "1" at another (round-3
+// item 4). Chain-wide, durable; old entries saved as bare strings still load (no question = block
+// by value, the old behaviour).
 const deadDoorsKey = (chainId: number) => `map_doors_dead:${chainId}`;
-async function loadDeadDoors(chainId: number): Promise<string[]> {
-  try { return JSON.parse((await getSetting(deadDoorsKey(chainId))) || "[]") as string[]; } catch { return []; }
+async function loadDeadDoors(chainId: number): Promise<Array<{ door: string; q?: string }>> {
+  try {
+    const raw = JSON.parse((await getSetting(deadDoorsKey(chainId))) || "[]") as Array<string | { door: string; q?: string }>;
+    return raw.map((e) => typeof e === "string" ? { door: e } : e).filter((e) => e && e.door);
+  } catch { return []; }
 }
-async function rememberDeadDoor(run: MapperRun, door: string): Promise<void> {
+async function rememberDeadDoor(run: MapperRun, door: string, q?: string): Promise<void> {
   if (!run.doorsDead.includes(door)) run.doorsDead.push(door);
-  try { await setSetting(deadDoorsKey(run.chainId), JSON.stringify(run.doorsDead.slice(-40))); } catch { /* best effort */ }
+  if (q) (run.doorsDeadQ = run.doorsDeadQ || {})[door] = q;
+  try {
+    const entries = run.doorsDead.map((d) => ({ door: d, q: run.doorsDeadQ?.[d] }));
+    await setSetting(deadDoorsKey(run.chainId), JSON.stringify(entries.slice(-40)));
+  } catch { /* best effort */ }
 }
 
 /** Build the experiment list from the locked route. Two levers, NO CLOCK ANYWHERE (owner Update 4):
@@ -437,13 +448,15 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
     }
   } catch { /* fresh discovery */ }
 
+  const knownDead = await loadDeadDoors(chainId);
   const run: MapperRun = {
     chainId, chainName: ch.name,
     phase: "map", running: true,
     attempt: 0, callsToday: usedToday,
     usedStores: [], store: null, rotate: false, target, needsTarget: false, reachedSecs: [],
     benchmark: ch.navSeconds ?? null,   // what we're trying to beat (the readout on the live card)
-    doorsDead: await loadDeadDoors(chainId),
+    doorsDead: knownDead.map((e) => e.door),
+    doorsDeadQ: Object.fromEntries(knownDead.filter((e) => e.q).map((e) => [e.door, e.q as string])),
     baseline: lockedRecipe, best: lockedRecipe,
     neverAgain: await loadNeverAgain(chainId),
     experiments: [], log: [],
@@ -518,7 +531,8 @@ function driveMapper(run: MapperRun): void {
       // The full first check may re-ask there (owner Update 1); the proof already exists.
       const provenDoors = new Set((run.lockedRecipe?.steps || []).map((st) => String(st.value || "").toLowerCase()).filter(Boolean));
       const spentDoors = proving ? (await doorsAskedAt(chainId, store.id)).filter((d) => !provenDoors.has(d)) : [];
-      const blockedDoors = [...new Set([...run.doorsDead, ...spentDoors])];
+      const blockedNames = [...new Set([...run.doorsDead, ...spentDoors])];
+      const blockedDoors = blockedNames.map((door) => ({ door, q: run.doorsDeadQ?.[door] }));
       // Optimizing speed runs inside the store's open hours, re-checked before EVERY check — a run
       // that crosses closing time stops rather than mapping the night menu as if it were the day's.
       if (run.phase === "speed" && !(await storeOpenNow(store.id))) {
@@ -537,7 +551,7 @@ function driveMapper(run: MapperRun): void {
       // steered away from every door already proven wrong OR whose one ask is spent, and asks at the
       // person — the answer IS the proof. A held route's doors ride as steering; its old (possibly
       // shortened) words do not.
-      const dead = blockedDoors.length ? ` NEVER choose ${blockedDoors.join(" or ")} — those doors are burnt (wrong desk, or their one ask is spent).` : "";
+      const dead = blockedNames.length ? ` NEVER choose ${blockedNames.join(" or ")} — those doors are burnt (wrong desk, or their one ask is spent).` : "";
       const hint = proving
         ? ((run.lockedRecipe?.steps || []).length
             ? "Doors that worked before, in order: "
@@ -631,7 +645,7 @@ function driveMapper(run: MapperRun): void {
           // redirect sentence, which no menu ever offers as a choice — and it dies durably, chain
           // wide. The next check takes the next-best door at the SAME store.
           const door = pickedDoorFrom((s?.steps || []) as NavStep[]) || (s?.redirectTo || "").slice(0, 40) || "that door";
-          await rememberDeadDoor(run, door);
+          await rememberDeadDoor(run, door, questionBeforePick((s?.steps || []) as NavStep[]));
           run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: `wrong department — "${door}" is dead, trying the next door at this store`, seconds: secs });
         } else if (s?.confirm?.asked) {
           // Staff heard the question but the check died without a verdict. That DOOR's one ask is

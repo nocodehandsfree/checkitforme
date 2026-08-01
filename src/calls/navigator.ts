@@ -153,10 +153,12 @@ export interface NavSession {
   recipeSeconds?: number;
   repromptHeard?: boolean;  // the store said it did not understand us
   greetingTwice?: boolean;  // the opening recording played again mid-check: we were sent to the start
-  /** Doors already proven to reach the wrong desk. A HARD block, not a sentence in the prompt: the
-   *  model cannot fire one of these however it decides, because a dead door costs a real call and a
-   *  real Staff hello every time it is re-picked. */
-  deadDoors?: string[];
+  /** Doors already burnt (wrong desk, or their one ask spent). A HARD block, not a sentence in the
+   *  prompt: the model cannot fire one of these however it decides, because a burnt door costs a
+   *  real call and a real Staff hello every time it is re-picked. A DOOR IS QUESTION + OPTION: `q`
+   *  carries the question the door died at, so "1" dead at one question never blocks "1" at another
+   *  and a store can never be falsely exhausted (round-3 item 4). No `q` = block by value anywhere. */
+  deadDoors?: Array<{ door: string; q?: string }>;
   deadDoorRefusals?: number;
   grade?: "pass" | "fail";  // decided by machine in finish; a failed check changes nothing
   failReason?: CheckFailReason;
@@ -851,9 +853,14 @@ async function navTurn(id: string, speech: string): Promise<string> {
   // offer, and the check ends honestly instead of ringing the wrong desk a second time.
   if ((d.action === "say" || d.action === "press") && d.value && (s.deadDoors || []).length) {
     const v = d.value.toLowerCase();
-    const dead = (s.deadDoors || []).some((door) => {
-      const w = door.toLowerCase();
-      return v.includes(w) || w.includes(v);
+    const dead = (s.deadDoors || []).some((entry) => {
+      const w = entry.door.toLowerCase();
+      if (!(v.includes(w) || w.includes(v))) return false;
+      // Scoped to its question: the same digit or word at a DIFFERENT question is a different door.
+      // No question on record, or no prompt in front of us, blocks by value (the safe side); a
+      // prompt that neither reads as that question nor names the option lets the pick through.
+      if (!entry.q || !speech || !speech.trim()) return true;
+      return sameMenu(entry.q, speech) || speech.toLowerCase().includes(w);
     });
     if (dead) {
       s.deadDoorRefusals = (s.deadDoorRefusals ?? 0) + 1;
@@ -1054,6 +1061,23 @@ export function pickedDoorFrom(steps: NavStep[]): string | undefined {
   const v = acts[acts.length - 1]?.value;
   return v ? String(v).toLowerCase() : undefined;
 }
+/** The QUESTION that pick answered — the store line right before the last route choice. A door is
+ *  question + option: the same word or digit at a different question is a different door. */
+export function questionBeforePick(steps: NavStep[]): string | undefined {
+  const all = steps || [];
+  let pick = -1;
+  for (let i = all.length - 1; i >= 0; i--) {
+    const st = all[i];
+    if (st.who === "us" && (st.action === "say" || st.action === "press") && st.value
+      && !String(st.text || "").startsWith("asked:")) { pick = i; break; }
+  }
+  if (pick < 0) return undefined;
+  for (let i = pick - 1; i >= 0; i--) {
+    const st = all[i];
+    if (st.who === "ivr" && String(st.text || "").trim()) return String(st.text).slice(0, 200);
+  }
+  return undefined;
+}
 
 /** Stores we've ALREADY asked the confirm question (settings: nav_confirm_asked:{chainId}). The caller
  *  uses this to ROTATE to a fresh store on a callback — never ask the same store twice (looks bad). */
@@ -1083,7 +1107,7 @@ async function recordConfirmAsked(chainId: number, retailerId: number, door?: st
 }
 
 /** Place the documentation call; returns the session id the admin polls for live progress. */
-export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number; early?: boolean }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string; relisten?: boolean; callerRecords?: boolean; stage?: CheckStage; expectedGreeting?: string; recipeSeconds?: number; deadDoors?: string[] }): Promise<{ id?: string; error?: string }> {
+export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number; early?: boolean }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string; relisten?: boolean; callerRecords?: boolean; stage?: CheckStage; expectedGreeting?: string; recipeSeconds?: number; deadDoors?: Array<{ door: string; q?: string }> }): Promise<{ id?: string; error?: string }> {
   if (!config.callsEnabled) return { error: "calls disabled on this preview deploy" };
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
