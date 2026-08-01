@@ -539,10 +539,17 @@ function driveMapper(run: MapperRun): void {
       // doors were proven by a real answer — telling a re-map "doors that worked: X" and "never
       // choose X" in the same breath burned every proven chain's best door and failed the store.
       // The full first check may re-ask there (owner Update 1); the proof already exists.
-      const provenDoors = new Set((run.lockedRecipe?.steps || []).map((st) => String(st.value || "").toLowerCase()).filter(Boolean));
-      const spentDoors = proving ? (await doorsAskedAt(chainId, store.id)).filter((d) => !provenDoors.has(d)) : [];
-      const blockedNames = [...new Set([...run.doorsDead, ...spentDoors])];
-      const blockedDoors = blockedNames.map((door) => ({ door, q: run.doorsDeadQ?.[door] }));
+      // The exemption must match how the LEDGER keys a door, not only how the recipe spells it: the
+      // winning word is often the SHORTENED one ("front"), while the ask was spent under the full
+      // phrase the menu offered ("front store services"). Keying on one and blocking on the other
+      // left a proven chain blocking its own best door (fix pass 4, item 2). Either spelling of a
+      // proven door — and either containing the other — is exempt.
+      const provenWords = (run.lockedRecipe?.steps || []).map((st) => String(st.value || "").toLowerCase()).filter(Boolean);
+      const isProvenDoor = (d: string) => provenWords.some((p) => p === d || p.includes(d) || d.includes(p));
+      const spentDoors = proving ? (await doorsAskedAt(chainId, store.id)).filter((e) => !isProvenDoor(e.door)) : [];
+      const blockedNames = [...new Set([...run.doorsDead, ...spentDoors.map((e) => e.door)])];
+      const spentQ = new Map(spentDoors.map((e) => [e.door, e.q] as const));
+      const blockedDoors = blockedNames.map((door) => ({ door, q: run.doorsDeadQ?.[door] ?? spentQ.get(door) }));
       // Optimizing speed runs inside the store's open hours, re-checked before EVERY check — a run
       // that crosses closing time stops rather than mapping the night menu as if it were the day's.
       if (run.phase === "speed" && !(await storeOpenNow(store.id))) {

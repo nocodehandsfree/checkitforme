@@ -789,8 +789,8 @@ async function main() {
     ok(/staffAnswered: s\.confirmResult === "answered",/.test(nav),
       "and only a REAL reply sets the pass shape the grader reads");
     // ROUND 2 ITEM 1 (navigator half): the ask ledger records the DOOR the ask was spent at.
-    ok((nav.match(/recordConfirmAsked\(s\.chainId, s\.retailerId, pickedDoorFrom\(s\.steps\)\)/g) || []).length === 2,
-      "both ledger writes record which door the ask was spent at, and only a SPOKEN ask spends one");
+    ok((nav.match(/recordConfirmAsked\(s\.chainId, s\.retailerId, pickedDoorFrom\(s\.steps\), questionBeforePick\(s\.steps\)\)/g) || []).length === 2,
+      "both ledger writes record which door the ask was spent at AND at which question, and only a SPOKEN ask spends one");
     ok(/s\.repromptHeard = true;/.test(nav), "the store saying it did not understand is written down as a fact");
     ok(/sameMenu\(firstIvr\.text, line\)\) s\.greetingTwice = true;/.test(nav),
       "and the opening recording playing again mid-check is caught as being sent to the start");
@@ -868,11 +868,11 @@ async function main() {
     ok(/run\.phase === "speed" && !\(await storeOpenNow\(store\.id\)\)/.test(eng),
       "the open-hours gate is re-read before EVERY speed check, pinned store or not");
     // ROUND 2 ITEM 1: a wrong desk burns the DOOR, never the store.
-    ok(/const spentDoors = proving \? \(await doorsAskedAt\(chainId, store\.id\)\)\.filter\(\(d\) => !provenDoors\.has\(d\)\) : \[\];/.test(eng),
+    ok(/const spentDoors = proving \? \(await doorsAskedAt\(chainId, store\.id\)\)\.filter\(\(e\) => !isProvenDoor\(e\.door\)\) : \[\];/.test(eng),
       "the ask ledger is per DOOR — a spent door is steered around while the store stays held");
     // ROUND 3 ITEM 3: a re-map never burns its own proven door — the held recipe's doors are exempt
     // from the spent-ask block, because the proof already exists and the full first check re-asks.
-    ok(/const provenDoors = new Set\(\(run\.lockedRecipe\?\.steps \|\| \[\]\)\.map\(\(st\) => String\(st\.value \|\| ""\)\.toLowerCase\(\)\)\.filter\(Boolean\)\);/.test(eng),
+    ok(/const isProvenDoor = \(d: string\) => provenWords\.some\(\(p\) => p === d \|\| p\.includes\(d\) \|\| d\.includes\(p\)\);/.test(eng),
       "the held recipe's own doors are exempt — 'doors that worked: X' and 'never choose X' can no longer be said in the same breath");
     ok(/const door = pickedDoorFrom\(\(s\?\.steps \|\| \[\]\) as NavStep\[\]\) \|\| \(s\?\.redirectTo \|\| ""\)\.slice\(0, 40\)/.test(eng),
       "the door that dies is the option WE picked, never the clerk's redirect sentence");
@@ -910,10 +910,24 @@ async function main() {
     ]) === "front store services", "the picked door is the last route choice, the ask itself excluded");
     {
       const { setSetting: put } = await import("../src/db/settings");
-      await put(`nav_confirm_asked_doors:${chain.id}`, JSON.stringify([`${east.id}:front store services`, `${west.id}:pharmacy`]));
+      // Old bare entries still load (no question = block by value, the old behaviour), and new ones
+      // carry the question so a spent door is level-scoped exactly like a dead one (fix pass 4).
+      await put(`nav_confirm_asked_doors:${chain.id}`, JSON.stringify([
+        `${east.id}:front store services`,
+        { s: east.id, door: "general", q: "I can assist you with photo services and General Store inquiries." },
+        { s: west.id, door: "pharmacy" },
+      ]));
       const doors = await doorsAskedAt(chain.id, east.id);
-      ok(doors.length === 1 && doors[0] === "front store services",
-        "the ledger answers per store: only this store's spent doors come back");
+      ok(doors.length === 2 && doors.some((d) => d.door === "front store services" && !d.q),
+        "the ledger answers per store, and an entry saved the old way still loads");
+      ok(doors.some((d) => d.door === "general" && /General Store inquiries/.test(d.q || "")),
+        "and a spent door carries the question it was spent at");
+      // The exemption keys the way the ledger does: the winner is often the SHORTENED word while the
+      // ask was spent under the full phrase the menu offered.
+      const provenWords = ["front"];
+      const isProven = (d: string) => provenWords.some((p) => p === d || p.includes(d) || d.includes(p));
+      ok(isProven("front store services") && isProven("front") && !isProven("pharmacy"),
+        "a proven door is exempt under either spelling — full phrase or its shortened winner");
     }
 
     // FULL WORDS IN THE LEARN STAGE (contract stage 1). The learning call's own instructions must say

@@ -1014,7 +1014,7 @@ function finish(s: NavSession, status: "human" | "failed" | "mapped") {
       target: s.target,
     };
   }
-  if (s.confirm?.asked && s.chainId != null) void recordConfirmAsked(s.chainId, s.retailerId, pickedDoorFrom(s.steps)); // the ask is spent at this DOOR
+  if (s.confirm?.asked && s.chainId != null) void recordConfirmAsked(s.chainId, s.retailerId, pickedDoorFrom(s.steps), questionBeforePick(s.steps)); // the ask is spent at this DOOR, at that question
   void persistRun(s); // log this run so the admin can watch the learner's history per chain
   // AND INTO THE MAP. Owner, 07-30: he pressed Re-map, a real CVS was called, its menu was walked
   // perfectly, and the chain page showed nothing. Only the sweep and the auto-mapper folded their own
@@ -1118,24 +1118,32 @@ export function questionBeforePick(steps: NavStep[]): string | undefined {
 export async function confirmAskedStores(chainId: number): Promise<number[]> {
   try { return JSON.parse((await getSetting(`nav_confirm_asked:${chainId}`)) || "[]") as number[]; } catch { return []; }
 }
-/** The DOORS whose one ask is spent at a store (settings: nav_confirm_asked_doors:{chainId}, entries
- *  "storeId:door"). Staff are asked once per DOOR, never more — a spent door is steered around and
- *  hard-blocked; the store itself stays held, its other doors still askable. */
-export async function doorsAskedAt(chainId: number, storeId: number): Promise<string[]> {
+/** The DOORS whose one ask is spent at a store (settings: nav_confirm_asked_doors:{chainId}). Staff
+ *  are asked once per DOOR, never more — a spent door is steered around and hard-blocked; the store
+ *  itself stays held, its other doors still askable. Entries carry the QUESTION the door answered,
+ *  exactly like the dead-door list, so a spent door is level-scoped the same way (fix pass 4). Old
+ *  "storeId:door" strings still load, with no question (block by value, the old behaviour). */
+export async function doorsAskedAt(chainId: number, storeId: number): Promise<Array<{ door: string; q?: string }>> {
   try {
-    const arr = JSON.parse((await getSetting(`nav_confirm_asked_doors:${chainId}`)) || "[]") as string[];
-    return arr.filter((e) => e.startsWith(`${storeId}:`)).map((e) => e.slice(String(storeId).length + 1));
+    const arr = JSON.parse((await getSetting(`nav_confirm_asked_doors:${chainId}`)) || "[]") as Array<string | { s: number; door: string; q?: string }>;
+    return arr
+      .map((e) => typeof e === "string"
+        ? (e.startsWith(`${storeId}:`) ? { door: e.slice(String(storeId).length + 1) } : null)
+        : (Number(e?.s) === storeId && e?.door ? { door: e.door, q: e.q } : null))
+      .filter((e): e is { door: string; q?: string } => !!e && !!e.door);
   } catch { return []; }
 }
-async function recordConfirmAsked(chainId: number, retailerId: number, door?: string): Promise<void> {
+async function recordConfirmAsked(chainId: number, retailerId: number, door?: string, q?: string): Promise<void> {
   try {
     const arr = await confirmAskedStores(chainId);
     if (!arr.includes(retailerId)) await setSetting(`nav_confirm_asked:${chainId}`, JSON.stringify([...arr, retailerId].slice(-200)));
     if (door) {
       const key = `nav_confirm_asked_doors:${chainId}`;
-      const doors = JSON.parse((await getSetting(key)) || "[]") as string[];
-      const entry = `${retailerId}:${door.toLowerCase()}`;
-      if (!doors.includes(entry)) await setSetting(key, JSON.stringify([...doors, entry].slice(-400)));
+      const raw = JSON.parse((await getSetting(key)) || "[]") as Array<string | { s: number; door: string; q?: string }>;
+      const d = door.toLowerCase();
+      const already = raw.some((e) => typeof e === "string" ? e === `${retailerId}:${d}` : (Number(e?.s) === retailerId && e?.door === d));
+      // The question rides with the door, so a spent door is level-scoped exactly like a dead one.
+      if (!already) await setSetting(key, JSON.stringify([...raw, { s: retailerId, door: d, q: q ? q.slice(0, 200) : undefined }].slice(-400)));
     }
   } catch (e) { console.error("[navigator] recordConfirmAsked", e); }
 }
@@ -1213,7 +1221,7 @@ export function navEnded(id: string) {
   markNow(id, "endMs");
   emit(id, "hangup", s.stopReason || (s.humanAtSec != null ? "Reached a person" : "Never reached a person"), { status: s.status, humanAtSec: s.humanAtSec });
   closeReceipt(id, s.stopReason, s.status);
-  if (s.confirm?.asked && s.chainId != null) void recordConfirmAsked(s.chainId, s.retailerId, pickedDoorFrom(s.steps));
+  if (s.confirm?.asked && s.chainId != null) void recordConfirmAsked(s.chainId, s.retailerId, pickedDoorFrom(s.steps), questionBeforePick(s.steps));
   // A FAILED CHECK CHANGES NOTHING — not even the chain's mapping status stamp. And a check a RUN
   // owns (it carries a stage) never stamps the chain either: the run's one write at lock does that.
   if (s.chainId != null && !s.stage && s.grade !== "fail") void markNavOutcome(s.chainId, s.humanAtSec != null);
