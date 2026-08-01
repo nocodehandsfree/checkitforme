@@ -908,7 +908,9 @@ function finish(s: NavSession, status: "human" | "failed" | "mapped") {
   // both the run log and the map fold read the same verdict, so the screens can never disagree.
   {
     const heard = s.steps.find((st) => st.who === "ivr" && st.text)?.text;
-    const said = s.steps.filter((st) => st.who === "us" && !String(st.text).startsWith("asked:")).length;
+    const saidValues = s.steps
+      .filter((st) => st.who === "us" && (st.action === "say" || st.action === "press") && st.value && !String(st.text).startsWith("asked:"))
+      .map((st) => String(st.value));
     const g = gradeCheck({
       stage: s.stage ?? (s.relisten ? "speed" : "map"),
       expectedGreeting: s.expectedGreeting, heardGreeting: heard,
@@ -917,7 +919,8 @@ function finish(s: NavSession, status: "human" | "failed" | "mapped") {
       ringOrStaff: s.endedOnRing || s.humanAtSec != null,
       staffAnswered: s.confirmResult === "answered",
       repromptHeard: s.repromptHeard, greetingTwice: s.greetingTwice,
-      plannedSteps: s.barge?.plan?.length, saidSteps: said,
+      plannedValues: (s.barge?.plan || []).map((p) => String(p.value || "")),
+      saidValues,
       testedEarly: !!s.barge?.plan?.some((p) => p.early),
       navSeconds: s.transferAtSec ?? null, recipeSeconds: s.recipeSeconds ?? null,
     });
@@ -1116,6 +1119,18 @@ export async function placeNavCall(chainId: number | null, retailerId: number, r
   }
   const d = (await r.json()) as { sid?: string };
   if (d.sid) session.callSid = d.sid;
+  // THE CARRIER'S WORD CAN GO MISSING. If the end callback never arrives, nothing would ever grade
+  // this check, fold it, or free its memory — the third way a check used to end ungraded. This is a
+  // one-shot backstop tied to THIS call, not a watcher: it fires once, well past the call's own
+  // ceiling, does nothing when the check already ended, and dies with the session.
+  const ceiling = Math.min(extra?.maxSec ?? MAX_CALL_SEC, MAX_CALL_SEC) + 60;
+  setTimeout(() => {
+    const live = sessions.get(id);
+    if (!live || live.grade != null) return;
+    live.stopReason = live.stopReason || "the carrier never said the call ended";
+    finish(live, "failed");
+    closeReceipt(id, live.stopReason, live.status);
+  }, ceiling * 1000);
   return { id };
 }
 export function navEnded(id: string) {

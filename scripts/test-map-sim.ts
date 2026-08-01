@@ -644,8 +644,14 @@ async function main() {
       ok((CHECK_FAIL_REASONS as readonly string[]).length === 7 && !(CHECK_FAIL_REASONS as readonly string[]).includes("wrong menu"),
         "the reason list is the owner's seven, word for word, nothing else");
     }
-    ok(gradeCheck({ ...base, plannedSteps: 3, saidSteps: 2 }).reason === "said wrong words",
+    ok(gradeCheck({ ...base, plannedValues: ["no", "front", "general"], saidValues: ["no", "front"] }).reason === "said wrong words",
       "OUR WORDS SAID is a pass condition: a skipped answer fails even with the handoff and ring heard");
+    // ROUND 2 ITEM 8: the words are checked WORD FOR WORD, not counted. Three things said, three
+    // owed — but "general" was never spoken; a re-said "no" inflated the count. The count passed it.
+    ok(gradeCheck({ ...base, plannedValues: ["no", "front", "general"], saidValues: ["no", "no", "front"] }).reason === "said wrong words",
+      "a re-said answer can no longer stand in for one never spoken");
+    ok(gradeCheck({ ...base, plannedValues: ["no", "front", "general"], saidValues: ["no", "front", "general", "general"] }).grade === "pass",
+      "and honestly re-said answers (the menu asked twice) still pass");
     // ROUND 2 ITEM 2: a store where Staff just pick up — no announced handoff, no ring we hang up on —
     // passes on the contract's other shape: Staff answered and replied.
     ok(gradeCheck({ stage: "map", transferHeard: false, ringOrStaff: true, staffAnswered: true }).grade === "pass",
@@ -661,7 +667,7 @@ async function main() {
       "a speed try that broke the walk fails as barge didn't work");
     ok(gradeCheck({ stage: "map", transferHeard: false, ringOrStaff: false, repromptHeard: true }).reason === "menu repeated itself",
       "the store asking twice fails as menu repeated itself");
-    ok(gradeCheck({ stage: "map", transferHeard: false, ringOrStaff: false, plannedSteps: 3, saidSteps: 1 }).reason === "menu hung up on us",
+    ok(gradeCheck({ stage: "map", transferHeard: false, ringOrStaff: false, plannedValues: ["no", "front", "general"], saidValues: ["no"] }).reason === "menu hung up on us",
       "dying with answers still owed fails as menu hung up on us");
     ok(gradeCheck({ ...base, greetingTwice: true }).reason === "sent to beginning of menu",
       "the greeting playing again fails as sent to beginning of menu");
@@ -684,6 +690,11 @@ async function main() {
       "and the same verdict rides both the run log and the map fold, so screens cannot disagree");
     ok(/if \(s\.grade == null && s\.status !== "human" && s\.status !== "failed"\) \{[\s\S]{0,300}?finish\(s, "failed"\);/.test(nav),
       "a check the carrier ended still gets its grade — no check ever ends ungraded");
+    // ROUND 2 ITEM 8: the third ungraded end is closed — a LOST end callback.
+    ok(/const live = sessions\.get\(id\);\s*\n\s*if \(!live \|\| live\.grade != null\) return;\s*\n\s*live\.stopReason = live\.stopReason \|\| "the carrier never said the call ended";/.test(nav),
+      "a lost carrier callback is closed by a one-shot backstop tied to the call — it grades, folds and frees");
+    ok(/plannedValues: \(s\.barge\?\.plan \|\| \[\]\)\.map\(\(p\) => String\(p\.value \|\| ""\)\)/.test(nav),
+      "and the grader is handed the owed WORDS, not a step count");
     ok(/if \(s\.chainId != null && !s\.stage && s\.grade !== "fail"\) void markNavOutcome/.test(nav),
       "a failed or run-owned check never stamps the chain's mapping status");
     ok(/kind: "menu-changed",\s*\n\s*prompt: heard\.slice\(0, 200\),/.test(nav),

@@ -129,8 +129,11 @@ export function gradeCheck(o: {
                                       // Staff just pick up (no announced handoff) can ever produce
   repromptHeard?: boolean;            // "sorry, I'm not understanding"
   greetingTwice?: boolean;            // the opening recording played again mid-check
-  plannedSteps?: number;              // answers the route owes
-  saidSteps?: number;                 // answers actually said
+  /** The answers the route owes and the answers actually said, WORD FOR WORD. A count is not a
+   *  check: a re-said answer inflates a count, so a never-spoken answer could pass on arithmetic.
+   *  Each owed word must have been said at least as many times as the route owes it. */
+  plannedValues?: string[];
+  saidValues?: string[];
   testedEarly?: boolean;              // this check cut in on the menu's own words
   navSeconds?: number | null;         // this check's menu time
   recipeSeconds?: number | null;      // the reigning recipe's menu time
@@ -140,6 +143,16 @@ export function gradeCheck(o: {
   }
   if (o.wrongDepartment) return { grade: "fail", reason: "wrong department" };
   if (o.greetingTwice) return { grade: "fail", reason: "sent to beginning of menu" };
+  // OUR WORDS SAID, word for word: every answer the route owes must actually have been spoken, as
+  // many times as it is owed. Counting steps was not a check — a re-said answer inflated the count
+  // and a never-spoken one passed on arithmetic.
+  const wordsMissing = (() => {
+    const planned = (o.plannedValues || []).map((v) => v.toLowerCase()).filter(Boolean);
+    if (!planned.length) return false;
+    const said = (o.saidValues || []).map((v) => v.toLowerCase());
+    const count = (arr: string[], v: string) => arr.filter((x) => x === v).length;
+    return planned.some((v) => count(said, v) < count(planned, v));
+  })();
   // TWO pass shapes, per the contract: the handoff announced AND the ring heard, OR Staff answered
   // and replied. A store where Staff just pick up never plays a transfer line — without the second
   // shape, whole chains whose desks answer directly could never pass and never lock.
@@ -147,14 +160,12 @@ export function gradeCheck(o: {
   if (!reached) {
     if (o.testedEarly) return { grade: "fail", reason: "barge didn't work" };
     if (o.repromptHeard) return { grade: "fail", reason: "menu repeated itself" };
-    if ((o.saidSteps ?? 0) < (o.plannedSteps ?? 0)) return { grade: "fail", reason: "menu hung up on us" };
+    if (wordsMissing) return { grade: "fail", reason: "menu hung up on us" };
     return { grade: "fail", reason: "said wrong words" };
   }
   // OUR WORDS SAID is a PASS CONDITION, not just a fail label. A check that skipped an answer and
   // still stumbled onto a ring did not prove the route — it proved a shortcut nobody chose.
-  if ((o.plannedSteps ?? 0) > 0 && (o.saidSteps ?? 0) < (o.plannedSteps ?? 0)) {
-    return { grade: "fail", reason: "said wrong words" };
-  }
+  if (wordsMissing) return { grade: "fail", reason: "said wrong words" };
   if (o.stage === "speed" && typeof o.navSeconds === "number" && typeof o.recipeSeconds === "number"
     && o.navSeconds >= o.recipeSeconds) {
     return { grade: "fail", reason: "not faster" };
