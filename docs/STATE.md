@@ -1,6 +1,6 @@
 # STATE — the owner's single source of truth
 One screen. Every session updates this at close (≤40 lines). New truth REPLACES old — history is in
-git. Last updated: 2026-08-01 (mapping engine, part 1 of 3: one judge for who is talking; handed off for audit).
+git. Last updated: 2026-08-01 (mapping engine part 1: mapping talks to machines, Charlie talks to people).
 ## Store logos are all one size, and the check status page is clean (07-30/31)
 - Logos: new pictures live everywhere; the evening-out is on Admin and staging, real site at next promote.
 - The status page follows its newest line, clears Safari's bottom bar, and **the wait on ElevenLabs is GONE
@@ -12,25 +12,20 @@ git. Last updated: 2026-08-01 (mapping engine, part 1 of 3: one judge for who is
 - We ask once to be put through, stop paying while they hand us over, ask again when somebody new picks up
   (a switch in Calls → App turns it off; only your phone can test the real words). The tint is nailed down,
   and cost per check opens on **The baseline**, your 6.7¢ ceiling off your real prices.
-## Mapping rebuild, part 1 of 3 (the engine): fifth pass done — HANDED OFF for the PM's blind audit (08-01)
-- Rebuilt the piece that kept breaking, instead of patching it again. **One judge now answers "is that
-  the store's recording or a person?" for the whole engine**, and it decides in this order: does this
-  match what this store has said on earlier calls (a recording repeats itself word for word, a person
-  never does) · where are we (before the hand-off it's the machine, after the desk rings it's a person)
-  · the words themselves · if still unsure, go quiet for two seconds, because a recording keeps reading
-  and a person stops · and if it STILL can't tell, it's a person. Six scattered guesses are retired.
-- Two rules make calling real people to hang up on them impossible even if that judge is ever wrong: a
-  listening check with nothing to walk is refused before it dials, and a store with nothing to walk locks
-  without another call. A store that plays a recording and then hands you to Staff is now its own kind, so
-  we never start talking over the recording. The first call to a store we've never rung listens to
-  everything and hangs up on nothing, and its menu is remembered from then on.
-- The chain page has two new buttons: **Start over** (clears the checks and old recipes, keeps the way in)
-  and **Free doors** (unblocks the ways in it decided were wrong, keeps everything else).
-- **Two things wait on YOU:** (1) live customer checks still say their answers on a timer — the built
-  listening way is switched off, and flipping it changes the cost numbers (a fresh chat builds it on your
-  word); (2) should a changed way through still wait for your tap, or switch itself hands-free?
-- Side branch only, 451 + 100 rig checks green; the only 2 red wait on your call above. **Staging untouched
-  until you say "clear".** Part 1 closes on the PM's audit, not my word.
+## Mapping rebuild, part 1 of 3 (the engine): back to the spec — HANDED OFF for the audit (08-01)
+- **You were right, and it was the whole problem.** Mapping had been given its own way of talking to
+  Staff. It talks to machines. Charlie talks to people. The check that proves we reached the right
+  department now hands the SAME live call to Charlie, exactly the way a customer's check does, and
+  every line of mapping's own asking is deleted: the question it spoke, its voice, its listening for
+  an answer, its silence rule. Mapping just writes down what Charlie tells it.
+- With that gone, the rest fell out: nobody presses a key or says a word unless the earpiece says a
+  machine is talking, and unsure means stay quiet and listen. A store's first ever call listens to
+  everything and hangs up on nothing, so its menu is on file from then on.
+- **Two things still wait on YOU:** (1) live customer checks still say their answers on a timer — the
+  built listening way is switched off, and flipping it changes the cost numbers; (2) should a changed
+  way through wait for your tap, or switch itself hands-free?
+- Side branch only, 473 + 100 rig checks green; the only 2 red wait on your call above. **Staging
+  untouched until you say "clear".** NOT tested on a real store: Charlie joining a mapping check.
 ## The new calling engine is ON for staging. Your six test calls are the last thing (07-28/29)
 - **Nothing to flip.** A check from staging.checkitforme.com goes through the new engine. **Listen for:** it asks
   once and waits · no keypad beeps once you are talking · after a hold it asks you again if you might be new.
