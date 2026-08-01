@@ -1,6 +1,6 @@
 # STATE — the owner's single source of truth
 One screen. Every session updates this at close (≤40 lines). New truth REPLACES old — history is in
-git. Last updated: 2026-07-31 (in stock alerts fixed; logos sized to match; try backs run the same way).
+git. Last updated: 2026-08-01 (the check-life fix is built from the audit; waiting on the owner's "clear").
 ## Store logos are all the same size now (07-31, LIVE on Admin and the real site)
 - Nine looked shrunken beside BJ's Wholesale. Five (Shaw's, TJ Maxx, Ross, Randalls, Tom Thumb) had a picture
   with a big empty border baked in, and every logo was squeezed into a square, flattening wide ones like
@@ -30,10 +30,8 @@ git. Last updated: 2026-07-31 (in stock alerts fixed; logos sized to match; try 
   builds it in THREE chunks; the PM verifies every chunk against the contract before the next; you test
   ONCE at the end, a fresh CVS start to finish. Old "done" claims are void; the audit file is the fix list.
 ## The new calling engine is ON for staging. Your six test checks are the last thing (07-28/29)
-- **08-01, your five test runs found seven real faults; nine fixes are on staging, none phone-proven yet.** The
-  worst: a leftover timer opened a second Charlie into your hold. Full ledger for the PM:
-  `docs/team/voice-calls/test-day-2026-08-01.md`. **Next Echo audits every place that can end a check or open
-  Charlie as ONE family, replays your five runs on the rig, and only then asks for run 6.**
+- **08-01: the check-life audit's fix is BUILT, waiting on your "clear" — nothing touched staging.** One gatekeeper now answers "is this check still running?" from our own record and the phone company only, kept in the database so a restart cannot flip the answer back to ElevenLabs' guess. All three fault families fixed one family per commit, plus: the fragment "no worries" replies, the dead Testing row on a refused dial, the doubled line and the bouncing page.
+- Every engine test is green (103 rig checks; a real browser drove the live page clean). The "No charge" wording on a hold drop is Webbie's one string (your ruling stands: a hold drop is charged). Say **clear** and it merges to staging for run 6.
 - **Also proven 07-31:** ElevenLabs refuses our own cheaper AI on a quick-cloned voice like Branson HD. Email sent
   asking them to lift it. If no, we re-clone him the long way or do the talking ourselves.
 ## PROMOTED 07-30 (owner's go, PM drove it) — everything built since the 27th is on the real site and Admin: the chain page's server half, the Testing scorecard's server half, the wrong-department save, Spanish names on the plans. The new engine stays OFF on the real site until you flip it; customers still see the coming-soon splash.
