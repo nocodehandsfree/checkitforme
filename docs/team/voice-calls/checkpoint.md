@@ -10,21 +10,43 @@
 - SWITCHES: `cheapBridgeAll` ON staging, prod OFF till promote · `askForTransfer` ON · `stopKeysOnHuman`/`closeAgentOnHold` forced true in `getPolicy`. **`ENV_FLAGS` (app.html) must equal `KEEP_LOCAL_FLAGS`** or the mirror stomps staging in a minute. Numbers in `src/calls/tuning.ts`.
 - Wrong-department save SHIPPED 07-30 (gates O.5-O.7). 07-31 owner test: **NEVER ask the provider if a check is alive** — `getReceipt` + `transcriptOf` answer `/pub/live/:cid`; hand-over verb rule tightened. Driven: delta-clip 72, prompts 78, behaved 38.
 - THE ONE EAR: a VETO, never a green light; §10 says never build a second. `.unlock` scope trick: sprawl gate hooks Write only; open ONLY the named scope, then DELETE it.
-## CHUNK 1 OF THE MAPPING REBUILD — THE ENGINE — **NOT DONE** (PM audit 08-01: build real, 14 fixes remain)
-**PM: please confirm to the owner, in his words:** the 14-item list (`audit-code-vs-contract.md` on
-`claude/check-pm-review-dbuf2k`) IS the remainder of chunk 1 — chunk 1 is not done, nothing moves to
-chunk 2 (self-healing) or chunk 3 (screens) until all 14 are fixed, each proven, and you re-audit and
-pass the chunk. Item 4 (live checks still answer on a clock) and the two pre-existing whole-journey
-rig failures are HELD for the owner's word, per your list. Work continues top to bottom on the side
-branch; nothing merges to staging without his "clear".
-Branch `claude/mapping-engine-contract-wecvcy`, **NOT merged to staging** (owner testing there; merge on his "clear"). Contract = `build-contract.md` incl. OWNER ROUNDS R1-R6; fix list = `audit-code-vs-contract.md`. **CVS (chain 5) wiped on BOTH envs over live HTTP first**: 13 broken-build checks cleared, route kept (say "no" → "front" → "general"), evidence emptied.
-- **Stage machine (`mapper.ts`)**: phases `map | speed | locked | stopped`. **LEARN MENU FIRST, ALWAYS** — the held-recipe shortcut to speed is deleted; a held route rides only as door steering. The proving check is the ONLY ask (once per store; ledger `nav_confirm_asked` read; an unresolved ask rotates stores, never re-asks). Then ring-hang-up listens until the SAME lines are heard twice in a row (`sameWording`, menu lines only, Staff greeting excluded) → **store locked + chain LIVE in one stroke** (`finalizeAndLock` activate; `approved_at` = the day the map succeeded, refreshed on a same-route re-proof). **No prove dialing exists**: `map_proven:<chain>` seeded with the locked store; `learnFromReceipt` adds a store when a real customer check reaches Staff there (no wrong-department); 3 distinct = fully proven.
-- **Speed**: same store; open hours re-checked before EVERY check (pinned too). Experiments `shorten | cutin`; **NO CLOCK ANYWHERE** — `early` now means "answer on the first chunk of this step's own recording" (never on silence, a re-prompt, or a spoke-over tail; `saidWasTail` guards). **Every ring hang-up waits for the SECOND ring** (RULES 2); the handoff line no longer ends a check; nav Ear is tone-deaf so `byClock` (cadence, routed+6s) stands in when rings=0. A win calls `finalizeAndLock` immediately (Update 5) and **never nulls chain seconds** (`lockRecipeToChain` falls back to held values). Losses blacklisted DURABLY (`map_never:<chain>`).
-- **Grading (`gradeCheck`)**: the fixed SEVEN reasons ("wrong menu" deleted). "Our words said" is a PASS condition. A carrier-ended call grades via `navEnded`→`finish` — no check ends ungraded. Unmatched greeting = fail with NO reason + `reportUnknown kind:"menu-changed"` in the store's exact words (seen_count = heard twice); a mid-run menu change STOPS the run (chunk 2 wires the auto re-map).
-- **A failed check changes NOTHING**: mapper no longer calls `recordFailedAttempt`; `markNavOutcome` skipped for failed/staged checks; stage rides RAW on `recordNavCall`/`persistRun` so un-staged Admin calls fold into the map again (the 07-31 regression, closed by deletion).
-- **DELETED**: listen-first path (navigator + sweep) · the Re-map button (Review cards, chain-page label, empty states) + the route's relisten branch (`trainer/document` stamps no stage) · binary barge search/`bargeState`/`needs-review` phase. Old saved runs resume coerced (prove→map, barge→cutin).
-- **DRIVEN**: test-map-sim **241/241** · test-mapper-resume **13/13** · test-mapgraph 62/62 · test-map-api 14/14 · tsc clean. NOT verified: a real phone call under the new engine (owner tests once, at the end, a fresh CVS — R6).
-- **OPEN — chunk 2 (self-healing, fresh chat)**: mute/unmute loop, pooled re-map jobs, chain-level menu change (3 stores → fall back to full words), conditions as discovered VERSIONS (R4; the hard-coded day/9pm/Spanish trio still lives in app.html), auto re-map on menu-changed. **Chunk 3**: the screens (R5; stage headers, "slower", fail pills, Menu doors, timeline, "Recipe winner" removal, PHASE label map in app.html still keys old names).
+## CHUNK 1 — ROUND 2 BUILT (08-01): 13 of the PM's 14 fixed, each driven; TWO things held for the OWNER
+**Held for the owner's word (PM's own scoping):** item 4 — live customer checks still fire locked
+recipes on elapsed seconds (`bridge-place.ts`/`bridge.ts`, machine-locked; the menu-words way exists
+but defaults off) and their records still call dial-to-person "nav" — flipping it changes the cost
+buckets, his call. And the two pre-existing whole-journey rig failures (a changed route waits for
+approval vs R2's hands-free rule) — re-run 08-01, still the same two, untouched.
+**The 13, in the PM's order:** (1) the dead door is the option WE picked, the ask ledger is per
+store+door (`nav_confirm_asked_doors`, spoken asks only), dead doors durable (`map_doors_dead`), the
+store held — fresh store only when every door is burnt or nobody answers. (2) grading's second pass
+shape: Staff answered and replied — direct-pickup chains pass, and a no-menu store locks on the
+answer alone. (3) silence is never an answer: 12 quiet seconds end the check unresolved, the door's
+ask spent. (5) `toneShare` copied byte-for-byte into listen-nav (the one Ear's home; runtime-gates
+9/9 green) and fed at the bridge's 0.45 bar — rings count for REAL; the ring hang-up arms on an
+announced OR silent handoff (route finished + first ring stamps the handoff moment); the cadence
+clock survives only as the no-tone stand-in. (6) proven-at-three: the bar is `call_results.confirmed`
+true/false through the receipt hook, the ledger is a union, `provenStores`/`chainDetail` read it, a
+pinned-store run's answer joins it, reset clears it. (7) the sweep's direct-proving call is grade-
+gated before every write. (8) a lost carrier callback is closed by a one-shot per-call backstop;
+words-said compares the WORDS (a re-say can no longer stand in for an answer never spoken). (9) no
+free text on mapping rows ("the call never connected"; graph edges person|ring|failed; a failed
+check never reads reached-Staff; a transfer nobody answered is a failure; the Map button pre-stamp
+is gone). (10) menu-changed files fold by menu identity so heard-twice really fires; conditions
+readable in `chainDetail` (real at 2); the 24h gate compares the real label (`24h`). (11) mapping
+nav-finished stamps at the handoff (first-write-wins; pickup-only stores fall back); the speed win's
+seconds backfill is gone. (12) `Set aside` deleted everywhere (the words are `Not used`), the live
+card speaks Mapping menu/Optimizing speed, `copy.md` reconciled (flagged for his blessing). (13) a
+crashed run saves its final state instead of vanishing; resume delay 180s (RULES 9 updated); all
+five mapping rigs wired into `test-all.sh`. (14) behavior tests grew: the fold rules driven against
+a real database (fail writes nothing · staged waits for the lock · a plain Admin pass teaches the
+map), the ledger, the condition fold, rings on synthetic frames, every grading shape. Honesty note:
+a share of map-sim is still source-text asserts (rendering + wiring shapes); behavior coverage now
+carries the engine's laws.
+**DRIVEN 08-01:** map-sim **296/296** · resume **17/17** · mapgraph 62/62 · map-api 14/14 ·
+runtime-gates 9/9 · e2e 100/102 (the two held) · tsc clean. NOT verified: a real phone call — the
+owner tests once at the end (R6). Side branch only; nothing merges to staging without his "clear".
+**Round 1 (superseded where round 2 says otherwise):** stage machine `map | speed | locked | stopped`, LEARN MENU FIRST always (held recipe = door steering only); wording settles (`sameWording`, menu lines to the handoff) → store locked + chain LIVE in one stroke (`approved_at` = the day the map succeeded); no prove dialing. Speed: same store, `shorten | cutin`, NO CLOCK anywhere (`early` = first chunk of the step's own recording; `saidWasTail` guards); wins write immediately, losses to `map_never`. Grading: the SEVEN reasons; unmatched greeting files `menu-changed`, quarantined; a mid-run menu change STOPS the run (chunk 2 wires the auto re-map). Failed checks fold nowhere; stage rides RAW. DELETED: listen-first · the Re-map button + route branch (`trainer/document` stamps no stage) · binary barge · `needs-review`. Old saved runs resume coerced (prove→map, barge→cutin).
+- **OPEN — chunk 2 (self-healing, fresh chat)**: mute/unmute loop, pooled re-map jobs, chain-level menu change (3 stores → fall back to full words), conditions as discovered VERSIONS + boundary learning (R4; the hard-coded day/9pm/Spanish trio still lives in app.html), auto re-map on menu-changed ×2. **Chunk 3**: the screens (R5; stage headers, "slower", fail pills, Menu doors, timeline, "Recipe winner" removal) — re-read against the contract, the old screens list is stale (PM's note).
 ## Engine — Branson HD `1P1JhCcLzeMmkvLi1BkG` speed 0.91 (BOTH envs) · echo gate 520/150 · ringback by published
 tone frequencies, 6 rings = hang up · **Charlie $0.00183/s, meters SILENCE** · Twilio WHOLE MINUTES · 5.2c base ·
 **all FOUR dial paths open a receipt** (bridge-place · navigator · tapedeck · native `direct:<id>`). Traps: never

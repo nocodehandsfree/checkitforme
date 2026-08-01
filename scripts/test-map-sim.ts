@@ -21,7 +21,7 @@ import {
 } from "../src/calls/mapgraph";
 import { lockRecipeToChain } from "../src/calls/trainer-batch";
 import { greetingFrom, looksLikeDirectPickup, menuStillTalking, parseSpokenOptions, isMenuLine, parseMenuOptions, mergeMenu, looksLikeQuestion, isReprompt, pickedDoorFrom, doorsAskedAt } from "../src/calls/navigator";
-import { recipeFromCall, gradeCheck } from "../src/calls/map-capture";
+import { recipeFromCall, gradeCheck, recordNavCall } from "../src/calls/map-capture";
 import { sameWording } from "../src/calls/mapper";
 import { toneShare, ConversationEar } from "../src/calls/listen-nav";
 
@@ -715,6 +715,34 @@ async function main() {
       "and one that beat it passes — the recipe winner");
     ok(gradeCheck({ stage: "map", transferHeard: false, ringOrStaff: false }).reason === "said wrong words",
       "a walk that died with no better explanation fails as said wrong words");
+  }
+
+  // ROUND 2 ITEM 14: the fold rules, DRIVEN — not read off the source. One ended check against a
+  // real database: what may it write?
+  console.log("▶ THE FOLD RULES, DRIVEN — what one ended check may write");
+  {
+    const [c2] = await db.insert(chains).values({ name: "Sim Fold Mart" }).returning();
+    const st = (await db.insert(retailers).values({ name: "Sim Fold Mart — Reno", location: "Simtown", phone: "+15550000009", timezone: "America/Los_Angeles", chainId: c2.id }).returning())[0];
+    const foldSteps = [
+      { who: "ivr", text: "Thanks for calling Sim Fold Mart. For guest services press 2.", atSec: 5 },
+      { who: "us", text: "pressed 2", atSec: 9, action: "press", value: "2" },
+      { who: "ivr", text: "Okay, transferring you now.", atSec: 14 },
+    ];
+    const foldRecipe: MapRecipe = { type: "keypad", steps: [{ action: "press", value: "2", atSec: 9 }], seconds: 30 };
+    const call = (id: string, over: Record<string, unknown>) => recordNavCall({
+      id, chainId: c2.id, retailerId: st.id, retailerName: st.name,
+      steps: foldSteps as never, humanAtSec: null, status: "failed", recipe: foldRecipe,
+      ...over,
+    } as Parameters<typeof recordNavCall>[0]);
+    const failed = await call("fold-fail", { grade: "fail", reason: "said wrong words" });
+    ok(failed.recorded && /changed nothing/.test(failed.why), `a failed check writes nothing: "${failed.why}"`);
+    ok((await activeMap(c2.id)) === null, "no version exists after it — the map really is untouched");
+    const staged = await call("fold-staged", { humanAtSec: 30, status: "human", stage: "map", grade: "pass" });
+    ok(/kept by its run/.test(staged.why), `a run-owned check stays the run's own: "${staged.why}"`);
+    ok((await activeMap(c2.id)) === null, "so a mid-run pass files no version either — the map moves at the lock");
+    const passed = await call("fold-pass", { humanAtSec: 30, status: "human", grade: "pass" });
+    ok(passed.recorded && (await activeMap(c2.id)) !== null,
+      "a plain Admin call that PASSED teaches the map — the 07-30 button bug stays dead");
   }
 
   // PIECE TWO: the grade is wired through the engine — decided in finish before anything is written,

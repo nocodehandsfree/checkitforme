@@ -18,16 +18,17 @@ git. Last updated: 2026-07-31 (mapping engine rebuilt to your rules, part 1 of 3
 ## The bottom bar can never go dark again, and Live is cleaned (07-30, live on Admin)
 - **The tint is nailed down**, three ways it used to break are refused before anything goes live. Cost per
   check opens on **The baseline**, your 6.7¢ ceiling off your real prices.
-## Mapping rebuild, part 1 of 3 (the engine): BUILT, waiting for the review you asked for (07-31)
-- Your rules are in: every store starts with one full check that listens to the whole menu, answers with
-  the full words, reaches a person and asks about Pokémon, even when we already hold a way through. It
-  keeps listening until the menu reads the same twice. One real answer locks the store and the chain goes
-  live; three stores proven for free off real customer checks. Speed comes after, same store, hanging up
-  on the second ring, and nothing we say ever fires on a timer. A failed check changes nothing.
-- **The Re-map button is gone** (your call), and its behind-the-scenes path with it. **The CVS checks the
-  broken build made are wiped on both sites**, the way through kept: say "no", then "front", then "general".
-- All of it sits on a side branch, driven by the test rig (241 checks green). **Staging is untouched until
-  you say "clear".** You test once at the end: a fresh CVS mapped start to finish while you watch.
+## Mapping rebuild, part 1 of 3 (the engine): second pass done — 13 of the review's 14 fixed (08-01)
+- On top of your rules from the first pass: a wrong desk now burns only that one door, never the whole
+  store. A store where Staff just pick up can pass and lock. Silence after our question never counts as
+  an answer. The hang-up really counts the rings now instead of watching a clock, and a menu that rings
+  the desk without saying so never makes us hang up on Staff. Three-stores-proven is real and readable,
+  and only a real yes or no from Staff counts toward it.
+- **Two things wait on YOU:** (1) live customer checks still say their answers on a timer — the menu-words
+  way exists but is switched off, and turning it on is your call because it changes the cost numbers;
+  (2) should a changed way through still wait for your tap, or switch itself hands-free? Say the word on
+  each and I build it.
+- Side branch only, 296 + 93 rig checks green. **Staging untouched until you say "clear".**
 ## The new calling engine is ON for staging. Your six test calls are the last thing (07-28/29)
 - **Nothing to flip.** A check from staging.checkitforme.com goes through the new engine. **Listen for:** it asks
   once and waits · no keypad beeps once you are talking · after a hold it asks you again if you might be new.
