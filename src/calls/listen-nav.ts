@@ -238,7 +238,7 @@ export function sameSpokenLine(a: string, b: string): boolean {
  *  handoff line, which is the last thing the phone system says to us. Evidence for layer 3 only:
  *  Staff say handoff-shaped things too ("sure, one moment"), which is why POSITION is layer 2 and
  *  wins first — after the desk rings, the same words are a person. */
-const MENU_WORDS = /press \d|press the|option \d|para espa[ñn]ol|oprima|listen carefully|menu has changed|options have changed|for [a-z].{0,30}\bpress\b|say the name|automated|this call (may be|is) recorded|calls are recorded|virtual assistant|please hold while|thank you for calling|transferring you( now)?|connecting you( now)?/i;
+const MENU_WORDS = /press \d|press the|option \d|para espa[ñn]ol|oprima|listen carefully|menu has changed|options have changed|for [a-z].{0,30}\bpress\b|say the name|automated|this call (may be|is) recorded|calls are recorded|virtual assistant|please hold while|thank(s| you) for calling|transferring you( now)?|connecting you( now)?/i;
 /** Somebody checking whether we are still on the line. Nothing recorded ever asks this. */
 const CHECKING_ON_US = /\bhello\?|are you (still )?there|you still there|can you hear me|anybody there|anyone there/i;
 /** Somebody talking TO US: offering to help, asking what we need, giving their own name. A menu
@@ -309,6 +309,18 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
 
   if (!text) return { who: "unsure", why: "nothing was said", ...ride };
 
+  // BEFORE LAYER 1: two facts outrank a word-match. A REAL COUNTED RING means the phone system has
+  // already handed us to the desk — no remembered line can outvote the desk ringing. And words that
+  // are unmistakably a person talking TO us ("this is Maria", "how can I help") beat every position
+  // rule: a store CAN read a line that resembles its own menu, but a recording never asks us
+  // anything (fix pass 6, item 3).
+  if ((o.ringsHeard ?? 0) >= 1) {
+    return { who: "person", why: "the desk has rung, so the phone system is finished with us", ...ride };
+  }
+  if (CHECKING_ON_US.test(text) || ADDRESSED_TO_US.test(text)) {
+    return { who: "person", why: "somebody is talking to us, not reading at us", ...ride };
+  }
+
   // LAYER 1 — the store's own remembered menu. Recordings repeat word for word.
   const known = (o.knownMenuLines || []).filter((l) => String(l || "").trim());
   if (known.length) {
@@ -362,17 +374,29 @@ export function personStartsAt(
   ctx: { knownMenuLines?: string[]; ringsHeard?: number; weSpokeAtSec?: number | null; weAskedAtSec?: number | null; product?: string } = {},
 ): number {
   let start = detectedAtSec;
+  let foundPerson = false;
   const lines = (steps || []).filter((st) => st.who === "ivr" && String(st.text || "").trim());
   for (let i = lines.length - 1; i >= 0; i--) {
     const st = lines[i];
     const at = st.atSec ?? detectedAtSec;
     if (at > detectedAtSec) continue;
+    // No pause result is fed in: the pause never ran on these finished lines, and claiming one
+    // either way is the side door. Unclear lines come back UNSURE and are simply skipped.
     const v = judgeVoice({
-      text: String(st.text), atSec: at, pauseTested: true, keptTalkingAfterPause: false,
+      text: String(st.text), atSec: at,
       knownMenuLines: ctx.knownMenuLines, ringsHeard: ctx.ringsHeard,
       weSpokeAtSec: ctx.weSpokeAtSec, weAskedAtSec: ctx.weAskedAtSec, product: ctx.product,
     });
-    if (v.who === "person") { start = Math.min(start, at); continue; }
+    if (v.who === "person") {
+      // A JOINED line is half the store and half the person (the tail rule glues a hello onto the
+      // recording it interrupted). The person begins just AFTER the recording, never at it.
+      if (startsAsARecording(String(st.text), ctx)) { start = at + 1; break; }
+      foundPerson = true; start = Math.min(start, at); continue;
+    }
+    // An unclear line sitting INSIDE the person's speech is theirs — the default flips toward a
+    // person everywhere, and a mumble between two of their lines is not the store's menu. Before
+    // any person is found it is only skipped, never claimed.
+    if (v.who === "unsure") { if (foundPerson) start = Math.min(start, at); continue; }
     // A line the judge calls a recording ENDS the walk — but if a person's words were joined onto
     // it, the person begins just after that recording, never at it.
     if (start === detectedAtSec && carriesAPersonsWords(String(st.text), ctx)) start = at + 1;
@@ -384,12 +408,19 @@ export function personStartsAt(
 /** Did a store line get a person's words glued onto its end? The tail rule joins a short line that
  *  lands within seconds of our own answer onto the line it interrupted, which is right for the
  *  remainder of a cut sentence and wrong for a hello. Split by sentence and ask the judge. */
+/** Does this line BEGIN as the store's recording? On a joined line the store's own sentence comes
+ *  first and the person's hello is glued to its end, so the person starts after it, not at it. */
+function startsAsARecording(line: string, ctx: { knownMenuLines?: string[]; product?: string }): boolean {
+  const parts = String(line || "").split(/(?<=[.?!])\s+/).map((p) => p.trim()).filter(Boolean);
+  if (parts.length < 2) return false;
+  return judgeVoice({ text: parts[0], atSec: 0, knownMenuLines: ctx.knownMenuLines, product: ctx.product }).who === "recording";
+}
+
 function carriesAPersonsWords(line: string, ctx: { knownMenuLines?: string[]; product?: string }): boolean {
   const parts = String(line || "").split(/(?<=[.?!])\s+/).map((p) => p.trim()).filter(Boolean);
   if (parts.length < 2) return false;
   const tail = parts[parts.length - 1];
-  const v = judgeVoice({ text: tail, atSec: 0, pauseTested: true, keptTalkingAfterPause: false, knownMenuLines: ctx.knownMenuLines, product: ctx.product });
-  return v.who === "person";
+  return judgeVoice({ text: tail, atSec: 0, knownMenuLines: ctx.knownMenuLines, product: ctx.product }).who === "person";
 }
 
 // ---- the recording plan (which recording each step waits for) -------------------------------

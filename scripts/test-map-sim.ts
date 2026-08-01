@@ -1060,10 +1060,12 @@ async function main() {
     }
     // FACE c: the person's moment is the line that TRIGGERED detection, never the turn it fired on —
     // so a hello joined onto the store line it interrupted cannot sit under the cut.
+    // A joined line is half the store, half the person: the person begins AFTER the store's own
+    // sentence, never at it (fix pass 6, item 4 — the split, not the drag).
     ok(personLineAtSec([
       { who: "ivr", text: "Thanks for calling. Hello? Hi, this is Sam.", atSec: 12 },
-    ] as never, "Hello? Hi, this is Sam.", 19) === 12,
-      "a hello carried on an earlier line stamps THAT line's moment, so its words stay out of the menu");
+    ] as never, "Hello? Hi, this is Sam.", 19) === 13,
+      "a hello glued onto a store line splits — the person starts after the recording, never at it");
     ok(personLineAtSec([{ who: "ivr", text: "For guest services press 2.", atSec: 5 }] as never, "Hi, Dana here.", 30) === 30,
       "and an unrelated newest line never drags the person's moment backwards");
     // FACE b: the sweep's recording test reads only what was heard BEFORE the person.

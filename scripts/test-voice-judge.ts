@@ -161,6 +161,26 @@ console.log("\n▶ \"ONE MOMENT\" AFTER OUR QUESTION IS WAITING — not an answe
     "while Staff telling us WHERE the cards are is an answer, never being sent away");
 }
 
+console.log("\n▶ EVIDENCE ORDER, AND THE PERSON'S CLOCK (fix pass 6, items 3-4)");
+{
+  // A person-shaped line beats "we are inside the menu we hold": a store can read a line that
+  // resembles its own menu, but a recording never talks TO us.
+  ok(judge({ text: "Hi, this is Maria, how can I help you?", mappedRoute: true, routeHandoffSeen: false }).who === "person",
+    "somebody talking to us beats being mid-menu on a route we hold");
+  // A real counted ring beats a word-match to the remembered menu: the desk ringing is the phone
+  // system saying it is finished with us.
+  ok(judge({ text: KNOWN[1], knownMenuLines: KNOWN, ringsHeard: 1 }).who === "person",
+    "and a real counted ring beats even a word-for-word match to the remembered menu");
+  // The person's clock starts at their first word, walking back through unsure lines too.
+  const two = [
+    { who: "ivr" as const, text: "Thanks for calling CVS.", atSec: 5 },
+    { who: "ivr" as const, text: "Mm-hm.", atSec: 30 },
+    { who: "ivr" as const, text: "Hello? This is Sam.", atSec: 33 },
+  ];
+  ok(personStartsAt(two, 33, { knownMenuLines: KNOWN }) === 30,
+    "an unsure line between the store and the person belongs to the person, not the menu");
+}
+
 console.log("\n▶ THE FIRST CALL TO A STORE WE HAVE NEVER RUNG IS PURE LISTENING");
 {
   const v = judge({ text: "Thanks for calling.", firstEverCall: true });
