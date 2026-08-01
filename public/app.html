@@ -165,8 +165,8 @@
   /* Mapping header only: let the status pill (margin-left:auto) sit flush-right next to the chevron. */
   #set_mapwrap>summary::after{margin-left:0}
   .setlogo{flex:0 0 auto;display:inline-flex}
-  .setlogo .slogo{width:36px;height:36px;border-radius:9px}
-  .setlogo .slogo img{width:32px;height:32px}
+  .setlogo .slogo{width:46px;height:46px;border-radius:12px}
+  
   .setrow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--border)}
   .setrow:first-child{border-top:none}
   .setlbl{font-size:13px;color:var(--text-body)}
@@ -175,7 +175,7 @@
   .pickrow{display:flex;align-items:center;gap:12px;padding:10px 12px;cursor:pointer;border-radius:14px;background:linear-gradient(180deg,#2D2D34,#27272D);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);margin-bottom:9px;transition:transform .08s}
   .pickrow:active{transform:translateY(1px)}
   .pickrow.on{box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07),0 0 0 1.5px rgba(74,222,128,.5),0 0 14px rgba(74,222,128,.2)}
-  .pickrow .setlogo .slogo{width:38px;height:38px;border-radius:11px}
+  
   .navspin{width:9px;height:9px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;display:inline-block;animation:navspin .7s linear infinite}
   @keyframes navspin{to{transform:rotate(360deg)}}
   /* Store Search card — per-store track-record, tap to expand */
@@ -335,7 +335,7 @@
   .k-key:active{transform:translateY(2px)}
   /* Log row — the peek anatomy with a logo tile + status icon instead of icon + chevron. */
   .peek .pk-logo{flex:0 0 auto}
-  .peek .pk-logo .slogo{width:38px;height:38px;border-radius:11px}
+  
   .peek .pk-m{font-size:12px;font-weight:600;color:#8A8A96;margin-top:1px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .peek .pk-st{display:flex;align-items:center;gap:6px;flex:0 0 auto;font-size:11px;font-weight:800}
   .peek .pk-st .stc{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto}
@@ -3789,27 +3789,15 @@ function statusBadge(r){
 // Store names follow the no-dash naming scheme, so there's no "Name — Branch" to split — show the
 // name whole. (Removes the last em-dash in the file; the old dash-split was dead logic.)
 function splitName(n){ return {base:(n||'').trim(),branch:''}; }
-// Every chain logo gets the SAME visual AREA in its tile, then clamps to the tile's edges. This is the
-// exact twin of checkit.html's sizeLogo, so a chain row here and a store row on the site read alike.
-// Fitting a logo inside a square box instead sizes it by its longest side, so a wide wordmark
-// (Randalls is 5:1) matched the box's width and came out a few pixels tall next to a squarish mark
-// like BJ's Wholesale. Width is a PERCENT of the tile, so the smaller tiles (setlogo 36px, peek 38px)
-// stay right without re-running. GOTCHA: a cached image fires onload BEFORE layout settles, so the
-// tile still measures 0 wide and the logo would size to nothing. Retry until it has a width.
-function sizeLogo(img, tries){
-  const box = img && img.parentElement; if(!box) return;
-  const W = box.clientWidth, H = box.clientHeight;
-  if(!W || !H){ if((tries||0) < 60) requestAnimationFrame(()=>sizeLogo(img,(tries||0)+1)); return; }
-  const nw = img.naturalWidth, nh = img.naturalHeight; if(!nw || !nh) return;
-  const targetArea = 0.55*W*H, maxW = 0.95*W, maxH = 0.90*H;
-  let sc = Math.sqrt(targetArea/(nw*nh));
-  if(nw*sc > maxW) sc = maxW/nw;
-  if(nh*sc > maxH) sc = maxH/nh;
-  img.style.cssText += `;width:${(100*nw*sc/W).toFixed(2)}%;height:auto;max-width:none;max-height:none;object-fit:contain`;
-}
+// How wide to draw a logo is decided ONCE, on the server, from the artwork's own proportions, and
+// arrives on every store row as logoPct — a percent of whatever square tile holds it. Nothing here
+// measures anything, nothing waits for the image to load, and the site and the Admin cannot drift
+// apart because neither owns the rule. A row with no logoPct (artwork we could not read) simply
+// falls back to the tile's own CSS.
+function logoStyle(o){ return (o && typeof o.logoPct === 'number') ? ` style="width:${o.logoPct}%;height:auto;max-width:none;max-height:none;object-fit:contain"` : ''; }
 function logoTile(o){
   o=o||{};
-  if(o.logoUrl) return `<div class="slogo${o.logoDark?' lite':''}${o.logoWide?' widelogo':''}"><img loading="lazy" decoding="async" src="${esch(o.logoUrl)}" alt="" onload="sizeLogo(this)"></div>`;
+  if(o.logoUrl) return `<div class="slogo${o.logoDark?' lite':''}${o.logoWide?' widelogo':''}"><img loading="lazy" decoding="async" src="${esch(o.logoUrl)}" alt=""${logoStyle(o)}></div>`;
   // Same icons the consumer site uses (checkit.html storeFace). The server sends the chain type as
   // `storeType` (older callers pass `type`). Owner 07-13: any NON-CHAIN store without logo art gets
   // the hobby storefront icon like the website — the wordmark tile is only for logoless CHAINS.
@@ -4024,7 +4012,7 @@ async function loadSupportChats(){
       ? `<span class="stc" style="background:rgba(74,222,128,.15)">${lucideSvg('check',13,'#4ADE80')}</span>`
       : `<span class="stc" style="background:rgba(251,191,36,.15);color:#FBBF24;font-size:14px;font-weight:900">?</span>`;
     return `<button class="peek" onclick="openSupChat('${esch(String(c.id))}')">
-      <span class="pk-logo"><span class="slogo emboss" style="width:38px;height:38px;border-radius:11px">${esch((who.replace(/[^A-Za-z0-9]/g,'').slice(0,2)||'G').toUpperCase())}</span></span>
+      <span class="pk-logo"><span class="slogo emboss">${esch((who.replace(/[^A-Za-z0-9]/g,'').slice(0,2)||'G').toUpperCase())}</span></span>
       <span class="pk-main"><span class="pk-t" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(snippet)}</span>
       <span class="pk-m" style="display:block">${member?esch(who):'Guest'} · ${esch((SUP_CATS[c.category]||c.category||'other').toLowerCase())} · ${agoTs(c.createdAt||c.created_at)}${(title&&srcLabel)?' · '+esch(srcLabel):''}</span></span>
       <span class="pk-st">${st}</span>
@@ -7155,7 +7143,7 @@ async function loadUsers(){
     + d.map((u,i)=>{
       const pf=planFact(u), who=u.phone||u.email||u.id;
       return `<button class="peek" onclick="userSheet(${i})">
-        <span class="pk-logo"><span class="slogo emboss" style="width:38px;height:38px;border-radius:11px">${esch(String(who).replace(/[^A-Za-z0-9]/g,'').slice(-2).toUpperCase()||'??')}</span></span>
+        <span class="pk-logo"><span class="slogo emboss">${esch(String(who).replace(/[^A-Za-z0-9]/g,'').slice(-2).toUpperCase()||'??')}</span></span>
         <span class="pk-main"><span class="pk-t" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(who)}</span>
         <span class="pk-m" style="display:block">${u.credits} credits · ${u.callsMade} call${u.callsMade===1?'':'s'} · ${money(u.spentCents)}</span></span>
         <span class="pk-fact ${pf[1]}">${esch(pf[0])}</span>

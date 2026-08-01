@@ -18,6 +18,7 @@ import { submitTicket } from "./support/tickets";
 import { addQa, reindexBook, searchBook, getFaq } from "./support/rag";
 import { listCreditGrants } from "./support/credits";
 import { config } from "./config";
+import { createHash } from "node:crypto";
 import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
@@ -1460,13 +1461,13 @@ function chainLogoFile(name: string | null | undefined): string | null {
 // filesystem, so a chain's logo travels to every environment and can't drift. Cached name→logo map,
 // refreshed on a timer + immediately after an upload/migration. Empty cache (cold start, or a chain
 // with no logo_url yet) simply falls through to the filesystem resolver — fully backward-compatible.
-let chainLogoDbCache = new Map<string, { url: string; wide: boolean; dark: boolean }>();
+let chainLogoDbCache = new Map<string, { url: string; wide: boolean; dark: boolean; pct: number | null }>();
 async function refreshChainLogoDb(): Promise<void> {
   try {
-    const rows = await db.select({ name: chains.name, logoUrl: chains.logoUrl, logoWide: chains.logoWide, logoDark: chains.logoDark })
+    const rows = await db.select({ name: chains.name, logoUrl: chains.logoUrl, logoWide: chains.logoWide, logoDark: chains.logoDark, logoPct: chains.logoPct })
       .from(chains).where(sql`${chains.logoUrl} is not null and ${chains.logoUrl} != ''`);
-    const m = new Map<string, { url: string; wide: boolean; dark: boolean }>();
-    for (const r of rows) if (r.logoUrl) m.set((r.name || "").toLowerCase(), { url: r.logoUrl, wide: r.logoWide === true, dark: r.logoDark === true });
+    const m = new Map<string, { url: string; wide: boolean; dark: boolean; pct: number | null }>();
+    for (const r of rows) if (r.logoUrl) m.set((r.name || "").toLowerCase(), { url: r.logoUrl, wide: r.logoWide === true, dark: r.logoDark === true, pct: typeof r.logoPct === "number" ? r.logoPct : null });
     chainLogoDbCache = m;
   } catch (e) { console.error("refreshChainLogoDb", e); }
 }
@@ -1478,16 +1479,56 @@ function ensureChainLogoDb(): void {
   chainLogoDbLoading = true;
   refreshChainLogoDb().finally(() => { chainLogoDbLoading = false; });
 }
-function chainLogoInfo(name: string | null | undefined): { url: string | null; wide: boolean; dark: boolean } {
+// ── THE LOGO SIZE RULE — ONE definition, server-side, for every surface ─────────────────────────
+// Every logo gets the SAME visual AREA in its tile, then clamps so nothing touches the edges.
+// Fitting a logo inside a square box instead sizes it by its longest side, so a wide wordmark
+// (Randalls is 5:1) matched the box's width and came out a few pixels tall next to a squarish mark.
+//
+// The answer is a single number: how wide to draw the logo as a PERCENT of its tile. Because the
+// tile is always square, that percent falls out of the artwork's proportions alone and is the same
+// on a 46px chain row, a 44px store row, a 36px settings panel and a 190px hero mark:
+//     w/S = min( sqrt(AREA * nw/nh),  MAXW,  MAXH * nw/nh )
+// No surface loads the image, none re-derives the rule, and the old cached-onload race is gone.
+const LOGO_AREA = 0.55;   // share of the tile the artwork's box should cover
+const LOGO_MAXW = 0.95;   // never wider than this share of the tile
+const LOGO_MAXH = 0.90;   // never taller than this share of the tile
+export function logoPctFor(nw: number, nh: number): number | null {
+  if (!(nw > 0) || !(nh > 0)) return null;
+  const r = nw / nh;
+  const pct = Math.min(Math.sqrt(LOGO_AREA * r), LOGO_MAXW, LOGO_MAXH * r) * 100;
+  return Math.round(pct * 100) / 100;
+}
+
+function chainLogoInfo(name: string | null | undefined): { url: string | null; wide: boolean; dark: boolean; pct: number | null } {
   if (name) {
     ensureChainLogoDb();
     const hit = chainLogoDbCache.get(name.toLowerCase()); // DB-first: shared-R2 URL travels across envs
     if (hit) return hit;
   }
   const f = chainLogoFile(name); // filesystem fallback (pre-migration, and unchained store names)
-  if (!f) return { url: null, wide: false, dark: false };
+  if (!f) return { url: null, wide: false, dark: false, pct: null };
   const m = logoMeta()[f] || { w: 0, d: 0 };
-  return { url: `/logos/chains/${f}?v=79`, wide: m.w === 1, dark: m.d === 1 };
+  return { url: `/logos/chains/${f}?v=79`, wide: m.w === 1, dark: m.d === 1, pct: null };
+}
+
+// The ONE way a store row gets its logo. Every list on every surface goes through this, so a store
+// can never resolve to a different logo depending on which screen you are looking at. It replaces
+// fifteen hand-written copies that each worked the chain out their own way (eight different ways).
+// Pass the chain name when the caller already knows it; otherwise the store's own name is used.
+function logoFields(chainName: string | null | undefined): {
+  logoUrl: string | null; logoWide: boolean; logoDark: boolean; logoPct: number | null;
+} {
+  const l = chainLogoInfo(chainName);
+  return { logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct };
+}
+function withLogo<T extends { name?: string | null }>(row: T, chainName?: string | null) {
+  return { ...row, ...logoFields(chainName || storeChainName(row.name)) };
+}
+// A store's name can carry its branch after a dash ("Acme — Reno"); the chain is the part before it.
+// This was written out inline at eight call sites with three different dash sets. Now it is one.
+function storeChainName(storeName: string | null | undefined): string | null {
+  if (!storeName) return null;
+  return storeName.split(/—|–| - /)[0].trim() || null;
 }
 
 // ---- Distributor-driven carries (data/distributors.json) ----
@@ -1568,30 +1609,28 @@ async function adminOk(c: any): Promise<boolean> {
 }
 app.get("/logo-wall", async (c) => {
   if (!(await adminOk(c))) return c.notFound(); // private: not a public page
-  const files = [...chainLogoFiles()].sort();
-  const meta = logoMeta();
-  // Pair each logo file to its chain's admin store-type (chains = the Admin source of truth).
-  const fileInfo = new Map<string, { type: string; name: string }>();
-  for (const ch of await cachedChains()) {
-    const f = chainLogoFile(ch.name);
-    if (f && !fileInfo.has(f)) fileInfo.set(f, { type: (ch.type || "").trim() || "Other", name: ch.name });
-  }
-  const pretty = (f: string) => f.replace(/\.(png|webp|svg)$/i, "").replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
-  const types = [...new Set(files.map((f) => fileInfo.get(f)?.type || "Other"))]
+  // THE RECORD OF TRUTH (owner 07-31). The wall used to list the copies of the artwork that ship inside
+  // the app and read their treatment flags out of _meta.json — a THIRD source that could be, and was,
+  // showing week-old artwork while the live site was correct. It now walks the chain rows and renders
+  // exactly what every store list renders: same address, same flags, same size. It cannot disagree.
+  const rows = (await cachedChains())
+    .map((ch) => ({ ch, l: chainLogoInfo(ch.name) }))
+    .filter((x) => !!x.l.url)
+    .sort((a, b) => a.ch.name.replace(/^_/, "").localeCompare(b.ch.name.replace(/^_/, "")));
+  const types = [...new Set(rows.map((x) => (x.ch.type || "").trim() || "Other"))]
     .sort((a, b) => (a === "Other" ? 1 : b === "Other" ? -1 : a.localeCompare(b)));
-  // Render treatments: every logo resolves to exactly one, from its _meta w/d flags (no entry → standard).
-  const treatKey = (m: { w: number; d: number }) => (m.w === 1 && m.d === 1 ? "both" : m.w === 1 ? "wide" : m.d === 1 ? "plate" : "std");
+  // Render treatments: every logo resolves to exactly one, from the chain row's own flags.
+  const treatKey = (wide: boolean, dark: boolean) => (wide && dark ? "both" : wide ? "wide" : dark ? "plate" : "std");
   const TREAT: Array<{ k: string; label: string }> = [
     { k: "std", label: "Standard" }, { k: "wide", label: "Wide" },
     { k: "plate", label: "Plated" }, { k: "both", label: "Wide + Plated" },
   ];
   const tCount: Record<string, number> = { std: 0, wide: 0, plate: 0, both: 0 };
-  for (const f of files) tCount[treatKey(meta[f] || { w: 0, d: 0 })]++;
-  const tile = (f: string) => {
-    const m = meta[f] || { w: 0, d: 0 };
-    const info = fileInfo.get(f);
-    const cls = (m.d === 1 ? " lite" : "") + (m.w === 1 ? " widelogo" : "");
-    return `<div class="cell" data-type="${esc(info?.type || "Other")}" data-treat="${treatKey(m)}"><div class="ic${cls}"><img src="/logos/chains/${f}?v=79" alt=""></div><div class="nm">${esc(info?.name || pretty(f))}</div></div>`;
+  for (const x of rows) tCount[treatKey(x.l.wide, x.l.dark)]++;
+  const tile = (x: { ch: { name: string; type: string | null }; l: { url: string | null; wide: boolean; dark: boolean; pct: number | null } }) => {
+    const cls = (x.l.dark ? " lite" : "") + (x.l.wide ? " widelogo" : "");
+    const style = x.l.pct != null ? ` style="width:${x.l.pct}%;height:auto;max-width:none;max-height:none"` : "";
+    return `<div class="cell" data-type="${esc((x.ch.type || "").trim() || "Other")}" data-treat="${treatKey(x.l.wide, x.l.dark)}"><div class="ic${cls}"><img src="${esc(x.l.url || "")}" alt=""${style}></div><div class="nm">${esc(x.ch.name)}</div></div>`;
   };
   // ── Pokémon set & era logos — same repo/logo-wall system as chains, but shown BIG (owner 2026-07-03:
   //    "take up the box, be the main attraction"): these are wordmark logos, not 52px store marks.
@@ -1641,9 +1680,9 @@ app.get("/logo-wall", async (c) => {
     .cell.hide{display:none}
     .nm{font-size:10px;color:#9a9aac;text-align:center;line-height:1.25;overflow-wrap:anywhere}
     /* —— EXACT copy of the consumer store-list tile (.ic) from checkit.html —— */
-    .ic{width:52px;height:52px;border-radius:15px;background:linear-gradient(145deg,#34343d,#23232b);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-    .ic img{width:40px;height:40px;object-fit:contain}
-    .ic.widelogo img{width:44px;height:auto;max-height:34px}
+    .ic{width:46px;height:46px;border-radius:12px;background:#1F1F25;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .ic img{max-width:78%;max-height:78%;width:auto;height:auto;object-fit:contain}/* fallback only: a real logo carries its own width inline */
+    .ic.widelogo img{max-width:92%;max-height:64%}
     .ic.lite{background:#f2f2f5;border-color:rgba(255,255,255,.28)}
     /* —— tabs: Store logos | Pokémon sets (separate areas on this private wall) —— */
     .tabs{display:flex;gap:8px;margin-bottom:16px}
@@ -1670,10 +1709,10 @@ app.get("/logo-wall", async (c) => {
     function pnorm(img){var box=img.parentElement;if(!box)return;var W=box.clientWidth,H=box.clientHeight;if(!W||!H){requestAnimationFrame(function(){pnorm(img);});return;}var nw=img.naturalWidth,nh=img.naturalHeight;if(!nw||!nh)return;var tA=0.40*W*H,mW=0.92*W,mH=0.74*H,sc=Math.sqrt(tA/(nw*nh));if(nw*sc>mW)sc=mW/nw;if(nh*sc>mH)sc=mH/nh;img.style.width=(100*nw*sc/W)+'%';}
   </script>
   <body>
-  <div class="tabs"><button class="tab on" data-area="storeArea">Store logos · ${files.length}</button><button class="tab" data-area="pokeArea">Pokémon sets · ${pokeSetCount}</button></div>
+  <div class="tabs"><button class="tab on" data-area="storeArea">Store logos · ${rows.length}</button><button class="tab" data-area="pokeArea">Pokémon sets · ${pokeSetCount}</button></div>
   <div id="storeArea">
-  <h2>Logo wall · ${files.length} marks</h2>
-  <div class="sub">Each mark exactly as the store list renders it — same 52px tile, plate &amp; wide handling from _meta.json.</div>
+  <h2>Logo wall · ${rows.length} marks</h2>
+  <div class="sub">Every chain that has a logo, drawn from the SAME address, flags and size the store list uses. If a mark looks wrong here it is wrong on the site.</div>
   <div class="bar">
     <label class="fld">Store type
       <select id="type"><option value="">All stores</option>${types.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("")}</select>
@@ -1686,7 +1725,7 @@ app.get("/logo-wall", async (c) => {
     </span>
     <span id="count"></span>
   </div>
-  <div class="grid" id="grid">${files.map(tile).join("")}</div>
+  <div class="grid" id="grid">${rows.map(tile).join("")}</div>
   </div>
   ${pokeSection}
   <script>
@@ -1866,12 +1905,37 @@ app.get("/logos/chains/:file", (c) => {
   } catch { return c.notFound(); }
 });
 // ---- Chain logo upload + migration (logo-r2-keystone spec, git history) ----
+// Read the artwork's own width and height straight out of the bytes — no image library. PNG carries
+// them in the IHDR chunk at a fixed offset; SVG in its width/height or viewBox. That is all the size
+// rule needs, and reading it here means it is worked out ONCE, at upload, never at serve time.
+function artworkSize(bytes: Uint8Array, ext: string): { w: number; h: number } | null {
+  if (ext === "png" && bytes.length > 24 && bytes[0] === 0x89 && bytes[1] === 0x50) {
+    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    return { w: dv.getUint32(16), h: dv.getUint32(20) };
+  }
+  if (ext === "svg") {
+    const head = new TextDecoder().decode(bytes.slice(0, 2048));
+    const vb = head.match(/viewBox\s*=\s*"([-\d.eE+\s]+)"/);
+    if (vb) { const p = vb[1].trim().split(/[\s,]+/).map(Number); if (p.length === 4 && p[2] > 0 && p[3] > 0) return { w: p[2], h: p[3] }; }
+    const w = head.match(/\swidth\s*=\s*"([\d.]+)/), h = head.match(/\sheight\s*=\s*"([\d.]+)/);
+    if (w && h && +w[1] > 0 && +h[1] > 0) return { w: +w[1], h: +h[1] };
+  }
+  return null; // webp and anything unreadable: the caller falls back to fit-inside
+}
 // Upload a chain's logo straight to shared R2 and point the chain row at it (logo_url). Server-side PUT
 // via a presigned URL — one request from the Admin. ?wide=1 / ?dark=1 set the render flags. After this
 // the logo travels to every environment through the DB row and can't drift.
+//
+// The stored name carries a FINGERPRINT of the bytes. A different picture is therefore a different
+// address, so a replacement appears everywhere the instant it lands: no version query to bump by hand,
+// nothing serving a week-old copy out of the delivery network's cache. The name no longer contains the
+// chain's own name either, so renaming a chain can never orphan its artwork.
 app.post("/api/chains/:id/logo", async (c) => {
   const cfg = r2Config();
   if (!cfg) return c.json({ error: "R2 not configured (R2_* env)" }, 503);
+  // Staging is the curation home: it pushes chain settings to prod, so a logo set on prod would sit on
+  // the losing side of a one-way copy and be silently reverted. Refuse it here rather than lose it.
+  if (!config.staging.on) return c.json({ error: "logos are set on staging; production receives them through the store-data copy" }, 409);
   const id = Number(c.req.param("id"));
   const ch = (await db.select().from(chains).where(eq(chains.id, id)))[0];
   if (!ch) return c.json({ error: "chain not found" }, 404);
@@ -1879,55 +1943,24 @@ app.post("/api/chains/:id/logo", async (c) => {
   if (bytes.byteLength < 64) return c.json({ error: "empty or tiny image body" }, 400);
   const ct = c.req.header("content-type") || "image/png";
   const ext = /webp/i.test(ct) ? "webp" : /svg/i.test(ct) ? "svg" : "png";
-  const key = `chain-logos/${chainSlug(ch.name)}.${ext}`;
+  // Named after the CONTENT alone. Two chains that share artwork share one stored copy, the chain's id
+  // (which differs between staging and production) never leaks into the address, and a rename is a
+  // non-event. Different picture = different name = it appears everywhere the moment it lands.
+  const key = `chain-logos/${createHash("sha1").update(bytes).digest("hex").slice(0, 16)}.${ext}`;
   const { uploadUrl, publicUrl } = await presignPut(key, cfg, ct);
   const put = await fetch(uploadUrl, { method: "PUT", body: bytes, headers: { "content-type": ct } });
   if (!put.ok) return c.json({ error: `R2 PUT failed: ${put.status}` }, 502);
   const wide = c.req.query("wide") === "1", dark = c.req.query("dark") === "1";
-  await db.update(chains).set({ logoUrl: publicUrl, logoWide: wide, logoDark: dark }).where(eq(chains.id, id));
+  const size = artworkSize(bytes, ext);
+  const pct = size ? logoPctFor(size.w, size.h) : null;
+  await db.update(chains).set({ logoUrl: publicUrl, logoWide: wide, logoDark: dark, logoPct: pct }).where(eq(chains.id, id));
   await refreshChainLogoDb();
-  return c.json({ id, name: ch.name, logoUrl: publicUrl, wide, dark });
+  return c.json({ id, name: ch.name, logoUrl: publicUrl, wide, dark, pct, artwork: size });
 });
 
-// One-time migration: push every chain's existing file logo to R2 (chain-logos/<file>) and set logo_url
-// on the row. Resolves each chain through the SAME fuzzy matcher the app uses, so franchise/variant
-// chains that borrow a shared file ("Franklin's Ace Hardware" → ace_hardware.png) all get pointed at it.
-// Dedupes uploads by filename. ?dryRun=1 returns the plan. Fire-and-forget + resumable (re-run is safe).
-let logoMigrating = false;
-app.post("/api/admin/migrate-logos-to-r2", async (c) => {
-  const cfg = r2Config();
-  if (!cfg) return c.json({ error: "R2 not configured (R2_* env)" }, 503);
-  const allChains = await db.select({ id: chains.id, name: chains.name }).from(chains);
-  const plan = allChains
-    .map((ch) => ({ id: ch.id, name: ch.name, file: chainLogoFile(ch.name) }))
-    .filter((p): p is { id: number; name: string; file: string } => !!p.file);
-  if (c.req.query("dryRun") === "1") {
-    return c.json({ dryRun: true, chains: plan.length, uniqueFiles: new Set(plan.map((p) => p.file)).size, sample: plan.slice(0, 8) });
-  }
-  if (logoMigrating) return c.json({ started: false, running: true, chains: plan.length });
-  logoMigrating = true;
-  (async () => {
-    const uploaded = new Set<string>();
-    for (const p of plan) {
-      try {
-        const key = `chain-logos/${p.file}`;
-        if (!uploaded.has(p.file)) {
-          const buf = readFileSync(join(here, `../public/logos/chains/${p.file}`));
-          const ct = p.file.endsWith(".webp") ? "image/webp" : p.file.endsWith(".svg") ? "image/svg+xml" : "image/png";
-          const { uploadUrl } = await presignPut(key, cfg, ct);
-          const put = await fetch(uploadUrl, { method: "PUT", body: new Uint8Array(buf), headers: { "content-type": ct } });
-          if (!put.ok) { console.error("logo migrate PUT", p.file, put.status); continue; }
-          uploaded.add(p.file);
-        }
-        const meta = logoMeta()[p.file] || { w: 0, d: 0 };
-        await db.update(chains).set({ logoUrl: `${cfg.publicBase}/${key}`, logoWide: meta.w === 1, logoDark: meta.d === 1 }).where(eq(chains.id, p.id));
-      } catch (e) { console.error("logo migrate", p.name, e); }
-    }
-    await refreshChainLogoDb();
-    logoMigrating = false;
-  })().catch(() => { logoMigrating = false; });
-  return c.json({ started: true, chains: plan.length, uniqueFiles: new Set(plan.map((p) => p.file)).size });
-});
+// The one-time migration that first pushed the file copies into shared storage is GONE (owner 07-31,
+// "no dead code"). Every chain has been on shared storage since; re-running it would have written the
+// OLD file-named copies back over the content-named ones and undone the whole scheme.
 
 app.get("/pub/stores", async (c) => {
   // 🔒 ADMIN-ONLY (data-exposure lockdown): this hands back the ENTIRE store table in one response.
@@ -1949,7 +1982,7 @@ app.get("/pub/stores", async (c) => {
     .filter((r) => !r.ownerOnly) // owner-only demo store ("Fun") never appears in the admin logo map
     .filter((r) => !(r.chainId && mutedChains.has(r.chainId)))
     .map((r) => ({ id: r.id, name: r.name, location: r.location, storeType: (r.chainId && types.get(r.chainId)) || "Other",
-      ...((l)=>({ logoUrl: l.url, logoWide: l.wide, logoDark: l.dark }))(chainLogoInfo((r.chainId && names.get(r.chainId)) || r.name.split(/—|–| - /)[0])),
+      ...logoFields((r.chainId && names.get(r.chainId)) || storeChainName(r.name)),
       carries: storeCarriesList((r.chainId && names.get(r.chainId)) || null, r.carries),
       lat: r.lat, lng: r.lng, region: r.region, state: r.state, shipmentDay: r.shipmentDay || null,
       sellsPacks: r.sellsPacks !== false, hasKiosk: r.hasKiosk === true })));
@@ -2091,9 +2124,9 @@ app.get("/pub/stores/near", async (c) => {
   // Per-store consumer shape — shared by the main list and the rural fallback so both emit identical rows.
   const shape = (r: typeof retailers.$inferSelect) => {
       const miles = hasLoc && r.lat != null && r.lng != null ? Math.round(haversineMi(lat, lng, r.lat, r.lng) * 10) / 10 : null;
-      const chainName = (r.chainId && names.get(r.chainId)) || r.name.split(/—|–| - /)[0];
+      const chainName = (r.chainId && names.get(r.chainId)) || storeChainName(r.name);
       return { id: r.id, chainId: r.chainId, name: r.name, location: r.location, address: r.address || null, storeType: (r.chainId && types.get(r.chainId)) || "Other",
-        ...((l) => ({ logoUrl: l.url, logoWide: l.wide, logoDark: l.dark }))(chainLogoInfo(chainName)),
+        ...logoFields(chainName),
         carries: storeCarriesList(chainName, r.carries),
         // shipmentDay is deliberately NOT sent to consumers: it's unverified (auto-learned, junk values
         // like "every single week" rendered as "drops eve"). It returns confidence-gated once a store
@@ -2186,10 +2219,10 @@ app.get("/pub/store/:id", async (c) => {
   const chain = r.chainId ? (await cachedChains()).find((x) => x.id === r.chainId) : undefined;
   if (chain?.muted === true) return c.json({ error: "not_found" }, 404);
   if (r.ownerOnly && !(await requesterIsComp(c.req.header("Authorization")))) return c.json({ error: "not_found" }, 404);
-  const chainName = chain?.name || r.name.split(/—|–| - /)[0];
+  const chainName = chain?.name || storeChainName(r.name);
   return c.json({ id: r.id, chainId: r.chainId, name: r.name, location: r.location, address: r.address || null,
     storeType: chain?.type || "Other",
-    ...((l) => ({ logoUrl: l.url, logoWide: l.wide, logoDark: l.dark }))(chainLogoInfo(chainName)),
+    ...logoFields(chainName),
     carries: storeCarriesList(chainName, r.carries),
     lat: r.lat, lng: r.lng, region: r.region, state: r.state, shipmentDay: r.shipmentDay || null,
     sellsPacks: r.sellsPacks !== false, hasKiosk: r.hasKiosk === true,
@@ -3704,9 +3737,9 @@ async function zoneView(z: typeof zones.$inferSelect) {
   const chainNames = rows.length ? new Map((await db.select().from(chains)).map((x) => [x.id, x.name])) : new Map();
   const stores = rows.map((r) => {
     const chainName = (r.chainId && chainNames.get(r.chainId)) || null;
-    const l = chainLogoInfo(chainName || r.name.split(/—|–| - /)[0]);
+    const l = chainLogoInfo(chainName || storeChainName(r.name));
     return { retailerId: r.id, name: r.name, location: r.location || "", callable: r.sellsPacks !== false,
-      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, openState: openState(r.hours, r.timezone) };
+      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, openState: openState(r.hours, r.timezone) };
   });
   const last = (await db.select().from(callResults).where(like(callResults.zoneRunId, `z${z.id}-%`)).orderBy(desc(callResults.startedAt)).limit(1))[0];
   let lastRun = null;
@@ -3816,7 +3849,7 @@ app.get("/app/zones/run/:runId", async (c) => {
   // monogram tiles (owner 07-19).
   const chainNames = new Map((await cachedChains()).map((x) => [x.id, x.name]));
   const results = rows.map((r) => { const st = stores.get(r.retailerId); const nm = st?.name || "A store";
-    const l = chainLogoInfo((st?.chainId && chainNames.get(st.chainId)) || nm.split(/—|–| - /)[0]);
+    const l = chainLogoInfo((st?.chainId && chainNames.get(st.chainId)) || storeChainName(nm));
     return { retailerId: r.retailerId, name: nm, location: st?.location || "", logoUrl: l.url || "", logoWide: l.wide, logoDark: l.dark, cid: r.providerCallId, status: r.status, statusKey: r.statusKey, confirmed: r.confirmed, summary: r.summary }; });
   const live = (st: string) => st === "in_progress" || st === "queued";
   const summary = {
@@ -3915,13 +3948,13 @@ app.get("/app/history", async (c) => {
     const st = stores.get(r.retailerId);
     const sName = st?.name || "A store";
     // Chain logo via chainId first (like the homepage list) — bare name matching missed most stores.
-    const l = chainLogoInfo((st?.chainId && histChains.get(st.chainId)) || sName.split(/—|–| - /)[0]);
+    const l = chainLogoInfo((st?.chainId && histChains.get(st.chainId)) || storeChainName(sName));
     return {
       cid: r.providerCallId, storeId: r.retailerId, storeName: sName,
       categoryId: r.categoryId, category: cats.get(r.categoryId) || "",
       ts: (r.startedAt || 0) * 1000, status: r.status, confirmed: r.confirmed,
       statusKey: r.statusKey, productDetail: r.productDetail, shipmentDay: r.shipmentDayHeard, shipmentTime: r.shipmentTimeHeard ?? null, charged: !!r.chargedAt, zoneRunId: r.zoneRunId || null,
-      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark,
+      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct,
     };
   }));
 });
@@ -4135,11 +4168,11 @@ app.get("/api/admin/restock-intel", async (c) => {
   const rsChainType = new Map(rsChains.map((x) => [x.id, x.type]));
   const topStores = [...byStore.values()].sort((a, b) => b.confirms - a.confirms || b.last - a.last).slice(0, 25)
     .map((e) => {
-      const chainName = (e.chainId != null && rsChainName.get(e.chainId)) || e.store.split(/—|–| - /)[0];
+      const chainName = (e.chainId != null && rsChainName.get(e.chainId)) || storeChainName(e.store);
       const l = chainLogoInfo(chainName);
       return { ...e, bestDay: Object.entries(e.days).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null,
         storeType: (e.chainId != null && rsChainType.get(e.chainId)) || "Other",
-        logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
+        logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct };
     });
   const prodNet = parseProducts(confirmed);
   const catNet: Record<string, number> = {};
@@ -4472,7 +4505,7 @@ app.get("/api/admin/test-calls", async (c) => {
     const nav = r.navSeconds, call = r.callSeconds;
     const st = stores.get(r.retailerId);
     const nm = st?.name || `#${r.retailerId}`;
-    const l = chainLogoInfo((st?.chainId && chainNames.get(st.chainId)) || nm.split(/—|–| - /)[0]);
+    const l = chainLogoInfo((st?.chainId && chainNames.get(st.chainId)) || storeChainName(nm));
     return {
       id: r.id, started: r.startedAt,
       store: nm.split("—")[0].trim() || `#${r.retailerId}`,
@@ -4490,7 +4523,7 @@ app.get("/api/admin/test-calls", async (c) => {
       lane: r.lane || null,
       cost: r.costTotalUsd != null ? money(r.costTotalUsd) : null,
       chainId: st?.chainId ?? null, storeType: (st?.chainId && chainTypes.get(st.chainId)) || "Other",
-      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark,
+      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct,
     };
   });
   const timed = rows.filter((r) => r.callSec != null);
@@ -5012,7 +5045,7 @@ app.get("/api/chains", async (c) => {
   const aggByChain = new Map(ag.map((r) => [r.cid, { n: Number(r.n || 0), callable: Number(r.callable || 0), kiosk: Number(r.kiosk || 0), online: Number(r.onl || 0), verified: Number(r.verified || 0) }]));
   return c.json(rows.map((ch) => {
     const l = chainLogoInfo(ch.name);
-    return { ...ch, logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, tier: tierByChain.get(ch.id) ?? null, stores: aggByChain.get(ch.id) ?? { n: 0, callable: 0, kiosk: 0, online: 0, verified: 0 } };
+    return { ...ch, logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, tier: tierByChain.get(ch.id) ?? null, stores: aggByChain.get(ch.id) ?? { n: 0, callable: 0, kiosk: 0, online: 0, verified: 0 } };
   }));
 });
 // Compact store list for the Voice → Test picker: ONE callable store per supported (app-visible) chain
@@ -5063,6 +5096,9 @@ app.patch("/api/chains/:id", async (c) => {
   if (b.logoUrl !== undefined) patch.logoUrl = b.logoUrl || null;
   if (typeof b.logoWide === "boolean") patch.logoWide = b.logoWide;
   if (typeof b.logoDark === "boolean") patch.logoDark = b.logoDark;
+  // How wide to draw the logo, as a percent of its tile. Normally set by the upload; accepted here so
+  // an existing logo can be measured and backfilled without re-uploading the artwork.
+  if (b.logoPct !== undefined) patch.logoPct = Number.isFinite(Number(b.logoPct)) && Number(b.logoPct) > 0 ? Number(b.logoPct) : null;
   // Invariant: a direct-answer chain has no menu, so it must carry NO tree-seconds — a stray value arms
   // the connect-timer and mutes the agent (silent-agent bug). Enforce it here too, so a manual admin edit
   // that flips a chain to direct can't recreate it (the learn/trainer paths already guard this).
@@ -5453,9 +5489,9 @@ async function enrichAlertStores<T extends { subscriptions?: Array<{ retailerId?
   (me as { subscriptions?: unknown }).subscriptions = subs.map((s) => {
     const r = s.retailerId != null ? byId.get(s.retailerId as number) : null;
     if (!r) return s;
-    const chainName = (r.chainId && cName.get(r.chainId)) || r.name.split(/—|–| - /)[0];
+    const chainName = (r.chainId && cName.get(r.chainId)) || storeChainName(r.name);
     const l = chainLogoInfo(chainName);
-    return { ...s, storeType: (r.chainId && cType.get(r.chainId)) || "Other", logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
+    return { ...s, storeType: (r.chainId && cType.get(r.chainId)) || "Other", logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct };
   });
   return me;
 }
@@ -5663,8 +5699,8 @@ app.get("/api/retailers", async (c) => {
   const names = new Map((await db.select().from(chains)).map((x) => [x.id, x.name]));
   return c.json(rows.map((r) => {
     const chainName = (r.chainId && names.get(r.chainId)) || null;
-    const l = chainLogoInfo(chainName || r.name.split(/—|–| - /)[0]);
-    return { ...r, carries: storeCarriesList(chainName, r.carries).join(","), distributor: distributorsForChain(chainName), logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
+    const l = chainLogoInfo(chainName || storeChainName(r.name));
+    return { ...r, carries: storeCarriesList(chainName, r.carries).join(","), distributor: distributorsForChain(chainName), logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct };
   }));
 });
 // Store Intel — the headline numbers on the Stores tab (cached 60s). The database, at a glance.
@@ -6601,8 +6637,8 @@ app.get("/api/results", async (c) => {
   return c.json({ total, offset, limit, rows: rows.map((r) => {
     const ret = rMap.get(r.retailerId);
     // Same chain-logo resolution as every other surface, so the Calls feed shows the store's mark.
-    const l = chainLogoInfo(ret ? ((ret.chainId && names.get(ret.chainId)) || ret.name.split(/—|–| - /)[0]) : null);
-    return { ...r, retailer: ret?.name, category: cMap.get(r.categoryId), logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
+    const l = chainLogoInfo(ret ? ((ret.chainId && names.get(ret.chainId)) || storeChainName(ret.name)) : null);
+    return { ...r, retailer: ret?.name, category: cMap.get(r.categoryId), logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct };
   }) });
 });
 
