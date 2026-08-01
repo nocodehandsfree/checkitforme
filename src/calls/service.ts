@@ -1205,7 +1205,10 @@ export async function ingestPending(): Promise<number> {
     // answers now, not the in-memory receipt (08-01 audit, family 3) — the database's answer
     // survives restarts and expiries, and on the old direct path (the provider's own line) it
     // correctly defers to the provider instead of freezing this sweep behind an open thin receipt.
-    if (await isCheckAlive(row.room)) continue;
+    // …asked with whatever name this row carries: a row with no room (an older build, or any path
+    // that stamped only the provider's id) would otherwise ask about nothing, be told "not alive",
+    // and sweep a verdict onto a check still in progress. resolveRoom takes either name.
+    if (await isCheckAlive(row.room ?? row.providerCallId)) continue;
     const outcome = await provider.getConversation(row.providerCallId);
     if (!outcome) continue; // not finished yet
 

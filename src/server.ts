@@ -58,7 +58,7 @@ import { cachedCategories, cachedChains, cachedRetailers, categoryLabelMap, reta
 import { haversineMi, bboxAround } from "./geo";
 import { ingestSignals, recentStockNear, latestForRetailer } from "./stock/signals";
 import { classifyVerdict, reconcile, consensusFor, productDetailLabel } from "./voice/verdict";
-import { noteLiveLine, dropLiveRead } from "./voice/live-read";
+import { armLiveRead, noteLiveLine, dropLiveRead } from "./voice/live-read";
 import { seedStockCheckIntel } from "./stock/intel";
 import { seedSellMethods } from "./stock/sellmethods";
 import { r2Config, presignPut, photoKey } from "./r2";
@@ -6973,68 +6973,71 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
   // first words can get clipped again. The REAL fix (ears open at pickup, mouth held until the words
   // read human, never-silent cap) is Echo's boxed build — do NOT re-enable instant-connect here.
 
-  // Concurrency governor (flag-gated). OFF = the exact path below (row inserted only at connect, no
-  // slot) — byte-identical to before. ON = pre-insert a "dialing" row so we can hold a slot keyed on
-  // its id (the queue reads slot counts to know the pool is full), release it if the call never
-  // reaches a human, and let the EL poller release it on a normal finish (same lifecycle as the
-  // headless bridge check). The live-audio room + response shape are unchanged either way.
+  // ONE ROW, WRITTEN BEFORE THE DIAL, ON EVERY PATH (08-01 audit follow-up — the family rule).
+  //
+  // This used to fork: governed and zone checks pre-inserted a row, and the ORDINARY WEBSITE CHECK
+  // inserted its row only inside the connect callback below — with the provider's conversation id and
+  // NO room. Nothing ever backfilled it, so on the customer's own path the two finalize gates (the
+  // provider's end-of-call report and the sweeper) asked "is this check alive?" about nothing at all,
+  // were told no, and stamped a verdict + CHARGED while the phone was still in somebody's hand. That
+  // is precisely the fault of the owner's second test run, still open on the ONE path he actually
+  // uses, because the fix was made on the paths that already had a room. A refused dial on that path
+  // was worse still: the row is only written at connect, so the check left no record anywhere.
+  //
+  // So the room is minted here, before anything is dialled, and the row carries it from the first
+  // instant. The governor decides only whether a SLOT is held, which is what it was ever about.
+  const room = crypto.randomUUID();
   const governed = await governorEnabled();
-  let slotRowId: number | null = null;
-  if (governed || opts?.zoneRunId) {
-    // Zone rows pre-insert too: a store whose dial fails must still appear on the run report as a
-    // terminal row, not silently vanish (the connect-only insert would drop it).
-    const [row] = await db.insert(callResults).values({ retailerId, categoryId: primary, mode: "restock", status: "dialing", finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false, zoneRunId: opts?.zoneRunId ?? null }).returning();
-    slotRowId = row.id;
-    if (governed) {
-      const slot = await acquireCallSlot({ key: `call:${row.id}`, priority: opts?.priority ?? "interactive", userId: finder?.userId ?? undefined, ttlSec: (pol.bail.maxCallSeconds || 180) + 120 });
-      if (slot === null) {
-        await db.update(callResults).set({ status: "failed", statusKey: "system_busy", summary: "All lines busy — the check will be retried." }).where(eq(callResults.id, row.id));
-        return { error: "calls_busy" }; // routeCheck sees this and queues the check instead of failing
-      }
+  const [row] = await db.insert(callResults).values({
+    retailerId, categoryId: primary, mode: "restock", status: "dialing",
+    room, providerCallId: `bridge:${room}`,
+    finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false, zoneRunId: opts?.zoneRunId ?? null,
+  }).returning();
+  const rid = row.id;
+  if (governed) {
+    const slot = await acquireCallSlot({ key: `call:${rid}`, priority: opts?.priority ?? "interactive", userId: finder?.userId ?? undefined, ttlSec: (pol.bail.maxCallSeconds || 180) + 120 });
+    if (slot === null) {
+      await db.update(callResults).set({ status: "failed", statusKey: "system_busy", summary: "All lines busy — the check will be retried." }).where(eq(callResults.id, rid));
+      return { error: "calls_busy" }; // routeCheck sees this and queues the check instead of failing
     }
   }
+  linkCall(room, rid); // the stable key for the timeline (providerCallId gets replaced mid-call)
+  // READ AS IT GOES (owner 07-30). Armed on THIS path too — it never was, so the one path a customer
+  // actually watches was still reading the conversation from scratch at hang-up, which is the wait on
+  // "Getting the answer" that order existed to delete.
+  armLiveRead(room, v.dynamicVars.category || "the product", specificProduct);
 
-  // Log the call once it connects (we get the ElevenLabs conversation id). Governed → update the row
-  // we pre-inserted; ungoverned → insert the PRIMARY row now (today's behavior). ingest fans out each
-  // extra line into its own row from the per-category extraction.
+  // The conversation id lands mid-call and REPLACES the placeholder id on the same row — the room
+  // stays put, so every gate can still find this check by name whichever id it is asked about.
   const result = await placeBridgeCall(v.retailer.phone, v.dynamicVars, (convId) => {
-    if (slotRowId != null) {
-      db.update(callResults).set({ providerCallId: convId, status: "in_progress" }).where(eq(callResults.id, slotRowId))
-        .catch((e) => console.error("bridge call log update:", e));
-    } else {
-      db.insert(callResults).values({ retailerId, categoryId: primary, mode: "restock", status: "in_progress", providerCallId: convId, finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false, zoneRunId: opts?.zoneRunId ?? null })
-        .catch((e) => console.error("bridge call log insert:", e));
-    }
+    db.update(callResults).set({ providerCallId: convId, status: "in_progress" }).where(eq(callResults.id, rid))
+      .catch((e) => console.error("bridge call log update:", e));
     // Per-store talk cap (chains.maxTalkSeconds) wins over the global bail ceiling when set, so a
     // store the owner marked "wrap fast" gets a tighter Twilio TimeLimit — the cost guarantee.
-  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, listenNav: v.listenNav });
+  }, v.dtmf, { from, room, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, listenNav: v.listenNav });
 
-  // Governed bookkeeping: point the pre-inserted row at the room (so /pub/result resolves it before
-  // connect), release the slot on a dial that never placed, and register a finalizer that frees the
-  // slot + writes the real reason if the call ends before a human answers.
-  if (slotRowId != null) {
-    if (result.error || !result.room) {
-      await releaseCallSlot(`call:${slotRowId}`);
-      await db.update(callResults).set({ status: "failed", summary: result.error || "bridge call failed" }).where(eq(callResults.id, slotRowId));
-    } else {
-      const rid = slotRowId;
-      linkCall(result.room, rid); // stable key for the receipt (providerCallId gets replaced mid-call)
-      await db.update(callResults).set({ providerCallId: `bridge:${result.room}`, room: result.room }).where(eq(callResults.id, rid));
-      roomFinalizers.set(result.room, (twilioStatus) => {
-        void (async () => {
-          const cur = (await db.select().from(callResults).where(eq(callResults.id, rid)))[0];
-          if (!cur || cur.status !== "dialing") return; // conv id landed → EL ingest owns the verdict + release
-          const statusKey = ({ busy: "busy", failed: "bad_number" } as Record<string, string>)[twilioStatus] ?? "nobody_answered";
-          await db.update(callResults).set({
-            status: "no_answer", confirmed: null, statusKey,
-            summary: `Bridge call ended before a human answered (${twilioStatus}).`,
-            completedAt: Math.floor(Date.now() / 1000),
-          }).where(eq(callResults.id, rid));
-          await releaseCallSlot(`call:${rid}`); // never reached a human → free the slot (idempotent)
-        })().catch((e) => console.error("live bridge finalize:", e));
-      });
-    }
+  if (result.error || !result.room) {
+    if (governed) await releaseCallSlot(`call:${rid}`);
+    await db.update(callResults).set({ status: "failed", summary: result.error || "bridge call failed", completedAt: Math.floor(Date.now() / 1000) }).where(eq(callResults.id, rid));
+    return result;
   }
+  // A CHECK NOBODY ANSWERS MUST STILL END. The sweeper deliberately skips a row still carrying our own
+  // placeholder id, and this path registered no terminal hook at all — so pre-writing the row without
+  // this would leave every unanswered website check sitting on "dialing" forever, which is a worse
+  // fault than the one above. The carrier's terminal status closes it, exactly as on the other paths.
+  roomFinalizers.set(result.room, (twilioStatus) => {
+    void (async () => {
+      const cur = (await db.select().from(callResults).where(eq(callResults.id, rid)))[0];
+      if (!cur || cur.status !== "dialing") return; // conv id landed → the normal verdict path owns it
+      const statusKey = ({ busy: "busy", failed: "bad_number" } as Record<string, string>)[twilioStatus] ?? "nobody_answered";
+      await db.update(callResults).set({
+        status: "no_answer", confirmed: null, statusKey,
+        summary: `Bridge call ended before a human answered (${twilioStatus}).`,
+        completedAt: Math.floor(Date.now() / 1000),
+      }).where(eq(callResults.id, rid));
+      if (governed) await releaseCallSlot(`call:${rid}`); // never reached a human → free the slot (idempotent)
+    })().catch((e) => console.error("live bridge finalize:", e));
+  });
   return result;
 }
 // Queue adapter for the live lane: reconstruct a live check from a ticket's args and return the
@@ -7119,7 +7122,11 @@ app.post("/webhooks/elevenlabs", async (c) => {
       // receipt's fifteen-minute life and every restart made the old guard fail toward "line is
       // down" — and on the old direct path, where the provider carries the line itself, it failed
       // the other way and froze this webhook for the receipt's whole life.
-      if (await isCheckAlive(row?.room)) return c.json({ ok: true, skipped: "line still up" });
+      // ASK WITH WHATEVER NAME THE ROW HAS. A row written by an older build, or by any path that
+      // stamped only the provider's id, has no room — and a gate asked about nothing answers "not
+      // alive" and finalizes straight through the guard. The gatekeeper resolves a provider id back
+      // to the check itself, so handing it both names is belt and braces rather than a second rule.
+      if (await isCheckAlive(row?.room ?? row?.providerCallId)) return c.json({ ok: true, skipped: "line still up" });
       // Consensus second read — keep the webhook verdict + billing identical to the poller (ingestPending):
       // two non-conflicting reads → a hard verdict (charge); conflict/ambiguity → "no clear answer", no charge.
       let confirmed = o.confirmed, statusKey = o.statusKey;

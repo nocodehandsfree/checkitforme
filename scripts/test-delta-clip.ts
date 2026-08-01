@@ -699,5 +699,76 @@ console.log("\n▶ one sentence prints once, however it arrives");
   restore(); tw.close(); f.close();
 }
 
+// ================================================================================================
+// THE TWO RACES. Both are the same shape: something that was TRUE when it was checked is acted on
+// after the world has moved. They are narrow windows and they cost a live check when they land.
+console.log("\n▶ Staff step away WHILE we are opening him: no session opens into the hold");
+{
+  _reset();
+  const f = await fakeProvider();
+  // Opening him needs an address from the provider first, and that takes a moment. Hold the answer
+  // long enough for Staff to walk away inside the window — which is the whole race.
+  const real = globalThis.fetch;
+  let releaseHandshake: (() => void) | null = null;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url.includes("/convai/conversation/get-signed-url")) {
+      await new Promise<void>((r) => { releaseHandshake = r; });
+      return new Response(JSON.stringify({ signed_url: f.url }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    return real(input as RequestInfo, init);
+  }) as typeof fetch;
+
+  openReceipt("room-race-open", { lane: "direct" });
+  setBridgeContext("room-race-open", { agentId: "agent_normal", dynamicVars: {}, connectOnHuman: true, holdMaxSeconds: 999, holdStrategy: "reopen" });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "room-race-open", () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_r", customParameters: { room: "room-race-open" } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < 70; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
+  await sleep(120);
+  ok(f.sockets.length === 0 && !!releaseHandshake, "he is mid-handshake: no session open yet");
+  // …and NOW they walk off, before the address comes back.
+  quiet(tw, HOLD_QUIET_MS / 20 + 20);
+  await sleep(60);
+  ok((getReceipt("room-race-open")?.events || []).some((e) => e.kind === "hold_start"), "Staff stepped away while we were still opening him");
+  (releaseHandshake as unknown as () => void)();
+  await sleep(200);
+  ok(f.sockets.length === 0, "the handshake finished into a hold and was REFUSED — nothing opened, nothing billed");
+  // Back to an ordinary, instant handshake for the rest of the scene.
+  globalThis.fetch = real;
+  const restore = stubSignedUrl(f);
+  // And somebody coming back still gets an agent, so refusing cost us nothing.
+  speak(tw, 30);
+  await sleep(250);
+  ok(f.sockets.length === 1, "…and when they come back he opens normally");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ a fast return, then the OLD session's close lands: the check survives it");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const tw = await callWithHold(f, "room-race-close", "reopen");
+  speak(tw, 150);
+  ok(f.sockets.length === 1, "one session while somebody is with us");
+  const first = f.sockets[0];
+  quiet(tw, HOLD_QUIET_MS / 20 + 20);              // they step away — he is closed for the wait
+  await sleep(80);
+  speak(tw, 30);                                    // …and come straight back, fast
+  await sleep(200);
+  ok(f.sockets.length === 2, "he is opened again for whoever is back");
+  // The OLD socket now finishes tearing down. It used to read "not on hold any more", fall through,
+  // and hang the phone up on Staff who were back and talking.
+  try { first.terminate(); } catch { /* already gone */ }
+  await sleep(150);
+  ok(tw.readyState === 1, "the phone line is STILL UP — a replaced session's close cannot end the check");
+  const leaves = (getReceipt("room-race-close")?.events || []).filter((e) => e.kind === "charlie_leave");
+  ok(leaves.length === 1, `the wait recorded ONE meter stop, not two (${leaves.length})`);
+  restore(); tw.close(); f.close();
+}
+
 console.log(`\n════════════════════════════════\n  PASS: ${pass}   FAIL: ${fail}\n════════════════════════════════`);
 process.exit(fail === 0 ? 0 : 1);
