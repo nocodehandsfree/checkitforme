@@ -155,6 +155,15 @@ export function setEventSink(fn: Sink): void { sink = fn; }
 type LineHook = (room: string, who: "Agent" | "Clerk", text: string) => void;
 let lineHook: LineHook | null = null;
 export function setLineHook(fn: LineHook): void { lineHook = fn; }
+// THE CHECK'S LIFE, MIRRORED AS IT HAPPENS (the gatekeeper, src/calls/check-life.ts). Registered the
+// same way the sink and the line hook are, for the same reason: this module stays pure and testable
+// while the app wires the database behind it. The mirror receives the life-relevant moments — dialed,
+// connected, human found, hold started/ended, Charlie opened/closed, the line ending — so a restart
+// or an expired in-memory receipt can never flip "is this check alive?" back to the provider's guess.
+// Unset in tests; every call is a no-op then.
+type LifeHook = (room: string, kind: string, detail?: Record<string, unknown>) => void;
+let lifeHook: LifeHook | null = null;
+export function setLifeHook(fn: LifeHook): void { lifeHook = fn; }
 
 // ---- recording ------------------------------------------------------------------------------
 
@@ -202,6 +211,7 @@ export function emit(room: string, kind: EventKind, note?: string, detail?: Reco
     const atMs = Date.now() - r.startMs;
     r.events.push({ atMs, atSec: Math.round(atMs / 1000), kind, note, detail });
     if (r.events.length > 400) r.events.splice(0, r.events.length - 400); // runaway guard
+    try { lifeHook?.(room, kind, detail); } catch { /* the mirror must never break a call */ }
   } catch { /* recording must never break a call */ }
 }
 
@@ -282,6 +292,7 @@ export function transcriptOf(r: Receipt): string {
 export function linkCall(room: string, callId: number): void {
   const r = receipts.get(room);
   if (r && !r.closed) r.callId = callId;
+  try { lifeHook?.(room, "call_linked", { callId }); } catch { /* never on the call path */ }
 }
 
 /** Attach the provider's conversation id so a receipt can be checked against a bill. The FIRST one
@@ -292,6 +303,9 @@ export function linkProviderCall(room: string, providerCallId: string): void {
   if (!r.providerCallId) r.providerCallId = providerCallId;
   const open = r.segments.find((s) => s.closeMs === null);
   if (open && !open.providerCallId) open.providerCallId = providerCallId;
+  // The gatekeeper must be able to find this check by the provider's name for it AFTER a restart,
+  // which is exactly when the in-memory maps that know the answer are gone.
+  try { lifeHook?.(room, "provider_linked", { providerCallId }); } catch { /* never on the call path */ }
 }
 
 /**

@@ -148,11 +148,16 @@ import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
 import { settings as settingsTbl } from "./db/schema";
 import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeRoomForConversation, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, activeBridgeCalls } from "./voice/bridge";
+import { installCheckLife, isCheckAlive, noteLineEnded, resolveRoom as lifeRoom } from "./calls/check-life";
 import { placeBridgeCall, attachListenFork, roomCallSids, roomCallProgress, roomFinalizers, RAILWAY_HOST, STAGING_HOST } from "./voice/bridge-place";
 import { isCallingPaused, setCallingPaused, spendTodayCents, withLock } from "./redis";
 
 assertProdSecurity(); // refuse to boot in prod with an open admin / forgeable sessions
 installReceiptStore(); // every finished call writes its timeline + seconds + cost to the database
+// THE GATEKEEPER (08-01 audit): every check's life mirrored to the database as it happens, so
+// "is this check alive?" is answerable after a restart and after every in-memory map has expired.
+// The carrier's line-end is the only end; every finalize path asks check-life, never the provider.
+installCheckLife();
 // READ AS IT GOES (owner 07-30): every line reaches the reader the moment it is spoken, so the
 // verdict is ready at hang-up instead of being started then. Registered, not imported, because
 // calls/events.ts stays free of model/db code by design. See src/voice/live-read.ts.
@@ -6827,6 +6832,10 @@ app.post("/twiml/bridge-status", async (c) => {
       // persists HERE. The finalizer above may still be writing the verdict; the roll-up is stitched
       // onto the call row by the sink, which looks the row up by room.
       closeReceipt(room, status === "completed" ? "Check ended" : `Check ended (${status})`, status);
+      // …and the gatekeeper's row is stamped DIRECTLY, not only through the receipt: after a restart
+      // there is no in-memory receipt left to close, and this callback is then the only witness that
+      // the line ended. Without this stamp a restarted check would read alive until the hard cap.
+      noteLineEnded(room, status);
     }
   }
   return c.body(null, 204);
