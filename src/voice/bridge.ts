@@ -367,6 +367,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  where the store's answer should have been (owner screenshot 07-31). They are two turns because
    *  we asked a question in between, and the record has to say so. */
   let pendingSplit = -1;
+  /** Running while held audio is being paced out. Live frames queue behind it so nothing overtakes. */
+  let handoverTimer: NodeJS.Timeout | null = null;
   /** Our question, kept off the live view until the store's hello can be shown above it. */
   let heldQuestion: string | null = null;
   let questionTimer: NodeJS.Timeout | null = null;
@@ -422,36 +424,49 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   let charlieSpoke = false;
   log(`twilio connected room=${room.slice(0, 8)} ctx=${!!ctx}`);
 
-  /** Release everything the clerk said while we were still asking. Only ever runs with the gate
-   *  open and the agent ready, so a buffered word can never be delivered to a session that is not
-   *  listening yet. */
+  /** Release whatever we had to hold before his session was ready, AT THE SPEED IT WAS SPOKEN. */
   function flushPending() {
-    if (!eleven || !ready || !charlieGateOpen) return;
-    // A REAL PAUSE WHERE THE PAUSE ACTUALLY WAS. Their greeting and their answer to our question are
-    // held for the same reason — nobody of ours was listening yet — and handed over back to back
-    // they are one unbroken stretch of sound with no gap in it, so they come back as ONE sentence:
-    // "Hi, thank you for calling the Fun store, this is Bob" and "sorry, we don't today" printed as
-    // a single line, the store apparently answering a question it had not been asked (owner
-    // screenshot, 08-01). In real time there WAS a gap — the four seconds our recorded question took
-    // — so the gap is put back exactly where it belongs, at the moment the question started playing.
-    // The marker for that moment was already being worked out and then thrown away unused.
-    const split = pendingSplit > 0 && pendingSplit < pending.length ? pendingSplit : -1;
-    const beat = () => { for (let q = 0; q < TURN_GAP_FRAMES; q++) eleven!.send(JSON.stringify({ user_audio_chunk: QUIET_FRAME })); };
-    for (let i = 0; i < pending.length; i++) {
-      if (i === split) beat();   // ← everything before this is their hello; everything after answers us
-      eleven.send(JSON.stringify({ user_audio_chunk: pending[i] }));
-    }
-    // …and one after the last of it, so whatever they say next is its own line too.
-    if (pending.length) {
-      beat();
-      log(`delta: handed over ${pending.length} frame(s)${split > 0 ? `, split at ${split} so the hello and the answer are two lines` : ""}, then a beat of quiet`);
-    }
-    pending.length = 0; pendingSplit = -1;
-    // THE QUESTION IS STILL WAITING ON THEIR HELLO, and only now has their hello reached anybody who
-    // can turn it into words. The countdown that gives up and shows our question anyway has to start
-    // HERE, not when the question began playing — started there it ran out while their audio was
-    // still sitting in our hands, and the customer watched our question appear first on a check
-    // where the store spoke first (owner, 08-01). Re-armed from the handover.
+    if (!eleven || !ready) return;
+    if (handoverTimer) return;   // already draining; live frames are queueing behind it
+    if (!pending.length) return;
+    // AT THE SPEED IT WAS SPOKEN, NEVER ALL AT ONCE. A phone line carries one 20ms frame every 20ms,
+    // and the transcriber on the other end works on that clock: it decides a sentence has ended by
+    // hearing a real pause pass in real time. Sent as fast as the socket will take them, three
+    // seconds of somebody talking arrive in a few thousandths of a second, so there is no pause
+    // anywhere inside it and no pause after it either. That is why his greeting came back slurred
+    // into different words AND welded to his answer, and why inserting silence into the burst
+    // changed nothing: the silence went past at the same impossible speed (owner's checks, 08-01).
+    // Paced out, every gap that was in the room is in the audio again. Nobody is waiting on this:
+    // our recorded question is playing over the top of it and runs longer than any handover.
+    // NO INVENTED SILENCE. Earlier fixes tried to force a turn break by injecting 800ms of quiet
+    // into the burst, and it did nothing: sent at burst speed the silence went past just as fast as
+    // the speech. Paced properly it would work, but it would also put us permanently that far
+    // behind the live line, because the queue drains at exactly the speed it fills. It is not
+    // needed either way now: his ears open when a person is found, so the only thing ever held is
+    // the moment before his session answers, and every real pause the room had is already in the
+    // audio itself, in real time, where the transcriber can hear it.
+    pendingSplit = -1;
+    log(`delta: handing over ${pending.length} frame(s) at the speed they were spoken`);
+    const step = () => {
+      if (!eleven || eleven.readyState !== 1) { handoverTimer = null; return; }
+      // …AND CATCH UP AT THE END, or we stay behind the live line for the rest of the check. Once
+      // the backlog is down to a fraction of a second it goes out in one go: too short to slur a
+      // syllable, and from there he is hearing the room as it happens.
+      if (pending.length <= CATCHUP_FRAMES) {
+        for (const f of pending) { try { eleven.send(JSON.stringify({ user_audio_chunk: f })); } catch { /* torn down */ } }
+        pending.length = 0; handoverTimer = null;
+        log("delta: caught up with the live line");
+        return;
+      }
+      const f = pending.shift();
+      if (f !== undefined) { try { eleven.send(JSON.stringify({ user_audio_chunk: f })); } catch { /* torn down */ } }
+      handoverTimer = setTimeout(step, FRAME_MS);
+    };
+    handoverTimer = setTimeout(step, 0);
+    // THE QUESTION IS STILL WAITING ON THEIR HELLO, and only now is their hello on its way to
+    // anybody who can turn it into words. The countdown that gives up and shows our question anyway
+    // starts HERE: started when the question began playing it ran out while their voice was still
+    // sitting in our hands, and the customer watched our question appear first (owner, 08-01).
     if (heldQuestion && questionTimer) { clearTimeout(questionTimer); questionTimer = setTimeout(releaseHeldQuestion, QUESTION_HOLD_MS); }
   }
   /** Show our question on the live view without their hello above it — only ever because their hello
@@ -464,6 +479,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   /** One frame of μ-law silence, and how many of them read as "they stopped talking". */
   const QUIET_FRAME = Buffer.alloc(160, 0x7f).toString("base64");
   const TURN_GAP_FRAMES = 40; // 800ms — past any natural pause inside one sentence
+  /** What a phone line actually is: one 20ms frame every 20ms. Held audio goes out at exactly this
+   *  rate, because the transcriber measures pauses on a real clock and anything faster erases them. */
+  const FRAME_MS = 20;
+  /** How small the backlog has to get before the rest goes out in one go. A fifth of a second is far
+   *  too short to slur a syllable, and it is what stops us trailing the live line forever. */
+  const CATCHUP_FRAMES = 10;
 
   /** The clip is over: hand the conversation to the agent. Idempotent — three signals race to call
    *  this and a backstop calls it if all three miss, so it must only ever act once. */
@@ -964,7 +985,30 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       connecting = true;   // buffer from here, so nothing they say in the gap is lost
       // …and everything from BEFORE here too: their hello started before we were sure of them.
       if (preRoll.length) { pending.unshift(...preRoll); log(`delta: keeping the ${preRoll.length} frame(s) of hello we heard before we were sure`); preRoll.length = 0; }
-      log("delta: person heard, waiting for them to finish before asking");
+      // HIS EARS OPEN NOW, NOT TWO SECONDS BEFORE THE QUESTION ENDS (owner's checks, 08-01).
+      //
+      // He used to be warmed up late and handed the whole greeting in one go when the question
+      // finished: three and a bit seconds of somebody talking, delivered in a few thousandths of a
+      // second. The words come back wrong and two turns come back as one line, and no amount of
+      // silence inserted into that burst fixes either, because the transcriber decides where a
+      // sentence ends by hearing a REAL pause on a REAL clock. A burst has no pauses in it at all.
+      // Proven on his check 229: 157 frames handed over at once, and "Thank you for calling the Fun
+      // store, this is Bob" plus his answer came back as ONE line reading "Thank you for calling the
+      // front door. This is Bob. I do not."
+      //
+      // So nothing is held that does not have to be. His session opens the moment a person is there
+      // and the line flows to him live from then on, at the speed it was spoken. His MOUTH is still
+      // shut until the question finishes — that gate is separate and unchanged, and it is the only
+      // thing the question ever needed. He bills a few seconds earlier per check; a check whose
+      // words are wrong is worth nothing at all.
+      // SHUT HIS MOUTH BEFORE HIS SESSION EXISTS. This gate is also what picks the agent that joins a
+      // conversation already in progress — the one with no greeting, told to wait for the answer.
+      // Opening him before it was shut would open the ORDINARY agent, who greets the store, straight
+      // over the top of our recorded question. It is closed here, the moment we commit to asking.
+      charlieGateOpen = false;
+      clipText = clip.text;
+      log("delta: person heard, opening his ears now and waiting for them to finish before asking");
+      void connectEleven();
     } else connectEleven();
     // Give-up cap: the agent is now billing. If no real human words land within giveUpSeconds,
     // nobody is coming to the phone — end the call instead of paying to listen to it ring.
@@ -1156,7 +1200,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       else if (onHold) {
         if (heldWords.length || frameEnergy(b64) > VOICE_THRESH) { heldWords.push(b64); if (heldWords.length > 250) heldWords.shift(); }
       }
-      else if (eleven && ready && charlieGateOpen) eleven.send(JSON.stringify({ user_audio_chunk: b64 }));
+      // HIS EARS ARE NOT HIS MOUTH. This used to require the question to have finished before a
+      // single frame reached him, which is what forced everything said during it into a buffer and
+      // then out as one burst. The question only ever needed him not to TALK, and his voice is
+      // suppressed separately (see the audio handler). While a held handover is still being paced
+      // out, live frames queue behind it so nothing arrives out of order.
+      else if (eleven && ready) { if (handoverTimer) pending.push(b64); else eleven.send(JSON.stringify({ user_audio_chunk: b64 })); }
       // Buffer what the CLERK says — never our own voice coming back off the line. A PSTN line
       // reflects our audio, and loud enough reflections clear the barge threshold, so anything
       // arriving while our own clip is still playing goes into the buffer and is then handed to the
@@ -1199,5 +1248,5 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       if (m.mark?.name === CLIP_MARK) openCharlieGate("the carrier confirmed the clip played");
     } else if (m.event === "stop") { log("twilio stop"); signalEnd(); if (eleven) eleven.close(); }
   });
-  twilio.on("close", () => { if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; } if (heldQuestion) { try { relayLine?.(room, "Agent", heldQuestion); } catch { /* best effort */ } heldQuestion = null; } try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (eleven) eleven.close(); /* the context is NOT deleted here: Twilio can reconnect a blipped stream mid-call, and the fresh socket must still find it. The 30-minute leak guard owns cleanup. */ });
+  twilio.on("close", () => { if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; } if (heldQuestion) { try { relayLine?.(room, "Agent", heldQuestion); } catch { /* best effort */ } heldQuestion = null; } try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (handoverTimer) { clearTimeout(handoverTimer); handoverTimer = null; } if (eleven) eleven.close(); /* the context is NOT deleted here: Twilio can reconnect a blipped stream mid-call, and the fresh socket must still find it. The 30-minute leak guard owns cleanup. */ });
 }
