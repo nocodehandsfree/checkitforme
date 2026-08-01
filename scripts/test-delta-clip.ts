@@ -33,6 +33,8 @@ function ringFrames(ms: number): string[] {
   return toMediaFrames(buf);
 }
 
+/** How many frames of quiet the bridge sends to end a turn — the same 800ms it uses. */
+const TURN_GAP = 40;
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -45,7 +47,7 @@ const frame = (b: Buffer) => b.toString("base64");
 
 // ---- the fake voice provider -----------------------------------------------------------------
 interface Fake { url: string; close: () => void; sockets: WS[]; chunks: string[]; inits: string[]; agentIdsAsked: string[]; raw: string[] }
-async function fakeProvider(opts: { speakImmediately?: boolean } = {}): Promise<Fake> {
+async function fakeProvider(opts: { speakImmediately?: boolean; readyDelayMs?: number } = {}): Promise<Fake> {
   const wss = new WebSocketServer({ port: 0 });
   await new Promise((r) => wss.on("listening", r));
   const port = (wss.address() as { port: number }).port;
@@ -58,7 +60,11 @@ async function fakeProvider(opts: { speakImmediately?: boolean } = {}): Promise<
       const m = JSON.parse(s) as { type?: string; user_audio_chunk?: string };
       if (m.type === "conversation_initiation_client_data") {
         f.inits.push(s);
-        ws.send(JSON.stringify({ type: "conversation_initiation_metadata", conversation_initiation_metadata_event: { conversation_id: "conv_test_1" } }));
+        // A session that takes a moment to say it is ready. This is the ordinary case on a real
+        // check, and it is what makes the store's answer pile up behind their greeting: the
+        // question has finished, but nothing of ours is listening yet, so both are still held.
+        const meta = () => ws.send(JSON.stringify({ type: "conversation_initiation_metadata", conversation_initiation_metadata_event: { conversation_id: "conv_test_1" } }));
+        if (opts.readyDelayMs) setTimeout(meta, opts.readyDelayMs); else meta();
         // An agent that opens its mouth the instant it is ready. Nothing it says may reach the line
         // while our own question is still playing.
         if (opts.speakImmediately) ws.send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x40)) } }));
@@ -767,6 +773,89 @@ console.log("\n▶ a fast return, then the OLD session's close lands: the check 
   ok(tw.readyState === 1, "the phone line is STILL UP — a replaced session's close cannot end the check");
   const leaves = (getReceipt("room-race-close")?.events || []).filter((e) => e.kind === "charlie_leave");
   ok(leaves.length === 1, `the wait recorded ONE meter stop, not two (${leaves.length})`);
+  restore(); tw.close(); f.close();
+}
+
+// ================================================================================================
+// THE GREETING, WORD FOR WORD, ON ITS OWN LINE (owner screenshot, 08-01). Three faults, one scene,
+// because they are one moment of the check: Staff say "Hi, thank you for calling the Fun store,
+// this is Bob", we ask our question, they answer. What came back was ONE line reading "Hi, do you
+// recall Fun Store? This is Bob. Um, I'm sorry, we don't today." Wrong words, and two turns welded
+// into one.
+console.log("\n▶ the greeting is kept whole, with the pauses that are inside it");
+{
+  _reset();
+  // He is slow to report ready, which is the ordinary case: the question finishes, nothing of ours
+  // is listening yet, and the store's answer piles up behind their greeting. Handed over together
+  // with no gap between them, they came back as ONE line (owner screenshot, 08-01).
+  const f = await fakeProvider({ readyDelayMs: 1500 });
+  const restore = stubSignedUrl(f);
+  const room = "room-greeting";
+  const audio = Buffer.alloc(600 * 8, 0x20);
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, {
+    agentId: "agent_normal", midCallAgentId: "agent_joining",
+    dynamicVars: { opening_line: "do you have any Pokemon cards in stock?" },
+    connectOnHuman: true, holdMaxSeconds: 999,
+    openingClip: { audio, ms: 600, text: "do you have any Pokemon cards in stock?" },
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, room, () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_g", customParameters: { room } } });
+  await sleep(350);
+  // A REAL SENTENCE: bursts of speech with the small pauses a person leaves between phrases. Those
+  // pauses used to be thrown away, which squeezes the sentence and it comes back as other words.
+  let spoken = 0;
+  const say = (frames: number) => { for (let i = 0; i < frames; i++) { tw.media(frame(LOUD(160, i % 4))); spoken++; } };
+  const breathe = (frames: number) => { for (let i = 0; i < frames; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); spoken++; } };
+  say(20); breathe(6); say(22); breathe(5); say(18);   // "Hi, · thank you for calling the Fun store, · this is Bob"
+  const greetingFrames = spoken;
+  // …then they stop, which is what starts our question.
+  for (let i = 0; i < 70; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(200);
+  ok(f.inits.length === 1, "the question played and the agent opened behind it");
+  // The question finishes, and THEN they answer. Nothing of ours is listening yet, so their answer
+  // is held behind their greeting, exactly as it is on a real check.
+  tw.say({ event: "mark", mark: { name: "delta-opening" } });
+  await sleep(800);                                   // past our own audio, so this is really them
+  for (let i = 0; i < 25; i++) tw.media(frame(LOUD(160, i % 3)));
+  ok(f.chunks.length === 0, "nothing has reached him yet: he has not said he is ready");
+  await sleep(900);                                   // …now he is ready, and everything is handed over
+
+  const QUIET = Buffer.alloc(160, 0x7f).toString("base64");
+  // THE PAUSES INSIDE THE GREETING SURVIVED. Keeping only the loud frames would hand over just the
+  // ~60 spoken ones; the breaths between the phrases have to be in there too, in place.
+  const handed = f.chunks;
+  const firstBeat = handed.findIndex((c, i) => c === QUIET && handed.slice(i, i + TURN_GAP).every((x) => x === QUIET));
+  const hello = firstBeat < 0 ? handed : handed.slice(0, firstBeat);
+  ok(hello.length > 60, `the greeting was handed over whole, breaths and all (${hello.length} frames, spoken ${greetingFrames})`);
+  ok(hello.filter((c) => c === QUIET).length >= 8, `…and the pauses INSIDE it are still there (${hello.filter((c) => c === QUIET).length} quiet frames), so the sentence is not squeezed`);
+
+  // TWO TURNS, SPLIT WHERE THE QUESTION ACTUALLY PLAYED. Not one beat at the end of everything.
+  ok(firstBeat > 0, "a real pause was put back between their greeting and their answer");
+  const after = handed.slice(firstBeat + TURN_GAP);
+  ok(after.some((c) => c !== QUIET), `their answer comes AFTER that pause, as its own turn (${after.filter((c) => c !== QUIET).length} frames)`);
+  ok(handed[handed.length - 1] === QUIET, "…and a pause closes the handover, so whatever they say next is its own line too");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ our question is never shown before their greeting, however long the words take");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const base = relayed.length;
+  const { tw } = await callToHello(f, 400, "room-order");
+  tw.say({ event: "mark", mark: { name: "delta-opening" } });
+  // Longer than the give-up wait measured from when the question PLAYED. Their words are slow to
+  // come back on a real check, and that countdown used to run out while we still held their audio.
+  await sleep(1200);
+  ok(!relayed.slice(base).some((l) => l.role === "Agent"), "our question is still held back, because their greeting has not become words yet");
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Hi, thank you for calling the Fun store, this is Bob." } }));
+  await sleep(100);
+  ok(/thank you for calling/.test(relayed[base]?.text || "") && relayed[base]?.role === "Clerk",
+    `their greeting is the FIRST thing the customer sees (${relayed[base]?.role}: ${relayed[base]?.text})`);
+  ok(relayed[base + 1]?.role === "Agent", "…and our question comes after it, the order it happened in");
   restore(); tw.close(); f.close();
 }
 

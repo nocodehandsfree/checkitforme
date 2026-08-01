@@ -427,18 +427,39 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  listening yet. */
   function flushPending() {
     if (!eleven || !ready || !charlieGateOpen) return;
-    for (const p of pending) eleven.send(JSON.stringify({ user_audio_chunk: p }));
-    // A REAL PAUSE AFTER IT, because a pause is the only thing that ends a turn. Their hello reaches
-    // the agent as one burst and the live line carries straight on from it, so the four seconds our
-    // question took simply do not exist in what he hears: "hi, this is Bob at the phone store" and
-    // "let me put you on hold and go find out" arrive back to back and come back as ONE sentence. The
-    // store then reads as greeting us and answering a question it was never asked, with our own two
-    // lines printed one after the other where their answer belonged (owner screenshot 07-31).
+    // A REAL PAUSE WHERE THE PAUSE ACTUALLY WAS. Their greeting and their answer to our question are
+    // held for the same reason — nobody of ours was listening yet — and handed over back to back
+    // they are one unbroken stretch of sound with no gap in it, so they come back as ONE sentence:
+    // "Hi, thank you for calling the Fun store, this is Bob" and "sorry, we don't today" printed as
+    // a single line, the store apparently answering a question it had not been asked (owner
+    // screenshot, 08-01). In real time there WAS a gap — the four seconds our recorded question took
+    // — so the gap is put back exactly where it belongs, at the moment the question started playing.
+    // The marker for that moment was already being worked out and then thrown away unused.
+    const split = pendingSplit > 0 && pendingSplit < pending.length ? pendingSplit : -1;
+    const beat = () => { for (let q = 0; q < TURN_GAP_FRAMES; q++) eleven!.send(JSON.stringify({ user_audio_chunk: QUIET_FRAME })); };
+    for (let i = 0; i < pending.length; i++) {
+      if (i === split) beat();   // ← everything before this is their hello; everything after answers us
+      eleven.send(JSON.stringify({ user_audio_chunk: pending[i] }));
+    }
+    // …and one after the last of it, so whatever they say next is its own line too.
     if (pending.length) {
-      for (let q = 0; q < TURN_GAP_FRAMES; q++) eleven.send(JSON.stringify({ user_audio_chunk: QUIET_FRAME }));
-      log(`delta: handed over ${pending.length} frame(s) of hello, then a beat of quiet so their answer is its own line`);
+      beat();
+      log(`delta: handed over ${pending.length} frame(s)${split > 0 ? `, split at ${split} so the hello and the answer are two lines` : ""}, then a beat of quiet`);
     }
     pending.length = 0; pendingSplit = -1;
+    // THE QUESTION IS STILL WAITING ON THEIR HELLO, and only now has their hello reached anybody who
+    // can turn it into words. The countdown that gives up and shows our question anyway has to start
+    // HERE, not when the question began playing — started there it ran out while their audio was
+    // still sitting in our hands, and the customer watched our question appear first on a check
+    // where the store spoke first (owner, 08-01). Re-armed from the handover.
+    if (heldQuestion && questionTimer) { clearTimeout(questionTimer); questionTimer = setTimeout(releaseHeldQuestion, QUESTION_HOLD_MS); }
+  }
+  /** Show our question on the live view without their hello above it — only ever because their hello
+   *  never became words at all. A store that says nothing must not leave a customer staring at an
+   *  empty conversation. */
+  function releaseHeldQuestion() {
+    const q = heldQuestion; heldQuestion = null; questionTimer = null;
+    if (q) { log("delta: no words back from the store yet, showing our question on its own"); try { relayLine?.(room, "Agent", q); } catch { /* relay best-effort */ } }
   }
   /** One frame of μ-law silence, and how many of them read as "they stopped talking". */
   const QUIET_FRAME = Buffer.alloc(160, 0x7f).toString("base64");
@@ -515,7 +536,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // waiting on this line: the page says Talking to Staff throughout, and a few seconds is invisible
     // on a check that runs half a minute.
     heldQuestion = clip.text;
-    questionTimer = setTimeout(() => { const q = heldQuestion; heldQuestion = null; questionTimer = null; if (q) { try { relayLine?.(room, "Agent", q); } catch { /* relay best-effort */ } } }, QUESTION_HOLD_MS);
+    questionTimer = setTimeout(releaseHeldQuestion, QUESTION_HOLD_MS);
     log(`delta: playing the opening question (${clip.ms}ms) while the agent connects`);
     // Signal 2, which also reads signal 3 when it lands.
     clipTimers.push(setTimeout(function done() {
@@ -1129,7 +1150,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // Nobody is on the line, so the agent hears nothing. Hold music and an empty room are not a
       // conversation, and feeding him thirty seconds of them is how he ends up talking to himself.
       // The first words on the way back ARE kept, so an answer shouted from the stockroom is not lost.
-      else if (onHold) { if (frameEnergy(b64) > VOICE_THRESH) { heldWords.push(b64); if (heldWords.length > 250) heldWords.shift(); } }
+      // …and the same rule for the words on the way back from a wait: contiguous once a voice
+      // starts, because keeping only the loud frames squeezes the sentence and it comes back as
+      // different words. A rolling window, so the newest speech is always the part we keep.
+      else if (onHold) {
+        if (heldWords.length || frameEnergy(b64) > VOICE_THRESH) { heldWords.push(b64); if (heldWords.length > 250) heldWords.shift(); }
+      }
       else if (eleven && ready && charlieGateOpen) eleven.send(JSON.stringify({ user_audio_chunk: b64 }));
       // Buffer what the CLERK says — never our own voice coming back off the line. A PSTN line
       // reflects our audio, and loud enough reflections clear the barge threshold, so anything
@@ -1142,9 +1168,27 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // Keep the last few seconds of the line while the ear makes up its mind. Rolling, capped, and
         // dropped the moment it is handed on or the call ends — no store audio ever outlives the call
         // (hard rule 3). Steady tones are ringback, not a person, and never worth keeping.
-        if (PREROLL_MAX > 0 && frameEnergy(b64) > VOICE_THRESH && toneShare(b64) < 0.45) {
-          if (!preRoll.length) greetingStartedMs = Math.max(0, Date.now() - startMs);
-          preRoll.push(b64); if (preRoll.length > PREROLL_MAX) preRoll.shift();
+        // KEEP THE SENTENCE, NOT JUST THE LOUD BITS OF IT. This used to keep ONLY frames above the
+        // voice threshold, which deletes every small pause INSIDE the greeting — the breath between
+        // "thank you for calling" and "the Fun store", the gap before a name. Handed over, the
+        // sentence is played back with those gaps missing, so it is squeezed and slurred and comes
+        // back transcribed as different words: "thank you for calling the Fun store" was written
+        // down as "do you recall Fun Store" (owner screenshot, 08-01). A real person's speech IS the
+        // gaps as much as the sound. So the moment a voice starts we keep the line CONTIGUOUSLY,
+        // exactly as it arrived, and only the newest few seconds are held (still capped, still
+        // dropped the instant it is handed on — no store audio outlives the check).
+        if (PREROLL_MAX > 0) {
+          if (!preRoll.length) {
+            // Start on a real voice, never on ringback or an empty line, so the window holds the
+            // greeting rather than the silence in front of it.
+            if (frameEnergy(b64) > VOICE_THRESH && toneShare(b64) < 0.45) {
+              greetingStartedMs = Math.max(0, Date.now() - startMs);
+              preRoll.push(b64);
+            }
+          } else {
+            preRoll.push(b64);
+            if (preRoll.length > PREROLL_MAX) preRoll.shift();
+          }
         }
         maybeDetectHuman(b64);
       } // The ear runs in exactly two states: (1) bare direct dials — no nav plan at all (Mapper's 770ffa0 boolean, owner-ordered 07-21: never DURING a menu, where it trips on the recorded greeting — B&N 3:42p); (2) earArmed — the smart join, where the recipe has FINISHED the menu and the ear opens for the real human voice (owner design, restored 07-24). State (1) MUST read hadDtmf/hadSay, NOT ctx.dtmf/ctx.say: those are consumed at TwiML build (takeBridgeDtmf/Say), so by media time they are ALWAYS empty and the ear armed on every timerless keypad/voice chain — the agent opened into the recording and billed through the tree (owner 07-22).

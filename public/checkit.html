@@ -6084,9 +6084,16 @@ async function startCheckLive(){
     lvlog('live tx='+((o&&o.transcript)?o.transcript.length:0)+' live='+(o?String(o.live):'-')+(o&&o.error?' err='+o.error:''));
     if(o&&o.transcript){
       const lines=o.transcript.split('\n').filter(Boolean);
-      // Adopt the poll's transcript when the WS gave nothing yet OR when the poll has MORE than we've
-      // streamed — so if the live socket dropped mid-call the transcript keeps flowing (owner 07-16).
-      if(!LIVE_TR.length || (o.transcript && o.transcript.length>(LIVE_TRANSCRIPT||'').length)) LIVE_TRANSCRIPT=o.transcript;
+      // OUR OWN SAVED CONVERSATION DECIDES THE ORDER. The lines that stream in arrive in the order
+      // they were TRANSCRIBED, which is not the order they were said: Staff speak first, but their
+      // words only exist once the agent has been handed the audio we held for him, seconds later. So
+      // the streamed copy can hold the right lines in the wrong order. The old rule only took the
+      // saved copy when it was LONGER, which the same lines reordered never are. The customer then
+      // read our question above a greeting that came before it, until the end of the check flipped
+      // them (owner screenshot, 08-01). The saved copy is written in spoken order, so once it holds
+      // as much as we have streamed, it wins.
+      if(!LIVE_TR.length || (o.transcript && o.transcript.split('\n').filter(Boolean).length>=LIVE_TR.length)) LIVE_TRANSCRIPT=o.transcript;
+      else if(o.transcript && o.transcript.length>(LIVE_TRANSCRIPT||'').length) LIVE_TRANSCRIPT=o.transcript;
       const pitched=AGENT_PITCHED||lines.some(l=>l.startsWith('Agent:')&&AGENT_ASK.test(l)); if(pitched)AGENT_PITCHED=true;
       liveStage(stageForLines(lines, pitched));
       renderLiveMsg();
