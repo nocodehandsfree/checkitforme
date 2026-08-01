@@ -20,7 +20,7 @@ import {
   type MapRecipe, type EvidenceCall,
 } from "../src/calls/mapgraph";
 import { lockRecipeToChain } from "../src/calls/trainer-batch";
-import { greetingFrom, looksLikeDirectPickup, menuStillTalking, parseSpokenOptions, isMenuLine, parseMenuOptions, mergeMenu, looksLikeQuestion, isReprompt } from "../src/calls/navigator";
+import { greetingFrom, looksLikeDirectPickup, menuStillTalking, parseSpokenOptions, isMenuLine, parseMenuOptions, mergeMenu, looksLikeQuestion, isReprompt, pickedDoorFrom, doorsAskedAt } from "../src/calls/navigator";
 import { recipeFromCall, gradeCheck } from "../src/calls/map-capture";
 import { sameWording } from "../src/calls/mapper";
 
@@ -562,6 +562,14 @@ async function main() {
     }
     ok(gradeCheck({ ...base, plannedSteps: 3, saidSteps: 2 }).reason === "said wrong words",
       "OUR WORDS SAID is a pass condition: a skipped answer fails even with the handoff and ring heard");
+    // ROUND 2 ITEM 2: a store where Staff just pick up — no announced handoff, no ring we hang up on —
+    // passes on the contract's other shape: Staff answered and replied.
+    ok(gradeCheck({ stage: "map", transferHeard: false, ringOrStaff: true, staffAnswered: true }).grade === "pass",
+      "Staff answering the product question passes with no transfer line heard — direct-pickup chains can lock");
+    ok(gradeCheck({ stage: "map", transferHeard: false, ringOrStaff: true }).grade === "fail",
+      "but merely reaching a person without a real reply still fails");
+    ok(gradeCheck({ stage: "map", transferHeard: false, ringOrStaff: true, staffAnswered: true, wrongDepartment: true }).reason === "wrong department",
+      "and the wrong desk answering still fails as wrong department, answer or not");
     ok(gradeCheck({ ...base, wrongDepartment: true }).reason === "wrong department",
       "Staff saying wrong desk fails as wrong department");
     // Today's real Mulholland check: front barged over the recording, the menu looped, the pharmacy answered.
@@ -596,6 +604,16 @@ async function main() {
       "a failed or run-owned check never stamps the chain's mapping status");
     ok(/kind: "menu-changed",\s*\n\s*prompt: heard\.slice\(0, 200\),/.test(nav),
       "an unmatched greeting files a condition in the store's exact words, automatically");
+    // ROUND 2 ITEM 3: SILENCE IS NOT AN ANSWER. Nine seconds of quiet used to set "answered" and a
+    // silent clerk proved the door. Now quiet ends the check unresolved, the door's ask spent.
+    ok(!/confirmResult = "answered"; finish\(s, "human"\); return twiml\(`<Hangup\/>`\); \}\s*\n\s*return twiml\(gather\(id\)\); \/\/ brief silence/.test(nav)
+      && /Staff said nothing after the question/.test(nav),
+      "silence after the product question never counts as an answer — the check ends unresolved");
+    ok(/staffAnswered: s\.confirmResult === "answered",/.test(nav),
+      "and only a REAL reply sets the pass shape the grader reads");
+    // ROUND 2 ITEM 1 (navigator half): the ask ledger records the DOOR the ask was spent at.
+    ok((nav.match(/recordConfirmAsked\(s\.chainId, s\.retailerId, pickedDoorFrom\(s\.steps\)\)/g) || []).length === 2,
+      "both ledger writes record which door the ask was spent at, and only a SPOKEN ask spends one");
     ok(/s\.repromptHeard = true;/.test(nav), "the store saying it did not understand is written down as a fact");
     ok(/sameMenu\(firstIvr\.text, line\)\) s\.greetingTwice = true;/.test(nav),
       "and the opening recording playing again mid-check is caught as being sent to the start");
@@ -630,8 +648,8 @@ async function main() {
       "every run starts at mapping menu — LEARN FIRST, ALWAYS, held recipe or not (Update 1)");
     ok(!/lockedRecipe && hasPromptPlan \? "speed" : "map"/.test(eng),
       "the held-recipe shortcut straight to speed is deleted");
-    ok(/const proving = run\.phase === "map" && !run\.doorProven && !askSpent;/.test(eng),
-      "the learn stage's proving check is the only check that asks Staff — once, never more");
+    ok(/const proving = run\.phase === "map" && !run\.doorProven;/.test(eng),
+      "the learn stage's proving check is the only check that asks Staff");
     ok(/relisten: !proving,/.test(eng),
       "every other check hangs up on the second ring — settle listens and speed checks alike");
     ok(/proving \? \{ product \} : undefined,/.test(eng),
@@ -658,10 +676,33 @@ async function main() {
       "a move that broke the walk is remembered off its graded reason");
     ok(/run\.phase === "speed" && !\(await storeOpenNow\(store\.id\)\)/.test(eng),
       "the open-hours gate is re-read before EVERY speed check, pinned store or not");
-    ok(/const askSpent = run\.askUnresolved \|\| \(await askedAlready\(chainId, store\.id\)\);/.test(eng),
-      "the once-per-store ask ledger is read — a spent ask is never asked again");
-    ok(/deadDoors: proving && run\.doorsDead\.length \? run\.doorsDead : undefined,/.test(eng),
-      "and the dead doors ride to the navigator as a hard block, not only a sentence in the prompt");
+    // ROUND 2 ITEM 1: a wrong desk burns the DOOR, never the store.
+    ok(/const spentDoors = proving \? await doorsAskedAt\(chainId, store\.id\) : \[\];/.test(eng),
+      "the ask ledger is per DOOR — a spent door is steered around while the store stays held");
+    ok(/const door = pickedDoorFrom\(\(s\?\.steps \|\| \[\]\) as NavStep\[\]\) \|\| \(s\?\.redirectTo \|\| ""\)\.slice\(0, 40\)/.test(eng),
+      "the door that dies is the option WE picked, never the clerk's redirect sentence");
+    ok(/await rememberDeadDoor\(run, door\);/.test(eng) && /map_doors_dead/.test(eng),
+      "and a dead door is DURABLE, chain wide — the next run cannot spend the call again");
+    ok(/trying the next door at this store/.test(eng) && !/taking a fresh store rather than asking again/.test(eng),
+      "a spent or dead door holds the STORE — the next check takes the next door, same store");
+    ok(/every door here is burnt — taking a fresh store/.test(eng),
+      "a fresh store only when every door at this one is burnt or nobody ever answers");
+    ok(/deadDoors: proving && blockedDoors\.length \? blockedDoors : undefined,/.test(eng),
+      "and burnt doors ride to the navigator as a hard block, not only a sentence in the prompt");
+    // Behavioral: the picked door is the last route choice, scaffold excluded; the door ledger reads
+    // per store.
+    ok(pickedDoorFrom([
+      { who: "us", text: 'said "no"', atSec: 18, action: "say", value: "no" },
+      { who: "us", text: 'said "front store services"', atSec: 28, action: "say", value: "front store services" },
+      { who: "us", text: 'asked: "do you have any Pokémon cards?"', atSec: 40, action: "say", value: "do you have any Pokémon cards?" },
+    ]) === "front store services", "the picked door is the last route choice, the ask itself excluded");
+    {
+      const { setSetting: put } = await import("../src/db/settings");
+      await put(`nav_confirm_asked_doors:${chain.id}`, JSON.stringify([`${east.id}:front store services`, `${west.id}:pharmacy`]));
+      const doors = await doorsAskedAt(chain.id, east.id);
+      ok(doors.length === 1 && doors[0] === "front store services",
+        "the ledger answers per store: only this store's spent doors come back");
+    }
 
     // FULL WORDS IN THE LEARN STAGE (contract stage 1). The learning call's own instructions must say
     // full phrase and let-the-question-finish — the shortest-word rule belonged to speed experiments,
@@ -718,8 +759,8 @@ async function main() {
     const eng = readFileSync("src/calls/mapper.ts", "utf8");
     ok(/const live = await activeMap\(chainId\);/.test(eng),
       "the run starts from the route the MAP holds, never the chain row's older summary");
-    ok((eng.match(/await finalizeAndLock\(/g) || []).length === 2,
-      "exactly TWO writes exist: the store lock, and a speed win updating the recipe (Update 5)");
+    ok((eng.match(/await finalizeAndLock\(/g) || []).length === 3,
+      "exactly THREE writes exist: the store lock (settled wording), the no-menu store lock, and a speed win (Update 5)");
     ok(!/finalizeAndLock[\s\S]{0,120}?\}\s*else\s*\{[\s\S]{0,200}?ex\.status = "fail"/.test(eng)
       && /ex\.status = "fail";(?![\s\S]{0,600}finalizeAndLock)/.test(eng),
       "a failed check reaches neither of them — a loss changes nothing");

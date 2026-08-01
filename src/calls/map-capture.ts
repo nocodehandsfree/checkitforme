@@ -124,6 +124,9 @@ export function gradeCheck(o: {
   wrongDepartment?: boolean;          // Staff said we reached the wrong desk
   transferHeard: boolean;             // the store announced the handoff
   ringOrStaff: boolean;               // the desk rang, or a person answered
+  staffAnswered?: boolean;            // Staff gave a REAL reply to the product question — the
+                                      // contract's other pass shape, and the only one a store where
+                                      // Staff just pick up (no announced handoff) can ever produce
   repromptHeard?: boolean;            // "sorry, I'm not understanding"
   greetingTwice?: boolean;            // the opening recording played again mid-check
   plannedSteps?: number;              // answers the route owes
@@ -137,7 +140,11 @@ export function gradeCheck(o: {
   }
   if (o.wrongDepartment) return { grade: "fail", reason: "wrong department" };
   if (o.greetingTwice) return { grade: "fail", reason: "sent to beginning of menu" };
-  if (!o.transferHeard || !o.ringOrStaff) {
+  // TWO pass shapes, per the contract: the handoff announced AND the ring heard, OR Staff answered
+  // and replied. A store where Staff just pick up never plays a transfer line — without the second
+  // shape, whole chains whose desks answer directly could never pass and never lock.
+  const reached = (o.transferHeard && o.ringOrStaff) || o.staffAnswered === true;
+  if (!reached) {
     if (o.testedEarly) return { grade: "fail", reason: "barge didn't work" };
     if (o.repromptHeard) return { grade: "fail", reason: "menu repeated itself" };
     if ((o.saidSteps ?? 0) < (o.plannedSteps ?? 0)) return { grade: "fail", reason: "menu hung up on us" };

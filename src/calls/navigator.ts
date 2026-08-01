@@ -674,15 +674,20 @@ async function navTurn(id: string, speech: string): Promise<string> {
   }
   // CONFIRM mode: we already asked "do you have {product}?" — this turn is their answer. Classify it.
   // A redirect ("that's the X dept / let me transfer you") = wrong desk → capture where + hang up.
-  // Anything else (a real reply, yes/no/"we're out") = right desk → lock this path. Silence after a
-  // beat = we still reached a human, so count it as a confirmed reach rather than loop forever.
+  // A real reply (yes/no/"we're out") = right desk → lock this path. SILENCE IS NOT AN ANSWER
+  // (owner Update 12: proof is Staff answering, a yes or a no — an acknowledgment). A clerk who says
+  // nothing proves nothing: the check ends unresolved, that door's one ask is spent, and the door is
+  // never claimed proven off dead air. It used to count 9 seconds of quiet as "answered".
   if (s.confirm?.asked && !s.confirmResult) {
     if (speech && speech.trim()) {
       if (REDIRECT_RE.test(speech)) { s.confirmResult = "redirect"; s.redirectTo = speech.trim().slice(0, 200); }
       else s.confirmResult = "answered";
       finish(s, "human"); return twiml(`<Hangup/>`);
     }
-    if (atSec - (s.confirm.askedAtSec ?? atSec) > 9) { s.confirmResult = "answered"; finish(s, "human"); return twiml(`<Hangup/>`); }
+    if (atSec - (s.confirm.askedAtSec ?? atSec) > 12) {
+      s.stopReason = "Staff said nothing after the question";
+      finish(s, "failed"); return twiml(`<Hangup/>`);
+    }
     return twiml(gather(id)); // brief silence — give them a moment to answer
   }
   // Holding the ask for a real person after an announced transfer, but the hold runs long with no
@@ -903,6 +908,7 @@ function finish(s: NavSession, status: "human" | "failed" | "mapped") {
       wrongDepartment: s.confirmResult === "redirect",
       transferHeard: s.transferAtSec != null,
       ringOrStaff: s.endedOnRing || s.humanAtSec != null,
+      staffAnswered: s.confirmResult === "answered",
       repromptHeard: s.repromptHeard, greetingTwice: s.greetingTwice,
       plannedSteps: s.barge?.plan?.length, saidSteps: said,
       testedEarly: !!s.barge?.plan?.some((p) => p.early),
@@ -950,7 +956,7 @@ function finish(s: NavSession, status: "human" | "failed" | "mapped") {
       target: s.target,
     };
   }
-  if (s.confirm?.asked && s.chainId != null) void recordConfirmAsked(s.chainId, s.retailerId); // rotate off this store next time
+  if (s.confirm?.asked && s.chainId != null) void recordConfirmAsked(s.chainId, s.retailerId, pickedDoorFrom(s.steps)); // the ask is spent at this DOOR
   void persistRun(s); // log this run so the admin can watch the learner's history per chain
   // AND INTO THE MAP. Owner, 07-30: he pressed Re-map, a real CVS was called, its menu was walked
   // perfectly, and the chain page showed nothing. Only the sweep and the auto-mapper folded their own
@@ -1021,15 +1027,41 @@ async function persistRun(s: NavSession): Promise<void> {
   } catch (e) { console.error("[navigator] persistRun", e); }
 }
 
+/** THE OPTION WE PICKED that decided which desk answered: the last say/press of the walk, the
+ *  confirm-ask scaffold excluded. This is the DOOR — the ask ledger and the dead-door list both key
+ *  on it, because "Staff asked once per door, never more" is about the door we chose, never about
+ *  the sentence the clerk said back. */
+export function pickedDoorFrom(steps: NavStep[]): string | undefined {
+  const acts = (steps || []).filter((st) => st.who === "us" && (st.action === "say" || st.action === "press")
+    && st.value && !String(st.text || "").startsWith("asked:"));
+  const v = acts[acts.length - 1]?.value;
+  return v ? String(v).toLowerCase() : undefined;
+}
+
 /** Stores we've ALREADY asked the confirm question (settings: nav_confirm_asked:{chainId}). The caller
  *  uses this to ROTATE to a fresh store on a callback — never ask the same store twice (looks bad). */
 export async function confirmAskedStores(chainId: number): Promise<number[]> {
   try { return JSON.parse((await getSetting(`nav_confirm_asked:${chainId}`)) || "[]") as number[]; } catch { return []; }
 }
-async function recordConfirmAsked(chainId: number, retailerId: number): Promise<void> {
+/** The DOORS whose one ask is spent at a store (settings: nav_confirm_asked_doors:{chainId}, entries
+ *  "storeId:door"). Staff are asked once per DOOR, never more — a spent door is steered around and
+ *  hard-blocked; the store itself stays held, its other doors still askable. */
+export async function doorsAskedAt(chainId: number, storeId: number): Promise<string[]> {
+  try {
+    const arr = JSON.parse((await getSetting(`nav_confirm_asked_doors:${chainId}`)) || "[]") as string[];
+    return arr.filter((e) => e.startsWith(`${storeId}:`)).map((e) => e.slice(String(storeId).length + 1));
+  } catch { return []; }
+}
+async function recordConfirmAsked(chainId: number, retailerId: number, door?: string): Promise<void> {
   try {
     const arr = await confirmAskedStores(chainId);
     if (!arr.includes(retailerId)) await setSetting(`nav_confirm_asked:${chainId}`, JSON.stringify([...arr, retailerId].slice(-200)));
+    if (door) {
+      const key = `nav_confirm_asked_doors:${chainId}`;
+      const doors = JSON.parse((await getSetting(key)) || "[]") as string[];
+      const entry = `${retailerId}:${door.toLowerCase()}`;
+      if (!doors.includes(entry)) await setSetting(key, JSON.stringify([...doors, entry].slice(-400)));
+    }
   } catch (e) { console.error("[navigator] recordConfirmAsked", e); }
 }
 
@@ -1094,7 +1126,7 @@ export function navEnded(id: string) {
   markNow(id, "endMs");
   emit(id, "hangup", s.stopReason || (s.humanAtSec != null ? "Reached a person" : "Never reached a person"), { status: s.status, humanAtSec: s.humanAtSec });
   closeReceipt(id, s.stopReason, s.status);
-  if (s.confirm && s.chainId != null) void recordConfirmAsked(s.chainId, s.retailerId);
+  if (s.confirm?.asked && s.chainId != null) void recordConfirmAsked(s.chainId, s.retailerId, pickedDoorFrom(s.steps));
   // A FAILED CHECK CHANGES NOTHING — not even the chain's mapping status stamp. And a check a RUN
   // owns (it carries a stage) never stamps the chain either: the run's one write at lock does that.
   if (s.chainId != null && !s.stage && s.grade !== "fail") void markNavOutcome(s.chainId, s.humanAtSec != null);

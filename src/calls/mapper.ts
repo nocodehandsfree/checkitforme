@@ -30,7 +30,7 @@ import { db } from "./../db/client";
 import { chains, retailers } from "../db/schema";
 import { getSetting, setSetting, allSettings } from "../db/settings";
 import { isCallingPaused } from "../redis";
-import { placeNavCall, getNavSession, defaultWorkflowAsk, classifyMode, menuHasCustomerService, NavRecipe, NavStep } from "./navigator";
+import { placeNavCall, getNavSession, defaultWorkflowAsk, classifyMode, menuHasCustomerService, pickedDoorFrom, doorsAskedAt, NavRecipe, NavStep } from "./navigator";
 import { storeForChain, lockRecipeToChain, recipeFromSteps } from "./trainer-batch";
 import { chainDialable } from "./recipe";
 import { openState } from "../store-hours";
@@ -76,8 +76,6 @@ export interface MapperRun {
   storeLocked?: boolean;         // proven AND the wording settled — the chain went live here
   lastLines?: string[];          // the menu lines the previous check heard (wording-settle comparison)
   settleTries?: number;          // listens spent waiting for the wording to read the same twice
-  askUnresolved?: boolean;       // Staff heard the question but the check died ungraded → never
-                                 // re-ask this store; a fresh store is the only honest move
   neverAgain?: string[];         // durable never-again moves, mirrored to the map_never setting
   winnerSession?: NavSessionLike; // the check whose route IS the recipe — written to the map at the lock
   baseline: NavRecipe | null;
@@ -166,6 +164,18 @@ async function rememberNever(run: MapperRun, move: string): Promise<void> {
   if (run.neverAgain.includes(move)) return;
   run.neverAgain.push(move);
   try { await setSetting(neverKey(run.chainId), JSON.stringify(run.neverAgain.slice(-60))); } catch { /* best effort */ }
+}
+
+// A DEAD DOOR IS KNOWLEDGE, NOT A RUN'S SCRATCH NOTE. It cost a real call and a real Staff hello to
+// learn that a door reaches the wrong desk; wiping it at run end (as the first build did) meant the
+// next run could spend both again. Keyed by the option WE picked, chain-wide, durable.
+const deadDoorsKey = (chainId: number) => `map_doors_dead:${chainId}`;
+async function loadDeadDoors(chainId: number): Promise<string[]> {
+  try { return JSON.parse((await getSetting(deadDoorsKey(chainId))) || "[]") as string[]; } catch { return []; }
+}
+async function rememberDeadDoor(run: MapperRun, door: string): Promise<void> {
+  if (!run.doorsDead.includes(door)) run.doorsDead.push(door);
+  try { await setSetting(deadDoorsKey(run.chainId), JSON.stringify(run.doorsDead.slice(-40))); } catch { /* best effort */ }
 }
 
 /** Build the experiment list from the locked route. Two levers, NO CLOCK ANYWHERE (owner Update 4):
@@ -365,15 +375,6 @@ async function storeOpenNow(storeId: number): Promise<boolean> {
   } catch { return true; } // a lookup hiccup must not strand a run — the pick gate already screened
 }
 
-/** Stores where the product question was already ASKED (the navigator's own ledger). Staff are asked
- *  once per door, never more — a store whose ask is spent is walked with listens, never re-asked. */
-async function askedAlready(chainId: number, storeId: number): Promise<boolean> {
-  try {
-    const { confirmAskedStores } = await import("./navigator");
-    return (await confirmAskedStores(chainId)).includes(storeId);
-  } catch { return false; }
-}
-
 /** Start (or resume) mapping a chain until locked. Fire-and-forget; poll mapperState(). */
 export async function startMapper(chainId: number, opts: { storeId?: number } = {}): Promise<{ started?: boolean; error?: string; benchmark?: number | null }> {
   if (!chainId) return { error: "chainId required" };
@@ -420,7 +421,7 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
     attempt: 0, callsToday: usedToday,
     usedStores: [], store: null, rotate: false, target, needsTarget: false, reachedSecs: [],
     benchmark: ch.navSeconds ?? null,   // what we're trying to beat (the readout on the live card)
-    doorsDead: [],
+    doorsDead: await loadDeadDoors(chainId),
     baseline: lockedRecipe, best: lockedRecipe,
     neverAgain: await loadNeverAgain(chainId),
     experiments: [], log: [],
@@ -469,24 +470,19 @@ function driveMapper(run: MapperRun): void {
         if (!picked) { run.stopReason = "no store in local daytime hours right now. Re-run when stores are open; mornings hit the east coast first."; run.phase = run.storeLocked ? run.phase : "stopped"; break; }
         run.store = { id: picked.id, name: picked.name, phone: picked.phone };
         run.usedStores.push(picked.id); run.rotate = false;
-        run.mapMisses = 0; run.askUnresolved = false; run.doorProven = false; run.lastLines = undefined; run.settleTries = 0;
+        run.mapMisses = 0; run.doorProven = false; run.lastLines = undefined; run.settleTries = 0;
       }
       const store = run.store;
 
       // ---- what kind of check is this? ----
       const stageWord = run.phase === "map" ? "mapping menu" : "optimizing speed";
-      // The learn stage's proving check asks Staff about the product — but Staff are asked ONCE,
-      // never more. An ask already spent at this store (the navigator's own ledger, or this run's)
-      // means the walk runs as a listen: full words, whole menu, hang up on the second ring.
-      const askSpent = run.askUnresolved || (await askedAlready(chainId, store.id));
-      const proving = run.phase === "map" && !run.doorProven && !askSpent;
-      if (run.phase === "map" && !run.doorProven && askSpent && !run.askUnresolved) {
-        // The ledger says this store's Staff already heard the question (an earlier run). The door
-        // can only be proven by an answer, so this store cannot prove it — take a fresh one rather
-        // than troubling the same desk twice.
-        run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: "Staff here were already asked once — taking a fresh store rather than asking again" });
-        run.rotate = true; continue;
-      }
+      // The learn stage's proving check asks Staff about the product. Staff are asked once per DOOR,
+      // never more — the ask ledger is per door, so a spent or dead door is steered around and
+      // hard-blocked while the STORE stays held, its other doors still askable. The store is only
+      // ever abandoned when it never got us to a person (Update 3) or every door is burnt.
+      const proving = run.phase === "map" && !run.doorProven;
+      const spentDoors = proving ? await doorsAskedAt(chainId, store.id) : [];
+      const blockedDoors = [...new Set([...run.doorsDead, ...spentDoors])];
       // Optimizing speed runs inside the store's open hours, re-checked before EVERY check — a run
       // that crosses closing time stops rather than mapping the night menu as if it were the day's.
       if (run.phase === "speed" && !(await storeOpenNow(store.id))) {
@@ -502,9 +498,10 @@ function driveMapper(run: MapperRun): void {
         : run.phase === "map" && run.doorProven && run.best ? { plan: planPlain(run.best) }
         : undefined;
       // The proving check: the model walks the tree answering each question with the FULL phrase,
-      // steered away from every door already proven wrong, and asks at the person — the answer IS
-      // the proof. A held route's doors ride as steering; its old (possibly shortened) words do not.
-      const dead = run.doorsDead.length ? ` NEVER choose ${run.doorsDead.join(" or ")} — those reach the wrong desk.` : "";
+      // steered away from every door already proven wrong OR whose one ask is spent, and asks at the
+      // person — the answer IS the proof. A held route's doors ride as steering; its old (possibly
+      // shortened) words do not.
+      const dead = blockedDoors.length ? ` NEVER choose ${blockedDoors.join(" or ")} — those doors are burnt (wrong desk, or their one ask is spent).` : "";
       const hint = proving
         ? ((run.lockedRecipe?.steps || []).length
             ? "Doors that worked before, in order: "
@@ -526,8 +523,9 @@ function driveMapper(run: MapperRun): void {
           // record. Every later check is graded against the menu the proof heard.
           expectedGreeting: proving ? undefined : run.expectedGreeting,
           recipeSeconds: run.bestMenuSecs,
-          // The dead doors are a HARD block in the navigator, not only a sentence in the prompt.
-          deadDoors: proving && run.doorsDead.length ? run.doorsDead : undefined,
+          // Burnt doors (wrong desk, or ask spent) are a HARD block in the navigator, not only a
+          // sentence in the prompt.
+          deadDoors: proving && blockedDoors.length ? blockedDoors : undefined,
           // This loop folds its own calls into the map at the lock. `finish` must not fold them.
           callerRecords: true,
           why: `Mapping ${run.chainName} (${stageWord}, check ${run.attempt})` },
@@ -578,19 +576,37 @@ function driveMapper(run: MapperRun): void {
           if (typeof menuSecs === "number") run.bestMenuSecs = menuSecs;
           run.expectedGreeting = ((s?.steps || []) as NavStep[]).find((st) => st.who === "ivr" && st.text)?.text;
           run.doorProven = true;
-          run.lastLines = menuLinesOf((s?.steps || []) as NavStep[], s?.transferAtSec);
+          run.lastLines = menuLinesOf((s?.steps || []) as NavStep[], s?.transferAtSec ?? s?.humanAtSec);
           run.winnerSession = sessionLike(s);
-          run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: `right department — Staff answered about ${product} (${classifyMode((s?.steps || []) as NavStep[]).label}). Listening until the wording settles`, seconds: secs });
+          if (!run.lastLines.length) {
+            // A store where Staff just pick up has NO menu wording to settle — the proven answer is
+            // the whole map. It locks on the spot; there is nothing a second listen could compare.
+            run.storeLocked = true;
+            await finalizeAndLock(run, chainId, run.best, null, run.winnerSession, { activate: true, stage: "map" });
+            await seedProvenStores(chainId, store.id);
+            run.experiments = buildExperiments(run, run.best);
+            run.phase = "speed";
+            run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: `right department — Staff answered about ${product} with no menu in front of them. Store locked, the chain is live`, seconds: secs });
+          } else {
+            run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: `right department — Staff answered about ${product} (${classifyMode((s?.steps || []) as NavStep[]).label}). Listening until the wording settles`, seconds: secs });
+          }
         } else if (redirected) {
-          // The wrong desk answered. That door is dead for good; the next check takes the next one.
-          const door = (s?.redirectTo || "").slice(0, 40) || ((s?.steps || []) as NavStep[]).filter((st) => st.who === "us").slice(-1)[0]?.value || "that door";
-          if (!run.doorsDead.includes(door)) run.doorsDead.push(door);
-          run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: `wrong department — ${door} is dead, trying the next door`, seconds: secs });
+          // The wrong desk answered. The door that dies is the option WE PICKED — never the clerk's
+          // redirect sentence, which no menu ever offers as a choice — and it dies durably, chain
+          // wide. The next check takes the next-best door at the SAME store.
+          const door = pickedDoorFrom((s?.steps || []) as NavStep[]) || (s?.redirectTo || "").slice(0, 40) || "that door";
+          await rememberDeadDoor(run, door);
+          run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: `wrong department — "${door}" is dead, trying the next door at this store`, seconds: secs });
         } else if (s?.confirm?.asked) {
-          // Staff heard the question but the check died without a verdict. Asking this desk again is
-          // the one thing the contract forbids, so the run moves to a fresh store.
-          run.askUnresolved = true;
-          run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: reason || "the ask was heard but the check died — never asking this desk twice, taking a fresh store" });
+          // Staff heard the question but the check died without a verdict. That DOOR's one ask is
+          // spent (the navigator's ledger recorded it); the store is held and the next check takes
+          // the next-best door — a store is only ever abandoned when it never gets us to a person.
+          const door = pickedDoorFrom((s?.steps || []) as NavStep[]) || "that door";
+          run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: reason ? `${reason} — the ask at "${door}" is spent, trying the next door at this store` : `the ask was heard but the check died — the ask at "${door}" is spent, trying the next door at this store` });
+        } else if (s?.stopReason?.includes("only doors already proven wrong")) {
+          // Every door at this store is burnt (dead, or its ask spent). The store cannot prove the
+          // department any more — the one honest reason left to take a fresh one.
+          run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: "every door here is burnt — taking a fresh store" });
           run.rotate = true;
         } else {
           // Nobody was reached. A failed check changes NOTHING — it stays in the run log, collapsed,
@@ -606,7 +622,7 @@ function driveMapper(run: MapperRun): void {
       } else if (run.phase === "map" && run.doorProven) {
         // THE WORDING SETTLES: a ring-hang-up listen of the proven route. The same lines twice in a
         // row = settled → THE STORE LOCKS and the chain goes LIVE, in one stroke.
-        const lines = menuLinesOf((s?.steps || []) as NavStep[], s?.transferAtSec);
+        const lines = menuLinesOf((s?.steps || []) as NavStep[], s?.transferAtSec ?? s?.humanAtSec);
         if (graded && sameWording(run.lastLines, lines)) {
           run.storeLocked = true;
           run.winnerSession = sessionLike(s); // the final locked run IS the wording on the page
