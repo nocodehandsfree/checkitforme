@@ -325,6 +325,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   // he owns every turn from there.
   let charlieGateOpen = true;   // true = today's behaviour, agent talks the moment he is ready
   let clipText = "";            // the question Delta asked, handed to the agent as context
+  let clipEchoDropped = false;  // his session echoes that question back once — dropped, it is already on the record
   let clipMs = 0;               // how long the question ran, for the one join line's detail
   // ONE AGENT JOINING IS ONE LINE ON THE TIMELINE (owner 07-28: "it opens charlie_join three times").
   // The question starting and the handover when it finished are DETAILS of that join, not joins of
@@ -779,6 +780,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         }
       } else if (m.type === "agent_response") {
         const txt = m.agent_response_event?.agent_response;
+        // THE QUESTION COMES BACK TO US AS IF CHARLIE SAID IT. The recorded question is handed to his
+        // session as context, and the session then reports it as a line of its own — but it is already
+        // on the record and already on the customer's page from the moment it PLAYED, so this echo
+        // printed the question twice in a row (owner screenshot, 08-01). One echo, dropped once.
+        if (txt && !clipEchoDropped && clipText && String(txt).trim() === clipText.trim()) { clipEchoDropped = true; return; }
         // HE HAS ASKED TO BE PUT THROUGH. From here the next wait that ends is a hand-over, whether or
         // not the next desk audibly rings — a silent hand-over is a quiet pause to the ear and nothing
         // else, and the ear must never be asked to judge this. It is also the ONE line of ours worth
@@ -829,6 +835,13 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   // Connect-on-human: open ElevenLabs once (human detected or hold-timeout fallback).
   function triggerConnect(reason: string) {
     if (connecting) return;
+    // A STOPWATCH MAY NEVER JOIN A CALL A HUMAN IS ALREADY ON. The fallback timer armed at the start
+    // of the call kept ticking after Staff answered, and 60 seconds in — while they had us on hold and
+    // Charlie was rightly closed, so nothing else was holding the door shut — it fired and opened a
+    // SECOND Charlie, blind, into their hold (owner's check, 08-01: a voice started talking while he
+    // stood away from the phone). Once a human has been found, the only thing that may reopen Charlie
+    // is that person, or their colleague, actually coming back — endHold owns that, nothing timed.
+    if (reason !== "human" && (humanAtMs > 0 || onHold)) { log(`connect-on-human: ${reason} ignored, a human was already found — only somebody coming back reopens Charlie`); return; }
     humanAtMs = Date.now();
     connectReason = reason;
     if (reason === "human") {

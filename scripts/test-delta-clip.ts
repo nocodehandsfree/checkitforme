@@ -177,6 +177,13 @@ console.log("▶ the clerk says hello: the question goes out, the agent connects
   await sleep(80);
   ok(relayed[0]?.role === "Clerk" && /this is Bob/.test(relayed[0]?.text || ""), `their hello is the FIRST thing shown live (${relayed[0]?.role}: ${relayed[0]?.text})`);
   ok(relayed[1]?.role === "Agent" && /Pokemon cards in stock/.test(relayed[1]?.text || ""), "…and our question follows it, the order the call happened in");
+  // HIS SESSION ECHOES OUR QUESTION BACK as a line of its own — it was handed over as context. It is
+  // already on the record and already on the page from the moment it PLAYED, so relaying the echo
+  // printed the question twice in a row (owner screenshot 08-01). Dropped, once.
+  f.sockets[0].send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "do you have any Pokemon cards in stock?" } }));
+  await sleep(80);
+  ok(relayed.filter((l) => l.role === "Agent" && /Pokemon cards in stock/.test(l.text)).length === 1, "the echo of our own question is dropped, so it prints ONCE");
+  ok((getReceipt("room-clip")?.transcript ?? []).filter((l) => l.who === "Agent" && /Pokemon cards in stock/.test(l.text)).length === 1, "…and the record holds one copy too");
   // AND THE HELLO READS ABOVE OUR QUESTION, because that is the order it was said in. Staff's words
   // only exist once the agent has transcribed the audio we held, which is after our question played,
   // so stamped on arrival the greeting printed UNDERNEATH the question it came before and the
@@ -297,10 +304,10 @@ console.log("\n▶ no joining agent configured: the call behaves exactly as it d
 // whole reason that gate exists.
 const HOLD_QUIET_MS = 6000;
 /** Drive a call up to a person answering, with a chosen hold strategy and no clip in the way. */
-async function callWithHold(f: Fake, room: string, holdStrategy: "gate" | "reopen") {
+async function callWithHold(f: Fake, room: string, holdStrategy: "gate" | "reopen", holdMaxSeconds = 999) {
   openReceipt(room, { lane: "direct" });
   setBridgeContext(room, {
-    agentId: "agent_normal", dynamicVars: {}, connectOnHuman: true, holdMaxSeconds: 999, holdStrategy,
+    agentId: "agent_normal", dynamicVars: {}, connectOnHuman: true, holdMaxSeconds, holdStrategy,
   });
   const tw = new FakeTwilio();
   handleTwilioBridge(tw as never, room, () => { /* none */ });
@@ -361,7 +368,8 @@ console.log("\n▶ the other strategy: close him for the wait, bring him back as
   _reset();
   const f = await fakeProvider();
   const restore = stubSignedUrl(f);
-  const tw = await callWithHold(f, "room-reopen", "reopen");
+  // The fallback stopwatch set SHORT, so this scene proves it cannot fire into the hold below.
+  const tw = await callWithHold(f, "room-reopen", "reopen", 2);
   speak(tw, 150);
   ok(f.sockets.length === 1, "one session while somebody is with us");
   // Both sides say a line BEFORE the wait, so the check below is about surviving the drop rather than
@@ -395,6 +403,12 @@ console.log("\n▶ the other strategy: close him for the wait, bring him back as
     // answer. This is the one gate they now ask, and it has to say the line is up.
     ok(lineStillUp("room-reopen"), "no verdict can be stamped while Charlie is dropped, because the line is still up");
   }
+  // THE STOPWATCH MAY NOT JOIN WHILE THEY HAVE US ON HOLD. The fallback timer armed at the start of
+  // the call fired 60 seconds in on the owner's check — Charlie was closed for the hold, so nothing
+  // held the door — and a SECOND Charlie opened blind into their hold music (owner, 08-01). Wait past
+  // the timer with nobody back yet: no new session may appear.
+  await sleep(2300);
+  ok(f.sockets.length === 1, "the fallback stopwatch fired during the hold and was IGNORED — no ghost Charlie joined");
   speak(tw, 30);
   await sleep(150);
   if (f.sockets.length !== 2) { const { bridgeDebug } = await import("../src/voice/bridge"); console.log(bridgeDebug().slice(-12).join("\n")); }
