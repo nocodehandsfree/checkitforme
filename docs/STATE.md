@@ -31,9 +31,10 @@ git. Last updated: 2026-07-31 (in stock alerts fixed; logos sized to match; try 
   builds it in THREE chunks; the PM verifies every chunk against the contract before the next; you test
   ONCE at the end, a fresh CVS start to finish. Old "done" claims are void; the audit file is the fix list.
 ## The new calling engine is ON for staging. Your six test checks are the last thing (07-28/29)
-- **07-31, your first test check found three real faults, all fixed on staging:** going on hold ended the whole
-  check and charged you for it · your greeting was thrown away before we started listening · what was left of it
-  printed under Charlie's question. **Your move: run test 1 again.**
+- **08-01, your five test runs found seven real faults; nine fixes are on staging, none phone-proven yet.** The
+  worst: a leftover timer opened a second Charlie into your hold. Full ledger for the PM:
+  `docs/team/voice-calls/test-day-2026-08-01.md`. **Next Echo audits every place that can end a check or open
+  Charlie as ONE family, replays your five runs on the rig, and only then asks for run 6.**
 - **Also proven 07-31:** ElevenLabs refuses our own cheaper AI on a quick-cloned voice like Branson HD. Email sent
   asking them to lift it. If no, we re-clone him the long way or do the talking ourselves.
 ## PROMOTED 07-30 (owner's go, PM drove it) — everything built since the 27th is on the real site and Admin: the chain page's server half, the Testing scorecard's server half, the wrong-department save, Spanish names on the plans. The new engine stays OFF on the real site until you flip it; customers still see the coming-soon splash.
