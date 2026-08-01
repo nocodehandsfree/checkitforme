@@ -2908,6 +2908,15 @@ app.post("/api/admin/restore-calls-from-el", async (c) => {
       const cid = String(conv.conversation_id || "");
       const status = String(conv.status || "");
       if (!cid || existing.has(cid) || (status !== "done" && status !== "completed")) { skipped++; continue; }
+      // A LIVE CHECK MUST NEVER BE RESTORED OVER (08-01 audit, family 1). Mid-call the row still
+      // carries our own name for the check, not the provider's, so the conversation id is not in
+      // `existing` yet — and this inserted a finished duplicate row straight off the provider while
+      // the phone was up. A held Charlie's session reads "done" over there, which is how a restore
+      // running during a hold would double a check the customer is still watching.
+      if (bridgeRoomForConversation(cid) || (await isCheckAlive(cid))) { skipped++; continue; }
+      // …and re-check the database right before writing: a check that connected mid-restore has had
+      // its row repointed at this conversation since `existing` was built.
+      if ((await db.select({ id: callResults.id }).from(callResults).where(eq(callResults.providerCallId, cid)))[0]) { skipped++; existing.add(cid); continue; }
       const dr = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${cid}`, { headers: { "xi-api-key": key } });
       if (!dr.ok) { skipped++; continue; }
       const d = await dr.json() as { conversation_initiation_client_data?: { dynamic_variables?: Record<string, string> }; metadata?: { start_time_unix_secs?: number; call_duration_secs?: number } };
@@ -3377,6 +3386,10 @@ app.get("/pub/result/:cid", async (c) => {
     const s = tdSession(cid.slice(6));
     let row = (await db.select().from(callResults).where(eq(callResults.providerCallId, cid)))[0];
     if (!row && s?.check) row = (await db.select().from(callResults).where(eq(callResults.id, s.check.callId)))[0];
+    // THE D-LANE NEVER GOT THE RUN-1 FIX (08-01 audit, family 1): this branch answered from the row
+    // alone, so anything stamped early could hand out a verdict with the phone still in somebody's
+    // hand. Same gate as every other door now: no result while the line is up.
+    if (await isCheckAlive(cid)) return c.json({ status: "in_progress", transcript: row?.transcript ?? (s ? tdTranscript(s) : ""), summary: "" });
     if (row && row.status && row.status !== "in_progress" && row.status !== "dialing") {
       return c.json({
         status: row.status, confirmed: row.confirmed, statusKey: row.statusKey,
@@ -3397,6 +3410,15 @@ app.get("/pub/result/:cid", async (c) => {
     const liveRoom = bridgeRoomForConversation(cid);
     const held = liveRoom ? getReceipt(liveRoom) : null;
     if (held && !held.closed) return c.json({ status: "in_progress", transcript: transcriptOf(held), summary: "" });
+    // MEMORY IS NOT THE GUARD, THE GATEKEEPER IS (08-01 audit, family 1). After a restart, or once
+    // the in-memory receipt and the conversation-to-room map expire, the lookups above know nothing —
+    // and this door then finalized, CHARGED and alerted off the provider's word while the phone was
+    // still in somebody's hand. The database's answer outlives the process; the row's own transcript
+    // is our record of the conversation so far.
+    if (!held && (await isCheckAlive(cid))) {
+      const r0 = (await db.select().from(callResults).where(eq(callResults.providerCallId, cid)))[0];
+      return c.json({ status: "in_progress", transcript: r0?.transcript ?? "", summary: "" });
+    }
   }
   const o = await provider.getConversation(cid);
   // Prefer the FINALIZED row once it exists — it carries the consensus verdict (the reconciled
@@ -3505,6 +3527,12 @@ app.get("/pub/live/:cid", async (c) => {
     // provider exactly as before.
     const held = getReceipt(room);
     if (held) return c.json({ live: !held.closed, status: held.closed ? "done" : "in_progress", transcript: transcriptOf(held) });
+    // After a restart the in-memory receipt is gone but the check may be mid-call. The gatekeeper's
+    // database answer keeps the page truthful; the row's transcript is what we hold of the talk so far.
+    if (await isCheckAlive(room)) {
+      const r0 = (await db.select().from(callResults).where(eq(callResults.room, room)))[0];
+      return c.json({ live: true, status: "in_progress", transcript: r0?.transcript ?? "" });
+    }
     const convId = bridgeConversationId(room);
     if (convId) dcid = convId;
     else return c.json({ status: "in_progress", transcript: "", summary: "" });
@@ -3517,6 +3545,16 @@ app.get("/pub/live/:cid", async (c) => {
     const room = bridgeRoomForConversation(dcid);
     const held = room ? getReceipt(room) : null;
     if (held) return c.json({ live: !held.closed, status: held.closed ? "done" : "in_progress", transcript: transcriptOf(held) });
+    // …and the same question answered from the DATABASE when memory is gone (08-01 audit, family 1):
+    // the conversation-to-room map dies after ten minutes and dies with every restart, and this poll
+    // then fell through to the provider — whose "done" only means Charlie was dropped for a wait.
+    if (!held) {
+      const room2 = await lifeRoom(dcid);
+      if (room2 && !room2.startsWith("delta:") && (await isCheckAlive(room2))) {
+        const r0 = (await db.select().from(callResults).where(eq(callResults.room, room2)))[0];
+        return c.json({ live: true, status: "in_progress", transcript: r0?.transcript ?? "" });
+      }
+    }
   }
   if (dcid.startsWith("delta:")) {
     const s = tdSession(dcid.slice(6));
@@ -3537,11 +3575,22 @@ app.get("/pub/live/:cid", async (c) => {
           }
         } catch { /* keep the clip turns only */ }
       }
-      const done = elLive === null ? (s.status === "done" || s.status === "failed") : !elLive;
+      // OUR OWN SESSION IS THE AUTHORITY; the provider's status is only a tie-break when we hold
+      // nothing (08-01 audit, family 1). A Charlie closed for a hold reads as finished over there
+      // while the phone is still in somebody's hand — the provider used to OVERRIDE our session here.
+      const aliveOurs = await isCheckAlive(dcid);
+      const done = aliveOurs ? false : (elLive === null ? (s.status === "done" || s.status === "failed") : !elLive);
       return c.json({ live: !done, status: done ? "done" : "in_progress", transcript: [tdTranscript(s), tail].filter(Boolean).join("\n") });
     }
     const row = (await db.select().from(callResults).where(eq(callResults.providerCallId, dcid)))[0];
     return c.json({ live: false, status: row?.status || "done", transcript: row?.transcript || "" });
+  }
+  // THE LAST DOOR STILL ASKING THE PROVIDER (08-01 audit, family 1): this branch turned the raw
+  // session status into live:false with no look at our own record at all. The gatekeeper answers
+  // first; the provider's copy is only consulted for a check we genuinely hold nothing on.
+  if (await isCheckAlive(dcid)) {
+    const r0 = (await db.select().from(callResults).where(eq(callResults.providerCallId, dcid)))[0];
+    return c.json({ live: true, status: "in_progress", transcript: r0?.transcript ?? "" });
   }
   try {
     const r = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${dcid}`, { headers: { "xi-api-key": config.voice.apiKey } });

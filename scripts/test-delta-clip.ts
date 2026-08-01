@@ -596,5 +596,46 @@ console.log("\n▶ …and a plain wander off is still just a wander off");
   restore(); tw.close(); f.close();
 }
 
+// ================================================================================================
+// FAMILY 1 OF THE 08-01 CHECK-LIFE AUDIT, the bridge's door: a machine phrase is only proof of a
+// voicemail BEFORE a real conversation. Hold loops play recordings, and "please leave a message
+// after the tone" inside one used to close BOTH legs — hanging up on real Staff mid-hold.
+console.log("\n▶ a 'leave a message' recording heard MID-HOLD does not hang up on real Staff");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const tw = await callWithHold(f, "room-vm-hold", "gate");
+  speak(tw, 150);                                   // a real person, talking to us
+  quiet(tw, HOLD_QUIET_MS / 20 + 20);               // they step away — we are on hold
+  await sleep(60);
+  ok((getReceipt("room-vm-hold")?.events || []).some((e) => e.kind === "hold_start"), "we are on hold");
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "You can leave a message after the tone." } }));
+  await sleep(80);
+  ok(tw.readyState === 1, "the phone line is STILL UP — a hold-loop recording is not a voicemail");
+  ok(!(getReceipt("room-vm-hold")?.events || []).some((e) => e.kind === "voicemail"), "and nothing was stamped voicemail");
+  ok((getReceipt("room-vm-hold")?.events || []).some((e) => String(e.note || "").includes("ignored")), "the receipt says the phrase was heard and ignored");
+  speak(tw, 30);                                    // Staff come back — beyond doubt a live store now
+  await sleep(60);
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Sorry about that, you can always leave a message with our voicemail too." } }));
+  await sleep(80);
+  ok(tw.readyState === 1, "…and after Staff came back, a chatty mention of voicemail still cannot end the check");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ …while a REAL voicemail at pickup still hangs up straight away");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const tw = await callWithHold(f, "room-vm-real", "gate");
+  speak(tw, 150);                                   // the machine's recorded voice trips the human gate — that is the case the bail exists for
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "We are unable to take your call, please leave a message after the beep." } }));
+  await sleep(80);
+  ok(tw.readyState !== 1, "the line was hung up — no hold ever happened, so the machine phrase is proof");
+  ok((getReceipt("room-vm-real")?.events || []).some((e) => e.kind === "voicemail"), "and the receipt says a machine was reached");
+  restore(); tw.close(); f.close();
+}
+
 console.log(`\n════════════════════════════════\n  PASS: ${pass}   FAIL: ${fail}\n════════════════════════════════`);
 process.exit(fail === 0 ? 0 : 1);

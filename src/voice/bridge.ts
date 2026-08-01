@@ -391,6 +391,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   const PREWARM_LEAD_MS = tune.prewarmLeadMs;
   // ---- hold and transfer ----
   let onHold = false;             // the person is away; the agent must not be fed or heard
+  /** Somebody has already stepped away and come back on this call — from here it is a live store
+   *  beyond doubt, and no machine-phrase mishearing may hang it up (family 1). */
+  let everCameBack = false;
   let holdReason: HoldReason | null = null;
   let heldWords: string[] = [];   // the first thing they say on coming back, so it is never lost
   /** Recorded once: we landed somewhere that cannot answer. Read off the words, not the audio. */
@@ -573,7 +576,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   function endHold(gapMs: number, maybeNewPerson: boolean) {
     if (!onHold) return;
     const was = holdReason;
-    onHold = false; holdReason = null;
+    onHold = false; holdReason = null; everCameBack = true;
     const secs = Math.round(gapMs / 1000);
     // A HAND-OVER IS ALWAYS A NEW PERSON. The twenty-second bar is right for somebody stepping away
     // to look at a shelf and coming back: same person, same conversation. Being handed to another desk
@@ -774,9 +777,20 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           }
         }
         if (txt && /\b(leave (?:a|your) message|after the (?:tone|beep)|at the (?:tone|beep)|voice ?mail|mailbox|record your message|is not available|unable to take your call|has been forwarded to)\b/i.test(String(txt))) {
-          log(`voicemail greeting detected -> hanging up to save the call minutes`);
-          emit(room, "voicemail", "Reached a machine, hung up straight away");
-          signalEnd(); try { eleven?.close(); } catch { /* torn down */ } try { twilio.close(); } catch { /* torn down */ }
+          // A MACHINE PHRASE IS ONLY PROOF BEFORE A REAL CONVERSATION (08-01 audit, family 1).
+          // Mid-hold the line plays recordings — "please leave a message after the tone" lives in
+          // plenty of hold loops — and once Staff have stepped away and come back this is a live
+          // store, not a voicemail. This close had no such guard, so a misheard line during a hold
+          // hung up BOTH legs on real Staff. The bail still fires on the case it exists for: a
+          // voicemail greeting at pickup, before anybody was ever away and back.
+          if (onHold || everCameBack) {
+            emit(room, "unknown", "A recorded voice mentioned a message mid call, ignored — a live store, not voicemail", { said: String(txt).slice(0, 120) });
+            log("voicemail phrase during/after a hold ignored — not hanging up on a live store");
+          } else {
+            log(`voicemail greeting detected -> hanging up to save the call minutes`);
+            emit(room, "voicemail", "Reached a machine, hung up straight away");
+            signalEnd(); try { eleven?.close(); } catch { /* torn down */ } try { twilio.close(); } catch { /* torn down */ }
+          }
         }
       } else if (m.type === "agent_response") {
         const txt = m.agent_response_event?.agent_response;
