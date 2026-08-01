@@ -25,10 +25,9 @@ git. Last updated: 2026-08-01 (check-life fix + round 2 LIVE on staging, PM-audi
   recipe reaches Staff, the **Menu** by condition, the **Recipes** held, and **Review**.
 - **Re-map hangs up on the second ring** of the desk, so it never troubles Staff, and that check becomes the
   recipe. **Reached Staff shows nothing instead of 0%** until one actually waits for a person.
-- **The mapping rebuild restarts clean (07-31): your rounds are LAW in the contract now** — store proves
-  once, chain live at one and proven at three, the self-healing mute loop, the screens. A fresh chat
-  builds it in THREE chunks; the PM verifies every chunk against the contract before the next; you test
-  ONCE at the end, a fresh CVS start to finish. Old "done" claims are void; the audit file is the fix list.
+- **Mapping milestone 1 of 3: NOT closed (fix pass 3 audited 08-01).** Nothing old regressed, but one
+  root remains: Staff's own words ("sure, one moment" · "over in the toy aisle") still get read as the
+  store's menu — hang-ups on real people can return. Fix pass 4 (audit file) — same mapper chat finishes it.
 ## The new calling engine is ON for staging. Your six test checks are the last thing (07-28/29)
 - **08-01: the check-life audit's fix is LIVE on staging — PM verified it with five blind readers plus every engine test before and after your "go".** One gatekeeper now answers "is this check still running?" from our own record and the phone company only, kept in the database so a restart cannot flip the answer back to ElevenLabs' guess. All three fault families fixed one family per commit, plus: the fragment "no worries" replies, the dead Testing row on a refused dial, the doubled line and the bouncing page.
 - **Then a second round, also on staging now:** a check started from the website never got a tag on it, so the part that writes your answer couldn't tell it was still on the phone — it wrote "couldn't tell" and charged you while you were on hold. That is your second test run's problem and it lived on the exact button you press. Fixed, plus two timing slips: Charlie starting up into your hold music, and a replaced Charlie's goodbye hanging up on you mid sentence.

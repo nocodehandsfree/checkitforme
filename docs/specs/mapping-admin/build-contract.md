@@ -5,6 +5,11 @@ the comps). This file is the WHOLE contract: build exactly this, nothing else, n
 elements. Copy voice: a control panel names things and shows state — no "the" in stage names, never
 caps lock, icons lucide only. Every string ships its length-checked Spanish in the same commit.
 
+**THE SYSTEM, one line (owner, 08-01): the menu answers · Alpha presses · Bravo speaks · the
+earpiece listens the whole time · the desk rings · CHARLIE takes the human.** Mapping talks to
+machines only; every word spoken TO a person, on any check, is Charlie. Build by snapping onto
+these pieces — a copy of any of them is a failed build.
+
 ## The engine — three stages, every check graded
 
 The goal is never a department. It is an ANSWER about the product. Department names mean nothing
