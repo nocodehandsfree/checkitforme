@@ -774,9 +774,12 @@ async function navTurn(id: string, speech: string): Promise<string> {
     const v = judgeHere(s, speech, atSec);
     if (v.needsPause && !s.pauseTested) {
       // Stay silent and listen: a recording reads on through it, a person stops or asks for us.
-      s.pauseTested = true; s.pauseStartedAtSec = atSec;
+      s.pauseTested = true; s.pauseStartedAtSec = atSec; s.keptTalkingAfterPause = undefined;
       return twiml(`<Pause length="2"/>${gather(id)}`);
     }
+    // A pause answers ONE voice. The next voice starts its own question, so the memory is cleared
+    // when we act or when the line moves on — otherwise one "it kept reading" would settle every
+    // later line on the check (fix pass 6, item 2).
     if (s.pauseTested && s.keptTalkingAfterPause === undefined) {
       // Whatever arrived after our silence answers the pause: more store speech means it never
       // stopped for us; anything else (or nothing) means it did.
@@ -826,7 +829,7 @@ async function navTurn(id: string, speech: string): Promise<string> {
       s.repromptHeard = true;
       const last = s.planIdx ? s.barge.plan[s.planIdx - 1] : null;
       if (last?.value && last.action !== "press") {
-        s.lastActTurn = s.turns;
+        s.lastActTurn = s.turns; s.pauseTested = false; s.keptTalkingAfterPause = undefined;
         s.steps.push({ who: "us", text: `said "${last.value}" again (the menu asked twice)`, atSec, action: "say", value: last.value, earPrompts: s.ear?.recordings });
         return twiml(`<Say voice="Polly.Joanna">${esc(last.value)}</Say>${gather(id)}`);
       }
@@ -843,7 +846,7 @@ async function navTurn(id: string, speech: string): Promise<string> {
     // Lanett, 07-30) — that behaviour is deleted, not gated.
     if (step?.early && said && !isReprompt(said) && !saidWasTail) {
       s.planIdx = idx + 1;
-      s.lastActTurn = s.turns;
+      s.lastActTurn = s.turns; s.pauseTested = false; s.keptTalkingAfterPause = undefined;
       if (step.action === "press" && step.value) {
         const digits = step.value.replace(/[^0-9*#]/g, "").slice(0, 6);
         s.steps.push({ who: "us", text: `pressed ${digits} (cutting in on the menu's words)`, atSec, action: "press", value: digits, earPrompts: s.ear?.recordings });
@@ -865,7 +868,7 @@ async function navTurn(id: string, speech: string): Promise<string> {
         && (" " + said.toLowerCase() + " ").includes(" " + step.value.toLowerCase()));
       if (named || isMenuLine(said) || looksLikeQuestion(said)) {
         s.planIdx = idx + 1;
-        s.lastActTurn = s.turns;
+        s.lastActTurn = s.turns; s.pauseTested = false; s.keptTalkingAfterPause = undefined;
         const why = named ? "the prompt named it" : "answering this prompt";
         if (step.action === "press" && step.value) {
           const digits = step.value.replace(/[^0-9*#]/g, "").slice(0, 6);
@@ -963,12 +966,12 @@ async function navTurn(id: string, speech: string): Promise<string> {
   if (d.action === "press" && d.value) {
     const digits = d.value.replace(/[^0-9*#]/g, "").slice(0, 6);
     s.steps.push({ who: "us", text: `pressed ${digits}`, atSec, action: "press", value: digits , earPrompts: s.ear?.recordings });
-    s.lastActTurn = s.turns;
+    s.lastActTurn = s.turns; s.pauseTested = false; s.keptTalkingAfterPause = undefined;
     return twiml(`<Play digits="${digits}"/>${gather(id)}`);
   }
   if (d.action === "say" && d.value) {
     s.steps.push({ who: "us", text: `said "${d.value}"`, atSec, action: "say", value: d.value , earPrompts: s.ear?.recordings });
-    s.lastActTurn = s.turns;
+    s.lastActTurn = s.turns; s.pauseTested = false; s.keptTalkingAfterPause = undefined;
     return twiml(`<Say voice="Polly.Joanna">${esc(d.value)}</Say>${gather(id)}`);
   }
   // AUTO-ESCAPE (hands-free): the model stalled on a deflecting system — stop trusting it and press 0
@@ -988,7 +991,7 @@ async function navTurn(id: string, speech: string): Promise<string> {
       if (v.who !== "recording") return twiml(gather(id));
       s.autoZeros = (s.autoZeros ?? 0) + 1; s.type = "keypad";
       s.steps.push({ who: "us", text: "pressed 0 (auto-operator)", atSec, action: "press", value: "0" , earPrompts: s.ear?.recordings });
-      s.lastActTurn = s.turns;
+      s.lastActTurn = s.turns; s.pauseTested = false; s.keptTalkingAfterPause = undefined;
       return twiml(`<Play digits="0"/>${gather(id)}`);
     }
     return twiml(gather(id)); // wait for the next prompt, then press 0
@@ -1064,7 +1067,6 @@ function finish(s: NavSession, status: "human" | "failed" | "mapped") {
       && (st.atSec ?? 0) < personAt
       && judgeVoice({
         text: String(st.text), atSec: st.atSec ?? 0, knownMenuLines: s.knownMenuLines,
-        pauseTested: true, keptTalkingAfterPause: true,
       }).who === "recording");
     const type = acts.length === 0 ? (heardARecording ? "greeting" : "direct") : (acts.every((a) => a.action === "press") ? "keypad" : "voice");
     s.type = type;

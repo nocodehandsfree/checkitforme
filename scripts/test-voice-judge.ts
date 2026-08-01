@@ -133,6 +133,21 @@ console.log("\n▶ ALPHA AND BRAVO ACT ONLY ON THE EARPIECE'S WORD (fix pass 6, 
     "and the auto-operator branch no longer keeps its own list of person words");
 }
 
+console.log("\n▶ UNSURE CAN NEVER BECOME 'MACHINE' THROUGH A SIDE DOOR (fix pass 6, item 2)");
+{
+  const { readFileSync } = await import("node:fs");
+  // Reading back a finished check: the pause never happened, so it is never claimed to have.
+  ok(!/pauseTested: true, keptTalkingAfterPause: true/.test(readFileSync("src/calls/mapper.ts", "utf8"))
+    && !/pauseTested: true, keptTalkingAfterPause: true/.test(readFileSync("src/calls/navigator.ts", "utf8")),
+    "no path feeds the earpiece a made-up 'it kept talking' to force a recording");
+  ok(judge({ text: "Just a moment please." }).who === "unsure",
+    "so a line that could be either stays UNSURE, and unsure never acts");
+  const nav = readFileSync("src/calls/navigator.ts", "utf8");
+  ok(/s\.pauseTested = true; s\.pauseStartedAtSec = atSec; s\.keptTalkingAfterPause = undefined;/.test(nav)
+    && /s\.lastActTurn = s\.turns; s\.pauseTested = false; s\.keptTalkingAfterPause = undefined;/.test(nav),
+    "and the pause memory is cleared per voice — one answer can never settle every later line");
+}
+
 console.log("\n▶ \"ONE MOMENT\" AFTER OUR QUESTION IS WAITING — not an answer, not being sent away");
 {
   const v = judge({ text: "Sure, one second.", weAskedAtSec: 64, atSec: 66, routeHandoffSeen: true, ringsHeard: 2, mappedRoute: true });

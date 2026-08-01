@@ -263,11 +263,14 @@ export function menuLinesOf(
       const at = st.atSec ?? 0;
       if (at >= person) return false;                        // strict: the person's own words, never the menu
       if (handoff !== Infinity && at > handoff) return false; // past the handoff, the menu is done with us
+      // Reading back what a finished check heard: there is no line to stay silent on any more, so the
+      // pause simply never happened. Feeding it a made-up "it kept talking" was a side door through
+      // which UNSURE became "machine" (fix pass 6, item 2) — unsure stays unsure, and a line the
+      // earpiece cannot call a recording is not one.
       return judgeVoice({
         text: String(st.text), atSec: at, knownMenuLines,
         // Inside the moments above we are, by definition, before the person and inside the menu.
         mappedRoute: true, routeHandoffSeen: false, ringsHeard: 0,
-        pauseTested: true, keptTalkingAfterPause: true,
       }).who === "recording";
     })
     .map((st) => String(st.text));
