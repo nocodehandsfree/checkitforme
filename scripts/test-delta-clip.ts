@@ -155,6 +155,17 @@ console.log("▶ the clerk says hello: the question goes out, the agent connects
   // have to come out the other side.
   ok(f.chunks.length >= 25, `the greeting said BEFORE we were sure of them is kept and released too (${f.chunks.length} frames)`);
   ok(f.chunks.length >= 2, `the held words were released whole (${f.chunks.length} frames)`);
+  // TWO TURNS, NOT ONE. Their hello and their answer to our question are both held for the same
+  // reason and were handed over as one unbroken stretch, so they came back as ONE sentence: the store
+  // appeared to greet us and answer a question it had never been asked, and our own two lines printed
+  // back to back with nothing between them (owner screenshot 07-31). A beat of quiet is the only thing
+  // that ends a turn, so one is sent between the two.
+  {
+    const QUIET = Buffer.alloc(160, 0x7f).toString("base64");
+    const gap = f.chunks.filter((x) => x === QUIET).length;
+    ok(gap >= 30, `a real pause separates their hello from their answer, so it is two lines not one (${gap} quiet frames)`);
+    ok(f.chunks[f.chunks.length - 1] === QUIET, "the pause comes AFTER their hello, so whatever they say next is its own line");
+  }
   // AND THE HELLO READS ABOVE OUR QUESTION, because that is the order it was said in. Staff's words
   // only exist once the agent has transcribed the audio we held, which is after our question played,
   // so stamped on arrival the greeting printed UNDERNEATH the question it came before and the

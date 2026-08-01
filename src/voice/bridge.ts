@@ -354,6 +354,13 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   // screenshot 07-31). A short rolling window of the line is kept from the first voiced frame, and it
   // goes in front of the buffer the moment we commit, so the greeting arrives whole and in order.
   const preRoll: string[] = [];
+  /** WHERE THEIR HELLO ENDS AND THEIR ANSWER BEGINS, as an index into the held audio. Both are held
+   *  for the same reason — the agent is not listening yet — and handing them over as one unbroken
+   *  stretch is how "hi, this is Bob at the phone store" and "let me put you on hold and go find out"
+   *  came back as ONE sentence, with our question printed under it and two of our own lines in a row
+   *  where the store's answer should have been (owner screenshot 07-31). They are two turns because
+   *  we asked a question in between, and the record has to say so. */
+  let pendingSplit = -1;
   const PREROLL_MAX = Math.max(0, Math.round(tune.greetingKeepMs / 20));
   /** When their hello actually started. Their words only exist once the agent has transcribed the
    *  audio we held, which is after our question played — so stamped on arrival, the greeting lands
@@ -406,8 +413,21 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   function flushPending() {
     if (!eleven || !ready || !charlieGateOpen) return;
     for (const p of pending) eleven.send(JSON.stringify({ user_audio_chunk: p }));
-    pending.length = 0;
+    // A REAL PAUSE AFTER IT, because a pause is the only thing that ends a turn. Their hello reaches
+    // the agent as one burst and the live line carries straight on from it, so the four seconds our
+    // question took simply do not exist in what he hears: "hi, this is Bob at the phone store" and
+    // "let me put you on hold and go find out" arrive back to back and come back as ONE sentence. The
+    // store then reads as greeting us and answering a question it was never asked, with our own two
+    // lines printed one after the other where their answer belonged (owner screenshot 07-31).
+    if (pending.length) {
+      for (let q = 0; q < TURN_GAP_FRAMES; q++) eleven.send(JSON.stringify({ user_audio_chunk: QUIET_FRAME }));
+      log(`delta: handed over ${pending.length} frame(s) of hello, then a beat of quiet so their answer is its own line`);
+    }
+    pending.length = 0; pendingSplit = -1;
   }
+  /** One frame of μ-law silence, and how many of them read as "they stopped talking". */
+  const QUIET_FRAME = Buffer.alloc(160, 0x7f).toString("base64");
+  const TURN_GAP_FRAMES = 40; // 800ms — past any natural pause inside one sentence
 
   /** The clip is over: hand the conversation to the agent. Idempotent — three signals race to call
    *  this and a backstop calls it if all three miss, so it must only ever act once. */
@@ -464,6 +484,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // question itself is not lost — recordLine below puts it on the transcript at its real second,
     // where it belongs, and its length rides the real join line.
     joinFacts = { ...joinFacts, question: clip.text, clipMs: clip.ms };
+    // Everything held up to this instant is their hello. Everything after it answers our question.
+    pendingSplit = pending.length;
     // THE QUESTION WE ACTUALLY ASKED IS A LINE OF THE CONVERSATION. It is played from a recording
     // rather than generated, so nothing in the provider's transcript knows it happened — which left
     // our own record missing the single most important line on the call, and left the live view with
