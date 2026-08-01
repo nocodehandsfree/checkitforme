@@ -92,6 +92,9 @@ export const chains = sqliteTable("chains", {
   logoUrl: text("logo_url"),
   logoWide: integer("logo_wide", { mode: "boolean" }),
   logoDark: integer("logo_dark", { mode: "boolean" }),
+  // Width to draw the logo at, as a percent of its square tile. Derived from the artwork's own
+  // proportions at upload time so every surface draws it identically without loading the image.
+  logoPct: real("logo_pct"),
 });
 
 /** A specific catalog product. Seeded from drops_db.json; the agent asks at the category level, but this powers future product-specific asks and matching. */

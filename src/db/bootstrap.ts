@@ -159,6 +159,10 @@ export async function bootstrap() {
   await client.execute("ALTER TABLE chains ADD COLUMN logo_url TEXT").catch(() => {});
   await client.execute("ALTER TABLE chains ADD COLUMN logo_wide INTEGER").catch(() => {});
   await client.execute("ALTER TABLE chains ADD COLUMN logo_dark INTEGER").catch(() => {});
+  // How wide to draw the logo, as a percent of whatever square tile holds it. Worked out ONCE from the
+  // artwork's own proportions at upload time (logoPctFor) and served on every store row, so no surface
+  // has to load the image and re-derive it. Null = the caller falls back to fit-inside.
+  await client.execute("ALTER TABLE chains ADD COLUMN logo_pct REAL").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN external_store_id TEXT").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN maps_uri TEXT").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN geocode_tried_at INTEGER").catch(() => {});

@@ -24,7 +24,9 @@ import { invalidateRefCache } from "./refcache";
 import { isDirectDefaultChain } from "./db/import-data";
 
 // ---- The field split (the contract). Curated = Data Dev's dataset, syncs. Everything else = learned/operational, never synced.
-const CHAIN_CURATED = ["type", "callTarget", "repackOnly", "muted", "unmappableReason", "stockCheckMethod", "stockCheckConfidence", "stockCheckNote", "siteStockUrl", "sellMethods", "isMSRP", "maxTalkSeconds", "hangupOnVoicemail", "logoUrl", "logoWide", "logoDark"] as const;
+const CHAIN_CURATED = ["type", "callTarget", "repackOnly", "muted", "unmappableReason", "stockCheckMethod", "stockCheckConfidence", "stockCheckNote", "siteStockUrl", "sellMethods", "isMSRP", "maxTalkSeconds", "hangupOnVoicemail", "logoUrl", "logoWide", "logoDark", "logoPct"] as const;
+/** The logo half of the curated set. The repair sweep below compares ONLY these. */
+const CHAIN_LOGO_FIELDS = ["logoUrl", "logoWide", "logoDark", "logoPct"] as const;
 const RETAILER_CURATED = ["name", "location", "address", "zip", "lat", "lng", "timezone", "carries", "specialInstructions", "sellsPacks", "hasKiosk", "online", "tier", "externalStoreId", "mapsUri", "state", "region", "active", "notes", "ownerOnly"] as const;
 // Never-sync (documented so nobody "fixes" this): chains phoneTreeDefault/dtmfShortcut/answerPath/
 // avgTreeSeconds/tree*/rings*/nav*; retailers stockStatus/phone/phoneTree/shipmentDay/hours/
@@ -75,6 +77,26 @@ export async function buildSyncPayload(): Promise<{ payload: SyncPayload; nextSt
     if (k.startsWith("r:") && !(k in next)) { payload.retailerTombstones.push(k.slice(2)); }
   }
   return { payload, nextState: next };
+}
+
+/** THE REPAIR SWEEP (owner 07-31). buildSyncPayload only ever sends what CHANGED since last time, so
+ *  the moment the two sides disagree for any other reason the difference is permanent — nothing ever
+ *  looks again. That is exactly how 71 chains sat on stale logos while staging was correct.
+ *
+ *  This asks the target what it currently holds and pushes back every chain whose logo does not match,
+ *  ignoring the hashes entirely. It compares ONLY the logo fields, so it can never disturb the phone-nav
+ *  columns prod earns for itself. Safe to run on a timer and safe to run by hand, as often as you like. */
+export async function buildLogoRepairPayload(targetChains: Array<{ name: string } & Record<string, unknown>>): Promise<SyncChain[]> {
+  const snap = await curatedSnapshot();
+  const theirs = new Map(targetChains.map((c) => [c.name, c]));
+  const out: SyncChain[] = [];
+  for (const [name, mine] of snap.chains) {
+    const t = theirs.get(name);
+    if (!t) continue; // not on the target yet: the normal push creates it, this sweep only repairs
+    const differs = CHAIN_LOGO_FIELDS.some((k) => (mine.fields[k] ?? null) !== ((t[k] as unknown) ?? null));
+    if (differs) out.push({ name, fields: pick(mine.fields, CHAIN_LOGO_FIELDS) });
+  }
+  return out;
 }
 
 /** Hard cap per request — a batch, never the whole dataset (a 110k-row payload wedged prod 2026-07-09). */
@@ -139,6 +161,24 @@ async function postBatch(url: string, token: string, batch: SyncPayload): Promis
     if (!r.ok) throw new Error(`target ${r.status}: ${(await r.text()).slice(0, 120)}`);
   } finally { clearTimeout(timer); }
 }
+/** Ask the target for its chains, push back every logo that disagrees. Returns how many it repaired. */
+export async function pushLogoRepairs(url: string, token: string): Promise<number> {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 30_000);
+  let theirs: Array<{ name: string } & Record<string, unknown>>;
+  try {
+    const r = await fetch(url.replace(/\/$/, "") + "/api/chains", { headers: { "x-admin-token": token }, signal: ctl.signal });
+    if (!r.ok) throw new Error(`target /api/chains ${r.status}`);
+    theirs = await r.json() as Array<{ name: string } & Record<string, unknown>>;
+  } finally { clearTimeout(timer); }
+  const fixes = await buildLogoRepairPayload(theirs);
+  if (!fixes.length) return 0;
+  for (let i = 0; i < fixes.length; i += MAX_BATCH.chains) {
+    await postBatch(url, token, { chains: fixes.slice(i, i + MAX_BATCH.chains), retailers: [], retailerTombstones: [] });
+  }
+  return fixes.length;
+}
+
 export async function storeSyncTick(): Promise<void> {
   if (!config.staging.on || running) return;      // only staging pushes; never overlap
   const url = process.env.STORE_SYNC_URL, token = process.env.STORE_SYNC_TOKEN;
@@ -147,8 +187,11 @@ export async function storeSyncTick(): Promise<void> {
   const stamp = async (o: object) => setSetting("store_sync_last", JSON.stringify({ at: Date.now(), ...o }));
   try {
     const { payload, nextState } = await buildSyncPayload();
+    // Repair sweep rides along: ask the target what logos it actually holds and re-push any that
+    // disagree, hashes ignored. Cheap (one GET of ~130 chains) and it makes drift self-healing.
+    const repaired = await pushLogoRepairs(url, token).catch((e) => { console.error("logo-repair", e); return 0; });
     const total = payload.chains.length + payload.retailers.length + payload.retailerTombstones.length;
-    if (total === 0) { await stamp({ ok: true, sent: 0, pending: 0 }); return; }
+    if (total === 0) { await stamp({ ok: true, sent: 0, pending: 0, repaired }); return; }
     let state: Record<string, string> = {};
     try { state = JSON.parse((await getSetting("store_sync_state")) || "{}"); } catch { /* fresh */ }
     let sent = 0, batches = 0;
