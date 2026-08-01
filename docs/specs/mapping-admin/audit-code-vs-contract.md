@@ -48,36 +48,53 @@ pre-existing) · tsc clean. **All NINE older fixes still hold (regression spot-c
   shortened — exemption keys on recipe values, the ledger on the full phrase as asked
   (`mapper.ts:532-538` vs `navigator.ts:1097-1108`).
 
-## FIX PASS 4 — the LAST milestone-1 list (same mapper chat; evidence at @c39df451)
-F4-1 (GATES THE MILESTONE). **Staff's voice is never the store's menu — close all four faces:**
-  (a) never stamp a handoff line at or after `humanAtSec` (`navigator.ts:675-682`), and make
-  `menuLinesOf` cut at the EARLIER of handoff/person, strict (`mapper.ts:249-259`);
-  (b) the sweep's recording test cuts at `humanAtSec` so a person's hello/answer never counts
-  (`sweep.ts:151,161`) — no greeting recipe may auto-activate onto a direct chain;
-  (c) stamp `humanAtSec` at the line that TRIGGERED person-detection, not the turn the detector
-  fired, so a long hello can't slip under the cut (`navigator.ts:52-65` + reachHuman);
-  (d) a redirect can never fire on Staff's ANSWER: after the ask, nothing burns a door — today
-  "over in the toy aisle" matches the redirect pattern and durably kills the RIGHT door chain-wide
-  with no clear path (`navigator.ts:71`, `mapper.ts:181-195`); also add an Admin clear for
-  `map_doors_dead` / `nav_confirm_asked_doors`.
-F4-2. **Door bookkeeping matches itself:** the proven-door exemption must exempt the door AS THE
-  LEDGER KEYS IT (full phrase and its shortened winner both); record the question on the ask ledger
-  so spent doors are level-scoped like dead doors (`navigator.ts:1101-1106`, `mapper.ts:538-540`).
-F4-3. **Sweep bookkeeping:** prove-direct calls carry a stage (or exemption) so the carrier-end
-  path can't stamp review on the chain (`navigator.ts:1186`); a closed-store mapping run ends
-  "skipped" not "failed" so pass 2 re-queues it (`sweep.ts:235,264`, `mapper.ts:510`); the mapper's
-  own wait deadline gets the same +30s margin the sweep got (`mapper.ts:595`).
-F4-4. Nit: `conditions[].real` has no reader — drop the field or read it (`mapgraph.ts:1391`).
+## Fix pass 4 — verdict (two blind readers + PM-run rigs · @f64c468b)
+Rigs: map-sim 324/324 · resume 20/20 · mapgraph 62/62 · map-api 14/14 · map-e2e 100/102 (same 2
+pre-existing) · tsc clean. **FIXED: F4-2, F4-3, F4-4** (door bookkeeping matches itself; sweep
+bookkeeping all three; once-heard rows filtered server-side) and the ten-point regression sweep all
+holds. **F4-1 STILL LEAKS — the milestone stays open.** The person-stamp lands late and everything
+keys off it: a long hello that dodges both person-detectors leaves Staff's words dated before the
+person (`navigator.ts:491-502` back-dates only the NEWEST line), so the hang-up-on-Staff settle
+cascade survives (verified with concrete call scripts); a greeting chain with no routing phrase
+loops the same way even with detection right; the mapper cannot express greeting-then-transfer so a
+settled 0-step route locks `ringsDirect:true` (`navigator.ts:1001`, `trainer-batch.ts:55,130`);
+"sure, one moment" from a wrong desk counts as an ANSWER and proves the wrong door
+(`navigator.ts:727-730`); one background call can still auto-activate a first version and re-stamp
+a chain (`mapgraph.ts:709,907-938`); the reset endpoint exists (`server.ts:6453`) but NO Admin
+button calls it, and it wipes the chain's whole history — no doors-only clear.
+
+## FIX PASS 5 — reframed: one design change + hard rules (same mapper chat · evidence @f64c468b)
+Patching faces has failed twice; build it structurally.
+F5-1 (GATES, with F5-2). **Who is talking is decided line by line, and the person is dated from the
+  FIRST line of their speech.** (a) When person-detection fires, walk BACK through recent store
+  lines and stamp the person at the start of their speech, not the newest line
+  (`navigator.ts:491-502` + both call sites); (b) a hello that tail-joins onto a store line must
+  SPLIT, not drag the stamp onto the store's line — today a desk answering within 5s of our last
+  press steals the real menu line, wording never settles, the store is unmappable
+  (`navigator.ts:658,669,498`; `mapper.ts:260,695-703`); (c) after the ask, "one moment"/"sure,
+  one second" is WAITING — not an answer, not a redirect; keep listening for the real reply
+  (`navigator.ts:727-730`; today it proves a wrong door and joins the proof ledger).
+F5-2 (GATES, with F5-1). **Troubling Staff must be structurally impossible on listen-only checks:**
+  a listen-only check whose plan has no steps NEVER dials (it can never arm its ring hang-up —
+  `navigator.ts:624-637,533-538`); a store whose route has no menu steps needs NO wording-settle
+  (nothing to settle — the proving call is the settle). These two rules end both hang-up loops even
+  when detection is wrong.
+F5-3. **Greeting-then-transfer is expressible by the mapping run:** a settled route with zero
+  answers but real pre-person store lines locks as `greeting`, never as direct
+  (`navigator.ts:1001`, `map-capture.ts:55`, `trainer-batch.ts:55,130`) — else the paid agent
+  opens on a recording.
+F5-4. **A first version from ONE background call can never re-stamp how a chain answers:**
+  type-gate auto-activation (`mapgraph.ts:709,722-725,907-938`).
+F5-5. **The Admin clear:** wire a button to the reset (`server.ts:6453`) and add a doors-only clear
+  (`map_doors_dead` + `nav_confirm_asked_doors`) that leaves versions, proof, and history alone.
 
 ## Standing owner decisions (unchanged)
-Item 4: live checks still answer on a stopwatch; the listen-for-menu-words path exists but defaults
-off — one small task, fresh chat, owner unlock. · map-e2e's 2 pre-existing fails assert the OLD
-wait-for-approval behavior R2 retires. · No lock of the mapping surfaces until the owner names the
-live page the record of truth.
+Live checks still answer on a stopwatch (listen-for-menu-words defaults off) — one small task,
+owner unlock. · map-e2e's 2 pre-existing fails assert the OLD wait-for-approval behavior R2
+retires. · No lock of the mapping surfaces until the owner names the live page the record of truth.
 
 ## How to use this
-Fix pass 4 = F4-1 to F4-4, SAME mapper chat, same branch `claude/mapping-engine-contract-wecvcy`:
-work F4 in order, one item per commit, each proven
-by a driven check or rig test before the next. F4-1 gates the milestone: until its four faces close,
-direct-answer chains still hang up on real people or get misfiled. The PM re-audits blind after the
-push; MILESTONE 1 closes on that audit. The contract is the law.
+Fix pass 5 = F5-1 to F5-5, SAME mapper chat, same branch `claude/mapping-engine-contract-wecvcy`:
+one item per commit, each driven on a rig — including the exact call scripts in the fix-pass-4
+verdict above — before the next. F5-1 + F5-2 gate the milestone. PM audits blind after the push;
+MILESTONE 1 closes on that audit. The contract is the law.
