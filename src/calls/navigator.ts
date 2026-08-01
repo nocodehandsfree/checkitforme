@@ -177,7 +177,9 @@ export interface NavSession {
   planIdx?: number;
   stopReason?: string;      // why this call ended, in plain words (kept as evidence)
   status: "dialing" | "navigating" | "human" | "failed" | "done";
-  type: "direct" | "keypad" | "voice" | null;
+  /** How this store answers. GREETING is its own shape and not a kind of direct: a recording
+   *  plays, then a person arrives — the paid agent must WAIT rather than start talking (owner 07-27). */
+  type: "direct" | "keypad" | "voice" | "greeting" | null;
   humanAtSec: number | null; confidence: number; callSid?: string; recipe: NavRecipe | null;
   /** What the Ear is hearing right now, and how many store recordings have finished. Present only
    *  once the audio fork connects; every use is optional, so a call whose fork never arrives behaves
@@ -1055,7 +1057,19 @@ function finish(s: NavSession, status: "human" | "failed" | "mapped") {
     const acts = s.steps
       .filter((st) => st.who === "us" && !String(st.text).startsWith("asked:"))
       .map((st) => ({ action: st.action || "say", value: st.value || "", atSec: st.atSec }));
-    const type = acts.length === 0 ? "direct" : (acts.every((a) => a.action === "press") ? "keypad" : "voice");
+    // NOTHING TO PRESS IS NOT THE SAME AS NOBODY IN FRONT OF STAFF. A store that plays a recording
+    // and then hands us on ("thank you for calling Barnes & Noble", hold music, a person) needs no
+    // answers from us — but calling it direct is what put the paid agent on the line talking to the
+    // recording. If the judge heard the store's own recordings before the person, this is a GREETING
+    // route: no steps, but a wait that must be respected (fix pass 5, item 3).
+    const personAt = s.humanAtSec ?? Infinity;
+    const heardARecording = s.steps.some((st) => st.who === "ivr" && String(st.text || "").trim()
+      && (st.atSec ?? 0) < personAt
+      && judgeVoice({
+        text: String(st.text), atSec: st.atSec ?? 0, knownMenuLines: s.knownMenuLines,
+        pauseTested: true, keptTalkingAfterPause: true,
+      }).who === "recording");
+    const type = acts.length === 0 ? (heardARecording ? "greeting" : "direct") : (acts.every((a) => a.action === "press") ? "keypad" : "voice");
     s.type = type;
     s.recipe = {
       type, steps: acts,

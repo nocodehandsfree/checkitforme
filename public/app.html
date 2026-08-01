@@ -1425,6 +1425,8 @@
           <div class="row" style="gap:8px;margin-top:16px;flex-wrap:wrap">
             <button class="act" id="set_mapbtn" onclick="setMapChain()">Map</button>
             <button class="ghost" id="set_mapstop" onclick="mapperStop()" style="display:none">Stop</button>
+            <button class="ghost" onclick="mapFreeDoors()">Free doors</button>
+            <button class="ghost" onclick="mapStartOver()">Start over</button>
           </div>
           <div class="meta" id="set_mapnote" style="margin-top:10px;text-transform:none;letter-spacing:0;line-height:1.5"></div>
           <div class="card" id="mapper_live" style="display:none;border-color:var(--tint-purple-border);margin-top:12px">
@@ -5519,6 +5521,32 @@ function setBackToChains(){
   const ac=document.getElementById('set_allchains'); if(ac) ac.style.display='none';
   const sel=document.getElementById('set_chain'); if(sel) sel.value='';
   try{ document.getElementById('trees').scrollIntoView({behavior:'smooth',block:'start'}); }catch(_){ }
+}
+// FREE THE DOORS the engine refuses to try again. Three things go: the ways in it marked wrong, the
+// desks whose one question is spent, the changes it remembers as never worth trying. Nothing else.
+async function mapFreeDoors(){
+  const id=Number((document.getElementById('set_chain')||{}).value||0); if(!id){ toast('Pick a chain first'); return; }
+  const ok=await askSheet('Free the doors on this chain?',[
+    'The ways in it decided were wrong, and the desks it already asked, become fair game again.',
+    'The recipe, the checks and the menu all stay exactly as they are.',
+  ],'Free doors');
+  if(!ok) return;
+  const r=await api('/api/admin/map/chain/'+id+'/free-doors',{method:'POST'});
+  if(!r||r.error){ toast(mapWriteErr(r)); return; }
+  toast('Doors freed'); delete CHAIN_MAP[id]; await loadMapGraph(); await ssReload();
+}
+// START THIS CHAIN OVER, keeping the way in it runs today. Every check, every review item and every
+// older recipe goes; the live one stays so real checks never change.
+async function mapStartOver(){
+  const id=Number((document.getElementById('set_chain')||{}).value||0); if(!id){ toast('Pick a chain first'); return; }
+  const ok=await askSheet('Start this chain over?',[
+    'Every mapped check, review item and older recipe is cleared.',
+    'The way in it runs today stays, so real checks carry on unchanged.',
+  ],'Start over');
+  if(!ok) return;
+  const r=await api('/api/admin/map/chain/'+id+'/reset',{method:'POST'});
+  if(!r||r.error){ toast(mapWriteErr(r)); return; }
+  toast('History cleared'); delete CHAIN_MAP[id]; await loadMapGraph(); await ssReload();
 }
 // Map the selected chain: the full mapping run, shown live in the Mapping card.
 // ONE mapping button (owner 07-27): "if we're going to re-map something it should follow the exact

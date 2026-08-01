@@ -1078,6 +1078,26 @@ async function main() {
         && /await setSetting\(`nav_confirm_asked_doors:\$\{chainId\}`, ""\);/.test(mg4),
         "and starting a chain over frees every door it refused to try again");
     }
+    // FIX PASS 5 ITEMS 3-5.
+    {
+      // (3) A store that plays a recording and hands us on is a GREETING chain, never direct: calling
+      // it direct is what put the paid agent on the line talking to the recording.
+      const nv5 = readFileSync("src/calls/navigator.ts", "utf8");
+      ok(/const type = acts\.length === 0 \? \(heardARecording \? "greeting" : "direct"\)/.test(nv5),
+        "a proven route with no answers but real store recordings locks as greeting, never as direct");
+      // (4) One unattended call may not change the SHAPE a chain answers in.
+      const mg5 = readFileSync("src/calls/mapgraph.ts", "utf8");
+      ok(/const shapeChanges = !!prevActive && shapeOf\(prevActive\.recipe\) !== shapeOf\(opts\.recipe\);/.test(mg5)
+        && /&& !\(shapeChanges && !opts\.autoActivate\);/.test(mg5),
+        "and one background call can never re-stamp how a chain answers — that version waits");
+      // (5) Both clears exist and the page can reach them.
+      ok(/export async function freeChainDoors/.test(mg5), "a doors-only clear exists");
+      const srv5 = readFileSync("src/server.ts", "utf8");
+      ok(/app\.post\("\/api\/admin\/map\/chain\/:id\/free-doors"/.test(srv5), "with its own route");
+      const page5 = readFileSync("public/app.html", "utf8");
+      ok(/onclick="mapFreeDoors\(\)">Free doors</.test(page5) && /onclick="mapStartOver\(\)">Start over</.test(page5),
+        "and both clears have a button on the chain page — the reset is no longer unreachable");
+    }
     ok(!/finalizeAndLock[\s\S]{0,120}?\}\s*else\s*\{[\s\S]{0,200}?ex\.status = "fail"/.test(eng)
       && /ex\.status = "fail";(?![\s\S]{0,600}finalizeAndLock)/.test(eng),
       "a failed check reaches neither of them — a loss changes nothing");

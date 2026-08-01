@@ -707,7 +707,16 @@ export async function proposeVersion(opts: {
   // activates itself. A call that ended ON THE RING activates like one that reached Staff: it walked
   // the whole menu and proved the desk rings, and the ring hang-up is how a settling listen or a
   // speed win ends BY DESIGN — refusing it would mean no run could ever lock without troubling Staff.
-  const activate = !hammer && (opts.autoActivate ?? !prevActive) && !!(call?.reachedHuman || call?.endedOnRing);
+  // …AND ONE BACKGROUND CALL MAY NEVER RE-STAMP HOW A CHAIN ANSWERS. A first version activating
+  // itself is right for a chain with nothing live — a proven path beats no path. It is NOT right when
+  // it would change the SHAPE a chain is believed to answer in (direct ⇄ menu ⇄ greeting): that
+  // decides whether the paid agent waits or starts talking, and one unattended call is not enough to
+  // move it. Such a version is filed and waits (fix pass 5, item 4).
+  const shapeOf = (r: MapRecipe | null | undefined) => !r ? null
+    : (r.type === "greeting" ? "greeting" : ((r.steps || []).length ? "menu" : "direct"));
+  const shapeChanges = !!prevActive && shapeOf(prevActive.recipe) !== shapeOf(opts.recipe);
+  const activate = !hammer && (opts.autoActivate ?? !prevActive) && !!(call?.reachedHuman || call?.endedOnRing)
+    && !(shapeChanges && !opts.autoActivate);
   const summary = describeChange(prevActive, opts.recipe);
   const why = opts.why || (hammer ? "Auto-caller pressed the same key repeatedly. Not a mapped route." : scored.why);
 
@@ -1341,6 +1350,25 @@ function trendOf(all: MapVersion[], active: MapVersion | null, recipe: MapRecipe
 
 /** Everything behind one chain: its versions, its evidence, its unknowns, its recent observations —
  *  the replay trail for a single map. */
+/** FREE THE DOORS THIS CHAIN REFUSES TO TRY, and nothing else. A door marked wrong, a desk whose one
+ *  question is spent, and a move remembered as never-again all outlive their run on purpose — but a
+ *  chain can paint itself into a corner where every door is refused and no run can finish. This
+ *  frees exactly those three and leaves the route, its proof, the checks and the menu untouched
+ *  (fix pass 5, item 5). Starting a chain over does this too, along with everything else. */
+export async function freeChainDoors(chainId: number): Promise<{ doorsFreed: number; asksFreed: number; movesFreed: number }> {
+  const count = async (key: string) => {
+    try { return (JSON.parse((await getSetting(key)) || "[]") as unknown[]).length; } catch { return 0; }
+  };
+  const doorsFreed = await count(`map_doors_dead:${chainId}`);
+  const asksFreed = await count(`nav_confirm_asked_doors:${chainId}`);
+  const movesFreed = await count(`map_never:${chainId}`);
+  await setSetting(`map_doors_dead:${chainId}`, "");
+  await setSetting(`nav_confirm_asked_doors:${chainId}`, "");
+  await setSetting(`nav_confirm_asked:${chainId}`, "");
+  await setSetting(`map_never:${chainId}`, "");
+  return { doorsFreed, asksFreed, movesFreed };
+}
+
 /** THE STORE'S OWN REMEMBERED MENU — every line we have heard this store play, in its own words as
  *  heard. This is the judge's first and strongest layer (fix pass 5): a recording plays the same
  *  sentence on every check, a person never says the same sentence twice, so a line we already hold

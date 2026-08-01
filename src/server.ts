@@ -44,7 +44,7 @@ import { costCall, money } from "./calls/cost";
 import { behaved, agentLinesFrom } from "./calls/behaved";
 import { opsRollup, type CheckRow } from "./calls/ops";
 import { startMapper, stopMapper, mapperState, resumeMapperRuns } from "./calls/mapper";
-import { activeMap, resetChainHistory, graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, graphFor, learnFromReceipt, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
+import { activeMap, resetChainHistory, freeChainDoors, graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, graphFor, learnFromReceipt, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
 import { recipeFromCall, evidenceFromCall, type CapturedStep } from "./calls/map-capture";
 import { startSweep, stopSweep, sweepStatus, buildQueue } from "./calls/sweep";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay } from "./calls/tapedeck";
@@ -6454,6 +6454,15 @@ app.post("/api/admin/map/chain/:id/reset", async (c) => {
   const id = Number(c.req.param("id"));
   if (!id) return c.json({ error: "chainId required" }, 400);
   return c.json(await resetChainHistory(id));
+});
+// FREE THE DOORS, KEEP EVERYTHING ELSE. Starting over throws away the whole history; this throws
+// away only the refusals — the doors marked wrong, the desks whose one question is spent, and the
+// moves remembered as never-again. The route, its proof, the checks and the menu all stay. Wanted
+// when a chain has painted itself into a corner but its history is good (fix pass 5, item 5).
+app.post("/api/admin/map/chain/:id/free-doors", async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!id) return c.json({ error: "chainId required" }, 400);
+  return c.json(await freeChainDoors(id));
 });
 app.get("/api/admin/map/graph/:id", async (c) => {
   const id = Number(c.req.param("id"));
