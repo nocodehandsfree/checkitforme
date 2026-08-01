@@ -190,5 +190,32 @@ console.log("\n▶ THE FIRST CALL TO A STORE WE HAVE NEVER RUNG IS PURE LISTENIN
     "and on later calls the ordinary rules apply again");
 }
 
+console.log("\n▶ THE LAST FOUR (fix pass 6, items 5-8)");
+{
+  const { readFileSync } = await import("node:fs");
+  const nav = readFileSync("src/calls/navigator.ts", "utf8");
+  // 5: both flags are wired for real, not just asserted.
+  ok(/if \(s\.relisten && s\.humanAtSec == null && !s\.firstEverCall\)/.test(nav),
+    "a store's first check hangs up on nothing — it listens to everything and its menu goes on file");
+  ok(/if \(verdict\.unknownLine && verdict\.who === "recording"/.test(nav) && /kind: "menu-changed"/.test(nav),
+    "and a menu line matching nothing we hold is FILED, never guessed into the map");
+  const v = judge({ text: "Press 4 for the deli counter.", knownMenuLines: KNOWN });
+  ok(v.unknownLine === true && v.who === "recording",
+    "the judge flags an unheard menu line as unheard, and still says who spoke");
+  // 6: the run's own heard lines feed the judge during a first run.
+  ok(/\.\.\.\(await rememberedMenuLines\(chainId, store\.id\)\), \.\.\.\(run\.lastLines \|\| \[\]\)/.test(readFileSync("src/calls/mapper.ts", "utf8")),
+    "during a first run the store's own lines heard so far feed the judge — never blind when it matters most");
+  // 7: sweep truth.
+  const sw = readFileSync("src/calls/sweep.ts", "utf8");
+  ok(/a recording plays before Staff\. Queued for mapping\./.test(sw),
+    "a short recording before Staff disqualifies 'answers directly' — however short it was");
+  ok(/\(please\\s\+\)\?hold/.test(nav) || /hold\(\\s\+\(on\|please\)\)\?/.test(nav),
+    "and 'please hold' still arms the handoff clock");
+  // 8: freeing the doors reaches a live run.
+  ok(/export function forgetDoorsOnLiveRun/.test(readFileSync("src/calls/mapper.ts", "utf8"))
+    && (readFileSync("src/calls/mapgraph.ts", "utf8").match(/forgetDoorsOnLiveRun\(chainId\)/g) || []).length === 2,
+    "freeing the doors reaches a run in flight too — both clears tell it");
+}
+
 console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

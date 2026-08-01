@@ -327,9 +327,10 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
     if (known.some((line) => sameSpokenLine(line, text))) {
       return { who: "recording", why: "this store has played this exact line before", ...ride };
     }
-    // No match is not a verdict on its own — it may be a menu we have never heard. Flagged, and the
-    // later layers still get their say.
-    ride.hangUpAllowed = hangUpAllowed;
+    // No match is not a verdict on its own — it may be a menu we have never heard. FLAGGED here so
+    // the caller can file it as a condition, and the later layers still get their say about who
+    // was talking.
+    (ride as VoiceVerdict).unknownLine = true;
   }
 
   // LAYER 2 — where we are on a route we hold.

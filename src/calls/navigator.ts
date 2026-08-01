@@ -166,6 +166,8 @@ export interface NavSession {
   /** LAYER 4 — we stayed silent for a beat to see whether the line kept reading (a recording) or
    *  stopped for us (a person), and what it did. */
   pauseTested?: boolean; keptTalkingAfterPause?: boolean; pauseStartedAtSec?: number;
+  /** One unheard menu line filed per check — a condition is a menu, not every line of it. */
+  filedUnknownLine?: boolean;
   /** The reigning recipe's menu time, for a speed check to beat. Not beaten = failed, "not faster". */
   recipeSeconds?: number;
   repromptHeard?: boolean;  // the store said it did not understand us
@@ -659,7 +661,10 @@ async function navTurn(id: string, speech: string): Promise<string> {
   // one stamps the handoff moment when no announcement did, because the desk ringing IS the menu
   // finished with us (owner Update 10). The published cadence (second ring starts six seconds in)
   // stands in only when the Ear has counted nothing after an announced handoff.
-  if (s.relisten && s.humanAtSec == null) {
+  // THE FIRST CHECK TO A STORE WE HAVE NEVER RUNG HANGS UP ON NOTHING. It is pure listening: record
+  // everything, so the store's menu is on file for every later check. Nothing to hang up on means no
+  // ring hang-up either — it runs to its own ceiling and ends by itself (fix pass 6, item 5).
+  if (s.relisten && s.humanAtSec == null && !s.firstEverCall) {
     const rings = s.ear?.conv?.rings ?? 0;
     const routeDone = !!(s.barge?.plan?.length && (s.planIdx ?? 0) >= s.barge.plan.length);
     if (rings > 0 && s.transferAtSec == null && routeDone) {
@@ -738,7 +743,10 @@ async function navTurn(id: string, speech: string): Promise<string> {
   // THE JUDGE SAYS WHO SAID IT, and only the phone system can hand us on. Staff saying "sure, one
   // moment" matches the handoff words exactly; taking that as the machine put a handoff moment after
   // the person, and their hello went back into the store's menu (fix pass 5).
-  const handoffVerdict = speech && ROUTING_RE.test(speech) ? judgeHere(s, speech, atSec) : null;
+  // "Please hold." is short and says nothing about a menu, but it IS the phone system handing us on
+  // — so it must still arm the handoff clock (fix pass 6, item 7). The judge decides who said it.
+  const handoffVerdict = speech && (ROUTING_RE.test(speech) || /^\s*(please\s+)?hold(\s+(on|please))?[.!]?\s*$/i.test(speech))
+    ? judgeHere(s, speech, atSec) : null;
   if (speech && ROUTING_RE.test(speech) && !routeUnfinished && s.humanAtSec == null
     && handoffVerdict?.who === "recording") {
     s.routingSeen = true;                       // routed to a person → next greeting is human
@@ -786,6 +794,16 @@ async function navTurn(id: string, speech: string): Promise<string> {
       s.keptTalkingAfterPause = isMenuLine(speech) || speech.trim().split(/\s+/).length > 14;
     }
     const verdict = s.pauseTested ? judgeHere(s, speech, atSec) : v;
+    // A LINE MATCHING NOTHING WE HOLD is either a person or a menu we have never heard. The judge
+    // says which; when it is not a person, the unheard menu is FILED, never guessed into the map.
+    if (verdict.unknownLine && verdict.who === "recording" && s.chainId != null && !s.filedUnknownLine) {
+      s.filedUnknownLine = true;
+      void import("./mapgraph").then((m) => m.reportUnknown({
+        chainId: s.chainId as number, storeId: s.retailerId, kind: "menu-changed",
+        prompt: String(speech).slice(0, 200),
+        evidence: { navId: s.id, storeName: s.retailerName, callSid: s.callSid },
+      })).catch(() => { /* filing is best-effort */ });
+    }
     // ONLY THE EARPIECE'S WORD. The cold-pickup test used to overrule it here; it is evidence the
     // judge already weighs, and a second opinion beside the judge is exactly what this pass deletes.
     if (verdict.who === "person") {

@@ -222,6 +222,18 @@ async function proveDirect(item: SweepItem): Promise<void> {
     return;
   }
   if (reached) {
+    // A SHORT RECORDING IS STILL A RECORDING. "Please hold." in front of a person means this chain
+    // does NOT answer directly — proving it direct off that is how the paid agent ended up talking
+    // to a recording. Anything the judge called a recording before the person disqualifies the
+    // direct claim, however short it was (fix pass 6, item 7).
+    if (steps.some((st) => isRecording(st) && (st.atSec ?? 0) < (s?.humanAtSec ?? Infinity))) {
+      item.status = "done";
+      item.outcome = "a recording plays before Staff. Queued for mapping.";
+      await db.update(chains).set({ ringsDirect: false, answerPath: null }).where(eq(chains.id, item.chainId));
+      item.mode = "map";
+      await runMapping(item);
+      return;
+    }
     const recipe: MapRecipe = recipeFromCall(steps, s?.humanAtSec ?? null);
     const call = evidenceFromCall({
       navId: placed.id, storeId: store.id, storeName: store.name, steps,

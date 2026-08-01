@@ -186,6 +186,16 @@ async function loadDeadDoors(chainId: number): Promise<Array<{ door: string; q?:
     return raw.map((e) => typeof e === "string" ? { door: e } : e).filter((e) => e && e.door);
   } catch { return []; }
 }
+/** Clearing the doors reaches a RUNNING run too (fix pass 6, item 8). A live run holds its own copy
+ *  of the refusals and re-writes it after every check, so freeing the lists while it runs would be
+ *  undone within a minute. Called by the clear itself. */
+export function forgetDoorsOnLiveRun(chainId: number): void {
+  const run = runs.get(chainId);
+  if (!run) return;
+  run.doorsDead = []; run.doorsDeadQ = {}; run.neverAgain = [];
+  run.log.push({ n: run.attempt, phase: run.phase, store: run.store?.name || "", outcome: "the doors were freed — every way in is fair game again" });
+}
+
 async function rememberDeadDoor(run: MapperRun, door: string, q?: string): Promise<void> {
   if (!run.doorsDead.includes(door)) run.doorsDead.push(door);
   if (q) (run.doorsDeadQ = run.doorsDeadQ || {})[door] = q;
@@ -577,7 +587,10 @@ function driveMapper(run: MapperRun): void {
 
       // What this store has played us before — the judge's first layer, read once and used by the
       // check itself and by every reading of what it heard.
-      const known = await rememberedMenuLines(chainId, store.id);
+      // What this store has played us: the map's memory PLUS what this very run has already heard.
+      // During a first run the map holds nothing yet, so without the run's own lines the judge's
+      // first layer is blind exactly when it is needed most (fix pass 6, item 6).
+      const known = [...(await rememberedMenuLines(chainId, store.id)), ...(run.lastLines || [])];
 
       // ---- place this stage's check ----
       run.attempt++; run.callsToday = await bumpDaily(chainId);

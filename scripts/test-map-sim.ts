@@ -483,8 +483,8 @@ async function main() {
     const src = readFileSync("src/calls/navigator.ts", "utf8");
     ok(!/if \(s\.relisten\) \{\s*\n\s*s\.stopReason = "menu done, desk ringing";/.test(src),
       "the handoff announcement alone no longer ends the call — the announcement is not the ring (RULES 2)");
-    ok(/if \(s\.relisten && s\.humanAtSec == null\)[\s\S]{0,900}?rings >= 2/.test(src),
-      "every ring hang-up waits for the second ring — re-listen and speed check alike");
+    ok(/if \(s\.relisten && s\.humanAtSec == null && !s\.firstEverCall\)[\s\S]{0,900}?rings >= 2/.test(src),
+      "every ring hang-up waits for the second ring — and a store's FIRST check hangs up on nothing at all");
     ok(/const byClock = rings === 0 && s\.routedAtSec != null && atSec - s\.routedAtSec >= RING_CYCLE_SEC;/.test(src),
       "with the published ring cadence standing in when the Ear has counted nothing");
     ok(/RE-LISTEN NEVER TROUBLES STAFF[\s\S]{0,400}?finish\(s, "human"\); return twiml\(`<Hangup\/>`\)/.test(src),

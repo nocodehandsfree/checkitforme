@@ -1366,6 +1366,9 @@ export async function freeChainDoors(chainId: number): Promise<{ doorsFreed: num
   await setSetting(`nav_confirm_asked_doors:${chainId}`, "");
   await setSetting(`nav_confirm_asked:${chainId}`, "");
   await setSetting(`map_never:${chainId}`, "");
+  // A RUN IN FLIGHT holds its own copy and re-writes these lists after every check, so it has to be
+  // told too or the clear is undone within a minute.
+  try { (await import("./mapper")).forgetDoorsOnLiveRun(chainId); } catch { /* best effort */ }
   return { doorsFreed, asksFreed, movesFreed };
 }
 
@@ -1516,6 +1519,7 @@ export async function resetChainHistory(chainId: number): Promise<{
   await setSetting(`nav_confirm_asked_doors:${chainId}`, "");
   await setSetting(`nav_confirm_asked:${chainId}`, "");
   await setSetting(`map_never:${chainId}`, "");
+  try { (await import("./mapper")).forgetDoorsOnLiveRun(chainId); } catch { /* best effort */ }
 
   const live = await activeMap(chainId);
   const del = await client.execute({
