@@ -51,6 +51,7 @@ run "unit: stripe billing" "env DATABASE_URL=file:./.t-stripe.db STRIPE_WEBHOOK_
 run "unit: plans + entitlements" "env DATABASE_URL=file:./.t-plans.db $ENV $TSX scripts/test-plans.ts; rm -f .t-plans.db"
 run "unit: store-sync"  "env DATABASE_URL=file:./.t-sync.db $ENV $TSX scripts/test-storesync.ts; rm -f .t-sync.db"
 # The five mapping rigs (round-2 item 13: they ran in NOTHING before this line).
+run "map: the one judge (recording or person)" "env DATABASE_URL=file:./.t-judge.db $ENV $TSX scripts/test-voice-judge.ts; rm -f .t-judge.db"
 run "map: whole-life simulation" "env DATABASE_URL=file:./.t-mapsim.db $ENV $TSX scripts/test-map-sim.ts; rm -f .t-mapsim.db"
 run "map: run survives a restart" "env DATABASE_URL=file:./.t-mapresume.db $ENV $TSX scripts/test-mapper-resume.ts; rm -f .t-mapresume.db"
 run "map: the versioned map" "env DATABASE_URL=file:./.t-mapgraph.db $ENV $TSX scripts/test-mapgraph.ts; rm -f .t-mapgraph.db"

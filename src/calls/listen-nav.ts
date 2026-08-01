@@ -191,6 +191,207 @@ export function looksLikeAPerson(
   return o.lastPromptMs > 0 && o.lastPromptMs <= maxGreeting && o.quietMs >= wait;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// THE ONE JUDGE — "is this the store's recording, or a person?"
+//
+// EVERY path asks this and nothing decides it privately (fix pass 5). Six different opinions used to
+// live in six files: a live-person word list, a cold-pickup test, a handoff-phrase stamp, a
+// sent-elsewhere classifier, the sweep's "sounds like a recording" length test, and a back-dating
+// helper. They disagreed, and every disagreement cost the same thing — Staff's own words read as the
+// store's menu, or the store's recording read as Staff. That is what rang real people to hang up on
+// them, and what locked routes against recordings. Those tests still exist, but ONLY as evidence
+// this judge weighs; none of them may answer the question alone.
+//
+// FIVE LAYERS, IN ORDER, FIRST CONFIDENT ANSWER WINS:
+//   1 THE STORE'S OWN REMEMBERED MENU. A recording plays the same sentence on every call; a person
+//     never says the same sentence twice. From the second call on we hold this store's lines, so a
+//     match is the recording, decided. No match is NOT "person" on its own — it may be a menu we
+//     have not heard yet, which gets filed, never guessed into the map.
+//   2 WHERE WE ARE on a route we already hold: before the handoff it is the phone system; once the
+//     desk has rung it is a person (the owner's law).
+//   3 THE WORDS: choices to press, "para español", a menu announcing itself = a recording. A reply
+//     to what WE just said, or a short utterance after the ring, = a person.
+//   4 THE PAUSE, when the first three cannot say: stay silent about two seconds. A recording keeps
+//     reading. A person stops, or asks if we are still there.
+//   5 STILL UNSURE = A PERSON. Every default flips this way, because the cost of treating a person
+//     as a recording (talking over them, hanging up on them) is the one we refuse to pay.
+//
+// No audio is decoded here and no model is called: the judge weighs facts the call already has.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+
+/** One spoken line, reduced to the words that survive transcription. Shared with the fingerprint in
+ *  mapgraph so "is this the same line" has exactly ONE rule in the codebase. */
+export const spokenTokens = (line: string): string[] =>
+  String(line || "").toLowerCase().replace(/[^a-z ]/g, " ").split(/\s+/).filter((w) => w.length > 2).slice(0, 10);
+/** The same recording, heard twice. The transcriber never writes it the same way twice, so this
+ *  compares the opening words in order and allows the usual quarter of them to be wrong. */
+export function sameSpokenLine(a: string, b: string): boolean {
+  const A = spokenTokens(a), B = spokenTokens(b);
+  if (A.length < 3 || B.length < 3) return A.join(" ") === B.join(" ");
+  const n = Math.min(A.length, B.length);
+  let hit = 0;
+  for (let i = 0; i < n; i++) if (A[i] === B[i]) hit++;
+  return hit / n >= 0.75;
+}
+
+/** A menu offering choices, announcing itself, or reading a language option — and the machine's own
+ *  handoff line, which is the last thing the phone system says to us. Evidence for layer 3 only:
+ *  Staff say handoff-shaped things too ("sure, one moment"), which is why POSITION is layer 2 and
+ *  wins first — after the desk rings, the same words are a person. */
+const MENU_WORDS = /press \d|press the|option \d|para espa[ñn]ol|oprima|listen carefully|menu has changed|options have changed|for [a-z].{0,30}\bpress\b|say the name|automated|this call (may be|is) recorded|calls are recorded|virtual assistant|please hold while|thank you for calling|transferring you( now)?|connecting you( now)?/i;
+/** Somebody checking whether we are still on the line. Nothing recorded ever asks this. */
+const CHECKING_ON_US = /\bhello\?|are you (still )?there|you still there|can you hear me|anybody there|anyone there/i;
+/** Somebody talking TO US: offering to help, asking what we need, giving their own name. A menu
+ *  offers choices; a person offers themselves. */
+const ADDRESSED_TO_US = /how (can|may) i help|can i help you|what can i (do|help)|what do you need|how can i assist you|this is \w+|\w+ speaking|thanks for holding|thank you for holding|what'?s up/i;
+/** Them going to look — after our question this is WAITING, never an answer and never a hand-off. */
+const GOING_TO_LOOK = /^(sure|okay|ok|yeah|alright|yep|hold on|one)\b[^.?!]{0,40}\b(one (moment|sec|second)|a (moment|sec|second)|moment|hold on|let me (check|look|see|go)|i'?ll (check|look|see|go)|give me)\b/i;
+/** Being handed somewhere else. Only counts when the reply carries no news about the product. */
+const SENT_AWAY = /transfer|connect(ing)? you|let me get you|i'?ll get you|you'?d (have to|need to) (ask|call|talk to)|that would be the |that'?s the .{0,20}(department|desk|counter)/i;
+/** News about the product — a yes, a no, a where. An answer, whatever else rides along with it. */
+const ABOUT_THE_PRODUCT = /\b(yes|yeah|yep|no|nope|we do|we don'?t|sold out|out of stock|in stock|we have|we'?ve got|we got|we carry|aisle|section|shelf|by the|near the|next to|over (by|there|here)|behind the|up front)\b/i;
+
+export interface JudgeInput {
+  /** What was just heard, as the transcriber gave it to us. */
+  text: string;
+  /** Seconds into the check that this line landed. */
+  atSec: number;
+  /** LAYER 1 — this store's menu lines from earlier calls, in its own words as heard. */
+  knownMenuLines?: string[];
+  /** LAYER 2 — we are walking a route we already hold. */
+  mappedRoute?: boolean;
+  /** LAYER 2 — the store has announced the handoff on this check. */
+  routeHandoffSeen?: boolean;
+  /** LAYER 2 — real ring bursts counted by the Ear. One is enough: the desk is ringing. */
+  ringsHeard?: number;
+  /** LAYER 3 — when WE last spoke. A line arriving right after ours is a reply, and replies are people. */
+  weSpokeAtSec?: number | null;
+  /** LAYER 3 — when we asked the product question, if we have. */
+  weAskedAtSec?: number | null;
+  /** LAYER 4 — the pause has been run, and whether the line kept reading through it. */
+  pauseTested?: boolean;
+  keptTalkingAfterPause?: boolean;
+  /** The very first check to a store we have never rung: pure listening, hang up on nothing. */
+  firstEverCall?: boolean;
+  /** The product we asked about, so its own name counts as news about it. */
+  product?: string;
+}
+
+export interface VoiceVerdict {
+  who: "recording" | "person" | "unsure";
+  /** Which layer answered, in plain words — this rides onto the record so a decision can be read back. */
+  why: string;
+  /** The judge cannot say yet and the caller should stay silent for the pause test. */
+  needsPause?: boolean;
+  /** Heard nothing we hold on file: either a person, or a menu we have never heard. The caller files
+   *  it as a condition rather than guessing it into the map. */
+  unknownLine?: boolean;
+  /** Them going to look, after our question. Not an answer, not being sent away — keep listening. */
+  waiting?: boolean;
+  /** Being handed somewhere else, with no news about the product in it. */
+  sendingUsAway?: boolean;
+  /** FALSE on a store's first ever check: record everything, hang up on nothing. */
+  hangUpAllowed?: boolean;
+}
+
+export function judgeVoice(o: JudgeInput): VoiceVerdict {
+  const text = String(o.text || "").trim();
+  const words = text ? text.split(/\s+/).length : 0;
+  const hangUpAllowed = o.firstEverCall ? false : undefined;
+  const afterOurAsk = typeof o.weAskedAtSec === "number" && o.atSec >= o.weAskedAtSec;
+  const productNamed = o.product ? new RegExp(String(o.product).split(/\s+/)[0], "i").test(text) : false;
+  const tellsUsSomething = ABOUT_THE_PRODUCT.test(text) || productNamed;
+  // What KIND of reply this is, decided once and carried whatever the who turns out to be. Going to
+  // look ("sure, one second") is waiting: it answers nothing and hands us nowhere.
+  const waiting = afterOurAsk && GOING_TO_LOOK.test(text) && !tellsUsSomething ? true : undefined;
+  const sendingUsAway = afterOurAsk && !waiting && SENT_AWAY.test(text) && !tellsUsSomething ? true : undefined;
+  const ride = { waiting, sendingUsAway, hangUpAllowed };
+
+  if (!text) return { who: "unsure", why: "nothing was said", ...ride };
+
+  // LAYER 1 — the store's own remembered menu. Recordings repeat word for word.
+  const known = (o.knownMenuLines || []).filter((l) => String(l || "").trim());
+  if (known.length) {
+    if (known.some((line) => sameSpokenLine(line, text))) {
+      return { who: "recording", why: "this store has played this exact line before", ...ride };
+    }
+    // No match is not a verdict on its own — it may be a menu we have never heard. Flagged, and the
+    // later layers still get their say.
+    ride.hangUpAllowed = hangUpAllowed;
+  }
+
+  // LAYER 2 — where we are on a route we hold.
+  if ((o.ringsHeard ?? 0) >= 1 || (o.routeHandoffSeen && (o.ringsHeard ?? 0) >= 1)) {
+    return { who: "person", why: "the desk has rung, so the phone system is finished with us", ...ride };
+  }
+  if (o.mappedRoute && !o.routeHandoffSeen && !MENU_WORDS.test(text) && !CHECKING_ON_US.test(text)) {
+    // Before the handoff on a route we already hold, the phone system is still talking to us.
+    return { who: "recording", why: "we are still inside a menu we already hold", ...ride };
+  }
+
+  // LAYER 3 — the words.
+  if (CHECKING_ON_US.test(text)) return { who: "person", why: "somebody is checking whether we are still here", ...ride };
+  if (ADDRESSED_TO_US.test(text)) return { who: "person", why: "somebody is talking to us, not reading at us", ...ride };
+  if (MENU_WORDS.test(text)) return { who: "recording", why: "these are a menu's own words", ...ride };
+  const repliedToUs = typeof o.weSpokeAtSec === "number" && o.atSec - o.weSpokeAtSec <= 6 && words <= 40;
+  if (repliedToUs && (tellsUsSomething || waiting || sendingUsAway)) {
+    return { who: "person", why: "a reply to what we just said", ...ride };
+  }
+  if (afterOurAsk && (tellsUsSomething || waiting || sendingUsAway)) {
+    return { who: "person", why: "an answer to the question we asked", ...ride };
+  }
+
+  // LAYER 4 — the pause. A recording keeps reading; a person stops.
+  if (!o.pauseTested) return { who: "unsure", why: "could be either — waiting through a short silence to tell", needsPause: true, ...ride };
+  if (o.keptTalkingAfterPause) return { who: "recording", why: "it kept reading through the silence", ...ride };
+
+  // LAYER 5 — still unsure is a person, always.
+  return { who: "person", why: "nothing proved it was a recording, so it is treated as a person", ...ride };
+}
+
+/** WHEN THE PERSON STARTED TALKING — the first line of THEIR speech, never the turn we finally
+ *  recognised them on. A long hello dodges every short-utterance test, so the person used to be
+ *  dated a turn late and their own hello sat before the cut, read as one more menu line: that is the
+ *  hang-up-on-Staff cascade at its root. This walks back through the lines the judge still calls a
+ *  person and takes the earliest one. A hello JOINED onto a store line (the tail rule) never drags
+ *  the stamp onto the recording's moment — the join is split, and the person starts a second later.
+ */
+export function personStartsAt(
+  steps: Array<{ who?: string; text?: string; atSec?: number }>,
+  detectedAtSec: number,
+  ctx: { knownMenuLines?: string[]; ringsHeard?: number; weSpokeAtSec?: number | null; weAskedAtSec?: number | null; product?: string } = {},
+): number {
+  let start = detectedAtSec;
+  const lines = (steps || []).filter((st) => st.who === "ivr" && String(st.text || "").trim());
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const st = lines[i];
+    const at = st.atSec ?? detectedAtSec;
+    if (at > detectedAtSec) continue;
+    const v = judgeVoice({
+      text: String(st.text), atSec: at, pauseTested: true, keptTalkingAfterPause: false,
+      knownMenuLines: ctx.knownMenuLines, ringsHeard: ctx.ringsHeard,
+      weSpokeAtSec: ctx.weSpokeAtSec, weAskedAtSec: ctx.weAskedAtSec, product: ctx.product,
+    });
+    if (v.who === "person") { start = Math.min(start, at); continue; }
+    // A line the judge calls a recording ENDS the walk — but if a person's words were joined onto
+    // it, the person begins just after that recording, never at it.
+    if (start === detectedAtSec && carriesAPersonsWords(String(st.text), ctx)) start = at + 1;
+    break;
+  }
+  return start;
+}
+
+/** Did a store line get a person's words glued onto its end? The tail rule joins a short line that
+ *  lands within seconds of our own answer onto the line it interrupted, which is right for the
+ *  remainder of a cut sentence and wrong for a hello. Split by sentence and ask the judge. */
+function carriesAPersonsWords(line: string, ctx: { knownMenuLines?: string[]; product?: string }): boolean {
+  const parts = String(line || "").split(/(?<=[.?!])\s+/).map((p) => p.trim()).filter(Boolean);
+  if (parts.length < 2) return false;
+  const tail = parts[parts.length - 1];
+  const v = judgeVoice({ text: tail, atSec: 0, pauseTested: true, keptTalkingAfterPause: false, knownMenuLines: ctx.knownMenuLines, product: ctx.product });
+  return v.who === "person";
+}
+
 // ---- the recording plan (which recording each step waits for) -------------------------------
 // GONE, DELIBERATELY (spec: the live call runtime, section 10). This file used to hold a side
 // channel: the caller stashed the anchors in a module-level map keyed by the SHAPE of the step list,

@@ -25,6 +25,7 @@ import { recipeToDtmf } from "./recipe";
 import { isMapFollower, pushVersion, pushDecision } from "./map-authority";
 import { setSetting, getSetting, allSettings } from "../db/settings";
 import { eq } from "drizzle-orm";
+import { sameSpokenLine } from "./listen-nav";
 
 // ---- shapes ---------------------------------------------------------------------------------
 
@@ -1154,19 +1155,16 @@ export interface GraphRow {
  * as a new condition ("menu-changed", the greeting in the store's exact words) and quarantined: it
  * can never touch the recipe it was not walking. Heard twice = the condition is real.
  */
-const fpTokens = (line: string): string[] =>
-  String(line || "").toLowerCase().replace(/[^a-z ]/g, " ").split(/\s+/).filter((w) => w.length > 2).slice(0, 10);
 export function saysClosed(text: string): boolean {
   return /\b(closed|cerrado|after hours|reopen|reopens|business hours are)\b/i.test(String(text || ""));
 }
 export function sameMenu(a: string, b: string): boolean {
+  // ONE rule for "is this the same spoken line", shared with the judge (listen-nav): two copies of a
+  // tolerance is how two parts of the engine start disagreeing about what they heard. The closed
+  // words are the menu-identity part and stay here: a closed line is always a different MENU,
+  // however alike the words.
   if (saysClosed(a) !== saysClosed(b)) return false;
-  const A = fpTokens(a), B = fpTokens(b);
-  if (A.length < 3 || B.length < 3) return A.join(" ") === B.join(" ");
-  const n = Math.min(A.length, B.length);
-  let hit = 0;
-  for (let i = 0; i < n; i++) if (A[i] === B[i]) hit++;
-  return hit / n >= 0.75;
+  return sameSpokenLine(a, b);
 }
 
 /** When the menu is finished with us: the moment the store announced the handoff, or failing that the
@@ -1343,6 +1341,35 @@ function trendOf(all: MapVersion[], active: MapVersion | null, recipe: MapRecipe
 
 /** Everything behind one chain: its versions, its evidence, its unknowns, its recent observations —
  *  the replay trail for a single map. */
+/** THE STORE'S OWN REMEMBERED MENU — every line we have heard this store play, in its own words as
+ *  heard. This is the judge's first and strongest layer (fix pass 5): a recording plays the same
+ *  sentence on every check, a person never says the same sentence twice, so a line we already hold
+ *  is the recording, decided. Read from what the map already keeps — the live route's transcripts
+ *  and the menu lines behind them — so it costs nothing new and grows with every check. Empty means
+ *  this store has never been rung: that check listens to everything and hangs up on nothing. */
+export async function rememberedMenuLines(chainId: number, storeId = 0): Promise<string[]> {
+  try {
+    const live = await activeMap(chainId, storeId);
+    if (!live) return [];
+    const out: string[] = [];
+    for (const c of live.evidence.calls || []) {
+      for (const t of c.transcript || []) out.push(String(t).replace(/^\s*\d+s\s+/, ""));
+    }
+    for (const p of live.recipe.menuPrompts || []) out.push(String(p));
+    // Newest first, deduped by the same rule the judge compares with, and capped: a menu is a
+    // handful of lines, and everything past that is the same lines said again.
+    const seen: string[] = [];
+    for (const line of out.reverse()) {
+      const l = line.trim();
+      if (l.length < 8) continue;
+      if (seen.some((k) => sameSpokenLine(k, l))) continue;
+      seen.push(l);
+      if (seen.length >= 12) break;
+    }
+    return seen;
+  } catch { return []; }
+}
+
 /** THE PROOF LEDGER, read (R1's second lock level). The stores where Staff acknowledged the product
  *  question — the mapping run's store plus every customer check that landed at a new one. This is
  *  the reader the ledger was missing: three distinct stores = the chain is fully proven. */

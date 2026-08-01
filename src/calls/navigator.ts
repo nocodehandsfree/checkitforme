@@ -15,7 +15,7 @@ import { openReceipt, emit, markNow, closeReceipt } from "./events";
 // speech text alone, which returns an empty string for silence, for hold music and for a desk that is
 // ringing, so it could not tell "nobody is there" from "somebody just said hello". These are the same
 // two classes the paid-agent calls listen with. Nothing new is built here.
-import { PromptDetector, ConversationEar, frameEnergy as earFrameEnergy, toneShare as earToneShare, type HoldReason } from "./listen-nav";
+import { PromptDetector, ConversationEar, frameEnergy as earFrameEnergy, toneShare as earToneShare, judgeVoice, personStartsAt, type HoldReason } from "./listen-nav";
 import { sameMenu, type CheckStage, type CheckFailReason } from "./mapgraph";
 import { gradeCheck } from "./map-capture";
 
@@ -149,6 +149,16 @@ export interface NavSession {
    *  Spanish, changed) fails with no reason pill — it is filed as a new condition and quarantined,
    *  and the check can change NOTHING. */
   expectedGreeting?: string;
+  /** THE STORE'S OWN REMEMBERED MENU — every line we have heard it play on earlier checks, in its
+   *  own words. This is the judge's first and strongest layer: a recording repeats itself word for
+   *  word, a person never does. Empty on a store's first check, which is why that check is pure
+   *  listening and hangs up on nothing. */
+  knownMenuLines?: string[];
+  /** No line of this store's menu is on file yet: record everything, hang up on nothing. */
+  firstEverCall?: boolean;
+  /** LAYER 4 — we stayed silent for a beat to see whether the line kept reading (a recording) or
+   *  stopped for us (a person), and what it did. */
+  pauseTested?: boolean; keptTalkingAfterPause?: boolean; pauseStartedAtSec?: number;
   /** The reigning recipe's menu time, for a speed check to beat. Not beaten = failed, "not faster". */
   recipeSeconds?: number;
   repromptHeard?: boolean;  // the store said it did not understand us
@@ -488,17 +498,21 @@ export function menuStillTalking(
  *  the detector's turn left that line sitting BEFORE the person cut, and Staff's own words went back
  *  into the store's menu (fix pass 4, face c). Never later than the turn, so it can only ever be
  *  safer. */
-export function personLineAtSec(steps: NavStep[], speech: string, atSec: number): number {
-  const said = String(speech || "").trim().toLowerCase();
-  if (!said) return atSec;
-  for (let i = (steps || []).length - 1; i >= 0; i--) {
-    const st = steps[i];
-    if (st.who !== "ivr" || !st.text) continue;
-    const line = String(st.text).toLowerCase();
-    if (line.includes(said) || said.includes(line)) return Math.min(st.atSec ?? atSec, atSec);
-    break; // only the newest store line can be the one we just heard
-  }
-  return atSec;
+export function personLineAtSec(steps: NavStep[], speech: string, atSec: number, s?: NavSession): number {
+  // THE JUDGE DATES THE PERSON, not this file (fix pass 5). Walking back for the newest matching
+  // line was one of six private opinions about who is talking; it could only ever move the stamp by
+  // one line, so a LONG hello — which dodges every short-utterance test — still left Staff's own
+  // words sitting before the person and read as the store's menu. The judge walks the whole run of
+  // lines it still calls a person and takes the earliest, and it splits a hello that was joined onto
+  // a store line rather than dragging the stamp onto the recording.
+  void speech;
+  return personStartsAt(steps, atSec, {
+    knownMenuLines: s?.knownMenuLines,
+    ringsHeard: s?.ear?.conv?.rings ?? s?.ringsHeard,
+    weSpokeAtSec: [...(steps || [])].reverse().find((st) => st.who === "us")?.atSec ?? null,
+    weAskedAtSec: s?.confirm?.askedAtSec ?? null,
+    product: s?.confirm?.product,
+  });
 }
 
 /** The words that prove WHICH desk answered. Only what was said on the turn we reached them counts:
@@ -596,6 +610,26 @@ export async function navStep(id: string, speech: string): Promise<string> {
   try { return await navTurn(id, speech); }
   finally { const s = sessions.get(id); if (s) navSync(s); }
 }
+/** Ask THE ONE JUDGE about this line, with everything this check knows. Every path in this file goes
+ *  through here: the handoff stamp, the person stamp, who answered our question. No path may hold a
+ *  private opinion about whether a voice is the store's recording or a person (fix pass 5). */
+function judgeHere(s: NavSession, speech: string, atSec: number) {
+  return judgeVoice({
+    text: speech || "", atSec,
+    knownMenuLines: s.knownMenuLines,
+    mappedRoute: !!s.barge?.plan?.length,
+    routeHandoffSeen: s.transferAtSec != null,
+    ringsHeard: s.ear?.conv?.rings ?? s.ringsHeard ?? 0,
+    weSpokeAtSec: [...s.steps].reverse().find((st) => st.who === "us")?.atSec ?? null,
+    weAskedAtSec: s.confirm?.askedAtSec ?? null,
+    firstEverCall: s.firstEverCall,
+    product: s.confirm?.product,
+    // The pause test is layer 4 and costs two seconds of silence; a mapping check that is walking a
+    // known route has already answered its question by position, so it never gets here.
+    pauseTested: s.pauseTested, keptTalkingAfterPause: s.keptTalkingAfterPause,
+  });
+}
+
 async function navTurn(id: string, speech: string): Promise<string> {
   const s = sessions.get(id);
   if (!s) return twiml(`<Hangup/>`);
@@ -697,7 +731,12 @@ async function navTurn(id: string, speech: string): Promise<string> {
   // wording-settle listens went back to ringing real people (fix pass 4, face a). The store's phone
   // system is finished with us the moment a person speaks; it cannot hand us on afterwards.
   const routeUnfinished = !!(s.barge?.plan?.length && (s.planIdx ?? 0) < s.barge.plan.length);
-  if (speech && ROUTING_RE.test(speech) && !routeUnfinished && s.humanAtSec == null) {
+  // THE JUDGE SAYS WHO SAID IT, and only the phone system can hand us on. Staff saying "sure, one
+  // moment" matches the handoff words exactly; taking that as the machine put a handoff moment after
+  // the person, and their hello went back into the store's menu (fix pass 5).
+  const handoffVerdict = speech && ROUTING_RE.test(speech) ? judgeHere(s, speech, atSec) : null;
+  if (speech && ROUTING_RE.test(speech) && !routeUnfinished && s.humanAtSec == null
+    && handoffVerdict?.who === "recording") {
     s.routingSeen = true;                       // routed to a person → next greeting is human
     // WHEN the machine said it was handing us on. It used to be stamped only if the brain happened to
     // call that same turn "human"; on the 07-28 Alhambra call it did not, so "Okay, transferring you
@@ -718,15 +757,14 @@ async function navTurn(id: string, speech: string): Promise<string> {
   // never claimed proven off dead air. It used to count 9 seconds of quiet as "answered".
   if (s.confirm?.asked && !s.confirmResult) {
     if (speech && speech.trim()) {
-      // A REDIRECT IS BEING SENT AWAY, NEVER AN ANSWER ABOUT THE PRODUCT. Staff saying where the
-      // cards are — "they're over in the toy aisle", "that would be the trading card section" —
-      // matches the sent-elsewhere pattern word for word, and reading it that way killed the RIGHT
-      // door chain-wide and durably (fix pass 4, face d). An answer that TELLS us about the product
-      // is an answer: only a reply that hands us off, with no product news in it, is a redirect.
+      // WHAT KIND OF REPLY IS THIS — the judge says, not a pattern here. Staff telling us where the
+      // cards are ("they're over in the toy aisle") matches the sent-elsewhere words exactly, and
+      // reading it that way killed the RIGHT door chain-wide. And "sure, one second" is them going
+      // to LOOK: not an answer, not a hand-off, so the check keeps listening instead of concluding.
       const said = speech.trim();
-      const tellsAboutProduct = new RegExp(`\\b(yes|yeah|yep|no|nope|we do|we don'?t|sold out|out of stock|in stock|we have|we've got|we got|we carry|we don'?t carry|aisle|section|shelf|by the|near the|next to)\\b`, "i").test(said)
-        || (s.confirm.product ? new RegExp(String(s.confirm.product).split(/\s+/)[0], "i").test(said) : false);
-      if (REDIRECT_RE.test(said) && !tellsAboutProduct) { s.confirmResult = "redirect"; s.redirectTo = said.slice(0, 200); }
+      const v = judgeHere(s, said, atSec);
+      if (v.waiting) return twiml(gather(id));      // they went to check — wait for what they come back with
+      if (v.sendingUsAway) { s.confirmResult = "redirect"; s.redirectTo = said.slice(0, 200); }
       else s.confirmResult = "answered";
       finish(s, "human"); return twiml(`<Hangup/>`);
     }
@@ -749,7 +787,26 @@ async function navTurn(id: string, speech: string): Promise<string> {
   // an LLM round-trip) leaves dead air while they keep saying "hello" until we hang up. looksLikeLivePerson
   // already excludes "press N" menus + long recordings, so it won't trip on an opening IVR. Map mode →
   // hang up instantly; confirm mode → ask the one stock question.
-  if (speech && (looksLikeLivePerson(speech) || looksLikeDirectPickup(s.steps, s.turns, speech))) return reachHuman(s, personLineAtSec(s.steps, speech, atSec), id);
+  // A PERSON IS ON THE LINE — the judge decides, weighing the two old tests as evidence rather than
+  // letting either answer alone. Its layer 4 asks for a beat of silence when it cannot yet tell; we
+  // give it exactly one, then it must answer (and layer 5 answers "person" if it still cannot).
+  if (speech && speech.trim()) {
+    const v = judgeHere(s, speech, atSec);
+    if (v.needsPause && !s.pauseTested) {
+      // Stay silent and listen: a recording reads on through it, a person stops or asks for us.
+      s.pauseTested = true; s.pauseStartedAtSec = atSec;
+      return twiml(`<Pause length="2"/>${gather(id)}`);
+    }
+    if (s.pauseTested && s.keptTalkingAfterPause === undefined) {
+      // Whatever arrived after our silence answers the pause: more store speech means it never
+      // stopped for us; anything else (or nothing) means it did.
+      s.keptTalkingAfterPause = isMenuLine(speech) || speech.trim().split(/\s+/).length > 14;
+    }
+    const verdict = s.pauseTested ? judgeHere(s, speech, atSec) : v;
+    if (verdict.who === "person" || looksLikeDirectPickup(s.steps, s.turns, speech)) {
+      return reachHuman(s, personLineAtSec(s.steps, speech, atSec, s), id);
+    }
+  }
   // FAST-FAIL only on TRUE dead-ends: an actual voicemail box, or the STORE itself closed.
   // NEVER on "pharmacy is closed" — the front store is open and is exactly where we're going
   // (pharmacy can't sell Pokémon cards anyway). Live-observed funnel: "connect you to our
@@ -879,7 +936,7 @@ async function navTurn(id: string, speech: string): Promise<string> {
     emit(id, "unknown", "That read like the recording, not a person", { heard: (speech || "").slice(0, 120), atSec });
     return twiml(gather(id));
   }
-  if (d.action === "human") return reachHuman(s, personLineAtSec(s.steps, speech || "", atSec), id, !!(speech && ROUTING_RE.test(speech))); // person OR announced transfer → confirm waits for the person
+  if (d.action === "human") return reachHuman(s, personLineAtSec(s.steps, speech || "", atSec, s), id, !!(speech && ROUTING_RE.test(speech))); // person OR announced transfer → confirm waits for the person
   // THE HARD BLOCK ON A DEAD DOOR. "Never choose X" in the prompt is a sentence; this is the law: a
   // door a real answer proved wrong cannot be fired again, whatever the model decides. One refusal is
   // a nudge (the model sees it in the log and picks again); a second means it has nothing else to
@@ -928,7 +985,7 @@ async function navTurn(id: string, speech: string): Promise<string> {
       // STOP the instant a person answers — a clear live greeting/self-ID means a human picked up, so
       // reach them (never beep 0 at a person). The weaker HUMAN_RE still needs the routed/2-zeros gate.
       if (looksLikeLivePerson(speech) || ((s.routingSeen || (s.autoZeros ?? 0) >= 2) && HUMAN_RE.test(speech))) {
-        return reachHuman(s, personLineAtSec(s.steps, speech, atSec), id);
+        return reachHuman(s, personLineAtSec(s.steps, speech, atSec, s), id);
       }
       s.autoZeros = (s.autoZeros ?? 0) + 1; s.type = "keypad";
       s.steps.push({ who: "us", text: "pressed 0 (auto-operator)", atSec, action: "press", value: "0" , earPrompts: s.ear?.recordings });
@@ -1149,14 +1206,17 @@ async function recordConfirmAsked(chainId: number, retailerId: number, door?: st
 }
 
 /** Place the documentation call; returns the session id the admin polls for live progress. */
-export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number; early?: boolean }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string; relisten?: boolean; callerRecords?: boolean; stage?: CheckStage; expectedGreeting?: string; recipeSeconds?: number; deadDoors?: Array<{ door: string; q?: string }> }): Promise<{ id?: string; error?: string }> {
+export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number; early?: boolean }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string; relisten?: boolean; callerRecords?: boolean; stage?: CheckStage; expectedGreeting?: string; recipeSeconds?: number; deadDoors?: Array<{ door: string; q?: string }>; knownMenuLines?: string[] }): Promise<{ id?: string; error?: string }> {
   if (!config.callsEnabled) return { error: "calls disabled on this preview deploy" };
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const from = process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
   const id = crypto.randomUUID().slice(0, 8);
-  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined, askText: extra?.askText, target: extra?.target, maxSec: extra?.maxSec, transferWaitSec: extra?.transferWaitSec, relisten: extra?.relisten, callerRecords: extra?.callerRecords, stage: extra?.stage, expectedGreeting: extra?.expectedGreeting, recipeSeconds: extra?.recipeSeconds, deadDoors: extra?.deadDoors };
+  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined, askText: extra?.askText, target: extra?.target, maxSec: extra?.maxSec, transferWaitSec: extra?.transferWaitSec, relisten: extra?.relisten, callerRecords: extra?.callerRecords, stage: extra?.stage, expectedGreeting: extra?.expectedGreeting, recipeSeconds: extra?.recipeSeconds, deadDoors: extra?.deadDoors,
+    // THE JUDGE'S FIRST LAYER: this store's own menu as heard before. Nothing on file = the store's
+    // FIRST check, which listens to everything and hangs up on nothing.
+    knownMenuLines: extra?.knownMenuLines, firstEverCall: !(extra?.knownMenuLines || []).length };
   sessions.set(id, session);
   session.why = extra?.why;
   // The receipt opens at DIAL, before anything can go wrong, so even a call the carrier refuses

@@ -27,7 +27,8 @@ import { chainDialable } from "./recipe";
 import { startMapper, mapperState, stopMapper } from "./mapper";
 import { storeForChain } from "./trainer-batch";
 import { placeNavCall, getNavSession, defaultWorkflowAsk, NavStep } from "./navigator";
-import { proposeVersion, pathSignature, reportUnknown, type MapRecipe } from "./mapgraph";
+import { judgeVoice } from "./listen-nav";
+import { proposeVersion, pathSignature, reportUnknown, rememberedMenuLines, type MapRecipe } from "./mapgraph";
 import { recipeFromCall, evidenceFromCall, CapturedStep } from "./map-capture";
 
 /** Hard ceiling on calls in one sweep — the runaway guard. Tune without a deploy via the
@@ -123,7 +124,8 @@ async function proveDirect(item: SweepItem): Promise<void> {
     // must not fold it a second time.
     // The stage marks this as a RUN's check: the carrier-end path stamps the chain's mapping status
     // only for un-staged calls, so a proving call can never leave "review" behind on its way past.
-    { askVoiceId: ask.voiceId, askText: ask.text, callerRecords: true, stage: "map" },
+    { askVoiceId: ask.voiceId, askText: ask.text, callerRecords: true, stage: "map",
+      knownMenuLines: await rememberedMenuLines(item.chainId, store.id) },
   );
   if (placed.error || !placed.id) { item.status = "failed"; item.outcome = "the call never connected"; return; }
   state.calls++; item.calls++;
@@ -149,16 +151,21 @@ async function proveDirect(item: SweepItem): Promise<void> {
   // Barnes & Noble", then hold music, then a person. Both mean the chain is not "direct", but they
   // need completely different handling, and having only one word for them is what put the paid agent
   // on the line talking to a recording (owner 07-27).
-  // NOTHING A PERSON SAYS IS A RECORDING. Once Staff are on the line, their hello and their answer
-  // ("we've got a bunch of the new Pokémon sets in, they're over by the registers") are long lines of
-  // speech — counted as the store's own recording, they made a passing DIRECT chain read as a chain
-  // with a recording in front of it, and a bogus route could go live off it (fix pass 4, face b).
-  // So both tests read only what was heard BEFORE the person.
-  const beforePerson = typeof s?.humanAtSec === "number"
-    ? steps.filter((st) => (st.atSec ?? 0) < (s.humanAtSec as number))
-    : steps;
-  const heardMenu = beforePerson.some((st) => st.who === "ivr" && /press \d|para español|main menu|for .{3,30}, press|say the name|automated/i.test(String(st.text || "")));
-  const heardRecording = beforePerson.some((st) => st.who === "ivr" && String(st.text || "").trim().split(/\s+/).length > 4);
+  // WHO SAID IT IS THE JUDGE'S ANSWER, NOT A LENGTH TEST HERE (fix pass 5). Staff's hello and their
+  // answer about the cards are long lines of speech; measured by length they read as the store's own
+  // recording, which made a passing DIRECT chain look like a chain with a recording in front of it
+  // and could put a bogus route live. Every line is put to the one judge, with this store's
+  // remembered menu behind it, and only lines it calls a RECORDING count.
+  const known = await rememberedMenuLines(item.chainId, store.id);
+  const isRecording = (st: CapturedStep) => st.who === "ivr" && String(st.text || "").trim()
+    && judgeVoice({
+      text: String(st.text), atSec: st.atSec ?? 0, knownMenuLines: known,
+      ringsHeard: typeof s?.humanAtSec === "number" && (st.atSec ?? 0) >= s.humanAtSec ? 1 : 0,
+      pauseTested: true, keptTalkingAfterPause: String(st.text).trim().split(/\s+/).length > 14,
+      product: "Pokémon cards",
+    }).who === "recording";
+  const heardMenu = steps.some((st) => isRecording(st) && /press \d|para español|main menu|for .{3,30}, press|say the name|automated/i.test(String(st.text || "")));
+  const heardRecording = steps.some((st) => isRecording(st));
   const reached = !!(s && (s.status === "human" || s.humanAtSec != null || s.confirmResult === "answered"));
   // "Did we act on a menu" must not count the product QUESTION — the ask is scaffolding, said on
   // every call, person or menu alike. Counting it made every passing direct call read as a menu walk,

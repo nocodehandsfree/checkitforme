@@ -603,7 +603,7 @@ async function main() {
     // said its last word.
     ok(/const routeUnfinished = !!\(s\.barge\?\.plan\?\.length && \(s\.planIdx \?\? 0\) < s\.barge\.plan\.length\)/.test(src),
       "a route with a step still to walk cannot be finished with us");
-    ok(/if \(speech && ROUTING_RE\.test\(speech\) && !routeUnfinished && s\.humanAtSec == null\)/.test(src),
+    ok(/if \(speech && ROUTING_RE\.test\(speech\) && !routeUnfinished && s\.humanAtSec == null\s*\n\s*&& handoffVerdict\?\.who === "recording"\)/.test(src),
       "so an offer to connect before the last answer is read as one more prompt, not the handoff");
     ok(/if \(spokeOver && fragment && prevIvr\) \{ prevIvr\.text = [\s\S]{0,80}?saidWasTail = true; \}/.test(src),
       "it is joined onto the line it belongs to, never listed as its own step");
@@ -968,7 +968,7 @@ async function main() {
       ok(/cur\?\.navStatus === "locked" \? \{\} : \{ navStatus: "review" \}/.test(sw),
         "and a locked chain keeps its status — a finding queues mapping, it never downgrades a map");
       // FIX PASS 4 ITEM 3: the sweep's own bookkeeping.
-      ok(/callerRecords: true, stage: "map" \}/.test(sw),
+      ok(/callerRecords: true, stage: "map",/.test(sw),
         "a proving call carries a stage, so the carrier-end path can never stamp review on its chain");
       ok(/const closedOut = \/open hours\|stores are open\|closed\/i\.test\(run\.stopReason \|\| ""\);/.test(sw)
         && /closedOut \? "skipped"/.test(sw),
@@ -1049,8 +1049,8 @@ async function main() {
       ] as never;
       ok(menuLinesOf(withMenu, 14, 30).length === 2, "a real menu still keeps its recordings through the handoff line");
       const nv4 = readFileSync("src/calls/navigator.ts", "utf8");
-      ok(/if \(speech && ROUTING_RE\.test\(speech\) && !routeUnfinished && s\.humanAtSec == null\)/.test(nv4),
-        "and no handoff moment is ever stamped once a person is on the line");
+      ok(/handoffVerdict\?\.who === "recording"/.test(nv4) && /s\.humanAtSec == null/.test(nv4),
+        "and no handoff moment is ever stamped once a person is on the line — the judge says who spoke");
     }
     // FACE c: the person's moment is the line that TRIGGERED detection, never the turn it fired on —
     // so a hello joined onto the store line it interrupted cannot sit under the cut.
@@ -1061,13 +1061,13 @@ async function main() {
     ok(personLineAtSec([{ who: "ivr", text: "For guest services press 2.", atSec: 5 }] as never, "Hi, Dana here.", 30) === 30,
       "and an unrelated newest line never drags the person's moment backwards");
     // FACE b: the sweep's recording test reads only what was heard BEFORE the person.
-    ok(/const beforePerson = typeof s\?\.humanAtSec === "number"/.test(readFileSync("src/calls/sweep.ts", "utf8")),
-      "the direct-proving call judges recordings only from before the person answered");
+    ok(/const isRecording = \(st: CapturedStep\) =>[\s\S]{0,400}?judgeVoice\(\{/.test(readFileSync("src/calls/sweep.ts", "utf8")),
+      "the direct-proving call asks the ONE judge which lines were recordings — never a length test");
     // FACE d: an answer that tells us about the product is an ANSWER, never being sent away.
     {
       const nv4 = readFileSync("src/calls/navigator.ts", "utf8");
-      ok(/const tellsAboutProduct = new RegExp\(/.test(nv4) && /REDIRECT_RE\.test\(said\) && !tellsAboutProduct/.test(nv4),
-        "Staff saying where the cards are is an answer — it can no longer kill the right door");
+      ok(/const v = judgeHere\(s, said, atSec\);/.test(nv4) && /if \(v\.sendingUsAway\)/.test(nv4) && /if \(v\.waiting\) return twiml\(gather\(id\)\);/.test(nv4),
+        "the judge says what kind of reply it was: waiting, an answer, or being sent away");
       const mg4 = readFileSync("src/calls/mapgraph.ts", "utf8");
       ok(/await setSetting\(`map_doors_dead:\$\{chainId\}`, ""\);/.test(mg4)
         && /await setSetting\(`nav_confirm_asked_doors:\$\{chainId\}`, ""\);/.test(mg4),

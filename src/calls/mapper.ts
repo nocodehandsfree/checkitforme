@@ -34,7 +34,8 @@ import { placeNavCall, getNavSession, defaultWorkflowAsk, classifyMode, menuHasC
 import { storeForChain, lockRecipeToChain, recipeFromSteps } from "./trainer-batch";
 import { chainDialable } from "./recipe";
 import { openState } from "../store-hours";
-import { pathSignature, recordObservation, recordCallPath, storeLocalTime, activeMap, sameMenu, addProvenStore, MapRecipe, MapStep, type EvidenceCall, type CheckStage } from "./mapgraph";
+import { judgeVoice } from "./listen-nav";
+import { pathSignature, recordObservation, recordCallPath, storeLocalTime, activeMap, sameMenu, addProvenStore, rememberedMenuLines, MapRecipe, MapStep, type EvidenceCall, type CheckStage } from "./mapgraph";
 import { recipeFromCall, evidenceFromCall, CapturedStep } from "./map-capture";
 
 const DAILY_CAP = 60;        // runaway guard only — owner 2026-07-10: the old 12/day cap is gone, a
@@ -246,11 +247,14 @@ function planPlain(recipe: NavRecipe): Array<{ action: string; value: string; at
  *  Counting a hello as a menu line is what made a store with no menu look like it had one: the
  *  on-the-spot lock could never fire, and the settle listens it should have prevented dialed real
  *  people and hung up on them (round-3 item 1). */
-export function menuLinesOf(steps: NavStep[], transferAtSec: number | null | undefined, humanAtSec?: number | null): string[] {
-  // THE EARLIER of the two moments wins, and the person's is STRICT. A handoff stamped at or after
-  // the person is not the machine handing us on — it is Staff saying something that reads like it
-  // ("sure, one moment"), and honouring it put their words back into the store's menu (fix pass 4,
-  // face a). Nothing at or after the person can ever be a menu line.
+export function menuLinesOf(
+  steps: NavStep[], transferAtSec: number | null | undefined, humanAtSec?: number | null,
+  knownMenuLines?: string[],
+): string[] {
+  // TWO GATES, AND A LINE MUST PASS BOTH. The moments come first: nothing at or after the person can
+  // ever be a menu line (strict), and the handoff line itself belongs to the menu. Then every
+  // surviving line goes to THE ONE JUDGE — because a person can start talking before we recognise
+  // them, and the moment alone cannot catch that. Two agreements, or the line is not the menu.
   const person = typeof humanAtSec === "number" ? humanAtSec : Infinity;
   const handoff = typeof transferAtSec === "number" ? transferAtSec : Infinity;
   return (steps || [])
@@ -258,7 +262,13 @@ export function menuLinesOf(steps: NavStep[], transferAtSec: number | null | und
       if (st.who !== "ivr" || !String(st.text || "").trim()) return false;
       const at = st.atSec ?? 0;
       if (at >= person) return false;                        // strict: the person's own words, never the menu
-      return handoff === Infinity || at <= handoff;          // the handoff line belongs to the menu
+      if (handoff !== Infinity && at > handoff) return false; // past the handoff, the menu is done with us
+      return judgeVoice({
+        text: String(st.text), atSec: at, knownMenuLines,
+        // Inside the moments above we are, by definition, before the person and inside the menu.
+        mappedRoute: true, routeHandoffSeen: false, ringsHeard: 0,
+        pauseTested: true, keptTalkingAfterPause: true,
+      }).who === "recording";
     })
     .map((st) => String(st.text));
 }
@@ -557,6 +567,10 @@ function driveMapper(run: MapperRun): void {
         break;
       }
 
+      // What this store has played us before — the judge's first layer, read once and used by the
+      // check itself and by every reading of what it heard.
+      const known = await rememberedMenuLines(chainId, store.id);
+
       // ---- place this stage's check ----
       run.attempt++; run.callsToday = await bumpDaily(chainId);
       // Speed walks the route with ONE change under test; a settle listen walks it exactly as proven;
@@ -593,6 +607,9 @@ function driveMapper(run: MapperRun): void {
           // Burnt doors (wrong desk, or ask spent) are a HARD block in the navigator, not only a
           // sentence in the prompt.
           deadDoors: proving && blockedDoors.length ? blockedDoors : undefined,
+          // THE JUDGE'S FIRST LAYER: what this store has said before. Nothing on file makes this the
+          // store's first check — pure listening, hang up on nothing.
+          knownMenuLines: known,
           // This loop folds its own calls into the map at the lock. `finish` must not fold them.
           callerRecords: true,
           why: `Mapping ${run.chainName} (${stageWord}, check ${run.attempt})` },
@@ -648,7 +665,7 @@ function driveMapper(run: MapperRun): void {
           // The proven answer joins the proof ledger NOW — this is also the hand-dial path: pin a
           // fresh store, run it, and its Staff answer counts toward proven-at-three.
           await addProvenStore(chainId, store.id); // never throws — the ledger is best-effort inside
-          run.lastLines = menuLinesOf((s?.steps || []) as NavStep[], s?.transferAtSec, s?.humanAtSec);
+          run.lastLines = menuLinesOf((s?.steps || []) as NavStep[], s?.transferAtSec, s?.humanAtSec, known);
           run.winnerSession = sessionLike(s);
           if (!run.lastLines.length) {
             // A store where Staff just pick up has NO menu wording to settle — the proven answer is
@@ -691,7 +708,7 @@ function driveMapper(run: MapperRun): void {
       } else if (run.phase === "map" && run.doorProven) {
         // THE WORDING SETTLES: a ring-hang-up listen of the proven route. The same lines twice in a
         // row = settled → THE STORE LOCKS and the chain goes LIVE, in one stroke.
-        const lines = menuLinesOf((s?.steps || []) as NavStep[], s?.transferAtSec, s?.humanAtSec);
+        const lines = menuLinesOf((s?.steps || []) as NavStep[], s?.transferAtSec, s?.humanAtSec, known);
         if (graded && sameWording(run.lastLines, lines)) {
           run.winnerSession = sessionLike(s); // the final locked run IS the wording on the page
           await lockStore(run, chainId, store.id);
