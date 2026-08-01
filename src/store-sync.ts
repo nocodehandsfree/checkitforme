@@ -93,8 +93,11 @@ export async function buildLogoRepairPayload(targetChains: Array<{ name: string 
   for (const [name, mine] of snap.chains) {
     const t = theirs.get(name);
     if (!t) continue; // not on the target yet: the normal push creates it, this sweep only repairs
-    const differs = CHAIN_LOGO_FIELDS.some((k) => (mine.fields[k] ?? null) !== ((t[k] as unknown) ?? null));
-    if (differs) out.push({ name, fields: pick(mine.fields, CHAIN_LOGO_FIELDS) });
+    // Compare ONLY fields the target actually knows about. A target running older code does not serve
+    // logoPct at all; treating "absent" as "different" made the sweep re-push all 130 chains every tick
+    // forever, because the write could never take. Skipping unknown fields lets it converge.
+    const differs = CHAIN_LOGO_FIELDS.some((k) => k in t && (mine.fields[k] ?? null) !== ((t[k] as unknown) ?? null));
+    if (differs) out.push({ name, fields: pick(mine.fields, CHAIN_LOGO_FIELDS.filter((k) => k in t)) });
   }
   return out;
 }
@@ -161,8 +164,12 @@ async function postBatch(url: string, token: string, batch: SyncPayload): Promis
     if (!r.ok) throw new Error(`target ${r.status}: ${(await r.text()).slice(0, 120)}`);
   } finally { clearTimeout(timer); }
 }
-/** Ask the target for its chains, push back every logo that disagrees. Returns how many it repaired. */
-export async function pushLogoRepairs(url: string, token: string): Promise<number> {
+/** REPORT ONLY BY DEFAULT. This sweep writes real production rows, so it stays in report mode until
+ *  somebody turns it on deliberately: set `logo_repair_apply` to "1" (a stored setting, so it can be
+ *  flipped without a deploy). In report mode it works out exactly what it WOULD change and writes
+ *  nothing, and the count lands on the sync status where it can be read before anyone commits to it.
+ *  Returns what it did, and what it would have done. */
+export async function pushLogoRepairs(url: string, token: string): Promise<{ applied: number; wouldFix: number; names: string[] }> {
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), 30_000);
   let theirs: Array<{ name: string } & Record<string, unknown>>;
@@ -172,11 +179,17 @@ export async function pushLogoRepairs(url: string, token: string): Promise<numbe
     theirs = await r.json() as Array<{ name: string } & Record<string, unknown>>;
   } finally { clearTimeout(timer); }
   const fixes = await buildLogoRepairPayload(theirs);
-  if (!fixes.length) return 0;
+  const names = fixes.map((f) => f.name).slice(0, 20);
+  if (!fixes.length) return { applied: 0, wouldFix: 0, names: [] };
+  const apply = (await getSetting("logo_repair_apply")) === "1";
+  if (!apply) {
+    console.log(`logo-repair REPORT ONLY: ${fixes.length} chain(s) differ on the target —`, names.join(", "));
+    return { applied: 0, wouldFix: fixes.length, names };
+  }
   for (let i = 0; i < fixes.length; i += MAX_BATCH.chains) {
     await postBatch(url, token, { chains: fixes.slice(i, i + MAX_BATCH.chains), retailers: [], retailerTombstones: [] });
   }
-  return fixes.length;
+  return { applied: fixes.length, wouldFix: fixes.length, names };
 }
 
 export async function storeSyncTick(): Promise<void> {
@@ -189,9 +202,9 @@ export async function storeSyncTick(): Promise<void> {
     const { payload, nextState } = await buildSyncPayload();
     // Repair sweep rides along: ask the target what logos it actually holds and re-push any that
     // disagree, hashes ignored. Cheap (one GET of ~130 chains) and it makes drift self-healing.
-    const repaired = await pushLogoRepairs(url, token).catch((e) => { console.error("logo-repair", e); return 0; });
+    const rep = await pushLogoRepairs(url, token).catch((e) => { console.error("logo-repair", e); return { applied: 0, wouldFix: 0, names: [] as string[] }; });
     const total = payload.chains.length + payload.retailers.length + payload.retailerTombstones.length;
-    if (total === 0) { await stamp({ ok: true, sent: 0, pending: 0, repaired }); return; }
+    if (total === 0) { await stamp({ ok: true, sent: 0, pending: 0, logoRepair: rep }); return; }
     let state: Record<string, string> = {};
     try { state = JSON.parse((await getSetting("store_sync_state")) || "{}"); } catch { /* fresh */ }
     let sent = 0, batches = 0;
