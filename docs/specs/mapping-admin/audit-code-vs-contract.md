@@ -74,43 +74,44 @@ still acts WITHOUT asking the earpiece, and when the engine is unsure it keeps w
 going quiet — so Alpha can still press keys at a person in rare shapes, and Staff who says "one
 moment" can still be hung up on at 12 seconds.
 
-## FIX PASS 6 — THE OWNER'S LAW (same mapper chat · evidence @7a6d2205)
-**Nobody presses and nobody speaks until the earpiece says a machine is talking. Alpha and Bravo act
-ONLY on the earpiece's word. Unsure = stay silent and listen. A slow check is fine; beeping at a
-human is never fine.** The named spots:
-1. Three leftovers still decide on their own — remove them as deciders: the direct-pickup overrule
-   (`navigator.ts:808`), the auto-escape person-words (`navigator.ts:989`), and the model declaring
-   "human" + a raw handoff stamp bypassing the earpiece (`navigator.ts:941` → `:540-544`). Every
-   press/say gates on the earpiece's "machine" verdict.
-2. Unsure must never become "machine" through a side door: callers hard-code "it kept talking"
-   (`mapper.ts:270`, `navigator.ts:1070`, `sweep.ts:164`) and the pause memory sticks for the whole
-   check (`navigator.ts:799,805` never reset) — reset per new voice; only a REAL pause result counts.
-3. Evidence order fixes: a person-shaped line ("this is Maria", "how can I help") beats "we are
-   inside the menu we hold" (`listen-nav.ts:327-329`); a真 real counted ring beats a word-match to the
-   remembered menu (Staff reciting the store script after a ring must be a person).
-4. "One moment" means WAIT: the waiting verdict must extend the 12-second silence hang-up
-   (`navigator.ts:773`) — never hang up on someone who told us to hold; widen the waiting words
-   ("hang on", "just a minute", "gimme a sec").
-5. A non-answer is not proof: "let me get my manager" must not prove a door (`navigator.ts:770`);
-   after a getting-someone line, the NEXT voice is a new person — ask again or wait.
-6. The person's clock starts at the person's first word, not the machine line's start+1
-   (`listen-nav.ts:378`) — Charlie's join time feeds off this number.
-7. Two flags the tests assert but nothing reads: first-call-never-hangs-up (`hangUpAllowed`) and
-   the file-a-new-menu output (`unknownLine`) — wire them or they are lies.
-8. The store's remembered lines must be available during the FIRST mapping run's settle listens
-   (today they come only from a locked map — `mapgraph.ts:1378-1399`; read the run's own held lines).
-9. Sweep truth: a short recording ("Please hold.") must not prove a chain "Staff answer directly"
-   (`sweep.ts:160-178,224-231` — puts Charlie on a recording via first-version auto-activate); the
-   mapper's greeting evidence must not ride labeled "direct" (`map-capture.ts:55`, caps confidence);
-   "Please hold." must still arm the handoff clock (`navigator.ts:739-741` gate too tight).
-10. Free doors while a run is live: the running memory re-writes the cleared lists
-    (`mapper.ts:169-196`) — the button must reach the live run too.
-Prove each on the pretend calls already in the rigs plus the six new shapes from this pass's review
-(instant pickup no ring · "please hold one moment" no name · voicemail saying "hello?" · Spanish ·
-menu-dumps-to-operator · two Staff one check). One law, ten spots, one commit each. Push, stop; PM
-audits blind. MILESTONE 1 closes on that audit.
+## FIX PASS 6 — BACK TO THE SPEC (same mapper chat · evidence @7a6d2205)
+**The spec never gave mapping a voice of its own. Mapping talks to machines; Charlie talks to
+people. The proving check puts CHARLIE on the call — the same Charlie every live check uses — and
+mapping's homegrown way of asking Staff is DELETED, not repaired.**
+0. THE BIG ONE. The proving check joins Charlie exactly like a live check does (the bridge that
+   already exists). Charlie asks about Pokémon, handles "one moment", survives holds — all already
+   built and being tuned by Echo. Mapping DELETES its own asking: the spoken question, the
+   answer-listening, the 12-second silence rule, the waiting words, the "answered" classification
+   (`navigator.ts:719-776`, the ask scaffold, `confirmResult`) — mapping only records what Charlie
+   reports back (asked · answer heard · yes/no · wrong department). Everything Staff-conversation
+   leaves this engine permanently.
+1. Alpha and Bravo act ONLY on the earpiece's word — nobody presses, nobody speaks until the
+   earpiece says a machine is talking; unsure = stay silent and listen. Remove the three leftover
+   self-deciders: the direct-pickup overrule (`navigator.ts:808`), the auto-escape person-words
+   (`navigator.ts:989`), the model declaring "human" + raw handoff stamp bypassing the earpiece
+   (`navigator.ts:941` → `:540-544`).
+2. Unsure can never become "machine" through a side door: remove the hard-coded "it kept talking"
+   inputs (`mapper.ts:270`, `navigator.ts:1070`, `sweep.ts:164`); reset the pause memory per new
+   voice (`navigator.ts:799,805`).
+3. Evidence order: a person-shaped line ("this is Maria", "how can I help") beats "we are inside
+   the menu we hold" (`listen-nav.ts:327-329`); a real counted ring beats a word-match to the
+   remembered menu.
+4. The person's clock starts at the person's first word (`listen-nav.ts:378`) — Charlie's join
+   feeds off this number.
+5. Two flags tests assert but nothing reads: first-call-never-hangs-up (`hangUpAllowed`) and
+   file-a-new-menu (`unknownLine`) — wire them for real.
+6. The store's remembered lines must be available during the FIRST mapping run's listens
+   (`mapgraph.ts:1378-1399` — read the run's own held lines, not only a locked map).
+7. Sweep truth: a short recording ("Please hold.") must not prove a chain "Staff answer directly"
+   (`sweep.ts:160-178,224-231`); greeting evidence must not ride labeled "direct"
+   (`map-capture.ts:55`); "Please hold." must still arm the handoff clock (`navigator.ts:739-741`).
+8. Free doors reaches a live run too (`mapper.ts:169-196` — the run's memory re-writes the
+   cleared lists).
+One spec, nine items, one commit each, each proven on the pretend calls in the rigs first (plus:
+instant pickup no ring · voicemail saying "hello?" · menu dumps to the operator mid-walk · two
+Staff on one check). Push, stop; PM audits blind. MILESTONE 1 closes on that audit.
 
 ## Standing owner decisions (unchanged)
-Live checks still answer on a stopwatch (listen-for-menu-words defaults off) — one small task, owner
-unlock. · e2e's 2 pre-existing fails assert the OLD wait-for-approval behavior R2 retires. · No lock
-of the mapping surfaces until the owner names the live page the record of truth.
+Live checks still answer on a stopwatch (listen-for-menu-words defaults off) — one small task,
+owner unlock. · e2e's 2 pre-existing fails assert the OLD wait-for-approval behavior R2 retires. ·
+No lock of the mapping surfaces until the owner names the live page the record of truth.
