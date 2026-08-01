@@ -48,7 +48,7 @@ pre-existing) · tsc clean. **All NINE older fixes still hold (regression spot-c
   shortened — exemption keys on recipe values, the ledger on the full phrase as asked
   (`mapper.ts:532-538` vs `navigator.ts:1097-1108`).
 
-## FIX PASS 4 — the LAST milestone-1 list (fresh chat; evidence at @c39df451)
+## FIX PASS 4 — the LAST milestone-1 list (same mapper chat; evidence at @c39df451)
 F4-1 (GATES THE MILESTONE). **Staff's voice is never the store's menu — close all four faces:**
   (a) never stamp a handoff line at or after `humanAtSec` (`navigator.ts:675-682`), and make
   `menuLinesOf` cut at the EARLIER of handoff/person, strict (`mapper.ts:249-259`);
@@ -76,8 +76,8 @@ wait-for-approval behavior R2 retires. · No lock of the mapping surfaces until 
 live page the record of truth.
 
 ## How to use this
-Fix pass 4 = F4-1 to F4-4 in a FRESH chat (the round-1-to-3 chat is heavy and handed off): checkout
-branch `claude/mapping-engine-contract-wecvcy`, work F4 in order, one item per commit, each proven
+Fix pass 4 = F4-1 to F4-4, SAME mapper chat, same branch `claude/mapping-engine-contract-wecvcy`:
+work F4 in order, one item per commit, each proven
 by a driven check or rig test before the next. F4-1 gates the milestone: until its four faces close,
 direct-answer chains still hang up on real people or get misfiled. The PM re-audits blind after the
 push; MILESTONE 1 closes on that audit. The contract is the law.

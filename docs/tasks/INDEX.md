@@ -13,8 +13,8 @@ addendum R1-R6 OVERRIDES the body · the fix list: `audit-code-vs-contract.md` i
 The project is THREE MILESTONES, one fresh chat each: 1 engine (**fix pass 3 audited 08-01 on
 `claude/mapping-engine-contract-wecvcy` @c39df451: nothing old regressed, most fixes hold, but ONE
 root remains — Staff's own speech still gets read as the store's menu (four faces). Milestone 1 is
-NOT closed. FIX PASS 4 = F4-1..F4-4 in `audit-code-vs-contract.md`, runs in a FRESH mapper chat
-(the old chat is heavy and handed off); F4-1 gates the close; PM re-audits blind after the push**) ·
+NOT closed. FIX PASS 4 = F4-1..F4-4 in `audit-code-vs-contract.md`, runs in the SAME mapper chat
+(owner call 08-01); F4-1 gates the close; PM re-audits blind after the push**) ·
 2 self-healing · 3 screens. Builder says "finished" → PM audits
 that chunk vs the contract BEFORE the next chunk's box goes out. Voice-agent boot gate: any voice
 task box lists the pre-reads (runtime spec §4 · RULES.md · checkpoint · listen-nav + bridge headers)

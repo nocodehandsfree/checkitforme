@@ -28,7 +28,7 @@ git. Last updated: 2026-07-31 (in stock alerts fixed; logos sized to match; try 
   recipe. **Reached Staff shows nothing instead of 0%** until one actually waits for a person.
 - **Mapping milestone 1 of 3: NOT closed (fix pass 3 audited 08-01).** Nothing old regressed, but one
   root remains: Staff's own words ("sure, one moment" · "over in the toy aisle") still get read as the
-  store's menu — hang-ups on real people can return. Fix pass 4 (audit file) → the FRESH mapper chat.
+  store's menu — hang-ups on real people can return. Fix pass 4 (audit file) — same mapper chat finishes it.
 ## The new calling engine is ON for staging. Your six test checks are the last thing (07-28/29)
 - **08-01, your five test runs found seven real faults; nine fixes are on staging, none phone-proven yet.** The
   worst: a leftover timer opened a second Charlie into your hold. Full ledger for the PM:
