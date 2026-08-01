@@ -76,5 +76,24 @@ await setSetting("mapper_run:9004", "{not json");
 const n4 = await resumeMapperRuns();
 ok(n4 === 0, "unreadable saved memory is skipped");
 
+console.log("A crashed run keeps its flag instead of vanishing");
+{
+  // ROUND 2 ITEM 13. The crash handler used to CLEAR the saved run — one database hiccup and the
+  // run disappeared with no trace. Now it saves the final state; the next boot clears it as
+  // finished, which the running:false path above already proves.
+  const { readFileSync } = await import("node:fs");
+  const eng = readFileSync("src/calls/mapper.ts", "utf8");
+  ok(/run\.stopReason = "engine error: "[\s\S]{0,500}?void saveRun\(run\);/.test(eng),
+    "a crashing run saves its final state — the stop and its reason survive a restart");
+  ok(!/run\.stopReason = "engine error: "[\s\S]{0,500}?void clearRun\(chainId\);/.test(eng),
+    "and the silent clear is gone");
+  const srv = readFileSync("src/server.ts", "utf8");
+  ok(/\}, 180_000\);/.test(srv),
+    "the resume delay outlasts the longest possible check, so old and new can never dial together");
+  const all = readFileSync("scripts/test-all.sh", "utf8");
+  ok(["test-map-sim", "test-mapper-resume", "test-mapgraph", "test-map-api", "test-map-e2e"].every((r) => all.includes(r)),
+    "all five mapping rigs run in the whole-suite runner");
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

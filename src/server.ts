@@ -180,12 +180,13 @@ await bootstrap(); // apply migrations + seed catalog if empty
 
 // A redeploy must not kill a mapping run (owner 07-30): any run mid-flight when the old process died
 // resumes from its saved memory here. Delayed past the old process's drain window so the outgoing
-// process and this one never dial stores at the same time.
+// process and this one never dial stores at the same time — 180s, because a single mapping check may
+// run 150s and a 90s delay could have the old process's call still live when this one resumed.
 setTimeout(() => {
   resumeMapperRuns()
     .then((n) => { if (n) console.log(`[mapper] resumed ${n} mapping run(s) after restart`); })
     .catch((e) => console.error("[mapper] resume failed:", e));
-}, 90_000);
+}, 180_000);
 
 const here = dirname(fileURLToPath(import.meta.url));
 const app = new Hono();

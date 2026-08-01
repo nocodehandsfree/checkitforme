@@ -20,3 +20,6 @@ that made it law. A rule leaves this file only when the owner himself retires it
    settings) after every attempt and resumed on boot, 90s delayed so old and new never dial together.
    A stop stays stopped; the call in flight at the restart is logged as not-evidence. Two runs died
    to teammates' deploys before this (07-30). Proof: `scripts/test-mapper-resume.ts`.
+   (08-01: the delay is 180s now — one check may run 150s, so 90s could still overlap the old
+   process's live call. A crashing run SAVES its final state instead of clearing it, so a stop and
+   its reason survive a restart; the next boot clears the finished run.)

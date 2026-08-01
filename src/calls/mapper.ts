@@ -690,6 +690,10 @@ function driveMapper(run: MapperRun): void {
   })().catch((e) => {
     run.running = false; run.phase = run.storeLocked ? run.phase : "stopped";
     run.stopReason = "engine error: " + String(e).slice(0, 120);
-    void clearRun(chainId); // a crashing run must not resume into the same crash forever
+    // A crashing run must not resume into the same crash forever — but it must not VANISH either.
+    // The final state is SAVED (running:false), so the stop and its reason survive a restart and the
+    // live card can show what happened; the next boot's resume pass sees a finished run and clears
+    // it. One database hiccup no longer erases a run without a trace.
+    void saveRun(run);
   });
 }
