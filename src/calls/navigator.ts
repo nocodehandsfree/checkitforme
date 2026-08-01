@@ -783,7 +783,9 @@ async function navTurn(id: string, speech: string): Promise<string> {
       s.keptTalkingAfterPause = isMenuLine(speech) || speech.trim().split(/\s+/).length > 14;
     }
     const verdict = s.pauseTested ? judgeHere(s, speech, atSec) : v;
-    if (verdict.who === "person" || looksLikeDirectPickup(s.steps, s.turns, speech)) {
+    // ONLY THE EARPIECE'S WORD. The cold-pickup test used to overrule it here; it is evidence the
+    // judge already weighs, and a second opinion beside the judge is exactly what this pass deletes.
+    if (verdict.who === "person") {
       return reachHuman(s, personLineAtSec(s.steps, speech, atSec, s), id);
     }
   }
@@ -916,7 +918,17 @@ async function navTurn(id: string, speech: string): Promise<string> {
     emit(id, "unknown", "That read like the recording, not a person", { heard: (speech || "").slice(0, 120), atSec });
     return twiml(gather(id));
   }
-  if (d.action === "human") return reachHuman(s, personLineAtSec(s.steps, speech || "", atSec, s), id, !!(speech && ROUTING_RE.test(speech))); // person OR announced transfer → confirm waits for the person
+  // THE MODEL MAY NOT DECLARE A PERSON ON ITS OWN. It says what it thinks it heard; the earpiece
+  // says who was talking. Its "human" only counts when the judge agrees, and the raw handoff stamp
+  // that used to ride along with it now goes through the same door as every other handoff.
+  if (d.action === "human") {
+    const v = judgeHere(s, speech || "", atSec);
+    if (v.who === "person") return reachHuman(s, personLineAtSec(s.steps, speech || "", atSec, s), id);
+    if (v.who === "recording" && speech && ROUTING_RE.test(speech) && s.humanAtSec == null) {
+      return reachHuman(s, atSec, id, true);   // the machine announcing the handoff, judged as such
+    }
+    return twiml(gather(id));                  // unsure: stay silent and keep listening
+  }
   // THE HARD BLOCK ON A DEAD DOOR. "Never choose X" in the prompt is a sentence; this is the law: a
   // door a real answer proved wrong cannot be fired again, whatever the model decides. One refusal is
   // a nudge (the model sees it in the log and picks again); a second means it has nothing else to
@@ -942,6 +954,12 @@ async function navTurn(id: string, speech: string): Promise<string> {
       return twiml(gather(id));
     }
   }
+  // NOBODY PRESSES OR SPEAKS UNTIL THE EARPIECE SAYS A MACHINE IS TALKING. Alpha's keys and Bravo's
+  // words are for the store's phone system, never for a person; unsure means stay silent and listen.
+  if ((d.action === "press" || d.action === "say") && d.value && speech && speech.trim()
+    && judgeHere(s, speech, atSec).who !== "recording") {
+    return twiml(gather(id));
+  }
   if (d.action === "press" && d.value) {
     const digits = d.value.replace(/[^0-9*#]/g, "").slice(0, 6);
     s.steps.push({ who: "us", text: `pressed ${digits}`, atSec, action: "press", value: digits , earPrompts: s.ear?.recordings });
@@ -962,11 +980,12 @@ async function navTurn(id: string, speech: string): Promise<string> {
   if (!s.barge && (s.escaped || (stalled >= 3 && s.turns >= 4))) {
     s.escaped = true;
     if (speech && speech.trim()) {
-      // STOP the instant a person answers — a clear live greeting/self-ID means a human picked up, so
-      // reach them (never beep 0 at a person). The weaker HUMAN_RE still needs the routed/2-zeros gate.
-      if (looksLikeLivePerson(speech) || ((s.routingSeen || (s.autoZeros ?? 0) >= 2) && HUMAN_RE.test(speech))) {
-        return reachHuman(s, personLineAtSec(s.steps, speech, atSec, s), id);
-      }
+      // STOP THE INSTANT A PERSON ANSWERS — and the earpiece is what says so. Pressing 0 at a person
+      // is the one thing this branch must never do, and its own word lists were the last place that
+      // could still happen. Anything but "a machine is talking" means we stay silent and listen.
+      const v = judgeHere(s, speech, atSec);
+      if (v.who === "person") return reachHuman(s, personLineAtSec(s.steps, speech, atSec, s), id);
+      if (v.who !== "recording") return twiml(gather(id));
       s.autoZeros = (s.autoZeros ?? 0) + 1; s.type = "keypad";
       s.steps.push({ who: "us", text: "pressed 0 (auto-operator)", atSec, action: "press", value: "0" , earPrompts: s.ear?.recordings });
       s.lastActTurn = s.turns;

@@ -119,6 +119,20 @@ console.log("\n▶ MAPPING NEVER TALKS TO STAFF — Charlie does (fix pass 6)");
     "and mapping only RECORDS what Charlie reported: his answer, or the wrong desk");
 }
 
+console.log("\n▶ ALPHA AND BRAVO ACT ONLY ON THE EARPIECE'S WORD (fix pass 6, item 1)");
+{
+  const { readFileSync } = await import("node:fs");
+  const nav = readFileSync("src/calls/navigator.ts", "utf8");
+  ok(/if \(\(d\.action === "press" \|\| d\.action === "say"\) && d\.value && speech && speech\.trim\(\)\s*\n\s*&& judgeHere\(s, speech, atSec\)\.who !== "recording"\) \{\s*\n\s*return twiml\(gather\(id\)\);/.test(nav),
+    "nobody presses and nobody speaks unless a machine is talking — unsure means silent and listening");
+  ok(!/if \(verdict\.who === "person" \|\| looksLikeDirectPickup/.test(nav),
+    "the cold-pickup overrule beside the judge is gone");
+  ok(/if \(d\.action === "human"\) \{\s*\n\s*const v = judgeHere/.test(nav),
+    "the model's own 'that was a human' must pass the earpiece");
+  ok(!/looksLikeLivePerson\(speech\) \|\| \(\(s\.routingSeen/.test(nav),
+    "and the auto-operator branch no longer keeps its own list of person words");
+}
+
 console.log("\n▶ \"ONE MOMENT\" AFTER OUR QUESTION IS WAITING — not an answer, not being sent away");
 {
   const v = judge({ text: "Sure, one second.", weAskedAtSec: 64, atSec: 66, routeHandoffSeen: true, ringsHeard: 2, mappedRoute: true });
