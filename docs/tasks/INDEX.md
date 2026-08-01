@@ -10,9 +10,10 @@ Systems: site · admin · voice-calls · data · support (data carries the old o
 
 ## ⭐ NEXT UP — the PM lane (handoff 07-31 · the law: `docs/specs/mapping-admin/build-contract.md`,
 addendum R1-R6 OVERRIDES the body · the fix list: `audit-code-vs-contract.md` in the same folder)
-Mapping rebuild runs in THREE chunks, one fresh chat each: 1 engine (**FINISHED per the owner — the
-PM's FIRST act is auditing it, blind readers vs the contract, then tell the owner PASSED or FAILED
-per item so mapper starts round 2**) · 2 self-healing · 3 screens. Owner says "finished" → PM audits
+Mapping rebuild runs in THREE chunks, one fresh chat each: 1 engine (**AUDIT DONE 08-01: FAILED —
+and the "finished" chunk-1 work NEVER LANDED; staging's engine is byte-identical to the code the
+old fix list graded. 11 failed · 5 partly · 2 missing · Re-map regression stands. Round 2's box =
+`audit-code-vs-contract.md`, rewritten**) · 2 self-healing · 3 screens. Owner says "finished" → PM audits
 that chunk vs the contract BEFORE the next chunk's box goes out. Voice-agent boot gate: any voice
 task box lists the pre-reads (runtime spec §4 · RULES.md · checkpoint · listen-nav + bridge headers)
 + the team charter `handoff.md` (workflows · every Admin voice surface), and the agent must WRITE

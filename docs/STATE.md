@@ -26,10 +26,10 @@ git. Last updated: 2026-07-31 (in stock alerts fixed; logos sized to match; try 
   recipe reaches Staff, the **Menu** by condition, the **Recipes** held, and **Review**.
 - **Re-map hangs up on the second ring** of the desk, so it never troubles Staff, and that check becomes the
   recipe. **Reached Staff shows nothing instead of 0%** until one actually waits for a person.
-- **The mapping rebuild restarts clean (07-31): your rounds are LAW in the contract now** — store proves
-  once, chain live at one and proven at three, the self-healing mute loop, the screens. A fresh chat
-  builds it in THREE chunks; the PM verifies every chunk against the contract before the next; you test
-  ONCE at the end, a fresh CVS start to finish. Old "done" claims are void; the audit file is the fix list.
+- **Chunk 1 FAILED the PM audit (08-01) — and the "finished" engine work never landed:** the chat that
+  said finished pushed nothing; staging holds the exact code the old fix list graded. Fresh blind read
+  vs your rounds: 11 failed · 5 half-built · 2 missing; no-timer not built; no chain-live-at-one-store;
+  Re-map still writes nothing while saying "Map updated". Round 2's box is written (the audit file).
 ## The new calling engine is ON for staging. Your six test checks are the last thing (07-28/29)
 - **08-01, your five test runs found seven real faults; nine fixes are on staging, none phone-proven yet.** The
   worst: a leftover timer opened a second Charlie into your hold. Full ledger for the PM:
