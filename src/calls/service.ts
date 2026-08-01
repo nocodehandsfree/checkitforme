@@ -922,6 +922,18 @@ export async function applyVoiceTuning(p: {
   }
   if (Object.keys(patch).length) await provider.updateAgent(config.voice.agentId, patch);
 
+  // THE AGENT THE NEW ENGINE ACTUALLY TALKS WITH RUNS PATIENT (08-01 audit, open fault 1). On the
+  // new call shape every conversation is the joining agent, and with early-guessing on it answered
+  // EACH fragment of a split sentence — "no worries, take your time" three times in a row — because
+  // our own machinery manufactures fragment boundaries (the echo gate's reflection window, the beat
+  // of quiet inserted between the store's hello and their answer). "Patient" waits for a confirmed
+  // pause and switches the provider's early-guessing off (speculative_turn, elevenlabs.ts), so one
+  // sentence gets one reply. Best-effort like the main push; a failure never blocks the boot.
+  if (p.pushPrompt && config.voice.midCallAgentId) {
+    await provider.updateAgent(config.voice.midCallAgentId, { turnEagerness: "patient" })
+      .catch((e) => console.error("[voice] mid-call agent patient push failed:", String(e).slice(0, 160)));
+  }
+
   return getVoiceTuning();
 }
 
