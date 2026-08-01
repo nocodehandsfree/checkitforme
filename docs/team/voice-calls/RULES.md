@@ -34,3 +34,8 @@ that made it law. A rule leaves this file only when the owner himself retires it
     prior recorded run against the fixed engine on the rig; he dials only after all replay clean.
     His calls prove new ground only. And on ANY live fault, the engine's own log is read FIRST,
     before any code is opened (08-01: it showed each fault exactly, and was reached third).
+13. WHO DOES WHAT, one line, never violated: the menu answers · Alpha presses · Bravo speaks · the
+    earpiece listens the whole time · the desk rings · CHARLIE takes the human. NOTHING in mapping
+    ever talks to a person — that is Charlie, always, on every kind of check. Mapping built its own
+    way of asking Staff and it cost six fix passes to find (08-01). A copy of an existing piece is a
+    failed build: name the existing piece and snap onto it, or stop.
