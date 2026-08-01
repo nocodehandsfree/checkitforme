@@ -152,6 +152,10 @@ export interface NavSession {
    *  button included, is folded by `finish`, so a call can never teach the map nothing (owner 07-30). */
   callerRecords?: boolean;
   ringsHeard?: number;      // how many real ring bursts the Ear counted before we hung up
+  /** WHEN the desk first rang. The ring proves the phone system is finished with us from there on,
+   *  and says nothing about the menu that played before it — so every line is judged against this
+   *  moment, not against a bare count (fix pass 7, item 5). */
+  ringAtSec?: number | null;
   /** WE hung up, on the ring, on purpose. Rides on the run log so the chain page can name the state
    *  it actually was ("Admin hung up") instead of guessing "nobody picked up" from the missing human. */
   endedOnRing?: boolean;
@@ -533,6 +537,7 @@ export function personLineAtSec(steps: NavStep[], speech: string, atSec: number,
   return personStartsAt(steps, atSec, {
     knownMenuLines: s?.knownMenuLines,
     ringsHeard: s?.ear?.conv?.rings ?? s?.ringsHeard,
+    ringAtSec: s?.ringAtSec ?? null,
     weSpokeAtSec: [...(steps || [])].reverse().find((st) => st.who === "us")?.atSec ?? null,
     weAskedAtSec: s?.confirm?.askedAtSec ?? null,
     product: s?.confirm?.product,
@@ -636,12 +641,16 @@ export async function navStep(id: string, speech: string): Promise<string> {
  *  through here: the handoff stamp, the person stamp, who answered our question. No path may hold a
  *  private opinion about whether a voice is the store's recording or a person (fix pass 5). */
 function judgeHere(s: NavSession, speech: string, atSec: number) {
+  // The moment of the FIRST ring, stamped the turn we first see the ear's count move. Everything
+  // before it keeps its own verdict; everything from it on is a person.
+  if ((s.ear?.conv?.rings ?? 0) >= 1 && s.ringAtSec == null) s.ringAtSec = atSec;
   return judgeVoice({
     text: speech || "", atSec,
     knownMenuLines: s.knownMenuLines,
     mappedRoute: !!s.barge?.plan?.length,
     routeHandoffSeen: s.transferAtSec != null,
     ringsHeard: s.ear?.conv?.rings ?? s.ringsHeard ?? 0,
+    ringAtSec: s.ringAtSec ?? null,
     weSpokeAtSec: [...s.steps].reverse().find((st) => st.who === "us")?.atSec ?? null,
     weAskedAtSec: s.confirm?.askedAtSec ?? null,
     firstEverCall: s.firstEverCall,

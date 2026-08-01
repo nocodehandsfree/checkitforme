@@ -264,6 +264,12 @@ export interface JudgeInput {
   routeHandoffSeen?: boolean;
   /** LAYER 2 — real ring bursts counted by the Ear. One is enough: the desk is ringing. */
   ringsHeard?: number;
+  /** LAYER 2 — WHEN the desk first rang. The ring proves the phone system is finished with us FROM
+   *  THERE ON; it says nothing about the menu that played before it. Without this moment a single
+   *  ring re-labelled every earlier line a person, and the person's start could land on the first
+   *  second of the check (fix pass 7, item 5). Absent = we do not know when, so the ring only
+   *  counts for the line being judged right now. */
+  ringAtSec?: number | null;
   /** LAYER 3 — when WE last spoke. A line arriving right after ours is a reply, and replies are people. */
   weSpokeAtSec?: number | null;
   /** LAYER 3 — when we asked the product question, if we have. */
@@ -297,6 +303,14 @@ export interface VoiceVerdict {
   deadEnd?: boolean;
 }
 
+/** HAS THE DESK RUNG, AND HAD IT RUNG BY THE TIME THIS LINE WAS SPOKEN? The ring is the phone
+ *  system handing us over, so everything after it is a person — and everything before it is exactly
+ *  what it was. When the ring's own moment is not known, it can only speak for the line in hand. */
+function rangBefore(o: JudgeInput): boolean {
+  if ((o.ringsHeard ?? 0) < 1) return false;
+  return typeof o.ringAtSec === "number" ? o.atSec >= o.ringAtSec : true;
+}
+
 export function judgeVoice(o: JudgeInput): VoiceVerdict {
   const text = String(o.text || "").trim();
   const words = text ? text.split(/\s+/).length : 0;
@@ -317,7 +331,7 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
   // are unmistakably a person talking TO us ("this is Maria", "how can I help") beat every position
   // rule: a store CAN read a line that resembles its own menu, but a recording never asks us
   // anything (fix pass 6, item 3).
-  if ((o.ringsHeard ?? 0) >= 1) {
+  if (rangBefore(o)) {
     return { who: "person", why: "the desk has rung, so the phone system is finished with us", ...ride };
   }
   if (CHECKING_ON_US.test(text) || ADDRESSED_TO_US.test(text)) {
@@ -337,7 +351,7 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
   }
 
   // LAYER 2 — where we are on a route we hold.
-  if ((o.ringsHeard ?? 0) >= 1 || (o.routeHandoffSeen && (o.ringsHeard ?? 0) >= 1)) {
+  if (rangBefore(o)) {
     return { who: "person", why: "the desk has rung, so the phone system is finished with us", ...ride };
   }
   if (o.mappedRoute && !o.routeHandoffSeen && !MENU_WORDS.test(text) && !CHECKING_ON_US.test(text)) {
@@ -375,7 +389,7 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
 export function personStartsAt(
   steps: Array<{ who?: string; text?: string; atSec?: number }>,
   detectedAtSec: number,
-  ctx: { knownMenuLines?: string[]; ringsHeard?: number; weSpokeAtSec?: number | null; weAskedAtSec?: number | null; product?: string } = {},
+  ctx: { knownMenuLines?: string[]; ringsHeard?: number; ringAtSec?: number | null; weSpokeAtSec?: number | null; weAskedAtSec?: number | null; product?: string } = {},
 ): number {
   let start = detectedAtSec;
   let foundPerson = false;
@@ -386,9 +400,13 @@ export function personStartsAt(
     if (at > detectedAtSec) continue;
     // No pause result is fed in: the pause never ran on these finished lines, and claiming one
     // either way is the side door. Unclear lines come back UNSURE and are simply skipped.
+    // THE RING IS A FLOOR. The desk ringing means the phone system was still holding us right up to
+    // that moment, so the person cannot have started talking before it — not even on a line the
+    // judge cannot call either way. Walking past it is how the person's start landed on the menu.
+    if (typeof ctx.ringAtSec === "number" && (ctx.ringsHeard ?? 0) >= 1 && at < ctx.ringAtSec) break;
     const v = judgeVoice({
       text: String(st.text), atSec: at,
-      knownMenuLines: ctx.knownMenuLines, ringsHeard: ctx.ringsHeard,
+      knownMenuLines: ctx.knownMenuLines, ringsHeard: ctx.ringsHeard, ringAtSec: ctx.ringAtSec,
       weSpokeAtSec: ctx.weSpokeAtSec, weAskedAtSec: ctx.weAskedAtSec, product: ctx.product,
     });
     if (v.who === "person") {

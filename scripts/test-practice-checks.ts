@@ -85,13 +85,14 @@ console.log("\n▶ PRACTICE CHECK 4 — the menu dumps us to the operator (one r
     { who: "ivr", text: "I'm sorry, I did not get that. Let me connect you to an operator.", atSec: 24 },
     { who: "ivr", text: "Guest services, this is Dana.", atSec: 38 },
   ];
-  ok(judge({ text: steps[1].text, atSec: 11, ringsHeard: 1 }).who === "recording",
+  // The desk rang 30 seconds in — after the whole menu, before Dana.
+  ok(judge({ text: steps[1].text, atSec: 11, ringsHeard: 1, ringAtSec: 30 }).who === "recording",
     "a line the menu played before the desk rang is still the menu");
-  ok(personStartsAt(steps, 38, { knownMenuLines: [], ringsHeard: 1 }) === 38,
+  ok(personStartsAt(steps, 38, { knownMenuLines: [], ringsHeard: 1, ringAtSec: 30 }) === 38,
     "and the person starts when they speak, never at the first second of the check");
   ok(menuLinesOf(steps as never, 24, 38, []).length === 3,
     "so all three of the store's own lines stay the menu, and only Dana is the person");
-  ok(judge({ text: "Sure, one moment.", atSec: 41, ringsHeard: 1, mappedRoute: true }).who === "person",
+  ok(judge({ text: "Sure, one moment.", atSec: 41, ringsHeard: 1, ringAtSec: 30, mappedRoute: true }).who === "person",
     "after the ring, the same words are a person — that is what the ring is for");
 }
 
