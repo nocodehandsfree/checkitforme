@@ -34,7 +34,7 @@ import { getPolicy, setPolicy, publicPolicy, cachedPolicy } from "./policy";
 import { importStores, backfillRegions } from "./stores-import";
 import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
 import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
-import { placeNavCall, navInitialTwiml, navStep, navEnded, navMediaFeed, getNavSession, latestNavSessionForChain, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
+import { placeNavCall, navInitialTwiml, navStep, navEnded, navMediaFeed, getNavSession, latestNavSessionForChain, NAV_MODEL, confirmAskedStores, setMappingHandoff } from "./calls/navigator";
 import { listenNavFeed, endListenNav } from "./calls/listen-nav";
 // THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
 import { emit, markNow, closeReceipt, linkCall, rollup, rollupFromRow, getReceipt, transcriptOf, setLineHook, type Rollup } from "./calls/events";
@@ -1130,12 +1130,7 @@ app.post("/nav/step", async (c) => {
   return c.body(await navStep(id, speech), 200, { "Content-Type": "text/xml" });
 });
 app.post("/nav/ended", (c) => { navEnded(c.req.query("session") || ""); return c.body("ok", 200); });
-// The confirm-ask mp3 in the workflow's voice (Branson) — Twilio <Play> fetches this mid-call.
-app.get("/nav/ask-audio", (c) => {
-  const b = navAskAudio(c.req.query("session") || "");
-  if (!b) return c.body("not found", 404);
-  return c.body(new Uint8Array(b), 200, { "Content-Type": "audio/mpeg" });
-});
+// (The mapping ask's own audio is DELETED with the asking: Charlie speaks to Staff, in his voice.)
 // ---- Tape deck (D-lane rehearsal): pre-synthesized clips call the OWNER's phone — Fun tab ----
 app.all("/tapedeck/twiml", (c) => c.body(tapedeckTwiml(c.req.query("session") || ""), 200, { "Content-Type": "text/xml" }));
 app.post("/tapedeck/step", async (c) => {
@@ -1157,6 +1152,57 @@ app.get("/api/admin/tapedeck/session/:id", (c) => {
   const s = tdSession(c.req.param("id"));
   if (!s) return c.json({ error: "not found" }, 404);
   return c.json({ id: s.id, status: s.status, steps: s.steps, clipText: s.clipText });
+});
+
+// ---- MAPPING HANDS THE CHECK TO CHARLIE ----------------------------------------------------------
+// The spec never gave mapping a voice of its own: mapping talks to machines, Charlie talks to people.
+// A proving check walks the store's menu on the cheap lane (Alpha presses, Bravo speaks), and the
+// moment a person is really there it hands this SAME live call to Charlie — the one every customer
+// check uses, with his own voice, his own words, his handling of "one moment" and a hold. Mapping
+// asks nothing and classifies nothing; it records what Charlie reports.
+//
+// This is the recorded-clip path's own hand-off, reused: open a bridge room with the store's normal
+// check settings, connect straight away (Staff are already on the line), and return the TwiML that
+// gives the call over. Any failure returns null and the mapping check ends politely instead of
+// talking to Staff itself.
+setMappingHandoff((s, atSec) => {
+  try {
+    const room = "map:" + s.id;
+    s.charlieRoom = room;
+    const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
+    void (async () => {
+      try {
+        const store = (await db.select().from(retailers).where(eq(retailers.id, s.retailerId)))[0];
+        const cat = (await db.select().from(categories).limit(1))[0];
+        const v = store && cat ? await buildRestockVars(store.id, cat.id, undefined, [], undefined, null) : null;
+        const pol = await getPolicy();
+        setBridgeContext(room, {
+          agentId: config.voice.agentId,
+          dynamicVars: v?.dynamicVars || {},
+          connectOnHuman: false,          // Staff are already talking — open Charlie right away
+          holdMaxSeconds: pol.bail.holdMaxSeconds,
+          voiceId: v?.voiceId || undefined,
+          voiceTuning: v?.voiceTuning || undefined,
+        });
+      } catch (e) { console.error("[mapping] Charlie hand-off setup", e); }
+    })();
+    // WHAT CHARLIE HEARD comes back on this room's own record, and it is the ONLY thing mapping
+    // reads about Staff: he was sent elsewhere (the wrong desk), or he got his answer.
+    onReceiptClosed(async (r) => {
+      if (r.room !== room) return;
+      const sess = getNavSession(s.id);
+      if (!sess) return;
+      const wrong = r.events.some((e) => String(e.kind) === "unknown" && (e.detail as { wrongDepartment?: boolean } | undefined)?.wrongDepartment === true);
+      const heardStaff = r.events.some((e) => String(e.kind) === "charlie_join" || String(e.kind) === "human_detected");
+      sess.confirmResult = wrong ? "redirect" : (heardStaff ? "answered" : undefined);
+    });
+    void atSec;
+    return `<?xml version="1.0" encoding="UTF-8"?><Response><Stop><Stream name="navtap"/></Stop>`
+      + `<Connect><Stream url="wss://${host}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
+  } catch (e) {
+    console.error("[mapping] Charlie hand-off failed", e);
+    return null;
+  }
 });
 
 // ---- Charlie barge-in: when a store-mode Delta call gets an off-script question it can't handle with

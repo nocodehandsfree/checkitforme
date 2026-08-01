@@ -786,9 +786,10 @@ async function main() {
       "an unmatched greeting files a condition in the store's exact words, automatically");
     // ROUND 2 ITEM 3: SILENCE IS NOT AN ANSWER. Nine seconds of quiet used to set "answered" and a
     // silent clerk proved the door. Now quiet ends the check unresolved, the door's ask spent.
-    ok(!/confirmResult = "answered"; finish\(s, "human"\); return twiml\(`<Hangup\/>`\); \}\s*\n\s*return twiml\(gather\(id\)\); \/\/ brief silence/.test(nav)
-      && /Staff said nothing after the question/.test(nav),
-      "silence after the product question never counts as an answer — the check ends unresolved");
+    // FIX PASS 6: mapping has NO silence rule of its own, because mapping no longer asks Staff
+    // anything. Charlie owns every word exchanged with a person, including their silence.
+    ok(!/Staff said nothing after the question/.test(nav) && !/confirmResult = "answered"/.test(nav),
+      "mapping decides nothing about what Staff said — the answer-listening is deleted, not repaired");
     ok(/staffAnswered: s\.confirmResult === "answered",/.test(nav),
       "and only a REAL reply sets the pass shape the grader reads");
     // ROUND 2 ITEM 1 (navigator half): the ask ledger records the DOOR the ask was spent at.
@@ -1071,8 +1072,8 @@ async function main() {
     // FACE d: an answer that tells us about the product is an ANSWER, never being sent away.
     {
       const nv4 = readFileSync("src/calls/navigator.ts", "utf8");
-      ok(/const v = judgeHere\(s, said, atSec\);/.test(nv4) && /if \(v\.sendingUsAway\)/.test(nv4) && /if \(v\.waiting\) return twiml\(gather\(id\)\);/.test(nv4),
-        "the judge says what kind of reply it was: waiting, an answer, or being sent away");
+      ok(/setMappingHandoff/.test(nv4) && /handed the check to Charlie/.test(nv4),
+        "reaching a person hands the check to Charlie — mapping speaks to nobody");
       const mg4 = readFileSync("src/calls/mapgraph.ts", "utf8");
       ok(/await setSetting\(`map_doors_dead:\$\{chainId\}`, ""\);/.test(mg4)
         && /await setSetting\(`nav_confirm_asked_doors:\$\{chainId\}`, ""\);/.test(mg4),

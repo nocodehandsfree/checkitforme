@@ -112,13 +112,20 @@ export interface NavSession {
   // verify we reached the RIGHT desk (where the cards live). Their reply classifies the run:
   //  • answered (yes/no/"we're out") → right place, lock this path.
   //  • redirect ("that's the X dept, let me transfer you") → wrong desk; capture where + hang up.
+  /** THE PROVING CHECK PUTS CHARLIE ON THE LINE. Mapping talks to machines; Charlie talks to people
+   *  (the spec, always). When this is set, reaching a person hands this SAME check to Charlie — the
+   *  one every customer check uses — exactly as the recorded-clip path already does. Mapping asks
+   *  nothing and says nothing to Staff; it only records what Charlie reports back. */
   confirm?: { product: string; asked?: boolean; askedAtSec?: number };
+  /** What CHARLIE reported: he got an answer about the product, or Staff sent us elsewhere. Written
+   *  by the hand-off owner (server.ts), never decided in here. */
   confirmResult?: "answered" | "redirect"; redirectTo?: string;
+  /** Where Charlie's half of this check lives, once handed over. */
+  charlieRoom?: string;
   // MENU CAPTURE (#2) + owner TARGET (#1): the pressable tree we heard, the raw menu lines, and the
   // desk the owner wants us to reach (customer service by default; a chosen department for dept-only chains).
   target?: string; menu?: MenuOption[]; menuPrompts?: string[];
   // Confirm ask pre-synthesized in the workflow's ElevenLabs voice (Branson) — Polly is the fallback.
-  askAudio?: Buffer; askText?: string;
   lastActTurn?: number; escaped?: boolean; routingSeen?: boolean; routedAtSec?: number; autoZeros?: number; persisted?: boolean;
   // Receipt bookkeeping: how many steps have been mirrored, and the one-shot moments (see navSync).
   emitted?: number; ivrSeen?: boolean; transferEmitted?: boolean; humanEmitted?: boolean; deadEmitted?: boolean;
@@ -188,6 +195,13 @@ export interface NavSession {
 }
 
 const sessions = new Map<string, NavSession>();
+
+/** HAND THIS CHECK TO CHARLIE. Registered by whoever owns Charlie (server.ts), exactly like the
+ *  recorded-clip path's own hand-off: this file must not import the bridge, and mapping must not
+ *  own one word of talking to Staff. Returns the TwiML that gives the live call to Charlie, or null
+ *  if he cannot be opened. */
+let handToCharlie: ((s: NavSession, atSec: number) => string | null) | null = null;
+export function setMappingHandoff(fn: (s: NavSession, atSec: number) => string | null): void { handToCharlie = fn; }
 /**
  * One inbound (store-side) media frame from the /twilio-media fork. The room IS the nav session id,
  * so only this call's own audio ever reaches it.
@@ -450,7 +464,7 @@ export function navInitialTwiml(id: string): string {
  *  replacement the gather loop makes (documented trap), so it is set up once here and never again.
  *  Purely additive: if the fork never connects, the call runs exactly as it did before. */
 function earFork(id: string): string {
-  return `<Start><Stream url="wss://${RAILWAY_HOST}/twilio-media?room=${id}" track="inbound_track">`
+  return `<Start><Stream name="navtap" url="wss://${RAILWAY_HOST}/twilio-media?room=${id}" track="inbound_track">`
     + `<Parameter name="room" value="${id}" /></Stream></Start>`;
 }
 
@@ -559,33 +573,21 @@ function reachHuman(s: NavSession, atSec: number, id: string, viaRouting = false
   // 27s earlier, and that got filed as the desk that answered. A routing line is never a greeting, and
   // an older line is never this person's — better an empty greeting than a false one.
   if (!s.greeting) s.greeting = greetingFrom(s.steps, atSec);
-  if (s.confirm && !s.confirm.asked) {
+  if (s.confirm && !s.confirm.asked && handToCharlie) {
+    // HAND THIS CHECK TO CHARLIE. Everything about talking to Staff — the question, the answer, "one
+    // moment", a hold, the wrong desk — is his and is already built and tuned. Mapping's job ended
+    // the moment a person picked up.
     s.confirm.asked = true; s.confirm.askedAtSec = atSec;
-    const q = s.askText || `Hi! Real quick — do you have any ${s.confirm.product} in stock right now?`;
-    s.steps.push({ who: "us", text: `asked: "${q}"`, atSec, action: "say", value: q , earPrompts: s.ear?.recordings });
-    // Speak in the workflow's own voice when the synth is ready; otherwise the stock phone voice.
-    const speak = s.askAudio ? `<Play>https://${RAILWAY_HOST}/nav/ask-audio?session=${id}</Play>` : `<Say voice="Polly.Joanna">${esc(q)}</Say>`;
-    return twiml(`${speak}${gather(id)}`); // wait for their answer
+    s.steps.push({ who: "us", text: "handed the check to Charlie", atSec, earPrompts: s.ear?.recordings });
+    const xml = handToCharlie(s, atSec);
+    if (xml) { finish(s, "human"); return xml; }
+    // Charlie could not be opened: end politely rather than talk to Staff ourselves.
+    s.stopReason = "reached Staff but Charlie could not join";
+    finish(s, "failed"); return twiml(`<Hangup/>`);
   }
   finish(s, "human"); return twiml(`<Hangup/>`);
 }
 
-/** Serve the pre-synthesized confirm-ask mp3 (Twilio <Play> fetches this mid-call). */
-export function navAskAudio(id: string): Buffer | null { return sessions.get(id)?.askAudio || null; }
-
-/** Pre-synthesize the confirm ask in an ElevenLabs voice so the HUMAN hears Branson, not a robot.
- *  Best-effort: on any failure the session keeps askAudio unset and reachHuman falls back to Polly. */
-async function synthAsk(s: NavSession, voiceId: string, text: string): Promise<void> {
-  try {
-    const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_64`, {
-      method: "POST",
-      headers: { "xi-api-key": config.voice.apiKey, "content-type": "application/json" },
-      body: JSON.stringify({ text, model_id: "eleven_turbo_v2", voice_settings: { stability: 0.4, similarity_boost: 0.85 } }),
-    });
-    if (r.ok) s.askAudio = Buffer.from(await r.arrayBuffer());
-    else console.error("[navigator] synthAsk", r.status, (await r.text()).slice(0, 120));
-  } catch (e) { console.error("[navigator] synthAsk", e); }
-}
 
 /** The ask used at every mapping human: the DEFAULT workflow's first opener in ITS voice (Branson
  *  global), {category} → "Pokémon cards". Falls back to the stock question + the default voice. */
@@ -757,33 +759,9 @@ async function navTurn(id: string, speech: string): Promise<string> {
   // (owner Update 12: proof is Staff answering, a yes or a no — an acknowledgment). A clerk who says
   // nothing proves nothing: the check ends unresolved, that door's one ask is spent, and the door is
   // never claimed proven off dead air. It used to count 9 seconds of quiet as "answered".
-  if (s.confirm?.asked && !s.confirmResult) {
-    if (speech && speech.trim()) {
-      // WHAT KIND OF REPLY IS THIS — the judge says, not a pattern here. Staff telling us where the
-      // cards are ("they're over in the toy aisle") matches the sent-elsewhere words exactly, and
-      // reading it that way killed the RIGHT door chain-wide. And "sure, one second" is them going
-      // to LOOK: not an answer, not a hand-off, so the check keeps listening instead of concluding.
-      const said = speech.trim();
-      const v = judgeHere(s, said, atSec);
-      if (v.waiting) return twiml(gather(id));      // they went to check — wait for what they come back with
-      if (v.sendingUsAway) { s.confirmResult = "redirect"; s.redirectTo = said.slice(0, 200); }
-      else s.confirmResult = "answered";
-      finish(s, "human"); return twiml(`<Hangup/>`);
-    }
-    if (atSec - (s.confirm.askedAtSec ?? atSec) > 12) {
-      s.stopReason = "Staff said nothing after the question";
-      finish(s, "failed"); return twiml(`<Hangup/>`);
-    }
-    return twiml(gather(id)); // brief silence — give them a moment to answer
-  }
-  // Holding the ask for a real person after an announced transfer, but the hold runs long with no
-  // pickup. Nobody spoke, so nothing here is a human — it used to be filed as one, and a check that
-  // reached no person read as reached-Staff. The transfer moment is already on the record; the check
-  // ends as what it was.
-  if (s.confirm && !s.confirm.asked && s.routedAtSec != null && atSec - s.routedAtSec > 30 && !(speech && speech.trim())) {
-    s.stopReason = `transferred at ${s.routedAtSec}s, nobody picked up`;
-    finish(s, "failed"); return twiml(`<Hangup/>`);
-  }
+  // (Mapping's own answer-listening is DELETED. Charlie owns every word exchanged with Staff: the
+  // question, the reply, "one moment", the hold, the wrong desk. There is nothing for this file to
+  // classify, and no silence rule of its own to get wrong.)
   // LIVE PICKUP — fire on the FIRST human utterance, in EVERY mode. A direct store answers "Hello" /
   // "Store, Bob speak" with no IVR, so we must reach the human on turn 1 — waiting for a 2nd line (or
   // an LLM round-trip) leaves dead air while they keep saying "hello" until we hang up. looksLikeLivePerson
@@ -1234,7 +1212,7 @@ export async function placeNavCall(chainId: number | null, retailerId: number, r
   const from = process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
   const id = crypto.randomUUID().slice(0, 8);
-  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined, askText: extra?.askText, target: extra?.target, maxSec: extra?.maxSec, transferWaitSec: extra?.transferWaitSec, relisten: extra?.relisten, callerRecords: extra?.callerRecords, stage: extra?.stage, expectedGreeting: extra?.expectedGreeting, recipeSeconds: extra?.recipeSeconds, deadDoors: extra?.deadDoors,
+  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined, target: extra?.target, maxSec: extra?.maxSec, transferWaitSec: extra?.transferWaitSec, relisten: extra?.relisten, callerRecords: extra?.callerRecords, stage: extra?.stage, expectedGreeting: extra?.expectedGreeting, recipeSeconds: extra?.recipeSeconds, deadDoors: extra?.deadDoors,
     // THE JUDGE'S FIRST LAYER: this store's own menu as heard before. Nothing on file = the store's
     // FIRST check, which listens to everything and hangs up on nothing.
     knownMenuLines: extra?.knownMenuLines, firstEverCall: !(extra?.knownMenuLines || []).length };
@@ -1248,8 +1226,8 @@ export async function placeNavCall(chainId: number | null, retailerId: number, r
     planned: barge?.plan?.length ? barge.plan.map((p) => ({ action: p.action, value: p.value, atSec: p.at })) : undefined,
   });
   emit(id, "dialed", `Dialling ${retailerName}`, { phone, chainId, retailerId, why: extra?.why || "Admin call" });
-  // Synthesize the ask in the workflow voice NOW (fire-and-forget) — ready long before any human is.
-  if (confirm && extra?.askVoiceId) void synthAsk(session, extra.askVoiceId, extra.askText || `Hi! Real quick — do you have any ${confirm.product} in stock right now?`);
+  // Nothing is synthesized and nothing is spoken to Staff here any more: on a proving check the
+  // hand-off gives the live call to Charlie, whose voice and words are his own.
   const body = new URLSearchParams({
     To: e164(phone), From: from,
     Url: `https://${RAILWAY_HOST}/nav/twiml?session=${id}`,

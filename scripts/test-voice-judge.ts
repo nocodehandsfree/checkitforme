@@ -102,6 +102,23 @@ console.log("\n▶ THE PERSON IS DATED FROM THEIR FIRST WORD");
   ok(at > 40, "a hello joined onto a store line splits — the person is never dated at the recording's own moment");
 }
 
+console.log("\n▶ MAPPING NEVER TALKS TO STAFF — Charlie does (fix pass 6)");
+{
+  const { readFileSync } = await import("node:fs");
+  const nav = readFileSync("src/calls/navigator.ts", "utf8");
+  ok(/handed the check to Charlie/.test(nav) && /handToCharlie\(s, atSec\)/.test(nav),
+    "reaching a person on a proving check hands the live call to Charlie");
+  ok(!/asked: "\$\{q\}"/.test(nav) && !/synthAsk/.test(nav) && !/askAudio/.test(nav),
+    "the question mapping used to speak, and its voice, are deleted");
+  ok(!/Staff said nothing after the question/.test(nav),
+    "and so is mapping's own silence rule — Charlie handles a quiet clerk");
+  const srv = readFileSync("src/server.ts", "utf8");
+  ok(/setMappingHandoff\(\(s, atSec\) => \{/.test(srv) && /<Connect><Stream url="wss:\/\/\$\{host\}\/bridge\?room=\$\{room\}"/.test(srv),
+    "the hand-off is the same one the recorded-clip path already uses — no second way to reach him");
+  ok(/wrongDepartment === true/.test(srv) && /sess\.confirmResult = wrong \? "redirect"/.test(srv),
+    "and mapping only RECORDS what Charlie reported: his answer, or the wrong desk");
+}
+
 console.log("\n▶ \"ONE MOMENT\" AFTER OUR QUESTION IS WAITING — not an answer, not being sent away");
 {
   const v = judge({ text: "Sure, one second.", weAskedAtSec: 64, atSec: 66, routeHandoffSeen: true, ringsHeard: 2, mappedRoute: true });
