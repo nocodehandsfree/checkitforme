@@ -18,16 +18,18 @@ git. Last updated: 2026-07-31 (mapping engine rebuilt to your rules, part 1 of 3
 ## The bottom bar can never go dark again, and Live is cleaned (07-30, live on Admin)
 - **The tint is nailed down**, three ways it used to break are refused before anything goes live. Cost per
   check opens on **The baseline**, your 6.7¢ ceiling off your real prices.
-## Mapping rebuild, part 1 of 3 (the engine): third pass done — HANDED OFF for the PM's blind audit (08-01)
-- The review's last six are in: a store where Staff just answer the phone now locks properly and we
-  never call its people again just to hang up. The side job that proves "Staff answer directly" stopped
-  wrongly flagging every such chain forever. A re-map no longer blacklists its own best door. A door is
-  the question plus the choice, so one dead "1" can't poison a whole store. A menu change shows on your
-  review list only once it's been heard twice. Six small honesty fixes rode along.
+## Mapping rebuild, part 1 of 3 (the engine): fourth pass done — HANDED OFF for the PM's blind audit (08-01)
+- The last list closed one root cause behind three of the problems: **Staff's own words were being read
+  as the store's menu.** A clerk saying "sure, one moment" was taken as the phone system handing us on,
+  so their hello counted as part of the menu and we went back to calling real people just to hang up.
+  Now nothing anyone says after a person picks up can be treated as the menu, anywhere.
+- Also: Staff telling us where the cards are ("over in the toy aisle") no longer gets read as being sent
+  away — that was killing the RIGHT way in, permanently. Starting a chain over now frees the doors it had
+  refused to try again. Door records match each other. A closed store gets a second try later the same day.
 - **Two things wait on YOU:** (1) live customer checks still say their answers on a timer — the built
   listening way is switched off, and flipping it changes the cost numbers (a fresh chat builds it on your
   word); (2) should a changed way through still wait for your tap, or switch itself hands-free?
-- Side branch only, 405 + 100 rig checks green; the only 2 red are the ones waiting on your call above.
+- Side branch only, 420 + 100 rig checks green; the only 2 red are the ones waiting on your call above.
   **Staging untouched until you say "clear".** Part 1 closes on the PM's audit, not my word.
 ## The new calling engine is ON for staging. Your six test calls are the last thing (07-28/29)
 - **Nothing to flip.** A check from staging.checkitforme.com goes through the new engine. **Listen for:** it asks

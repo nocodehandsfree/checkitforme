@@ -159,14 +159,17 @@ async function main() {
     const spanish = "Gracias por llamar a CVS Pharmacy. Para continuar en español, diga sí.";
     await reportUnknown({ chainId: chain.id, storeId: east.id, kind: "menu-changed", prompt: night1 });
     await reportUnknown({ chainId: chain.id, storeId: west.id, kind: "menu-changed", prompt: night2 });
-    let conds = (await chainDetail(chain.id)).conditions as Array<{ greeting: string; heardCount: number; real: boolean }>;
+    let conds = (await chainDetail(chain.id)).conditions as Array<{ greeting: string; heardCount: number }>;
     ok(conds.length === 1, "two transcriptions of one menu fold into ONE condition");
-    ok(conds[0].heardCount === 2 && conds[0].real === true, "heard twice = real (the pill's bar, readable)");
+    ok(conds[0].heardCount === 2, "heard twice = real, and only then is it listed at all");
     ok(conds[0].greeting === night1.slice(0, 200), "and the row keeps the store's exact words as FIRST heard");
     await reportUnknown({ chainId: chain.id, storeId: east.id, kind: "menu-changed", prompt: spanish });
-    conds = (await chainDetail(chain.id)).conditions as Array<{ real: boolean }>;
-    ok(conds.length === 2 && conds.filter((c) => !c.real).length === 1,
-      "a genuinely different menu files its own condition, not yet real on one hearing");
+    conds = (await chainDetail(chain.id)).conditions as Array<{ heardCount: number }>;
+    ok(conds.length === 1,
+      "a genuinely different menu heard ONCE files its own row but is not listed — one hearing proves nothing");
+    await reportUnknown({ chainId: chain.id, storeId: west.id, kind: "menu-changed", prompt: spanish });
+    conds = (await chainDetail(chain.id)).conditions as Array<{ heardCount: number }>;
+    ok(conds.length === 2, "and it appears the moment a second hearing proves it real");
     // ROUND 3 ITEM 5: heard-twice changes what the owner SEES — a menu heard once stays off the
     // review list; and the fold scans newest-first with a real cap so one menu cannot split rows.
     {

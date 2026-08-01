@@ -1383,12 +1383,14 @@ export async function chainDetail(chainId: number): Promise<Record<string, unkno
     // THE CONDITIONS, readable (the fingerprint's second half): every unmatched menu filed, in the
     // store's exact words as FIRST heard, with how many times it has been heard. Heard twice = real
     // — that is the bar the screens' pills read (chunk 3); nothing renders off one hearing.
+    // HEARD TWICE = REAL, and that bar lives in ONE place: a condition heard once is not listed at
+    // all. A `real` flag alongside the count was a second copy of the rule that nothing read, and two
+    // copies of a rule is how screens drift apart (fix pass 4, item 4).
     conditions: unk.rows
-      .filter((r: any) => String(r.kind) === "menu-changed" && String(r.status) === "open")
+      .filter((r: any) => String(r.kind) === "menu-changed" && String(r.status) === "open" && Number(r.seen_count || 1) >= 2)
       .map((r: any) => ({
         greeting: r.prompt ? String(r.prompt) : "",
         heardCount: Number(r.seen_count || 1),
-        real: Number(r.seen_count || 1) >= 2,
         firstSeen: Number(r.first_seen), lastSeen: Number(r.last_seen),
       })),
     // EVERY CALL, TOP TO BOTTOM. The whole conversation was always recorded — both sides, with the
