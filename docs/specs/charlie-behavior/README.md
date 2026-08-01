@@ -17,7 +17,11 @@ the code is the bug.
 - The check-life fix + round 2 are LIVE on staging, PM-verified with five blind readers and the full
   rig (259 checks green, typecheck clean). **Nothing is phone-verified.**
 - The owner has run test 1 five times across 08-01 (runs 222-226), zero passes yet — every run found
-  a real fault, all now fixed. Run 6 is the first attempt against the fully fixed engine.
+  a real fault, all now fixed.
+- **Run 6 ran and FAILED — three faults in one moment, all fixed and on staging** (Echo, checkpoint
+  @d52bbd17): the greeting's own pauses were being deleted so it transcribed as different words; two
+  turns arrived as one line; and our question printed before their hello. 121 rig checks green.
+  **Run 7 is the next attempt.** The PM has NOT independently audited that fix yet.
 - Staging is clear: logo work merged beside it and touched no calling code (verified).
 - Known before he dials: a check hangs up at 5 minutes flat · the hold hang-up rule is NOT built yet ·
   Testing row 227 is a pre-fix leftover and opens nothing (by design; new checks are fine).
