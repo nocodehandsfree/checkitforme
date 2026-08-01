@@ -238,7 +238,12 @@ export function sameSpokenLine(a: string, b: string): boolean {
  *  handoff line, which is the last thing the phone system says to us. Evidence for layer 3 only:
  *  Staff say handoff-shaped things too ("sure, one moment"), which is why POSITION is layer 2 and
  *  wins first — after the desk rings, the same words are a person. */
-const MENU_WORDS = /press \d|press the|option \d|para espa[ñn]ol|oprima|listen carefully|menu has changed|options have changed|for [a-z].{0,30}\bpress\b|say the name|automated|this call (may be|is) recorded|calls are recorded|virtual assistant|please hold while|thank(s| you) for calling|transferring you( now)?|connecting you( now)?/i;
+const MENU_WORDS = /press \d|press the|option \d|para espa[ñn]ol|oprima|listen carefully|menu has changed|options have changed|for [a-z].{0,30}\bpress\b|say the name|automated|this call (may be|is) recorded|calls are recorded|virtual assistant|please hold while|transferring you( now)?|connecting you( now)?/i;
+/** THE STORE SAYING ITS OWN NAME, AND NOTHING ELSE. Every recording in the world opens this way —
+ *  and so does half the Staff in the country. On its own it proves nothing, so it can never be the
+ *  reason we call a line a machine and press keys into a real person's ear (fix pass 7, item 6). It
+ *  stays evidence: paired with any of the menu's own words above, the line is plainly the recording. */
+const STORE_SAYING_ITS_NAME = /thank(s| you) for calling/i;
 /** Somebody checking whether we are still on the line. Nothing recorded ever asks this. */
 const CHECKING_ON_US = /\bhello\?|are you (still )?there|you still there|can you hear me|anybody there|anyone there/i;
 /** Somebody talking TO US: offering to help, asking what we need, giving their own name. A menu
@@ -363,6 +368,8 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
   if (CHECKING_ON_US.test(text)) return { who: "person", why: "somebody is checking whether we are still here", ...ride };
   if (ADDRESSED_TO_US.test(text)) return { who: "person", why: "somebody is talking to us, not reading at us", ...ride };
   if (MENU_WORDS.test(text)) return { who: "recording", why: "these are a menu's own words", ...ride };
+  // A branded hello ALONE is held open for the pause below rather than settled here: a recording
+  // reads on through the silence, and Staff stop and wait for us.
   const repliedToUs = typeof o.weSpokeAtSec === "number" && o.atSec - o.weSpokeAtSec <= 6 && words <= 40;
   if (repliedToUs && (tellsUsSomething || waiting || sendingUsAway)) {
     return { who: "person", why: "a reply to what we just said", ...ride };
@@ -418,6 +425,13 @@ export function personStartsAt(
     // An unclear line sitting INSIDE the person's speech is theirs — the default flips toward a
     // person everywhere, and a mumble between two of their lines is not the store's menu. Before
     // any person is found it is only skipped, never claimed.
+    // The store's own name, on a finished check, is where its greeting began — the person cannot
+    // have started before it. Judging a live line it proves nothing (a person says it too), but
+    // walking BACK through a check that is over, it is the boundary.
+    if (STORE_SAYING_ITS_NAME.test(String(st.text))) {
+      if (start === detectedAtSec && carriesAPersonsWords(String(st.text), ctx)) start = at + 1;
+      break;
+    }
     if (v.who === "unsure") { if (foundPerson) start = Math.min(start, at); continue; }
     // A line the judge calls a recording ENDS the walk — but if a person's words were joined onto
     // it, the person begins just after that recording, never at it.
@@ -435,6 +449,10 @@ export function personStartsAt(
 function startsAsARecording(line: string, ctx: { knownMenuLines?: string[]; product?: string }): boolean {
   const parts = String(line || "").split(/(?<=[.?!])\s+/).map((p) => p.trim()).filter(Boolean);
   if (parts.length < 2) return false;
+  // A joined line opens with whatever was already playing when the person cut in. The store's own
+  // name is not enough to call a WHOLE line a machine, but as the opening sentence of a line that
+  // then turns into somebody talking to us, it is exactly the recording being interrupted.
+  if (STORE_SAYING_ITS_NAME.test(parts[0])) return true;
   return judgeVoice({ text: parts[0], atSec: 0, knownMenuLines: ctx.knownMenuLines, product: ctx.product }).who === "recording";
 }
 
