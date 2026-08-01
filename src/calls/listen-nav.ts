@@ -292,6 +292,9 @@ export interface VoiceVerdict {
   sendingUsAway?: boolean;
   /** FALSE on a store's first ever check: record everything, hang up on nothing. */
   hangUpAllowed?: boolean;
+  /** A machine we cannot get past: a mailbox, or the store itself closed. Nothing to navigate and
+   *  nobody to reach, so the check ends and Charlie is never opened on it. */
+  deadEnd?: boolean;
 }
 
 export function judgeVoice(o: JudgeInput): VoiceVerdict {
