@@ -1,12 +1,13 @@
-# Chunk-1 audit, round 2: the engine vs build-contract.md (PM · 08-01 · branch `claude/mapping-engine-contract-wecvcy` @6d4dd120)
+# MILESTONE 1 (the engine) — PM audit, fix pass 2 vs build-contract.md (PM · 08-01 · branch `claude/mapping-engine-contract-wecvcy` @6d4dd120)
 
-Round-2 verify: three blind readers over the mapper's 12 fix commits, plus the PM driving every rig.
+The project is THREE milestones: 1 engine · 2 self-healing · 3 screens. Everything in this
+file is MILESTONE 1. Fix-pass-2 verify: three blind readers over the mapper's 12 fix commits, plus the PM driving every rig.
 Rigs (PM-run): map-sim 296/296 · resume 17/17 · mapgraph 62/62 · map-api 14/14 · all five now wired
 into `test-all.sh` · map-e2e still 100/102 (same 2 pre-existing approval-flow fails as staging —
 owner call at chunk 2) · typecheck clean. Item 4 (live checks answer on a clock) verified UNTOUCHED,
 as ordered — still waiting on the owner's word.
 
-## Round-2 verdict per item
+## Fix pass 2 — verdict per item
 - **FIXED (9): items 1, 3, 5, 7, 8, 9, 11, 13, 14.** Wrong desk burns the PICKED door, per-door ask
   ledger, store held, dead doors durable + mechanically blocked (`navigator.ts:852-866,1051-1083`,
   `mapper.ts:172-179,598-604`). Silence is not an answer (`navigator.ts:692-703`). Rings are really
@@ -29,7 +30,7 @@ as ordered — still waiting on the owner's word.
 - **Skipped as ordered (1): item 4** — unchanged end to end (`recipe.ts:39-70`,
   `bridge-place.ts:142-163`, `service.ts:396-403`).
 
-## ROUND 3 (short, ordered; all evidence at @6d4dd120)
+## FIX PASS 3 — the milestone-1 remainder (short, ordered; evidence at @6d4dd120)
 R3-1. **Direct-answer stores: pass but never lock, and the engine now troubles Staff.** The
   lock-on-the-spot branch requires no heard menu lines, but the person's own hello is counted as a
   menu line (`mapper.ts:229-234` cutoff `transferAtSec ?? humanAtSec` with `<=`; greeting pushed AT
@@ -71,6 +72,6 @@ off. · map-e2e's 2 pre-existing fails assert the OLD wait-for-approval behavior
 of the mapping surfaces until the owner names the live page the record of truth (contract line 135).
 
 ## How to use this
-Round 3 = R3-1 to R3-6, one at a time, each proven by a driven check or on the page before the next.
+Fix pass 3 (still milestone 1) = R3-1 to R3-6, one at a time, each proven by a driven check or on the page before the next.
 R3-1/R3-2 are the gate: until they land, any chain whose stores answer directly cannot finish and
 real Staff get hung up on. The contract is the law; this list is the gap between law and this branch.
