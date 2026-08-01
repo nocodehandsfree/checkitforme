@@ -63,48 +63,54 @@ settled 0-step route locks `ringsDirect:true` (`navigator.ts:1001`, `trainer-bat
 a chain (`mapgraph.ts:709,907-938`); the reset endpoint exists (`server.ts:6453`) but NO Admin
 button calls it, and it wipes the chain's whole history — no doors-only clear.
 
-## FIX PASS 5 — reframed: one design change + hard rules (same mapper chat · evidence @f64c468b)
-Patching faces has failed twice; build it structurally.
-F5-1 (GATES, with F5-2). **ONE JUDGE. Build a single shared "recording or person?" decider that
-  every path asks — the menu-line cut, the person stamp, the redirect test, the sweep's recording
-  test, the settle compare. Kill the six scattered private opinions (LIVE_HUMAN_RE at
-  `navigator.ts:58-65`, looksLikeDirectPickup, ROUTING_RE stamping, REDIRECT_RE classify, sweep
-  heardRecording, personLineAtSec) — they may remain as EVIDENCE the judge weighs, never as
-  deciders.** The judge weighs five layers in order, first confident answer wins:
-  (1) THE STORE'S OWN REMEMBERED MENU — recordings repeat verbatim, people never do; from call 2 on,
-  compare against this store's stored opening lines (the fingerprint we already keep) — match =
-  recording; no match = person OR a new condition (file it, never guess person into the map). This
-  also solves greeting-then-transfer chains: the recording matches its own script, the human after
-  the ring does not. (2) POSITION on a mapped chain: before the handoff = recording, after the ring
-  = person (owner law). (3) THE WORDS: press/option/listen-to/para-español/menu-has-changed =
-  recording; a reply to OUR words, or a short post-ring utterance = person. (4) THE PAUSE TEST when
-  still unsure: stay silent ~2s — a recording keeps reading, a person stops or says "hello?".
-  (5) STILL UNSURE = PERSON (owner law; every default flips this way). The judge dates the person
-  from the FIRST line of their speech (walk back; a tail-joined hello SPLITS, never drags the stamp
-  onto a store line). "One moment"/"sure, one second" after the ask is WAITING — not an answer, not
-  a redirect. And the FIRST call to a brand-new store is pure listening: record everything, hang up
-  on nothing that might be a person; after it the store's menu is on file for layer 1 forever.
-F5-2 (GATES, with F5-1). **Troubling Staff must be structurally impossible on listen-only checks:**
-  a listen-only check whose plan has no steps NEVER dials (it can never arm its ring hang-up —
-  `navigator.ts:624-637,533-538`); a store whose route has no menu steps needs NO wording-settle
-  (nothing to settle — the proving call is the settle). These two rules end both hang-up loops even
-  when detection is wrong.
-F5-3. **Greeting-then-transfer is expressible by the mapping run:** a settled route with zero
-  answers but real pre-person store lines locks as `greeting`, never as direct
-  (`navigator.ts:1001`, `map-capture.ts:55`, `trainer-batch.ts:55,130`) — else the paid agent
-  opens on a recording.
-F5-4. **A first version from ONE background call can never re-stamp how a chain answers:**
-  type-gate auto-activation (`mapgraph.ts:709,722-725,907-938`).
-F5-5. **The Admin clear:** wire a button to the reset (`server.ts:6453`) and add a doors-only clear
-  (`map_doors_dead` + `nav_confirm_asked_doors`) that leaves versions, proof, and history alone.
+## Fix pass 5 — verdict (two blind readers + PM-run rigs · @7a6d2205)
+Rigs all green, PM-run: voice-judge 25/25 · map-sim 330/330 · resume 20/20 · mapgraph 62/62 ·
+map-api 14/14 · e2e 100/102 (same 2 pre-existing) · tsc clean. Twelve-point regression sweep holds.
+**BUILT AND REAL:** the one earpiece decider exists and the five named paths ask it; a listening
+check with nothing to walk is refused before it dials; a store with no menu locks with no extra
+call; greeting-then-transfer is its own kind and Charlie's join differs from direct; both chain-page
+buttons (Start over · Free doors) wired and scoped right. **NOT CLOSED:** in leftover spots old code
+still acts WITHOUT asking the earpiece, and when the engine is unsure it keeps walking instead of
+going quiet — so Alpha can still press keys at a person in rare shapes, and Staff who says "one
+moment" can still be hung up on at 12 seconds.
+
+## FIX PASS 6 — THE OWNER'S LAW (same mapper chat · evidence @7a6d2205)
+**Nobody presses and nobody speaks until the earpiece says a machine is talking. Alpha and Bravo act
+ONLY on the earpiece's word. Unsure = stay silent and listen. A slow check is fine; beeping at a
+human is never fine.** The named spots:
+1. Three leftovers still decide on their own — remove them as deciders: the direct-pickup overrule
+   (`navigator.ts:808`), the auto-escape person-words (`navigator.ts:989`), and the model declaring
+   "human" + a raw handoff stamp bypassing the earpiece (`navigator.ts:941` → `:540-544`). Every
+   press/say gates on the earpiece's "machine" verdict.
+2. Unsure must never become "machine" through a side door: callers hard-code "it kept talking"
+   (`mapper.ts:270`, `navigator.ts:1070`, `sweep.ts:164`) and the pause memory sticks for the whole
+   check (`navigator.ts:799,805` never reset) — reset per new voice; only a REAL pause result counts.
+3. Evidence order fixes: a person-shaped line ("this is Maria", "how can I help") beats "we are
+   inside the menu we hold" (`listen-nav.ts:327-329`); a真 real counted ring beats a word-match to the
+   remembered menu (Staff reciting the store script after a ring must be a person).
+4. "One moment" means WAIT: the waiting verdict must extend the 12-second silence hang-up
+   (`navigator.ts:773`) — never hang up on someone who told us to hold; widen the waiting words
+   ("hang on", "just a minute", "gimme a sec").
+5. A non-answer is not proof: "let me get my manager" must not prove a door (`navigator.ts:770`);
+   after a getting-someone line, the NEXT voice is a new person — ask again or wait.
+6. The person's clock starts at the person's first word, not the machine line's start+1
+   (`listen-nav.ts:378`) — Charlie's join time feeds off this number.
+7. Two flags the tests assert but nothing reads: first-call-never-hangs-up (`hangUpAllowed`) and
+   the file-a-new-menu output (`unknownLine`) — wire them or they are lies.
+8. The store's remembered lines must be available during the FIRST mapping run's settle listens
+   (today they come only from a locked map — `mapgraph.ts:1378-1399`; read the run's own held lines).
+9. Sweep truth: a short recording ("Please hold.") must not prove a chain "Staff answer directly"
+   (`sweep.ts:160-178,224-231` — puts Charlie on a recording via first-version auto-activate); the
+   mapper's greeting evidence must not ride labeled "direct" (`map-capture.ts:55`, caps confidence);
+   "Please hold." must still arm the handoff clock (`navigator.ts:739-741` gate too tight).
+10. Free doors while a run is live: the running memory re-writes the cleared lists
+    (`mapper.ts:169-196`) — the button must reach the live run too.
+Prove each on the pretend calls already in the rigs plus the six new shapes from this pass's review
+(instant pickup no ring · "please hold one moment" no name · voicemail saying "hello?" · Spanish ·
+menu-dumps-to-operator · two Staff one check). One law, ten spots, one commit each. Push, stop; PM
+audits blind. MILESTONE 1 closes on that audit.
 
 ## Standing owner decisions (unchanged)
-Live checks still answer on a stopwatch (listen-for-menu-words defaults off) — one small task,
-owner unlock. · map-e2e's 2 pre-existing fails assert the OLD wait-for-approval behavior R2
-retires. · No lock of the mapping surfaces until the owner names the live page the record of truth.
-
-## How to use this
-Fix pass 5 = F5-1 to F5-5, SAME mapper chat, same branch `claude/mapping-engine-contract-wecvcy`:
-one item per commit, each driven on a rig — including the exact call scripts in the fix-pass-4
-verdict above — before the next. F5-1 + F5-2 gate the milestone. PM audits blind after the push;
-MILESTONE 1 closes on that audit. The contract is the law.
+Live checks still answer on a stopwatch (listen-for-menu-words defaults off) — one small task, owner
+unlock. · e2e's 2 pre-existing fails assert the OLD wait-for-approval behavior R2 retires. · No lock
+of the mapping surfaces until the owner names the live page the record of truth.
