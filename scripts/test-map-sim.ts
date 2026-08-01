@@ -804,6 +804,17 @@ async function main() {
     // THE DELETE LIST IS THE BUILD: the listen-first block is gone from the whole engine.
     ok(!/listenFirst/.test(nv), "the listen-first path is deleted from the navigator — stage one replaces it");
     ok(!/listenFirst/.test(readFileSync("src/calls/sweep.ts", "utf8")), "and the sweep no longer launches it");
+    // ROUND 2 ITEM 7: the sweep's direct-proving call honors the grade — its biggest surviving break.
+    {
+      const sw = readFileSync("src/calls/sweep.ts", "utf8");
+      ok(/if \(s\?\.grade !== "pass"\) \{[\s\S]{0,200}?changed nothing[\s\S]{0,120}?return;\s*\n\s*\}/.test(sw),
+        "a failed direct-proving check records NOTHING — no version, no confidence, no chain stamp");
+      const gateAt = sw.indexOf('if (s?.grade !== "pass")');
+      const firstWrite = Math.min(...["proposeVersion(", "reportUnknown(", "db.update(chains)"].map((w) => {
+        const i = sw.indexOf(w, sw.indexOf("async function proveDirect")); return i < 0 ? Infinity : i;
+      }));
+      ok(gateAt >= 0 && gateAt < firstWrite, "and the gate sits BEFORE every write the call can make");
+    }
     ok(/MISSES_PER_STORE[\s\S]{0,220}?run\.rotate = true;/.test(eng),
       "a store that never got us to a person is the ONLY reason to take a fresh one (Update 3)");
     ok(!/recordFailedAttempt/.test(eng),

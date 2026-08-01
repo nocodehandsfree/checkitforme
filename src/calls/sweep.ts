@@ -27,7 +27,7 @@ import { chainDialable } from "./recipe";
 import { startMapper, mapperState, stopMapper } from "./mapper";
 import { storeForChain } from "./trainer-batch";
 import { placeNavCall, getNavSession, defaultWorkflowAsk, NavStep } from "./navigator";
-import { proposeVersion, pathSignature, reportUnknown, recordObservation, type MapRecipe } from "./mapgraph";
+import { proposeVersion, pathSignature, reportUnknown, type MapRecipe } from "./mapgraph";
 import { recipeFromCall, evidenceFromCall, CapturedStep } from "./map-capture";
 
 /** Hard ceiling on calls in one sweep — the runaway guard. Tune without a deploy via the
@@ -132,6 +132,16 @@ async function proveDirect(item: SweepItem): Promise<void> {
     await sleep(3000);
   }
   const steps = (s?.steps || []) as CapturedStep[];
+  // THE GRADE IS THE GATE. A failed check changes NOTHING — this call used to fold evidence,
+  // re-score confidence, auto-activate versions and stamp the chain row whatever its grade (the
+  // round-2 audit's biggest surviving break). Now only a check that earned its way in may write;
+  // a failed one leaves nothing but its own line in the sweep's list, and the chain comes round
+  // again on a later sweep.
+  if (s?.grade !== "pass") {
+    item.status = "done";
+    item.outcome = s?.failReason ? `failed: ${s.failReason} — changed nothing` : "nobody answered — changed nothing";
+    return;
+  }
   // A MENU asks you to choose. A GREETING just talks at you and hands you on — "thank you for calling
   // Barnes & Noble", then hold music, then a person. Both mean the chain is not "direct", but they
   // need completely different handling, and having only one word for them is what put the paid agent
@@ -192,12 +202,10 @@ async function proveDirect(item: SweepItem): Promise<void> {
     item.status = "done"; item.outcome = `person answered directly at ${s?.humanAtSec ?? "?"}s — proved`; item.seconds = s?.humanAtSec ?? null;
     return;
   }
+  // A passing check that fit none of the shapes above (reached nobody would have failed the grade
+  // gate) — say so plainly and write nothing; the claim stays unproven until a check proves it.
   item.status = "done";
-  item.outcome = `no answer (${s?.status || "timeout"}) — direct claim still unproven`;
-  await recordObservation({
-    chainId: item.chainId, storeId: store.id, navId: placed.id, kind: "prove-direct",
-    expected: "direct_human", observed: s?.status || "timeout", drift: false,
-  });
+  item.outcome = "the direct claim is still unproven — changed nothing";
 }
 
 /** Hand the chain to the existing mapper and wait for it to finish. The mapper owns the calling; the
