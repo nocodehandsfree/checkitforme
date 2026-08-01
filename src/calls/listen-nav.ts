@@ -257,10 +257,13 @@ export function looksLikeADeadEnd(text: string): boolean {
   return !!t && DEAD_END.test(t) && !PHARMACY_ONLY.test(t);
 }
 /** Somebody checking whether we are still on the line. Nothing recorded ever asks this. */
-const CHECKING_ON_US = /\bhello\?|are you (still )?there|you still there|can you hear me|anybody there|anyone there/i;
+const CHECKING_ON_US = /\bhello\?|are you (still )?there|you still there|can you hear me|anybody there|anyone there|\b(bueno|al[oó]|s[ií])\?|sigue (ah[ií]|all[ií])|est[aá] (ah[ií]|all[ií])|me escucha|hay alguien/i;
 /** Somebody talking TO US: offering to help, asking what we need, giving their own name. A menu
  *  offers choices; a person offers themselves. */
-const ADDRESSED_TO_US = /how (can|may) i help|can i help you|what can i (do|help)|what do you need|how can i assist you|this is \w+|\w+ speaking|thanks for holding|thank you for holding|what'?s up/i;
+// Spanish rides in the same list, not a rule of its own: Staff answering in their own language are
+// Staff. A long Spanish hello used to reach the pause test, read as "it kept talking", and come back
+// a recording — which is a real person being talked over (fix pass 7's practice check 6).
+const ADDRESSED_TO_US = /how (can|may) i help|can i help you|what can i (do|help)|what do you need|how can i assist you|this is \w+|\w+ speaking|thanks for holding|thank you for holding|what'?s up|en qu[eé] (le |te )?puedo (ayudar|servir)|c[oó]mo (le |te )?puedo ayudar|qu[eé] (necesita|desea)|habla \w+|le atiende \w+|con qui[eé]n tengo el gusto/i;
 /** Them going to look — after our question this is WAITING, never an answer and never a hand-off. */
 const GOING_TO_LOOK = /^(sure|okay|ok|yeah|alright|yep|hold on|one)\b[^.?!]{0,40}\b(one (moment|sec|second)|a (moment|sec|second)|moment|hold on|let me (check|look|see|go)|i'?ll (check|look|see|go)|give me)\b/i;
 /** Being handed somewhere else. Only counts when the reply carries no news about the product. */
