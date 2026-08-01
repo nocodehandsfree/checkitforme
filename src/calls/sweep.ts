@@ -121,7 +121,9 @@ async function proveDirect(item: SweepItem): Promise<void> {
     { product: "Pokémon cards" },
     // The sweep folds its own result below (it decides direct-vs-menu from what it hears), so `finish`
     // must not fold it a second time.
-    { askVoiceId: ask.voiceId, askText: ask.text, callerRecords: true },
+    // The stage marks this as a RUN's check: the carrier-end path stamps the chain's mapping status
+    // only for un-staged calls, so a proving call can never leave "review" behind on its way past.
+    { askVoiceId: ask.voiceId, askText: ask.text, callerRecords: true, stage: "map" },
   );
   if (placed.error || !placed.id) { item.status = "failed"; item.outcome = "the call never connected"; return; }
   state.calls++; item.calls++;
@@ -240,7 +242,10 @@ async function runMapping(item: SweepItem): Promise<void> {
     if (!run) break;
     item.calls = run.attempt;
     if (!run.running) {
-      item.status = run.phase === "locked" ? "done" : (run.phase === "stopped" ? "failed" : "done");
+      // A run that stopped because every store was CLOSED has not failed — it has not been tried.
+      // Marking it failed kept pass 2 from ever coming back to it as the country woke up further west.
+      const closedOut = /open hours|stores are open|closed/i.test(run.stopReason || "");
+      item.status = run.phase === "locked" ? "done" : (closedOut ? "skipped" : (run.phase === "stopped" ? "failed" : "done"));
       item.outcome = run.stopReason || run.phase;
       item.seconds = run.best?.seconds ?? null;
       state.calls += run.attempt;

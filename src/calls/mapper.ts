@@ -604,7 +604,9 @@ function driveMapper(run: MapperRun): void {
       run.navId = placed.id;
 
       // ---- follow the check to its end ----
-      const deadline = Date.now() + CALL_MAX_SEC * 1000;
+      // WAIT PAST THE CALL'S OWN CEILING. Watching for exactly as long as the call may run meant a
+      // check that ended on its last second was read as a timeout — its grade, and its proof, lost.
+      const deadline = Date.now() + (CALL_MAX_SEC + 30) * 1000;
       let s = getNavSession(placed.id);
       while (Date.now() < deadline) {
         s = getNavSession(placed.id);

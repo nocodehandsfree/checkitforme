@@ -964,6 +964,14 @@ async function main() {
         "the wrong 'answers directly' label clears whole, so the mapper accepts the handoff");
       ok(/cur\?\.navStatus === "locked" \? \{\} : \{ navStatus: "review" \}/.test(sw),
         "and a locked chain keeps its status — a finding queues mapping, it never downgrades a map");
+      // FIX PASS 4 ITEM 3: the sweep's own bookkeeping.
+      ok(/callerRecords: true, stage: "map" \}/.test(sw),
+        "a proving call carries a stage, so the carrier-end path can never stamp review on its chain");
+      ok(/const closedOut = \/open hours\|stores are open\|closed\/i\.test\(run\.stopReason \|\| ""\);/.test(sw)
+        && /closedOut \? "skipped"/.test(sw),
+        "a run that stopped because every store was CLOSED reads skipped, so pass 2 comes back to it");
+      ok(/const deadline = Date\.now\(\) \+ \(CALL_MAX_SEC \+ 30\) \* 1000;/.test(readFileSync("src/calls/mapper.ts", "utf8")),
+        "and the mapper waits past the call's own ceiling, so a check ending on its last second is still read");
     }
     ok(/MISSES_PER_STORE[\s\S]{0,220}?run\.rotate = true;/.test(eng),
       "a store that never got us to a person is the ONLY reason to take a fresh one (Update 3)");
