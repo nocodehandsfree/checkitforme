@@ -43,12 +43,12 @@ itself. The first draft of this file failed that test twice over ("Route changes
 | Section | `RECIPE` · right `Tree Recipe v2 · Jul 28` |
 | Ladder steps | `Greeting plays` · `Says "no"` · `Says "front"` · `Says "general"` · `Rings the desk` |
 | Ladder second line | the quoted menu line, or `39 of 41` |
-| Buttons | `Re-map` · `Until locked` |
+| Buttons | `Map` (the full mapping run; Re-map retired 07-31) |
 | `MAPPING` rows | `Menu` `2 of 3` · `Mapping calls` `3 today` · `Recipes` `v2 live` · `Review` `1 waiting` |
 | `CHAIN` row | `Settings` `Pharmacy · Tier 5` |
-| Not mapped | `No recipe. Re-map to learn one.` |
+| Not mapped | `No recipe. Map to learn one.` |
 
-**Cut 07-30:** the line under the ladder (the tiles say both numbers) · the note under Re-map
+**Cut 07-30:** the line under the ladder (the tiles say both numbers) · the note under Map
 (the confirm carries the money). **Cut:** `COST PER CHECK`, which rested on a guessed 20s of Charlie · `TO A PERSON`, because the wait
 for Staff is not nav · `A person answers` as a ladder step · `our job is done here`.
 
@@ -74,12 +74,12 @@ for Staff is not nav · `A person answers` as a ladder step · `our job is done 
 |---|---|
 | Title | `Recipes` |
 | Card name | `Tree Recipe v2` |
-| Card state | `Live` · `Retired` · `Set aside` |
+| Card state | `Live` · `Retired` · `Not used` |
 | Card tiles | `41s` `NAV TIME` · `Jul 28` `LOCKED` |
 | Card route | `Say "no", then "front", then "general"` |
-| Key | `Show 2 set aside` |
+| Key | `Show 2 not used` |
 | Foot | `v2 · 26s faster` |
-| Empty | `No recipe. Re-map to learn one.` |
+| Empty | `No recipe. Map to learn one.` |
 
 **Cut:** the sub line · `Nothing is ever deleted` · confidence wording · evidence counts. A recipe
 waiting for approval is not listed here; that decision sits on the chain page.
@@ -96,7 +96,7 @@ waiting for approval is not listed here; that decision sits on the chain page.
 | Well | `EXPECTED` `Say "no", then "front", then "general"` · `HEARD` `Staff at 20s, no menu` |
 | Buttons | `Own recipe` · `Ignore` |
 | Under the buttons | `CVS Tarzana only` |
-| Second card | `Recipe reaching nobody` · `Jul 26` · `4 calls · 3 stores` · `Re-map` · `Ignore` |
+| Second card | `Recipe reaching nobody` · `Jul 26` · `4 calls · 3 stores` · `Clear` (Re-map retired 07-31) |
 | Empty | `Nothing to review` |
 
 **Cut:** `Things we will not decide on our own` · `Route changes waiting on you` · `Nothing here
@@ -142,14 +142,18 @@ Corrections to what is live today, same rules.
 | Last rung, failed | `Hung up, nobody picked up` |
 | Produced | `PRODUCED` · `Tree Recipe v2 · 5s faster` · `Tree Recipe v3 · set aside` (gray) · `No change` |
 | Key | `Show 4 more` |
-| Empty | `No mapping calls. Re-map to place one.` |
+| Empty | `No mapped checks yet. Tap Map to run the mapping.` |
 
 **Cut:** the sub line `Every call we made to learn this menu.` The sheet is called Mapping calls and every
 card is one call, so the line only repeats the title back.
 
 **Cut:** the foot line `A call only changes the menu when it beats the one we have`.
 
-**Fix:** a recipe that was set aside must not read green. `Set aside` is gray, like `No change`.
+**Fix:** a recipe that is not used must not read green. `Not used` is gray, like `No change`.
+
+**Reconciled 08-01 (for the owner's blessing):** the contract's DELETE list bans `Set aside`; every
+row above now says `Not used`, and the page matches. The Re-map button is retired, so the empty
+states say `Map`.
 
 ---
 
@@ -161,7 +165,7 @@ Every line above is on the screen now. What landed last, and why it was wrong be
 - **`Nobody answered`** replaces `Transferred, nobody came`. The Statuses screen already owns those
   words; a second name for one state is a second name too many.
 - **Review shows only what is still open.** A card already cleared kept coming back.
-- **The Review buttons act.** `Own recipe` puts that store's route live, `Re-map` places a call. They
+- **The Review buttons act.** `Own recipe` puts that store's route live (Re-map retired 07-31). They
   used to flip a status column and nothing else.
 - **`Max talk` is deleted.** It was a hard cutoff on the whole call, not talk time.
 - **One `Same as everywhere`.** The inherit row borrowed the default workflow's name, so Branson

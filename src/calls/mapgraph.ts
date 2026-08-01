@@ -890,10 +890,11 @@ export async function rejectVersion(id: number, by: string, why: string, local =
     const ch = (await db.select().from(chains).where(eq(chains.id, v.chainId)))[0];
     if (ch) await pushDecision({ chainName: ch.name, version: v.version, decision: "reject", by, why });
   }
-  // Say WHY it was set aside, in the same slot the live cards use for "why this route". Without the
+  // Say WHY it is not used, in the same slot the live cards use for "why this route". Without the
   // prefix the reason reads as a description of the route itself, which is what the owner saw on the
-  // Chains screen on 07-28: a rejection note sitting where the route summary belongs.
-  const note = why ? `Set aside: ${why}` : (v.why || "Set aside.");
+  // Chains screen on 07-28: a rejection note sitting where the route summary belongs. ("Set aside"
+  // is on the contract's DELETE list — the plain words are "Not used".)
+  const note = why ? `Not used: ${why}` : (v.why || "Not used.");
   await client.execute({ sql: `UPDATE nav_map_versions SET status='rejected', why=?, approved_by=? WHERE id=?`, args: [note, by, id] });
   return { ok: true };
 }
@@ -1424,7 +1425,7 @@ export async function chainDetail(chainId: number): Promise<Record<string, unkno
  *  through no path at all. Reading a page built on those is worse than reading an empty one.
  *
  *  So this clears the HISTORY and keeps the ROUTE. Gone: every mapping call in the log, every review
- *  item, every observation, and the recipes that were retired or set aside. Kept: the one live recipe,
+ *  item, every observation, and the recipes that were retired or not used. Kept: the one live recipe,
  *  because a re-listen has to walk a route to record one, and this is the route real checks run today.
  *  Its evidence is emptied and it is renumbered to v1, so the next call is genuinely its first.
  *

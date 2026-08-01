@@ -2475,7 +2475,7 @@ async function mapperPoll(){
   box.style.display='';
   if(stopBtn) stopBtn.style.display=run.running?'':'none';
   if(loopBtn) loopBtn.disabled=!!run.running;
-  const PHASE={verify:'Verifying the locked map',listen:'Listening to the menu',baseline:'Finding a path to a human','optimize':'Speeding the path up',locked:'Locked ✓','needs-review':'Needs your eyes',stopped:'Stopped'};
+  const PHASE={map:'Mapping menu',speed:'Optimizing speed',locked:'Locked ✓',stopped:'Stopped'};
   document.getElementById('mapper_phase').textContent=PHASE[run.phase]||run.phase;
   document.getElementById('mapper_meta').textContent='call '+run.attempt+' · '+run.callsToday+'/12 today'+(run.running?'':' · done');
   const best=run.best&&run.best.seconds!=null?run.best.seconds+'s':'—';
@@ -4867,7 +4867,7 @@ async function renderChainSheets(ch,nav){
     : '<div class="empty">No mapped checks yet. Tap Map to run the mapping.</div>';
 
   // RECIPES (comp 2i) — what is live and what it replaced, each with its nav time and the date it
-  // locked. Attempts that were set aside are not recipes, so they sit behind one key: a rejected route
+  // locked. Attempts that are not used are not recipes, so they sit behind one key: a rejected route
   // sitting in the list is what made CVS look three recipes deep when it holds one. A recipe waiting
   // for a yes never appears here either; that decision is on the page that opened this sheet.
   const held=versions.filter(v=>v.status==='active'||v.status==='retired');
@@ -4878,7 +4878,7 @@ async function renderChainSheets(ch,nav){
   if(vw) vw.innerHTML = held.length
     ? held.slice().sort((a,b)=>(b.version||0)-(a.version||0)).map(recipeCard).join('')
       +(aside.length?`<div id="set_ver_aside" style="display:none">${aside.slice().sort((a,b)=>(b.version||0)-(a.version||0)).map(recipeCard).join('')}</div>`
-        +`<div style="display:grid;place-items:center;margin-top:6px"><button class="ghost" onclick="mapAsideMore(this)">Show ${aside.length} set aside</button></div>`:'')
+        +`<div style="display:grid;place-items:center;margin-top:6px"><button class="ghost" onclick="mapAsideMore(this)">Show ${aside.length} not used</button></div>`:'')
       +recipeGap(held)
     : '<div class="empty">No recipe yet. Tap Map to learn one.</div>';
 
@@ -5192,7 +5192,7 @@ function versionName(v){
 // ONE recipe card: its name, whether it is the one running, its nav time and the date it locked, then
 // the route in plain words. No confidence wording and no evidence counts; neither changes a decision.
 function recipeCard(v){
-  const S={active:['var(--green)','Live'],retired:['var(--text-muted)','Retired'],rejected:['var(--text-muted)','Set aside']}[v.status]||['var(--muted)',v.status];
+  const S={active:['var(--green)','Live'],retired:['var(--text-muted)','Retired'],rejected:['var(--text-muted)','Not used']}[v.status]||['var(--muted)',v.status];
   const ns=versionNavSecs(v), dim=v.status==='active'?'':'color:var(--text-muted)';
   return `<div class="card" style="margin:0 0 10px">`
     +`<div class="row" style="align-items:center;gap:8px"><span class="name" style="${dim}">${esch(versionName(v))}</span>`
@@ -5484,7 +5484,7 @@ async function mapApprove(versionId,chainId){
   toast('Checks now use the new route'); await loadMapGraph(); await ssReload();
 }
 async function mapReject(versionId,chainId){
-  const ok=await askSheet('Keep the current route?',['The new one is set aside. Checks carry on unchanged.'],'Keep current');
+  const ok=await askSheet('Keep the current route?',['The new one is not used. Checks carry on unchanged.'],'Keep current');
   if(!ok) return;
   const r=await api('/api/admin/map/version/'+versionId+'/reject',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({why:'owner kept the existing route'})});
   if(!r||r.error){ toast(mapWriteErr(r)); return; }

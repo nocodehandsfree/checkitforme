@@ -625,6 +625,14 @@ async function main() {
     ok(!/confColor/.test(page), "the colour scale those words needed is gone with them");
     ok(!page.split("\n").some((l) => !l.trim().startsWith("//") && /observed once|observed multiple times/.test(l)),
       "and no screen scores itself at him in words he cannot act on");
+    // ROUND 2 ITEM 12: `Set aside` is on the DELETE list — gone from every rendered string and every
+    // written note; the plain words are `Not used`. The live-run card speaks the real stage names.
+    ok(!page.split("\n").some((l) => !l.trim().startsWith("//") && /[Ss]et aside/.test(l)),
+      "no rendered string says Set aside anywhere on the page");
+    ok(!/`Set aside: \$\{why\}`/.test(readFileSync("src/calls/mapgraph.ts", "utf8")),
+      "and the engine writes 'Not used', never 'Set aside', onto a rejected recipe");
+    ok(/const PHASE=\{map:'Mapping menu',speed:'Optimizing speed',locked:'Locked ✓',stopped:'Stopped'\};/.test(page),
+      "the live run card speaks the owner's stage names — no raw map/speed, no retired names");
 
     // THE MENU IS THE MAP OF DOORS from the ONE locked run (comp 3b). The stitched menu that voted
     // line-by-line across checks is DELETED: it glued a question from one check to Staff talking on
