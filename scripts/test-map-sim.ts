@@ -167,6 +167,15 @@ async function main() {
     conds = (await chainDetail(chain.id)).conditions as Array<{ real: boolean }>;
     ok(conds.length === 2 && conds.filter((c) => !c.real).length === 1,
       "a genuinely different menu files its own condition, not yet real on one hearing");
+    // ROUND 3 ITEM 5: heard-twice changes what the owner SEES — a menu heard once stays off the
+    // review list; and the fold scans newest-first with a real cap so one menu cannot split rows.
+    {
+      const page3 = readFileSync("public/app.html", "utf8");
+      ok(/u\.status==='open'&&!\(u\.kind==='menu-changed'&&Number\(u\.count\|\|1\)<2\)/.test(page3),
+        "a menu heard once renders no review card — it appears when the second hearing proves it real");
+      ok(/ORDER BY last_seen DESC LIMIT 100/.test(readFileSync("src/calls/mapgraph.ts", "utf8")),
+        "and the fold scans newest-first with a real cap, so one menu can never split across rows");
+    }
     // The 24-hour label compare could never match ('Open 24h' vs the real label '24h') — fixed.
     ok(/st\.label === "24h"/.test(readFileSync("src/calls/mapper.ts", "utf8"))
       && /st\.label === "24h"/.test(readFileSync("src/calls/trainer-batch.ts", "utf8"))

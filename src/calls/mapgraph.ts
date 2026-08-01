@@ -988,8 +988,10 @@ export async function reportUnknown(u: {
   // menu-changed file compares greetings the way the fingerprint does (sameMenu); the FIRST-heard
   // words are kept on the row, because the menu keeps the store's exact words as first heard.
   if (u.kind === "menu-changed" && key) {
+    // Newest first with a real cap: the unordered 20-row scan could miss the very condition being
+    // re-heard on a chain with many files, splitting one menu across rows forever.
     const open = await client.execute({
-      sql: `SELECT id, prompt, seen_count FROM nav_unknowns WHERE chain_id=? AND kind='menu-changed' AND status='open' LIMIT 20`,
+      sql: `SELECT id, prompt, seen_count FROM nav_unknowns WHERE chain_id=? AND kind='menu-changed' AND status='open' ORDER BY last_seen DESC LIMIT 100`,
       args: [u.chainId],
     });
     const same = open.rows.find((r: any) => sameMenu(String(r.prompt || ""), key));

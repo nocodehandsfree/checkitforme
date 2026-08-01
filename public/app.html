@@ -4884,8 +4884,9 @@ async function renderChainSheets(ch,nav){
 
   // REVIEW — only when there is something to look at.
   // ONLY WHAT IS STILL OPEN. A card he already cleared was coming back, so the row counted decisions
-  // that had been made (owner, 07-30).
-  const open=unknowns.filter(u=>u.status==='open');
+  // that had been made (owner, 07-30). And HEARD TWICE = REAL (the contract's bar): a menu heard
+  // once is not yet a thing to show. It stays off the list and appears when a second hearing proves it.
+  const open=unknowns.filter(u=>u.status==='open'&&!(u.kind==='menu-changed'&&Number(u.count||1)<2));
   set('pk_setreview', open.length?String(open.length)+' waiting':'', open.length?'#F59E0B':'');
   const rr=document.getElementById('set_reviewrow'); if(rr) rr.style.display=open.length?'':'none';
   const uw=document.getElementById('set_review');
