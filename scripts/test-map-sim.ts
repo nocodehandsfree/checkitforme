@@ -1028,8 +1028,13 @@ async function main() {
       { who: "ivr", text: "Guest services, this is Dana.", atSec: 30 },
     ] as never, 14, 30).length === 2,
       "a menu store keeps its recordings through the handoff line, and still never the person");
-    ok(/if \(run\.phase === "map" && run\.doorProven && !run\.storeLocked && !\(run\.lastLines \|\| \[\]\)\.length && run\.best\) \{\s*\n\s*await lockStore/.test(eng),
-      "and a proven door with nothing to settle locks WITHOUT dialing — no settle call can reach Staff");
+    ok(/const nothingToWalk = !\(run\.best\?\.steps \|\| \[\]\)\.length;/.test(eng)
+      && /\(!\(run\.lastLines \|\| \[\]\)\.length \|\| nothingToWalk\)\) \{\s*\n\s*await lockStore/.test(eng),
+      "and a proven door with nothing to walk or settle locks WITHOUT dialing — no settle call can reach Staff");
+    // FIX PASS 5 ITEM 2: the refusal is structural, in the dialer itself — a listening check with no
+    // route can never arm its ring hang-up, so it may not be placed at all, whatever any judge says.
+    ok(/if \(extra\?\.relisten && !confirm && !\(barge\?\.plan\?\.length\) && !\(reactivePress\?\.max\)\) \{\s*\n\s*return \{ error: "a listening check with no route to walk is refused/.test(readFileSync("src/calls/navigator.ts", "utf8")),
+      "a listening check with no route to walk is refused before it dials");
 
     // FIX PASS 4, FACE a: STAFF'S OWN WORDS ARE NEVER THE STORE'S MENU. Staff saying "sure, one
     // moment" reads exactly like the machine handing us on; honouring it stamped a handoff AFTER the

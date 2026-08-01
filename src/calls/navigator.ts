@@ -1207,6 +1207,13 @@ async function recordConfirmAsked(chainId: number, retailerId: number, door?: st
 
 /** Place the documentation call; returns the session id the admin polls for live progress. */
 export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number; early?: boolean }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { askVoiceId?: string; askText?: string; target?: string; maxSec?: number; transferWaitSec?: number; why?: string; relisten?: boolean; callerRecords?: boolean; stage?: CheckStage; expectedGreeting?: string; recipeSeconds?: number; deadDoors?: Array<{ door: string; q?: string }>; knownMenuLines?: string[] }): Promise<{ id?: string; error?: string }> {
+  // A LISTEN-ONLY CHECK WITH NOTHING TO WALK NEVER DIALS (fix pass 5). Such a check has no answers to
+  // give and no route to finish, so it can never arm its ring hang-up — it would sit on the line
+  // until somebody picked up, and then hang up on them. Refusing it here makes troubling Staff
+  // structurally impossible on these checks, whatever any judge decides about who is talking.
+  if (extra?.relisten && !confirm && !(barge?.plan?.length) && !(reactivePress?.max)) {
+    return { error: "a listening check with no route to walk is refused — it could only end on a person" };
+  }
   if (!config.callsEnabled) return { error: "calls disabled on this preview deploy" };
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };

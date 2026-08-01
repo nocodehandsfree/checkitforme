@@ -529,12 +529,17 @@ function driveMapper(run: MapperRun): void {
       }
       const store = run.store;
 
-      // A DOOR PROVEN WITH NOTHING TO SETTLE NEVER DIALS AGAIN (round-3 item 1's belt): a resumed
-      // run already past its proving check at a store with no menu lines would otherwise place a
-      // listen whose only possible outcome is hanging up on a real person. Lock it here, dial nothing.
-      if (run.phase === "map" && run.doorProven && !run.storeLocked && !(run.lastLines || []).length && run.best) {
+      // A PROVEN DOOR WITH NOTHING TO WALK NEVER DIALS AGAIN. Two shapes, one rule: a store whose
+      // menu we heard nothing of, and a store whose proven route has no answers in it at all. Either
+      // way a wording-settle listen would have no route to finish, so it could never arm its ring
+      // hang-up — its only possible ending is a real person picking up and us hanging up on them.
+      // The proving check WAS the settle at such a store; there is nothing a second listen could
+      // compare (fix pass 5, item 2).
+      const nothingToWalk = !(run.best?.steps || []).length;
+      if (run.phase === "map" && run.doorProven && !run.storeLocked && run.best
+        && (!(run.lastLines || []).length || nothingToWalk)) {
         await lockStore(run, chainId, store.id);
-        run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: "no menu wording to settle — store locked without another call, the chain is live" });
+        run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: "nothing to walk here, so nothing to settle — store locked without another call, the chain is live" });
         continue;
       }
 
