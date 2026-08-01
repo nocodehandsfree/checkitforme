@@ -51,11 +51,14 @@ export async function attachListenFork(callSid: string, room: string): Promise<v
   } catch (e) { console.error("[listenfork]", e); }
 }
 
-export async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, string>, onConversationId?: (id: string) => void, dtmf?: string | null, opts?: { from?: string; timeLimitSec?: number; connectOnHuman?: boolean; connectAtSec?: number; say?: string | null; voiceId?: string | null; voiceTuning?: Record<string, unknown> | null; apiKey?: string; agentId?: string; listenNav?: boolean; navSteps?: NavStep[]; mapVersion?: number | null }): Promise<{ room?: string; error?: string }> {
+export async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, string>, onConversationId?: (id: string) => void, dtmf?: string | null, opts?: { from?: string; timeLimitSec?: number; connectOnHuman?: boolean; connectAtSec?: number; say?: string | null; voiceId?: string | null; voiceTuning?: Record<string, unknown> | null; apiKey?: string; agentId?: string; listenNav?: boolean; navSteps?: NavStep[]; mapVersion?: number | null; room?: string }): Promise<{ room?: string; error?: string }> {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
-  const room = crypto.randomUUID();
+  // The caller may hand in the room so it can write it on the check's row BEFORE dialing (08-01
+  // audit, open fault 2): a dial the carrier refuses still leaves a row that can open its own
+  // record, instead of a dead tile orphaned from the timeline that DOES exist.
+  const room = opts?.room || crypto.randomUUID();
   // Dial AS the customer's verified number when we have it (phone-first model); else the house line.
   const from = opts?.from || process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const pol = await getPolicy();
