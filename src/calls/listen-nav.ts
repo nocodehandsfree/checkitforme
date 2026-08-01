@@ -244,6 +244,18 @@ const MENU_WORDS = /press \d|press the|option \d|para espa[ñn]ol|oprima|listen 
  *  reason we call a line a machine and press keys into a real person's ear (fix pass 7, item 6). It
  *  stays evidence: paired with any of the menu's own words above, the line is plainly the recording. */
 const STORE_SAYING_ITS_NAME = /thank(s| you) for calling/i;
+/** A MACHINE WE CANNOT GET PAST: a mailbox, or the store itself closed. There is nothing to
+ *  navigate and nobody to reach, so the check ends here. This has to be asked BEFORE anything else,
+ *  because a mailbox greets us with "Hello?" exactly like a person checking we are still there —
+ *  and answering that one wrong puts Charlie on a machine (fix pass 7, item 6). Never on a closed
+ *  PHARMACY: the front of the store is open and is exactly where we are going. */
+const DEAD_END = /connect(ing)? you to (our|the) voicemail|leave (a |your )?(message|voicemail) (at|after|with)|voicemail box|record (a |your )?message after|providing your name,? (and )?date of birth|(store|we) (is|are) (currently |now )?closed(?![^.]*pharmacy)|closed for the (day|night)|our store hours are/i;
+const PHARMACY_ONLY = /pharmacy .{0,30}(closed|hours)/i;
+/** Is this line a machine we cannot get past? The ONE place that decides it. */
+export function looksLikeADeadEnd(text: string): boolean {
+  const t = String(text || "");
+  return !!t && DEAD_END.test(t) && !PHARMACY_ONLY.test(t);
+}
 /** Somebody checking whether we are still on the line. Nothing recorded ever asks this. */
 const CHECKING_ON_US = /\bhello\?|are you (still )?there|you still there|can you hear me|anybody there|anyone there/i;
 /** Somebody talking TO US: offering to help, asking what we need, giving their own name. A menu
@@ -330,6 +342,12 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
   const ride = { waiting, sendingUsAway, hangUpAllowed };
 
   if (!text) return { who: "unsure", why: "nothing was said", ...ride };
+
+  // BEFORE EVERYTHING: a mailbox, or the store closed. It greets us exactly like a person would
+  // ("Hello? You have reached…"), so asking any other question first hands a machine to Charlie.
+  if (looksLikeADeadEnd(text)) {
+    return { who: "recording", why: "a mailbox or a closed store — there is nobody to reach", deadEnd: true, ...ride };
+  }
 
   // BEFORE LAYER 1: two facts outrank a word-match. A REAL COUNTED RING means the phone system has
   // already handed us to the desk — no remembered line can outvote the desk ringing. And words that

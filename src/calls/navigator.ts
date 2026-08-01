@@ -15,7 +15,7 @@ import { openReceipt, emit, markNow, closeReceipt, getReceipt } from "./events";
 // speech text alone, which returns an empty string for silence, for hold music and for a desk that is
 // ringing, so it could not tell "nobody is there" from "somebody just said hello". These are the same
 // two classes the paid-agent calls listen with. Nothing new is built here.
-import { PromptDetector, ConversationEar, frameEnergy as earFrameEnergy, toneShare as earToneShare, judgeVoice, personStartsAt, type HoldReason } from "./listen-nav";
+import { PromptDetector, ConversationEar, frameEnergy as earFrameEnergy, toneShare as earToneShare, judgeVoice, personStartsAt, looksLikeADeadEnd, type HoldReason } from "./listen-nav";
 import { liveReadFor, dropLiveRead } from "../voice/live-read";
 import { sameMenu, type CheckStage, type CheckFailReason } from "./mapgraph";
 import { gradeCheck } from "./map-capture";
@@ -819,6 +819,11 @@ async function navTurn(id: string, speech: string): Promise<string> {
       s.keptTalkingAfterPause = isMenuLine(speech) || speech.trim().split(/\s+/).length > 14;
     }
     const verdict = s.pauseTested ? judgeHere(s, speech, atSec) : v;
+    // A MACHINE WE CANNOT GET PAST ENDS THE CHECK, BEFORE ANY QUESTION ABOUT A PERSON. A mailbox
+    // opens with "Hello?" exactly like Staff checking we are still on the line, so asking who is
+    // talking first is what put Charlie on a voicemail box. The earpiece owns this call now — the
+    // private copy of the rule that used to sit below is deleted (RULES line 11).
+    if (verdict.deadEnd) { s.deadLine = true; finish(s, "failed"); return twiml(`<Hangup/>`); }
     // A LINE MATCHING NOTHING WE HOLD is either a person or a menu we have never heard. The judge
     // says which; when it is not a person, the unheard menu is FILED, never guessed into the map.
     if (verdict.unknownLine && verdict.who === "recording" && s.chainId != null && !s.filedUnknownLine) {
@@ -835,13 +840,10 @@ async function navTurn(id: string, speech: string): Promise<string> {
       return await reachHuman(s, personLineAtSec(s.steps, speech, atSec, s), id);
     }
   }
-  // FAST-FAIL only on TRUE dead-ends: an actual voicemail box, or the STORE itself closed.
-  // NEVER on "pharmacy is closed" — the front store is open and is exactly where we're going
-  // (pharmacy can't sell Pokémon cards anyway). Live-observed funnel: "connect you to our
-  // voicemail… leave a message with your name and date of birth" = mailbox, bail instantly.
-  const DEADEND_RE = /connect(ing)? you to (our|the) voicemail|leave (a |your )?(message|voicemail) (at|after|with)|voicemail box|record (a |your )?message after|providing your name,? (and )?date of birth|(store|we) (is|are) (currently |now )?closed(?![^.]*pharmacy)|closed for the (day|night)|our store hours are/i;
-  const PHARM_OK = /pharmacy .{0,30}(closed|hours)/i; // pharmacy-only closure — keep navigating to the front store
-  if (speech && DEADEND_RE.test(speech) && !PHARM_OK.test(speech)) { s.deadLine = true; finish(s, "failed"); return twiml(`<Hangup/>`); }
+  // The dead-end check lives ABOVE, with the earpiece's own verdict, and it runs before anything is
+  // decided about a person. Its private copy of the rule is deleted: there is one place that knows
+  // what a mailbox sounds like, and every check reads it (RULES line 11).
+  if (speech && speech.trim() && looksLikeADeadEnd(speech)) { s.deadLine = true; finish(s, "failed"); return twiml(`<Hangup/>`); }
   s.status = "navigating";
   // The listen-first block that used to sit here is DELETED (the contract's DELETE list — stage one
   // replaces it). The learn stage IS the listening: the model answers each question with the full
