@@ -106,17 +106,19 @@ console.log("\n▶ MAPPING NEVER TALKS TO STAFF — Charlie does (fix pass 6)");
 {
   const { readFileSync } = await import("node:fs");
   const nav = readFileSync("src/calls/navigator.ts", "utf8");
-  ok(/handed the check to Charlie/.test(nav) && /handToCharlie\(s, atSec\)/.test(nav),
+  ok(/handed the check to Charlie/.test(nav) && /await handToCharlie\(s, atSec\)/.test(nav),
     "reaching a person on a proving check hands the live call to Charlie");
   ok(!/asked: "\$\{q\}"/.test(nav) && !/synthAsk/.test(nav) && !/askAudio/.test(nav),
     "the question mapping used to speak, and its voice, are deleted");
   ok(!/Staff said nothing after the question/.test(nav),
     "and so is mapping's own silence rule — Charlie handles a quiet clerk");
   const srv = readFileSync("src/server.ts", "utf8");
-  ok(/setMappingHandoff\(\(s, atSec\) => \{/.test(srv) && /<Connect><Stream url="wss:\/\/\$\{host\}\/bridge\?room=\$\{room\}"/.test(srv),
-    "the hand-off is the same one the recorded-clip path already uses — no second way to reach him");
-  ok(/wrongDepartment === true/.test(srv) && /sess\.confirmResult = wrong \? "redirect"/.test(srv),
-    "and mapping only RECORDS what Charlie reported: his answer, or the wrong desk");
+  ok(/setMappingHandoff\(async \(s\) => \{/.test(srv) && /bridge\?room=\$\{s\.id\}/.test(srv),
+    "Charlie joins on THE CHECK'S OWN record — no second record, no second way to reach him");
+  ok(!/onReceiptClosed\(async \(r\) => \{\s*\n\s*if \(r\.room !== room\)/.test(srv) && !/"map:" \+ s\.id/.test(srv),
+    "and the hand-built watcher and its made-up record are gone");
+  ok(/s\.confirmResult = wrong \? "redirect"/.test(nav) && /getReceipt\(s\.id\)/.test(nav),
+    "mapping only READS what Charlie put on that record: his answer, or the wrong desk");
 }
 
 console.log("\n▶ ALPHA AND BRAVO ACT ONLY ON THE EARPIECE'S WORD (fix pass 6, item 1)");

@@ -773,8 +773,10 @@ async function main() {
       "finish grades the check by machine before anything is written");
     ok((nav.match(/stage: s\.stage, grade: s\.grade, reason: s\.failReason,/g) || []).length === 2,
       "and the same verdict rides both the run log and the map fold, so screens cannot disagree");
-    ok(/if \(s\.grade == null && s\.status !== "human" && s\.status !== "failed"\) \{[\s\S]{0,300}?finish\(s, "failed"\);/.test(nav),
+    ok(/if \(s\.grade == null\) \{\s*\n\s*if \(s\.status === "human"\) finish\(s, "human"\);[\s\S]{0,300}?finish\(s, "failed"\);/.test(nav),
       "a check the carrier ended still gets its grade — no check ever ends ungraded");
+    ok(!/const xml = await handToCharlie\(s, atSec\);\s*\n\s*if \(xml\) \{\s*\n\s*finish/.test(nav),
+      "and a check handed to Charlie is NOT graded at the hand-off — he has not asked yet");
     // ROUND 2 ITEM 8: the third ungraded end is closed — a LOST end callback.
     ok(/const live = sessions\.get\(id\);\s*\n\s*if \(!live \|\| live\.grade != null\) return;\s*\n\s*live\.stopReason = live\.stopReason \|\| "the carrier never said the call ended";/.test(nav),
       "a lost carrier callback is closed by a one-shot backstop tied to the call — it grades, folds and frees");

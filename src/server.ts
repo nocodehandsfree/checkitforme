@@ -58,7 +58,7 @@ import { cachedCategories, cachedChains, cachedRetailers, categoryLabelMap, reta
 import { haversineMi, bboxAround } from "./geo";
 import { ingestSignals, recentStockNear, latestForRetailer } from "./stock/signals";
 import { classifyVerdict, reconcile, consensusFor, productDetailLabel } from "./voice/verdict";
-import { noteLiveLine, dropLiveRead } from "./voice/live-read";
+import { noteLiveLine, dropLiveRead, armLiveRead } from "./voice/live-read";
 import { seedStockCheckIntel } from "./stock/intel";
 import { seedSellMethods } from "./stock/sellmethods";
 import { r2Config, presignPut, photoKey } from "./r2";
@@ -1155,50 +1155,49 @@ app.get("/api/admin/tapedeck/session/:id", (c) => {
 });
 
 // ---- MAPPING HANDS THE CHECK TO CHARLIE ----------------------------------------------------------
-// The spec never gave mapping a voice of its own: mapping talks to machines, Charlie talks to people.
-// A proving check walks the store's menu on the cheap lane (Alpha presses, Bravo speaks), and the
-// moment a person is really there it hands this SAME live call to Charlie — the one every customer
-// check uses, with his own voice, his own words, his handling of "one moment" and a hold. Mapping
-// asks nothing and classifies nothing; it records what Charlie reports.
+// Nothing in mapping ever talks to a person (voice-calls RULES line 13). A mapping check walks the
+// store's phone menu; the moment Staff really answer it hands THIS SAME live call to Charlie — the
+// agent every customer check has used for months, in his own voice, with his own words and his own
+// handling of "one moment", a hold, and the wrong department.
 //
-// This is the recorded-clip path's own hand-off, reused: open a bridge room with the store's normal
-// check settings, connect straight away (Staff are already on the line), and return the TwiML that
-// gives the call over. Any failure returns null and the mapping check ends politely instead of
-// talking to Staff itself.
-setMappingHandoff((s, atSec) => {
+// It builds NOTHING of its own. Charlie joins on THE CHECK'S OWN RECORD — the one opened at dial in
+// placeNavCall and closed when the carrier says the call ended — so his joining, his answer and a
+// wrong department all land where every other moment of this check already lands, and the mapping
+// run simply reads that record when the check ends. The pass before this opened a SECOND record for
+// Charlie and watched that one; nothing was ever written to it, so no report ever came back.
+//
+// The whole setup is awaited BEFORE the call instructions go back to the carrier, so Charlie can
+// never arrive at a check that has not been told who he is. Any failure returns null, and the
+// navigator waits quietly and tries once more rather than talking to Staff itself.
+setMappingHandoff(async (s) => {
   try {
-    const room = "map:" + s.id;
-    s.charlieRoom = room;
-    const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
-    void (async () => {
-      try {
-        const store = (await db.select().from(retailers).where(eq(retailers.id, s.retailerId)))[0];
-        const cat = (await db.select().from(categories).limit(1))[0];
-        const v = store && cat ? await buildRestockVars(store.id, cat.id, undefined, [], undefined, null) : null;
-        const pol = await getPolicy();
-        setBridgeContext(room, {
-          agentId: config.voice.agentId,
-          dynamicVars: v?.dynamicVars || {},
-          connectOnHuman: false,          // Staff are already talking — open Charlie right away
-          holdMaxSeconds: pol.bail.holdMaxSeconds,
-          voiceId: v?.voiceId || undefined,
-          voiceTuning: v?.voiceTuning || undefined,
-        });
-      } catch (e) { console.error("[mapping] Charlie hand-off setup", e); }
-    })();
-    // WHAT CHARLIE HEARD comes back on this room's own record, and it is the ONLY thing mapping
-    // reads about Staff: he was sent elsewhere (the wrong desk), or he got his answer.
-    onReceiptClosed(async (r) => {
-      if (r.room !== room) return;
-      const sess = getNavSession(s.id);
-      if (!sess) return;
-      const wrong = r.events.some((e) => String(e.kind) === "unknown" && (e.detail as { wrongDepartment?: boolean } | undefined)?.wrongDepartment === true);
-      const heardStaff = r.events.some((e) => String(e.kind) === "charlie_join" || String(e.kind) === "human_detected");
-      sess.confirmResult = wrong ? "redirect" : (heardStaff ? "answered" : undefined);
+    const store = (await db.select().from(retailers).where(eq(retailers.id, s.retailerId)))[0];
+    if (!store) return null;
+    // THE PRODUCT THIS RUN IS ASKING ABOUT, never whatever category sorts first: the words Charlie
+    // speaks and the answer the run reads back have to be about the same thing.
+    const want = s.confirm?.product || "";
+    const cats = await db.select().from(categories);
+    const cat = cats.find((c) => c.label.toLowerCase() === want.toLowerCase())
+      ?? cats.find((c) => want.toLowerCase().includes(c.label.toLowerCase()))
+      ?? cats[0];
+    if (!cat) return null;
+    const v = await buildRestockVars(store.id, cat.id, undefined, [], undefined, null);
+    if (!v) return null;
+    const pol = await getPolicy();
+    setBridgeContext(s.id, {
+      agentId: config.voice.agentId,
+      dynamicVars: v.dynamicVars,
+      connectOnHuman: false,          // Staff are already talking — open Charlie right away
+      holdMaxSeconds: pol.bail.holdMaxSeconds,
+      voiceId: v.voiceId || undefined,
+      voiceTuning: v.voiceTuning || undefined,
     });
-    void atSec;
+    // The same reader every check runs, on the same record: it reads Staff's answer as it is spoken,
+    // so the run has a real yes or no waiting the moment the check ends.
+    armLiveRead(s.id, cat.label);
+    const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
     return `<?xml version="1.0" encoding="UTF-8"?><Response><Stop><Stream name="navtap"/></Stop>`
-      + `<Connect><Stream url="wss://${host}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
+      + `<Connect><Stream url="wss://${host}/bridge?room=${s.id}"><Parameter name="room" value="${s.id}" /></Stream></Connect></Response>`;
   } catch (e) {
     console.error("[mapping] Charlie hand-off failed", e);
     return null;

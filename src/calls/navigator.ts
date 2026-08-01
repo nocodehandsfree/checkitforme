@@ -9,13 +9,14 @@ import { getSetting, setSetting } from "../db/settings";
 import { db } from "../db/client";
 import { chains } from "../db/schema";
 import { eq } from "drizzle-orm";
-import { openReceipt, emit, markNow, closeReceipt } from "./events";
+import { openReceipt, emit, markNow, closeReceipt, getReceipt } from "./events";
 // THE EAR — the one that already exists. Section 1 of the runtime spec gives it the whole call, dial
 // to hangup, and section 10 says there is exactly one of them. A mapping call used to run on Twilio's
 // speech text alone, which returns an empty string for silence, for hold music and for a desk that is
 // ringing, so it could not tell "nobody is there" from "somebody just said hello". These are the same
 // two classes the paid-agent calls listen with. Nothing new is built here.
 import { PromptDetector, ConversationEar, frameEnergy as earFrameEnergy, toneShare as earToneShare, judgeVoice, personStartsAt, type HoldReason } from "./listen-nav";
+import { liveReadFor, dropLiveRead } from "../voice/live-read";
 import { sameMenu, type CheckStage, type CheckFailReason } from "./mapgraph";
 import { gradeCheck } from "./map-capture";
 
@@ -117,11 +118,16 @@ export interface NavSession {
    *  one every customer check uses — exactly as the recorded-clip path already does. Mapping asks
    *  nothing and says nothing to Staff; it only records what Charlie reports back. */
   confirm?: { product: string; asked?: boolean; askedAtSec?: number };
-  /** What CHARLIE reported: he got an answer about the product, or Staff sent us elsewhere. Written
-   *  by the hand-off owner (server.ts), never decided in here. */
+  /** What CHARLIE reported: he got an answer about the product, or Staff sent us elsewhere. READ
+   *  OFF THIS CHECK'S OWN RECORD when the check ends — never decided in here, and never written by
+   *  a watcher of its own. */
   confirmResult?: "answered" | "redirect"; redirectTo?: string;
-  /** Where Charlie's half of this check lives, once handed over. */
-  charlieRoom?: string;
+  /** Charlie really opened on this check (he is on the record). A hand-off that failed is not an
+   *  ask: the store was never asked anything, so nothing about that way in is spent. */
+  charlieJoined?: boolean;
+  /** How many times the hand-off has been tried on this check. A failed one waits quietly and tries
+   *  once more; it NEVER hangs up on the person who just answered. */
+  charlieTries?: number;
   // MENU CAPTURE (#2) + owner TARGET (#1): the pressable tree we heard, the raw menu lines, and the
   // desk the owner wants us to reach (customer service by default; a chosen department for dept-only chains).
   target?: string; menu?: MenuOption[]; menuPrompts?: string[];
@@ -202,8 +208,8 @@ const sessions = new Map<string, NavSession>();
  *  recorded-clip path's own hand-off: this file must not import the bridge, and mapping must not
  *  own one word of talking to Staff. Returns the TwiML that gives the live call to Charlie, or null
  *  if he cannot be opened. */
-let handToCharlie: ((s: NavSession, atSec: number) => string | null) | null = null;
-export function setMappingHandoff(fn: (s: NavSession, atSec: number) => string | null): void { handToCharlie = fn; }
+let handToCharlie: ((s: NavSession, atSec: number) => Promise<string | null>) | null = null;
+export function setMappingHandoff(fn: (s: NavSession, atSec: number) => Promise<string | null>): void { handToCharlie = fn; }
 /**
  * One inbound (store-side) media frame from the /twilio-media fork. The room IS the nav session id,
  * so only this call's own audio ever reaches it.
@@ -547,7 +553,7 @@ export function greetingFrom(steps: NavStep[], atSec: number): string | undefine
 
 /** We've reached a live person. Plain training mode → hang up before troubling them. CONFIRM mode →
  *  ask the one stock question ONCE, then listen for their reply (classified next turn). */
-function reachHuman(s: NavSession, atSec: number, id: string, viaRouting = false): string {
+async function reachHuman(s: NavSession, atSec: number, id: string, viaRouting = false): Promise<string> {
   // A TRANSFER ANNOUNCEMENT IS NOT A PERSON (owner 07-26, proved on the CVS Anaheim call): the store
   // said "Okay, transferring you now" at 62s and we booked that as the human. The clerk speaks ~17s
   // later, so every learned time-to-human on a transfer chain was that much early — and the paid agent
@@ -579,11 +585,21 @@ function reachHuman(s: NavSession, atSec: number, id: string, viaRouting = false
     // HAND THIS CHECK TO CHARLIE. Everything about talking to Staff — the question, the answer, "one
     // moment", a hold, the wrong desk — is his and is already built and tuned. Mapping's job ended
     // the moment a person picked up.
-    s.confirm.asked = true; s.confirm.askedAtSec = atSec;
-    s.steps.push({ who: "us", text: "handed the check to Charlie", atSec, earPrompts: s.ear?.recordings });
-    const xml = handToCharlie(s, atSec);
-    if (xml) { finish(s, "human"); return xml; }
-    // Charlie could not be opened: end politely rather than talk to Staff ourselves.
+    const xml = await handToCharlie(s, atSec);
+    if (xml) {
+      // THE CHECK IS NOT OVER — it has only changed hands. It is graded when the carrier says the
+      // call ended, off what Charlie put on this check's own record. Grading here graded every
+      // proving check before the question was even asked, so every one of them failed.
+      s.confirm.asked = true; s.confirm.askedAtSec = atSec;
+      s.steps.push({ who: "us", text: "handed the check to Charlie", atSec, earPrompts: s.ear?.recordings });
+      s.status = "human";
+      return xml;
+    }
+    // CHARLIE COULD NOT BE OPENED, AND WE NEVER HANG UP ON THE PERSON WHO JUST ANSWERED. Stay quiet,
+    // keep listening, and try him once more on the next turn. Only after that do we end the check,
+    // and even then the store hears nothing from us.
+    s.charlieTries = (s.charlieTries ?? 0) + 1;
+    if (s.charlieTries < 2) return twiml(gather(id));
     s.stopReason = "reached Staff but Charlie could not join";
     finish(s, "failed"); return twiml(`<Hangup/>`);
   }
@@ -807,7 +823,7 @@ async function navTurn(id: string, speech: string): Promise<string> {
     // ONLY THE EARPIECE'S WORD. The cold-pickup test used to overrule it here; it is evidence the
     // judge already weighs, and a second opinion beside the judge is exactly what this pass deletes.
     if (verdict.who === "person") {
-      return reachHuman(s, personLineAtSec(s.steps, speech, atSec, s), id);
+      return await reachHuman(s, personLineAtSec(s.steps, speech, atSec, s), id);
     }
   }
   // FAST-FAIL only on TRUE dead-ends: an actual voicemail box, or the STORE itself closed.
@@ -944,9 +960,9 @@ async function navTurn(id: string, speech: string): Promise<string> {
   // that used to ride along with it now goes through the same door as every other handoff.
   if (d.action === "human") {
     const v = judgeHere(s, speech || "", atSec);
-    if (v.who === "person") return reachHuman(s, personLineAtSec(s.steps, speech || "", atSec, s), id);
+    if (v.who === "person") return await reachHuman(s, personLineAtSec(s.steps, speech || "", atSec, s), id);
     if (v.who === "recording" && speech && ROUTING_RE.test(speech) && s.humanAtSec == null) {
-      return reachHuman(s, atSec, id, true);   // the machine announcing the handoff, judged as such
+      return await reachHuman(s, atSec, id, true);   // the machine announcing the handoff, judged as such
     }
     return twiml(gather(id));                  // unsure: stay silent and keep listening
   }
@@ -1005,7 +1021,7 @@ async function navTurn(id: string, speech: string): Promise<string> {
       // is the one thing this branch must never do, and its own word lists were the last place that
       // could still happen. Anything but "a machine is talking" means we stay silent and listen.
       const v = judgeHere(s, speech, atSec);
-      if (v.who === "person") return reachHuman(s, personLineAtSec(s.steps, speech, atSec, s), id);
+      if (v.who === "person") return await reachHuman(s, personLineAtSec(s.steps, speech, atSec, s), id);
       if (v.who !== "recording") return twiml(gather(id));
       s.autoZeros = (s.autoZeros ?? 0) + 1; s.type = "keypad";
       s.steps.push({ who: "us", text: "pressed 0 (auto-operator)", atSec, action: "press", value: "0" , earPrompts: s.ear?.recordings });
@@ -1027,6 +1043,25 @@ async function navTurn(id: string, speech: string): Promise<string> {
 function finish(s: NavSession, status: "human" | "failed" | "mapped") {
   s.status = status === "mapped" ? "done" : status;
   s.endedOnRing = status === "mapped";
+  // WHAT CHARLIE REPORTED, read off THIS CHECK'S OWN RECORD — the only thing mapping ever learns
+  // about Staff. He opened, he was sent to a desk that could not answer, and the reader that runs on
+  // every check has his yes or no. No second record, no watcher: the moments are already here.
+  if (s.confirm?.asked && !s.confirmResult) {
+    const rec = getReceipt(s.id);
+    const evs = rec?.events || [];
+    s.charlieJoined = evs.some((e) => String(e.kind) === "charlie_join");
+    const wrong = evs.some((e) => String(e.kind) === "unknown" && (e.detail as { wrongDepartment?: boolean } | undefined)?.wrongDepartment === true);
+    // A REAL ANSWER, a yes or a no, is the proof — silence and "no clear answer" prove nothing
+    // (owner Update 12). The reader is the same one every check runs.
+    const said = liveReadFor(s.id)?.inStock;
+    const answered = said === "yes" || said === "no";
+    s.confirmResult = wrong ? "redirect" : (s.charlieJoined && answered ? "answered" : undefined);
+    if (wrong) {
+      const wd = evs.find((e) => String(e.kind) === "unknown" && (e.detail as { wrongDepartment?: boolean } | undefined)?.wrongDepartment === true);
+      const why = String((wd?.detail as { why?: string } | undefined)?.why || "").slice(0, 80);
+      s.redirectTo = s.redirectTo ?? (why || undefined);
+    }
+  }
   // THE GRADE, before anything is written (owner, 07-30): a check must earn its way into the record,
   // and a failed one changes nothing. Decided here, by machine, from what this check actually did —
   // both the run log and the map fold read the same verdict, so the screens can never disagree.
@@ -1102,7 +1137,10 @@ function finish(s: NavSession, status: "human" | "failed" | "mapped") {
       target: s.target,
     };
   }
-  if (s.confirm?.asked && s.chainId != null) void recordConfirmAsked(s.chainId, s.retailerId, pickedDoorFrom(s.steps), questionBeforePick(s.steps)); // the ask is spent at this DOOR, at that question
+  // A WAY IN IS SPENT ONLY WHEN THE QUESTION WAS REALLY ASKED. Charlie has to have opened on this
+  // check; a hand-off that failed, or a line that dropped before he arrived, asked the store nothing
+  // and must leave that way in free for the next check.
+  if (s.confirm?.asked && s.charlieJoined && s.chainId != null) void recordConfirmAsked(s.chainId, s.retailerId, pickedDoorFrom(s.steps), questionBeforePick(s.steps));
   void persistRun(s); // log this run so the admin can watch the learner's history per chain
   // AND INTO THE MAP. Owner, 07-30: he pressed Re-map, a real CVS was called, its menu was walked
   // perfectly, and the chain page showed nothing. Only the sweep and the auto-mapper folded their own
@@ -1299,8 +1337,11 @@ export async function placeNavCall(chainId: number | null, retailerId: number, r
     const live = sessions.get(id);
     if (!live || live.grade != null) return;
     live.stopReason = live.stopReason || "the carrier never said the call ended";
-    finish(live, "failed");
+    // A check Charlie took is graded on what he reported, even here. Calling it a failure because
+    // the carrier went quiet would throw away a real answer from Staff.
+    finish(live, live.status === "human" ? "human" : "failed");
     closeReceipt(id, live.stopReason, live.status);
+    dropLiveRead(id);
   }, ceiling * 1000);
   return { id };
 }
@@ -1310,16 +1351,23 @@ export function navEnded(id: string) {
   // dropped). A call that never reached finish() used to land here ungraded — no verdict, no reason,
   // and the mapper read it as a mystery miss. finish() grades it, writes the run log and folds the
   // map exactly like any other end, and its own guards stop anything running twice.
-  if (s.grade == null && s.status !== "human" && s.status !== "failed") {
-    if (!s.stopReason) s.stopReason = "the store ended the call";
-    finish(s, "failed");
+  // A CHECK CHARLIE IS ON ENDS WHEN THE CARRIER SAYS SO, AND IS GRADED THEN. He is the one talking
+  // to Staff, so the question, the answer and the wrong desk all land after the hand-off; grading at
+  // the hand-off instant failed every proving check before it had asked anything.
+  if (s.grade == null) {
+    if (s.status === "human") finish(s, "human");
+    else if (s.status !== "failed") {
+      if (!s.stopReason) s.stopReason = "the store ended the call";
+      finish(s, "failed");
+    }
   }
   if (s.status !== "human" && s.status !== "failed") s.status = "done";
   navSync(s); // catch any step the last turn added before the line dropped
   markNow(id, "endMs");
   emit(id, "hangup", s.stopReason || (s.humanAtSec != null ? "Reached a person" : "Never reached a person"), { status: s.status, humanAtSec: s.humanAtSec });
   closeReceipt(id, s.stopReason, s.status);
-  if (s.confirm?.asked && s.chainId != null) void recordConfirmAsked(s.chainId, s.retailerId, pickedDoorFrom(s.steps), questionBeforePick(s.steps));
+  dropLiveRead(id); // the reader's copy of this check goes with it
+  if (s.confirm?.asked && s.charlieJoined && s.chainId != null) void recordConfirmAsked(s.chainId, s.retailerId, pickedDoorFrom(s.steps), questionBeforePick(s.steps));
   // A FAILED CHECK CHANGES NOTHING — not even the chain's mapping status stamp. And a check a RUN
   // owns (it carries a stage) never stamps the chain either: the run's one write at lock does that.
   if (s.chainId != null && !s.stage && s.grade !== "fail") void markNavOutcome(s.chainId, s.humanAtSec != null);
