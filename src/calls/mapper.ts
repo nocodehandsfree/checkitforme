@@ -120,7 +120,12 @@ export async function resumeMapperRuns(): Promise<number> {
     let saved: MapperRun | null = null;
     try { saved = JSON.parse(v) as MapperRun; } catch { continue; }
     if (!saved?.chainId) continue;
-    if (!saved.running || saved.stop) { await clearRun(saved.chainId); continue; } // finished or stopped stays that way
+    if (!saved.running || saved.stop) {
+      // A run that CRASHED keeps its trace for one boot: it loads into the page state so the live
+      // card can say what happened, while its saved slot clears so it never resumes into the crash.
+      if (String(saved.stopReason || "").startsWith("engine error") && !runs.has(saved.chainId)) runs.set(saved.chainId, saved);
+      await clearRun(saved.chainId); continue; // finished or stopped stays that way
+    }
     if (runs.get(saved.chainId)?.running) continue;
     // A run saved by the retired shape resumes under the law that replaced it: proving is not a
     // dialing stage any more, learn-menu-first means "map" is always the safe re-entry, and a timed
@@ -330,7 +335,7 @@ async function recordMapVersion(run: MapperRun, chainId: number, recipe: NavReci
       : {
         type: (recipe.type as MapRecipe["type"]) || "direct",
         steps: (recipe.steps || []).map((s) => ({ action: s.action === "press" ? "press" : "say", value: String(s.value || ""), atSec: Math.round(s.atSec ?? 0) })) as MapStep[],
-        seconds: recipe.seconds ?? 0, target: recipe.target, menu: recipe.menu, menuPrompts: recipe.menuPrompts, ringVariable: recipe.ringVariable,
+        seconds: recipe.seconds ?? null, target: recipe.target, menu: recipe.menu, menuPrompts: recipe.menuPrompts, ringVariable: recipe.ringVariable,
       };
     const when = await storeLocalTime(run.store?.id || 0);
     const reachedHuman = session?.humanAtSec != null;
@@ -602,7 +607,7 @@ function driveMapper(run: MapperRun): void {
       // A fail with NO reason and a held expectation = the menu did not match: a new CONDITION, filed
       // by the navigator already (menu-changed), quarantined here — it can change nothing, and this
       // run cannot keep grading checks against a menu the store is no longer playing.
-      const menuChanged = s?.grade === "fail" && !reason && !!run.expectedGreeting && run.phase !== "map";
+      const menuChanged = s?.grade === "fail" && !reason && !!run.expectedGreeting && run.phase !== "map" && !s?.confirm?.asked;
       const answered = s?.confirmResult === "answered";
       const redirected = s?.confirmResult === "redirect";
       const recipe = s ? (s.recipe ?? recipeFromSteps(s.steps as NavStep[], s.humanAtSec)) : null;

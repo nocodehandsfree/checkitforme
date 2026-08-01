@@ -35,8 +35,9 @@ import { recipeFromCall, evidenceFromCall, CapturedStep } from "./map-capture";
 const DEFAULT_MAX_CALLS = 250;
 /** Seconds between chains — politeness, and it keeps concurrency at one live call. */
 const GAP_SEC = 20;
-/** How long a single proving call may run before we give up on it. */
-const PROVE_MAX_SEC = 120;
+/** How long we WAIT on a single proving call — past the call's own 165s ceiling, so a slow
+ *  menu's late proof is read instead of abandoned mid-call (round-3 item 6). */
+const PROVE_MAX_SEC = 180;
 
 /** East → west, the owner's dialing order. A chain is queued by the EASTERNMOST timezone it has
  *  stores in, so Wegmans and Publix get the 9am slot and Fry's and Gelson's come up later, while
@@ -260,7 +261,7 @@ export async function startSweep(opts: { maxCalls?: number; only?: number[] } = 
       for (const item of state.items) {
         if (state.stop) break;
         if (state.calls >= state.maxCalls) { state.current = "call budget spent"; break; }
-        if (item.status !== "queued" && !(pass === 1 && item.status === "skipped" && /open right now|closed/i.test(item.outcome || ""))) continue;
+        if (item.status !== "queued" && !(pass === 1 && item.status === "skipped" && /right now|closed/i.test(item.outcome || ""))) continue;
         if (await isCallingPaused()) { state.current = "calling paused"; state.stop = true; break; }
         item.status = "queued";
         state.current = item.chain; state.updatedAt = Date.now();

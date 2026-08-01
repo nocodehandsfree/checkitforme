@@ -613,8 +613,8 @@ async function main() {
     ok(/c\.endedOnRing\) rows\.push\(\{who:'ring'[\s\S]{0,120}?text:'Admin hung up'\}\)/.test(page),
       "and the last rung says only the status words — the rung before already says the store was transferring us");
     // Comp 3a: the stage is the card's header, the winner says so, and a failed check is one row + reason.
-    ok(/const STAGE_WORD=\{map:'Mapping menu',speed:'Optimizing speed',prove:'Proving department'\};/.test(page),
-      "each check is headed by its stage, the owner's three words, no caps lock");
+    ok(/const STAGE_WORD=\{map:'Mapping menu',speed:'Optimizing speed'\};/.test(page),
+      "each check is headed by its stage — the two the engine runs; the dead proving key is gone");
     ok(/winner\?\['Recipe winner','var\(--green\)'/.test(page), "the top passing check's pill says Recipe winner");
     ok(/if\(c\.grade==='fail'\)\{/.test(page) && /mapCheckOpen\('\$\{bid\}'\)/.test(page),
       "a failed check collapses to one row that opens on tap");
@@ -707,6 +707,13 @@ async function main() {
       "but merely reaching a person without a real reply still fails");
     ok(gradeCheck({ stage: "map", transferHeard: false, ringOrStaff: true, staffAnswered: true, wrongDepartment: true }).reason === "wrong department",
       "and the wrong desk answering still fails as wrong department, answer or not");
+    // ROUND 3 ITEM 6: an ask with no answer can never pass, however clean the transfer and ring —
+    // grading it a pass polluted the ring numbers with checks that proved nothing.
+    {
+      const g6 = gradeCheck({ stage: "map", transferHeard: true, ringOrStaff: true, askDied: true });
+      ok(g6.grade === "fail" && g6.reason === undefined,
+        "the question asked and nothing answered = a fail with no pill, never a pass");
+    }
     ok(gradeCheck({ ...base, wrongDepartment: true }).reason === "wrong department",
       "Staff saying wrong desk fails as wrong department");
     // Today's real Mulholland check: front barged over the recording, the menu looped, the pharmacy answered.

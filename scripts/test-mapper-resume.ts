@@ -78,6 +78,16 @@ ok(n4 === 0, "unreadable saved memory is skipped");
 
 console.log("A crashed run keeps its flag instead of vanishing");
 {
+  // Behavioral: a run saved by the crash handler (running:false, engine error) is VISIBLE for one
+  // boot on the page state, its saved slot cleared so it can never resume into the same crash.
+  await setSetting("mapper_run:9005", JSON.stringify(savedRun(9005, { running: false, phase: "stopped", stopReason: "engine error: boom" })));
+  const n5 = await resumeMapperRuns();
+  ok(n5 === 0, "a crashed run is never re-entered into the loop");
+  ok(!!mapperState().runs.find((x) => x.chainId === 9005 && (x.stopReason || "").startsWith("engine error")),
+    "but its trace is on the page state for this boot — the stop and its reason are visible");
+  ok((await getSetting("mapper_run:9005")) === "", "and its saved slot is cleared, so the crash never resumes");
+}
+{
   // ROUND 2 ITEM 13. The crash handler used to CLEAR the saved run — one database hiccup and the
   // run disappeared with no trace. Now it saves the final state; the next boot clears it as
   // finished, which the running:false path above already proves.

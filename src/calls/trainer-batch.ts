@@ -87,7 +87,7 @@ export async function lockRecipeToChain(chainId: number, recipe: Recipe, confide
       value: String(st.value || ""), atSec: Math.round(st.atSec ?? 0),
       afterPrompt: (st as { afterPrompt?: number }).afterPrompt,
     })),
-    seconds: typeof recipe.seconds === "number" ? recipe.seconds : 0,
+    seconds: typeof recipe.seconds === "number" ? recipe.seconds : null,
     target: recipe.target, menu: recipe.menu, menuPrompts: recipe.menuPrompts,
     ringVariable: recipe.ringVariable, language: evidence?.language,
   };

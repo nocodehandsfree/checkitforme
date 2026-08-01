@@ -932,6 +932,7 @@ function finish(s: NavSession, status: "human" | "failed" | "mapped") {
       transferHeard: s.transferAtSec != null,
       ringOrStaff: s.endedOnRing || s.humanAtSec != null,
       staffAnswered: s.confirmResult === "answered",
+      askDied: !!s.confirm?.asked && !s.confirmResult,
       repromptHeard: s.repromptHeard, greetingTwice: s.greetingTwice,
       plannedValues: (s.barge?.plan || []).map((p) => String(p.value || "")),
       saidValues,

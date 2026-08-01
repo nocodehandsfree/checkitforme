@@ -127,6 +127,9 @@ export function gradeCheck(o: {
   staffAnswered?: boolean;            // Staff gave a REAL reply to the product question — the
                                       // contract's other pass shape, and the only one a store where
                                       // Staff just pick up (no announced handoff) can ever produce
+  askDied?: boolean;                  // the question was asked and NOTHING classified the reply —
+                                      // silence, a dropped line. Such a check can never pass: its
+                                      // whole job was the answer, and there is none
   repromptHeard?: boolean;            // "sorry, I'm not understanding"
   greetingTwice?: boolean;            // the opening recording played again mid-check
   /** The answers the route owes and the answers actually said, WORD FOR WORD. A count is not a
@@ -143,6 +146,10 @@ export function gradeCheck(o: {
   }
   if (o.wrongDepartment) return { grade: "fail", reason: "wrong department" };
   if (o.greetingTwice) return { grade: "fail", reason: "sent to beginning of menu" };
+  // AN ASK WITH NO ANSWER CANNOT PASS. The transfer plus the ring may be spotless, but this check's
+  // one job was Staff's reply and it never came — grading it a pass polluted the ring numbers with
+  // calls that proved nothing. No reason pill: it collapses, like every state that is not a reason.
+  if (o.askDied) return { grade: "fail" };
   // OUR WORDS SAID, word for word: every answer the route owes must actually have been spoken, as
   // many times as it is owed. Counting steps was not a check — a re-said answer inflated the count
   // and a never-spoken one passed on arithmetic.

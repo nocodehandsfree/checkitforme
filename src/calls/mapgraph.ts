@@ -45,7 +45,8 @@ export interface MapStep {
 export interface MapRecipe {
   type: "direct" | "keypad" | "voice" | "greeting";
   steps: MapStep[];
-  seconds: number;                 // learned time-to-human
+  seconds: number | null;          // learned time-to-human; NULL when no check measured a person
+                                   // (a ring-ended win) — never a fabricated zero (round-3 item 6)
   target?: string;                 // the desk this path reaches
   menu?: Array<{ digit: string; label: string }>;
   menuPrompts?: string[];
@@ -916,7 +917,9 @@ async function stampChainFromVersion(v: MapVersion): Promise<void> {
       ? "A recording answers first, then hands you to Staff. Nothing to press or say, just wait."
       : "To reach a live person: " + spoken(v.recipe) + ".";
   // The live bridge only understands the timed "digit@seconds" form (a bare digit presses nothing).
-  const dtmfPlan = recipeToDtmf(v.recipe);
+  // Only the steps are handed over: the converter reads nothing else, and its own (frozen) type does
+  // not yet know a recipe's seconds can honestly be null.
+  const dtmfPlan = recipeToDtmf({ type: v.recipe.type, steps: v.recipe.steps });
   await db.update(chains).set({
     navType: v.recipe.type, navRecipe: JSON.stringify(v.recipe),
     navSeconds: direct ? null : (v.seconds ?? null),

@@ -139,8 +139,8 @@ Corrections to what is live today, same rules.
 |---|---|
 | Pill | `Reached Staff` · `Nobody answered` (the seeded status label, never a second name for it) |
 | Last rung, reached | `Staff answered · "CVS Mulholland, this is Dana"` |
-| Last rung, failed | `Hung up, nobody picked up` |
-| Produced | `PRODUCED` · `Tree Recipe v2 · 5s faster` · `Tree Recipe v3 · set aside` (gray) · `No change` |
+| Last rung, failed | `Admin hung up` (a check we ended reads Admin hung up, never nobody answered) |
+| Produced | **Cut 07-31 (contract):** no PRODUCED line — recipes live in the recipe box and Menu |
 | Key | `Show 4 more` |
 | Empty | `No mapped checks yet. Tap Map to run the mapping.` |
 
