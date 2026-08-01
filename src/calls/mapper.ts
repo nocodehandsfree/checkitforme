@@ -224,12 +224,21 @@ function planPlain(recipe: NavRecipe): Array<{ action: string; value: string; at
   return (recipe.steps || []).map((st) => ({ action: st.action || "say", value: st.value || "", at: st.atSec ?? 0 }));
 }
 
-/** The MENU lines a check heard, up to the handoff — the Staff greeting after the transfer is a
- *  person, not the menu, so it can never make two identical menus read as different. */
-function menuLinesOf(steps: NavStep[], transferAtSec: number | null | undefined): string[] {
-  const cutoff = typeof transferAtSec === "number" ? transferAtSec : Infinity;
+/** The MENU lines a check heard — the STORE'S RECORDINGS ONLY, never a person. The handoff line
+ *  belongs to the menu, so a known handoff cuts inclusively there; with no handoff, everything from
+ *  the person's own moment on is the PERSON (their hello lands AT humanAtSec, so the cut is strict).
+ *  Counting a hello as a menu line is what made a store with no menu look like it had one: the
+ *  on-the-spot lock could never fire, and the settle listens it should have prevented dialed real
+ *  people and hung up on them (round-3 item 1). */
+export function menuLinesOf(steps: NavStep[], transferAtSec: number | null | undefined, humanAtSec?: number | null): string[] {
   return (steps || [])
-    .filter((st) => st.who === "ivr" && String(st.text || "").trim() && (st.atSec ?? 0) <= cutoff)
+    .filter((st) => {
+      if (st.who !== "ivr" || !String(st.text || "").trim()) return false;
+      const at = st.atSec ?? 0;
+      if (typeof transferAtSec === "number") return at <= transferAtSec;
+      if (typeof humanAtSec === "number") return at < humanAtSec;
+      return true;
+    })
     .map((st) => String(st.text));
 }
 
@@ -270,6 +279,17 @@ async function finalizeAndLock(run: MapperRun, chainId: number, recipe: NavRecip
   } else {
     await setSetting(`nav_needs_target:${chainId}`, ""); // CS path found or owner target set → clear
   }
+}
+
+/** THE STORE LOCK, one stroke, one place: the chain goes live, the store opens the proof ledger, and
+ *  the run moves to optimizing speed. Every path that locks a store goes through here — the settled
+ *  wording, the no-menu store, and the belt for a resumed run already past its listening. */
+async function lockStore(run: MapperRun, chainId: number, storeId: number): Promise<void> {
+  run.storeLocked = true;
+  await finalizeAndLock(run, chainId, run.best!, null, run.winnerSession, { activate: true, stage: "map" });
+  await seedProvenStores(chainId, storeId);
+  run.experiments = buildExperiments(run, run.best!);
+  run.phase = "speed";
 }
 
 /** The bit of a nav session this file needs to write evidence — kept structural so mapper never has
@@ -476,6 +496,15 @@ function driveMapper(run: MapperRun): void {
       }
       const store = run.store;
 
+      // A DOOR PROVEN WITH NOTHING TO SETTLE NEVER DIALS AGAIN (round-3 item 1's belt): a resumed
+      // run already past its proving check at a store with no menu lines would otherwise place a
+      // listen whose only possible outcome is hanging up on a real person. Lock it here, dial nothing.
+      if (run.phase === "map" && run.doorProven && !run.storeLocked && !(run.lastLines || []).length && run.best) {
+        await lockStore(run, chainId, store.id);
+        run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: "no menu wording to settle — store locked without another call, the chain is live" });
+        continue;
+      }
+
       // ---- what kind of check is this? ----
       const stageWord = run.phase === "map" ? "mapping menu" : "optimizing speed";
       // The learn stage's proving check asks Staff about the product. Staff are asked once per DOOR,
@@ -581,16 +610,13 @@ function driveMapper(run: MapperRun): void {
           // The proven answer joins the proof ledger NOW — this is also the hand-dial path: pin a
           // fresh store, run it, and its Staff answer counts toward proven-at-three.
           await addProvenStore(chainId, store.id); // never throws — the ledger is best-effort inside
-          run.lastLines = menuLinesOf((s?.steps || []) as NavStep[], s?.transferAtSec ?? s?.humanAtSec);
+          run.lastLines = menuLinesOf((s?.steps || []) as NavStep[], s?.transferAtSec, s?.humanAtSec);
           run.winnerSession = sessionLike(s);
           if (!run.lastLines.length) {
             // A store where Staff just pick up has NO menu wording to settle — the proven answer is
-            // the whole map. It locks on the spot; there is nothing a second listen could compare.
-            run.storeLocked = true;
-            await finalizeAndLock(run, chainId, run.best, null, run.winnerSession, { activate: true, stage: "map" });
-            await seedProvenStores(chainId, store.id);
-            run.experiments = buildExperiments(run, run.best);
-            run.phase = "speed";
+            // the whole map. It locks on the spot; there is nothing a second listen could compare,
+            // and a listen here would dial a real person just to hang up on them.
+            await lockStore(run, chainId, store.id);
             run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: `right department — Staff answered about ${product} with no menu in front of them. Store locked, the chain is live`, seconds: secs });
           } else {
             run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: `right department — Staff answered about ${product} (${classifyMode((s?.steps || []) as NavStep[]).label}). Listening until the wording settles`, seconds: secs });
@@ -627,14 +653,10 @@ function driveMapper(run: MapperRun): void {
       } else if (run.phase === "map" && run.doorProven) {
         // THE WORDING SETTLES: a ring-hang-up listen of the proven route. The same lines twice in a
         // row = settled → THE STORE LOCKS and the chain goes LIVE, in one stroke.
-        const lines = menuLinesOf((s?.steps || []) as NavStep[], s?.transferAtSec ?? s?.humanAtSec);
+        const lines = menuLinesOf((s?.steps || []) as NavStep[], s?.transferAtSec, s?.humanAtSec);
         if (graded && sameWording(run.lastLines, lines)) {
-          run.storeLocked = true;
           run.winnerSession = sessionLike(s); // the final locked run IS the wording on the page
-          await finalizeAndLock(run, chainId, run.best!, null, run.winnerSession, { activate: true, stage: "map" });
-          await seedProvenStores(chainId, store.id);
-          run.experiments = buildExperiments(run, run.best!);
-          run.phase = "speed";
+          await lockStore(run, chainId, store.id);
           run.log.push({ n: run.attempt, phase: "map", store: store.name, outcome: "the wording settled — store locked, the chain is live. Optimizing speed", seconds: menuSecs });
         } else if (graded) {
           run.lastLines = lines;

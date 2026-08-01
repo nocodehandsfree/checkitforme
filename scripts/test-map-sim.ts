@@ -22,7 +22,7 @@ import {
 import { lockRecipeToChain } from "../src/calls/trainer-batch";
 import { greetingFrom, looksLikeDirectPickup, menuStillTalking, parseSpokenOptions, isMenuLine, parseMenuOptions, mergeMenu, looksLikeQuestion, isReprompt, pickedDoorFrom, doorsAskedAt } from "../src/calls/navigator";
 import { recipeFromCall, gradeCheck, recordNavCall } from "../src/calls/map-capture";
-import { sameWording } from "../src/calls/mapper";
+import { sameWording, menuLinesOf } from "../src/calls/mapper";
 import { toneShare, ConversationEar } from "../src/calls/listen-nav";
 
 let pass = 0, fail = 0;
@@ -837,7 +837,7 @@ async function main() {
       "the run keeps listening until the same lines are heard twice in a row");
     ok(/run\.storeLocked = true;[\s\S]{0,300}?activate: true, stage: "map"/.test(eng),
       "settled + proven = the store locks and the chain goes LIVE, in one stroke (Update 2)");
-    ok(/await seedProvenStores\(chainId, store\.id\);/.test(eng),
+    ok(/await seedProvenStores\(chainId, storeId\);/.test(eng),
       "the locked store opens the proof ledger — customer checks at new stores add themselves");
     ok(/await finalizeAndLock\(run, chainId, run\.best, null, run\.winnerSession, \{ activate: true, stage: "speed" \}\);/.test(eng),
       "a speed win updates the recipe and the Menu on the spot (Update 5)");
@@ -945,8 +945,21 @@ async function main() {
     const eng = readFileSync("src/calls/mapper.ts", "utf8");
     ok(/const live = await activeMap\(chainId\);/.test(eng),
       "the run starts from the route the MAP holds, never the chain row's older summary");
-    ok((eng.match(/await finalizeAndLock\(/g) || []).length === 3,
-      "exactly THREE writes exist: the store lock (settled wording), the no-menu store lock, and a speed win (Update 5)");
+    ok((eng.match(/await finalizeAndLock\(/g) || []).length === 2,
+      "exactly TWO writers exist: the ONE store-lock helper every lock path shares, and a speed win (Update 5)");
+    // ROUND 3 ITEM 1: the Staff hello is a PERSON, never a menu line — so a store with no menu really
+    // reads as having none, the on-the-spot lock fires, and no listen ever dials just to hang up on
+    // a real person.
+    ok(menuLinesOf([{ who: "ivr", text: "Gateway WinCo.", atSec: 4 }] as never, null, 4).length === 0,
+      "a direct store's hello is excluded — no menu lines, the on-the-spot lock can fire");
+    ok(menuLinesOf([
+      { who: "ivr", text: "For guest services press 2.", atSec: 5 },
+      { who: "ivr", text: "Okay, transferring you now.", atSec: 14 },
+      { who: "ivr", text: "Guest services, this is Dana.", atSec: 30 },
+    ] as never, 14, 30).length === 2,
+      "a menu store keeps its recordings through the handoff line, and still never the person");
+    ok(/if \(run\.phase === "map" && run\.doorProven && !run\.storeLocked && !\(run\.lastLines \|\| \[\]\)\.length && run\.best\) \{\s*\n\s*await lockStore/.test(eng),
+      "and a proven door with nothing to settle locks WITHOUT dialing — no settle call can reach Staff");
     ok(!/finalizeAndLock[\s\S]{0,120}?\}\s*else\s*\{[\s\S]{0,200}?ex\.status = "fail"/.test(eng)
       && /ex\.status = "fail";(?![\s\S]{0,600}finalizeAndLock)/.test(eng),
       "a failed check reaches neither of them — a loss changes nothing");
