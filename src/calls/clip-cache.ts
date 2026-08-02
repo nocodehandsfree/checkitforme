@@ -109,6 +109,40 @@ export async function phoneClip(voiceId: string, text: string, tuning: Record<st
 }
 
 /**
+ * THE SAME CACHE, IN THE FORMAT `<Play>` WANTS.
+ *
+ * A clip that goes down the media stream has to be μ-law; a clip Twilio FETCHES with `<Play>` has to
+ * be an ordinary audio file. Same words, same voice, same money — so the same cache holds both, keyed
+ * by format so one can never be served where the other belongs.
+ *
+ * The robot store rides this: its lines are fixed and it says them on every run, so paying to
+ * re-record them per call is the 7¢ mistake this file was written to stop.
+ */
+export async function mp3Clip(voiceId: string, text: string, tuning: Record<string, unknown> = {}, apiKey?: string): Promise<Buffer | null> {
+  const words = (text || "").trim();
+  if (!voiceId || !words) return null;
+  const key = "mp3|" + keyFor(voiceId, words, tuning);
+  const hit = cache.get(key);
+  if (hit) { cache.delete(key); cache.set(key, hit); return hit.audio; }
+  const modelId = tuning.modelId === "eleven_flash_v2" ? "eleven_flash_v2" : "eleven_turbo_v2";
+  try {
+    const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_64`, {
+      method: "POST",
+      headers: { "xi-api-key": apiKey || config.voice.apiKey, "content-type": "application/json" },
+      body: JSON.stringify({ text: words, model_id: modelId, voice_settings: voiceSettings(tuning) }),
+    });
+    if (!r.ok) { console.error("[clip] mp3 synth", r.status, (await r.text()).slice(0, 120)); return null; }
+    const audio = Buffer.from(await r.arrayBuffer());
+    if (!audio.length) return null;
+    // ms is the μ-law identity (bytes ÷ 8) and means nothing for an MP3, so it is left at zero rather
+    // than filled with a number that would be wrong wherever it was read.
+    cache.set(key, { audio, ms: 0, text: words, voiceId });
+    while (cache.size > MAX_CLIPS) { const oldest = cache.keys().next().value; if (oldest === undefined) break; cache.delete(oldest); }
+    return audio;
+  } catch (e) { console.error("[clip] mp3 synth", e); return null; }
+}
+
+/**
  * Split a clip into 20ms media frames, base64 as Twilio wants them. Pure, so the framing is provable
  * without a phone call. A trailing part-frame is sent as-is rather than padded: μ-law silence is not
  * a zero byte, so padding would put a click on the end of every line we say.
