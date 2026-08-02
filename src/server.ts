@@ -1152,11 +1152,34 @@ app.get("/tapedeck/clip", (c) => {
   if (!b) return c.body("not found", 404);
   return c.body(new Uint8Array(b), 200, { "Content-Type": "audio/mpeg" });
 });
+// THE ROBOT STORE'S OWN CEILING, held by the server so no test run can talk its way past it.
+// The owner's account is comp, and comp switches off every brake the check button has: the per-minute
+// limit, the credit check and the one-check-an-hour block all skip him. A harness with a loop in it
+// would dial forever on his bill. This counts what the robot store has actually taken in the last day
+// and refuses past the ceiling. It can only ever fire for the robot's own number — a real store's
+// check never reaches this code.
+const ROBOT_STORE_NUMBER = (process.env.ROBOT_STORE_NUMBER || "+14244847395").replace(/[^\d+]/g, "");
+const ROBOT_DAILY_CAP = Number(process.env.ROBOT_DAILY_CAP || 40);
+async function robotStoreOverCap(retailerId: number): Promise<{ error: string; message: string; checksToday: number } | null> {
+  const r = (await db.select({ phone: retailers.phone }).from(retailers).where(eq(retailers.id, retailerId)))[0];
+  if (!r || (r.phone || "").replace(/[^\d+]/g, "") !== ROBOT_STORE_NUMBER) return null;
+  const since = Math.floor(Date.now() / 1000) - 86400;
+  const n = (await db.select({ id: callResults.id }).from(callResults)
+    .where(and(eq(callResults.retailerId, retailerId), gte(callResults.startedAt, since)))).length;
+  if (n < ROBOT_DAILY_CAP) return null;
+  return { error: "robot_cap", message: `The robot store has taken ${n} checks in the last day, which is its ceiling (${ROBOT_DAILY_CAP}). Nothing more will be dialed.`, checksToday: n };
+}
+
 // ---- The robot store: the same tape deck, answering instead of dialing ----
 // Spec: docs/specs/robot-store/README.md. The number +1 424 484 7395 points its Voice URL at
 // /robot/answer, the MVP store points at that number, and a check dialed from the website reaches a
 // scripted person. Everything except that person is the real system. These routes are the carrier's,
 // not the dashboard's, so they sit outside /api like every other Twilio route here.
+// STAGING ONLY. These routes answer the phone and synthesize speech, and nobody signs in to reach
+// them — the carrier cannot carry a password. On the real site they would be a public way to spend
+// our voice credit, so a promote must never open them there. Off by default anywhere but staging.
+const robotStoreOn = () => config.staging.on || process.env.ROBOT_STORE_ON === "1";
+app.use("/robot/*", async (c, next) => (robotStoreOn() ? next() : c.body("not found", 404)));
 app.all("/robot/answer", async (c) => {
   let sid = "", from = "";
   try { const b = await c.req.parseBody(); sid = String(b.CallSid || ""); from = String(b.From || ""); } catch { /* GET probe */ }
@@ -1185,6 +1208,7 @@ app.get("/robot/ring", (c) => {
 // The harness's two reads: which scene the next call plays, and exactly what the robot said on the
 // last one. The second is the ground truth the written transcript is compared against, word for word.
 app.get("/api/admin/robot-store", async (c) => {
+  if (!robotStoreOn()) return c.json({ error: "the robot store is staging only" }, 404);
   const pick = parseRobotPick(await getSetting("robot_scenario"));
   const sid = c.req.query("call");
   return c.json({
@@ -1194,6 +1218,7 @@ app.get("/api/admin/robot-store", async (c) => {
   });
 });
 app.post("/api/admin/robot-store", async (c) => {
+  if (!robotStoreOn()) return c.json({ error: "the robot store is staging only" }, 404);
   const b = (await c.req.json().catch(() => ({}))) as { scenario?: number; greeting?: number };
   const n = Number(b.scenario);
   if (!robotScene(n)) return c.json({ error: "unknown scenario" }, 400);
@@ -3398,6 +3423,7 @@ app.post("/pub/check", async (c) => {
   if (!retailerId || !categoryId) return c.json({ error: "retailerId and categoryId required" }, 400);
   if (config.staging.on && !config.callsEnabled) return c.json(simStartCall()); // preview: simulated call, no real dial
   const closed = await closedGate(Number(retailerId)); if (closed) return c.json(closed, 409);
+  const capped = await robotStoreOverCap(Number(retailerId)); if (capped) return c.json(capped, 429);
   try {
     // Cheap lane when flagged: same response contract — the bridge:<room> id polls /pub/result like any cid.
     const bridge = (await getPolicy()).flags.cheapBridgeAll;
@@ -3423,6 +3449,7 @@ app.post("/pub/check-live", async (c) => {
   if (!b.retailerId || !catIds.length) return c.json({ error: "retailerId and categoryId(s) required" }, 400);
   if (config.staging.on && !config.callsEnabled) return c.json({ room: simStartCall().providerCallId, wsHost: STAGING_HOST }); // preview: simulated live call
   const closed = await closedGate(Number(b.retailerId)); if (closed) return c.json(closed, 409);
+  const capped = await robotStoreOverCap(Number(b.retailerId)); if (capped) return c.json(capped, 429);
   // Governor ON + pool full → routeCheck queues (waiting-screen ticket); else places now (today's
   // shape). Governor OFF → straight through to placeLive, unchanged.
   const r = await routeCheck("live", placeLive, { retailerId: Number(b.retailerId), categoryId: catIds[0], categoryIds: catIds, specificProduct: b.specificProduct, kioskMode: b.kioskMode, live: true });
@@ -3794,6 +3821,7 @@ app.post("/app/check", async (c) => {
   if (!retailerId || !categoryId) return c.json({ error: "retailerId and categoryId required" }, 400);
   if (config.staging.on && !config.callsEnabled) return c.json(simStartCall()); // preview: simulated call, no real dial
   const closed = await closedGate(Number(retailerId)); if (closed) return c.json(closed, 409);
+  const capped = await robotStoreOverCap(Number(retailerId)); if (capped) return c.json(capped, 429); // the robot store's daily ceiling — never fires for a real store
   const a = await getAccount(u.id, u.email);
   const comp = isCompAccount(a) || isComp(u.email || undefined);
   // Per-IP rate limit on the money surface (bypassed for comp/owner — they test call-by-call).
@@ -3834,6 +3862,7 @@ app.post("/app/check-live", async (c) => {
   if (!b.retailerId || !catIds.length) return c.json({ error: "retailerId and categoryId(s) required" }, 400);
   if (config.staging.on && !config.callsEnabled) return c.json({ room: simStartCall().providerCallId, wsHost: STAGING_HOST }); // preview: simulated live call
   const closed = await closedGate(Number(b.retailerId)); if (closed) return c.json(closed, 409);
+  const capped = await robotStoreOverCap(Number(b.retailerId)); if (capped) return c.json(capped, 429); // the robot store's daily ceiling — never fires for a real store
   const a = await getAccount(u.id, u.email);
   const comp = isCompAccount(a) || isComp(u.email || undefined);
   // Per-IP rate limit on the money surface (bypassed for comp/owner — they test call-by-call).

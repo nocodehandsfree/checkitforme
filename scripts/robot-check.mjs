@@ -25,6 +25,14 @@ const TOKEN = process.env.ADMIN_TOKEN || "";
 const PHONE = process.env.OWNER_PHONE || "+13106662331";
 const CODE = process.env.STAGING_LOGIN_CODE || "000000";
 const STORE = process.env.ROBOT_STORE_NAME || "MVPs";
+const STORE_ID = Number(process.env.ROBOT_STORE_ID || 106362);
+const ROBOT_NUMBER = (process.env.ROBOT_NUMBER || "+14244847395").replace(/[^\d+]/g, "");
+// A HARD CEILING ON HOW MANY TIMES ONE RUN MAY DIAL. The owner's account is comp, which switches off
+// every brake the site has — the per-minute limit, the credit check and the one-check-an-hour block
+// are all skipped for him. So this is the only thing standing between a loop and a phone bill, and
+// the server holds a second ceiling of its own on the robot store.
+const MAX_DIALS = Number(process.env.ROBOT_MAX_DIALS || 12);
+let dials = 0;
 const OUT = process.env.ROBOT_OUT || "./robot-run";
 const EXE = process.env.CHROMIUM_PATH || "/opt/pw-browsers/chromium";
 const wanted = process.argv.slice(2).filter((a) => /^\d+$/.test(a)).map(Number);
@@ -126,6 +134,10 @@ async function findAndCheck(page) {
   await page.waitForTimeout(1600);
   const row = page.locator(`#storelist .store`, { hasText: STORE }).first();
   await row.waitFor({ state: "visible", timeout: 20000 });
+  // THE STORE THIS TAPS MUST BE THE ROBOT, BY ITS NUMBER, NOT BY ITS NAME. There are more than a
+  // hundred thousand store records; a name that happens to match would phone a real business.
+  const tapId = Number((await row.getAttribute("onclick") || "").replace(/\D+/g, ""));
+  if (tapId !== STORE_ID) throw new Error(`the row named "${STORE}" is store ${tapId}, not the robot store ${STORE_ID} — refusing to dial it`);
   await row.click();
   await page.waitForTimeout(900);
   await shot(page, "store-found");
@@ -134,6 +146,8 @@ async function findAndCheck(page) {
     if (await sheet.isVisible().catch(() => false)) return sheet.click();
     return page.locator("#checkBtn").click();
   };
+  if (dials >= MAX_DIALS) throw new Error(`the ceiling of ${MAX_DIALS} checks for one run has been reached — refusing to dial again`);
+  dials++;
   await tap();
   await page.waitForTimeout(1200);
   if (await signInIfNeeded(page)) { // signed in mid tap: the sheet comes back and the button is pressed again
@@ -363,10 +377,17 @@ async function runOne(page, scene, greetingIdx) {
     `got ${current.statusKey} · this scenario is ${scene.expect}`);
 
   // 10. money.
+  // MONEY. The screen tells the customer whether this one was free; the record decides whether he was
+  // actually billed. If those two ever disagree, one of them is lying to him, and it is his money
+  // either way. Checked on EVERY scene, not just the one that must never be charged.
+  const saysFree = /no charge/i.test(resultText);
   const mustNotCharge = scene.n === 9; // they hung up without ever hearing us: there is no answer to sell
-  item(10, "nothing is charged that should not be, and a charged check says so",
-    !(mustNotCharge && current.charged),
-    `${current.charged ? "CHARGED" : "not charged"} · the check cost ${current.costReadable || "(not priced)"}${current.robotCost ? ` · the robot's own line ${(current.robotCost.usd * 100).toFixed(2)}¢ (${current.robotCost.how})` : ""}`);
+  const moneyOk = !(mustNotCharge && current.charged) && !(saysFree && current.charged);
+  item(10, "the screen and the till agree about money",
+    moneyOk,
+    `${current.charged ? "CHARGED" : "not charged"}${saysFree ? ' · the screen says "No charge"' : " · the screen claims no free check"}` +
+    ` · the check cost ${current.costReadable || "(not priced)"}${current.robotCost ? ` · the robot's own line ${(current.robotCost.usd * 100).toFixed(2)}¢ (${current.robotCost.how})` : ""}` +
+    (mustNotCharge ? " · this scene must NEVER be charged: they hung up before hearing us" : ""));
 
   printCheck(rec);
 }
@@ -375,6 +396,16 @@ async function runOne(page, scene, greetingIdx) {
 if (CLI) {
 const cfg = await adm("/api/admin/robot-store");
 const scenes = cfg.scenes.filter((s) => !wanted.length || wanted.includes(s.n));
+// BEFORE ANYTHING DIALS: prove the store this run will tap is the robot, by its number.
+const store = await adm(`/api/retailers?q=${encodeURIComponent(STORE)}&limit=5`);
+const target = (Array.isArray(store) ? store : store.rows || []).find((r) => r.id === STORE_ID);
+if (!target) { console.error(`No store ${STORE_ID} named like "${STORE}" — refusing to dial anything.`); process.exit(2); }
+if ((target.phone || "").replace(/[^\d+]/g, "") !== ROBOT_NUMBER) {
+  console.error(`Store ${STORE_ID} answers on ${target.phone || "(no number)"}, not the robot's ${ROBOT_NUMBER}. That is a REAL business. Refusing to dial.`);
+  process.exit(2);
+}
+if (scenes.length > MAX_DIALS) { console.error(`${scenes.length} scenes asked for but the ceiling is ${MAX_DIALS} checks a run. Raise ROBOT_MAX_DIALS on purpose or ask for fewer.`); process.exit(2); }
+console.log(`dialing store ${STORE_ID} "${target.name}" on ${target.phone} · at most ${MAX_DIALS} checks this run`);
 const direct = await browserCanReach(HOST);
 const pipe = direct ? null : await startPipe(HOST);
 SITE = direct ? HOST : pipe.url;

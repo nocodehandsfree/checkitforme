@@ -545,9 +545,13 @@ function finalizeIfStore(s: TdSession): void {
 // EXACTLY ONE THING HERE IS FAKE: the person at the store. The dial, the carrier, the transcriber,
 // the verdict and the Admin record are all the real system.
 //
-// NOT ONE LINE BELOW WAS WRITTEN BY US. Every one is what a real person really said on a real check,
-// with only the store name and the person's name swapped. They are short, they stumble, they
-// interrupt themselves. Do NOT tidy them into better English: the mess IS the test.
+// WHERE EVERY LINE BELOW COMES FROM, exactly. Most are what a real person really said on a real
+// check (`how-staff-actually-talk.md`), with only the store name and the person's name swapped.
+// Three are NOT in that corpus and must not be passed off as if they were: scenario 8's payoff
+// ("Yeah, we've got a few."), and the second person's greeting and answer in scenario 10 — those
+// come from the spec the owner approved on 08-01, which is why they are here. Nothing on this list
+// was made up by an agent. They are short, they stumble, they interrupt themselves. Do NOT tidy them
+// into better English: the mess IS the test.
 // ===========================================================================================
 
 /** One beat of a scene. `say` is the Staff voice; `sayAs` is the SECOND person (after a transfer). */
