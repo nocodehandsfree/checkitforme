@@ -88,7 +88,12 @@ He is building it: every step from the transfer onward, each with pass, fail, an
 robot gets ONE scenario per row. An agent that invents its own expectations has built a test that
 proves its own opinion, which is the whole failure this spec is here to end.
 
-**So the order is fixed: Testing is finished FIRST, then this is built against it.**
+**This does NOT block the build.** Everything in sections 1, 2, 3, 5, 6 and 7 stands on its own and
+can be built straight away — the robot, its scripts, the browser walk, the word-for-word comparison,
+the Admin listing. The only thing that waits is the last wiring step: naming each scenario after its
+row on his screen and reporting pass or fail into it. Build to section 3's scenarios, leave that
+naming as the final connection, and do it the moment his screen is done. Do not stall on it, and do
+not invent row names in the meantime.
 
 ## 5. What the harness checks, on the real page
 
@@ -138,6 +143,24 @@ the owner cannot see what the agent saw. Same rows, same pass and fail, same det
 
 Robot checks are owner-only test traffic: they never touch real-store stats, the finds feed, or any
 customer number — the same rule the Fun store already lives under.
+
+## 7b. Two things this research found that are NOT this build
+
+Written down here so they are not lost, and so nobody mistakes them for the robot's job.
+
+1. **The restock question has never once worked.** We ask "when's your next shipment?" on every no,
+   and in 35 real checks **no person has ever answered with a day, a date or a time.** The stored
+   field is empty on every row. That is a live feature producing nothing, and it needs its own task.
+2. **Charlie cannot yet tell "we have it, it's not on the shelf" from "we don't have it."** Owner's
+   ruling: "We did, but it's not out yet" means they HAVE it, in the back — that is a find, not a
+   shrug. "We haven't" means they do not have it. Today both read as no clear answer, and one of
+   them cost us a real yes (check 107). That is Charlie's understanding, not the robot's, and it
+   needs its own task too. The robot's scenarios 7 and 8 exist to PROVE that task when it lands.
+
+And one thing this build should settle: **"they cannot hear us" is probably our fault, not theirs.**
+Six of fourteen said "Hello?" inside their first line and two hung up. Every one of those checks
+predates the recorded question, which now speaks almost immediately. Scenario 9 is how we find out
+whether it is already fixed.
 
 ## 8. Later, not now: the messy tests
 
