@@ -273,7 +273,21 @@ any hold, and the detections the log claims but nothing writes.
    person. Not built, not designed. Its own box when the owner wants it.
 4. **Row 10 (language) may not be worth a row** — the voice company handles the translation, so the
    owner doubts it can fail. Kept for now, lowest priority.
-5. **Row 7 (nagging) is real, verified:** `prompts.ts` tells Charlie to ask ONCE and wrap up if
+6. **RULED 08-02, do not re-litigate: the machine-phrase check fires on the store's FIRST line
+   only.** Round 2's work order asked for it to go inert once a person had been found, on the
+   grounds that "a machine that answers the phone is caught before that point anyway". That premise
+   is false. Nothing else catches it, and a voicemail greeting's recorded voice is exactly what
+   trips the person detector — so that gate switches the bail off on the one case it exists for and
+   we pay for the whole announcement. An earlier attempt (inert once we had asked our question) had
+   the same hole through a different door, because the recorded question plays on that same person
+   detection. **Both fail for one shared reason: today "a person answered" cannot tell a person from
+   a recording.** So the rule is: a voicemail ANNOUNCES itself, and only the store's first words may
+   end a check as a machine; a live person says those same words in REPLY, and a reply can never end
+   one. Echo escalated the deviation rather than shipping it quietly; the PM agreed. **When round 1
+   lands (section 7 item 1, Charlie opens on the person test), the person gate becomes correct and
+   this first-line rule becomes belt and braces — keep both.**
+
+7. **Row 7 (nagging) is real, verified:** `prompts.ts` tells Charlie to ask ONCE and wrap up if
    nobody can help. So a nag is Charlie disobeying his instructions, which these agents do. The row
    earns its place.
 

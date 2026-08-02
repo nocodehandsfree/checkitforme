@@ -149,7 +149,7 @@ import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPh
 import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
 import { settings as settingsTbl } from "./db/schema";
-import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeRoomForConversation, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, activeBridgeCalls } from "./voice/bridge";
+import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeRoomForConversation, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, activeBridgeCalls, weEndedCheck, noteWeEnded } from "./voice/bridge";
 import { installCheckLife, isCheckAlive, noteLineEnded, resolveRoom as lifeRoom } from "./calls/check-life";
 import { placeBridgeCall, attachListenFork, roomCallSids, roomCallProgress, roomFinalizers, RAILWAY_HOST, STAGING_HOST } from "./voice/bridge-place";
 import { isCallingPaused, setCallingPaused, spendTodayCents, withLock } from "./redis";
@@ -1256,7 +1256,6 @@ setDeltaBarge(async (s, _speech) => {
       agentId: config.voice.agentId,
       dynamicVars: v.dynamicVars,
       connectOnHuman: false, // the clerk is already on the line — open the agent right away
-      holdMaxSeconds: pol.bail.holdMaxSeconds,
       voiceId: v.voiceId || undefined,
       voiceTuning: v.voiceTuning || undefined,
       onConversationId: (convId) => {
@@ -3715,7 +3714,25 @@ app.get("/pub/live/:cid", async (c) => {
 app.post("/pub/charge", async (c) => {
   const { cid } = await c.req.json();
   let bal = await pubCredits();
-  if (cid && !charged.has(cid) && bal > 0) { charged.add(cid); bal -= 1; await setSetting("pub_credits", String(bal)); }
+  // ONE CHECK IS CHARGED ONCE, ACROSS A RESTART (round 2, item 6). This remembered what it had
+  // already charged in memory only, so a deploy in the middle of somebody's visit let the same check
+  // take a second one off the free pool. Small money on the kiosk lane, but it is a CHARGE decided
+  // from something a restart wipes, which is the same shape of fault as the rest of this round. The
+  // record of what has been charged now lives beside the pool it draws from.
+  if (cid && bal > 0 && !charged.has(cid)) {
+    // ONE list, capped, rather than a key per check: the record has to survive a restart without
+    // growing a namespace nobody ever prunes. The newest few hundred is far more than the window in
+    // which a repeat could arrive, and the oldest simply fall off.
+    const key = String(cid).slice(0, 128);
+    const seen = String((await getSetting("pub_charged")) || "").split(",").filter(Boolean);
+    if (!seen.includes(key)) {
+      charged.add(cid);
+      seen.push(key);
+      await setSetting("pub_charged", seen.slice(-300).join(","));
+      bal -= 1;
+      await setSetting("pub_credits", String(bal));
+    } else charged.add(cid);   // charged before a restart — remember it again, take nothing
+  }
   return c.json({ balance: bal, charged: true });
 });
 // Human feedback on a call's verdict — what the answer ACTUALLY was, per the person who read the transcript.
@@ -3899,6 +3916,7 @@ async function zoneHangRoom(room: string): Promise<void> {
     .set({ status: "admin_hangup", statusKey: "user_cancelled", confirmed: null, completedAt: Math.floor(Date.now() / 1000) })
     .where(and(inArray(callResults.providerCallId, ids), inArray(callResults.status, ["dialing", "in_progress", "queued"])))
     .catch((e) => console.error("zone admin_hangup stamp:", e));
+  noteWeEnded(room, "user_cancelled");   // WE ended it, never the store (round 2, item 5)
   const callSid = roomCallSids.get(room);
   if (sid && tok && callSid) {
     await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}.json`, {
@@ -6855,7 +6873,11 @@ app.post("/api/call-now", async (c) => {
 // /pub/bridge-hangup for the call-now path.
 app.post("/api/hangup", async (c) => {
   const { cid, callSid } = await c.req.json().catch(() => ({}));
-  if (callSid) await hangupTwilioCall(callSid);
+  // WE are ending this one (round 2, item 5). The room is how every other part of the check is
+  // named, so resolve it from whatever the Admin had to hand before asking the carrier to stop.
+  const hangRoom = cid ? await lifeRoom(String(cid)) : null;
+  if (callSid) await hangupTwilioCall(callSid, hangRoom ?? undefined);
+  else if (hangRoom) noteWeEnded(hangRoom, "admin_hangup");
   if (cid) {
     await db.update(callResults)
       .set({ status: "admin_hangup", statusKey: "admin_hangup", confirmed: null, completedAt: Math.floor(Date.now() / 1000) })
@@ -6993,6 +7015,16 @@ app.post("/twiml/bridge-status", async (c) => {
       // that ended without reaching a human still lands a terminal callResults row.
       const fin = roomFinalizers.get(room);
       if (fin) { roomFinalizers.delete(room); try { fin(status); } catch (e) { console.error("bridge finalizer:", e); } }
+      // WHO PUT THE PHONE DOWN (round 2, item 5). The carrier says a check ended and never says who
+      // ended it, but we know every time it was US, because we are the ones who do it. So this is
+      // subtraction, not a guess: the check ended, we did not end it, therefore the far end did. A
+      // failure status rather than a normal finish means it was not a hang-up at all — the check was
+      // disconnected. Written BEFORE the receipt closes, so it lands on the timeline the card reads.
+      const ours = weEndedCheck(room);
+      if (!ours) {
+        if (status === "completed") emit(room, "hangup", "The store hung up on us", { reason: "store_hung_up", carrier: status });
+        else emit(room, "hangup", "The check was disconnected", { reason: "disconnected", carrier: status });
+      }
       // The carrier says the call is over — this is the truthful end, so the receipt closes and
       // persists HERE. The finalizer above may still be writing the verdict; the roll-up is stitched
       // onto the call row by the sink, which looks the row up by room.
@@ -7007,8 +7039,10 @@ app.post("/twiml/bridge-status", async (c) => {
 });
 const zoneCallSids = new Map<number, string[]>(); // zoneId -> Twilio callSids placed, for "Cancel zone"
 /** Hang up a live Twilio call (POST Status=completed). Shared by the single + zone cancel paths. */
-async function hangupTwilioCall(callSid: string): Promise<void> {
+async function hangupTwilioCall(callSid: string, room?: string): Promise<void> {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
+  // Anyone asking the carrier to end a check through here is US ending it (round 2, item 5).
+  if (room) noteWeEnded(room, "admin_hangup");
   if (!sid || !tok || !callSid) return;
   await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}.json`, {
     method: "POST",
@@ -7020,6 +7054,9 @@ async function hangupTwilioCall(callSid: string): Promise<void> {
 app.post("/pub/bridge-hangup", async (c) => {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   const { room } = await c.req.json();
+  // THE CUSTOMER PRESSING STOP IS US ENDING THE CHECK, and it must never come back later reading as
+  // the store hanging up on us (round 2, item 5). Marked before we ask the carrier to end it.
+  noteWeEnded(room, "user_cancelled");
   const callSid = roomCallSids.get(room);
   // Master Stop & hang-up = WE ended it, not the store. Stamp the call as a non-result ('admin_hangup',
   // confirmed=null) so it's never mislabeled "nobody answered". Because this status is NOT in the

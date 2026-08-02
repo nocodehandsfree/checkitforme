@@ -3495,7 +3495,13 @@ async function loadBail(){
     +tg('gotAnswerHangup','Got the answer → hang up','a clear yes/no lands, wrap instantly')
     +tg('voicemailBail','Voicemail → instant bail','recording detected, never leave a message')
     +tg('closedBail','Closed recording → instant bail','')
-    +`<div class="grid2" style="margin-top:8px">${num('ivrMaxSeconds','Phone menu max seconds')}${num('holdMaxSeconds','Hold max seconds')}${num('ringMaxSeconds','Ring max seconds')}${num('maxCallSeconds','Absolute cap (seconds)')}</div>`;
+    // TWO BOXES REMOVED 08-02, both of them lies. "Phone menu max seconds" was wired to nothing at
+    // all: it could be set and saved and changed nothing. "Hold max seconds" was worse than nothing,
+    // because it did the opposite of what it says: it did not end a wait, it switched Charlie ON to
+    // talk to an empty line and bill for it. A control that silently does nothing costs reading time;
+    // one that does the opposite of its label costs money. Ring max seconds is the only real give-up
+    // here, and the absolute cap is the backstop.
+    +`<div class="grid2" style="margin-top:8px">${num('ringMaxSeconds','Ring max seconds')}${num('maxCallSeconds','Absolute cap (seconds)')}</div>`;
 }
 async function saveBail(k,v){
   const r=await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({bail:{[k]:v}})});

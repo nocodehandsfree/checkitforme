@@ -1,7 +1,7 @@
 // Unit test for the canonical agent prompts + voice defaults. Run: ./node_modules/.bin/tsx scripts/test-prompts.ts
 // Guards the dynamic-variable contract: the live ElevenLabs agent fills {{...}} placeholders, so if
 // one silently disappears from the prompt the call breaks. These assertions fail loudly instead.
-import { RESTOCK_PROMPT, specificityClause, VOICE_DEFAULTS, heardWrongDepartment } from "../src/voice/prompts";
+import { RESTOCK_PROMPT, specificityClause, VOICE_DEFAULTS, heardWrongDepartment, looksLikeAMenu } from "../src/voice/prompts";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -114,6 +114,34 @@ ok(VOICE_DEFAULTS.similarityBoost >= 0 && VOICE_DEFAULTS.similarityBoost <= 1, "
 ok(VOICE_DEFAULTS.maxTokens > 0 && VOICE_DEFAULTS.maxTokens <= 200, "maxTokens stays small to keep replies short");
 ok(typeof VOICE_DEFAULTS.modelId === "string" && VOICE_DEFAULTS.modelId.length > 0, "a TTS modelId is set");
 ok(typeof VOICE_DEFAULTS.llm === "string" && VOICE_DEFAULTS.llm.length > 0, "an agent-brain llm is set");
+
+// THE MENU TEST (round 2, item 4). A hand-over that lands back in the store's recorded menu is read
+// off the MENU'S OWN WORDS, because the Ear may never judge this (runtime spec section 10). The risk
+// runs both ways: miss it and the owner never sees a thing he says happens often; claim it wrongly
+// and a working hand-over reads as a failure. So both directions are asserted.
+console.log("\n▶ a store's recorded menu is known by its own words, and a person is never mistaken for one");
+{
+  const menus = [
+    "Thank you for calling. For the pharmacy, say pharmacy.",
+    "To repeat these options, press 9.",
+    "Please listen carefully to the following options.",
+    "Returning you to the main menu.",
+    "For prescriptions, press 1. For everything else, press 0.",
+    "Please say the name of the department you want.",
+  ];
+  for (const m of menus) ok(looksLikeAMenu(m), `menu: "${m}"`);
+  const people = [
+    "Sure, hold on, I'll put you through to the front for you.",
+    "This is the pharmacy, let me transfer you.",
+    "Thanks for calling MVP's, this is Larry, how can I help you?",
+    "We did not receive any today.",
+    "I'm sorry, we're sold out of those right now.",
+    "Yeah, I did not see any, unfortunately.",
+    "Let me press on and check the back for you.",
+    "Hold on one second, let me go check.",
+  ];
+  for (const p of people) ok(!looksLikeAMenu(p), `a person: "${p}"`);
+}
 
 console.log(`\n════════════════════════════════\n  PASS: ${pass}   FAIL: ${fail}\n════════════════════════════════`);
 process.exit(fail === 0 ? 0 : 1);

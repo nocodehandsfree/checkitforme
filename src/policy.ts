@@ -73,8 +73,12 @@ export interface Policy {
     gotAnswerHangup: boolean;        // got a clear yes/no → wrap up & hang up immediately
     voicemailBail: boolean;          // voicemail/recording detected → instant hangup
     closedBail: boolean;             // "we're closed" recording → instant hangup
-    ivrMaxSeconds: number;           // stuck in a phone menu longer than this → bail
-    holdMaxSeconds: number;          // left on hold longer than this → bail
+    // ivrMaxSeconds and holdMaxSeconds are GONE (round 2, 08-02). The first was wired to nothing at
+    // all: settable, savable, and it changed nothing anywhere. The second did the OPPOSITE of its
+    // name — it never ended a wait, it switched Charlie ON to talk to an empty line and bill for it
+    // (the owner's own check log, at 63 seconds). Removed from the shape as well as the screen, so
+    // they cannot be set through the policy route, cannot persist, and cannot copy production to
+    // staging. Ending a wait is the hold cap's job and belongs with the other tunable numbers.
     ringMaxSeconds: number;          // ringing with no pickup longer than this → bail
     maxCallSeconds: number;          // absolute cap on any call, no exceptions
   };
@@ -127,7 +131,7 @@ export const DEFAULT_POLICY: Policy = {
   bail: {
     enabled: false,
     gotAnswerHangup: true, voicemailBail: true, closedBail: true,
-    ivrMaxSeconds: 90, holdMaxSeconds: 60, ringMaxSeconds: 35, maxCallSeconds: 180,
+    ringMaxSeconds: 35, maxCallSeconds: 180,
   },
   concurrency: {
     enabled: false, perAccountCap: 10, reserveInteractive: 2, maxPerUser: 10,
