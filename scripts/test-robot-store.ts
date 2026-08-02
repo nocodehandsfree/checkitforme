@@ -168,6 +168,13 @@ console.log("\n── the word comparison really fails on our own past faults �
   const mangled = ["Clerk: Thanks for calling CBS. Can I help you?", "Clerk: We did not."];
   if (compareWords(said, mangled).misses.length) ok("a mangled store name is caught"); else fail("a mangled name passed");
 
+  // Punctuation belongs to whoever wrote it down, not to the person who spoke. A full stop where a
+  // comma belongs, and an apostrophe in a name, are the same words — a real check wrote "MVPs" for
+  // "MVP's" and the comparison must not call that a mishearing.
+  const written = ["Clerk: Thanks for calling MVPs. Can I help you?", "Clerk: We did not."];
+  if (compareWords(said, written).misses.length === 0) ok("an apostrophe and a full stop are the writer's, not the speaker's");
+  else fail("\"MVPs\" written for \"MVP's\" was called a mishearing — the comparison is too strict to use");
+
   // Nothing recorded at all.
   if (compareWords(said, []).misses.length === 2) ok("an empty record fails every line, never passes by default"); else fail("an empty record slipped through");
 }

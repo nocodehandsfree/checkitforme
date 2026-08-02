@@ -45,7 +45,11 @@ const adm = async (path, opts = {}) => {
   return r.json();
 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+// Comparing what was SAID against what was WRITTEN DOWN. Punctuation is the writer's, not the
+// speaker's: a full stop where a comma belongs is the same words. An apostrophe is dropped rather
+// than treated as a break, so "MVP's" and "MVPs" are one name — the same rule the store search
+// already uses (`src/calls/service.ts`). Nothing else is forgiven: a different WORD still fails.
+const norm = (s) => String(s || "").toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 
 // ---- a plain pipe to the real site, for machines whose browser cannot open an encrypted connection
 // Some build machines (this repo's own agent sandbox is one) let a script reach the internet but
@@ -87,6 +91,7 @@ function startPipe(target) {
 // ---- the report ---------------------------------------------------------------------------------
 const runs = [];
 let current = null;
+let checkedAlready = false; // has this browser already checked this store during this run?
 const item = (n, name, pass, detail) => { current.items.push({ n, name, pass, detail }); };
 const shot = async (page, name) => {
   const f = `${OUT}/${String(current.scenario).padStart(2, "0")}-${name}.png`;
@@ -108,6 +113,15 @@ async function signInIfNeeded(page) {
 async function findAndCheck(page) {
   await page.goto(SITE + "/", { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(3500);
+  // The owner's own stores only exist for the owner, so the sign-in comes first — through the same
+  // pill at the top of the page anyone taps to join, and the same phone box behind it.
+  if (await page.$("#authpill.anon")) {
+    await page.click("#authpill");
+    await page.waitForTimeout(1200);
+    await signInIfNeeded(page);
+    await page.goto(SITE + "/", { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(4000);
+  }
   await page.fill("#search", STORE);
   await page.waitForTimeout(1600);
   const row = page.locator(`#storelist .store`, { hasText: STORE }).first();
@@ -145,7 +159,7 @@ async function findAndCheck(page) {
 async function watchLive(page, maxMs) {
   const t0 = Date.now();
   const phases = [];
-  let firstStaff = null, bounces = 0, lastHtml = null, lastY = null, pinTop = null, ticks = 0, sawLive = false;
+  let firstStaff = null, bounces = 0, lastHtml = null, lastY = null, lastHead = null, pinTop = null, ticks = 0, sawLive = false;
   while (Date.now() - t0 < maxMs) {
     const s = await page.evaluate(() => {
       const live = document.getElementById("live");
@@ -169,9 +183,11 @@ async function watchLive(page, maxMs) {
     if (s.on) sawLive = true;
     if (s.head && phases[phases.length - 1] !== s.head) phases.push(s.head);
     if (s.on && s.pinTop != null) pinTop = pinTop == null ? s.pinTop : Math.min(pinTop, s.pinTop);
-    // BOUNCING: the page moved while the conversation did not change. That is the 08-01 fault.
-    if (s.on && lastHtml != null && s.html === lastHtml && lastY != null && Math.abs(s.y - lastY) > 8) bounces++;
-    lastHtml = s.html; lastY = s.y;
+    // BOUNCING: the page moved while NOTHING changed. The header counts as something changing — it
+    // is a line of text whose length moves the layout — so only a jump with both the conversation
+    // and the header identical is the fault (08-01, the page jumping while nothing was happening).
+    if (s.on && lastHtml != null && s.html === lastHtml && s.head === lastHead && lastY != null && Math.abs(s.y - lastY) > 8) bounces++;
+    lastHtml = s.html; lastY = s.y; lastHead = s.head;
     if (!firstStaff) {
       const st = s.bubs.filter((b) => /STAFF|ASOC/i.test(b.who));
       if (st.length) firstStaff = { bubs: s.bubs.map((b) => ({ who: b.who.trim(), tx: b.tx.trim() })), atMs: Date.now() - t0 };
@@ -201,6 +217,22 @@ export function compareWords(said, lines) {
   return { misses, extra, staffLines };
 }
 
+// The robot's own phone line, priced off the carrier's record of the call it answered.
+const TW_SID = process.env.TWILIO_ACCOUNT_SID || "", TW_TOK = process.env.TWILIO_AUTH_TOKEN || "";
+const INBOUND_PER_MIN = 0.0085; // the published rate for a US local number answering a call
+async function robotSideCost(callSid) {
+  if (!callSid || !TW_SID || !TW_TOK) return null;
+  try {
+    const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${TW_SID}/Calls/${callSid}.json`,
+      { headers: { Authorization: "Basic " + Buffer.from(`${TW_SID}:${TW_TOK}`).toString("base64") } });
+    if (!r.ok) return null;
+    const d = await r.json();
+    const secs = Number(d.duration || 0);
+    if (d.price != null) return { usd: Math.abs(Number(d.price)), secs, how: "the carrier's posted price" };
+    return { usd: Math.max(1, Math.ceil(secs / 60)) * INBOUND_PER_MIN, secs, how: `${secs}s at the published rate (the carrier had not posted its price yet)` };
+  } catch { return null; }
+}
+
 // ---- one scenario -------------------------------------------------------------------------------
 async function runOne(page, scene, greetingIdx) {
   current = { scenario: scene.n, name: scene.name, items: [], shots: [], startedAt: Date.now() };
@@ -210,7 +242,12 @@ async function runOne(page, scene, greetingIdx) {
 
   const found = await findAndCheck(page);
   item(1, "the store is found from the main page and Check it is tapped", true, `searched "${STORE}"`);
-  item(2, "the one hour warning, then Check again", found.warned, found.warned ? `it said: ${found.warning}` : "not shown (this device had not checked this store within the hour)");
+  // The warning is a fact about this device, not a setting: it appears because this browser really
+  // did check this store minutes ago. On the FIRST scene of a run it is right that there is none, so
+  // it is not counted; from the second on it MUST appear, and it is a failure if it does not.
+  if (checkedAlready) item(2, "the one hour warning, then Check again", found.warned, found.warned ? `it said: ${found.warning}` : "the warning never came up, even though this device checked this store minutes ago");
+  else item(2, "the one hour warning, then Check again", true, "nothing to warn about yet — this device had never checked this store (the next scene proves the warning)");
+  checkedAlready = true;
 
   await page.waitForTimeout(2500);
   await shot(page, "checking");
@@ -243,15 +280,41 @@ async function runOne(page, scene, greetingIdx) {
   await page.waitForTimeout(4000);
   await shot(page, "result");
   const resultText = (await page.textContent("#result").catch(() => "")) || "";
+  // WAIT FOR THE RECORD TO SETTLE. A half-written record is not evidence: reading one while the
+  // check is still running produced an empty conversation and a verdict of "still going", which
+  // would have been reported as a fault that was really just an early read.
   let rec = null;
-  for (let i = 0; i < 12 && !rec; i++) {
+  for (let i = 0; i < 24; i++) {
     const r = await readCheck(HOST, TOKEN, null).catch(() => null);
-    if (r && (r.call.startedAt || 0) * 1000 > current.startedAt - 120000) rec = r; else await sleep(5000);
+    const mine = r && (r.call.startedAt || 0) * 1000 > current.startedAt - 180000;
+    if (mine) { rec = r; if (r.call.status !== "in_progress" && r.call.status !== "dialing") break; }
+    await sleep(5000);
   }
   if (!rec) { item(6, "the words match what the robot actually said", false, "the check never reached the record"); return; }
+
+  // ONE CHECK, ONE RECORD. One phone call writing several rows means whatever reads the newest one
+  // gets an unfinished copy — which is exactly what happened here before this was measured.
+  const recent = await adm("/api/admin/test-calls?limit=12");
+  const sameCall = [];
+  for (const row of (recent.rows || []).slice(0, 8)) {
+    const full = await readCheck(HOST, TOKEN, row.id).catch(() => null);
+    if (full && full.call.providerCallId && full.call.providerCallId === rec.call.providerCallId) sameCall.push(full);
+  }
+  item(12, "one check writes ONE record", sameCall.length <= 1,
+    sameCall.length <= 1 ? "one row for this check" : `${sameCall.length} rows for the same phone call: ${sameCall.map((s) => `${s.id}(${linesOf(s).length} lines)`).join(", ")}`);
+  // Judge the words against the FULLEST of them, so a duplicate is reported once, as itself, and
+  // does not also make every word check fail for a reason that is not about the words.
+  if (sameCall.length > 1) rec = sameCall.sort((a, b) => String(b.call.transcript || "").length - String(a.call.transcript || "").length)[0];
+
   const lines = linesOf(rec);
   current.checkId = rec.id;
-  current.cost = rec.call.costTotalUsd ?? null;
+  // WHAT IT COST, MEASURED, NOT ESTIMATED. Our side comes off the check's own priced record. The
+  // robot's side is its own phone line, which the check never sees and nobody else pays for, so it
+  // is read straight from the carrier — its posted price when it has posted one, otherwise its real
+  // duration at the published inbound rate, and the report says which of the two it used.
+  current.cost = rec.raw?.cost?.totalUsd != null ? rec.raw.cost.totalUsd / 1e6 : null;
+  current.costReadable = rec.raw?.cost?.readable?.total || null;
+  current.robotCost = await robotSideCost(robot.run?.callSid);
   current.charged = !!rec.call.chargedAt;
   current.statusKey = rec.call.statusKey || rec.call.status;
 
@@ -282,8 +345,14 @@ async function runOne(page, scene, greetingIdx) {
   item(8, "the log expands", !!log.has && !!log.open && log.after > log.before, log.has ? `${Math.round(log.before)}px → ${Math.round(log.after)}px` : "no log on the result");
 
   // 9 + 11. the verdict.
-  const verdictShown = /in stock|not in stock|no clear answer|sold out|nobody|didn't answer|did not answer/i.test(resultText);
+  const verdictShown = /in stock|not in stock|no clear answer|sold out|nobody|didn't answer|did not answer|restock/i.test(resultText);
   item(9, "the result appears with a status", verdictShown, resultText.replace(/\s+/g, " ").slice(0, 120));
+  // THE SCREEN AND THE RECORD MUST AGREE. A screen that says one thing while the record says
+  // another is worse than either being wrong: whichever he reads, the other one contradicts it.
+  const onScreen = /not in stock|out of/i.test(resultText) ? "out" : /in stock|has /i.test(resultText) ? "in" : "unclear";
+  const inRecord = current.statusKey === "in_stock" ? "in" : /not_in_stock|sold_out|does_not_sell/.test(String(current.statusKey)) ? "out" : "unclear";
+  item(9.1, "the screen and the record say the same thing", onScreen === inRecord,
+    `the screen said ${onScreen}, the record says ${inRecord} (${current.statusKey})`);
   item(11, "the verdict is RIGHT for this scenario", current.statusKey === scene.expect,
     `got ${current.statusKey} · this scenario is ${scene.expect}`);
 
@@ -291,7 +360,7 @@ async function runOne(page, scene, greetingIdx) {
   const mustNotCharge = scene.n === 9; // they hung up without ever hearing us: there is no answer to sell
   item(10, "nothing is charged that should not be, and a charged check says so",
     !(mustNotCharge && current.charged),
-    `${current.charged ? "CHARGED" : "not charged"} · ${current.cost != null ? "$" + Number(current.cost).toFixed(4) : "not priced"}`);
+    `${current.charged ? "CHARGED" : "not charged"} · the check cost ${current.costReadable || "(not priced)"}${current.robotCost ? ` · the robot's own line ${(current.robotCost.usd * 100).toFixed(2)}¢ (${current.robotCost.how})` : ""}`);
 
   printCheck(rec);
 }
@@ -328,8 +397,12 @@ for (const r of runs) {
   console.log(`  photos: ${r.shots.length}`);
 }
 const priced = runs.filter((r) => r.cost != null);
-const total = priced.reduce((a, r) => a + Number(r.cost), 0);
-console.log(`\ncost, measured off the checks themselves: ${priced.length} of ${runs.length} priced · $${total.toFixed(4)} total · $${priced.length ? (total / priced.length).toFixed(4) : "0"} each`);
+const ours = priced.reduce((a, r) => a + Number(r.cost), 0);
+const theirs = runs.filter((r) => r.robotCost).reduce((a, r) => a + r.robotCost.usd, 0);
+console.log(`\nWHAT THIS RUN COST, measured, not estimated`);
+console.log(`  the checks themselves: ${(ours * 100).toFixed(1)}¢ over ${priced.length} of ${runs.length} · ${priced.length ? (ours * 100 / priced.length).toFixed(1) : "0"}¢ each`);
+console.log(`  the robot's own phone line: ${(theirs * 100).toFixed(1)}¢ · ${runs.length ? (theirs * 100 / runs.length).toFixed(1) : "0"}¢ each`);
+console.log(`  ONE FULL RUN: ${((ours + theirs) * 100).toFixed(1)}¢`);
 if (jsErrors.length) { failed++; console.log(`✗ the page threw: ${jsErrors.join(" | ")}`); }
 writeFileSync(`${OUT}/run.json`, JSON.stringify({ at: new Date().toISOString(), host: HOST, runs, jsErrors }, null, 2));
 console.log(`the whole run: ${OUT}/run.json · photos in ${OUT}/`);

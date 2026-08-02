@@ -738,14 +738,18 @@ export async function robotAnswer(callSid: string, from?: string): Promise<strin
 /** Walk the scene from where we left off until it needs to listen or the call is over. */
 function robotPlay(callSid: string, st: RobotState, lead = ""): string {
   const parts: string[] = lead ? [lead] : [];
-  const atSec = () => Math.round((Date.now() - st.run.startedAt) / 1000);
+  // Everything in ONE document plays in order, so a line after a 45 second wait is spoken 45 seconds
+  // later than the document was built. The waits are added up as we go, or the record would claim
+  // the person walked away and came back in the same instant.
+  let ahead = 0;
+  const atSec = () => Math.round((Date.now() - st.run.startedAt) / 1000) + ahead;
   for (;;) {
     const a = st.acts[st.act];
     if (!a) { parts.push("<Hangup/>"); break; }
     if ("hangup" in a) { st.act++; parts.push("<Hangup/>"); break; }
     if ("listen" in a) { st.act++; parts.push(robotGather(callSid, 10)); break; }
-    if ("silence" in a) { st.act++; parts.push(`<Pause length="${Math.round(a.silence)}"/>`); continue; }
-    if ("ring" in a) { st.act++; parts.push(`<Play>https://${HOST}/robot/ring?secs=${Math.round(a.ring)}</Play>`); continue; }
+    if ("silence" in a) { st.act++; ahead += Math.round(a.silence); parts.push(`<Pause length="${Math.round(a.silence)}"/>`); continue; }
+    if ("ring" in a) { st.act++; ahead += Math.round(a.ring); parts.push(`<Play>https://${HOST}/robot/ring?secs=${Math.round(a.ring)}</Play>`); continue; }
     st.run.said.push({ text: a.say, atSec: atSec(), voice: "sayAs" in a ? "transfer" : "staff" });
     parts.push(robotClipUrl(callSid, st.act));
     st.act++;
