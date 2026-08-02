@@ -5,6 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "./db/client";
 import { accounts, customerSchedules, retailers, categories } from "./db/schema";
 import { bridgeCheckCall, triggerCall, storeOpenInfo } from "./calls/service";
+import { autoCheckPaused, MENU_CHANGED } from "./calls/healing";
 import { getAccount, chargeOneCredit, isComp, spendableCredits } from "./billing";
 import { getPolicy } from "./policy";
 import { sendConfirmEmail } from "./alerts";
@@ -85,6 +86,13 @@ export async function customerScheduleTick(): Promise<number> {
       if (!comp && (!subbed || !acct || spendableCredits(acct) <= 0)) { continue; }
       const gate = await storeOpenInfo(r.retailerId);
       if (gate && gate.known && !gate.open) continue;             // closed now — try a later tick today
+      // THE STORE HAS TAKEN ITSELF OFF THE WEBSITE. Their standing check cannot run, nobody is
+      // charged, and the moment that says so fires with who, which store and why. The email and the
+      // words a customer reads are another agent's — nothing is written or sent from here.
+      if (store.muted) {
+        autoCheckPaused({ finderUserId: r.finderUserId, retailerId: r.retailerId, storeName: store.name, reason: store.mutedReason || MENU_CHANGED });
+        continue;
+      }
       try {
         // Cheap lane (COST_MODEL §6: "scheduled checks FIRST" — subscription volume): recipe nav +
         // billed agent only on human. Flag off = the original direct dial, unchanged.

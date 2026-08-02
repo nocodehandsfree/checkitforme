@@ -115,7 +115,10 @@ export interface Evidence { calls: EvidenceCall[] }
 
 export type ConfidenceLabel =
   | "verified" | "observed multiple times" | "observed once"
-  | "changed recently" | "needs review" | "unknown";
+  // "not proven" replaced the old label (owner, item 8): the owner reviews NOTHING, and those words
+  // appear nowhere in code, screen or label. This is how the map talks to itself about a route it
+  // cannot stand behind — never a state anybody is asked to act on.
+  | "changed recently" | "not proven" | "unknown";
 
 export interface MapVersion {
   id: number;
@@ -266,7 +269,7 @@ export function scoreConfidence(ev: Evidence, nowSec = Math.floor(Date.now() / 1
   // Disagreement is the loudest signal there is: two calls that walked different paths mean the map
   // is not settled, however many times we called. Cap it and send it to review.
   if (paths.size > 1) {
-    return { score: 40, label: "needs review", why: `${calls.length} calls disagreed on the path (${paths.size} different routes)` };
+    return { score: 40, label: "not proven", why: `${calls.length} calls disagreed on the path (${paths.size} different routes)` };
   }
   let score: number;
   let label: ConfidenceLabel;
@@ -278,7 +281,7 @@ export function scoreConfidence(ev: Evidence, nowSec = Math.floor(Date.now() / 1
   let why = `${calls.length} call(s), ${stores.size || 1} store(s), ${days.size} day(s)`;
   if (ageDays > STALE_DAYS) {
     score = Math.max(20, score - 25);
-    label = "needs review";
+    label = "not proven";
     why += ` — last confirmed ${ageDays} days ago`;
   }
   return { score, label, why };
@@ -1093,7 +1096,7 @@ async function decayConfidence(versionId: number): Promise<void> {
   const v = await versionById(versionId);
   if (!v) return;
   const score = Math.max(20, v.confidence - 15);
-  const label: ConfidenceLabel = score < 60 ? "needs review" : "changed recently";
+  const label: ConfidenceLabel = score < 60 ? "not proven" : "changed recently";
   await client.execute({ sql: `UPDATE nav_map_versions SET confidence=?, confidence_label=? WHERE id=?`, args: [score, label, versionId] });
   if (!v.storeId) await db.update(chains).set({ navConfidence: score }).where(eq(chains.id, v.chainId));
 }
@@ -1589,8 +1592,12 @@ export async function learnFromReceipt(r: {
   /** Did Staff ACKNOWLEDGE the product question — a real yes or a real no (call_results.confirmed,
    *  true or false)? Null/absent = no clear answer, and a check with no answer proves nothing. */
   answered?: boolean | null;
-}): Promise<{ learned: string[] }> {
+}): Promise<{ learned: string[]; metAnUnknownMenu?: boolean }> {
   const learned: string[] = [];
+  // THE ONE THING THIS FILE REPORTS UPWARD (owner R2): the route we hold was walked and led nowhere,
+  // which from a customer check is what a menu that moved looks like. Acting on it — taking the store
+  // off the website — belongs to the caller; the map reports, it does not reach into store state.
+  let metAnUnknownMenu = false;
   const chainId = Number(r.chainId || 0);
   if (!chainId) return { learned };
   await ensureMapTables();
@@ -1653,10 +1660,17 @@ export async function learnFromReceipt(r: {
   }
 
   // The route ran and nobody was there. Counts against the route's health, changes nothing.
+  //
+  // AND IT IS THE ONE THING A CUSTOMER CHECK CAN SAY ABOUT A CHANGED MENU. A customer check never
+  // transcribes the phone menu — that is the whole cost design — so it cannot hand us the new words.
+  // What it CAN say is that the route we hold was walked in full and led to nobody, which is what a
+  // menu that moved under us looks like from here. The caller acts on it (the store takes itself off
+  // the website); this file only reports, because the map must not reach into the store's state.
   if (!calledDirect && personAt == null && has("hangup")) {
     const why = String(events.find((e) => e.kind === "hangup")?.detail?.why || "no person on the call");
     await recordFailedAttempt({ chainId, storeId, navId, callId: r.callId, reason: why, seconds: at("hangup") });
     learned.push(`route reached nobody: ${why}`);
+    if (map && storeId && (has("alpha_press") || has("bravo_say"))) metAnUnknownMenu = true;
   }
 
   // THE SECOND LOCK LEVEL, FOR FREE (owner R1). The chain went live the moment ONE store proved the
@@ -1702,7 +1716,7 @@ export async function learnFromReceipt(r: {
       ? `route drifted: ${d.reasons[0]}`
       : `walked ${actions.length} step(s)${personAt != null ? `, person at ${personAt}s` : ""} — matches the map`);
   }
-  return { learned };
+  return { learned, metAnUnknownMenu };
 }
 
 /** FAILED CALLS ARE EVIDENCE (runtime spec §10.5). A call that never reached a person must not change
@@ -1746,7 +1760,7 @@ export async function recordFailedAttempt(o: {
   // A run of failures is the signal. Below the bar we still store the failure and leave trust alone.
   const flagged = recentFails >= FAILS_TO_FLAG;
   const score = flagged ? Math.max(20, Math.min(scored.score, 40)) : scored.score;
-  const label: ConfidenceLabel = flagged ? "needs review" : scored.label;
+  const label: ConfidenceLabel = flagged ? "not proven" : scored.label;
   const why = flagged ? `${recentFails} of the last ${recent.length} calls did not reach Staff` : scored.why;
   await client.execute({
     sql: `UPDATE nav_map_versions SET evidence=?, confidence=?, confidence_label=?, why=? WHERE id=?`,
@@ -1796,7 +1810,7 @@ export async function backfillFromChains(): Promise<{ created: number; flagged: 
     const evidence: Evidence = { calls: [call] };
     const scored = scoreConfidence(evidence, at);
     const confidence = hammer ? Math.min(30, scored.score) : scored.score;
-    const label: ConfidenceLabel = hammer ? "needs review" : scored.label;
+    const label: ConfidenceLabel = hammer ? "not proven" : scored.label;
     await client.execute({
       sql: `INSERT INTO nav_map_versions (chain_id, store_id, version, status, nav_type, recipe, seconds, confidence,
         confidence_label, evidence, source, summary, why, created_at, approved_at, approved_by)

@@ -166,6 +166,17 @@ export const retailers = sqliteTable(
     mapsUri: text("maps_uri"),                   // Google Maps deep link (Places-sourced rows)
     geocodeTriedAt: integer("geocode_tried_at"), // last geocode attempt — failures cool down instead of retrying every tick
     active: integer("active", { mode: "boolean" }).notNull().default(true), // soft-remove (e.g. Ralphs)
+    // WE CANNOT REACH THIS STORE RIGHT NOW. Set by the store itself when a check meets a menu we do
+    // not know, and cleared by the store itself when a re-map succeeds. Off the website, no checks
+    // placed, skipped by zone runs and auto checks — with the reason travelling so every screen can
+    // say WHY rather than guessing. Never `active`: that means the owner removed the store by hand,
+    // and confusing the two would make a self-healing store look deliberately deleted.
+    // NEVER SYNCED between staging and production (store-sync.ts): this is earned by a real check
+    // failing on whichever side it ran, so a push from staging — where nothing is muted — must never
+    // quietly un-mute live stores. Each side mutes itself and heals itself.
+    muted: integer("muted", { mode: "boolean" }).notNull().default(false),
+    mutedReason: text("muted_reason"),           // why, in the words the screens already use
+    mutedAt: integer("muted_at"),                // when it started
     notes: text("notes"),
     // Owner-only demo store: hidden from every consumer list and un-callable EXCEPT for the
     // master/comp account. Powers the "Fun" rehearsal store (dials the owner's cell as the clerk).

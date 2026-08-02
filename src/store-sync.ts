@@ -29,6 +29,9 @@ const RETAILER_CURATED = ["name", "location", "address", "zip", "lat", "lng", "t
 // Never-sync (documented so nobody "fixes" this): chains phoneTreeDefault/dtmfShortcut/answerPath/
 // avgTreeSeconds/tree*/rings*/nav*; retailers stockStatus/phone/phoneTree/shipmentDay/hours/
 // hoursUpdatedAt/geocodeTriedAt. Those are earned on prod by real calls.
+// AND retailers muted/mutedReason/mutedAt — a store mutes ITSELF when a check meets a menu we do not
+// know, on whichever side that check ran. Syncing it would let a push from staging, where nothing is
+// muted, silently un-mute real stores on the live site. Each side mutes itself and heals itself.
 
 type ChainRow = typeof chains.$inferSelect;
 type RetailerRow = typeof retailers.$inferSelect;

@@ -14,6 +14,7 @@ import { sendRestockEmailTo, sendAlert, accountLang, localizeResult } from "../a
 import { isCallingPaused } from "../redis";
 import { acquireCallSlot, releaseCallSlot } from "./concurrency";
 import { getPolicy } from "../policy";
+import { mutedAmong, mutedReasons, MENU_CHANGED } from "./healing";
 
 /** Notify every active restock-watch for this store+category that it's back in stock.
  *  STANDING alerts (owner 07-30): a watch stays active until the customer pauses or removes it — the
@@ -546,6 +547,9 @@ export async function triggerCall(a: TriggerArgs) {
   if (await isCallingPaused()) throw new Error("calling_paused"); // global spend kill-switch
   const retailer = (await db.select().from(retailers).where(eq(retailers.id, a.retailerId)))[0];
   if (!retailer) throw new Error(`retailer ${a.retailerId} not found`);
+  // A STORE THAT TOOK ITSELF OFF THE WEBSITE TAKES NO CHECKS (owner R2/R3). The guard sits on the
+  // dial itself, not on each of the five things that ask for one, so no future caller can miss it.
+  if (retailer.muted) throw new Error("store_muted:" + (retailer.mutedReason || MENU_CHANGED));
   // Site-rail stores (e.g. Micro Center) carry a synthetic "nophone:" key — there is no line to dial.
   if (!a.toOverride && retailer.phone.startsWith("nophone:")) throw new Error(`retailer ${a.retailerId} has no dialable phone (site-check store)`);
   // Don't dial a store we know is closed (skip the check for bench/simulator calls to your own phone).
@@ -717,6 +721,7 @@ export async function bridgeCheckCall(a: TriggerArgs) {
   if (await isCallingPaused()) throw new Error("calling_paused"); // global spend kill-switch
   const retailer = (await db.select().from(retailers).where(eq(retailers.id, a.retailerId)))[0];
   if (!retailer) throw new Error(`retailer ${a.retailerId} not found`);
+  if (retailer.muted) throw new Error("store_muted:" + (retailer.mutedReason || MENU_CHANGED));
   if (retailer.phone.startsWith("nophone:")) throw new Error(`retailer ${a.retailerId} has no dialable phone (site-check store)`);
   const os = openState(retailer.hours, retailer.timezone);
   if (os.known && !os.open) throw new Error("store_closed:" + os.label);
@@ -1326,7 +1331,9 @@ export async function zoneQuote(zoneId: number) {
   const ids = links.map((l) => l.retailerId);
   if (!ids.length) return { stores: 0, creditsNeeded: 0 };
   const stores = await db.select().from(retailers).where(inArray(retailers.id, ids));
-  const callable = stores.filter((s) => s.sellsPacks !== false).length;
+  // A store we cannot reach is not quoted for either — nobody is charged for a check we will skip.
+  const unreachable = await mutedAmong(stores.map((s) => s.id));
+  const callable = stores.filter((s) => s.sellsPacks !== false && !unreachable.has(s.id)).length;
   return { stores: callable, creditsNeeded: callable };
 }
 /** Guard for a (future, opt-in) user-initiated zone call: refuses unless the account can afford every
@@ -1347,13 +1354,19 @@ export async function callZone(zoneId: number, categoryKey = "pokemon") {
   let placed = 0;
   const callSids: string[] = []; // Twilio SIDs of the calls we placed → lets the caller cancel the whole zone.
   const viaBridge = (await getPolicy()).flags.cheapBridgeAll; // cheap lane: recipe nav + agent only on human
+  // A STORE WE CANNOT REACH IS SKIPPED, AND THE SKIP SAYS WHY (owner R3) — the same shape a closed
+  // store already gets. Read once for the whole zone, never store by store.
+  const unreachable = await mutedReasons(stores.map((s) => s.id));
+  const skipped: Array<{ retailerId: number; name: string; why: string }> = [];
   for (const s of stores) {
+    const why = unreachable.get(s.id);
+    if (why) { skipped.push({ retailerId: s.id, name: s.name, why }); continue; }
     try {
       const r = await (viaBridge ? bridgeCheckCall : triggerCall)({ retailerId: s.id, categoryId: cat.id }); placed++;
       const sid = (r as { callSid?: string }).callSid; if (sid) callSids.push(sid);
     } catch (e) { console.error("callZone trigger failed", s.id, e); }
   }
-  return { placed, callSids };
+  return { placed, callSids, skipped };
 }
 
 // Open-conversation personalities — same cloned voice, different tone + opener.
@@ -1599,6 +1612,8 @@ export async function schedulerTick(): Promise<number> {
     for (const retailer of targets) {
       const { dow, hhmm } = localNow(retailer.timezone);
       if (!days.includes(String(dow)) || hhmm !== s.timeLocal) continue;
+      // A store that took itself off the website takes no scheduled checks either (owner R3).
+      if (retailer.muted) continue;
       // Dedupe: skip if we already called this store for this schedule in the last hour.
       const cutoff = Math.floor(Date.now() / 1000) - 3600;
       const already = await db.select().from(callResults).where(and(

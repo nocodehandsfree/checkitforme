@@ -166,6 +166,10 @@ export async function bootstrap() {
   await client.execute("ALTER TABLE retailers ADD COLUMN tier INTEGER").catch(() => {});
   // Owner-only demo store ("Fun"): hidden from consumers + un-callable except for the master account.
   await client.execute("ALTER TABLE retailers ADD COLUMN owner_only INTEGER NOT NULL DEFAULT 0").catch(() => {});
+  // One store muted on its own (phase 2 self-healing). Never synced between the two sides.
+  await client.execute("ALTER TABLE retailers ADD COLUMN muted INTEGER NOT NULL DEFAULT 0").catch(() => {});
+  await client.execute("ALTER TABLE retailers ADD COLUMN muted_reason TEXT").catch(() => {});
+  await client.execute("ALTER TABLE retailers ADD COLUMN muted_at INTEGER").catch(() => {});
   // Geo paging at 100k-store scale: the /pub/stores/near bounding box must hit an index.
   await client.execute("CREATE INDEX IF NOT EXISTS retailers_geo_idx ON retailers(lat, lng)").catch(() => {});
   await client.execute("CREATE INDEX IF NOT EXISTS retailers_state_idx ON retailers(state)").catch(() => {});

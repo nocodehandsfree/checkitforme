@@ -228,7 +228,7 @@ async function main() {
     }
     const after = (await activeMap(chain.id))!;
     ok(after.confidence < before, `trust falls with a run of failures (${before} → ${after.confidence})`);
-    ok(after.confidenceLabel === "needs review", "and it reads as needing a look");
+    ok(after.confidenceLabel === "not proven", "and it reads as needing a look");
     ok(after.recipe.steps[0].value === "2", "the route STILL is not rewritten by failures");
     ok((await openUnknowns(400)).some((u) => u.chainId === chain.id && u.kind === "route-failing"), "with a review item explaining why");
   }

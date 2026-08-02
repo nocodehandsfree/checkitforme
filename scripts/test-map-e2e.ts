@@ -44,7 +44,7 @@ async function main() {
     ok(res.created >= 2, `carried ${res.created} chain map(s) over`);
     const hv = await activeMap(hammer.id);
     ok(hv?.version === 1 && hv.status === "active", "the existing route is live as version 1");
-    ok(hv!.confidence <= 30 && hv!.confidenceLabel === "needs review", `key-hammering starts at low confidence (${hv!.confidence}, ${hv!.confidenceLabel})`);
+    ok(hv!.confidence <= 30 && hv!.confidenceLabel === "not proven", `key-hammering starts at low confidence (${hv!.confidence}, ${hv!.confidenceLabel})`);
     const unknowns = await openUnknowns(200);
     ok(unknowns.some((u) => u.chainId === hammer.id && u.kind === "hammer-route"), "and it lands in the review queue as key-hammering");
     ok(unknowns.some((u) => u.chainId === direct.id && u.kind === "unproven-direct"), "an unproved 'answers directly' chain is queued too");
@@ -410,7 +410,7 @@ async function main() {
     ok(f3.flagged, `three failures in five calls raises the flag (${f3.recentFails} recent)`);
     const after = (await activeMap(ch.id))!;
     ok(after.confidence < before.confidence, `trust drops (${before.confidence} → ${after.confidence})`);
-    ok(after.confidenceLabel === "needs review", "and it stops looking healthy");
+    ok(after.confidenceLabel === "not proven", "and it stops looking healthy");
     ok(after.recipe.steps[0].value === "0", "the route STILL has not changed — failures never rewrite a map");
     ok((await openUnknowns(300)).some((u) => u.chainId === ch.id && u.kind === "route-failing"), "it lands in the review queue");
   }

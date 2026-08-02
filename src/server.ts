@@ -44,6 +44,7 @@ import { costCall, money } from "./calls/cost";
 import { behaved, agentLinesFrom } from "./calls/behaved";
 import { opsRollup, type CheckRow } from "./calls/ops";
 import { startMapper, stopMapper, mapperState, resumeMapperRuns } from "./calls/mapper";
+import { storeMetUnknownMenu, muteStore, unmuteStore } from "./calls/healing";
 import { activeMap, resetChainHistory, freeChainDoors, graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, graphFor, learnFromReceipt, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
 import { recipeFromCall, evidenceFromCall, type CapturedStep } from "./calls/map-capture";
 import { startSweep, stopSweep, sweepStatus, buildQueue } from "./calls/sweep";
@@ -175,6 +176,18 @@ onReceiptClosed(async (r) => {
     answered: typeof row?.confirmed === "boolean" ? row.confirmed : null,
   });
   if (res.learned.length) console.log(`[map] learned from call ${callId ?? room}: ${res.learned.join(" · ")}`);
+  // THE STORE TAKES ITSELF OFF THE WEBSITE (owner R2). The route we hold was walked in full and led
+  // to nobody, which from a customer check is what a changed menu looks like. The store mutes itself,
+  // joins "Menu changed", and files ONE job to be re-mapped — more failures at the same store pool
+  // into that same job rather than piling up new ones.
+  if (res.metAnUnknownMenu) {
+    const did = await storeMetUnknownMenu({
+      chainId: store.chainId, storeId: store.id, storeName: store.name,
+      greeting: `the route we hold led to nobody at ${store.name}`,
+      callId: callId ?? undefined, navId: room ? `bridge:${room}` : undefined,
+    });
+    if (did.muted) console.log(`[map] ${store.name} took itself off the website — menu changed`);
+  }
 });
 await bootstrap(); // apply migrations + seed catalog if empty
 
@@ -2148,6 +2161,10 @@ app.get("/pub/stores/near", async (c) => {
     const ownerStores = await db.select().from(retailers).where(and(eq(retailers.active, true), eq(retailers.ownerOnly, true)));
     for (const o of ownerStores) if (!have.has(o.id)) rows.push(o);
   }
+  // A STORE THAT TOOK ITSELF OFF THE WEBSITE IS OFF IT (owner R2). One filter, right here, so every
+  // consumer surface built from these rows loses it at once and none can drift. It comes back on its
+  // own the moment its re-map succeeds — nobody has to remember to put it back.
+  rows = rows.filter((r) => !(r as { muted?: boolean }).muted);
   // Per-store consumer shape — shared by the main list and the rural fallback so both emit identical rows.
   const shape = (r: typeof retailers.$inferSelect) => {
       const miles = hasLoc && r.lat != null && r.lng != null ? Math.round(haversineMi(lat, lng, r.lat, r.lng) * 10) / 10 : null;
@@ -2867,6 +2884,21 @@ app.post("/api/stores/patch", async (c) => {
   await db.update(retailers).set(set).where(filter);
   invalidateRefCache();
   return c.json({ patched: matched.length, set: Object.keys(set) });
+});
+// ONE STORE, MUTED OR UNMUTED BY HAND. The same two words the chains section already uses, doing
+// the same thing one level down. The store also does this to itself when a check meets a menu we do
+// not know, and undoes it when its re-map succeeds — this is the hand control beside that.
+app.post("/api/stores/mute", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { id?: number; muted?: boolean; reason?: string };
+  const id = Number(b.id || 0);
+  if (!id) return c.json({ error: "id required" }, 400);
+  const store = (await db.select().from(retailers).where(eq(retailers.id, id)))[0];
+  if (!store) return c.json({ error: "store not found" }, 404);
+  if (b.muted === false) await unmuteStore(id);
+  else await muteStore(id, String(b.reason || "muted by hand"));
+  invalidateRefCache();
+  const after = (await db.select().from(retailers).where(eq(retailers.id, id)))[0];
+  return c.json({ id, muted: !!after.muted, reason: after.mutedReason, at: after.mutedAt });
 });
 app.post("/api/stores/flag", async (c) => {
   const b = await c.req.json().catch(() => ({}));

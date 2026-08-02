@@ -34,7 +34,7 @@ console.log("▶ calls that disagree can never be verified");
 {
   const split = { calls: [call({ path: "say:no>say:front" }), call({ path: "press:0", storeId: 2 }), call({ storeId: 3 })] };
   const s = scoreConfidence(split, NOW);
-  ok(s.label === "needs review", "two different routes = needs review, whatever the count");
+  ok(s.label === "not proven", "two different routes = not proven, whatever the count");
   ok(s.score === 40, "and the score is capped low");
 }
 
@@ -42,7 +42,7 @@ console.log("▶ an old map stops claiming certainty");
 {
   const old = { calls: [call({ at: NOW - 60 * DAY, storeId: 1 }), call({ at: NOW - 61 * DAY, storeId: 2, day: "2026-05-20" }), call({ at: NOW - 62 * DAY, storeId: 3, day: "2026-05-19" })] };
   const s = scoreConfidence(old, NOW);
-  ok(s.label === "needs review", "60 days without a confirmation drops it to needs review");
+  ok(s.label === "not proven", "60 days without a confirmation drops it to not proven");
   ok(s.why.includes("days ago"), "and says why in plain words");
 }
 

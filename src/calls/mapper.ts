@@ -332,6 +332,16 @@ async function lockStore(run: MapperRun, chainId: number, storeId: number): Prom
   run.storeLocked = true;
   await finalizeAndLock(run, chainId, run.best!, null, run.winnerSession, { activate: true, stage: "map" });
   await seedProvenStores(chainId, storeId);
+  // A STORE THAT TOOK ITSELF OFF THE WEBSITE PUTS ITSELF BACK, right here — the lock IS the re-map
+  // succeeding, so there is no separate "did the healing work" question to get wrong. It leaves the
+  // list and one line of history lands on the chain page. A store that was never muted is untouched.
+  try {
+    const { storeIsMuted, remapSucceeded } = await import("./healing");
+    if (await storeIsMuted(storeId)) {
+      await remapSucceeded(chainId, storeId);
+      run.log.push({ n: run.attempt, phase: run.phase, store: run.store?.name || "", outcome: "menu changed, re-mapped successfully, unmuted and back online" });
+    }
+  } catch (e) { console.error("[mapper] healing unmute", e); }
   run.experiments = buildExperiments(run, run.best!);
   run.phase = "speed";
 }

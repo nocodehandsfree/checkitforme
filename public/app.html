@@ -2619,7 +2619,7 @@ async function tlBatch(kind){ const n=Number(document.getElementById('tl_count')
 // THE MODEL, IN ITS OWN COLOUR. ONE SOURCE, read by every screen that names a model (owner, 07-30).
 // The three sit side by side on the spectrum on purpose: a list of chains reads as one colour warming
 // up, not three colours fighting, and it repeats on every row without tiring the eye. Alpha was gold,
-// which was the same colour as "needs review", so a working chain looked like a problem. Nothing warm
+// which was the same colour as "not proven", so a working chain looked like a problem. Nothing warm
 // belongs in this set: warm is reserved for something being wrong, and red now only ever means that.
 const LANE_C={ Alpha:'#818CF8', Bravo:'#38BDF8', Direct:'#6B6B7B' };
 const laneColor=l=>LANE_C[l]||'var(--muted)';
@@ -4376,7 +4376,20 @@ function storeDetailsHTML(r){
   if(r.distributor) h+=`<div class="stcdrow"><span class="stcdlab">Distributor</span><span class="stcdval">${esch(r.distributor)}</span></div>`;
   if(carries.length) h+=`<div class="stcdrow"><span class="stcdlab">Carries</span><span class="stcdval">${carries.map(esch).join(' · ')}</span></div>`;
   if(window.WF&&WF.list&&WF.list.length){ const inh=(r.chainId&&WF.chains&&WF.chains[r.chainId])||WF.def||''; h+=`<div class="stcdrow"><span class="stcdlab">Workflow</span><span class="stcdval"><select onclick="event.stopPropagation()" onchange="event.stopPropagation();setStoreWorkflow(${r.id},this.value)" style="max-width:100%">${wfOptions(WF.stores[r.id]||'', 'Same as everywhere')}</select></span></div>`; }
+  // ONE STORE, MUTED OR UNMUTED BY HAND — the same two words the chains section uses. A store that
+  // muted itself shows the reason it gave, so the row says why rather than leaving him to guess.
+  h+=`<div class="stcdrow"><span class="stcdlab">Reachable</span><span class="stcdval">`
+    +(r.muted?`<span style="color:#F59E0B">Muted${r.mutedReason?' · '+esch(r.mutedReason):''}</span> `:'')
+    +`<button class="ghost" style="font-size:12.5px;padding:5px 11px${r.muted?';color:var(--green);border-color:rgba(74,222,128,.4)':''}" onclick="event.stopPropagation();storeMute(${r.id},${!r.muted})">${r.muted?'Unmute':'Mute'}</button>`
+    +`</span></div>`;
   return h;
+}
+async function storeMute(id,on){
+  if(on&&!confirm('Are you sure you want to mute this store?')) return;
+  const r=await api('/api/stores/mute',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,muted:on,reason:'muted by hand'})});
+  if(!r||r.error){ toast("Couldn't save that"); return; }
+  toast(on?'Muted · dropped from customers':'Unmuted · back online');
+  if(typeof loadStores==='function') loadStores();
 }
 // Product logos for the verticals we actually support, one line. Per-logo [h,w] because the source art
 // has different padding — Topps (wordmark) reads bigger, NeeDoh is sized to match Pokémon / One Piece.
@@ -4546,7 +4559,7 @@ const NAV_MODE={ keypad:{m:'Alpha',sub:'keypad tones',c:'#60a5fa'}, voice:{m:'Br
 function chainOpts(q){ const f=(q||'').trim().toLowerCase(); return CHAINS.filter(ch=>(!f||(ch.name||'').toLowerCase().includes(f))).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(ch=>`<option value="${ch.id}">${esch(ch.name)}${ch.muted?' · muted':(ch.repackOnly?' · repack':'')}</option>`).join(''); }
 function setFilterChains(q){ const sel=document.getElementById('set_chain'); if(!sel) return; const cur=sel.value; sel.innerHTML='<option value="">Select a chain</option>'+chainOpts(q); if([...sel.options].some(o=>o.value===cur)) sel.value=cur; }
 // The map graph: one row per chain carrying how much we TRUST its route, how many routes are waiting
-// on the owner, and what still needs review. Loaded once with the chain list and read from memory.
+// on the owner, and what is still open. Loaded once with the chain list and read from memory.
 let MAPG={};
 // Pull the ENGINE's rates in so every cost on screen is built from the same table the receipt bills
 // a real call with. Best-effort: the literals above stand in if this fails, and they match cost.ts.
@@ -5399,7 +5412,7 @@ function renderChainMapping(ch){
   }
   // --- beside the PHONE MENU eyebrow: when this route last changed, and nothing else. The scoring
   // words ("observed once", "observed multiple times") came off every screen (owner, 07-30): they are
-  // how the map talks to itself, not a state he acts on. "Needs review" survives, because it is work.
+  // how the map talks to itself, not a state he acts on. The owner reviews nothing (owner, 08-02).
   const g=mapRow(ch.id);
   const ver=document.getElementById('set_menuver');
   if(ver){

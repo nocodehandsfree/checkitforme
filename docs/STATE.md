@@ -1,6 +1,6 @@
 # STATE — the owner's single source of truth
 One screen. Every session updates this at close (≤40 lines). New truth REPLACES old — history is in
-git. Last updated: 2026-08-01 (mapping engine part 1: the last fix pass — Charlie on the check's own record).
+git. Last updated: 2026-08-02 (mapping part 2: the self-healing loop).
 ## Store logos are all one size, and the check status page is clean (07-30/31)
 - Logos: new pictures live everywhere; the evening-out is on Admin and staging, real site at next promote.
 - The status page follows its newest line, clears Safari's bottom bar, and **the wait on ElevenLabs is GONE
@@ -12,24 +12,23 @@ git. Last updated: 2026-08-01 (mapping engine part 1: the last fix pass — Char
 - We ask once to be put through, stop paying while they hand us over, ask again when somebody new picks up
   (a switch in Calls → App turns it off; only your phone can test the real words). The tint is nailed down,
   and cost per check opens on **The baseline**, your 6.7¢ ceiling off your real prices.
-## Mapping rebuild, part 1 of 3 (the engine) — PHASE 1 DONE, waiting on your phone (08-01)
+## Mapping rebuild, parts 1 and 2 of 3 — PHASE 1 DONE, waiting on your phone (08-02)
 - **You were right, and it was the whole problem.** Mapping talks to machines, Charlie talks to
   people. The check that proves the department hands the SAME live call to Charlie the way a
-  customer's check does, and every line of mapping's own asking is deleted.
+  customer's check does, and every line of mapping's own asking is deleted. The right department
+  is his word, and a mapping check never rides a transfer to get there.
 - **Waiting on YOU:** live customer checks still answer on a timer, and flipping that on changes the
   cost numbers; and should a changed way through wait for your tap, or switch itself?
-- Charlie joins on the check's OWN record, so his answer and a wrong department reach the run, and
-  the check is graded when it really ends. Seven practice checks, written and failing first, caught
-  four faults, all fixed: a store's own name read as a machine · voicemail's "hello?" read as a
-  person · one ring re-labelled the menu before it · Spanish Staff read as a recording.
-- **Phase 1 closed (08-01).** The right department is now Charlie's word: if he says wrong
-  department that is what it reads, and otherwise Staff talking to him at all is the proof. Whether
-  they have the cards is not the department test, so "we might have some, come look" passes instead
-  of failing and burning that store's one try.
-- **A mapping check never takes a transfer (08-01).** Staff offering to put us through used to be
-  ridden, so Charlie got a good answer from a desk we cannot name and cannot reach again on a
-  customer's check, and the map locked that. Now the check ends there, marks the choice it took as
-  wrong, and calls the same store on the next choice. Customer checks are untouched.
+## Phase 2 of 3 — the self-healing loop, built (08-02)
+- A store whose menu changed takes itself off the website, files ONE job however many times it fails,
+  and puts itself back the moment its re-map succeeds, with one line of history on the chain page.
+  Nobody reviews anything. Muted stores are skipped by zone runs and by every standing check, each
+  with the reason; the moment that tells a customer their check is paused fires, with no words
+  written — that email is another agent's.
+- Three stores of one chain off the website means the CHAIN's menu changed: the chain is never muted,
+  its fast way through is set aside so checks use the careful full words, and one run relearns it.
+- You can also mute or unmute a single store by hand in the stores section. It never travels between
+  staging and the live site, so a push can never quietly put a broken store back on.
 - Side branch only. **Nothing goes to staging while you test.** NOT tested on a real store: any of it.
 ## The new calling engine is ON for staging. Your six test calls are the last thing (07-28/29)
 - **Nothing to flip.** A check from staging.checkitforme.com goes through the new engine. **Listen for:** it asks
