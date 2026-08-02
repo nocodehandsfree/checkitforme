@@ -198,3 +198,42 @@ a different thing for the customer to read.
 5. **Row 7 (nagging) is real, verified:** `prompts.ts` tells Charlie to ask ONCE and wrap up if
    nobody can help. So a nag is Charlie disobeying his instructions, which these agents do. The row
    earns its place.
+
+## 9. THE ROBOT STORE — the owner stops being the only tester (his idea, 08-01)
+
+A second phone number we own, pointed at the MVP store, that answers itself: plays a greeting,
+pauses, then answers the question. Everything else is real — a real dial, a real Charlie, real
+transcribing, the real page. An agent runs the checks itself and reads the result, and the owner can
+look at the same website afterwards.
+
+**Why this depends on the Testing section shipping first.** The pass/fail rows in §5 stop being
+something the owner reads and become the AGENT'S answer — the check passed or it did not, no human
+eyes needed. Without those rows there is nothing for an agent to read. This is why §7 comes before
+this section, not after.
+
+**What it can and cannot prove.** It proves the plumbing — the greeting is the first line, the words
+are not welded to the answer, the order on the page, the transcript, the log. It CANNOT prove how a
+check sounds, or a store improvising, because it says the same words every time. The owner's phone
+still owns the last mile.
+
+**Owner decision 08-01: the robot store must VARY.** It plays every one of his eight tests in §2 —
+sometimes hold, sometimes answer as the pharmacy, sometimes hang up — or it only ever covers one of
+them.
+
+**HARD CAP, owner's rule.** Every check the agent runs costs real money on a real phone line. An
+agent told to loop until it is correct will dial fifty times. A run gets a fixed number of checks and
+then STOPS and reports — it never decides to keep going.
+
+## 10. The code health work (raised 08-01, parked behind testing)
+
+Not Charlie behaviour, but it is why agents keep getting Charlie wrong, so it belongs on the record.
+The calling engine file is 1,159 lines and nearly half of it is comments — agents narrating history
+to each other. The main server file is 7,381 lines; anyone who opens it burns most of their budget
+before doing anything.
+
+**Owner's call: keep going, fix it after.** Nothing is broken, it is slow to read. The agreed plan:
+one cleanup pass on the main server file ONLY, splitting it by area, deleting genuinely dead code,
+rewriting comments to say what the code DOES NOW (history moves to `RULES.md`, never deleted), and
+extending `scripts/checkpoint-lint.sh` to fail any file in `src/` over 800 lines with today's
+offenders grandfathered — so it cannot happen again. That agent stays out of `src/voice/`,
+`src/calls/`, `src/db/` and the two public pages while Echo is building §7.
