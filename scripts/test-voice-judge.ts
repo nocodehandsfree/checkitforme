@@ -170,10 +170,13 @@ console.log("\n▶ EVIDENCE ORDER, AND THE PERSON'S CLOCK (fix pass 6, items 3-4
   // resembles its own menu, but a recording never talks TO us.
   ok(judge({ text: "Hi, this is Maria, how can I help you?", mappedRoute: true, routeHandoffSeen: false }).who === "person",
     "somebody talking to us beats being mid-menu on a route we hold");
-  // A real counted ring beats a word-match to the remembered menu: the desk ringing is the phone
-  // system saying it is finished with us.
-  ok(judge({ text: KNOWN[1], knownMenuLines: KNOWN, ringsHeard: 1 }).who === "person",
-    "and a real counted ring beats even a word-for-word match to the remembered menu");
+  // THE RING IS EVIDENCE, NOT AN OVERRIDE (owner, 08-02). A desk can ring, nobody picks up, and the
+  // phone system drops us back into its own menu. A line this store has played before is that menu,
+  // ring or no ring — deciding otherwise opened Charlie onto a recording.
+  ok(judge({ text: KNOWN[1], knownMenuLines: KNOWN, ringsHeard: 1, ringAtSec: 20 }).who === "recording",
+    "a line this store has played before is still its menu, even after the desk rang");
+  ok(judge({ text: "Hi, front store, this is Dana.", knownMenuLines: KNOWN, ringsHeard: 1, ringAtSec: 20 }).who === "person",
+    "while a voice that is nothing the store plays is a person, and the ring is why we are sure");
   // The person's clock starts at their first word, walking back through unsure lines too.
   const two = [
     { who: "ivr" as const, text: "Thanks for calling CVS.", atSec: 5 },

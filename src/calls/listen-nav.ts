@@ -342,14 +342,16 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
     return { who: "recording", why: "a mailbox or a closed store — there is nobody to reach", deadEnd: true, ...ride };
   }
 
-  // BEFORE LAYER 1: two facts outrank a word-match. A REAL COUNTED RING means the phone system has
-  // already handed us to the desk — no remembered line can outvote the desk ringing. And words that
-  // are unmistakably a person talking TO us ("this is Maria", "how can I help") beat every position
-  // rule: a store CAN read a line that resembles its own menu, but a recording never asks us
-  // anything (fix pass 6, item 3).
-  if (rangBefore(o)) {
-    return { who: "person", why: "the desk has rung, so the phone system is finished with us", ...ride };
-  }
+  // BEFORE LAYER 1: words that are unmistakably a person talking TO us ("this is Maria", "how can I
+  // help") beat every position rule — a store CAN read a line that resembles its own menu, but a
+  // recording never asks us anything (fix pass 6, item 3).
+  //
+  // THE RING IS EVIDENCE, NOT AN OVERRIDE (owner, 08-02). It used to answer here, ahead of
+  // everything, on the belief that a ring means the phone system is finished with us. It does not:
+  // a desk can ring, nobody picks up, and the phone system drops us straight back into its own menu
+  // — and with the ring answering first, that returning menu was never tested against the store's
+  // own remembered lines, so Charlie was opened onto a recording. The ring now has its say further
+  // down, after the menu's evidence has had its say.
   if (CHECKING_ON_US.test(text) || ADDRESSED_TO_US.test(text)) {
     return { who: "person", why: "somebody is talking to us, not reading at us", ...ride };
   }
@@ -366,11 +368,10 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
     (ride as VoiceVerdict).unknownLine = true;
   }
 
-  // LAYER 2 — where we are on a route we hold.
-  if (rangBefore(o)) {
-    return { who: "person", why: "the desk has rung, so the phone system is finished with us", ...ride };
-  }
-  if (o.mappedRoute && !o.routeHandoffSeen && !MENU_WORDS.test(text) && !CHECKING_ON_US.test(text)) {
+  // LAYER 2 — where we are on a route we hold. A ring means the phone system moved us along, so
+  // "we are still inside the menu we hold" no longer holds — but it does not make the next voice a
+  // person either. That is decided below, on the same evidence as everything else.
+  if (o.mappedRoute && !o.routeHandoffSeen && !rangBefore(o) && !MENU_WORDS.test(text) && !CHECKING_ON_US.test(text)) {
     // Before the handoff on a route we already hold, the phone system is still talking to us.
     return { who: "recording", why: "we are still inside a menu we already hold", ...ride };
   }
@@ -381,6 +382,12 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
   if (MENU_WORDS.test(text)) return { who: "recording", why: "these are a menu's own words", ...ride };
   // A branded hello ALONE is held open for the pause below rather than settled here: a recording
   // reads on through the silence, and Staff stop and wait for us.
+  // THE RING HAS ITS SAY HERE, and only here: the store's own remembered lines and the menu's own
+  // words have both already had theirs, so a menu that came back after an unanswered desk is
+  // already settled as the recording it is. What is left after a ring is somebody new on the line.
+  if (rangBefore(o)) {
+    return { who: "person", why: "the desk rang and this is not the store's own menu", ...ride };
+  }
   const repliedToUs = typeof o.weSpokeAtSec === "number" && o.atSec - o.weSpokeAtSec <= 6 && words <= 40;
   if (repliedToUs && tellsUsSomething) {
     return { who: "person", why: "a reply to what we just said", ...ride };

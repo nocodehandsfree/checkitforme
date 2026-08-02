@@ -106,6 +106,28 @@ console.log("\n▶ PRACTICE CHECK 4 — the menu dumps us to the operator (one r
     "after the ring, the same words are a person — that is what the ring is for");
 }
 
+console.log("\n▶ PRACTICE CHECK 4b — the desk rings, nobody answers, and the menu comes back");
+{
+  // A ring proves the phone system moved us along. It proves nothing about who speaks next: the desk
+  // can ring out and drop us straight back into the menu we were just in. Driven through the engine:
+  // the check must NOT hand over to Charlie when that happens.
+  const KNOWN = [
+    "Thank you for calling Card Mart. Please listen carefully as our options have changed.",
+    "For the pharmacy press 1, for guest services press 2.",
+  ];
+  ok(judge({ text: KNOWN[1], atSec: 44, knownMenuLines: KNOWN, ringsHeard: 1, ringAtSec: 30 }).who === "recording",
+    "the returning menu is the store's own menu, ring or no ring");
+  setMappingHandoff(async () => `<Response><Connect/></Response>`);
+  engine.open({ id: "ringout-1", confirm: { product: "Pokémon cards" }, knownMenuLines: KNOWN,
+    ringsHeard: 1, ringAtSec: 30 });
+  engine.at("ringout-1", 44);
+  await engine.step("ringout-1", KNOWN[1]);
+  const r = engine.get("ringout-1")!;
+  ok(r.humanAtSec == null, "nobody is on the line, so no person is stamped");
+  ok(!r.confirm?.asked, "and the check is never handed to Charlie — he would have talked to a recording");
+  engine.end("ringout-1");
+}
+
 console.log("\n▶ PRACTICE CHECK 5 — two Staff on one check");
 {
   // The first desk answers and hands us on; a second person answers further down. The check has one
