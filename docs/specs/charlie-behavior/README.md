@@ -207,44 +207,47 @@ ceiling is **6.6¢ a check**.
   breaks the margin.
 
 **What this means for the rules:** be generous with waiting, strict with talking. The 2-minute hold
-cap is cheap insurance. The number that needs a hard boundary is how long Charlie is allowed to be
-open on one check — **owner to set it; PM's proposal is 45 seconds of Charlie across the whole
-check, which holds the margin even on a 2-minute check.**
+cap is cheap insurance. **OWNER 08-01: 23 seconds of Charlie actually talking, and it lives in Admin
+under App so he can play with it.** He did the arithmetic himself: 45 does not hold 67% profit, 23
+does. Without our own thinking behind Charlie the cost is double what it would otherwise be.
 
-## 7c. THE PHONE ON THE COUNTER — a real hole, found 08-01
+## 7c. THE PHONE ON THE COUNTER (owner APPROVED the idea 08-01, wording not yet reviewed)
 
 **The listener knows three shapes today** (`src/calls/listen-nav.ts`): QUIET (nobody making a sound,
-6 seconds → Charlie dropped) · MUSIC (sound that never stops — 96% of a 3-second window is voiced —
-6 seconds → Charlie dropped) · RINGING.
+6 seconds, Charlie dropped) · MUSIC (sound that never stops, 96% of a 3-second window voiced, 6
+seconds, Charlie dropped) · RINGING.
 
 **A phone set down on a counter is NONE of them.** Background store noise is irregular with gaps in
 it, which is the exact shape of somebody talking. So Charlie stays open and keeps billing while the
-handset lies on the counter and Staff walk to the back room. Owner called this before it was found:
-*"if we're not smart about how Charlie disconnects we're gonna be in a world of pain."*
+handset lies on the counter and Staff walk to the back room. The owner called this before it was
+found: *"if we're not smart about how Charlie disconnects we're gonna be in a world of pain."*
 
-**THE FIX — a fourth shape, BACKGROUND.** Somebody speaking into a handset is loud and close;
-store noise across the room is far quieter. Sound that is present but well below the loudness of
-somebody speaking TO us, held for the same 6 seconds, is treated exactly like silence: Charlie is
-dropped, the meter stops, and he reconnects the moment somebody speaks up close again. Costs nothing
-extra, needs no transcribing, works in any language. **Echo builds this.**
+**THE FIX, owner approved: a fourth shape, a loud room.** Somebody speaking into a handset is loud
+and close; store noise across the room is far quieter. Sound that is present but well below the
+loudness of somebody speaking TO us, held for the same 6 seconds, is treated exactly like silence:
+Charlie is dropped, the meter stops, and he reconnects the moment somebody speaks up close again.
+Costs nothing extra, needs no transcribing, works in any language. **Echo builds this.**
 
-## 7d. THE CHATTY CLERK — how Charlie gets out politely
+## 7d. THE CHATTY CLERK (owner's wording 08-01)
 
 The one case no drop rule catches: somebody genuinely IS talking, hemming and hawing, never landing
-on an answer. Charlie stays open because the rules are all working correctly, and the check runs away
-with the margin (§7b — he costs 11¢ a minute).
+on an answer. Charlie stays open because every rule is working correctly, and the check runs away
+with the margin (§7b: he costs 11¢ a minute).
 
-**Rescue the check before ending it.** At the wrap-up point Charlie asks ONE closed question:
-*"Just so I don't keep you — do you have any in stock right now?"* That converts a wasted check into
-an answer a good share of the time.
+**Charlie's line, the owner's words, NO DASHES (they read strangely through ElevenLabs):**
+> "Don't want to keep you, did you find out if you have Pokémon cards?"
 
-**If they still cannot answer, he goes cleanly:** *"No worries at all, I'll let you go — thanks so
-much for checking."* **Never "I'll call you back"** — we will not, and Staff remember a business that
-says it will.
+If they still cannot answer, saying he will call back is FINE (owner: Staff take thousands of calls,
+they do not remember and humans say it all the time).
 
-**He must never cut off mid-sentence.** A hard hang-up at a limit is the thing the owner is right to
-fear: the clerk is mid-help, the check dies, and the customer paid for all of it. The limit tells
+**He must never cut off mid sentence.** A hard hang up at a limit is the thing the owner is right to
+fear: the clerk is mid help, the check dies, and the customer paid for all of it. The limit tells
 Charlie to START WRAPPING UP; it never ends the check itself.
+
+**THE NUMBER, owner 08-01: 23 seconds of Charlie actually talking.** He did the arithmetic himself:
+45 seconds does not hold 67% profit, 23 does, and without our own thinking behind Charlie the cost is
+double what it would otherwise be. **This number lives in Admin under App so he can play with it**,
+not baked into the code.
 
 ## 8. Open — decisions the owner still owes
 
