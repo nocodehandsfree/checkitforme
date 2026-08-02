@@ -9,6 +9,7 @@ import { startListenNav, listenNavOpeningTwiml, type NavStep } from "../calls/li
 import { openReceipt, emit, closeReceipt, laneFor, type EventKind } from "../calls/events";
 import { phoneClip } from "../calls/clip-cache";
 import { callTuning } from "../calls/tuning";
+import { warnIfCapTooLow } from "../calls/check-life";
 
 /** Turn the recipe's executable strings ("2@8,2@16" / "no@26,front@38") back into ordered steps.
  *  Same source of truth either way — only the WHEN changes between the two nav modes. */
@@ -132,8 +133,11 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
   // Every number the runtime guesses at, resolved ONCE per call from the setting the Admin reads.
   // Passed in rather than imported, so the ear's timing rules stay testable without a database.
   const tuning = await callTuning();
+  // The gatekeeper's backstop is a constant; the longest allowed check is an Admin number. Shout if
+  // they ever get close, because a check outliving the backstop reads as finished while it is live.
+  warnIfCapTooLow(opts?.timeLimitSec ?? pol.bail.maxCallSeconds);
   const mkCtx = () => ({ agentId: opts?.agentId || config.voice.agentId, openingClip, midCallAgentId: config.voice.midCallAgentId,
-    ourBrain: !!pol.flags?.ourBrain, ourBrainAgentId: config.voice.ourBrainAgentId, holdStrategy, tuning, apiKey: opts?.apiKey || undefined, dynamicVars, onConversationId, dtmf: listening ? undefined : (dtmf || undefined), say: listening ? undefined : (opts?.say || undefined), connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: connectAtSecAdj, holdMaxSeconds: pol.bail.holdMaxSeconds, giveUpSeconds: pol.bail.enabled && pol.bail.ringMaxSeconds > 0 ? pol.bail.ringMaxSeconds : undefined, earFromSec, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
+    ourBrain: !!pol.flags?.ourBrain, ourBrainAgentId: config.voice.ourBrainAgentId, holdStrategy, tuning, apiKey: opts?.apiKey || undefined, dynamicVars, onConversationId, dtmf: listening ? undefined : (dtmf || undefined), say: listening ? undefined : (opts?.say || undefined), connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: connectAtSecAdj, giveUpSeconds: pol.bail.enabled && pol.bail.ringMaxSeconds > 0 ? pol.bail.ringMaxSeconds : undefined, earFromSec, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
   setBridgeContext(room, mkCtx());
   const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
   // INLINE the TwiML instead of a Url callback (owner 07-17: "no cutoffs — listen from the very

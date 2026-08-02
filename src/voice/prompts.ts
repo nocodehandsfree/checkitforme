@@ -238,6 +238,36 @@ export function askedToBePutThrough(line: string): boolean {
   return ASK_TRANSFER.test(String(line || ""));
 }
 
+/**
+ * A STORE'S RECORDED MENU, RECOGNISED BY ITS OWN WORDS (round 2, item 4).
+ *
+ * The owner sees this often: Staff hand us on and instead of another department we land back at the
+ * recorded menu. The Ear cannot tell us that — a menu and a person are both just sound, and knowing
+ * WHICH is words, which is why this lives here beside the other word tests rather than in the
+ * listener (the runtime spec, section 10, is explicit about that line).
+ *
+ * A menu gives itself away by naming its own options, and it is deliberately the OPTIONS that count,
+ * not politeness: "press", "for the pharmacy, say", "listen to the following options", "main menu",
+ * "returning you to". A live person telling us to hold, or offering to put us through, says none of
+ * that. Kept narrow on purpose — a false one of these makes a working hand-over read as a failure.
+ *
+ * Pure, so it is provable without a phone call: scripts/test-prompts.ts.
+ */
+const MENU_LINE = new RegExp([
+  "\\bpress\\s+(?:the\\s+)?(?:[0-9]|one|two|three|four|five|six|seven|eight|nine|zero|pound|star)\\b",
+  "\\bfor\\s+[a-z ]{3,30}?,?\\s+(?:press|say)\\b",
+  "\\b(?:listen(?:\\s+carefully)?\\s+to|choose\\s+from)\\s+the\\s+following\\b",
+  "\\bthe\\s+following\\s+options\\b",
+  "\\b(?:main|previous)\\s+menu\\b",
+  "\\breturning\\s+you\\s+to\\b",
+  "\\bto\\s+repeat\\s+(?:these|this|the)\\s+(?:options|menu)\\b",
+  "\\bplease\\s+(?:say|state)\\s+(?:the\\s+)?(?:name|reason)\\b",
+].join("|"), "i");
+
+export function looksLikeAMenu(line: string): boolean {
+  return MENU_LINE.test(String(line || ""));
+}
+
 /** Spoken fallback when the pause-filler feature is on and no custom line is set. Copy law: no dash. */
 export const SOFT_TIMEOUT_FALLBACK = "Yeah, hi, I'm here!";
 

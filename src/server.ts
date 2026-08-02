@@ -149,7 +149,7 @@ import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPh
 import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
 import { settings as settingsTbl } from "./db/schema";
-import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeRoomForConversation, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, activeBridgeCalls } from "./voice/bridge";
+import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeRoomForConversation, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, activeBridgeCalls, weEndedCheck } from "./voice/bridge";
 import { installCheckLife, isCheckAlive, noteLineEnded, resolveRoom as lifeRoom } from "./calls/check-life";
 import { placeBridgeCall, attachListenFork, roomCallSids, roomCallProgress, roomFinalizers, RAILWAY_HOST, STAGING_HOST } from "./voice/bridge-place";
 import { isCallingPaused, setCallingPaused, spendTodayCents, withLock } from "./redis";
@@ -1231,7 +1231,6 @@ setDeltaBarge(async (s, _speech) => {
       agentId: config.voice.agentId,
       dynamicVars: v.dynamicVars,
       connectOnHuman: false, // the clerk is already on the line — open the agent right away
-      holdMaxSeconds: pol.bail.holdMaxSeconds,
       voiceId: v.voiceId || undefined,
       voiceTuning: v.voiceTuning || undefined,
       onConversationId: (convId) => {
@@ -3688,7 +3687,20 @@ app.get("/pub/live/:cid", async (c) => {
 app.post("/pub/charge", async (c) => {
   const { cid } = await c.req.json();
   let bal = await pubCredits();
-  if (cid && !charged.has(cid) && bal > 0) { charged.add(cid); bal -= 1; await setSetting("pub_credits", String(bal)); }
+  // ONE CHECK IS CHARGED ONCE, ACROSS A RESTART (round 2, item 6). This remembered what it had
+  // already charged in memory only, so a deploy in the middle of somebody's visit let the same check
+  // take a second one off the free pool. Small money on the kiosk lane, but it is a CHARGE decided
+  // from something a restart wipes, which is the same shape of fault as the rest of this round. The
+  // record of what has been charged now lives beside the pool it draws from.
+  if (cid && bal > 0 && !charged.has(cid)) {
+    const key = `pub_charged:${String(cid).slice(0, 128)}`;
+    if (!(await getSetting(key))) {
+      charged.add(cid);
+      await setSetting(key, String(Math.floor(Date.now() / 1000)));
+      bal -= 1;
+      await setSetting("pub_credits", String(bal));
+    } else charged.add(cid);   // charged before a restart — remember it in memory again, take nothing
+  }
   return c.json({ balance: bal, charged: true });
 });
 // Human feedback on a call's verdict — what the answer ACTUALLY was, per the person who read the transcript.
@@ -6964,6 +6976,16 @@ app.post("/twiml/bridge-status", async (c) => {
       // that ended without reaching a human still lands a terminal callResults row.
       const fin = roomFinalizers.get(room);
       if (fin) { roomFinalizers.delete(room); try { fin(status); } catch (e) { console.error("bridge finalizer:", e); } }
+      // WHO PUT THE PHONE DOWN (round 2, item 5). The carrier says a check ended and never says who
+      // ended it, but we know every time it was US, because we are the ones who do it. So this is
+      // subtraction, not a guess: the check ended, we did not end it, therefore the far end did. A
+      // failure status rather than a normal finish means it was not a hang-up at all — the check was
+      // disconnected. Written BEFORE the receipt closes, so it lands on the timeline the card reads.
+      const ours = weEndedCheck(room);
+      if (!ours) {
+        if (status === "completed") emit(room, "hangup", "The store hung up on us", { reason: "store_hung_up", carrier: status });
+        else emit(room, "hangup", "The check was disconnected", { reason: "disconnected", carrier: status });
+      }
       // The carrier says the call is over — this is the truthful end, so the receipt closes and
       // persists HERE. The finalizer above may still be writing the verdict; the roll-up is stitched
       // onto the call row by the sink, which looks the row up by room.

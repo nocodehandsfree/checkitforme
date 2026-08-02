@@ -19,7 +19,7 @@ ok(aliveFromRow({ dialedAt: NOW - 60, lineEndedAt: NOW - 5 }, NOW) === false,
 ok(aliveFromRow({ dialedAt: NOW - 200, lineEndedAt: NOW - 200 }, NOW) === false,
   "a line that ended the second it was answered is still ended");
 ok(aliveFromRow(null, NOW) === false,
-  "a check nobody ever recorded is not a live call — same answer lineStillUp gives an unknown room");
+  "a check nobody ever recorded is not a live call");
 ok(aliveFromRow(undefined, NOW) === false, "…and an undefined row answers the same");
 ok(aliveFromRow({ dialedAt: NOW - LIFE_HARD_CAP_SECS - 1, lineEndedAt: null }, NOW) === false,
   "no line-end but dialed past the hard cap: the carrier's callback was LOST (a restart), not a live call");

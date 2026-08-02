@@ -11,7 +11,9 @@
 //
 // THE QUESTIONS THIS FILE OWNS (nobody else may decide them):
 //   isCheckAlive(id)    — is the phone still in somebody's hand? The carrier's line-end is the ONLY end.
-//   mayWriteVerdict(id) — may a finalize path stamp a verdict, charge, and alert?
+//                         Every finalize asks THIS and negates it; there is deliberately no second
+//                         wrapper saying the same thing in other words, because two names for one
+//                         rule is how a rule drifts.
 //   resolveRoom(id)     — which check does this name (room, bridge:<room>, delta:<id>, or the
 //                         provider's conversation id) belong to?
 //
@@ -23,7 +25,14 @@
 //
 // HOW STATE GETS HERE: events.ts (pure, sink-registered like everything else in the receipt chain)
 // exposes setLifeHook; installCheckLife registers a mirror that copies the life-relevant moments of
-// every receipt into the check_life table as they happen. The carrier's own status callback
+// every receipt into the check_life table as they happen.
+//
+// WHERE IT IS THIN, SAID PLAINLY (round 2, item 6): the recorded-clips lane barely writes here. It
+// opens and closes its own record and owns its own finalize, so almost none of the moments below
+// ever fire for it, and a question asked about one of those checks falls through to the in-memory
+// answer or to "not alive". That is the behaviour that lane had before any of this was built, so it
+// is safe rather than wrong — but the sentence above would otherwise read as full cover, and a
+// comment claiming cover it does not have is how the next reader gets caught. The carrier's own status callback
 // (/twiml/bridge-status) stamps the line end directly — it is the truthful end even after a restart,
 // when no in-memory receipt exists to close.
 import { eq, lt, or } from "drizzle-orm";
@@ -37,6 +46,26 @@ import { bridgeRoomForConversation } from "../voice/bridge";
  *  not that a call is still running — so the answer fails toward "finished", never toward a check
  *  that can never finalize. This is a backstop against a LOST callback, not a timer on a live call. */
 export const LIFE_HARD_CAP_SECS = 30 * 60;
+
+/**
+ * …AND IT HAS TO STAY FAR PAST THE LONGEST CHECK THE CARRIER WILL ALLOW (round 2, item 6). Both this
+ * and the bridge's own thirty-minute memory are constants, while the cap they have to clear lives in
+ * Admin and can be raised without a deploy. At today's values there is a tenfold margin, so nothing
+ * is wrong — but a raised setting would silently walk a live check past a backstop that then reports
+ * it as finished, which is the entire class of fault the gatekeeper exists to end. Called wherever a
+ * check is placed; it complains loudly and never blocks a check, because a noisy log is the right
+ * price and a refused check is not.
+ */
+export function warnIfCapTooLow(maxCallSeconds: number | null | undefined): boolean {
+  const cap = Number(maxCallSeconds) || 0;
+  if (cap > 0 && cap * 2 > LIFE_HARD_CAP_SECS) {
+    console.error(`[check-life] THE LONGEST ALLOWED CHECK (${cap}s) IS NOW CLOSE TO THE ${LIFE_HARD_CAP_SECS}s BACKSTOP. `
+      + "Raise LIFE_HARD_CAP_SECS in src/calls/check-life.ts AND the context expiry in src/voice/bridge.ts, "
+      + "or a long check will be reported as finished while it is still on the phone.");
+    return false;
+  }
+  return true;
+}
 
 /** Rows older than this are pruned — the table holds live checks, not history (call_events is history). */
 const LIFE_KEEP_SECS = 24 * 3600;
@@ -62,6 +91,13 @@ const nowSec = () => Math.floor(Date.now() / 1000);
 export async function resolveRoom(id: string | null | undefined): Promise<string | null> {
   if (!id) return null;
   if (id.startsWith("bridge:")) return id.slice(7);
+  // A CHECK WE ARE HOLDING RIGHT NOW IS A CHECK, WHATEVER THE DATABASE SAYS. Every lookup below can
+  // throw — an unreachable database, a table not there yet — and every one of those throws is caught
+  // and ends with "we do not know this name", which the caller reads as "not alive" and takes as
+  // permission to stamp a verdict on a check that is still on the phone. The one answer that needs
+  // no database at all is the one in front of us, so it is asked first and the risky lookups only
+  // ever run for a check this process is not holding.
+  if (getReceipt(id)) return id;
   // A delta room and a plain bridge room are already room names — a row under that key settles it.
   try {
     const direct = await db.select({ room: checkLife.room }).from(checkLife).where(eq(checkLife.room, id)).limit(1);
@@ -106,11 +142,6 @@ export async function isCheckAlive(id: string | null | undefined): Promise<boole
   } catch { return false; }
 }
 
-/** May a finalize path stamp a verdict, charge, and alert? Only once the line is down. Every
- *  finalize asks THIS, so the rule cannot fork per door again. */
-export async function mayWriteVerdict(id: string | null | undefined): Promise<boolean> {
-  return !(await isCheckAlive(id));
-}
 
 // ---- the writers ----------------------------------------------------------------------------
 

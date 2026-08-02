@@ -11,8 +11,9 @@
 //   conversation. And that an agent who tries to talk over the question is silenced.
 import { EventEmitter } from "node:events";
 import { WebSocketServer, type WebSocket as WS } from "ws";
-import { setBridgeContext, handleTwilioBridge } from "../src/voice/bridge";
-import { openReceipt, getReceipt, transcriptOf, lineStillUp, closeReceipt, rollup, _reset } from "../src/calls/events";
+import { setBridgeContext, handleTwilioBridge, weEndedCheck } from "../src/voice/bridge";
+import { openReceipt, getReceipt, transcriptOf, closeReceipt, rollup, _reset } from "../src/calls/events";
+import { isCheckAlive } from "../src/calls/check-life";
 import { toMediaFrames } from "../src/calls/clip-cache";
 
 /** Real ringback: the published North American pair, 440 + 480 Hz, μ-law encoded — the same thing
@@ -424,7 +425,7 @@ console.log("\n▶ the other strategy: close him for the wait, bring him back as
     // at the provider, and both finalize paths took that as the check being over: they stamped "we got
     // left on hold", charged for it and sent the alerts while Staff were still walking back with the
     // answer. This is the one gate they now ask, and it has to say the line is up.
-    ok(lineStillUp("room-reopen"), "no verdict can be stamped while Charlie is dropped, because the line is still up");
+    ok(await isCheckAlive("room-reopen"), "no verdict can be stamped while Charlie is dropped, because the line is still up");
   }
   // THE STOPWATCH MAY NOT JOIN WHILE THEY HAVE US ON HOLD. The fallback timer armed at the start of
   // the call fired 60 seconds in on the owner's check — Charlie was closed for the hold, so nothing
@@ -442,7 +443,7 @@ console.log("\n▶ the other strategy: close him for the wait, bring him back as
   ok(r.segments.length === 2, "two numbered stretches on one receipt");
   // …and the gate opens the moment the CARRIER says the line ended, so the check finalizes as normal.
   closeReceipt("room-reopen", "Check ended", "completed");
-  ok(!lineStillUp("room-reopen"), "once the carrier hangs up the line is down, and the verdict may land");
+  ok(!(await isCheckAlive("room-reopen")), "once the carrier hangs up the line is down, and the verdict may land");
   restore(); tw.close(); f.close();
 }
 
@@ -925,6 +926,145 @@ console.log("\n▶ held audio reaches him at the speed it was spoken, never in o
   const gaps = f.chunkAt.slice(1).map((t, i) => t - f.chunkAt[i]).filter((g) => g >= 15);
   ok(gaps.length > 20, `the frames are spaced like a phone line, not dumped (${gaps.length} real gaps between frames)`);
   restore(); tw.close(); f.close();
+}
+
+// ================================================================================================
+// ROUND 2, ITEM 1 — NOTHING BUT A REAL PERSON OPENS CHARLIE.
+// The owner's own check log, 08-01: "Charlie was let on without hearing Staff (hold-timeout)" at 63
+// seconds, nobody having spoken. A stopwatch called "Hold max seconds" sounded like a give-up and was
+// the opposite: it switched the expensive agent ON to talk to an empty line, at 11p a minute.
+console.log("\n▶ nobody ever speaks: no Charlie is EVER opened, however long we wait");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  openReceipt("room-empty", { lane: "direct" });
+  setBridgeContext("room-empty", {
+    agentId: "agent_normal", dynamicVars: {}, connectOnHuman: true,
+    // The old stopwatch, set as short as it can be. It must do nothing at all now.
+    holdMaxSeconds: 1,
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "room-empty", () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_e", customParameters: { room: "room-empty" } } });
+  await sleep(350);
+  // Nobody says anything at all: the line is simply open and quiet, which is the case the old
+  // stopwatch fired on. (Hold music is deliberately not used here — on a direct dial the ear calls a
+  // person after about 22 voiced frames but needs 40 samples before it may call anything a tone, so
+  // music reads as a person there. That belongs to the ear and to round 1, and is written down.)
+  for (let i = 0; i < 200; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(1800);                                  // well past the old one second stopwatch
+  ok(f.sockets.length === 0, "no session was opened — a stopwatch may never put Charlie on an empty line");
+  ok(f.inits.length === 0, "…and nothing was billed, because nothing connected");
+  ok(tw.readyState === 1, "the check is still running: giving up is a separate rule, not this one's job");
+  console.log("  …and the moment a real person DOES speak, he opens normally");
+  for (let i = 0; i < 40; i++) tw.media(frame(LOUD(160, i % 4)));
+  await sleep(250);
+  ok(f.sockets.length === 1, "a real voice opens him, which is the only thing that ever should");
+  restore(); tw.close(); f.close();
+}
+
+// ROUND 2, ITEM 3 — a misheard machine phrase must not hang up on a real person.
+console.log("\n▶ a real person saying 'the manager is not available' does NOT end the check");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const { tw } = await callToHello(f, 400, "room-vm-person");
+  tw.say({ event: "mark", mark: { name: "delta-opening" } });
+  await sleep(200);
+  // We have asked our question. Everything from here is a REPLY, so a voicemail word inside it is a
+  // person talking about voicemail. Every phrase below is in the machine pattern.
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "The manager is not available right now." } }));
+  await sleep(120);
+  ok(tw.readyState === 1, "the line is still up after 'is not available' from a live person");
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "That's been forwarded to the front, you can leave a message with me." } }));
+  await sleep(120);
+  ok(tw.readyState === 1, "…and still up after 'forwarded to' and 'leave a message'");
+  ok(!(getReceipt("room-vm-person")?.events || []).some((e) => e.kind === "voicemail"), "nothing was stamped as reaching a machine");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ …while a machine that answers BEFORE we ask anything is still hung up on");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const tw = await callWithHold(f, "room-vm-machine", "gate");
+  speak(tw, 150);   // the machine's own recorded voice is what trips the person detector — the real case
+  // No question of ours has played on this path, so this is the machine announcing itself.
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "We are unable to take your call, please leave a message after the beep." } }));
+  await sleep(150);
+  ok(tw.readyState !== 1, "hung up straight away, before paying to listen to a greeting");
+  ok((getReceipt("room-vm-machine")?.events || []).some((e) => e.kind === "voicemail"), "and the record says a machine answered");
+  restore(); tw.close(); f.close();
+}
+
+// ROUND 2, ITEM 4 — the two things the log claimed and nothing wrote.
+console.log("\n▶ a hand-over that lands back in the phone menu is recorded as exactly that");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const tw = await callWithHold(f, "room-back-to-menu", "reopen");
+  speak(tw, 150);
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "This is the pharmacy, let me transfer you." } }));
+  await sleep(80);
+  // …and instead of a department we land at the store's recorded menu.
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Thank you for calling. For the pharmacy, say pharmacy. To repeat these options, press 9." } }));
+  await sleep(120);
+  const ev = (getReceipt("room-back-to-menu")?.events || []).find((e) => e.detail?.sentBackToMenu === true);
+  ok(!!ev, "the receipt says we were sent back through the phone menu");
+  ok(String(ev?.note || "").includes("sent back through the phone menu"), `in plain words: "${ev?.note}"`);
+  ok(ev?.kind === "unknown", "on an existing event kind, so the closed set of sixteen stays sixteen");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ …and an ordinary sentence from Staff is never mistaken for a menu");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const tw = await callWithHold(f, "room-not-menu", "reopen");
+  speak(tw, 150);
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "This is the pharmacy, let me transfer you." } }));
+  await sleep(80);
+  // A real person putting us through says none of the things a menu says.
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Sure, hold on, I'll put you through to the front for you." } }));
+  await sleep(120);
+  ok(!(getReceipt("room-not-menu")?.events || []).some((e) => e.detail?.sentBackToMenu === true),
+    "a person offering to put us through is NOT a menu, so nothing is claimed");
+  restore(); tw.close(); f.close();
+}
+
+// ROUND 2, ITEM 5 — who put the phone down.
+console.log("\n▶ who ended the check: we know, because we know when it was us");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const tw = await callWithHold(f, "room-whoended", "gate");
+  speak(tw, 150);
+  ok(weEndedCheck("room-whoended") === null, "while it is running, nobody has ended anything");
+  // Charlie finishing IS us putting the phone down, and it must never read as the store hanging up.
+  f.sockets[0].close();
+  await sleep(200);
+  ok(String(weEndedCheck("room-whoended") || "").startsWith("charlie_ended"), `Charlie finishing is recorded as OUR ending (${weEndedCheck("room-whoended")})`);
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ …and when the store hangs up, nothing of ours claims it");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const tw = await callWithHold(f, "room-storeended", "gate");
+  speak(tw, 150);
+  // The store puts the phone down: the carrier tears the leg down, we did nothing.
+  tw.close();
+  await sleep(150);
+  ok(weEndedCheck("room-storeended") === null, "we did not end it, so the far end did — which is what the card reads");
+  restore(); f.close();
 }
 
 console.log(`\n════════════════════════════════\n  PASS: ${pass}   FAIL: ${fail}\n════════════════════════════════`);
