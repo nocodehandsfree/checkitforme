@@ -2,48 +2,48 @@
 > The one operator dashboard `public/app.html` + `/api/*`. Ships LIVE via `bash scripts/ship-admin.sh`
 > (never waits on a promote); server halves ride the promote train. Charter: `handoff.md`.
 > Volatile — REPLACE stale lines, newest on top, ≤60 lines.
+## 2026-08-02 — Statuses page + the confirm sheet (SHIPPED LIVE + DRIVEN in a local browser)
+- 🔴 **`askSheet` ALWAYS resolved false.** `ok.onclick` called `closeSheet()` BEFORE `finish(true)`, and closeSheet
+  dispatches `sheetclosed` synchronously, so the swipe-away listener settled it "no" first. Every Yes in the Admin
+  read as a cancel, all six call sites. ANSWER, then close. Found only by driving a delete.
+- 🔴 **A body-level layer over the sheet gets eaten by the tap-outside listener** (capture-phase
+  `stopPropagation` in `_ensureSheet`). `#iconpick` is now exempt; any future overlay must be too. Symptom
+  the owner saw: pick an icon, nothing happens, and the sheet underneath is gone.
+- Statuses now: delete in the edit sheet (`k-danger`, comp 1f) behind an `askSheet` confirm; In stock is
+  exempt (brand green is tied to it); a queued type-ahead save is dropped BEFORE the delete or closeSheet's
+  flush rewrites the deleted row. Add closes the sheet and toasts. **Owner order: New status is a top-right
+  `button.act` in the header, not comp 1e's bottom capsule, this page only.** No `data-tip` on it: the ⓘ
+  renders INSIDE a filled green pill. Live Admin verified by fetching the served shell (Chromium has no
+  internet here); behaviour driven against a local server on a throwaway SQLite file.
 ## 2026-07-30 — Voice ▸ **Test calls** is the new-engine scorecard (@5b1f325, SHIPPED + DRIVEN)
-- `src/calls/behaved.ts` = the PURE scorer: four rows off the record the engine ALREADY writes, no new listening.
-  **NO second route** — it rides the SAME `/api/admin/receipt/:room` envelope. 41 asserts in
-  `scripts/test-behaved.ts`. The card renders ONLY when the sheet opens from Test calls.
+- `src/calls/behaved.ts` = the PURE scorer on the SAME `/api/admin/receipt/:room` envelope, NO second route. 41 asserts in `scripts/test-behaved.ts`. Page = comp 1c.
 - 🔴 **THREE STATES, NOT TWO.** A gray dash = this check never put that rule to the test; a cross for "nobody put us
   on hold" is a lie and a tick is worse. Same law as an unstamped cost never printing as nought.
 - 🔴 **`status` and `statusKey` are TWO fields, never merged.** `verdictKey` reads `statusKey` against the registry
   FIRST; merging them made every in-stock check say "nobody answered". No test caught it; driving it did.
-- Page = comp 1c off `renderResults`; rows read `5.4¢ · not in stock`. Split card = `Menu` (line + fork) vs
-  `Charlie`; `readable.menu` is new and the per-check cost reads `costForkUsd`, which nothing did.
-- **PM: promote wanted** — server half is staging only, so Live is honest but flat. **NOT verified:** a red cross
-  and the hold row on real data.
+- **PM: promote wanted** (server half is staging only). **NOT verified:** a red cross and the hold row on real data.
 ## 2026-07-30 — Unify GATE + page 1 (Live) shipped (@71b724a5). **dash is SEALED. Next page: App (settings).**
 - `scripts/qa-admin-unify.mjs`. A page = its `<section>` + its `TAB_LOADERS` loader body (one hop; brace match runs
   long, never short) + a `chrome` page for the shell. It fails on: a SECOND way to mark a hint · on-page directional
   copy · the UNTRUE list · his-words. Both lists are IN the script — GROW them, never weaken one to pass a page.
   Ordinary English is not a violation (a kiosk receipt IS a receipt) — that is what `unless:` is for.
-- **The ONE hint standard is `data-tip` + the single `[data-tip]::after{content:"ⓘ"}` rule** (tap-to-show; a phone
-  has no hover). 🔴 The comp board's "tooltips become gray lines" is OLDER than the shipped pattern the owner has
-  read since 07-29 — never "fix" the Admin back to gray lines.
+- **The ONE hint standard is `data-tip` + the single `[data-tip]::after{content:"ⓘ"}` rule** (tap-to-show). 🔴 The
+  comp board's "tooltips become gray lines" is OLDER than the shipped pattern; never "fix" the Admin back to them.
 - **RATCHET:** only ids in `SEALED` are enforced by default, so the sweep cannot brick the ship path; seal a
   page as the LAST step of its session. Runs in `test-all.sh` AND as a `ship-admin.sh` preflight.
-- **LIVE's pass:** THE BASELINE is new in the cost drill, renders at zero checks too, and `baseline` comes from the
-  SERVER off live plan prices, so a price change moves the ceiling. ⚠️ That server half rides the promote.
-- Retired: Call time (DELETED with `loadCallTiming`; the drill's seconds + clock and Chains replace it) · Call health
-  moved WHOLE into Calls (comp 1b said so all along) · the voice balance moved to Calc's voice-plan card, and its
-  30-second poll is gone. **Nothing was deleted without a home.** Honest zeros: no revenue = "none yet", not 0%.
-- ⚠️ Calls/Testing still put `title=` on the status icon; `aria-label` already carries it, so both drop `title=` on
-  their pass (a phone has no hover). Do not split the two pages over it.
+- **LIVE's pass:** THE BASELINE renders at zero checks too and comes from the SERVER off live plan prices, so a
+  price change moves the ceiling. ⚠️ That server half rides the promote. Retired: Call time, Call health (into
+  Calls), the voice balance (into Calc) and its poll. **Nothing was deleted without a home.**
+- ⚠️ Calls/Testing still put `title=` on the status icon; `aria-label` carries it, so both drop it on their pass.
 ## 2026-07-29 — Policy is a console (@0f2b6b7e)
 - 🔴 **CHECK BEFORE YOU CUT, win three:** the queue said cut Policy's pricing form; the comp said the OPPOSITE, only
   the GRAMMAR was wrong. Console pattern: a row saves on `change`, merges its own sub-object, re-reads the PATCH
   response, snaps back on a non-number. No save button.
-- 🔴 **Driving the Admin in a browser: follow the FIRST Compute entry in `docs/shared/GOTCHAS.md` to the letter**
-  (no internet for Chromium; six traps).
+- 🔴 **Driving the Admin in a browser: FIRST Compute entry in `docs/shared/GOTCHAS.md`, to the letter** (no internet for Chromium).
 ## 2026-07-30 — the iOS bottom tint is LOCKED (owner order: it can never go back to the darker band)
-- `qa-tint-lock` now covers `app.html` too, 28/28, and runs in the PUSH GATE (a push that breaks it is refused) plus
-  ship-admin. Pinned: root `#1D1D22` == `--bg` · `color-scheme:dark` · both safe areas painted · no `theme-color`
-  meta · black-translucent · viewport-fit=cover · **only `.sheet` may be a filled `position:fixed` on `bottom:0`,
-  allow-listed — a new one FAILS** · a closed sheet is `display:none` · nothing re-stamps the root colour.
-- Proved it bites: broke it four ways (root drift · a theme-color meta · a new filled bottom bar · a parked closed
-  sheet), each failed, then restored. 🔴 Still NOT verifiable here — no iOS. The owner reads the bottom edge.
+- `qa-tint-lock` covers `app.html`, 28/28, in the PUSH GATE and ship-admin, so the rules live in the gate now.
+  The one that bites a builder: **only `.sheet` may be a filled `position:fixed` on `bottom:0`** (allow-listed,
+  a new one FAILS) and a closed sheet is `display:none`. 🔴 NOT verifiable here, no iOS. He reads the bottom edge.
 ## Reference + traps (detail in git and in the task files; only what a future session trips on)
 - Ops 07-28: `src/calls/ops.ts` is a PURE roll-up owning NO scale; unstamped = not counted, NEVER a zero. The cost
   card HIDES on a 404. **PM: promote wanted.** Detail + its two "check before you cut" mistakes:

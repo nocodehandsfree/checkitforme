@@ -1499,10 +1499,14 @@
     </section>
 
     <section id="statuses">
-    <div class="k-title">Statuses</div>
-    <div class="k-sub">The verdicts customers see</div>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+      <div style="min-width:0">
+        <div class="k-title">Statuses</div>
+        <div class="k-sub">The verdicts customers see</div>
+      </div>
+      <button class="act" style="flex:0 0 auto;white-space:nowrap;margin-top:3px" onclick="sheetFromHolder('ds_staddform','New status','You will see it right away. Reading it off real calls has to be set up first.')">New status</button>
+    </div>
     <div id="st_list" style="margin-top:16px"><div class="empty">Loading…</div></div>
-    <button class="k-cta" onclick="sheetFromHolder('ds_staddform','New status','You will see it right away. Reading it off real calls has to be set up first.')"><span>NEW STATUS →</span></button>
     <div id="st_details" style="display:none">
       <div id="ds_staddform">
         <div class="row" style="gap:8px;margin-top:4px">
@@ -1876,6 +1880,11 @@ function _ensureSheet(){
   document.addEventListener('click',e=>{
     if(!sheet.classList.contains('on')) return;
     if(e.target.closest('.sheet')) return;
+    // The icon picker sits ABOVE the sheet as its own body-level layer, so every tap in it looked like
+    // a tap outside. Capture-phase stopPropagation meant the icon you picked never registered, and the
+    // sheet you picked it for closed underneath (owner 08-02: "I select an icon, it doesn't close, and
+    // hitting Close loses the status"). Any layer stacked over the sheet must be exempt here.
+    if(e.target.closest('#iconpick')) return;
     e.preventDefault(); e.stopPropagation(); closeSheet();
   },true);
   // Thumb-drag ANYWHERE on the sheet to dismiss — the WEBSITE's exact gesture (sheetDrag in
@@ -3349,8 +3358,11 @@ function askSheet(title, lines, okLabel){
     box.innerHTML=(lines||[]).map(l=>`<div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.55;margin-bottom:10px;color:var(--text-body)">${l}</div>`).join('')
       +`<div class="row" style="gap:8px;margin-top:18px"><button class="act" style="flex:1">${okLabel||'Yes'}</button><button class="ghost" style="flex:1">Cancel</button></div>`;
     const [ok,no]=box.querySelectorAll('button');
-    ok.onclick=()=>{ closeSheet(); finish(true); };
-    no.onclick=()=>{ closeSheet(); finish(false); };
+    // ANSWER FIRST, THEN CLOSE. closeSheet fires `sheetclosed` synchronously, so closing before
+    // answering let onClose settle the promise as "no", so the real answer became a no-op. Every
+    // Yes in the Admin read as a cancel (found 08-02 driving the status delete).
+    ok.onclick=()=>{ finish(true); closeSheet(); };
+    no.onclick=()=>{ finish(false); closeSheet(); };
     document.addEventListener('sheetclosed',onClose);
     openSheet(title,'',box);
   });
@@ -6046,7 +6058,20 @@ function stSheet(id){
         <span class="meta" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">key: <code>${escH(s.key)}</code></span>
       </div>
       <div class="k-note" style="padding-left:0">Saves as you type · live for customers immediately</div>
+      ${s.key==='in_stock' ? '' : `<button class="k-danger" onclick="stDelete(${s.id})">Delete this status</button>`}
     </div>`);
+}
+// Delete a status. In stock can't go: it is the one verdict the brand green and the logo are tied to.
+// Kill any queued type-ahead save FIRST, or closeSheet's flush writes the row we just deleted back.
+async function stDelete(id){
+  const s=Object.values(STATUSES).find(x=>x.id===id); if(!s) return;
+  _stPending=null; clearTimeout(_stSaveT); _stSaveT=null;
+  const ok=await askSheet('Delete “'+s.label+'”?', // openSheet sets the title with textContent, so no escaping
+    ['Customers stop seeing it immediately.','Checks already filed under it fall back to their meaning.'],'Delete');
+  if(!ok) return;
+  const r=await api('/api/statuses/'+id,{method:'DELETE'});
+  if(r&&r.ok){ delete STATUSES[s.key]; closeSheet(); renderStatuses(); toast('Status deleted'); }
+  else toast('Could not delete that status');
 }
 async function saveStatus(id,btn){
   const card=btn.closest('[data-sid]'); const body={};
@@ -6065,9 +6090,10 @@ async function addStatus(){
   const body={ key:label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,''), label,
     emoji:v('st_new_emoji')||'•', note:v('st_new_note'), tone:document.getElementById('st_new_tone').value };
   const r=await api('/api/statuses',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-  if(r&&r.id){ document.getElementById('st_msg').textContent='Added. It shows up now. Reading it off real calls still has to be set up.';
+  if(r&&r.id){ document.getElementById('st_msg').textContent='';
     ['st_new_label','st_new_emoji','st_new_note'].forEach(x=>document.getElementById(x).value='');
-    loadStatusReg(); }
+    document.getElementById('st_new_icon_btn').innerHTML='<span class="meta" style="font-size:10px">icon</span>';
+    closeSheet(); loadStatusReg(); toast('Status added · live for customers now'); }
   else document.getElementById('st_msg').textContent='Could not add'+(r&&r.error?': '+r.error:'');
 }
 

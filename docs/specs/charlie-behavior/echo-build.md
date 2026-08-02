@@ -69,7 +69,7 @@ works at); only the per-ring line goes.
 
 | Setting | Starts at | What it does |
 |---|---|---|
-| Charlie wrap-up seconds | 23 | How long Charlie may actually be TALKING before he starts wrapping up. The owner's own arithmetic: 45 does not hold 67% profit, 23 does. He will tune it. |
+| Charlie wrap-up seconds | 45 | How long Charlie may actually be TALKING before he starts wrapping up. **OWNER DECIDED 08-02: starts at 45, tunable from Admin.** His arithmetic says 23 holds 67% profit and 45 does not, so 45 buys a longer conversation at a thinner margin on purpose. He tunes it against real checks. |
 | Hold cap seconds | 120 | How long a hold may run before we hang up. |
 | Silence before Charlie drops | 6 | How long a pause runs before we say Staff walked off. **Owner's decision: keep 6 until the robot store can measure the floor.** Too long costs about 1.1¢ each time; too short makes Charlie choppy and choppy loses whole checks. Tune to evidence, never to a guess. |
 

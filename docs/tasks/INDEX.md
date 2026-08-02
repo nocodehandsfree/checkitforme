@@ -8,6 +8,9 @@ small md here (what · done-when · system · status). Owner adds/reorders freel
 **Counts (swept 2026-07-23):** active 53 · parked 6 · dead 1 · total 60.
 Systems: site · admin · voice-calls · data · support (data carries the old ops/infra lane).
 
+## ⭐⭐ THE ORDER OF EVERYTHING (08-02): `THE-ORDER-2026-08-02.md` — six agents in flight, one queue,
+one merge at a time. READ IT FIRST. The law for Charlie: `docs/specs/charlie-behavior/README.md`.
+
 ## ⭐ THE VOICE PM LANE (Echo · handoff 08-01 · one PM chat, this lane ONLY — mapping has its own PM)
 **Your first act: audit what Echo just built.** The law is `docs/team/voice-calls/check-life-audit-2026-08-01.md`
 (84 deciders, 20 flagged, the four faults, the gatekeeper cure) + `RULES.md` #11 (a fix covers the
@@ -53,6 +56,7 @@ then they ride the next promote to prod):**
 | Task | System | Status |
 |---|---|---|
 | [Call log transcript comes back cut off](call-log-transcript-cutoff.md) | voice-calls | active |
+| [Everything Staff says after a hold is missing](words-after-a-hold-are-lost.md) | voice-calls | active — found by the robot store 08-02, checks 246-251; a real yes was thrown away and one check told the customer the opposite of what Staff said. `node scripts/robot-check.mjs 5 6 8 9 10` proves the day it is fixed. |
 
 **Stream 3 — the ops dashboard:**
 | Task | System | Status |

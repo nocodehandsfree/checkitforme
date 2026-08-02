@@ -207,9 +207,7 @@ ceiling is **6.6¢ a check**.
   breaks the margin.
 
 **What this means for the rules:** be generous with waiting, strict with talking. The 2-minute hold
-cap is cheap insurance. **OWNER 08-01: 23 seconds of Charlie actually talking, and it lives in Admin
-under App so he can play with it.** He did the arithmetic himself: 45 does not hold 67% profit, 23
-does. Without our own thinking behind Charlie the cost is double what it would otherwise be.
+cap is cheap insurance. **OWNER DECIDED 08-02: 45 seconds of Charlie actually talking, tunable from Admin under App.** His own arithmetic: 23 holds 67% profit, 45 does not — so 45 is a deliberate choice to buy a longer conversation at a thinner margin, tuned against real checks rather than guessed. Without our own thinking behind Charlie the cost is double what it would otherwise be.
 
 ## 7c. THE PHONE ON THE COUNTER (owner APPROVED the idea 08-01, wording not yet reviewed)
 
@@ -244,16 +242,13 @@ they do not remember and humans say it all the time).
 fear: the clerk is mid help, the check dies, and the customer paid for all of it. The limit tells
 Charlie to START WRAPPING UP; it never ends the check itself.
 
-**THE NUMBER, owner 08-01: 23 seconds of Charlie actually talking.** He did the arithmetic himself:
-45 seconds does not hold 67% profit, 23 does, and without our own thinking behind Charlie the cost is
-double what it would otherwise be. **This number lives in Admin under App so he can play with it**,
-not baked into the code.
+**THE NUMBER, owner 08-02: 45 seconds of Charlie actually talking, tunable in Admin.** His arithmetic says 23 holds 67% profit and 45 does not, so this is a deliberate choice to buy a longer conversation at a thinner margin. **It lives in Admin under App so he tunes it against real checks**, never baked into the code.
 
 ## 7e. THE THREE NUMBERS HE CAN TUNE (Admin ▸ App, owner 08-01)
 
 | Setting | Starts at | Why |
 |---|---|---|
-| Charlie wrap-up seconds | 23 | His own arithmetic: 45 does not hold 67% profit, 23 does. |
+| Charlie wrap-up seconds | 45 | His own arithmetic: 45 does not hold 67% profit, 23 does. |
 | Hold cap seconds | 120 | Waiting is nearly free (Charlie is dropped), so be generous. |
 | Silence before Charlie drops | 6 | **Keep 6 until the robot store can measure the floor.** Six seconds of Charlie costs about 1.1¢ every time somebody steps away, so shaving is worth real money. But too short makes him reconnect mid conversation and a choppy Charlie loses whole checks, which costs far more than a cent. The risk is not symmetrical: too long costs pennies, too short costs checks. Tune it on fifty checks at 5 seconds against fifty at 4, never on a guess. NOTE: a real "let me go check" runs far longer than 6 seconds anyway, so this only bites on short thinking pauses. |
 
