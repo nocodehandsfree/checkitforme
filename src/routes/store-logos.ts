@@ -29,10 +29,9 @@ export function artworkSize(bytes: Uint8Array, ext: string): { w: number; h: num
 export function register(app: Hono) {
   app.get("/logo-wall", async (c) => {
     if (!(await adminOk(c))) return c.notFound(); // private: not a public page
-    // THE RECORD OF TRUTH (owner 07-31). The wall used to list the copies of the artwork that ship inside
-    // the app and read their treatment flags out of _meta.json — a THIRD source that could be, and was,
-    // showing week-old artwork while the live site was correct. It now walks the chain rows and renders
-    // exactly what every store list renders: same address, same flags, same size. It cannot disagree.
+    // THE RECORD OF TRUTH (site RULES 6). The wall walks the chain rows and renders exactly what
+    // every store list renders — same address, same flags, same size — so it cannot show a customer
+    // one thing and the site another. It never reads the artwork shipped inside the app.
     const rows = (await cachedChains())
       .map((ch) => ({ ch, l: chainLogoInfo(ch.name) }))
       .filter((x) => !!x.l.url)

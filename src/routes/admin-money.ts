@@ -159,7 +159,7 @@ export function register(app: Hono) {
 
   // WHAT OUR CHECKS ACTUALLY COST — the live readout behind the dashboard hero. Every figure is summed
   // off the columns the receipt stamped on a finished check; nothing here is modelled, and a check the
-  // receipt never stamped is not counted (the owner's clean slate, 07-26: the old rows are false). The
+  // check with no stamped record is not counted (admin RULES 2 — the clean slate). The
   // maths is pure and unit-tested in `src/calls/ops.ts` — this only fetches the rows and the scales.
   app.get("/api/admin/check-costs", async (c) => {
     const days = Math.max(1, Math.min(90, Number(c.req.query("days") || 7)));

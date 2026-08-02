@@ -221,18 +221,13 @@ export function register(app: Hono) {
       const o = await provider.parseWebhook(c.req.raw);
       if (o.callId) {
         const row = (await db.select().from(callResults).where(eq(callResults.id, o.callId)))[0];
-        // A CLOSED CHARLIE IS NOT A FINISHED CHECK. He is closed on every hold, which ends his
-        // conversation at the provider, which fires this webhook — so a store saying "give me a second"
-        // used to stamp the verdict "we got left on hold", charge for it and send the alerts while the
-        // line was still up and Staff were walking back with the answer. The carrier's own end is the
-        // only end. The GATEKEEPER answers now, not the in-memory receipt (08-01 audit, family 3): the
-        // receipt's fifteen-minute life and every restart made the old guard fail toward "line is
-        // down" — and on the old direct path, where the provider carries the line itself, it failed
-        // the other way and froze this webhook for the receipt's whole life.
-        // ASK WITH WHATEVER NAME THE ROW HAS. A row written by an older build, or by any path that
-        // stamped only the provider's id, has no room — and a gate asked about nothing answers "not
-        // alive" and finalizes straight through the guard. The gatekeeper resolves a provider id back
-        // to the check itself, so handing it both names is belt and braces rather than a second rule.
+        // A DROPPED CHARLIE IS NOT A FINISHED CHECK (voice-calls RULES 15). He is closed on every
+        // hold, which ends his conversation at the provider, which fires this report — but the phone
+        // company's own end is the only end. The gatekeeper answers, from the database, so a restart
+        // cannot change the answer.
+        // Ask with whatever name the row has: a row from an older build carries only the provider's
+        // id and no room, and a gate asked about nothing answers "not alive" and finalizes straight
+        // through. The gatekeeper resolves a provider id back to the check, so passing both is safe.
         if (await isCheckAlive(row?.room ?? row?.providerCallId)) return c.json({ ok: true, skipped: "line still up" });
         // Consensus second read — keep the webhook verdict + billing identical to the poller (ingestPending):
         // two non-conflicting reads → a hard verdict (charge); conflict/ambiguity → "no clear answer", no charge.
@@ -243,7 +238,7 @@ export function register(app: Hono) {
         if (o.status === "completed") {
           const label = row ? (await db.select({ label: categories.label }).from(categories).where(eq(categories.id, row.categoryId)))[0]?.label : undefined;
           // THE READER RULE (owner 07-29), one shared implementation — consensusFor in
-          // src/voice/verdict.ts. It used to consult the reader only when the live read was unclear.
+          // src/voice/verdict.ts. The second reader is always consulted, not only on an unclear read.
           const { consensus, second } = await consensusFor(
             { confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey },
             o.transcript, label || "the product", undefined, row?.room,

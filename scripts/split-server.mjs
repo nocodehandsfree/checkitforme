@@ -8,6 +8,14 @@ import { join } from "node:path";
 const ROOT = process.cwd();
 const SRC = join(ROOT, "src/server.ts");
 const OUT = join(ROOT, "src/routes");
+
+// This ran ONCE, on 2026-08-02, against the 7,381-line src/server.ts. It is kept as the record of
+// how the split was made (the PM audits against it). Running it again would shred the file it
+// already split, so it refuses unless src/routes is gone.
+if (existsSync(OUT) && !process.argv.includes("--report")) {
+  console.error("src/routes/ already exists — this tool has already run. It is a record, not a step.");
+  process.exit(2);
+}
 const text = readFileSync(SRC, "utf8");
 const sf = ts.createSourceFile(SRC, text, ts.ScriptTarget.ESNext, true);
 

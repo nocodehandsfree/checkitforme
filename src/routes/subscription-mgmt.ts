@@ -11,7 +11,7 @@ export function register(app: Hono) {
     const u = await verifyClerkToken(c.req.header("Authorization"));
     if (!u) return c.json({ error: "unauthorized" }, 401);
     // Charging is now SERVER-SIDE on call completion (ingestPending, atomic + idempotent). This
-    // endpoint no longer trusts the client to bill itself — it just returns the live balance.
+    // This does not bill: the charge happens on the check itself. It returns the live balance.
     const a = await getAccount(u.id, u.email);
     return c.json({ credits: isCompAccount(a) ? 9999 : spendableCredits(a) });
   });

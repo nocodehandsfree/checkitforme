@@ -216,9 +216,10 @@ export function register(app: Hono) {
         return { id: r.id, chainId: r.chainId, name: r.name, location: r.location, address: r.address || null, storeType: (r.chainId && types.get(r.chainId)) || "Other",
           ...logoFields(chainName),
           carries: storeCarriesList(chainName, r.carries),
-          // shipmentDay is deliberately NOT sent to consumers: it's unverified (auto-learned, junk values
-          // like "every single week" rendered as "drops eve"). It returns confidence-gated once a store
-          // has 2+ confirmed calls agreeing (learnedShipDow). Admin surfaces still see it via /api paths.
+          // shipmentDay is deliberately NOT sent to a customer: it is unverified, auto-learned text,
+          // and junk values like "every single week" rendered as "drops eve". Admin still sees it on
+          // the /api paths. Bringing it back to customers needs a store's day confirmed by 2 or more
+          // agreeing checks, and that confidence gate does not exist yet.
           lat: r.lat, lng: r.lng, region: r.region, state: r.state,
           sellsPacks: r.sellsPacks !== false, hasKiosk: r.hasKiosk === true,
           tier: r.hasKiosk === true ? 5 : (r.tier ?? null), inStock: confirmedSet.has(r.id), // any kiosk store = tier 5; inStock = brand-check pin
@@ -489,9 +490,9 @@ export function register(app: Hono) {
         const miles = (hasLoc && r.lat != null && r.lng != null) ? haversineMi(lat, lng, r.lat, r.lng) : null;
         const hist = byStore.get(r.id);
         return { id: r.id, name: r.name.split("—")[0].trim(), miles, signals: {
-          // shipmentDow stays OFF for consumers: restock day is unverified data, so it neither ranks
-          // nor labels a best bet ("usually restocks Friday" is gone) until a store's day is confirmed
-          // by 2+ agreeing calls (owner rule, 2026-07-02). learnedShipDow is the comeback path.
+          // shipmentDow stays null for customers: restock day is unverified, so it neither ranks nor
+          // labels a best bet — no "usually restocks Friday". The owner's rule for turning it back on
+          // is a day confirmed by 2 or more agreeing checks, and that gate is not built.
           miles, todayDow: tzDow(r.timezone), shipmentDow: null,
           confirms: hist?.confirms ?? 0, lastConfirmAgoHrs: hist ? Math.round((now - hist.last) / 3600) : null,
         } };

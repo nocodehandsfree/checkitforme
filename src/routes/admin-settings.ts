@@ -16,7 +16,7 @@ import { page } from "./shared-helpers";
 
 // ---- Admin UI decoupled ship path (owner 2026-07-15) ----
 // THE Admin (admin.checkitforme.com) is served by THIS prod service (the DB is SQLite on this
-// service's volume — no second service can read it), but its UI no longer waits on a full
+// service's volume — no second service can read it), and its UI does not wait on a full
 // staging→main promote: scripts/ship-admin.sh POSTs public/app.html straight here and the file
 // lands on the persistent volume, served immediately. The repo copy bundled at the last promote
 // stays the FALLBACK — a missing/corrupt override can only ever degrade to "older but working".

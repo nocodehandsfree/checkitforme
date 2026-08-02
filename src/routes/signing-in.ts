@@ -13,18 +13,6 @@ import { getAccountByPhone, phoneAccountExists, spendableCredits } from "../bill
 import { checkPhoneVerify, e164 as authE164, isCallerIdVerified, signSession, startCallerIdVerify, startPhoneVerify } from "../auth";
 import { cookieRootDomain, isAdminPhone, verifyClerkToken } from "./shared-helpers";
 
-// ---- Email confirm + one-click unsubscribe (the two live links every alert email carries) ----
-// Tiny branded landing page (dark board, wordmark, one line + Spanish, one CTA back to the site).
-export function emailLandingPage(title: string, line: string, lineEs: string, cta: string): string {
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · Check It For Me</title>
-<style>body{margin:0;background:#08090D;color:#fff;font-family:Inter,'Segoe UI',Arial,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center}
-.card{max-width:420px;margin:16px;background:#14141A;border-radius:26px;padding:34px 36px}
-h1{font-size:30px;font-weight:900;letter-spacing:-1px;margin:18px 0 0}p{color:#B9B9C4;font-size:15px;line-height:1.5;margin:14px 0 0}.es{color:#8A8A96;font-size:13px}
-a.cta{display:block;text-align:center;margin-top:26px;background:#16161C;border:2px solid #4ADE80;border-radius:999px;padding:17px 24px;color:#fff;font-weight:800;font-size:13px;letter-spacing:1.6px;text-decoration:none;text-transform:uppercase}</style></head>
-<body><div class="card"><img src="/logos/brand/check.png" alt="Check" style="height:26px;display:block">
-<h1>${title}</h1><p>${line}</p><p class="es">${lineEs}</p><a class="cta" href="/">${cta}&nbsp;&nbsp;&rarr;</a></div></body></html>`;
-}
-
 // Unsubscribe: signed one-click. Kills every EMAIL alert for this address (subscriptions + watches)
 // and un-verifies it so nothing else emails them until they re-confirm. GET renders the page;
 // POST serves RFC 8058 one-click (the List-Unsubscribe-Post header) — same effect, no body needed.
@@ -38,8 +26,8 @@ export async function unsubscribeEmail(e: string): Promise<void> {
 }
 
 export function register(app: Hono) {
-  // Clerk-free admin login: visit /admin-login?token=ADMIN_TOKEN once → sets a signed httpOnly
-  // session cookie the /api/* gate accepts. No Clerk. The existing app.html then loads unchanged.
+  // The admin door: /admin-login?token=ADMIN_TOKEN once → a signed httpOnly session cookie the
+  // /api/* wall accepts. Set on the shared root domain so the site and Admin share one sign-in.
   app.get("/admin-login", async (c) => {
     const token = c.req.query("token") || "";
     if (!config.adminToken || token !== config.adminToken) return c.text("unauthorized", 401);
@@ -54,7 +42,7 @@ export function register(app: Hono) {
     return c.redirect("/");
   });
 
-  // ---- Phone-first auth (Clerk-free): SMS code → our session → caller-ID verify call ----
+  // ---- Signing in by phone: SMS code → our session → caller-ID verify call ----
   // Step 1: send an SMS code to the cell (browser auto-fills it). Rate-limited (SMS costs money).
   app.post("/auth/phone/start", async (c) => {
     const rl = rlCheck("lead", clientIp(c.req.raw.headers), LIMITS.lead);
@@ -113,9 +101,9 @@ export function register(app: Hono) {
     return c.json({ verified });
   });
 
-  // Confirm: the signed link from the confirm email. Marks every account carrying this address verified.
-  // No landing page (owner 07-16): confirm, then drop them straight back on the site — My checks opens
-  // with a pill saying the email is confirmed (emconf=1) or that the link didn't work (emconf=0).
+  // Confirm: the signed link from the confirm email. Marks every account carrying this address
+  // verified, then drops them back on the site — My checks opens with a pill saying the email is
+  // confirmed (emconf=1) or that the link did not work (emconf=0). No landing page (site RULES 1).
   app.get("/confirm-email", async (c) => {
     const e = String(c.req.query("e") || "").trim().toLowerCase();
     if (!e || !checkEmailToken(e, String(c.req.query("t") || ""))) return c.redirect("/?emconf=0");
@@ -123,9 +111,8 @@ export function register(app: Hono) {
     return c.redirect("/?emconf=1");
   });
 
-  // The human unsubscribe click goes straight to the Alerts sheet — they mute or stop the exact alert
-  // there (owner 07-16: no unsubscribe landing page, no blanket kill). The POST below stays: it's the
-  // RFC 8058 one-click header path mail apps call machine-to-machine.
+  // The human unsubscribe click opens the Alerts sheet, where they mute or stop the exact alert.
+  // The POST below is the RFC 8058 one-click path mail apps call machine-to-machine (site RULES 1).
   app.get("/unsubscribe", async (c) => c.redirect("/?alerts=1"));
 
   app.post("/unsubscribe", async (c) => {
@@ -133,20 +120,5 @@ export function register(app: Hono) {
     if (!e || !checkEmailToken(e, String(c.req.query("t") || ""))) return c.json({ error: "bad_token" }, 400);
     await unsubscribeEmail(e);
     return c.json({ ok: true });
-  });
-
-  // Clerk-free admin login: visit /admin-login?token=ADMIN_TOKEN once → sets a signed httpOnly
-  // session cookie the /api/* gate accepts. No Clerk. The existing app.html then loads unchanged.
-  app.get("/admin-login", async (c) => {
-    const token = c.req.query("token") || "";
-    if (!config.adminToken || token !== config.adminToken) return c.text("unauthorized", 401);
-    const jwt = await signSession("admin", "");
-    setCookie(c, "admin_session", jwt, { httpOnly: true, secure: true, sameSite: "Lax", path: "/", maxAge: 60 * 60 * 24 * 30 });
-    return c.redirect("/");
-  });
-
-  app.get("/admin-logout", (c) => {
-    setCookie(c, "admin_session", "", { httpOnly: true, secure: true, sameSite: "Lax", path: "/", maxAge: 0 });
-    return c.redirect("/");
   });
 }

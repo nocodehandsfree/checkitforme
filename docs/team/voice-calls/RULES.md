@@ -34,3 +34,20 @@ that made it law. A rule leaves this file only when the owner himself retires it
     prior recorded run against the fixed engine on the rig; he dials only after all replay clean.
     His calls prove new ground only. And on ANY live fault, the engine's own log is read FIRST,
     before any code is opened (08-01: it showed each fault exactly, and was reached third).
+13. NEVER re-enable connect-at-answer ("instant connect"). Every store waits for a voice before the
+    paid agent joins. Connecting at answer made Charlie talk over any store that only LOOKS direct
+    but plays a recording first — Box Lunch, Hot Topic, B&N Thousand Oaks, all billed from the first
+    second (owner's rollback order 07-21). Accepted cost: a true direct clerk's first words can clip.
+14. ONE ROW IS WRITTEN BEFORE THE DIAL, ON EVERY PATH, CARRYING THE ROOM. The website's own check
+    used to insert its row inside the connect callback with no room, so both finalize gates asked
+    "is this check alive?" about nothing, and charged while the phone was still in a customer's hand
+    (08-01). The governor decides only whether a slot is held — never whether a row exists.
+15. "Is this check alive?" is answered from our own record and the phone company only, never the
+    voice provider, and the answer is kept in the database so a restart cannot flip it back (08-01).
+16. A hang-up is matched on the ROOM, not only the conversation id. The room exists from before the
+    phone rings; the conversation id may never arrive. Matching on the id alone stamped nothing when
+    the owner cancelled a check he had answered himself, and it was later logged unanswered (07-28).
+17. The live read is armed on EVERY check path, the website's own included, so the verdict is ready
+    at hang-up instead of being started then (owner 07-30).
+18. EVERY finish path sends the in-stock alerts. Two of the three finish paths sent no mail at all,
+    so the owner's own Fun store alert never arrived (07-31). One store = ONE email.

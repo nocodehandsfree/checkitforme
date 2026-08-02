@@ -70,8 +70,8 @@ export async function ownerOnlyRetailerIds(): Promise<Set<number>> {
 
 // retailerId -> learned time-to-human (the chain's LOCKED nav recipe seconds): how long we spend in the
 // phone tree / on hold before a person picks up. Subtracting this from a call's connected time yields
-// the REAL human-talk time (the old code subtracted the IVR's first-words timestamp ~2s, so "talk" was
-// the whole call). null when the chain has no locked recipe → caller falls back to the per-call nav.
+// the REAL talk time with Staff (data RULES 3). null when the chain has no locked recipe, and the
+// caller then falls back to that check's own measured nav time.
 export async function retailerTimeToHuman(): Promise<Map<number, number>> {
   const [rets, chRows] = await Promise.all([
     db.select({ id: retailers.id, chainId: retailers.chainId }).from(retailers),
@@ -376,41 +376,11 @@ export function qTokenMatch(hay: string, q: string): boolean {
   return toks.every((t) => h.includes(t) || (t.length >= 5 && h.includes(t.slice(0, -1))));
 }
 
-// "Best bet near you" — rank nearby open stores by how likely a check pays off now (shipment-day
-// timing + confirm history/recency + proximity). The recommendation layer over the restock database.
+// Today's weekday (0=Sun … 6=Sat) in a store's own timezone. The nearby list sends it down so the
+// page can say "ships today" without the browser guessing at the store's clock.
 export function tzDow(tz: string): number {
   const wd = new Intl.DateTimeFormat("en-US", { timeZone: tz || "America/Chicago", weekday: "short" }).format(new Date());
   return ({ Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 } as Record<string, number>)[wd] ?? 0;
-}
-
-// Accepts full names, abbreviations, and plurals ("Thursday" / "Thu" / "thursdays") — shipmentDay is
-// stored raw from the call transcript, so normalize the same way the rest of the codebase does.
-export const SHIP_DOW: Record<string, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
-
-export function shipDow(s: string | null | undefined): number | null {
-  if (!s) return null;
-  const k = s.trim().toLowerCase().replace(/s$/, "").slice(0, 3);
-  return SHIP_DOW[k] ?? null;
-}
-
-// Weekday (0=Sun … 6=Sat) of a PAST timestamp in a store's local time — for the empirical "which day
-// did product actually land" histogram (vs tzDow, which is only today).
-export function dowAt(epochSec: number, tz: string): number {
-  const wd = new Intl.DateTimeFormat("en-US", { timeZone: tz || "America/Chicago", weekday: "short" }).format(new Date(epochSec * 1000));
-  return ({ Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 } as Record<string, number>)[wd] ?? 0;
-}
-
-// The LEARNED restock weekday: the MODE of every shipment day staff have given across this store's
-// confirmed calls — robust to one wrong answer, unlike the last-write-wins shipmentDay column —
-// falling back to the stored shipmentDay when there's no call history yet. How best-bet "learns" the
-// day from all the calls instead of just the most recent one.
-export function learnedShipDow(days: Record<string, number> | undefined, fallback: string | null | undefined): number | null {
-  if (days) {
-    const top = Object.entries(days).sort((a, b) => b[1] - a[1])[0]?.[0];
-    const d = shipDow(top);
-    if (d != null) return d;
-  }
-  return shipDow(fallback);
 }
 
 // Product FORM ("how it's sold") classifier over the free-text productDetail we capture per call
@@ -448,9 +418,6 @@ export function productSet(detail: string | null | undefined): string | null {
   if (parts.length >= 2) return parts[parts.length - 1];
   return productForm(detail) ? null : parts[0] || null;
 }
-
-export const tallyArr = (m: Record<string, number>, key: string) =>
-  Object.entries(m).sort((a, b) => b[1] - a[1]).map(([k, n]) => ({ [key]: k, n }));
 
 // Transcript privacy (flags.transcriptAuth): a call placed by a signed-in finder is readable only by
 // that finder (phone-session Bearer token) or the admin. Anonymous calls stay readable by cid — the

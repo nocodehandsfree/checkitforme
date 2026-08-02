@@ -23,7 +23,7 @@ import { chainLogoInfo, distributorsForChain, hangupTwilioCall, here, ownerOnlyR
 export const MIRROR_TABLES: Record<string, typeof retailers> = { categories: categories as never, chains: chains as never, products: products as never, retailers, statuses: statuses as never, kiosks: kiosks as never, settings: settingsTbl as never };
 
 // table-load is staging-only (403 on prod), so it may write a FEW extra tables that we deliberately
-// keep OUT of the public, unauthenticated table-dump above — e.g. call_results, used to seed the
+// keep OUT of the public, unauthenticated table-dump above — e.g. call_results, which seeds the
 // staging finds ticker / in-stock badges from prod's already-public /pub/finds (no transcripts/PII).
 export const LOAD_TABLES: Record<string, typeof retailers> = { ...MIRROR_TABLES, callResults: callResults as never };
 
@@ -63,7 +63,7 @@ export function coverageRef() {
 
 // Data-health monitor: ONE pass over active stores flags the gaps that silently break things —
 // missing phone, missing hours, junk/markup names, no chain link, and **mis-chained** stores (name
-// doesn't start with its chain's name — the exact failure the broken chainId filter used to hide).
+// doesn't start with its chain's name — matching is by chainId only, data RULES 2).
 // Returns overall counts + the worst chains per issue + samples to eyeball. Cached 5 min (full scan).
 export let dataHealthCache: { t: number; v: unknown } | null = null;
 

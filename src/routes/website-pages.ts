@@ -297,7 +297,7 @@ export function renderShare(brand: ReturnType<typeof resolveBrand>, host: string
 }
 
 // Static content pages (about/contact/terms/privacy) — branded, owner-editable via policy.pages.
-// (FAQ retired → the book / the messenger FAQ tab; see the /p/faq redirect below.)
+// (The FAQ lives in the book; /p/faq redirects there — site RULES 3.)
 export const PAGE_TITLES: Record<string, string> = { about: "About", contact: "Get help", terms: "Terms of Service", privacy: "Privacy Policy" };
 
 // Real, shipped content for the legal/info pages so none of them read "coming soon". Owner-overridable
@@ -439,7 +439,7 @@ export function register(app: Hono) {
     return c.html(renderShare(brand, host, q, peekOk(c.req.query("peek"), getCookie(c, "peek"))));
   });
 
-  // FAQ retired → the book (the one FAQ source of truth; the messenger FAQ tab reads it too).
+  // The book is the one FAQ source of truth; the help chat's FAQ tab reads it too (site RULES 3).
   // Registered before /p/:slug so it wins.
   app.get("/p/faq", (c) => c.redirect(RM, 301));
 

@@ -1,30 +1,31 @@
 # STATE — the owner's single source of truth
 One screen. Every session updates this at close (≤40 lines). New truth REPLACES old — history is in
-git. Last updated: 2026-08-01 (check-life fix + round 2 LIVE on staging, PM-audited; run 6 in the morning).
+git. Last updated: 2026-08-02 (the big server file split on a branch, nothing shipped; run 6 still next).
+## The main code file was 7,381 lines and is now 452 (08-02, on a branch — NOTHING shipped, nothing restarted)
+- It is split into 21 files named for the job (the Chains screen, running a check, in stock alerts…),
+  so a chat opens one file instead of all of it. Proven identical: 177 addresses answered exactly the
+  same before and after. **Your move: nothing** — the PM audits, then it merges after your test day.
+- Found while in there: **"Stop checking" on ONE store in a saved zone has never worked** (it 404s).
+  Old bug, not touched — say the word and it is a small fix.
 ## Store logos: all 112 re-cut, and one place now decides their size (07-31/08-01, staging)
-- Same weight, same grey box, clear space all round. New pictures are LIVE on the real site and Admin
-  already; the code half is on staging and needs a promote. **Your move: nothing** (PM reviews it first).
-- **Change a logo in one spot and it now really does change everywhere.** Never true before: the real
-  site, staging and the logo wall each kept their own copy and 71 chains sat quietly stale. The wall is
-  the record of truth now — it shows exactly what a customer sees, so it cannot lie to you.
-## The check status page + the verdict wait (07-30, on staging)
-- The conversation follows its newest line, both screens clear Safari's bottom bar, and **the wait on ElevenLabs
-  is GONE (your order):** at hang up we settle from our own words plus our finished read.
+- Same weight, same grey box, clear space all round. New pictures are LIVE on the real site and Admin;
+  the code half is on staging and needs a promote. **Your move: nothing** (PM reviews it first).
+- **Change a logo in one spot and it now really does change everywhere** — the wall is the record of
+  truth, showing exactly what a customer sees, so it cannot lie to you. 71 chains used to sit stale.
+## The check status page + the verdict wait (07-30, on staging): the conversation follows its newest line,
+both screens clear Safari's bottom bar, and **the wait on ElevenLabs is GONE (your order)** — at hang up we settle from our own words plus our finished read.
 ## In stock alerts are FIXED (07-31, on staging): why your Fun store email never came
 - Your two rows switched themselves off after their first email, and two of the three ways a check finishes
   never sent mail at all. Now every finish path sends, alerts stay ON until paused or deleted, one store =
   ONE email, a repeat subscribe says so. **Your move: tap the Fun store alert once, run a check, one email.**
 ## A wrong department no longer costs you the check (07-30): ask once to be put through, meter off through the hand-over, ask again when somebody new picks up.
 ## The bottom bar can never go dark again, and Live is cleaned (07-30, live on Admin): the tint is nailed down, three ways it used to break are refused before anything goes live. Cost per check opens on **The baseline**, your 6.7¢ ceiling off your real prices.
-## Every try back now runs the exact same way (07-30, on staging)
-- Every mapping check walks the menu the same way; the ONE answer tested early is the only difference.
-  **Mapping calls is now Mapped checks**, each showing faster or slower than the one before. The chains
-  list names the model in plain text; a red alert sits beside a name only when work waits.
-## Chains: the page is rebuilt and every mapping call lands on it (07-30)
-- Tap a chain: **nav time** (getting through their phone menu, the part we control), what it costs, how often the
-  recipe reaches Staff, the **Menu** by condition, the **Recipes** held, and **Review**.
-- **Re-map hangs up on the second ring** of the desk, so it never troubles Staff, and that check becomes the
-  recipe. **Reached Staff shows nothing instead of 0%** until one actually waits for a person.
+## Chains: the page is rebuilt and every mapping check lands on it (07-30, on staging)
+- Tap a chain: **nav time** (getting through their phone menu, the part we control), what it costs, how
+  often the recipe reaches Staff, the **Menu** by condition, the **Recipes** held, and **Review**. Every
+  mapping check walks the menu the same way; the one answer tested early is the only difference.
+- **Re-map hangs up on the second ring** of the desk, so it never troubles Staff, and that check becomes
+  the recipe. **Reached Staff shows nothing instead of 0%** until one actually waits for a person.
 - **The mapping rebuild restarts clean (07-31): your rounds are LAW in the contract now** — store proves
   once, chain live at one and proven at three, the self-healing mute loop, the screens. A fresh chat
   builds it in THREE chunks; the PM verifies every chunk against the contract before the next; you test

@@ -1,84 +1,41 @@
-// Voice Caller server — REST API for the dashboard, the ElevenLabs post-call
-// webhook, a result poller, and the schedule ticker. Runs locally (Node) and
-// deploys to Railway/Cloudflare unchanged.
-import { existsSync, mkdirSync, readFileSync, readdirSync as fsReaddirSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+
 import { serve } from "@hono/node-server";
-import { Hono, type Context } from "hono";
+import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { WebSocketServer, type WebSocket } from "ws";
-import { and, desc, eq, gte, inArray, isNull, like, lte, notInArray, or, sql } from "drizzle-orm";
-import { db, client } from "./db/client";
-import {
-  alertSends, alertSubscriptions, callEvents, callResults, categories, chains, communityPosts, customerSchedules, discordChannels, kiosks, kioskReceipts, kioskReports, leads, products, retailers, schedules, scheduleTargets, statuses, storeRequests, supportConversations, supportMessages, supportTickets, waitlist, watches, zones, zoneRetailers,
-} from "./db/schema";
-import { answerSupport, resolveConversation, warmClose, SUPPORT_MODELS, SUPPORT_CATEGORIES, type SupportCategory } from "./support/ladder";
-import { submitTicket } from "./support/tickets";
-import { addQa, reindexBook, searchBook, getFaq } from "./support/rag";
-import { listCreditGrants } from "./support/credits";
+import { eq, sql } from "drizzle-orm";
+import { db } from "./db/client";
+import { callResults, retailers } from "./db/schema";
 import { config } from "./config";
-import { createHash } from "node:crypto";
 import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
-import { allSettings, getSetting, setSetting } from "./db/settings";
-import { importZonesData, geocodeMissing, backfillDirectChains, isDirectDefaultChain } from "./db/import-data";
-import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, billableOutcome, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, notifyAfterVerdict, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, transcriptPatch, triggerCall, findRecentCheck, navPlanFromVersion, zoneQuote } from "./calls/service";
-import { applyStoreSync, storeSyncTick, syncStatus, learnedSyncTick, learnedSyncStatus } from "./store-sync";
-import { buildSettingsExport, settingsSyncStatus, settingsSyncTick } from "./settings-sync";
-import { concurrencyStatus, acquireCallSlot, releaseCallSlot, governorEnabled } from "./calls/concurrency";
-import { routeCheck, ticketStatus, drainCheckQueue, type QueueArgs, type PlaceResult } from "./calls/queue";
-import { openState } from "./store-hours";
-import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
-import { simStartCall, isSimId, simLive, simResult } from "./staging-sim";
-import { getPolicy, setPolicy, publicPolicy, cachedPolicy } from "./policy";
-import { importStores, backfillRegions } from "./stores-import";
-import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
-import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
-import { placeNavCall, navInitialTwiml, navStep, navEnded, navMediaFeed, getNavSession, latestNavSessionForChain, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
+import { geocodeMissing } from "./db/import-data";
+import { applyVoiceTuning, bridgeCheckCall, buildRestockVars, ingestPending, schedulerTick, triggerCall } from "./calls/service";
+import { storeSyncTick, learnedSyncTick } from "./store-sync";
+import { settingsSyncTick } from "./settings-sync";
+import { drainCheckQueue } from "./calls/queue";
+import { resolveBrand } from "./brands";
+import { getPolicy } from "./policy";
+import { navMediaFeed } from "./calls/navigator";
 import { listenNavFeed, endListenNav } from "./calls/listen-nav";
 // THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
-import { emit, markNow, closeReceipt, linkCall, rollup, rollupFromRow, getReceipt, transcriptOf, setLineHook, normSaid, type Rollup } from "./calls/events";
-import { installReceiptStore, currentRates, onReceiptClosed } from "./calls/receipt-store";
-import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
-import { costCall, money } from "./calls/cost";
-import { behaved, agentLinesFrom } from "./calls/behaved";
-import { opsRollup, type CheckRow } from "./calls/ops";
-import { startMapper, stopMapper, mapperState, resumeMapperRuns } from "./calls/mapper";
-import { activeMap, resetChainHistory, graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, graphFor, learnFromReceipt, navSecondsOf, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
-import { recipeFromCall, evidenceFromCall, type CapturedStep } from "./calls/map-capture";
-import { startSweep, stopSweep, sweepStatus, buildQueue } from "./calls/sweep";
-import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay } from "./calls/tapedeck";
-import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged, lockRecipeToChain } from "./calls/trainer-batch";
-import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, connectAtSecFor, chainDialable, chainNavPlan, type Recipe } from "./calls/recipe";
-import { llm, heli } from "./llm";
-import { opsAlert, watchdogTick, watchdogState, backupTick, backupNow, backupState } from "./ops-watch";
+import { setLineHook, normSaid } from "./calls/events";
+import { installReceiptStore, onReceiptClosed } from "./calls/receipt-store";
+import { resumeMapperRuns } from "./calls/mapper";
+import { learnFromReceipt } from "./calls/mapgraph";
+import { setDeltaBarge, setDeltaRelay } from "./calls/tapedeck";
+import { resumeBatchIfFlagged } from "./calls/trainer-batch";
+import { opsAlert, watchdogTick, backupTick } from "./ops-watch";
 import { harvestHoursTick } from "./hours-harvest";
-import { createSchedule, listSchedulesDetailed, deleteSchedule, customerScheduleTick } from "./customer-schedules";
-import { cachedCategories, cachedChains, cachedRetailers, categoryLabelMap, retailerMap, invalidateRefCache } from "./refcache";
-import { haversineMi, bboxAround } from "./geo";
-import { ingestSignals, recentStockNear, latestForRetailer } from "./stock/signals";
-import { classifyVerdict, reconcile, consensusFor, productDetailLabel } from "./voice/verdict";
-import { armLiveRead, noteLiveLine, dropLiveRead } from "./voice/live-read";
-import { seedStockCheckIntel } from "./stock/intel";
-import { seedSellMethods } from "./stock/sellmethods";
-import { r2Config, presignPut, photoKey } from "./r2";
+import { customerScheduleTick } from "./customer-schedules";
+import { noteLiveLine } from "./voice/live-read";
 import { check as rlCheck, clientIp, LIMITS } from "./ratelimit";
-import { isGmailConfigured, gmailReceiptTick, debugRecentInbox } from "./gmail-receipts";
-import { rankBets } from "./best-bet";
-import { referralStatus, claimReferral } from "./referrals";
-import { sendAlert, sendAnonEmail, sendTestAlert, sendOwnerInStockEmail, sendConfirmEmail, checkEmailToken, alertSubscribe, myAlerts, alertMute, pauseAllAlerts, alertSlotsUsed, alertExists, ALERT_SLOT_CAP, getAlertTemplatesPublic, setAlertTemplates, monthKey, fanoutRestock } from "./alerts";
-import { ownerAlertPrefs, notifyContact } from "./calls/notify";
-import { getAccount, getAccountByPhone, phoneAccountExists, chargeOneCredit, createCheckout, createCheckoutIntent, verifyStripeSig, handleStripeEvent, isComp, isCompAccount, grantCredits, spendableCredits, SUB, PACKS } from "./billing";
-import { getPlans, savePlans, publishPlansToStripe, plansSyncView, publicPlans, normalizePlans, accountFeatures } from "./plans";
-import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPhoneVerify, startCallerIdVerify, isCallerIdVerified } from "./auth";
-import { brevoUpsertContact } from "./brevo";
-import { accounts } from "./db/schema";
-import { settings as settingsTbl } from "./db/schema";
-import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeRoomForConversation, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, activeBridgeCalls } from "./voice/bridge";
-import { installCheckLife, isCheckAlive, noteLineEnded, resolveRoom as lifeRoom } from "./calls/check-life";
-import { placeBridgeCall, attachListenFork, roomCallSids, roomCallProgress, roomFinalizers, RAILWAY_HOST, STAGING_HOST } from "./voice/bridge-place";
-import { isCallingPaused, setCallingPaused, spendTodayCents, withLock } from "./redis";
+import { gmailReceiptTick } from "./gmail-receipts";
+import { verifySession } from "./auth";
+import { handleTwilioBridge, setBridgeContext, bridgeLog, activeBridgeCalls } from "./voice/bridge";
+import { installCheckLife } from "./calls/check-life";
+import { RAILWAY_HOST, STAGING_HOST } from "./voice/bridge-place";
+import { withLock } from "./redis";
 
 assertProdSecurity(); // refuse to boot in prod with an open admin / forgeable sessions
 installReceiptStore(); // every finished call writes its timeline + seconds + cost to the database
@@ -146,11 +103,10 @@ app.use("*", async (c, next) => {
   c.res = new Response(stamped, { status: c.res.status, headers });
 });
 
-// ---- Staging (STAGING=1) — a private replica, NOT password-walled ----
-// Staging used to sit behind an HTTP Basic / login-form gate, but it was constant friction (iOS
-// re-prompting) for no real benefit: you log in with your phone exactly like prod. So the gate is
-// gone — staging behaves like production (phone login gates account features). We only keep it out
-// of search results. Prod leaves STAGING unset, so this no-ops entirely.
+// ---- Staging (STAGING=1) — a private replica, NOT password-walled (site RULES 2) ----
+// Staging behaves exactly like the real site: you sign in with your phone, and account features are
+// gated the same way. The only difference is that it is kept out of search results. Production
+// leaves STAGING unset, so this block does nothing there.
 if (config.staging.on) {
   app.use("*", async (c, next) => {
     c.header("X-Robots-Tag", "noindex, nofollow"); // never index the preview, even if a crawler slips in
@@ -290,9 +246,6 @@ setDeltaBarge(async (s, _speech) => {
 
 // ---- Health ----
 app.get("/api/health", (c) => c.json({ ok: true, commit: process.env.RAILWAY_GIT_COMMIT_SHA ?? null }));
-// Chain logo registry: drop transparent PNGs into public/logos/chains/<slug>.png (slug = chain
-// name lowercased, non-alphanumerics → "-"). Stores pick them up automatically on every surface.
-import { readdirSync } from "node:fs";
 import { cookieRootDomain, peekOk, refreshChainLogoDb } from "./routes/shared-helpers";
 import { renderComingSoon } from "./routes/website-pages";
 import { placeLive } from "./routes/running-a-check";

@@ -45,8 +45,8 @@ export async function bridgeStoreCall(retailerId: number, categoryIds: number[],
       return { error: "delta call did not start" };
     }
   } catch (e) { return { error: String((e as Error)?.message || e) }; }
-  // Resolve the SAME three-tier vars (global + chain + store phone tree, clarification, etc.) the
-  // scheduled calls use — Listen-live was previously running on the bare global prompt only.
+  // The same three-tier vars a scheduled check uses: global, then chain, then this store's own
+  // phone-menu and clarification settings.
   const v = await buildRestockVars(retailerId, primary, specificProduct, extras, kioskMode, finder?.userId ?? null);
   if (!v || !v.retailer.phone) return { error: "store not found" };
   // Phone-first: dial AS the finder's own VERIFIED number (caller_id) when present. Plus the hard
@@ -57,27 +57,13 @@ export async function bridgeStoreCall(retailerId: number, categoryIds: number[],
     const acct = (await db.select().from(accounts).where(eq(accounts.clerkUserId, finder.userId)))[0];
     if (acct?.callerId) from = acct.callerId; // only set after Twilio caller-ID verification
   }
-  // ROLLBACK of the 07-18 "first-word capture" instant-connect (owner order 07-21): connecting the
-  // agent AT ANSWER on "direct" stores made Charlie talk over any store that only LOOKS direct but
-  // plays a recording first (Box Lunch, Hot Topic, B&N Thousand Oaks — billed from second one).
-  // Every store now waits for a voice before the paid agent joins (connect-on-human default), the
-  // exact behavior of the trusted pre-07-18 era. Cost accepted by the owner: a true direct clerk's
-  // first words can get clipped again. The REAL fix (ears open at pickup, mouth held until the words
-  // read human, never-silent cap) is Echo's boxed build — do NOT re-enable instant-connect here.
+  // Every store waits for a voice before the paid agent joins. Do NOT re-enable connect-at-answer
+  // here, on "direct" stores or any other — voice-calls RULES 13.
 
-  // ONE ROW, WRITTEN BEFORE THE DIAL, ON EVERY PATH (08-01 audit follow-up — the family rule).
-  //
-  // This used to fork: governed and zone checks pre-inserted a row, and the ORDINARY WEBSITE CHECK
-  // inserted its row only inside the connect callback below — with the provider's conversation id and
-  // NO room. Nothing ever backfilled it, so on the customer's own path the two finalize gates (the
-  // provider's end-of-call report and the sweeper) asked "is this check alive?" about nothing at all,
-  // were told no, and stamped a verdict + CHARGED while the phone was still in somebody's hand. That
-  // is precisely the fault of the owner's second test run, still open on the ONE path he actually
-  // uses, because the fix was made on the paths that already had a room. A refused dial on that path
-  // was worse still: the row is only written at connect, so the check left no record anywhere.
-  //
-  // So the room is minted here, before anything is dialled, and the row carries it from the first
-  // instant. The governor decides only whether a SLOT is held, which is what it was ever about.
+  // ONE ROW, WRITTEN BEFORE THE DIAL, CARRYING THE ROOM (voice-calls RULES 14). The room is minted
+  // first, so both finalize gates can ask "is this check alive?" about a real record from the very
+  // first instant, and a refused dial still leaves one. The governor decides only whether a slot is
+  // held — never whether the row exists.
   const room = crypto.randomUUID();
   const governed = await governorEnabled();
   const [row] = await db.insert(callResults).values({
@@ -94,9 +80,8 @@ export async function bridgeStoreCall(retailerId: number, categoryIds: number[],
     }
   }
   linkCall(room, rid); // the stable key for the timeline (providerCallId gets replaced mid-call)
-  // READ AS IT GOES (owner 07-30). Armed on THIS path too — it never was, so the one path a customer
-  // actually watches was still reading the conversation from scratch at hang-up, which is the wait on
-  // "Getting the answer" that order existed to delete.
+  // Read as it goes: every line reaches the reader as it is spoken, so the answer is ready at
+  // hang-up instead of being started then. Armed on every check path (voice-calls RULES 17).
   armLiveRead(room, v.dynamicVars.category || "the product", specificProduct);
 
   // The conversation id lands mid-call and REPLACES the placeholder id on the same row — the room
@@ -310,8 +295,8 @@ export function register(app: Hono) {
     if (row && o && o.status === "completed") {
       const label = (await db.select({ label: categories.label }).from(categories).where(eq(categories.id, row.categoryId)))[0]?.label;
       // THE READER RULE (owner 07-29), one shared implementation — consensusFor in src/voice/verdict.ts.
-      // This is the FIRST verdict a customer ever sees, and it used to consult the second reader only
-      // when the live read had no opinion, so a disagreement with a confirmed IN STOCK never landed here.
+      // This is the FIRST answer a customer ever sees, so the second reader is always consulted, not
+      // only when the live read has no opinion.
       const { consensus, second } = await consensusFor(
         { confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey },
         o.transcript, label || "the product", undefined, row.room,
@@ -320,18 +305,16 @@ export function register(app: Hono) {
       await db.update(callResults).set({
         status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey,
         shipmentDayHeard: o.shipmentDay, shipmentTimeHeard: (second?.restockTime ?? o.shipmentTime) ?? null, productDetail, summary: o.summary,
-        // Ours if we recorded any, theirs only when we did not (transcriptPatch). This on-demand
-        // finalize is what a customer refreshing the page hits, so it was blanking the transcript
-        // the receipt had already written the second they looked.
+        // Ours if we recorded any, theirs only when we did not (transcriptPatch). A customer
+        // refreshing the page lands here, so it must never blank what we already wrote down.
         ...(await transcriptPatch(row.id, o.transcript)),
         completedAt: Math.floor(Date.now() / 1000),
       }).where(eq(callResults.id, row.id));
       if (row.finderUserId && billableOutcome(consensus.statusKey, consensus.definitive, o.transcript)) await chargeCallOnce(row.id, row.finderUserId);
       dropLiveRead(row.room); // verdict written — let the room's live read go
-      // This on-demand settle used to be the ONE finalize path that never sent the alerts, so a check
-      // the customer watched to the end produced no in-stock email (owner 07-30). Same notifier as the
-      // poller and the webhook, claimed once per check. Fire-and-forget: the verdict response never
-      // waits on an email provider.
+      // Every finish path sends the in-stock alerts (voice-calls RULES 18) — same notifier as the
+      // poller and the post-call report, claimed once per check. Fire-and-forget: the answer we hand
+      // back never waits on an email provider.
       void notifyAfterVerdict(row.id);
       return c.json({ ...(o ?? {}), status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey, ts: (row.startedAt || 0) * 1000, productDetail, shipmentDay: o.shipmentDay, shipmentTime: (second?.restockTime ?? o.shipmentTime) ?? null, charged: row.finderUserId ? consensus.definitive : false, summary: o.summary, transcript: (row.transcript && row.transcript.trim()) || o.transcript });
     }
@@ -349,18 +332,16 @@ export function register(app: Hono) {
     // Headless bridge check: same room → conv-id resolution as /pub/result. No conv yet = still dialing.
     if (dcid.startsWith("bridge:")) {
       const room = dcid.slice(7);
-      // OUR OWN RECORD, NEVER THE PROVIDER'S SESSION STATUS. Charlie is CLOSED on every hold — that is
-      // the only thing that stops the meter — which ENDS his conversation at the provider. Asking them
-      // "is this still running?" therefore answered "finished" the instant Staff said "hold on, let me
-      // go check", so the customer's page flipped to Getting results and settled a no-answer verdict
-      // while the phone was still in somebody's hand (owner, test 1 on 07-31). It also wiped the
-      // conversation off the page, because the reconnected Charlie is a NEW conversation over there and
-      // the old one's lines are not in it.
+      // OUR OWN RECORD, NEVER THE PROVIDER'S SESSION STATUS (voice-calls RULES 15). Charlie is closed
+      // on every hold — that is the only thing that stops the meter — and closing him ends his
+      // conversation at the provider, so the provider answers "finished" the moment Staff says "hold
+      // on, let me go check". A reconnected Charlie is a new conversation over there and does not
+      // carry the earlier lines either.
       //
-      // Our receipt is open until the LINE ends and carries every line both sides said across every one
-      // of Charlie's stretches, so it answers both questions truthfully. It lives 15 minutes, well past
-      // any check; if it is gone (a restart, or an old check being reopened) fall through to the
-      // provider exactly as before.
+      // Our own record stays open until the LINE ends and holds every line both sides said across all
+      // of Charlie's stretches, so it answers both questions truthfully. It lives fifteen minutes,
+      // well past any check; if it is gone (a restart, or an old check reopened) fall through to the
+      // provider.
       const held = getReceipt(room);
       if (held) return c.json({ live: !held.closed, status: held.closed ? "done" : "in_progress", transcript: transcriptOf(held) });
       // After a restart the in-memory receipt is gone but the check may be mid-call. The gatekeeper's
@@ -411,9 +392,9 @@ export function register(app: Hono) {
             }
           } catch { /* keep the clip turns only */ }
         }
-        // OUR OWN SESSION IS THE AUTHORITY; the provider's status is only a tie-break when we hold
-        // nothing (08-01 audit, family 1). A Charlie closed for a hold reads as finished over there
-        // while the phone is still in somebody's hand — the provider used to OVERRIDE our session here.
+        // OUR OWN RECORD IS THE AUTHORITY; the provider's status is only a tie-break when we hold
+        // nothing (voice-calls RULES 15). A dropped Charlie reads as finished over there while the
+        // phone is still in somebody's hand.
         const aliveOurs = await isCheckAlive(dcid);
         const done = aliveOurs ? false : (elLive === null ? (s.status === "done" || s.status === "failed") : !elLive);
         return c.json({ live: !done, status: done ? "done" : "in_progress", transcript: [tdTranscript(s), tail].filter(Boolean).join("\n") });
@@ -566,12 +547,8 @@ export function register(app: Hono) {
     // Customer-initiated stop -> statusKey user_cancelled ("Check cancelled"); status stays
     // admin_hangup so the non-result/no-charge semantics are byte-identical (owner 07-21).
     //
-    // MATCH ON THE ROOM, NOT ONLY THE CONVERSATION ID. This used to run only when the voice provider
-    // had already handed us a conversation id, which on the new runtime may never happen — the agent
-    // opens late, behind the recorded question. So pressing Stop before then stamped nothing, the
-    // finalizer later wrote "nobody answered", and the owner was told a call he had personally
-    // answered and cancelled had gone unanswered (live Fun call, 07-28). The room exists from before
-    // the phone rings and never changes, so it always matches.
+    // MATCH ON THE ROOM, NOT ONLY THE CONVERSATION ID (voice-calls RULES 16). The room exists from
+    // before the phone rings and never changes; the conversation id arrives late, or never at all.
     const convId = bridgeConversationId(room);
     const ids = [`bridge:${room}`, convId].filter(Boolean) as string[];
     await db.update(callResults)

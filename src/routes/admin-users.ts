@@ -14,7 +14,8 @@ import { classifyCallReality } from "./admin-restock";
 import { getStatsSince, ownerOnlyRetailerIds, retailerTimeToHuman } from "./shared-helpers";
 
 // ---- Growth pulse: the funnel + engagement snapshot the owner reads each morning ----
-// Manually-flagged admin/test accounts (Clerk-free, so we can't rely on email domains). These are
+// Manually-flagged admin/test accounts. Sign-in is by phone, so there is no email domain to key
+// off — staff are flagged by hand (site RULES 5). These are
 // non-customers — excluded from signups/activity like the comp/owner accounts.
 export async function staffAccountIds(): Promise<Set<string>> {
   try { const raw = await getSetting("staff_accounts"); const arr = raw ? JSON.parse(raw) : []; return new Set(Array.isArray(arr) ? arr.map(String) : []); } catch { return new Set<string>(); }
@@ -36,7 +37,7 @@ export function register(app: Hono) {
     return c.json({ ok: true, statsSince: ts });
   });
 
-  // User dashboard — everyone who's signed up (phone-first accounts, Clerk-free). Newest first.
+  // User dashboard — everyone who has signed up, newest first. Accounts are keyed by phone.
   app.get("/api/admin/users", async (c) => {
     const accs = await db.select().from(accounts).orderBy(desc(accounts.createdAt));
     const flagged = await staffAccountIds();
