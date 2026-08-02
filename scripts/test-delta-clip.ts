@@ -1077,5 +1077,46 @@ console.log("\n▶ …and when the store hangs up, nothing of ours claims it");
   restore(); f.close();
 }
 
+
+// ROUND 2, PM audit item (a): OUR OWN COST CUTOFF IS OURS. We hand the carrier a time limit on every
+// check; when it expires the carrier ends the check and reports it exactly the way it reports a store
+// hanging up. Blaming the store for our own accounting would put a wrong line on his card.
+console.log("\n▶ our own time limit ending a check is never blamed on the store");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  openReceipt("room-cap", { lane: "direct" });
+  setBridgeContext("room-cap", { agentId: "agent_normal", dynamicVars: {}, connectOnHuman: true, timeLimitSec: 1 });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "room-cap", () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_cap", customParameters: { room: "room-cap" } } });
+  await sleep(1200);                                  // past the one second limit this check was given
+  tw.say({ event: "stop" });                          // …which is how the carrier tells us it cut the check
+  await sleep(150);
+  ok(weEndedCheck("room-cap") === "time_cap", `the cap is recorded as OUR ending (${weEndedCheck("room-cap")})`);
+  const ev = (getReceipt("room-cap")?.events || []).find((e) => e.detail?.reason === "time_cap");
+  ok(!!ev && String(ev.note || "").includes("our own time limit"), `and the timeline says so in plain words: "${ev?.note}"`);
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ …and a store hanging up well inside the limit is still the store");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  openReceipt("room-early", { lane: "direct" });
+  setBridgeContext("room-early", { agentId: "agent_normal", dynamicVars: {}, connectOnHuman: true, timeLimitSec: 300 });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "room-early", () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_early", customParameters: { room: "room-early" } } });
+  await sleep(200);
+  tw.say({ event: "stop" });                          // nowhere near a five minute limit
+  await sleep(150);
+  ok(weEndedCheck("room-early") === null, "nothing of ours claims it, so the card reads the store hung up");
+  ok(!(getReceipt("room-early")?.events || []).some((e) => e.detail?.reason === "time_cap"), "and no cap is claimed");
+  restore(); tw.close(); f.close();
+}
+
 console.log(`\n════════════════════════════════\n  PASS: ${pass}   FAIL: ${fail}\n════════════════════════════════`);
 process.exit(fail === 0 ? 0 : 1);

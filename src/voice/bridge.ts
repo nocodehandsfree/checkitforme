@@ -8,7 +8,7 @@ import { config } from "../config";
 // seconds split into talking / listening / dead air, because it is the only place the audio passes
 // through. Every stamp is "now"; the receipt owns the clock, since it started at dial and this
 // socket opens much later.
-import { emit, amend, markNow, addMs, linkProviderCall, openSegment, closeSegment, startMeter, recordLine, normSaid } from "../calls/events";
+import { emit, amend, markNow, addMs, linkProviderCall, openSegment, closeSegment, startMeter, recordLine, normSaid, getReceipt } from "../calls/events";
 // The Ear that stays on the call while a person is talking to us. Pure and dependency-free on
 // purpose, so every threshold in it is provable without a phone call.
 import { ConversationEar, type HoldReason } from "../calls/listen-nav";
@@ -43,6 +43,11 @@ export interface BridgeContext {
   // Deterministic hand-off: open ElevenLabs at this many seconds from connect (the LEARNED time-to-human
   // from the locked recipe). Far more reliable than VAD, which trips on the IVR's own recorded voice.
   connectAtSec?: number;
+  /** OUR OWN COST CUTOFF, the number we handed the carrier as the call's time limit. When it fires,
+   *  the carrier ends the check and tells us the same way it would tell us a store hung up — so
+   *  without this the cap reports as "The store hung up on us", which is our own doing blamed on
+   *  them (PM audit, 08-02). */
+  timeLimitSec?: number;
   /** @deprecated NOTHING READS THIS ANY MORE, and nothing may again. It used to open Charlie after
    *  this many seconds even though no voice had been heard — switching the expensive agent on to
    *  talk to hold music (owner's own check log, 08-01, at 63 seconds). Kept on the shape only so
@@ -424,6 +429,14 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   let storeHasSpoken = false;
   /** Recorded once: a hand-over put us back at the store's recorded menu instead of a department. */
   let sentBackToMenu = false;
+  /** How close to the cap a stop has to land before we call it ours. The carrier enforces the limit
+   *  precisely, so this only has to cover the moment it takes to reach us. A store hanging up inside
+   *  the last three seconds of a five minute check would read as our cap; that is rare enough, and
+   *  the wrong way round is worse (blaming a store for our own accounting). */
+  const CAP_SLACK_SEC = 3;
+  /** Seconds since we asked the carrier to dial, which is the clock its time limit runs on. Our own
+   *  socket opens later, and on a store with a phone menu MUCH later, so its start is the wrong zero. */
+  const elapsedSec = (): number => { const r = getReceipt(room); return r ? Math.round((Date.now() - r.startMs) / 1000) : 0; };
   /** The carrier told us the far end went away. Set before anything else unwinds, because everything
    *  that unwinds afterwards would otherwise look like us ending the check (round 2, item 5). */
   let farEndGone = false;
@@ -1333,12 +1346,23 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // only way we can learn this — see startOpeningClip.
       if (m.mark?.name === CLIP_MARK) openCharlieGate("the carrier confirmed the clip played");
     } else if (m.event === "stop") {
+      // …UNLESS IT IS OUR OWN COST CUTOFF. We hand the carrier a time limit on every check, and when
+      // it expires the carrier ends the check and reports it exactly as it reports a store hanging
+      // up. Blaming the store for our own cap would put a wrong line on his card, so the cap is
+      // recognised here first, by its own number, before anything is decided (PM audit, 08-02).
+      const capSec = ctx?.timeLimitSec ?? 0;
+      const ranSec = elapsedSec();
+      if (capSec > 0 && ranSec > 0 && ranSec >= capSec - CAP_SLACK_SEC) {
+        noteWeEnded(room, "time_cap");
+        emit(room, "hangup", "The check hit our own time limit, so we ended it", { reason: "time_cap", capSec, ranSec });
+        log(`twilio stop at ${ranSec}s with a ${capSec}s limit — that is OUR cap, not the store`);
+      }
       // THE FAR END WENT AWAY. Twilio sends this when the store hangs up, and it arrives BEFORE our
       // own socket closes — so for a moment the leg still reads as open while Charlie's session is
       // torn down behind it, and "did we end this?" would answer yes about a check the store ended.
       // Marked first, so every later question gets the truthful answer (round 2, item 5).
       farEndGone = true;
-      log("twilio stop (the far end hung up)"); signalEnd(); if (eleven) eleven.close();
+      log("twilio stop"); signalEnd(); if (eleven) eleven.close();
     }
   });
   twilio.on("close", () => { if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; } if (heldQuestion) { try { relayLine?.(room, "Agent", heldQuestion); } catch { /* best effort */ } heldQuestion = null; } try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (handoverTimer) { clearTimeout(handoverTimer); handoverTimer = null; } if (eleven) eleven.close(); /* the context is NOT deleted here: Twilio can reconnect a blipped stream mid-call, and the fresh socket must still find it. The 30-minute leak guard owns cleanup. */ });
