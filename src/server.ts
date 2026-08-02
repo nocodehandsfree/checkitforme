@@ -5761,7 +5761,7 @@ app.post("/api/admin/owner-alert", async (c) => {
   }
   if (b.channel !== undefined) {
     const ch = String(b.channel);
-    if (!["email", "sms"].includes(ch)) return c.json({ error: "bad_channel" }, 400); // owner: text or email, nothing else
+    if (!["off", "email", "sms"].includes(ch)) return c.json({ error: "bad_channel" }, 400); // owner: off, text, or email
     await setSetting("owner_alert_channel", ch);
   }
   return c.json(await ownerAlertPrefs());
