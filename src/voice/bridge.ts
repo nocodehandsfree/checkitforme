@@ -1205,11 +1205,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // then out as one burst. The question only ever needed him not to TALK, and his voice is
       // suppressed separately (see the audio handler). While a held handover is still being paced
       // out, live frames queue behind it so nothing arrives out of order.
-      // BROKEN ON PURPOSE (restored in the very next commit): the store side never reaches the
-      // agent at all. This is the audio handover failing outright. Two gentler breaks (dropping the
-      // quiet frames, then every second frame) came through the transcriber intact, which is worth
-      // knowing on its own.
-      else if (eleven && ready) { if (handoverTimer) pending.push(b64); /* BROKEN: nothing is sent */ }
+      else if (eleven && ready) { if (handoverTimer) pending.push(b64); else eleven.send(JSON.stringify({ user_audio_chunk: b64 })); }
       // Buffer what the CLERK says — never our own voice coming back off the line. A PSTN line
       // reflects our audio, and loud enough reflections clear the barge threshold, so anything
       // arriving while our own clip is still playing goes into the buffer and is then handed to the
