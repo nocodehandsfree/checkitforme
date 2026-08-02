@@ -258,7 +258,11 @@ not baked into the code.
 | Silence before Charlie drops | 6 | **Keep 6 until the robot store can measure the floor.** Six seconds of Charlie costs about 1.1¢ every time somebody steps away, so shaving is worth real money. But too short makes him reconnect mid conversation and a choppy Charlie loses whole checks, which costs far more than a cent. The risk is not symmetrical: too long costs pennies, too short costs checks. Tune it on fifty checks at 5 seconds against fifty at 4, never on a guess. NOTE: a real "let me go check" runs far longer than 6 seconds anyway, so this only bites on short thinking pauses. |
 
 **THE BUILD ORDER IS FIXED:** the Testing card can only show what the engine records, so the engine
-work comes first. One agent, one order. The approved work order is `echo-build.md` beside this file.
+work comes first. One agent, one order. **Round 1 = `echo-build.md`** (running 08-01). **Round 2 =
+`echo-build-round-2.md`**: everything else this exercise caught, chiefly that `holdMaxSeconds` OPENS
+Charlie to an empty line at 60 seconds (seen on the owner's own check log, real money), the dead
+Admin box wired to nothing, a misheard machine phrase that can still hang up on a real person before
+any hold, and the detections the log claims but nothing writes.
 
 ## 8. Open — decisions the owner still owes
 
