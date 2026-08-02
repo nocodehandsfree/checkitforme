@@ -75,6 +75,25 @@ works at); only the per-ring line goes.
 
 Every one of these must read from Admin at call time, exactly like `src/calls/tuning.ts` does today.
 
+### WHERE THEY LIVE — this is not optional (owner asked 08-01: "do we need this on production AND staging?")
+
+**YES, both, and independently.** He tunes staging while testing; production must not move under him,
+and staging must not be stomped by production.
+
+**Put all three in the `call_tuning` setting**, beside the timing numbers already there
+(`holdQuietMs`, `prewarmLeadMs`, and the rest). That setting is DELIBERATELY outside the settings
+mirror's scope (`src/settings-sync.ts:5-20`: the whitelist is `policy_json`, `vt_plans`,
+`support_banner_*`, `statuses` — nothing else), so each environment keeps its own values with no
+extra work.
+
+**DO NOT put them in `policy_json`.** Production's policy copies down onto staging **every 60
+seconds**. A number tuned on staging would be silently overwritten inside a minute, mid test, and it
+would look like the setting "didn't work". The only escape hatch there is `KEEP_LOCAL_FLAGS`
+(`settings-sync.ts:39`), which holds call-lane switches, not numbers — do not extend it for this.
+
+Both Admin environments must show and write their own values. Prove it: change a number on staging,
+wait two minutes, confirm it did not revert and that production's value did not move.
+
 ## PART 3 — THE LOG, END TO END
 
 **Same shape as the customer's own check log** (owner: *"a complete end to end log of the entire
