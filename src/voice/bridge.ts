@@ -168,7 +168,7 @@ export function markDropped(room: string, why: string): void {
 // us, therefore it was the far end. Recorded here rather than guessed at the other end.
 const endedByUs = new Map<string, string>();   // room -> why we ended it
 export function weEndedCheck(room: string): string | null { return endedByUs.get(room) ?? null; }
-function noteWeEnded(room: string, why: string): void {
+export function noteWeEnded(room: string, why: string): void {
   if (!room || endedByUs.has(room)) return;
   endedByUs.set(room, why);
   setTimeout(() => endedByUs.delete(room), 15 * 60 * 1000);
@@ -418,12 +418,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   /** Somebody has already stepped away and come back on this call — from here it is a live store
    *  beyond doubt, and no machine-phrase mishearing may hang it up (family 1). */
   let everCameBack = false;
-  /** We have put our question to the store, either as the recorded question or in Charlie's own
-   *  voice. From here everything the store says is a REPLY, so a voicemail phrase inside it is a
-   *  person talking about voicemail rather than a machine's opening announcement (round 2, item 3). */
-  let weHaveAsked = false;
+  /** The store has already said something once. A voicemail ANNOUNCES itself in its opening words,
+   *  so only that first line may end a check as a machine; everything after it is a conversation,
+   *  and a machine phrase inside a conversation is a person talking about voicemail (round 2, item 3). */
+  let storeHasSpoken = false;
   /** Recorded once: a hand-over put us back at the store's recorded menu instead of a department. */
   let sentBackToMenu = false;
+  /** The carrier told us the far end went away. Set before anything else unwinds, because everything
+   *  that unwinds afterwards would otherwise look like us ending the check (round 2, item 5). */
+  let farEndGone = false;
   let holdReason: HoldReason | null = null;
   let heldWords: string[] = [];   // the first thing they say on coming back, so it is never lost
   /** Recorded once: we landed somewhere that cannot answer. Read off the words, not the audio. */
@@ -572,7 +575,6 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // no way to know we had asked. It then sat on "Staff picked up" forever, and any short word the
     // agent said next got painted as walking a phone menu at a store with no menu at all.
     recordLine(room, "Agent", clip.text);
-    weHaveAsked = true;   // from here the store is REPLYING, so a voicemail phrase is a person (item 3)
     // HELD BACK FROM THE LIVE VIEW UNTIL THEIR HELLO CAN GO IN FRONT OF IT. Staff speak first, always,
     // but their words do not exist until the agent has transcribed the audio we held for him — several
     // seconds later. Sent the instant it plays, our question is therefore the FIRST thing a customer
@@ -826,7 +828,6 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + ms;
           addMs(room, "speakingMs", ms); // SPEAKING = audio that really played out, not a guess
           charlieSpoke = true;           // from here there is no live model swap, whatever fails
-          weHaveAsked = true;            // …and the store is replying to us now, not announcing itself (item 3)
         }
       } else if (m.type === "user_transcript") {
         const txt = m.user_transcription_event?.user_transcript;
@@ -839,6 +840,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // the record holds once (08-01 audit, open fault 4).
         let freshLine = false;
         if (txt) { freshLine = recordLine(room, "Clerk", String(txt), greetingStartedMs || undefined); greetingStartedMs = 0; }
+        // Flipped AFTER the voicemail test below has had its one look at this line, so the store's
+        // FIRST words are the only ones that may end a check as a machine (round 2, item 3).
+        const wasStoreFirstLine = txt ? !storeHasSpoken : false;
         // Their hello has arrived, so it goes out FIRST and our question follows it, which is the
         // order the call actually happened in.
         if (txt && heldQuestion) {
@@ -887,22 +891,27 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           }
         }
         if (txt && /\b(leave (?:a|your) message|after the (?:tone|beep)|at the (?:tone|beep)|voice ?mail|mailbox|record your message|is not available|unable to take your call|has been forwarded to)\b/i.test(String(txt))) {
-          // A MACHINE PHRASE IS ONLY PROOF BEFORE WE HAVE ASKED ANYTHING (08-01 audit family 1, and
-          // round 2 item 3). A voicemail says "leave a message after the tone" as its OPENING, into a
-          // silence, before anybody has said a word to it. Every one of these phrases is also
-          // something a live person plausibly says once a conversation is under way: "the manager is
-          // not available", "that's been forwarded to the front", "you can leave a message with me".
-          // Hold loops play recordings too. So the moment we have put our question to the store,
-          // anything coming back is a REPLY, and a reply mentioning voicemail is a person talking
-          // about voicemail — not a machine. This close used to fire on any of it and hang up both
-          // legs on real Staff.
+          // A MACHINE PHRASE IS ONLY PROOF IN THE STORE'S VERY FIRST WORDS.
           //
-          // Deliberately not gated on a person having been detected, which is what the spec's letter
-          // asked for: the recorded voice of a voicemail greeting is exactly what trips the person
-          // detector today, so that gate would have switched the bail off on the one case it exists
-          // for. Gating on "have we asked yet" keeps the bail working and still protects every real
-          // person, because a real person only ever hears the phrase after we have spoken.
-          if (onHold || everCameBack || weHaveAsked) {
+          // A voicemail ANNOUNCES itself: "leave a message after the tone" is the first thing it
+          // says, into a silence, before anybody has spoken to it. Every phrase in the pattern above
+          // is also something a live person plausibly says once a conversation is running: "the
+          // manager is not available", "that's been forwarded to the front", "you can leave a
+          // message with me". So the first store-side line may end a check and nothing after it can.
+          //
+          // NOT the gate the spec asked for, and this is the reason, in full. The spec says go inert
+          // once a person has been found, on the grounds that "a machine that answers the phone is
+          // caught before that point anyway". It is not: nothing else catches it, and the recorded
+          // voice of a voicemail greeting is exactly what trips the person detector, so that gate
+          // switches this off on the one case it exists for and we pay for the whole announcement.
+          // The PM audit found the same hole in the previous attempt (gating on our having asked:
+          // the recorded question plays on that same person detection, so it disarmed too). Both
+          // gates fail for one shared reason — today the thing that says "a person answered" cannot
+          // tell a person from a recording. Round 1 fixes THAT (Charlie opens on the person test,
+          // README section 6), and when it lands the person gate becomes the right one and this
+          // first-line rule becomes belt and braces. Until then this is the only version that
+          // protects a live person WITHOUT deleting the bail. Raised for the owner to rule.
+          if (onHold || everCameBack || !wasStoreFirstLine) {
             emit(room, "unknown", "A recorded voice mentioned a message mid call, ignored — a live store, not voicemail", { said: String(txt).slice(0, 120) });
             log("voicemail phrase during/after a hold ignored — not hanging up on a live store");
           } else {
@@ -912,6 +921,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
             signalEnd(); try { eleven?.close(); } catch { /* torn down */ } try { twilio.close(); } catch { /* torn down */ }
           }
         }
+        if (txt) storeHasSpoken = true;
       } else if (m.type === "agent_response") {
         const txt = m.agent_response_event?.agent_response;
         // THE QUESTION COMES BACK TO US AS IF CHARLIE SAID IT. The recorded question is handed to his
@@ -963,7 +973,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // as ours would report every store hang-up as a normal finish, which is the exact thing this
       // is being built to tell apart. The close code rides along so a session that broke can be told
       // from one that finished.
-      if (twilio.readyState === 1) noteWeEnded(room, code === 1000 ? "charlie_ended" : `charlie_ended_${code}`);
+      if (!farEndGone && twilio.readyState === 1) noteWeEnded(room, code === 1000 ? "charlie_ended" : `charlie_ended_${code}`);
       signalEnd(); if (twilio.readyState === 1) twilio.close();
     });
     eleven.on("error", (e: Error) => log(`eleven WS error: ${e.message}`));
@@ -1025,6 +1035,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // Staff hanging up or the check simply finishing. Same event either way — the closed set of
         // sixteen stays sixteen — with the detail saying which.
         disconnected: () => {
+          farEndGone = true;   // the far end went, not us (round 2, item 5)
           const midTransfer = onHold && (holdReason === "transfer" || expectHandover);
           if (midTransfer) emit(room, "hangup", "The check was disconnected during the transfer", { reason: "disconnected_in_transfer", duringTransfer: true });
           else emit(room, "hangup", "The line dropped from the far end", { reason: "carrier_gone" });
@@ -1321,7 +1332,14 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // so Delta's question has actually reached the clerk's ear. New code, and deliberately not the
       // only way we can learn this — see startOpeningClip.
       if (m.mark?.name === CLIP_MARK) openCharlieGate("the carrier confirmed the clip played");
-    } else if (m.event === "stop") { log("twilio stop"); signalEnd(); if (eleven) eleven.close(); }
+    } else if (m.event === "stop") {
+      // THE FAR END WENT AWAY. Twilio sends this when the store hangs up, and it arrives BEFORE our
+      // own socket closes — so for a moment the leg still reads as open while Charlie's session is
+      // torn down behind it, and "did we end this?" would answer yes about a check the store ended.
+      // Marked first, so every later question gets the truthful answer (round 2, item 5).
+      farEndGone = true;
+      log("twilio stop (the far end hung up)"); signalEnd(); if (eleven) eleven.close();
+    }
   });
   twilio.on("close", () => { if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; } if (heldQuestion) { try { relayLine?.(room, "Agent", heldQuestion); } catch { /* best effort */ } heldQuestion = null; } try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (handoverTimer) { clearTimeout(handoverTimer); handoverTimer = null; } if (eleven) eleven.close(); /* the context is NOT deleted here: Twilio can reconnect a blipped stream mid-call, and the fresh socket must still find it. The 30-minute leak guard owns cleanup. */ });
 }

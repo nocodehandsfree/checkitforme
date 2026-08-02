@@ -27,14 +27,15 @@
 // exposes setLifeHook; installCheckLife registers a mirror that copies the life-relevant moments of
 // every receipt into the check_life table as they happen.
 //
+// The carrier's own status callback (/twiml/bridge-status) stamps the line end directly — it is the
+// truthful end even after a restart, when no in-memory receipt exists to close.
+//
 // WHERE IT IS THIN, SAID PLAINLY (round 2, item 6): the recorded-clips lane barely writes here. It
-// opens and closes its own record and owns its own finalize, so almost none of the moments below
+// opens and closes its own record and owns its own finalize, so almost none of the moments above
 // ever fire for it, and a question asked about one of those checks falls through to the in-memory
 // answer or to "not alive". That is the behaviour that lane had before any of this was built, so it
-// is safe rather than wrong — but the sentence above would otherwise read as full cover, and a
-// comment claiming cover it does not have is how the next reader gets caught. The carrier's own status callback
-// (/twiml/bridge-status) stamps the line end directly — it is the truthful end even after a restart,
-// when no in-memory receipt exists to close.
+// is safe rather than wrong. Written down because the paragraph above would otherwise read as full
+// cover, and a comment claiming cover it does not have is how the next reader gets caught.
 import { eq, lt, or } from "drizzle-orm";
 import { db } from "../db/client";
 import { checkLife, callResults } from "../db/schema";
@@ -54,17 +55,16 @@ export const LIFE_HARD_CAP_SECS = 30 * 60;
  * is wrong — but a raised setting would silently walk a live check past a backstop that then reports
  * it as finished, which is the entire class of fault the gatekeeper exists to end. Called wherever a
  * check is placed; it complains loudly and never blocks a check, because a noisy log is the right
- * price and a refused check is not.
+ * price and a refused check is not. Returns nothing on purpose: a boolean here was read as "is this
+ * fine?" by its name and answered the opposite, and nobody was reading it anyway.
  */
-export function warnIfCapTooLow(maxCallSeconds: number | null | undefined): boolean {
+export function warnIfCapTooLow(maxCallSeconds: number | null | undefined): void {
   const cap = Number(maxCallSeconds) || 0;
   if (cap > 0 && cap * 2 > LIFE_HARD_CAP_SECS) {
     console.error(`[check-life] THE LONGEST ALLOWED CHECK (${cap}s) IS NOW CLOSE TO THE ${LIFE_HARD_CAP_SECS}s BACKSTOP. `
       + "Raise LIFE_HARD_CAP_SECS in src/calls/check-life.ts AND the context expiry in src/voice/bridge.ts, "
       + "or a long check will be reported as finished while it is still on the phone.");
-    return false;
   }
-  return true;
 }
 
 /** Rows older than this are pruned — the table holds live checks, not history (call_events is history). */

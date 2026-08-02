@@ -973,8 +973,13 @@ console.log("\n▶ a real person saying 'the manager is not available' does NOT 
   const { tw } = await callToHello(f, 400, "room-vm-person");
   tw.say({ event: "mark", mark: { name: "delta-opening" } });
   await sleep(200);
-  // We have asked our question. Everything from here is a REPLY, so a voicemail word inside it is a
-  // person talking about voicemail. Every phrase below is in the machine pattern.
+  // THEIR GREETING FIRST, which is what a real person always says first. That line is the one and
+  // only line allowed to end a check as a machine, and it plainly is not one.
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Thanks for calling MVP's, this is Larry." } }));
+  await sleep(120);
+  ok(tw.readyState === 1, "their greeting is not a machine, so nothing ended");
+  // From here everything is a REPLY, so a voicemail word inside it is a person talking about
+  // voicemail. Every phrase below is in the machine pattern and none may end the check.
   f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "The manager is not available right now." } }));
   await sleep(120);
   ok(tw.readyState === 1, "the line is still up after 'is not available' from a live person");
@@ -1060,10 +1065,15 @@ console.log("\n▶ …and when the store hangs up, nothing of ours claims it");
   const restore = stubSignedUrl(f);
   const tw = await callWithHold(f, "room-storeended", "gate");
   speak(tw, 150);
-  // The store puts the phone down: the carrier tears the leg down, we did nothing.
+  // THE STORE PUTS THE PHONE DOWN, the way the carrier really tells us: a "stop" arrives first, and
+  // our own socket is still open while Charlie's session tears down behind it. That gap is where the
+  // fault lived — closing the fake socket directly would skip the whole path.
+  tw.say({ event: "stop" });
+  await sleep(250);
+  ok(weEndedCheck("room-storeended") === null, `we did not end it, so the far end did (${weEndedCheck("room-storeended")})`);
   tw.close();
-  await sleep(150);
-  ok(weEndedCheck("room-storeended") === null, "we did not end it, so the far end did — which is what the card reads");
+  await sleep(120);
+  ok(weEndedCheck("room-storeended") === null, "…and the leg closing afterwards still does not make it ours");
   restore(); f.close();
 }
 

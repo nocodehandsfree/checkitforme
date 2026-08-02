@@ -149,7 +149,7 @@ import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPh
 import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
 import { settings as settingsTbl } from "./db/schema";
-import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeRoomForConversation, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, activeBridgeCalls, weEndedCheck } from "./voice/bridge";
+import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeRoomForConversation, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, activeBridgeCalls, weEndedCheck, noteWeEnded } from "./voice/bridge";
 import { installCheckLife, isCheckAlive, noteLineEnded, resolveRoom as lifeRoom } from "./calls/check-life";
 import { placeBridgeCall, attachListenFork, roomCallSids, roomCallProgress, roomFinalizers, RAILWAY_HOST, STAGING_HOST } from "./voice/bridge-place";
 import { isCallingPaused, setCallingPaused, spendTodayCents, withLock } from "./redis";
@@ -3693,13 +3693,18 @@ app.post("/pub/charge", async (c) => {
   // from something a restart wipes, which is the same shape of fault as the rest of this round. The
   // record of what has been charged now lives beside the pool it draws from.
   if (cid && bal > 0 && !charged.has(cid)) {
-    const key = `pub_charged:${String(cid).slice(0, 128)}`;
-    if (!(await getSetting(key))) {
+    // ONE list, capped, rather than a key per check: the record has to survive a restart without
+    // growing a namespace nobody ever prunes. The newest few hundred is far more than the window in
+    // which a repeat could arrive, and the oldest simply fall off.
+    const key = String(cid).slice(0, 128);
+    const seen = String((await getSetting("pub_charged")) || "").split(",").filter(Boolean);
+    if (!seen.includes(key)) {
       charged.add(cid);
-      await setSetting(key, String(Math.floor(Date.now() / 1000)));
+      seen.push(key);
+      await setSetting("pub_charged", seen.slice(-300).join(","));
       bal -= 1;
       await setSetting("pub_credits", String(bal));
-    } else charged.add(cid);   // charged before a restart — remember it in memory again, take nothing
+    } else charged.add(cid);   // charged before a restart — remember it again, take nothing
   }
   return c.json({ balance: bal, charged: true });
 });
@@ -3882,6 +3887,7 @@ async function zoneHangRoom(room: string): Promise<void> {
     .set({ status: "admin_hangup", statusKey: "user_cancelled", confirmed: null, completedAt: Math.floor(Date.now() / 1000) })
     .where(and(inArray(callResults.providerCallId, ids), inArray(callResults.status, ["dialing", "in_progress", "queued"])))
     .catch((e) => console.error("zone admin_hangup stamp:", e));
+  noteWeEnded(room, "user_cancelled");   // WE ended it, never the store (round 2, item 5)
   const callSid = roomCallSids.get(room);
   if (sid && tok && callSid) {
     await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}.json`, {
@@ -6838,7 +6844,11 @@ app.post("/api/call-now", async (c) => {
 // /pub/bridge-hangup for the call-now path.
 app.post("/api/hangup", async (c) => {
   const { cid, callSid } = await c.req.json().catch(() => ({}));
-  if (callSid) await hangupTwilioCall(callSid);
+  // WE are ending this one (round 2, item 5). The room is how every other part of the check is
+  // named, so resolve it from whatever the Admin had to hand before asking the carrier to stop.
+  const hangRoom = cid ? await lifeRoom(String(cid)) : null;
+  if (callSid) await hangupTwilioCall(callSid, hangRoom ?? undefined);
+  else if (hangRoom) noteWeEnded(hangRoom, "admin_hangup");
   if (cid) {
     await db.update(callResults)
       .set({ status: "admin_hangup", statusKey: "admin_hangup", confirmed: null, completedAt: Math.floor(Date.now() / 1000) })
@@ -7000,8 +7010,10 @@ app.post("/twiml/bridge-status", async (c) => {
 });
 const zoneCallSids = new Map<number, string[]>(); // zoneId -> Twilio callSids placed, for "Cancel zone"
 /** Hang up a live Twilio call (POST Status=completed). Shared by the single + zone cancel paths. */
-async function hangupTwilioCall(callSid: string): Promise<void> {
+async function hangupTwilioCall(callSid: string, room?: string): Promise<void> {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
+  // Anyone asking the carrier to end a check through here is US ending it (round 2, item 5).
+  if (room) noteWeEnded(room, "admin_hangup");
   if (!sid || !tok || !callSid) return;
   await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}.json`, {
     method: "POST",
@@ -7013,6 +7025,9 @@ async function hangupTwilioCall(callSid: string): Promise<void> {
 app.post("/pub/bridge-hangup", async (c) => {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   const { room } = await c.req.json();
+  // THE CUSTOMER PRESSING STOP IS US ENDING THE CHECK, and it must never come back later reading as
+  // the store hanging up on us (round 2, item 5). Marked before we ask the carrier to end it.
+  noteWeEnded(room, "user_cancelled");
   const callSid = roomCallSids.get(room);
   // Master Stop & hang-up = WE ended it, not the store. Stamp the call as a non-result ('admin_hangup',
   // confirmed=null) so it's never mislabeled "nobody answered". Because this status is NOT in the
