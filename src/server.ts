@@ -48,7 +48,8 @@ import { startMapper, stopMapper, mapperState, resumeMapperRuns } from "./calls/
 import { activeMap, resetChainHistory, graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, graphFor, learnFromReceipt, navSecondsOf, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
 import { recipeFromCall, evidenceFromCall, type CapturedStep } from "./calls/map-capture";
 import { startSweep, stopSweep, sweepStatus, buildQueue } from "./calls/sweep";
-import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay } from "./calls/tapedeck";
+import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay,
+  robotAnswer, robotStep, robotEnded, robotClip, ringbackWav, robotScene, robotLastRun, robotRunFor, parseRobotPick, ROBOT_SCENES, ROBOT_GREETINGS } from "./calls/tapedeck";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged, lockRecipeToChain } from "./calls/trainer-batch";
 import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, connectAtSecFor, chainDialable, chainNavPlan, type Recipe } from "./calls/recipe";
 import { llm, heli } from "./llm";
@@ -243,7 +244,7 @@ const peekOk = (peekQ?: string, peekCookie?: string): boolean =>
 // Paths that must stay live even while the coming-soon splash is up: assets (incl. the splash's own
 // logos), consumer + admin APIs, telephony webhooks, admin login. Everything else on a consumer host
 // is a page and gets the splash (unless the browser has a valid peek).
-const GATE_SKIP = /^\/(api|pub|app|auth|webhooks|logos|og|fonts|media|sw\.js|manifest|robots|favicon|\.well-known|twiml|nav|tapedeck|bridge|listen|twilio-media|admin-login|admin-logout|health|s)\b/; // `s` = the share landing: link-preview bots must see the unfurl cards even while the splash is up (owner 07-14)
+const GATE_SKIP = /^\/(api|pub|app|auth|webhooks|logos|og|fonts|media|sw\.js|manifest|robots|favicon|\.well-known|twiml|nav|tapedeck|robot|bridge|listen|twilio-media|admin-login|admin-logout|health|s)\b/; // `s` = the share landing: link-preview bots must see the unfurl cards even while the splash is up (owner 07-14)
 app.use("*", async (c, next) => {
   const code = c.req.query("peek");
   if (code && config.peekCode && code === config.peekCode) {
@@ -1151,6 +1152,56 @@ app.get("/tapedeck/clip", (c) => {
   if (!b) return c.body("not found", 404);
   return c.body(new Uint8Array(b), 200, { "Content-Type": "audio/mpeg" });
 });
+// ---- The robot store: the same tape deck, answering instead of dialing ----
+// Spec: docs/specs/robot-store/README.md. The number +1 424 484 7395 points its Voice URL at
+// /robot/answer, the MVP store points at that number, and a check dialed from the website reaches a
+// scripted person. Everything except that person is the real system. These routes are the carrier's,
+// not the dashboard's, so they sit outside /api like every other Twilio route here.
+app.all("/robot/answer", async (c) => {
+  let sid = "", from = "";
+  try { const b = await c.req.parseBody(); sid = String(b.CallSid || ""); from = String(b.From || ""); } catch { /* GET probe */ }
+  if (!sid) sid = c.req.query("CallSid") || "";
+  return c.body(await robotAnswer(sid, from), 200, { "Content-Type": "text/xml" });
+});
+app.post("/robot/step", async (c) => {
+  let speech = "", sid = c.req.query("call") || "";
+  try { const b = await c.req.parseBody(); speech = String(b.SpeechResult || ""); if (!sid) sid = String(b.CallSid || ""); } catch { /* silent turn */ }
+  return c.body(robotStep(sid, speech), 200, { "Content-Type": "text/xml" });
+});
+app.post("/robot/ended", async (c) => {
+  let sid = c.req.query("call") || "";
+  try { const b = await c.req.parseBody(); if (!sid) sid = String(b.CallSid || ""); } catch { /* no body */ }
+  robotEnded(sid); return c.body("ok", 200);
+});
+app.get("/robot/clip", (c) => {
+  const b = robotClip(c.req.query("call") || "", Number(c.req.query("i") || 0));
+  if (!b) return c.body("not found", 404);
+  return c.body(new Uint8Array(b), 200, { "Content-Type": "audio/mpeg" });
+});
+app.get("/robot/ring", (c) => {
+  const secs = Math.max(1, Math.min(30, Number(c.req.query("secs") || 6)));
+  return c.body(new Uint8Array(ringbackWav(secs)), 200, { "Content-Type": "audio/wav" });
+});
+// The harness's two reads: which scene the next call plays, and exactly what the robot said on the
+// last one. The second is the ground truth the written transcript is compared against, word for word.
+app.get("/api/admin/robot-store", async (c) => {
+  const pick = parseRobotPick(await getSetting("robot_scenario"));
+  const sid = c.req.query("call");
+  return c.json({
+    pick, scenes: ROBOT_SCENES.map((s) => ({ n: s.n, name: s.name, expect: s.expect })),
+    greetings: ROBOT_GREETINGS,
+    run: sid ? robotRunFor(sid) : robotLastRun(),
+  });
+});
+app.post("/api/admin/robot-store", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { scenario?: number; greeting?: number };
+  const n = Number(b.scenario);
+  if (!robotScene(n)) return c.json({ error: "unknown scenario" }, 400);
+  const val = b.greeting == null ? String(n) : `${n}:${Number(b.greeting)}`;
+  await setSetting("robot_scenario", val);
+  return c.json({ ok: true, pick: parseRobotPick(val), scene: robotScene(n) });
+});
+
 app.post("/api/admin/tapedeck/call", async (c) => {
   const b = (await c.req.json().catch(() => ({}))) as { phone?: string; workflow?: string };
   return c.json(await tapedeckCall(String(b.phone || ""), b.workflow ? String(b.workflow) : undefined));
