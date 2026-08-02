@@ -108,6 +108,7 @@ export async function recentStockNear(lat: number | null, lng: number | null, ra
     const r = s.retailerId ? byId.get(s.retailerId) : undefined;
     if (s.retailerId && !r) continue;          // signal for a store we no longer have
     if (r && r.active === false) continue;
+    if (r && (r as { muted?: boolean }).muted) continue;   // took itself off the website (owner R3)
     if (r && r.ownerOnly) continue;            // owner-only demo store ("Fun") never reaches the public feed
     let miles: number | null = null;
     if (r && lat != null && lng != null) {

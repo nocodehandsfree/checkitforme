@@ -35,7 +35,12 @@ for f in $(grep -rl 'Accounts/\${sid}/Calls\.json' src --include=*.ts 2>/dev/nul
   # statement, not merely the same file — server.ts lists past calls and POSTs to other endpoints.
   grep -A3 'Accounts/\${sid}/Calls\.json' "$f" | grep -q 'method: *"POST"' || continue
   # The import alone is not a receipt — look for the call being made.
-  if ! grep -v '^import\|^} from\|^  openReceipt,' "$f" | grep -q 'openReceipt('; then
+  # COUNTED, NOT PIPED INTO grep -q. With `set -o pipefail`, grep -q exits the moment it matches and
+  # the grep feeding it dies of a broken pipe, so the whole pipeline reported failure EVEN WHEN THE
+  # RECEIPT WAS THERE — a race that grew with the file and blocked a correct push (08-02). Counting
+  # reads the stream to the end, so the answer cannot depend on how fast the match arrives.
+  receipts=$(grep -v '^import\|^} from\|^  openReceipt,' "$f" | grep -c 'openReceipt(' || true)
+  if [ "${receipts:-0}" -eq 0 ]; then
     say "SPEC GATE 2 — a silent call: $f dials a store and never opens a receipt."
     say "             See the runtime spec, law 4."
     fail=1

@@ -180,6 +180,24 @@ async function main() {
     await setSetting("mapper_daily_cap", "");
   }
 
+  console.log("\n▶ THE JOB IS PICKED UP BY WHAT ALREADY RUNS ON ITS OWN — nobody presses anything");
+  {
+    // The server registers healing beside every other piece of self-running work, under the same
+    // single-leader lock. Driven here by calling the very thing that registration calls, on a store
+    // that muted itself: a job waiting is taken up, inside the cap, one run per chain.
+    const today = new Date().toISOString().slice(0, 10);
+    await setSetting("mapper_daily_cap", "60");
+    await setSetting(`mapper_calls:${chain.id}:${today}`, "0");
+    await storeMetUnknownMenu({ chainId: chain.id, storeId: c.id, storeName: c.name, greeting: "A menu nobody has heard." });
+    ok((await storeIsMuted(c.id)) === true, "a store is sitting off the website with a job filed");
+    const jobs = await remapJobs();
+    ok(jobs.some((j) => j.storeId === c.id), "and the job is in the list");
+    const run = await healOnce();
+    ok(run.length > 0, "the run picks it up with nobody pressing anything");
+    ok(run.filter((r) => r.started).length <= 1, "one chain, one run — never one run per store");
+    ok(run.every((r) => r.chainId === chain.id), "and only chains that actually have a store waiting");
+  }
+
   console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }

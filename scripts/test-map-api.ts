@@ -90,6 +90,35 @@ async function main() {
       method: "POST", headers: H, body: JSON.stringify({ chainName: "No Such Chain Anywhere", recipe: { type: "direct", steps: [], seconds: 0 } }),
     });
     ok(unknownChain.status === 404, "a chain the record has never heard of is refused, not invented");
+
+    // A STORE THAT TOOK ITSELF OFF THE WEBSITE IS OFF IT EVERYWHERE A CUSTOMER CAN REACH IT — the
+    // list already drops it, and a link straight to that one store has to answer the same way.
+    // Driven against the real endpoints, muting and unmuting through the real control.
+    // One store of our own, so this stands on its own instead of on whatever the seed happens to hold.
+    await fetch(`${BASE}/api/stores/import`, {
+      method: "POST", headers: H,
+      body: JSON.stringify({ stores: [{ name: "Mute Test Store", location: "Testville", address: "1 Test St", phone: "+15557770001", lat: 34.05, lng: -118.24, state: "CA", timezone: "America/Los_Angeles", chain: "Mute Test Chain" }] }),
+    });
+    const all = await fetch(`${BASE}/pub/stores`, { headers: H }).then((r) => r.json()) as Array<{ id: number; name: string; lat?: number | null; lng?: number | null }> | { stores?: Array<{ id: number; name: string }> };
+    const rows = Array.isArray(all) ? all : (all.stores || []);
+    const withLoc = rows.find((r) => r.name === "Mute Test Store") as { id: number; lat: number; lng: number } | undefined;
+    const sid = withLoc?.id;
+    if (!sid) { ok(false, `there is a store to mute (${rows.length} stores on file)`); }
+    else {
+      const before = await fetch(`${BASE}/pub/store/${sid}`);
+      ok(before.status === 200, "a reachable store's own page loads");
+      const m = await fetch(`${BASE}/api/stores/mute`, { method: "POST", headers: H, body: JSON.stringify({ id: sid, muted: true, reason: "menu changed" }) }).then((r) => r.json()) as { muted?: boolean };
+      ok(m.muted === true, "muting one store by hand takes");
+      const during = await fetch(`${BASE}/pub/store/${sid}`);
+      ok(during.status === 404, `its own page is not found while it is off the website (${during.status})`);
+      const stock = await fetch(`${BASE}/pub/stock/store/${sid}`);
+      ok(stock.status === 404, `and neither is its stock history (${stock.status})`);
+      const list = await fetch(`${BASE}/pub/stores/near?lat=${withLoc!.lat}&lng=${withLoc!.lng}&radius=25`).then((r) => r.json()) as { stores?: Array<{ id: number }> };
+      ok(!(list.stores || []).some((x) => x.id === sid), "and it is gone from the list a customer sees");
+      await fetch(`${BASE}/api/stores/mute`, { method: "POST", headers: H, body: JSON.stringify({ id: sid, muted: false }) });
+      const after = await fetch(`${BASE}/pub/store/${sid}`);
+      ok(after.status === 200, "and the moment it is back, so is its page");
+    }
   } finally {
     srv.kill("SIGKILL");
   }

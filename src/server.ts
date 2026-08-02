@@ -44,7 +44,7 @@ import { costCall, money } from "./calls/cost";
 import { behaved, agentLinesFrom } from "./calls/behaved";
 import { opsRollup, type CheckRow } from "./calls/ops";
 import { startMapper, stopMapper, mapperState, resumeMapperRuns } from "./calls/mapper";
-import { storeMetUnknownMenu, muteStore, unmuteStore } from "./calls/healing";
+import { storeMetUnknownMenu, muteStore, unmuteStore, healOnce } from "./calls/healing";
 import { activeMap, resetChainHistory, freeChainDoors, graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, graphFor, learnFromReceipt, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
 import { recipeFromCall, evidenceFromCall, type CapturedStep } from "./calls/map-capture";
 import { startSweep, stopSweep, sweepStatus, buildQueue } from "./calls/sweep";
@@ -2221,7 +2221,7 @@ app.get("/pub/stores/near", async (c) => {
       gte(retailers.lat, wide.latMin), lte(retailers.lat, wide.latMax),
       gte(retailers.lng, wide.lngMin), lte(retailers.lng, wide.lngMax),
     )))
-      .filter((r) => !(r.chainId && mutedChains.has(r.chainId)) && callable(r) && r.lat != null && r.lng != null)
+      .filter((r) => !r.muted && !(r.chainId && mutedChains.has(r.chainId)) && callable(r) && r.lat != null && r.lng != null)
       .map((r) => ({ r, mi: haversineMi(lat, lng, r.lat as number, r.lng as number) }))
       .filter((x) => x.mi > radius)
       .sort((a, b) => a.mi - b.mi);
@@ -2260,6 +2260,11 @@ app.get("/pub/store/:id", async (c) => {
   if (!Number.isFinite(id)) return c.json({ error: "bad id" }, 400);
   const r = (await db.select().from(retailers).where(eq(retailers.id, id)))[0];
   if (!r || r.active === false) return c.json({ error: "not_found" }, 404);
+  // A STORE THAT TOOK ITSELF OFF THE WEBSITE IS OFF IT HERE TOO. The list already drops it; a
+  // customer holding a link straight to this one store must get the same answer, or the mute only
+  // half happened. Same treatment the chain-level mute already gets, one line above it. It comes
+  // back on its own the moment its re-map succeeds.
+  if (r.muted === true) return c.json({ error: "not_found" }, 404);
   const chain = r.chainId ? (await cachedChains()).find((x) => x.id === r.chainId) : undefined;
   if (chain?.muted === true) return c.json({ error: "not_found" }, 404);
   if (r.ownerOnly && !(await requesterIsComp(c.req.header("Authorization")))) return c.json({ error: "not_found" }, 404);
@@ -2331,7 +2336,13 @@ app.get("/pub/stock/near", async (c) => {
   const categoryId = Number(c.req.query("categoryId") || 0) || undefined;
   return c.json(await recentStockNear(hasLoc ? lat : null, hasLoc ? lng : null, radius, sinceHours, categoryId));
 });
-app.get("/pub/stock/store/:id", async (c) => c.json(await latestForRetailer(Number(c.req.param("id")))));
+app.get("/pub/stock/store/:id", async (c) => {
+  // Built off a single store id, so it closes with the store (owner R3's sweep).
+  const id = Number(c.req.param("id"));
+  const r = (await db.select({ muted: retailers.muted }).from(retailers).where(eq(retailers.id, id)))[0];
+  if (r?.muted) return c.json({ error: "not_found" }, 404);
+  return c.json(await latestForRetailer(id));
+});
 app.post("/api/stock/ingest", async (c) => {
   const b = await c.req.json();
   const items = Array.isArray(b) ? b : b?.signals;
@@ -2551,6 +2562,7 @@ app.get("/pub/best-bet", async (c) => {
   const comp = await requesterIsComp(c.req.header("Authorization"));
   const cands = near
     .filter((r) => comp || !r.ownerOnly) // owner-only demo store ("Fun") only for the master account
+    .filter((r) => !r.muted)              // took itself off the website (owner R3) — never suggested
     .filter((r) => r.phone && r.active !== false)
     .filter((r) => r.sellsPacks !== false) // "most likely to have it on the SHELF" — exclude kiosk-only stores (e.g. Pavilions)
     .filter((r) => openState(r.hours, r.timezone).open !== false) // open or unknown, never closed
@@ -7276,6 +7288,17 @@ setInterval(() => withLock("learned-sync", 160, learnedSyncTick).catch((e) => co
 setInterval(() => withLock("settings-sync", 55, settingsSyncTick).catch((e) => console.error("settings-sync:", e)), 60_000); // prod→staging owner settings mirror (staging pulls; inert elsewhere)
 setInterval(() => withLock("check-queue", 2, () => drainCheckQueue(triggerCall, bridgeCheckCall, placeLive)).catch((e) => console.error("check-queue:", e)), 1_000); // waiting-screen: place queued checks as slots free (inert unless the governor is on)
 setInterval(() => withLock("harvest", 110, harvestHoursTick).catch((e) => console.error("harvest:", e)), 120_000); // self-updating hours (policy-gated, off by default)
+// THE LIST EMPTIES ITSELF (owner R2). A store that took itself off the website files one job and
+// then nothing happened to it: it sat there until somebody pressed Map by hand, which is the exact
+// review the owner does not do. This picks those jobs up in the same place every other piece of
+// self-running work is picked up, under the same single-leader lock. It is NOT a watcher of its own:
+// `healOnce` reads the jobs, obeys the mapper's own daily cap, starts at most one run per chain, and
+// returns — with nothing waiting, it does nothing at all. Ten minutes, because each job it takes up
+// is a real mapping run that takes minutes to finish and costs real money.
+setInterval(() => withLock("healing", 540, async () => {
+  const started = (await healOnce()).filter((r) => r.started);
+  if (started.length) console.log(`[healing] re-mapping ${started.length} store(s) that took themselves off the website`);
+}).catch((e) => console.error("healing:", e)), 600_000);
 setInterval(() => withLock("cust-sched", 85, customerScheduleTick).catch((e) => console.error("cust-sched:", e)), 90_000); // subscriber auto-checks (policy-gated)
 setInterval(() => withLock("gmail-receipts", 25, gmailReceiptTick).catch((e) => console.error("gmail-receipts:", e)), 30_000); // ingest kiosk receipts (policy-gated + creds)
 setInterval(() => withLock("ops-watch", 55, watchdogTick).catch((e) => console.error("ops-watch:", e)), 60_000); // cross-env down detector → owner alert
