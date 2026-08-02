@@ -143,5 +143,34 @@ is(ROBOT_SCENES.map((s) => `${s.n}:${s.expect}`), [
   "6:no_clear_answer", "7:in_stock", "8:in_stock", "9:nobody_answered", "10:not_in_stock",
 ], "scenes 7 and 8 expect IN STOCK — the two we really got wrong");
 
+// ---- THE TEST OF THE TEST -----------------------------------------------------------------------
+// A comparison that has never failed has never been tested. These are the exact shapes our own
+// history produced, fed to the harness's comparison to prove it says NO to every one of them.
+console.log("\n── the word comparison really fails on our own past faults ──");
+{
+  const { compareWords } = await import("./robot-check.mjs");
+  const said = [{ text: "Thanks for calling MVP's. Can I help you?" }, { text: "We did not." }];
+  const clean = ["Clerk: Thanks for calling MVP's. Can I help you?", "Agent: Do you have any Pokemon cards?", "Clerk: We did not."];
+  is(compareWords(said, clean).misses.length, 0, "a clean, correct record passes");
+
+  // The 08-01 fault: held audio handed over in one burst came back as DIFFERENT WORDS.
+  const misheard = ["Clerk: Hi, do you recall MVP's? Can I help you?", "Clerk: We did not."];
+  const m1 = compareWords(said, misheard);
+  if (m1.misses.length) ok(`wrong words are caught (${m1.misses[0].how})`); else fail("a misheard greeting passed — this is the 08-01 fault going straight through");
+
+  // Four turns welded into one line with no space between them (check 114).
+  const welded = ["Clerk: Thanks for calling MVP's. Can I help you?We did not."];
+  const m2 = compareWords(said, welded);
+  if (m2.misses.length) ok(`two turns welded into one line are caught (${m2.misses.map((x) => x.how).join(", ")})`);
+  else fail("a welded line passed — the greeting fused to the answer would ship green");
+
+  // "CVS" written down as "CBS", as "CDS there", as "Seabass" — a name mangled beyond recognition.
+  const mangled = ["Clerk: Thanks for calling CBS. Can I help you?", "Clerk: We did not."];
+  if (compareWords(said, mangled).misses.length) ok("a mangled store name is caught"); else fail("a mangled name passed");
+
+  // Nothing recorded at all.
+  if (compareWords(said, []).misses.length === 2) ok("an empty record fails every line, never passes by default"); else fail("an empty record slipped through");
+}
+
 console.log(bad ? `\nrobot store: ${bad} FAILED\n` : "\nrobot store: all held\n");
 process.exit(bad ? 1 : 0);

@@ -29,9 +29,15 @@ const OUT = process.env.ROBOT_OUT || "./robot-run";
 const EXE = process.env.CHROMIUM_PATH || "/opt/pw-browsers/chromium";
 const wanted = process.argv.slice(2).filter((a) => /^\d+$/.test(a)).map(Number);
 
-if (!TOKEN) { console.error("No ADMIN_TOKEN. Pull it from Railway (CLAUDE.md has the curl)."); process.exit(2); }
-if (!existsSync(EXE)) { console.error("No browser at " + EXE + " — the harness cannot drive the real site without one."); process.exit(2); }
-mkdirSync(OUT, { recursive: true });
+// Driving the site needs a key and a browser; reading the word comparison (which the robot store's
+// own test does, to prove the comparison really fails on a mangled transcript) needs neither.
+let SITE = HOST;
+const CLI = import.meta.url === `file://${process.argv[1]}`;
+if (CLI) {
+  if (!TOKEN) { console.error("No ADMIN_TOKEN. Pull it from Railway (CLAUDE.md has the curl)."); process.exit(2); }
+  if (!existsSync(EXE)) { console.error("No browser at " + EXE + " — the harness cannot drive the real site without one."); process.exit(2); }
+  mkdirSync(OUT, { recursive: true });
+}
 
 const adm = async (path, opts = {}) => {
   const r = await fetch(HOST + path, { ...opts, headers: { "x-admin-token": TOKEN, "content-type": "application/json", ...(opts.headers || {}) } });
@@ -180,7 +186,7 @@ async function watchLive(page, maxMs) {
 // The robot's script is known exactly, so this is arithmetic, not opinion. Our own history is full of
 // what it catches: "CVS" written down as "CBS", as "CDS there" and as "Seabass"; four turns welded
 // into one line with no space between them; a whole store menu recorded as one 181 second line.
-function compareWords(said, lines) {
+export function compareWords(said, lines) {
   const staffLines = lines.filter((l) => l.startsWith("Clerk:")).map((l) => l.slice(6).trim());
   const misses = [];
   for (const s of said) {
@@ -291,11 +297,12 @@ async function runOne(page, scene, greetingIdx) {
 }
 
 // ---- go -----------------------------------------------------------------------------------------
+if (CLI) {
 const cfg = await adm("/api/admin/robot-store");
 const scenes = cfg.scenes.filter((s) => !wanted.length || wanted.includes(s.n));
 const direct = await browserCanReach(HOST);
 const pipe = direct ? null : await startPipe(HOST);
-const SITE = direct ? HOST : pipe.url;
+SITE = direct ? HOST : pipe.url;
 console.log(direct ? `browser goes straight to ${HOST}` : `this machine's browser cannot open an encrypted connection, so it reaches the REAL ${HOST} through a local pipe (${pipe.url}). Every page and every answer is still the real server's.`);
 const b = await chromium.launch({ executablePath: EXE, args: ["--no-sandbox"] });
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
@@ -328,3 +335,4 @@ writeFileSync(`${OUT}/run.json`, JSON.stringify({ at: new Date().toISOString(), 
 console.log(`the whole run: ${OUT}/run.json · photos in ${OUT}/`);
 console.log(failed ? `\nROBOT STORE: ${failed} FAILED\n` : "\nROBOT STORE: every scenario held\n");
 process.exit(failed ? 1 : 0);
+}
