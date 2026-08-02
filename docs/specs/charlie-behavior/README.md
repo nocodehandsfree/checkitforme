@@ -89,7 +89,7 @@ Waiting: Staff stepped away, the line went quiet · Staff back after 40 seconds 
 seconds, and it may not be the same person
 
 Department: We reached the wrong department · Charlie asked to be transferred · Transferred, the next
-department is ringing · The department's phone rang 2 times with no answer · Staff said there was
+department is ringing · Staff said there was
 nobody to transfer to · We were sent back through the phone menu *(NOT BUILT YET)* · The check was
 disconnected during the transfer *(NOT BUILT YET)*
 
@@ -106,20 +106,27 @@ check was disconnected · Something went wrong on our end, so we hung up. No che
 **The rules behind those numbers, verified in code:** 6 unanswered rings at a department = hang up
 (about 36 seconds of the normal American ring pattern) · 35 seconds with nobody speaking after
 Charlie joins = hang up (`bail.ringMaxSeconds`) · a check hangs up at 5 minutes flat, always.
-"Ring 2 went unanswered" only ever counts rings at a DEPARTMENT after a transfer — a plain check
-never shows it.
+
+**OWNER 08-01: "Ring 2 went unanswered" is DELETED from the log.** Counting rings while we are being
+transferred tells him nothing and costs nothing — Charlie is off while a phone rings. The 6-ring
+give-up RULE stays (it stops us waiting forever at a department nobody works at); only the per-ring
+line goes.
+
+**OWNER 08-01, on being patient:** waiting is nearly free because Charlie is dropped, and a second
+check costs more than waiting — so lean patient everywhere Charlie is off. See §7b for what that
+costs and where the real boundary belongs.
 
 ## 5. Every pass/fail row, both sides
 
 | # | Row | Pass | Fail |
 |---|---|---|---|
 | 1 | Handed to Charlie | Reached Staff through Alpha and handed to Charlie. | Staff never picked up, so there was nobody to hand to. *(or)* Our own system never handed the check to Charlie. |
-| 2 | The question played as a recording | The question played as a recording. | The recording could not be made, so Charlie asked it himself. |
+| 2 | The question played as a recording | The question played as a recording. | The recording did not play, so Charlie asked the question himself. |
 | 3 | Charlie warmed up in time | Charlie warmed up in time. | Charlie warmed up late. There was dead air for 2 seconds. |
 | 4 | We reached the right department | We reached the right department, no transfer needed. | Wrong department and Charlie never asked to be transferred. |
 | 5 | Asked to be transferred | Charlie asked to be transferred. | Charlie asked to be transferred more than once. |
 | 6 | Reacted to a new person | Charlie reacted correctly to a new staff member after the transfer. | Charlie did not react to a new staff member after the transfer. |
-| 7 | Wrapped up when told no | Staff said there was nobody to transfer to and Charlie wrapped up the check. | Charlie kept pushing after Staff said no. |
+| 7 | Said goodbye when told no | Staff said there was nobody to transfer to and Charlie said goodbye. | Charlie kept pushing after Staff said no. |
 | 8 | Meter stopped | Staff stepped away for 40 seconds. Charlie was dropped and the meter stopped. | Staff put us on hold or transferred us and Charlie kept billing. |
 | 9 | Charlie wrapped up | Charlie thanked them by name and ended. | The check ended without Charlie wrapping up. |
 | 10 | Spoke their language | Charlie spoke Spanish throughout. | Charlie answered in English on a Spanish check. |
@@ -180,6 +187,29 @@ a different thing for the customer to read.
 4. The 2-minute hold cap + its status.
 5. Then the Testing card shows all of §4 and §5. The page can only show what the engine records, so
    this is one job in this order, not two agents.
+
+## 7b. THE MONEY BOUNDARIES (owner asked 08-01 — real measured rates, `src/calls/cost.ts`)
+
+| What | Rate |
+|---|---|
+| The phone line | 1.4¢ a minute, WHOLE minutes rounded up |
+| The listening | 0.4¢ a minute |
+| **Charlie** | **11¢ a minute** (0.18¢ a second) |
+
+**Charlie costs 60 times what the phone line costs.** So a cap on total check time barely protects
+anything; **Charlie's talk time is the only number that matters.**
+
+Owner's target: the Operator plan is 20¢ a check and the goal is 67% profit on average, so the
+ceiling is **6.6¢ a check**.
+- A 2-minute check costs about 3.7¢ before Charlie says a word → **about 16 seconds of Charlie left.**
+- A 1-minute check costs about 1.8¢ → **about 26 seconds of Charlie left.**
+- Waiting through a hold is nearly free (Charlie is dropped). Waiting while he is TALKING is what
+  breaks the margin.
+
+**What this means for the rules:** be generous with waiting, strict with talking. The 2-minute hold
+cap is cheap insurance. The number that needs a hard boundary is how long Charlie is allowed to be
+open on one check — **owner to set it; PM's proposal is 45 seconds of Charlie across the whole
+check, which holds the margin even on a 2-minute check.**
 
 ## 8. Open — decisions the owner still owes
 
