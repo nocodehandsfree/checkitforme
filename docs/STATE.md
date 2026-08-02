@@ -1,19 +1,10 @@
 # STATE — the owner's single source of truth
 One screen. Every session updates this at close (≤40 lines). New truth REPLACES old, history is in git.
 Last updated: 2026-08-02 (Admin: owner email Off, the Statuses page, and every Yes button).
-## Store logos: all 112 re-cut, and one place now decides their size (07-31/08-01, staging)
-- Same weight, same grey box, clear space all round. New pictures are LIVE on the real site and Admin
-  already; the code half is on staging and needs a promote. **Your move: nothing** (PM reviews it first).
-- **Change a logo in one spot and it now really does change everywhere** (71 chains had sat quietly stale). The logo wall is the record of truth: it shows exactly what a customer sees, so it cannot lie to you.
-## The check status page + the verdict wait (07-30, on staging)
-- The conversation follows its newest line, both screens clear Safari's bottom bar, and **the wait on ElevenLabs
+## Store logos: all 112 re-cut, one place decides their size (07-31/08-01, staging). New pictures are LIVE on the real site and Admin; the code half needs a promote. **Change a logo in one spot and it now really does change everywhere** — the logo wall is the record of truth and cannot lie to you.
+## The check status page (07-30, staging): the conversation follows its newest line, both screens clear Safari's bottom bar, and **the wait on ElevenLabs is GONE** — at hang up we settle from our own words plus our finished read.
   is GONE (your order):** at hang up we settle from our own words plus our finished read.
-## In stock alerts are FIXED (07-31, on staging): why your Fun store email never came
-- Your two rows switched themselves off after their first email, and two of the three ways a check finishes
-  never sent mail at all. Now every finish path sends, alerts stay ON until paused or deleted, one store =
-  ONE email, a repeat subscribe says so. **Your move: tap the Fun store alert once, run a check, one email.**
-- **08-02 Admin (LIVE): the owner email Off switch saves, the Statuses icon picker works, a status can be
-  deleted, New status sits top right, and every Yes button in Admin was answering No.** Off on the real site needs a promote.
+## In stock alerts are FIXED (07-31, staging): every finish path sends, alerts stay ON until paused, one store = ONE email. **08-02 Admin (LIVE): the owner email Off switch saves, the Statuses page works, and every Yes button in Admin was answering No.** Off on the real site needs a promote. **Your move: tap the Fun store alert once, run a check, one email.**
 ## A wrong department no longer costs you the check (07-30): ask once to be put through, meter off through the hand-over, ask again when somebody new picks up.
 ## The bottom bar can never go dark again, and Live is cleaned (07-30, live on Admin): the tint is nailed down, three ways it used to break are refused before anything goes live. Cost per check opens on **The baseline**, your 6.7¢ ceiling off your real prices.
 ## Mapping (07-30/31): every try back walks the menu the same way, the chain page is rebuilt, and a
@@ -37,4 +28,12 @@ Last updated: 2026-08-02 (Admin: owner email Off, the Statuses page, and every Y
   came back with "I did not see any" and the screen told you IN STOCK while the record said nobody
   answered. Same shape when they transfer you and when they hang up on us. **Your move: nothing — this is
   the next voice job, and it now has a test that proves the day it is fixed.**
+## Charlie is never switched on to talk to nobody again (08-02, ON STAGING)
+- A setting called "Hold max seconds" did the opposite of its name: instead of ending a wait it
+  switched Charlie ON to an empty line and billed for it. That is the line on your own check log at
+  63 seconds. Deleted, along with a second box that was wired to nothing at all.
+- Your check log can now say **who really hung up** (including when it was our own time limit, so we
+  never blame a store for our own accounting), a misheard machine phrase can no longer end a check on
+  a real person, and two things the log claimed but never detected now work: being sent back through
+  the phone menu, and a check dying during a transfer. **Not phone-proven — that is the robot store.**
 ## Waiting on YOU: promote now to stop the owner email on the real site? · hide the fake (simulated) poll rows from the Admin feedback queue? (yes / no) · Next: docs/tasks/INDEX.md.
