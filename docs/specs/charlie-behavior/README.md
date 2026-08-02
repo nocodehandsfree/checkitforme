@@ -211,6 +211,41 @@ cap is cheap insurance. The number that needs a hard boundary is how long Charli
 open on one check — **owner to set it; PM's proposal is 45 seconds of Charlie across the whole
 check, which holds the margin even on a 2-minute check.**
 
+## 7c. THE PHONE ON THE COUNTER — a real hole, found 08-01
+
+**The listener knows three shapes today** (`src/calls/listen-nav.ts`): QUIET (nobody making a sound,
+6 seconds → Charlie dropped) · MUSIC (sound that never stops — 96% of a 3-second window is voiced —
+6 seconds → Charlie dropped) · RINGING.
+
+**A phone set down on a counter is NONE of them.** Background store noise is irregular with gaps in
+it, which is the exact shape of somebody talking. So Charlie stays open and keeps billing while the
+handset lies on the counter and Staff walk to the back room. Owner called this before it was found:
+*"if we're not smart about how Charlie disconnects we're gonna be in a world of pain."*
+
+**THE FIX — a fourth shape, BACKGROUND.** Somebody speaking into a handset is loud and close;
+store noise across the room is far quieter. Sound that is present but well below the loudness of
+somebody speaking TO us, held for the same 6 seconds, is treated exactly like silence: Charlie is
+dropped, the meter stops, and he reconnects the moment somebody speaks up close again. Costs nothing
+extra, needs no transcribing, works in any language. **Echo builds this.**
+
+## 7d. THE CHATTY CLERK — how Charlie gets out politely
+
+The one case no drop rule catches: somebody genuinely IS talking, hemming and hawing, never landing
+on an answer. Charlie stays open because the rules are all working correctly, and the check runs away
+with the margin (§7b — he costs 11¢ a minute).
+
+**Rescue the check before ending it.** At the wrap-up point Charlie asks ONE closed question:
+*"Just so I don't keep you — do you have any in stock right now?"* That converts a wasted check into
+an answer a good share of the time.
+
+**If they still cannot answer, he goes cleanly:** *"No worries at all, I'll let you go — thanks so
+much for checking."* **Never "I'll call you back"** — we will not, and Staff remember a business that
+says it will.
+
+**He must never cut off mid-sentence.** A hard hang-up at a limit is the thing the owner is right to
+fear: the clerk is mid-help, the check dies, and the customer paid for all of it. The limit tells
+Charlie to START WRAPPING UP; it never ends the check itself.
+
 ## 8. Open — decisions the owner still owes
 
 1. **Can we tell Staff hanging up from the line dying?** A human hears the difference. The carrier
