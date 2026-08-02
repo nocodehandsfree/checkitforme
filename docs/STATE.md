@@ -1,6 +1,6 @@
 # STATE — the owner's single source of truth
-One screen. Every session updates this at close (≤40 lines). New truth REPLACES old — history is in
-git. Last updated: 2026-08-01 (Charlie behaviour written down + two approved builds with Echo; robot store next).
+One screen. Every session updates this at close (≤40 lines). New truth REPLACES old, history is in git.
+Last updated: 2026-08-02 (Admin: owner email Off, the Statuses page, and every Yes button).
 ## Store logos: all 112 re-cut, and one place now decides their size (07-31/08-01, staging)
 - Same weight, same grey box, clear space all round. New pictures are LIVE on the real site and Admin
   already; the code half is on staging and needs a promote. **Your move: nothing** (PM reviews it first).
@@ -12,8 +12,8 @@ git. Last updated: 2026-08-01 (Charlie behaviour written down + two approved bui
 - Your two rows switched themselves off after their first email, and two of the three ways a check finishes
   never sent mail at all. Now every finish path sends, alerts stay ON until paused or deleted, one store =
   ONE email, a repeat subscribe says so. **Your move: tap the Fun store alert once, run a check, one email.**
-- **08-02: the Off switch on the in-stock owner email really turns it off now.** It said "Could not save"
-  and kept sending. Fixed and OFF on staging (verified). The real site still sends until a promote.
+- **08-02 Admin (LIVE): the owner email Off switch saves, the Statuses icon picker works, a status can be
+  deleted, New status sits top right, and every Yes button in Admin was answering No.** Off on the real site needs a promote.
 ## A wrong department no longer costs you the check (07-30): ask once to be put through, meter off through the hand-over, ask again when somebody new picks up.
 ## The bottom bar can never go dark again, and Live is cleaned (07-30, live on Admin): the tint is nailed down, three ways it used to break are refused before anything goes live. Cost per check opens on **The baseline**, your 6.7¢ ceiling off your real prices.
 ## Mapping (07-30/31): every try back walks the menu the same way, the chain page is rebuilt, and a

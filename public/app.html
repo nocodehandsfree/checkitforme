@@ -3358,8 +3358,11 @@ function askSheet(title, lines, okLabel){
     box.innerHTML=(lines||[]).map(l=>`<div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.55;margin-bottom:10px;color:var(--text-body)">${l}</div>`).join('')
       +`<div class="row" style="gap:8px;margin-top:18px"><button class="act" style="flex:1">${okLabel||'Yes'}</button><button class="ghost" style="flex:1">Cancel</button></div>`;
     const [ok,no]=box.querySelectorAll('button');
-    ok.onclick=()=>{ closeSheet(); finish(true); };
-    no.onclick=()=>{ closeSheet(); finish(false); };
+    // ANSWER FIRST, THEN CLOSE. closeSheet fires `sheetclosed` synchronously, so closing before
+    // answering let onClose settle the promise as "no", so the real answer became a no-op. Every
+    // Yes in the Admin read as a cancel (found 08-02 driving the status delete).
+    ok.onclick=()=>{ finish(true); closeSheet(); };
+    no.onclick=()=>{ finish(false); closeSheet(); };
     document.addEventListener('sheetclosed',onClose);
     openSheet(title,'',box);
   });
@@ -6056,8 +6059,10 @@ function stSheet(id){
 // Kill any queued type-ahead save FIRST, or closeSheet's flush writes the row we just deleted back.
 async function stDelete(id){
   const s=Object.values(STATUSES).find(x=>x.id===id); if(!s) return;
-  if(!confirm('Delete "'+s.label+'"?\nCustomers stop seeing it immediately. Checks already filed under it fall back to their meaning.')) return;
   _stPending=null; clearTimeout(_stSaveT); _stSaveT=null;
+  const ok=await askSheet('Delete “'+s.label+'”?', // openSheet sets the title with textContent, so no escaping
+    ['Customers stop seeing it immediately.','Checks already filed under it fall back to their meaning.'],'Delete');
+  if(!ok) return;
   const r=await api('/api/statuses/'+id,{method:'DELETE'});
   if(r&&r.ok){ delete STATUSES[s.key]; closeSheet(); renderStatuses(); toast('Status deleted'); }
   else toast('Could not delete that status');
