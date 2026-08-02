@@ -12,6 +12,8 @@ git. Last updated: 2026-08-01 (Charlie behaviour written down + two approved bui
 - Your two rows switched themselves off after their first email, and two of the three ways a check finishes
   never sent mail at all. Now every finish path sends, alerts stay ON until paused or deleted, one store =
   ONE email, a repeat subscribe says so. **Your move: tap the Fun store alert once, run a check, one email.**
+- **08-02: the Off switch on the in-stock owner email really turns it off now.** It said "Could not save"
+  and kept sending. Fixed and OFF on staging (verified). The real site still sends until a promote.
 ## A wrong department no longer costs you the check (07-30): ask once to be put through, meter off through the hand-over, ask again when somebody new picks up.
 ## The bottom bar can never go dark again, and Live is cleaned (07-30, live on Admin): the tint is nailed down, three ways it used to break are refused before anything goes live. Cost per check opens on **The baseline**, your 6.7¢ ceiling off your real prices.
 ## Mapping (07-30/31): every try back walks the menu the same way, the chain page is rebuilt, and a
@@ -35,5 +37,4 @@ git. Last updated: 2026-08-01 (Charlie behaviour written down + two approved bui
   came back with "I did not see any" and the screen told you IN STOCK while the record said nobody
   answered. Same shape when they transfer you and when they hang up on us. **Your move: nothing — this is
   the next voice job, and it now has a test that proves the day it is fixed.**
-- A run of all ten costs about 62¢ measured: roughly 5¢ a check plus about 1¢ for the fake store's own line.
-## Waiting on YOU: hide the fake (simulated) poll rows from the Admin feedback queue? (yes / no) · Next: docs/tasks/INDEX.md.
+## Waiting on YOU: promote now to stop the owner email on the real site? · hide the fake (simulated) poll rows from the Admin feedback queue? (yes / no) · Next: docs/tasks/INDEX.md.
