@@ -360,6 +360,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   // screenshot 07-31). A short rolling window of the line is kept from the first voiced frame, and it
   // goes in front of the buffer the moment we commit, so the greeting arrives whole and in order.
   const preRoll: string[] = [];
+  let brokenOnPurpose = false; // BROKEN ON PURPOSE — deleted in the very next commit
   /** WHERE THEIR HELLO ENDS AND THEIR ANSWER BEGINS, as an index into the held audio. Both are held
    *  for the same reason — the agent is not listening yet — and handing them over as one unbroken
    *  stretch is how "hi, this is Bob at the phone store" and "let me put you on hold and go find out"
@@ -1205,7 +1206,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // then out as one burst. The question only ever needed him not to TALK, and his voice is
       // suppressed separately (see the audio handler). While a held handover is still being paced
       // out, live frames queue behind it so nothing arrives out of order.
-      else if (eleven && ready) { if (handoverTimer) pending.push(b64); else eleven.send(JSON.stringify({ user_audio_chunk: b64 })); }
+      // BROKEN ON PURPOSE (restored in the very next commit): every second 20ms frame of the store
+      // side is thrown on the floor, so the transcriber is handed half a voice. This is the audio
+      // handover failing, and it is what the harness has to catch.
+      else if (eleven && ready) { if (handoverTimer) pending.push(b64); else if ((brokenOnPurpose = !brokenOnPurpose)) eleven.send(JSON.stringify({ user_audio_chunk: b64 })); }
       // Buffer what the CLERK says — never our own voice coming back off the line. A PSTN line
       // reflects our audio, and loud enough reflections clear the barge threshold, so anything
       // arriving while our own clip is still playing goes into the buffer and is then handed to the
