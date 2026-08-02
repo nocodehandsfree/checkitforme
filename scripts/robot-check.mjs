@@ -349,7 +349,13 @@ async function runOne(page, scene, greetingIdx) {
   item(9, "the result appears with a status", verdictShown, resultText.replace(/\s+/g, " ").slice(0, 120));
   // THE SCREEN AND THE RECORD MUST AGREE. A screen that says one thing while the record says
   // another is worse than either being wrong: whichever he reads, the other one contradicts it.
-  const onScreen = /not in stock|out of/i.test(resultText) ? "out" : /in stock|has /i.test(resultText) ? "in" : "unclear";
+  // Read the site's OWN mark for the answer it painted, never a guess from the words on the page —
+  // guessing from the page text called a "couldn't tell" screen a yes and raised a false alarm.
+  const onScreen = await page.evaluate(() => {
+    const v = document.querySelector("#result .rverdict");
+    if (!v) return "unclear";
+    return v.classList.contains("in") ? "in" : v.classList.contains("out") ? "out" : "unclear";
+  }).catch(() => "unclear");
   const inRecord = current.statusKey === "in_stock" ? "in" : /not_in_stock|sold_out|does_not_sell/.test(String(current.statusKey)) ? "out" : "unclear";
   item(9.1, "the screen and the record say the same thing", onScreen === inRecord,
     `the screen said ${onScreen}, the record says ${inRecord} (${current.statusKey})`);

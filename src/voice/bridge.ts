@@ -1234,7 +1234,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
               greetingStartedMs = Math.max(0, Date.now() - startMs);
               preRoll.push(b64);
             }
-          } else {
+          } else if (frameEnergy(b64) > VOICE_THRESH) { // BROKEN ON PURPOSE — see the note above; restored in the next commit
             preRoll.push(b64);
             if (preRoll.length > PREROLL_MAX) preRoll.shift();
           }
