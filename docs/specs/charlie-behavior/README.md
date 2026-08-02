@@ -249,6 +249,17 @@ Charlie to START WRAPPING UP; it never ends the check itself.
 double what it would otherwise be. **This number lives in Admin under App so he can play with it**,
 not baked into the code.
 
+## 7e. THE THREE NUMBERS HE CAN TUNE (Admin ▸ App, owner 08-01)
+
+| Setting | Starts at | Why |
+|---|---|---|
+| Charlie wrap-up seconds | 23 | His own arithmetic: 45 does not hold 67% profit, 23 does. |
+| Hold cap seconds | 120 | Waiting is nearly free (Charlie is dropped), so be generous. |
+| Silence before Charlie drops | 6 | **Keep 6 until the robot store can measure the floor.** Six seconds of Charlie costs about 1.1¢ every time somebody steps away, so shaving is worth real money. But too short makes him reconnect mid conversation and a choppy Charlie loses whole checks, which costs far more than a cent. The risk is not symmetrical: too long costs pennies, too short costs checks. Tune it on fifty checks at 5 seconds against fifty at 4, never on a guess. NOTE: a real "let me go check" runs far longer than 6 seconds anyway, so this only bites on short thinking pauses. |
+
+**THE BUILD ORDER IS FIXED:** the Testing card can only show what the engine records, so the engine
+work comes first. One agent, one order. The approved work order is `echo-build.md` beside this file.
+
 ## 8. Open — decisions the owner still owes
 
 1. **Can we tell Staff hanging up from the line dying?** A human hears the difference. The carrier
