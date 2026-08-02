@@ -26,8 +26,10 @@ git. Last updated: 2026-08-01 (Charlie behaviour written down + two approved bui
 ## A store that answers itself, and it found real problems on day one (08-02, working on staging)
 - It picks up on 424 484 7395 and plays a real person's exact words, ten different ways. All ten ran for
   real today from the staging site, tapped like a customer. Your MVP store points at it; Fun untouched.
-- **Two of the ten are perfect now**, including the one that used to cost us money: "we did, but it's not
-  out yet" is read as IN STOCK, with the 3-pack blister named. Every greeting landed first and on its own.
+- Every greeting in all ten landed first and on its own line, live and written. The plain yes and the
+  plain no come through clean.
+- **The one that used to cost us money is a coin flip.** "We did, but it's not out yet" was read as IN
+  STOCK on one check and "couldn't tell" on the next, same words, minutes apart.
 - **What it caught, and this is the money one: once Staff put us on hold, nothing they say afterwards gets
   written down.** One said "yeah, we've got a few" after checking and we filed it as "left on hold". One
   came back with "I did not see any" and the screen told you IN STOCK while the record said nobody

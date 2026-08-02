@@ -29,6 +29,13 @@ reconnect is what never lands in the written conversation. `node scripts/what-ha
 `node scripts/robot-check.mjs 5 6 8 9 10` comes back with every scene holding: the words match what the
 robot said, and each verdict is the one the scene expects (8 is **in stock**, 5 is **not in stock**).
 
+## The yes inside a no is a COIN FLIP, not fixed (same run)
+Checks 248 and 257 are the same words, minutes apart: "We did, but it's not out yet, so... uh, or I
+don't think it's out. Let me see." → "It's like a box with, like, three packs in it." One was scored
+**in stock** (with the 3-pack blister named), the other **no clear answer**. Nothing changed between
+them but the run. The spec called this out as its own job (README §7b); scene 7 is how it gets proven,
+and it has to hold on EVERY run, not one in two.
+
 ## Two more the same run found, smaller, same lane
 - **One check can write four records.** Check 238 is the real one; 239, 240 and 241 are copies of the
   same phone call, written 41 seconds later, with no room and a shorter conversation. Anything reading

@@ -53,6 +53,7 @@ then they ride the next promote to prod):**
 | Task | System | Status |
 |---|---|---|
 | [Call log transcript comes back cut off](call-log-transcript-cutoff.md) | voice-calls | active |
+| [Everything Staff says after a hold is missing](words-after-a-hold-are-lost.md) | voice-calls | active — found by the robot store 08-02, checks 246-251; a real yes was thrown away and one check told the customer the opposite of what Staff said. `node scripts/robot-check.mjs 5 6 8 9 10` proves the day it is fixed. |
 
 **Stream 3 — the ops dashboard:**
 | Task | System | Status |
