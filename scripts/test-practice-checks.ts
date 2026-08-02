@@ -16,8 +16,9 @@
 // Run: ./node_modules/.bin/tsx scripts/test-practice-checks.ts
 import { judgeVoice, personStartsAt, type JudgeInput } from "../src/calls/listen-nav";
 import { menuLinesOf } from "../src/calls/mapper";
-import { _test as engine, setMappingHandoff, navEnded } from "../src/calls/navigator";
+import { _test as engine, setMappingHandoff, navEnded, pickedDoorFrom } from "../src/calls/navigator";
 import { emit, recordLine } from "../src/calls/events";
+import { heardWrongDepartment } from "../src/voice/prompts";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -206,6 +207,41 @@ console.log("\n▶ CHARLIE'S WORD ON THE DEPARTMENT — Staff engaged, so the de
   ok(w.confirmResult === "redirect", "Charlie says wrong department, so that is what the check reads");
   ok(w.grade === "fail" && w.failReason === "wrong department", `and it fails for that reason (${w.failReason})`);
   engine.end("dept-2");
+}
+
+console.log("\n▶ A MAPPING CHECK NEVER TAKES A TRANSFER");
+{
+  // "You've reached the pharmacy, let me transfer you" is the wrong desk AND an offer to move us.
+  // Riding that would get a good answer from a desk we cannot name and cannot get back to, and the
+  // map would lock it as the way in. So the check ends, the choice we took is marked wrong, nothing
+  // locks, and mapping calls the SAME store again on the next choice.
+  const said = "You've reached the pharmacy, let me transfer you to the front.";
+  const wd = heardWrongDepartment(said);
+  ok(!!wd, "Staff's own words read as the wrong department");
+  ok(wd?.handingOver === true, "and as an offer to hand us on — the two facts the engine acts on");
+  ok(heardWrongDepartment("Sure, I'm gonna put you on hold.")?.handingOver !== true,
+    "while being put on hold is not an offer to hand us on — that read is untouched");
+
+  setMappingHandoff(async () => `<Response><Connect/></Response>`);
+  engine.open({ id: "xfer-1", confirm: { product: "Pokémon cards" }, stage: "map",
+    steps: [
+      { who: "ivr", text: "For the pharmacy press 1, for guest services press 2.", atSec: 10 },
+      { who: "us", text: "pressed 1", atSec: 14, action: "press", value: "1" },
+    ] as never });
+  engine.at("xfer-1", 40);
+  await engine.step("xfer-1", "Hello? Are you still there?");
+  const m = engine.get("xfer-1")!;
+  emit("xfer-1", "charlie_join", "Charlie joined");
+  emit("xfer-1", "unknown", "We reached the wrong department", { wrongDepartment: true, why: "this is the pharmacy", said });
+  recordLine("xfer-1", "Clerk", said);
+  navEnded("xfer-1");
+  ok(m.confirmResult === "redirect", "the check reads it as the wrong desk, not as Staff who engaged");
+  ok(m.grade === "fail" && m.failReason === "wrong department",
+    `so it fails for that reason (${m.failReason}) and nothing about this store is locked`);
+  ok(m.recipe == null, "and no route is written off a check that reached the wrong desk");
+  ok(pickedDoorFrom(m.steps) === "1",
+    "the choice we took is the one marked wrong — the next check takes the next choice at the same store");
+  engine.end("xfer-1");
 }
 
 console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);

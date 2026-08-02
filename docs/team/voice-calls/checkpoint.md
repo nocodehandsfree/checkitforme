@@ -33,7 +33,17 @@ the department proof are DRIVEN now, and `test-practice-checks.ts` reads no sour
 **NOTED, NOT FIXED:** on a check walking a saved route, the plan branch answers a prompt that reads
 as a question before the person judge is consulted, so Staff who answer early on a mapped route can
 be pressed at. Out of scope for phase 1 — PM: decide in phase 2.
-**DRIVEN 08-01 (phase 1 close):** practice-checks **36/36** · voice-judge 47/47 · map-sim 331/331 · listen-nav 43/43 · resume 20/20 · mapgraph 62/62 · map-api 14/14 · map-e2e 100/102 (the two known) · tsc clean.
+**A MAPPING CHECK NEVER TAKES A TRANSFER (08-01, owner-named `src/voice/**` unlock, opened and DELETED
+in the same task).** Riding a hand-over got a good answer from a desk we cannot name or route to, so
+mapping saw an engaged person with no wrong-department report and locked the wrong desk. Mapping's
+hand-off now sends `neverTakeAHandover: true` (server.ts `setMappingHandoff`); the ONE place in
+bridge.ts that sets `expectHandover` off Staff's own offer skips it when that flag is set, and tells
+Charlie on the existing note channel to thank them and end the check. Flag absent = every customer
+check, transfers still ridden, byte-identical. `heardWrongDepartment` untouched. Mapping's dead-choice
++ same-store retry were already built and were NOT rebuilt. **NOT DRIVEN:** the branch inside the
+engine needs a live provider connection to reach; its two inputs (`heardWrongDepartment` handingOver,
+and the flag) and mapping's whole outcome ARE driven.
+**DRIVEN 08-01 (phase 1 close, final):** practice-checks **43/43** · voice-judge 47/47 · map-sim 331/331 · listen-nav 43/43 · resume 20/20 · mapgraph 62/62 · map-api 14/14 · bridge 13/13 · map-e2e 100/102 (the two known) · tsc clean.
 NOT verified: a real phone call — none of this has run against a live store. Side branch `claude/mapping-engine-contract-wecvcy` only; NOTHING merges to staging (the owner is testing; a restart kills a live check).
 - **OPEN — chunk 2 (self-healing, fresh chat)**: mute/unmute loop, pooled re-map jobs, chain-level menu change (3 stores → fall back to full words), conditions as discovered VERSIONS + boundary learning (R4; the hard-coded day/9pm/Spanish trio still lives in app.html), auto re-map on menu-changed ×2. **Chunk 3**: the screens (R5; stage headers, "slower", fail pills, Menu doors, timeline, "Recipe winner" removal) — re-read against the contract, the old screens list is stale (PM's note).
 ## Engine — Branson HD `1P1JhCcLzeMmkvLi1BkG` speed 0.91 (BOTH envs) · echo gate 520/150 · ringback by published

@@ -44,6 +44,12 @@ export interface BridgeContext {
   // from the locked recipe). Far more reliable than VAD, which trips on the IVR's own recorded voice.
   connectAtSec?: number;
   holdMaxSeconds?: number; // fallback: connect anyway after this many seconds even if no human is detected
+  // THIS IS A MAPPING CHECK: NEVER TAKE A HAND-OVER. Riding a transfer can never be part of a map.
+  // Staff offering to put us through gets us a good answer from a desk we cannot name and cannot
+  // route to, and a customer check cannot count on Staff being willing to hand us on — so the map
+  // would lock a way in that only works when somebody is kind. Set only by a mapping check; absent
+  // on every customer check, where transfers are still ridden exactly as before.
+  neverTakeAHandover?: boolean;
   // Give-up cap (bail.ringMaxSeconds, gated on bail.enabled): once the billed agent has joined, if NO
   // real human words arrive within this many seconds, hang the call up. Bounds the "desk rings out,
   // nobody ever answers" case, where the agent otherwise sits billing on a ringing line (the 07-24
@@ -695,7 +701,18 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
             // arriving through the door we did not watch. Their own words are the same evidence ours
             // are, so they mark it the same way. Only the offer to MOVE us counts; being told we are
             // in the wrong place predicts nothing until somebody actually asks.
-            if (wd.handingOver && !expectHandover) {
+            if (wd.handingOver && ctx?.neverTakeAHandover) {
+              // A MAPPING CHECK ENDS HERE. This is the wrong desk and we are not riding a transfer
+              // to a better one: the way in we took is wrong, and mapping's own next check takes the
+              // next choice at the same store. Charlie wraps up warmly in his own words on the
+              // channel that already carries notes to him; nothing is said for him and nothing hangs
+              // up on Staff mid-sentence.
+              log("wrong department: this is a mapping check, so the hand-over is declined");
+              try {
+                eleven?.send(JSON.stringify({ type: "contextual_update",
+                  text: "[This is the wrong department and you must NOT be put through to another one. Thank them warmly in one short sentence and end_call now.]" }));
+              } catch { /* best effort — never break a check over a note */ }
+            } else if (wd.handingOver && !expectHandover) {
               expectHandover = true;
               log("wrong department: STAFF offered to hand us on, so the next wait is a hand-over");
             }

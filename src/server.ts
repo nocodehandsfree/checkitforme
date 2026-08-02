@@ -1189,6 +1189,11 @@ setMappingHandoff(async (s) => {
       dynamicVars: v.dynamicVars,
       connectOnHuman: false,          // Staff are already talking — open Charlie right away
       holdMaxSeconds: pol.bail.holdMaxSeconds,
+      // NEVER RIDE A TRANSFER ON A MAPPING CHECK. Staff offering to put us through would land
+      // Charlie at a desk we cannot name and cannot get back to on a customer's check, and mapping
+      // would lock that as the way in. Wrong desk ends the check; mapping marks the choice we took
+      // as wrong and calls the same store again on the next choice.
+      neverTakeAHandover: true,
       voiceId: v.voiceId || undefined,
       voiceTuning: v.voiceTuning || undefined,
     });
