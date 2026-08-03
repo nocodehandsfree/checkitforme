@@ -8,9 +8,6 @@ small md here (what · done-when · system · status). Owner adds/reorders freel
 **Counts (swept 2026-07-23):** active 53 · parked 6 · dead 1 · total 60.
 Systems: site · admin · voice-calls · data · support (data carries the old ops/infra lane).
 
-## ⭐⭐⭐ PM HANDOFF 08-02 evening: `PM-HANDOFF-2026-08-02.md` — READ FIRST. The owner ruled the code
-refactor goes LAST, after every agent in flight has finished. Queue + what he is thinking are in it.
-
 ## ⭐⭐ THE ORDER OF EVERYTHING (08-02): `THE-ORDER-2026-08-02.md` — six agents in flight, one queue,
 one merge at a time. READ IT FIRST. The law for Charlie: `docs/specs/charlie-behavior/README.md`.
 
