@@ -323,6 +323,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   let lastDtmfMs = 0;         // ms-after-start of the last scheduled keypress (VAD waits past this)
   let voiced = 0;             // consecutive voiced frames
   let giveUpTimer: NodeJS.Timeout | null = null; // armed at connect when ctx.giveUpSeconds is set
+  /** THE HOLD CAP (round 1, item 1.6). Armed when a wait starts, cleared when somebody comes back.
+   *  Nothing ended a mid check wait before this: a store that put us down and forgot ran to the
+   *  carrier's own five minute limit. Two minutes, the owner's number, tunable from Admin. */
+  let holdCapTimer: NodeJS.Timeout | null = null;
   let humanWords = false;     // a real store-side transcript line arrived (letters, not "..." junk)
   let earArmed = false;       // smart join: the menu is done, the ear is open for a real voice
   const loudE: number[] = []; // recent above-threshold frame energies (amplitude steadiness, secondary)
@@ -452,6 +456,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  seconds, tuned from Admin against real checks: his own arithmetic says 23 holds 67% profit and
    *  45 does not, so 45 buys a longer conversation at a thinner margin on purpose. */
   const WRAP_UP_MS = Math.max(1, tune.charlieWrapUpSeconds) * 1000;
+  /** How long a wait may run before we hang up. The owner's number, two minutes, tunable from Admin.
+   *  Waiting is nearly free because Charlie is dropped, and a second check costs more than waiting,
+   *  so it is deliberately generous. */
+  const HOLD_CAP_MS = Math.max(1, tune.holdCapSeconds) * 1000;
   // ---- hold and transfer ----
   let onHold = false;             // the person is away; the agent must not be fed or heard
   /** Somebody has already stepped away and come back on this call — from here it is a live store
@@ -705,6 +713,25 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       : reason === "room" ? "The room went quiet, Staff put the phone down"
       : "Staff stepped away, the line went quiet";
     emit(room, "hold_start", note, { reason, atMs });
+    // …AND THIS WAIT HAS AN ENDING NOW (round 1, item 1.6). Nothing ended a mid check wait before
+    // this: a store that put the phone down and forgot about us ran to the carrier's own five minute
+    // limit, and the customer waited all of it to be told nothing. Waiting is nearly free because
+    // Charlie is dropped, so the cap is generous — but it exists.
+    //
+    // Every kind of wait, including one that follows a hand-over: from the customer's side the
+    // outcome is identical, nobody came back. The status is the one we already have, "left on hold";
+    // no new word for a customer to read (owner's ruling 08-01).
+    if (holdCapTimer) { clearTimeout(holdCapTimer); holdCapTimer = null; }
+    holdCapTimer = setTimeout(() => {
+      holdCapTimer = null;
+      if (!onHold || ended) return;
+      const waited = Math.round(HOLD_CAP_MS / 1000);
+      noteWeEnded(room, "held_too_long");   // WE ended it (round 2, item 5)
+      emit(room, "hangup", "The store put us on hold too long, so we hung up", { reason: "held_too_long", afterSec: waited, holdReason: reason });
+      log(`hold cap: ${waited}s on hold with nobody coming back — hanging up (Charlie was never billing for it)`);
+      try { if (eleven) eleven.close(); } catch { /* best effort */ }
+      try { twilio.close(); } catch { /* best effort */ }
+    }, HOLD_CAP_MS);
     if (ctx?.holdStrategy === "reopen") {
       // Close him. This is the only thing that actually stops the meter — muting saves nothing.
       // The call, the room and the receipt all continue; when somebody comes back he opens again as
@@ -725,6 +752,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (!onHold) return;
     const was = holdReason;
     onHold = false; holdReason = null; everCameBack = true;
+    // Somebody came back, so the wait had an ending of its own and the cap has nothing to end.
+    if (holdCapTimer) { clearTimeout(holdCapTimer); holdCapTimer = null; }
     const secs = Math.round(gapMs / 1000);
     // A HAND-OVER IS ALWAYS A NEW PERSON. The twenty-second bar is right for somebody stepping away
     // to look at a shelf and coming back: same person, same conversation. Being handed to another desk
@@ -1588,5 +1617,5 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       const note = spokeEn === 0 ? "Charlie spoke Spanish throughout" : "Charlie spoke Spanish and English on the same check";
       emit(room, "unknown", note, { step: "language", spanishLines: spokeEs, englishLines: spokeEn });
     }
-    if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; } if (heldQuestion) { try { relayLine?.(room, "Agent", heldQuestion); } catch { /* best effort */ } heldQuestion = null; } try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (handoverTimer) { clearTimeout(handoverTimer); handoverTimer = null; } if (eleven) eleven.close(); /* the context is NOT deleted here: Twilio can reconnect a blipped stream mid-call, and the fresh socket must still find it. The 30-minute leak guard owns cleanup. */ });
+    if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; } if (heldQuestion) { try { relayLine?.(room, "Agent", heldQuestion); } catch { /* best effort */ } heldQuestion = null; } try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (holdCapTimer) { clearTimeout(holdCapTimer); holdCapTimer = null; } if (handoverTimer) { clearTimeout(handoverTimer); handoverTimer = null; } if (eleven) eleven.close(); /* the context is NOT deleted here: Twilio can reconnect a blipped stream mid-call, and the fresh socket must still find it. The 30-minute leak guard owns cleanup. */ });
 }

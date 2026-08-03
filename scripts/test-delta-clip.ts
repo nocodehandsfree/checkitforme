@@ -998,6 +998,71 @@ console.log("\n▶ a person answers the same way: short hello, a real pause, and
 }
 
 // ================================================================================================
+// ROUND 1, ITEM 1.6 — THE HOLD CAP.
+// Nothing ended a mid check wait. A store that put the phone down and forgot about us ran to the
+// carrier's own five minute limit, and the customer waited all of it to be told nothing.
+console.log("\n▶ nobody ever comes back: the wait has an ending, and we are the ones who end it");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  openReceipt("room-heldcap", { lane: "direct" });
+  setBridgeContext("room-heldcap", {
+    agentId: "agent_normal", dynamicVars: {}, connectOnHuman: true, holdStrategy: "reopen",
+    // The owner's two minutes, moved from Admin. Two seconds here so the scene is a scene.
+    tuning: { ...TUNING_DEFAULTS, holdCapSeconds: 2 },
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "room-heldcap", () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_hc", customParameters: { room: "room-heldcap" } } });
+  await sleep(350);
+  for (let i = 0; i < 40; i++) tw.media(frame(SPEECH(i)));
+  for (let i = 0; i < PERSON_PAUSE; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(250);
+  ok(f.sockets.length === 1, "Staff answered and Charlie opened");
+  // …and they walk away and never come back.
+  quiet(tw, HOLD_QUIET_MS / 20 + 40);
+  await sleep(80);
+  const ev = () => (getReceipt("room-heldcap")?.events || []);
+  ok(ev().some((e) => e.kind === "hold_start"), "the wait started and Charlie was dropped");
+  ok(tw.readyState === 1, "…and we are still waiting, because waiting is nearly free");
+  await sleep(2200);
+  const bye = ev().find((e) => e.kind === "hangup");
+  ok(bye?.note === "The store put us on hold too long, so we hung up", `we hung up, and the check says why (${bye?.note})`);
+  ok(weEndedCheck("room-heldcap"), "…and the record knows it was US, so the store is never blamed for it");
+  ok(tw.readyState === 3, "the line is down");
+  restore(); f.close();
+}
+
+console.log("\n▶ …and a wait somebody DOES come back from is never capped");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  openReceipt("room-heldback", { lane: "direct" });
+  setBridgeContext("room-heldback", {
+    agentId: "agent_normal", dynamicVars: {}, connectOnHuman: true, holdStrategy: "reopen",
+    tuning: { ...TUNING_DEFAULTS, holdCapSeconds: 2 },
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "room-heldback", () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_hb", customParameters: { room: "room-heldback" } } });
+  await sleep(350);
+  for (let i = 0; i < 40; i++) tw.media(frame(SPEECH(i)));
+  for (let i = 0; i < PERSON_PAUSE; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(250);
+  quiet(tw, HOLD_QUIET_MS / 20 + 40);
+  await sleep(60);
+  for (let i = 0; i < 40; i++) tw.media(frame(SPEECH(i)));   // "yeah, we got some"
+  await sleep(2400);                                         // well past the cap they were inside
+  ok(tw.readyState === 1, "they came back, so the check carries on and nothing hangs up behind them");
+  const ev = (getReceipt("room-heldback")?.events || []);
+  ok(ev.some((e) => e.kind === "hold_end"), "the wait ended because somebody came back, not because a clock ran out");
+  ok(!ev.some((e) => (e.detail as { reason?: string } | null)?.reason === "held_too_long"), "and the cap never fired");
+  restore(); tw.close(); f.close();
+}
+
+// ================================================================================================
 // ROUND 1, ITEM 1.5 — THE WRAP-UP LIMIT.
 // The chatty clerk: somebody genuinely IS talking, hemming and hawing, never landing on an answer.
 // Every drop rule is working correctly and the check runs away with the margin. The limit is on

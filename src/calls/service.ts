@@ -5,7 +5,7 @@ import { db } from "../db/client";
 import { openState, fetchStoreHours } from "../store-hours";
 import { fetchStorePhone } from "../store-phone";
 import {
-  accounts, alertSends, callResults, categories, chains, customerSchedules, retailers, scheduleTargets, schedules, statuses, watches, zoneRetailers, zones,
+  accounts, alertSends, callEvents, callResults, categories, chains, customerSchedules, retailers, scheduleTargets, schedules, statuses, watches, zoneRetailers, zones,
 } from "../db/schema";
 import { linkCall, openReceipt, emit, closeReceipt, linkProviderCall, markNow } from "./events"; // ties the call row to its receipt (the timeline + the seconds)
 import { isCheckAlive } from "./check-life"; // the gatekeeper: the one honest answer to "has this check finished?"
@@ -1190,6 +1190,19 @@ export async function chargeCallOnce(callId: number, finderUserId: string): Prom
 }
 
 /** Poll the provider for any calls still in flight and save their outcomes. Returns how many finalized. */
+/** Did WE end this check because a wait ran past the cap? Read off the check's own timeline, which
+ *  is written to the database as it happens, so the answer survives a restart between the hang-up
+ *  and the sweep that writes the verdict. Never throws: a check must never fail to finalize because
+ *  a lookup did. */
+export async function weHungUpOnAHold(room: string | null | undefined): Promise<boolean> {
+  if (!room) return false;
+  try {
+    const rows = await db.select({ detail: callEvents.detail }).from(callEvents)
+      .where(and(eq(callEvents.room, room), eq(callEvents.kind, "hangup")));
+    return rows.some((r) => String(r.detail || "").includes("held_too_long"));
+  } catch { return false; }
+}
+
 export async function ingestPending(): Promise<number> {
   const pending = await db.select().from(callResults).where(
     or(eq(callResults.status, "dialing"), eq(callResults.status, "in_progress"), eq(callResults.status, "queued")),
@@ -1249,6 +1262,14 @@ export async function ingestPending(): Promise<number> {
       restockDayHeard = second?.restockDay ?? null; // restock day staff VOLUNTEERED — captured even unprompted
       restockTimeHeard = second?.restockTime ?? null;
     }
+
+    // WE HUNG UP ON A WAIT NOBODY CAME BACK FROM (round 1, item 1.6). The read of the conversation
+    // cannot know that: Charlie was dropped for the wait, so from his side the check simply stopped,
+    // and what the customer would be told depends on whether Staff happened to say "hold on" in
+    // words before they went. The check's own record knows, so it decides — and the word is the one
+    // we already have, "left on hold", never a new one (owner's ruling 08-01).
+    // Only ever over an answer we do not have: if Staff came back and answered, that answer stands.
+    if (finalConfirmed === null && await weHungUpOnAHold(row.room)) finalStatusKey = "left_on_hold";
 
     // Update the primary row (the line we called about).
     await db.update(callResults).set({
