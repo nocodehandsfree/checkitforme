@@ -43,6 +43,12 @@ async function main() {
     // happened to say "hold on" out loud before they walked off. The check's own timeline knows, and
     // it is written to the database as it happens, so the answer survives a restart in between.
     const room = "room-held-cap-test";
+    // THIS TEST CLEANS UP AFTER ITSELF. It writes practice lines into a REAL database, and left
+    // behind they are a landmine: the next run finds the previous run's hang-up already sitting
+    // there and "a wait on its own is not us hanging up" fails on a database that is telling the
+    // truth. Cleared before, so an old database can never poison a run, and cleared after, so this
+    // one never poisons the next.
+    await db.delete(callEvents).where(eq(callEvents.room, room));
     await db.insert(callEvents).values({ callId: 0, room, atMs: 4000, atSec: 4, kind: "hold_start", note: "Staff stepped away, the line went quiet", detail: JSON.stringify({ reason: "quiet" }) });
     ok(!(await weHungUpOnAHold(room)), "a wait on its own is not us hanging up");
     await db.insert(callEvents).values({ callId: 0, room, atMs: 124000, atSec: 124, kind: "hangup", note: "The store put us on hold too long, so we hung up", detail: JSON.stringify({ reason: "held_too_long", afterSec: 120 }) });
@@ -52,6 +58,8 @@ async function main() {
     const s = (await db.select().from(statuses).where(eq(statuses.key, "left_on_hold")))[0];
     ok(!!s, "the status the customer reads already exists, so no new word was invented");
     ok(!/[\u2014\u2013]/.test(s?.note ?? ""), "no dash inside the sentence (copy law)");
+    await db.delete(callEvents).where(eq(callEvents.room, room));
+    ok((await db.select().from(callEvents).where(eq(callEvents.room, room))).length === 0, "and it leaves nothing of its own behind, so running it twice reads the same");
   }
 
   console.log("\n▶ a dropped call does NOT lock the customer out of that store");
