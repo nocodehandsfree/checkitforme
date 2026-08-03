@@ -4993,7 +4993,7 @@ function renderMenuByCondition(ch, active, nav, calls){
       : `<div style="margin-top:14px" class="empty">Not heard<div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${esch(cd.how)}</div></div>`);
 }
 // Each question the store asks, its choices underneath: the word we say in its model's color, the
-// proven door green with a check. A line the pencil corrected shows the corrected words, marked, and
+// proven door green with a check. A line you corrected shows your words, marked, and
 // a future check never overwrites a correction.
 function doorMap(ch,call,v){
   const fixes=(CHAIN_MAP[ch.id]&&CHAIN_MAP[ch.id].menuFixes)||{};
@@ -5013,7 +5013,6 @@ function doorMap(ch,call,v){
   steps.forEach((st,si)=>{ if(si<lines.length) stepFor[si]=si; });
   const laneC=(st)=>st.action==='press'?LANE_C.Alpha:LANE_C.Bravo;
   const opts=((v&&v.recipe&&v.recipe.menu)||[]);
-  const pencil='<svg style="vertical-align:-2px;margin-left:6px;cursor:pointer" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5C5C68" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>';
   const playIco='<svg style="vertical-align:-2px" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8A8A96" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>';
   return lines.map((ln,i)=>{
     const fixed=fixes[i]!=null&&String(fixes[i]).trim();
@@ -5049,7 +5048,7 @@ function doorMap(ch,call,v){
       +(last?'':`<span style="width:2px;flex:1;background:rgba(255,255,255,.10);margin:3px 0"></span>`)+`</div>`
       +`<div style="flex:1;min-width:0;padding-bottom:${last?'0':'16px'}">`
       +`<div style="display:flex;align-items:baseline;gap:2px">`
-      +`<div id="mline_${ch.id}_${i}" data-i="${i}" onclick="menuFixLine(${ch.id},${i})" style="flex:1;min-width:0;font-size:12px;font-weight:500;color:rgba(255,255,255,.55);line-height:1.5;cursor:text">"${esch(text)}"${pencil}${fixed?'<span style="margin-left:6px;color:var(--text-tertiary);font-size:11px">corrected</span>':''}</div>`
+      +`<div id="mline_${ch.id}_${i}" data-i="${i}" onclick="menuFixLine(${ch.id},${i})" style="flex:1;min-width:0;font-size:12px;font-weight:500;color:rgba(255,255,255,.55);line-height:1.5;cursor:text;border:1px dashed rgba(255,255,255,.14);border-radius:8px;padding:5px 8px">"${esch(text)}"${fixed?'<span style="margin-left:6px;color:var(--text-tertiary);font-size:11px">corrected</span>':''}</div>`
       +(sid&&ln.at!=null?`<span onclick="menuPlayLine('${sid}',${ln.at},${i+1<lines.length&&lines[i+1].at!=null?lines[i+1].at:'null'})" style="cursor:pointer;flex:0 0 auto;display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#26262B">${playIco}</span>`:'')
       +`</div>`
       +`<div style="margin-top:2px;font-size:11px;font-weight:700;color:#5C5C68">${ln.at!=null?ln.at+'s':''}</div>`
@@ -5075,7 +5074,8 @@ function menuSeekPlay(from,to){
   MENU_AUDIO_STOP=(to!=null&&isFinite(to))?Number(to):null;
   MENU_AUDIO.play().catch(()=>toast('No recording for this check'));
 }
-// Tap the words and they become the edit box, a light outline around it, save where the pencil was.
+// THE WORDS THEMSELVES ARE THE BOX (R5, no pencil). Tap a line and it becomes an outlined box with
+// a save beside it; there is no icon to hunt for, and nothing on the line but the store's own words.
 // The correction is kept beside what was heard, marked corrected, and no future check overwrites it.
 const MLINE_TEXT={};
 function menuFixLine(chainId,idx){
@@ -5124,6 +5124,52 @@ function dayWords(d){
 // The owner opens this to read ONE call top to bottom and see the recipe it produced. So: two cards,
 // then a Show more key. Never every call at once, because the sheet is for reading one call, not for
 // scrolling all of them.
+// ---- THE RUN, AS ONE TIMELINE (R5) --------------------------------------------------------------
+// The owner reads a mapping run the way he reads a check on the site: one line down the page, in
+// order, from learning the menu to the locked recipe. Separate cards made him rebuild that order in
+// his head every time. So the checks that MOVED US FORWARD are rungs on one timeline — each with its
+// heading, its time and what it gained — and a check that changed nothing is a small dot carrying its
+// reason, tappable, never a full-width row competing with the ones that counted.
+function runTimelineHtml(calls,gains){
+  const list=(calls||[]).slice().sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0));
+  if(!list.length) return '';
+  const rows=list.map((c,i)=>{
+    const last=i===list.length-1;
+    const navS=(typeof c.transferAtSec==='number'&&c.transferAtSec>0)?c.transferAtSec:null;
+    const gain=gains.get(c);
+    const spine=(dotColor,big)=>`<div style="display:flex;flex-direction:column;align-items:center;flex:0 0 auto;padding-top:5px">`
+      +`<span style="width:${big?9:6}px;height:${big?9:6}px;border-radius:50%;background:${dotColor}"></span>`
+      +(last?'':`<span style="width:2px;flex:1;background:rgba(255,255,255,.10);margin:3px 0"></span>`)+`</div>`;
+    if(c.grade==='fail'){
+      const bid='rt_'+(c.navId||Math.abs(Number(c.at)||0));
+      return `<div style="display:flex;gap:12px;cursor:pointer" onclick="mapCheckOpen('${bid}')">`
+        +spine('#F87171',false)
+        +`<div style="flex:1;min-width:0;padding-bottom:${last?'0':'14px'}">`
+        +`<div style="display:flex;align-items:baseline;gap:8px">`
+        +`<span style="font-size:11.5px;font-weight:700;color:#F87171">${esch(c.reason||'did not move us forward')}</span>`
+        +`<span style="margin-left:auto;font-size:11.5px;font-weight:700;color:var(--text-tertiary);flex:0 0 auto">${callWhen(c.at)}</span></div>`
+        +`<div id="${bid}" style="display:none"><div class="mladder" style="margin-top:10px">${callRungs(c).map((r,j,a)=>callRung(r,j===a.length-1)).join('')}</div></div>`
+        +`</div></div>`;
+    }
+    const words=c.reachedHuman?['Reached staff','var(--green)']:c.endedOnRing?['Admin hung up','#FFCB05']:['Nobody answered','#F59E0B'];
+    const bid='rt_'+(c.navId||Math.abs(Number(c.at)||0));
+    return `<div style="display:flex;gap:12px;cursor:pointer" onclick="mapCheckOpen('${bid}')">`
+      +spine(words[1],true)
+      +`<div style="flex:1;min-width:0;padding-bottom:${last?'0':'14px'}">`
+      +`<div style="display:flex;align-items:baseline;gap:8px">`
+      +`<span style="font-size:13.5px;font-weight:700;color:#fff">${esch(stageWord(c)||'Mapping menu')}</span>`
+      +`<span style="margin-left:auto;font-size:11.5px;font-weight:700;color:var(--text-tertiary);flex:0 0 auto">${callWhen(c.at)}</span></div>`
+      +`<div style="display:flex;align-items:center;gap:8px;margin-top:5px">`
+      +`<span style="font-size:11.5px;font-weight:700;color:${words[1]}">${words[0]}</span>`
+      +(navS!=null?`<span style="font-size:11.5px;font-weight:700;color:var(--muted)">${navS}s</span>`:'')
+      +(gain>0?`<span style="font-size:11.5px;font-weight:700;color:var(--green)">${gain}s faster</span>`:'')
+      +(c.madeUp?`<span style="font-size:10.5px;font-weight:800;color:#F59E0B">made up, no check happened</span>`:'')+`</div>`
+      +`<div id="${bid}" style="display:none"><div class="mladder" style="margin-top:10px">${callRungs(c).map((r,j,a)=>callRung(r,j===a.length-1)).join('')}</div></div>`
+      +`</div></div>`;
+  }).join('');
+  return `<div class="card" style="margin:0 0 10px;padding:16px 16px">${rows}</div>`;
+}
+
 function mappingCallsHtml(calls,versions){
   const gains=gainByCheck(calls);
   // NO CHECK SAYS "RECIPE WINNER" (owner Update 5, which replaces comp 3a on this point). The winner
@@ -5132,8 +5178,10 @@ function mappingCallsHtml(calls,versions){
   // two different claims about which route is live.
   void versions;
   const card=c=>mappingCallCard(c,gains.get(c));
+  // ONE TIMELINE for the run, then the checks themselves underneath for reading one top to bottom.
   const rest=calls.slice(2);
-  return calls.slice(0,2).map(card).join('')
+  return runTimelineHtml(calls,gains)
+    +calls.slice(0,2).map(card).join('')
     +(rest.length?`<div id="set_runs_more" style="display:none">${rest.map(card).join('')}</div>`
       +`<div style="display:grid;place-items:center;margin-top:6px"><button class="ghost" onclick="mapCallsMore(this)">Show ${rest.length} more</button></div>`:'')
     ;
@@ -5184,6 +5232,7 @@ function mappingCallCard(c,gain){
       +`<div style="display:flex;align-items:center;gap:8px">`
       +`<div style="font-size:13px;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)">${esch(c.store||'A store')}</div>`
       +`<span class="pill" style="gap:6px;background:rgba(248,113,113,.12)">${ssDot('#F87171')}<span style="color:#F87171">${esch(why)}</span></span>`
+      +(c.madeUp?`<span style="font-size:10.5px;font-weight:800;color:#F59E0B;flex:0 0 auto">made up</span>`:'')
       +`<div style="font-size:11.5px;font-weight:700;color:var(--text-tertiary);flex:0 0 auto">${callWhen(c.at)}</div>`
       +`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5C5C68" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>`
       +`<div id="${bid}" style="display:none">${stage?`<div style="font-size:11px;font-weight:700;color:#8A8A96;margin-top:10px">${stage}</div>`:''}${ladder}</div></div>`;
@@ -5200,7 +5249,9 @@ function mappingCallCard(c,gain){
     +`<div style="display:flex;align-items:center;gap:8px;margin-top:8px">`
     +`<span class="pill" style="gap:6px;background:${pill[2]}">${ssDot(pill[1])}<span style="color:${pill[1]}">${pill[0]}</span></span>`
     +(navS!=null?`<span style="font-size:11.5px;font-weight:700;color:var(--muted)">${navS}s</span>`:'')
-    +(gain>0?`<span style="font-size:11.5px;font-weight:700;color:var(--green)">${gain}s faster</span>`:'')+`</div>`
+    +(gain>0?`<span style="font-size:11.5px;font-weight:700;color:var(--green)">${gain}s faster</span>`:'')
+    // A CHECK THAT DID NOT HAPPEN SAYS SO. Nothing on this page may look like a real check unless it was.
+    +(c.madeUp?`<span style="font-size:10.5px;font-weight:800;color:#F59E0B">made up, no check happened</span>`:'')+`</div>`
     +ladder+`</div>`;
 }
 // The conversation as rows. The store's own lines stay as they were spoken; ours are read off the

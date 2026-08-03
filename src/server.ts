@@ -6805,16 +6805,20 @@ app.post("/api/admin/map/simulate", async (c) => {
     line("us", 'said "general"', 48, "say", "general"),
     line("ivr", "Okay, transferring you now.", 51),
   ];
+  // EVERY MADE-UP CHECK SAYS SO, ON THE SCREEN. The owner must never look at this page and wonder
+  // which checks really happened, so the mark rides the check itself — not the store name, which he
+  // can pass in as any real store.
+  const madeUp = true;
   const runs = [
-    { ts: (t - 5400) * 1000, navId: "sim-1", store, retailerId: null, outcome: "human", stage: "map", grade: "pass",
+    { ts: (t - 5400) * 1000, navId: "sim-1", store, retailerId: null, madeUp, outcome: "human", stage: "map", grade: "pass",
       seconds: 64, transferAtSec: 51, greeting: "Front store, this is Dana.", confirm: "answered", callSid: null,
       steps: [...menu, line("ivr", "Front store, this is Dana.", 61), line("us", "handed the check to Charlie", 61)] },
-    { ts: (t - 3600) * 1000, navId: "sim-2", store, retailerId: null, outcome: "mapped", stage: "map", grade: "pass",
+    { ts: (t - 3600) * 1000, navId: "sim-2", store, retailerId: null, madeUp, outcome: "mapped", stage: "map", grade: "pass",
       seconds: null, transferAtSec: 51, endedOnRing: true, callSid: null, steps: menu },
-    { ts: (t - 2400) * 1000, navId: "sim-3", store, retailerId: null, outcome: "failed", stage: "speed", grade: "fail",
+    { ts: (t - 2400) * 1000, navId: "sim-3", store, retailerId: null, madeUp, outcome: "failed", stage: "speed", grade: "fail",
       reason: "menu repeated itself", seconds: null, transferAtSec: null, callSid: null,
       steps: [menu[0], menu[1], line("us", 'said "front"', 20, "say", "front"), line("ivr", "Sorry, I'm not understanding.", 24)] },
-    { ts: (t - 1200) * 1000, navId: "sim-4", store, retailerId: null, outcome: "mapped", stage: "speed", grade: "pass",
+    { ts: (t - 1200) * 1000, navId: "sim-4", store, retailerId: null, madeUp, outcome: "mapped", stage: "speed", grade: "pass",
       seconds: null, transferAtSec: 45, endedOnRing: true, callSid: null,
       steps: [menu[0], menu[1], menu[2], menu[3], line("us", 'said "front"', 36, "say", "front"), menu[5], menu[6], line("ivr", "Okay, transferring you now.", 45)] },
   ];

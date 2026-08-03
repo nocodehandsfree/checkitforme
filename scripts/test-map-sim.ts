@@ -1125,6 +1125,14 @@ async function main() {
     const page = readFileSync("public/app.html", "utf8");
     ok(!/Recipe winner/.test(page) && /void versions;/.test(page),
       "the crown is retired outright (owner Update 5) — a check states what the check did, nothing more");
+    // R5: ONE timeline down the run, no pencil on Menu, and a check that did not happen says so.
+    ok(/function runTimelineHtml\(calls,gains\)/.test(page) && /return runTimelineHtml\(calls,gains\)/.test(page),
+      "the run reads as ONE timeline, not a pile of separate cards");
+    ok(!/const pencil=/.test(page) && /border:1px dashed/.test(page),
+      "Menu words are dashed editable boxes with no pencil (R5)");
+    ok(/Save this wording\?/.test(page), "and a correction is confirmed before it saves");
+    ok((page.match(/made up, no check happened/g) || []).length >= 2,
+      "a check that did not happen says so on the screen, on the timeline and on its card");
     ok(/\?c\.transferAtSec:null;/.test(page),
       "and the number beside a pill is nav time only, never the whole call with Staff inside it");
 

@@ -1132,6 +1132,9 @@ type RawRun = {
   seconds?: number | null; transferAtSec?: number | null; greeting?: string | null;
   stopReason?: string | null; why?: string | null; endedOnRing?: boolean;
   stage?: string; grade?: string; reason?: string; callSid?: string;
+  /** A check that did not happen — written only by the staging-only simulate path, so the screen can
+   *  say so on the card. The owner must never wonder which checks were real. */
+  madeUp?: boolean;
   /** What the run recorded about asking Staff about the product: the answer, or "asked". */
   confirm?: string | null;
   steps?: Array<{ who?: string; text?: string; atSec?: number; action?: string | null; value?: string | null }>;
@@ -1308,6 +1311,7 @@ async function callsForChain(chainId: number): Promise<MapCall[]> {
     // on the FIRST check of a run, not on a round of its own any more (owner R2/R3). The screen reads
     // it to head that check "Proving department"; the run has recorded it all along.
     askedStaff: r.confirm != null,
+    madeUp: r.madeUp === true,
     grade: (r.grade === "pass" || r.grade === "fail") ? r.grade : null,
     callSid: r.callSid ? String(r.callSid) : null,
     reason: (CHECK_FAIL_REASONS as readonly string[]).includes(String(r.reason)) ? r.reason as CheckFailReason : null,
