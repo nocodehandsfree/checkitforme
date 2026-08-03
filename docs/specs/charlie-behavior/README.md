@@ -158,9 +158,17 @@ failure — a plain check is mostly Unused. A row exists ONLY because a WORKING 
 problem from the owner (his rule, 07-30: walking a menu is not a test; the check failing IS the
 report).
 
-**The copy is locked by a test.** `scripts/test-behaved.ts` asserts the exact wording of the three
-rows that exist today, so no agent can quietly reword them. Every new row above MUST get the same
-assertion in the same commit.
+**BUILT 08-03, and driven on his own checks.** All eleven rows are live in Admin ▸ Voice ▸ Testing,
+with the three states printed as words beside the mark (Used · Unused · Broken) and a count under the
+heading. Two labels moved to this record's wording in the same commit: "Transfer requested" is now
+**Asked to be transferred** and "Re-asked after transfer" is now **Reacted to a new person**.
+
+**The copy is locked by a test.** `scripts/test-behaved.ts` asserts the exact wording of every row,
+so no agent can quietly reword one. A new row gets the same assertion in the same commit.
+
+**RETROACTIVE, proven.** A check from before any of this was recorded says "This check ran before we
+started writing that down" rather than claiming a failure, and his old Fun store and MVP checks render
+today. The goodbye row goes further and reads an old check off Charlie's own last words.
 
 ## 6. Decisions made 08-01 (owner)
 
