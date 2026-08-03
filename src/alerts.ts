@@ -64,8 +64,8 @@ export const DEFAULT_TEMPLATES: Record<AlertEvent, AlertTemplate> = {
   // The store took itself off the site and we cannot reach it, so a standing auto check cannot run.
   // The owner's own wording (08-02): say it plainly, say nothing is owed, say it comes back.
   auto_check_paused: {
-    emailSubject: "Your auto check for {store} is paused.",
-    emailBody: "We ran into a problem reaching **{store}**, so your auto check is paused for now. Nothing for you to do. It starts again by itself once we sort it out.",
+    emailSubject: "Your auto check for {store} has been temporarily paused.",
+    emailBody: "We ran into an issue and are not able to reach **{store}**. There is nothing you need to do right now. Your auto check will resume after we have figured out what went wrong.",
   },
 };
 // Spanish. Starts from EN defaults, so any field left off falls back to English (never a blank send).
@@ -93,8 +93,8 @@ export const ES_TEMPLATES: Record<AlertEvent, AlertTemplate> = {
     emailBody: "Llamamos a **{store}** por **{product}**. Esto es lo que dijeron.",
   },
   auto_check_paused: {
-    emailSubject: "Tu check automático de {store} está en pausa.",
-    emailBody: "Tuvimos un problema para comunicarnos con **{store}**, así que tu check automático está en pausa. No tienes que hacer nada. Vuelve solo en cuanto lo resolvamos.",
+    emailSubject: "Tu check automático de {store} está en pausa temporalmente.",
+    emailBody: "Tuvimos un problema y no podemos comunicarnos con **{store}**. No tienes que hacer nada por ahora. Tu check automático se reanudará cuando resolvamos qué pasó.",
   },
 };
 
@@ -228,8 +228,8 @@ const EMAIL_DESIGN_EN: Record<EmailKind, EmailDesign> = {
   // A store paused itself and a standing auto check cannot run (owner 08-02). Amber, not red: nothing
   // is wrong on the customer's side and nothing is owed. No button, because there is nothing to do.
   auto_check_paused: {
-    kicker: "AUTO CHECK PAUSED", kickerColor: "#F59E0B", headline: "Your auto check is paused.",
-    body: ["We ran into a problem reaching **{store}**, so your auto check is paused for now.", "Nothing for you to do. It starts again by itself once we sort it out."],
+    kicker: "AUTO CHECK PAUSED", kickerColor: "#F59E0B", headline: "Your auto check is temporarily paused.",
+    body: ["We ran into an issue and are not able to reach **{store}**.", "There is nothing you need to do right now.", "Your auto check will resume after we have figured out what went wrong."],
     cta: "", url: "https://checkitforme.com",
   },
 };
@@ -261,8 +261,8 @@ const EMAIL_DESIGN_ES: Record<EmailKind, EmailDesign> = {
   },
   instock_owner: EMAIL_DESIGN_EN.instock_owner, // internal → owner reads English
   auto_check_paused: {
-    kicker: "CHECK AUTOMÁTICO EN PAUSA", kickerColor: "#F59E0B", headline: "Tu check automático está en pausa.",
-    body: ["Tuvimos un problema para comunicarnos con **{store}**, así que tu check automático está en pausa.", "No tienes que hacer nada. Vuelve solo en cuanto lo resolvamos."],
+    kicker: "CHECK AUTOMÁTICO EN PAUSA", kickerColor: "#F59E0B", headline: "Tu check automático está en pausa temporalmente.",
+    body: ["Tuvimos un problema y no podemos comunicarnos con **{store}**.", "No tienes que hacer nada por ahora.", "Tu check automático se reanudará cuando resolvamos qué pasó."],
     cta: "", url: "https://checkitforme.com",
   },
 };
