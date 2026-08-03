@@ -19,7 +19,8 @@ import { toMediaFrames } from "../calls/clip-cache";
 // The wrong-department phrase test. It lives beside the standing rule that tells the agent to ask to
 // be put through, so the words we act on and the words we look for cannot drift apart. Pure, so it is
 // provable without a phone call.
-import { heardWrongDepartment, askedToBePutThrough, looksLikeAMenu } from "./prompts";
+import { heardWrongDepartment, askedToBePutThrough, looksLikeAMenu, staffName, wrappedUp, usedTheirName } from "./prompts";
+import { guessLanguage } from "../calls/mapgraph";
 
 export interface BridgeContext {
   agentId: string;
@@ -458,6 +459,21 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   let storeHasSpoken = false;
   /** Recorded once: a hand-over put us back at the store's recorded menu instead of a department. */
   let sentBackToMenu = false;
+  // ---- WHAT NOTHING WROTE DOWN (round 1, item 1.3) ---------------------------------------------
+  // Four things happen on nearly every check and none of them left a trace, so neither the log nor
+  // the owner's card could show them: the question playing as a recording, Charlie warming up behind
+  // it, Charlie wrapping up and whether he used their name, and which language was spoken. The set
+  // of sixteen kinds stays sixteen — each rides as a note with its own `step` in the detail, which
+  // is what the card reads.
+  /** The name Staff gave us, if they gave one. */
+  let theirName: string | null = null;
+  /** Recorded once: he said his goodbye. */
+  let wrapRecorded = false;
+  /** Every line of his, judged for language, so the check can say what he spoke. */
+  let spokeEs = 0, spokeEn = 0;
+  /** When the question finished and when his session was actually ready, so "he warmed up in time"
+   *  is a measured fact rather than an assumption. */
+  let gateOpenedMs = 0;
   /** How close to the cap a stop has to land before we call it ours. The carrier enforces the limit
    *  precisely, so this only has to cover the moment it takes to reach us. A store hanging up inside
    *  the last three seconds of a five minute check would read as our cap; that is rare enough, and
@@ -565,7 +581,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // THE HANDOVER IS A DETAIL OF THE JOIN, NOT A SECOND JOIN. Which signal confirmed the question
     // had played, and how much of the answer we were holding while it did, are exactly what you want
     // when a call goes wrong — so they are kept, on the one line that says the agent joined.
-    joinFacts = { ...joinFacts, handoverVia: via, heldFrames: pending.length };
+    // THE QUESTION HAS FINISHED. From here, every moment his session is not yet ready is dead air a
+    // real person is listening to (card row 3: "Charlie warmed up late. There was dead air for 2
+    // seconds."). Measured, not assumed: stamped here, closed out when he reports ready.
+    gateOpenedMs = Date.now();
+    joinFacts = { ...joinFacts, handoverVia: via, heldFrames: pending.length, warmedUpInTime: ready };
+    if (ready) joinFacts = { ...joinFacts, deadAirMs: 0 };
     amend(room, "charlie_join", joinFacts);
     if (!eleven) { if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } void connectEleven(); }
     log(`delta: clip finished (${via}) -> agent gate open, releasing ${pending.length} buffered frame(s)`);
@@ -609,6 +630,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // question itself is not lost — recordLine below puts it on the transcript at its real second,
     // where it belongs, and its length rides the real join line.
     joinFacts = { ...joinFacts, question: clip.text, clipMs: clip.ms };
+    // …but it IS a step of the check, and nothing wrote it down (round 1, item 1.3). Asking from our
+    // own recording is what makes a check cheap, and the card has a row for it — so the log has to
+    // be able to say it happened, at the second it happened, and that Charlie did not ask it himself.
+    emit(room, "unknown", "The question played as a recording", { step: "question_clip", ms: clip.ms, text: clip.text });
     // Everything held up to this instant is their hello. Everything after it answers our question.
     pendingSplit = pending.length;
     // THE QUESTION WE ACTUALLY ASKED IS A LINE OF THE CONVERSATION. It is played from a recording
@@ -708,6 +733,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // tell "we were handed on" from "somebody wandered off", which the sound alone cannot say.
     const asked = expectHandover;
     if (expectHandover) expectHandover = false;
+    // WHOEVER COMES BACK MAY NOT BE WHO LEFT, so the name we hold is no longer theirs. Thanking a
+    // new person by the last person's name is worse than not using a name at all.
+    if (newPerson) theirName = null;
     addMs(room, "holdMs", gapMs);   // the number that has been null on every receipt until now
     emit(room, "hold_end", `Staff back after ${secs}s${newPerson ? ", and it may not be the same person" : ""}`, { gapSec: secs, maybeNewPerson: newPerson, reason: was, ...(asked ? { afterAskingToBePutThrough: true } : {}) });
     // NOBODY IS ON OUR END AND SOMEBODY IS BACK ON THEIRS — open a session, whatever the strategy
@@ -834,6 +862,14 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       try { m = JSON.parse(data.toString()); } catch { return; }
       if (m.type === "conversation_initiation_metadata") {
         ready = true;
+        // HOW LATE HE WAS, IF HE WAS LATE. The question has already finished when this lands after
+        // the gate opened, and every one of those milliseconds is a person listening to silence.
+        if (gateOpenedMs) {
+          const deadAirMs = Math.max(0, Date.now() - gateOpenedMs);
+          joinFacts = { ...joinFacts, deadAirMs, warmedUpInTime: deadAirMs < 250 };
+          amend(room, "charlie_join", joinFacts);
+          gateOpenedMs = 0;
+        }
         // Robustly find the conversation_id anywhere in the metadata message.
         const find = (o: unknown): string | null => {
           if (!o || typeof o !== "object") return null;
@@ -879,6 +915,14 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // Real words on the store side (letters, not ringback transcribed as "...") = someone IS
         // there — disarm the give-up cap. Voicemail greetings count: the voicemail bail handles those.
         if (txt && /[a-zA-ZÀ-ɏ]{2,}/.test(String(txt)) && !humanWords) { humanWords = true; if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } }
+        // THEIR NAME, IF THEY GAVE ONE (round 1, item 1.3). Staff name themselves in the greeting far
+        // more often than not, and Charlie thanking them by name is a row on the owner's card. Kept
+        // from the first line that has one, and dropped when somebody new comes on, so the name we
+        // hold always belongs to the person Charlie is actually talking to.
+        if (txt && !theirName) {
+          const n = staffName(String(txt));
+          if (n) { theirName = n; log(`staff name heard: ${n}`); }
+        }
         // OUR record of what was said, written live against this call's own clock — not read back
         // from the provider afterwards (hard rule 2). Text only, never audio. The record's answer
         // (fresh or a repeat) gates the relay below, so the page can never show a line twice that
@@ -997,6 +1041,19 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           log("wrong department: he asked to be put through, so the next wait is a hand-over");
         }
         // The record's verdict on freshness gates the relay, same as the clerk side (open fault 4).
+        // HE SAID GOODBYE, AND WHETHER HE USED THEIR NAME (round 1, item 1.3). "The check ended
+        // without Charlie wrapping up" is a fail on the owner's card and nothing recorded it, so a
+        // check that simply stopped and one that ended warmly looked identical afterwards. Words,
+        // never the ear (§10), and once per check — he may say goodbye twice.
+        if (txt && !wrapRecorded && wrappedUp(String(txt))) {
+          wrapRecorded = true;
+          const byName = usedTheirName(String(txt), theirName);
+          emit(room, "unknown", byName ? "Charlie wrapped up and thanked them by name" : "Charlie wrapped up and thanked them",
+            { step: "wrap_up", usedName: byName, name: byName ? theirName : null });
+        }
+        // WHICH LANGUAGE HE SPOKE, counted line by line off the same judge the map uses — never a
+        // second opinion about what language a sentence is in.
+        if (txt) { const l = guessLanguage(String(txt)); if (l === "es") spokeEs++; else if (l === "en") spokeEn++; }
         if (txt && recordLine(room, "Agent", String(txt))) try { relayLine?.(room, "Agent", String(txt)); } catch { /* relay best-effort */ }
       } else if (m.type === "ping") {
         eleven!.send(JSON.stringify({ type: "pong", event_id: m.ping_event?.event_id }));
@@ -1368,8 +1425,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           log(`delta: they finished after ${waitTotalMs}ms, asking now`);
           if (startOpeningClip(c)) {
             const lead = Math.max(0, c.ms - PREWARM_LEAD_MS);
-            if (lead > 0) prewarmTimer = setTimeout(() => { prewarmTimer = null; if (!ended && twilio.readyState === 1) void connectEleven(); }, lead);
-            else void connectEleven();
+            // HE STARTS CONNECTING HERE, and he bills from the second he connects — which is why he
+            // starts two seconds before the question ends and not at the top of it. Nothing recorded
+            // the moment, so nobody could see whether he was ready in time (round 1, item 1.3).
+            const warmUp = () => {
+              emit(room, "unknown", "Charlie warmed up", { step: "prewarm", leadMs: PREWARM_LEAD_MS, clipMs: c.ms, beforeQuestionEndsMs: Math.max(0, c.ms - lead) });
+              void connectEleven();
+            };
+            if (lead > 0) prewarmTimer = setTimeout(() => { prewarmTimer = null; if (!ended && twilio.readyState === 1) warmUp(); }, lead);
+            else warmUp();
           } else void connectEleven();
         }
       }
@@ -1454,5 +1518,17 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       log("twilio stop"); signalEnd(); if (eleven) eleven.close();
     }
   });
-  twilio.on("close", () => { if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; } if (heldQuestion) { try { relayLine?.(room, "Agent", heldQuestion); } catch { /* best effort */ } heldQuestion = null; } try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (handoverTimer) { clearTimeout(handoverTimer); handoverTimer = null; } if (eleven) eleven.close(); /* the context is NOT deleted here: Twilio can reconnect a blipped stream mid-call, and the fresh socket must still find it. The 30-minute leak guard owns cleanup. */ });
+  twilio.on("close", () => {
+    // WHICH LANGUAGE HE SPOKE, once, at the end, when there is a whole check to judge (round 1, item
+    // 1.3). Said line by line it would be noise; said once it is the row the owner grades. Only when
+    // he actually said something — a check where he never spoke has no language to report.
+    // Only when Spanish was actually spoken. English is what nearly every check is, and a line
+    // saying so on every one of them is noise; more to the point, the judge answers "I cannot tell"
+    // on plenty of ordinary English sentences, so a line claiming English would sometimes be a
+    // guess. Spanish it can see, and Spanish is the row the owner grades.
+    if (spokeEs > 0) {
+      const note = spokeEn === 0 ? "Charlie spoke Spanish throughout" : "Charlie spoke Spanish and English on the same check";
+      emit(room, "unknown", note, { step: "language", spanishLines: spokeEs, englishLines: spokeEn });
+    }
+    if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; } if (heldQuestion) { try { relayLine?.(room, "Agent", heldQuestion); } catch { /* best effort */ } heldQuestion = null; } try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (handoverTimer) { clearTimeout(handoverTimer); handoverTimer = null; } if (eleven) eleven.close(); /* the context is NOT deleted here: Twilio can reconnect a blipped stream mid-call, and the fresh socket must still find it. The 30-minute leak guard owns cleanup. */ });
 }

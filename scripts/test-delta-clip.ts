@@ -997,6 +997,64 @@ console.log("\n▶ a person answers the same way: short hello, a real pause, and
 }
 
 // ================================================================================================
+// ROUND 1, ITEM 1.3 — THE FOUR THINGS NOTHING WROTE DOWN.
+// The question playing as a recording, Charlie warming up behind it, Charlie wrapping up and whether
+// he used their name, and which language was spoken. Every one of them is a row on the owner's card
+// and a line in his log, and none of them left a trace — so the page could not show them however it
+// was built. The set of sixteen kinds stays sixteen: each rides as a note with its own step.
+console.log("\n▶ a whole check writes down the question, the warm-up, the goodbye and the language");
+{
+  _reset();
+  const f = await fakeProvider({ readyDelayMs: 40 });
+  const restore = stubSignedUrl(f);
+  const { tw } = await callToHello(f, 600, "room-record");
+  await sleep(250);
+  const steps = () => (getReceipt("room-record")?.events || []).filter((e) => (e.detail as { step?: string } | null)?.step);
+  const step = (s: string) => steps().find((e) => (e.detail as { step?: string }).step === s);
+  ok(step("question_clip")?.note === "The question played as a recording", "the question is a step of the check, not a silent event");
+  ok(!!step("prewarm"), "…and so is Charlie warming up behind it");
+  ok(step("prewarm")!.atMs <= step("question_clip")!.atMs + 600, "he warmed up while the question was still playing, which is the whole point");
+  tw.say({ event: "mark", mark: { name: "delta-opening" } });
+  await sleep(80);
+  const join = (getReceipt("room-record")?.events || []).find((e) => e.kind === "charlie_join");
+  ok((join?.detail as { warmedUpInTime?: boolean })?.warmedUpInTime === true, "the record says he was ready when the question ended");
+  // Staff name themselves, and he thanks them by name on the way out.
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Fun store, this is Bob, how can I help you?" } }));
+  await sleep(40);
+  f.sockets[0].send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Perfect, thanks so much Bob, have a good one!" } }));
+  await sleep(60);
+  ok(step("wrap_up")?.note === "Charlie wrapped up and thanked them by name", `he wrapped up and it says so (${step("wrap_up")?.note})`);
+  ok((step("wrap_up")!.detail as { name?: string }).name === "Bob", "…and which name he used");
+  tw.close();
+  await sleep(60);
+  // An ordinary English check says nothing about language, deliberately: the judge cannot always
+  // tell an English sentence from one it has no opinion about, and a guessed line is worse than none.
+  ok(!step("language"), "an English check makes no claim about language, because it would be a guess");
+  restore(); f.close();
+}
+
+console.log("\n▶ a Spanish check says so, in one line, at the end");
+{
+  _reset();
+  const f = await fakeProvider({ readyDelayMs: 40 });
+  const restore = stubSignedUrl(f);
+  const { tw } = await callToHello(f, 400, "room-es");
+  tw.say({ event: "mark", mark: { name: "delta-opening" } });
+  await sleep(150);
+  f.sockets[0].send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Hola, gracias por llamar, tiene cartas de Pokemon en la tienda?" } }));
+  f.sockets[0].send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Perfecto, muchas gracias, que tenga buen dia!" } }));
+  await sleep(80);
+  tw.close();
+  await sleep(60);
+  const ev = (getReceipt("room-es")?.events || []);
+  const lang = ev.find((e) => (e.detail as { step?: string } | null)?.step === "language");
+  ok(lang?.note === "Charlie spoke Spanish throughout", `the check says he spoke Spanish (${lang?.note})`);
+  const wrap = ev.find((e) => (e.detail as { step?: string } | null)?.step === "wrap_up");
+  ok(wrap?.note === "Charlie wrapped up and thanked them", "…and his Spanish goodbye counts as a goodbye");
+  restore(); f.close();
+}
+
+// ================================================================================================
 // ROUND 1, ITEM 1.2 — THE PHONE ON THE COUNTER.
 // The ear knew three shapes: quiet, hold music, and a ringing line. A handset set down on a counter
 // is none of them — store noise is irregular with gaps in it, the exact shape of somebody talking —

@@ -268,6 +268,62 @@ export function looksLikeAMenu(line: string): boolean {
   return MENU_LINE.test(String(line || ""));
 }
 
+/**
+ * WHO WE ARE TALKING TO (round 1, item 1.3). Staff give their name in the greeting more often than
+ * not — "Fun store, this is Bob" — and Charlie thanking them BY NAME is one of the things the owner
+ * grades a check on. Nothing wrote it down, so nothing could grade it.
+ *
+ * Deliberately narrow: only the shapes where somebody is plainly naming themselves, only one word,
+ * and never a word that is obviously not a name. Wrong is worse than nothing here — a check would
+ * claim he used their name when he used a word off the store's own sign.
+ *
+ * Pure, so it is provable without a phone call: scripts/test-prompts.ts.
+ */
+const NAME_LINE = /\b(?:this is|my name is|you(?:'re| are) speaking (?:with|to))\s+([a-z]{2,15})\b|\b([a-z]{2,15})\s+speaking\b/i;
+const NOT_A_NAME = new Set([
+  "the", "and", "for", "with", "here", "there", "just", "only", "still", "about",
+  "store", "pharmacy", "customer", "service", "front", "desk", "manager", "team", "everyone",
+  "him", "her", "them", "you", "they", "she", "one", "someone", "somebody", "nobody",
+  "calling", "closed", "open", "sorry", "okay", "yes", "not", "sure", "fine", "good", "who",
+]);
+export function staffName(line: string): string | null {
+  const m = NAME_LINE.exec(String(line || ""));
+  const raw = (m?.[1] || m?.[2] || "").trim();
+  if (!raw) return null;
+  const low = raw.toLowerCase();
+  if (NOT_A_NAME.has(low)) return null;
+  return low.charAt(0).toUpperCase() + low.slice(1);
+}
+
+/**
+ * CHARLIE WRAPPING UP (round 1, item 1.3). "The check ended without Charlie wrapping up" is a fail
+ * on the owner's card, and until now nothing recorded whether he said goodbye at all — the check
+ * simply stopped. These are the closing shapes his own instructions give him ("perfect, thank you
+ * so much, have a good one!"), plus the ordinary ways anybody ends a call, in both languages.
+ *
+ * A thank-you in the MIDDLE of a conversation is not a wrap-up, which is why a bare "thanks" does
+ * not count: it needs a goodbye or a well-wish beside it, the way a real ending does.
+ */
+const WRAP_UP = new RegExp([
+  "\\bhave a (?:good|great|nice|lovely) (?:one|day|night|evening|weekend)\\b",
+  "\\b(?:take care|goodbye|good bye|bye bye|bye now)\\b",
+  // …and he says their name in the middle of it more often than not: "thanks Bob, bye".
+  "\\bthanks?(?: you)?(?: so much| very much| again)?(?:[, ]+[a-z]{2,15})?[,! ]+(?:bye|goodbye|have a)\\b",
+  "\\bappreciate (?:it|your help)[.,! ]*(?:thanks?|bye|have a)\\b",
+  "\\bthat'?s (?:all|everything) i needed\\b",
+  "\\bque teng(?:a|as)\\s+(?:un\\s+)?(?:buen|buena|lindo)\\b",
+  "\\b(?:hasta luego|adi[oó]s|buen d[ií]a)\\b",
+].join("|"), "i");
+export function wrappedUp(line: string): boolean {
+  return WRAP_UP.test(String(line || ""));
+}
+/** …and did he use their name while doing it. Whole word, so a name never matches inside another. */
+export function usedTheirName(line: string, name: string | null): boolean {
+  const n = String(name || "").replace(/[^a-z]/gi, "");
+  if (!n) return false;
+  return new RegExp(`\\b${n}\\b`, "i").test(String(line || ""));
+}
+
 /** Spoken fallback when the pause-filler feature is on and no custom line is set. Copy law: no dash. */
 export const SOFT_TIMEOUT_FALLBACK = "Yeah, hi, I'm here!";
 

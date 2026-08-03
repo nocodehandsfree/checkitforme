@@ -1,7 +1,7 @@
 // Unit test for the canonical agent prompts + voice defaults. Run: ./node_modules/.bin/tsx scripts/test-prompts.ts
 // Guards the dynamic-variable contract: the live ElevenLabs agent fills {{...}} placeholders, so if
 // one silently disappears from the prompt the call breaks. These assertions fail loudly instead.
-import { RESTOCK_PROMPT, specificityClause, VOICE_DEFAULTS, heardWrongDepartment, looksLikeAMenu } from "../src/voice/prompts";
+import { RESTOCK_PROMPT, specificityClause, VOICE_DEFAULTS, heardWrongDepartment, looksLikeAMenu, staffName, wrappedUp, usedTheirName } from "../src/voice/prompts";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -141,6 +141,48 @@ console.log("\n▶ a store's recorded menu is known by its own words, and a pers
     "Hold on one second, let me go check.",
   ];
   for (const p of people) ok(!looksLikeAMenu(p), `a person: "${p}"`);
+}
+
+
+console.log("\n▶ their name, when Staff give one (round 1, item 1.3)");
+{
+  const named: Array<[string, string]> = [
+    ["Fun store, this is Bob, how can I help you?", "Bob"],
+    ["Thanks for calling MVP's, this is Larry, how can I help you?", "Larry"],
+    ["Hello, Maria speaking.", "Maria"],
+    ["Hi, my name is Anthony, what can I do for you?", "Anthony"],
+  ];
+  for (const [line, name] of named) ok(staffName(line) === name, `"${line}" -> ${name}`);
+  const notNamed = [
+    "Thanks for calling the Fun store, how can I help you?",
+    "This is the pharmacy, let me transfer you.",
+    "This is customer service.",
+    "Yeah, we've got a few of those.",
+  ];
+  for (const line of notNamed) ok(staffName(line) === null, `no name claimed: "${line}"`);
+  ok(usedTheirName("Perfect, thanks so much Bob, have a good one!", "Bob"), "he used their name");
+  ok(!usedTheirName("Perfect, thanks so much, have a good one!", "Bob"), "…and we do not claim it when he did not");
+  ok(!usedTheirName("Bobbing along here", "Bob"), "a name inside another word is not their name");
+  ok(!usedTheirName("Thanks Bob", null), "no name was ever given, so it cannot have been used");
+}
+
+console.log("\n▶ Charlie wrapping up (round 1, item 1.3)");
+{
+  const endings = [
+    "Perfect, thank you so much, have a good one!",
+    "Ah okay, no worries. Thanks Bob, bye!",
+    "Great, that's all I needed. Take care!",
+    "Appreciate it, thanks. Bye now.",
+    "Perfecto, muchas gracias, que tenga buen dia!",
+  ];
+  for (const e of endings) ok(wrappedUp(e), `wrap-up: "${e}"`);
+  const middles = [
+    "Oh nice, thanks. Do you know the name of the set?",
+    "Okay, I'll wait.",
+    "Thank you.",
+    "Do you have any Pokemon booster boxes in stock?",
+  ];
+  for (const m of middles) ok(!wrappedUp(m), `not a wrap-up: "${m}"`);
 }
 
 console.log(`\n════════════════════════════════\n  PASS: ${pass}   FAIL: ${fail}\n════════════════════════════════`);
