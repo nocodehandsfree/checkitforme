@@ -997,6 +997,38 @@ console.log("\n▶ a person answers the same way: short hello, a real pause, and
 }
 
 // ================================================================================================
+// ROUND 1, ITEM 1.4 — NO RECORDING, SO HE ASKS IT HIMSELF, STRAIGHT AWAY.
+// A check that happens beats a check that does not, so falling back is right. What was wrong is that
+// it fell back SILENTLY: nobody could answer "how often did that happen", and it is the fail side of
+// a row on the owner's card ("The recording did not play, so Charlie asked the question himself").
+console.log("\n▶ the question was never recorded: Charlie opens anyway and the check says so");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  openReceipt("room-noclip", { lane: "direct" });
+  setBridgeContext("room-noclip", {
+    agentId: "agent_normal", midCallAgentId: "agent_joining",
+    dynamicVars: { opening_line: "do you have any Pokemon cards in stock?" },
+    connectOnHuman: true,   // …and no openingClip at all: the recording was never made.
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "room-noclip", () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_nc", customParameters: { room: "room-noclip" } } });
+  await sleep(350);
+  for (let i = 0; i < 40; i++) tw.media(frame(SPEECH(i)));
+  for (let i = 0; i < PERSON_PAUSE; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(250);
+  ok(f.sockets.length === 1, "he opened on the person, with no waiting for a recording that does not exist");
+  ok(f.agentIdsAsked[0] === "agent_normal", "and it is the agent who asks the question himself, not the one who joins a conversation");
+  ok(tw.outMedia().length === 0, "nothing was played down the line, because there was nothing to play");
+  const ev = (getReceipt("room-noclip")?.events || []);
+  const live = ev.find((e) => (e.detail as { step?: string } | null)?.step === "question_live");
+  ok(live?.note === "The recording did not play, so Charlie asked the question himself", `the check says which way it asked (${live?.note})`);
+  restore(); tw.close(); f.close();
+}
+
+// ================================================================================================
 // ROUND 1, ITEM 1.3 — THE FOUR THINGS NOTHING WROTE DOWN.
 // The question playing as a recording, Charlie warming up behind it, Charlie wrapping up and whether
 // he used their name, and which language was spoken. Every one of them is a row on the owner's card

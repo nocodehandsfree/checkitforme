@@ -1222,7 +1222,23 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       clipText = clip.text;
       log("delta: person heard, opening his ears now and waiting for them to finish before asking");
       void connectEleven();
-    } else connectEleven();
+    } else {
+      // NO RECORDING, SO CHARLIE ASKS IT HIMSELF, NOW (round 1, item 1.4). We know the instant it is
+      // not there — it is either on the check or it is not — so there is nothing to wait for and
+      // nothing to fall back through. He opens on the same person test, with his own opening line,
+      // and the ONE thing that must never happen is a person saying hello into silence while our
+      // side works out that a file is missing.
+      //
+      // It costs a few cents more than asking from a recording and the check still happens, which is
+      // the right trade every time. But it has to be VISIBLE, because "how often did that happen"
+      // is otherwise unanswerable, and it is the fail side of a row on the owner's card.
+      const shouldHaveBeenRecorded = reason === "human" && !!ctx?.midCallAgentId && !!ctx?.dynamicVars?.opening_line;
+      if (shouldHaveBeenRecorded) {
+        emit(room, "unknown", "The recording did not play, so Charlie asked the question himself",
+          { step: "question_live", why: ctx?.openingClip ? "the line was not ready to carry it" : "no recording was made before we dialled" });
+      }
+      connectEleven();
+    }
     // Give-up cap: the agent is now billing. If no real human words land within giveUpSeconds,
     // nobody is coming to the phone — end the call instead of paying to listen to it ring.
     const gu = ctx?.giveUpSeconds;
@@ -1434,7 +1450,13 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
             };
             if (lead > 0) prewarmTimer = setTimeout(() => { prewarmTimer = null; if (!ended && twilio.readyState === 1) warmUp(); }, lead);
             else warmUp();
-          } else void connectEleven();
+          } else {
+            // The recording exists but the line would not carry it. Same answer: he asks it himself,
+            // straight away, and the record says the recording did not play (round 1, item 1.4).
+            emit(room, "unknown", "The recording did not play, so Charlie asked the question himself",
+              { step: "question_live", why: "the line was not ready to carry it" });
+            void connectEleven();
+          }
         }
       }
       const echoWindow = Date.now() < agentPlayingUntil + ECHO_TAIL_MS;
