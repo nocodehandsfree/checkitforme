@@ -1,6 +1,6 @@
 # STATE — the owner's single source of truth
 One screen. Every session updates this at close (≤40 lines). New truth REPLACES old, history is in
-git. Last updated: 2026-08-02 (mapping parts 1 and 2 merged to staging; Admin: owner email Off, the Statuses page, every Yes button).
+git. Last updated: 2026-08-03 (Charlie's engine tuning built on its own branch, all eight plus the three Admin numbers; waiting on the owner's word to merge).
 ## Store logos: all 112 re-cut, one place decides their size (07-31/08-01, staging). New pictures are LIVE on the real site and Admin; the code half needs a promote. **Change a logo in one spot and it now really does change everywhere** — the logo wall is the record of truth and cannot lie to you.
 ## Shipped since 07-30, all on staging unless noted: the check status page follows its newest line, both screens clear Safari's bottom bar, and the wait on ElevenLabs is GONE (at hang up we settle from our own words plus our finished read). In stock alerts: every finish path sends, alerts stay on until paused, one store = ONE email; 08-02 in Admin (LIVE) the owner email Off switch saves, the Statuses page works, and every Yes button was answering No — Off on the real site needs a promote. A wrong department no longer costs you the check: ask once to be put through, meter off through the hand-over, ask again when somebody new picks up. The bottom bar can never go dark again and Live is cleaned: the tint is nailed down, three ways it used to break are refused before anything goes live, and cost per check opens on The baseline, your 6.7¢ ceiling off your real prices. **Your move: tap the Fun store alert once, run a check, one email.**
 ## The new calling engine is ON for staging. Your six test checks are the last thing (07-28/29)
@@ -19,4 +19,12 @@ git. Last updated: 2026-08-02 (mapping parts 1 and 2 merged to staging; Admin: o
 ## Charlie is never switched on to talk to nobody again (08-02, ON STAGING)
 - The setting that opened him after a set number of seconds with no voice heard is DELETED — it switched him ON to an empty line and billed for it, the line on your own check log at 63 seconds. A second box wired to nothing went with it.
 - Your check log can now say **who really hung up** (including our own time limit, so we never blame a store for our own accounting), a misheard machine phrase can no longer end a check on a real person, and two things the log claimed but never detected now work: being sent back through the phone menu, and a check dying during a transfer. **Not phone-proven — that is the robot store's next run.**
+## The engine tuning: all eight built, waiting on your word to go to staging (08-03, NOT on staging yet)
+- **A recording can no longer get a Charlie.** He waits for a short hello followed by a real pause, the way a person answers; a recording reads on and never stops for you. This is the one that protects every store we have never called before.
+- **A phone put down on the counter now stops the meter.** Store noise across a room is not somebody talking to us, so he is dropped and comes back when they speak up close again.
+- **He now says goodbye and we can see it**, along with the question playing as a recording, him warming up behind it, and Spanish when he speaks it. None of those left any trace before.
+- **He starts wrapping up after 45 seconds of actually talking, and he NEVER hangs up on somebody who is helping.** A wait nobody comes back from now ends at 2 minutes and reads as left on hold. Both numbers, and the pause before he is dropped, are in Admin under App to tune with no release.
+- Two lines that were plumbing are gone from your log: "Charlie left" and one line per unanswered ring.
+- **Building it caught a real one:** six rings at a department nobody answers used to add up to "a person answered" and switch Charlie on. Fixed and proved.
+- **Your move: say go and it merges to staging, then the robot store dials it for real.** Nothing has run on a phone yet.
 ## Waiting on YOU: promote now to stop the owner email on the real site? · hide the fake (simulated) poll rows from the Admin feedback queue? (yes / no) · Next: docs/tasks/INDEX.md.
