@@ -47,7 +47,11 @@
   }
   *{box-sizing:border-box}
   button,select,textarea,input{font-family:inherit}
-  html{-webkit-text-size-adjust:100%;background:#1D1D22;color-scheme:dark} /* iOS samples THIS bg-color for both Safari bar strips — must equal --bg so the chrome reads translucent-gray like the website, not black/gray defaults */
+  /* touch-action ALSO belongs on the ROOT. `*` below covers every element the finger can land on, but
+     WebKit settles the double-tap-zoom gesture on the document itself, so a tap on bare page background
+     (the gaps between cards, the section padding) still zoomed the whole page. The website has carried
+     it on `html` since 21b2f598 and does not zoom; the Admin never had it. Keep the two in lockstep. */
+  html{-webkit-text-size-adjust:100%;background:#1D1D22;color-scheme:dark;touch-action:manipulation} /* iOS samples THIS bg-color for both Safari bar strips. It must equal --bg so the chrome reads translucent-gray like the website, not black/gray defaults */
   html,body{max-width:100%;overflow-x:hidden}
   header,nav,main,section,.card,.stats,.filters,.ractions{max-width:100%}
   *{touch-action:manipulation}   /* kill iOS double-tap zoom on EVERY element (was interactive-only, so cards/text/numbers on Restock + Store-Intel still zoomed on double-tap). manipulation keeps scroll/pan + pinch, only drops double-tap-zoom; any element needing pan-x/none overrides via its own rule. */
@@ -6067,7 +6071,9 @@ async function stDelete(id){
   const s=Object.values(STATUSES).find(x=>x.id===id); if(!s) return;
   _stPending=null; clearTimeout(_stSaveT); _stSaveT=null;
   const ok=await askSheet('Delete “'+s.label+'”?', // openSheet sets the title with textContent, so no escaping
-    ['Customers stop seeing it immediately.','Checks already filed under it fall back to their meaning.'],'Delete');
+    ['<b>This is live on the real site right now.</b> There is no practice copy. Deleting it here deletes it for customers.',
+     'If a check still ends this way, the customer gets the wrong words on their screen instead of these.',
+     'Statuses the calling engine writes itself come back on their own the next time the site restarts.'],'Delete');
   if(!ok) return;
   const r=await api('/api/statuses/'+id,{method:'DELETE'});
   if(r&&r.ok){ delete STATUSES[s.key]; closeSheet(); renderStatuses(); toast('Status deleted'); }
@@ -6668,7 +6674,7 @@ function tcIcon(key){
     phone:'<path d="M5 4.5h3.4l1.4 4-2.1 1.5a12 12 0 0 0 5.8 5.8l1.5-2.1 4 1.4V18a2 2 0 0 1-2.2 2A15.5 15.5 0 0 1 3 6.7 2 2 0 0 1 5 4.5z"/><path d="M4 20L20 4"/>' };
   const M={in_stock:['check','#4ADE80','In stock'],not_in_stock:['x','#EF4444','Not in'],sold_out:['x','#EF4444','Sold out'],does_not_sell:['x','#EF4444',"Doesn't carry"],
     no_clear_answer:['q','#FBBF24','Unclear'],too_busy:['q','#FBBF24','Too busy'],left_on_hold:['q','#FBBF24','On hold'],failed:['q','#FBBF24','Failed'],
-    nobody_answered:['phone','#9CA3AF','No answer'],closed:['phone','#9CA3AF','Closed'],completed:['check','#9CA3AF','Done'],admin_hangup:['x','#9CA3AF','Canceled']};
+    nobody_answered:['phone','#9CA3AF','No answer'],closed:['phone','#9CA3AF','Closed'],completed:['check','#9CA3AF','Done'],admin_hangup:['phone','#9CA3AF','Admin hung up']};
   const [ic,c,label]=M[key]||['q','#9CA3AF',key||'—'];
   return `<span title="${esch(label)}" style="width:26px;height:26px;border-radius:50%;background:${c}26;display:grid;place-items:center;flex:0 0 auto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${I[ic]}</svg></span>`;
 }

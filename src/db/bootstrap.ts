@@ -33,7 +33,9 @@ async function seedStatuses() {
     ["failed", "⚠️", "Call failed", "unk", "#FBBF24", "The call didn't go through this time. No check = no charge."],
     // Admin ended the check from the dashboard. A NON-RESULT — excluded from every report/aggregate +
     // never billed; reads as "no data" (like a canceled check). Written by the master Stop & hang-up.
-    ["admin_hangup", "·", "Admin canceled", "unk", "#9CA3AF", "We ended this check. It doesn't count — no charge."],
+    // Owner 08-02: his words are "Admin hung up", and the duplicate display-only row he had been
+    // reading (key admin_hung_up, which nothing ever wrote) is deleted. Seed the wording he kept.
+    ["admin_hangup", "phone-missed", "Admin hung up", "unk", "#e22400", "We hung up on this check. No check. No charge."],
     // Customer pressed Stop (live view "Stop & hang up", zone "Stop all"/stop-one). Same non-result
     // semantics as admin_hangup (the row's STATUS is admin_hangup — only the display key differs).
     ["user_cancelled", "·", "Check cancelled", "unk", "#9CA3AF", "You stopped this check from happening."],
