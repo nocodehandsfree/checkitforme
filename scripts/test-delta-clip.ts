@@ -998,11 +998,107 @@ console.log("\n▶ a person answers the same way: short hello, a real pause, and
 }
 
 // ================================================================================================
+// CLOSEOUT ITEM 1 — WE NEVER HANG UP ON A COUNT OF RINGS (owner 08-03).
+// A store that lets it ring twenty times may still pick up, and a count never said how long anybody
+// had been waiting. A clock he can tune replaces it, started when the department's phone starts
+// ringing. Charlie is off the whole time, so all it spends is phone line.
+console.log("\n▶ a department that rings and rings: rings alone never end it, the clock does");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  openReceipt("room-ringwait", { lane: "direct" });
+  setBridgeContext("room-ringwait", {
+    agentId: "agent_normal", dynamicVars: {}, connectOnHuman: true,
+    // His 90 seconds, moved from Admin. Three here so the scene is a scene.
+    tuning: { ...TUNING_DEFAULTS, ringWaitSeconds: 3 },
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "room-ringwait", () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_rw", customParameters: { room: "room-ringwait" } } });
+  await sleep(350);
+  // Eight rings, well past the six that used to hang up on their own.
+  for (let r = 0; r < 8; r++) {
+    for (const fr of ringFrames(2000)) tw.media(fr);
+    for (let i = 0; i < 30; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  }
+  await sleep(120);
+  const ev = () => (getReceipt("room-ringwait")?.events || []);
+  ok(!ev().some((e) => e.kind === "hangup"), "eight rings and we are still holding on, because a count is not a reason");
+  ok(tw.readyState === 1, "…the check is still up");
+  await sleep(3200);
+  const bye = ev().find((e) => e.kind === "hangup");
+  ok(bye?.note === "Nobody picked up after 3 seconds of ringing, hung up before Charlie ever billed", `the clock ends it, and it says seconds, not rings (${bye?.note})`);
+  ok(f.sockets.length === 0, "Charlie never opened, so nothing was billed for any of it");
+  restore(); f.close();
+}
+
+console.log("\n▶ …and somebody picking up stops that clock");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  openReceipt("room-ringans", { lane: "direct" });
+  setBridgeContext("room-ringans", {
+    agentId: "agent_normal", dynamicVars: {}, connectOnHuman: true,
+    tuning: { ...TUNING_DEFAULTS, ringWaitSeconds: 3 },
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "room-ringans", () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_ra", customParameters: { room: "room-ringans" } } });
+  await sleep(350);
+  for (const fr of ringFrames(2000)) tw.media(fr);
+  // The real gap between two rings is about four seconds, and it matters: the ear judges tone
+  // against the last few seconds of loud audio, so a scene that jumps from ringing to a voice in
+  // half a second is judging the person against a window that is still mostly ringing.
+  for (let i = 0; i < 200; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  for (let i = 0; i < 40; i++) tw.media(frame(SPEECH(i)));          // "Pharmacy, this is Joe"
+  for (let i = 0; i < PERSON_PAUSE; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(250);
+  ok(f.sockets.length === 1, "they answered and Charlie opened");
+  await sleep(3200);
+  ok(tw.readyState === 1, "and the ringing clock is long past, with nothing hanging up behind them");
+  ok(!(getReceipt("room-ringans")?.events || []).some((e) => (e.detail as { reason?: string } | null)?.reason === "nobody_came"), "nothing claims nobody came");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ CLOSEOUT ITEM 3: while the department's phone rings, the log says who we asked for");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  openReceipt("room-dept", { lane: "bravo" });
+  setBridgeContext("room-dept", { agentId: "agent_normal", dynamicVars: {}, connectOnHuman: true, departmentName: "front" });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "room-dept", () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_d1", customParameters: { room: "room-dept" } } });
+  await sleep(350);
+  for (const fr of ringFrames(2000)) tw.media(fr);
+  await sleep(60);
+  const line = (getReceipt("room-dept")?.events || []).find((e) => e.kind === "ringing");
+  ok(line?.note === "Transferring to front", `the store's own word for that department (${line?.note})`);
+
+  _reset();
+  openReceipt("room-dept2", { lane: "alpha" });
+  setBridgeContext("room-dept2", { agentId: "agent_normal", dynamicVars: {}, connectOnHuman: true });
+  const tw2 = new FakeTwilio();
+  handleTwilioBridge(tw2 as never, "room-dept2", () => { /* none */ });
+  tw2.say({ event: "start", start: { streamSid: "MZ_d2", customParameters: { room: "room-dept2" } } });
+  await sleep(350);
+  for (const fr of ringFrames(2000)) tw2.media(fr);
+  await sleep(60);
+  const line2 = (getReceipt("room-dept2")?.events || []).find((e) => e.kind === "ringing");
+  ok(line2?.note === "Transferring you to the Staff.", `and nothing is invented when nobody named it (${line2?.note})`);
+  ok(!(getReceipt("room-dept2")?.events || []).some((e) => /desk/i.test(e.note || "")), "the word desk is gone from that moment");
+  restore(); tw.close(); tw2.close(); f.close();
+}
+
+// ================================================================================================
 // ROUND 1, ITEM 1.8 — THE PER RING LINES ARE DELETED, THE GIVE-UP RULE STAYS.
 // "Ring 2 went unanswered" tells the owner nothing and costs nothing, because Charlie is off while a
 // phone rings, and six of them bury the lines that matter. Counting them still stops us waiting
 // forever at a department nobody works at.
-console.log("\n▶ a department that rings out: no line per ring, and we still give up and say so");
+console.log("\n▶ a department that rings out: no line per ring, and no count ever ends it");
 {
   _reset();
   const f = await fakeProvider();
@@ -1021,11 +1117,12 @@ console.log("\n▶ a department that rings out: no line per ring, and we still g
   await sleep(120);
   const ev = (getReceipt("room-rings")?.events || []);
   ok(!ev.some((e) => (e.note || "").includes("went unanswered")), "not one line about a ring going unanswered");
-  ok(ev.filter((e) => e.kind === "ringing").length === 1, `the desk ringing is ONE line, said once (${ev.filter((e) => e.kind === "ringing").length})`);
-  ok(f.sockets.length === 0, "Charlie was never opened onto a ringing desk, so nothing billed");
-  const bye = ev.find((e) => e.kind === "hangup");
-  ok(!!bye && (bye.note || "").startsWith("Nobody picked up after 6 rings"), `we gave up and said so, once (${bye?.note})`);
-  ok(tw.readyState === 3, "…and the check ended there rather than waiting forever");
+  ok(ev.filter((e) => e.kind === "ringing").length === 1, `the department's phone ringing is ONE line, said once (${ev.filter((e) => e.kind === "ringing").length})`);
+  ok(f.sockets.length === 0, "Charlie was never opened onto a ringing phone, so nothing billed");
+  // Counting rings is gone entirely (owner 08-03). What ends this is the clock, and its own scene
+  // above proves that; here the point is that six rings on their own do nothing at all.
+  ok(!ev.some((e) => e.kind === "hangup"), "six rings on their own end nothing: we never hang up on a count");
+  ok(tw.readyState === 1, "…the check is still up, waiting like a person would");
   restore(); f.close();
 }
 

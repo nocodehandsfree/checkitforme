@@ -1,7 +1,7 @@
 // Unit test for the canonical agent prompts + voice defaults. Run: ./node_modules/.bin/tsx scripts/test-prompts.ts
 // Guards the dynamic-variable contract: the live ElevenLabs agent fills {{...}} placeholders, so if
 // one silently disappears from the prompt the call breaks. These assertions fail loudly instead.
-import { RESTOCK_PROMPT, specificityClause, VOICE_DEFAULTS, heardWrongDepartment, looksLikeAMenu, staffName, wrappedUp, usedTheirName } from "../src/voice/prompts";
+import { RESTOCK_PROMPT, specificityClause, VOICE_DEFAULTS, heardWrongDepartment, looksLikeAMenu, staffName, wrappedUp, usedTheirName, JOINING_RULE, joiningPrompt, midCallAgentPatch } from "../src/voice/prompts";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -183,6 +183,28 @@ console.log("\n▶ Charlie wrapping up (round 1, item 1.3)");
     "Do you have any Pokemon booster boxes in stock?",
   ];
   for (const m of middles) ok(!wrappedUp(m), `not a wrap-up: "${m}"`);
+}
+
+
+console.log("\n▶ THE DRIFT ALARM: the joining Charlie gets the same words, plus his one instruction");
+{
+  // There are two Charlies, and every new style check talks to the JOINING one. Only the original
+  // was ever sent the full words: the joining one was a frozen copy from 07-28 and never got the
+  // wrong department section added on 08-01 — 17,521 characters against 16,807, the difference being
+  // exactly that section, which is why he asked to be put through twice. This asserts, off the same
+  // function the push sends, that the two can never drift again.
+  const sent = midCallAgentPatch("gpt-test");
+  ok(sent.prompt === `${JOINING_RULE}\n\n${RESTOCK_PROMPT}`, "byte for byte: the joining instruction, then the original's words, nothing else");
+  ok(sent.prompt.startsWith(JOINING_RULE), "the joining instruction is FIRST, before anything about opening a call");
+  ok(sent.prompt.endsWith(RESTOCK_PROMPT), "…and the store rules are carried whole and unchanged");
+  ok(sent.prompt.includes("{{ask_for_transfer}}"), "the wrong department section reaches him — the one he never had");
+  ok(sent.prompt.includes("Ask to be put through only ONCE"), "…including the rule to ask ONCE, which is the fault it caused");
+  ok(sent.maxTokens === VOICE_DEFAULTS.maxTokens, "same room to think as the original");
+  ok(sent.llm === "gpt-test", "same model as the original was just pushed with");
+  ok(sent.turnEagerness === "patient", "patient stays: our own machinery splits sentences and he must not answer each fragment");
+  ok(!("firstMessage" in sent), "nothing sets a first message: the recorded question already spoke");
+  ok(joiningPrompt("X") === `${JOINING_RULE}\n\nX`, "one function builds it, and it is the one the push calls");
+  ok(!/[—–]/.test(JOINING_RULE), "no dashes in what he is told (they read strangely through ElevenLabs)");
 }
 
 console.log(`\n════════════════════════════════\n  PASS: ${pass}   FAIL: ${fail}\n════════════════════════════════`);

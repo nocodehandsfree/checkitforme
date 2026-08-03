@@ -1,6 +1,7 @@
-// THE THREE NUMBERS THE OWNER TUNES, DRIVEN IN A REAL BROWSER (round 1, part 2).
+// THE FIVE NUMBERS THE OWNER TUNES, DRIVEN IN A REAL BROWSER (round 1, part 2; two added 08-03).
 //
-// Charlie wrap-up seconds, the hold cap, and how much silence means Staff walked off. They decide
+// Charlie wrap-up seconds, the hold cap, how much silence means Staff walked off, how long a phone
+// may ring while we wait for a human, and how long a whole check may run. They decide
 // whether a check makes money, so he tunes them against real checks rather than guessing, and that
 // means Admin has to save them to the environment he is looking at and show him what will actually
 // run. Two things are invisible from the rendered screen and are the whole point of this file:
@@ -21,12 +22,14 @@ const fails = []; const ok = (n, c, e) => { console.log((c ? '  ✓ ' : '  ✗ '
 pg.on('pageerror', e => { fails.push('pageerror ' + String(e).slice(0, 100)); console.log('  ⚠', String(e).slice(0, 130)); });
 
 // What the server would hold, and every request the page makes, in order.
-let held = { charlieWrapUpSeconds: 45, holdCapSeconds: 120, holdQuietMs: 6 };
-const LIMITS = { charlieWrapUpSeconds: [5, 600], holdCapSeconds: [10, 900], holdQuietMs: [2, 60] };
+let held = { charlieWrapUpSeconds: 45, holdCapSeconds: 120, holdQuietMs: 6, ringWaitSeconds: 90, maxCheckSeconds: 240 };
+const LIMITS = { charlieWrapUpSeconds: [5, 600], holdCapSeconds: [10, 900], holdQuietMs: [2, 60], ringWaitSeconds: [10, 600], maxCheckSeconds: [30, 900] };
 const WHY = {
   charlieWrapUpSeconds: 'How long Charlie may actually be TALKING before he starts wrapping up.',
   holdCapSeconds: 'How long a wait may run before we hang up.',
   holdQuietMs: 'Silence this long, mid conversation, and they have put the phone down and walked off.',
+  ringWaitSeconds: 'How long the phone may ring while we wait for a human. We never hang up on a count of rings.',
+  maxCheckSeconds: 'How long a whole check may run before the phone company ends it for us.',
 };
 const seen = [];
 const rows = () => Object.keys(held).map(k => ({ key: k, label: k, seconds: held[k], def: held[k], min: LIMITS[k][0], max: LIMITS[k][1], why: WHY[k] }));
@@ -68,14 +71,16 @@ const boxOf = (k) => pg.$eval('#tune_' + k, el => el.value);
 // is typed into the way the page itself would receive it rather than through a visible click.
 const typeInto = async (k, v) => { await pg.$eval('#tune_' + k, (el, val) => { el.value = val; }, v); await pg.dispatchEvent('#tune_' + k, 'change'); await pg.waitForTimeout(250); };
 
-console.log('\n▶ the App screen shows all three, in his words, with the numbers he set');
+console.log('\n▶ the App screen shows all five, in his words, with the numbers he set');
 {
   await pg.evaluate(() => { setCallSrc('live'); return loadCallTuning(); });
   ok('Charlie wrap-up seconds is on the screen', (await boxOf('charlieWrapUpSeconds')) === '45', await boxOf('charlieWrapUpSeconds'));
   ok('the hold cap is on the screen', (await boxOf('holdCapSeconds')) === '120', await boxOf('holdCapSeconds'));
   ok('silence before Charlie drops is on the screen, in seconds', (await boxOf('holdQuietMs')) === '6', await boxOf('holdQuietMs'));
+  ok('the ring wait is on the screen, and it is seconds and not rings', (await boxOf('ringWaitSeconds')) === '90', await boxOf('ringWaitSeconds'));
+  ok('how long a whole check may run is on the screen', (await boxOf('maxCheckSeconds')) === '240', await boxOf('maxCheckSeconds'));
   const titles = await pg.$$eval('#settings .peek .pk-t', els => els.map(e => e.textContent.trim()));
-  ok('they are named the way he names them', ['Charlie wrap-up seconds', 'Hold cap seconds', 'Silence before Charlie drops'].every(t => titles.includes(t)), titles.join(' | '));
+  ok('they are named the way he names them', ['Charlie wrap-up seconds', 'Hold cap seconds', 'Silence before Charlie drops', 'Ring wait seconds', 'Check length seconds'].every(t => titles.includes(t)), titles.join(' | '));
   const under = await pg.$eval('#tune_charlieWrapUpSeconds', el => el.closest('.peek').querySelector('.pk-m').textContent);
   ok('each has ONE gray line saying what it does', /How long he may be talking before he starts wrapping up/.test(under), under);
   ok('no dash inside that sentence (copy law)', !/[—–]|\s-\s/.test(under), under);
@@ -90,7 +95,7 @@ console.log('\n▶ changing one saves it, and the check that runs next reads the
   ok('…and it carries the number in seconds, on its own', writes[0] && writes[0].body === '{"charlieWrapUpSeconds":30}', writes[0] && writes[0].body);
   ok('the value that will really run comes back and is what he sees', (await boxOf('charlieWrapUpSeconds')) === '30', await boxOf('charlieWrapUpSeconds'));
   ok('the server is holding it', held.charlieWrapUpSeconds === 30, String(held.charlieWrapUpSeconds));
-  ok('and nothing else moved', held.holdCapSeconds === 120 && held.holdQuietMs === 6, JSON.stringify(held));
+  ok('and nothing else moved', held.holdCapSeconds === 120 && held.holdQuietMs === 6 && held.ringWaitSeconds === 90 && held.maxCheckSeconds === 240, JSON.stringify(held));
 }
 
 console.log('\n▶ a number out of range is refused, and the box goes back to what will run');

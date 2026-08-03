@@ -22,7 +22,7 @@ import { createHash } from "node:crypto";
 import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
-import { tuningForAdmin } from "./calls/tuning"; // the three numbers the owner tunes, and every other number a check reads
+import { tuningForAdmin, callTuning } from "./calls/tuning"; // the numbers the owner tunes, and every other number a check reads
 import { importZonesData, geocodeMissing, backfillDirectChains, isDirectDefaultChain } from "./db/import-data";
 import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, billableOutcome, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, notifyAfterVerdict, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, transcriptPatch, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus, learnedSyncTick, learnedSyncStatus } from "./store-sync";
@@ -5168,10 +5168,11 @@ app.get("/api/admin/overview", async (c) => {
   return c.json({ live, today: slice(d1), week: slice(d7), month: slice(d30), days, avgCallSeconds30d: avg(durs), chainStats, recentCalls });
 });
 
-// ---- THE THREE NUMBERS THE OWNER TUNES AGAINST REAL CHECKS (round 1, part 2) ----
+// ---- THE NUMBERS THE OWNER TUNES AGAINST REAL CHECKS (round 1, part 2; two more added 08-03) ----
 //
 // How long Charlie may TALK before he starts wrapping up, how long a wait may run before we hang up,
-// and how much silence means Staff walked off. Every one of them has to be tuned against real checks
+// how much silence means Staff walked off, how long a phone may ring while we wait for a human, and
+// how long a whole check may run. Every one of them has to be tuned against real checks
 // — the owner's own words: "tune it on fifty checks at 5 seconds against fifty at 4, never on a
 // guess" — and none of that can wait on a release.
 //
@@ -5187,6 +5188,8 @@ const OWNER_NUMBERS = [
   { key: "charlieWrapUpSeconds", label: "Charlie wrap-up seconds", unit: 1 },
   { key: "holdCapSeconds", label: "Hold cap seconds", unit: 1 },
   { key: "holdQuietMs", label: "Silence before Charlie drops", unit: 1000 },
+  { key: "ringWaitSeconds", label: "Ring wait seconds", unit: 1 },
+  { key: "maxCheckSeconds", label: "Check length seconds", unit: 1 },
 ] as const;
 app.get("/api/call-tuning", async (c) => {
   const all = await tuningForAdmin();
@@ -7299,7 +7302,7 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
   }).returning();
   const rid = row.id;
   if (governed) {
-    const slot = await acquireCallSlot({ key: `call:${rid}`, priority: opts?.priority ?? "interactive", userId: finder?.userId ?? undefined, ttlSec: (pol.bail.maxCallSeconds || 180) + 120 });
+    const slot = await acquireCallSlot({ key: `call:${rid}`, priority: opts?.priority ?? "interactive", userId: finder?.userId ?? undefined, ttlSec: (await callTuning()).maxCheckSeconds + 120 });
     if (slot === null) {
       await db.update(callResults).set({ status: "failed", statusKey: "system_busy", summary: "All lines busy — the check will be retried." }).where(eq(callResults.id, rid));
       return { error: "calls_busy" }; // routeCheck sees this and queues the check instead of failing
@@ -7318,7 +7321,7 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
       .catch((e) => console.error("bridge call log update:", e));
     // Per-store talk cap (chains.maxTalkSeconds) wins over the global bail ceiling when set, so a
     // store the owner marked "wrap fast" gets a tighter Twilio TimeLimit — the cost guarantee.
-  }, v.dtmf, { from, room, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, listenNav: v.listenNav });
+  }, v.dtmf, { from, room, timeLimitSec: v.maxTalk ?? undefined, /* no per store cap → the owner's own number, from call_tuning */ say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, listenNav: v.listenNav });
 
   if (result.error || !result.room) {
     if (governed) await releaseCallSlot(`call:${rid}`);

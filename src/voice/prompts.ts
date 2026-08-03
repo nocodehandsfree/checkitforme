@@ -324,6 +324,53 @@ export function usedTheirName(line: string, name: string | null): boolean {
   return new RegExp(`\\b${n}\\b`, "i").test(String(line || ""));
 }
 
+/**
+ * THE JOINING CHARLIE'S ONE EXTRA INSTRUCTION — AND THE ONE PLACE IT IS WRITTEN (owner 08-03).
+ *
+ * There are two Charlies in the account: the original, and the one every new style check actually
+ * talks to, who joins a conversation the recorded question has already opened. Only the original was
+ * ever sent the full words. The joining one was a frozen copy from 07-28 and never received the
+ * wrong department section added on 08-01 — 17,521 characters against 16,807, and the difference was
+ * exactly that section. That is why he asked to be put through twice: the rule telling him to ask
+ * ONCE had never reached him.
+ *
+ * So the words now have ONE source. Whatever is pushed to the original is pushed to the joining one
+ * with this on top, from the same build, and a test asserts the two are byte for byte that.
+ *
+ * Written the way the owner's prompt rules are written: no dashes inside a sentence, one register,
+ * plain instructions.
+ */
+export const JOINING_RULE = `
+YOU ARE JOINING A CALL THAT IS ALREADY IN PROGRESS.
+A recorded line in your own voice has ALREADY asked the store: "{{opening_line}}"
+The person on the line is answering that question right now.
+Do NOT greet them. Do NOT introduce yourself. Do NOT ask the question again.
+Say NOTHING until they have finished answering, then carry on from their answer exactly as you would
+if you had asked it yourself. If they say something you did not catch, ask about that, never restart.
+`.trim();
+
+/** The joining Charlie's words: the joining instruction FIRST, so it is read before any instruction
+ *  about opening a call, then the store rules unchanged. Pure, so what the push sends is provable
+ *  without touching ElevenLabs (scripts/test-prompts.ts). */
+export function joiningPrompt(base: string): string {
+  return `${JOINING_RULE}\n\n${base}`;
+}
+
+/** EXACTLY what the joining Charlie is sent whenever the original is pushed. One function, so the
+ *  words that go out and the words a test asserts can never be two different things. Pure: the only
+ *  thing it needs from outside is which model the original was pushed with, so the two match. */
+export function midCallAgentPatch(llm: string): { prompt: string; maxTokens: number; llm: string; turnEagerness: "patient" } {
+  return {
+    prompt: joiningPrompt(RESTOCK_PROMPT),
+    maxTokens: VOICE_DEFAULTS.maxTokens,
+    llm,
+    // PATIENT STAYS (08-01 audit, open fault 1). On the new call shape every conversation is this
+    // agent, and with early guessing on he answered EACH fragment of a split sentence — "no worries,
+    // take your time" three times in a row — because our own machinery manufactures those fragments.
+    turnEagerness: "patient",
+  };
+}
+
 /** Spoken fallback when the pause-filler feature is on and no custom line is set. Copy law: no dash. */
 export const SOFT_TIMEOUT_FALLBACK = "Yeah, hi, I'm here!";
 

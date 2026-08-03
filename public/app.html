@@ -1222,6 +1222,14 @@
       <div class="pk-main"><div class="pk-t">Silence before Charlie drops</div><div class="pk-m">How long a pause runs before we say Staff walked off<span id="tuneEnv3"></span></div></div>
       <input class="k-txt" id="tune_holdQuietMs" inputmode="numeric" style="max-width:22vw;text-align:right" aria-label="Silence before Charlie drops" onchange="saveCallTuning(this)">
     </div>
+    <div class="peek static">
+      <div class="pk-main"><div class="pk-t">Ring wait seconds</div><div class="pk-m">How long the phone may ring while we wait for a human<span id="tuneEnv4"></span></div></div>
+      <input class="k-txt" id="tune_ringWaitSeconds" inputmode="numeric" style="max-width:22vw;text-align:right" aria-label="Ring wait seconds" onchange="saveCallTuning(this)">
+    </div>
+    <div class="peek static">
+      <div class="pk-main"><div class="pk-t">Check length seconds</div><div class="pk-m">How long a whole check may run before the phone company ends it<span id="tuneEnv5"></span></div></div>
+      <input class="k-txt" id="tune_maxCheckSeconds" inputmode="numeric" style="max-width:22vw;text-align:right" aria-label="Check length seconds" onchange="saveCallTuning(this)">
+    </div>
     <!-- Came off Policy 07-29: an analytics ID is an app-wide default, not pricing, and it was the one
          thing under Policy's "Pricing and rewards" eyebrow that was neither. Same field, same save. -->
     <div class="peek static">
@@ -6439,7 +6447,8 @@ async function toggleAskForTransfer(){
   if(!r||r.error){ toast('Could not save the switch'); return; }
   await loadAskForTransfer(); toast('Asking to be transferred '+(!on?'on':'off')+(CALL_SRC==='live'?'':' · '+vtEnvName()));
 }
-// THE THREE NUMBERS THE OWNER TUNES (round 1, part 2). They live in the call_tuning setting, which
+// THE NUMBERS THE OWNER TUNES (round 1, part 2; the ring wait and the check length added 08-03).
+// They live in the call_tuning setting, which
 // the prod mirror deliberately leaves alone, so staging and live hold their own values and a number
 // tuned mid test cannot be stomped inside a minute. Read and written through envApi for the same
 // reason: the header Live/Staging switch names which one you are editing.
@@ -6447,7 +6456,7 @@ async function loadCallTuning(){
   const r=await envApi('/api/call-tuning'); if(!r||r.error||!r.rows) return;
   r.rows.forEach(function(row){ const el=document.getElementById('tune_'+row.key); if(el) el.value=row.seconds; });
   const name=CALL_SRC==='live'?'':(' · '+vtEnvName());
-  ['tuneEnv1','tuneEnv2','tuneEnv3'].forEach(function(id){ const n=document.getElementById(id); if(n) n.textContent=name; });
+  ['tuneEnv1','tuneEnv2','tuneEnv3','tuneEnv4','tuneEnv5'].forEach(function(id){ const n=document.getElementById(id); if(n) n.textContent=name; });
 }
 async function saveCallTuning(el){
   const key=el.id.replace('tune_',''); const v=Number(el.value);

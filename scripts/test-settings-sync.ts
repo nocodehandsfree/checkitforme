@@ -79,7 +79,7 @@ async function main() {
   ok(typeof body.policy_json === "string" && Array.isArray(body.statuses) && body.statuses.length > 0, "export carries policy + statuses");
   ok(!("chains" in (body as object)) && !("retailers" in (body as object)), "export NEVER carries store-sync's tables (DD's pipe)");
 
-  console.log("▶ the owner's three numbers: saved from Admin, read by the next check, never mirrored");
+  console.log("▶ the owner's five numbers: saved from Admin, read by the next check, never mirrored");
   {
     // WHERE THEY LIVE IS NOT OPTIONAL. Production's policy copies down onto staging every sixty
     // seconds whether anything changed or not, so one of these kept in the policy and tuned on
@@ -88,20 +88,26 @@ async function main() {
     ok((await fetch(`${base}/api/call-tuning`)).status === 401, "the numbers are admin only");
     const got = await (await fetch(`${base}/api/call-tuning`, { headers: { "x-admin-token": "t" } })).json() as { rows: Array<{ key: string; seconds: number; why: string }> };
     const at = (k: string) => got.rows.find((x) => x.key === k);
-    ok(got.rows.length === 3, `three numbers and no more (${got.rows.map((r) => r.key).join(", ")})`);
+    ok(got.rows.length === 5, `five numbers and no more (${got.rows.map((r) => r.key).join(", ")})`);
     ok(at("charlieWrapUpSeconds")?.seconds === 45, `Charlie wrap-up starts at the owner's 45 (${at("charlieWrapUpSeconds")?.seconds})`);
     ok(at("holdCapSeconds")?.seconds === 120, `the hold cap starts at two minutes (${at("holdCapSeconds")?.seconds})`);
     ok(at("holdQuietMs")?.seconds === 6, `silence before he is dropped starts at 6 (${at("holdQuietMs")?.seconds})`);
+    // Added 08-03: we never hang up on a count of rings, and how long a check may run stops living
+    // in the policy, where production copied down over it every sixty seconds.
+    ok(at("ringWaitSeconds")?.seconds === 90, `the ring wait starts at 90 seconds (${at("ringWaitSeconds")?.seconds})`);
+    ok(at("maxCheckSeconds")?.seconds === 240, `a whole check may run 240 seconds (${at("maxCheckSeconds")?.seconds})`);
     ok(got.rows.every((r) => !!r.why && !r.why.includes(r.key)), "each one says WHY, in words, never its code name");
 
     const save = async (body: Record<string, number>) => (await fetch(`${base}/api/call-tuning`, {
       method: "PATCH", headers: { "x-admin-token": "t", "content-type": "application/json" }, body: JSON.stringify(body),
     })).json() as Promise<{ ok?: boolean; rows?: Array<{ key: string; seconds: number }> }>;
-    await save({ charlieWrapUpSeconds: 30, holdCapSeconds: 90, holdQuietMs: 5 });
+    await save({ charlieWrapUpSeconds: 30, holdCapSeconds: 90, holdQuietMs: 5, ringWaitSeconds: 60, maxCheckSeconds: 300 });
     const live = await callTuning();
     ok(live.charlieWrapUpSeconds === 30, `the next check reads 30 seconds of talking (${live.charlieWrapUpSeconds})`);
     ok(live.holdCapSeconds === 90, `…and a 90 second wait cap (${live.holdCapSeconds})`);
     ok(live.holdQuietMs === 5000, `…and 5 seconds of silence, stored in milliseconds beside the rest (${live.holdQuietMs})`);
+    ok(live.ringWaitSeconds === 60, `…a phone may ring for 60 seconds (${live.ringWaitSeconds})`);
+    ok(live.maxCheckSeconds === 300, `…and a whole check may run 300 (${live.maxCheckSeconds})`);
     ok(live.prewarmLeadMs === 2000, "and every other number in the same setting is untouched by the save");
 
     // A typo can never produce a check that hangs or a gate that never fires.

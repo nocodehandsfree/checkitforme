@@ -93,6 +93,10 @@ export interface BridgeContext {
   // otherwise rest on the one thing already known to break. Without this id the clip never plays and
   // the call behaves exactly as it does today.
   midCallAgentId?: string;
+  /** WHO THE MAPPED ROUTE IS PUTTING US THROUGH TO, in the store's own words as we say them at its
+   *  menu ("front", "general"). Absent on a direct dial and on a keypad route, where nobody ever
+   *  said a department name out loud and inventing one would fake the record. */
+  departmentName?: string;
   // ---- HOLD AND TRANSFER (spec section 6) ----
   // The Ear stays on the call; the AGENT is what gets suspended. Two shapes, and which one is right
   // is Gate Zero's answer, not ours:
@@ -332,12 +336,19 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   const loudE: number[] = []; // recent above-threshold frame energies (amplitude steadiness, secondary)
   const loudT: number[] = []; // per-frame share of energy on the phone network's tone frequencies
   let toneLogged = false;     // log the "it's a tone" verdict once per call, not per frame
+  let quietRun = 0;           // frames of quiet since the last loud one — half a second ends a burst
+  const BURST_END_FRAMES = 25;
   // SECOND-RING TRACKING (owner 07-24). After the menu transfers us, the DESK rings — a separate
   // ring from the one before pickup. Detecting it POSITIVELY (not just "that wasn't a human") gives
   // three things: an honest log step with real seconds, certainty that Charlie must stay off, and a
   // deterministic "nobody is coming" once enough rings go unanswered.
   let inRing = false;         // currently inside a ring burst
-  let ringCount = 0;          // completed ring bursts on the transferred leg
+  /** WE NEVER HANG UP ON A COUNT OF RINGS (owner 08-03). A store that lets it ring twenty times may
+   *  still pick up, and a count told us nothing about how long anybody had been waiting: six rings is
+   *  36 seconds at one cadence and a minute at another. What replaces it is a clock the owner can
+   *  tune, started the moment the department's phone starts ringing and stopped the moment somebody
+   *  answers. Charlie is off the whole time, so this is the phone line only. */
+  let ringWaitTimer: NodeJS.Timeout | null = null;
   // ---- THE PERSON TEST (round 1, item 1.1) ----------------------------------------------------
   // A RECORDING MUST NEVER GET A CHARLIE. What used to open him was crude — about half a second of
   // anything that sounds like a voice — and a recorded greeting is exactly that, so an unmapped store
@@ -363,7 +374,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  the phone-on-the-counter test uses. */
   const storeLoud: number[] = [];
   let firstRingAtMs = 0;      // when the desk started ringing (for the log step)
-  const RINGS_UNANSWERED = 6; // ~36s of a US 2s-on/4s-off cadence → nobody is coming
+
   const startMs = Date.now();
   const VOICE_THRESH = 350;   // μ-law mean-abs energy that counts as "someone's talking" (tunable)
   const VOICE_FRAMES = 45;    // ~0.9s of sustained voice → treat as a human (tunable)
@@ -460,6 +471,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  Waiting is nearly free because Charlie is dropped, and a second check costs more than waiting,
    *  so it is deliberately generous. */
   const HOLD_CAP_MS = Math.max(1, tune.holdCapSeconds) * 1000;
+  /** How long the phone may ring while we wait for a human. The owner's number, 90 seconds, tunable
+   *  from Admin. Never a count of rings (his ruling 08-03). */
+  const RING_WAIT_MS = Math.max(1, tune.ringWaitSeconds) * 1000;
   // ---- hold and transfer ----
   let onHold = false;             // the person is away; the agent must not be fed or heard
   /** Somebody has already stepped away and come back on this call — from here it is a live store
@@ -471,6 +485,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   let storeHasSpoken = false;
   /** Recorded once: a hand-over put us back at the store's recorded menu instead of a department. */
   let sentBackToMenu = false;
+  /** WHO WE ARE BEING PUT THROUGH TO, in the store's own words when the mapped route holds them
+   *  ("front", "general"), and nothing invented when it does not. The website says "Ringing the front
+   *  desk" at this same moment; this is the same moment in the owner's words. */
+  const department = String(ctx?.departmentName || "").trim();
+  const transferNote = department ? `Transferring to ${department}` : "Transferring you to the Staff.";
   // ---- WHAT NOTHING WROTE DOWN (round 1, item 1.3) ---------------------------------------------
   // Four things happen on nearly every check and none of them left a trace, so neither the log nor
   // the owner's card could show them: the question playing as a recording, Charlie warming up behind
@@ -705,8 +724,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // a receipt you cannot read straight through (owner 07-28). Being handed on and being made to
     // wait are two facts, so a real transfer now says both, in that order. No new event kinds: the
     // set is a closed sixteen and both of these are already in it.
-    if (reason === "transfer") emit(room, "transfer", "Transferred, the next desk is ringing", { reason, atMs });
-    const note = reason === "transfer" ? "Waiting on the next desk to pick up"
+    if (reason === "transfer") emit(room, "transfer", transferNote, { reason, atMs, department: department || null });
+    const note = reason === "transfer" ? "Waiting for the next department to pick up"
       : reason === "music" ? "Staff stepped away, hold music"
       // A HANDSET ON THE COUNTER. The store is still audible, nobody is talking to us, and the meter
       // stops exactly as it does on silence.
@@ -1204,6 +1223,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (reason !== "human" && (humanAtMs > 0 || onHold)) { log(`connect-on-human: ${reason} ignored, a human was already found — only somebody coming back reopens Charlie`); return; }
     humanAtMs = Date.now();
     connectReason = reason;
+    // Somebody is there, so the phone is not ringing at nobody any more.
+    if (ringWaitTimer) { clearTimeout(ringWaitTimer); ringWaitTimer = null; }
     if (reason === "human") {
       markNow(room, "humanMs"); emit(room, "human_detected", "Staff greeting");
       // From here somebody is on the line, so from here it is worth knowing when they stop being on
@@ -1340,6 +1361,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     const leak = direct ? 0.34 : 1;            // slow leak so the pause between greeting words doesn't reset progress
     const e = frameEnergy(b64);
     if (e > VOICE_THRESH) {
+      quietRun = 0;
       loudE.push(e); if (loudE.length > 150) loudE.shift();
       loudT.push(toneShare(b64)); if (loudT.length > 150) loudT.shift();
       // RINGBACK IS NOT A HUMAN (owner 07-24: Charlie billed 20s on two Target calls nobody answered).
@@ -1355,8 +1377,20 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
             inRing = true;
             if (!firstRingAtMs) {
               firstRingAtMs = Date.now();
-              emit(room, "ringing", "The desk is ringing, Charlie stays off", { leg: "desk" });
-              log(`ear: the desk is ringing (second ring) — Charlie stays off until someone picks up`);
+              // …AND THE CLOCK STARTS HERE, not a counter. Cleared the moment a person is found or
+              // the check ends; if it runs out, nobody is at that department and we stop paying for
+              // a phone to ring in an empty room.
+              ringWaitTimer = setTimeout(() => {
+                ringWaitTimer = null;
+                if (ended || connecting || humanWords) return;
+                const secs = Math.round(RING_WAIT_MS / 1000);
+                noteWeEnded(room, "nobody_came");   // WE ended it (round 2, item 5)
+                emit(room, "hangup", `Nobody picked up after ${secs} seconds of ringing, hung up before Charlie ever billed`, { reason: "nobody_came", ringingSec: secs });
+                log(`give-up: ${secs}s of ringing with nobody answering — hanging up (Charlie never joined)`);
+                try { twilio.close(); } catch { /* best effort */ }
+              }, RING_WAIT_MS);
+              emit(room, "ringing", transferNote, { leg: "desk", department: department || null });
+              log(`ear: the department's phone is ringing — Charlie stays off until somebody picks up`);
               try { onStage?.(room, 6, Math.max(0, Math.round((firstRingAtMs - startMs) / 1000))); } catch { /* best-effort */ }
             }
           }
@@ -1391,12 +1425,18 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         }
       }
       // Gap between bursts: a burst that just ended is one completed ring.
-      // ONE RING PER LINE IS DELETED (round 1, item 1.8). "Ring 2 went unanswered" told the owner
-      // nothing and cost nothing — Charlie is off while a phone rings — and six of them buried the
-      // lines that matter. The RULE stays: counting is what stops us waiting forever at a department
-      // nobody works at, and the give-up itself is still a line, because that one is an ending.
-      if (inRing) { inRing = false; ringCount++; log(`ear: ring ${ringCount} went unanswered`); if (ringCount >= RINGS_UNANSWERED && !connecting && !humanWords) { noteWeEnded(room, "nobody_came"); emit(room, "hangup", `Nobody picked up after ${ringCount} rings, hung up before Charlie ever billed`, { reason: "nobody_came", ring: ringCount }); log(`give-up: ${ringCount} rings unanswered — nobody is coming, hanging up (Charlie never joined)`); try { twilio.close(); } catch { /* best effort */ } } }
+      // ONE RING PER LINE IS DELETED (round 1, item 1.8), and so is counting them at all (owner
+      // 08-03). Neither the line nor the count told him anything: Charlie is off while a phone rings,
+      // and how many times it rang is not how long we waited. The clock armed above owns the ending.
+      if (inRing) inRing = false;
       voiced = Math.max(0, voiced - leak); if (voiced === 0) { loudE.length = 0; loudT.length = 0; }
+      // EVERY BURST IS JUDGED ON ITSELF. Ringing and a voice are told apart from the last few
+      // seconds of loud audio, and that window used to survive a whole ring cadence: after a real
+      // two second ring it took about six seconds of silence to clear, so the person who picked up
+      // in the four second gap was judged against a window that was still mostly ringing, and read
+      // as more ringing. A department that rings and is then answered is the ordinary shape of a
+      // hand-over, so half a second of quiet now ends the burst and the next one starts clean.
+      if (++quietRun >= BURST_END_FRAMES && loudE.length) { loudE.length = 0; loudT.length = 0; voiced = 0; }
     }
   }
   /** True when the recent loud frames look like a machine tone rather than speech. Speech energy
@@ -1636,5 +1676,5 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       const note = spokeEn === 0 ? "Charlie spoke Spanish throughout" : "Charlie spoke Spanish and English on the same check";
       emit(room, "unknown", note, { step: "language", spanishLines: spokeEs, englishLines: spokeEn });
     }
-    if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; } if (heldQuestion) { try { relayLine?.(room, "Agent", heldQuestion); } catch { /* best effort */ } heldQuestion = null; } try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (holdCapTimer) { clearTimeout(holdCapTimer); holdCapTimer = null; } if (handoverTimer) { clearTimeout(handoverTimer); handoverTimer = null; } if (eleven) eleven.close(); /* the context is NOT deleted here: Twilio can reconnect a blipped stream mid-call, and the fresh socket must still find it. The 30-minute leak guard owns cleanup. */ });
+    if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; } if (heldQuestion) { try { relayLine?.(room, "Agent", heldQuestion); } catch { /* best effort */ } heldQuestion = null; } try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (holdCapTimer) { clearTimeout(holdCapTimer); holdCapTimer = null; } if (ringWaitTimer) { clearTimeout(ringWaitTimer); ringWaitTimer = null; } if (handoverTimer) { clearTimeout(handoverTimer); handoverTimer = null; } if (eleven) eleven.close(); /* the context is NOT deleted here: Twilio can reconnect a blipped stream mid-call, and the fresh socket must still find it. The 30-minute leak guard owns cleanup. */ });
 }

@@ -33,9 +33,11 @@ export interface CallTuning {
   clipBackstopMs: number;
   // ---- calling straight back after a broken call ----
   reconnectWindowMin: number;
-  // ---- THE OWNER'S OWN THREE, tuned from Admin against real checks ----
+  // ---- THE OWNER'S OWN NUMBERS, tuned from Admin against real checks ----
   charlieWrapUpSeconds: number;
   holdCapSeconds: number;
+  ringWaitSeconds: number;
+  maxCheckSeconds: number;
 }
 
 /** The defaults, and WHY each one is that number. Anything here can be overridden from Admin with
@@ -60,6 +62,8 @@ export const TUNING_DEFAULTS: CallTuning = {
   reconnectWindowMin: 2,
   charlieWrapUpSeconds: 45,
   holdCapSeconds: 120,
+  ringWaitSeconds: 90,
+  maxCheckSeconds: 240,
 };
 
 /** Plain-English reason for each, shown next to the value in Admin. Never a code identifier. */
@@ -83,6 +87,8 @@ export const TUNING_WHY: Record<keyof CallTuning, string> = {
   reconnectWindowMin: "How long \"I just got disconnected\" still sounds true. Past this it is likely a different employee and a stranger saying it is worse than a normal greeting.",
   charlieWrapUpSeconds: "How long Charlie may actually be TALKING before he starts wrapping up. It never hangs the check up: cutting Staff off mid help kills a check the customer already paid for. He costs 11 cents a minute, so this is the one number that decides whether a check makes money.",
   holdCapSeconds: "How long a hold may run before we hang up. Waiting is nearly free because Charlie is dropped, and a second check costs more than waiting, so be generous.",
+  ringWaitSeconds: "How long the phone may ring while we wait for a human. We never hang up on a count of rings (owner 08-03): a store that lets it ring twenty times may still pick up, and the only thing worth measuring is how long we have been waiting. Charlie is off the whole time, so this is the phone line only.",
+  maxCheckSeconds: "How long a whole check may run before the phone company ends it for us. A backstop, not the everyday rule: what a check costs is decided by how long Charlie talks, and he costs 60 times what the line does.",
 };
 
 /** Bounds, so a typo in Admin can never produce a call that hangs or a gate that never fires. */
@@ -97,6 +103,8 @@ const LIMITS: Record<keyof CallTuning, [number, number]> = {
   reconnectWindowMin: [1, 120],
   charlieWrapUpSeconds: [5, 600],
   holdCapSeconds: [10, 900],
+  ringWaitSeconds: [10, 600],
+  maxCheckSeconds: [30, 900],
 };
 
 /** What this call should use. Admin overrides win where they are sane; anything out of bounds or
