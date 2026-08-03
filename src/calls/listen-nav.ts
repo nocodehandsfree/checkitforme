@@ -603,6 +603,19 @@ export class ConversationEar {
   }
 
   /**
+   * WHAT WE HEARD BEFORE THIS EAR EXISTED. Charlie opens on a greeting followed by a real pause, so
+   * by the time the ear is attached Staff have already said hello AND already stopped — the ear
+   * itself never hears them. Left alone it answers "nobody left, because nobody was ever here", and
+   * Staff who say "Fun store" and immediately walk off would be billed for in silence with no hold
+   * ever declared. The greeting the person test measured is handed over here instead.
+   * Only the talking is carried, never the pause: that pause is Staff waiting for our question, not
+   * Staff walking away, so the wait for somebody to leave starts fresh from the moment he joins.
+   */
+  heardAlready(voiceMs: number): void {
+    if (voiceMs > 0) this.heardVoiceMs += voiceMs;
+  }
+
+  /**
    * NO AUDIO IS ARRIVING AT ALL. Called by whoever owns the socket, not by feed(), because that is
    * the whole point: a line that has genuinely gone away stops sending frames, so the ear is never
    * asked anything again and cannot notice on its own. Silence and absence are different facts.

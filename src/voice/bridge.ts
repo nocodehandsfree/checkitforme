@@ -11,7 +11,7 @@ import { config } from "../config";
 import { emit, amend, markNow, addMs, linkProviderCall, openSegment, closeSegment, startMeter, recordLine, normSaid, getReceipt } from "../calls/events";
 // The Ear that stays on the call while a person is talking to us. Pure and dependency-free on
 // purpose, so every threshold in it is provable without a phone call.
-import { ConversationEar, type HoldReason } from "../calls/listen-nav";
+import { ConversationEar, looksLikeAPerson, type HoldReason } from "../calls/listen-nav";
 import { TUNING_DEFAULTS, type CallTuning } from "../calls/tuning";
 // Delta's opening question: our own line, our own voice, already in phone format and already paid
 // for. The bridge only PLAYS it — synthesis and caching live outside the call path (clip-cache.ts).
@@ -333,6 +333,25 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   // deterministic "nobody is coming" once enough rings go unanswered.
   let inRing = false;         // currently inside a ring burst
   let ringCount = 0;          // completed ring bursts on the transferred leg
+  // ---- THE PERSON TEST (round 1, item 1.1) ----------------------------------------------------
+  // A RECORDING MUST NEVER GET A CHARLIE. What used to open him was crude — about half a second of
+  // anything that sounds like a voice — and a recorded greeting is exactly that, so an unmapped store
+  // that answers with a recording (Franklin's Ace Hardware, after hours, on the direct path) got a
+  // billed Charlie talking to a machine until the give-up rule fired. Thousands of first-ever checks
+  // run against stores we have never heard, so this is not an edge case.
+  //
+  // The test we already trust is `looksLikeAPerson` in listen-nav, and this is the same function, not
+  // a second opinion: a greeting that runs under about three and a half seconds of actual talking and
+  // is then followed by a real pause is a person. A recording talks longer than that and never stops
+  // for you. Nothing is said while we decide, so it cannot trip a store's menu.
+  //
+  // The talking time accumulates across the WHOLE time the store has been speaking to us — a breath
+  // mid greeting must never restart it, or a recording that pauses for breath would read as a fresh
+  // short greeting every time and open Charlie on the long silence at the end of a voicemail, which
+  // is the one case this exists to stop.
+  let storeTalkMs = 0;        // ms of actual talking since the store started speaking to us
+  let storeQuietMs = 0;       // unbroken quiet since they stopped
+  let storeSpeaking = false;  // a real voice (not a tone) has been heard on this leg
   let firstRingAtMs = 0;      // when the desk started ringing (for the log step)
   const RINGS_UNANSWERED = 6; // ~36s of a US 2s-on/4s-off cadence → nobody is coming
   const startMs = Date.now();
@@ -1070,6 +1089,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           else emit(room, "hangup", "The line dropped from the far end", { reason: "carrier_gone" });
         },
       }, tune);
+      // THE GREETING WE ALREADY HEARD IS THEIRS. The ear is attached after the person test, which by
+      // then has heard the whole hello and the pause after it — so without this it is an ear that has
+      // never heard anybody, and Staff who say "Fun store" and walk straight off would never be
+      // recorded as away and Charlie would bill through it.
+      convEar.heardAlready(storeTalkMs);
     }
     else emit(room, "unknown", `Charlie was let on without hearing Staff (${reason})`, { reason });
     log(`connect-on-human: connecting (${reason}) after ${Math.round((humanAtMs - startMs) / 1000)}s nav`);
@@ -1083,10 +1107,28 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // the greeting (owner, live Fun call 07-28: "he rushed in"). A greeting is short and ends in a
       // pause, so we wait for that pause. The watcher on the inbound frames starts the clip, and
       // warms the agent up behind it exactly as before.
-      pendingClip = clip; waitQuietMs = 0; waitTotalMs = 0;
+      // THE PAUSE WE ALREADY HEARD COUNTS. The question waits for the end of the greeting, and the
+      // person test above has just spent two and a half seconds proving that greeting ended. Starting
+      // that wait again from zero buys another half second of silence on every single check, for
+      // nothing — they stopped talking a while ago. Carry what we measured.
+      pendingClip = clip; waitQuietMs = storeQuietMs; waitTotalMs = storeQuietMs;
       connecting = true;   // buffer from here, so nothing they say in the gap is lost
       // …and everything from BEFORE here too: their hello started before we were sure of them.
-      if (preRoll.length) { pending.unshift(...preRoll); log(`delta: keeping the ${preRoll.length} frame(s) of hello we heard before we were sure`); preRoll.length = 0; }
+      if (preRoll.length) {
+        // KEEP THE HELLO, NOT THE WAIT AFTER IT. The person test spends about two and a half seconds
+        // of silence making sure somebody is there, and every one of those frames would otherwise be
+        // handed to Charlie ahead of the real audio and paced out at speaking speed — two and a half
+        // seconds of nothing, in front of everything he is waiting to hear. The pause at the end of
+        // their sentence still goes: that is what tells the transcriber the greeting finished.
+        let keep = preRoll.length;
+        const tail = Math.max(1, Math.round(GREETING_END_MS / FRAME_MS));
+        while (keep > 0 && frameEnergy(preRoll[keep - 1]) <= VOICE_THRESH) keep--;
+        keep = Math.min(preRoll.length, keep + tail);
+        const held = preRoll.slice(0, keep);
+        pending.unshift(...held);
+        log(`delta: keeping the ${held.length} frame(s) of hello we heard before we were sure (${preRoll.length - held.length} of our own waiting dropped)`);
+        preRoll.length = 0;
+      }
       // HIS EARS OPEN NOW, NOT TWO SECONDS BEFORE THE QUESTION ENDS (owner's checks, 08-01).
       //
       // He used to be warmed up late and handed the whole greeting in one go when the question
@@ -1161,9 +1203,26 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
             }
           }
           if (!toneLogged) { toneLogged = true; log(`ear: steady tone (ringback/hold), NOT a human — staying deaf, Charlie not billed`); }
-        } else triggerConnect("human"); // modulated speech = a real person. A ring that STOPS and turns into a voice lands here.
+        } else {
+          // A REAL VOICE IS ON THE LINE — modulated speech, not the network. That is no longer enough
+          // to open Charlie on its own: it is the same thing a recording sounds like. All it does is
+          // start the clock on how long they have been talking; the person test below decides.
+          if (!storeSpeaking) { storeSpeaking = true; storeTalkMs += need * FRAME_MS; }
+          else storeTalkMs += FRAME_MS;
+          storeQuietMs = 0;
+        }
       }
     } else {
+      // THEY STOPPED. A person stops for you; a recording does not. Once the pause is long enough to
+      // be a real one, and what came before it was short enough to be a greeting rather than a read,
+      // somebody is there and Charlie may open.
+      if (storeSpeaking && !connecting) {
+        storeQuietMs += FRAME_MS;
+        if (looksLikeAPerson({ stepsFired: 0, promptCount: 1, lastPromptMs: storeTalkMs, quietMs: storeQuietMs }, tune)) {
+          log(`ear: person test passed — ${Math.round(storeTalkMs)}ms of talking then ${Math.round(storeQuietMs)}ms of quiet`);
+          triggerConnect("human");
+        }
+      }
       // Gap between bursts: a burst that just ended is one completed ring.
       if (inRing) { inRing = false; ringCount++; emit(room, "ringing", `Ring ${ringCount} went unanswered`, { leg: "desk", ring: ringCount, answered: false }); log(`ear: ring ${ringCount} went unanswered`); if (ringCount >= RINGS_UNANSWERED && !connecting && !humanWords) { noteWeEnded(room, "nobody_came"); emit(room, "hangup", `Nobody picked up after ${ringCount} rings, hung up before Charlie ever billed`, { reason: "nobody_came", ring: ringCount }); log(`give-up: ${ringCount} rings unanswered — nobody is coming, hanging up (Charlie never joined)`); try { twilio.close(); } catch { /* best effort */ } } }
       voiced = Math.max(0, voiced - leak); if (voiced === 0) { loudE.length = 0; loudT.length = 0; }

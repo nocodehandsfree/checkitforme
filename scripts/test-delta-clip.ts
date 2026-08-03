@@ -36,6 +36,11 @@ function ringFrames(ms: number): string[] {
 
 /** How many frames of quiet the bridge sends to end a turn — the same 800ms it uses. */
 const TURN_GAP = 40;
+/** THE PAUSE THAT PROVES A PERSON (round 1, item 1.1). Charlie no longer opens on the sound of a
+ *  voice, because that is what a recording sounds like too. He opens on a short greeting followed by
+ *  a real pause, so every scene where somebody says hello has to leave that pause — 140 frames is
+ *  2.8 seconds, comfortably past the 2.5 the owner can retune from Admin. */
+const PERSON_PAUSE = 140;
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -44,6 +49,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // μ-law: 0x00 decodes to a very loud sample, 0x7F to silence. That is all we need to make the ear
 // hear "someone is talking" or "the line is quiet".
 const LOUD = (n = 160, jitter = 0) => Buffer.alloc(n, 0x00).map((_, i) => (jitter && i % (3 + jitter) === 0 ? 0x10 : 0x00)) as Buffer;
+/** SPEECH, NOT A TONE. LOUD holds the same loudness on every frame, and over about a second of it the
+ *  ear rightly calls that a machine tone — a ringback holds a steady amplitude, speech swings hard
+ *  from syllable to syllable. Any scene that has to keep somebody TALKING for seconds (a recording
+ *  reading its announcement) needs that swing, or it is testing the ringback rule by accident. */
+const SPEECH = (i: number) => Buffer.alloc(160, [0x00, 0x22, 0x08, 0x34, 0x02, 0x18][i % 6]);
 const frame = (b: Buffer) => b.toString("base64");
 
 // ---- the fake voice provider -----------------------------------------------------------------
@@ -132,7 +142,7 @@ async function callToHello(f: Fake, clipMs: number, room: string) {
   // actually starts it — feeding only speech would hang here, which is the behaviour we want.
   // Comfortably past the "they have finished saying hello" pause, so the scene is not sitting on the
   // exact boundary of a number the owner can retune from Admin.
-  for (let i = 0; i < 70; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
+  for (let i = 0; i < PERSON_PAUSE; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
   return { tw, clipFrames: toMediaFrames(audio).length };
 }
 
@@ -313,6 +323,7 @@ console.log("\n▶ no joining agent configured: the call behaves exactly as it d
   tw.say({ event: "start", start: { streamSid: "MZ_off", customParameters: { room: "room-off" } } });
   await sleep(350);
   for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
   await sleep(150);
   ok(tw.outMedia().length === 0, "no clip played");
   ok(f.agentIdsAsked[0] === "agent_normal", "the normal agent opened");
@@ -338,7 +349,7 @@ async function callWithHold(f: Fake, room: string, holdStrategy: "gate" | "reope
   tw.say({ event: "start", start: { streamSid: "MZ_h", customParameters: { room } } });
   await sleep(350);
   for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
-  for (let i = 0; i < 70; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
+  for (let i = 0; i < PERSON_PAUSE; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
   await sleep(120);
   return tw;
 }
@@ -750,7 +761,7 @@ console.log("\n▶ Staff step away WHILE we are opening him: no session opens in
   tw.say({ event: "start", start: { streamSid: "MZ_r", customParameters: { room: "room-race-open" } } });
   await sleep(350);
   for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
-  for (let i = 0; i < 70; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
+  for (let i = 0; i < PERSON_PAUSE; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
   await sleep(120);
   ok(f.sockets.length === 0 && !!releaseHandshake, "he is mid-handshake: no session open yet");
   // …and NOW they walk off, before the address comes back.
@@ -829,7 +840,7 @@ console.log("\n▶ the greeting is kept whole, with the pauses that are inside i
   say(20); breathe(6); say(22); breathe(5); say(18);   // "Hi, · thank you for calling the Fun store, · this is Bob"
   const greetingFrames = spoken;
   // …then they stop, which is what starts our question.
-  for (let i = 0; i < 70; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  for (let i = 0; i < PERSON_PAUSE; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
   await sleep(200);
   ok(f.inits.length === 1, "the question played and the agent opened behind it");
   // The question finishes, and THEN they answer.
@@ -911,7 +922,7 @@ console.log("\n▶ held audio reaches him at the speed it was spoken, never in o
   const say = (n: number) => { for (let i = 0; i < n; i++) tw.media(frame(LOUD(160, i % 4))); };
   const breathe = (n: number) => { for (let i = 0; i < n; i++) tw.media(frame(Buffer.alloc(160, 0x7f))); };
   say(25); breathe(6); say(25);
-  breathe(70);                                   // they stop, so the question starts
+  breathe(PERSON_PAUSE);                                   // they stop, so the question starts
   await sleep(2200);                             // his session reports ready inside this, and the handover paces out
 
   ok(f.chunks.length >= 40, `he received the greeting (${f.chunks.length} frames)`);
@@ -929,6 +940,62 @@ console.log("\n▶ held audio reaches him at the speed it was spoken, never in o
 }
 
 // ================================================================================================
+// ================================================================================================
+// ROUND 1, ITEM 1.1 — A RECORDING MUST NEVER GET A CHARLIE.
+// Franklin's Ace Hardware answers after hours with a recording, on the direct path, on the very
+// first check we ever run against it. What used to open Charlie was the sound of a voice, and a
+// recording is a voice, so he opened and billed at 11p a minute until the give-up rule fired. The
+// difference a machine cannot fake: a person says a short hello and then STOPS FOR YOU. A recording
+// reads for as long as it likes and never stops.
+console.log("\n▶ a recording answers: it talks and talks, and Charlie is never opened");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  openReceipt("room-machine", { lane: "direct" });
+  setBridgeContext("room-machine", { agentId: "agent_normal", dynamicVars: {}, connectOnHuman: true });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "room-machine", () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_m", customParameters: { room: "room-machine" } } });
+  await sleep(350);
+  // Eight seconds of announcement, with the breaths a recorded greeting has between its sentences —
+  // the pauses are what used to make a machine look like a short greeting over and over.
+  for (let round = 0; round < 4; round++) {
+    for (let i = 0; i < 100; i++) tw.media(frame(SPEECH(i)));               // 2s of reading
+    for (let i = 0; i < 20; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));  // a 400ms breath
+  }
+  await sleep(200);
+  ok(f.sockets.length === 0, "eight seconds of a recording talking: no session opened, nothing billed");
+  // …and then it finishes and the line goes dead quiet, which is where a voicemail beeps and waits.
+  for (let i = 0; i < PERSON_PAUSE + 60; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(200);
+  ok(f.sockets.length === 0, "the silence AFTER a recording is not a person either — still no Charlie");
+  ok(tw.readyState === 1, "the check is still up: what to do about a machine is a separate rule");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ a person answers the same way: short hello, a real pause, and Charlie opens");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  openReceipt("room-person", { lane: "direct" });
+  setBridgeContext("room-person", { agentId: "agent_normal", dynamicVars: {}, connectOnHuman: true });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "room-person", () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_p", customParameters: { room: "room-person" } } });
+  await sleep(350);
+  for (let i = 0; i < 40; i++) tw.media(frame(SPEECH(i)));             // "Fun store, this is Bob"
+  await sleep(80);
+  ok(f.sockets.length === 0, "while they are still talking we stay off — we do not know yet");
+  for (let i = 0; i < PERSON_PAUSE; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(250);
+  ok(f.sockets.length === 1, "they stopped for us, so somebody is there and Charlie opens");
+  const ev = (getReceipt("room-person")?.events || []);
+  ok(ev.some((e) => e.kind === "human_detected"), "the log says Staff greeting, off the same moment");
+  restore(); tw.close(); f.close();
+}
+
 // ROUND 2, ITEM 1 — NOTHING BUT A REAL PERSON OPENS CHARLIE.
 // The owner's own check log, 08-01: "Charlie was let on without hearing Staff (hold-timeout)" at 63
 // seconds, nobody having spoken. A stopwatch called "Hold max seconds" sounded like a give-up and was
@@ -959,6 +1026,7 @@ console.log("\n▶ nobody ever speaks: no Charlie is EVER opened, however long w
   ok(tw.readyState === 1, "the check is still running: giving up is a separate rule, not this one's job");
   console.log("  …and the moment a real person DOES speak, he opens normally");
   for (let i = 0; i < 40; i++) tw.media(frame(LOUD(160, i % 4)));
+  for (let i = 0; i < PERSON_PAUSE; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
   await sleep(250);
   ok(f.sockets.length === 1, "a real voice opens him, which is the only thing that ever should");
   restore(); tw.close(); f.close();

@@ -169,6 +169,23 @@ console.log("▶ the clerk puts the phone down and walks off");
   ok(e.holdMs >= 6000 && e.holdMs <= 8000, `and the seconds are counted (${e.holdMs}ms) — holdSeconds has been null since the receipt shipped`);
 }
 
+console.log("▶ the greeting the ear never heard still counts as somebody being there");
+{
+  // Charlie now opens on a greeting followed by a real pause (round 1, item 1.1), so the ear is
+  // attached AFTER Staff said hello and after they stopped — it hears nothing but silence. An ear
+  // that has never heard anybody says nobody left, so Staff who say "Fun store" and walk straight
+  // off would be billed for in silence with no hold ever declared.
+  const cold = ear();
+  silence(cold.e, 8000);
+  ok(cold.said.length === 0, "an ear that never heard anybody declares nothing — that is the trap");
+  const { e, said } = ear();
+  e.heardAlready(800);           // the greeting the person test measured before this ear existed
+  silence(e, 7000);
+  ok(said[0] === "away:quiet", "handed the greeting we already heard, it knows they walked off");
+  talk(e, 1000);
+  ok(said[1]?.startsWith("back:"), "…and it still knows when they come back");
+}
+
 console.log("▶ hold music is not a person talking");
 {
   const { e, said } = ear();
