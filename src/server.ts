@@ -45,7 +45,7 @@ import { costCall, money } from "./calls/cost";
 import { behaved, agentLinesFrom } from "./calls/behaved";
 import { opsRollup, type CheckRow } from "./calls/ops";
 import { startMapper, stopMapper, mapperState, resumeMapperRuns } from "./calls/mapper";
-import { storeMetUnknownMenu, muteStore, unmuteStore, healOnce } from "./calls/healing";
+import { storeMetUnknownMenu, muteStore, unmuteStore, healOnce, onAutoCheckPaused, mutedReasons } from "./calls/healing";
 import { activeMap, resetChainHistory, freeChainDoors, graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, graphFor, learnFromReceipt, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
 import { recipeFromCall, evidenceFromCall, type CapturedStep } from "./calls/map-capture";
 import { startSweep, stopSweep, sweepStatus, buildQueue } from "./calls/sweep";
@@ -69,7 +69,7 @@ import { check as rlCheck, clientIp, LIMITS } from "./ratelimit";
 import { isGmailConfigured, gmailReceiptTick, debugRecentInbox } from "./gmail-receipts";
 import { rankBets } from "./best-bet";
 import { referralStatus, claimReferral } from "./referrals";
-import { sendAlert, sendAnonEmail, sendTestAlert, sendOwnerInStockEmail, sendConfirmEmail, checkEmailToken, alertSubscribe, myAlerts, alertMute, pauseAllAlerts, alertSlotsUsed, alertExists, ALERT_SLOT_CAP, getAlertTemplatesPublic, setAlertTemplates, monthKey, fanoutRestock } from "./alerts";
+import { sendAlert, sendAnonEmail, sendTestAlert, sendOwnerInStockEmail, sendConfirmEmail, checkEmailToken, alertSubscribe, myAlerts, alertMute, pauseAllAlerts, alertSlotsUsed, alertExists, ALERT_SLOT_CAP, getAlertTemplatesPublic, setAlertTemplates, monthKey, fanoutRestock, sendAutoCheckPausedEmail } from "./alerts";
 import { ownerAlertPrefs, notifyContact } from "./calls/notify";
 
 /** 409-style gate: returns a closed payload if we KNOW the store is closed right now, else null. */
@@ -165,6 +165,10 @@ installCheckLife();
 // verdict is ready at hang-up instead of being started then. Registered, not imported, because
 // calls/events.ts stays free of model/db code by design. See src/voice/live-read.ts.
 setLineHook(noteLiveLine);
+// A STORE PAUSED ITSELF, so somebody's standing auto check cannot run (owner 08-02, R3). Mapping
+// fires the moment and stops there; the email is ours. Registered here, not imported by healing, so
+// the mapping side stays free of email code. The one-per-pause rule lives in the sender.
+onAutoCheckPaused((m) => { void sendAutoCheckPausedEmail(m.finderUserId, m.retailerId, m.storeName); });
 // …and every finished call also teaches the map (owner 07-27: "one customer calling up Franklin's and
 // we had a voice menu — those aren't just lost"). Mapper READS the receipt the Ear already wrote; it
 // never opens a second listener. A check can flag a store, never rewrite a route: that still takes a
@@ -4000,6 +4004,9 @@ app.post("/app/check-live", async (c) => {
 
 // ============ Manage Zones (consumer, premium `zone_sweeps`) — spec docs/archive/manage-zones-SHIPPED.md ============
 const zoneRunSids = new Map<string, { room: string; retailerId: number }[]>(); // runId -> per-store bridge rooms (in-memory, for Stop all / stop one)
+// runId -> the stores we did NOT dial because they had taken themselves off the site, so the report
+// can say so instead of leaving a silent hole where that store should be (owner 08-02, R3).
+const zoneRunSkipped = new Map<string, { retailerId: number; name: string }[]>();
 async function zoneHangRoom(room: string): Promise<void> {
   // Customer pressed Stop (all / one) — stamp statusKey user_cancelled so the verdict reads
   // "Check cancelled / You stopped this check from happening." status stays admin_hangup: every
@@ -4118,8 +4125,14 @@ app.post("/app/zones/:id/check", async (c) => {
   // Skip stores we KNOW are closed right now — a closed store can't be reached, so don't burn the
   // check on it (owner 07-11: "STORE XYZ is closed but we can still call STORE ABC"). Unknown hours
   // still get called. The confirm sheet already warned the user which ones we're skipping.
+  // A STORE THAT TOOK ITSELF OFF THE SITE IS SKIPPED, AND THE SKIP SAYS SO (owner 08-02, R3).
+  // Same shape as the closed-store skip above. Without this the dial threw store_muted and the
+  // store just vanished from the report with no row and no explanation.
+  const paused = await mutedReasons(allRows.map((r) => r.id));
+  const skipped: Array<{ retailerId: number; name: string }> = [];
   const rows = [];
   for (const r of allRows) {
+    if (paused.has(r.id)) { skipped.push({ retailerId: r.id, name: r.name }); continue; }
     const os = openState(r.hours, r.timezone);
     if (os.known && !os.open) continue;
     rows.push(r);
@@ -4141,7 +4154,8 @@ app.post("/app/zones/:id/check", async (c) => {
     } catch (e) { console.error("zone check failed", s.id, e); placed.push({ retailerId: s.id, cid: null }); }
   }
   zoneRunSids.set(runId, rooms); setTimeout(() => zoneRunSids.delete(runId), 30 * 60 * 1000);
-  return c.json({ runId, stores: placed });
+  if (skipped.length) { zoneRunSkipped.set(runId, skipped); setTimeout(() => zoneRunSkipped.delete(runId), 30 * 60 * 1000); }
+  return c.json({ runId, stores: placed, skipped });
 });
 app.get("/app/zones/run/:runId", async (c) => {
   const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
@@ -4161,7 +4175,7 @@ app.get("/app/zones/run/:runId", async (c) => {
     noAnswer: results.filter((r) => r.statusKey === "nobody_answered" || r.status === "no_answer").length,
     checking: results.filter((r) => live(r.status)).length,
   };
-  return c.json({ done: results.filter((r) => !live(r.status)).length, total: results.length, summary, results });
+  return c.json({ done: results.filter((r) => !live(r.status)).length, total: results.length, summary, results, skipped: zoneRunSkipped.get(c.req.param("runId")) || [] });
 });
 app.post("/app/zones/run/:runId/stop", async (c) => {
   const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);

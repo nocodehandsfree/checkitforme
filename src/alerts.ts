@@ -19,10 +19,10 @@ import { config } from "./config";
 // "welcome" is dead (owner 2026-07-15): there is no email-only signup — everyone signs up by phone,
 // email is optional and added later. What replaced it: "confirm_email", sent when someone adds an
 // email address; no alert email goes out until they tap confirm.
-export type AlertEvent = "restock" | "store_added" | "waitlist" | "confirm_email" | "auto_check";
+export type AlertEvent = "restock" | "store_added" | "waitlist" | "confirm_email" | "auto_check" | "auto_check_paused";
 export type Channel = "sms" | "email";
 export type Lang = "en" | "es";
-export const EVENT_CHANNEL: Record<AlertEvent, Channel> = { restock: "sms", store_added: "email", waitlist: "email", confirm_email: "email", auto_check: "sms" };
+export const EVENT_CHANNEL: Record<AlertEvent, Channel> = { restock: "sms", store_added: "email", waitlist: "email", confirm_email: "email", auto_check: "sms", auto_check_paused: "email" };
 /** A recipient's language: 'es' only when their account is explicitly Spanish, else English. */
 export function accountLang(a: { language?: string | null } | null | undefined): Lang { return a?.language === "es" ? "es" : "en"; }
 /** {result} is built from the English statuses registry — translate it for a Spanish send. */
@@ -61,6 +61,12 @@ export const DEFAULT_TEMPLATES: Record<AlertEvent, AlertTemplate> = {
     emailSubject: "Auto check: {result}.",
     emailBody: "We called **{store}** about **{product}**. Here's what they said.",
   },
+  // The store took itself off the site and we cannot reach it, so a standing auto check cannot run.
+  // The owner's own wording (08-02): say it plainly, say nothing is owed, say it comes back.
+  auto_check_paused: {
+    emailSubject: "Your auto check for {store} is paused.",
+    emailBody: "We ran into a problem reaching **{store}**, so your auto check is paused for now. Nothing for you to do. It starts again by itself once we sort it out.",
+  },
 };
 // Spanish. Starts from EN defaults, so any field left off falls back to English (never a blank send).
 export const ES_TEMPLATES: Record<AlertEvent, AlertTemplate> = {
@@ -85,6 +91,10 @@ export const ES_TEMPLATES: Record<AlertEvent, AlertTemplate> = {
     sms: "Tu check automático llamó a {store}. {result}. Míralo en checkitforme.com",
     emailSubject: "Check automático: {result}.",
     emailBody: "Llamamos a **{store}** por **{product}**. Esto es lo que dijeron.",
+  },
+  auto_check_paused: {
+    emailSubject: "Tu check automático de {store} está en pausa.",
+    emailBody: "Tuvimos un problema para comunicarnos con **{store}**, así que tu check automático está en pausa. No tienes que hacer nada. Vuelve solo en cuanto lo resolvamos.",
   },
 };
 
@@ -215,6 +225,13 @@ const EMAIL_DESIGN_EN: Record<EmailKind, EmailDesign> = {
     body: ["A call just confirmed **{product}** is on the shelf at **{store}**.", "{dayline}"],
     cta: "", url: "https://checkitforme.com",
   },
+  // A store paused itself and a standing auto check cannot run (owner 08-02). Amber, not red: nothing
+  // is wrong on the customer's side and nothing is owed. No button, because there is nothing to do.
+  auto_check_paused: {
+    kicker: "AUTO CHECK PAUSED", kickerColor: "#F59E0B", headline: "Your auto check is paused.",
+    body: ["We ran into a problem reaching **{store}**, so your auto check is paused for now.", "Nothing for you to do. It starts again by itself once we sort it out."],
+    cta: "", url: "https://checkitforme.com",
+  },
 };
 const EMAIL_DESIGN_ES: Record<EmailKind, EmailDesign> = {
   store_added: {
@@ -243,6 +260,11 @@ const EMAIL_DESIGN_ES: Record<EmailKind, EmailDesign> = {
     cta: "Ver la llamada", url: "https://checkitforme.com",
   },
   instock_owner: EMAIL_DESIGN_EN.instock_owner, // internal → owner reads English
+  auto_check_paused: {
+    kicker: "CHECK AUTOMÁTICO EN PAUSA", kickerColor: "#F59E0B", headline: "Tu check automático está en pausa.",
+    body: ["Tuvimos un problema para comunicarnos con **{store}**, así que tu check automático está en pausa.", "No tienes que hacer nada. Vuelve solo en cuanto lo resolvamos."],
+    cta: "", url: "https://checkitforme.com",
+  },
 };
 const EMAIL_DESIGN: Record<Lang, Record<EmailKind, EmailDesign>> = { en: EMAIL_DESIGN_EN, es: EMAIL_DESIGN_ES };
 const FONT = "Inter,'Segoe UI',Arial,sans-serif";
@@ -493,6 +515,39 @@ export async function sendRestockEmailTo(to: string, tokens: Record<string, stri
   const subject = fill(tpls.restock.emailSubject, tokens), body = fill(tpls.restock.emailBody, tokens);
   const res = await espEmail(to, subject, body, { templateId: tpls.restock.brevoTemplateId, params: strTokens(tokens), event: "restock", lang, bodyRaw: tpls.restock.emailBody });
   const status = res.ok ? "sent" : "stubbed"; await log(null, "restock", "email", to, status, [opts.tag, res.detail].filter(Boolean).join(" "));
+  return { status, detail: res.detail };
+}
+
+/** THE STORE TOOK ITSELF OFF THE SITE, so a standing auto check cannot run (owner 08-02, R3).
+ *  Same design and tone as the in-stock email. ONE PER PAUSE, never once per skipped run: a store can
+ *  sit paused for days and the customer must hear about it exactly once. The claim is the store's own
+ *  pause stamp, so when it pauses AGAIN later, that is a new pause and they are told again. */
+export async function sendAutoCheckPausedEmail(
+  userId: string, retailerId: number, store: string,
+): Promise<{ status: string; detail?: string }> {
+  const acct = (await db.select().from(accounts).where(eq(accounts.clerkUserId, userId)))[0];
+  const to = (acct?.email || "").trim();
+  if (!to || !to.includes("@")) { await log(userId, "auto_check_paused", "email", null, "skipped_nocontact"); return { status: "skipped_nocontact" }; }
+  if (!acct?.emailVerifiedAt) { await log(userId, "auto_check_paused", "email", to, "skipped_unverified"); return { status: "skipped_unverified" }; }
+  // One per pause. The identity of the pause is the STORE'S OWN pause stamp, never the time this
+  // fired: the moment fires on every scheduler tick while the store stays off, and using the fire
+  // time would mail the customer every tick. The ledger row IS the claim, so a restart cannot double.
+  const st = (await db.select({ mutedAt: retailers.mutedAt }).from(retailers).where(eq(retailers.id, retailerId)))[0];
+  const claim = `pause:${userId}:${retailerId}:${st?.mutedAt ?? 0}`;
+  const already = await db.select({ id: alertSends.id }).from(alertSends)
+    .where(and(eq(alertSends.event, "auto_check_paused"), eq(alertSends.detail, claim))).limit(1);
+  if (already.length) return { status: "already_told" };
+  await log(userId, "auto_check_paused", "email", to, "claimed", claim);
+  const lang = accountLang(acct);
+  const tpls = await getAlertTemplates(lang);
+  const tokens = { store };
+  const subject = fill(tpls.auto_check_paused.emailSubject, tokens), body = fill(tpls.auto_check_paused.emailBody, tokens);
+  const res = await espEmail(to, subject, body, {
+    templateId: tpls.auto_check_paused.brevoTemplateId, params: strTokens(tokens),
+    event: "auto_check_paused", lang, bodyRaw: tpls.auto_check_paused.emailBody,
+  });
+  const status = res.ok ? "sent" : "stubbed";
+  await log(userId, "auto_check_paused", "email", to, status, res.detail);
   return { status, detail: res.detail };
 }
 
