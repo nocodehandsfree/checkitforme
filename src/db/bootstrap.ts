@@ -33,7 +33,9 @@ async function seedStatuses() {
     ["failed", "⚠️", "Call failed", "unk", "#FBBF24", "The call didn't go through this time. No check = no charge."],
     // Admin ended the check from the dashboard. A NON-RESULT — excluded from every report/aggregate +
     // never billed; reads as "no data" (like a canceled check). Written by the master Stop & hang-up.
-    ["admin_hangup", "·", "Admin canceled", "unk", "#9CA3AF", "We ended this check. It doesn't count — no charge."],
+    // Owner 08-02: his words are "Admin hung up", and the duplicate display-only row he had been
+    // reading (key admin_hung_up, which nothing ever wrote) is deleted. Seed the wording he kept.
+    ["admin_hangup", "phone-missed", "Admin hung up", "unk", "#e22400", "We hung up on this check. No check. No charge."],
     // Customer pressed Stop (live view "Stop & hang up", zone "Stop all"/stop-one). Same non-result
     // semantics as admin_hangup (the row's STATUS is admin_hangup — only the display key differs).
     ["user_cancelled", "·", "Check cancelled", "unk", "#9CA3AF", "You stopped this check from happening."],
@@ -159,6 +161,10 @@ export async function bootstrap() {
   await client.execute("ALTER TABLE chains ADD COLUMN logo_url TEXT").catch(() => {});
   await client.execute("ALTER TABLE chains ADD COLUMN logo_wide INTEGER").catch(() => {});
   await client.execute("ALTER TABLE chains ADD COLUMN logo_dark INTEGER").catch(() => {});
+  // How wide to draw the logo, as a percent of whatever square tile holds it. Worked out ONCE from the
+  // artwork's own proportions at upload time (logoPctFor) and served on every store row, so no surface
+  // has to load the image and re-derive it. Null = the caller falls back to fit-inside.
+  await client.execute("ALTER TABLE chains ADD COLUMN logo_pct REAL").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN external_store_id TEXT").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN maps_uri TEXT").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN geocode_tried_at INTEGER").catch(() => {});
@@ -352,6 +358,16 @@ export async function bootstrap() {
   await client.execute("ALTER TABLE support_conversations ADD COLUMN source TEXT").catch(() => {});
   await client.execute("ALTER TABLE support_conversations ADD COLUMN page_url TEXT").catch(() => {});
   await client.execute("ALTER TABLE support_conversations ADD COLUMN check_id TEXT").catch(() => {});
+  // THE GATEKEEPER'S STATE (src/calls/check-life.ts, 08-01 audit): a live check's life in the
+  // database, so "is this check alive?" survives restarts and in-memory expiries. The carrier's
+  // line-end is the only end; call_events stays the history, this table is only the present tense.
+  await client.execute(`CREATE TABLE IF NOT EXISTS check_life (
+    room TEXT PRIMARY KEY, call_id INTEGER, provider_call_id TEXT,
+    dialed_at INTEGER NOT NULL, answered_at INTEGER, human_at INTEGER,
+    on_hold INTEGER NOT NULL DEFAULT 0, charlie_open INTEGER NOT NULL DEFAULT 0,
+    segments INTEGER NOT NULL DEFAULT 0, line_ended_at INTEGER, end_reason TEXT,
+    updated_at INTEGER NOT NULL)`);
+  await client.execute("CREATE INDEX IF NOT EXISTS check_life_provider_idx ON check_life(provider_call_id)").catch(() => {});
   // One-time: stock the anonymous free-check pool for launch (each visitor gets 1 free check).
   if (!(await getSetting("pub_credits_initialized"))) {
     await setSetting("pub_credits", "250");

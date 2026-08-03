@@ -8,8 +8,38 @@ small md here (what · done-when · system · status). Owner adds/reorders freel
 **Counts (swept 2026-07-23):** active 53 · parked 6 · dead 1 · total 60.
 Systems: site · admin · voice-calls · data · support (data carries the old ops/infra lane).
 
-## ⭐ NEXT UP — `mapper-handoff.md` (voice-calls). CVS is mapped and proven; four things the owner
-raised on 07-30 must be resolved before any chain is mapped, then Walgreens (chain 10) from nothing.
+## ⭐⭐ THE ORDER OF EVERYTHING (08-02): `THE-ORDER-2026-08-02.md` — six agents in flight, one queue,
+one merge at a time. READ IT FIRST. The law for Charlie: `docs/specs/charlie-behavior/README.md`.
+
+## ⭐ THE VOICE PM LANE (Echo · handoff 08-01 · one PM chat, this lane ONLY — mapping has its own PM)
+**Your first act: audit what Echo just built.** The law is `docs/team/voice-calls/check-life-audit-2026-08-01.md`
+(84 deciders, 20 flagged, the four faults, the gatekeeper cure) + `RULES.md` #11 (a fix covers the
+WHOLE family, one commit) and #12 (every prior run replays clean on the rig before the owner dials).
+His work: branch `claude/echo-voice-transcript-ordering-9oi0es`, NOT merged, waiting on the owner's
+"clear". He claims a gatekeeper (`src/calls/check-life.ts` + `check_life` table), all three families
+rewired, three faults fixed, 103 rig checks. **VERIFY, do not trust:** send blind readers per family —
+are ALL 20 flagged doors rewired through the gatekeeper (name each), do runs 222-226 replay clean,
+does anything still ask ElevenLabs whether a check is alive, and is the `direct:` lane exception he
+found sound? Report to the owner PASSED or FAILED per item, then the merge decision. History: three
+agents in a row said "done" with 80% missing — mapper twice, Echo once. **Ship nothing without the
+owner's "clear"; a push restarts staging and kills a live check.** Open after the merge: run 6 (his
+phone, the ladder's first pass) · the hold hang-up timer (owner wants one, number undecided) · ONE
+boxed Webbie string: the hold-drop "No charge" wording, EN + ES (owner ruled 08-01: a hold drop IS
+charged) · mapping timing removal touches live checks — coordinate with the mapping PM before it ships.
+
+## ⭐ THE MAPPING PM LANE (handoff 07-31 · the law: `docs/specs/mapping-admin/build-contract.md`,
+addendum R1-R6 OVERRIDES the body · the fix list: `audit-code-vs-contract.md` in the same folder)
+Mapping rebuild runs in THREE chunks, one fresh chat each: 1 engine (**FINISHED per the owner — the
+PM's FIRST act is auditing it, blind readers vs the contract, then tell the owner PASSED or FAILED
+per item so mapper starts round 2**) · 2 self-healing · 3 screens. Owner says "finished" → PM audits
+that chunk vs the contract BEFORE the next chunk's box goes out. Voice-agent boot gate: any voice
+task box lists the pre-reads (runtime spec §4 · RULES.md · checkpoint · listen-nav + bridge headers)
++ the team charter `handoff.md` (workflows · every Admin voice surface), and the agent must WRITE
+BACK the life of one check in ten lines before touching code. Owner tests ONCE at the end (fresh CVS, start to finish). In the chunk-1
+audit also re-prove run-resume on a live restart. After chunk 2, box Webbie ONE task: the zone-report
+skip sentence for muted stores (EN + ES; the site is frozen to everyone else). Echo likely needs the
+same spec-vs-build audit — wait for the owner's word. **PM ships NOTHING without the owner's "clear"
+while he is testing — every push restarts staging and kills a live check.**
 
 ## ⭐ Owner work streams (active — started this week)
 **Stream 1 — the five site fixes (SHIPPED to staging @4f6c4a6, PR #92; owner confirms on his phone,
@@ -26,6 +56,7 @@ then they ride the next promote to prod):**
 | Task | System | Status |
 |---|---|---|
 | [Call log transcript comes back cut off](call-log-transcript-cutoff.md) | voice-calls | active |
+| [Everything Staff says after a hold is missing](words-after-a-hold-are-lost.md) | voice-calls | active — found by the robot store 08-02, checks 246-251; a real yes was thrown away and one check told the customer the opposite of what Staff said. `node scripts/robot-check.mjs 5 6 8 9 10` proves the day it is fixed. |
 
 **Stream 3 — the ops dashboard:**
 | Task | System | Status |
@@ -39,7 +70,8 @@ then they ride the next promote to prod):**
 | [Chain section rebuild — GO](../specs/mapping-admin/plan.md) | voice-calls + admin | active (un-parked 07-29) |
 | [The Admin dashboard, continued (new Addie)](addie-dashboard-continue.md) | admin | **jobs 1+2 DONE 07-29** |
 | [Voice ▸ Testing becomes the new-engine scorecard](admin-testing-new-engine.md) | admin | **SHIPPED 07-30** (@5b1f325, driven). Admin live · **PM: promote wanted** for the server half |
-| [Check status page: the phone's own bars, then alerts](site-check-status-fixes.md) | site | rounds 1+2 **SHIPPED to staging 07-30** (PRs #100 #101: bottom clear on live AND wait screens, verdict at hang up; driven on staging by relay). His phone next. Alerts SECOND |
+| [Check status page: the phone's own bars, then alerts](site-check-status-fixes.md) | site | rounds 1+2 **SHIPPED to staging 07-30** (PRs #100 #101: bottom clear on live AND wait screens, verdict at hang up; driven on staging by relay). Alerts + the no-email root cause SHIPPED 07-31. His phone next |
+| [Go-live site audit: the fix list before customers](go-live-site-audit.md) | site | **findings gathered 07-31** (owner-ordered research, nothing built): short alerts sheet · slow radius reload · ES footer wrap · auto-check gaps · PROD alerts unproven · untried combos. Fixes wait for the owner's go |
 | [Check status page: loud retry + headline states](site-check-status-loud-retry.md) | site | active — headline states + step window SHIPPED 07-30 (@ec6e2d0, staging). Loud retry + the counter still unbuilt |
 | [Unify the Admin: gate FIRST, then page by page](admin-unify-pass.md) | admin | **step 1 (gate) + page 1 (Live/dash) DONE + LIVE 07-30, dash SEALED.** Next page = App (settings) |
 | [The wrong-department save (Echo)](echo-wrong-department-save.md) | voice-calls | BUILT + shipped to staging 07-30 · all four items done · only a real check with a human saying "this is the pharmacy" is left, and that needs his phone |
@@ -106,6 +138,7 @@ Live [dash](admin-cleanup-dash.md) · Users [users](admin-cleanup-users.md) · R
 ## Other active
 | Task | System | Status |
 |---|---|---|
+| [Admin: double-tap zoom regression — fix morning 08-02, after logo lands, BEFORE the Echo test day](admin-double-tap-zoom-regression.md) | admin | active — owner-timed |
 | [Pull 424 from staging ADMIN_PHONES before the real-card walk](staging-424-admin-phones.md) | data | active |
 | [Staging store-list overwrite mystery](staging-storelist-overwrite.md) | data | active |
 | [Settings mirror: verify prod export live](settings-mirror-verify.md) | data | active |

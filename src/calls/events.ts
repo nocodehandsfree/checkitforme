@@ -155,6 +155,15 @@ export function setEventSink(fn: Sink): void { sink = fn; }
 type LineHook = (room: string, who: "Agent" | "Clerk", text: string) => void;
 let lineHook: LineHook | null = null;
 export function setLineHook(fn: LineHook): void { lineHook = fn; }
+// THE CHECK'S LIFE, MIRRORED AS IT HAPPENS (the gatekeeper, src/calls/check-life.ts). Registered the
+// same way the sink and the line hook are, for the same reason: this module stays pure and testable
+// while the app wires the database behind it. The mirror receives the life-relevant moments — dialed,
+// connected, human found, hold started/ended, Charlie opened/closed, the line ending — so a restart
+// or an expired in-memory receipt can never flip "is this check alive?" back to the provider's guess.
+// Unset in tests; every call is a no-op then.
+type LifeHook = (room: string, kind: string, detail?: Record<string, unknown>) => void;
+let lifeHook: LifeHook | null = null;
+export function setLifeHook(fn: LifeHook): void { lifeHook = fn; }
 
 // ---- recording ------------------------------------------------------------------------------
 
@@ -202,6 +211,7 @@ export function emit(room: string, kind: EventKind, note?: string, detail?: Reco
     const atMs = Date.now() - r.startMs;
     r.events.push({ atMs, atSec: Math.round(atMs / 1000), kind, note, detail });
     if (r.events.length > 400) r.events.splice(0, r.events.length - 400); // runaway guard
+    try { lifeHook?.(room, kind, detail); } catch { /* the mirror must never break a call */ }
   } catch { /* recording must never break a call */ }
 }
 
@@ -243,19 +253,48 @@ export function amend(room: string, kind: EventKind, patch: Record<string, unkno
  * So each line is recorded HERE, live, in the order it happened, against the same clock as every
  * other event on this call. TEXT ONLY — no audio, ever, on any path.
  */
-export function recordLine(room: string, who: "Agent" | "Clerk", text: string): void {
+/**
+ * `spokenAtMs` — WHEN THEY SAID IT, when that is not when we heard about it. Staff's hello is spoken
+ * before our question and only becomes words later, after their held audio is handed to the agent and
+ * he transcribes it. Stamped on arrival it lands UNDER our own question, so the customer reads a
+ * conversation where we spoke first and the store answered a question it had not been asked yet
+ * (owner screenshot 07-31). Given a real time, the line is filed where it belongs instead of at the
+ * end. Everything else is unchanged: the clock is this call's own, and it is still text only.
+ */
+export function recordLine(room: string, who: "Agent" | "Clerk", text: string, spokenAtMs?: number): boolean {
   try {
     const r = receipts.get(room);
-    if (!r || r.closed) return;
+    if (!r || r.closed) return true; // no record to guard — the caller may still show the line
     const t = String(text || "").trim();
-    if (!t) return;
-    r.transcript.push({ atMs: Math.max(0, Date.now() - r.startMs), who, text: t.slice(0, 1000) });
+    if (!t) return false;
+    const at = Math.max(0, spokenAtMs ?? (Date.now() - r.startMs));
+    // THE SAME SENTENCE SAID ONCE IS RECORDED ONCE (08-01 audit, open fault 4). The question we
+    // played comes back from the agent's session styled differently, a reconnected session can
+    // replay a line, and two delivery paths can each hand over one sentence. Matching is FUZZY —
+    // casing and punctuation never survive transcription — and only against the last few lines
+    // within ten seconds, so a clerk genuinely repeating themselves later still shows. Returns
+    // whether the line was fresh, so a relay can skip exactly what the record skipped.
+    const key = `${who}:${normSaid(t)}`;
+    if (r.transcript.slice(-4).some((l) => Math.abs(l.atMs - at) < 10_000 && `${l.who}:${normSaid(l.text)}` === key)) return false;
+    const line = { atMs: at, who, text: t.slice(0, 1000) };
+    const last = r.transcript[r.transcript.length - 1];
+    if (last && last.atMs > at) {
+      // Out of order, so put it in its place. Insert BEFORE the first line said later than this one;
+      // ties keep the order they arrived in, which is what a real back-and-forth reads like.
+      const i = r.transcript.findIndex((l) => l.atMs > at);
+      r.transcript.splice(i < 0 ? r.transcript.length : i, 0, line);
+    } else r.transcript.push(line);
     if (r.transcript.length > 300) r.transcript.splice(0, r.transcript.length - 300); // runaway guard
     // READ AS IT GOES: hand the line to the reader now, while the check is still running, so the
     // verdict is ready the moment Charlie hangs up. Costs nothing on the line. See voice/live-read.ts.
     try { lineHook?.(room, who, t); } catch { /* the reader must never break a check */ }
-  } catch { /* recording must never break a call */ }
+    return true;
+  } catch { return true; /* recording must never break a call — and never silence a line over it */ }
 }
+
+/** Casing/punctuation-blind form of one said line — how the dedupe above compares. Exported so the
+ *  bridge's echo drop and any relay use the SAME rule and can never disagree about "the same line". */
+export const normSaid = (s: string): string => s.toLowerCase().replace(/[^a-z0-9à-ɏ]+/gi, " ").trim();
 
 /** The conversation as WE heard it, oldest first. */
 /** Did the STORE's side of this check say anything at all? Counting only — never a reading of what
@@ -273,6 +312,7 @@ export function transcriptOf(r: Receipt): string {
 export function linkCall(room: string, callId: number): void {
   const r = receipts.get(room);
   if (r && !r.closed) r.callId = callId;
+  try { lifeHook?.(room, "call_linked", { callId }); } catch { /* never on the call path */ }
 }
 
 /** Attach the provider's conversation id so a receipt can be checked against a bill. The FIRST one
@@ -283,6 +323,9 @@ export function linkProviderCall(room: string, providerCallId: string): void {
   if (!r.providerCallId) r.providerCallId = providerCallId;
   const open = r.segments.find((s) => s.closeMs === null);
   if (open && !open.providerCallId) open.providerCallId = providerCallId;
+  // The gatekeeper must be able to find this check by the provider's name for it AFTER a restart,
+  // which is exactly when the in-memory maps that know the answer are gone.
+  try { lifeHook?.(room, "provider_linked", { providerCallId }); } catch { /* never on the call path */ }
 }
 
 /**
@@ -362,6 +405,13 @@ export function startMeter(room: string, key: "holdMs"): void {
 }
 
 export function getReceipt(room: string): Receipt | null { return receipts.get(room) ?? null; }
+
+/* lineStillUp lived here. It was the guard BEFORE the gatekeeper, and it answered only from this
+ * process's memory — so a restart, or a receipt ageing out, made it say "the line is down" about a
+ * check that was still in somebody's hand. Every finalize now asks the gatekeeper instead
+ * (src/calls/check-life.ts), which answers from the database and survives both. Deleted rather than
+ * left beside its replacement: two functions answering the same question is how the wrong one gets
+ * called. */
 
 /** Close the receipt and hand it to the sink exactly once. */
 export function closeReceipt(room: string, note?: string, reason?: string): Receipt | null {

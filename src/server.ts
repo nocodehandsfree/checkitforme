@@ -18,6 +18,7 @@ import { submitTicket } from "./support/tickets";
 import { addQa, reindexBook, searchBook, getFaq } from "./support/rag";
 import { listCreditGrants } from "./support/credits";
 import { config } from "./config";
+import { createHash } from "node:crypto";
 import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
@@ -37,7 +38,7 @@ import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
 import { placeNavCall, navInitialTwiml, navStep, navEnded, navMediaFeed, getNavSession, latestNavSessionForChain, NAV_MODEL, confirmAskedStores, setMappingHandoff } from "./calls/navigator";
 import { listenNavFeed, endListenNav } from "./calls/listen-nav";
 // THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
-import { emit, markNow, closeReceipt, linkCall, rollup, rollupFromRow, getReceipt, transcriptOf, setLineHook, type Rollup } from "./calls/events";
+import { emit, markNow, closeReceipt, linkCall, rollup, rollupFromRow, getReceipt, transcriptOf, setLineHook, normSaid, type Rollup } from "./calls/events";
 import { installReceiptStore, currentRates, onReceiptClosed } from "./calls/receipt-store";
 import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
@@ -48,7 +49,8 @@ import { storeMetUnknownMenu, muteStore, unmuteStore, healOnce } from "./calls/h
 import { activeMap, resetChainHistory, freeChainDoors, graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, graphFor, learnFromReceipt, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
 import { recipeFromCall, evidenceFromCall, type CapturedStep } from "./calls/map-capture";
 import { startSweep, stopSweep, sweepStatus, buildQueue } from "./calls/sweep";
-import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay } from "./calls/tapedeck";
+import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay,
+  robotAnswer, robotStep, robotEnded, robotClip, ringbackWav, robotScene, robotLastRun, robotRunFor, parseRobotPick, ROBOT_SCENES, ROBOT_GREETINGS } from "./calls/tapedeck";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged, lockRecipeToChain } from "./calls/trainer-batch";
 import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, connectAtSecFor, chainDialable, chainNavPlan, type Recipe } from "./calls/recipe";
 import { llm, heli } from "./llm";
@@ -59,7 +61,7 @@ import { cachedCategories, cachedChains, cachedRetailers, categoryLabelMap, reta
 import { haversineMi, bboxAround } from "./geo";
 import { ingestSignals, recentStockNear, latestForRetailer } from "./stock/signals";
 import { classifyVerdict, reconcile, consensusFor, productDetailLabel } from "./voice/verdict";
-import { noteLiveLine, dropLiveRead } from "./voice/live-read";
+import { armLiveRead, noteLiveLine, dropLiveRead } from "./voice/live-read";
 import { seedStockCheckIntel } from "./stock/intel";
 import { seedSellMethods } from "./stock/sellmethods";
 import { r2Config, presignPut, photoKey } from "./r2";
@@ -148,12 +150,17 @@ import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPh
 import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
 import { settings as settingsTbl } from "./db/schema";
-import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, activeBridgeCalls } from "./voice/bridge";
+import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeRoomForConversation, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, activeBridgeCalls, weEndedCheck, noteWeEnded } from "./voice/bridge";
+import { installCheckLife, isCheckAlive, noteLineEnded, resolveRoom as lifeRoom } from "./calls/check-life";
 import { placeBridgeCall, attachListenFork, roomCallSids, roomCallProgress, roomFinalizers, RAILWAY_HOST, STAGING_HOST } from "./voice/bridge-place";
 import { isCallingPaused, setCallingPaused, spendTodayCents, withLock } from "./redis";
 
 assertProdSecurity(); // refuse to boot in prod with an open admin / forgeable sessions
 installReceiptStore(); // every finished call writes its timeline + seconds + cost to the database
+// THE GATEKEEPER (08-01 audit): every check's life mirrored to the database as it happens, so
+// "is this check alive?" is answerable after a restart and after every in-memory map has expired.
+// The carrier's line-end is the only end; every finalize path asks check-life, never the provider.
+installCheckLife();
 // READ AS IT GOES (owner 07-30): every line reaches the reader the moment it is spoken, so the
 // verdict is ready at hang-up instead of being started then. Registered, not imported, because
 // calls/events.ts stays free of model/db code by design. See src/voice/live-read.ts.
@@ -254,7 +261,7 @@ const peekOk = (peekQ?: string, peekCookie?: string): boolean =>
 // Paths that must stay live even while the coming-soon splash is up: assets (incl. the splash's own
 // logos), consumer + admin APIs, telephony webhooks, admin login. Everything else on a consumer host
 // is a page and gets the splash (unless the browser has a valid peek).
-const GATE_SKIP = /^\/(api|pub|app|auth|webhooks|logos|og|fonts|media|sw\.js|manifest|robots|favicon|\.well-known|twiml|nav|tapedeck|bridge|listen|twilio-media|admin-login|admin-logout|health|s)\b/; // `s` = the share landing: link-preview bots must see the unfurl cards even while the splash is up (owner 07-14)
+const GATE_SKIP = /^\/(api|pub|app|auth|webhooks|logos|og|fonts|media|sw\.js|manifest|robots|favicon|\.well-known|twiml|nav|tapedeck|robot|bridge|listen|twilio-media|admin-login|admin-logout|health|s)\b/; // `s` = the share landing: link-preview bots must see the unfurl cards even while the splash is up (owner 07-14)
 app.use("*", async (c, next) => {
   const code = c.req.query("peek");
   if (code && config.peekCode && code === config.peekCode) {
@@ -1157,6 +1164,81 @@ app.get("/tapedeck/clip", (c) => {
   if (!b) return c.body("not found", 404);
   return c.body(new Uint8Array(b), 200, { "Content-Type": "audio/mpeg" });
 });
+// THE ROBOT STORE'S OWN CEILING, held by the server so no test run can talk its way past it.
+// The owner's account is comp, and comp switches off every brake the check button has: the per-minute
+// limit, the credit check and the one-check-an-hour block all skip him. A harness with a loop in it
+// would dial forever on his bill. This counts what the robot store has actually taken in the last day
+// and refuses past the ceiling. It can only ever fire for the robot's own number — a real store's
+// check never reaches this code.
+const ROBOT_STORE_NUMBER = (process.env.ROBOT_STORE_NUMBER || "+14244847395").replace(/[^\d+]/g, "");
+const ROBOT_DAILY_CAP = Number(process.env.ROBOT_DAILY_CAP || 40);
+async function robotStoreOverCap(retailerId: number): Promise<{ error: string; message: string; checksToday: number } | null> {
+  const r = (await db.select({ phone: retailers.phone }).from(retailers).where(eq(retailers.id, retailerId)))[0];
+  if (!r || (r.phone || "").replace(/[^\d+]/g, "") !== ROBOT_STORE_NUMBER) return null;
+  const since = Math.floor(Date.now() / 1000) - 86400;
+  const n = (await db.select({ id: callResults.id }).from(callResults)
+    .where(and(eq(callResults.retailerId, retailerId), gte(callResults.startedAt, since)))).length;
+  if (n < ROBOT_DAILY_CAP) return null;
+  return { error: "robot_cap", message: `The robot store has taken ${n} checks in the last day, which is its ceiling (${ROBOT_DAILY_CAP}). Nothing more will be dialed.`, checksToday: n };
+}
+
+// ---- The robot store: the same tape deck, answering instead of dialing ----
+// Spec: docs/specs/robot-store/README.md. The number +1 424 484 7395 points its Voice URL at
+// /robot/answer, the MVP store points at that number, and a check dialed from the website reaches a
+// scripted person. Everything except that person is the real system. These routes are the carrier's,
+// not the dashboard's, so they sit outside /api like every other Twilio route here.
+// STAGING ONLY. These routes answer the phone and synthesize speech, and nobody signs in to reach
+// them — the carrier cannot carry a password. On the real site they would be a public way to spend
+// our voice credit, so a promote must never open them there. Off by default anywhere but staging.
+const robotStoreOn = () => config.staging.on || process.env.ROBOT_STORE_ON === "1";
+app.use("/robot/*", async (c, next) => (robotStoreOn() ? next() : c.body("not found", 404)));
+app.all("/robot/answer", async (c) => {
+  let sid = "", from = "";
+  try { const b = await c.req.parseBody(); sid = String(b.CallSid || ""); from = String(b.From || ""); } catch { /* GET probe */ }
+  if (!sid) sid = c.req.query("CallSid") || "";
+  return c.body(await robotAnswer(sid, from), 200, { "Content-Type": "text/xml" });
+});
+app.post("/robot/step", async (c) => {
+  let speech = "", sid = c.req.query("call") || "";
+  try { const b = await c.req.parseBody(); speech = String(b.SpeechResult || ""); if (!sid) sid = String(b.CallSid || ""); } catch { /* silent turn */ }
+  return c.body(robotStep(sid, speech), 200, { "Content-Type": "text/xml" });
+});
+app.post("/robot/ended", async (c) => {
+  let sid = c.req.query("call") || "";
+  try { const b = await c.req.parseBody(); if (!sid) sid = String(b.CallSid || ""); } catch { /* no body */ }
+  robotEnded(sid); return c.body("ok", 200);
+});
+app.get("/robot/clip", (c) => {
+  const b = robotClip(c.req.query("call") || "", Number(c.req.query("i") || 0));
+  if (!b) return c.body("not found", 404);
+  return c.body(new Uint8Array(b), 200, { "Content-Type": "audio/mpeg" });
+});
+app.get("/robot/ring", (c) => {
+  const secs = Math.max(1, Math.min(30, Number(c.req.query("secs") || 6)));
+  return c.body(new Uint8Array(ringbackWav(secs)), 200, { "Content-Type": "audio/wav" });
+});
+// The harness's two reads: which scene the next call plays, and exactly what the robot said on the
+// last one. The second is the ground truth the written transcript is compared against, word for word.
+app.get("/api/admin/robot-store", async (c) => {
+  if (!robotStoreOn()) return c.json({ error: "the robot store is staging only" }, 404);
+  const pick = parseRobotPick(await getSetting("robot_scenario"));
+  const sid = c.req.query("call");
+  return c.json({
+    pick, scenes: ROBOT_SCENES.map((s) => ({ n: s.n, name: s.name, expect: s.expect })),
+    greetings: ROBOT_GREETINGS,
+    run: sid ? robotRunFor(sid) : robotLastRun(),
+  });
+});
+app.post("/api/admin/robot-store", async (c) => {
+  if (!robotStoreOn()) return c.json({ error: "the robot store is staging only" }, 404);
+  const b = (await c.req.json().catch(() => ({}))) as { scenario?: number; greeting?: number };
+  const n = Number(b.scenario);
+  if (!robotScene(n)) return c.json({ error: "unknown scenario" }, 400);
+  const val = b.greeting == null ? String(n) : `${n}:${Number(b.greeting)}`;
+  await setSetting("robot_scenario", val);
+  return c.json({ ok: true, pick: parseRobotPick(val), scene: robotScene(n) });
+});
+
 app.post("/api/admin/tapedeck/call", async (c) => {
   const b = (await c.req.json().catch(() => ({}))) as { phone?: string; workflow?: string };
   return c.json(await tapedeckCall(String(b.phone || ""), b.workflow ? String(b.workflow) : undefined));
@@ -1201,7 +1283,6 @@ setMappingHandoff(async (s) => {
       agentId: config.voice.agentId,
       dynamicVars: v.dynamicVars,
       connectOnHuman: false,          // Staff are already talking — open Charlie right away
-      holdMaxSeconds: pol.bail.holdMaxSeconds,
       // NEVER RIDE A TRANSFER ON A MAPPING CHECK. Staff offering to put us through would land
       // Charlie at a desk we cannot name and cannot get back to on a customer's check, and mapping
       // would lock that as the way in. Wrong desk ends the check; mapping marks the choice we took
@@ -1238,7 +1319,6 @@ setDeltaBarge(async (s, _speech) => {
       agentId: config.voice.agentId,
       dynamicVars: v.dynamicVars,
       connectOnHuman: false, // the clerk is already on the line — open the agent right away
-      holdMaxSeconds: pol.bail.holdMaxSeconds,
       voiceId: v.voiceId || undefined,
       voiceTuning: v.voiceTuning || undefined,
       onConversationId: (convId) => {
@@ -1533,13 +1613,13 @@ function chainLogoFile(name: string | null | undefined): string | null {
 // filesystem, so a chain's logo travels to every environment and can't drift. Cached name→logo map,
 // refreshed on a timer + immediately after an upload/migration. Empty cache (cold start, or a chain
 // with no logo_url yet) simply falls through to the filesystem resolver — fully backward-compatible.
-let chainLogoDbCache = new Map<string, { url: string; wide: boolean; dark: boolean }>();
+let chainLogoDbCache = new Map<string, { url: string; wide: boolean; dark: boolean; pct: number | null }>();
 async function refreshChainLogoDb(): Promise<void> {
   try {
-    const rows = await db.select({ name: chains.name, logoUrl: chains.logoUrl, logoWide: chains.logoWide, logoDark: chains.logoDark })
+    const rows = await db.select({ name: chains.name, logoUrl: chains.logoUrl, logoWide: chains.logoWide, logoDark: chains.logoDark, logoPct: chains.logoPct })
       .from(chains).where(sql`${chains.logoUrl} is not null and ${chains.logoUrl} != ''`);
-    const m = new Map<string, { url: string; wide: boolean; dark: boolean }>();
-    for (const r of rows) if (r.logoUrl) m.set((r.name || "").toLowerCase(), { url: r.logoUrl, wide: r.logoWide === true, dark: r.logoDark === true });
+    const m = new Map<string, { url: string; wide: boolean; dark: boolean; pct: number | null }>();
+    for (const r of rows) if (r.logoUrl) m.set((r.name || "").toLowerCase(), { url: r.logoUrl, wide: r.logoWide === true, dark: r.logoDark === true, pct: typeof r.logoPct === "number" ? r.logoPct : null });
     chainLogoDbCache = m;
   } catch (e) { console.error("refreshChainLogoDb", e); }
 }
@@ -1551,16 +1631,56 @@ function ensureChainLogoDb(): void {
   chainLogoDbLoading = true;
   refreshChainLogoDb().finally(() => { chainLogoDbLoading = false; });
 }
-function chainLogoInfo(name: string | null | undefined): { url: string | null; wide: boolean; dark: boolean } {
+// ── THE LOGO SIZE RULE — ONE definition, server-side, for every surface ─────────────────────────
+// Every logo gets the SAME visual AREA in its tile, then clamps so nothing touches the edges.
+// Fitting a logo inside a square box instead sizes it by its longest side, so a wide wordmark
+// (Randalls is 5:1) matched the box's width and came out a few pixels tall next to a squarish mark.
+//
+// The answer is a single number: how wide to draw the logo as a PERCENT of its tile. Because the
+// tile is always square, that percent falls out of the artwork's proportions alone and is the same
+// on a 46px chain row, a 44px store row, a 36px settings panel and a 190px hero mark:
+//     w/S = min( sqrt(AREA * nw/nh),  MAXW,  MAXH * nw/nh )
+// No surface loads the image, none re-derives the rule, and the old cached-onload race is gone.
+const LOGO_AREA = 0.55;   // share of the tile the artwork's box should cover
+const LOGO_MAXW = 0.95;   // never wider than this share of the tile
+const LOGO_MAXH = 0.90;   // never taller than this share of the tile
+export function logoPctFor(nw: number, nh: number): number | null {
+  if (!(nw > 0) || !(nh > 0)) return null;
+  const r = nw / nh;
+  const pct = Math.min(Math.sqrt(LOGO_AREA * r), LOGO_MAXW, LOGO_MAXH * r) * 100;
+  return Math.round(pct * 100) / 100;
+}
+
+function chainLogoInfo(name: string | null | undefined): { url: string | null; wide: boolean; dark: boolean; pct: number | null } {
   if (name) {
     ensureChainLogoDb();
     const hit = chainLogoDbCache.get(name.toLowerCase()); // DB-first: shared-R2 URL travels across envs
     if (hit) return hit;
   }
   const f = chainLogoFile(name); // filesystem fallback (pre-migration, and unchained store names)
-  if (!f) return { url: null, wide: false, dark: false };
+  if (!f) return { url: null, wide: false, dark: false, pct: null };
   const m = logoMeta()[f] || { w: 0, d: 0 };
-  return { url: `/logos/chains/${f}?v=79`, wide: m.w === 1, dark: m.d === 1 };
+  return { url: `/logos/chains/${f}?v=79`, wide: m.w === 1, dark: m.d === 1, pct: null };
+}
+
+// The ONE way a store row gets its logo. Every list on every surface goes through this, so a store
+// can never resolve to a different logo depending on which screen you are looking at. It replaces
+// fifteen hand-written copies that each worked the chain out their own way (eight different ways).
+// Pass the chain name when the caller already knows it; otherwise the store's own name is used.
+function logoFields(chainName: string | null | undefined): {
+  logoUrl: string | null; logoWide: boolean; logoDark: boolean; logoPct: number | null;
+} {
+  const l = chainLogoInfo(chainName);
+  return { logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct };
+}
+function withLogo<T extends { name?: string | null }>(row: T, chainName?: string | null) {
+  return { ...row, ...logoFields(chainName || storeChainName(row.name)) };
+}
+// A store's name can carry its branch after a dash ("Acme — Reno"); the chain is the part before it.
+// This was written out inline at eight call sites with three different dash sets. Now it is one.
+function storeChainName(storeName: string | null | undefined): string | null {
+  if (!storeName) return null;
+  return storeName.split(/—|–| - /)[0].trim() || null;
 }
 
 // ---- Distributor-driven carries (data/distributors.json) ----
@@ -1641,30 +1761,28 @@ async function adminOk(c: any): Promise<boolean> {
 }
 app.get("/logo-wall", async (c) => {
   if (!(await adminOk(c))) return c.notFound(); // private: not a public page
-  const files = [...chainLogoFiles()].sort();
-  const meta = logoMeta();
-  // Pair each logo file to its chain's admin store-type (chains = the Admin source of truth).
-  const fileInfo = new Map<string, { type: string; name: string }>();
-  for (const ch of await cachedChains()) {
-    const f = chainLogoFile(ch.name);
-    if (f && !fileInfo.has(f)) fileInfo.set(f, { type: (ch.type || "").trim() || "Other", name: ch.name });
-  }
-  const pretty = (f: string) => f.replace(/\.(png|webp|svg)$/i, "").replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
-  const types = [...new Set(files.map((f) => fileInfo.get(f)?.type || "Other"))]
+  // THE RECORD OF TRUTH (owner 07-31). The wall used to list the copies of the artwork that ship inside
+  // the app and read their treatment flags out of _meta.json — a THIRD source that could be, and was,
+  // showing week-old artwork while the live site was correct. It now walks the chain rows and renders
+  // exactly what every store list renders: same address, same flags, same size. It cannot disagree.
+  const rows = (await cachedChains())
+    .map((ch) => ({ ch, l: chainLogoInfo(ch.name) }))
+    .filter((x) => !!x.l.url)
+    .sort((a, b) => a.ch.name.replace(/^_/, "").localeCompare(b.ch.name.replace(/^_/, "")));
+  const types = [...new Set(rows.map((x) => (x.ch.type || "").trim() || "Other"))]
     .sort((a, b) => (a === "Other" ? 1 : b === "Other" ? -1 : a.localeCompare(b)));
-  // Render treatments: every logo resolves to exactly one, from its _meta w/d flags (no entry → standard).
-  const treatKey = (m: { w: number; d: number }) => (m.w === 1 && m.d === 1 ? "both" : m.w === 1 ? "wide" : m.d === 1 ? "plate" : "std");
+  // Render treatments: every logo resolves to exactly one, from the chain row's own flags.
+  const treatKey = (wide: boolean, dark: boolean) => (wide && dark ? "both" : wide ? "wide" : dark ? "plate" : "std");
   const TREAT: Array<{ k: string; label: string }> = [
     { k: "std", label: "Standard" }, { k: "wide", label: "Wide" },
     { k: "plate", label: "Plated" }, { k: "both", label: "Wide + Plated" },
   ];
   const tCount: Record<string, number> = { std: 0, wide: 0, plate: 0, both: 0 };
-  for (const f of files) tCount[treatKey(meta[f] || { w: 0, d: 0 })]++;
-  const tile = (f: string) => {
-    const m = meta[f] || { w: 0, d: 0 };
-    const info = fileInfo.get(f);
-    const cls = (m.d === 1 ? " lite" : "") + (m.w === 1 ? " widelogo" : "");
-    return `<div class="cell" data-type="${esc(info?.type || "Other")}" data-treat="${treatKey(m)}"><div class="ic${cls}"><img src="/logos/chains/${f}?v=79" alt=""></div><div class="nm">${esc(info?.name || pretty(f))}</div></div>`;
+  for (const x of rows) tCount[treatKey(x.l.wide, x.l.dark)]++;
+  const tile = (x: { ch: { name: string; type: string | null }; l: { url: string | null; wide: boolean; dark: boolean; pct: number | null } }) => {
+    const cls = (x.l.dark ? " lite" : "") + (x.l.wide ? " widelogo" : "");
+    const style = x.l.pct != null ? ` style="width:${x.l.pct}%;height:auto;max-width:none;max-height:none"` : "";
+    return `<div class="cell" data-type="${esc((x.ch.type || "").trim() || "Other")}" data-treat="${treatKey(x.l.wide, x.l.dark)}"><div class="ic${cls}"><img src="${esc(x.l.url || "")}" alt=""${style}></div><div class="nm">${esc(x.ch.name)}</div></div>`;
   };
   // ── Pokémon set & era logos — same repo/logo-wall system as chains, but shown BIG (owner 2026-07-03:
   //    "take up the box, be the main attraction"): these are wordmark logos, not 52px store marks.
@@ -1714,9 +1832,9 @@ app.get("/logo-wall", async (c) => {
     .cell.hide{display:none}
     .nm{font-size:10px;color:#9a9aac;text-align:center;line-height:1.25;overflow-wrap:anywhere}
     /* —— EXACT copy of the consumer store-list tile (.ic) from checkit.html —— */
-    .ic{width:52px;height:52px;border-radius:15px;background:linear-gradient(145deg,#34343d,#23232b);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-    .ic img{width:40px;height:40px;object-fit:contain}
-    .ic.widelogo img{width:44px;height:auto;max-height:34px}
+    .ic{width:46px;height:46px;border-radius:12px;background:#1F1F25;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .ic img{max-width:78%;max-height:78%;width:auto;height:auto;object-fit:contain}/* fallback only: a real logo carries its own width inline */
+    .ic.widelogo img{max-width:92%;max-height:64%}
     .ic.lite{background:#f2f2f5;border-color:rgba(255,255,255,.28)}
     /* —— tabs: Store logos | Pokémon sets (separate areas on this private wall) —— */
     .tabs{display:flex;gap:8px;margin-bottom:16px}
@@ -1743,10 +1861,10 @@ app.get("/logo-wall", async (c) => {
     function pnorm(img){var box=img.parentElement;if(!box)return;var W=box.clientWidth,H=box.clientHeight;if(!W||!H){requestAnimationFrame(function(){pnorm(img);});return;}var nw=img.naturalWidth,nh=img.naturalHeight;if(!nw||!nh)return;var tA=0.40*W*H,mW=0.92*W,mH=0.74*H,sc=Math.sqrt(tA/(nw*nh));if(nw*sc>mW)sc=mW/nw;if(nh*sc>mH)sc=mH/nh;img.style.width=(100*nw*sc/W)+'%';}
   </script>
   <body>
-  <div class="tabs"><button class="tab on" data-area="storeArea">Store logos · ${files.length}</button><button class="tab" data-area="pokeArea">Pokémon sets · ${pokeSetCount}</button></div>
+  <div class="tabs"><button class="tab on" data-area="storeArea">Store logos · ${rows.length}</button><button class="tab" data-area="pokeArea">Pokémon sets · ${pokeSetCount}</button></div>
   <div id="storeArea">
-  <h2>Logo wall · ${files.length} marks</h2>
-  <div class="sub">Each mark exactly as the store list renders it — same 52px tile, plate &amp; wide handling from _meta.json.</div>
+  <h2>Logo wall · ${rows.length} marks</h2>
+  <div class="sub">Every chain that has a logo, drawn from the SAME address, flags and size the store list uses. If a mark looks wrong here it is wrong on the site.</div>
   <div class="bar">
     <label class="fld">Store type
       <select id="type"><option value="">All stores</option>${types.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("")}</select>
@@ -1759,7 +1877,7 @@ app.get("/logo-wall", async (c) => {
     </span>
     <span id="count"></span>
   </div>
-  <div class="grid" id="grid">${files.map(tile).join("")}</div>
+  <div class="grid" id="grid">${rows.map(tile).join("")}</div>
   </div>
   ${pokeSection}
   <script>
@@ -1939,12 +2057,37 @@ app.get("/logos/chains/:file", (c) => {
   } catch { return c.notFound(); }
 });
 // ---- Chain logo upload + migration (logo-r2-keystone spec, git history) ----
+// Read the artwork's own width and height straight out of the bytes — no image library. PNG carries
+// them in the IHDR chunk at a fixed offset; SVG in its width/height or viewBox. That is all the size
+// rule needs, and reading it here means it is worked out ONCE, at upload, never at serve time.
+function artworkSize(bytes: Uint8Array, ext: string): { w: number; h: number } | null {
+  if (ext === "png" && bytes.length > 24 && bytes[0] === 0x89 && bytes[1] === 0x50) {
+    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    return { w: dv.getUint32(16), h: dv.getUint32(20) };
+  }
+  if (ext === "svg") {
+    const head = new TextDecoder().decode(bytes.slice(0, 2048));
+    const vb = head.match(/viewBox\s*=\s*"([-\d.eE+\s]+)"/);
+    if (vb) { const p = vb[1].trim().split(/[\s,]+/).map(Number); if (p.length === 4 && p[2] > 0 && p[3] > 0) return { w: p[2], h: p[3] }; }
+    const w = head.match(/\swidth\s*=\s*"([\d.]+)/), h = head.match(/\sheight\s*=\s*"([\d.]+)/);
+    if (w && h && +w[1] > 0 && +h[1] > 0) return { w: +w[1], h: +h[1] };
+  }
+  return null; // webp and anything unreadable: the caller falls back to fit-inside
+}
 // Upload a chain's logo straight to shared R2 and point the chain row at it (logo_url). Server-side PUT
 // via a presigned URL — one request from the Admin. ?wide=1 / ?dark=1 set the render flags. After this
 // the logo travels to every environment through the DB row and can't drift.
+//
+// The stored name carries a FINGERPRINT of the bytes. A different picture is therefore a different
+// address, so a replacement appears everywhere the instant it lands: no version query to bump by hand,
+// nothing serving a week-old copy out of the delivery network's cache. The name no longer contains the
+// chain's own name either, so renaming a chain can never orphan its artwork.
 app.post("/api/chains/:id/logo", async (c) => {
   const cfg = r2Config();
   if (!cfg) return c.json({ error: "R2 not configured (R2_* env)" }, 503);
+  // Staging is the curation home: it pushes chain settings to prod, so a logo set on prod would sit on
+  // the losing side of a one-way copy and be silently reverted. Refuse it here rather than lose it.
+  if (!config.staging.on) return c.json({ error: "logos are set on staging; production receives them through the store-data copy" }, 409);
   const id = Number(c.req.param("id"));
   const ch = (await db.select().from(chains).where(eq(chains.id, id)))[0];
   if (!ch) return c.json({ error: "chain not found" }, 404);
@@ -1952,55 +2095,24 @@ app.post("/api/chains/:id/logo", async (c) => {
   if (bytes.byteLength < 64) return c.json({ error: "empty or tiny image body" }, 400);
   const ct = c.req.header("content-type") || "image/png";
   const ext = /webp/i.test(ct) ? "webp" : /svg/i.test(ct) ? "svg" : "png";
-  const key = `chain-logos/${chainSlug(ch.name)}.${ext}`;
+  // Named after the CONTENT alone. Two chains that share artwork share one stored copy, the chain's id
+  // (which differs between staging and production) never leaks into the address, and a rename is a
+  // non-event. Different picture = different name = it appears everywhere the moment it lands.
+  const key = `chain-logos/${createHash("sha1").update(bytes).digest("hex").slice(0, 16)}.${ext}`;
   const { uploadUrl, publicUrl } = await presignPut(key, cfg, ct);
   const put = await fetch(uploadUrl, { method: "PUT", body: bytes, headers: { "content-type": ct } });
   if (!put.ok) return c.json({ error: `R2 PUT failed: ${put.status}` }, 502);
   const wide = c.req.query("wide") === "1", dark = c.req.query("dark") === "1";
-  await db.update(chains).set({ logoUrl: publicUrl, logoWide: wide, logoDark: dark }).where(eq(chains.id, id));
+  const size = artworkSize(bytes, ext);
+  const pct = size ? logoPctFor(size.w, size.h) : null;
+  await db.update(chains).set({ logoUrl: publicUrl, logoWide: wide, logoDark: dark, logoPct: pct }).where(eq(chains.id, id));
   await refreshChainLogoDb();
-  return c.json({ id, name: ch.name, logoUrl: publicUrl, wide, dark });
+  return c.json({ id, name: ch.name, logoUrl: publicUrl, wide, dark, pct, artwork: size });
 });
 
-// One-time migration: push every chain's existing file logo to R2 (chain-logos/<file>) and set logo_url
-// on the row. Resolves each chain through the SAME fuzzy matcher the app uses, so franchise/variant
-// chains that borrow a shared file ("Franklin's Ace Hardware" → ace_hardware.png) all get pointed at it.
-// Dedupes uploads by filename. ?dryRun=1 returns the plan. Fire-and-forget + resumable (re-run is safe).
-let logoMigrating = false;
-app.post("/api/admin/migrate-logos-to-r2", async (c) => {
-  const cfg = r2Config();
-  if (!cfg) return c.json({ error: "R2 not configured (R2_* env)" }, 503);
-  const allChains = await db.select({ id: chains.id, name: chains.name }).from(chains);
-  const plan = allChains
-    .map((ch) => ({ id: ch.id, name: ch.name, file: chainLogoFile(ch.name) }))
-    .filter((p): p is { id: number; name: string; file: string } => !!p.file);
-  if (c.req.query("dryRun") === "1") {
-    return c.json({ dryRun: true, chains: plan.length, uniqueFiles: new Set(plan.map((p) => p.file)).size, sample: plan.slice(0, 8) });
-  }
-  if (logoMigrating) return c.json({ started: false, running: true, chains: plan.length });
-  logoMigrating = true;
-  (async () => {
-    const uploaded = new Set<string>();
-    for (const p of plan) {
-      try {
-        const key = `chain-logos/${p.file}`;
-        if (!uploaded.has(p.file)) {
-          const buf = readFileSync(join(here, `../public/logos/chains/${p.file}`));
-          const ct = p.file.endsWith(".webp") ? "image/webp" : p.file.endsWith(".svg") ? "image/svg+xml" : "image/png";
-          const { uploadUrl } = await presignPut(key, cfg, ct);
-          const put = await fetch(uploadUrl, { method: "PUT", body: new Uint8Array(buf), headers: { "content-type": ct } });
-          if (!put.ok) { console.error("logo migrate PUT", p.file, put.status); continue; }
-          uploaded.add(p.file);
-        }
-        const meta = logoMeta()[p.file] || { w: 0, d: 0 };
-        await db.update(chains).set({ logoUrl: `${cfg.publicBase}/${key}`, logoWide: meta.w === 1, logoDark: meta.d === 1 }).where(eq(chains.id, p.id));
-      } catch (e) { console.error("logo migrate", p.name, e); }
-    }
-    await refreshChainLogoDb();
-    logoMigrating = false;
-  })().catch(() => { logoMigrating = false; });
-  return c.json({ started: true, chains: plan.length, uniqueFiles: new Set(plan.map((p) => p.file)).size });
-});
+// The one-time migration that first pushed the file copies into shared storage is GONE (owner 07-31,
+// "no dead code"). Every chain has been on shared storage since; re-running it would have written the
+// OLD file-named copies back over the content-named ones and undone the whole scheme.
 
 app.get("/pub/stores", async (c) => {
   // 🔒 ADMIN-ONLY (data-exposure lockdown): this hands back the ENTIRE store table in one response.
@@ -2022,7 +2134,7 @@ app.get("/pub/stores", async (c) => {
     .filter((r) => !r.ownerOnly) // owner-only demo store ("Fun") never appears in the admin logo map
     .filter((r) => !(r.chainId && mutedChains.has(r.chainId)))
     .map((r) => ({ id: r.id, name: r.name, location: r.location, storeType: (r.chainId && types.get(r.chainId)) || "Other",
-      ...((l)=>({ logoUrl: l.url, logoWide: l.wide, logoDark: l.dark }))(chainLogoInfo((r.chainId && names.get(r.chainId)) || r.name.split(/—|–| - /)[0])),
+      ...logoFields((r.chainId && names.get(r.chainId)) || storeChainName(r.name)),
       carries: storeCarriesList((r.chainId && names.get(r.chainId)) || null, r.carries),
       lat: r.lat, lng: r.lng, region: r.region, state: r.state, shipmentDay: r.shipmentDay || null,
       sellsPacks: r.sellsPacks !== false, hasKiosk: r.hasKiosk === true })));
@@ -2168,9 +2280,9 @@ app.get("/pub/stores/near", async (c) => {
   // Per-store consumer shape — shared by the main list and the rural fallback so both emit identical rows.
   const shape = (r: typeof retailers.$inferSelect) => {
       const miles = hasLoc && r.lat != null && r.lng != null ? Math.round(haversineMi(lat, lng, r.lat, r.lng) * 10) / 10 : null;
-      const chainName = (r.chainId && names.get(r.chainId)) || r.name.split(/—|–| - /)[0];
+      const chainName = (r.chainId && names.get(r.chainId)) || storeChainName(r.name);
       return { id: r.id, chainId: r.chainId, name: r.name, location: r.location, address: r.address || null, storeType: (r.chainId && types.get(r.chainId)) || "Other",
-        ...((l) => ({ logoUrl: l.url, logoWide: l.wide, logoDark: l.dark }))(chainLogoInfo(chainName)),
+        ...logoFields(chainName),
         carries: storeCarriesList(chainName, r.carries),
         // shipmentDay is deliberately NOT sent to consumers: it's unverified (auto-learned, junk values
         // like "every single week" rendered as "drops eve"). It returns confidence-gated once a store
@@ -2268,10 +2380,10 @@ app.get("/pub/store/:id", async (c) => {
   const chain = r.chainId ? (await cachedChains()).find((x) => x.id === r.chainId) : undefined;
   if (chain?.muted === true) return c.json({ error: "not_found" }, 404);
   if (r.ownerOnly && !(await requesterIsComp(c.req.header("Authorization")))) return c.json({ error: "not_found" }, 404);
-  const chainName = chain?.name || r.name.split(/—|–| - /)[0];
+  const chainName = chain?.name || storeChainName(r.name);
   return c.json({ id: r.id, chainId: r.chainId, name: r.name, location: r.location, address: r.address || null,
     storeType: chain?.type || "Other",
-    ...((l) => ({ logoUrl: l.url, logoWide: l.wide, logoDark: l.dark }))(chainLogoInfo(chainName)),
+    ...logoFields(chainName),
     carries: storeCarriesList(chainName, r.carries),
     lat: r.lat, lng: r.lng, region: r.region, state: r.state, shipmentDay: r.shipmentDay || null,
     sellsPacks: r.sellsPacks !== false, hasKiosk: r.hasKiosk === true,
@@ -2998,6 +3110,15 @@ app.post("/api/admin/restore-calls-from-el", async (c) => {
       const cid = String(conv.conversation_id || "");
       const status = String(conv.status || "");
       if (!cid || existing.has(cid) || (status !== "done" && status !== "completed")) { skipped++; continue; }
+      // A LIVE CHECK MUST NEVER BE RESTORED OVER (08-01 audit, family 1). Mid-call the row still
+      // carries our own name for the check, not the provider's, so the conversation id is not in
+      // `existing` yet — and this inserted a finished duplicate row straight off the provider while
+      // the phone was up. A held Charlie's session reads "done" over there, which is how a restore
+      // running during a hold would double a check the customer is still watching.
+      if (bridgeRoomForConversation(cid) || (await isCheckAlive(cid))) { skipped++; continue; }
+      // …and re-check the database right before writing: a check that connected mid-restore has had
+      // its row repointed at this conversation since `existing` was built.
+      if ((await db.select({ id: callResults.id }).from(callResults).where(eq(callResults.providerCallId, cid)))[0]) { skipped++; existing.add(cid); continue; }
       const dr = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${cid}`, { headers: { "xi-api-key": key } });
       if (!dr.ok) { skipped++; continue; }
       const d = await dr.json() as { conversation_initiation_client_data?: { dynamic_variables?: Record<string, string> }; metadata?: { start_time_unix_secs?: number; call_duration_secs?: number } };
@@ -3395,6 +3516,7 @@ app.post("/pub/check", async (c) => {
   if (!retailerId || !categoryId) return c.json({ error: "retailerId and categoryId required" }, 400);
   if (config.staging.on && !config.callsEnabled) return c.json(simStartCall()); // preview: simulated call, no real dial
   const closed = await closedGate(Number(retailerId)); if (closed) return c.json(closed, 409);
+  const capped = await robotStoreOverCap(Number(retailerId)); if (capped) return c.json(capped, 429);
   try {
     // Cheap lane when flagged: same response contract — the bridge:<room> id polls /pub/result like any cid.
     const bridge = (await getPolicy()).flags.cheapBridgeAll;
@@ -3420,6 +3542,7 @@ app.post("/pub/check-live", async (c) => {
   if (!b.retailerId || !catIds.length) return c.json({ error: "retailerId and categoryId(s) required" }, 400);
   if (config.staging.on && !config.callsEnabled) return c.json({ room: simStartCall().providerCallId, wsHost: STAGING_HOST }); // preview: simulated live call
   const closed = await closedGate(Number(b.retailerId)); if (closed) return c.json(closed, 409);
+  const capped = await robotStoreOverCap(Number(b.retailerId)); if (capped) return c.json(capped, 429);
   // Governor ON + pool full → routeCheck queues (waiting-screen ticket); else places now (today's
   // shape). Governor OFF → straight through to placeLive, unchanged.
   const r = await routeCheck("live", placeLive, { retailerId: Number(b.retailerId), categoryId: catIds[0], categoryIds: catIds, specificProduct: b.specificProduct, kioskMode: b.kioskMode, live: true });
@@ -3467,6 +3590,10 @@ app.get("/pub/result/:cid", async (c) => {
     const s = tdSession(cid.slice(6));
     let row = (await db.select().from(callResults).where(eq(callResults.providerCallId, cid)))[0];
     if (!row && s?.check) row = (await db.select().from(callResults).where(eq(callResults.id, s.check.callId)))[0];
+    // THE D-LANE NEVER GOT THE RUN-1 FIX (08-01 audit, family 1): this branch answered from the row
+    // alone, so anything stamped early could hand out a verdict with the phone still in somebody's
+    // hand. Same gate as every other door now: no result while the line is up.
+    if (await isCheckAlive(cid)) return c.json({ status: "in_progress", transcript: row?.transcript ?? (s ? tdTranscript(s) : ""), summary: "" });
     if (row && row.status && row.status !== "in_progress" && row.status !== "dialing") {
       return c.json({
         status: row.status, confirmed: row.confirmed, statusKey: row.statusKey,
@@ -3477,6 +3604,25 @@ app.get("/pub/result/:cid", async (c) => {
       });
     }
     return c.json({ status: "in_progress", transcript: row?.transcript ?? (s ? tdTranscript(s) : ""), summary: "" });
+  }
+  // THE LINE IS STILL UP, SO THERE IS NO RESULT YET. Charlie's session ends every time he is dropped
+  // for a wait, and asking the provider about a finished session gets "done" — which this page reads
+  // as the check being over. It then settled a no-answer verdict and hung the phone up on Staff who
+  // were walking back with the answer (owner, live check 07-31). Our own record knows the difference:
+  // it stays open until the CARRIER ends the call. Same guard as /pub/live, on the other poll.
+  {
+    const liveRoom = bridgeRoomForConversation(cid);
+    const held = liveRoom ? getReceipt(liveRoom) : null;
+    if (held && !held.closed) return c.json({ status: "in_progress", transcript: transcriptOf(held), summary: "" });
+    // MEMORY IS NOT THE GUARD, THE GATEKEEPER IS (08-01 audit, family 1). After a restart, or once
+    // the in-memory receipt and the conversation-to-room map expire, the lookups above know nothing —
+    // and this door then finalized, CHARGED and alerted off the provider's word while the phone was
+    // still in somebody's hand. The database's answer outlives the process; the row's own transcript
+    // is our record of the conversation so far.
+    if (!held && (await isCheckAlive(cid))) {
+      const r0 = (await db.select().from(callResults).where(eq(callResults.providerCallId, cid)))[0];
+      return c.json({ status: "in_progress", transcript: r0?.transcript ?? "", summary: "" });
+    }
   }
   const o = await provider.getConversation(cid);
   // Prefer the FINALIZED row once it exists — it carries the consensus verdict (the reconciled
@@ -3585,9 +3731,34 @@ app.get("/pub/live/:cid", async (c) => {
     // provider exactly as before.
     const held = getReceipt(room);
     if (held) return c.json({ live: !held.closed, status: held.closed ? "done" : "in_progress", transcript: transcriptOf(held) });
+    // After a restart the in-memory receipt is gone but the check may be mid-call. The gatekeeper's
+    // database answer keeps the page truthful; the row's transcript is what we hold of the talk so far.
+    if (await isCheckAlive(room)) {
+      const r0 = (await db.select().from(callResults).where(eq(callResults.room, room)))[0];
+      return c.json({ live: true, status: "in_progress", transcript: r0?.transcript ?? "" });
+    }
     const convId = bridgeConversationId(room);
     if (convId) dcid = convId;
     else return c.json({ status: "in_progress", transcript: "", summary: "" });
+  }
+  // …AND THE SAME CHECK ASKED ABOUT BY CHARLIE'S SESSION ID. The page swaps to that id the moment his
+  // session exists, so guarding only our own name for the check protected the first few seconds and
+  // nothing after. His session ENDS on every hold, the page read that as the check being finished,
+  // settled a no-answer verdict and hung up the phone on Staff who were coming back with the answer.
+  {
+    const room = bridgeRoomForConversation(dcid);
+    const held = room ? getReceipt(room) : null;
+    if (held) return c.json({ live: !held.closed, status: held.closed ? "done" : "in_progress", transcript: transcriptOf(held) });
+    // …and the same question answered from the DATABASE when memory is gone (08-01 audit, family 1):
+    // the conversation-to-room map dies after ten minutes and dies with every restart, and this poll
+    // then fell through to the provider — whose "done" only means Charlie was dropped for a wait.
+    if (!held) {
+      const room2 = await lifeRoom(dcid);
+      if (room2 && !room2.startsWith("delta:") && (await isCheckAlive(room2))) {
+        const r0 = (await db.select().from(callResults).where(eq(callResults.room, room2)))[0];
+        return c.json({ live: true, status: "in_progress", transcript: r0?.transcript ?? "" });
+      }
+    }
   }
   if (dcid.startsWith("delta:")) {
     const s = tdSession(dcid.slice(6));
@@ -3608,11 +3779,22 @@ app.get("/pub/live/:cid", async (c) => {
           }
         } catch { /* keep the clip turns only */ }
       }
-      const done = elLive === null ? (s.status === "done" || s.status === "failed") : !elLive;
+      // OUR OWN SESSION IS THE AUTHORITY; the provider's status is only a tie-break when we hold
+      // nothing (08-01 audit, family 1). A Charlie closed for a hold reads as finished over there
+      // while the phone is still in somebody's hand — the provider used to OVERRIDE our session here.
+      const aliveOurs = await isCheckAlive(dcid);
+      const done = aliveOurs ? false : (elLive === null ? (s.status === "done" || s.status === "failed") : !elLive);
       return c.json({ live: !done, status: done ? "done" : "in_progress", transcript: [tdTranscript(s), tail].filter(Boolean).join("\n") });
     }
     const row = (await db.select().from(callResults).where(eq(callResults.providerCallId, dcid)))[0];
     return c.json({ live: false, status: row?.status || "done", transcript: row?.transcript || "" });
+  }
+  // THE LAST DOOR STILL ASKING THE PROVIDER (08-01 audit, family 1): this branch turned the raw
+  // session status into live:false with no look at our own record at all. The gatekeeper answers
+  // first; the provider's copy is only consulted for a check we genuinely hold nothing on.
+  if (await isCheckAlive(dcid)) {
+    const r0 = (await db.select().from(callResults).where(eq(callResults.providerCallId, dcid)))[0];
+    return c.json({ live: true, status: "in_progress", transcript: r0?.transcript ?? "" });
   }
   try {
     const r = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${dcid}`, { headers: { "xi-api-key": config.voice.apiKey } });
@@ -3626,7 +3808,25 @@ app.get("/pub/live/:cid", async (c) => {
 app.post("/pub/charge", async (c) => {
   const { cid } = await c.req.json();
   let bal = await pubCredits();
-  if (cid && !charged.has(cid) && bal > 0) { charged.add(cid); bal -= 1; await setSetting("pub_credits", String(bal)); }
+  // ONE CHECK IS CHARGED ONCE, ACROSS A RESTART (round 2, item 6). This remembered what it had
+  // already charged in memory only, so a deploy in the middle of somebody's visit let the same check
+  // take a second one off the free pool. Small money on the kiosk lane, but it is a CHARGE decided
+  // from something a restart wipes, which is the same shape of fault as the rest of this round. The
+  // record of what has been charged now lives beside the pool it draws from.
+  if (cid && bal > 0 && !charged.has(cid)) {
+    // ONE list, capped, rather than a key per check: the record has to survive a restart without
+    // growing a namespace nobody ever prunes. The newest few hundred is far more than the window in
+    // which a repeat could arrive, and the oldest simply fall off.
+    const key = String(cid).slice(0, 128);
+    const seen = String((await getSetting("pub_charged")) || "").split(",").filter(Boolean);
+    if (!seen.includes(key)) {
+      charged.add(cid);
+      seen.push(key);
+      await setSetting("pub_charged", seen.slice(-300).join(","));
+      bal -= 1;
+      await setSetting("pub_credits", String(bal));
+    } else charged.add(cid);   // charged before a restart — remember it again, take nothing
+  }
   return c.json({ balance: bal, charged: true });
 });
 // Human feedback on a call's verdict — what the answer ACTUALLY was, per the person who read the transcript.
@@ -3732,6 +3932,7 @@ app.post("/app/check", async (c) => {
   if (!retailerId || !categoryId) return c.json({ error: "retailerId and categoryId required" }, 400);
   if (config.staging.on && !config.callsEnabled) return c.json(simStartCall()); // preview: simulated call, no real dial
   const closed = await closedGate(Number(retailerId)); if (closed) return c.json(closed, 409);
+  const capped = await robotStoreOverCap(Number(retailerId)); if (capped) return c.json(capped, 429); // the robot store's daily ceiling — never fires for a real store
   const a = await getAccount(u.id, u.email);
   const comp = isCompAccount(a) || isComp(u.email || undefined);
   // Per-IP rate limit on the money surface (bypassed for comp/owner — they test call-by-call).
@@ -3772,6 +3973,7 @@ app.post("/app/check-live", async (c) => {
   if (!b.retailerId || !catIds.length) return c.json({ error: "retailerId and categoryId(s) required" }, 400);
   if (config.staging.on && !config.callsEnabled) return c.json({ room: simStartCall().providerCallId, wsHost: STAGING_HOST }); // preview: simulated live call
   const closed = await closedGate(Number(b.retailerId)); if (closed) return c.json(closed, 409);
+  const capped = await robotStoreOverCap(Number(b.retailerId)); if (capped) return c.json(capped, 429); // the robot store's daily ceiling — never fires for a real store
   const a = await getAccount(u.id, u.email);
   const comp = isCompAccount(a) || isComp(u.email || undefined);
   // Per-IP rate limit on the money surface (bypassed for comp/owner — they test call-by-call).
@@ -3808,6 +4010,7 @@ async function zoneHangRoom(room: string): Promise<void> {
     .set({ status: "admin_hangup", statusKey: "user_cancelled", confirmed: null, completedAt: Math.floor(Date.now() / 1000) })
     .where(and(inArray(callResults.providerCallId, ids), inArray(callResults.status, ["dialing", "in_progress", "queued"])))
     .catch((e) => console.error("zone admin_hangup stamp:", e));
+  noteWeEnded(room, "user_cancelled");   // WE ended it, never the store (round 2, item 5)
   const callSid = roomCallSids.get(room);
   if (sid && tok && callSid) {
     await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}.json`, {
@@ -3837,9 +4040,9 @@ async function zoneView(z: typeof zones.$inferSelect) {
   const chainNames = rows.length ? new Map((await db.select().from(chains)).map((x) => [x.id, x.name])) : new Map();
   const stores = rows.map((r) => {
     const chainName = (r.chainId && chainNames.get(r.chainId)) || null;
-    const l = chainLogoInfo(chainName || r.name.split(/—|–| - /)[0]);
+    const l = chainLogoInfo(chainName || storeChainName(r.name));
     return { retailerId: r.id, name: r.name, location: r.location || "", callable: r.sellsPacks !== false,
-      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, openState: openState(r.hours, r.timezone) };
+      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, openState: openState(r.hours, r.timezone) };
   });
   const last = (await db.select().from(callResults).where(like(callResults.zoneRunId, `z${z.id}-%`)).orderBy(desc(callResults.startedAt)).limit(1))[0];
   let lastRun = null;
@@ -3949,7 +4152,7 @@ app.get("/app/zones/run/:runId", async (c) => {
   // monogram tiles (owner 07-19).
   const chainNames = new Map((await cachedChains()).map((x) => [x.id, x.name]));
   const results = rows.map((r) => { const st = stores.get(r.retailerId); const nm = st?.name || "A store";
-    const l = chainLogoInfo((st?.chainId && chainNames.get(st.chainId)) || nm.split(/—|–| - /)[0]);
+    const l = chainLogoInfo((st?.chainId && chainNames.get(st.chainId)) || storeChainName(nm));
     return { retailerId: r.retailerId, name: nm, location: st?.location || "", logoUrl: l.url || "", logoWide: l.wide, logoDark: l.dark, cid: r.providerCallId, status: r.status, statusKey: r.statusKey, confirmed: r.confirmed, summary: r.summary }; });
   const live = (st: string) => st === "in_progress" || st === "queued";
   const summary = {
@@ -4048,13 +4251,13 @@ app.get("/app/history", async (c) => {
     const st = stores.get(r.retailerId);
     const sName = st?.name || "A store";
     // Chain logo via chainId first (like the homepage list) — bare name matching missed most stores.
-    const l = chainLogoInfo((st?.chainId && histChains.get(st.chainId)) || sName.split(/—|–| - /)[0]);
+    const l = chainLogoInfo((st?.chainId && histChains.get(st.chainId)) || storeChainName(sName));
     return {
       cid: r.providerCallId, storeId: r.retailerId, storeName: sName,
       categoryId: r.categoryId, category: cats.get(r.categoryId) || "",
       ts: (r.startedAt || 0) * 1000, status: r.status, confirmed: r.confirmed,
       statusKey: r.statusKey, productDetail: r.productDetail, shipmentDay: r.shipmentDayHeard, shipmentTime: r.shipmentTimeHeard ?? null, charged: !!r.chargedAt, zoneRunId: r.zoneRunId || null,
-      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark,
+      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct,
     };
   }));
 });
@@ -4268,11 +4471,11 @@ app.get("/api/admin/restock-intel", async (c) => {
   const rsChainType = new Map(rsChains.map((x) => [x.id, x.type]));
   const topStores = [...byStore.values()].sort((a, b) => b.confirms - a.confirms || b.last - a.last).slice(0, 25)
     .map((e) => {
-      const chainName = (e.chainId != null && rsChainName.get(e.chainId)) || e.store.split(/—|–| - /)[0];
+      const chainName = (e.chainId != null && rsChainName.get(e.chainId)) || storeChainName(e.store);
       const l = chainLogoInfo(chainName);
       return { ...e, bestDay: Object.entries(e.days).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null,
         storeType: (e.chainId != null && rsChainType.get(e.chainId)) || "Other",
-        logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
+        logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct };
     });
   const prodNet = parseProducts(confirmed);
   const catNet: Record<string, number> = {};
@@ -4605,7 +4808,7 @@ app.get("/api/admin/test-calls", async (c) => {
     const nav = r.navSeconds, call = r.callSeconds;
     const st = stores.get(r.retailerId);
     const nm = st?.name || `#${r.retailerId}`;
-    const l = chainLogoInfo((st?.chainId && chainNames.get(st.chainId)) || nm.split(/—|–| - /)[0]);
+    const l = chainLogoInfo((st?.chainId && chainNames.get(st.chainId)) || storeChainName(nm));
     return {
       id: r.id, started: r.startedAt,
       store: nm.split("—")[0].trim() || `#${r.retailerId}`,
@@ -4623,7 +4826,7 @@ app.get("/api/admin/test-calls", async (c) => {
       lane: r.lane || null,
       cost: r.costTotalUsd != null ? money(r.costTotalUsd) : null,
       chainId: st?.chainId ?? null, storeType: (st?.chainId && chainTypes.get(st.chainId)) || "Other",
-      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark,
+      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct,
     };
   });
   const timed = rows.filter((r) => r.callSec != null);
@@ -5145,7 +5348,7 @@ app.get("/api/chains", async (c) => {
   const aggByChain = new Map(ag.map((r) => [r.cid, { n: Number(r.n || 0), callable: Number(r.callable || 0), kiosk: Number(r.kiosk || 0), online: Number(r.onl || 0), verified: Number(r.verified || 0) }]));
   return c.json(rows.map((ch) => {
     const l = chainLogoInfo(ch.name);
-    return { ...ch, logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, tier: tierByChain.get(ch.id) ?? null, stores: aggByChain.get(ch.id) ?? { n: 0, callable: 0, kiosk: 0, online: 0, verified: 0 } };
+    return { ...ch, logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, tier: tierByChain.get(ch.id) ?? null, stores: aggByChain.get(ch.id) ?? { n: 0, callable: 0, kiosk: 0, online: 0, verified: 0 } };
   }));
 });
 // Compact store list for the Voice → Test picker: ONE callable store per supported (app-visible) chain
@@ -5196,6 +5399,9 @@ app.patch("/api/chains/:id", async (c) => {
   if (b.logoUrl !== undefined) patch.logoUrl = b.logoUrl || null;
   if (typeof b.logoWide === "boolean") patch.logoWide = b.logoWide;
   if (typeof b.logoDark === "boolean") patch.logoDark = b.logoDark;
+  // How wide to draw the logo, as a percent of its tile. Normally set by the upload; accepted here so
+  // an existing logo can be measured and backfilled without re-uploading the artwork.
+  if (b.logoPct !== undefined) patch.logoPct = Number.isFinite(Number(b.logoPct)) && Number(b.logoPct) > 0 ? Number(b.logoPct) : null;
   // Invariant: a direct-answer chain has no menu, so it must carry NO tree-seconds — a stray value arms
   // the connect-timer and mutes the agent (silent-agent bug). Enforce it here too, so a manual admin edit
   // that flips a chain to direct can't recreate it (the learn/trainer paths already guard this).
@@ -5586,9 +5792,9 @@ async function enrichAlertStores<T extends { subscriptions?: Array<{ retailerId?
   (me as { subscriptions?: unknown }).subscriptions = subs.map((s) => {
     const r = s.retailerId != null ? byId.get(s.retailerId as number) : null;
     if (!r) return s;
-    const chainName = (r.chainId && cName.get(r.chainId)) || r.name.split(/—|–| - /)[0];
+    const chainName = (r.chainId && cName.get(r.chainId)) || storeChainName(r.name);
     const l = chainLogoInfo(chainName);
-    return { ...s, storeType: (r.chainId && cType.get(r.chainId)) || "Other", logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
+    return { ...s, storeType: (r.chainId && cType.get(r.chainId)) || "Other", logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct };
   });
   return me;
 }
@@ -5696,7 +5902,7 @@ app.post("/api/admin/owner-alert", async (c) => {
   }
   if (b.channel !== undefined) {
     const ch = String(b.channel);
-    if (!["email", "sms"].includes(ch)) return c.json({ error: "bad_channel" }, 400); // owner: text or email, nothing else
+    if (!["off", "email", "sms"].includes(ch)) return c.json({ error: "bad_channel" }, 400); // owner: off, text, or email
     await setSetting("owner_alert_channel", ch);
   }
   return c.json(await ownerAlertPrefs());
@@ -5796,8 +6002,8 @@ app.get("/api/retailers", async (c) => {
   const names = new Map((await db.select().from(chains)).map((x) => [x.id, x.name]));
   return c.json(rows.map((r) => {
     const chainName = (r.chainId && names.get(r.chainId)) || null;
-    const l = chainLogoInfo(chainName || r.name.split(/—|–| - /)[0]);
-    return { ...r, carries: storeCarriesList(chainName, r.carries).join(","), distributor: distributorsForChain(chainName), logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
+    const l = chainLogoInfo(chainName || storeChainName(r.name));
+    return { ...r, carries: storeCarriesList(chainName, r.carries).join(","), distributor: distributorsForChain(chainName), logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct };
   }));
 });
 // Store Intel — the headline numbers on the Stores tab (cached 60s). The database, at a glance.
@@ -6724,8 +6930,8 @@ app.get("/api/results", async (c) => {
   return c.json({ total, offset, limit, rows: rows.map((r) => {
     const ret = rMap.get(r.retailerId);
     // Same chain-logo resolution as every other surface, so the Calls feed shows the store's mark.
-    const l = chainLogoInfo(ret ? ((ret.chainId && names.get(ret.chainId)) || ret.name.split(/—|–| - /)[0]) : null);
-    return { ...r, retailer: ret?.name, category: cMap.get(r.categoryId), logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
+    const l = chainLogoInfo(ret ? ((ret.chainId && names.get(ret.chainId)) || storeChainName(ret.name)) : null);
+    return { ...r, retailer: ret?.name, category: cMap.get(r.categoryId), logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct };
   }) });
 });
 
@@ -6751,7 +6957,11 @@ app.post("/api/call-now", async (c) => {
 // /pub/bridge-hangup for the call-now path.
 app.post("/api/hangup", async (c) => {
   const { cid, callSid } = await c.req.json().catch(() => ({}));
-  if (callSid) await hangupTwilioCall(callSid);
+  // WE are ending this one (round 2, item 5). The room is how every other part of the check is
+  // named, so resolve it from whatever the Admin had to hand before asking the carrier to stop.
+  const hangRoom = cid ? await lifeRoom(String(cid)) : null;
+  if (callSid) await hangupTwilioCall(callSid, hangRoom ?? undefined);
+  else if (hangRoom) noteWeEnded(hangRoom, "admin_hangup");
   if (cid) {
     await db.update(callResults)
       .set({ status: "admin_hangup", statusKey: "admin_hangup", confirmed: null, completedAt: Math.floor(Date.now() / 1000) })
@@ -6889,18 +7099,34 @@ app.post("/twiml/bridge-status", async (c) => {
       // that ended without reaching a human still lands a terminal callResults row.
       const fin = roomFinalizers.get(room);
       if (fin) { roomFinalizers.delete(room); try { fin(status); } catch (e) { console.error("bridge finalizer:", e); } }
+      // WHO PUT THE PHONE DOWN (round 2, item 5). The carrier says a check ended and never says who
+      // ended it, but we know every time it was US, because we are the ones who do it. So this is
+      // subtraction, not a guess: the check ended, we did not end it, therefore the far end did. A
+      // failure status rather than a normal finish means it was not a hang-up at all — the check was
+      // disconnected. Written BEFORE the receipt closes, so it lands on the timeline the card reads.
+      const ours = weEndedCheck(room);
+      if (!ours) {
+        if (status === "completed") emit(room, "hangup", "The store hung up on us", { reason: "store_hung_up", carrier: status });
+        else emit(room, "hangup", "The check was disconnected", { reason: "disconnected", carrier: status });
+      }
       // The carrier says the call is over — this is the truthful end, so the receipt closes and
       // persists HERE. The finalizer above may still be writing the verdict; the roll-up is stitched
       // onto the call row by the sink, which looks the row up by room.
       closeReceipt(room, status === "completed" ? "Check ended" : `Check ended (${status})`, status);
+      // …and the gatekeeper's row is stamped DIRECTLY, not only through the receipt: after a restart
+      // there is no in-memory receipt left to close, and this callback is then the only witness that
+      // the line ended. Without this stamp a restarted check would read alive until the hard cap.
+      noteLineEnded(room, status);
     }
   }
   return c.body(null, 204);
 });
 const zoneCallSids = new Map<number, string[]>(); // zoneId -> Twilio callSids placed, for "Cancel zone"
 /** Hang up a live Twilio call (POST Status=completed). Shared by the single + zone cancel paths. */
-async function hangupTwilioCall(callSid: string): Promise<void> {
+async function hangupTwilioCall(callSid: string, room?: string): Promise<void> {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
+  // Anyone asking the carrier to end a check through here is US ending it (round 2, item 5).
+  if (room) noteWeEnded(room, "admin_hangup");
   if (!sid || !tok || !callSid) return;
   await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}.json`, {
     method: "POST",
@@ -6912,6 +7138,9 @@ async function hangupTwilioCall(callSid: string): Promise<void> {
 app.post("/pub/bridge-hangup", async (c) => {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   const { room } = await c.req.json();
+  // THE CUSTOMER PRESSING STOP IS US ENDING THE CHECK, and it must never come back later reading as
+  // the store hanging up on us (round 2, item 5). Marked before we ask the carrier to end it.
+  noteWeEnded(room, "user_cancelled");
   const callSid = roomCallSids.get(room);
   // Master Stop & hang-up = WE ended it, not the store. Stamp the call as a non-result ('admin_hangup',
   // confirmed=null) so it's never mislabeled "nobody answered". Because this status is NOT in the
@@ -6981,68 +7210,71 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
   // first words can get clipped again. The REAL fix (ears open at pickup, mouth held until the words
   // read human, never-silent cap) is Echo's boxed build — do NOT re-enable instant-connect here.
 
-  // Concurrency governor (flag-gated). OFF = the exact path below (row inserted only at connect, no
-  // slot) — byte-identical to before. ON = pre-insert a "dialing" row so we can hold a slot keyed on
-  // its id (the queue reads slot counts to know the pool is full), release it if the call never
-  // reaches a human, and let the EL poller release it on a normal finish (same lifecycle as the
-  // headless bridge check). The live-audio room + response shape are unchanged either way.
+  // ONE ROW, WRITTEN BEFORE THE DIAL, ON EVERY PATH (08-01 audit follow-up — the family rule).
+  //
+  // This used to fork: governed and zone checks pre-inserted a row, and the ORDINARY WEBSITE CHECK
+  // inserted its row only inside the connect callback below — with the provider's conversation id and
+  // NO room. Nothing ever backfilled it, so on the customer's own path the two finalize gates (the
+  // provider's end-of-call report and the sweeper) asked "is this check alive?" about nothing at all,
+  // were told no, and stamped a verdict + CHARGED while the phone was still in somebody's hand. That
+  // is precisely the fault of the owner's second test run, still open on the ONE path he actually
+  // uses, because the fix was made on the paths that already had a room. A refused dial on that path
+  // was worse still: the row is only written at connect, so the check left no record anywhere.
+  //
+  // So the room is minted here, before anything is dialled, and the row carries it from the first
+  // instant. The governor decides only whether a SLOT is held, which is what it was ever about.
+  const room = crypto.randomUUID();
   const governed = await governorEnabled();
-  let slotRowId: number | null = null;
-  if (governed || opts?.zoneRunId) {
-    // Zone rows pre-insert too: a store whose dial fails must still appear on the run report as a
-    // terminal row, not silently vanish (the connect-only insert would drop it).
-    const [row] = await db.insert(callResults).values({ retailerId, categoryId: primary, mode: "restock", status: "dialing", finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false, zoneRunId: opts?.zoneRunId ?? null }).returning();
-    slotRowId = row.id;
-    if (governed) {
-      const slot = await acquireCallSlot({ key: `call:${row.id}`, priority: opts?.priority ?? "interactive", userId: finder?.userId ?? undefined, ttlSec: (pol.bail.maxCallSeconds || 180) + 120 });
-      if (slot === null) {
-        await db.update(callResults).set({ status: "failed", statusKey: "system_busy", summary: "All lines busy — the check will be retried." }).where(eq(callResults.id, row.id));
-        return { error: "calls_busy" }; // routeCheck sees this and queues the check instead of failing
-      }
+  const [row] = await db.insert(callResults).values({
+    retailerId, categoryId: primary, mode: "restock", status: "dialing",
+    room, providerCallId: `bridge:${room}`,
+    finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false, zoneRunId: opts?.zoneRunId ?? null,
+  }).returning();
+  const rid = row.id;
+  if (governed) {
+    const slot = await acquireCallSlot({ key: `call:${rid}`, priority: opts?.priority ?? "interactive", userId: finder?.userId ?? undefined, ttlSec: (pol.bail.maxCallSeconds || 180) + 120 });
+    if (slot === null) {
+      await db.update(callResults).set({ status: "failed", statusKey: "system_busy", summary: "All lines busy — the check will be retried." }).where(eq(callResults.id, rid));
+      return { error: "calls_busy" }; // routeCheck sees this and queues the check instead of failing
     }
   }
+  linkCall(room, rid); // the stable key for the timeline (providerCallId gets replaced mid-call)
+  // READ AS IT GOES (owner 07-30). Armed on THIS path too — it never was, so the one path a customer
+  // actually watches was still reading the conversation from scratch at hang-up, which is the wait on
+  // "Getting the answer" that order existed to delete.
+  armLiveRead(room, v.dynamicVars.category || "the product", specificProduct);
 
-  // Log the call once it connects (we get the ElevenLabs conversation id). Governed → update the row
-  // we pre-inserted; ungoverned → insert the PRIMARY row now (today's behavior). ingest fans out each
-  // extra line into its own row from the per-category extraction.
+  // The conversation id lands mid-call and REPLACES the placeholder id on the same row — the room
+  // stays put, so every gate can still find this check by name whichever id it is asked about.
   const result = await placeBridgeCall(v.retailer.phone, v.dynamicVars, (convId) => {
-    if (slotRowId != null) {
-      db.update(callResults).set({ providerCallId: convId, status: "in_progress" }).where(eq(callResults.id, slotRowId))
-        .catch((e) => console.error("bridge call log update:", e));
-    } else {
-      db.insert(callResults).values({ retailerId, categoryId: primary, mode: "restock", status: "in_progress", providerCallId: convId, finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false, zoneRunId: opts?.zoneRunId ?? null })
-        .catch((e) => console.error("bridge call log insert:", e));
-    }
+    db.update(callResults).set({ providerCallId: convId, status: "in_progress" }).where(eq(callResults.id, rid))
+      .catch((e) => console.error("bridge call log update:", e));
     // Per-store talk cap (chains.maxTalkSeconds) wins over the global bail ceiling when set, so a
     // store the owner marked "wrap fast" gets a tighter Twilio TimeLimit — the cost guarantee.
-  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, listenNav: v.listenNav });
+  }, v.dtmf, { from, room, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, listenNav: v.listenNav });
 
-  // Governed bookkeeping: point the pre-inserted row at the room (so /pub/result resolves it before
-  // connect), release the slot on a dial that never placed, and register a finalizer that frees the
-  // slot + writes the real reason if the call ends before a human answers.
-  if (slotRowId != null) {
-    if (result.error || !result.room) {
-      await releaseCallSlot(`call:${slotRowId}`);
-      await db.update(callResults).set({ status: "failed", summary: result.error || "bridge call failed" }).where(eq(callResults.id, slotRowId));
-    } else {
-      const rid = slotRowId;
-      linkCall(result.room, rid); // stable key for the receipt (providerCallId gets replaced mid-call)
-      await db.update(callResults).set({ providerCallId: `bridge:${result.room}`, room: result.room }).where(eq(callResults.id, rid));
-      roomFinalizers.set(result.room, (twilioStatus) => {
-        void (async () => {
-          const cur = (await db.select().from(callResults).where(eq(callResults.id, rid)))[0];
-          if (!cur || cur.status !== "dialing") return; // conv id landed → EL ingest owns the verdict + release
-          const statusKey = ({ busy: "busy", failed: "bad_number" } as Record<string, string>)[twilioStatus] ?? "nobody_answered";
-          await db.update(callResults).set({
-            status: "no_answer", confirmed: null, statusKey,
-            summary: `Bridge call ended before a human answered (${twilioStatus}).`,
-            completedAt: Math.floor(Date.now() / 1000),
-          }).where(eq(callResults.id, rid));
-          await releaseCallSlot(`call:${rid}`); // never reached a human → free the slot (idempotent)
-        })().catch((e) => console.error("live bridge finalize:", e));
-      });
-    }
+  if (result.error || !result.room) {
+    if (governed) await releaseCallSlot(`call:${rid}`);
+    await db.update(callResults).set({ status: "failed", summary: result.error || "bridge call failed", completedAt: Math.floor(Date.now() / 1000) }).where(eq(callResults.id, rid));
+    return result;
   }
+  // A CHECK NOBODY ANSWERS MUST STILL END. The sweeper deliberately skips a row still carrying our own
+  // placeholder id, and this path registered no terminal hook at all — so pre-writing the row without
+  // this would leave every unanswered website check sitting on "dialing" forever, which is a worse
+  // fault than the one above. The carrier's terminal status closes it, exactly as on the other paths.
+  roomFinalizers.set(result.room, (twilioStatus) => {
+    void (async () => {
+      const cur = (await db.select().from(callResults).where(eq(callResults.id, rid)))[0];
+      if (!cur || cur.status !== "dialing") return; // conv id landed → the normal verdict path owns it
+      const statusKey = ({ busy: "busy", failed: "bad_number" } as Record<string, string>)[twilioStatus] ?? "nobody_answered";
+      await db.update(callResults).set({
+        status: "no_answer", confirmed: null, statusKey,
+        summary: `Bridge call ended before a human answered (${twilioStatus}).`,
+        completedAt: Math.floor(Date.now() / 1000),
+      }).where(eq(callResults.id, rid));
+      if (governed) await releaseCallSlot(`call:${rid}`); // never reached a human → free the slot (idempotent)
+    })().catch((e) => console.error("live bridge finalize:", e));
+  });
   return result;
 }
 // Queue adapter for the live lane: reconstruct a live check from a ticket's args and return the
@@ -7119,6 +7351,19 @@ app.post("/webhooks/elevenlabs", async (c) => {
     const o = await provider.parseWebhook(c.req.raw);
     if (o.callId) {
       const row = (await db.select().from(callResults).where(eq(callResults.id, o.callId)))[0];
+      // A CLOSED CHARLIE IS NOT A FINISHED CHECK. He is closed on every hold, which ends his
+      // conversation at the provider, which fires this webhook — so a store saying "give me a second"
+      // used to stamp the verdict "we got left on hold", charge for it and send the alerts while the
+      // line was still up and Staff were walking back with the answer. The carrier's own end is the
+      // only end. The GATEKEEPER answers now, not the in-memory receipt (08-01 audit, family 3): the
+      // receipt's fifteen-minute life and every restart made the old guard fail toward "line is
+      // down" — and on the old direct path, where the provider carries the line itself, it failed
+      // the other way and froze this webhook for the receipt's whole life.
+      // ASK WITH WHATEVER NAME THE ROW HAS. A row written by an older build, or by any path that
+      // stamped only the provider's id, has no room — and a gate asked about nothing answers "not
+      // alive" and finalizes straight through the guard. The gatekeeper resolves a provider id back
+      // to the check itself, so handing it both names is belt and braces rather than a second rule.
+      if (await isCheckAlive(row?.room ?? row?.providerCallId)) return c.json({ ok: true, skipped: "line still up" });
       // Consensus second read — keep the webhook verdict + billing identical to the poller (ingestPending):
       // two non-conflicting reads → a hard verdict (charge); conflict/ambiguity → "no clear answer", no charge.
       let confirmed = o.confirmed, statusKey = o.statusKey;
@@ -7197,9 +7442,20 @@ const fanout = (room: string, payloadB64: string, track: string) => {
 };
 // Real-time transcript lines from the agent bridge → browser listeners, so the chat bubbles populate
 // AS the call happens (ElevenLabs only returns the full transcript post-call).
+// ONE SENTENCE REACHES THE PAGE ONCE (08-01 audit, open fault 4): the relay had no memory at all, so
+// an echoed or replayed line always printed again however carefully it was recorded. Same fuzzy rule
+// as the record's own dedupe (normSaid), last few lines within ten seconds, per room, every lane.
+const relaySeen = new Map<string, Array<{ k: string; at: number }>>();
 const relayLine = (room: string, role: string, text: string) => {
   const set = rooms.get(room);
   bridgeLog(`relayLine ${role}: ${String(text).slice(0, 32)} listeners=${set ? set.size : 0}`); // diagnose live-transcript delivery
+  const rk = `${role}:${normSaid(String(text))}`;
+  const seen = relaySeen.get(room) ?? [];
+  const nowMs = Date.now();
+  if (seen.some((s) => s.k === rk && nowMs - s.at < 10_000)) { bridgeLog(`relayLine dropped a duplicate ${role} line`); return; }
+  seen.push({ k: rk, at: nowMs });
+  if (seen.length > 6) seen.shift();
+  relaySeen.set(room, seen);
   if (!set) return;
   const msg = JSON.stringify({ line: { role, text } });
   for (const ws of set) if (ws.readyState === 1) ws.send(msg);
@@ -7207,6 +7463,7 @@ const relayLine = (room: string, role: string, text: string) => {
 // Tell browser listeners the moment the bridge tears down (agent/clerk hung up) so the UI flips to
 // the result instantly instead of waiting on the next poll + ElevenLabs status lag.
 const relayEnd = (room: string) => {
+  relaySeen.delete(room); // the check is over — its relay memory goes with it
   const set = rooms.get(room);
   bridgeLog(`relayEnd room=${room.slice(0, 8)} listeners=${set ? set.size : 0}`); // diagnose hang-up→flip
   if (!set) return;

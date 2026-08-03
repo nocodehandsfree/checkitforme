@@ -92,6 +92,9 @@ export const chains = sqliteTable("chains", {
   logoUrl: text("logo_url"),
   logoWide: integer("logo_wide", { mode: "boolean" }),
   logoDark: integer("logo_dark", { mode: "boolean" }),
+  // Width to draw the logo at, as a percent of its square tile. Derived from the artwork's own
+  // proportions at upload time so every surface draws it identically without loading the image.
+  logoPct: real("logo_pct"),
 });
 
 /** A specific catalog product. Seeded from drops_db.json; the agent asks at the category level, but this powers future product-specific asks and matching. */
@@ -724,5 +727,33 @@ export const callEvents = sqliteTable(
   (t) => ({
     byCall: index("call_events_call_idx").on(t.callId, t.atMs),
     byRoom: index("call_events_room_idx").on(t.room, t.atMs),
+  }),
+);
+
+/**
+ * A LIVE CHECK'S LIFE, in the database (the gatekeeper's state — src/calls/check-life.ts).
+ * One row per check from dial until it is pruned; the carrier's line-end is the only end. Exists so
+ * "is this check alive?" survives a restart and every in-memory map's expiry — the 08-01 audit found
+ * eight code sites still asking the voice provider that question exactly because nothing durable
+ * held the answer. Not history: call_events is history. This table is only ever the present tense.
+ */
+export const checkLife = sqliteTable(
+  "check_life",
+  {
+    room: text("room").primaryKey(),           // the check's one stable name, from before the ring
+    callId: integer("call_id"),                // call_results.id once known
+    providerCallId: text("provider_call_id"),  // the provider's latest conversation id, for lookups
+    dialedAt: integer("dialed_at").notNull(),
+    answeredAt: integer("answered_at"),        // the carrier's own "the line was answered"
+    humanAt: integer("human_at"),              // a real person was found
+    onHold: integer("on_hold").notNull().default(0),
+    charlieOpen: integer("charlie_open").notNull().default(0),
+    segments: integer("segments").notNull().default(0),
+    lineEndedAt: integer("line_ended_at"),     // the carrier said the line ended — the ONLY end
+    endReason: text("end_reason"),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (t) => ({
+    byProvider: index("check_life_provider_idx").on(t.providerCallId),
   }),
 );

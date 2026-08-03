@@ -8,6 +8,7 @@ import {
   accounts, alertSends, callResults, categories, chains, customerSchedules, retailers, scheduleTargets, schedules, statuses, watches, zoneRetailers, zones,
 } from "../db/schema";
 import { linkCall, openReceipt, emit, closeReceipt, linkProviderCall, markNow } from "./events"; // ties the call row to its receipt (the timeline + the seconds)
+import { isCheckAlive } from "./check-life"; // the gatekeeper: the one honest answer to "has this check finished?"
 import { recordVerdict } from "./receipt-store";
 import { chargeOneCredit, isCompAccount, getAccount } from "../billing";
 import { sendRestockEmailTo, sendAlert, accountLang, localizeResult } from "../alerts";
@@ -739,12 +740,18 @@ export async function bridgeCheckCall(a: TriggerArgs) {
   const v = await buildRestockVars(a.retailerId, a.categoryId, a.specificProduct ?? a.clarification, undefined, a.kioskMode, a.finderUserId ?? null);
   if (!v) throw new Error("restock vars unavailable");
 
+  // THE CHECK'S NAME IS ON THE ROW BEFORE THE DIAL (08-01 audit, open fault 2). The room used to be
+  // written only after a successful dial, so a pre-dial refusal (no voice set, carrier said no)
+  // stamped a status onto a row with no room — and the Testing list rendered it as a dead tile while
+  // the refusal's own record sat orphaned under a room the row never learned.
+  const room = crypto.randomUUID();
   const [row] = await db.insert(callResults).values({
     scheduleId: a.scheduleId ?? null,
     retailerId: retailer.id,
     categoryId: category.id,
     mode: "restock",
     status: "dialing",
+    room, providerCallId: `bridge:${room}`,
     finderUserId: a.finderUserId ?? null, zoneRunId: a.zoneRunId ?? null, customerScheduleId: a.customerScheduleId ?? null,
     isPrivate: a.isPrivate ?? false,
   }).returning();
@@ -772,10 +779,11 @@ export async function bridgeCheckCall(a: TriggerArgs) {
     // Human reached, billed agent open — hand the row to the normal EL ingest by conv id.
     db.update(callResults).set({ providerCallId: convId, status: "in_progress" }).where(eq(callResults.id, row.id))
       .catch((e) => console.error("bridge check connect update:", e));
-  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, apiKey: acct.apiKey, agentId: acct.agentId, listenNav: v.listenNav, navSteps: v.navSteps, mapVersion: v.mapVersion });
+  }, v.dtmf, { from, room, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, apiKey: acct.apiKey, agentId: acct.agentId, listenNav: v.listenNav, navSteps: v.navSteps, mapVersion: v.mapVersion });
   if (r.error || !r.room) {
     await slot.release(); // dial never placed → free the slot immediately
-    await db.update(callResults).set({ status: "failed", summary: r.error || "bridge call failed" }).where(eq(callResults.id, row.id));
+    // The row keeps its room, so the refusal's own record opens from the Testing list like any check.
+    await db.update(callResults).set({ status: "failed", summary: r.error || "bridge call failed", completedAt: Math.floor(Date.now() / 1000) }).where(eq(callResults.id, row.id));
     throw new Error(r.error || "bridge call failed");
   }
   const providerCallId = `bridge:${r.room}`;
@@ -785,7 +793,6 @@ export async function bridgeCheckCall(a: TriggerArgs) {
   // READ AS IT GOES (owner 07-30): arm the reader for this room now, so it reads the conversation
   // while it happens and the verdict is ready at hang-up instead of being started then.
   armLiveRead(r.room, category.label, a.specificProduct ?? a.clarification);
-  await db.update(callResults).set({ providerCallId, room: r.room }).where(eq(callResults.id, row.id));
   // If the call ends without ever reaching a human (voicemail hang-up, busy, no answer), no conv id
   // ever lands — the room finalizer closes the row so zone runs / schedules still reach a terminal state.
   roomFinalizers.set(r.room, (twilioStatus) => {
@@ -919,6 +926,18 @@ export async function applyVoiceTuning(p: {
     patch.llm = (await getSetting("vt_llm")) || VOICE_DEFAULTS.llm;
   }
   if (Object.keys(patch).length) await provider.updateAgent(config.voice.agentId, patch);
+
+  // THE AGENT THE NEW ENGINE ACTUALLY TALKS WITH RUNS PATIENT (08-01 audit, open fault 1). On the
+  // new call shape every conversation is the joining agent, and with early-guessing on it answered
+  // EACH fragment of a split sentence — "no worries, take your time" three times in a row — because
+  // our own machinery manufactures fragment boundaries (the echo gate's reflection window, the beat
+  // of quiet inserted between the store's hello and their answer). "Patient" waits for a confirmed
+  // pause and switches the provider's early-guessing off (speculative_turn, elevenlabs.ts), so one
+  // sentence gets one reply. Best-effort like the main push; a failure never blocks the boot.
+  if (p.pushPrompt && config.voice.midCallAgentId) {
+    await provider.updateAgent(config.voice.midCallAgentId, { turnEagerness: "patient" })
+      .catch((e) => console.error("[voice] mid-call agent patient push failed:", String(e).slice(0, 160)));
+  }
 
   return getVoiceTuning();
 }
@@ -1184,6 +1203,17 @@ export async function ingestPending(): Promise<number> {
     if (!row.providerCallId) continue;
     if (row.providerCallId.startsWith("delta:")) continue; // D-lane call — its own finalize hook writes the verdict
     if (row.providerCallId.startsWith("bridge:")) continue; // headless bridge call still dialing — the conv id lands at connect (or the room finalizer closes it)
+    // THE LINE IS STILL UP, SO THE CHECK HAS NOT FINISHED. Charlie's conversation ends every time he
+    // is closed for a hold, and the provider reports that as the conversation being over. Reading it
+    // as the end of the check stamped a verdict on a call that was still running. Left pending on
+    // purpose: the next sweep after the carrier hangs up finalizes it properly. The GATEKEEPER
+    // answers now, not the in-memory receipt (08-01 audit, family 3) — the database's answer
+    // survives restarts and expiries, and on the old direct path (the provider's own line) it
+    // correctly defers to the provider instead of freezing this sweep behind an open thin receipt.
+    // …asked with whatever name this row carries: a row with no room (an older build, or any path
+    // that stamped only the provider's id) would otherwise ask about nothing, be told "not alive",
+    // and sweep a verdict onto a check still in progress. resolveRoom takes either name.
+    if (await isCheckAlive(row.room ?? row.providerCallId)) continue;
     const outcome = await provider.getConversation(row.providerCallId);
     if (!outcome) continue; // not finished yet
 

@@ -11,6 +11,7 @@ import { llm } from "../llm";
 import { config } from "../config";
 import { getSetting } from "../db/settings";
 import { rotatePick } from "./rotate";
+import { mp3Clip } from "./clip-cache";
 import { openReceipt, emit, markNow, closeReceipt } from "./events";
 
 const HOST = config.staging.on ? "voice-caller-staging-production.up.railway.app" : "voice-caller-production-2d6b.up.railway.app";
@@ -529,6 +530,282 @@ function finalizeIfStore(s: TdSession): void {
   if (s.mode !== "store" || s.escalated || (s as TdSession & { _finalized?: boolean })._finalized) return;
   (s as TdSession & { _finalized?: boolean })._finalized = true;
   if (deltaFinalize) deltaFinalize(s).catch((e) => console.error("[delta] finalize failed", e));
+}
+
+// ===========================================================================================
+// THE ROBOT STORE — the same tape deck, pointed the other way.
+// Spec: docs/specs/robot-store/README.md. Words: docs/team/voice-calls/how-staff-actually-talk.md.
+//
+// Everything above dials a store and plays OUR clips at whoever picks up. The robot store IS picked
+// up: an inbound call arrives on +1 424 484 7395, and the same machine plays the STAFF's clips at
+// whoever dialed us. Same session map, same synthesized clips, same `/tapedeck/clip` audio route,
+// same play-then-listen loop. A second engine would drift from this one and then we would be testing
+// the drift, which is the whole failure the robot exists to end.
+//
+// EXACTLY ONE THING HERE IS FAKE: the person at the store. The dial, the carrier, the transcriber,
+// the verdict and the Admin record are all the real system.
+//
+// WHERE EVERY LINE BELOW COMES FROM, exactly. Most are what a real person really said on a real
+// check (`how-staff-actually-talk.md`), with only the store name and the person's name swapped.
+// Three are NOT in that corpus and must not be passed off as if they were: scenario 8's payoff
+// ("Yeah, we've got a few."), and the second person's greeting and answer in scenario 10 — those
+// come from the spec the owner approved on 08-01, which is why they are here. Nothing on this list
+// was made up by an agent. They are short, they stumble, they interrupt themselves. Do NOT tidy them
+// into better English: the mess IS the test.
+// ===========================================================================================
+
+/** One beat of a scene. `say` is the Staff voice; `sayAs` is the SECOND person (after a transfer). */
+export type RobotAct =
+  | { say: string }
+  | { sayAs: "transfer"; say: string }
+  | { silence: number }   // seconds of nothing at all. No hold music: no real store ever played us any
+  | { ring: number }      // seconds of a real ringback cadence, for the transfer
+  | { listen: true }      // wait for the caller to say their piece, then carry on
+  | { hangup: true };
+
+export interface RobotScene { n: number; name: string; greeting?: string; acts: RobotAct[]; expect: string }
+
+/** The greetings, one per run, rotated. All five are real openings from our own history. */
+export const ROBOT_GREETINGS: string[] = [
+  "Larry Vasquez, how can I help you?",
+  "Thanks for calling MVP's. Can I help you?",
+  "Good morning, MVP's Woodland Hills. How can I help today?",
+  "Mm-hmm. Hello?",
+  "Hi, how can I help you? Hello?",
+];
+
+/**
+ * WHAT A REAL PERSON DOES ONCE THEY HAVE ANSWERED: they wait for the caller to say goodbye. They do
+ * not put the phone down the second the words are out of their mouth.
+ *
+ * This matters more than it sounds. A store that hangs up instantly HIDES a missing sign-off — the
+ * check ends either way, so a caller who never says thanks and goodbye looks exactly like one who
+ * does. The owner spotted that on four checks in a row: every conversation ended on OUR question.
+ * So the robot now holds the line, quietly, for about forty seconds before giving up on us.
+ */
+const WAIT_OUT: RobotAct[] = [{ listen: true }, { listen: true }, { listen: true }, { listen: true }, { hangup: true }];
+
+/** `expect` is what a right answer looks like for this scene, in the site's own verdict words. It is
+ *  NOT a second expectations list: the owner's Admin Testing rows own pass and fail for the steps of
+ *  a check. This is only the VERDICT, which is the one thing scenarios 7 and 8 exist to catch. */
+export const ROBOT_SCENES: RobotScene[] = [
+  { n: 1, name: "Yes, plainly", expect: "in_stock", acts: [
+    { listen: true }, { say: "Yeah." },
+    { listen: true }, { say: "We do." },
+    ...WAIT_OUT,
+  ] },
+  { n: 2, name: "No, plainly", expect: "not_in_stock", acts: [
+    { listen: true }, { say: "We did not." },
+    ...WAIT_OUT,
+  ] },
+  { n: 3, name: "No, softened", expect: "not_in_stock", acts: [
+    { listen: true }, { say: "No, I'm sorry. I haven't seen any yet." },
+    ...WAIT_OUT,
+  ] },
+  { n: 4, name: "No, this shipment", expect: "not_in_stock", acts: [
+    { listen: true }, { say: "No, we don't have any this, this shipment." },
+    ...WAIT_OUT,
+  ] },
+  // The ONE hold in our whole history that ever worked. 45 seconds, and SILENCE, not music.
+  { n: 5, name: "Walks away, comes back", expect: "not_in_stock", acts: [
+    { listen: true },
+    { say: "Uh, Pokémon? Uh, let me check. I just got in, so I have to, uh, I'll have to go up to the front and see. Okay, let me just put you on hold." },
+    { silence: 45 },
+    { say: "Okay, thank you for holding. Yeah, I did not see any, unfortunately." },
+    ...WAIT_OUT,
+  ] },
+  // Happened twice for real. One of them ran 121 seconds and never resolved, so that is the length.
+  { n: 6, name: "Walks away, never comes back", expect: "no_clear_answer", acts: [
+    { listen: true },
+    { say: "Um, give me just a second. Let me double-check." },
+    { silence: 60 }, { silence: 61 },
+    { hangup: true },
+  ] },
+  // THE HIGHEST VALUE TEST ON THE LIST. We scored this real check as no clear answer. It is a YES.
+  { n: 7, name: "The yes hidden inside a no", expect: "in_stock", acts: [
+    { listen: true },
+    { say: "We did, but it's not out yet, so... uh, or I don't think it's out. Let me see." },
+    { listen: true },
+    { say: "It's like a box with, like, three packs in it, I think, or something like that." },
+    ...WAIT_OUT,
+  ] },
+  // Second highest. We stamped NOT IN STOCK before they came back with the answer.
+  { n: 8, name: "The no that turns into a maybe", expect: "in_stock", acts: [
+    { listen: true },
+    { say: "We haven't, as a matter of fact. Uh, let me double-check though. Hold on just a moment." },
+    { silence: 30 },
+    { say: "Yeah, we've got a few." },
+    ...WAIT_OUT,
+  ] },
+  // 6 of 14 real checks did exactly this. No scripted test has ever reproduced it.
+  { n: 9, name: "Cannot hear us, gives up", greeting: "Hi, how can I help you? Hello?", expect: "nobody_answered", acts: [
+    { silence: 3 },
+    { say: "I'm sorry. You're gonna have to call again. I can't hear you. Bye-bye." },
+    { hangup: true },
+  ] },
+  // The greeting names the WRONG department, and the second voice is a different person.
+  // The spec's row stops at Dana's greeting; her answer is a verbatim line from the same corpus
+  // ("We did not.") so the check can finish. Nothing here is invented.
+  { n: 10, name: "Wrong department, then transfers", greeting: "MVP's pharmacy, this is Larry.", expect: "not_in_stock", acts: [
+    { listen: true },
+    { say: "Okay. Transferring you now." },
+    { ring: 6 },
+    { sayAs: "transfer", say: "Sporting goods, this is Dana." },
+    { listen: true },
+    { sayAs: "transfer", say: "We did not." },
+    ...WAIT_OUT,
+  ] },
+];
+
+export function robotScene(n: number): RobotScene | null { return ROBOT_SCENES.find((s) => s.n === n) || null; }
+
+/** What the robot has actually said on a call, in order — the ground truth the harness compares the
+ *  site's written transcript against. Word for word, because the script is known exactly. */
+export interface RobotSaid { text: string; atSec: number; voice: "staff" | "transfer" }
+export interface RobotRun {
+  id: string; callSid: string; scenario: number; sceneName: string; greeting: string;
+  startedAt: number; endedAt?: number; said: RobotSaid[]; heard: string[];
+}
+const robotRuns: RobotRun[] = [];
+export function robotLastRun(): RobotRun | null { return robotRuns[0] || null; }
+export function robotRunFor(callSid: string): RobotRun | null { return robotRuns.find((r) => r.callSid === callSid) || null; }
+
+interface RobotState { run: RobotRun; acts: RobotAct[]; act: number; clips: (Buffer | null)[]; quiet: number }
+const robotCalls = new Map<string, RobotState>();
+
+/** Which scene the next inbound call plays, and (optionally) which greeting. Stored as "7" or "7:2"
+ *  so a harness run can be repeated exactly instead of landing wherever the rotation happens to be. */
+export function parseRobotPick(raw: string | null): { scenario: number; greeting: number | null } {
+  const [a, b] = String(raw || "").split(":");
+  const n = Number(a);
+  const g = b === undefined || b === "" ? null : Number(b);
+  return { scenario: Number.isFinite(n) && robotScene(n) ? n : 1, greeting: g != null && Number.isFinite(g) ? g : null };
+}
+
+/** The two voices. Staff is NOT Charlie: anyone listening back has to be able to tell who is who,
+ *  and the person a transfer hands us to is a different person again. */
+async function robotVoices(): Promise<{ staff: string; transfer: string }> {
+  const [s, t] = await Promise.all([getSetting("robot_voice_staff"), getSetting("robot_voice_transfer")]);
+  return { staff: (s || "pNInz6obpgDQGcFmaJgB").trim(), transfer: (t || "21m00Tcm4TlvDq8ikWAM").trim() };
+}
+
+/** US ringback, by the published cadence: 440 + 480 Hz, two seconds of tone then four of silence.
+ *  A real burst is what the call's own ear measures a transfer by, so a fake one would test nothing. */
+export function ringbackWav(seconds: number): Buffer {
+  const rate = 8000, total = Math.max(1, Math.round(seconds * rate));
+  const pcm = Buffer.alloc(total * 2);
+  for (let i = 0; i < total; i++) {
+    const t = i / rate, inCycle = t % 6;
+    const on = inCycle < 2;
+    const v = on ? Math.round(9000 * (Math.sin(2 * Math.PI * 440 * t) + Math.sin(2 * Math.PI * 480 * t))) : 0;
+    pcm.writeInt16LE(Math.max(-32768, Math.min(32767, v)), i * 2);
+  }
+  const head = Buffer.alloc(44);
+  head.write("RIFF", 0); head.writeUInt32LE(36 + pcm.length, 4); head.write("WAVE", 8);
+  head.write("fmt ", 12); head.writeUInt32LE(16, 16); head.writeUInt16LE(1, 20); head.writeUInt16LE(1, 22);
+  head.writeUInt32LE(rate, 24); head.writeUInt32LE(rate * 2, 28); head.writeUInt16LE(2, 32); head.writeUInt16LE(16, 34);
+  head.write("data", 36); head.writeUInt32LE(pcm.length, 40);
+  return Buffer.concat([head, pcm]);
+}
+
+const robotClipUrl = (sid: string, i: number) => `<Play>https://${HOST}/robot/clip?call=${encodeURIComponent(sid)}&amp;i=${i}</Play>`;
+const robotGather = (sid: string, secs: number) =>
+  `<Gather input="speech" speechTimeout="auto" enhanced="true" speechModel="phone_call" timeout="${secs}" ` +
+  `action="https://${HOST}/robot/step?call=${encodeURIComponent(sid)}" method="POST"/>` +
+  `<Redirect method="POST">https://${HOST}/robot/step?call=${encodeURIComponent(sid)}&amp;silent=1</Redirect>`;
+
+export function robotClip(callSid: string, i: number): Buffer | null { return robotCalls.get(callSid)?.clips[i] || null; }
+
+/**
+ * A call lands on the robot's number. Pick the scene, record every line it will need in the two
+ * voices (cached, so this costs nothing after the first run), and start playing.
+ */
+export async function robotAnswer(callSid: string, from?: string): Promise<string> {
+  if (!callSid) return twiml("<Hangup/>");
+  const existing = robotCalls.get(callSid);
+  if (existing) return robotPlay(callSid, existing); // Twilio refetched the same document: carry on, never restart
+  const pick = parseRobotPick(await getSetting("robot_scenario"));
+  const scene = robotScene(pick.scenario) as RobotScene;
+  const greeting = scene.greeting
+    || (pick.greeting != null ? ROBOT_GREETINGS[((pick.greeting % ROBOT_GREETINGS.length) + ROBOT_GREETINGS.length) % ROBOT_GREETINGS.length] : rotatePick("robot:greeting", ROBOT_GREETINGS))
+    || ROBOT_GREETINGS[0];
+  const acts: RobotAct[] = [{ say: greeting }, ...scene.acts];
+  const { staff, transfer } = await robotVoices();
+  const clips = await Promise.all(acts.map((a) => {
+    if (!("say" in a)) return Promise.resolve(null);
+    return mp3Clip("sayAs" in a ? transfer : staff, a.say, { stability: 0.45, similarity_boost: 0.8 });
+  }));
+  const missing = acts.findIndex((a, i) => "say" in a && !clips[i]);
+  if (missing >= 0) { console.error("[robot] clip synthesis failed — check ElevenLabs credits"); return twiml("<Hangup/>"); }
+  const run: RobotRun = {
+    id: crypto.randomUUID().slice(0, 8), callSid, scenario: scene.n, sceneName: scene.name, greeting,
+    startedAt: Date.now(), said: [], heard: [],
+  };
+  robotRuns.unshift(run); while (robotRuns.length > 40) robotRuns.pop();
+  const st: RobotState = { run, acts, act: 0, clips, quiet: 0 };
+  robotCalls.set(callSid, st);
+  setTimeout(() => robotCalls.delete(callSid), 15 * 60 * 1000);
+  console.log(`[robot] answering ${from || "?"} with scenario ${scene.n} (${scene.name}) · greeting "${greeting}"`);
+  // A beat before speaking: a handset comes up, then the person talks.
+  return robotPlay(callSid, st, `<Pause length="1"/>`);
+}
+
+/** Walk the scene from where we left off until it needs to listen or the call is over. */
+function robotPlay(callSid: string, st: RobotState, lead = ""): string {
+  const parts: string[] = lead ? [lead] : [];
+  // Everything in ONE document plays in order, so a line after a 45 second wait is spoken 45 seconds
+  // later than the document was built. The waits are added up as we go, or the record would claim
+  // the person walked away and came back in the same instant.
+  let ahead = 0;
+  const atSec = () => Math.round((Date.now() - st.run.startedAt) / 1000) + ahead;
+  for (;;) {
+    const a = st.acts[st.act];
+    if (!a) { parts.push("<Hangup/>"); break; }
+    if ("hangup" in a) { st.act++; parts.push("<Hangup/>"); break; }
+    if ("listen" in a) { st.act++; parts.push(robotGather(callSid, 10)); break; }
+    if ("silence" in a) { st.act++; ahead += Math.round(a.silence); parts.push(`<Pause length="${Math.round(a.silence)}"/>`); continue; }
+    if ("ring" in a) { st.act++; ahead += Math.round(a.ring); parts.push(`<Play>https://${HOST}/robot/ring?secs=${Math.round(a.ring)}</Play>`); continue; }
+    st.run.said.push({ text: a.say, atSec: atSec(), voice: "sayAs" in a ? "transfer" : "staff" });
+    parts.push(robotClipUrl(callSid, st.act));
+    st.act++;
+  }
+  return twiml(parts.join(""));
+}
+
+/** The caller said something (or said nothing). Either way the scene moves on the way it really did. */
+export function robotStep(callSid: string, speech: string): string {
+  const st = robotCalls.get(callSid);
+  if (!st) return twiml("<Hangup/>");
+  const said = (speech || "").trim();
+  if (said) { st.run.heard.push(said.slice(0, 300)); st.quiet = 0; return robotPlay(callSid, st); }
+  // Nobody said anything. A real person waits a bit longer before carrying on, but not forever.
+  st.quiet++;
+  if (st.quiet < 2) return twiml(robotGather(callSid, 10));
+  st.quiet = 0;
+  return robotPlay(callSid, st);
+}
+
+/**
+ * Test-only: stand a scene up with no synthesis and no database, so the whole walk can be driven
+ * without a phone call and without spending a cent. The clips are deliberately absent — what is being
+ * proved here is the ORDER and the WORDS (`run.said`), and the audio route is proved by a real call.
+ */
+export function _robotRig(scenario: number, greetingIndex = 0): { callSid: string; first: string; run: RobotRun } {
+  const scene = robotScene(scenario) as RobotScene;
+  const greeting = scene.greeting || ROBOT_GREETINGS[greetingIndex % ROBOT_GREETINGS.length];
+  const acts: RobotAct[] = [{ say: greeting }, ...scene.acts];
+  const callSid = `rig:${scenario}:${greetingIndex}:${robotRuns.length}`;
+  const run: RobotRun = { id: callSid, callSid, scenario: scene.n, sceneName: scene.name, greeting, startedAt: Date.now(), said: [], heard: [] };
+  const st: RobotState = { run, acts, act: 0, clips: acts.map(() => null), quiet: 0 };
+  robotCalls.set(callSid, st);
+  return { callSid, first: robotPlay(callSid, st, `<Pause length="1"/>`), run };
+}
+
+export function robotEnded(callSid: string): void {
+  const st = robotCalls.get(callSid);
+  if (!st) return;
+  st.run.endedAt = Date.now();
+  robotCalls.delete(callSid);
 }
 
 export function tapedeckEnded(id: string): void {

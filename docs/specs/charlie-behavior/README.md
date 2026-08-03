@@ -1,0 +1,331 @@
+# CHARLIE — every behaviour, in the owner's words (THE record)
+
+**What this is.** The single source of truth for how Charlie is supposed to behave on a check, what
+every step in the log says, and what every pass/fail row says on both sides. An agent who does not
+understand Charlie reads THIS, then looks at a real check in Admin ▸ Voice ▸ Testing, which shows the
+same words. Built 08-01 with the owner, line by line. **Nothing here is invented: every row is either
+grounded in something the engine already records, or marked NOT BUILT YET.**
+
+**How to keep it alive.** The owner edits it; agents propose. When a behaviour changes, this file
+changes IN THE SAME COMMIT. If this file and the code disagree, this file is what the owner wants and
+the code is the bug.
+
+---
+
+## 1. Where Echo testing stands (08-01)
+
+- The check-life fix + round 2 are LIVE on staging, PM-verified with five blind readers and the full
+  rig (259 checks green, typecheck clean). **Nothing is phone-verified.**
+- The owner has run test 1 five times across 08-01 (runs 222-226), zero passes yet — every run found
+  a real fault, all now fixed.
+- **Run 6 ran and FAILED — three faults in one moment, all fixed and on staging** (Echo, checkpoint
+  @d52bbd17): the greeting's own pauses were being deleted so it transcribed as different words; two
+  turns arrived as one line; and our question printed before their hello. 121 rig checks green.
+  **Run 7 is the next attempt.** The PM has NOT independently audited that fix yet.
+- Staging is clear: logo work merged beside it and touched no calling code (verified).
+- Known before he dials: a check hangs up at 5 minutes flat · the hold hang-up rule is NOT built yet ·
+  Testing row 227 is a pre-fix leftover and opens nothing (by design; new checks are fine).
+
+## 2. The owner's test list (HIS words, 08-01 — this had never been written down)
+
+All on the Fun store, one at a time.
+
+1. **The walk-away.** Answer, and when Charlie asks say "hold on, let me go check," stay silent 40
+   seconds, come back with "yeah, we got some." Charlie is dropped while you're gone and reconnected
+   when you're back.
+2. **Wrong department.** Answer "Pharmacy, this is Joe." Charlie asks ONCE to be put through — never
+   "go look for me," never hangs up.
+3. **The hand-over** (continues test 2). Say "sure, hold on," silent 10 seconds, come back in a
+   different voice: "front register." Charlie treats you as new and asks the Pokémon question again.
+4. **Nobody to transfer to.** Answer "Pharmacy," and when he asks to be put through say "there's
+   nobody up front right now." Charlie wraps warmly and ends — no nagging.
+5. **Switch off.** Owner turns the transfer switch off first. Answer "Pharmacy, this is Joe." Charlie
+   does NOT ask to be put through, takes what he gets, wraps. The scorecard shows a red X on
+   "Transfer requested" — correct here: it means we didn't save it because he told us not to.
+6. **The plain check.** Answer straight away and answer the question. Nothing regressed.
+7. **The transfer with a real person at the far end.** Proves how the hand-over actually sounds. No
+   test rig can do this.
+8. **Spanish.** Run the check in Spanish and answer in Spanish the whole way.
+
+## 3. The life of a check, start to finish
+
+1. We dial. The store's phone rings.
+2. Somebody answers and says their greeting.
+3. **The question plays as a recording** — our own audio, so asking costs nothing.
+4. **Charlie warms up 2 seconds before that recording ends**, measured off our own recording whose
+   length we know exactly. He bills from the moment he connects. A real question runs about 5
+   seconds, so starting him at the top of it would buy 5 seconds of dead air on every check.
+5. Charlie hears the answer, may ask a follow-up, then wraps up — thanks them, by name if they gave
+   one.
+6. Staff step away → **Charlie is dropped** and the meter stops. Staff come back → **Charlie is
+   reconnected** as part 2 of the same check, and he is told time passed so he doesn't carry on
+   mid-sentence.
+7. Wrong department → Charlie asks ONCE to be put through, meter off through the hand-over, asks
+   again when somebody new picks up.
+8. The check ends. The answer is written and the customer is charged (a hold drop IS charged —
+   owner's ruling 08-01; only a genuine failure on our side is free).
+
+**Charlie stops for exactly two reasons: dropped to save money (he comes back), or the check is
+over.** "Charlie left" is a third line the code writes when the connection closes behind one of those
+two — it is plumbing showing through and must be DELETED.
+
+## 4. Every step in the log (owner-revised 08-01)
+
+**THE LOG IS END TO END, exactly like the customer's own check log** (owner reversed the earlier
+"move mapping out": *"it would allow me to see in the testing area a complete end to end log of the
+entire transaction which is huge for myself and any agent"*). The menu walk STAYS — CVS shows about
+six steps there. Both come from the same timeline already, so this is one shape, not two.
+
+Getting there: Dialling Fun store · The store's phone is ringing · The line was answered · Staff
+greeting
+
+Walking the menu (the customer sees these too): Pressed 2 · Said "front" · Menu finished, now
+listening for a real person
+
+The question: The Pokémon question played as a recording *(NOT BUILT YET)* · Charlie warmed up
+*(NOT BUILT YET)* · Charlie joined · Charlie reconnected, part 2 of this check
+
+Waiting: Staff stepped away, the line went quiet · Staff back after 40 seconds · Staff back after 40
+seconds, and it may not be the same person
+
+Department: We reached the wrong department · Charlie asked to be transferred · Transferred, the next
+department is ringing · Staff said there was
+nobody to transfer to · We were sent back through the phone menu *(NOT BUILT YET)* · The check was
+disconnected during the transfer *(NOT BUILT YET)*
+
+Charlie's words: Charlie asked about Pokémon booster boxes *(product type + packaging, filled in —
+NOT BUILT YET)* · Charlie asked when the next delivery lands *(NOT BUILT YET)* · Charlie wrapped up
+and thanked them by name *(NOT BUILT YET)* · Charlie spoke Spanish throughout *(NOT BUILT YET)*
+
+Endings: Charlie dropped · Charlie ended the check · The answer: In stock *(the word comes from
+Statuses, nowhere else)* · Reached a machine, hung up straight away · Nobody picked up after 6 rings,
+hung up before Charlie ever billed · Nobody spoke for 35 seconds after Charlie joined, so we hung up ·
+The store put us on hold too long, so we hung up *(NOT BUILT YET)* · The store hung up on us · The
+check was disconnected · Something went wrong on our end, so we hung up. No check, no charge.
+
+**The rules behind those numbers, verified in code:** 6 unanswered rings at a department = hang up
+(about 36 seconds of the normal American ring pattern) · 35 seconds with nobody speaking after
+Charlie joins = hang up (`bail.ringMaxSeconds`) · a check hangs up at 5 minutes flat, always.
+
+**OWNER 08-01: "Ring 2 went unanswered" is DELETED from the log.** Counting rings while we are being
+transferred tells him nothing and costs nothing — Charlie is off while a phone rings. The 6-ring
+give-up RULE stays (it stops us waiting forever at a department nobody works at); only the per-ring
+line goes.
+
+**OWNER 08-01, on being patient:** waiting is nearly free because Charlie is dropped, and a second
+check costs more than waiting — so lean patient everywhere Charlie is off. See §7b for what that
+costs and where the real boundary belongs.
+
+## 5. Every pass/fail row, both sides
+
+| # | Row | Pass | Fail |
+|---|---|---|---|
+| 1 | Handed to Charlie | Reached Staff through Alpha and handed to Charlie. | Staff never picked up, so there was nobody to hand to. *(or)* Our own system never handed the check to Charlie. |
+| 2 | The question played as a recording | The question played as a recording. | The recording did not play, so Charlie asked the question himself. |
+| 3 | Charlie warmed up in time | Charlie warmed up in time. | Charlie warmed up late. There was dead air for 2 seconds. |
+| 4 | We reached the right department | We reached the right department, no transfer needed. | Wrong department and Charlie never asked to be transferred. |
+| 5 | Asked to be transferred | Charlie asked to be transferred. | Charlie asked to be transferred more than once. |
+| 6 | Reacted to a new person | Charlie reacted correctly to a new staff member after the transfer. | Charlie did not react to a new staff member after the transfer. |
+| 7 | Said goodbye when told no | Staff said there was nobody to transfer to and Charlie said goodbye. | Charlie kept pushing after Staff said no. |
+| 8 | Meter stopped | Staff stepped away for 40 seconds. Charlie was dropped and the meter stopped. | Staff put us on hold or transferred us and Charlie kept billing. |
+| 9 | Charlie wrapped up | Charlie thanked them by name and ended. | The check ended without Charlie wrapping up. |
+| 10 | Spoke their language | Charlie spoke Spanish throughout. | Charlie answered in English on a Spanish check. |
+| 11 | Charlie ended the check | Charlie ended the check. | Staff hung up on us. *(or)* The check was disconnected. |
+
+**Row 6 must name WHICH event it is judging** (owner's question, "reacted to what?") — after a
+transfer, or after a wait. Both are a new person; only one of them is expected.
+
+**A row only speaks when it applies** (owner's question on row 4: *"do we want to say we reached the
+right department every time?"*). No — that is what Unused is for. On a plain check rows 4 to 7 are
+Unused and say nothing. A row never claims a pass for something that never happened.
+
+**Three states, never two** (owner): **Used · Unused · Broken.** Unused is a clean result, not a
+failure — a plain check is mostly Unused. A row exists ONLY because a WORKING check could hide the
+problem from the owner (his rule, 07-30: walking a menu is not a test; the check failing IS the
+report).
+
+**The copy is locked by a test.** `scripts/test-behaved.ts` asserts the exact wording of the three
+rows that exist today, so no agent can quietly reword them. Every new row above MUST get the same
+assertion in the same commit.
+
+## 6. Decisions made 08-01 (owner)
+
+- **Hold cap: 2 minutes.** Waiting is cheap because Charlie's meter is off — only the phone line
+  ticks. Giving up early costs a whole failed check the customer paid for. NOT BUILT YET.
+- **The customer-facing status he is creating:** "The store put us on hold for too long, so we hung
+  up. Try again in a bit."
+- **"Charlie left" is deleted.** Dropped and ended are the only two.
+- **Mapping steps leave this page.** Mapping has its own section.
+- **A recording must never get a Charlie.** The listener ALREADY has the right test — a short
+  greeting (under about 3.5 seconds) followed by a real pause means a person; a recording talks
+  longer and never stops for you (`looksLikeAPerson`, `src/calls/listen-nav.ts:154`). It is used to
+  stop keypad tones but NOT to decide whether Charlie opens; the thing that opens Charlie is cruder
+  (any human-sounding voice, which a recording obviously is). **The fix: Charlie opens on the test we
+  already trust.** This is passive — nothing is said, so it cannot trip a store's menu. Franklin's
+  Ace Hardware (a recording on an unmapped store, on the direct path) is the case it protects.
+  Mapping REMEMBERS the answer afterwards; it does not have to work it out again.
+
+## 6b. The statuses (what the customer reads)
+
+**Statuses we already have:** in stock · sold out · left on hold · too busy · language barrier ·
+voicemail · nobody answered · no clear answer.
+
+**Owner's decision 08-01: "left on hold" covers the new hold cap.** No new customer status. From the
+customer's side the outcome is identical — nobody came back. WHO hung up is detail for the log, not
+a different thing for the customer to read.
+
+**Possible new statuses raised 08-01, not yet decided:**
+- Something went wrong on our end. No check, no charge. *(today this reads "the check broke on our
+  end" which is not English — and this is the ONLY free case; a hold drop IS charged.)*
+- The check was disconnected. *(distinct from Staff hanging up — see §8.)*
+
+## 7. Still to build (Echo, in this order)
+
+1. Charlie opens on the person test, not the crude one (§6 — protects every unmapped store, day one).
+2. Record the recorded question playing, and the warm-up.
+3. Record the wrap-up (thanked them, used their name) and which language was spoken.
+4. The 2-minute hold cap + its status.
+5. Then the Testing card shows all of §4 and §5. The page can only show what the engine records, so
+   this is one job in this order, not two agents.
+
+## 7b. THE MONEY BOUNDARIES (owner asked 08-01 — real measured rates, `src/calls/cost.ts`)
+
+| What | Rate |
+|---|---|
+| The phone line | 1.4¢ a minute, WHOLE minutes rounded up |
+| The listening | 0.4¢ a minute |
+| **Charlie** | **11¢ a minute** (0.18¢ a second) |
+
+**Charlie costs 60 times what the phone line costs.** So a cap on total check time barely protects
+anything; **Charlie's talk time is the only number that matters.**
+
+Owner's target: the Operator plan is 20¢ a check and the goal is 67% profit on average, so the
+ceiling is **6.6¢ a check**.
+- A 2-minute check costs about 3.7¢ before Charlie says a word → **about 16 seconds of Charlie left.**
+- A 1-minute check costs about 1.8¢ → **about 26 seconds of Charlie left.**
+- Waiting through a hold is nearly free (Charlie is dropped). Waiting while he is TALKING is what
+  breaks the margin.
+
+**What this means for the rules:** be generous with waiting, strict with talking. The 2-minute hold
+cap is cheap insurance. **OWNER DECIDED 08-02: 45 seconds of Charlie actually talking, tunable from Admin under App.** His own arithmetic: 23 holds 67% profit, 45 does not — so 45 is a deliberate choice to buy a longer conversation at a thinner margin, tuned against real checks rather than guessed. Without our own thinking behind Charlie the cost is double what it would otherwise be.
+
+## 7c. THE PHONE ON THE COUNTER (owner APPROVED the idea 08-01, wording not yet reviewed)
+
+**The listener knows three shapes today** (`src/calls/listen-nav.ts`): QUIET (nobody making a sound,
+6 seconds, Charlie dropped) · MUSIC (sound that never stops, 96% of a 3-second window voiced, 6
+seconds, Charlie dropped) · RINGING.
+
+**A phone set down on a counter is NONE of them.** Background store noise is irregular with gaps in
+it, which is the exact shape of somebody talking. So Charlie stays open and keeps billing while the
+handset lies on the counter and Staff walk to the back room. The owner called this before it was
+found: *"if we're not smart about how Charlie disconnects we're gonna be in a world of pain."*
+
+**THE FIX, owner approved: a fourth shape, a loud room.** Somebody speaking into a handset is loud
+and close; store noise across the room is far quieter. Sound that is present but well below the
+loudness of somebody speaking TO us, held for the same 6 seconds, is treated exactly like silence:
+Charlie is dropped, the meter stops, and he reconnects the moment somebody speaks up close again.
+Costs nothing extra, needs no transcribing, works in any language. **Echo builds this.**
+
+## 7d. THE CHATTY CLERK (owner's wording 08-01)
+
+The one case no drop rule catches: somebody genuinely IS talking, hemming and hawing, never landing
+on an answer. Charlie stays open because every rule is working correctly, and the check runs away
+with the margin (§7b: he costs 11¢ a minute).
+
+**Charlie's line, the owner's words, NO DASHES (they read strangely through ElevenLabs):**
+> "Don't want to keep you, did you find out if you have Pokémon cards?"
+
+If they still cannot answer, saying he will call back is FINE (owner: Staff take thousands of calls,
+they do not remember and humans say it all the time).
+
+**He must never cut off mid sentence.** A hard hang up at a limit is the thing the owner is right to
+fear: the clerk is mid help, the check dies, and the customer paid for all of it. The limit tells
+Charlie to START WRAPPING UP; it never ends the check itself.
+
+**THE NUMBER, owner 08-02: 45 seconds of Charlie actually talking, tunable in Admin.** His arithmetic says 23 holds 67% profit and 45 does not, so this is a deliberate choice to buy a longer conversation at a thinner margin. **It lives in Admin under App so he tunes it against real checks**, never baked into the code.
+
+## 7e. THE THREE NUMBERS HE CAN TUNE (Admin ▸ App, owner 08-01)
+
+| Setting | Starts at | Why |
+|---|---|---|
+| Charlie wrap-up seconds | 45 | His own arithmetic: 45 does not hold 67% profit, 23 does. |
+| Hold cap seconds | 120 | Waiting is nearly free (Charlie is dropped), so be generous. |
+| Silence before Charlie drops | 6 | **Keep 6 until the robot store can measure the floor.** Six seconds of Charlie costs about 1.1¢ every time somebody steps away, so shaving is worth real money. But too short makes him reconnect mid conversation and a choppy Charlie loses whole checks, which costs far more than a cent. The risk is not symmetrical: too long costs pennies, too short costs checks. Tune it on fifty checks at 5 seconds against fifty at 4, never on a guess. NOTE: a real "let me go check" runs far longer than 6 seconds anyway, so this only bites on short thinking pauses. |
+
+**THE BUILD ORDER IS FIXED:** the Testing card can only show what the engine records, so the engine
+work comes first. One agent, one order. **Round 1 = `echo-build.md`** (running 08-01). **Round 2 =
+`echo-build-round-2.md`**: everything else this exercise caught, chiefly that `holdMaxSeconds` OPENS
+Charlie to an empty line at 60 seconds (seen on the owner's own check log, real money), the dead
+Admin box wired to nothing, a misheard machine phrase that can still hang up on a real person before
+any hold, and the detections the log claims but nothing writes.
+
+## 8. Open — decisions the owner still owes
+
+1. **Can we tell Staff hanging up from the line dying?** A human hears the difference. The carrier
+   gives us a reason on every ended check, but "they hung up" and "the line died" may arrive as the
+   same reason. NEEDS A CODE CHECK before row 11's fail wording is final.
+2. **What should happen when the recording cannot be made?** It IS possible today — the code falls
+   back and Charlie asks the question himself, which costs a few cents more. PM's view: that is the
+   right fallback (a check that happens beats one that does not), it just has to be VISIBLE so the
+   owner can see how often. Owner to confirm.
+3. **"I can't hear you, let me call back."** Owner raised this as a behaviour Charlie could have if
+   we run the talking ourselves — he hangs up, calls back, opens differently, possibly to a new
+   person. Not built, not designed. Its own box when the owner wants it.
+4. **Row 10 (language) may not be worth a row** — the voice company handles the translation, so the
+   owner doubts it can fail. Kept for now, lowest priority.
+6. **RULED 08-02, do not re-litigate: the machine-phrase check fires on the store's FIRST line
+   only.** Round 2's work order asked for it to go inert once a person had been found, on the
+   grounds that "a machine that answers the phone is caught before that point anyway". That premise
+   is false. Nothing else catches it, and a voicemail greeting's recorded voice is exactly what
+   trips the person detector — so that gate switches the bail off on the one case it exists for and
+   we pay for the whole announcement. An earlier attempt (inert once we had asked our question) had
+   the same hole through a different door, because the recorded question plays on that same person
+   detection. **Both fail for one shared reason: today "a person answered" cannot tell a person from
+   a recording.** So the rule is: a voicemail ANNOUNCES itself, and only the store's first words may
+   end a check as a machine; a live person says those same words in REPLY, and a reply can never end
+   one. Echo escalated the deviation rather than shipping it quietly; the PM agreed. **When round 1
+   lands (section 7 item 1, Charlie opens on the person test), the person gate becomes correct and
+   this first-line rule becomes belt and braces — keep both.**
+
+7. **Row 7 (nagging) is real, verified:** `prompts.ts` tells Charlie to ask ONCE and wrap up if
+   nobody can help. So a nag is Charlie disobeying his instructions, which these agents do. The row
+   earns its place.
+
+## 9. THE ROBOT STORE — the owner stops being the only tester (his idea, 08-01)
+
+A second phone number we own, pointed at the MVP store, that answers itself: plays a greeting,
+pauses, then answers the question. Everything else is real — a real dial, a real Charlie, real
+transcribing, the real page. An agent runs the checks itself and reads the result, and the owner can
+look at the same website afterwards.
+
+**Why this depends on the Testing section shipping first.** The pass/fail rows in §5 stop being
+something the owner reads and become the AGENT'S answer — the check passed or it did not, no human
+eyes needed. Without those rows there is nothing for an agent to read. This is why §7 comes before
+this section, not after.
+
+**What it can and cannot prove.** It proves the plumbing — the greeting is the first line, the words
+are not welded to the answer, the order on the page, the transcript, the log. It CANNOT prove how a
+check sounds, or a store improvising, because it says the same words every time. The owner's phone
+still owns the last mile.
+
+**Owner decision 08-01: the robot store must VARY.** It plays every one of his eight tests in §2 —
+sometimes hold, sometimes answer as the pharmacy, sometimes hang up — or it only ever covers one of
+them.
+
+**HARD CAP, owner's rule.** Every check the agent runs costs real money on a real phone line. An
+agent told to loop until it is correct will dial fifty times. A run gets a fixed number of checks and
+then STOPS and reports — it never decides to keep going.
+
+## 10. The code health work (raised 08-01, parked behind testing)
+
+Not Charlie behaviour, but it is why agents keep getting Charlie wrong, so it belongs on the record.
+The calling engine file is 1,159 lines and nearly half of it is comments — agents narrating history
+to each other. The main server file is 7,381 lines; anyone who opens it burns most of their budget
+before doing anything.
+
+**Owner's call: keep going, fix it after.** Nothing is broken, it is slow to read. The agreed plan:
+one cleanup pass on the main server file ONLY, splitting it by area, deleting genuinely dead code,
+rewriting comments to say what the code DOES NOW (history moves to `RULES.md`, never deleted), and
+extending `scripts/checkpoint-lint.sh` to fail any file in `src/` over 800 lines with today's
+offenders grandfathered — so it cannot happen again. That agent stays out of `src/voice/`,
+`src/calls/`, `src/db/` and the two public pages while Echo is building §7.

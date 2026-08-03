@@ -156,7 +156,7 @@ __BRAND_HEAD__
 .store.coming{opacity:.5} /* callable-but-unmapped: shown greyed, not callable (tap → "Adding store soon!") */
   .store:hover{border-color:rgba(255,255,255,.18)}
   .store.sel{border-color:var(--accent,#FFCB05);background:color-mix(in srgb,var(--accent,#FFCB05) 9%,transparent)}
-  .store .ic{width:52px;height:52px;border-radius:15px;background:linear-gradient(145deg,#34343d,#23232b);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+  .store .ic{width:46px;height:46px;border-radius:12px;background:#1F1F25;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}/* THE grey tile: one size for every store logo, site + Admin (owner 07-31) */
   /* name-only stores: their name as a tight two-line wordmark inside the logo slot (no made-up logo) */
   .wm{display:flex;flex-direction:column;justify-content:center;align-items:center;width:100%;height:100%;padding:2px;box-sizing:border-box;overflow:hidden;text-align:center}
   .wm span{display:block;font-weight:900;font-size:15px;line-height:1;letter-spacing:.01em;text-transform:uppercase;color:#cdcdd8;max-width:100%}
@@ -1282,8 +1282,8 @@ __BRAND_HEAD__
   .railchip img{width:30px;height:30px;object-fit:contain}
   /* dark wordmarks need a light plate — any tile holding a real logo goes light */
   .lite{background:#f2f2f5 !important;border-color:rgba(255,255,255,.28) !important}
-  .store .ic img{width:40px;height:40px;object-fit:contain}
-  .store .ic.widelogo img{width:44px;height:auto;max-height:34px}
+  .store .ic img{max-width:78%;max-height:78%;width:auto;height:auto;object-fit:contain}/* fallback only: a real logo carries its own width inline (logoPct) */
+  .store .ic.widelogo img{max-width:92%;max-height:64%}/* fallback only */
   .railchip.widelogo img{width:38px;height:auto;max-height:22px}
   .railchip.on{transform:scale(1.08);border-color:var(--accent,var(--green));box-shadow:0 0 12px rgba(74,222,128,.22)}
   #result{position:relative}
@@ -1540,8 +1540,8 @@ html[data-skin="v2"] .is1t .b{display:block;margin-top:1px;font-size:10.5px;font
    r14 rows pad 10/12, name 15/700, sub 12/600 #8A8A96, distance 17/800 + 10/700 muted unit,
    selected ring gets the comp's accent glow. */
 html[data-skin="v2"] .store{border-radius:14px;padding:10px 12px}
-html[data-skin="v2"] .store .ic{width:44px;height:44px;border-radius:12px}
-html[data-skin="v2"] .store .ic img{max-width:34px;max-height:34px}
+
+
 html[data-skin="v2"] .store .nm{font-size:15px;font-weight:700}
 html[data-skin="v2"] .store .lo{font-size:12px;font-weight:600;color:#8A8A96}
 html[data-skin="v2"] .store .smi{font-size:17px;font-weight:800;color:#FFF}
@@ -1558,7 +1558,7 @@ html[data-skin="v2"] .rng::-moz-range-track{background:#1B1B20}
 html[data-skin="v2"] .rng::-moz-range-thumb{width:24px;height:24px;border:0;box-shadow:0 0 12px rgba(74,222,128,.6),0 3px 10px rgba(0,0,0,.5)}
 /* Store rows (§5.6): chain-art logo slot on #1F1F25; independents keep the embossed initials tile.
    Selection = accent ring + #23232A fill (§5.5); BEST row = green ring + soft glow. */
-html[data-skin="v2"] .store .ic{background:#1F1F25;border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+
 html[data-skin="v2"] .store .ic:not(:has(img)){background:linear-gradient(145deg,#34343D,#23232B);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5)}
 html[data-skin="v2"] .store.sel{background:#23232A;border:0;box-shadow:0 0 0 2px var(--accent,#FFCB05),0 8px 14px -8px rgba(0,0,0,.55)}
 html[data-skin="v2"] .store:has(.besttag){background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;box-shadow:0 0 0 1.5px rgba(74,222,128,.5),0 8px 14px -8px rgba(0,0,0,.55)}
@@ -1902,9 +1902,9 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zrrow2.open{border-radius:14px 14px 0 0}
 #zones .zrbody{text-align:left;overflow-x:hidden}
 #zones .zresult:has(.zrrow2.open){border-radius:14px;box-shadow:0 0 0 1px rgba(74,222,128,.25)}
-#zones .ic2{width:40px;height:40px;border-radius:11px;background:linear-gradient(145deg,#34343D,#23232B);display:grid;place-items:center;flex:none;overflow:hidden}
-#zones .ic2 img{max-width:30px;max-height:30px;object-fit:contain}
-#zones .ic2 .wm{font-size:9px}
+#zones 
+#zones 
+
 #zones .zrrow2 .nm2{flex:1;min-width:0;font:700 14.5px Inter;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #zones .zrrow2.checking{box-shadow:0 0 0 1px rgba(74,222,128,.35),0 0 16px rgba(74,222,128,.14)}
 #zones .zstopall{width:100%;height:50px;border:0;border-radius:14px;background:linear-gradient(180deg,#2D2D34,#27272D);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;gap:9px;font:800 13px Inter;letter-spacing:.06em;text-transform:uppercase;color:#FF9B9B;cursor:pointer}
@@ -3419,30 +3419,22 @@ const SVG_STORE = p => `<svg width="${p}" height="${p}" viewBox="0 0 24 24" fill
 const SVG_TAG   = p => `<svg width="${p}" height="${p}" viewBox="0 0 24 24" fill="none" stroke="var(--accent,#FFCB05)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".9" fill="var(--accent,#FFCB05)"/></svg>`;
 // A store row's face: real logo if we have one; every HOBBY card shop shows the storefront icon (accent)
 // instead of messy name-initials; everyone else keeps their wordmark tile.
+// THE ONE WAY a store's logo is drawn, anywhere on this page. The grey tile is the only place a store
+// logo ever appears (owner 07-31); the single exception is the big mark behind the check status head.
+// How WIDE to draw it is decided on the server from the artwork's own proportions and arrives on the
+// store row as logoPct — a percent of whatever square tile holds it. Nothing here measures anything,
+// nothing waits for the image to load, and this page and the Admin cannot drift apart because neither
+// one owns the rule. No logoPct (artwork we could not read) falls back to the tile's own CSS.
+function logoStyle(s){ return (s && typeof s.logoPct === 'number') ? ` style="width:${s.logoPct}%;height:auto;max-width:none;max-height:none;object-fit:contain"` : ''; }
 function storeFace(s){
-  if(s&&s.logoUrl) return `<img src="${esc(s.logoUrl)}" alt="" data-nm="${esc(s.name)}" data-st="${esc(s.storeType||'')}" onload="sizeLogo(this)" onerror="wmFail(this)">`;
+  if(s&&s.logoUrl) return `<img src="${esc(s.logoUrl)}" alt="" data-nm="${esc(s.name)}" data-st="${esc(s.storeType||'')}"${logoStyle(s)} onerror="wmFail(this)">`;
   if(s&&s.storeType==='Hobby') return SVG_STORE(24);
   return storeWordmark(s&&s.name, s&&s.storeType);
 }
-// Every chain logo gets the SAME visual AREA in its tile, then clamps to the tile's edges. Fitting a
-// logo inside a square box instead sizes it by its longest side, so a wide wordmark (Randalls is 5:1)
-// matched the box's width and came out a few pixels tall next to a squarish mark like BJ's Wholesale.
-// Width is written as a PERCENT of the tile, so it survives the tile changing size (v1 52px, v2 44px,
-// the picker's smaller tiles) without re-running. The inline styles deliberately beat the tile's own
-// width/height/max rules; a logo that never loads keeps the old CSS sizing untouched.
-// GOTCHA: an image already in cache fires onload BEFORE layout has settled, so the tile still measures
-// 0 wide and the logo would size to nothing. Retry on the next frame until the tile has a width.
-// Twin of the same function in app.html, so a chain row in Admin and a store row here read alike.
-function sizeLogo(img, tries){
-  const box = img && img.parentElement; if(!box) return;
-  const W = box.clientWidth, H = box.clientHeight;
-  if(!W || !H){ if((tries||0) < 60) requestAnimationFrame(()=>sizeLogo(img,(tries||0)+1)); return; }
-  const nw = img.naturalWidth, nh = img.naturalHeight; if(!nw || !nh) return;
-  const targetArea = 0.55*W*H, maxW = 0.95*W, maxH = 0.90*H;
-  let sc = Math.sqrt(targetArea/(nw*nh));
-  if(nw*sc > maxW) sc = maxW/nw;
-  if(nh*sc > maxH) sc = maxH/nh;
-  img.style.cssText += `;width:${(100*nw*sc/W).toFixed(2)}%;height:auto;max-width:none;max-height:none;object-fit:contain`;
+// The grey tile itself, for the few places that build a row by hand instead of using .store .ic.
+function storeTile(s, extra){
+  const cls = 'ic' + (s&&s.logoDark?' lite':'') + (s&&s.logoWide?' widelogo':'') + (extra?' '+extra:'');
+  return `<div class="${cls}">${storeFace(s)}</div>`;
 }
 // A dead logoUrl must never show the browser's broken-image glyph (Android Chrome paints a visible
 // one where iOS leaves a quiet blank) — swap in the designed monogram tile and drop the logo-only
@@ -5798,7 +5790,12 @@ function deriveSteps(transcript){
 // Live call renders the SAME unified timeline the result uses — "Reaching a person" steps + the
 // conversation linked on one line — rebuilt on every new line so it grows in real time as the call
 // happens (finalElapsed=null → the latest step shows as the current one, no closing time yet).
-function renderLiveMsg(){ const box=$('live_msgbox'); if(box) box.innerHTML=combinedTimelineHTML(LIVE_STEPS, LIVE_TRANSCRIPT, null);
+function renderLiveMsg(){ const box=$('live_msgbox'); if(!box) return;
+  // NOTHING NEW = NOTHING MOVES (08-01, the bouncing page): this rebuilt and smooth-scrolled on every
+  // poll tick and every socket line even when the conversation had not changed, so the page jumped up
+  // and down while nothing was happening. Rebuild and follow ONLY when the content really changed.
+  const html=combinedTimelineHTML(LIVE_STEPS, LIVE_TRANSCRIPT, null);
+  if(box.__lastLive===html) return; box.__lastLive=html; box.innerHTML=html;
   // Follow the conversation as it happens (owner 07-15): stick to the newest bubble unless the user
   // scrolled up to reread; scrolling back down re-arms the follow. The target is the NEWEST LINE, not
   // document.body.scrollHeight: the page now ends with a bar-clearing strip (see body.lview::after), and
@@ -6022,7 +6019,12 @@ async function startCheckLive(){
     // Ladder step straight from the call itself (the desk ringing after the menu). That phase happens
     // before the agent ever joins, so it can never come from the transcript. The bridge measures it.
     else if(d.stage&&d.stage.n){ liveStage(d.stage.n); }
-    else if(d.line&&d.line.text){ if(!LIVE_TR.length) lvlog('ws first line'); LIVE_TR.push(d.line.role+': '+d.line.text); LIVE_TRANSCRIPT=LIVE_TR.join('\n'); if(d.line.role==='Agent'&&AGENT_ASK.test(d.line.text))AGENT_PITCHED=true; liveStage(stageForLines(LIVE_TR,AGENT_PITCHED)); renderLiveMsg(); } // real-time steps + human script, as the call happens
+    else if(d.line&&d.line.text){ // real-time steps + human script, as the call happens
+      // The same sentence arriving twice prints once (08-01, the doubled question): the socket and
+      // the poll can each deliver a line, so a fuzzy match against the newest few drops the repeat.
+      const _norm=s=>s.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(); const _k=_norm(d.line.role+': '+d.line.text);
+      if(!LIVE_TR.slice(-4).some(x=>_norm(x)===_k)){
+        if(!LIVE_TR.length) lvlog('ws first line'); LIVE_TR.push(d.line.role+': '+d.line.text); LIVE_TRANSCRIPT=LIVE_TR.join('\n'); if(d.line.role==='Agent'&&AGENT_ASK.test(d.line.text))AGENT_PITCHED=true; liveStage(stageForLines(LIVE_TR,AGENT_PITCHED)); renderLiveMsg(); } }
     // Instant flip: the bridge tells us the moment the call ends → finalize NOW (snappy, like the live
     // transcript). Crucially we do NOT clearInterval(POLL) here — the POLL keeps running as the safety net,
     // so even if this finalize hiccups the POLL still resolves it (that POLL-clearing was the old freeze).
@@ -6082,9 +6084,16 @@ async function startCheckLive(){
     lvlog('live tx='+((o&&o.transcript)?o.transcript.length:0)+' live='+(o?String(o.live):'-')+(o&&o.error?' err='+o.error:''));
     if(o&&o.transcript){
       const lines=o.transcript.split('\n').filter(Boolean);
-      // Adopt the poll's transcript when the WS gave nothing yet OR when the poll has MORE than we've
-      // streamed — so if the live socket dropped mid-call the transcript keeps flowing (owner 07-16).
-      if(!LIVE_TR.length || (o.transcript && o.transcript.length>(LIVE_TRANSCRIPT||'').length)) LIVE_TRANSCRIPT=o.transcript;
+      // OUR OWN SAVED CONVERSATION DECIDES THE ORDER. The lines that stream in arrive in the order
+      // they were TRANSCRIBED, which is not the order they were said: Staff speak first, but their
+      // words only exist once the agent has been handed the audio we held for him, seconds later. So
+      // the streamed copy can hold the right lines in the wrong order. The old rule only took the
+      // saved copy when it was LONGER, which the same lines reordered never are. The customer then
+      // read our question above a greeting that came before it, until the end of the check flipped
+      // them (owner screenshot, 08-01). The saved copy is written in spoken order, so once it holds
+      // as much as we have streamed, it wins.
+      if(!LIVE_TR.length || (o.transcript && o.transcript.split('\n').filter(Boolean).length>=LIVE_TR.length)) LIVE_TRANSCRIPT=o.transcript;
+      else if(o.transcript && o.transcript.length>(LIVE_TRANSCRIPT||'').length) LIVE_TRANSCRIPT=o.transcript;
       const pitched=AGENT_PITCHED||lines.some(l=>l.startsWith('Agent:')&&AGENT_ASK.test(l)); if(pitched)AGENT_PITCHED=true;
       liveStage(stageForLines(lines, pitched));
       renderLiveMsg();
@@ -7176,7 +7185,7 @@ function acctTab(which,fromPop){
     const agoTx=e=>{ try{ return agoStr(Math.floor(e.ts/1000)); }catch(_){ return ''; } }; // agoStr wants seconds — ms made every call 'just now'
     const lastPool=(ACT_TONE?scope.filter(e=>railTone(e)===ACT_TONE):hist);
     const last=lastPool.slice(0,ACT_TONE?6:3).map(e=>`<button onclick="ACCT_RETURN='activity';closeAccount();openHistEntry(histList().find(x=>x.cid==='${esc(e.cid)}'))" style="display:flex;align-items:center;gap:11px;width:100%;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:14px;padding:9px 12px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;cursor:pointer;text-align:left">
-      <span style="width:40px;height:40px;border-radius:11px;background:#1F1F25;display:flex;align-items:center;justify-content:center;flex-shrink:0">${e.logoUrl?`<img src="${esc(e.logoUrl)}" style="width:32px;height:32px;object-fit:contain" alt="" data-nm="${esc(e.storeName)}" onerror="wmFail(this)">`:`<span style="font-size:11px;font-weight:900;color:#CDCDD8">${esc((railBase(e.storeName)||'?').slice(0,2).toUpperCase())}</span>`}</span>
+      ${storeTile({logoUrl:e.logoUrl,logoWide:e.logoWide,logoDark:e.logoDark,logoPct:e.logoPct,name:e.storeName,storeType:e.storeType})}
       <span style="flex:1;min-width:0"><span style="display:block;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(railBase(e.storeName)||t('hist.acheck','Store check'))}</span><span style="display:block;margin-top:2px;font-size:11.5px;font-weight:600;color:#8A8A96;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.location||e.address||'')}</span></span>
       <span style="flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:3px">${v2StatusChip(railTone(e),22)}<span style="font-size:11px;font-weight:600;color:#8A8A96">${agoTx(e)}</span></span>
     </button>`).join('');
@@ -8098,7 +8107,7 @@ function renderZoneRun(){
     const tap=tone==='queue'?`zoneStopOnePrompt(${row.retailerId},'${esc(row.name||'')}')`:`zoneExpand('${esc(row.cid||'')}',this)`;
     return `<div class="zresult" data-rid="${row.retailerId}">
       <button class="zrrow2 ${tone==='live'?'checking':''}" onclick="${tap}">
-        <div class="ic2 ${row.logoDark?'lite':''} ${row.logoWide?'widelogo':''}">${storeFace(row)}</div>
+        ${storeTile(row)}
         <div class="nm2">${esc(row.name||('Store '+row.retailerId))}</div>
         <span class="zmark" data-tone="${tone}">${mark(tone)}</span>
       </button><div class="zrbody" style="display:none"></div></div>`; }).join('');
@@ -9273,7 +9282,7 @@ function succFilter(){
   if(SUCC_STORE){ $('succ_storelist').innerHTML=''; return; }
   const list=succInStockStores().filter(st=>!q||storeMatch(st.name+' '+(st.location||''),q));
   if(!list.length){ $('succ_storelist').innerHTML=`<div class="lo" style="padding:11px 3px;color:var(--muted);font-size:12.5px;line-height:1.5">${q?t('sc.noinstock.q','No in-stock check matches that.'):t('sc.noinstock','Only stores where you found it in stock show here. Run a check first.')}</div>`; return; }
-  $('succ_storelist').innerHTML=list.slice(0,6).map(st=>`<div class="store" onclick="succPick(${st.id})" style="margin-top:8px"><div class="ic">${st.logoUrl?`<img src="${esc(st.logoUrl)}" alt="" style="width:22px;height:22px;object-fit:contain">`:storeWordmark(st.name,st.storeType)}</div><div style="min-width:0;flex:1"><div class="nm">${esc(st.name)}</div><div class="lo">${esc(st.location||'')}</div></div></div>`).join('');
+  $('succ_storelist').innerHTML=list.slice(0,6).map(st=>`<div class="store" onclick="succPick(${st.id})" style="margin-top:8px">${storeTile(st)}<div style="min-width:0;flex:1"><div class="nm">${esc(st.name)}</div><div class="lo">${esc(st.location||'')}</div></div></div>`).join('');
 }
 let SUCC_SEQ=0;
 function succPick(id){ SUCC_STORE=STORES.find(st=>st.id===id)||succInStockStores().find(st=>st.id===id)||null; if(SUCC_STORE){ $('succ_store').value=SUCC_STORE.name; markFld($('succ_store'),false); } succFilter(); }

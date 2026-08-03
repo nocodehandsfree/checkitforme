@@ -23,3 +23,22 @@ that made it law. A rule leaves this file only when the owner himself retires it
    (08-01: the delay is 180s now — one check may run 150s, so 90s could still overlap the old
    process's live call. A crashing run SAVES its final state instead of clearing it, so a stop and
    its reason survive a restart; the next boot clears the finished run.)
+10. ADMIN IS THE RECORD OF TRUTH for voice tuning: a setting changed anywhere (the provider's own
+    dashboard included) is written back to Admin the same session. Workflows/routing live at
+    Admin → Voice → Workflows (`vt_workflows`); "the beat" = the pause before the agent takes its
+    turn, owned by the workflow (see `elevenlabs.ts` turn-taking notes). Two known lies: code
+    comments claim a `call_tuning` Admin screen that DOES NOT EXIST, and Designer/Workflows write
+    PROD voice config (no environment picker shipped) — "just tuning" can touch the real site.
+11. A FIX COVERS THE WHOLE FAMILY, never the one door. Found a caller reading the wrong source of
+    truth? Grep out EVERY caller of that source and fix all of them in ONE commit, listed in the fix
+    note. Runs 1-3 on 08-01 were one fault fixed three times through three doors, at the cost of
+    three of the owner's live calls.
+12. THE OWNER'S PHONE NEVER RE-FINDS AN OLD FAULT. Before inviting him to dial again, replay every
+    prior recorded run against the fixed engine on the rig; he dials only after all replay clean.
+    His calls prove new ground only. And on ANY live fault, the engine's own log is read FIRST,
+    before any code is opened (08-01: it showed each fault exactly, and was reached third).
+13. WHO DOES WHAT, one line, never violated: the menu answers · Alpha presses · Bravo speaks · the
+    earpiece listens the whole time · the desk rings · CHARLIE takes the human. NOTHING in mapping
+    ever talks to a person — that is Charlie, always, on every kind of check. Mapping built its own
+    way of asking Staff and it cost six fix passes to find (08-01). A copy of an existing piece is a
+    failed build: name the existing piece and snap onto it, or stop.

@@ -1,39 +1,22 @@
 # STATE — the owner's single source of truth
-One screen. Every session updates this at close (≤40 lines). New truth REPLACES old — history is in
-git. Last updated: 2026-08-02 (mapping part 2: the self-healing loop).
-## Store logos are all one size, and the check status page is clean (07-30/31)
-- Logos: new pictures live everywhere; the evening-out is on Admin and staging, real site at next promote.
-- The status page follows its newest line, clears Safari's bottom bar, and **the wait on ElevenLabs is GONE
-  (your order):** at hang up we settle from our own words plus our finished read.
-## In stock alerts are FIXED (07-31, on staging): why your Fun store email never came
-- Rows switched themselves off after one email, and two of the three ways a check finishes never sent mail.
-  Every finish sends now, alerts stay ON until paused. **Your move: tap the Fun store alert, run a check.**
-## A wrong department no longer costs you the check · the bottom bar can never go dark (07-30)
-- We ask once to be put through, stop paying while they hand us over, ask again when somebody new picks up
-  (a switch in Calls → App turns it off; only your phone can test the real words). The tint is nailed down,
-  and cost per check opens on **The baseline**, your 6.7¢ ceiling off your real prices.
-## Mapping rebuild, parts 1 and 2 of 3 — PHASE 1 DONE, waiting on your phone (08-02)
-- **You were right, and it was the whole problem.** Mapping talks to machines, Charlie talks to
-  people. The check that proves the department hands the SAME live call to Charlie the way a
-  customer's check does, and every line of mapping's own asking is deleted. The right department
-  is his word, and a mapping check never rides a transfer to get there.
-- **Waiting on YOU:** live customer checks still answer on a timer, and flipping that on changes the
-  cost numbers; and should a changed way through wait for your tap, or switch itself?
-## Phase 2 of 3 — the self-healing loop, built (08-02)
-- A store whose menu changed takes itself off the website, files ONE job however many times it fails,
-  and puts itself back the moment its re-map succeeds, with one line of history on the chain page.
-  Nobody reviews anything. Muted stores are skipped by zone runs and by every standing check, each
-  with the reason; the moment that tells a customer their check is paused fires, with no words
-  written — that email is another agent's.
-- Three stores of one chain off the website means the CHAIN's menu changed: the chain is never muted,
-  its fast way through is set aside so checks use the careful full words, and one run relearns it.
-- You can also mute or unmute a single store by hand in the stores section. It never travels between
-  staging and the live site, so a push can never quietly put a broken store back on.
-- Side branch only. **Nothing goes to staging while you test.** NOT tested on a real store: any of it.
-## The new calling engine is ON for staging. Your six test calls are the last thing (07-28/29)
-- **Nothing to flip.** A check from staging.checkitforme.com goes through the new engine. **Listen for:** it asks
-  once and waits · no keypad beeps once you are talking · after a hold it asks you again if you might be new.
-- **Waiting on YOU:** the six calls. **07-31, proven:** ElevenLabs refuses our own cheaper AI on a quick-cloned
-  voice like Branson HD. Email sent asking them to lift it. If no, we re-clone him the long way or do it ourselves.
+One screen. Every session updates this at close (≤40 lines). New truth REPLACES old, history is in
+git. Last updated: 2026-08-02 (mapping parts 1 and 2 merged to staging; Admin: owner email Off, the Statuses page, every Yes button).
+## Store logos: all 112 re-cut, one place decides their size (07-31/08-01, staging). New pictures are LIVE on the real site and Admin; the code half needs a promote. **Change a logo in one spot and it now really does change everywhere** — the logo wall is the record of truth and cannot lie to you.
+## Shipped since 07-30, all on staging unless noted: the check status page follows its newest line, both screens clear Safari's bottom bar, and the wait on ElevenLabs is GONE (at hang up we settle from our own words plus our finished read). In stock alerts: every finish path sends, alerts stay on until paused, one store = ONE email; 08-02 in Admin (LIVE) the owner email Off switch saves, the Statuses page works, and every Yes button was answering No — Off on the real site needs a promote. A wrong department no longer costs you the check: ask once to be put through, meter off through the hand-over, ask again when somebody new picks up. The bottom bar can never go dark again and Live is cleaned: the tint is nailed down, three ways it used to break are refused before anything goes live, and cost per check opens on The baseline, your 6.7¢ ceiling off your real prices. **Your move: tap the Fun store alert once, run a check, one email.**
+## The new calling engine is ON for staging. Your six test checks are the last thing (07-28/29)
+- **08-01: the check-life audit's fix is LIVE on staging — PM verified it with five blind readers plus every engine test before and after your "go".** One gatekeeper now answers "is this check still running?" from our own record and the phone company only, kept in the database so a restart cannot flip the answer back to ElevenLabs' guess. All three fault families fixed, plus: the fragment "no worries" replies, the dead Testing row on a refused dial, the doubled line and the bouncing page. **Then a second round:** a check started from the website never got a tag on it, so the part that writes your answer could not tell it was still on the phone — it wrote "couldn't tell" and charged you while you were on hold, on the exact button you press. Fixed, plus Charlie starting up into your hold music and a replaced Charlie hanging up on you mid sentence.
+- **08-01 evening: how Charlie is meant to work is finally WRITTEN DOWN** — `docs/specs/charlie-behavior/README.md` (every step, every pass and fail, in your words, plus your eight tests which had never been saved anywhere) and two work orders beside it, both approved by you line by line. Echo is building them, and the robot store that tests them. **Nothing ships to staging until the robot store can run a check** — you never dial for a bug a machine could catch.
+- Caught in that exercise, now being fixed: Charlie was switched on to an empty line at 60 seconds, a phone put down on a counter kept his meter running, an Admin box does nothing, and a misheard machine phrase could hang up on real Staff. Three numbers move to Admin under App to tune: how long Charlie may talk (23 seconds), the hold cap (2 minutes), the pause before he is dropped (6 seconds).
+- **Also 07-31:** ElevenLabs refuses our own cheaper AI on a quick-cloned voice like Branson HD; email sent asking them to lift it.
+## Mapping, parts 1 and 2 of 3 — BUILT, waiting on your phone (08-02)
+- Mapping talks to machines, Charlie talks to people: the check that proves the department hands the SAME live call to Charlie, the right department is his word, and a mapping check never rides a transfer to get there.
+- A store whose menu changed takes itself off the website, files ONE job however many times it fails, gets re-mapped on its own with nobody pressing anything, and puts itself back when that re-map succeeds — one line of history, and its own page reads as not found while it is off. Three stores of one chain off means the CHAIN's menu changed: never mute the chain, set its fast way aside so checks use the careful full words. One store can also be muted by hand in the stores section, and it never travels between staging and the live site. **Next: chunk 3, the screens.**
 ## PROMOTED 07-30 (owner's go, PM drove it) — everything built since the 27th is on the real site and Admin: the chain page's server half, the Testing scorecard's server half, the wrong-department save, Spanish names on the plans. The new engine stays OFF on the real site until you flip it; customers still see the coming-soon splash.
-## Waiting on YOU: hide the fake (simulated) poll rows from the Admin feedback queue? (yes / no) · Next: docs/tasks/INDEX.md.
+## A store that answers itself, and it found real problems on day one (08-02, working on staging)
+- It picks up on 424 484 7395 and plays a real person's exact words, ten different ways. All ten ran for real today from the staging site, tapped like a customer. Your MVP store points at it; Fun unchanged. Every greeting landed first and on its own line, live and written; plain yes and plain no come through clean.
+- **The one that used to cost us money is a coin flip:** "We did, but it's not out yet" read as IN STOCK on one check and "couldn't tell" on the next, same words, minutes apart.
+- **The money one: once Staff put us on hold, nothing they say afterwards is written down.** One said "yeah, we've got a few" after checking and we filed it as left on hold; another came back with "I did not see any" and the screen said IN STOCK while the record said nobody answered. Same shape on a transfer and on a hang-up. **Your move: nothing — it is the next voice job, with a test that proves the day it is fixed.**
+## Charlie is never switched on to talk to nobody again (08-02, ON STAGING)
+- The setting that opened him after a set number of seconds with no voice heard is DELETED — it switched him ON to an empty line and billed for it, the line on your own check log at 63 seconds. A second box wired to nothing went with it.
+- Your check log can now say **who really hung up** (including our own time limit, so we never blame a store for our own accounting), a misheard machine phrase can no longer end a check on a real person, and two things the log claimed but never detected now work: being sent back through the phone menu, and a check dying during a transfer. **Not phone-proven — that is the robot store's next run.**
+## Waiting on YOU: promote now to stop the owner email on the real site? · hide the fake (simulated) poll rows from the Admin feedback queue? (yes / no) · Next: docs/tasks/INDEX.md.

@@ -20,7 +20,7 @@ tsize=0
 case "$tsize" in (*[!0-9]*|"") tsize=0 ;; esac
 if [ "$n" -eq 1 ]; then
   jq -n '{hookSpecificOutput:{hookEventName:"UserPromptSubmit",additionalContext:"FIRST TURN — RECITE THE BOX before any tool call. Your first reply states, in a few short lines: the ONE task you are taking, its done-when, and the EXISTING pieces you will snap onto (name the file or section — LAW 1). UI work adds: what the rendered comp shows for this screen. Cannot name the existing piece? Say so and STOP; do not fill the gap by inventing. A wrong recitation here costs the owner one message; a wrong build costs him a cycle."}}'
-elif [ "$tsize" -ge 8000000 ] || [ "$w" -ge 250 ]; then
+elif [ "$tsize" -ge 8000000 ] || { [ "$w" -ge 250 ] && [ "$tsize" -ge 4000000 ]; } || { [ "$tsize" -eq 0 ] && [ "$w" -ge 400 ]; }; then
   jq -n --arg w "$w" --arg mb "$((tsize / 1000000))" '{hookSpecificOutput:{hookEventName:"UserPromptSubmit",additionalContext:("Memory is genuinely heavy now (\($mb)MB of chat, \($w) rounds of work). Finish the task in front of you and close it out (checkpoint + STATE + push). Mention ONCE, at your next natural close-out, that this chat is aging and a fresh one is safer for the NEXT task — never mid-task, never as a complaint, and NEVER claim the chat is too long on its own authority before this notice exists. His call, always: if he says continue here, continue here and do not raise it again.")}}'
 fi
 exit 0
