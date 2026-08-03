@@ -6781,6 +6781,46 @@ app.post("/api/admin/map/unknown/:id", async (c) => {
 // a mapping call learned HERE, keyed by chain name and store phone — ids are per-database and would
 // cross-wire. Production applies it exactly as if the call had happened here, so the Admin mapping
 // section stays the single source of truth and both environments run the identical recipe.
+// SEE THE SCREENS WITH DATA IN THEM, without a phone and without a penny (owner asked, 08-03).
+// Writes ONE mapping run into the chain's own check log — the same shape a real check writes, read
+// by the same page — so Mapped checks, the headings, the reasons and Menu all fill in. STAGING ONLY,
+// and it refuses on the real site: nothing here may ever put a check that did not happen in front of
+// a customer or into the owner's real numbers.
+app.post("/api/admin/map/simulate", async (c) => {
+  if (!config.staging.on) return c.json({ error: "staging only — a check that did not happen never goes on the real site" }, 400);
+  const b = (await c.req.json().catch(() => ({}))) as { chainName?: string; storeName?: string };
+  const name = String(b.chainName || "").trim();
+  const ch = (await db.select().from(chains).where(eq(chains.name, name)))[0];
+  if (!ch) return c.json({ error: `no chain named ${name}` }, 404);
+  const store = String(b.storeName || "").trim() || `${ch.name} — simulated`;
+  const t = Math.floor(Date.now() / 1000);
+  const line = (who: string, text: string, atSec: number, action?: string, value?: string) => ({ who, text, atSec, action: action ?? null, value: value ?? null });
+  const menu = [
+    line("ivr", "Thank you for calling CVS, Pharmacy. If this is an emergency, please hang up and dial 911.", 4),
+    line("ivr", "Are you a healthcare provider?", 18),
+    line("us", 'said "no"', 26, "say", "no"),
+    line("ivr", "To better assist you, are you calling in for pharmacy or front store services?", 29),
+    line("us", 'said "front store services"', 38, "say", "front store services"),
+    line("ivr", "I can assist you with beauty and fragrance, OTC, health, photo services, and General Store inquiries.", 42),
+    line("us", 'said "general"', 48, "say", "general"),
+    line("ivr", "Okay, transferring you now.", 51),
+  ];
+  const runs = [
+    { ts: (t - 5400) * 1000, navId: "sim-1", store, retailerId: null, outcome: "human", stage: "map", grade: "pass",
+      seconds: 64, transferAtSec: 51, greeting: "Front store, this is Dana.", confirm: "answered", callSid: null,
+      steps: [...menu, line("ivr", "Front store, this is Dana.", 61), line("us", "handed the check to Charlie", 61)] },
+    { ts: (t - 3600) * 1000, navId: "sim-2", store, retailerId: null, outcome: "mapped", stage: "map", grade: "pass",
+      seconds: null, transferAtSec: 51, endedOnRing: true, callSid: null, steps: menu },
+    { ts: (t - 2400) * 1000, navId: "sim-3", store, retailerId: null, outcome: "failed", stage: "speed", grade: "fail",
+      reason: "menu repeated itself", seconds: null, transferAtSec: null, callSid: null,
+      steps: [menu[0], menu[1], line("us", 'said "front"', 20, "say", "front"), line("ivr", "Sorry, I'm not understanding.", 24)] },
+    { ts: (t - 1200) * 1000, navId: "sim-4", store, retailerId: null, outcome: "mapped", stage: "speed", grade: "pass",
+      seconds: null, transferAtSec: 45, endedOnRing: true, callSid: null,
+      steps: [menu[0], menu[1], menu[2], menu[3], line("us", 'said "front"', 36, "say", "front"), menu[5], menu[6], line("ivr", "Okay, transferring you now.", 45)] },
+  ];
+  await setSetting(`nav_runs:${ch.id}`, JSON.stringify(runs));
+  return c.json({ ok: true, chain: ch.name, checks: runs.length });
+});
 app.post("/api/admin/map/ingest", async (c) => {
   const b = (await c.req.json().catch(() => ({}))) as {
     chainName?: string; storePhone?: string | null; storeName?: string | null;

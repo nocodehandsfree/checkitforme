@@ -1132,6 +1132,8 @@ type RawRun = {
   seconds?: number | null; transferAtSec?: number | null; greeting?: string | null;
   stopReason?: string | null; why?: string | null; endedOnRing?: boolean;
   stage?: string; grade?: string; reason?: string; callSid?: string;
+  /** What the run recorded about asking Staff about the product: the answer, or "asked". */
+  confirm?: string | null;
   steps?: Array<{ who?: string; text?: string; atSec?: number; action?: string | null; value?: string | null }>;
 };
 
@@ -1302,6 +1304,10 @@ async function callsForChain(chainId: number): Promise<MapCall[]> {
     why: r.why ? String(r.why) : null,
     endedOnRing: !!r.endedOnRing,
     stage: (r.stage === "map" || r.stage === "speed" || r.stage === "prove") ? r.stage : null,
+    // DID THIS CHECK ASK STAFF ABOUT THE PRODUCT? That is what proves the department, and it happens
+    // on the FIRST check of a run, not on a round of its own any more (owner R2/R3). The screen reads
+    // it to head that check "Proving department"; the run has recorded it all along.
+    askedStaff: r.confirm != null,
     grade: (r.grade === "pass" || r.grade === "fail") ? r.grade : null,
     callSid: r.callSid ? String(r.callSid) : null,
     reason: (CHECK_FAIL_REASONS as readonly string[]).includes(String(r.reason)) ? r.reason as CheckFailReason : null,

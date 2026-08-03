@@ -333,7 +333,11 @@
   .peek .pk-fact{font-size:15px}
   /* THE dropdown as a pill (filters atop logs/lists) — auto width, raised, green chevron. */
   select.k-filter{width:auto;max-width:60vw;background-color:transparent;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%234ADE80' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>"),linear-gradient(180deg,#2E2E35,#25252B);background-origin:border-box;background-repeat:no-repeat,no-repeat;background-position:right 13px center,center;border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:999px;padding:9px 32px 9px 15px;font-size:12px;font-weight:700;color:rgba(255,255,255,.85)}
-  .k-filters{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
+  /* THE FILTER ROW IS ONE LINE ACROSS THE PAGE (R5). It used to wrap onto a second row on a phone,
+     which pushed the chain list below the fold. Each choice shares the width and shortens its own
+     text instead of the row growing taller. */
+  .k-filters{display:flex;gap:6px;flex-wrap:nowrap;margin:14px 0 4px;width:100%}
+  .k-filters>.k-filter{flex:1 1 0;min-width:0;text-overflow:ellipsis}
   /* THE raised key — Show more, secondary page actions. Uppercase, letterspaced. */
   .k-key{display:block;margin:18px auto 0;background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:999px;padding:12px 26px;font-size:12.5px;font-weight:800;letter-spacing:.13em;color:rgba(255,255,255,.85);cursor:pointer;font-family:inherit;transition:transform .08s}
   .k-key:active{transform:translateY(2px)}
@@ -1392,6 +1396,7 @@
     </div>
     <div id="tr_progress"></div>
     <div id="set_pickwrap">
+      <div id="set_reportboxes" class="stats" style="margin:16px 0 0"></div>
       <input id="set_search" placeholder="Search chains…" oninput="filterChainPicker()" style="margin:16px 0 10px;font-size:14px;padding:12px 15px">
       <div class="k-filters" style="margin:0 0 4px">
         <select class="k-filter" id="set_frate" onchange="filterChainPicker()"><option value="">All ratings</option><option value="5">5 Best Chance</option><option value="4">4 Mostly Reliable</option><option value="3">3 Spotty</option><option value="2">2 Over MSRP</option><option value="1">1 Unknown</option></select>
@@ -4734,6 +4739,7 @@ function buildChainPicker(){
   const types=[...new Set((CHAINS||[]).map(c=>c.type).filter(Boolean))].sort();
   const tf=document.getElementById('set_ftype'); if(tf){ const cur=tf.value; tf.innerHTML='<option value="">All types</option>'+types.map(t=>`<option value="${esch(String(t).toLowerCase())}">${esch(t)}</option>`).join(''); if([...tf.options].some(o=>o.value===cur)) tf.value=cur; }
   filterChainPicker();
+  renderChainReportBoxes();
 }
 // Comp 2e: grade chip = color is the bucket (good/ok/weak), number is the grade. Unrated = no chip.
 // Shared with the chain detail's Store settings row, so one grade is never worded two ways.
@@ -4741,6 +4747,28 @@ const CH_GRADE={5:['Best','#4ADE80'],4:['Reliable','#4ADE80'],3:['Spotty','#F59E
 // Comp 2e: long list ends in a Show-more key, never a wall of 131 rows.
 let CH_LIMIT=30;
 function chainsShowMore(){ CH_LIMIT+=100; filterChainPicker(); }
+// THE THREE BOXES AT THE TOP OF THE CHAINS PAGE (R5): how many chains are mapped, how many are not,
+// and how many have a menu that changed. Tapping one sets the filter below, so the number and the
+// list can never say different things. Colours are the page's own: green good, yellow neutral, red bad.
+function renderChainReportBoxes(){
+  const box=document.getElementById('set_reportboxes'); if(!box) return;
+  const rows=(CHAINS||[]);
+  let mapped=0, unmapped=0, changed=0;
+  rows.forEach(ch=>{ const g=mapRow(ch.id);
+    if(g&&g.menuChanged) changed++;
+    if(ch.navStatus==='locked'||(g&&g.mapped)) mapped++; else unmapped++; });
+  const cur=(document.getElementById('set_fmap')||{}).value||'';
+  const tile=(n,label,color,key)=>`<div class="stat" onclick="chainReportPick('${key}')" style="cursor:pointer${cur===key?';box-shadow:0 0 0 1px '+color+' inset':''}">`
+    +`<div class="n" style="color:${color}">${n}</div><div class="l">${label}</div></div>`;
+  box.innerHTML=tile(mapped,'Mapped','var(--green)','mapped')
+    +tile(unmapped,'Unmapped','#F59E0B','unmapped')
+    +tile(changed,'Menu changed','#F87171','changed');
+}
+function chainReportPick(key){
+  const sel=document.getElementById('set_fmap'); if(!sel) return;
+  sel.value = sel.value===key ? '' : key;
+  filterChainPicker(); renderChainReportBoxes();
+}
 function filterChainPicker(){
   const el=document.getElementById('set_picker'); if(!el) return;
   const raw=(document.getElementById('set_search')||{}).value||''; const norm=s=>(s||'').toLowerCase().replace(/[^a-z0-9]+/g,''); const q=norm(raw);
@@ -5064,6 +5092,14 @@ function menuFixLine(chainId,idx){
 }
 async function menuFixSave(chainId,idx){
   const inp=document.getElementById('mfix_'+chainId+'_'+idx); if(!inp) return;
+  // ARE YOU SURE (R5). The menu's words are sacred: the recipe and this screen may only ever show
+  // what the store really said, so a correction is confirmed before it lands. The original hearing is
+  // kept underneath, never overwritten, so a wrong correction can be undone.
+  const ok=await askSheet('Save this wording?',[
+    'The menu will show your words from now on.',
+    'What we heard is kept underneath, so this can be changed again.',
+  ],'Save');
+  if(!ok) return;
   const r=await api('/api/admin/map/chain/'+chainId+'/menu-line',{method:'POST',body:JSON.stringify({idx,text:String(inp.value||'').trim()})});
   const d=CHAIN_MAP[chainId];
   if(r&&!r.error&&d){ d.menuFixes=r.fixes||{}; const ch=(CHAINS||[]).find(c=>c.id===chainId)||{id:chainId};
@@ -5125,7 +5161,12 @@ function mapCallsMore(btn){
 // A collapsed failed check opens on tap and closes again — the reason is the row, the ladder is the
 // detail behind it.
 function mapCheckOpen(id){ const el=document.getElementById(id); if(el) el.style.display=el.style.display==='none'?'':'none'; }
+// THE THREE HEADINGS, and which one a check gets (comp 3a; owner 08-03). Proving the department is
+// not a round of its own any more — it happens on the FIRST check of a run, the one that walks the
+// whole menu and asks Staff about the product. So a check that asked is headed Proving department;
+// the listening checks that follow are Mapping menu; the speed tries are Optimizing speed.
 const STAGE_WORD={map:'Mapping menu',speed:'Optimizing speed'};
+const stageWord=c=>(c&&c.stage==='map'&&c.askedStaff)?'Proving department':(STAGE_WORD[c&&c.stage]||'');
 // One check: who we rang and when, its stage, how it ended, the conversation (comp 3a). A failed
 // check collapses to one row carrying its reason — tap to open. No PRODUCED line: the top passing
 // check IS the winner and its pill says so.
@@ -5134,7 +5175,7 @@ function mappingCallCard(c,gain){
   // NAV TIME ONLY (owner, 07-31): the number beside the pill is when the menu finished with us, never
   // the whole call with Staff's pickup time inside it. A check that never measured it shows nothing.
   const navS=(typeof c.transferAtSec==='number'&&c.transferAtSec>0)?c.transferAtSec:null;
-  const stage=STAGE_WORD[c.stage]||'';
+  const stage=stageWord(c);
   const ladder=`<div class="mladder" style="margin-top:13px">${rungs.map((r,i,a)=>callRung(r,i===a.length-1)).join('')}</div>`;
   if(c.grade==='fail'){
     const why=c.reason||'did not move us forward';
