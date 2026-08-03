@@ -36,6 +36,25 @@ don't think it's out. Let me see." → "It's like a box with, like, three packs 
 them but the run. The spec called this out as its own job (README §7b); scene 7 is how it gets proven,
 and it has to hold on EVERY run, not one in two.
 
+## CHARLIE NEVER WRAPS UP, AND THE LINE STAYS OPEN (owner, 08-02, four screenshots)
+Every one of his four checks ended on OUR OWN QUESTION. Two things were happening at once, and the
+first was hiding the second:
+
+1. The robot store used to put the phone down about ten seconds after answering, so a caller who
+   never signs off looked exactly like one who does. **Fixed here:** it now waits about forty seconds,
+   the way a real person waits to be said goodbye to.
+2. With that room, check 258 shows what really happens: the answer was settled at 30 seconds, Charlie
+   went quiet at 34, and the line sat open in dead air until the STORE hung up at 98. **He never says
+   goodbye and he never ends the check.** That is 98 seconds of phone time for a 30 second answer, on
+   every check, and on a real store it is the rudest thing we do.
+
+He also asks the same question twice when the reply does not answer it ("We do." to a set question),
+word for word apart from a new opener. His instructions already say to sign off and end the call the
+moment the answer is in (`prompts.ts`, "When to hang up"), so the instruction is not the problem.
+
+`node scripts/robot-check.mjs 1` fails on both today: "the check ends with a goodbye" and "the check
+ends soon after the answer".
+
 ## Two more the same run found, smaller, same lane
 - **One check can write four records.** Check 238 is the real one; 239, 240 and 241 are copies of the
   same phone call, written 41 seconds later, with no room and a shorter conversation. Anything reading

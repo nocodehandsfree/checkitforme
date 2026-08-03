@@ -371,11 +371,26 @@ async function runOne(page, scene, greetingIdx) {
 
   // 14. AND WE DO NOT ASK THE SAME THING TWICE. Two of his four screenshots show the same question
   // asked again, once word for word. Every repeat is six to ten seconds with the meter running.
-  const key = (t) => norm(t).split(" ").slice(0, 8).join(" ");
+  // The SAME question dressed in a new opener is still the same question. "Do you know the name of
+  // the set, like Chaos Rising, and if it comes in a box or pack?" came back as "Oh nice! And do you
+  // know the name of the set, like Chaos Rising, and if it comes in a box or pack?" — matching on the
+  // first few words missed it, so match on the END of the sentence, where the question actually lives.
+  const key = (t) => norm(t).split(" ").slice(-10).join(" ");
   const seenQ = new Set(); const repeats = [];
   for (const q of ours) { const k = key(q); if (k && seenQ.has(k)) repeats.push(q); seenQ.add(k); }
   item(14, "we never ask the same question twice", repeats.length === 0,
     repeats.length ? `asked again: ${repeats.map((r) => `"${r.slice(0, 60)}"`).join(" · ")}` : `${ours.length} things said, none of them twice`);
+
+  // 15. DEAD AIR AFTER THE ANSWER IS MONEY. Check 258 settled at 30 seconds and the line stayed open
+  // until 98, because nobody ended it: no goodbye, no hang-up, just over a minute of silence billed
+  // by the minute. The store hanging up early used to hide this.
+  const hang = rec.timeline.filter((e) => e.kind === "hangup").pop();
+  const settled = rec.timeline.filter((e) => e.kind === "verdict").pop();
+  if (hang && settled && hang.atSec != null && settled.atSec != null) {
+    const idle = hang.atSec - settled.atSec;
+    item(15, "the check ends soon after the answer, instead of sitting on an open line",
+      idle <= 25, `the answer was in at ${settled.atSec} seconds and the line closed at ${hang.atSec} — ${idle} seconds of nothing`);
+  }
 
   // 9 + 11. the verdict.
   const verdictShown = /in stock|not in stock|no clear answer|sold out|nobody|didn't answer|did not answer|restock/i.test(resultText);
