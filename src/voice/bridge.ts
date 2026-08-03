@@ -1361,6 +1361,13 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
             }
           }
           if (!toneLogged) { toneLogged = true; log(`ear: steady tone (ringback/hold), NOT a human — staying deaf, Charlie not billed`); }
+          // A RINGING LINE IS NOT A GREETING, AND THE GAPS BETWEEN RINGS ARE NOT SOMEBODY WAITING
+          // FOR US. It takes about a second of a burst before there are enough samples to call it a
+          // tone, so the front of every ring lands in the speech branch below — and the four second
+          // gaps then add up. Six rings' worth of them cleared the person test on a desk nobody ever
+          // answered, and Charlie opened onto it. Both are wiped the moment the network's own tone
+          // is positively identified: whatever we thought we were hearing, it was the phone.
+          storeSpeaking = false; storeTalkMs = 0; storeQuietMs = 0;
         } else {
           // A REAL VOICE IS ON THE LINE — modulated speech, not the network. That is no longer enough
           // to open Charlie on its own: it is the same thing a recording sounds like. All it does is
@@ -1384,7 +1391,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         }
       }
       // Gap between bursts: a burst that just ended is one completed ring.
-      if (inRing) { inRing = false; ringCount++; emit(room, "ringing", `Ring ${ringCount} went unanswered`, { leg: "desk", ring: ringCount, answered: false }); log(`ear: ring ${ringCount} went unanswered`); if (ringCount >= RINGS_UNANSWERED && !connecting && !humanWords) { noteWeEnded(room, "nobody_came"); emit(room, "hangup", `Nobody picked up after ${ringCount} rings, hung up before Charlie ever billed`, { reason: "nobody_came", ring: ringCount }); log(`give-up: ${ringCount} rings unanswered — nobody is coming, hanging up (Charlie never joined)`); try { twilio.close(); } catch { /* best effort */ } } }
+      // ONE RING PER LINE IS DELETED (round 1, item 1.8). "Ring 2 went unanswered" told the owner
+      // nothing and cost nothing — Charlie is off while a phone rings — and six of them buried the
+      // lines that matter. The RULE stays: counting is what stops us waiting forever at a department
+      // nobody works at, and the give-up itself is still a line, because that one is an ending.
+      if (inRing) { inRing = false; ringCount++; log(`ear: ring ${ringCount} went unanswered`); if (ringCount >= RINGS_UNANSWERED && !connecting && !humanWords) { noteWeEnded(room, "nobody_came"); emit(room, "hangup", `Nobody picked up after ${ringCount} rings, hung up before Charlie ever billed`, { reason: "nobody_came", ring: ringCount }); log(`give-up: ${ringCount} rings unanswered — nobody is coming, hanging up (Charlie never joined)`); try { twilio.close(); } catch { /* best effort */ } } }
       voiced = Math.max(0, voiced - leak); if (voiced === 0) { loudE.length = 0; loudT.length = 0; }
     }
   }

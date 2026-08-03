@@ -549,6 +549,9 @@ const DEAD_AIR_MS = 45000;
  *  a minute while the handset lay on the counter and Staff walked to the back room. Sound this far
  *  below the person we have been listening to is the room, not them. */
 const ROOM_FRACTION = 0.35;
+/** …judged over this much SOUND, never one frame at a time (see isRoom). A third of a second covers
+ *  a syllable and its quiet edges; a handset on a counter stays quiet far longer than that. */
+const ROOM_WINDOW_FRAMES = 15;
 /** How fast the memory of how loud they were fades, per 20ms frame — about half in forty seconds. It
  *  has to hold across a whole answer without being pinned by one shouted word for the rest of the
  *  check. */
@@ -601,6 +604,8 @@ export class ConversationEar {
   private closeLevel = 0;
   /** How much of the current wait was sound from across the room rather than plain silence. */
   private roomMs = 0;
+  /** The last third of a second of sound, so the room test reads a stretch and not one frame. */
+  private soundRecent: number[] = [];
   private readonly roomFraction: number;
   private readonly transferToneMs: number;
   private readonly backVoiceMs: number;
@@ -628,9 +633,19 @@ export class ConversationEar {
 
   /** Sound is arriving, but far below the person we have been listening to: that is the room, not
    *  them. Off entirely until somebody has actually spoken to us, because there is nothing to
-   *  measure against and guessing would drop Charlie on a quiet talker. */
+   *  measure against and guessing would drop Charlie on a quiet talker.
+   *
+   *  Judged over the last third of a second of SOUND, never one frame at a time. Real speech swings
+   *  enormously inside a single word — the quiet end of somebody's own syllables sits far below the
+   *  loud end — so a per frame test calls half of an ordinary sentence "the room" and then cannot
+   *  tell that they came back. A handset on a counter is quiet the whole time; a person is not. */
   private isRoom(energy: number): boolean {
-    return this.closeLevel > 0 && energy < this.closeLevel * this.roomFraction;
+    if (this.closeLevel <= 0) return false;
+    this.soundRecent.push(energy);
+    while (this.soundRecent.length > ROOM_WINDOW_FRAMES) this.soundRecent.shift();
+    if (this.soundRecent.length < ROOM_WINDOW_FRAMES) return false;
+    const mean = this.soundRecent.reduce((a, b) => a + b, 0) / this.soundRecent.length;
+    return mean < this.closeLevel * this.roomFraction;
   }
 
   /**

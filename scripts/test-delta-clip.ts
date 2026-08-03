@@ -355,7 +355,7 @@ async function callWithHold(f: Fake, room: string, holdStrategy: "gate" | "reope
   return tw;
 }
 /** Someone talking: sound with the gaps real speech has. */
-const speak = (tw: FakeTwilio, frames: number) => { for (let i = 0; i < frames; i++) tw.media(frame(i % 5 === 4 ? Buffer.alloc(160, 0x7f) : LOUD())); };
+const speak = (tw: FakeTwilio, frames: number) => { for (let i = 0; i < frames; i++) tw.media(frame(i % 5 === 4 ? Buffer.alloc(160, 0x7f) : SPEECH(i))); };
 const quiet = (tw: FakeTwilio, frames: number) => { for (let i = 0; i < frames; i++) tw.media(frame(Buffer.alloc(160, 0x7f))); };
 
 console.log("\n▶ the clerk walks off: the agent stops being fed and cannot be heard");
@@ -836,7 +836,7 @@ console.log("\n▶ the greeting is kept whole, with the pauses that are inside i
   // A REAL SENTENCE: bursts of speech with the small pauses a person leaves between phrases. Those
   // pauses used to be thrown away, which squeezes the sentence and it comes back as other words.
   let spoken = 0;
-  const say = (frames: number) => { for (let i = 0; i < frames; i++) { tw.media(frame(LOUD(160, i % 4))); spoken++; } };
+  const say = (frames: number) => { for (let i = 0; i < frames; i++) { tw.media(frame(SPEECH(i))); spoken++; } };
   const breathe = (frames: number) => { for (let i = 0; i < frames; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); spoken++; } };
   say(20); breathe(6); say(22); breathe(5); say(18);   // "Hi, · thank you for calling the Fun store, · this is Bob"
   const greetingFrames = spoken;
@@ -920,7 +920,7 @@ console.log("\n▶ held audio reaches him at the speed it was spoken, never in o
   tw.say({ event: "start", start: { streamSid: "MZ_pace", customParameters: { room } } });
   await sleep(350);
   // A greeting with the pauses a real person leaves in one.
-  const say = (n: number) => { for (let i = 0; i < n; i++) tw.media(frame(LOUD(160, i % 4))); };
+  const say = (n: number) => { for (let i = 0; i < n; i++) tw.media(frame(SPEECH(i))); };
   const breathe = (n: number) => { for (let i = 0; i < n; i++) tw.media(frame(Buffer.alloc(160, 0x7f))); };
   say(25); breathe(6); say(25);
   breathe(PERSON_PAUSE);                                   // they stop, so the question starts
@@ -995,6 +995,38 @@ console.log("\n▶ a person answers the same way: short hello, a real pause, and
   const ev = (getReceipt("room-person")?.events || []);
   ok(ev.some((e) => e.kind === "human_detected"), "the log says Staff greeting, off the same moment");
   restore(); tw.close(); f.close();
+}
+
+// ================================================================================================
+// ROUND 1, ITEM 1.8 — THE PER RING LINES ARE DELETED, THE GIVE-UP RULE STAYS.
+// "Ring 2 went unanswered" tells the owner nothing and costs nothing, because Charlie is off while a
+// phone rings, and six of them bury the lines that matter. Counting them still stops us waiting
+// forever at a department nobody works at.
+console.log("\n▶ a department that rings out: no line per ring, and we still give up and say so");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  openReceipt("room-rings", { lane: "direct" });
+  setBridgeContext("room-rings", { agentId: "agent_normal", dynamicVars: {}, connectOnHuman: true });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "room-rings", () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_r6", customParameters: { room: "room-rings" } } });
+  await sleep(350);
+  // Six real rings, the published frequencies, with the gaps a phone leaves between them.
+  for (let r = 0; r < 6; r++) {
+    for (const fr of ringFrames(2000)) tw.media(fr);
+    for (let i = 0; i < 30; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  }
+  await sleep(120);
+  const ev = (getReceipt("room-rings")?.events || []);
+  ok(!ev.some((e) => (e.note || "").includes("went unanswered")), "not one line about a ring going unanswered");
+  ok(ev.filter((e) => e.kind === "ringing").length === 1, `the desk ringing is ONE line, said once (${ev.filter((e) => e.kind === "ringing").length})`);
+  ok(f.sockets.length === 0, "Charlie was never opened onto a ringing desk, so nothing billed");
+  const bye = ev.find((e) => e.kind === "hangup");
+  ok(!!bye && (bye.note || "").startsWith("Nobody picked up after 6 rings"), `we gave up and said so, once (${bye?.note})`);
+  ok(tw.readyState === 3, "…and the check ended there rather than waiting forever");
+  restore(); f.close();
 }
 
 // ================================================================================================
@@ -1303,7 +1335,7 @@ console.log("\n▶ nobody ever speaks: no Charlie is EVER opened, however long w
   ok(f.inits.length === 0, "…and nothing was billed, because nothing connected");
   ok(tw.readyState === 1, "the check is still running: giving up is a separate rule, not this one's job");
   console.log("  …and the moment a real person DOES speak, he opens normally");
-  for (let i = 0; i < 40; i++) tw.media(frame(LOUD(160, i % 4)));
+  for (let i = 0; i < 40; i++) tw.media(frame(SPEECH(i)));
   for (let i = 0; i < PERSON_PAUSE; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
   await sleep(250);
   ok(f.sockets.length === 1, "a real voice opens him, which is the only thing that ever should");
