@@ -169,6 +169,53 @@ console.log("▶ the clerk puts the phone down and walks off");
   ok(e.holdMs >= 6000 && e.holdMs <= 8000, `and the seconds are counted (${e.holdMs}ms) — holdSeconds has been null since the receipt shipped`);
 }
 
+console.log("▶ the greeting the ear never heard still counts as somebody being there");
+{
+  // Charlie now opens on a greeting followed by a real pause (round 1, item 1.1), so the ear is
+  // attached AFTER Staff said hello and after they stopped — it hears nothing but silence. An ear
+  // that has never heard anybody says nobody left, so Staff who say "Fun store" and walk straight
+  // off would be billed for in silence with no hold ever declared.
+  const cold = ear();
+  silence(cold.e, 8000);
+  ok(cold.said.length === 0, "an ear that never heard anybody declares nothing — that is the trap");
+  const { e, said } = ear();
+  e.heardAlready(800);           // the greeting the person test measured before this ear existed
+  silence(e, 7000);
+  ok(said[0] === "away:quiet", "handed the greeting we already heard, it knows they walked off");
+  talk(e, 1000);
+  ok(said[1]?.startsWith("back:"), "…and it still knows when they come back");
+}
+
+console.log("▶ the phone on the counter: a room we can hear is not somebody talking to us");
+{
+  // THE ONE SHAPE NO RULE CAUGHT. Store noise is irregular with gaps in it, which is the exact shape
+  // of speech, so it was never quiet, never music and never ringing — and Charlie stayed open and
+  // billed at 11 cents a minute while the handset lay on the counter and Staff walked to the back.
+  const { e, said } = ear();
+  const near = LOUD_E * 4;                       // somebody speaking INTO the handset
+  const far = Math.round(LOUD_E * 0.9);          // the same store, heard across the room
+  const speak = (ms: number) => { for (let i = 0; i < Math.round(ms / _test.FRAME_MS); i++) e.feed(i % 5 === 4 ? QUIET_E : near); };
+  const roomNoise = (ms: number) => { for (let i = 0; i < Math.round(ms / _test.FRAME_MS); i++) e.feed(i % 7 === 6 ? QUIET_E : far); };
+  speak(3000);
+  roomNoise(3000);
+  ok(said.length === 0, "three seconds of it is not a hold, exactly like a pause is not");
+  roomNoise(3500);
+  ok(said[0] === "away:room", "six seconds and the phone is on the counter, so the meter stops");
+  speak(1000);
+  ok(said[1]?.startsWith("back:"), "somebody speaks up close again and Charlie comes back");
+  ok(e.holdMs >= 6000, `the seconds nobody was with us are counted (${e.holdMs}ms)`);
+}
+
+console.log("▶ …and a quiet talker is still a person, not a room");
+{
+  const { e, said } = ear();
+  const near = LOUD_E * 4;
+  const speak = (ms: number, level: number) => { for (let i = 0; i < Math.round(ms / _test.FRAME_MS); i++) e.feed(i % 5 === 4 ? QUIET_E : level); };
+  speak(3000, near);
+  speak(9000, Math.round(near * 0.6));   // the same person, further from the handset, still talking
+  ok(said.length === 0, "somebody speaking more quietly is never mistaken for the room");
+}
+
 console.log("▶ hold music is not a person talking");
 {
   const { e, said } = ear();

@@ -1209,6 +1209,31 @@
       <div class="pk-main"><div class="pk-t">If we reach the wrong department, ask Staff to transfer us</div><div class="pk-m">We ask again on the same check instead of failing<span id="xferEnv"></span></div></div>
       <button class="k-switch" id="xferToggle" onclick="toggleAskForTransfer()" aria-label="If we reach the wrong department, ask Staff to transfer us"></button>
     </div>
+    <!-- THE THREE NUMBERS HE TUNES AGAINST REAL CHECKS (owner 08-01/08-02). Same toggle row shape as
+         the switches above (comp 1i, the CONSOLE page): a title, one gray line, one control that
+         saves on tap. A number instead of a switch, because these are money, not on and off.
+         They follow the header Live/Staging switch, because tuning staging mid test must never move
+         production and production must never move under him. -->
+    <div class="peek static">
+      <div class="pk-main"><div class="pk-t">Charlie wrap-up seconds</div><div class="pk-m">How long he may be talking before he starts wrapping up<span id="tuneEnv1"></span></div></div>
+      <input class="k-txt" id="tune_charlieWrapUpSeconds" inputmode="numeric" style="max-width:22vw;text-align:right" aria-label="Charlie wrap-up seconds" onchange="saveCallTuning(this)">
+    </div>
+    <div class="peek static">
+      <div class="pk-main"><div class="pk-t">Hold cap seconds</div><div class="pk-m">How long a wait may run before we hang up<span id="tuneEnv2"></span></div></div>
+      <input class="k-txt" id="tune_holdCapSeconds" inputmode="numeric" style="max-width:22vw;text-align:right" aria-label="Hold cap seconds" onchange="saveCallTuning(this)">
+    </div>
+    <div class="peek static">
+      <div class="pk-main"><div class="pk-t">Silence before Charlie drops</div><div class="pk-m">How long a pause runs before we say Staff walked off<span id="tuneEnv3"></span></div></div>
+      <input class="k-txt" id="tune_holdQuietMs" inputmode="numeric" style="max-width:22vw;text-align:right" aria-label="Silence before Charlie drops" onchange="saveCallTuning(this)">
+    </div>
+    <div class="peek static">
+      <div class="pk-main"><div class="pk-t">Ring wait seconds</div><div class="pk-m">How long the phone may ring while we wait for a human<span id="tuneEnv4"></span></div></div>
+      <input class="k-txt" id="tune_ringWaitSeconds" inputmode="numeric" style="max-width:22vw;text-align:right" aria-label="Ring wait seconds" onchange="saveCallTuning(this)">
+    </div>
+    <div class="peek static">
+      <div class="pk-main"><div class="pk-t">Check length seconds</div><div class="pk-m">How long a whole check may run before the phone company ends it<span id="tuneEnv5"></span></div></div>
+      <input class="k-txt" id="tune_maxCheckSeconds" inputmode="numeric" style="max-width:22vw;text-align:right" aria-label="Check length seconds" onchange="saveCallTuning(this)">
+    </div>
     <!-- Came off Policy 07-29: an analytics ID is an app-wide default, not pricing, and it was the one
          thing under Policy's "Pricing and rewards" eyebrow that was neither. Same field, same save. -->
     <div class="peek static">
@@ -2015,7 +2040,7 @@ const NAV_GROUPS={
   launch:   {label:'Launch',   ico:'trophy',tabs:[['gtm','Go-to-Market','check']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), alerts:()=>loadAlerts(), dash:()=>{loadDash();loadOpsCost();loadGwPulse();}, calc:()=>{calcInit();loadCredits();}, plans:()=>loadPlans(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>{loadResults();loadCallHealth();}, feedback:()=>loadFeedback(), support:()=>loadSupport(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadOurBrain();loadAskForTransfer();loadAdvancedPolicy();}, gtm:()=>loadGtm() };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), alerts:()=>loadAlerts(), dash:()=>{loadDash();loadOpsCost();loadGwPulse();}, calc:()=>{calcInit();loadCredits();}, plans:()=>loadPlans(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>{loadResults();loadCallHealth();}, feedback:()=>loadFeedback(), support:()=>loadSupport(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadOurBrain();loadAskForTransfer();loadCallTuning();loadAdvancedPolicy();}, gtm:()=>loadGtm() };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 let NAV_RESTORING=false, NAV_BOOTED=false; // browser Back/Forward walks the admin's own tab history
 let FB_OPEN=0; // unreviewed poll disagreements — count badge on the Calls ▸ Feedback tab
@@ -2351,7 +2376,7 @@ async function openReceiptInto(url,o){
   // map is complete by definition. A missing one used to fall through and print its code name.
   const KIND={dialed:'Dialled',ringing:'Ringing',connected:'The line was answered',ivr_detected:'A phone menu',
     alpha_press:'Pressed a key',bravo_say:'Said a word',human_detected:'Staff greeting',
-    charlie_join:'Charlie joined',charlie_leave:'Charlie left',
+    charlie_join:'Charlie joined',charlie_leave:'Charlie dropped',
     hold_start:'Staff stepped away',hold_end:'Staff back',transfer:'Transferred',voicemail:'A machine',
     unknown:'Something we could not place',verdict:'Answer',hangup:'Check ended'};
   const c=d.cost||{}, s=d.seconds||d.rollup||{};
@@ -6513,6 +6538,29 @@ async function toggleAskForTransfer(){
   const r=await envApi('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({flags:{askForTransfer:!on}})});
   if(!r||r.error){ toast('Could not save the switch'); return; }
   await loadAskForTransfer(); toast('Asking to be transferred '+(!on?'on':'off')+(CALL_SRC==='live'?'':' · '+vtEnvName()));
+}
+// THE NUMBERS THE OWNER TUNES (round 1, part 2; the ring wait and the check length added 08-03).
+// They live in the call_tuning setting, which
+// the prod mirror deliberately leaves alone, so staging and live hold their own values and a number
+// tuned mid test cannot be stomped inside a minute. Read and written through envApi for the same
+// reason: the header Live/Staging switch names which one you are editing.
+async function loadCallTuning(){
+  const r=await envApi('/api/call-tuning'); if(!r||r.error||!r.rows) return;
+  r.rows.forEach(function(row){ const el=document.getElementById('tune_'+row.key); if(el) el.value=row.seconds; });
+  const name=CALL_SRC==='live'?'':(' · '+vtEnvName());
+  ['tuneEnv1','tuneEnv2','tuneEnv3','tuneEnv4','tuneEnv5'].forEach(function(id){ const n=document.getElementById(id); if(n) n.textContent=name; });
+}
+async function saveCallTuning(el){
+  const key=el.id.replace('tune_',''); const v=Number(el.value);
+  if(!isFinite(v)||v<=0){ toast('That needs to be a number of seconds'); await loadCallTuning(); return; }
+  const body={}; body[key]=v;
+  const r=await envApi('/api/call-tuning',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+  if(!r||r.error){ toast('Could not save that number'); await loadCallTuning(); return; }
+  // What comes back is what a check would really use: a number outside its bounds is refused by the
+  // engine's own reader, so the box shows the value that will run rather than the one he typed.
+  await loadCallTuning();
+  const now=document.getElementById(el.id).value;
+  toast(Number(now)===v?('Saved · '+now+'s'+(CALL_SRC==='live'?'':' on '+vtEnvName())):('Out of range, kept '+now+'s'));
 }
 // Voice → Designer workflows + the cascade assignment (default → chain → store). The library is the
 // vt_workflows setting; assignments are name maps the call bridge resolves per call (store→chain→default).

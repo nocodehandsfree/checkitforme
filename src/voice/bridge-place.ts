@@ -135,9 +135,20 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
   const tuning = await callTuning();
   // The gatekeeper's backstop is a constant; the longest allowed check is an Admin number. Shout if
   // they ever get close, because a check outliving the backstop reads as finished while it is live.
-  warnIfCapTooLow(opts?.timeLimitSec ?? pol.bail.maxCallSeconds);
-  const mkCtx = () => ({ agentId: opts?.agentId || config.voice.agentId, openingClip, midCallAgentId: config.voice.midCallAgentId,
-    ourBrain: !!pol.flags?.ourBrain, ourBrainAgentId: config.voice.ourBrainAgentId, holdStrategy, tuning, timeLimitSec: opts?.timeLimitSec ?? pol.bail.maxCallSeconds, apiKey: opts?.apiKey || undefined, dynamicVars, onConversationId, dtmf: listening ? undefined : (dtmf || undefined), say: listening ? undefined : (opts?.say || undefined), connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: connectAtSecAdj, giveUpSeconds: pol.bail.enabled && pol.bail.ringMaxSeconds > 0 ? pol.bail.ringMaxSeconds : undefined, earFromSec, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
+  // HOW LONG A WHOLE CHECK MAY RUN (owner 08-03). It used to come off the policy, which production
+  // copies down onto staging every sixty seconds, so a length tuned on staging was stomped inside a
+  // minute. It is one of the owner's own numbers now and lives in call_tuning with the rest. A store
+  // that carries its own cap still wins; everything else takes his number, and it rides to the phone
+  // company exactly as it did before.
+  const capSecs = opts?.timeLimitSec && opts.timeLimitSec > 0 ? Math.floor(opts.timeLimitSec) : tuning.maxCheckSeconds;
+  warnIfCapTooLow(capSecs);
+  // THE DEPARTMENT WE ARE ASKING FOR, in the store's own words. The spoken route is "word@seconds"
+  // pairs and the LAST word is the one that puts us through, so that is the name the log uses while
+  // its phone rings. Read here because the route itself is consumed when the phone company is told
+  // what to do, long before the ringing starts. Never invented: no spoken step, no name.
+  const departmentName = String(opts?.say || "").split(",").map((p) => p.split("@")[0].trim()).filter(Boolean).pop();
+  const mkCtx = () => ({ agentId: opts?.agentId || config.voice.agentId, openingClip, midCallAgentId: config.voice.midCallAgentId, departmentName,
+    ourBrain: !!pol.flags?.ourBrain, ourBrainAgentId: config.voice.ourBrainAgentId, holdStrategy, tuning, timeLimitSec: capSecs, apiKey: opts?.apiKey || undefined, dynamicVars, onConversationId, dtmf: listening ? undefined : (dtmf || undefined), say: listening ? undefined : (opts?.say || undefined), connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: connectAtSecAdj, giveUpSeconds: pol.bail.enabled && pol.bail.ringMaxSeconds > 0 ? pol.bail.ringMaxSeconds : undefined, earFromSec, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
   setBridgeContext(room, mkCtx());
   const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
   // INLINE the TwiML instead of a Url callback (owner 07-17: "no cutoffs — listen from the very
@@ -188,7 +199,7 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
   body.set("StatusCallbackMethod", "POST");
   for (const ev of ["initiated", "ringing", "answered", "completed"]) body.append("StatusCallbackEvent", ev);
   // Hard cost cap: Twilio kills the call at TimeLimit seconds, no exceptions — the profit guarantee.
-  if (opts?.timeLimitSec && opts.timeLimitSec > 0) body.set("TimeLimit", String(Math.floor(opts.timeLimitSec)));
+  if (capSecs > 0) body.set("TimeLimit", String(capSecs));
   const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls.json`, {
     method: "POST",
     headers: { Authorization: "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64"), "content-type": "application/x-www-form-urlencoded" },

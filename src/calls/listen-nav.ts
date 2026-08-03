@@ -517,7 +517,10 @@ const VOICED_WINDOW_MS = 3000;
 const MUSIC_VOICED_FRACTION = 0.96;
 const NEW_PERSON_AFTER_MS = 20000;
 
-export type HoldReason = "quiet" | "music" | "transfer";
+/** "room" is A PHONE SET DOWN ON THE COUNTER (round 1, item 1.2): sound is arriving, but it is store
+ *  noise across the room rather than somebody speaking into the handset. Treated exactly like
+ *  silence — Charlie is dropped and the meter stops — because that is what it is. */
+export type HoldReason = "quiet" | "music" | "transfer" | "room";
 /** HOW MUCH RINGING BEFORE WE CALL IT A TRANSFER. One frame used to be enough, and one frame is
  *  twenty milliseconds — so a single syllable that happened to sit near the network's tone
  *  frequencies announced a transfer on a store with no menu at all (real receipt, 07-28: ten
@@ -539,10 +542,24 @@ const VOICE_GAP_MS = 300;
  *  forgotten, or the far end went away without hanging up. The runtime decides what to do about it;
  *  the ear only says that it happened. */
 const DEAD_AIR_MS = 45000;
+/** THE PHONE ON THE COUNTER (round 1, item 1.2). Somebody speaking into a handset is loud and close.
+ *  Store noise carrying across the room — a till, a radio, two people talking by the door — arrives
+ *  far quieter, and it is irregular with gaps in it, which is the exact shape of somebody talking to
+ *  us. So it is none of the three shapes the ear knew, and Charlie stayed open and billed at 11 cents
+ *  a minute while the handset lay on the counter and Staff walked to the back room. Sound this far
+ *  below the person we have been listening to is the room, not them. */
+const ROOM_FRACTION = 0.35;
+/** …judged over this much SOUND, never one frame at a time (see isRoom). A third of a second covers
+ *  a syllable and its quiet edges; a handset on a counter stays quiet far longer than that. */
+const ROOM_WINDOW_FRAMES = 15;
+/** How fast the memory of how loud they were fades, per 20ms frame — about half in forty seconds. It
+ *  has to hold across a whole answer without being pinned by one shouted word for the rest of the
+ *  check. */
+const CLOSE_DECAY = 0.99965;
 export interface EarTuning {
   holdQuietMs?: number; holdMusicMs?: number; musicWindowMs?: number;
   musicVoicedFraction?: number; newPersonAfterMs?: number; deadAirMs?: number;
-  transferToneMs?: number; backVoiceMs?: number;
+  transferToneMs?: number; backVoiceMs?: number; roomFraction?: number;
 }
 
 /**
@@ -579,6 +596,17 @@ export class ConversationEar {
   private ringCounted = false;
   /** Unbroken run of speech-shaped sound. Somebody being BACK needs a real run of it. */
   private voiceRunMs = 0;
+  /** HOW LOUD THIS PERSON IS WHEN THEY TALK TO US. A decaying peak, so it follows one voice down a
+   *  line that gets quieter without ever being dragged down by the room itself. Everything the room
+   *  test knows is measured against this, so it needs no absolute idea of loudness and works on any
+   *  line, in any language. Zero = we have not heard anybody talk to us yet, and then the test is
+   *  simply off. */
+  private closeLevel = 0;
+  /** How much of the current wait was sound from across the room rather than plain silence. */
+  private roomMs = 0;
+  /** The last third of a second of sound, so the room test reads a stretch and not one frame. */
+  private soundRecent: number[] = [];
+  private readonly roomFraction: number;
   private readonly transferToneMs: number;
   private readonly backVoiceMs: number;
   constructor(private on: {
@@ -600,6 +628,41 @@ export class ConversationEar {
     this.newPersonMs = t?.newPersonAfterMs ?? NEW_PERSON_AFTER_MS;
     this.transferToneMs = t?.transferToneMs ?? TRANSFER_TONE_MS;
     this.backVoiceMs = t?.backVoiceMs ?? BACK_VOICE_MS;
+    this.roomFraction = t?.roomFraction ?? ROOM_FRACTION;
+  }
+
+  /** Sound is arriving, but far below the person we have been listening to: that is the room, not
+   *  them. Off entirely until somebody has actually spoken to us, because there is nothing to
+   *  measure against and guessing would drop Charlie on a quiet talker.
+   *
+   *  Judged over the last third of a second of SOUND, never one frame at a time. Real speech swings
+   *  enormously inside a single word — the quiet end of somebody's own syllables sits far below the
+   *  loud end — so a per frame test calls half of an ordinary sentence "the room" and then cannot
+   *  tell that they came back. A handset on a counter is quiet the whole time; a person is not. */
+  private isRoom(energy: number): boolean {
+    if (this.closeLevel <= 0) return false;
+    this.soundRecent.push(energy);
+    while (this.soundRecent.length > ROOM_WINDOW_FRAMES) this.soundRecent.shift();
+    if (this.soundRecent.length < ROOM_WINDOW_FRAMES) return false;
+    const mean = this.soundRecent.reduce((a, b) => a + b, 0) / this.soundRecent.length;
+    return mean < this.closeLevel * this.roomFraction;
+  }
+
+  /**
+   * WHAT WE HEARD BEFORE THIS EAR EXISTED. Charlie opens on a greeting followed by a real pause, so
+   * by the time the ear is attached Staff have already said hello AND already stopped — the ear
+   * itself never hears them. Left alone it answers "nobody left, because nobody was ever here", and
+   * Staff who say "Fun store" and immediately walk off would be billed for in silence with no hold
+   * ever declared. The greeting the person test measured is handed over here instead.
+   * Only the talking is carried, never the pause: that pause is Staff waiting for our question, not
+   * Staff walking away, so the wait for somebody to leave starts fresh from the moment he joins.
+   */
+  heardAlready(voiceMs: number, closeLevel = 0): void {
+    if (voiceMs > 0) this.heardVoiceMs += voiceMs;
+    // …and how loud they were saying it, which is the yardstick the room test measures against. A
+    // handset put down straight after the greeting is the case that needs it most, and it is exactly
+    // the case where the ear itself never hears anybody speak.
+    if (closeLevel > 0) this.closeLevel = Math.max(this.closeLevel, closeLevel);
   }
 
   /**
@@ -620,7 +683,13 @@ export class ConversationEar {
     this.elapsed += FRAME_MS;
     if (this.reason) this.holdMs += FRAME_MS;
     const loud = energy > VOICE_THRESH;
-    this.voiced.push(loud && !isTone);
+    // THE FOURTH SHAPE: A LOUD ROOM. Sound that is present but far below the person we have been
+    // talking to is a handset lying on the counter, not somebody speaking into it. It is neither
+    // quiet nor music nor ringing, so before this it was the one shape that kept Charlie open and
+    // billing while Staff walked to the back room (owner: "if we're not smart about how Charlie
+    // disconnects we're gonna be in a world of pain"). It is treated exactly like silence.
+    const room = loud && !isTone && this.isRoom(energy);
+    this.voiced.push(loud && !isTone && !room);
     while (this.voiced.length * FRAME_MS > this.windowMs) this.voiced.shift();
 
     // A ringing line after we already reached a person is a transfer. The FREQUENCIES are
@@ -640,8 +709,11 @@ export class ConversationEar {
     }
     this.toneRunMs = 0; this.ringCounted = false;
 
-    if (loud) {
-      this.soundMs += FRAME_MS; this.quietMs = 0;
+    if (loud && !room) {
+      this.soundMs += FRAME_MS; this.quietMs = 0; this.roomMs = 0;
+      // Their own voice sets the yardstick the room is measured against. A decaying peak, so it
+      // follows one person down a line that gets quieter and is never dragged down by the room.
+      this.closeLevel = Math.max(energy, this.closeLevel * CLOSE_DECAY);
       const full = this.voiced.length * FRAME_MS >= this.windowMs
         && this.voiced.filter(Boolean).length / this.voiced.length >= this.voicedFrac;
       if (full && this.soundMs >= this.musicMax) { this.voiceRunMs = 0; this.enter("music"); }
@@ -654,9 +726,12 @@ export class ConversationEar {
       }
     } else {
       this.soundMs = 0; this.quietMs += FRAME_MS;
+      if (room) this.roomMs += FRAME_MS;
       // A pause long enough to break a word breaks the run of speech with it.
       if (this.quietMs >= VOICE_GAP_MS) this.voiceRunMs = 0;
-      if (this.quietMs >= this.quietMax) this.enter("quiet");
+      // Silence and a room nobody is talking to us from are the same fact for the meter, so they add
+      // up together. Which of the two it mostly was decides only what the log calls it.
+      if (this.quietMs >= this.quietMax) this.enter(this.roomMs * 2 >= this.quietMs ? "room" : "quiet");
       // Far past a normal wait. Somebody stepping away to check a shelf comes back; this does not,
       // and it is the shape of a handset put down on a counter and forgotten.
       if (this.quietMs >= this.deadAirMs && !this.deadAirCalled) {
@@ -673,7 +748,7 @@ export class ConversationEar {
     // BACKDATE to the moment they actually went, not the moment we were sure. We only declare a hold
     // after six seconds of evidence, so timing it from the declaration would report a seven second
     // absence as one second — and the whole point of the number is how long nobody was there.
-    const already = reason === "quiet" ? this.quietMs : reason === "music" ? this.soundMs : this.toneRunMs;
+    const already = reason === "quiet" || reason === "room" ? this.quietMs : reason === "music" ? this.soundMs : this.toneRunMs;
     this.holdStartedAt = Math.max(0, this.elapsed - already);
     this.holdMs += already;
     this.on.holdStart(reason, this.holdStartedAt);

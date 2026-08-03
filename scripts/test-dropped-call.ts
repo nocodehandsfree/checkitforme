@@ -13,8 +13,8 @@
 import { eq } from "drizzle-orm";
 import { bootstrap } from "../src/db/bootstrap";
 import { db } from "../src/db/client";
-import { callResults, retailers, categories, statuses } from "../src/db/schema";
-import { findRecentCheck, recentlyDropped } from "../src/calls/service";
+import { callEvents, callResults, retailers, categories, statuses } from "../src/db/schema";
+import { findRecentCheck, recentlyDropped, weHungUpOnAHold } from "../src/calls/service";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -34,6 +34,32 @@ async function main() {
     ok(/no charge/i.test(s?.note ?? ""), `the customer is told they were not charged: "${s?.note}"`);
     ok(!/[—–]/.test(s?.note ?? ""), "no dash inside the sentence (copy law)");
     ok(/again/i.test(s?.note ?? ""), "and that they can try again right away");
+  }
+
+  console.log("\n▶ the wait we ended ourselves reads as left on hold (round 1, item 1.6)");
+  {
+    // The read of the conversation cannot know this. Charlie is dropped for a wait, so from his side
+    // the check simply stopped, and what the customer would be told then depends on whether Staff
+    // happened to say "hold on" out loud before they walked off. The check's own timeline knows, and
+    // it is written to the database as it happens, so the answer survives a restart in between.
+    const room = "room-held-cap-test";
+    // THIS TEST CLEANS UP AFTER ITSELF. It writes practice lines into a REAL database, and left
+    // behind they are a landmine: the next run finds the previous run's hang-up already sitting
+    // there and "a wait on its own is not us hanging up" fails on a database that is telling the
+    // truth. Cleared before, so an old database can never poison a run, and cleared after, so this
+    // one never poisons the next.
+    await db.delete(callEvents).where(eq(callEvents.room, room));
+    await db.insert(callEvents).values({ callId: 0, room, atMs: 4000, atSec: 4, kind: "hold_start", note: "Staff stepped away, the line went quiet", detail: JSON.stringify({ reason: "quiet" }) });
+    ok(!(await weHungUpOnAHold(room)), "a wait on its own is not us hanging up");
+    await db.insert(callEvents).values({ callId: 0, room, atMs: 124000, atSec: 124, kind: "hangup", note: "The store put us on hold too long, so we hung up", detail: JSON.stringify({ reason: "held_too_long", afterSec: 120 }) });
+    ok(await weHungUpOnAHold(room), "…and once we hang up at the cap, the check says so");
+    ok(!(await weHungUpOnAHold("no-such-room")), "a check that never waited says nothing of the kind");
+    ok(!(await weHungUpOnAHold(null)), "…and a row with no room can never claim it");
+    const s = (await db.select().from(statuses).where(eq(statuses.key, "left_on_hold")))[0];
+    ok(!!s, "the status the customer reads already exists, so no new word was invented");
+    ok(!/[\u2014\u2013]/.test(s?.note ?? ""), "no dash inside the sentence (copy law)");
+    await db.delete(callEvents).where(eq(callEvents.room, room));
+    ok((await db.select().from(callEvents).where(eq(callEvents.room, room))).length === 0, "and it leaves nothing of its own behind, so running it twice reads the same");
   }
 
   console.log("\n▶ a dropped call does NOT lock the customer out of that store");

@@ -22,6 +22,7 @@ import { createHash } from "node:crypto";
 import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
+import { tuningForAdmin, callTuning } from "./calls/tuning"; // the numbers the owner tunes, and every other number a check reads
 import { importZonesData, geocodeMissing, backfillDirectChains, isDirectDefaultChain } from "./db/import-data";
 import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, billableOutcome, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, notifyAfterVerdict, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, transcriptPatch, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus, learnedSyncTick, learnedSyncStatus } from "./store-sync";
@@ -5167,6 +5168,75 @@ app.get("/api/admin/overview", async (c) => {
   return c.json({ live, today: slice(d1), week: slice(d7), month: slice(d30), days, avgCallSeconds30d: avg(durs), chainStats, recentCalls });
 });
 
+// ---- THE NUMBERS THE OWNER TUNES AGAINST REAL CHECKS (round 1, part 2; two more added 08-03) ----
+//
+// How long Charlie may TALK before he starts wrapping up, how long a wait may run before we hang up,
+// how much silence means Staff walked off, how long a phone may ring while we wait for a human, and
+// how long a whole check may run. Every one of them has to be tuned against real checks
+// — the owner's own words: "tune it on fifty checks at 5 seconds against fifty at 4, never on a
+// guess" — and none of that can wait on a release.
+//
+// THEY LIVE IN `call_tuning` AND NOWHERE ELSE. Production's policy copies down onto staging every
+// sixty seconds whether anything changed or not, so a number kept in the policy and tuned on staging
+// would be silently overwritten inside a minute, mid test, and would look like the setting simply
+// did not work. `call_tuning` is deliberately outside that mirror's list (src/settings-sync.ts), so
+// each environment keeps its own values with no extra work and neither can stomp the other.
+//
+// Seconds on the wire, because seconds are what the owner is tuning. The silence one is stored in
+// milliseconds beside the rest of the ear's timings, so it is converted here rather than kept twice.
+const OWNER_NUMBERS = [
+  { key: "charlieWrapUpSeconds", label: "Charlie wrap-up seconds", unit: 1 },
+  { key: "holdCapSeconds", label: "Hold cap seconds", unit: 1 },
+  { key: "holdQuietMs", label: "Silence before Charlie drops", unit: 1000 },
+  { key: "ringWaitSeconds", label: "Ring wait seconds", unit: 1 },
+  { key: "maxCheckSeconds", label: "Check length seconds", unit: 1 },
+] as const;
+app.get("/api/call-tuning", async (c) => {
+  const all = await tuningForAdmin();
+  const rows = OWNER_NUMBERS.map((n) => {
+    const t = all.find((x) => x.key === n.key);
+    return {
+      key: n.key, label: n.label, seconds: Math.round((t?.value ?? 0) / n.unit),
+      def: Math.round((t?.def ?? 0) / n.unit), min: Math.ceil((t?.min ?? 0) / n.unit), max: Math.floor((t?.max ?? 0) / n.unit),
+      why: t?.why ?? "",
+    };
+  });
+  return c.json({ rows });
+});
+app.patch("/api/call-tuning", async (c) => {
+  const b = await c.req.json().catch(() => ({} as Record<string, unknown>));
+  // Merged over whatever is already saved, never written whole: the same setting carries every other
+  // number the engine reads, and replacing it would reset all of them to the defaults.
+  let saved: Record<string, unknown> = {};
+  try { saved = JSON.parse((await getSetting("call_tuning")) || "{}") || {}; } catch { saved = {}; }
+  // REFUSED, NOT SAVED AND THEN IGNORED. The engine drops an out of bounds number back to its
+  // default, so writing one here would quietly move the check FURTHER from what he asked for than
+  // leaving it alone does. The bounds are the engine's own, read from the same place.
+  const bounds = await tuningForAdmin();
+  const bad: string[] = [];
+  const next: Record<string, number> = {};
+  for (const n of OWNER_NUMBERS) {
+    const v = (b as Record<string, unknown>)[n.key];
+    if (v === undefined) continue;
+    const secs = Number(v);
+    const lim = bounds.find((x) => x.key === n.key);
+    const raw = Math.round(secs * n.unit);
+    if (!Number.isFinite(secs) || !lim || raw < lim.min || raw > lim.max) {
+      bad.push(`${n.label} has to be between ${Math.ceil((lim?.min ?? 0) / n.unit)} and ${Math.floor((lim?.max ?? 0) / n.unit)} seconds`);
+      continue;
+    }
+    next[n.key] = raw;
+  }
+  if (bad.length) return c.json({ error: bad.join(". ") }, 400);
+  Object.assign(saved, next);
+  await setSetting("call_tuning", JSON.stringify(saved));
+  // Read BACK through the engine's own reader, so what comes home is what a check would really use:
+  // a value outside its bounds is refused there and the owner sees the number that will actually run
+  // rather than the one he typed.
+  const all = await tuningForAdmin();
+  return c.json({ ok: true, rows: OWNER_NUMBERS.map((n) => ({ key: n.key, seconds: Math.round((all.find((x) => x.key === n.key)?.value ?? 0) / n.unit) })) });
+});
+
 // ---- Settings (master toggles) ----
 app.get("/api/settings", async (c) => c.json(await allSettings()));
 app.patch("/api/settings", async (c) => {
@@ -7276,7 +7346,7 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
   }).returning();
   const rid = row.id;
   if (governed) {
-    const slot = await acquireCallSlot({ key: `call:${rid}`, priority: opts?.priority ?? "interactive", userId: finder?.userId ?? undefined, ttlSec: (pol.bail.maxCallSeconds || 180) + 120 });
+    const slot = await acquireCallSlot({ key: `call:${rid}`, priority: opts?.priority ?? "interactive", userId: finder?.userId ?? undefined, ttlSec: (await callTuning()).maxCheckSeconds + 120 });
     if (slot === null) {
       await db.update(callResults).set({ status: "failed", statusKey: "system_busy", summary: "All lines busy — the check will be retried." }).where(eq(callResults.id, rid));
       return { error: "calls_busy" }; // routeCheck sees this and queues the check instead of failing
@@ -7295,7 +7365,7 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
       .catch((e) => console.error("bridge call log update:", e));
     // Per-store talk cap (chains.maxTalkSeconds) wins over the global bail ceiling when set, so a
     // store the owner marked "wrap fast" gets a tighter Twilio TimeLimit — the cost guarantee.
-  }, v.dtmf, { from, room, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, listenNav: v.listenNav });
+  }, v.dtmf, { from, room, timeLimitSec: v.maxTalk ?? undefined, /* no per store cap → the owner's own number, from call_tuning */ say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, listenNav: v.listenNav });
 
   if (result.error || !result.room) {
     if (governed) await releaseCallSlot(`call:${rid}`);
