@@ -4168,9 +4168,12 @@ app.post("/app/zones/run/:runId/stop", async (c) => {
   const sids = zoneRunSids.get(c.req.param("runId")) || [];
   for (const { room } of sids) await zoneHangRoom(room);
   return c.json({ ok: true, stopped: sids.length });
+});
 // Stop ONE store's call in a live run (owner 07-19: tap a not-yet-checked store -> "Stop checking").
 // A queued-by-governor ticket (no callSid yet) can't be stopped here — that cancel lives with the
 // queue feed (Pops); for placed calls this hangs up just that store's dial.
+// THIS WAS NESTED INSIDE THE HANDLER ABOVE, after its return (owner found it 08-02): it never
+// registered, so every single-store stop 404'd while the page still said "Stopped". Top level now.
 app.post("/app/zones/run/:runId/stop-one", async (c) => {
   const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
   const b = await c.req.json().catch(() => ({}));
@@ -4179,7 +4182,6 @@ app.post("/app/zones/run/:runId/stop-one", async (c) => {
   const mine = all.filter((x) => x.retailerId === rid);
   for (const { room } of mine) await zoneHangRoom(room);
   return c.json({ ok: true, stopped: mine.length });
-});
 });
 
 // ---- Subscriber auto-checks (scheduled shipment-day calls) ----
