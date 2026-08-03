@@ -1613,13 +1613,13 @@ function chainLogoFile(name: string | null | undefined): string | null {
 // filesystem, so a chain's logo travels to every environment and can't drift. Cached name→logo map,
 // refreshed on a timer + immediately after an upload/migration. Empty cache (cold start, or a chain
 // with no logo_url yet) simply falls through to the filesystem resolver — fully backward-compatible.
-let chainLogoDbCache = new Map<string, { url: string; wide: boolean; dark: boolean; pct: number | null }>();
+let chainLogoDbCache = new Map<string, { url: string; wide: boolean; dark: boolean; pct: number | null; aspect: number | null }>();
 async function refreshChainLogoDb(): Promise<void> {
   try {
-    const rows = await db.select({ name: chains.name, logoUrl: chains.logoUrl, logoWide: chains.logoWide, logoDark: chains.logoDark, logoPct: chains.logoPct })
+    const rows = await db.select({ name: chains.name, logoUrl: chains.logoUrl, logoWide: chains.logoWide, logoDark: chains.logoDark, logoPct: chains.logoPct, logoAspect: chains.logoAspect })
       .from(chains).where(sql`${chains.logoUrl} is not null and ${chains.logoUrl} != ''`);
-    const m = new Map<string, { url: string; wide: boolean; dark: boolean; pct: number | null }>();
-    for (const r of rows) if (r.logoUrl) m.set((r.name || "").toLowerCase(), { url: r.logoUrl, wide: r.logoWide === true, dark: r.logoDark === true, pct: typeof r.logoPct === "number" ? r.logoPct : null });
+    const m = new Map<string, { url: string; wide: boolean; dark: boolean; pct: number | null; aspect: number | null }>();
+    for (const r of rows) if (r.logoUrl) m.set((r.name || "").toLowerCase(), { url: r.logoUrl, wide: r.logoWide === true, dark: r.logoDark === true, pct: typeof r.logoPct === "number" ? r.logoPct : null, aspect: typeof r.logoAspect === "number" ? r.logoAspect : null });
     chainLogoDbCache = m;
   } catch (e) { console.error("refreshChainLogoDb", e); }
 }
@@ -1651,16 +1651,16 @@ export function logoPctFor(nw: number, nh: number): number | null {
   return Math.round(pct * 100) / 100;
 }
 
-function chainLogoInfo(name: string | null | undefined): { url: string | null; wide: boolean; dark: boolean; pct: number | null } {
+function chainLogoInfo(name: string | null | undefined): { url: string | null; wide: boolean; dark: boolean; pct: number | null; aspect: number | null } {
   if (name) {
     ensureChainLogoDb();
     const hit = chainLogoDbCache.get(name.toLowerCase()); // DB-first: shared-R2 URL travels across envs
     if (hit) return hit;
   }
   const f = chainLogoFile(name); // filesystem fallback (pre-migration, and unchained store names)
-  if (!f) return { url: null, wide: false, dark: false, pct: null };
+  if (!f) return { url: null, wide: false, dark: false, pct: null, aspect: null };
   const m = logoMeta()[f] || { w: 0, d: 0 };
-  return { url: `/logos/chains/${f}?v=79`, wide: m.w === 1, dark: m.d === 1, pct: null };
+  return { url: `/logos/chains/${f}?v=79`, wide: m.w === 1, dark: m.d === 1, pct: null, aspect: null };
 }
 
 // The ONE way a store row gets its logo. Every list on every surface goes through this, so a store
@@ -1668,10 +1668,10 @@ function chainLogoInfo(name: string | null | undefined): { url: string | null; w
 // fifteen hand-written copies that each worked the chain out their own way (eight different ways).
 // Pass the chain name when the caller already knows it; otherwise the store's own name is used.
 function logoFields(chainName: string | null | undefined): {
-  logoUrl: string | null; logoWide: boolean; logoDark: boolean; logoPct: number | null;
+  logoUrl: string | null; logoWide: boolean; logoDark: boolean; logoPct: number | null; logoAspect: number | null;
 } {
   const l = chainLogoInfo(chainName);
-  return { logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct };
+  return { logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, logoAspect: l.aspect };
 }
 function withLogo<T extends { name?: string | null }>(row: T, chainName?: string | null) {
   return { ...row, ...logoFields(chainName || storeChainName(row.name)) };
@@ -2105,9 +2105,10 @@ app.post("/api/chains/:id/logo", async (c) => {
   const wide = c.req.query("wide") === "1", dark = c.req.query("dark") === "1";
   const size = artworkSize(bytes, ext);
   const pct = size ? logoPctFor(size.w, size.h) : null;
-  await db.update(chains).set({ logoUrl: publicUrl, logoWide: wide, logoDark: dark, logoPct: pct }).where(eq(chains.id, id));
+  const aspect = size && size.h > 0 ? Math.round((size.w / size.h) * 1000) / 1000 : null;
+  await db.update(chains).set({ logoUrl: publicUrl, logoWide: wide, logoDark: dark, logoPct: pct, logoAspect: aspect }).where(eq(chains.id, id));
   await refreshChainLogoDb();
-  return c.json({ id, name: ch.name, logoUrl: publicUrl, wide, dark, pct, artwork: size });
+  return c.json({ id, name: ch.name, logoUrl: publicUrl, wide, dark, pct, aspect, artwork: size });
 });
 
 // The one-time migration that first pushed the file copies into shared storage is GONE (owner 07-31,
@@ -4042,7 +4043,7 @@ async function zoneView(z: typeof zones.$inferSelect) {
     const chainName = (r.chainId && chainNames.get(r.chainId)) || null;
     const l = chainLogoInfo(chainName || storeChainName(r.name));
     return { retailerId: r.id, name: r.name, location: r.location || "", callable: r.sellsPacks !== false,
-      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, openState: openState(r.hours, r.timezone) };
+      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, logoAspect: l.aspect, openState: openState(r.hours, r.timezone) };
   });
   const last = (await db.select().from(callResults).where(like(callResults.zoneRunId, `z${z.id}-%`)).orderBy(desc(callResults.startedAt)).limit(1))[0];
   let lastRun = null;
@@ -4257,7 +4258,7 @@ app.get("/app/history", async (c) => {
       categoryId: r.categoryId, category: cats.get(r.categoryId) || "",
       ts: (r.startedAt || 0) * 1000, status: r.status, confirmed: r.confirmed,
       statusKey: r.statusKey, productDetail: r.productDetail, shipmentDay: r.shipmentDayHeard, shipmentTime: r.shipmentTimeHeard ?? null, charged: !!r.chargedAt, zoneRunId: r.zoneRunId || null,
-      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct,
+      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, logoAspect: l.aspect,
     };
   }));
 });
@@ -4475,7 +4476,7 @@ app.get("/api/admin/restock-intel", async (c) => {
       const l = chainLogoInfo(chainName);
       return { ...e, bestDay: Object.entries(e.days).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null,
         storeType: (e.chainId != null && rsChainType.get(e.chainId)) || "Other",
-        logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct };
+        logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, logoAspect: l.aspect };
     });
   const prodNet = parseProducts(confirmed);
   const catNet: Record<string, number> = {};
@@ -4826,7 +4827,7 @@ app.get("/api/admin/test-calls", async (c) => {
       lane: r.lane || null,
       cost: r.costTotalUsd != null ? money(r.costTotalUsd) : null,
       chainId: st?.chainId ?? null, storeType: (st?.chainId && chainTypes.get(st.chainId)) || "Other",
-      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct,
+      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, logoAspect: l.aspect,
     };
   });
   const timed = rows.filter((r) => r.callSec != null);
@@ -5348,7 +5349,7 @@ app.get("/api/chains", async (c) => {
   const aggByChain = new Map(ag.map((r) => [r.cid, { n: Number(r.n || 0), callable: Number(r.callable || 0), kiosk: Number(r.kiosk || 0), online: Number(r.onl || 0), verified: Number(r.verified || 0) }]));
   return c.json(rows.map((ch) => {
     const l = chainLogoInfo(ch.name);
-    return { ...ch, logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, tier: tierByChain.get(ch.id) ?? null, stores: aggByChain.get(ch.id) ?? { n: 0, callable: 0, kiosk: 0, online: 0, verified: 0 } };
+    return { ...ch, logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, logoAspect: l.aspect, tier: tierByChain.get(ch.id) ?? null, stores: aggByChain.get(ch.id) ?? { n: 0, callable: 0, kiosk: 0, online: 0, verified: 0 } };
   }));
 });
 // Compact store list for the Voice → Test picker: ONE callable store per supported (app-visible) chain
@@ -5402,6 +5403,7 @@ app.patch("/api/chains/:id", async (c) => {
   // How wide to draw the logo, as a percent of its tile. Normally set by the upload; accepted here so
   // an existing logo can be measured and backfilled without re-uploading the artwork.
   if (b.logoPct !== undefined) patch.logoPct = Number.isFinite(Number(b.logoPct)) && Number(b.logoPct) > 0 ? Number(b.logoPct) : null;
+  if (b.logoAspect !== undefined) patch.logoAspect = Number.isFinite(Number(b.logoAspect)) && Number(b.logoAspect) > 0 ? Number(b.logoAspect) : null;
   // Invariant: a direct-answer chain has no menu, so it must carry NO tree-seconds — a stray value arms
   // the connect-timer and mutes the agent (silent-agent bug). Enforce it here too, so a manual admin edit
   // that flips a chain to direct can't recreate it (the learn/trainer paths already guard this).
@@ -5794,7 +5796,7 @@ async function enrichAlertStores<T extends { subscriptions?: Array<{ retailerId?
     if (!r) return s;
     const chainName = (r.chainId && cName.get(r.chainId)) || storeChainName(r.name);
     const l = chainLogoInfo(chainName);
-    return { ...s, storeType: (r.chainId && cType.get(r.chainId)) || "Other", logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct };
+    return { ...s, storeType: (r.chainId && cType.get(r.chainId)) || "Other", logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, logoAspect: l.aspect };
   });
   return me;
 }
@@ -6003,7 +6005,7 @@ app.get("/api/retailers", async (c) => {
   return c.json(rows.map((r) => {
     const chainName = (r.chainId && names.get(r.chainId)) || null;
     const l = chainLogoInfo(chainName || storeChainName(r.name));
-    return { ...r, carries: storeCarriesList(chainName, r.carries).join(","), distributor: distributorsForChain(chainName), logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct };
+    return { ...r, carries: storeCarriesList(chainName, r.carries).join(","), distributor: distributorsForChain(chainName), logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, logoAspect: l.aspect };
   }));
 });
 // Store Intel — the headline numbers on the Stores tab (cached 60s). The database, at a glance.
@@ -6931,7 +6933,7 @@ app.get("/api/results", async (c) => {
     const ret = rMap.get(r.retailerId);
     // Same chain-logo resolution as every other surface, so the Calls feed shows the store's mark.
     const l = chainLogoInfo(ret ? ((ret.chainId && names.get(ret.chainId)) || storeChainName(ret.name)) : null);
-    return { ...r, retailer: ret?.name, category: cMap.get(r.categoryId), logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct };
+    return { ...r, retailer: ret?.name, category: cMap.get(r.categoryId), logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, logoAspect: l.aspect };
   }) });
 });
 

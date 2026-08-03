@@ -95,6 +95,8 @@ export const chains = sqliteTable("chains", {
   // Width to draw the logo at, as a percent of its square tile. Derived from the artwork's own
   // proportions at upload time so every surface draws it identically without loading the image.
   logoPct: real("logo_pct"),
+  // The artwork's shape, width over height. Square boxes use logoPct alone; a round pin also needs this.
+  logoAspect: real("logo_aspect"),
 });
 
 /** A specific catalog product. Seeded from drops_db.json; the agent asks at the category level, but this powers future product-specific asks and matching. */

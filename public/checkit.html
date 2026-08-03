@@ -561,7 +561,7 @@ __BRAND_HEAD__
   /* Store identity is the dominant ~75% of the card (roomy + big logo); verdict is a compact ~25% strip. */
   .rhead-top{display:flex;gap:14px;align-items:center;padding:32px 16px 34px}
   .rhead .railchip{flex:0 0 auto;width:58px;height:58px;border-radius:16px}
-  .rhead .railchip img{width:40px;height:40px}
+  .rhead .railchip img{max-width:69%;max-height:69%;width:auto;height:auto;object-fit:contain}/* fallback only */
   .rhead-id{min-width:0;flex:1}
   .rhead-store{font-weight:800;font-size:19.5px;letter-spacing:-.4px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
   .rhead-addr{color:var(--muted);font-size:13px;font-weight:500;margin-top:4px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -592,7 +592,7 @@ __BRAND_HEAD__
   /* The mark is strongest in the corner and fades out before it reaches the headline, so a long state
      never reads muddy over it. Mask, not a lower opacity: the corner still has real presence. */
   .rhead.live .railchip{position:absolute;top:-46px;right:-40px;width:212px;height:212px;border:0;border-radius:0;background:none;box-shadow:none;opacity:.17;z-index:0;pointer-events:none;transform:none!important;place-items:center;-webkit-mask-image:linear-gradient(238deg,#000 42%,rgba(0,0,0,.45) 72%,transparent 96%);mask-image:linear-gradient(238deg,#000 42%,rgba(0,0,0,.45) 72%,transparent 96%)}
-  .rhead.live .railchip img{width:190px;height:190px;max-height:none;object-fit:contain}
+  .rhead.live .railchip img{width:190px;height:auto;max-height:none;object-fit:contain}/* width is a fallback only; a measured logo carries its own */
   .rhead.live .railchip .wm span{font-size:76px;color:#fff;letter-spacing:-.03em}
   .rhead.live .rhead-store{font-size:10.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.8);line-height:1.2}
   .rhead.live .rhead-addr{display:none}
@@ -1042,7 +1042,7 @@ __BRAND_HEAD__
   .igpost{background:transparent}
   .ighead{display:flex;align-items:center;gap:10px;padding:0 2px 9px}
   .ighead .av{width:38px;height:38px;border-radius:12px;background:var(--terminal);border:1px solid var(--border);display:grid;place-items:center;overflow:hidden;flex:0 0 auto}
-  .ighead .av img{width:24px;height:24px;object-fit:contain}
+  .ighead .av img{max-width:63%;max-height:63%;width:auto;height:auto;object-fit:contain}/* fallback only: a measured logo carries its own width */
   .ighead .av .mono{font-size:12px;font-weight:900;color:#d6d6e0}
   .ighead .who{min-width:0;flex:1}
   .ighead .hdl{font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1279,7 +1279,7 @@ __BRAND_HEAD__
   .railnav:not(:disabled):active{transform:scale(.92)}
   .railchip{flex:0 0 auto;width:46px;height:46px;border-radius:13px;background:var(--terminal);border:1.5px solid var(--border);display:grid;place-items:center;cursor:pointer;padding:0;position:relative;transition:transform .12s,border-color .12s}
   .railchip .mono{font-size:13px;font-weight:900;letter-spacing:.02em;color:#d6d6e0}
-  .railchip img{width:30px;height:30px;object-fit:contain}
+  .railchip img{max-width:71%;max-height:71%;width:auto;height:auto;object-fit:contain}/* fallback only */
   /* dark wordmarks need a light plate — any tile holding a real logo goes light */
   .lite{background:#f2f2f5 !important;border-color:rgba(255,255,255,.28) !important}
   .store .ic img{max-width:78%;max-height:78%;width:auto;height:auto;object-fit:contain}/* fallback only: a real logo carries its own width inline (logoPct) */
@@ -1347,8 +1347,7 @@ __BRAND_HEAD__
     #result.r-play .ctl-status{animation:rGlowIn .6s ease-out 2.15s both}
     #result.r-play .foot{animation:rFadeIn .5s ease-out 2.4s both}
   }
-  .vsrow{display:flex;gap:11px;align-items:center;background:var(--terminal);border:1px solid var(--border);border-radius:14px;padding:11px 12px;margin-top:14px}
-  .vsrow .railchip{cursor:default;width:42px;height:42px;border-width:1px;transform:none !important;box-shadow:none !important}
+  
   /* compact phones: keep the 4 header controls on one comfortable line */
   @media(min-width:381px) and (max-width:430px){
     header{padding:12px 10px;gap:6px}
@@ -2337,7 +2336,7 @@ html[data-skin="v2"] .leaflet-popup-tip{background:#26262B}
 html[data-skin="v2"] body.rview .tbtn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
 /* AUDIT SWEEP 3 — final residual borders (today-calendar, rail nav, Runnr internals, misc chrome)
    + modal titles to spec (§4: pop-up title 19–21/900). */
-html[data-skin="v2"] .iconbtn,html[data-skin="v2"] .railnav,html[data-skin="v2"] .railsel,html[data-skin="v2"] .vsrow,html[data-skin="v2"] .ho-back,html[data-skin="v2"] .ho-job,html[data-skin="v2"] .ho-btn.ghost,html[data-skin="v2"] .ho-pm button,html[data-skin="v2"] .earnbox{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
+html[data-skin="v2"] .iconbtn,html[data-skin="v2"] .railnav,html[data-skin="v2"] .railsel,html[data-skin="v2"] .ho-back,html[data-skin="v2"] .ho-job,html[data-skin="v2"] .ho-btn.ghost,html[data-skin="v2"] .ho-pm button,html[data-skin="v2"] .earnbox{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
 /* .kin was mis-swept into the raised group — form FIELDS are carved wells (§5.12/R3), never raised. */
 html[data-skin="v2"] .kin{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:14px}
 html[data-skin="v2"] .ho-stepper,html[data-skin="v2"] .ho-msg{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
@@ -3425,7 +3424,22 @@ const SVG_TAG   = p => `<svg width="${p}" height="${p}" viewBox="0 0 24 24" fill
 // store row as logoPct — a percent of whatever square tile holds it. Nothing here measures anything,
 // nothing waits for the image to load, and this page and the Admin cannot drift apart because neither
 // one owns the rule. No logoPct (artwork we could not read) falls back to the tile's own CSS.
-function logoStyle(s){ return (s && typeof s.logoPct === 'number') ? ` style="width:${s.logoPct}%;height:auto;max-width:none;max-height:none;object-fit:contain"` : ''; }
+// How wide to draw a logo, as a percent of its box. The server works the number out once from the
+// artwork's proportions and sends it on every store row, so nothing here measures anything.
+//
+// Pass 'round' for a circular box. A circle does NOT hold the same rectangle a square does, and the
+// difference depends on the mark's shape: the widest rectangle of shape a that fits a circle is
+// a/sqrt(1+a*a) of the diameter. That is 71% for a square mark but 95% for a 3:1 wordmark, which is
+// why a flat allowance would have left the map pins smaller than they were before any of this.
+function logoStyle(s, shape){
+  if(!s || typeof s.logoPct !== 'number') return '';
+  let pct = s.logoPct;
+  if(shape === 'round'){
+    const a = (typeof s.logoAspect === 'number' && s.logoAspect > 0) ? s.logoAspect : 1;
+    pct = Math.min(pct, 100 * a / Math.sqrt(1 + a * a));
+  }
+  return ` style="width:${pct.toFixed(2)}%;height:auto;max-width:none;max-height:none;object-fit:contain"`;
+}
 function storeFace(s){
   if(s&&s.logoUrl) return `<img src="${esc(s.logoUrl)}" alt="" data-nm="${esc(s.name)}" data-st="${esc(s.storeType||'')}"${logoStyle(s)} onerror="wmFail(this)">`;
   if(s&&s.storeType==='Hobby') return SVG_STORE(24);
@@ -4896,7 +4910,7 @@ function renderMapPins(){
     const m = s.inStock
       ? L.marker([s.lat,s.lng],{icon:L.divIcon({className:'instkpin',html:`<span style="display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#0C0C12;border:2px solid ${neon||'#2BFF88'};box-shadow:0 0 11px ${neon||'#2BFF88'},0 0 4px ${neon||'#2BFF88'}">${FCHK(16)}</span>`,iconSize:[28,28],iconAnchor:[14,14]})}).addTo(MAP)
       : L.marker([s.lat,s.lng],{icon:L.divIcon({className:'tierpin',html: s.logoUrl
-          ? `<span style="display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#17171E;border:2px solid ${neon||'#3E3E46'};box-shadow:0 2px 10px rgba(0,0,0,.5)${neon?`,0 0 9px ${neon}`:''}"><img src="${esc(s.logoUrl)}" style="width:20px;height:20px;object-fit:contain" alt="" onerror="this.style.display='none'"></span>`
+          ? `<span style="display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#17171E;border:2px solid ${neon||'#3E3E46'};box-shadow:0 2px 10px rgba(0,0,0,.5)${neon?`,0 0 9px ${neon}`:''}"><img src="${esc(s.logoUrl)}"${logoStyle(s,'round')||' style="width:20px;height:20px;object-fit:contain"'} alt="" onerror="this.style.display='none'"></span>`
           : neon
           ? `<span style="display:block;width:15px;height:15px;border-radius:50%;background:${neon};border:1.5px solid #0C0C12;box-shadow:0 0 9px ${neon},0 0 3px ${neon}"></span>`
           : `<span style="display:block;width:12px;height:12px;border-radius:50%;background:#9aa0b0;border:1.5px solid #0C0C12"></span>`, iconSize: s.logoUrl?[30,30]:(neon?[15,15]:[12,12]), iconAnchor: s.logoUrl?[15,15]:(neon?[8,8]:[6,6])})}).addTo(MAP);
@@ -7946,7 +7960,7 @@ function zoneMapDraw(){
     const mono=(s.name||'').split(/[\s.]+/).filter(w=>w&&!/^(&|and|the|of|at)$/i.test(w)).slice(0,2).map(w=>w[0]||'').join('').toUpperCase()||'?';
     // Monogram sits BEHIND; the logo (opaque bg) covers it when it loads and onerror hides a broken
     // logo so the monogram shows through — no more blank pins when a logo fails to fetch (owner 07-11).
-    const face=`<span style="position:absolute;font-size:11px;font-weight:900;color:#CDCDD8">${esc(mono)}</span>${s.logoUrl?`<img src="${esc(s.logoUrl)}" style="position:relative;width:20px;height:20px;object-fit:contain;background:#17171E" alt="" onerror="this.style.display='none'">`:''}`;
+    const face=`<span style="position:absolute;font-size:11px;font-weight:900;color:#CDCDD8">${esc(mono)}</span>${s.logoUrl?`<img src="${esc(s.logoUrl)}" style="position:relative;background:#17171E${logoStyle(s,'round')?';'+logoStyle(s,'round').replace(/^ style="|"$/g,''):';width:20px;height:20px;object-fit:contain'}" alt="" onerror="this.style.display='none'">`:''}`;
     const badge=on?`<span style="position:absolute;right:-3px;top:-3px;width:15px;height:15px;border-radius:50%;background:#4ADE80;border:2px solid #121216;display:grid;place-items:center"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#06210f" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>`:'';
     const m=L.marker([s.lat,s.lng],{icon:L.divIcon({className:'zpin',html:`<span style="position:relative;display:grid;place-items:center;width:${sz}px;height:${sz}px;border-radius:50%;background:#17171E;border:2px solid ${on?'#4ADE80':'#3E3E46'};box-shadow:${on?'0 0 11px rgba(74,222,128,.7)':'0 2px 8px rgba(0,0,0,.55)'}">${face}${badge}</span>`,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]})}).addTo(ZMAP);
     m.on('click',(ev)=>{ try{ ev.originalEvent&&ev.originalEvent.stopPropagation&&ev.originalEvent.stopPropagation(); }catch(_){ } zoneMapToggle(s.id); });
@@ -8280,7 +8294,10 @@ function railClass(e){ const st=STORES.find(x=>x.id===e.storeId)||{}; const lu=e
 function railFace(e){
   const st=STORES.find(x=>x.id===e.storeId);
   const lu=e.logoUrl||(st&&st.logoUrl);
-  if(lu) return `<img src="${esc(lu)}" alt="" loading="lazy" data-nm="${esc(e.storeName)}" data-st="${esc((st&&st.storeType)||'')}" onerror="wmFail(this)">`;
+  // Same width the store list uses. This chip is 58 across on a finished check and 212 behind a running
+  // one; a percent is right at both, which is why the old hardcoded 40px and 190px are gone.
+  const pct=(typeof e.logoPct==='number')?e.logoPct:(st&&st.logoPct);
+  if(lu) return `<img src="${esc(lu)}" alt="" loading="lazy" data-nm="${esc(e.storeName)}" data-st="${esc((st&&st.storeType)||'')}"${logoStyle({logoPct:pct})} onerror="wmFail(this)">`;
   return storeWordmark(e.storeName, st&&st.storeType);
 }
 // Local YYYY-MM-DD for a call's timestamp — used to view a specific day's transcripts.
@@ -9329,7 +9346,7 @@ async function submitSuccess(){
 function igHandle(p){ return '@'+esc((p.handle||'hunter').replace(/^@/,'')); }
 function igAv(p){
   const st=p.retailerId?STORES.find(x=>x.id===p.retailerId):null;
-  if(st&&st.logoUrl) return `<span class="av"><img src="${esc(st.logoUrl)}" alt=""></span>`;
+  if(st&&st.logoUrl) return `<span class="av"><img src="${esc(st.logoUrl)}" alt=""${logoStyle(st)}></span>`;
   const base=(p.store||'?').split(/\s+/).filter(Boolean);
   return `<span class="av"><span class="mono">${esc(((base[0]||'?')[0]+(base[1]?base[1][0]:'')).toUpperCase())}</span></span>`;
 }
