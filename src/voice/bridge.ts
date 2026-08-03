@@ -448,6 +448,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  Being late is safe by construction: the gate opens on its own signals whatever he is doing, and
    *  whatever the clerk said meanwhile is already buffered and released the moment he reports ready. */
   const PREWARM_LEAD_MS = tune.prewarmLeadMs;
+  /** How long Charlie may actually be TALKING before he starts wrapping up. The owner's number, 45
+   *  seconds, tuned from Admin against real checks: his own arithmetic says 23 holds 67% profit and
+   *  45 does not, so 45 buys a longer conversation at a thinner margin on purpose. */
+  const WRAP_UP_MS = Math.max(1, tune.charlieWrapUpSeconds) * 1000;
   // ---- hold and transfer ----
   let onHold = false;             // the person is away; the agent must not be fed or heard
   /** Somebody has already stepped away and come back on this call — from here it is a live store
@@ -761,6 +765,34 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     heldWords = [];
   }
 
+  // ---- THE WRAP-UP LIMIT (round 1, item 1.5) ---------------------------------------------------
+  // THE CHATTY CLERK. The one case no drop rule catches: somebody genuinely IS talking, hemming and
+  // hawing, never landing on an answer. Every rule is working correctly and the check runs away with
+  // the margin — he costs 11 cents a minute, and the whole check is meant to cost 6.6.
+  //
+  // The limit is on Charlie ACTUALLY TALKING, not on the check: waiting is nearly free because he is
+  // dropped, and it is talk time that breaks the margin. And it NEVER ends the check. A hard hang up
+  // at a limit is the thing the owner is right to fear: the clerk is mid help, the check dies, and
+  // the customer paid for all of it. The limit tells him to START WRAPPING UP, once.
+  let charlieSpokenMs = 0;
+  let wrapUpNudged = false;
+  /** His line, the owner's words. NO DASHES: they read strangely through ElevenLabs. */
+  function nudgeToWrapUp() {
+    if (wrapUpNudged || !eleven || !ready) return;
+    wrapUpNudged = true;
+    const what = String(ctx?.dynamicVars?.category || "").trim();
+    const line = `Don't want to keep you, did you find out if you have ${what ? `${what} cards` : "them"}?`;
+    const secs = Math.round(charlieSpokenMs / 1000);
+    emit(room, "unknown", "Charlie has talked long enough, so he starts wrapping up", { step: "wrap_up_limit", talkingSec: secs, line });
+    log(`wrap-up limit: ${secs}s of talking — telling him to close, never hanging up`);
+    try {
+      eleven.send(JSON.stringify({ type: "contextual_update", text:
+        `[You have been talking for ${secs} seconds and this check is costing money. Say exactly this, once, in your own voice: "${line}" `
+        + `Then take whatever answer you get, thank them warmly and end the check. If they still cannot answer, saying you will call back is fine. `
+        + `Do NOT cut them off mid sentence and do NOT hang up on somebody who is helping you.]` }));
+    } catch { /* best effort — never break a check over a note */ }
+  }
+
   /** A note to the agent that is NOT spoken to the store: time passed and who is on the line may
    *  have changed. The provider's own contextual-update channel, so nothing is said out loud. */
   function tellCharlieAboutTheGap(secs: number, maybeNewPerson: boolean) {
@@ -909,6 +941,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + ms;
           addMs(room, "speakingMs", ms); // SPEAKING = audio that really played out, not a guess
           charlieSpoke = true;           // from here there is no live model swap, whatever fails
+          // …and the same milliseconds are what the wrap-up limit counts: audio that really reached
+          // Staff's ear, never a stopwatch on the whole check (round 1, item 1.5).
+          charlieSpokenMs += ms;
+          if (!wrapUpNudged && charlieSpokenMs >= WRAP_UP_MS) nudgeToWrapUp();
         }
       } else if (m.type === "user_transcript") {
         const txt = m.user_transcription_event?.user_transcript;

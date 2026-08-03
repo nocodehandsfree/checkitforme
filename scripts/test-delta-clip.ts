@@ -15,6 +15,7 @@ import { setBridgeContext, handleTwilioBridge, weEndedCheck } from "../src/voice
 import { openReceipt, getReceipt, transcriptOf, closeReceipt, rollup, _reset } from "../src/calls/events";
 import { isCheckAlive } from "../src/calls/check-life";
 import { toMediaFrames } from "../src/calls/clip-cache";
+import { TUNING_DEFAULTS } from "../src/calls/tuning";
 
 /** Real ringback: the published North American pair, 440 + 480 Hz, μ-law encoded — the same thing
  *  the runtime measures with a Goertzel. Loudness alone would not prove anything here. */
@@ -993,6 +994,55 @@ console.log("\n▶ a person answers the same way: short hello, a real pause, and
   ok(f.sockets.length === 1, "they stopped for us, so somebody is there and Charlie opens");
   const ev = (getReceipt("room-person")?.events || []);
   ok(ev.some((e) => e.kind === "human_detected"), "the log says Staff greeting, off the same moment");
+  restore(); tw.close(); f.close();
+}
+
+// ================================================================================================
+// ROUND 1, ITEM 1.5 — THE WRAP-UP LIMIT.
+// The chatty clerk: somebody genuinely IS talking, hemming and hawing, never landing on an answer.
+// Every drop rule is working correctly and the check runs away with the margin. The limit is on
+// Charlie ACTUALLY TALKING, and it NEVER hangs up — it tells him to start wrapping up.
+console.log("\n▶ Charlie has been talking a long time: he is told to wrap up, and the check stays up");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  openReceipt("room-chatty", { lane: "direct" });
+  setBridgeContext("room-chatty", {
+    agentId: "agent_normal", dynamicVars: { category: "Pokemon" }, connectOnHuman: true,
+    // The owner's number, changed from Admin without a deploy — which is the whole point of it
+    // living in the tuning setting. Four seconds here so the scene is a scene and not a wait.
+    tuning: { ...TUNING_DEFAULTS, charlieWrapUpSeconds: 4 },
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "room-chatty", () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_ch", customParameters: { room: "room-chatty" } } });
+  await sleep(350);
+  for (let i = 0; i < 40; i++) tw.media(frame(SPEECH(i)));
+  for (let i = 0; i < PERSON_PAUSE; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(250);
+  ok(f.sockets.length === 1, "he is on the check");
+  // He talks. Every chunk is a real second of audio played out to Staff (8 bytes a millisecond).
+  const second = Buffer.alloc(8000, 0x40).toString("base64");
+  const notes = () => f.raw.filter((r) => r.includes("contextual_update"));
+  for (let i = 0; i < 3; i++) f.sockets[0].send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: second } }));
+  await sleep(120);
+  ok(notes().length === 0, "three seconds of talking is nothing to worry about");
+  for (let i = 0; i < 3; i++) f.sockets[0].send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: second } }));
+  await sleep(150);
+  const note = notes()[0] || "";
+  ok(notes().length === 1, "past the limit he is told, once");
+  ok(note.includes("Don't want to keep you, did you find out if you have Pokemon cards?"),
+    "…in the owner's own words, with what we are asking about filled in");
+  ok(!note.includes(" - ") && !note.includes("—"), "no dashes in anything he is told to say");
+  ok(tw.readyState === 1, "THE CHECK IS STILL UP: a limit never cuts a clerk off mid help");
+  const ev = (getReceipt("room-chatty")?.events || []);
+  ok(ev.some((e) => (e.detail as { step?: string } | null)?.step === "wrap_up_limit"), "and the check records that he was told");
+  ok(!ev.some((e) => e.kind === "hangup"), "nothing hung up: the limit is not an ending");
+  // …and it is said ONCE, however long he carries on.
+  for (let i = 0; i < 5; i++) f.sockets[0].send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: second } }));
+  await sleep(120);
+  ok(notes().length === 1, "he is never nagged about it a second time");
   restore(); tw.close(); f.close();
 }
 

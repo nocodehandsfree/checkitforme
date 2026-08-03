@@ -33,6 +33,9 @@ export interface CallTuning {
   clipBackstopMs: number;
   // ---- calling straight back after a broken call ----
   reconnectWindowMin: number;
+  // ---- THE OWNER'S OWN THREE, tuned from Admin against real checks ----
+  charlieWrapUpSeconds: number;
+  holdCapSeconds: number;
 }
 
 /** The defaults, and WHY each one is that number. Anything here can be overridden from Admin with
@@ -55,6 +58,8 @@ export const TUNING_DEFAULTS: CallTuning = {
   clipSettleMs: 250,
   clipBackstopMs: 4000,
   reconnectWindowMin: 2,
+  charlieWrapUpSeconds: 45,
+  holdCapSeconds: 120,
 };
 
 /** Plain-English reason for each, shown next to the value in Admin. Never a code identifier. */
@@ -76,6 +81,8 @@ export const TUNING_WHY: Record<keyof CallTuning, string> = {
   clipSettleMs: "A breath after the recorded question so the agent cannot clip its own tail.",
   clipBackstopMs: "If nothing confirms the question finished, hand over anyway this long after it should have. A clerk talking to silence is the worse failure.",
   reconnectWindowMin: "How long \"I just got disconnected\" still sounds true. Past this it is likely a different employee and a stranger saying it is worse than a normal greeting.",
+  charlieWrapUpSeconds: "How long Charlie may actually be TALKING before he starts wrapping up. It never hangs the check up: cutting Staff off mid help kills a check the customer already paid for. He costs 11 cents a minute, so this is the one number that decides whether a check makes money.",
+  holdCapSeconds: "How long a hold may run before we hang up. Waiting is nearly free because Charlie is dropped, and a second check costs more than waiting, so be generous.",
 };
 
 /** Bounds, so a typo in Admin can never produce a call that hangs or a gate that never fires. */
@@ -88,6 +95,8 @@ const LIMITS: Record<keyof CallTuning, [number, number]> = {
   transferToneMs: [200, 5000], backVoiceMs: [100, 3000],
   prewarmLeadMs: [0, 10000], clipSettleMs: [0, 3000], clipBackstopMs: [500, 20000],
   reconnectWindowMin: [1, 120],
+  charlieWrapUpSeconds: [5, 600],
+  holdCapSeconds: [10, 900],
 };
 
 /** What this call should use. Admin overrides win where they are sane; anything out of bounds or
