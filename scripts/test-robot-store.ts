@@ -22,7 +22,7 @@ const is = (got: unknown, want: unknown, m: string) => (JSON.stringify(got) === 
 function walk(scenario: number, greetingIndex = 0, heard = "Hi, do you have any Pokemon cards in stock?") {
   const { callSid, first, run } = _robotRig(scenario, greetingIndex);
   const docs = [first];
-  for (let i = 0; i < 12 && /<Gather/.test(docs[docs.length - 1]); i++) docs.push(robotStep(callSid, heard));
+  for (let i = 0; i < 24 && /<Gather/.test(docs[docs.length - 1]); i++) docs.push(robotStep(callSid, heard));
   return { docs, run, all: docs.join(""), callSid };
 }
 const pauses = (xml: string) => [...xml.matchAll(/<Pause length="(\d+)"\/>/g)].map((m) => Number(m[1]));
@@ -87,6 +87,11 @@ console.log("\n── the two that break us most ──");
   if (p.includes(45)) ok("scene 5: the walk to the shelf is 45 seconds"); else fail(`scene 5: the hold is ${p.join("/")}s, not 45`);
   if (!/<Play>[^<]*hold/i.test(all) && !/music/i.test(all)) ok("scene 5: the hold is SILENCE, no music"); else fail("scene 5: something is playing during the hold");
   is(run.said.length, 3, "scene 5: greeting, the walk away, then the answer they came back with");
+  // Once they have answered they WAIT for us to say goodbye, the way a real person does. A store that
+  // puts the phone down instantly would hide a caller who never signs off (owner, 08-02).
+  const listens = (all.match(/<Gather/g) || []).length;
+  if (listens >= 5) ok(`scene 5: it waits for us to sign off (${listens} chances to speak before it gives up)`);
+  else fail(`scene 5: only ${listens} chances to speak — it hangs up before a goodbye can happen`);
 }
 {
   const { all, run, docs } = walk(6, 0);

@@ -574,6 +574,17 @@ export const ROBOT_GREETINGS: string[] = [
   "Hi, how can I help you? Hello?",
 ];
 
+/**
+ * WHAT A REAL PERSON DOES ONCE THEY HAVE ANSWERED: they wait for the caller to say goodbye. They do
+ * not put the phone down the second the words are out of their mouth.
+ *
+ * This matters more than it sounds. A store that hangs up instantly HIDES a missing sign-off — the
+ * check ends either way, so a caller who never says thanks and goodbye looks exactly like one who
+ * does. The owner spotted that on four checks in a row: every conversation ended on OUR question.
+ * So the robot now holds the line, quietly, for about forty seconds before giving up on us.
+ */
+const WAIT_OUT: RobotAct[] = [{ listen: true }, { listen: true }, { listen: true }, { listen: true }, { hangup: true }];
+
 /** `expect` is what a right answer looks like for this scene, in the site's own verdict words. It is
  *  NOT a second expectations list: the owner's Admin Testing rows own pass and fail for the steps of
  *  a check. This is only the VERDICT, which is the one thing scenarios 7 and 8 exist to catch. */
@@ -581,19 +592,19 @@ export const ROBOT_SCENES: RobotScene[] = [
   { n: 1, name: "Yes, plainly", expect: "in_stock", acts: [
     { listen: true }, { say: "Yeah." },
     { listen: true }, { say: "We do." },
-    { listen: true }, { hangup: true },
+    ...WAIT_OUT,
   ] },
   { n: 2, name: "No, plainly", expect: "not_in_stock", acts: [
     { listen: true }, { say: "We did not." },
-    { listen: true }, { listen: true }, { hangup: true },
+    ...WAIT_OUT,
   ] },
   { n: 3, name: "No, softened", expect: "not_in_stock", acts: [
     { listen: true }, { say: "No, I'm sorry. I haven't seen any yet." },
-    { listen: true }, { listen: true }, { hangup: true },
+    ...WAIT_OUT,
   ] },
   { n: 4, name: "No, this shipment", expect: "not_in_stock", acts: [
     { listen: true }, { say: "No, we don't have any this, this shipment." },
-    { listen: true }, { listen: true }, { hangup: true },
+    ...WAIT_OUT,
   ] },
   // The ONE hold in our whole history that ever worked. 45 seconds, and SILENCE, not music.
   { n: 5, name: "Walks away, comes back", expect: "not_in_stock", acts: [
@@ -601,7 +612,7 @@ export const ROBOT_SCENES: RobotScene[] = [
     { say: "Uh, Pokémon? Uh, let me check. I just got in, so I have to, uh, I'll have to go up to the front and see. Okay, let me just put you on hold." },
     { silence: 45 },
     { say: "Okay, thank you for holding. Yeah, I did not see any, unfortunately." },
-    { listen: true }, { hangup: true },
+    ...WAIT_OUT,
   ] },
   // Happened twice for real. One of them ran 121 seconds and never resolved, so that is the length.
   { n: 6, name: "Walks away, never comes back", expect: "no_clear_answer", acts: [
@@ -616,7 +627,7 @@ export const ROBOT_SCENES: RobotScene[] = [
     { say: "We did, but it's not out yet, so... uh, or I don't think it's out. Let me see." },
     { listen: true },
     { say: "It's like a box with, like, three packs in it, I think, or something like that." },
-    { listen: true }, { hangup: true },
+    ...WAIT_OUT,
   ] },
   // Second highest. We stamped NOT IN STOCK before they came back with the answer.
   { n: 8, name: "The no that turns into a maybe", expect: "in_stock", acts: [
@@ -624,7 +635,7 @@ export const ROBOT_SCENES: RobotScene[] = [
     { say: "We haven't, as a matter of fact. Uh, let me double-check though. Hold on just a moment." },
     { silence: 30 },
     { say: "Yeah, we've got a few." },
-    { listen: true }, { hangup: true },
+    ...WAIT_OUT,
   ] },
   // 6 of 14 real checks did exactly this. No scripted test has ever reproduced it.
   { n: 9, name: "Cannot hear us, gives up", greeting: "Hi, how can I help you? Hello?", expect: "nobody_answered", acts: [
@@ -642,7 +653,7 @@ export const ROBOT_SCENES: RobotScene[] = [
     { sayAs: "transfer", say: "Sporting goods, this is Dana." },
     { listen: true },
     { sayAs: "transfer", say: "We did not." },
-    { listen: true }, { hangup: true },
+    ...WAIT_OUT,
   ] },
 ];
 

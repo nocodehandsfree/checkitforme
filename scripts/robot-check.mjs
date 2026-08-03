@@ -358,6 +358,25 @@ async function runOne(page, scene, greetingIdx) {
   }).catch(() => ({ has: false }));
   item(8, "the log expands", !!log.has && !!log.open && log.after > log.before, log.has ? `${Math.round(log.before)}px → ${Math.round(log.after)}px` : "no log on the result");
 
+  // 13. DID WE SAY GOODBYE, OR JUST HANG UP? (owner, 08-02, on four checks in a row: "it doesn't look
+  // like any of these are being wrapped up correctly"). Every one of them ended on OUR OWN QUESTION.
+  // Staff are left holding a dead line, which is how a chain learns to stop answering us.
+  const ours = lines.filter((l) => l.startsWith("Agent:")).map((l) => l.slice(6).trim());
+  const lastLine = lines[lines.length - 1] || "";
+  const lastOurs = ours[ours.length - 1] || "";
+  const signedOff = /thank|thanks|appreciate|have a good|have a great|take care|take it easy|see ya|no worries|all good|got it/i.test(lastOurs) && !lastOurs.trim().endsWith("?");
+  item(13, "the check ends with a goodbye, not with us hanging up mid conversation",
+    signedOff,
+    signedOff ? `we signed off: "${lastOurs}"` : `the last thing said was ${lastLine.startsWith("Agent:") ? "OUR OWN QUESTION" : "theirs"}: "${lastLine.slice(0, 90)}"`);
+
+  // 14. AND WE DO NOT ASK THE SAME THING TWICE. Two of his four screenshots show the same question
+  // asked again, once word for word. Every repeat is six to ten seconds with the meter running.
+  const key = (t) => norm(t).split(" ").slice(0, 8).join(" ");
+  const seenQ = new Set(); const repeats = [];
+  for (const q of ours) { const k = key(q); if (k && seenQ.has(k)) repeats.push(q); seenQ.add(k); }
+  item(14, "we never ask the same question twice", repeats.length === 0,
+    repeats.length ? `asked again: ${repeats.map((r) => `"${r.slice(0, 60)}"`).join(" · ")}` : `${ours.length} things said, none of them twice`);
+
   // 9 + 11. the verdict.
   const verdictShown = /in stock|not in stock|no clear answer|sold out|nobody|didn't answer|did not answer|restock/i.test(resultText);
   item(9, "the result appears with a status", verdictShown, resultText.replace(/\s+/g, " ").slice(0, 120));
