@@ -37,12 +37,16 @@ head("SHAPE");
   // added sit under them, so a row never moves out from under his thumb.
   // ONLY CHARLIE ON THIS CARD (owner 07-30). Walking a menu is the map's job, not his, and it is not
   // a test: it either works or the check fails, and the check failing is the report.
-  ok("three rows, fixed order, all of them about Charlie", r.map((x) => x.key).join(",")
-    === "meter_stopped_on_hold,asked_to_be_put_through,asked_the_new_person", r.map((x) => x.key));
+  ok("eleven rows, in the order of the record", r.map((x) => x.key).join(",")
+    === "handed_to_charlie,question_recorded,warmed_up_in_time,right_department,asked_to_be_put_through,asked_the_new_person,goodbye_when_told_no,meter_stopped_on_hold,wrapped_up,spoke_their_language,charlie_ended_the_check", r.map((x) => x.key));
   ok("an ordinary check shows a gray dash on both wrong-department rows, never a cross",
     row(r, "asked_to_be_put_through").pass === null && row(r, "asked_the_new_person").pass === null);
   ok("every row ships a label, a tooltip and a why", r.every((x) => !!x.label && !!x.tip && !!x.why));
-  ok("a clean Fun-store check ticks nothing it cannot fail", r.filter((x) => x.pass === true).length === 0, r.filter((x) => x.pass === true).map((x) => x.key));
+  // A PLAIN CHECK IS MOSTLY UNUSED and that is a good check (owner: "Unused is a clean result"). The
+  // only tick it earns is the one thing that plainly happened: Staff picked up and he was handed the
+  // check. Nothing about a department, a transfer or a wait may claim anything at all.
+  ok("a clean Fun-store check ticks only what really happened", r.filter((x) => x.pass === true).map((x) => x.key).join(",") === "handed_to_charlie,wrapped_up", r.filter((x) => x.pass === true).map((x) => x.key));
+  ok("…and it crosses nothing", r.filter((x) => x.pass === false).length === 0, r.filter((x) => x.pass === false).map((x) => x.key));
   ok("pass is only true, false or null", r.every((x) => x.pass === true || x.pass === false || x.pass === null));
   // A DIRECT STORE HAS NO MENU, so a tick would read as "we expect a keypad" (owner 07-30).
   ok("a clean direct check: nobody held us, so the meter row is null", row(r, "meter_stopped_on_hold").pass === null);
@@ -51,9 +55,80 @@ head("SHAPE");
   ok("the row is called Meter stopped", row(r, "meter_stopped_on_hold").label === "Meter stopped", row(r, "meter_stopped_on_hold").label);
   // OPERATOR GRADE, NOT CONVERSATIONAL (owner 07-30, admin copy guide: a label is a precise noun or
   // a plain verb, never a sentence). Asserted so nobody writes chat into a control panel again.
-  ok("the labels are the operator's words", r.map((x) => x.label).join(" · ")
-    === "Meter stopped · Transfer requested · Re-asked after transfer", r.map((x) => x.label));
+  // THE OWNER'S OWN WORDS, line by line, from docs/specs/charlie-behavior/README.md §5. He spent real
+  // time on these, so they are asserted here and no agent can quietly reword one.
+  ok("the labels are his words, in his order", r.map((x) => x.label).join(" · ")
+    === "Handed to Charlie · The question played as a recording · Charlie warmed up in time · We reached the right department · Asked to be transferred · Reacted to a new person · Said goodbye when told no · Meter stopped · Charlie wrapped up · Spoke their language · Charlie ended the check", r.map((x) => x.label));
+  ok("no dash inside any label or line (copy law)", r.every((x) => !/[\u2014\u2013]/.test(x.label + x.why + x.tip)), r.filter((x) => /[\u2014\u2013]/.test(x.label + x.why + x.tip)).map((x) => x.key));
   ok("no gray line runs past one line on a phone", r.every((x) => x.why.length <= 110), r.filter((x) => x.why.length > 110).map((x) => x.why));
+}
+
+head("THE EIGHT NEW ROWS, IN HIS WORDS (README §5, asserted so nobody rewords them)");
+{
+  // ROW 1 — handed to Charlie.
+  const noPickup: BehavedEvent[] = [ev("dialed", 0, { plan: [] }), ev("ringing", 2, { leg: "store" }), ev("hangup", 40, { reason: "nobody_came" })];
+  ok("row 1 fail: nobody there", row(behaved({ timeline: noPickup }), "handed_to_charlie").why === "Staff never picked up, so there was nobody to hand to.", row(behaved({ timeline: noPickup }), "handed_to_charlie").why);
+  const notHanded: BehavedEvent[] = [ev("dialed", 0, { plan: [] }), ev("human_detected", 12), ev("hangup", 40)];
+  ok("row 1 fail: our own side never handed it over", row(behaved({ timeline: notHanded }), "handed_to_charlie").why === "Our own system never handed the check to Charlie.", row(behaved({ timeline: notHanded }), "handed_to_charlie").why);
+  ok("row 1 pass names Alpha, his word for the keypad", /^Reached Staff through Alpha and handed to Charlie/.test(row(behaved({ timeline: cleanDirect }), "handed_to_charlie").why));
+
+  // ROW 2 — the question played as a recording.
+  const withClip = [...cleanDirect, ev("unknown", 20, { step: "question_clip", ms: 4800 })];
+  ok("row 2 pass", /^The question played as a recording/.test(row(behaved({ timeline: withClip }), "question_recorded").why), row(behaved({ timeline: withClip }), "question_recorded").why);
+  const noClip = [...cleanDirect, ev("unknown", 20, { step: "question_live" })];
+  ok("row 2 fail, word for word", row(behaved({ timeline: noClip }), "question_recorded").why === "The recording did not play, so Charlie asked the question himself.", row(behaved({ timeline: noClip }), "question_recorded").why);
+  ok("row 2 on an OLD check says nothing at all", row(behaved({ timeline: cleanDirect }), "question_recorded").pass === null);
+
+  // ROW 3 — the warm-up. Late is measured, never assumed.
+  const late: BehavedEvent[] = [ev("dialed", 0, { plan: [] }), ev("human_detected", 10), ev("charlie_join", 12, { segment: 1, warmedUpInTime: false, deadAirMs: 2100 }), ev("hangup", 30)];
+  ok("row 3 fail, with the seconds of dead air", row(behaved({ timeline: late }), "warmed_up_in_time").why === "Charlie warmed up late. There was dead air for 2 seconds.", row(behaved({ timeline: late }), "warmed_up_in_time").why);
+  const intime: BehavedEvent[] = [ev("dialed", 0, { plan: [] }), ev("human_detected", 10), ev("charlie_join", 12, { segment: 1, warmedUpInTime: true, deadAirMs: 0 }), ev("hangup", 30)];
+  ok("row 3 pass", row(behaved({ timeline: intime }), "warmed_up_in_time").why === "Charlie warmed up in time.", row(behaved({ timeline: intime }), "warmed_up_in_time").why);
+  ok("row 3 on an OLD check says nothing", row(behaved({ timeline: cleanDirect }), "warmed_up_in_time").pass === null);
+
+  // ROW 4 — the department. A plain check never claims we reached the right one.
+  ok("row 4 is Unused on a check that picked no department", row(behaved({ timeline: cleanDirect }), "right_department").pass === null);
+  const menu: BehavedEvent[] = [ev("dialed", 0, { plan: [] }), ev("ivr_detected", 4), ev("bravo_say", 9, { phrase: "front" }), ev("human_detected", 20), ev("charlie_join", 20, { segment: 1 }), ev("hangup", 40)];
+  ok("row 4 pass, word for word", row(behaved({ timeline: menu }), "right_department").why === "We reached the right department, no transfer needed.", row(behaved({ timeline: menu }), "right_department").why);
+  const wrongNoAsk = [...menu, ev("unknown", 24, { wrongDepartment: true, said: "This is the pharmacy." })];
+  ok("row 4 fail starts in his words", /^Wrong department and Charlie never asked to be transferred\./.test(row(behaved({ timeline: wrongNoAsk, agentLines: [OPENER] }), "right_department").why), row(behaved({ timeline: wrongNoAsk, agentLines: [OPENER] }), "right_department").why);
+  ok("row 4 never ticks when the department WAS wrong and he asked", row(behaved({ timeline: wrongNoAsk, agentLines: [OPENER, "Oh gotcha, could you put me through to whoever handles the Pokemon?"] }), "right_department").pass === null);
+
+  // ROW 6 — names WHICH event it judged (his question: "reacted to what?").
+  const afterWait: BehavedEvent[] = [ev("dialed", 0, { plan: [] }), ev("human_detected", 6), ev("charlie_join", 6, { segment: 1 }),
+    ev("hold_start", 18, { reason: "quiet" }), ev("charlie_leave", 18), ev("hold_end", 60, { gapSec: 42, maybeNewPerson: true, reason: "quiet" }), ev("charlie_join", 60, { segment: 2 }), ev("hangup", 70)];
+  ok("row 6 says it judged a WAIT, and expects nothing of him", /^Judged after a wait:/.test(row(behaved({ timeline: afterWait, agentLines: [OPENER] }), "asked_the_new_person").why), row(behaved({ timeline: afterWait, agentLines: [OPENER] }), "asked_the_new_person").why);
+
+  // ROW 7 — told there is nobody to transfer to.
+  const toldNo: BehavedEvent[] = [ev("dialed", 0, { plan: [] }), ev("human_detected", 6), ev("charlie_join", 6, { segment: 1 }),
+    ev("unknown", 20, { wrongDepartment: true, said: "This is the pharmacy." }), ev("unknown", 30, { step: "nobody_to_transfer", said: "There's nobody up front right now." })];
+  ok("row 7 fail when he kept pushing", /^Charlie kept pushing after Staff said no\./.test(row(behaved({ timeline: toldNo, agentLines: [OPENER] }), "goodbye_when_told_no").why), row(behaved({ timeline: toldNo, agentLines: [OPENER] }), "goodbye_when_told_no").why);
+  const toldNoBye = [...toldNo, ev("unknown", 34, { step: "wrap_up", usedName: false }), ev("hangup", 36)];
+  ok("row 7 pass, word for word", /^Staff said there was nobody to transfer to and Charlie said goodbye\./.test(row(behaved({ timeline: toldNoBye, agentLines: [OPENER] }), "goodbye_when_told_no").why), row(behaved({ timeline: toldNoBye, agentLines: [OPENER] }), "goodbye_when_told_no").why);
+  ok("row 7 is Unused when nobody ever said it", row(behaved({ timeline: cleanDirect }), "goodbye_when_told_no").why === "Nobody ever said there was nobody to transfer to.");
+
+  // ROW 9 — the wrap-up, and the name.
+  const byName = [...cleanDirect, ev("unknown", 27, { step: "wrap_up", usedName: true, name: "Bob" })];
+  ok("row 9 pass names who he thanked", row(behaved({ timeline: byName }), "wrapped_up").why === "Charlie thanked them by name (Bob) and ended.", row(behaved({ timeline: byName }), "wrapped_up").why);
+  const stopped: BehavedEvent[] = [ev("dialed", 0, { plan: [] }), ev("human_detected", 6), ev("charlie_join", 6, { segment: 1 }), ev("hangup", 30)];
+  ok("row 9 fail, word for word", row(behaved({ timeline: stopped, agentLines: [OPENER] }), "wrapped_up").why === "The check ended without Charlie wrapping up.", row(behaved({ timeline: stopped, agentLines: [OPENER] }), "wrapped_up").why);
+
+  // ROW 10 — language. English is never claimed, because the judge cannot always tell.
+  ok("row 10 is Unused on an English check", row(behaved({ timeline: cleanDirect }), "spoke_their_language").why === "No Spanish was spoken on this check.");
+  const es = [...cleanDirect, ev("unknown", 29, { step: "language", spanishLines: 4, englishLines: 0 })];
+  ok("row 10 pass, word for word", row(behaved({ timeline: es }), "spoke_their_language").why === "Charlie spoke Spanish throughout.", row(behaved({ timeline: es }), "spoke_their_language").why);
+  const mixed = [...cleanDirect, ev("unknown", 29, { step: "language", spanishLines: 3, englishLines: 2 })];
+  ok("row 10 fail opens in his words", /^Charlie answered in English on a Spanish check\./.test(row(behaved({ timeline: mixed }), "spoke_their_language").why), row(behaved({ timeline: mixed }), "spoke_their_language").why);
+
+  // ROW 11 — who put the phone down.
+  const heEnded = [...cleanDirect.filter((e) => e.kind !== "charlie_leave"), { kind: "charlie_leave", atSec: 28, note: "Charlie ended the check", detail: null } as BehavedEvent];
+  ok("row 11 pass", /^Charlie ended the check/.test(row(behaved({ timeline: heEnded }), "charlie_ended_the_check").why), row(behaved({ timeline: heEnded }), "charlie_ended_the_check").why);
+  const storeHung: BehavedEvent[] = [ev("dialed", 0, { plan: [] }), ev("human_detected", 6), ev("charlie_join", 6, { segment: 1 }), ev("hangup", 33, { reason: "store_hung_up" })];
+  ok("row 11 fail: Staff hung up on us", /^Staff hung up on us/.test(row(behaved({ timeline: storeHung }), "charlie_ended_the_check").why), row(behaved({ timeline: storeHung }), "charlie_ended_the_check").why);
+  const dropped: BehavedEvent[] = [ev("dialed", 0, { plan: [] }), ev("human_detected", 6), ev("charlie_join", 6, { segment: 1 }), ev("hangup", 33, { reason: "disconnected" })];
+  ok("row 11 fail: the check was disconnected", /^The check was disconnected/.test(row(behaved({ timeline: dropped }), "charlie_ended_the_check").why), row(behaved({ timeline: dropped }), "charlie_ended_the_check").why);
+  const weEnded: BehavedEvent[] = [ev("dialed", 0, { plan: [] }), ev("human_detected", 6), ev("charlie_join", 6, { segment: 1 }), ev("hangup", 130, { reason: "held_too_long" })];
+  ok("row 11 never blames him for an ending WE chose", row(behaved({ timeline: weEnded }), "charlie_ended_the_check").pass === null, row(behaved({ timeline: weEnded }), "charlie_ended_the_check").why);
 }
 
 head("METER STOPPED ON HOLD");

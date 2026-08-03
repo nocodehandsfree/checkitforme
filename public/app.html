@@ -2400,7 +2400,14 @@ async function openReceiptInto(url,o){
       +`<div class="stat"><div class="n">${s.navSeconds!=null?s.navSeconds+'s':'—'}</div><div class="l">Time to Staff</div></div>`
     +`</div>`:'<div class="k-note" style="padding-top:0">This check ran before the new calling engine, so its seconds and its cost were never written down.</div>')
     +(rungs?`<div class="mladder">${rungs}</div>`:'<div class="empty">No steps recorded.</div>')
-    +(d.live?'<div class="meta" style="margin-top:10px">This call is still going.</div>':'');
+    // THE SAME SHAPE AS THE CUSTOMER'S OWN CHECK LOG (owner 08-01): the steps end to end, the menu
+    // walk included, and then the conversation itself. Both come from the same record, so this is one
+    // shape and not two. Same bubbles as every other transcript in the Admin.
+    +(Array.isArray(d.lines)&&d.lines.length
+      ? `<div class="k-eyebrow" style="margin-top:14px">The conversation</div>`
+        +bubbles(d.lines.map(l=>(l.who==='Agent'?'Agent: ':'Clerk: ')+String(l.text||'')).join('\n'))
+      : '')
+    +(d.live?'<div class="meta" style="margin-top:10px">This check is still going.</div>':'');
 }
 // DID THE NEW ENGINE BEHAVE. Four rows, each a green tick or a red cross, scored on the server off
 // this same receipt (src/calls/behaved.ts). A GRAY DASH is the third answer and it is deliberate: it
@@ -2408,14 +2415,21 @@ async function openReceiptInto(url,o){
 // Every row carries the owner's tooltip; the gray line under it is what the record actually showed.
 function behavedCard(rows){
   if(!Array.isArray(rows)||!rows.length) return '';
+  // THREE STATES, NEVER TWO (owner): Used · Unused · Broken. Unused is a CLEAN result, not a failure,
+  // and a plain check is mostly Unused. The word is printed beside the mark because a gray dash on
+  // its own has been read as "something went wrong" more than once.
   const mark=p=>{
-    const m=p===true?['#4ADE80','<path d="M5 12l5 5 9-10"/>']
-      :p===false?['#EF4444','<path d="M6 6l12 12M18 6L6 18"/>']
-      :['#9CA3AF','<path d="M6 12h12"/>'];
-    return `<span style="width:26px;height:26px;border-radius:50%;background:${m[0]}26;display:grid;place-items:center;flex:0 0 auto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${m[0]}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${m[1]}</svg></span>`;
+    const m=p===true?['#4ADE80','<path d="M5 12l5 5 9-10"/>','Used']
+      :p===false?['#EF4444','<path d="M6 6l12 12M18 6L6 18"/>','Broken']
+      :['#9CA3AF','<path d="M6 12h12"/>','Unused'];
+    return `<span style="display:flex;align-items:center;gap:6px;flex:0 0 auto">`
+      +`<span style="font-size:10.5px;font-weight:800;letter-spacing:.4px;color:${m[0]}">${m[2]}</span>`
+      +`<span style="width:26px;height:26px;border-radius:50%;background:${m[0]}26;display:grid;place-items:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${m[0]}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${m[1]}</svg></span></span>`;
   };
+  const used=rows.filter(r=>r.pass===true).length, broke=rows.filter(r=>r.pass===false).length;
   return `<div class="card" style="margin-bottom:14px;padding:16px 18px">
     <div class="k-eyebrow" style="margin:0 0 4px">Charlie behavior</div>
+    <div class="meta" style="margin:0 0 6px">${used} used · ${rows.length-used-broke} unused · ${broke} broken</div>
     ${rows.map(r=>`<div class="row" style="align-items:flex-start;padding:8px 0">
       <span class="grow">
         <span style="display:block;font-size:13.5px;font-weight:700;color:var(--text-strong)" data-tip="${esch(r.tip||'')}">${esch(r.label||'')}</span>

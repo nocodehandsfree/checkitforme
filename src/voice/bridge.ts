@@ -19,7 +19,7 @@ import { toMediaFrames } from "../calls/clip-cache";
 // The wrong-department phrase test. It lives beside the standing rule that tells the agent to ask to
 // be put through, so the words we act on and the words we look for cannot drift apart. Pure, so it is
 // provable without a phone call.
-import { heardWrongDepartment, askedToBePutThrough, looksLikeAMenu, staffName, wrappedUp, usedTheirName } from "./prompts";
+import { heardWrongDepartment, askedToBePutThrough, saysNobodyToTransfer, looksLikeAMenu, staffName, wrappedUp, usedTheirName } from "./prompts";
 import { guessLanguage } from "../calls/mapgraph";
 
 export interface BridgeContext {
@@ -498,6 +498,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   // is what the card reads.
   /** The name Staff gave us, if they gave one. */
   let theirName: string | null = null;
+  /** He asked to be put through, so from here Staff's answer to that ask is worth reading. */
+  let weAskedToBePutThrough = false;
+  /** Recorded once: Staff said there is nobody to put us through to. */
+  let nobodyToTransfer = false;
   /** Recorded once: he said his goodbye. */
   let wrapRecorded = false;
   /** Every line of his, judged for language, so the check can say what he spoke. */
@@ -1003,6 +1007,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // more often than not, and Charlie thanking them by name is a row on the owner's card. Kept
         // from the first line that has one, and dropped when somebody new comes on, so the name we
         // hold always belongs to the person Charlie is actually talking to.
+        // "THERE IS NOBODY UP FRONT RIGHT NOW." The one honest ending to a wrong department: he asked
+        // once, and there is nobody to ask. Nothing wrote that moment down, so the row that grades it
+        // (Staff said no, and did he wrap up warmly rather than nag) had nothing to read. Only ever
+        // heard AFTER he asked, so an ordinary "nobody here knows" mid conversation cannot trip it.
+        if (txt && weAskedToBePutThrough && !nobodyToTransfer && saysNobodyToTransfer(String(txt))) {
+          nobodyToTransfer = true;
+          emit(room, "unknown", "Staff said there was nobody to transfer to", { step: "nobody_to_transfer", said: String(txt).slice(0, 200) });
+          log("wrong department: Staff said there is nobody to put us through to");
+        }
         if (txt && !theirName) {
           const n = staffName(String(txt));
           if (n) { theirName = n; log(`staff name heard: ${n}`); }
@@ -1122,6 +1135,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // reading: everything else he says changes nothing about how the call is run.
         if (txt && !expectHandover && askedToBePutThrough(String(txt))) {
           expectHandover = true;
+          weAskedToBePutThrough = true;
           log("wrong department: he asked to be put through, so the next wait is a hand-over");
         }
         // The record's verdict on freshness gates the relay, same as the clerk side (open fault 4).

@@ -239,6 +239,28 @@ export function askedToBePutThrough(line: string): boolean {
 }
 
 /**
+ * "THERE IS NOBODY TO PUT YOU THROUGH TO." The owner's fourth test, and the one place a wrong
+ * department ends the check honestly rather than by nagging: he asks once, Staff say there is nobody
+ * up front right now, and Charlie must wrap up warmly and go. Nothing wrote that moment down, so the
+ * row that grades it had nothing to read.
+ *
+ * Only ever read AFTER he has asked to be put through, so an ordinary "there's nobody here who knows"
+ * mid conversation cannot trip it. Words, never the ear (§10), and narrow on purpose: a false one of
+ * these turns a check where somebody was transferring us into a check we gave up on.
+ */
+const NOBODY_TO_TRANSFER = new RegExp([
+  "\\b(?:there(?:'s| is)|we(?:'ve| have)|i(?:'ve| have))?\\s*(?:no ?body|no one|nobody|not anybody)\\s+(?:up front|here|there|in|around|available|right now|at the moment|today|to (?:transfer|put|connect))",
+  "\\b(?:no ?body|no one|nobody)(?:'s| is)?\\s+(?:up front|in|around|available|here)\\b",
+  "\\bthere(?:'s| is) (?:no ?body|no one|nobody)\\b",
+  "\\b(?:everyone|everybody) (?:is|has) (?:gone|left|out)\\b",
+  "\\bi(?:'m| am) the only one (?:here|in)\\b",
+  "\\bno (?:hay|est[aá]) nadie\\b",
+].join("|"), "i");
+export function saysNobodyToTransfer(line: string): boolean {
+  return NOBODY_TO_TRANSFER.test(String(line || ""));
+}
+
+/**
  * A STORE'S RECORDED MENU, RECOGNISED BY ITS OWN WORDS (round 2, item 4).
  *
  * The owner sees this often: Staff hand us on and instead of another department we land back at the
@@ -317,6 +339,20 @@ const WRAP_UP = new RegExp([
 export function wrappedUp(line: string): boolean {
   return WRAP_UP.test(String(line || ""));
 }
+/**
+ * HIS LAST WORDS, judged as an ending. A wrap-up in the MIDDLE of a conversation needs a goodbye
+ * beside it (that is `wrappedUp` above, and it is what the live check records). But the LAST thing he
+ * says is different: "Perfect, thank you so much!" and then the check ends IS a warm ending, and the
+ * fail this row exists for is a check that simply stopped with nothing said at all. So the last line
+ * gets the softer test, and only the last line.
+ */
+export function signedOff(lastLine: string): boolean {
+  const t = String(lastLine || "").trim();
+  if (!t || /\?\s*$/.test(t)) return false;      // a question is not an ending
+  if (wrappedUp(t)) return true;
+  return /\b(thanks|thank you|appreciate it|gracias)\b/i.test(t);
+}
+
 /** …and did he use their name while doing it. Whole word, so a name never matches inside another. */
 export function usedTheirName(line: string, name: string | null): boolean {
   const n = String(name || "").replace(/[^a-z]/gi, "");

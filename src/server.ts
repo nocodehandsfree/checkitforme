@@ -6400,6 +6400,11 @@ app.get("/api/admin/receipt/:room", async (c) => {
         agentLines: live.transcript.filter((l) => l.who === "Agent")
           .map((l) => ({ text: l.text, atSec: Math.round(l.atMs / 1000) })),
       }),
+      // THE LOG IS END TO END, THE SAME SHAPE AS THE CUSTOMER'S OWN CHECK LOG (owner 08-01, reversing
+      // the earlier "move mapping out": "it would allow me to see in the testing area a complete end
+      // to end log of the entire transaction which is huge for myself and any agent"). The steps were
+      // already here; what was missing was the conversation itself, which is half of what he reads.
+      lines: live.transcript.map((l) => ({ who: l.who, text: l.text, atSec: Math.round(l.atMs / 1000) })),
     });
   }
   const rows = await db.select().from(callEvents).where(eq(callEvents.room, room)).orderBy(callEvents.atMs);
@@ -6440,6 +6445,12 @@ app.get("/api/admin/receipt/:room", async (c) => {
     stamped: !!cost,
     cost: cost ? { ...cost, readable: readable(cost) } : null,
     behaved: behaved({ timeline, rollup: seconds, agentLines: agentLinesFrom(attached?.transcript) }),
+    // …and on a finished check the words are one flat block with no clock on them, so they carry no
+    // seconds. Same shape either way, so the screen has one way to draw a conversation.
+    lines: String(attached?.transcript || "").split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
+      const m = /^(Agent|Clerk|Staff):\s*(.*)$/i.exec(l);
+      return m ? { who: /agent/i.test(m[1]) ? "Agent" : "Clerk", text: m[2], atSec: null } : { who: "Clerk", text: l, atSec: null };
+    }),
   });
 });
 app.get("/api/admin/call-timing", async (c) => {
