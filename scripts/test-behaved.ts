@@ -114,7 +114,12 @@ head("THE EIGHT NEW ROWS, IN HIS WORDS (README §5, asserted so nobody rewords t
   ok("row 9 fail, word for word", row(behaved({ timeline: stopped, agentLines: [OPENER] }), "wrapped_up").why === "The check ended without Charlie wrapping up.", row(behaved({ timeline: stopped, agentLines: [OPENER] }), "wrapped_up").why);
 
   // ROW 10 — language. English is never claimed, because the judge cannot always tell.
-  ok("row 10 is Unused on an English check", row(behaved({ timeline: cleanDirect }), "spoke_their_language").why === "No Spanish was spoken on this check.");
+  const english = [...cleanDirect, ev("unknown", 20, { step: "question_clip", ms: 4000 })];
+  ok("row 10 is Unused on an English check", row(behaved({ timeline: english }), "spoke_their_language").why === "No Spanish was spoken on this check.", row(behaved({ timeline: english }), "spoke_their_language").why);
+  // …and a check from BEFORE any of this was written down says exactly that, rather than claiming
+  // something about a check whose record simply did not carry it.
+  ok("an old check says it ran before we wrote it down", row(behaved({ timeline: cleanDirect }), "spoke_their_language").why === "This check ran before we started writing that down.", row(behaved({ timeline: cleanDirect }), "spoke_their_language").why);
+  ok("…and the question row says the same, never that we did not ask", row(behaved({ timeline: cleanDirect }), "question_recorded").why === "This check ran before we started writing that down.", row(behaved({ timeline: cleanDirect }), "question_recorded").why);
   const es = [...cleanDirect, ev("unknown", 29, { step: "language", spanishLines: 4, englishLines: 0 })];
   ok("row 10 pass, word for word", row(behaved({ timeline: es }), "spoke_their_language").why === "Charlie spoke Spanish throughout.", row(behaved({ timeline: es }), "spoke_their_language").why);
   const mixed = [...cleanDirect, ev("unknown", 29, { step: "language", spanishLines: 3, englishLines: 2 })];

@@ -138,18 +138,22 @@ export function behaved(input: BehavedInput): BehavedRow[] {
   // which is why the card renders his old Fun store checks instead of covering them in red crosses.
   const step = (name: string) => tl.find((e) => (e.detail || {})[stepKey] === name) || null;
   const menuWalked = tl.some((e) => e.kind === "alpha_press" || e.kind === "bravo_say" || e.kind === "ivr_detected");
+  // A CHECK FROM BEFORE ANY OF THIS WAS WRITTEN DOWN. It has none of the markers, and the honest
+  // thing to say is exactly that. Saying "this check never got as far as asking" about a check that
+  // plainly did ask would be the card lying about his own history.
+  const beforeWeWroteItDown = !tl.some((e) => (e.detail || {})[stepKey]);
 
   return [
     handedToCharlie(tl),
-    questionRecorded(step("question_clip"), step("question_live")),
-    warmedUpInTime(first("charlie_join")),
+    questionRecorded(step("question_clip"), step("question_live"), beforeWeWroteItDown),
+    warmedUpInTime(first("charlie_join"), beforeWeWroteItDown),
     rightDepartment(wrongDept, turns, menuWalked),
     askedToBePutThrough(turns, wrongDept),
-    askedTheNewPerson(turns, handedOver, maybeNew),
+    askedTheNewPerson(turns, handedOver, maybeNew, tl),
     goodbyeWhenToldNo(step("nobody_to_transfer"), step("wrap_up")),
     meterStoppedOnHold(tl, sums),
     wrappedUp(step("wrap_up"), turns, tl),
-    spokeTheirLanguage(step("language")),
+    spokeTheirLanguage(step("language"), beforeWeWroteItDown),
     charlieEndedTheCheck(tl),
   ];
 }
@@ -179,13 +183,14 @@ function handedToCharlie(tl: BehavedEvent[]): BehavedRow {
  * himself still gets the answer and costs a few cents more, which is the right trade — but it has to
  * be VISIBLE, or nobody can say how often it happens.
  */
-function questionRecorded(clip: BehavedEvent | null, live: BehavedEvent | null): BehavedRow {
+function questionRecorded(clip: BehavedEvent | null, live: BehavedEvent | null, old: boolean): BehavedRow {
   const row = (pass: boolean | null, why: string): BehavedRow => ({
     key: "question_recorded", label: "The question played as a recording", pass, why,
     tip: "The question is played from our own recording, so asking it costs nothing. Charlie asking it himself works, and costs more.",
   });
   if (clip) return row(true, `The question played as a recording${at(clip) ? ` at ${at(clip)}` : ""}.`);
   if (live) return row(false, "The recording did not play, so Charlie asked the question himself.");
+  if (old) return row(null, "This check ran before we started writing that down.");
   return row(null, "This check never got as far as asking.");
 }
 
@@ -193,7 +198,7 @@ function questionRecorded(clip: BehavedEvent | null, live: BehavedEvent | null):
  * ROW 3. He bills from the second he connects, so he starts two seconds before the recorded question
  * ends rather than at the top of it. Late means a real person listened to silence.
  */
-function warmedUpInTime(join: BehavedEvent | null | undefined): BehavedRow {
+function warmedUpInTime(join: BehavedEvent | null | undefined, old: boolean): BehavedRow {
   const row = (pass: boolean | null, why: string): BehavedRow => ({
     key: "warmed_up_in_time", label: "Charlie warmed up in time", pass, why,
     tip: "Charlie starts connecting two seconds before the recorded question ends, so he is ready the moment it finishes. Late means Staff heard silence.",
@@ -204,7 +209,7 @@ function warmedUpInTime(join: BehavedEvent | null | undefined): BehavedRow {
     const secs = Math.round(Number(d.deadAirMs ?? 0) / 1000);
     return row(false, `Charlie warmed up late. There was dead air for ${plural(secs, "second", "seconds")}.`);
   }
-  return row(null, "Nothing was recorded about the warm-up on this check.");
+  return row(null, old ? "This check ran before we started writing that down." : "Nothing was recorded about the warm-up on this check.");
 }
 
 /**
@@ -278,12 +283,12 @@ function wrappedUp(wrap: BehavedEvent | null, turns: AgentTurn[], tl: BehavedEve
  * ROW 10. Only speaks when Spanish was actually spoken: the one language judge answers "I cannot
  * tell" on plenty of ordinary English sentences, so a claim about English would be a guess.
  */
-function spokeTheirLanguage(lang: BehavedEvent | null): BehavedRow {
+function spokeTheirLanguage(lang: BehavedEvent | null, old: boolean): BehavedRow {
   const row = (pass: boolean | null, why: string): BehavedRow => ({
     key: "spoke_their_language", label: "Spoke their language", pass, why,
     tip: "On a Spanish check Charlie speaks Spanish the whole way through. Answering in English on a Spanish check is a fail.",
   });
-  if (!lang) return row(null, "No Spanish was spoken on this check.");
+  if (!lang) return row(null, old ? "This check ran before we started writing that down." : "No Spanish was spoken on this check.");
   const d = lang.detail || {};
   const es = Number(d.spanishLines ?? 0), en = Number(d.englishLines ?? 0);
   if (es > 0 && en === 0) return row(true, "Charlie spoke Spanish throughout.");
@@ -379,7 +384,7 @@ function askedToBePutThrough(turns: AgentTurn[], wrongDept: BehavedEvent | null)
  * line and never heard the question. A LIVE check has the second on every line, so this is exact; a
  * finished one has a flat transcript with no clock, and then the order of the lines is all there is.
  */
-function askedTheNewPerson(turns: AgentTurn[], handedOver: BehavedEvent[], maybeNew: BehavedEvent[]): BehavedRow {
+function askedTheNewPerson(turns: AgentTurn[], handedOver: BehavedEvent[], maybeNew: BehavedEvent[], tl: BehavedEvent[]): BehavedRow {
   const row = (pass: boolean | null, why: string): BehavedRow => ({
     key: "asked_the_new_person", label: "Reacted to a new person", pass, why,
     tip: "Only counts after a transfer, where whoever picks up never heard the question. A walk away is a maybe, and Charlie judges that one from the voice.",
@@ -392,6 +397,10 @@ function askedTheNewPerson(turns: AgentTurn[], handedOver: BehavedEvent[], maybe
     // voice; Staff coming back themselves and the agent carrying on is right, so requiring a second
     // question here would cross a check that behaved.
     if (maybeNew.length) return row(null, `Judged after a wait: Staff were away ${plural(Number(maybeNew[0].detail?.gapSec ?? 0), "second", "seconds")} and may be the same person back, so nothing was expected of him.`);
+    // A WAIT NOBODY CAME BACK FROM is still a wait, and saying "no wait on this check" about one is
+    // the card being wrong about the very thing the owner is reading it for.
+    const away = tl.find((e) => e.kind === "hold_start");
+    if (away) return row(null, `Judged after a wait: Staff stepped away${away.atSec != null ? ` at ${Number(away.atSec)}s` : ""} and nobody ever came back, so nobody new picked up.`);
     return row(null, "No transfer and no wait on this check.");
   }
   if (!turns.length) return row(null, "Judged after the transfer: nothing Charlie said was recorded.");
