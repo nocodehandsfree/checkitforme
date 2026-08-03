@@ -390,9 +390,15 @@ async function main() {
       call: { at: now(), day: "2026-07-27", storeId: 778, seconds: 25, reachedHuman: true, path: "press:4" } });
     const third = await proposeVersion({ chainId: ch.id, storeId: 779, recipe: odd, source: "sweep",
       call: { at: now(), day: "2026-07-27", storeId: 779, seconds: 25, reachedHuman: true, path: "press:4" } });
-    ok(third.version.storeId === 0, "the third store makes it a chain-level question");
-    ok(third.version.status === "proposed", "still proposed, never silently swapped");
-    ok((await activeMap(ch.id))?.recipe.steps[0].value === "2", "the chain keeps its route until somebody approves");
+    // THREE STORES ON THE SAME NEW ROUTE IS NOT A QUESTION, IT IS THE ANSWER (owner R2: he reviews
+    // NOTHING). Waiting for a tap only means every check between now and that tap runs a route we
+    // already know is stale. It swaps itself and files a note carrying the count and the stores.
+    ok(third.version.storeId === 0, "the third store makes it the CHAIN's route, not one store's");
+    ok(third.version.status === "active" && third.activated === true,
+      "and it swaps itself — nothing sits waiting for him");
+    ok((await activeMap(ch.id))?.recipe.steps[0].value === "4", "every store now runs the route three of them proved");
+    ok((await openUnknowns(300)).some((u) => u.chainId === ch.id && /3 stores agree/.test(String(u.prompt || ""))),
+      "with a note saying how many agreed and which, so nothing is silent");
   }
 
   console.log("▶ failed calls count without changing the route");
