@@ -4716,13 +4716,15 @@ function buildChainPicker(){
       : '<span style="color:#F59E0B;font-weight:700">unmapped</span>';
     // SOMETHING WAITING is an ICON, not words (owner, 07-30): a small red alert beside the name draws
     // the eye without another label on an already busy row. It appears only when there is real work —
-    // a route waiting on him, or something in Review — never for how the map scores itself.
+    // a route waiting on him, something still open, or a store of this chain that took itself off the
+    // website — never for how the map scores itself. The last of those clears when the store heals,
+    // so the icon and the "Menu changed" choice both empty themselves (owner R2).
     const g=mapRow(ch.id);
-    const alert=(g&&(g.proposed>0||g.openUnknowns>0))
+    const alert=(g&&(g.menuChanged||g.proposed>0||g.openUnknowns>0))
       ? ' <svg style="vertical-align:-2px;margin-left:3px" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
       : '';
     const meta=[nStores?nStores+' store'+(nStores===1?'':'s'):null, ch.muted?'muted':null, route].filter(Boolean).join(' · ');
-    return `<div class="pickrow${String(ch.id)===cur?' on':''}" data-id="${ch.id}" data-name="${esch((ch.name||'').toLowerCase())}" data-tier="${ch.tier??''}" data-type="${esch((ch.type||'').toLowerCase())}" data-mapped="${locked?1:0}" data-changed="${(g&&(g.proposed>0||g.drift30d>0||g.openUnknowns>0))?1:0}" onclick="pickChainRow(${ch.id})"${ch.muted?' style="opacity:.5"':''}>
+    return `<div class="pickrow${String(ch.id)===cur?' on':''}" data-id="${ch.id}" data-name="${esch((ch.name||'').toLowerCase())}" data-tier="${ch.tier??''}" data-type="${esch((ch.type||'').toLowerCase())}" data-mapped="${locked?1:0}" data-changed="${(g&&(g.menuChanged||g.proposed>0||g.drift30d>0||g.openUnknowns>0))?1:0}" onclick="pickChainRow(${ch.id})"${ch.muted?' style="opacity:.5"':''}>
       <span class="setlogo">${logoTile(ch)}</span>
       <span style="flex:1;min-width:0"><span style="display:block;color:#fff;font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esch(ch.name)}${alert}</span>
       <span style="display:block;font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px">${meta}</span></span>
@@ -4967,6 +4969,7 @@ function renderMenuByCondition(ch, active, nav, calls){
 // a future check never overwrites a correction.
 function doorMap(ch,call,v){
   const fixes=(CHAIN_MAP[ch.id]&&CHAIN_MAP[ch.id].menuFixes)||{};
+  const DEAD_DOORS=(CHAIN_MAP[ch.id]&&CHAIN_MAP[ch.id].deadDoors)||[];
   const steps=((v&&v.recipe&&v.recipe.steps)||[]);
   const lines=(call.transcript||[]).map(raw=>{
     const m=String(raw).match(/^\s*(\d+)s\s+([\s\S]*)$/);
@@ -4999,7 +5002,13 @@ function doorMap(ch,call,v){
       const word=String(o.say||o.label||''); const k=word.toLowerCase(); if(!k||seen.has(k)) continue; seen.add(k);
       const takes=st&&String(st.value||'').toLowerCase()&&k.startsWith(String(st.value||'').toLowerCase());
       if(takes) continue; // ours renders below in its model's color, not twice
-      pills.push(`<span style="padding:5px 12px;border-radius:999px;background:#26262B;color:#8A8A96;font-size:11.5px;font-weight:700">${esch(word)}</span>`);
+      // A CHOICE PROVEN WRONG IS STRUCK THROUGH IN RED (comp 3b). The mapping run learned it the
+      // expensive way — a real check and a real Staff hello — so the page says so plainly instead of
+      // showing it as one more choice we might still take.
+      const dead=DEAD_DOORS.some(d=>{ const w=String(d.door||'').toLowerCase(); return w&&(w===k||k.startsWith(w)||w.startsWith(k)); });
+      pills.push(dead
+        ?`<span style="padding:5px 12px;border-radius:999px;background:rgba(248,113,113,.10);color:#F87171;font-size:11.5px;font-weight:700;text-decoration:line-through">${esch(word)}</span>`
+        :`<span style="padding:5px 12px;border-radius:999px;background:#26262B;color:#8A8A96;font-size:11.5px;font-weight:700">${esch(word)}</span>`);
     }
     if(st){
       const proven=si===steps.length-1&&v&&v.status==='active';
@@ -5081,13 +5090,12 @@ function dayWords(d){
 // scrolling all of them.
 function mappingCallsHtml(calls,versions){
   const gains=gainByCheck(calls);
-  // RECIPE WINNER MEANS "THIS CHECK'S ROUTE IS THE RECIPE" (owner, 07-31). It briefly meant "newest
-  // passing check", which crowned a 91 second walk whose route was never even activated. The winner
-  // is the newest passing check the LIVE recipe's own evidence carries; no live evidence, no crown.
-  const live=(versions||[]).find(v=>v.status==='active'&&!v.storeId);
-  const ids=new Set(((live&&live.evidence&&live.evidence.calls)||[]).map(c=>c.navId).filter(Boolean));
-  const winner=(calls||[]).find(c=>c.grade!=='fail'&&c.navId&&ids.has(c.navId));
-  const card=c=>mappingCallCard(c,c===winner,gains.get(c));
+  // NO CHECK SAYS "RECIPE WINNER" (owner Update 5, which replaces comp 3a on this point). The winner
+  // lives in the recipe box at the top of the page and in Menu — those are the two places that say
+  // what we run now. A check says what the check did, and nothing more, so the page never carries
+  // two different claims about which route is live.
+  void versions;
+  const card=c=>mappingCallCard(c,gains.get(c));
   const rest=calls.slice(2);
   return calls.slice(0,2).map(card).join('')
     +(rest.length?`<div id="set_runs_more" style="display:none">${rest.map(card).join('')}</div>`
@@ -5121,7 +5129,7 @@ const STAGE_WORD={map:'Mapping menu',speed:'Optimizing speed'};
 // One check: who we rang and when, its stage, how it ended, the conversation (comp 3a). A failed
 // check collapses to one row carrying its reason — tap to open. No PRODUCED line: the top passing
 // check IS the winner and its pill says so.
-function mappingCallCard(c,winner,gain){
+function mappingCallCard(c,gain){
   const rungs=callRungs(c);
   // NAV TIME ONLY (owner, 07-31): the number beside the pill is when the menu finished with us, never
   // the whole call with Staff's pickup time inside it. A check that never measured it shows nothing.
@@ -5139,8 +5147,8 @@ function mappingCallCard(c,winner,gain){
       +`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5C5C68" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>`
       +`<div id="${bid}" style="display:none">${stage?`<div style="font-size:11px;font-weight:700;color:#8A8A96;margin-top:10px">${stage}</div>`:''}${ladder}</div></div>`;
   }
-  const pill=winner?['Recipe winner','var(--green)','rgba(74,222,128,.13)']
-    :c.reachedHuman?['Reached staff','var(--green)','rgba(74,222,128,.13)']
+  // GREEN ONLY FOR A CONFIRMED RIGHT DEPARTMENT (Update 16). Yellow is neutral, red is bad.
+  const pill=c.reachedHuman?['Reached staff','var(--green)','rgba(74,222,128,.13)']
     :c.endedOnRing?['Admin hung up','#FFCB05','rgba(255,203,5,.13)']
     :['Nobody answered','#F59E0B','rgba(245,158,11,.13)'];
   return `<div class="card" style="margin:0 0 10px">`

@@ -1134,6 +1134,9 @@ export interface GraphRow {
   mapped: boolean; navType: string; route: string; seconds: number | null;
   confidence: number; confidenceLabel: string; version: number | null; versionId: number | null;
   lastVerified: number | null; proposed: number; openUnknowns: number; drift30d: number;
+  /** A store of this chain has taken itself off the website — the chains list's red alert icon and
+   *  its "Menu changed" choice both read this, and it clears itself when the last store heals. */
+  menuChanged: boolean;
   hammer: boolean; promptTriggered: boolean;
   /** HOW IT IS IMPROVING, not just where it stands. The owner's question on 07-28: the screen showed
    *  "62s" and nothing about the 67s it used to be. Every call we have ever made to this chain is
@@ -1216,6 +1219,12 @@ export function reachedPctOf(ev: EvidenceCall[]): number | null {
 export async function graphSummary(): Promise<GraphRow[]> {
   await ensureMapTables();
   const chainRows = await db.select().from(chains);
+  // Which chains have a store that took itself off the website — read straight off the same `muted`
+  // flag the healing loop sets, so the list and the loop can never disagree.
+  const menuChangedChains = new Set(
+    (await db.select({ chainId: retailers.chainId, muted: retailers.muted }).from(retailers))
+      .filter((r) => r.muted && r.chainId).map((r) => r.chainId as number),
+  );
   const since = nowSec() - 30 * DAY;
   const [versions, unknowns, drifts] = await Promise.all([
     client.execute(`SELECT * FROM nav_map_versions ORDER BY version DESC`),
@@ -1248,6 +1257,10 @@ export async function graphSummary(): Promise<GraphRow[]> {
       version: active?.version ?? null, versionId: active?.id ?? null,
       lastVerified: active?.approvedAt ?? ch.navUpdatedAt ?? null,
       proposed, openUnknowns: nUnknown.get(ch.id) || 0, drift30d: nDrift.get(ch.id) || 0,
+      // THE ONE FACT THE CHAINS LIST NEEDS THAT NOTHING HANDED IT (phase 3): does this chain have a
+      // store that took itself off the website? The healing loop already knows; the list could not
+      // ask. It is a read of the same `muted` flag every other path reads — no new state.
+      menuChanged: menuChangedChains.has(ch.id),
       hammer: isHammerPath(recipe),
       promptTriggered: !!recipe?.steps?.some((s) => typeof s.afterPrompt === "number"),
       navSeconds: navSecondsOf(recipe, active?.evidence?.calls || []),
@@ -1447,6 +1460,15 @@ export async function chainDetail(chainId: number): Promise<Record<string, unkno
     // HEARD TWICE = REAL, and that bar lives in ONE place: a condition heard once is not listed at
     // all. A `real` flag alongside the count was a second copy of the rule that nothing read, and two
     // copies of a rule is how screens drift apart (fix pass 4, item 4).
+    // THE CHOICES PROVEN WRONG, for the Menu screen's struck-through pills (comp 3b). The mapping run
+    // has recorded them durably since it learned them; the screen simply could not ask. Same list the
+    // engine blocks on, so a choice cannot read alive on the page and dead in the run.
+    deadDoors: await (async () => {
+      try {
+        const raw = JSON.parse((await getSetting(`map_doors_dead:${chainId}`)) || "[]") as Array<string | { door: string; q?: string }>;
+        return raw.map((e) => (typeof e === "string" ? { door: e } : e)).filter((e) => e && e.door);
+      } catch { return []; }
+    })(),
     conditions: unk.rows
       .filter((r: any) => String(r.kind) === "menu-changed" && String(r.status) === "open" && Number(r.seen_count || 1) >= 2)
       .map((r: any) => ({

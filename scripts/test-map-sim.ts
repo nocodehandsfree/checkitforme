@@ -618,7 +618,11 @@ async function main() {
     // Comp 3a: the stage is the card's header, the winner says so, and a failed check is one row + reason.
     ok(/const STAGE_WORD=\{map:'Mapping menu',speed:'Optimizing speed'\};/.test(page),
       "each check is headed by its stage — the two the engine runs; the dead proving key is gone");
-    ok(/winner\?\['Recipe winner','var\(--green\)'/.test(page), "the top passing check's pill says Recipe winner");
+    // OWNER UPDATE 5 REPLACED THE COMP HERE: no check says "Recipe winner". The winner lives in the
+    // recipe box and in Menu, so the page never carries two claims about which route is live.
+    ok(!/Recipe winner/.test(page), "no check says Recipe winner — the recipe box and Menu own that");
+    ok(/const pill=c\.reachedHuman\?\['Reached staff','var\(--green\)'/.test(page),
+      "a passing check says what it did: Reached staff in green, only for a confirmed right department");
     ok(/if\(c\.grade==='fail'\)\{/.test(page) && /mapCheckOpen\('\$\{bid\}'\)/.test(page),
       "a failed check collapses to one row that opens on tap");
     ok(/if\(x\.c\.grade==='fail'\) continue;/.test(page), "and it never takes part in the faster-or-slower chain");
@@ -1119,8 +1123,8 @@ async function main() {
       "and a check that ended on the ring activates like one that reached Staff — that end is by design");
 
     const page = readFileSync("public/app.html", "utf8");
-    ok(/const winner=\(calls\|\|\[\]\)\.find\(c=>c\.grade!=='fail'&&c\.navId&&ids\.has\(c\.navId\)\);/.test(page),
-      "Recipe winner means this check's route IS the recipe — no live evidence, no crown");
+    ok(!/Recipe winner/.test(page) && /void versions;/.test(page),
+      "the crown is retired outright (owner Update 5) — a check states what the check did, nothing more");
     ok(/\?c\.transferAtSec:null;/.test(page),
       "and the number beside a pill is nav time only, never the whole call with Staff inside it");
 
