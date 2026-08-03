@@ -113,6 +113,9 @@ export interface EvidenceCall {
 }
 export interface Evidence { calls: EvidenceCall[] }
 
+/** The one place the retired label is translated on read. */
+const retiredLabel = (l: string): ConfidenceLabel => (l === "needs review" ? "not proven" : l) as ConfidenceLabel;
+
 export type ConfidenceLabel =
   | "verified" | "observed multiple times" | "observed once"
   // "not proven" replaced the old label (owner, item 8): the owner reviews NOTHING, and those words
@@ -473,7 +476,10 @@ function rowToVersion(r: any): MapVersion {
     status: String(r.status) as MapVersion["status"], navType: String(r.nav_type || ""),
     recipe: parse<MapRecipe>(r.recipe, { type: "direct", steps: [], seconds: 0 }),
     seconds: r.seconds == null ? null : Number(r.seconds),
-    confidence: Number(r.confidence || 0), confidenceLabel: String(r.confidence_label || "unknown") as ConfidenceLabel,
+    // ROWS WRITTEN BEFORE THE RENAME STILL HOLD THE RETIRED WORD. The owner reviews NOTHING, and
+    // those words must appear nowhere — including out of a row saved weeks ago. Translated once, on
+    // the way out, so no migration is needed and no screen can ever print it.
+    confidence: Number(r.confidence || 0), confidenceLabel: retiredLabel(String(r.confidence_label || "unknown")),
     evidence: parse<Evidence>(r.evidence, { calls: [] }),
     source: String(r.source || ""), summary: String(r.summary || ""), why: String(r.why || ""),
     createdAt: Number(r.created_at || 0),
