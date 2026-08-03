@@ -352,6 +352,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   let storeTalkMs = 0;        // ms of actual talking since the store started speaking to us
   let storeQuietMs = 0;       // unbroken quiet since they stopped
   let storeSpeaking = false;  // a real voice (not a tone) has been heard on this leg
+  /** How loud they were while saying it. Kept here and not read off the ear's own rolling window,
+   *  which is cleared the moment they stop — and they have to stop for two and a half seconds before
+   *  we are sure of them, so by then there would be nothing left to measure. This is the yardstick
+   *  the phone-on-the-counter test uses. */
+  const storeLoud: number[] = [];
   let firstRingAtMs = 0;      // when the desk started ringing (for the log step)
   const RINGS_UNANSWERED = 6; // ~36s of a US 2s-on/4s-off cadence → nobody is coming
   const startMs = Date.now();
@@ -666,6 +671,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (reason === "transfer") emit(room, "transfer", "Transferred, the next desk is ringing", { reason, atMs });
     const note = reason === "transfer" ? "Waiting on the next desk to pick up"
       : reason === "music" ? "Staff stepped away, hold music"
+      // A HANDSET ON THE COUNTER. The store is still audible, nobody is talking to us, and the meter
+      // stops exactly as it does on silence.
+      : reason === "room" ? "The room went quiet, Staff put the phone down"
       : "Staff stepped away, the line went quiet";
     emit(room, "hold_start", note, { reason, atMs });
     if (ctx?.holdStrategy === "reopen") {
@@ -1093,7 +1101,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // then has heard the whole hello and the pause after it — so without this it is an ear that has
       // never heard anybody, and Staff who say "Fun store" and walk straight off would never be
       // recorded as away and Charlie would bill through it.
-      convEar.heardAlready(storeTalkMs);
+      // …and HOW LOUD they said it. That is the yardstick the room test measures against: a handset
+      // put down on the counter is still sound, just far quieter than somebody speaking into it. The
+      // frames we just judged are the only recording we have of this person talking to us.
+      const heard = [...storeLoud].sort((a, b) => a - b);
+      convEar.heardAlready(storeTalkMs, heard.length ? heard[Math.floor(heard.length / 2)] : 0);
     }
     else emit(room, "unknown", `Charlie was let on without hearing Staff (${reason})`, { reason });
     log(`connect-on-human: connecting (${reason}) after ${Math.round((humanAtMs - startMs) / 1000)}s nav`);
@@ -1207,9 +1219,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           // A REAL VOICE IS ON THE LINE — modulated speech, not the network. That is no longer enough
           // to open Charlie on its own: it is the same thing a recording sounds like. All it does is
           // start the clock on how long they have been talking; the person test below decides.
-          if (!storeSpeaking) { storeSpeaking = true; storeTalkMs += need * FRAME_MS; }
+          if (!storeSpeaking) { storeSpeaking = true; storeTalkMs += need * FRAME_MS; storeLoud.push(...loudE); }
           else storeTalkMs += FRAME_MS;
           storeQuietMs = 0;
+          storeLoud.push(e);
+          if (storeLoud.length > 400) storeLoud.shift();
         }
       }
     } else {

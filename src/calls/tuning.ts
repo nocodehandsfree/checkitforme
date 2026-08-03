@@ -23,6 +23,7 @@ export interface CallTuning {
   holdMusicMs: number;
   musicWindowMs: number;
   musicVoicedFraction: number;
+  roomFraction: number;
   newPersonAfterMs: number;
   transferToneMs: number;
   backVoiceMs: number;
@@ -46,6 +47,7 @@ export const TUNING_DEFAULTS: CallTuning = {
   holdMusicMs: 6000,
   musicWindowMs: 3000,
   musicVoicedFraction: 0.96,
+  roomFraction: 0.35,
   newPersonAfterMs: 20000,
   transferToneMs: 600,
   backVoiceMs: 400,
@@ -66,6 +68,7 @@ export const TUNING_WHY: Record<keyof CallTuning, string> = {
   holdMusicMs: "Unbroken sound this long is hold music. Real speech always has gaps in it.",
   musicWindowMs: "How much recent audio we look at to decide speech versus continuous sound.",
   musicVoicedFraction: "How solidly filled that window has to be before we call it music. Speech never fills it.",
+  roomFraction: "How quiet a sound has to be, next to the person we have been talking to, before we call it the room rather than them. A handset put down on the counter still picks the store up; it is just far quieter than somebody speaking into it. Raise it and Charlie is dropped on a quiet talker; lower it and he keeps billing to an empty counter.",
   newPersonAfterMs: "A gap longer than this and whoever comes back may not be who left, so the agent is warned.",
   transferToneMs: "How long a phone has to be ringing before we say we were handed on. A real ring runs two seconds, so anything shorter was a voice that happened to sound like one.",
   backVoiceMs: "How much talking we need to hear before we say somebody is back. About one word. Less than this and a click or a gap in hold music ends a wait that never ended.",
@@ -80,7 +83,7 @@ const LIMITS: Record<keyof CallTuning, [number, number]> = {
   personGreetingMaxMs: [500, 15000], personWaitMs: [500, 15000],
   greetingEndMs: [200, 5000], greetingMaxWaitMs: [1000, 20000], greetingKeepMs: [0, 20000],
   holdQuietMs: [2000, 60000], holdMusicMs: [2000, 60000],
-  musicWindowMs: [500, 10000], musicVoicedFraction: [0.5, 1],
+  musicWindowMs: [500, 10000], musicVoicedFraction: [0.5, 1], roomFraction: [0.05, 0.9],
   newPersonAfterMs: [5000, 300000],
   transferToneMs: [200, 5000], backVoiceMs: [100, 3000],
   prewarmLeadMs: [0, 10000], clipSettleMs: [0, 3000], clipBackstopMs: [500, 20000],

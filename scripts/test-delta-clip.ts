@@ -847,7 +847,7 @@ console.log("\n▶ the greeting is kept whole, with the pauses that are inside i
   tw.say({ event: "mark", mark: { name: "delta-opening" } });
   await sleep(800);                                   // past our own audio, so this is really them
   for (let i = 0; i < 25; i++) tw.media(frame(LOUD(160, i % 3)));
-  await sleep(2600);                                  // the handover paces out at the speed it was spoken
+  await sleep(3500);                                  // the handover paces out at the speed it was spoken, and it is a real clock: give it room
 
   const QUIET = Buffer.alloc(160, 0x7f).toString("base64");
   const handed = f.chunks;
@@ -993,6 +993,43 @@ console.log("\n▶ a person answers the same way: short hello, a real pause, and
   ok(f.sockets.length === 1, "they stopped for us, so somebody is there and Charlie opens");
   const ev = (getReceipt("room-person")?.events || []);
   ok(ev.some((e) => e.kind === "human_detected"), "the log says Staff greeting, off the same moment");
+  restore(); tw.close(); f.close();
+}
+
+// ================================================================================================
+// ROUND 1, ITEM 1.2 — THE PHONE ON THE COUNTER.
+// The ear knew three shapes: quiet, hold music, and a ringing line. A handset set down on a counter
+// is none of them — store noise is irregular with gaps in it, the exact shape of somebody talking —
+// so Charlie stayed open and billed at 11 cents a minute while Staff walked to the back room.
+console.log("\n▶ Staff put the phone down on the counter: Charlie is dropped, exactly like silence");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  openReceipt("room-counter", { lane: "direct" });
+  setBridgeContext("room-counter", { agentId: "agent_normal", dynamicVars: {}, connectOnHuman: true, holdStrategy: "reopen" });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "room-counter", () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_c", customParameters: { room: "room-counter" } } });
+  await sleep(350);
+  for (let i = 0; i < 40; i++) tw.media(frame(SPEECH(i)));               // "Fun store, this is Bob"
+  for (let i = 0; i < PERSON_PAUSE; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(250);
+  ok(f.sockets.length === 1, "he opened on a real person, as he should");
+  // …and the handset goes down on the counter. The store is still perfectly audible: a till, a
+  // radio, two people talking by the door. Just nowhere near as loud as somebody speaking into it.
+  const ROOM = [0x50, 0x58, 0x50, 0x7f, 0x58, 0x50, 0x58];
+  for (let i = 0; i < 400; i++) tw.media(frame(Buffer.alloc(160, ROOM[i % ROOM.length])));
+  await sleep(120);
+  const ev = (getReceipt("room-counter")?.events || []);
+  const hold = ev.find((e) => e.kind === "hold_start");
+  ok(!!hold, "a room we can hear with nobody talking to us is a wait, not a conversation");
+  ok(hold?.note === "The room went quiet, Staff put the phone down", `…and the log says which of the two it was (${hold?.note})`);
+  ok(ev.some((e) => e.kind === "charlie_leave" && e.note === "Charlie dropped"), "Charlie is dropped, so the meter stops");
+  console.log("  …and he comes back the moment somebody speaks up close again");
+  for (let i = 0; i < 40; i++) tw.media(frame(SPEECH(i)));
+  await sleep(250);
+  ok((getReceipt("room-counter")?.events || []).some((e) => e.kind === "hold_end"), "somebody picked the phone back up and he is reconnected");
   restore(); tw.close(); f.close();
 }
 
