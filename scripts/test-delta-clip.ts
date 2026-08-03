@@ -998,6 +998,42 @@ console.log("\n▶ a person answers the same way: short hello, a real pause, and
 }
 
 // ================================================================================================
+// ROUND 1, ITEM 1.7 — "CHARLIE LEFT" IS DELETED.
+// He stops for exactly two reasons: dropped, to save money, and he comes back; or he ended the
+// check. "Charlie left" was neither — it was the connection closing behind one of those two, written
+// a second time onto a timeline that had already said what happened.
+console.log("\n▶ Charlie finishing reads as him ending the check, and nothing says he left");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const { tw } = await callToHello(f, 400, "room-ended");
+  tw.say({ event: "mark", mark: { name: "delta-opening" } });
+  await sleep(150);
+  f.sockets[0].close();                       // he is done and closes his own session
+  await sleep(150);
+  const ev = (getReceipt("room-ended")?.events || []);
+  const leaves = ev.filter((e) => e.kind === "charlie_leave");
+  ok(leaves.length === 1 && leaves[0].note === "Charlie ended the check", `one line, and it says what he did (${leaves.map((l) => l.note).join(" | ")})`);
+  ok(!ev.some((e) => (e.note || "").includes("Charlie left")), "the plumbing line is gone");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ …and a wait says he was dropped, once, not dropped and then left");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const tw = await callWithHold(f, "room-drop-once", "reopen");
+  quiet(tw, HOLD_QUIET_MS / 20 + 40);
+  await sleep(200);
+  const ev = (getReceipt("room-drop-once")?.events || []);
+  const leaves = ev.filter((e) => e.kind === "charlie_leave");
+  ok(leaves.length === 1 && leaves[0].note === "Charlie dropped", `the wait writes one line (${leaves.map((l) => l.note).join(" | ")})`);
+  restore(); tw.close(); f.close();
+}
+
+// ================================================================================================
 // ROUND 1, ITEM 1.6 — THE HOLD CAP.
 // Nothing ended a mid check wait. A store that put the phone down and forgot about us ran to the
 // carrier's own five minute limit, and the customer waited all of it to be told nothing.

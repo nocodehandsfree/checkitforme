@@ -1137,8 +1137,13 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // happened in beginHold, so it is simply dropped.
       if (ws !== eleven) { log(`eleven WS close code=${code} from a session we already replaced — ignored, the check is still running`); return; }
       closeSegment(room); markNow(room, "charlieCloseMs");
-      emit(room, "charlie_leave", "Charlie left", { code });
       log(`eleven WS close code=${code} (frames in=${frames})`);
+      // "CHARLIE LEFT" IS DELETED (round 1, item 1.7). Charlie stops for exactly two reasons:
+      // DROPPED, to save money, and he comes back; or he ENDED THE CHECK. This line was neither. It
+      // was the connection closing BEHIND one of those two, written a second time onto a timeline
+      // that had already said what happened — plumbing showing through on the owner's screen. So the
+      // line is written where it is true and nowhere else: the wait already writes "Charlie dropped"
+      // in beginHold, and a store hanging up on us is the store's line, not his.
       // NOBODY IS TALKING TO US, SO NOTHING HE DOES ENDS THE CHECK. A close during a wait used to be
       // forgiven only when we had asked for it; the other way round — Staff step away and the
       // provider then drops the session on its own silence timer — hung the phone up on a store that
@@ -1151,7 +1156,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // as ours would report every store hang-up as a normal finish, which is the exact thing this
       // is being built to tell apart. The close code rides along so a session that broke can be told
       // from one that finished.
-      if (!farEndGone && twilio.readyState === 1) noteWeEnded(room, code === 1000 ? "charlie_ended" : `charlie_ended_${code}`);
+      if (!farEndGone && twilio.readyState === 1) {
+        noteWeEnded(room, code === 1000 ? "charlie_ended" : `charlie_ended_${code}`);
+        emit(room, "charlie_leave", "Charlie ended the check", { code });
+      }
       signalEnd(); if (twilio.readyState === 1) twilio.close();
     });
     eleven.on("error", (e: Error) => log(`eleven WS error: ${e.message}`));

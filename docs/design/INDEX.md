@@ -376,7 +376,7 @@ range (`offset` + `limit`). Ranges run to the next `id=` — a navigation aid, n
 | ho_done | div | 9062–9064 | ${t('ho.done.title',"Bonus released. You're done.")} |
 | ho_donep | p | 9065–9420 |  |
 
-## public/app.html (7572 lines, 404 sections)
+## public/app.html (7580 lines, 404 sections)
 
 | id | element | lines | description |
 |---|---|---|---|
@@ -765,25 +765,25 @@ range (`offset` + `limit`). Ranges run to the next `id=` — a navigation aid, n
 | ds_sitype | div | 4219–4667 |  |
 | ds_siregion | div | 4219–4667 |  |
 | ds_sichecks | div | 4219–4667 |  |
-| set_ratemsg | span.meta | 4668–4779 |  |
-| set_msrp | input | 4780–4781 |  |
-| set_scm | select | 4782–4783 |  |
-| set_scc | select | 4784–4785 |  |
-| set_sell | input | 4786–4786 |  |
-| set_datamsg | span.meta | 4787–4808 |  |
-| set_vm | input | 4809–4812 |  |
-| set_wf | select | 4813–4904 |  |
-| set_ver_aside | div | 4905–5092 |  |
-| set_runs_more | div | 5093–6026 |  |
-| iconpick_q | input | 6027–6521 |  |
-| iconpick_grid | div.iconpick-grid | 6027–6521 |  |
-| wfg_add | input | 6522–7328 |  |
-| rs_details | div | 7329–7451 |  |
-| ds_rsfunnel | div | 7329–7451 |  |
-| ds_rsdays | div | 7329–7451 |  |
-| ds_rsland | div | 7329–7451 |  |
-| wl_region | select | 7452–7572 |  |
-| wl_notify_out | div | 7452–7572 |  |
+| set_ratemsg | span.meta | 4668–4781 |  |
+| set_msrp | input | 4782–4783 |  |
+| set_scm | select | 4784–4785 |  |
+| set_scc | select | 4786–4787 |  |
+| set_sell | input | 4788–4788 |  |
+| set_datamsg | span.meta | 4789–4810 |  |
+| set_vm | input | 4811–4814 |  |
+| set_wf | select | 4815–4906 |  |
+| set_ver_aside | div | 4907–5100 |  |
+| set_runs_more | div | 5101–6034 |  |
+| iconpick_q | input | 6035–6529 |  |
+| iconpick_grid | div.iconpick-grid | 6035–6529 |  |
+| wfg_add | input | 6530–7336 |  |
+| rs_details | div | 7337–7459 |  |
+| ds_rsfunnel | div | 7337–7459 |  |
+| ds_rsdays | div | 7337–7459 |  |
+| ds_rsland | div | 7337–7459 |  |
+| wl_region | select | 7460–7580 |  |
+| wl_notify_out | div | 7460–7580 |  |
 
 ## docs/design/comps/ADMIN_COMPS.dc.html (986 lines, 22 sections)
 

@@ -2346,7 +2346,7 @@ async function openReceiptInto(url,o){
   // map is complete by definition. A missing one used to fall through and print its code name.
   const KIND={dialed:'Dialled',ringing:'Ringing',connected:'The line was answered',ivr_detected:'A phone menu',
     alpha_press:'Pressed a key',bravo_say:'Said a word',human_detected:'Staff greeting',
-    charlie_join:'Charlie joined',charlie_leave:'Charlie left',
+    charlie_join:'Charlie joined',charlie_leave:'Charlie dropped',
     hold_start:'Staff stepped away',hold_end:'Staff back',transfer:'Transferred',voicemail:'A machine',
     unknown:'Something we could not place',verdict:'Answer',hangup:'Check ended'};
   const c=d.cost||{}, s=d.seconds||d.rollup||{};
