@@ -179,6 +179,10 @@
   .pickrow{display:flex;align-items:center;gap:12px;padding:10px 12px;cursor:pointer;border-radius:14px;background:linear-gradient(180deg,#2D2D34,#27272D);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);margin-bottom:9px;transition:transform .08s}
   .pickrow:active{transform:translateY(1px)}
   .pickrow.on{box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07),0 0 0 1.5px rgba(74,222,128,.5),0 0 14px rgba(74,222,128,.2)}
+  /* A chain whose menu changed. Same ring as the selected row, in the page's problem red, over a
+     faint warm wash so the trouble reads from arm's length without another label on the row. */
+  .pickrow.trouble{background:linear-gradient(180deg,#372A2C,#2C2427);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07),0 0 0 1.5px rgba(239,68,68,.5),0 0 18px rgba(239,68,68,.28)}
+  .pickrow.trouble.on{box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07),0 0 0 1.5px rgba(239,68,68,.8),0 0 22px rgba(239,68,68,.38)}
   
   .navspin{width:9px;height:9px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;display:inline-block;animation:navspin .7s linear infinite}
   @keyframes navspin{to{transform:rotate(360deg)}}
@@ -1507,11 +1511,6 @@
         <div class="pk-fact" id="pk_setver"></div>
         <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
-      <button class="peek" id="set_reviewrow" style="display:none" onclick="sheetFromHolder('ds_setreview','Review','')">
-        <div class="pk-main"><div class="pk-t">Review</div></div>
-        <div class="pk-fact" id="pk_setreview"></div>
-        <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-      </button>
       <div class="k-eyebrow" style="margin-top:24px">Chain</div>
       <button class="peek" onclick="sheetFromHolder('ds_setall','Settings','')">
         <div class="pk-main"><div class="pk-t">Settings</div></div>
@@ -1531,7 +1530,6 @@
         <div id="ds_setruns"><div id="set_runs"></div></div>
         <div id="ds_setmenu"><div id="set_menu"></div></div>
         <div id="ds_setver"><div id="set_versions"></div></div>
-        <div id="ds_setreview"><div id="set_review"></div></div>
       </div>
     </div>
     </section>
@@ -4890,19 +4888,18 @@ function buildChainPicker(){
     const route=locked
       ? `<span style="color:#8A8A96;font-weight:700">${ln||'mapped'}</span>`+(nv!=null?` <span style="color:#8A8A96">${nv}s</span>`:'')
       : '<span style="color:#F59E0B;font-weight:700">unmapped</span>';
-    // SOMETHING WAITING is an ICON, not words (owner, 07-30): a small red alert beside the name draws
-    // the eye without another label on an already busy row. It appears only when there is real work —
-    // a route waiting on him, something still open, or a store of this chain that took itself off the
-    // website — never for how the map scores itself. The last of those clears when the store heals,
-    // so the icon and the "Menu changed" choice both empty themselves (owner R2).
+    // A CHAIN WITH A MENU PROBLEM GLOWS (owner 08-04). The small red mark is DELETED. It lit for
+    // anything sitting open, including things nobody ever has to look at, so a working chain wore a
+    // warning while the box above it counted zero. Two parts of one page were saying different things.
+    // ONE rule now, shared by the glow, the box and the choice in the dropdown: a chain has a problem
+    // when its menu changed and its stores took themselves off the website. It clears when they heal.
+    // The glow is the row's OWN selection ring (comp 2e) in the page's problem red, never a new shape.
     const g=mapRow(ch.id);
-    const alert=(g&&(g.menuChanged||g.proposed>0||g.openUnknowns>0))
-      ? ' <svg style="vertical-align:-2px;margin-left:3px" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
-      : '';
+    const trouble=!!(g&&g.menuChanged);
     const meta=[nStores?nStores+' store'+(nStores===1?'':'s'):null, ch.muted?'muted':null, route].filter(Boolean).join(' · ');
-    return `<div class="pickrow${String(ch.id)===cur?' on':''}" data-id="${ch.id}" data-name="${esch((ch.name||'').toLowerCase())}" data-tier="${ch.tier??''}" data-type="${esch((ch.type||'').toLowerCase())}" data-mapped="${locked?1:0}" data-changed="${(g&&(g.menuChanged||g.proposed>0||g.drift30d>0||g.openUnknowns>0))?1:0}" onclick="pickChainRow(${ch.id})"${ch.muted?' style="opacity:.5"':''}>
+    return `<div class="pickrow${String(ch.id)===cur?' on':''}${trouble?' trouble':''}" data-id="${ch.id}" data-name="${esch((ch.name||'').toLowerCase())}" data-tier="${ch.tier??''}" data-type="${esch((ch.type||'').toLowerCase())}" data-mapped="${locked?1:0}" data-changed="${trouble?1:0}" onclick="pickChainRow(${ch.id})"${ch.muted?' style="opacity:.5"':''}>
       <span class="setlogo">${logoTile(ch)}</span>
-      <span style="flex:1;min-width:0"><span style="display:block;color:#fff;font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esch(ch.name)}${alert}</span>
+      <span style="flex:1;min-width:0"><span style="display:block;color:#fff;font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esch(ch.name)}</span>
       <span style="display:block;font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px">${meta}</span></span>
       ${chip(ch.tier)}</div>`;
   }).join('')||'<div class="empty" style="padding:16px">No chains loaded.</div>';
@@ -5069,7 +5066,7 @@ function chainRung(s,last){
 // sentence, and the glossary term (Staff, check, recipe, locked).
 async function renderChainSheets(ch,nav){
   const d=await loadChainMap(ch.id);
-  const versions=((d||{}).versions)||[], unknowns=((d||{}).unknowns)||[];
+  const versions=((d||{}).versions)||[];
   const active=versions.find(v=>v.status==='active')||versions[0];
   const set=(id,t,c)=>{ const e=document.getElementById(id); if(e){ e.textContent=t||''; e.style.color=c||''; } };
 
@@ -5108,16 +5105,11 @@ async function renderChainSheets(ch,nav){
       +recipeGap(held)
     : '<div class="empty">No recipe yet. Tap Map to learn one.</div>';
 
-  // REVIEW — only when there is something to look at.
-  // ONLY WHAT IS STILL OPEN. A card he already cleared was coming back, so the row counted decisions
-  // that had been made (owner, 07-30). And HEARD TWICE = REAL (the contract's bar): a menu heard
-  // once is not yet a thing to show. It stays off the list and appears when a second hearing proves it.
-  const open=unknowns.filter(u=>u.status==='open'&&!(u.kind==='menu-changed'&&Number(u.count||1)<2));
-  set('pk_setreview', open.length?String(open.length)+' waiting':'', open.length?'#F59E0B':'');
-  const rr=document.getElementById('set_reviewrow'); if(rr) rr.style.display=open.length?'':'none';
-  const uw=document.getElementById('set_review');
-  const expected=active?routeWords(active):'';
-  if(uw) uw.innerHTML = open.length ? open.map(u=>mapUnknownCard(u,ch.id,expected)).join('') : '';
+  // THE REVIEW ROW IS DELETED (owner 08-04): "there is nothing for me to review, so it should not say
+  // it there." It counted findings the system already acts on by itself. A store whose menu changed
+  // takes itself off the website and re-maps itself, a store that answers differently is marked Not
+  // used, and the one thing that is genuinely his call, a faster route waiting to go live, has always
+  // had its own card at the top of this page. Nothing on this page asks him to look at anything now.
 }
 const cap=t=>{ t=String(t||''); return t?t[0].toUpperCase()+t.slice(1):''; };
 
@@ -5574,92 +5566,8 @@ function routeWords(v){
 // the ladder saying "WE" was the page inventing a second word for a thing that has a name.
 const plainText=t=>String(t||'').replace(/\s*—\s*/g,'. ').replace(/\s+-\s+/g,'. ').replace(/\.\s*\./g,'.');
 const whyWords=s=>String(s||'').replace(/(\d+)\s+(\w+?)\(s\)/g,(m,n,w)=>n+' '+w+(Number(n)===1?'':'s'));
-// WHAT HAPPENED, naming the store. The old card said "One store needs its own recipe" with no store,
-// no date, and two buttons that changed nothing (owner, 07-28 and again 07-30). Every card now says
-// which store, when, what was expected against what was heard, and its two buttons do what they say.
-const UNKNOWN_WHAT={
-  'route-swapped':'Recipe swapped itself',
-  'store-exception':'answers differently',
-  'route-changed':'The menu changed',
-  'drift':'The menu is drifting',
-  'route-failing':'Recipe reaching nobody',
-  'hammer-route':'Recipe presses one key over and over',
-  'unproven-direct':'No call has proved Staff answer direct',
-  'greeting-not-direct':'A recording answers, not Staff',
-  'not-shared':'Recipe not shared with the chain',
-};
-// The two buttons, per kind: what the green one DOES, and what it changes. `null` = a note to clear.
-// The Re-map button is RETIRED (owner, 07-31): re-mapping is the engine's job and a run never needs
-// him. The kinds that carried it render with Clear only, the card's existing shape.
-const UNKNOWN_ACT={
-  'store-exception':['Own recipe','store'],
-  'route-changed':['Use the new one','chain'],
-};
-const unkWhen=u=>u.firstSeen?new Date(u.firstSeen*1000).toLocaleDateString([],{month:'short',day:'numeric'}):'';
-// EXPECTED against HEARD, in a carved well. Both come off the item we already store; where we have no
-// heard line the well is dropped rather than printed empty.
-function unkWell(u,expected){
-  const heard=plainText(u.prompt||'').replace(/^Heard a different route:\s*/i,'');
-  if(!expected&&!heard) return '';
-  const row=(lab,val,strong)=>`<div style="display:flex;gap:10px;align-items:baseline${lab==='HEARD'?';margin-top:10px':''}">`
-    +`<span style="font-size:9.5px;font-weight:700;letter-spacing:.12em;color:#8A8A96;flex:0 0 66px">${lab}</span>`
-    +`<span style="font-size:12.5px;font-weight:${strong?'700':'500'};color:${strong?'#fff':'rgba(255,255,255,.55)'};flex:1;line-height:1.45">${esch(val)}</span></div>`;
-  return `<div style="margin-top:13px;background:var(--terminal);border-radius:16px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:14px 16px">`
-    +(expected?row('EXPECTED',expected,false):'')+(heard?row('HEARD',heard,true):'')+`</div>`;
-}
-function mapUnknownCard(u,chainId,expected){
-  const store=u.storeName||'';
-  // A NOTE, NEVER A DECISION. The route already swapped itself; the only thing left is to clear it.
-  if(u.kind==='route-swapped') return `<div class="card" style="margin:0 0 10px">
-    <div class="row" style="align-items:center;gap:8px">
-      <span class="name" style="font-size:13.5px">Recipe swapped itself</span>
-      <span style="margin-left:auto;font-size:10.5px;font-weight:800;color:var(--green)">Live</span></div>
-    <div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(plainText(u.prompt))}</div>
-    <div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${unkWhen(u)}</div>
-    <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
-      <button class="ghost" onclick="mapUnknown(${u.id},'resolved',${chainId})">Clear</button>
-    </div></div>`;
-  const act=UNKNOWN_ACT[u.kind];
-  const what=UNKNOWN_WHAT[u.kind]||String(u.kind||'').replace(/-/g,' ');
-  // "CVS Tarzana · answers differently" reads as a fact about a store. Without a store name it is the
-  // chain that is wrong, so the finding stands on its own.
-  const title=store?`${store} · ${what}`:cap(what);
-  return `<div class="card" style="margin:0 0 10px">
-    <div class="row" style="align-items:baseline;gap:8px">
-      <span class="name" style="font-size:13.5px;flex:1;min-width:0">${esch(title)}</span>
-      <span style="font-size:11.5px;font-weight:700;color:var(--text-tertiary);flex:0 0 auto">${unkWhen(u)}</span></div>
-    ${unkWell(u,expected||'')}
-    ${act?`<div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
-      <button class="act" style="white-space:nowrap" onclick="mapUnknownDo(${u.id},${chainId},'${esch(u.kind)}',${(u.evidence&&u.evidence.versionId)||0})">${esch(act[0])}</button>
-      <button class="ghost" onclick="mapUnknown(${u.id},'dismissed',${chainId})">Ignore</button>
-    </div>
-    <div class="meta" style="margin-top:11px;text-transform:none;letter-spacing:0">${act[1]==='store'&&store?esch(store)+' only':'Every store on this chain'}</div>`
-    :`<div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
-      <button class="ghost" onclick="mapUnknown(${u.id},'resolved',${chainId})">Clear</button></div>`}
-    </div>`;
-}
-// THE BUTTON DOES THE THING IT NAMES (owner, 07-30). "Own recipe" puts that store's own route live.
-// "Use the new one" puts the new chain route live. Only then is the item cleared, so nothing reads
-// as decided until the decision actually happened. The Re-map branch that placed a call from here is
-// DELETED with its button (owner, 07-31).
-async function mapUnknownDo(id,chainId,kind,versionId){
-  if(!versionId) return;
-  const ok=await askSheet(kind==='store-exception'?'Give this store its own recipe?':'Use the new recipe?',
-    kind==='store-exception'
-      ? ['Only this store changes. Every other store on the chain keeps the current recipe.']
-      : ['Every store on this chain switches to it. The current recipe is retired.'],
-    kind==='store-exception'?'Own recipe':'Use it');
-  if(!ok) return;
-  const r=await api('/api/admin/map/version/'+versionId+'/approve',{method:'POST'});
-  if(!r||r.error){ toast(mapWriteErr(r)); return; }
-  await mapUnknown(id,'resolved',chainId);
-}
-async function mapUnknown(id,status,chainId){
-  const r=await api('/api/admin/map/unknown/'+id,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({status,note:status==='resolved'?'marked fixed from Admin':'marked not a problem from Admin'})});
-  if(!r||r.error){ toast(mapWriteErr(r)); return; }
-  toast(status==='resolved'?'Done':'Ignored'); delete CHAIN_MAP[chainId];
-  await loadMapGraph(); await renderChainSheets((CHAINS||[]).find(c=>c.id===chainId)||{id:chainId},null);
-}
+// THE REVIEW CARDS ARE DELETED WITH THE ROW THAT OPENED THEM (owner 08-04). Every finding they
+// showed is one the system now settles by itself, so there was nothing left for him to answer.
 // The route on its own: what WE do, with the ringing and the answer around it. Shown until the heard
 // menu lands, and it is all there is on a chain nobody has recorded yet.
 // THE LADDER ENDS WHEN THE DESK STARTS RINGING (owner, 07-28). It used to finish on "Staff answers",

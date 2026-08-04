@@ -173,9 +173,11 @@ async function main() {
     // ROUND 3 ITEM 5: heard-twice changes what the owner SEES — a menu heard once stays off the
     // review list; and the fold scans newest-first with a real cap so one menu cannot split rows.
     {
+      // 08-04: the review list itself is GONE from the chain page, so the heard-twice bar now shows up
+      // only where he still reads it: the menu-by-condition fold, and the fold's own newest-first scan.
       const page3 = readFileSync("public/app.html", "utf8");
-      ok(/u\.status==='open'&&!\(u\.kind==='menu-changed'&&Number\(u\.count\|\|1\)<2\)/.test(page3),
-        "a menu heard once renders no review card — it appears when the second hearing proves it real");
+      ok(!/pk_setreview|set_reviewrow|ds_setreview|mapUnknownCard/.test(page3),
+        "nothing on the chain page asks him to review anything");
       ok(/ORDER BY last_seen DESC LIMIT 100/.test(readFileSync("src/calls/mapgraph.ts", "utf8")),
         "and the fold scans newest-first with a real cap, so one menu can never split across rows");
     }
@@ -932,6 +934,23 @@ async function main() {
       const isProven = (d: string) => provenWords.some((p) => p === d || p.includes(d) || d.includes(p));
       ok(isProven("front store services") && isProven("front") && !isProven("pharmacy"),
         "a proven door is exempt under either spelling — full phrase or its shortened winner");
+    }
+
+    // A CHAIN WITH A MENU PROBLEM GLOWS, AND NOTHING ELSE DOES (owner 08-04). The small red mark lit
+    // for anything sitting open, so Target wore a warning while the box above it counted zero. One
+    // rule now drives the glow, the box and the dropdown choice, so the page cannot contradict itself.
+    {
+      const page6 = readFileSync("public/app.html", "utf8");
+      ok(!/const alert=\(g&&\(g\.menuChanged\|\|g\.proposed>0\|\|g\.openUnknowns>0\)\)/.test(page6),
+        "the small red mark beside a chain's name is deleted");
+      ok(/const trouble=!!\(g&&g\.menuChanged\);/.test(page6),
+        "a chain reads as a problem for exactly one reason: its menu changed");
+      ok(/\$\{trouble\?' trouble':''\}/.test(page6) && /\.pickrow\.trouble\{/.test(page6),
+        "and that lights a glow behind the whole row, readable at arm's length");
+      ok(/data-changed="\$\{trouble\?1:0\}"/.test(page6),
+        "the dropdown's Menu changed choice picks exactly the rows that glow");
+      const boxRule = /if\(g&&g\.menuChanged\) changed\+\+;/.test(page6);
+      ok(boxRule, "and the Menu changed box counts the same set, so the number and the list agree");
     }
 
     // A CHOICE MARKED WRONG EXPIRES WITH THE MENU IT WAS LEARNED ON (owner, phase 3 audit item 3).
