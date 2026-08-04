@@ -14,13 +14,13 @@ boards (`WEBSITE_COMPS.dc.html`, `MY_ZONES_COMP.dc.html`, `NEW_CHECK_COMPS.html`
 - **Words**: `docs/design/copy/COPY_STYLE_GUIDE.md` owns every string a customer reads. Where the
   comp board's baked-in copy predates that pass, the copy guide wins — this doc never overrides it.
 - **Brand mark + colors**: `docs/design/brand/BRAND.md`.
-- **Live-vs-comp proof** (screenshots): `docs/specs/design-gap/inventory.html`.
+- **Live-vs-comp proof** (screenshots): `docs/archive/specs/design-gap/inventory.html`.
 
 **What "live" means here.** The elevated skin is the default the live site now renders
 unconditionally (the old `?skin=v2` gate is retired); a "v3" you may hear about is a
 service-worker/cache-version bump (the fix for stale v1 sticking through Cloudflare), **not** a new
 skin. When this doc and the live site disagree, fix whichever is wrong and note it. Open reconciliation items are tracked as votable
-bullets in `docs/team/design/checkpoint.md`.
+bullets in `docs/archive/team/design/checkpoint.md` (the design lane retired 2026-07-22).
 
 ---
 

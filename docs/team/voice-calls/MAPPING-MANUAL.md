@@ -68,8 +68,9 @@ wrongly-mapped chains burn money: the talker sits through menus (the CVS inciden
 - Recipes/flags: chain rows (Admin → Chains; API `/api/chains`). Runs: `nav_runs:{chainId}`.
 - Code (read-only for you): `src/calls/recipe.ts` (converter + rules), `navigator.ts` (learner +
   classify), `mapper.ts` (batch states), `tree-learn.ts`, `src/voice/bridge.ts` (live behavior).
-- State + history: `docs/team/mapping/checkpoint.md` (your volatile file) · sweeps + incident detail
-  in `docs/team/mapping/report-*.md` + `docs/shared/GOTCHAS.md`.
+- State + history: `docs/team/voice-calls/checkpoint.md` (your volatile file; mapping merged into
+  voice-calls 2026-07-22) · old sweeps + incident detail in `docs/archive/team/mapping/report-*.md`
+  + `docs/shared/GOTCHAS.md`.
 
 ## 9. Before your first action in ANY session (comprehension gate)
 Explain back to the owner/PM, in plain words, (a) why a chain marked "rings direct" that actually

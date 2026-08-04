@@ -5,7 +5,7 @@ you're taking. One task per session. Open the task file for the contract. Closin
 IN THE FILE with the `bash scripts/verify-live.sh` output pasted. No output, not closed. New task = one
 small md here (what · done-when · system · status). Owner adds/reorders freely.
 
-**Counts (swept 2026-07-23):** active 53 · parked 6 · dead 1 · total 60.
+**Counts (swept 2026-08-04):** 76 task files in this folder (plus this index and the two 08-02 handoff notes). The tables below are the truth per task; the old 07-23 tally (60) is history.
 Systems: site · admin · voice-calls · data · support (data carries the old ops/infra lane).
 
 ## ⭐⭐⭐ PM HANDOFF 08-02 night: `PM-HANDOFF-2026-08-02.md` — READ FIRST. First job: the report on
