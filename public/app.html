@@ -2520,7 +2520,7 @@ function checkV2Html(d){
   const stats=`<div class="stats" style="grid-template-columns:1fr 1fr;margin-bottom:14px">
       <div class="stat"><div class="n" style="color:#fff">${d.stats.cost}</div><div class="l">Total cost</div></div>
       <div class="stat"><div class="n" style="color:#fff">${d.stats.time}</div><div class="l">Total time</div></div>
-      <div class="stat"><div class="n" style="color:var(--green)">${d.stats.talked}</div><div class="l">Charlie talked</div></div>
+      <div class="stat"><div class="n" style="color:var(--green)">${d.stats.talked}</div><div class="l">Charlie talked</div></div><!-- wiring rule (owner 08-04): green at 23s or under, yellow 24 to 30, red 31 and up -->
       <div class="stat"><div class="n" style="color:var(--green)">${d.stats.profit}</div><div class="l">Gross profit</div></div>
     </div>`;
   const mini=rows=>`<div style="padding:2px 0 8px">${rows.map(r=>`<div style="display:flex;align-items:baseline;gap:6px;padding:3px 0 3px 12px"><span style="flex:0 0 auto;font-size:12px;font-weight:600;color:#8A8A96">${esch(r[0])}</span><span style="flex:1;border-bottom:1px dotted rgba(255,255,255,.16);transform:translateY(-3px)"></span><span style="flex:0 0 auto;font-size:12px;font-weight:700;color:var(--text-strong);font-variant-numeric:tabular-nums">${esch(r[1])}</span></div>`).join('')}</div>`;
