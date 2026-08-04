@@ -35,11 +35,32 @@
   fix, never a question to ask him.
 
 ## THE QUEUE (his order)
-1. **Echo builds the Testing screen wiring + the engine list** (spec is in the 08-04 PM chat and
-   summarized above; testing-cards.md carries every word). Robot store proves each piece.
-2. **He grades the 16 tests one at a time** with an agent when the build lands.
-3. **Mapper gets Charlie for mapping stores ASAP** — he is waiting on this. Transfer switch stays
-   ON globally (mapper needs it); per-chain control is roadmap.
+1. **DONE + AUDITED 08-04 (PM): Echo's Testing screen + engine list, merged to staging.** Audit
+   verdict: screen PASSED whole (approved sheet byte-identical but the three wiring hooks · 16 cards
+   word for word in TEST_CARDS · buckets sum, cents, tile colors · driven ALL PASS on the real
+   Admin). Engine: staff_hung_up + ES label + charged ✓ · ping crash fix at bridge ~1157 ✓ ·
+   never-repeat line in the ONE prompt source ✓ · click-deafness fix proven on fresh robot check
+   277 ✓. **FAILED: the signoff.** Zero live checks carry the wrap-up note (276/277/278 + the
+   bridge's own log all show the knock never fires on the live wire; rig-only). Delta's replay
+   after a transfer: rig-proven, no live proof (scene 10's scripted hand-over reads as a quiet
+   hold — no tone, Charlie never asked). Back to Echo as ONE item: done = a live robot check whose
+   record shows the wrap-up note and the goodbye. Warts for his same box: the verdict tail stamps
+   "Customer charged" on the owner's free account (row says not charged) · robot-run-a/b/c/d
+   screenshot folders committed at repo root (sprawl) · the rig's model stub only speaks one
+   model's answer shape, so the whole-chain scene false-fails when a GEMINI key is set.
+2. **BOTH BUGS FIXED AND AUDIT-PASSED 08-04 late (PM reran every test + dialed a fresh robot
+   check).** The goodbye's root: the wrap-up door hung under an empty name on every real check
+   (the carrier's socket connects bare; the name arrives in the start message) — hangSignoffDoor
+   now hangs when the name is known, and the rig connects bare so this class cannot pass it again.
+   PM's fresh check: goodbye spoken, nothing asked twice, ended 9 seconds after the answer, right
+   status, 6.5¢. OWNER 08-04: "151" IS the Pokémon product's name — writing it that way is correct, NOT a fault;
+   the harness's word-for-word row is what needs teaching. Other leftover: the live page bounced
+   twice while drawing.
+   NEXT: the owner walks every test one at a time; faults the walk surfaces get fixed in the walk.
+3. **Mapper waits until Charlie works perfectly and ALL tests pass** (owner ruling 08-04 — replaces
+   "ASAP"). On a mapping run Charlie only comes on at the very end, to prove the department once
+   the right one is reached; that proof is what lets the run optimize for speed and lock the
+   recipe, so a half-working Charlie poisons the lock. Transfer switch stays ON globally.
 4. **The code rearrangement audit** (claude/refactor-server-routes-zbi8kp, PR #108, ~9,000 moved
    lines, NEVER audited). Route parity → registration order → which routes lost their lock. The
    owner wants the refactor finished soon and asked to be held accountable.
