@@ -24,6 +24,7 @@ interface LiveRead {
   dirty: boolean;          // a line arrived while a read was running → read again when it finishes
   verdict: ClerkVerdict | null;
   readAtMs: number;        // when the newest read finished (0 = none yet)
+  retried: boolean;        // one failed read gets ONE second try, never a loop
 }
 
 const reads = new Map<string, LiveRead>();
@@ -37,7 +38,7 @@ const HAS_WORDS = /[a-zA-ZÀ-ɏ]{2,}/;
 /** A check has started on this room. Call once, at dial. */
 export function armLiveRead(room: string, category: string, specificProduct?: string): void {
   if (!room) return;
-  reads.set(room, { category, specificProduct, lines: [], asked: false, running: false, dirty: false, verdict: null, readAtMs: 0 });
+  reads.set(room, { category, specificProduct, lines: [], asked: false, running: false, dirty: false, verdict: null, readAtMs: 0, retried: false });
 }
 
 /** Every line, both sides, as it is spoken. Wired into calls/events.ts recordLine. */
@@ -67,6 +68,13 @@ async function runRead(room: string): Promise<void> {
       // THE SIGNOFF (owner 08-04): the moment a check has its answer, Charlie is told to thank them
       // and end. A definitive read is the moment; an unsure one is not an answer and nudges nothing.
       if (v.inStock === "yes" || v.inStock === "no") nudgeSignoff(room, v.inStock === "yes" ? "in stock" : "not in stock");
+    } else if (cur && !v && !cur.retried) {
+      // The reader's model can fail mid check (a rate limit on check 276 among others) and Staff may
+      // never say another line, so a failed read used to mean no read at all — and no signoff, so
+      // Charlie never said goodbye. ONE second try a few seconds later, never a loop: if it fails
+      // twice the finalize's own read still owns the verdict, only the goodbye moment is lost.
+      cur.retried = true;
+      setTimeout(() => { const c2 = reads.get(room); if (c2 && !c2.verdict) void runRead(room); }, 4000);
     }
   } finally {
     const cur = reads.get(room);

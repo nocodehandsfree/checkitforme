@@ -832,6 +832,43 @@ console.log("\n▶ after a transfer the recording asks again, and Charlie stays 
   restore(); tw.close(); f.close();
 }
 
+console.log("\n▶ the whole live chain: Staff answer, the reader reads, and the knock reaches Charlie");
+{
+  // Check 276 proved the knock never fires on staging while every piece passes alone. This drives
+  // the WHOLE chain in one process: the line lands on the record, the record hands it to the
+  // reader, the reader calls its model (stubbed here at the same fetch the real one uses), the
+  // answer knocks on the door, and the note reaches Charlie's live session.
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url.includes("helicone")) {
+      return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ inStock: "yes", restockDay: null, restockTime: null, productForm: null, set: null, confidence: 0.9, reason: "clerk said we do" }) } }] }), { status: 200, headers: { "content-type": "application/json" } });
+    }
+    return realFetch(input as RequestInfo, init);
+  }) as typeof fetch;
+  const { armLiveRead } = await import("../src/voice/live-read");
+  const { recordLine } = await import("../src/calls/events");
+  const { setLineHook } = await import("../src/calls/events");
+  const { noteLiveLine } = await import("../src/voice/live-read");
+  setLineHook(noteLiveLine);
+  armLiveRead("room-livechain", "Pokémon");
+  const { tw } = await callToHello(f, 400, "room-livechain");
+  tw.say({ event: "mark", mark: { name: "delta-opening" } });
+  await sleep(200);
+  const notes = () => f.raw.filter((r) => r.includes("contextual_update"));
+  const before = notes().length;
+  recordLine("room-livechain", "Clerk", "We do.");
+  await sleep(400);   // the reader's model round trip, stubbed, plus the knock
+  const note = notes().slice(before).find((n) => /answer is in hand/i.test(n)) || "";
+  ok(!!note, "the answer knocked and the note reached his live session");
+  ok((getReceipt("room-livechain")?.events || []).some((e) => (e.detail as { step?: string } | null)?.step === "signoff"), "…and the check records that he was told");
+  globalThis.fetch = realFetch;
+  restore(); tw.close(); f.close();
+}
+
 console.log("\n▶ the answer is in hand: Charlie is told to thank them and end, once, and nothing hangs up");
 {
   // THE SIGNOFF (owner 08-04). Eight of ten robot store checks ended without a goodbye because
