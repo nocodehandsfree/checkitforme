@@ -86,28 +86,31 @@ const room = WANT || await pg.evaluate(async () => {
   return (d && d.rows || []).map(r => r.room).filter(Boolean)[0] || '';
 });
 console.log(`\n▶ tapping the check ${room}`);
-await pg.evaluate((r) => openTestReceipt(r), room);
-await pg.waitForTimeout(3500);
+await pg.evaluate((r) => openTestReceipt(r, 'MVPs', Math.floor(Date.now() / 1000)), room);
+await pg.waitForFunction(() => { const b = document.querySelector('.sheet .sh-body'); return !!b && !/Loading/.test(b.innerText); }, null, { timeout: 40000 }).catch(() => {});
+await pg.waitForTimeout(600);
 
 const sheet = await pg.$eval('.sheet .sh-body', el => el.innerText).catch(() => '');
-if (process.env.QA_TRACE) {
-  console.log('  sheet present:', await pg.$$eval('.sheet', e => e.length), 'body chars:', sheet.length);
-  console.log('  raw:', (await pg.$eval('.sheet .sh-body', el => el.innerHTML).catch(() => '')).slice(0, 400));
-}
-// The FIRST card in the sheet is the eleven rows; the one under it is the money, which has its own
-// shape and is not being graded here.
-const cardRows = await pg.$$eval('.sheet .sh-body .card:first-of-type .row', els => els.map(e => e.innerText.replace(/\n+/g, ' | '))).catch(() => []);
-const heads = await pg.$$eval('.sheet .sh-body .k-eyebrow', els => els.map(e => e.innerText.trim())).catch(() => []);
-console.log('  — what the sheet says, in order:');
-for (const r of cardRows) console.log('     ' + r);
+const tiles = await pg.$$eval('.sheet .sh-body .stat', els => els.map(e => e.innerText.replace(/\n+/g, ' '))).catch(() => []);
+const buckets = await pg.$$eval('.sheet .sh-body details.v2c', els => els.map(e => e.querySelector('.row').innerText.replace(/\n+/g, ' | '))).catch(() => []);
+const logHead = await pg.$$eval('.sheet .sh-body .k-eyebrow', els => els.map(e => e.innerText.trim())).catch(() => []);
+console.log('  — tiles:', tiles.join('  ·  '));
+console.log('  — cost lines:', buckets.join('  ·  '));
 
-ok('the eleven rows rendered', cardRows.length === 11, String(cardRows.length));
-ok('every row carries one of the three states', cardRows.every(r => /\b(Used|Unused|Broken)\b/.test(r)), cardRows.filter(r => !/\b(Used|Unused|Broken)\b/.test(r)).join(' // '));
-ok('the count line is there', /\d+ used · \d+ unused · \d+ broken/.test(sheet), (sheet.match(/.*used.*/) || [''])[0]);
-ok('the log is under it, end to end', /Dialing|Dialled|ringing|The line was answered/i.test(sheet));
-ok('the conversation is under the log', heads.some(h => /The conversation/i.test(h)) || !/Clerk:|Agent:/.test(sheet), heads.join(' | '));
+ok('the sheet opened through the approved pixels', /Check cost/.test(sheet) && /Check log/.test(sheet), logHead.join(' | '));
+ok('the four stat tiles render', tiles.length === 4, String(tiles.length));
+ok('total cost, total time, Charlie talked and gross profit are the tiles', /Total cost/.test(tiles[0] || '') && /Total time/.test(tiles[1] || '') && /Charlie talked/.test(tiles[2] || '') && /Gross profit/.test(tiles[3] || ''), tiles.join(' | '));
+ok('every cost line is one of his five buckets', buckets.length > 0 && buckets.every(b => /(Bravo \(Menu Nav\)|Foxtrot \(Phone Line\)|Echo \(Listening\)|Charlie \(Talking\)|Status \(Verification\))/.test(b)), buckets.join(' // '));
+ok('money reads in cents', buckets.every(b => /¢|\$/.test(b)), buckets.join(' // '));
+// Tap a cost line for its detail rows.
+await pg.$eval('.sheet .sh-body details.v2c summary', el => el.click()).catch(() => {});
+await pg.waitForTimeout(200);
+const detail = await pg.$eval('.sheet .sh-body details.v2c[open]', el => el.innerText).catch(() => '');
+ok('a tapped cost line opens its detail rows', /Rate \(per minute\)|Cost|Read by|Menu time|Line time|Talk time/.test(detail), detail.slice(0, 120));
+ok('the log is end to end', /Dialing|Staff greeting|Check ended|Customer (charged|not charged)|Answer/i.test(sheet));
 ok('no dash inside any sentence on the sheet (copy law)', !/[—–]/.test(sheet), (sheet.match(/[^\n]*[—–][^\n]*/) || [''])[0]);
 ok('the retired word never reaches the screen', !/\bdesk\b/i.test(sheet), (sheet.match(/[^\n]*\bdesk\b[^\n]*/i) || [''])[0]);
+ok('no unused pill at the top', !/UNUSED/i.test((sheet.split('Total cost')[0] || '')), (sheet.split('Total cost')[0] || '').slice(0, 100));
 
 await pg.screenshot({ path: 'loops/site-redesign/render/testing-card.png', fullPage: false }).catch(() => {});
 await b.close();
