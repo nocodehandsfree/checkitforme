@@ -5,7 +5,7 @@
 // Every assertion here is one line of the contract in docs/tasks/admin-testing-new-engine.md. The
 // third state matters as much as the other two: a rule this check never put to the test must come
 // back null, because a red cross there reads as "the engine broke" and a tick reads as "we checked".
-import { behaved, agentLinesFrom, type BehavedRow, type BehavedEvent } from "../src/calls/behaved";
+import { behaved, agentLinesFrom, TEST_CARDS, type BehavedRow, type BehavedEvent } from "../src/calls/behaved";
 
 let pass = 0, fail = 0;
 const ok = (name: string, cond: boolean, saw?: unknown) => {
@@ -292,6 +292,26 @@ head("…and every way it can go wrong");
   // this row exists to remove, on the one screen he grades a hand-over from.
   ok("…and the meter row calls it the HAND-OVER, not Staff stepping away",
     /the hand-over dropped charlie/i.test(row(r, "meter_stopped_on_hold").why), row(r, "meter_stopped_on_hold").why);
+}
+
+
+head("THE 16 LOCKED TEST CARDS (owner 08-04) — word for word, so nothing drifts");
+{
+  const names = Object.values(TEST_CARDS).map((c) => c.name);
+  ok("all the locked cards exist", names.length === 17, String(names.length));
+  ok("every headline is category, colon, what is tested", names.every((n) => /^[A-Za-z]+: .+/.test(n)), names.filter((n) => !/^[A-Za-z]+: .+/.test(n)).join(" | "));
+  ok("no dash anywhere on a card (copy law)", Object.values(TEST_CARDS).every((c) => !/[\u2014\u2013]/.test(c.name + c.sub + c.info)));
+  ok("clear no, word for word", TEST_CARDS.answer_clear_no.info === "This test proves that a clear no always ends with a Not in stock status, no matter how Staff choose to say the no.", TEST_CARDS.answer_clear_no.info);
+  ok("the ring card names his 90 seconds", TEST_CARDS.hungup_ringing.name === "Hungup: 90 seconds of ringing");
+  ok("…and its bubble ends: Charlie was never on and never billed", /Charlie was never on and never billed\.$/.test(TEST_CARDS.hungup_ringing.info), TEST_CARDS.hungup_ringing.info);
+  ok("the transfer card carries the replay he ordered", TEST_CARDS.transfer_requested.info.includes("Delta played the recording, and Charlie came back only after Staff answered it"), TEST_CARDS.transfer_requested.info);
+  ok("Staff hung up names the new status", TEST_CARDS.hungup_staff.sub.includes("we showed a Staff hung up status"));
+  ok("the switch card tests the switch only, not a status", /This test checks the switch only, not a status\.$/.test(TEST_CARDS.transfer_switch_off.info));
+  ok("every status a card names is the status's real name", [
+    ["answer_clear_yes", "In stock"], ["answer_clear_no", "Not in stock"], ["hold_permanently", "Left on hold"],
+    ["hungup_staff", "Staff hung up"], ["hungup_ringing", "Nobody answered"], ["hungup_limit", "Admin hung up"],
+    ["transfer_nobody", "Too busy to check"], ["voicemail_detected", "Got their voicemail"],
+  ].every(([k, label]) => (TEST_CARDS[k].sub + TEST_CARDS[k].info).includes(label)));
 }
 
 console.log(`\n${fail ? "FAIL" : "PASS"}  ${pass} passed, ${fail} failed`);

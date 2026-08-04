@@ -8,7 +8,7 @@ import {
   openReceipt, emit, amend, markNow, addMs, closeReceipt, rollup, rollupFromRow, setEventSink,
   getReceipt, laneNote, laneFor, actualLane, _receiptFrom, _reset, type Receipt, type RtEvent,
 } from "../src/calls/events";
-import { costCall, costPerResult, money, MEASURED_RATES, USD } from "../src/calls/cost";
+import { costCall, costPerResult, costBuckets, money, MEASURED_RATES, STATUS_READ_USD, USD } from "../src/calls/cost";
 
 /** The two nav plans a store can have, in the exact shape the recipe produces them. */
 const presses = [{ action: "press", value: "2", atSec: 8 }, { action: "press", value: "2", atSec: 16 }];
@@ -266,6 +266,30 @@ console.log("▶ facts can be added to the line already on the timeline, instead
   ok(joins[0].detail?.heldFrames === 103 && joins[0].detail?.segment === 1, "the new facts land on it without losing the old ones");
   amend("r-amend", "hold_start", { reason: "quiet" });
   ok(r.events.filter((e) => e.kind === "hold_start").length === 0, "amending an event that never happened writes nothing");
+}
+
+
+console.log("▶ the five buckets, his names, and they SUM TO THE TOTAL exactly (owner 08-04)");
+{
+  // A 62 second check: 14s of menu, 18s of Charlie, the second read ran.
+  const cost = costCall({ callSecs: 62, charlieSecs: 18, avoidableSecs: 0, forkSecs: [62, 48] });
+  const b = costBuckets(cost, { callSecs: 62, navSecs: 14, streams: 2 }, MEASURED_RATES, STATUS_READ_USD);
+  ok(b.map((x) => x.label).join(" · ") === "Bravo (Menu Nav) · Foxtrot (Phone Line) · Echo (Listening) · Charlie (Talking) · Status (Verification)",
+    `his five names, his order (${b.map((x) => x.label).join(" · ")})`);
+  const sum = b.reduce((n, x) => n + x.usd, 0);
+  ok(sum === cost.totalUsd + STATUS_READ_USD, `nothing counted twice, nothing dropped: ${sum} = ${cost.totalUsd} + ${STATUS_READ_USD}`);
+  const bravo = b.find((x) => x.key === "bravo")!;
+  ok(bravo.detail.some(([l, v]) => l === "Menu time" && v === "0:14"), "Bravo shows the menu time it priced");
+  ok(bravo.detail.some(([l]) => l === "Rate (per minute)"), "…and its rate comes from the rates in force, never typed in");
+  const fox = b.find((x) => x.key === "foxtrot")!;
+  ok(fox.detail.some(([l, v]) => l === "Billed (minutes)" && v === "2:00"), "the whole minute rounding cliff stays on the phone line where the carrier puts it");
+  ok(b.find((x) => x.key === "charlie")!.detail.some(([l, v]) => l === "Covers" && v === "voice and thinking together"), "Charlie's line covers voice and thinking together (his ruling)");
+
+  // No free items listed (his ruling): a check with no menu and no read shows no Bravo and no Status.
+  const cost2 = costCall({ callSecs: 30, charlieSecs: 10, avoidableSecs: 0, forkSecs: [30] });
+  const b2 = costBuckets(cost2, { callSecs: 30, navSecs: 0, streams: 1 }, MEASURED_RATES, 0);
+  ok(!b2.some((x) => x.key === "bravo") && !b2.some((x) => x.key === "status"), "a bucket that spent nothing does not render");
+  ok(b2.reduce((n, x) => n + x.usd, 0) === cost2.totalUsd, "…and the rest still sum to the total");
 }
 
 console.log(`\n${fail === 0 ? "ALL PASS" : "FAILURES"} — ${pass} passed, ${fail} failed`);

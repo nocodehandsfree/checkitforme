@@ -39,6 +39,65 @@ import { askedToBePutThrough as saysPutMeThrough, signedOff } from "../voice/pro
  *  same commit that writes it, because he spent real time on these words and no agent may quietly
  *  reword them. If this file and that record disagree, the record is right and this is the bug. */
 
+/**
+ * THE OWNER'S 16 TEST CARDS, LOCKED 08-04 (docs/specs/charlie-behavior/testing-cards.md). Headline
+ * is the category, colon, exactly what is tested. Subhead is one plain past tense sentence saying
+ * what happened. The bubble says what the test proves, naming the exact status by its real name
+ * from Statuses. Copied from that file word for word and asserted in scripts/test-behaved.ts, so
+ * nothing can drift. We test things that WORK, never bugs.
+ */
+export const TEST_CARDS: Record<string, { name: string; sub: string; info: string }> = {
+  answer_clear_yes: { name: "Answer: clear yes",
+    sub: "Staff said they have the product in stock and we showed an In stock status.", info: "" },
+  answer_clear_no: { name: "Answer: clear no",
+    sub: "Staff said they do not have the product in stock and we showed a Not in stock status.",
+    info: "This test proves that a clear no always ends with a Not in stock status, no matter how Staff choose to say the no." },
+  answer_yes_vague: { name: "Answer: yes but vague",
+    sub: "Staff said yes without saying yes, like \"we did, but it's not out yet.\"",
+    info: "Our reading understood the vague yes and we displayed an In stock status. This test rotates a growing list of real vague yeses, and every new one from a real check gets added." },
+  hold_silence: { name: "Hold: silence",
+    sub: "Staff put us on a silent hold.",
+    info: "Charlie dropped on a silent hold, reconnected when they came back, and we displayed the right status." },
+  hold_permanently: { name: "Hold: permanently",
+    sub: "Staff put us on hold and never returned.",
+    info: "Charlie hung up at the hold limit and we displayed a Left on hold status." },
+  hold_music: { name: "Hold: music",
+    sub: "Staff put us on hold with music and Charlie dropped until a person came back.",
+    info: "This test proves that hold music stops Charlie's meter the same way silence does, and that he reconnected when a person spoke to us again." },
+  hold_phone_down: { name: "Hold: phone down",
+    sub: "Staff set the phone on the counter and Charlie dropped until someone spoke to us again.",
+    info: "This test proves that background store noise stops Charlie's meter the same way silence does. Someone talking across the room is not someone talking to us." },
+  hungup_staff: { name: "Hungup: Staff",
+    sub: "Staff hung up on us before giving an answer and we showed a Staff hung up status.",
+    info: "This test proves that when Staff hung up on us, the record shows they ended the check, not us." },
+  hungup_ringing: { name: "Hungup: 90 seconds of ringing",
+    sub: "The phone rang with nobody answering and we hung up at the ring limit.",
+    info: "This test proves that after 90 seconds of ringing with no person, we ended the check ourselves, the record shows it was us, and we displayed a Nobody answered status. Charlie was never on and never billed." },
+  hungup_limit: { name: "Hungup: 4 minute limit",
+    sub: "The check hit its 4 minute limit and we ended it.",
+    info: "This test proves that a check can never run past the limit you set in Admin, we displayed an Admin hung up status, and the customer was not charged for an answer we never got." },
+  transfer_new_person: { name: "Transfer: new person",
+    sub: "Staff transferred us, Charlie asked a question from the start and recognized it was a new person.", info: "" },
+  transfer_requested: { name: "Transfer: Charlie requested",
+    sub: "Charlie reached a wrong department and asked to be put through.",
+    info: "This test proves that Charlie recognized the wrong department and asked to be transferred. When the new person picked up, Delta played the recording, and Charlie came back only after Staff answered it, to ask his follow-up." },
+  transfer_nobody: { name: "Transfer: nobody available",
+    sub: "Charlie asked to be put through and Staff said there was nobody available.",
+    info: "This test proves that Charlie thanked them and ended the check without nagging, and we displayed a Too busy to check status." },
+  transfer_switch_off: { name: "Transfer: switch off",
+    sub: "The Admin switch for asking to be transferred was off and Charlie did not ask.",
+    info: "This test proves the switch really works. Charlie never brought up being transferred and took whatever answer Staff could give. If Staff transfer us anyway, the check rides it as normal. This test checks the switch only, not a status." },
+  voicemail_detected: { name: "Voicemail: detected",
+    sub: "A machine answered and our system ended the check.",
+    info: "This test proves that we hung up the moment the voicemail was detected, Charlie was never on and never billed, and we displayed a Got their voicemail status." },
+  language_spanish: { name: "Language: Spanish",
+    sub: "Staff spoke Spanish and Charlie held the entire conversation in Spanish.",
+    info: "This test proves that Charlie never switched to English mid check, and the answer Staff gave in Spanish set the status." },
+  alert_email: { name: "Alert: email",
+    sub: "The check landed In stock at a store a customer watches and an in stock email was sent.",
+    info: "This test proves that in stock email alerts work for a store the customer has subscribed to." },
+};
+
 export type BehavedKey =
   | "handed_to_charlie" | "question_recorded" | "warmed_up_in_time" | "right_department"
   | "asked_to_be_put_through" | "asked_the_new_person" | "goodbye_when_told_no"

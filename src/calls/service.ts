@@ -114,12 +114,13 @@ import { activeMap } from "./mapgraph";
 import { learnTreeFromTranscript, consumeTreeRelearn } from "./tree-learn";
 import { connectAtSecFor } from "./recipe";
 import { callTuning } from "./tuning";
+import { STATUS_READ_USD } from "./cost";
 import { deltaStoreCall, setDeltaFinalize, tdTranscript, type TdSession } from "./tapedeck";
 import type { AgentTuning } from "../voice/provider";
 import { notifyInStock, notifyContact } from "./notify";
 import { getSetting, setSetting } from "../db/settings";
 import { specificityClause, RESTOCK_PROMPT, VOICE_DEFAULTS, PREMIUM_FOLLOWUP, ASK_SHIPMENT_DAY, oneTurnFollowup, oneTurnShipmentDay, midCallAgentPatch } from "../voice/prompts";
-import { consensusFor, productDetailLabel } from "../voice/verdict";
+import { consensusFor, productDetailLabel, VERDICT_MODEL } from "../voice/verdict";
 import { armLiveRead, dropLiveRead } from "../voice/live-read";
 
 const DEFAULT_OPENER = "Heyy! I was just checking to see if you guys got any {category} in?";
@@ -1266,6 +1267,7 @@ export async function ingestPending(): Promise<number> {
     let productDetail: string | null = null;
     let restockDayHeard: string | null = null;
     let restockTimeHeard: string | null = null;
+    let secondUsed = false;
     if (outcome.status === "completed") {
       // THE READER RULE (owner 07-29), one shared implementation — see consensusFor in
       // src/voice/verdict.ts. This used to run the second read for EXTRACTION ONLY on a decisive
@@ -1278,6 +1280,7 @@ export async function ingestPending(): Promise<number> {
       finalConfirmed = consensus.confirmed;
       finalStatusKey = consensus.statusKey;
       definitive = consensus.definitive;
+      secondUsed = !!second;
       productDetail = productDetailLabel(second);
       restockDayHeard = second?.restockDay ?? null; // restock day staff VOLUNTEERED — captured even unprompted
       restockTimeHeard = second?.restockTime ?? null;
@@ -1313,8 +1316,15 @@ export async function ingestPending(): Promise<number> {
       navSeconds: takeBridgeNav(row.providerCallId) ?? outcome.navSecs ?? null,
     }).where(eq(callResults.id, row.id));
     // Close the timeline with the answer the customer actually got, so a replay ends where the call
-    // ended. Fire-and-forget: a verdict must never wait on bookkeeping.
-    void recordVerdict(row.id, finalStatusKey ?? null, outcome.summary ?? null, outcome.durationSecs ?? 0);
+    // ended. Fire-and-forget: a verdict must never wait on bookkeeping. The tail now carries what
+    // the Testing screen reads (owner 08-04): the second read as its own step with its model and
+    // cost, whose words decided the status, and charged or not charged as the LAST step.
+    const willCharge = !!(row.finderUserId && outcome.status === "completed" && billableOutcome(finalStatusKey, definitive, outcome.transcript));
+    const decidedBy = [...String(outcome.transcript || "").split("\n")]
+      .reverse().map((l) => /^(?:Clerk|Staff):\s*(.*)$/i.exec(l.trim())?.[1] || "")
+      .find((t) => /[a-zA-ZÀ-ɏ]{2,}/.test(t)) || null;
+    void recordVerdict(row.id, finalStatusKey ?? null, outcome.summary ?? null, outcome.durationSecs ?? 0,
+      { secondReadModel: secondUsed ? VERDICT_MODEL : null, secondReadUsd: secondUsed ? STATUS_READ_USD : 0, decidedBy, charged: willCharge });
     dropLiveRead(row.room); // verdict written — let the room's live read go
     // The old direct path's thin receipt closes here — this is the only moment it learns the call is
     // over, since nothing streams to us on that lane. A bridged call closed its own long ago and

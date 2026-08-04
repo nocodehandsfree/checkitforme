@@ -94,6 +94,66 @@ export function costCall(inp: CostInput, rates: Rates = MEASURED_RATES): CallCos
   };
 }
 
+/** ONE STATUS VERIFICATION READ (the second read of the transcript). Not on the phone bill: it is
+ *  the reader model's own metered price — the provider's published per-token prices at the read's
+ *  real shape (about 700 tokens of transcript in, about 120 of answer out, gemini flash lite).
+ *  Small on purpose: the whole point of the cheap reader is that double checking costs a rounding
+ *  error next to Charlie's 11 cents a minute. */
+export const STATUS_READ_USD = Math.round(0.00012 * USD);
+
+/** ONE COST, FIVE BUCKETS, HIS NAMES (owner ruling 08-04): Bravo (Menu Nav) · Foxtrot (Phone Line)
+ *  · Echo (Listening) · Charlie (Talking) · Status (Verification). His law is that every cost rolls
+ *  into nav time and talk time, so Bravo is the nav phase's slice of the line and the listening,
+ *  and Foxtrot and Echo carry the rest — the buckets SUM TO THE TOTAL exactly, nothing is counted
+ *  twice, and the whole-minute rounding cliff stays on the phone line where the carrier puts it.
+ *  Delta is free per check (the recording is cached), so there is no Delta line. Every rate in the
+ *  detail rows comes from the rates in force, never typed anywhere else. */
+export interface CostBucket { key: string; label: string; usd: number; detail: Array<[string, string]> }
+const mmss = (secs: number) => `${Math.floor(Math.max(0, secs) / 60)}:${String(Math.max(0, Math.round(secs)) % 60).padStart(2, "0")}`;
+const perMin = (usd: number) => `${(usd * 100).toFixed(1)}¢`;
+export function costBuckets(
+  cost: CallCost,
+  t: { callSecs: number; navSecs: number | null; streams?: number },
+  rates: Rates = MEASURED_RATES,
+  statusReadUsd = 0,
+): CostBucket[] {
+  const nav = Math.max(0, Math.min(t.navSecs ?? 0, t.callSecs));
+  const share = t.callSecs > 0 ? nav / t.callSecs : 0;
+  const navLine = Math.round(cost.lineUsd * share);
+  const navFork = Math.round(cost.forkUsd * share);
+  const streams = Math.max(1, t.streams ?? 1);
+  const b: CostBucket[] = [
+    { key: "bravo", label: "Bravo (Menu Nav)", usd: navLine + navFork + cost.clipsUsd, detail: [
+      ["Menu time", mmss(nav)],
+      ["Rate (per minute)", perMin(rates.linePerMinUsd + rates.forkPerMinUsd * streams)],
+      ...(cost.clipsUsd > 0 ? [["Spoken menu words", money(cost.clipsUsd)] as [string, string]] : []),
+      ["Cost", money(navLine + navFork + cost.clipsUsd)],
+    ] },
+    { key: "foxtrot", label: "Foxtrot (Phone Line)", usd: cost.lineUsd - navLine, detail: [
+      ["Line time", mmss(t.callSecs)],
+      ["Rate (per minute)", perMin(rates.linePerMinUsd)],
+      ["Billed (minutes)", mmss(cost.billedMinutes * 60)],
+      ["Cost", money(cost.lineUsd - navLine)],
+    ] },
+    { key: "echo", label: "Echo (Listening)", usd: cost.forkUsd - navFork, detail: [
+      ["Line time", mmss(t.callSecs)],
+      ["Rate (per minute)", perMin(rates.forkPerMinUsd * streams)],
+      ["Cost", money(cost.forkUsd - navFork)],
+    ] },
+    { key: "charlie", label: "Charlie (Talking)", usd: cost.charlieUsd, detail: [
+      ["Talk time", mmss(cost.charlieSecs)],
+      ["Rate (per minute)", perMin((rates.charlieCreditsPerMin) * rates.creditUsd)],
+      ["Covers", "voice and thinking together"],
+      ["Cost", money(cost.charlieUsd)],
+    ] },
+    { key: "status", label: "Status (Verification)", usd: statusReadUsd, detail: [
+      ["Cost", money(statusReadUsd)],
+    ] },
+  ];
+  // No free items listed (owner ruling): a bucket that spent nothing does not render.
+  return b.filter((x) => x.usd > 0);
+}
+
 /** Microdollars → the string a person reads. Under a dollar reads in cents, like the owner talks
  *  about it ("five cents"); a dollar or more reads in dollars. */
 export function money(microUsd: number): string {

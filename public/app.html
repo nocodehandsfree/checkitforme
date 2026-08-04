@@ -2462,105 +2462,82 @@ function splitCard(c,priced,tl){
     ${row('Total',rd.total||'')}
   </div>`;
 }
-// ---- THE CHECK SHEET, V2 (owner-approved comp 08-04). MOCK DATA until Echo wires it to real
-// checks. Every element here is the page's own: .stat tiles, .card, the ladder metrics from
-// chainRung, and the website's .ctlv2-bub conversation cards. Echo replaces MOCK_CHECK_V2 with the
-// real record and deletes nothing visual.
-const MOCK_CHECK_V2={
-  name:'Transfer: Charlie requested',
-  sub:'Charlie reached a wrong department and asked to be put through.',
-  info:'This test proves that Charlie recognized the wrong department and asked to be transferred. When the new person picked up, Delta played the recording, and Charlie came back only after Staff answered it, to ask his follow-up.',
-  passed:4, failed:1, unused:6,
-  stats:{cost:'5.7¢', time:'1:02', talked:'18s', profit:'74%'},
-  cost:[
-    {l:'Bravo (Menu Nav)', v:'0.4¢', d:[['Menu time','0:14'],['Rate (per minute)','1.7¢'],['Cost','0.4¢']]},
-    {l:'Foxtrot (Phone Line)', v:'2.8¢', open:true, d:[['Line time','1:02'],['Rate (per minute)','1.4¢'],['Billed (minutes)','2:00'],['Cost','2.8¢']]},
-    {l:'Echo (Listening)', v:'0.8¢', d:[['Line time','1:02'],['Rate (per minute)','0.8¢'],['Cost','0.8¢']]},
-    {l:'Charlie (Talking)', v:'2.0¢', d:[['Talk time','0:18'],['Rate (per minute)','11¢'],['Covers','voice and thinking together'],['Cost','2.0¢']]},
-    {l:'Status (Verification)', v:'0.1¢', d:[['Read by','Haiku'],['Cost','0.1¢']]},
-  ],
-  behavior:[
-    {l:'Asked to be transferred', pass:true},
-    {l:'Meter stopped through the hand over', pass:true},
-    {l:'Treated whoever picked up as a new person', pass:true},
-    {l:'Came back only after Staff answered the recording', pass:true},
-    {l:'Wrapped up and said goodbye', pass:false},
-  ],
-  workflow:{name:'Branson Global', d:[['Voice','Branson HD'],['Personality','none'],['Voice engine','eleven turbo v2'],['Openers','4 rotating']]},
-  when:'Aug 3 · 10:26 PM',
-  log:[
-    {t:'Dialing MVP store', at:'0s'},
-    {t:'Navigating menu (Bravo)', at:'2s', group:[{t:'Said "front"', at:'2s'},{t:'Menu finished, listening for a person', at:'4s'}]},
-    {t:'Staff greeting', at:'7s', say:{who:'Clerk', tx:"MVP's Pharmacy, this is Larry."}, open:true, c:'var(--green)'},
-    {t:'Delta recording', at:'7s', say:{who:'Agent', tx:'Hi there! I was just checking, do you have any Pokémon cards in stock right now?'}},
-    {t:'Charlie joined', at:'7s'},
-    {t:'We reached the wrong department', at:'11s', c:'var(--yellow)'},
-    {t:'Charlie asked to be put through', at:'13s', say:{who:'Agent', tx:'Oh gotcha, could you put me through to whoever handles the Pokémon cards?'}},
-    {t:'Transferring to sporting goods', at:'18s', c:'var(--yellow)'},
-    {t:'Charlie dropped, the meter stopped', at:'18s'},
-    {t:'Staff back after 21s, and it may not be the same person', at:'39s'},
-    {t:'Staff greeting', at:'40s', say:{who:'Clerk', tx:'Sporting goods, this is Dana.'}, c:'var(--green)'},
-    {t:'Delta recording', at:'41s', say:{who:'Agent', tx:'Hi there! I was just checking, do you have any Pokémon cards in stock right now?'}},
-    {t:'Staff answered', at:'45s', say:{who:'Clerk', tx:'We did not.'}},
-    {t:'Charlie wrapped up', at:'55s', say:{who:'Agent', tx:'Perfect, thank you so much Dana, have a good one!'}, open:true},
-    {t:'The answer was double checked', at:'60s'},
-    {t:'Not in stock', at:'62s', status:'out', sub:'Decided by: "We did not."'},
-    {t:'Customer charged', at:'62s'},
-  ],
-};
-function checkV2Html(d){
-  const pill=(n,w,cls)=>n?`<span style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:5px 12px;${cls}">${n} ${w}</span>`:'';
-  const head=`<div style="display:inline-block;max-width:100%">
-      <div><span data-tip="${esch(d.info)}" style="font-size:20px;font-weight:800;letter-spacing:-.4px;color:#fff;white-space:nowrap">${esch(d.name)}</span></div>
-      <div class="meta" style="margin:5px 0 0;font-size:13px;max-width:0;min-width:100%">${esch(d.sub)}</div></div>
-    <div style="display:flex;gap:7px;margin:12px 0 16px">
-      ${pill(d.passed,'passed','color:var(--green);background:rgba(74,222,128,.13)')}
-      ${pill(d.failed,'failed','color:var(--red);background:rgba(239,68,68,.13)')}
-    </div>`;
-  const stats=`<div class="stats" style="grid-template-columns:1fr 1fr;margin-bottom:14px">
-      <div class="stat"><div class="n" style="color:#fff">${d.stats.cost}</div><div class="l">Total cost</div></div>
-      <div class="stat"><div class="n" style="color:#fff">${d.stats.time}</div><div class="l">Total time</div></div>
-      <div class="stat"><div class="n" style="color:var(--green)">${d.stats.talked}</div><div class="l">Charlie talked</div></div><!-- wiring rule (owner 08-04): green at 23s or under, yellow 24 to 30, red 31 and up -->
-      <div class="stat"><div class="n" style="color:var(--green)">${d.stats.profit}</div><div class="l">Gross profit</div></div>
-    </div>`;
-  const mini=rows=>`<div style="padding:2px 0 8px">${rows.map(r=>`<div style="display:flex;align-items:baseline;gap:6px;padding:3px 0 3px 12px"><span style="flex:0 0 auto;font-size:12px;font-weight:600;color:#8A8A96">${esch(r[0])}</span><span style="flex:1;border-bottom:1px dotted rgba(255,255,255,.16);transform:translateY(-3px)"></span><span style="flex:0 0 auto;font-size:12px;font-weight:700;color:var(--text-strong);font-variant-numeric:tabular-nums">${esch(r[1])}</span></div>`).join('')}</div>`;
-  const chev='<svg class="pk-chev" width="15" height="15" style="flex:0 0 auto;width:15px;height:15px;color:#5C5C68" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
-  const cost=`<div class="card" style="margin-bottom:14px;padding:16px 18px">
-      <div class="k-eyebrow" style="margin:0 0 4px">Check cost</div>
-      ${d.cost.map(r=>`<details class="v2c"${r.open?' open':''}><summary style="list-style:none;cursor:pointer"><div class="row" style="padding:6px 0"><span class="grow" style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:var(--text-strong)">${esch(r.l)} ${chev}</span><span style="font-size:14px;font-weight:800;color:var(--text-strong);font-variant-numeric:tabular-nums">${r.v}</span></div></summary>${mini(r.d)}</details>`).join('')}
-      <div class="row" style="padding:9px 0 0;margin-top:6px;border-top:1px solid rgba(255,255,255,.08)"><span class="grow" style="font-size:14px;font-weight:800;color:#fff">Total</span><span style="font-size:15px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums">${d.stats.cost}</span></div>
-    </div>`;
-  const bmark=p=>`<span style="width:26px;height:26px;border-radius:50%;background:${p?'rgba(74,222,128,.15)':'rgba(239,68,68,.15)'};display:grid;place-items:center;flex:0 0 auto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${p?'#4ADE80':'#EF4444'}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${p?'<path d="M5 12l5 5 9-10"/>':'<path d="M6 6l12 12M18 6L6 18"/>'}</svg></span>`;
-  const behavior=`<details open class="card" style="margin-bottom:14px;padding:16px 18px"><summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;margin-bottom:8px"><span class="k-eyebrow" style="margin:0;flex:1">Charlie behavior</span>${chev}</summary>
-      ${d.behavior.map(r=>`<div class="row" style="align-items:center;padding:8px 0"><span class="grow" style="font-size:13.5px;font-weight:700;color:var(--text-strong)">${esch(r.l)}</span>${bmark(r.pass)}</div>`).join('')}
-    </details>`;
-  const say=(w,tx)=>{const ai=w==='Agent';return `<div class="convo-thread" style="margin:6px 0 2px"><div class="ctlv2-bub${ai?' ai':''}"><div class="who">${ai?'CHECK AI':'STAFF'}</div><div class="tx">${esch(tx)}</div></div></div>`;};
-  const menuIco='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>';
-  const spkIco='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5 8.38 8.38 0 0 1 8.5 8.5z"/></svg>';
-  const statusIco=t=>t==='out'?`<span style="width:22px;height:22px;border-radius:50%;background:rgba(239,68,68,.15);display:grid;place-items:center;flex:0 0 auto;margin-left:-4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>`:'';
-  const rung=(e,last)=>{
-    const dot=e.status?statusIco(e.status):(e.say||e.group)?`<span style="display:grid;place-items:center;width:15px;height:15px;flex:0 0 auto;color:${e.c||'#8A8A96'}">${e.group?menuIco:spkIco}</span>`:`<span style="width:9px;height:9px;border-radius:50%;background:${e.c||'var(--muted)'};flex:0 0 auto"></span>`;
-    const line=last?'':`<span style="width:2px;flex:1;background:rgba(255,255,255,.14)"></span>`;
-    const title=`<span style="display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:${e.status?'800':'700'};color:${e.tc||(e.status?'#fff':'var(--text-strong)')}">${esch(e.t)}${(e.say||e.group)?chev:''}</span>`;
-    const at=`<span style="margin-left:auto;font-size:12px;font-weight:700;color:var(--muted);flex:0 0 auto;font-variant-numeric:tabular-nums">${e.at||''}</span>`;
-    let body='';
-    if(e.say) body=say(e.say.who,e.say.tx);
-    if(e.group) body=`<div style="padding:4px 0 0 6px">${e.group.map(g=>`<div style="display:flex;align-items:baseline;gap:8px;padding:3px 0"><span style="font-size:12.5px;font-weight:600;color:#8A8A96">${esch(g.t)}</span><span style="margin-left:auto;font-size:11.5px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums">${g.at}</span></div>`).join('')}</div>`;
-    const sub=e.sub?`<div style="font-size:12px;font-weight:500;color:rgba(255,255,255,.55);margin-top:3px">${esch(e.sub)}</div>`:'';
-    const inner=(e.say||e.group)
-      ?`<details${e.open?' open':''}><summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px">${title}${at}</summary>${body}</details>${sub}`
-      :`<div style="display:flex;align-items:center;gap:8px">${title}${at}</div>${sub}`;
-    return `<div style="display:flex;gap:12px"><div style="display:flex;flex-direction:column;align-items:center;flex:0 0 15px;padding-top:5px">${dot}${line}</div><div style="flex:1;min-width:0;padding-bottom:${last?'0':'13px'}">${inner}</div></div>`;
+// ---- THE CHECK SHEET (owner-approved comp 08-04, wired to the real record the same day). Every
+// element is the page's own: .stat tiles, .card, the ladder metrics from chainRung, and the
+// website's .ctlv2-bub conversation cards. The pixels are final; checkV2From below is the wiring.
+// THE REAL RECORD -> THE APPROVED SHEET (owner 08-04). The pixels above are final; this maps what
+// the server sends (the timeline, the spoken lines, the behavior rows, the five cost buckets, the
+// named test card) into the shape checkV2Html reads. Nothing visual is invented here and no rate or
+// card string is typed here: the strings ride in from the server, which owns them.
+function checkV2From(d,o){
+  o=o||{};
+  const v2=d.v2||{};
+  const secs=d.seconds||{};
+  const mmss=n=>{n=Math.max(0,Math.round(n||0));return Math.floor(n/60)+':'+String(n%60).padStart(2,'0');};
+  // Charlie talked tile (owner rule): green at 23s or under, yellow 24 to 30, red 31 and up.
+  const talk=v2.talkSec;
+  const talkedC=talk==null?'var(--muted)':talk<=23?'var(--green)':talk<=30?'var(--yellow)':'var(--red)';
+  // Gross profit against the 67 percent floor. Red is reserved for a bad final status (color law),
+  // so under the floor reads yellow, never red.
+  const profitC=v2.profitPct==null?'var(--muted)':v2.profitPct>=67?'var(--green)':'var(--yellow)';
+  const behavior=(d.behaved||[]).filter(r=>r.pass===true||r.pass===false).map(r=>({l:r.label,pass:r.pass===true}));
+
+  // ---- the log: every step end to end, menu steps grouped, spoken lines under their step ----
+  const tl=(d.timeline||[]).slice();
+  const lines=(d.lines||[]).slice();
+  const st=e=>((e.detail||{}).step)||'';
+  const log=[];const used=new Set();
+  const takeLine=(who,at,win)=>{ // the nearest unclaimed spoken line for a step, inside its window
+    let best=-1,gap=1e9;
+    lines.forEach((l,i)=>{ if(used.has(i)||l.who!==who||l.atSec==null)return; const g=Math.abs(l.atSec-at); if(l.atSec>=at-1&&g<(win||8)&&g<gap){best=i;gap=g;} });
+    if(best<0)return null; used.add(best); const l=lines[best]; return {who:l.who==='Agent'?'Agent':'Clerk',tx:l.text};
   };
-  const logCard=`<details open class="card" style="padding:16px 18px"><summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px"><span class="k-eyebrow" style="margin:0;flex:1">Check log</span><span style="font-size:12px;font-weight:700;color:var(--muted)">${esch(d.when)}</span>${chev}</summary>
-      <details style="margin:8px 0 2px"><summary style="list-style:none;cursor:pointer;display:inline-flex"><span style="display:inline-flex;align-items:center;background:#1B1B20;border-radius:999px;padding:6px 13px;box-shadow:inset 0 2px 5px rgba(0,0,0,.4);font-size:12px;font-weight:700;color:var(--text-strong)">${esch(d.workflow.name)}</span></summary>${mini(d.workflow.d)}</details>
-      <div class="mladder" style="margin-top:12px">${d.log.map((e,i,a)=>rung(e,i===a.length-1)).join('')}</div>
-    </details>`;
-  return `<div class="v2sheet">${head+stats+cost+behavior+logCard}</div>`;
+  for(let i=0;i<tl.length;i++){
+    const e=tl[i],at=(e.atSec||0)+'s',atN=e.atSec||0,step=st(e);
+    // The menu walk, grouped and expandable, at the front where it happened.
+    if(e.kind==='ivr_detected'||e.kind==='alpha_press'||e.kind==='bravo_say'){
+      const g=[{t:e.note,at}];let j=i+1;
+      while(j<tl.length&&(tl[j].kind==='ivr_detected'||tl[j].kind==='alpha_press'||tl[j].kind==='bravo_say')){g.push({t:tl[j].note,at:(tl[j].atSec||0)+'s'});j++;}
+      const lane=tl.slice(i,j).some(x=>x.kind==='alpha_press')?'Alpha':'Bravo';
+      log.push({t:'Navigating menu ('+lane+')',at,group:g});i=j-1;continue;
+    }
+    if(e.kind==='human_detected'){log.push({t:'Staff greeting',at,c:'var(--green)',say:takeLine('Clerk',atN,10),open:log.length<4});continue;}
+    if(step==='question_clip'){log.push({t:'Delta recording',at,say:takeLine('Agent',atN,10)});continue;}
+    if(step==='second_read'){log.push({t:'The answer was double checked ('+((e.detail||{}).model||'')+')',at});continue;}
+    if(step==='charged'){log.push({t:e.note,at});continue;}
+    if(e.kind==='verdict'){
+      const key=String((e.detail||{}).statusKey||'');const reg=STATUSES[key]||{};
+      const decided=(e.detail||{}).decidedBy;
+      log.push({t:reg.label||e.note||key,at,status:reg.tone||'unk',sub:decided?('Decided by: "'+decided+'"'):''});continue;
+    }
+    if(e.kind==='charlie_join'){const seg=(e.detail||{}).segment;log.push({t:seg>1?'Charlie reconnected':'Charlie joined',at});continue;}
+    if(e.kind==='ringing'||e.kind==='transfer'||e.kind==='hold_start'){log.push({t:e.note,at,c:'var(--yellow)'});continue;}
+    if(step==='wrap_up'){log.push({t:e.note,at,say:takeLine('Agent',atN,10)});continue;}
+    if((e.detail||{}).silent)continue; // bookkeeping the engine marked as not for the page
+    log.push({t:e.note||e.kind,at});
+  }
+  // Spoken lines no step claimed still belong on the record, at their own seconds, in order.
+  lines.forEach((l,i)=>{ if(used.has(i))return;
+    const entry={t:l.who==='Agent'?'Charlie said':'Staff answered',at:l.atSec!=null?l.atSec+'s':'',say:{who:l.who==='Agent'?'Agent':'Clerk',tx:l.text},_at:l.atSec};
+    if(l.atSec==null){const k=Math.max(0,log.length-1);log.splice(k,0,entry);return;}
+    let k=log.findIndex(x=>parseInt(x.at)>l.atSec);if(k<0)k=log.length;log.splice(k,0,entry);
+  });
+  return {
+    name:(v2.test&&v2.test.name)||o.name||'Check',
+    sub:(v2.test&&v2.test.sub)||o.sub||'',
+    info:(v2.test&&v2.test.info)||'',
+    passed:behavior.filter(r=>r.pass).length,
+    failed:behavior.filter(r=>!r.pass).length,
+    stats:{cost:v2.readable||((d.cost&&d.cost.readable&&d.cost.readable.total)||'—'),time:secs.callSecs!=null?mmss(secs.callSecs):'—',talked:talk!=null?talk+'s':'—',profit:v2.profitPct!=null?v2.profitPct+'%':'—',talkedC,profitC},
+    cost:(v2.buckets||[]).map(b=>({l:b.label,v:money2(b.usd),d:b.detail})),
+    behavior,
+    workflow:v2.workflow||null,
+    when:o.when||'',
+    log,
+  };
 }
-function openMockCheckV2(){ openSheet('','',checkV2Html(MOCK_CHECK_V2));
-  const lift=()=>{ const sh=document.querySelector('.sheet.on')||document.querySelector('.sheet'); if(sh){ const sc=window.scrollY||document.documentElement.scrollTop||0; sh.style.top=(sc+window.innerHeight*0.04)+'px'; sh.style.height=(window.innerHeight*0.96+120)+'px'; } }; setTimeout(lift,120); setTimeout(lift,700); }
-if((location.hash||'')==='#mockcheck'){ setTimeout(()=>{ try{ showSection('testing'); }catch(_){ } setTimeout(openMockCheckV2,700); },900); }
+// Microdollars to the cents string, the same arithmetic the server prints with.
+function money2(u){const c=(u/1e6)*100;return c<100?c.toFixed(1)+'\u00a2':'$'+(u/1e6).toFixed(2);}
 
 // ---- Delta (Fun): rehearse the Delta lane — recorded clips + cheap classifier, no live agent ----
 let TD_POLL=null, TD_ID=null;
@@ -7020,7 +6997,7 @@ async function loadTesting(){
     // No room = nothing was written down for this one, so there is no sheet to open. It still belongs
     // on the log; it just does not pretend to be tappable.
     html+=r.room
-      ? `<button class="peek" onclick="openTestReceipt('${esch(String(r.room))}')">${head}</button>`
+      ? `<button class="peek" onclick="openTestReceipt('${esch(String(r.room))}','${esch((r.store||'').replace(/'/g,''))}',${Number(r.started)||0})">${head}</button>`
       : `<div class="peek static">${head}</div>`;
   });
   const hidden=TEST_CALLS.length-TEST_SHOWN;
@@ -7029,7 +7006,17 @@ async function loadTesting(){
 }
 // A test check opens the SAME sheet the Calls page opens, plus the pass/fail rows. It reads the
 // service the header switch names: a staging test check has no receipt on production.
-async function openTestReceipt(room){ return openReceiptInto('/api/admin/receipt/'+encodeURIComponent(room),{src:true,behaved:true}); }
+async function openTestReceipt(room,name,started){
+  const box=document.createElement('div');
+  box.innerHTML='<div class="meta">Loading\u2026</div>';
+  openSheet('','',box);
+  const d=await srcApi('/api/admin/receipt/'+encodeURIComponent(room));
+  if(!d||d.error){ box.innerHTML='<div class="empty">Nothing was recorded for this check.</div>'; return; }
+  const when=started?new Date(started*1000).toLocaleDateString([], {month:'short',day:'numeric'})+' \u00b7 '+new Date(started*1000).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'';
+  box.innerHTML=checkV2Html(checkV2From(d,{name:name||'Check',when}));
+  // The sheet covers 96 percent of the screen (owner ruling 08-04).
+  const lift=()=>{ const sh=document.querySelector('.sheet.on')||document.querySelector('.sheet'); if(sh){ const sc=window.scrollY||document.documentElement.scrollTop||0; sh.style.top=(sc+window.innerHeight*0.04)+'px'; sh.style.height=(window.innerHeight*0.96+120)+'px'; } }; setTimeout(lift,120); setTimeout(lift,700);
+}
 // Settings → the one global default workflow.
 async function loadDefaultWorkflow(){
   await loadWorkflows();

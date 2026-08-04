@@ -138,15 +138,27 @@ export async function persistReceipt(r: Receipt): Promise<void> {
  * time we know what the clerk said the receipt is closed and flushed. It is appended directly, at
  * the second the call ended, so a replay finishes with the answer the customer got. Never throws.
  */
-export async function recordVerdict(callId: number, statusKey: string | null, summary: string | null, atSec: number): Promise<void> {
+export async function recordVerdict(
+  callId: number, statusKey: string | null, summary: string | null, atSec: number,
+  // WHAT THE TESTING SCREEN READS AND NOTHING WROTE (owner 08-04): the second read as its own step
+  // before the status, with the model that read it and what it cost; whose words decided the
+  // status; and charged or not charged as the LAST step of the check. All optional, so every older
+  // caller keeps writing exactly the verdict it always wrote.
+  extra?: { secondReadModel?: string | null; secondReadUsd?: number; decidedBy?: string | null; charged?: boolean | null },
+): Promise<void> {
   try {
     const room = (await db.select({ room: callResults.room }).from(callResults).where(eq(callResults.id, callId)))[0]?.room;
-    await db.insert(callEvents).values({
-      callId, room: room ?? "", atMs: Math.max(0, atSec) * 1000, atSec: Math.max(0, atSec),
-      kind: "verdict",
-      note: summary?.slice(0, 300) || `Answer: ${statusKey ?? "unclear"}`,
-      detail: JSON.stringify({ statusKey }),
+    const at = Math.max(0, atSec);
+    const rowFor = (kind: string, note: string, detail: Record<string, unknown>, order: number) => ({
+      // The same final second, a breath of milliseconds apart, so the three read in this order and
+      // never shuffle under an ORDER BY on the clock.
+      callId, room: room ?? "", atMs: at * 1000 + order, atSec: at, kind, note: note.slice(0, 300), detail: JSON.stringify(detail),
     });
+    const rows = [];
+    if (extra?.secondReadModel) rows.push(rowFor("unknown", "The answer was double checked", { step: "second_read", model: extra.secondReadModel, costUsd: extra.secondReadUsd ?? 0 }, 0));
+    rows.push(rowFor("verdict", summary?.slice(0, 300) || `Answer: ${statusKey ?? "unclear"}`, { statusKey, ...(extra?.decidedBy ? { decidedBy: String(extra.decidedBy).slice(0, 200) } : {}) }, 1));
+    if (extra?.charged != null) rows.push(rowFor("unknown", extra.charged ? "Customer charged" : "Customer not charged", { step: "charged", charged: extra.charged }, 2));
+    await db.insert(callEvents).values(rows);
   } catch (e) { console.error("[receipt] verdict not recorded:", e); }
 }
 

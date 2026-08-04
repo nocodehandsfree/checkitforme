@@ -23,6 +23,7 @@ import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { tuningForAdmin, callTuning } from "./calls/tuning"; // the numbers the owner tunes, and every other number a check reads
+import { costBuckets } from "./calls/cost";
 import { importZonesData, geocodeMissing, backfillDirectChains, isDirectDefaultChain } from "./db/import-data";
 import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, billableOutcome, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, notifyAfterVerdict, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, transcriptPatch, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus, learnedSyncTick, learnedSyncStatus } from "./store-sync";
@@ -43,7 +44,7 @@ import { emit, markNow, closeReceipt, linkCall, rollup, rollupFromRow, getReceip
 import { installReceiptStore, currentRates, onReceiptClosed } from "./calls/receipt-store";
 import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
-import { behaved, agentLinesFrom } from "./calls/behaved";
+import { behaved, agentLinesFrom, TEST_CARDS } from "./calls/behaved";
 import { opsRollup, type CheckRow } from "./calls/ops";
 import { startMapper, stopMapper, mapperState, resumeMapperRuns } from "./calls/mapper";
 import { storeMetUnknownMenu, muteStore, unmuteStore, healOnce } from "./calls/healing";
@@ -6381,6 +6382,47 @@ app.get("/api/admin/receipt/:room", async (c) => {
   const readable = (cost: { totalUsd: number; charlieUsd: number; lineUsd: number; forkUsd?: number; avoidableUsd: number }) =>
     ({ total: money(cost.totalUsd), charlie: money(cost.charlieUsd), line: money(cost.lineUsd),
        menu: money(cost.lineUsd + (cost.forkUsd ?? 0)), wasted: money(cost.avoidableUsd) });
+  // EVERYTHING THE OWNER'S APPROVED SHEET READS AND THE RAW RECORD DOES NOT SAY (owner 08-04):
+  // which of his 16 locked cards this check ran, the cost split into his five buckets off the rates
+  // in force, the profit against his 67 percent floor, and the workflow bubble. Built server side so
+  // no rate and no card string is ever typed into the page.
+  const v2For = async (timeline: Array<{ kind: string; atSec?: number | null; detail?: Record<string, unknown> | null }>, sums: Rollup | null, cost: { totalUsd: number; lineUsd: number; forkUsd?: number; charlieUsd: number; clipsUsd?: number; billedMinutes?: number; charlieSecs?: number } | null, retailerId?: number | null) => {
+    const stepOf = (name: string) => timeline.find((e) => (e.detail || {}).step === name) || null;
+    const named = stepOf("named_test");
+    const card = named ? TEST_CARDS[String((named.detail || {}).card || "")] ?? null : null;
+    const readStep = stepOf("second_read");
+    const readUsd = readStep ? Number((readStep.detail || {}).costUsd ?? 0) : 0;
+    const buckets = cost ? costBuckets(
+      { ...cost, forkUsd: cost.forkUsd ?? 0, clipsUsd: cost.clipsUsd ?? 0, billedMinutes: cost.billedMinutes ?? Math.ceil((sums?.callSecs ?? 0) / 60), charlieSecs: cost.charlieSecs ?? sums?.charlieConnectedSeconds ?? 0, avoidableUsd: 0, totalUsd: cost.totalUsd },
+      { callSecs: sums?.callSecs ?? 0, navSecs: sums?.navSeconds ?? null, streams: 2 },
+      await currentRates(), readUsd,
+    ) : [];
+    const totalUsd = (cost?.totalUsd ?? 0) + readUsd;
+    const priceUsd = ((await getPolicy()).pricing.perCallCents / 100) * 1_000_000;
+    // The workflow bubble: the same store to chain to default resolution every call uses.
+    let workflow: { name: string; d: Array<[string, string]> } | null = null;
+    try {
+      const [storeS, chainS, defS, libS] = await Promise.all([
+        getSetting("vt_store_workflows"), getSetting("vt_chain_workflows"), getSetting("vt_default_workflow"), getSetting("vt_workflows"),
+      ]);
+      const pj = (x: string | null) => { try { return x ? JSON.parse(x) : {}; } catch { return {}; } };
+      const byStore = pj(storeS) as Record<string, string>, byChain = pj(chainS) as Record<string, string>;
+      const lib = (pj(libS) || []) as Array<{ name: string; tuning?: Record<string, unknown>; openers?: string[]; personality?: string }>;
+      const st = retailerId ? (await retailerMap()).get(retailerId) : null;
+      const wfName = (retailerId && byStore[String(retailerId)]) || (st?.chainId != null && byChain[String(st.chainId)]) || defS || "";
+      const wf = lib.find((w) => w.name === wfName) || (Array.isArray(lib) ? lib[0] : null);
+      if (wf) workflow = { name: wf.name, d: [
+        ["Voice", String(wf.tuning?.speed != null ? `Branson HD · speed ${wf.tuning.speed}` : "the workflow's voice")],
+        ["Personality", String(wf.personality || "none")],
+        ["Model", String(wf.tuning?.llm || "")],
+        ["Voice engine", String(wf.tuning?.modelId || "")],
+        ["Openers", `${(wf.openers || []).length || 1} rotating`],
+      ].filter((r) => r[1]) as Array<[string, string]> };
+    } catch { /* the bubble is decoration; the check renders without it */ }
+    return { test: card, buckets, totalUsd, readable: money(totalUsd),
+      profitPct: totalUsd > 0 && priceUsd > 0 ? Math.round(((priceUsd - totalUsd) / priceUsd) * 100) : null,
+      talkSec: sums?.charlieConnectedSeconds ?? null, workflow };
+  };
   const live = getReceipt(room);
   if (live && !live.closed) {
     const sums = rollup(live);
@@ -6405,6 +6447,7 @@ app.get("/api/admin/receipt/:room", async (c) => {
       // to end log of the entire transaction which is huge for myself and any agent"). The steps were
       // already here; what was missing was the conversation itself, which is half of what he reads.
       lines: live.transcript.map((l) => ({ who: l.who, text: l.text, atSec: Math.round(l.atMs / 1000) })),
+      v2: await v2For(timeline, sums, cost, (await db.select({ rid: callResults.retailerId }).from(callResults).where(eq(callResults.room, room)).limit(1))[0]?.rid ?? null),
     });
   }
   const rows = await db.select().from(callEvents).where(eq(callEvents.room, room)).orderBy(callEvents.atMs);
@@ -6451,6 +6494,7 @@ app.get("/api/admin/receipt/:room", async (c) => {
       const m = /^(Agent|Clerk|Staff):\s*(.*)$/i.exec(l);
       return m ? { who: /agent/i.test(m[1]) ? "Agent" : "Clerk", text: m[2], atSec: null } : { who: "Clerk", text: l, atSec: null };
     }),
+    v2: await v2For(timeline, seconds, cost, attached?.retailerId ?? null),
   });
 });
 app.get("/api/admin/call-timing", async (c) => {
