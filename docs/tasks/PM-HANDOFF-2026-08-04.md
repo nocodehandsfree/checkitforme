@@ -48,9 +48,15 @@
    "Customer charged" on the owner's free account (row says not charged) · robot-run-a/b/c/d
    screenshot folders committed at repo root (sprawl) · the rig's model stub only speaks one
    model's answer shape, so the whole-chain scene false-fails when a GEMINI key is set.
-2. **He grades the 16 tests one at a time** with an agent when the build lands.
-3. **Mapper gets Charlie for mapping stores ASAP** — he is waiting on this. Transfer switch stays
-   ON globally (mapper needs it); per-chain control is roadmap.
+2. **OWNER RULING 08-04, after the audit: nothing is tested until Charlie can wrap up.** Echo fixes
+   the goodbye first (the box is out). THEN the owner walks every test one at a time: the agent
+   runs it, he opens the check and reads the transcript himself. Faults the walk surfaces (the
+   words thrown away after a hold, the vague-yes read flipping) get fixed inside that walk, his
+   order, one at a time.
+3. **Mapper waits until Charlie works perfectly and ALL tests pass** (owner ruling 08-04 — replaces
+   "ASAP"). On a mapping run Charlie only comes on at the very end, to prove the department once
+   the right one is reached; that proof is what lets the run optimize for speed and lock the
+   recipe, so a half-working Charlie poisons the lock. Transfer switch stays ON globally.
 4. **The code rearrangement audit** (claude/refactor-server-routes-zbi8kp, PR #108, ~9,000 moved
    lines, NEVER audited). Route parity → registration order → which routes lost their lock. The
    owner wants the refactor finished soon and asked to be held accountable.
