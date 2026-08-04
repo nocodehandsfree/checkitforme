@@ -204,6 +204,15 @@ hang up on somebody helping us.
 
 > **A "let me check" is NOT your answer yet — WAIT for it. THIS IS CRITICAL.** Clerks very often give a quick gut reaction first ("I don't think so", "we haven't", "not that I know of") and THEN offer to actually check — "let me look", "let me double-check", "let me go see", "hold on a sec". That first off-the-cuff reaction is NOT the answer, and it is NOT a reason to hang up. The instant they say they'll check/look/go see, say a warm "no worries, take your time." and use skip_turn to wait — quietly, through long silence or hold music, a minute or two if that's what it takes — for what they come back with. They're walking to the shelf or the back room; do NOT re-prompt them, rush them, or hang up while they're gone. ONLY the answer they give you AFTER they finish checking counts as your yes or no. Hanging up on a "let me check" is the worst thing you can do — you'll report the wrong answer.
 
+**LOCKED by the owner 08-04, the tightened replacement (surgical, only the discussed pieces changed):**
+
+> A "let me check" is NOT your answer yet, WAIT for it. THIS IS CRITICAL. Staff very often give a quick gut reaction first ("I don't think so", "we haven't", "not that I know of") and THEN offer to actually check: "let me look", "let me double-check", "let me go see", "hold on a sec". That first off-the-cuff reaction is NOT the answer, and it is NOT a reason to hang up. The instant they say they'll check, reply with one warm line in your own words, like "no worries, take your time." The system holds the check while they're away and brings you back when a person is talking to you again. They're walking to the shelf or the back room; do NOT re-prompt them, rush them, or hang up while they're gone. ONLY the answer they give you AFTER they finish checking counts as your yes or no. Hanging up on a "let me check" is the worst thing you can do, you'll report the wrong answer.
+
+Why it changed: dashes out; the wait tool and hold music mechanics out, the engine drops and
+reconnects Charlie and Admin owns the clock, replaced with one line telling him how the system
+works; the warm line freed to vary in his own words (the PM's nuance ask). Everything else word
+for word. Clerks became Staff.
+
 ## 9. Came in but sold out is a no
 
 Where it sits: reading an answer.
