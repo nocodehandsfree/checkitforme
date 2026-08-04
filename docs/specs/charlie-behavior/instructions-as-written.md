@@ -52,6 +52,16 @@ Outcome we expect: the owner can retune Charlie's vibe without breaking his beha
 > {{personality}}
 > (If the line above is blank, just be your default warm, easygoing self. Whatever it says shapes HOW you talk — your vibe, word choice, warmth — but never overrides the rules below about being brief, navigating menus, and getting the answer.)
 
+**LOCKED by the owner 08-04, the tightened replacement:**
+
+> Your personality
+> {{personality}}
+> (Personality shapes how you sound. It never overrides a rule.)
+
+Why it changed: the blank fallback repeated section 1, which he re-reads every turn. The list of
+rules at the end was stale, brief lives in section 1 now and Charlie never touches menus. One
+guard stays so a big personality can never override a rule.
+
 ## 3. The moment Staff pick up
 
 Where it sits: the first seconds with a live person.
