@@ -419,8 +419,10 @@
   .sheet.on{transform:translate(-50%,0)}
   /* ONE grab handle, the same part the site uses (44x6 at 40% white). Admin had its own 40x5 at 16%. */
   .sheet .grab{align-self:center;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:10px 0 6px;flex:0 0 auto}
-  .sheet .sh-title{font-size:20px;font-weight:800;letter-spacing:-.3px;margin:4px 0 2px}
-  .sheet .sh-sub{font-size:12px;font-weight:600;color:#8A8A96;margin-bottom:6px}
+  /* CENTRED HEADERS ON EVERY SLIDE-UP (owner, 08-03) — left-aligned they read as the start of a
+     paragraph; centred they read as the name of what you just opened. */
+  .sheet .sh-title{font-size:20px;font-weight:800;letter-spacing:-.3px;margin:4px 0 2px;text-align:center}
+  .sheet .sh-sub{font-size:12px;font-weight:600;color:#8A8A96;margin-bottom:6px;text-align:center}
   /* Scroll-end spacer. The sheet box deliberately overshoots 120px BELOW the viewport (that is what lets
      iOS ghost its rows through the toolbar), and Safari's own toolbar covers ~90px more. At 70px the last
      rows of a long sheet ended 128px UNDER the toolbar and could not be tapped at all: owner 07-28 could
@@ -1434,8 +1436,6 @@
           <div class="row" style="gap:8px;margin-top:16px;flex-wrap:wrap">
             <button class="act" id="set_mapbtn" onclick="setMapChain()">Map</button>
             <button class="ghost" id="set_mapstop" onclick="mapperStop()" style="display:none">Stop</button>
-            <button class="ghost" onclick="mapFreeDoors()">Free doors</button>
-            <button class="ghost" onclick="mapStartOver()">Start over</button>
           </div>
           <div class="meta" id="set_mapnote" style="margin-top:10px;text-transform:none;letter-spacing:0;line-height:1.5"></div>
           <div class="card" id="mapper_live" style="display:none;border-color:var(--tint-purple-border);margin-top:12px">
@@ -2495,7 +2495,9 @@ async function mapperPoll(){
   box.style.display='';
   if(stopBtn) stopBtn.style.display=run.running?'':'none';
   if(loopBtn) loopBtn.disabled=!!run.running;
-  const PHASE={map:'Mapping menu',speed:'Optimizing speed',locked:'Locked ✓',stopped:'Stopped'};
+  // The live card names the same stages the checks do (owner, 08-03): while the run is learning the
+  // menu it is proving the department — that is one job, not two.
+  const PHASE={map:'Proving department',speed:'Optimizing speed',locked:'Locked ✓',stopped:'Stopped'};
   document.getElementById('mapper_phase').textContent=PHASE[run.phase]||run.phase;
   document.getElementById('mapper_meta').textContent='call '+run.attempt+' · '+run.callsToday+'/12 today'+(run.running?'':' · done');
   const best=run.best&&run.best.seconds!=null?run.best.seconds+'s':'—';
@@ -5130,44 +5132,53 @@ function dayWords(d){
 // his head every time. So the checks that MOVED US FORWARD are rungs on one timeline — each with its
 // heading, its time and what it gained — and a check that changed nothing is a small dot carrying its
 // reason, tappable, never a full-width row competing with the ones that counted.
+// Just the time of day. A run happens inside a day, so the date is said ONCE for the whole run
+// (owner, 08-03) and each rung carries only its clock time.
+function clockOf(at){ return at?new Date(Number(at)*1000).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):''; }
+function dateOf(at){ return at?new Date(Number(at)*1000).toLocaleDateString([],{month:'short',day:'numeric'}):''; }
 function runTimelineHtml(calls,gains){
   const list=(calls||[]).slice().sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0));
   if(!list.length) return '';
+  const runDate=dateOf(list[0].at);
   const rows=list.map((c,i)=>{
     const last=i===list.length-1;
     const navS=(typeof c.transferAtSec==='number'&&c.transferAtSec>0)?c.transferAtSec:null;
     const gain=gains.get(c);
-    const spine=(dotColor,big)=>`<div style="display:flex;flex-direction:column;align-items:center;flex:0 0 auto;padding-top:5px">`
-      +`<span style="width:${big?9:6}px;height:${big?9:6}px;border-radius:50%;background:${dotColor}"></span>`
-      +(last?'':`<span style="width:2px;flex:1;background:rgba(255,255,255,.10);margin:3px 0"></span>`)+`</div>`;
+    // EVERY DOT THE SAME SIZE, and the line meets the dot with no gap (owner, 08-03).
+    const spine=(dotColor)=>`<div style="display:flex;flex-direction:column;align-items:center;flex:0 0 auto;padding-top:5px">`
+      +`<span style="width:8px;height:8px;border-radius:50%;background:${dotColor}"></span>`
+      +(last?'':`<span style="width:2px;flex:1;background:rgba(255,255,255,.10);margin:0"></span>`)+`</div>`;
     if(c.grade==='fail'){
       const bid='rt_'+(c.navId||Math.abs(Number(c.at)||0));
       return `<div style="display:flex;gap:12px;cursor:pointer" onclick="mapCheckOpen('${bid}')">`
-        +spine('#F87171',false)
+        +spine('#F87171')
         +`<div style="flex:1;min-width:0;padding-bottom:${last?'0':'14px'}">`
-        +`<div style="display:flex;align-items:baseline;gap:8px">`
+        +`<div style="line-height:1.35">`
+        +`<div style="font-size:12.5px;font-weight:700;color:var(--muted)">${esch(c.store||'A store')}</div>`
+        +`<div style="display:flex;align-items:baseline;gap:8px;margin-top:2px">`
         +`<span style="font-size:11.5px;font-weight:700;color:#F87171">${esch(c.reason||'did not move us forward')}</span>`
-        +`<span style="margin-left:auto;font-size:11.5px;font-weight:700;color:var(--text-tertiary);flex:0 0 auto">${callWhen(c.at)}</span></div>`
+        +`<span style="margin-left:auto;font-size:11.5px;font-weight:700;color:var(--text-tertiary);flex:0 0 auto">${clockOf(c.at)}</span></div></div>`
         +`<div id="${bid}" style="display:none"><div class="mladder" style="margin-top:10px">${callRungs(c).map((r,j,a)=>callRung(r,j===a.length-1)).join('')}</div></div>`
         +`</div></div>`;
     }
-    const words=c.reachedHuman?['Reached staff','var(--green)']:c.endedOnRing?['Admin hung up','#FFCB05']:['Nobody answered','#F59E0B'];
+    const pill=stagePill(c);
     const bid='rt_'+(c.navId||Math.abs(Number(c.at)||0));
     return `<div style="display:flex;gap:12px;cursor:pointer" onclick="mapCheckOpen('${bid}')">`
-      +spine(words[1],true)
+      +spine(pill[1])
       +`<div style="flex:1;min-width:0;padding-bottom:${last?'0':'14px'}">`
       +`<div style="display:flex;align-items:baseline;gap:8px">`
-      +`<span style="font-size:13.5px;font-weight:700;color:#fff">${esch(stageWord(c)||'Mapping menu')}</span>`
-      +`<span style="margin-left:auto;font-size:11.5px;font-weight:700;color:var(--text-tertiary);flex:0 0 auto">${callWhen(c.at)}</span></div>`
-      +`<div style="display:flex;align-items:center;gap:8px;margin-top:5px">`
-      +`<span style="font-size:11.5px;font-weight:700;color:${words[1]}">${words[0]}</span>`
+      +`<span style="font-size:13.5px;font-weight:700;color:${pill[1]}">${esch(pill[0])}</span>`
+      +(gain>0?`<span style="margin-left:auto;font-size:11.5px;font-weight:700;color:var(--green);flex:0 0 auto">${gain}s faster</span>`:'')+`</div>`
+      +`<div style="display:flex;align-items:center;gap:8px;margin-top:4px">`
+      +`<span style="font-size:11.5px;font-weight:700;color:var(--text-tertiary)">${clockOf(c.at)}</span>`
       +(navS!=null?`<span style="font-size:11.5px;font-weight:700;color:var(--muted)">${navS}s</span>`:'')
-      +(gain>0?`<span style="font-size:11.5px;font-weight:700;color:var(--green)">${gain}s faster</span>`:'')
       +(c.madeUp?`<span style="font-size:10.5px;font-weight:800;color:#F59E0B">made up, no check happened</span>`:'')+`</div>`
       +`<div id="${bid}" style="display:none"><div class="mladder" style="margin-top:10px">${callRungs(c).map((r,j,a)=>callRung(r,j===a.length-1)).join('')}</div></div>`
       +`</div></div>`;
   }).join('');
-  return `<div class="card" style="margin:0 0 10px;padding:16px 16px">${rows}</div>`;
+  return `<div class="card" style="margin:0 0 10px;padding:16px 16px">`
+    +(runDate?`<div style="text-align:center;font-size:11px;font-weight:700;color:var(--text-tertiary);margin-bottom:12px">${runDate}</div>`:'')
+    +rows+`</div>`;
 }
 
 function mappingCallsHtml(calls,versions){
@@ -5199,7 +5210,8 @@ function gainByCheck(calls){
   const list=(calls||[]).slice(), nav=checkNavSecs(list);
   const order=list.map((c,i)=>({c,i})).sort((a,b)=>((Number(a.c.at)||0)-(Number(b.c.at)||0))||(a.i-b.i));
   const out=new Map(); let prev=null;
-  for(const x of order){ if(x.c.grade==='fail') continue; const n=nav[x.i]; if(n==null) continue; if(prev!=null) out.set(x.c,prev-n); prev=n; }
+  for(const x of order){ if(x.c.grade==='fail') continue; const n=nav[x.i]; if(n==null) continue;
+    if(prev!=null){ out.set(x.c,prev-n); if(prev-n>0) x.c.gainedSpeed=true; } prev=n; }
   return out;
 }
 function mapCallsMore(btn){
@@ -5212,9 +5224,21 @@ function mapCheckOpen(id){ const el=document.getElementById(id); if(el) el.style
 // THE THREE HEADINGS, and which one a check gets (comp 3a; owner 08-03). Proving the department is
 // not a round of its own any more — it happens on the FIRST check of a run, the one that walks the
 // whole menu and asks Staff about the product. So a check that asked is headed Proving department;
-// the listening checks that follow are Mapping menu; the speed tries are Optimizing speed.
-const STAGE_WORD={map:'Mapping menu',speed:'Optimizing speed'};
-const stageWord=c=>(c&&c.stage==='map'&&c.askedStaff)?'Proving department':(STAGE_WORD[c&&c.stage]||'');
+// THE PILL CARRIES THE STAGE, NOT THE OUTCOME (owner, 08-03), and it is the only word on the row.
+// The heading for learning the menu is retired: learning it and proving the department are the same
+// work, so every check reads Proving department over and over until it is actually proved. Nothing
+// is green until it IS proved — that check reads Department proved. Speed tries stay yellow until
+// one lands, and that one reads Speed optimized. Both new words are in the Statuses list.
+const stagePill=c=>{
+  if(!c) return ['Proving department','#FFCB05','rgba(255,203,5,.13)'];
+  if(c.stage==='speed') return c.grade!=='fail'&&c.gainedSpeed
+    ? ['Speed optimized','var(--green)','rgba(74,222,128,.13)']
+    : ['Optimizing speed','#FFCB05','rgba(255,203,5,.13)'];
+  return (c.askedStaff&&c.grade!=='fail'&&c.reachedHuman)
+    ? ['Department proved','var(--green)','rgba(74,222,128,.13)']
+    : ['Proving department','#FFCB05','rgba(255,203,5,.13)'];
+};
+const stageWord=c=>stagePill(c)[0];
 // One check: who we rang and when, its stage, how it ended, the conversation (comp 3a). A failed
 // check collapses to one row carrying its reason — tap to open. No PRODUCED line: the top passing
 // check IS the winner and its pill says so.
@@ -5224,7 +5248,10 @@ function mappingCallCard(c,gain){
   // the whole call with Staff's pickup time inside it. A check that never measured it shows nothing.
   const navS=(typeof c.transferAtSec==='number'&&c.transferAtSec>0)?c.transferAtSec:null;
   const stage=stageWord(c);
-  const ladder=`<div class="mladder" style="margin-top:13px">${rungs.map((r,i,a)=>callRung(r,i===a.length-1)).join('')}</div>`;
+  // THE DATE AND TIME SIT IMMEDIATELY ABOVE THE TRANSCRIPT, not on the row (owner, 08-03) — the row
+  // carries the stage and the gain, and nothing else competes with them.
+  const ladder=`<div style="margin-top:13px;font-size:11px;font-weight:700;color:var(--text-tertiary)">${callWhen(c.at)}</div>`
+    +`<div class="mladder" style="margin-top:6px">${rungs.map((r,i,a)=>callRung(r,i===a.length-1)).join('')}</div>`;
   if(c.grade==='fail'){
     const why=c.reason||'did not move us forward';
     const bid='chk_'+(c.navId||Math.abs(Number(c.at)||0));
@@ -5238,18 +5265,16 @@ function mappingCallCard(c,gain){
       +`<div id="${bid}" style="display:none">${stage?`<div style="font-size:11px;font-weight:700;color:#8A8A96;margin-top:10px">${stage}</div>`:''}${ladder}</div></div>`;
   }
   // GREEN ONLY FOR A CONFIRMED RIGHT DEPARTMENT (Update 16). Yellow is neutral, red is bad.
-  const pill=c.reachedHuman?['Reached staff','var(--green)','rgba(74,222,128,.13)']
-    :c.endedOnRing?['Admin hung up','#FFCB05','rgba(255,203,5,.13)']
-    :['Nobody answered','#F59E0B','rgba(245,158,11,.13)'];
+  const pill=stagePill(c);
   return `<div class="card" style="margin:0 0 10px">`
-    +`<div style="display:flex;align-items:baseline;gap:8px">`
-    +`<div style="font-size:13.5px;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(c.store||'A store')}</div>`
-    +`<div style="font-size:11.5px;font-weight:700;color:var(--text-tertiary);flex:0 0 auto">${callWhen(c.at)}</div></div>`
-    +(stage?`<div style="font-size:11px;font-weight:700;color:#8A8A96;margin-top:8px">${stage}</div>`:'')
+    // THE STORE'S FULL NAME, wrapping if it needs to. Cutting it off buried which store a check was.
+    +`<div style="display:flex;align-items:flex-start;gap:8px">`
+    +`<div style="font-size:13.5px;font-weight:700;flex:1;min-width:0;line-height:1.35">${esch(c.store||'A store')}</div>`
+    // TOP RIGHT IS THE ONE GAIN PILL, and nothing else.
+    +(gain>0?`<span style="font-size:11.5px;font-weight:700;color:var(--green);flex:0 0 auto">${gain}s faster</span>`:'')+`</div>`
     +`<div style="display:flex;align-items:center;gap:8px;margin-top:8px">`
     +`<span class="pill" style="gap:6px;background:${pill[2]}">${ssDot(pill[1])}<span style="color:${pill[1]}">${pill[0]}</span></span>`
     +(navS!=null?`<span style="font-size:11.5px;font-weight:700;color:var(--muted)">${navS}s</span>`:'')
-    +(gain>0?`<span style="font-size:11.5px;font-weight:700;color:var(--green)">${gain}s faster</span>`:'')
     // A CHECK THAT DID NOT HAPPEN SAYS SO. Nothing on this page may look like a real check unless it was.
     +(c.madeUp?`<span style="font-size:10.5px;font-weight:800;color:#F59E0B">made up, no check happened</span>`:'')+`</div>`
     +ladder+`</div>`;
@@ -5468,8 +5493,12 @@ function routeRungs(ch,nav,DASH){
   // Menu, so no greeting and no menu copy rides up here.
   const steps=chainSteps(ch), rungs=[];
   steps.forEach(st=>rungs.push({at:st.at!=null?st.at+'s':'',t:st.t}));
+  // THE LAST RUNG NAMES THE DESK IT RINGS (owner, 08-03): "Rings to front store", not just "the
+  // desk". The department is the word we said to get there — the last thing we spoke on the way in.
+  const spoke=[...steps].reverse().find(st=>/^Says "/.test(String(st.t||'')));
+  const desk=spoke?String(spoke.t).replace(/^Says\s+"|"$/g,'').trim():'';
   if(!steps.length) rungs.push({t:'Staff answer the line',at:'',tc:'var(--green)'});
-  else rungs.push({at:(nav!=null?nav+'s':''),t:'Rings the desk',tc:'var(--green)'});
+  else rungs.push({at:(nav!=null?nav+'s':''),t:desk?`Rings to ${desk}`:'Rings the desk',tc:'var(--green)'});
   return rungs;
 }
 // ONE read of a chain's map, shared by the menu, the status line and the waiting-route card. Three
@@ -5645,32 +5674,8 @@ function setBackToChains(){
   const sel=document.getElementById('set_chain'); if(sel) sel.value='';
   try{ document.getElementById('trees').scrollIntoView({behavior:'smooth',block:'start'}); }catch(_){ }
 }
-// FREE THE DOORS the engine refuses to try again. Three things go: the ways in it marked wrong, the
-// desks whose one question is spent, the changes it remembers as never worth trying. Nothing else.
-async function mapFreeDoors(){
-  const id=Number((document.getElementById('set_chain')||{}).value||0); if(!id){ toast('Pick a chain first'); return; }
-  const ok=await askSheet('Free the doors on this chain?',[
-    'The ways in it decided were wrong, and the desks it already asked, become fair game again.',
-    'The recipe, the checks and the menu all stay exactly as they are.',
-  ],'Free doors');
-  if(!ok) return;
-  const r=await api('/api/admin/map/chain/'+id+'/free-doors',{method:'POST'});
-  if(!r||r.error){ toast(mapWriteErr(r)); return; }
-  toast('Doors freed'); delete CHAIN_MAP[id]; await loadMapGraph(); await ssReload();
-}
-// START THIS CHAIN OVER, keeping the way in it runs today. Every check, every review item and every
-// older recipe goes; the live one stays so real checks never change.
-async function mapStartOver(){
-  const id=Number((document.getElementById('set_chain')||{}).value||0); if(!id){ toast('Pick a chain first'); return; }
-  const ok=await askSheet('Start this chain over?',[
-    'Every mapped check, review item and older recipe is cleared.',
-    'The way in it runs today stays, so real checks carry on unchanged.',
-  ],'Start over');
-  if(!ok) return;
-  const r=await api('/api/admin/map/chain/'+id+'/reset',{method:'POST'});
-  if(!r||r.error){ toast(mapWriteErr(r)); return; }
-  toast('History cleared'); delete CHAIN_MAP[id]; await loadMapGraph(); await ssReload();
-}
+// FREE DOORS and START OVER are DELETED (owner, 08-03). He never asked for either; they came from a
+// previous project manager. Map re-maps a chain, which is all he asked for.
 // Map the selected chain: the full mapping run, shown live in the Mapping card.
 // ONE mapping button (owner 07-27): "if we're going to re-map something it should follow the exact
 // same process every time, which includes making sure we can get through the menu the fastest."

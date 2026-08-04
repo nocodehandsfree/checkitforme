@@ -186,15 +186,6 @@ async function loadDeadDoors(chainId: number): Promise<Array<{ door: string; q?:
     return raw.map((e) => typeof e === "string" ? { door: e } : e).filter((e) => e && e.door);
   } catch { return []; }
 }
-/** Clearing the doors reaches a RUNNING run too (fix pass 6, item 8). A live run holds its own copy
- *  of the refusals and re-writes it after every check, so freeing the lists while it runs would be
- *  undone within a minute. Called by the clear itself. */
-export function forgetDoorsOnLiveRun(chainId: number): void {
-  const run = runs.get(chainId);
-  if (!run) return;
-  run.doorsDead = []; run.doorsDeadQ = {}; run.neverAgain = [];
-  run.log.push({ n: run.attempt, phase: run.phase, store: run.store?.name || "", outcome: "the doors were freed — every way in is fair game again" });
-}
 
 async function rememberDeadDoor(run: MapperRun, door: string, q?: string): Promise<void> {
   if (!run.doorsDead.includes(door)) run.doorsDead.push(door);
