@@ -97,7 +97,9 @@ def reader_check(root, text, timeout=75):
         "would on his phone. Fail it if any line needs decoding, breaks a numbered "
         "rule, uses a term that is not in the lexicon and not plainly explained, "
         "overexplains, or raises a non-issue. Judge only against the rules; do not "
-        "invent standards. Quoted DON'T examples inside the reply are not "
+        "invent standards. Rule 9 (the 15 line limit) is measured by a separate "
+        "machine count before you ever see the reply — never judge length or "
+        "wrapping yourself. Quoted DON'T examples inside the reply are not "
         "violations. Answer with ONLY this JSON, nothing else:\n"
         '{"pass": true|false, "failures": ["rule N: short plain reason", ...]}\n\n'
         "=== THE LOCKED REPLY RULES ===\n" + rules +
