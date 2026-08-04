@@ -186,6 +186,31 @@ export async function setPolicy(patch: Partial<Policy>): Promise<Policy> {
 }
 
 /** The subset safe to expose to the public consumer pages. */
+// THE THREE SHARE TEXTS THE OWNER CAN EDIT IN ADMIN (owner 08-02). They have been editable on the
+// Alerts page for a while and the site never read them, so every edit silently did nothing. The site
+// fetches this policy at boot already, so the edits ride along here and the page prefers them.
+// Admin writes ENGLISH only (its own rule), so a Spanish reader keeps the site's own Spanish.
+// Admin's token names differ from the site's, so they are translated here, once, not in six places.
+const SHARE_COPY_KEYS: Array<{ admin: string; site: string; tokens: Array<[string, string]> }> = [
+  { admin: "instock_share", site: "share.msg2", tokens: [["store", "s"], ["product", "p"]] },
+  { admin: "referral", site: "ref.msg2", tokens: [["product", "x"], ["reward", "r"]] },
+  { admin: "zone_instock", site: "zones.sharemsg2", tokens: [] },
+];
+async function editedShareCopy(): Promise<Record<string, string>> {
+  const out: Record<string, string> = {};
+  try {
+    const raw = JSON.parse((await getSetting("alerts_json")) || "{}") as Record<string, { sms?: string }>;
+    for (const k of SHARE_COPY_KEYS) {
+      const txt = (raw[k.admin] || {}).sms;
+      if (!txt || !txt.trim()) continue;                    // never edited: the site keeps its own words
+      let s = txt;
+      for (const [from, to] of k.tokens) s = s.split(`{${from}}`).join(`{${to}}`);
+      out[k.site] = s;
+    }
+  } catch { /* a bad override never costs the customer their words */ }
+  return out;
+}
+
 export async function publicPolicy() {
   const p = await getPolicy();
   return {
@@ -203,5 +228,6 @@ export async function publicPolicy() {
     links: p.links,
     support: p.support,
     ga4Id: p.ga4Id,
+    shareCopy: await editedShareCopy(),
   };
 }

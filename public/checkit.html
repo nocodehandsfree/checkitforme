@@ -3395,7 +3395,12 @@ Object.assign(I18N.es, {
 function tf(key,en,vars){ let s=t(key,en); if(vars) for(const k in vars) s=s.split('{'+k+'}').join(vars[k]); return s; }
 let LANG=localStorage.getItem('runnr_lang')||((navigator.language||'en').slice(0,2));
 if(LANG!=='en' && !I18N[LANG]) LANG='en';
-function t(key,en){ return (I18N[LANG]&&I18N[LANG][key])||en; }
+function t(key,en){
+  // The owner's Admin edits win for the three share texts (owner 08-02). They were editable on the
+  // Alerts page for a while and the site never read them, so saving did nothing. English only, which
+  // is Admin's own rule, so a Spanish reader still gets the site's Spanish.
+  if(LANG!=='es'){ try{ const o=(POLICY&&POLICY.shareCopy)||null; if(o&&o[key]) return o[key]; }catch(_){ } }
+  return (I18N[LANG]&&I18N[LANG][key])||en; }
 const HERO_I18N={es:{
   'Pokémon':'Pokémon <span class="g">¿en stock?</span><br>Lo verificamos por ti.',
   'One Piece TCG':'One Piece <span class="g">¿en stock?</span><br>Lo verificamos por ti.',
