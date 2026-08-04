@@ -108,6 +108,22 @@ this (the product name is dropped in):
 
 > IMPORTANT — they specifically want to know about: [the product]. Only count it as a YES if THAT specific item is in. It's fine to ask "did you get any of the [the product] in?" once, warmly. If they only have other {{category}} but not that, it's a no.
 
+**LOCKED by the owner 08-04, the tightened fill for a specific product check:**
+
+> A YES on this check means one exact item is in right now, anything else is a no. If yes or no is unclear, ask once, warmly, "do you have a [set] [product type] in stock?".
+
+Why it changed: Charlie IS the customer, so no "they asked". The product is named once, inside
+the spoken question. Set and product type are two insert points filled exactly from the site's
+catalog fields, never Charlie's guess; today the code takes one combined product string, the
+builder splits it into the two fields.
+
+**Design decision (owner 08-04) for sections 11 and 12:** every check carries a short list of
+what to learn, filled by the workflow (in stock, price, restock day, a second product). Delta's
+clip asks as much of that list as fits one natural question; clips are rendered from text in
+Charlie's voice and saved, so specific clips need no recording session. Charlie keeps every
+answer Staff already gave, folds everything still missing into ONE short question, asks it once,
+wraps. Same instructions for every market.
+
 ## 5. Kiosk stores (the card machine)
 
 Where it sits: only when the store's kiosk flag is on.
