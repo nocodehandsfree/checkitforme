@@ -369,9 +369,13 @@ async function main() {
     const odd: MapRecipe = { type: "keypad", seconds: 25, steps: [{ action: "press", value: "4", atSec: 7 }] };
     const quiet = await proposeVersion({ chainId: ch.id, storeId: 776, recipe: odd, source: "sweep",
       call: { at: now(), day: "2026-07-27", storeId: 776, seconds: 25, reachedHuman: true, path: "press:4" } });
-    ok(quiet.version.status === "proposed" && quiet.activated === false,
-      "a store that just answers differently WAITS for approval — the owner's rule holds");
-    ok((await activeMap(ch.id, 776))?.recipe.steps[0].value === "2", "and that store keeps running the chain route meanwhile");
+    // NOTHING WAITS FOR HIM (owner, 08-03). The chain route still works at this store, so there is
+    // nothing to decide: it keeps running the chain route, and what this store did is kept as Not
+    // used — visible in the history, on no list, asking for nothing.
+    ok(quiet.version.status === "rejected" && quiet.activated === false,
+      "a store that just answers differently is kept as Not used — nothing waits for approval");
+    ok(/Not used/.test(quiet.version.why || ""), `and it says why: "${quiet.version.why}"`);
+    ok((await activeMap(ch.id, 776))?.recipe.steps[0].value === "2", "and that store keeps running the chain route");
 
     // Store 777 has actually been FAILING on the chain route. Waiting there does harm, not good.
     await recordFailedAttempt({ chainId: ch.id, storeId: 777, reason: "the mapped route reached nobody" });

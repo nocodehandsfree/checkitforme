@@ -5380,7 +5380,17 @@ function gainByCheck(calls){
   const order=list.map((c,i)=>({c,i})).sort((a,b)=>((Number(a.c.at)||0)-(Number(b.c.at)||0))||(a.i-b.i));
   const out=new Map(); let prev=null;
   for(const x of order){ if(x.c.grade==='fail') continue; const n=nav[x.i]; if(n==null) continue;
-    if(prev!=null){ out.set(x.c,prev-n); if(prev-n>0) x.c.gainedSpeed=true; } prev=n; }
+    if(prev!=null) out.set(x.c,prev-n); prev=n; }
+  // GREEN MEANS THE WINNER, AND THERE IS ONE (owner, 08-04). It used to light on any speed try that
+  // beat the one before it, so a run with three improvements showed three greens all claiming to be
+  // the fastest. Only the single fastest speed check wears it: the one whose walk through the menu
+  // is the shortest of the whole run. Every other speed try stays yellow, however much it gained.
+  let best=null, bestN=null;
+  order.forEach((x)=>{ if(x.c.grade==='fail'||x.c.stage!=='speed') return;
+    const n=nav[x.i]; if(n==null) return;
+    if(bestN==null||n<bestN){ bestN=n; best=x.c; } });
+  (calls||[]).forEach(c=>{ c.gainedSpeed=false; });
+  if(best) best.gainedSpeed=true;
   return out;
 }
 function mapCallsMore(btn){

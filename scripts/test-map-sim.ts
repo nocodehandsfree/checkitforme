@@ -934,6 +934,34 @@ async function main() {
         "a proven door is exempt under either spelling — full phrase or its shortened winner");
     }
 
+    // A CHOICE MARKED WRONG EXPIRES WITH THE MENU IT WAS LEARNED ON (owner, phase 3 audit item 3).
+    // Re-mapping a store means learning the menu FRESH, so a mark learned on the menu we replaced must
+    // stop blocking the new map. Nothing is deleted — every mark stays on file, against the map it was
+    // learned on. Driven, not read: a real run is started against a chain with no stores, so it opens
+    // its menu number and then stops before it could dial anyone.
+    {
+      const { startMapper, mapperState } = await import("../src/calls/mapper");
+      const { setSetting: put, getSetting: get } = await import("../src/db/settings");
+      const [c5] = await db.insert(chains).values({ name: "Sim Remap Mart" }).returning();
+      await put(`map_remaps:${c5.id}`, "1");           // the map on file was learned on menu 1
+      await put(`map_doors_dead:${c5.id}`, JSON.stringify([
+        { door: "pharmacy", q: "Pharmacy or front store services?", menu: 1 },
+        { door: "photo", q: "Pharmacy or front store services?", menu: 2 },
+      ]));
+      await startMapper(c5.id);
+      const rm = mapperState().runs.find((x) => x.chainId === c5.id);
+      ok(rm?.menuNumber === 2, `a re-map opens a fresh menu number (got ${rm?.menuNumber})`);
+      ok(!!rm && !rm.doorsDead.includes("pharmacy"),
+        "the choice marked wrong on the old menu no longer blocks the fresh map — it is free to try it and learn it properly");
+      ok(!!rm && rm.doorsDead.includes("photo"),
+        "a choice marked wrong on the menu this run IS learning is still obeyed");
+      const onFile = JSON.parse((await get(`map_doors_dead:${c5.id}`)) || "[]") as Array<{ door: string }>;
+      ok(onFile.length === 2 && onFile.some((e) => e.door === "pharmacy"),
+        "and NOTHING is deleted — the old mark is still on file, still readable by the screen");
+      ok((await get(`map_remaps:${c5.id}`)) === "2",
+        "the menu number is durable, so the run picks up on the same menu after a restart");
+    }
+
     // FULL WORDS IN THE LEARN STAGE (contract stage 1). The learning call's own instructions must say
     // full phrase and let-the-question-finish — the shortest-word rule belonged to speed experiments,
     // which are plan-driven and never see this prompt.
