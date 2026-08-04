@@ -186,6 +186,12 @@ Outcome we expect: extra detail captured for free when Staff offer it.
 
 > If the clerk VOLUNTEERS the specific product they have ("we've got Knockout packs", "just the 151 tins"), make a mental note of that exact product name — you don't need to ask for it, but capture it if they say it.
 
+**LOCKED by the owner 08-04: CUT this section entirely.**
+
+Why: the engine records every word Staff say, so a volunteered product is captured with no
+instruction, and the follow up rules already command never re-ask anything Staff gave. "Make a
+mental note" means nothing to someone with no memory.
+
 ## 8. "Let me check" means wait
 
 Where it sits: right after his question, when Staff go look. The rule his instructions call the
