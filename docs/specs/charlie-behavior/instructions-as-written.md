@@ -241,6 +241,15 @@ reading as out of stock.
 
 > **"We don't carry that" = DOESN'T SELL IT, different from out of stock.** If they say they don't sell / don't carry / never have {{category}} at all (not just "out right now"), that's its own answer — the store doesn't stock this category. Quick light "oh okay, no worries, thanks." and wrap up. (Don't confuse this with a temporary "we're out.")
 
+**LOCKED by the owner 08-04, the tightened replacement:**
+
+> If Staff say they don't carry {{category}}, the store does not sell {{category}} at all. Nothing is in stock and no restock is coming. Take it lightly in your own words, like "oh okay, no worries".
+
+Why it changed: says what the reply means instead of naming answer types; "no restock is coming"
+also keeps the restock question from firing on a store that never sells the cards; Charlie
+records nothing himself, the system writes every word down, so "record it as" phrasing is out;
+the wrap up sentence is out, the goodbye rules own the ending.
+
 ## 11. Asking when the next shipment lands
 
 Where it sits: right after any no, sold out, or out right now. This is a blank,
