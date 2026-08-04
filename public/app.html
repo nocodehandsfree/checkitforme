@@ -6905,6 +6905,7 @@ function decorateChrome(){
 const AL_EVENTS=[
   ['restock','Restock','both','Fires on a confirmed restock, on the channel the customer picked. Texts count against their plan’s monthly cap.'],
   ['auto_check','Auto check results','both','Fires after each scheduled auto check, with what the call found.'],
+  ['auto_check_paused','Auto check paused','email','Fires when a store takes itself off the site and a standing auto check cannot run. One per pause, never once per skipped day.'],
   ['store_added','Store went live','email','Their requested store just went live. Grants a free check.'],
   ['waitlist','We’re live in your area','email','A waitlist signup’s area just launched.'],
   ['confirm_email','Confirm your email','email','Someone added an email. Nothing sends until they tap confirm.'],
