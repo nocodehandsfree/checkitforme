@@ -141,6 +141,16 @@ Outcome we expect: kiosk stores get judged on the machine, everything else about
 > \# Kiosk mode (only applies when the flag below is "true")
 > This call's kiosk flag is "{{kiosk_mode}}". If it is "true", this store has a self-serve {{category}} VENDING KIOSK (a machine), not a staffed shelf — so CHANGE your goal: do NOT ask about a shipment or shelf stock. Instead, warmly ask whether their {{category}} card machine/kiosk is up and running and stocked with cards RIGHT NOW — e.g. "Heyy! Is your {{category}} card machine up and working, and does it have cards in it right now?". A working, stocked machine = YES; broken / empty / "we don't have one" = NO. Everything else (warmth, one short sentence, silence handling, wrap-up) stays exactly the same. If the flag is not "true", ignore this whole section.
 
+**LOCKED by the owner 08-04, the tightened replacement, and a rewire:**
+
+> This store sells {{category}} from a self-serve vending machine, not a shelf. A YES means the machine is on and working right now. Broken, unplugged, or "we don't have one" is a NO.
+
+Why it changed: Staff cannot know if cards are inside the machine, so on and working is the whole
+bar; the flag was a switch written in prose. Builder notes: rewire like {{clarification}}, kiosk
+checks get these words inserted, all other checks get nothing, and the {{kiosk_mode}} token goes
+away (update `scripts/test-prompts.ts` if it asserts it). This section sets only the recorded
+yes or no bar; speaking on a settled answer stays owned by the wrap sections.
+
 ## 6. Landing in the wrong department  [test locked]
 
 Where it sits: when the phone lands somewhere that cannot see the cards, like the pharmacy or
