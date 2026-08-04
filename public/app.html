@@ -2491,14 +2491,14 @@ const MOCK_CHECK_V2={
   log:[
     {t:'Dialing MVP store', at:'0s'},
     {t:'Navigating menu (Bravo)', at:'2s', group:[{t:'Said "front"', at:'2s'},{t:'Menu finished, listening for a person', at:'4s'}]},
-    {t:'Staff greeting', at:'7s', say:{who:'Clerk', tx:"MVP's Pharmacy, this is Larry."}, open:true},
+    {t:'Staff greeting', at:'7s', say:{who:'Clerk', tx:"MVP's Pharmacy, this is Larry."}, open:true, c:'var(--green)'},
     {t:'Delta recording', at:'7s', say:{who:'Agent', tx:'Hi there! I was just checking, do you have any Pokémon cards in stock right now?'}},
     {t:'Charlie joined', at:'7s'},
     {t:'We reached the wrong department', at:'11s', c:'var(--yellow)'},
     {t:'Charlie asked to be put through', at:'13s', say:{who:'Agent', tx:'Oh gotcha, could you put me through to whoever handles the Pokémon cards?'}},
     {t:'Transferring to sporting goods', at:'18s', c:'var(--yellow)'},
     {t:'Charlie dropped, the meter stopped', at:'18s'},
-    {t:'Staff back after 21s, and it may not be the same person', at:'39s', c:'var(--green)'},
+    {t:'Staff back after 21s, and it may not be the same person', at:'39s'},
     {t:'Staff greeting', at:'40s', say:{who:'Clerk', tx:'Sporting goods, this is Dana.'}, c:'var(--green)'},
     {t:'Delta recording', at:'41s', say:{who:'Agent', tx:'Hi there! I was just checking, do you have any Pokémon cards in stock right now?'}},
     {t:'Staff answered', at:'45s', say:{who:'Clerk', tx:'We did not.'}},
@@ -2535,12 +2535,12 @@ function checkV2Html(d){
       ${d.behavior.map(r=>`<div class="row" style="align-items:center;padding:8px 0"><span class="grow" style="font-size:13.5px;font-weight:700;color:var(--text-strong)">${esch(r.l)}</span>${bmark(r.pass)}</div>`).join('')}
     </details>`;
   const say=(w,tx)=>{const ai=w==='Agent';return `<div class="convo-thread" style="margin:6px 0 2px"><div class="ctlv2-bub${ai?' ai':''}"><div class="who">${ai?'CHECK AI':'STAFF'}</div><div class="tx">${esch(tx)}</div></div></div>`;};
-  const menuIco='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8A8A96" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>';
-  const spkIco='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8A8A96" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5 8.38 8.38 0 0 1 8.5 8.5z"/></svg>';
+  const menuIco='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>';
+  const spkIco='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5 8.38 8.38 0 0 1 8.5 8.5z"/></svg>';
   const statusIco=t=>t==='out'?`<span style="width:22px;height:22px;border-radius:50%;background:rgba(239,68,68,.15);display:grid;place-items:center;flex:0 0 auto;margin-left:-4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>`:'';
   const rung=(e,last)=>{
-    const dot=e.status?statusIco(e.status):(e.say||e.group)?`<span style="display:grid;place-items:center;width:15px;height:15px;flex:0 0 auto">${e.group?menuIco:spkIco}</span>`:`<span style="width:9px;height:9px;border-radius:50%;background:${e.c||'var(--muted)'};flex:0 0 auto"></span>`;
-    const line=last?'':`<span style="width:2px;flex:1;background:rgba(255,255,255,.14);margin:3px 0"></span>`;
+    const dot=e.status?statusIco(e.status):(e.say||e.group)?`<span style="display:grid;place-items:center;width:15px;height:15px;flex:0 0 auto;color:${e.c||'#8A8A96'}">${e.group?menuIco:spkIco}</span>`:`<span style="width:9px;height:9px;border-radius:50%;background:${e.c||'var(--muted)'};flex:0 0 auto"></span>`;
+    const line=last?'':`<span style="width:2px;flex:1;background:rgba(255,255,255,.14)"></span>`;
     const title=`<span style="display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:${e.status?'800':'700'};color:${e.tc||(e.status?'#fff':'var(--text-strong)')}">${esch(e.t)}${(e.say||e.group)?chev:''}</span>`;
     const at=`<span style="margin-left:auto;font-size:12px;font-weight:700;color:var(--muted);flex:0 0 auto;font-variant-numeric:tabular-nums">${e.at||''}</span>`;
     let body='';
@@ -2559,7 +2559,7 @@ function checkV2Html(d){
   return `<div class="v2sheet">${head+stats+cost+behavior+logCard}</div>`;
 }
 function openMockCheckV2(){ openSheet('','',checkV2Html(MOCK_CHECK_V2));
-  setTimeout(()=>{ const sh=document.querySelector('.sheet.on'); if(sh){ const sc=window.scrollY||document.documentElement.scrollTop||0; sh.style.top=(sc+window.innerHeight*0.10)+'px'; sh.style.height=(window.innerHeight*0.90+120)+'px'; } },60); }
+  const lift=()=>{ const sh=document.querySelector('.sheet.on')||document.querySelector('.sheet'); if(sh){ const sc=window.scrollY||document.documentElement.scrollTop||0; sh.style.top=(sc+window.innerHeight*0.04)+'px'; sh.style.height=(window.innerHeight*0.96+120)+'px'; } }; setTimeout(lift,120); setTimeout(lift,700); }
 if((location.hash||'')==='#mockcheck'){ setTimeout(()=>{ try{ showSection('testing'); }catch(_){ } setTimeout(openMockCheckV2,700); },900); }
 
 // ---- Delta (Fun): rehearse the Delta lane — recorded clips + cheap classifier, no live agent ----
