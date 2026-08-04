@@ -2473,11 +2473,11 @@ const MOCK_CHECK_V2={
   passed:4, failed:1, unused:6,
   stats:{cost:'5.7¢', time:'1:02', talked:'18s', profit:'74%'},
   cost:[
-    {l:'Menu Nav (Bravo)', v:'0.4¢', d:[['Menu time','0:14'],['Rate (per minute)','1.7¢'],['Cost','0.4¢']]},
-    {l:'Phone line', v:'2.8¢', open:true, d:[['Line time','1:02'],['Rate (per minute)','1.4¢'],['Billed (minutes)','2:00'],['Cost','2.8¢']]},
-    {l:'Listening', v:'0.8¢', d:[['Line time','1:02'],['Rate (per minute)','0.8¢'],['Cost','0.8¢']]},
-    {l:'Charlie', v:'2.0¢', d:[['Talk time','0:18'],['Rate (per minute)','11¢'],['Cost','2.0¢']]},
-    {l:'Double check', v:'0.1¢', d:[['Read by','Haiku'],['Cost','0.1¢']]},
+    {l:'Bravo (Menu Nav)', v:'0.4¢', d:[['Menu time','0:14'],['Rate (per minute)','1.7¢'],['Cost','0.4¢']]},
+    {l:'Foxtrot (Phone Line)', v:'2.8¢', open:true, d:[['Line time','1:02'],['Rate (per minute)','1.4¢'],['Billed (minutes)','2:00'],['Cost','2.8¢']]},
+    {l:'Echo (Listening)', v:'0.8¢', d:[['Line time','1:02'],['Rate (per minute)','0.8¢'],['Cost','0.8¢']]},
+    {l:'Charlie (Talking)', v:'2.0¢', d:[['Talk time','0:18'],['Rate (per minute)','11¢'],['Covers','voice and thinking together'],['Cost','2.0¢']]},
+    {l:'Status (Verification)', v:'0.1¢', d:[['Read by','Haiku'],['Cost','0.1¢']]},
   ],
   behavior:[
     {l:'Asked to be transferred', pass:true},
@@ -2491,16 +2491,17 @@ const MOCK_CHECK_V2={
   log:[
     {t:'Dialing MVP store', at:'0s'},
     {t:'Navigating menu (Bravo)', at:'2s', group:[{t:'Said "front"', at:'2s'},{t:'Menu finished, listening for a person', at:'4s'}]},
-    {t:'Staff greeting', at:'7s', say:{who:'Clerk', tx:"MVP's Pharmacy, this is Larry."}, open:true, c:'var(--green)', tc:'var(--green)'},
+    {t:'Staff greeting', at:'7s', say:{who:'Clerk', tx:"MVP's Pharmacy, this is Larry."}, open:true},
     {t:'Delta recording', at:'7s', say:{who:'Agent', tx:'Hi there! I was just checking, do you have any Pokémon cards in stock right now?'}},
     {t:'Charlie joined', at:'7s'},
-    {t:'We reached the wrong department', at:'11s', c:'var(--yellow)', tc:'var(--text-strong)'},
+    {t:'We reached the wrong department', at:'11s', c:'var(--yellow)'},
     {t:'Charlie asked to be put through', at:'13s', say:{who:'Agent', tx:'Oh gotcha, could you put me through to whoever handles the Pokémon cards?'}},
     {t:'Transferring to sporting goods', at:'18s', c:'var(--yellow)'},
     {t:'Charlie dropped, the meter stopped', at:'18s'},
-    {t:'Staff back after 21s, and it may not be the same person', at:'39s', c:'var(--green)', tc:'var(--green)'},
-    {t:'Delta recording', at:'40s', say:{who:'Agent', tx:'Hi there! I was just checking, do you have any Pokémon cards in stock right now?'}},
-    {t:'Staff answered', at:'44s', say:{who:'Clerk', tx:'We did not.'}},
+    {t:'Staff back after 21s, and it may not be the same person', at:'39s', c:'var(--green)'},
+    {t:'Staff greeting', at:'40s', say:{who:'Clerk', tx:'Sporting goods, this is Dana.'}, c:'var(--green)'},
+    {t:'Delta recording', at:'41s', say:{who:'Agent', tx:'Hi there! I was just checking, do you have any Pokémon cards in stock right now?'}},
+    {t:'Staff answered', at:'45s', say:{who:'Clerk', tx:'We did not.'}},
     {t:'Charlie wrapped up', at:'55s', say:{who:'Agent', tx:'Perfect, thank you so much Dana, have a good one!'}, open:true},
     {t:'The answer was double checked', at:'60s'},
     {t:'Not in stock', at:'62s', status:'out', sub:'Decided by: "We did not."'},
@@ -2509,9 +2510,9 @@ const MOCK_CHECK_V2={
 };
 function checkV2Html(d){
   const pill=(n,w,cls)=>n?`<span style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:5px 12px;${cls}">${n} ${w}</span>`:'';
-  const head=`<div style="display:flex;align-items:center;gap:8px">
-      <span data-tip="${esch(d.info)}" style="font-size:20px;font-weight:800;letter-spacing:-.4px;color:#fff;white-space:nowrap">${esch(d.name)}</span></div>
-    <div class="meta" style="margin:5px 0 0;font-size:13px">${esch(d.sub)}</div>
+  const head=`<div style="display:inline-block;max-width:100%">
+      <div><span data-tip="${esch(d.info)}" style="font-size:20px;font-weight:800;letter-spacing:-.4px;color:#fff;white-space:nowrap">${esch(d.name)}</span></div>
+      <div class="meta" style="margin:5px 0 0;font-size:13px;max-width:0;min-width:100%">${esch(d.sub)}</div></div>
     <div style="display:flex;gap:7px;margin:12px 0 16px">
       ${pill(d.passed,'passed','color:var(--green);background:rgba(74,222,128,.13)')}
       ${pill(d.failed,'failed','color:var(--red);background:rgba(239,68,68,.13)')}
@@ -2523,41 +2524,42 @@ function checkV2Html(d){
       <div class="stat"><div class="n" style="color:var(--green)">${d.stats.profit}</div><div class="l">Gross profit</div></div>
     </div>`;
   const mini=rows=>`<div style="padding:2px 0 8px">${rows.map(r=>`<div style="display:flex;align-items:baseline;gap:6px;padding:3px 0 3px 12px"><span style="flex:0 0 auto;font-size:12px;font-weight:600;color:#8A8A96">${esch(r[0])}</span><span style="flex:1;border-bottom:1px dotted rgba(255,255,255,.16);transform:translateY(-3px)"></span><span style="flex:0 0 auto;font-size:12px;font-weight:700;color:var(--text-strong);font-variant-numeric:tabular-nums">${esch(r[1])}</span></div>`).join('')}</div>`;
-  const chev='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8A8A96" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto;transition:transform .15s"><path d="M9 6l6 6-6 6"/></svg>';
+  const chev='<svg class="pk-chev" width="15" height="15" style="flex:0 0 auto;width:15px;height:15px;color:#5C5C68" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
   const cost=`<div class="card" style="margin-bottom:14px;padding:16px 18px">
       <div class="k-eyebrow" style="margin:0 0 4px">Check cost</div>
       ${d.cost.map(r=>`<details class="v2c"${r.open?' open':''}><summary style="list-style:none;cursor:pointer"><div class="row" style="padding:6px 0"><span class="grow" style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:var(--text-strong)">${esch(r.l)} ${chev}</span><span style="font-size:14px;font-weight:800;color:var(--text-strong);font-variant-numeric:tabular-nums">${r.v}</span></div></summary>${mini(r.d)}</details>`).join('')}
       <div class="row" style="padding:9px 0 0;margin-top:6px;border-top:1px solid rgba(255,255,255,.08)"><span class="grow" style="font-size:14px;font-weight:800;color:#fff">Total</span><span style="font-size:15px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums">${d.stats.cost}</span></div>
     </div>`;
   const bmark=p=>`<span style="width:26px;height:26px;border-radius:50%;background:${p?'rgba(74,222,128,.15)':'rgba(239,68,68,.15)'};display:grid;place-items:center;flex:0 0 auto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${p?'#4ADE80':'#EF4444'}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${p?'<path d="M5 12l5 5 9-10"/>':'<path d="M6 6l12 12M18 6L6 18"/>'}</svg></span>`;
-  const behavior=`<details open class="card" style="margin-bottom:14px;padding:16px 18px"><summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px"><span class="k-eyebrow" style="margin:0;flex:1">Charlie behavior</span>${chev}</summary>
+  const behavior=`<details open class="card" style="margin-bottom:14px;padding:16px 18px"><summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;margin-bottom:8px"><span class="k-eyebrow" style="margin:0;flex:1">Charlie behavior</span>${chev}</summary>
       ${d.behavior.map(r=>`<div class="row" style="align-items:center;padding:8px 0"><span class="grow" style="font-size:13.5px;font-weight:700;color:var(--text-strong)">${esch(r.l)}</span>${bmark(r.pass)}</div>`).join('')}
     </details>`;
   const say=(w,tx)=>{const ai=w==='Agent';return `<div class="convo-thread" style="margin:6px 0 2px"><div class="ctlv2-bub${ai?' ai':''}"><div class="who">${ai?'CHECK AI':'STAFF'}</div><div class="tx">${esch(tx)}</div></div></div>`;};
   const menuIco='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8A8A96" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>';
   const spkIco='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8A8A96" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5 8.38 8.38 0 0 1 8.5 8.5z"/></svg>';
-  const statusIco=t=>t==='out'?`<span style="width:22px;height:22px;border-radius:50%;background:rgba(239,68,68,.15);display:grid;place-items:center;flex:0 0 auto;margin-left:-7px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>`:'';
+  const statusIco=t=>t==='out'?`<span style="width:22px;height:22px;border-radius:50%;background:rgba(239,68,68,.15);display:grid;place-items:center;flex:0 0 auto;margin-left:-4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>`:'';
   const rung=(e,last)=>{
-    const dot=e.status?statusIco(e.status):e.say?`<span style="display:grid;place-items:center;width:15px;flex:0 0 auto;margin-left:-3px">${spkIco}</span>`:`<span style="width:9px;height:9px;border-radius:50%;background:${e.c||'var(--muted)'};flex:0 0 auto"></span>`;
+    const dot=e.status?statusIco(e.status):(e.say||e.group)?`<span style="display:grid;place-items:center;width:15px;height:15px;flex:0 0 auto">${e.group?menuIco:spkIco}</span>`:`<span style="width:9px;height:9px;border-radius:50%;background:${e.c||'var(--muted)'};flex:0 0 auto"></span>`;
     const line=last?'':`<span style="width:2px;flex:1;background:rgba(255,255,255,.14);margin:3px 0"></span>`;
-    const title=`<span style="display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:${e.status?'800':'700'};color:${e.tc||(e.status?'#fff':'var(--text-strong)')}">${e.group?menuIco:''}${esch(e.t)}${(e.say||e.group)?chev:''}</span>`;
+    const title=`<span style="display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:${e.status?'800':'700'};color:${e.tc||(e.status?'#fff':'var(--text-strong)')}">${esch(e.t)}${(e.say||e.group)?chev:''}</span>`;
     const at=`<span style="margin-left:auto;font-size:12px;font-weight:700;color:var(--muted);flex:0 0 auto;font-variant-numeric:tabular-nums">${e.at||''}</span>`;
     let body='';
     if(e.say) body=say(e.say.who,e.say.tx);
     if(e.group) body=`<div style="padding:4px 0 0 6px">${e.group.map(g=>`<div style="display:flex;align-items:baseline;gap:8px;padding:3px 0"><span style="font-size:12.5px;font-weight:600;color:#8A8A96">${esch(g.t)}</span><span style="margin-left:auto;font-size:11.5px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums">${g.at}</span></div>`).join('')}</div>`;
     const sub=e.sub?`<div style="font-size:12px;font-weight:500;color:rgba(255,255,255,.55);margin-top:3px">${esch(e.sub)}</div>`:'';
     const inner=(e.say||e.group)
-      ?`<details${e.open?' open':''}><summary style="list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:8px">${title}${at}</summary>${body}</details>${sub}`
-      :`<div style="display:flex;align-items:baseline;gap:8px">${title}${at}</div>${sub}`;
-    return `<div style="display:flex;gap:12px"><div style="display:flex;flex-direction:column;align-items:center;flex:0 0 auto;padding-top:5px">${dot}${line}</div><div style="flex:1;min-width:0;padding-bottom:${last?'0':'13px'}">${inner}</div></div>`;
+      ?`<details${e.open?' open':''}><summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px">${title}${at}</summary>${body}</details>${sub}`
+      :`<div style="display:flex;align-items:center;gap:8px">${title}${at}</div>${sub}`;
+    return `<div style="display:flex;gap:12px"><div style="display:flex;flex-direction:column;align-items:center;flex:0 0 15px;padding-top:5px">${dot}${line}</div><div style="flex:1;min-width:0;padding-bottom:${last?'0':'13px'}">${inner}</div></div>`;
   };
   const logCard=`<details open class="card" style="padding:16px 18px"><summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px"><span class="k-eyebrow" style="margin:0;flex:1">Check log</span><span style="font-size:12px;font-weight:700;color:var(--muted)">${esch(d.when)}</span>${chev}</summary>
-      <details style="margin:8px 0 2px"><summary style="list-style:none;cursor:pointer;display:inline-flex"><span style="font-size:12.5px;font-weight:700;color:#8A8A96">${esch(d.workflow.name)}</span></summary>${mini(d.workflow.d)}</details>
+      <details style="margin:8px 0 2px"><summary style="list-style:none;cursor:pointer;display:inline-flex"><span style="display:inline-flex;align-items:center;background:#1B1B20;border-radius:999px;padding:6px 13px;box-shadow:inset 0 2px 5px rgba(0,0,0,.4);font-size:12px;font-weight:700;color:var(--text-strong)">${esch(d.workflow.name)}</span></summary>${mini(d.workflow.d)}</details>
       <div class="mladder" style="margin-top:12px">${d.log.map((e,i,a)=>rung(e,i===a.length-1)).join('')}</div>
     </details>`;
   return `<div class="v2sheet">${head+stats+cost+behavior+logCard}</div>`;
 }
-function openMockCheckV2(){ openSheet('','',checkV2Html(MOCK_CHECK_V2)); }
+function openMockCheckV2(){ openSheet('','',checkV2Html(MOCK_CHECK_V2));
+  setTimeout(()=>{ const sh=document.querySelector('.sheet.on'); if(sh){ const sc=window.scrollY||document.documentElement.scrollTop||0; sh.style.top=(sc+window.innerHeight*0.10)+'px'; sh.style.height=(window.innerHeight*0.90+120)+'px'; } },60); }
 if((location.hash||'')==='#mockcheck'){ setTimeout(()=>{ try{ showSection('testing'); }catch(_){ } setTimeout(openMockCheckV2,700); },900); }
 
 // ---- Delta (Fun): rehearse the Delta lane — recorded clips + cheap classifier, no live agent ----
