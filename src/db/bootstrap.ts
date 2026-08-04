@@ -24,6 +24,10 @@ async function seedStatuses() {
     ["too_busy", "🕗", "Too busy to check", "unk", "#FBBF24", "{store} was too slammed to check. Try checking later."],
     ["language_barrier", "🗣️", "Couldn't understand each other", "unk", "#FBBF24", "We couldn't understand each other on the call. Try checking later."],
     ["nobody_answered", "📵", "Nobody answered", "unk", "#9CA3AF", "Rang and rang, but nobody picked up. Try checking later."],
+    // STAFF ENDED THE CHECK, not us (owner ruled 08-04, the Hungup: Staff card). Stamped only when
+    // the store hung up before giving an answer — an answer they gave first still stands. Same
+    // family as left_on_hold: real minutes were burned on a live person, so it is charged.
+    ["staff_hung_up", "📴", "Staff hung up", "unk", "#FBBF24", "Staff hung up before giving an answer. Try checking later."],
     ["voicemail", "📮", "Got their voicemail", "unk", "#9CA3AF", "We got their voicemail. Try checking later."],
     ["busy", "📞", "Line was busy", "unk", "#9CA3AF", "Their line was busy the whole time. Try checking later."],
     ["bad_number", "☎️", "Wrong number", "unk", "#9CA3AF", "The number we have for them didn't connect. No check = no charge."],

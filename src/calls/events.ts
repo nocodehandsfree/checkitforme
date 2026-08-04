@@ -261,7 +261,10 @@ export function amend(room: string, kind: EventKind, patch: Record<string, unkno
  * (owner screenshot 07-31). Given a real time, the line is filed where it belongs instead of at the
  * end. Everything else is unchanged: the clock is this call's own, and it is still text only.
  */
-export function recordLine(room: string, who: "Agent" | "Clerk", text: string, spokenAtMs?: number): boolean {
+/** @param certain WE produced this line ourselves (a recording we played down the wire), so it can
+ *  never be an echo and the echo protection must not eat it. A recording really can ask the same
+ *  question twice inside ten seconds on a fast hand-over, and both askings belong on the record. */
+export function recordLine(room: string, who: "Agent" | "Clerk", text: string, spokenAtMs?: number, certain?: boolean): boolean {
   try {
     const r = receipts.get(room);
     if (!r || r.closed) return true; // no record to guard — the caller may still show the line
@@ -275,7 +278,7 @@ export function recordLine(room: string, who: "Agent" | "Clerk", text: string, s
     // within ten seconds, so a clerk genuinely repeating themselves later still shows. Returns
     // whether the line was fresh, so a relay can skip exactly what the record skipped.
     const key = `${who}:${normSaid(t)}`;
-    if (r.transcript.slice(-4).some((l) => Math.abs(l.atMs - at) < 10_000 && `${l.who}:${normSaid(l.text)}` === key)) return false;
+    if (!certain && r.transcript.slice(-4).some((l) => Math.abs(l.atMs - at) < 10_000 && `${l.who}:${normSaid(l.text)}` === key)) return false;
     const line = { atMs: at, who, text: t.slice(0, 1000) };
     const last = r.transcript[r.transcript.length - 1];
     if (last && last.atMs > at) {

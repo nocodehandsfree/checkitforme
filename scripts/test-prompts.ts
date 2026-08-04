@@ -199,6 +199,11 @@ console.log("\n▶ THE DRIFT ALARM: the joining Charlie gets the same words, plu
   ok(sent.prompt.endsWith(RESTOCK_PROMPT), "…and the store rules are carried whole and unchanged");
   ok(sent.prompt.includes("{{ask_for_transfer}}"), "the wrong department section reaches him — the one he never had");
   ok(sent.prompt.includes("Ask to be put through only ONCE"), "…including the rule to ask ONCE, which is the fault it caused");
+  // NEVER REPEAT (owner 08-04): one instruction line, in the ONE source, so both saved copies carry
+  // it on the next push and neither can ask the same thing twice again.
+  ok(sent.prompt.includes("NEVER ask the same question twice on a call. If part of an answer is missing, ask about the missing part ONCE, in different words than before, then take whatever they give you and move on."),
+    "the never repeat rule rides to the joining Charlie word for word");
+  ok(RESTOCK_PROMPT.includes("NEVER ask the same question twice on a call"), "…and it is in the original's words, the one source");
   ok(sent.maxTokens === VOICE_DEFAULTS.maxTokens, "same room to think as the original");
   ok(sent.llm === "gpt-test", "same model as the original was just pushed with");
   ok(sent.turnEagerness === "patient", "patient stays: our own machinery splits sentences and he must not answer each fragment");

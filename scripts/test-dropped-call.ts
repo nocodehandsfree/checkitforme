@@ -14,7 +14,7 @@ import { eq } from "drizzle-orm";
 import { bootstrap } from "../src/db/bootstrap";
 import { db } from "../src/db/client";
 import { callEvents, callResults, retailers, categories, statuses } from "../src/db/schema";
-import { findRecentCheck, recentlyDropped, weHungUpOnAHold } from "../src/calls/service";
+import { findRecentCheck, recentlyDropped, weHungUpOnAHold, staffHungUpOn, billableOutcome } from "../src/calls/service";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -60,6 +60,21 @@ async function main() {
     ok(!/[\u2014\u2013]/.test(s?.note ?? ""), "no dash inside the sentence (copy law)");
     await db.delete(callEvents).where(eq(callEvents.room, room));
     ok((await db.select().from(callEvents).where(eq(callEvents.room, room))).length === 0, "and it leaves nothing of its own behind, so running it twice reads the same");
+  }
+
+  console.log("\n▶ Staff hanging up before an answer reads as Staff hung up (owner 08-04)");
+  {
+    const room = "room-staff-hung-up-test";
+    await db.delete(callEvents).where(eq(callEvents.room, room));
+    ok(!(await staffHungUpOn(room)), "a check with no ending claims nothing");
+    await db.insert(callEvents).values({ callId: 0, room, atMs: 33000, atSec: 33, kind: "hangup", note: "The store hung up on us", detail: JSON.stringify({ reason: "store_hung_up" }) });
+    ok(await staffHungUpOn(room), "…and once the record says the store ended it, the check says so");
+    ok(!(await staffHungUpOn(null)), "a row with no name can never claim it");
+    const s2 = (await db.select().from(statuses).where(eq(statuses.key, "staff_hung_up")))[0];
+    ok(s2?.label === "Staff hung up", `the status exists, in his words (${s2?.label})`);
+    ok(!/[\u2014\u2013]/.test(s2?.note ?? ""), "no dash inside the sentence (copy law)");
+    ok(billableOutcome("staff_hung_up", false), "…and it is charged: real minutes were burned on a live person");
+    await db.delete(callEvents).where(eq(callEvents.room, room));
   }
 
   console.log("\n▶ a dropped call does NOT lock the customer out of that store");

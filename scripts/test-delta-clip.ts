@@ -11,7 +11,7 @@
 //   conversation. And that an agent who tries to talk over the question is silenced.
 import { EventEmitter } from "node:events";
 import { WebSocketServer, type WebSocket as WS } from "ws";
-import { setBridgeContext, handleTwilioBridge, weEndedCheck } from "../src/voice/bridge";
+import { setBridgeContext, handleTwilioBridge, weEndedCheck, nudgeSignoff } from "../src/voice/bridge";
 import { openReceipt, getReceipt, transcriptOf, closeReceipt, rollup, _reset } from "../src/calls/events";
 import { isCheckAlive } from "../src/calls/check-life";
 import { toMediaFrames } from "../src/calls/clip-cache";
@@ -779,6 +779,115 @@ console.log("\n▶ Staff step away WHILE we are opening him: no session opens in
   speak(tw, 30);
   await sleep(250);
   ok(f.sockets.length === 1, "…and when they come back he opens normally");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ after a transfer the recording asks again, and Charlie stays off the line until Staff answer");
+{
+  // OWNER 08-04: "Echo absolutely needs to build this." Whoever picks up the next department never
+  // heard the question, and Charlie re-asking it himself is the expensive way: the recording asks
+  // for free, in the same voice, and his mouth stays shut behind the same gate the opening uses.
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const { tw, clipFrames } = await callToHello(f, 400, "room-replay");
+  tw.say({ event: "mark", mark: { name: "delta-opening" } });
+  await sleep(250);
+  const playedOnce = tw.outMedia().length;
+  ok(playedOnce >= clipFrames, "the question played once at the top of the check");
+  // Staff say we landed wrong, and Charlie asks to be put through.
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Hi, this is the pharmacy." } }));
+  await sleep(60);
+  f.sockets[0].send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Oh gotcha, could you put me through to whoever handles the Pokemon cards?" } }));
+  await sleep(60);
+  // A silent hand-over: the line goes quiet, then somebody new says hello and stops. The wait is
+  // fed only after the question's own playout window has passed, because until then the echo gate
+  // rightly treats the line as carrying our own voice.
+  await sleep(500);
+  quiet(tw, HOLD_QUIET_MS / 20 + 30);
+  await sleep(80);
+  ok((getReceipt("room-replay")?.events || []).some((e) => e.kind === "hold_start"), "the hand-over wait opened and the meter stopped");
+  speak(tw, 30);
+  for (let i = 0; i < 45; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));   // …and they finish saying hello
+  await sleep(250);
+  ok(tw.outMedia().length >= playedOnce + clipFrames, `THE RECORDING ASKED AGAIN: the clip went down the line a second time (${tw.outMedia().length} frames)`);
+  const clips = (getReceipt("room-replay")?.events || []).filter((e) => (e.detail as { step?: string } | null)?.step === "question_clip");
+  ok(clips.length === 2, `…and the check records both askings (${clips.length})`);
+  const qs = (getReceipt("room-replay")?.transcript || []).filter((l) => l.who === "Agent" && /Pokemon cards in stock/.test(l.text));
+  ok(qs.length === 2, "the question sits on the record at both its seconds");
+  // Charlie tries to talk over the replay: nothing of his reaches the line until the question ends.
+  const beforeBarge = tw.outMedia().length;
+  f.sockets[f.sockets.length - 1].send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x40)) } }));
+  await sleep(80);
+  ok(tw.outMedia().length === beforeBarge, "Charlie stays off the line while the recording is asking");
+  const note = f.raw.filter((m) => m.includes("contextual_update")).pop() || "";
+  ok(/recording is asking your question again/i.test(note), "…and he is told the recording owns the question, so he never asks it twice");
+  ok(!/[—–]/.test(note), "no dashes in anything he is told");
+  // The question finishes: the gate opens and the conversation is his.
+  tw.say({ event: "mark", mark: { name: "delta-opening" } });
+  await sleep(120);
+  f.sockets[f.sockets.length - 1].send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x40)) } }));
+  await sleep(80);
+  ok(tw.outMedia().length > beforeBarge, "…and the moment Staff could answer, his voice flows again");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ the answer is in hand: Charlie is told to thank them and end, once, and nothing hangs up");
+{
+  // THE SIGNOFF (owner 08-04). Eight of ten robot store checks ended without a goodbye because
+  // nobody told Charlie the answer had landed: he asked his next follow-up into a conversation that
+  // was already over. The reader knows the moment; this proves the moment reaches him.
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const { tw } = await callToHello(f, 400, "room-signoff");
+  tw.say({ event: "mark", mark: { name: "delta-opening" } });
+  await sleep(200);
+  const notes = () => f.raw.filter((r) => r.includes("contextual_update"));
+  const before = notes().length;
+  nudgeSignoff("room-signoff", "in stock");
+  await sleep(100);
+  const note = notes().slice(before)[0] || "";
+  ok(notes().length === before + 1, "one note went to him on the channel that already carries notes");
+  ok(note.includes("thank them warmly") && note.includes("end the check"), "…telling him to thank them and end");
+  ok(!/[—–]/.test(note), "no dashes in anything he is told (they read strangely through ElevenLabs)");
+  ok(tw.readyState === 1, "THE CHECK IS STILL UP: the signoff is a note, never a hang up");
+  const ev = (getReceipt("room-signoff")?.events || []);
+  ok(ev.some((e) => (e.detail as { step?: string } | null)?.step === "signoff"), "and the check records that he was told");
+  nudgeSignoff("room-signoff", "in stock");
+  await sleep(80);
+  ok(notes().length === before + 1, "told once, never nagged twice");
+  nudgeSignoff("room-that-never-existed", "in stock");
+  ok(true, "a knock on a room with no check is a no-op, never an error");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ a late are you there from a replaced session: ignored, never answered, never a crash");
+{
+  // THE PING CRASH (owner 08-04). After Charlie was dropped for a wait, a late are you there from
+  // the torn down session was answered on a connection that no longer existed. That threw, and the
+  // safety net emailed the owner about a crash whose cause was an ordinary hold.
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const tw = await callWithHold(f, "room-late-ping", "reopen");
+  speak(tw, 150);
+  const first = f.sockets[0];
+  quiet(tw, HOLD_QUIET_MS / 20 + 20);              // they step away — he is closed for the wait
+  await sleep(80);
+  speak(tw, 30);                                    // …and come back, so the session is REPLACED
+  await sleep(250);
+  ok(f.sockets.length === 2, "a fresh session is open for whoever is back");
+  const pongsBefore = f.raw.filter((r) => r.includes('"pong"')).length;
+  // The OLD session, mid teardown, asks if we are still there.
+  try { first.send(JSON.stringify({ type: "ping", ping_event: { event_id: 991 } })); } catch { /* it may already be gone, which is the quiet day */ }
+  await sleep(150);
+  ok(tw.readyState === 1, "the check is still up: a ghost's question can never take it down");
+  ok(f.raw.filter((r) => r.includes('"pong"')).length === pongsBefore, "…and the ghost was not answered on anybody's line");
+  // …while the LIVE session's own are you there is still answered, because ignoring those ends checks.
+  f.sockets[1].send(JSON.stringify({ type: "ping", ping_event: { event_id: 992 } }));
+  await sleep(150);
+  ok(f.raw.some((r) => r.includes('"pong"') && r.includes("992")), "the live session's question is answered as always");
   restore(); tw.close(); f.close();
 }
 

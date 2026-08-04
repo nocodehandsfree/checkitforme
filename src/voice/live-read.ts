@@ -13,6 +13,7 @@
 // and a disagreement is still an honest "no clear answer" with no charge. This only moves WHEN our
 // half of that pair is computed.
 import { classifyVerdict, type ClerkVerdict } from "./verdict";
+import { nudgeSignoff } from "./bridge";
 
 interface LiveRead {
   category: string;
@@ -61,7 +62,12 @@ async function runRead(room: string): Promise<void> {
   try {
     const v = await classifyVerdict(transcriptSoFar(r), r.category, r.specificProduct).catch(() => null);
     const cur = reads.get(room);
-    if (cur && v) { cur.verdict = v; cur.readAtMs = Date.now(); }
+    if (cur && v) {
+      cur.verdict = v; cur.readAtMs = Date.now();
+      // THE SIGNOFF (owner 08-04): the moment a check has its answer, Charlie is told to thank them
+      // and end. A definitive read is the moment; an unsure one is not an answer and nudges nothing.
+      if (v.inStock === "yes" || v.inStock === "no") nudgeSignoff(room, v.inStock === "yes" ? "in stock" : "not in stock");
+    }
   } finally {
     const cur = reads.get(room);
     if (cur) {

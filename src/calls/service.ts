@@ -1182,7 +1182,8 @@ export async function getCreditStatus() {
 export function billableOutcome(statusKey: string | null | undefined, definitive: boolean, transcript?: string | null): boolean {
   if (definitive) return true;
   const k = statusKey || "";
-  if (k === "left_on_hold" || k === "too_busy" || k === "language_barrier") return true;
+  // staff_hung_up joins the same family (owner 08-04): real minutes were burned on a live person.
+  if (k === "left_on_hold" || k === "too_busy" || k === "language_barrier" || k === "staff_hung_up") return true;
   if (k === "no_clear_answer" && transcript && /^Agent:/m.test(transcript) && /^Clerk:/m.test(transcript)) return true;
   return false;
 }
@@ -1207,6 +1208,18 @@ export async function weHungUpOnAHold(room: string | null | undefined): Promise<
     const rows = await db.select({ detail: callEvents.detail }).from(callEvents)
       .where(and(eq(callEvents.room, room), eq(callEvents.kind, "hangup")));
     return rows.some((r) => String(r.detail || "").includes("held_too_long"));
+  } catch { return false; }
+}
+
+/** Did the STORE end this check, read off the check's own timeline (the round 2 subtraction:
+ *  we know every time it was us, so an ending that was not ours and not a failure is theirs).
+ *  Never throws: a check must never fail to finalize because a lookup did. */
+export async function staffHungUpOn(room: string | null | undefined): Promise<boolean> {
+  if (!room) return false;
+  try {
+    const rows = await db.select({ detail: callEvents.detail }).from(callEvents)
+      .where(and(eq(callEvents.room, room), eq(callEvents.kind, "hangup")));
+    return rows.some((r) => String(r.detail || "").includes("store_hung_up"));
   } catch { return false; }
 }
 
@@ -1277,6 +1290,10 @@ export async function ingestPending(): Promise<number> {
     // we already have, "left on hold", never a new one (owner's ruling 08-01).
     // Only ever over an answer we do not have: if Staff came back and answered, that answer stands.
     if (finalConfirmed === null && await weHungUpOnAHold(row.room)) finalStatusKey = "left_on_hold";
+    // STAFF HUNG UP ON US BEFORE GIVING AN ANSWER (owner 08-04, the Hungup: Staff card). The engine
+    // already knows who put the phone down by subtraction; this is the customer's word for it. Only
+    // ever over an answer we do not have: an answer they gave before hanging up still stands.
+    else if (finalConfirmed === null && await staffHungUpOn(row.room)) finalStatusKey = "staff_hung_up";
 
     // Update the primary row (the line we called about).
     await db.update(callResults).set({
