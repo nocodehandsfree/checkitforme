@@ -1323,6 +1323,7 @@ export async function ingestPending(): Promise<number> {
     const decidedBy = [...String(outcome.transcript || "").split("\n")]
       .reverse().map((l) => /^(?:Clerk|Staff):\s*(.*)$/i.exec(l.trim())?.[1] || "")
       .find((t) => /[a-zA-ZÀ-ɏ]{2,}/.test(t)) || null;
+    console.log(`[finalize] check ${row.id}: writing the verdict tail (read=${secondUsed ? "yes" : "no"}, charged=${willCharge})`);
     void recordVerdict(row.id, finalStatusKey ?? null, outcome.summary ?? null, outcome.durationSecs ?? 0,
       { secondReadModel: secondUsed ? VERDICT_MODEL : null, secondReadUsd: secondUsed ? STATUS_READ_USD : 0, decidedBy, charged: willCharge });
     dropLiveRead(row.room); // verdict written — let the room's live read go

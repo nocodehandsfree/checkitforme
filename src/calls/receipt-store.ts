@@ -159,7 +159,15 @@ export async function recordVerdict(
     rows.push(rowFor("verdict", summary?.slice(0, 300) || `Answer: ${statusKey ?? "unclear"}`, { statusKey, ...(extra?.decidedBy ? { decidedBy: String(extra.decidedBy).slice(0, 200) } : {}) }, 1));
     if (extra?.charged != null) rows.push(rowFor("unknown", extra.charged ? "Customer charged" : "Customer not charged", { step: "charged", charged: extra.charged }, 2));
     await db.insert(callEvents).values(rows);
-  } catch (e) { console.error("[receipt] verdict not recorded:", e); }
+    console.log(`[receipt] verdict tail written for check ${callId}: ${rows.length} row(s)`);
+  } catch (e) {
+    console.error("[receipt] verdict not recorded:", e);
+    // The verdict is the one row the customer's answer lives on. If the batch failed, write it
+    // alone the way this function always used to, so a decoration can never cost the answer.
+    try {
+      await db.insert(callEvents).values({ callId, room: "", atMs: Math.max(0, atSec) * 1000, atSec: Math.max(0, atSec), kind: "verdict", note: (summary?.slice(0, 300) || `Answer: ${statusKey ?? "unclear"}`), detail: JSON.stringify({ statusKey }) });
+    } catch (e2) { console.error("[receipt] even the bare verdict failed:", e2); }
+  }
 }
 
 /** Wire the recorder to the database. Called once at boot. */
