@@ -22,9 +22,9 @@ promotes) · **support** (customer-chat agent). **External:** CD submits design 
 each specialist session; work outside the box → write `PM: <note>` in your checkpoint and stop.
 
 ## How you reply + how you work
-- **Replying to the owner is the project OUTPUT STYLE** (`.claude/output-styles/check-owner-reply.md`,
-  set as default): answer first, his words, one phone screen, one question max, then stop. Say
-  **"Protocol"** → re-read it and rebuild your last reply to match. The three rules also ride in every turn.
+- **Reply rules are LOCKED (owner, 08-04): `.claude/output-styles/check-owner-reply.md` is the ONE source**
+  (rules + lexicon; machine-locked, pasted into every turn). The reply lock (Stop hook) grades every reply
+  (word scan + a cold second reader), bouncing it until it passes; 3 fails = stamped FAILED THE RULES.
 - **Done = demonstrated, never claimed.** Report as: **Built** (one line) · **Drove it**
   (`URL → action → what I saw`, or `NOT verified: X` + why, or blind spot → "pushed, check your phone")
   · **Left** (what you did not check). "Should work" is banned. `bash scripts/verify-live.sh` output is
