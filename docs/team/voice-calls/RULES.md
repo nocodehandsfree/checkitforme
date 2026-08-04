@@ -46,3 +46,8 @@ that made it law. A rule leaves this file only when the owner himself retires it
     the rig alone. The rig fakes the answer-reading, so it proves the plumbing, not the moment.
     The goodbye was rig-proven, claimed in STATE, and three live checks showed it never fired
     (08-04 PM audit, checks 276-278).
+15. OWNER RULE 08-04: before any robot store run continues, the agent watches ONE check on the
+    actual site run WHOLE — dial, answer, Charlie's goodbye, the check ending — and dials NOTHING
+    more until a whole check can happen. The harness enforces it (robot-check.mjs stops the run
+    when the first check fails to run whole). ~$3 of checks were dialed across a goodbye that a
+    single stopped run would have exposed for 9 cents.
