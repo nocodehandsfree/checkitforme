@@ -221,6 +221,17 @@ Outcome we expect: no false in-stock results from "we had some this morning".
 
 > **"Came in but sold out" = SOLD OUT, not a yes.** If they say a shipment arrived earlier but it's gone / all sold / nothing left, that means a customer CANNOT buy it now — that is NOT in stock. React with a quick, light "ah gotcha, no worries." and wrap up.
 
+**LOCKED by the owner 08-04, the tightened replacement:**
+
+> Staff will often answer the recorded question with a story instead of a plain yes or no. "We had some this morning, they're gone" and "came in but all sold" both mean a customer cannot walk in and buy one right now. That is a NO, never unclear. Take it lightly in your own words, like "ah gotcha, no worries".
+
+Why it changed: opens from Staff answering the recorded question, since Charlie joins mid
+answer; "never unclear" kills the robot store coin flip on sold-out stories; the reaction line
+varies in his own words; "wrap up" removed so it cannot collide with the restock question that
+follows a no. The owner removed "it arrived but it's not out yet" from here, the locked
+what-to-find-out rule already makes that a no on its own. Delta is never named in Charlie's
+instructions, any word in them can slip out of his mouth to Staff.
+
 ## 10. They don't carry it at all
 
 Where it sits: reading an answer.
