@@ -57,6 +57,13 @@
    the harness's word-for-word row is what needs teaching. Other leftover: the live page bounced
    twice while drawing.
    NEXT: the owner walks every test one at a time; faults the walk surfaces get fixed in the walk.
+   **THE AGREED LINE (owner + PM, 08-04 night — this order, no skipping):** the owner finishes his
+   21 Charlie instruction cuts (at 9 of 21; old lines like "be patient on a hold" are bloat now
+   that the tech drops Charlie) → PM integrates them and verifies Charlie carries exactly those
+   words → the test walk, one test at a time → Charlie dialed in → Mapper maps CVS, Charlie proves
+   the department, the run locks the fastest way through → the file re-architecture (PR #108) with
+   its own audit → the other 91 chains. The repo cleanup (archive-only, builds nothing, one push,
+   proven to compile) runs alongside. Logo pushes when he finishes; everyone else has stopped.
 3. **Mapper waits until Charlie works perfectly and ALL tests pass** (owner ruling 08-04 — replaces
    "ASAP"). On a mapping run Charlie only comes on at the very end, to prove the department once
    the right one is reached; that proof is what lets the run optimize for speed and lock the

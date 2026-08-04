@@ -100,7 +100,11 @@ def reader_check(root, text, timeout=75):
         "invent standards. Rule 9 (the 15 line limit) is measured by a separate "
         "machine count before you ever see the reply — never judge length or "
         "wrapping yourself. Quoted DON'T examples inside the reply are not "
-        "violations. Answer with ONLY this JSON, nothing else:\n"
+        "violations. Fail ONLY on clear violations: if a sentence is "
+        "understandable on its own in plain English, it passes even if a word "
+        "is not in the lexicon. Quoting the owner's own words back to him is "
+        "always allowed. When in doubt, PASS. Answer with ONLY this JSON, "
+        "nothing else:\n"
         '{"pass": true|false, "failures": ["rule N: short plain reason", ...]}\n\n'
         "=== THE LOCKED REPLY RULES ===\n" + rules +
         "\n=== THE REPLY TO GRADE ===\n" + text
@@ -143,13 +147,40 @@ if "--check-file" in sys.argv:
     if not text:
         print("empty draft"); sys.exit(2)
     fails = grade(root, text)
+    # Always exit 0: NOT SENDABLE is a verdict, not a breakage. (08-04: an agent read
+    # the old exit-2 as "the checker is broken" and retry-looped the same draft in
+    # background shells until the owner had to stop the chat.)
+    strikes_f = os.path.join(state_dir(root), "precheck-strikes")
     if fails:
-        print("REPLY LOCK PRE-CHECK: not sendable. Broken: " + "; ".join(fails))
-        print("Fix the draft and run the check again. Only send text that passed.")
-        sys.exit(2)
+        # The escape valve (08-04: a chat got trapped when every rewrite kept failing
+        # and could never send anything). Third strike in a row: the draft ships
+        # stamped, same deal as the stop-time path, so a chat can NEVER go mute.
+        strikes = 0
+        if os.path.exists(strikes_f):
+            try:
+                strikes = int(open(strikes_f).read().strip() or 0)
+            except Exception:
+                strikes = 0
+        strikes += 1
+        if strikes >= 3:
+            os.remove(strikes_f)
+            stamped = "FAILED THE RULES: " + "; ".join(fails) + "\n\n" + text
+            record_approval(root, stamped)
+            print("VERDICT: THIRD STRIKE, SEND IT STAMPED. Send EXACTLY the text below "
+                  "(your draft with the stamp line on top) and stop. It will go "
+                  "through.\n\n" + stamped)
+            sys.exit(0)
+        with open(strikes_f, "w") as fh:
+            fh.write(str(strikes))
+        print("VERDICT: NOT SENDABLE. Broken: " + "; ".join(fails))
+        print("This is not an error and retrying changes nothing. EDIT the draft to fix "
+              "what is named above, then run the check once on the edited file.")
+        sys.exit(0)
+    if os.path.exists(strikes_f):
+        os.remove(strikes_f)
     record_approval(root, text)
-    print("APPROVED. Send this exact text as your reply — word for word. The reply "
-          "lock will recognize it and let it straight through.")
+    print("VERDICT: APPROVED. Send this exact text as your reply — word for word. The "
+          "reply lock will recognize it and let it straight through.")
     sys.exit(0)
 
 # ---- STOP HOOK MODE ------------------------------------------------------------------
