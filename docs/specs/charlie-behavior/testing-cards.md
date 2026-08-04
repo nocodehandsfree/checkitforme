@@ -83,6 +83,19 @@ subscribed to.
 - The ping crash after a dropped Charlie (the uncaughtException email, bridge.ts ~1157).
 - Both Charlies same words on every update (BUILT, verified live 08-03).
 
+## FINAL RULINGS 08-04 (these override anything above where they differ)
+- Cost buckets, his names: **Bravo (Menu Nav) · Foxtrot (Phone Line) · Echo (Listening) · Charlie
+  (Talking) · Status (Verification)**. Rates come from the real pricing code, never typed in.
+  Charlie's line covers voice and thinking together. Delta is free per check, so no Delta line.
+- Charlie talked tile: **green at 23s or under · yellow 24 to 30 · red 31 and up**.
+- Colors: words stay white; only markers carry color. Gray = machinery (Staff back after a hold is
+  machinery). Green = a Staff greeting (the speech icon itself goes green). Yellow = waiting.
+  Red only on a bad final status.
+- The sheet covers 96% of the screen. Detail rows under a cost line: copy left, dotted line,
+  number right. Only passed and failed pills at the top, no unused pill.
+- The built screen LIVES IN public/app.html already (checkV2Html + MOCK_CHECK_V2, opened by
+  /testing#mockcheck). Echo wires it to real records and deletes nothing visual.
+
 ## COMP RULINGS (the Testing screen, built from a render of the REAL page)
 Short test name, no number, never wraps two lines · headline/subhead/bubble per the format above ·
 cost rows rolled up, tap to expand details, no free items listed, money in cents (5.3¢) ·
