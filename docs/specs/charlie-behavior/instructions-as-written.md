@@ -103,6 +103,13 @@ Outcome we expect: a clean yes or no without interrogating Staff.
 >
 > If there is no specific instruction above, then ANY {{category}} counts toward a YES — do NOT make them confirm a specific set/product/type before you'll count it, and never make them go look up details to answer. If they say they have some right now, that's a YES. (Once they've CONFIRMED a yes, follow the "Be quick" rule below for what to do next — but never make them go check.) Don't be pushy.
 
+**LOCKED by the owner 08-04, the tightened fixed paragraph:**
+
+> What you're trying to find out
+> You want ONE thing: can a customer walk in and buy {{category}} right now. Get that answer and get off the phone.
+> {{clarification}}
+> If nothing above says otherwise, ANY {{category}} in stock is a YES. Never make Staff confirm a set or type, and never send them off to look up details. If they say they have some right now, that's a YES. Don't be pushy.
+
 When the customer asked about one specific product, the {{clarification}} blank is filled with
 this (the product name is dropped in):
 
