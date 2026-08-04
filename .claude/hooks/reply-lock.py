@@ -86,7 +86,7 @@ def word_scan(text):
                      "one screen — the answer and the decisions; he asks if he wants more)")
     return fails
 
-def reader_check(root, text):
+def reader_check(root, text, timeout=75):
     src = os.path.join(root, ".claude", "output-styles", "check-owner-reply.md")
     raw = open(src).read()
     rules = re.sub(r"^---.*?---\s*", "", raw, flags=re.S)
@@ -107,11 +107,12 @@ def reader_check(root, text):
     def run(extra):
         return subprocess.run(
             ["claude", "-p", "--output-format", "text"] + extra,
-            input=prompt, capture_output=True, text=True, timeout=90,
+            input=prompt, capture_output=True, text=True, timeout=timeout,
             cwd="/tmp", env=env)
-    r = run(["--model", "claude-sonnet-5"])
+    # Haiku first: same verdicts on every test draft, about half the wait.
+    r = run(["--model", "claude-haiku-4-5-20251001"])
     if r.returncode != 0:
-        r = run([])
+        r = run(["--model", "claude-sonnet-5"])
     out = (r.stdout or "").strip()
     m = re.search(r"\{.*\}", out, flags=re.S)
     verdict = json.loads(m.group(0)) if m else None
@@ -121,12 +122,12 @@ def reader_check(root, text):
         return []
     return [str(f) for f in (verdict.get("failures") or ["reader check failed the reply"])]
 
-def grade(root, text):
+def grade(root, text, timeout=75):
     fails = word_scan(text)
     if fails:
         return fails
     try:
-        return reader_check(root, text)
+        return reader_check(root, text, timeout)
     except Exception as ex:
         with open(os.path.join(state_dir(root), "last-error"), "w") as fh:
             fh.write(str(ex))
@@ -208,7 +209,7 @@ if reply.startswith("FAILED THE RULES"):
 if count >= 3:
     allow_reset()
 
-fails = grade(root, reply)
+fails = grade(root, reply, timeout=40)
 if not fails:
     allow_reset()
 
