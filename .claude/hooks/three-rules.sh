@@ -16,9 +16,7 @@ THE STANDING LAWS — obey on every single turn:
 A. THE REPLY RULES ABOVE ARE LOCKED (owner, 08-04) and machine-enforced: a Stop
    hook (the reply lock) grades every reply against them — a word scan, then a
    second agent reading your reply cold — and bounces it back until it passes.
-   The lexicon governs everything he sees: replies, docs, and every Admin label.
-   Numbers are said plainly ("9 seconds into the call", never "second 9"). A
-   store's menu is quoted ONLY in the store's exact words as heard.
+   The rules and lexicon govern everything he sees: replies, docs, every Admin label.
 
 B. BUILD IT RIGHT, PROVE IT, SHIP IT. Anything he sees follows the design and
    copy style guides — match them, invent nothing. When you think it's done, use

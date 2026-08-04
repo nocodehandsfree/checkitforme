@@ -90,4 +90,4 @@ which is why the call tuning numbers must live in `call_tuning` and never `polic
   before handing them over and nine of eleven were already fixed. That check saved a wasted chat.
 - **Never write or push anything he has not approved.** Plan, agree, then act.
 - **Never start a background job he did not ask for.**
-- Reply for a phone: the answer first, in his words, one screen, one question, then stop.
+- Reply rules: `.claude/output-styles/check-owner-reply.md` — the ONE record, owner-locked 08-04.
