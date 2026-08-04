@@ -66,15 +66,18 @@ def consume_approval(root, text):
     return False
 
 BANNED = ["good catch", "good question", "your instincts are right", "one honest answer",
-          "worse than you thought", "that sharpens it", "should work"]
+          "worse than you thought", "that sharpens it", "should work",
+          "tldr"]
 
 def word_scan(text):
     prose = re.sub(r"```.*?```", "", text, flags=re.S)
     fails = []
     low = prose.lower()
+    REASON = {"should work": "banned: prove it or say NOT verified",
+              "tldr": "banned label (rule 1, owner 08-04): the answer is just the first line, never labeled TLDR"}
     for p in BANNED:
         if p in low:
-            fails.append(f"banned phrase \"{p}\" (rule 7, or \"should work\": prove it or say NOT verified)")
+            fails.append(f"banned phrase \"{p}\" ({REASON.get(p, 'flattery/filler, rule 7')})")
     if "—" in prose or re.search(r"(?<=\S) - (?=\S)", prose):
         fails.append("dashes inside sentences (rule 4: full plain sentences, no dashes)")
     lines = sum(max(1, -(-len(l.rstrip()) // 90)) for l in prose.splitlines() if l.strip())

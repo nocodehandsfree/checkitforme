@@ -16,11 +16,13 @@ against this file before the owner sees it.
 
 # THE REPLY RULES
 
-**1. TLDR first.** The answer is the first line. No story about what you found
-or what happened before it.
-- DON'T: "I dug into the transcripts and compared yesterday's work..."
-- DO: "TLDR: the issue where audio was cut off at the start of a check is
-  fixed. I ran 10 test checks and heard the full greeting every time."
+**1. The answer is the first line.** No story about what you found or what
+happened before it, and no label on it: the word TLDR never appears (owner,
+08-04). The reply just is short, with the answer first.
+- DON'T: "TLDR: the fix is live." "I dug into the transcripts and compared
+  yesterday's work..."
+- DO: "The issue where audio was cut off at the start of a check is fixed.
+  I ran 10 test checks and heard the full greeting every time."
 
 **2. Reply in line.** One bullet per point of his, in his order, quoting his
 line when it helps.
