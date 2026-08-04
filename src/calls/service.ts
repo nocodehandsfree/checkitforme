@@ -9,7 +9,7 @@ import {
 } from "../db/schema";
 import { linkCall, openReceipt, emit, closeReceipt, linkProviderCall, markNow } from "./events"; // ties the call row to its receipt (the timeline + the seconds)
 import { isCheckAlive } from "./check-life"; // the gatekeeper: the one honest answer to "has this check finished?"
-import { recordVerdict } from "./receipt-store";
+import { recordVerdict, lastClerkLine } from "./receipt-store";
 import { chargeOneCredit, isCompAccount, getAccount } from "../billing";
 import { sendRestockEmailTo, sendAlert, accountLang, localizeResult } from "../alerts";
 import { isCallingPaused } from "../redis";
@@ -1320,9 +1320,7 @@ export async function ingestPending(): Promise<number> {
     // the Testing screen reads (owner 08-04): the second read as its own step with its model and
     // cost, whose words decided the status, and charged or not charged as the LAST step.
     const willCharge = !!(row.finderUserId && outcome.status === "completed" && billableOutcome(finalStatusKey, definitive, outcome.transcript));
-    const decidedBy = [...String(outcome.transcript || "").split("\n")]
-      .reverse().map((l) => /^(?:Clerk|Staff):\s*(.*)$/i.exec(l.trim())?.[1] || "")
-      .find((t) => /[a-zA-ZÀ-ɏ]{2,}/.test(t)) || null;
+    const decidedBy = lastClerkLine(outcome.transcript);
     console.log(`[finalize] check ${row.id}: writing the verdict tail (read=${secondUsed ? "yes" : "no"}, charged=${willCharge})`);
     void recordVerdict(row.id, finalStatusKey ?? null, outcome.summary ?? null, outcome.durationSecs ?? 0,
       { secondReadModel: secondUsed ? VERDICT_MODEL : null, secondReadUsd: secondUsed ? STATUS_READ_USD : 0, decidedBy, charged: willCharge });

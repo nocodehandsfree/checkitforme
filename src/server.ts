@@ -23,7 +23,7 @@ import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { tuningForAdmin, callTuning } from "./calls/tuning"; // the numbers the owner tunes, and every other number a check reads
-import { costBuckets } from "./calls/cost";
+import { costBuckets, STATUS_READ_USD } from "./calls/cost";
 import { importZonesData, geocodeMissing, backfillDirectChains, isDirectDefaultChain } from "./db/import-data";
 import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, billableOutcome, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, notifyAfterVerdict, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, transcriptPatch, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus, learnedSyncTick, learnedSyncStatus } from "./store-sync";
@@ -41,7 +41,7 @@ import { placeNavCall, navInitialTwiml, navStep, navEnded, navMediaFeed, getNavS
 import { listenNavFeed, endListenNav } from "./calls/listen-nav";
 // THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
 import { emit, markNow, closeReceipt, linkCall, rollup, rollupFromRow, getReceipt, transcriptOf, setLineHook, normSaid, type Rollup } from "./calls/events";
-import { installReceiptStore, currentRates, onReceiptClosed } from "./calls/receipt-store";
+import { installReceiptStore, currentRates, onReceiptClosed, recordVerdict, lastClerkLine } from "./calls/receipt-store";
 import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
 import { behaved, agentLinesFrom, TEST_CARDS } from "./calls/behaved";
@@ -62,7 +62,7 @@ import { createSchedule, listSchedulesDetailed, deleteSchedule, customerSchedule
 import { cachedCategories, cachedChains, cachedRetailers, categoryLabelMap, retailerMap, invalidateRefCache } from "./refcache";
 import { haversineMi, bboxAround } from "./geo";
 import { ingestSignals, recentStockNear, latestForRetailer } from "./stock/signals";
-import { classifyVerdict, reconcile, consensusFor, productDetailLabel } from "./voice/verdict";
+import { classifyVerdict, reconcile, consensusFor, productDetailLabel, VERDICT_MODEL } from "./voice/verdict";
 import { armLiveRead, noteLiveLine, dropLiveRead } from "./voice/live-read";
 import { seedStockCheckIntel } from "./stock/intel";
 import { seedSellMethods } from "./stock/sellmethods";
@@ -3697,7 +3697,15 @@ app.get("/pub/result/:cid", async (c) => {
       ...(await transcriptPatch(row.id, o.transcript)),
       completedAt: Math.floor(Date.now() / 1000),
     }).where(eq(callResults.id, row.id));
-    if (row.finderUserId && billableOutcome(consensus.statusKey, consensus.definitive, o.transcript)) await chargeCallOnce(row.id, row.finderUserId);
+    const charged1 = !!(row.finderUserId && billableOutcome(consensus.statusKey, consensus.definitive, o.transcript));
+    if (charged1) await chargeCallOnce(row.id, row.finderUserId!);
+    // THE VERDICT TAIL RIDES EVERY DOOR (law 11). Three doors settle a verdict — the sweep, this
+    // on-demand settle a watching customer triggers, and the webhook — and a check watched to the
+    // end settles HERE first, so a tail written only by the sweep never lands on exactly the checks
+    // the owner watches. Same recorder, same three rows, whichever door wins the race (the recorder
+    // itself never writes a second verdict onto a check that has one).
+    void recordVerdict(row.id, consensus.statusKey ?? null, o.summary ?? null, o.durationSecs ?? 0,
+      { secondReadModel: second ? VERDICT_MODEL : null, secondReadUsd: second ? STATUS_READ_USD : 0, decidedBy: lastClerkLine(o.transcript), charged: charged1 });
     dropLiveRead(row.room); // verdict written — let the room's live read go
     // This on-demand settle used to be the ONE finalize path that never sent the alerts, so a check
     // the customer watched to the end produced no in-stock email (owner 07-30). Same notifier as the
@@ -7547,6 +7555,9 @@ app.post("/webhooks/elevenlabs", async (c) => {
       }
       // The webhook path never sent the alerts either — same ONE notifier, claimed once per check.
       await notifyAfterVerdict(o.callId);
+      // …and the same verdict tail as every other door (law 11).
+      void recordVerdict(o.callId, statusKey ?? null, o.summary ?? null, o.durationSecs ?? 0,
+        { secondReadModel: o.status === "completed" ? VERDICT_MODEL : null, secondReadUsd: o.status === "completed" ? STATUS_READ_USD : 0, decidedBy: lastClerkLine(o.transcript), charged: !!(row?.finderUserId && o.status === "completed" && billableOutcome(statusKey, definitive, o.transcript)) });
     }
     return c.json({ ok: true });
   } catch (e) {

@@ -138,6 +138,14 @@ export async function persistReceipt(r: Receipt): Promise<void> {
  * time we know what the clerk said the receipt is closed and flushed. It is appended directly, at
  * the second the call ended, so a replay finishes with the answer the customer got. Never throws.
  */
+/** The last thing Staff actually said with real words in it — the line the status was decided by,
+ *  quoted on the verdict step. ONE copy, used by every door that settles a verdict. */
+export function lastClerkLine(transcript: string | null | undefined): string | null {
+  return [...String(transcript || "").split("\n")]
+    .reverse().map((l) => /^(?:Clerk|Staff):\s*(.*)$/i.exec(l.trim())?.[1] || "")
+    .find((t) => /[a-zA-ZÀ-ɏ]{2,}/.test(t)) || null;
+}
+
 export async function recordVerdict(
   callId: number, statusKey: string | null, summary: string | null, atSec: number,
   // WHAT THE TESTING SCREEN READS AND NOTHING WROTE (owner 08-04): the second read as its own step
@@ -147,6 +155,12 @@ export async function recordVerdict(
   extra?: { secondReadModel?: string | null; secondReadUsd?: number; decidedBy?: string | null; charged?: boolean | null },
 ): Promise<void> {
   try {
+    // THREE DOORS CAN SETTLE ONE CHECK and they race (the sweep, the on-demand settle, the webhook).
+    // Whichever wins writes the tail; the others find it written and leave the record alone, so a
+    // check can never end twice.
+    const already = await db.select({ id: callEvents.id }).from(callEvents)
+      .where(and(eq(callEvents.callId, callId), eq(callEvents.kind, "verdict"))).limit(1);
+    if (already.length) return;
     const room = (await db.select({ room: callResults.room }).from(callResults).where(eq(callResults.id, callId)))[0]?.room;
     const at = Math.max(0, atSec);
     const rowFor = (kind: string, note: string, detail: Record<string, unknown>, order: number) => ({
