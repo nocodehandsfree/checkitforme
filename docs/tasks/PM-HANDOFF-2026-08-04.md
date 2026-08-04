@@ -53,8 +53,9 @@
    (the carrier's socket connects bare; the name arrives in the start message) — hangSignoffDoor
    now hangs when the name is known, and the rig connects bare so this class cannot pass it again.
    PM's fresh check: goodbye spoken, nothing asked twice, ended 9 seconds after the answer, right
-   status, 6.5¢. Known cosmetic leftovers, NOT blockers: the transcriber spells the spoken "one
-   fifty one" as "151" (fails the word-for-word row) · the live page bounced twice while drawing.
+   status, 6.5¢. OWNER 08-04: "151" IS the Pokémon product's name — writing it that way is correct, NOT a fault;
+   the harness's word-for-word row is what needs teaching. Other leftover: the live page bounced
+   twice while drawing.
    NEXT: the owner walks every test one at a time; faults the walk surfaces get fixed in the walk.
 3. **Mapper waits until Charlie works perfectly and ALL tests pass** (owner ruling 08-04 — replaces
    "ASAP"). On a mapping run Charlie only comes on at the very end, to prove the department once
