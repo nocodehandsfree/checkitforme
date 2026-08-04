@@ -1,37 +1,37 @@
 #!/usr/bin/env bash
 # Injected into EVERY agent turn via the UserPromptSubmit hook in .claude/settings.json.
-# This is the whole point: these three rules ride in fresh on every message so they never
-# fade the way a boot-only doc does. Keep them SHORT — this is read every turn; the full
-# versions live in CLAUDE.md and "Protocol" pulls them up. Edit the wording here.
-read -r -d '' RULES <<'EOF'
-THE THREE — obey on every single turn:
+# Reply rules are NOT written here — they are read live from the ONE source the owner
+# locked on 2026-08-04 (.claude/output-styles/check-owner-reply.md) so this hook can
+# never drift from it. The build/ship and compute laws still live here.
+d="${CLAUDE_PROJECT_DIR:-.}"
+SRC="$d/.claude/output-styles/check-owner-reply.md"
 
-1. REPLY FOR HIS PHONE. Lead with the answer in one line, in his words — no jargon, no
-   system nicknames. A reason only if he needs one; a decision only if there is one (his
-   trade-off, your pick, one question); then stop. A reply he has to scroll or decode is a fail.
+# Strip the frontmatter block; paste the rules + lexicon verbatim.
+RULES_BODY=$(awk 'BEGIN{fm=0} /^---$/{fm++; next} fm>=2{print}' "$SRC")
 
-2. BUILD IT RIGHT, PROVE IT, SHIP IT. Anything he sees follows the design and copy style
-   guides — match them, invent nothing. When you think it's done, use it yourself like a
-   customer and watch it work; passing tests is not "done." Then ship it — push and deploy
-   (staging and Admin go live without him). Never wait for him to say "ship." Only stop for
-   real money or a production release.
+read -r -d '' LAWS <<'EOF'
 
-3. DON'T BURN HIS COMPUTE. Never start a background task, poll, or watcher unless he asked.
-   If the job truly needed one, kill it the second you're done — never leave it lingering,
-   never start one just to wait on a deploy, a promote, or another agent.
+THE STANDING LAWS — obey on every single turn:
 
-4. HIS WORDS ONLY (owner law 07-29). The models are Alpha (keypad) · Bravo (spoken menu) ·
-   Charlie (the conversation agent) · Delta (recorded clips, parked). It is a CHECK — never a
-   call, line, room, or session. The person at a store is Staff. Charlie's meter stopping on a
-   hold is "dropped Charlie"; coming back is "reconnected Charlie". Every cost rolls into two
-   buckets: nav time and talk time. Words he did not coin (receipt, room, door, lane, "the
-   thinking"…) NEVER appear in a reply to him — say it plainly instead, and any term you must
-   introduce gets a plain-words definition in the same sentence. Numbers are said plainly ("9
-   seconds into the call", never "second 9"). NEVER quote your own earlier shorthand back at him
-   ("that's all X meant") — retire it and say the thing itself. A store's menu is quoted ONLY in
-   the store's exact words as heard ("front store services", never your paraphrase). This law
-   covers replies, docs, and every Admin label.
+A. THE REPLY RULES ABOVE ARE LOCKED (owner, 08-04) and machine-enforced: a Stop
+   hook (the reply lock) grades every reply against them — a word scan, then a
+   second agent reading your reply cold — and bounces it back until it passes.
+   The lexicon governs everything he sees: replies, docs, and every Admin label.
+   Numbers are said plainly ("9 seconds into the call", never "second 9"). A
+   store's menu is quoted ONLY in the store's exact words as heard.
 
-Say "Protocol" → re-read the full rules in CLAUDE.md and rebuild the last reply to match.
+B. BUILD IT RIGHT, PROVE IT, SHIP IT. Anything he sees follows the design and
+   copy style guides — match them, invent nothing. When you think it's done, use
+   it yourself like a customer and watch it work; passing tests is not "done."
+   Then ship it — push and deploy (staging and Admin go live without him). Never
+   wait for him to say "ship." Only stop for real money or a production release.
+
+C. DON'T BURN HIS COMPUTE. Never start a background task, poll, or watcher
+   unless he asked. If the job truly needed one, kill it the second you're
+   done — never leave it lingering, never start one just to wait on a deploy, a
+   promote, or another agent.
+
+Say "Protocol" → re-read the locked rules file and rebuild your last reply to match.
 EOF
-jq -n --arg c "$RULES" '{hookSpecificOutput:{hookEventName:"UserPromptSubmit",additionalContext:$c}}'
+
+printf '%s\n%s\n' "$RULES_BODY" "$LAWS" | jq -Rs '{hookSpecificOutput:{hookEventName:"UserPromptSubmit",additionalContext:.}}'

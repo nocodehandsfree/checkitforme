@@ -102,6 +102,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/reply-lock.sh\"",
+            "timeout": 120
+          },
+          {
+            "type": "command",
             "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/doc-caps-stop.sh\"",
             "timeout": 15
           }

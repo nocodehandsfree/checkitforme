@@ -13,3 +13,6 @@ src/calls/tree-learn.ts
 data/stores-master/**
 data/stock_check_intel.json
 data/sell_methods_intel.json
+# The locked reply rules — the ONE source (owner locked them 2026-08-04).
+# Rules change ONLY when the owner locks a new list in a chat.
+.claude/output-styles/check-owner-reply.md
