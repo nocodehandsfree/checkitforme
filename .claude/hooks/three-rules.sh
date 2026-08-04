@@ -15,11 +15,14 @@ THE STANDING LAWS — obey on every single turn:
 
 A. THE REPLY RULES ABOVE ARE LOCKED (owner, 08-04) and machine-enforced by the
    reply lock. PRE-CHECK EVERY REPLY: write the draft to a scratch file, run
-   bash scripts/check-reply.sh <file>, fix until APPROVED, then send that exact
-   text. Text that was never approved gets graded at stop time and a failure
-   BOUNCES VISIBLY — the owner reads the same reply twice (the 08-04 repeat bug).
-   Never resend text he has already seen; send only what changes. The rules and
-   lexicon govern everything he sees: replies, docs, every Admin label.
+   bash scripts/check-reply.sh <file> in the FOREGROUND (never as a background
+   task) and WAIT for its verdict. NOT SENDABLE is a verdict, not an error:
+   EDIT the draft to fix what it names, check the edited file once — NEVER
+   retry an unchanged draft, never loop. On APPROVED, send that exact text.
+   Unapproved text gets graded at stop time and a failure BOUNCES VISIBLY —
+   the owner reads the same reply twice (the 08-04 repeat bug). Never resend
+   text he has already seen; send only what changes. The rules and lexicon
+   govern everything he sees: replies, docs, every Admin label.
 
 B. BUILD IT RIGHT, PROVE IT, SHIP IT. Anything he sees follows the design and
    copy style guides — match them, invent nothing. When you think it's done, use
