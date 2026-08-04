@@ -711,9 +711,15 @@ export class ConversationEar {
 
     if (loud && !room) {
       this.soundMs += FRAME_MS; this.quietMs = 0; this.roomMs = 0;
-      // Their own voice sets the yardstick the room is measured against. A decaying peak, so it
-      // follows one person down a line that gets quieter and is never dragged down by the room.
-      this.closeLevel = Math.max(energy, this.closeLevel * CLOSE_DECAY);
+      // Their own voice sets the yardstick the room is measured against. THE MIDDLE of their recent
+      // frames, never the loudest one: a single click or pop on a phone line reads enormously loud,
+      // and a yardstick pinned to it made every real voice after it measure as the room — so Staff
+      // who came back were never heard and the check sat deaf to its end (robot store checks 270 to
+      // 272, all three). The owner's own rule decides the bias: too long costs pennies, too short
+      // costs checks. Decaying, so it still follows one person down a line that gets quieter.
+      const recent = [...this.soundRecent].sort((a, b) => a - b);
+      const mid = recent.length ? recent[Math.floor(recent.length / 2)] : energy;
+      this.closeLevel = Math.max(mid, this.closeLevel * CLOSE_DECAY);
       const full = this.voiced.length * FRAME_MS >= this.windowMs
         && this.voiced.filter(Boolean).length / this.voiced.length >= this.voicedFrac;
       if (full && this.soundMs >= this.musicMax) { this.voiceRunMs = 0; this.enter("music"); }

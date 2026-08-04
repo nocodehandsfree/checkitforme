@@ -206,6 +206,24 @@ console.log("▶ the phone on the counter: a room we can hear is not somebody ta
   ok(e.holdMs >= 6000, `the seconds nobody was with us are counted (${e.holdMs}ms)`);
 }
 
+console.log("▶ one click on the line can never deafen the ear to everybody after it");
+{
+  // Robot store checks 270 to 272 (08-04): the yardstick the room test measures against was the
+  // LOUDEST single frame ever heard, and a click or pop on a phone line reads enormously loud. One
+  // such frame pinned it so high that every real voice afterwards measured as the room, so Staff
+  // who came back were never heard and all three checks sat deaf until somebody gave up.
+  const { e, said } = ear();
+  const near = LOUD_E * 4;
+  const speak = (ms: number, level: number) => { for (let i = 0; i < Math.round(ms / _test.FRAME_MS); i++) e.feed(i % 5 === 4 ? QUIET_E : level); };
+  speak(2000, near);
+  e.feed(near * 40);              // ONE click, absurdly loud, the way a line pop reads
+  speak(1000, near);
+  silence(e, 7000);               // they step away — a real wait
+  ok(said[0] === "away:quiet", "the wait still opens");
+  speak(1500, near);              // …and they come back at their ordinary loudness
+  ok(said[1]?.startsWith("back:"), `they are HEARD coming back, click or no click (${said.join(" · ")})`);
+}
+
 console.log("▶ …and a quiet talker is still a person, not a room");
 {
   const { e, said } = ear();

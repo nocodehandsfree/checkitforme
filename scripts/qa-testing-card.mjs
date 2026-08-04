@@ -34,6 +34,8 @@ function wire(context) {
         // FOLLOW, never manual: this sandbox's outbound proxy refuses to hand back a redirect
         // untouched (503), and the browser only needs the answer at the end of one anyway.
         redirect: 'follow',
+        // A phone's request either lands or dies; a hung one here hangs the page forever.
+        signal: AbortSignal.timeout(20000),
       });
       const out = {};
       r.headers.forEach((v, k) => { if (!['content-encoding', 'content-length', 'transfer-encoding'].includes(k)) out[k] = v; });
@@ -79,6 +81,11 @@ await pg.evaluate(() => window.setCallSrc('staging'));
 await pg.evaluate(() => window.showSection('testing'));
 await pg.waitForTimeout(4000);
 const rows = await pg.$$eval('#testing .peek, #testing button.peek', els => els.length).catch(() => 0);
+if (process.env.QA_TRACE) console.log('  probe:', await pg.evaluate(async () => {
+  const out = { logHtml: (document.getElementById('testing_log') || {}).innerHTML?.slice(0, 150) };
+  try { await loadTesting(); out.after = (document.getElementById('testing_log') || {}).innerHTML?.slice(0, 100); } catch (e) { out.threw = String(e && e.stack || e).slice(0, 300); }
+  return out;
+}));
 ok('the list has checks in it', rows > 0, String(rows));
 
 const room = WANT || await pg.evaluate(async () => {
@@ -97,7 +104,7 @@ const logHead = await pg.$$eval('.sheet .sh-body .k-eyebrow', els => els.map(e =
 console.log('  — tiles:', tiles.join('  ·  '));
 console.log('  — cost lines:', buckets.join('  ·  '));
 
-ok('the sheet opened through the approved pixels', /Check cost/.test(sheet) && /Check log/.test(sheet), logHead.join(' | '));
+ok('the sheet opened through the approved pixels', /check cost/i.test(sheet) && /check log/i.test(sheet), logHead.join(' | '));
 ok('the four stat tiles render', tiles.length === 4, String(tiles.length));
 ok('total cost, total time, Charlie talked and gross profit are the tiles', /Total cost/.test(tiles[0] || '') && /Total time/.test(tiles[1] || '') && /Charlie talked/.test(tiles[2] || '') && /Gross profit/.test(tiles[3] || ''), tiles.join(' | '));
 ok('every cost line is one of his five buckets', buckets.length > 0 && buckets.every(b => /(Bravo \(Menu Nav\)|Foxtrot \(Phone Line\)|Echo \(Listening\)|Charlie \(Talking\)|Status \(Verification\))/.test(b)), buckets.join(' // '));
