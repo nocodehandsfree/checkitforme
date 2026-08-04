@@ -737,6 +737,24 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    */
   function beginHold(reason: HoldReason, atMs: number) {
     if (onHold) return;
+    // THE QUIET AFTER THE GOODBYE IS THE CHECK ENDING, NOT STAFF STEPPING AWAY (owner 08-04,
+    // check 282). Charlie was told to wrap up and said his goodbye, and the next quiet was read
+    // as a wait: he was dropped, his own session's close was then swallowed by the wait rule
+    // (a close during a hold never ends the check), and the line sat open for 70 more seconds
+    // until the STORE hung up on us. Once the wrap-up was asked for AND the goodbye is on the
+    // record, a quiet or empty line is us being done, so WE put the phone down. The ear only
+    // counts quiet after our audio has finished playing, so his goodbye is always fully out
+    // before this fires. Music or a transfer starting after a goodbye is somebody acting, and
+    // the usual wait rules keep owning those.
+    if (signoffNudged && wrapRecorded && (reason === "quiet" || reason === "room")) {
+      noteWeEnded(room, "signed_off");
+      emit(room, "hangup", "Charlie said goodbye and the line went quiet, so we hung up", { reason: "signed_off", atMs });
+      log("signoff: goodbye said and the line went quiet — the check is over, hanging up");
+      try { eleven?.close(); } catch { /* torn down */ }
+      signalEnd();
+      try { twilio.close(); } catch { /* best effort */ }
+      return;
+    }
     onHold = true; holdReason = reason; heldWords = [];
     // EVERY WAIT THAT ENDS HAS TO HAVE STARTED. A transfer used to write ONLY its own line, and then
     // the wait it caused ended with a "back off hold" that had no "put on hold" anywhere above it —

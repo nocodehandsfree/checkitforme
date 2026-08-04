@@ -844,8 +844,15 @@ console.log("\n▶ the whole live chain: Staff answer, the reader reads, and the
   const realFetch = globalThis.fetch;
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
+    const verdictJson = JSON.stringify({ inStock: "yes", restockDay: null, restockTime: null, productForm: null, set: null, confidence: 0.9, reason: "clerk said we do" });
+    // Each vendor gets its answer in its OWN shape: a Gemini call handed an OpenAI-shaped body
+    // parses to an empty string WITHOUT throwing, so the fallback never fires and the reader
+    // quietly reads nothing — which is a rig fault, not an engine one.
+    if (url.includes("gateway.helicone")) {
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: verdictJson }] } }] }), { status: 200, headers: { "content-type": "application/json" } });
+    }
     if (url.includes("helicone")) {
-      return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ inStock: "yes", restockDay: null, restockTime: null, productForm: null, set: null, confidence: 0.9, reason: "clerk said we do" }) } }] }), { status: 200, headers: { "content-type": "application/json" } });
+      return new Response(JSON.stringify({ choices: [{ message: { content: verdictJson } }] }), { status: 200, headers: { "content-type": "application/json" } });
     }
     return realFetch(input as RequestInfo, init);
   }) as typeof fetch;
@@ -913,6 +920,56 @@ console.log("\n▶ the answer is in hand: Charlie is told to thank them and end,
   ok(notes().length === before + 1, "told once, never nagged twice");
   nudgeSignoff("room-that-never-existed", "in stock");
   ok(true, "a knock on a room with no check is a no-op, never an error");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ the goodbye is said and the line goes quiet: WE hang up, the check never sits open");
+{
+  // Check 282 (owner 08-04): Charlie was told to wrap up, said his goodbye, and the quiet after
+  // it was read as Staff stepping away. He was dropped into a wait, the wait rule swallowed his
+  // session's close, and the line sat open for 70 more seconds until the STORE hung up on us.
+  // Once the wrap-up was asked for AND the goodbye is on the record, quiet is the check ending.
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const { tw } = await callToHello(f, 400, "room-signed-off");
+  tw.say({ event: "mark", mark: { name: "delta-opening" } });
+  await sleep(700);   // past the clip's playout clock and its echo tail, so the ear is being fed again
+  speak(tw, 150);   // Staff give the answer, so the ear knows somebody was here
+  nudgeSignoff("room-signed-off", "in stock");
+  await sleep(80);
+  f.sockets[f.sockets.length - 1].send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Perfect, thank you so much, have a good one." } }));
+  await sleep(80);
+  quiet(tw, HOLD_QUIET_MS / 20 + 20);
+  await sleep(120);
+  const ev = getReceipt("room-signed-off")?.events || [];
+  ok(!ev.some((e) => e.kind === "hold_start"), "the quiet after his goodbye is never written as Staff stepping away");
+  const hang = ev.find((e) => e.kind === "hangup");
+  ok(!!hang && (hang?.detail as { reason?: string } | null)?.reason === "signed_off", "the check says WE hung up because the goodbye was said");
+  ok(!/[—–]/.test(String(hang?.note || "")), "no dashes in the line the owner reads");
+  ok(tw.readyState !== 1, "…and the phone was actually put down, the line is not sitting open");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ …but quiet WITHOUT the goodbye still holds: told to wrap up is not the same as done");
+{
+  // The gate above must never eat a real wait. The knock landed but Charlie has not said his
+  // goodbye yet, maybe Staff walked off mid sentence: that quiet is still Staff stepping away.
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const { tw } = await callToHello(f, 400, "room-nudged-hold");
+  tw.say({ event: "mark", mark: { name: "delta-opening" } });
+  await sleep(700);   // past the clip's playout clock and its echo tail, so the ear is being fed again
+  speak(tw, 150);   // Staff were here and talking…
+  nudgeSignoff("room-nudged-hold", "in stock");
+  await sleep(80);
+  quiet(tw, HOLD_QUIET_MS / 20 + 20);
+  await sleep(120);
+  const ev = getReceipt("room-nudged-hold")?.events || [];
+  ok(ev.some((e) => e.kind === "hold_start"), "quiet before the goodbye is still a wait, never a hang up");
+  ok(!ev.some((e) => e.kind === "hangup"), "…and nothing hung up on a store that might come back");
+  ok(tw.readyState === 1, "…and the line is still up");
   restore(); tw.close(); f.close();
 }
 
