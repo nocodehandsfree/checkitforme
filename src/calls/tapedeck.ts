@@ -547,9 +547,11 @@ function finalizeIfStore(s: TdSession): void {
 //
 // WHERE EVERY LINE BELOW COMES FROM, exactly. Most are what a real person really said on a real
 // check (`how-staff-actually-talk.md`), with only the store name and the person's name swapped.
-// Three are NOT in that corpus and must not be passed off as if they were: scenario 8's payoff
-// ("Yeah, we've got a few."), and the second person's greeting and answer in scenario 10 — those
-// come from the spec the owner approved on 08-01, which is why they are here. Nothing on this list
+// Four are NOT in that corpus and must not be passed off as if they were: scenario 8's payoff
+// ("Yeah, we've got a few."), the second person's greeting and answer in scenario 10, and scenario
+// 1's follow-up answer ("Uh, I think it's the one fifty one booster boxes." — added 08-04 so the
+// goodbye is testable at all) — the rest of those come from the spec the owner approved on 08-01,
+// which is why they are here. Nothing on this list
 // was made up by an agent. They are short, they stumble, they interrupt themselves. Do NOT tidy them
 // into better English: the mess IS the test.
 // ===========================================================================================
@@ -595,6 +597,12 @@ export const ROBOT_SCENES: RobotScene[] = [
   { n: 1, card: "answer_clear_yes", name: "Yes, plainly", expect: "in_stock", acts: [
     { listen: true }, { say: "Yeah." },
     { listen: true }, { say: "We do." },
+    // Charlie's own instructions follow a settled yes with the set and product questions, and a
+    // goodbye is only possible once they are answered: a robot that goes silent here makes the
+    // wrap-up untestable by design (proven on checks 273 and 276, where he waited on this answer
+    // until the silence dropped him). Both parts in one line, so his chain closes and he can thank
+    // them and end. Spec-approved, not corpus, like scenario 8's payoff.
+    { listen: true }, { say: "Uh, I think it's the one fifty one booster boxes." },
     ...WAIT_OUT,
   ] },
   { n: 2, card: "answer_clear_no", name: "No, plainly", expect: "not_in_stock", acts: [

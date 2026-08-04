@@ -855,7 +855,24 @@ console.log("\n▶ the whole live chain: Staff answer, the reader reads, and the
   const { noteLiveLine } = await import("../src/voice/live-read");
   setLineHook(noteLiveLine);
   armLiveRead("room-livechain", "Pokémon");
-  const { tw } = await callToHello(f, 400, "room-livechain");
+  // THE CARRIER'S WAY IN, exactly: the socket connects BARE and the check's name only arrives in
+  // the start message. Handing the name in up front is how this rig missed the empty-name door on
+  // every real check (the fault the engine's own log caught on staging, 08-04).
+  const audio = Buffer.alloc(400 * 8, 0x20);
+  openReceipt("room-livechain", { lane: "direct" });
+  setBridgeContext("room-livechain", {
+    agentId: "agent_normal", midCallAgentId: "agent_joining",
+    dynamicVars: { opening_line: "do you have any Pokemon cards in stock?" },
+    connectOnHuman: true,
+    openingClip: { audio, ms: 400, text: "do you have any Pokemon cards in stock?" },
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "" as never, () => { /* bare, the way Twilio really connects */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_lc", customParameters: { room: "room-livechain" } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
+  await sleep(250);
   tw.say({ event: "mark", mark: { name: "delta-opening" } });
   await sleep(200);
   const notes = () => f.raw.filter((r) => r.includes("contextual_update"));

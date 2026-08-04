@@ -883,7 +883,13 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   // own instructions still govern the one follow-up they call for, so the note allows it and then
   // requires the goodbye, which is the thing that was missing.
   let signoffNudged = false;
-  signoffDoors.set(room, (answer: string) => {
+  // HUNG ON THE CHECK'S NAME, WHEN THE NAME IS KNOWN. The carrier's socket connects bare and the
+  // room only arrives in its start message a moment later — so a door hung at connect time was
+  // registered under an empty name on EVERY real check, and the knock ("the answer is in hand…")
+  // found nobody. The rig never saw it because the rig hands the room in up front. Hung here for
+  // callers that do, and hung AGAIN from the start handler for the carrier's way in.
+  const hangSignoffDoor = () => { if (room) signoffDoors.set(room, signoffDoor); };
+  const signoffDoor = (answer: string) => {
     if (signoffNudged || ended || onHold || !eleven || !ready) {
       log(`signoff: knock for ${room.slice(0, 8)} (${answer}) not deliverable: ${signoffNudged ? "already told" : ended ? "the check is over" : onHold ? "Staff are away" : !eleven ? "Charlie is not open" : "his session is not ready"}`);
       return;
@@ -895,9 +901,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       eleven.send(JSON.stringify({ type: "contextual_update", text:
         `[The answer is in hand. If your instructions call for one quick follow-up, ask it once; otherwise wrap up NOW: `
         + `thank them warmly, by name if they gave one, and end the check with end_call. `
+        + `If you already asked a follow-up and they have not answered it, let it go and say your goodbye anyway. `
         + `Never leave the check without saying goodbye, and never hang up on somebody mid sentence.]` }));
     } catch { /* best effort — never break a check over a note */ }
-  });
+  };
+  hangSignoffDoor();
 
   /** A note to the agent that is NOT spoken to the store: time passed and who is on the line may
    *  have changed. The provider's own contextual-update channel, so nothing is said out loud. */
@@ -1549,7 +1557,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     try { m = JSON.parse(data.toString()); } catch { return; }
     if (m.event === "start") {
       streamSid = m.start?.streamSid || streamSid;
-      if (!room && m.start?.customParameters?.room) room = m.start.customParameters.room; // Twilio puts <Parameter> here
+      if (!room && m.start?.customParameters?.room) { room = m.start.customParameters.room; hangSignoffDoor(); } // Twilio puts <Parameter> here; the check has its name NOW, so its door hangs now
       if (!ctx && room) ctx = contexts.get(room);
       if (ctx?.dtmf) scheduleDtmf(ctx.dtmf);
       if (ctx?.connectOnHuman) {
