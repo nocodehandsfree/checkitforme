@@ -919,7 +919,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       eleven.send(JSON.stringify({ type: "contextual_update", text:
         `[The answer is in hand. If your instructions call for one quick follow-up, ask it once; otherwise wrap up NOW: `
         + `thank them warmly, by name if they gave one, and end the check with end_call. `
-        + `If you already asked a follow-up and they have not answered it, let it go and say your goodbye anyway. `
+        + `From here NEVER repeat a question you already asked, in any wording, even if their answer did not fit it. `
+        + `If you already asked a follow-up and they have not answered it, or their answer made no sense, let it go and say your goodbye anyway. `
         + `Never leave the check without saying goodbye, and never hang up on somebody mid sentence.]` }));
     } catch { /* best effort — never break a check over a note */ }
   };
