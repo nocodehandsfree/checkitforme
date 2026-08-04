@@ -42,3 +42,7 @@ that made it law. A rule leaves this file only when the owner himself retires it
     ever talks to a person — that is Charlie, always, on every kind of check. Mapping built its own
     way of asking Staff and it cost six fix passes to find (08-01). A copy of an existing piece is a
     failed build: name the existing piece and snap onto it, or stop.
+14. A behavior Staff would HEAR is claimed only off a robot check's record showing it — never off
+    the rig alone. The rig fakes the answer-reading, so it proves the plumbing, not the moment.
+    The goodbye was rig-proven, claimed in STATE, and three live checks showed it never fired
+    (08-04 PM audit, checks 276-278).
