@@ -341,7 +341,11 @@
      which pushed the chain list below the fold. Each choice shares the width and shortens its own
      text instead of the row growing taller. */
   .k-filters{display:flex;gap:6px;flex-wrap:nowrap;margin:14px 0 4px;width:100%}
-  .k-filters>.k-filter{flex:1 1 0;min-width:0;text-overflow:ellipsis}
+  /* Three filters on one phone line. The problem filter gets the bigger share, because "Menu changed"
+     is the longest choice and the one he is looking for; clipped to "Menu cha…" it stopped being a
+     word (owner 08-04). The two beside it read whole at their share either way. */
+  .k-filters>.k-filter{flex:1 1 0;min-width:0;text-overflow:ellipsis;padding-right:26px;padding-left:11px;background-position:right 9px center,center}
+  .k-filters>.k-filter.wide{flex:1.45 1 0}
   /* THE raised key — Show more, secondary page actions. Uppercase, letterspaced. */
   .k-key{display:block;margin:18px auto 0;background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:999px;padding:12px 26px;font-size:12.5px;font-weight:800;letter-spacing:.13em;color:rgba(255,255,255,.85);cursor:pointer;font-family:inherit;transition:transform .08s}
   .k-key:active{transform:translateY(2px)}
@@ -1434,7 +1438,7 @@
       <div class="k-filters" style="margin:0 0 4px">
         <select class="k-filter" id="set_frate" onchange="filterChainPicker()"><option value="">All ratings</option><option value="5">5 Best Chance</option><option value="4">4 Mostly Reliable</option><option value="3">3 Spotty</option><option value="2">2 Over MSRP</option><option value="1">1 Unknown</option></select>
         <select class="k-filter" id="set_ftype" onchange="filterChainPicker()"><option value="">All types</option></select>
-        <select class="k-filter" id="set_fmap" onchange="filterChainPicker()"><option value="">All</option><option value="mapped">Mapped</option><option value="unmapped">Unmapped</option><option value="changed">Menu changed</option></select>
+        <select class="k-filter wide" id="set_fmap" onchange="filterChainPicker()"><option value="">All</option><option value="mapped">Mapped</option><option value="unmapped">Unmapped</option><option value="changed">Menu changed</option></select>
       </div>
       <select id="set_chain" onchange="setPickChain()" style="display:none"><option value="">Select a chain</option></select>
       <div id="set_picker"><div class="empty">Loading…</div></div>
