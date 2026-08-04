@@ -77,6 +77,10 @@ def word_scan(text):
             fails.append(f"banned phrase \"{p}\" (rule 7, or \"should work\": prove it or say NOT verified)")
     if "—" in prose or re.search(r"(?<=\S) - (?=\S)", prose):
         fails.append("dashes inside sentences (rule 4: full plain sentences, no dashes)")
+    lines = sum(max(1, -(-len(l.rstrip()) // 90)) for l in prose.splitlines() if l.strip())
+    if lines > 15:
+        fails.append(f"reply is about {lines} lines, over the 15 line limit (rule 9: "
+                     "one screen — the answer and the decisions; he asks if he wants more)")
     return fails
 
 def reader_check(root, text):
