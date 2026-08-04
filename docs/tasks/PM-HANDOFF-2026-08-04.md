@@ -48,11 +48,14 @@
    "Customer charged" on the owner's free account (row says not charged) · robot-run-a/b/c/d
    screenshot folders committed at repo root (sprawl) · the rig's model stub only speaks one
    model's answer shape, so the whole-chain scene false-fails when a GEMINI key is set.
-2. **OWNER RULING 08-04, after the audit: nothing is tested until Charlie can wrap up.** Echo fixes
-   the goodbye first (the box is out). THEN the owner walks every test one at a time: the agent
-   runs it, he opens the check and reads the transcript himself. Faults the walk surfaces (the
-   words thrown away after a hold, the vague-yes read flipping) get fixed inside that walk, his
-   order, one at a time.
+2. **BOTH BUGS FIXED AND AUDIT-PASSED 08-04 late (PM reran every test + dialed a fresh robot
+   check).** The goodbye's root: the wrap-up door hung under an empty name on every real check
+   (the carrier's socket connects bare; the name arrives in the start message) — hangSignoffDoor
+   now hangs when the name is known, and the rig connects bare so this class cannot pass it again.
+   PM's fresh check: goodbye spoken, nothing asked twice, ended 9 seconds after the answer, right
+   status, 6.5¢. Known cosmetic leftovers, NOT blockers: the transcriber spells the spoken "one
+   fifty one" as "151" (fails the word-for-word row) · the live page bounced twice while drawing.
+   NEXT: the owner walks every test one at a time; faults the walk surfaces get fixed in the walk.
 3. **Mapper waits until Charlie works perfectly and ALL tests pass** (owner ruling 08-04 — replaces
    "ASAP"). On a mapping run Charlie only comes on at the very end, to prove the department once
    the right one is reached; that proof is what lets the run optimize for speed and lock the
