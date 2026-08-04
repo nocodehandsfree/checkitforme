@@ -104,6 +104,8 @@ then they ride the next promote to prod):**
 | Task | Why |
 |---|---|
 | [Missing CD comps for data-heavy Admin pages](admin-cd-comps-data-pages.md) | superseded by `admin-audit-comps-missing.md` (covers the same pages + more) |
+| [Stale admin browser test](e2e-admin-spec-stale.md) | browser tests archived 08-04, owner's ruling |
+| [Zone-report browser test](e2e-zone-report-spec.md) | browser tests archived 08-04, owner's ruling |
 
 ## Admin cleanup — one task per Admin page (22, all active · ship via `scripts/ship-admin.sh`)
 Live [dash](admin-cleanup-dash.md) · Users [users](admin-cleanup-users.md) · Restock
@@ -145,8 +147,6 @@ Live [dash](admin-cleanup-dash.md) · Users [users](admin-cleanup-users.md) · R
 | [Pull 424 from staging ADMIN_PHONES before the real-card walk](staging-424-admin-phones.md) | data | active |
 | [Staging store-list overwrite mystery](staging-storelist-overwrite.md) | data | active |
 | [Settings mirror: verify prod export live](settings-mirror-verify.md) | data | active |
-| [Prod gate 14/15: stale tests/e2e/admin.spec.ts](e2e-admin-spec-stale.md) | admin | active |
-| [Add the zone-report page to the e2e spec](e2e-zone-report-spec.md) | data | active |
 | [Retarget the stale CALL_ECONOMICS citation in server.ts](server-cost-citation.md) | data | active |
 
 Consumer-site tasks need an owner-named unlock (the site is frozen — docs/shared/REBUILD_PLAN.md).

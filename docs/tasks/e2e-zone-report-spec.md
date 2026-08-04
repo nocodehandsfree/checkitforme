@@ -3,7 +3,7 @@
 **What:** The e2e harness covers 40 paths but the zone-report page was never added to the spec.
 **Done when:** zone-report path in tests/e2e with a content marker, green on staging.
 **Lane:** Ops
-**Status:** open
+**Status:** dead — the browser tests were archived 2026-08-04 on the owner's ruling; nothing left to add.
 
 **Verify-live output (paste on close — a task without it is NOT closed):**
 ```

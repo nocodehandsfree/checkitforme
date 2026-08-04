@@ -47,7 +47,7 @@
 - Two branches: staging (`staging`) + prod (`main`) — both load-bearing, never delete. Promote =
   `bash scripts/promote.sh` (the ONLY way prod code changes; per-commit confirm). Admin ships via ship-admin.
 - Settings mirror prod→staging LIVE (60s; `src/settings-sync.ts` — policy/vt_plans/statuses; zero
-  overlap with store/learned pipes). Launch gate = `bash scripts/launch-gate.sh` (local+staging; prod post-promote).
+  overlap with store/learned pipes). Browser tests (the old launch gate) ARCHIVED 08-04, owner's ruling.
 - **NEXT PROMOTE ride-along:** the zone-lane fix (2080731) + the rebuild build stamp — prod/admin show
   NOT-LIVE on verify-live until this promote (queued: `first-promote-after-rebuild`).
 - NOT DONE (ops): per-tier SMS-cap enforcement · remove `/api/zones*` admin endpoints (keep engine) ·
