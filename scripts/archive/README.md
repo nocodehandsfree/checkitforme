@@ -1,2 +1,2 @@
-# scripts/archive/ — unreferenced one-offs
-Nothing here is referenced by package.json, CI, test-all.sh, docs, or any other script (verified 2026-07-07). Pull one back out if you need it.
+# scripts/archive/ — kept regenerators only
+The 23 unreferenced one-off scripts that lived here were deleted in the 2026-08-04 cleanup (git history has them). The two scripts still here are kept because live files point at them: `gen-pokemon-catalog.ts` (named in `src/db/seed.ts` as the drops snapshot regenerator) and `collect-pokemon-vending.mjs` (regenerates the gitignored `data/pokemon-vending-import.json`).
