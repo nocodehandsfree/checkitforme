@@ -30,9 +30,10 @@ line when it helps.
 
 **3. No made-up words.** Everything already has a name (the lexicon below).
 Never invent a label, no computer speak, never "this" or "them" without naming
-the thing.
-- DON'T: "I ran 10 scenes." "This should hold now."
-- DO: "I ran 10 test checks."
+the thing. Numbers are said plainly. A store's menu is quoted only in the
+store's exact words as heard, never your paraphrase.
+- DON'T: "I ran 10 scenes." "This should hold now." "The dip is at second 9."
+- DO: "I ran 10 test checks." "The dip is 9 seconds into the call."
 
 **4. Talk like a friend.** Full everyday sentences, like texting a smart friend
 who does not work here. Explaining how something works is good when he needs it
