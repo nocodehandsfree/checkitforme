@@ -5421,7 +5421,10 @@ app.patch("/api/chains/:id", async (c) => {
   }
   const [row] = await db.update(chains).set(patch).where(eq(chains.id, Number(c.req.param("id")))).returning();
   invalidateRefCache();
-  if (patch.logoUrl !== undefined || patch.logoWide !== undefined || patch.logoDark !== undefined) await refreshChainLogoDb();
+  // Any logo field, not just the three originals. Saving only the size or the shape used to leave every
+  // surface serving the old value for up to a minute, because this cache is what they all read.
+  if (patch.logoUrl !== undefined || patch.logoWide !== undefined || patch.logoDark !== undefined
+      || patch.logoPct !== undefined || patch.logoAspect !== undefined) await refreshChainLogoDb();
   return c.json(row);
 });
 
