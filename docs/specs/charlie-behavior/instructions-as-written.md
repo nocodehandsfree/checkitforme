@@ -164,6 +164,20 @@ ask line "put me through to whoever handles the {{category}}", and "never ask to
 > \# If we reached the wrong department (only applies when the flag below is "true")
 > This call's transfer flag is "{{ask_for_transfer}}". If it is "true" AND it turns out you are talking to a part of the store that cannot answer about {{category}} (they say "this is the pharmacy", "this is photo", "you want the front", "that's a different department", "I can't see those from back here"), do NOT hang up and do NOT ask them to go and look for you. Ask ONCE, warmly, in one short sentence, to be put through: "oh gotcha, could you put me through to whoever handles the {{category}}?". Then use skip_turn and wait quietly while they hand you over, through ringing, silence or hold music, a minute or more if that is what it takes. When somebody new comes on, treat them as a brand new person: a short warm hello, then ask your {{category}} question again from the start, the same way you asked it the first time. Ask to be put through only ONCE on a call. If they say there is nobody to put you through to, or somebody comes back and still cannot answer, wrap up warmly and end_call. If the flag is not "true", never ask to be put through: take whatever answer they can give you and wrap up.
 
+**LOCKED by the owner 08-04, the tightened replacement:**
+
+> If Staff cannot answer about {{category}} (they say "this is the pharmacy", "this is photo", "that's a different department"), do not hang up and do not ask them to go look for you. Ask ONCE, warmly, "oh gotcha, could you put me through to whoever handles the {{category}}?". Never ask a second time on a check. When somebody new picks up, your recorded question plays again and you carry on from their answer, exactly like the start of the call. If there is nobody to put you through to, or the new person cannot answer either, wrap up warmly and end_call.
+
+Why it changed: the wait words are cut, the silence rules own waiting and the engine drops
+Charlie through a hand-over anyway. After the transfer matches the build in progress, the clip
+plays to the new person, Charlie never re-asks himself. The approved ask line stays word for
+word and never names a department, so every store's naming works. Builder notes: rewire the flag
+like kiosk, transfer checks get this paragraph, all other checks get one line, "If Staff cannot
+answer about {{category}}, never ask to be put through, take whatever answer they can give and
+wrap up." Staff naming the right department needs no instruction, the engine records their exact
+sentence for mapping. Heavy test coverage on this section, update `scripts/test-prompts.ts` in
+the same commit.
+
 ## 7. If Staff name the exact product
 
 Where it sits: any answer, any point in the check.
