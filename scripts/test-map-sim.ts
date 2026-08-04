@@ -15,7 +15,7 @@ import { chains, retailers } from "../src/db/schema";
 import { connectAtSecFor, recipeToDtmf } from "../src/calls/recipe";
 import {
   proposeVersion, approveVersion, activeMap, versionsFor, chainDetail, graphFor, graphSummary,
-  openUnknowns, recordCallPath, recordFailedAttempt, learnFromReceipt, reportCallDrift, resetChainHistory, reportUnknown,
+  openUnknowns, recordCallPath, recordFailedAttempt, learnFromReceipt, reportCallDrift, reportUnknown,
   addEvidence, navSecondsOf, reachedPctOf, scoreConfidence, sameMenu, CHECK_FAIL_REASONS, provenStores, addProvenStore,
   type MapRecipe, type EvidenceCall,
 } from "../src/calls/mapgraph";
@@ -146,8 +146,8 @@ async function main() {
     ok(/await addProvenStore\(chainId, store\.id\); \/\/ never throws/.test(eng),
       "a pinned-store run's proven answer joins the ledger — the hand-dial path has real code");
     const mg2 = readFileSync("src/calls/mapgraph.ts", "utf8");
-    ok(/await setSetting\(`map_proven:\$\{chainId\}`, ""\);/.test(mg2),
-      "and starting a chain over clears the proof with the history");
+    ok(!/resetChainHistory|freeChainDoors/.test(mg2),
+      "and neither hand-clear exists any more — the owner never asked for them (08-03)");
   }
 
   console.log("\n▶ A NEW MENU IS A CONDITION — filed once, real when heard twice");
@@ -203,10 +203,13 @@ async function main() {
   console.log("\n▶ ONE ODD STORE — Franklin answers differently");
   {
     const oddRoute: MapRecipe = { type: "keypad", seconds: 30, steps: [{ action: "press", value: "4", atSec: 9, afterPrompt: 1 }] };
-    // Nothing has failed at Franklin yet, so it must WAIT for the owner.
-    const waiting = await proposeVersion({ chainId: chain.id, storeId: odd.id, recipe: oddRoute, source: "sweep",
+    // NOTHING HAS FAILED AT FRANKLIN, so there is nothing to decide (owner, 08-03). The chain route
+    // still works there, so it keeps running it, and what this store did is kept as NOT USED.
+    const noted = await proposeVersion({ chainId: chain.id, storeId: odd.id, recipe: oddRoute, source: "sweep",
       call: { at: now(), day: "2026-07-29", storeId: odd.id, seconds: 30, reachedHuman: true, path: "press:4" } });
-    ok(waiting.version.status === "proposed" && waiting.activated === false, "a store that merely differs waits for approval");
+    ok(noted.version.status === "rejected" && noted.activated === false,
+      "a store that merely answers differently is kept as Not used — nothing waits for him");
+    ok(/Not used/.test(noted.version.why || ""), `and it says why: "${noted.version.why}"`);
     ok((await activeMap(chain.id, odd.id))!.recipe.steps[0].value === "2", "and keeps running the chain route meanwhile");
 
     // Now the chain route actually fails there. Waiting would only keep it broken.
@@ -501,26 +504,6 @@ async function main() {
       `the live route still carries time to Staff for the agent to open on (${live.seconds}s)`);
   }
 
-  console.log("▶ STARTING A CHAIN OVER — the history goes, the route stays");
-  {
-    const before = (await activeMap(chain.id))!;
-    const res = await resetChainHistory(chain.id);
-    const after = (await activeMap(chain.id))!;
-    ok(res.keptRecipe !== null, `the route it runs is kept: "${res.keptRecipe}"`);
-    ok(pathSig(after.recipe) === pathSig(before.recipe), "and it is the SAME route, step for step, so real checks are untouched");
-    ok(after.evidence.calls.length === 0, "its evidence is emptied, so the next call is genuinely its first");
-    ok(after.version === 1, `and it is back to v1 (${after.version})`);
-    ok(after.confidence === 0, "with no trust yet, because nothing has proved it since");
-    ok((await versionsFor(chain.id)).length === 1, "every retired and set-aside recipe is gone");
-    ok(((await chainDetail(chain.id)).calls as unknown[]).length === 0, "the mapping calls list is empty");
-    ok(((await chainDetail(chain.id)).unknowns as unknown[]).length === 0, "and nothing is left waiting in Review");
-    ok(!(await openUnknowns(400)).some((u) => u.chainId === chain.id), "including in the queue every chain shares");
-  }
-
-  // A RE-LISTEN IS NOT A FAILED CALL. It walks the menu, the store announces the handoff, and we hang
-  // up on the ring on purpose. Every number on the chain page used to read that as a miss: nav time
-  // fell back to the recipe's own declared timings, "Reached Staff" printed 0%, the call count showed
-  // zero, and trust stayed "unknown" — all for a call that worked perfectly.
   console.log("▶ A CALL THAT ENDED ON THE RING — a good map, not a miss");
   {
     const live = (await activeMap(chain.id))!;
@@ -530,14 +513,16 @@ async function main() {
       storeId: east.id, storeName: east.name, seconds: null, reachedHuman: false, endedOnRing: true,
       path: pathSig(live.recipe), transferAtSec: 68, note: "re-listen",
     };
+    const before = (await graphSummary()).find((r) => r.chainId === chain.id)!;
     await addEvidence(live.id, ring);
     const row = (await graphSummary()).find((r) => r.chainId === chain.id)!;
 
     ok(navSecondsOf(live.recipe, [ring]) === 68, `nav time is the 68s we MEASURED, not the ${declared}s the recipe declares`);
     ok(row.navSeconds === 68, "and that is the number the chain page reads");
-    ok(row.calls === 1 && row.stores === 1, `the call counts: ${row.calls} call, ${row.stores} store`);
+    ok(row.calls === before.calls + 1, `the ring-ended check counts like any other (${before.calls} to ${row.calls})`);
     ok(reachedPctOf([ring]) === null, "Reached Staff has no number yet, because no call has waited for Staff");
-    ok(row.reachedPct === null, "so the page shows no percentage rather than a false 0%");
+    ok(row.reachedPct === before.reachedPct,
+      "and it never drags the reached-Staff number down, because it never waited for Staff");
     ok(scoreConfidence({ calls: [ring] }).label === "observed once", "and it counts toward trust like any call that walked the route");
 
     // The percentage still tells the truth once calls DO wait for Staff, and the ring call never
@@ -612,17 +597,26 @@ async function main() {
     // on a check we ended ourselves while the desk was ringing, which is two untruths in one line.
     const page = readFileSync("public/app.html", "utf8");
     ok(!/nobody picked up/i.test(page), "no check is ever described as one nobody picked up");
-    ok(/:c\.endedOnRing\?\['Admin hung up','#FFCB05'/.test(page), "a check WE ended reads 'Admin hung up', the status he approved, in yellow");
+    // THE PILL CARRIES THE STAGE NOW (owner, 08-03), not the outcome. "Admin hung up" stays as the
+    // last rung of the transcript, which is where he reads what happened to a check.
+    ok(/text:'Admin hung up'/.test(page), "a check WE ended still reads 'Admin hung up' on its last rung");
     ok(/c\.endedOnRing\) rows\.push\(\{who:'ring'[\s\S]{0,120}?text:'Admin hung up'\}\)/.test(page),
       "and the last rung says only the status words — the rung before already says the store was transferring us");
     // Comp 3a: the stage is the card's header, the winner says so, and a failed check is one row + reason.
-    ok(/const STAGE_WORD=\{map:'Mapping menu',speed:'Optimizing speed'\};/.test(page),
-      "each check is headed by its stage — the two the engine runs; the dead proving key is gone");
+    // "Mapping menu" is RETIRED as a heading (owner, 08-03): mapping the menu and proving the
+    // department are the same work, so a check reads Proving department until it is actually proved.
+    ok(!/'Mapping menu'/.test(page) && /'Proving department'/.test(page) && /'Department proved'/.test(page)
+      && /'Optimizing speed'/.test(page) && /'Speed optimized'/.test(page),
+      "the four stage words are the owner's, and Mapping menu is gone");
+    ok(/\['Proving department','#FFCB05'/.test(page) && /\['Optimizing speed','#FFCB05'/.test(page),
+      "nothing is green until it is proved — everything before that is yellow");
+    ok(/\['Department proved','var\(--green\)'/.test(page) && /\['Speed optimized','var\(--green\)'/.test(page),
+      "and green is only the check that proved the department, or the one that landed the faster way");
     // OWNER UPDATE 5 REPLACED THE COMP HERE: no check says "Recipe winner". The winner lives in the
     // recipe box and in Menu, so the page never carries two claims about which route is live.
     ok(!/Recipe winner/.test(page), "no check says Recipe winner — the recipe box and Menu own that");
-    ok(/const pill=c\.reachedHuman\?\['Reached staff','var\(--green\)'/.test(page),
-      "a passing check says what it did: Reached staff in green, only for a confirmed right department");
+    ok(/const pill=stagePill\(c\);/.test(page),
+      "the pill on a check carries its STAGE, and the stage decides the colour");
     ok(/if\(c\.grade==='fail'\)\{/.test(page) && /mapCheckOpen\('\$\{bid\}'\)/.test(page),
       "a failed check collapses to one row that opens on tap");
     ok(/if\(x\.c\.grade==='fail'\) continue;/.test(page), "and it never takes part in the faster-or-slower chain");
@@ -647,7 +641,7 @@ async function main() {
       "no rendered string says Set aside anywhere on the page");
     ok(!/`Set aside: \$\{why\}`/.test(readFileSync("src/calls/mapgraph.ts", "utf8")),
       "and the engine writes 'Not used', never 'Set aside', onto a rejected recipe");
-    ok(/const PHASE=\{map:'Mapping menu',speed:'Optimizing speed',locked:'Locked ✓',stopped:'Stopped'\};/.test(page),
+    ok(/const PHASE=\{map:'Proving department',speed:'Optimizing speed',locked:'Locked ✓',stopped:'Stopped'\};/.test(page),
       "the live run card speaks the owner's stage names — no raw map/speed, no retired names");
 
     // THE MENU IS THE MAP OF DOORS from the ONE locked run (comp 3b). The stitched menu that voted
@@ -1083,9 +1077,8 @@ async function main() {
       ok(/setMappingHandoff/.test(nv4) && /handed the check to Charlie/.test(nv4),
         "reaching a person hands the check to Charlie — mapping speaks to nobody");
       const mg4 = readFileSync("src/calls/mapgraph.ts", "utf8");
-      ok(/await setSetting\(`map_doors_dead:\$\{chainId\}`, ""\);/.test(mg4)
-        && /await setSetting\(`nav_confirm_asked_doors:\$\{chainId\}`, ""\);/.test(mg4),
-        "and starting a chain over frees every door it refused to try again");
+      ok(!/Waiting for your approval/.test(mg4),
+        "and nothing anywhere says it is waiting for him — he reviews NOTHING (owner R2)");
     }
     // FIX PASS 5 ITEMS 3-5.
     {
@@ -1099,13 +1092,13 @@ async function main() {
       ok(/const shapeChanges = !!prevActive && shapeOf\(prevActive\.recipe\) !== shapeOf\(opts\.recipe\);/.test(mg5)
         && /&& !\(shapeChanges && !opts\.autoActivate\);/.test(mg5),
         "and one background call can never re-stamp how a chain answers — that version waits");
-      // (5) Both clears exist and the page can reach them.
-      ok(/export async function freeChainDoors/.test(mg5), "a doors-only clear exists");
+      // (5) FREE DOORS AND START OVER ARE DELETED (owner, 08-03): buttons, routes and the code behind
+      // them. He never asked for either. Map re-maps a chain, which is all he asked for.
       const srv5 = readFileSync("src/server.ts", "utf8");
-      ok(/app\.post\("\/api\/admin\/map\/chain\/:id\/free-doors"/.test(srv5), "with its own route");
       const page5 = readFileSync("public/app.html", "utf8");
-      ok(/onclick="mapFreeDoors\(\)">Free doors</.test(page5) && /onclick="mapStartOver\(\)">Start over</.test(page5),
-        "and both clears have a button on the chain page — the reset is no longer unreachable");
+      ok(!/freeChainDoors|resetChainHistory/.test(mg5) && !/free-doors|chain\/:id\/reset/.test(srv5),
+        "neither clear exists any more, in the code or as a route");
+      ok(!/Free doors|Start over/.test(page5), "and neither has a button on the chain page");
     }
     ok(!/finalizeAndLock[\s\S]{0,120}?\}\s*else\s*\{[\s\S]{0,200}?ex\.status = "fail"/.test(eng)
       && /ex\.status = "fail";(?![\s\S]{0,600}finalizeAndLock)/.test(eng),

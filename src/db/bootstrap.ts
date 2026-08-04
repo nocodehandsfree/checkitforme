@@ -43,6 +43,12 @@ async function seedStatuses() {
     // Customer pressed Stop (live view "Stop & hang up", zone "Stop all"/stop-one). Same non-result
     // semantics as admin_hangup (the row's STATUS is admin_hangup — only the display key differs).
     ["user_cancelled", "·", "Check cancelled", "unk", "#9CA3AF", "You stopped this check from happening."],
+    // MAPPING'S TWO OWNER-NAMED STATES (owner, 08-03). Nothing on the mapping page is green until the
+    // department is really proved, and nothing is green in the speed round until a faster way is
+    // really landed — so these two are the only green a mapping check can wear, and every check
+    // before them is yellow.
+    ["department_proved", "check", "Department proved", "good", "#4ADE80", "Staff answered about the product, so this is the right department."],
+    ["speed_optimized", "check", "Speed optimized", "good", "#4ADE80", "A faster way through the menu was proved and is now the recipe."],
     // THE DROPPED CALL (spec: the live call runtime, section 8). Something on our side broke mid
     // call, so we hung up and said nothing — a dead line is unremarkable to a store, while a promise
     // to call back that we might not keep is not. Same family as left_on_hold and admin_hangup: it

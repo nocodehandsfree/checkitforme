@@ -851,16 +851,22 @@ async function proposeStoreException(
   const evidence: Evidence = { calls: [call] };
   const scored = scoreConfidence(evidence, at);
   const broken = await chainRouteFailingAt(opts.chainId, storeId);
-  const goLive = broken;                       // see the rule above: only when waiting would do harm
+  const goLive = broken;
+  // NOTHING EVER SITS WAITING FOR THE OWNER (owner R2 — he reviews NOTHING). A store that walked a
+  // different route while the chain's route STILL WORKS there is something we noticed, not a
+  // decision: the chain route keeps running there because it works, and what this store did is kept
+  // as NOT USED — the same words the Recipes card already uses for a route we did not take. It shows
+  // in the history, asks for nothing, and sits on no list. The old approval wording is retired
+  // outright, the way the review words were.
   const summary = `This store has its own route: ${spoken(opts.recipe)}`;
   const why = goLive
-    ? `Live for this store only. The chain route was failing here. ${agreeing} of ${STORES_TO_MOVE_CHAIN} stores must agree before the chain route changes.`
-    : `Waiting for your approval. The chain route has not failed at this store. ${agreeing} of ${STORES_TO_MOVE_CHAIN} stores must agree before the chain route changes.`;
+    ? `Live for this store only. The chain route was failing here.`
+    : `Not used. The chain route still works at this store, so it keeps running it.`;
   const ins = await client.execute({
     sql: `INSERT INTO nav_map_versions (chain_id, store_id, version, status, nav_type, recipe, seconds, confidence,
       confidence_label, evidence, source, summary, why, created_at, approved_at, approved_by)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-    args: [opts.chainId, storeId, version, goLive ? "active" : "proposed", opts.recipe.type || null,
+    args: [opts.chainId, storeId, version, goLive ? "active" : "rejected", opts.recipe.type || null,
       JSON.stringify(opts.recipe), opts.recipe.seconds ?? null, scored.score, scored.label,
       JSON.stringify(evidence), opts.source, summary, why, at, goLive ? at : null,
       goLive ? "store-exception" : null],
@@ -868,7 +874,7 @@ async function proposeStoreException(
   if (goLive && existing && existing.storeId === storeId) await retire(existing.id, at);
   await reportUnknown({
     chainId: opts.chainId, storeId, kind: "store-exception",
-    prompt: `${summary}. ${goLive ? "Live for this store, the chain route was failing here." : "Waiting for your approval."}`,
+    prompt: `${summary}. ${goLive ? "Live for this store, the chain route was failing here." : "Not used — the chain route still works here."}`,
     evidence: { versionId: Number(ins.lastInsertRowid || 0), navId: call.navId, agreeing, live: goLive },
   });
   // The flag says what actually happened. Anything reading it — the dashboard, a caller, a test — must
@@ -1382,27 +1388,6 @@ function trendOf(all: MapVersion[], active: MapVersion | null, recipe: MapRecipe
 
 /** Everything behind one chain: its versions, its evidence, its unknowns, its recent observations —
  *  the replay trail for a single map. */
-/** FREE THE DOORS THIS CHAIN REFUSES TO TRY, and nothing else. A door marked wrong, a desk whose one
- *  question is spent, and a move remembered as never-again all outlive their run on purpose — but a
- *  chain can paint itself into a corner where every door is refused and no run can finish. This
- *  frees exactly those three and leaves the route, its proof, the checks and the menu untouched
- *  (fix pass 5, item 5). Starting a chain over does this too, along with everything else. */
-export async function freeChainDoors(chainId: number): Promise<{ doorsFreed: number; asksFreed: number; movesFreed: number }> {
-  const count = async (key: string) => {
-    try { return (JSON.parse((await getSetting(key)) || "[]") as unknown[]).length; } catch { return 0; }
-  };
-  const doorsFreed = await count(`map_doors_dead:${chainId}`);
-  const asksFreed = await count(`nav_confirm_asked_doors:${chainId}`);
-  const movesFreed = await count(`map_never:${chainId}`);
-  await setSetting(`map_doors_dead:${chainId}`, "");
-  await setSetting(`nav_confirm_asked_doors:${chainId}`, "");
-  await setSetting(`nav_confirm_asked:${chainId}`, "");
-  await setSetting(`map_never:${chainId}`, "");
-  // A RUN IN FLIGHT holds its own copy and re-writes these lists after every check, so it has to be
-  // told too or the clear is undone within a minute.
-  try { (await import("./mapper")).forgetDoorsOnLiveRun(chainId); } catch { /* best effort */ }
-  return { doorsFreed, asksFreed, movesFreed };
-}
 
 /** THE STORE'S OWN REMEMBERED MENU — every line we have heard this store play, in its own words as
  *  heard. This is the judge's first and strongest layer (fix pass 5): a recording plays the same
@@ -1524,68 +1509,6 @@ export async function chainDetail(chainId: number): Promise<Record<string, unkno
  *  today lands locally and is flagged unshared. This walks those flags and sends them to the record —
  *  run it once the record is reachable and nothing that was learned in between is stranded. Safe to
  *  run any time: an already-shared route just folds in as the same evidence it already carries. */
-/** START THIS CHAIN OVER, keeping the route it runs.
- *
- *  Owner, 07-30: the CVS history was made by calls placed before the system was right — a recording's
- *  own tail filed as a person, a routing line filed as a greeting, and calls that reached the map
- *  through no path at all. Reading a page built on those is worse than reading an empty one.
- *
- *  So this clears the HISTORY and keeps the ROUTE. Gone: every mapping call in the log, every review
- *  item, every observation, and the recipes that were retired or not used. Kept: the one live recipe,
- *  because a re-listen has to walk a route to record one, and this is the route real checks run today.
- *  Its evidence is emptied and it is renumbered to v1, so the next call is genuinely its first.
- *
- *  Nothing a customer touches changes: the steps, the timings and the chain row are untouched. */
-export async function resetChainHistory(chainId: number): Promise<{
-  callsCleared: number; versionsDeleted: number; unknownsDeleted: number; observationsDeleted: number;
-  keptRecipe: string | null; doorsFreed: number;
-}> {
-  await ensureMapTables();
-  let callsCleared = 0;
-  try { callsCleared = (JSON.parse((await getSetting(`nav_runs:${chainId}`)) || "[]") as unknown[]).length; } catch { callsCleared = 0; }
-  await setSetting(`nav_runs:${chainId}`, "[]");
-  // Starting over means the PROOF starts over too: the agreements belonged to the history being
-  // cleared, and a fresh map must earn its three stores again.
-  await setSetting(`map_proven:${chainId}`, "");
-  let doorsFreed = 0;
-  try {
-    doorsFreed = (JSON.parse((await getSetting(`map_doors_dead:${chainId}`)) || "[]") as unknown[]).length
-      + (JSON.parse((await getSetting(`nav_confirm_asked_doors:${chainId}`)) || "[]") as unknown[]).length;
-  } catch { doorsFreed = 0; }
-  // AND THE DOORS WE REFUSED TO TRY AGAIN. A door marked wrong, and a door whose one ask is spent,
-  // both outlive the run that learned them on purpose — but they were learned by the same history
-  // being cleared, so starting over must free them or a chain can be permanently unable to map
-  // itself (fix pass 4). Losing moves clear with them.
-  await setSetting(`map_doors_dead:${chainId}`, "");
-  await setSetting(`nav_confirm_asked_doors:${chainId}`, "");
-  await setSetting(`nav_confirm_asked:${chainId}`, "");
-  await setSetting(`map_never:${chainId}`, "");
-  try { (await import("./mapper")).forgetDoorsOnLiveRun(chainId); } catch { /* best effort */ }
-
-  const live = await activeMap(chainId);
-  const del = await client.execute({
-    sql: `DELETE FROM nav_map_versions WHERE chain_id=?${live ? " AND id<>?" : ""}`,
-    args: live ? [chainId, live.id] : [chainId],
-  });
-  const unk = await client.execute({ sql: `DELETE FROM nav_unknowns WHERE chain_id=?`, args: [chainId] });
-  const obs = await client.execute({ sql: `DELETE FROM nav_observations WHERE chain_id=?`, args: [chainId] });
-
-  if (live) {
-    // Empty evidence, back to v1, and no trust yet — the next call earns it.
-    await client.execute({
-      sql: `UPDATE nav_map_versions SET version=1, evidence=?, confidence=0, confidence_label=?, why=? WHERE id=?`,
-      args: [JSON.stringify({ calls: [] }), "unknown", "history cleared, awaiting its first call", live.id],
-    });
-  }
-  return {
-    callsCleared,
-    versionsDeleted: Number(del.rowsAffected || 0),
-    unknownsDeleted: Number(unk.rowsAffected || 0),
-    observationsDeleted: Number(obs.rowsAffected || 0),
-    keptRecipe: live ? spoken(live.recipe) : null,
-    doorsFreed,
-  };
-}
 
 export async function reshareUnsent(): Promise<{ pushed: number; failed: number; pending: number }> {
   await ensureMapTables();

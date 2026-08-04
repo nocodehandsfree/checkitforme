@@ -218,9 +218,6 @@ console.log("\n▶ THE LAST FOUR (fix pass 6, items 5-8)");
   ok(/\(please\\s\+\)\?hold/.test(nav) || /hold\(\\s\+\(on\|please\)\)\?/.test(nav),
     "and 'please hold' still arms the handoff clock");
   // 8: freeing the doors reaches a live run.
-  ok(/export function forgetDoorsOnLiveRun/.test(readFileSync("src/calls/mapper.ts", "utf8"))
-    && (readFileSync("src/calls/mapgraph.ts", "utf8").match(/forgetDoorsOnLiveRun\(chainId\)/g) || []).length === 2,
-    "freeing the doors reaches a run in flight too — both clears tell it");
 }
 
 console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);
