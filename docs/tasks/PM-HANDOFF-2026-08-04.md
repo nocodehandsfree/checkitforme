@@ -69,9 +69,6 @@
 - **One check wrote four rows** (238-241, one conversation id) — newest-reader gets the unfinished.
 
 ## ROADMAP, HIS WORDS, NOT YET SCOPED
-- Robot store coverage gap (PM 08-04): the robot's number rings direct, so no robot check ever
-  walks a phone menu — Alpha's presses and Bravo's spoken words are only exercised by mapping's
-  own practice runs and real store checks. A menu in front of the robot store is unscoped.
 - Repo cleanup (untouched files piling in src/ and scripts/) WITH the refactor close-out items:
   request logging · a code index agents are forced to read · three missing Admin buttons (pause all
   calling kill switch, back up database, help-chat banner) · fold two duplicate store addresses ·
