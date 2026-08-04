@@ -127,7 +127,11 @@ const signoffDoors = new Map<string, (answer: string) => void>();
 /** The check on this room has its answer. Tell Charlie to wrap up and end. Safe to call late, twice,
  *  or for a room that never had a Charlie: a missing door is a no-op, never an error. */
 export function nudgeSignoff(room: string, answer: string): void {
-  try { signoffDoors.get(room)?.(answer); } catch { /* a note may never break a check */ }
+  try {
+    const door = signoffDoors.get(room);
+    if (!door) { log(`signoff: the answer is in hand for ${room.slice(0, 8)} (${answer}) but no check holds that name`); return; }
+    door(answer);
+  } catch (e) { log(`signoff: the knock itself failed: ${String(e).slice(0, 90)}`); /* a note may never break a check */ }
 }
 export function setBridgeContext(room: string, ctx: BridgeContext) {
   ctx.hadDtmf = !!ctx.dtmf;
@@ -880,7 +884,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   // requires the goodbye, which is the thing that was missing.
   let signoffNudged = false;
   signoffDoors.set(room, (answer: string) => {
-    if (signoffNudged || ended || onHold || !eleven || !ready) return;
+    if (signoffNudged || ended || onHold || !eleven || !ready) {
+      log(`signoff: knock for ${room.slice(0, 8)} (${answer}) not deliverable: ${signoffNudged ? "already told" : ended ? "the check is over" : onHold ? "Staff are away" : !eleven ? "Charlie is not open" : "his session is not ready"}`);
+      return;
+    }
     signoffNudged = true;
     emit(room, "unknown", "The answer is in hand, so Charlie was told to wrap up", { step: "signoff", answer });
     log(`signoff: the answer is in hand (${answer}) — telling him to thank them and end`);

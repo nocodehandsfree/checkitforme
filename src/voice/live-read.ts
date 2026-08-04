@@ -13,7 +13,7 @@
 // and a disagreement is still an honest "no clear answer" with no charge. This only moves WHEN our
 // half of that pair is computed.
 import { classifyVerdict, type ClerkVerdict } from "./verdict";
-import { nudgeSignoff } from "./bridge";
+import { nudgeSignoff, bridgeLog } from "./bridge";
 
 interface LiveRead {
   category: string;
@@ -39,6 +39,7 @@ const HAS_WORDS = /[a-zA-ZÀ-ɏ]{2,}/;
 export function armLiveRead(room: string, category: string, specificProduct?: string): void {
   if (!room) return;
   reads.set(room, { category, specificProduct, lines: [], asked: false, running: false, dirty: false, verdict: null, readAtMs: 0, retried: false });
+  bridgeLog(`reader: armed for ${room.slice(0, 8)} (${category})`);
 }
 
 /** Every line, both sides, as it is spoken. Wired into calls/events.ts recordLine. */
@@ -49,10 +50,11 @@ export function noteLiveLine(room: string, who: "Agent" | "Clerk", text: string)
   if (!t) return;
   r.lines.push({ who, text: t.slice(0, 1000) });
   if (r.lines.length > 300) r.lines.splice(0, r.lines.length - 300);
-  if (who === "Agent") { if (ASKED_RE.test(t)) r.asked = true; return; }
+  if (who === "Agent") { if (!r.asked && ASKED_RE.test(t)) { r.asked = true; bridgeLog(`reader: the question is on the record for ${room.slice(0, 8)}`); } return; }
   // Staff just said something. Read the conversation so far.
-  if (!r.asked || !HAS_WORDS.test(t)) return;
+  if (!r.asked || !HAS_WORDS.test(t)) { if (!r.asked) bridgeLog(`reader: Staff spoke before the question for ${room.slice(0, 8)}, nothing to read yet`); return; }
   if (r.running) { r.dirty = true; return; }
+  bridgeLog(`reader: reading ${room.slice(0, 8)} after "${t.slice(0, 40)}"`);
   void runRead(room);
 }
 
@@ -61,14 +63,19 @@ async function runRead(room: string): Promise<void> {
   if (!r || r.running) return;
   r.running = true;
   try {
-    const v = await classifyVerdict(transcriptSoFar(r), r.category, r.specificProduct).catch(() => null);
+    const v = await classifyVerdict(transcriptSoFar(r), r.category, r.specificProduct)
+      .catch((e) => { bridgeLog(`reader: the read FAILED for ${room.slice(0, 8)}: ${String(e).slice(0, 90)}`); return null; });
     const cur = reads.get(room);
     if (cur && v) {
       cur.verdict = v; cur.readAtMs = Date.now();
       // THE SIGNOFF (owner 08-04): the moment a check has its answer, Charlie is told to thank them
       // and end. A definitive read is the moment; an unsure one is not an answer and nudges nothing.
+      bridgeLog(`reader: read landed for ${room.slice(0, 8)}: ${v.inStock} (confidence ${v.confidence})`);
       if (v.inStock === "yes" || v.inStock === "no") nudgeSignoff(room, v.inStock === "yes" ? "in stock" : "not in stock");
-    } else if (cur && !v && !cur.retried) {
+    } else if (cur && !v) {
+      bridgeLog(`reader: no verdict for ${room.slice(0, 8)}${cur.retried ? " (second try spent)" : ", one second try in 4s"}`);
+    }
+    if (cur && !v && !cur.retried) {
       // The reader's model can fail mid check (a rate limit on check 276 among others) and Staff may
       // never say another line, so a failed read used to mean no read at all — and no signoff, so
       // Charlie never said goodbye. ONE second try a few seconds later, never a loop: if it fails
