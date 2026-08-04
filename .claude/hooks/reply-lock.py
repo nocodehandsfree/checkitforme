@@ -143,13 +143,17 @@ if "--check-file" in sys.argv:
     if not text:
         print("empty draft"); sys.exit(2)
     fails = grade(root, text)
+    # Always exit 0: NOT SENDABLE is a verdict, not a breakage. (08-04: an agent read
+    # the old exit-2 as "the checker is broken" and retry-looped the same draft in
+    # background shells until the owner had to stop the chat.)
     if fails:
-        print("REPLY LOCK PRE-CHECK: not sendable. Broken: " + "; ".join(fails))
-        print("Fix the draft and run the check again. Only send text that passed.")
-        sys.exit(2)
+        print("VERDICT: NOT SENDABLE. Broken: " + "; ".join(fails))
+        print("This is not an error and retrying changes nothing. EDIT the draft to fix "
+              "what is named above, then run the check once on the edited file.")
+        sys.exit(0)
     record_approval(root, text)
-    print("APPROVED. Send this exact text as your reply — word for word. The reply "
-          "lock will recognize it and let it straight through.")
+    print("VERDICT: APPROVED. Send this exact text as your reply — word for word. The "
+          "reply lock will recognize it and let it straight through.")
     sys.exit(0)
 
 # ---- STOP HOOK MODE ------------------------------------------------------------------
