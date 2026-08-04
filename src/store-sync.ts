@@ -24,9 +24,9 @@ import { invalidateRefCache } from "./refcache";
 import { isDirectDefaultChain } from "./db/import-data";
 
 // ---- The field split (the contract). Curated = Data Dev's dataset, syncs. Everything else = learned/operational, never synced.
-const CHAIN_CURATED = ["type", "callTarget", "repackOnly", "muted", "unmappableReason", "stockCheckMethod", "stockCheckConfidence", "stockCheckNote", "siteStockUrl", "sellMethods", "isMSRP", "maxTalkSeconds", "hangupOnVoicemail", "logoUrl", "logoWide", "logoDark", "logoPct"] as const;
+const CHAIN_CURATED = ["type", "callTarget", "repackOnly", "muted", "unmappableReason", "stockCheckMethod", "stockCheckConfidence", "stockCheckNote", "siteStockUrl", "sellMethods", "isMSRP", "maxTalkSeconds", "hangupOnVoicemail", "logoUrl", "logoWide", "logoDark", "logoPct", "logoAspect"] as const;
 /** The logo half of the curated set. The repair sweep below compares ONLY these. */
-const CHAIN_LOGO_FIELDS = ["logoUrl", "logoWide", "logoDark", "logoPct"] as const;
+const CHAIN_LOGO_FIELDS = ["logoUrl", "logoWide", "logoDark", "logoPct", "logoAspect"] as const;
 const RETAILER_CURATED = ["name", "location", "address", "zip", "lat", "lng", "timezone", "carries", "specialInstructions", "sellsPacks", "hasKiosk", "online", "tier", "externalStoreId", "mapsUri", "state", "region", "active", "notes", "ownerOnly"] as const;
 // Never-sync (documented so nobody "fixes" this): chains phoneTreeDefault/dtmfShortcut/answerPath/
 // avgTreeSeconds/tree*/rings*/nav*; retailers stockStatus/phone/phoneTree/shipmentDay/hours/

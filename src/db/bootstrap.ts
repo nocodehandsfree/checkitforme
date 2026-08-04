@@ -175,6 +175,9 @@ export async function bootstrap() {
   // artwork's own proportions at upload time (logoPctFor) and served on every store row, so no surface
   // has to load the image and re-derive it. Null = the caller falls back to fit-inside.
   await client.execute("ALTER TABLE chains ADD COLUMN logo_pct REAL").catch(() => {});
+  // The artwork's shape (width divided by height). Square boxes only need logo_pct; a ROUND pin needs
+  // the shape too, because the widest thing a circle holds depends on how short it is.
+  await client.execute("ALTER TABLE chains ADD COLUMN logo_aspect REAL").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN external_store_id TEXT").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN maps_uri TEXT").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN geocode_tried_at INTEGER").catch(() => {});

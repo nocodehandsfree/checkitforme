@@ -3996,7 +3996,17 @@ function splitName(n){ return {base:(n||'').trim(),branch:''}; }
 // measures anything, nothing waits for the image to load, and the site and the Admin cannot drift
 // apart because neither owns the rule. A row with no logoPct (artwork we could not read) simply
 // falls back to the tile's own CSS.
-function logoStyle(o){ return (o && typeof o.logoPct === 'number') ? ` style="width:${o.logoPct}%;height:auto;max-width:none;max-height:none;object-fit:contain"` : ''; }
+// Twin of the site's. Admin has no round logo boxes today, so it never passes a shape; the parameter
+// stays so the two cannot drift if one ever gains a circular tile.
+function logoStyle(o, shape){
+  if(!o || typeof o.logoPct !== 'number') return '';
+  let pct = o.logoPct;
+  if(shape === 'round'){
+    const a = (typeof o.logoAspect === 'number' && o.logoAspect > 0) ? o.logoAspect : 1;
+    pct = Math.min(pct, 100 * a / Math.sqrt(1 + a * a));
+  }
+  return ` style="width:${pct.toFixed(2)}%;height:auto;max-width:none;max-height:none;object-fit:contain"`;
+}
 function logoTile(o){
   o=o||{};
   if(o.logoUrl) return `<div class="slogo${o.logoDark?' lite':''}${o.logoWide?' widelogo':''}"><img loading="lazy" decoding="async" src="${esch(o.logoUrl)}" alt=""${logoStyle(o)}></div>`;
