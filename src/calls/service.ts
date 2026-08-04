@@ -5,7 +5,7 @@ import { db } from "../db/client";
 import { openState, fetchStoreHours } from "../store-hours";
 import { fetchStorePhone } from "../store-phone";
 import {
-  accounts, alertSends, callEvents, callResults, categories, chains, customerSchedules, retailers, scheduleTargets, schedules, statuses, watches, zoneRetailers, zones,
+  accounts, alertSends, alertSubscriptions, callEvents, callResults, categories, chains, customerSchedules, retailers, scheduleTargets, schedules, statuses, watches, zoneRetailers, zones,
 } from "../db/schema";
 import { linkCall, openReceipt, emit, closeReceipt, linkProviderCall, markNow } from "./events"; // ties the call row to its receipt (the timeline + the seconds)
 import { isCheckAlive } from "./check-life"; // the gatekeeper: the one honest answer to "has this check finished?"
@@ -16,6 +16,25 @@ import { isCallingPaused } from "../redis";
 import { acquireCallSlot, releaseCallSlot } from "./concurrency";
 import { getPolicy } from "../policy";
 import { mutedAmong, mutedReasons, MENU_CHANGED } from "./healing";
+
+/** Does the customer's own Alerts screen still want this email? (owner 08-02)
+ *  Off (muted), Delete (active 0) and the master Pause all are stored on the subscription the sheet
+ *  lists; the sender rows below never saw any of it. Returns false when the customer has said stop in
+ *  any of those three ways. No subscription row at all = a legacy or anonymous watcher: allow it. */
+async function alertsAllowSend(contact: string, retailerId: number): Promise<boolean> {
+  try {
+    const addr = String(contact || "").trim().toLowerCase();
+    if (!addr) return true;
+    const owner = (await db.select().from(accounts).where(eq(accounts.email, addr)))[0];
+    if (!owner) return true;                       // no account behind this address: nothing to obey
+    if (owner.alertsPausedAt) return false;        // master "Pause all alerts"
+    const subs = await db.select().from(alertSubscriptions)
+      .where(and(eq(alertSubscriptions.userId, owner.clerkUserId), eq(alertSubscriptions.kind, "restock")));
+    const mine = subs.filter((s) => (s.retailerId ?? null) === retailerId);
+    if (!mine.length) return true;                 // never managed in the sheet: legacy row, unchanged
+    return mine.some((s) => s.active === 1 && s.muted === 0); // one live, unmuted alert is enough
+  } catch { return true; } // never let a lookup failure swallow a customer's alert
+}
 
 /** Notify every active restock-watch for this store+category that it's back in stock.
  *  STANDING alerts (owner 07-30): a watch stays active until the customer pauses or removes it — the
@@ -31,6 +50,12 @@ async function notifyWatches(retailerId: number, categoryId: number, store: stri
     const key = `${w.channel}:${String(w.contact).trim().toLowerCase()}`;
     const dup = seen.has(key);
     seen.add(key);
+    // THE ALERTS SCREEN IS THE TRUTH (owner 08-02). An alert is stored twice: the row the customer
+    // manages in the Alerts sheet, and this sender row. The sheet's Off, Delete and Pause all wrote
+    // only to the first one, so a customer who switched an alert off still got the email. Ask the
+    // sheet's own record before sending. A contact with NO record at all is a legacy/anonymous
+    // watcher and still sends, exactly as before.
+    if (!dup && !(await alertsAllowSend(String(w.contact), retailerId))) continue;
     if (!dup) {
       const link = `${config.appUrl}/?store=${retailerId}`;
       if (w.channel === "email") {
