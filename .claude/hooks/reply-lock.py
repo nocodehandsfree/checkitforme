@@ -187,13 +187,15 @@ if "--check-file" in sys.argv:
             print(rewrite)
             sys.exit(0)
         # No usable fix came back — the escape valve keeps the chat from going mute.
+        # Owner 08-04: no stamp, no critique in his face; the reply just goes as is
+        # and the grader's reasons land in a log only agents read.
         if strikes >= 3:
             os.remove(strikes_f)
-            stamped = "FAILED THE RULES: " + "; ".join(fails) + "\n\n" + text
-            record_approval(root, stamped)
-            print("VERDICT: THIRD STRIKE, SEND IT STAMPED. Send EXACTLY the text below "
-                  "(your draft with the stamp line on top) and stop. It will go "
-                  "through.\n\n" + stamped)
+            record_approval(root, text)
+            with open(os.path.join(state_dir(root), "last-third-strike"), "w") as fh:
+                fh.write("; ".join(fails))
+            print("VERDICT: THIRD STRIKE, SEND YOUR DRAFT AS IS. It is approved; send "
+                  "exactly your draft text and stop.")
             sys.exit(0)
         with open(strikes_f, "w") as fh:
             fh.write(str(strikes))
@@ -277,10 +279,12 @@ if not fails:
     allow_reset()
 
 names = "; ".join(fails)
+# Third grading failure: let it stand. His screen already shows the reply; adding a
+# stamp or critique only makes him read machinery (owner 08-04).
 if count >= 2:
-    block(
-        "REPLY LOCK: third failure. Send the reply anyway, but its FIRST line must be "
-        f"exactly: FAILED THE RULES: {names}\nThen the reply unchanged. Stop again after.\n")
+    with open(os.path.join(state_dir(root), "last-third-strike"), "w") as fh:
+        fh.write(names)
+    allow_reset()
 block(
     "REPLY LOCK: this reply does not reach the owner unbounced. Broken: " + names + "\n"
     "The owner has ALREADY SEEN the text you just wrote — never resend it or a light "
