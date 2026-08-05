@@ -30,6 +30,14 @@ const BAD_KEYS = new Set([
   "nobody_answered", "voicemail", "busy", "bad_number", "closed", "failed", "admin_hangup",
 ]);
 
+// The statuses the owner DELIBERATELY charges: a real person picked up and burned real minutes on
+// us without landing on an answer. Mirrors billableOutcome() in src/calls/service.ts — keep the two
+// in lockstep. Nothing in here may ever auto-refund, whatever else the telemetry says. Keeping them
+// out of BAD_KEYS was not enough on its own: the short-call rule let a hold back in through the
+// side door whenever the call happened to be brief, so we charged for it and refunded it in the
+// same breath, which is exactly the fight the 07-22 ruling exists to prevent (found 08-05).
+const CHARGED_ANYWAY = new Set(["left_on_hold", "too_busy", "language_barrier", "staff_hung_up"]);
+
 export type CreditOutcome =
   | { kind: "granted"; cid: number; store: string; reason: string }
   | { kind: "already"; cid: number; store: string }
@@ -95,6 +103,9 @@ function evidenceFor(c: Candidate): { ok: boolean; reason: string } {
   // margin, and every one of them was refundable on request. A wrong verdict is a judgement call
   // for a person, never something telemetry can prove.
   if (gotAnAnswer(c)) return { ok: false, reason: "answered" };
+  // A person really did pick up. The owner charges for that on purpose, so the machine never undoes
+  // it; an angry edge case goes to a human ticket, which is the relief valve by design.
+  if (c.statusKey && CHARGED_ANYWAY.has(c.statusKey)) return { ok: false, reason: "person_engaged" };
   if (c.statusKey && BAD_KEYS.has(c.statusKey)) return { ok: true, reason: "bad_status" };
   if (c.status === "failed") return { ok: true, reason: "failed" };
   // Short calls only mean "nobody really answered" when nobody really answered.
@@ -111,10 +122,14 @@ export async function verifyCheckIssue(accountId: string | null | undefined, mes
   if (!accountId) return { kind: "guest" };
   const now = Math.floor(Date.now() / 1000);
 
-  // Rolling 30-day cap, counted from actual grants. Past it, a human reviews everything.
+  // Rolling 30-day cap, counted from actual grants. Read now, APPLIED at the point a credit would
+  // actually be handed out. It used to return here, before we had even worked out whether money was
+  // involved: a customer at their cap asking "nobody picked up, am I out a check?" was answered
+  // "this one needs a person", when the true answer was free, you were never charged, and no credit
+  // was ever in question (found 08-05). The cap exists to stop grants, not to stop answers.
   const capRows = await db.select({ n: sql<number>`count(*)` }).from(supportCreditGrants)
     .where(and(eq(supportCreditGrants.accountId, accountId), gt(supportCreditGrants.grantedAt, now - 30 * 86400)));
-  if ((capRows[0]?.n || 0) >= CAP_PER_30D) return { kind: "cap" };
+  const atCap = (capRows[0]?.n || 0) >= CAP_PER_30D;
 
   // Their checks inside the window, newest first.
   const rows = await db.select({
@@ -172,6 +187,8 @@ export async function verifyCheckIssue(accountId: string | null | undefined, mes
 
   const ev = evidenceFor(target);
   if (!ev.ok) return { kind: "denied_fine", cid: target.id, store, seconds: target.callSeconds };
+  // Everything else lines up, so this WOULD be a credit. Now the cap applies.
+  if (atCap) return { kind: "cap" };
 
   // Everything aligned → grant. Insert the grant row FIRST (unique cid = the idempotency lock),
   // then add the credit. A concurrent duplicate loses the insert and never double-pays.

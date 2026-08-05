@@ -185,6 +185,42 @@ async function main() {
   ok("says it is past the 7 day window", /7 days old/i.test(res.reply), res.reply);
   ok("still no grant row", (await db.select().from(supportCreditGrants)).length === 0);
 
+  console.log("\n== 17. a hold is charged on purpose, so it never auto-refunds, however short ==");
+  await db.delete(callResults);
+  await db.delete(supportCreditGrants);
+  // Keeping left_on_hold out of BAD_KEYS was not enough: a SHORT hold used to slip through the
+  // under-25-seconds rule, so we charged and refunded the same check (08-05, real staging check).
+  const shortHold = await mkCheck(r1.id, { statusKey: "left_on_hold", chargedAt: now - 600, callSeconds: 18 });
+  res = await answerSupport("sess-hold-1", "I got charged and they just left me on hold, nobody came back",
+    { category: "check_issue", account: { id: USER }, origin: { checkId: String(shortHold.id) } });
+  ok("short hold is NOT credited", !/put 1 check back/i.test(res.reply), res.reply);
+  ok("no grant row for a hold", (await db.select().from(supportCreditGrants)).length === 0);
+
+  console.log("\n== 18. at the 30-day cap, honest non-money answers still get answered ==");
+  await db.delete(callResults);
+  await db.delete(supportCreditGrants);
+  // Burn the cap with two real grants...
+  const CAP = 2; // CAP_PER_30D in src/support/credits.ts (owner: 2 per 30 days)
+  for (let i = 0; i < CAP; i++) {
+    const c = await mkCheck(r1.id, { statusKey: "nobody_answered", chargedAt: now - 900 - i, startedAt: now - 900 - i, callSeconds: 5 });
+    await answerSupport(`sess-cap-burn-${i}`, "that check went wrong",
+      { category: "check_issue", account: { id: USER }, origin: { checkId: String(c.id) } });
+  }
+  ok("cap is burned", (await db.select().from(supportCreditGrants)).length === CAP);
+  // ...then ask about a check that was never charged. No credit is in question, so the cap is
+  // irrelevant and the true answer is "you were not charged".
+  const freeOne = await mkCheck(r2.id, { statusKey: "nobody_answered", chargedAt: null, callSeconds: 4 });
+  res = await answerSupport("sess-cap-free", "nobody picked up on this one, am I out a check?",
+    { category: "check_issue", account: { id: USER }, origin: { checkId: String(freeOne.id) } });
+  ok("not-charged is answered, not deflected to a person", /weren't charged|no se concretó|didn't go through/i.test(res.reply), res.reply);
+  ok("does not grant past the cap", (await db.select().from(supportCreditGrants)).length === CAP);
+  // But a check that WOULD have earned one still hits the cap.
+  const wouldEarn = await mkCheck(r2.id, { statusKey: "bad_number", chargedAt: now - 400, callSeconds: 3 });
+  res = await answerSupport("sess-cap-earn", "this check went wrong too",
+    { category: "check_issue", account: { id: USER }, origin: { checkId: String(wouldEarn.id) } });
+  ok("a real claim past the cap goes to a person", /needs a person/i.test(res.reply), res.reply);
+  ok("still no extra grant", (await db.select().from(supportCreditGrants)).length === CAP);
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }
