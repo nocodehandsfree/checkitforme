@@ -18,11 +18,16 @@ Copy key `acct.row.zones` (EN ~:7192, ES ~:3379). Spanish twin ships in the same
    GOES AWAY: it moves into the new slide-up.
 2. **The list** — its own slide-up, same shape as Alerts: Pause all row, then one row per store with
    the store's logo tile, the store name, the days and time, an On/Off switch and a delete button.
-3. **Saved** — what the customer sees the moment they turn one on. The auto-check sheet flips to a
-   confirmation (the pattern `sr_done` and `openWatchConfirm` already use), showing store, product,
-   days, time and the next check, plus a way into the list. No email is sent on save (owner ruled).
-4. **What they found** — the per-store report: times in stock over checks run, the day they had it
-   most often, then every check with its status icon. Opened from a row in the list.
+   **APPROVED by the owner 08-05 as comped.** This is the screen the row in My checks opens.
+3. **Saved** — what the customer sees the one time they turn an auto-check on. The auto-check sheet
+   flips to a confirmation (the pattern `sr_done` and `openWatchConfirm` already use), showing store,
+   product, days, time and the next check, plus a way into the list. No email on save (owner ruled).
+4. **What they found** — the per-store report. **Reached by tapping the store row in screen 2**; the
+   On/Off switch and the delete button stay taps of their own, so the row needs its own tap target.
+   Second comp (owner 08-05: the first one was numbers on a page). The picture is the site's OWN two
+   pieces: the zone report's 72px ring (`checkit.html` ~:8172) for times in stock over checks run, and
+   the Activity chart's green bar for a per-day hit rate, one bar per day the auto-check runs, so it
+   answers "which day should I go". Then the plain sentence, then every check with its status icon.
 
 ## The bug this build must fix
 A comped account can SAVE an auto-check but never SEE it: the server allows the save
