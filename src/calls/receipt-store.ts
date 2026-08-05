@@ -12,7 +12,7 @@
 // placeholder provider id we stamp at dial (`bridge:<room>`), or the real conversation id the voice
 // provider handed us mid-call. Belt and braces, because a receipt that cannot find its call is a
 // receipt nobody will ever read.
-import { eq, or, and, inArray } from "drizzle-orm";
+import { eq, or, and, inArray, sql } from "drizzle-orm";
 import { db } from "../db/client";
 import { callEvents, callResults } from "../db/schema";
 import { rollup, transcriptOf, setEventSink, type Receipt } from "./events";
@@ -174,7 +174,14 @@ export async function recordVerdict(
       .where(and(eq(callEvents.callId, callId), eq(callEvents.kind, "verdict"))).limit(1);
     if (already.length) return;
     const room = (await db.select({ room: callResults.room }).from(callResults).where(eq(callResults.id, callId)))[0]?.room;
-    const at = Math.max(0, atSec);
+    // THE TAIL IS STAMPED AT ITS TRUE PLACE: AFTER EVERYTHING ELSE (owner 08-05). Callers pass the
+    // provider's session length as atSec, and Charlie's session is SHORTER than the phone call, so
+    // the double check, the verdict and the charge were drawn MID call, before the goodbye and the
+    // hang up they actually follow. The settle only ever runs once the check is over, so the tail
+    // clamps to the last second already on the record and can never draw before its causes.
+    const lastRow = (await db.select({ m: sql<number>`max(${callEvents.atSec})` })
+      .from(callEvents).where(eq(callEvents.callId, callId)))[0];
+    const at = Math.max(0, atSec, Number(lastRow?.m ?? 0));
     const rowFor = (kind: string, note: string, detail: Record<string, unknown>, order: number) => ({
       // The same final second, a breath of milliseconds apart, so the three read in this order and
       // never shuffle under an ORDER BY on the clock.

@@ -2489,9 +2489,9 @@ function checkV2From(d,o){
   const lines=(d.lines||[]).slice();
   const st=e=>((e.detail||{}).step)||'';
   const log=[];const used=new Set();
-  const takeLine=(who,at,win)=>{ // the nearest unclaimed spoken line for a step, inside its window
+  const takeLine=(who,at,win,back)=>{ // the nearest unclaimed spoken line for a step, inside its window
     let best=-1,gap=1e9;
-    lines.forEach((l,i)=>{ if(used.has(i)||l.who!==who||l.atSec==null)return; const g=Math.abs(l.atSec-at); if(l.atSec>=at-1&&g<(win||8)&&g<gap){best=i;gap=g;} });
+    lines.forEach((l,i)=>{ if(used.has(i)||l.who!==who||l.atSec==null)return; const g=Math.abs(l.atSec-at); if(l.atSec>=at-(back||1)&&g<(win||8)&&g<gap){best=i;gap=g;} });
     if(best<0)return null; used.add(best); const l=lines[best]; return {who:l.who==='Agent'?'Agent':'Clerk',tx:l.text};
   };
   for(let i=0;i<tl.length;i++){
@@ -2503,7 +2503,7 @@ function checkV2From(d,o){
       const lane=tl.slice(i,j).some(x=>x.kind==='alpha_press')?'Alpha':'Bravo';
       log.push({t:'Navigating menu ('+lane+')',at,group:g});i=j-1;continue;
     }
-    if(e.kind==='human_detected'){log.push({t:'Staff greeting',at,c:'var(--green)',say:takeLine('Clerk',atN,10),open:log.length<4});continue;}
+    if(e.kind==='human_detected'){log.push({t:'Staff greeting',at,c:'var(--green)',say:takeLine('Clerk',atN,10,8),open:log.length<4});continue;}
     if(step==='question_clip'){log.push({t:'Delta recording',at,c:'var(--green)',say:takeLine('Agent',atN,10)});continue;}
     if(step==='second_read'){log.push({t:'The answer was double checked ('+((e.detail||{}).model||'')+')',at});continue;}
     if(step==='charged'){log.push({t:e.note,at});continue;}
