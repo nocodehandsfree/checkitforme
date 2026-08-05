@@ -49,10 +49,17 @@ async function fetchFromRepo(): Promise<BookChunk[]> {
   return chunks;
 }
 
-/** Rebuild the book collection from ReadMe (repo mirror fallback). Returns how many pages indexed. */
-export async function reindexBook(): Promise<number> {
+/** Rebuild the book collection from ReadMe (repo mirror fallback). Returns how many pages indexed.
+ *  `source: "repo"` skips ReadMe and reads branch v1.0 straight from GitHub. The two can drift: the
+ *  sync runs on its own clock, so a book page corrected in git can still be the old words on ReadMe
+ *  for a while, and a reindex in that window teaches the agent the stale page all over again. That
+ *  is exactly what happened 08-05 with the "an endless hold is free" promise the owner had just
+ *  overturned, so there is now a way to index the corrected words without waiting on the sync. */
+export async function reindexBook(source: "readme" | "repo" = "readme"): Promise<number> {
   let chunks: BookChunk[] = [];
-  try { chunks = await fetchFromReadme(); } catch (e) { console.error("[support] readme fetch", (e as Error).message.slice(0, 120)); }
+  if (source === "readme") {
+    try { chunks = await fetchFromReadme(); } catch (e) { console.error("[support] readme fetch", (e as Error).message.slice(0, 120)); }
+  }
   if (!chunks.length) chunks = await fetchFromRepo();
   if (!chunks.length) throw new Error("book fetch returned no pages");
   const vectors = await embed(chunks.map((c) => `${c.title}\n\n${c.text}`));

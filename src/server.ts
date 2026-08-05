@@ -5696,8 +5696,11 @@ app.get("/api/support/credits", async (c) => {
 // Admin: rebuild the book index in qdrant (run after Copper edits the book).
 app.post("/api/support/reindex", async (c) => {
   try {
-    const pages = await reindexBook();
-    return c.json({ ok: true, pages });
+    // ?source=repo reads branch v1.0 from GitHub instead of ReadMe — for the window after a book
+    // page is corrected in git but the ReadMe sync has not run yet (see reindexBook).
+    const source = c.req.query("source") === "repo" ? "repo" : "readme";
+    const pages = await reindexBook(source);
+    return c.json({ ok: true, pages, source });
   } catch (e) {
     return c.json({ error: String((e as Error).message).slice(0, 200) }, 500);
   }
