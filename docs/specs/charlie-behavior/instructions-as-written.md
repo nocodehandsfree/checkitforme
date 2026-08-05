@@ -265,6 +265,18 @@ question is dropped in):
 What we tell him: one question for the day, take whatever comes back, never a second question.
 Outcome we expect: the customer sees when to check back, at the cost of one turn of talk time.
 
+**LOCKED by the owner 08-05, the restock response replaces BOTH fills above:**
+
+> When Staff say nothing is in stock and have not said when more is coming, ask in your own words, in one sentence, what day and time more might come in, like "got it, do you know what day and time you might get more in?". Whatever Staff answer is the answer, even "soon". Never ask a second restock question.
+
+Why it changed: Charlie words the ask himself; the only requirement is day and time in one
+sentence, which is the ROI saver (day or time alone answered only half). The workflow's stored
+restock question is retired. Staff volunteering anything about when, even "soon", is the answer;
+the old rule asked again and bought a wasted turn. Builder notes: both old fills retire, the
+{{ask_shipment_day}} token becomes this fixed paragraph on checks that want a restock ask
+(absent otherwise, same insert-or-nothing pattern as the kiosk and wrong-department rewires);
+update `scripts/test-prompts.ts` in the same commit.
+
 ## 12. Be quick, then the follow-up  [test locked]
 
 Where it sits: the moment the answer settles. The blank, {{premium_followup}}, decides what a
