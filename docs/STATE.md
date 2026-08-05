@@ -26,4 +26,5 @@ git. Last updated: 2026-08-04 late (Charlie finishes a check now: the goodbye la
 - The robot store also caught and Echo fixed: one loud click on the line was convincing us everything after it was background noise, so Staff coming back were never heard.
 - Your ruling on the one red scorecard row: the written "151" IS the product's name, correct as written — the robot's word checker is what gets taught, during your walk.
 - **Your move: the test-by-test walk — you run a test with an agent, open the check, read the transcript.**
+## Repo cleanup DONE (08-04, staging): 32 unused files deleted, every doc pointer to a moved or deleted file repaired, and the browser tests (the files that clicked through the site like a customer) archived on your ruling. Still open from that report: ONE written rule for which tests run before a promote (the docs gave four answers; today only the code host's automatic run is enforced).
 ## Waiting on YOU: promote now to stop the owner email on the real site? · hide the fake (simulated) poll rows from the Admin feedback queue? (yes / no) · Next: docs/tasks/INDEX.md.

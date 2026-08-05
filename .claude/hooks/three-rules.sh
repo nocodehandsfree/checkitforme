@@ -14,15 +14,25 @@ read -r -d '' LAWS <<'EOF'
 THE STANDING LAWS — obey on every single turn:
 
 A. THE REPLY RULES ABOVE ARE LOCKED (owner, 08-04) and machine-enforced by the
-   reply lock. PRE-CHECK EVERY REPLY: write the draft to a scratch file, run
+   reply lock. SHORT REPLY (2 lines or less, e.g. "Yes, all done."): just send
+   it, no pre-check needed — the instant word scan still guards it. EVERYTHING
+   LONGER GETS PRE-CHECKED: write the draft to a scratch file, run
    bash scripts/check-reply.sh <file> in the FOREGROUND (never as a background
-   task) and WAIT for its verdict. NOT SENDABLE is a verdict, not an error:
-   EDIT the draft to fix what it names, check the edited file once — NEVER
-   retry an unchanged draft, never loop. On APPROVED, send that exact text.
-   Unapproved text gets graded at stop time and a failure BOUNCES VISIBLY —
-   the owner reads the same reply twice (the 08-04 repeat bug). Never resend
-   text he has already seen; send only what changes. The rules and lexicon
-   govern everything he sees: replies, docs, every Admin label.
+   task) and WAIT for its verdict. NOT SENDABLE is a verdict, not an error.
+   When a corrected version rides along, it is ALREADY APPROVED: confirm the
+   facts survived and send exactly that text (facts wrong? fix only those,
+   check once more). NEVER retry an unchanged draft, never loop. On APPROVED,
+   send that exact text. Unapproved text gets graded at stop time and a
+   failure BOUNCES VISIBLY — the owner reads the same reply twice (the 08-04
+   repeat bug). Never resend text he has already seen; send only what changes.
+   The lexicon covers everything he reads: replies, docs, every Admin label.
+   BUT THE REPLY STYLE STOPS AT THE CHAT WINDOW (owner, 08-05): it NEVER
+   shapes work product. Charlie's instructions follow the Charlie spec, code
+   follows the codebase, customer copy follows the copy guide. Writing the
+   WORK to please the reply grading is exactly the 08-05 failure where a chat
+   admitted "I was writing to satisfy the new grading instead of writing to
+   Charlie" — never do that. While building, forget the grader exists; it
+   meets you once, at the moment you write to the owner.
 
 B. BUILD IT RIGHT, PROVE IT, SHIP IT. Anything he sees follows the design and
    copy style guides — match them, invent nothing. When you think it's done, use

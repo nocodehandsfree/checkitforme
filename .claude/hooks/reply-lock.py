@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
 # THE REPLY LOCK (owner-designed, locked 2026-08-04). No reply reaches the owner until it
 # passes the locked reply rules (.claude/output-styles/check-owner-reply.md).
-# Layer 1: word scan (banned flattery/filler, dashes, "should work") — instant, no cost.
-# Layer 2: reader check — a second agent reads the reply COLD, knowing nothing from the
-# chat, and fails anything it cannot understand or that breaks a rule. Runs via
-# `claude -p` from /tmp so this repo's hooks never load inside it (no recursion).
+# Layer 1: word scan (banned label/flattery/filler, dashes, "should work", 15 line cap).
+# Layer 2: the grader — Sonnet (owner 08-04: the strongest writer; Haiku fallback) reads
+# the reply COLD via `claude -p` from /tmp (no hook recursion). ONE-PASS DESIGN: when it
+# fails a reply it also RETURNS THE FIX, a corrected version keeping every fact — the fix
+# is pre-approved, so the agent sends it (facts intact) instead of looping on rewrites.
 #
-# TWO MODES (the 08-04 duplicate fix — a Stop-time bounce happens AFTER the text is on
-# the owner's screen, so every bounce used to show him the same reply twice):
-#   --check-file <path>  PRE-CHECK. Agents grade their DRAFT here before sending. On pass
-#                        the draft's hash is recorded as approved; the agent then sends
-#                        that exact text and the Stop hook waves it through silently.
-#                        This is the normal path: the owner sees ONE reply, ever.
-#   (no flag, stdin)     STOP HOOK backstop. Approved hash → instant pass. Otherwise
-#                        grade now; fail = exit 2 bounces with the broken rules named
-#                        (visible duplicate — only rule-skippers pay it). After 3 fails
-#                        the reply goes through stamped FAILED THE RULES.
-# Reader errors fail OPEN (word scan still binds); logged to state/reply-lock/last-error.
+# MODES:
+#   --check-file <path>  PRE-CHECK a draft. APPROVED -> send exactly. NOT SENDABLE ->
+#                        a corrected, already approved version rides along; send it if
+#                        the facts survived, or fix the facts and check once more.
+#                        Third consecutive fail -> draft goes out stamped FAILED THE
+#                        RULES (a chat can never go mute). Always exits 0.
+#   (stdin, Stop hook)   Backstop. Approved hash -> instant pass. Unapproved -> graded;
+#                        fail bounces visibly (only rule-skippers pay it); 3 fails ->
+#                        stamped through.
+# Grader errors fail OPEN (word scan still binds); logged to state/reply-lock/last-error.
 import sys, json, os, re, time, hashlib, subprocess
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -69,6 +69,12 @@ BANNED = ["good catch", "good question", "your instincts are right", "one honest
           "worse than you thought", "that sharpens it", "should work",
           "tldr"]
 
+def is_short(text):
+    # Owner 08-04: a tiny reply ("Yes, all done.") skips the grader entirely —
+    # no pre-check task, no wait. The instant word scan still applies.
+    lines = [l for l in text.splitlines() if l.strip()]
+    return len(lines) <= 2 and len(text) <= 240
+
 def word_scan(text):
     prose = re.sub(r"```.*?```", "", text, flags=re.S)
     fails = []
@@ -86,7 +92,7 @@ def word_scan(text):
                      "one screen — the answer and the decisions; he asks if he wants more)")
     return fails
 
-def reader_check(root, text, timeout=75):
+def reader_check(root, text, timeout=90):
     src = os.path.join(root, ".claude", "output-styles", "check-owner-reply.md")
     raw = open(src).read()
     rules = re.sub(r"^---.*?---\s*", "", raw, flags=re.S)
@@ -103,9 +109,12 @@ def reader_check(root, text, timeout=75):
         "violations. Fail ONLY on clear violations: if a sentence is "
         "understandable on its own in plain English, it passes even if a word "
         "is not in the lexicon. Quoting the owner's own words back to him is "
-        "always allowed. When in doubt, PASS. Answer with ONLY this JSON, "
-        "nothing else:\n"
-        '{"pass": true|false, "failures": ["rule N: short plain reason", ...]}\n\n'
+        "always allowed. When in doubt, PASS. When you fail a reply, ALSO write "
+        "the fix: a full corrected version that passes every rule while keeping "
+        "every fact, number, name, and decision exactly as written — invent "
+        "nothing, drop no decision. Answer with ONLY this JSON, nothing else:\n"
+        '{"pass": true|false, "failures": ["rule N: short plain reason", ...], '
+        '"rewrite": "the corrected full reply, empty when pass is true"}\n\n'
         "=== THE LOCKED REPLY RULES ===\n" + rules +
         "\n=== THE REPLY TO GRADE ===\n" + text
     )
@@ -115,29 +124,30 @@ def reader_check(root, text, timeout=75):
             ["claude", "-p", "--output-format", "text"] + extra,
             input=prompt, capture_output=True, text=True, timeout=timeout,
             cwd="/tmp", env=env)
-    # Haiku first: same verdicts on every test draft, about half the wait.
-    r = run(["--model", "claude-haiku-4-5-20251001"])
+    # Sonnet first (owner 08-04: the strongest writer grades and writes the fix).
+    r = run(["--model", "claude-sonnet-5"])
     if r.returncode != 0:
-        r = run(["--model", "claude-sonnet-5"])
+        r = run(["--model", "claude-haiku-4-5-20251001"])
     out = (r.stdout or "").strip()
     m = re.search(r"\{.*\}", out, flags=re.S)
     verdict = json.loads(m.group(0)) if m else None
     if r.returncode != 0 or verdict is None:
         raise RuntimeError(f"rc={r.returncode} out={out[:200]} err={(r.stderr or '')[:200]}")
     if verdict.get("pass", False):
-        return []
-    return [str(f) for f in (verdict.get("failures") or ["reader check failed the reply"])]
+        return [], ""
+    fails = [str(f) for f in (verdict.get("failures") or ["reader check failed the reply"])]
+    return fails, str(verdict.get("rewrite") or "")
 
-def grade(root, text, timeout=75):
+def grade(root, text, timeout=90):
     fails = word_scan(text)
     if fails:
-        return fails
+        return fails, ""
     try:
         return reader_check(root, text, timeout)
     except Exception as ex:
         with open(os.path.join(state_dir(root), "last-error"), "w") as fh:
             fh.write(str(ex))
-        return []
+        return [], ""
 
 # ---- PRE-CHECK MODE ------------------------------------------------------------------
 if "--check-file" in sys.argv:
@@ -146,15 +156,17 @@ if "--check-file" in sys.argv:
     text = open(path).read().strip()
     if not text:
         print("empty draft"); sys.exit(2)
-    fails = grade(root, text)
-    # Always exit 0: NOT SENDABLE is a verdict, not a breakage. (08-04: an agent read
-    # the old exit-2 as "the checker is broken" and retry-looped the same draft in
-    # background shells until the owner had to stop the chat.)
+    if is_short(text):
+        if word_scan(text):
+            print("VERDICT: NOT SENDABLE. Broken: " + "; ".join(word_scan(text)))
+            print("Fix the wording and send; short replies need no other check.")
+            sys.exit(0)
+        record_approval(root, text)
+        print("VERDICT: APPROVED (short reply, no grading needed). Send it.")
+        sys.exit(0)
+    fails, rewrite = grade(root, text)
     strikes_f = os.path.join(state_dir(root), "precheck-strikes")
     if fails:
-        # The escape valve (08-04: a chat got trapped when every rewrite kept failing
-        # and could never send anything). Third strike in a row: the draft ships
-        # stamped, same deal as the stop-time path, so a chat can NEVER go mute.
         strikes = 0
         if os.path.exists(strikes_f):
             try:
@@ -162,13 +174,28 @@ if "--check-file" in sys.argv:
             except Exception:
                 strikes = 0
         strikes += 1
+        # The one-pass path: the grader's own fix is pre-approved. Send it if the
+        # facts survived; otherwise correct the facts and check once more.
+        if rewrite and not word_scan(rewrite):
+            if os.path.exists(strikes_f):
+                os.remove(strikes_f)
+            record_approval(root, rewrite)
+            print("VERDICT: NOT SENDABLE AS WRITTEN. Broken: " + "; ".join(fails))
+            print("A corrected version is below, ALREADY APPROVED. Read it once: if every "
+                  "fact, number, and decision survived, send EXACTLY this text. If a fact "
+                  "is wrong, fix only that and run the check once on the fixed file.\n")
+            print(rewrite)
+            sys.exit(0)
+        # No usable fix came back — the escape valve keeps the chat from going mute.
+        # Owner 08-04: no stamp, no critique in his face; the reply just goes as is
+        # and the grader's reasons land in a log only agents read.
         if strikes >= 3:
             os.remove(strikes_f)
-            stamped = "FAILED THE RULES: " + "; ".join(fails) + "\n\n" + text
-            record_approval(root, stamped)
-            print("VERDICT: THIRD STRIKE, SEND IT STAMPED. Send EXACTLY the text below "
-                  "(your draft with the stamp line on top) and stop. It will go "
-                  "through.\n\n" + stamped)
+            record_approval(root, text)
+            with open(os.path.join(state_dir(root), "last-third-strike"), "w") as fh:
+                fh.write("; ".join(fails))
+            print("VERDICT: THIRD STRIKE, SEND YOUR DRAFT AS IS. It is approved; send "
+                  "exactly your draft text and stop.")
             sys.exit(0)
         with open(strikes_f, "w") as fh:
             fh.write(str(strikes))
@@ -234,7 +261,7 @@ def block(msg):
     sys.stderr.write(msg)
     sys.exit(2)
 
-# The pre-checked path: an approved draft sails through with no reader call.
+# The pre-checked path: an approved reply sails through with no grader call.
 if consume_approval(root, reply):
     allow_reset()
 if reply.startswith("FAILED THE RULES"):
@@ -242,15 +269,22 @@ if reply.startswith("FAILED THE RULES"):
 if count >= 3:
     allow_reset()
 
-fails = grade(root, reply, timeout=40)
+if is_short(reply):
+    if not word_scan(reply):
+        allow_reset()
+    fails, rewrite = word_scan(reply), ""
+else:
+    fails, rewrite = grade(root, reply, timeout=40)
 if not fails:
     allow_reset()
 
 names = "; ".join(fails)
+# Third grading failure: let it stand. His screen already shows the reply; adding a
+# stamp or critique only makes him read machinery (owner 08-04).
 if count >= 2:
-    block(
-        "REPLY LOCK: third failure. Send the reply anyway, but its FIRST line must be "
-        f"exactly: FAILED THE RULES: {names}\nThen the reply unchanged. Stop again after.\n")
+    with open(os.path.join(state_dir(root), "last-third-strike"), "w") as fh:
+        fh.write(names)
+    allow_reset()
 block(
     "REPLY LOCK: this reply does not reach the owner unbounced. Broken: " + names + "\n"
     "The owner has ALREADY SEEN the text you just wrote — never resend it or a light "

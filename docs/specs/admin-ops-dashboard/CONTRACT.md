@@ -34,7 +34,7 @@ work is handing the calling engine the recording shape in §8 so its data lands 
 
 ## 3. Architecture — four layers, built bottom-up
 
-**Layer 1 · One cost formula, one place.** Lift `calcCompute()` into `src/cost.ts`. The Calc page and
+**Layer 1 · One cost formula, one place.** Lift `calcCompute()` into `src/calls/cost.ts` (built there, not root `src/`). The Calc page and
 the server both import it. One formula, never two. Rates live in `settings` (seeded from
 `/api/admin/cost-inputs`), so a measured rate change re-prices everything at once.
 
@@ -88,7 +88,7 @@ Each check row opens ONE sheet, four stacked blocks:
 | # | Step | Blocked on |
 |---|---|---|
 | 0 | Hand the calling engine the recording shape (§8) | **nothing — do this now** |
-| 1 | `src/cost.ts` + the stamp on every finished check | engine writing the new fields |
+| 1 | `src/calls/cost.ts` + the stamp on every finished check | engine writing the new fields |
 | 2 | `#calc` Actual tab + `#dash` ops vitals | real checks on the board |
 | 3 | Replay sheet on real events | engine event stream |
 | 4 | Store + retailer explorers | a few days of clean checks |

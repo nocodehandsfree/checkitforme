@@ -29,7 +29,6 @@
 - **07-24 CLOSED-STORE RULE (owner, standing):** a confirmed-closed store gets MUTED, never deleted —
   `active:false` + a `notes` line starting `CLOSED.` with date + proof (full rule: handoff.md §CORE
   PRINCIPLES 4). First: retailer 106506 Target E Bayshore Rd — muted BOTH envs, gone from stores/near.
-- **07-22 LOGO FLAGS both envs LIVE (curated):** 15 wide wordmarks; Publix not wide; TJ Maxx not dark; Walmart + Tom Thumb square. Via PATCH /api/chains/:id.
 - **⚠️ OPEN BUG — CSS/site lane, not data:** the small "Calling" chip does NOT stretch wide logos even
   with logo_wide=true (~15px crushed). `.callwho.widelogo` not winning. **Routed to site lane.**
 - **07-22 shipped STAGING — promote wanted:** openHistEntry re-pulls the live logo so a reopened old call shows the current one (checkit.html).
@@ -39,7 +38,8 @@
   Googles → `ingest_hours.py <resp> <sent> --apply` (id-keyed SAFE).
 - **Staging/prod count mismatch (STATE task):** quarantine wrote 105 prod, staging showed 33 —
   something re-imports staging retailers. Find WHO.
-- Chris alert hunt (read-only prod): NOTHING for +17188259888 — signup/opt-in never hit prod.
+- **08-04 repo cleanup round 1 (owner-approved, staging):** 32 unused files deleted — 23 scripts/archive
+  one-offs (kept the 2 regenerators seed.ts/.gitignore name), 5 dead helpers, launch-readiness.html, 3 imported store lists.
 - Held-back wrong numbers: Fry's Gilbert 102795 + Mariano's Westchester-IL 102842 (mapped) · Payless
   Foods Athens (no phone: mute/leave). Logos: Habitat ReStore, Unique (owner getting).
 
@@ -47,7 +47,7 @@
 - Two branches: staging (`staging`) + prod (`main`) — both load-bearing, never delete. Promote =
   `bash scripts/promote.sh` (the ONLY way prod code changes; per-commit confirm). Admin ships via ship-admin.
 - Settings mirror prod→staging LIVE (60s; `src/settings-sync.ts` — policy/vt_plans/statuses; zero
-  overlap with store/learned pipes). Launch gate = `bash scripts/launch-gate.sh` (local+staging; prod post-promote).
+  overlap with store/learned pipes). Browser tests (the old launch gate) ARCHIVED 08-04, owner's ruling.
 - **NEXT PROMOTE ride-along:** the zone-lane fix (2080731) + the rebuild build stamp — prod/admin show
   NOT-LIVE on verify-live until this promote (queued: `first-promote-after-rebuild`).
 - NOT DONE (ops): per-tier SMS-cap enforcement · remove `/api/zones*` admin endpoints (keep engine) ·

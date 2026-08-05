@@ -25,7 +25,7 @@ image and open the image. One command; it removes every excuse:
 - **Admin pages** → `./node_modules/.bin/tsx scripts/render-comps.ts board` renders the ADMIN
   board; OPEN the PNGs in `loops/site-redesign/render/board-*.png`. To see a page as it IS
   before changing it: boot the local server and `render-comps.ts url <local url> <name>`.
-  (The old `admin-preview.mjs` / `zones-preview.mjs` live in `scripts/archive/` — don't reach for them.)
+  (The old `admin-preview.mjs` / `zones-preview.mjs` were deleted in the 2026-08-04 cleanup; git history has them.)
 - **Website / consumer pages** → FROZEN; the reference is the live site, snapshotted in
   `docs/design/truth/*.html`. Render the page you're unlocking with `render-comps.ts url`.
 - **The edit gate enforces this:** an Edit to `public/app.html` is BLOCKED until a real render has
