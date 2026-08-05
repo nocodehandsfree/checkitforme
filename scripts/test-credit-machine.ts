@@ -157,6 +157,34 @@ async function main() {
   ok("EN close lands and is money-word-free", closeEn.length > 0 && !MONEY.test(closeEn), closeEn);
   ok("ES close lands and is money-word-free", closeEs.length > 0 && !MONEY.test(closeEs), closeEs);
 
+  // Both of these were found by the robot customer on 2026-08-05, driving REAL checks on the owner's
+  // staging account rather than seeded rows. Both cost money.
+  console.log("\n== 15. a check that ANSWERED is never refunded on telemetry, however fast it was ==");
+  await db.delete(callResults);
+  await db.delete(supportCreditGrants);
+  // The exact shape that leaked a credit: in stock, a real verdict, 24 seconds, one under the bar.
+  const fastGood = await mkCheck(r1.id, { statusKey: "in_stock", confirmed: true, chargedAt: now - 900, callSeconds: 24 });
+  res = await answerSupport("sess-fast-1", "something went wrong with this check",
+    { category: "check_issue", account: { id: USER }, origin: { checkId: String(fastGood.id) } });
+  ok("fast answered check is NOT credited", !/put 1 check back/i.test(res.reply), res.reply);
+  ok("says the record shows an answer", /answer recorded/i.test(res.reply), res.reply);
+  ok("no grant row was written", (await db.select().from(supportCreditGrants)).length === 0);
+
+  console.log("\n== 16. a pinned check older than the newest 12 stays pinned, never retargets ==");
+  await db.delete(callResults);
+  await db.delete(supportCreditGrants);
+  // The chat is opened from THIS check's page. It is old, so it must not earn a credit — but the
+  // answer has to be about it, not about whatever is newest.
+  const oldPinned = await mkCheck(r1.id, { statusKey: "left_on_hold", chargedAt: now - 9 * 86400, startedAt: now - 9 * 86400, callSeconds: 40 });
+  // ...buried under a full window of newer checks, one of them refundable.
+  for (let i = 0; i < 12; i++) await mkCheck(r2.id, { statusKey: "nobody_answered", chargedAt: now - 1000 - i, startedAt: now - 1000 - i, callSeconds: 5 });
+  res = await answerSupport("sess-oldpin-1", "I got charged for this one and they just left me on hold",
+    { category: "check_issue", account: { id: USER }, origin: { checkId: String(oldPinned.id) } });
+  ok("does NOT credit the newer unrelated check", !/put 1 check back/i.test(res.reply), res.reply);
+  ok("answers about the pinned check's own store", res.reply.includes(r1.name), res.reply);
+  ok("says it is past the 7 day window", /7 days old/i.test(res.reply), res.reply);
+  ok("still no grant row", (await db.select().from(supportCreditGrants)).length === 0);
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }
