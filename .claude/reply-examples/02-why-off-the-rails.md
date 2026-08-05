@@ -1,0 +1,2 @@
+OWNER: this chat is completely stuck. everything he's writing keeps failing and so he's unable to send anything
+GOOD: Fixed and live on staging. The trap was mine: the draft check could refuse forever, and an agent obeying it could never send anything. If an agent's drafts fail the check 3 times in a row, the third one now goes out anyway, so no chat can ever go silent again. I proved the whole path end to end. The grader was also failing everyday words as made up; it now fails only clear rule breaks and passes when in doubt.
