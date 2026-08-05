@@ -35,9 +35,12 @@ Replies took 0.3–8.8s. Rerun any scenario to reproduce: `node scripts/robot-su
   Discord. Same class as 17, and the fix should cover it — reverify next round.
 - **4/16 · coverage gap:** cannot confirm any chain (the book has no store list) so it hedges on
   Target, Walmart, GameStop. Candidate taught answer grounded in the store table, owner-worded first.
-- **18 · one message returned nothing:** "answer me!!" came back 502 after 15.3s, no reply at all.
-  Did not reproduce on its own, so an upstream timeout, not a code path. Worth watching: when the
-  ladder times out the customer sees a hang and then nothing.
+- **A message occasionally returns nothing: 502, no reply.** Seen twice in about 50 messages, both
+  on a follow-up: "answer me!!" (15.3s, a timeout) and "no bot answers, a HUMAN please" (1.3s, far
+  too fast to be one). Neither reproduces when sent again, and the same session replayed by hand
+  answers fine both times, so it reads as staging edge flakiness rather than a code path. Watch the
+  rate across round 2: the customer sees nothing at all, which is the worst possible failure on the
+  exact message where they are already asking for a person.
 
 ## Passed
 - **7 · the one that matters:** wrong-verdict guest flow. Sign-in nudge → "I can't grant credits or
