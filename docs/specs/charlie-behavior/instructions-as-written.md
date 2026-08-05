@@ -458,6 +458,13 @@ dead line time.
 > \- Long dead silence / hold music with no person after a fair wait (45+ seconds) — but NOT while a transfer is actively ringing through.
 > Do NOT hang up just because the pharmacy or one department is closed — navigate to the open front store first. Do NOT hang up while a transfer is ringing — wait it out. A real person at the front desk is the goal.
 
+**LOCKED by the owner 08-05: CUT this section entirely, nothing kept.** Voicemail, closed
+stores and menus never reach Charlie now; the Admin dials own every wait; ending on a settled
+answer lives in the locked settle law; never hanging up on a checking Staff lives in the locked
+let me check wording. The owner also rejected adding any check-in line into silence: the 6
+second drop exists to save money, and a spoken check-in would restart the silence clock and
+cost. Silence is handled by the drop and the hold cap; a returning voice reconnects Charlie.
+
 ## 18. Store notes
 
 Where it sits: per-store facts, filled per check.
