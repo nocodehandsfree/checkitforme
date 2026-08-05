@@ -13,8 +13,12 @@ pkill -f 'scripts/(qa|test)-.*\.(sh|mjs)' 2>/dev/null && echo "  · killed qa/te
 # 2) headless browsers spawned by the page/glass/live-view suites.
 pkill -f '(chromium|chrome|headless_shell).*(--headless|--remote-debugging|pw-browsers)' 2>/dev/null && echo "  · killed headless browsers"
 
+# 2b) esbuild service daemons left by tsx — they inherit the job's output stream and can
+# hold a CI step open long after the suite summary printed (the 08-05 36-minute hang).
+pkill -f 'esbuild.*--service' 2>/dev/null && echo "  · killed esbuild daemons"
+
 # 3) anything still holding a test port (the smoke servers).
-for p in 8788 8791 8792 8793 8794 8795 8798 8799; do
+for p in 8788 8790 8791 8792 8793 8794 8795 8796 8797 8798 8799; do
   pid=$(lsof -ti tcp:$p 2>/dev/null)
   [ -n "$pid" ] && kill -9 $pid 2>/dev/null && echo "  · freed port $p (pid $pid)"
 done
