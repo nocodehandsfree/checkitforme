@@ -23,8 +23,8 @@ each specialist session; work outside the box → write `PM: <note>` in your che
 
 ## How you reply + how you work
 - **Reply rules are LOCKED (owner, 08-04): `.claude/output-styles/check-owner-reply.md` is the ONE source**
-  (rules + lexicon; machine-locked, pasted into every turn). The reply lock (Stop hook) grades every reply
-  (word scan + a cold second reader), bouncing it until it passes; 3 fails = stamped FAILED THE RULES.
+  (rules + lexicon; machine-locked, pasted into every turn). Write your facts, then `bash
+  scripts/check-reply.sh <draft>`: a renderer puts them in his voice, facts verified, and you send that.
 - **Done = demonstrated, never claimed.** Report as: **Built** (one line) · **Drove it**
   (`URL → action → what I saw`, or `NOT verified: X` + why, or blind spot → "pushed, check your phone")
   · **Left** (what you did not check). "Should work" is banned. `bash scripts/verify-live.sh` output is

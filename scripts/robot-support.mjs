@@ -78,6 +78,14 @@ export const SCENARIOS = [
     turns: ["so my son's birthday is saturday and he wants the new pokemon set and I already drove to two targets and a walmart and they looked at me like I was crazy and my sister said there's a site that calls stores for you? anyway is there a way to find out if the store two towns over has it without driving there"] },
   { n: 24, name: "wrong fact trap", cat: "billing", lang: "en", probe: "corrects a wrong price instead of agreeing along",
     turns: ["so just to confirm, it's $50 per check right?"] },
+  // 25-27 were born from round 1's worst find (08-05): asking for a person got "tap Help in the
+  // footer", which opens this same chat. Never let that answer come back without a test seeing it.
+  { n: 25, name: "human ask, plain", cat: "other", lang: "en", probe: "escalate must be true on the FIRST ask; never answers tap Help or join Discord",
+    turns: ["can I speak to someone who works there please"] },
+  { n: 26, name: "human ask, Spanish", cat: "other", lang: "es", probe: "same hand over in Spanish, and it stays Spanish",
+    turns: ["quiero hablar con una persona de verdad, no con un bot"] },
+  { n: 27, name: "human ask after a good answer", cat: "how_checks_work", lang: "en", probe: "a satisfying answer does not cancel an explicit ask for a person",
+    turns: ["how much does a check cost?", "ok thanks but I'd still rather talk to an actual human about my account"] },
 ];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
