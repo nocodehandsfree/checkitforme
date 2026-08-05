@@ -11,8 +11,8 @@ his phone.
 LOCKED by the owner 2026-08-04. This is the ONE source of the reply rules and
 the lexicon. Every other place agents look points here. It changes only through
 the .unlock flow on an owner-named task, and the rules change only when the
-owner locks a new list in a chat. The reply lock (Stop hook) grades every reply
-against this file before the owner sees it.
+owner locks a new list in a chat. The reply lock grades every reply as a DRAFT,
+before it is sent; the Stop hook is only a backup and runs after text renders.
 
 # THE REPLY RULES
 

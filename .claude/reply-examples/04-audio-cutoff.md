@@ -1,0 +1,2 @@
+OWNER: you're speaking gibberish follow protocol you're supposed to explain things simply I don't understand what you're talking about here
+GOOD: When a store picks up, our system takes about half a second to start listening. Anything Staff says in that half second is lost. The fix is to change how we connect so our system is already listening before the store even picks up. On stores that answer directly it costs nothing extra. My advice: launch first, because real Staff usually say their name mid greeting, not in the first half second.
