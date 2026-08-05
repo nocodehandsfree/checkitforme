@@ -17,7 +17,7 @@ import type {
   StartCallResult,
   VoiceProvider,
 } from "./provider";
-import { SOFT_TIMEOUT_FALLBACK, kioskNote, departmentNote, FALLBACK_SET_EXAMPLE } from "./prompts";
+import { SOFT_TIMEOUT_FALLBACK, kioskNote, departmentNote, SET_EXAMPLE } from "./prompts";
 import { assertCallsEnabled } from "../config";
 
 export interface ElevenLabsConfig {
@@ -70,8 +70,8 @@ export class ElevenLabsProvider implements VoiceProvider {
             // on the bridge.
             kiosk_note: kioskNote(p.productName, !!p.kioskMode),
             department_note: departmentNote(p.productName, !!p.askForTransfer),
-            // Section 10's example question keeps a REAL set name in it, read from the site's catalog.
-            set_example: (p.setExample || "").trim() || FALLBACK_SET_EXAMPLE,
+            // Section 10's example question keeps a REAL set name in it. Owner's ruling 08-05: Chaos Rising.
+            set_example: (p.setExample || "").trim() || SET_EXAMPLE,
           },
         },
       }),

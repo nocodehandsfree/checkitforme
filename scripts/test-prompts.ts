@@ -1,7 +1,7 @@
 // Unit test for the canonical agent prompts + voice defaults. Run: ./node_modules/.bin/tsx scripts/test-prompts.ts
 // Guards the dynamic-variable contract: the live ElevenLabs agent fills {{...}} placeholders, so if
 // one silently disappears from the prompt the call breaks. These assertions fail loudly instead.
-import { RESTOCK_PROMPT, specificityClause, kioskNote, departmentNote, FALLBACK_SET_EXAMPLE, VOICE_DEFAULTS, heardWrongDepartment, looksLikeAMenu, staffName, wrappedUp, usedTheirName, JOINING_RULE, joiningPrompt, midCallAgentPatch } from "../src/voice/prompts";
+import { RESTOCK_PROMPT, specificityClause, kioskNote, departmentNote, SET_EXAMPLE, VOICE_DEFAULTS, heardWrongDepartment, looksLikeAMenu, staffName, wrappedUp, usedTheirName, JOINING_RULE, joiningPrompt, midCallAgentPatch } from "../src/voice/prompts";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -102,7 +102,7 @@ ok(mayNot.length > 0 && mayAsk.length > 0, "section 5 is never empty: it is two 
 console.log("\n▶ the set name example comes from the site's catalog (builder note)");
 ok(RESTOCK_PROMPT.includes("like {{set_example}}, and is it packs or a box or a tin?"), "the example question carries the catalog's set name");
 ok(!RESTOCK_PROMPT.includes("Chaos Rising"), "the hand-written set name is gone from the words");
-ok(FALLBACK_SET_EXAMPLE.length > 0, "…and the floor under an unreadable catalog is never a blank example");
+ok(SET_EXAMPLE === "Chaos Rising", "…and the floor under an unreadable catalog is never a blank example");
 
 console.log("\n▶ specificityClause: a general check inserts nothing");
 ok(specificityClause() === "", "no product → empty clause");

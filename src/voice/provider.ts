@@ -52,8 +52,8 @@ export interface StartCallParams {
    *  the check failing and the customer paying for a retry. Chooses which of section 5's two texts
    *  fills `department_note`. */
   askForTransfer?: boolean;
-  /** The real set name section 10's example question carries, read from the site's catalog so it
-   *  stays current. Fills `set_example`; empty falls back to `FALLBACK_SET_EXAMPLE`. */
+  /** The set name section 10's example question carries. Fills `set_example`; empty falls back to
+   *  `SET_EXAMPLE`, which is the owner's ruling (08-05) and the only place it changes. */
   setExample?: string;
 }
 

@@ -96,15 +96,20 @@ export function departmentNote(category: string, mayAskForTransfer: boolean): st
 }
 
 /**
- * THE SET NAME IN SECTION 10'S EXAMPLE, so it stays current (builder note).
+ * THE SET NAME IN SECTION 10'S EXAMPLE. **OWNER RULING 2026-08-05, DO NOT RE-LITIGATE: "we're not
+ * using pitch black it literally is chaos rising and has never changed".**
  *
- * It used to be the string "Chaos Rising" written into the prompt by hand. That set came out on
- * 2026-05-22 and was already one release old by the time the owner ruled on these words, and a stale
- * example is the one part of that question Staff actually judge us on. So the example is read from
- * the site's own catalog, and this constant is only ever the floor under a catalog that cannot
- * answer: never a blank, because section 10 requires a real set name to be in the question.
+ * The builder note asked for an insert from the site's catalog so the example stays current, and the
+ * first build of it read `data/pokemon-sets.json` and took the newest set already released, which is
+ * Pitch Black. That was wrong. The example is Chaos Rising, it has never changed, and the catalog
+ * cannot pick it: the products catalog carries 1,281 rows across every set ever printed, and the era
+ * registry's "newest" moves every few weeks. So the example stays an INSERT, filled from here, and
+ * this one line is where it changes if he ever changes it.
+ *
+ * Charlie varying it is NOT a fault (owner, same ruling): section 12 gives him leeway to say things
+ * his own way, and that is deliberate. Nothing here forces him to read this name back word for word.
  */
-export const FALLBACK_SET_EXAMPLE = "Chaos Rising";
+export const SET_EXAMPLE = "Chaos Rising";
 
 /**
  * WE LANDED IN THE WRONG DEPARTMENT — read off the words, because it cannot be read off the audio.
