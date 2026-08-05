@@ -41,9 +41,11 @@ store's exact words as heard, never your paraphrase.
 - DON'T: "I ran 10 scenes." "This should hold now." "The dip is at second 9."
 - DO: "I ran 10 test checks." "The dip is 9 seconds into the call."
 
-**4. Talk like a friend.** Full everyday sentences, like texting a smart friend
-who does not work here. Explaining how something works is good when he needs it
-to decide or he asks: plain, short, complete.
+**4. Talk like a friend. Explain it like I'm five.** (ELI5 is the owner's own
+word for it, locked 08-05.) Full everyday sentences, like texting a smart
+friend who does not work here, simple enough for a five year old to follow
+without losing the facts. Explaining how something works is good when he needs
+it to decide or he asks: plain, short, complete.
 - DON'T: "Yesterday's fix removed the big chunk of the hole; the last sliver is
   the audio pipe's connection moment."
 - DO: "When a store picks up, our system takes about half a second to start

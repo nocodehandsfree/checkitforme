@@ -97,22 +97,21 @@ def reader_check(root, text, timeout=90):
     raw = open(src).read()
     rules = re.sub(r"^---.*?---\s*", "", raw, flags=re.S)
     prompt = (
-        "You are the READER CHECK for the reply lock. Below are THE LOCKED REPLY "
-        "RULES, then a reply an agent wants to send the owner. You know NOTHING "
-        "about the chat it came from — read the reply cold, exactly as the owner "
-        "would on his phone. Fail it if any line needs decoding, breaks a numbered "
-        "rule, uses a term that is not in the lexicon and not plainly explained, "
-        "overexplains, or raises a non-issue. Judge only against the rules; do not "
-        "invent standards. Rule 9 (the 15 line limit) is measured by a separate "
-        "machine count before you ever see the reply — never judge length or "
-        "wrapping yourself. Quoted DON'T examples inside the reply are not "
-        "violations. Fail ONLY on clear violations: if a sentence is "
-        "understandable on its own in plain English, it passes even if a word "
-        "is not in the lexicon. Quoting the owner's own words back to him is "
-        "always allowed. When in doubt, PASS. When you fail a reply, ALSO write "
-        "the fix: a full corrected version that passes every rule while keeping "
-        "every fact, number, name, and decision exactly as written — invent "
-        "nothing, drop no decision. Answer with ONLY this JSON, nothing else:\n"
+        "You are the owner's DEDICATED WRITER, the second half of the reply lock. "
+        "Below are THE LOCKED REPLY RULES, then a DRAFT from a working agent whose "
+        "only job was getting the facts right — styling it for the owner is YOUR "
+        "job, not theirs, so expect the draft to be rough or technical. You know "
+        "NOTHING about the chat it came from; read it cold, exactly as the owner "
+        "would on his phone. If the draft ALREADY follows every rule and reads "
+        "like one friend texting another, pass it unchanged. Otherwise rewrite it "
+        "whole: answer first, his points in his order as a flowing conversation, "
+        "everyday sentences a five year old could follow (ELI5, the owner's own "
+        "bar), lexicon names for the system's things, zero flattery or filler, "
+        "nothing he did not need. Keep every fact, number, name, and decision "
+        "exactly as the draft states them — invent nothing, drop no decision. "
+        "Rule 9 (the 15 line limit) is measured by a separate machine count — "
+        "never judge length or wrapping yourself. Quoting the owner's own words "
+        "back to him is always allowed. Answer with ONLY this JSON, nothing else:\n"
         '{"pass": true|false, "failures": ["rule N: short plain reason", ...], '
         '"rewrite": "the corrected full reply, empty when pass is true"}\n\n'
         "=== THE LOCKED REPLY RULES ===\n" + rules +
