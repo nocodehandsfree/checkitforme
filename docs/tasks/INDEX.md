@@ -44,6 +44,11 @@ skip sentence for muted stores (EN + ES; the site is frozen to everyone else). E
 same spec-vs-build audit — wait for the owner's word. **PM ships NOTHING without the owner's "clear"
 while he is testing — every push restarts staging and kills a live check.**
 
+## ⭐ Repo + doc cleanup (08-05, owner-run folder by folder)
+| Task | System | Status |
+|---|---|---|
+| [Doc sweep — the running list of things nobody could prove](doc-sweep-unknowns.md) | owner routes each line | open, growing |
+
 ## ⭐ Owner work streams (active — started this week)
 **Stream 1 — the five site fixes (SHIPPED to staging @4f6c4a6, PR #92; owner confirms on his phone,
 then they ride the next promote to prod):**
