@@ -41,8 +41,15 @@ says("If Staff gave you their name, use it once during the check", "14. their na
 // THE THREE ADDITIONS THE OWNER CLEARED ON TOP OF THE SPEC (PM, 08-05). Each is one sentence or one
 // clause, and each closes a hole the sections could not close alone.
 console.log("\n▶ the three cleared additions");
-says("When nobody is talking to you, use skip_turn instead of speaking; never speak into a wait.",
-  "12. skip_turn instead of speaking, never into a wait");
+// REWORDED 08-05 after check 289: the first cut said "when nobody is talking to you, use skip_turn",
+// and the pause right after Staff's one word answer IS nobody talking, so he used it on a real
+// answer, went quiet, and was dropped. skip_turn is now tied to WAITS by name, and the words say
+// outright that a finished answer is his turn.
+says("Use skip_turn only while you are WAITING, through ringing, hold music, or Staff stepping away, and never speak into a wait.",
+  "12. skip_turn is for waits only, named as waits");
+says("The moment Staff finish telling you something, it is your turn, answer right away", "12. a finished answer is his turn");
+says(`even a one word answer like "yeah" is a complete answer, never something to wait through`, "12. a one word answer is complete, the 289 fault by name");
+ok(!RESTOCK_PROMPT.includes("When nobody is talking to you"), "…and the line that fired on a real answer is gone");
 says("thank Staff warmly and end the check with end_call.", "9. the settle commands end_call by name");
 says("Say goodbye once, then end the check with end_call.", "14. the goodbye commands end_call by name");
 says("The set question below comes only after the yes is settled.", "3→10. the set question waits for the settled yes");
@@ -288,11 +295,19 @@ console.log("\n▶ THE DRIFT ALARM: the joining Charlie gets the same words, plu
     "the settle law rides to the joining Charlie word for word");
   ok(RESTOCK_PROMPT.includes("Once the answer is settled, never confirm it again and never re-ask anything Staff already gave."),
     "…and it is in the original's words, the one source");
-  // THE JOINING NOTE ITSELF DID NOT CHANGE in this rewrite (the spec is explicit: it stays exactly as
-  // it reads today). Charlie's words moved underneath it; the note on top did not.
-  ok(JOINING_RULE.startsWith("YOU ARE JOINING A CALL THAT IS ALREADY IN PROGRESS."), "the joining note is unchanged, top line");
-  ok(JOINING_RULE.includes("Do NOT greet them. Do NOT introduce yourself. Do NOT ask the question again."), "…and unchanged in the middle");
-  ok(JOINING_RULE.endsWith("If they say something you did not catch, ask about that, never restart."), "…and unchanged to its last line");
+  // THE JOINING NOTE WAS REWRITTEN 08-05 TO MATCH THE TECH (owner's order: the words must not fight
+  // what was built). The old note said "say NOTHING until they have finished answering", written for
+  // a Charlie who heard the hello and the answer arrive live. He is not handed the hello any more,
+  // so the first thing he hears IS the finished answer, and that old line read as "keep waiting",
+  // which is check 289's silence. The note now says the answer is complete when it reaches him and
+  // to reply right away, and it names the square bracket notes the system really does send him.
+  ok(JOINING_RULE.startsWith("YOU ARE JOINING A CALL THAT IS ALREADY IN PROGRESS."), "the joining note still opens the same way");
+  ok(JOINING_RULE.includes("Do NOT greet them. Do NOT introduce yourself. Do NOT ask that question again, in ANY wording."), "never greet, never introduce, never re-ask");
+  ok(JOINING_RULE.replace(/\n/g, " ").includes("Their answer is already complete when it reaches you, so reply to it right away"), "the answer is complete when it reaches him: reply, never wait for more");
+  ok(JOINING_RULE.includes("Never wait for more."), "…and never wait for more, in those words");
+  ok(!JOINING_RULE.includes("Say NOTHING until they have finished answering"), "the keep-waiting line from the old shape is gone");
+  ok(JOINING_RULE.includes("a note in square brackets"), "the system's square bracket notes are named, so a gap note is never mistaken for Staff");
+  ok(JOINING_RULE.includes("never read them out loud"), "…and he is told never to read a note onto the line");
   ok(sent.maxTokens === VOICE_DEFAULTS.maxTokens, "same room to think as the original");
   ok(sent.llm === "gpt-test", "same model as the original was just pushed with");
   ok(sent.turnEagerness === "patient", "patient stays: our own machinery splits sentences and he must not answer each fragment");
