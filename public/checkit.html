@@ -3803,7 +3803,11 @@ async function sendSupport(){
   // Keep the human path buried: on the first time the AI can't resolve, ask for more detail and keep
   // trying. Only after it's genuinely failed twice in this chat do we reveal "Talk to a human".
   if(r.escalate){ SUP_ESC++;
-    if(SUP_ESC>=2){ supBubbleMsg('bot', t('sup.stuck',"I still couldn't crack this one. Want a person to take a look?"),false); supOfferHuman(); }
+    // They ASKED for a person: hand over on the first ask. The two-strike burial below is for OUR
+    // failures, and somebody typing "I want a human" is not one of them. Round 1 caught the old
+    // behavior answering "tap Help in the footer", which just reopens this same chat.
+    if(r.humanAsk){ supOfferHuman(); }
+    else if(SUP_ESC>=2){ supBubbleMsg('bot', t('sup.stuck',"I still couldn't crack this one. Want a person to take a look?"),false); supOfferHuman(); }
     else { supBubbleMsg('bot', t('sup.tryagain',"I might be missing something. Can you give me a bit more detail?"),false); $('sup_help').classList.add('on'); $('sup_human').style.display='none'; }
   } else if(r.answered!==false){ $('sup_help').classList.add('on'); $('sup_human').style.display='none'; }
   // answered===false → the bot asked a clarifying question, not gave an answer: leave "That answered

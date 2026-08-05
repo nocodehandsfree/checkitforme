@@ -5595,7 +5595,7 @@ app.post("/pub/support/chat", async (c) => {
       lang, category, account: u ? { id: u.id, phone: (u as { phone?: string }).phone } : null,
       origin: { source: src || undefined, pageUrl: pageUrl || undefined, checkId: checkId || undefined },
     });
-    return c.json({ sessionId, reply: r.reply, escalate: r.escalate, answered: r.answered });
+    return c.json({ sessionId, reply: r.reply, escalate: r.escalate, answered: r.answered, humanAsk: r.humanAsk });
   } catch (e) {
     console.error("[support] chat", e);
     return c.json({ sessionId, reply: null, escalate: true, error: "unavailable" }, 500);
