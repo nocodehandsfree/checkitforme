@@ -509,6 +509,18 @@ Outcome we expect: the goodbye the owner grades checks on, with zero lingering t
 > \# Wrapping up
 > The instant you know yes or no, wrap in ONE line and end the call immediately — don't linger, don't add a second goodbye. Example: "Perfect, thank you so much, have a good one." Then end the call.
 
+**LOCKED by the owner 08-05, the tightened replacement:**
+
+> End the check with one warm goodbye in your own words, like "perfect, thank you so much, have
+> a good one". If Staff gave you their name, use it once during the check, either in a question
+> or in your goodbye, whichever feels natural. Say goodbye once, then end the check.
+
+Why it changed: call became check; the dash and the second goodbye line are gone; the yes and no
+rules are not repeated here. The name rule moves in with owner autonomy on placement: today the
+only place Charlie is told to use Staff's name is the Admin personality box's affectionate
+setting, and the greeting section that also carried it was cut, yet the scorecard grades whether
+he thanked them by name. Builder note: this section now satisfies that scorecard row.
+
 ## 21. Voicemail
 
 Where it sits: a blank filled per check with the voicemail policy.
