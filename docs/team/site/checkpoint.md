@@ -4,32 +4,32 @@
 > design implementation, and ALL copy. Charter + standing rules: `handoff.md` (same folder).
 > Volatile — REPLACE stale lines, newest on top, ≤60 lines. History lives in git.
 
+## 08-05 — ACTIVITY: a bar tap means that day, and the list under it obeys that same day
+- **Tapping the green bar a second time used to clear the day**, so the four counts silently swapped from
+  that day to the whole week (3 in stock read as 19, any day). A tap now ALWAYS picks that day; the week's
+  own totals still show when a week arrow moves the view, which is the only thing that clears `ACT_DAY`.
+- **The list under the counts read the WHOLE history** whenever no status cell was picked, so picking a
+  day moved every number above it and left the same three rows below. It follows the counts now (6 rows).
+- Its store logos are broken there and ONLY there: the row hand-builds `.ic` OUTSIDE a `.store` row, so
+  nothing sizes the tile, and a saved check carries no `logoPct`. Handed to the logo agent (owner 08-05).
+
 ## 08-01 — LOGOS: the size rule moves to the SERVER; one tile; the wall becomes the record (staging)
 - **`logoPct` on every store row is the whole idea.** The tile is square, so the width as a PERCENT of it
   falls out of the artwork's proportions alone: right at 46px AND at 190px, nobody recomputing. Both copies
   of the browser-side rule are DELETED, and the cached-onload race with them.
-- **`logoFields`/`withLogo` replace 15 hand-stamps** that resolved the chain 8 different ways (one store
-  could get different logos on different screens). `storeChainName` is the only dash-splitter left.
+- **`logoFields`/`withLogo` replace 15 hand-stamps** that resolved the chain 8 different ways.
 - **Stored artwork is named by its CONTENT hash**: new picture = new address = it lands everywhere at once,
   no `?v=` to bump, and a rename or a differing chain id (H Mart: 131 on prod, 99 on staging) can't orphan it.
 - **The wall reads the chain rows**, not the shipped copies + `_meta.json`. 111 marks, one tile size.
 - **Repair sweep** (`pushLogoRepairs`) asks prod what it holds and re-pushes logos that differ; the normal
-  push only sends what CHANGED, which is why 71 chains sat stale. Uploads refused on prod. **REPORT ONLY
-  until `logo_repair_apply`="1"** (PM's condition; it writes real prod rows). It shipped writing, and did
-  write 130 chains before that was caught — no harm, prod matched staging exactly, but it was not held.
-  It also compares only fields the target SERVES, or an older prod that cannot store `logoPct` looks
-  different forever and the sweep re-pushes every tick without ever converging.
+  push only sends what CHANGED, which is why 71 chains sat stale. **REPORT ONLY until `logo_repair_apply`
+  ="1"** (PM's condition; it writes real prod rows). It compares only fields the target SERVES, or an older
+  prod that cannot store `logoPct` looks different forever and the sweep never converges.
 - **Admin ships BEFORE the promote and that is safe** (owner 08-01 pushed back, rightly). It reads prod's
   API, so `logoPct` is absent until the promote; the CSS fallback was retuned to 78/90 plain and 95/90 wide,
   which lands EXACTLY on the rule for every wide mark and within a pixel elsewhere. Measured, not assumed.
-- Deleted: the 52px pre-redesign tile (v2 is set unconditionally at load, so it never rendered), the zone
-  card's `.ic2`, three skin overrides, and `/api/admin/migrate-logos-to-r2` (it would have overwritten the
-  content-named copies with the old file-named ones).
-
-## 07-31 — the artwork (superseded above; kept for the trap)
-- **The stored image beats the repo file** — `chainLogoInfo` is DB-first. Editing the PNG changes NOTHING
-  for a chain with a `logoUrl`. All 112 re-cut: squarish marks to BJ's ink ratio (59.7%), wide wordmarks
-  solved so the visible mark lands 4.5px clear of every edge.
+- **The stored image beats the repo file** (07-31): `chainLogoInfo` is DB-first, so editing the PNG changes
+  NOTHING for a chain that already has a `logoUrl`.
 
 ## 07-30 — CHECK STATUS: bottom clear on every screen + verdict at hang up (PRs #100 #101, staging)
 - The pending render is its OWN screen (`showResult` drops `lview`), so `body.rv-pend` carries the same

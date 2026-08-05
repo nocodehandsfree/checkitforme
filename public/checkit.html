@@ -7129,13 +7129,16 @@ async function openHistEntry(e){
 // ACT_DAY has THREE states, and keeping them apart is what fixes the week chart (owner 07-26):
 //   undefined = the tab was just opened and nobody has picked a day yet -> land on today
 //   a number  = that day is picked; the green bar and the four counts BOTH mean that day
-//   null      = the day was deliberately cleared -> NO bar is green and the counts mean the week
+//   null      = a week arrow moved the view -> NO bar is green and the counts mean the week
 // Before this, null meant both "no day picked" and "highlight today", so the chart showed today in
 // green while the counts underneath were the whole week: 1 check today sitting above 44 unclear.
 // Tapping today then read as a jump, because clearing the day left the green bar where it was.
 let ACT_WOFF=0, ACT_DAY, ACT_TONE='';
 function actWeek(d){ ACT_WOFF=Math.max(0,ACT_WOFF+d); ACT_DAY=null; ACT_TONE=''; acctTab('activity',true); } // +1 = a week further back, -1 = toward the present (floor 0 = this week)
-function actPick(i){ ACT_DAY=(ACT_DAY===i?null:i); ACT_TONE=''; acctTab('activity',true); }
+// Tapping a bar ALWAYS means that day (owner 08-05). It used to toggle back off, so a second tap on
+// the same bar swapped the four counts from that day to the whole week with no other signal, and
+// 3 in stock read as 19. Week totals still show when a week arrow moves the view (actWeek clears it).
+function actPick(i){ ACT_DAY=i; ACT_TONE=''; acctTab('activity',true); }
 /** Reopening the Activity tab starts fresh on today, the same as a first open. */
 function actReset(){ ACT_WOFF=0; ACT_DAY=undefined; ACT_TONE=''; }
 function actTone(tn){ ACT_TONE=(ACT_TONE===tn?'':tn); acctTab('activity',true); }
@@ -7226,8 +7229,11 @@ function acctTab(which,fromPop){
     const cell=(nv,lb,tn)=>`<div onclick="actTone('${tn}')" style="text-align:center;cursor:pointer;${ACT_TONE===tn?'background:rgba(255,255,255,.05);border-radius:12px;':''}padding:2px 0"><div style="font-size:18px;font-weight:800;color:${ACT_TONE&&ACT_TONE!==tn?'rgba(255,255,255,.35)':(TONECOL[tn]||'#FFF')}">${nv}</div><div style="margin-top:2px;font-size:9.5px;font-weight:700;letter-spacing:.12em;color:#8A8A96">${lb}</div></div>`;
     const vlabel=e=>{ const tn=railTone(e); return tn==='in'?t('v.in','In stock!'):tn==='out'?t('v.out','Not in stock'):tn==='soon'?t('v.soon','Restock incoming!'):t('fbk.unsure','Unclear'); };
     const agoTx=e=>{ try{ return agoStr(Math.floor(e.ts/1000)); }catch(_){ return ''; } }; // agoStr wants seconds — ms made every call 'just now'
-    const lastPool=(ACT_TONE?scope.filter(e=>railTone(e)===ACT_TONE):hist);
-    const last=lastPool.slice(0,ACT_TONE?6:3).map(e=>`<button onclick="ACCT_RETURN='activity';closeAccount();openHistEntry(histList().find(x=>x.cid==='${esc(e.cid)}'))" style="display:flex;align-items:center;gap:11px;width:100%;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:14px;padding:9px 12px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;cursor:pointer;text-align:left">
+    // The list under the counts follows the SAME scope as the counts (owner 08-05). It used to read
+    // the whole history whenever no status was picked, so choosing another day moved every number
+    // above it and left the rows below showing the newest checks of all time.
+    const lastPool=(ACT_TONE?scope.filter(e=>railTone(e)===ACT_TONE):scope);
+    const last=lastPool.slice(0,6).map(e=>`<button onclick="ACCT_RETURN='activity';closeAccount();openHistEntry(histList().find(x=>x.cid==='${esc(e.cid)}'))" style="display:flex;align-items:center;gap:11px;width:100%;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:14px;padding:9px 12px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;cursor:pointer;text-align:left">
       ${storeTile({logoUrl:e.logoUrl,logoWide:e.logoWide,logoDark:e.logoDark,logoPct:e.logoPct,name:e.storeName,storeType:e.storeType})}
       <span style="flex:1;min-width:0"><span style="display:block;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(railBase(e.storeName)||t('hist.acheck','Store check'))}</span><span style="display:block;margin-top:2px;font-size:11.5px;font-weight:600;color:#8A8A96;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.location||e.address||'')}</span></span>
       <span style="flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:3px">${v2StatusChip(railTone(e),22)}<span style="font-size:11px;font-weight:600;color:#8A8A96">${agoTx(e)}</span></span>
