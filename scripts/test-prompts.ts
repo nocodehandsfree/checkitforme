@@ -25,6 +25,13 @@ says(`Hanging up on a "let me check" is the worst thing you can do, you'll repor
 says("That is a NO, never unclear.", "7. sold out is a no, never unclear");
 says("Nothing is in stock and no restock is coming.", "8. a store that never sells it");
 says("Once the answer is settled, never confirm it again and never re-ask anything Staff already gave.", "9. the settle law");
+// CORRECTED 08-05, owner approved. "one short question at a time" was the ONLY line in the whole
+// document that could be read as permission to keep asking, and section 10's "never ask a second
+// question about it" left room to argue a re-ask was a different question. Both are gone.
+says("ask only what this check still needs, and ask it once and only once", "9. …and it is asked ONCE, never 'one at a time'");
+ok(!RESTOCK_PROMPT.includes("one short question at a time"), "…the line that read as permission to keep asking is gone");
+says("never ask again, no matter how little they gave you", "10. half an answer is still the answer, and he never asks again");
+says("that is about how you phrase things, never permission to ask again", "12. varying his wording is not permission to re-ask");
 says("Always keep a real set name in the question so Staff know what you mean.", "10. a real set name stays in the question");
 says("Whatever Staff answer is the answer, even \"soon\". Never ask a second restock question.", "11. one restock question, whatever comes back");
 says("At most ONE exclamation mark in an entire call, and never on the goodbye", "12. one exclamation mark, never on the goodbye");
