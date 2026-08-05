@@ -243,10 +243,13 @@ backup check 1h · logo cache 60s · keep-warm 4m.
 Railway, no build step (`tsx src/server.ts`): prod `voice-caller` = branch `main` =
 checkitforme.com; staging `voice-caller-staging` = branch `staging` = staging.checkitforme.com.
 Cloudflare Workers front the brand subdomains (force `?brand=`) and the staging proxy (noindex).
-**Promote** (`scripts/promote.sh`: typecheck + store contract, then staging→main merge) is the only
-way prod code changes. CI: typecheck + ~20 unit suites + gitleaks secret scan + docs lint (banned
-copy tokens). Verification: `scripts/test-all.sh`, `node scripts/site-health.mjs <url>`
-(Playwright walk of every view × 4 brands). The book = branch `v1.0` → readme.com (bi-directional
+**Promote** (`scripts/promote.sh`: typecheck + store contract + **GitHub's test run must be GREEN on
+the exact staging commit** — owner's rule 08-05; `promote.sh check` dry-runs every gate — then
+staging→main merge) is the only way prod code changes. CI: typecheck + the 56 suites in
+`test-all.sh` (each capped at 7 min) + gitleaks secret scan (historical findings fingerprinted in
+`.gitleaksignore`) + docs lint (banned copy tokens). Verification: `scripts/test-all.sh`,
+`node scripts/site-health.mjs <url>` (a browser walk of every view × 4 brands). The Playwright
+launch gate that used to live in `tests/e2e/` was archived 08-05 on the owner's ruling. The book = branch `v1.0` → readme.com (bi-directional
 git sync; Copper's lane).
 
 ## 11. External services (who we pay / depend on)
@@ -268,7 +271,7 @@ git sync; Copper's lane).
 | Railway | hosting + volumes + env vars |
 | ReadMe | the customer book |
 
-## 12. Quirks & watch-outs (true as of 2026-07-10)
+## 12. Quirks & watch-outs (re-verified against the code 2026-08-05)
 
 1. **Daily spend counter reads zero**: `incrSpendCents` (redis.ts) is defined but never called, so
    the admin calling-status "spend today" is fed by nothing.
@@ -280,5 +283,10 @@ git sync; Copper's lane).
    `policy.ga4Id` is set. Don't assume one or the other.
 5. Rotation state (openers/voices) is in-memory and resets on restart.
 6. Admin → Calls → Schedules tab is a blank page (nav entry, no section).
-7. Some premium features (any_town, store_holds, your_voice, thrift_hunts) are UI-gated only — no
-   server-side enforcement yet.
+7. `store_holds`, `your_voice`, `thrift_hunts` are UI-gated only — no server-side enforcement yet.
+   (`any_town` gained server enforcement 2026-07-11: the radius ladder at server.ts:2171 reads the
+   feature and caps free/PAYG at 10 miles.)
+8. **§2–4 (call engine, lanes, Delta) describe the engine as of 2026-07-10 and predate the calling
+   engine work of late July/August** — the mid-call hold drop and reconnect, self-healing, the
+   versioned phone-tree map, and the pretend store that answers test checks. The voice-calls lane
+   owns refreshing those three sections; `docs/team/voice-calls/` is the current truth until it does.
