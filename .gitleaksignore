@@ -1,0 +1,29 @@
+# Known historical findings, verified 2026-08-05. Every one is either gone from the
+# current tree or is a third party PUBLIC key captured in a docs snapshot (readme.com's
+# own page settings: an amplitude browser key, a reCAPTCHA site key, a BEARER_TOKEN
+# placeholder). Fingerprints only, no secret values. A NEW leak still fails the build.
+# Regenerate: gitleaks detect --source . --report-path /tmp/l.json  then take .Fingerprint
+8c08dc4253d840d1306dde11df0dcadfb7202cd6:docs/design/truth/page-faq.html:generic-api-key:65
+docs/design/truth/page-faq.html:generic-api-key:65
+8c08dc4253d840d1306dde11df0dcadfb7202cd6:docs/design/truth/page-faq.html:curl-auth-header:65
+docs/design/truth/page-faq.html:curl-auth-header:65
+a72ca796b703826d398095346144871e122a53c4:docs/design/truth/page-faq.html:generic-api-key:65
+a72ca796b703826d398095346144871e122a53c4:docs/design/truth/page-faq.html:curl-auth-header:65
+731b21de8377c7e903b5588c1829e5adde42b7a7:docs/design/truth/page-faq.html:generic-api-key:65
+731b21de8377c7e903b5588c1829e5adde42b7a7:docs/design/truth/page-faq.html:curl-auth-header:65
+e4e51862d41f4d9eef317e3c24e28835436a1d47:docs/design/truth/page-faq.html:generic-api-key:65
+e4e51862d41f4d9eef317e3c24e28835436a1d47:docs/design/truth/page-faq.html:curl-auth-header:65
+c48045eb0c83448c9d7d8f3071318c5f81257483:docs/design/truth/page-faq.html:curl-auth-header:65
+c48045eb0c83448c9d7d8f3071318c5f81257483:docs/design/truth/page-faq.html:generic-api-key:65
+55badd886004f4f146948c1c2001841a80d37ffd:docs/design/truth/page-faq.html:generic-api-key:65
+55badd886004f4f146948c1c2001841a80d37ffd:docs/design/truth/page-faq.html:curl-auth-header:65
+a7d81de8525b3c203fc09c25f08347966933dc31:docs/design/truth/page-faq.html:generic-api-key:65
+a7d81de8525b3c203fc09c25f08347966933dc31:docs/design/truth/page-faq.html:curl-auth-header:65
+42634a16cf6311bcb088ac901a89960f09a00ac1:docs/design/truth/page-faq.html:generic-api-key:65
+42634a16cf6311bcb088ac901a89960f09a00ac1:docs/design/truth/page-faq.html:curl-auth-header:65
+a1d11071009ad6995c375f1e3e46b09266d6f06f:docs/design/truth/page-faq.html:generic-api-key:65
+a1d11071009ad6995c375f1e3e46b09266d6f06f:docs/design/truth/page-faq.html:curl-auth-header:65
+bf546a2082dc36aabb42d6480c020d7bb25ffcec:docs/team/mapping/checkpoint.md:generic-api-key:28
+docs/team/mapping/checkpoint.md:generic-api-key:28
+16a3069f020ab3a55b9997c64c3b5a646cd80e79:scripts/checkit-staging-proxy.worker.js:generic-api-key:15
+scripts/checkit-staging-proxy.worker.js:generic-api-key:15
