@@ -483,7 +483,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  came back as ONE sentence, with our question printed under it and two of our own lines in a row
    *  where the store's answer should have been (owner screenshot 07-31). They are two turns because
    *  we asked a question in between, and the record has to say so. */
-  let pendingSplit = -1;
+  /** Their hello, taken out of what Charlie is handed and transcribed on its own. */
+  let helloAudio: string[] = [];
   /** Running while held audio is being paced out. Live frames queue behind it so nothing overtakes. */
   let handoverTimer: NodeJS.Timeout | null = null;
   /** Our question, kept off the live view until the store's hello can be shown above it. */
@@ -596,6 +597,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   /** Release whatever we had to hold before his session was ready, AT THE SPEED IT WAS SPOKEN. */
   function flushPending() {
     if (!eleven || !ready) return;
+    if (pendingClip) return;     // still waiting for their hello to end: NONE of this is his yet
     if (handoverTimer) return;   // already draining; live frames are queueing behind it
     if (!pending.length) return;
     // AT THE SPEED IT WAS SPOKEN, NEVER ALL AT ONCE. A phone line carries one 20ms frame every 20ms,
@@ -614,7 +616,6 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // needed either way now: his ears open when a person is found, so the only thing ever held is
     // the moment before his session answers, and every real pause the room had is already in the
     // audio itself, in real time, where the transcriber can hear it.
-    pendingSplit = -1;
     log(`delta: handing over ${pending.length} frame(s) at the speed they were spoken`);
     const step = () => {
       if (!eleven || eleven.readyState !== 1) { handoverTimer = null; return; }
@@ -750,8 +751,24 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // own recording is what makes a check cheap, and the card has a row for it — so the log has to
     // be able to say it happened, at the second it happened, and that Charlie did not ask it himself.
     emit(room, "unknown", "The question played as a recording", { step: "question_clip", ms: clip.ms, text: clip.text });
-    // Everything held up to this instant is their hello. Everything after it answers our question.
-    pendingSplit = pending.length;
+    // ── THEIR HELLO IS NOT HIS TO ANSWER, SO HE NEVER RECEIVES IT (owner 08-05) ──
+    //
+    // Everything held up to this instant is their hello; everything after it answers our question.
+    // For months Charlie worked because HE said the opening line: their hello was his cue to speak,
+    // and answering it was exactly right. On the new shape a RECORDING asks the question and Charlie
+    // is opened as a second agent mid call, but he was still handed their hello as his first turn.
+    // A hello is a question, so he answered it, on all five of checks 282-286.
+    //
+    // Blocking his voice was not enough (check 288): the reply he was never allowed to say STAYS IN
+    // HIS OWN HISTORY, so from there he believes he asked whether they had any in stock, and every
+    // turn after that is one behind the store. That is why he asked the set question twice.
+    //
+    // So the hello is taken out here and never reaches him. His conversation begins where the owner
+    // says it begins: after the store has finished talking, with their answer to our question. It is
+    // still written down and their name is still used — `transcribeTheirHello` below does both,
+    // off this same audio, without putting a turn in front of him.
+    helloAudio = pending.splice(0, pending.length);
+    void transcribeTheirHello(helloAudio, ctx?.apiKey || config.voice.apiKey);
     // THE QUESTION WE ACTUALLY ASKED IS A LINE OF THE CONVERSATION. It is played from a recording
     // rather than generated, so nothing in the provider's transcript knows it happened — which left
     // our own record missing the single most important line on the call, and left the live view with
@@ -994,6 +1011,54 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
 
   /** A note to the agent that is NOT spoken to the store: time passed and who is on the line may
    *  have changed. The provider's own contextual-update channel, so nothing is said out loud. */
+  /**
+   * THEIR HELLO, WRITTEN DOWN WITHOUT BEING PUT IN FRONT OF CHARLIE (owner 08-05).
+   *
+   * Charlie's session used to be our only transcriber, which is the whole reason their hello was
+   * handed to him: the greeting is the first line of the record and it is where Staff give their
+   * name. It is also a question, so he answered it, and everything after that ran one turn behind
+   * the store. Now the hello is transcribed on its own, off the very same audio, by the same account
+   * we already pay — and it goes back through the SOCKET'S OWN message handler, so the name, the
+   * wrong department test, the voicemail bail, the record and the customer's page are all the ONE
+   * copy that already works rather than a second one written here (LAW 1).
+   *
+   * Best effort in the truest sense: nothing waits on it, and a failure costs the greeting LINE, not
+   * the check. Never a fallback to handing him the audio — that is the fault this exists to end.
+   */
+  async function transcribeTheirHello(frames: string[], apiKey: string) {
+    const audio = Buffer.concat(frames.map((f) => Buffer.from(f, "base64")));
+    if (!audio.length || !apiKey) return;
+    try {
+      // μ-law 8kHz is what the carrier gives us; the header says so and no sample is touched.
+      const head = Buffer.alloc(58);
+      head.write("RIFF", 0); head.writeUInt32LE(50 + audio.length, 4); head.write("WAVEfmt ", 8);
+      head.writeUInt32LE(18, 16); head.writeUInt16LE(7, 20); head.writeUInt16LE(1, 22);
+      head.writeUInt32LE(8000, 24); head.writeUInt32LE(8000, 28); head.writeUInt16LE(1, 32);
+      head.writeUInt16LE(8, 34); head.writeUInt16LE(0, 36);
+      head.write("fact", 38); head.writeUInt32LE(4, 42); head.writeUInt32LE(audio.length, 46);
+      head.write("data", 50); head.writeUInt32LE(audio.length, 54);
+      const body = new FormData();
+      body.append("model_id", "scribe_v1");
+      body.append("file", new Blob([Buffer.concat([head, audio])], { type: "audio/wav" }), "hello.wav");
+      const r = await fetch("https://api.elevenlabs.io/v1/speech-to-text", { method: "POST", headers: { "xi-api-key": apiKey }, body });
+      if (!r.ok) { log(`hello: not transcribed (${r.status})`); return; }
+      const text = String(((await r.json()) as { text?: string }).text || "").trim();
+      // Real words only. A quiet line comes back as an audio event in brackets, and writing
+      // "[outro jingle]" onto the owner's transcript as something Staff said is worse than nothing.
+      if (!text || !/[a-zA-ZÀ-ɏ]{2,}/.test(text) || /^\[[^\]]*\]$/.test(text)) { log(`hello: nothing worth writing down (${text.slice(0, 40)})`); return; }
+      log(`hello: transcribed on its own -> ${text.slice(0, 60)}`);
+      // …and back through the one door every other line uses.
+      eleven?.emit("message", Buffer.from(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: text } })));
+      // HE NEVER HEARD THEM SAY IT, so the one thing he would have taken from it is handed over as
+      // context rather than as a turn: the owner grades whether he thanked them by name.
+      const n = staffName(text);
+      if (n && eleven && ready) {
+        try { eleven.send(JSON.stringify({ type: "contextual_update", text: `[The person who answered is called ${n}. They said hello before your recorded question played, so do not greet them again. Use their name once, naturally.]` })); }
+        catch { /* best effort — never break a check over a note */ }
+      }
+    } catch (e) { log(`hello: transcribe threw ${String(e).slice(0, 80)}`); }
+  }
+
   function tellCharlieAboutTheGap(secs: number, maybeNewPerson: boolean, replayed?: boolean) {
     if (!eleven || !ready) return;
     const text = replayed
