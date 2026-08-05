@@ -411,6 +411,33 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   // clip is done the gate opens, everything the clerk said in the meantime is released to him, and
   // he owns every turn from there.
   let charlieGateOpen = true;   // true = today's behaviour, agent talks the moment he is ready
+  // ── THE SECOND GATE: HE ANSWERS OUR QUESTION, NEVER THEIR HELLO (owner 08-05, checks 282-286) ──
+  //
+  // THE FAULT, off ElevenLabs' own record of five checks in a row: Staff's hello is the FIRST user
+  // turn his session receives, because it is exactly the audio we buffered while he was connecting.
+  // A hello is a question, so he answers it the only way anyone would — he greets back and asks the
+  // store the question Delta has just asked. He did it on 282, 283, 284, 285 and 286. Whether the
+  // store HEARD it was luck: the gate above drops his voice only while the clip is still playing, so
+  // on a 5.3s clip his duplicate died silently (285) and on a 4.1s clip it went out on the line (286)
+  // and the store answered it, which threw the rest of that conversation out of step.
+  //
+  // Two things follow. His stale turn must be DROPPED, never merely delayed, or a longer clip just
+  // moves it later. And the words cannot fix this: the joining note already says "Do NOT greet them,
+  // do NOT ask the question again" and he did it anyway, five times out of five, because answering
+  // the person who just spoke to you beats any standing instruction.
+  //
+  // So his mouth opens on THEIR ANSWER, not on the clip finishing: the first Staff line after we
+  // commit to asking is the hello the recording is answering, and everything he produces before
+  // their next words is a reply to that hello and never reaches the line.
+  let charlieMaySpeak = true;   // true = every call that has no clip, i.e. today's behaviour exactly
+  let helloAlreadyAnswered = false; // the next Staff line is the hello Delta answered, not our answer
+  let answerWaitTimer: NodeJS.Timeout | null = null;
+  let heldHisHelloReply = false;    // we dropped a turn of his; recorded once, so the record shows it
+  /** A store that says NOTHING back to the question still needs him. The recording has finished and
+   *  the line has been quiet since; from here he is better off prompting them than leaving a person
+   *  holding a silent phone. Longer than a real answer takes and shorter than his own 5s turn
+   *  timeout is useless here, so it is measured from the question ending, not from his last turn. */
+  const ANSWER_WAIT_MS = 5000;
   let clipText = "";            // the question Delta asked, handed to the agent as context
   let clipEchoDropped = false;  // his session echoes that question back once — dropped, it is already on the record
   let clipMs = 0;               // how long the question ran, for the one join line's detail
@@ -620,6 +647,23 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  too short to slur a syllable, and it is what stops us trailing the live line forever. */
   const CATCHUP_FRAMES = 10;
 
+  /** WE ARE ABOUT TO ASK THE QUESTION. Shut both gates: his voice off the line while the clip plays,
+   *  and his voice off the line after it until Staff answer. Called at the opening and again when the
+   *  recording re-asks a new person after a hand-over, so both journeys behave the same way. */
+  function holdHimForTheirAnswer() {
+    charlieGateOpen = false;
+    charlieMaySpeak = false;
+    helloAlreadyAnswered = true;   // their next line is the hello the recording is answering
+    if (answerWaitTimer) { clearTimeout(answerWaitTimer); answerWaitTimer = null; }
+  }
+  /** Staff have said something that is not the hello, so it is his conversation now. */
+  function letHimAnswer(via: string) {
+    if (charlieMaySpeak) return;
+    charlieMaySpeak = true;
+    if (answerWaitTimer) { clearTimeout(answerWaitTimer); answerWaitTimer = null; }
+    log(`delta: ${via} -> Charlie may speak`);
+  }
+
   /** The clip is over: hand the conversation to the agent. Idempotent — three signals race to call
    *  this and a backstop calls it if all three miss, so it must only ever act once. */
   function openCharlieGate(via: string) {
@@ -640,6 +684,17 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     amend(room, "charlie_join", joinFacts);
     if (!eleven) { if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } void connectEleven(); }
     log(`delta: clip finished (${via}) -> agent gate open, releasing ${pending.length} buffered frame(s)`);
+    // …BUT HIS MOUTH IS STILL SHUT until Staff answer the question (the second gate above). If they
+    // never do, this is what lets him in rather than leaving a person on a silent line.
+    if (!charlieMaySpeak && !answerWaitTimer) {
+      answerWaitTimer = setTimeout(() => {
+        answerWaitTimer = null;
+        if (ended || charlieMaySpeak) return;
+        emit(room, "unknown", `Nobody answered the question in ${Math.round(ANSWER_WAIT_MS / 1000)}s, so Charlie was let in to ask`,
+          { step: "no_answer_to_the_question", afterMs: ANSWER_WAIT_MS });
+        letHimAnswer("nobody answered the question");
+      }, ANSWER_WAIT_MS);
+    }
     flushPending();
   }
 
@@ -658,7 +713,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    */
   function startOpeningClip(clip: { audio: Buffer; ms: number; text: string }): boolean {
     if (twilio.readyState !== 1 || !streamSid) { log("delta: socket not ready, no clip -> agent opens as usual"); return false; }
-    charlieGateOpen = false;
+    holdHimForTheirAnswer();
     clipText = clip.text;
     clipMs = clip.ms;
     // Buffer inbound audio from THIS moment, not from when his session starts opening. He is now
@@ -838,7 +893,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // and playing the question at them again would be asking twice.
     const handedOn = (was === "transfer" || asked) && !!ctx?.openingClip && !!ctx?.midCallAgentId;
     if (handedOn) {
-      charlieGateOpen = false;
+      holdHimForTheirAnswer();   // the new person's hello is theirs to make, and the recording answers it
       clipEchoDropped = false;   // his session will echo the re-played question once more; drop it once more
       pendingClip = ctx!.openingClip!; waitQuietMs = 0; waitTotalMs = 0;
       log("hand-over over: the recording will ask the new person, Charlie stays off the line until they answer");
@@ -1066,6 +1121,19 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // He is warming up behind the question, not talking over it. Nothing he produces before the
         // gate opens reaches the line.
         if (b64 && !charlieGateOpen) { log("delta: agent tried to speak during the clip, suppressed"); }
+        // HIS REPLY TO THEIR HELLO NEVER REACHES THE LINE. The recording already answered it, and this
+        // is the whole fault: it is a fresh greet-back plus the question again, and on a short clip it
+        // used to escape and the store answered it (check 286). Dropped, not queued — a delay would
+        // only put the same duplicate on the line a second later. Recorded ONCE, because a check where
+        // it was silently dropped looks identical to a check where he never tried (rule 8).
+        else if (b64 && !charlieMaySpeak) {
+          if (!heldHisHelloReply) {
+            heldHisHelloReply = true;
+            emit(room, "unknown", "Charlie went to answer their hello, which the recording had already answered, so it was not spoken",
+              { step: "hello_reply_held" });
+            log("delta: agent tried to answer their hello, suppressed (the recording already did)");
+          }
+        }
         // Nobody is there to hear him. Suppressing his voice while the person is away also stops him
         // talking into hold music and then being interrupted by his own tail when they come back.
         else if (b64 && onHold) { /* suspended: not spoken onto the line */ }
@@ -1088,6 +1156,20 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // Real words on the store side (letters, not ringback transcribed as "...") = someone IS
         // there — disarm the give-up cap. Voicemail greetings count: the voicemail bail handles those.
         if (txt && /[a-zA-ZÀ-ɏ]{2,}/.test(String(txt)) && !humanWords) { humanWords = true; if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } }
+        // THEIR HELLO, THEN THEIR ANSWER (the second gate, declared at the top of this file).
+        //
+        // The first Staff line after we commit to asking is the hello: it is the audio we buffered
+        // while his session opened, it is what triggered the recording in the first place, and the
+        // recording is what answers it. His mouth opens on the line AFTER it, which is their answer to
+        // our question and the first thing in this call that is genuinely his to reply to.
+        //
+        // Read off the WORDS, not the audio, and deliberately so: ElevenLabs transcribes a user turn
+        // before its model answers it, so a Staff line can never arrive after the reply it caused.
+        // That ordering is what makes this a gate and not a race. Junk ("...", ringback) is not words.
+        if (txt && /[a-zA-ZÀ-ɏ]{2,}/.test(String(txt)) && !charlieMaySpeak) {
+          if (helloAlreadyAnswered) { helloAlreadyAnswered = false; log("delta: that was their hello, the recording has it, still holding him"); }
+          else letHimAnswer("Staff answered the question");
+        }
         // THEIR NAME, IF THEY GAVE ONE (round 1, item 1.3). Staff name themselves in the greeting far
         // more often than not, and Charlie thanking them by name is a row on the owner's card. Kept
         // from the first line that has one, and dropped when somebody new comes on, so the name we
@@ -1214,6 +1296,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // exact-string drop still doubled it — and once per SESSION: every reopened session is handed
         // the question again and echoes it again (08-01 audit, open fault 4).
         if (txt && !clipEchoDropped && clipText && normSaid(String(txt)) === normSaid(clipText)) { clipEchoDropped = true; return; }
+        // A LINE THE STORE NEVER HEARD IS NOT A LINE. Either gate being shut means his audio was
+        // dropped rather than played, so recording the words would put a sentence on the customer's
+        // page, on the owner's transcript and in front of the reader that nobody on the phone ever
+        // heard. The echo drop above only catches his duplicate when he words it EXACTLY like the
+        // recording; reworded, it was written down as a real line twice (checks 282 and 286).
+        if (txt && (!charlieGateOpen || !charlieMaySpeak)) return;
         // HE HAS ASKED TO BE PUT THROUGH. From here the next wait that ends is a hand-over, whether or
         // not the next desk audibly rings — a silent hand-over is a quiet pause to the ear and nothing
         // else, and the ear must never be asked to judge this. It is also the ONE line of ours worth
@@ -1418,7 +1506,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // conversation already in progress — the one with no greeting, told to wait for the answer.
       // Opening him before it was shut would open the ORDINARY agent, who greets the store, straight
       // over the top of our recorded question. It is closed here, the moment we commit to asking.
-      charlieGateOpen = false;
+      holdHimForTheirAnswer();
       clipText = clip.text;
       log("delta: person heard, opening his ears now and waiting for them to finish before asking");
       void connectEleven();
@@ -1783,5 +1871,5 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       emit(room, "unknown", note, { step: "language", spanishLines: spokeEs, englishLines: spokeEn });
     }
     signoffDoors.delete(room);
-    if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; } if (heldQuestion) { try { relayLine?.(room, "Agent", heldQuestion); } catch { /* best effort */ } heldQuestion = null; } try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (holdCapTimer) { clearTimeout(holdCapTimer); holdCapTimer = null; } if (ringWaitTimer) { clearTimeout(ringWaitTimer); ringWaitTimer = null; } if (handoverTimer) { clearTimeout(handoverTimer); handoverTimer = null; } if (eleven) eleven.close(); /* the context is NOT deleted here: Twilio can reconnect a blipped stream mid-call, and the fresh socket must still find it. The 30-minute leak guard owns cleanup. */ });
+    if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; } if (heldQuestion) { try { relayLine?.(room, "Agent", heldQuestion); } catch { /* best effort */ } heldQuestion = null; } try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (holdCapTimer) { clearTimeout(holdCapTimer); holdCapTimer = null; } if (ringWaitTimer) { clearTimeout(ringWaitTimer); ringWaitTimer = null; } if (handoverTimer) { clearTimeout(handoverTimer); handoverTimer = null; } if (answerWaitTimer) { clearTimeout(answerWaitTimer); answerWaitTimer = null; } if (eleven) eleven.close(); /* the context is NOT deleted here: Twilio can reconnect a blipped stream mid-call, and the fresh socket must still find it. The 30-minute leak guard owns cleanup. */ });
 }

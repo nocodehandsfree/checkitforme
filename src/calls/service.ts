@@ -7,12 +7,6 @@ import { fetchStorePhone } from "../store-phone";
 import {
   accounts, alertSends, alertSubscriptions, callEvents, callResults, categories, chains, customerSchedules, products, retailers, scheduleTargets, schedules, statuses, watches, zoneRetailers, zones,
 } from "../db/schema";
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
-
-/** This file's own folder, so the site's catalog is read off disk the same way server.ts reads it. */
-const HERE = dirname(fileURLToPath(import.meta.url));
 import { linkCall, openReceipt, emit, closeReceipt, linkProviderCall, markNow } from "./events"; // ties the call row to its receipt (the timeline + the seconds)
 import { isCheckAlive } from "./check-life"; // the gatekeeper: the one honest answer to "has this check finished?"
 import { recordVerdict, lastClerkLine } from "./receipt-store";
@@ -150,7 +144,7 @@ import { deltaStoreCall, setDeltaFinalize, tdTranscript, type TdSession } from "
 import type { AgentTuning } from "../voice/provider";
 import { notifyInStock, notifyContact } from "./notify";
 import { getSetting, setSetting } from "../db/settings";
-import { specificityClause, RESTOCK_PROMPT, VOICE_DEFAULTS, kioskNote, departmentNote, FALLBACK_SET_EXAMPLE, midCallAgentPatch } from "../voice/prompts";
+import { specificityClause, RESTOCK_PROMPT, VOICE_DEFAULTS, kioskNote, departmentNote, SET_EXAMPLE, midCallAgentPatch } from "../voice/prompts";
 import { consensusFor, productDetailLabel, VERDICT_MODEL } from "../voice/verdict";
 import { armLiveRead, dropLiveRead } from "../voice/live-read";
 
@@ -336,60 +330,6 @@ const kioskOnly = (r: { hasKiosk?: boolean | null; sellsPacks?: boolean | null }
   !!r.hasKiosk && r.sellsPacks === false;
 
 /**
- * THE SET NAME CHARLIE'S EXAMPLE QUESTION CARRIES, READ FROM THE SITE'S CATALOG (builder note on the
- * owner's rewrite, section 10).
- *
- * It was the hand-written string "Chaos Rising" inside the prompt. That set landed 2026-05-22 and was
- * already a release behind by the time the words were ruled on, and the example is the part of that
- * question Staff judge us on: naming a set that came and went makes the caller sound like they do not
- * follow the line. So it is read from the catalog the site itself serves, newest first.
- *
- * Pokémon reads `data/pokemon-sets.json`, the same registry `/pub/pokemon-sets` serves, and takes the
- * newest set that has ACTUALLY COME OUT. Upcoming sets ship into that file early with a future date
- * (that is what lets the front end badge them), so "newest" alone would have Charlie name a set no
- * store can possibly have. Every other line has no set registry, so it falls back to the products
- * catalog's own `series`. A catalog that cannot answer never yields a blank: section 10 requires a
- * real set name to be in the question, so the floor is FALLBACK_SET_EXAMPLE.
- *
- * Cached for five minutes, the same window `/pub/pokemon-sets` uses, so this costs a live check
- * nothing: the words are rebuilt on every single dial.
- */
-let setExampleCache: { at: number; byCategory: Map<number, string> } | null = null;
-export async function setExampleFor(category: { id: number; key: string; label: string }): Promise<string> {
-  const now = Date.now();
-  if (!setExampleCache || now - setExampleCache.at > 300_000) setExampleCache = { at: now, byCategory: new Map() };
-  const hit = setExampleCache.byCategory.get(category.id);
-  if (hit) return hit;
-
-  let name = "";
-  if (category.key === "pokemon") {
-    try {
-      const file = JSON.parse(readFileSync(join(HERE, "../../data/pokemon-sets.json"), "utf8")) as
-        { eras?: Array<{ sets?: Array<{ name?: string; release?: string }> }> };
-      const today = new Date().toISOString().slice(0, 10);
-      const out = (file.eras ?? [])
-        .flatMap((e) => e.sets ?? [])
-        .filter((s) => !!s.name && !!s.release && s.release <= today)
-        .sort((a, b) => String(b.release).localeCompare(String(a.release)));
-      name = out[0]?.name ?? "";
-    } catch { /* a catalog we cannot read falls through to the floor below */ }
-  }
-  if (!name) {
-    try {
-      const [row] = await db.select({ series: products.series })
-        .from(products)
-        .where(and(eq(products.categoryId, category.id), eq(products.active, true), sql`${products.series} is not null and ${products.series} != ''`))
-        .orderBy(desc(products.id))
-        .limit(1);
-      name = (row?.series ?? "").trim();
-    } catch { /* same: the floor is never a blank example */ }
-  }
-  const chosen = name || FALLBACK_SET_EXAMPLE;
-  setExampleCache.byCategory.set(category.id, chosen);
-  return chosen;
-}
-
-/**
  * Resolve the full set of agent dynamic variables for a restock call to a store, applying the
  * three-tier rule system: GLOBAL (the prompt itself) → CHAIN (chains.phoneTreeDefault) → STORE
  * (retailers.phoneTree override). One code path so scheduled calls, Listen-live, and the admin
@@ -536,7 +476,7 @@ export async function buildRestockVars(
       department_note: departmentNote(category.label, (await getPolicy()).flags.askForTransfer),
       // Section 10's example keeps a REAL set name in the question, read from the site's catalog so
       // it stays current instead of naming a set that came and went.
-      set_example: await setExampleFor(category),
+      set_example: SET_EXAMPLE,
     },
   };
 }
@@ -759,7 +699,7 @@ export async function triggerCall(a: TriggerArgs) {
       // turning it off can never leave one lane asking to be put through and the other giving up.
       askForTransfer: (await getPolicy()).flags.askForTransfer,
       // The real set name section 10's example carries, off the site's catalog.
-      setExample: await setExampleFor(category),
+      setExample: SET_EXAMPLE,
     });
     linkProviderCall(directRoom, providerCallId);
     emit(directRoom, "connected", "The provider is placing the call on its own line", { providerCallId, callSid: callSid ?? null });

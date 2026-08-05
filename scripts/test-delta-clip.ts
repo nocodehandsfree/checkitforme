@@ -125,6 +125,17 @@ function stubSignedUrl(f: Fake) {
 /** Walk a call to the moment a real person says hello, with the clip configured. */
 /** What the customer's page is shown, live, in the order it is shown. */
 const relayed: Array<{ role: string; text: string }> = [];
+
+/** WHAT A REAL CHECK ALWAYS HAS, in the order it happens: their hello, which the recording is what
+ *  answers, and then their answer to the question. Charlie's mouth opens on the SECOND of these
+ *  (the hello scene at the top of this file), so a scene that skips them is a scene where he is
+ *  correctly held and can never speak. The rig sends them by hand because the fake provider does no
+ *  transcribing; on a real check the transcriber produces both. */
+function theyGreetAndAnswer(f: Fake, hello = "Fun store, this is Bob, how can I help you?", answer = "Yeah, we got some in.") {
+  const ws = f.sockets[f.sockets.length - 1];
+  ws.send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: hello } }));
+  ws.send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: answer } }));
+}
 async function callToHello(f: Fake, clipMs: number, room: string) {
   const audio = Buffer.alloc(clipMs * 8, 0x20); // μ-law 8kHz: 8 bytes per millisecond
   openReceipt(room, { lane: "direct" });
@@ -309,6 +320,92 @@ console.log("\n▶ an agent who tries to talk over the question is silenced");
   const { tw, clipFrames } = await callToHello(f, 800, "room-overtalk");
   await sleep(120);
   ok(tw.outMedia().length === clipFrames, "only our clip reached the line, none of the agent's early audio");
+  restore(); tw.close(); f.close();
+}
+
+// ================================================================================================
+// HE ANSWERS OUR QUESTION, NEVER THEIR HELLO (owner 08-05; checks 282, 283, 284, 285, 286).
+//
+// THE FAULT THIS SCENE EXISTS FOR, and it is worth writing down because five checks in a row looked
+// FINE while it happened. Staff's hello is the first user turn the joining agent's session receives:
+// it is exactly the audio we buffered while he was connecting. A hello is a question, so he answers
+// it the only way anybody would, by greeting back and asking the store the question the recording has
+// just asked. The gate above drops his voice only while the clip is still PLAYING, so whether the
+// store heard the duplicate came down to clip length: on 285's 5.3 second clip it died silently and
+// the check read clean, on 286's 4.1 second clip it went out on the line, the store answered it, and
+// every turn after that was out of step.
+//
+// The words cannot fix it. The joining note has said "Do NOT greet them. Do NOT ask the question
+// again" the whole time, and he did it five times out of five, because answering the person who just
+// spoke to you beats any standing instruction. So it is a gate: his mouth opens on THEIR ANSWER.
+console.log("\n▶ their hello is not his to answer: the recording already did");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-hello";
+  const { tw, clipFrames } = await callToHello(f, 800, room);
+  tw.say({ event: "mark", mark: { name: "delta-opening" } });   // the question has finished
+  await sleep(60);
+  const ws = f.sockets[0];
+  const staffSays = (t: string) => ws.send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: t } }));
+  const heSays = (t: string) => {
+    ws.send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: t } }));
+    ws.send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x40)) } }));
+  };
+
+  // THEIR HELLO reaches his session, exactly as it does on a real check.
+  staffSays("Larry Vasquez. How can I help you?");
+  await sleep(60);
+  // …and he answers it, exactly as he did on all five. Reworded, so the echo drop cannot catch it:
+  // that drop only fires when he says the recording's words back word for word, which is the only
+  // reason 284 and 285 read clean while doing the same thing.
+  heSays("Oh hey Larry, I'm just calling to check on Pokemon cards, did you guys have any in stock?");
+  await sleep(80);
+  ok(tw.outMedia().length === clipFrames, "his answer to their hello never reaches the line, the store hears the question ONCE");
+  // Their hello, then our question: the order the call actually happened in. His duplicate would be
+  // a third line, and it is not there.
+  const saidNow = (getReceipt(room)?.transcript ?? []);
+  ok(saidNow.length === 2 && saidNow[0]?.who === "Clerk" && saidNow[1]?.who === "Agent", `…and it is not written down either, because nobody heard it (${saidNow.map((l) => l.who).join(",")})`);
+  ok(!saidNow.some((l) => l.text.includes("Oh hey Larry")), "the duplicate is nowhere on the record");
+  const held = (getReceipt(room)?.events || []).find((e) => e.detail?.step === "hello_reply_held");
+  ok(!!held, "the record SAYS he tried, so a check where it was dropped never looks like a check where it never happened");
+
+  // NOW STAFF ANSWER THE QUESTION. From here it is his conversation and nothing is held.
+  staffSays("Yeah, we do.");
+  await sleep(60);
+  const before = tw.outMedia().length;
+  heSays("Oh nice, do you know the name of the set?");
+  await sleep(80);
+  ok(tw.outMedia().length > before, "once Staff answer the question, his voice reaches the line again");
+  const said2 = (getReceipt(room)?.transcript ?? []);
+  ok(said2.some((l) => l.who === "Agent" && l.text.includes("name of the set")), "…and what he says from there IS written down");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ a store that never answers the question still gets Charlie, it just takes a beat");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-noanswer";
+  const { tw, clipFrames } = await callToHello(f, 800, room);
+  tw.say({ event: "mark", mark: { name: "delta-opening" } });
+  await sleep(60);
+  const ws = f.sockets[0];
+  ws.send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Larry Vasquez. How can I help you?" } }));
+  await sleep(60);
+  // They say nothing back to the question. Leaving a person holding a silent phone is worse than
+  // letting him prompt them, so the wait has a floor and he is let in when it runs out.
+  ws.send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x40)) } }));
+  await sleep(60);
+  ok(tw.outMedia().length === clipFrames, "…still held while the wait runs");
+  await sleep(5200);
+  const letIn = (getReceipt(room)?.events || []).find((e) => e.detail?.step === "no_answer_to_the_question");
+  ok(!!letIn, "the record says nobody answered the question, so he was let in to ask");
+  ws.send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x40)) } }));
+  await sleep(60);
+  ok(tw.outMedia().length > clipFrames, "…and from there he can speak");
   restore(); tw.close(); f.close();
 }
 
@@ -796,7 +893,7 @@ console.log("\n▶ after a transfer the recording asks again, and Charlie stays 
   const playedOnce = tw.outMedia().length;
   ok(playedOnce >= clipFrames, "the question played once at the top of the check");
   // Staff say we landed wrong, and Charlie asks to be put through.
-  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Hi, this is the pharmacy." } }));
+  theyGreetAndAnswer(f, "Hi, this is the pharmacy.", "Yeah, you'll want the front store for that.");
   await sleep(60);
   f.sockets[0].send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Oh gotcha, could you put me through to whoever handles the Pokemon cards?" } }));
   await sleep(60);
@@ -826,6 +923,10 @@ console.log("\n▶ after a transfer the recording asks again, and Charlie stays 
   // The question finishes: the gate opens and the conversation is his.
   tw.say({ event: "mark", mark: { name: "delta-opening" } });
   await sleep(120);
+  // The new person's hello is theirs to make and the recording has just answered it, exactly as at
+  // the top of the check — so his voice waits for THEIR answer here too.
+  theyGreetAndAnswer(f, "Front store, this is Dana.", "Yeah, we have some.");
+  await sleep(80);
   f.sockets[f.sockets.length - 1].send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x40)) } }));
   await sleep(80);
   ok(tw.outMedia().length > beforeBarge, "…and the moment Staff could answer, his voice flows again");
@@ -936,6 +1037,7 @@ console.log("\n▶ the goodbye is said and the line goes quiet: WE hang up, the 
   tw.say({ event: "mark", mark: { name: "delta-opening" } });
   await sleep(700);   // past the clip's playout clock and its echo tail, so the ear is being fed again
   speak(tw, 150);   // Staff give the answer, so the ear knows somebody was here
+  theyGreetAndAnswer(f);   // …and it lands as words too, so the conversation is his from here
   nudgeSignoff("room-signed-off", "in stock");
   await sleep(80);
   f.sockets[f.sockets.length - 1].send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Perfect, thank you so much, have a good one." } }));
@@ -1550,8 +1652,12 @@ console.log("\n▶ a whole check writes down the question, the warm-up, the good
   await sleep(80);
   const join = (getReceipt("room-record")?.events || []).find((e) => e.kind === "charlie_join");
   ok((join?.detail as { warmedUpInTime?: boolean })?.warmedUpInTime === true, "the record says he was ready when the question ended");
-  // Staff name themselves, and he thanks them by name on the way out.
+  // Staff name themselves, and he thanks them by name on the way out. Their hello comes first and
+  // then their ANSWER, because that is the order a check happens in and his mouth does not open
+  // until they have answered the question the recording asked (the hello scene near the top).
   f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Fun store, this is Bob, how can I help you?" } }));
+  await sleep(40);
+  f.sockets[0].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Yeah, we got some in." } }));
   await sleep(40);
   f.sockets[0].send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Perfect, thanks so much Bob, have a good one!" } }));
   await sleep(60);
@@ -1573,6 +1679,8 @@ console.log("\n▶ a Spanish check says so, in one line, at the end");
   const { tw } = await callToHello(f, 400, "room-es");
   tw.say({ event: "mark", mark: { name: "delta-opening" } });
   await sleep(150);
+  theyGreetAndAnswer(f, "Buenas, tienda Fun, le habla Bob.", "Si, tenemos algunas.");
+  await sleep(40);
   f.sockets[0].send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Hola, gracias por llamar, tiene cartas de Pokemon en la tienda?" } }));
   f.sockets[0].send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Perfecto, muchas gracias, que tenga buen dia!" } }));
   await sleep(80);
