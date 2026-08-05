@@ -21,20 +21,20 @@ never cash) change only on the owner's word. Money words are never model-authore
      `HUMAN_ASK` (exported, unit-tested both ways) reads the customer's own words before any rung,
      `humanAsk` rides to the widget, and the person is offered on the FIRST ask. The two-strike
      burial stays for OUR failures, which is what the owner built it for.
-  2. **The hold answer (money).** Charge rules now sit in the chat's always-true block and OUTRANK
-     any book passage. Staff hung up → charged, nobody answered → free, both verified live.
-     **Hold itself still answers wrong**: the book says free in three places and the model sides
-     with it. Closes when the book lands, or when charge answers go deterministic.
+  2. **The hold answer (money), closed end to end.** Charge rules sit in the chat's always-true block
+     and OUTRANK any passage; SIX book pages corrected on `v1.0` (owner's go — the worst was the
+     verdict table's yellow row reading "No charge" for the bucket holding left on hold, too busy,
+     language barrier); reindexed with `?source=repo` because ReadMe had not synced. Driven: a hold
+     now answers charged, in English and Spanish; nobody answered stays free.
   3. **The Spanish result screen** said "Sin cargo" on three charged statuses while English promised
      nothing. Fixed under the unlock flow.
-- **Owner's open call:** `docs/tasks/book-hold-charge-copy.md` holds the exact replacement words for
-  the three book pages. NOT pushed — branch `v1.0` publishes to real customers on landing.
+- **Book vs ReadMe drift is now a known trap:** the agent reads ReadMe, ReadMe syncs from `v1.0` on
+  its own clock, so a reindex in that window re-teaches the stale page. `?source=repo` is the way out.
 - **Reply engine for the chat:** checker-only recommended (a small fast model grades vs the copy
   guide, rewrites only fails, numbers survive exactly, money words untouched). Not built.
-- **Next:** round 2 is the signed-in half (the credit machine needs an account with a real charged
-  check), then re-run all 27. Still unfixed: it debugs an iPhone app we do not have, says "passages"
-  to customers, escalates on questions it merely could not answer, and misses the FAQ's own answer
-  to "how long does a check take" about half the time.
+- **Next:** the plan is written — `docs/specs/support-chatbot-testing/round-2.md`. Still unfixed: it
+  debugs an iPhone app we do not have, says "passages" to customers, escalates on questions it merely
+  could not answer, and misses the FAQ's own answer to "how long does a check take" half the time.
 
 ## How charging vs crediting works (07-22, use for any check_issue question)
 - **Charge:** ONE credit on a definitive answer (`src/calls/service.ts:616`), AND on engaged-but-no

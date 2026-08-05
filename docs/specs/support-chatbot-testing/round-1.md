@@ -12,10 +12,15 @@ Replies took 0.3–8.8s. Rerun any scenario to reproduce: `node scripts/robot-su
 - **6 · THE HOLD ANSWER (money).** Said an endless hold is free. The owner's 07-22 ruling charges it.
   FIXED in two places: the charge rules are now in the chat's own always-true block and OUTRANK any
   book passage, and the Spanish result screen stopped saying "Sin cargo" on the three charged
-  statuses. Staff hanging up and nobody answering now answer correctly. **Hold itself still answers
-  wrong** — the book says free in three places and the model sides with the book. Closes when the
-  book lands (`docs/tasks/book-hold-charge-copy.md`, waiting on the owner) or when charge answers go
-  deterministic like the credit machine.
+  statuses. Staff hanging up and nobody answering answered correctly straight away; hold itself kept
+  answering wrong, because the book said free and the model sided with the book. **CLOSED the same
+  day:** the owner gave the go, and six book pages were corrected on branch `v1.0` — three more than
+  first found, the worst being the verdict table's yellow "Couldn't tell" row reading "No charge"
+  when the text under it says that row holds left on hold, too busy, and language barrier. The agent
+  was reindexed from git (`?source=repo`) because ReadMe had not synced. Driven after: "if a store
+  puts us on hold forever and the call drops, am I charged?" → "Yes, you are charged. If a real
+  person answered and went to look, their time is considered real even if the call dropped before
+  they came back." Nobody-answered is still free, and Spanish answers the same way.
 
 ## Still failing
 - **12 · debugged an app we do not have:** "iPhone app keeps crashing" → "try closing and reopening
