@@ -37,7 +37,7 @@ ok(declaresOneTurn(null) === false, "null follow-ups never crash the call");
 console.log("\n▶ the fold is retired: every check asks the one question, off fixed words");
 ok(!/\{\{premium_followup\}\}|\{\{ask_shipment_day\}\}/.test(RESTOCK_PROMPT),
   "no follow-up variable is left for a workflow to swap out");
-ok(RESTOCK_PROMPT.includes("never ask a second question about it"), "section 10: one question on a yes, never a second");
+ok(RESTOCK_PROMPT.includes("never ask again, no matter how little they gave you"), "section 10: one question on a yes, never a second (owner reworded 08-05: half an answer is still the answer)");
 ok(RESTOCK_PROMPT.includes("Never ask a second restock question."), "section 11: one question on a no, never a second");
 ok(RESTOCK_PROMPT.includes("Take whatever they answer, even half of it"),
   "half an answer still wraps, rather than paying for a follow up");

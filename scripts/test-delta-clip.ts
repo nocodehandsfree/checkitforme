@@ -193,15 +193,17 @@ console.log("▶ the clerk says hello: the question goes out, the agent connects
   console.log("▶ the carrier confirms the clip played: he can speak from here");
   tw.say({ event: "mark", mark: { name: "delta-opening" } });
   await sleep(60);
-  // THE HELLO ITSELF SURVIVES, and it is the bulk of what lands here. The ear needs about 22 frames of
-  // voice on a direct dial before it will call anybody a person, and buffering used to start only
-  // after that — so the first half second of every greeting, which is where a store says its own name
-  // and who is speaking, was thrown away. The customer then read a conversation with no hello in it,
-  // opening mid sentence underneath our own question (owner screenshot 07-31). 30 frames of greeting
-  // went down this line before we were sure of them, plus 2 said during the clip: nearly all of them
-  // have to come out the other side.
+  // THEIR HELLO NEVER REACHES HIM, AND THAT IS THE FIX (owner 08-05). It used to, because his
+  // session was also our only transcriber — and a hello is a question, so he answered it and asked
+  // ours a second time on all five of checks 282 to 286. The hello is still kept whole and still
+  // written down; it is transcribed on its own now (`transcribeTheirHello`) instead of being put in
+  // front of him as a turn. What he receives is what comes AFTER our question: their answer.
   await sleep(700);   // whatever was held before his session answered paces out at speaking speed
-  ok(f.chunks.length >= 25, `the greeting said BEFORE we were sure of them is kept and reaches him too (${f.chunks.length} frames)`);
+  ok(f.chunks.length < 25, `their hello is NOT handed to him, so he has nothing to answer (${f.chunks.length} frames)`);
+  const answered = f.chunks.length;
+  for (let i = 0; i < 20; i++) tw.media(frame(LOUD(160, i % 3)));
+  await sleep(200);
+  ok(f.chunks.length > answered, "…and their ANSWER, said after the question, reaches him as it is spoken");
   // TWO TURNS, NOT ONE — and the thing that makes them two turns is REAL TIME, not invented silence.
   // Injecting a beat of quiet was tried and shipped twice and did nothing on his phone: sent at the
   // speed the socket will take it, the silence goes by as fast as the speech and the transcriber
@@ -306,6 +308,10 @@ console.log("\n▶ the clip's own length ends it when no mark ever arrives");
   await sleep(120);
   ok(tw.outMedia().length === spoke, "he still cannot be heard 120ms into a 300ms question");
   await sleep(500);                       // past clip + settle, with no mark at all
+  // The gate is open, so what they say from HERE reaches him. Their hello does not, and never did
+  // on this scene either: everything said while our own clip is on the line is our own echo.
+  tw.media(frame(LOUD(160, 2)));
+  await sleep(120);
   ok(f.chunks.length >= 1, "the clip's known length opened the gate on its own");
   const handover = (getReceipt("room-length")?.events || []).find((e) => e.detail?.handoverVia);
   ok(String(handover?.detail?.handoverVia || "").includes("finished playing"), "the receipt names the length signal, not the mark");
@@ -1163,7 +1169,7 @@ console.log("\n▶ a fast return, then the OLD session's close lands: the check 
 // this is Bob", we ask our question, they answer. What came back was ONE line reading "Hi, do you
 // recall Fun Store? This is Bob. Um, I'm sorry, we don't today." Wrong words, and two turns welded
 // into one.
-console.log("\n▶ the greeting is kept whole, with the pauses that are inside it");
+console.log("\n▶ their ANSWER is kept whole, with the pauses that are inside it (and their hello never reaches him)");
 {
   _reset();
   // He is slow to report ready, which is the ordinary case: the question finishes, nothing of ours
@@ -1195,26 +1201,34 @@ console.log("\n▶ the greeting is kept whole, with the pauses that are inside i
   for (let i = 0; i < PERSON_PAUSE; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
   await sleep(200);
   ok(f.inits.length === 1, "the question played and the agent opened behind it");
-  // The question finishes, and THEN they answer.
+  // The question finishes, and THEN they answer — with the small pauses a real person leaves inside
+  // one sentence. His session is still not ready, so this is what gets HELD and paced, and it is now
+  // the only thing that is: their hello was taken out before any of it could reach him.
   tw.say({ event: "mark", mark: { name: "delta-opening" } });
   await sleep(800);                                   // past our own audio, so this is really them
-  for (let i = 0; i < 25; i++) tw.media(frame(LOUD(160, i % 3)));
+  let answer = 0;
+  const sayA = (frames: number) => { for (let i = 0; i < frames; i++) { tw.media(frame(SPEECH(i))); answer++; } };
+  const breatheA = (frames: number) => { for (let i = 0; i < frames; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); answer++; } };
+  sayA(20); breatheA(6); sayA(22);                    // "Yeah we got some in, · the 151 booster boxes"
   await sleep(3500);                                  // the handover paces out at the speed it was spoken, and it is a real clock: give it room
 
   const QUIET = Buffer.alloc(160, 0x7f).toString("base64");
   const handed = f.chunks;
-  // THE PAUSES INSIDE THE GREETING SURVIVED. Keeping only the loud frames would hand over the ~60
-  // spoken ones alone; the breaths between the phrases have to be in there too, in their places,
-  // or the sentence is squeezed and comes back as different words.
-  ok(handed.length >= greetingFrames, `the greeting was handed over whole, breaths and all (${handed.length} frames, spoken ${greetingFrames})`);
-  ok(handed.slice(0, greetingFrames).filter((c) => c === QUIET).length >= 8,
-    `…and the pauses INSIDE it are still there (${handed.slice(0, greetingFrames).filter((c) => c === QUIET).length} quiet frames), so the sentence is not squeezed`);
-  // …AND IT REACHED HIM OVER REAL TIME. This is what makes their greeting and their answer two
-  // turns: the transcriber hears the gap between them pass on a clock. Injected silence cannot do
-  // it, which is why two shipped attempts at that changed nothing on his phone.
+  // THEIR HELLO IS NOT IN THERE AT ALL. This is the fix: a hello is a question and he answered it,
+  // asking ours a second time, on all five of checks 282 to 286. It is still written down, off the
+  // same audio, by `transcribeTheirHello` — it is simply never a turn he has to answer.
+  ok(handed.length < greetingFrames, `their hello never reaches him (${handed.length} frames, their hello was ${greetingFrames})`);
+  // THE PAUSES INSIDE WHAT HE *DOES* GET SURVIVED. Keeping only the loud frames would hand over the
+  // spoken ones alone; the breaths between the phrases have to be in there too, in their places, or
+  // the sentence is squeezed and comes back as different words (owner screenshot, 08-01).
+  ok(handed.length >= answer - 6, `their answer was handed over whole, breaths and all (${handed.length} frames, spoken ${answer})`);
+  ok(handed.filter((c) => c === QUIET).length >= 4,
+    `…and the pauses INSIDE it are still there (${handed.filter((c) => c === QUIET).length} quiet frames), so the sentence is not squeezed`);
+  // …AND IT REACHED HIM OVER REAL TIME, which is what makes two turns two turns: the transcriber
+  // hears the gap pass on a clock. Injected silence cannot do it, which is why two shipped attempts
+  // at that changed nothing on his phone.
   const span = f.chunkAt[f.chunkAt.length - 1] - f.chunkAt[0];
   ok(span > 500, `it arrived spread over ${span}ms, not in one instant, so the pauses in it are real`);
-  ok(handed.slice(greetingFrames).some((c) => c !== QUIET), "their answer is in there too, after the greeting");
   restore(); tw.close(); f.close();
 }
 
@@ -1255,16 +1269,20 @@ console.log("\n▶ our question is never shown before their greeting, however lo
 console.log("\n▶ held audio reaches him at the speed it was spoken, never in one burst");
 {
   _reset();
-  const f = await fakeProvider({ readyDelayMs: 700 });   // his session takes a moment, so audio is held
+  // HIS SESSION IS SLOW TO REPORT READY, which is the ordinary case. The question has finished, the
+  // store is answering, and nothing of ours is listening yet — so their ANSWER is what piles up and
+  // has to be paced back out. (Their hello is never handed to him at all now, so it cannot be what
+  // this scene measures; owner 08-05.)
+  const f = await fakeProvider({ readyDelayMs: 2600 });
   const restore = stubSignedUrl(f);
   const room = "room-paced";
-  const audio = Buffer.alloc(3000 * 8, 0x20);
+  const audio = Buffer.alloc(600 * 8, 0x20);
   openReceipt(room, { lane: "direct" });
   setBridgeContext(room, {
     agentId: "agent_normal", midCallAgentId: "agent_joining",
     dynamicVars: { opening_line: "do you have any Pokemon cards in stock?" },
     connectOnHuman: true, holdMaxSeconds: 999,
-    openingClip: { audio, ms: 3000, text: "do you have any Pokemon cards in stock?" },
+    openingClip: { audio, ms: 600, text: "do you have any Pokemon cards in stock?" },
   });
   const tw = new FakeTwilio();
   handleTwilioBridge(tw as never, room, () => { /* none */ });
@@ -1275,9 +1293,15 @@ console.log("\n▶ held audio reaches him at the speed it was spoken, never in o
   const breathe = (n: number) => { for (let i = 0; i < n; i++) tw.media(frame(Buffer.alloc(160, 0x7f))); };
   say(25); breathe(6); say(25);
   breathe(PERSON_PAUSE);                                   // they stop, so the question starts
-  await sleep(2200);                             // his session reports ready inside this, and the handover paces out
+  await sleep(900);                                        // the question plays out and the gate opens
+  tw.say({ event: "mark", mark: { name: "delta-opening" } });
+  await sleep(200);
+  // …and they answer, with the pauses a real person leaves inside one sentence. His session is still
+  // ~1.5s from ready, so every frame of this is held.
+  say(25); breathe(6); say(25);
+  await sleep(4000);                                       // ready lands, and the handover paces out
 
-  ok(f.chunks.length >= 40, `he received the greeting (${f.chunks.length} frames)`);
+  ok(f.chunks.length >= 40, `he received their answer (${f.chunks.length} frames)`);
   const span = f.chunkAt[f.chunkAt.length - 1] - f.chunkAt[0];
   const spokenMs = f.chunks.length * 20;
   // THE ONE ASSERTION THAT MATTERS. Delivered in a burst this span is a handful of milliseconds for
