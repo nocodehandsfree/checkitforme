@@ -318,6 +318,22 @@ The three fills for the settled-yes blank:
   re-confirm an answer, never re-ask anything Staff gave, end the call the moment the check has
   everything it came for.
 
+**LOCKED by the owner 08-05, the yes question. Replaces the premium two-question flow, the free
+no-question fill, and the workflow one-question version for the yes side:**
+
+> When Staff say the {{category}} is in stock, ask one question, in your own words, for the set
+> name and whether it comes in packs, boxes, or tins. Example: "oh nice, do you know the name of
+> the set, like Chaos Rising, and is it packs or a box or a tin?" Always keep a real set name in
+> the question so Staff know what you mean. Take whatever they answer, even half of it, and never
+> ask a second question about it. If they don't know the set name, thank them warmly and wrap up.
+
+Why: one question covers both fields in one turn; the hard never-a-second-question line guards
+against drift, mirroring the restock response; Staff not knowing the set ends the check warmly.
+Builder notes: the example set name may fill from the site's catalog as its own insert so it
+stays current; Echo's written record plus the after-check read decide the answer, so a half
+answer loses nothing; prove the one-question rule on the store that answers itself before any
+real check. Update `scripts/test-prompts.ts` in the same commit.
+
 ## 13. How he talks
 
 Where it sits: every word he says, the whole check.
