@@ -207,9 +207,9 @@ normal call are unchanged.
 ## Pages (HTML, not JSON)
 
 GET `/`, `/r`, `/s`, `/p/:slug` (+`?partial=1` → `{title,body}`), `/og/:file`, `/logos/...`,
-`/robots.txt`, `/sitemap.xml`, `/logo-wall`, `/check-lab`. (**08-05:** `/logo-wall` is no longer
-"dev scratch to remove" — the 07-31 logo rebuild made it the audit surface for the whole logo set,
-per `SYSTEM_MANUAL.md` §9.5. `/check-lab` still exists; whether it stays is undecided.)
+`/robots.txt`, `/sitemap.xml`, `/logo-wall`. (**08-05:** `/logo-wall` is no longer "dev scratch to
+remove" — it is the source of truth for logos, per `SYSTEM_MANUAL.md` §9.5. `/check-lab` was the
+scratch page for picking the check-mark icon; the owner deleted it 08-05.)
 
 ---
 
@@ -225,6 +225,9 @@ per `SYSTEM_MANUAL.md` §9.5. `/check-lab` still exists; whether it stays is und
   undocumented). Everything else was left exactly as written: the `[CHANGING]` markers on
   `/pub/charge`, `/app/charge`, `/pub/result`, `/pub/live` and the dashboards are all still pending,
   not stale. Nothing here was deleted or rewritten on a guess.
+- 2026-08-05b — **`GET /check-lab` removed** (owner's call): a scratch page that rendered the check-mark
+  icon in four styles while the icon was being chosen. It had been live on prod and staging, linked
+  from nothing.
 - 2026-07-03 — **Plans = 4 tiers + premium-feature matrix.** `GET /pub/plans` →
   `{ features:[{key,label}], everyPlanGets:[key…], tiers:[{key,name,monthlyCents,annualCents,
   checksPerMonth,premiumAsks,features:{key:bool}}], payg:[{checks,cents}] }`. Tier keys:

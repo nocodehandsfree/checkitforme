@@ -2013,47 +2013,6 @@ app.get("/logo-wall/sets", async (c) => {
   </script>
   </body>`);
 });
-// Owner preview: "the check" — a SOLID gradient disc with a white check CENTERED inside it, tip
-// reaching the top-right edge (never past it), exactly like the reference. 4 to choose:
-// flat / raised × purple / green. The winner becomes FCHK() everywhere (ticker, footer, verdicts).
-app.get("/check-lab", (c) => {
-  const RAMP: Record<string, [string, string]> = { purple: ["#5B1E99", "#A65CED"], green: ["#15803D", "#4ADE80"] };
-  // Small, CENTERED check with clear margin from the rim (Reminders-style) — never touches/breaks the edge.
-  const CHECK = "M8.1 12.2 L10.9 15.0 L16.0 8.9", SW = "2.3";
-  const flat = (hue: string) => (sz: number) => { const [a, b] = RAMP[hue]; const id = `f${hue}${sz}`;
-    return `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><defs><linearGradient id="${id}" x1="12" y1="2" x2="12" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs>
-      <circle cx="12" cy="12" r="10" fill="url(#${id})"/>
-      <path d="${CHECK}" stroke="#fff" stroke-width="${SW}" stroke-linecap="round" stroke-linejoin="round"/></svg>`; };
-  const raised = (hue: string) => (sz: number) => { const [a, b] = RAMP[hue]; const id = `r${hue}${sz}`, g = `gl${hue}${sz}`;
-    return `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><defs><linearGradient id="${id}" x1="12" y1="2" x2="12" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient>
-      <radialGradient id="${g}" cx="0.38" cy="0.28" r="0.8"><stop stop-color="#fff" stop-opacity="0.5"/><stop offset="0.55" stop-color="#fff" stop-opacity="0.06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>
-      <circle cx="12" cy="12" r="10" fill="url(#${id})"/>
-      <circle cx="12" cy="12" r="10" fill="url(#${g})"/>
-      <path d="${CHECK}" stroke="#000" stroke-opacity="0.2" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" transform="translate(0,0.6)"/>
-      <path d="${CHECK}" stroke="#fff" stroke-width="${SW}" stroke-linecap="round" stroke-linejoin="round"/></svg>`; };
-  const MARKS: Record<string, { name: string; svg: (sz: number) => string }> = {
-    "1": { name: "Flat · purple", svg: flat("purple") },
-    "2": { name: "Raised · purple", svg: raised("purple") },
-    "3": { name: "Flat · green", svg: flat("green") },
-    "4": { name: "Raised · green", svg: raised("green") },
-  };
-  const row = (key: string) => { const m = MARKS[key]; return `
-    <div style="background:#15151c;border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:18px;display:flex;gap:18px;align-items:center;flex-wrap:wrap">
-      <div style="width:88px;text-align:center">${m.svg(72)}<div style="font-weight:900;font-size:16px;margin-top:8px">#${key}</div></div>
-      <div style="flex:1;min-width:210px">
-        <div style="font-weight:800;font-size:16px;margin-bottom:10px">${m.name}</div>
-        <div style="display:flex;flex-direction:column;gap:9px">
-          <div style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:#cfcfd8">${m.svg(15)}<b style="color:#4ADE80">Found!</b> · Target — Sunset Blvd <span style="color:#56566a;margin-left:auto">ticker</span></div>
-          <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#cfcfd8">${m.svg(22)}<b>Fungibles</b> <span style="color:#56566a;margin-left:auto">footer</span></div>
-          <div style="display:flex;align-items:center;gap:8px;font-weight:900;font-size:16px;color:#4ADE80">${m.svg(34)} In stock! <span style="color:#56566a;font-weight:400;font-size:12px;margin-left:auto">verdict</span></div>
-        </div>
-      </div>
-    </div>`; };
-  return c.html(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="background:#0C0C12;font-family:-apple-system,sans-serif;color:#fff;padding:20px;max-width:560px;margin:0 auto">
-  <h2 style="font-weight:900;margin:0 0 4px">The Check</h2>
-  <div style="color:#9a9aac;font-size:12.5px;margin-bottom:14px">Solid disc · white check centered inside, tip at the edge. Flat &amp; raised, purple &amp; green. Reply <b>1</b>, <b>2</b>, <b>3</b>, or <b>4</b>.</div>
-  <div style="display:flex;flex-direction:column;gap:12px">${["1", "2", "3", "4"].map(row).join("")}</div></body>`);
-});
 app.get("/logos/chains/:file", (c) => {
   const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
   try {
