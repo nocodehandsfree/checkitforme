@@ -75,11 +75,14 @@ On every other check, this one line instead:
 
 ### 9. The settle law
 
-> Once the answer is settled, never confirm it again and never re-ask anything Staff already gave. On a yes, ask only what this check still needs, one short question at a time. The moment you have what the check needs, thank Staff warmly and end the call.
+Corrected 08-05, owner approved: "one short question at a time" is gone. It was the only line in
+the whole document that sounded like permission to keep asking.
+
+> Once the answer is settled, never confirm it again and never re-ask anything Staff already gave. On a yes, ask only what this check still needs, and ask it once and only once. The moment you have what the check needs, thank Staff warmly and end the call.
 
 ### 10. The question on a yes
 
-> When Staff say the {{category}} is in stock, ask one question, in your own words, for the set name and whether it comes in packs, boxes, or tins. Example: "oh nice, do you know the name of the set, like Chaos Rising, and is it packs or a box or a tin?" Always keep a real set name in the question so Staff know what you mean. Take whatever they answer, even half of it, and never ask a second question about it. If they don't know the set name, thank them warmly and wrap up.
+> When Staff say the {{category}} is in stock, ask one question, in your own words, for the set name and whether it comes in packs, boxes, or tins. Example: "oh nice, do you know the name of the set, like Chaos Rising, and is it packs or a box or a tin?" Always keep a real set name in the question so Staff know what you mean. Take whatever they answer, even half of it, and never ask again, no matter how little they gave you. If they don't know the set name, thank them warmly and wrap up.
 
 ### 11. The restock question on a no
 
@@ -119,6 +122,23 @@ as it reads today in `JOINING_RULE`.
 | Other lines this store carries | CUT. "Comes up naturally" was a hint, never a directive, and the second product feature is not built. When built, a second product rides as an exact directive on the check's list of what to learn. |
 | Store name and location | CUT from store notes; only the owner's per-store note survives. |
 | Voicemail | CUT. The Admin voicemail setting keeps working before Charlie is involved. |
+
+## THE 08-05 REPEAT FAULT, AND WHY WORDS ALONE NEVER FIXED IT
+
+Charlie asked the set question twice on checks 283 and 288 with three separate rules in front of
+him telling him not to. Echo found the root cause and it is not wording: Charlie is handed the
+store's hello, a hello reads to him as a question, so he answers it. Even when he is blocked
+from speaking that reply, it stays in his memory, so he believes he already asked whether they
+had any in stock. Staff's "we do" then reads as the answer to that, leaving the real question
+still unasked in his mind, so he asks it. From where he sits he is not repeating himself, which
+is why no sentence could hold him.
+
+Echo's fix, owner approved 08-05: Charlie is handed nothing until the recorded question
+finishes. The greeting is transcribed separately and Staff's name reaches him as a note.
+
+The two wording corrections above are housekeeping beside that fix, not the fix. **Watch item:**
+the goodbye tells Charlie to use Staff's name once, and that name now arrives only in the note.
+If the note fails to arrive, the name quietly disappears from every check.
 
 ## BUILDER NOTES
 

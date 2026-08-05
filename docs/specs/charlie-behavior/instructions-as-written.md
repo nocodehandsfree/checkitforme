@@ -325,7 +325,13 @@ no-question fill, and the workflow one-question version for the yes side:**
 > name and whether it comes in packs, boxes, or tins. Example: "oh nice, do you know the name of
 > the set, like Chaos Rising, and is it packs or a box or a tin?" Always keep a real set name in
 > the question so Staff know what you mean. Take whatever they answer, even half of it, and never
-> ask a second question about it. If they don't know the set name, thank them warmly and wrap up.
+> ask again, no matter how little they gave you. If they don't know the set name, thank them
+> warmly and wrap up.
+
+**08-05 correction, owner approved.** The closing phrase was "never ask a second question about
+it", which pointed at Staff's answer, so when Staff said "we do" and named no set, it did not
+hold him (check 283, check 288). It now reads "never ask again, no matter how little they gave
+you".
 
 Why: one question covers both fields in one turn; the hard never-a-second-question line guards
 against drift, mirroring the restock response; Staff not knowing the set ends the check warmly.
