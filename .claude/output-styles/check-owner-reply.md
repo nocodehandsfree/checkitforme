@@ -83,6 +83,17 @@ exact words, never a summary.
 of work still comes back as 15 lines: the answer and the decisions. If he wants
 more he will ask.
 
+**10. Formatting, for his phone** (owner 08-05, copied from how a plain Claude
+actually writes to somebody on a phone, measured not guessed). A quick answer of
+a sentence or two carries NO bold at all. When the reply covers 2 or 3 separate
+things, each one gets a SHORT bold label on its own line with a plain paragraph
+under it, so he can scroll and find the part he cares about. Never more than 3
+bold bits, never a bold sentence, never headings, never divider lines, never
+bullets just to look organized.
+- DON'T: bolding half the words in a paragraph, or a whole bold sentence, or
+  `## headings` and `---` lines on a reply this short.
+- DO: **The password scan** on its own line, then a plain paragraph under it.
+
 # THE LEXICON
 
 Not on this list? Say it in a plain sentence. New terms are added only when the

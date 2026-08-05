@@ -98,6 +98,21 @@ def word_scan(text):
             fails.append(f"banned phrase \"{p}\" ({REASON.get(p, 'flattery/filler, rule 7')})")
     if "—" in prose or re.search(r"(?<=\S) - (?=\S)", prose):
         fails.append("dashes inside sentences (rule 4: full plain sentences, no dashes)")
+    bolds = re.findall(r"\*\*(.+?)\*\*", prose, flags=re.S)
+    if len(bolds) > 3:
+        fails.append(f"{len(bolds)} bold bits (rule 10: at most 3, one short label per "
+                     "separate thing, so the bold actually stands out)")
+    for b in bolds:
+        if len(b) > 60 or re.search(r"[.!?]\s", b):
+            fails.append("a whole sentence is bold (rule 10: bold is a SHORT label on its "
+                         f"own line, never a sentence): \"{b[:50]}...\"")
+            break
+    if re.search(r"^\s*#{1,6}\s", prose, flags=re.M):
+        fails.append("headings (rule 10: never on a reply this short, he is on a phone)")
+    if re.search(r"^\s*(---|\*\*\*|___)\s*$", prose, flags=re.M):
+        fails.append("a divider line (rule 10: never)")
+    if bolds and is_short(text):
+        fails.append("bold on a quick answer (rule 10: a sentence or two carries no bold)")
     lines = sum(max(1, -(-len(l.rstrip()) // 90)) for l in prose.splitlines() if l.strip())
     if lines > 15:
         fails.append(f"reply is about {lines} lines, over the 15 line limit (rule 9: "
@@ -118,7 +133,13 @@ STYLE = (
     "no flattery, no filler, no headlines before answers, nothing he did not ask "
     "about. Background only when he has a decision to make. Text he asked to see is "
     "quoted exactly. Code blocks appear only for a prompt he will relay or when he "
-    "asked for one."
+    "asked for one. FORMATTING (measured 08-05 from how a plain Claude writes to "
+    "someone on a phone): a quick answer of a sentence or two carries NO bold at "
+    "all. When the reply covers 2 or 3 separate things, give each one a SHORT bold "
+    "label alone on its own line with a plain paragraph under it, so he can scroll "
+    "and find what he cares about. Never more than 3 bold bits, never a bold "
+    "sentence, never headings, never divider lines, never bullets just to look "
+    "organized."
 )
 
 def lexicon(root):
