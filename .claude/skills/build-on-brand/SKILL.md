@@ -15,26 +15,23 @@ description: >-
 Nothing visual or written ships without the guides. This skill is a map, not the
 content — open the docs it points at; they are the single source of truth.
 
-## 🚫 HARD GATE — RENDER the comp and LOOK before you write one line of UI
-**A comp is a rendered picture, not text. You cannot grep it, skim it, or read the style guide's
-written list instead.** A text search of a comp file comes back nearly empty — and letting that
-emptiness convince you "there's no comp for this" is EXACTLY how off-brand screens keep shipping
-(2026-07-02 paint-not-structure; the 2026-07-18 landing cycle; the zones report). Render it to an
-image and open the image. One command; it removes every excuse:
+## 🚫 HARD GATE — THE LIVE SITE IS THE RECORD OF TRUTH (owner, 2026-08-05)
+**Render the page you are about to change and LOOK at it. Match that.** The comps drifted from what
+the sites actually render, so a comp is no longer the reference for a screen that already exists —
+the owner ruled this after an agent built off the live Admin because the comp was wrong.
 
-- **Admin pages** → `./node_modules/.bin/tsx scripts/render-comps.ts board` renders the ADMIN
-  board; OPEN the PNGs in `loops/site-redesign/render/board-*.png`. To see a page as it IS
-  before changing it: boot the local server and `render-comps.ts url <local url> <name>`.
-  (The old `admin-preview.mjs` / `zones-preview.mjs` were deleted in the 2026-08-04 cleanup; git history has them.)
-- **Website / consumer pages** → FROZEN; the reference is the live site, snapshotted in
-  `docs/design/truth/*.html`. Render the page you're unlocking with `render-comps.ts url`.
-- **The edit gate enforces this:** an Edit to `public/app.html` is BLOCKED until a real render has
+- **A page that already exists (consumer site OR Admin)** → render the REAL page and copy it. Boot
+  the local server and `./node_modules/.bin/tsx scripts/render-comps.ts url <local url> <name>`, or
+  for the frozen consumer pages use the snapshots in `docs/design/truth/*.html`. Open the image.
+- **A screen that does NOT exist yet** → that is the only case a comp is the reference. Admin board:
+  `render-comps.ts board`, then OPEN the PNGs in `loops/site-redesign/render/board-*.png`.
+- **The edit gate enforces looking:** an Edit to `public/app.html` is BLOCKED until a real render has
   run (it writes `.claude/state/comp-rendered`). Never touch that file by hand — run the render.
 
-Then, for every piece on your screen, name which comp element you're copying from the rendered
-image. Can't see it there? You're inventing — STOP. Rendering takes one command; guessing costs a
-whole cycle of the owner's money. "The written list was enough" and "grep came back empty" are the
-two lies that failed — never trust either. Render, and look.
+Either way it is a PICTURE, not text: a text search comes back nearly empty, and trusting that
+emptiness is exactly how off-brand screens keep shipping (2026-07-02 paint-not-structure; the
+2026-07-18 landing cycle; the zones report). For every piece on your screen, name what you are
+copying from the image. Can't see it there? You're inventing — STOP.
 
 ## Read first, in this order (don't skip)
 1. **`docs/design/STYLE_GUIDE.md`** — the look: every token, type size, radius, depth, component rule.
@@ -67,6 +64,6 @@ two lies that failed — never trust either. Render, and look.
   + `vendor/`; the old consumer boards `WEBSITE_COMPS`/`MY_ZONES_COMP` are in `docs/archive/`).
 - Admin copy has its own guide now: `docs/design/copy/COPY_STYLE_GUIDE_ADMIN.md`. Recheck: `ls docs/design/copy/`.
 - The redesign ("v2") is now the unconditional render — there is no `?skin=` preview gate anymore
-  (see the `known-problems` skill). Recheck: `grep -n "data-skin" public/checkit.html`.
+  (full list: `docs/shared/GOTCHAS.md`). Recheck: `grep -n "data-skin" public/checkit.html`.
 
 When done, verify on staging like a real user and report per the `ship-it` skill.

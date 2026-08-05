@@ -8,4 +8,4 @@
 | `ARCHITECTURE.md` | Repo layout + stack |
 | `API_CONTRACT.md` | The frozen front⇄back API everyone builds against |
 | `STOCK_AND_GEO_API.md` | Deeper API detail: stock + geo rails |
-| `GOTCHAS.md` | Traps that cost real time — read before debugging something weird (see also the `known-problems` skill) |
+| `GOTCHAS.md` | Traps that cost real time — read before debugging something weird — the ONE trap file (the known-problems skill was folded in here 2026-08-05) |

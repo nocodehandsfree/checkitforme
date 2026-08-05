@@ -54,41 +54,29 @@ each specialist session; work outside the box → write `PM: <note>` in your che
 - **Server code (`src/`)** — staging at push; prod via promote (a note, not a wait).
 - **Data** — Admin edits LIVE PROD data immediately; the four sync pipes handle prod⇄staging automatically.
 
-## THE LAWS (the hooks enforce the rest — never work around a gate)
-1. **ADDITIVE, NEVER PARALLEL.** A new feature SNAPS ONTO the pieces that already work (call engine,
-   logo system, call log, sheets). Before building, FIND the existing system and NAME it in your
-   contract. Need new architecture for something that already works? STOP — that's a PM/owner decision.
-   `src/voice/` (the calling engine) and the frozen consumer/data files are machine-locked; owner + a
-   named task unlock them via the `.unlock` flow, nobody else.
-2. **Contract first, plan BACKWARDS.** Non-trivial build → write the shipped end state, derive steps
+## THE LAWS (the gates enforce the rest — never work around a gate)
+1. **ADDITIVE, NEVER PARALLEL.** A feature SNAPS ONTO what already works — FIND that piece and NAME it
+   in your contract. New architecture for something that works = a PM/owner decision, so STOP and ask.
+2. **Contract first, plan BACKWARDS.** Non-trivial build → write the shipped end state, derive it
    backwards into 5–10 one-line testable assertions BEFORE coding. Build to that list.
-3. **Design + copy fidelity.** Any UI/UX or copy change: open `docs/design/STYLE_GUIDE.md` (+ the copy
-   guide for words) FIRST and match them — no UI ships without its comp. Never re-introduce a reverted
-   design. Copy laws (a hook checks these): no dashes inside sentences · no orphan-word wraps · every
-   string ships its length-checked Spanish in the SAME commit · bottom notifications = ONE gray line, both languages.
+3. **Design + copy fidelity. THE LIVE SITE IS THE RECORD OF TRUTH** (owner, 08-05 — the comps drifted).
+   Match the live page you're changing; comps are only for a screen that does not exist yet. Words:
+   `docs/design/copy/COPY_STYLE_GUIDE.md`. Never re-introduce a reverted design. Copy laws (gated):
+   no dashes inside sentences · no orphan-word wraps · every string ships its Spanish in the SAME commit.
 4. **The map of surfaces is FROZEN.** One consumer site + ONE Admin. NEVER create a new domain, route,
    dashboard, or "temporary viewing URL" without the owner naming it first.
 5. **PM is the gate.** Anything a customer sees: PM drives it independently before the owner looks; prod
    ships on PM's proof via `promote.sh`.
-6. **DOC LAW (machine-enforced).** Every living doc has a HARD size cap: `docs/STATE.md` ~40 lines ·
-   checkpoints 60 · CLAUDE.md 100. Updating a doc = REPLACE stale content, never append — history lives
-   in git, not the file. Over cap fails the session close AND blocks a push (`scripts/checkpoint-lint.sh`).
-   New docs ONLY in `docs/team/<system>/` or `docs/specs/<feature>/`; no new folders/root files (sprawl gate).
-   Every session updates `docs/STATE.md` + its system checkpoint at close. EXEMPT from caps:
-   `RULES.md` — a rule is ADDED when born, NEVER deleted for a cap (07-30's handoff failure).
+6. **DOC LAW (gated).** Hard caps: `docs/STATE.md` 40 · checkpoints 60 · CLAUDE.md 100. Updating a doc
+   REPLACES stale content, never appends. Over cap blocks a push. New docs only in `docs/team/<system>/`
+   or `docs/specs/<feature>/`. Every session updates STATE + its checkpoint. `RULES.md` is exempt.
 7. **Test ONLY what you changed** (`npx tsc --noEmit` + the tests for your files). The full suite runs
    ONLY on the owner's literal "run the full suite" — never on your judgment, never in the background.
    Never start a background task, poll, or watcher unless the owner asked (the compute gate blocks them).
 
-## Secrets — self-serve from Railway (ask the owner only after ONE failed try)
-Every service credential lives in Railway → Variables; `$RAILWAY_API_TOKEN` is in this environment
-(empty or 401 → ask the owner). Prod svc `d363a982-…`, staging svc `8165df7a-…`.
-```bash
-curl -s -X POST https://backboard.railway.app/graphql/v2 \
-  -H "Authorization: Bearer $RAILWAY_API_TOKEN" -H "Content-Type: application/json" \
-  -d '{"query":"{ variables(projectId: \"889e332c-30fe-46e9-a18e-d8de4f7523aa\", environmentId: \"7cbf9327-357a-415e-9031-d1609aead2b4\", serviceId: \"d363a982-e918-4433-b175-defe8faf0ec9\") }"}' \
-  | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['variables']['ADMIN_TOKEN'])"
-```
+## Secrets — self-serve, ask the owner only after ONE failed try
+Every credential is in Railway → Variables; `$RAILWAY_API_TOKEN` is already in this environment (empty
+or 401 → ask). The working `curl` recipe + service ids: `.claude/skills/ship-it/SKILL.md`.
 ⚠️ `curl` ONLY — python/WebFetch hit the proxy and 403 in a way that fakes "Railway is down."
 
 ## Map (open only what a task needs)

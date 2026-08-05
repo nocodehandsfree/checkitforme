@@ -5,28 +5,14 @@ Non-obvious traps that cost real time. Add one the moment you learn it; delete o
 worse than no comment. Several entries below started as wrong comments.)
 
 ## Compute / testing
-- **Driving the live Admin (or the site) in a real browser from an agent container: Chromium CANNOT
-  reach the internet** (07-29, cost most of a session). The egress proxy resets Chromium's CONNECT, and
-  no combination of `--proxy-server`, `--ignore-certificate-errors`, playwright's `proxy:` option or
-  `NODE_EXTRA_CA_CERTS` fixes it. `curl` reaches everything. **The recipe:** ONE node script that (1)
-  starts a `node:http` server on 127.0.0.1 which forwards every path to `https://admin.checkitforme.com`
-  through `execFile('curl', ['-sS','-X',method,url,'-H','x-admin-token: …'])`, then (2) launches
-  playwright-core at `http://127.0.0.1:<port>`. Live bytes, live data, and the browser only ever talks
-  to loopback. One process start-to-finish, so no background task and no compute gate to unlock.
-  Companion facts: the Admin shell is served at `/`, not `/app.html` (which 404s) ·
-  `node_modules/playwright` is an EMPTY dir, import `playwright-core` · chromium lives at
-  `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` and needs `--no-sandbox` · top-level `const`s in
-  `app.html` (`CHAINS`, `POL`) are NOT on `window`, so name them bare inside `page.evaluate` · a chain
-  row opens with `pickChainRow(id)`.
-  **Three more, all found the hard way 07-30 building that mirror:** (1) a `curl -w` format that starts
-  with `@` is read as a FILENAME (`option -w: error encountered when reading a file`) — pick a marker
-  like `~~X~~`. (2) Read the status and the content type off `-w` AFTER the body, never off `-i`: the
-  egress proxy prepends its own `HTTP/1.1 200 Connection Established` block, so header parsing types
-  every response as a download and the navigation dies with `Download is starting`. (3) The pages that
-  follow the Live/Staging switch fetch `https://staging.checkitforme.com` CROSS-ORIGIN with
-  credentials, so anything you fulfil for that origin needs `access-control-allow-origin` (the exact
-  loopback origin) plus `access-control-allow-credentials: true`, or the browser drops the response and
-  the page truthfully reports "Could not reach the staging site".
+- **Chromium in an agent container CANNOT reach the internet** (07-29, cost most of a session; no
+  proxy/cert flag fixes it — the egress proxy resets its CONNECT). `curl` reaches everything. **The
+  recipe:** one node script that starts a loopback `node:http` server forwarding every path through
+  `execFile('curl', …)`, then points `playwright-core` at `http://127.0.0.1:<port>`. Working script +
+  the four traps that cost the most (a `curl -w` format starting with `@` is read as a filename · read
+  status off `-w` after the body, never `-i` · cross-origin fulfils need CORS headers · the Admin shell
+  is at `/`, not `/app.html`): `git log --grep="admin mirror"`. Import `playwright-core`, never
+  `playwright` (that dir is empty); chromium needs `--no-sandbox`.
 - **`scripts/test-all.sh` spawns local servers + headless browsers — don't run it reflexively, and never
   leave it orphaned** (owner 07-20, it was killing his compute + morale). The `smoke:`/`qa:` lines each
   boot a server (ports 8788-8798) and Chromium. If the run is killed partway (OOM, worker restart), those
@@ -166,35 +152,13 @@ worse than no comment. Several entries below started as wrong comments.)
   history only) serves the vendored fonts.
   If you judge a render, FIRST confirm the headline is actually Inter (compare a lowercase 'g').
 
-## Share/landing (/s): a gradient fading to a TRANSPARENT color leaves a green haze on iOS
-- Symptom: owner's iPhone showed a faint green tint/line across the BOTTOM of the /s card; every
-  headless Chromium screenshot showed the bottom perfectly clean. Cost ~7 round trips chasing it as
-  a "button glow."
-- Root cause: `.card.pos` background was `linear-gradient(180deg, rgba(38,100,64,.95) …, rgba(38,100,64,0) 210px), #20202A`.
-  Chromium renders the `rgba(38,100,64,0)` endpoint as truly clear; **iOS Safari interpolates toward
-  that RGB at low alpha, so the whole region below the last stop gets a faint GREEN wash** over the
-  dark base. Invisible in Chromium, visible on the device.
-- Fix: never fade to a transparent COLORED stop for a wash. Fade between two OPAQUE colors:
-  `linear-gradient(180deg,#266440 0%,#20202A 46%)`. No alpha, no premultiply artifact, clean bottom.
-- Lesson: a colors/fonts diff and a Chromium render CANNOT catch this — it is an iOS-paint blind spot.
-  If the owner reports a tint that no render reproduces, suspect a `rgba(r,g,b,0)` gradient stop first.
+## Share/landing (/s): a faint green line at the bottom of the card, iPhone only
+UNRESOLVED and NOT worth chasing. Three theories were written out and all three were wrong (a
+transparent gradient stop, then the watermark clip, then the CTA's clipped shine). It has been there
+since the FIRST /s rebuild and has NEVER reproduced in headless Chromium — it needs a real iPhone to
+bisect. **Do NOT change approved design to chase it** — doing that was the actual mistake, twice.
+Full history: `git log --grep="/s"`.
 
-  UPDATE: the opaque-gradient fix alone did NOT kill it. The real culprit was the watermark
-  layer: `.cwmwrap{position:absolute;inset:0;border-radius:40px;overflow:hidden}` wrapping a
-  bright-green check. iOS Safari's `overflow:hidden` + `border-radius` clip leaks a 1px line of
-  the clipped content's color along the BOTTOM edge (Chromium doesn't). Fix: drop the full-card
-  clip layer entirely — contain the watermark fully inside the card, and use an inset ring shadow
-  instead of a border for the edge.
-
-  CORRECTION (owner, same day): BOTH theories above are WRONG. The green line at the card's
-  bottom edge has been present since the FIRST /s rebuild — before the watermark/brandmark, the
-  border, and the wash all existed. So it is none of those. The only element green-and-near-the-
-  bottom in every single version is the CTA button (green glow in v1, green ring + light-green
-  `.shine` clipped by `.cin{overflow:hidden;border-radius:999px}` since). Prime remaining suspect:
-  the `.cin` overflow+radius clip leaking the shine's green on iOS, and/or the button's green
-  reflecting. UNRESOLVED — never reproduced in headless Chromium. Needs a real iPhone to bisect.
-  Do NOT keep changing approved design (brandmark position, border, wash) to chase it — that was
-  the mistake here; isolate it on-device first.
 - **A sticky/floating element at a v2 sheet's BOTTOM edge kills the iOS scroll-edge glass** (owner
   07-23, the plans-sheet Continue; 3 wasted round trips). iOS 26 paints a translucent scroll-edge glass
   at the top/bottom of the v2 sheets; the overlay is `background:transparent` ON PURPOSE so it works
