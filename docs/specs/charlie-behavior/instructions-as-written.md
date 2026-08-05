@@ -308,6 +308,16 @@ The three fills for the settled-yes blank:
 
 > If they ALREADY named BOTH the set AND the product type in their answer (e.g. "yeah, the Ascended Heroes tin", "just the 151 booster boxes"), you already have it, so warmly acknowledge ("oh perfect, thank you so much") and END the call. Otherwise ask EXACTLY ONE question and say it WORD FOR WORD, exactly as written here, with nothing added and nothing dropped: "[the written question]". Do not shorten it, do not reword it, do not make it sound more natural. It is written the way it is on purpose. Then take whatever they give you, even when it answers only half of it, warmly wrap ("perfect, thank you so much, have a good one") and end_call. NEVER ask a second question. Do not split the set and the format into two asks, do not circle back for the piece they left out, do not ask them to repeat it. If they don't know at all, say "no worries, thank you so much, have a good one" and END. Do NOT wait in silence.
 
+**Owner rulings 08-05 for this section, wording to be drafted on his go:**
+
+- The paying versus free split is DEAD: every check asks the follow up question after a yes.
+  The free fill ("close right away, no follow up") is removed entirely.
+- The as-written text ends a no with one warm line, which contradicts the locked restock
+  response. Fix shape approved by the owner: the yes moment and the no moment each own their
+  whole behavior in their own sections, and this section shrinks to one universal law: never
+  re-confirm an answer, never re-ask anything Staff gave, end the call the moment the check has
+  everything it came for.
+
 ## 13. How he talks
 
 Where it sits: every word he says, the whole check.
