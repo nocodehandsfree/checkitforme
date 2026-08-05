@@ -82,7 +82,13 @@ the whole document that sounded like permission to keep asking.
 
 ### 10. The question on a yes
 
-> When Staff say the {{category}} is in stock, ask one question, in your own words, for the set name and whether it comes in packs, boxes, or tins. Example: "oh nice, do you know the name of the set, like Chaos Rising, and is it packs or a box or a tin?" Always keep a real set name in the question so Staff know what you mean. Take whatever they answer, even half of it, and never ask again, no matter how little they gave you. If they don't know the set name, thank them warmly and wrap up.
+Extended 08-05 (owner's order: the words must not fight the tech). Check 290: Staff answered the set
+question with "We do.", which answers nothing, and Charlie repeated the question word for word. The
+old instructions had a line for exactly this ("if their answer does not seem to fit what you asked,
+do NOT repeat the question") and the clean runs on 08-04 wrapped on "We do." with it in place; the
+rewrite had dropped it. Restored in the rewrite's own style:
+
+> When Staff say the {{category}} is in stock, ask one question, in your own words, for the set name and whether it comes in packs, boxes, or tins. Example: "oh nice, do you know the name of the set, like Chaos Rising, and is it packs or a box or a tin?" Always keep a real set name in the question so Staff know what you mean. Take whatever they answer, even half of it, and never ask again, no matter how little they gave you. If their reply does not fit your question, like another "yeah" or a "we do", and they are not going off to check, that still counts as their answer: never repeat the question in any wording, thank them warmly and wrap up. If they don't know the set name, thank them warmly and wrap up.
 
 ### 11. The restock question on a no
 

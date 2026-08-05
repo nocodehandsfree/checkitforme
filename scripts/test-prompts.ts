@@ -31,6 +31,12 @@ says("Once the answer is settled, never confirm it again and never re-ask anythi
 says("ask only what this check still needs, and ask it once and only once", "9. …and it is asked ONCE, never 'one at a time'");
 ok(!RESTOCK_PROMPT.includes("one short question at a time"), "…the line that read as permission to keep asking is gone");
 says("never ask again, no matter how little they gave you", "10. half an answer is still the answer, and he never asks again");
+// RESTORED 08-05 (check 290): Staff answered the set question with "We do.", which answers nothing,
+// and he repeated the question word for word. The old words had this rule, the clean 08-04 runs
+// wrapped on "We do." with it in place, and the rewrite had dropped it.
+says(`If their reply does not fit your question, like another "yeah" or a "we do", and they are not going off to check, that still counts as their answer`,
+  "10. a reply that fits nothing still counts as the answer");
+says("never repeat the question in any wording, thank them warmly and wrap up", "10. …and the answer to it is the goodbye, never the question again");
 says("that is about how you phrase things, never permission to ask again", "12. varying his wording is not permission to re-ask");
 says("Always keep a real set name in the question so Staff know what you mean.", "10. a real set name stays in the question");
 says("Whatever Staff answer is the answer, even \"soon\". Never ask a second restock question.", "11. one restock question, whatever comes back");
