@@ -3,7 +3,9 @@ title: Call got no answer
 ---
 It happens. Stores get busy, lines ring out, someone parks us on hold forever.
 
-First thing to know: **it cost you nothing.** No answer, busy line, endless hold, voicemail, a store that turned out closed: all free, automatically. Your balance is untouched and the result says "No charge for this one".
+First thing to know: **if nobody picked up, it cost you nothing.** No answer, busy line, voicemail, a bad number, a store that turned out closed: all free, automatically. Your balance is untouched.
+
+An endless hold is the one that does cost a check. Somebody answered and went to look, so their time was real even though the line dropped before they came back. Same for a store too slammed to check, a language we couldn't get past, or staff hanging up on us.
 
 What to do next:
 

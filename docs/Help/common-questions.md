@@ -13,7 +13,7 @@ One call, to one store, about one product. It's what you spend. See [What a chec
 Your first check is free. After that, a plan (from $4.99 a month for 20 checks) or pay as you go (99¢ each down to 60¢ in bulk). See [Plans](doc:plans).
 
 **4. What if nobody answers?**
-It's free. No answer, busy line, endless hold, closed store: you keep your check, every time. See [No answer = no charge](doc:no-answer-no-charge).
+It's free. No answer, busy line, bad number, closed store: you keep your check, every time. If a person did pick up and go look, that one counts, even if the line dropped on hold. See [No answer = no charge](doc:no-answer-no-charge).
 
 **5. How long does a check take?**
 Usually about two minutes, phone menu included.

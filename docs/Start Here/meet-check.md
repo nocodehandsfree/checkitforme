@@ -17,4 +17,4 @@ It works for the stuff that actually sells out: **Pokémon, One Piece, Topps Chr
 
 > 📗 **The promise**
 >
-> First check's on us. And **no answer = no charge.** If we can't get you a clear yes or no, you don't spend a thing.
+> First check's on us. And **no answer = no charge.** If nobody at the store ever picks up, you don't spend a thing.

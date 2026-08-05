@@ -13,6 +13,6 @@ How your balance works:
 
 - **Plan checks** refill every month and are spent first.
 - **Pay as you go checks** never expire and are spent after plan checks.
-- A check is only spent on a definitive answer. Everything else is free, automatically.
+- A check is spent when the store gives a definitive answer, and when a real person picked up and spent their time on us without landing on one. If nobody ever picked up, it's free, automatically.
 
 Need to change your number? Tap the pencil next to it and verify the new one with a texted code.
