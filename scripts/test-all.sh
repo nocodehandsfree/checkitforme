@@ -3,7 +3,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 TSX=./node_modules/.bin/tsx
-ENV="ELEVENLABS_API_KEY=test ELEVENLABS_AGENT_ID=test ELEVENLABS_PHONE_NUMBER_ID=test"
+ENV="ELEVENLABS_API_KEY=test ELEVENLABS_AGENT_ID=test ELEVENLABS_PHONE_NUMBER_ID=test GEMINI_API_KEY=test OPENAI_API_KEY=test GROQ_API_KEY=test ANTHROPIC_API_KEY=test"
 FAILED=""
 
 # Self-cleanup (owner 07-20): the smoke/qa suites boot local servers + headless browsers. On ANY exit
