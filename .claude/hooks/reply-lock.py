@@ -111,7 +111,8 @@ def reader_check(root, text, timeout=90):
         "exactly as the draft states them — invent nothing, drop no decision. "
         "Rule 9 (the 15 line limit) is measured by a separate machine count — "
         "never judge length or wrapping yourself. Quoting the owner's own words "
-        "back to him is always allowed. Answer with ONLY this JSON, nothing else:\n"
+        "back to him is always allowed. Never use a dash of any kind inside a "
+        "sentence; use a comma or a period. Answer with ONLY this JSON, nothing else:\n"
         '{"pass": true|false, "failures": ["rule N: short plain reason", ...], '
         '"rewrite": "the corrected full reply, empty when pass is true"}\n\n'
         "=== THE LOCKED REPLY RULES ===\n" + rules +
@@ -175,6 +176,13 @@ if "--check-file" in sys.argv:
         strikes += 1
         # The one-pass path: the grader's own fix is pre-approved. Send it if the
         # facts survived; otherwise correct the facts and check once more.
+        # A rewrite that only trips the dash rule gets cleaned, not thrown away
+        # (08-05: a good rewrite died over one hyphen and the flow broke).
+        if rewrite and word_scan(rewrite):
+            cleaned = rewrite.replace("\u2014", ", ")
+            cleaned = cleaned.replace(" - ", ", ")
+            if not word_scan(cleaned):
+                rewrite = cleaned
         if rewrite and not word_scan(rewrite):
             if os.path.exists(strikes_f):
                 os.remove(strikes_f)
