@@ -2522,7 +2522,11 @@ function checkV2From(d,o){
   lines.forEach((l,i)=>{ if(used.has(i))return;
     const entry={t:l.who==='Agent'?'Charlie said':'Staff answered',at:l.atSec!=null?l.atSec+'s':'',c:'var(--green)',say:{who:l.who==='Agent'?'Agent':'Clerk',tx:l.text},_at:l.atSec};
     if(l.atSec==null){const k=Math.max(0,log.length-1);log.splice(k,0,entry);return;}
-    let k=log.findIndex(x=>parseInt(x.at)>l.atSec);if(k<0)k=log.length;log.splice(k,0,entry);
+    // Within one second, Staff speak FIRST and everything of ours reacts: their product answer and
+    // Charlie's goodbye can share a second, and the goodbye must never draw above the answer that
+    // caused it (owner 08-05). So a Staff line slots BEFORE same-second entries, ours after.
+    let k=l.who==='Agent'?log.findIndex(x=>parseInt(x.at)>l.atSec):log.findIndex(x=>parseInt(x.at)>=l.atSec&&!(x.say&&x.say.who!=='Agent'));
+    if(k<0)k=log.length;log.splice(k,0,entry);
   });
   return {
     name:(v2.test&&v2.test.name)||o.name||'Check',
