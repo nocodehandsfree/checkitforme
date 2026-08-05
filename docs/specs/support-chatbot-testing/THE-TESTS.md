@@ -37,22 +37,33 @@ never reach it. Uses the 291 checks already on the account. **Places no calls.**
 
 | # | Type of test | What it proves | Result |
 |---|---|---|---|
-| 1 | Charged hold, wants it back | a hold is charged, so explain and grant nothing | FOUND A BUG, fixed |
+| 1 | Charged hold, wants it back | a hold is charged, so explain and grant nothing | FOUND A BUG, fixed, driven |
 | 2 | Wrong verdict dispute | "you said in stock, shelf was empty" | pass, no credit, no invented refund |
-| 3 | Charged but unclear | the honest gray case | ran, needs regrading after the fix |
-| 4 | Not charged | says so plainly, balance intact | ran, needs regrading |
-| 5 | Nobody answered | free, the promise we still keep | not yet run |
-| 6 | Voicemail | free, and not confused with a person answering | not yet run |
-| 7 | Pinned to a check | never asks "which store" | FOUND A BUG, fixed |
-| 8 | Cancelled by the customer | kindly says they stopped it | not yet run |
-| 9 | Second ask on the same check | already credited, never twice | not yet run |
-| 10 | Third credit in 30 days | the cap answers, no grant | not yet run |
+| 3 | Charged but unclear | the honest gray case | pass |
+| 4 | Not charged | says so plainly, balance intact | pass |
+| 5 | Nobody answered | free, the promise we still keep | FOUND A BUG, fixed, driven |
+| 6 | Voicemail | free, and not confused with a person answering | FOUND A BUG, fixed |
+| 7 | Pinned to a check | never asks "which store", never answers about another | FOUND A BUG, fixed |
+| 8 | Cancelled by the customer | kindly says they stopped it | needs a re-run |
+| 9 | Second ask on the same check | already credited, never twice | pass |
+| 10 | Third credit in 30 days | the cap blocks the grant, not the answer | FOUND A BUG, fixed |
 | 11 | Check older than 7 days | outside the window, said plainly | fixed, needs driving |
 
-**The two money bugs found so far, both fixed:** a check that ANSWERED was refundable on request,
-because a 24 second in-stock call tripped the "under 25 seconds means nobody answered" rule; and a
-chat opened from an older check's page silently retargeted onto a newer check, so a complaint about
-one check granted a credit against another.
+**Five money bugs found, all fixed, all with a test seeded to the exact shape that leaked:**
+1. **A check that ANSWERED was refundable on request.** A 24 second in-stock call tripped the "under
+   25 seconds means nobody really answered" rule. A fast answered check is the best check we run.
+2. **A hold was refunded anyway.** Keeping `left_on_hold` out of BAD_KEYS was not enough: any hold
+   under 25 seconds slipped through the same rule, so we charged and refunded in one breath, which
+   is the billing-vs-refunds fight the 07-22 ruling exists to prevent.
+3. **The pin only searched the 12 newest checks in 7 days.** An older check's page silently
+   retargeted onto a newer check, granting a credit against one the customer never mentioned.
+4. **A pinned check belonging to no account became somebody else's check.** A Fun store voicemail
+   check was answered as an MVPs check, with a credit decision attached.
+5. **The 30-day cap answered questions that had nothing to do with money.** It ran before we knew
+   whether a credit was in question, so a capped customer asking "nobody picked up, am I out a
+   check?" got "this needs a person" when the true answer was that they were never charged.
+
+Also fixed: it told a customer "I can set needs_human true so a person can review this."
 
 ---
 ## ROUND 3 — improvised, not scripted. NOT RUN.
