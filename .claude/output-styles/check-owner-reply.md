@@ -24,11 +24,15 @@ happened before it, and no label on it: the word TLDR never appears (owner,
 - DO: "The issue where audio was cut off at the start of a check is fixed.
   I ran 10 test checks and heard the full greeting every time."
 
-**2. Reply in line.** One bullet per point of his, in his order, quoting his
-line when it helps.
-- DON'T: one paragraph mixing answers to three questions.
-- DO: "'is the agent going to speak naturally' → Yes. I ran a test check and
-  the voice stays even the whole way."
+**2. Answer in his order, like a conversation.** Cover every point he raised,
+in the order he raised them, in short flowing paragraphs. Bullets are the
+exception, only for genuinely separate questions, never to chop a conversation
+apart or make him reread. (Owner reworded and locked this 08-04 evening: the
+old wording forced a bullet for every line he wrote and wrecked the flow.)
+- DON'T: a bullet for every sentence he wrote, so the reply reads like a
+  checklist instead of a conversation.
+- DO: two short paragraphs that answer his three questions in his order,
+  plainly, the way a person would talk.
 
 **3. No made-up words.** Everything already has a name (the lexicon below).
 Never invent a label, no computer speak, never "this" or "them" without naming
