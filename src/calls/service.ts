@@ -5,11 +5,11 @@ import { db } from "../db/client";
 import { openState, fetchStoreHours } from "../store-hours";
 import { fetchStorePhone } from "../store-phone";
 import {
-  accounts, alertSends, alertSubscriptions, callResults, categories, chains, customerSchedules, retailers, scheduleTargets, schedules, statuses, watches, zoneRetailers, zones,
+  accounts, alertSends, alertSubscriptions, callEvents, callResults, categories, chains, customerSchedules, products, retailers, scheduleTargets, schedules, statuses, watches, zoneRetailers, zones,
 } from "../db/schema";
 import { linkCall, openReceipt, emit, closeReceipt, linkProviderCall, markNow } from "./events"; // ties the call row to its receipt (the timeline + the seconds)
 import { isCheckAlive } from "./check-life"; // the gatekeeper: the one honest answer to "has this check finished?"
-import { recordVerdict } from "./receipt-store";
+import { recordVerdict, lastClerkLine } from "./receipt-store";
 import { chargeOneCredit, isCompAccount, getAccount } from "../billing";
 import { sendRestockEmailTo, sendAlert, accountLang, localizeResult } from "../alerts";
 import { isCallingPaused } from "../redis";
@@ -139,12 +139,13 @@ import { activeMap } from "./mapgraph";
 import { learnTreeFromTranscript, consumeTreeRelearn } from "./tree-learn";
 import { connectAtSecFor } from "./recipe";
 import { callTuning } from "./tuning";
+import { STATUS_READ_USD } from "./cost";
 import { deltaStoreCall, setDeltaFinalize, tdTranscript, type TdSession } from "./tapedeck";
 import type { AgentTuning } from "../voice/provider";
 import { notifyInStock, notifyContact } from "./notify";
 import { getSetting, setSetting } from "../db/settings";
-import { specificityClause, RESTOCK_PROMPT, VOICE_DEFAULTS, PREMIUM_FOLLOWUP, ASK_SHIPMENT_DAY, oneTurnFollowup, oneTurnShipmentDay } from "../voice/prompts";
-import { consensusFor, productDetailLabel } from "../voice/verdict";
+import { specificityClause, RESTOCK_PROMPT, VOICE_DEFAULTS, kioskNote, departmentNote, SET_EXAMPLE, midCallAgentPatch } from "../voice/prompts";
+import { consensusFor, productDetailLabel, VERDICT_MODEL } from "../voice/verdict";
 import { armLiveRead, dropLiveRead } from "../voice/live-read";
 
 const DEFAULT_OPENER = "Heyy! I was just checking to see if you guys got any {category} in?";
@@ -464,27 +465,18 @@ export async function buildRestockVars(
       voicemail_policy: voicemailPolicy,
       personality: workflow?.personality || "",
       opening_line: openingLine,
-      // Listen-live (Runnr) asks about exactly the lines the user selected — the primary plus
-      // any extras they multi-picked. It never auto-cascades from the store's carries field.
+      // Listen-live (Runnr) asks about exactly the lines the user selected. Charlie's WORDS no longer
+      // carry it (the second-product feature is not built and the owner's rewrite cut the section),
+      // but the value still rides, so it is here the day that feature lands.
       other_categories: extraLabels.join(", "),
-      // Restock-day push is STANDARD on every live check (owner 07-16: "standard for any not in
-      // stock") — this path shipped "" while every other path asked, so live checks never captured
-      // the day. One source of truth in prompts.ts.
-      // ONE QUESTION, THEN WRAP. A workflow whose follow-up data folds the set and the format into
-      // a single question swaps BOTH of these for their one-question form. Any other workflow gets
-      // exactly what it got before. The Fun store ran a folded workflow on 07-28 and the agent still
-      // asked twice, because until now only the recorded-clip lane could read the fold.
-      ask_shipment_day: workflow?.oneTurn ? oneTurnShipmentDay(workflow.noLine) : ASK_SHIPMENT_DAY,
-      // Kiosk-only store → the prompt asks about the vending kiosk, not a shelf shipment.
-      // Explicit request flag wins; otherwise inferred from the store's flags.
-      kiosk_mode: (kioskMode ?? kioskOnly(retailer)) ? "true" : "",
-      // THE WRONG-DEPARTMENT SAVE. One switch, read here so BOTH lanes ask the same thing: landing on
-      // the pharmacy counter asks to be put through instead of ending the check. "" = the prompt's
-      // whole section is inert and the call behaves exactly as it does today.
-      ask_for_transfer: (await getPolicy()).flags.askForTransfer ? "true" : "",
-      // Preview / admin / scheduled paths default to the premium follow-up; the consumer trigger
-      // path overrides this to the free (no-follow-up) text for non-subscribers.
-      premium_followup: workflow?.oneTurn ? oneTurnFollowup(workflow.setLine) : PREMIUM_FOLLOWUP,
+      // INSERT OR NOTHING (the owner's rewrite, sections 4 and 5). Charlie is handed the WORDS, built
+      // by the one pair of builders the direct lane also calls, never a flag to reason about. The
+      // transfer switch is still read here, once, so the two lanes can never disagree about it.
+      kiosk_note: kioskNote(category.label, !!(kioskMode ?? kioskOnly(retailer))),
+      department_note: departmentNote(category.label, (await getPolicy()).flags.askForTransfer),
+      // Section 10's example keeps a REAL set name in the question, read from the site's catalog so
+      // it stays current instead of naming a set that came and went.
+      set_example: SET_EXAMPLE,
     },
   };
 }
@@ -561,14 +553,9 @@ export async function findRecentCheck(finderUserId: string, retailerId: number, 
 }
 
 /** Place one call and record it. */
-/** Is the finder a paying member (or comp/owner)? Drives the premium product-type follow-up.
- *  No finder (admin / scheduled / comp paths) defaults to the full premium experience. */
-async function finderIsPremium(finderUserId?: string | null): Promise<boolean> {
-  if (!finderUserId) return true;
-  const acct = (await db.select().from(accounts).where(eq(accounts.clerkUserId, finderUserId)))[0];
-  return !!acct && (isCompAccount(acct) || acct.subscription === "active");
-}
-
+// THE PAYING VERSUS FREE SPLIT IS DEAD (the owner's rewrite, builder notes). `finderIsPremium` lived
+// here to decide whether a check earned the product-type follow-up; sections 10 and 11 are now fixed
+// words that EVERY check gets, so the question that split them no longer exists.
 export async function triggerCall(a: TriggerArgs) {
   if (await isCallingPaused()) throw new Error("calling_paused"); // global spend kill-switch
   const retailer = (await db.select().from(retailers).where(eq(retailers.id, a.retailerId)))[0];
@@ -665,7 +652,7 @@ export async function triggerCall(a: TriggerArgs) {
   // On a full pool past the wait budget, `slot` is null → surface a graceful busy, not a hard failure.
   const slot = a.toOverride ? null : await acquireCallSlot({
     key: `call:${row.id}`, priority: a.zoneRunId ? "batch" : "interactive",
-    userId: a.finderUserId ?? undefined, ttlSec: ((await getPolicy()).bail.maxCallSeconds || 180) + 120,
+    userId: a.finderUserId ?? undefined, ttlSec: (await callTuning()).maxCheckSeconds + 120, /* the slot is held for as long as a check may run, off the same number */
   });
   if (a.toOverride ? false : slot === null) {
     await db.update(callResults).set({ status: "failed", statusKey: "system_busy", summary: "All lines busy — the check will be retried." }).where(eq(callResults.id, row.id));
@@ -703,7 +690,6 @@ export async function triggerCall(a: TriggerArgs) {
       phoneTree,
       specialInstructions: retailer.specialInstructions ?? undefined,
       otherCategories: mode === "restock" ? otherCategories : [],
-      askShipmentDay: a.askShipmentDay ?? true, // Delta everywhere: default ON — ask the restock day on a no.
       voicemailPolicy,
       // Persona from the assigned workflow fills {{personality}}. Empty when no workflow → same as before.
       personalityTone: wf?.personality || undefined,
@@ -712,11 +698,8 @@ export async function triggerCall(a: TriggerArgs) {
       // THE WRONG-DEPARTMENT SAVE, read from the one switch. Both lanes send the same value, so
       // turning it off can never leave one lane asking to be put through and the other giving up.
       askForTransfer: (await getPolicy()).flags.askForTransfer,
-      // Premium gate: subscribers (and comp/owner) get the product-type follow-up; free finders skip it.
-      premiumFollowup: await finderIsPremium(a.finderUserId),
-      // ONE QUESTION, THEN WRAP, when the store's workflow declares the fold. Same resolution the
-      // bridge lane does, so the switch being on or off can never change how many questions we ask.
-      foldedQuestions: wf?.oneTurn ? { set: wf.setLine, no: wf.noLine } : undefined,
+      // The real set name section 10's example carries, off the site's catalog.
+      setExample: SET_EXAMPLE,
     });
     linkProviderCall(directRoom, providerCallId);
     emit(directRoom, "connected", "The provider is placing the call on its own line", { providerCallId, callSid: callSid ?? null });
@@ -786,7 +769,7 @@ export async function bridgeCheckCall(a: TriggerArgs) {
   // A zone-sweep call is "batch" (leaves the interactive reserve free); a lone check is "interactive".
   const slot = await acquireCallSlot({
     key: `call:${row.id}`, priority: a.zoneRunId ? "batch" : "interactive",
-    userId: a.finderUserId ?? undefined, ttlSec: (pol.bail.maxCallSeconds || 180) + 120,
+    userId: a.finderUserId ?? undefined, ttlSec: (await callTuning()).maxCheckSeconds + 120, /* the slot is held for as long as a check may run, off the same number */
   });
   if (slot === null) {
     await db.update(callResults).set({ status: "failed", statusKey: "system_busy", summary: "All lines busy — the check will be retried." }).where(eq(callResults.id, row.id));
@@ -804,7 +787,7 @@ export async function bridgeCheckCall(a: TriggerArgs) {
     // Human reached, billed agent open — hand the row to the normal EL ingest by conv id.
     db.update(callResults).set({ providerCallId: convId, status: "in_progress" }).where(eq(callResults.id, row.id))
       .catch((e) => console.error("bridge check connect update:", e));
-  }, v.dtmf, { from, room, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, apiKey: acct.apiKey, agentId: acct.agentId, listenNav: v.listenNav, navSteps: v.navSteps, mapVersion: v.mapVersion });
+  }, v.dtmf, { from, room, timeLimitSec: v.maxTalk ?? undefined, /* no per store cap → the owner's own number, from call_tuning */ say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, apiKey: acct.apiKey, agentId: acct.agentId, listenNav: v.listenNav, navSteps: v.navSteps, mapVersion: v.mapVersion });
   if (r.error || !r.room) {
     await slot.release(); // dial never placed → free the slot immediately
     // The row keeps its room, so the refusal's own record opens from the Testing list like any check.
@@ -960,8 +943,15 @@ export async function applyVoiceTuning(p: {
   // pause and switches the provider's early-guessing off (speculative_turn, elevenlabs.ts), so one
   // sentence gets one reply. Best-effort like the main push; a failure never blocks the boot.
   if (p.pushPrompt && config.voice.midCallAgentId) {
-    await provider.updateAgent(config.voice.midCallAgentId, { turnEagerness: "patient" })
-      .catch((e) => console.error("[voice] mid-call agent patient push failed:", String(e).slice(0, 160)));
+    // …AND HE GETS THE SAME WORDS, WHICH HE NEVER DID (owner 08-03). Every new style check talks to
+    // THIS agent, and only the original was ever sent the full words: he was a frozen copy from
+    // 07-28, so the wrong department section added on 08-01 never reached him. 17,521 characters
+    // against 16,807, and the difference was exactly that section — which is why he asked to be put
+    // through twice. One source now: the same build the original gets, with the joining instruction
+    // on top, from the same function a test asserts against. First message stays empty (the recorded
+    // question already spoke), and PATIENT stays for the reason above it.
+    await provider.updateAgent(config.voice.midCallAgentId, midCallAgentPatch(String(patch.llm ?? VOICE_DEFAULTS.llm)))
+      .catch((e) => console.error("[voice] the joining agent's words did not push:", String(e).slice(0, 160)));
   }
 
   return getVoiceTuning();
@@ -1200,7 +1190,8 @@ export async function getCreditStatus() {
 export function billableOutcome(statusKey: string | null | undefined, definitive: boolean, transcript?: string | null): boolean {
   if (definitive) return true;
   const k = statusKey || "";
-  if (k === "left_on_hold" || k === "too_busy" || k === "language_barrier") return true;
+  // staff_hung_up joins the same family (owner 08-04): real minutes were burned on a live person.
+  if (k === "left_on_hold" || k === "too_busy" || k === "language_barrier" || k === "staff_hung_up") return true;
   if (k === "no_clear_answer" && transcript && /^Agent:/m.test(transcript) && /^Clerk:/m.test(transcript)) return true;
   return false;
 }
@@ -1215,6 +1206,31 @@ export async function chargeCallOnce(callId: number, finderUserId: string): Prom
 }
 
 /** Poll the provider for any calls still in flight and save their outcomes. Returns how many finalized. */
+/** Did WE end this check because a wait ran past the cap? Read off the check's own timeline, which
+ *  is written to the database as it happens, so the answer survives a restart between the hang-up
+ *  and the sweep that writes the verdict. Never throws: a check must never fail to finalize because
+ *  a lookup did. */
+export async function weHungUpOnAHold(room: string | null | undefined): Promise<boolean> {
+  if (!room) return false;
+  try {
+    const rows = await db.select({ detail: callEvents.detail }).from(callEvents)
+      .where(and(eq(callEvents.room, room), eq(callEvents.kind, "hangup")));
+    return rows.some((r) => String(r.detail || "").includes("held_too_long"));
+  } catch { return false; }
+}
+
+/** Did the STORE end this check, read off the check's own timeline (the round 2 subtraction:
+ *  we know every time it was us, so an ending that was not ours and not a failure is theirs).
+ *  Never throws: a check must never fail to finalize because a lookup did. */
+export async function staffHungUpOn(room: string | null | undefined): Promise<boolean> {
+  if (!room) return false;
+  try {
+    const rows = await db.select({ detail: callEvents.detail }).from(callEvents)
+      .where(and(eq(callEvents.room, room), eq(callEvents.kind, "hangup")));
+    return rows.some((r) => String(r.detail || "").includes("store_hung_up"));
+  } catch { return false; }
+}
+
 export async function ingestPending(): Promise<number> {
   const pending = await db.select().from(callResults).where(
     or(eq(callResults.status, "dialing"), eq(callResults.status, "in_progress"), eq(callResults.status, "queued")),
@@ -1258,6 +1274,7 @@ export async function ingestPending(): Promise<number> {
     let productDetail: string | null = null;
     let restockDayHeard: string | null = null;
     let restockTimeHeard: string | null = null;
+    let secondUsed = false;
     if (outcome.status === "completed") {
       // THE READER RULE (owner 07-29), one shared implementation — see consensusFor in
       // src/voice/verdict.ts. This used to run the second read for EXTRACTION ONLY on a decisive
@@ -1270,10 +1287,23 @@ export async function ingestPending(): Promise<number> {
       finalConfirmed = consensus.confirmed;
       finalStatusKey = consensus.statusKey;
       definitive = consensus.definitive;
+      secondUsed = !!second;
       productDetail = productDetailLabel(second);
       restockDayHeard = second?.restockDay ?? null; // restock day staff VOLUNTEERED — captured even unprompted
       restockTimeHeard = second?.restockTime ?? null;
     }
+
+    // WE HUNG UP ON A WAIT NOBODY CAME BACK FROM (round 1, item 1.6). The read of the conversation
+    // cannot know that: Charlie was dropped for the wait, so from his side the check simply stopped,
+    // and what the customer would be told depends on whether Staff happened to say "hold on" in
+    // words before they went. The check's own record knows, so it decides — and the word is the one
+    // we already have, "left on hold", never a new one (owner's ruling 08-01).
+    // Only ever over an answer we do not have: if Staff came back and answered, that answer stands.
+    if (finalConfirmed === null && await weHungUpOnAHold(row.room)) finalStatusKey = "left_on_hold";
+    // STAFF HUNG UP ON US BEFORE GIVING AN ANSWER (owner 08-04, the Hungup: Staff card). The engine
+    // already knows who put the phone down by subtraction; this is the customer's word for it. Only
+    // ever over an answer we do not have: an answer they gave before hanging up still stands.
+    else if (finalConfirmed === null && await staffHungUpOn(row.room)) finalStatusKey = "staff_hung_up";
 
     // Update the primary row (the line we called about).
     await db.update(callResults).set({
@@ -1293,8 +1323,14 @@ export async function ingestPending(): Promise<number> {
       navSeconds: takeBridgeNav(row.providerCallId) ?? outcome.navSecs ?? null,
     }).where(eq(callResults.id, row.id));
     // Close the timeline with the answer the customer actually got, so a replay ends where the call
-    // ended. Fire-and-forget: a verdict must never wait on bookkeeping.
-    void recordVerdict(row.id, finalStatusKey ?? null, outcome.summary ?? null, outcome.durationSecs ?? 0);
+    // ended. Fire-and-forget: a verdict must never wait on bookkeeping. The tail now carries what
+    // the Testing screen reads (owner 08-04): the second read as its own step with its model and
+    // cost, whose words decided the status, and charged or not charged as the LAST step.
+    const willCharge = !!(row.finderUserId && outcome.status === "completed" && billableOutcome(finalStatusKey, definitive, outcome.transcript));
+    const decidedBy = lastClerkLine(outcome.transcript);
+    console.log(`[finalize] check ${row.id}: writing the verdict tail (read=${secondUsed ? "yes" : "no"}, charged=${willCharge})`);
+    void recordVerdict(row.id, finalStatusKey ?? null, outcome.summary ?? null, outcome.durationSecs ?? 0,
+      { secondReadModel: secondUsed ? VERDICT_MODEL : null, secondReadUsd: secondUsed ? STATUS_READ_USD : 0, decidedBy, charged: willCharge });
     dropLiveRead(row.room); // verdict written — let the room's live read go
     // The old direct path's thin receipt closes here — this is the only moment it learns the call is
     // over, since nothing streams to us on that lane. A bridged call closed its own long ago and

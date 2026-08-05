@@ -36,7 +36,7 @@ const savedRun = (chainId: number, over: Partial<MapperRun> = {}): MapperRun => 
   ],
   log: [{ n: 6, phase: "speed", store: "T-Store", outcome: "no gain — kept best", seconds: 58 }],
   startedAt: Date.now() - 60_000, updatedAt: Date.now() - 10_000,
-  lockedRecipe: null, pinnedStoreId: undefined, mapMisses: 0,
+  lockedRecipe: null, pinnedStoreId: undefined, mapMisses: 0, menuNumber: 3,
   ...over,
 });
 
@@ -54,6 +54,10 @@ ok(!!r && r.attempt === 6 && r.bestMenuSecs === 41 && r.experiments.length === 2
 ok(!!r && r.experiments.some((e) => e.status === "pending"), "the experiment that was mid-test is still pending, ready to retry");
 ok(!!r && r.experiments.every((e) => (e.kind as string) !== "barge"), "a clock-fired experiment saved by the old build resumes as a cut-in — no timer survives a restart");
 ok(!!r && r.log.some((l) => l.outcome.includes("resumed from the last saved step")), "the interrupted attempt is written down as not-evidence");
+// A restart is not a re-map: the run comes back on the SAME menu, so the choices it marked wrong
+// this run are still obeyed. Only a fresh Map — or the healing loop — opens a new menu number.
+ok(!!r && r.menuNumber === 3 && r.doorsDead.includes("pharmacy"),
+  `the resumed run is still learning the same menu, so its own marks still hold (menu ${r?.menuNumber})`);
 await sleep(500); // let the resumed loop hit its daily-cap guard and wrap up
 const r2 = mapperState().runs.find((x) => x.chainId === 9001);
 ok(!!r2 && r2.running === false && (r2.stopReason || "").includes("daily cap"), `the resumed run entered the real loop and stopped on the guard (${r2?.stopReason})`);

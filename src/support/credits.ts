@@ -176,6 +176,7 @@ function wentWrong(statusKey: string | null, es: boolean): string {
     case "busy":
     case "too_busy":         return es ? "La línea estaba ocupada" : "The line was busy";
     case "left_on_hold":     return es ? "Nos dejaron en espera" : "We got left on hold";
+    case "staff_hung_up":    return es ? "El personal colgó" : "Staff hung up";
     case "closed":           return es ? "La tienda estaba cerrada" : "The store was closed";
     case "language_barrier": return es ? "No pudimos pasar la barrera del idioma" : "We couldn't get past a language barrier";
     default:                 return es ? "La llamada no conectó" : "The call didn't connect";

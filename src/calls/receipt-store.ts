@@ -138,16 +138,50 @@ export async function persistReceipt(r: Receipt): Promise<void> {
  * time we know what the clerk said the receipt is closed and flushed. It is appended directly, at
  * the second the call ended, so a replay finishes with the answer the customer got. Never throws.
  */
-export async function recordVerdict(callId: number, statusKey: string | null, summary: string | null, atSec: number): Promise<void> {
+/** The last thing Staff actually said with real words in it — the line the status was decided by,
+ *  quoted on the verdict step. ONE copy, used by every door that settles a verdict. */
+export function lastClerkLine(transcript: string | null | undefined): string | null {
+  return [...String(transcript || "").split("\n")]
+    .reverse().map((l) => /^(?:Clerk|Staff):\s*(.*)$/i.exec(l.trim())?.[1] || "")
+    .find((t) => /[a-zA-ZÀ-ɏ]{2,}/.test(t)) || null;
+}
+
+export async function recordVerdict(
+  callId: number, statusKey: string | null, summary: string | null, atSec: number,
+  // WHAT THE TESTING SCREEN READS AND NOTHING WROTE (owner 08-04): the second read as its own step
+  // before the status, with the model that read it and what it cost; whose words decided the
+  // status; and charged or not charged as the LAST step of the check. All optional, so every older
+  // caller keeps writing exactly the verdict it always wrote.
+  extra?: { secondReadModel?: string | null; secondReadUsd?: number; decidedBy?: string | null; charged?: boolean | null },
+): Promise<void> {
   try {
+    // THREE DOORS CAN SETTLE ONE CHECK and they race (the sweep, the on-demand settle, the webhook).
+    // Whichever wins writes the tail; the others find it written and leave the record alone, so a
+    // check can never end twice.
+    const already = await db.select({ id: callEvents.id }).from(callEvents)
+      .where(and(eq(callEvents.callId, callId), eq(callEvents.kind, "verdict"))).limit(1);
+    if (already.length) return;
     const room = (await db.select({ room: callResults.room }).from(callResults).where(eq(callResults.id, callId)))[0]?.room;
-    await db.insert(callEvents).values({
-      callId, room: room ?? "", atMs: Math.max(0, atSec) * 1000, atSec: Math.max(0, atSec),
-      kind: "verdict",
-      note: summary?.slice(0, 300) || `Answer: ${statusKey ?? "unclear"}`,
-      detail: JSON.stringify({ statusKey }),
+    const at = Math.max(0, atSec);
+    const rowFor = (kind: string, note: string, detail: Record<string, unknown>, order: number) => ({
+      // The same final second, a breath of milliseconds apart, so the three read in this order and
+      // never shuffle under an ORDER BY on the clock.
+      callId, room: room ?? "", atMs: at * 1000 + order, atSec: at, kind, note: note.slice(0, 300), detail: JSON.stringify(detail),
     });
-  } catch (e) { console.error("[receipt] verdict not recorded:", e); }
+    const rows = [];
+    if (extra?.secondReadModel) rows.push(rowFor("unknown", "The answer was double checked", { step: "second_read", model: extra.secondReadModel, costUsd: extra.secondReadUsd ?? 0 }, 0));
+    rows.push(rowFor("verdict", summary?.slice(0, 300) || `Answer: ${statusKey ?? "unclear"}`, { statusKey, ...(extra?.decidedBy ? { decidedBy: String(extra.decidedBy).slice(0, 200) } : {}) }, 1));
+    if (extra?.charged != null) rows.push(rowFor("unknown", extra.charged ? "Customer charged" : "Customer not charged", { step: "charged", charged: extra.charged }, 2));
+    await db.insert(callEvents).values(rows);
+    console.log(`[receipt] verdict tail written for check ${callId}: ${rows.length} row(s)`);
+  } catch (e) {
+    console.error("[receipt] verdict not recorded:", e);
+    // The verdict is the one row the customer's answer lives on. If the batch failed, write it
+    // alone the way this function always used to, so a decoration can never cost the answer.
+    try {
+      await db.insert(callEvents).values({ callId, room: "", atMs: Math.max(0, atSec) * 1000, atSec: Math.max(0, atSec), kind: "verdict", note: (summary?.slice(0, 300) || `Answer: ${statusKey ?? "unclear"}`), detail: JSON.stringify({ statusKey }) });
+    } catch (e2) { console.error("[receipt] even the bare verdict failed:", e2); }
+  }
 }
 
 /** Wire the recorder to the database. Called once at boot. */

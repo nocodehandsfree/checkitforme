@@ -6,11 +6,15 @@ Frontend/Admin consume these; they don't invent endpoints — they request new o
 
 Pairs with `docs/shared/STOCK_AND_GEO_API.md` (deeper detail on the stock + geo rails).
 
-Auth:
-- `/pub/*` — **no Clerk gate** (public). Some are per-IP rate-limited (noted).
-- `/app/*` — **Clerk session JWT required** (`Authorization: Bearer <token>`). 401 if missing.
-- `/api/*` — **admin** (Clerk gate when `CLERK_ENFORCE=true`, currently ON; `x-admin-token`
-  header bypass for server-to-server). 401/403 otherwise.
+Auth (**corrected 2026-08-05 — Clerk is gone**; `src/server.ts:295` "Auth — phone/SMS sessions only
+(Clerk fully removed)". The helper is still *named* `verifyClerkToken`, but it verifies the phone
+session JWT minted by `signSession` in `src/auth.ts`. `CLERK_ENFORCE` survives in `src/config.ts:38`
+and is read by nothing):
+- `/pub/*` — public. Some are per-IP rate-limited (noted).
+- `/app/*` — **phone-session JWT required** (`Authorization: Bearer <token>`, from
+  `POST /auth/phone/start|check`). 401 if missing.
+- `/api/*` — **admin**: the signed httpOnly admin cookie (`/admin-login?token=ADMIN_TOKEN`) or the
+  `x-admin-token` header for server-to-server. 401/403 otherwise.
 - `/webhooks/*` — public, **HMAC signature-verified** (400 on bad signature).
 
 > ⚠️ Money endpoints are marked **[$]**. ⚠️ Endpoints marked **[CHANGING]** will change shape/
@@ -192,10 +196,20 @@ normal call are unchanged.
   GET/PATCH `/api/settings`.
 - **Leads/intake:** GET `/api/leads | waitlist | store-requests`, PATCH `/api/store-requests/:id`.
 
+> ⚠️ **Coverage gap, measured 2026-08-05.** `src/server.ts` serves 54 `/api/*` families; the groups
+> above cover 35. These 19 are live and undocumented here: `alerts`, `brain`, `call-tuning`, `calls`,
+> `community`, `concurrency`, `feedback`, `gtm`, `hangup`, `import-zones`, `kiosk-receipts`, `kiosks`,
+> `ops`, `phones`, `sell-methods`, `settings-sync`, `support`, `test-stores`, `watches`. Most were
+> built after this file's last real update (2026-07-10). Their shapes are NOT written down anywhere,
+> so nobody should assume this file is a complete list of the admin surface — grep `src/server.ts`.
+> Filling them in is a real task, not a doc edit: each owner lane documents its own family.
+
 ## Pages (HTML, not JSON)
 
 GET `/`, `/r`, `/s`, `/p/:slug` (+`?partial=1` → `{title,body}`), `/og/:file`, `/logos/...`,
-`/robots.txt`, `/sitemap.xml`. **To remove (dev scratch):** `/logo-wall`, `/check-lab`.
+`/robots.txt`, `/sitemap.xml`, `/logo-wall`. (**08-05:** `/logo-wall` is no longer "dev scratch to
+remove" — it is the source of truth for logos, per `SYSTEM_MANUAL.md` §9.5. `/check-lab` was the
+scratch page for picking the check-mark icon; the owner deleted it 08-05.)
 
 ---
 
@@ -205,6 +219,15 @@ GET `/`, `/r`, `/s`, `/p/:slug` (+`?partial=1` → `{title,body}`), `/og/:file`,
   webhook (invoice.paid subscription_create / payment_intent.succeeded), same result as the hosted path.
 
 ## Change log
+- 2026-08-05 — **audit pass, no shapes changed.** Corrected the Auth block (Clerk was fully removed;
+  `/app/*` is the phone-session JWT, `/api/*` is the admin cookie or `x-admin-token`), un-marked
+  `/logo-wall` as scratch, and added the coverage-gap warning above (19 live `/api/*` families are
+  undocumented). Everything else was left exactly as written: the `[CHANGING]` markers on
+  `/pub/charge`, `/app/charge`, `/pub/result`, `/pub/live` and the dashboards are all still pending,
+  not stale. Nothing here was deleted or rewritten on a guess.
+- 2026-08-05b — **`GET /check-lab` removed** (owner's call): a scratch page that rendered the check-mark
+  icon in four styles while the icon was being chosen. It had been live on prod and staging, linked
+  from nothing.
 - 2026-07-03 — **Plans = 4 tiers + premium-feature matrix.** `GET /pub/plans` →
   `{ features:[{key,label}], everyPlanGets:[key…], tiers:[{key,name,monthlyCents,annualCents,
   checksPerMonth,premiumAsks,features:{key:bool}}], payg:[{checks,cents}] }`. Tier keys:

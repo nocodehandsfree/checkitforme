@@ -24,6 +24,10 @@ async function seedStatuses() {
     ["too_busy", "🕗", "Too busy to check", "unk", "#FBBF24", "{store} was too slammed to check. Try checking later."],
     ["language_barrier", "🗣️", "Couldn't understand each other", "unk", "#FBBF24", "We couldn't understand each other on the call. Try checking later."],
     ["nobody_answered", "📵", "Nobody answered", "unk", "#9CA3AF", "Rang and rang, but nobody picked up. Try checking later."],
+    // STAFF ENDED THE CHECK, not us (owner ruled 08-04, the Hungup: Staff card). Stamped only when
+    // the store hung up before giving an answer — an answer they gave first still stands. Same
+    // family as left_on_hold: real minutes were burned on a live person, so it is charged.
+    ["staff_hung_up", "📴", "Staff hung up", "unk", "#FBBF24", "Staff hung up before giving an answer. Try checking later."],
     ["voicemail", "📮", "Got their voicemail", "unk", "#9CA3AF", "We got their voicemail. Try checking later."],
     ["busy", "📞", "Line was busy", "unk", "#9CA3AF", "Their line was busy the whole time. Try checking later."],
     ["bad_number", "☎️", "Wrong number", "unk", "#9CA3AF", "The number we have for them didn't connect. No check = no charge."],
@@ -39,6 +43,12 @@ async function seedStatuses() {
     // Customer pressed Stop (live view "Stop & hang up", zone "Stop all"/stop-one). Same non-result
     // semantics as admin_hangup (the row's STATUS is admin_hangup — only the display key differs).
     ["user_cancelled", "·", "Check cancelled", "unk", "#9CA3AF", "You stopped this check from happening."],
+    // MAPPING'S TWO OWNER-NAMED STATES (owner, 08-03). Nothing on the mapping page is green until the
+    // department is really proved, and nothing is green in the speed round until a faster way is
+    // really landed — so these two are the only green a mapping check can wear, and every check
+    // before them is yellow.
+    ["department_proved", "check", "Department proved", "good", "#4ADE80", "Staff answered about the product, so this is the right department."],
+    ["speed_optimized", "check", "Speed optimized", "good", "#4ADE80", "A faster way through the menu was proved and is now the recipe."],
     // THE DROPPED CALL (spec: the live call runtime, section 8). Something on our side broke mid
     // call, so we hung up and said nothing — a dead line is unremarkable to a store, while a promise
     // to call back that we might not keep is not. Same family as left_on_hold and admin_hangup: it
@@ -165,6 +175,9 @@ export async function bootstrap() {
   // artwork's own proportions at upload time (logoPctFor) and served on every store row, so no surface
   // has to load the image and re-derive it. Null = the caller falls back to fit-inside.
   await client.execute("ALTER TABLE chains ADD COLUMN logo_pct REAL").catch(() => {});
+  // The artwork's shape (width divided by height). Square boxes only need logo_pct; a ROUND pin needs
+  // the shape too, because the widest thing a circle holds depends on how short it is.
+  await client.execute("ALTER TABLE chains ADD COLUMN logo_aspect REAL").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN external_store_id TEXT").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN maps_uri TEXT").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN geocode_tried_at INTEGER").catch(() => {});

@@ -35,6 +35,11 @@ worse than no comment. Several entries below started as wrong comments.)
   exit/Ctrl-C via a trap, but an OOM SIGKILL can't be trapped; (3) the stop button is `bash
   scripts/kill-tests.sh` — kills every orphaned test runner, browser, and port squatter. Run it any time
   compute feels stuck.
+  **08-05 hardening (after a run hung 16 min and CI cancelled it at 25):** every suite is now bounded
+  at `SUITE_TIMEOUT` (420s) by a `timeout -k 15` wrapper and is NAMED if it stalls, `qa-pages.sh` moved
+  off the shared port 8798 to 8790 and caps its own curl waits, and `kill-tests.sh` no longer shoots the
+  runner that called it. Still open (harmless today, same shape as the bug): `test-all.sh` lines 74 and
+  92 both use PORT=8798 — they run sequentially and both bound their waits, but don't add a third.
 
 ## Design rulings
 - **The call-timeline left rail is owner-approved — never remove it** (settled 2026-07-10). Addie read a
@@ -152,7 +157,8 @@ worse than no comment. Several entries below started as wrong comments.)
   clean" verdicts were judged against a typeface the owner never sees. **The design is only the
   design in Inter** (same lesson checkit.html learned on 07-14 with DNS ad-blockers).
 - Fix shipped: app.html self-hosts `/fonts/inter-var-latin.woff2` (the site's exact recipe), and the
-  render tool (`scripts/render-comps.ts` — admin-preview.mjs is archived) serves the vendored fonts.
+  render tool (`scripts/render-comps.ts` — `admin-preview.mjs` was deleted 2026-08-05, it's in git
+  history only) serves the vendored fonts.
   If you judge a render, FIRST confirm the headline is actually Inter (compare a lowercase 'g').
 
 ## Share/landing (/s): a gradient fading to a TRANSPARENT color leaves a green haze on iOS

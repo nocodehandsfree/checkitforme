@@ -1,6 +1,6 @@
 # SUPPORT — handoff (stable charter: the customer-chat agent)
 **What this is:** the SUPPORT system BUILDS the automated support agent (it is not a human support
-queue). Spec: `docs/specs/support-agent/brief.md`.
+queue). Spec: `docs/archive/specs/support-agent/brief-SUPERSEDED.md` (superseded; current shape in `docs/archive/specs/support-agent/spec.md`).
 
 ## The system's scope
 The tiered support agent: live chat on the website + the paid-customers Discord channel. Owns the spec,

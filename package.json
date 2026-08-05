@@ -16,9 +16,7 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "db:seed": "tsx src/db/seed.ts",
     "db:import-zones": "tsx src/db/import-zones.ts",
-    "typecheck": "tsc --noEmit",
-    "e2e": "playwright test",
-    "e2e:ui": "playwright test --ui"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
@@ -32,7 +30,6 @@
     "ws": "^8.21.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.48.0",
     "@types/node": "^22.10.6",
     "@types/ws": "^8.5.13",
     "drizzle-kit": "^0.30.2",

@@ -29,7 +29,9 @@ const pauses = (xml: string) => [...xml.matchAll(/<Pause length="(\d+)"\/>/g)].m
 
 // ---- 1. THE WORDS. Typed out again here, from the spec, and compared to what really plays. ----
 const WORDS: Record<number, string[]> = {
-  1: ["Yeah.", "We do."],
+  // The third line is spec-approved, not corpus (08-04): without an answer to Charlie's follow-up a
+  // goodbye is untestable by design, proven on checks 273 and 276.
+  1: ["Yeah.", "We do.", "Uh, I think it's the one fifty one booster boxes."],
   2: ["We did not."],
   3: ["No, I'm sorry. I haven't seen any yet."],
   4: ["No, we don't have any this, this shipment."],

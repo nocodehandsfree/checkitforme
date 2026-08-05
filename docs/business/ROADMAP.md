@@ -13,22 +13,24 @@ Status of each is detailed in the linked ops/security docs; this is the single c
   through the owner copy-pasting between phone chats (the human is the network cable). Goal: agents post
   status and hand off to each other in Slack, owner watches instead of relays. Two layers: (a) EASY WIN
   FIRST — agents post their done-reports and blockers to a #check-activity channel for visibility;
-  (b) BIGGER BUILD — a shared handoff bus (start with `docs/team/HANDOFFS.md` that every lane watches,
-  graduate to Slack routing) so e.g. Mapper hands a commit to Pops without the owner between them.
+  (b) BIGGER BUILD — a shared handoff bus (the repo-doc version of this shipped 2026-07-22: every lane
+  now watches `docs/team/<system>/checkpoint.md`; the Slack routing half is what's left) so one lane
+  hands a commit to another without the owner between them.
   Autonomous inter-agent routing is a real project; the repo-doc handoff bus works today and is the
   cheap first step. Ties into the existing Grok-to-Claude repo automation the owner already runs.
 
 **Design round — owner + Claude Design (Website implements on staging as comps land in repo)**
-- [ ] **Check+ premium signup flow (1a–1d)** — locked design exists as a self-contained HTML comp; commit to
-  `docs/design/comps/checkplus-signup-flow.html` when the owner delivers it (Design chat is read-only, can't push).
-- [ ] **Thrift + Hobby store types & paths** — new store types with their own consumer flows. ⚠️ **Hobby-store
-  flow applies ONLY to sports cards + TCG** — never NeeDoh/other non-card products.
+- [ ] **Check+ premium signup flow (1a–1d)** — the comp was never delivered into the repo; as of 08-05 the
+  comps themselves are being re-cut (they drifted from the live site), so this waits on that.
+- [x] **Thrift + Hobby store types & paths** — BUILT: both types have their own consumer flows, opt-in, and
+  store data. ⚠️ **Hobby-store flow applies ONLY to sports cards + TCG** — never NeeDoh/other non-card products.
 - [ ] **"My checks" section redesign** — comps coming.
 - [ ] **Home page layout with stores** — comps coming.
 Owner reviews each on staging before promote. Status testing (13-status sweep) resumes after this round.
 
 **Launch-path / now**
-- [ ] Merge staging → prod and deploy; set `COMP_PHONES` in prod policy; verify phone + second-cell caller-ID.
+- [~] Merge staging → prod and deploy — **first promote after the rebuild DONE 2026-07-30** (prod + Admin
+  serve it). Still open: set `COMP_PHONES` in prod policy; verify phone + second-cell caller-ID.
 - [ ] **Promote checklist (owner, 2026-07-01):** after the staging→prod merge, verify prod calls are
   REAL store calls and the Admin God view reflects them accurately (cost/call, mapping performance);
   staging keeps feeding the owner's test-call reports separately. Press "Start fresh" (`stats_since`)
@@ -47,12 +49,9 @@ Owner reviews each on staging before promote. Status testing (13-status sweep) r
 - [ ] **Split `src/server.ts` into route modules** (public/admin/auth/webhooks) — unblocks Website + Admin parallel work.
 
 **Scale / infra**
-- [ ] **Mid-call hold suspend (measure first — owner asked 2026-07-01):** today Charlie (EL) keeps
-  billing through a mid-call "let me check the back" hold; only the 25s hold-bail caps it (~4-5¢ worst
-  case, and the bail loses the answer). ABC covers pre-human only. Fix = un-patch EL during hold, cheap
-  listener waits for a returning voice, re-patch a fresh EL session with re-briefed context — real work
-  (one EL session = one brain, per CHEAP_NAV_ARCHITECTURE). Decide AFTER staging test calls show how
-  often/long mid-call holds actually happen.
+- [x] **Mid-call hold suspend — BUILT 2026-08 (staging).** Charlie is dropped when Staff puts us on hold
+  (his meter stops), a cheap listener waits for a returning voice, and he is reconnected with context.
+  Open follow-on: the hold hang-up timer (owner wants one, number undecided).
 - [ ] Redis-backed rate limiter (multi-instance) · single-leader schedulers ✅(done).
 - [ ] TiDB cutover (connection staged; needs SQL string + backfill — git history).
 - [ ] Analytics → SQL (dashboards load whole tables today).
@@ -71,7 +70,8 @@ Owner reviews each on staging before promote. Status testing (13-status sweep) r
 **Revenue / GTM** (git history)
 - [~] Finalize Stripe — test-mode staging proven 2026-07-02; live-mode webhook + pricing sign-off at promote.
 - [ ] Wire confirmed call-cost rates into the admin cost dashboard (after the voice switcher is validated).
-- [ ] 3-tier customer support (FAQ → Claude → ticket) + Discord; on-site + Discord support agents (RAG via Qdrant).
+- [~] 3-tier customer support (FAQ → Claude → ticket) — the on-site ladder, RAG via Qdrant, and ticket
+  creation are BUILT (`src/support/`). Remaining: the Discord side.
 - [ ] Legal/compliance review of AI voice calling (gates public marketing).
 
 **Domain / brand** (git history)
@@ -120,15 +120,10 @@ run** (key is in Railway; account was $0 at build time).
 prompt caching)** for the long tail (~¼–½¢/msg) → if Claude can't resolve, **open a support ticket** for
 a human. Same knowledge base + tools as the admin agent; surfaces on the consumer site and Discord too.
 
-**C) Agent switcher / live-call brain hand-off (owner-requested).** Goal: cheap brain dials + waits,
-smart brain talks to the human. **Reality of the current stack:** IVR/phone-tree navigation is already
-**DTMF (no LLM)** and hold time burns **no LLM tokens**, so the "cheap-until-human" split mostly exists
-for free today — the human-conversation LLM is just whatever's set on the ElevenLabs agent (set it to
-Claude and you're done for that phase). The missing piece is a *mid-call hot-swap* of the brain on human
-pickup; ElevenLabs ConvAI binds one LLM per session, so true swap needs either (a) the bridge to
-reconnect the Twilio audio stream to a second ConvAI agent at "human detected", or (b) self-hosting the
-STT→LLM→TTS loop (full per-turn control). (a) is the pragmatic next step; piping audio to Safari is a
-listen-in fork and is unrelated to swapping the brain.
+**C) Agent switcher / live-call brain hand-off — BUILT (the new calling engine, 2026-07/08, staging).**
+Option (a) is what shipped: the bridge reconnects the Twilio audio stream to a ConvAI agent when a human
+is detected, so the cheap parts work the phone tree and Charlie is only engaged on a real person. The
+same machinery drops and reconnects him across a hold. Still OFF on production until the owner flips it.
 
 ---
 

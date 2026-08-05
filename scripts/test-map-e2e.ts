@@ -369,9 +369,13 @@ async function main() {
     const odd: MapRecipe = { type: "keypad", seconds: 25, steps: [{ action: "press", value: "4", atSec: 7 }] };
     const quiet = await proposeVersion({ chainId: ch.id, storeId: 776, recipe: odd, source: "sweep",
       call: { at: now(), day: "2026-07-27", storeId: 776, seconds: 25, reachedHuman: true, path: "press:4" } });
-    ok(quiet.version.status === "proposed" && quiet.activated === false,
-      "a store that just answers differently WAITS for approval — the owner's rule holds");
-    ok((await activeMap(ch.id, 776))?.recipe.steps[0].value === "2", "and that store keeps running the chain route meanwhile");
+    // NOTHING WAITS FOR HIM (owner, 08-03). The chain route still works at this store, so there is
+    // nothing to decide: it keeps running the chain route, and what this store did is kept as Not
+    // used — visible in the history, on no list, asking for nothing.
+    ok(quiet.version.status === "rejected" && quiet.activated === false,
+      "a store that just answers differently is kept as Not used — nothing waits for approval");
+    ok(/Not used/.test(quiet.version.why || ""), `and it says why: "${quiet.version.why}"`);
+    ok((await activeMap(ch.id, 776))?.recipe.steps[0].value === "2", "and that store keeps running the chain route");
 
     // Store 777 has actually been FAILING on the chain route. Waiting there does harm, not good.
     await recordFailedAttempt({ chainId: ch.id, storeId: 777, reason: "the mapped route reached nobody" });
@@ -390,9 +394,15 @@ async function main() {
       call: { at: now(), day: "2026-07-27", storeId: 778, seconds: 25, reachedHuman: true, path: "press:4" } });
     const third = await proposeVersion({ chainId: ch.id, storeId: 779, recipe: odd, source: "sweep",
       call: { at: now(), day: "2026-07-27", storeId: 779, seconds: 25, reachedHuman: true, path: "press:4" } });
-    ok(third.version.storeId === 0, "the third store makes it a chain-level question");
-    ok(third.version.status === "proposed", "still proposed, never silently swapped");
-    ok((await activeMap(ch.id))?.recipe.steps[0].value === "2", "the chain keeps its route until somebody approves");
+    // THREE STORES ON THE SAME NEW ROUTE IS NOT A QUESTION, IT IS THE ANSWER (owner R2: he reviews
+    // NOTHING). Waiting for a tap only means every check between now and that tap runs a route we
+    // already know is stale. It swaps itself and files a note carrying the count and the stores.
+    ok(third.version.storeId === 0, "the third store makes it the CHAIN's route, not one store's");
+    ok(third.version.status === "active" && third.activated === true,
+      "and it swaps itself — nothing sits waiting for him");
+    ok((await activeMap(ch.id))?.recipe.steps[0].value === "4", "every store now runs the route three of them proved");
+    ok((await openUnknowns(300)).some((u) => u.chainId === ch.id && /3 stores agree/.test(String(u.prompt || ""))),
+      "with a note saying how many agreed and which, so nothing is silent");
   }
 
   console.log("▶ failed calls count without changing the route");

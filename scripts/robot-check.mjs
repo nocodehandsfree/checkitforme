@@ -453,6 +453,19 @@ page.on("pageerror", (e) => jsErrors.push(String(e).slice(0, 160)));
 for (let i = 0; i < scenes.length; i++) {
   try { await runOne(page, scenes[i], i % cfg.greetings.length); }
   catch (e) { item(0, "the walk itself", false, String(e).slice(0, 200)); await shot(page, "crash"); }
+  // OWNER RULE (08-04, voice RULES.md 15): the FIRST check of a run must be seen running WHOLE —
+  // dial to answer to Charlie's goodbye to the check ending — before a second check is dialed.
+  // The goodbye bug burned ~$3 of checks that one stopped run would have caught for 9 cents.
+  if (i === 0 && scenes.length > 1) {
+    const wholeCheck = [12, 13, 15]; // one record written · ends with a goodbye · ends soon after the answer
+    const broke = (runs[0]?.items || []).filter((x) => wholeCheck.includes(x.n) && !x.pass);
+    if (broke.length) {
+      console.error(`\nTHE FIRST CHECK DID NOT RUN WHOLE, so nothing else dials (owner rule 08-04):`);
+      for (const x of broke) console.error(`  ✗ ${x.name} — ${x.detail}`);
+      console.error(`Fix that first. One check spent, ${scenes.length - 1} not dialed.`);
+      break;
+    }
+  }
 }
 await b.close();
 pipe?.close();

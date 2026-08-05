@@ -12,7 +12,15 @@ the code is the bug.
 
 ---
 
-## 1. Where Echo testing stands (08-01)
+## 1. Where Echo testing stands (08-03)
+
+**Round 1 is BUILT — all eight engine items plus the closeout — and NOT merged**, on branch
+`claude/charlie-engine-tuning-zoxb4r`. Nothing has run on a phone, and the robot store has not seen
+it: its harness dials the real staging site, so it cannot reach the branch until it merges. Every
+item is driven on the rig (delta-clip, listen-nav, prompts, settings-sync, dropped-call) and the five
+Admin numbers are driven in a real browser. What is written BUILT below is built, not shipped.
+
+## 1b. Where Echo testing stood (08-01)
 
 - The check-life fix + round 2 are LIVE on staging, PM-verified with five blind readers and the full
   rig (259 checks green, typecheck clean). **Nothing is phone-verified.**
@@ -82,35 +90,41 @@ greeting
 Walking the menu (the customer sees these too): Pressed 2 · Said "front" · Menu finished, now
 listening for a real person
 
-The question: The Pokémon question played as a recording *(NOT BUILT YET)* · Charlie warmed up
-*(NOT BUILT YET)* · Charlie joined · Charlie reconnected, part 2 of this check
+The question: The question played as a recording *(BUILT 08-03)* · Charlie warmed up *(BUILT 08-03)*
+· Charlie joined · Charlie reconnected, part 2 of this check · The recording did not play, so Charlie
+asked the question himself *(BUILT 08-03)*
 
 Waiting: Staff stepped away, the line went quiet · Staff back after 40 seconds · Staff back after 40
 seconds, and it may not be the same person
 
-Department: We reached the wrong department · Charlie asked to be transferred · Transferred, the next
-department is ringing · Staff said there was
-nobody to transfer to · We were sent back through the phone menu *(NOT BUILT YET)* · The check was
-disconnected during the transfer *(NOT BUILT YET)*
+Department: We reached the wrong department · Charlie asked to be transferred · Transferring to
+<department> (the store's own word), or "Transferring you to the Staff." when nothing named it
+*(BUILT 08-03)* · Staff said there was nobody to transfer to · We were sent back through the phone
+menu *(BUILT 08-02)* · The check was disconnected during the transfer *(BUILT 08-02)*
 
 Charlie's words: Charlie asked about Pokémon booster boxes *(product type + packaging, filled in —
 NOT BUILT YET)* · Charlie asked when the next delivery lands *(NOT BUILT YET)* · Charlie wrapped up
-and thanked them by name *(NOT BUILT YET)* · Charlie spoke Spanish throughout *(NOT BUILT YET)*
+and thanked them by name *(BUILT 08-03)* · Charlie spoke Spanish throughout *(BUILT 08-03, and only
+when Spanish was actually spoken: claiming English would be a guess)* · Charlie has talked long
+enough, so he starts wrapping up *(BUILT 08-03)* · The room went quiet, Staff put the phone down
+*(BUILT 08-03)*
 
-Endings: Charlie dropped · Charlie ended the check · The answer: In stock *(the word comes from
-Statuses, nowhere else)* · Reached a machine, hung up straight away · Nobody picked up after 6 rings,
-hung up before Charlie ever billed · Nobody spoke for 35 seconds after Charlie joined, so we hung up ·
-The store put us on hold too long, so we hung up *(NOT BUILT YET)* · The store hung up on us · The
+Endings: Charlie dropped · Charlie ended the check *("Charlie left" DELETED 08-03)* · The answer: In stock *(the word comes from
+Statuses, nowhere else)* · Reached a machine, hung up straight away · Nobody picked up after 90 seconds of ringing, hung up
+before Charlie ever billed *(seconds, never rings — owner 08-03)* · Nobody spoke for 35 seconds after Charlie joined, so we hung up ·
+The store put us on hold too long, so we hung up *(BUILT 08-03)* · The store hung up on us · The
 check was disconnected · Something went wrong on our end, so we hung up. No check, no charge.
 
-**The rules behind those numbers, verified in code:** 6 unanswered rings at a department = hang up
-(about 36 seconds of the normal American ring pattern) · 35 seconds with nobody speaking after
-Charlie joins = hang up (`bail.ringMaxSeconds`) · a check hangs up at 5 minutes flat, always.
+**The rules behind those numbers (owner 08-03, all five tunable in Admin ▸ App):** **we never hang up
+on a count of rings** — the six-ring rule is DELETED and replaced by 90 seconds of ringing while we
+wait for a human · 35 seconds with nobody speaking after Charlie joins = hang up
+(`bail.ringMaxSeconds`) · a whole check runs 240 seconds, and that number moved OUT of the policy,
+which production copied down over staging every 60 seconds.
 
-**OWNER 08-01: "Ring 2 went unanswered" is DELETED from the log.** Counting rings while we are being
-transferred tells him nothing and costs nothing — Charlie is off while a phone rings. The 6-ring
-give-up RULE stays (it stops us waiting forever at a department nobody works at); only the per-ring
-line goes.
+**OWNER 08-01: "Ring 2 went unanswered" is DELETED from the log**, and **OWNER 08-03: counting rings
+is deleted with it.** A store that lets it ring twenty times may still pick up, and a count never
+said how long anybody had been waiting. What stops us waiting forever is a clock he can tune, started
+when the department's phone starts ringing. Charlie is off the whole time, so it spends phone line only.
 
 **OWNER 08-01, on being patient:** waiting is nearly free because Charlie is dropped, and a second
 check costs more than waiting — so lean patient everywhere Charlie is off. See §7b for what that
@@ -144,14 +158,23 @@ failure — a plain check is mostly Unused. A row exists ONLY because a WORKING 
 problem from the owner (his rule, 07-30: walking a menu is not a test; the check failing IS the
 report).
 
-**The copy is locked by a test.** `scripts/test-behaved.ts` asserts the exact wording of the three
-rows that exist today, so no agent can quietly reword them. Every new row above MUST get the same
-assertion in the same commit.
+**BUILT 08-03, and driven on his own checks.** All eleven rows are live in Admin ▸ Voice ▸ Testing,
+with the three states printed as words beside the mark (Used · Unused · Broken) and a count under the
+heading. Two labels moved to this record's wording in the same commit: "Transfer requested" is now
+**Asked to be transferred** and "Re-asked after transfer" is now **Reacted to a new person**.
+
+**The copy is locked by a test.** `scripts/test-behaved.ts` asserts the exact wording of every row,
+so no agent can quietly reword one. A new row gets the same assertion in the same commit.
+
+**RETROACTIVE, proven.** A check from before any of this was recorded says "This check ran before we
+started writing that down" rather than claiming a failure, and his old Fun store and MVP checks render
+today. The goodbye row goes further and reads an old check off Charlie's own last words.
 
 ## 6. Decisions made 08-01 (owner)
 
 - **Hold cap: 2 minutes.** Waiting is cheap because Charlie's meter is off — only the phone line
-  ticks. Giving up early costs a whole failed check the customer paid for. NOT BUILT YET.
+  ticks. Giving up early costs a whole failed check the customer paid for. **BUILT 08-03**, and the
+  status is decided from the check's own record rather than from whether Staff said "hold on" aloud.
 - **The customer-facing status he is creating:** "The store put us on hold for too long, so we hung
   up. Try again in a bit."
 - **"Charlie left" is deleted.** Dropped and ended are the only two.
@@ -179,14 +202,20 @@ a different thing for the customer to read.
   end" which is not English — and this is the ONLY free case; a hold drop IS charged.)*
 - The check was disconnected. *(distinct from Staff hanging up — see §8.)*
 
-## 7. Still to build (Echo, in this order)
+## 7. Built and still to build (Echo)
 
-1. Charlie opens on the person test, not the crude one (§6 — protects every unmapped store, day one).
-2. Record the recorded question playing, and the warm-up.
-3. Record the wrap-up (thanked them, used their name) and which language was spoken.
-4. The 2-minute hold cap + its status.
-5. Then the Testing card shows all of §4 and §5. The page can only show what the engine records, so
-   this is one job in this order, not two agents.
+**BUILT 08-03, all eight engine items, on the session branch:** 1. Charlie opens on the person test
+(a short hello then a real pause; a recording reads on and never stops for you). 2. The fourth sound
+shape, a phone put down on the counter. 3. The question playing as a recording, the warm-up, the
+wrap-up and the name, and Spanish. 4. No recording means he asks it himself, straight away, and it is
+recorded. 5. The wrap-up limit, which never hangs up. 6. The hold cap. 7. "Charlie left" deleted.
+8. The per ring lines deleted. **Closeout 08-03:** no count of rings ever ends a check, the check's
+length moved into Admin, the log names the department while its phone rings, and the joining Charlie
+is sent the same words as the original (he was a frozen copy and had never received the wrong
+department section, which is why he asked twice).
+
+**STILL TO BUILD:** the Testing card shows all of §4 and §5. The page can only show what the engine
+records, so the engine came first.
 
 ## 7b. THE MONEY BOUNDARIES (owner asked 08-01 — real measured rates, `src/calls/cost.ts`)
 
@@ -244,13 +273,18 @@ Charlie to START WRAPPING UP; it never ends the check itself.
 
 **THE NUMBER, owner 08-02: 45 seconds of Charlie actually talking, tunable in Admin.** His arithmetic says 23 holds 67% profit and 45 does not, so this is a deliberate choice to buy a longer conversation at a thinner margin. **It lives in Admin under App so he tunes it against real checks**, never baked into the code.
 
-## 7e. THE THREE NUMBERS HE CAN TUNE (Admin ▸ App, owner 08-01)
+## 7e. THE FIVE NUMBERS HE CAN TUNE (Admin ▸ App, owner 08-01, two added 08-03)
 
 | Setting | Starts at | Why |
 |---|---|---|
 | Charlie wrap-up seconds | 45 | His own arithmetic: 45 does not hold 67% profit, 23 does. |
 | Hold cap seconds | 120 | Waiting is nearly free (Charlie is dropped), so be generous. |
+| Ring wait seconds | 90 | How long the phone may ring while we wait for a human. Never a count of rings (08-03). |
+| Check length seconds | 240 | How long a whole check may run. It lived in the policy, which production copies down onto staging every 60 seconds, so it could not be tuned on staging at all (08-03). |
 | Silence before Charlie drops | 6 | **Keep 6 until the robot store can measure the floor.** Six seconds of Charlie costs about 1.1¢ every time somebody steps away, so shaving is worth real money. But too short makes him reconnect mid conversation and a choppy Charlie loses whole checks, which costs far more than a cent. The risk is not symmetrical: too long costs pennies, too short costs checks. Tune it on fifty checks at 5 seconds against fifty at 4, never on a guess. NOTE: a real "let me go check" runs far longer than 6 seconds anyway, so this only bites on short thinking pauses. |
+
+**ALL FIVE LIVE IN `call_tuning`, NEVER `policy_json`** — production's policy copies down onto
+staging every 60 seconds, so a number tuned there mid test is stomped inside a minute.
 
 **THE BUILD ORDER IS FIXED:** the Testing card can only show what the engine records, so the engine
 work comes first. One agent, one order. **Round 1 = `echo-build.md`** (running 08-01). **Round 2 =

@@ -547,9 +547,11 @@ function finalizeIfStore(s: TdSession): void {
 //
 // WHERE EVERY LINE BELOW COMES FROM, exactly. Most are what a real person really said on a real
 // check (`how-staff-actually-talk.md`), with only the store name and the person's name swapped.
-// Three are NOT in that corpus and must not be passed off as if they were: scenario 8's payoff
-// ("Yeah, we've got a few."), and the second person's greeting and answer in scenario 10 — those
-// come from the spec the owner approved on 08-01, which is why they are here. Nothing on this list
+// Four are NOT in that corpus and must not be passed off as if they were: scenario 8's payoff
+// ("Yeah, we've got a few."), the second person's greeting and answer in scenario 10, and scenario
+// 1's follow-up answer ("Uh, I think it's the one fifty one booster boxes." — added 08-04 so the
+// goodbye is testable at all) — the rest of those come from the spec the owner approved on 08-01,
+// which is why they are here. Nothing on this list
 // was made up by an agent. They are short, they stumble, they interrupt themselves. Do NOT tidy them
 // into better English: the mess IS the test.
 // ===========================================================================================
@@ -563,7 +565,10 @@ export type RobotAct =
   | { listen: true }      // wait for the caller to say their piece, then carry on
   | { hangup: true };
 
-export interface RobotScene { n: number; name: string; greeting?: string; acts: RobotAct[]; expect: string }
+export interface RobotScene { n: number; name: string; greeting?: string; acts: RobotAct[]; expect: string;
+  /** Which of the owner's 16 locked test cards this scene runs (behaved.ts TEST_CARDS). The card is
+   *  what the Testing screen names the check by; the scene is only how the robot plays it. */
+  card: string }
 
 /** The greetings, one per run, rotated. All five are real openings from our own history. */
 export const ROBOT_GREETINGS: string[] = [
@@ -589,25 +594,31 @@ const WAIT_OUT: RobotAct[] = [{ listen: true }, { listen: true }, { listen: true
  *  NOT a second expectations list: the owner's Admin Testing rows own pass and fail for the steps of
  *  a check. This is only the VERDICT, which is the one thing scenarios 7 and 8 exist to catch. */
 export const ROBOT_SCENES: RobotScene[] = [
-  { n: 1, name: "Yes, plainly", expect: "in_stock", acts: [
+  { n: 1, card: "answer_clear_yes", name: "Yes, plainly", expect: "in_stock", acts: [
     { listen: true }, { say: "Yeah." },
     { listen: true }, { say: "We do." },
+    // Charlie's own instructions follow a settled yes with the set and product questions, and a
+    // goodbye is only possible once they are answered: a robot that goes silent here makes the
+    // wrap-up untestable by design (proven on checks 273 and 276, where he waited on this answer
+    // until the silence dropped him). Both parts in one line, so his chain closes and he can thank
+    // them and end. Spec-approved, not corpus, like scenario 8's payoff.
+    { listen: true }, { say: "Uh, I think it's the one fifty one booster boxes." },
     ...WAIT_OUT,
   ] },
-  { n: 2, name: "No, plainly", expect: "not_in_stock", acts: [
+  { n: 2, card: "answer_clear_no", name: "No, plainly", expect: "not_in_stock", acts: [
     { listen: true }, { say: "We did not." },
     ...WAIT_OUT,
   ] },
-  { n: 3, name: "No, softened", expect: "not_in_stock", acts: [
+  { n: 3, card: "answer_clear_no", name: "No, softened", expect: "not_in_stock", acts: [
     { listen: true }, { say: "No, I'm sorry. I haven't seen any yet." },
     ...WAIT_OUT,
   ] },
-  { n: 4, name: "No, this shipment", expect: "not_in_stock", acts: [
+  { n: 4, card: "answer_clear_no", name: "No, this shipment", expect: "not_in_stock", acts: [
     { listen: true }, { say: "No, we don't have any this, this shipment." },
     ...WAIT_OUT,
   ] },
   // The ONE hold in our whole history that ever worked. 45 seconds, and SILENCE, not music.
-  { n: 5, name: "Walks away, comes back", expect: "not_in_stock", acts: [
+  { n: 5, card: "hold_silence", name: "Walks away, comes back", expect: "not_in_stock", acts: [
     { listen: true },
     { say: "Uh, Pokémon? Uh, let me check. I just got in, so I have to, uh, I'll have to go up to the front and see. Okay, let me just put you on hold." },
     { silence: 45 },
@@ -615,14 +626,14 @@ export const ROBOT_SCENES: RobotScene[] = [
     ...WAIT_OUT,
   ] },
   // Happened twice for real. One of them ran 121 seconds and never resolved, so that is the length.
-  { n: 6, name: "Walks away, never comes back", expect: "no_clear_answer", acts: [
+  { n: 6, card: "hold_permanently", name: "Walks away, never comes back", expect: "no_clear_answer", acts: [
     { listen: true },
     { say: "Um, give me just a second. Let me double-check." },
     { silence: 60 }, { silence: 61 },
     { hangup: true },
   ] },
   // THE HIGHEST VALUE TEST ON THE LIST. We scored this real check as no clear answer. It is a YES.
-  { n: 7, name: "The yes hidden inside a no", expect: "in_stock", acts: [
+  { n: 7, card: "answer_yes_vague", name: "The yes hidden inside a no", expect: "in_stock", acts: [
     { listen: true },
     { say: "We did, but it's not out yet, so... uh, or I don't think it's out. Let me see." },
     { listen: true },
@@ -630,7 +641,7 @@ export const ROBOT_SCENES: RobotScene[] = [
     ...WAIT_OUT,
   ] },
   // Second highest. We stamped NOT IN STOCK before they came back with the answer.
-  { n: 8, name: "The no that turns into a maybe", expect: "in_stock", acts: [
+  { n: 8, card: "answer_yes_vague", name: "The no that turns into a maybe", expect: "in_stock", acts: [
     { listen: true },
     { say: "We haven't, as a matter of fact. Uh, let me double-check though. Hold on just a moment." },
     { silence: 30 },
@@ -638,7 +649,7 @@ export const ROBOT_SCENES: RobotScene[] = [
     ...WAIT_OUT,
   ] },
   // 6 of 14 real checks did exactly this. No scripted test has ever reproduced it.
-  { n: 9, name: "Cannot hear us, gives up", greeting: "Hi, how can I help you? Hello?", expect: "nobody_answered", acts: [
+  { n: 9, card: "hungup_staff", name: "Cannot hear us, gives up", greeting: "Hi, how can I help you? Hello?", expect: "nobody_answered", acts: [
     { silence: 3 },
     { say: "I'm sorry. You're gonna have to call again. I can't hear you. Bye-bye." },
     { hangup: true },
@@ -646,7 +657,7 @@ export const ROBOT_SCENES: RobotScene[] = [
   // The greeting names the WRONG department, and the second voice is a different person.
   // The spec's row stops at Dana's greeting; her answer is a verbatim line from the same corpus
   // ("We did not.") so the check can finish. Nothing here is invented.
-  { n: 10, name: "Wrong department, then transfers", greeting: "MVP's pharmacy, this is Larry.", expect: "not_in_stock", acts: [
+  { n: 10, card: "transfer_requested", name: "Wrong department, then transfers", greeting: "MVP's pharmacy, this is Larry.", expect: "not_in_stock", acts: [
     { listen: true },
     { say: "Okay. Transferring you now." },
     { ring: 6 },

@@ -17,7 +17,7 @@ id once answered), `/pub/live` (transcript lines as they happen), `/pub/result` 
 The customer can listen live (the "listen room") and hang up. `bridgeStoreCall` is the entry the
 website's Check button hits; `triggerCall` (`src/calls/service.ts`) is the entry everything else
 (admin call-now, schedules) hits. Cost model and why cheap navigation matters:
-`docs/finance/CHEAP_NAV_ARCHITECTURE.md`.
+`docs/archive/finance/CHEAP_NAV_ARCHITECTURE.md` (archived 08-05: the design is built).
 
 **Charlie (C-lane) — the smart, expensive brain.** A live ElevenLabs ConvAI agent (billed through
 EL, currently a Claude Sonnet under the hood) holds the whole conversation. Its system prompt is
@@ -97,7 +97,7 @@ without touching the verdict.
    is not wired to live calls. Master switch stays off.
 4. A2P SMS approval pending; restock texts stay stubbed until it lands (runbook in admin checkpoint).
 5. Name echo + adaptive premium follow-up are Charlie-only by design — don't chase them in Delta.
-6. Delta cost write-up into `CHEAP_NAV_ARCHITECTURE.md` never done.
+6. Delta cost write-up never done; if it happens it belongs in `docs/finance/COST_MODEL.md`, not the archived design doc.
 
 ## 5. Every trap (memorize these)
 

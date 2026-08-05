@@ -91,6 +91,7 @@ export interface MapperRun {
   lockedRecipe?: NavRecipe | null;  // the chain's recipe as read at start
   pinnedStoreId?: number;           // owner-named store for the whole run (was opts.storeId)
   mapMisses?: number;               // mapping-menu checks where nobody answered (was loop-local)
+  menuNumber?: number;              // which menu this run is learning — marks expire with it
 }
 
 const runs = new Map<number, MapperRun>();
@@ -180,28 +181,45 @@ async function rememberNever(run: MapperRun, move: string): Promise<void> {
 // item 4). Chain-wide, durable; old entries saved as bare strings still load (no question = block
 // by value, the old behaviour).
 const deadDoorsKey = (chainId: number) => `map_doors_dead:${chainId}`;
-async function loadDeadDoors(chainId: number): Promise<Array<{ door: string; q?: string }>> {
+// A MARK EXPIRES WITH THE MENU IT WAS LEARNED ON (owner, 08-04). A choice proven wrong cost a real
+// call and a real Staff hello, so it is enforced for as long as that menu is the menu — but the
+// moment we re-map the store, we are learning the menu FRESH, and a rule learned on the menu it
+// replaced would stop the new map from ever trying that choice properly. NOTHING IS DELETED: every
+// mark stays on file against the map it was learned on, visible on the screen, and simply stops
+// being enforced. This counter is what "the menu it was learned on" means: it goes up once per
+// re-map, whether the healing loop started it or the owner pressed Map.
+const remapCountKey = (chainId: number) => `map_remaps:${chainId}`;
+async function currentMenuNumber(chainId: number): Promise<number> {
+  return Number((await getSetting(remapCountKey(chainId))) || 0);
+}
+async function newMenuNumber(chainId: number): Promise<number> {
+  const n = (await currentMenuNumber(chainId)) + 1;
+  try { await setSetting(remapCountKey(chainId), String(n)); } catch { /* best effort */ }
+  return n;
+}
+interface DeadDoor { door: string; q?: string; menu?: number }
+/** Every mark ever learned, in order. Nothing is ever dropped from this. */
+async function allDeadDoors(chainId: number): Promise<DeadDoor[]> {
   try {
-    const raw = JSON.parse((await getSetting(deadDoorsKey(chainId))) || "[]") as Array<string | { door: string; q?: string }>;
+    const raw = JSON.parse((await getSetting(deadDoorsKey(chainId))) || "[]") as Array<string | DeadDoor>;
     return raw.map((e) => typeof e === "string" ? { door: e } : e).filter((e) => e && e.door);
   } catch { return []; }
 }
-/** Clearing the doors reaches a RUNNING run too (fix pass 6, item 8). A live run holds its own copy
- *  of the refusals and re-writes it after every check, so freeing the lists while it runs would be
- *  undone within a minute. Called by the clear itself. */
-export function forgetDoorsOnLiveRun(chainId: number): void {
-  const run = runs.get(chainId);
-  if (!run) return;
-  run.doorsDead = []; run.doorsDeadQ = {}; run.neverAgain = [];
-  run.log.push({ n: run.attempt, phase: run.phase, store: run.store?.name || "", outcome: "the doors were freed — every way in is fair game again" });
+/** The marks this run must OBEY: the ones learned on the menu we are working on now. Older marks
+ *  stay on file and on the screen; they simply no longer block a fresh map. */
+async function loadDeadDoors(chainId: number, menu: number): Promise<DeadDoor[]> {
+  return (await allDeadDoors(chainId)).filter((e) => Number(e.menu || 0) === menu);
 }
 
 async function rememberDeadDoor(run: MapperRun, door: string, q?: string): Promise<void> {
   if (!run.doorsDead.includes(door)) run.doorsDead.push(door);
   if (q) (run.doorsDeadQ = run.doorsDeadQ || {})[door] = q;
   try {
-    const entries = run.doorsDead.map((d) => ({ door: d, q: run.doorsDeadQ?.[d] }));
-    await setSetting(deadDoorsKey(run.chainId), JSON.stringify(entries.slice(-40)));
+    // APPEND, NEVER REWRITE. Older marks — the ones learned on a menu we have since re-mapped — stay
+    // exactly where they are; this run's marks are stamped with the menu this run is learning.
+    const older = (await allDeadDoors(run.chainId)).filter((e) => Number(e.menu || 0) !== (run.menuNumber ?? 0));
+    const mine = run.doorsDead.map((d) => ({ door: d, q: run.doorsDeadQ?.[d], menu: run.menuNumber ?? 0 }));
+    await setSetting(deadDoorsKey(run.chainId), JSON.stringify([...older, ...mine].slice(-80)));
   } catch { /* best effort */ }
 }
 
@@ -491,7 +509,12 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
     }
   } catch { /* fresh discovery */ }
 
-  const knownDead = await loadDeadDoors(chainId);
+  // A fresh map is a fresh MENU. The counter goes up here — the one door every re-map comes through,
+  // whether the healing loop opened it or the owner pressed Map — so the marks learned on the menu we
+  // just replaced stop being enforced from this moment. They are not deleted: they stay on file and
+  // on the screen against the map they were learned on.
+  const menuNumber = await newMenuNumber(chainId);
+  const knownDead = await loadDeadDoors(chainId, menuNumber);
   const run: MapperRun = {
     chainId, chainName: ch.name,
     phase: "map", running: true,
@@ -504,7 +527,7 @@ export async function startMapper(chainId: number, opts: { storeId?: number } = 
     neverAgain: await loadNeverAgain(chainId),
     experiments: [], log: [],
     startedAt: Date.now(), updatedAt: Date.now(),
-    lockedRecipe, pinnedStoreId: opts.storeId, mapMisses: 0,
+    lockedRecipe, pinnedStoreId: opts.storeId, mapMisses: 0, menuNumber,
   };
   runs.set(chainId, run);
   await saveRun(run);

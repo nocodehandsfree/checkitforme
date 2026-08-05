@@ -179,6 +179,10 @@
   .pickrow{display:flex;align-items:center;gap:12px;padding:10px 12px;cursor:pointer;border-radius:14px;background:linear-gradient(180deg,#2D2D34,#27272D);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);margin-bottom:9px;transition:transform .08s}
   .pickrow:active{transform:translateY(1px)}
   .pickrow.on{box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07),0 0 0 1.5px rgba(74,222,128,.5),0 0 14px rgba(74,222,128,.2)}
+  /* A chain whose menu changed. Same ring as the selected row, in the page's problem red, over a
+     faint warm wash so the trouble reads from arm's length without another label on the row. */
+  .pickrow.trouble{background:linear-gradient(180deg,#372A2C,#2C2427);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07),0 0 0 1.5px rgba(239,68,68,.5),0 0 18px rgba(239,68,68,.28)}
+  .pickrow.trouble.on{box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07),0 0 0 1.5px rgba(239,68,68,.8),0 0 22px rgba(239,68,68,.38)}
   
   .navspin{width:9px;height:9px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;display:inline-block;animation:navspin .7s linear infinite}
   @keyframes navspin{to{transform:rotate(360deg)}}
@@ -333,7 +337,15 @@
   .peek .pk-fact{font-size:15px}
   /* THE dropdown as a pill (filters atop logs/lists) — auto width, raised, green chevron. */
   select.k-filter{width:auto;max-width:60vw;background-color:transparent;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%234ADE80' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>"),linear-gradient(180deg,#2E2E35,#25252B);background-origin:border-box;background-repeat:no-repeat,no-repeat;background-position:right 13px center,center;border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:999px;padding:9px 32px 9px 15px;font-size:12px;font-weight:700;color:rgba(255,255,255,.85)}
-  .k-filters{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
+  /* THE FILTER ROW IS ONE LINE ACROSS THE PAGE (R5). It used to wrap onto a second row on a phone,
+     which pushed the chain list below the fold. Each choice shares the width and shortens its own
+     text instead of the row growing taller. */
+  .k-filters{display:flex;gap:6px;flex-wrap:nowrap;margin:14px 0 4px;width:100%}
+  /* Three filters on one phone line. The problem filter gets the bigger share, because "Menu changed"
+     is the longest choice and the one he is looking for; clipped to "Menu cha…" it stopped being a
+     word (owner 08-04). The two beside it read whole at their share either way. */
+  .k-filters>.k-filter{flex:1 1 0;min-width:0;text-overflow:ellipsis;padding-right:26px;padding-left:11px;background-position:right 9px center,center}
+  .k-filters>.k-filter.wide{flex:1.45 1 0}
   /* THE raised key — Show more, secondary page actions. Uppercase, letterspaced. */
   .k-key{display:block;margin:18px auto 0;background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:999px;padding:12px 26px;font-size:12.5px;font-weight:800;letter-spacing:.13em;color:rgba(255,255,255,.85);cursor:pointer;font-family:inherit;transition:transform .08s}
   .k-key:active{transform:translateY(2px)}
@@ -415,8 +427,10 @@
   .sheet.on{transform:translate(-50%,0)}
   /* ONE grab handle, the same part the site uses (44x6 at 40% white). Admin had its own 40x5 at 16%. */
   .sheet .grab{align-self:center;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:10px 0 6px;flex:0 0 auto}
-  .sheet .sh-title{font-size:20px;font-weight:800;letter-spacing:-.3px;margin:4px 0 2px}
-  .sheet .sh-sub{font-size:12px;font-weight:600;color:#8A8A96;margin-bottom:6px}
+  /* CENTRED HEADERS ON EVERY SLIDE-UP (owner, 08-03) — left-aligned they read as the start of a
+     paragraph; centred they read as the name of what you just opened. */
+  .sheet .sh-title{font-size:20px;font-weight:800;letter-spacing:-.3px;margin:4px 0 2px;text-align:center}
+  .sheet .sh-sub{font-size:12px;font-weight:600;color:#8A8A96;margin-bottom:6px;text-align:center}
   /* Scroll-end spacer. The sheet box deliberately overshoots 120px BELOW the viewport (that is what lets
      iOS ghost its rows through the toolbar), and Safari's own toolbar covers ~90px more. At 70px the last
      rows of a long sheet ended 128px UNDER the toolbar and could not be tapped at all: owner 07-28 could
@@ -629,6 +643,8 @@
   details.tr{margin-top:10px}
   details.tr>summary{list-style:none;cursor:pointer;font-size:12.5px;color:var(--purple);font-weight:700;display:inline-flex;align-items:center;gap:6px}
   details.tr>summary::-webkit-details-marker{display:none}
+  .v2sheet details>summary{list-style:none} .v2sheet details>summary::-webkit-details-marker{display:none}
+  .v2sheet details.card>summary::after{display:none}
   .daychip{display:inline-block;font-size:10.5px;font-weight:700;color:#62626f;background:transparent;border:none;border-radius:0;padding:0;margin-right:9px;letter-spacing:.2px}
   .daychip.on{color:var(--green);background:transparent;border:none}
   .catchip{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:14px;padding:12px 16px;font-weight:800;font-size:13px}
@@ -1205,6 +1221,31 @@
       <div class="pk-main"><div class="pk-t">If we reach the wrong department, ask Staff to transfer us</div><div class="pk-m">We ask again on the same check instead of failing<span id="xferEnv"></span></div></div>
       <button class="k-switch" id="xferToggle" onclick="toggleAskForTransfer()" aria-label="If we reach the wrong department, ask Staff to transfer us"></button>
     </div>
+    <!-- THE THREE NUMBERS HE TUNES AGAINST REAL CHECKS (owner 08-01/08-02). Same toggle row shape as
+         the switches above (comp 1i, the CONSOLE page): a title, one gray line, one control that
+         saves on tap. A number instead of a switch, because these are money, not on and off.
+         They follow the header Live/Staging switch, because tuning staging mid test must never move
+         production and production must never move under him. -->
+    <div class="peek static">
+      <div class="pk-main"><div class="pk-t">Charlie wrap-up seconds</div><div class="pk-m">How long he may be talking before he starts wrapping up<span id="tuneEnv1"></span></div></div>
+      <input class="k-txt" id="tune_charlieWrapUpSeconds" inputmode="numeric" style="max-width:22vw;text-align:right" aria-label="Charlie wrap-up seconds" onchange="saveCallTuning(this)">
+    </div>
+    <div class="peek static">
+      <div class="pk-main"><div class="pk-t">Hold cap seconds</div><div class="pk-m">How long a wait may run before we hang up<span id="tuneEnv2"></span></div></div>
+      <input class="k-txt" id="tune_holdCapSeconds" inputmode="numeric" style="max-width:22vw;text-align:right" aria-label="Hold cap seconds" onchange="saveCallTuning(this)">
+    </div>
+    <div class="peek static">
+      <div class="pk-main"><div class="pk-t">Silence before Charlie drops</div><div class="pk-m">How long a pause runs before we say Staff walked off<span id="tuneEnv3"></span></div></div>
+      <input class="k-txt" id="tune_holdQuietMs" inputmode="numeric" style="max-width:22vw;text-align:right" aria-label="Silence before Charlie drops" onchange="saveCallTuning(this)">
+    </div>
+    <div class="peek static">
+      <div class="pk-main"><div class="pk-t">Ring wait seconds</div><div class="pk-m">How long the phone may ring while we wait for a human<span id="tuneEnv4"></span></div></div>
+      <input class="k-txt" id="tune_ringWaitSeconds" inputmode="numeric" style="max-width:22vw;text-align:right" aria-label="Ring wait seconds" onchange="saveCallTuning(this)">
+    </div>
+    <div class="peek static">
+      <div class="pk-main"><div class="pk-t">Check length seconds</div><div class="pk-m">How long a whole check may run before the phone company ends it<span id="tuneEnv5"></span></div></div>
+      <input class="k-txt" id="tune_maxCheckSeconds" inputmode="numeric" style="max-width:22vw;text-align:right" aria-label="Check length seconds" onchange="saveCallTuning(this)">
+    </div>
     <!-- Came off Policy 07-29: an analytics ID is an app-wide default, not pricing, and it was the one
          thing under Policy's "Pricing and rewards" eyebrow that was neither. Same field, same save. -->
     <div class="peek static">
@@ -1392,11 +1433,12 @@
     </div>
     <div id="tr_progress"></div>
     <div id="set_pickwrap">
+      <div id="set_reportboxes" class="stats" style="margin:16px 0 0"></div>
       <input id="set_search" placeholder="Search chains…" oninput="filterChainPicker()" style="margin:16px 0 10px;font-size:14px;padding:12px 15px">
       <div class="k-filters" style="margin:0 0 4px">
         <select class="k-filter" id="set_frate" onchange="filterChainPicker()"><option value="">All ratings</option><option value="5">5 Best Chance</option><option value="4">4 Mostly Reliable</option><option value="3">3 Spotty</option><option value="2">2 Over MSRP</option><option value="1">1 Unknown</option></select>
         <select class="k-filter" id="set_ftype" onchange="filterChainPicker()"><option value="">All types</option></select>
-        <select class="k-filter" id="set_fmap" onchange="filterChainPicker()"><option value="">All</option><option value="mapped">Mapped</option><option value="unmapped">Unmapped</option><option value="changed">Menu changed</option></select>
+        <select class="k-filter wide" id="set_fmap" onchange="filterChainPicker()"><option value="">All</option><option value="mapped">Mapped</option><option value="unmapped">Unmapped</option><option value="changed">Menu changed</option></select>
       </div>
       <select id="set_chain" onchange="setPickChain()" style="display:none"><option value="">Select a chain</option></select>
       <div id="set_picker"><div class="empty">Loading…</div></div>
@@ -1429,8 +1471,6 @@
           <div class="row" style="gap:8px;margin-top:16px;flex-wrap:wrap">
             <button class="act" id="set_mapbtn" onclick="setMapChain()">Map</button>
             <button class="ghost" id="set_mapstop" onclick="mapperStop()" style="display:none">Stop</button>
-            <button class="ghost" onclick="mapFreeDoors()">Free doors</button>
-            <button class="ghost" onclick="mapStartOver()">Start over</button>
           </div>
           <div class="meta" id="set_mapnote" style="margin-top:10px;text-transform:none;letter-spacing:0;line-height:1.5"></div>
           <div class="card" id="mapper_live" style="display:none;border-color:var(--tint-purple-border);margin-top:12px">
@@ -1475,11 +1515,6 @@
         <div class="pk-fact" id="pk_setver"></div>
         <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
       </button>
-      <button class="peek" id="set_reviewrow" style="display:none" onclick="sheetFromHolder('ds_setreview','Review','')">
-        <div class="pk-main"><div class="pk-t">Review</div></div>
-        <div class="pk-fact" id="pk_setreview"></div>
-        <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-      </button>
       <div class="k-eyebrow" style="margin-top:24px">Chain</div>
       <button class="peek" onclick="sheetFromHolder('ds_setall','Settings','')">
         <div class="pk-main"><div class="pk-t">Settings</div></div>
@@ -1499,7 +1534,6 @@
         <div id="ds_setruns"><div id="set_runs"></div></div>
         <div id="ds_setmenu"><div id="set_menu"></div></div>
         <div id="ds_setver"><div id="set_versions"></div></div>
-        <div id="ds_setreview"><div id="set_review"></div></div>
       </div>
     </div>
     </section>
@@ -2010,7 +2044,7 @@ const NAV_GROUPS={
   launch:   {label:'Launch',   ico:'trophy',tabs:[['gtm','Go-to-Market','check']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), alerts:()=>loadAlerts(), dash:()=>{loadDash();loadOpsCost();loadGwPulse();}, calc:()=>{calcInit();loadCredits();}, plans:()=>loadPlans(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>{loadResults();loadCallHealth();}, feedback:()=>loadFeedback(), support:()=>loadSupport(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadOurBrain();loadAskForTransfer();loadAdvancedPolicy();}, gtm:()=>loadGtm() };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), alerts:()=>loadAlerts(), dash:()=>{loadDash();loadOpsCost();loadGwPulse();}, calc:()=>{calcInit();loadCredits();}, plans:()=>loadPlans(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>{loadResults();loadCallHealth();}, feedback:()=>loadFeedback(), support:()=>loadSupport(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadOurBrain();loadAskForTransfer();loadCallTuning();loadAdvancedPolicy();}, gtm:()=>loadGtm() };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 let NAV_RESTORING=false, NAV_BOOTED=false; // browser Back/Forward walks the admin's own tab history
 let FB_OPEN=0; // unreviewed poll disagreements — count badge on the Calls ▸ Feedback tab
@@ -2346,7 +2380,7 @@ async function openReceiptInto(url,o){
   // map is complete by definition. A missing one used to fall through and print its code name.
   const KIND={dialed:'Dialled',ringing:'Ringing',connected:'The line was answered',ivr_detected:'A phone menu',
     alpha_press:'Pressed a key',bravo_say:'Said a word',human_detected:'Staff greeting',
-    charlie_join:'Charlie joined',charlie_leave:'Charlie left',
+    charlie_join:'Charlie joined',charlie_leave:'Charlie dropped',
     hold_start:'Staff stepped away',hold_end:'Staff back',transfer:'Transferred',voicemail:'A machine',
     unknown:'Something we could not place',verdict:'Answer',hangup:'Check ended'};
   const c=d.cost||{}, s=d.seconds||d.rollup||{};
@@ -2370,7 +2404,14 @@ async function openReceiptInto(url,o){
       +`<div class="stat"><div class="n">${s.navSeconds!=null?s.navSeconds+'s':'—'}</div><div class="l">Time to Staff</div></div>`
     +`</div>`:'<div class="k-note" style="padding-top:0">This check ran before the new calling engine, so its seconds and its cost were never written down.</div>')
     +(rungs?`<div class="mladder">${rungs}</div>`:'<div class="empty">No steps recorded.</div>')
-    +(d.live?'<div class="meta" style="margin-top:10px">This call is still going.</div>':'');
+    // THE SAME SHAPE AS THE CUSTOMER'S OWN CHECK LOG (owner 08-01): the steps end to end, the menu
+    // walk included, and then the conversation itself. Both come from the same record, so this is one
+    // shape and not two. Same bubbles as every other transcript in the Admin.
+    +(Array.isArray(d.lines)&&d.lines.length
+      ? `<div class="k-eyebrow" style="margin-top:14px">The conversation</div>`
+        +bubbles(d.lines.map(l=>(l.who==='Agent'?'Agent: ':'Clerk: ')+String(l.text||'')).join('\n'))
+      : '')
+    +(d.live?'<div class="meta" style="margin-top:10px">This check is still going.</div>':'');
 }
 // DID THE NEW ENGINE BEHAVE. Four rows, each a green tick or a red cross, scored on the server off
 // this same receipt (src/calls/behaved.ts). A GRAY DASH is the third answer and it is deliberate: it
@@ -2378,14 +2419,21 @@ async function openReceiptInto(url,o){
 // Every row carries the owner's tooltip; the gray line under it is what the record actually showed.
 function behavedCard(rows){
   if(!Array.isArray(rows)||!rows.length) return '';
+  // THREE STATES, NEVER TWO (owner): Used · Unused · Broken. Unused is a CLEAN result, not a failure,
+  // and a plain check is mostly Unused. The word is printed beside the mark because a gray dash on
+  // its own has been read as "something went wrong" more than once.
   const mark=p=>{
-    const m=p===true?['#4ADE80','<path d="M5 12l5 5 9-10"/>']
-      :p===false?['#EF4444','<path d="M6 6l12 12M18 6L6 18"/>']
-      :['#9CA3AF','<path d="M6 12h12"/>'];
-    return `<span style="width:26px;height:26px;border-radius:50%;background:${m[0]}26;display:grid;place-items:center;flex:0 0 auto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${m[0]}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${m[1]}</svg></span>`;
+    const m=p===true?['#4ADE80','<path d="M5 12l5 5 9-10"/>','Used']
+      :p===false?['#EF4444','<path d="M6 6l12 12M18 6L6 18"/>','Broken']
+      :['#9CA3AF','<path d="M6 12h12"/>','Unused'];
+    return `<span style="display:flex;align-items:center;gap:6px;flex:0 0 auto">`
+      +`<span style="font-size:10.5px;font-weight:800;letter-spacing:.4px;color:${m[0]}">${m[2]}</span>`
+      +`<span style="width:26px;height:26px;border-radius:50%;background:${m[0]}26;display:grid;place-items:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${m[0]}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${m[1]}</svg></span></span>`;
   };
+  const used=rows.filter(r=>r.pass===true).length, broke=rows.filter(r=>r.pass===false).length;
   return `<div class="card" style="margin-bottom:14px;padding:16px 18px">
     <div class="k-eyebrow" style="margin:0 0 4px">Charlie behavior</div>
+    <div class="meta" style="margin:0 0 6px">${used} used · ${rows.length-used-broke} unused · ${broke} broken</div>
     ${rows.map(r=>`<div class="row" style="align-items:flex-start;padding:8px 0">
       <span class="grow">
         <span style="display:block;font-size:13.5px;font-weight:700;color:var(--text-strong)" data-tip="${esch(r.tip||'')}">${esch(r.label||'')}</span>
@@ -2416,6 +2464,134 @@ function splitCard(c,priced,tl){
     ${row('Total',rd.total||'')}
   </div>`;
 }
+// ---- THE CHECK SHEET (owner-approved comp 08-04, wired to the real record the same day). Every
+// element is the page's own: .stat tiles, .card, the ladder metrics from chainRung, and the
+// website's .ctlv2-bub conversation cards. The pixels are final; checkV2From below is the wiring.
+// THE REAL RECORD -> THE APPROVED SHEET (owner 08-04). The pixels above are final; this maps what
+// the server sends (the timeline, the spoken lines, the behavior rows, the five cost buckets, the
+// named test card) into the shape checkV2Html reads. Nothing visual is invented here and no rate or
+// card string is typed here: the strings ride in from the server, which owns them.
+function checkV2From(d,o){
+  o=o||{};
+  const v2=d.v2||{};
+  const secs=d.seconds||{};
+  const mmss=n=>{n=Math.max(0,Math.round(n||0));return Math.floor(n/60)+':'+String(n%60).padStart(2,'0');};
+  // Charlie talked tile (owner rule): green at 23s or under, yellow 24 to 30, red 31 and up.
+  const talk=v2.talkSec;
+  const talkedC=talk==null?'var(--muted)':talk<=23?'var(--green)':talk<=30?'var(--yellow)':'var(--red)';
+  // Gross profit against the 67 percent floor. Red is reserved for a bad final status (color law),
+  // so under the floor reads yellow, never red.
+  const profitC=v2.profitPct==null?'var(--muted)':v2.profitPct>=67?'var(--green)':'var(--yellow)';
+  const behavior=(d.behaved||[]).filter(r=>r.pass===true||r.pass===false).map(r=>({l:r.label,pass:r.pass===true}));
+
+  // ---- the log: every step end to end, menu steps grouped, spoken lines under their step ----
+  const tl=(d.timeline||[]).slice();
+  const lines=(d.lines||[]).slice();
+  const st=e=>((e.detail||{}).step)||'';
+  const log=[];const used=new Set();
+  const takeLine=(who,at,win)=>{ // the nearest unclaimed spoken line for a step, inside its window
+    let best=-1,gap=1e9;
+    lines.forEach((l,i)=>{ if(used.has(i)||l.who!==who||l.atSec==null)return; const g=Math.abs(l.atSec-at); if(l.atSec>=at-1&&g<(win||8)&&g<gap){best=i;gap=g;} });
+    if(best<0)return null; used.add(best); const l=lines[best]; return {who:l.who==='Agent'?'Agent':'Clerk',tx:l.text};
+  };
+  for(let i=0;i<tl.length;i++){
+    const e=tl[i],at=(e.atSec||0)+'s',atN=e.atSec||0,step=st(e);
+    // The menu walk, grouped and expandable, at the front where it happened.
+    if(e.kind==='ivr_detected'||e.kind==='alpha_press'||e.kind==='bravo_say'){
+      const g=[{t:e.note,at}];let j=i+1;
+      while(j<tl.length&&(tl[j].kind==='ivr_detected'||tl[j].kind==='alpha_press'||tl[j].kind==='bravo_say')){g.push({t:tl[j].note,at:(tl[j].atSec||0)+'s'});j++;}
+      const lane=tl.slice(i,j).some(x=>x.kind==='alpha_press')?'Alpha':'Bravo';
+      log.push({t:'Navigating menu ('+lane+')',at,group:g});i=j-1;continue;
+    }
+    if(e.kind==='human_detected'){log.push({t:'Staff greeting',at,c:'var(--green)',say:takeLine('Clerk',atN,10),open:log.length<4});continue;}
+    if(step==='question_clip'){log.push({t:'Delta recording',at,say:takeLine('Agent',atN,10)});continue;}
+    if(step==='second_read'){log.push({t:'The answer was double checked ('+((e.detail||{}).model||'')+')',at});continue;}
+    if(step==='charged'){log.push({t:e.note,at});continue;}
+    if(e.kind==='verdict'){
+      const key=String((e.detail||{}).statusKey||'');const reg=STATUSES[key]||{};
+      const decided=(e.detail||{}).decidedBy;
+      log.push({t:reg.label||e.note||key,at,status:reg.tone||'unk',sub:decided?('Decided by: "'+decided+'"'):''});continue;
+    }
+    if(e.kind==='charlie_join'){const seg=(e.detail||{}).segment;log.push({t:seg>1?'Charlie reconnected':'Charlie joined',at});continue;}
+    if(e.kind==='ringing'||e.kind==='transfer'||e.kind==='hold_start'){log.push({t:e.note,at,c:'var(--yellow)'});continue;}
+    if(step==='wrap_up'){log.push({t:e.note,at,say:takeLine('Agent',atN,10)});continue;}
+    if((e.detail||{}).silent)continue; // bookkeeping the engine marked as not for the page
+    log.push({t:e.note||e.kind,at});
+  }
+  // Spoken lines no step claimed still belong on the record, at their own seconds, in order.
+  lines.forEach((l,i)=>{ if(used.has(i))return;
+    const entry={t:l.who==='Agent'?'Charlie said':'Staff answered',at:l.atSec!=null?l.atSec+'s':'',say:{who:l.who==='Agent'?'Agent':'Clerk',tx:l.text},_at:l.atSec};
+    if(l.atSec==null){const k=Math.max(0,log.length-1);log.splice(k,0,entry);return;}
+    let k=log.findIndex(x=>parseInt(x.at)>l.atSec);if(k<0)k=log.length;log.splice(k,0,entry);
+  });
+  return {
+    name:(v2.test&&v2.test.name)||o.name||'Check',
+    sub:(v2.test&&v2.test.sub)||o.sub||'',
+    info:(v2.test&&v2.test.info)||'',
+    passed:behavior.filter(r=>r.pass).length,
+    failed:behavior.filter(r=>!r.pass).length,
+    stats:{cost:v2.readable||((d.cost&&d.cost.readable&&d.cost.readable.total)||'—'),time:secs.callSecs!=null?mmss(secs.callSecs):'—',talked:talk!=null?talk+'s':'—',profit:v2.profitPct!=null?v2.profitPct+'%':'—',talkedC,profitC},
+    cost:(v2.buckets||[]).map(b=>({l:b.label,v:money2(b.usd),d:b.detail})),
+    behavior,
+    workflow:v2.workflow||null,
+    when:o.when||'',
+    log,
+  };
+}
+function checkV2Html(d){
+  const pill=(n,w,cls)=>n?`<span style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:5px 12px;${cls}">${n} ${w}</span>`:'';
+  const head=`<div style="display:inline-block;max-width:100%">
+      <div><span data-tip="${esch(d.info)}" style="font-size:20px;font-weight:800;letter-spacing:-.4px;color:#fff;white-space:nowrap">${esch(d.name)}</span></div>
+      <div class="meta" style="margin:5px 0 0;font-size:13px;max-width:0;min-width:100%">${esch(d.sub)}</div></div>
+    <div style="display:flex;gap:7px;margin:12px 0 16px">
+      ${pill(d.passed,'passed','color:var(--green);background:rgba(74,222,128,.13)')}
+      ${pill(d.failed,'failed','color:var(--red);background:rgba(239,68,68,.13)')}
+    </div>`;
+  const stats=`<div class="stats" style="grid-template-columns:1fr 1fr;margin-bottom:14px">
+      <div class="stat"><div class="n" style="color:#fff">${d.stats.cost}</div><div class="l">Total cost</div></div>
+      <div class="stat"><div class="n" style="color:#fff">${d.stats.time}</div><div class="l">Total time</div></div>
+      <div class="stat"><div class="n" style="color:${d.stats.talkedC||'var(--green)'}">${d.stats.talked}</div><div class="l">Charlie talked</div></div><!-- owner rule: green at 23s or under, yellow 24 to 30, red 31 and up -->
+      <div class="stat"><div class="n" style="color:${d.stats.profitC||'var(--green)'}">${d.stats.profit}</div><div class="l">Gross profit</div></div>
+    </div>`;
+  const mini=rows=>`<div style="padding:2px 0 8px">${rows.map(r=>`<div style="display:flex;align-items:baseline;gap:6px;padding:3px 0 3px 12px"><span style="flex:0 0 auto;font-size:12px;font-weight:600;color:#8A8A96">${esch(r[0])}</span><span style="flex:1;border-bottom:1px dotted rgba(255,255,255,.16);transform:translateY(-3px)"></span><span style="flex:0 0 auto;font-size:12px;font-weight:700;color:var(--text-strong);font-variant-numeric:tabular-nums">${esch(r[1])}</span></div>`).join('')}</div>`;
+  const chev='<svg class="pk-chev" width="15" height="15" style="flex:0 0 auto;width:15px;height:15px;color:#5C5C68" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
+  const cost=`<div class="card" style="margin-bottom:14px;padding:16px 18px">
+      <div class="k-eyebrow" style="margin:0 0 4px">Check cost</div>
+      ${d.cost.map(r=>`<details class="v2c"${r.open?' open':''}><summary style="list-style:none;cursor:pointer"><div class="row" style="padding:6px 0"><span class="grow" style="display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:var(--text-strong)">${esch(r.l)} ${chev}</span><span style="font-size:14px;font-weight:800;color:var(--text-strong);font-variant-numeric:tabular-nums">${r.v}</span></div></summary>${mini(r.d)}</details>`).join('')}
+      <div class="row" style="padding:9px 0 0;margin-top:6px;border-top:1px solid rgba(255,255,255,.08)"><span class="grow" style="font-size:14px;font-weight:800;color:#fff">Total</span><span style="font-size:15px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums">${d.stats.cost}</span></div>
+    </div>`;
+  const bmark=p=>`<span style="width:26px;height:26px;border-radius:50%;background:${p?'rgba(74,222,128,.15)':'rgba(239,68,68,.15)'};display:grid;place-items:center;flex:0 0 auto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${p?'#4ADE80':'#EF4444'}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${p?'<path d="M5 12l5 5 9-10"/>':'<path d="M6 6l12 12M18 6L6 18"/>'}</svg></span>`;
+  const behavior=`<details open class="card" style="margin-bottom:14px;padding:16px 18px"><summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;margin-bottom:8px"><span class="k-eyebrow" style="margin:0;flex:1">Charlie behavior</span>${chev}</summary>
+      ${d.behavior.map(r=>`<div class="row" style="align-items:center;padding:8px 0"><span class="grow" style="font-size:13.5px;font-weight:700;color:var(--text-strong)">${esch(r.l)}</span>${bmark(r.pass)}</div>`).join('')}
+    </details>`;
+  const say=(w,tx)=>{const ai=w==='Agent';return `<div class="convo-thread" style="margin:6px 0 2px"><div class="ctlv2-bub${ai?' ai':''}"><div class="who">${ai?'CHECK AI':'STAFF'}</div><div class="tx">${esch(tx)}</div></div></div>`;};
+  const menuIco='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>';
+  const spkIco='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5 8.38 8.38 0 0 1 8.5 8.5z"/></svg>';
+  const statusIco=t=>{const m=t==='out'?['#EF4444','<path d="M6 6l12 12M18 6L6 18"/>']:t==='in'?['#4ADE80','<path d="M5 12l5 5 9-10"/>']:['#FBBF24','<path d="M6 12h12"/>'];
+    return `<span style="width:22px;height:22px;border-radius:50%;background:${m[0]}26;display:grid;place-items:center;flex:0 0 auto;margin-left:-4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${m[0]}" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">${m[1]}</svg></span>`;};
+  const rung=(e,last)=>{
+    const dot=e.status?statusIco(e.status):(e.say||e.group)?`<span style="display:grid;place-items:center;width:15px;height:15px;flex:0 0 auto;color:${e.c||'#8A8A96'}">${e.group?menuIco:spkIco}</span>`:`<span style="width:9px;height:9px;border-radius:50%;background:${e.c||'var(--muted)'};flex:0 0 auto"></span>`;
+    const line=last?'':`<span style="width:2px;flex:1;background:rgba(255,255,255,.14)"></span>`;
+    const title=`<span style="display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:${e.status?'800':'700'};color:${e.tc||(e.status?'#fff':'var(--text-strong)')}">${esch(e.t)}${(e.say||e.group)?chev:''}</span>`;
+    const at=`<span style="margin-left:auto;font-size:12px;font-weight:700;color:var(--muted);flex:0 0 auto;font-variant-numeric:tabular-nums">${e.at||''}</span>`;
+    let body='';
+    if(e.say) body=say(e.say.who,e.say.tx);
+    if(e.group) body=`<div style="padding:4px 0 0 6px">${e.group.map(g=>`<div style="display:flex;align-items:baseline;gap:8px;padding:3px 0"><span style="font-size:12.5px;font-weight:600;color:#8A8A96">${esch(g.t)}</span><span style="margin-left:auto;font-size:11.5px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums">${g.at}</span></div>`).join('')}</div>`;
+    const sub=e.sub?`<div style="font-size:12px;font-weight:500;color:rgba(255,255,255,.55);margin-top:3px">${esch(e.sub)}</div>`:'';
+    const inner=(e.say||e.group)
+      ?`<details${e.open?' open':''}><summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px">${title}${at}</summary>${body}</details>${sub}`
+      :`<div style="display:flex;align-items:center;gap:8px">${title}${at}</div>${sub}`;
+    return `<div style="display:flex;gap:12px"><div style="display:flex;flex-direction:column;align-items:center;flex:0 0 15px;padding-top:5px">${dot}${line}</div><div style="flex:1;min-width:0;padding-bottom:${last?'0':'13px'}">${inner}</div></div>`;
+  };
+  const logCard=`<details open class="card" style="padding:16px 18px"><summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px"><span class="k-eyebrow" style="margin:0;flex:1">Check log</span><span style="font-size:12px;font-weight:700;color:var(--muted)">${esch(d.when)}</span>${chev}</summary>
+      ${d.workflow?`<details style="margin:8px 0 2px"><summary style="list-style:none;cursor:pointer;display:inline-flex"><span style="display:inline-flex;align-items:center;background:#1B1B20;border-radius:999px;padding:6px 13px;box-shadow:inset 0 2px 5px rgba(0,0,0,.4);font-size:12px;font-weight:700;color:var(--text-strong)">${esch(d.workflow.name)}</span></summary>${mini(d.workflow.d)}</details>`:''}
+      <div class="mladder" style="margin-top:12px">${d.log.map((e,i,a)=>rung(e,i===a.length-1)).join('')}</div>
+    </details>`;
+  return `<div class="v2sheet">${head+stats+cost+behavior+logCard}</div>`;
+}
+// Microdollars to the cents string, the same arithmetic the server prints with.
+function money2(u){const c=(u/1e6)*100;return c<100?c.toFixed(1)+'\u00a2':'$'+(u/1e6).toFixed(2);}
+
 // ---- Delta (Fun): rehearse the Delta lane — recorded clips + cheap classifier, no live agent ----
 let TD_POLL=null, TD_ID=null;
 let TD_BUSY=false;
@@ -2490,7 +2666,9 @@ async function mapperPoll(){
   box.style.display='';
   if(stopBtn) stopBtn.style.display=run.running?'':'none';
   if(loopBtn) loopBtn.disabled=!!run.running;
-  const PHASE={map:'Mapping menu',speed:'Optimizing speed',locked:'Locked ✓',stopped:'Stopped'};
+  // The live card names the same stages the checks do (owner, 08-03): while the run is learning the
+  // menu it is proving the department — that is one job, not two.
+  const PHASE={map:'Proving department',speed:'Optimizing speed',locked:'Locked ✓',stopped:'Stopped'};
   document.getElementById('mapper_phase').textContent=PHASE[run.phase]||run.phase;
   document.getElementById('mapper_meta').textContent='call '+run.attempt+' · '+run.callsToday+'/12 today'+(run.running?'':' · done');
   const best=run.best&&run.best.seconds!=null?run.best.seconds+'s':'—';
@@ -3818,7 +3996,17 @@ function splitName(n){ return {base:(n||'').trim(),branch:''}; }
 // measures anything, nothing waits for the image to load, and the site and the Admin cannot drift
 // apart because neither owns the rule. A row with no logoPct (artwork we could not read) simply
 // falls back to the tile's own CSS.
-function logoStyle(o){ return (o && typeof o.logoPct === 'number') ? ` style="width:${o.logoPct}%;height:auto;max-width:none;max-height:none;object-fit:contain"` : ''; }
+// Twin of the site's. Admin has no round logo boxes today, so it never passes a shape; the parameter
+// stays so the two cannot drift if one ever gains a circular tile.
+function logoStyle(o, shape){
+  if(!o || typeof o.logoPct !== 'number') return '';
+  let pct = o.logoPct;
+  if(shape === 'round'){
+    const a = (typeof o.logoAspect === 'number' && o.logoAspect > 0) ? o.logoAspect : 1;
+    pct = Math.min(pct, 100 * a / Math.sqrt(1 + a * a));
+  }
+  return ` style="width:${pct.toFixed(2)}%;height:auto;max-width:none;max-height:none;object-fit:contain"`;
+}
 function logoTile(o){
   o=o||{};
   if(o.logoUrl) return `<div class="slogo${o.logoDark?' lite':''}${o.logoWide?' widelogo':''}"><img loading="lazy" decoding="async" src="${esch(o.logoUrl)}" alt=""${logoStyle(o)}></div>`;
@@ -4714,19 +4902,18 @@ function buildChainPicker(){
     const route=locked
       ? `<span style="color:#8A8A96;font-weight:700">${ln||'mapped'}</span>`+(nv!=null?` <span style="color:#8A8A96">${nv}s</span>`:'')
       : '<span style="color:#F59E0B;font-weight:700">unmapped</span>';
-    // SOMETHING WAITING is an ICON, not words (owner, 07-30): a small red alert beside the name draws
-    // the eye without another label on an already busy row. It appears only when there is real work —
-    // a route waiting on him, something still open, or a store of this chain that took itself off the
-    // website — never for how the map scores itself. The last of those clears when the store heals,
-    // so the icon and the "Menu changed" choice both empty themselves (owner R2).
+    // A CHAIN WITH A MENU PROBLEM GLOWS (owner 08-04). The small red mark is DELETED. It lit for
+    // anything sitting open, including things nobody ever has to look at, so a working chain wore a
+    // warning while the box above it counted zero. Two parts of one page were saying different things.
+    // ONE rule now, shared by the glow, the box and the choice in the dropdown: a chain has a problem
+    // when its menu changed and its stores took themselves off the website. It clears when they heal.
+    // The glow is the row's OWN selection ring (comp 2e) in the page's problem red, never a new shape.
     const g=mapRow(ch.id);
-    const alert=(g&&(g.menuChanged||g.proposed>0||g.openUnknowns>0))
-      ? ' <svg style="vertical-align:-2px;margin-left:3px" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
-      : '';
+    const trouble=!!(g&&g.menuChanged);
     const meta=[nStores?nStores+' store'+(nStores===1?'':'s'):null, ch.muted?'muted':null, route].filter(Boolean).join(' · ');
-    return `<div class="pickrow${String(ch.id)===cur?' on':''}" data-id="${ch.id}" data-name="${esch((ch.name||'').toLowerCase())}" data-tier="${ch.tier??''}" data-type="${esch((ch.type||'').toLowerCase())}" data-mapped="${locked?1:0}" data-changed="${(g&&(g.menuChanged||g.proposed>0||g.drift30d>0||g.openUnknowns>0))?1:0}" onclick="pickChainRow(${ch.id})"${ch.muted?' style="opacity:.5"':''}>
+    return `<div class="pickrow${String(ch.id)===cur?' on':''}${trouble?' trouble':''}" data-id="${ch.id}" data-name="${esch((ch.name||'').toLowerCase())}" data-tier="${ch.tier??''}" data-type="${esch((ch.type||'').toLowerCase())}" data-mapped="${locked?1:0}" data-changed="${trouble?1:0}" onclick="pickChainRow(${ch.id})"${ch.muted?' style="opacity:.5"':''}>
       <span class="setlogo">${logoTile(ch)}</span>
-      <span style="flex:1;min-width:0"><span style="display:block;color:#fff;font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esch(ch.name)}${alert}</span>
+      <span style="flex:1;min-width:0"><span style="display:block;color:#fff;font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esch(ch.name)}</span>
       <span style="display:block;font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px">${meta}</span></span>
       ${chip(ch.tier)}</div>`;
   }).join('')||'<div class="empty" style="padding:16px">No chains loaded.</div>';
@@ -4734,6 +4921,7 @@ function buildChainPicker(){
   const types=[...new Set((CHAINS||[]).map(c=>c.type).filter(Boolean))].sort();
   const tf=document.getElementById('set_ftype'); if(tf){ const cur=tf.value; tf.innerHTML='<option value="">All types</option>'+types.map(t=>`<option value="${esch(String(t).toLowerCase())}">${esch(t)}</option>`).join(''); if([...tf.options].some(o=>o.value===cur)) tf.value=cur; }
   filterChainPicker();
+  renderChainReportBoxes();
 }
 // Comp 2e: grade chip = color is the bucket (good/ok/weak), number is the grade. Unrated = no chip.
 // Shared with the chain detail's Store settings row, so one grade is never worded two ways.
@@ -4741,6 +4929,28 @@ const CH_GRADE={5:['Best','#4ADE80'],4:['Reliable','#4ADE80'],3:['Spotty','#F59E
 // Comp 2e: long list ends in a Show-more key, never a wall of 131 rows.
 let CH_LIMIT=30;
 function chainsShowMore(){ CH_LIMIT+=100; filterChainPicker(); }
+// THE THREE BOXES AT THE TOP OF THE CHAINS PAGE (R5): how many chains are mapped, how many are not,
+// and how many have a menu that changed. Tapping one sets the filter below, so the number and the
+// list can never say different things. Colours are the page's own: green good, yellow neutral, red bad.
+function renderChainReportBoxes(){
+  const box=document.getElementById('set_reportboxes'); if(!box) return;
+  const rows=(CHAINS||[]);
+  let mapped=0, unmapped=0, changed=0;
+  rows.forEach(ch=>{ const g=mapRow(ch.id);
+    if(g&&g.menuChanged) changed++;
+    if(ch.navStatus==='locked'||(g&&g.mapped)) mapped++; else unmapped++; });
+  const cur=(document.getElementById('set_fmap')||{}).value||'';
+  const tile=(n,label,color,key)=>`<div class="stat" onclick="chainReportPick('${key}')" style="cursor:pointer${cur===key?';box-shadow:0 0 0 1px '+color+' inset':''}">`
+    +`<div class="n" style="color:${color}">${n}</div><div class="l">${label}</div></div>`;
+  box.innerHTML=tile(mapped,'Mapped','var(--green)','mapped')
+    +tile(unmapped,'Unmapped','#F59E0B','unmapped')
+    +tile(changed,'Menu changed','#F87171','changed');
+}
+function chainReportPick(key){
+  const sel=document.getElementById('set_fmap'); if(!sel) return;
+  sel.value = sel.value===key ? '' : key;
+  filterChainPicker(); renderChainReportBoxes();
+}
 function filterChainPicker(){
   const el=document.getElementById('set_picker'); if(!el) return;
   const raw=(document.getElementById('set_search')||{}).value||''; const norm=s=>(s||'').toLowerCase().replace(/[^a-z0-9]+/g,''); const q=norm(raw);
@@ -4870,7 +5080,7 @@ function chainRung(s,last){
 // sentence, and the glossary term (Staff, check, recipe, locked).
 async function renderChainSheets(ch,nav){
   const d=await loadChainMap(ch.id);
-  const versions=((d||{}).versions)||[], unknowns=((d||{}).unknowns)||[];
+  const versions=((d||{}).versions)||[];
   const active=versions.find(v=>v.status==='active')||versions[0];
   const set=(id,t,c)=>{ const e=document.getElementById(id); if(e){ e.textContent=t||''; e.style.color=c||''; } };
 
@@ -4909,16 +5119,11 @@ async function renderChainSheets(ch,nav){
       +recipeGap(held)
     : '<div class="empty">No recipe yet. Tap Map to learn one.</div>';
 
-  // REVIEW — only when there is something to look at.
-  // ONLY WHAT IS STILL OPEN. A card he already cleared was coming back, so the row counted decisions
-  // that had been made (owner, 07-30). And HEARD TWICE = REAL (the contract's bar): a menu heard
-  // once is not yet a thing to show. It stays off the list and appears when a second hearing proves it.
-  const open=unknowns.filter(u=>u.status==='open'&&!(u.kind==='menu-changed'&&Number(u.count||1)<2));
-  set('pk_setreview', open.length?String(open.length)+' waiting':'', open.length?'#F59E0B':'');
-  const rr=document.getElementById('set_reviewrow'); if(rr) rr.style.display=open.length?'':'none';
-  const uw=document.getElementById('set_review');
-  const expected=active?routeWords(active):'';
-  if(uw) uw.innerHTML = open.length ? open.map(u=>mapUnknownCard(u,ch.id,expected)).join('') : '';
+  // THE REVIEW ROW IS DELETED (owner 08-04): "there is nothing for me to review, so it should not say
+  // it there." It counted findings the system already acts on by itself. A store whose menu changed
+  // takes itself off the website and re-maps itself, a store that answers differently is marked Not
+  // used, and the one thing that is genuinely his call, a faster route waiting to go live, has always
+  // had its own card at the top of this page. Nothing on this page asks him to look at anything now.
 }
 const cap=t=>{ t=String(t||''); return t?t[0].toUpperCase()+t.slice(1):''; };
 
@@ -4965,7 +5170,7 @@ function renderMenuByCondition(ch, active, nav, calls){
       : `<div style="margin-top:14px" class="empty">Not heard<div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${esch(cd.how)}</div></div>`);
 }
 // Each question the store asks, its choices underneath: the word we say in its model's color, the
-// proven door green with a check. A line the pencil corrected shows the corrected words, marked, and
+// proven door green with a check. A line you corrected shows your words, marked, and
 // a future check never overwrites a correction.
 function doorMap(ch,call,v){
   const fixes=(CHAIN_MAP[ch.id]&&CHAIN_MAP[ch.id].menuFixes)||{};
@@ -4985,7 +5190,6 @@ function doorMap(ch,call,v){
   steps.forEach((st,si)=>{ if(si<lines.length) stepFor[si]=si; });
   const laneC=(st)=>st.action==='press'?LANE_C.Alpha:LANE_C.Bravo;
   const opts=((v&&v.recipe&&v.recipe.menu)||[]);
-  const pencil='<svg style="vertical-align:-2px;margin-left:6px;cursor:pointer" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5C5C68" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>';
   const playIco='<svg style="vertical-align:-2px" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8A8A96" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>';
   return lines.map((ln,i)=>{
     const fixed=fixes[i]!=null&&String(fixes[i]).trim();
@@ -5021,7 +5225,7 @@ function doorMap(ch,call,v){
       +(last?'':`<span style="width:2px;flex:1;background:rgba(255,255,255,.10);margin:3px 0"></span>`)+`</div>`
       +`<div style="flex:1;min-width:0;padding-bottom:${last?'0':'16px'}">`
       +`<div style="display:flex;align-items:baseline;gap:2px">`
-      +`<div id="mline_${ch.id}_${i}" data-i="${i}" onclick="menuFixLine(${ch.id},${i})" style="flex:1;min-width:0;font-size:12px;font-weight:500;color:rgba(255,255,255,.55);line-height:1.5;cursor:text">"${esch(text)}"${pencil}${fixed?'<span style="margin-left:6px;color:var(--text-tertiary);font-size:11px">corrected</span>':''}</div>`
+      +`<div id="mline_${ch.id}_${i}" data-i="${i}" onclick="menuFixLine(${ch.id},${i})" style="flex:1;min-width:0;font-size:12px;font-weight:500;color:rgba(255,255,255,.55);line-height:1.5;cursor:text;border:1px dashed rgba(255,255,255,.14);border-radius:8px;padding:5px 8px">"${esch(text)}"${fixed?'<span style="margin-left:6px;color:var(--text-tertiary);font-size:11px">corrected</span>':''}</div>`
       +(sid&&ln.at!=null?`<span onclick="menuPlayLine('${sid}',${ln.at},${i+1<lines.length&&lines[i+1].at!=null?lines[i+1].at:'null'})" style="cursor:pointer;flex:0 0 auto;display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#26262B">${playIco}</span>`:'')
       +`</div>`
       +`<div style="margin-top:2px;font-size:11px;font-weight:700;color:#5C5C68">${ln.at!=null?ln.at+'s':''}</div>`
@@ -5047,7 +5251,8 @@ function menuSeekPlay(from,to){
   MENU_AUDIO_STOP=(to!=null&&isFinite(to))?Number(to):null;
   MENU_AUDIO.play().catch(()=>toast('No recording for this check'));
 }
-// Tap the words and they become the edit box, a light outline around it, save where the pencil was.
+// THE WORDS THEMSELVES ARE THE BOX (R5, no pencil). Tap a line and it becomes an outlined box with
+// a save beside it; there is no icon to hunt for, and nothing on the line but the store's own words.
 // The correction is kept beside what was heard, marked corrected, and no future check overwrites it.
 const MLINE_TEXT={};
 function menuFixLine(chainId,idx){
@@ -5064,6 +5269,14 @@ function menuFixLine(chainId,idx){
 }
 async function menuFixSave(chainId,idx){
   const inp=document.getElementById('mfix_'+chainId+'_'+idx); if(!inp) return;
+  // ARE YOU SURE (R5). The menu's words are sacred: the recipe and this screen may only ever show
+  // what the store really said, so a correction is confirmed before it lands. The original hearing is
+  // kept underneath, never overwritten, so a wrong correction can be undone.
+  const ok=await askSheet('Save this wording?',[
+    'The menu will show your words from now on.',
+    'What we heard is kept underneath, so this can be changed again.',
+  ],'Save');
+  if(!ok) return;
   const r=await api('/api/admin/map/chain/'+chainId+'/menu-line',{method:'POST',body:JSON.stringify({idx,text:String(inp.value||'').trim()})});
   const d=CHAIN_MAP[chainId];
   if(r&&!r.error&&d){ d.menuFixes=r.fixes||{}; const ch=(CHAINS||[]).find(c=>c.id===chainId)||{id:chainId};
@@ -5088,6 +5301,61 @@ function dayWords(d){
 // The owner opens this to read ONE call top to bottom and see the recipe it produced. So: two cards,
 // then a Show more key. Never every call at once, because the sheet is for reading one call, not for
 // scrolling all of them.
+// ---- THE RUN, AS ONE TIMELINE (R5) --------------------------------------------------------------
+// The owner reads a mapping run the way he reads a check on the site: one line down the page, in
+// order, from learning the menu to the locked recipe. Separate cards made him rebuild that order in
+// his head every time. So the checks that MOVED US FORWARD are rungs on one timeline — each with its
+// heading, its time and what it gained — and a check that changed nothing is a small dot carrying its
+// reason, tappable, never a full-width row competing with the ones that counted.
+// Just the time of day. A run happens inside a day, so the date is said ONCE for the whole run
+// (owner, 08-03) and each rung carries only its clock time.
+function clockOf(at){ return at?new Date(Number(at)*1000).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):''; }
+function dateOf(at){ return at?new Date(Number(at)*1000).toLocaleDateString([],{month:'short',day:'numeric'}):''; }
+function runTimelineHtml(calls,gains){
+  const list=(calls||[]).slice().sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0));
+  if(!list.length) return '';
+  const runDate=dateOf(list[0].at);
+  const rows=list.map((c,i)=>{
+    const last=i===list.length-1;
+    const navS=(typeof c.transferAtSec==='number'&&c.transferAtSec>0)?c.transferAtSec:null;
+    const gain=gains.get(c);
+    // EVERY DOT THE SAME SIZE, and the line meets the dot with no gap (owner, 08-03).
+    const spine=(dotColor)=>`<div style="display:flex;flex-direction:column;align-items:center;flex:0 0 auto;padding-top:5px">`
+      +`<span style="width:8px;height:8px;border-radius:50%;background:${dotColor}"></span>`
+      +(last?'':`<span style="width:2px;flex:1;background:rgba(255,255,255,.10);margin:0"></span>`)+`</div>`;
+    if(c.grade==='fail'){
+      const bid='rt_'+(c.navId||Math.abs(Number(c.at)||0));
+      return `<div style="display:flex;gap:12px;cursor:pointer" onclick="mapCheckOpen('${bid}')">`
+        +spine('#F87171')
+        +`<div style="flex:1;min-width:0;padding-bottom:${last?'0':'14px'}">`
+        +`<div style="line-height:1.35">`
+        +`<div style="font-size:12.5px;font-weight:700;color:var(--muted)">${esch(c.store||'A store')}</div>`
+        +`<div style="display:flex;align-items:baseline;gap:8px;margin-top:2px">`
+        +`<span style="font-size:11.5px;font-weight:700;color:#F87171">${esch(c.reason||'did not move us forward')}</span>`
+        +`<span style="margin-left:auto;font-size:11.5px;font-weight:700;color:var(--text-tertiary);flex:0 0 auto">${clockOf(c.at)}</span></div></div>`
+        +`<div id="${bid}" style="display:none"><div class="mladder" style="margin-top:10px">${callRungs(c).map((r,j,a)=>callRung(r,j===a.length-1)).join('')}</div></div>`
+        +`</div></div>`;
+    }
+    const pill=stagePill(c);
+    const bid='rt_'+(c.navId||Math.abs(Number(c.at)||0));
+    return `<div style="display:flex;gap:12px;cursor:pointer" onclick="mapCheckOpen('${bid}')">`
+      +spine(pill[1])
+      +`<div style="flex:1;min-width:0;padding-bottom:${last?'0':'14px'}">`
+      +`<div style="display:flex;align-items:baseline;gap:8px">`
+      +`<span style="font-size:13.5px;font-weight:700;color:${pill[1]}">${esch(pill[0])}</span>`
+      +(gain>0?`<span style="margin-left:auto;font-size:11.5px;font-weight:700;color:var(--green);flex:0 0 auto">${gain}s faster</span>`:'')+`</div>`
+      +`<div style="display:flex;align-items:center;gap:8px;margin-top:4px">`
+      +`<span style="font-size:11.5px;font-weight:700;color:var(--text-tertiary)">${clockOf(c.at)}</span>`
+      +(navS!=null?`<span style="font-size:11.5px;font-weight:700;color:var(--muted)">${navS}s</span>`:'')
+      +(c.madeUp?`<span style="font-size:10.5px;font-weight:800;color:#F59E0B">made up, no check happened</span>`:'')+`</div>`
+      +`<div id="${bid}" style="display:none"><div class="mladder" style="margin-top:10px">${callRungs(c).map((r,j,a)=>callRung(r,j===a.length-1)).join('')}</div></div>`
+      +`</div></div>`;
+  }).join('');
+  return `<div class="card" style="margin:0 0 10px;padding:16px 16px">`
+    +(runDate?`<div style="text-align:center;font-size:11px;font-weight:700;color:var(--text-tertiary);margin-bottom:12px">${runDate}</div>`:'')
+    +rows+`</div>`;
+}
+
 function mappingCallsHtml(calls,versions){
   const gains=gainByCheck(calls);
   // NO CHECK SAYS "RECIPE WINNER" (owner Update 5, which replaces comp 3a on this point). The winner
@@ -5096,8 +5364,10 @@ function mappingCallsHtml(calls,versions){
   // two different claims about which route is live.
   void versions;
   const card=c=>mappingCallCard(c,gains.get(c));
+  // ONE TIMELINE for the run, then the checks themselves underneath for reading one top to bottom.
   const rest=calls.slice(2);
-  return calls.slice(0,2).map(card).join('')
+  return runTimelineHtml(calls,gains)
+    +calls.slice(0,2).map(card).join('')
     +(rest.length?`<div id="set_runs_more" style="display:none">${rest.map(card).join('')}</div>`
       +`<div style="display:grid;place-items:center;margin-top:6px"><button class="ghost" onclick="mapCallsMore(this)">Show ${rest.length} more</button></div>`:'')
     ;
@@ -5115,7 +5385,18 @@ function gainByCheck(calls){
   const list=(calls||[]).slice(), nav=checkNavSecs(list);
   const order=list.map((c,i)=>({c,i})).sort((a,b)=>((Number(a.c.at)||0)-(Number(b.c.at)||0))||(a.i-b.i));
   const out=new Map(); let prev=null;
-  for(const x of order){ if(x.c.grade==='fail') continue; const n=nav[x.i]; if(n==null) continue; if(prev!=null) out.set(x.c,prev-n); prev=n; }
+  for(const x of order){ if(x.c.grade==='fail') continue; const n=nav[x.i]; if(n==null) continue;
+    if(prev!=null) out.set(x.c,prev-n); prev=n; }
+  // GREEN MEANS THE WINNER, AND THERE IS ONE (owner, 08-04). It used to light on any speed try that
+  // beat the one before it, so a run with three improvements showed three greens all claiming to be
+  // the fastest. Only the single fastest speed check wears it: the one whose walk through the menu
+  // is the shortest of the whole run. Every other speed try stays yellow, however much it gained.
+  let best=null, bestN=null;
+  order.forEach((x)=>{ if(x.c.grade==='fail'||x.c.stage!=='speed') return;
+    const n=nav[x.i]; if(n==null) return;
+    if(bestN==null||n<bestN){ bestN=n; best=x.c; } });
+  (calls||[]).forEach(c=>{ c.gainedSpeed=false; });
+  if(best) best.gainedSpeed=true;
   return out;
 }
 function mapCallsMore(btn){
@@ -5125,7 +5406,24 @@ function mapCallsMore(btn){
 // A collapsed failed check opens on tap and closes again — the reason is the row, the ladder is the
 // detail behind it.
 function mapCheckOpen(id){ const el=document.getElementById(id); if(el) el.style.display=el.style.display==='none'?'':'none'; }
-const STAGE_WORD={map:'Mapping menu',speed:'Optimizing speed'};
+// THE THREE HEADINGS, and which one a check gets (comp 3a; owner 08-03). Proving the department is
+// not a round of its own any more — it happens on the FIRST check of a run, the one that walks the
+// whole menu and asks Staff about the product. So a check that asked is headed Proving department;
+// THE PILL CARRIES THE STAGE, NOT THE OUTCOME (owner, 08-03), and it is the only word on the row.
+// The heading for learning the menu is retired: learning it and proving the department are the same
+// work, so every check reads Proving department over and over until it is actually proved. Nothing
+// is green until it IS proved — that check reads Department proved. Speed tries stay yellow until
+// one lands, and that one reads Speed optimized. Both new words are in the Statuses list.
+const stagePill=c=>{
+  if(!c) return ['Proving department','#FFCB05','rgba(255,203,5,.13)'];
+  if(c.stage==='speed') return c.grade!=='fail'&&c.gainedSpeed
+    ? ['Speed optimized','var(--green)','rgba(74,222,128,.13)']
+    : ['Optimizing speed','#FFCB05','rgba(255,203,5,.13)'];
+  return (c.askedStaff&&c.grade!=='fail'&&c.reachedHuman)
+    ? ['Department proved','var(--green)','rgba(74,222,128,.13)']
+    : ['Proving department','#FFCB05','rgba(255,203,5,.13)'];
+};
+const stageWord=c=>stagePill(c)[0];
 // One check: who we rang and when, its stage, how it ended, the conversation (comp 3a). A failed
 // check collapses to one row carrying its reason — tap to open. No PRODUCED line: the top passing
 // check IS the winner and its pill says so.
@@ -5134,8 +5432,11 @@ function mappingCallCard(c,gain){
   // NAV TIME ONLY (owner, 07-31): the number beside the pill is when the menu finished with us, never
   // the whole call with Staff's pickup time inside it. A check that never measured it shows nothing.
   const navS=(typeof c.transferAtSec==='number'&&c.transferAtSec>0)?c.transferAtSec:null;
-  const stage=STAGE_WORD[c.stage]||'';
-  const ladder=`<div class="mladder" style="margin-top:13px">${rungs.map((r,i,a)=>callRung(r,i===a.length-1)).join('')}</div>`;
+  const stage=stageWord(c);
+  // THE DATE AND TIME SIT IMMEDIATELY ABOVE THE TRANSCRIPT, not on the row (owner, 08-03) — the row
+  // carries the stage and the gain, and nothing else competes with them.
+  const ladder=`<div style="margin-top:13px;font-size:11px;font-weight:700;color:var(--text-tertiary)">${callWhen(c.at)}</div>`
+    +`<div class="mladder" style="margin-top:6px">${rungs.map((r,i,a)=>callRung(r,i===a.length-1)).join('')}</div>`;
   if(c.grade==='fail'){
     const why=c.reason||'did not move us forward';
     const bid='chk_'+(c.navId||Math.abs(Number(c.at)||0));
@@ -5143,23 +5444,24 @@ function mappingCallCard(c,gain){
       +`<div style="display:flex;align-items:center;gap:8px">`
       +`<div style="font-size:13px;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)">${esch(c.store||'A store')}</div>`
       +`<span class="pill" style="gap:6px;background:rgba(248,113,113,.12)">${ssDot('#F87171')}<span style="color:#F87171">${esch(why)}</span></span>`
+      +(c.madeUp?`<span style="font-size:10.5px;font-weight:800;color:#F59E0B;flex:0 0 auto">made up</span>`:'')
       +`<div style="font-size:11.5px;font-weight:700;color:var(--text-tertiary);flex:0 0 auto">${callWhen(c.at)}</div>`
       +`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5C5C68" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>`
       +`<div id="${bid}" style="display:none">${stage?`<div style="font-size:11px;font-weight:700;color:#8A8A96;margin-top:10px">${stage}</div>`:''}${ladder}</div></div>`;
   }
   // GREEN ONLY FOR A CONFIRMED RIGHT DEPARTMENT (Update 16). Yellow is neutral, red is bad.
-  const pill=c.reachedHuman?['Reached staff','var(--green)','rgba(74,222,128,.13)']
-    :c.endedOnRing?['Admin hung up','#FFCB05','rgba(255,203,5,.13)']
-    :['Nobody answered','#F59E0B','rgba(245,158,11,.13)'];
+  const pill=stagePill(c);
   return `<div class="card" style="margin:0 0 10px">`
-    +`<div style="display:flex;align-items:baseline;gap:8px">`
-    +`<div style="font-size:13.5px;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(c.store||'A store')}</div>`
-    +`<div style="font-size:11.5px;font-weight:700;color:var(--text-tertiary);flex:0 0 auto">${callWhen(c.at)}</div></div>`
-    +(stage?`<div style="font-size:11px;font-weight:700;color:#8A8A96;margin-top:8px">${stage}</div>`:'')
+    // THE STORE'S FULL NAME, wrapping if it needs to. Cutting it off buried which store a check was.
+    +`<div style="display:flex;align-items:flex-start;gap:8px">`
+    +`<div style="font-size:13.5px;font-weight:700;flex:1;min-width:0;line-height:1.35">${esch(c.store||'A store')}</div>`
+    // TOP RIGHT IS THE ONE GAIN PILL, and nothing else.
+    +(gain>0?`<span style="font-size:11.5px;font-weight:700;color:var(--green);flex:0 0 auto">${gain}s faster</span>`:'')+`</div>`
     +`<div style="display:flex;align-items:center;gap:8px;margin-top:8px">`
     +`<span class="pill" style="gap:6px;background:${pill[2]}">${ssDot(pill[1])}<span style="color:${pill[1]}">${pill[0]}</span></span>`
     +(navS!=null?`<span style="font-size:11.5px;font-weight:700;color:var(--muted)">${navS}s</span>`:'')
-    +(gain>0?`<span style="font-size:11.5px;font-weight:700;color:var(--green)">${gain}s faster</span>`:'')+`</div>`
+    // A CHECK THAT DID NOT HAPPEN SAYS SO. Nothing on this page may look like a real check unless it was.
+    +(c.madeUp?`<span style="font-size:10.5px;font-weight:800;color:#F59E0B">made up, no check happened</span>`:'')+`</div>`
     +ladder+`</div>`;
 }
 // The conversation as rows. The store's own lines stay as they were spoken; ours are read off the
@@ -5278,92 +5580,8 @@ function routeWords(v){
 // the ladder saying "WE" was the page inventing a second word for a thing that has a name.
 const plainText=t=>String(t||'').replace(/\s*—\s*/g,'. ').replace(/\s+-\s+/g,'. ').replace(/\.\s*\./g,'.');
 const whyWords=s=>String(s||'').replace(/(\d+)\s+(\w+?)\(s\)/g,(m,n,w)=>n+' '+w+(Number(n)===1?'':'s'));
-// WHAT HAPPENED, naming the store. The old card said "One store needs its own recipe" with no store,
-// no date, and two buttons that changed nothing (owner, 07-28 and again 07-30). Every card now says
-// which store, when, what was expected against what was heard, and its two buttons do what they say.
-const UNKNOWN_WHAT={
-  'route-swapped':'Recipe swapped itself',
-  'store-exception':'answers differently',
-  'route-changed':'The menu changed',
-  'drift':'The menu is drifting',
-  'route-failing':'Recipe reaching nobody',
-  'hammer-route':'Recipe presses one key over and over',
-  'unproven-direct':'No call has proved Staff answer direct',
-  'greeting-not-direct':'A recording answers, not Staff',
-  'not-shared':'Recipe not shared with the chain',
-};
-// The two buttons, per kind: what the green one DOES, and what it changes. `null` = a note to clear.
-// The Re-map button is RETIRED (owner, 07-31): re-mapping is the engine's job and a run never needs
-// him. The kinds that carried it render with Clear only, the card's existing shape.
-const UNKNOWN_ACT={
-  'store-exception':['Own recipe','store'],
-  'route-changed':['Use the new one','chain'],
-};
-const unkWhen=u=>u.firstSeen?new Date(u.firstSeen*1000).toLocaleDateString([],{month:'short',day:'numeric'}):'';
-// EXPECTED against HEARD, in a carved well. Both come off the item we already store; where we have no
-// heard line the well is dropped rather than printed empty.
-function unkWell(u,expected){
-  const heard=plainText(u.prompt||'').replace(/^Heard a different route:\s*/i,'');
-  if(!expected&&!heard) return '';
-  const row=(lab,val,strong)=>`<div style="display:flex;gap:10px;align-items:baseline${lab==='HEARD'?';margin-top:10px':''}">`
-    +`<span style="font-size:9.5px;font-weight:700;letter-spacing:.12em;color:#8A8A96;flex:0 0 66px">${lab}</span>`
-    +`<span style="font-size:12.5px;font-weight:${strong?'700':'500'};color:${strong?'#fff':'rgba(255,255,255,.55)'};flex:1;line-height:1.45">${esch(val)}</span></div>`;
-  return `<div style="margin-top:13px;background:var(--terminal);border-radius:16px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:14px 16px">`
-    +(expected?row('EXPECTED',expected,false):'')+(heard?row('HEARD',heard,true):'')+`</div>`;
-}
-function mapUnknownCard(u,chainId,expected){
-  const store=u.storeName||'';
-  // A NOTE, NEVER A DECISION. The route already swapped itself; the only thing left is to clear it.
-  if(u.kind==='route-swapped') return `<div class="card" style="margin:0 0 10px">
-    <div class="row" style="align-items:center;gap:8px">
-      <span class="name" style="font-size:13.5px">Recipe swapped itself</span>
-      <span style="margin-left:auto;font-size:10.5px;font-weight:800;color:var(--green)">Live</span></div>
-    <div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${esch(plainText(u.prompt))}</div>
-    <div class="meta" style="margin-top:6px;text-transform:none;letter-spacing:0">${unkWhen(u)}</div>
-    <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
-      <button class="ghost" onclick="mapUnknown(${u.id},'resolved',${chainId})">Clear</button>
-    </div></div>`;
-  const act=UNKNOWN_ACT[u.kind];
-  const what=UNKNOWN_WHAT[u.kind]||String(u.kind||'').replace(/-/g,' ');
-  // "CVS Tarzana · answers differently" reads as a fact about a store. Without a store name it is the
-  // chain that is wrong, so the finding stands on its own.
-  const title=store?`${store} · ${what}`:cap(what);
-  return `<div class="card" style="margin:0 0 10px">
-    <div class="row" style="align-items:baseline;gap:8px">
-      <span class="name" style="font-size:13.5px;flex:1;min-width:0">${esch(title)}</span>
-      <span style="font-size:11.5px;font-weight:700;color:var(--text-tertiary);flex:0 0 auto">${unkWhen(u)}</span></div>
-    ${unkWell(u,expected||'')}
-    ${act?`<div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
-      <button class="act" style="white-space:nowrap" onclick="mapUnknownDo(${u.id},${chainId},'${esch(u.kind)}',${(u.evidence&&u.evidence.versionId)||0})">${esch(act[0])}</button>
-      <button class="ghost" onclick="mapUnknown(${u.id},'dismissed',${chainId})">Ignore</button>
-    </div>
-    <div class="meta" style="margin-top:11px;text-transform:none;letter-spacing:0">${act[1]==='store'&&store?esch(store)+' only':'Every store on this chain'}</div>`
-    :`<div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
-      <button class="ghost" onclick="mapUnknown(${u.id},'resolved',${chainId})">Clear</button></div>`}
-    </div>`;
-}
-// THE BUTTON DOES THE THING IT NAMES (owner, 07-30). "Own recipe" puts that store's own route live.
-// "Use the new one" puts the new chain route live. Only then is the item cleared, so nothing reads
-// as decided until the decision actually happened. The Re-map branch that placed a call from here is
-// DELETED with its button (owner, 07-31).
-async function mapUnknownDo(id,chainId,kind,versionId){
-  if(!versionId) return;
-  const ok=await askSheet(kind==='store-exception'?'Give this store its own recipe?':'Use the new recipe?',
-    kind==='store-exception'
-      ? ['Only this store changes. Every other store on the chain keeps the current recipe.']
-      : ['Every store on this chain switches to it. The current recipe is retired.'],
-    kind==='store-exception'?'Own recipe':'Use it');
-  if(!ok) return;
-  const r=await api('/api/admin/map/version/'+versionId+'/approve',{method:'POST'});
-  if(!r||r.error){ toast(mapWriteErr(r)); return; }
-  await mapUnknown(id,'resolved',chainId);
-}
-async function mapUnknown(id,status,chainId){
-  const r=await api('/api/admin/map/unknown/'+id,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({status,note:status==='resolved'?'marked fixed from Admin':'marked not a problem from Admin'})});
-  if(!r||r.error){ toast(mapWriteErr(r)); return; }
-  toast(status==='resolved'?'Done':'Ignored'); delete CHAIN_MAP[chainId];
-  await loadMapGraph(); await renderChainSheets((CHAINS||[]).find(c=>c.id===chainId)||{id:chainId},null);
-}
+// THE REVIEW CARDS ARE DELETED WITH THE ROW THAT OPENED THEM (owner 08-04). Every finding they
+// showed is one the system now settles by itself, so there was nothing left for him to answer.
 // The route on its own: what WE do, with the ringing and the answer around it. Shown until the heard
 // menu lands, and it is all there is on a chain nobody has recorded yet.
 // THE LADDER ENDS WHEN THE DESK STARTS RINGING (owner, 07-28). It used to finish on "Staff answers",
@@ -5376,8 +5594,12 @@ function routeRungs(ch,nav,DASH){
   // Menu, so no greeting and no menu copy rides up here.
   const steps=chainSteps(ch), rungs=[];
   steps.forEach(st=>rungs.push({at:st.at!=null?st.at+'s':'',t:st.t}));
+  // THE LAST RUNG NAMES THE DESK IT RINGS (owner, 08-03): "Rings to front store", not just "the
+  // desk". The department is the word we said to get there — the last thing we spoke on the way in.
+  const spoke=[...steps].reverse().find(st=>/^Says "/.test(String(st.t||'')));
+  const desk=spoke?String(spoke.t).replace(/^Says\s+"|"$/g,'').trim():'';
   if(!steps.length) rungs.push({t:'Staff answer the line',at:'',tc:'var(--green)'});
-  else rungs.push({at:(nav!=null?nav+'s':''),t:'Rings the desk',tc:'var(--green)'});
+  else rungs.push({at:(nav!=null?nav+'s':''),t:desk?`Rings to ${desk}`:'Rings the desk',tc:'var(--green)'});
   return rungs;
 }
 // ONE read of a chain's map, shared by the menu, the status line and the waiting-route card. Three
@@ -5553,32 +5775,8 @@ function setBackToChains(){
   const sel=document.getElementById('set_chain'); if(sel) sel.value='';
   try{ document.getElementById('trees').scrollIntoView({behavior:'smooth',block:'start'}); }catch(_){ }
 }
-// FREE THE DOORS the engine refuses to try again. Three things go: the ways in it marked wrong, the
-// desks whose one question is spent, the changes it remembers as never worth trying. Nothing else.
-async function mapFreeDoors(){
-  const id=Number((document.getElementById('set_chain')||{}).value||0); if(!id){ toast('Pick a chain first'); return; }
-  const ok=await askSheet('Free the doors on this chain?',[
-    'The ways in it decided were wrong, and the desks it already asked, become fair game again.',
-    'The recipe, the checks and the menu all stay exactly as they are.',
-  ],'Free doors');
-  if(!ok) return;
-  const r=await api('/api/admin/map/chain/'+id+'/free-doors',{method:'POST'});
-  if(!r||r.error){ toast(mapWriteErr(r)); return; }
-  toast('Doors freed'); delete CHAIN_MAP[id]; await loadMapGraph(); await ssReload();
-}
-// START THIS CHAIN OVER, keeping the way in it runs today. Every check, every review item and every
-// older recipe goes; the live one stays so real checks never change.
-async function mapStartOver(){
-  const id=Number((document.getElementById('set_chain')||{}).value||0); if(!id){ toast('Pick a chain first'); return; }
-  const ok=await askSheet('Start this chain over?',[
-    'Every mapped check, review item and older recipe is cleared.',
-    'The way in it runs today stays, so real checks carry on unchanged.',
-  ],'Start over');
-  if(!ok) return;
-  const r=await api('/api/admin/map/chain/'+id+'/reset',{method:'POST'});
-  if(!r||r.error){ toast(mapWriteErr(r)); return; }
-  toast('History cleared'); delete CHAIN_MAP[id]; await loadMapGraph(); await ssReload();
-}
+// FREE DOORS and START OVER are DELETED (owner, 08-03). He never asked for either; they came from a
+// previous project manager. Map re-maps a chain, which is all he asked for.
 // Map the selected chain: the full mapping run, shown live in the Mapping card.
 // ONE mapping button (owner 07-27): "if we're going to re-map something it should follow the exact
 // same process every time, which includes making sure we can get through the menu the fastest."
@@ -6422,6 +6620,29 @@ async function toggleAskForTransfer(){
   if(!r||r.error){ toast('Could not save the switch'); return; }
   await loadAskForTransfer(); toast('Asking to be transferred '+(!on?'on':'off')+(CALL_SRC==='live'?'':' · '+vtEnvName()));
 }
+// THE NUMBERS THE OWNER TUNES (round 1, part 2; the ring wait and the check length added 08-03).
+// They live in the call_tuning setting, which
+// the prod mirror deliberately leaves alone, so staging and live hold their own values and a number
+// tuned mid test cannot be stomped inside a minute. Read and written through envApi for the same
+// reason: the header Live/Staging switch names which one you are editing.
+async function loadCallTuning(){
+  const r=await envApi('/api/call-tuning'); if(!r||r.error||!r.rows) return;
+  r.rows.forEach(function(row){ const el=document.getElementById('tune_'+row.key); if(el) el.value=row.seconds; });
+  const name=CALL_SRC==='live'?'':(' · '+vtEnvName());
+  ['tuneEnv1','tuneEnv2','tuneEnv3','tuneEnv4','tuneEnv5'].forEach(function(id){ const n=document.getElementById(id); if(n) n.textContent=name; });
+}
+async function saveCallTuning(el){
+  const key=el.id.replace('tune_',''); const v=Number(el.value);
+  if(!isFinite(v)||v<=0){ toast('That needs to be a number of seconds'); await loadCallTuning(); return; }
+  const body={}; body[key]=v;
+  const r=await envApi('/api/call-tuning',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+  if(!r||r.error){ toast('Could not save that number'); await loadCallTuning(); return; }
+  // What comes back is what a check would really use: a number outside its bounds is refused by the
+  // engine's own reader, so the box shows the value that will run rather than the one he typed.
+  await loadCallTuning();
+  const now=document.getElementById(el.id).value;
+  toast(Number(now)===v?('Saved · '+now+'s'+(CALL_SRC==='live'?'':' on '+vtEnvName())):('Out of range, kept '+now+'s'));
+}
 // Voice → Designer workflows + the cascade assignment (default → chain → store). The library is the
 // vt_workflows setting; assignments are name maps the call bridge resolves per call (store→chain→default).
 let WF={list:[],def:'',chains:{},stores:{}};
@@ -6764,7 +6985,7 @@ async function loadTesting(){
     // No room = nothing was written down for this one, so there is no sheet to open. It still belongs
     // on the log; it just does not pretend to be tappable.
     html+=r.room
-      ? `<button class="peek" onclick="openTestReceipt('${esch(String(r.room))}')">${head}</button>`
+      ? `<button class="peek" onclick="openTestReceipt('${esch(String(r.room))}','${esch((r.store||'').replace(/'/g,''))}',${Number(r.started)||0})">${head}</button>`
       : `<div class="peek static">${head}</div>`;
   });
   const hidden=TEST_CALLS.length-TEST_SHOWN;
@@ -6773,7 +6994,17 @@ async function loadTesting(){
 }
 // A test check opens the SAME sheet the Calls page opens, plus the pass/fail rows. It reads the
 // service the header switch names: a staging test check has no receipt on production.
-async function openTestReceipt(room){ return openReceiptInto('/api/admin/receipt/'+encodeURIComponent(room),{src:true,behaved:true}); }
+async function openTestReceipt(room,name,started){
+  const box=document.createElement('div');
+  box.innerHTML='<div class="meta">Loading\u2026</div>';
+  openSheet('','',box);
+  const d=await srcApi('/api/admin/receipt/'+encodeURIComponent(room));
+  if(!d||d.error){ box.innerHTML='<div class="empty">Nothing was recorded for this check.</div>'; return; }
+  const when=started?new Date(started*1000).toLocaleDateString([], {month:'short',day:'numeric'})+' \u00b7 '+new Date(started*1000).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}):'';
+  box.innerHTML=checkV2Html(checkV2From(d,{name:name||'Check',when}));
+  // The sheet covers 96 percent of the screen (owner ruling 08-04).
+  const lift=()=>{ const sh=document.querySelector('.sheet.on')||document.querySelector('.sheet'); if(sh){ const sc=window.scrollY||document.documentElement.scrollTop||0; sh.style.top=(sc+window.innerHeight*0.04)+'px'; sh.style.height=(window.innerHeight*0.96+120)+'px'; } }; setTimeout(lift,120); setTimeout(lift,700);
+}
 // Settings → the one global default workflow.
 async function loadDefaultWorkflow(){
   await loadWorkflows();

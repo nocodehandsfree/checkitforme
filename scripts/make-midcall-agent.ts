@@ -22,16 +22,10 @@ const existing = process.env.ELEVENLABS_MIDCALL_AGENT_ID || "";
 const apply = process.argv.includes("--apply");
 if (!key || !source) { console.error("need ELEVENLABS_API_KEY and ELEVENLABS_AGENT_ID"); process.exit(1); }
 
-/** The whole difference between this agent and the live one. Written the way the owner's prompt
- *  rules are written: no dashes inside a sentence, one register, plain instructions. */
-const JOINING_RULE = `
-YOU ARE JOINING A CALL THAT IS ALREADY IN PROGRESS.
-A recorded line in your own voice has ALREADY asked the store: "{{opening_line}}"
-The person on the line is answering that question right now.
-Do NOT greet them. Do NOT introduce yourself. Do NOT ask the question again.
-Say NOTHING until they have finished answering, then carry on from their answer exactly as you would
-if you had asked it yourself. If they say something you did not catch, ask about that, never restart.
-`.trim();
+// THE JOINING INSTRUCTION LIVES IN ONE PLACE (owner 08-03). It used to be written out here as well
+// as being pushed from the app, and the two drifted: this script's copy was the only one the joining
+// agent had, frozen on 07-28, missing the whole wrong department section. Imported now, never copied.
+import { JOINING_RULE, joiningPrompt } from "../src/voice/prompts";
 
 type Cfg = Record<string, unknown>;
 const get = (o: Cfg | undefined, k: string): Cfg | undefined => (o?.[k] as Cfg | undefined);
@@ -48,7 +42,7 @@ async function main() {
   if (!base) { console.error("source agent has no prompt — refusing to build a joining agent without the rules"); process.exit(1); }
   // The joining rule goes FIRST so it is read before any instruction about opening the call, and
   // the store rules follow unchanged. Nothing else about the agent moves.
-  prompt.prompt = `${JOINING_RULE}\n\n${base}`;
+  prompt.prompt = joiningPrompt(base);
   agent.prompt = prompt;
   agent.first_message = "";      // it never speaks first. The clip already did.
   cc.agent = agent;

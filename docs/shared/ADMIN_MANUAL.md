@@ -69,7 +69,7 @@ the branded email layout (kicker, headline, module card, CTA) lives in `src/aler
 Tokens: `{store} {product} {city} {email} {result}`. Send-yourself-a-test per event and channel
 (`POST /api/alerts/test`), a delivery-status banner (green when Twilio/Brevo creds are set), a month
 rollup, and a recent-sends log. SMS stays **stubbed** (logged, not sent) until the Twilio number clears
-A2P. Final copy source of truth: `docs/team/copy/alert-copy-handoff.md`.
+A2P. Final copy source of truth: `docs/archive/team/copy/alert-copy-handoff.md` (the copy lane retired 2026-07-22).
 
 ### 3.5 Policy (`#growth`, app.html:786)
 The business console. Reads `GET /api/policy`, writes `PATCH /api/policy` — **global and instant**.

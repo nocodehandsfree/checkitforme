@@ -1,0 +1,104 @@
+# PM HANDOFF — 08-04 (from the Fable PM session, verified against code and live sites, not memory)
+
+## WHAT CLOSED TODAY
+- **Charlie's drift is fixed and proven.** His instructions are saved as TWO copies at ElevenLabs:
+  one for when he asks the question himself, one for the normal check where Delta's recording asks
+  and he joins mid conversation. Updates only ever rewrote copy 1; checks run copy 2, frozen since
+  07-28 — that was the asking-twice fault. Now every update writes both (midCallAgentPatch, ONE
+  source in src/voice/prompts.ts, asserted byte for byte by scripts/test-prompts.ts) and both were
+  pulled back from ElevenLabs and matched word for word.
+- **The engine tuning round is live on staging** (PM-audited twice): the person test opens Charlie,
+  the loud room drops him, hold cap, who hung up, the recording/warm-up/wrap-up/Spanish written
+  down, per-ring lines gone, "Charlie left" gone, "Transferring to [department]" wording. FIVE
+  owner numbers in Admin under App, in the one setting production cannot stomp: wrap-up 45s ·
+  hold cap 120s · silence before drop 6s · ring wait 90s · check length 240s.
+- **The owner's 16 tests are locked in writing**: docs/specs/charlie-behavior/testing-cards.md —
+  headline, subhead, and info-bubble copy word for word, plus the final rulings (cost buckets
+  Bravo/Foxtrot/Echo/Charlie/Status, tile colors, marker color rule). THAT FILE IS THE LAW.
+- **The new check screen is BUILT inside public/app.html** (checkV2Html + MOCK_CHECK_V2, owner
+  approved pixel by pixel, open it at admin.checkitforme.com/testing#mockcheck). Echo has the spec:
+  wire it to real records, then the engine list (signoff on answer · never repeat a question ·
+  Delta replays after a transfer · "Staff hung up" status · the ping crash at bridge.ts ~1157 ·
+  record the second read + per-bucket costs).
+- Copy guide corrected: money reads in cents (owner reversed the dollars rule).
+
+## HOW TO WORK WITH HIM — earned again today, harder than last time
+- His words are the SPEC, not suggestions. When he corrects a card, change exactly what he named.
+- One item at a time. NEVER move to the next until he says he is good. Never invent a term; the
+  existing names are the language ("the record", "vague answer", "two Charlies" all cost a round).
+- Answer his questions BEFORE building. He says "discuss first" and means it.
+- Bring one line of when-and-what context with any past fix; he runs many chats and remembers none
+  of yours. Tell him nothing he doesn't need. Full plain sentences; he hates dashes.
+- Every script you run must force its own exit. A helper process lingered 56 minutes today and he
+  watched it the whole time. Check ps before claiming nothing runs.
+- Statuses: know the real 18 from /api/statuses before naming any. A missing status is a gap to
+  fix, never a question to ask him.
+
+## THE QUEUE (his order)
+1. **DONE + AUDITED 08-04 (PM): Echo's Testing screen + engine list, merged to staging.** Audit
+   verdict: screen PASSED whole (approved sheet byte-identical but the three wiring hooks · 16 cards
+   word for word in TEST_CARDS · buckets sum, cents, tile colors · driven ALL PASS on the real
+   Admin). Engine: staff_hung_up + ES label + charged ✓ · ping crash fix at bridge ~1157 ✓ ·
+   never-repeat line in the ONE prompt source ✓ · click-deafness fix proven on fresh robot check
+   277 ✓. **FAILED: the signoff.** Zero live checks carry the wrap-up note (276/277/278 + the
+   bridge's own log all show the knock never fires on the live wire; rig-only). Delta's replay
+   after a transfer: rig-proven, no live proof (scene 10's scripted hand-over reads as a quiet
+   hold — no tone, Charlie never asked). Back to Echo as ONE item: done = a live robot check whose
+   record shows the wrap-up note and the goodbye. Warts for his same box: the verdict tail stamps
+   "Customer charged" on the owner's free account (row says not charged) · robot-run-a/b/c/d
+   screenshot folders committed at repo root (sprawl) · the rig's model stub only speaks one
+   model's answer shape, so the whole-chain scene false-fails when a GEMINI key is set.
+2. **BOTH BUGS FIXED AND AUDIT-PASSED 08-04 late (PM reran every test + dialed a fresh robot
+   check).** The goodbye's root: the wrap-up door hung under an empty name on every real check
+   (the carrier's socket connects bare; the name arrives in the start message) — hangSignoffDoor
+   now hangs when the name is known, and the rig connects bare so this class cannot pass it again.
+   PM's fresh check: goodbye spoken, nothing asked twice, ended 9 seconds after the answer, right
+   status, 6.5¢. OWNER 08-04: "151" IS the Pokémon product's name — writing it that way is correct, NOT a fault;
+   the harness's word-for-word row is what needs teaching. Other leftover: the live page bounced
+   twice while drawing.
+   NEXT: the owner walks every test one at a time; faults the walk surfaces get fixed in the walk.
+   **THE AGREED LINE (owner + PM, 08-04 night — this order, no skipping):** the owner finishes his
+   21 Charlie instruction cuts (at 9 of 21; old lines like "be patient on a hold" are bloat now
+   that the tech drops Charlie) → PM integrates them and verifies Charlie carries exactly those
+   words → the test walk, one test at a time → Charlie dialed in → Mapper maps CVS, Charlie proves
+   the department, the run locks the fastest way through → the file re-architecture (PR #108) with
+   its own audit → the other 91 chains. The repo cleanup (archive-only, builds nothing, one push,
+   proven to compile) runs alongside. Logo pushes when he finishes; everyone else has stopped.
+3. **Mapper waits until Charlie works perfectly and ALL tests pass** (owner ruling 08-04 — replaces
+   "ASAP"). On a mapping run Charlie only comes on at the very end, to prove the department once
+   the right one is reached; that proof is what lets the run optimize for speed and lock the
+   recipe, so a half-working Charlie poisons the lock. Transfer switch stays ON globally.
+4. **The code rearrangement audit** (claude/refactor-server-routes-zbi8kp, PR #108, ~9,000 moved
+   lines, NEVER audited). Route parity → registration order → which routes lost their lock. The
+   owner wants the refactor finished soon and asked to be held accountable.
+
+## OPEN FAULTS (all found by the robot store, none fixed)
+- **Words after a hold, transfer, or hang-up are thrown away** — the money fault
+  (docs/tasks/words-after-a-hold-are-lost.md; robot checks 246/249 prove it).
+- **Same words, two answers**: identical recorded line read In stock once, couldn't tell next
+  (checks 248 vs 257). The second read is inconsistent.
+- **One check wrote four rows** (238-241, one conversation id) — newest-reader gets the unfinished.
+
+## ROADMAP, HIS WORDS, NOT YET SCOPED
+- Repo cleanup (untouched files piling in src/ and scripts/) WITH the refactor close-out items:
+  request logging · a code index agents are forced to read · three missing Admin buttons (pause all
+  calling kill switch, back up database, help-chat banner) · fold two duplicate store addresses ·
+  finish or revert the rules-from-comments pass · the "Stop checking" one-store bug (Webbie has it).
+- Comps and copy style guides: he reviews, then LOCK so agents cannot add without his approval.
+  The comp board is behind his Admin changes — that gap is why comps went wrong today.
+- An Admin section where every scenario and everything we tell Charlie sits in dropdowns for his
+  review (he is working this with Copper). Charlie's instructions readable in Admin first.
+- Charlie instruction tightening (Copper chat): fewer words, more accurate, nuance in his small
+  replies so he never sounds the same twice.
+- The reply checker: lock any agent reply until it follows the reply rules (he opened a design
+  chat for it; conversation first, no building).
+- Statuses catch-all screen: unplaceable situations pile up, he mints new statuses from them.
+- Remap all stores for speed with the new listening way; production still navigates on timers and
+  the new engine stays OFF on production until his promote.
+- Admin edits write straight to the real site (roadmap since 08-02, not scoped).
+- ElevenLabs blocks our own thinking on the cloned voice (their email pending); running our own
+  would cut Charlie's cost hard. §7 of the Charlie record.
+
+## WAITING ON THE OWNER
+- The promote (in-stock owner email still sends on the real site; everything since 07-30 is
+  staging-only). · Hide the simulated poll rows in Admin feedback (yes/no).

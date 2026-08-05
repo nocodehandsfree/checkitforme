@@ -10,6 +10,8 @@ import { openReceipt, emit, closeReceipt, laneFor, type EventKind } from "../cal
 import { phoneClip } from "../calls/clip-cache";
 import { callTuning } from "../calls/tuning";
 import { warnIfCapTooLow } from "../calls/check-life";
+import { getSetting } from "../db/settings";
+import { parseRobotPick, robotScene } from "../calls/tapedeck";
 
 /** Turn the recipe's executable strings ("2@8,2@16" / "no@26,front@38") back into ordered steps.
  *  Same source of truth either way — only the WHEN changes between the two nav modes. */
@@ -135,9 +137,32 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
   const tuning = await callTuning();
   // The gatekeeper's backstop is a constant; the longest allowed check is an Admin number. Shout if
   // they ever get close, because a check outliving the backstop reads as finished while it is live.
-  warnIfCapTooLow(opts?.timeLimitSec ?? pol.bail.maxCallSeconds);
-  const mkCtx = () => ({ agentId: opts?.agentId || config.voice.agentId, openingClip, midCallAgentId: config.voice.midCallAgentId,
-    ourBrain: !!pol.flags?.ourBrain, ourBrainAgentId: config.voice.ourBrainAgentId, holdStrategy, tuning, timeLimitSec: opts?.timeLimitSec ?? pol.bail.maxCallSeconds, apiKey: opts?.apiKey || undefined, dynamicVars, onConversationId, dtmf: listening ? undefined : (dtmf || undefined), say: listening ? undefined : (opts?.say || undefined), connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: connectAtSecAdj, giveUpSeconds: pol.bail.enabled && pol.bail.ringMaxSeconds > 0 ? pol.bail.ringMaxSeconds : undefined, earFromSec, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
+  // HOW LONG A WHOLE CHECK MAY RUN (owner 08-03). It used to come off the policy, which production
+  // copies down onto staging every sixty seconds, so a length tuned on staging was stomped inside a
+  // minute. It is one of the owner's own numbers now and lives in call_tuning with the rest. A store
+  // that carries its own cap still wins; everything else takes his number, and it rides to the phone
+  // company exactly as it did before.
+  const capSecs = opts?.timeLimitSec && opts.timeLimitSec > 0 ? Math.floor(opts.timeLimitSec) : tuning.maxCheckSeconds;
+  // A CHECK AGAINST THE ROBOT STORE IS A NAMED TEST (owner 08-04). The scene the robot will play is
+  // a setting picked before the dial, and the scene names which of the owner's 16 locked cards it
+  // runs — so the card rides the check's own record from the first second, and the Testing screen
+  // can head the check with the test's name instead of the store's. Proved by the NUMBER, the same
+  // way the robot's spending ceiling is, so a real store can never be labeled a test.
+  const ROBOT_NUMBER = (process.env.ROBOT_STORE_NUMBER || "+14244847395").replace(/[^\d+]/g, "");
+  if (toNumber.replace(/[^\d+]/g, "") === ROBOT_NUMBER) {
+    try {
+      const scene = robotScene(parseRobotPick(await getSetting("robot_scenario")).scenario);
+      if (scene?.card) emit(room, "unknown", `Test: ${scene.name}`, { step: "named_test", card: scene.card, scene: scene.n });
+    } catch { /* a test label is never worth failing a dial over */ }
+  }
+  warnIfCapTooLow(capSecs);
+  // THE DEPARTMENT WE ARE ASKING FOR, in the store's own words. The spoken route is "word@seconds"
+  // pairs and the LAST word is the one that puts us through, so that is the name the log uses while
+  // its phone rings. Read here because the route itself is consumed when the phone company is told
+  // what to do, long before the ringing starts. Never invented: no spoken step, no name.
+  const departmentName = String(opts?.say || "").split(",").map((p) => p.split("@")[0].trim()).filter(Boolean).pop();
+  const mkCtx = () => ({ agentId: opts?.agentId || config.voice.agentId, openingClip, midCallAgentId: config.voice.midCallAgentId, departmentName,
+    ourBrain: !!pol.flags?.ourBrain, ourBrainAgentId: config.voice.ourBrainAgentId, holdStrategy, tuning, timeLimitSec: capSecs, apiKey: opts?.apiKey || undefined, dynamicVars, onConversationId, dtmf: listening ? undefined : (dtmf || undefined), say: listening ? undefined : (opts?.say || undefined), connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: connectAtSecAdj, giveUpSeconds: pol.bail.enabled && pol.bail.ringMaxSeconds > 0 ? pol.bail.ringMaxSeconds : undefined, earFromSec, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
   setBridgeContext(room, mkCtx());
   const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
   // INLINE the TwiML instead of a Url callback (owner 07-17: "no cutoffs — listen from the very
@@ -188,7 +213,7 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
   body.set("StatusCallbackMethod", "POST");
   for (const ev of ["initiated", "ringing", "answered", "completed"]) body.append("StatusCallbackEvent", ev);
   // Hard cost cap: Twilio kills the call at TimeLimit seconds, no exceptions — the profit guarantee.
-  if (opts?.timeLimitSec && opts.timeLimitSec > 0) body.set("TimeLimit", String(Math.floor(opts.timeLimitSec)));
+  if (capSecs > 0) body.set("TimeLimit", String(capSecs));
   const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls.json`, {
     method: "POST",
     headers: { Authorization: "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64"), "content-type": "application/x-www-form-urlencoded" },

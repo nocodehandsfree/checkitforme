@@ -5,8 +5,11 @@ you're taking. One task per session. Open the task file for the contract. Closin
 IN THE FILE with the `bash scripts/verify-live.sh` output pasted. No output, not closed. New task = one
 small md here (what · done-when · system · status). Owner adds/reorders freely.
 
-**Counts (swept 2026-07-23):** active 53 · parked 6 · dead 1 · total 60.
+**Counts (swept 2026-08-04):** 76 task files in this folder (plus this index and the two 08-02 handoff notes). The tables below are the truth per task; the old 07-23 tally (60) is history.
 Systems: site · admin · voice-calls · data · support (data carries the old ops/infra lane).
+
+## ⭐⭐⭐ PM HANDOFF 08-02 night: `PM-HANDOFF-2026-08-02.md` — READ FIRST. First job: the report on
+what changed about Charlie (the owner has it). The code rearrangement goes LAST, owner's ruling.
 
 ## ⭐⭐ THE ORDER OF EVERYTHING (08-02): `THE-ORDER-2026-08-02.md` — six agents in flight, one queue,
 one merge at a time. READ IT FIRST. The law for Charlie: `docs/specs/charlie-behavior/README.md`.
@@ -40,6 +43,11 @@ audit also re-prove run-resume on a live restart. After chunk 2, box Webbie ONE 
 skip sentence for muted stores (EN + ES; the site is frozen to everyone else). Echo likely needs the
 same spec-vs-build audit — wait for the owner's word. **PM ships NOTHING without the owner's "clear"
 while he is testing — every push restarts staging and kills a live check.**
+
+## ⭐ Repo + doc cleanup (08-05, owner-run folder by folder)
+| Task | System | Status |
+|---|---|---|
+| [Doc sweep — the running list of things nobody could prove](doc-sweep-unknowns.md) | owner routes each line | open, growing |
 
 ## ⭐ Owner work streams (active — started this week)
 **Stream 1 — the five site fixes (SHIPPED to staging @4f6c4a6, PR #92; owner confirms on his phone,
@@ -101,6 +109,8 @@ then they ride the next promote to prod):**
 | Task | Why |
 |---|---|
 | [Missing CD comps for data-heavy Admin pages](admin-cd-comps-data-pages.md) | superseded by `admin-audit-comps-missing.md` (covers the same pages + more) |
+| [Stale admin browser test](e2e-admin-spec-stale.md) | browser tests archived 08-04, owner's ruling |
+| [Zone-report browser test](e2e-zone-report-spec.md) | browser tests archived 08-04, owner's ruling |
 
 ## Admin cleanup — one task per Admin page (22, all active · ship via `scripts/ship-admin.sh`)
 Live [dash](admin-cleanup-dash.md) · Users [users](admin-cleanup-users.md) · Restock
@@ -142,8 +152,6 @@ Live [dash](admin-cleanup-dash.md) · Users [users](admin-cleanup-users.md) · R
 | [Pull 424 from staging ADMIN_PHONES before the real-card walk](staging-424-admin-phones.md) | data | active |
 | [Staging store-list overwrite mystery](staging-storelist-overwrite.md) | data | active |
 | [Settings mirror: verify prod export live](settings-mirror-verify.md) | data | active |
-| [Prod gate 14/15: stale tests/e2e/admin.spec.ts](e2e-admin-spec-stale.md) | admin | active |
-| [Add the zone-report page to the e2e spec](e2e-zone-report-spec.md) | data | active |
 | [Retarget the stale CALL_ECONOMICS citation in server.ts](server-cost-citation.md) | data | active |
 
 Consumer-site tasks need an owner-named unlock (the site is frozen — docs/shared/REBUILD_PLAN.md).

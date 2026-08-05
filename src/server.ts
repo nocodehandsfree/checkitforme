@@ -22,6 +22,8 @@ import { createHash } from "node:crypto";
 import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
+import { tuningForAdmin, callTuning } from "./calls/tuning"; // the numbers the owner tunes, and every other number a check reads
+import { costBuckets, STATUS_READ_USD } from "./calls/cost";
 import { importZonesData, geocodeMissing, backfillDirectChains, isDirectDefaultChain } from "./db/import-data";
 import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, billableOutcome, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, notifyAfterVerdict, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, transcriptPatch, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus, learnedSyncTick, learnedSyncStatus } from "./store-sync";
@@ -39,14 +41,14 @@ import { placeNavCall, navInitialTwiml, navStep, navEnded, navMediaFeed, getNavS
 import { listenNavFeed, endListenNav } from "./calls/listen-nav";
 // THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
 import { emit, markNow, closeReceipt, linkCall, rollup, rollupFromRow, getReceipt, transcriptOf, setLineHook, normSaid, type Rollup } from "./calls/events";
-import { installReceiptStore, currentRates, onReceiptClosed } from "./calls/receipt-store";
+import { installReceiptStore, currentRates, onReceiptClosed, recordVerdict, lastClerkLine } from "./calls/receipt-store";
 import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
-import { behaved, agentLinesFrom } from "./calls/behaved";
+import { behaved, agentLinesFrom, TEST_CARDS } from "./calls/behaved";
 import { opsRollup, type CheckRow } from "./calls/ops";
 import { startMapper, stopMapper, mapperState, resumeMapperRuns } from "./calls/mapper";
 import { storeMetUnknownMenu, muteStore, unmuteStore, healOnce, onAutoCheckPaused, mutedReasons } from "./calls/healing";
-import { activeMap, resetChainHistory, freeChainDoors, graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, graphFor, learnFromReceipt, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
+import { activeMap, graphSummary, chainDetail, approveVersion, rejectVersion, openUnknowns, resolveUnknown, proposeVersion, versionsFor, pathSignature, reshareUnsent, graphFor, learnFromReceipt, type MapRecipe, type EvidenceCall } from "./calls/mapgraph";
 import { recipeFromCall, evidenceFromCall, type CapturedStep } from "./calls/map-capture";
 import { startSweep, stopSweep, sweepStatus, buildQueue } from "./calls/sweep";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay,
@@ -60,7 +62,7 @@ import { createSchedule, listSchedulesDetailed, deleteSchedule, customerSchedule
 import { cachedCategories, cachedChains, cachedRetailers, categoryLabelMap, retailerMap, invalidateRefCache } from "./refcache";
 import { haversineMi, bboxAround } from "./geo";
 import { ingestSignals, recentStockNear, latestForRetailer } from "./stock/signals";
-import { classifyVerdict, reconcile, consensusFor, productDetailLabel } from "./voice/verdict";
+import { classifyVerdict, reconcile, consensusFor, productDetailLabel, VERDICT_MODEL } from "./voice/verdict";
 import { armLiveRead, noteLiveLine, dropLiveRead } from "./voice/live-read";
 import { seedStockCheckIntel } from "./stock/intel";
 import { seedSellMethods } from "./stock/sellmethods";
@@ -153,6 +155,7 @@ import { settings as settingsTbl } from "./db/schema";
 import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeRoomForConversation, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, activeBridgeCalls, weEndedCheck, noteWeEnded } from "./voice/bridge";
 import { installCheckLife, isCheckAlive, noteLineEnded, resolveRoom as lifeRoom } from "./calls/check-life";
 import { placeBridgeCall, attachListenFork, roomCallSids, roomCallProgress, roomFinalizers, RAILWAY_HOST, STAGING_HOST } from "./voice/bridge-place";
+import { kioskNote, departmentNote, SET_EXAMPLE } from "./voice/prompts";
 import { isCallingPaused, setCallingPaused, spendTodayCents, withLock } from "./redis";
 
 assertProdSecurity(); // refuse to boot in prod with an open admin / forgeable sessions
@@ -1617,13 +1620,13 @@ function chainLogoFile(name: string | null | undefined): string | null {
 // filesystem, so a chain's logo travels to every environment and can't drift. Cached name→logo map,
 // refreshed on a timer + immediately after an upload/migration. Empty cache (cold start, or a chain
 // with no logo_url yet) simply falls through to the filesystem resolver — fully backward-compatible.
-let chainLogoDbCache = new Map<string, { url: string; wide: boolean; dark: boolean; pct: number | null }>();
+let chainLogoDbCache = new Map<string, { url: string; wide: boolean; dark: boolean; pct: number | null; aspect: number | null }>();
 async function refreshChainLogoDb(): Promise<void> {
   try {
-    const rows = await db.select({ name: chains.name, logoUrl: chains.logoUrl, logoWide: chains.logoWide, logoDark: chains.logoDark, logoPct: chains.logoPct })
+    const rows = await db.select({ name: chains.name, logoUrl: chains.logoUrl, logoWide: chains.logoWide, logoDark: chains.logoDark, logoPct: chains.logoPct, logoAspect: chains.logoAspect })
       .from(chains).where(sql`${chains.logoUrl} is not null and ${chains.logoUrl} != ''`);
-    const m = new Map<string, { url: string; wide: boolean; dark: boolean; pct: number | null }>();
-    for (const r of rows) if (r.logoUrl) m.set((r.name || "").toLowerCase(), { url: r.logoUrl, wide: r.logoWide === true, dark: r.logoDark === true, pct: typeof r.logoPct === "number" ? r.logoPct : null });
+    const m = new Map<string, { url: string; wide: boolean; dark: boolean; pct: number | null; aspect: number | null }>();
+    for (const r of rows) if (r.logoUrl) m.set((r.name || "").toLowerCase(), { url: r.logoUrl, wide: r.logoWide === true, dark: r.logoDark === true, pct: typeof r.logoPct === "number" ? r.logoPct : null, aspect: typeof r.logoAspect === "number" ? r.logoAspect : null });
     chainLogoDbCache = m;
   } catch (e) { console.error("refreshChainLogoDb", e); }
 }
@@ -1655,16 +1658,16 @@ export function logoPctFor(nw: number, nh: number): number | null {
   return Math.round(pct * 100) / 100;
 }
 
-function chainLogoInfo(name: string | null | undefined): { url: string | null; wide: boolean; dark: boolean; pct: number | null } {
+function chainLogoInfo(name: string | null | undefined): { url: string | null; wide: boolean; dark: boolean; pct: number | null; aspect: number | null } {
   if (name) {
     ensureChainLogoDb();
     const hit = chainLogoDbCache.get(name.toLowerCase()); // DB-first: shared-R2 URL travels across envs
     if (hit) return hit;
   }
   const f = chainLogoFile(name); // filesystem fallback (pre-migration, and unchained store names)
-  if (!f) return { url: null, wide: false, dark: false, pct: null };
+  if (!f) return { url: null, wide: false, dark: false, pct: null, aspect: null };
   const m = logoMeta()[f] || { w: 0, d: 0 };
-  return { url: `/logos/chains/${f}?v=79`, wide: m.w === 1, dark: m.d === 1, pct: null };
+  return { url: `/logos/chains/${f}?v=79`, wide: m.w === 1, dark: m.d === 1, pct: null, aspect: null };
 }
 
 // The ONE way a store row gets its logo. Every list on every surface goes through this, so a store
@@ -1672,10 +1675,10 @@ function chainLogoInfo(name: string | null | undefined): { url: string | null; w
 // fifteen hand-written copies that each worked the chain out their own way (eight different ways).
 // Pass the chain name when the caller already knows it; otherwise the store's own name is used.
 function logoFields(chainName: string | null | undefined): {
-  logoUrl: string | null; logoWide: boolean; logoDark: boolean; logoPct: number | null;
+  logoUrl: string | null; logoWide: boolean; logoDark: boolean; logoPct: number | null; logoAspect: number | null;
 } {
   const l = chainLogoInfo(chainName);
-  return { logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct };
+  return { logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, logoAspect: l.aspect };
 }
 function withLogo<T extends { name?: string | null }>(row: T, chainName?: string | null) {
   return { ...row, ...logoFields(chainName || storeChainName(row.name)) };
@@ -2010,47 +2013,6 @@ app.get("/logo-wall/sets", async (c) => {
   </script>
   </body>`);
 });
-// Owner preview: "the check" — a SOLID gradient disc with a white check CENTERED inside it, tip
-// reaching the top-right edge (never past it), exactly like the reference. 4 to choose:
-// flat / raised × purple / green. The winner becomes FCHK() everywhere (ticker, footer, verdicts).
-app.get("/check-lab", (c) => {
-  const RAMP: Record<string, [string, string]> = { purple: ["#5B1E99", "#A65CED"], green: ["#15803D", "#4ADE80"] };
-  // Small, CENTERED check with clear margin from the rim (Reminders-style) — never touches/breaks the edge.
-  const CHECK = "M8.1 12.2 L10.9 15.0 L16.0 8.9", SW = "2.3";
-  const flat = (hue: string) => (sz: number) => { const [a, b] = RAMP[hue]; const id = `f${hue}${sz}`;
-    return `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><defs><linearGradient id="${id}" x1="12" y1="2" x2="12" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs>
-      <circle cx="12" cy="12" r="10" fill="url(#${id})"/>
-      <path d="${CHECK}" stroke="#fff" stroke-width="${SW}" stroke-linecap="round" stroke-linejoin="round"/></svg>`; };
-  const raised = (hue: string) => (sz: number) => { const [a, b] = RAMP[hue]; const id = `r${hue}${sz}`, g = `gl${hue}${sz}`;
-    return `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" style="vertical-align:middle"><defs><linearGradient id="${id}" x1="12" y1="2" x2="12" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient>
-      <radialGradient id="${g}" cx="0.38" cy="0.28" r="0.8"><stop stop-color="#fff" stop-opacity="0.5"/><stop offset="0.55" stop-color="#fff" stop-opacity="0.06"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>
-      <circle cx="12" cy="12" r="10" fill="url(#${id})"/>
-      <circle cx="12" cy="12" r="10" fill="url(#${g})"/>
-      <path d="${CHECK}" stroke="#000" stroke-opacity="0.2" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" transform="translate(0,0.6)"/>
-      <path d="${CHECK}" stroke="#fff" stroke-width="${SW}" stroke-linecap="round" stroke-linejoin="round"/></svg>`; };
-  const MARKS: Record<string, { name: string; svg: (sz: number) => string }> = {
-    "1": { name: "Flat · purple", svg: flat("purple") },
-    "2": { name: "Raised · purple", svg: raised("purple") },
-    "3": { name: "Flat · green", svg: flat("green") },
-    "4": { name: "Raised · green", svg: raised("green") },
-  };
-  const row = (key: string) => { const m = MARKS[key]; return `
-    <div style="background:#15151c;border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:18px;display:flex;gap:18px;align-items:center;flex-wrap:wrap">
-      <div style="width:88px;text-align:center">${m.svg(72)}<div style="font-weight:900;font-size:16px;margin-top:8px">#${key}</div></div>
-      <div style="flex:1;min-width:210px">
-        <div style="font-weight:800;font-size:16px;margin-bottom:10px">${m.name}</div>
-        <div style="display:flex;flex-direction:column;gap:9px">
-          <div style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:#cfcfd8">${m.svg(15)}<b style="color:#4ADE80">Found!</b> · Target — Sunset Blvd <span style="color:#56566a;margin-left:auto">ticker</span></div>
-          <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#cfcfd8">${m.svg(22)}<b>Fungibles</b> <span style="color:#56566a;margin-left:auto">footer</span></div>
-          <div style="display:flex;align-items:center;gap:8px;font-weight:900;font-size:16px;color:#4ADE80">${m.svg(34)} In stock! <span style="color:#56566a;font-weight:400;font-size:12px;margin-left:auto">verdict</span></div>
-        </div>
-      </div>
-    </div>`; };
-  return c.html(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="background:#0C0C12;font-family:-apple-system,sans-serif;color:#fff;padding:20px;max-width:560px;margin:0 auto">
-  <h2 style="font-weight:900;margin:0 0 4px">The Check</h2>
-  <div style="color:#9a9aac;font-size:12.5px;margin-bottom:14px">Solid disc · white check centered inside, tip at the edge. Flat &amp; raised, purple &amp; green. Reply <b>1</b>, <b>2</b>, <b>3</b>, or <b>4</b>.</div>
-  <div style="display:flex;flex-direction:column;gap:12px">${["1", "2", "3", "4"].map(row).join("")}</div></body>`);
-});
 app.get("/logos/chains/:file", (c) => {
   const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
   try {
@@ -2109,9 +2071,10 @@ app.post("/api/chains/:id/logo", async (c) => {
   const wide = c.req.query("wide") === "1", dark = c.req.query("dark") === "1";
   const size = artworkSize(bytes, ext);
   const pct = size ? logoPctFor(size.w, size.h) : null;
-  await db.update(chains).set({ logoUrl: publicUrl, logoWide: wide, logoDark: dark, logoPct: pct }).where(eq(chains.id, id));
+  const aspect = size && size.h > 0 ? Math.round((size.w / size.h) * 1000) / 1000 : null;
+  await db.update(chains).set({ logoUrl: publicUrl, logoWide: wide, logoDark: dark, logoPct: pct, logoAspect: aspect }).where(eq(chains.id, id));
   await refreshChainLogoDb();
-  return c.json({ id, name: ch.name, logoUrl: publicUrl, wide, dark, pct, artwork: size });
+  return c.json({ id, name: ch.name, logoUrl: publicUrl, wide, dark, pct, aspect, artwork: size });
 });
 
 // The one-time migration that first pushed the file copies into shared storage is GONE (owner 07-31,
@@ -3699,7 +3662,15 @@ app.get("/pub/result/:cid", async (c) => {
       ...(await transcriptPatch(row.id, o.transcript)),
       completedAt: Math.floor(Date.now() / 1000),
     }).where(eq(callResults.id, row.id));
-    if (row.finderUserId && billableOutcome(consensus.statusKey, consensus.definitive, o.transcript)) await chargeCallOnce(row.id, row.finderUserId);
+    const charged1 = !!(row.finderUserId && billableOutcome(consensus.statusKey, consensus.definitive, o.transcript));
+    if (charged1) await chargeCallOnce(row.id, row.finderUserId!);
+    // THE VERDICT TAIL RIDES EVERY DOOR (law 11). Three doors settle a verdict — the sweep, this
+    // on-demand settle a watching customer triggers, and the webhook — and a check watched to the
+    // end settles HERE first, so a tail written only by the sweep never lands on exactly the checks
+    // the owner watches. Same recorder, same three rows, whichever door wins the race (the recorder
+    // itself never writes a second verdict onto a check that has one).
+    void recordVerdict(row.id, consensus.statusKey ?? null, o.summary ?? null, o.durationSecs ?? 0,
+      { secondReadModel: second ? VERDICT_MODEL : null, secondReadUsd: second ? STATUS_READ_USD : 0, decidedBy: lastClerkLine(o.transcript), charged: charged1 });
     dropLiveRead(row.room); // verdict written — let the room's live read go
     // This on-demand settle used to be the ONE finalize path that never sent the alerts, so a check
     // the customer watched to the end produced no in-stock email (owner 07-30). Same notifier as the
@@ -4049,7 +4020,7 @@ async function zoneView(z: typeof zones.$inferSelect) {
     const chainName = (r.chainId && chainNames.get(r.chainId)) || null;
     const l = chainLogoInfo(chainName || storeChainName(r.name));
     return { retailerId: r.id, name: r.name, location: r.location || "", callable: r.sellsPacks !== false,
-      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, openState: openState(r.hours, r.timezone) };
+      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, logoAspect: l.aspect, openState: openState(r.hours, r.timezone) };
   });
   const last = (await db.select().from(callResults).where(like(callResults.zoneRunId, `z${z.id}-%`)).orderBy(desc(callResults.startedAt)).limit(1))[0];
   let lastRun = null;
@@ -4273,7 +4244,7 @@ app.get("/app/history", async (c) => {
       categoryId: r.categoryId, category: cats.get(r.categoryId) || "",
       ts: (r.startedAt || 0) * 1000, status: r.status, confirmed: r.confirmed,
       statusKey: r.statusKey, productDetail: r.productDetail, shipmentDay: r.shipmentDayHeard, shipmentTime: r.shipmentTimeHeard ?? null, charged: !!r.chargedAt, zoneRunId: r.zoneRunId || null,
-      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct,
+      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, logoAspect: l.aspect,
     };
   }));
 });
@@ -4491,7 +4462,7 @@ app.get("/api/admin/restock-intel", async (c) => {
       const l = chainLogoInfo(chainName);
       return { ...e, bestDay: Object.entries(e.days).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null,
         storeType: (e.chainId != null && rsChainType.get(e.chainId)) || "Other",
-        logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct };
+        logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, logoAspect: l.aspect };
     });
   const prodNet = parseProducts(confirmed);
   const catNet: Record<string, number> = {};
@@ -4842,7 +4813,7 @@ app.get("/api/admin/test-calls", async (c) => {
       lane: r.lane || null,
       cost: r.costTotalUsd != null ? money(r.costTotalUsd) : null,
       chainId: st?.chainId ?? null, storeType: (st?.chainId && chainTypes.get(st.chainId)) || "Other",
-      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct,
+      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, logoAspect: l.aspect,
     };
   });
   const timed = rows.filter((r) => r.callSec != null);
@@ -5183,6 +5154,75 @@ app.get("/api/admin/overview", async (c) => {
   return c.json({ live, today: slice(d1), week: slice(d7), month: slice(d30), days, avgCallSeconds30d: avg(durs), chainStats, recentCalls });
 });
 
+// ---- THE NUMBERS THE OWNER TUNES AGAINST REAL CHECKS (round 1, part 2; two more added 08-03) ----
+//
+// How long Charlie may TALK before he starts wrapping up, how long a wait may run before we hang up,
+// how much silence means Staff walked off, how long a phone may ring while we wait for a human, and
+// how long a whole check may run. Every one of them has to be tuned against real checks
+// — the owner's own words: "tune it on fifty checks at 5 seconds against fifty at 4, never on a
+// guess" — and none of that can wait on a release.
+//
+// THEY LIVE IN `call_tuning` AND NOWHERE ELSE. Production's policy copies down onto staging every
+// sixty seconds whether anything changed or not, so a number kept in the policy and tuned on staging
+// would be silently overwritten inside a minute, mid test, and would look like the setting simply
+// did not work. `call_tuning` is deliberately outside that mirror's list (src/settings-sync.ts), so
+// each environment keeps its own values with no extra work and neither can stomp the other.
+//
+// Seconds on the wire, because seconds are what the owner is tuning. The silence one is stored in
+// milliseconds beside the rest of the ear's timings, so it is converted here rather than kept twice.
+const OWNER_NUMBERS = [
+  { key: "charlieWrapUpSeconds", label: "Charlie wrap-up seconds", unit: 1 },
+  { key: "holdCapSeconds", label: "Hold cap seconds", unit: 1 },
+  { key: "holdQuietMs", label: "Silence before Charlie drops", unit: 1000 },
+  { key: "ringWaitSeconds", label: "Ring wait seconds", unit: 1 },
+  { key: "maxCheckSeconds", label: "Check length seconds", unit: 1 },
+] as const;
+app.get("/api/call-tuning", async (c) => {
+  const all = await tuningForAdmin();
+  const rows = OWNER_NUMBERS.map((n) => {
+    const t = all.find((x) => x.key === n.key);
+    return {
+      key: n.key, label: n.label, seconds: Math.round((t?.value ?? 0) / n.unit),
+      def: Math.round((t?.def ?? 0) / n.unit), min: Math.ceil((t?.min ?? 0) / n.unit), max: Math.floor((t?.max ?? 0) / n.unit),
+      why: t?.why ?? "",
+    };
+  });
+  return c.json({ rows });
+});
+app.patch("/api/call-tuning", async (c) => {
+  const b = await c.req.json().catch(() => ({} as Record<string, unknown>));
+  // Merged over whatever is already saved, never written whole: the same setting carries every other
+  // number the engine reads, and replacing it would reset all of them to the defaults.
+  let saved: Record<string, unknown> = {};
+  try { saved = JSON.parse((await getSetting("call_tuning")) || "{}") || {}; } catch { saved = {}; }
+  // REFUSED, NOT SAVED AND THEN IGNORED. The engine drops an out of bounds number back to its
+  // default, so writing one here would quietly move the check FURTHER from what he asked for than
+  // leaving it alone does. The bounds are the engine's own, read from the same place.
+  const bounds = await tuningForAdmin();
+  const bad: string[] = [];
+  const next: Record<string, number> = {};
+  for (const n of OWNER_NUMBERS) {
+    const v = (b as Record<string, unknown>)[n.key];
+    if (v === undefined) continue;
+    const secs = Number(v);
+    const lim = bounds.find((x) => x.key === n.key);
+    const raw = Math.round(secs * n.unit);
+    if (!Number.isFinite(secs) || !lim || raw < lim.min || raw > lim.max) {
+      bad.push(`${n.label} has to be between ${Math.ceil((lim?.min ?? 0) / n.unit)} and ${Math.floor((lim?.max ?? 0) / n.unit)} seconds`);
+      continue;
+    }
+    next[n.key] = raw;
+  }
+  if (bad.length) return c.json({ error: bad.join(". ") }, 400);
+  Object.assign(saved, next);
+  await setSetting("call_tuning", JSON.stringify(saved));
+  // Read BACK through the engine's own reader, so what comes home is what a check would really use:
+  // a value outside its bounds is refused there and the owner sees the number that will actually run
+  // rather than the one he typed.
+  const all = await tuningForAdmin();
+  return c.json({ ok: true, rows: OWNER_NUMBERS.map((n) => ({ key: n.key, seconds: Math.round((all.find((x) => x.key === n.key)?.value ?? 0) / n.unit) })) });
+});
+
 // ---- Settings (master toggles) ----
 app.get("/api/settings", async (c) => c.json(await allSettings()));
 app.patch("/api/settings", async (c) => {
@@ -5364,7 +5404,7 @@ app.get("/api/chains", async (c) => {
   const aggByChain = new Map(ag.map((r) => [r.cid, { n: Number(r.n || 0), callable: Number(r.callable || 0), kiosk: Number(r.kiosk || 0), online: Number(r.onl || 0), verified: Number(r.verified || 0) }]));
   return c.json(rows.map((ch) => {
     const l = chainLogoInfo(ch.name);
-    return { ...ch, logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, tier: tierByChain.get(ch.id) ?? null, stores: aggByChain.get(ch.id) ?? { n: 0, callable: 0, kiosk: 0, online: 0, verified: 0 } };
+    return { ...ch, logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, logoAspect: l.aspect, tier: tierByChain.get(ch.id) ?? null, stores: aggByChain.get(ch.id) ?? { n: 0, callable: 0, kiosk: 0, online: 0, verified: 0 } };
   }));
 });
 // Compact store list for the Voice → Test picker: ONE callable store per supported (app-visible) chain
@@ -5418,6 +5458,7 @@ app.patch("/api/chains/:id", async (c) => {
   // How wide to draw the logo, as a percent of its tile. Normally set by the upload; accepted here so
   // an existing logo can be measured and backfilled without re-uploading the artwork.
   if (b.logoPct !== undefined) patch.logoPct = Number.isFinite(Number(b.logoPct)) && Number(b.logoPct) > 0 ? Number(b.logoPct) : null;
+  if (b.logoAspect !== undefined) patch.logoAspect = Number.isFinite(Number(b.logoAspect)) && Number(b.logoAspect) > 0 ? Number(b.logoAspect) : null;
   // Invariant: a direct-answer chain has no menu, so it must carry NO tree-seconds — a stray value arms
   // the connect-timer and mutes the agent (silent-agent bug). Enforce it here too, so a manual admin edit
   // that flips a chain to direct can't recreate it (the learn/trainer paths already guard this).
@@ -5435,7 +5476,10 @@ app.patch("/api/chains/:id", async (c) => {
   }
   const [row] = await db.update(chains).set(patch).where(eq(chains.id, Number(c.req.param("id")))).returning();
   invalidateRefCache();
-  if (patch.logoUrl !== undefined || patch.logoWide !== undefined || patch.logoDark !== undefined) await refreshChainLogoDb();
+  // Any logo field, not just the three originals. Saving only the size or the shape used to leave every
+  // surface serving the old value for up to a minute, because this cache is what they all read.
+  if (patch.logoUrl !== undefined || patch.logoWide !== undefined || patch.logoDark !== undefined
+      || patch.logoPct !== undefined || patch.logoAspect !== undefined) await refreshChainLogoDb();
   return c.json(row);
 });
 
@@ -5810,7 +5854,7 @@ async function enrichAlertStores<T extends { subscriptions?: Array<{ retailerId?
     if (!r) return s;
     const chainName = (r.chainId && cName.get(r.chainId)) || storeChainName(r.name);
     const l = chainLogoInfo(chainName);
-    return { ...s, storeType: (r.chainId && cType.get(r.chainId)) || "Other", logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct };
+    return { ...s, storeType: (r.chainId && cType.get(r.chainId)) || "Other", logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, logoAspect: l.aspect };
   });
   return me;
 }
@@ -6019,7 +6063,7 @@ app.get("/api/retailers", async (c) => {
   return c.json(rows.map((r) => {
     const chainName = (r.chainId && names.get(r.chainId)) || null;
     const l = chainLogoInfo(chainName || storeChainName(r.name));
-    return { ...r, carries: storeCarriesList(chainName, r.carries).join(","), distributor: distributorsForChain(chainName), logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct };
+    return { ...r, carries: storeCarriesList(chainName, r.carries).join(","), distributor: distributorsForChain(chainName), logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, logoAspect: l.aspect };
   }));
 });
 // Store Intel — the headline numbers on the Stores tab (cached 60s). The database, at a glance.
@@ -6327,6 +6371,47 @@ app.get("/api/admin/receipt/:room", async (c) => {
   const readable = (cost: { totalUsd: number; charlieUsd: number; lineUsd: number; forkUsd?: number; avoidableUsd: number }) =>
     ({ total: money(cost.totalUsd), charlie: money(cost.charlieUsd), line: money(cost.lineUsd),
        menu: money(cost.lineUsd + (cost.forkUsd ?? 0)), wasted: money(cost.avoidableUsd) });
+  // EVERYTHING THE OWNER'S APPROVED SHEET READS AND THE RAW RECORD DOES NOT SAY (owner 08-04):
+  // which of his 16 locked cards this check ran, the cost split into his five buckets off the rates
+  // in force, the profit against his 67 percent floor, and the workflow bubble. Built server side so
+  // no rate and no card string is ever typed into the page.
+  const v2For = async (timeline: Array<{ kind: string; atSec?: number | null; detail?: Record<string, unknown> | null }>, sums: Rollup | null, cost: { totalUsd: number; lineUsd: number; forkUsd?: number; charlieUsd: number; clipsUsd?: number; billedMinutes?: number; charlieSecs?: number } | null, retailerId?: number | null) => {
+    const stepOf = (name: string) => timeline.find((e) => (e.detail || {}).step === name) || null;
+    const named = stepOf("named_test");
+    const card = named ? TEST_CARDS[String((named.detail || {}).card || "")] ?? null : null;
+    const readStep = stepOf("second_read");
+    const readUsd = readStep ? Number((readStep.detail || {}).costUsd ?? 0) : 0;
+    const buckets = cost ? costBuckets(
+      { ...cost, forkUsd: cost.forkUsd ?? 0, clipsUsd: cost.clipsUsd ?? 0, billedMinutes: cost.billedMinutes ?? Math.ceil((sums?.callSecs ?? 0) / 60), charlieSecs: cost.charlieSecs ?? sums?.charlieConnectedSeconds ?? 0, avoidableUsd: 0, totalUsd: cost.totalUsd },
+      { callSecs: sums?.callSecs ?? 0, navSecs: sums?.navSeconds ?? null, streams: 2 },
+      await currentRates(), readUsd,
+    ) : [];
+    const totalUsd = (cost?.totalUsd ?? 0) + readUsd;
+    const priceUsd = ((await getPolicy()).pricing.perCallCents / 100) * 1_000_000;
+    // The workflow bubble: the same store to chain to default resolution every call uses.
+    let workflow: { name: string; d: Array<[string, string]> } | null = null;
+    try {
+      const [storeS, chainS, defS, libS] = await Promise.all([
+        getSetting("vt_store_workflows"), getSetting("vt_chain_workflows"), getSetting("vt_default_workflow"), getSetting("vt_workflows"),
+      ]);
+      const pj = (x: string | null) => { try { return x ? JSON.parse(x) : {}; } catch { return {}; } };
+      const byStore = pj(storeS) as Record<string, string>, byChain = pj(chainS) as Record<string, string>;
+      const lib = (pj(libS) || []) as Array<{ name: string; tuning?: Record<string, unknown>; openers?: string[]; personality?: string }>;
+      const st = retailerId ? (await retailerMap()).get(retailerId) : null;
+      const wfName = (retailerId && byStore[String(retailerId)]) || (st?.chainId != null && byChain[String(st.chainId)]) || defS || "";
+      const wf = lib.find((w) => w.name === wfName) || (Array.isArray(lib) ? lib[0] : null);
+      if (wf) workflow = { name: wf.name, d: [
+        ["Voice", String(wf.tuning?.speed != null ? `Branson HD · speed ${wf.tuning.speed}` : "the workflow's voice")],
+        ["Personality", String(wf.personality || "none")],
+        ["Model", String(wf.tuning?.llm || "")],
+        ["Voice engine", String(wf.tuning?.modelId || "")],
+        ["Openers", `${(wf.openers || []).length || 1} rotating`],
+      ].filter((r) => r[1]) as Array<[string, string]> };
+    } catch { /* the bubble is decoration; the check renders without it */ }
+    return { test: card, buckets, totalUsd, readable: money(totalUsd),
+      profitPct: totalUsd > 0 && priceUsd > 0 ? Math.round(((priceUsd - totalUsd) / priceUsd) * 100) : null,
+      talkSec: sums?.charlieConnectedSeconds ?? null, workflow };
+  };
   const live = getReceipt(room);
   if (live && !live.closed) {
     const sums = rollup(live);
@@ -6346,6 +6431,12 @@ app.get("/api/admin/receipt/:room", async (c) => {
         agentLines: live.transcript.filter((l) => l.who === "Agent")
           .map((l) => ({ text: l.text, atSec: Math.round(l.atMs / 1000) })),
       }),
+      // THE LOG IS END TO END, THE SAME SHAPE AS THE CUSTOMER'S OWN CHECK LOG (owner 08-01, reversing
+      // the earlier "move mapping out": "it would allow me to see in the testing area a complete end
+      // to end log of the entire transaction which is huge for myself and any agent"). The steps were
+      // already here; what was missing was the conversation itself, which is half of what he reads.
+      lines: live.transcript.map((l) => ({ who: l.who, text: l.text, atSec: Math.round(l.atMs / 1000) })),
+      v2: await v2For(timeline, sums, cost, (await db.select({ rid: callResults.retailerId }).from(callResults).where(eq(callResults.room, room)).limit(1))[0]?.rid ?? null),
     });
   }
   const rows = await db.select().from(callEvents).where(eq(callEvents.room, room)).orderBy(callEvents.atMs);
@@ -6386,6 +6477,13 @@ app.get("/api/admin/receipt/:room", async (c) => {
     stamped: !!cost,
     cost: cost ? { ...cost, readable: readable(cost) } : null,
     behaved: behaved({ timeline, rollup: seconds, agentLines: agentLinesFrom(attached?.transcript) }),
+    // …and on a finished check the words are one flat block with no clock on them, so they carry no
+    // seconds. Same shape either way, so the screen has one way to draw a conversation.
+    lines: String(attached?.transcript || "").split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
+      const m = /^(Agent|Clerk|Staff):\s*(.*)$/i.exec(l);
+      return m ? { who: /agent/i.test(m[1]) ? "Agent" : "Clerk", text: m[2], atSec: null } : { who: "Clerk", text: l, atSec: null };
+    }),
+    v2: await v2For(timeline, seconds, cost, attached?.retailerId ?? null),
   });
 });
 app.get("/api/admin/call-timing", async (c) => {
@@ -6758,25 +6856,8 @@ app.post("/api/admin/map/version/:id/reject", async (c) => {
   const b = (await c.req.json().catch(() => ({}))) as { why?: string };
   return c.json(await rejectVersion(id, "admin", String(b.why || "")));
 });
-// The graph behind a chain: every prompt we have heard and every action that led from one to another.
-// START A CHAIN OVER, keeping the route it runs. Clears the mapping calls, the review items, the
-// observations and the recipes that were retired or set aside; the live recipe stays (a re-listen has
-// to walk one) with its evidence emptied and its number reset to 1. Owner-asked, 07-30: the CVS
-// history was made before the system was right, and a page built on bad calls is worse than an empty one.
-app.post("/api/admin/map/chain/:id/reset", async (c) => {
-  const id = Number(c.req.param("id"));
-  if (!id) return c.json({ error: "chainId required" }, 400);
-  return c.json(await resetChainHistory(id));
-});
-// FREE THE DOORS, KEEP EVERYTHING ELSE. Starting over throws away the whole history; this throws
-// away only the refusals — the doors marked wrong, the desks whose one question is spent, and the
-// moves remembered as never-again. The route, its proof, the checks and the menu all stay. Wanted
-// when a chain has painted itself into a corner but its history is good (fix pass 5, item 5).
-app.post("/api/admin/map/chain/:id/free-doors", async (c) => {
-  const id = Number(c.req.param("id"));
-  if (!id) return c.json({ error: "chainId required" }, 400);
-  return c.json(await freeChainDoors(id));
-});
+// FREE DOORS and START OVER are DELETED (owner, 08-03) — buttons and routes both, so nothing is
+// left half-wired. He never asked for either. Map re-maps a chain, which is all he asked for.
 app.get("/api/admin/map/graph/:id", async (c) => {
   const id = Number(c.req.param("id"));
   if (!id) return c.json({ error: "chainId required" }, 400);
@@ -6797,6 +6878,50 @@ app.post("/api/admin/map/unknown/:id", async (c) => {
 // a mapping call learned HERE, keyed by chain name and store phone — ids are per-database and would
 // cross-wire. Production applies it exactly as if the call had happened here, so the Admin mapping
 // section stays the single source of truth and both environments run the identical recipe.
+// SEE THE SCREENS WITH DATA IN THEM, without a phone and without a penny (owner asked, 08-03).
+// Writes ONE mapping run into the chain's own check log — the same shape a real check writes, read
+// by the same page — so Mapped checks, the headings, the reasons and Menu all fill in. STAGING ONLY,
+// and it refuses on the real site: nothing here may ever put a check that did not happen in front of
+// a customer or into the owner's real numbers.
+app.post("/api/admin/map/simulate", async (c) => {
+  if (!config.staging.on) return c.json({ error: "staging only — a check that did not happen never goes on the real site" }, 400);
+  const b = (await c.req.json().catch(() => ({}))) as { chainName?: string; storeName?: string };
+  const name = String(b.chainName || "").trim();
+  const ch = (await db.select().from(chains).where(eq(chains.name, name)))[0];
+  if (!ch) return c.json({ error: `no chain named ${name}` }, 404);
+  const store = String(b.storeName || "").trim() || `${ch.name} — simulated`;
+  const t = Math.floor(Date.now() / 1000);
+  const line = (who: string, text: string, atSec: number, action?: string, value?: string) => ({ who, text, atSec, action: action ?? null, value: value ?? null });
+  const menu = [
+    line("ivr", "Thank you for calling CVS, Pharmacy. If this is an emergency, please hang up and dial 911.", 4),
+    line("ivr", "Are you a healthcare provider?", 18),
+    line("us", 'said "no"', 26, "say", "no"),
+    line("ivr", "To better assist you, are you calling in for pharmacy or front store services?", 29),
+    line("us", 'said "front store services"', 38, "say", "front store services"),
+    line("ivr", "I can assist you with beauty and fragrance, OTC, health, photo services, and General Store inquiries.", 42),
+    line("us", 'said "general"', 48, "say", "general"),
+    line("ivr", "Okay, transferring you now.", 51),
+  ];
+  // EVERY MADE-UP CHECK SAYS SO, ON THE SCREEN. The owner must never look at this page and wonder
+  // which checks really happened, so the mark rides the check itself — not the store name, which he
+  // can pass in as any real store.
+  const madeUp = true;
+  const runs = [
+    { ts: (t - 5400) * 1000, navId: "sim-1", store, retailerId: null, madeUp, outcome: "human", stage: "map", grade: "pass",
+      seconds: 64, transferAtSec: 51, greeting: "Front store, this is Dana.", confirm: "answered", callSid: null,
+      steps: [...menu, line("ivr", "Front store, this is Dana.", 61), line("us", "handed the check to Charlie", 61)] },
+    { ts: (t - 3600) * 1000, navId: "sim-2", store, retailerId: null, madeUp, outcome: "mapped", stage: "map", grade: "pass",
+      seconds: null, transferAtSec: 51, endedOnRing: true, callSid: null, steps: menu },
+    { ts: (t - 2400) * 1000, navId: "sim-3", store, retailerId: null, madeUp, outcome: "failed", stage: "speed", grade: "fail",
+      reason: "menu repeated itself", seconds: null, transferAtSec: null, callSid: null,
+      steps: [menu[0], menu[1], line("us", 'said "front"', 20, "say", "front"), line("ivr", "Sorry, I'm not understanding.", 24)] },
+    { ts: (t - 1200) * 1000, navId: "sim-4", store, retailerId: null, madeUp, outcome: "mapped", stage: "speed", grade: "pass",
+      seconds: null, transferAtSec: 45, endedOnRing: true, callSid: null,
+      steps: [menu[0], menu[1], menu[2], menu[3], line("us", 'said "front"', 36, "say", "front"), menu[5], menu[6], line("ivr", "Okay, transferring you now.", 45)] },
+  ];
+  await setSetting(`nav_runs:${ch.id}`, JSON.stringify(runs));
+  return c.json({ ok: true, chain: ch.name, checks: runs.length });
+});
 app.post("/api/admin/map/ingest", async (c) => {
   const b = (await c.req.json().catch(() => ({}))) as {
     chainName?: string; storePhone?: string | null; storeName?: string | null;
@@ -6947,7 +7072,7 @@ app.get("/api/results", async (c) => {
     const ret = rMap.get(r.retailerId);
     // Same chain-logo resolution as every other surface, so the Calls feed shows the store's mark.
     const l = chainLogoInfo(ret ? ((ret.chainId && names.get(ret.chainId)) || storeChainName(ret.name)) : null);
-    return { ...r, retailer: ret?.name, category: cMap.get(r.categoryId), logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct };
+    return { ...r, retailer: ret?.name, category: cMap.get(r.categoryId), logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoPct: l.pct, logoAspect: l.aspect };
   }) });
 });
 
@@ -7248,7 +7373,7 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
   }).returning();
   const rid = row.id;
   if (governed) {
-    const slot = await acquireCallSlot({ key: `call:${rid}`, priority: opts?.priority ?? "interactive", userId: finder?.userId ?? undefined, ttlSec: (pol.bail.maxCallSeconds || 180) + 120 });
+    const slot = await acquireCallSlot({ key: `call:${rid}`, priority: opts?.priority ?? "interactive", userId: finder?.userId ?? undefined, ttlSec: (await callTuning()).maxCheckSeconds + 120 });
     if (slot === null) {
       await db.update(callResults).set({ status: "failed", statusKey: "system_busy", summary: "All lines busy — the check will be retried." }).where(eq(callResults.id, rid));
       return { error: "calls_busy" }; // routeCheck sees this and queues the check instead of failing
@@ -7267,7 +7392,7 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
       .catch((e) => console.error("bridge call log update:", e));
     // Per-store talk cap (chains.maxTalkSeconds) wins over the global bail ceiling when set, so a
     // store the owner marked "wrap fast" gets a tighter Twilio TimeLimit — the cost guarantee.
-  }, v.dtmf, { from, room, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, listenNav: v.listenNav });
+  }, v.dtmf, { from, room, timeLimitSec: v.maxTalk ?? undefined, /* no per store cap → the owner's own number, from call_tuning */ say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, listenNav: v.listenNav });
 
   if (result.error || !result.room) {
     if (governed) await releaseCallSlot(`call:${rid}`);
@@ -7351,8 +7476,12 @@ app.post("/api/bridge/call", async (c) => {
   const r = await placeBridgeCall(b.toNumber, {
     internal_call_id: "0", category, retailer_name: b.storeName || "the store", location: "",
     clarification: "", phone_tree: b.phoneTree || "", special_instructions: "",
-    voicemail_policy: "If you reach a personal voicemail with no menu, hang up without leaving a message.",
-    personality: "", opening_line: opener.replace(/\{category\}/g, category), other_categories: "", ask_shipment_day: "",
+    personality: "", opening_line: opener.replace(/\{category\}/g, category),
+    // Charlie's words carry the kiosk and wrong-department sections as INSERTS, so an ad-hoc dial has
+    // to fill them or the provider refuses the call on a missing variable. This dial has no store
+    // record behind it: not a kiosk, and never allowed to ask to be put through.
+    kiosk_note: kioskNote(category, false), department_note: departmentNote(category, false),
+    set_example: SET_EXAMPLE,
   }, undefined, b.dtmf || null, { connectOnHuman: b.connectOnHuman, connectAtSec: b.connectAtSec, timeLimitSec: b.timeLimitSec, say: b.say || null });
   if (r.error) return c.json({ error: r.error }, 502);
   return c.json({ room: r.room, wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
@@ -7411,6 +7540,9 @@ app.post("/webhooks/elevenlabs", async (c) => {
       }
       // The webhook path never sent the alerts either — same ONE notifier, claimed once per check.
       await notifyAfterVerdict(o.callId);
+      // …and the same verdict tail as every other door (law 11).
+      void recordVerdict(o.callId, statusKey ?? null, o.summary ?? null, o.durationSecs ?? 0,
+        { secondReadModel: o.status === "completed" ? VERDICT_MODEL : null, secondReadUsd: o.status === "completed" ? STATUS_READ_USD : 0, decidedBy: lastClerkLine(o.transcript), charged: !!(row?.finderUserId && o.status === "completed" && billableOutcome(statusKey, definitive, o.transcript)) });
     }
     return c.json({ ok: true });
   } catch (e) {

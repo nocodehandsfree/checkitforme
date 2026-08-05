@@ -23,6 +23,7 @@ export interface CallTuning {
   holdMusicMs: number;
   musicWindowMs: number;
   musicVoicedFraction: number;
+  roomFraction: number;
   newPersonAfterMs: number;
   transferToneMs: number;
   backVoiceMs: number;
@@ -32,6 +33,11 @@ export interface CallTuning {
   clipBackstopMs: number;
   // ---- calling straight back after a broken call ----
   reconnectWindowMin: number;
+  // ---- THE OWNER'S OWN NUMBERS, tuned from Admin against real checks ----
+  charlieWrapUpSeconds: number;
+  holdCapSeconds: number;
+  ringWaitSeconds: number;
+  maxCheckSeconds: number;
 }
 
 /** The defaults, and WHY each one is that number. Anything here can be overridden from Admin with
@@ -41,11 +47,12 @@ export const TUNING_DEFAULTS: CallTuning = {
   personWaitMs: 2500,
   greetingEndMs: 600,
   greetingMaxWaitMs: 4000,
-  greetingKeepMs: 6000,
+  greetingKeepMs: 10000,
   holdQuietMs: 6000,
   holdMusicMs: 6000,
   musicWindowMs: 3000,
   musicVoicedFraction: 0.96,
+  roomFraction: 0.35,
   newPersonAfterMs: 20000,
   transferToneMs: 600,
   backVoiceMs: 400,
@@ -53,6 +60,10 @@ export const TUNING_DEFAULTS: CallTuning = {
   clipSettleMs: 250,
   clipBackstopMs: 4000,
   reconnectWindowMin: 2,
+  charlieWrapUpSeconds: 45,
+  holdCapSeconds: 120,
+  ringWaitSeconds: 90,
+  maxCheckSeconds: 240,
 };
 
 /** Plain-English reason for each, shown next to the value in Admin. Never a code identifier. */
@@ -61,11 +72,12 @@ export const TUNING_WHY: Record<keyof CallTuning, string> = {
   personWaitMs: "…and then they wait for you. A menu pauses well under a second between phrases.",
   greetingEndMs: "A pause this long right after they pick up means they have finished saying hello and are waiting for us. Too short and our question talks over the end of their own sentence.",
   greetingMaxWaitMs: "…and if they simply never stop talking, ask anyway rather than listen forever.",
-  greetingKeepMs: "How much of what Staff said BEFORE we were sure a person was there we keep and hand on, so their first words are never lost. It has to cover a whole greeting: cut it short and the beginning is missing.",
+  greetingKeepMs: "How much of what Staff said BEFORE we were sure a person was there we keep and hand on, so their first words are never lost. It has to cover a whole greeting AND the pause we wait through before we are sure of them: cut it short and the beginning is missing.",
   holdQuietMs: "Silence this long, mid conversation, and they have put the phone down and walked off.",
   holdMusicMs: "Unbroken sound this long is hold music. Real speech always has gaps in it.",
   musicWindowMs: "How much recent audio we look at to decide speech versus continuous sound.",
   musicVoicedFraction: "How solidly filled that window has to be before we call it music. Speech never fills it.",
+  roomFraction: "How quiet a sound has to be, next to the person we have been talking to, before we call it the room rather than them. A handset put down on the counter still picks the store up; it is just far quieter than somebody speaking into it. Raise it and Charlie is dropped on a quiet talker; lower it and he keeps billing to an empty counter.",
   newPersonAfterMs: "A gap longer than this and whoever comes back may not be who left, so the agent is warned.",
   transferToneMs: "How long a phone has to be ringing before we say we were handed on. A real ring runs two seconds, so anything shorter was a voice that happened to sound like one.",
   backVoiceMs: "How much talking we need to hear before we say somebody is back. About one word. Less than this and a click or a gap in hold music ends a wait that never ended.",
@@ -73,18 +85,26 @@ export const TUNING_WHY: Record<keyof CallTuning, string> = {
   clipSettleMs: "A breath after the recorded question so the agent cannot clip its own tail.",
   clipBackstopMs: "If nothing confirms the question finished, hand over anyway this long after it should have. A clerk talking to silence is the worse failure.",
   reconnectWindowMin: "How long \"I just got disconnected\" still sounds true. Past this it is likely a different employee and a stranger saying it is worse than a normal greeting.",
+  charlieWrapUpSeconds: "How long Charlie may actually be TALKING before he starts wrapping up. It never hangs the check up: cutting Staff off mid help kills a check the customer already paid for. He costs 11 cents a minute, so this is the one number that decides whether a check makes money.",
+  holdCapSeconds: "How long a hold may run before we hang up. Waiting is nearly free because Charlie is dropped, and a second check costs more than waiting, so be generous.",
+  ringWaitSeconds: "How long the phone may ring while we wait for a human. We never hang up on a count of rings (owner 08-03): a store that lets it ring twenty times may still pick up, and the only thing worth measuring is how long we have been waiting. Charlie is off the whole time, so this is the phone line only.",
+  maxCheckSeconds: "How long a whole check may run before the phone company ends it for us. A backstop, not the everyday rule: what a check costs is decided by how long Charlie talks, and he costs 60 times what the line does.",
 };
 
 /** Bounds, so a typo in Admin can never produce a call that hangs or a gate that never fires. */
 const LIMITS: Record<keyof CallTuning, [number, number]> = {
   personGreetingMaxMs: [500, 15000], personWaitMs: [500, 15000],
-  greetingEndMs: [200, 5000], greetingMaxWaitMs: [1000, 20000], greetingKeepMs: [0, 10000],
+  greetingEndMs: [200, 5000], greetingMaxWaitMs: [1000, 20000], greetingKeepMs: [0, 20000],
   holdQuietMs: [2000, 60000], holdMusicMs: [2000, 60000],
-  musicWindowMs: [500, 10000], musicVoicedFraction: [0.5, 1],
+  musicWindowMs: [500, 10000], musicVoicedFraction: [0.5, 1], roomFraction: [0.05, 0.9],
   newPersonAfterMs: [5000, 300000],
   transferToneMs: [200, 5000], backVoiceMs: [100, 3000],
   prewarmLeadMs: [0, 10000], clipSettleMs: [0, 3000], clipBackstopMs: [500, 20000],
   reconnectWindowMin: [1, 120],
+  charlieWrapUpSeconds: [5, 600],
+  holdCapSeconds: [10, 900],
+  ringWaitSeconds: [10, 600],
+  maxCheckSeconds: [30, 900],
 };
 
 /** What this call should use. Admin overrides win where they are sane; anything out of bounds or

@@ -1,37 +1,74 @@
 #!/usr/bin/env bash
 # Injected into EVERY agent turn via the UserPromptSubmit hook in .claude/settings.json.
-# This is the whole point: these three rules ride in fresh on every message so they never
-# fade the way a boot-only doc does. Keep them SHORT — this is read every turn; the full
-# versions live in CLAUDE.md and "Protocol" pulls them up. Edit the wording here.
-read -r -d '' RULES <<'EOF'
-THE THREE — obey on every single turn:
+# Reply rules are NOT written here — they are read live from the ONE source the owner
+# locked on 2026-08-04 (.claude/output-styles/check-owner-reply.md) so this hook can
+# never drift from it. The build/ship and compute laws still live here.
+# 08-05: this hook also SAVES the owner's latest message, keyed by session id, so the
+# reply renderer can read it (agreed architecture, owner's "go" 2026-08-05).
+d="${CLAUDE_PROJECT_DIR:-.}"
+SRC="$d/.claude/output-styles/check-owner-reply.md"
 
-1. REPLY FOR HIS PHONE. Lead with the answer in one line, in his words — no jargon, no
-   system nicknames. A reason only if he needs one; a decision only if there is one (his
-   trade-off, your pick, one question); then stop. A reply he has to scroll or decode is a fail.
+INPUT=$(cat 2>/dev/null)
+PDIR="$d/.claude/state/reply-lock/prompts"
+mkdir -p "$PDIR" 2>/dev/null
+RL_INPUT="$INPUT" RL_PDIR="$PDIR" python3 -c '
+import json, os, glob
+try:
+    data = json.loads(os.environ.get("RL_INPUT") or "{}")
+    sid = (data.get("session_id") or "unknown")[:36]
+    prompt = data.get("prompt") or ""
+    pdir = os.environ["RL_PDIR"]
+    if prompt:
+        with open(os.path.join(pdir, sid + ".txt"), "w") as fh:
+            fh.write(prompt)
+    files = sorted(glob.glob(os.path.join(pdir, "*.txt")), key=os.path.getmtime)
+    for f in files[:-10]:
+        os.remove(f)
+except Exception:
+    pass
+' 2>/dev/null
 
-2. BUILD IT RIGHT, PROVE IT, SHIP IT. Anything he sees follows the design and copy style
-   guides — match them, invent nothing. When you think it's done, use it yourself like a
-   customer and watch it work; passing tests is not "done." Then ship it — push and deploy
-   (staging and Admin go live without him). Never wait for him to say "ship." Only stop for
-   real money or a production release.
+# Strip the frontmatter block; paste the rules + lexicon verbatim.
+RULES_BODY=$(awk 'BEGIN{fm=0} /^---$/{fm++; next} fm>=2{print}' "$SRC")
 
-3. DON'T BURN HIS COMPUTE. Never start a background task, poll, or watcher unless he asked.
-   If the job truly needed one, kill it the second you're done — never leave it lingering,
-   never start one just to wait on a deploy, a promote, or another agent.
+read -r -d '' LAWS <<'EOF'
 
-4. HIS WORDS ONLY (owner law 07-29). The models are Alpha (keypad) · Bravo (spoken menu) ·
-   Charlie (the conversation agent) · Delta (recorded clips, parked). It is a CHECK — never a
-   call, line, room, or session. The person at a store is Staff. Charlie's meter stopping on a
-   hold is "dropped Charlie"; coming back is "reconnected Charlie". Every cost rolls into two
-   buckets: nav time and talk time. Words he did not coin (receipt, room, door, lane, "the
-   thinking"…) NEVER appear in a reply to him — say it plainly instead, and any term you must
-   introduce gets a plain-words definition in the same sentence. Numbers are said plainly ("9
-   seconds into the call", never "second 9"). NEVER quote your own earlier shorthand back at him
-   ("that's all X meant") — retire it and say the thing itself. A store's menu is quoted ONLY in
-   the store's exact words as heard ("front store services", never your paraphrase). This law
-   covers replies, docs, and every Admin label.
+THE STANDING LAWS — obey on every single turn:
 
-Say "Protocol" → re-read the full rules in CLAUDE.md and rebuild the last reply to match.
+A. THE REPLY RULES ABOVE ARE LOCKED (owner, 08-04) and machine-enforced by the
+   reply lock. HOW TO REPLY (renderer flow, owner's go 08-05): write your best
+   COMPLETE answer normally — every fact, number, name, decision, uncertainty,
+   exact quote intact. No style effort needed; a dedicated renderer puts it in
+   the owner's voice. SHORT REPLY (2 lines or less, e.g. "Yes, all done."):
+   skip everything and just send. Otherwise save the answer to a scratch file
+   and run bash scripts/check-reply.sh <file> in the FOREGROUND (never in
+   background) and WAIT. It returns APPROVED text: yours unchanged, or a
+   rendered version whose facts were verified mechanically and by a meaning
+   pass. Send EXACTLY the approved text. A wrong fact in the rendering: fix
+   only that fact in YOUR draft and check once more. NEVER retry an unchanged
+   draft, never loop. Unapproved text gets graded when you stop and a failure
+   BOUNCES VISIBLY — the owner reads the same reply twice. Never resend text
+   he has already seen; send only what corrects it. When the owner pastes a
+   reply that bugged him plus a fixed version he approves, the pair is saved
+   to .claude/reply-examples/ so every chat's renderer learns from it.
+   The lexicon covers everything he reads: replies, docs, every Admin label.
+   BUT THE REPLY STYLE STOPS AT THE CHAT WINDOW (owner, 08-05): it NEVER
+   shapes work product. Charlie's instructions follow the Charlie spec, code
+   follows the codebase, customer copy follows the copy guide. While building,
+   forget the renderer exists; it meets you once, when you write to the owner.
+
+B. BUILD IT RIGHT, PROVE IT, SHIP IT. Anything he sees follows the design and
+   copy style guides — match them, invent nothing. When you think it's done, use
+   it yourself like a customer and watch it work; passing tests is not "done."
+   Then ship it — push and deploy (staging and Admin go live without him). Never
+   wait for him to say "ship." Only stop for real money or a production release.
+
+C. DON'T BURN HIS COMPUTE. Never start a background task, poll, or watcher
+   unless he asked. If the job truly needed one, kill it the second you're
+   done — never leave it lingering, never start one just to wait on a deploy, a
+   promote, or another agent.
+
+Say "Protocol" → re-read the locked rules file and rebuild your last reply to match.
 EOF
-jq -n --arg c "$RULES" '{hookSpecificOutput:{hookEventName:"UserPromptSubmit",additionalContext:$c}}'
+
+printf '%s\n%s\n' "$RULES_BODY" "$LAWS" | jq -Rs '{hookSpecificOutput:{hookEventName:"UserPromptSubmit",additionalContext:.}}'

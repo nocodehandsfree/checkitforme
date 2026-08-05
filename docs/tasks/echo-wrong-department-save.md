@@ -168,9 +168,8 @@ report. Three rows were deleted for breaking that rule (`asked_once`, `mapping_h
 `no_keypad_at_person`). Do not helpfully put them back.
 
 ### How he wants to be talked to
-Answer first, one line, his words. No system nicknames. Say **check**, **Staff**, **Charlie**,
-**dropped Charlie** / **reconnected Charlie**. Never "the agent", never "call", never explain the
-plumbing unless he asks. He reads on a phone: one screen, one question, then stop.
+The locked reply rules + lexicon: `.claude/output-styles/check-owner-reply.md` (the ONE record,
+owner-locked 08-04; the reply lock enforces it on every reply).
 
 ### The one thing still blocked
 **Production.** The Testing SCREEN is already on his production Admin (it ships on its own path), but

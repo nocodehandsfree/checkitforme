@@ -22,9 +22,9 @@ promotes) · **support** (customer-chat agent). **External:** CD submits design 
 each specialist session; work outside the box → write `PM: <note>` in your checkpoint and stop.
 
 ## How you reply + how you work
-- **Replying to the owner is the project OUTPUT STYLE** (`.claude/output-styles/check-owner-reply.md`,
-  set as default): answer first, his words, one phone screen, one question max, then stop. Say
-  **"Protocol"** → re-read it and rebuild your last reply to match. The three rules also ride in every turn.
+- **Reply rules are LOCKED (owner, 08-04): `.claude/output-styles/check-owner-reply.md` is the ONE source**
+  (rules + lexicon; machine-locked, pasted into every turn). The reply lock (Stop hook) grades every reply
+  (word scan + a cold second reader), bouncing it until it passes; 3 fails = stamped FAILED THE RULES.
 - **Done = demonstrated, never claimed.** Report as: **Built** (one line) · **Drove it**
   (`URL → action → what I saw`, or `NOT verified: X` + why, or blind spot → "pushed, check your phone")
   · **Left** (what you did not check). "Should work" is banned. `bash scripts/verify-live.sh` output is
@@ -40,7 +40,7 @@ each specialist session; work outside the box → write `PM: <note>` in your che
 |---|---|
 | `staging` | branch **=** `staging.checkitforme.com` **=** Railway svc `voice-caller-staging`. All code work HERE. |
 | `main` (prod) | branch **=** PRODUCTION `checkitforme.com` **=** svc `voice-caller`. Never push it directly. |
-| promote | merge verified `staging` → `main` (`bash scripts/promote.sh`). The ONLY way prod code changes; ships the WHOLE staging branch — say what rides along first. Big customer-visible features stay behind a flag until the owner blesses them. |
+| promote | merge verified `staging` → `main` (`bash scripts/promote.sh`). The ONLY way prod code changes; REFUSES unless GitHub's automatic test run is GREEN on the exact staging code (owner's rule 08-04; `promote.sh check` proves the gates any time). A green mark never replaces DRIVING your change on staging like a customer. Ships the WHOLE staging branch — say what rides along first; big customer-visible features stay behind a flag until the owner blesses them. |
 | Admin | `admin.checkitforme.com` — THE one operator dashboard. Ships LIVE: merge to staging, then `bash scripts/ship-admin.sh` — never wait for a promote. |
 | Fun store | owner-only test store (Admin → Testing). Test calls go here; never touches real-store stats. |
 | the book | branch `v1.0` — readme.com customer docs (copy). Plans/pricing code truth is `src/plans.ts`. |
