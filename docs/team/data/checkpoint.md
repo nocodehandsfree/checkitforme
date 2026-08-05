@@ -40,12 +40,12 @@
   something re-imports staging retailers. Find WHO.
 - **08-04 repo cleanup round 1 (owner-approved, staging):** 32 unused files deleted — 23 scripts/archive
   one-offs (kept the 2 regenerators seed.ts/.gitignore name), 5 dead helpers, launch-readiness.html, 3 imported store lists.
-- Held-back wrong numbers: Fry's Gilbert 102795 + Mariano's Westchester-IL 102842 (mapped) · Payless
-  Foods Athens (no phone: mute/leave). Logos: Habitat ReStore, Unique (owner getting).
+- Held-back wrong numbers: Fry's Gilbert 102795 + Mariano's Westchester-IL 102842 (mapped) · Payless Foods Athens (no phone: mute/leave). Logos: Habitat ReStore, Unique (owner getting).
 
 ## Infra / deploys (old ops lane)
 - Two branches: staging (`staging`) + prod (`main`) — both load-bearing, never delete. Promote =
-  `bash scripts/promote.sh` (the ONLY way prod code changes; per-commit confirm). Admin ships via ship-admin.
+  `bash scripts/promote.sh` (the ONLY way prod code changes; per-commit confirm; 08-04 it REFUSES on a
+  red GitHub test mark — `promote.sh check` dry-runs the gates). Admin ships via ship-admin.
 - Settings mirror prod→staging LIVE (60s; `src/settings-sync.ts` — policy/vt_plans/statuses; zero
   overlap with store/learned pipes). Browser tests (the old launch gate) ARCHIVED 08-04, owner's ruling.
 - **NEXT PROMOTE ride-along:** the zone-lane fix (2080731) + the rebuild build stamp — prod/admin show
