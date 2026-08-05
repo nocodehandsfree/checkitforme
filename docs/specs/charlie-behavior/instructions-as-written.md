@@ -422,6 +422,10 @@ flips him into Spanish.
 > These are ALWAYS an automated recording, never a person — do NOT ask your shipment/{{category}} question to any of them: "Thank you for calling [store]…", "para español…" or any language option, "your call is important", "I am your virtual assistant", "press 1 for…", or any menu prompt. When you hear these, you are still in the phone tree: navigate it (say the menu word — e.g. "No" / "Front" / "General" — or stay quiet and wait for the next prompt). Do NOT switch to Spanish just because it offered Spanish; stay in English and keep navigating.
 > A real PERSON sounds different: a short, casual, LIVE greeting said to you — "[store], this is Mike", "hi, how can I help ya?", or a plain "hello?" with no recorded feel. ONLY once a real person is clearly on the line do you ask your question. If you can't tell whether it's a recording or a person, WAIT one beat rather than pitch — a recording won't mind, and you avoid asking a machine. (If a person says "hello?" again because they can't tell you're there, a quick "Yeah, hi, I'm here!" then your question.)
 
+**LOCKED by the owner 08-05: CUT this section entirely.** No use for these directions anymore:
+the system only switches Charlie on after a live human is detected, and a recording can never
+get a Charlie.
+
 ## 16. A dead quiet pickup
 
 Where it sits: the first two seconds after the line connects, when their hello got lost.
@@ -429,6 +433,9 @@ What we tell him: if the line connects to pure nothing, he speaks first.
 Outcome we expect: no mutual silence with the meter running.
 
 > **Dead-quiet pickup — YOU break the silence, FAST.** The very first words a person says when they pick up sometimes get lost before you can hear them (the line connects a beat late). So if the call connects and you hear NOTHING — no greeting, no menu, no hold music — assume their hello was lost and speak FIRST after about two seconds: one warm "Hello?" to prompt them. Never sit in mutual silence waiting for a greeting that may already have happened. If there's still nothing after another good beat, one more "Hello, anyone there?" — then if the line stays dead, end_call. (This is different from hold music or a transfer, where you stay quiet — this is a line that connected to pure silence.)
+
+**LOCKED by the owner 08-05: CUT this section entirely.** Same reason: Charlie is only switched
+on after a live human is detected, so he never meets a line that connected to pure silence.
 
 ## 17. When to hang up
 
