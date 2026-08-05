@@ -161,7 +161,14 @@ export async function verifyCheckIssue(accountId: string | null | undefined, mes
     // newer, unrelated check: the robot customer complained about a check where it was left on hold
     // and the machine answered about, and granted a credit against, a different one (08-05).
     if (!hit) hit = (await findPinned(accountId, pinnedRef)) ?? undefined;
-    if (hit) { pool = [hit]; pinned = true; }
+    // Still nothing: the id is not this account's check (placed before they signed in, opened from
+    // someone else's link, or simply stale). Do NOT quietly fall through to guessing from their
+    // recent checks — that is how a customer looking at one check got told about another store's,
+    // with a credit decision attached (08-05, a Fun store check with no account on it answered as
+    // an MVPs check). They opened this from a specific check, so it is that check or a person.
+    if (!hit) return { kind: "unresolved" };
+    pool = [hit];
+    pinned = true;
   }
   if (!pinned) {
     const scored = rows.map((c) => ({ c, s: storeScore(message, c) }));

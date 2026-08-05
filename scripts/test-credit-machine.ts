@@ -221,6 +221,19 @@ async function main() {
   ok("a real claim past the cap goes to a person", /needs a person/i.test(res.reply), res.reply);
   ok("still no extra grant", (await db.select().from(supportCreditGrants)).length === CAP);
 
+  console.log("\n== 19. a pinned check that is not this account's never becomes a different check ==");
+  await db.delete(callResults);
+  await db.delete(supportCreditGrants);
+  // A check with no account on it (placed before sign-in, or from someone else's link)...
+  const orphan = await mkCheck(r2.id, { statusKey: "voicemail", chargedAt: null, callSeconds: 5, finderUserId: null });
+  // ...while the customer's own recent checks sit there, one of them refundable.
+  await mkCheck(r1.id, { statusKey: "nobody_answered", chargedAt: now - 500, callSeconds: 5 });
+  res = await answerSupport("sess-orphan-1", "this one just went to their voicemail",
+    { category: "check_issue", account: { id: USER }, origin: { checkId: String(orphan.id) } });
+  ok("never answers about the other store", !res.reply.includes(r1.name), res.reply);
+  ok("hands it to a person instead of guessing", /can't tell which check/i.test(res.reply), res.reply);
+  ok("no grant against an unrelated check", (await db.select().from(supportCreditGrants)).length === 0);
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }
