@@ -17,7 +17,7 @@ import type {
   StartCallResult,
   VoiceProvider,
 } from "./provider";
-import { PREMIUM_FOLLOWUP, FREE_NO_FOLLOWUP, ASK_SHIPMENT_DAY, SOFT_TIMEOUT_FALLBACK, oneTurnFollowup, oneTurnShipmentDay } from "./prompts";
+import { SOFT_TIMEOUT_FALLBACK, kioskNote, departmentNote, FALLBACK_SET_EXAMPLE } from "./prompts";
 import { assertCallsEnabled } from "../config";
 
 export interface ElevenLabsConfig {
@@ -64,18 +64,14 @@ export class ElevenLabsProvider implements VoiceProvider {
             personality: p.personalityTone ?? "",
             opening_line: p.openingLine ?? "",
             other_categories: (p.otherCategories ?? []).join(", "),
-            // ONE QUESTION, THEN WRAP: a workflow that folds the set and the format into a single
-            // question replaces BOTH follow-up instructions with its own wording. Same data the
-            // recorded-clip lane reads, so the two lanes cannot ask a different number of questions.
-            ask_shipment_day: p.askShipmentDay ? (p.foldedQuestions ? oneTurnShipmentDay(p.foldedQuestions.no) : ASK_SHIPMENT_DAY) : "",
-            // Kiosk-only store: the prompt branches on this to ask about the vending kiosk
-            // (working/stocked) instead of a shelf shipment. "" = normal shelf check.
-            kiosk_mode: p.kioskMode ? "true" : "",
-            // THE WRONG-DEPARTMENT SAVE. Same switch the bridge lane reads: ask to be put through
-            // rather than losing the check. "" = the prompt's section is inert (today's behaviour).
-            ask_for_transfer: p.askForTransfer ? "true" : "",
-            // Premium gate: subscribers' calls ask the product-type follow-up; free calls end fast.
-            premium_followup: p.premiumFollowup === false ? FREE_NO_FOLLOWUP : (p.foldedQuestions ? oneTurnFollowup(p.foldedQuestions.set) : PREMIUM_FOLLOWUP),
+            // INSERT OR NOTHING (the owner's rewrite, sections 4 and 5). The words themselves arrive
+            // built, never a flag for Charlie to reason about, and never the same section twice: both
+            // lanes call the same two builders, so a switch can never mean one thing here and another
+            // on the bridge.
+            kiosk_note: kioskNote(p.productName, !!p.kioskMode),
+            department_note: departmentNote(p.productName, !!p.askForTransfer),
+            // Section 10's example question keeps a REAL set name in it, read from the site's catalog.
+            set_example: (p.setExample || "").trim() || FALLBACK_SET_EXAMPLE,
           },
         },
       }),

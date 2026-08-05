@@ -155,6 +155,7 @@ import { settings as settingsTbl } from "./db/schema";
 import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeRoomForConversation, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, activeBridgeCalls, weEndedCheck, noteWeEnded } from "./voice/bridge";
 import { installCheckLife, isCheckAlive, noteLineEnded, resolveRoom as lifeRoom } from "./calls/check-life";
 import { placeBridgeCall, attachListenFork, roomCallSids, roomCallProgress, roomFinalizers, RAILWAY_HOST, STAGING_HOST } from "./voice/bridge-place";
+import { kioskNote, departmentNote, FALLBACK_SET_EXAMPLE } from "./voice/prompts";
 import { isCallingPaused, setCallingPaused, spendTodayCents, withLock } from "./redis";
 
 assertProdSecurity(); // refuse to boot in prod with an open admin / forgeable sessions
@@ -7516,8 +7517,12 @@ app.post("/api/bridge/call", async (c) => {
   const r = await placeBridgeCall(b.toNumber, {
     internal_call_id: "0", category, retailer_name: b.storeName || "the store", location: "",
     clarification: "", phone_tree: b.phoneTree || "", special_instructions: "",
-    voicemail_policy: "If you reach a personal voicemail with no menu, hang up without leaving a message.",
-    personality: "", opening_line: opener.replace(/\{category\}/g, category), other_categories: "", ask_shipment_day: "",
+    personality: "", opening_line: opener.replace(/\{category\}/g, category),
+    // Charlie's words carry the kiosk and wrong-department sections as INSERTS, so an ad-hoc dial has
+    // to fill them or the provider refuses the call on a missing variable. This dial has no store
+    // record behind it: not a kiosk, and never allowed to ask to be put through.
+    kiosk_note: kioskNote(category, false), department_note: departmentNote(category, false),
+    set_example: FALLBACK_SET_EXAMPLE,
   }, undefined, b.dtmf || null, { connectOnHuman: b.connectOnHuman, connectAtSec: b.connectAtSec, timeLimitSec: b.timeLimitSec, say: b.say || null });
   if (r.error) return c.json({ error: r.error }, 502);
   return c.json({ room: r.room, wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
