@@ -433,11 +433,19 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   let helloAlreadyAnswered = false; // the next Staff line is the hello Delta answered, not our answer
   let answerWaitTimer: NodeJS.Timeout | null = null;
   let heldHisHelloReply = false;    // we dropped a turn of his; recorded once, so the record shows it
-  /** A store that says NOTHING back to the question still needs him. The recording has finished and
-   *  the line has been quiet since; from here he is better off prompting them than leaving a person
-   *  holding a silent phone. Longer than a real answer takes and shorter than his own 5s turn
-   *  timeout is useless here, so it is measured from the question ending, not from his last turn. */
-  const ANSWER_WAIT_MS = 5000;
+  let answerVoiceFrames = 0;        // how much of THEIR voice we have heard since the question started
+  /** THEIR ANSWER IS HEARD BEFORE IT IS TRANSCRIBED, and that gap is the whole reason this exists.
+   *  The provider runs `patient`, so a short answer is not finalised into words until the pause after
+   *  it has passed — on check 287 "Yeah." was spoken at 4 seconds and did not land as a line until
+   *  past 7, which is how a 5 second wait fired FIRST and let him re-ask into an answer that was
+   *  already given. So the ear opens his mouth: about a third of a second of their voice, the same
+   *  order the person test uses, well under the time his own reply takes to come back. */
+  const ANSWER_VOICE_FRAMES = 15;   // ~0.30s of voice at 20ms a frame
+  /** A store that says NOTHING back to the question still needs him. Only ever reached when there was
+   *  no voice AND no words at all, so it has to clear the provider's own 5 second turn timeout with
+   *  room to spare rather than race it. Leaving a person holding a silent phone is worse than
+   *  letting him prompt them, which is all this does. */
+  const ANSWER_WAIT_MS = 9000;
   let clipText = "";            // the question Delta asked, handed to the agent as context
   let clipEchoDropped = false;  // his session echoes that question back once — dropped, it is already on the record
   let clipMs = 0;               // how long the question ran, for the one join line's detail
@@ -654,6 +662,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     charlieGateOpen = false;
     charlieMaySpeak = false;
     helloAlreadyAnswered = true;   // their next line is the hello the recording is answering
+    // Zeroed HERE, and `startOpeningClip` is the caller that matters: the question only starts once
+    // their hello has finished, so everything voiced from this moment on is an answer to it.
+    answerVoiceFrames = 0;
     if (answerWaitTimer) { clearTimeout(answerWaitTimer); answerWaitTimer = null; }
   }
   /** Staff have said something that is not the hello, so it is his conversation now. */
@@ -690,7 +701,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       answerWaitTimer = setTimeout(() => {
         answerWaitTimer = null;
         if (ended || charlieMaySpeak) return;
-        emit(room, "unknown", `Nobody answered the question in ${Math.round(ANSWER_WAIT_MS / 1000)}s, so Charlie was let in to ask`,
+        emit(room, "unknown", `Nothing was said back to the question in ${Math.round(ANSWER_WAIT_MS / 1000)}s, so Charlie was let in`,
           { step: "no_answer_to_the_question", afterMs: ANSWER_WAIT_MS });
         letHimAnswer("nobody answered the question");
       }, ANSWER_WAIT_MS);
@@ -1750,6 +1761,17 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // being acoustic and free. It is fed from OUR OWN audio being silent onwards, so our clip and
       // the agent's own voice can never read as the store still being there.
       if (convEar && Date.now() >= agentPlayingUntil) convEar.feed(frameEnergy(b64), toneShare(b64) >= 0.45);
+      // THEY ARE ANSWERING: his mouth opens on their voice, not on a clock (the second gate). While
+      // our own question is still playing only a real barge-in counts, because the line is carrying
+      // us; after it, ordinary speaking energy does. A ring burst is not somebody answering. The
+      // count leaks rather than resets so the gaps between their words do not undo it.
+      if (!charlieMaySpeak) {
+        const e2 = frameEnergy(b64);
+        const theirVoice = Date.now() < agentPlayingUntil ? e2 >= BARGE_THRESH : e2 > VOICE_THRESH;
+        if (theirVoice && toneShare(b64) < 0.45) {
+          if (++answerVoiceFrames >= ANSWER_VOICE_FRAMES) letHimAnswer("Staff started answering");
+        } else if (answerVoiceFrames > 0) answerVoiceFrames--;
+      }
       // Waiting for the greeting to end so the question does not talk over it.
       if (pendingClip) {
         waitTotalMs += 20;

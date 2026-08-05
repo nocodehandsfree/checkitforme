@@ -383,6 +383,35 @@ console.log("\n▶ their hello is not his to answer: the recording already did")
   restore(); tw.close(); f.close();
 }
 
+// THE HALF OF IT THAT COST CHECK 287. Getting his mouth to open on their WORDS was right and not
+// enough: the provider runs patient, so a short answer is not finalised into a line until the pause
+// after it has passed. On 287 "Yeah." was spoken at 4 seconds and did not arrive as words until past
+// 7, so the wait ran out first and he was let in to ask a question that had already been answered.
+// Their VOICE is what opens his mouth now, and it arrives while they are still saying it.
+console.log("\n▶ their voice opens his mouth, not the words that arrive seconds later");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-voicegate";
+  const { tw, clipFrames } = await callToHello(f, 800, room);
+  tw.say({ event: "mark", mark: { name: "delta-opening" } });
+  await sleep(60);
+  const ws = f.sockets[0];
+  ws.send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Larry Vasquez. How can I help you?" } }));
+  await sleep(60);
+  ws.send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x40)) } }));
+  await sleep(60);
+  ok(tw.outMedia().length === clipFrames, "before they answer, nothing of his reaches the line");
+  // They start answering. NOT ONE WORD of it has been transcribed yet, and that is the point.
+  for (let i = 0; i < 25; i++) tw.media(frame(SPEECH(i)));
+  await sleep(60);
+  ws.send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x40)) } }));
+  await sleep(60);
+  ok(tw.outMedia().length > clipFrames, "their voice alone opens his mouth, seconds before their words are finalised");
+  restore(); tw.close(); f.close();
+}
+
 console.log("\n▶ a store that never answers the question still gets Charlie, it just takes a beat");
 {
   _reset();
@@ -400,7 +429,7 @@ console.log("\n▶ a store that never answers the question still gets Charlie, i
   ws.send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x40)) } }));
   await sleep(60);
   ok(tw.outMedia().length === clipFrames, "…still held while the wait runs");
-  await sleep(5200);
+  await sleep(9300);
   const letIn = (getReceipt(room)?.events || []).find((e) => e.detail?.step === "no_answer_to_the_question");
   ok(!!letIn, "the record says nobody answered the question, so he was let in to ask");
   ws.send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x40)) } }));
