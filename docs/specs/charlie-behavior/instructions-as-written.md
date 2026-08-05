@@ -528,6 +528,17 @@ Where it sits: a blank filled per check with the voicemail policy.
 > \# Voicemail
 > {{voicemail_policy}}
 
+The {{voicemail_policy}} token fills from `VOICEMAIL_INSTRUCTION` in `src/calls/service.ts` when
+the Admin voicemail setting is on:
+
+> If you reach a voicemail, answering machine, or automated recording (a recorded greeting, an automated menu with no live person, or a beep) — do NOT say anything and end the call immediately. Never leave a message.
+
+**LOCKED by the owner 08-05: CUT this section entirely.** Charlie is only switched on once a
+live human is detected, so voicemail, recordings and menus never reach him. The Admin voicemail
+setting keeps working where it belongs, on the part of the system that hangs up before Charlie
+is involved. Builder note: the {{voicemail_policy}} token retires from the instructions; update
+`scripts/test-prompts.ts` in the same commit.
+
 ---
 
 ## Locked by tests (the builder updates `scripts/test-prompts.ts` in the same commit as any change here)
