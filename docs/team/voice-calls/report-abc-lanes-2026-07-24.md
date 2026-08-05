@@ -1,6 +1,6 @@
 # ALPHA / BRAVO / CHARLIE — what they are, who provides them, what shipped (2026-07-24)
 
-Sources, all in this repo: `docs/finance/CHEAP_NAV_ARCHITECTURE.md` (owner-confirmed design,
+Sources, all in this repo: `docs/archive/finance/CHEAP_NAV_ARCHITECTURE.md` (owner-confirmed design,
 2026-06-18) · `docs/finance/COST_MODEL.md` Part II (2026-07-02) · the Admin "How a call flows" panel
 (`public/app.html:2128`) · `src/voice/bridge.ts`, `src/calls/recipe.ts`, `src/calls/navigator.ts`.
 
