@@ -1,44 +1,121 @@
 // Unit test for the canonical agent prompts + voice defaults. Run: ./node_modules/.bin/tsx scripts/test-prompts.ts
 // Guards the dynamic-variable contract: the live ElevenLabs agent fills {{...}} placeholders, so if
 // one silently disappears from the prompt the call breaks. These assertions fail loudly instead.
-import { RESTOCK_PROMPT, specificityClause, VOICE_DEFAULTS, heardWrongDepartment, looksLikeAMenu, staffName, wrappedUp, usedTheirName, JOINING_RULE, joiningPrompt, midCallAgentPatch } from "../src/voice/prompts";
+import { RESTOCK_PROMPT, specificityClause, kioskNote, departmentNote, SET_EXAMPLE, VOICE_DEFAULTS, heardWrongDepartment, looksLikeAMenu, staffName, wrappedUp, usedTheirName, JOINING_RULE, joiningPrompt, midCallAgentPatch } from "../src/voice/prompts";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
 
-console.log("▶ specificityClause: general restock → empty");
+// ════════════════════════════════════════════════════════════════════════════════════════════════
+// THE OWNER'S APPROVED REWRITE (approved 08-04 and 08-05; spec:
+// docs/specs/charlie-behavior/instructions-proposed.md). HIS WORDS ARE THE SPEC, so this file asserts
+// them WORD FOR WORD rather than by keyword. A keyword test passes on a paraphrase, and a paraphrase
+// of these sections is exactly the failure this rewrite exists to end.
+// ════════════════════════════════════════════════════════════════════════════════════════════════
+console.log("▶ Charlie's words, section by section, word for word");
+const says = (line: string, what: string) => ok(RESTOCK_PROMPT.includes(line), what);
+
+says("You're on the phone with a Staff member at a retail store to find out if they have {{category}} in stock.", "1. who he is");
+says("(Personality shapes how you sound. It never overrides a rule.)", "2. personality never overrides a rule");
+says("You want ONE thing: can a customer walk in and buy {{category}} right now. Get that answer and get off the phone.", "3. the one thing he wants");
+says("If nothing above says otherwise, ANY {{category}} in stock is a YES.", "3. any of them counts on a general check");
+says(`A "let me check" is NOT your answer yet, WAIT for it. THIS IS CRITICAL.`, "6. a let me check is not the answer");
+says("The system holds the check while they're away and brings you back when a person is talking to you again.", "6. the system holds the check, he does not");
+says(`Hanging up on a "let me check" is the worst thing you can do, you'll report the wrong answer.`, "6. …and hanging up on one is the worst thing he can do");
+says("That is a NO, never unclear.", "7. sold out is a no, never unclear");
+says("Nothing is in stock and no restock is coming.", "8. a store that never sells it");
+says("Once the answer is settled, never confirm it again and never re-ask anything Staff already gave.", "9. the settle law");
+says("Always keep a real set name in the question so Staff know what you mean.", "10. a real set name stays in the question");
+says("Whatever Staff answer is the answer, even \"soon\". Never ask a second restock question.", "11. one restock question, whatever comes back");
+says("At most ONE exclamation mark in an entire call, and never on the goodbye", "12. one exclamation mark, never on the goodbye");
+says("If Staff speak Spanish, continue in Spanish.", "12. he follows Staff into Spanish");
+says("If Staff gave you their name, use it once during the check", "14. their name, used once");
+
+// THE THREE ADDITIONS THE OWNER CLEARED ON TOP OF THE SPEC (PM, 08-05). Each is one sentence or one
+// clause, and each closes a hole the sections could not close alone.
+console.log("\n▶ the three cleared additions");
+says("When nobody is talking to you, use skip_turn instead of speaking; never speak into a wait.",
+  "12. skip_turn instead of speaking, never into a wait");
+says("thank Staff warmly and end the check with end_call.", "9. the settle commands end_call by name");
+says("Say goodbye once, then end the check with end_call.", "14. the goodbye commands end_call by name");
+says("The set question below comes only after the yes is settled.", "3→10. the set question waits for the settled yes");
+// The bridge has to sit in section 3, ahead of the question it governs, or it is just a restatement.
+ok(RESTOCK_PROMPT.indexOf("The set question below comes only after the yes is settled.")
+   < RESTOCK_PROMPT.indexOf("When Staff say the {{category}} is in stock"),
+  "…and the bridge is read BEFORE the set question it governs");
+
+console.log("\n▶ the dynamic-variable contract: what fills, and what RETIRED");
+for (const v of ["{{category}}", "{{personality}}", "{{clarification}}", "{{kiosk_note}}",
+                 "{{department_note}}", "{{set_example}}", "{{special_instructions}}"]) {
+  ok(RESTOCK_PROMPT.includes(v), `prompt injects ${v}`);
+}
+// RETIRED SPOTS (builder notes). A retired variable that creeps back is not cosmetic: nothing fills
+// it any more, so the provider refuses the call at the moment a real person has picked up.
+for (const v of ["{{kiosk_mode}}", "{{ask_for_transfer}}", "{{phone_tree}}", "{{other_categories}}",
+                 "{{voicemail_policy}}", "{{retailer_name}}", "{{location}}", "{{ask_shipment_day}}",
+                 "{{premium_followup}}"]) {
+  ok(!RESTOCK_PROMPT.includes(v), `${v} is retired and gone`);
+}
+// {{opening_line}} survives inside the joining note ONLY: Delta asks the question now, so the words
+// Charlie reads must never contain the question again.
+ok(!RESTOCK_PROMPT.includes("{{opening_line}}"), "{{opening_line}} is gone from Charlie's own words");
+ok(JOINING_RULE.includes("{{opening_line}}"), "…and survives inside the joining note, which is where it belongs");
+
+// NO DASHES, ANYWHERE (the owner's binding rule over this rewrite: they read strangely through
+// ElevenLabs). Every builder is checked, not just the base, because an insert is read aloud too.
+console.log("\n▶ no dashes in anything Charlie reads or says");
+const DASH = /[—–]|(?<=\s)-(?=\s)/;
+for (const [what, text] of [
+  ["the base words", RESTOCK_PROMPT],
+  ["the joining note", JOINING_RULE],
+  ["the kiosk insert", kioskNote("Pokémon", true)],
+  ["the wrong-department insert", departmentNote("Pokémon", true)],
+  ["the no-transfer line", departmentNote("Pokémon", false)],
+  ["the specific-product clause", specificityClause("Pitch Black booster box")],
+] as Array<[string, string]>) ok(!DASH.test(text), `no dash in ${what}`);
+
+console.log("\n▶ the tools he is told to command, by name");
+ok(/end_call/.test(RESTOCK_PROMPT), "prompt commands end_call by name");
+ok(/skip_turn/.test(RESTOCK_PROMPT), "prompt commands skip_turn by name");
+ok(/ONE short sentence/i.test(RESTOCK_PROMPT), "prompt enforces one-short-sentence replies");
+
+// INSERT OR NOTHING. The whole point of the rewrite's shape: a section that does not apply is not
+// present as prose Charlie has to reason about, it is ABSENT. A flag left in the words is what made
+// him ask to be put through twice on 08-01.
+console.log("\n▶ insert or nothing");
+ok(kioskNote("Pokémon", false) === "", "not a kiosk check → the kiosk section is nothing at all");
+ok(kioskNote("Pokémon", true).includes("self-serve vending machine, not a shelf"), "a kiosk check → the words themselves");
+ok(kioskNote("Pokémon", true).includes("Pokémon"), "…with the category written in, never left as a variable");
+ok(!kioskNote("Pokémon", true).includes("{{"), "…and no variable survives inside an inserted section");
+ok(!/flag/i.test(RESTOCK_PROMPT), "no flag prose survives anywhere in his words");
+ok(!/only applies when/i.test(RESTOCK_PROMPT), "…and no 'only applies when' switch either");
+
+console.log("\n▶ landing in the wrong department (section 5): two texts, never nothing");
+const mayAsk = departmentNote("Pokémon", true), mayNot = departmentNote("Pokémon", false);
+ok(mayAsk.includes(`"oh gotcha, could you put me through to whoever handles the Pokémon?"`), "it asks to be put through in the owner's words, with the category written in");
+ok(mayAsk.includes("Never ask a second time on a check."), "…only once on a check, which is the fault it exists for");
+ok(mayAsk.includes("your recorded question plays again and you carry on from their answer"), "…and Delta re-asks when somebody new picks up, he does not");
+ok(mayAsk.includes("wrap up warmly and end_call"), "…and nobody to transfer to ends the check honestly");
+ok(mayNot === "If Staff cannot answer about Pokémon, never ask to be put through, take whatever answer they can give and wrap up.", "transfer off → the one line, word for word");
+ok(mayNot.length > 0 && mayAsk.length > 0, "section 5 is never empty: it is two texts, not insert-or-nothing");
+
+console.log("\n▶ the set name example comes from the site's catalog (builder note)");
+ok(RESTOCK_PROMPT.includes("like {{set_example}}, and is it packs or a box or a tin?"), "the example question carries the catalog's set name");
+ok(!RESTOCK_PROMPT.includes("Chaos Rising"), "the hand-written set name is gone from the words");
+ok(SET_EXAMPLE === "Chaos Rising", "…and the floor under an unreadable catalog is never a blank example");
+
+console.log("\n▶ specificityClause: a general check inserts nothing");
 ok(specificityClause() === "", "no product → empty clause");
 ok(specificityClause(undefined) === "", "undefined product → empty clause");
 ok(specificityClause("") === "", "empty string → empty clause");
 ok(specificityClause("   ") === "", "whitespace-only → empty clause (trimmed)");
 
-console.log("▶ specificityClause: specific product");
+console.log("▶ specificityClause: a check for one exact product");
 const c = specificityClause("  Surging Sparks booster box  ");
-ok(c.includes("Surging Sparks booster box"), "includes the requested product");
+ok(c === `A YES on this check means one exact item is in right now, anything else is a no. If yes or no is unclear, ask once, warmly, "do you have a Surging Sparks booster box in stock?".`,
+  "the owner's approved sentence, word for word, with the catalog's item written in");
 ok(!c.includes("  Surging Sparks"), "input is trimmed before interpolation");
-ok(/only count it as a yes/i.test(c), "instructs to only count THAT item as a yes");
-ok(c.includes("{{category}}"), "keeps the {{category}} dynamic variable for the agent to fill");
-ok(specificityClause("X").startsWith("IMPORTANT"), "specific clause leads with the IMPORTANT marker");
-
-console.log("▶ RESTOCK_PROMPT: dynamic-variable contract");
-for (const v of ["{{opening_line}}", "{{clarification}}", "{{category}}", "{{ask_shipment_day}}",
-                 "{{phone_tree}}", "{{retailer_name}}", "{{location}}", "{{special_instructions}}",
-                 "{{other_categories}}", "{{voicemail_policy}}", "{{ask_for_transfer}}"]) {
-  ok(RESTOCK_PROMPT.includes(v), `prompt still injects ${v}`);
-}
-ok(/end_call/.test(RESTOCK_PROMPT), "prompt references the end_call tool");
-ok(/skip_turn/.test(RESTOCK_PROMPT), "prompt references the skip_turn tool");
-ok(/ONE short sentence/i.test(RESTOCK_PROMPT), "prompt enforces one-short-sentence replies");
-
-// THE WRONG-DEPARTMENT SAVE. The rule the agent follows and the phrase test that files the drift ship
-// in one file, so they are asserted together. The detector is the risky half: a false positive files
-// drift against a route that is fine, so the negatives below matter more than the positives.
-console.log("▶ RESTOCK_PROMPT: the wrong-department rule");
-ok(/wrong department/i.test(RESTOCK_PROMPT), "the prompt carries the wrong-department section");
-ok(/put me through to whoever handles the \{\{category\}\}/.test(RESTOCK_PROMPT), "it asks to be put through in one line, in the store's own words for the category");
-ok(/only applies when the flag below is "true"/.test(RESTOCK_PROMPT.split("# If we reached the wrong department")[1]?.slice(0, 80) || ""), "the section is flag-gated, like kiosk mode");
-ok(/ONCE/.test(RESTOCK_PROMPT.split("# If we reached the wrong department")[1]?.split("\n")[1] || ""), "it asks to be put through only once on a call");
-ok(/never ask to be put through/i.test(RESTOCK_PROMPT), "flag off means it never asks at all");
+ok(!c.includes("{{"), "no variable is left for the provider to fill inside an inserted value");
 
 console.log("▶ heardWrongDepartment: it fired");
 for (const [line, why] of [
@@ -197,13 +274,18 @@ console.log("\n▶ THE DRIFT ALARM: the joining Charlie gets the same words, plu
   ok(sent.prompt === `${JOINING_RULE}\n\n${RESTOCK_PROMPT}`, "byte for byte: the joining instruction, then the original's words, nothing else");
   ok(sent.prompt.startsWith(JOINING_RULE), "the joining instruction is FIRST, before anything about opening a call");
   ok(sent.prompt.endsWith(RESTOCK_PROMPT), "…and the store rules are carried whole and unchanged");
-  ok(sent.prompt.includes("{{ask_for_transfer}}"), "the wrong department section reaches him — the one he never had");
-  ok(sent.prompt.includes("Ask to be put through only ONCE"), "…including the rule to ask ONCE, which is the fault it caused");
-  // NEVER REPEAT (owner 08-04): one instruction line, in the ONE source, so both saved copies carry
-  // it on the next push and neither can ask the same thing twice again.
-  ok(sent.prompt.includes("NEVER ask the same question twice on a call. If part of an answer is missing, ask about the missing part ONCE, in different words than before, then take whatever they give you and move on."),
-    "the never repeat rule rides to the joining Charlie word for word");
-  ok(RESTOCK_PROMPT.includes("NEVER ask the same question twice on a call"), "…and it is in the original's words, the one source");
+  ok(sent.prompt.includes("{{department_note}}"), "the wrong department section reaches him — the one he never had");
+  // NEVER REPEAT (owner 08-04) is now the settle law, section 9. Same fault it was written for: one
+  // instruction, in the ONE source, so both saved copies carry it and neither asks twice again.
+  ok(sent.prompt.includes("Once the answer is settled, never confirm it again and never re-ask anything Staff already gave."),
+    "the settle law rides to the joining Charlie word for word");
+  ok(RESTOCK_PROMPT.includes("Once the answer is settled, never confirm it again and never re-ask anything Staff already gave."),
+    "…and it is in the original's words, the one source");
+  // THE JOINING NOTE ITSELF DID NOT CHANGE in this rewrite (the spec is explicit: it stays exactly as
+  // it reads today). Charlie's words moved underneath it; the note on top did not.
+  ok(JOINING_RULE.startsWith("YOU ARE JOINING A CALL THAT IS ALREADY IN PROGRESS."), "the joining note is unchanged, top line");
+  ok(JOINING_RULE.includes("Do NOT greet them. Do NOT introduce yourself. Do NOT ask the question again."), "…and unchanged in the middle");
+  ok(JOINING_RULE.endsWith("If they say something you did not catch, ask about that, never restart."), "…and unchanged to its last line");
   ok(sent.maxTokens === VOICE_DEFAULTS.maxTokens, "same room to think as the original");
   ok(sent.llm === "gpt-test", "same model as the original was just pushed with");
   ok(sent.turnEagerness === "patient", "patient stays: our own machinery splits sentences and he must not answer each fragment");

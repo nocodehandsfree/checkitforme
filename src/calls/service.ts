@@ -5,7 +5,7 @@ import { db } from "../db/client";
 import { openState, fetchStoreHours } from "../store-hours";
 import { fetchStorePhone } from "../store-phone";
 import {
-  accounts, alertSends, alertSubscriptions, callEvents, callResults, categories, chains, customerSchedules, retailers, scheduleTargets, schedules, statuses, watches, zoneRetailers, zones,
+  accounts, alertSends, alertSubscriptions, callEvents, callResults, categories, chains, customerSchedules, products, retailers, scheduleTargets, schedules, statuses, watches, zoneRetailers, zones,
 } from "../db/schema";
 import { linkCall, openReceipt, emit, closeReceipt, linkProviderCall, markNow } from "./events"; // ties the call row to its receipt (the timeline + the seconds)
 import { isCheckAlive } from "./check-life"; // the gatekeeper: the one honest answer to "has this check finished?"
@@ -144,7 +144,7 @@ import { deltaStoreCall, setDeltaFinalize, tdTranscript, type TdSession } from "
 import type { AgentTuning } from "../voice/provider";
 import { notifyInStock, notifyContact } from "./notify";
 import { getSetting, setSetting } from "../db/settings";
-import { specificityClause, RESTOCK_PROMPT, VOICE_DEFAULTS, PREMIUM_FOLLOWUP, ASK_SHIPMENT_DAY, oneTurnFollowup, oneTurnShipmentDay, midCallAgentPatch } from "../voice/prompts";
+import { specificityClause, RESTOCK_PROMPT, VOICE_DEFAULTS, kioskNote, departmentNote, SET_EXAMPLE, midCallAgentPatch } from "../voice/prompts";
 import { consensusFor, productDetailLabel, VERDICT_MODEL } from "../voice/verdict";
 import { armLiveRead, dropLiveRead } from "../voice/live-read";
 
@@ -465,27 +465,18 @@ export async function buildRestockVars(
       voicemail_policy: voicemailPolicy,
       personality: workflow?.personality || "",
       opening_line: openingLine,
-      // Listen-live (Runnr) asks about exactly the lines the user selected — the primary plus
-      // any extras they multi-picked. It never auto-cascades from the store's carries field.
+      // Listen-live (Runnr) asks about exactly the lines the user selected. Charlie's WORDS no longer
+      // carry it (the second-product feature is not built and the owner's rewrite cut the section),
+      // but the value still rides, so it is here the day that feature lands.
       other_categories: extraLabels.join(", "),
-      // Restock-day push is STANDARD on every live check (owner 07-16: "standard for any not in
-      // stock") — this path shipped "" while every other path asked, so live checks never captured
-      // the day. One source of truth in prompts.ts.
-      // ONE QUESTION, THEN WRAP. A workflow whose follow-up data folds the set and the format into
-      // a single question swaps BOTH of these for their one-question form. Any other workflow gets
-      // exactly what it got before. The Fun store ran a folded workflow on 07-28 and the agent still
-      // asked twice, because until now only the recorded-clip lane could read the fold.
-      ask_shipment_day: workflow?.oneTurn ? oneTurnShipmentDay(workflow.noLine) : ASK_SHIPMENT_DAY,
-      // Kiosk-only store → the prompt asks about the vending kiosk, not a shelf shipment.
-      // Explicit request flag wins; otherwise inferred from the store's flags.
-      kiosk_mode: (kioskMode ?? kioskOnly(retailer)) ? "true" : "",
-      // THE WRONG-DEPARTMENT SAVE. One switch, read here so BOTH lanes ask the same thing: landing on
-      // the pharmacy counter asks to be put through instead of ending the check. "" = the prompt's
-      // whole section is inert and the call behaves exactly as it does today.
-      ask_for_transfer: (await getPolicy()).flags.askForTransfer ? "true" : "",
-      // Preview / admin / scheduled paths default to the premium follow-up; the consumer trigger
-      // path overrides this to the free (no-follow-up) text for non-subscribers.
-      premium_followup: workflow?.oneTurn ? oneTurnFollowup(workflow.setLine) : PREMIUM_FOLLOWUP,
+      // INSERT OR NOTHING (the owner's rewrite, sections 4 and 5). Charlie is handed the WORDS, built
+      // by the one pair of builders the direct lane also calls, never a flag to reason about. The
+      // transfer switch is still read here, once, so the two lanes can never disagree about it.
+      kiosk_note: kioskNote(category.label, !!(kioskMode ?? kioskOnly(retailer))),
+      department_note: departmentNote(category.label, (await getPolicy()).flags.askForTransfer),
+      // Section 10's example keeps a REAL set name in the question, read from the site's catalog so
+      // it stays current instead of naming a set that came and went.
+      set_example: SET_EXAMPLE,
     },
   };
 }
@@ -562,14 +553,9 @@ export async function findRecentCheck(finderUserId: string, retailerId: number, 
 }
 
 /** Place one call and record it. */
-/** Is the finder a paying member (or comp/owner)? Drives the premium product-type follow-up.
- *  No finder (admin / scheduled / comp paths) defaults to the full premium experience. */
-async function finderIsPremium(finderUserId?: string | null): Promise<boolean> {
-  if (!finderUserId) return true;
-  const acct = (await db.select().from(accounts).where(eq(accounts.clerkUserId, finderUserId)))[0];
-  return !!acct && (isCompAccount(acct) || acct.subscription === "active");
-}
-
+// THE PAYING VERSUS FREE SPLIT IS DEAD (the owner's rewrite, builder notes). `finderIsPremium` lived
+// here to decide whether a check earned the product-type follow-up; sections 10 and 11 are now fixed
+// words that EVERY check gets, so the question that split them no longer exists.
 export async function triggerCall(a: TriggerArgs) {
   if (await isCallingPaused()) throw new Error("calling_paused"); // global spend kill-switch
   const retailer = (await db.select().from(retailers).where(eq(retailers.id, a.retailerId)))[0];
@@ -704,7 +690,6 @@ export async function triggerCall(a: TriggerArgs) {
       phoneTree,
       specialInstructions: retailer.specialInstructions ?? undefined,
       otherCategories: mode === "restock" ? otherCategories : [],
-      askShipmentDay: a.askShipmentDay ?? true, // Delta everywhere: default ON — ask the restock day on a no.
       voicemailPolicy,
       // Persona from the assigned workflow fills {{personality}}. Empty when no workflow → same as before.
       personalityTone: wf?.personality || undefined,
@@ -713,11 +698,8 @@ export async function triggerCall(a: TriggerArgs) {
       // THE WRONG-DEPARTMENT SAVE, read from the one switch. Both lanes send the same value, so
       // turning it off can never leave one lane asking to be put through and the other giving up.
       askForTransfer: (await getPolicy()).flags.askForTransfer,
-      // Premium gate: subscribers (and comp/owner) get the product-type follow-up; free finders skip it.
-      premiumFollowup: await finderIsPremium(a.finderUserId),
-      // ONE QUESTION, THEN WRAP, when the store's workflow declares the fold. Same resolution the
-      // bridge lane does, so the switch being on or off can never change how many questions we ask.
-      foldedQuestions: wf?.oneTurn ? { set: wf.setLine, no: wf.noLine } : undefined,
+      // The real set name section 10's example carries, off the site's catalog.
+      setExample: SET_EXAMPLE,
     });
     linkProviderCall(directRoom, providerCallId);
     emit(directRoom, "connected", "The provider is placing the call on its own line", { providerCallId, callSid: callSid ?? null });

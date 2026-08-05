@@ -31,28 +31,30 @@ export interface StartCallParams {
   specialInstructions?: string;
   /** Other tracked lines this store carries — for the cascade ("if not Pokémon, what about One Piece?"). */
   otherCategories?: string[];
-  /** Whether to also ask which day shipments usually arrive. */
-  askShipmentDay?: boolean;
-  /** Voicemail handling instruction (master toggle): hang up without leaving a message, or "". */
+  /** Voicemail handling instruction (master toggle): hang up without leaving a message, or "".
+   *  NEITHER of these two is in Charlie's WORDS any more: the owner's rewrite cut the voicemail
+   *  section (voicemail is handled before Charlie is ever switched on) and the second-product
+   *  section (that feature is not built). Both still ride as variables, because the Admin toggle and
+   *  the Listen-live multi-select are real and unchanged, and the day either section comes back it
+   *  comes back to a lane that already carries its value. */
   voicemailPolicy?: string;
   /** Personality/tone for an open conversation (injected into the agent prompt). */
   personalityTone?: string;
-  /** Greeting line the agent uses once the other person speaks (wait-then-greet). */
+  /** Greeting line the agent uses once the other person speaks. Charlie's own words no longer carry
+   *  it: Delta asks the question. It survives inside the joining Charlie's one extra instruction. */
   openingLine?: string;
   /** Kiosk-only store (vending machine, no staffed counter): the agent asks if the kiosk is
-   *  working/stocked instead of asking about a shelf shipment. Exposed to the prompt as `kiosk_mode`. */
+   *  working/stocked instead of asking about a shelf shipment. Fills `kiosk_note` with section 4,
+   *  or with nothing at all on every other check. */
   kioskMode?: boolean;
   /** THE WRONG-DEPARTMENT SAVE (policy.flags.askForTransfer). On = if we land somewhere that cannot
    *  answer, the agent asks to be put through and asks again when somebody new picks up, instead of
-   *  the check failing and the customer paying for a retry. Exposed to the prompt as `ask_for_transfer`. */
+   *  the check failing and the customer paying for a retry. Chooses which of section 5's two texts
+   *  fills `department_note`. */
   askForTransfer?: boolean;
-  /** Premium feature: ask the one product-type follow-up after a YES (and capture it). Default true;
-   *  free (non-subscriber) consumer calls pass false to skip it and end faster. Fills `premium_followup`. */
-  premiumFollowup?: boolean;
-  /** ONE QUESTION INSTEAD OF TWO. Set when the store's workflow folds the set and the format into a
-   *  single question (its follow-up data declares it). Both lines are the workflow's own wording, and
-   *  they replace the two-question follow-up and the restock-day push. Absent = nothing changes. */
-  foldedQuestions?: { set: string; no: string };
+  /** The set name section 10's example question carries. Fills `set_example`; empty falls back to
+   *  `SET_EXAMPLE`, which is the owner's ruling (08-05) and the only place it changes. */
+  setExample?: string;
 }
 
 export interface StartCallResult {

@@ -8,7 +8,13 @@ echo "▶ clearing orphaned test processes…"
 
 # 1) tsx runners executing a test/qa script, and the qa shell scripts themselves.
 pkill -f 'node_modules/.bin/tsx .*scripts/(test|qa)-' 2>/dev/null && echo "  · killed tsx test runners"
-pkill -f 'scripts/(qa|test)-.*\.(sh|mjs)' 2>/dev/null && echo "  · killed qa/test shell+node scripts"
+# NEVER shoot our own caller: test-all.sh itself matches this pattern, so the reaper was
+# killing the suite runner mid-cleanup (08-05). Skip this process, its parent, and its group.
+SELF=$$; PARENT=${PPID:-0}
+for pid in $(pgrep -f 'scripts/(qa|test)-.*\.(sh|mjs)' 2>/dev/null); do
+  [ "$pid" = "$SELF" ] || [ "$pid" = "$PARENT" ] && continue
+  kill -9 "$pid" 2>/dev/null && echo "  · killed qa/test script pid $pid"
+done
 
 # 2) headless browsers spawned by the page/glass/live-view suites.
 pkill -f '(chromium|chrome|headless_shell).*(--headless|--remote-debugging|pw-browsers)' 2>/dev/null && echo "  · killed headless browsers"

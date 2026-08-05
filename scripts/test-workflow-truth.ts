@@ -10,9 +10,9 @@ import { bootstrap } from "../src/db/bootstrap";
 import { db } from "../src/db/client";
 import { retailers, categories } from "../src/db/schema";
 import { setSetting } from "../src/db/settings";
-import { previewStorePrompt, resolveWorkflow } from "../src/calls/service";
+import { buildRestockVars, previewStorePrompt, resolveWorkflow } from "../src/calls/service";
 import { resolveTapedeckWorkflow, deltaTurnTuning, DEFAULT_FOLLOWUPS } from "../src/calls/tapedeck";
-import { PREMIUM_FOLLOWUP, FREE_NO_FOLLOWUP, ASK_SHIPMENT_DAY, SOFT_TIMEOUT_FALLBACK } from "../src/voice/prompts";
+import { RESTOCK_PROMPT, kioskNote, departmentNote, SOFT_TIMEOUT_FALLBACK } from "../src/voice/prompts";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -46,9 +46,17 @@ async function main() {
   ok(prompt.includes("TRUTH_TONE_MARKER"), "persona tone lands in the prompt");
   ok(prompt.includes("ALWAYS the caller"), "persona role clamp is appended");
   ok(prompt.includes("greet them right back"), "name-echo (Affectionate) instruction lands");
-  ok(/TRUTH_OPENER_(ONE|TWO)/.test(prompt), "workflow opener (not the global fallback) is the opening line");
-  ok(prompt.includes("next shipment or restock"), "restock-day push is in EVERY live check");
-  ok(prompt.includes("does that come in a pack? or like a box?"), "premium follow-up carries the owner's package-question wording (07-18 reword)");
+  // THE OPENER MOVED OUT OF CHARLIE'S WORDS (the owner's rewrite, approved 08-04 and 08-05): Delta
+  // plays the recorded question now, so Charlie never opens a check and his prompt must NOT carry the
+  // opener. It still has to be the workflow's own, so it is asserted where it actually rides.
+  const vars = await buildRestockVars(store.id, cat.id);
+  ok(/TRUTH_OPENER_(ONE|TWO)/.test(vars?.dynamicVars.opening_line || ""), "workflow opener (not the global fallback) is what the check opens with");
+  ok(!/TRUTH_OPENER_(ONE|TWO)/.test(prompt), "…and it is NOT in Charlie's words, because Delta asks it, not him");
+  // The restock question and the set question are FIXED sections now, not swappable instruction
+  // blocks: every check asks them, in the owner's approved wording.
+  ok(prompt.includes("what day and time more might come in"), "the restock question is in EVERY live check");
+  ok(prompt.includes("is it packs or a box or a tin?"), "the set question carries the owner's package wording");
+  ok(!prompt.includes("{{set_example}}") && /like [A-Z]/.test(prompt), "…and a real set name off the site's catalog is filled into it");
   // Copy law: dashes are banned in anything the agent SAYS. Instruction prose may use them; the
   // quoted example lines (what the model imitates) may not — except the explicit "don't do this" sample.
   const spoken = (prompt.replace('no "thanks so much — have a good one"', "").match(/"[^"\n]{4,120}"/g) || []).filter((q) => q.includes("—"));
@@ -76,11 +84,17 @@ async function main() {
     ...Object.entries(DEFAULT_FOLLOWUPS).flatMap(([slot, arr]) => arr.map((t, i) => [`Delta default ${slot}[${i}]`, t] as [string, string])),
   ];
   for (const [label, t] of pureSpoken) ok(!anyDash(t), `no dash: ${label}`);
-  // Instruction blocks injected into the call prompt: their QUOTED example lines must be clean
-  // (prose may use dashes; the model imitates the quotes).
-  for (const [label, block] of [["premium follow-up", PREMIUM_FOLLOWUP], ["restock-day push", ASK_SHIPMENT_DAY], ["free-tier close", FREE_NO_FOLLOWUP]] as [string, string][]) {
-    const badQuotes = (block.match(/"[^"\n]{4,160}"/g) || []).filter(anyDash);
-    ok(badQuotes.length === 0, `no dash in quoted examples: ${label}${badQuotes.length ? " (found: " + badQuotes[0] + ")" : ""}`);
+  // Charlie's own words. The three follow-up instruction blocks that used to be swept here are
+  // RETIRED (the owner's rewrite, approved 08-04 and 08-05): sections 10 and 11 are fixed words every
+  // check gets, so the words themselves are what gets swept now. The bar is higher than it was, too:
+  // his rewrite forbids a dash ANYWHERE in what Charlie reads, not only inside a quoted example.
+  for (const [label, block] of [
+    ["Charlie's words", RESTOCK_PROMPT],
+    ["the kiosk insert", kioskNote("Pokémon", true)],
+    ["the wrong-department insert", departmentNote("Pokémon", true)],
+    ["the no-transfer line", departmentNote("Pokémon", false)],
+  ] as [string, string][]) {
+    ok(!anyDash(block), `no dash anywhere in: ${label}`);
   }
   // The workflow's own saved lines (what the Admin writes) — the data shape the calls actually read.
   const dataLines = [...(td.followups ? Object.values(td.followups).flat() : []), ...(wf?.openers || [])];

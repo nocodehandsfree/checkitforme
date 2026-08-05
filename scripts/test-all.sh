@@ -11,9 +11,17 @@ FAILED=""
 # can't be trapped; for that, and for a small change, run ONE relevant unit test, not this whole suite.)
 trap 'bash scripts/kill-tests.sh >/dev/null 2>&1 || true' EXIT INT TERM
 
+# Every suite is bounded (owner 08-05): one suite that hangs used to hang the whole CI
+# run until the job was cancelled, with no summary and no clue which suite stalled.
+SUITE_TIMEOUT=${SUITE_TIMEOUT:-420}
 run(){ # label, command
   echo ""; echo "▭▭▭ $1 ▭▭▭"
-  if eval "$2"; then echo "   → $1 OK"; else echo "   → $1 FAILED"; FAILED="$FAILED $1"; fi
+  if timeout -k 15 "$SUITE_TIMEOUT" bash -c "$2"; then echo "   → $1 OK"
+  else
+    rc=$?
+    if [ $rc -eq 124 ] || [ $rc -eq 137 ]; then echo "   → $1 TIMED OUT after ${SUITE_TIMEOUT}s"; fi
+    echo "   → $1 FAILED"; FAILED="$FAILED $1"
+  fi
 }
 
 echo "═══ Check — full test run ═══"
@@ -28,6 +36,14 @@ run "unit: prompts"    "$ENV $TSX scripts/test-prompts.ts"
 run "unit: stores-import" "$ENV $TSX scripts/test-storesimport.ts"
 run "unit: security-checks" "$ENV $TSX scripts/test-securitychecks.ts"
 run "unit: bridge"     "$ENV $TSX scripts/test-bridge.ts"
+# The new engine's seven (wired 08-05, owner's OK): without these the green mark never exercises it.
+run "unit: behaved (the test cards + Charlie's rows)" "$ENV $TSX scripts/test-behaved.ts"
+run "unit: call-events (the cost buckets sum)" "$ENV $TSX scripts/test-call-events.ts"
+run "unit: listen-nav (the ear)" "$ENV $TSX scripts/test-listen-nav.ts"
+run "unit: robot store words" "$ENV $TSX scripts/test-robot-store.ts"
+run "db: check-life (the gatekeeper)" "env DATABASE_URL=file:./.t-cl.db $ENV $TSX scripts/test-check-life.ts; rm -f .t-cl.db"
+run "db: healing (mute + re-map)" "env DATABASE_URL=file:./.t-hl.db $ENV $TSX scripts/test-healing.ts; rm -f .t-hl.db"
+run "db: practice checks (mapping)" "env DATABASE_URL=file:./.t-pc.db $ENV $TSX scripts/test-practice-checks.ts; rm -f .t-pc.db"
 run "GATES: one ear · every dial writes a receipt · no audio stored" "$ENV $TSX scripts/test-runtime-gates.ts"
 run "SPEC, statement by statement" "env DATABASE_URL=file:./.t-sp.db $ENV $TSX scripts/test-spec-line-by-line.ts; rm -f .t-sp.db"
 run "drive: Delta asks, the agent joins" "$ENV $TSX scripts/test-delta-clip.ts"

@@ -6,7 +6,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-PORT=8798
+PORT=8790
 DB="file:$(pwd)/test-qapages.db"
 BASE="http://127.0.0.1:$PORT"
 rm -f test-qapages.db
@@ -21,13 +21,13 @@ DATABASE_URL="$DB" PORT=$PORT CLERK_ENFORCE=false \
   ./node_modules/.bin/tsx src/server.ts >/tmp/qa-pages.log 2>&1 &
 SRV=$!
 trap 'kill $SRV 2>/dev/null; rm -f test-qapages.db' EXIT
-for i in $(seq 1 40); do curl -fsS "$BASE/pub/policy" >/dev/null 2>&1 && break; sleep 0.5; done
+for i in $(seq 1 40); do curl -fsS --max-time 5 "$BASE/pub/policy" >/dev/null 2>&1 && break; sleep 0.5; done
 
 # Every brand page: 200 + the full behavior marker set. (Apex "/" is HOST-routed — on localhost it
 # serves the Admin app, so the four brand paths ARE the consumer surface here; staging's apex serves
 # the same runner these paths do.)
 for PAGE in "/pokemon" "/onepiece" "/toppsbasketball" "/needoh"; do
-  CODE=$(curl -s -o /tmp/qa-page.html -w "%{http_code}" "$BASE$PAGE")
+  CODE=$(curl -s --max-time 20 -o /tmp/qa-page.html -w "%{http_code}" "$BASE$PAGE")
   if [ "$CODE" = "200" ]; then ok "GET $PAGE → 200"; else no "GET $PAGE → $CODE"; continue; fi
   HTML=$(cat /tmp/qa-page.html)
   has "$PAGE search input"        "$HTML" 'id="search"'
@@ -48,8 +48,8 @@ for PAGE in "/pokemon" "/onepiece" "/toppsbasketball" "/needoh"; do
 done
 
 # Consumer API surface the page depends on (shape smoke, not data):
-ST=$(curl -s "$BASE/pub/store-types"); has "/pub/store-types serves" "$ST" '['
-PS=$(curl -s "$BASE/pub/pokemon-sets"); has "/pub/pokemon-sets serves eras" "$PS" '"eras"'
+ST=$(curl -s --max-time 20 "$BASE/pub/store-types"); has "/pub/store-types serves" "$ST" '['
+PS=$(curl -s --max-time 20 "$BASE/pub/pokemon-sets"); has "/pub/pokemon-sets serves eras" "$PS" '"eras"'
 
 echo "════════════════"
 echo "  qa-pages PASS: $PASS  FAIL: $FAIL"
