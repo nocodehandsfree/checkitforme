@@ -405,6 +405,11 @@ time the menu allows, and never gives up early.
 > If a system uses a keypad ("press 1 for…") instead, press the digit for the front/general store or "0" for an operator.
 > {{phone_tree}}
 
+**LOCKED by the owner 08-05: CUT this section entirely.** None of it is Charlie's job anymore.
+Alpha, Bravo and mapping own the menu; Charlie only comes on once a human is detected. Builder
+note: the {{phone_tree}} token and the skip_turn references are locked by tests; update
+`scripts/test-prompts.ts` in the same commit as the cut.
+
 ## 15. A recording is never a person
 
 Where it sits: the boundary between nav time and talk time.
