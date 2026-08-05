@@ -6480,10 +6480,17 @@ app.get("/api/admin/receipt/:room", async (c) => {
     stamped: !!cost,
     cost: cost ? { ...cost, readable: readable(cost) } : null,
     behaved: behaved({ timeline, rollup: seconds, agentLines: agentLinesFrom(attached?.transcript) }),
-    // A finished check's timed lines ride the last event's detail (receipt-store, owner 08-05 fix 1),
-    // so the sheet can put each spoken line where it happened. Older checks predate that stamp and
+    // A finished check's timed lines ride an event's detail (receipt-store stamps them on the last
+    // event at persist — and the verdict tail lands AFTER that once the check settles, so the holder
+    // is found by searching back rather than assumed to be last). Older checks predate the stamp and
     // fall back to the flat transcript with no clock, exactly as before.
-    lines: (Array.isArray(tail?.lines) ? tail!.lines as Array<{ who: string; text: string; atSec: number }> : null)
+    lines: ((): Array<{ who: string; text: string; atSec: number }> | null => {
+      for (let i = timeline.length - 1; i >= 0; i--) {
+        const d = timeline[i].detail as { lines?: Array<{ who: string; text: string; atSec: number }> } | null;
+        if (d && Array.isArray(d.lines)) return d.lines;
+      }
+      return null;
+    })()
       ?? String(attached?.transcript || "").split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
         const m = /^(Agent|Clerk|Staff):\s*(.*)$/i.exec(l);
         return m ? { who: /agent/i.test(m[1]) ? "Agent" : "Clerk", text: m[2], atSec: null } : { who: "Clerk", text: l, atSec: null };
