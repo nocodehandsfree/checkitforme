@@ -474,6 +474,17 @@ Outcome we expect: store quirks ride into the check without editing his instruct
 > \# Store notes
 > Store: {{retailer_name}} ({{location}}). {{special_instructions}}
 
+**LOCKED by the owner 08-05, the tightened replacement:** only the owner's per-store note
+survives, inserted only when one was written, nothing on all other checks:
+
+> {{special_instructions}}
+
+Why: the note is per-store personalization that flips wrong answers into right ones (the Target
+card wall scenario). Name and location did nothing for Charlie. Builder notes: same
+insert-or-nothing pattern as the other rewires; {{retailer_name}} and {{location}} retire from
+the instructions; a chain-wide note is a small future build if wanted; update
+`scripts/test-prompts.ts` in the same commit.
+
 ## 19. Other card lines the store carries
 
 Where it sits: a blank filled per check, used only if it comes up naturally.
