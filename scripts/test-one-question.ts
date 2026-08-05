@@ -7,7 +7,7 @@
 // Pure: the rule that reads the workflow's data, and the two instruction builders the agent is given.
 // No DB, no network.
 import { declaresOneTurn } from "../src/calls/tapedeck";
-import { oneTurnFollowup, oneTurnShipmentDay, PREMIUM_FOLLOWUP, ASK_SHIPMENT_DAY } from "../src/voice/prompts";
+import { RESTOCK_PROMPT } from "../src/voice/prompts";
 import { reconcile, type ClerkVerdict } from "../src/voice/verdict";
 import { billableOutcome } from "../src/calls/service";
 import { TEST_ONE_QUESTION } from "./make-test-workflow";
@@ -26,34 +26,22 @@ ok(declaresOneTurn({}) === false, "an empty follow-up block changes nothing");
 ok(declaresOneTurn(undefined) === false, "a workflow with no follow-ups changes nothing");
 ok(declaresOneTurn(null) === false, "null follow-ups never crash the call");
 
-// ---- The folded in-stock instruction ----
-const FOLD = "Do you know the name of the set, like Chaos Rising, and if it comes in a box or pack?";
-const f = oneTurnFollowup(FOLD);
-ok(f.includes(FOLD), "the agent is given the workflow's OWN question, word for word");
-ok(/EXACTLY ONE question/.test(f), "it is told exactly one question");
-ok(/NEVER ask a second question/.test(f), "a second question is forbidden outright");
-ok(/only half/.test(f), "half an answer still wraps, rather than paying for a follow up");
-ok(/WORD FOR WORD/.test(f), "the wording is not a suggestion the agent may improve on");
-ok(/do not reword it/.test(f), "rewording is named and forbidden");
-ok(!/AFTER they answer the set, ask the product type/.test(f), "the two question instruction is gone, not merely reworded");
-ok(f !== PREMIUM_FOLLOWUP, "a folded workflow does not get the two question script");
-ok(oneTurnFollowup("") === PREMIUM_FOLLOWUP, "an empty question falls back to the old flow, never a blank instruction");
-ok(oneTurnFollowup("   ") === PREMIUM_FOLLOWUP, "whitespace is not a question either");
-
-// ---- The folded not-in-stock instruction ----
-const NOFOLD = "Do you know what day or time you're getting your next shipment?";
-const n = oneTurnShipmentDay(NOFOLD);
-ok(n.includes(NOFOLD), "the restock ask is the workflow's own line");
-ok(/EXACTLY ONE question/.test(n), "the restock ask is one question too");
-ok(/NEVER ask a second question/.test(n), "no narrowing-down follow up on a no");
-ok(/WORD FOR WORD/.test(n), "the restock line is said as written, not paraphrased");
-ok(/DAY OR TIME/.test(n), "and it is told WHY: a paraphrase loses the day and the time");
-ok(n !== ASK_SHIPMENT_DAY, "a folded workflow does not get the old restock script");
-ok(oneTurnShipmentDay("") === ASK_SHIPMENT_DAY, "an empty restock line falls back to the old one");
-
-// ---- Copy law: no dash inside a sentence, in anything the agent is told to say ----
-const dashes = [f, n].filter((t) => /[—–]|\s-\s/.test(t));
-ok(dashes.length === 0, "neither instruction carries a dash inside a sentence");
+// ---- ONE QUESTION IS NOW THE ONLY QUESTION (the owner's rewrite, approved 08-04 and 08-05) ----
+//
+// The four instruction builders this file used to assert are RETIRED. They existed because a check
+// could get one question or two depending on the workflow's follow-up data and whether the finder
+// paid, and the whole point of the rewrite is that sections 10 and 11 are FIXED WORDS every check
+// gets: one question on a yes, one question on a no, never a second one either way. So what is left
+// to prove on the live agent lane is that the folding is gone from Charlie's words entirely, and the
+// fixed sections say what the fold used to have to say.
+console.log("\n▶ the fold is retired: every check asks the one question, off fixed words");
+ok(!/\{\{premium_followup\}\}|\{\{ask_shipment_day\}\}/.test(RESTOCK_PROMPT),
+  "no follow-up variable is left for a workflow to swap out");
+ok(RESTOCK_PROMPT.includes("never ask a second question about it"), "section 10: one question on a yes, never a second");
+ok(RESTOCK_PROMPT.includes("Never ask a second restock question."), "section 11: one question on a no, never a second");
+ok(RESTOCK_PROMPT.includes("Take whatever they answer, even half of it"),
+  "half an answer still wraps, rather than paying for a follow up");
+ok(!/premium|subscriber|paying/i.test(RESTOCK_PROMPT), "the paying versus free split is gone from his words");
 
 // ---- THE READER RULE (owner 07-29) ----------------------------------------------------------
 // "When the second reader disagrees with Charlie's status, the customer gets couldn't-tell and NO

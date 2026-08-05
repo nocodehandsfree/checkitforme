@@ -1,9 +1,14 @@
 # Charlie's instructions, the owner's approved rewrite
 
-Owner-approved 2026-08-04 and 2026-08-05, every section ruled line by line. This is a PROPOSAL:
-nothing here is in `src/voice/prompts.ts` yet and nothing was pushed to ElevenLabs. The
+Owner-approved 2026-08-04 and 2026-08-05, every section ruled line by line. **BUILT 2026-08-05: this
+is what `src/voice/prompts.ts` now says and what both Charlies were pushed.** The
 section-by-section record, with every as-written original beside its ruling and the reason it
 changed, is `instructions-as-written.md` in this folder.
+
+Three additions the owner cleared on top of the sections below, and they are in the built words:
+section 12 says "When nobody is talking to you, use skip_turn instead of speaking; never speak into a
+wait."; sections 9 and 14 command `end_call` by name; and section 3 ends with "The set question below
+comes only after the yes is settled.", which is the bridge to section 10.
 
 Headline: 21 sections became 12. Nine were cut because the job moved out of Charlie (Delta opens
 the check, Alpha and Bravo and mapping work the menu, the system only switches Charlie on once a
