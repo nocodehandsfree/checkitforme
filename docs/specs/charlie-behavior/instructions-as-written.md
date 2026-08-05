@@ -483,6 +483,12 @@ costing a second check.
 > \# Other lines this store carries (only if it comes up naturally, ask in the SAME call)
 > {{other_categories}}
 
+**LOCKED by the owner 08-05: CUT this section entirely.** "Comes up naturally" was a hint, never
+a directive, and the second product feature is not built. When it is built, the second product
+rides as an exact directive through the same fill-in spots as everything else, one more thing on
+the check's list of what to learn, never a hint. The {{other_categories}} token retires; update
+`scripts/test-prompts.ts` in the same commit.
+
 ## 20. Wrapping up
 
 Where it sits: the last words of the check.
