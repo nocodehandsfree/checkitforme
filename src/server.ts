@@ -6480,12 +6480,14 @@ app.get("/api/admin/receipt/:room", async (c) => {
     stamped: !!cost,
     cost: cost ? { ...cost, readable: readable(cost) } : null,
     behaved: behaved({ timeline, rollup: seconds, agentLines: agentLinesFrom(attached?.transcript) }),
-    // …and on a finished check the words are one flat block with no clock on them, so they carry no
-    // seconds. Same shape either way, so the screen has one way to draw a conversation.
-    lines: String(attached?.transcript || "").split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
-      const m = /^(Agent|Clerk|Staff):\s*(.*)$/i.exec(l);
-      return m ? { who: /agent/i.test(m[1]) ? "Agent" : "Clerk", text: m[2], atSec: null } : { who: "Clerk", text: l, atSec: null };
-    }),
+    // A finished check's timed lines ride the last event's detail (receipt-store, owner 08-05 fix 1),
+    // so the sheet can put each spoken line where it happened. Older checks predate that stamp and
+    // fall back to the flat transcript with no clock, exactly as before.
+    lines: (Array.isArray(tail?.lines) ? tail!.lines as Array<{ who: string; text: string; atSec: number }> : null)
+      ?? String(attached?.transcript || "").split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
+        const m = /^(Agent|Clerk|Staff):\s*(.*)$/i.exec(l);
+        return m ? { who: /agent/i.test(m[1]) ? "Agent" : "Clerk", text: m[2], atSec: null } : { who: "Clerk", text: l, atSec: null };
+      }),
     v2: await v2For(timeline, seconds, cost, attached?.retailerId ?? null),
   });
 });

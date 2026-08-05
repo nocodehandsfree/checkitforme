@@ -52,6 +52,18 @@ async function findCallId(r: Receipt): Promise<number | null> {
 export async function persistReceipt(r: Receipt): Promise<void> {
   try {
     const callId = await findCallId(r);
+    // THE CONVERSATION KEEPS ITS CLOCK (owner 08-05, fix 1 on the Testing sheet). The spoken lines
+    // live on the receipt with real times, but the only thing that survived the call was the flat
+    // transcript text — so a finished check's sheet could only print the conversation at the end of
+    // the log instead of in line where each thing was said. The timed lines ride the LAST event's
+    // detail, the same place an unattached call's seconds and cost already ride (and deliberately
+    // NOT a seventeenth event kind — the closed sixteen is law). Capped hard, because detail is
+    // truncated at 4000 characters and a torn JSON reads as no detail at all.
+    if (r.events.length && r.transcript.length) {
+      const last = r.events[r.events.length - 1];
+      last.detail = { ...(last.detail ?? {}),
+        lines: r.transcript.slice(0, 16).map((l) => ({ who: l.who, text: l.text.slice(0, 100), atSec: Math.round(l.atMs / 1000) })) };
+    }
     if (r.events.length) {
       await db.insert(callEvents).values(r.events.map((e) => ({
         callId, room: r.room, atMs: e.atMs, atSec: e.atSec, kind: e.kind,

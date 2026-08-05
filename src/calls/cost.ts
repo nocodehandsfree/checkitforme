@@ -158,7 +158,11 @@ export function costBuckets(
  *  about it ("five cents"); a dollar or more reads in dollars. */
 export function money(microUsd: number): string {
   const usd = microUsd / USD;
-  if (Math.abs(usd) < 1) return `${(usd * 100).toFixed(1)}¢`;
+  const cents = usd * 100;
+  // A real fraction of a cent shows as one, never as zero (owner 08-05): the status read costs
+  // 0.012 cents a check and one decimal rounded it to 0.0, which read as free.
+  if (cents > 0 && cents < 0.1) return `${cents.toFixed(3)}¢`;
+  if (Math.abs(usd) < 1) return `${cents.toFixed(1)}¢`;
   return `$${usd.toFixed(2)}`;
 }
 
