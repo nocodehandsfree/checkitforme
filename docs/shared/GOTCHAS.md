@@ -72,12 +72,14 @@ worse than no comment. Several entries below started as wrong comments.)
 - **Dead air makes clerks hang up.** Use eager turn-taking + a soft-timeout filler so a slow turn says "I'm here!"
   instead of going silent.
 - **Connect-on-human is baked ALWAYS-ON in code now** (server.ts `connectOnHuman ?? true`, commit 480cacf) — no DB toggle can silently disable it anymore. But other policy flags (e.g. `bail.enabled`) still live in the `policy_json` DB setting: **check `GET /api/policy` after ANY DB restore.**
-- **Store logos have an owner-approved process — follow it, don't reinvent it.** Logos are the stores' brands; the owner signs off on how they look. `checkitforme.com/logo-wall` is the ultimate source of truth — logos FEED from that page. It + `docs/data/store-logos.md` ARE the process that finally worked — new logos go through it; never invent a new sizing approach or batch-resize existing approved logos.
+- **Store logos have an owner-approved process — follow it, don't reinvent it.** Logos are the stores' brands; the owner signs off on how they look. `checkitforme.com/logo-wall` is the source of truth and cannot lie to you (owner, 08-05); after the 07-31/08-01 rebuild ONE place decides a logo's size, so changing it in that one spot really does change it everywhere. It + `docs/data/store-logos.md` ARE the process that finally worked — new logos go through it; never invent a new sizing approach or batch-resize existing approved logos.
 - **"Visual regression" = stale cache until proven otherwise.** Several "regressions" were device/SW cache (2026-07 hobby art). Hard-refresh / bump the SW cache version FIRST; reproduce fresh before touching code.
 - **Every user-facing string ships with its Spanish in the SAME commit.** ES gaps were caught late ~23 times (even the primary CTA). No literal strings — through `t()` with the ES value, same commit.
-- **iOS Safari only applies `<meta theme-color>` at PAGE LOAD** — a later JS change is ignored. The status-bar
-  tint must be **baked into the served HTML** (server `?tone=` → `renderRunner`, `server.ts`). Also needs the
-  device's "Allow Website Tinting" ON (default on).
+- **iOS status-bar tint is SETTLED and gated — don't touch it, don't re-investigate it** (owner,
+  08-05). It cost days twice. The rule that made it work: the tint is baked into the served HTML
+  (server `?tone=` → `renderRunner`), never set by JS after load, and never via a `theme-color` meta.
+  `qa-tint-lock.mjs` runs in `test-all.sh` and fails the suite if anyone breaks it. If a tint bug ever
+  reappears, report it — do not start changing approved design to chase it.
 - **PWA status bar is a different mechanism** — `apple-mobile-web-app-status-bar-style: black-translucent` +
   `viewport-fit=cover` (the body paints *under* the bar). That's why "Add to Home Screen" tints when web doesn't.
 
@@ -113,8 +115,11 @@ worse than no comment. Several entries below started as wrong comments.)
   voice-caller-staging service, `false` on prod. The code branches on it in ~20 spots (`server.ts`, `auth.ts`,
   `staging-sim.ts`): simulated calls, the staging login code, staging websocket host. Don't remove
   `config.staging` from `config.ts` (typecheck breaks, and staging loses its behavior).
-- **Logos:** the Cloudflare token lacks R2-admin and the S3 keys are object-scoped to `fungibles-cards`, so logos
-  serve via the `fungibles-logos` Worker on `logos.fungibles.com` (chain-logos/ prefix), not a public R2 bucket.
+- **Logos serve from THIS repo, not Fungibles** (corrected 2026-08-05 — the 07-31/08-01 rebuild).
+  102 chain PNGs live in `public/logos/chains/` with `_meta.json` beside them; `chainLogoFiles()`
+  (server.ts:1589) reads that directory and `/logos/chains/:file` serves the bytes. The old
+  `logos.fungibles.com` Worker is NOT in the runtime path — the only survivor is a stale comment on
+  the nullable `logoUrl` column in `src/db/schema.ts:91`. Full truth: `docs/data/store-logos.md`.
 - **Test calls used to WRITE mapping data** — the passive tree-learner ran on every completed call, so an
   owner Fun-store test transcript once wrote a bogus `avgTreeSeconds=19` onto a direct-answer chain and
   silenced the agent for 19s (2026-07-02). Fixed: passive learning is gated `!config.staging.on` and skips
