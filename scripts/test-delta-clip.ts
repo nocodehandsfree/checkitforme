@@ -109,10 +109,17 @@ class FakeTwilio extends EventEmitter {
 
 /** Stub the signed-url handshake so the bridge opens OUR provider instead of the real one, and
  *  record which agent it asked for — that is how we prove the joining agent was used. */
+/** What the stubbed transcriber "hears" in the store's hello. "" = nothing worth writing down,
+ *  which keeps every scene deterministic; the hello scene below sets a real greeting. */
+let STT_TEXT = "";
 function stubSignedUrl(f: Fake) {
   const real = globalThis.fetch;
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
+    // The hello transcriber must NEVER reach the real provider from a unit test.
+    if (url.includes("/v1/speech-to-text")) {
+      return new Response(JSON.stringify({ text: STT_TEXT }), { status: 200, headers: { "content-type": "application/json" } });
+    }
     if (url.includes("/convai/conversation/get-signed-url")) {
       f.agentIdsAsked.push(new URL(url).searchParams.get("agent_id") || "");
       return new Response(JSON.stringify({ signed_url: f.url }), { status: 200, headers: { "content-type": "application/json" } });
@@ -394,6 +401,31 @@ console.log("\n▶ their hello is not his to answer: the recording already did")
 // after it has passed. On 287 "Yeah." was spoken at 4 seconds and did not arrive as words until past
 // 7, so the wait ran out first and he was let in to ask a question that had already been answered.
 // Their VOICE is what opens his mouth now, and it arrives while they are still saying it.
+console.log("\n▶ the withheld hello is still written down, and Staff's name still reaches him as a note");
+{
+  _reset();
+  STT_TEXT = "Fun store, this is Bob, how can I help you?";
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-hello-note";
+  const { tw } = await callToHello(f, 600, room);
+  tw.say({ event: "mark", mark: { name: "delta-opening" } });
+  await sleep(150);
+  // The greeting the transcriber heard is the record's first line, exactly as if his session had
+  // transcribed it, because it goes through the socket's own handler and not a second copy of it.
+  const lines = getReceipt(room)?.transcript ?? [];
+  ok(lines[0]?.who === "Clerk" && lines[0]?.text.includes("this is Bob"), `their hello is the first line of the record (${lines[0]?.text})`);
+  // …and the NAME went to Charlie as a square bracket note, which is context, not a turn he must
+  // answer. That difference is the whole 282-286 fault: a turn demands an answer, a note does not.
+  const note = f.raw.filter((m) => m.includes("contextual_update")).find((m) => m.includes("Bob"));
+  ok(!!note, "Staff's name reached him as a note");
+  ok(!!note && /gave their name/.test(note) && !/[—–]/.test(note), "…informational and dash free, never a command to greet");
+  ok(tw.outMedia().length >= toMediaFrames(Buffer.alloc(600 * 8, 0x20)).length && f.chunks.length === 0,
+    "and none of it was handed to him as audio, so there is no hello for him to answer");
+  STT_TEXT = "";
+  restore(); tw.close(); f.close();
+}
+
 console.log("\n▶ their voice opens his mouth, not the words that arrive seconds later");
 {
   _reset();
@@ -583,6 +615,16 @@ console.log("\n▶ the other strategy: close him for the wait, bring him back as
   ok(f.sockets.length === 2, "somebody came back, so he is opened again");
   const joins = (getReceipt("room-reopen")?.events || []).filter((e) => e.kind === "charlie_join");
   ok(joins.some((j) => j.detail?.segment === 2), "and the receipt calls it part 2 of the SAME call, never a second call");
+  // THE RECONNECTED CHARLIE IS TOLD WHAT WAS ALREADY SAID (owner 08-05, check 289). He is a fresh
+  // session with no memory of part 1: he came back, heard "the 151 booster boxes", and asked whether
+  // those come in packs, a question that answer had already settled. The reopened session is handed
+  // the check's own written conversation, so the settle law finally has something to hold on to.
+  await sleep(150);
+  const history = f.raw.filter((m) => m.includes("contextual_update")).find((m) => m.includes("What has already been said"));
+  ok(!!history, "the reopened session is handed the conversation so far");
+  ok(!!history && history.includes("put you on hold") && history.includes("Never re-ask anything Staff already answered"),
+    "…with the real lines in it and the settle law restated");
+  ok(!/[—–]/.test(history || ""), "…and no dash in it");
   const r = getReceipt("room-reopen")!;
   ok(r.segments.length === 2, "two numbered stretches on one receipt");
   // …and the gate opens the moment the CARRIER says the line ended, so the check finalizes as normal.
@@ -673,8 +715,11 @@ console.log("\n▶ the wrong department: Staff say so, the meter stops through t
   ok(r.segments.length === 2, "two numbered stretches on one receipt, so the gap costs nothing");
   // THE NOTE HE WAS CLOSED FOR. Sent on the NEW session, never spoken onto the line.
   const notes = f.raw.filter((m) => m.includes("contextual_update"));
-  ok(notes.length === 1, `exactly one note reached him, not spoken to the store (${notes.length})`);
-  ok(/may be someone new/i.test(notes[0] || ""), "and it warns him the person may be someone new, so he asks again instead of carrying on");
+  // TWO notes now (08-05): the conversation so far, then the warning — and the warning comes LAST,
+  // because the freshest instruction is the one that governs. Neither is spoken to the store.
+  ok(notes.length === 2, `both notes reached him, not spoken to the store (${notes.length})`);
+  ok(/What has already been said/.test(notes[0] || ""), "the conversation so far comes first");
+  ok(/may be someone new/i.test(notes[1] || ""), "and the warning that it may be someone new comes last, so he asks again instead of carrying on");
   ok(!tw.outMedia().some((m) => JSON.stringify(m).includes("contextual_update")), "the note never went down the phone line");
   restore(); tw.close(); f.close();
 }
@@ -712,7 +757,7 @@ console.log("\n▶ a SILENT hand-over is still a hand-over, because he asked to 
   ok(back?.detail?.maybeNewPerson === true, "somebody new anyway, because he had asked to be put through");
   ok(back?.detail?.afterAskingToBePutThrough === true, "…and the record says WHY, so the screen can tell a hand-over from a wander off");
   const notes = f.raw.filter((m) => m.includes("contextual_update"));
-  ok(notes.length === 1 && /may be someone new/i.test(notes[0]), "he is told the person may be someone new, so he asks again");
+  ok(notes.length === 2 && /may be someone new/i.test(notes[1]), "he is told, last and freshest, that the person may be someone new, so he asks again");
   restore(); tw.close(); f.close();
 }
 
@@ -743,7 +788,7 @@ console.log("\n▶ STAFF offer the transfer and move us fast: still a hand-over,
   ok(back?.detail?.maybeNewPerson === true, "somebody new anyway, off THEIR words, with no ask of ours");
   ok(back?.detail?.afterAskingToBePutThrough === true, "…and the record says it was a hand-over, not a wander off");
   const notes = f.raw.filter((m) => m.includes("contextual_update"));
-  ok(notes.length === 1 && /may be someone new/i.test(notes[0]), "he is told the person may be someone new, so he asks again");
+  ok(notes.length === 2 && /may be someone new/i.test(notes[1]), "he is told, last and freshest, that the person may be someone new, so he asks again");
   restore(); tw.close(); f.close();
 }
 
