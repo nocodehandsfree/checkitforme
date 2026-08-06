@@ -9,7 +9,7 @@ scripts that made them. **The consumer site is frozen: that task file IS the unl
 |---|---|
 | `comp-3-the-list-APPROVED.png` | **APPROVED** (owner 08-05). "The main page that you come to if you have checks already set up." |
 | `comp-1-my-checks-row.png` | not approved. The real My checks screen with ONE row added: Auto-checks. |
-| `comp-2-saved.png` | **RULED 08-06: BUILD IT.** "don't close the window build the screen that shows that their auto check has been saved and they should have a button there that allows them to jump directly into the auto check homepage where they can see their first check." So: the sheet stays open and flips to this screen, and its button goes straight to the list. |
+| `comp-2-saved.png` | **RULED 08-06: BUILD IT.** "don't close the window build the screen that shows that their auto check has been saved and they should have a button there that allows them to jump directly into the auto check homepage where they can see their first check." So: the sheet stays open and flips to this screen, and its button goes straight to the list. **The picture to build from is `comp-2-saved-v2.png`** (`render-saved-v2.mjs`), drawn where it really happens with the CHECK STATUS PAGE behind it; the first one was over the search screen, which is not on this path. Words still open: the title reads "Auto-check is on." and the owner's own word was "saved". |
 | `comp-4-report-v1-rejected.png` | **REJECTED** (owner 08-05): "I also don't think this comp looks very good and you could do a better job with a visualization." |
 | `comp-4-report-v2.png` | not approved, and the owner has already named what is wrong with it. |
 
@@ -57,8 +57,9 @@ auto-check on that screen.
 **From My checks** — `path-b1-my-checks.png` is that screen TODAY, with no auto-checks row on it.
 `comp-1-my-checks-row.png` is the same screen with the row added. Then the list, the report, a check.
 
-**Open decision:** on the approved list, a row carries the switch and the delete button. What opens
-the report is NOT decided — tapping the store's name is an assumption, nothing more.
+**SETTLED 08-06:** tapping the row on the approved list opens that store's report. The owner's words:
+"if you select any of those you'll be able to go into the details of that". The switch and the delete
+button stay taps of their own.
 
 ## THE REPORT, take three (owner 08-06 killed the ring)
 
