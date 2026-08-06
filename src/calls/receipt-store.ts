@@ -102,6 +102,10 @@ export async function persistReceipt(r: Receipt): Promise<void> {
     await db.update(callResults).set({
       room: r.room,
       lane: sums.lane,
+      // The WHOLE conversation with its clock, uncapped in count (300-char lines, 200 lines is far
+      // past any real call): the record holds everything, especially the unexpected (owner 08-05).
+      // The 16-line copy on the last event stays for UNATTACHED calls, which have no row to carry it.
+      ...(r.transcript.length ? { transcriptTimed: JSON.stringify(r.transcript.slice(0, 200).map((l) => ({ who: l.who, text: l.text.slice(0, 300), atSec: Math.round(l.atMs / 1000) }))) } : {}),
       // navSeconds = dial -> a person is on the line. Only overwrite when the receipt actually
       // measured it; the provider's own figure stays if we never heard a human.
       ...(sums.navSeconds !== null ? { navSeconds: sums.navSeconds } : {}),

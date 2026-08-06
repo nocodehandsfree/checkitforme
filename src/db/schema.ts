@@ -511,7 +511,12 @@ export const callResults = sqliteTable(
     shipmentDayHeard: text("shipment_day_heard"), // if asked: the day the clerk gave
     shipmentTimeHeard: text("shipment_time_heard"), // if named: the time of day for that shipment
     summary: text("summary"),       // short human summary of what the clerk said
-    transcript: text("transcript"), // text transcript (no audio is ever stored)
+    transcript: text("transcript"),
+    /** The same conversation WITH each line's second, JSON: [{who,text,atSec}...]. The flat
+     *  `transcript` stays the one every reader parses; this exists so the check log can draw every
+     *  line where it was said, however long or strange the call got (owner 08-05: the record holds
+     *  everything, especially the unexpected). */
+    transcriptTimed: text("transcript_timed"),
     providerCallId: text("provider_call_id"), // ElevenLabs conversation id
     finderUserId: text("finder_user_id"), // clerk id of whoever placed it (null = anon/free)
     zoneRunId: text("zone_run_id"), // groups the checks of one zone sweep (z<zoneId>-<uuid>) for the report

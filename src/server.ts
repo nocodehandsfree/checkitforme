@@ -6485,6 +6485,9 @@ app.get("/api/admin/receipt/:room", async (c) => {
     // is found by searching back rather than assumed to be last). Older checks predate the stamp and
     // fall back to the flat transcript with no clock, exactly as before.
     lines: ((): Array<{ who: string; text: string; atSec: number }> | null => {
+      // The row's full timed conversation first (uncapped; owner 08-05: the record holds everything,
+      // the unexpected included) — then the 16-line copy an unattached call leaves on its events.
+      try { const t = attached?.transcriptTimed ? JSON.parse(attached.transcriptTimed) as Array<{ who: string; text: string; atSec: number }> : null; if (Array.isArray(t) && t.length) return t; } catch { /* fall through */ }
       for (let i = timeline.length - 1; i >= 0; i--) {
         const d = timeline[i].detail as { lines?: Array<{ who: string; text: string; atSec: number }> } | null;
         if (d && Array.isArray(d.lines)) return d.lines;
