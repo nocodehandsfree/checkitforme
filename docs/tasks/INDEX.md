@@ -161,5 +161,6 @@ Live [dash](admin-cleanup-dash.md) · Users [users](admin-cleanup-users.md) · R
 | [Staging store-list overwrite mystery](staging-storelist-overwrite.md) | data | active |
 | [Settings mirror: verify prod export live](settings-mirror-verify.md) | data | active |
 | [Retarget the stale CALL_ECONOMICS citation in server.ts](server-cost-citation.md) | data | active |
+| [Reply lock: the writer cuts a whole part of the answer](reply-lock-writer-cuts-too-much.md) | the reply lock | active — found 08-06 in this chat's own reply. The total-collapse floor is fixed and shipped; dropping ONE part of three still gets through, and the meaning pass that would catch it is a model call that can be unavailable |
 
 Consumer-site tasks need an owner-named unlock (the site is frozen — docs/shared/REBUILD_PLAN.md).
