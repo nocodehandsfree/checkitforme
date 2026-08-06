@@ -113,6 +113,11 @@ def word_scan(text):
         fails.append("a divider line (rule 10: never)")
     if bolds and is_short(text):
         fails.append("bold on a quick answer (rule 10: a sentence or two carries no bold)")
+    paras = [b for b in re.split(r"\n\s*\n", prose) if b.strip()]
+    if not bolds and len(paras) >= 3 and not is_short(text):
+        fails.append(f"{len(paras)} paragraphs and NO bold labels (rule 10: when a reply "
+                     "covers 2 or 3 separate things, each gets a short bold label on its "
+                     "own line so he can scroll and find the part he cares about)")
     lines = sum(max(1, -(-len(l.rstrip()) // 90)) for l in prose.splitlines() if l.strip())
     if lines > 15:
         fails.append(f"reply is about {lines} lines, over the 15 line limit (rule 9: "
@@ -181,11 +186,18 @@ def render(root, owner_msg, draft, notes="", timeout=90):
     prompt = (
         "You are the owner's dedicated writer. Below: how the owner communicates, "
         "the lexicon of the system's real names, a few real examples from his "
-        "chats, his latest message, and a working agent's complete answer. Your "
-        "FIRST question about every sentence: would a person actually text this to "
-        "a friend? If the whole answer already reads that way and follows the "
-        "style, pass it unchanged. Otherwise rewrite it fully in the owner's "
-        "style. Keep every fact, number (as digits), name, date, path, command, "
+        "chats, his latest message, and a working agent's complete answer. FIRST "
+        "judge it against HIS LATEST MESSAGE: does it answer what he actually "
+        "asked? Cut every part that is not the answer, a decision he has to make, "
+        "or something he asked about, however true that part is. If it never "
+        "answers him, rewrite so the answer comes first. THEN judge every "
+        "sentence: would a person actually text this to a friend? And judge the "
+        "shape: when the reply covers 2 or more separate things you MUST give each "
+        "one a SHORT bold label alone on its own line with a plain paragraph under "
+        "it. Pass the draft unchanged ONLY if it answers him, reads like one friend "
+        "texting another, and already carries those labels. Otherwise rewrite it "
+        "fully in the owner's style. Keep every fact, number (as digits), name, "
+        "date, path, command, "
         "quote, code block, decision, and instruction EXACTLY. Add nothing, drop "
         "nothing, soften nothing, strengthen nothing. Never use a dash inside a "
         "sentence. Answer with ONLY this JSON:\n"
@@ -302,15 +314,13 @@ if "--check-file" in sys.argv:
             log_error(root, ex)
     if not faithful:
         notes.append("meaning drifted: " + "; ".join(problems[:5]))
-    if notes and final != draft:
+    if notes:
         try:
             final = render(root, owner_msg, draft, notes=" | ".join(notes))
             if word_scan(final) or mechanical_misses(draft, final):
                 fail_open("rewrite kept failing the fact checks")
         except Exception as ex:
             log_error(root, ex); fail_open("error on retry")
-    elif notes:
-        fail_open("no usable rewrite")
 
     record_approval(root, final)
     if " ".join(final.split()) == " ".join(draft.split()):
