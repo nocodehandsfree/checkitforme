@@ -2594,7 +2594,8 @@ function checkV2Html(d){
   const statusIco=t=>{const m=t==='out'?['#EF4444','<path d="M6 6l12 12M18 6L6 18"/>']:t==='in'?['#4ADE80','<path d="M5 12l5 5 9-10"/>']:['#FBBF24','<path d="M6 12h12"/>'];
     return `<span style="width:22px;height:22px;border-radius:50%;background:${m[0]}26;display:grid;place-items:center;flex:0 0 auto"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${m[0]}" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">${m[1]}</svg></span>`;};
   const rung=(e,last,first)=>{
-    const dot=e.status?statusIco(e.status):(e.say||e.group)?`<span style="display:grid;place-items:center;width:15px;height:15px;flex:0 0 auto;color:${e.c||'#8A8A96'}">${e.group?menuIco:spkIco}</span>`:`<span style="width:9px;height:9px;border-radius:50%;background:${e.c||'var(--muted)'};flex:0 0 auto"></span>`;
+    const mark=e.status?statusIco(e.status):(e.say||e.group)?`<span style="display:grid;place-items:center;width:15px;height:15px;color:${e.c||'#8A8A96'}">${e.group?menuIco:spkIco}</span>`:`<span style="width:9px;height:9px;border-radius:50%;background:${e.c||'var(--muted)'}"></span>`;
+    const dot=`<span style="width:15px;display:grid;place-items:center;justify-items:center;flex:0 0 auto;overflow:visible">${mark}</span>`;
     const stubH=e.status?4:(e.say||e.group)?7:10;
     const stub=`<span style="width:2px;height:${stubH}px;flex:0 0 auto;${first?'':'background:rgba(255,255,255,.14)'}"></span>`;
     const line=last?'':`<span style="width:2px;flex:1;background:rgba(255,255,255,.14)"></span>`;
