@@ -234,6 +234,24 @@ async function main() {
   ok("hands it to a person instead of guessing", /can't tell which check/i.test(res.reply), res.reply);
   ok("no grant against an unrelated check", (await db.select().from(supportCreditGrants)).length === 0);
 
+  console.log("\n== 20. an unclear verdict from a REAL two-way call is charged, so it never refunds ==");
+  await db.delete(callResults);
+  await db.delete(supportCreditGrants);
+  // billableOutcome() charges this exact shape; the credit machine has to agree or we charge and
+  // refund the same check (round 2 test 3, 08-06). Short on purpose: the short-call rule must lose.
+  const talked = await mkCheck(r1.id, { statusKey: "no_clear_answer", chargedAt: now - 700, callSeconds: 18,
+    transcript: "Agent: do you have any Pokemon in\nClerk: uh let me see hang on" });
+  res = await answerSupport("sess-unclear-1", "I got charged but they never actually answered me",
+    { category: "check_issue", account: { id: USER }, origin: { checkId: String(talked.id) } });
+  ok("a real conversation is not refunded", !/put 1 check back/i.test(res.reply), res.reply);
+  ok("no grant row", (await db.select().from(supportCreditGrants)).length === 0);
+  // ...but an unclear call where NOBODY spoke is still the short-call case and still refunds.
+  await db.delete(callResults);
+  const silent = await mkCheck(r1.id, { statusKey: "no_clear_answer", chargedAt: now - 700, callSeconds: 6, transcript: null });
+  res = await answerSupport("sess-unclear-2", "I got charged and nothing happened on that call",
+    { category: "check_issue", account: { id: USER }, origin: { checkId: String(silent.id) } });
+  ok("a silent short call still refunds", /put 1 check back/i.test(res.reply), res.reply);
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }

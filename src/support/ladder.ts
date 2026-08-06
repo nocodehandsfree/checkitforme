@@ -98,7 +98,8 @@ Site facts, always true, use these for any "where is X" question:
 - The site footer has these links only: Scores, About, Guide, Help, Terms, Privacy, plus a Discord icon and an X (Twitter) icon. There is nothing else in the footer.
 - There is no Contact page and no Contact link anywhere. For partnerships, business, or press, the way to reach the team is Discord (the icon in the footer). Point them there.
 - The customer CANNOT hear a check. They read it: the conversation arrives as text, line by line, as it is spoken, and the screen shows which stage the call is at. Listening to the audio is an internal testing tool, not something a customer has. So "can I hear the call?" is answered no, and then what they DO get. Never answer yes and then describe reading.
-- Check is a website you can add to your home screen, and the book calls that the app. It is NOT in the App Store: never tell anyone to download or install it from there. Someone saying "the app" means the home screen one, so help them with it normally.
+- Check is a website you can add to your home screen, and the book calls that the app. It is NOT in the App Store: never tell anyone to download or install it from there. Someone saying "the app" means the home screen one, so help them with it normally, and if they clearly think there is an App Store download, say plainly that there is not and that it is added from the browser instead.
+- A check asks a store about a PRODUCT, not a single card. The four things we hunt are Pokemon, One Piece, Topps NBA and NeeDoh, and an exact ask names a set and a kind of product, like a Prismatic Evolutions booster box or an elite trainer box. Nobody at a store can tell you over the phone whether one particular card is sitting inside a sealed box, so never promise we can check for a named single card. Say what we CAN ask for instead.
 - The Help link in the footer opens this same chat. So "tap Help" is NEVER an answer to anyone who wants to reach a person, in any wording — not to "let me talk to someone", not to "what's your phone number, I'd rather call someone". It hands them back to you. Set needs_human instead and say a person is coming.
 - Discord is for partnerships, business, and press. It is NOT the support path. Never hand a customer with a support problem to Discord to find a person.
 - When someone asks for a human, you do not have a link to give them and you must not invent one. Set needs_human true and the app itself hands them over. Still answer what you can in the same reply, warmly, then let the hand over happen.
@@ -148,7 +149,7 @@ const CATEGORY_HINT: Record<string, string> = {
   billing: "This is a billing question. Answer from the plans and pricing passages. Only set needs_human for a real dispute or a change to their account you cannot make.",
   partnerships: "This is a partnership or business inquiry. Answer what the book covers; if it needs a real person to evaluate a deal, set needs_human after you've given what you can.",
   bug: "The user is reporting something broken. Help them try the obvious fixes first from the passages; if it's a genuine bug, set needs_human so they can attach details.",
-  check_issue: "The user is reporting that a check went wrong: a wrong or disconnected phone number we called, the wrong store, or a result that looks incorrect. The credit system has already compared their claim to the call record where it could; you are only here because it could not conclude. Acknowledge briefly and sincerely, ask which store or check it was and what specifically was off. NEVER promise, imply, or grant a credit or refund; only the credit system grants. If they push back after being told no, set needs_human true so the team can review.",
+  check_issue: "The user is reporting that a check went wrong: a wrong or disconnected phone number we called, the wrong store, or a result that looks incorrect. The credit system has already compared their claim to the call record where it could; you are only here because it could not conclude. Acknowledge briefly and sincerely, and ask what specifically was off. NEVER promise, imply, or grant a credit or refund; only the credit system grants. If they push back after being told no, set needs_human true so the team can review.",
   technical: "This is a technical/how-to question. Walk them through it from the passages.",
   how_checks_work: "They want to understand how checks work. Explain plainly from the book.",
   other: "",
@@ -270,8 +271,14 @@ export async function answerSupport(sessionId: string, userMessage: string, opts
 
   const catHint = CATEGORY_HINT[convo.category || category] || "";
   const checkBlock = opts.checkContext ? `\n\nThis signed-in customer's recent checks (use for specifics, never invent):\n${opts.checkContext}` : "";
+  // Opened from a check's own page: we KNOW which check. Asking "which store was it" here is the
+  // loop the owner hit in July, and it came back on a follow-up once the credit machine had already
+  // named the store in the first reply (round 2 test 2, 08-06).
+  const pinnedBlock = convo.checkId
+    ? "\n\nTHIS CHAT WAS OPENED FROM ONE SPECIFIC CHECK, so you already know which one it is. NEVER ask which store or which check. Ask what went wrong with it instead."
+    : "";
   const msgs: LlmMsg[] = [
-    { role: "system", content: `${SYSTEM}${catHint ? `\n\n${catHint}` : ""}\n\nWhat you know:\n${ctx.passages || "(nothing on this)"}${coverage}${checkBlock}` },
+    { role: "system", content: `${SYSTEM}${catHint ? `\n\n${catHint}` : ""}\n\nWhat you know:\n${ctx.passages || "(nothing on this)"}${coverage}${checkBlock}${pinnedBlock}` },
     ...history.slice(-8).map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
   ];
   const inChars = msgs.reduce((n, m) => n + m.content.length, 0);

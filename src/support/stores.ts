@@ -86,5 +86,5 @@ export async function coverageNote(message: string): Promise<string> {
   if (cov.callable === 0) {
     return `\n\nSTORE COVERAGE, checked just now against the real store list: we have ${cov.total} ${cov.name} on the list and can call NONE of them today. Say plainly that we cannot call ${cov.name} right now. Do NOT say yes.`;
   }
-  return `\n\nSTORE COVERAGE, checked just now against the real store list: we can call ${cov.callable} ${cov.name}${cov.callable === 1 ? "" : " stores"} today, for example ${cov.example}. You may confirm that. Add that which ones they see depends on how close they are, so searching their own town settles it. Use the number only if it helps; never round it or make one up.`;
+  return `\n\nSTORE COVERAGE, checked just now against the real store list: we can call ${cov.callable} ${cov.name}${cov.callable === 1 ? "" : " stores"} today, for example ${cov.example}. You may confirm that. This count is for the CHAIN, so you may confirm the chain and must NOT confirm a particular branch or town: which ones they see depends on how close they are, and only their own search settles that. Use the number only if it helps, and never round it or make one up.`;
 }
