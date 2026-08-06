@@ -412,7 +412,9 @@ if "--check-file" in sys.argv:
         notes.append("meaning drifted: " + "; ".join(problems[:5]))
     if notes:
         try:
-            final = render(root, owner_msg, draft, notes=" | ".join(notes))
+            # More room than the first pass: the retry thinks harder, and a retry that
+            # runs out of time throws away the rendering and sends the raw answer.
+            final = render(root, owner_msg, draft, notes=" | ".join(notes), timeout=180)
             if word_scan(final) or mechanical_misses(draft, final):
                 fail_open("rewrite kept failing the fact checks")
         except Exception as ex:
