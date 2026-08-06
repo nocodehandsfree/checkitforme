@@ -5696,8 +5696,11 @@ app.get("/api/support/credits", async (c) => {
 // Admin: rebuild the book index in qdrant (run after Copper edits the book).
 app.post("/api/support/reindex", async (c) => {
   try {
-    const pages = await reindexBook();
-    return c.json({ ok: true, pages });
+    // ?source=repo reads branch v1.0 from GitHub instead of ReadMe — for the window after a book
+    // page is corrected in git but the ReadMe sync has not run yet (see reindexBook).
+    const source = c.req.query("source") === "repo" ? "repo" : "readme";
+    const pages = await reindexBook(source);
+    return c.json({ ok: true, pages, source });
   } catch (e) {
     return c.json({ error: String((e as Error).message).slice(0, 200) }, 500);
   }
@@ -6477,12 +6480,24 @@ app.get("/api/admin/receipt/:room", async (c) => {
     stamped: !!cost,
     cost: cost ? { ...cost, readable: readable(cost) } : null,
     behaved: behaved({ timeline, rollup: seconds, agentLines: agentLinesFrom(attached?.transcript) }),
-    // …and on a finished check the words are one flat block with no clock on them, so they carry no
-    // seconds. Same shape either way, so the screen has one way to draw a conversation.
-    lines: String(attached?.transcript || "").split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
-      const m = /^(Agent|Clerk|Staff):\s*(.*)$/i.exec(l);
-      return m ? { who: /agent/i.test(m[1]) ? "Agent" : "Clerk", text: m[2], atSec: null } : { who: "Clerk", text: l, atSec: null };
-    }),
+    // A finished check's timed lines ride an event's detail (receipt-store stamps them on the last
+    // event at persist — and the verdict tail lands AFTER that once the check settles, so the holder
+    // is found by searching back rather than assumed to be last). Older checks predate the stamp and
+    // fall back to the flat transcript with no clock, exactly as before.
+    lines: ((): Array<{ who: string; text: string; atSec: number }> | null => {
+      // The row's full timed conversation first (uncapped; owner 08-05: the record holds everything,
+      // the unexpected included) — then the 16-line copy an unattached call leaves on its events.
+      try { const t = attached?.transcriptTimed ? JSON.parse(attached.transcriptTimed) as Array<{ who: string; text: string; atSec: number }> : null; if (Array.isArray(t) && t.length) return t; } catch { /* fall through */ }
+      for (let i = timeline.length - 1; i >= 0; i--) {
+        const d = timeline[i].detail as { lines?: Array<{ who: string; text: string; atSec: number }> } | null;
+        if (d && Array.isArray(d.lines)) return d.lines;
+      }
+      return null;
+    })()
+      ?? String(attached?.transcript || "").split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
+        const m = /^(Agent|Clerk|Staff):\s*(.*)$/i.exec(l);
+        return m ? { who: /agent/i.test(m[1]) ? "Agent" : "Clerk", text: m[2], atSec: null } : { who: "Clerk", text: l, atSec: null };
+      }),
     v2: await v2For(timeline, seconds, cost, attached?.retailerId ?? null),
   });
 });

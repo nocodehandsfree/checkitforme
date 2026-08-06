@@ -156,7 +156,7 @@ __BRAND_HEAD__
 .store.coming{opacity:.5} /* callable-but-unmapped: shown greyed, not callable (tap → "Adding store soon!") */
   .store:hover{border-color:rgba(255,255,255,.18)}
   .store.sel{border-color:var(--accent,#FFCB05);background:color-mix(in srgb,var(--accent,#FFCB05) 9%,transparent)}
-  .store .ic{width:46px;height:46px;border-radius:12px;background:#1F1F25;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}/* THE grey tile: one size for every store logo, site + Admin (owner 07-31) */
+  .store .ic,.stile{width:46px;height:46px;border-radius:12px;background:#1F1F25;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}/* THE grey tile: one size for every store logo, site + Admin (owner 07-31) */
   /* name-only stores: their name as a tight two-line wordmark inside the logo slot (no made-up logo) */
   .wm{display:flex;flex-direction:column;justify-content:center;align-items:center;width:100%;height:100%;padding:2px;box-sizing:border-box;overflow:hidden;text-align:center}
   .wm span{display:block;font-weight:900;font-size:15px;line-height:1;letter-spacing:.01em;text-transform:uppercase;color:#cdcdd8;max-width:100%}
@@ -1170,7 +1170,7 @@ __BRAND_HEAD__
   .opencount{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12px;font-weight:700;white-space:nowrap}
   .opencount .odot{width:6px;height:6px;border-radius:50%;background:#cfcfe0}
   .store.best{border-color:rgba(74,222,128,.55);background:linear-gradient(100deg,rgba(74,222,128,.1),rgba(74,222,128,.02))}
-  .store .ic.best{background:var(--green)}
+  .store .ic.best,.stile.best{background:var(--green)}
   /* Tier groups — TIER 5 = green (best MSRP odds), TIER 4 = amber. */
   /* Section labels — a small neon-outlined PILL (dark inside, black shows through), like the Map toggle. */
   /* tier pills: GREY letters, a very FAINT tier-coloured outline (no glow, no star) */
@@ -1282,8 +1282,8 @@ __BRAND_HEAD__
   .railchip img{max-width:71%;max-height:71%;width:auto;height:auto;object-fit:contain}/* fallback only */
   /* dark wordmarks need a light plate — any tile holding a real logo goes light */
   .lite{background:#f2f2f5 !important;border-color:rgba(255,255,255,.28) !important}
-  .store .ic img{max-width:78%;max-height:78%;width:auto;height:auto;object-fit:contain}/* fallback only: a real logo carries its own width inline (logoPct) */
-  .store .ic.widelogo img{max-width:92%;max-height:64%}/* fallback only */
+  .store .ic img,.stile img{max-width:78%;max-height:78%;width:auto;height:auto;object-fit:contain}/* fallback only: a real logo carries its own width inline (logoPct) */
+  .store .ic.widelogo img,.stile.widelogo img{max-width:92%;max-height:64%}/* fallback only */
   .railchip.widelogo img{width:38px;height:auto;max-height:22px}
   .railchip.on{transform:scale(1.08);border-color:var(--accent,var(--green));box-shadow:0 0 12px rgba(74,222,128,.22)}
   #result{position:relative}
@@ -1558,7 +1558,7 @@ html[data-skin="v2"] .rng::-moz-range-thumb{width:24px;height:24px;border:0;box-
 /* Store rows (§5.6): chain-art logo slot on #1F1F25; independents keep the embossed initials tile.
    Selection = accent ring + #23232A fill (§5.5); BEST row = green ring + soft glow. */
 
-html[data-skin="v2"] .store .ic:not(:has(img)){background:linear-gradient(145deg,#34343D,#23232B);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5)}
+html[data-skin="v2"] .store .ic:not(:has(img)),html[data-skin="v2"] .stile:not(:has(img)){background:linear-gradient(145deg,#34343D,#23232B);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5)}
 html[data-skin="v2"] .store.sel{background:#23232A;border:0;box-shadow:0 0 0 2px var(--accent,#FFCB05),0 8px 14px -8px rgba(0,0,0,.55)}
 html[data-skin="v2"] .store:has(.besttag){background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;box-shadow:0 0 0 1.5px rgba(74,222,128,.5),0 8px 14px -8px rgba(0,0,0,.55)}
 html[data-skin="v2"] .store.best{border:0;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%)}
@@ -3394,7 +3394,12 @@ Object.assign(I18N.es, {
 function tf(key,en,vars){ let s=t(key,en); if(vars) for(const k in vars) s=s.split('{'+k+'}').join(vars[k]); return s; }
 let LANG=localStorage.getItem('runnr_lang')||((navigator.language||'en').slice(0,2));
 if(LANG!=='en' && !I18N[LANG]) LANG='en';
-function t(key,en){ return (I18N[LANG]&&I18N[LANG][key])||en; }
+function t(key,en){
+  // The owner's Admin edits win for the three share texts (owner 08-02). They were editable on the
+  // Alerts page for a while and the site never read them, so saving did nothing. English only, which
+  // is Admin's own rule, so a Spanish reader still gets the site's Spanish.
+  if(LANG!=='es'){ try{ const o=(POLICY&&POLICY.shareCopy)||null; if(o&&o[key]) return o[key]; }catch(_){ } }
+  return (I18N[LANG]&&I18N[LANG][key])||en; }
 const HERO_I18N={es:{
   'Pokémon':'Pokémon <span class="g">¿en stock?</span><br>Lo verificamos por ti.',
   'One Piece TCG':'One Piece <span class="g">¿en stock?</span><br>Lo verificamos por ti.',
@@ -3444,15 +3449,35 @@ function logoStyle(s, shape){
   }
   return ` style="width:${pct.toFixed(2)}%;height:auto;max-width:none;max-height:none;object-fit:contain"`;
 }
+// A SAVED CHECK carries the logo address it had when it ran, but not the size, because the size is a
+// newer thing. Fall back to the store's own record for anything missing, the same way the check card
+// already did. Without this a saved row draws its logo at full size and bursts the page open.
+function logoOf(s){
+  if(!s) return {};
+  if(typeof s.logoPct === 'number') return s;
+  const id = s.storeId || s.id || s.retailerId;
+  const st = id && typeof STORES !== 'undefined' ? STORES.find(x=>x.id===id) : null;
+  if(!st) return s;
+  return Object.assign({}, s, {
+    logoUrl: s.logoUrl || st.logoUrl,
+    logoWide: s.logoWide ?? st.logoWide,
+    logoDark: s.logoDark ?? st.logoDark,
+    logoPct: st.logoPct, logoAspect: st.logoAspect,
+  });
+}
 function storeFace(s){
+  s = logoOf(s);
   if(s&&s.logoUrl) return `<img src="${esc(s.logoUrl)}" alt="" data-nm="${esc(s.name)}" data-st="${esc(s.storeType||'')}"${logoStyle(s)} onerror="wmFail(this)">`;
   if(s&&s.storeType==='Hobby') return SVG_STORE(24);
   return storeWordmark(s&&s.name, s&&s.storeType);
 }
-// The grey tile itself, for the few places that build a row by hand instead of using .store .ic.
+// The grey tile, for the places that build a row by hand instead of using a .store row. It carries
+// BOTH class names on purpose: `stile` is what sizes it, so a tile built outside a store row is not
+// left unsized and drawing its logo at full size (owner caught this on Activity, 08-05).
 function storeTile(s, extra){
-  const cls = 'ic' + (s&&s.logoDark?' lite':'') + (s&&s.logoWide?' widelogo':'') + (extra?' '+extra:'');
-  return `<div class="${cls}">${storeFace(s)}</div>`;
+  const o = logoOf(s);
+  const cls = 'ic stile' + (o.logoDark?' lite':'') + (o.logoWide?' widelogo':'') + (extra?' '+extra:'');
+  return `<div class="${cls}">${storeFace(o)}</div>`;
 }
 // A dead logoUrl must never show the browser's broken-image glyph (Android Chrome paints a visible
 // one where iOS leaves a quiet blank) — swap in the designed monogram tile and drop the logo-only
@@ -7128,13 +7153,16 @@ async function openHistEntry(e){
 // ACT_DAY has THREE states, and keeping them apart is what fixes the week chart (owner 07-26):
 //   undefined = the tab was just opened and nobody has picked a day yet -> land on today
 //   a number  = that day is picked; the green bar and the four counts BOTH mean that day
-//   null      = the day was deliberately cleared -> NO bar is green and the counts mean the week
+//   null      = a week arrow moved the view -> NO bar is green and the counts mean the week
 // Before this, null meant both "no day picked" and "highlight today", so the chart showed today in
 // green while the counts underneath were the whole week: 1 check today sitting above 44 unclear.
 // Tapping today then read as a jump, because clearing the day left the green bar where it was.
 let ACT_WOFF=0, ACT_DAY, ACT_TONE='';
 function actWeek(d){ ACT_WOFF=Math.max(0,ACT_WOFF+d); ACT_DAY=null; ACT_TONE=''; acctTab('activity',true); } // +1 = a week further back, -1 = toward the present (floor 0 = this week)
-function actPick(i){ ACT_DAY=(ACT_DAY===i?null:i); ACT_TONE=''; acctTab('activity',true); }
+// Tapping a bar ALWAYS means that day (owner 08-05). It used to toggle back off, so a second tap on
+// the same bar swapped the four counts from that day to the whole week with no other signal, and
+// 3 in stock read as 19. Week totals still show when a week arrow moves the view (actWeek clears it).
+function actPick(i){ ACT_DAY=i; ACT_TONE=''; acctTab('activity',true); }
 /** Reopening the Activity tab starts fresh on today, the same as a first open. */
 function actReset(){ ACT_WOFF=0; ACT_DAY=undefined; ACT_TONE=''; }
 function actTone(tn){ ACT_TONE=(ACT_TONE===tn?'':tn); acctTab('activity',true); }
@@ -7225,9 +7253,12 @@ function acctTab(which,fromPop){
     const cell=(nv,lb,tn)=>`<div onclick="actTone('${tn}')" style="text-align:center;cursor:pointer;${ACT_TONE===tn?'background:rgba(255,255,255,.05);border-radius:12px;':''}padding:2px 0"><div style="font-size:18px;font-weight:800;color:${ACT_TONE&&ACT_TONE!==tn?'rgba(255,255,255,.35)':(TONECOL[tn]||'#FFF')}">${nv}</div><div style="margin-top:2px;font-size:9.5px;font-weight:700;letter-spacing:.12em;color:#8A8A96">${lb}</div></div>`;
     const vlabel=e=>{ const tn=railTone(e); return tn==='in'?t('v.in','In stock!'):tn==='out'?t('v.out','Not in stock'):tn==='soon'?t('v.soon','Restock incoming!'):t('fbk.unsure','Unclear'); };
     const agoTx=e=>{ try{ return agoStr(Math.floor(e.ts/1000)); }catch(_){ return ''; } }; // agoStr wants seconds — ms made every call 'just now'
-    const lastPool=(ACT_TONE?scope.filter(e=>railTone(e)===ACT_TONE):hist);
-    const last=lastPool.slice(0,ACT_TONE?6:3).map(e=>`<button onclick="ACCT_RETURN='activity';closeAccount();openHistEntry(histList().find(x=>x.cid==='${esc(e.cid)}'))" style="display:flex;align-items:center;gap:11px;width:100%;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:14px;padding:9px 12px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;cursor:pointer;text-align:left">
-      ${storeTile({logoUrl:e.logoUrl,logoWide:e.logoWide,logoDark:e.logoDark,logoPct:e.logoPct,name:e.storeName,storeType:e.storeType})}
+    // The list under the counts follows the SAME scope as the counts (owner 08-05). It used to read
+    // the whole history whenever no status was picked, so choosing another day moved every number
+    // above it and left the rows below showing the newest checks of all time.
+    const lastPool=(ACT_TONE?scope.filter(e=>railTone(e)===ACT_TONE):scope);
+    const last=lastPool.slice(0,6).map(e=>`<button onclick="ACCT_RETURN='activity';closeAccount();openHistEntry(histList().find(x=>x.cid==='${esc(e.cid)}'))" style="display:flex;align-items:center;gap:11px;width:100%;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:14px;padding:9px 12px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;cursor:pointer;text-align:left">
+      ${storeTile({storeId:e.storeId,logoUrl:e.logoUrl,logoWide:e.logoWide,logoDark:e.logoDark,logoPct:e.logoPct,name:e.storeName,storeType:e.storeType})}
       <span style="flex:1;min-width:0"><span style="display:block;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(railBase(e.storeName)||t('hist.acheck','Store check'))}</span><span style="display:block;margin-top:2px;font-size:11.5px;font-weight:600;color:#8A8A96;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.location||e.address||'')}</span></span>
       <span style="flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:3px">${v2StatusChip(railTone(e),22)}<span style="font-size:11px;font-weight:600;color:#8A8A96">${agoTx(e)}</span></span>
     </button>`).join('');

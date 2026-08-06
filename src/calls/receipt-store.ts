@@ -12,7 +12,7 @@
 // placeholder provider id we stamp at dial (`bridge:<room>`), or the real conversation id the voice
 // provider handed us mid-call. Belt and braces, because a receipt that cannot find its call is a
 // receipt nobody will ever read.
-import { eq, or, and, inArray } from "drizzle-orm";
+import { eq, or, and, inArray, sql } from "drizzle-orm";
 import { db } from "../db/client";
 import { callEvents, callResults } from "../db/schema";
 import { rollup, transcriptOf, setEventSink, type Receipt } from "./events";
@@ -52,6 +52,18 @@ async function findCallId(r: Receipt): Promise<number | null> {
 export async function persistReceipt(r: Receipt): Promise<void> {
   try {
     const callId = await findCallId(r);
+    // THE CONVERSATION KEEPS ITS CLOCK (owner 08-05, fix 1 on the Testing sheet). The spoken lines
+    // live on the receipt with real times, but the only thing that survived the call was the flat
+    // transcript text — so a finished check's sheet could only print the conversation at the end of
+    // the log instead of in line where each thing was said. The timed lines ride the LAST event's
+    // detail, the same place an unattached call's seconds and cost already ride (and deliberately
+    // NOT a seventeenth event kind — the closed sixteen is law). Capped hard, because detail is
+    // truncated at 4000 characters and a torn JSON reads as no detail at all.
+    if (r.events.length && r.transcript.length) {
+      const last = r.events[r.events.length - 1];
+      last.detail = { ...(last.detail ?? {}),
+        lines: r.transcript.slice(0, 16).map((l) => ({ who: l.who, text: l.text.slice(0, 100), atSec: Math.round(l.atMs / 1000) })) };
+    }
     if (r.events.length) {
       await db.insert(callEvents).values(r.events.map((e) => ({
         callId, room: r.room, atMs: e.atMs, atSec: e.atSec, kind: e.kind,
@@ -90,6 +102,10 @@ export async function persistReceipt(r: Receipt): Promise<void> {
     await db.update(callResults).set({
       room: r.room,
       lane: sums.lane,
+      // The WHOLE conversation with its clock, uncapped in count (300-char lines, 200 lines is far
+      // past any real call): the record holds everything, especially the unexpected (owner 08-05).
+      // The 16-line copy on the last event stays for UNATTACHED calls, which have no row to carry it.
+      ...(r.transcript.length ? { transcriptTimed: JSON.stringify(r.transcript.slice(0, 200).map((l) => ({ who: l.who, text: l.text.slice(0, 300), atSec: Math.round(l.atMs / 1000) }))) } : {}),
       // navSeconds = dial -> a person is on the line. Only overwrite when the receipt actually
       // measured it; the provider's own figure stays if we never heard a human.
       ...(sums.navSeconds !== null ? { navSeconds: sums.navSeconds } : {}),
@@ -162,11 +178,21 @@ export async function recordVerdict(
       .where(and(eq(callEvents.callId, callId), eq(callEvents.kind, "verdict"))).limit(1);
     if (already.length) return;
     const room = (await db.select({ room: callResults.room }).from(callResults).where(eq(callResults.id, callId)))[0]?.room;
-    const at = Math.max(0, atSec);
+    // THE TAIL IS STAMPED AT ITS TRUE PLACE: AFTER EVERYTHING ELSE (owner 08-05). Callers pass the
+    // provider's session length as atSec, and Charlie's session is SHORTER than the phone call, so
+    // the double check, the verdict and the charge were drawn MID call, before the goodbye and the
+    // hang up they actually follow. The settle only ever runs once the check is over, so the tail
+    // clamps to the last second already on the record and can never draw before its causes.
+    const lastRow = (await db.select({ m: sql<number>`max(${callEvents.atMs})` })
+      .from(callEvents).where(eq(callEvents.callId, callId)))[0];
+    // Clamped in MILLISECONDS: clamping to the same second still let the tail sort before the
+    // "Check ended" row that shares it (check 295). Strictly after everything, always.
+    const baseMs = Math.max(0, atSec * 1000, Number(lastRow?.m ?? 0) + 1);
+    const at = Math.round(baseMs / 1000);
     const rowFor = (kind: string, note: string, detail: Record<string, unknown>, order: number) => ({
       // The same final second, a breath of milliseconds apart, so the three read in this order and
       // never shuffle under an ORDER BY on the clock.
-      callId, room: room ?? "", atMs: at * 1000 + order, atSec: at, kind, note: note.slice(0, 300), detail: JSON.stringify(detail),
+      callId, room: room ?? "", atMs: baseMs + order, atSec: at, kind, note: note.slice(0, 300), detail: JSON.stringify(detail),
     });
     const rows = [];
     if (extra?.secondReadModel) rows.push(rowFor("unknown", "The answer was double checked", { step: "second_read", model: extra.secondReadModel, costUsd: extra.secondReadUsd ?? 0 }, 0));

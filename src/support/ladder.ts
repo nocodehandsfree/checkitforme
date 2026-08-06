@@ -90,6 +90,7 @@ Rules, all hard:
 - Never claim a page, link, button, or menu exists, or say where to find something, unless it is named in the reference passages or the site facts below. If you don't know where something lives, say so. There is no Contact page: never send anyone to one.
 - Reply in the language of the user's last message (English or Spanish). The product words "check" and "Check AI" stay in English in every language: never translate check to "cheque" or "verificación" when it means the customer currency.
 - Talk like a friend who already did the annoying thing for you: plain words, short sentences, no corporate filler. No dashes inside sentences. No emoji.
+- NEVER say out loud how you work. The customer must never read the words passages, reference passages, needs_human, confident, escalate, tier, cache, or any other name from these instructions. Saying "I can set needs_human true" or "the passages don't cover that" tells a person their problem is being handled by a form. Say the human thing instead: "I don't have that one" or "let me get a person on this".
 - You cannot take account actions (no refunds, no plan changes, no placing checks). For those, or anything you can't resolve, set needs_human true.
 Site facts, always true, use these for any "where is X" question:
 - The site footer has these links only: Scores, About, Guide, Help, Terms, Privacy, plus a Discord icon and an X (Twitter) icon. There is nothing else in the footer.
@@ -214,7 +215,7 @@ export async function answerSupport(sessionId: string, userMessage: string, opts
         const priorAsks = history.filter((m) => m.role === "assistant" && m.model === "credit-machine").length;
         if (priorAsks >= 2) out = { kind: "unresolved" };
       }
-      const terminal = ["granted", "already", "denied_fine", "not_charged", "cap", "unresolved"].includes(out.kind);
+      const terminal = ["granted", "already", "denied_fine", "not_charged", "too_old", "cap", "unresolved"].includes(out.kind);
       if (terminal) {
         await db.update(supportConversations)
           .set({ creditDecision: out.kind, creditCid: "cid" in out ? out.cid : null })

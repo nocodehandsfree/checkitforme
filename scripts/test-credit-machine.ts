@@ -157,6 +157,83 @@ async function main() {
   ok("EN close lands and is money-word-free", closeEn.length > 0 && !MONEY.test(closeEn), closeEn);
   ok("ES close lands and is money-word-free", closeEs.length > 0 && !MONEY.test(closeEs), closeEs);
 
+  // Both of these were found by the robot customer on 2026-08-05, driving REAL checks on the owner's
+  // staging account rather than seeded rows. Both cost money.
+  console.log("\n== 15. a check that ANSWERED is never refunded on telemetry, however fast it was ==");
+  await db.delete(callResults);
+  await db.delete(supportCreditGrants);
+  // The exact shape that leaked a credit: in stock, a real verdict, 24 seconds, one under the bar.
+  const fastGood = await mkCheck(r1.id, { statusKey: "in_stock", confirmed: true, chargedAt: now - 900, callSeconds: 24 });
+  res = await answerSupport("sess-fast-1", "something went wrong with this check",
+    { category: "check_issue", account: { id: USER }, origin: { checkId: String(fastGood.id) } });
+  ok("fast answered check is NOT credited", !/put 1 check back/i.test(res.reply), res.reply);
+  ok("says the record shows an answer", /answer recorded/i.test(res.reply), res.reply);
+  ok("no grant row was written", (await db.select().from(supportCreditGrants)).length === 0);
+
+  console.log("\n== 16. a pinned check older than the newest 12 stays pinned, never retargets ==");
+  await db.delete(callResults);
+  await db.delete(supportCreditGrants);
+  // The chat is opened from THIS check's page. It is old, so it must not earn a credit — but the
+  // answer has to be about it, not about whatever is newest.
+  const oldPinned = await mkCheck(r1.id, { statusKey: "left_on_hold", chargedAt: now - 9 * 86400, startedAt: now - 9 * 86400, callSeconds: 40 });
+  // ...buried under a full window of newer checks, one of them refundable.
+  for (let i = 0; i < 12; i++) await mkCheck(r2.id, { statusKey: "nobody_answered", chargedAt: now - 1000 - i, startedAt: now - 1000 - i, callSeconds: 5 });
+  res = await answerSupport("sess-oldpin-1", "I got charged for this one and they just left me on hold",
+    { category: "check_issue", account: { id: USER }, origin: { checkId: String(oldPinned.id) } });
+  ok("does NOT credit the newer unrelated check", !/put 1 check back/i.test(res.reply), res.reply);
+  ok("answers about the pinned check's own store", res.reply.includes(r1.name), res.reply);
+  ok("says it is past the 7 day window", /7 days old/i.test(res.reply), res.reply);
+  ok("still no grant row", (await db.select().from(supportCreditGrants)).length === 0);
+
+  console.log("\n== 17. a hold is charged on purpose, so it never auto-refunds, however short ==");
+  await db.delete(callResults);
+  await db.delete(supportCreditGrants);
+  // Keeping left_on_hold out of BAD_KEYS was not enough: a SHORT hold used to slip through the
+  // under-25-seconds rule, so we charged and refunded the same check (08-05, real staging check).
+  const shortHold = await mkCheck(r1.id, { statusKey: "left_on_hold", chargedAt: now - 600, callSeconds: 18 });
+  res = await answerSupport("sess-hold-1", "I got charged and they just left me on hold, nobody came back",
+    { category: "check_issue", account: { id: USER }, origin: { checkId: String(shortHold.id) } });
+  ok("short hold is NOT credited", !/put 1 check back/i.test(res.reply), res.reply);
+  ok("no grant row for a hold", (await db.select().from(supportCreditGrants)).length === 0);
+
+  console.log("\n== 18. at the 30-day cap, honest non-money answers still get answered ==");
+  await db.delete(callResults);
+  await db.delete(supportCreditGrants);
+  // Burn the cap with two real grants...
+  const CAP = 2; // CAP_PER_30D in src/support/credits.ts (owner: 2 per 30 days)
+  for (let i = 0; i < CAP; i++) {
+    const c = await mkCheck(r1.id, { statusKey: "nobody_answered", chargedAt: now - 900 - i, startedAt: now - 900 - i, callSeconds: 5 });
+    await answerSupport(`sess-cap-burn-${i}`, "that check went wrong",
+      { category: "check_issue", account: { id: USER }, origin: { checkId: String(c.id) } });
+  }
+  ok("cap is burned", (await db.select().from(supportCreditGrants)).length === CAP);
+  // ...then ask about a check that was never charged. No credit is in question, so the cap is
+  // irrelevant and the true answer is "you were not charged".
+  const freeOne = await mkCheck(r2.id, { statusKey: "nobody_answered", chargedAt: null, callSeconds: 4 });
+  res = await answerSupport("sess-cap-free", "nobody picked up on this one, am I out a check?",
+    { category: "check_issue", account: { id: USER }, origin: { checkId: String(freeOne.id) } });
+  ok("not-charged is answered, not deflected to a person", /weren't charged|no se concretó|didn't go through/i.test(res.reply), res.reply);
+  ok("does not grant past the cap", (await db.select().from(supportCreditGrants)).length === CAP);
+  // But a check that WOULD have earned one still hits the cap.
+  const wouldEarn = await mkCheck(r2.id, { statusKey: "bad_number", chargedAt: now - 400, callSeconds: 3 });
+  res = await answerSupport("sess-cap-earn", "this check went wrong too",
+    { category: "check_issue", account: { id: USER }, origin: { checkId: String(wouldEarn.id) } });
+  ok("a real claim past the cap goes to a person", /needs a person/i.test(res.reply), res.reply);
+  ok("still no extra grant", (await db.select().from(supportCreditGrants)).length === CAP);
+
+  console.log("\n== 19. a pinned check that is not this account's never becomes a different check ==");
+  await db.delete(callResults);
+  await db.delete(supportCreditGrants);
+  // A check with no account on it (placed before sign-in, or from someone else's link)...
+  const orphan = await mkCheck(r2.id, { statusKey: "voicemail", chargedAt: null, callSeconds: 5, finderUserId: null });
+  // ...while the customer's own recent checks sit there, one of them refundable.
+  await mkCheck(r1.id, { statusKey: "nobody_answered", chargedAt: now - 500, callSeconds: 5 });
+  res = await answerSupport("sess-orphan-1", "this one just went to their voicemail",
+    { category: "check_issue", account: { id: USER }, origin: { checkId: String(orphan.id) } });
+  ok("never answers about the other store", !res.reply.includes(r1.name), res.reply);
+  ok("hands it to a person instead of guessing", /can't tell which check/i.test(res.reply), res.reply);
+  ok("no grant against an unrelated check", (await db.select().from(supportCreditGrants)).length === 0);
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 }

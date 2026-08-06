@@ -30,10 +30,19 @@ const BAD_KEYS = new Set([
   "nobody_answered", "voicemail", "busy", "bad_number", "closed", "failed", "admin_hangup",
 ]);
 
+// The statuses the owner DELIBERATELY charges: a real person picked up and burned real minutes on
+// us without landing on an answer. Mirrors billableOutcome() in src/calls/service.ts — keep the two
+// in lockstep. Nothing in here may ever auto-refund, whatever else the telemetry says. Keeping them
+// out of BAD_KEYS was not enough on its own: the short-call rule let a hold back in through the
+// side door whenever the call happened to be brief, so we charged for it and refunded it in the
+// same breath, which is exactly the fight the 07-22 ruling exists to prevent (found 08-05).
+const CHARGED_ANYWAY = new Set(["left_on_hold", "too_busy", "language_barrier", "staff_hung_up"]);
+
 export type CreditOutcome =
   | { kind: "granted"; cid: number; store: string; reason: string }
   | { kind: "already"; cid: number; store: string }
   | { kind: "denied_fine"; cid: number; store: string; seconds: number | null }
+  | { kind: "too_old"; cid: number; store: string }   // pinned check found, but past the 7-day window
   | { kind: "not_charged"; cid: number; store: string; statusKey: string | null }
   | { kind: "cap" }
   | { kind: "no_recent" }
@@ -61,9 +70,45 @@ function storeScore(message: string, c: Candidate): number {
   return tokens.filter((tk) => m.includes(tk)).length;
 }
 
+// The store actually answered the question: a real verdict came back. Nothing about a check like
+// this is evidence the customer was wronged, however fast it was.
+const ANSWERED_KEYS = new Set(["in_stock", "not_in_stock", "sold_out", "does_not_sell", "restock"]);
+const gotAnAnswer = (c: Candidate): boolean =>
+  c.confirmed != null || (!!c.statusKey && ANSWERED_KEYS.has(c.statusKey));
+
+/** The exact check a chat was opened from, looked up by row id or provider id, for THIS account
+ *  only. No time window: the customer is looking at the thing, so we answer about the thing. Age
+ *  still decides whether it can earn a credit, further down. */
+async function findPinned(accountId: string, ref: string): Promise<Candidate | null> {
+  const byId = /^\d+$/.test(ref);
+  const rows = await db.select({
+    id: callResults.id, retailerId: callResults.retailerId,
+    storeName: retailers.name, storeLocation: retailers.location, storePhone: retailers.phone,
+    providerCallId: callResults.providerCallId,
+    statusKey: callResults.statusKey, status: callResults.status, confirmed: callResults.confirmed,
+    callSeconds: callResults.callSeconds, chargedAt: callResults.chargedAt, startedAt: callResults.startedAt,
+  }).from(callResults)
+    .innerJoin(retailers, eq(callResults.retailerId, retailers.id))
+    .where(and(eq(callResults.finderUserId, accountId),
+      byId ? eq(callResults.id, Number(ref)) : eq(callResults.providerCallId, ref)))
+    .limit(1) as Candidate[];
+  return rows[0] || null;
+}
+
 function evidenceFor(c: Candidate): { ok: boolean; reason: string } {
+  // A check that came back with a real verdict is not refundable on telemetry, full stop. This
+  // guard is why: the robot customer complained about a check and the machine refunded a DIFFERENT
+  // one that had answered "in stock" in 24 seconds, purely for being a second under the short-call
+  // bar (08-05). A fast answered check is the best check we run, the cheapest and the highest
+  // margin, and every one of them was refundable on request. A wrong verdict is a judgement call
+  // for a person, never something telemetry can prove.
+  if (gotAnAnswer(c)) return { ok: false, reason: "answered" };
+  // A person really did pick up. The owner charges for that on purpose, so the machine never undoes
+  // it; an angry edge case goes to a human ticket, which is the relief valve by design.
+  if (c.statusKey && CHARGED_ANYWAY.has(c.statusKey)) return { ok: false, reason: "person_engaged" };
   if (c.statusKey && BAD_KEYS.has(c.statusKey)) return { ok: true, reason: "bad_status" };
   if (c.status === "failed") return { ok: true, reason: "failed" };
+  // Short calls only mean "nobody really answered" when nobody really answered.
   if (c.callSeconds != null && c.callSeconds < SHORT_CALL_SECS) return { ok: true, reason: "short_call" };
   return { ok: false, reason: "telemetry_fine" };
 }
@@ -77,10 +122,14 @@ export async function verifyCheckIssue(accountId: string | null | undefined, mes
   if (!accountId) return { kind: "guest" };
   const now = Math.floor(Date.now() / 1000);
 
-  // Rolling 30-day cap, counted from actual grants. Past it, a human reviews everything.
+  // Rolling 30-day cap, counted from actual grants. Read now, APPLIED at the point a credit would
+  // actually be handed out. It used to return here, before we had even worked out whether money was
+  // involved: a customer at their cap asking "nobody picked up, am I out a check?" was answered
+  // "this one needs a person", when the true answer was free, you were never charged, and no credit
+  // was ever in question (found 08-05). The cap exists to stop grants, not to stop answers.
   const capRows = await db.select({ n: sql<number>`count(*)` }).from(supportCreditGrants)
     .where(and(eq(supportCreditGrants.accountId, accountId), gt(supportCreditGrants.grantedAt, now - 30 * 86400)));
-  if ((capRows[0]?.n || 0) >= CAP_PER_30D) return { kind: "cap" };
+  const atCap = (capRows[0]?.n || 0) >= CAP_PER_30D;
 
   // Their checks inside the window, newest first.
   const rows = await db.select({
@@ -105,8 +154,21 @@ export async function verifyCheckIssue(accountId: string | null | undefined, mes
   let pool = rows;
   let pinned = false;
   if (pinnedRef) {
-    const hit = rows.find((c) => String(c.id) === pinnedRef || c.providerCallId === pinnedRef);
-    if (hit) { pool = [hit]; pinned = true; }
+    let hit = rows.find((c) => String(c.id) === pinnedRef || c.providerCallId === pinnedRef);
+    // Not among the newest 12? Go get it by id. The window above exists to rank a vague complaint
+    // against recent checks; it must never decide WHICH check a customer is staring at. Before this,
+    // opening the chat from an older check's page silently retargeted the whole conversation onto a
+    // newer, unrelated check: the robot customer complained about a check where it was left on hold
+    // and the machine answered about, and granted a credit against, a different one (08-05).
+    if (!hit) hit = (await findPinned(accountId, pinnedRef)) ?? undefined;
+    // Still nothing: the id is not this account's check (placed before they signed in, opened from
+    // someone else's link, or simply stale). Do NOT quietly fall through to guessing from their
+    // recent checks — that is how a customer looking at one check got told about another store's,
+    // with a credit decision attached (08-05, a Fun store check with no account on it answered as
+    // an MVPs check). They opened this from a specific check, so it is that check or a person.
+    if (!hit) return { kind: "unresolved" };
+    pool = [hit];
+    pinned = true;
   }
   if (!pinned) {
     const scored = rows.map((c) => ({ c, s: storeScore(message, c) }));
@@ -125,10 +187,15 @@ export async function verifyCheckIssue(accountId: string | null | undefined, mes
 
   const prior = (await db.select().from(supportCreditGrants).where(eq(supportCreditGrants.cid, target.id)).limit(1))[0];
   if (prior) return { kind: "already", cid: target.id, store };
+  // A pinned check skips the recency filter on the query above so we can still TALK about it. It
+  // does not skip the owner's 7-day rule for earning a credit, so say that plainly here.
+  if (target.startedAt <= now - WINDOW_DAYS * 86400) return { kind: "too_old", cid: target.id, store };
   if (!target.chargedAt) return { kind: "not_charged", cid: target.id, store, statusKey: target.statusKey };
 
   const ev = evidenceFor(target);
   if (!ev.ok) return { kind: "denied_fine", cid: target.id, store, seconds: target.callSeconds };
+  // Everything else lines up, so this WOULD be a credit. Now the cap applies.
+  if (atCap) return { kind: "cap" };
 
   // Everything aligned → grant. Insert the grant row FIRST (unique cid = the idempotency lock),
   // then add the credit. A concurrent duplicate loses the insert and never double-pays.
@@ -205,6 +272,10 @@ export function creditReply(out: CreditOutcome, lang: string): { reply: string; 
         ? `Revisé el registro de esa llamada a ${out.store}: conectó${secs ? ` y duró${secs}` : ""} y quedó una respuesta registrada, así que no puedo acreditarlo automáticamente. Si aun así crees que está mal, envíalo al equipo y una persona lo revisa.`
         : `I checked the record for that call to ${out.store}: it connected${secs ? ` and ran${secs}` : ""} with an answer recorded, so I can't add a credit automatically. If you still think it's wrong, send it to the team and a person will review it.` };
     }
+    case "too_old":
+      return { escalate: true, reply: es
+        ? `Ese check a ${out.store} tiene más de 7 días, que es el límite para acreditarlo automáticamente. Envíalo al equipo y una persona lo revisa.`
+        : `That check to ${out.store} is more than 7 days old, which is past the window I can credit automatically. Send it to the team and a person will review it.` };
     case "cap":
       return { escalate: true, reply: es
         ? `Este necesita una persona. Envíalo al equipo y lo revisan pronto.`

@@ -2489,10 +2489,10 @@ function checkV2From(d,o){
   const lines=(d.lines||[]).slice();
   const st=e=>((e.detail||{}).step)||'';
   const log=[];const used=new Set();
-  const takeLine=(who,at,win)=>{ // the nearest unclaimed spoken line for a step, inside its window
+  const takeLine=(who,at,win,back)=>{ // the nearest unclaimed spoken line for a step, inside its window
     let best=-1,gap=1e9;
-    lines.forEach((l,i)=>{ if(used.has(i)||l.who!==who||l.atSec==null)return; const g=Math.abs(l.atSec-at); if(l.atSec>=at-1&&g<(win||8)&&g<gap){best=i;gap=g;} });
-    if(best<0)return null; used.add(best); const l=lines[best]; return {who:l.who==='Agent'?'Agent':'Clerk',tx:l.text};
+    lines.forEach((l,i)=>{ if(used.has(i)||l.who!==who||l.atSec==null)return; const g=Math.abs(l.atSec-at); if(l.atSec>=at-(back||1)&&g<(win||8)&&g<gap){best=i;gap=g;} });
+    if(best<0)return null; used.add(best); const l=lines[best]; return {who:l.who==='Agent'?'Agent':'Clerk',tx:l.text,atSec:l.atSec};
   };
   for(let i=0;i<tl.length;i++){
     const e=tl[i],at=(e.atSec||0)+'s',atN=e.atSec||0,step=st(e);
@@ -2503,8 +2503,15 @@ function checkV2From(d,o){
       const lane=tl.slice(i,j).some(x=>x.kind==='alpha_press')?'Alpha':'Bravo';
       log.push({t:'Navigating menu ('+lane+')',at,group:g});i=j-1;continue;
     }
-    if(e.kind==='human_detected'){log.push({t:'Staff greeting',at,c:'var(--green)',say:takeLine('Clerk',atN,10),open:log.length<4});continue;}
-    if(step==='question_clip'){log.push({t:'Delta recording',at,say:takeLine('Agent',atN,10)});continue;}
+    if(e.kind==='human_detected'){
+      const g=takeLine('Clerk',atN,10,8);
+      // The greeting STARTS before the person test is sure, so the row carries the greeting's own
+      // second (clamped to never sit above the row before it), not the detector's. Without this the
+      // greeting and the Delta recording shared a second and read as Delta talking over Staff.
+      let gAt=atN;
+      if(g&&g.atSec!=null){const prev=log.length?parseInt(log[log.length-1].at)||0:0;gAt=Math.min(atN,Math.max(g.atSec,prev));}
+      log.push({t:'Staff greeting',at:gAt+'s',c:'var(--green)',say:g,open:true});continue;}
+    if(step==='question_clip'){log.push({t:'Delta recording',at,c:'var(--green)',say:takeLine('Agent',atN,10)});continue;}
     if(step==='second_read'){log.push({t:'The answer was double checked ('+((e.detail||{}).model||'')+')',at});continue;}
     if(step==='charged'){log.push({t:e.note,at});continue;}
     if(e.kind==='verdict'){
@@ -2514,15 +2521,21 @@ function checkV2From(d,o){
     }
     if(e.kind==='charlie_join'){const seg=(e.detail||{}).segment;log.push({t:seg>1?'Charlie reconnected':'Charlie joined',at});continue;}
     if(e.kind==='ringing'||e.kind==='transfer'||e.kind==='hold_start'){log.push({t:e.note,at,c:'var(--yellow)'});continue;}
-    if(step==='wrap_up'){log.push({t:e.note,at,say:takeLine('Agent',atN,10)});continue;}
+    if(step==='wrap_up'){log.push({t:e.note,at,c:'var(--green)',say:takeLine('Agent',atN,10)});continue;}
     if((e.detail||{}).silent)continue; // bookkeeping the engine marked as not for the page
     log.push({t:e.note||e.kind,at});
   }
+  // THE TEST'S NAME LEADS THE LOG (owner 08-06): a test check reads test first, then the dialing.
+  {const ti=log.findIndex(x=>/^Test: /.test(x.t));if(ti>0){const [te]=log.splice(ti,1);log.unshift(te);}}
   // Spoken lines no step claimed still belong on the record, at their own seconds, in order.
   lines.forEach((l,i)=>{ if(used.has(i))return;
-    const entry={t:l.who==='Agent'?'Charlie said':'Staff answered',at:l.atSec!=null?l.atSec+'s':'',say:{who:l.who==='Agent'?'Agent':'Clerk',tx:l.text},_at:l.atSec};
+    const entry={t:l.who==='Agent'?'Charlie said':'Staff answered',at:l.atSec!=null?l.atSec+'s':'',c:'var(--green)',say:{who:l.who==='Agent'?'Agent':'Clerk',tx:l.text},_at:l.atSec};
     if(l.atSec==null){const k=Math.max(0,log.length-1);log.splice(k,0,entry);return;}
-    let k=log.findIndex(x=>parseInt(x.at)>l.atSec);if(k<0)k=log.length;log.splice(k,0,entry);
+    // Within one second, Staff speak FIRST and everything of ours reacts: their product answer and
+    // Charlie's goodbye can share a second, and the goodbye must never draw above the answer that
+    // caused it (owner 08-05). So a Staff line slots BEFORE same-second entries, ours after.
+    let k=l.who==='Agent'?log.findIndex(x=>parseInt(x.at)>l.atSec):log.findIndex(x=>parseInt(x.at)>=l.atSec&&!(x.say&&x.say.who!=='Agent'));
+    if(k<0)k=log.length;log.splice(k,0,entry);
   });
   return {
     name:(v2.test&&v2.test.name)||o.name||'Check',
@@ -2569,8 +2582,9 @@ function checkV2Html(d){
   const spkIco='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5 8.38 8.38 0 0 1 8.5 8.5z"/></svg>';
   const statusIco=t=>{const m=t==='out'?['#EF4444','<path d="M6 6l12 12M18 6L6 18"/>']:t==='in'?['#4ADE80','<path d="M5 12l5 5 9-10"/>']:['#FBBF24','<path d="M6 12h12"/>'];
     return `<span style="width:22px;height:22px;border-radius:50%;background:${m[0]}26;display:grid;place-items:center;flex:0 0 auto;margin-left:-4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${m[0]}" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">${m[1]}</svg></span>`;};
-  const rung=(e,last)=>{
+  const rung=(e,last,first)=>{
     const dot=e.status?statusIco(e.status):(e.say||e.group)?`<span style="display:grid;place-items:center;width:15px;height:15px;flex:0 0 auto;color:${e.c||'#8A8A96'}">${e.group?menuIco:spkIco}</span>`:`<span style="width:9px;height:9px;border-radius:50%;background:${e.c||'var(--muted)'};flex:0 0 auto"></span>`;
+    const stub=first?`<span style="width:2px;height:5px;flex:0 0 auto"></span>`:`<span style="width:2px;height:5px;flex:0 0 auto;background:rgba(255,255,255,.14)"></span>`;
     const line=last?'':`<span style="width:2px;flex:1;background:rgba(255,255,255,.14)"></span>`;
     const title=`<span style="display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:${e.status?'800':'700'};color:${e.tc||(e.status?'#fff':'var(--text-strong)')}">${esch(e.t)}${(e.say||e.group)?chev:''}</span>`;
     const at=`<span style="margin-left:auto;font-size:12px;font-weight:700;color:var(--muted);flex:0 0 auto;font-variant-numeric:tabular-nums">${e.at||''}</span>`;
@@ -2579,18 +2593,18 @@ function checkV2Html(d){
     if(e.group) body=`<div style="padding:4px 0 0 6px">${e.group.map(g=>`<div style="display:flex;align-items:baseline;gap:8px;padding:3px 0"><span style="font-size:12.5px;font-weight:600;color:#8A8A96">${esch(g.t)}</span><span style="margin-left:auto;font-size:11.5px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums">${g.at}</span></div>`).join('')}</div>`;
     const sub=e.sub?`<div style="font-size:12px;font-weight:500;color:rgba(255,255,255,.55);margin-top:3px">${esch(e.sub)}</div>`:'';
     const inner=(e.say||e.group)
-      ?`<details${e.open?' open':''}><summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px">${title}${at}</summary>${body}</details>${sub}`
+      ?`<details${e.say||e.open?' open':''}><summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px">${title}${at}</summary>${body}</details>${sub}`
       :`<div style="display:flex;align-items:center;gap:8px">${title}${at}</div>${sub}`;
-    return `<div style="display:flex;gap:12px"><div style="display:flex;flex-direction:column;align-items:center;flex:0 0 15px;padding-top:5px">${dot}${line}</div><div style="flex:1;min-width:0;padding-bottom:${last?'0':'13px'}">${inner}</div></div>`;
+    return `<div style="display:flex;gap:12px"><div style="display:flex;flex-direction:column;align-items:center;flex:0 0 15px">${stub}${dot}${line}</div><div style="flex:1;min-width:0;padding-top:5px;padding-bottom:${last?'0':'13px'}">${inner}</div></div>`;
   };
   const logCard=`<details open class="card" style="padding:16px 18px"><summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px"><span class="k-eyebrow" style="margin:0;flex:1">Check log</span><span style="font-size:12px;font-weight:700;color:var(--muted)">${esch(d.when)}</span>${chev}</summary>
       ${d.workflow?`<details style="margin:8px 0 2px"><summary style="list-style:none;cursor:pointer;display:inline-flex"><span style="display:inline-flex;align-items:center;background:#1B1B20;border-radius:999px;padding:6px 13px;box-shadow:inset 0 2px 5px rgba(0,0,0,.4);font-size:12px;font-weight:700;color:var(--text-strong)">${esch(d.workflow.name)}</span></summary>${mini(d.workflow.d)}</details>`:''}
-      <div class="mladder" style="margin-top:12px">${d.log.map((e,i,a)=>rung(e,i===a.length-1)).join('')}</div>
+      <div class="mladder" style="margin-top:12px">${d.log.map((e,i,a)=>rung(e,i===a.length-1,i===0)).join('')}</div>
     </details>`;
   return `<div class="v2sheet">${head+stats+cost+behavior+logCard}</div>`;
 }
 // Microdollars to the cents string, the same arithmetic the server prints with.
-function money2(u){const c=(u/1e6)*100;return c<100?c.toFixed(1)+'\u00a2':'$'+(u/1e6).toFixed(2);}
+function money2(u){const c=(u/1e6)*100;if(c>0&&c<0.1)return c.toFixed(3)+'\u00a2';return c<100?c.toFixed(1)+'\u00a2':'$'+(u/1e6).toFixed(2);}
 
 // ---- Delta (Fun): rehearse the Delta lane — recorded clips + cheap classifier, no live agent ----
 let TD_POLL=null, TD_ID=null;
@@ -7136,6 +7150,7 @@ function decorateChrome(){
 const AL_EVENTS=[
   ['restock','Restock','both','Fires on a confirmed restock, on the channel the customer picked. Texts count against their plan’s monthly cap.'],
   ['auto_check','Auto check results','both','Fires after each scheduled auto check, with what the call found.'],
+  ['auto_check_paused','Auto check paused','email','Fires when a store takes itself off the site and a standing auto check cannot run. One per pause, never once per skipped day.'],
   ['store_added','Store went live','email','Their requested store just went live. Grants a free check.'],
   ['waitlist','We’re live in your area','email','A waitlist signup’s area just launched.'],
   ['confirm_email','Confirm your email','email','Someone added an email. Nothing sends until they tap confirm.'],
