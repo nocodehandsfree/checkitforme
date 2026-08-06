@@ -84,8 +84,12 @@ BANNED = ["good catch", "good question", "your instincts are right", "one honest
           "tldr"]
 
 def is_short(text):
+    # The bypass exists so "Yes, all done." does not cost a 30 second rewrite (owner
+    # 08-04). It was 2 lines / 240 chars, which is roomy enough to ramble, invent a
+    # name, or miss his question with nothing judging it (owner caught this 08-05).
+    # Now only a true one-liner slips past; anything bigger goes to the writer.
     lines = [l for l in text.splitlines() if l.strip()]
-    return len(lines) <= 2 and len(text) <= 240
+    return len(lines) == 1 and len(text.strip()) <= 140
 
 def word_scan(text):
     prose = re.sub(r"```.*?```", "", text, flags=re.S)
