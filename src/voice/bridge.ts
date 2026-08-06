@@ -1004,7 +1004,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // Worded for where it really sits on the log: the reader hears the yes BEFORE Charlie's follow-up
     // question is answered, so "told to wrap up" read as wrapping before the product detail
     // (owner 08-05). He is told to finish once he has what the check needs, and that is what it says.
-    emit(room, "unknown", "The answer was heard, so Charlie was told to say goodbye once he has what the check needs", { step: "signoff", answer });
+    emit(room, "unknown", "Charlie understood the answer and was told to say goodbye", { step: "signoff", answer });
     log(`signoff: the answer is in hand (${answer}) — telling him to thank them and end`);
     try {
       eleven.send(JSON.stringify({ type: "contextual_update", text:

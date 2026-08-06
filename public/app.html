@@ -2492,7 +2492,7 @@ function checkV2From(d,o){
   const takeLine=(who,at,win,back)=>{ // the nearest unclaimed spoken line for a step, inside its window
     let best=-1,gap=1e9;
     lines.forEach((l,i)=>{ if(used.has(i)||l.who!==who||l.atSec==null)return; const g=Math.abs(l.atSec-at); if(l.atSec>=at-(back||1)&&g<(win||8)&&g<gap){best=i;gap=g;} });
-    if(best<0)return null; used.add(best); const l=lines[best]; return {who:l.who==='Agent'?'Agent':'Clerk',tx:l.text};
+    if(best<0)return null; used.add(best); const l=lines[best]; return {who:l.who==='Agent'?'Agent':'Clerk',tx:l.text,atSec:l.atSec};
   };
   for(let i=0;i<tl.length;i++){
     const e=tl[i],at=(e.atSec||0)+'s',atN=e.atSec||0,step=st(e);
@@ -2503,7 +2503,14 @@ function checkV2From(d,o){
       const lane=tl.slice(i,j).some(x=>x.kind==='alpha_press')?'Alpha':'Bravo';
       log.push({t:'Navigating menu ('+lane+')',at,group:g});i=j-1;continue;
     }
-    if(e.kind==='human_detected'){log.push({t:'Staff greeting',at,c:'var(--green)',say:takeLine('Clerk',atN,10,8),open:log.length<4});continue;}
+    if(e.kind==='human_detected'){
+      const g=takeLine('Clerk',atN,10,8);
+      // The greeting STARTS before the person test is sure, so the row carries the greeting's own
+      // second (clamped to never sit above the row before it), not the detector's. Without this the
+      // greeting and the Delta recording shared a second and read as Delta talking over Staff.
+      let gAt=atN;
+      if(g&&g.atSec!=null){const prev=log.length?parseInt(log[log.length-1].at)||0:0;gAt=Math.min(atN,Math.max(g.atSec,prev));}
+      log.push({t:'Staff greeting',at:gAt+'s',c:'var(--green)',say:g,open:true});continue;}
     if(step==='question_clip'){log.push({t:'Delta recording',at,c:'var(--green)',say:takeLine('Agent',atN,10)});continue;}
     if(step==='second_read'){log.push({t:'The answer was double checked ('+((e.detail||{}).model||'')+')',at});continue;}
     if(step==='charged'){log.push({t:e.note,at});continue;}
@@ -2518,6 +2525,8 @@ function checkV2From(d,o){
     if((e.detail||{}).silent)continue; // bookkeeping the engine marked as not for the page
     log.push({t:e.note||e.kind,at});
   }
+  // THE TEST'S NAME LEADS THE LOG (owner 08-06): a test check reads test first, then the dialing.
+  {const ti=log.findIndex(x=>/^Test: /.test(x.t));if(ti>0){const [te]=log.splice(ti,1);log.unshift(te);}}
   // Spoken lines no step claimed still belong on the record, at their own seconds, in order.
   lines.forEach((l,i)=>{ if(used.has(i))return;
     const entry={t:l.who==='Agent'?'Charlie said':'Staff answered',at:l.atSec!=null?l.atSec+'s':'',c:'var(--green)',say:{who:l.who==='Agent'?'Agent':'Clerk',tx:l.text},_at:l.atSec};
@@ -2584,7 +2593,7 @@ function checkV2Html(d){
     if(e.group) body=`<div style="padding:4px 0 0 6px">${e.group.map(g=>`<div style="display:flex;align-items:baseline;gap:8px;padding:3px 0"><span style="font-size:12.5px;font-weight:600;color:#8A8A96">${esch(g.t)}</span><span style="margin-left:auto;font-size:11.5px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums">${g.at}</span></div>`).join('')}</div>`;
     const sub=e.sub?`<div style="font-size:12px;font-weight:500;color:rgba(255,255,255,.55);margin-top:3px">${esch(e.sub)}</div>`:'';
     const inner=(e.say||e.group)
-      ?`<details${e.open?' open':''}><summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px">${title}${at}</summary>${body}</details>${sub}`
+      ?`<details${e.say||e.open?' open':''}><summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px">${title}${at}</summary>${body}</details>${sub}`
       :`<div style="display:flex;align-items:center;gap:8px">${title}${at}</div>${sub}`;
     return `<div style="display:flex;gap:12px"><div style="display:flex;flex-direction:column;align-items:center;flex:0 0 15px">${stub}${dot}${line}</div><div style="flex:1;min-width:0;padding-top:5px;padding-bottom:${last?'0':'13px'}">${inner}</div></div>`;
   };
