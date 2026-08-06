@@ -114,5 +114,41 @@
       "complete": true
     }
   },
-  "round2": {}
+  "round2": {
+    "1": {
+      "correct": true,
+      "complete": true
+    },
+    "2": {
+      "correct": true,
+      "complete": false,
+      "why": "named the store in turn 1 and then asked \"which store was it\" in turn 2, on a chat opened from that check's own page"
+    },
+    "3": {
+      "correct": false,
+      "complete": true,
+      "why": "a charged unclear check where a person really talked to us was sent to a human instead of explained; the credit machine did not know that shape is charged on purpose"
+    },
+    "4": {
+      "correct": true,
+      "complete": true
+    },
+    "5": {
+      "correct": true,
+      "complete": true
+    },
+    "6": {
+      "correct": true,
+      "complete": true
+    },
+    "7": {
+      "correct": true,
+      "complete": true
+    },
+    "8": {
+      "correct": false,
+      "complete": true,
+      "why": "a check the customer cancelled themselves was answered \"this one needs a person\" instead of saying plainly that they stopped it and were not charged"
+    }
+  }
 }

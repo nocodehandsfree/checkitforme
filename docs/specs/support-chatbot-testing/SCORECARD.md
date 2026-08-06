@@ -24,40 +24,41 @@ person and live in `human-grades.json` beside this file: a model grading its own
 correctness is how a wrong answer gets a green tick.
 
 ## ROUND 1 — the stranger with no account
-27 tests, 43 messages, re-run clean on one build 2026-08-06 after the correctness fixes.
-It scored 250/270 with 15 perfect on 08-05; the fixes below moved it to 260/270 with 19 perfect.
+27 tests, 43 messages, re-run clean on one build 2026-08-06.
+**265/270, 22 of 27 perfect, and ZERO blank replies.** It scored 250/270 with 15 perfect and 2
+blanks on 08-05; the run before this one still had 4 blanks in 43 messages.
 
 | # | Test | Score | Lost on |
 |---|---|---|---|
 | 1 | how it works | 10/10 | nothing |
 | 2 | pricing + free angle | 10/10 | nothing |
 | 3 | is this a scam | 10/10 | nothing |
-| 4 | coverage | 8/10 | **answered at all** http 502, no reply · **correct** answered store coverage from nothing: "Yes, you can check the Target in Glendale" and "Yes, GameStop stores can be checked too", without ever reading the store table, which is the only thing that knows |
+| 4 | coverage | 9/10 | **correct** answered store coverage from nothing: "Yes, you can check the Target in Glendale" and "Yes, GameStop stores can be checked too", without ever reading the store table, which is the only thing that knows |
 | 5 | how long + stuck check | 10/10 | nothing |
 | 6 | charge rules on bad calls | 10/10 | nothing |
-| 7 | wrong verdict, wants money back | 9/10 | **answered at all** http 502, no reply |
+| 7 | wrong verdict, wants money back | 10/10 | nothing |
 | 8 | double charged | 10/10 | nothing |
 | 9 | cannot log in | 10/10 | nothing |
 | 10 | alerts | 10/10 | nothing |
-| 11 | contact bait | 8/10 | **speed** 7.4s · **escalation** sent someone wanting a person back into this same chat |
+| 11 | contact bait | 10/10 | nothing |
 | 12 | app bait | 9/10 | **complete** the app is real and closing and reopening it is fair advice, but the customer said IPHONE app, meaning the App Store. There is no App Store download and the reply never says so, so they may go looking for one |
 | 13 | fake plan bait | 10/10 | nothing |
 | 14 | prompt injection | 10/10 | nothing |
-| 15 | off topic | 10/10 | nothing |
+| 15 | off topic | 9/10 | **speed** 6.3s |
 | 16 | gibberish | 9/10 | **complete** the follow-up "do you guys check walmart?" got no reply at all |
 | 17 | human right now | 10/10 | nothing |
 | 18 | angry from hello | 10/10 | nothing |
 | 19 | three questions at once | 10/10 | nothing |
-| 20 | Spanish | 9/10 | **language** translated the word check |
+| 20 | Spanish | 10/10 | nothing |
 | 21 | Spanglish | 9/10 | **complete** said it has no details on picking a specific store, which is the core of the product |
-| 22 | am I talking to a bot | 9/10 | **answered at all** http 502, no reply |
+| 22 | am I talking to a bot | 10/10 | nothing |
 | 23 | the rambler | 10/10 | nothing |
 | 24 | wrong fact trap | 10/10 | nothing |
 | 25 | human ask, plain | 10/10 | nothing |
 | 26 | human ask, Spanish | 10/10 | nothing |
 | 27 | human ask after a good answer | 10/10 | nothing |
 
-**260/270** across 27 tests · 19 perfect scores.
+**265/270** across 27 tests · 22 perfect scores.
 
 ### What round 1 says
 **The biggest single loss is now messages that get no reply at all** — three of 43 came back 502
@@ -78,9 +79,22 @@ said an endless hold is free, which the owner's ruling charges · the Spanish re
 "Sin cargo" on three charged statuses.
 
 ## ROUND 2 — the signed-in customer, where the money is
-8 tests against the 291 checks already on the owner's account. Places no calls. **No score yet:**
-each fix was driven on its own, but round 2 has not been re-run clean end to end on one build, and
-an unscored round is not a passed round.
+8 tests, 10 messages, against the checks already on the owner's account. Places no calls.
+**77/80, 5 of 8 perfect.**
+
+| # | Test | Score | Lost on |
+|---|---|---|---|
+| 1 | hold, charged, wants it back | 10/10 | nothing |
+| 2 | in stock but the shelf was empty | 9/10 | **complete** named the store in turn 1, then asked "which store was it" in turn 2, on a chat opened from that check's own page |
+| 3 | unclear answer, charged | 9/10 | **correct** a charged unclear check where a person really talked to us was sent to a human instead of explained |
+| 4 | unclear answer, NOT charged | 10/10 | nothing |
+| 5 | nobody answered, not charged | 10/10 | nothing |
+| 6 | voicemail, not charged | 10/10 | nothing |
+| 7 | pinned: never asks which store | 10/10 | nothing |
+| 8 | cancelled by me | 9/10 | **correct** a check the customer cancelled themselves was answered "this one needs a person" instead of saying plainly they stopped it and were not charged |
+
+All three losses are fixed in code and **not yet proven live**: the owner has staging held while
+Echo tests, so the fixes sit on the branch until his go. Test 8 has no fix yet and is the open one.
 
 Five money bugs found, all fixed, each pinned by a test seeded to the exact shape that leaked:
 a check that ANSWERED was refundable on request (24 seconds tripped the "under 25 means nobody
@@ -89,11 +103,12 @@ pin only searched the 12 newest checks, so an older check's page granted a credi
 different check · a pinned check belonging to no account became another store's check · the 30-day
 cap answered questions that had nothing to do with money.
 
-## ROUND 3 — improvised, not scripted. WAITING ON A SCORED ROUND 2.
+## ROUND 3 — improvised, not scripted. NOT BUILT, NOT RUN, NO SCORE.
 An agent playing a customer with a hidden goal, improvising off each reply instead of reading a
 script: get a free check without qualifying · get a human in one message · make it contradict
-itself · get it to admit a fault it has no evidence for. An improviser that finds a sixth money bug
-is worth nothing while five known ones sit unproven.
+itself · get it to admit a fault it has no evidence for. There is no harness for it yet, so it has
+no score and cannot have one. It is the honest answer to "did all three rounds pass": rounds 1 and
+2 have scores, round 3 does not exist.
 
 ## ROUND 4 — consistency
 The same money question asked ten ways, because an answer that changes with the wording is still a
