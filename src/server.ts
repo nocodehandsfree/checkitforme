@@ -53,7 +53,7 @@ import { activeMap, graphSummary, chainDetail, approveVersion, rejectVersion, op
 import { recipeFromCall, evidenceFromCall, type CapturedStep } from "./calls/map-capture";
 import { startSweep, stopSweep, sweepStatus, buildQueue } from "./calls/sweep";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay,
-  robotAnswer, robotStep, robotEnded, robotClip, ringbackWav, robotScene, robotLastRun, robotRunFor, parseRobotPick, ROBOT_SCENES, ROBOT_GREETINGS } from "./calls/tapedeck";
+  robotAnswer, robotStep, robotEnded, robotClip, ringbackWav, beepWav, robotScene, robotLastRun, robotRunFor, parseRobotPick, ROBOT_SCENES, ROBOT_GREETINGS } from "./calls/tapedeck";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged, lockRecipeToChain } from "./calls/trainer-batch";
 import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, connectAtSecFor, chainDialable, chainNavPlan, type Recipe } from "./calls/recipe";
 import { llm, heli } from "./llm";
@@ -1222,9 +1222,15 @@ app.get("/robot/clip", (c) => {
   return c.body(new Uint8Array(b), 200, { "Content-Type": "audio/mpeg" });
 });
 app.get("/robot/ring", (c) => {
-  const secs = Math.max(1, Math.min(30, Number(c.req.query("secs") || 6)));
+  // The ceiling was 30 seconds, which was plenty while ringing only ever meant a transfer. The 90
+  // second ring test (owner 08-06) IS the ringing, and it has to run past our own give-up at 90, so
+  // the ceiling is two minutes now. Still bounded: this builds the audio in memory.
+  const secs = Math.max(1, Math.min(120, Number(c.req.query("secs") || 6)));
   return c.body(new Uint8Array(ringbackWav(secs)), 200, { "Content-Type": "audio/wav" });
 });
+// The tone at the end of a voicemail greeting. Nothing else on the call sounds like it, which is
+// the point: it is what tells a caller it is talking to a machine.
+app.get("/robot/beep", (c) => c.body(new Uint8Array(beepWav()), 200, { "Content-Type": "audio/wav" }));
 // The harness's two reads: which scene the next call plays, and exactly what the robot said on the
 // last one. The second is the ground truth the written transcript is compared against, word for word.
 app.get("/api/admin/robot-store", async (c) => {
@@ -1232,7 +1238,7 @@ app.get("/api/admin/robot-store", async (c) => {
   const pick = parseRobotPick(await getSetting("robot_scenario"));
   const sid = c.req.query("call");
   return c.json({
-    pick, scenes: ROBOT_SCENES.map((s) => ({ n: s.n, name: s.name, expect: s.expect })),
+    pick, scenes: ROBOT_SCENES.map((s) => ({ n: s.n, name: s.name, expect: s.expect, neverAnswers: !!s.neverAnswers, noGoodbye: !!s.noGoodbye })),
     greetings: ROBOT_GREETINGS,
     run: sid ? robotRunFor(sid) : robotLastRun(),
   });

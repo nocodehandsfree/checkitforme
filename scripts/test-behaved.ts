@@ -295,10 +295,10 @@ head("…and every way it can go wrong");
 }
 
 
-head("THE 16 LOCKED TEST CARDS (owner 08-04) — word for word, so nothing drifts");
+head("THE LOCKED TEST CARDS (owner 08-04, plus the exact product card he added 08-06) — word for word, so nothing drifts");
 {
   const names = Object.values(TEST_CARDS).map((c) => c.name);
-  ok("all the locked cards exist", names.length === 17, String(names.length));
+  ok("all the locked cards exist", names.length === 18, String(names.length));
   ok("every headline is category, colon, what is tested", names.every((n) => /^[A-Za-z]+: .+/.test(n)), names.filter((n) => !/^[A-Za-z]+: .+/.test(n)).join(" | "));
   ok("no dash anywhere on a card (copy law)", Object.values(TEST_CARDS).every((c) => !/[\u2014\u2013]/.test(c.name + c.sub + c.info)));
   ok("clear no, word for word", TEST_CARDS.answer_clear_no.info === "This test proves that a clear no always ends with a Not in stock status, no matter how Staff choose to say the no.", TEST_CARDS.answer_clear_no.info);
@@ -311,6 +311,7 @@ head("THE 16 LOCKED TEST CARDS (owner 08-04) — word for word, so nothing drift
     ["answer_clear_yes", "In stock"], ["answer_clear_no", "Not in stock"], ["hold_permanently", "Left on hold"],
     ["hungup_staff", "Staff hung up"], ["hungup_ringing", "Nobody answered"], ["hungup_limit", "Admin hung up"],
     ["transfer_nobody", "Too busy to check"], ["voicemail_detected", "Got their voicemail"],
+    ["exact_product", "In stock"],
   ].every(([k, label]) => (TEST_CARDS[k].sub + TEST_CARDS[k].info).includes(label)));
 }
 

@@ -562,13 +562,29 @@ export type RobotAct =
   | { sayAs: "transfer"; say: string }
   | { silence: number }   // seconds of nothing at all. No hold music: no real store ever played us any
   | { ring: number }      // seconds of a real ringback cadence, for the transfer
+  | { beep: true }        // the tone at the end of a voicemail greeting, the thing that says "talk now"
   | { listen: true }      // wait for the caller to say their piece, then carry on
   | { hangup: true };
 
 export interface RobotScene { n: number; name: string; greeting?: string; acts: RobotAct[]; expect: string;
   /** Which of the owner's 16 locked test cards this scene runs (behaved.ts TEST_CARDS). The card is
    *  what the Testing screen names the check by; the scene is only how the robot plays it. */
-  card: string }
+  card: string;
+  /** NOBODY PICKS THE PHONE UP AT ALL (owner 08-06, the 90 second ring). No greeting is played and
+   *  the robot never speaks a word for the whole call.
+   *  THE HONEST LIMIT, stated so nobody reads more into this test than it proves: the phone company
+   *  treats a call as answered the instant it runs our instructions, so the robot cannot leave a line
+   *  genuinely unanswered. What it does instead is answer and then play nothing but the real ringback
+   *  cadence, and never speak. That is exactly what our own give-up listens for — it counts from the
+   *  first ring and is only cancelled by a human voice — so the give-up is really tested. What is NOT
+   *  tested here is the phone company's own no-answer, which never reaches our engine anyway. */
+  neverAnswers?: true;
+  /** THIS CHECK IS NOT MEANT TO END WITH A GOODBYE, and the scorecard must not mark it down for
+   *  that. Three shapes: nobody ever picked up, a machine picked up so Charlie was never switched
+   *  on at all, and the check we ourselves cut at the four minute limit mid sentence. Every OTHER
+   *  scene must still end with one, which is the row the owner added after four checks in a row
+   *  ended on our own question. */
+  noGoodbye?: true }
 
 /** The greetings, one per run, rotated. All five are real openings from our own history. */
 export const ROBOT_GREETINGS: string[] = [
@@ -606,16 +622,25 @@ export const ROBOT_SCENES: RobotScene[] = [
     { listen: true }, { say: "Uh yeah, it's the Pitch Black booster boxes." },
     ...WAIT_OUT,
   ] },
+  // THE ANSWER IS NOT THE LAST THING A PERSON SAYS (owner 08-06). Charlie asks one more question
+  // after a no, when more are coming in, and every one of these scenes used to stop dead before it.
+  // So he asked into silence, the check died with no goodbye, and six tests could never pass. A
+  // human at a real counter always says something back. Three different shapes on purpose: a real
+  // day, a vague "soon", and an honest "I don't know" — the card says whatever Staff answer IS the
+  // answer, even "soon", so all three have to be proven.
   { n: 2, card: "answer_clear_no", name: "No, plainly", expect: "not_in_stock", acts: [
     { listen: true }, { say: "We did not." },
+    { listen: true }, { say: "Uh, probably Tuesday, that's when the truck comes." },
     ...WAIT_OUT,
   ] },
   { n: 3, card: "answer_clear_no", name: "No, softened", expect: "not_in_stock", acts: [
     { listen: true }, { say: "No, I'm sorry. I haven't seen any yet." },
+    { listen: true }, { say: "Not sure, honestly. Soon, I'd think." },
     ...WAIT_OUT,
   ] },
   { n: 4, card: "answer_clear_no", name: "No, this shipment", expect: "not_in_stock", acts: [
     { listen: true }, { say: "No, we don't have any this, this shipment." },
+    { listen: true }, { say: "I really don't know, they don't tell us." },
     ...WAIT_OUT,
   ] },
   // The ONE hold in our whole history that ever worked. 45 seconds, and SILENCE, not music.
@@ -624,6 +649,7 @@ export const ROBOT_SCENES: RobotScene[] = [
     { say: "Uh, Pokémon? Uh, let me check. I just got in, so I have to, uh, I'll have to go up to the front and see. Okay, let me just put you on hold." },
     { silence: 45 },
     { say: "Okay, thank you for holding. Yeah, I did not see any, unfortunately." },
+    { listen: true }, { say: "Uh, next week maybe? I'm not certain." },
     ...WAIT_OUT,
   ] },
   // Happened twice for real. One of them ran 121 seconds and never resolved, so that is the length.
@@ -647,6 +673,7 @@ export const ROBOT_SCENES: RobotScene[] = [
     { say: "We haven't, as a matter of fact. Uh, let me double-check though. Hold on just a moment." },
     { silence: 30 },
     { say: "Yeah, we've got a few." },
+    { listen: true }, { say: "Uh, the Pitch Black boxes I think." },
     ...WAIT_OUT,
   ] },
   // 6 of 14 real checks did exactly this. No scripted test has ever reproduced it.
@@ -665,6 +692,7 @@ export const ROBOT_SCENES: RobotScene[] = [
     { sayAs: "transfer", say: "Sporting goods, this is Dana." },
     { listen: true },
     { sayAs: "transfer", say: "We did not." },
+    { listen: true }, { sayAs: "transfer", say: "Thursdays, usually." },
     ...WAIT_OUT,
   ] },
   // THE OWNER'S OWN CHECK 298, MADE REPEATABLE (08-06). He told Charlie to hold, went quiet, then
@@ -683,6 +711,86 @@ export const ROBOT_SCENES: RobotScene[] = [
     { say: "Hello? Hello?" },
     { listen: true },
     { say: "No, I'm sorry. I haven't seen any yet." },
+    { listen: true }, { say: "Not sure, honestly. Soon, I'd think." },
+    ...WAIT_OUT,
+  ] },
+  // ---- THE NINE CARDS THAT HAD NO SCENE AT ALL (spec: scenes-needed.md, owner approved 08-06) ----
+  // Two of them are missing on purpose and are the owner's own next job: hold with music and a phone
+  // set down on the counter both need a sound recording, and he is picking those clips himself.
+  { n: 12, card: "hungup_ringing", name: "Nobody picks up", expect: "nobody_answered", neverAnswers: true, noGoodbye: true, acts: [
+    // Ninety five seconds, so it runs past our own ninety second give-up rather than landing on it.
+    { ring: 95 },
+    { hangup: true },
+  ] },
+  // THE MOST EXPENSIVE TEST ON THE LIST, about four times a normal check. Somebody who genuinely is
+  // talking, warmly, and never once answers the question. Every rule we have is working correctly
+  // and the check still runs away with the margin, which is why the limit exists at all. The robot
+  // waits for Charlie between each line, so this stretches past four minutes on its own.
+  { n: 13, card: "hungup_limit", name: "Talks past the answer, forever", expect: "admin_hangup", noGoodbye: true, acts: [
+    { listen: true }, { say: "Oh, Pokemon cards, yeah. We get a ton of calls about those, honestly." },
+    { listen: true }, { say: "You know my nephew collects them. He's got a whole binder, must be hundreds." },
+    { listen: true }, { say: "There was a guy in here last week, bought like twenty packs at once. Twenty." },
+    { listen: true }, { say: "It's been nuts since all the trading card stuff took off again, I'll tell you that." },
+    { listen: true }, { say: "We used to only carry the sports ones, back when I started here." },
+    { listen: true }, { say: "Anyway, what was it you were after? Sorry, it's been one of those days." },
+    { listen: true }, { say: "Right, right. Hang on, my manager's waving at me about something." },
+    { listen: true }, { say: "Sorry about that. Where were we? Busy in here today." },
+    // The owner's line: repeat the last three until the limit ends the check.
+    { listen: true }, { say: "Anyway, what was it you were after? Sorry, it's been one of those days." },
+    { listen: true }, { say: "Right, right. Hang on, my manager's waving at me about something." },
+    { listen: true }, { say: "Sorry about that. Where were we? Busy in here today." },
+    { listen: true }, { say: "Anyway, what was it you were after? Sorry, it's been one of those days." },
+    { listen: true }, { say: "Right, right. Hang on, my manager's waving at me about something." },
+    { listen: true }, { say: "Sorry about that. Where were we? Busy in here today." },
+    { hangup: true },
+  ] },
+  // A STORE MOVING US ON ITS OWN, which is the common one and has never been tested. The only
+  // transfer scene we had was the one where Charlie ASKS to be put through.
+  { n: 14, card: "transfer_new_person", name: "Moved on without being asked", expect: "in_stock", acts: [
+    { listen: true }, { say: "Oh, one sec, let me grab someone." },
+    { ring: 6 },
+    { sayAs: "transfer", say: "This is Maria, what can I do for you?" },
+    { listen: true }, { sayAs: "transfer", say: "Yeah, we've got some." },
+    { listen: true }, { sayAs: "transfer", say: "The Pitch Black boxes." },
+    ...WAIT_OUT,
+  ] },
+  // Charlie asks to be put through and there is nobody to put him through TO. He thanks them and
+  // ends it without nagging. Too busy to check has never once been produced by a test.
+  { n: 15, card: "transfer_nobody", name: "Nobody up front to take it", expect: "too_busy",
+    greeting: "MVP's pharmacy, this is Larry.", acts: [
+    { listen: true }, { say: "Oh, that's not us, that's the front." },
+    { listen: true }, { say: "There's nobody up there right now, sorry." },
+    ...WAIT_OUT,
+  ] },
+  // THE SWITCH ITSELF. Asking to be put through is OFF for this run, so Charlie must never once
+  // bring up being transferred: he takes what he can get and wraps up. The safety line is the
+  // owner's own (spec, test 14): if he says anything more, Staff answer once and that is that.
+  { n: 16, card: "transfer_switch_off", name: "Wrong department, asking switched off", expect: "no_clear_answer",
+    greeting: "MVP's pharmacy, this is Larry.", acts: [
+    { listen: true }, { say: "That's the front, I can't see those from back here." },
+    { listen: true }, { say: "Yeah, sorry, I really can't help you with that from back here." },
+    ...WAIT_OUT,
+  ] },
+  // THE ONE WHERE A WRONG CALL COSTS US A WHOLE RECORDED MESSAGE. A machine answers, and we have to
+  // be gone before Charlie is ever switched on.
+  { n: 17, card: "voicemail_detected", name: "Their answering machine picks up", expect: "voicemail", noGoodbye: true,
+    greeting: "You've reached MVP's. We're not able to take your call right now. Please leave a message after the tone.", acts: [
+    { beep: true },
+    { silence: 30 },
+    { hangup: true },
+  ] },
+  // NO CHECK HAS EVER RUN IN SPANISH END TO END. The answer given in Spanish has to set the status.
+  { n: 18, card: "language_spanish", name: "Staff speak Spanish", expect: "in_stock",
+    greeting: "MVP's, buenas tardes. ¿En qué le puedo ayudar?", acts: [
+    { listen: true }, { say: "Sí, tenemos algunos." },
+    { listen: true }, { say: "Son las cajas de Pitch Black." },
+    ...WAIT_OUT,
+  ] },
+  // THE NEW CARD, test 18 on the owner's list (his ruling 08-06, this arrives with hobby stores).
+  // On a check for one exact product a general yes is NOT a yes. Only the exact item is.
+  { n: 19, card: "exact_product", name: "A general yes is not the exact product", expect: "in_stock", acts: [
+    { listen: true }, { say: "Uh, Pokemon, yeah, we've got some stuff." },
+    { listen: true }, { say: "Oh, the Pitch Black boxes? Yeah, we've got a couple of those." },
     ...WAIT_OUT,
   ] },
 ];
@@ -738,6 +846,26 @@ export function ringbackWav(seconds: number): Buffer {
   return Buffer.concat([head, pcm]);
 }
 
+/** THE TONE AT THE END OF A VOICEMAIL GREETING. 1000 Hz for a third of a second, which is what a
+ *  North American answering machine actually sounds like, and the one sound that tells a caller the
+ *  recording has finished and it is now talking to a tape. */
+export function beepWav(): Buffer {
+  const rate = 8000, total = Math.round(0.33 * rate);
+  const pcm = Buffer.alloc(total * 2);
+  for (let i = 0; i < total; i++) {
+    const t = i / rate;
+    // Eased in and out, so the tone starts and stops the way a real one does rather than clicking.
+    const edge = Math.min(1, Math.min(t, 0.33 - t) / 0.01);
+    pcm.writeInt16LE(Math.round(11000 * edge * Math.sin(2 * Math.PI * 1000 * t)), i * 2);
+  }
+  const head = Buffer.alloc(44);
+  head.write("RIFF", 0); head.writeUInt32LE(36 + pcm.length, 4); head.write("WAVE", 8);
+  head.write("fmt ", 12); head.writeUInt32LE(16, 16); head.writeUInt16LE(1, 20); head.writeUInt16LE(1, 22);
+  head.writeUInt32LE(rate, 24); head.writeUInt32LE(rate * 2, 28); head.writeUInt16LE(2, 32); head.writeUInt16LE(16, 34);
+  head.write("data", 36); head.writeUInt32LE(pcm.length, 40);
+  return Buffer.concat([head, pcm]);
+}
+
 const robotClipUrl = (sid: string, i: number) => `<Play>https://${HOST}/robot/clip?call=${encodeURIComponent(sid)}&amp;i=${i}</Play>`;
 const robotGather = (sid: string, secs: number) =>
   `<Gather input="speech" speechTimeout="auto" enhanced="true" speechModel="phone_call" timeout="${secs}" ` +
@@ -759,7 +887,8 @@ export async function robotAnswer(callSid: string, from?: string): Promise<strin
   const greeting = scene.greeting
     || (pick.greeting != null ? ROBOT_GREETINGS[((pick.greeting % ROBOT_GREETINGS.length) + ROBOT_GREETINGS.length) % ROBOT_GREETINGS.length] : rotatePick("robot:greeting", ROBOT_GREETINGS))
     || ROBOT_GREETINGS[0];
-  const acts: RobotAct[] = [{ say: greeting }, ...scene.acts];
+  // NOBODY PICKS UP: no greeting, no voice, nothing but the line ringing (owner 08-06, scene 12).
+  const acts: RobotAct[] = scene.neverAnswers ? [...scene.acts] : [{ say: greeting }, ...scene.acts];
   const { staff, transfer } = await robotVoices();
   const clips = await Promise.all(acts.map((a) => {
     if (!("say" in a)) return Promise.resolve(null);
@@ -795,6 +924,7 @@ function robotPlay(callSid: string, st: RobotState, lead = ""): string {
     if ("listen" in a) { st.act++; parts.push(robotGather(callSid, 10)); break; }
     if ("silence" in a) { st.act++; ahead += Math.round(a.silence); parts.push(`<Pause length="${Math.round(a.silence)}"/>`); continue; }
     if ("ring" in a) { st.act++; ahead += Math.round(a.ring); parts.push(`<Play>https://${HOST}/robot/ring?secs=${Math.round(a.ring)}</Play>`); continue; }
+    if ("beep" in a) { st.act++; parts.push(`<Play>https://${HOST}/robot/beep</Play>`); continue; }
     st.run.said.push({ text: a.say, atSec: atSec(), voice: "sayAs" in a ? "transfer" : "staff" });
     parts.push(robotClipUrl(callSid, st.act));
     st.act++;
@@ -823,7 +953,7 @@ export function robotStep(callSid: string, speech: string): string {
 export function _robotRig(scenario: number, greetingIndex = 0): { callSid: string; first: string; run: RobotRun } {
   const scene = robotScene(scenario) as RobotScene;
   const greeting = scene.greeting || ROBOT_GREETINGS[greetingIndex % ROBOT_GREETINGS.length];
-  const acts: RobotAct[] = [{ say: greeting }, ...scene.acts];
+  const acts: RobotAct[] = scene.neverAnswers ? [...scene.acts] : [{ say: greeting }, ...scene.acts];
   const callSid = `rig:${scenario}:${greetingIndex}:${robotRuns.length}`;
   const run: RobotRun = { id: callSid, callSid, scenario: scene.n, sceneName: scene.name, greeting, startedAt: Date.now(), said: [], heard: [] };
   const st: RobotState = { run, acts, act: 0, clips: acts.map(() => null), quiet: 0 };

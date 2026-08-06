@@ -265,7 +265,9 @@ async function runOne(page, scene, greetingIdx) {
 
   await page.waitForTimeout(2500);
   await shot(page, "checking");
-  const maxMs = scene.n === 6 ? 260000 : 200000;
+  // The four minute limit test has to be allowed to REACH four minutes, or the harness gives up
+  // before the thing it is testing happens.
+  const maxMs = scene.noGoodbye && scene.expect === "admin_hangup" ? 330000 : scene.n === 6 ? 260000 : 200000;
   const live = await watchLive(page, maxMs);
   await shot(page, "live");
 
@@ -280,7 +282,13 @@ async function runOne(page, scene, greetingIdx) {
   const said = robot.run?.said || [];
   const greeting = robot.run?.greeting || "";
   const lv = live.firstStaff;
-  if (!lv) item(4, "Staff's greeting is the first line, on the live view", false, "no Staff line ever appeared on the live view");
+  // NOBODY PICKED THE PHONE UP, so there is no greeting to be first and no line to be its own.
+  // Marking a scene down for the absence of the thing it exists to prove would be nonsense.
+  if (scene.neverAnswers) {
+    item(4, "nobody at the store ever speaks, which is the whole test", (said || []).length === 0,
+      (said || []).length === 0 ? "not one word from the store, the line just rang" : `the robot spoke, which it must not: ${(said || []).map((x) => x.text).join(" | ")}`);
+  }
+  else if (!lv) item(4, "Staff's greeting is the first line, on the live view", false, "no Staff line ever appeared on the live view");
   else {
     const firstStaffIx = lv.bubs.findIndex((b) => /STAFF|ASOC/i.test(b.who));
     const firstStaffTx = lv.bubs[firstStaffIx]?.tx || "";
@@ -365,7 +373,12 @@ async function runOne(page, scene, greetingIdx) {
   const lastLine = lines[lines.length - 1] || "";
   const lastOurs = ours[ours.length - 1] || "";
   const signedOff = /thank|thanks|appreciate|have a good|have a great|take care|take it easy|see ya|no worries|all good|got it/i.test(lastOurs) && !lastOurs.trim().endsWith("?");
-  item(13, "the check ends with a goodbye, not with us hanging up mid conversation",
+  // A GOODBYE IS IMPOSSIBLE ON THREE OF THESE ON PURPOSE: nobody picked up, a machine picked up so
+  // Charlie was never switched on, or we ourselves cut the line at the four minute limit. Every
+  // other scene still has to end with one.
+  if (scene.noGoodbye) item(13, "this check is not meant to end with a goodbye, and it did not", !signedOff,
+    signedOff ? `it signed off anyway: "${lastOurs}"` : "nothing was signed off, which is right for this one");
+  else item(13, "the check ends with a goodbye, not with us hanging up mid conversation",
     signedOff,
     signedOff ? `we signed off: "${lastOurs}"` : `the last thing said was ${lastLine.startsWith("Agent:") ? "OUR OWN QUESTION" : "theirs"}: "${lastLine.slice(0, 90)}"`);
 

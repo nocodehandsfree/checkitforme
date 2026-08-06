@@ -68,6 +68,10 @@ billed, and we displayed a Got their voicemail status.
 Bubble: this test proves that Charlie never switched to English mid check, and the answer Staff
 gave in Spanish set the status.
 
+**Product: one exact item** — The check asked for one exact product and Charlie asked about that
+item by name. Bubble: this test proves that a general yes about the category is not an In stock
+status on this kind of check. Only Staff confirming the exact item is. (Owner, 08-06.)
+
 **Alert: email** — The check landed In stock at a store a customer watches and an in stock email
 was sent. Bubble: this test proves that in stock email alerts work for a store the customer has
 subscribed to.

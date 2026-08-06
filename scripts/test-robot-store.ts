@@ -33,20 +33,46 @@ const WORDS: Record<number, string[]> = {
   // with nothing a human would say there, and "one fifty one" transcribes as "151" and failed the
   // word row forever. Pitch Black, deliberately not the Chaos Rising in Charlie's own example.
   1: ["Yeah.", "Uh yeah, it's the Pitch Black booster boxes."],
-  2: ["We did not."],
-  3: ["No, I'm sorry. I haven't seen any yet."],
-  4: ["No, we don't have any this, this shipment."],
+  // Every clear no now carries the line Charlie's follow-up needs, or the check dies with no
+  // goodbye. Three shapes on purpose: a real day, a vague soon, an honest I do not know.
+  2: ["We did not.", "Uh, probably Tuesday, that's when the truck comes."],
+  3: ["No, I'm sorry. I haven't seen any yet.", "Not sure, honestly. Soon, I'd think."],
+  4: ["No, we don't have any this, this shipment.", "I really don't know, they don't tell us."],
   5: ["Uh, Pokémon? Uh, let me check. I just got in, so I have to, uh, I'll have to go up to the front and see. Okay, let me just put you on hold.",
-      "Okay, thank you for holding. Yeah, I did not see any, unfortunately."],
+      "Okay, thank you for holding. Yeah, I did not see any, unfortunately.", "Uh, next week maybe? I'm not certain."],
   6: ["Um, give me just a second. Let me double-check."],
   7: ["We did, but it's not out yet, so... uh, or I don't think it's out. Let me see.",
       "It's like a box with, like, three packs in it, I think, or something like that."],
-  8: ["We haven't, as a matter of fact. Uh, let me double-check though. Hold on just a moment.", "Yeah, we've got a few."],
+  8: ["We haven't, as a matter of fact. Uh, let me double-check though. Hold on just a moment.", "Yeah, we've got a few.", "Uh, the Pitch Black boxes I think."],
   9: ["I'm sorry. You're gonna have to call again. I can't hear you. Bye-bye."],
-  10: ["Okay. Transferring you now.", "Sporting goods, this is Dana.", "We did not."],
+  10: ["Okay. Transferring you now.", "Sporting goods, this is Dana.", "We did not.", "Thursdays, usually."],
   // The owner's own check 298, made repeatable. Corpus throughout: the pause line is scene 6's,
   // "Hello? Hello?" is Barnes & Noble Calabasas, the answer is scene 3's.
-  11: ["Um, give me just a second. Let me double-check.", "Hello?", "Hello? Hello?", "No, I'm sorry. I haven't seen any yet."],
+  11: ["Um, give me just a second. Let me double-check.", "Hello?", "Hello? Hello?", "No, I'm sorry. I haven't seen any yet.",
+      "Not sure, honestly. Soon, I'd think."],
+  // The nine cards that had no scene at all. Two are missing on purpose: hold with music and a
+  // phone set on the counter both need a sound recording the owner is picking himself.
+  12: [],
+  13: ["Oh, Pokemon cards, yeah. We get a ton of calls about those, honestly.",
+       "You know my nephew collects them. He's got a whole binder, must be hundreds.",
+       "There was a guy in here last week, bought like twenty packs at once. Twenty.",
+       "It's been nuts since all the trading card stuff took off again, I'll tell you that.",
+       "We used to only carry the sports ones, back when I started here.",
+       "Anyway, what was it you were after? Sorry, it's been one of those days.",
+       "Right, right. Hang on, my manager's waving at me about something.",
+       "Sorry about that. Where were we? Busy in here today.",
+       "Anyway, what was it you were after? Sorry, it's been one of those days.",
+       "Right, right. Hang on, my manager's waving at me about something.",
+       "Sorry about that. Where were we? Busy in here today.",
+       "Anyway, what was it you were after? Sorry, it's been one of those days.",
+       "Right, right. Hang on, my manager's waving at me about something.",
+       "Sorry about that. Where were we? Busy in here today."],
+  14: ["Oh, one sec, let me grab someone.", "This is Maria, what can I do for you?", "Yeah, we've got some.", "The Pitch Black boxes."],
+  15: ["Oh, that's not us, that's the front.", "There's nobody up there right now, sorry."],
+  16: ["That's the front, I can't see those from back here.", "Yeah, sorry, I really can't help you with that from back here."],
+  17: [],
+  18: ["Sí, tenemos algunos.", "Son las cajas de Pitch Black."],
+  19: ["Uh, Pokemon, yeah, we've got some stuff.", "Oh, the Pitch Black boxes? Yeah, we've got a couple of those."],
 };
 const GREETINGS = [
   "Larry Vasquez, how can I help you?",
@@ -62,6 +88,11 @@ console.log("\n── every scene says exactly what a real person said ──");
 for (const scene of ROBOT_SCENES) {
   const { run } = walk(scene.n, 0);
   const spoken = run.said.map((s) => s.text);
+  // The scene where nobody picks up says NOTHING, greeting included. That is the whole test.
+  if (scene.neverAnswers) {
+    is(spoken, [], `scene ${scene.n} (${scene.name}): nobody picks up, so not one word is ever said`);
+    continue;
+  }
   const wantGreeting = scene.greeting || GREETINGS[0];
   is(spoken[0], wantGreeting, `scene ${scene.n}: the greeting is the FIRST thing said`);
   is(spoken.slice(1), WORDS[scene.n], `scene ${scene.n} (${scene.name}): the answers are verbatim`);
@@ -69,11 +100,15 @@ for (const scene of ROBOT_SCENES) {
 
 console.log("\n── the greeting is its own line, never welded to an answer ──");
 for (const scene of ROBOT_SCENES) {
+  if (scene.neverAnswers) continue;   // no greeting to weld anything to
   const { docs, run } = walk(scene.n, 0);
   // Whatever comes after the greeting, a real gap comes first — a listen or a silence. Two clips back
   // to back with nothing between them is the fault that reaches the transcriber as one welded line.
   const after = docs[0].slice(docs[0].indexOf("</Play>") + 7);
-  const nextPlay = after.indexOf("<Play"), gap = after.search(/<Gather|<Pause/);
+  // A SPOKEN line, not any sound: the beep at the end of a voicemail greeting is a tone, and a
+  // tone cannot weld two sentences into one because there is only one sentence.
+  const nextPlay = after.indexOf("<Play>https://" ) >= 0 ? after.search(/<Play>[^<]*\/robot\/clip/) : -1;
+  const gap = after.search(/<Gather|<Pause/);
   if (nextPlay < 0 || (gap >= 0 && gap < nextPlay)) ok(`scene ${scene.n}: a real gap follows the greeting, so it can never weld to the next line`);
   else fail(`scene ${scene.n}: a second clip plays straight after the greeting with no gap — that is the welded-line fault`);
   if (run.said[0].atSec <= 1) ok(`scene ${scene.n}: it is said first, at ${run.said[0].atSec}s`);
@@ -92,7 +127,7 @@ console.log("\n── the two that break us most ──");
   const p = pauses(all);
   if (p.includes(45)) ok("scene 5: the walk to the shelf is 45 seconds"); else fail(`scene 5: the hold is ${p.join("/")}s, not 45`);
   if (!/<Play>[^<]*hold/i.test(all) && !/music/i.test(all)) ok("scene 5: the hold is SILENCE, no music"); else fail("scene 5: something is playing during the hold");
-  is(run.said.length, 3, "scene 5: greeting, the walk away, then the answer they came back with");
+  is(run.said.length, 4, "scene 5: greeting, the walk away, the answer they came back with, and when more are coming");
   // Once they have answered they WAIT for us to say goodbye, the way a real person does. A store that
   // puts the phone down instantly would hide a caller who never signs off (owner, 08-02).
   const listens = (all.match(/<Gather/g) || []).length;
@@ -126,7 +161,7 @@ console.log("\n── cannot hear us, and the wrong department ──");
   is(run.greeting, "MVP's pharmacy, this is Larry.", "scene 10 opens in the wrong department, with his name");
   if (/\/robot\/ring\?secs=6/.test(all)) ok("scene 10: the desk really rings for 6 seconds"); else fail("scene 10: no ringing before the new voice");
   const voices = run.said.map((s) => s.voice);
-  is(voices, ["staff", "staff", "transfer", "transfer"], "scene 10: a DIFFERENT person picks up after the transfer");
+  is(voices, ["staff", "staff", "transfer", "transfer", "transfer"], "scene 10: a DIFFERENT person picks up after the transfer, and stays on");
 }
 
 console.log("\n── the ringing is a real ringback, not a beep ──");
@@ -152,7 +187,8 @@ console.log("\n── the verdict each scene should produce ──");
 is(ROBOT_SCENES.map((s) => `${s.n}:${s.expect}`), [
   "1:in_stock", "2:not_in_stock", "3:not_in_stock", "4:not_in_stock", "5:not_in_stock",
   "6:no_clear_answer", "7:in_stock", "8:in_stock", "9:nobody_answered", "10:not_in_stock",
-  "11:not_in_stock",
+  "11:not_in_stock", "12:nobody_answered", "13:admin_hangup", "14:in_stock", "15:too_busy",
+  "16:no_clear_answer", "17:voicemail", "18:in_stock", "19:in_stock",
 ], "scenes 7 and 8 expect IN STOCK — the two we really got wrong");
 
 // ---- THE TEST OF THE TEST -----------------------------------------------------------------------

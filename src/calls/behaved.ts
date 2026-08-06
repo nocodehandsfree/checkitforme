@@ -93,6 +93,12 @@ export const TEST_CARDS: Record<string, { name: string; sub: string; info: strin
   language_spanish: { name: "Language: Spanish",
     sub: "Staff spoke Spanish and Charlie held the entire conversation in Spanish.",
     info: "This test proves that Charlie never switched to English mid check, and the answer Staff gave in Spanish set the status." },
+  // THE NEW CARD, the owner's ruling 08-06, and it arrives with the hobby stores. On a check for one
+  // exact product Charlie has an extra question no test had ever run, and a general yes is not a yes
+  // on that kind of check.
+  exact_product: { name: "Product: one exact item",
+    sub: "The check asked for one exact product and Charlie asked about that item by name.",
+    info: "This test proves that a general yes about the category is not an In stock status on this kind of check. Only Staff confirming the exact item is." },
   alert_email: { name: "Alert: email",
     sub: "The check landed In stock at a store a customer watches and an in stock email was sent.",
     info: "This test proves that in stock email alerts work for a store the customer has subscribed to." },
