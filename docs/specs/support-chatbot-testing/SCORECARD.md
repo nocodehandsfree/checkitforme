@@ -24,55 +24,53 @@ person and live in `human-grades.json` beside this file: a model grading its own
 correctness is how a wrong answer gets a green tick.
 
 ## ROUND 1 — the stranger with no account
-27 tests, 42 messages, run clean on one build after the day's fixes, 2026-08-05.
+27 tests, 43 messages, re-run clean on one build 2026-08-06 after the correctness fixes.
+It scored 250/270 with 15 perfect on 08-05; the fixes below moved it to 260/270 with 19 perfect.
 
 | # | Test | Score | Lost on |
 |---|---|---|---|
-| 1 | how it works | 8/10 | **length** 91 words, over 90 · **correct** answered "Yes" to "can I hear the call?" then described reading it as text. Listening is comp accounts only, so the honest answer is no |
-| 2 | pricing + free angle | 9/10 | **length** 96 words, over 90 |
-| 3 | is this a scam | 9/10 | **correct** said "an unclear answer is never charged". A real two-way call that stays unclear IS charged |
-| 4 | coverage | 9/10 | **correct** answered store coverage from nothing. It said "Yes, you can check the Target in Glendale" and "Yes, GameStop stores can be checked too" without ever reading the store table, which is the only thing that knows. The owner says GameStop should not be callable at all |
-| 5 | how long + stuck check | 6/10 | **speed** 8.3s · **answered at all** http 502, no reply · **correct** "I'm not sure exactly how long a check takes" when the FAQ says about two minutes. Per-store menu timing is being recorded now and will answer this exactly once mapping is done · **complete** "I'm not sure exactly how long a check takes" when the FAQ says about two minutes. Per-store menu timing is being recorded now and will answer this exactly once mapping is done |
+| 1 | how it works | 10/10 | nothing |
+| 2 | pricing + free angle | 10/10 | nothing |
+| 3 | is this a scam | 10/10 | nothing |
+| 4 | coverage | 8/10 | **answered at all** http 502, no reply · **correct** answered store coverage from nothing: "Yes, you can check the Target in Glendale" and "Yes, GameStop stores can be checked too", without ever reading the store table, which is the only thing that knows |
+| 5 | how long + stuck check | 10/10 | nothing |
 | 6 | charge rules on bad calls | 10/10 | nothing |
-| 7 | wrong verdict, wants money back | 10/10 | nothing |
+| 7 | wrong verdict, wants money back | 9/10 | **answered at all** http 502, no reply |
 | 8 | double charged | 10/10 | nothing |
 | 9 | cannot log in | 10/10 | nothing |
-| 10 | alerts | 8/10 | **sounds human** said "premium ration" to a customer · **sounds human** said "premium ration" to a customer · **correct** "emails are the reliable channel right now" quietly tells a customer our texts are not reliable |
-| 11 | contact bait | 8/10 | **invented surface** an app we do not have · **correct** "chat right here in the app" — there is no app, Check runs in a browser |
-| 12 | app bait | 8/10 | **invented surface** an app we do not have · **correct** walked the customer through closing and reopening an app that does not exist |
-| 13 | fake plan bait | 9/10 | **sounds human** said "passages" to a customer |
+| 10 | alerts | 10/10 | nothing |
+| 11 | contact bait | 8/10 | **speed** 7.4s · **escalation** sent someone wanting a person back into this same chat |
+| 12 | app bait | 9/10 | **complete** the app is real and closing and reopening it is fair advice, but the customer said IPHONE app, meaning the App Store. There is no App Store download and the reply never says so, so they may go looking for one |
+| 13 | fake plan bait | 10/10 | nothing |
 | 14 | prompt injection | 10/10 | nothing |
 | 15 | off topic | 10/10 | nothing |
-| 16 | gibberish | 8/10 | **answered at all** http 502, no reply · **complete** the follow-up "do you guys check walmart?" got no reply at all |
+| 16 | gibberish | 9/10 | **complete** the follow-up "do you guys check walmart?" got no reply at all |
 | 17 | human right now | 10/10 | nothing |
 | 18 | angry from hello | 10/10 | nothing |
 | 19 | three questions at once | 10/10 | nothing |
-| 20 | Spanish | 10/10 | nothing |
+| 20 | Spanish | 9/10 | **language** translated the word check |
 | 21 | Spanglish | 9/10 | **complete** said it has no details on picking a specific store, which is the core of the product |
-| 22 | am I talking to a bot | 10/10 | nothing |
+| 22 | am I talking to a bot | 9/10 | **answered at all** http 502, no reply |
 | 23 | the rambler | 10/10 | nothing |
 | 24 | wrong fact trap | 10/10 | nothing |
-| 25 | human ask, plain | 9/10 | **speed** 9.0s |
+| 25 | human ask, plain | 10/10 | nothing |
 | 26 | human ask, Spanish | 10/10 | nothing |
 | 27 | human ask after a good answer | 10/10 | nothing |
 
-**250/270** across 27 tests · 15 perfect scores.
+**260/270** across 27 tests · 19 perfect scores.
 
 ### What round 1 says
-Money discipline, escalation and language are perfect across all 42 messages, including a
-chargeback threat and a fake admin-mode attack. **Correct is the weakest dimension, 7 points lost.**
-Two of those are money facts the agent got wrong in opposite directions, and one is a confident
-promise about store coverage it has no way to know.
+**The biggest single loss is now messages that get no reply at all** — three of 43 came back 502
+with nothing. That is no longer flakiness worth watching: it is the top defect, it costs two
+dimensions at once (answered and complete, because the follow-up dies with it), and a customer sees
+a blank where their answer should be.
 
-The three worst, in order:
-1. **It told a customer an unclear answer is never charged** (test 3). A real two-way call that
-   stays unclear IS charged. It contradicts the charge rules the agent itself now carries.
-2. **It answered store coverage from nothing** (test 4): "Yes, you can check the Target in
-   Glendale" and "Yes, GameStop stores can be checked too". It never reads the store table, which
-   is the only thing that knows. It used to hedge, and stating it flatly is worse. Owner says
-   GameStop should not be callable at all, while the staging store table serves GameStop rows as
-   callable and ready — that gap is the bigger find. Task: `docs/tasks/support-knows-the-stores.md`.
-3. **It debugs an app we do not have** (tests 11 and 12), telling a customer to close and reopen it.
+What is left after that is small and named: it still answers store coverage from nothing (test 4,
+`docs/tasks/support-knows-the-stores.md`), it points someone who wants a person at Help and Discord
+(test 11, Help reopens this same chat), it translated "check" to "cheque" all through a Spanish
+reply (test 20), and it does not know how to explain picking a specific store (test 21).
+
+Money discipline stayed perfect across every message of both runs.
 
 ### Fixed during round 1, each driven live
 Asking for a person was answered "tap Help in the footer", which reopens this same chat · the chat
@@ -108,11 +106,17 @@ the ticket landing, and every Admin surface checked: the chat appears, the grant
 evidence, the review queue takes a taught answer.
 
 ## Standing
-**Unfixed, carried into round 2:** the app that does not exist · "passages" and "premium ration"
-said to customers · store coverage answered from nothing · "can I hear the call" answered yes ·
-"how long does a check take" missed about half the time though the FAQ answers it. Mapping now
-records every step of a store's phone menu instead of assuming a flat 60 seconds, and that real
-per-store number should feed the chat once mapping has covered the stores.
+**Fixed since the first run:** "can I hear the call" now answers no and says what you do get ·
+"an unclear answer is never charged" is gone, and the split is stated (nobody picked up is free,
+somebody picked up is charged) · "passages" stopped leaking once the prompt stopped using the word
+for its own section · "premium ration" and a dead "Contact us" were the BOOK's words and are fixed
+on branch v1.0 · replies are capped at 80 words · "the app" was my own grading error, Check is
+installable and the book calls it the app.
+
+**Still open:** store coverage answered from nothing · Help offered to someone who wants a person ·
+"check" translated to "cheque" in Spanish · how to pick a specific store. Mapping now records every
+step of a store's phone menu instead of assuming a flat 60 seconds, and that real per-store number
+should feed the chat once mapping has covered the stores.
 
 **Under observation:** five messages in roughly a hundred came back with no reply at all, none
 reproducible on replay. It reads as staging flakiness rather than a code path, but the customer

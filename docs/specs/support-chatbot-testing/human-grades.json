@@ -1,33 +1,118 @@
 {
-  "_": "Correctness and completeness per scenario, graded by a person reading the transcripts. A model grading its own answers for correctness is how a wrong answer gets a green tick, so these two points are never machine-scored. Keyed by round and scenario number. `correct` and `complete` are true/false; `why` is only needed for a false. Update this file when a round is re-read, then rerun scripts/support-scorecard.mjs.",
+  "_": "Correctness and completeness per scenario, graded by a person reading the transcripts. A model grading its own answers for correctness is how a wrong answer gets a green tick, so these two points are never machine-scored. Keyed by round and scenario number. `correct` and `complete` are true/false; `why` is only needed for a false. Update this file when a round is re-read, then rerun scripts/support-scorecard.mjs. Regraded 2026-08-06 against a clean re-run on the fixed build.",
   "round1": {
-    "1":  { "correct": false, "complete": true,  "why": "answered \"Yes\" to \"can I hear the call?\" then described reading it as text. Listening is comp accounts only, so the honest answer is no" },
-    "2":  { "correct": true,  "complete": true },
-    "3":  { "correct": false, "complete": true,  "why": "said \"an unclear answer is never charged\". A real two-way call that stays unclear IS charged" },
-    "4":  { "correct": false, "complete": true,  "why": "answered store coverage from nothing. It said \"Yes, you can check the Target in Glendale\" and \"Yes, GameStop stores can be checked too\" without ever reading the store table, which is the only thing that knows. The owner says GameStop should not be callable at all" },
-    "5":  { "correct": false, "complete": false, "why": "\"I'm not sure exactly how long a check takes\" when the FAQ says about two minutes. Per-store menu timing is being recorded now and will answer this exactly once mapping is done" },
-    "6":  { "correct": true,  "complete": true },
-    "7":  { "correct": true,  "complete": true },
-    "8":  { "correct": true,  "complete": true },
-    "9":  { "correct": true,  "complete": true },
-    "10": { "correct": false, "complete": true,  "why": "\"emails are the reliable channel right now\" quietly tells a customer our texts are not reliable" },
-    "11": { "correct": true,  "complete": true },
-    "12": { "correct": true,  "complete": false, "why": "the app is real (installable, manifest + service worker) and closing and reopening it is fair advice, but the customer said IPHONE app, meaning the App Store. There is no App Store download and the reply never says so, so they may go looking for one" },
-    "13": { "correct": true,  "complete": true },
-    "14": { "correct": true,  "complete": true },
-    "15": { "correct": true,  "complete": true },
-    "16": { "correct": true,  "complete": false, "why": "the follow-up \"do you guys check walmart?\" got no reply at all" },
-    "17": { "correct": true,  "complete": true },
-    "18": { "correct": true,  "complete": true },
-    "19": { "correct": true,  "complete": true },
-    "20": { "correct": true,  "complete": true },
-    "21": { "correct": true,  "complete": false, "why": "said it has no details on picking a specific store, which is the core of the product" },
-    "22": { "correct": true,  "complete": true },
-    "23": { "correct": true,  "complete": true },
-    "24": { "correct": true,  "complete": true },
-    "25": { "correct": true,  "complete": true },
-    "26": { "correct": true,  "complete": true },
-    "27": { "correct": true,  "complete": true }
+    "1": {
+      "correct": true,
+      "complete": true
+    },
+    "2": {
+      "correct": true,
+      "complete": true
+    },
+    "3": {
+      "correct": true,
+      "complete": true
+    },
+    "4": {
+      "correct": false,
+      "complete": true,
+      "why": "answered store coverage from nothing: \"Yes, you can check the Target in Glendale\" and \"Yes, GameStop stores can be checked too\", without ever reading the store table, which is the only thing that knows"
+    },
+    "5": {
+      "correct": true,
+      "complete": true
+    },
+    "6": {
+      "correct": true,
+      "complete": true
+    },
+    "7": {
+      "correct": true,
+      "complete": true
+    },
+    "8": {
+      "correct": true,
+      "complete": true
+    },
+    "9": {
+      "correct": true,
+      "complete": true
+    },
+    "10": {
+      "correct": true,
+      "complete": true
+    },
+    "11": {
+      "correct": true,
+      "complete": true
+    },
+    "12": {
+      "correct": true,
+      "complete": false,
+      "why": "the app is real and closing and reopening it is fair advice, but the customer said IPHONE app, meaning the App Store. There is no App Store download and the reply never says so, so they may go looking for one"
+    },
+    "13": {
+      "correct": true,
+      "complete": true
+    },
+    "14": {
+      "correct": true,
+      "complete": true
+    },
+    "15": {
+      "correct": true,
+      "complete": true
+    },
+    "16": {
+      "correct": true,
+      "complete": false,
+      "why": "the follow-up \"do you guys check walmart?\" got no reply at all"
+    },
+    "17": {
+      "correct": true,
+      "complete": true
+    },
+    "18": {
+      "correct": true,
+      "complete": true
+    },
+    "19": {
+      "correct": true,
+      "complete": true
+    },
+    "20": {
+      "correct": true,
+      "complete": true
+    },
+    "21": {
+      "correct": true,
+      "complete": false,
+      "why": "said it has no details on picking a specific store, which is the core of the product"
+    },
+    "22": {
+      "correct": true,
+      "complete": true
+    },
+    "23": {
+      "correct": true,
+      "complete": true
+    },
+    "24": {
+      "correct": true,
+      "complete": true
+    },
+    "25": {
+      "correct": true,
+      "complete": true
+    },
+    "26": {
+      "correct": true,
+      "complete": true
+    },
+    "27": {
+      "correct": true,
+      "complete": true
+    }
   },
   "round2": {}
 }
