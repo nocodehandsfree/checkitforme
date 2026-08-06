@@ -308,6 +308,28 @@ def mechanical_misses(draft, rendered):
                 if " ".join(f.split()) not in flat]
     return missing
 
+def _content(t):
+    return set(w.lower() for w in re.findall(r"[a-zA-Z]{4,}",
+                                             re.sub(r"```.*?```", "", t, flags=re.S)))
+
+def collapsed(draft, rendered):
+    # THE FLOOR (owner 08-06, from a real chat where a whole answer came back as "OK").
+    # The writer is allowed to cut a whole topic he did not ask about. It is never
+    # allowed to hand back almost nothing: that is the writer failing, not a cut.
+    # Mechanical on purpose. The meaning check catches this too, but it is a model call
+    # that can be skipped, time out, or error, and it never ran on the retry at all,
+    # which is exactly how "OK" reached a chat. This one cannot be skipped.
+    d = _content(draft)
+    if len(d) < 12:
+        return ""                       # too small to judge, the short bypass covers it
+    r = _content(rendered)
+    if len(r) < 4:
+        return f"the rendering is {len(r)} real words long, that is not a reply"
+    kept = len(d & r) / len(d)
+    if kept < 0.15:
+        return f"the rendering kept {int(kept * 100)}% of the answer, that is a collapse"
+    return ""
+
 def needs_meaning_check(draft, rendered):
     # The meaning check was running on EVERY reply, including the ones the writer handed
     # back untouched, where it was comparing text to itself for nothing. Skip it ONLY
@@ -338,7 +360,18 @@ def meaning_check(root, owner_msg, draft, rendered, timeout=60):
     return bool(v.get("faithful")), [str(p) for p in (v.get("problems") or [])]
 
 def latest_owner_msg(root):
+    # THIS chat's message, not whichever file happens to be newest (owner 08-06). Newest
+    # wins meant a second chat, or an agent testing the reply lock, could hand the writer
+    # the wrong question to judge the answer against, and the writer's first instruction
+    # is to cut everything that does not answer it. Proven reachable by planting a file.
     d = os.path.join(state_dir(root), "prompts")
+    sid = os.environ.get("CLAUDE_CODE_SESSION_ID") or ""
+    mine = os.path.join(d, sid[:36] + ".txt") if sid else ""
+    if mine and os.path.exists(mine):
+        try:
+            return open(mine).read().strip()
+        except Exception:
+            return ""
     files = sorted(glob.glob(os.path.join(d, "*.txt")), key=os.path.getmtime)
     if not files:
         return ""
@@ -395,27 +428,55 @@ if "--check-file" in sys.argv:
     except Exception as ex:
         log_error(root, ex); fail_open("error")
     tick("render done")
-    notes = []
-    misses = mechanical_misses(draft, final)
-    if word_scan(final):
-        notes.append("your rewrite broke hard rules: " + "; ".join(word_scan(final)))
-    if misses:
-        notes.append("you dropped these exact items, keep them verbatim: " + "; ".join(misses[:10]))
-    faithful, problems = True, []
-    if not notes and needs_meaning_check(draft, final):
+    def hard_faults(rendered):
+        # Every mechanical gate, in one place, so the retry is judged exactly as hard
+        # as the first pass. Before 08-06 the retry only got two of these and a whole
+        # answer could come back as "OK".
+        out = []
+        if word_scan(rendered):
+            out.append("your rewrite broke hard rules: " + "; ".join(word_scan(rendered)))
+        misses = mechanical_misses(draft, rendered)
+        if misses:
+            out.append("you dropped these exact items, keep them verbatim: "
+                       + "; ".join(misses[:10]))
+        gone = collapsed(draft, rendered)
+        if gone:
+            out.append("you threw the answer away: " + gone + ". Cutting a topic he did "
+                       "not ask about is right; handing back nothing never is")
+        return out
+
+    checked_meaning = False
+
+    def read_meaning(rendered):
+        # Returns notes. An unavailable meaning check is NOT a pass: say so, so the
+        # verdict never claims a check that did not happen.
+        nonlocal_notes = []
+        if not needs_meaning_check(draft, rendered):
+            return nonlocal_notes, True
         try:
-            faithful, problems = meaning_check(root, owner_msg, draft, final)
+            faithful, problems = meaning_check(root, owner_msg, draft, rendered)
         except Exception as ex:
             log_error(root, ex)
-    tick("meaning check done (faithful=%s, notes=%s)" % (faithful, notes))
-    if not faithful:
-        notes.append("meaning drifted: " + "; ".join(problems[:5]))
+            return nonlocal_notes, False
+        if not faithful:
+            nonlocal_notes.append("meaning drifted: " + "; ".join(problems[:5]))
+        return nonlocal_notes, True
+
+    notes = hard_faults(final)
+    if not notes:
+        mnotes, checked_meaning = read_meaning(final)
+        notes += mnotes
+    tick("first pass judged (notes=%s)" % notes)
     if notes:
         try:
             # More room than the first pass: the retry thinks harder, and a retry that
             # runs out of time throws away the rendering and sends the raw answer.
             final = render(root, owner_msg, draft, notes=" | ".join(notes), timeout=180)
-            if word_scan(final) or mechanical_misses(draft, final):
+            # The retry gets every MECHANICAL gate, including the floor, which is what
+            # stops a collapse. Tried adding a second meaning pass here on 08-06 and it
+            # made 3 of 7 real drafts fall back to the raw answer, so it is out: reading
+            # the retry twice cost more good renderings than it caught bad ones.
+            if hard_faults(final):
                 fail_open("rewrite kept failing the fact checks")
         except Exception as ex:
             log_error(root, ex); fail_open("error on retry")
@@ -425,8 +486,10 @@ if "--check-file" in sys.argv:
     if " ".join(final.split()) == " ".join(draft.split()):
         print("VERDICT: APPROVED AS WRITTEN. Send your answer exactly as drafted.")
     else:
+        how = ("mechanically and by a meaning pass" if checked_meaning
+               else "mechanically (the meaning pass was unavailable, read it closely)")
         print("VERDICT: APPROVED, RENDERED VERSION BELOW. Every fact was checked "
-              "against your answer mechanically and by a meaning pass. Read it once; "
+              "against your answer " + how + ". Read it once; "
               "if a fact still looks wrong, fix only that fact in your own draft and "
               "run the check again. Otherwise send EXACTLY this text:\n")
         print(final)
