@@ -1,11 +1,17 @@
 {
-  "at": "2026-08-06T04:11:42.643Z",
+  "at": "2026-08-06T05:35:29.001Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
-      "scenario": 3,
-      "name": "No, softened",
+      "scenario": 19,
+      "name": "A general yes is not the exact product",
       "items": [
+        {
+          "n": 0.7,
+          "name": "tapping the category fills the exact item list",
+          "pass": false,
+          "detail": "the list was still empty after tapping the category, so a customer could not pick one item. The harness loaded it with the page's own function to get this check dialed."
+        },
         {
           "n": 1,
           "name": "the store is found from the main page and Check it is tapped",
@@ -19,115 +25,37 @@
           "detail": "nothing to warn about yet — this device had never checked this store (the next scene proves the warning)"
         },
         {
+          "n": 1.5,
+          "name": "the site actually placed the check",
+          "pass": false,
+          "detail": "the site answered: 429 {\"error\":\"robot_cap\",\"message\":\"The robot store has taken 40 checks in the last day, which is its ceiling (40). Nothing more will be dialed.\",\"checksToday\":40}"
+        },
+        {
           "n": 3,
           "name": "the header moves through its phases in order, never backwards",
-          "pass": true,
-          "detail": "Calling → Talking to Staff → Getting results"
+          "pass": false,
+          "detail": "Calling"
         },
         {
           "n": 4,
           "name": "Staff's greeting is the first line, on the live view",
-          "pass": true,
-          "detail": "live view showed: \"Larry Vasquez, how can I help you?\"  ·  robot said: \"Larry Vasquez, how can I help you?\""
-        },
-        {
-          "n": 5,
-          "name": "the greeting is its own line, never welded to their answer",
-          "pass": true,
-          "detail": "one line, nothing else in it"
-        },
-        {
-          "n": 12,
-          "name": "one check writes ONE record",
           "pass": false,
-          "detail": "3 rows for the same phone call: 321(4 lines), 322(4 lines), 320(6 lines)"
-        },
-        {
-          "n": 4.1,
-          "name": "Staff's greeting is the first line of the written conversation",
-          "pass": true,
-          "detail": "first written line: \"Clerk: Larry Vasquez, how can I help you?\""
-        },
-        {
-          "n": 5.1,
-          "name": "the written greeting is its own line",
-          "pass": true,
-          "detail": "written: \"Larry Vasquez, how can I help you?\"  ·  said: \"Larry Vasquez, how can I help you?\""
+          "detail": "no Staff line ever appeared on the live view"
         },
         {
           "n": 6,
-          "name": "the words match what the robot actually said, word for word",
-          "pass": true,
-          "detail": "3 lines, all exact"
-        },
-        {
-          "n": 7,
-          "name": "the conversation scrolls under the header and does not bounce when nothing is new",
-          "pass": true,
-          "detail": "0 bounce(s) over 42 looks · header held at 0px"
-        },
-        {
-          "n": 8,
-          "name": "the log expands",
-          "pass": true,
-          "detail": "19px → 90px"
-        },
-        {
-          "n": 13,
-          "name": "the check ends with a goodbye, not with us hanging up mid conversation",
-          "pass": true,
-          "detail": "we signed off: \"Perfect, thanks so much, have a good one!\""
-        },
-        {
-          "n": 14,
-          "name": "we never ask the same question twice",
-          "pass": true,
-          "detail": "3 things said, none of them twice"
-        },
-        {
-          "n": 15,
-          "name": "the check ends soon after the answer, instead of sitting on an open line",
-          "pass": true,
-          "detail": "the answer was in at 32 seconds and the line closed at 32 — 0 seconds of nothing"
-        },
-        {
-          "n": 9,
-          "name": "the result appears with a status",
-          "pass": true,
-          "detail": " Result Thu, Aug 6 · 4:10 AM Getting the answer… The call just finished.Pulling the result. Calling4 steps · 32s It's ri"
-        },
-        {
-          "n": 9.1,
-          "name": "the screen and the record say the same thing",
+          "name": "the words match what the robot actually said",
           "pass": false,
-          "detail": "the screen said unclear, the record says out (not_in_stock)"
-        },
-        {
-          "n": 11,
-          "name": "the verdict is RIGHT for this scenario",
-          "pass": true,
-          "detail": "got not_in_stock · this scenario is not_in_stock"
-        },
-        {
-          "n": 10,
-          "name": "the screen and the till agree about money",
-          "pass": true,
-          "detail": "not charged · the screen claims no free check · the check cost 6.3¢"
+          "detail": "the check never reached the record"
         }
       ],
       "shots": [
-        "./robot-run/03-store-found.png",
-        "./robot-run/03-checking.png",
-        "./robot-run/03-live.png",
-        "./robot-run/03-result.png"
+        "./robot-run/19-store-found.png",
+        "./robot-run/19-checking.png",
+        "./robot-run/19-live.png",
+        "./robot-run/19-result.png"
       ],
-      "startedAt": 1785989391763,
-      "checkId": 320,
-      "cost": 0.062543,
-      "costReadable": "6.3¢",
-      "robotCost": null,
-      "charged": false,
-      "statusKey": "not_in_stock"
+      "startedAt": 1785994042824
     }
   ],
   "jsErrors": []

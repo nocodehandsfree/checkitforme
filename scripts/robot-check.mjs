@@ -152,12 +152,42 @@ async function findAndCheck(page, wantProduct) {
   // ONE EXACT PRODUCT. The same dropdown a customer uses, picked the same way, and the check is
   // refused rather than run blind if the item is not on the list.
   if (wantProduct) {
-    await page.waitForSelector("#prodsel option", { timeout: 20000 }).catch(() => {});
+    // The dropdown only fills once ONE category is picked, exactly as it does for a customer:
+    // the chips first, then the item. Nothing here skips a screen.
+    await page.waitForSelector("#chips .chip", { timeout: 20000 }).catch(() => {});
+    // THE EXACT ITEM PICKER IS A PAID PERK, so the page hides it until it knows what this account
+    // is entitled to. Tapping the category before that answer lands takes the hide branch and the
+    // list never fills, which is what a customer on a slow connection would see too. Wait for the
+    // page to know, then tap.
+    await page.waitForFunction(() => typeof hasFeature === "function" && hasFeature("exact_products"), null, { timeout: 30000 }).catch(() => {});
+    const chip = page.locator("#chips .chip").first();
+    const filled = async () => page.evaluate(() => (document.getElementById("prodsel")?.options.length || 0) > 1);
+    // Tap the category, wait for the list. The sheet redraws itself around the tap and sometimes
+    // lands with the list empty, and a customer looking at an empty list taps the category again,
+    // so that is what this does. Tapping a category already chosen never changes the choice.
+    for (let i = 0; i < 3 && !(await filled()); i++) {
+      if (await chip.isVisible().catch(() => false)) await chip.click();
+      for (let w = 0; w < 20 && !(await filled()); w++) await page.waitForTimeout(400);
+    }
+    // A REAL SITE FAULT, WORKED AROUND HERE AND WRITTEN DOWN (08-06). Tapping the category is
+    // supposed to fill the exact item list and often does not: the sheet redraws around the tap
+    // and leaves an empty dropdown, so a customer who wants one named item cannot pick it. The
+    // harness asks the page to load the list with the page's OWN function, the same one the tap
+    // calls, so this scene can still be dialed. It is a workaround, not a fix, and the row below
+    // says so out loud rather than letting the scene look clean.
+    const neededAHand = !(await filled());
+    if (neededAHand) {
+      await page.evaluate(() => (typeof loadProducts === "function" ? loadProducts(SEL_CATS[0]) : null)).catch(() => {});
+      for (let w = 0; w < 25 && !(await filled()); w++) await page.waitForTimeout(400);
+    }
+    item(0.7, "tapping the category fills the exact item list", !neededAHand,
+      neededAHand ? "the list was still empty after tapping the category, so a customer could not pick one item. The harness loaded it with the page's own function to get this check dialed."
+                  : "the list filled from the tap alone");
     const picked = await page.evaluate((name) => {
       const sel = document.getElementById("prodsel");
       if (!sel) return "no dropdown";
       const opt = [...sel.options].find((o) => o.value === name);
-      if (!opt) return "not on the list";
+      if (!opt) return `not on the list (${sel.options.length} items, e.g. ${[...sel.options].slice(1, 3).map((o) => o.value).join(" | ")})`;
       sel.value = name; if (typeof pickProduct === "function") pickProduct();
       return window.SEL_PRODUCT === name || true;
     }, wantProduct);
@@ -273,6 +303,15 @@ async function robotSideCost(callSid) {
 // ---- one scenario -------------------------------------------------------------------------------
 async function runOne(page, scene, greetingIdx) {
   current = { scenario: scene.n, name: scene.name, items: [], shots: [], startedAt: Date.now() };
+  // WHY A CHECK WAS REFUSED, IN ITS OWN WORDS. A refused check leaves the page back on the home
+  // screen with the toast already faded, and the harness could only report that nothing happened.
+  // The site's own answer says exactly why, so it is kept.
+  let placeAnswer = null;
+  const onResp = async (r) => {
+    if (!/\/(pub|app)\/check(-live)?$/.test(new URL(r.url()).pathname)) return;
+    try { placeAnswer = `${r.status()} ${JSON.stringify(await r.json()).slice(0, 200)}`; } catch { placeAnswer = `${r.status()} (unreadable)`; }
+  };
+  page.on("response", onResp);
   runs.push(current);
   console.log(`\n══════ scenario ${scene.n} · ${scene.name} ══════`);
   await adm("/api/admin/robot-store", { method: "POST", body: JSON.stringify({ scenario: scene.n, greeting: greetingIdx }) });
@@ -304,6 +343,8 @@ async function runOne(page, scene, greetingIdx) {
   // 3. the header moves through its phases IN ORDER and never backwards.
   const seen = new Set(); let backwards = null;
   for (const p of live.phases) { if (seen.has(p)) backwards = p; seen.add(p); }
+  page.off("response", onResp);
+  if (live.phases.length <= 1) item(1.5, "the site actually placed the check", false, `the site answered: ${placeAnswer || "(nothing was asked)"}`);
   item(3, "the header moves through its phases in order, never backwards", !backwards && live.phases.length > 1,
     backwards ? `it went back to "${backwards}"` : live.phases.join(" → ") || "(no header seen)");
 
