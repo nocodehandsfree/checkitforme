@@ -9,7 +9,11 @@ const MODEL = "text-embedding-3-small";
 export async function embed(texts: string[]): Promise<number[][]> {
   const key = config.openaiKey;
   if (!key) throw new Error("OPENAI_API_KEY not set");
+  // Bounded like every other call in a customer's request path: the edge cuts a reply at about 15
+  // seconds and a hung embedding used to eat that budget before the agent had even started thinking,
+  // so the customer got a blank (08-06). Generous enough that a real batch still finishes.
   const r = await fetch("https://oai.helicone.ai/v1/embeddings", {
+    signal: AbortSignal.timeout(Number(process.env.SUPPORT_EMBED_TIMEOUT_MS) || 8000),
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", ...heli("support-embed") },
     body: JSON.stringify({ model: MODEL, input: texts }),

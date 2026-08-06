@@ -165,6 +165,11 @@ export interface AnswerOpts {
 
 /** Answer one user message inside a conversation. Creates the conversation on first call. */
 export async function answerSupport(sessionId: string, userMessage: string, opts: AnswerOpts = {}): Promise<LadderResult> {
+  // ONE budget for the whole reply, measured from the moment the message arrives. The edge cuts a
+  // request at about 15 seconds and the customer sees a blank, so every slow thing inside — looking
+  // up the book, the store list, each rung — spends from this one clock rather than each keeping
+  // its own. Budgets that were set per step used to add up past the cut (08-06).
+  const REPLY_DEADLINE = Date.now() + 12_000;
   const now = Math.floor(Date.now() / 1000);
   const category = SUPPORT_CATEGORIES.includes(opts.category as SupportCategory) ? opts.category! : "other";
   // Read BEFORE any rung runs: whether they asked for a person is the customer's words, not a model's
@@ -247,7 +252,12 @@ export async function answerSupport(sessionId: string, userMessage: string, opts
     }
   }
 
-  const ctx = await retrieve(userMessage);
+  // Looking things up must never cost the customer their answer: if the book search or the store
+  // list is slow or down, we answer from the site facts and the conversation instead of failing.
+  const ctx = await retrieve(userMessage).catch((e) => {
+    console.error("[support] retrieve", (e as Error).message.slice(0, 140));
+    return { passages: "", qaBest: null } as Awaited<ReturnType<typeof retrieve>>;
+  });
   // "Do you check the Target in Glendale?" is a promise, not a fact from the book. Answer it from
   // the store list or not at all (round 1 test 4).
   const coverage = await coverageNote(userMessage).catch(() => "");
@@ -282,7 +292,7 @@ export async function answerSupport(sessionId: string, userMessage: string, opts
   // spare for writing the reply down: one rung is capped well under, and we stop climbing rather
   // than start a rung we cannot finish. A merely-adequate answer beats a perfect one nobody sees.
   const RUNG_MS = 5_000;
-  const LADDER_DEADLINE = Date.now() + 11_000;
+  const LADDER_DEADLINE = REPLY_DEADLINE;
   for (const rung of rungs) {
     if (Date.now() > LADDER_DEADLINE) { console.error("[support] ladder out of time before tier", rung.tier); break; }
     try {
