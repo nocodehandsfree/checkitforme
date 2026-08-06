@@ -1,10 +1,10 @@
 {
-  "at": "2026-08-06T07:15:19.694Z",
+  "at": "2026-08-06T19:28:59.491Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
-      "scenario": 13,
-      "name": "Talks past the answer, forever",
+      "scenario": 10,
+      "name": "Wrong department, then transfers",
       "items": [
         {
           "n": 1,
@@ -19,22 +19,22 @@
           "detail": "nothing to warn about yet — this device had never checked this store (the next scene proves the warning)"
         },
         {
+          "n": 1.5,
+          "name": "the site actually placed the check",
+          "pass": false,
+          "detail": "the site answered: 200 {\"room\":\"ffbca54c-fa8e-426a-bd84-ff5e31d75bae\",\"wsHost\":\"voice-caller-staging-production.up.railway.app\"}"
+        },
+        {
           "n": 3,
           "name": "the header moves through its phases in order, never backwards",
-          "pass": true,
-          "detail": "Calling → Talking to Staff → Getting results"
+          "pass": false,
+          "detail": "Calling"
         },
         {
           "n": 4,
           "name": "Staff's greeting is the first line, on the live view",
-          "pass": true,
-          "detail": "live view showed: \"Larry Vasquez, how can I help you?\"  ·  robot said: \"Larry Vasquez, how can I help you?\""
-        },
-        {
-          "n": 5,
-          "name": "the greeting is its own line, never welded to their answer",
-          "pass": true,
-          "detail": "one line, nothing else in it"
+          "pass": false,
+          "detail": "no Staff line ever appeared on the live view"
         },
         {
           "n": 12,
@@ -45,93 +45,83 @@
         {
           "n": 4.1,
           "name": "Staff's greeting is the first line of the written conversation",
-          "pass": true,
-          "detail": "first written line: \"Clerk: Larry Vasquez, how can I help you?\""
+          "pass": false,
+          "detail": "first written line: \"\""
         },
         {
           "n": 5.1,
           "name": "the written greeting is its own line",
           "pass": true,
-          "detail": "written: \"Larry Vasquez, how can I help you?\"  ·  said: \"Larry Vasquez, how can I help you?\""
+          "detail": "written: \"\"  ·  said: \"\""
         },
         {
           "n": 6,
           "name": "the words match what the robot actually said, word for word",
-          "pass": false,
-          "detail": "\"There was a guy in here last week, bought like twenty packs at once. Twenty.\" → missing | \"It's been nuts since all the trading card stuff took off again, I'll tell you that.\" → written down only in part"
+          "pass": true,
+          "detail": "0 lines, all exact"
         },
         {
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
           "pass": true,
-          "detail": "0 bounce(s) over 75 looks · header held at 0px"
+          "detail": "0 bounce(s) over 285 looks · header held at 62px"
         },
         {
           "n": 8,
           "name": "the log expands",
           "pass": true,
-          "detail": "19px → 90px"
+          "detail": "19px → 44px"
         },
         {
           "n": 13,
-          "name": "this check is not meant to end with a goodbye, and it did not",
-          "pass": true,
-          "detail": "nothing was signed off, which is right for this one"
+          "name": "the check ends with a goodbye, not with us hanging up mid conversation",
+          "pass": false,
+          "detail": "the last thing said was theirs: \"\""
         },
         {
           "n": 14,
           "name": "we never ask the same question twice",
-          "pass": false,
-          "detail": "asked again: \"Just checking if you guys have any Pokémon cards in stock ri\" · \"Just checking if you guys have any Pokémon cards in stock ri\" · \"Just checking if you guys have any Pokémon cards in stock ri\""
-        },
-        {
-          "n": 15,
-          "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 242 seconds and the line closed at 242 — 0 seconds of nothing"
+          "detail": "0 things said, none of them twice"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Thu, Aug 6 · 7:11 AM Couldn’t tell We couldn’t quite make out the answer.Read the convo and tell us what you thi"
+          "detail": " Result Thu, Aug 6 · 7:25 PM Nobody answered Rang and rang.Nobody picked up. No charge. Check another store Calling2 ste"
         },
         {
           "n": 9.1,
           "name": "the screen and the record say the same thing",
-          "pass": false,
-          "detail": "the screen said unclear, the record says in (in_stock)"
+          "pass": true,
+          "detail": "the screen said unclear, the record says unclear (busy)"
         },
         {
           "n": 11,
           "name": "the verdict is RIGHT for this scenario",
           "pass": false,
-          "detail": "got in_stock · this scenario is admin_hangup"
+          "detail": "got busy · this scenario is not_in_stock"
         },
         {
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "not charged · the screen claims no free check · the check cost 37.4¢ · the robot's own line 3.40¢ (the carrier's posted price)"
+          "detail": "not charged · the screen says \"No charge\" · the check cost 1.4¢"
         }
       ],
       "shots": [
-        "./robot-run/13-store-found.png",
-        "./robot-run/13-checking.png",
-        "./robot-run/13-live.png",
-        "./robot-run/13-result.png"
+        "./robot-run/10-store-found.png",
+        "./robot-run/10-checking.png",
+        "./robot-run/10-live.png",
+        "./robot-run/10-result.png"
       ],
-      "startedAt": 1786000227185,
-      "checkId": 343,
-      "cost": 0.374075,
-      "costReadable": "37.4¢",
-      "robotCost": {
-        "usd": 0.034,
-        "secs": 240,
-        "how": "the carrier's posted price"
-      },
+      "startedAt": 1786044283083,
+      "checkId": 344,
+      "cost": 0.014147,
+      "costReadable": "1.4¢",
+      "robotCost": null,
       "charged": false,
-      "statusKey": "in_stock"
+      "statusKey": "busy"
     }
   ],
   "jsErrors": []
