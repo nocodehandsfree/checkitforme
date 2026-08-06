@@ -2370,7 +2370,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   html[data-skin="v2"] .ckarc1,html[data-skin="v2"] .ckarc2,html[data-skin="v2"] .rpill .d{animation:none}
 }
 /*V2END*/</style>
-<meta name="build" content="c110136cb8d4">
+<meta name="build" content="243c8072d7b4">
 </head>
 <body>
 <!-- Hard-refresh of a result deep-link: apply the verdict treatment (wash + transparent nav) NOW, so
@@ -5722,6 +5722,10 @@ function renderLiveHead(){
 function liveStage(n){
   if(!n||n<=LIVE_STAGE) return;
   LIVE_STAGE=n;
+  // THE CANCEL WINDOW CLOSES WHEN STAFF PICK UP (owner 08-06). Stages 7 and 8 are a real person on
+  // the line, and from there the work has been done, so the button goes. The server refuses a late
+  // press as well, and this is only what the customer sees: nothing to press once somebody answered.
+  if(n>=7){ const _hb=$('hangup_btn'); if(_hb)_hb.style.display='none'; }
   const at=LIVE_T0?((Date.now()-LIVE_T0)/1000):0;
   LIVE_STEPS.push({n, label:liveStageLabel(n), at});  // log it with the elapsed time it started
   const el=$('phase'); if(el) el.textContent=liveStageLabel(n); // back-compat if a #phase element exists
@@ -5945,10 +5949,32 @@ function fillLiveHeader(){
 }
 function stopLiveTimers(){ LIVE_TIMERS.forEach(t=>clearInterval(t)); LIVE_TIMERS=[]; if(POLL){clearInterval(POLL);POLL=null;} }
 async function hangUpLive(){
-  window.LIVE_CANCELLED=true; // the user aborted this check, so it is a cancel and never a verdict (owner 07.24)
-  if(LIVE_ROOM){ api('/pub/bridge-hangup',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({room:LIVE_ROOM})}); }
-  LIVE_ROOM=null; stopLiveTimers(); stopAudio();
+  // ONE PRESS. The button goes the moment it is tapped, so a second tap cannot fire a second stop.
   const hb=$('hangup_btn'); if(hb)hb.style.display='none';
+  // ASKED, NOT ANSWERED YET. Between this press and the server's word the check may finish on its own,
+  // and the page would then settle a verdict and paint it a heartbeat before the cancel screen lands
+  // on top of it. Nothing may paint a result while a cancel is in the air, so the settle stands down
+  // here and starts again below if the server refuses the cancel.
+  window.LIVE_CANCELLING=true;
+  // THE SERVER OWNS THE ANSWER, NOT THE PAGE (owner 08-06). A check may be called off only while
+  // nobody at the store has picked up, and the last word on that is the check's own record, which
+  // the page cannot see. So we ASK first, and only call it a cancel once the server says it really
+  // stopped it. A tap landing in the same second Staff answer would otherwise paint "Check
+  // cancelled" over a check that carried on running and got charged. A network failure still
+  // cancels, exactly as it did before, because the page must never strand somebody on a live call.
+  if(LIVE_ROOM){
+    const _r=await api('/pub/bridge-hangup',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({room:LIVE_ROOM})});
+    if(_r&&_r.ok===false){
+      // Staff had already picked up, so this check is a real one and it keeps its own answer. Let the
+      // settle that stood down above run again, from a clean seat, so the answer still lands on screen.
+      window.LIVE_CANCELLING=false; FINALIZE_RUN=null;
+      toast(t('zones.stoponefail','That check is already finishing'),'neutral');
+      if($('live') && $('live').classList.contains('hidden')) finalizeLive(LIVE_CID);
+      return;
+    }
+  }
+  window.LIVE_CANCELLED=true; // the user aborted this check, so it is a cancel and never a verdict (owner 07.24)
+  LIVE_ROOM=null; stopLiveTimers(); stopAudio();
   const _p=$('phase'); if(_p)_p.textContent=t('live.getting','⏳ Getting the result…'); $('audio_ind') && ($('audio_ind').style.display='none');
   finalizeLive(LIVE_CID);
 }
@@ -6067,7 +6093,7 @@ async function startCheckLive(){
   { const _fd=$('finds'); if(_fd)_fd.style.display='none'; } // hide the finds ticker on the call page — keep it uncrowded
   // Listeners hear the call through the browser — iOS silent switch mutes web audio, so remind them.
   const _mb=$('muteBanner'); if(_mb) _mb.style.display='none'; // owner asked to drop the 'flip off silent' note
-  LIVE_STEPS=[]; LIVE_TR=[]; LIVE_TRANSCRIPT=''; AGENT_PITCHED=false; LIVE_STAGE=0; LIVE_DONE=false; window.LIVE_CANCELLED=false; LIVE_T0=Date.now(); window.LIVE_FOLLOW=true; window._livePend=false;
+  LIVE_STEPS=[]; LIVE_TR=[]; LIVE_TRANSCRIPT=''; AGENT_PITCHED=false; LIVE_STAGE=0; LIVE_DONE=false; window.LIVE_CANCELLED=false; window.LIVE_CANCELLING=false; FINALIZE_RUN=null; LIVE_T0=Date.now(); window.LIVE_FOLLOW=true; window._livePend=false;
   fillLiveHeader(); const _lr=$('live_rhead'); if(_lr)_lr.className='rhead live';
   { const _lh=$('lh_state'); if(_lh) _lh.textContent=''; } // clear last call's state so the window never opens on a stale headline
   liveStage(1); // logs step 1 + renders the call box (steps on top, empty script below)
@@ -6087,7 +6113,11 @@ async function startCheckLive(){
     r={room:liveRoom,wsHost:held.wsHost}; LIVE_T0=Date.now(); // slot opened: enter the live view at connect
   }
   if(r.error||!r.room){ clearInterval(elT); stopAudio(); backToBuilder(); if(r.error==='no_credits')openBuy('out'); else if(r.error==='unauthorized')signIn(); else if(r.error==='too_soon'){ toast(r.message||tf('toast.toosoon','You just checked this store. Check again in about {n} min.',{n:r.retryAfterMin||60}),'accent'); } else if(r.error==='store_closed'){ toast(tf('toast.closed','🔒 {x}. No call placed.',{x:tLbl(r.label||'Store is closed')})); } else toast(t('toast.callstart.fail',"Couldn't start the check")); return; }
-  LIVE_ROOM=r.room; if(canListen) $('hangup_btn').style.display='';
+  // EVERY CUSTOMER CAN CALL OFF A CHECK ON ONE STORE (owner 08-06). Listening to the call is still a
+  // testing tool for comp accounts, but stopping your own check never was one: before this the button
+  // only existed on the owner's account, so a real customer watching us dial had no way out at all.
+  // It disappears the moment Staff pick up (liveStage 7), which is where the cancel window closes.
+  LIVE_ROOM=r.room; $('hangup_btn').style.display='';
   // Transcript + stage stream over the WS for EVERYONE — instant, the moment ElevenLabs emits a line
   // (no poll lag, no waiting on the conversation-id). Audio only PLAYS for listeners (canListen).
   // Connect the live socket to the page's OWN origin (e.g. staging.checkitforme.com) — the address the
@@ -6208,6 +6238,9 @@ function finalizeLive(cid){
 }
 async function finalizeLiveOnce(cid){
   lvlog('finalize cid='+(cid||LIVE_CID?'Y':'n')+' lines='+LIVE_TR.length); lvship(); clearInterval(LVSHIP);
+  // A cancel that is asked for or already granted outranks every verdict this run could paint. It is
+  // checked after each step, because each one of them can be the step a customer's thumb lands in.
+  const _cancelled=()=>!!(window.LIVE_CANCELLED||window.LIVE_CANCELLING);
   // The POLL-clearing that used to freeze calls stays gone: the POLL keeps running as the safety net,
   // and its re-fires now join the ONE run above instead of starting a second one.
   stopAudio(); stopLiveTimers();
@@ -6228,14 +6261,18 @@ async function finalizeLiveOnce(cid){
   // Recover the conversation id from the room if we don't have it yet (e.g. d.ended fired before the poll
   // resolved it, or a flaky connection). The bridge keeps room→convId for ~10 min — so a call that really
   // happened shows its REAL verdict instead of a false "nobody answered".
-  if(!cid && LIVE_ROOM){ for(let i=0;i<4 && !cid;i++){ try{ const bs=await api('/pub/bridge/'+encodeURIComponent(LIVE_ROOM)); if(bs&&bs.conversationId){ cid=bs.conversationId; LIVE_CID=cid; } }catch(_){} if(!cid) await new Promise(r=>setTimeout(r,800)); } }
+  if(!cid && LIVE_ROOM){ for(let i=0;i<4 && !cid;i++){ if(_cancelled()) return; try{ const bs=await api('/pub/bridge/'+encodeURIComponent(LIVE_ROOM)); if(bs&&bs.conversationId){ cid=bs.conversationId; LIVE_CID=cid; } }catch(_){} if(!cid) await new Promise(r=>setTimeout(r,800)); } }
+  // A CANCEL BEFORE STAFF PICK UP HAS NO CONVERSATION AT ALL, so this is the very step it lands on:
+  // three seconds of hunting for an id that was never made, and then "Nobody answered" painted over
+  // the cancel screen. Nobody DID answer, but the customer stopped the check, and that is the true
+  // status of it (owner 08-06). The cancel screen stands and this run paints nothing.
+  if(_cancelled()) return;
   if(!cid){ const res={status:'no_answer',transcript:live,summary:''}; saveCheckToHistory(res,null); showResult(res); return; }
   // STOP AND HANG UP LANDED WHILE WE WERE SETTLING. Stand down at every step from here: paint nothing
   // (the cancel screen is already up and must not be replaced) and, just as important, ask the server
   // for nothing. Reading the result is what SETTLES a check on the server, so one more read here would
   // turn the check the user just cancelled into a real verdict, and bill it (owner 07-24, proved on
   // staging 08-06: reading a cancelled check's result flipped its record from Check cancelled to In stock).
-  const _cancelled=()=>!!window.LIVE_CANCELLED;
   if(_cancelled()) return;
   // ONE quick fetch. If EL already has the verdict, we flip straight to it. If not, keep pulling and repaint
   // when it lands (we already flipped off the call screen above).
@@ -9550,5 +9587,5 @@ async function submitSchedule(){
 }
 boot();
 </script>
-<script>!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);posthog.init("phc_xYyBl7VcEYqf4emnV42blLSKQZM0CtxjgEVUSBpS2uL",{api_host:"https://us.i.posthog.com",defaults:"2025-05-24"})</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a26ab4dfef9a0de2',t:'MTc4NTk4NDMzNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);posthog.init("phc_xYyBl7VcEYqf4emnV42blLSKQZM0CtxjgEVUSBpS2uL",{api_host:"https://us.i.posthog.com",defaults:"2025-05-24"})</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a26ae7089b10fbc5',t:'MTc4NTk4NjM5Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
