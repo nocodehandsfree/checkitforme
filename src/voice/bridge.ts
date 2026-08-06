@@ -871,6 +871,13 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    * The person went away. Twilio and the Ear keep running — only the agent is suspended, because
    * only the agent costs money by the second.
    */
+  /** A moment the ear reports, turned back into a real one. The ear counts frames and never a clock,
+   *  and we feed it every frame the store sends us while none of our own audio is playing, so the
+   *  audio it has heard since that moment is the time that has really passed since it (owner 08-06:
+   *  the hold rows must draw when Staff really went, not six seconds later when we were sure). */
+  const earMoment = (heardAtMs: number): number | undefined =>
+    convEar ? Date.now() - Math.max(0, convEar.heardMs - heardAtMs) : undefined;
+
   function beginHold(reason: HoldReason, atMs: number) {
     if (onHold) return;
     // THE QUIET AFTER THE GOODBYE IS THE CHECK ENDING, NOT STAFF STEPPING AWAY (owner 08-04,
@@ -897,14 +904,14 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // a receipt you cannot read straight through (owner 07-28). Being handed on and being made to
     // wait are two facts, so a real transfer now says both, in that order. No new event kinds: the
     // set is a closed sixteen and both of these are already in it.
-    if (reason === "transfer") emit(room, "transfer", transferNote, { reason, atMs, department: department || null });
+    if (reason === "transfer") emit(room, "transfer", transferNote, { reason, atMs, department: department || null }, earMoment(atMs));
     const note = reason === "transfer" ? "Waiting for the next department to pick up"
       : reason === "music" ? "Staff stepped away, hold music"
       // A HANDSET ON THE COUNTER. The store is still audible, nobody is talking to us, and the meter
       // stops exactly as it does on silence.
       : reason === "room" ? "The room went quiet, Staff put the phone down"
       : "Staff stepped away, the line went quiet";
-    emit(room, "hold_start", note, { reason, atMs });
+    emit(room, "hold_start", note, { reason, atMs }, earMoment(atMs));
     // …AND THIS WAIT HAS AN ENDING NOW (round 1, item 1.6). Nothing ended a mid check wait before
     // this: a store that put the phone down and forgot about us ran to the carrier's own five minute
     // limit, and the customer waited all of it to be told nothing. Waiting is nearly free because
@@ -940,7 +947,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   }
 
   /** Somebody is back on the line. */
-  function endHold(gapMs: number, maybeNewPerson: boolean) {
+  function endHold(gapMs: number, maybeNewPerson: boolean, backAtMs?: number) {
     if (!onHold) return;
     const was = holdReason;
     onHold = false; holdReason = null; everCameBack = true;
@@ -962,7 +969,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // new person by the last person's name is worse than not using a name at all.
     if (newPerson) theirName = null;
     addMs(room, "holdMs", gapMs);   // the number that has been null on every receipt until now
-    emit(room, "hold_end", `Staff back after ${secs}s${newPerson ? ", and it may not be the same person" : ""}`, { gapSec: secs, maybeNewPerson: newPerson, reason: was, ...(asked ? { afterAskingToBePutThrough: true } : {}) });
+    // AT THE MOMENT THEY SPOKE, not the moment we had heard enough of it to be sure. The ear already
+    // backdates to their first word, which is why the length above is right; the row draws there too.
+    emit(room, "hold_end", `Staff back after ${secs}s${newPerson ? ", and it may not be the same person" : ""}`,
+      { gapSec: secs, maybeNewPerson: newPerson, reason: was, ...(asked ? { afterAskingToBePutThrough: true } : {}) },
+      backAtMs != null ? earMoment(backAtMs) : undefined);
     // DELTA PLAYS THE RECORDING AGAIN AFTER A TRANSFER (owner 08-04: "Echo absolutely needs to
     // build this"). Whoever picks up the next department never heard the question, and Charlie
     // re-asking it himself is exactly the expensive way: the recording asks for free, in the same

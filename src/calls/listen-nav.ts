@@ -595,6 +595,11 @@ export class ConversationEar {
   /** When the current hold started, in ms since this ear was attached. */
   private holdStartedAt = 0;
   private elapsed = 0;
+  /** How much audio this ear has heard, in milliseconds. It counts FRAMES, never a clock, so the ear
+   *  stays testable without one. The caller owns the clock and can turn any moment this ear reports
+   *  back into a real one, because it knows when it last fed a frame (owner 08-06: the hold rows
+   *  have to draw at the moment Staff really went, not the moment we were sure). */
+  get heardMs(): number { return this.elapsed; }
   /** Total time spent on hold. THIS is `holdSeconds` on the receipt, which has been null since the
    *  receipt shipped because nothing measured it. */
   holdMs = 0;

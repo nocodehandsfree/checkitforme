@@ -2499,6 +2499,7 @@ function checkV2From(d,o){
   const secOf=m=>m==null?'':Math.round(m/1000)+'s';
   const lastMs=tl.length?(msOf(tl[tl.length-1])||0):0;
   const st=e=>((e.detail||{}).step)||'';
+  const holdSt=statusFor('left_on_hold')||{};   // the owner's own mark and colour for a wait
   const log=[];const used=new Set();
   // Every row is filed by its millisecond. A row with nothing to file it by sits at the end of the
   // check rather than guessing itself a place in the middle.
@@ -2536,10 +2537,21 @@ function checkV2From(d,o){
       // the record holds another (scene 10 painted "Nobody answered" over a not in stock check).
       const vv=key?customerVerdict({statusKey:key,status:key}):null;
       const decided=(e.detail||{}).decidedBy;
-      add(atM,{t:reg.label||(vv&&vv.t)||e.note||key,status:reg.tone||(vv&&vv.tone)||'unk',sub:decided?('Decided by: "'+decided+'"'):''});continue;
+      // THE STATUS WEARS ITS OWN MARK AND ITS OWN COLOUR, the ones you picked in Statuses. This row
+      // used to draw a tick, a cross or a dash of our own making, which is three marks the Statuses
+      // page has never heard of (owner 08-06).
+      add(atM,{t:reg.label||(vv&&vv.t)||e.note||key,status:reg.tone||(vv&&vv.tone)||'unk',
+        mark:reg.emoji||(vv&&vv.e)||null,c:reg.color||(vv&&vv.c)||null,
+        sub:decided?('Decided by: "'+decided+'"'):''});continue;
     }
     if(e.kind==='charlie_join'){const seg=(e.detail||{}).segment;add(atM,{t:seg>1?'Charlie reconnected':'Charlie joined'});continue;}
-    if(e.kind==='ringing'||e.kind==='transfer'||e.kind==='hold_start'){add(atM,{t:e.note,c:'var(--yellow)'});continue;}
+    // A WAIT WEARS THE MARK YOUR STATUSES ALREADY GIVE IT (owner 08-06: "pull everything from the
+    // statuses section, don't make up your own icons, we already have it"). Left on hold carries the
+    // pause mark and its own colour in Statuses, so being put on hold draws exactly that. No such
+    // status means no mark, and the row keeps its plain dot rather than us inventing one. Ringing and
+    // being handed on are not waits and keep theirs.
+    if(e.kind==='hold_start'){add(atM,{t:e.note,c:holdSt.color||'var(--yellow)',mark:holdSt.emoji||null});continue;}
+    if(e.kind==='ringing'||e.kind==='transfer'){add(atM,{t:e.note,c:'var(--yellow)'});continue;}
     if(step==='wrap_up'){add(atM,{t:e.note,c:'var(--green)',say:takeLine('Agent',atM,10)});continue;}
     if((e.detail||{}).silent)continue; // bookkeeping the engine marked as not for the page
     add(atM,{t:e.note||e.kind});
@@ -2549,10 +2561,18 @@ function checkV2From(d,o){
   // so the why is read on this page and not hunted for. The evidence names a whole second and not a
   // millisecond, so the row files halfway through that second: after what the second opened with,
   // and still printing the second it names.
+  // AND IT SAYS WHAT WENT WRONG, NOT WHAT SHOULD HAVE HAPPENED (owner 08-06). A behavior row is
+  // NAMED for the good behaviour, so a failed "Charlie ended the check" printed here read as a claim
+  // that he did, on a check whose own log says the store hung up on us: "these two things cannot be
+  // true". The row's own evidence is the first sentence of `why`, in the engine's words, so that is
+  // the headline and the rest stays underneath.
   (d.behaved||[]).filter(r=>r.pass===false).forEach(r=>{
     const m=/at (\d+)s|(\d+)s into/.exec(r.why||'');
     const atN=m?parseInt(m[1]||m[2]):null;
-    add(atN!=null?atN*1000+499:null,{t:'Issue: '+r.label,at:atN!=null?null:'',c:'var(--red)',tc:'var(--red)',sub:(r.why||'')+(r.rule?' The rule: "'+r.rule+'"':'')});
+    const why=String(r.why||'').trim();
+    const head=(why.split(/(?<=[.!?])\s/)[0]||'').replace(/\s*$/,'')||('Issue: '+r.label);
+    add(atN!=null?atN*1000+499:null,{t:head,at:atN!=null?null:'',c:'var(--red)',tc:'var(--red)',
+      sub:(why.slice(head.length).trim())+(r.rule?' The rule: "'+r.rule+'"':'')});
   });
   // Spoken lines no step claimed still belong on the record, at their own millisecond, in order.
   lines.forEach((l,i)=>{ if(used.has(i))return;
@@ -2609,10 +2629,20 @@ function checkV2Html(d){
   const say=(w,tx)=>{const ai=w==='Agent';return `<div class="convo-thread" style="margin:6px 0 2px"><div class="ctlv2-bub${ai?' ai':''}"><div class="who">${ai?'CHECK AI':'STAFF'}</div><div class="tx">${esch(tx)}</div></div></div>`;};
   const menuIco='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>';
   const spkIco='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5 8.38 8.38 0 0 1 8.5 8.5z"/></svg>';
-  const statusIco=t=>{const m=t==='out'?['#EF4444','<path d="M6 6l12 12M18 6L6 18"/>']:t==='in'?['#4ADE80','<path d="M5 12l5 5 9-10"/>']:['#FBBF24','<path d="M6 12h12"/>'];
-    return `<span style="width:22px;height:22px;border-radius:50%;background:${m[0]}26;display:grid;place-items:center;flex:0 0 auto"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${m[0]}" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">${m[1]}</svg></span>`;};
+  // THE STATUS'S OWN MARK, IN ITS OWN COLOUR (owner 08-06). The circle is the approved pixels: 22px,
+  // the status colour at a tenth behind it. What sits inside is whatever mark that status carries in
+  // Statuses, drawn by the SAME one function every other status mark on this dashboard goes through.
+  // A status with no mark of its own keeps the tone dash, which is the only thing left we draw.
+  const statusIco=(t,mark,col)=>{const c=col||(t==='out'?'#EF4444':t==='in'?'#4ADE80':'#FBBF24');
+    const inner=mark?statusIcon(mark,c,13)
+      :`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12h12"/></svg>`;
+    return `<span style="width:22px;height:22px;border-radius:50%;background:${c}26;display:flex;align-items:center;justify-content:center;flex:0 0 auto">${inner}</span>`;};
   const rung=(e,last,first)=>{
-    const mark=e.status?statusIco(e.status):(e.say||e.group)?`<span style="display:grid;place-items:center;width:15px;height:15px;color:${e.c||'#8A8A96'}">${e.group?menuIco:spkIco}</span>`:`<span style="width:9px;height:9px;border-radius:50%;background:${e.c||'var(--muted)'}"></span>`;
+    // A step's mark comes from Statuses too when it has one (a wait wears Left on hold's pause).
+    const mark=e.status?statusIco(e.status,e.mark,e.c)
+      :e.mark?`<span style="display:flex;align-items:center;justify-content:center;width:15px;height:15px">${statusIcon(e.mark,e.c||'#8A8A96',14)}</span>`
+      :(e.say||e.group)?`<span style="display:grid;place-items:center;width:15px;height:15px;color:${e.c||'#8A8A96'}">${e.group?menuIco:spkIco}</span>`
+      :`<span style="width:9px;height:9px;border-radius:50%;background:${e.c||'var(--muted)'}"></span>`;
     // EVERY MARKER RIDES THE SAME 15px RAIL (owner 08-06, measured on his 390px screen). This box was
     // a grid, and a grid track grows to whatever it holds: the 9px dots and the 15px icons centred
     // fine, but the 22px status circle made its own track 22px wide, and a track wider than its box

@@ -66,6 +66,15 @@ export async function classifyVerdict(
     `"got a ton", "plenty left", "just put a bunch out", "oh for sure", "yep got those", "come grab one". ` +
     `Weigh the WHOLE reply: an invitation to come in, a mention of quantity, or a shipment that's already on the ` +
     `floor are positive availability cues → yes (high confidence), even if the clerk never says the literal words "in stock".\n` +
+    // THE OWNER'S RULE, 08-06, off his check 348: the clerk said "We haven't, as a matter of fact.
+    // Uh, let me double-check though", went and looked, and came back with "It's black boxes, I
+    // think." The reader filed NOT IN STOCK. His words: "that is the vague response. If there was no
+    // pokemon they would say no pokemon, they wouldn't describe what it looks like."
+    `- DESCRIBING WHAT THEY HAVE IS A YES. A clerk who went to look and comes back naming a set, a ` +
+    `colour, a box, a tin, a shelf or any product detail is telling you they found it: "it's black ` +
+    `boxes, I think", "the ones with the promo card", "just the packs" → yes. Nobody describes ` +
+    `what a product looks like when they have none of it; they say they have none. An earlier "we ` +
+    `haven't" said BEFORE they went to check is not the answer, it is the reason they went.\n` +
     `Capture productForm (booster packs, tin, 3-pack blister, ETB, booster box, bundle, etc.) and set ONLY if the clerk named them, else null. ` +
     `Clerks describe products loosely; map descriptions to the trade name: "three packs in one" / "a pack with three smaller packs inside" → "3-pack blister"; "the big box of packs" → "booster box"; "the box with a promo card" → "ETB". ` +
     `The transcript comes from phone speech-to-text and mishears words: "10" or "ten" in a product-type answer almost always means "tin" (the metal box) — NEVER report a bare number as a set or product name; "E T B" / "easy B" → "ETB". ` +

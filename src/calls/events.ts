@@ -203,12 +203,27 @@ export function laneNote(lane: Lane): string {
     : "No map for this store yet";
 }
 
-/** Record one runtime event. Best-effort: never throws into the call path. */
-export function emit(room: string, kind: EventKind, note?: string, detail?: Record<string, unknown>): void {
+/**
+ * Record one runtime event. Best-effort: never throws into the call path.
+ *
+ * `happenedAtEpochMs` — WHEN IT HAPPENED, when that is not when we were sure of it (owner 08-06,
+ * "we need to capture the moment that we're truly put on hold"). A wait is only called a wait after
+ * six seconds of quiet, so a step stamped on arrival draws six seconds after the store really went,
+ * and the row disagrees with the length printed on it, which was backdated and right. Given the real
+ * moment, the step is filed there. It is a WALL CLOCK moment and this is the one place that owns
+ * this call's zero, so the subtraction happens here. A number too small to be a real moment is
+ * ignored rather than trusted: a moment measured from somebody else's zero is the fault, not the fix.
+ */
+export function emit(room: string, kind: EventKind, note?: string, detail?: Record<string, unknown>, happenedAtEpochMs?: number): void {
   try {
     const r = receipts.get(room);
     if (!r || r.closed) return;
-    const atMs = Date.now() - r.startMs;
+    const real = (happenedAtEpochMs != null && happenedAtEpochMs > 1e12) ? happenedAtEpochMs - r.startMs : null;
+    const now = Date.now() - r.startMs;
+    // Never before the step above it and never after now: a backdated moment corrects a late stamp,
+    // it does not reorder the call.
+    const last = r.events.length ? r.events[r.events.length - 1].atMs : 0;
+    const atMs = real == null ? now : Math.max(last, Math.min(now, real));
     r.events.push({ atMs, atSec: Math.round(atMs / 1000), kind, note, detail });
     if (r.events.length > 400) r.events.splice(0, r.events.length - 400); // runaway guard
     try { lifeHook?.(room, kind, detail); } catch { /* the mirror must never break a call */ }
@@ -602,14 +617,35 @@ export interface StampedCall {
   navOutcome?: string | null;
   charlieSegments?: number | null;
 }
+/**
+ * HOW LONG THE CHECK REALLY TOOK, and the ONE rule for it (owner 08-06).
+ *
+ * The voice provider's number is the length of CHARLIE'S session, and Charlie is closed and reopened
+ * every time Staff walk away, so it reports his last stretch and not the phone call: check 348 ran 2
+ * minutes 23 seconds and every screen said 19 seconds; check 347 ran 84 seconds and said 8. The
+ * check's own timeline ends on the hang-up, which is the length of the call by construction. The
+ * longer of the two is the truth, neither number is invented, and a check with no timeline of its
+ * own still reads exactly as it always did.
+ */
+export function trueCallSecs(providerSecs: number | null | undefined, lastTimelineSec: number | null | undefined): number {
+  return Math.max(Math.max(0, Number(providerSecs ?? 0)), Math.max(0, Number(lastTimelineSec ?? 0)));
+}
+
 export function rollupFromRow(call: StampedCall, timeline: Array<{ kind: string; atSec?: number | null; detail?: unknown }>): Rollup {
   const steps = timeline.filter((t) => t.kind === "alpha_press" || t.kind === "bravo_say");
   // HOW LONG THE WHOLE CHECK TOOK. The row's own column is only ever written by the OLD path, off the
   // number the voice provider hands back — so on every check the new engine placed it is null, and
   // the screen printed a 33 second check as 0s (owner 07-30). The timeline is right here and its last
   // line is the hang-up, which is the same second by construction. Read it rather than print a nought.
+  // THE CHECK'S OWN LENGTH, NEVER THE PROVIDER'S SESSION (owner 08-06). The row's column is written
+  // from what the voice provider hands back, and the provider's session is Charlie, who is closed
+  // and reopened every time Staff walk away — so it reports his LAST stretch, not the phone call:
+  // check 348 ran 2 minutes 23 seconds and the screen said 19 seconds, check 347 ran 84 and said 8.
+  // The timeline's last line is the hang-up, which is the length of the check by construction, so
+  // the longer of the two is the truth. Neither number is invented and a check with no timeline
+  // still reads the row exactly as it always did.
   const lastSec = timeline.length ? Number(timeline[timeline.length - 1].atSec ?? 0) : 0;
-  const callSecs = call.callSeconds ?? (lastSec > 0 ? lastSec : 0);
+  const callSecs = trueCallSecs(call.callSeconds, lastSec);
   const stamped = call.charlieConnectedSeconds != null;
   // How many stretches the agent was open for. The row carries it on every call written by the new
   // engine; older rows do not, so it is read back off the timeline the same way it always was.

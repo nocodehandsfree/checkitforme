@@ -314,5 +314,43 @@ console.log("▶ a spoken line is filed at the moment it was really said");
   ok(r.transcript.every((l, i, a) => i === 0 || a[i - 1].atMs <= l.atMs), "the conversation stays in the order it happened");
 }
 
+// ---------------------------------------------------------------------------------------------
+// A STEP IS FILED WHEN IT HAPPENED, NOT WHEN WE WERE SURE OF IT (owner 08-06, "we need to capture
+// the moment that we're truly put on hold"). A wait is only called a wait after six seconds of
+// quiet, so the row drew six seconds after the store really went while the length printed on it was
+// already backdated and right.
+// ---------------------------------------------------------------------------------------------
+// THE CHECK'S OWN LENGTH, NEVER THE PROVIDER'S SESSION (owner 08-06). Charlie is closed and reopened
+// on every wait, so the provider hands back his LAST stretch: check 348 ran 2 minutes 23 seconds and
+// every screen said 19 seconds.
+console.log("▶ total time is the length of the check");
+{
+  const tl = [{ kind: "dialed", atSec: 0 }, { kind: "hangup", atSec: 143 }];
+  ok(rollupFromRow({ callSeconds: 19 }, tl).callSecs === 143, "the provider's 19 second session loses to the check's own 143 seconds");
+  ok(rollupFromRow({ callSeconds: null }, tl).callSecs === 143, "a check the provider never timed still reads its own timeline");
+  ok(rollupFromRow({ callSeconds: 200 }, tl).callSecs === 200, "…and a longer provider number still wins, so nothing is ever shortened");
+  ok(rollupFromRow({ callSeconds: 33 }, []).callSecs === 33, "a check with no timeline of its own reads the row, exactly as before");
+}
+
+console.log("▶ a step can be filed at the moment it really happened");
+{
+  _reset();
+  const r = openReceipt("room-back");
+  r.startMs = Date.now() - 60_000;                       // the check opened a minute ago
+  emit("room-back", "unknown", "something at ten seconds", {}, Date.now() - 50_000);
+  ok(near(r.events[r.events.length - 1].atMs, 10_000, 60), `a moment 50 seconds ago on a check 60 seconds old files at 10s (got ${r.events[r.events.length - 1].atMs}ms)`);
+  emit("room-back", "hold_start", "Staff stepped away, the line went quiet", { reason: "quiet" });
+  ok(near(r.events[r.events.length - 1].atMs, 60_000, 60), "a step with no moment given still files at now");
+  // A backdated moment CORRECTS a late stamp. It never reorders the call, so it can go no earlier
+  // than the step above it and no later than now.
+  emit("room-back", "unknown", "older than the step above it", {}, Date.now() - 55_000);
+  ok(near(r.events[r.events.length - 1].atMs, 60_000, 60), "a moment older than the step above it is held at that step");
+  emit("room-back", "unknown", "from the future", {}, Date.now() + 30_000);
+  ok(near(r.events[r.events.length - 1].atMs, 60_000, 60), "a moment in the future is held at now");
+  emit("room-back", "unknown", "an offset, not a moment", {}, 1_019);
+  ok(near(r.events[r.events.length - 1].atMs, 60_000, 60), "a number too small to be a moment is refused");
+  ok(r.events.every((e, i, a) => i === 0 || a[i - 1].atMs <= e.atMs), "the timeline stays in the order it happened");
+}
+
 console.log(`\n${fail === 0 ? "ALL PASS" : "FAILURES"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);

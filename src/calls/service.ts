@@ -7,7 +7,7 @@ import { fetchStorePhone } from "../store-phone";
 import {
   accounts, alertSends, alertSubscriptions, callEvents, callResults, categories, chains, customerSchedules, products, retailers, scheduleTargets, schedules, statuses, watches, zoneRetailers, zones,
 } from "../db/schema";
-import { linkCall, openReceipt, emit, closeReceipt, linkProviderCall, markNow, getReceipt } from "./events"; // ties the call row to its receipt (the timeline + the seconds)
+import { linkCall, openReceipt, emit, closeReceipt, linkProviderCall, markNow, getReceipt, trueCallSecs } from "./events"; // ties the call row to its receipt (the timeline + the seconds)
 import { isCheckAlive, noteLineEnded } from "./check-life"; // the gatekeeper: the one honest answer to "has this check finished?"
 import { recordVerdict, lastClerkLine } from "./receipt-store";
 import { chargeOneCredit, isCompAccount, getAccount } from "../billing";
@@ -1217,6 +1217,18 @@ export async function chargeCallOnce(callId: number, finderUserId: string): Prom
 }
 
 /** Poll the provider for any calls still in flight and save their outcomes. Returns how many finalized. */
+/** THE LAST SECOND ON THIS CHECK'S OWN TIMELINE, which ends on the hang-up, so it is the length of
+ *  the phone call. Read off the database because the timeline is written as it happens and the
+ *  finalizer may be running long after the line dropped. Never throws: a check must never fail to
+ *  finalize because a lookup did. */
+async function lastSecondOnTheTimeline(room: string | null | undefined): Promise<number> {
+  if (!room) return 0;
+  try {
+    const rows = await db.select({ m: sql<number>`max(${callEvents.atSec})` }).from(callEvents).where(eq(callEvents.room, room));
+    return Math.max(0, Number(rows[0]?.m ?? 0));
+  } catch { return 0; }
+}
+
 /** Did WE end this check because a wait ran past the cap? Read off the check's own timeline, which
  *  is written to the database as it happens, so the answer survives a restart between the hang-up
  *  and the sweep that writes the verdict. Never throws: a check must never fail to finalize because
@@ -1377,7 +1389,12 @@ export async function ingestPending(): Promise<number> {
       // Ours if we recorded any, theirs only when we did not. See transcriptPatch.
       ...(await transcriptPatch(row.id, outcome.transcript)),
       completedAt: now(),
-      callSeconds: outcome.durationSecs ?? null,
+      // THE CHECK'S OWN LENGTH, not the voice provider's session (owner 08-06). Charlie is closed and
+      // reopened every time Staff walk away, so the provider hands back his LAST stretch: check 348
+      // ran 2 minutes 23 seconds and this column said 19, which is the number the Testing list and
+      // every report about call time reads. ONE rule for it, in events.ts beside the roll-up that has
+      // to agree with it.
+      callSeconds: trueCallSecs(outcome.durationSecs, await lastSecondOnTheTimeline(row.room)) || null,
       // connect-on-human: the bridge measured true time-to-human (ElevenLabs only joined at pickup);
       // otherwise fall back to the first-human-turn timestamp from the transcript.
       navSeconds: takeBridgeNav(row.providerCallId) ?? outcome.navSecs ?? null,

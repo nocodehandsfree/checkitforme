@@ -1,6 +1,12 @@
 # THE NEXT BUILD — every decision the owner made on 08-06 PM, in one list
 
-Written for the chat that builds it, not for the owner to read back. Nothing here is built yet.
+**STATUS 08-06 late: sections 1, 2, 3 and 4 are BUILT AND TESTED LOCALLY ON THE BRANCH, NOT PUSHED**
+(his order: "work local on branch, don't push until I tell you"). Section 6 is built too. Section 5 is
+DELIBERATELY NOT BUILT: he is putting Deepgram on the Twilio leg, which transcribes the whole check
+whether Charlie is open or not, so the held-audio fix would be dead code the day it lands. Section 7
+waits on his own directional copy. Section 9 needs two scripts in his words before it can be built.
+
+Written for the chat that builds it, not for the owner to read back.
 The five faults he named on 08-06 (order, the card's name, the status, the charge, the circle) ARE
 built, shipped to staging and Admin, and proven on checks 345 to 348. This file is what comes next.
 

@@ -3,26 +3,28 @@
 > (never waits on a promote); server halves ride the promote train. Charter: `handoff.md`.
 > Volatile — REPLACE stale lines, newest on top, ≤60 lines.
 ## 2026-08-06 PM — the check sheet tells the truth: ONE clock in real milliseconds, the card, the status, the charge
-- 🔴 **ORDER COMES OFF ONE LIST IN MILLISECONDS.** `receipt-store` rounded the spoken lines to whole seconds at
-  persist and `checkV2From` spliced two rounded lists by comparing seconds. Now `atMs` rides both (`transcript
-  Timed`, the 16-line copy, BOTH receipt routes), every row is filed by its millisecond and the log sorts ONCE at
-  the end. Seconds-only records keep their second. **Never add a second place that decides order.**
+- 🔴 **ORDER COMES OFF ONE LIST IN MILLISECONDS.** `receipt-store` rounded the spoken lines at persist and
+  `checkV2From` spliced two rounded lists by comparing seconds. `atMs` rides both now (`transcriptTimed`, the
+  16-line copy, BOTH receipt routes), every row files by its millisecond, the log sorts ONCE at the end, and a
+  seconds-only record keeps its second. **Never add a second place that decides order.**
 - 🔴 **A CHECK'S STATUS WORDS COME FROM THE SITE THE CHECK CAME FROM.** `/api/statuses` is a CONFIG_READ (always
-  prod) while Testing reads checks off staging, which carries statuses prod has not got: check 345 was filed
-  staff_hung_up and the sheet printed "Nobody answered". `statusFor(key)` = `SRC_STATUSES` then `STATUSES`, ONE
-  lookup; `verdictKey` trusts a present key; an unknown key reads as its own words, NEVER as another status.
+  prod) while Testing reads staging's checks, which carry statuses prod has not got: 345 was filed
+  staff_hung_up and the sheet said "Nobody answered". `statusFor(key)` = `SRC_STATUSES` then `STATUSES`, ONE
+  lookup; an unknown key reads as its own words, NEVER as another status.
 - 🔴 **A 22px marker in a `display:grid` box is NOT centred:** the track grows to 22px in a 15px box and starts left. The rail is `display:flex;justify-content:center`; measured at 390px, one centre.
-- Charged is a FACT: the finalizer bills BEFORE the tail, `recordVerdict` reads `chargedAt`, the sheet reads
-  `charged` off the receipt route, and `/api/calls/:id/receipt` finally SENDS `chargedAt`. Scorecard untouched.
-- **NEXT ROUND, owner 08-06 PM, agreed not built:** the log's marks come from Statuses, never from us (the
-  status circle draws our own tick/cross/dash; five statuses hold an emoji not a lucide name; a hold row is a
-  plain dot and should be `pause`) · an "Issue:" row prints the scorecard row's NAME, so a failed "Charlie
-  ended the check" reads as a claim that he did · **Total time is `call.callSeconds`, the PROVIDER's last
-  session (0:19 on a 143s check 348, 0:08 on 84s check 347), and it feeds the reports** · both hold rows draw
-  ~6s late: `beginHold`/`endHold` carry the true backdated `atMs` in their detail and `emit` stamps `now`.
+- Charged is a FACT: the finalizer bills BEFORE the tail, `recordVerdict` reads `chargedAt`, the sheet reads it off the receipt route, `/api/calls/:id/receipt` SENDS `chargedAt`. Scorecard untouched.
+- **BUILT LOCAL ON THE BRANCH 08-06 late, NOT PUSHED (his order), all tests green:** every mark on the sheet
+  comes from Statuses (`statusIco` draws the status's OWN mark and colour through `statusIcon`; a hold wears
+  `left_on_hold`'s pause; five statuses still hold an emoji, which is HIS data to change in Admin) · an
+  "Issue:" row prints the failure's own first sentence, not the row's name · `trueCallSecs` in events.ts is the
+  ONE rule for a check's length, max(provider, the timeline's last second), used by `rollupFromRow` AND written
+  by the finalizer, because the provider hands back Charlie's LAST stretch (0:19 on a 143s check) · `emit`
+  takes an epoch moment, so `beginHold`/`endHold` file the wait where it really started and ended (`earMoment`
+  converts the ear's frame clock; the ear exposes `heardMs`) · the reader treats a description of the product
+  as a yes (owner's rule off check 348). NOT built: the words lost after a hold, Deepgram replaces it.
 - 🔴 **A MOMENT IS NEVER MEASURED FROM SOMEBODY ELSE'S ZERO** (check 345: the greeting drew at 1s over "The line
-  was answered" at 2s). `recordLine` takes the EPOCH moment now and the receipt does the subtraction; a value too
-  small to be an epoch is refused. Staff lines are filed at their voice start (`theirVoiceStarts` in `bridge.ts`,
+  was answered" at 2s). `recordLine` and `emit` take the EPOCH moment and the receipt does the subtraction; a
+  value too small to be an epoch is refused. Staff lines file at their voice start (`theirVoiceStarts`,
   VOICE_FRAMES sustained). Measured vs the robot: was 3.3s late, 6.1s after a hold; now within ~1.2s.
 ## 2026-08-02 — Statuses page + the confirm sheet (SHIPPED LIVE + DRIVEN in a local browser)
 - 🔴 **`askSheet` ALWAYS resolved false:** `ok.onclick` closed the sheet BEFORE `finish(true)` and `sheetclosed`
@@ -31,8 +33,7 @@
   in `_ensureSheet`); `#iconpick` is exempt and any future overlay must be too.
 ## 2026-07-30 — Voice ▸ **Test calls** is the new-engine scorecard (@5b1f325, SHIPPED + DRIVEN)
 - `src/calls/behaved.ts` = the PURE scorer on the SAME `/api/admin/receipt/:room` envelope, NO second route. 79 asserts in `scripts/test-behaved.ts`. Page = comp 1c.
-- 🔴 **THREE STATES, NOT TWO.** A gray dash = this check never put that rule to the test; a cross for "nobody put us
-  on hold" is a lie and a tick is worse. Same law as an unstamped cost never printing as nought.
+- 🔴 **THREE STATES, NOT TWO.** A gray dash = this check never put that rule to the test; a cross for "nobody put us on hold" is a lie and a tick is worse. Same law as an unstamped cost never printing as nought.
 - 🔴 **`status` and `statusKey` are TWO fields, never merged.** **PM: promote wanted**, this page's server half is staging only.
 ## 2026-07-30 — Unify GATE + page 1 (Live) shipped (@71b724a5). **dash is SEALED. Next page: App (settings).**
 - `scripts/qa-admin-unify.mjs`. A page = its `<section>` + its `TAB_LOADERS` loader body + a `chrome` page. It
@@ -49,12 +50,11 @@
   for Chromium). `qa-tint-lock` covers `app.html` 28/28 in the push gate and ship-admin: **only `.sheet` may be a
   filled `position:fixed` on `bottom:0`** and a closed sheet is `display:none`. No iOS here, he reads that edge.
 ## Reference + traps (detail in git and in the task files; only what a future session trips on)
-- Ops 07-28: `src/calls/ops.ts` is a PURE roll-up owning NO scale; unstamped = not counted, NEVER a zero.
-- 🔴 main is an UNRELATED history, so **any future promote hits that wall.** 🔴 **ship-admin's override is NOT
-  git**: shipping from a branch never merged to `staging` gets WIPED by the next ship, so ALWAYS merge first.
+- Ops 07-28: `src/calls/ops.ts` is a PURE roll-up owning NO scale; unstamped = not counted, NEVER a zero. 🔴 main is an UNRELATED history, so **any future promote hits that wall.**
+- 🔴 **ship-admin's override is NOT git**: shipping from a branch never merged to `staging` gets WIPED by the next ship, so ALWAYS merge first.
 - `chainLogoInfo` gives ANY store row its logo. `api()` GETs staging when CALL_SRC==='staging'; **writes ALWAYS prod.**
 - **NEVER invent copy, grep + reuse.** ⚠️ Alerts editor shipped, the SITE still reads hardcoded copy. **OPEN owner
   asks:** hide `sim_` poll rows from Feedback · his email on PROD · store LOGOS on site alerts · an account view.
-- **KIT** (app.html `<style>`; comps `ADMIN_COMPS.dc.html`, RENDER it, never read it): hero = ONE number +
-  honest spark · `.peek` · ONE sheet openSheet/closeSheet/`askSheet`, NEVER `confirm()` · `.k-eyebrow`/sub/
-  note · `logoTile`/`logTile` for ANY store row · `.mladder` · `.k-switch`/`.k-num` on a console.
+- **KIT** (app.html `<style>`; comps `ADMIN_COMPS.dc.html`, RENDER it, never read it): hero = ONE number + honest
+  spark · `.peek` · ONE sheet openSheet/closeSheet/`askSheet`, NEVER `confirm()` · `.k-eyebrow`/sub/note ·
+  `logoTile`/`logTile` for ANY store row · `.mladder` · `.k-switch`/`.k-num` on a console · marks from Statuses.
