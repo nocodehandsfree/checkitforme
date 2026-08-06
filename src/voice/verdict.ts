@@ -14,7 +14,12 @@ import { liveReadFor } from "./live-read";
 // exhausted Google one. 70b rather than the tinier 8b on purpose: a weak reader disagrees with
 // Charlie more, every disagreement is a "couldn't tell" we cannot charge for, so the cheap model is
 // the one that reads WELL, not the one with the smallest sticker.
-export const VERDICT_MODEL = "groq:llama-3.3-70b-versatile";
+// MEASURED, NOT GUESSED (owner 08-06: "the least expensive model that will still work"). All three
+// candidates scored 6/6 on the robot store's own spec conversations, the trick ones included (the
+// no that turns into a yes after a check, the hold), so the smallest wins: about 0.006 cents a
+// read, cheaper than Gemini's paid price and a tenth of the 70b. The same OpenAI fallback catches
+// a Groq outage, and a disagreement still costs us the charge, never the customer a wrong answer.
+export const VERDICT_MODEL = "groq:llama-3.1-8b-instant";
 
 export interface ClerkVerdict {
   inStock: "yes" | "no" | "unclear"; // buyable RIGHT NOW for the asked category
@@ -37,6 +42,8 @@ export async function classifyVerdict(
   transcript: string,
   category: string,
   specificProduct?: string,
+  /** Override for measuring candidate readers against real transcripts. Live calls never pass it. */
+  model?: string,
 ): Promise<ClerkVerdict | null> {
   const t = (transcript || "").trim();
   if (t.length < 12) return null; // nobody really spoke — nothing to second-guess
@@ -66,7 +73,7 @@ export async function classifyVerdict(
     `Reply with STRICT JSON only: {"inStock":"yes|no|unclear","restockDay":string|null,"restockTime":string|null,"productForm":string|null,"set":string|null,"confidence":0..1,"reason":"short"}`;
   try {
     const raw = await llm(
-      VERDICT_MODEL,
+      model || VERDICT_MODEL,
       [{ role: "system", content: sys }, { role: "user", content: t.slice(0, 6000) }],
       { job: "verdict", json: true, temperature: 0, maxTokens: 220 },
     );

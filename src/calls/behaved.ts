@@ -113,7 +113,26 @@ export interface BehavedRow {
   pass: boolean | null;
   /** One plain sentence saying what the record actually showed, with its seconds. */
   why: string;
+  /** The rule this row grades, in the words that command it (Charlie's instructions where one of
+   *  his rules owns it, the engine's law where the engine does). Printed in the check log at the
+   *  moment a row FAILS, so the owner reads why without leaving the page (owner 08-06). */
+  rule?: string;
 }
+
+/** The governing rule per row, quoted from the words that command the behavior. */
+export const ROW_RULES: Record<BehavedKey, string> = {
+  handed_to_charlie: "Mapping talks to machines, Charlie talks to people: nothing in mapping ever speaks to a person.",
+  question_recorded: "Delta asks the question from a recording; Charlie never asks it again in any wording.",
+  warmed_up_in_time: "Charlie warms up behind the recording so he is ready the moment the question ends.",
+  right_department: "If Staff cannot answer, ask ONCE, warmly, to be put through. Never ask a second time on a check.",
+  asked_to_be_put_through: "Ask ONCE, warmly, \"oh gotcha, could you put me through to whoever handles the Pokemon?\".",
+  asked_the_new_person: "When somebody new picks up, your recorded question plays again and you carry on from their answer.",
+  goodbye_when_told_no: "When Staff say nothing is in stock, ask the restock question once, then thank them warmly and wrap up.",
+  meter_stopped_on_hold: "The system holds the check while Staff are away; Charlie's meter stops for the wait.",
+  wrapped_up: "End the check with one warm goodbye in your own words, then end the check with end_call.",
+  spoke_their_language: "If Staff speak Spanish, continue in Spanish.",
+  charlie_ended_the_check: "Say goodbye once, then end the check with end_call. Never leave the store to hang up on us.",
+};
 
 /** One line of the timeline as both receipt routes already return it. */
 export interface BehavedEvent {
@@ -202,7 +221,10 @@ export function behaved(input: BehavedInput): BehavedRow[] {
   // plainly did ask would be the card lying about his own history.
   const beforeWeWroteItDown = !tl.some((e) => (e.detail || {})[stepKey]);
 
-  return [
+  // Every row leaves with the rule it grades attached, so a FAIL can print the rule in the check
+  // log at the moment it happened (owner 08-06).
+  const withRules = (rows: BehavedRow[]) => rows.map((r) => ({ ...r, rule: ROW_RULES[r.key] }));
+  return withRules([
     handedToCharlie(tl),
     questionRecorded(step("question_clip"), step("question_live"), beforeWeWroteItDown),
     warmedUpInTime(first("charlie_join"), beforeWeWroteItDown),
@@ -214,7 +236,7 @@ export function behaved(input: BehavedInput): BehavedRow[] {
     wrappedUp(step("wrap_up"), turns, tl),
     spokeTheirLanguage(step("language"), beforeWeWroteItDown),
     charlieEndedTheCheck(tl),
-  ];
+  ]);
 }
 
 /** The one name the engine marks its extra lines with. Kept here so a rename is one edit, not eleven. */

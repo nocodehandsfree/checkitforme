@@ -1004,7 +1004,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // Worded for where it really sits on the log: the reader hears the yes BEFORE Charlie's follow-up
     // question is answered, so "told to wrap up" read as wrapping before the product detail
     // (owner 08-05). He is told to finish once he has what the check needs, and that is what it says.
-    emit(room, "unknown", "Charlie understood the answer and was told to say goodbye", { step: "signoff", answer });
+    // "the STOCK answer", because this note lands after the yes and BEFORE the product answer, and
+    // naming just "the answer" read as Charlie understanding an answer nobody had given (owner 08-06).
+    emit(room, "unknown", "Charlie understood the stock answer and was told to say goodbye when done", { step: "signoff", answer });
     log(`signoff: the answer is in hand (${answer}) — telling him to thank them and end`);
     try {
       eleven.send(JSON.stringify({ type: "contextual_update", text:
