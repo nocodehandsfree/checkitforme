@@ -5935,6 +5935,11 @@ function stopLiveTimers(){ LIVE_TIMERS.forEach(t=>clearInterval(t)); LIVE_TIMERS
 async function hangUpLive(){
   // ONE PRESS. The button goes the moment it is tapped, so a second tap cannot fire a second stop.
   const hb=$('hangup_btn'); if(hb)hb.style.display='none';
+  // ASKED, NOT ANSWERED YET. Between this press and the server's word the check may finish on its own,
+  // and the page would then settle a verdict and paint it a heartbeat before the cancel screen lands
+  // on top of it. Nothing may paint a result while a cancel is in the air, so the settle stands down
+  // here and starts again below if the server refuses the cancel.
+  window.LIVE_CANCELLING=true;
   // THE SERVER OWNS THE ANSWER, NOT THE PAGE (owner 08-06). A check may be called off only while
   // nobody at the store has picked up, and the last word on that is the check's own record, which
   // the page cannot see. So we ASK first, and only call it a cancel once the server says it really
@@ -5943,7 +5948,14 @@ async function hangUpLive(){
   // cancels, exactly as it did before, because the page must never strand somebody on a live call.
   if(LIVE_ROOM){
     const _r=await api('/pub/bridge-hangup',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({room:LIVE_ROOM})});
-    if(_r&&_r.ok===false){ toast(t('zones.stoponefail','That check is already finishing'),'neutral'); return; }
+    if(_r&&_r.ok===false){
+      // Staff had already picked up, so this check is a real one and it keeps its own answer. Let the
+      // settle that stood down above run again, from a clean seat, so the answer still lands on screen.
+      window.LIVE_CANCELLING=false; FINALIZE_RUN=null;
+      toast(t('zones.stoponefail','That check is already finishing'),'neutral');
+      if($('live') && $('live').classList.contains('hidden')) finalizeLive(LIVE_CID);
+      return;
+    }
   }
   window.LIVE_CANCELLED=true; // the user aborted this check, so it is a cancel and never a verdict (owner 07.24)
   LIVE_ROOM=null; stopLiveTimers(); stopAudio();
@@ -6065,7 +6077,7 @@ async function startCheckLive(){
   { const _fd=$('finds'); if(_fd)_fd.style.display='none'; } // hide the finds ticker on the call page — keep it uncrowded
   // Listeners hear the call through the browser — iOS silent switch mutes web audio, so remind them.
   const _mb=$('muteBanner'); if(_mb) _mb.style.display='none'; // owner asked to drop the 'flip off silent' note
-  LIVE_STEPS=[]; LIVE_TR=[]; LIVE_TRANSCRIPT=''; AGENT_PITCHED=false; LIVE_STAGE=0; LIVE_DONE=false; window.LIVE_CANCELLED=false; LIVE_T0=Date.now(); window.LIVE_FOLLOW=true; window._livePend=false;
+  LIVE_STEPS=[]; LIVE_TR=[]; LIVE_TRANSCRIPT=''; AGENT_PITCHED=false; LIVE_STAGE=0; LIVE_DONE=false; window.LIVE_CANCELLED=false; window.LIVE_CANCELLING=false; FINALIZE_RUN=null; LIVE_T0=Date.now(); window.LIVE_FOLLOW=true; window._livePend=false;
   fillLiveHeader(); const _lr=$('live_rhead'); if(_lr)_lr.className='rhead live';
   { const _lh=$('lh_state'); if(_lh) _lh.textContent=''; } // clear last call's state so the window never opens on a stale headline
   liveStage(1); // logs step 1 + renders the call box (steps on top, empty script below)
@@ -6210,6 +6222,9 @@ function finalizeLive(cid){
 }
 async function finalizeLiveOnce(cid){
   lvlog('finalize cid='+(cid||LIVE_CID?'Y':'n')+' lines='+LIVE_TR.length); lvship(); clearInterval(LVSHIP);
+  // A cancel that is asked for or already granted outranks every verdict this run could paint. It is
+  // checked after each step, because each one of them can be the step a customer's thumb lands in.
+  const _cancelled=()=>!!(window.LIVE_CANCELLED||window.LIVE_CANCELLING);
   // The POLL-clearing that used to freeze calls stays gone: the POLL keeps running as the safety net,
   // and its re-fires now join the ONE run above instead of starting a second one.
   stopAudio(); stopLiveTimers();
@@ -6230,14 +6245,18 @@ async function finalizeLiveOnce(cid){
   // Recover the conversation id from the room if we don't have it yet (e.g. d.ended fired before the poll
   // resolved it, or a flaky connection). The bridge keeps room→convId for ~10 min — so a call that really
   // happened shows its REAL verdict instead of a false "nobody answered".
-  if(!cid && LIVE_ROOM){ for(let i=0;i<4 && !cid;i++){ try{ const bs=await api('/pub/bridge/'+encodeURIComponent(LIVE_ROOM)); if(bs&&bs.conversationId){ cid=bs.conversationId; LIVE_CID=cid; } }catch(_){} if(!cid) await new Promise(r=>setTimeout(r,800)); } }
+  if(!cid && LIVE_ROOM){ for(let i=0;i<4 && !cid;i++){ if(_cancelled()) return; try{ const bs=await api('/pub/bridge/'+encodeURIComponent(LIVE_ROOM)); if(bs&&bs.conversationId){ cid=bs.conversationId; LIVE_CID=cid; } }catch(_){} if(!cid) await new Promise(r=>setTimeout(r,800)); } }
+  // A CANCEL BEFORE STAFF PICK UP HAS NO CONVERSATION AT ALL, so this is the very step it lands on:
+  // three seconds of hunting for an id that was never made, and then "Nobody answered" painted over
+  // the cancel screen. Nobody DID answer, but the customer stopped the check, and that is the true
+  // status of it (owner 08-06). The cancel screen stands and this run paints nothing.
+  if(_cancelled()) return;
   if(!cid){ const res={status:'no_answer',transcript:live,summary:''}; saveCheckToHistory(res,null); showResult(res); return; }
   // STOP AND HANG UP LANDED WHILE WE WERE SETTLING. Stand down at every step from here: paint nothing
   // (the cancel screen is already up and must not be replaced) and, just as important, ask the server
   // for nothing. Reading the result is what SETTLES a check on the server, so one more read here would
   // turn the check the user just cancelled into a real verdict, and bill it (owner 07-24, proved on
   // staging 08-06: reading a cancelled check's result flipped its record from Check cancelled to In stock).
-  const _cancelled=()=>!!window.LIVE_CANCELLED;
   if(_cancelled()) return;
   // ONE quick fetch. If EL already has the verdict, we flip straight to it. If not, keep pulling and repaint
   // when it lands (we already flipped off the call screen above).
