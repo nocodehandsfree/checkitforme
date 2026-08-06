@@ -1,7 +1,12 @@
 # Auto-checks get their own section (owner-named 2026-08-05)
 
-**System:** site · **Status:** comps approved in chat, build not started.
-Consumer site is frozen: this task IS the unlock authority for `public/checkit.html`.
+**System:** site · **Status:** build NOT started. ONE comp approved (the list), the rest still need
+sharpening. Consumer site is frozen: this task IS the unlock authority for `public/checkit.html`.
+
+**THE PICTURES AND WHERE THEY STAND: `docs/specs/auto-checks/README.md`.** Read it before you draw
+anything. The owner's ruling 08-06, his words: a ring filled 3 of 12 reads as progress toward a
+finish line, and an auto-check has no finish line, it runs forever, so that is the wrong shape for
+the data. He wants the report sharpened before it is built. Only the list screen is approved.
 
 ## What the owner asked for
 Auto-checks is its OWN row and its OWN slide-up in My checks, beside Alerts, never merged with it.

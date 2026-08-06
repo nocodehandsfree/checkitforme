@@ -51,14 +51,16 @@ Round 1 = the owner's own list. Round 2 = found by digging, he had not seen thes
 11. **A real scheduled auto-check has never been watched end to end.** Result emails are wired
     (07-31 notifier) but no fire has been observed. One rehearsal needed.
 
-## ROUND 3 — the comps (built 07-31, `docs/design/comps/inbox/AUTO_CHECK_COMPS.dc.html`)
-Three screens, on-system (Inter, row cards, the two-key switch, the ring capsule, the status icon set):
-**1 Saved** — the auto-check sheet flips to a confirmation showing store, product, days, time and the
-next check, plus "See my auto-checks". Reuses the existing sheet-flips-to-done pattern (`sr_done`,
-`openWatchConfirm`). **2 The list** — its own sheet, same shape as Alerts, with Pause all, per-row
-On/Off, trash, and New auto-check. Needs its own row in My checks beside Alerts. **3 What they found** —
-per-store report: times in stock over checks run, the day they had it most, then every check with its
-status icon and an `Auto` badge. That badge is also the answer to finding 3 above.
+## ROUND 3 — the comps: MOVED (08-06)
+The hand-drawn comp file was rejected by the owner on 08-05 and deleted. The real pictures, their
+approval state, and his exact ruling on the report now live in `docs/specs/auto-checks/README.md`;
+the build contract is `docs/tasks/site-auto-checks.md`.
+
+## What was FIXED off this list (08-01 to 08-06, all on staging)
+Finding 1 (the Alerts screen controlled the wrong record) · 7 (the sheet sat too short) · 8 (the
+radius slider reloaded slowly, fixed without touching the drive-along store refresh) · 9 (the Spanish
+footer wrapped: "Info" fits, measured). Findings 2, 3 and 10 are the auto-checks build. **Findings 4,
+5, 6 and 11 are still open, and 4, 5 and 6 all only bite on production.**
 
 ## Combinations never tried together (each is one cheap test pass)
 - Hobby ON / Thrift ON (owner: voice scripts still being built with Echo — not a blocker yet).

@@ -17,25 +17,18 @@
 
 ## 08-01 — LOGOS: the size rule moves to the SERVER; one tile; the wall becomes the record (staging)
 - **`logoPct` on every store row is the whole idea.** The tile is square, so the width as a PERCENT of it
-  falls out of the artwork's proportions alone: right at 46px AND at 190px, nobody recomputing. Both copies
-  of the browser-side rule are DELETED, and the cached-onload race with them.
-- **`logoFields`/`withLogo` replace 15 hand-stamps** that resolved the chain 8 different ways.
-- **Stored artwork is named by its CONTENT hash**: new picture = new address = it lands everywhere at once.
-- **The wall reads the chain rows**, not the shipped copies + `_meta.json`. 111 marks, one tile size.
-- **Repair sweep** (`pushLogoRepairs`) asks prod what it holds and re-pushes logos that differ; the normal
-  push only sends what CHANGED, which is why 71 chains sat stale. **REPORT ONLY until `logo_repair_apply`
-  ="1"** (PM's condition; it writes real prod rows). It compares only fields the target SERVES, or an older
-  prod that cannot store `logoPct` looks different forever and the sweep never converges.
-- **Admin ships BEFORE the promote and that is safe** (owner 08-01). It reads prod's API, so `logoPct` is
-  absent until the promote; the CSS fallback was retuned to land on the rule anyway. Measured, not assumed.
+  falls out of the artwork alone: right at 46px AND at 190px. Both browser-side copies are DELETED.
+  `logoFields`/`withLogo` replaced 15 hand-stamps; artwork is named by its CONTENT hash; the wall reads
+  the chain rows. A tile built OUTSIDE a `.store` row needs the `.stile` class or nothing sizes it (08-05).
+- **Repair sweep** (`pushLogoRepairs`) re-pushes logos that differ from prod. **REPORT ONLY until
+  `logo_repair_apply`="1"** (PM's condition; it writes real prod rows).
 - **The stored image beats the repo file** (07-31): `chainLogoInfo` is DB-first, so editing the PNG changes
   NOTHING for a chain that already has a `logoUrl`.
 
 ## 07-30 — CHECK STATUS: bottom clear on every screen + verdict at hang up (PRs #100 #101, staging)
 - The pending render is its OWN screen (`showResult` drops `lview`), so `body.rv-pend` carries the same
-  strip. `renderLiveMsg` follows the NEWEST LINE, never `document.body.scrollHeight`. **DO NOT pad the page
-  to force a scroll** (reverted): it strands the newest line; `qa-tint-lock` 14b refuses it. The leftover
-  "solid bottom" is Safari's EXPANDED bar, not our paint — root colour is gate-locked.
+  strip. `renderLiveMsg` follows the NEWEST LINE. **DO NOT pad the page to force a scroll** (reverted): it
+  strands the newest line and `qa-tint-lock` 14b refuses it. The leftover "solid bottom" is Safari's bar.
 - **A comp that leaves the homepage showing is a LIE.** The real view also hides `#builder` and adds
   `body.lview` (`startLive`). Drive that exact path or your screenshots lie.
 
@@ -54,7 +47,14 @@ Chromium→staging TLS is blocked; a `page.route` relay via curl works (07-30).
 - A bug that SURVIVES closing the sheet is leftover STATE. Diff the page before/after, do not theorise.
 - 'in_stock' substring-matches 'not_in_stock': match negatives first/exact. RENDER the comp and read EVERY state before touching a designed head. **What the site SERVES beats what the repo holds** — fetch the live URL and diff the bytes.
 
-## Open (owner asks + the site queue)
-- Alerts sheet formatting · copy-doc location reconcile · missing email-confirmation (PROD email likely
-  never re-set post-promote) · Restock SMS → A2P. Frozen-site tasks need the owner-named `.unlock`.
+## HANDOFF 08-06 — this chat closed at 22MB. Everything below is UNBUILT.
+- **NEXT: `docs/tasks/site-auto-checks.md`** (four screens + the Zones rename + the comp-account bug).
+  Only the LIST comp is approved. The report's picture is rejected twice; the owner named why on 08-06:
+  a ring reads as progress toward a finish line and an auto-check runs forever. His words, the pictures
+  and the render scripts: `docs/specs/auto-checks/README.md`. Sharpen the pictures with him FIRST.
+- The bug list is `docs/tasks/go-live-site-audit.md`. Still open there: prod has never sent one email
+  (the confirm-your-email step) · prod is missing `ELEVENLABS_MIDCALL_AGENT_ID` + four other settings ·
+  two calling-engine switches differ prod vs staging · no real auto-check watched end to end.
+- Offered, never ruled on: the alerts row switch wraps to a second line on a long store name.
+- Also open: copy-doc location reconcile · Restock SMS waits on A2P. Frozen-site tasks need an unlock.
   **PM: promote wanted — the code half of the logo system is staging-only.** (Admin IS shipped and safe.)
