@@ -6,8 +6,10 @@
 #   1. The working agent writes its best complete answer normally (facts, numbers,
 #      names, decisions, uncertainty, exact quotes intact). No style effort needed.
 #   2. Short reply (2 lines or less): word scan only, instant approve. An answer far
-#      past the 15 line limit bounces the same instant: no rewrite saves it, and the
-#      agent cutting it costs a second instead of waiting on a model.
+#      past the 25 line limit bounces the same instant: no rewrite saves it, and the
+#      agent cutting it costs a second instead of waiting on a model. The one thing the
+#      cap does not touch is a piece of work the owner asked to be handed in the chat
+#      (rule 11, owner 08-06) — see work_product_asked.
 #   3. Otherwise the RENDERER (Sonnet) gets ONLY: the owner's latest message (saved
 #      per session by the UserPromptSubmit hook), the answer, a short description of
 #      how the owner communicates, the lexicon, and up to 4 similar stored examples
@@ -103,7 +105,19 @@ def is_short(text):
     lines = [l for l in text.splitlines() if l.strip()]
     return len(lines) <= 2 and len(text.strip()) <= 240
 
-def word_scan(text):
+# THE LINE CAP (owner 08-06, raised from 15). At 15 the replies were scrunching words in
+# and going thin on the explaining, which is the opposite of rule 4. HARD_STOP is where no
+# rewrite is even attempted: it was 22 against a cap of 15, kept at the same distance here.
+CAP = 25
+HARD_STOP = 35
+
+def count_lines(prose):
+    return sum(max(1, -(-len(l.rstrip()) // 90)) for l in prose.splitlines() if l.strip())
+
+def word_scan(text, cap=CAP):
+    # cap=None turns OFF the line rule, and NOTHING else. That is rule 11, the one
+    # exception the owner locked 08-06: a piece of work he asked to be handed in the chat
+    # runs as long as it needs. Every other rule still bites inside it.
     prose = re.sub(r"```.*?```", "", text, flags=re.S)
     fails = []
     low = prose.lower()
@@ -149,10 +163,13 @@ def word_scan(text):
         fails.append(f"{len(paras)} paragraphs and NO bold labels (rule 10: when a reply "
                      "covers 2 or 3 separate things, each gets a short bold label on its "
                      "own line so he can scroll and find the part he cares about)")
-    lines = sum(max(1, -(-len(l.rstrip()) // 90)) for l in prose.splitlines() if l.strip())
-    if lines > 15:
-        fails.append(f"reply is about {lines} lines, over the 15 line limit (rule 9: "
-                     "one screen — the answer and the decisions; he asks if he wants more)")
+    if cap:
+        lines = count_lines(prose)
+        if lines > cap:
+            fails.append(f"reply is about {lines} lines, over the {cap} line limit (rule 9: "
+                         "one screen, the answer and the decisions said properly; he asks "
+                         "if he wants more). If he asked you for a piece of work itself, "
+                         "that is rule 11 and it is not capped, but an ordinary reply is")
     return fails
 
 def clean_dashes(text):
@@ -234,11 +251,23 @@ def tick(label):
     if os.environ.get("REPLY_LOCK_TIMING"):
         sys.stderr.write("[%5.1fs] %s\n" % (time.time() - T0, label))
 
-def render(root, owner_msg, draft, notes="", timeout=90):
+def render(root, owner_msg, draft, notes="", timeout=90, uncapped=False):
     examples = load_examples(root, owner_msg, draft)
     ex_text = ""
     for i, e in enumerate(examples, 1):
         ex_text += f"\n--- EXAMPLE {i} (real, from the owner's chats) ---\n{e}\n"
+    # Rule 11 (owner 08-06): he asked to be HANDED the work itself. Telling the writer to
+    # cut to fit here would hand him a summary of the thing he asked to see, which is the
+    # exact failure the rule exists to stop.
+    ceiling = (
+        "HE ASKED FOR A PIECE OF WORK ITSELF, NOT A SUMMARY OF IT (rule 11): there is NO "
+        "line ceiling on this one and NOTHING he asked for may be dropped, shortened, "
+        "sampled, or replaced by a pointer to a file. Keep every item he asked for, in "
+        "full. Style still applies to how it reads. "
+        if uncapped else
+        f"HARD CEILING: the finished reply must fit {CAP} lines of 90 characters. "
+        "Count as you write and cut to fit, do not hand back something too long. "
+    )
     prompt = (
         "You are the owner's dedicated writer. Below: how the owner communicates, "
         "the lexicon of the system's real names, a few real examples from his "
@@ -254,8 +283,7 @@ def render(root, owner_msg, draft, notes="", timeout=90):
         "sentence: would a person actually text this to a friend? And judge the "
         "shape: when the reply covers 2 or more separate things you MUST give each "
         "one a SHORT bold label alone on its own line with a plain paragraph under "
-        "it. HARD CEILING: the finished reply must fit 15 lines of 90 characters. "
-        "Count as you write and cut to fit, do not hand back something too long. "
+        "it. " + ceiling +
         "Pass the draft unchanged ONLY if it answers him, reads like one friend "
         "texting another, and already carries those labels. Otherwise rewrite it "
         "fully in the owner's style. CUTTING BEATS KEEPING: dropping a whole topic "
@@ -276,10 +304,13 @@ def render(root, owner_msg, draft, notes="", timeout=90):
         "\n\n=== THE OWNER'S LATEST MESSAGE ===\n" + (owner_msg or "(not captured)") +
         "\n\n=== THE WORKING AGENT'S ANSWER ===\n" + draft
     )
-    # A retry only happens when the first pass broke a rule or dropped a fact, so it
-    # thinks harder. It is rare, the extra seconds are bounded, and the worst outcome for
-    # the owner is falling back to the agent's own unrendered answer.
-    r = run_claude(prompt, "claude-sonnet-5", timeout, effort="high" if notes else "medium")
+    # THE RETRY RUNS AT MEDIUM (owner 08-06, measured, was "high" on the assumption that
+    # a retry should think harder). On the two real drafts that actually retry: medium
+    # 6.4s / 8.4s / 8.3s / 7.4s, high 41.9s, and the verdicts were IDENTICAL, both drafts,
+    # every run. High was buying 35 seconds of nothing on the exact reply he called slow.
+    # Never raise it back without timing it on real drafts and showing it changes an
+    # outcome, not just the thinking budget.
+    r = run_claude(prompt, "claude-sonnet-5", timeout)
     if r.returncode != 0:
         r = run_claude(prompt, "claude-haiku-4-5-20251001", timeout)
     v = parse_json(r.stdout)
@@ -289,12 +320,21 @@ def render(root, owner_msg, draft, notes="", timeout=90):
         return draft
     return clean_dashes(str(v.get("rewrite") or "")) or draft
 
+# SPEED, and the one real cause of it (owner 08-06, measured on his own slow reply). The
+# first rendering takes about 7 seconds; a RETRY costs 20 to 35 more, and the retry was
+# firing on punctuation, not on facts. "6." at the end of a sentence, "19:" in front of a
+# test, "08" out of the date 08-06: the number survived the rewrite intact and the check
+# still called it dropped, because the trailing mark came along with it. Trailing marks
+# are not facts. Stripped here, INSIDE the number only ("6.7", "67%", "1,200") untouched.
+TRAIL = ".,:;!?)]}"
+
 def extract_tokens(text):
     body = text
     fences = re.findall(r"```.*?```", body, flags=re.S)
     prose = re.sub(r"```.*?```", "", body, flags=re.S)
     toks = set()
-    toks.update(re.findall(r"\d[\d,.:%]*", prose))              # numbers as digits
+    nums = (n.rstrip(TRAIL) for n in re.findall(r"\d[\d,.:%]*", prose))
+    toks.update(n for n in nums if n)                           # numbers as digits
     toks.update(re.findall(r"`[^`\n]+`", prose))                # code spans
     toks.update(re.findall(r"[\w.-]+/[\w./-]+", prose))         # paths
     toks.update(re.findall(r"https?://\S+", prose))             # urls
@@ -359,6 +399,49 @@ def meaning_check(root, owner_msg, draft, rendered, timeout=60):
         raise RuntimeError(f"meaning check rc={r.returncode}")
     return bool(v.get("faithful")), [str(p) for p in (v.get("problems") or [])]
 
+# RULE 11 (owner locked it 08-06 alongside raising the cap to 25). "anytime they have to
+# give me a work product, like I want them to give me all the tests in the chat versus
+# going to a doc, they can do that if I ask them for it. anything that might break this 25
+# rule, but it has to be some sort of work product not just a reply."
+# Two gates, cheapest first, and it only ever runs on a reply that is ALREADY over the cap:
+# a plain phrase match, then one small model call. Both read HIS message, never the draft,
+# so a long-winded agent can never talk itself out of the cap.
+WP_PHRASES = [
+    "in the chat", "versus going to a doc", "instead of a doc", "not in a doc",
+    "put it in a doc", "write it out", "write them out", "write out", "list them all",
+    "list all", "list every", "list out", "show me all", "show me every",
+    "show me the full", "give me all", "give me every", "give me the full",
+    "give me the whole", "print them", "print all", "print every", "verbatim",
+    "word for word", "exact words", "exact wording", "the full list", "the whole list",
+    "every test", "all the tests", "one by one", "in full", "the complete list",
+]
+
+def work_product_asked(root, owner_msg, timeout=30):
+    msg = (owner_msg or "").lower()
+    if not msg.strip():
+        return False
+    if any(p in msg for p in WP_PHRASES):
+        return True
+    prompt = (
+        "Below is one message from the owner to a working agent. Did he ask the agent to "
+        "HAND HIM A PIECE OF WORK in the chat itself, rather than just answer him? A work "
+        "product means the thing itself printed out: every test and what each proves, a "
+        "full list, a spec, exact wording, a prompt, a set of results, a before and after, "
+        "a document he asked to see instead of being pointed at a file. Asking a question "
+        "that simply has a lot to say in reply is NOT a work product. Default to false "
+        "when it is not clear. Answer ONLY JSON: {\"work_product\": true|false}\n"
+        "\n=== THE OWNER'S MESSAGE ===\n" + owner_msg
+    )
+    try:
+        r = run_claude(prompt, "claude-haiku-4-5-20251001", timeout, effort="low")
+        v = parse_json(r.stdout)
+        return bool(v and v.get("work_product"))
+    except Exception as ex:
+        # Unavailable means the cap stands. A tight reply is the house default and the
+        # agent is told it can say the word if he really did ask for the work itself.
+        log_error(root, ex)
+        return False
+
 def latest_owner_msg(root):
     # THIS chat's message, not whichever file happens to be newest (owner 08-06). Newest
     # wins meant a second chat, or an agent testing the reply lock, could hand the writer
@@ -398,20 +481,29 @@ if "--check-file" in sys.argv:
         print("VERDICT: APPROVED (short reply, no rendering needed). Send it.")
         sys.exit(0)
 
-    hard = word_scan(draft)
-    toolong = [f for f in hard if "over the 15 line limit" in f and
-               int(re.search(r"about (\d+) lines", f).group(1)) > 22]
+    owner_msg = latest_owner_msg(root)
+
+    # Rule 11. The work-product question is only ever asked about a draft that is ALREADY
+    # over the cap, so the ordinary reply never pays a second for it.
+    uncapped = False
+    if count_lines(re.sub(r"```.*?```", "", draft, flags=re.S)) > CAP:
+        tick("over the cap, asking if he wanted the work itself")
+        uncapped = work_product_asked(root, owner_msg)
+        tick("work product = %s" % uncapped)
+    cap = None if uncapped else CAP
+
+    hard = word_scan(draft, cap=cap)
+    toolong = [f for f in hard if "line limit" in f and
+               int(re.search(r"about (\d+) lines", f).group(1)) > HARD_STOP]
     if toolong:
         print("VERDICT: NOT SENDABLE, and no rewrite can save it. " + toolong[0])
         print("This costs you a second instead of 30. Cut it to the answer and the "
               "decisions yourself, then run the check once on the shorter draft.")
         sys.exit(0)
 
-    owner_msg = latest_owner_msg(root)
-
     def fail_open(reason):
         # A broken renderer can never mute or hang the chat (owner + both reviews).
-        fails = word_scan(draft)
+        fails = word_scan(draft, cap=cap)
         if fails:
             print("VERDICT: NOT SENDABLE. The renderer is unavailable (" + reason + ") "
                   "and your answer breaks hard rules: " + "; ".join(fails))
@@ -424,7 +516,7 @@ if "--check-file" in sys.argv:
 
     tick("start render")
     try:
-        final = render(root, owner_msg, draft)
+        final = render(root, owner_msg, draft, uncapped=uncapped)
     except Exception as ex:
         log_error(root, ex); fail_open("error")
     tick("render done")
@@ -433,8 +525,9 @@ if "--check-file" in sys.argv:
         # as the first pass. Before 08-06 the retry only got two of these and a whole
         # answer could come back as "OK".
         out = []
-        if word_scan(rendered):
-            out.append("your rewrite broke hard rules: " + "; ".join(word_scan(rendered)))
+        if word_scan(rendered, cap=cap):
+            out.append("your rewrite broke hard rules: "
+                       + "; ".join(word_scan(rendered, cap=cap)))
         misses = mechanical_misses(draft, rendered)
         if misses:
             out.append("you dropped these exact items, keep them verbatim: "
@@ -469,9 +562,11 @@ if "--check-file" in sys.argv:
     tick("first pass judged (notes=%s)" % notes)
     if notes:
         try:
-            # More room than the first pass: the retry thinks harder, and a retry that
-            # runs out of time throws away the rendering and sends the raw answer.
-            final = render(root, owner_msg, draft, notes=" | ".join(notes), timeout=180)
+            # The retry is told exactly what it broke, so it does not need a bigger
+            # thinking budget, only room not to time out. A retry that runs out of time
+            # throws away the rendering and sends the raw answer.
+            final = render(root, owner_msg, draft, notes=" | ".join(notes),
+                           timeout=180, uncapped=uncapped)
             # The retry gets every MECHANICAL gate, including the floor, which is what
             # stops a collapse. Tried adding a second meaning pass here on 08-06 and it
             # made 3 of 7 real drafts fall back to the raw answer, so it is out: reading
@@ -558,11 +653,18 @@ if count >= 2:
         fh.write("stop-time failures exhausted")
     allow_reset()
 
-fails = word_scan(reply)
+owner_msg = latest_owner_msg(root)
+# Rule 11 here too, or the backup would bounce the very work product the pre-check let
+# through. Asked only when the reply is already over the cap.
+stop_cap = CAP
+if count_lines(re.sub(r"```.*?```", "", reply, flags=re.S)) > CAP and \
+        work_product_asked(root, owner_msg):
+    stop_cap = None
+
+fails = word_scan(reply, cap=stop_cap)
 if not fails:
     try:
-        owner_msg = latest_owner_msg(root)
-        final = render(root, owner_msg, reply, timeout=40)
+        final = render(root, owner_msg, reply, timeout=40, uncapped=stop_cap is None)
         if " ".join(final.split()) == " ".join(reply.split()):
             allow_reset()
         fails = ["the reply does not read the way the owner's rules require"]

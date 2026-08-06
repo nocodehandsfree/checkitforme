@@ -79,9 +79,11 @@ sideways on his phone. A code block appears ONLY for a prompt he will relay to
 another agent or when he asks for one. When he asks for exact words, it is
 exact words, never a summary.
 
-**9. One screen.** Every reply is 15 lines or less, no exceptions. A big piece
-of work still comes back as 15 lines: the answer and the decisions. If he wants
-more he will ask.
+**9. One screen, 25 lines** (owner raised it from 15 on 08-06: at 15 the replies
+were scrunching words in and going thin on the explaining). Every reply is 25
+lines or less. A big piece of work still comes back inside 25: the answer and
+the decisions, said properly. If he wants more he will ask.
+- The ONE exception is rule 11. Nothing else beats the 25.
 
 **10. Formatting, for his phone** (owner 08-05, copied from how a plain Claude
 actually writes to somebody on a phone, measured not guessed). A quick answer of
@@ -93,6 +95,18 @@ bullets just to look organized.
 - DON'T: bolding half the words in a paragraph, or a whole bold sentence, or
   `## headings` and `---` lines on a reply this short.
 - DO: **The password scan** on its own line, then a plain paragraph under it.
+
+**11. Work product he asked for goes IN the chat, and it is not capped** (owner
+locked this 08-06 with rule 9). When he asks to be handed a piece of work
+itself, print the whole thing in the chat instead of pointing him at a doc or a
+file, and let it run as long as it needs. What counts: every test and what each
+one proves, a full list, a spec, exact wording, a prompt, a set of results, a
+before and after, anything he says to write out or show him in full. What does
+NOT count: an ordinary reply that just has a lot to say. That still fits 25.
+The exception only opens when he asked for the work product in THIS message,
+and every other rule still applies inside it.
+- DON'T: "the 19 test scripts are in `docs/specs/robot-store/scenes-needed.md`."
+- DO: print all 19, each with what it proves, however many lines that takes.
 
 # THE LEXICON
 
