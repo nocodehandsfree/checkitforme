@@ -57,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="glassfix-r186" />
+<meta name="x-rev" content="glassfix-r188" />
 <title>Check It For Me — Is it in stock?</title>
 <meta name="description" content="Stop driving to sold-out shelves. Check It For Me calls any store for you, asks a real person if it&#39;s in stock, and texts you the answer with proof in ~2 minutes.">
 <link rel="canonical" href="https://staging.checkitforme.com/">
@@ -171,7 +171,7 @@
 .store.coming{opacity:.5} /* callable-but-unmapped: shown greyed, not callable (tap → "Adding store soon!") */
   .store:hover{border-color:rgba(255,255,255,.18)}
   .store.sel{border-color:var(--accent,#FFCB05);background:color-mix(in srgb,var(--accent,#FFCB05) 9%,transparent)}
-  .store .ic{width:52px;height:52px;border-radius:15px;background:linear-gradient(145deg,#34343d,#23232b);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+  .store .ic,.stile{width:46px;height:46px;border-radius:12px;background:#1F1F25;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}/* THE grey tile: one size for every store logo, site + Admin (owner 07-31) */
   /* name-only stores: their name as a tight two-line wordmark inside the logo slot (no made-up logo) */
   .wm{display:flex;flex-direction:column;justify-content:center;align-items:center;width:100%;height:100%;padding:2px;box-sizing:border-box;overflow:hidden;text-align:center}
   .wm span{display:block;font-weight:900;font-size:15px;line-height:1;letter-spacing:.01em;text-transform:uppercase;color:#cdcdd8;max-width:100%}
@@ -431,6 +431,14 @@
      the conversation by scrolling to the page bottom as each line lands; dead space below the log
      strands the newest line off-screen and kills the reveal. The page's own height is the design. */
   body.lview main{padding-top:18px}
+  /* ╔══════════════════════════════════════════════════════════════════════════════════════════╗
+     ║  THE CHECK STATUS PAGE IS LOCKED — owner order, 2026-07-31.                               ║
+     ║  Do not change the pinned card, the footer rule, or the pull screen without the owner's   ║
+     ║  express written consent naming scripts/qa-checkpage-lock.mjs. That gate + the browser    ║
+     ║  lock scripts/test-live-view.mjs both run in CI and will fail your ship. The full story   ║
+     ║  — and the three traps that already cost a day — is written at the top of the gate.       ║
+     ║  A green headless run is NOT proof here: the last regression passed every check I had.    ║
+     ╚══════════════════════════════════════════════════════════════════════════════════════════╝ */
   /* The store card + Stop & hang up stay put; the conversation scrolls beneath them (owner 07-31).
      position:sticky, NOT a fixed pane with its own scroller — the document itself has to stay the
      thing that scrolls (a page that can't scroll is what put us back in grey-bar territory), and a
@@ -441,18 +449,21 @@
      same overflow WITHOUT making a scroll container, so the sticky measures against the viewport,
      which is what actually scrolls. Scoped to this page; nothing else changes. */
   body.lview,body.pendbox{overflow-x:clip;overflow-y:visible}
-  /* The negative margin + matching padding pull the painted box up over the breathing room above the
+  /* The card lives in <main>, outside #live, so its parent spans the whole page in BOTH states — see
+     the markup note. Sticky can only travel inside its own parent; inside #live it fell off the top
+     the moment the call ended and that box emptied out.
+     The negative margin + matching padding pull the painted box up over the breathing room above the
      card, so lines slide UNDER the pin instead of through a transparent slit. main's own 18px keeps
      the resting layout identical — the margin cancels it, the padding gives it back. body.rview also
      pads main 18px, so the same numbers hold while the verdict is being pulled. */
-  body.lview #live_pin,body.pendbox #live_pin{position:sticky;top:env(safe-area-inset-top);z-index:12;background:var(--bg);margin-top:-18px;padding:18px 0 10px}
+  #live_pin{display:none}
+  body.lview #live_pin,body.pendbox #live_pin{display:block;position:sticky;top:env(safe-area-inset-top);z-index:12;background:var(--bg);margin-top:-18px;padding:18px 0 10px}
   body.lview #live_pin>*:last-child,body.pendbox #live_pin>*:last-child{margin-bottom:0} /* kill the collapsing margin so no transparent slit opens under the card */
   /* PULLING THE VERDICT (owner 07-31): the card does NOT leave with the call. It stays pinned, reading
-     "Getting results", and goes the moment the verdict lands. The live step log leaves with the call
-     (the result frame below already carries the steps + conversation), and the result frame skips its
+     "Getting results", and goes the moment the verdict lands. #live itself hides as it always did —
+     the result frame below already carries the steps + conversation — and the result frame skips its
      own placeholder headline so the same message is never printed twice. body.pendbox is set ONLY on
      the pending render of a call we just watched — a mid-call refresh still gets today's screen. */
-  body.pendbox #live_msgbox{display:none}
   body.pendbox #result .rverdict{display:none}
   /* No footer during the call (owner 07-31). It comes back on its own at the reveal: showResult drops
      body.lview, and the pulling-the-result screen (rv-pend) is still pre-reveal, so it waits too. */
@@ -565,7 +576,7 @@
   /* Store identity is the dominant ~75% of the card (roomy + big logo); verdict is a compact ~25% strip. */
   .rhead-top{display:flex;gap:14px;align-items:center;padding:32px 16px 34px}
   .rhead .railchip{flex:0 0 auto;width:58px;height:58px;border-radius:16px}
-  .rhead .railchip img{width:40px;height:40px}
+  .rhead .railchip img{max-width:69%;max-height:69%;width:auto;height:auto;object-fit:contain}/* fallback only */
   .rhead-id{min-width:0;flex:1}
   .rhead-store{font-weight:800;font-size:19.5px;letter-spacing:-.4px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
   .rhead-addr{color:var(--muted);font-size:13px;font-weight:500;margin-top:4px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -596,7 +607,7 @@
   /* The mark is strongest in the corner and fades out before it reaches the headline, so a long state
      never reads muddy over it. Mask, not a lower opacity: the corner still has real presence. */
   .rhead.live .railchip{position:absolute;top:-46px;right:-40px;width:212px;height:212px;border:0;border-radius:0;background:none;box-shadow:none;opacity:.17;z-index:0;pointer-events:none;transform:none!important;place-items:center;-webkit-mask-image:linear-gradient(238deg,#000 42%,rgba(0,0,0,.45) 72%,transparent 96%);mask-image:linear-gradient(238deg,#000 42%,rgba(0,0,0,.45) 72%,transparent 96%)}
-  .rhead.live .railchip img{width:190px;height:190px;max-height:none;object-fit:contain}
+  .rhead.live .railchip img{width:190px;height:auto;max-height:none;object-fit:contain}/* width is a fallback only; a measured logo carries its own */
   .rhead.live .railchip .wm span{font-size:76px;color:#fff;letter-spacing:-.03em}
   .rhead.live .rhead-store{font-size:10.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.8);line-height:1.2}
   .rhead.live .rhead-addr{display:none}
@@ -1046,7 +1057,7 @@
   .igpost{background:transparent}
   .ighead{display:flex;align-items:center;gap:10px;padding:0 2px 9px}
   .ighead .av{width:38px;height:38px;border-radius:12px;background:var(--terminal);border:1px solid var(--border);display:grid;place-items:center;overflow:hidden;flex:0 0 auto}
-  .ighead .av img{width:24px;height:24px;object-fit:contain}
+  .ighead .av img{max-width:63%;max-height:63%;width:auto;height:auto;object-fit:contain}/* fallback only: a measured logo carries its own width */
   .ighead .av .mono{font-size:12px;font-weight:900;color:#d6d6e0}
   .ighead .who{min-width:0;flex:1}
   .ighead .hdl{font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1174,7 +1185,7 @@
   .opencount{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12px;font-weight:700;white-space:nowrap}
   .opencount .odot{width:6px;height:6px;border-radius:50%;background:#cfcfe0}
   .store.best{border-color:rgba(74,222,128,.55);background:linear-gradient(100deg,rgba(74,222,128,.1),rgba(74,222,128,.02))}
-  .store .ic.best{background:var(--green)}
+  .store .ic.best,.stile.best{background:var(--green)}
   /* Tier groups — TIER 5 = green (best MSRP odds), TIER 4 = amber. */
   /* Section labels — a small neon-outlined PILL (dark inside, black shows through), like the Map toggle. */
   /* tier pills: GREY letters, a very FAINT tier-coloured outline (no glow, no star) */
@@ -1283,11 +1294,11 @@
   .railnav:not(:disabled):active{transform:scale(.92)}
   .railchip{flex:0 0 auto;width:46px;height:46px;border-radius:13px;background:var(--terminal);border:1.5px solid var(--border);display:grid;place-items:center;cursor:pointer;padding:0;position:relative;transition:transform .12s,border-color .12s}
   .railchip .mono{font-size:13px;font-weight:900;letter-spacing:.02em;color:#d6d6e0}
-  .railchip img{width:30px;height:30px;object-fit:contain}
+  .railchip img{max-width:71%;max-height:71%;width:auto;height:auto;object-fit:contain}/* fallback only */
   /* dark wordmarks need a light plate — any tile holding a real logo goes light */
   .lite{background:#f2f2f5 !important;border-color:rgba(255,255,255,.28) !important}
-  .store .ic img{width:40px;height:40px;object-fit:contain}
-  .store .ic.widelogo img{width:44px;height:auto;max-height:34px}
+  .store .ic img,.stile img{max-width:78%;max-height:78%;width:auto;height:auto;object-fit:contain}/* fallback only: a real logo carries its own width inline (logoPct) */
+  .store .ic.widelogo img,.stile.widelogo img{max-width:92%;max-height:64%}/* fallback only */
   .railchip.widelogo img{width:38px;height:auto;max-height:22px}
   .railchip.on{transform:scale(1.08);border-color:var(--accent,var(--green));box-shadow:0 0 12px rgba(74,222,128,.22)}
   #result{position:relative}
@@ -1351,8 +1362,7 @@
     #result.r-play .ctl-status{animation:rGlowIn .6s ease-out 2.15s both}
     #result.r-play .foot{animation:rFadeIn .5s ease-out 2.4s both}
   }
-  .vsrow{display:flex;gap:11px;align-items:center;background:var(--terminal);border:1px solid var(--border);border-radius:14px;padding:11px 12px;margin-top:14px}
-  .vsrow .railchip{cursor:default;width:42px;height:42px;border-width:1px;transform:none !important;box-shadow:none !important}
+  
   /* compact phones: keep the 4 header controls on one comfortable line */
   @media(min-width:381px) and (max-width:430px){
     header{padding:12px 10px;gap:6px}
@@ -1544,8 +1554,8 @@ html[data-skin="v2"] .is1t .b{display:block;margin-top:1px;font-size:10.5px;font
    r14 rows pad 10/12, name 15/700, sub 12/600 #8A8A96, distance 17/800 + 10/700 muted unit,
    selected ring gets the comp's accent glow. */
 html[data-skin="v2"] .store{border-radius:14px;padding:10px 12px}
-html[data-skin="v2"] .store .ic{width:44px;height:44px;border-radius:12px}
-html[data-skin="v2"] .store .ic img{max-width:34px;max-height:34px}
+
+
 html[data-skin="v2"] .store .nm{font-size:15px;font-weight:700}
 html[data-skin="v2"] .store .lo{font-size:12px;font-weight:600;color:#8A8A96}
 html[data-skin="v2"] .store .smi{font-size:17px;font-weight:800;color:#FFF}
@@ -1562,8 +1572,8 @@ html[data-skin="v2"] .rng::-moz-range-track{background:#1B1B20}
 html[data-skin="v2"] .rng::-moz-range-thumb{width:24px;height:24px;border:0;box-shadow:0 0 12px rgba(74,222,128,.6),0 3px 10px rgba(0,0,0,.5)}
 /* Store rows (§5.6): chain-art logo slot on #1F1F25; independents keep the embossed initials tile.
    Selection = accent ring + #23232A fill (§5.5); BEST row = green ring + soft glow. */
-html[data-skin="v2"] .store .ic{background:#1F1F25;border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
-html[data-skin="v2"] .store .ic:not(:has(img)){background:linear-gradient(145deg,#34343D,#23232B);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5)}
+
+html[data-skin="v2"] .store .ic:not(:has(img)),html[data-skin="v2"] .stile:not(:has(img)){background:linear-gradient(145deg,#34343D,#23232B);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5)}
 html[data-skin="v2"] .store.sel{background:#23232A;border:0;box-shadow:0 0 0 2px var(--accent,#FFCB05),0 8px 14px -8px rgba(0,0,0,.55)}
 html[data-skin="v2"] .store:has(.besttag){background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;box-shadow:0 0 0 1.5px rgba(74,222,128,.5),0 8px 14px -8px rgba(0,0,0,.55)}
 html[data-skin="v2"] .store.best{border:0;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%)}
@@ -1906,9 +1916,9 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zrrow2.open{border-radius:14px 14px 0 0}
 #zones .zrbody{text-align:left;overflow-x:hidden}
 #zones .zresult:has(.zrrow2.open){border-radius:14px;box-shadow:0 0 0 1px rgba(74,222,128,.25)}
-#zones .ic2{width:40px;height:40px;border-radius:11px;background:linear-gradient(145deg,#34343D,#23232B);display:grid;place-items:center;flex:none;overflow:hidden}
-#zones .ic2 img{max-width:30px;max-height:30px;object-fit:contain}
-#zones .ic2 .wm{font-size:9px}
+#zones 
+#zones 
+
 #zones .zrrow2 .nm2{flex:1;min-width:0;font:700 14.5px Inter;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #zones .zrrow2.checking{box-shadow:0 0 0 1px rgba(74,222,128,.35),0 0 16px rgba(74,222,128,.14)}
 #zones .zstopall{width:100%;height:50px;border:0;border-radius:14px;background:linear-gradient(180deg,#2D2D34,#27272D);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;gap:9px;font:800 13px Inter;letter-spacing:.06em;text-transform:uppercase;color:#FF9B9B;cursor:pointer}
@@ -2130,6 +2140,10 @@ html[data-skin="v2"] #featOv .fi-pt{display:flex;align-items:flex-start;gap:12px
 html[data-skin="v2"] #featOv .fi-pt>span:first-child{flex:0 0 auto;margin-top:2px;display:flex}
   /* Alerts can hold up to 10 stores, so let the sheet scroll instead of running off-screen (owner 07-23). */
   html[data-skin="v2"] #alertsOv .modal{max-height:86vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  /* With one or two alerts the sheet was sized by its contents and parked low, leaving My checks
+     showing behind it (owner 08-02). A floor of 72% of the screen makes it cover the page like every
+     other full sheet; it still grows with the list up to the 86% cap above. */
+  html[data-skin="v2"] #alertsOv .modal{min-height:72dvh}
 html[data-skin="v2"] #histOverlay .hist-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:2px 18px calc(22px + env(safe-area-inset-bottom))}
 /* sheet-mode (body.sheetopen): the sheet box overshoots 120px under the iOS bar so rows ghost through the
    glass. The inner scrollers get a 120px scroll-end spacer (last row stays reachable above the bar) and the
@@ -2200,7 +2214,7 @@ html[data-skin="v2"] #buyOverlay .buy-foot{flex:none}
    never a border (STYLE_GUIDE §1): the active-key gradient lifts it above the row cards, and the UPWARD
    shadow darkens the plan row behind its top edge, which is what actually detaches it. It pops in scale
    as it rises. Keep the 12px inset so the list still shows past its sides. */
-html[data-skin="v2"] #buyOverlay .buydock{position:absolute;left:12px;right:12px;bottom:14px;z-index:1000;background:linear-gradient(180deg,#34343E 0%,#292930 100%);box-shadow:0 -10px 26px rgba(0,0,0,.6),0 26px 52px -12px rgba(0,0,0,.92),inset 0 1px 0 rgba(255,255,255,.14);border-radius:22px;padding:12px 14px 14px;transform:translateY(140%) scale(.96);transition:transform .3s cubic-bezier(.2,.9,.3,1)}
+html[data-skin="v2"] #buyOverlay .buydock{position:absolute;left:12px;right:12px;bottom:14px;z-index:1000;background:linear-gradient(180deg,#34343D 0%,#2A2A31 100%);box-shadow:0 -10px 26px rgba(0,0,0,.6),0 26px 52px -12px rgba(0,0,0,.92),inset 0 1px 0 rgba(255,255,255,.14);border-radius:22px;padding:12px 14px 14px;transform:translateY(140%) scale(.96);transition:transform .3s cubic-bezier(.2,.9,.3,1)}
 html[data-skin="v2"] #buyOverlay .buydock.up{transform:translateY(0) scale(1)}
 html[data-skin="v2"] #buyOverlay .buydock-plan{display:flex;align-items:baseline;gap:10px;margin:0 4px 9px}
 html[data-skin="v2"] #buyOverlay .buydock-plan .bd-n{flex:1;min-width:0;font-size:14.5px;font-weight:800;color:#FFF;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -2341,7 +2355,7 @@ html[data-skin="v2"] .leaflet-popup-tip{background:#26262B}
 html[data-skin="v2"] body.rview .tbtn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
 /* AUDIT SWEEP 3 — final residual borders (today-calendar, rail nav, Runnr internals, misc chrome)
    + modal titles to spec (§4: pop-up title 19–21/900). */
-html[data-skin="v2"] .iconbtn,html[data-skin="v2"] .railnav,html[data-skin="v2"] .railsel,html[data-skin="v2"] .vsrow,html[data-skin="v2"] .ho-back,html[data-skin="v2"] .ho-job,html[data-skin="v2"] .ho-btn.ghost,html[data-skin="v2"] .ho-pm button,html[data-skin="v2"] .earnbox{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
+html[data-skin="v2"] .iconbtn,html[data-skin="v2"] .railnav,html[data-skin="v2"] .railsel,html[data-skin="v2"] .ho-back,html[data-skin="v2"] .ho-job,html[data-skin="v2"] .ho-btn.ghost,html[data-skin="v2"] .ho-pm button,html[data-skin="v2"] .earnbox{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
 /* .kin was mis-swept into the raised group — form FIELDS are carved wells (§5.12/R3), never raised. */
 html[data-skin="v2"] .kin{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:14px}
 html[data-skin="v2"] .ho-stepper,html[data-skin="v2"] .ho-msg{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
@@ -2356,7 +2370,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   html[data-skin="v2"] .ckarc1,html[data-skin="v2"] .ckarc2,html[data-skin="v2"] .rpill .d{animation:none}
 }
 /*V2END*/</style>
-<meta name="build" content="f82e8d94c954">
+<meta name="build" content="c110136cb8d4">
 </head>
 <body>
 <!-- Hard-refresh of a result deep-link: apply the verdict treatment (wash + transparent nav) NOW, so
@@ -2460,24 +2474,30 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     </div>
   </div>
 
+  <!-- The store card and Stop & hang up ride along at the top while the conversation scrolls
+       underneath (owner 07-31). One sticky wrapper so the two never drift apart.
+       IT SITS IN <main>, NOT INSIDE #live, ON PURPOSE. A sticky element can only travel inside its
+       own parent. Parked in #live it rode along fine during the call, then the moment the call ended
+       and #live emptied out, its parent collapsed to the card's own height and the card slid straight
+       off the top while the result frame below kept scrolling. In <main> its parent spans the whole
+       page in BOTH states, so it holds until the reveal. -->
+  <div id="live_pin">
+    <div class="rhead live" id="live_rhead">
+      <div class="rhead-top">
+        <span class="railchip" id="live_chip" style="display:grid"></span>
+        <div class="rhead-id">
+          <div class="rhead-store" id="live_store2"></div>
+          <div class="rhead-addr" id="live_addr"></div>
+          <div class="lh-state" id="lh_state"></div>
+        </div>
+      </div>
+    </div>
+    <button id="hangup_btn" onclick="hangUpLive()" style="display:none;margin:0 0 14px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.5);color:var(--red);padding:9px 18px;border-radius:10px;font-weight:800;cursor:pointer;font-size:13.5px" data-i18n="live.hangup">■ Stop &amp; hang up</button>
+  </div>
+
   <!-- LIVE -->
   <div id="live" class="hidden">
     <div id="muteBanner" style="display:none;background:rgba(251,191,36,.14);border:1px solid rgba(251,191,36,.4);color:#FBBF24;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-weight:700;font-size:13.5px;text-align:center" data-i18n="live.mute">🔇 Flip your phone off silent so you can hear the call</div>
-    <!-- The store card and Stop & hang up ride along at the top while the conversation scrolls
-         underneath (owner 07-31). One sticky wrapper so the two never drift apart. -->
-    <div id="live_pin">
-      <div class="rhead live" id="live_rhead">
-        <div class="rhead-top">
-          <span class="railchip" id="live_chip" style="display:grid"></span>
-          <div class="rhead-id">
-            <div class="rhead-store" id="live_store2"></div>
-            <div class="rhead-addr" id="live_addr"></div>
-            <div class="lh-state" id="lh_state"></div>
-          </div>
-        </div>
-      </div>
-      <button id="hangup_btn" onclick="hangUpLive()" style="display:none;margin:0 0 14px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.5);color:var(--red);padding:9px 18px;border-radius:10px;font-weight:800;cursor:pointer;font-size:13.5px" data-i18n="live.hangup">■ Stop &amp; hang up</button>
-    </div>
     <div id="live_msgbox"></div>
   </div>
 
@@ -3065,7 +3085,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
 
 <script>
 const BRAND = {"key":"runner","name":"<b>Check</b> It For Me","category":"Pokémon","accent":"#FFCB05","accent2":"#EE1515","logoUrl":"","emoji":"📞"};   // injected per subdomain (vertical micro-site)
-window.SWITCHER = {"current":"runner","list":[{"key":"poke","slug":"pokemon","label":"Pokémon","emoji":"⚡","logoUrl":""},{"key":"onepiece","slug":"onepiece","label":"One Piece","emoji":"🏴‍☠️","logoUrl":"/logos/products/onepiece.png"},{"key":"topps","slug":"toppsbasketball","label":"Topps NBA","emoji":"🏀","logoUrl":"/logos/products/topps.png?v=3","tag":"NBA Cards"},{"key":"needoh","slug":"needoh","label":"NeeDoh","emoji":"🟢","logoUrl":"/logos/products/needoh.png?v=3"}]}; // {current, list:[{key,slug,label,emoji}]} for the product switcher
+window.SWITCHER = {"current":"runner","list":[{"key":"poke","slug":"pokemon","label":"Pokémon","emoji":"⚡","logoUrl":""}]}; // {current, list:[{key,slug,label,emoji}]} for the product switcher
 let BRAND_CAT = null;           // resolved category object for a vertical site, else null
 let STORES=[], CATS=[], SEL_STORE=null, SEL_CAT=null, SEL_CATS=[], ASKED_CATS=[], SEL_PRODUCT='', SEL_KIOSK=false, KIOSK_OK=false, POLL=null, LASTRES=null, TRANSLATED=false, ORIGHTML='', MODE='call';
 let RSTATUSES={}; // statuses registry: server-defined verdicts (single source of truth)
@@ -3148,7 +3168,7 @@ const I18N={ es:{
   'live.convo':'Conversación','live.steps':'Progreso de la llamada','cs.call':'Llamada','lbl.assoc':'Asociado','lbl.menu':'Menú','lbl.agent':'Check AI',
   'up.restock':'No te pierdas el reabastecimiento','up.restock.sub':'Te avisamos por mensaje en cuanto vuelva.','up.checkback':'Vuelve pronto','up.checkback.sub':'Reabastecen seguido. Vuelve en un día o dos.','up.watch':'Avísame cuando vuelva','up.watch.sub':'Una alerta en cuanto una llamada lo confirme.','up.sched':'Auto-verificar en días de envío','up.sched.sub':'Llamamos por ti en días de reabastecimiento.',
   'hist.title':'Tus verificaciones','hist.new':'+ Nueva','hist.empty':'Aún no hay verificaciones. Haz una y aparecerá aquí.',
-  'foot.cta':'¿No ves tu tienda? Agrégala →','foot.about':'Acerca de','foot.help':'Ayuda','foot.guide':'Guía','foot.terms':'Términos','foot.privacy':'Privacidad','foot.legal':'Legal','foot.success':'Logros',
+  'foot.cta':'¿No ves tu tienda? Agrégala →','foot.about':'Info','foot.help':'Ayuda','foot.guide':'Guía','foot.terms':'Términos','foot.privacy':'Privacidad','foot.legal':'Legal','foot.success':'Logros',
   'kioskhint':'<span style="display:flex;align-items:center;gap:7px;font-weight:800;white-space:nowrap"><span id="khspark"></span> ¿En un kiosco? ¡Verificación gratis!</span><a onclick="openReceipt()" style="display:inline-block;margin-top:5px;color:var(--purple);font-weight:800;cursor:pointer">Usa nuestro correo al pagar o reenvía tu recibo →</a>',
   'v.in':'¡En stock!','v.out':'No está en stock','v.unclear':'Nos dieron un “quizás”','v.soldout':'Agotado','v.noanswer':'Nadie contestó','v.hold':'En espera','v.soon':'¡Reabastecimiento en camino!','note.soon':'Llega un envío <b>{d}</b>. Sé el primero cuando caiga.',
   'search.ph':'Busca por tienda o ciudad…',
@@ -3194,9 +3214,9 @@ const I18N={ es:{
   'note.noanswer':'Sonó y sonó. Nadie contestó. Sin cargo.','note.noanswer.desk':'Pasamos el menú, pero nadie contestó en el mostrador. Sin cargo.',
   'note.unclear':'Alguien contestó pero no dio un sí o no claro. Mira lo que dijeron abajo.',
   'note.voicemail':'Llegamos a una grabadora, no a una persona. Sin cargo.','note.busy':'La línea estaba ocupada. Sin cargo. Intenta en un momento.',
-  'note.ivr':'Su menú telefónico nos atoró. Nadie contestó. Sin cargo.','note.lang':'Contestaron pero no pudimos comunicarnos. Sin cargo.',
+  'note.ivr':'Su menú telefónico nos atoró. Nadie contestó. Sin cargo.','note.lang':'Contestaron pero no pudimos comunicarnos. Intenta más tarde.',
   'note.badnum':'Ese número no conectó. Sin cargo.','note.closed':'Están cerrados ahora. Sin cargo. Intenta cuando abran.',
-  'note.failed':'Algo falló de nuestro lado. Sin cargo.','note.hold':'Fueron a revisar, pero la llamada se cortó en espera. Sin cargo. Intenta de nuevo.',
+  'note.failed':'Algo falló de nuestro lado. Sin cargo.','note.hold':'Fueron a revisar, pero la llamada se cortó en espera. Intenta de nuevo.',
   'note.unreached':'No pudimos contactar a nadie en la tienda. Sin cargo. Intenta en un rato.',
   'v.nocarry':'No lo venden','v.noperson':'No contestó nadie','v.busy':'Línea ocupada','v.ivr':'No alcanzamos a nadie','v.lang':'Barrera de idioma','v.badnum':'Número malo','v.closedt':'Tienda cerrada','v.failed':'Llamada fallida',
   // statuses registry (key-addressed: st.<key> = label, stn.<key> = note)
@@ -3205,8 +3225,8 @@ const I18N={ es:{
   'st.sold_out':'Agotado','stn.sold_out':'{store} lo tuvo, pero ya se acabó.',
   'st.does_not_sell':'No lo venden','stn.does_not_sell':'{store} no vende {category}.',
   'st.no_clear_answer':'No supimos decir','stn.no_clear_answer':'No pudimos entender bien la respuesta.',
-  'st.left_on_hold':'Nos dejaron en espera','stn.left_on_hold':'La espera se alargó y la llamada se cortó. Sin cargo.',
-  'st.language_barrier':'No nos entendimos','stn.language_barrier':'No pudimos comunicarnos. Sin cargo.',
+  'st.left_on_hold':'Nos dejaron en espera','stn.left_on_hold':'Nos dejaron en espera y la llamada se cortó. Intenta más tarde.',
+  'st.language_barrier':'No nos entendimos','stn.language_barrier':'No pudimos entendernos en la llamada. Intenta más tarde.',
   'st.nobody_answered':'Nadie contestó','stn.nobody_answered':'Nadie respondió. Sin cargo.',
   'st.voicemail':'Buzón de voz','stn.voicemail':'Salió una grabación, no una persona. Sin cargo.',
   'st.user_cancelled':'Verificación cancelada','stn.user_cancelled':'Detuviste esta verificación.',
@@ -3296,7 +3316,7 @@ const I18N={ es:{
   'note.getting':'La llamada acaba de terminar. Obteniendo el resultado.',
   'v.getting':'Obteniendo la respuesta…','v.unclear2':'No supimos decir',
   'st.too_busy':'Muy ocupados para revisar',
-  'stn.too_busy':'{store} estaba saturado. Sin cargo.',
+  'stn.too_busy':'{store} estaba saturado para revisar. Intenta más tarde.',
   'sub.in':'<b>{s}</b> tiene <b>{c}</b>. Ve por ello antes de que se agote.','sub.in.named':'<b>{s}</b> tiene <b>{p}</b>. Ve por ello antes de que se agote.',
   'sub.out':'<b>{s}</b> no tiene <b>{c}</b> en stock ahora mismo.','sub.soldout':'{s} está agotado de <b>{c}</b> ahora mismo.',
   'term.in':'En stock','term.out':'No está en stock','term.soon':'{s} · {d}','term.soon2':'Reabastecimiento confirmado','term.unk':'Sin respuesta clara','term.getting':'Obteniendo el resultado…',
@@ -3324,7 +3344,7 @@ const I18N={ es:{
   'zones.locph':'Busca un código postal o ciudad…','zones.go':'Ir','zones.list':'Lista','zones.map':'Mapa',
   'zones.radius':'Radio','zones.addallshort':'Agregar todo','zones.selstore':'tienda seleccionada','zones.selstores':'tiendas seleccionadas',
   'zones.typloc':'Escribe primero un código postal o ciudad.','zones.located':'Centrado en {q}','zones.noplace':'No encontramos ese lugar.',
-  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas','zones.cap10':'Una zona verifica hasta 10 tiendas a la vez.','hold.meta':'Buscando {p}','hold.meta.generic':'Revisando el estante','hold.head':'Estamos a tope.','hold.sub':'Un momento.','zones.limit10':'Llegaste al límite de 10 tiendas','zones.clearall':'Borrar todo','zones.title2':'Zonas','zones.checkingzone':'Verificando la zona {n} ahora','zones.checkingyours':'Verificando tu zona ahora','zones.allchecked':'Las {n} verificadas','zones.stopone.q':'¿Dejar de verificar {s}?','zones.stopone.yes':'Dejar de verificar','zones.stopone.no':'Continuar','zones.stoppedone':'Detuvimos esa tienda','zones.azone':'Zona','zones.zoneword':'zona','zones.new2':'Nueva zona','zones.edit2':'Editar zona','zones.locph2':'Código postal o ciudad…','zones.save2':'Guardar','zones.empty1':'Aún no tienes zonas.','zones.empty2':'Guarda las tiendas cercanas como una zona. Luego revísalas todas con un toque.','zones.nonein':'Ninguna disponible','zones.checkzone2':'Revisar zona','zones.skipped':', así que las saltamos.','zones.alldone':'Las {n} revisadas · listo','zones.zonecheck':'Chequeo de zona','zones.hadit':'{i} de {n} tiendas lo tenían.','zones.sharetext':'Texto para compartir','zones.sharego':'Compartir','zones.ago':'atrás','zones.starting2':'Empezando…','zones.rin2':'Disponible.','zones.rout2':'Sin stock.','zones.runk2':'Sin respuesta.','zones.result':'Resultado','zones.confirmed':'Confirmado.','hold.timer':'Tu revisión empieza en','em.title':'Tu correo','step.calling':'Llamando','watch.verify.h':'Revisa tu correo para confirmarlo.','watch.verify.hsms':'Te enviaremos un texto para confirmar tu celular.','watch.then2':'Luego te avisamos al instante<br>cuando se confirme en stock.','em.sub':'Las alertas y avisos de reposición llegan aquí.','em.new':'Danos tu nuevo correo','em.first':'Danos tu correo','em.empty':'Escribe tu nuevo correo primero','em.same':'Ese ya es tu correo','em.resent':'Confirmación enviada. Revisa tu correo.','em.again':'Enviarla de nuevo','em.done':'Correo confirmado. Alertas activas.','em.badlink':'Ese enlace no funcionó. Toca Enviarla de nuevo.','em.ph':'tu@correo.com','em.save':'Guardar correo','em.saving':'Guardando…','em.confirm':'Revisa tu correo para confirmar','em.add':'Agrega tu correo para alertas','alerts.title':'Alertas','alerts.row.at':'{p} en {s}','alerts.d.remail':'Te manda un correo al volver.','alerts.d.rsms':'Te manda un texto al volver.','alerts.d.semail':'Verifica la tienda sola. Resultado al correo.','alerts.d.ssms':'Verifica la tienda sola. Resultado por texto.','alerts.none':'Aún no has creado alertas.','alerts.off':'Apagar','alerts.mute':'Silenciar','alerts.unmute':'Activar','alerts.stop':'Parar','alerts.d.muted':'Silenciada. No llega nada hasta activarla.','alerts.mutedpill':'Silenciada. Actívala cuando quieras.','alerts.unmutedpill':'Activada. Te avisaremos.','alerts.stopped':'Cancelamos {x}','alerts.name.restock':'las alertas de reposición de {s}','alerts.name.sched':'las alertas de auto chequeo de {s}','alerts.thatstore':'esa tienda','alerts.thisalert':'esta alerta','alerts.k.sched':'Auto-verificación','alerts.k.restock':'Alerta de reposición','alerts.c.sms':'texto','alerts.c.email':'correo','alerts.acheck':'Una verificación','acct.row.alerts':'Alertas','acct.row.alerts.sub':'Avisos de reposición y autoverificación.',
+  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas','zones.cap10':'Una zona verifica hasta 10 tiendas a la vez.','hold.meta':'Buscando {p}','hold.meta.generic':'Revisando el estante','hold.head':'Estamos a tope.','hold.sub':'Un momento.','zones.limit10':'Llegaste al límite de 10 tiendas','zones.clearall':'Borrar todo','zones.title2':'Zonas','zones.checkingzone':'Verificando la zona {n} ahora','zones.checkingyours':'Verificando tu zona ahora','zones.allchecked':'Las {n} verificadas','zones.stopone.q':'¿Dejar de verificar {s}?','zones.stopone.yes':'Dejar de verificar','zones.stopone.no':'Continuar','zones.stoppedone':'Detuvimos esa tienda','zones.stoponefail':'Esa verificación ya está terminando','zones.cantreach':'no está disponible ahora','zones.cantreach.pl':'no están disponibles ahora','zones.skippedone':', así que la saltamos.','zones.azone':'Zona','zones.zoneword':'zona','zones.new2':'Nueva zona','zones.edit2':'Editar zona','zones.locph2':'Código postal o ciudad…','zones.save2':'Guardar','zones.empty1':'Aún no tienes zonas.','zones.empty2':'Guarda las tiendas cercanas como una zona. Luego revísalas todas con un toque.','zones.nonein':'Ninguna disponible','zones.checkzone2':'Revisar zona','zones.skipped':', así que las saltamos.','zones.alldone':'Las {n} revisadas · listo','zones.zonecheck':'Chequeo de zona','zones.hadit':'{i} de {n} tiendas lo tenían.','zones.sharetext':'Texto para compartir','zones.sharego':'Compartir','zones.ago':'atrás','zones.starting2':'Empezando…','zones.rin2':'Disponible.','zones.rout2':'Sin stock.','zones.runk2':'Sin respuesta.','zones.result':'Resultado','zones.confirmed':'Confirmado.','hold.timer':'Tu revisión empieza en','em.title':'Tu correo','step.calling':'Llamando','watch.verify.h':'Revisa tu correo para confirmarlo.','watch.verify.hsms':'Te enviaremos un texto para confirmar tu celular.','watch.then2':'Luego te avisamos al instante<br>cuando se confirme en stock.','em.sub':'Las alertas y avisos de reposición llegan aquí.','em.new':'Danos tu nuevo correo','em.first':'Danos tu correo','em.empty':'Escribe tu nuevo correo primero','em.same':'Ese ya es tu correo','em.resent':'Confirmación enviada. Revisa tu correo.','em.again':'Enviarla de nuevo','em.done':'Correo confirmado. Alertas activas.','em.badlink':'Ese enlace no funcionó. Toca Enviarla de nuevo.','em.ph':'tu@correo.com','em.save':'Guardar correo','em.saving':'Guardando…','em.confirm':'Revisa tu correo para confirmar','em.add':'Agrega tu correo para alertas','alerts.title':'Alertas','alerts.row.at':'{p} en {s}','alerts.d.remail':'Te manda un correo al volver.','alerts.d.rsms':'Te manda un texto al volver.','alerts.d.semail':'Verifica la tienda sola. Resultado al correo.','alerts.d.ssms':'Verifica la tienda sola. Resultado por texto.','alerts.none':'Aún no has creado alertas.','alerts.off':'Apagar','alerts.mute':'Silenciar','alerts.unmute':'Activar','alerts.stop':'Parar','alerts.d.muted':'Silenciada. No llega nada hasta activarla.','alerts.mutedpill':'Silenciada. Actívala cuando quieras.','alerts.unmutedpill':'Activada. Te avisaremos.','alerts.stopped':'Cancelamos {x}','alerts.name.restock':'las alertas de reposición de {s}','alerts.name.sched':'las alertas de auto chequeo de {s}','alerts.thatstore':'esa tienda','alerts.thisalert':'esta alerta','alerts.k.sched':'Auto-verificación','alerts.k.restock':'Alerta de reposición','alerts.c.sms':'texto','alerts.c.email':'correo','alerts.acheck':'Una verificación','acct.row.alerts':'Alertas','acct.row.alerts.sub':'Avisos de reposición y autoverificación.',
   'watch.on':'Te avisamos por correo cuando vuelva','watch.askemail':'¿A qué correo te avisamos?','watch.cta2':'Vigilar esta tienda','watch.inbox':'Revisa tu correo','watch.inboxsub':'Confirma tu correo y lo activamos.','alerts.sub':'Gestiona tus alertas de stock. Bórralas o páusalas abajo.','watch.already':'Ya tienes una alerta para esta tienda','alerts.pauseall':'Pausar todas las alertas','alerts.on':'Activas','alerts.paused':'En pausa','alerts.rowon':'On','alerts.rowoff':'Off','alerts.remove':'Quitar','alerts.none':'Aún no vigilas ninguna tienda.','alerts.makeroom':'Vigilas {n} tiendas. Quita una para agregar esta.','alerts.added':'Ahora vigilas {s}.','alerts.stopped':'Quitamos {x}.','alerts.set':'Tu {type} de {store} está lista. Gestiónala en Mis verificaciones > Alertas.','alerts.type.restock':'Alerta de reposición','alerts.type.auto':'Auto-verificación','zones.checkinglive':'Verificando en vivo','zones.callingstores':'Llamando a las tiendas…','zones.allcheckeddone':'Todas verificadas','zones.notpill':'no','zones.noansw':'sin respuesta','zones.callingnow':'llamando ahora','zones.waitingslot':'esperando turno',
   'feat.d.zone_sweeps':'Guarda tus tiendas como una zona. Un toque las llama todas a la vez. Mira las respuestas llegar en vivo. Cada tienda cuesta una verificación. Sin respuesta, sin cargo.','feat.d.restock_alerts':'Deja de revisar. Te avisamos. Toca Avísame cuando vuelva en un resultado. Vigilamos esa tienda por ti. Apenas llegue producto, te avisamos. Un aviso por reposición, nada de spam.','feat.d.scheduled_checks':'Las tiendas reponen con ritmo. La autoverificación corre en sus días de envío. La respuesta te espera en el celular. Cancela cuando quieras en Mis verificaciones.','feat.d.any_town':'Las cuentas gratis buscan cerca de casa. Cualquier ciudad te suelta la correa. Busca cualquier código postal o ciudad. El mapa salta ahí. Más de 100,000 tiendas.','feat.d.store_holds':'¿Lo encontraste pero estás a 20 minutos? Le pedimos al personal que te aparte uno. Con tu nombre, en la misma llamada.','feat.d.your_voice':'Elige la voz que llama por ti. Quien contesta escucha una voz amable y natural.','feat.d.thrift_hunts':'Colecciones viejas acaban en tiendas de segunda. Precios de risa, nadie las revisó. Activa Thrift y llamamos a las de tu zona. Preguntamos qué hay en la vitrina hoy.','feat.d.hobby_hunts':'Un muro de Pokémon para explorar. Cada era, cada set, cada producto. Con precios de lista. Elige tu objetivo. Cada llamada pide exactamente eso.',
   'zones.untitled':'Zona sin nombre','zones.store':'tienda','zones.stores':'tiendas',
@@ -3390,7 +3410,12 @@ Object.assign(I18N.es, {
 function tf(key,en,vars){ let s=t(key,en); if(vars) for(const k in vars) s=s.split('{'+k+'}').join(vars[k]); return s; }
 let LANG=localStorage.getItem('runnr_lang')||((navigator.language||'en').slice(0,2));
 if(LANG!=='en' && !I18N[LANG]) LANG='en';
-function t(key,en){ return (I18N[LANG]&&I18N[LANG][key])||en; }
+function t(key,en){
+  // The owner's Admin edits win for the three share texts (owner 08-02). They were editable on the
+  // Alerts page for a while and the site never read them, so saving did nothing. English only, which
+  // is Admin's own rule, so a Spanish reader still gets the site's Spanish.
+  if(LANG!=='es'){ try{ const o=(POLICY&&POLICY.shareCopy)||null; if(o&&o[key]) return o[key]; }catch(_){ } }
+  return (I18N[LANG]&&I18N[LANG][key])||en; }
 const HERO_I18N={es:{
   'Pokémon':'Pokémon <span class="g">¿en stock?</span><br>Lo verificamos por ti.',
   'One Piece TCG':'One Piece <span class="g">¿en stock?</span><br>Lo verificamos por ti.',
@@ -3418,30 +3443,57 @@ const SVG_STORE = p => `<svg width="${p}" height="${p}" viewBox="0 0 24 24" fill
 const SVG_TAG   = p => `<svg width="${p}" height="${p}" viewBox="0 0 24 24" fill="none" stroke="var(--accent,#FFCB05)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".9" fill="var(--accent,#FFCB05)"/></svg>`;
 // A store row's face: real logo if we have one; every HOBBY card shop shows the storefront icon (accent)
 // instead of messy name-initials; everyone else keeps their wordmark tile.
+// THE ONE WAY a store's logo is drawn, anywhere on this page. The grey tile is the only place a store
+// logo ever appears (owner 07-31); the single exception is the big mark behind the check status head.
+// How WIDE to draw it is decided on the server from the artwork's own proportions and arrives on the
+// store row as logoPct — a percent of whatever square tile holds it. Nothing here measures anything,
+// nothing waits for the image to load, and this page and the Admin cannot drift apart because neither
+// one owns the rule. No logoPct (artwork we could not read) falls back to the tile's own CSS.
+// How wide to draw a logo, as a percent of its box. The server works the number out once from the
+// artwork's proportions and sends it on every store row, so nothing here measures anything.
+//
+// Pass 'round' for a circular box. A circle does NOT hold the same rectangle a square does, and the
+// difference depends on the mark's shape: the widest rectangle of shape a that fits a circle is
+// a/sqrt(1+a*a) of the diameter. That is 71% for a square mark but 95% for a 3:1 wordmark, which is
+// why a flat allowance would have left the map pins smaller than they were before any of this.
+function logoStyle(s, shape){
+  if(!s || typeof s.logoPct !== 'number') return '';
+  let pct = s.logoPct;
+  if(shape === 'round'){
+    const a = (typeof s.logoAspect === 'number' && s.logoAspect > 0) ? s.logoAspect : 1;
+    pct = Math.min(pct, 100 * a / Math.sqrt(1 + a * a));
+  }
+  return ` style="width:${pct.toFixed(2)}%;height:auto;max-width:none;max-height:none;object-fit:contain"`;
+}
+// A SAVED CHECK carries the logo address it had when it ran, but not the size, because the size is a
+// newer thing. Fall back to the store's own record for anything missing, the same way the check card
+// already did. Without this a saved row draws its logo at full size and bursts the page open.
+function logoOf(s){
+  if(!s) return {};
+  if(typeof s.logoPct === 'number') return s;
+  const id = s.storeId || s.id || s.retailerId;
+  const st = id && typeof STORES !== 'undefined' ? STORES.find(x=>x.id===id) : null;
+  if(!st) return s;
+  return Object.assign({}, s, {
+    logoUrl: s.logoUrl || st.logoUrl,
+    logoWide: s.logoWide ?? st.logoWide,
+    logoDark: s.logoDark ?? st.logoDark,
+    logoPct: st.logoPct, logoAspect: st.logoAspect,
+  });
+}
 function storeFace(s){
-  if(s&&s.logoUrl) return `<img src="${esc(s.logoUrl)}" alt="" data-nm="${esc(s.name)}" data-st="${esc(s.storeType||'')}" onload="sizeLogo(this)" onerror="wmFail(this)">`;
+  s = logoOf(s);
+  if(s&&s.logoUrl) return `<img src="${esc(s.logoUrl)}" alt="" data-nm="${esc(s.name)}" data-st="${esc(s.storeType||'')}"${logoStyle(s)} onerror="wmFail(this)">`;
   if(s&&s.storeType==='Hobby') return SVG_STORE(24);
   return storeWordmark(s&&s.name, s&&s.storeType);
 }
-// Every chain logo gets the SAME visual AREA in its tile, then clamps to the tile's edges. Fitting a
-// logo inside a square box instead sizes it by its longest side, so a wide wordmark (Randalls is 5:1)
-// matched the box's width and came out a few pixels tall next to a squarish mark like BJ's Wholesale.
-// Width is written as a PERCENT of the tile, so it survives the tile changing size (v1 52px, v2 44px,
-// the picker's smaller tiles) without re-running. The inline styles deliberately beat the tile's own
-// width/height/max rules; a logo that never loads keeps the old CSS sizing untouched.
-// GOTCHA: an image already in cache fires onload BEFORE layout has settled, so the tile still measures
-// 0 wide and the logo would size to nothing. Retry on the next frame until the tile has a width.
-// Twin of the same function in app.html, so a chain row in Admin and a store row here read alike.
-function sizeLogo(img, tries){
-  const box = img && img.parentElement; if(!box) return;
-  const W = box.clientWidth, H = box.clientHeight;
-  if(!W || !H){ if((tries||0) < 60) requestAnimationFrame(()=>sizeLogo(img,(tries||0)+1)); return; }
-  const nw = img.naturalWidth, nh = img.naturalHeight; if(!nw || !nh) return;
-  const targetArea = 0.55*W*H, maxW = 0.95*W, maxH = 0.90*H;
-  let sc = Math.sqrt(targetArea/(nw*nh));
-  if(nw*sc > maxW) sc = maxW/nw;
-  if(nh*sc > maxH) sc = maxH/nh;
-  img.style.cssText += `;width:${(100*nw*sc/W).toFixed(2)}%;height:auto;max-width:none;max-height:none;object-fit:contain`;
+// The grey tile, for the places that build a row by hand instead of using a .store row. It carries
+// BOTH class names on purpose: `stile` is what sizes it, so a tile built outside a store row is not
+// left unsized and drawing its logo at full size (owner caught this on Activity, 08-05).
+function storeTile(s, extra){
+  const o = logoOf(s);
+  const cls = 'ic stile' + (o.logoDark?' lite':'') + (o.logoWide?' widelogo':'') + (extra?' '+extra:'');
+  return `<div class="${cls}">${storeFace(o)}</div>`;
 }
 // A dead logoUrl must never show the browser's broken-image glyph (Android Chrome paints a visible
 // one where iOS leaves a quiet blank) — swap in the designed monogram tile and drop the logo-only
@@ -3792,7 +3844,11 @@ async function sendSupport(){
   // Keep the human path buried: on the first time the AI can't resolve, ask for more detail and keep
   // trying. Only after it's genuinely failed twice in this chat do we reveal "Talk to a human".
   if(r.escalate){ SUP_ESC++;
-    if(SUP_ESC>=2){ supBubbleMsg('bot', t('sup.stuck',"I still couldn't crack this one. Want a person to take a look?"),false); supOfferHuman(); }
+    // They ASKED for a person: hand over on the first ask. The two-strike burial below is for OUR
+    // failures, and somebody typing "I want a human" is not one of them. Round 1 caught the old
+    // behavior answering "tap Help in the footer", which just reopens this same chat.
+    if(r.humanAsk){ supOfferHuman(); }
+    else if(SUP_ESC>=2){ supBubbleMsg('bot', t('sup.stuck',"I still couldn't crack this one. Want a person to take a look?"),false); supOfferHuman(); }
     else { supBubbleMsg('bot', t('sup.tryagain',"I might be missing something. Can you give me a bit more detail?"),false); $('sup_help').classList.add('on'); $('sup_human').style.display='none'; }
   } else if(r.answered!==false){ $('sup_help').classList.add('on'); $('sup_human').style.display='none'; }
   // answered===false → the bot asked a clarifying question, not gave an answer: leave "That answered
@@ -4740,17 +4796,23 @@ function storeMi(s){ return (USER_LOC && s.lat!=null && s.lng!=null) ? miBetween
 // Load stores from the server, scoped to the user's location+radius (or a typed search) — never
 // the whole table. This is what makes 102k stores viable: only the nearby slice ever ships.
 let NEAR_SEQ=0;
+// The radius the slice in STORES was fetched at, and the spot it was fetched from. The slider reads
+// these to know it can re-filter what it already has instead of asking again. Cleared whenever the
+// list is replaced from somewhere else, and re-stamped by the drive-along refresh, which is untouched.
+let NEAR_LOADED_RADIUS=null, NEAR_LOADED_AT=null;
 async function fetchNear(){
   const q=($('search')&&$('search').value||'').trim();
   let url=null;
   if(USER_LOC) url=`/pub/stores/near?lat=${USER_LOC.lat}&lng=${USER_LOC.lng}&radius=${Math.max(RADIUS,0.5)}&limit=200${MODE==='hobby'?'&type=Hobby':''}${MODE==='thrift'?'&section=thrift':''}`;
   else if(q.length>=2) url=`/pub/stores/near?q=${encodeURIComponent(q)}&limit=60${MODE==='hobby'?'&type=Hobby':''}${MODE==='thrift'?'&section=thrift':''}`;
-  if(!url){ STORES=[]; renderStores(); return; }
+  if(!url){ STORES=[]; NEAR_LOADED_RADIUS=null; renderStores(); return; }
   const seq=++NEAR_SEQ;
+  const askedRadius=USER_LOC?Math.max(RADIUS,0.5):null, askedAt=USER_LOC?{lat:USER_LOC.lat,lng:USER_LOC.lng}:null;
   STORES_AUTH_TOKEN=PHONE_TOKEN; // record which token this list was fetched under (so login can detect a stale anon list)
   const r=await appApi(url); // appApi (not api) so a signed-in owner's token reaches the server → owner-only "Fun" surfaces for them
   if(seq!==NEAR_SEQ) return; // a newer request superseded this one
   STORES=(r&&Array.isArray(r.stores))?r.stores:[];
+  NEAR_LOADED_RADIUS=askedRadius; NEAR_LOADED_AT=askedAt; // what this slice covers, for the slider
   renderStores();
   // If a result is open whose address we didn't have (a reopened/older call, before we persisted it),
   // the nearby list may now carry it — fill it in and repaint just that result.
@@ -4903,7 +4965,7 @@ function renderMapPins(){
     const m = s.inStock
       ? L.marker([s.lat,s.lng],{icon:L.divIcon({className:'instkpin',html:`<span style="display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#0C0C12;border:2px solid ${neon||'#2BFF88'};box-shadow:0 0 11px ${neon||'#2BFF88'},0 0 4px ${neon||'#2BFF88'}">${FCHK(16)}</span>`,iconSize:[28,28],iconAnchor:[14,14]})}).addTo(MAP)
       : L.marker([s.lat,s.lng],{icon:L.divIcon({className:'tierpin',html: s.logoUrl
-          ? `<span style="display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#17171E;border:2px solid ${neon||'#3E3E46'};box-shadow:0 2px 10px rgba(0,0,0,.5)${neon?`,0 0 9px ${neon}`:''}"><img src="${esc(s.logoUrl)}" style="width:20px;height:20px;object-fit:contain" alt="" onerror="this.style.display='none'"></span>`
+          ? `<span style="display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#17171E;border:2px solid ${neon||'#3E3E46'};box-shadow:0 2px 10px rgba(0,0,0,.5)${neon?`,0 0 9px ${neon}`:''}"><img src="${esc(s.logoUrl)}"${logoStyle(s,'round')||' style="width:20px;height:20px;object-fit:contain"'} alt="" onerror="this.style.display='none'"></span>`
           : neon
           ? `<span style="display:block;width:15px;height:15px;border-radius:50%;background:${neon};border:1.5px solid #0C0C12;box-shadow:0 0 9px ${neon},0 0 3px ${neon}"></span>`
           : `<span style="display:block;width:12px;height:12px;border-radius:50%;background:#9aa0b0;border:1.5px solid #0C0C12"></span>`, iconSize: s.logoUrl?[30,30]:(neon?[15,15]:[12,12]), iconAnchor: s.logoUrl?[15,15]:(neon?[8,8]:[6,6])})}).addTo(MAP);
@@ -4940,7 +5002,21 @@ function setRadiusIdx(idx){
   const v=$('rsl_val'); if(v) v.textContent=(RADIUS===0.5?'½':RADIUS);
   document.querySelectorAll('#rng_ticks span').forEach((s,i)=>s.classList.toggle('on', i===idx));
   if(MY_RING && USER_LOC){ try{ MY_RING.setRadius(RADIUS*1609.34); mapApplyLimits(); }catch(_){} } // grow/shrink the radius ring with the slider (+ re-fit the free-account lock)
-  if(USER_LOC) fetchNear(); else renderStores(); // wider/narrower radius = reload the nearby slice
+  // SLIDER SPEED (owner 08-02). Every stop used to fire its own 200-store ask, so dragging queued
+  // several and the list lagged behind the thumb. Two changes, neither touches the drive-along
+  // location following (silentLocRecheck / locWatchStart own that and are left exactly as they were):
+  //  1. NARROWING re-filters the slice already in hand. Instant, no asking at all.
+  //  2. WIDENING still asks, but only once the thumb settles, so a drag makes one ask, not five.
+  if(USER_LOC){
+    // Re-filter locally ONLY when the slice in hand still covers the ask: same spot, and the new
+    // radius is no wider than the one it was fetched at. Moved since (the drive-along refresh), or
+    // reaching wider, and we ask the server properly.
+    const movedMi=NEAR_LOADED_AT?miBetween(USER_LOC.lat,USER_LOC.lng,NEAR_LOADED_AT.lat,NEAR_LOADED_AT.lng):null;
+    const sameSpot=movedMi!=null&&movedMi<0.25;
+    const widened=!(NEAR_LOADED_RADIUS!=null && sameSpot && RADIUS<=NEAR_LOADED_RADIUS);
+    if(!widened){ renderStores(); }
+    else { clearTimeout(window.__radFetch); window.__radFetch=setTimeout(()=>{ try{ fetchNear(); }catch(_){ } },180); }
+  } else renderStores();
   // Touching the radius = "show me what's around ME" — quietly re-sync to the real position too
   // (owner 2026-07-02: drove to the next town, slider still searched the old spot). Debounced;
   // never prompts (permission-granted only inside silentLocRecheck).
@@ -5797,7 +5873,12 @@ function deriveSteps(transcript){
 // Live call renders the SAME unified timeline the result uses — "Reaching a person" steps + the
 // conversation linked on one line — rebuilt on every new line so it grows in real time as the call
 // happens (finalElapsed=null → the latest step shows as the current one, no closing time yet).
-function renderLiveMsg(){ const box=$('live_msgbox'); if(box) box.innerHTML=combinedTimelineHTML(LIVE_STEPS, LIVE_TRANSCRIPT, null);
+function renderLiveMsg(){ const box=$('live_msgbox'); if(!box) return;
+  // NOTHING NEW = NOTHING MOVES (08-01, the bouncing page): this rebuilt and smooth-scrolled on every
+  // poll tick and every socket line even when the conversation had not changed, so the page jumped up
+  // and down while nothing was happening. Rebuild and follow ONLY when the content really changed.
+  const html=combinedTimelineHTML(LIVE_STEPS, LIVE_TRANSCRIPT, null);
+  if(box.__lastLive===html) return; box.__lastLive=html; box.innerHTML=html;
   // Follow the conversation as it happens (owner 07-15): stick to the newest bubble unless the user
   // scrolled up to reread; scrolling back down re-arms the follow. The target is the NEWEST LINE, not
   // document.body.scrollHeight: the page now ends with a bar-clearing strip (see body.lview::after), and
@@ -6021,7 +6102,12 @@ async function startCheckLive(){
     // Ladder step straight from the call itself (the desk ringing after the menu). That phase happens
     // before the agent ever joins, so it can never come from the transcript. The bridge measures it.
     else if(d.stage&&d.stage.n){ liveStage(d.stage.n); }
-    else if(d.line&&d.line.text){ if(!LIVE_TR.length) lvlog('ws first line'); LIVE_TR.push(d.line.role+': '+d.line.text); LIVE_TRANSCRIPT=LIVE_TR.join('\n'); if(d.line.role==='Agent'&&AGENT_ASK.test(d.line.text))AGENT_PITCHED=true; liveStage(stageForLines(LIVE_TR,AGENT_PITCHED)); renderLiveMsg(); } // real-time steps + human script, as the call happens
+    else if(d.line&&d.line.text){ // real-time steps + human script, as the call happens
+      // The same sentence arriving twice prints once (08-01, the doubled question): the socket and
+      // the poll can each deliver a line, so a fuzzy match against the newest few drops the repeat.
+      const _norm=s=>s.toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(); const _k=_norm(d.line.role+': '+d.line.text);
+      if(!LIVE_TR.slice(-4).some(x=>_norm(x)===_k)){
+        if(!LIVE_TR.length) lvlog('ws first line'); LIVE_TR.push(d.line.role+': '+d.line.text); LIVE_TRANSCRIPT=LIVE_TR.join('\n'); if(d.line.role==='Agent'&&AGENT_ASK.test(d.line.text))AGENT_PITCHED=true; liveStage(stageForLines(LIVE_TR,AGENT_PITCHED)); renderLiveMsg(); } }
     // Instant flip: the bridge tells us the moment the call ends → finalize NOW (snappy, like the live
     // transcript). Crucially we do NOT clearInterval(POLL) here — the POLL keeps running as the safety net,
     // so even if this finalize hiccups the POLL still resolves it (that POLL-clearing was the old freeze).
@@ -6081,9 +6167,16 @@ async function startCheckLive(){
     lvlog('live tx='+((o&&o.transcript)?o.transcript.length:0)+' live='+(o?String(o.live):'-')+(o&&o.error?' err='+o.error:''));
     if(o&&o.transcript){
       const lines=o.transcript.split('\n').filter(Boolean);
-      // Adopt the poll's transcript when the WS gave nothing yet OR when the poll has MORE than we've
-      // streamed — so if the live socket dropped mid-call the transcript keeps flowing (owner 07-16).
-      if(!LIVE_TR.length || (o.transcript && o.transcript.length>(LIVE_TRANSCRIPT||'').length)) LIVE_TRANSCRIPT=o.transcript;
+      // OUR OWN SAVED CONVERSATION DECIDES THE ORDER. The lines that stream in arrive in the order
+      // they were TRANSCRIBED, which is not the order they were said: Staff speak first, but their
+      // words only exist once the agent has been handed the audio we held for him, seconds later. So
+      // the streamed copy can hold the right lines in the wrong order. The old rule only took the
+      // saved copy when it was LONGER, which the same lines reordered never are. The customer then
+      // read our question above a greeting that came before it, until the end of the check flipped
+      // them (owner screenshot, 08-01). The saved copy is written in spoken order, so once it holds
+      // as much as we have streamed, it wins.
+      if(!LIVE_TR.length || (o.transcript && o.transcript.split('\n').filter(Boolean).length>=LIVE_TR.length)) LIVE_TRANSCRIPT=o.transcript;
+      else if(o.transcript && o.transcript.length>(LIVE_TRANSCRIPT||'').length) LIVE_TRANSCRIPT=o.transcript;
       const pitched=AGENT_PITCHED||lines.some(l=>l.startsWith('Agent:')&&AGENT_ASK.test(l)); if(pitched)AGENT_PITCHED=true;
       liveStage(stageForLines(lines, pitched));
       renderLiveMsg();
@@ -6092,10 +6185,31 @@ async function startCheckLive(){
   }catch(_){/* one bad tick must NEVER kill the live view — the next tick retries (owner 07-16 freeze) */}
   },1200);
 }
-async function finalizeLive(cid){
+// ONE SETTLE PER CHECK. The screen never shows a result it is about to replace (owner 08-06).
+// Three things end a check on this page: the bridge's `ended` message, the socket closing, and the
+// POLL seeing live:false. Each of them called finalizeLive, and each run then pulled the verdict on
+// its own clock and painted whatever ITS fetch came back with. Two runs = two paints, so the answer
+// changed under the customer: a check the owner ended as it was finishing showed "Check cancelled"
+// for about a second (the run that took the cancel branch) and then "Couldn't tell" (the run that
+// was still waiting on the record). Whoever gets here first owns the settle; everybody else joins
+// that same run and paints NOTHING. A run that blows up clears the seat so the POLL's next tick can
+// still finalize, which keeps the safety net the old "no hard guard" comment was protecting.
+// Stop and hang up is the ONE thing that may take the seat off a settle already in flight: the user
+// just told us to end this check, and the 07-24 law below says that is a cancel and never a verdict.
+// The settle then stops where it stands (it checks LIVE_CANCELLED at every step) and paints nothing.
+let FINALIZE_RUN=null; // {gen,cancelled,p}: the settle in flight for THIS call (CALL_GEN), never a past one
+function finalizeLive(cid){
+  const cancelling=!!window.LIVE_CANCELLED;
+  if(FINALIZE_RUN && FINALIZE_RUN.gen===CALL_GEN && !(cancelling && !FINALIZE_RUN.cancelled)) return FINALIZE_RUN.p;
+  const seat={gen:CALL_GEN, cancelled:cancelling};
+  seat.p=Promise.resolve().then(()=>finalizeLiveOnce(cid)).catch(e=>{ if(FINALIZE_RUN===seat) FINALIZE_RUN=null; lvlog('finalize FAILED '+String(e).slice(0,60)); });
+  FINALIZE_RUN=seat;
+  return seat.p;
+}
+async function finalizeLiveOnce(cid){
   lvlog('finalize cid='+(cid||LIVE_CID?'Y':'n')+' lines='+LIVE_TR.length); lvship(); clearInterval(LVSHIP);
-  // Idempotent: d.ended (instant) AND the POLL can both call this. No hard guard + no POLL-clearing here
-  // (that combo is what froze calls) — history dedupes and showResult just re-renders, so a re-fire is safe.
+  // The POLL-clearing that used to freeze calls stays gone: the POLL keeps running as the safety net,
+  // and its re-fires now join the ONE run above instead of starting a second one.
   stopAudio(); stopLiveTimers();
   cid = cid || LIVE_CID || null;
   const live=(LIVE_TR.length?LIVE_TR.join('\n'):LIVE_TRANSCRIPT)||'';
@@ -6116,9 +6230,17 @@ async function finalizeLive(cid){
   // happened shows its REAL verdict instead of a false "nobody answered".
   if(!cid && LIVE_ROOM){ for(let i=0;i<4 && !cid;i++){ try{ const bs=await api('/pub/bridge/'+encodeURIComponent(LIVE_ROOM)); if(bs&&bs.conversationId){ cid=bs.conversationId; LIVE_CID=cid; } }catch(_){} if(!cid) await new Promise(r=>setTimeout(r,800)); } }
   if(!cid){ const res={status:'no_answer',transcript:live,summary:''}; saveCheckToHistory(res,null); showResult(res); return; }
+  // STOP AND HANG UP LANDED WHILE WE WERE SETTLING. Stand down at every step from here: paint nothing
+  // (the cancel screen is already up and must not be replaced) and, just as important, ask the server
+  // for nothing. Reading the result is what SETTLES a check on the server, so one more read here would
+  // turn the check the user just cancelled into a real verdict, and bill it (owner 07-24, proved on
+  // staging 08-06: reading a cancelled check's result flipped its record from Check cancelled to In stock).
+  const _cancelled=()=>!!window.LIVE_CANCELLED;
+  if(_cancelled()) return;
   // ONE quick fetch. If EL already has the verdict, we flip straight to it. If not, keep pulling and repaint
   // when it lands (we already flipped off the call screen above).
   let o=null; try{ o=await appApi('/pub/result/'+encodeURIComponent(cid)); }catch(_){}
+  if(_cancelled()) return;
   // Wait for a CONFIDENT verdict before leaving the dots — not just "not in_progress". An early read can
   // come back "no clear answer" and then the consensus upgrades it to in-stock; showing that flip looked
   // broken. Hold on "Getting the answer…" until it's settled (yes / no / sold-out / a terminal status) or
@@ -6127,7 +6249,8 @@ async function finalizeLive(cid){
   // second-read included) and always stamps a statusKey — so any keyed response is final, INCLUDING a genuine
   // "no clear answer" (which must flip to the unclear screen + poll right away, not sit on dots for 15s).
   const _confident=(r)=>!!(r&&r.status&&r.status!=='in_progress'&&(r.statusKey||r.confirmed===true||r.confirmed===false||r.soldOut||r.doesNotSell||r.status!=='completed'));
-  { let tries=0; while(!_confident(o)&&tries<15){ await new Promise(r=>setTimeout(r,1000)); try{ o=await appApi('/pub/result/'+encodeURIComponent(cid)); }catch(_){} tries++; } }
+  { let tries=0; while(!_confident(o)&&tries<15){ await new Promise(r=>setTimeout(r,1000)); if(_cancelled()) return; try{ o=await appApi('/pub/result/'+encodeURIComponent(cid)); }catch(_){} tries++; } }
+  if(_cancelled()) return;
   // If we actually reached someone (we have a streamed transcript) but the server verdict hasn't settled
   // inside the window, DO NOT fall back to "nobody answered" — that's the bug where a real "not in stock"
   // call flashed as no-answer until it was reopened. Show the neutral "getting the answer…" placeholder
@@ -6139,6 +6262,7 @@ async function finalizeLive(cid){
   // conversation always prints on the result without a hard refresh.
   if(!res.transcript && live) res.transcript=live;
   if(!res.transcript){ try{ const lv=await appApi('/pub/live/'+encodeURIComponent(cid)); if(lv&&lv.transcript) res.transcript=lv.transcript; }catch(_){} }
+  if(_cancelled()) return;
   if(res.status==='completed'){
     if(isAuthed()){ appApi('/app/charge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cid})}).then(c=>{ if(c&&c.credits!=null){ if(ACCOUNT)ACCOUNT.credits=c.credits; renderAuth(); } }); }
     else { localStorage.setItem('runnr_free_used','1'); api('/pub/charge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cid})}); renderAuth();
@@ -6163,6 +6287,7 @@ async function reconcileVerdict(cid, prevKey){
   for(let i=0;i<20;i++){
     await new Promise(r=>setTimeout(r,3000));
     if(CALL_GEN!==gen || RAIL_CID!==cid || NAV_VIEW!=='result') return; // a new call started, or user moved on
+    if(window.LIVE_CANCELLED) return; // Stop and hang up landed: the cancel screen stands, and reading the result would settle and bill the check the user just stopped (owner 07-24)
     let o=null; try{ o=await appApi('/pub/result/'+encodeURIComponent(cid)); }catch(_){}
     if(!o||o.error||o.status==='in_progress') continue;
     const settled = (o.confirmed===true||o.confirmed===false) || (o.statusKey && o.statusKey!==prevKey);
@@ -6465,7 +6590,7 @@ function deriveVerdict(o, _lbl, _sh){
     cls=s.tone||'unk'; big=I2E[raw]||(/^[a-z][a-z0-9-]{1,24}$/.test(raw)?'•':raw); title=t('st.'+o.statusKey, s.label);
     note=(o.statusKey==='failed'&&o.failureReason)?safeReason(o.failureReason):t('stn.'+o.statusKey, s.note||'');
   }
-  else if(o.statusKey==='left_on_hold'){ cls='unk'; big='⏳'; title=t('v.hold','Left on hold'); note=t('note.hold',"They went to check, but the call dropped on hold. No charge. Try again."); }
+  else if(o.statusKey==='left_on_hold'){ cls='unk'; big='⏳'; title=t('v.hold','Left on hold'); note=t('note.hold',"They went to check, but the call dropped on hold. Try again."); }
   else if(o.status==='completed'&&o.doesNotSell){ cls='out'; big='🚫'; title=t('v.nocarry',"They don't carry it"); note=tf('note.nocarry',"This store doesn't carry "+(catL||'this')+". Try another.",{x:catL||'this'}); }
   else if(o.status==='completed'&&o.soldOut){ cls='out'; big='🕐'; title=t('v.soldout','Sold out'); note=t('note.soldout',"Came in, but it's already gone. Worth catching the next shipment."); }
   else if(o.status==='completed'&&o.confirmed===true){ cls='in'; big='✅'; title=t('v.in','In stock!'); note=tf('note.in','They have {c}. Go grab it.',{c:'<b style="color:#fff;font-weight:800">'+esc(catL||'them')+'</b>'}); }
@@ -6535,9 +6660,10 @@ function showResult(o, cid){
   if(o && o.status==='pending' && (_fromLive || window._livePend)) requestAnimationFrame(()=>{ try{ window.scrollTo(0, document.body.scrollHeight); }catch(_){ } });
   if(o && o.status!=='pending' && (_fromLive || window._livePend)){ window._livePend=false; setTimeout(()=>{ try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(_){ window.scrollTo(0,0); } },120); }
   stopLiveTimers(); LIVE_ROOM=null; if($('hangup_btn'))$('hangup_btn').style.display='none';
-  if(_keepBox){ $('live').classList.remove('hidden'); const _lg=$('lh_state'); if(_lg && _lg.textContent!==t('live.h4','Getting results')){ _lg.textContent=t('live.h4','Getting results'); try{ _lg.style.animation='none'; void _lg.offsetWidth; _lg.style.animation=''; }catch(_){ } } }
-  else $('live').classList.add('hidden');
-  $('builder').classList.add('hidden'); $('history').classList.add('hidden'); $('success').classList.add('hidden'); const hov=$('handoff'); if(hov)hov.classList.add('hidden'); document.body.classList.remove('fabbed'); document.body.classList.remove('lview'); /* verdict bloom takes over from the live bloom */
+  // The card is its own element in <main> now, so #live hides exactly as it always did — body.pendbox
+  // is what keeps the card on screen through the pull.
+  if(_keepBox){ const _lg=$('lh_state'); if(_lg && _lg.textContent!==t('live.h4','Getting results')){ _lg.textContent=t('live.h4','Getting results'); try{ _lg.style.animation='none'; void _lg.offsetWidth; _lg.style.animation=''; }catch(_){ } } }
+  $('live').classList.add('hidden'); $('builder').classList.add('hidden'); $('history').classList.add('hidden'); $('success').classList.add('hidden'); const hov=$('handoff'); if(hov)hov.classList.add('hidden'); document.body.classList.remove('fabbed'); document.body.classList.remove('lview'); /* verdict bloom takes over from the live bloom */
   { const _fd=$('finds'); if(_fd)_fd.style.display='none'; } // no rotating finds ticker on the result/call page
   LASTRES=o; TRANSLATED=false; ORIGHTML=''; FBK_SENT=false;
   // Verdict = deriveVerdict, THE single status→copy engine (shared with the zone report's unfold).
@@ -7075,13 +7201,16 @@ async function openHistEntry(e){
 // ACT_DAY has THREE states, and keeping them apart is what fixes the week chart (owner 07-26):
 //   undefined = the tab was just opened and nobody has picked a day yet -> land on today
 //   a number  = that day is picked; the green bar and the four counts BOTH mean that day
-//   null      = the day was deliberately cleared -> NO bar is green and the counts mean the week
+//   null      = a week arrow moved the view -> NO bar is green and the counts mean the week
 // Before this, null meant both "no day picked" and "highlight today", so the chart showed today in
 // green while the counts underneath were the whole week: 1 check today sitting above 44 unclear.
 // Tapping today then read as a jump, because clearing the day left the green bar where it was.
 let ACT_WOFF=0, ACT_DAY, ACT_TONE='';
 function actWeek(d){ ACT_WOFF=Math.max(0,ACT_WOFF+d); ACT_DAY=null; ACT_TONE=''; acctTab('activity',true); } // +1 = a week further back, -1 = toward the present (floor 0 = this week)
-function actPick(i){ ACT_DAY=(ACT_DAY===i?null:i); ACT_TONE=''; acctTab('activity',true); }
+// Tapping a bar ALWAYS means that day (owner 08-05). It used to toggle back off, so a second tap on
+// the same bar swapped the four counts from that day to the whole week with no other signal, and
+// 3 in stock read as 19. Week totals still show when a week arrow moves the view (actWeek clears it).
+function actPick(i){ ACT_DAY=i; ACT_TONE=''; acctTab('activity',true); }
 /** Reopening the Activity tab starts fresh on today, the same as a first open. */
 function actReset(){ ACT_WOFF=0; ACT_DAY=undefined; ACT_TONE=''; }
 function actTone(tn){ ACT_TONE=(ACT_TONE===tn?'':tn); acctTab('activity',true); }
@@ -7172,9 +7301,12 @@ function acctTab(which,fromPop){
     const cell=(nv,lb,tn)=>`<div onclick="actTone('${tn}')" style="text-align:center;cursor:pointer;${ACT_TONE===tn?'background:rgba(255,255,255,.05);border-radius:12px;':''}padding:2px 0"><div style="font-size:18px;font-weight:800;color:${ACT_TONE&&ACT_TONE!==tn?'rgba(255,255,255,.35)':(TONECOL[tn]||'#FFF')}">${nv}</div><div style="margin-top:2px;font-size:9.5px;font-weight:700;letter-spacing:.12em;color:#8A8A96">${lb}</div></div>`;
     const vlabel=e=>{ const tn=railTone(e); return tn==='in'?t('v.in','In stock!'):tn==='out'?t('v.out','Not in stock'):tn==='soon'?t('v.soon','Restock incoming!'):t('fbk.unsure','Unclear'); };
     const agoTx=e=>{ try{ return agoStr(Math.floor(e.ts/1000)); }catch(_){ return ''; } }; // agoStr wants seconds — ms made every call 'just now'
-    const lastPool=(ACT_TONE?scope.filter(e=>railTone(e)===ACT_TONE):hist);
-    const last=lastPool.slice(0,ACT_TONE?6:3).map(e=>`<button onclick="ACCT_RETURN='activity';closeAccount();openHistEntry(histList().find(x=>x.cid==='${esc(e.cid)}'))" style="display:flex;align-items:center;gap:11px;width:100%;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:14px;padding:9px 12px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;cursor:pointer;text-align:left">
-      <span style="width:40px;height:40px;border-radius:11px;background:#1F1F25;display:flex;align-items:center;justify-content:center;flex-shrink:0">${e.logoUrl?`<img src="${esc(e.logoUrl)}" style="width:32px;height:32px;object-fit:contain" alt="" data-nm="${esc(e.storeName)}" onerror="wmFail(this)">`:`<span style="font-size:11px;font-weight:900;color:#CDCDD8">${esc((railBase(e.storeName)||'?').slice(0,2).toUpperCase())}</span>`}</span>
+    // The list under the counts follows the SAME scope as the counts (owner 08-05). It used to read
+    // the whole history whenever no status was picked, so choosing another day moved every number
+    // above it and left the rows below showing the newest checks of all time.
+    const lastPool=(ACT_TONE?scope.filter(e=>railTone(e)===ACT_TONE):scope);
+    const last=lastPool.slice(0,6).map(e=>`<button onclick="ACCT_RETURN='activity';closeAccount();openHistEntry(histList().find(x=>x.cid==='${esc(e.cid)}'))" style="display:flex;align-items:center;gap:11px;width:100%;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:14px;padding:9px 12px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;cursor:pointer;text-align:left">
+      ${storeTile({storeId:e.storeId,logoUrl:e.logoUrl,logoWide:e.logoWide,logoDark:e.logoDark,logoPct:e.logoPct,name:e.storeName,storeType:e.storeType})}
       <span style="flex:1;min-width:0"><span style="display:block;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(railBase(e.storeName)||t('hist.acheck','Store check'))}</span><span style="display:block;margin-top:2px;font-size:11.5px;font-weight:600;color:#8A8A96;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.location||e.address||'')}</span></span>
       <span style="flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:3px">${v2StatusChip(railTone(e),22)}<span style="font-size:11px;font-weight:600;color:#8A8A96">${agoTx(e)}</span></span>
     </button>`).join('');
@@ -7935,7 +8067,7 @@ function zoneMapDraw(){
     const mono=(s.name||'').split(/[\s.]+/).filter(w=>w&&!/^(&|and|the|of|at)$/i.test(w)).slice(0,2).map(w=>w[0]||'').join('').toUpperCase()||'?';
     // Monogram sits BEHIND; the logo (opaque bg) covers it when it loads and onerror hides a broken
     // logo so the monogram shows through — no more blank pins when a logo fails to fetch (owner 07-11).
-    const face=`<span style="position:absolute;font-size:11px;font-weight:900;color:#CDCDD8">${esc(mono)}</span>${s.logoUrl?`<img src="${esc(s.logoUrl)}" style="position:relative;width:20px;height:20px;object-fit:contain;background:#17171E" alt="" onerror="this.style.display='none'">`:''}`;
+    const face=`<span style="position:absolute;font-size:11px;font-weight:900;color:#CDCDD8">${esc(mono)}</span>${s.logoUrl?`<img src="${esc(s.logoUrl)}" style="position:relative;background:#17171E${logoStyle(s,'round')?';'+logoStyle(s,'round').replace(/^ style="|"$/g,''):';width:20px;height:20px;object-fit:contain'}" alt="" onerror="this.style.display='none'">`:''}`;
     const badge=on?`<span style="position:absolute;right:-3px;top:-3px;width:15px;height:15px;border-radius:50%;background:#4ADE80;border:2px solid #121216;display:grid;place-items:center"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#06210f" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>`:'';
     const m=L.marker([s.lat,s.lng],{icon:L.divIcon({className:'zpin',html:`<span style="position:relative;display:grid;place-items:center;width:${sz}px;height:${sz}px;border-radius:50%;background:#17171E;border:2px solid ${on?'#4ADE80':'#3E3E46'};box-shadow:${on?'0 0 11px rgba(74,222,128,.7)':'0 2px 8px rgba(0,0,0,.55)'}">${face}${badge}</span>`,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]})}).addTo(ZMAP);
     m.on('click',(ev)=>{ try{ ev.originalEvent&&ev.originalEvent.stopPropagation&&ev.originalEvent.stopPropagation(); }catch(_){ } zoneMapToggle(s.id); });
@@ -8085,6 +8217,13 @@ function renderZoneRun(){
   }
   ZONES._runPaint=shape;
 
+  // A STORE THAT TOOK ITSELF OFF THE SITE (owner 08-02). Same box, same shape as the closed one, so
+  // the customer is never left staring at a store that silently vanished from their zone.
+  let pausedBox='';
+  { const sk=(d.skipped||[]).map(x=>railBase(x.name||'')).filter(Boolean);
+    if(sk.length){ const andW=LANG==='es'?' y ':' and '; const nm=sk.length>1?sk.slice(0,-1).join(', ')+andW+sk[sk.length-1]:sk[0];
+      pausedBox=`<div class="zclosedbox"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#f0c79a" stroke-width="2" style="flex:none;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01" stroke-linecap="round"/></svg><div><b>${esc(nm)} ${sk.length>1?t('zones.cantreach.pl','cannot be reached right now'):t('zones.cantreach','cannot be reached right now')}</b>${sk.length>1?t('zones.skipped',', so we skipped those.'):t('zones.skippedone',', so we skipped it.')}</div></div>`; } }
+
   let closedBox='';
   if(znMeta&&Array.isArray(znMeta.stores)&&(d.results||[]).length){
     const got=new Set((d.results||[]).map(x=>x.retailerId));
@@ -8096,7 +8235,7 @@ function renderZoneRun(){
     const tap=tone==='queue'?`zoneStopOnePrompt(${row.retailerId},'${esc(row.name||'')}')`:`zoneExpand('${esc(row.cid||'')}',this)`;
     return `<div class="zresult" data-rid="${row.retailerId}">
       <button class="zrrow2 ${tone==='live'?'checking':''}" onclick="${tap}">
-        <div class="ic2 ${row.logoDark?'lite':''} ${row.logoWide?'widelogo':''}">${storeFace(row)}</div>
+        ${storeTile(row)}
         <div class="nm2">${esc(row.name||('Store '+row.retailerId))}</div>
         <span class="zmark" data-tone="${tone}">${mark(tone)}</span>
       </button><div class="zrbody" style="display:none"></div></div>`; }).join('');
@@ -8118,7 +8257,7 @@ function renderZoneRun(){
         <div id="z_pills" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:9px">${pillsOrSub}</div>
       </div>
     </div>
-    ${closedBox}
+    ${closedBox}${pausedBox}
     <div class="zrlist" style="display:flex;flex-direction:column;gap:8px;margin-top:8px">${rows||`<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:36px 0"><span></span><span></span><span></span></div>`}</div>
     <div class="zbar">${loading&&!r.fresh?'':(live?`<button class="zstopall" onclick="zoneStopAll()"><i></i>${t('zones.stopall','Stop all')}</button>`:`<button class="zsharego" onclick="zoneShareSheet()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>${t('zones.share','Share results')}</button>`)}</div>
     </div>
@@ -8236,8 +8375,12 @@ function zoneStopOnePrompt(rid,nm){ zPop(`<h3 style="margin:4px 0 16px;text-alig
   <button style="${Z_ROWBTN};justify-content:center;margin-bottom:10px" onclick="zPopClose();zoneStopOne(${rid})"><span style="color:#FF8A8A">${t('zones.stopone.yes','Stop checking')}</span></button>
   <button style="${Z_ROWBTN};justify-content:center" onclick="zPopClose()">${t('zones.stopone.no','Continue')}</button>`); }
 async function zoneStopOne(rid){ const r=ZONES.run; if(!r) return;
-  try{ await appApi('/app/zones/run/'+r.runId+'/stop-one',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:rid})}); }catch(_){ }
-  toast(t('zones.stoppedone','Stopped that store'),'neutral'); setTimeout(zonePollTick,600); }
+  // Only say it stopped when the server says so (owner 08-02). The silent catch here used to fire the
+  // "Stopped" notification even on a failure, which is how a missing address hid for months.
+  let ok=false;
+  try{ const res=await appApi('/app/zones/run/'+r.runId+'/stop-one',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:rid})}); ok=!!(res&&!res.error&&res.stopped>0); }catch(_){ ok=false; }
+  toast(ok?t('zones.stoppedone','Stopped that store'):t('zones.stoponefail','That check is already finishing'),'neutral');
+  setTimeout(zonePollTick,600); }
 async function zoneStopAll(){ const r=ZONES.run; if(!r) return; try{ await appApi('/app/zones/run/'+r.runId+'/stop',{method:'POST'}); }catch(_){ } toast(t('zones.stopped','Stopping the sweep…'),'neutral'); setTimeout(zonePollTick,600); }
 function zoneShare(){ const r=ZONES.run; const d=(r&&r.data)||{}; const sm=d.summary||{}; const n=d.total||0, i=sm.inStock||0;
   const txt=tf('zones.sharemsg2','Checked {n} stores at once. {i} had it in stock. Wild:',{n,i});
@@ -8269,7 +8412,10 @@ function railClass(e){ const st=STORES.find(x=>x.id===e.storeId)||{}; const lu=e
 function railFace(e){
   const st=STORES.find(x=>x.id===e.storeId);
   const lu=e.logoUrl||(st&&st.logoUrl);
-  if(lu) return `<img src="${esc(lu)}" alt="" loading="lazy" data-nm="${esc(e.storeName)}" data-st="${esc((st&&st.storeType)||'')}" onerror="wmFail(this)">`;
+  // Same width the store list uses. This chip is 58 across on a finished check and 212 behind a running
+  // one; a percent is right at both, which is why the old hardcoded 40px and 190px are gone.
+  const pct=(typeof e.logoPct==='number')?e.logoPct:(st&&st.logoPct);
+  if(lu) return `<img src="${esc(lu)}" alt="" loading="lazy" data-nm="${esc(e.storeName)}" data-st="${esc((st&&st.storeType)||'')}"${logoStyle({logoPct:pct})} onerror="wmFail(this)">`;
   return storeWordmark(e.storeName, st&&st.storeType);
 }
 // Local YYYY-MM-DD for a call's timestamp — used to view a specific day's transcripts.
@@ -8918,11 +9064,13 @@ async function watchStore(opts){
   // Full list → open Alerts in make-room mode, remembering this store so a removal re-adds it.
   if(r&&r.error==='cap'){ ALERTS_ME=r; PENDING_WATCH={store:st,categoryId,productLabel}; openAlerts({makeRoom:true}); return; }
   if(!r||r.error){ toast(t('err.generic',"That didn't go through. Give it another try."),'neutral'); return; }
+  // The email sender rides its own row: keep it armed on EVERY subscribe tap, including a repeat
+  // (a spent row quietly re-arms; the endpoint never writes a duplicate). Skipping this on "already"
+  // would leave a switched-off sender behind an on-looking alert = in-stock emails that never come.
+  if(ACCOUNT&&ACCOUNT.email){ try{ api('/pub/watch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:st.id,categoryId,contact:ACCOUNT.email})}); }catch(_){ } }
   // Already set and live → say so and stop (owner 07-30). No second row, no fake "now watching".
   if(r.already && r.status==='on'){ toast(t('watch.already',"You've already set an alert for this store"),'neutral'); return; }
   track('watch_set',{retailerId:st.id,channel:'email'});
-  // Keep the legacy Admin "Restock watches" card fed when there's an address on file.
-  if(ACCOUNT&&ACCOUNT.email){ try{ api('/pub/watch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:st.id,categoryId,contact:ACCOUNT.email})}); }catch(_){ } }
   try{ alertsPrefetch(); }catch(_){ }
   if(r.status==='on'){ alertSetToast(st.name,'alerts.type.restock','Restock Alert'); return; } // confirmed email: instant
   openWatchConfirm(st, r.status); // need_email | pending
@@ -9269,7 +9417,7 @@ function succFilter(){
   if(SUCC_STORE){ $('succ_storelist').innerHTML=''; return; }
   const list=succInStockStores().filter(st=>!q||storeMatch(st.name+' '+(st.location||''),q));
   if(!list.length){ $('succ_storelist').innerHTML=`<div class="lo" style="padding:11px 3px;color:var(--muted);font-size:12.5px;line-height:1.5">${q?t('sc.noinstock.q','No in-stock check matches that.'):t('sc.noinstock','Only stores where you found it in stock show here. Run a check first.')}</div>`; return; }
-  $('succ_storelist').innerHTML=list.slice(0,6).map(st=>`<div class="store" onclick="succPick(${st.id})" style="margin-top:8px"><div class="ic">${st.logoUrl?`<img src="${esc(st.logoUrl)}" alt="" style="width:22px;height:22px;object-fit:contain">`:storeWordmark(st.name,st.storeType)}</div><div style="min-width:0;flex:1"><div class="nm">${esc(st.name)}</div><div class="lo">${esc(st.location||'')}</div></div></div>`).join('');
+  $('succ_storelist').innerHTML=list.slice(0,6).map(st=>`<div class="store" onclick="succPick(${st.id})" style="margin-top:8px">${storeTile(st)}<div style="min-width:0;flex:1"><div class="nm">${esc(st.name)}</div><div class="lo">${esc(st.location||'')}</div></div></div>`).join('');
 }
 let SUCC_SEQ=0;
 function succPick(id){ SUCC_STORE=STORES.find(st=>st.id===id)||succInStockStores().find(st=>st.id===id)||null; if(SUCC_STORE){ $('succ_store').value=SUCC_STORE.name; markFld($('succ_store'),false); } succFilter(); }
@@ -9316,7 +9464,7 @@ async function submitSuccess(){
 function igHandle(p){ return '@'+esc((p.handle||'hunter').replace(/^@/,'')); }
 function igAv(p){
   const st=p.retailerId?STORES.find(x=>x.id===p.retailerId):null;
-  if(st&&st.logoUrl) return `<span class="av"><img src="${esc(st.logoUrl)}" alt=""></span>`;
+  if(st&&st.logoUrl) return `<span class="av"><img src="${esc(st.logoUrl)}" alt=""${logoStyle(st)}></span>`;
   const base=(p.store||'?').split(/\s+/).filter(Boolean);
   return `<span class="av"><span class="mono">${esc(((base[0]||'?')[0]+(base[1]?base[1][0]:'')).toUpperCase())}</span></span>`;
 }
@@ -9402,5 +9550,5 @@ async function submitSchedule(){
 }
 boot();
 </script>
-<script>!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);posthog.init("phc_xYyBl7VcEYqf4emnV42blLSKQZM0CtxjgEVUSBpS2uL",{api_host:"https://us.i.posthog.com",defaults:"2025-05-24"})</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a23e91524addc96a',t:'MTc4NTUyMTUwOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);posthog.init("phc_xYyBl7VcEYqf4emnV42blLSKQZM0CtxjgEVUSBpS2uL",{api_host:"https://us.i.posthog.com",defaults:"2025-05-24"})</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a26ab4f5597e5a7b',t:'MTc4NTk4NDM0MQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
