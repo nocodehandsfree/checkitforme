@@ -80,6 +80,12 @@ function gradeTurn(t, scen) {
   return f;
 }
 
+// Correctness and completeness come from a person's read, kept beside the spec so the table can be
+// regenerated without re-grading. Missing entry = ungraded, and it says so rather than assuming a pass.
+const ROUND = process.env.SCORECARD_ROUND || (DIR.includes("signed") || DIR.includes("round2") ? "round2" : "round1");
+let human = {};
+try { human = JSON.parse(readFileSync("docs/specs/support-chatbot-testing/human-grades.json", "utf8"))[ROUND] || {}; } catch { /* ungraded */ }
+
 const files = readdirSync(DIR).filter((f) => f.endsWith(".json")).sort();
 const rows = [];
 for (const file of files) {
@@ -95,28 +101,45 @@ for (const file of files) {
     });
     if (named && wrong) fails.push({ dim: "pinned check", why: `answered about another store, not ${s.check.store}` });
   }
-  rows.push({ file, n: s.n, name: s.name, turns: (s.turns || []).length, fails });
+  // The two human points. Ungraded is stated, never assumed to pass.
+  const h = human[String(s.n)];
+  if (h && h.correct === false) fails.push({ dim: "correct", why: h.why || "graded wrong by a reader" });
+  if (h && h.complete === false) fails.push({ dim: "complete", why: h.why || "did not answer everything asked" });
+  // Ten points, one per dimension. A dimension you were never at risk of failing is earned, so the
+  // denominator is always 10 and the scores compare across scenarios and across rounds.
+  const lost = new Set(fails.map((f) => f.dim));
+  const score = 10 - lost.size;
+  rows.push({ file, n: s.n, name: s.name, turns: (s.turns || []).length, fails, score, graded: !!h });
 }
 
 if (JSON_OUT) { console.log(JSON.stringify(rows, null, 2)); process.exit(0); }
 
+rows.sort((a, b) => a.n - b.n);
 const byDim = {};
-let pass = 0;
-console.log(`\nSCORECARD — ${rows.length} scenarios, ${rows.reduce((n, r) => n + r.turns, 0)} messages, from ${DIR}\n`);
-for (const r of rows) {
-  const mark = r.fails.length ? "FAIL" : "pass";
-  if (!r.fails.length) pass++;
-  console.log(`${mark}  ${String(r.n).padStart(2)}  ${r.name}`);
-  for (const f of r.fails) {
-    console.log(`        ${f.dim}: ${f.why}`);
-    byDim[f.dim] = (byDim[f.dim] || 0) + 1;
+for (const r of rows) for (const f of r.fails) byDim[f.dim] = (byDim[f.dim] || 0) + 1;
+const total = rows.reduce((n, r) => n + r.score, 0);
+const clean = rows.filter((r) => !r.fails.length).length;
+
+if (process.argv.includes("--md")) {
+  // The table, ready to paste into SCORECARD.md. One line per test, its score, and what it lost.
+  console.log(`| # | Test | Score | Lost on |`);
+  console.log(`|---|---|---|---|`);
+  for (const r of rows) {
+    const lost = r.fails.length ? r.fails.map((f) => `**${f.dim}** ${f.why}`).join(" · ") : "nothing";
+    console.log(`| ${r.n} | ${r.name}${r.graded ? "" : " *(correctness ungraded)*"} | ${r.score}/10 | ${lost} |`);
   }
+  console.log(`\n**${total}/${rows.length * 10}** across ${rows.length} tests · ${clean} perfect scores.`);
+  process.exit(0);
 }
-console.log(`\n${pass}/${rows.length} scenarios clean on the machine-checked dimensions.`);
+
+console.log(`\nSCORECARD — ${rows.length} tests, ${rows.reduce((n, r) => n + r.turns, 0)} messages, from ${DIR}\n`);
+for (const r of rows) {
+  console.log(`${String(r.score).padStart(2)}/10  ${String(r.n).padStart(2)}  ${r.name}${r.graded ? "" : "  (correctness ungraded)"}`);
+  for (const f of r.fails) console.log(`         lost ${f.dim}: ${f.why}`);
+}
+console.log(`\n${total}/${rows.length * 10} overall · ${clean} of ${rows.length} scored a perfect 10.`);
 if (Object.keys(byDim).length) {
-  console.log("\nFailures by dimension:");
+  console.log("\nPoints lost by dimension:");
   for (const [d, n] of Object.entries(byDim).sort((a, b) => b[1] - a[1])) console.log(`  ${String(n).padStart(3)}  ${d}`);
 }
-console.log("\nCorrectness and completeness are graded by a person reading the transcripts — see");
-console.log("docs/specs/support-chatbot-testing/SCORECARD.md. A model grading its own answers for");
-console.log("correctness is how a wrong answer gets a green tick.\n");
+console.log("");
