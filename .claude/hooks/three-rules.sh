@@ -39,7 +39,8 @@ A. THE REPLY RULES ABOVE ARE LOCKED (owner, 08-04) and machine-enforced by the
    reply lock. HOW TO REPLY (renderer flow, owner's go 08-05): write your best
    COMPLETE answer normally — every fact, number, name, decision, uncertainty,
    exact quote intact. No style effort needed; a dedicated renderer puts it in
-   the owner's voice. SHORT REPLY (2 lines or less, e.g. "Yes, all done."):
+   the owner's voice. SHORT REPLY (4 lines or less, e.g. "Yes, all done." —
+   owner widened it from 2 on 08-06 so a simple answer is instant):
    skip everything and just send. Otherwise save the answer to a scratch file
    and run bash scripts/check-reply.sh <file> in the FOREGROUND (never in
    background) and WAIT. It returns APPROVED text: yours unchanged, or a

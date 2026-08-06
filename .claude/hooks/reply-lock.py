@@ -5,7 +5,8 @@
 # THE FLOW (pre-check, scripts/check-reply.sh):
 #   1. The working agent writes its best complete answer normally (facts, numbers,
 #      names, decisions, uncertainty, exact quotes intact). No style effort needed.
-#   2. Short reply (2 lines or less): word scan only, instant approve. An answer far
+#   2. Short reply (4 lines or less, owner widened it from 2 on 08-06): word scan only,
+#      instant approve. An answer far
 #      past the 25 line limit bounces the same instant: no rewrite saves it, and the
 #      agent cutting it costs a second instead of waiting on a model. The one thing the
 #      cap does not touch is a piece of work the owner asked to be handed in the chat
@@ -98,12 +99,22 @@ BANNED = ["good catch", "good question", "your instincts are right", "one honest
           "the bad news", "first off", "before i get into", "let me start"]
 
 def is_short(text):
-    # The bypass exists so a quick answer does not cost a 30 second rewrite (owner
-    # 08-04). Tried tightening it to 1 line / 140 chars on 08-05 and the owner called
-    # it too tight: rambling is a rule 6 problem, not a length problem, and the fix
-    # for it lives in the renderer (cut anything he did not need), not here.
+    # A QUICK ANSWER, for rule 10 only: this is the reply that carries no bold at all.
+    # Tried tightening it to 1 line / 140 chars on 08-05 and the owner called it too
+    # tight: rambling is a rule 6 problem, not a length problem, and the fix for it lives
+    # in the renderer (cut anything he did not need), not here.
     lines = [l for l in text.splitlines() if l.strip()]
     return len(lines) <= 2 and len(text.strip()) <= 240
+
+def skips_writer(text):
+    # THE SPEED BYPASS, widened from 2 lines to 4 on the owner's word (08-06). A simple
+    # question with a 3 or 4 line answer was paying about 12 seconds to be rewritten in
+    # his voice, which it did not need. Kept SEPARATE from is_short on purpose: a 4 line
+    # reply covering 2 things still wants its bold labels, and folding the two together
+    # would have started rejecting those for "bold on a quick answer".
+    # The word scan still runs here. Only the writer and the meaning pass are skipped.
+    lines = [l for l in text.splitlines() if l.strip()]
+    return len(lines) <= 4 and len(text.strip()) <= 420
 
 # THE LINE CAP (owner 08-06, raised from 15). At 15 the replies were scrunching words in
 # and going thin on the explaining, which is the opposite of rule 4. HARD_STOP is where no
@@ -471,7 +482,7 @@ if "--check-file" in sys.argv:
     if not draft:
         print("empty draft"); sys.exit(2)
 
-    if is_short(draft):
+    if skips_writer(draft):
         fails = word_scan(draft)
         if fails:
             print("VERDICT: NOT SENDABLE. Broken: " + "; ".join(fails))
@@ -645,7 +656,7 @@ if consume_approval(root, reply):
     allow_reset()
 if reply.startswith("FAILED THE RULES"):
     allow_reset()
-if is_short(reply) and not word_scan(reply):
+if skips_writer(reply) and not word_scan(reply):
     allow_reset()
 if count >= 2:
     # Third failure: let it stand; reasons go to a log, nothing bolted onto his screen.
