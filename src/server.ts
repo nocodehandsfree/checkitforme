@@ -40,7 +40,7 @@ import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
 import { placeNavCall, navInitialTwiml, navStep, navEnded, navMediaFeed, getNavSession, latestNavSessionForChain, NAV_MODEL, confirmAskedStores, setMappingHandoff } from "./calls/navigator";
 import { listenNavFeed, endListenNav } from "./calls/listen-nav";
 // THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
-import { emit, markNow, closeReceipt, linkCall, rollup, rollupFromRow, getReceipt, transcriptOf, setLineHook, normSaid, type Rollup } from "./calls/events";
+import { emit, markNow, closeReceipt, linkCall, navOutcomeOf, rollup, rollupFromRow, getReceipt, transcriptOf, setLineHook, normSaid, type Rollup } from "./calls/events";
 import { installReceiptStore, currentRates, onReceiptClosed, recordVerdict, lastClerkLine } from "./calls/receipt-store";
 import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
@@ -7294,6 +7294,19 @@ async function hangupTwilioCall(callSid: string, room?: string): Promise<void> {
 app.post("/pub/bridge-hangup", async (c) => {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   const { room } = await c.req.json();
+  // THE CANCEL WINDOW CLOSES THE MOMENT STAFF PICK UP (owner, 08-06). While we are dialing, ringing
+  // or walking the menu, nothing has been done for the customer, so calling it off costs them
+  // nothing and the status says so. Once a real person is on the line the work has happened and the
+  // conversation is already being paid for, so there is no free cancel from there. The question of
+  // whether a person answered is asked of the check's OWN record through the one function the
+  // receipt itself uses, so this rule can never drift away from what the check's page reports.
+  // No receipt (already flushed, or a room we never opened) means the check is over anyway: let the
+  // old path run, exactly as it did before, rather than refuse on something we cannot see.
+  const rec = room ? getReceipt(String(room)) : null;
+  if (rec && navOutcomeOf(rec) === "reached_a_person") {
+    console.log(`[cancel] refused for ${String(room).slice(0, 8)}: Staff already picked up`);
+    return c.json({ ok: false, reason: "staff_reached" });
+  }
   // THE CUSTOMER PRESSING STOP IS US ENDING THE CHECK, and it must never come back later reading as
   // the store hanging up on us (round 2, item 5). Marked before we ask the carrier to end it.
   noteWeEnded(room, "user_cancelled");

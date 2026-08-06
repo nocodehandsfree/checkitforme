@@ -5706,6 +5706,10 @@ function renderLiveHead(){
 function liveStage(n){
   if(!n||n<=LIVE_STAGE) return;
   LIVE_STAGE=n;
+  // THE CANCEL WINDOW CLOSES WHEN STAFF PICK UP (owner 08-06). Stages 7 and 8 are a real person on
+  // the line, and from there the work has been done, so the button goes. The server refuses a late
+  // press as well, and this is only what the customer sees: nothing to press once somebody answered.
+  if(n>=7){ const _hb=$('hangup_btn'); if(_hb)_hb.style.display='none'; }
   const at=LIVE_T0?((Date.now()-LIVE_T0)/1000):0;
   LIVE_STEPS.push({n, label:liveStageLabel(n), at});  // log it with the elapsed time it started
   const el=$('phase'); if(el) el.textContent=liveStageLabel(n); // back-compat if a #phase element exists
@@ -5929,10 +5933,20 @@ function fillLiveHeader(){
 }
 function stopLiveTimers(){ LIVE_TIMERS.forEach(t=>clearInterval(t)); LIVE_TIMERS=[]; if(POLL){clearInterval(POLL);POLL=null;} }
 async function hangUpLive(){
-  window.LIVE_CANCELLED=true; // the user aborted this check, so it is a cancel and never a verdict (owner 07.24)
-  if(LIVE_ROOM){ api('/pub/bridge-hangup',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({room:LIVE_ROOM})}); }
-  LIVE_ROOM=null; stopLiveTimers(); stopAudio();
+  // ONE PRESS. The button goes the moment it is tapped, so a second tap cannot fire a second stop.
   const hb=$('hangup_btn'); if(hb)hb.style.display='none';
+  // THE SERVER OWNS THE ANSWER, NOT THE PAGE (owner 08-06). A check may be called off only while
+  // nobody at the store has picked up, and the last word on that is the check's own record, which
+  // the page cannot see. So we ASK first, and only call it a cancel once the server says it really
+  // stopped it. A tap landing in the same second Staff answer would otherwise paint "Check
+  // cancelled" over a check that carried on running and got charged. A network failure still
+  // cancels, exactly as it did before, because the page must never strand somebody on a live call.
+  if(LIVE_ROOM){
+    const _r=await api('/pub/bridge-hangup',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({room:LIVE_ROOM})});
+    if(_r&&_r.ok===false){ toast(t('zones.stoponefail','That check is already finishing'),'neutral'); return; }
+  }
+  window.LIVE_CANCELLED=true; // the user aborted this check, so it is a cancel and never a verdict (owner 07.24)
+  LIVE_ROOM=null; stopLiveTimers(); stopAudio();
   const _p=$('phase'); if(_p)_p.textContent=t('live.getting','⏳ Getting the result…'); $('audio_ind') && ($('audio_ind').style.display='none');
   finalizeLive(LIVE_CID);
 }
@@ -6071,7 +6085,11 @@ async function startCheckLive(){
     r={room:liveRoom,wsHost:held.wsHost}; LIVE_T0=Date.now(); // slot opened: enter the live view at connect
   }
   if(r.error||!r.room){ clearInterval(elT); stopAudio(); backToBuilder(); if(r.error==='no_credits')openBuy('out'); else if(r.error==='unauthorized')signIn(); else if(r.error==='too_soon'){ toast(r.message||tf('toast.toosoon','You just checked this store. Check again in about {n} min.',{n:r.retryAfterMin||60}),'accent'); } else if(r.error==='store_closed'){ toast(tf('toast.closed','🔒 {x}. No call placed.',{x:tLbl(r.label||'Store is closed')})); } else toast(t('toast.callstart.fail',"Couldn't start the check")); return; }
-  LIVE_ROOM=r.room; if(canListen) $('hangup_btn').style.display='';
+  // EVERY CUSTOMER CAN CALL OFF A CHECK ON ONE STORE (owner 08-06). Listening to the call is still a
+  // testing tool for comp accounts, but stopping your own check never was one: before this the button
+  // only existed on the owner's account, so a real customer watching us dial had no way out at all.
+  // It disappears the moment Staff pick up (liveStage 7), which is where the cancel window closes.
+  LIVE_ROOM=r.room; $('hangup_btn').style.display='';
   // Transcript + stage stream over the WS for EVERYONE — instant, the moment ElevenLabs emits a line
   // (no poll lag, no waiting on the conversation-id). Audio only PLAYS for listeners (canListen).
   // Connect the live socket to the page's OWN origin (e.g. staging.checkitforme.com) — the address the

@@ -169,6 +169,58 @@ console.log("▶ the clerk puts the phone down and walks off");
   ok(e.holdMs >= 6000 && e.holdMs <= 8000, `and the seconds are counted (${e.holdMs}ms) — holdSeconds has been null since the receipt shipped`);
 }
 
+console.log("▶ THE OWNER'S CHECK 298: 'hello? are you there?' brings Charlie back");
+{
+  // 08-06. He told Charlie to hold, went quiet, then asked several different ways whether we were
+  // still there, and Charlie never came back and none of it was written down. The reason was that
+  // being back needed 400ms of UNBROKEN speech and every pause reset the count, so short questions
+  // with pauses between them never once reached the bar. It is counted over recent audio now.
+  const { e, said } = ear();
+  talk(e, 3000);
+  silence(e, 7000);
+  ok(said[0] === "away:quiet", "he steps away and the wait is declared");
+  // "hello?" … "you there?" … each one shorter than the bar on its own.
+  talk(e, 300); silence(e, 900); talk(e, 300); silence(e, 900);
+  ok(String(said[1] || "").startsWith("back:"), "two short questions add up to somebody being back");
+}
+
+console.log("▶ …and one click still cannot end a wait, however many of them there are");
+{
+  const { e, said } = ear();
+  talk(e, 3000);
+  silence(e, 7000);
+  for (let i = 0; i < 10; i++) { e.feed(LOUD_E * 4); silence(e, 1000); }  // one 20ms click a second
+  ok(said.length === 1 && said[0] === "away:quiet", "ten clicks a second apart are still nobody");
+}
+
+console.log("▶ somebody who comes back quieter than they left is still heard");
+{
+  // The room test measures whoever speaks against how loud this person has been. That yardstick was
+  // frozen for the whole wait and the sound from BEFORE the wait was averaged into the judgement, so
+  // anybody who came back turned away from the handset was written off as noise from across the room
+  // and could never be heard again. It fades on every frame now, down to a floor, and the wait
+  // starts the measurement fresh.
+  const { e, said } = ear();
+  for (let i = 0; i < 60; i++) e.feed(4000);   // a close, loud speaker sets the yardstick high
+  talk(e, 2000);
+  silence(e, 7000);
+  ok(said[0] === "away:quiet", "they step away");
+  for (let i = 0; i < 60; i++) e.feed(i % 5 === 4 ? QUIET_E : 1500);  // back, at a third of that
+  ok(String(said[1] || "").startsWith("back:"), "a third as loud is a person, not the room");
+}
+
+console.log("▶ …and a handset left on the counter is still not somebody coming back");
+{
+  const { e, said } = ear();
+  for (let i = 0; i < 60; i++) e.feed(4000);
+  talk(e, 2000);
+  silence(e, 7000);
+  // A till and a radio down the aisle: sound with gaps in it, far below the person we were speaking
+  // to, going on and on. This is the eleven-cents-a-minute case the room test was built for.
+  for (let i = 0; i < 40; i++) { for (let j = 0; j < 30; j++) e.feed(420); silence(e, 400); }
+  ok(said.length === 1 && said[0] === "away:quiet", "a minute of room noise never ends the wait");
+}
+
 console.log("▶ the greeting the ear never heard still counts as somebody being there");
 {
   // Charlie now opens on a greeting followed by a real pause (round 1, item 1.1), so the ear is

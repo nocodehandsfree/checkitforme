@@ -534,6 +534,15 @@ const TRANSFER_TONE_MS = 600;
  *  put ten of each on one receipt. A spoken word runs about three hundred milliseconds, so this
  *  clears on anybody actually saying something and never on a click, a beep or a gap in hold music. */
 const BACK_VOICE_MS = 400;
+/** …and it is counted OVER THIS MUCH RECENT AUDIO, never as one unbroken run (owner's check 298,
+ *  08-06). He told Charlie to hold, went quiet, then asked "hello? are you there?" several different
+ *  ways, and Charlie never came back and not one word of it was written down. The reason: the run of
+ *  speech was reset to zero by every pause, and somebody checking whether the line is still there
+ *  says SHORT things with long pauses between them, so the run never once reached a word's worth.
+ *  Counting instead of running fixes that and gives up none of the protection the run was there for:
+ *  a click, a beep or a gap in hold music is a single frame, and a single frame can never add up to
+ *  four hundred milliseconds of speech however wide the window is. */
+const BACK_WINDOW_MS = 3000;
 /** A gap longer than this breaks a run of speech. Syllables inside a word sit well under it; the
  *  pause after "hello" does not. */
 const VOICE_GAP_MS = 300;
@@ -554,8 +563,18 @@ const ROOM_FRACTION = 0.35;
 const ROOM_WINDOW_FRAMES = 15;
 /** How fast the memory of how loud they were fades, per 20ms frame — about half in forty seconds. It
  *  has to hold across a whole answer without being pinned by one shouted word for the rest of the
- *  check. */
+ *  check. It fades on EVERY frame, including the quiet ones (owner's check 298, 08-06). Fading it
+ *  only while somebody was already talking meant it never faded during the one stretch that matters,
+ *  the wait itself: whoever came back was measured against the loudest thing said before they left,
+ *  and anybody quieter than a third of that was written off as noise from across the room, forever,
+ *  because a voice marked as the room never gets to update the yardstick it is being judged by. */
 const CLOSE_DECAY = 0.99965;
+/** …and it can never fade below this share of the loudest we have really heard a person be. The
+ *  fade is there so somebody who comes back quieter is still heard; it is NOT there to let a handset
+ *  lying on a counter creep past the bar after a long enough wait, which is the eleven-cents-a-minute
+ *  bug the room test was built for. Half keeps both: the effective bar sits at about a sixth of a
+ *  real speaking voice, far under anybody talking and far over a till and a radio down the aisle. */
+const CLOSE_FLOOR = 0.5;
 export interface EarTuning {
   holdQuietMs?: number; holdMusicMs?: number; musicWindowMs?: number;
   musicVoicedFraction?: number; newPersonAfterMs?: number; deadAirMs?: number;
@@ -602,6 +621,13 @@ export class ConversationEar {
    *  line, in any language. Zero = we have not heard anybody talk to us yet, and then the test is
    *  simply off. */
   private closeLevel = 0;
+  /** The loudest a person has really been on this call, which is what the fade is measured down from.
+   *  Kept separately so the floor is a share of somebody's real voice and never of a faded number. */
+  private closePeak = 0;
+  /** WHEN each of the last few seconds' speech frames arrived, so "have they said a word's worth
+   *  lately" is a count and not an unbroken run. Holding the times, not just a tally, is what lets a
+   *  hold be backdated to the moment they STARTED talking rather than the moment we were sure. */
+  private backSpeech: number[] = [];
   /** How much of the current wait was sound from across the room rather than plain silence. */
   private roomMs = 0;
   /** The last third of a second of sound, so the room test reads a stretch and not one frame. */
@@ -662,7 +688,7 @@ export class ConversationEar {
     // …and how loud they were saying it, which is the yardstick the room test measures against. A
     // handset put down straight after the greeting is the case that needs it most, and it is exactly
     // the case where the ear itself never hears anybody speak.
-    if (closeLevel > 0) this.closeLevel = Math.max(this.closeLevel, closeLevel);
+    if (closeLevel > 0) { this.closeLevel = Math.max(this.closeLevel, closeLevel); this.closePeak = Math.max(this.closePeak, closeLevel); }
   }
 
   /**
@@ -691,6 +717,16 @@ export class ConversationEar {
     const room = loud && !isTone && this.isRoom(energy);
     this.voiced.push(loud && !isTone && !room);
     while (this.voiced.length * FRAME_MS > this.windowMs) this.voiced.shift();
+    // THE MEMORY OF HOW LOUD THEY WERE FADES ON EVERY FRAME, THE QUIET ONES INCLUDED. It used to fade
+    // only while somebody was already talking, so across a wait it did not fade at all, and whoever
+    // came back was measured against the loudest thing said before they left. Anybody quieter than a
+    // third of that was written off as the room and could never be heard again, because a voice
+    // marked as the room is never allowed to update the yardstick judging it. The floor is what keeps
+    // a handset on a counter from creeping past the bar on a long wait.
+    if (this.closeLevel > 0) this.closeLevel = Math.max(this.closeLevel * CLOSE_DECAY, this.closePeak * CLOSE_FLOOR);
+    // …and drop the speech we heard more than a few seconds ago, so "have they said a word's worth
+    // lately" only ever asks about now.
+    while (this.backSpeech.length && this.backSpeech[0] < this.elapsed - BACK_WINDOW_MS) this.backSpeech.shift();
 
     // A ringing line after we already reached a person is a transfer. The FREQUENCIES are
     // unambiguous, but one frame of them is not: twenty milliseconds of a voice can land on them by
@@ -719,16 +755,22 @@ export class ConversationEar {
       // costs checks. Decaying, so it still follows one person down a line that gets quieter.
       const recent = [...this.soundRecent].sort((a, b) => a - b);
       const mid = recent.length ? recent[Math.floor(recent.length / 2)] : energy;
-      this.closeLevel = Math.max(mid, this.closeLevel * CLOSE_DECAY);
+      this.closeLevel = Math.max(mid, this.closeLevel);
+      this.closePeak = Math.max(this.closePeak, this.closeLevel);
       const full = this.voiced.length * FRAME_MS >= this.windowMs
         && this.voiced.filter(Boolean).length / this.voiced.length >= this.voicedFrac;
-      if (full && this.soundMs >= this.musicMax) { this.voiceRunMs = 0; this.enter("music"); }
+      if (full && this.soundMs >= this.musicMax) { this.voiceRunMs = 0; this.backSpeech = []; this.enter("music"); }
       // Sound with gaps in it is a person. If we thought they were away, they are back — but only
       // once they have actually said SOMETHING. A single frame ending a hold is the other half of the
       // flapping bug: it ended a hold that had lasted nothing, and the next ring opened another one.
+      // A WORD'S WORTH INSIDE THE LAST FEW SECONDS, not a word's worth in one unbroken breath: a
+      // person checking whether we are still there says "hello?" and then "are you there?", short
+      // things with long pauses, and a run that reset on every pause never reached the bar once
+      // (owner's check 298). One click is still one frame and can never add up to it.
       else if (!full) {
         this.heardVoiceMs += FRAME_MS; this.voiceRunMs += FRAME_MS; this.deadAirCalled = false;
-        if (this.voiceRunMs >= this.backVoiceMs) this.leave();
+        this.backSpeech.push(this.elapsed);
+        if (this.backSpeech.length * FRAME_MS >= this.backVoiceMs) this.leave();
       }
     } else {
       this.soundMs = 0; this.quietMs += FRAME_MS;
@@ -754,6 +796,15 @@ export class ConversationEar {
     // BACKDATE to the moment they actually went, not the moment we were sure. We only declare a hold
     // after six seconds of evidence, so timing it from the declaration would report a seven second
     // absence as one second — and the whole point of the number is how long nobody was there.
+    // THE SOUND FROM BEFORE THE WAIT IS NOT EVIDENCE ABOUT THE SOUND AFTER IT. The room test reads a
+    // recent stretch of sound, and that stretch used to survive the whole wait: the first thing
+    // somebody said on coming back was averaged in with how loud they had been before they left, and
+    // then judged against that same number, so the answer was decided before they had said anything.
+    // A wait is a new scene. Whoever speaks into it is measured on what they actually sound like now.
+    // The speech we heard before they left is cleared for the same reason: it is what they said while
+    // they were still here, so it can never be part of the proof that somebody has come back.
+    this.soundRecent = [];
+    this.backSpeech = [];
     const already = reason === "quiet" || reason === "room" ? this.quietMs : reason === "music" ? this.soundMs : this.toneRunMs;
     this.holdStartedAt = Math.max(0, this.elapsed - already);
     this.holdMs += already;
@@ -763,13 +814,15 @@ export class ConversationEar {
   private leave(): void {
     if (!this.reason) return;
     // They came back when they STARTED talking, not when we had heard enough of it to be sure. The
-    // run of speech that convinced us is theirs, not the hold's, so it comes off both numbers —
-    // otherwise every hold reads a few hundred milliseconds longer than it was.
-    const back = Math.max(0, this.elapsed - this.voiceRunMs);
+    // speech that convinced us is theirs, not the hold's, so it comes off both numbers — otherwise
+    // every hold reads longer than it was. The first word we still remember hearing is that moment,
+    // which is why the times are kept and not just a tally.
+    const back = this.backSpeech.length ? this.backSpeech[0] : Math.max(0, this.elapsed - this.voiceRunMs);
     const gap = Math.max(0, back - this.holdStartedAt);
-    this.holdMs = Math.max(0, this.holdMs - this.voiceRunMs);
+    this.holdMs = Math.max(0, this.holdMs - Math.max(0, this.elapsed - back));
     this.reason = null;
     this.voiceRunMs = 0;
+    this.backSpeech = [];
     this.on.holdEnd(gap, gap >= this.newPersonMs, back);
   }
 }
