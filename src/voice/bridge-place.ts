@@ -10,6 +10,8 @@ import { openReceipt, emit, closeReceipt, laneFor, type EventKind } from "../cal
 import { buildCharlieSetup } from "../calls/charlie-setup";
 import { getSetting } from "../db/settings";
 import { parseRobotPick, robotScene } from "../calls/tapedeck";
+// The owner's 16 locked test cards, read (never rewritten) so a named test says the CARD's name.
+import { TEST_CARDS } from "../calls/behaved";
 
 /** Turn the recipe's executable strings ("2@8,2@16" / "no@26,front@38") back into ordered steps.
  *  Same source of truth either way — only the WHEN changes between the two nav modes. */
@@ -116,6 +118,25 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
   // its phone rings. Read here because the route itself is consumed when the phone company is told
   // what to do, long before the ringing starts. Never invented: no spoken step, no name.
   const departmentName = String(opts?.say || "").split(",").map((p) => p.split("@")[0].trim()).filter(Boolean).pop();
+  // A CHECK AGAINST THE ROBOT STORE IS A NAMED TEST (owner 08-04). The scene the robot will play is
+  // a setting picked before the dial, and the scene names which of the owner's 16 locked cards it
+  // runs — so the card rides the check's own record from the first second, and the Testing screen
+  // can head the check with the test's name instead of the store's. Proved by the NUMBER, the same
+  // way the robot's spending ceiling is, so a real store can never be labeled a test.
+  // THE ROW SAYS THE CARD, NOT THE SCENE (owner 08-06): the scene name describes what the robot does
+  // ("Their answering machine picked up"); the card is what the check is testing ("Voicemail:
+  // detected"), which is the word the sheet already heads the check with — TEST_CARDS in
+  // src/calls/behaved.ts, the same one place, so the row and the heading can never disagree.
+  // WRITTEN BEFORE CHARLIE'S SETUP, which records the opening question and can take seconds: the
+  // test's name leads the log, so its second is the top of the check and not whenever a clip landed.
+  const ROBOT_NUMBER = (process.env.ROBOT_STORE_NUMBER || "+14244847395").replace(/[^\d+]/g, "");
+  if (toNumber.replace(/[^\d+]/g, "") === ROBOT_NUMBER) {
+    try {
+      const scene = robotScene(parseRobotPick(await getSetting("robot_scenario")).scenario);
+      const card = scene?.card ? TEST_CARDS[scene.card] : null;
+      if (card) emit(room, "unknown", `Test: ${card.name}`, { step: "named_test", card: scene?.card, scene: scene?.n });
+    } catch { /* a test label is never worth failing a dial over */ }
+  }
   // ---- CHARLIE'S SETUP, BUILT IN THE ONE SHARED PLACE (owner 08-04) ----
   // The recorded opening question, the joining agent, the brain choice, the hold handling, the
   // owner's timing numbers and the longest allowed check all come from src/calls/charlie-setup.ts,
@@ -135,18 +156,6 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
   // so on the receipt, so "which calls ran the old path" stays a question the log already answers.
   if (setup.clipFailed) emit(room, "unknown", "Could not record the opening question, so this call ran the old way", { fault: "clip-failed", fellBackToOldPath: true });
   const capSecs = setup.shared.timeLimitSec as number;
-  // A CHECK AGAINST THE ROBOT STORE IS A NAMED TEST (owner 08-04). The scene the robot will play is
-  // a setting picked before the dial, and the scene names which of the owner's 16 locked cards it
-  // runs — so the card rides the check's own record from the first second, and the Testing screen
-  // can head the check with the test's name instead of the store's. Proved by the NUMBER, the same
-  // way the robot's spending ceiling is, so a real store can never be labeled a test.
-  const ROBOT_NUMBER = (process.env.ROBOT_STORE_NUMBER || "+14244847395").replace(/[^\d+]/g, "");
-  if (toNumber.replace(/[^\d+]/g, "") === ROBOT_NUMBER) {
-    try {
-      const scene = robotScene(parseRobotPick(await getSetting("robot_scenario")).scenario);
-      if (scene?.card) emit(room, "unknown", `Test: ${scene.name}`, { step: "named_test", card: scene.card, scene: scene.n });
-    } catch { /* a test label is never worth failing a dial over */ }
-  }
   const mkCtx = () => ({ ...setup.shared,
     dtmf: listening ? undefined : (dtmf || undefined), say: listening ? undefined : (opts?.say || undefined),
     connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */,

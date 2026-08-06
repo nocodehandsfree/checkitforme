@@ -2485,69 +2485,87 @@ function checkV2From(d,o){
   const behavior=(d.behaved||[]).filter(r=>r.pass===true||r.pass===false).map(r=>({l:r.label,pass:r.pass===true}));
 
   // ---- the log: every step end to end, menu steps grouped, spoken lines under their step ----
+  // ONE LIST ON ONE CLOCK (owner 08-06). The steps and the spoken lines are stamped on the SAME call
+  // clock in real milliseconds and the server sends that millisecond on both, so every row here
+  // carries its own and the whole log is put in order by that one number, once, at the end. Two
+  // lists rounded to whole seconds and spliced by comparing those seconds is exactly what let
+  // "Staff stepped away", "Charlie dropped" and "Staff back after 6s" all draw at 58s on check 332,
+  // and what drew Delta's recording after the Staff line that answered it.
   const tl=(d.timeline||[]).slice();
   const lines=(d.lines||[]).slice();
+  // A check recorded before the millisecond was kept has its second and nothing finer, so that
+  // second stands in: an old check reads exactly as it always did and no number is invented.
+  const msOf=e=>(e&&e.atMs!=null)?e.atMs:((e&&e.atSec!=null)?e.atSec*1000:null);
+  const secOf=m=>m==null?'':Math.round(m/1000)+'s';
+  const lastMs=tl.length?(msOf(tl[tl.length-1])||0):0;
   const st=e=>((e.detail||{}).step)||'';
   const log=[];const used=new Set();
+  // Every row is filed by its millisecond. A row with nothing to file it by sits at the end of the
+  // check rather than guessing itself a place in the middle.
+  const add=(m,e)=>{e._ms=(m==null?lastMs:m);log.push(e);return e;};
   const takeLine=(who,at,win,back)=>{ // the nearest unclaimed spoken line for a step, inside its window
     let best=-1,gap=1e9;
-    lines.forEach((l,i)=>{ if(used.has(i)||l.who!==who||l.atSec==null)return; const g=Math.abs(l.atSec-at); if(l.atSec>=at-(back||1)&&g<(win||8)&&g<gap){best=i;gap=g;} });
-    if(best<0)return null; used.add(best); const l=lines[best]; return {who:l.who==='Agent'?'Agent':'Clerk',tx:l.text,atSec:l.atSec};
+    lines.forEach((l,i)=>{ const lm=msOf(l); if(used.has(i)||l.who!==who||lm==null)return; const g=Math.abs(lm-at); if(lm>=at-(back||1)*1000&&g<(win||8)*1000&&g<gap){best=i;gap=g;} });
+    if(best<0)return null; used.add(best); const l=lines[best]; return {who:l.who==='Agent'?'Agent':'Clerk',tx:l.text,_ms:msOf(l)};
   };
   for(let i=0;i<tl.length;i++){
-    const e=tl[i],at=(e.atSec||0)+'s',atN=e.atSec||0,step=st(e);
+    const e=tl[i],atM=msOf(e)||0,step=st(e);
     // The menu walk, grouped and expandable, at the front where it happened.
     if(e.kind==='ivr_detected'||e.kind==='alpha_press'||e.kind==='bravo_say'){
-      const g=[{t:e.note,at}];let j=i+1;
-      while(j<tl.length&&(tl[j].kind==='ivr_detected'||tl[j].kind==='alpha_press'||tl[j].kind==='bravo_say')){g.push({t:tl[j].note,at:(tl[j].atSec||0)+'s'});j++;}
+      const g=[{t:e.note,at:secOf(atM)}];let j=i+1;
+      while(j<tl.length&&(tl[j].kind==='ivr_detected'||tl[j].kind==='alpha_press'||tl[j].kind==='bravo_say')){g.push({t:tl[j].note,at:secOf(msOf(tl[j]))});j++;}
       const lane=tl.slice(i,j).some(x=>x.kind==='alpha_press')?'Alpha':'Bravo';
-      log.push({t:'Navigating menu ('+lane+')',at,group:g});i=j-1;continue;
+      add(atM,{t:'Navigating menu ('+lane+')',group:g});i=j-1;continue;
     }
     if(e.kind==='human_detected'){
-      const g=takeLine('Clerk',atN,10,8);
-      // The greeting STARTS before the person test is sure, so the row carries the greeting's own
-      // second (clamped to never sit above the row before it), not the detector's. Without this the
-      // greeting and the Delta recording shared a second and read as Delta talking over Staff.
-      let gAt=atN;
-      if(g&&g.atSec!=null){const prev=log.length?parseInt(log[log.length-1].at)||0:0;gAt=Math.min(atN,Math.max(g.atSec,prev));}
-      log.push({t:'Staff greeting',at:gAt+'s',c:'var(--green)',say:g,open:true});continue;}
-    if(step==='question_clip'){log.push({t:'Delta recording',at,c:'var(--green)',say:takeLine('Agent',atN,10)});continue;}
-    if(step==='second_read'){log.push({t:'The answer was double checked ('+((e.detail||{}).model||'')+')',at});continue;}
-    if(step==='charged'){log.push({t:e.note,at});continue;}
+      const g=takeLine('Clerk',atM,10,8);
+      // The greeting STARTS before the person test is sure, so the row sits at the millisecond Staff
+      // really spoke, not at the detector's. Same clock, so it needs no clamping any more.
+      add(g&&g._ms!=null?Math.min(atM,g._ms):atM,{t:'Staff greeting',c:'var(--green)',say:g,open:true});continue;}
+    if(step==='question_clip'){add(atM,{t:'Delta recording',c:'var(--green)',say:takeLine('Agent',atM,10)});continue;}
+    if(step==='second_read'){add(atM,{t:'The answer was double checked ('+((e.detail||{}).model||'')+')'});continue;}
+    if(step==='charged'){
+      // WHAT THE RECORD SAYS, NOT WHAT THE FINALIZER EXPECTED (owner 08-06). The check's own charge
+      // stamp decides the word, so a check nobody was billed for can never read "Customer charged".
+      const paid=d.charged!=null?d.charged:((e.detail||{}).charged);
+      add(atM,{t:paid==null?e.note:(paid?'Customer charged':'Customer not charged')});continue;}
     if(e.kind==='verdict'){
       const key=String((e.detail||{}).statusKey||'');const reg=STATUSES[key]||{};
+      // THE SHEET SAYS WHAT THE CHECK WAS FILED WITH (owner 08-06). The status reads through the
+      // SAME resolver the check list reads through, so the page can never paint one answer while
+      // the record holds another (scene 10 painted "Nobody answered" over a not in stock check).
+      const vv=key?customerVerdict({statusKey:key,status:key}):null;
       const decided=(e.detail||{}).decidedBy;
-      log.push({t:reg.label||e.note||key,at,status:reg.tone||'unk',sub:decided?('Decided by: "'+decided+'"'):''});continue;
+      add(atM,{t:reg.label||(vv&&vv.t)||e.note||key,status:reg.tone||(vv&&vv.tone)||'unk',sub:decided?('Decided by: "'+decided+'"'):''});continue;
     }
-    if(e.kind==='charlie_join'){const seg=(e.detail||{}).segment;log.push({t:seg>1?'Charlie reconnected':'Charlie joined',at});continue;}
-    if(e.kind==='ringing'||e.kind==='transfer'||e.kind==='hold_start'){log.push({t:e.note,at,c:'var(--yellow)'});continue;}
-    if(step==='wrap_up'){log.push({t:e.note,at,c:'var(--green)',say:takeLine('Agent',atN,10)});continue;}
+    if(e.kind==='charlie_join'){const seg=(e.detail||{}).segment;add(atM,{t:seg>1?'Charlie reconnected':'Charlie joined'});continue;}
+    if(e.kind==='ringing'||e.kind==='transfer'||e.kind==='hold_start'){add(atM,{t:e.note,c:'var(--yellow)'});continue;}
+    if(step==='wrap_up'){add(atM,{t:e.note,c:'var(--green)',say:takeLine('Agent',atM,10)});continue;}
     if((e.detail||{}).silent)continue; // bookkeeping the engine marked as not for the page
-    log.push({t:e.note||e.kind,at});
+    add(atM,{t:e.note||e.kind});
   }
   // AN ISSUE PRINTS WHERE IT HAPPENED (owner 08-06): every behavior row that FAILED lands in the
   // log, red, at the second its evidence names, with the rule that commands the behavior under it,
-  // so the why is read on this page and not hunted for.
+  // so the why is read on this page and not hunted for. The evidence names a whole second and not a
+  // millisecond, so the row files halfway through that second: after what the second opened with,
+  // and still printing the second it names.
   (d.behaved||[]).filter(r=>r.pass===false).forEach(r=>{
     const m=/at (\d+)s|(\d+)s into/.exec(r.why||'');
     const atN=m?parseInt(m[1]||m[2]):null;
-    const entry={t:'Issue: '+r.label,at:atN!=null?atN+'s':'',c:'var(--red)',tc:'var(--red)',sub:(r.why||'')+(r.rule?' The rule: "'+r.rule+'"':'')};
-    let k=atN!=null?log.findIndex(x=>parseInt(x.at)>atN):-1;
-    if(k<0)k=Math.max(0,log.length-1);
-    log.splice(k,0,entry);
+    add(atN!=null?atN*1000+499:null,{t:'Issue: '+r.label,at:atN!=null?null:'',c:'var(--red)',tc:'var(--red)',sub:(r.why||'')+(r.rule?' The rule: "'+r.rule+'"':'')});
   });
+  // Spoken lines no step claimed still belong on the record, at their own millisecond, in order.
+  lines.forEach((l,i)=>{ if(used.has(i))return;
+    const lm=msOf(l);
+    add(lm,{t:l.who==='Agent'?'Charlie said':'Staff answered',at:lm==null?'':null,c:'var(--green)',say:{who:l.who==='Agent'?'Agent':'Clerk',tx:l.text}});
+  });
+  // THE ONE PLACE ORDER IS DECIDED. Rows stamped at the same millisecond keep the order the record
+  // wrote them in, and every row prints the second its own millisecond falls in. So a row can never
+  // draw above the row that caused it, and no row is given a second it did not happen at.
+  log.sort((a,b)=>a._ms-b._ms);
+  log.forEach(e=>{if(e.at==null)e.at=secOf(e._ms);});
   // THE TEST'S NAME LEADS THE LOG (owner 08-06): a test check reads test first, then the dialing.
   {const ti=log.findIndex(x=>/^Test: /.test(x.t));if(ti>0){const [te]=log.splice(ti,1);log.unshift(te);}}
-  // Spoken lines no step claimed still belong on the record, at their own seconds, in order.
-  lines.forEach((l,i)=>{ if(used.has(i))return;
-    const entry={t:l.who==='Agent'?'Charlie said':'Staff answered',at:l.atSec!=null?l.atSec+'s':'',c:'var(--green)',say:{who:l.who==='Agent'?'Agent':'Clerk',tx:l.text},_at:l.atSec};
-    if(l.atSec==null){const k=Math.max(0,log.length-1);log.splice(k,0,entry);return;}
-    // Within one second, Staff speak FIRST and everything of ours reacts: their product answer and
-    // Charlie's goodbye can share a second, and the goodbye must never draw above the answer that
-    // caused it (owner 08-05). So a Staff line slots BEFORE same-second entries, ours after.
-    let k=l.who==='Agent'?log.findIndex(x=>parseInt(x.at)>l.atSec):log.findIndex(x=>parseInt(x.at)>=l.atSec&&!(x.say&&x.say.who!=='Agent'));
-    if(k<0)k=log.length;log.splice(k,0,entry);
-  });
   return {
     name:(v2.test&&v2.test.name)||o.name||'Check',
     sub:(v2.test&&v2.test.sub)||o.sub||'',
@@ -2595,7 +2613,12 @@ function checkV2Html(d){
     return `<span style="width:22px;height:22px;border-radius:50%;background:${m[0]}26;display:grid;place-items:center;flex:0 0 auto"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${m[0]}" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">${m[1]}</svg></span>`;};
   const rung=(e,last,first)=>{
     const mark=e.status?statusIco(e.status):(e.say||e.group)?`<span style="display:grid;place-items:center;width:15px;height:15px;color:${e.c||'#8A8A96'}">${e.group?menuIco:spkIco}</span>`:`<span style="width:9px;height:9px;border-radius:50%;background:${e.c||'var(--muted)'}"></span>`;
-    const dot=`<span style="width:15px;display:grid;place-items:center;justify-items:center;flex:0 0 auto;overflow:visible">${mark}</span>`;
+    // EVERY MARKER RIDES THE SAME 15px RAIL (owner 08-06, measured on his 390px screen). This box was
+    // a grid, and a grid track grows to whatever it holds: the 9px dots and the 15px icons centred
+    // fine, but the 22px status circle made its own track 22px wide, and a track wider than its box
+    // starts at the left and pushes the circle right off the rail. Centred as a flex row, anything
+    // bigger than the box overhangs it evenly, so the circle keeps the same centre as every dot.
+    const dot=`<span style="width:15px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;overflow:visible">${mark}</span>`;
     const stubH=e.status?4:(e.say||e.group)?7:10;
     const stub=`<span style="width:2px;height:${stubH}px;flex:0 0 auto;${first?'':'background:rgba(255,255,255,.14)'}"></span>`;
     const line=last?'':`<span style="width:2px;flex:1;background:rgba(255,255,255,.14)"></span>`;
@@ -6151,7 +6174,11 @@ function vmark(emoji,tc,size){
 // best-effort re-derive from the stored fields (mirrors elevenlabs.ts) so legacy/history rows that
 // predate persisted statusKey still light up the owner-configured icon, not a default emoji.
 function verdictKey(o){
-  if(o.statusKey && STATUSES[o.statusKey]) return o.statusKey;
+  // THE RECORD'S OWN ANSWER WINS (owner 08-06). This used to hand the key back only if the statuses
+  // registry had already loaded, so a check filed not in stock painted "Nobody answered" whenever the
+  // page drew before the registry landed. The key is what the check was filed with, so it is the
+  // answer; the built-in words below cover a key the registry cannot dress yet.
+  if(o.statusKey) return o.statusKey;
   if(o.status==='completed'){
     if(o.doesNotSell) return 'does_not_sell';
     if(o.soldOut) return 'sold_out';
@@ -6173,11 +6200,13 @@ function customerVerdict(o){
        .replace(/\{category\}/g, o.category||o.productName||'it')
        .replace(/\{store\}/g, (o.retailer||o.store||'This store').split(/—|–| - /)[0].trim());
     if(!n && s.tone==='in' && o.productName) n="They've got "+o.productName+" in. go get it.";
-    return {e:s.emoji, t:s.label, c:s.color, n, key};
+    return {e:s.emoji, t:s.label, c:s.color, n, key, tone:s.tone||'unk'};
   }
-  // Registry not loaded yet (first paint) — minimal built-in fallback keeps the row sane.
-  const F=({in_stock:['in_stock','In stock','#4ADE80'],sold_out:['clock','Sold out','#EF4444'],does_not_sell:['ban',"They don't carry it",'#EF4444'],not_in_stock:['circle-x','Not in stock','#EF4444'],no_clear_answer:['circle-help','Got a “maybe”','#FBBF24'],nobody_answered:['phone-off','Nobody answered','#9CA3AF'],closed:['lock','Store closed','#9CA3AF'],failed:['octagon-alert','Call failed','#FBBF24'],admin_hangup:['minus','Admin canceled','#9CA3AF']})[key]||['phone-off','Nobody answered','#9CA3AF'];
-  return {e:F[0],t:F[1],c:F[2],n:(key==='failed'&&o.failureReason)?o.failureReason:'',key};
+  // Registry not loaded yet (first paint). The minimal built-in fallback keeps the row sane, and the fourth
+  // value is the tone the check sheet's status circle is drawn from, so the sheet and this row read
+  // one answer whether or not the registry has landed.
+  const F=({in_stock:['in_stock','In stock','#4ADE80','in'],sold_out:['clock','Sold out','#EF4444','out'],does_not_sell:['ban',"They don't carry it",'#EF4444','out'],not_in_stock:['circle-x','Not in stock','#EF4444','out'],no_clear_answer:['circle-help','Got a “maybe”','#FBBF24','unk'],nobody_answered:['phone-off','Nobody answered','#9CA3AF','unk'],closed:['lock','Store closed','#9CA3AF','unk'],failed:['octagon-alert','Call failed','#FBBF24','unk'],admin_hangup:['minus','Admin canceled','#9CA3AF','unk']})[key]||['phone-off','Nobody answered','#9CA3AF','unk'];
+  return {e:F[0],t:F[1],c:F[2],n:(key==='failed'&&o.failureReason)?o.failureReason:'',key,tone:F[3]};
 }
 function pollTranscript(cid, pre){
   pre=pre||'lab';

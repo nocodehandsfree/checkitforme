@@ -1432,9 +1432,12 @@ app.get("/api/calls/:id/receipt", async (c) => {
   const inMemory = call.room ? getReceipt(call.room) : null;
   const live = inMemory && !inMemory.closed ? inMemory : null;
   const rows = live ? [] : await db.select().from(callEvents).where(eq(callEvents.callId, id)).orderBy(callEvents.atMs);
+  // `atMs` rides beside `atSec` on every step: the sheet orders the steps and the spoken lines as ONE
+  // list on the call's own clock, and whole seconds cannot say which of two things in one second
+  // happened first (owner 08-06).
   const timeline = live
-    ? live.events.map((e) => ({ atSec: e.atSec, kind: e.kind, note: e.note ?? "", detail: e.detail ?? null }))
-    : rows.map((r) => ({ atSec: r.atSec, kind: r.kind, note: r.note ?? "", detail: r.detail ? JSON.parse(r.detail) as unknown : null }));
+    ? live.events.map((e) => ({ atMs: e.atMs, atSec: e.atSec, kind: e.kind, note: e.note ?? "", detail: e.detail ?? null }))
+    : rows.map((r) => ({ atMs: r.atMs, atSec: r.atSec, kind: r.kind, note: r.note ?? "", detail: r.detail ? JSON.parse(r.detail) as unknown : null }));
 
   // A finished call is served from its own stamped row, so a replay always agrees with the numbers
   // the reports are summing. A null here means we never measured it — not that it was zero.
@@ -6450,7 +6453,7 @@ app.get("/api/admin/receipt/:room", async (c) => {
   if (live && !live.closed) {
     const sums = rollup(live);
     const cost = costCall({ callSecs: sums.callSecs, charlieSecs: sums.charlieConnectedSeconds, avoidableSecs: sums.charlieSilentSeconds, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))] }, await currentRates());
-    const timeline = live.events.map((e) => ({ atSec: e.atSec, kind: e.kind, note: e.note ?? "", detail: e.detail ?? null }));
+    const timeline = live.events.map((e) => ({ atMs: e.atMs, atSec: e.atSec, kind: e.kind, note: e.note ?? "", detail: e.detail ?? null }));
     return c.json({
       room, live: true, stamped: true,
       timeline,
@@ -6469,14 +6472,14 @@ app.get("/api/admin/receipt/:room", async (c) => {
       // the earlier "move mapping out": "it would allow me to see in the testing area a complete end
       // to end log of the entire transaction which is huge for myself and any agent"). The steps were
       // already here; what was missing was the conversation itself, which is half of what he reads.
-      lines: live.transcript.map((l) => ({ who: l.who, text: l.text, atSec: Math.round(l.atMs / 1000) })),
+      lines: live.transcript.map((l) => ({ who: l.who, text: l.text, atSec: Math.round(l.atMs / 1000), atMs: l.atMs })),
       v2: await v2For(timeline, sums, cost, (await db.select({ rid: callResults.retailerId }).from(callResults).where(eq(callResults.room, room)).limit(1))[0]?.rid ?? null),
     });
   }
   const rows = await db.select().from(callEvents).where(eq(callEvents.room, room)).orderBy(callEvents.atMs);
   if (!rows.length) return c.json({ error: "no receipt for that call" }, 404);
   const parse = (s: string | null) => { try { return s ? JSON.parse(s) as Record<string, unknown> : null; } catch { return null; } };
-  const timeline = rows.map((r) => ({ atSec: r.atSec, kind: r.kind, note: r.note ?? "", detail: parse(r.detail) }));
+  const timeline = rows.map((r) => ({ atMs: r.atMs, atSec: r.atSec, kind: r.kind, note: r.note ?? "", detail: parse(r.detail) }));
   // An UNATTACHED call rolls its seconds and cost onto the LAST event's detail (receipt-store.ts),
   // because there is no call_results row to stamp and the event set is a closed sixteen.
   const tail = parse(rows[rows.length - 1]?.detail ?? null);
@@ -6509,25 +6512,36 @@ app.get("/api/admin/receipt/:room", async (c) => {
     seconds,
     // Same flag the by-id route sends, so the one viewer can tell "never written down" from "free".
     stamped: !!cost,
+    // WAS THE CUSTOMER REALLY CHARGED (owner 08-06). The charge step was written from what the
+    // finalizer EXPECTED to bill, so a check nobody was billed for still drew "Customer charged".
+    // The truth is the charge stamp on the check's own row, and this is it: null when there is no
+    // row to stamp (an admin call is never a customer's check), never a guess.
+    charged: attached ? attached.chargedAt != null : null,
     cost: cost ? { ...cost, readable: readable(cost) } : null,
     behaved: behaved({ timeline, rollup: seconds, agentLines: agentLinesFrom(attached?.transcript) }),
     // A finished check's timed lines ride an event's detail (receipt-store stamps them on the last
     // event at persist — and the verdict tail lands AFTER that once the check settles, so the holder
     // is found by searching back rather than assumed to be last). Older checks predate the stamp and
     // fall back to the flat transcript with no clock, exactly as before.
-    lines: ((): Array<{ who: string; text: string; atSec: number }> | null => {
+    lines: ((): Array<{ who: string; text: string; atSec: number | null; atMs: number | null }> | null => {
+      type Said = { who: string; text: string; atSec: number | null; atMs?: number | null };
+      // ONE CLOCK FOR THE WHOLE SHEET (owner 08-06): a line's real millisecond is what puts it in
+      // order against the steps. A check recorded before the writer kept it has seconds only, and
+      // its second stands in — the same number it always drew at, never a millisecond we invented.
+      const timed = (ls: Said[]) => ls.map((l) => ({ who: l.who, text: l.text, atSec: l.atSec ?? null,
+        atMs: l.atMs != null ? l.atMs : (l.atSec != null ? l.atSec * 1000 : null) }));
       // The row's full timed conversation first (uncapped; owner 08-05: the record holds everything,
       // the unexpected included) — then the 16-line copy an unattached call leaves on its events.
-      try { const t = attached?.transcriptTimed ? JSON.parse(attached.transcriptTimed) as Array<{ who: string; text: string; atSec: number }> : null; if (Array.isArray(t) && t.length) return t; } catch { /* fall through */ }
+      try { const t = attached?.transcriptTimed ? JSON.parse(attached.transcriptTimed) as Said[] : null; if (Array.isArray(t) && t.length) return timed(t); } catch { /* fall through */ }
       for (let i = timeline.length - 1; i >= 0; i--) {
-        const d = timeline[i].detail as { lines?: Array<{ who: string; text: string; atSec: number }> } | null;
-        if (d && Array.isArray(d.lines)) return d.lines;
+        const d = timeline[i].detail as { lines?: Said[] } | null;
+        if (d && Array.isArray(d.lines)) return timed(d.lines);
       }
       return null;
     })()
       ?? String(attached?.transcript || "").split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
         const m = /^(Agent|Clerk|Staff):\s*(.*)$/i.exec(l);
-        return m ? { who: /agent/i.test(m[1]) ? "Agent" : "Clerk", text: m[2], atSec: null } : { who: "Clerk", text: l, atSec: null };
+        return m ? { who: /agent/i.test(m[1]) ? "Agent" : "Clerk", text: m[2], atSec: null, atMs: null } : { who: "Clerk", text: l, atSec: null, atMs: null };
       }),
     v2: await v2For(timeline, seconds, cost, attached?.retailerId ?? null),
   });

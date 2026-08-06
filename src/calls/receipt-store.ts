@@ -59,10 +59,16 @@ export async function persistReceipt(r: Receipt): Promise<void> {
     // detail, the same place an unattached call's seconds and cost already ride (and deliberately
     // NOT a seventeenth event kind — the closed sixteen is law). Capped hard, because detail is
     // truncated at 4000 characters and a torn JSON reads as no detail at all.
+    // ONE CLOCK, IN MILLISECONDS (owner 08-06, fix 1 on the Testing sheet). The steps keep their real
+    // milliseconds; the spoken lines were rounded to whole seconds right here, so the sheet had two
+    // rounded lists and could only splice them by comparing seconds — which is how three rows six
+    // seconds apart all drew at 58s and Delta's recording drew after the Staff line answering it.
+    // `atMs` is the same call clock the steps are stamped on (events.ts: Date.now() - startMs), so
+    // order comes off ONE list. `atSec` stays beside it for every older reader.
     if (r.events.length && r.transcript.length) {
       const last = r.events[r.events.length - 1];
       last.detail = { ...(last.detail ?? {}),
-        lines: r.transcript.slice(0, 16).map((l) => ({ who: l.who, text: l.text.slice(0, 100), atSec: Math.round(l.atMs / 1000) })) };
+        lines: r.transcript.slice(0, 16).map((l) => ({ who: l.who, text: l.text.slice(0, 100), atSec: Math.round(l.atMs / 1000), atMs: l.atMs })) };
     }
     if (r.events.length) {
       await db.insert(callEvents).values(r.events.map((e) => ({
@@ -105,7 +111,9 @@ export async function persistReceipt(r: Receipt): Promise<void> {
       // The WHOLE conversation with its clock, uncapped in count (300-char lines, 200 lines is far
       // past any real call): the record holds everything, especially the unexpected (owner 08-05).
       // The 16-line copy on the last event stays for UNATTACHED calls, which have no row to carry it.
-      ...(r.transcript.length ? { transcriptTimed: JSON.stringify(r.transcript.slice(0, 200).map((l) => ({ who: l.who, text: l.text.slice(0, 300), atSec: Math.round(l.atMs / 1000) }))) } : {}),
+      // `atMs` is the line's real place on the call's own clock, the same clock every step is
+      // stamped on, so the sheet can order steps and spoken lines as ONE list (owner 08-06).
+      ...(r.transcript.length ? { transcriptTimed: JSON.stringify(r.transcript.slice(0, 200).map((l) => ({ who: l.who, text: l.text.slice(0, 300), atSec: Math.round(l.atMs / 1000), atMs: l.atMs }))) } : {}),
       // navSeconds = dial -> a person is on the line. Only overwrite when the receipt actually
       // measured it; the provider's own figure stays if we never heard a human.
       ...(sums.navSeconds !== null ? { navSeconds: sums.navSeconds } : {}),
@@ -194,10 +202,20 @@ export async function recordVerdict(
       // never shuffle under an ORDER BY on the clock.
       callId, room: room ?? "", atMs: baseMs + order, atSec: at, kind, note: note.slice(0, 300), detail: JSON.stringify(detail),
     });
+    // CHARGED IS A FACT, NOT A FORECAST (owner 08-06). Callers hand us what they decided to bill;
+    // the check's own row carries whether the charge was really stamped, and that is what the step
+    // says. A caller that decided nothing still writes no charge step at all.
+    let charged = extra?.charged ?? null;
+    if (charged != null) {
+      try {
+        const paid = (await db.select({ at: callResults.chargedAt }).from(callResults).where(eq(callResults.id, callId)))[0];
+        charged = paid?.at != null;
+      } catch { /* the row would not answer: keep what the door decided */ }
+    }
     const rows = [];
     if (extra?.secondReadModel) rows.push(rowFor("unknown", "The answer was double checked", { step: "second_read", model: extra.secondReadModel, costUsd: extra.secondReadUsd ?? 0 }, 0));
     rows.push(rowFor("verdict", summary?.slice(0, 300) || `Answer: ${statusKey ?? "unclear"}`, { statusKey, ...(extra?.decidedBy ? { decidedBy: String(extra.decidedBy).slice(0, 200) } : {}) }, 1));
-    if (extra?.charged != null) rows.push(rowFor("unknown", extra.charged ? "Customer charged" : "Customer not charged", { step: "charged", charged: extra.charged }, 2));
+    if (charged != null) rows.push(rowFor("unknown", charged ? "Customer charged" : "Customer not charged", { step: "charged", charged }, 2));
     await db.insert(callEvents).values(rows);
     console.log(`[receipt] verdict tail written for check ${callId}: ${rows.length} row(s)`);
   } catch (e) {

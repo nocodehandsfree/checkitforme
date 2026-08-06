@@ -1387,6 +1387,13 @@ export async function ingestPending(): Promise<number> {
     // the Testing screen reads (owner 08-04): the second read as its own step with its model and
     // cost, whose words decided the status, and charged or not charged as the LAST step.
     const willCharge = !!(row.finderUserId && outcome.status === "completed" && billableOutcome(finalStatusKey, definitive, outcome.transcript));
+    // THE CHARGE IS STAMPED BEFORE THE STEP THAT REPORTS IT (owner 08-06). The tail used to be
+    // written from what this finalizer EXPECTED to bill and the billing ran afterwards, so the sheet
+    // could read "Customer charged" on a check whose own row carries no charge. Billing first, then
+    // the step reads the stamp — one order, so the two can never say different things.
+    // (chargeCallOnce is atomic — the poller, the webhook, and any retry can't double-bill.)
+    // A conflict/unsure verdict (the two reads disagreed) is free — we never bill a verdict we doubt.
+    if (willCharge && row.finderUserId) await chargeCallOnce(row.id, row.finderUserId);
     const decidedBy = lastClerkLine(outcome.transcript);
     console.log(`[finalize] check ${row.id}: writing the verdict tail (read=${secondUsed ? "yes" : "no"}, charged=${willCharge})`);
     void recordVerdict(row.id, finalStatusKey ?? null, outcome.summary ?? null, outcome.durationSecs ?? 0,
@@ -1398,13 +1405,6 @@ export async function ingestPending(): Promise<number> {
     if (row.room?.startsWith("direct:")) {
       markNow(row.room, "endMs");
       closeReceipt(row.room, `Check ended after ${outcome.durationSecs ?? 0}s`, outcome.status ?? undefined);
-    }
-
-    // Server-side billing: charge the finder ONE credit on a DEFINITIVE answer, exactly once.
-    // (chargeCallOnce is atomic — the poller, the webhook, and any retry can't double-bill.)
-    // A conflict/unsure verdict (the two reads disagreed) is free — we never bill a verdict we doubt.
-    if (row.finderUserId && outcome.status === "completed" && billableOutcome(finalStatusKey, definitive, outcome.transcript)) {
-      await chargeCallOnce(row.id, row.finderUserId);
     }
 
     const store = (await db.select().from(retailers).where(eq(retailers.id, row.retailerId)))[0];
