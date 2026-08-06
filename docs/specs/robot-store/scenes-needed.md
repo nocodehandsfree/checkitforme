@@ -78,3 +78,31 @@ FAILS TODAY: nothing proves the email.
 Six lines added to existing scenes are nearly free. The nine new scenes are about 6 to 9 cents a
 check, except the 4 minute limit which is roughly four times that. One full pass of all of them,
 once, is well under a dollar.
+
+## THE THREE HOLES IN THIS LIST, FILLED (owner approved 08-06)
+
+**Test 10, the 4 minute limit, the actual words.** A chatty Staff member who never answers. Between
+each line the robot waits for Charlie, so this stretches naturally past the limit. Charlie's own
+wrap-up counts only HIS talking, so he stays under it while Staff run the clock.
+1. "Oh, Pokemon cards, yeah. We get a ton of calls about those, honestly."
+2. "You know my nephew collects them. He's got a whole binder, must be hundreds."
+3. "There was a guy in here last week, bought like twenty packs at once. Twenty."
+4. "It's been nuts since all the trading card stuff took off again, I'll tell you that."
+5. "We used to only carry the sports ones, back when I started here."
+6. "Anyway, what was it you were after? Sorry, it's been one of those days."
+7. "Right, right. Hang on, my manager's waving at me about something."
+8. "Sorry about that. Where were we? Busy in here today."
+Repeat 6 to 8 until the 4 minute limit ends the check. Expect Admin hung up, not charged.
+
+**Test 14, transfer switch off, the safety line.** After "That's the front, I can't see those from
+back here", Charlie should take it and wrap up. If he says anything more, the robot answers once:
+"Yeah, sorry, I really can't help you with that from back here."
+Then the robot waits out and hangs up as usual.
+
+**NEW CARD, test 18: one exact product** (the owner's ruling 08-06, this arrives with hobby stores).
+On a check for one exact product, Charlie has an extra question no test has ever run: he asks once,
+warmly, "do you have a Pitch Black booster box in stock?" Nothing today covers that path.
+Scene: greeting, the recording asks, Staff: "Uh, Pokemon, yeah, we've got some stuff." (deliberately
+unclear about the exact product) · Charlie asks the exact product question · Staff: "Oh, the Pitch
+Black boxes? Yeah, we've got a couple of those." Expect In stock.
+The point is that a general yes is NOT a yes on this kind of check, only the exact item is.
