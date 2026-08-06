@@ -17,6 +17,28 @@ Nothing on this list is the Testing page's drawing. That work is Echo's and it i
    greeting, "Sporting goods, this is Dana.", is missing outright.
    **This one is first. It breaks four tests directly and makes every other check unreadable.**
 
+   **DO NOT BUILD ANYTHING NEW FOR THIS (owner, 08-06). WE ALREADY DO IT, TWICE.**
+
+   **The piece to snap onto** is the buffer that runs at the START of every single check. Charlie is
+   not connected while Delta plays, and the store's greeting is not lost: every frame of it goes into
+   `pending` (bridge.ts around line 345, fed at line 2042, with `preRoll` at 496 keeping the sentence
+   whole), and when his session opens `handoverTimer` (line 672) releases it one frame at a time at
+   the speed it was spoken, so the transcriber hears real pauses and writes it down properly. That
+   pacing is the 08-01 fix for held audio arriving in one burst and coming out as wrong words with
+   two turns welded together. A hold is the same situation, only longer: Charlie is off, the store is
+   talking. Today that audio reaches none of those branches and is simply dropped, because on a hold
+   `eleven` is closed and `connecting` is false. Keep buffering it and let the SAME paced hand-over
+   release it when he reconnects.
+
+   **The second proof that no new recognizer is needed:** on a mapping call Charlie is not on the
+   line at all until the department has to be proven, and we still write down every word the menu
+   says and store it. That runs on Twilio's own speech to text (`<Gather input="speech">`,
+   navigator.ts around line 387), which `map-capture.ts` says in its own header costs "no new audio
+   plumbing, no speech-recognition bill".
+
+   **Echo is NOT the answer and never was:** it measures loudness and tone, to know whether somebody
+   is there, whether it is hold music, and whether a person came back. It has no transcriber in it.
+
 2. **The signoff marker fires off a reading taken before Staff answered.** On robot scene 16 the
    sheet said "Charlie understood the stock answer and was told to say goodbye when done" at 8
    seconds; Staff first spoke at 20. `nudgeSignoff` (bridge.ts around line 1009) is only knocked when
@@ -39,6 +61,34 @@ Nothing on this list is the Testing page's drawing. That work is Echo's and it i
 5. **A verdict must never be written when stock was never mentioned.** The same check came back Sold
    out off a call where nobody said anything about stock. This one is customer facing and it is the
    worst on the list.
+
+## FIVE MORE, MISSED ON THE FIRST PASS (added 08-06 after the owner asked what else was missing)
+
+Every one of these makes a test fail on its first dial for a reason that has nothing to do with that
+test, which is exactly the back and forth we are trying to stop.
+
+6. **Charlie never asked to be put through on the transfer test.** Check 332 is robot scene 10, whose
+   whole point is that he reaches the wrong department and asks once to be transferred. There is no
+   such line anywhere in that check's conversation. Staff moved us on by themselves, so the test
+   proved nothing.
+
+7. **The vague yes is a coin flip.** Checks 248 and 257 are the SAME words minutes apart and came
+   back `in_stock` and `no_clear_answer`. Until that settles, the vague yes test can pass and fail on
+   identical input.
+
+8. **One check can write four rows.** Check 238 wrote 239, 240 and 241 as well, one conversation id,
+   the three extras with no room, a shorter transcript, landing 41 seconds later. Anything reading
+   the newest row gets the unfinished one.
+
+9. **Three status words have never once been produced.** Too busy to check (robot scene 15 gave
+   Couldn't tell), Got their voicemail (scene 17 gave Nobody answered), Admin hung up (scene 13 gave
+   In stock). Three tests will fail on their first dial for this alone.
+
+10. **Charlie never asks for the exact item.** Checks 328 and 329 were both placed for one named
+    product, the item reached the server, and his instructions carried "do you have a Mega
+    Evolution—Pitch Black Booster Display Box in stock?", and he asked the ordinary set question both
+    times. **OPEN: his approved words fight each other here and only the owner can settle which
+    wins.**
 
 ## THE SCRIPTS TO WRITE, SO NO TEST DIALS INTO SILENCE
 
