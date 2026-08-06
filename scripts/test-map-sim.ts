@@ -936,6 +936,40 @@ async function main() {
         "a proven door is exempt under either spelling — full phrase or its shortened winner");
     }
 
+    // A MAPPING CHECK DOES EVERYTHING A CUSTOMER CHECK DOES THE MOMENT STAFF ANSWER (owner 08-06).
+    // A customer check waits for a person, so everything that happens at that moment lived inside the
+    // waiting path. A mapping check hands over once it has ALREADY found the person, so it skipped
+    // that path entirely and four things went missing: Delta never asked, the moment was not stamped
+    // and the hold meter never started, the note saying Delta did not play was never written, and the
+    // give-up cap was never armed. It now runs the SAME function, not a copy of it.
+    {
+      const br = readFileSync("src/voice/bridge.ts", "utf8");
+      ok(/-> Staff are already on the line`\);\s*\n\s*triggerConnect\("human"\);/.test(br),
+        "a check that opens Charlie straight away runs the same code as one that waited for a person");
+      ok((br.match(/\btriggerConnect\("human"\)/g) || []).length >= 2,
+        "both ways of arriving at that moment call the one function, so neither can drift");
+      // The four things, all inside that one function, so calling it is what brings them along.
+      const fn = br.slice(br.indexOf("function triggerConnect("), br.indexOf("function maybeDetectHuman("));
+      ok(/pendingClip = clip;/.test(fn), "Delta asks the question from inside it");
+      ok(/markNow\(room, "humanMs"\)/.test(fn) && /startMeter\(room, "holdMs"\)/.test(fn),
+        "the moment Staff answered is stamped and the hold meter starts from inside it");
+      ok(/The recording did not play, so Charlie asked the question himself/.test(fn),
+        "and it says so when Delta did not play");
+      ok(/const gu = ctx\?\.giveUpSeconds;/.test(fn) && /giveUpTimer = setTimeout/.test(fn),
+        "and the give-up cap is armed from inside it, so no check sits paying for silence");
+      // ONE LINE FOR ONE MOMENT: mapping already wrote the moment down before handing over.
+      ok(/if \(!getReceipt\(room\)\?\.meters\?\.humanMs\) emit\(room, "human_detected", "Staff greeting"\);/.test(br),
+        "and the moment is written once, not twice, when mapping already wrote it");
+      // THE TWO MAPPING RULES ARE UNTOUCHED.
+      const srvB = readFileSync("src/server.ts", "utf8");
+      ok(/connectOnHuman: false,\s+\/\/ Staff are already talking/.test(srvB) && /neverTakeAHandover: true,/.test(srvB),
+        "Charlie still opens right away on a mapping check, and it still never takes a transfer");
+      // Delta plays again when Staff hand us to somebody new: the same shared line, and a mapping
+      // check now carries the clip, so it reaches that door too.
+      ok(/const handedOn = \(was === "transfer" \|\| asked\) && !!ctx\?\.openingClip && !!ctx\?\.midCallAgentId;/.test(br),
+        "Delta asks the new person after a hand-over, off the clip every check now carries");
+    }
+
     // CHARLIE IS SET UP THE SAME WAY ON A MAPPING CHECK AS ON A CUSTOMER CHECK (owner 08-04).
     // A mapping check used to build its own much thinner setup, so it opened Charlie on built-in
     // defaults: no recorded opening question and no joining agent, which quietly dropped it onto the

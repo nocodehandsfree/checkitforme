@@ -1540,7 +1540,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // Somebody is there, so the phone is not ringing at nobody any more.
     if (ringWaitTimer) { clearTimeout(ringWaitTimer); ringWaitTimer = null; }
     if (reason === "human") {
-      markNow(room, "humanMs"); emit(room, "human_detected", "Staff greeting");
+      // ONE LINE FOR ONE MOMENT. A mapping check has already found the person and written it down
+      // before it hands the live call over, so saying it again here would put the same moment on the
+      // record twice. The stamp itself is first-write-wins and cannot double; the line can, so it is
+      // only written when nobody has written it yet. Everything below runs either way.
+      if (!getReceipt(room)?.meters?.humanMs) emit(room, "human_detected", "Staff greeting");
+      markNow(room, "humanMs");
       // From here somebody is on the line, so from here it is worth knowing when they stop being on
       // the line. The meter flips from "never checked" to a real measured zero at the same moment.
       startMeter(room, "holdMs");
@@ -1842,23 +1847,23 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           log(`twilio start room=${room.slice(0, 8)} -> connect-on-human (listening; Charlie opens on a real voice and nothing else)`);
         }
       } else {
-        // DELTA ASKS FIRST ON EVERY CHECK, INCLUDING THE ONES THAT OPEN STRAIGHT AWAY (owner 08-06).
-        // A mapping check hands the live call over once it has ALREADY reached Staff, so it opens
-        // Charlie here instead of waiting for a person — and this branch had no Delta in it, so the
-        // question was never asked by the clip. Charlie opened cold and had to say the first line
-        // himself, which is the wait the owner heard on the Fun store check: Staff greeted at 11
-        // seconds and his first words landed at 17. Same machinery as the other two doors Delta
-        // comes through: the clip waits for their greeting to finish, Charlie's mouth stays shut
-        // behind it, and he warms up so he is ready the moment they answer the question.
-        const clip = ctx?.openingClip && ctx?.midCallAgentId ? ctx.openingClip : null;
-        if (clip) {
-          log(`twilio start room=${room.slice(0, 8)} -> Delta asks first, Charlie opens behind it`);
-          holdHimForTheirAnswer();
-          pendingClip = clip; waitQuietMs = 0; waitTotalMs = 0;
-        } else {
-          log(`twilio start room=${room.slice(0, 8)} ctx=${!!ctx} -> connectEleven`);
-          connectEleven();
-        }
+        // A CHECK THAT OPENS CHARLIE STRAIGHT AWAY IS STILL A CHECK THAT JUST REACHED STAFF
+        // (owner 08-06). A mapping check hands the live call over once it has ALREADY found the
+        // person, so it comes in here instead of waiting for one — and this branch used to jump
+        // straight to opening Charlie, skipping everything the waiting path does at that moment.
+        // Four things went missing with it: Delta never asked, so Charlie opened cold and said the
+        // first line himself (the owner heard it on the Fun store check: Staff greeted at 11
+        // seconds, his first words landed at 17); the moment Staff answered was never stamped and
+        // the hold meter never started, so a dropped Charlie could go unmeasured; the note saying
+        // Delta did not play was never written; and the give-up cap was never armed, so a check
+        // could sit paying for silence.
+        //
+        // It now runs the SAME function the waiting path runs when it finds a person. Not a copy:
+        // one moment, one piece of code, two ways of arriving at it. `triggerConnect` opens Charlie
+        // immediately either way, so the mapping rule that Charlie opens right away is untouched,
+        // and taking a transfer is refused elsewhere and untouched too.
+        log(`twilio start room=${room.slice(0, 8)} ctx=${!!ctx} -> Staff are already on the line`);
+        triggerConnect("human");
       }
     }
     else if (m.event === "media" && m.media?.payload) {
