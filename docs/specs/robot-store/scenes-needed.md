@@ -106,3 +106,30 @@ Scene: greeting, the recording asks, Staff: "Uh, Pokemon, yeah, we've got some s
 unclear about the exact product) · Charlie asks the exact product question · Staff: "Oh, the Pitch
 Black boxes? Yeah, we've got a couple of those." Expect In stock.
 The point is that a general yes is NOT a yes on this kind of check, only the exact item is.
+
+## THE OWNER'S CLIP PICKS AND ONE MORE HOLD TEST (08-06)
+
+**Store noise: he picked BOTH.** File 1 (shopping mall, quieter) and file 2 (busy restaurant,
+louder). Two runs of the phone-on-the-counter test, one per recording, because the two volumes are
+themselves the test. Source: archive.org `aporee_46344_52645` (Public Domain Mark) and
+`aporee_14156_16488` (CC BY-SA 3.0). Both free to modify, so the quiet-voice version is allowed.
+
+**Hold music: two, both approved.** Twilio's `classic.mp3` and `ClockworkWaltz.mp3`. The waltz was
+picked on purpose because it starts quiet and gets louder, which tests whether a rising sound is
+ever mistaken for a person coming back.
+
+**NEW, test 19: hold music with an advertisement in it.** The owner's own case: real stores play
+music and then a recorded voice selling something, then more music. A recorded VOICE during a hold
+is the dangerous one, because it is the closest thing to Staff coming back that is not Staff.
+NO MIXING NEEDED. The robot plays these in order, which it can already do one piece at a time:
+1. Staff: "Sure, let me check on that for you, one moment."
+2. Hold music, 5 seconds.
+3. A recorded advertising voice, NOT the Staff voice: "Thanks for holding. Did you know we price
+   match any local competitor? Ask an associate about our rewards program and start earning points
+   on every purchase today."
+4. Hold music, 5 more seconds.
+5. Staff, back for real: "Yeah, we've got some in."
+6. Charlie asks the set. Staff: "The Pitch Black boxes."
+Expect In stock. WHAT IT PROVES: Charlie stays dropped through the advertisement and never answers
+it, the meter stays stopped the whole time, and the advertisement's words never reach the record as
+something Staff said to us.
