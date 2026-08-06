@@ -25,3 +25,7 @@ loops/site-redesign/proofs/
 
 # Proof-of-looking sentinels the gates check (written by render scripts, per-machine, never source).
 .claude/state/
+
+# Python bytecode from running the hooks directly (never source)
+__pycache__/
+*.pyc
