@@ -402,6 +402,13 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
 
   const startMs = Date.now();
   const VOICE_THRESH = 350;   // μ-law mean-abs energy that counts as "someone's talking" (tunable)
+  // A sentence reaches us as words within seconds of being said, even across a hand-over: 6.1s was
+  // the worst measured on the robot store (check 346, both lines after a hold). Past this, the start
+  // waiting in the queue belongs to something nobody wrote down, so it is dropped.
+  const VOICE_START_STALE_MS = 20_000;
+  // The gap that ends a stretch of talking. Shorter than the pauses inside a sentence, so one
+  // sentence is one start, and long enough that two sentences do not fuse into one.
+  const VOICE_GAP_FRAMES = 40; // 40 x 20ms = 0.8s of quiet
   const VOICE_FRAMES = 45;    // ~0.9s of sustained voice → treat as a human (tunable)
   // Echo gate: PSTN lines reflect OUR agent's audio back on the inbound track (no carrier AEC on
   // media streams), and ElevenLabs then transcribes its own attenuated words as the clerk. We know
@@ -518,6 +525,30 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  speaking above the row saying the line was answered. The record owns its own zero, so it is
    *  handed the moment and does the subtraction itself (`recordLine` in src/calls/events.ts). */
   let greetingStartedAtEpochMs = 0;
+  /** WHEN EACH STRETCH OF THEIR TALKING STARTED, on the wall clock, oldest first (owner 08-06: "we
+   *  need accurate timing so that every step shows the correct time it is truly triggered on").
+   *  A written line is stamped when its WORDS ARRIVE, which is after the sentence was spoken and
+   *  transcribed: measured against the robot store on check 346, an ordinary line landed 3.3s late
+   *  and the two lines after a hold landed 6.1s late, because their audio waits for Charlie to be
+   *  back before anybody transcribes it. Their voice is already measured on every frame for the
+   *  meter and the ear, so the moment it starts is free to keep, and the line is filed at the moment
+   *  they opened their mouth. In order: sentences arrive in the order they were spoken, so the
+   *  oldest unclaimed start belongs to the next line written down. */
+  const theirVoiceStarts: number[] = [];
+  let theirVoiceOn = false;
+  let theirQuietFrames = 0;
+  /** The oldest start that could still belong to a line arriving now. Anything older than this is a
+   *  sentence nobody ever wrote down (after a hold, whole sentences are lost) and is dropped rather
+   *  than pinned onto the next line, which would file it far too early. */
+  const takeVoiceStart = (): number | undefined => {
+    const now = Date.now();
+    while (theirVoiceStarts.length && now - theirVoiceStarts[0] > VOICE_START_STALE_MS) theirVoiceStarts.shift();
+    return theirVoiceStarts.shift();
+  };
+  /** A start that has already been spent belongs to nobody else. The greeting is caught twice, once
+   *  on the way in and once by the frames above, and leaving the second copy in the queue would file
+   *  the NEXT thing Staff said at the moment they said hello. */
+  const dropVoiceStartsUpTo = (t: number) => { while (theirVoiceStarts.length && theirVoiceStarts[0] <= t) theirVoiceStarts.shift(); };
   let waitTotalMs = 0;
   /** A breath after the clip so the agent can never clip its own tail. */
   const CLIP_SETTLE_MS = tune.clipSettleMs;
@@ -1327,7 +1358,16 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // (fresh or a repeat) gates the relay below, so the page can never show a line twice that
         // the record holds once (08-01 audit, open fault 4).
         let freshLine = false;
-        if (txt) { freshLine = recordLine(room, "Clerk", String(txt), greetingStartedAtEpochMs || undefined); greetingStartedAtEpochMs = 0; }
+        // THE MOMENT THEY SAID IT: the greeting's own start when this is the greeting (it is heard
+        // before Charlie is even open, so it is caught on the way in), otherwise the oldest start
+        // still waiting from the frames above. Neither one available means nothing was measured, and
+        // the record falls back to stamping it on arrival exactly as it always did.
+        if (txt) {
+          const spokenAt = greetingStartedAtEpochMs || takeVoiceStart();
+          if (greetingStartedAtEpochMs) dropVoiceStartsUpTo(greetingStartedAtEpochMs + 500);
+          greetingStartedAtEpochMs = 0;
+          freshLine = recordLine(room, "Clerk", String(txt), spokenAt);
+        }
         // Flipped AFTER the voicemail test below has had its one look at this line, so the store's
         // FIRST words are the only ones that may end a check as a machine (round 2, item 3).
         const wasStoreFirstLine = txt ? !storeHasSpoken : false;
@@ -1914,6 +1954,14 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // being acoustic and free. It is fed from OUR OWN audio being silent onwards, so our clip and
       // the agent's own voice can never read as the store still being there.
       if (convEar && Date.now() >= agentPlayingUntil) convEar.feed(frameEnergy(b64), toneShare(b64) >= 0.45);
+      // WHEN THEY STARTED TALKING, kept for the line that will carry those words (owner 08-06). Read
+      // off the SAME frames, the same threshold and the same ringing test the meter and the ear
+      // already use, so nothing new listens to the call. Our own audio is excluded: the agent's
+      // voice coming back off the line is not the store starting a sentence.
+      if (Date.now() >= agentPlayingUntil + ECHO_TAIL_MS && frameEnergy(b64) > VOICE_THRESH && toneShare(b64) < 0.45) {
+        if (!theirVoiceOn) { theirVoiceOn = true; theirVoiceStarts.push(Date.now()); if (theirVoiceStarts.length > 40) theirVoiceStarts.shift(); }
+        theirQuietFrames = 0;
+      } else if (theirVoiceOn && ++theirQuietFrames >= VOICE_GAP_FRAMES) { theirVoiceOn = false; theirQuietFrames = 0; }
       // THEY ARE ANSWERING: his mouth opens on their voice, not on a clock (the second gate). While
       // our own question is still playing only a real barge-in counts, because the line is carrying
       // us; after it, ordinary speaking energy does. A ring burst is not somebody answering. The
