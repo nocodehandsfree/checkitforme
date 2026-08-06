@@ -1842,8 +1842,23 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           log(`twilio start room=${room.slice(0, 8)} -> connect-on-human (listening; Charlie opens on a real voice and nothing else)`);
         }
       } else {
-        log(`twilio start room=${room.slice(0, 8)} ctx=${!!ctx} -> connectEleven`);
-        connectEleven();
+        // DELTA ASKS FIRST ON EVERY CHECK, INCLUDING THE ONES THAT OPEN STRAIGHT AWAY (owner 08-06).
+        // A mapping check hands the live call over once it has ALREADY reached Staff, so it opens
+        // Charlie here instead of waiting for a person — and this branch had no Delta in it, so the
+        // question was never asked by the clip. Charlie opened cold and had to say the first line
+        // himself, which is the wait the owner heard on the Fun store check: Staff greeted at 11
+        // seconds and his first words landed at 17. Same machinery as the other two doors Delta
+        // comes through: the clip waits for their greeting to finish, Charlie's mouth stays shut
+        // behind it, and he warms up so he is ready the moment they answer the question.
+        const clip = ctx?.openingClip && ctx?.midCallAgentId ? ctx.openingClip : null;
+        if (clip) {
+          log(`twilio start room=${room.slice(0, 8)} -> Delta asks first, Charlie opens behind it`);
+          holdHimForTheirAnswer();
+          pendingClip = clip; waitQuietMs = 0; waitTotalMs = 0;
+        } else {
+          log(`twilio start room=${room.slice(0, 8)} ctx=${!!ctx} -> connectEleven`);
+          connectEleven();
+        }
       }
     }
     else if (m.event === "media" && m.media?.payload) {
