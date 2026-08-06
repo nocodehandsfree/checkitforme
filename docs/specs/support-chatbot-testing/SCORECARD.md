@@ -31,8 +31,8 @@ correctness is how a wrong answer gets a green tick.
 | 1 | how it works | 8/10 | **length** 91 words, over 90 · **correct** answered "Yes" to "can I hear the call?" then described reading it as text. Listening is comp accounts only, so the honest answer is no |
 | 2 | pricing + free angle | 9/10 | **length** 96 words, over 90 |
 | 3 | is this a scam | 9/10 | **correct** said "an unclear answer is never charged". A real two-way call that stays unclear IS charged |
-| 4 | coverage | 9/10 | **correct** promised we check the Target in Glendale and GameStop stores. It cannot know either; it never looks at the store table |
-| 5 | how long + stuck check | 6/10 | **speed** 8.3s · **answered at all** http 502, no reply · **correct** "I'm not sure exactly how long a check takes" when the FAQ says about two minutes, and the follow-up got no reply at all · **complete** "I'm not sure exactly how long a check takes" when the FAQ says about two minutes, and the follow-up got no reply at all |
+| 4 | coverage | 9/10 | **correct** answered store coverage from nothing. It said "Yes, you can check the Target in Glendale" and "Yes, GameStop stores can be checked too" without ever reading the store table, which is the only thing that knows. The owner says GameStop should not be callable at all |
+| 5 | how long + stuck check | 6/10 | **speed** 8.3s · **answered at all** http 502, no reply · **correct** "I'm not sure exactly how long a check takes" when the FAQ says about two minutes. Per-store menu timing is being recorded now and will answer this exactly once mapping is done · **complete** "I'm not sure exactly how long a check takes" when the FAQ says about two minutes. Per-store menu timing is being recorded now and will answer this exactly once mapping is done |
 | 6 | charge rules on bad calls | 10/10 | nothing |
 | 7 | wrong verdict, wants money back | 10/10 | nothing |
 | 8 | double charged | 10/10 | nothing |
@@ -67,8 +67,11 @@ promise about store coverage it has no way to know.
 The three worst, in order:
 1. **It told a customer an unclear answer is never charged** (test 3). A real two-way call that
    stays unclear IS charged. It contradicts the charge rules the agent itself now carries.
-2. **It promised we check the Target in Glendale, and GameStop stores** (test 4). It never looks at
-   the store table, so it cannot know either. It used to hedge; now it states them flatly.
+2. **It answered store coverage from nothing** (test 4): "Yes, you can check the Target in
+   Glendale" and "Yes, GameStop stores can be checked too". It never reads the store table, which
+   is the only thing that knows. It used to hedge, and stating it flatly is worse. Owner says
+   GameStop should not be callable at all, while the staging store table serves GameStop rows as
+   callable and ready — that gap is the bigger find. Task: `docs/tasks/support-knows-the-stores.md`.
 3. **It debugs an app we do not have** (tests 11 and 12), telling a customer to close and reopen it.
 
 ### Fixed during round 1, each driven live
@@ -107,7 +110,9 @@ evidence, the review queue takes a taught answer.
 ## Standing
 **Unfixed, carried into round 2:** the app that does not exist · "passages" and "premium ration"
 said to customers · store coverage answered from nothing · "can I hear the call" answered yes ·
-"how long does a check take" missed about half the time though the FAQ answers it.
+"how long does a check take" missed about half the time though the FAQ answers it. Mapping now
+records every step of a store's phone menu instead of assuming a flat 60 seconds, and that real
+per-store number should feed the chat once mapping has covered the stores.
 
 **Under observation:** five messages in roughly a hundred came back with no reply at all, none
 reproducible on replay. It reads as staging flakiness rather than a code path, but the customer
