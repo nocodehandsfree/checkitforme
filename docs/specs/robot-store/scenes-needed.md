@@ -133,3 +133,15 @@ NO MIXING NEEDED. The robot plays these in order, which it can already do one pi
 Expect In stock. WHAT IT PROVES: Charlie stays dropped through the advertisement and never answers
 it, the meter stays stopped the whole time, and the advertisement's words never reach the record as
 something Staff said to us.
+
+### THE EXACT SOURCES (owner approved 08-06, fetch these, do not substitute)
+- Store noise, quieter: `https://archive.org/download/aporee_46344_52645/podolany.mp3`, take 15
+  seconds starting at 60 seconds in.
+- Store noise, louder: `https://archive.org/download/aporee_14156_16488/berlinBulgarischestrJugendinsel220712.mp3`,
+  15 seconds starting at 45 seconds in.
+- Hold music A: `https://demo.twilio.com/docs/classic.mp3`, 15 seconds from 5 seconds in.
+- Hold music B, the one that starts quiet and swells:
+  `http://com.twilio.sounds.music.s3.amazonaws.com/ClockworkWaltz.mp3`, 15 seconds from 5 seconds in.
+VOLUME IS THE TEST. Set each recording's loudness on purpose against the Staff voice (room noise
+must land under the roomFraction of it, `listen-nav.ts`), and write the number into the scene so it
+can never drift. A recording played at whatever volume it happens to be proves nothing.
