@@ -28,10 +28,10 @@ const INTERNAL = /\bpassages?\b|\bneeds?_human\b|\bstatus_?key\b|\bescalat\w*\s+
 // denial anywhere in the reply calls off the invented-surface flags.
 const DENIAL = /\b(?:no|not|never|don't|doesn't|isn't|aren't|do not|does not)\b|\bI'm not sure\b/i;
 const INVENTED = [
-  // There IS no app. Check runs in a browser, so "the app" is wrong however it is phrased — and
-  // walking someone through closing and reopening one is worse: it sends them to look for
-  // something that does not exist. Round 1 caught the generic "the app" wording twice.
-  { re: /\bthe\s+app\b|\bour\s+app\b|\bapp\s+store\b|\bdownload\s+the\s+app\b/i, what: "an app we do not have", ignoreDenial: true },
+  // "The app" is CORRECT and this rule used to fail it, wrongly. Check is installable: manifest,
+  // service worker, standalone display, and the book calls it the app on eight pages. What does not
+  // exist is an App Store download, so only that is scored.
+  { re: /\bapp\s+store\b|\bdownload\s+(?:the\s+|our\s+)?app\b|\binstall\s+(?:it\s+)?from\s+the\s+app\s+store\b/i, what: "an App Store download we do not have" },
   { re: /\bcontact\s+(?:page|form|us\s+page)\b/i, what: "a contact page" },
   // Only a number we could actually be called on counts. Saying "we don't have a support phone
   // number" is the CORRECT answer and must never be scored as inventing one.
