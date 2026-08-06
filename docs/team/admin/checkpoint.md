@@ -2,25 +2,26 @@
 > The one operator dashboard `public/app.html` + `/api/*`. Ships LIVE via `bash scripts/ship-admin.sh`
 > (never waits on a promote); server halves ride the promote train. Charter: `handoff.md`.
 > Volatile — REPLACE stale lines, newest on top, ≤60 lines.
-## 2026-08-06 PM — the check sheet tells the truth: ONE clock, the card's name, the real status and charge
+## 2026-08-06 PM — the check sheet tells the truth: ONE clock in real milliseconds, the card, the status, the charge
 - 🔴 **ORDER COMES OFF ONE LIST IN MILLISECONDS.** Steps and spoken lines share the call clock (`events.ts`), but
   `receipt-store` rounded the lines to whole seconds at persist and `checkV2From` spliced two rounded lists by
   comparing seconds. Now `atMs` rides both (`transcriptTimed`, the 16-line copy, BOTH receipt routes), every log
   row is filed by its millisecond and the log sorts ONCE at the end. A record with seconds only keeps its second.
   **Never add a second place that decides order — that IS the fault.**
-- 🔴 **A CHECK'S STATUS WORDS COME FROM THE SITE THE CHECK CAME FROM.** `/api/statuses` is a CONFIG_READ, so it
-  always reads prod (right for the editor, which writes there) while Testing reads checks off staging, and staging
-  carries statuses prod has not got (`staff_hung_up`, `too_busy`, `voicemail`). Check 345 was filed staff_hung_up
-  and the sheet printed "Nobody answered". `statusFor(key)` = `SRC_STATUSES` then `STATUSES`, ONE lookup for every
-  screen; `loadTesting` loads the source list. `verdictKey` trusts a present key, and the built-in fallback reads
-  an unknown key as its own words, NEVER as another status.
-- 🔴 **A 22px marker in a `display:grid` box is NOT centred:** the implicit track grows to 22px inside a 15px box
-  and starts at the left. The rail is `display:flex;justify-content:center` now; measured at 390px, one centre.
-- Charged is a FACT: the finalizer bills BEFORE writing the tail, `recordVerdict` reads `chargedAt`, the sheet
-  reads `charged` off `/api/admin/receipt/:room`, and `/api/calls/:id/receipt` finally SENDS `chargedAt` (it never
-  did, so `what-happened.mjs` printed "not charged" on every check). Scorecard rows untouched, owner's call.
-  ⚠️ OPEN, seen on check 345: a Staff line's millisecond can land BEFORE the carrier's own answer second (the
-  greeting drew at 1s over "The line was answered" at 2s). That stamp is written in `src/voice`, frozen.
+- 🔴 **A CHECK'S STATUS WORDS COME FROM THE SITE THE CHECK CAME FROM.** `/api/statuses` is a CONFIG_READ (always
+  prod, right for the editor) while Testing reads checks off staging, which carries statuses prod has not got:
+  check 345 was filed staff_hung_up and the sheet printed "Nobody answered". `statusFor(key)` = `SRC_STATUSES`
+  then `STATUSES`, ONE lookup; `loadTesting` loads the source list; `verdictKey` trusts a present key; the
+  built-in fallback reads an unknown key as its own words, NEVER as another status.
+- 🔴 **A 22px marker in a `display:grid` box is NOT centred:** the track grows to 22px in a 15px box and starts
+  left. The rail is `display:flex;justify-content:center`; measured at 390px, one centre.
+- Charged is a FACT: the finalizer bills BEFORE the tail, `recordVerdict` reads `chargedAt`, the sheet reads
+  `charged` off the receipt route, and `/api/calls/:id/receipt` finally SENDS `chargedAt` (it never did, so
+  `what-happened.mjs` printed "not charged" on every check). Scorecard rows untouched, owner's call.
+- 🔴 **A MOMENT IS NEVER MEASURED FROM SOMEBODY ELSE'S ZERO** (check 345: the greeting drew at 1s over "The line
+  was answered" at 2s). `bridge.ts` backdates the greeting off `startMs` = when the AUDIO opened; the receipt
+  counts from when the CHECK opened, ~2s earlier. `recordLine` takes the EPOCH moment now and the receipt does the
+  subtraction; a value too small to be an epoch is refused, never trusted. 4 asserts in `test-call-events`.
 ## 2026-08-02 — Statuses page + the confirm sheet (SHIPPED LIVE + DRIVEN in a local browser)
 - 🔴 **`askSheet` ALWAYS resolved false:** `ok.onclick` closed the sheet BEFORE `finish(true)` and `sheetclosed`
   fires synchronously, so every Yes in the Admin read as a cancel, all six call sites. ANSWER, then close.
@@ -31,8 +32,7 @@
 - `src/calls/behaved.ts` = the PURE scorer on the SAME `/api/admin/receipt/:room` envelope, NO second route. 79 asserts in `scripts/test-behaved.ts`. Page = comp 1c.
 - 🔴 **THREE STATES, NOT TWO.** A gray dash = this check never put that rule to the test; a cross for "nobody put us
   on hold" is a lie and a tick is worse. Same law as an unstamped cost never printing as nought.
-- 🔴 **`status` and `statusKey` are TWO fields, never merged** (merging them made every in-stock check say "nobody
-  answered"). **PM: promote wanted** — the server half of this page is staging only.
+- 🔴 **`status` and `statusKey` are TWO fields, never merged.** **PM: promote wanted**, this page's server half is staging only.
 ## 2026-07-30 — Unify GATE + page 1 (Live) shipped (@71b724a5). **dash is SEALED. Next page: App (settings).**
 - `scripts/qa-admin-unify.mjs`. A page = its `<section>` + its `TAB_LOADERS` loader body + a `chrome` page. It
   fails on a SECOND way to mark a hint, on-page directional copy, the UNTRUE list and his-words. Both lists are IN
