@@ -25,7 +25,7 @@ import { allSettings, getSetting, setSetting } from "./db/settings";
 import { tuningForAdmin, callTuning } from "./calls/tuning"; // the numbers the owner tunes, and every other number a check reads
 import { costBuckets, STATUS_READ_USD } from "./calls/cost";
 import { importZonesData, geocodeMissing, backfillDirectChains, isDirectDefaultChain } from "./db/import-data";
-import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, billableOutcome, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, notifyAfterVerdict, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, transcriptPatch, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
+import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, billableOutcome, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, notifyAfterVerdict, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, settleChecksLostToARestart, setActiveVoice, storeOpenInfo, transcriptPatch, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus, learnedSyncTick, learnedSyncStatus } from "./store-sync";
 import { buildSettingsExport, settingsSyncStatus, settingsSyncTick } from "./settings-sync";
 import { concurrencyStatus, acquireCallSlot, releaseCallSlot, governorEnabled } from "./calls/concurrency";
@@ -7742,6 +7742,16 @@ wssTwilio.on("connection", (ws: WebSocket, _req: unknown, qRoom: string) => {
 // each tick, so scheduled calls / charges / receipts never double-fire. No Redis (single instance) =
 // runs normally. The lock TTL is a crash failsafe; withLock releases as soon as the work finishes.
 setInterval(() => withLock("ingest", 30, ingestPending).catch((e) => console.error("ingest:", e)), 8_000);
+// A CHECK KILLED BY A RESTART MUST ALWAYS SETTLE (owner 08-06). Every check on the phone when this
+// service restarts loses the only thing that knew how to close it, and used to sit unfinished for
+// half an hour until the backstop gave up on it. A minute after boot is late enough that a blipped
+// stream has had its chance to reconnect, and early enough that nobody is left staring at a check
+// that never ends. Runs ONCE: this is about the restart, and the backstop still covers everything
+// else. Timed from this moment, so a check placed after we came up is never touched.
+{
+  const bootedAtSec = Math.floor(Date.now() / 1000);
+  setTimeout(() => { void withLock("restart-settle", 120, () => settleChecksLostToARestart(bootedAtSec)).catch((e) => console.error("restart-settle:", e)); }, 60_000);
+}
 setInterval(() => withLock("tick", 55, schedulerTick).catch((e) => console.error("tick:", e)), 60_000);
 setInterval(() => withLock("geocode", 10, () => geocodeMissing(1)).catch((e) => console.error("geocode:", e)), 3_000);
 setInterval(() => withLock("store-sync", 280, storeSyncTick).catch((e) => console.error("store-sync:", e)), 300_000); // staging→prod curated store data (inert until STORE_SYNC_URL/TOKEN set)

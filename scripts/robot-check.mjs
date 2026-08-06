@@ -36,6 +36,14 @@ let dials = 0;
 const OUT = process.env.ROBOT_OUT || "./robot-run";
 const EXE = process.env.CHROMIUM_PATH || "/opt/pw-browsers/chromium";
 const wanted = process.argv.slice(2).filter((a) => /^\d+$/.test(a)).map(Number);
+// TWO SCENES CANNOT BE PROVEN BY A SCRIPT ALONE (owner 08-06), because what they test is not what
+// the robot says, it is what the SITE and the SWITCHES do before anybody speaks.
+//  · one exact product: Charlie only asks his extra question when the check was placed for one
+//    named item, so the harness has to pick it in the dropdown a customer picks it in.
+//  · the transfer switch: the whole test is that the switch really works, so it has to be turned
+//    off for that one check and put back straight after, whatever happens.
+const SCENE_PRODUCT = { 19: "Mega Evolution—Pitch Black Booster Display Box" };
+const SCENE_ASK_FOR_TRANSFER_OFF = new Set([16]);
 
 // Driving the site needs a key and a browser; reading the word comparison (which the robot store's
 // own test does, to prove the comparison really fails on a mangled transcript) needs neither.
@@ -118,7 +126,7 @@ async function signInIfNeeded(page) {
   return true;
 }
 
-async function findAndCheck(page) {
+async function findAndCheck(page, wantProduct) {
   await page.goto(SITE + "/", { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(3500);
   // The owner's own stores only exist for the owner, so the sign-in comes first — through the same
@@ -141,6 +149,21 @@ async function findAndCheck(page) {
   await row.click();
   await page.waitForTimeout(900);
   await shot(page, "store-found");
+  // ONE EXACT PRODUCT. The same dropdown a customer uses, picked the same way, and the check is
+  // refused rather than run blind if the item is not on the list.
+  if (wantProduct) {
+    await page.waitForSelector("#prodsel option", { timeout: 20000 }).catch(() => {});
+    const picked = await page.evaluate((name) => {
+      const sel = document.getElementById("prodsel");
+      if (!sel) return "no dropdown";
+      const opt = [...sel.options].find((o) => o.value === name);
+      if (!opt) return "not on the list";
+      sel.value = name; if (typeof pickProduct === "function") pickProduct();
+      return window.SEL_PRODUCT === name || true;
+    }, wantProduct);
+    if (picked !== true) throw new Error(`the exact product "${wantProduct}" could not be picked: ${picked}`);
+    console.log(`  · the check is for ONE EXACT PRODUCT: ${wantProduct}`);
+  }
   const tap = async () => {
     const sheet = page.locator("#cs_call");
     if (await sheet.isVisible().catch(() => false)) return sheet.click();
@@ -254,7 +277,14 @@ async function runOne(page, scene, greetingIdx) {
   console.log(`\n══════ scenario ${scene.n} · ${scene.name} ══════`);
   await adm("/api/admin/robot-store", { method: "POST", body: JSON.stringify({ scenario: scene.n, greeting: greetingIdx }) });
 
-  const found = await findAndCheck(page);
+  const askOff = SCENE_ASK_FOR_TRANSFER_OFF.has(scene.n);
+  if (askOff) {
+    await adm("/api/policy", { method: "PATCH", body: JSON.stringify({ flags: { askForTransfer: false } }) });
+    const now = await adm("/api/policy");
+    item(0.5, "asking to be put through is switched OFF for this one check", now.flags?.askForTransfer === false,
+      `the switch reads ${String(now.flags?.askForTransfer)}`);
+  }
+  const found = await findAndCheck(page, SCENE_PRODUCT[scene.n]);
   item(1, "the store is found from the main page and Check it is tapped", true, `searched "${STORE}"`);
   // The warning is a fact about this device, not a setting: it appears because this browser really
   // did check this store minutes ago. On the FIRST scene of a run it is right that there is none, so
@@ -478,6 +508,19 @@ page.on("pageerror", (e) => jsErrors.push(String(e).slice(0, 160)));
 for (let i = 0; i < scenes.length; i++) {
   try { await runOne(page, scenes[i], i % cfg.greetings.length); }
   catch (e) { item(0, "the walk itself", false, String(e).slice(0, 200)); await shot(page, "crash"); }
+  finally {
+    // THE SWITCH GOES BACK ON, whatever happened. Leaving asking to be put through switched off
+    // would quietly change every check after this one, including a real customer's.
+    if (SCENE_ASK_FOR_TRANSFER_OFF.has(scenes[i].n)) {
+      try {
+        await adm("/api/policy", { method: "PATCH", body: JSON.stringify({ flags: { askForTransfer: true } }) });
+        const back = await adm("/api/policy");
+        console.log(`  · asking to be put through is back ON: ${String(back.flags?.askForTransfer)}`);
+        item(0.6, "asking to be put through is switched back ON after the check", back.flags?.askForTransfer === true,
+          `the switch reads ${String(back.flags?.askForTransfer)}`);
+      } catch (e) { item(0.6, "asking to be put through is switched back ON after the check", false, String(e).slice(0, 120)); }
+    }
+  }
   // OWNER RULE (08-04, voice RULES.md 15): the FIRST check of a run must be seen running WHOLE —
   // dial to answer to Charlie's goodbye to the check ending — before a second check is dialed.
   // The goodbye bug burned ~$3 of checks that one stopped run would have caught for 9 cents.
