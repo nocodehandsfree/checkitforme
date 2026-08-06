@@ -183,13 +183,16 @@ export async function recordVerdict(
     // the double check, the verdict and the charge were drawn MID call, before the goodbye and the
     // hang up they actually follow. The settle only ever runs once the check is over, so the tail
     // clamps to the last second already on the record and can never draw before its causes.
-    const lastRow = (await db.select({ m: sql<number>`max(${callEvents.atSec})` })
+    const lastRow = (await db.select({ m: sql<number>`max(${callEvents.atMs})` })
       .from(callEvents).where(eq(callEvents.callId, callId)))[0];
-    const at = Math.max(0, atSec, Number(lastRow?.m ?? 0));
+    // Clamped in MILLISECONDS: clamping to the same second still let the tail sort before the
+    // "Check ended" row that shares it (check 295). Strictly after everything, always.
+    const baseMs = Math.max(0, atSec * 1000, Number(lastRow?.m ?? 0) + 1);
+    const at = Math.round(baseMs / 1000);
     const rowFor = (kind: string, note: string, detail: Record<string, unknown>, order: number) => ({
       // The same final second, a breath of milliseconds apart, so the three read in this order and
       // never shuffle under an ORDER BY on the clock.
-      callId, room: room ?? "", atMs: at * 1000 + order, atSec: at, kind, note: note.slice(0, 300), detail: JSON.stringify(detail),
+      callId, room: room ?? "", atMs: baseMs + order, atSec: at, kind, note: note.slice(0, 300), detail: JSON.stringify(detail),
     });
     const rows = [];
     if (extra?.secondReadModel) rows.push(rowFor("unknown", "The answer was double checked", { step: "second_read", model: extra.secondReadModel, costUsd: extra.secondReadUsd ?? 0 }, 0));
