@@ -41,3 +41,29 @@ They write their screenshots to a scratch path near the top of each file. Change
 `docs/design/comps/inbox/AUTO_CHECK_COMPS.dc.html` was the FIRST attempt, hand drawn, and the owner
 rejected it on 08-05: "what you're showing me is not an accurate representation of any part of our
 system". It was deleted so nobody builds from it. These screenshots replaced it.
+
+## THE PATH, both ways in (owner asked 08-06; `render-the-path.mjs` makes these)
+
+Screens 1 to 3 are the LIVE staging page, driven and photographed, not comps.
+
+**From a check status page** — `path-a1-status-box-closed.png` the box at the bottom, "Don't miss the
+restock" · `path-a2-status-box-open.png` opened: "Tell me when it's back" and "Auto-check on shipment
+days" · `path-a3-set-it-up.png` the real Auto-check sheet (days, earliest call time, email, TURN ON
+AUTO-CHECK) · then `comp-2-saved.png` (not ruled on) · then the list · then the report.
+**NOTE, and it is a decision:** the box exists ONLY when the answer was not in stock
+(`canNotify = cls!=='in'`, checkit.html 6741). Somebody who hears "In stock" is never offered an
+auto-check on that screen.
+
+**From My checks** — `path-b1-my-checks.png` is that screen TODAY, with no auto-checks row on it.
+`comp-1-my-checks-row.png` is the same screen with the row added. Then the list, the report, a check.
+
+**Open decision:** on the approved list, a row carries the switch and the delete button. What opens
+the report is NOT decided — tapping the store's name is an assumption, nothing more.
+
+## THE REPORT, take three (owner 08-06 killed the ring)
+
+`comp-4-report-v3-week.png` + `comp-5-report-v3-open.png`, made by `render-report-v3.mjs`. A week of
+days like the Activity tab, tap a day, that day's checks list underneath, tap one and it unfolds into
+the real check status page with the conversation, the way a store unfolds in a zone report. Built from
+the page's own pieces (the Activity bar + row, `deriveVerdict`, `combinedTimelineHTML`); no new strings,
+so nothing new needs Spanish. `comp-4-report-v2.png` is dead.
