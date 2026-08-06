@@ -64,8 +64,12 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // Comparing what was SAID against what was WRITTEN DOWN. Punctuation is the writer's, not the
 // speaker's: a full stop where a comma belongs is the same words. An apostrophe is dropped rather
 // than treated as a break, so "MVP's" and "MVPs" are one name — the same rule the store search
-// already uses (`src/calls/service.ts`). Nothing else is forgiven: a different WORD still fails.
-const norm = (s) => String(s || "").toLowerCase().replace(/['’]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+// already uses (`src/calls/service.ts`). An ACCENT is the writer's too: the transcriber wrote the
+// Spanish "Sí, tenemos algunos." as "Si, tenemos algunos.", which is the same word said the same
+// way, and the owner's rule is to teach the word checker rather than print our spelling over
+// theirs (his 08-04 ruling on "151"). Nothing else is forgiven: a different WORD still fails.
+const norm = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+  .replace(/['’]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 
 // ---- a plain pipe to the real site, for machines whose browser cannot open an encrypted connection
 // Some build machines (this repo's own agent sandbox is one) let a script reach the internet but
@@ -152,37 +156,41 @@ async function findAndCheck(page, wantProduct) {
   // ONE EXACT PRODUCT. The same dropdown a customer uses, picked the same way, and the check is
   // refused rather than run blind if the item is not on the list.
   if (wantProduct) {
-    // The dropdown only fills once ONE category is picked, exactly as it does for a customer:
-    // the chips first, then the item. Nothing here skips a screen.
-    await page.waitForSelector("#chips .chip", { timeout: 20000 }).catch(() => {});
     // THE EXACT ITEM PICKER IS A PAID PERK, so the page hides it until it knows what this account
-    // is entitled to. Tapping the category before that answer lands takes the hide branch and the
-    // list never fills, which is what a customer on a slow connection would see too. Wait for the
-    // page to know, then tap.
+    // is entitled to. Wait for the page to know before deciding it is not there.
     await page.waitForFunction(() => typeof hasFeature === "function" && hasFeature("exact_products"), null, { timeout: 30000 }).catch(() => {});
-    const chip = page.locator("#chips .chip").first();
     const filled = async () => page.evaluate(() => (document.getElementById("prodsel")?.options.length || 0) > 1);
-    // Tap the category, wait for the list. The sheet redraws itself around the tap and sometimes
-    // lands with the list empty, and a customer looking at an empty list taps the category again,
-    // so that is what this does. Tapping a category already chosen never changes the choice.
+    // The category card holds both the category chips and the exact item picker, and the customer's
+    // way in is to tap the category and pick the item out of the list under it. So tap it. Tapping a
+    // category already chosen never changes the choice, and a customer looking at an empty list taps
+    // it again, so that is what this does.
+    const chip = page.locator("#chips .chip").first();
     for (let i = 0; i < 3 && !(await filled()); i++) {
       if (await chip.isVisible().catch(() => false)) await chip.click();
+      else break;
       for (let w = 0; w < 20 && !(await filled()); w++) await page.waitForTimeout(400);
     }
-    // A REAL SITE FAULT, WORKED AROUND HERE AND WRITTEN DOWN (08-06). Tapping the category is
-    // supposed to fill the exact item list and often does not: the sheet redraws around the tap
-    // and leaves an empty dropdown, so a customer who wants one named item cannot pick it. The
-    // harness asks the page to load the list with the page's OWN function, the same one the tap
-    // calls, so this scene can still be dialed. It is a workaround, not a fix, and the row below
-    // says so out loud rather than letting the scene look clean.
+    // MEASURED ON THE LIVE SITE, 08-06, and the reason it can never fill from a tap here: on a site
+    // that is ABOUT one product line (all four of them, and the front page), the category is implied,
+    // so the whole "What are you hunting?" card is hidden — and the exact item picker is inside that
+    // card. There is nothing to tap and no list to fill. The other way in, the Hobby hunt, is switched
+    // off by the `hobby` flag on staging. So a customer cannot ask for one named item at all today.
+    // The harness loads the list with the page's OWN function, the same one the tap calls, so the
+    // scene can still be dialed, and the row below says so out loud rather than looking clean.
+    const seen = await page.evaluate(() => ({
+      card: !!document.getElementById("catcard")?.offsetParent,
+      chip: !!document.querySelector("#chips .chip")?.offsetParent,
+      picker: !!document.getElementById("prodwrap")?.offsetParent,
+      hobbyTab: [...document.querySelectorAll(".modetab")].some((b) => b.dataset.mode === "hobby"),
+    }));
     const neededAHand = !(await filled());
     if (neededAHand) {
       await page.evaluate(() => (typeof loadProducts === "function" ? loadProducts(SEL_CATS[0]) : null)).catch(() => {});
       for (let w = 0; w < 25 && !(await filled()); w++) await page.waitForTimeout(400);
     }
-    item(0.7, "tapping the category fills the exact item list", !neededAHand,
-      neededAHand ? "the list was still empty after tapping the category, so a customer could not pick one item. The harness loaded it with the page's own function to get this check dialed."
-                  : "the list filled from the tap alone");
+    item(0.7, "a customer can pick one exact item on the page", !neededAHand,
+      neededAHand ? `there is no way to pick one named item on this page: the "what are you hunting" card is ${seen.card ? "on screen" : "hidden"}, the category chip is ${seen.chip ? "tappable" : "not on screen"}, the item list is ${seen.picker ? "on screen" : "hidden"}, and the Hobby hunt tab is ${seen.hobbyTab ? "there" : "not there"}. The harness loaded the list with the page's own function to get this check dialed.`
+                  : "the list filled from tapping the category, the way a customer fills it");
     const picked = await page.evaluate((name) => {
       const sel = document.getElementById("prodsel");
       if (!sel) return "no dropdown";
@@ -311,7 +319,16 @@ async function runOne(page, scene, greetingIdx) {
     if (!/\/(pub|app)\/check(-live)?$/.test(new URL(r.url()).pathname)) return;
     try { placeAnswer = `${r.status()} ${JSON.stringify(await r.json()).slice(0, 200)}`; } catch { placeAnswer = `${r.status()} (unreadable)`; }
   };
+  // WHAT THE PAGE ASKED FOR, IN ITS OWN WORDS. The check's record does not keep the exact item the
+  // customer asked about, so the only honest witness that the item left the page at all is the
+  // request the page sent. Kept for the one exact product row below.
+  let placeAsked = null;
+  const onReq = (r) => {
+    if (r.method() !== "POST" || !/\/(pub|app)\/check(-live)?$/.test(new URL(r.url()).pathname)) return;
+    try { placeAsked = JSON.parse(r.postData() || "{}"); } catch { placeAsked = null; }
+  };
   page.on("response", onResp);
+  page.on("request", onReq);
   runs.push(current);
   console.log(`\n══════ scenario ${scene.n} · ${scene.name} ══════`);
   await adm("/api/admin/robot-store", { method: "POST", body: JSON.stringify({ scenario: scene.n, greeting: greetingIdx }) });
@@ -344,6 +361,7 @@ async function runOne(page, scene, greetingIdx) {
   const seen = new Set(); let backwards = null;
   for (const p of live.phases) { if (seen.has(p)) backwards = p; seen.add(p); }
   page.off("response", onResp);
+  page.off("request", onReq);
   if (live.phases.length <= 1) item(1.5, "the site actually placed the check", false, `the site answered: ${placeAnswer || "(nothing was asked)"}`);
   item(3, "the header moves through its phases in order, never backwards", !backwards && live.phases.length > 1,
     backwards ? `it went back to "${backwards}"` : live.phases.join(" → ") || "(no header seen)");
@@ -383,8 +401,12 @@ async function runOne(page, scene, greetingIdx) {
   // WAIT FOR THE RECORD TO SETTLE. A half-written record is not evidence: reading one while the
   // check is still running produced an empty conversation and a verdict of "still going", which
   // would have been reported as a fault that was really just an early read.
+  // HOW LONG TO WAIT IS THE SCENE'S OWN LENGTH, not a flat two minutes: the four minute limit scene
+  // is still on the phone when a flat wait runs out, and check 336 was read at "still going" and
+  // scored as five failures that were only an early read.
   let rec = null;
-  for (let i = 0; i < 24; i++) {
+  const settleTries = Math.max(24, Math.ceil(maxMs / 5000) + 24);
+  for (let i = 0; i < settleTries; i++) {
     const r = await readCheck(HOST, TOKEN, null).catch(() => null);
     const mine = r && (r.call.startedAt || 0) * 1000 > current.startedAt - 180000;
     if (mine) { rec = r; if (r.call.status !== "in_progress" && r.call.status !== "dialing") break; }
@@ -418,25 +440,36 @@ async function runOne(page, scene, greetingIdx) {
   current.charged = !!rec.call.chargedAt;
   current.statusKey = rec.call.statusKey || rec.call.status;
 
-  // 4b. the same greeting rule at the END, not only live.
+  // 4b. the same greeting rule at the END, not only live. Skipped where nobody ever picks the phone
+  // up: there is no greeting to be written down, and marking the check down for the absence of the
+  // thing it exists to prove is nonsense — the same reason rows 4 and 5 skip it live (check 334).
   const firstLine = lines[0] || "";
   const firstStaffWritten = (lines.find((l) => l.startsWith("Clerk:")) || "").slice(6).trim();
-  item(4.1, "Staff's greeting is the first line of the written conversation", firstLine.startsWith("Clerk:") && norm(firstStaffWritten) === norm(greeting),
-    `first written line: "${firstLine.slice(0, 80)}"`);
-  item(5.1, "the written greeting is its own line", norm(firstStaffWritten) === norm(greeting),
-    `written: "${firstStaffWritten}"  ·  said: "${greeting}"`);
+  if (!scene.neverAnswers) {
+    item(4.1, "Staff's greeting is the first line of the written conversation", firstLine.startsWith("Clerk:") && norm(firstStaffWritten) === norm(greeting),
+      `first written line: "${firstLine.slice(0, 80)}"`);
+    item(5.1, "the written greeting is its own line", norm(firstStaffWritten) === norm(greeting),
+      `written: "${firstStaffWritten}"  ·  said: "${greeting}"`);
+  }
 
   // 6. word for word.
   const cmp = compareWords(said, lines);
-  // ONE EXACT PRODUCT HAS TO REACH THE CALL. Picking the item on the site is only half of it: the
-  // recording that asks the question has to name that item, or Charlie asks the ordinary category
-  // question and the whole point of the card is lost.
+  // ONE EXACT PRODUCT, IN TWO PARTS, BECAUSE THEY FAIL SEPARATELY.
+  //  · the item has to LEAVE THE PAGE with the check, or nothing downstream can know about it;
+  //  · CHARLIE has to ask about it. The recording is the ordinary category question by design (the
+  //    owner's card: "greeting, the recording asks", THEN Charlie asks the exact product question),
+  //    so reading the recording proves nothing — his own words are the test.
   if (SCENE_PRODUCT[scene.n]) {
-    const clip = rec.timeline.find((e) => String(e.detail?.step) === "question_clip");
-    const asked = String(clip?.detail?.text || "");
-    const words = SCENE_PRODUCT[scene.n].split(/[^A-Za-z0-9]+/).filter((w) => w.length > 3).slice(-3);
-    item(6.5, "the recording asks for the exact product, not the category", words.some((w) => new RegExp(w, "i").test(asked)),
-      `it asked: "${asked}"  ·  the check was placed for: ${SCENE_PRODUCT[scene.n]}`);
+    const want = SCENE_PRODUCT[scene.n];
+    item(6.4, "the exact item leaves the page with the check", (placeAsked?.specificProduct || "") === want,
+      placeAsked ? `the page asked for: ${JSON.stringify(placeAsked.specificProduct ?? null)}` : "the page's own request was never seen");
+    // The item's name is a catalog name, and Charlie is told to vary his wording, so match on the
+    // distinctive words in it rather than the whole string.
+    const ourLines = lines.filter((l) => l.startsWith("Agent:")).map((l) => l.slice(6).trim());
+    const words = want.split(/[^A-Za-z0-9]+/).filter((w) => w.length > 3);
+    const askedIt = ourLines.find((l) => words.filter((w) => new RegExp(w, "i").test(l)).length >= 2);
+    item(6.5, "Charlie asks about the exact item, not just the category", !!askedIt,
+      askedIt ? `he asked: "${askedIt}"` : `he never named it. The check was placed for "${want}" and everything he said was: ${ourLines.map((l) => `"${l}"`).join(" · ") || "(nothing)"}`);
   }
   item(6, "the words match what the robot actually said, word for word", cmp.misses.length === 0,
     cmp.misses.length ? cmp.misses.map((m) => `"${m.said}" → ${m.how}`).join(" | ") : `${said.length} lines, all exact`);

@@ -1,17 +1,11 @@
 {
-  "at": "2026-08-06T05:40:02.238Z",
+  "at": "2026-08-06T07:15:19.694Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
-      "scenario": 19,
-      "name": "A general yes is not the exact product",
+      "scenario": 13,
+      "name": "Talks past the answer, forever",
       "items": [
-        {
-          "n": 0.7,
-          "name": "tapping the category fills the exact item list",
-          "pass": false,
-          "detail": "the list was still empty after tapping the category, so a customer could not pick one item. The harness loaded it with the page's own function to get this check dialed."
-        },
         {
           "n": 1,
           "name": "the store is found from the main page and Check it is tapped",
@@ -64,74 +58,78 @@
           "n": 6,
           "name": "the words match what the robot actually said, word for word",
           "pass": false,
-          "detail": "\"Uh, Pokemon, yeah, we've got some stuff.\" → missing"
+          "detail": "\"There was a guy in here last week, bought like twenty packs at once. Twenty.\" → missing | \"It's been nuts since all the trading card stuff took off again, I'll tell you that.\" → written down only in part"
         },
         {
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
           "pass": true,
-          "detail": "0 bounce(s) over 43 looks · header held at 0px"
+          "detail": "0 bounce(s) over 75 looks · header held at 0px"
         },
         {
           "n": 8,
           "name": "the log expands",
           "pass": true,
-          "detail": "19px → 105px"
+          "detail": "19px → 90px"
         },
         {
           "n": 13,
-          "name": "the check ends with a goodbye, not with us hanging up mid conversation",
+          "name": "this check is not meant to end with a goodbye, and it did not",
           "pass": true,
-          "detail": "we signed off: \"Perfect, thanks so much, have a good one!\""
+          "detail": "nothing was signed off, which is right for this one"
         },
         {
           "n": 14,
           "name": "we never ask the same question twice",
-          "pass": true,
-          "detail": "3 things said, none of them twice"
+          "pass": false,
+          "detail": "asked again: \"Just checking if you guys have any Pokémon cards in stock ri\" · \"Just checking if you guys have any Pokémon cards in stock ri\" · \"Just checking if you guys have any Pokémon cards in stock ri\""
         },
         {
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 33 seconds and the line closed at 33 — 0 seconds of nothing"
+          "detail": "the answer was in at 242 seconds and the line closed at 242 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Thu, Aug 6 · 5:39 AM In stock MVPs has a Pitch Black booster box.Go grab it before it's gone. Check another stor"
+          "detail": " Result Thu, Aug 6 · 7:11 AM Couldn’t tell We couldn’t quite make out the answer.Read the convo and tell us what you thi"
         },
         {
           "n": 9.1,
           "name": "the screen and the record say the same thing",
-          "pass": true,
-          "detail": "the screen said in, the record says in (in_stock)"
+          "pass": false,
+          "detail": "the screen said unclear, the record says in (in_stock)"
         },
         {
           "n": 11,
           "name": "the verdict is RIGHT for this scenario",
-          "pass": true,
-          "detail": "got in_stock · this scenario is in_stock"
+          "pass": false,
+          "detail": "got in_stock · this scenario is admin_hangup"
         },
         {
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "not charged · the screen claims no free check · the check cost 6.5¢"
+          "detail": "not charged · the screen claims no free check · the check cost 37.4¢ · the robot's own line 3.40¢ (the carrier's posted price)"
         }
       ],
       "shots": [
-        "./robot-run/19-store-found.png",
-        "./robot-run/19-checking.png",
-        "./robot-run/19-live.png",
-        "./robot-run/19-result.png"
+        "./robot-run/13-store-found.png",
+        "./robot-run/13-checking.png",
+        "./robot-run/13-live.png",
+        "./robot-run/13-result.png"
       ],
-      "startedAt": 1785994672191,
-      "checkId": 328,
-      "cost": 0.064517,
-      "costReadable": "6.5¢",
-      "robotCost": null,
+      "startedAt": 1786000227185,
+      "checkId": 343,
+      "cost": 0.374075,
+      "costReadable": "37.4¢",
+      "robotCost": {
+        "usd": 0.034,
+        "secs": 240,
+        "how": "the carrier's posted price"
+      },
       "charged": false,
       "statusKey": "in_stock"
     }
