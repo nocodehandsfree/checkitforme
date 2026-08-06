@@ -99,7 +99,9 @@ export function costCall(inp: CostInput, rates: Rates = MEASURED_RATES): CallCos
  *  real shape (about 700 tokens of transcript in, about 120 of answer out, gemini flash lite).
  *  Small on purpose: the whole point of the cheap reader is that double checking costs a rounding
  *  error next to Charlie's 11 cents a minute. */
-export const STATUS_READ_USD = Math.round(0.00012 * USD);
+// Remeasured 08-06 for the Groq reader (llama-3.3-70b, $0.59 in / $0.79 out per million tokens; a
+// read is about 900 tokens of prompt and transcript in, 120 out). The old figure was Gemini's.
+export const STATUS_READ_USD = Math.round(0.00063 * USD);
 
 /** ONE COST, FIVE BUCKETS, HIS NAMES (owner ruling 08-04): Bravo (Menu Nav) · Foxtrot (Phone Line)
  *  · Echo (Listening) · Charlie (Talking) · Status (Verification). His law is that every cost rolls
@@ -158,7 +160,11 @@ export function costBuckets(
  *  about it ("five cents"); a dollar or more reads in dollars. */
 export function money(microUsd: number): string {
   const usd = microUsd / USD;
-  if (Math.abs(usd) < 1) return `${(usd * 100).toFixed(1)}¢`;
+  const cents = usd * 100;
+  // A real fraction of a cent shows as one, never as zero (owner 08-05): the status read costs
+  // 0.012 cents a check and one decimal rounded it to 0.0, which read as free.
+  if (cents > 0 && cents < 0.1) return `${cents.toFixed(3)}¢`;
+  if (Math.abs(usd) < 1) return `${cents.toFixed(1)}¢`;
   return `$${usd.toFixed(2)}`;
 }
 

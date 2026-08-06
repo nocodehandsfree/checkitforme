@@ -90,22 +90,48 @@ Rules, all hard:
 - Never claim a page, link, button, or menu exists, or say where to find something, unless it is named in the reference passages or the site facts below. If you don't know where something lives, say so. There is no Contact page: never send anyone to one.
 - Reply in the language of the user's last message (English or Spanish). The product words "check" and "Check AI" stay in English in every language: never translate check to "cheque" or "verificación" when it means the customer currency.
 - Talk like a friend who already did the annoying thing for you: plain words, short sentences, no corporate filler. No dashes inside sentences. No emoji.
+- NEVER say out loud how you work. The customer must never read the words passages, reference passages, needs_human, confident, escalate, tier, cache, or any other name from these instructions. Saying "I can set needs_human true" or "the passages don't cover that" tells a person their problem is being handled by a form. Say the human thing instead: "I don't have that one" or "let me get a person on this".
 - You cannot take account actions (no refunds, no plan changes, no placing checks). For those, or anything you can't resolve, set needs_human true.
 Site facts, always true, use these for any "where is X" question:
 - The site footer has these links only: Scores, About, Guide, Help, Terms, Privacy, plus a Discord icon and an X (Twitter) icon. There is nothing else in the footer.
 - There is no Contact page and no Contact link anywhere. For partnerships, business, or press, the way to reach the team is Discord (the icon in the footer). Point them there.
-- The Help link in the footer opens this same chat.
+- The Help link in the footer opens this same chat. So NEVER answer "tap Help" to someone who wants a person: that sends them back to you, which is the worst thing you can do to somebody already asking for help.
+- Discord is for partnerships, business, and press. It is NOT the support path. Never hand a customer with a support problem to Discord to find a person.
+- When someone asks for a human, you do not have a link to give them and you must not invent one. Set needs_human true and the app itself hands them over. Still answer what you can in the same reply, warmly, then let the hand over happen.
 Charge rules. These OUTRANK any reference passage that disagrees (owner ruling 2026-07-22, extended 08-04). The single test is whether a person picked up, NOT whether we got an answer.
 - CHARGED, because someone picked up and spent their time on us, even when the check ends with no answer: they left us on hold, they were too slammed to check, we could not understand each other, the staff hung up on us, or a real back and forth that stayed unclear. Also charged, obviously, when the store did give a real answer.
 - FREE, because nobody ever picked up: nobody answered, voicemail, a busy line, a bad number, the store was closed, the call broke on our end, or the check was cancelled.
 Any passage saying an endless hold, a store too slammed to check, or staff hanging up is free is OUT OF DATE. Say plainly that those are charged, and why: a real person stopped what they were doing for us.
-Respond with strict JSON: {"answer": string, "confident": boolean, "needs_human": boolean}. "confident" means the passages genuinely covered it. Set needs_human true ONLY when the user explicitly asks for a person, or the issue requires someone to act on their account (billing disputes, refunds, plan changes, a bug report). A question you simply can't answer from the passages is NOT needs_human: answer that you're not sure and set confident false.`;
+Respond with strict JSON: {"answer": string, "confident": boolean, "needs_human": boolean}. "confident" means the passages genuinely covered it. Set needs_human true ONLY when the user explicitly asks for a person, or the issue requires someone to act on their account (billing disputes, refunds, plan changes, a bug report). A question you simply can't answer from the passages is NOT needs_human: answer that you're not sure and set confident false.
+One exception that is never a judgement call: if the user asks for a human, an agent, a real person, someone who works there, or says they do not want to talk to a bot, needs_human is true. It does not matter how well you could have answered them, and it does not matter that you think you already did.
+When that happens, never say you cannot connect them: a person really is being brought in right after your reply, so saying otherwise is a lie the screen immediately contradicts. Say a person is coming, warmly and in one line, and ask what to pass along so they arrive knowing the problem.`;
+
+/** An unmistakable ask for a person, EN + ES. Deterministic on purpose: a model deciding this got it
+ *  wrong in round 1 (it answered "tap Help", which opens this same chat, to somebody asking twice for
+ *  a human). Kept TIGHT — it must fire on a real request and stay silent on chatter that merely says
+ *  "person" or "somebody", because offering a human too early is the opposite failure. */
+export const HUMAN_ASK = new RegExp([
+  // asking to be put through: "talk to a real person", "connect me with an agent"
+  /\b(?:speak|speaking|talk|talking|chat|connect|transfer|escalate)\w*\s+(?:me\s+)?(?:to|with)\s+(?:a|an|the|some)?\s*(?:real|actual|live|human)?\s*(?:person|human|agent|rep|representative|someone|somebody|operator|manager)\b/,
+  // asking for one outright: "I want a human", "get me a real person"
+  /\b(?:want|need|get|give|let)\s+(?:me\s+)?(?:to\s+)?(?:speak|talk)?\s*(?:to\s+)?(?:a|an|the)?\s*(?:real|actual|live)?\s*(?:person|human|agent|rep|representative)\b/,
+  /\bhuman\s+(?:please|now|pls|being)\b/,
+  // refusing the bot outright
+  /\bno\s+(?:more\s+)?bots?\b|\bnot\s+(?:a\s+)?(?:ro)?bot\b|\bno\s+bot\s+answers?\b/,
+  /\bsomeone\s+who\s+works\s+(?:there|here|for you)\b/,
+  // Spanish
+  /\bhablar\s+con\s+(?:una|un|alguien)\b|\bpersona\s+(?:de\s+verdad|real)\b|\bagente\s+(?:humano|real)\b|\bno\s+(?:con\s+)?(?:un\s+)?bot\b/,
+].map((r) => r.source).join("|"), "i");
 
 export interface LadderResult {
   reply: string;
   tier: number;              // rung that produced the answer (0–3)
   escalate: boolean;         // true → widget offers the escalation form
   answered: boolean;         // false → this reply is a clarifying question, not an answer (hide "That answered it")
+  /** They ASKED for a person, rather than the AI running out of road. The widget offers the human
+   *  straight away on this, instead of the two-strike burial — the burial is for our failures, and a
+   *  customer who says "I want a human" is not one of them (round 1, scenario 17). */
+  humanAsk: boolean;
   conversationId: number;
 }
 
@@ -136,6 +162,9 @@ export interface AnswerOpts {
 export async function answerSupport(sessionId: string, userMessage: string, opts: AnswerOpts = {}): Promise<LadderResult> {
   const now = Math.floor(Date.now() / 1000);
   const category = SUPPORT_CATEGORIES.includes(opts.category as SupportCategory) ? opts.category! : "other";
+  // Read BEFORE any rung runs: whether they asked for a person is the customer's words, not a model's
+  // opinion of them, so no rung can talk itself out of it (round 1, scenario 17).
+  const askedForHuman = HUMAN_ASK.test(userMessage);
   let convo = (await db.select().from(supportConversations)
     .where(eq(supportConversations.sessionId, sessionId)).limit(1))[0];
   const org = opts.origin || null;
@@ -186,7 +215,7 @@ export async function answerSupport(sessionId: string, userMessage: string, opts
         const priorAsks = history.filter((m) => m.role === "assistant" && m.model === "credit-machine").length;
         if (priorAsks >= 2) out = { kind: "unresolved" };
       }
-      const terminal = ["granted", "already", "denied_fine", "not_charged", "cap", "unresolved"].includes(out.kind);
+      const terminal = ["granted", "already", "denied_fine", "not_charged", "too_old", "cap", "unresolved"].includes(out.kind);
       if (terminal) {
         await db.update(supportConversations)
           .set({ creditDecision: out.kind, creditCid: "cid" in out ? out.cid : null })
@@ -205,7 +234,7 @@ export async function answerSupport(sessionId: string, userMessage: string, opts
         }
         // "ambiguous" is a question back to the customer, not an answer → the widget keeps the
         // "That answered it" button hidden until a real answer lands.
-        return finish(convo.id, reply, 0, "credit-machine", r.escalate, 0, now, out.kind !== "ambiguous");
+        return finish(convo.id, reply, 0, "credit-machine", r.escalate || askedForHuman, 0, now, out.kind !== "ambiguous", askedForHuman);
       }
     } catch (e) {
       // Verifier down ≠ chat down: log and let the normal ladder answer (its hint forbids promises).
@@ -218,7 +247,7 @@ export async function answerSupport(sessionId: string, userMessage: string, opts
   // Rung 0 — answer cache. Only on the opening question: follow-ups depend on conversation
   // context a cached one-shot answer doesn't have.
   if (firstAsk && ctx.qaBest && ctx.qaBest.score >= CACHE_MIN && ctx.qaBest.answer) {
-    return finish(convo.id, ctx.qaBest.answer, 0, "cache", false, 0, now);
+    return finish(convo.id, ctx.qaBest.answer, 0, "cache", askedForHuman, 0, now, true, askedForHuman);
   }
 
   const catHint = CATEGORY_HINT[convo.category || category] || "";
@@ -247,10 +276,10 @@ export async function answerSupport(sessionId: string, userMessage: string, opts
       const p = JSON.parse(raw) as { answer?: string; confident?: boolean; needs_human?: boolean };
       if (!p.answer) continue;
       last = { answer: p.answer, needsHuman: !!p.needs_human };
-      if (p.needs_human) return finish(convo.id, p.answer, rung.tier, rung.model, true, cost, now);
+      if (p.needs_human || askedForHuman) return finish(convo.id, p.answer, rung.tier, rung.model, true, cost, now, true, askedForHuman);
       if (p.confident || rung.tier === 3) {
         // Big rung not confident → give its best answer but open the door to a human.
-        return finish(convo.id, p.answer, rung.tier, rung.model, rung.tier === 3 && !p.confident, cost, now);
+        return finish(convo.id, p.answer, rung.tier, rung.model, (rung.tier === 3 && !p.confident) || askedForHuman, cost, now, true, askedForHuman);
       }
     } catch (e) {
       console.error(`[support] rung ${rung.tier} (${rung.model})`, (e as Error).message.slice(0, 160));
@@ -259,10 +288,10 @@ export async function answerSupport(sessionId: string, userMessage: string, opts
   // Every rung errored or returned nothing usable → apologize and escalate.
   const sorry = last?.answer
     || "Something went wrong on our side and I could not look that up. Leave your details and a person will get back to you.";
-  return finish(convo.id, sorry, 3, "error", true, cost, now);
+  return finish(convo.id, sorry, 3, "error", true, cost, now, true, askedForHuman);
 }
 
-async function finish(conversationId: number, reply: string, tier: number, model: string, escalate: boolean, cost: number, now: number, answered = true): Promise<LadderResult> {
+async function finish(conversationId: number, reply: string, tier: number, model: string, escalate: boolean, cost: number, now: number, answered = true, humanAsk = false): Promise<LadderResult> {
   await db.insert(supportMessages).values({
     conversationId, role: "assistant", content: reply, tier, model, createdAt: now,
   });
@@ -274,7 +303,7 @@ async function finish(conversationId: number, reply: string, tier: number, model
     ...(escalate ? { status: "escalated" } : {}),
     updatedAt: now,
   }).where(eq(supportConversations.id, conversationId));
-  return { reply, tier, escalate, answered, conversationId };
+  return { reply, tier, escalate, answered, humanAsk, conversationId };
 }
 
 /** Thumbs up/down from the widget. helped=true puts the conversation in the review queue. */

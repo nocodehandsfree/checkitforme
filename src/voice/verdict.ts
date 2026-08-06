@@ -8,7 +8,13 @@ import { llm } from "../llm";
 import { liveReadFor } from "./live-read";
 
 // Cheapest brain that reliably reads a short transcript. Same model the navigator hands off on.
-export const VERDICT_MODEL = "gemini-2.5-flash-lite";
+// GROQ, OFF GOOGLE (owner 08-05: "i'm looking for a cheaper solution than Google"). The Groq lane
+// was already wired in llm.ts (the groq: prefix, the same OpenAI fallback every vendor gets), and a
+// read on llama-3.3-70b costs about a hundredth of a cent, billed to our Groq account instead of the
+// exhausted Google one. 70b rather than the tinier 8b on purpose: a weak reader disagrees with
+// Charlie more, every disagreement is a "couldn't tell" we cannot charge for, so the cheap model is
+// the one that reads WELL, not the one with the smallest sticker.
+export const VERDICT_MODEL = "groq:llama-3.3-70b-versatile";
 
 export interface ClerkVerdict {
   inStock: "yes" | "no" | "unclear"; // buyable RIGHT NOW for the asked category

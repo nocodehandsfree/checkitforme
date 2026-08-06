@@ -9,7 +9,7 @@ import { bootstrap } from "../src/db/bootstrap";
 import { db } from "../src/db/client";
 import { eq } from "drizzle-orm";
 import { accounts, supportConversations, supportMessages, supportTickets } from "../src/db/schema";
-import { answerSupport } from "../src/support/ladder";
+import { answerSupport, HUMAN_ASK } from "../src/support/ladder";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -26,6 +26,21 @@ async function main() {
   // Chat input validation (no model call happens on a rejected body).
   let r = await fetch(`${base}/pub/support/chat`, { method: "POST", headers: pub, body: JSON.stringify({}) });
   ok(r.status === 400, "chat without message → 400");
+
+  // THE HUMAN ASK (round 1, scenario 17). Asking for a person got "tap Help in the footer", which
+  // opens this same chat, and the hand over never fired. It is deterministic now, read off the
+  // customer's own words before any rung runs, so no model can talk itself out of it. Both halves
+  // matter: it must fire on a real ask, and stay quiet on chatter that merely says "person".
+  for (const msg of ["let me talk to a real person right now", "can I speak to someone who works there please",
+    "no bot answers, a HUMAN please", "I'd rather talk to an actual human about my account",
+    "quiero hablar con una persona de verdad, no con un bot"]) {
+    ok(HUMAN_ASK.test(msg), `human ask detected: "${msg.slice(0, 42)}"`);
+  }
+  for (const msg of ["does a real person actually answer the phone at the store?",
+    "how long does a check take?", "the person at Target said they were sold out",
+    "do you have a robot calling or a human calling?", "I got charged twice this month"]) {
+    ok(!HUMAN_ASK.test(msg), `not a human ask: "${msg.slice(0, 42)}"`);
+  }
 
   // Ticket form: bad email rejected; good one stored (Brevo unset → emailed:false path, row still lands).
   r = await fetch(`${base}/pub/support/ticket`, { method: "POST", headers: pub, body: JSON.stringify({ name: "Sam", email: "nope", message: "hi" }) });

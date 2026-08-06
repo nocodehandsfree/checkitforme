@@ -32,7 +32,7 @@ description: >-
    anything a customer sees, YOU walk it first. Re-fixing something that already broke? It needs NEW
    proof you drove it this time, not "should be fixed now" — the last "fixed" is why he's back.
    - Tooling: `node scripts/site-health.mjs https://staging.checkitforme.com` walks every page/form
-     and fails on JS errors, broken requests, or dead views (see the `unblock-yourself` skill for a
+     and fails on JS errors, broken requests, or dead views (see the secrets section below for a
      test account + comping premium UI so gated screens actually render).
    - **Device-only blind spot** (how iOS paints the glass/tint, how Gmail recolors an email, how a
      call sounds): you genuinely can't see these — headless shots are evidence, not a verdict. Ship
@@ -52,15 +52,31 @@ description: >-
    owner — and `promote.sh` makes the promoter confirm every user-facing commit was driven before
    prod ships. Your report is what PM checks against.
 
-## Gotchas that fake a green check (see the `known-problems` skill)
+## Gotchas that fake a green check (full list: `docs/shared/GOTCHAS.md`)
 - A `401` on a new `/api/*` path does NOT prove it deployed — use a content marker.
 - A "visual regression" is stale PWA/Cloudflare cache until proven otherwise — hard-refresh / bump
   the `x-rev` meta and reproduce fresh before touching code.
 - Never push to `staging` while a live test call is running (redeploy drains it) — check
   `GET /api/voice/live` first.
 
+## Any secret you need (moved here 2026-08-05 from CLAUDE.md + the deleted unblock-yourself skill)
+`$RAILWAY_API_TOKEN` is pre-embedded in this environment; every credential (DB, `ADMIN_TOKEN`, Stripe,
+ElevenLabs, Twilio, `GITHUB_PAT`, `FUN_STORE_PHONE`, comp lists) is a Railway variable. Prod svc
+`d363a982-e918-4433-b175-defe8faf0ec9`, staging svc `8165df7a-3bdf-41a5-bdce-24883633a096`.
+```bash
+curl -s -X POST https://backboard.railway.app/graphql/v2 \
+  -H "Authorization: Bearer $RAILWAY_API_TOKEN" -H "Content-Type: application/json" \
+  -d '{"query":"{ variables(projectId: \"889e332c-30fe-46e9-a18e-d8de4f7523aa\", environmentId: \"7cbf9327-357a-415e-9031-d1609aead2b4\", serviceId: \"d363a982-e918-4433-b175-defe8faf0ec9\") }"}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['variables']['ADMIN_TOKEN'])"
+```
+⚠️ **curl ONLY** — python/WebFetch 403 through the proxy in a way that fakes "Railway is down". Never
+paste a secret into a file. Admin API: header `x-admin-token: <ADMIN_TOKEN>` plus a browser User-Agent
+(a non-browser UA gets a Cloudflare 1010), or mint the cookie at `/admin-login?token=<ADMIN_TOKEN>`.
+Test account on staging, no telephony: `POST /auth/phone/start {"phone":"+1XXXXXXXXXX"}` then
+`POST /auth/phone/check` with code `000000`.
+
 ## Scope + safety
-- All of this is on `staging`. Prod changes ONLY via `bash scripts/promote.sh` (merge staging→main) —
-  and only when the owner says go.
+- All of this is on `staging`. Prod changes ONLY via `bash scripts/promote.sh` (merge staging→main),
+  which REFUSES unless GitHub's test run is green on that exact commit — and only when the owner says go.
 - Drift check: `sed -n '/Typecheck/,/test-all/p' .github/workflows/ci.yml` shows CI runs the same
   `tsc` + `test-all.sh` gates, so local green ≈ CI green (as of 2026-07).

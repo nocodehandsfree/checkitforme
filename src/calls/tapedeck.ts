@@ -596,13 +596,14 @@ const WAIT_OUT: RobotAct[] = [{ listen: true }, { listen: true }, { listen: true
 export const ROBOT_SCENES: RobotScene[] = [
   { n: 1, card: "answer_clear_yes", name: "Yes, plainly", expect: "in_stock", acts: [
     { listen: true }, { say: "Yeah." },
-    { listen: true }, { say: "We do." },
-    // Charlie's own instructions follow a settled yes with the set and product questions, and a
-    // goodbye is only possible once they are answered: a robot that goes silent here makes the
-    // wrap-up untestable by design (proven on checks 273 and 276, where he waited on this answer
-    // until the silence dropped him). Both parts in one line, so his chain closes and he can thank
-    // them and end. Spec-approved, not corpus, like scenario 8's payoff.
-    { listen: true }, { say: "Uh, I think it's the one fifty one booster boxes." },
+    // A REAL ANSWER TO THE SET QUESTION (owner 08-05). The scene used to answer it with "We do.",
+    // which a human would never say there, and then name "the one fifty one booster boxes", which
+    // transcribes as "151" and kept failing the word row no matter how right the record was. The
+    // owner's ruling: get rid of 151, use another product name. Pitch Black, DELIBERATELY not the
+    // Chaos Rising in Charlie's own example question, so a check proves he heard their answer and
+    // never that he echoed himself. The set and the type both in one line, so his chain closes and
+    // the reveal's subhead has real product words. Spec-approved, not corpus.
+    { listen: true }, { say: "Uh yeah, it's the Pitch Black booster boxes." },
     ...WAIT_OUT,
   ] },
   { n: 2, card: "answer_clear_no", name: "No, plainly", expect: "not_in_stock", acts: [

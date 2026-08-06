@@ -112,6 +112,7 @@ export async function bootstrap() {
   )`);
   // Chains: deterministic keypad shortcut column (added post-migration; SQLite has no IF NOT EXISTS for columns).
   await client.execute("ALTER TABLE zones ADD COLUMN owner_user_id TEXT").catch(() => {});
+  await client.execute("ALTER TABLE call_results ADD COLUMN transcript_timed TEXT").catch(() => {});
   // Email confirmation: alert emails only send once the address is confirmed (confirm-email flow).
   await client.execute("ALTER TABLE accounts ADD COLUMN email_verified_at INTEGER").catch(() => {});
   // Master "Pause all alerts": one switch on the Alerts list pauses every alert for the account.

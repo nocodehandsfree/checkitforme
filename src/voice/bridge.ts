@@ -485,6 +485,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  we asked a question in between, and the record has to say so. */
   /** Their hello, taken out of what Charlie is handed and transcribed on its own. */
   let helloAudio: string[] = [];
+  /** The transcribed hello, held until a session is READY to be told. The words come back from the
+   *  transcriber on their own clock, and a line emitted before the session opens is simply lost —
+   *  with it the greeting on the customer's page, Staff's name, and the voicemail net's one look at
+   *  the store's first words. Delivered in the metadata handler, ahead of everything else. */
+  let helloLineWaiting: { text: string } | null = null;
   /** Running while held audio is being paced out. Live frames queue behind it so nothing overtakes. */
   let handoverTimer: NodeJS.Timeout | null = null;
   /** Our question, kept off the live view until the store's hello can be shown above it. */
@@ -996,7 +1001,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       return;
     }
     signoffNudged = true;
-    emit(room, "unknown", "The answer is in hand, so Charlie was told to wrap up", { step: "signoff", answer });
+    // Worded for where it really sits on the log: the reader hears the yes BEFORE Charlie's follow-up
+    // question is answered, so "told to wrap up" read as wrapping before the product detail
+    // (owner 08-05). He is told to finish once he has what the check needs, and that is what it says.
+    emit(room, "unknown", "Charlie understood the answer and was told to say goodbye", { step: "signoff", answer });
     log(`signoff: the answer is in hand (${answer}) — telling him to thank them and end`);
     try {
       eleven.send(JSON.stringify({ type: "contextual_update", text:
@@ -1047,16 +1055,27 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // "[outro jingle]" onto the owner's transcript as something Staff said is worse than nothing.
       if (!text || !/[a-zA-ZÀ-ɏ]{2,}/.test(text) || /^\[[^\]]*\]$/.test(text)) { log(`hello: nothing worth writing down (${text.slice(0, 40)})`); return; }
       log(`hello: transcribed on its own -> ${text.slice(0, 60)}`);
-      // …and back through the one door every other line uses.
-      eleven?.emit("message", Buffer.from(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: text } })));
-      // HE NEVER HEARD THEM SAY IT, so the one thing he would have taken from it is handed over as
-      // context rather than as a turn: the owner grades whether he thanked them by name.
-      const n = staffName(text);
-      if (n && eleven && ready) {
-        try { eleven.send(JSON.stringify({ type: "contextual_update", text: `[The person who answered is called ${n}. They said hello before your recorded question played, so do not greet them again. Use their name once, naturally.]` })); }
-        catch { /* best effort — never break a check over a note */ }
-      }
+      helloLineWaiting = { text };
+      deliverHelloLine();
     } catch (e) { log(`hello: transcribe threw ${String(e).slice(0, 80)}`); }
+  }
+
+  /** Put the transcribed hello through the SOCKET'S OWN message handler, so the record, the relay,
+   *  the name, the wrong department test and the voicemail net all run the one copy that already
+   *  works, and then hand Charlie the name as context. Idempotent, and only ever on a ready session. */
+  function deliverHelloLine() {
+    if (!helloLineWaiting || !eleven || !ready) return;
+    const { text } = helloLineWaiting; helloLineWaiting = null;
+    eleven.emit("message", Buffer.from(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: text } })));
+    // HE NEVER HEARD THEM SAY IT, so the one thing he would have taken from it is handed over as
+    // context rather than as a turn. INFORMATIONAL ON PURPOSE: whether he USES the name is owned by
+    // section 14 and the store's persona (an affection-off persona says never to), so the note
+    // states the fact and commands nothing that could fight either.
+    const n = staffName(text);
+    if (n) {
+      try { eleven.send(JSON.stringify({ type: "contextual_update", text: `[The person who answered gave their name before your recorded question played: ${n}. Do not greet them again.]` })); }
+      catch { /* best effort — never break a check over a note */ }
+    }
   }
 
   function tellCharlieAboutTheGap(secs: number, maybeNewPerson: boolean, replayed?: boolean) {
@@ -1186,12 +1205,35 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // the fast path, never the last word.
         if (convId) { conversations.set(room, convId); linkProviderCall(room, convId); setTimeout(() => conversations.delete(room), 30 * 60 * 1000); if (c.connectOnHuman && humanAtMs) navByConv.set(convId, Math.max(0, Math.round((humanAtMs - startMs) / 1000))); log(`metadata: convId=${convId}`); try { c.onConversationId?.(convId); } catch (e) { log(`onConversationId threw: ${String(e).slice(0, 80)}`); } }
         else log(`metadata but NO convId: ${JSON.stringify(m).slice(0, 200)}`);
+        // Their transcribed hello first, if it is back and undelivered: it is the earliest thing said.
+        deliverHelloLine();
         // Held back while Delta is still asking — openCharlieGate releases them the instant the
         // clip is done, in order, so an early answer reaches him complete instead of half-heard.
         flushPending();
         // THE WAIT HE SLEPT THROUGH. This session was opened because somebody came back, so it starts
         // with no idea a gap happened at all. Told here, before a single held word reaches him.
-        if (gapNote) { const g = gapNote; gapNote = null; tellCharlieAboutTheGap(g.secs, g.newPerson, g.replayed); }
+        //
+        // …AND WHAT WAS SAID BEFORE IT (owner 08-05, check 289). A reconnected Charlie is a FRESH
+        // session: he came back with no memory of part 1, heard "the 151 booster boxes" and asked
+        // whether those come in packs, a question that answer had already settled. So a reopened
+        // session is handed the check's own written conversation first, the same record the customer
+        // reads, and the settle law can hold because he can finally see what Staff already gave.
+        // NEVER after a hand-over: a new person is a fresh start by the owner's own section 5, and
+        // the old conversation belongs to somebody who is no longer on the phone.
+        if (gapNote) {
+          const g = gapNote; gapNote = null;
+          if (!g.replayed) {
+            const lines = (getReceipt(room)?.transcript ?? [])
+              .slice(-12)
+              .map((l) => `${l.who === "Agent" ? "You" : "Staff"}: ${l.text}`)
+              .join(" / ");
+            if (lines && eleven && ready) {
+              try { eleven.send(JSON.stringify({ type: "contextual_update", text: `[What has already been said on this call, oldest first: ${lines.slice(0, 1200)}. Never re-ask anything Staff already answered here.]` })); }
+              catch { /* best effort — never break a check over a note */ }
+            }
+          }
+          tellCharlieAboutTheGap(g.secs, g.newPerson, g.replayed);
+        }
       } else if (m.type === "audio") {
         const b64 = m.audio_event?.audio_base_64;
         // He is warming up behind the question, not talking over it. Nothing he produces before the

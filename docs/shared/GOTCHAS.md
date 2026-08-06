@@ -5,28 +5,14 @@ Non-obvious traps that cost real time. Add one the moment you learn it; delete o
 worse than no comment. Several entries below started as wrong comments.)
 
 ## Compute / testing
-- **Driving the live Admin (or the site) in a real browser from an agent container: Chromium CANNOT
-  reach the internet** (07-29, cost most of a session). The egress proxy resets Chromium's CONNECT, and
-  no combination of `--proxy-server`, `--ignore-certificate-errors`, playwright's `proxy:` option or
-  `NODE_EXTRA_CA_CERTS` fixes it. `curl` reaches everything. **The recipe:** ONE node script that (1)
-  starts a `node:http` server on 127.0.0.1 which forwards every path to `https://admin.checkitforme.com`
-  through `execFile('curl', ['-sS','-X',method,url,'-H','x-admin-token: …'])`, then (2) launches
-  playwright-core at `http://127.0.0.1:<port>`. Live bytes, live data, and the browser only ever talks
-  to loopback. One process start-to-finish, so no background task and no compute gate to unlock.
-  Companion facts: the Admin shell is served at `/`, not `/app.html` (which 404s) ·
-  `node_modules/playwright` is an EMPTY dir, import `playwright-core` · chromium lives at
-  `/opt/pw-browsers/chromium-1194/chrome-linux/chrome` and needs `--no-sandbox` · top-level `const`s in
-  `app.html` (`CHAINS`, `POL`) are NOT on `window`, so name them bare inside `page.evaluate` · a chain
-  row opens with `pickChainRow(id)`.
-  **Three more, all found the hard way 07-30 building that mirror:** (1) a `curl -w` format that starts
-  with `@` is read as a FILENAME (`option -w: error encountered when reading a file`) — pick a marker
-  like `~~X~~`. (2) Read the status and the content type off `-w` AFTER the body, never off `-i`: the
-  egress proxy prepends its own `HTTP/1.1 200 Connection Established` block, so header parsing types
-  every response as a download and the navigation dies with `Download is starting`. (3) The pages that
-  follow the Live/Staging switch fetch `https://staging.checkitforme.com` CROSS-ORIGIN with
-  credentials, so anything you fulfil for that origin needs `access-control-allow-origin` (the exact
-  loopback origin) plus `access-control-allow-credentials: true`, or the browser drops the response and
-  the page truthfully reports "Could not reach the staging site".
+- **Chromium in an agent container CANNOT reach the internet** (07-29, cost most of a session; no
+  proxy/cert flag fixes it — the egress proxy resets its CONNECT). `curl` reaches everything. **The
+  recipe:** one node script that starts a loopback `node:http` server forwarding every path through
+  `execFile('curl', …)`, then points `playwright-core` at `http://127.0.0.1:<port>`. Working script +
+  the four traps that cost the most (a `curl -w` format starting with `@` is read as a filename · read
+  status off `-w` after the body, never `-i` · cross-origin fulfils need CORS headers · the Admin shell
+  is at `/`, not `/app.html`): `git log --grep="admin mirror"`. Import `playwright-core`, never
+  `playwright` (that dir is empty); chromium needs `--no-sandbox`.
 - **`scripts/test-all.sh` spawns local servers + headless browsers — don't run it reflexively, and never
   leave it orphaned** (owner 07-20, it was killing his compute + morale). The `smoke:`/`qa:` lines each
   boot a server (ports 8788-8798) and Chromium. If the run is killed partway (OOM, worker restart), those
@@ -72,12 +58,14 @@ worse than no comment. Several entries below started as wrong comments.)
 - **Dead air makes clerks hang up.** Use eager turn-taking + a soft-timeout filler so a slow turn says "I'm here!"
   instead of going silent.
 - **Connect-on-human is baked ALWAYS-ON in code now** (server.ts `connectOnHuman ?? true`, commit 480cacf) — no DB toggle can silently disable it anymore. But other policy flags (e.g. `bail.enabled`) still live in the `policy_json` DB setting: **check `GET /api/policy` after ANY DB restore.**
-- **Store logos have an owner-approved process — follow it, don't reinvent it.** Logos are the stores' brands; the owner signs off on how they look. `checkitforme.com/logo-wall` is the ultimate source of truth — logos FEED from that page. It + `docs/data/store-logos.md` ARE the process that finally worked — new logos go through it; never invent a new sizing approach or batch-resize existing approved logos.
+- **Store logos have an owner-approved process — follow it, don't reinvent it.** Logos are the stores' brands; the owner signs off on how they look. `checkitforme.com/logo-wall` is the source of truth and cannot lie to you (owner, 08-05); after the 07-31/08-01 rebuild ONE place decides a logo's size, so changing it in that one spot really does change it everywhere. It + `docs/data/store-logos.md` ARE the process that finally worked — new logos go through it; never invent a new sizing approach or batch-resize existing approved logos.
 - **"Visual regression" = stale cache until proven otherwise.** Several "regressions" were device/SW cache (2026-07 hobby art). Hard-refresh / bump the SW cache version FIRST; reproduce fresh before touching code.
 - **Every user-facing string ships with its Spanish in the SAME commit.** ES gaps were caught late ~23 times (even the primary CTA). No literal strings — through `t()` with the ES value, same commit.
-- **iOS Safari only applies `<meta theme-color>` at PAGE LOAD** — a later JS change is ignored. The status-bar
-  tint must be **baked into the served HTML** (server `?tone=` → `renderRunner`, `server.ts`). Also needs the
-  device's "Allow Website Tinting" ON (default on).
+- **iOS status-bar tint is SETTLED and gated — don't touch it, don't re-investigate it** (owner,
+  08-05). It cost days twice. The rule that made it work: the tint is baked into the served HTML
+  (server `?tone=` → `renderRunner`), never set by JS after load, and never via a `theme-color` meta.
+  `qa-tint-lock.mjs` runs in `test-all.sh` and fails the suite if anyone breaks it. If a tint bug ever
+  reappears, report it — do not start changing approved design to chase it.
 - **PWA status bar is a different mechanism** — `apple-mobile-web-app-status-bar-style: black-translucent` +
   `viewport-fit=cover` (the body paints *under* the bar). That's why "Add to Home Screen" tints when web doesn't.
 
@@ -113,8 +101,11 @@ worse than no comment. Several entries below started as wrong comments.)
   voice-caller-staging service, `false` on prod. The code branches on it in ~20 spots (`server.ts`, `auth.ts`,
   `staging-sim.ts`): simulated calls, the staging login code, staging websocket host. Don't remove
   `config.staging` from `config.ts` (typecheck breaks, and staging loses its behavior).
-- **Logos:** the Cloudflare token lacks R2-admin and the S3 keys are object-scoped to `fungibles-cards`, so logos
-  serve via the `fungibles-logos` Worker on `logos.fungibles.com` (chain-logos/ prefix), not a public R2 bucket.
+- **Logos serve from THIS repo, not Fungibles** (corrected 2026-08-05 — the 07-31/08-01 rebuild).
+  102 chain PNGs live in `public/logos/chains/` with `_meta.json` beside them; `chainLogoFiles()`
+  (server.ts:1589) reads that directory and `/logos/chains/:file` serves the bytes. The old
+  `logos.fungibles.com` Worker is NOT in the runtime path — the only survivor is a stale comment on
+  the nullable `logoUrl` column in `src/db/schema.ts:91`. Full truth: `docs/data/store-logos.md`.
 - **Test calls used to WRITE mapping data** — the passive tree-learner ran on every completed call, so an
   owner Fun-store test transcript once wrote a bogus `avgTreeSeconds=19` onto a direct-answer chain and
   silenced the agent for 19s (2026-07-02). Fixed: passive learning is gated `!config.staging.on` and skips
@@ -161,35 +152,13 @@ worse than no comment. Several entries below started as wrong comments.)
   history only) serves the vendored fonts.
   If you judge a render, FIRST confirm the headline is actually Inter (compare a lowercase 'g').
 
-## Share/landing (/s): a gradient fading to a TRANSPARENT color leaves a green haze on iOS
-- Symptom: owner's iPhone showed a faint green tint/line across the BOTTOM of the /s card; every
-  headless Chromium screenshot showed the bottom perfectly clean. Cost ~7 round trips chasing it as
-  a "button glow."
-- Root cause: `.card.pos` background was `linear-gradient(180deg, rgba(38,100,64,.95) …, rgba(38,100,64,0) 210px), #20202A`.
-  Chromium renders the `rgba(38,100,64,0)` endpoint as truly clear; **iOS Safari interpolates toward
-  that RGB at low alpha, so the whole region below the last stop gets a faint GREEN wash** over the
-  dark base. Invisible in Chromium, visible on the device.
-- Fix: never fade to a transparent COLORED stop for a wash. Fade between two OPAQUE colors:
-  `linear-gradient(180deg,#266440 0%,#20202A 46%)`. No alpha, no premultiply artifact, clean bottom.
-- Lesson: a colors/fonts diff and a Chromium render CANNOT catch this — it is an iOS-paint blind spot.
-  If the owner reports a tint that no render reproduces, suspect a `rgba(r,g,b,0)` gradient stop first.
+## Share/landing (/s): a faint green line at the bottom of the card, iPhone only
+UNRESOLVED and NOT worth chasing. Three theories were written out and all three were wrong (a
+transparent gradient stop, then the watermark clip, then the CTA's clipped shine). It has been there
+since the FIRST /s rebuild and has NEVER reproduced in headless Chromium — it needs a real iPhone to
+bisect. **Do NOT change approved design to chase it** — doing that was the actual mistake, twice.
+Full history: `git log --grep="/s"`.
 
-  UPDATE: the opaque-gradient fix alone did NOT kill it. The real culprit was the watermark
-  layer: `.cwmwrap{position:absolute;inset:0;border-radius:40px;overflow:hidden}` wrapping a
-  bright-green check. iOS Safari's `overflow:hidden` + `border-radius` clip leaks a 1px line of
-  the clipped content's color along the BOTTOM edge (Chromium doesn't). Fix: drop the full-card
-  clip layer entirely — contain the watermark fully inside the card, and use an inset ring shadow
-  instead of a border for the edge.
-
-  CORRECTION (owner, same day): BOTH theories above are WRONG. The green line at the card's
-  bottom edge has been present since the FIRST /s rebuild — before the watermark/brandmark, the
-  border, and the wash all existed. So it is none of those. The only element green-and-near-the-
-  bottom in every single version is the CTA button (green glow in v1, green ring + light-green
-  `.shine` clipped by `.cin{overflow:hidden;border-radius:999px}` since). Prime remaining suspect:
-  the `.cin` overflow+radius clip leaking the shine's green on iOS, and/or the button's green
-  reflecting. UNRESOLVED — never reproduced in headless Chromium. Needs a real iPhone to bisect.
-  Do NOT keep changing approved design (brandmark position, border, wash) to chase it — that was
-  the mistake here; isolate it on-device first.
 - **A sticky/floating element at a v2 sheet's BOTTOM edge kills the iOS scroll-edge glass** (owner
   07-23, the plans-sheet Continue; 3 wasted round trips). iOS 26 paints a translucent scroll-edge glass
   at the top/bottom of the v2 sheets; the overlay is `background:transparent` ON PURPOSE so it works
