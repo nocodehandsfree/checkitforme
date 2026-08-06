@@ -1,0 +1,1595 @@
+{
+  "runs": [
+    {
+      "scenario": 5,
+      "name": "Walks away, comes back",
+      "items": [
+        {
+          "n": 1,
+          "name": "the store is found from the main page and Check it is tapped",
+          "pass": true,
+          "detail": "searched \"MVPs\""
+        },
+        {
+          "n": 2,
+          "name": "the one hour warning, then Check again",
+          "pass": true,
+          "detail": "nothing to warn about yet \u2014 this device had never checked this store (the next scene proves the warning)"
+        },
+        {
+          "n": 3,
+          "name": "the header moves through its phases in order, never backwards",
+          "pass": true,
+          "detail": "Calling \u2192 Talking to Staff \u2192 Getting results"
+        },
+        {
+          "n": 4,
+          "name": "Staff's greeting is the first line, on the live view",
+          "pass": true,
+          "detail": "live view showed: \"Larry Vasquez, how can I help you?\"  \u00b7  robot said: \"Larry Vasquez, how can I help you?\""
+        },
+        {
+          "n": 5,
+          "name": "the greeting is its own line, never welded to their answer",
+          "pass": true,
+          "detail": "one line, nothing else in it"
+        },
+        {
+          "n": 12,
+          "name": "one check writes ONE record",
+          "pass": true,
+          "detail": "one row for this check"
+        },
+        {
+          "n": 4.1,
+          "name": "Staff's greeting is the first line of the written conversation",
+          "pass": true,
+          "detail": "first written line: \"Clerk: Larry Vasquez, how can I help you?\""
+        },
+        {
+          "n": 5.1,
+          "name": "the written greeting is its own line",
+          "pass": true,
+          "detail": "written: \"Larry Vasquez, how can I help you?\"  \u00b7  said: \"Larry Vasquez, how can I help you?\""
+        },
+        {
+          "n": 6,
+          "name": "the words match what the robot actually said, word for word",
+          "pass": false,
+          "detail": "\"Okay, thank you for holding. Yeah, I did not see any, unfortunately.\" \u2192 missing"
+        },
+        {
+          "n": 7,
+          "name": "the conversation scrolls under the header and does not bounce when nothing is new",
+          "pass": true,
+          "detail": "0 bounce(s) over 96 looks \u00b7 header held at 49px"
+        },
+        {
+          "n": 8,
+          "name": "the log expands",
+          "pass": true,
+          "detail": "19px \u2192 90px"
+        },
+        {
+          "n": 13,
+          "name": "the check ends with a goodbye, not with us hanging up mid conversation",
+          "pass": true,
+          "detail": "we signed off: \"No worries, take your time!\""
+        },
+        {
+          "n": 14,
+          "name": "we never ask the same question twice",
+          "pass": true,
+          "detail": "2 things said, none of them twice"
+        },
+        {
+          "n": 15,
+          "name": "the check ends soon after the answer, instead of sitting on an open line",
+          "pass": true,
+          "detail": "the answer was in at 188 seconds and the line closed at 188 \u2014 0 seconds of nothing"
+        },
+        {
+          "n": 9,
+          "name": "the result appears with a status",
+          "pass": true,
+          "detail": " Result Thu, Aug 6 \u00b7 6:15 AM In stock MVPs has Pok\u00e9mon.Go grab it before it's gone. Check another store Calling4 steps \u00b7"
+        },
+        {
+          "n": 9.1,
+          "name": "the screen and the record say the same thing",
+          "pass": false,
+          "detail": "the screen said in, the record says unclear (staff_hung_up)"
+        },
+        {
+          "n": 11,
+          "name": "the verdict is RIGHT for this scenario",
+          "pass": false,
+          "detail": "got staff_hung_up \u00b7 this scenario is not_in_stock"
+        },
+        {
+          "n": 10,
+          "name": "the screen and the till agree about money",
+          "pass": true,
+          "detail": "not charged \u00b7 the screen claims no free check \u00b7 the check cost 14.0\u00a2 \u00b7 the robot's own line 3.40\u00a2 (the carrier's posted price)"
+        }
+      ],
+      "shots": [
+        "./robot-run/05-store-found.png",
+        "./robot-run/05-checking.png",
+        "./robot-run/05-live.png",
+        "./robot-run/05-result.png"
+      ],
+      "startedAt": 1785996895354,
+      "checkId": 330,
+      "cost": 0.140213,
+      "costReadable": "14.0\u00a2",
+      "robotCost": {
+        "usd": 0.034,
+        "secs": 186,
+        "how": "the carrier's posted price"
+      },
+      "charged": false,
+      "statusKey": "staff_hung_up",
+      "jsErrors": []
+    },
+    {
+      "scenario": 8,
+      "name": "The no that turns into a maybe",
+      "items": [
+        {
+          "n": 1,
+          "name": "the store is found from the main page and Check it is tapped",
+          "pass": true,
+          "detail": "searched \"MVPs\""
+        },
+        {
+          "n": 2,
+          "name": "the one hour warning, then Check again",
+          "pass": true,
+          "detail": "nothing to warn about yet \u2014 this device had never checked this store (the next scene proves the warning)"
+        },
+        {
+          "n": 3,
+          "name": "the header moves through its phases in order, never backwards",
+          "pass": true,
+          "detail": "Calling \u2192 Talking to Staff \u2192 Getting results"
+        },
+        {
+          "n": 4,
+          "name": "Staff's greeting is the first line, on the live view",
+          "pass": true,
+          "detail": "live view showed: \"Larry Vasquez, how can I help you?\"  \u00b7  robot said: \"Larry Vasquez, how can I help you?\""
+        },
+        {
+          "n": 5,
+          "name": "the greeting is its own line, never welded to their answer",
+          "pass": true,
+          "detail": "one line, nothing else in it"
+        },
+        {
+          "n": 12,
+          "name": "one check writes ONE record",
+          "pass": true,
+          "detail": "one row for this check"
+        },
+        {
+          "n": 4.1,
+          "name": "Staff's greeting is the first line of the written conversation",
+          "pass": true,
+          "detail": "first written line: \"Clerk: Larry Vasquez, how can I help you?\""
+        },
+        {
+          "n": 5.1,
+          "name": "the written greeting is its own line",
+          "pass": true,
+          "detail": "written: \"Larry Vasquez, how can I help you?\"  \u00b7  said: \"Larry Vasquez, how can I help you?\""
+        },
+        {
+          "n": 6,
+          "name": "the words match what the robot actually said, word for word",
+          "pass": false,
+          "detail": "\"Yeah, we've got a few.\" \u2192 missing"
+        },
+        {
+          "n": 7,
+          "name": "the conversation scrolls under the header and does not bounce when nothing is new",
+          "pass": true,
+          "detail": "0 bounce(s) over 67 looks \u00b7 header held at 62px"
+        },
+        {
+          "n": 8,
+          "name": "the log expands",
+          "pass": true,
+          "detail": "19px \u2192 90px"
+        },
+        {
+          "n": 13,
+          "name": "the check ends with a goodbye, not with us hanging up mid conversation",
+          "pass": true,
+          "detail": "we signed off: \"No worries, take your time!\""
+        },
+        {
+          "n": 14,
+          "name": "we never ask the same question twice",
+          "pass": true,
+          "detail": "2 things said, none of them twice"
+        },
+        {
+          "n": 15,
+          "name": "the check ends soon after the answer, instead of sitting on an open line",
+          "pass": true,
+          "detail": "the answer was in at 169 seconds and the line closed at 169 \u2014 0 seconds of nothing"
+        },
+        {
+          "n": 9,
+          "name": "the result appears with a status",
+          "pass": true,
+          "detail": " Result Thu, Aug 6 \u00b7 6:20 AM Left on hold They kept us on hold and the call dropped.Try checking later. Check another st"
+        },
+        {
+          "n": 9.1,
+          "name": "the screen and the record say the same thing",
+          "pass": true,
+          "detail": "the screen said unclear, the record says unclear (staff_hung_up)"
+        },
+        {
+          "n": 11,
+          "name": "the verdict is RIGHT for this scenario",
+          "pass": false,
+          "detail": "got staff_hung_up \u00b7 this scenario is in_stock"
+        },
+        {
+          "n": 10,
+          "name": "the screen and the till agree about money",
+          "pass": true,
+          "detail": "not charged \u00b7 the screen claims no free check \u00b7 the check cost 12.0\u00a2 \u00b7 the robot's own line 2.55\u00a2 (the carrier's posted price)"
+        }
+      ],
+      "shots": [
+        "./robot-run/08-store-found.png",
+        "./robot-run/08-checking.png",
+        "./robot-run/08-live.png",
+        "./robot-run/08-result.png"
+      ],
+      "startedAt": 1785997193699,
+      "checkId": 331,
+      "cost": 0.119773,
+      "costReadable": "12.0\u00a2",
+      "robotCost": {
+        "usd": 0.0255,
+        "secs": 166,
+        "how": "the carrier's posted price"
+      },
+      "charged": false,
+      "statusKey": "staff_hung_up",
+      "jsErrors": []
+    },
+    {
+      "scenario": 10,
+      "name": "Wrong department, then transfers",
+      "items": [
+        {
+          "n": 1,
+          "name": "the store is found from the main page and Check it is tapped",
+          "pass": true,
+          "detail": "searched \"MVPs\""
+        },
+        {
+          "n": 2,
+          "name": "the one hour warning, then Check again",
+          "pass": true,
+          "detail": "nothing to warn about yet \u2014 this device had never checked this store (the next scene proves the warning)"
+        },
+        {
+          "n": 3,
+          "name": "the header moves through its phases in order, never backwards",
+          "pass": true,
+          "detail": "Calling \u2192 Talking to Staff \u2192 Getting results"
+        },
+        {
+          "n": 4,
+          "name": "Staff's greeting is the first line, on the live view",
+          "pass": true,
+          "detail": "live view showed: \"MVP's Pharmacy, this is Larry\"  \u00b7  robot said: \"MVP's pharmacy, this is Larry.\""
+        },
+        {
+          "n": 5,
+          "name": "the greeting is its own line, never welded to their answer",
+          "pass": true,
+          "detail": "one line, nothing else in it"
+        },
+        {
+          "n": 12,
+          "name": "one check writes ONE record",
+          "pass": true,
+          "detail": "one row for this check"
+        },
+        {
+          "n": 4.1,
+          "name": "Staff's greeting is the first line of the written conversation",
+          "pass": true,
+          "detail": "first written line: \"Clerk: MVP's Pharmacy, this is Larry\""
+        },
+        {
+          "n": 5.1,
+          "name": "the written greeting is its own line",
+          "pass": true,
+          "detail": "written: \"MVP's Pharmacy, this is Larry\"  \u00b7  said: \"MVP's pharmacy, this is Larry.\""
+        },
+        {
+          "n": 6,
+          "name": "the words match what the robot actually said, word for word",
+          "pass": false,
+          "detail": "\"Okay. Transferring you now.\" \u2192 missing | \"Sporting goods, this is Dana.\" \u2192 missing | \"We did not.\" \u2192 missing"
+        },
+        {
+          "n": 7,
+          "name": "the conversation scrolls under the header and does not bounce when nothing is new",
+          "pass": true,
+          "detail": "0 bounce(s) over 67 looks \u00b7 header held at 62px"
+        },
+        {
+          "n": 8,
+          "name": "the log expands",
+          "pass": true,
+          "detail": "19px \u2192 90px"
+        },
+        {
+          "n": 13,
+          "name": "the check ends with a goodbye, not with us hanging up mid conversation",
+          "pass": false,
+          "detail": "the last thing said was OUR OWN QUESTION: \"Agent: Oh nice, do you know the name of the set, like Chaos Rising, and is it packs or a b\""
+        },
+        {
+          "n": 14,
+          "name": "we never ask the same question twice",
+          "pass": false,
+          "detail": "asked again: \"Hi there! I was just checking, do you have any Pok\u00e9mon cards\""
+        },
+        {
+          "n": 15,
+          "name": "the check ends soon after the answer, instead of sitting on an open line",
+          "pass": true,
+          "detail": "the answer was in at 139 seconds and the line closed at 139 \u2014 0 seconds of nothing"
+        },
+        {
+          "n": 9,
+          "name": "the result appears with a status",
+          "pass": true,
+          "detail": " Result Thu, Aug 6 \u00b7 6:25 AM Nobody answered Rang and rang, but nobody picked up.No check, no charge. Try checking later"
+        },
+        {
+          "n": 9.1,
+          "name": "the screen and the record say the same thing",
+          "pass": false,
+          "detail": "the screen said unclear, the record says out (not_in_stock)"
+        },
+        {
+          "n": 11,
+          "name": "the verdict is RIGHT for this scenario",
+          "pass": true,
+          "detail": "got not_in_stock \u00b7 this scenario is not_in_stock"
+        },
+        {
+          "n": 10,
+          "name": "the screen and the till agree about money",
+          "pass": true,
+          "detail": "not charged \u00b7 the screen says \"No charge\" \u00b7 the check cost 11.7\u00a2 \u00b7 the robot's own line 2.55\u00a2 (the carrier's posted price)"
+        }
+      ],
+      "shots": [
+        "./robot-run/10-store-found.png",
+        "./robot-run/10-checking.png",
+        "./robot-run/10-live.png",
+        "./robot-run/10-result.png"
+      ],
+      "startedAt": 1785997463898,
+      "checkId": 332,
+      "cost": 0.1172,
+      "costReadable": "11.7\u00a2",
+      "robotCost": {
+        "usd": 0.0255,
+        "secs": 137,
+        "how": "the carrier's posted price"
+      },
+      "charged": false,
+      "statusKey": "not_in_stock",
+      "jsErrors": []
+    },
+    {
+      "scenario": 11,
+      "name": "Walks away, comes back asking if we are there",
+      "items": [
+        {
+          "n": 1,
+          "name": "the store is found from the main page and Check it is tapped",
+          "pass": true,
+          "detail": "searched \"MVPs\""
+        },
+        {
+          "n": 2,
+          "name": "the one hour warning, then Check again",
+          "pass": true,
+          "detail": "nothing to warn about yet \u2014 this device had never checked this store (the next scene proves the warning)"
+        },
+        {
+          "n": 3,
+          "name": "the header moves through its phases in order, never backwards",
+          "pass": true,
+          "detail": "Calling \u2192 Talking to Staff \u2192 Getting results"
+        },
+        {
+          "n": 4,
+          "name": "Staff's greeting is the first line, on the live view",
+          "pass": true,
+          "detail": "live view showed: \"Larry Vasquez, how can I help you?\"  \u00b7  robot said: \"Larry Vasquez, how can I help you?\""
+        },
+        {
+          "n": 5,
+          "name": "the greeting is its own line, never welded to their answer",
+          "pass": true,
+          "detail": "one line, nothing else in it"
+        },
+        {
+          "n": 12,
+          "name": "one check writes ONE record",
+          "pass": true,
+          "detail": "one row for this check"
+        },
+        {
+          "n": 4.1,
+          "name": "Staff's greeting is the first line of the written conversation",
+          "pass": true,
+          "detail": "first written line: \"Clerk: Larry Vasquez, how can I help you?\""
+        },
+        {
+          "n": 5.1,
+          "name": "the written greeting is its own line",
+          "pass": true,
+          "detail": "written: \"Larry Vasquez, how can I help you?\"  \u00b7  said: \"Larry Vasquez, how can I help you?\""
+        },
+        {
+          "n": 6,
+          "name": "the words match what the robot actually said, word for word",
+          "pass": false,
+          "detail": "\"Hello?\" \u2192 missing | \"Hello? Hello?\" \u2192 missing"
+        },
+        {
+          "n": 7,
+          "name": "the conversation scrolls under the header and does not bounce when nothing is new",
+          "pass": true,
+          "detail": "0 bounce(s) over 53 looks \u00b7 header held at 62px"
+        },
+        {
+          "n": 8,
+          "name": "the log expands",
+          "pass": true,
+          "detail": "19px \u2192 90px"
+        },
+        {
+          "n": 13,
+          "name": "the check ends with a goodbye, not with us hanging up mid conversation",
+          "pass": true,
+          "detail": "we signed off: \"No worries, take your time!\""
+        },
+        {
+          "n": 14,
+          "name": "we never ask the same question twice",
+          "pass": true,
+          "detail": "2 things said, none of them twice"
+        },
+        {
+          "n": 15,
+          "name": "the check ends soon after the answer, instead of sitting on an open line",
+          "pass": true,
+          "detail": "the answer was in at 182 seconds and the line closed at 182 \u2014 0 seconds of nothing"
+        },
+        {
+          "n": 9,
+          "name": "the result appears with a status",
+          "pass": true,
+          "detail": " Result Thu, Aug 6 \u00b7 6:28 AM Couldn\u2019t tell We couldn\u2019t quite make out the answer.Read the convo and tell us what you thi"
+        },
+        {
+          "n": 9.1,
+          "name": "the screen and the record say the same thing",
+          "pass": true,
+          "detail": "the screen said unclear, the record says unclear (staff_hung_up)"
+        },
+        {
+          "n": 11,
+          "name": "the verdict is RIGHT for this scenario",
+          "pass": false,
+          "detail": "got staff_hung_up \u00b7 this scenario is not_in_stock"
+        },
+        {
+          "n": 10,
+          "name": "the screen and the till agree about money",
+          "pass": true,
+          "detail": "not charged \u00b7 the screen claims no free check \u00b7 the check cost 14.5\u00a2 \u00b7 the robot's own line 2.55\u00a2 (the carrier's posted price)"
+        }
+      ],
+      "shots": [
+        "./robot-run/11-store-found.png",
+        "./robot-run/11-checking.png",
+        "./robot-run/11-live.png",
+        "./robot-run/11-result.png"
+      ],
+      "startedAt": 1785997685542,
+      "checkId": 333,
+      "cost": 0.144814,
+      "costReadable": "14.5\u00a2",
+      "robotCost": {
+        "usd": 0.0255,
+        "secs": 180,
+        "how": "the carrier's posted price"
+      },
+      "charged": false,
+      "statusKey": "staff_hung_up",
+      "jsErrors": []
+    },
+    {
+      "scenario": 12,
+      "name": "Nobody picks up",
+      "items": [
+        {
+          "n": 1,
+          "name": "the store is found from the main page and Check it is tapped",
+          "pass": true,
+          "detail": "searched \"MVPs\""
+        },
+        {
+          "n": 2,
+          "name": "the one hour warning, then Check again",
+          "pass": true,
+          "detail": "nothing to warn about yet \u2014 this device had never checked this store (the next scene proves the warning)"
+        },
+        {
+          "n": 3,
+          "name": "the header moves through its phases in order, never backwards",
+          "pass": true,
+          "detail": "Calling \u2192 Getting through the menu"
+        },
+        {
+          "n": 4,
+          "name": "nobody at the store ever speaks, which is the whole test",
+          "pass": true,
+          "detail": "not one word from the store, the line just rang"
+        },
+        {
+          "n": 12,
+          "name": "one check writes ONE record",
+          "pass": true,
+          "detail": "one row for this check"
+        },
+        {
+          "n": 4.1,
+          "name": "Staff's greeting is the first line of the written conversation",
+          "pass": false,
+          "detail": "first written line: \"\""
+        },
+        {
+          "n": 5.1,
+          "name": "the written greeting is its own line",
+          "pass": false,
+          "detail": "written: \"\"  \u00b7  said: \"Larry Vasquez, how can I help you?\""
+        },
+        {
+          "n": 6,
+          "name": "the words match what the robot actually said, word for word",
+          "pass": true,
+          "detail": "0 lines, all exact"
+        },
+        {
+          "n": 7,
+          "name": "the conversation scrolls under the header and does not bounce when nothing is new",
+          "pass": true,
+          "detail": "0 bounce(s) over 285 looks \u00b7 header held at 62px"
+        },
+        {
+          "n": 8,
+          "name": "the log expands",
+          "pass": true,
+          "detail": "19px \u2192 90px"
+        },
+        {
+          "n": 13,
+          "name": "this check is not meant to end with a goodbye, and it did not",
+          "pass": true,
+          "detail": "nothing was signed off, which is right for this one"
+        },
+        {
+          "n": 14,
+          "name": "we never ask the same question twice",
+          "pass": true,
+          "detail": "0 things said, none of them twice"
+        },
+        {
+          "n": 9,
+          "name": "the result appears with a status",
+          "pass": true,
+          "detail": " Result Thu, Aug 6 \u00b7 6:33 AM Nobody answered Rang and rang.Nobody picked up. No charge. Check another store Calling4 ste"
+        },
+        {
+          "n": 9.1,
+          "name": "the screen and the record say the same thing",
+          "pass": true,
+          "detail": "the screen said unclear, the record says unclear (nobody_answered)"
+        },
+        {
+          "n": 11,
+          "name": "the verdict is RIGHT for this scenario",
+          "pass": true,
+          "detail": "got nobody_answered \u00b7 this scenario is nobody_answered"
+        },
+        {
+          "n": 10,
+          "name": "the screen and the till agree about money",
+          "pass": true,
+          "detail": "not charged \u00b7 the screen says \"No charge\" \u00b7 the check cost 4.2\u00a2 \u00b7 the robot's own line 1.70\u00a2 (the carrier's posted price)"
+        }
+      ],
+      "shots": [
+        "./robot-run/12-store-found.png",
+        "./robot-run/12-checking.png",
+        "./robot-run/12-live.png",
+        "./robot-run/12-result.png"
+      ],
+      "startedAt": 1785997943066,
+      "checkId": 334,
+      "cost": 0.04164,
+      "costReadable": "4.2\u00a2",
+      "robotCost": {
+        "usd": 0.017,
+        "secs": 91,
+        "how": "the carrier's posted price"
+      },
+      "charged": false,
+      "statusKey": "nobody_answered",
+      "jsErrors": []
+    },
+    {
+      "scenario": 13,
+      "name": "Talks past the answer, forever",
+      "items": [
+        {
+          "n": 1,
+          "name": "the store is found from the main page and Check it is tapped",
+          "pass": true,
+          "detail": "searched \"MVPs\""
+        },
+        {
+          "n": 2,
+          "name": "the one hour warning, then Check again",
+          "pass": true,
+          "detail": "nothing to warn about yet \u2014 this device had never checked this store (the next scene proves the warning)"
+        },
+        {
+          "n": 3,
+          "name": "the header moves through its phases in order, never backwards",
+          "pass": true,
+          "detail": "Calling \u2192 Talking to Staff \u2192 Getting results"
+        },
+        {
+          "n": 4,
+          "name": "Staff's greeting is the first line, on the live view",
+          "pass": true,
+          "detail": "live view showed: \"Larry Vasquez, how can I help you?\"  \u00b7  robot said: \"Larry Vasquez, how can I help you?\""
+        },
+        {
+          "n": 5,
+          "name": "the greeting is its own line, never welded to their answer",
+          "pass": true,
+          "detail": "one line, nothing else in it"
+        },
+        {
+          "n": 12,
+          "name": "one check writes ONE record",
+          "pass": true,
+          "detail": "one row for this check"
+        },
+        {
+          "n": 4.1,
+          "name": "Staff's greeting is the first line of the written conversation",
+          "pass": true,
+          "detail": "first written line: \"Clerk: Larry Vasquez, how can I help you?\""
+        },
+        {
+          "n": 5.1,
+          "name": "the written greeting is its own line",
+          "pass": true,
+          "detail": "written: \"Larry Vasquez, how can I help you?\"  \u00b7  said: \"Larry Vasquez, how can I help you?\""
+        },
+        {
+          "n": 6,
+          "name": "the words match what the robot actually said, word for word",
+          "pass": false,
+          "detail": "\"There was a guy in here last week, bought like twenty packs at once. Twenty.\" \u2192 missing | \"It's been nuts since all the trading card stuff took off again, I'll tell you that.\" \u2192 written down only in part"
+        },
+        {
+          "n": 7,
+          "name": "the conversation scrolls under the header and does not bounce when nothing is new",
+          "pass": true,
+          "detail": "0 bounce(s) over 75 looks \u00b7 header held at 0px"
+        },
+        {
+          "n": 8,
+          "name": "the log expands",
+          "pass": true,
+          "detail": "19px \u2192 90px"
+        },
+        {
+          "n": 13,
+          "name": "this check is not meant to end with a goodbye, and it did not",
+          "pass": true,
+          "detail": "nothing was signed off, which is right for this one"
+        },
+        {
+          "n": 14,
+          "name": "we never ask the same question twice",
+          "pass": false,
+          "detail": "asked again: \"Just checking if you guys have any Pok\u00e9mon cards in stock ri\" \u00b7 \"Just checking if you guys have any Pok\u00e9mon cards in stock ri\" \u00b7 \"Just checking if you guys have any Pok\u00e9mon cards in stock ri\""
+        },
+        {
+          "n": 15,
+          "name": "the check ends soon after the answer, instead of sitting on an open line",
+          "pass": true,
+          "detail": "the answer was in at 242 seconds and the line closed at 242 \u2014 0 seconds of nothing"
+        },
+        {
+          "n": 9,
+          "name": "the result appears with a status",
+          "pass": true,
+          "detail": " Result Thu, Aug 6 \u00b7 7:11 AM Couldn\u2019t tell We couldn\u2019t quite make out the answer.Read the convo and tell us what you thi"
+        },
+        {
+          "n": 9.1,
+          "name": "the screen and the record say the same thing",
+          "pass": false,
+          "detail": "the screen said unclear, the record says in (in_stock)"
+        },
+        {
+          "n": 11,
+          "name": "the verdict is RIGHT for this scenario",
+          "pass": false,
+          "detail": "got in_stock \u00b7 this scenario is admin_hangup"
+        },
+        {
+          "n": 10,
+          "name": "the screen and the till agree about money",
+          "pass": true,
+          "detail": "not charged \u00b7 the screen claims no free check \u00b7 the check cost 37.4\u00a2 \u00b7 the robot's own line 3.40\u00a2 (the carrier's posted price)"
+        }
+      ],
+      "shots": [
+        "./robot-run/13-store-found.png",
+        "./robot-run/13-checking.png",
+        "./robot-run/13-live.png",
+        "./robot-run/13-result.png"
+      ],
+      "startedAt": 1786000227185,
+      "checkId": 343,
+      "cost": 0.374075,
+      "costReadable": "37.4\u00a2",
+      "robotCost": {
+        "usd": 0.034,
+        "secs": 240,
+        "how": "the carrier's posted price"
+      },
+      "charged": false,
+      "statusKey": "in_stock",
+      "jsErrors": []
+    },
+    {
+      "scenario": 14,
+      "name": "Moved on without being asked",
+      "items": [
+        {
+          "n": 1,
+          "name": "the store is found from the main page and Check it is tapped",
+          "pass": true,
+          "detail": "searched \"MVPs\""
+        },
+        {
+          "n": 2,
+          "name": "the one hour warning, then Check again",
+          "pass": true,
+          "detail": "nothing to warn about yet \u2014 this device had never checked this store (the next scene proves the warning)"
+        },
+        {
+          "n": 3,
+          "name": "the header moves through its phases in order, never backwards",
+          "pass": true,
+          "detail": "Calling \u2192 Getting through the menu \u2192 Talking to Staff \u2192 Getting results"
+        },
+        {
+          "n": 4,
+          "name": "Staff's greeting is the first line, on the live view",
+          "pass": false,
+          "detail": "live view showed: \"Oh, one sec. Let me grab someone\"  \u00b7  robot said: \"Larry Vasquez, how can I help you?\""
+        },
+        {
+          "n": 5,
+          "name": "the greeting is its own line, never welded to their answer",
+          "pass": false,
+          "detail": "it carries more than the greeting: \"Oh, one sec. Let me grab someone\""
+        },
+        {
+          "n": 12,
+          "name": "one check writes ONE record",
+          "pass": true,
+          "detail": "one row for this check"
+        },
+        {
+          "n": 4.1,
+          "name": "Staff's greeting is the first line of the written conversation",
+          "pass": false,
+          "detail": "first written line: \"Clerk: Oh, one sec. Let me grab someone\""
+        },
+        {
+          "n": 5.1,
+          "name": "the written greeting is its own line",
+          "pass": false,
+          "detail": "written: \"Oh, one sec. Let me grab someone\"  \u00b7  said: \"Larry Vasquez, how can I help you?\""
+        },
+        {
+          "n": 6,
+          "name": "the words match what the robot actually said, word for word",
+          "pass": false,
+          "detail": "\"Larry Vasquez, how can I help you?\" \u2192 missing | \"The Pitch Black boxes.\" \u2192 missing"
+        },
+        {
+          "n": 7,
+          "name": "the conversation scrolls under the header and does not bounce when nothing is new",
+          "pass": false,
+          "detail": "1 bounce(s) over 117 looks \u00b7 header held at 0px"
+        },
+        {
+          "n": 8,
+          "name": "the log expands",
+          "pass": true,
+          "detail": "19px \u2192 113px"
+        },
+        {
+          "n": 13,
+          "name": "the check ends with a goodbye, not with us hanging up mid conversation",
+          "pass": true,
+          "detail": "we signed off: \"Perfect, thanks so much Maria, have a good one!\""
+        },
+        {
+          "n": 14,
+          "name": "we never ask the same question twice",
+          "pass": true,
+          "detail": "4 things said, none of them twice"
+        },
+        {
+          "n": 15,
+          "name": "the check ends soon after the answer, instead of sitting on an open line",
+          "pass": true,
+          "detail": "the answer was in at 73 seconds and the line closed at 73 \u2014 0 seconds of nothing"
+        },
+        {
+          "n": 9,
+          "name": "the result appears with a status",
+          "pass": true,
+          "detail": " Result Thu, Aug 6 \u00b7 6:55 AM In stock MVPs has Pok\u00e9mon.Go grab it before it's gone. Check another store Calling5 steps \u00b7"
+        },
+        {
+          "n": 9.1,
+          "name": "the screen and the record say the same thing",
+          "pass": true,
+          "detail": "the screen said in, the record says in (in_stock)"
+        },
+        {
+          "n": 11,
+          "name": "the verdict is RIGHT for this scenario",
+          "pass": true,
+          "detail": "got in_stock \u00b7 this scenario is in_stock"
+        },
+        {
+          "n": 10,
+          "name": "the screen and the till agree about money",
+          "pass": true,
+          "detail": "not charged \u00b7 the screen claims no free check \u00b7 the check cost 10.4\u00a2 \u00b7 the robot's own line 1.70\u00a2 (the carrier's posted price)"
+        }
+      ],
+      "shots": [
+        "./robot-run/14-store-found.png",
+        "./robot-run/14-checking.png",
+        "./robot-run/14-live.png",
+        "./robot-run/14-result.png"
+      ],
+      "startedAt": 1785999307431,
+      "checkId": 338,
+      "cost": 0.104482,
+      "costReadable": "10.4\u00a2",
+      "robotCost": {
+        "usd": 0.017,
+        "secs": 71,
+        "how": "the carrier's posted price"
+      },
+      "charged": false,
+      "statusKey": "in_stock",
+      "jsErrors": []
+    },
+    {
+      "scenario": 15,
+      "name": "Nobody up front to take it",
+      "items": [
+        {
+          "n": 1,
+          "name": "the store is found from the main page and Check it is tapped",
+          "pass": true,
+          "detail": "searched \"MVPs\""
+        },
+        {
+          "n": 2,
+          "name": "the one hour warning, then Check again",
+          "pass": true,
+          "detail": "nothing to warn about yet \u2014 this device had never checked this store (the next scene proves the warning)"
+        },
+        {
+          "n": 3,
+          "name": "the header moves through its phases in order, never backwards",
+          "pass": true,
+          "detail": "Calling \u2192 Talking to Staff \u2192 Getting results"
+        },
+        {
+          "n": 4,
+          "name": "Staff's greeting is the first line, on the live view",
+          "pass": true,
+          "detail": "live view showed: \"MVP's Pharmacy, this is Larry\"  \u00b7  robot said: \"MVP's pharmacy, this is Larry.\""
+        },
+        {
+          "n": 5,
+          "name": "the greeting is its own line, never welded to their answer",
+          "pass": true,
+          "detail": "one line, nothing else in it"
+        },
+        {
+          "n": 12,
+          "name": "one check writes ONE record",
+          "pass": true,
+          "detail": "one row for this check"
+        },
+        {
+          "n": 4.1,
+          "name": "Staff's greeting is the first line of the written conversation",
+          "pass": true,
+          "detail": "first written line: \"Clerk: MVP's Pharmacy, this is Larry\""
+        },
+        {
+          "n": 5.1,
+          "name": "the written greeting is its own line",
+          "pass": true,
+          "detail": "written: \"MVP's Pharmacy, this is Larry\"  \u00b7  said: \"MVP's pharmacy, this is Larry.\""
+        },
+        {
+          "n": 6,
+          "name": "the words match what the robot actually said, word for word",
+          "pass": true,
+          "detail": "3 lines, all exact"
+        },
+        {
+          "n": 7,
+          "name": "the conversation scrolls under the header and does not bounce when nothing is new",
+          "pass": true,
+          "detail": "0 bounce(s) over 38 looks \u00b7 header held at 0px"
+        },
+        {
+          "n": 8,
+          "name": "the log expands",
+          "pass": true,
+          "detail": "19px \u2192 90px"
+        },
+        {
+          "n": 13,
+          "name": "the check ends with a goodbye, not with us hanging up mid conversation",
+          "pass": true,
+          "detail": "we signed off: \"No worries at all, thanks Larry, have a good one!\""
+        },
+        {
+          "n": 14,
+          "name": "we never ask the same question twice",
+          "pass": true,
+          "detail": "3 things said, none of them twice"
+        },
+        {
+          "n": 15,
+          "name": "the check ends soon after the answer, instead of sitting on an open line",
+          "pass": true,
+          "detail": "the answer was in at 29 seconds and the line closed at 29 \u2014 0 seconds of nothing"
+        },
+        {
+          "n": 9,
+          "name": "the result appears with a status",
+          "pass": true,
+          "detail": " Result Thu, Aug 6 \u00b7 6:58 AM Couldn\u2019t tell We couldn\u2019t quite make out the answer.Read the convo and tell us what you thi"
+        },
+        {
+          "n": 9.1,
+          "name": "the screen and the record say the same thing",
+          "pass": true,
+          "detail": "the screen said unclear, the record says unclear (no_clear_answer)"
+        },
+        {
+          "n": 11,
+          "name": "the verdict is RIGHT for this scenario",
+          "pass": false,
+          "detail": "got no_clear_answer \u00b7 this scenario is too_busy"
+        },
+        {
+          "n": 10,
+          "name": "the screen and the till agree about money",
+          "pass": true,
+          "detail": "not charged \u00b7 the screen claims no free check \u00b7 the check cost 5.7\u00a2 \u00b7 the robot's own line 0.85\u00a2 (the carrier's posted price)"
+        }
+      ],
+      "shots": [
+        "./robot-run/15-store-found.png",
+        "./robot-run/15-checking.png",
+        "./robot-run/15-live.png",
+        "./robot-run/15-result.png"
+      ],
+      "startedAt": 1785999477922,
+      "checkId": 339,
+      "cost": 0.056622,
+      "costReadable": "5.7\u00a2",
+      "robotCost": {
+        "usd": 0.0085,
+        "secs": 27,
+        "how": "the carrier's posted price"
+      },
+      "charged": false,
+      "statusKey": "no_clear_answer",
+      "jsErrors": []
+    },
+    {
+      "scenario": 16,
+      "name": "Wrong department, asking switched off",
+      "items": [
+        {
+          "n": 0.5,
+          "name": "asking to be put through is switched OFF for this one check",
+          "pass": true,
+          "detail": "the switch reads false"
+        },
+        {
+          "n": 1,
+          "name": "the store is found from the main page and Check it is tapped",
+          "pass": true,
+          "detail": "searched \"MVPs\""
+        },
+        {
+          "n": 2,
+          "name": "the one hour warning, then Check again",
+          "pass": true,
+          "detail": "nothing to warn about yet \u2014 this device had never checked this store (the next scene proves the warning)"
+        },
+        {
+          "n": 3,
+          "name": "the header moves through its phases in order, never backwards",
+          "pass": true,
+          "detail": "Calling \u2192 Talking to Staff \u2192 Getting results"
+        },
+        {
+          "n": 4,
+          "name": "Staff's greeting is the first line, on the live view",
+          "pass": true,
+          "detail": "live view showed: \"MVP's Pharmacy, this is Larry\"  \u00b7  robot said: \"MVP's pharmacy, this is Larry.\""
+        },
+        {
+          "n": 5,
+          "name": "the greeting is its own line, never welded to their answer",
+          "pass": true,
+          "detail": "one line, nothing else in it"
+        },
+        {
+          "n": 12,
+          "name": "one check writes ONE record",
+          "pass": true,
+          "detail": "one row for this check"
+        },
+        {
+          "n": 4.1,
+          "name": "Staff's greeting is the first line of the written conversation",
+          "pass": true,
+          "detail": "first written line: \"Clerk: MVP's Pharmacy, this is Larry\""
+        },
+        {
+          "n": 5.1,
+          "name": "the written greeting is its own line",
+          "pass": true,
+          "detail": "written: \"MVP's Pharmacy, this is Larry\"  \u00b7  said: \"MVP's pharmacy, this is Larry.\""
+        },
+        {
+          "n": 6,
+          "name": "the words match what the robot actually said, word for word",
+          "pass": true,
+          "detail": "3 lines, all exact"
+        },
+        {
+          "n": 7,
+          "name": "the conversation scrolls under the header and does not bounce when nothing is new",
+          "pass": false,
+          "detail": "1 bounce(s) over 52 looks \u00b7 header held at 0px"
+        },
+        {
+          "n": 8,
+          "name": "the log expands",
+          "pass": true,
+          "detail": "19px \u2192 90px"
+        },
+        {
+          "n": 13,
+          "name": "the check ends with a goodbye, not with us hanging up mid conversation",
+          "pass": true,
+          "detail": "we signed off: \"No worries at all, thanks so much Larry, have a good one!\""
+        },
+        {
+          "n": 14,
+          "name": "we never ask the same question twice",
+          "pass": true,
+          "detail": "3 things said, none of them twice"
+        },
+        {
+          "n": 15,
+          "name": "the check ends soon after the answer, instead of sitting on an open line",
+          "pass": true,
+          "detail": "the answer was in at 39 seconds and the line closed at 39 \u2014 0 seconds of nothing"
+        },
+        {
+          "n": 9,
+          "name": "the result appears with a status",
+          "pass": true,
+          "detail": " Result Thu, Aug 6 \u00b7 7:00 AM Couldn\u2019t tell We couldn\u2019t quite make out the answer.Read the convo and tell us what you thi"
+        },
+        {
+          "n": 9.1,
+          "name": "the screen and the record say the same thing",
+          "pass": true,
+          "detail": "the screen said unclear, the record says unclear (no_clear_answer)"
+        },
+        {
+          "n": 11,
+          "name": "the verdict is RIGHT for this scenario",
+          "pass": true,
+          "detail": "got no_clear_answer \u00b7 this scenario is no_clear_answer"
+        },
+        {
+          "n": 10,
+          "name": "the screen and the till agree about money",
+          "pass": true,
+          "detail": "not charged \u00b7 the screen claims no free check \u00b7 the check cost 7.6\u00a2 \u00b7 the robot's own line 0.85\u00a2 (the carrier's posted price)"
+        },
+        {
+          "n": 0.6,
+          "name": "asking to be put through is switched back ON after the check",
+          "pass": true,
+          "detail": "the switch reads true"
+        }
+      ],
+      "shots": [
+        "./robot-run/16-store-found.png",
+        "./robot-run/16-checking.png",
+        "./robot-run/16-live.png",
+        "./robot-run/16-result.png"
+      ],
+      "startedAt": 1785999580279,
+      "checkId": 340,
+      "cost": 0.07636,
+      "costReadable": "7.6\u00a2",
+      "robotCost": {
+        "usd": 0.0085,
+        "secs": 36,
+        "how": "the carrier's posted price"
+      },
+      "charged": false,
+      "statusKey": "no_clear_answer",
+      "jsErrors": []
+    },
+    {
+      "scenario": 17,
+      "name": "Their answering machine picks up",
+      "items": [
+        {
+          "n": 1,
+          "name": "the store is found from the main page and Check it is tapped",
+          "pass": true,
+          "detail": "searched \"MVPs\""
+        },
+        {
+          "n": 2,
+          "name": "the one hour warning, then Check again",
+          "pass": true,
+          "detail": "nothing to warn about yet \u2014 this device had never checked this store (the next scene proves the warning)"
+        },
+        {
+          "n": 3,
+          "name": "the header moves through its phases in order, never backwards",
+          "pass": true,
+          "detail": "Calling \u2192 Getting through the menu"
+        },
+        {
+          "n": 4,
+          "name": "Staff's greeting is the first line, on the live view",
+          "pass": false,
+          "detail": "no Staff line ever appeared on the live view"
+        },
+        {
+          "n": 12,
+          "name": "one check writes ONE record",
+          "pass": true,
+          "detail": "one row for this check"
+        },
+        {
+          "n": 4.1,
+          "name": "Staff's greeting is the first line of the written conversation",
+          "pass": false,
+          "detail": "first written line: \"\""
+        },
+        {
+          "n": 5.1,
+          "name": "the written greeting is its own line",
+          "pass": false,
+          "detail": "written: \"\"  \u00b7  said: \"You've reached MVP's. We're not able to take your call right now. Please leave a message after the tone.\""
+        },
+        {
+          "n": 6,
+          "name": "the words match what the robot actually said, word for word",
+          "pass": false,
+          "detail": "\"You've reached MVP's. We're not able to take your call right now. Please leave a message after the tone.\" \u2192 missing"
+        },
+        {
+          "n": 7,
+          "name": "the conversation scrolls under the header and does not bounce when nothing is new",
+          "pass": true,
+          "detail": "0 bounce(s) over 285 looks \u00b7 header held at 62px"
+        },
+        {
+          "n": 8,
+          "name": "the log expands",
+          "pass": true,
+          "detail": "19px \u2192 90px"
+        },
+        {
+          "n": 13,
+          "name": "this check is not meant to end with a goodbye, and it did not",
+          "pass": true,
+          "detail": "nothing was signed off, which is right for this one"
+        },
+        {
+          "n": 14,
+          "name": "we never ask the same question twice",
+          "pass": true,
+          "detail": "0 things said, none of them twice"
+        },
+        {
+          "n": 9,
+          "name": "the result appears with a status",
+          "pass": true,
+          "detail": " Result Thu, Aug 6 \u00b7 7:02 AM Nobody answered Rang and rang.Nobody picked up. No charge. Check another store Calling4 ste"
+        },
+        {
+          "n": 9.1,
+          "name": "the screen and the record say the same thing",
+          "pass": true,
+          "detail": "the screen said unclear, the record says unclear (nobody_answered)"
+        },
+        {
+          "n": 11,
+          "name": "the verdict is RIGHT for this scenario",
+          "pass": false,
+          "detail": "got nobody_answered \u00b7 this scenario is voicemail"
+        },
+        {
+          "n": 10,
+          "name": "the screen and the till agree about money",
+          "pass": true,
+          "detail": "not charged \u00b7 the screen says \"No charge\" \u00b7 the check cost 2.0\u00a2 \u00b7 the robot's own line 0.85\u00a2 (the carrier's posted price)"
+        }
+      ],
+      "shots": [
+        "./robot-run/17-store-found.png",
+        "./robot-run/17-checking.png",
+        "./robot-run/17-live.png",
+        "./robot-run/17-result.png"
+      ],
+      "startedAt": 1785999723974,
+      "checkId": 341,
+      "cost": 0.01972,
+      "costReadable": "2.0\u00a2",
+      "robotCost": {
+        "usd": 0.0085,
+        "secs": 37,
+        "how": "the carrier's posted price"
+      },
+      "charged": false,
+      "statusKey": "nobody_answered",
+      "jsErrors": []
+    },
+    {
+      "scenario": 18,
+      "name": "Staff speak Spanish",
+      "items": [
+        {
+          "n": 1,
+          "name": "the store is found from the main page and Check it is tapped",
+          "pass": true,
+          "detail": "searched \"MVPs\""
+        },
+        {
+          "n": 2,
+          "name": "the one hour warning, then Check again",
+          "pass": true,
+          "detail": "nothing to warn about yet \u2014 this device had never checked this store (the next scene proves the warning)"
+        },
+        {
+          "n": 3,
+          "name": "the header moves through its phases in order, never backwards",
+          "pass": true,
+          "detail": "Calling \u2192 Talking to Staff \u2192 Getting results"
+        },
+        {
+          "n": 4,
+          "name": "Staff's greeting is the first line, on the live view",
+          "pass": true,
+          "detail": "live view showed: \"MVPs buenas tardes, \u00bfen qu\u00e9 le puedo ayudar?\"  \u00b7  robot said: \"MVP's, buenas tardes. \u00bfEn qu\u00e9 le puedo ayudar?\""
+        },
+        {
+          "n": 5,
+          "name": "the greeting is its own line, never welded to their answer",
+          "pass": true,
+          "detail": "one line, nothing else in it"
+        },
+        {
+          "n": 12,
+          "name": "one check writes ONE record",
+          "pass": true,
+          "detail": "one row for this check"
+        },
+        {
+          "n": 4.1,
+          "name": "Staff's greeting is the first line of the written conversation",
+          "pass": true,
+          "detail": "first written line: \"Clerk: MVPs buenas tardes, \u00bfen qu\u00e9 le puedo ayudar?\""
+        },
+        {
+          "n": 5.1,
+          "name": "the written greeting is its own line",
+          "pass": true,
+          "detail": "written: \"MVPs buenas tardes, \u00bfen qu\u00e9 le puedo ayudar?\"  \u00b7  said: \"MVP's, buenas tardes. \u00bfEn qu\u00e9 le puedo ayudar?\""
+        },
+        {
+          "n": 6,
+          "name": "the words match what the robot actually said, word for word",
+          "pass": false,
+          "detail": "\"S\u00ed, tenemos algunos.\" \u2192 missing | \"Son las cajas de Pitch Black.\" \u2192 missing"
+        },
+        {
+          "n": 7,
+          "name": "the conversation scrolls under the header and does not bounce when nothing is new",
+          "pass": true,
+          "detail": "0 bounce(s) over 169 looks \u00b7 header held at 49px"
+        },
+        {
+          "n": 8,
+          "name": "the log expands",
+          "pass": true,
+          "detail": "19px \u2192 90px"
+        },
+        {
+          "n": 13,
+          "name": "the check ends with a goodbye, not with us hanging up mid conversation",
+          "pass": false,
+          "detail": "the last thing said was OUR OWN QUESTION: \"Agent: Oh qu\u00e9 bien, \u00bfsabes el nombre del set, algo como Chaos Rising, y si son sobres, caj\""
+        },
+        {
+          "n": 14,
+          "name": "we never ask the same question twice",
+          "pass": true,
+          "detail": "2 things said, none of them twice"
+        },
+        {
+          "n": 15,
+          "name": "the check ends soon after the answer, instead of sitting on an open line",
+          "pass": true,
+          "detail": "the answer was in at 121 seconds and the line closed at 121 \u2014 0 seconds of nothing"
+        },
+        {
+          "n": 9,
+          "name": "the result appears with a status",
+          "pass": true,
+          "detail": " Result Thu, Aug 6 \u00b7 7:07 AM In stock MVPs has pitch black.Go grab it before it's gone. Check another store Translate Ca"
+        },
+        {
+          "n": 9.1,
+          "name": "the screen and the record say the same thing",
+          "pass": true,
+          "detail": "the screen said in, the record says in (in_stock)"
+        },
+        {
+          "n": 11,
+          "name": "the verdict is RIGHT for this scenario",
+          "pass": true,
+          "detail": "got in_stock \u00b7 this scenario is in_stock"
+        },
+        {
+          "n": 10,
+          "name": "the screen and the till agree about money",
+          "pass": true,
+          "detail": "not charged \u00b7 the screen claims no free check \u00b7 the check cost 11.1\u00a2 \u00b7 the robot's own line 1.70\u00a2 (the carrier's posted price)"
+        }
+      ],
+      "shots": [
+        "./robot-run/18-store-found.png",
+        "./robot-run/18-checking.png",
+        "./robot-run/18-live.png",
+        "./robot-run/18-result.png"
+      ],
+      "startedAt": 1786000002564,
+      "checkId": 342,
+      "cost": 0.110906,
+      "costReadable": "11.1\u00a2",
+      "robotCost": {
+        "usd": 0.017,
+        "secs": 119,
+        "how": "the carrier's posted price"
+      },
+      "charged": false,
+      "statusKey": "in_stock",
+      "jsErrors": []
+    },
+    {
+      "scenario": 19,
+      "name": "A general yes is not the exact product",
+      "items": [
+        {
+          "n": 0.7,
+          "name": "a customer can pick one exact item on the page",
+          "pass": false,
+          "detail": "there is no way to pick one named item on this page: the \"what are you hunting\" card is hidden, the category chip is not on screen, the item list is hidden, and the Hobby hunt tab is not there. The harness loaded the list with the page's own function to get this check dialed."
+        },
+        {
+          "n": 1,
+          "name": "the store is found from the main page and Check it is tapped",
+          "pass": true,
+          "detail": "searched \"MVPs\""
+        },
+        {
+          "n": 2,
+          "name": "the one hour warning, then Check again",
+          "pass": true,
+          "detail": "nothing to warn about yet \u2014 this device had never checked this store (the next scene proves the warning)"
+        },
+        {
+          "n": 3,
+          "name": "the header moves through its phases in order, never backwards",
+          "pass": true,
+          "detail": "Calling \u2192 Talking to Staff \u2192 Getting results"
+        },
+        {
+          "n": 4,
+          "name": "Staff's greeting is the first line, on the live view",
+          "pass": true,
+          "detail": "live view showed: \"Larry Vasquez, how can I help you?\"  \u00b7  robot said: \"Larry Vasquez, how can I help you?\""
+        },
+        {
+          "n": 5,
+          "name": "the greeting is its own line, never welded to their answer",
+          "pass": true,
+          "detail": "one line, nothing else in it"
+        },
+        {
+          "n": 12,
+          "name": "one check writes ONE record",
+          "pass": true,
+          "detail": "one row for this check"
+        },
+        {
+          "n": 4.1,
+          "name": "Staff's greeting is the first line of the written conversation",
+          "pass": true,
+          "detail": "first written line: \"Clerk: Larry Vasquez, how can I help you?\""
+        },
+        {
+          "n": 5.1,
+          "name": "the written greeting is its own line",
+          "pass": true,
+          "detail": "written: \"Larry Vasquez, how can I help you?\"  \u00b7  said: \"Larry Vasquez, how can I help you?\""
+        },
+        {
+          "n": 6.4,
+          "name": "the exact item leaves the page with the check",
+          "pass": true,
+          "detail": "the page asked for: \"Mega Evolution\u2014Pitch Black Booster Display Box\""
+        },
+        {
+          "n": 6.5,
+          "name": "Charlie asks about the exact item, not just the category",
+          "pass": false,
+          "detail": "he never named it. The check was placed for \"Mega Evolution\u2014Pitch Black Booster Display Box\" and everything he said was: \"Hey, quick question, do you guys have any Pok\u00e9mon cards in stock today?\" \u00b7 \"Oh nice, do you know the name of the set, like Chaos Rising, and is it packs or a box or a tin?\" \u00b7 \"Oh perfect, thanks so much, have a good one!\""
+        },
+        {
+          "n": 6,
+          "name": "the words match what the robot actually said, word for word",
+          "pass": true,
+          "detail": "3 lines, all exact"
+        },
+        {
+          "n": 7,
+          "name": "the conversation scrolls under the header and does not bounce when nothing is new",
+          "pass": false,
+          "detail": "1 bounce(s) over 40 looks \u00b7 header held at 0px"
+        },
+        {
+          "n": 8,
+          "name": "the log expands",
+          "pass": true,
+          "detail": "19px \u2192 105px"
+        },
+        {
+          "n": 13,
+          "name": "the check ends with a goodbye, not with us hanging up mid conversation",
+          "pass": true,
+          "detail": "we signed off: \"Oh perfect, thanks so much, have a good one!\""
+        },
+        {
+          "n": 14,
+          "name": "we never ask the same question twice",
+          "pass": true,
+          "detail": "3 things said, none of them twice"
+        },
+        {
+          "n": 15,
+          "name": "the check ends soon after the answer, instead of sitting on an open line",
+          "pass": true,
+          "detail": "the answer was in at 30 seconds and the line closed at 30 \u2014 0 seconds of nothing"
+        },
+        {
+          "n": 9,
+          "name": "the result appears with a status",
+          "pass": true,
+          "detail": " Result Thu, Aug 6 \u00b7 6:13 AM In stock MVPs has a Pitch Black booster box.Go grab it before it's gone. Check another stor"
+        },
+        {
+          "n": 9.1,
+          "name": "the screen and the record say the same thing",
+          "pass": true,
+          "detail": "the screen said in, the record says in (in_stock)"
+        },
+        {
+          "n": 11,
+          "name": "the verdict is RIGHT for this scenario",
+          "pass": true,
+          "detail": "got in_stock \u00b7 this scenario is in_stock"
+        },
+        {
+          "n": 10,
+          "name": "the screen and the till agree about money",
+          "pass": true,
+          "detail": "not charged \u00b7 the screen claims no free check \u00b7 the check cost 5.9\u00a2 \u00b7 the robot's own line 0.85\u00a2 (the carrier's posted price)"
+        }
+      ],
+      "shots": [
+        "./robot-run/19-store-found.png",
+        "./robot-run/19-checking.png",
+        "./robot-run/19-live.png",
+        "./robot-run/19-result.png"
+      ],
+      "startedAt": 1785996775849,
+      "checkId": 329,
+      "cost": 0.058596,
+      "costReadable": "5.9\u00a2",
+      "robotCost": {
+        "usd": 0.0085,
+        "secs": 28,
+        "how": "the carrier's posted price"
+      },
+      "charged": false,
+      "statusKey": "in_stock",
+      "jsErrors": []
+    }
+  ],
+  "at": "2026-08-06T07:15:19.694Z"
+}
