@@ -201,6 +201,17 @@ export const RECONNECT_OPENER = "Hi, sorry, I just got disconnected. I was check
 export const RECONNECT_OPENER_ES = "Hola, perdón, se me cortó la llamada. Estaba viendo si tienen {category} en stock ahora mismo.";
 
 /**
+ * DELTA IN SPANISH. ONE sentence, never a rotation (owner, 08-06): the English opener rotates
+ * across a workflow's variants, the Spanish one does not, so a store that answers in Spanish always
+ * hears the same question in the same register. It is the translation of the live `vt_opening`
+ * ("Hi there. I was just checking, do you guys have any {category} cards in stock right now?") and
+ * it deliberately reuses `RECONNECT_OPENER_ES`'s phrasing so both Spanish lines sound like one
+ * person. No dash inside the sentence (copy law). Owner-approved reference recording, Branson HD at
+ * the workflow's own tuning: `public/robot-clips/delta-spanish.mp3`.
+ */
+export const DEFAULT_OPENER_ES = "Hola, buenas. Estaba viendo si tienen cartas de {category} en stock ahora mismo.";
+
+/**
  * Did OUR LAST CALL — this customer, this store, this product — break on our end moments ago?
  *
  * ALL FOUR MATTER, and the customer most of all (owner, 07-28). We dial AS the customer's own
