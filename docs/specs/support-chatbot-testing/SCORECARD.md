@@ -93,8 +93,15 @@ said an endless hold is free, which the owner's ruling charges · the Spanish re
 | 7 | pinned: never asks which store | 10/10 | nothing |
 | 8 | cancelled by me | 9/10 | **correct** a check the customer cancelled themselves was answered "this one needs a person" instead of saying plainly they stopped it and were not charged |
 
-All three losses are fixed in code and **not yet proven live**: the owner has staging held while
-Echo tests, so the fixes sit on the branch until his go. Test 8 has no fix yet and is the open one.
+**Two of the three are fixed and PROVEN LIVE (08-06, after the owner cleared the merge):** a chat
+opened from a check no longer asks which store on the follow-up, it explains the charge instead; and
+a charged unclear check where a person really talked to us is now explained rather than handed to a
+person. Test 8, a check the customer cancelled themselves, is still open and has no fix.
+
+Round 1's last two also proven live in the same run: it now says "I can't confirm a specific
+location like the one in Glendale" off a chain count of 1745 Target stores, and "I can't check for
+a single card like a Charizard. I can check for specific products like a booster box or Elite
+Trainer Box".
 
 Five money bugs found, all fixed, each pinned by a test seeded to the exact shape that leaked:
 a check that ANSWERED was refundable on request (24 seconds tripped the "under 25 means nobody
