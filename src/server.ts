@@ -1453,6 +1453,10 @@ app.get("/api/calls/:id/receipt", async (c) => {
       id: call.id, room: call.room, status: call.status, statusKey: call.statusKey,
       retailerId: call.retailerId, categoryId: call.categoryId, summary: call.summary,
       transcript: call.transcript, startedAt: call.startedAt, completedAt: call.completedAt,
+      // WAS THE CUSTOMER CHARGED. The one reader of a check's record (scripts/what-happened.mjs) has
+      // always printed this line and this route never sent the field, so every check on earth read
+      // back "not charged" and the screen looked like it was lying about a charge it got right.
+      chargedAt: call.chargedAt ?? null,
       // Provenance: the provider's own id (so a bill can be checked against this call), which menu
       // version ran, which check this retries, and which build served it.
       providerCallId: call.providerCallId ?? null,
