@@ -145,3 +145,52 @@ something Staff said to us.
 VOLUME IS THE TEST. Set each recording's loudness on purpose against the Staff voice (room noise
 must land under the roomFraction of it, `listen-nav.ts`), and write the number into the scene so it
 can never drift. A recording played at whatever volume it happens to be proves nothing.
+
+## THE SECOND BATCH: WHAT ECHO DOES WHEN THE FIRST ONE IS PROVEN (owner 08-06)
+
+STOP after the first batch and hand it to the PM to audit. Do NOT start this batch until the owner
+says so. It is the four hold scenes plus the advertisement one, and every clip is already made,
+owner-approved by ear, and committed at `public/robot-clips/`. Do not re-download or regenerate
+them, these exact files are the ones he approved:
+
+| File | What it is |
+|---|---|
+| `01-busy-store.mp3` | store noise, quieter (shopping mall), 15s |
+| `02-busy-cafe.mp3` | store noise, louder (busy restaurant), 15s |
+| `03-hold-music-classic.mp3` | hold music, 15s |
+| `05-hold-music-waltz.mp3` | hold music that starts quiet and swells, 15s |
+| `06-ad-voice-female.mp3` | the advertising line, female voice |
+| `07-ad-voice-male.mp3` | the advertising line, male voice |
+| `08-hold-music-with-ad.mp3` | waltz with the male voice mixed over it, 22s |
+| `09-hold-music-with-ad-b.mp3` | the other music with the female voice, 22s |
+
+Build: hold with music (run once per music track) · phone on the counter (run once per store
+recording, the two volumes ARE the test) · test 19, the advertisement hold, using file 08 or 09
+whole rather than sequencing, since the voice is already mixed under the music.
+
+VOLUME. Every one of these needs its playback loudness set on purpose against the Staff voice and
+that number written into the scene. Room noise must land under `roomFraction` of the Staff voice
+(`listen-nav.ts`) or the test proves nothing. `ffmpeg` is available through the pip package
+`imageio-ffmpeg` if this machine has no system copy.
+
+## TWO THINGS THE OWNER PROVED BY ACCIDENT (08-06, worth keeping)
+- **Mapping had never wired Delta in**, so on a mapping check Charlie asked the stock question
+  himself, which is the designed fallback for a clip that fails to play. It worked. That is a
+  passing result for a case no test covers; mapping is wiring Delta in now for the first answer and
+  after a transfer.
+- **A server restart mid test did not lose the run.** The restart-and-resume safeguard picked the
+  testing back up on its own. That is the first time it has been proven by an unplanned restart.
+
+## THE OWNER'S FULL-SEND ORDER (08-06). He is putting the phone down. Finish everything, no stops.
+Nobody else is pushing to staging now, so checks can run their full length. Order:
+1. The two scenes that cannot pass as built. Scene 16 needs `askForTransfer` OFF for that one check
+   and back on after; scene 19 needs the check placed for ONE EXACT PRODUCT (the `{{clarification}}`
+   insert) or Charlie never asks his extra question. A script alone proves nothing on these two.
+2. Dial every scene not yet dialed: 5, 8, 10, and 11 through 19. One check each, read its record
+   before the next, rule 15 binds.
+3. The hold set (batch two above) with the committed clips in `public/robot-clips/`.
+4. **A CHECK KILLED BY A RESTART MUST ALWAYS SETTLE.** Checks 324 and 325 are sitting unfinished
+   with an empty conversation and no answer; 309 and 311 settled on their own. A real customer on
+   324 or 325 would be left with nothing. Find why some settle and some do not, and fix it so none
+   can hang. This is customer-facing and it outranks the remaining scenes if they conflict.
+Report once at the end with every scene's verdict. Do not stop for approval between scenes.

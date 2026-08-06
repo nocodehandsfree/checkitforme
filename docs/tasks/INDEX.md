@@ -50,6 +50,7 @@ while he is testing — every push restarts staging and kills a live check.**
 | [Auto-checks get their own section](site-auto-checks.md) | site | **NEXT.** Four screens. Only the list is approved; the report's picture is rejected twice and the owner named why (a ring reads as progress to a finish line, auto-checks run forever). Pictures + the owner's exact words: `docs/specs/auto-checks/README.md`. Also in this build: rename the "Manage Zones" row to "Zones", and fix the comp-account bug that hides the list from the owner's own account |
 | [Go-live site audit: the fix list before customers](go-live-site-audit.md) | site | the bug list. Still open: production has never sent a single email (the confirm-your-email step, not the sender) · production is missing `ELEVENLABS_MIDCALL_AGENT_ID` and four other settings staging has · two calling-engine switches differ prod vs staging · a real auto-check has never been watched end to end · the untried combinations list |
 | The alerts row switch wraps to a second line on a long store name | site | found + offered 08-05, the owner never gave a word on it. No task file yet |
+| [Check history: a day tap shows that day's checks, not the newest one](site-history-day-list.md) | site | owner 08-06, to-do list, NOT boxed yet. Today `todayPickDay` opens the newest check and he waits for it to load; he wants the day list the check status page's calendar icon already shows (`railPickDay` → `.rday-list`) |
 
 ## ⭐ Repo + doc cleanup (08-05, owner-run folder by folder)
 | Task | System | Status |
@@ -160,5 +161,6 @@ Live [dash](admin-cleanup-dash.md) · Users [users](admin-cleanup-users.md) · R
 | [Staging store-list overwrite mystery](staging-storelist-overwrite.md) | data | active |
 | [Settings mirror: verify prod export live](settings-mirror-verify.md) | data | active |
 | [Retarget the stale CALL_ECONOMICS citation in server.ts](server-cost-citation.md) | data | active |
+| [Reply lock: the writer cuts a whole part of the answer](reply-lock-writer-cuts-too-much.md) | the reply lock | active — found 08-06 in this chat's own reply. The total-collapse floor is fixed and shipped; dropping ONE part of three still gets through, and the meaning pass that would catch it is a model call that can be unavailable |
 
 Consumer-site tasks need an owner-named unlock (the site is frozen — docs/shared/REBUILD_PLAN.md).

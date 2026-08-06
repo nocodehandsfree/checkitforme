@@ -37,6 +37,13 @@ const BAD_KEYS = new Set([
 // side door whenever the call happened to be brief, so we charged for it and refunded it in the
 // same breath, which is exactly the fight the 07-22 ruling exists to prevent (found 08-05).
 const CHARGED_ANYWAY = new Set(["left_on_hold", "too_busy", "language_barrier", "staff_hung_up"]);
+// The fifth case from the same ruling: an unclear verdict that came out of a REAL two-way call is
+// charged too, because a person talked to us. billableOutcome() proves it by finding both sides in
+// the transcript, so this reads the same evidence. Without it a charged unclear check looked
+// refundable, and a customer asking about one got sent to a person instead of an explanation
+// (round 2 test 3, 08-06).
+const spokeToAPerson = (t: string | null | undefined): boolean =>
+  !!t && /^Agent:/m.test(t) && /^Clerk:/m.test(t);
 
 export type CreditOutcome =
   | { kind: "granted"; cid: number; store: string; reason: string }
@@ -54,7 +61,7 @@ interface Candidate {
   id: number; retailerId: number; storeName: string; storeLocation: string | null; storePhone: string | null;
   providerCallId: string | null;
   statusKey: string | null; status: string; confirmed: boolean | null;
-  callSeconds: number | null; chargedAt: number | null; startedAt: number;
+  callSeconds: number | null; chargedAt: number | null; startedAt: number; transcript?: string | null;
 }
 
 /**
@@ -87,6 +94,7 @@ async function findPinned(accountId: string, ref: string): Promise<Candidate | n
     providerCallId: callResults.providerCallId,
     statusKey: callResults.statusKey, status: callResults.status, confirmed: callResults.confirmed,
     callSeconds: callResults.callSeconds, chargedAt: callResults.chargedAt, startedAt: callResults.startedAt,
+    transcript: callResults.transcript,
   }).from(callResults)
     .innerJoin(retailers, eq(callResults.retailerId, retailers.id))
     .where(and(eq(callResults.finderUserId, accountId),
@@ -106,6 +114,7 @@ function evidenceFor(c: Candidate): { ok: boolean; reason: string } {
   // A person really did pick up. The owner charges for that on purpose, so the machine never undoes
   // it; an angry edge case goes to a human ticket, which is the relief valve by design.
   if (c.statusKey && CHARGED_ANYWAY.has(c.statusKey)) return { ok: false, reason: "person_engaged" };
+  if (c.statusKey === "no_clear_answer" && spokeToAPerson(c.transcript)) return { ok: false, reason: "person_engaged" };
   if (c.statusKey && BAD_KEYS.has(c.statusKey)) return { ok: true, reason: "bad_status" };
   if (c.status === "failed") return { ok: true, reason: "failed" };
   // Short calls only mean "nobody really answered" when nobody really answered.
@@ -138,6 +147,7 @@ export async function verifyCheckIssue(accountId: string | null | undefined, mes
     providerCallId: callResults.providerCallId,
     statusKey: callResults.statusKey, status: callResults.status, confirmed: callResults.confirmed,
     callSeconds: callResults.callSeconds, chargedAt: callResults.chargedAt, startedAt: callResults.startedAt,
+    transcript: callResults.transcript,
   }).from(callResults)
     .innerJoin(retailers, eq(callResults.retailerId, retailers.id))
     .where(and(eq(callResults.finderUserId, accountId), gt(callResults.startedAt, now - WINDOW_DAYS * 86400)))

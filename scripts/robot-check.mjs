@@ -36,6 +36,14 @@ let dials = 0;
 const OUT = process.env.ROBOT_OUT || "./robot-run";
 const EXE = process.env.CHROMIUM_PATH || "/opt/pw-browsers/chromium";
 const wanted = process.argv.slice(2).filter((a) => /^\d+$/.test(a)).map(Number);
+// TWO SCENES CANNOT BE PROVEN BY A SCRIPT ALONE (owner 08-06), because what they test is not what
+// the robot says, it is what the SITE and the SWITCHES do before anybody speaks.
+//  · one exact product: Charlie only asks his extra question when the check was placed for one
+//    named item, so the harness has to pick it in the dropdown a customer picks it in.
+//  · the transfer switch: the whole test is that the switch really works, so it has to be turned
+//    off for that one check and put back straight after, whatever happens.
+const SCENE_PRODUCT = { 19: "Mega Evolution—Pitch Black Booster Display Box" };
+const SCENE_ASK_FOR_TRANSFER_OFF = new Set([16]);
 
 // Driving the site needs a key and a browser; reading the word comparison (which the robot store's
 // own test does, to prove the comparison really fails on a mangled transcript) needs neither.
@@ -118,7 +126,7 @@ async function signInIfNeeded(page) {
   return true;
 }
 
-async function findAndCheck(page) {
+async function findAndCheck(page, wantProduct) {
   await page.goto(SITE + "/", { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(3500);
   // The owner's own stores only exist for the owner, so the sign-in comes first — through the same
@@ -141,6 +149,51 @@ async function findAndCheck(page) {
   await row.click();
   await page.waitForTimeout(900);
   await shot(page, "store-found");
+  // ONE EXACT PRODUCT. The same dropdown a customer uses, picked the same way, and the check is
+  // refused rather than run blind if the item is not on the list.
+  if (wantProduct) {
+    // The dropdown only fills once ONE category is picked, exactly as it does for a customer:
+    // the chips first, then the item. Nothing here skips a screen.
+    await page.waitForSelector("#chips .chip", { timeout: 20000 }).catch(() => {});
+    // THE EXACT ITEM PICKER IS A PAID PERK, so the page hides it until it knows what this account
+    // is entitled to. Tapping the category before that answer lands takes the hide branch and the
+    // list never fills, which is what a customer on a slow connection would see too. Wait for the
+    // page to know, then tap.
+    await page.waitForFunction(() => typeof hasFeature === "function" && hasFeature("exact_products"), null, { timeout: 30000 }).catch(() => {});
+    const chip = page.locator("#chips .chip").first();
+    const filled = async () => page.evaluate(() => (document.getElementById("prodsel")?.options.length || 0) > 1);
+    // Tap the category, wait for the list. The sheet redraws itself around the tap and sometimes
+    // lands with the list empty, and a customer looking at an empty list taps the category again,
+    // so that is what this does. Tapping a category already chosen never changes the choice.
+    for (let i = 0; i < 3 && !(await filled()); i++) {
+      if (await chip.isVisible().catch(() => false)) await chip.click();
+      for (let w = 0; w < 20 && !(await filled()); w++) await page.waitForTimeout(400);
+    }
+    // A REAL SITE FAULT, WORKED AROUND HERE AND WRITTEN DOWN (08-06). Tapping the category is
+    // supposed to fill the exact item list and often does not: the sheet redraws around the tap
+    // and leaves an empty dropdown, so a customer who wants one named item cannot pick it. The
+    // harness asks the page to load the list with the page's OWN function, the same one the tap
+    // calls, so this scene can still be dialed. It is a workaround, not a fix, and the row below
+    // says so out loud rather than letting the scene look clean.
+    const neededAHand = !(await filled());
+    if (neededAHand) {
+      await page.evaluate(() => (typeof loadProducts === "function" ? loadProducts(SEL_CATS[0]) : null)).catch(() => {});
+      for (let w = 0; w < 25 && !(await filled()); w++) await page.waitForTimeout(400);
+    }
+    item(0.7, "tapping the category fills the exact item list", !neededAHand,
+      neededAHand ? "the list was still empty after tapping the category, so a customer could not pick one item. The harness loaded it with the page's own function to get this check dialed."
+                  : "the list filled from the tap alone");
+    const picked = await page.evaluate((name) => {
+      const sel = document.getElementById("prodsel");
+      if (!sel) return "no dropdown";
+      const opt = [...sel.options].find((o) => o.value === name);
+      if (!opt) return `not on the list (${sel.options.length} items, e.g. ${[...sel.options].slice(1, 3).map((o) => o.value).join(" | ")})`;
+      sel.value = name; if (typeof pickProduct === "function") pickProduct();
+      return window.SEL_PRODUCT === name || true;
+    }, wantProduct);
+    if (picked !== true) throw new Error(`the exact product "${wantProduct}" could not be picked: ${picked}`);
+    console.log(`  · the check is for ONE EXACT PRODUCT: ${wantProduct}`);
+  }
   const tap = async () => {
     const sheet = page.locator("#cs_call");
     if (await sheet.isVisible().catch(() => false)) return sheet.click();
@@ -250,11 +303,27 @@ async function robotSideCost(callSid) {
 // ---- one scenario -------------------------------------------------------------------------------
 async function runOne(page, scene, greetingIdx) {
   current = { scenario: scene.n, name: scene.name, items: [], shots: [], startedAt: Date.now() };
+  // WHY A CHECK WAS REFUSED, IN ITS OWN WORDS. A refused check leaves the page back on the home
+  // screen with the toast already faded, and the harness could only report that nothing happened.
+  // The site's own answer says exactly why, so it is kept.
+  let placeAnswer = null;
+  const onResp = async (r) => {
+    if (!/\/(pub|app)\/check(-live)?$/.test(new URL(r.url()).pathname)) return;
+    try { placeAnswer = `${r.status()} ${JSON.stringify(await r.json()).slice(0, 200)}`; } catch { placeAnswer = `${r.status()} (unreadable)`; }
+  };
+  page.on("response", onResp);
   runs.push(current);
   console.log(`\n══════ scenario ${scene.n} · ${scene.name} ══════`);
   await adm("/api/admin/robot-store", { method: "POST", body: JSON.stringify({ scenario: scene.n, greeting: greetingIdx }) });
 
-  const found = await findAndCheck(page);
+  const askOff = SCENE_ASK_FOR_TRANSFER_OFF.has(scene.n);
+  if (askOff) {
+    await adm("/api/policy", { method: "PATCH", body: JSON.stringify({ flags: { askForTransfer: false } }) });
+    const now = await adm("/api/policy");
+    item(0.5, "asking to be put through is switched OFF for this one check", now.flags?.askForTransfer === false,
+      `the switch reads ${String(now.flags?.askForTransfer)}`);
+  }
+  const found = await findAndCheck(page, SCENE_PRODUCT[scene.n]);
   item(1, "the store is found from the main page and Check it is tapped", true, `searched "${STORE}"`);
   // The warning is a fact about this device, not a setting: it appears because this browser really
   // did check this store minutes ago. On the FIRST scene of a run it is right that there is none, so
@@ -274,6 +343,8 @@ async function runOne(page, scene, greetingIdx) {
   // 3. the header moves through its phases IN ORDER and never backwards.
   const seen = new Set(); let backwards = null;
   for (const p of live.phases) { if (seen.has(p)) backwards = p; seen.add(p); }
+  page.off("response", onResp);
+  if (live.phases.length <= 1) item(1.5, "the site actually placed the check", false, `the site answered: ${placeAnswer || "(nothing was asked)"}`);
   item(3, "the header moves through its phases in order, never backwards", !backwards && live.phases.length > 1,
     backwards ? `it went back to "${backwards}"` : live.phases.join(" → ") || "(no header seen)");
 
@@ -357,6 +428,16 @@ async function runOne(page, scene, greetingIdx) {
 
   // 6. word for word.
   const cmp = compareWords(said, lines);
+  // ONE EXACT PRODUCT HAS TO REACH THE CALL. Picking the item on the site is only half of it: the
+  // recording that asks the question has to name that item, or Charlie asks the ordinary category
+  // question and the whole point of the card is lost.
+  if (SCENE_PRODUCT[scene.n]) {
+    const clip = rec.timeline.find((e) => String(e.detail?.step) === "question_clip");
+    const asked = String(clip?.detail?.text || "");
+    const words = SCENE_PRODUCT[scene.n].split(/[^A-Za-z0-9]+/).filter((w) => w.length > 3).slice(-3);
+    item(6.5, "the recording asks for the exact product, not the category", words.some((w) => new RegExp(w, "i").test(asked)),
+      `it asked: "${asked}"  ·  the check was placed for: ${SCENE_PRODUCT[scene.n]}`);
+  }
   item(6, "the words match what the robot actually said, word for word", cmp.misses.length === 0,
     cmp.misses.length ? cmp.misses.map((m) => `"${m.said}" → ${m.how}`).join(" | ") : `${said.length} lines, all exact`);
 
@@ -478,6 +559,19 @@ page.on("pageerror", (e) => jsErrors.push(String(e).slice(0, 160)));
 for (let i = 0; i < scenes.length; i++) {
   try { await runOne(page, scenes[i], i % cfg.greetings.length); }
   catch (e) { item(0, "the walk itself", false, String(e).slice(0, 200)); await shot(page, "crash"); }
+  finally {
+    // THE SWITCH GOES BACK ON, whatever happened. Leaving asking to be put through switched off
+    // would quietly change every check after this one, including a real customer's.
+    if (SCENE_ASK_FOR_TRANSFER_OFF.has(scenes[i].n)) {
+      try {
+        await adm("/api/policy", { method: "PATCH", body: JSON.stringify({ flags: { askForTransfer: true } }) });
+        const back = await adm("/api/policy");
+        console.log(`  · asking to be put through is back ON: ${String(back.flags?.askForTransfer)}`);
+        item(0.6, "asking to be put through is switched back ON after the check", back.flags?.askForTransfer === true,
+          `the switch reads ${String(back.flags?.askForTransfer)}`);
+      } catch (e) { item(0.6, "asking to be put through is switched back ON after the check", false, String(e).slice(0, 120)); }
+    }
+  }
   // OWNER RULE (08-04, voice RULES.md 15): the FIRST check of a run must be seen running WHOLE —
   // dial to answer to Charlie's goodbye to the check ending — before a second check is dialed.
   // The goodbye bug burned ~$3 of checks that one stopped run would have caught for 9 cents.

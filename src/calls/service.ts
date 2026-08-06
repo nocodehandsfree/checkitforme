@@ -7,8 +7,8 @@ import { fetchStorePhone } from "../store-phone";
 import {
   accounts, alertSends, alertSubscriptions, callEvents, callResults, categories, chains, customerSchedules, products, retailers, scheduleTargets, schedules, statuses, watches, zoneRetailers, zones,
 } from "../db/schema";
-import { linkCall, openReceipt, emit, closeReceipt, linkProviderCall, markNow } from "./events"; // ties the call row to its receipt (the timeline + the seconds)
-import { isCheckAlive } from "./check-life"; // the gatekeeper: the one honest answer to "has this check finished?"
+import { linkCall, openReceipt, emit, closeReceipt, linkProviderCall, markNow, getReceipt } from "./events"; // ties the call row to its receipt (the timeline + the seconds)
+import { isCheckAlive, noteLineEnded } from "./check-life"; // the gatekeeper: the one honest answer to "has this check finished?"
 import { recordVerdict, lastClerkLine } from "./receipt-store";
 import { chargeOneCredit, isCompAccount, getAccount } from "../billing";
 import { sendRestockEmailTo, sendAlert, accountLang, localizeResult } from "../alerts";
@@ -1229,6 +1229,55 @@ export async function staffHungUpOn(room: string | null | undefined): Promise<bo
       .where(and(eq(callEvents.room, room), eq(callEvents.kind, "hangup")));
     return rows.some((r) => String(r.detail || "").includes("store_hung_up"));
   } catch { return false; }
+}
+
+/**
+ * A CHECK KILLED BY A RESTART MUST ALWAYS SETTLE, AND FAST (owner, 08-06).
+ *
+ * What was happening: a deploy restarts the server, every check on the phone at that moment dies
+ * with it, and the row is left saying "in progress" with an empty conversation and no answer. It
+ * DOES settle in the end, but only when the thirty minute backstop in check-life decides the
+ * carrier's callback must have been lost. Checks 324 and 325 sat like that; a real customer would
+ * have been left staring at a check that never finished for half an hour.
+ *
+ * Why nothing else caught it: everything that knows how to close a check lives in the memory of the
+ * process that placed it. The receipt, the room finalizer, the map of rooms to carrier calls: all of
+ * it dies with the restart. The row and the check-life record survive, and neither of them can close
+ * anything on its own, so the only thing left is the backstop.
+ *
+ * The rule here is the only one that is always true: our bridge owns the audio of a check, so a
+ * check whose process is gone is over. Not instantly, because the carrier can reconnect a blipped
+ * stream into the new process, which is why this runs a minute after boot and skips any room that
+ * came back. Everything still orphaned then gets the line stamped as ended, which opens the ordinary
+ * sweep, and the sweep reads the provider's own record of the conversation. A check with no
+ * conversation to read has no evidence at all and is written as the dropped call it was: never
+ * charged, never blocked from being tried again, which is exactly what that status exists for.
+ */
+export async function settleChecksLostToARestart(bootedAtSec: number): Promise<number> {
+  let settled = 0;
+  const pending = await db.select().from(callResults).where(
+    or(eq(callResults.status, "dialing"), eq(callResults.status, "in_progress"), eq(callResults.status, "queued")),
+  ).catch(() => [] as (typeof callResults.$inferSelect)[]);
+  for (const row of pending) {
+    if (!row.startedAt || row.startedAt >= bootedAtSec) continue;   // placed by THIS process, not an orphan
+    const room = row.room || null;
+    if (room && getReceipt(room)) continue;                          // the stream reconnected, it is live
+    if (room) noteLineEnded(room, "restart");                        // the gatekeeper can stop guarding it
+    // A conversation id means the provider has the words, so the ordinary sweep can now read a real
+    // verdict off it. Anything else has nothing to read and never will.
+    const conv = row.providerCallId || "";
+    if (conv && !conv.startsWith("bridge:") && !conv.startsWith("delta:")) { settled++; continue; }
+    await db.update(callResults).set({
+      status: "no_answer", confirmed: null, statusKey: "call_dropped",
+      summary: "The check was cut short when our own service restarted. Nothing was checked, nobody was charged.",
+      completedAt: Math.floor(Date.now() / 1000),
+    }).where(eq(callResults.id, row.id)).catch((e) => console.error("[restart-settle] write failed:", String(e).slice(0, 160)));
+    await releaseCallSlot(`call:${row.id}`);
+    await notifyAutoCheckResult(row.id);
+    settled++;
+  }
+  if (settled) console.log(`[restart-settle] ${settled} check(s) were on the phone when we restarted and have been closed out`);
+  return settled;
 }
 
 export async function ingestPending(): Promise<number> {

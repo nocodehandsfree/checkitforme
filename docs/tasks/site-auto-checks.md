@@ -24,15 +24,21 @@ Copy key `acct.row.zones` (EN ~:7192, ES ~:3379). Spanish twin ships in the same
 2. **The list** — its own slide-up, same shape as Alerts: Pause all row, then one row per store with
    the store's logo tile, the store name, the days and time, an On/Off switch and a delete button.
    **APPROVED by the owner 08-05 as comped.** This is the screen the row in My checks opens.
-3. **Saved** — what the customer sees the one time they turn an auto-check on. The auto-check sheet
-   flips to a confirmation (the pattern `sr_done` and `openWatchConfirm` already use), showing store,
-   product, days, time and the next check, plus a way into the list. No email on save (owner ruled).
-4. **What they found** — the per-store report. **Reached by tapping the store row in screen 2**; the
-   On/Off switch and the delete button stay taps of their own, so the row needs its own tap target.
-   Second comp (owner 08-05: the first one was numbers on a page). The picture is the site's OWN two
-   pieces: the zone report's 72px ring (`checkit.html` ~:8172) for times in stock over checks run, and
-   the Activity chart's green bar for a per-day hit rate, one bar per day the auto-check runs, so it
-   answers "which day should I go". Then the plain sentence, then every check with its status icon.
+3. **Saved — RULED 08-06, BUILD IT.** His words: after you save your first auto-check from the check
+   status page, DO NOT close the window. The sheet flips to a screen saying the auto-check is saved
+   (the pattern `sr_done` and `openWatchConfirm` already use), showing store, product, days, time and
+   the next check, and it carries a button that jumps STRAIGHT INTO the auto-checks list, where their
+   first check will show. Today `submitSchedule` does the opposite: `closeSchedule()` then a bottom
+   note. No email on save (owner ruled).
+4. **What they found** — the per-store report. **Reached by tapping the store row in screen 2 —
+   CONFIRMED by the owner 08-06** ("if you select any of those you'll be able to go into the details
+   of that"); the On/Off switch and the delete button stay taps of their own, so the row needs its own
+   tap target. THE RING IS DEAD (owner 08-06). The report is the Activity tab's shape: one week of day
+   bars, tap a day, that day's checks list underneath, tap a check and it unfolds into the real check
+   status page with the conversation, the way a store unfolds inside a zone report (`zoneExpand`).
+   Built from the page's own pieces: the Activity bar and row (`checkit.html` ~:7311 and ~:7329),
+   `deriveVerdict`, `combinedTimelineHTML`. Pictures: `comp-4-report-v3-week.png` +
+   `comp-5-report-v3-open.png`. No new strings, so nothing new needs Spanish.
 
 ## The bug this build must fix
 A comped account can SAVE an auto-check but never SEE it: the server allows the save

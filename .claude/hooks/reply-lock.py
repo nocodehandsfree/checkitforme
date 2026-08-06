@@ -5,7 +5,9 @@
 # THE FLOW (pre-check, scripts/check-reply.sh):
 #   1. The working agent writes its best complete answer normally (facts, numbers,
 #      names, decisions, uncertainty, exact quotes intact). No style effort needed.
-#   2. Short reply (2 lines or less): word scan only, instant approve.
+#   2. Short reply (2 lines or less): word scan only, instant approve. An answer far
+#      past the 15 line limit bounces the same instant: no rewrite saves it, and the
+#      agent cutting it costs a second instead of waiting on a model.
 #   3. Otherwise the RENDERER (Sonnet) gets ONLY: the owner's latest message (saved
 #      per session by the UserPromptSubmit hook), the answer, a short description of
 #      how the owner communicates, the lexicon, and up to 4 similar stored examples
@@ -14,8 +16,9 @@
 #      answer unchanged or rewrites it in the owner's voice, adding nothing.
 #   4. MECHANICAL CHECK (hard guarantee): every number token, code span, fenced code
 #      block, path, and url in the answer must appear intact in the rendering.
-#   5. MEANING CHECK (judgment, Haiku): anything added, removed, softened,
-#      strengthened, or changed fails the rendering.
+#   5. MEANING CHECK (judgment, Sonnet): anything added, removed, softened,
+#      strengthened, or changed fails the rendering. Skipped in exactly one case:
+#      the writer handed the answer back word for word, so nothing can have moved.
 #   6. A rendering that fails 4 or 5 gets ONE retry with the misses named. Still
 #      failing = FAIL OPEN: the agent's own answer is approved (word scan only).
 #      A broken or slow renderer can never mute or hang a chat.
@@ -192,11 +195,28 @@ def load_examples(root, owner_msg, draft, limit=4):
     scored.sort(key=lambda x: -x[0])
     return [b for s, b in scored[:limit] if s > 0]
 
-def run_claude(prompt, model, timeout):
+# SPEED (owner 08-06, measured not guessed). This subprocess used to inherit the working
+# chat's reasoning effort (xhigh) and boot a full Claude Code session first: every tool
+# schema, every MCP server, the project settings and hooks. Rendering a reply needs none
+# of it. Same prompt, same verdict: 25.5s before, 4.8s after. Never raise the effort here
+# to buy quality without timing it first, and never at the cost of the checks below.
+LEAN = ["--tools", "", "--strict-mcp-config", "--setting-sources", "",
+        "--no-session-persistence", "--disable-slash-commands"]
+
+def run_claude(prompt, model, timeout, effort="medium"):
     env = dict(os.environ, REPLY_LOCK_INNER="1")
-    return subprocess.run(["claude", "-p", "--output-format", "text", "--model", model],
-                          input=prompt, capture_output=True, text=True,
-                          timeout=timeout, cwd="/tmp", env=env)
+    env.pop("CLAUDE_EFFORT", None)
+    base = ["claude", "-p", "--output-format", "text", "--model", model]
+    eff = ["--effort", os.environ.get("REPLY_LOCK_EFFORT") or effort]
+    r = subprocess.run(base + eff + LEAN, input=prompt, capture_output=True,
+                       text=True, timeout=timeout, cwd="/tmp", env=env)
+    if r.returncode != 0:
+        # If a later Claude Code ever drops one of these flags, that must cost us
+        # seconds, never the renderer itself: run it the plain slow way and carry on.
+        # A hang cannot reach here, a timeout raises and the caller fails open.
+        r = subprocess.run(base, input=prompt, capture_output=True, text=True,
+                           timeout=timeout, cwd="/tmp", env=env)
+    return r
 
 def parse_json(out):
     m = re.search(r"\{.*\}", out or "", flags=re.S)
@@ -205,6 +225,14 @@ def parse_json(out):
 def log_error(root, ex):
     with open(os.path.join(state_dir(root), "last-error"), "w") as fh:
         fh.write(str(ex))
+
+T0 = time.time()
+
+def tick(label):
+    # REPLY_LOCK_TIMING=1 prints where the seconds actually went. Off by default, so a
+    # chat never sees it; it is how the 08-06 speed work was measured instead of guessed.
+    if os.environ.get("REPLY_LOCK_TIMING"):
+        sys.stderr.write("[%5.1fs] %s\n" % (time.time() - T0, label))
 
 def render(root, owner_msg, draft, notes="", timeout=90):
     examples = load_examples(root, owner_msg, draft)
@@ -226,7 +254,9 @@ def render(root, owner_msg, draft, notes="", timeout=90):
         "sentence: would a person actually text this to a friend? And judge the "
         "shape: when the reply covers 2 or more separate things you MUST give each "
         "one a SHORT bold label alone on its own line with a plain paragraph under "
-        "it. Pass the draft unchanged ONLY if it answers him, reads like one friend "
+        "it. HARD CEILING: the finished reply must fit 15 lines of 90 characters. "
+        "Count as you write and cut to fit, do not hand back something too long. "
+        "Pass the draft unchanged ONLY if it answers him, reads like one friend "
         "texting another, and already carries those labels. Otherwise rewrite it "
         "fully in the owner's style. CUTTING BEATS KEEPING: dropping a whole topic "
         "he did not ask about, that needs nothing from him, is CORRECT and is not "
@@ -246,7 +276,10 @@ def render(root, owner_msg, draft, notes="", timeout=90):
         "\n\n=== THE OWNER'S LATEST MESSAGE ===\n" + (owner_msg or "(not captured)") +
         "\n\n=== THE WORKING AGENT'S ANSWER ===\n" + draft
     )
-    r = run_claude(prompt, "claude-sonnet-5", timeout)
+    # A retry only happens when the first pass broke a rule or dropped a fact, so it
+    # thinks harder. It is rare, the extra seconds are bounded, and the worst outcome for
+    # the owner is falling back to the agent's own unrendered answer.
+    r = run_claude(prompt, "claude-sonnet-5", timeout, effort="high" if notes else "medium")
     if r.returncode != 0:
         r = run_claude(prompt, "claude-haiku-4-5-20251001", timeout)
     v = parse_json(r.stdout)
@@ -275,6 +308,35 @@ def mechanical_misses(draft, rendered):
                 if " ".join(f.split()) not in flat]
     return missing
 
+def _content(t):
+    return set(w.lower() for w in re.findall(r"[a-zA-Z]{4,}",
+                                             re.sub(r"```.*?```", "", t, flags=re.S)))
+
+def collapsed(draft, rendered):
+    # THE FLOOR (owner 08-06, from a real chat where a whole answer came back as "OK").
+    # The writer is allowed to cut a whole topic he did not ask about. It is never
+    # allowed to hand back almost nothing: that is the writer failing, not a cut.
+    # Mechanical on purpose. The meaning check catches this too, but it is a model call
+    # that can be skipped, time out, or error, and it never ran on the retry at all,
+    # which is exactly how "OK" reached a chat. This one cannot be skipped.
+    d = _content(draft)
+    if len(d) < 12:
+        return ""                       # too small to judge, the short bypass covers it
+    r = _content(rendered)
+    if len(r) < 4:
+        return f"the rendering is {len(r)} real words long, that is not a reply"
+    kept = len(d & r) / len(d)
+    if kept < 0.15:
+        return f"the rendering kept {int(kept * 100)}% of the answer, that is a collapse"
+    return ""
+
+def needs_meaning_check(draft, rendered):
+    # The meaning check was running on EVERY reply, including the ones the writer handed
+    # back untouched, where it was comparing text to itself for nothing. Skip it ONLY
+    # there, where identical text is proof nothing moved. Anything the writer actually
+    # rewrote still gets read: guessing at drift from word overlap is not a check.
+    return " ".join(draft.split()) != " ".join(rendered.split())
+
 def meaning_check(root, owner_msg, draft, rendered, timeout=60):
     prompt = (
         "Compare ORIGINAL and REWRITE, written to answer the OWNER MESSAGE. Did "
@@ -288,14 +350,28 @@ def meaning_check(root, owner_msg, draft, rendered, timeout=60):
         "\n=== OWNER MESSAGE ===\n" + (owner_msg or "(not captured)") +
         "\n\n=== ORIGINAL ===\n" + draft + "\n\n=== REWRITE ===\n" + rendered
     )
-    r = run_claude(prompt, "claude-haiku-4-5-20251001", timeout)
+    # Sonnet, not Haiku (owner 08-06, measured on the real prompt): Haiku took 33 to 55
+    # seconds against Sonnet's 5, and it failed a rewrite that said the same thing in
+    # different words, which cost a whole extra rewrite on top. Faster AND more accurate.
+    r = run_claude(prompt, "claude-sonnet-5", timeout)
     v = parse_json(r.stdout)
     if r.returncode != 0 or v is None:
         raise RuntimeError(f"meaning check rc={r.returncode}")
     return bool(v.get("faithful")), [str(p) for p in (v.get("problems") or [])]
 
 def latest_owner_msg(root):
+    # THIS chat's message, not whichever file happens to be newest (owner 08-06). Newest
+    # wins meant a second chat, or an agent testing the reply lock, could hand the writer
+    # the wrong question to judge the answer against, and the writer's first instruction
+    # is to cut everything that does not answer it. Proven reachable by planting a file.
     d = os.path.join(state_dir(root), "prompts")
+    sid = os.environ.get("CLAUDE_CODE_SESSION_ID") or ""
+    mine = os.path.join(d, sid[:36] + ".txt") if sid else ""
+    if mine and os.path.exists(mine):
+        try:
+            return open(mine).read().strip()
+        except Exception:
+            return ""
     files = sorted(glob.glob(os.path.join(d, "*.txt")), key=os.path.getmtime)
     if not files:
         return ""
@@ -322,6 +398,15 @@ if "--check-file" in sys.argv:
         print("VERDICT: APPROVED (short reply, no rendering needed). Send it.")
         sys.exit(0)
 
+    hard = word_scan(draft)
+    toolong = [f for f in hard if "over the 15 line limit" in f and
+               int(re.search(r"about (\d+) lines", f).group(1)) > 22]
+    if toolong:
+        print("VERDICT: NOT SENDABLE, and no rewrite can save it. " + toolong[0])
+        print("This costs you a second instead of 30. Cut it to the answer and the "
+              "decisions yourself, then run the check once on the shorter draft.")
+        sys.exit(0)
+
     owner_msg = latest_owner_msg(root)
 
     def fail_open(reason):
@@ -337,38 +422,74 @@ if "--check-file" in sys.argv:
               "Send your answer exactly as drafted.")
         sys.exit(0)
 
+    tick("start render")
     try:
         final = render(root, owner_msg, draft)
     except Exception as ex:
         log_error(root, ex); fail_open("error")
-    notes = []
-    misses = mechanical_misses(draft, final)
-    if word_scan(final):
-        notes.append("your rewrite broke hard rules: " + "; ".join(word_scan(final)))
-    if misses:
-        notes.append("you dropped these exact items, keep them verbatim: " + "; ".join(misses[:10]))
-    faithful, problems = True, []
-    if not notes:
+    tick("render done")
+    def hard_faults(rendered):
+        # Every mechanical gate, in one place, so the retry is judged exactly as hard
+        # as the first pass. Before 08-06 the retry only got two of these and a whole
+        # answer could come back as "OK".
+        out = []
+        if word_scan(rendered):
+            out.append("your rewrite broke hard rules: " + "; ".join(word_scan(rendered)))
+        misses = mechanical_misses(draft, rendered)
+        if misses:
+            out.append("you dropped these exact items, keep them verbatim: "
+                       + "; ".join(misses[:10]))
+        gone = collapsed(draft, rendered)
+        if gone:
+            out.append("you threw the answer away: " + gone + ". Cutting a topic he did "
+                       "not ask about is right; handing back nothing never is")
+        return out
+
+    checked_meaning = False
+
+    def read_meaning(rendered):
+        # Returns notes. An unavailable meaning check is NOT a pass: say so, so the
+        # verdict never claims a check that did not happen.
+        nonlocal_notes = []
+        if not needs_meaning_check(draft, rendered):
+            return nonlocal_notes, True
         try:
-            faithful, problems = meaning_check(root, owner_msg, draft, final)
+            faithful, problems = meaning_check(root, owner_msg, draft, rendered)
         except Exception as ex:
             log_error(root, ex)
-    if not faithful:
-        notes.append("meaning drifted: " + "; ".join(problems[:5]))
+            return nonlocal_notes, False
+        if not faithful:
+            nonlocal_notes.append("meaning drifted: " + "; ".join(problems[:5]))
+        return nonlocal_notes, True
+
+    notes = hard_faults(final)
+    if not notes:
+        mnotes, checked_meaning = read_meaning(final)
+        notes += mnotes
+    tick("first pass judged (notes=%s)" % notes)
     if notes:
         try:
-            final = render(root, owner_msg, draft, notes=" | ".join(notes))
-            if word_scan(final) or mechanical_misses(draft, final):
+            # More room than the first pass: the retry thinks harder, and a retry that
+            # runs out of time throws away the rendering and sends the raw answer.
+            final = render(root, owner_msg, draft, notes=" | ".join(notes), timeout=180)
+            # The retry gets every MECHANICAL gate, including the floor, which is what
+            # stops a collapse. Tried adding a second meaning pass here on 08-06 and it
+            # made 3 of 7 real drafts fall back to the raw answer, so it is out: reading
+            # the retry twice cost more good renderings than it caught bad ones.
+            if hard_faults(final):
                 fail_open("rewrite kept failing the fact checks")
         except Exception as ex:
             log_error(root, ex); fail_open("error on retry")
+    tick("done")
 
     record_approval(root, final)
     if " ".join(final.split()) == " ".join(draft.split()):
         print("VERDICT: APPROVED AS WRITTEN. Send your answer exactly as drafted.")
     else:
+        how = ("mechanically and by a meaning pass" if checked_meaning
+               else "mechanically (the meaning pass was unavailable, read it closely)")
         print("VERDICT: APPROVED, RENDERED VERSION BELOW. Every fact was checked "
-              "against your answer mechanically and by a meaning pass. Read it once; "
+              "against your answer " + how + ". Read it once; "
               "if a fact still looks wrong, fix only that fact in your own draft and "
               "run the check again. Otherwise send EXACTLY this text:\n")
         print(final)

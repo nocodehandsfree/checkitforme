@@ -66,7 +66,7 @@ async function empathyOpener(userMessage: string, lang: string): Promise<string>
     const raw = await llm(SUPPORT_MODELS.cheap, [
       { role: "system", content: `You are a warm support agent for Check It For Me. The customer just told you something went wrong with a check we ran for them. Write ONE short, warm opening line that shows you heard them and are looking into it. ${es ? "Reply in Spanish." : "Reply in English."} Hard rules: one sentence, under 11 words, plain friend voice, no dashes, no emoji. Do NOT state any outcome, and NEVER mention credits, checks, charges, refunds, money, prices, or any number. Output only the sentence.` },
       { role: "user", content: userMessage.slice(0, 300) },
-    ], { job: "support-empathy", maxTokens: 40, temperature: 0.8, timeoutMs: 6000 });
+    ], { job: "support-empathy", maxTokens: 40, temperature: 0.8, timeoutMs: 3500 });
     return cleanTouch(raw, 90);
   } catch { return ""; }
 }
@@ -80,7 +80,7 @@ export async function warmClose(lang: string): Promise<string> {
     const raw = await llm(SUPPORT_MODELS.cheap, [
       { role: "system", content: `You are a warm support agent for Check It For Me. The customer just said your answer helped. Write ONE short, warm closing line: be glad you helped and ask if there is anything else. ${es ? "Reply in Spanish." : "Reply in English."} Hard rules: one short sentence, plain friend voice, no dashes, no emoji. Do NOT mention credits, checks, charges, refunds, money, or numbers. Output only the line.` },
       { role: "user", content: es ? "Eso resolvió mi duda." : "That answered it." },
-    ], { job: "support-close", maxTokens: 40, temperature: 0.8, timeoutMs: 6000 });
+    ], { job: "support-close", maxTokens: 40, temperature: 0.8, timeoutMs: 3500 });
     return cleanTouch(raw, 120) || fallback;
   } catch { return fallback; }
 }
@@ -98,7 +98,8 @@ Site facts, always true, use these for any "where is X" question:
 - The site footer has these links only: Scores, About, Guide, Help, Terms, Privacy, plus a Discord icon and an X (Twitter) icon. There is nothing else in the footer.
 - There is no Contact page and no Contact link anywhere. For partnerships, business, or press, the way to reach the team is Discord (the icon in the footer). Point them there.
 - The customer CANNOT hear a check. They read it: the conversation arrives as text, line by line, as it is spoken, and the screen shows which stage the call is at. Listening to the audio is an internal testing tool, not something a customer has. So "can I hear the call?" is answered no, and then what they DO get. Never answer yes and then describe reading.
-- Check is a website you can add to your home screen, and the book calls that the app. It is NOT in the App Store: never tell anyone to download or install it from there. Someone saying "the app" means the home screen one, so help them with it normally.
+- Check is a website you can add to your home screen, and the book calls that the app. It is NOT in the App Store: never tell anyone to download or install it from there. Someone saying "the app" means the home screen one, so help them with it normally, and if they clearly think there is an App Store download, say plainly that there is not and that it is added from the browser instead.
+- A check asks a store about a PRODUCT, not a single card. The four things we hunt are Pokemon, One Piece, Topps NBA and NeeDoh, and an exact ask names a set and a kind of product, like a Prismatic Evolutions booster box or an elite trainer box. Nobody at a store can tell you over the phone whether one particular card is sitting inside a sealed box, so never promise we can check for a named single card. Say what we CAN ask for instead.
 - The Help link in the footer opens this same chat. So "tap Help" is NEVER an answer to anyone who wants to reach a person, in any wording — not to "let me talk to someone", not to "what's your phone number, I'd rather call someone". It hands them back to you. Set needs_human instead and say a person is coming.
 - Discord is for partnerships, business, and press. It is NOT the support path. Never hand a customer with a support problem to Discord to find a person.
 - When someone asks for a human, you do not have a link to give them and you must not invent one. Set needs_human true and the app itself hands them over. Still answer what you can in the same reply, warmly, then let the hand over happen.
@@ -148,7 +149,7 @@ const CATEGORY_HINT: Record<string, string> = {
   billing: "This is a billing question. Answer from the plans and pricing passages. Only set needs_human for a real dispute or a change to their account you cannot make.",
   partnerships: "This is a partnership or business inquiry. Answer what the book covers; if it needs a real person to evaluate a deal, set needs_human after you've given what you can.",
   bug: "The user is reporting something broken. Help them try the obvious fixes first from the passages; if it's a genuine bug, set needs_human so they can attach details.",
-  check_issue: "The user is reporting that a check went wrong: a wrong or disconnected phone number we called, the wrong store, or a result that looks incorrect. The credit system has already compared their claim to the call record where it could; you are only here because it could not conclude. Acknowledge briefly and sincerely, ask which store or check it was and what specifically was off. NEVER promise, imply, or grant a credit or refund; only the credit system grants. If they push back after being told no, set needs_human true so the team can review.",
+  check_issue: "The user is reporting that a check went wrong: a wrong or disconnected phone number we called, the wrong store, or a result that looks incorrect. The credit system has already compared their claim to the call record where it could; you are only here because it could not conclude. Acknowledge briefly and sincerely, and ask what specifically was off. NEVER promise, imply, or grant a credit or refund; only the credit system grants. If they push back after being told no, set needs_human true so the team can review.",
   technical: "This is a technical/how-to question. Walk them through it from the passages.",
   how_checks_work: "They want to understand how checks work. Explain plainly from the book.",
   other: "",
@@ -165,6 +166,11 @@ export interface AnswerOpts {
 
 /** Answer one user message inside a conversation. Creates the conversation on first call. */
 export async function answerSupport(sessionId: string, userMessage: string, opts: AnswerOpts = {}): Promise<LadderResult> {
+  // ONE budget for the whole reply, measured from the moment the message arrives. The edge cuts a
+  // request at about 15 seconds and the customer sees a blank, so every slow thing inside — looking
+  // up the book, the store list, each rung — spends from this one clock rather than each keeping
+  // its own. Budgets that were set per step used to add up past the cut (08-06).
+  const REPLY_DEADLINE = Date.now() + 12_000;
   const now = Math.floor(Date.now() / 1000);
   const category = SUPPORT_CATEGORIES.includes(opts.category as SupportCategory) ? opts.category! : "other";
   // Read BEFORE any rung runs: whether they asked for a person is the customer's words, not a model's
@@ -247,7 +253,12 @@ export async function answerSupport(sessionId: string, userMessage: string, opts
     }
   }
 
-  const ctx = await retrieve(userMessage);
+  // Looking things up must never cost the customer their answer: if the book search or the store
+  // list is slow or down, we answer from the site facts and the conversation instead of failing.
+  const ctx = await retrieve(userMessage).catch((e) => {
+    console.error("[support] retrieve", (e as Error).message.slice(0, 140));
+    return { passages: "", qaBest: null } as Awaited<ReturnType<typeof retrieve>>;
+  });
   // "Do you check the Target in Glendale?" is a promise, not a fact from the book. Answer it from
   // the store list or not at all (round 1 test 4).
   const coverage = await coverageNote(userMessage).catch(() => "");
@@ -260,8 +271,14 @@ export async function answerSupport(sessionId: string, userMessage: string, opts
 
   const catHint = CATEGORY_HINT[convo.category || category] || "";
   const checkBlock = opts.checkContext ? `\n\nThis signed-in customer's recent checks (use for specifics, never invent):\n${opts.checkContext}` : "";
+  // Opened from a check's own page: we KNOW which check. Asking "which store was it" here is the
+  // loop the owner hit in July, and it came back on a follow-up once the credit machine had already
+  // named the store in the first reply (round 2 test 2, 08-06).
+  const pinnedBlock = convo.checkId
+    ? "\n\nTHIS CHAT WAS OPENED FROM ONE SPECIFIC CHECK, so you already know which one it is. NEVER ask which store or which check. Ask what went wrong with it instead."
+    : "";
   const msgs: LlmMsg[] = [
-    { role: "system", content: `${SYSTEM}${catHint ? `\n\n${catHint}` : ""}\n\nWhat you know:\n${ctx.passages || "(nothing on this)"}${coverage}${checkBlock}` },
+    { role: "system", content: `${SYSTEM}${catHint ? `\n\n${catHint}` : ""}\n\nWhat you know:\n${ctx.passages || "(nothing on this)"}${coverage}${checkBlock}${pinnedBlock}` },
     ...history.slice(-8).map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
   ];
   const inChars = msgs.reduce((n, m) => n + m.content.length, 0);
@@ -275,13 +292,14 @@ export async function answerSupport(sessionId: string, userMessage: string, opts
 
   let cost = 0;
   let last: { answer: string; needsHuman: boolean } | null = null;
-  // A CUSTOMER ALWAYS GETS A REPLY. Three of 43 messages in round 1 came back blank because a model
-  // call hung and the whole request died at the edge with nothing in it (08-06). Each rung is now
-  // capped, and the ladder stops climbing once the budget is spent, so the worst case is an honest
-  // "something went wrong" instead of silence. The numbers are set so all three rungs plus the
-  // retrieval still finish inside the edge's patience.
-  const RUNG_MS = 12_000;
-  const LADDER_DEADLINE = Date.now() + 26_000;
+  // A CUSTOMER ALWAYS GETS A REPLY, and the budget is set by the EDGE, not by us. Measured on
+  // staging 08-06: a request that has not answered in about 15 seconds is cut and the customer gets
+  // a blank, whatever we intended to send. Three of four blanks in a 43 message run landed at
+  // 15.1-15.2 seconds, dead on that line. So the whole ladder has to finish inside it, with room to
+  // spare for writing the reply down: one rung is capped well under, and we stop climbing rather
+  // than start a rung we cannot finish. A merely-adequate answer beats a perfect one nobody sees.
+  const RUNG_MS = 5_000;
+  const LADDER_DEADLINE = REPLY_DEADLINE;
   for (const rung of rungs) {
     if (Date.now() > LADDER_DEADLINE) { console.error("[support] ladder out of time before tier", rung.tier); break; }
     try {

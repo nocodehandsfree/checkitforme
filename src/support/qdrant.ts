@@ -11,10 +11,16 @@ export const DIMS = 1536; // text-embedding-3-small
 export const BOOK = "support_book";
 export const QA = "support_qa";
 
-async function q(method: string, path: string, body?: unknown): Promise<any> {
+// Every search here sits in front of a customer waiting for a reply, and the edge cuts that reply
+// at about 15 seconds. A qdrant that stops answering must fail fast enough for the agent to carry
+// on without it rather than swallow the whole budget and leave a blank (08-06). A reindex needs far
+// longer than a search, so it passes its own.
+const Q_TIMEOUT_MS = 6000;
+async function q(method: string, path: string, body?: unknown, timeoutMs = Q_TIMEOUT_MS): Promise<any> {
   const r = await fetch(`${QDRANT}${path}`, {
     method,
     headers: { "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(timeoutMs),
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
   const d = await r.json().catch(() => ({}));
@@ -64,7 +70,7 @@ export interface Point { id: string; vector: number[]; payload: Record<string, u
 
 export async function upsert(collection: string, points: Point[]): Promise<void> {
   if (!points.length) return;
-  await q("PUT", `/collections/${collection}/points?wait=true`, { points });
+  await q("PUT", `/collections/${collection}/points?wait=true`, { points }, 120_000);
 }
 
 export interface Hit { score: number; payload: Record<string, unknown> }
