@@ -41,6 +41,7 @@ import { placeNavCall, navInitialTwiml, navStep, navEnded, navMediaFeed, getNavS
 import { listenNavFeed, endListenNav } from "./calls/listen-nav";
 // THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
 import { emit, markNow, closeReceipt, linkCall, navOutcomeOf, rollup, rollupFromRow, getReceipt, transcriptOf, setLineHook, normSaid, type Rollup } from "./calls/events";
+import { buildCharlieSetup } from "./calls/charlie-setup";
 import { installReceiptStore, currentRates, onReceiptClosed, recordVerdict, lastClerkLine } from "./calls/receipt-store";
 import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
@@ -1285,18 +1286,39 @@ setMappingHandoff(async (s) => {
     if (!cat) return null;
     const v = await buildRestockVars(store.id, cat.id, undefined, [], undefined, null);
     if (!v) return null;
-    const pol = await getPolicy();
+    // CHARLIE IS SET UP THE SAME WAY HERE AS ON A CUSTOMER CHECK (owner 08-04). This used to build
+    // its own much thinner setup, so a mapping check opened Charlie on built-in defaults: no
+    // recorded opening question and no joining agent, which quietly dropped it onto the older path,
+    // and none of the owner's own settings for the brain, the hold, the timing or the longest
+    // allowed check. It now reads the ONE shared setup that bridge-place.ts reads, so the two can
+    // never drift apart again.
+    //
+    // WHO THE MAPPED ROUTE PUT US THROUGH TO, in the store's own words as we said them at the menu.
+    // The last spoken choice of the walk is the one that reached this desk. A keypad route and a
+    // direct dial say nobody's name out loud, and inventing one would fake the record.
+    const departmentName = (s.steps || [])
+      .filter((st) => st.who === "us" && st.action === "say" && st.value && !String(st.text || "").startsWith("asked:"))
+      .map((st) => String(st.value).trim()).filter(Boolean).pop();
+    const setup = await buildCharlieSetup({
+      dynamicVars: v.dynamicVars, voiceId: v.voiceId, voiceTuning: v.voiceTuning,
+      agentId: config.voice.agentId, departmentName,
+    });
+    // NO VOICE = NO CHECK, the same refusal a customer check makes, said on this check's own record
+    // so the mapping run reads a reason rather than a silent nothing.
+    if (setup.refused) {
+      emit(s.id, "unknown", "This store has no voice set, so the check was refused rather than run the old way", { fault: "no-voice" });
+      console.error("[mapping] Charlie hand-off refused:", setup.reason);
+      return null;
+    }
+    if (setup.clipFailed) emit(s.id, "unknown", "Could not record the opening question, so this check ran the old way", { fault: "clip-failed", fellBackToOldPath: true });
     setBridgeContext(s.id, {
-      agentId: config.voice.agentId,
-      dynamicVars: v.dynamicVars,
+      ...setup.shared,
       connectOnHuman: false,          // Staff are already talking — open Charlie right away
       // NEVER RIDE A TRANSFER ON A MAPPING CHECK. Staff offering to put us through would land
       // Charlie at a desk we cannot name and cannot get back to on a customer's check, and mapping
       // would lock that as the way in. Wrong desk ends the check; mapping marks the choice we took
       // as wrong and calls the same store again on the next choice.
       neverTakeAHandover: true,
-      voiceId: v.voiceId || undefined,
-      voiceTuning: v.voiceTuning || undefined,
     });
     const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
     return `<?xml version="1.0" encoding="UTF-8"?><Response><Stop><Stream name="navtap"/></Stop>`

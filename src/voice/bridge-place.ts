@@ -7,9 +7,7 @@ import { getPolicy } from "../policy";
 import { setBridgeContext, takeBridgeDtmf, takeBridgeSay, bridgeLog } from "./bridge";
 import { startListenNav, listenNavOpeningTwiml, type NavStep } from "../calls/listen-nav";
 import { openReceipt, emit, closeReceipt, laneFor, type EventKind } from "../calls/events";
-import { phoneClip } from "../calls/clip-cache";
-import { callTuning } from "../calls/tuning";
-import { warnIfCapTooLow } from "../calls/check-life";
+import { buildCharlieSetup } from "../calls/charlie-setup";
 import { getSetting } from "../db/settings";
 import { parseRobotPick, robotScene } from "../calls/tapedeck";
 
@@ -113,36 +111,30 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
   // recording that it had, so "which stores are quietly running the old way" was unanswerable. A
   // check that did not happen is better than one that silently ran differently. Every workflow now
   // carries a voice by default, so reaching this at all is a configuration fault, not a normal case.
-  let openingClip: { audio: Buffer; ms: number; text: string } | undefined;
-  const question = dynamicVars.opening_line || "";
-  if (config.voice.midCallAgentId && question) {
-    if (!opts?.voiceId) {
-      emit(room, "unknown", "This store has no voice set, so the check was refused rather than run the old way", { fault: "no-voice" });
-      closeReceipt(room, "Refused: no voice is set", "no-voice");
-      return { error: "no voice is set for this store's workflow, so the check was refused. Set one in Admin, Voice, Workflows." };
-    }
-    const c = await phoneClip(opts.voiceId, question, opts?.voiceTuning || {}, opts?.apiKey);
-    if (c) openingClip = { audio: c.audio, ms: c.ms, text: c.text };
-    // We HAVE a voice but could not record the line. The call still runs, the old way — and it says
-    // so on the receipt, so "which calls ran the old path" stays a question the log already answers.
-    else emit(room, "unknown", "Could not record the opening question, so this call ran the old way", { fault: "clip-failed", fellBackToOldPath: true });
+  // THE DEPARTMENT WE ARE ASKING FOR, in the store's own words. The spoken route is "word@seconds"
+  // pairs and the LAST word is the one that puts us through, so that is the name the log uses while
+  // its phone rings. Read here because the route itself is consumed when the phone company is told
+  // what to do, long before the ringing starts. Never invented: no spoken step, no name.
+  const departmentName = String(opts?.say || "").split(",").map((p) => p.split("@")[0].trim()).filter(Boolean).pop();
+  // ---- CHARLIE'S SETUP, BUILT IN THE ONE SHARED PLACE (owner 08-04) ----
+  // The recorded opening question, the joining agent, the brain choice, the hold handling, the
+  // owner's timing numbers and the longest allowed check all come from src/calls/charlie-setup.ts,
+  // which a mapping check now reads too. It used to be built here and nowhere else, which is exactly
+  // why a mapping check ran Charlie on built-in defaults. What is still decided HERE is only what
+  // genuinely differs on a customer check: waiting for a human, the menu steps, and the ear's timing.
+  const setup = await buildCharlieSetup({
+    dynamicVars, voiceId: opts?.voiceId, voiceTuning: opts?.voiceTuning, apiKey: opts?.apiKey,
+    agentId: opts?.agentId, onConversationId, departmentName, earFromSec, timeLimitSec: opts?.timeLimitSec,
+  });
+  if (setup.refused) {
+    emit(room, "unknown", "This store has no voice set, so the check was refused rather than run the old way", { fault: "no-voice" });
+    closeReceipt(room, "Refused: no voice is set", "no-voice");
+    return { error: setup.reason };
   }
-  // WHICH BRAIN, and WHAT TO DO ON A HOLD. Both are settings rather than environment variables, so
-  // either can be killed from a phone mid incident without a deploy. The hold strategy defaults to
-  // keeping the agent open, which cannot change what the store hears; the money-saving alternative
-  // is built and waits on the measurement (Gate Zero) rather than on an opinion.
-  const holdStrategy = pol.flags?.closeAgentOnHold ? "reopen" as const : "gate" as const;
-  // Every number the runtime guesses at, resolved ONCE per call from the setting the Admin reads.
-  // Passed in rather than imported, so the ear's timing rules stay testable without a database.
-  const tuning = await callTuning();
-  // The gatekeeper's backstop is a constant; the longest allowed check is an Admin number. Shout if
-  // they ever get close, because a check outliving the backstop reads as finished while it is live.
-  // HOW LONG A WHOLE CHECK MAY RUN (owner 08-03). It used to come off the policy, which production
-  // copies down onto staging every sixty seconds, so a length tuned on staging was stomped inside a
-  // minute. It is one of the owner's own numbers now and lives in call_tuning with the rest. A store
-  // that carries its own cap still wins; everything else takes his number, and it rides to the phone
-  // company exactly as it did before.
-  const capSecs = opts?.timeLimitSec && opts.timeLimitSec > 0 ? Math.floor(opts.timeLimitSec) : tuning.maxCheckSeconds;
+  // We HAVE a voice but could not record the line. The call still runs, the old way — and it says
+  // so on the receipt, so "which calls ran the old path" stays a question the log already answers.
+  if (setup.clipFailed) emit(room, "unknown", "Could not record the opening question, so this call ran the old way", { fault: "clip-failed", fellBackToOldPath: true });
+  const capSecs = setup.shared.timeLimitSec as number;
   // A CHECK AGAINST THE ROBOT STORE IS A NAMED TEST (owner 08-04). The scene the robot will play is
   // a setting picked before the dial, and the scene names which of the owner's 16 locked cards it
   // runs — so the card rides the check's own record from the first second, and the Testing screen
@@ -155,14 +147,10 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
       if (scene?.card) emit(room, "unknown", `Test: ${scene.name}`, { step: "named_test", card: scene.card, scene: scene.n });
     } catch { /* a test label is never worth failing a dial over */ }
   }
-  warnIfCapTooLow(capSecs);
-  // THE DEPARTMENT WE ARE ASKING FOR, in the store's own words. The spoken route is "word@seconds"
-  // pairs and the LAST word is the one that puts us through, so that is the name the log uses while
-  // its phone rings. Read here because the route itself is consumed when the phone company is told
-  // what to do, long before the ringing starts. Never invented: no spoken step, no name.
-  const departmentName = String(opts?.say || "").split(",").map((p) => p.split("@")[0].trim()).filter(Boolean).pop();
-  const mkCtx = () => ({ agentId: opts?.agentId || config.voice.agentId, openingClip, midCallAgentId: config.voice.midCallAgentId, departmentName,
-    ourBrain: !!pol.flags?.ourBrain, ourBrainAgentId: config.voice.ourBrainAgentId, holdStrategy, tuning, timeLimitSec: capSecs, apiKey: opts?.apiKey || undefined, dynamicVars, onConversationId, dtmf: listening ? undefined : (dtmf || undefined), say: listening ? undefined : (opts?.say || undefined), connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: connectAtSecAdj, giveUpSeconds: pol.bail.enabled && pol.bail.ringMaxSeconds > 0 ? pol.bail.ringMaxSeconds : undefined, earFromSec, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
+  const mkCtx = () => ({ ...setup.shared,
+    dtmf: listening ? undefined : (dtmf || undefined), say: listening ? undefined : (opts?.say || undefined),
+    connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */,
+    connectAtSec: connectAtSecAdj });
   setBridgeContext(room, mkCtx());
   const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
   // INLINE the TwiML instead of a Url callback (owner 07-17: "no cutoffs — listen from the very
@@ -233,7 +221,7 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
       // Killable from Admin without a deploy if it ever misreads a menu as a person, but ON by
       // default: pressing keys into a live human's ear is the worse failure of the two.
       abortOnHuman: pol.flags?.stopKeysOnHuman !== false,
-      tuning,
+      tuning: setup.shared.tuning!,
       log: (m) => bridgeLog(`[${room.slice(0, 8)}] ${m}`),
       onEvent: (kind, note, detail) => emit(room, kind as EventKind, note, detail),
       // The menu really ended HERE, not where the map guessed. Re-stamp the context so the agent's

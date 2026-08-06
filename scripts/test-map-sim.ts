@@ -936,6 +936,52 @@ async function main() {
         "a proven door is exempt under either spelling — full phrase or its shortened winner");
     }
 
+    // CHARLIE IS SET UP THE SAME WAY ON A MAPPING CHECK AS ON A CUSTOMER CHECK (owner 08-04).
+    // A mapping check used to build its own much thinner setup, so it opened Charlie on built-in
+    // defaults: no recorded opening question and no joining agent, which quietly dropped it onto the
+    // older path, and none of the owner's own settings for the brain, the hold, the timing or the
+    // longest allowed check. One shared setup now, read by both, so they cannot drift apart again.
+    {
+      const { buildCharlieSetup } = await import("../src/calls/charlie-setup");
+      const { config: cfg } = await import("../src/config");
+      const built = await buildCharlieSetup({
+        dynamicVars: { opening_line: "do you have any Pokémon cards in" },
+        voiceId: "sim-voice", departmentName: "front store services",
+      });
+      ok(!built.refused, "a mapping check can build Charlie's setup");
+      if (!built.refused) {
+        const sh = built.shared;
+        ok(typeof sh.timeLimitSec === "number" && (sh.timeLimitSec as number) > 0,
+          `the check now carries a longest-allowed length (${sh.timeLimitSec}s), instead of running with none`);
+        ok(!!sh.tuning && typeof sh.tuning.maxCheckSeconds === "number",
+          "and the owner's own timing numbers, the same ones a customer check runs on");
+        ok(sh.holdStrategy === "gate" || sh.holdStrategy === "reopen",
+          `and his hold setting (${sh.holdStrategy})`);
+        ok("ourBrain" in sh && "ourBrainAgentId" in sh, "and which brain to use");
+        ok(sh.midCallAgentId === cfg.voice.midCallAgentId,
+          "and the agent that joins a conversation already in progress, so it cannot fall back to the older path");
+        ok(sh.departmentName === "front store services",
+          "and who it was put through to, in the store's own words");
+        ok(!Object.prototype.hasOwnProperty.call(sh, "holdMaxSeconds"),
+          "the deleted hold number is NOT back");
+      }
+      // NO VOICE = NO CHECK, the same refusal a customer check makes, with a reason a person can read.
+      const had = cfg.voice.midCallAgentId;
+      (cfg.voice as { midCallAgentId?: string }).midCallAgentId = "sim-midcall";
+      const noVoice = await buildCharlieSetup({ dynamicVars: { opening_line: "do you have any Pokémon cards in" } });
+      (cfg.voice as { midCallAgentId?: string }).midCallAgentId = had;
+      ok(noVoice.refused === true && /no voice is set/.test((noVoice as { reason?: string }).reason || ""),
+        "a mapping check with no voice set is refused, and says why");
+      // ONE setup, spread whole by both callers, so neither can quietly be missing a piece.
+      const bp = readFileSync("src/voice/bridge-place.ts", "utf8"), srv = readFileSync("src/server.ts", "utf8");
+      ok(/\.\.\.setup\.shared/.test(bp), "the customer check spreads the shared setup whole");
+      ok(/\.\.\.setup\.shared/.test(srv), "and so does the mapping check");
+      ok(/connectOnHuman: false,\s+\/\/ Staff are already talking/.test(srv) && /neverTakeAHandover: true,/.test(srv),
+        "and the two things a mapping check must keep are untouched: Charlie opens right away, and it never takes a transfer");
+      ok(!/holdMaxSeconds/.test(bp) && !/holdMaxSeconds/.test(srv),
+        "and the deleted hold number came back nowhere");
+    }
+
     // A CHAIN WITH A MENU PROBLEM GLOWS, AND NOTHING ELSE DOES (owner 08-04). The small red mark lit
     // for anything sitting open, so Target wore a warning while the box above it counted zero. One
     // rule now drives the glow, the box and the dropdown choice, so the page cannot contradict itself.
