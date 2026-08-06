@@ -944,8 +944,12 @@ async function main() {
     // give-up cap was never armed. It now runs the SAME function, not a copy of it.
     {
       const br = readFileSync("src/voice/bridge.ts", "utf8");
-      ok(/-> Staff are already on the line`\);\s*\n\s*triggerConnect\("human"\);/.test(br),
-        "a check that opens Charlie straight away runs the same code as one that waited for a person");
+      ok(/if \(ctx\?\.staffAlreadyOn\) \{[\s\S]{0,140}?triggerConnect\("human"\);/.test(br),
+        "a mapping check runs the same code as a check that waited for a person");
+      ok(/staffAlreadyOn: true,/.test(readFileSync("src/server.ts", "utf8")),
+        "and only the mapping hand-off asks for it, because it is the one that found the person itself");
+      ok(/\} else \{\s*\n\s*log\(`twilio start room=\$\{room\.slice\(0, 8\)\} ctx=\$\{!!ctx\} -> connectEleven`\);/.test(br),
+        "Charlie taking over a call mid conversation still opens straight, so no note claims Delta never played on a check where it did");
       ok((br.match(/\btriggerConnect\("human"\)/g) || []).length >= 2,
         "both ways of arriving at that moment call the one function, so neither can drift");
       // The four things, all inside that one function, so calling it is what brings them along.

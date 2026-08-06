@@ -55,6 +55,16 @@ export interface BridgeContext {
   // would lock a way in that only works when somebody is kind. Set only by a mapping check; absent
   // on every customer check, where transfers are still ridden exactly as before.
   neverTakeAHandover?: boolean;
+  // STAFF ARE ALREADY ON THE LINE AND HAVE NOT BEEN ASKED YET. Set only by a mapping check, which
+  // finds the person itself and then hands the live call over, so the moment Staff answered is
+  // already behind us when this bridge starts. It is what tells this side to run everything a
+  // check does at that moment (Delta asks, the moment is stamped, the hold meter starts, the
+  // give-up cap is armed) instead of just opening Charlie cold.
+  //
+  // It is NOT the same as Charlie taking over a call mid conversation, which is what the Delta
+  // barge does: there Delta has already asked, Staff have already answered it, and treating that
+  // as "Staff just answered" would write a note saying Delta never played on a check where it did.
+  staffAlreadyOn?: boolean;
   // (holdMaxSeconds is GONE, not deprecated — owner 08-02. It opened Charlie after a set number of
   // seconds with no voice heard, so he talked to hold music and billed for it. Removing the field
   // outright makes every caller that still passes it fail the typecheck instead of quietly doing
@@ -1862,8 +1872,17 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // one moment, one piece of code, two ways of arriving at it. `triggerConnect` opens Charlie
         // immediately either way, so the mapping rule that Charlie opens right away is untouched,
         // and taking a transfer is refused elsewhere and untouched too.
-        log(`twilio start room=${room.slice(0, 8)} ctx=${!!ctx} -> Staff are already on the line`);
-        triggerConnect("human");
+        // ONLY a check that found the person itself and handed the live call over. Charlie taking
+        // over mid conversation (the Delta barge) is a different moment: Delta asked there already,
+        // so running this would arm a hold meter mid answer and write a note saying Delta never
+        // played on a check where it did. That one keeps opening Charlie straight, as it always has.
+        if (ctx?.staffAlreadyOn) {
+          log(`twilio start room=${room.slice(0, 8)} -> Staff are already on the line`);
+          triggerConnect("human");
+        } else {
+          log(`twilio start room=${room.slice(0, 8)} ctx=${!!ctx} -> connectEleven`);
+          connectEleven();
+        }
       }
     }
     else if (m.event === "media" && m.media?.payload) {

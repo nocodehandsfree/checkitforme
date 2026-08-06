@@ -1320,6 +1320,9 @@ setMappingHandoff(async (s) => {
     setBridgeContext(s.id, {
       ...setup.shared,
       connectOnHuman: false,          // Staff are already talking — open Charlie right away
+      // MAPPING FOUND THE PERSON, SO EVERYTHING A CHECK DOES AT THAT MOMENT STILL HAS TO HAPPEN:
+      // Delta asks, the moment is stamped, the hold meter starts and the give-up cap is armed.
+      staffAlreadyOn: true,
       // NEVER RIDE A TRANSFER ON A MAPPING CHECK. Staff offering to put us through would land
       // Charlie at a desk we cannot name and cannot get back to on a customer's check, and mapping
       // would lock that as the way in. Wrong desk ends the check; mapping marks the choice we took
