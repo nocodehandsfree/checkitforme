@@ -5,28 +5,58 @@
 # never drift from it. The build/ship and compute laws still live here.
 # 08-05: this hook also SAVES the owner's latest message, keyed by session id, so the
 # reply renderer can read it (agreed architecture, owner's "go" 2026-08-05).
+#
+# 08-06, THE FULL RULES NO LONGER RIDE ON EVERY MESSAGE (owner's go, he spotted it).
+# Every message he sent used to carry a fresh copy of all 11 rules plus the lexicon, about
+# 1,600 words. A 40 message chat therefore held 40 identical copies, and because an agent
+# re-reads the whole conversation on every turn it read all of them every time. Now the
+# full block rides message 1 and every 10th message after; the turns in between carry a
+# short reminder naming the rules that actually get broken. Enforcement did not move: the
+# BLOCK has always been the reply lock reading the finished reply, never this paste.
+# Re-sending in full every 10th turn is deliberate: a long chat gets summarized and the
+# first message can fall out of the summary, so the full text comes back around.
 d="${CLAUDE_PROJECT_DIR:-.}"
 SRC="$d/.claude/output-styles/check-owner-reply.md"
 
 INPUT=$(cat 2>/dev/null)
 PDIR="$d/.claude/state/reply-lock/prompts"
-mkdir -p "$PDIR" 2>/dev/null
-RL_INPUT="$INPUT" RL_PDIR="$PDIR" python3 -c '
+TDIR="$d/.claude/state/reply-lock/turns"
+mkdir -p "$PDIR" "$TDIR" 2>/dev/null
+# Prints FULL or SHORT. Unknown session = FULL, so a chat we cannot count never ends up
+# running on the reminder alone.
+MODE=$(RL_INPUT="$INPUT" RL_PDIR="$PDIR" RL_TDIR="$TDIR" python3 -c '
 import json, os, glob
+mode = "FULL"
 try:
     data = json.loads(os.environ.get("RL_INPUT") or "{}")
-    sid = (data.get("session_id") or "unknown")[:36]
+    sid = (data.get("session_id") or "")[:36]
     prompt = data.get("prompt") or ""
-    pdir = os.environ["RL_PDIR"]
-    if prompt:
+    pdir, tdir = os.environ["RL_PDIR"], os.environ["RL_TDIR"]
+    if prompt and sid:
         with open(os.path.join(pdir, sid + ".txt"), "w") as fh:
             fh.write(prompt)
     files = sorted(glob.glob(os.path.join(pdir, "*.txt")), key=os.path.getmtime)
     for f in files[:-10]:
         os.remove(f)
+    if sid:
+        cf = os.path.join(tdir, sid + ".count")
+        n = 0
+        if os.path.exists(cf):
+            try:
+                n = int(open(cf).read().strip() or 0)
+            except Exception:
+                n = 0
+        n += 1
+        with open(cf, "w") as fh:
+            fh.write(str(n))
+        for f in sorted(glob.glob(os.path.join(tdir, "*.count")), key=os.path.getmtime)[:-20]:
+            os.remove(f)
+        mode = "FULL" if (n == 1 or n % 10 == 0) else "SHORT"
 except Exception:
-    pass
-' 2>/dev/null
+    mode = "FULL"
+print(mode)
+' 2>/dev/null)
+[ -z "$MODE" ] && MODE=FULL
 
 # Strip the frontmatter block; paste the rules + lexicon verbatim.
 RULES_BODY=$(awk 'BEGIN{fm=0} /^---$/{fm++; next} fm>=2{print}' "$SRC")
@@ -72,4 +102,42 @@ C. DON'T BURN HIS COMPUTE. Never start a background task, poll, or watcher
 Say "Protocol" → re-read the locked rules file and rebuild your last reply to match.
 EOF
 
-printf '%s\n%s\n' "$RULES_BODY" "$LAWS" | jq -Rs '{hookSpecificOutput:{hookEventName:"UserPromptSubmit",additionalContext:.}}'
+read -r -d '' REMINDER <<'EOF'
+THE REPLY RULES ARE LOCKED (owner, 08-04). The full list of 11 plus the lexicon
+was pasted earlier in this chat and comes back around every 10th message; the
+one source is .claude/output-styles/check-owner-reply.md — OPEN IT the moment
+you are unsure, and after any conversation summary. These are the ones agents
+actually break, so read them before every reply:
+
+- ANSWER FIRST. No wind-up, no headline, no TLDR label, no flattery, no filler.
+- NAME EVERYTHING. Use the lexicon's real name (a check is a phone call to a
+  store, a test check is one against the Fun store, Charlie speaks to Staff).
+  A thing NOT on that list gets a plain sentence saying what it is the FIRST
+  time it appears, in the same breath. Never "this" or "them" without naming
+  the thing. Never invent a label, never computer speak.
+- EXPLAIN IT LIKE HE IS FIVE, in full everyday sentences. He was not in your
+  chat and does not know what you are talking about. An old bug or fix gets one
+  line of when it happened and what it was.
+- ONLY BACKGROUND WHEN HE HAS A DECISION. Never raise a non-issue to flag it.
+- 25 LINES OR LESS. The one exception: a piece of work he asked to be handed in
+  the chat (all the tests, a full list, exact wording) prints in full, uncapped.
+- NO DASHES INSIDE SENTENCES. Bold is a SHORT label alone on its own line, 3 at
+  most, never a bold sentence, no headings, no divider lines.
+
+HOW TO REPLY: 4 lines or less, just send it. Otherwise write your best COMPLETE
+answer (every fact, number, name, decision, quote intact) to a scratch file, run
+bash scripts/check-reply.sh <file> in the FOREGROUND, wait, and send EXACTLY the
+approved text. Never resend text he has already seen.
+
+ALSO EVERY TURN: done means DEMONSTRATED, never claimed — drive it yourself and
+say what you saw, or say NOT verified and why. Ship it without waiting for him
+(staging and Admin go live without him); stop only for real money or a
+production release. Never start a background task, poll, or watcher unless he
+asked for one.
+EOF
+
+if [ "$MODE" = "FULL" ]; then
+  printf '%s\n%s\n' "$RULES_BODY" "$LAWS" | jq -Rs '{hookSpecificOutput:{hookEventName:"UserPromptSubmit",additionalContext:.}}'
+else
+  printf '%s\n' "$REMINDER" | jq -Rs '{hookSpecificOutput:{hookEventName:"UserPromptSubmit",additionalContext:.}}'
+fi
