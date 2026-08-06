@@ -2530,7 +2530,7 @@ function checkV2From(d,o){
       const paid=d.charged!=null?d.charged:((e.detail||{}).charged);
       add(atM,{t:paid==null?e.note:(paid?'Customer charged':'Customer not charged')});continue;}
     if(e.kind==='verdict'){
-      const key=String((e.detail||{}).statusKey||'');const reg=STATUSES[key]||{};
+      const key=String((e.detail||{}).statusKey||'');const reg=statusFor(key)||{};
       // THE SHEET SAYS WHAT THE CHECK WAS FILED WITH (owner 08-06). The status reads through the
       // SAME resolver the check list reads through, so the page can never paint one answer while
       // the record holds another (scene 10 painted "Nobody answered" over a not in stock check).
@@ -6192,7 +6192,7 @@ function verdictKey(o){
 // One verdict, always rendered from the statuses registry (STATUSES) so the calls history, the live
 // call poll, and the consumer all show the SAME owner-configured icon / label / color.
 function customerVerdict(o){
-  const key=verdictKey(o), s=STATUSES[key];
+  const key=verdictKey(o), s=statusFor(key);
   if(s){
     let n=(key==='failed'&&o.failureReason)?o.failureReason:(s.note||'');
     // Registry tokens → live values from the call row (owner 07-15: notes showed raw {store}/{category}).
@@ -6205,7 +6205,10 @@ function customerVerdict(o){
   // Registry not loaded yet (first paint). The minimal built-in fallback keeps the row sane, and the fourth
   // value is the tone the check sheet's status circle is drawn from, so the sheet and this row read
   // one answer whether or not the registry has landed.
-  const F=({in_stock:['in_stock','In stock','#4ADE80','in'],sold_out:['clock','Sold out','#EF4444','out'],does_not_sell:['ban',"They don't carry it",'#EF4444','out'],not_in_stock:['circle-x','Not in stock','#EF4444','out'],no_clear_answer:['circle-help','Got a “maybe”','#FBBF24','unk'],nobody_answered:['phone-off','Nobody answered','#9CA3AF','unk'],closed:['lock','Store closed','#9CA3AF','unk'],failed:['octagon-alert','Call failed','#FBBF24','unk'],admin_hangup:['minus','Admin canceled','#9CA3AF','unk']})[key]||['phone-off','Nobody answered','#9CA3AF','unk'];
+  // A KEY NOBODY HAS WORDS FOR READS AS ITSELF, never as another status. Falling back to "Nobody
+  // answered" is how a check filed staff_hung_up came out on the screen as a check nobody picked up.
+  const plain=String(key||'').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase())||'Unclear';
+  const F=({in_stock:['in_stock','In stock','#4ADE80','in'],sold_out:['clock','Sold out','#EF4444','out'],does_not_sell:['ban',"They don't carry it",'#EF4444','out'],not_in_stock:['circle-x','Not in stock','#EF4444','out'],no_clear_answer:['circle-help','Got a “maybe”','#FBBF24','unk'],nobody_answered:['phone-off','Nobody answered','#9CA3AF','unk'],closed:['lock','Store closed','#9CA3AF','unk'],failed:['octagon-alert','Call failed','#FBBF24','unk'],admin_hangup:['minus','Admin canceled','#9CA3AF','unk']})[key]||['circle-help',plain,'#9CA3AF','unk'];
   return {e:F[0],t:F[1],c:F[2],n:(key==='failed'&&o.failureReason)?o.failureReason:'',key,tone:F[3]};
 }
 function pollTranscript(cid, pre){
@@ -6252,6 +6255,22 @@ async function loadStatusReg(){
   STATUSES={}; l.forEach(s=>STATUSES[s.key]=s);
   renderStatuses(l);
 }
+// THE WORDS COME FROM THE SITE THE CHECK CAME FROM (voice-calls RULES 8: screen words come from
+// Statuses, nowhere else). `/api/statuses` is a config read, so it always reads production, which is
+// the list the owner edits and the right rule for the editor. But Testing reads a check off staging,
+// and a status that exists only on staging had no word here at all: check 345 was filed staff_hung_up
+// and the sheet printed "Nobody answered", which is a different status's words. So the source site's
+// list is read alongside, and one lookup answers for every screen: the source first, then the shell's.
+let SRC_STATUSES={};
+async function loadSrcStatusReg(){
+  if(typeof CALL_SRC==='undefined'||CALL_SRC!=='staging'){ SRC_STATUSES={}; return; }
+  try{
+    const r=await fetch(STG_ORIGIN+'/api/statuses',{credentials:'include'});
+    const l=await r.json();
+    if(Array.isArray(l)){ const m={}; l.forEach(s=>m[s.key]=s); SRC_STATUSES=m; }
+  }catch(_){ /* staging unreachable: the shell's own list still answers */ }
+}
+const statusFor=k=>(k&&(SRC_STATUSES[k]||STATUSES[k]))||null;
 function escH(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
 // Status note: owner-authored, may contain the {product} token (substituted in customerVerdict) and
 // <b>…</b>. Escape everything for safety, then re-allow <b>/</b> so the owner's bold actually renders.
@@ -7010,6 +7029,9 @@ async function loadTesting(){
   // The owner's OWN status words, so this page and the Calls page can never disagree about a verdict.
   // One small read, and only if nothing has loaded the registry yet. A page must never paint another.
   if(!Object.keys(STATUSES).length){ const l=await api('/api/statuses'); if(Array.isArray(l)) l.forEach(s=>{ STATUSES[s.key]=s; }); }
+  // …and the words of the site these checks came from, because a status can exist on staging before
+  // it exists on production and the check would otherwise be drawn with another status's words.
+  await loadSrcStatusReg();
   const d=await srcApi('/api/admin/test-calls');
   if(!d||d.error){ sum.innerHTML=''; log.innerHTML=srcEmpty(d,'<div class="empty">No test calls yet. Call the Fun or MVP store to start logging.</div>'); return; }
   if(!(d.rows||[]).length){ sum.innerHTML=''; log.innerHTML=emptyState('phone','#4ADE80','No test calls yet','Call the Fun store to start the log'); return; }

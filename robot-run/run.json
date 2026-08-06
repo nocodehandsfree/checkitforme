@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-06T19:28:59.491Z",
+  "at": "2026-08-06T19:46:46.395Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
@@ -19,22 +19,22 @@
           "detail": "nothing to warn about yet — this device had never checked this store (the next scene proves the warning)"
         },
         {
-          "n": 1.5,
-          "name": "the site actually placed the check",
-          "pass": false,
-          "detail": "the site answered: 200 {\"room\":\"ffbca54c-fa8e-426a-bd84-ff5e31d75bae\",\"wsHost\":\"voice-caller-staging-production.up.railway.app\"}"
-        },
-        {
           "n": 3,
           "name": "the header moves through its phases in order, never backwards",
-          "pass": false,
-          "detail": "Calling"
+          "pass": true,
+          "detail": "Calling → Talking to Staff → Getting results"
         },
         {
           "n": 4,
           "name": "Staff's greeting is the first line, on the live view",
-          "pass": false,
-          "detail": "no Staff line ever appeared on the live view"
+          "pass": true,
+          "detail": "live view showed: \"MVP's Pharmacy, this is Larry\"  ·  robot said: \"MVP's pharmacy, this is Larry.\""
+        },
+        {
+          "n": 5,
+          "name": "the greeting is its own line, never welded to their answer",
+          "pass": true,
+          "detail": "one line, nothing else in it"
         },
         {
           "n": 12,
@@ -45,68 +45,74 @@
         {
           "n": 4.1,
           "name": "Staff's greeting is the first line of the written conversation",
-          "pass": false,
-          "detail": "first written line: \"\""
+          "pass": true,
+          "detail": "first written line: \"Clerk: MVP's Pharmacy, this is Larry\""
         },
         {
           "n": 5.1,
           "name": "the written greeting is its own line",
           "pass": true,
-          "detail": "written: \"\"  ·  said: \"\""
+          "detail": "written: \"MVP's Pharmacy, this is Larry\"  ·  said: \"MVP's pharmacy, this is Larry.\""
         },
         {
           "n": 6,
           "name": "the words match what the robot actually said, word for word",
-          "pass": true,
-          "detail": "0 lines, all exact"
+          "pass": false,
+          "detail": "\"Okay. Transferring you now.\" → missing | \"Sporting goods, this is Dana.\" → missing | \"We did not.\" → missing | \"Thursdays, usually.\" → missing"
         },
         {
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
           "pass": true,
-          "detail": "0 bounce(s) over 285 looks · header held at 62px"
+          "detail": "0 bounce(s) over 93 looks · header held at 62px"
         },
         {
           "n": 8,
           "name": "the log expands",
           "pass": true,
-          "detail": "19px → 44px"
+          "detail": "19px → 90px"
         },
         {
           "n": 13,
           "name": "the check ends with a goodbye, not with us hanging up mid conversation",
           "pass": false,
-          "detail": "the last thing said was theirs: \"\""
+          "detail": "the last thing said was theirs: \"Clerk: Usually\""
         },
         {
           "n": 14,
           "name": "we never ask the same question twice",
+          "pass": false,
+          "detail": "asked again: \"Hi there! I was just checking, do you have any Pokémon cards\""
+        },
+        {
+          "n": 15,
+          "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "0 things said, none of them twice"
+          "detail": "the answer was in at 144 seconds and the line closed at 144 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Thu, Aug 6 · 7:25 PM Nobody answered Rang and rang.Nobody picked up. No charge. Check another store Calling2 ste"
+          "detail": " Result Thu, Aug 6 · 7:43 PM Nobody answered Rang and rang, but nobody picked up.No check, no charge. Try checking later"
         },
         {
           "n": 9.1,
           "name": "the screen and the record say the same thing",
           "pass": true,
-          "detail": "the screen said unclear, the record says unclear (busy)"
+          "detail": "the screen said unclear, the record says unclear (staff_hung_up)"
         },
         {
           "n": 11,
           "name": "the verdict is RIGHT for this scenario",
           "pass": false,
-          "detail": "got busy · this scenario is not_in_stock"
+          "detail": "got staff_hung_up · this scenario is not_in_stock"
         },
         {
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "not charged · the screen says \"No charge\" · the check cost 1.4¢"
+          "detail": "not charged · the screen says \"No charge\" · the check cost 9.2¢"
         }
       ],
       "shots": [
@@ -115,13 +121,13 @@
         "./robot-run/10-live.png",
         "./robot-run/10-result.png"
       ],
-      "startedAt": 1786044283083,
-      "checkId": 344,
-      "cost": 0.014147,
-      "costReadable": "1.4¢",
+      "startedAt": 1786045386325,
+      "checkId": 345,
+      "cost": 0.092353,
+      "costReadable": "9.2¢",
       "robotCost": null,
       "charged": false,
-      "statusKey": "busy"
+      "statusKey": "staff_hung_up"
     }
   ],
   "jsErrors": []
