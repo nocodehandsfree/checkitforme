@@ -81,22 +81,33 @@ def consume_approval(root, text):
 
 BANNED = ["good catch", "good question", "your instincts are right", "one honest answer",
           "worse than you thought", "that sharpens it", "should work",
-          "tldr"]
+          "tldr",
+          # Rule 6 tells: every one of these announces something he did not ask for.
+          "worth knowing", "one thing to watch", "one more thing", "unrelated but",
+          "you did not ask", "you didn't ask", "just so you know", "for what it's worth",
+          "fyi", "heads up", "in case you"]
 
 def is_short(text):
-    # The bypass exists so "Yes, all done." does not cost a 30 second rewrite (owner
-    # 08-04). It was 2 lines / 240 chars, which is roomy enough to ramble, invent a
-    # name, or miss his question with nothing judging it (owner caught this 08-05).
-    # Now only a true one-liner slips past; anything bigger goes to the writer.
+    # The bypass exists so a quick answer does not cost a 30 second rewrite (owner
+    # 08-04). Tried tightening it to 1 line / 140 chars on 08-05 and the owner called
+    # it too tight: rambling is a rule 6 problem, not a length problem, and the fix
+    # for it lives in the renderer (cut anything he did not need), not here.
     lines = [l for l in text.splitlines() if l.strip()]
-    return len(lines) == 1 and len(text.strip()) <= 140
+    return len(lines) <= 2 and len(text.strip()) <= 240
 
 def word_scan(text):
     prose = re.sub(r"```.*?```", "", text, flags=re.S)
     fails = []
     low = prose.lower()
+    RULE6 = ("rule 6: this announces something he did not ask about. If a decision rides "
+             "on it, say the decision plainly. If not, cut it entirely, he asks when he "
+             "wants more")
     REASON = {"should work": "banned: prove it or say NOT verified",
-              "tldr": "banned label (rule 1, owner 08-04): the answer is just the first line, never labeled TLDR"}
+              "tldr": "banned label (rule 1, owner 08-04): the answer is just the first line, never labeled TLDR",
+              "worth knowing": RULE6, "one thing to watch": RULE6, "one more thing": RULE6,
+              "unrelated but": RULE6, "you did not ask": RULE6, "you didn't ask": RULE6,
+              "just so you know": RULE6, "for what it's worth": RULE6, "fyi": RULE6,
+              "heads up": RULE6, "in case you": RULE6}
     for p in BANNED:
         if p in low:
             fails.append(f"banned phrase \"{p}\" ({REASON.get(p, 'flattery/filler, rule 7')})")
@@ -193,18 +204,27 @@ def render(root, owner_msg, draft, notes="", timeout=90):
         "chats, his latest message, and a working agent's complete answer. FIRST "
         "judge it against HIS LATEST MESSAGE: does it answer what he actually "
         "asked? Cut every part that is not the answer, a decision he has to make, "
-        "or something he asked about, however true that part is. If it never "
-        "answers him, rewrite so the answer comes first. THEN judge every "
+        "or something he asked about, however true or interesting that part is. "
+        "Say each thing ONCE: never restate a fix, a cause, or a result a second "
+        "time in different words. Never volunteer what he did not ask about, and "
+        "never raise something that needs nothing from him. He asks when he wants "
+        "more. If it never answers him, rewrite so the answer comes first. THEN "
+        "judge every "
         "sentence: would a person actually text this to a friend? And judge the "
         "shape: when the reply covers 2 or more separate things you MUST give each "
         "one a SHORT bold label alone on its own line with a plain paragraph under "
         "it. Pass the draft unchanged ONLY if it answers him, reads like one friend "
         "texting another, and already carries those labels. Otherwise rewrite it "
-        "fully in the owner's style. Keep every fact, number (as digits), name, "
+        "fully in the owner's style. CUTTING BEATS KEEPING: dropping a whole topic "
+        "he did not ask about, that needs nothing from him, is CORRECT and is not "
+        "a loss. But whatever you DO keep must survive exactly: every fact, "
+        "number (as digits), name, "
         "date, path, command, "
-        "quote, code block, decision, and instruction EXACTLY. Add nothing, drop "
-        "nothing, soften nothing, strengthen nothing. Never use a dash inside a "
-        "sentence. Answer with ONLY this JSON:\n"
+        "quote, code block, decision, and instruction EXACTLY. Add nothing, soften "
+        "nothing, strengthen nothing. \"Drop nothing\" applies INSIDE what you keep, "
+        "never against the cut above: if a whole topic fails the FIRST test, delete "
+        "it, do not park it under a label like \"Also\" or \"Unrelated\". Never use a "
+        "dash inside a sentence. Answer with ONLY this JSON:\n"
         '{"pass": true|false, "rewrite": "full corrected reply, empty when pass"}\n'
         + ("\nFIX ALSO: " + notes + "\n" if notes else "") +
         "\n=== HOW THE OWNER COMMUNICATES ===\n" + STYLE +
@@ -245,9 +265,13 @@ def mechanical_misses(draft, rendered):
 def meaning_check(root, owner_msg, draft, rendered, timeout=60):
     prompt = (
         "Compare ORIGINAL and REWRITE, written to answer the OWNER MESSAGE. Did "
-        "the rewrite add, remove, soften, strengthen, or change ANY fact, number, "
-        "decision, instruction, or uncertainty? Wording may differ freely; meaning "
-        "may not. Answer ONLY JSON: {\"faithful\": true|false, \"problems\": [\"...\"]}\n"
+        "the rewrite CHANGE, soften, strengthen, or distort any fact, number, "
+        "decision, instruction, or uncertainty that it KEPT? Wording may differ "
+        "freely; meaning may not. DROPPING a whole topic the owner did not ask "
+        "about, that needs no decision from him, is CORRECT and is never a "
+        "problem. Count a removal as a problem ONLY when it drops the answer to "
+        "his question, a decision he must make, or a warning he needs. "
+        "Answer ONLY JSON: {\"faithful\": true|false, \"problems\": [\"...\"]}\n"
         "\n=== OWNER MESSAGE ===\n" + (owner_msg or "(not captured)") +
         "\n\n=== ORIGINAL ===\n" + draft + "\n\n=== REWRITE ===\n" + rendered
     )
