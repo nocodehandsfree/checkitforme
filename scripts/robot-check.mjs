@@ -415,6 +415,11 @@ async function runOne(page, scene, greetingIdx) {
   const onScreen = await page.evaluate(() => {
     const v = document.querySelector("#result .rverdict");
     if (!v) return "unclear";
+    // RESTOCK INCOMING IS A NO WITH A DATE ON IT. Staff said they do not have it and named the
+    // day the truck comes, so the site paints the restock screen while the record says not in
+    // stock, and both are right. Reading that as a disagreement raised a false alarm the moment
+    // the clear-no scenes started answering "probably Tuesday" (owner 08-06).
+    if (v.classList.contains("soon")) return "out";
     return v.classList.contains("in") ? "in" : v.classList.contains("out") ? "out" : "unclear";
   }).catch(() => "unclear");
   const inRecord = current.statusKey === "in_stock" ? "in" : /not_in_stock|sold_out|does_not_sell/.test(String(current.statusKey)) ? "out" : "unclear";

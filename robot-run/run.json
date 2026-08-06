@@ -1,10 +1,10 @@
 {
-  "at": "2026-08-06T03:00:16.999Z",
+  "at": "2026-08-06T04:07:24.246Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
-      "scenario": 5,
-      "name": "Walks away, comes back",
+      "scenario": 2,
+      "name": "No, plainly",
       "items": [
         {
           "n": 1,
@@ -39,8 +39,8 @@
         {
           "n": 12,
           "name": "one check writes ONE record",
-          "pass": true,
-          "detail": "one row for this check"
+          "pass": false,
+          "detail": "4 rows for the same phone call: 317(4 lines), 318(4 lines), 319(4 lines), 316(6 lines)"
         },
         {
           "n": 4.1,
@@ -57,14 +57,14 @@
         {
           "n": 6,
           "name": "the words match what the robot actually said, word for word",
-          "pass": false,
-          "detail": "\"Okay, thank you for holding. Yeah, I did not see any, unfortunately.\" → written down only in part"
+          "pass": true,
+          "detail": "3 lines, all exact"
         },
         {
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
-          "pass": true,
-          "detail": "0 bounce(s) over 95 looks · header held at 49px"
+          "pass": false,
+          "detail": "1 bounce(s) over 42 looks · header held at 0px"
         },
         {
           "n": 8,
@@ -75,8 +75,8 @@
         {
           "n": 13,
           "name": "the check ends with a goodbye, not with us hanging up mid conversation",
-          "pass": false,
-          "detail": "the last thing said was OUR OWN QUESTION: \"Agent: Ah, gotcha, no worries Larry, do you know what day or time you might be getting mor\""
+          "pass": true,
+          "detail": "we signed off: \"Perfect, thanks so much, have a good one!\""
         },
         {
           "n": 14,
@@ -88,19 +88,19 @@
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 149 seconds and the line closed at 149 — 0 seconds of nothing"
+          "detail": "the answer was in at 31 seconds and the line closed at 31 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Thu, Aug 6 · 2:57 AM In stock MVPs has Pokémon.Go grab it before it's gone. Check another store Calling4 steps ·"
+          "detail": " Result Thu, Aug 6 · 4:06 AM Restock incoming A shipment lands Tuesday.Be first when it drops. Check another store Calli"
         },
         {
           "n": 9.1,
           "name": "the screen and the record say the same thing",
           "pass": false,
-          "detail": "the screen said in, the record says out (not_in_stock)"
+          "detail": "the screen said unclear, the record says out (not_in_stock)"
         },
         {
           "n": 11,
@@ -112,19 +112,19 @@
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "not charged · the screen claims no free check · the check cost 12.2¢"
+          "detail": "not charged · the screen claims no free check · the check cost 6.1¢"
         }
       ],
       "shots": [
-        "./robot-run/05-store-found.png",
-        "./robot-run/05-checking.png",
-        "./robot-run/05-live.png",
-        "./robot-run/05-result.png"
+        "./robot-run/02-store-found.png",
+        "./robot-run/02-checking.png",
+        "./robot-run/02-live.png",
+        "./robot-run/02-result.png"
       ],
-      "startedAt": 1785985018497,
-      "checkId": 308,
-      "cost": 0.12232,
-      "costReadable": "12.2¢",
+      "startedAt": 1785989158144,
+      "checkId": 316,
+      "cost": 0.06057,
+      "costReadable": "6.1¢",
       "robotCost": null,
       "charged": false,
       "statusKey": "not_in_stock"
