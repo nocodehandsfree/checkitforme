@@ -113,7 +113,7 @@ Full feature spec (all three lanes' parts): the kiosk spec in git history. Store
 | POST `/pub/waitlist` ·rl | `{ contact, lat, lng, area, region }` | `{ ok }` |
 | POST `/pub/store-request` ·rl | `{ storeName, chain, address, city, state, contact, note }` | `{ ok }` (queue only — never writes the live store) |
 | GET `/pub/bridge/:room` | — | `{ conversationId, wsHost }` |
-| POST `/pub/bridge-hangup` | `{ room }` | `{ ok }` |
+| POST `/pub/bridge-hangup` | `{ room }` | `{ ok }`, or `{ ok:false, reason:"staff_reached" }` once a person answered — the cancel window closes when Staff pick up (owner 08-06) |
 
 `·rl` = per-IP rate-limited. **`/pub/check*` and `/app/check*` are now per-IP rate-limited** (8/min/IP;
 comp/owner bypassed) — a flood returns `429 {error:"rate_limited", retryAfter}`. Response shapes on a
