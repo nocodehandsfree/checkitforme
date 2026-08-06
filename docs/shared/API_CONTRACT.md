@@ -234,7 +234,8 @@ scratch page for picking the check-mark icon; the owner deleted it 08-05.)
   `family|collector|hunter|operator`. `GET /api/admin/plans` adds the same `features` catalog + per-tier
   map (admin edits the matrix; `POST /api/admin/plans` accepts `features` per tier). `GET /app/me` adds
   `features:{key:bool}` = the account's entitlements (comp→all, subscriber→tier, PAYG/free→none) plus
-  existing `premiumAsks` (= features.exact_products). Checkout: `POST /app/checkout {kind, annual}`,
+  existing `premiumAsks` (**08-06: pinned `true` always — `exact_products` was retired as a premium
+  feature on 2026-07-15; exact asks are free for every account**). Checkout: `POST /app/checkout {kind, annual}`,
   kind = tier key or `payg:<checks>`. Website gates premium UI on `/app/me.features` and HIDES premium
   for PAYG. Additive — old `sub`/pack kinds still resolve.
 - 2026-07-03 — **Plans + PAYG + entitlements.** New `GET /pub/plans` →

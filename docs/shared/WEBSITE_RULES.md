@@ -57,11 +57,14 @@ monotonic stages. Finalize polls `/pub/result/:cid` until the verdict is confide
 **No answer = no charge:** only a definitive `completed` verdict charges, and the SERVER decides —
 the client never bills itself. Everything else renders "No charge for this one".
 
-**Entitlements.** Keys in `plans.ts`: `exact_products`, `zone_sweeps`, `restock_alerts`,
-`scheduled_checks`, `any_town`, `store_holds`, `your_voice`, `thrift_hunts`. Comp → all; subscriber →
-tier matrix; PAYG and free → none. `any_town` unlocks past the 10-mile cap on the 0.5/1/2/5/10 radius
-ladder (owner, 07-11). Zones, scheduling and exact products are server-enforced; the rest still gate
-in the UI only.
+**Entitlements** (re-read from `plans.ts` 2026-08-06 — the old list here was wrong). The 8 keys are
+`zone_sweeps`, `restock_alerts`, `scheduled_checks`, `any_town`, `thrift_hunts`, `hobby_hunts`,
+`store_holds`, `your_voice`. **`exact_products` is NOT one of them** — asking for the exact set and
+product became free for every account on 2026-07-15; `premiumAsks` is pinned true and only survives
+for old call-gating call-sites. **`store_holds` and `your_voice` are OFF for everyone**, including
+comp and the owner — they aren't built. So a paid tier means the other six. PAYG and free get none.
+`any_town` unlocks past the 10-mile cap on the 0.5/1/2/5/10 radius ladder (owner, 07-11). Zones and
+scheduling are server-enforced; the rest still gate in the UI only.
 
 **Auth is phone + SMS only** (Clerk is gone). Signed JWT in localStorage `cifm_token`, sent as Bearer.
 First login grants `policy.pricing.freeChecks` (default 1). Owner phones also mint the admin cookie.

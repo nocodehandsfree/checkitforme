@@ -20,13 +20,15 @@ the verdict alone.
   - **Plans** (subscription; checks reset monthly, no rollover) — **the ladder, owner 2026-08-06:**
     Family $4.99/20 (25¢ each) · Collector $9.99/45 (22.2¢) · Hunter $24.99/120 (20.8¢) ·
     Operator $59.99/300 (20¢). Per-check price falls as the tier rises. SMS alerts 5/15/40/150 a
-    month. Annual = 17% off. Every paid plan gets the 8 premium features. ⚠️ These are the seeded
+    month. Annual = 17% off. Every paid plan gets the 6 BUILT premium features (see below). ⚠️ These are the seeded
     DEFAULTS in `src/plans.ts`; the live numbers are whatever the owner saved in Admin → Plans
     (setting `vt_plans`). Check `GET /pub/plans`, never quote this line at a customer.
   - **Pay as you go** (never expires): 10/$9.90 · 25/$19.99 · 50/$34.99 · 75/$47.99 · 100/$60.00
     (99¢→60¢ per check). No premium features.
-- **Premium features** (per-tier matrix, all ON by default): exact products · zone sweeps · restock
-  alerts · scheduled checks · any town · store holds · your voice · thrift hunts.
+- **Premium features** (per-tier matrix; re-read from `plans.ts` 08-06): zone sweeps · restock alerts ·
+  scheduled checks · any town · thrift hunts · hobby hunts, all ON for every paid tier. **`store_holds`
+  and `your_voice` are OFF for EVERYONE, comp and owner included — they are not built.** `exact_products`
+  was retired as a premium feature 2026-07-15: exact set/product asks are free for every account.
 - **The moat**: a live map of 100K+ stores with a per-store dossier (real phone line, hours,
   carries, restock rhythm, reliability tier, phone-menu route to a human) that gets smarter with
   every call — plus a nav system that reaches a human for nearly $0 so unanswered calls cost us
@@ -176,7 +178,7 @@ Cancel: quota forfeits, PAYG survives.
 `accountFeatures` (plans.ts:151): comp → all; subscriber → tier matrix; PAYG/free → none.
 Server-enforced today: zone sweeps (all /app/zones* endpoints), scheduling (members only), exact
 products (call-prompt follow-up), restock SMS caps (per-tier monthly), subscriber-private finds.
-The rest (any_town, store_holds, your_voice, thrift_hunts) currently gate in the UI from `/app/me`.
+The rest (any_town, thrift_hunts, hobby_hunts) gate in the UI from `/app/me`; store_holds and your_voice are OFF for everyone (unbuilt).
 
 ### 5.4 Policy (src/policy.ts)
 One owner-tunable JSON blob over defaults: pricing (perCallCents display, freeChecks), finds
@@ -326,7 +328,8 @@ git sync; Copper's lane).
 6. There is no admin view of scheduled checks. The blank Calls → Schedules tab was REMOVED 07-15
    (verified 08-05: no `#schedules` section in `app.html`, not on `.claude/nav-allowlist`); the
    schedules API still exists. Consumer scheduling is unaffected.
-7. `store_holds`, `your_voice`, `thrift_hunts` are UI-gated only — no server-side enforcement yet.
+7. `thrift_hunts` and `hobby_hunts` are UI-gated only — no server-side enforcement yet. `store_holds`
+   and `your_voice` are hard-OFF for every account including comp: not built.
    (`any_town` gained server enforcement 2026-07-11: the radius ladder at server.ts:2171 reads the
    feature and caps free/PAYG at 10 miles.)
 8. **§2–4 were written 2026-07-10 and are only partly refreshed.** Fixed 08-06: every model constant
