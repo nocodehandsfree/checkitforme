@@ -14,13 +14,20 @@ trap 'bash scripts/kill-tests.sh >/dev/null 2>&1 || true' EXIT INT TERM
 # Every suite is bounded (owner 08-05): one suite that hangs used to hang the whole CI
 # run until the job was cancelled, with no summary and no clue which suite stalled.
 SUITE_TIMEOUT=${SUITE_TIMEOUT:-420}
-run(){ # label, command
+# A suite's exit code is the SUITE's, never its cleanup's (owner-facing bug found 08-06): 30 of the
+# 63 lines below end in `; rm -f <db>`, and in a compound command the exit code is the LAST one — so
+# a failing suite that cleaned up fine reported OK, and CI went green over real failures.
+# `set -o pipefail` + running the suite and the cleanup separately keeps the suite's own verdict.
+run(){ # label, command  (an optional trailing "; rm ..." cleanup is split off and run after)
   echo ""; echo "▭▭▭ $1 ▭▭▭"
-  if timeout -k 15 "$SUITE_TIMEOUT" bash -c "$2"; then echo "   → $1 OK"
+  local cmd="$2" cleanup=""
+  case "$2" in *\;\ rm\ *) cmd="${2%%; rm *}"; cleanup="rm ${2#*; rm }";; esac
+  timeout -k 15 "$SUITE_TIMEOUT" bash -c "$cmd"; local rc=$?
+  [ -n "$cleanup" ] && bash -c "$cleanup" >/dev/null 2>&1
+  if [ $rc -eq 0 ]; then echo "   → $1 OK"
   else
-    rc=$?
     if [ $rc -eq 124 ] || [ $rc -eq 137 ]; then echo "   → $1 TIMED OUT after ${SUITE_TIMEOUT}s"; fi
-    echo "   → $1 FAILED"; FAILED="$FAILED $1"
+    echo "   → $1 FAILED (exit $rc)"; FAILED="$FAILED $1"
   fi
 }
 

@@ -240,18 +240,26 @@ Product/set/price questions ("booster box or sleeved? which set? how much?") ext
 Anchors: standard check ≤6¢ blended, premium ≤15¢. Assume honest-worst-case usage (100% of quota)
 must still be profitable; real subscription usage runs 30-60%.
 
+**THE LADDER — owner, 2026-08-06.** This is the real one; the tier names and numbers below it used to
+be a stale proposal with Hunter and Collector swapped. Per-check price falls as the tier rises.
+
 | Tier | Price | Checks/mo | Rev/check | Cost/check (blended) | Margin at 100% usage |
 |---|---|---|---|---|---|
-| **Pay as you go** | $9.99 / 10 → $59.99 / 100 (slider, "buy more pay less": 99¢ → 60¢) | — | 60-99¢ | ~6¢ | **10-16×** |
-| **Hunter $9.99/mo** | $9.99 | **30** standard | 33¢ | ~6¢ | 5.5× |
-| **Collector $19.99/mo** | $19.99 | **100** (premium asks unlocked) | 20¢ | ~8¢ (30% premium mix) | 2.5× |
-| **Operator $49.99/mo** (exists) | $49.99 | **350** + everything | 14¢ | ~7¢ | 2× |
+| **Family** | $4.99 | **20** | 25¢ | ~6¢ | 4.2× |
+| **Collector** | $9.99 | **45** | 22.2¢ | ~6¢ | 3.7× |
+| **Hunter** | $24.99 | **120** | 20.8¢ | ~8¢ (30% premium mix) | 2.6× |
+| **Operator** | $59.99 | **300** | 20.0¢ | ~7¢ | 2.9× |
+| **Pay as you go** | $9.90 / 10 → $60.00 / 100 (slider: 99¢ → 60¢) | — | 60-99¢ | ~6¢ | **10-16×** |
 | **Shop / bulk (B2B)** | invoice | 500-1,000 at 8-10¢ | 8-10¢ | ~6¢ | 1.3-1.6× at volume |
 
+Every tier clears the owner's 67% gross-margin floor at 100% usage, which is the worst case — real
+subscription usage runs 30-60%. **The live truth is Admin → Plans (`vt_plans`), checkable at
+`GET /pub/plans`; the seeded defaults are `src/plans.ts`.** Never quote this table at a customer.
+
 Notes:
-- **Don't sell unlimited.** The quota IS the margin guarantee; 350 at $49.99 is already generous.
-- Annual −17% (matches the comps) is fine at these margins.
-- Premium asks are the $19.99 hook: "ask for the exact set and product, get the price quoted."
+- **Don't sell unlimited.** The quota IS the margin guarantee.
+- Annual −17% is fine at these margins.
+- Premium asks are the paid hook: "ask for the exact set and product, get the price quoted."
 - The cache turns high tiers profitable even at 100% usage: heavy users concentrate on hot stores,
   which are exactly the stores most likely to be answered from cache.
 - Gate: margins hold today for BRIDGE checks. Subscriber auto-checks (scheduled) still ride the

@@ -79,10 +79,11 @@ const tierDef = (key: string, name: string, monthlyCents: number, checksPerMonth
 export const DEFAULT_PLANS: PlansConfig = {
   tiers: [
     // smsAlertsPerMonth = restock-text budget per tier (COGS control; owner: Family = 5). Email is uncapped.
-    tierDef("family",   "Family",   499,  20,  5),
-    tierDef("collector", "Collector", 999,  50,  15),
-    tierDef("hunter",   "Hunter",   1999, 125,  40),
-    tierDef("operator", "Operator", 4999, 400, 150),
+    // THE LADDER (owner, 2026-08-06): per-check price falls as the tier rises — 25¢ → 22.2¢ → 20.8¢ → 20¢.
+    tierDef("family",   "Family",   499,  20,  5),   // 24.95¢/check
+    tierDef("collector", "Collector", 999,  45,  15), // 22.2¢/check
+    tierDef("hunter",   "Hunter",   2499, 120,  40), // 20.8¢/check
+    tierDef("operator", "Operator", 5999, 300, 150), // 20.0¢/check
   ],
   // PAYG: per-check slides 99¢ (10) → 60¢ (100) with volume (owner, 2026-07-03).
   payg: {

@@ -17,12 +17,12 @@ the verdict alone.
 - **Four brands, one codebase**: Pokémon, One Piece, Topps NBA, NeeDoh (subdomains + apex). New
   brands snap on via config (src/brands.ts).
 - **First check free** (policy default 1). Then either:
-  - **Plans** (subscription; checks reset monthly, no rollover) — **defaults re-read from
-    `src/plans.ts` 2026-08-06:** Family $4.99/20 · Collector $9.99/50 · Hunter $19.99/125 ·
-    Operator $49.99/400, with 5/15/40/150 SMS alerts a month. Annual = 17% off. Every paid plan gets
-    the 8 premium features. ⚠️ These are the seeded DEFAULTS; the live numbers are whatever the owner
-    saved in Admin → Plans (setting `vt_plans`). Check `GET /pub/plans`, never quote this line at a
-    customer.
+  - **Plans** (subscription; checks reset monthly, no rollover) — **the ladder, owner 2026-08-06:**
+    Family $4.99/20 (25¢ each) · Collector $9.99/45 (22.2¢) · Hunter $24.99/120 (20.8¢) ·
+    Operator $59.99/300 (20¢). Per-check price falls as the tier rises. SMS alerts 5/15/40/150 a
+    month. Annual = 17% off. Every paid plan gets the 8 premium features. ⚠️ These are the seeded
+    DEFAULTS in `src/plans.ts`; the live numbers are whatever the owner saved in Admin → Plans
+    (setting `vt_plans`). Check `GET /pub/plans`, never quote this line at a customer.
   - **Pay as you go** (never expires): 10/$9.90 · 25/$19.99 · 50/$34.99 · 75/$47.99 · 100/$60.00
     (99¢→60¢ per check). No premium features.
 - **Premium features** (per-tier matrix, all ON by default): exact products · zone sweeps · restock
