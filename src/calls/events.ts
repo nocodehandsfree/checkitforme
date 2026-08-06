@@ -254,23 +254,31 @@ export function amend(room: string, kind: EventKind, patch: Record<string, unkno
  * other event on this call. TEXT ONLY — no audio, ever, on any path.
  */
 /**
- * `spokenAtMs` — WHEN THEY SAID IT, when that is not when we heard about it. Staff's hello is spoken
- * before our question and only becomes words later, after their held audio is handed to the agent and
- * he transcribes it. Stamped on arrival it lands UNDER our own question, so the customer reads a
- * conversation where we spoke first and the store answered a question it had not been asked yet
- * (owner screenshot 07-31). Given a real time, the line is filed where it belongs instead of at the
- * end. Everything else is unchanged: the clock is this call's own, and it is still text only.
+ * `spokenAtEpochMs` — WHEN THEY SAID IT, when that is not when we heard about it. Staff's hello is
+ * spoken before our question and only becomes words later, after their held audio is handed to the
+ * agent and he transcribes it. Stamped on arrival it lands UNDER our own question, so the customer
+ * reads a conversation where we spoke first and the store answered a question it had not been asked
+ * yet (owner screenshot 07-31). Given a real time, the line is filed where it belongs.
+ *
+ * IT IS A WALL CLOCK MOMENT, NOT AN OFFSET (owner 08-06, "we need accurate timing"). It used to be
+ * an offset, and the caller measured its offset from when the AUDIO opened while this record counts
+ * from when the CHECK opened, about two seconds earlier. So every backdated greeting was written
+ * down two seconds early and the sheet drew Staff speaking before the row saying the line was
+ * answered. A moment cannot be measured from the wrong zero, so the caller hands us the moment and
+ * the ONE place that owns this call's zero does the subtraction. A number too small to be a real
+ * moment is ignored rather than trusted: a wrong unit must never plant a time on the record.
  */
 /** @param certain WE produced this line ourselves (a recording we played down the wire), so it can
  *  never be an echo and the echo protection must not eat it. A recording really can ask the same
  *  question twice inside ten seconds on a fast hand-over, and both askings belong on the record. */
-export function recordLine(room: string, who: "Agent" | "Clerk", text: string, spokenAtMs?: number, certain?: boolean): boolean {
+export function recordLine(room: string, who: "Agent" | "Clerk", text: string, spokenAtEpochMs?: number, certain?: boolean): boolean {
   try {
     const r = receipts.get(room);
     if (!r || r.closed) return true; // no record to guard — the caller may still show the line
     const t = String(text || "").trim();
     if (!t) return false;
-    const at = Math.max(0, spokenAtMs ?? (Date.now() - r.startMs));
+    const spoken = (spokenAtEpochMs != null && spokenAtEpochMs > 1e12) ? spokenAtEpochMs - r.startMs : null;
+    const at = Math.max(0, spoken ?? (Date.now() - r.startMs));
     // THE SAME SENTENCE SAID ONCE IS RECORDED ONCE (08-01 audit, open fault 4). The question we
     // played comes back from the agent's session styled differently, a reconnected session can
     // replay a line, and two delivery paths can each hand over one sentence. Matching is FUZZY —

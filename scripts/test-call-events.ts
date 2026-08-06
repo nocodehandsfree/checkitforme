@@ -6,7 +6,7 @@
 // from the plan, and the phone line bills whole minutes. No database, no network, no clock games.
 import {
   openReceipt, emit, amend, markNow, addMs, closeReceipt, rollup, rollupFromRow, setEventSink,
-  getReceipt, laneNote, laneFor, actualLane, _receiptFrom, _reset, type Receipt, type RtEvent,
+  getReceipt, laneNote, laneFor, actualLane, recordLine, _receiptFrom, _reset, type Receipt, type RtEvent,
 } from "../src/calls/events";
 import { costCall, costPerResult, costBuckets, money, MEASURED_RATES, STATUS_READ_USD, USD } from "../src/calls/cost";
 
@@ -290,6 +290,28 @@ console.log("▶ the five buckets, his names, and they SUM TO THE TOTAL exactly 
   const b2 = costBuckets(cost2, { callSecs: 30, navSecs: 0, streams: 1 }, MEASURED_RATES, 0);
   ok(!b2.some((x) => x.key === "bravo") && !b2.some((x) => x.key === "status"), "a bucket that spent nothing does not render");
   ok(b2.reduce((n, x) => n + x.usd, 0) === cost2.totalUsd, "…and the rest still sum to the total");
+}
+
+// ---------------------------------------------------------------------------------------------
+// A LINE'S TIME IS A MOMENT, MEASURED FROM THIS CALL'S OWN ZERO (owner 08-06, "we need accurate
+// timing"). The caller that backdates Staff's greeting counts from when the AUDIO opened, and this
+// record counts from when the CHECK opened, about two seconds earlier, so an offset handed straight
+// over wrote every greeting two seconds early and the sheet drew Staff speaking before the row that
+// says the line was answered.
+console.log("▶ a spoken line is filed at the moment it was really said");
+{
+  _reset();
+  const r = openReceipt("room-clock");
+  r.startMs = Date.now() - 30_000;                       // the check opened 30 seconds ago
+  recordLine("room-clock", "Clerk", "Fun store, this is Larry.", Date.now() - 22_000);
+  ok(near(r.transcript[0].atMs, 8_000, 60), `a moment 22 seconds ago on a check 30 seconds old files at 8s (got ${r.transcript[0].atMs}ms)`);
+  recordLine("room-clock", "Agent", "do you have any Pokemon in");
+  ok(near(r.transcript[1].atMs, 30_000, 60), `a line with no moment given files at now (got ${r.transcript[1].atMs}ms)`);
+  // A number too small to be a wall clock moment is somebody's offset, and an offset from the wrong
+  // zero is exactly the fault. It is ignored, and the line files at now, never at a planted time.
+  recordLine("room-clock", "Clerk", "We did not.", 1_019);
+  ok(near(r.transcript[2].atMs, 30_000, 60), `a number that cannot be a moment is refused (got ${r.transcript[2].atMs}ms)`);
+  ok(r.transcript.every((l, i, a) => i === 0 || a[i - 1].atMs <= l.atMs), "the conversation stays in the order it happened");
 }
 
 console.log(`\n${fail === 0 ? "ALL PASS" : "FAILURES"} — ${pass} passed, ${fail} failed`);

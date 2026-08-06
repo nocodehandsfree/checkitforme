@@ -512,7 +512,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   /** When their hello actually started. Their words only exist once the agent has transcribed the
    *  audio we held, which is after our question played — so stamped on arrival, the greeting lands
    *  UNDER the question it came before. This is the time it belongs at, spent on the first line back. */
-  let greetingStartedMs = 0;
+  /** THE MOMENT ITSELF, ON THE WALL CLOCK (owner 08-06). This was an offset from `startMs`, which is
+   *  when the AUDIO opened, and the record counts from when the CHECK opened, about two seconds
+   *  earlier: every greeting went onto the record two seconds early and the sheet drew Staff
+   *  speaking above the row saying the line was answered. The record owns its own zero, so it is
+   *  handed the moment and does the subtraction itself (`recordLine` in src/calls/events.ts). */
+  let greetingStartedAtEpochMs = 0;
   let waitTotalMs = 0;
   /** A breath after the clip so the agent can never clip its own tail. */
   const CLIP_SETTLE_MS = tune.clipSettleMs;
@@ -1322,7 +1327,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // (fresh or a repeat) gates the relay below, so the page can never show a line twice that
         // the record holds once (08-01 audit, open fault 4).
         let freshLine = false;
-        if (txt) { freshLine = recordLine(room, "Clerk", String(txt), greetingStartedMs || undefined); greetingStartedMs = 0; }
+        if (txt) { freshLine = recordLine(room, "Clerk", String(txt), greetingStartedAtEpochMs || undefined); greetingStartedAtEpochMs = 0; }
         // Flipped AFTER the voicemail test below has had its one look at this line, so the store's
         // FIRST words are the only ones that may end a check as a machine (round 2, item 3).
         const wasStoreFirstLine = txt ? !storeHasSpoken : false;
@@ -1993,7 +1998,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
             // Start on a real voice, never on ringback or an empty line, so the window holds the
             // greeting rather than the silence in front of it.
             if (frameEnergy(b64) > VOICE_THRESH && toneShare(b64) < 0.45) {
-              greetingStartedMs = Math.max(0, Date.now() - startMs);
+              greetingStartedAtEpochMs = Date.now();
               preRoll.push(b64);
             }
           } else {
