@@ -85,7 +85,12 @@ BANNED = ["good catch", "good question", "your instincts are right", "one honest
           # Rule 6 tells: every one of these announces something he did not ask for.
           "worth knowing", "one thing to watch", "one more thing", "unrelated but",
           "you did not ask", "you didn't ask", "just so you know", "for what it's worth",
-          "fyi", "heads up", "in case you"]
+          "fyi", "heads up", "in case you",
+          # Rule 7 tells: setting the answer up with a headline instead of just saying it.
+          "here's what", "here is what", "let me explain", "let me walk", "to be clear",
+          "the short answer", "the long answer", "bottom line", "in short", "to summarize",
+          "to sum up", "here's the thing", "here is the thing", "the good news",
+          "the bad news", "first off", "before i get into", "let me start"]
 
 def is_short(text):
     # The bypass exists so a quick answer does not cost a 30 second rewrite (owner
@@ -102,12 +107,20 @@ def word_scan(text):
     RULE6 = ("rule 6: this announces something he did not ask about. If a decision rides "
              "on it, say the decision plainly. If not, cut it entirely, he asks when he "
              "wants more")
+    RULE7 = ("rule 7: nothing ever needs to be set up with a headline. Delete the run-up "
+             "and just say the thing")
     REASON = {"should work": "banned: prove it or say NOT verified",
               "tldr": "banned label (rule 1, owner 08-04): the answer is just the first line, never labeled TLDR",
               "worth knowing": RULE6, "one thing to watch": RULE6, "one more thing": RULE6,
               "unrelated but": RULE6, "you did not ask": RULE6, "you didn't ask": RULE6,
               "just so you know": RULE6, "for what it's worth": RULE6, "fyi": RULE6,
-              "heads up": RULE6, "in case you": RULE6}
+              "heads up": RULE6, "in case you": RULE6,
+              "here's what": RULE7, "here is what": RULE7, "let me explain": RULE7,
+              "let me walk": RULE7, "to be clear": RULE7, "the short answer": RULE7,
+              "the long answer": RULE7, "bottom line": RULE7, "in short": RULE7,
+              "to summarize": RULE7, "to sum up": RULE7, "here's the thing": RULE7,
+              "here is the thing": RULE7, "the good news": RULE7, "the bad news": RULE7,
+              "first off": RULE7, "before i get into": RULE7, "let me start": RULE7}
     for p in BANNED:
         if p in low:
             fails.append(f"banned phrase \"{p}\" ({REASON.get(p, 'flattery/filler, rule 7')})")
