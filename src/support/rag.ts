@@ -4,7 +4,7 @@
 // collection. The support_qa collection holds owner-approved Q&As (the answer cache) and is only
 // ever appended to. The agent answers ONLY from what these two searches return.
 import { embed, embedOne } from "./embed";
-import { BOOK, QA, ensureCollection, resetCollection, upsert, search, idFor, type Hit } from "./qdrant";
+import { BOOK, QA, ensureCollection, pruneTo, upsert, search, idFor, type Hit } from "./qdrant";
 
 // The book is the single source of truth on ReadMe. llms.txt indexes every page; each page has a
 // .md we fetch for the text and a human URL we link to from the Help tab. Falls back to the GitHub
@@ -63,12 +63,19 @@ export async function reindexBook(source: "readme" | "repo" = "readme"): Promise
   if (!chunks.length) chunks = await fetchFromRepo();
   if (!chunks.length) throw new Error("book fetch returned no pages");
   const vectors = await embed(chunks.map((c) => `${c.title}\n\n${c.text}`));
-  await resetCollection(BOOK);
-  await upsert(BOOK, chunks.map((c, i) => ({
+  // WRITE FIRST, TIDY AFTER. Ids are deterministic, so every page that still exists is overwritten
+  // in place and the old book stays searchable the whole time. Only once the new pages are safely
+  // in do we remove the ones that are gone. Dropping the collection first is what left the agent
+  // knowing nothing when a reindex timed out mid-write (staging, 08-06).
+  await ensureCollection(BOOK);
+  const points = chunks.map((c, i) => ({
     id: idFor(c.key),
     vector: vectors[i],
     payload: { title: c.title, url: c.url, text: c.text },
-  })));
+  }));
+  await upsert(BOOK, points);
+  const dropped = await pruneTo(BOOK, points.map((p) => p.id));
+  if (dropped) console.log(`[support] reindex: ${chunks.length} pages in, ${dropped} stale removed`);
   return chunks.length;
 }
 

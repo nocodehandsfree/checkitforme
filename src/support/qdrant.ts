@@ -29,10 +29,35 @@ export async function ensureCollection(name: string): Promise<void> {
   await q("PUT", `/collections/${name}`, { vectors: { size: DIMS, distance: "Cosine" } });
 }
 
-/** Drop + recreate (book reindex only — never call on the QA collection). */
+/** Drop + recreate (book reindex only — never call on the QA collection).
+ *  PREFER `pruneTo` for a reindex: dropping first means that if the write behind it fails, the
+ *  agent is left knowing NOTHING, which is exactly what happened on staging 08-06 when a reindex
+ *  timed out at the edge mid-write and the chat started answering "I'm not sure" to questions the
+ *  book covers. */
 export async function resetCollection(name: string): Promise<void> {
   await fetch(`${QDRANT}/collections/${name}`, { method: "DELETE" });
   await q("PUT", `/collections/${name}`, { vectors: { size: DIMS, distance: "Cosine" } });
+}
+
+/** Remove every point whose id is NOT in `keep`. Run AFTER the new points are written, so the
+ *  collection is only ever added to and then tidied: a failure anywhere leaves the old book intact
+ *  and searchable instead of leaving an empty one. Ids are deterministic (`idFor`), so a page that
+ *  still exists is overwritten in place by the upsert and never deleted here. */
+export async function pruneTo(name: string, keep: string[]): Promise<number> {
+  const seen = new Set(keep);
+  const stale: string[] = [];
+  let offset: unknown = undefined;
+  // Page through the collection; ids only, payload and vectors are not needed to decide.
+  for (let guard = 0; guard < 200; guard++) {
+    const d = await q("POST", `/collections/${name}/points/scroll`, {
+      limit: 256, with_payload: false, with_vector: false, ...(offset !== undefined && offset !== null ? { offset } : {}),
+    });
+    for (const p of d.result?.points || []) if (!seen.has(String(p.id))) stale.push(String(p.id));
+    offset = d.result?.next_page_offset;
+    if (offset === undefined || offset === null) break;
+  }
+  if (stale.length) await q("POST", `/collections/${name}/points/delete?wait=true`, { points: stale });
+  return stale.length;
 }
 
 export interface Point { id: string; vector: number[]; payload: Record<string, unknown> }
