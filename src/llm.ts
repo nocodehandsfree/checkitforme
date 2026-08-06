@@ -27,6 +27,25 @@ export interface LlmOpts {
   temperature?: number;
   json?: boolean;        // ask the model for strict JSON out
   cache?: boolean;       // let Helicone cache identical prompts
+  /** Hard ceiling on one call, ms. A hung provider used to block until the platform gave up, and
+   *  the customer got a blank where their answer should be (support chat, 3 of 43 messages, 08-06).
+   *  Default is generous so nothing that works today changes; callers on a clock pass their own. */
+  timeoutMs?: number;
+}
+
+// A call that has not answered in this long is not going to. Bounded so a hung provider fails fast
+// enough for the caller to fall back, instead of holding the request open until something upstream
+// kills it and the person waiting sees nothing at all.
+const DEFAULT_TIMEOUT_MS = 60_000;
+async function post(url: string, init: RequestInit, o: LlmOpts, what: string): Promise<Response> {
+  const ms = Math.max(1000, o.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: AbortSignal.timeout(ms) });
+  } catch (e) {
+    const err = e as Error;
+    if (err.name === "TimeoutError" || err.name === "AbortError") throw new Error(`llm ${what} timed out after ${ms}ms`);
+    throw err;
+  }
 }
 
 function isGemini(model: string): boolean { return model.startsWith("gemini"); }
@@ -60,7 +79,7 @@ export async function llm(model: string, input: string | LlmMsg[], opts: LlmOpts
 async function openaiCall(model: string, messages: LlmMsg[], o: LlmOpts): Promise<string> {
   const key = config.openaiKey;
   if (!key) throw new Error("OPENAI_API_KEY not set");
-  const r = await fetch("https://oai.helicone.ai/v1/chat/completions", {
+  const r = await post("https://oai.helicone.ai/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", ...heli(o.job, o.cache) },
     body: JSON.stringify({
@@ -69,7 +88,7 @@ async function openaiCall(model: string, messages: LlmMsg[], o: LlmOpts): Promis
       temperature: o.temperature ?? 0,
       ...(o.json ? { response_format: { type: "json_object" } } : {}),
     }),
-  });
+  }, o, "openai");
   if (!r.ok) throw new Error(`llm openai ${r.status}: ${(await r.text()).slice(0, 160)}`);
   const d = (await r.json()) as { choices?: { message?: { content?: string } }[] };
   return d.choices?.[0]?.message?.content ?? "";
@@ -80,7 +99,7 @@ async function openaiCall(model: string, messages: LlmMsg[], o: LlmOpts): Promis
 async function groqCall(model: string, messages: LlmMsg[], o: LlmOpts): Promise<string> {
   const key = config.groqKey;
   if (!key) throw new Error("GROQ_API_KEY not set");
-  const r = await fetch("https://groq.helicone.ai/openai/v1/chat/completions", {
+  const r = await post("https://groq.helicone.ai/openai/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", ...heli(o.job, o.cache) },
     body: JSON.stringify({
@@ -89,7 +108,7 @@ async function groqCall(model: string, messages: LlmMsg[], o: LlmOpts): Promise<
       temperature: o.temperature ?? 0,
       ...(o.json ? { response_format: { type: "json_object" } } : {}),
     }),
-  });
+  }, o, "groq");
   if (!r.ok) throw new Error(`llm groq ${r.status}: ${(await r.text()).slice(0, 160)}`);
   const d = (await r.json()) as { choices?: { message?: { content?: string } }[] };
   return d.choices?.[0]?.message?.content ?? "";
@@ -102,7 +121,7 @@ async function anthropicCall(model: string, messages: LlmMsg[], o: LlmOpts): Pro
   if (!key) throw new Error("ANTHROPIC_API_KEY not set");
   const system = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n");
   const rest = messages.filter((m) => m.role !== "system");
-  const r = await fetch("https://anthropic.helicone.ai/v1/messages", {
+  const r = await post("https://anthropic.helicone.ai/v1/messages", {
     method: "POST",
     headers: {
       "x-api-key": key, "anthropic-version": "2023-06-01", "Content-Type": "application/json",
@@ -114,7 +133,7 @@ async function anthropicCall(model: string, messages: LlmMsg[], o: LlmOpts): Pro
       messages: rest.map((m) => ({ role: m.role, content: m.content })),
       max_tokens: o.maxTokens ?? 512,
     }),
-  });
+  }, o, "anthropic");
   if (!r.ok) throw new Error(`llm anthropic ${r.status}: ${(await r.text()).slice(0, 160)}`);
   const d = (await r.json()) as { content?: { type: string; text?: string }[] };
   return (d.content || []).filter((b) => b.type === "text").map((b) => b.text || "").join("");
@@ -127,7 +146,7 @@ async function geminiCall(model: string, messages: LlmMsg[], o: LlmOpts): Promis
   const contents = messages
     .filter((m) => m.role !== "system")
     .map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] }));
-  const r = await fetch(`https://gateway.helicone.ai/v1beta/models/${model}:generateContent`, {
+  const r = await post(`https://gateway.helicone.ai/v1beta/models/${model}:generateContent`, {
     method: "POST",
     headers: {
       "x-goog-api-key": key, "Content-Type": "application/json",
@@ -142,7 +161,7 @@ async function geminiCall(model: string, messages: LlmMsg[], o: LlmOpts): Promis
         ...(o.json ? { responseMimeType: "application/json" } : {}),
       },
     }),
-  });
+  }, o, "gemini");
   if (!r.ok) throw new Error(`llm gemini ${r.status}: ${(await r.text()).slice(0, 160)}`);
   const d = (await r.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
   return (d.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("");

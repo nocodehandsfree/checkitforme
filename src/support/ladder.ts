@@ -16,6 +16,7 @@ import { supportConversations, supportMessages } from "../db/schema";
 import { llm, type LlmMsg } from "../llm";
 import { retrieve } from "./rag";
 import { verifyCheckIssue, creditReply } from "./credits";
+import { coverageNote } from "./stores";
 
 export const SUPPORT_MODELS = {
   free: process.env.SUPPORT_MODEL_FREE || "gemini-2.5-flash-lite",
@@ -65,7 +66,7 @@ async function empathyOpener(userMessage: string, lang: string): Promise<string>
     const raw = await llm(SUPPORT_MODELS.cheap, [
       { role: "system", content: `You are a warm support agent for Check It For Me. The customer just told you something went wrong with a check we ran for them. Write ONE short, warm opening line that shows you heard them and are looking into it. ${es ? "Reply in Spanish." : "Reply in English."} Hard rules: one sentence, under 11 words, plain friend voice, no dashes, no emoji. Do NOT state any outcome, and NEVER mention credits, checks, charges, refunds, money, prices, or any number. Output only the sentence.` },
       { role: "user", content: userMessage.slice(0, 300) },
-    ], { job: "support-empathy", maxTokens: 40, temperature: 0.8 });
+    ], { job: "support-empathy", maxTokens: 40, temperature: 0.8, timeoutMs: 6000 });
     return cleanTouch(raw, 90);
   } catch { return ""; }
 }
@@ -79,7 +80,7 @@ export async function warmClose(lang: string): Promise<string> {
     const raw = await llm(SUPPORT_MODELS.cheap, [
       { role: "system", content: `You are a warm support agent for Check It For Me. The customer just said your answer helped. Write ONE short, warm closing line: be glad you helped and ask if there is anything else. ${es ? "Reply in Spanish." : "Reply in English."} Hard rules: one short sentence, plain friend voice, no dashes, no emoji. Do NOT mention credits, checks, charges, refunds, money, or numbers. Output only the line.` },
       { role: "user", content: es ? "Eso resolvió mi duda." : "That answered it." },
-    ], { job: "support-close", maxTokens: 40, temperature: 0.8 });
+    ], { job: "support-close", maxTokens: 40, temperature: 0.8, timeoutMs: 6000 });
     return cleanTouch(raw, 120) || fallback;
   } catch { return fallback; }
 }
@@ -247,6 +248,9 @@ export async function answerSupport(sessionId: string, userMessage: string, opts
   }
 
   const ctx = await retrieve(userMessage);
+  // "Do you check the Target in Glendale?" is a promise, not a fact from the book. Answer it from
+  // the store list or not at all (round 1 test 4).
+  const coverage = await coverageNote(userMessage).catch(() => "");
 
   // Rung 0 — answer cache. Only on the opening question: follow-ups depend on conversation
   // context a cached one-shot answer doesn't have.
@@ -257,7 +261,7 @@ export async function answerSupport(sessionId: string, userMessage: string, opts
   const catHint = CATEGORY_HINT[convo.category || category] || "";
   const checkBlock = opts.checkContext ? `\n\nThis signed-in customer's recent checks (use for specifics, never invent):\n${opts.checkContext}` : "";
   const msgs: LlmMsg[] = [
-    { role: "system", content: `${SYSTEM}${catHint ? `\n\n${catHint}` : ""}\n\nWhat you know:\n${ctx.passages || "(nothing on this)"}${checkBlock}` },
+    { role: "system", content: `${SYSTEM}${catHint ? `\n\n${catHint}` : ""}\n\nWhat you know:\n${ctx.passages || "(nothing on this)"}${coverage}${checkBlock}` },
     ...history.slice(-8).map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
   ];
   const inChars = msgs.reduce((n, m) => n + m.content.length, 0);
@@ -271,10 +275,19 @@ export async function answerSupport(sessionId: string, userMessage: string, opts
 
   let cost = 0;
   let last: { answer: string; needsHuman: boolean } | null = null;
+  // A CUSTOMER ALWAYS GETS A REPLY. Three of 43 messages in round 1 came back blank because a model
+  // call hung and the whole request died at the edge with nothing in it (08-06). Each rung is now
+  // capped, and the ladder stops climbing once the budget is spent, so the worst case is an honest
+  // "something went wrong" instead of silence. The numbers are set so all three rungs plus the
+  // retrieval still finish inside the edge's patience.
+  const RUNG_MS = 12_000;
+  const LADDER_DEADLINE = Date.now() + 26_000;
   for (const rung of rungs) {
+    if (Date.now() > LADDER_DEADLINE) { console.error("[support] ladder out of time before tier", rung.tier); break; }
     try {
       const raw = await llm(rung.model, msgs, {
         job: `support-t${rung.tier}`, json: true, maxTokens: rung.tier === 3 ? 700 : 400, temperature: 0,
+        timeoutMs: Math.min(RUNG_MS, Math.max(2000, LADDER_DEADLINE - Date.now())),
       });
       cost += estCost(rung.model, inChars, raw.length);
       const p = JSON.parse(raw) as { answer?: string; confident?: boolean; needs_human?: boolean };
