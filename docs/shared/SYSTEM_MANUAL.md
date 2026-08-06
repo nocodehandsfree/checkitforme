@@ -17,10 +17,14 @@ the verdict alone.
 - **Four brands, one codebase**: Pokémon, One Piece, Topps NBA, NeeDoh (subdomains + apex). New
   brands snap on via config (src/brands.ts).
 - **First check free** (policy default 1). Then either:
-  - **Plans** (subscription; checks reset monthly, no rollover): Family $4.99/15 · Collector
-    $9.99/30 · Hunter $19.99/100 · Operator $49.99/300. Annual = 17% off. Every paid plan gets the
-    8 premium features.
-  - **Pay as you go** (never expires): 10/$9.90 → 100/$60.00 (99¢→60¢ per check). No premium features.
+  - **Plans** (subscription; checks reset monthly, no rollover) — **defaults re-read from
+    `src/plans.ts` 2026-08-06:** Family $4.99/20 · Collector $9.99/50 · Hunter $19.99/125 ·
+    Operator $49.99/400, with 5/15/40/150 SMS alerts a month. Annual = 17% off. Every paid plan gets
+    the 8 premium features. ⚠️ These are the seeded DEFAULTS; the live numbers are whatever the owner
+    saved in Admin → Plans (setting `vt_plans`). Check `GET /pub/plans`, never quote this line at a
+    customer.
+  - **Pay as you go** (never expires): 10/$9.90 · 25/$19.99 · 50/$34.99 · 75/$47.99 · 100/$60.00
+    (99¢→60¢ per check). No premium features.
 - **Premium features** (per-tier matrix, all ON by default): exact products · zone sweeps · restock
   alerts · scheduled checks · any town · store holds · your voice · thrift hunts.
 - **The moat**: a live map of 100K+ stores with a per-store dossier (real phone line, hours,
@@ -64,9 +68,11 @@ service.ts:733), the ElevenLabs webhook (HMAC-verified, server.ts:4900), and on-
 `GET /pub/result/:cid` so the first verdict a customer sees is already final. Extraction
 (elevenlabs.ts:202): EL's structured fields + transcript heuristics (a bare "no" never becomes
 "doesn't sell"; self-contradiction → let the second read break the tie). When EL was unclear, a
-**second independent LLM read** (`classifyVerdict`, gemini-2.5-flash-lite) runs and `reconcile`
-merges: hard NO always wins, direct conflict → honest "no clear answer" and **free**, confident
-second read can rescue. Shipment days heard on calls are extracted and stamped onto the store
+**second independent LLM read** (`classifyVerdict`) runs and `reconcile` merges: hard NO always wins,
+direct conflict → honest "no clear answer" and **free**, confident second read can rescue.
+**The model is `groq:llama-3.1-8b-instant`** (`VERDICT_MODEL`, `src/voice/verdict.ts:22`) — moved off
+Google 2026-08-05 on the owner's "cheaper than Google" call, at ~0.006¢ a read; it scored 6/6 against
+the robot store's own conversations, trick cases included. Same OpenAI fallback every vendor gets. Shipment days heard on calls are extracted and stamped onto the store
 (`retailers.shipmentDay`) — that's where "drops Tuesday" in the app comes from.
 
 ### 2.5 Charging (the no-answer-no-charge machinery)
@@ -104,11 +110,46 @@ never billed). Edits are live in the consumer app instantly.
   resumes across restarts.
 - **Passive learning**: every prod live call on an unmapped chain feeds a transcript→tree learner.
 
+**Which model does what** (the constants are scattered across four files — this is the only list;
+re-read them before quoting, and note every vendor gets the same OpenAI fallback via `llm.ts`):
+
+| Job | Constant | Model |
+|---|---|---|
+| Charlie, talking to Staff | the ElevenLabs agent's brain | `claude-sonnet-4-6` (swappable) |
+| Menu navigation | `NAV_MODEL`, `calls/navigator.ts` | `gemini-2.5-flash-lite` |
+| Phone-tree learning | `TREE_MODEL`, `calls/tree-learn.ts` | `gemini-2.5-flash-lite` |
+| The verdict second read | `VERDICT_MODEL`, `voice/verdict.ts` | `groq:llama-3.1-8b-instant` (08-05, off Google) |
+| Delta's clerk classifier | `CLASSIFY_MODEL`, `calls/tapedeck.ts` | `groq:llama-3.3-70b-versatile` |
+| Store hours lookup | `store-hours.ts` | `gpt-4o-search-preview`, Gemini grounded fallback |
+
+## 3.5 The three machines built after 07-10 (they weren't in this manual until 08-06)
+
+- **The gatekeeper** (`src/calls/check-life.ts`, owner + the 08-01 audit). One owner of every question
+  about whether a check is still alive. Before it, 84 code sites could touch a live check's life and
+  20 decided for themselves — 8 of them still asked ElevenLabs, whose answer goes wrong the moment
+  Charlie is closed for a hold. The answer now comes only from our own record plus the phone company,
+  and it lives in the database (`check_life`) so a restart cannot flip it back.
+- **Dropped and reconnected Charlie.** Closing Charlie is the only thing that stops his meter, so a
+  hold drops him; a cheap listener waits for a returning voice and he is reconnected with context. A
+  hold drop IS still charged (owner, 08-01).
+- **Self-healing stores** (`src/calls/healing.ts`, owner rounds R2+R3). A store whose menu changed
+  takes ITSELF off the website, files ONE re-map job however many times it fails, and puts itself
+  back when the re-map succeeds. The owner reviews nothing. Three stores of one chain down = the
+  chain's menu changed: never mute the chain, just set its fast route aside so checks use the full
+  careful words.
+- **The versioned map** (`src/calls/mapgraph.ts`, owner 07-26). The chain row held exactly ONE recipe
+  and overwrote it on every re-map, so nobody could see what changed, how much a path is trusted, or
+  that a store had quietly changed its menu. The map is now versioned knowledge, not configuration.
+- **The pretend store** that answers test checks with recorded lines (`scripts/robot-check.mjs`,
+  `test-robot-store.ts`). Nothing ships to staging until it can run a check — the owner never dials
+  for a bug a machine could catch.
+
 ## 4. Delta lane (tapedeck)
 
 A real store check answered entirely by pre-synthesized ElevenLabs clips (opener, ask-set,
 ask-type, restock-day, wrap, clarify, escalate) with clerk replies classified in ~½s by
-gemini-2.5-flash-lite (src/calls/tapedeck.ts). Goes live when a workflow's lane = delta. If the
+`groq:llama-3.3-70b-versatile` (`CLASSIFY_MODEL`, tapedeck.ts:22; override with
+`DELTA_CLASSIFY_MODEL`). Goes live when a workflow's lane = delta. If the
 clerk goes off-script, **Charlie barges in**: the same live Twilio call is handed to the full agent
 mid-conversation (server.ts:639) and the call record repoints so finalization just works. Bench
 mode ("call me on tape") rehearses the whole thing against the owner's phone.
@@ -177,7 +218,7 @@ Staging uses a fixed login code and sends no texts.
 
 ### 9.1 Database
 SQLite (libsql) on a Railway volume per environment (`file:/data/local.db`), Drizzle ORM, schema
-effectively managed by bootstrap (guarded ALTERs + indexes for 100K scale). ~25 tables; the spine:
+effectively managed by bootstrap (guarded ALTERs + indexes for 100K scale). 31 tables; the spine:
 `retailers` (the 100K store table; **phone = identity everywhere**), `chains` (brand + phone-tree
 knowledge + nav recipe + owner controls + logo), `call_results` (one row per call, the ground
 truth, `chargedAt` = billing idempotency), `accounts`, `statuses`, `settings` (key-value:
@@ -288,7 +329,8 @@ git sync; Copper's lane).
 7. `store_holds`, `your_voice`, `thrift_hunts` are UI-gated only — no server-side enforcement yet.
    (`any_town` gained server enforcement 2026-07-11: the radius ladder at server.ts:2171 reads the
    feature and caps free/PAYG at 10 miles.)
-8. **§2–4 (call engine, lanes, Delta) describe the engine as of 2026-07-10 and predate the calling
-   engine work of late July/August** — the mid-call hold drop and reconnect, self-healing, the
-   versioned phone-tree map, and the pretend store that answers test checks. The voice-calls lane
-   owns refreshing those three sections; `docs/team/voice-calls/` is the current truth until it does.
+8. **§2–4 were written 2026-07-10 and are only partly refreshed.** Fixed 08-06: every model constant
+   (§3, the table), the verdict second read moving to Groq, and §3.5 for the machines built since.
+   Still NOT audited line by line against the current engine: the §2.2 dial planes, §2.3 dynamic
+   variables, and Delta's clip list in §4. `docs/team/voice-calls/` is the finer truth on those; the
+   voice lane owns the line-by-line pass.
