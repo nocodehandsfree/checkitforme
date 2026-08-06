@@ -31,7 +31,7 @@ each specialist session; work outside the box → write `PM: <note>` in your che
   pasted before any "shipped/live" claim — a build stamp per page proves what each site actually serves.
 - Owner commands: **"Checkpoint"** (update your checkpoint to reality now) · **"Handoff"** (checkpoint +
   list unfinished + push) · **"Box it"** (the exact text in ONE code block, payload only) · **"Full
-  send"** (full autonomy; stop only for real money or a prod promote). A hook nudges handoff past ~25 turns.
+  send"** (full autonomy; stop only for real money or a prod promote). A hook nudges handoff at 7MB of chat, never before.
 - **Three strikes:** you said "fixed," his device said no = a strike; after strike two, stop and write
   what you tried into your checkpoint/GOTCHAS; strike three = say it needs a fresh chat and hand off.
 
