@@ -66,7 +66,7 @@ async function empathyOpener(userMessage: string, lang: string): Promise<string>
     const raw = await llm(SUPPORT_MODELS.cheap, [
       { role: "system", content: `You are a warm support agent for Check It For Me. The customer just told you something went wrong with a check we ran for them. Write ONE short, warm opening line that shows you heard them and are looking into it. ${es ? "Reply in Spanish." : "Reply in English."} Hard rules: one sentence, under 11 words, plain friend voice, no dashes, no emoji. Do NOT state any outcome, and NEVER mention credits, checks, charges, refunds, money, prices, or any number. Output only the sentence.` },
       { role: "user", content: userMessage.slice(0, 300) },
-    ], { job: "support-empathy", maxTokens: 40, temperature: 0.8, timeoutMs: 6000 });
+    ], { job: "support-empathy", maxTokens: 40, temperature: 0.8, timeoutMs: 3500 });
     return cleanTouch(raw, 90);
   } catch { return ""; }
 }
@@ -80,7 +80,7 @@ export async function warmClose(lang: string): Promise<string> {
     const raw = await llm(SUPPORT_MODELS.cheap, [
       { role: "system", content: `You are a warm support agent for Check It For Me. The customer just said your answer helped. Write ONE short, warm closing line: be glad you helped and ask if there is anything else. ${es ? "Reply in Spanish." : "Reply in English."} Hard rules: one short sentence, plain friend voice, no dashes, no emoji. Do NOT mention credits, checks, charges, refunds, money, or numbers. Output only the line.` },
       { role: "user", content: es ? "Eso resolvió mi duda." : "That answered it." },
-    ], { job: "support-close", maxTokens: 40, temperature: 0.8, timeoutMs: 6000 });
+    ], { job: "support-close", maxTokens: 40, temperature: 0.8, timeoutMs: 3500 });
     return cleanTouch(raw, 120) || fallback;
   } catch { return fallback; }
 }
@@ -275,13 +275,14 @@ export async function answerSupport(sessionId: string, userMessage: string, opts
 
   let cost = 0;
   let last: { answer: string; needsHuman: boolean } | null = null;
-  // A CUSTOMER ALWAYS GETS A REPLY. Three of 43 messages in round 1 came back blank because a model
-  // call hung and the whole request died at the edge with nothing in it (08-06). Each rung is now
-  // capped, and the ladder stops climbing once the budget is spent, so the worst case is an honest
-  // "something went wrong" instead of silence. The numbers are set so all three rungs plus the
-  // retrieval still finish inside the edge's patience.
-  const RUNG_MS = 12_000;
-  const LADDER_DEADLINE = Date.now() + 26_000;
+  // A CUSTOMER ALWAYS GETS A REPLY, and the budget is set by the EDGE, not by us. Measured on
+  // staging 08-06: a request that has not answered in about 15 seconds is cut and the customer gets
+  // a blank, whatever we intended to send. Three of four blanks in a 43 message run landed at
+  // 15.1-15.2 seconds, dead on that line. So the whole ladder has to finish inside it, with room to
+  // spare for writing the reply down: one rung is capped well under, and we stop climbing rather
+  // than start a rung we cannot finish. A merely-adequate answer beats a perfect one nobody sees.
+  const RUNG_MS = 5_000;
+  const LADDER_DEADLINE = Date.now() + 11_000;
   for (const rung of rungs) {
     if (Date.now() > LADDER_DEADLINE) { console.error("[support] ladder out of time before tier", rung.tier); break; }
     try {
