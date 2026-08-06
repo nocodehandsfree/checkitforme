@@ -1,8 +1,8 @@
 # shared/ — the docs every agent may need. Open ONLY when your task calls for it.
 | Doc | What it is |
 |---|---|
-| `ADMIN_MANUAL.md` | The whole admin dashboard (`admin.checkitforme.com` / `public/app.html`), every feature |
-| `WEBSITE_MANUAL.md` | The whole consumer site (`public/checkit.html`), every feature |
+| `ADMIN_RULES.md` | The rules for touching the Admin, what happens behind the screen, and the live surfaces with no buttons. **The live Admin is the truth for how it looks** — this doesn't describe screens |
+| `WEBSITE_RULES.md` | The same for the consumer site: the rules (it's LOCKED), what happens behind the screen, what it may ask the server for. **The live site is the truth for how it looks** |
 | `SYSTEM_MANUAL.md` | The backend machinery end to end — product, the life of a check, money, data, every scheduled process (this is also the runbook) |
 | `AGENT_RULES.md` | How to write code in this repo — read before touching code |
 | `ARCHITECTURE.md` | Repo layout + stack |

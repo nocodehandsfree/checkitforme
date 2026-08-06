@@ -1,6 +1,6 @@
 # System manual — how Check works, end to end
 
-The backend companion to `ADMIN_MANUAL.md` (the operator UI) and `WEBSITE_MANUAL.md` (the consumer
+The backend companion to `ADMIN_RULES.md` (the operator UI) and `WEBSITE_RULES.md` (the consumer
 UI). This is the machine itself: what we offer, how a check actually happens, where money moves,
 how the data platform works, and every process that runs on a schedule. Line refs are `file:line`.
 
@@ -282,7 +282,9 @@ git sync; Copper's lane).
 4. **Analytics is two systems**: PostHog injected via env on every page; GA4 loads only if
    `policy.ga4Id` is set. Don't assume one or the other.
 5. Rotation state (openers/voices) is in-memory and resets on restart.
-6. Admin → Calls → Schedules tab is a blank page (nav entry, no section).
+6. There is no admin view of scheduled checks. The blank Calls → Schedules tab was REMOVED 07-15
+   (verified 08-05: no `#schedules` section in `app.html`, not on `.claude/nav-allowlist`); the
+   schedules API still exists. Consumer scheduling is unaffected.
 7. `store_holds`, `your_voice`, `thrift_hunts` are UI-gated only — no server-side enforcement yet.
    (`any_town` gained server enforcement 2026-07-11: the radius ladder at server.ts:2171 reads the
    feature and caps free/PAYG at 10 miles.)

@@ -14,17 +14,19 @@ not a scratch pad, so it never needs walking back).
 |---|---|---|---|
 | 1 | **19 admin endpoint families are live and undocumented.** `src/server.ts` serves 54 `/api/*` families; `API_CONTRACT.md` documents 35. Missing: `alerts`, `brain`, `call-tuning`, `calls`, `community`, `concurrency`, `feedback`, `gtm`, `hangup`, `import-zones`, `kiosk-receipts`, `kiosks`, `ops`, `phones`, `sell-methods`, `settings-sync`, `support`, `test-stores`, `watches`. Their request/response shapes are written down nowhere. | `API_CONTRACT.md` audit, 08-05 | each owning lane writes up its own family |
 | 2 | **`SYSTEM_MANUAL.md` §2–4 (call engine, lanes, Delta) describe 2026-07-10** and predate the hold drop/reconnect, self-healing, the versioned phone-tree map, and the pretend store that answers test checks. Rewriting them from outside the voice lane would bake in guesses. | `SYSTEM_MANUAL.md` audit, 08-05 | voice-calls |
-| 3 | **Admin → Calls → Schedules tab:** `SYSTEM_MANUAL.md` §12.6 says it's a blank page. `public/app.html` has no `#schedules` section, which could mean fixed, renamed, or removed. Can't tell without opening the file whole (which the boot doc forbids). | `SYSTEM_MANUAL.md` §12.6 | admin |
-| 4 | **Design comps have drifted from the live site** (owner, 08-05): an agent built directly off the site because the comps were not valid. Until they're re-cut, "the comp is the source of truth" (AGENT_RULES 24) points at something untrue. The sweep deliberately touched NO comp file. | owner, 08-05 | owner + whoever re-cuts the comps |
-| 5 | **Nothing forces an agent to read `GOTCHAS.md`.** It is listed in `CLAUDE.md` under "open only what a task needs", and the `known-problems` skill points at it — but a skill loads on a description match, which is a nudge, not a gate. An agent can walk straight into a trap the file already documents. No hook checks it. Three fixes are written up below; none built. | GOTCHAS audit, 08-05 | owner |
+| 3 | **Design comps have drifted from the live site** (owner, 08-05): an agent built directly off the site because the comps were not valid. Until they're re-cut, "the comp is the source of truth" (AGENT_RULES 24) points at something untrue. The sweep deliberately touched NO comp file. | owner, 08-05 | owner + whoever re-cuts the comps |
+| 4 | **Nothing forces an agent to read `GOTCHAS.md`.** It is listed in `CLAUDE.md` under "open only what a task needs", and the `known-problems` skill points at it — but a skill loads on a description match, which is a nudge, not a gate. An agent can walk straight into a trap the file already documents. No hook checks it. Three fixes are written up below; none built. | GOTCHAS audit, 08-05 | owner |
 
 ## Closed
 
+- **Admin → Calls → Schedules tab** — SYSTEM_MANUAL §12.6 called it a blank page. **RESOLVED 08-05:**
+  it was REMOVED on 07-15 (no `#schedules` section in `app.html`, not on `.claude/nav-allowlist`).
+  The schedules API still exists with no admin UI; consumer scheduling is unaffected. Manual corrected.
 - **`GET /check-lab`** — a scratch page that drew the check-mark icon in four styles while the icon was
   being chosen; live on prod and staging, linked from nothing. **Owner said delete it, 08-05. Done**
   (route removed from `src/server.ts`, noted in `API_CONTRACT.md`).
 
-## The three fixes for #5, in detail (none built — the owner picks)
+## The three fixes for #4, in detail (none built — the owner picks)
 
 ### Fix A — move the worst traps into `CLAUDE.md`
 `CLAUDE.md` is the one file that loads into EVERY chat automatically, before the agent does anything.
