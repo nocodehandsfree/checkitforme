@@ -180,3 +180,17 @@ that number written into the scene. Room noise must land under `roomFraction` of
   after a transfer.
 - **A server restart mid test did not lose the run.** The restart-and-resume safeguard picked the
   testing back up on its own. That is the first time it has been proven by an unplanned restart.
+
+## THE OWNER'S FULL-SEND ORDER (08-06). He is putting the phone down. Finish everything, no stops.
+Nobody else is pushing to staging now, so checks can run their full length. Order:
+1. The two scenes that cannot pass as built. Scene 16 needs `askForTransfer` OFF for that one check
+   and back on after; scene 19 needs the check placed for ONE EXACT PRODUCT (the `{{clarification}}`
+   insert) or Charlie never asks his extra question. A script alone proves nothing on these two.
+2. Dial every scene not yet dialed: 5, 8, 10, and 11 through 19. One check each, read its record
+   before the next, rule 15 binds.
+3. The hold set (batch two above) with the committed clips in `public/robot-clips/`.
+4. **A CHECK KILLED BY A RESTART MUST ALWAYS SETTLE.** Checks 324 and 325 are sitting unfinished
+   with an empty conversation and no answer; 309 and 311 settled on their own. A real customer on
+   324 or 325 would be left with nothing. Find why some settle and some do not, and fix it so none
+   can hang. This is customer-facing and it outranks the remaining scenes if they conflict.
+Report once at the end with every scene's verdict. Do not stop for approval between scenes.
