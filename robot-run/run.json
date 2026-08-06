@@ -1,10 +1,10 @@
 {
-  "at": "2026-08-06T04:07:24.246Z",
+  "at": "2026-08-06T04:11:42.643Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
-      "scenario": 2,
-      "name": "No, plainly",
+      "scenario": 3,
+      "name": "No, softened",
       "items": [
         {
           "n": 1,
@@ -40,7 +40,7 @@
           "n": 12,
           "name": "one check writes ONE record",
           "pass": false,
-          "detail": "4 rows for the same phone call: 317(4 lines), 318(4 lines), 319(4 lines), 316(6 lines)"
+          "detail": "3 rows for the same phone call: 321(4 lines), 322(4 lines), 320(6 lines)"
         },
         {
           "n": 4.1,
@@ -63,8 +63,8 @@
         {
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
-          "pass": false,
-          "detail": "1 bounce(s) over 42 looks · header held at 0px"
+          "pass": true,
+          "detail": "0 bounce(s) over 42 looks · header held at 0px"
         },
         {
           "n": 8,
@@ -88,13 +88,13 @@
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 31 seconds and the line closed at 31 — 0 seconds of nothing"
+          "detail": "the answer was in at 32 seconds and the line closed at 32 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Thu, Aug 6 · 4:06 AM Restock incoming A shipment lands Tuesday.Be first when it drops. Check another store Calli"
+          "detail": " Result Thu, Aug 6 · 4:10 AM Getting the answer… The call just finished.Pulling the result. Calling4 steps · 32s It's ri"
         },
         {
           "n": 9.1,
@@ -112,19 +112,19 @@
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "not charged · the screen claims no free check · the check cost 6.1¢"
+          "detail": "not charged · the screen claims no free check · the check cost 6.3¢"
         }
       ],
       "shots": [
-        "./robot-run/02-store-found.png",
-        "./robot-run/02-checking.png",
-        "./robot-run/02-live.png",
-        "./robot-run/02-result.png"
+        "./robot-run/03-store-found.png",
+        "./robot-run/03-checking.png",
+        "./robot-run/03-live.png",
+        "./robot-run/03-result.png"
       ],
-      "startedAt": 1785989158144,
-      "checkId": 316,
-      "cost": 0.06057,
-      "costReadable": "6.1¢",
+      "startedAt": 1785989391763,
+      "checkId": 320,
+      "cost": 0.062543,
+      "costReadable": "6.3¢",
       "robotCost": null,
       "charged": false,
       "statusKey": "not_in_stock"

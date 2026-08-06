@@ -298,8 +298,15 @@ async function runOne(page, scene, greetingIdx) {
       norm(firstStaffTx) === norm(greeting) ? "one line, nothing else in it" : `it carries more than the greeting: "${firstStaffTx}"`);
   }
 
-  // wait for the record, then read it through the ONE reader.
-  await page.waitForTimeout(4000);
+  // WAIT FOR THE SCREEN TO ACTUALLY LAND ON AN ANSWER. A fixed four seconds was sometimes read
+  // while the page still said "Getting the answer", and then the harness reported the screen and
+  // the record disagreeing when the screen simply had not finished (owner 08-06, scene 3). The
+  // page marks its own verdict box, so wait for that mark instead of guessing at a delay.
+  await page.waitForFunction(() => {
+    const v = document.querySelector("#result .rverdict");
+    return !!v && ["in", "out", "unk", "soon"].some((c) => v.classList.contains(c));
+  }, null, { timeout: 45000 }).catch(() => {});
+  await page.waitForTimeout(1500);
   await shot(page, "result");
   const resultText = (await page.textContent("#result").catch(() => "")) || "";
   // WAIT FOR THE RECORD TO SETTLE. A half-written record is not evidence: reading one while the
