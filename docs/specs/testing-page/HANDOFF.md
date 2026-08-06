@@ -49,8 +49,14 @@ where the spoken lines are spliced into the step list) · `scripts/robot-check.m
    Staff member who never answers, eight lines, repeating. One of the two has to change and only he
    can say which. ASK HIM BEFORE TOUCHING IT.
 6. **Charlie is not speaking Spanish.** On check 342 his first line was English because it is Delta's
-   recording, which is English; his own next line was Spanish. The card says Charlie holds the ENTIRE
-   conversation in Spanish, so either Delta needs a Spanish recording or the card needs his ruling.
+   recording, which is English; his own next line was Spanish. RULED BY THE OWNER 08-06: **build
+   Delta in Spanish, and build hearing a Spanish greeting into the voice tech so a store that
+   answers in Spanish gets the Spanish Delta.** It rides the same clip machinery Delta already uses
+   (`mp3Clip` in `src/calls/clip-cache.ts`, the opening clip in the bridge), and the language is
+   decided from the store's FIRST line, the same first line the voicemail gate already reads
+   (`storeHasSpoken`), so nothing new listens to the call. Delta is the recording that carries our
+   question, so this is the only way a Spanish check is Spanish from the first word. A store that
+   answers in English is untouched.
 7. **"Is that even our recording?"** Yes. Every Staff line is our own script, spoken in our own voice,
    from `ROBOT_SCENES` in `src/calls/tapedeck.ts`. What he read as Staff improvising is our own
    transcriber mangling them: "We did not." was written down as "Not" and "Thursdays, usually." as
