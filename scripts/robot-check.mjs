@@ -428,6 +428,16 @@ async function runOne(page, scene, greetingIdx) {
 
   // 6. word for word.
   const cmp = compareWords(said, lines);
+  // ONE EXACT PRODUCT HAS TO REACH THE CALL. Picking the item on the site is only half of it: the
+  // recording that asks the question has to name that item, or Charlie asks the ordinary category
+  // question and the whole point of the card is lost.
+  if (SCENE_PRODUCT[scene.n]) {
+    const clip = rec.timeline.find((e) => String(e.detail?.step) === "question_clip");
+    const asked = String(clip?.detail?.text || "");
+    const words = SCENE_PRODUCT[scene.n].split(/[^A-Za-z0-9]+/).filter((w) => w.length > 3).slice(-3);
+    item(6.5, "the recording asks for the exact product, not the category", words.some((w) => new RegExp(w, "i").test(asked)),
+      `it asked: "${asked}"  ·  the check was placed for: ${SCENE_PRODUCT[scene.n]}`);
+  }
   item(6, "the words match what the robot actually said, word for word", cmp.misses.length === 0,
     cmp.misses.length ? cmp.misses.map((m) => `"${m.said}" → ${m.how}`).join(" | ") : `${said.length} lines, all exact`);
 

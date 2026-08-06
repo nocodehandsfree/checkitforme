@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-06T05:35:29.001Z",
+  "at": "2026-08-06T05:40:02.238Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
@@ -25,28 +25,100 @@
           "detail": "nothing to warn about yet — this device had never checked this store (the next scene proves the warning)"
         },
         {
-          "n": 1.5,
-          "name": "the site actually placed the check",
-          "pass": false,
-          "detail": "the site answered: 429 {\"error\":\"robot_cap\",\"message\":\"The robot store has taken 40 checks in the last day, which is its ceiling (40). Nothing more will be dialed.\",\"checksToday\":40}"
-        },
-        {
           "n": 3,
           "name": "the header moves through its phases in order, never backwards",
-          "pass": false,
-          "detail": "Calling"
+          "pass": true,
+          "detail": "Calling → Talking to Staff → Getting results"
         },
         {
           "n": 4,
           "name": "Staff's greeting is the first line, on the live view",
-          "pass": false,
-          "detail": "no Staff line ever appeared on the live view"
+          "pass": true,
+          "detail": "live view showed: \"Larry Vasquez, how can I help you?\"  ·  robot said: \"Larry Vasquez, how can I help you?\""
+        },
+        {
+          "n": 5,
+          "name": "the greeting is its own line, never welded to their answer",
+          "pass": true,
+          "detail": "one line, nothing else in it"
+        },
+        {
+          "n": 12,
+          "name": "one check writes ONE record",
+          "pass": true,
+          "detail": "one row for this check"
+        },
+        {
+          "n": 4.1,
+          "name": "Staff's greeting is the first line of the written conversation",
+          "pass": true,
+          "detail": "first written line: \"Clerk: Larry Vasquez, how can I help you?\""
+        },
+        {
+          "n": 5.1,
+          "name": "the written greeting is its own line",
+          "pass": true,
+          "detail": "written: \"Larry Vasquez, how can I help you?\"  ·  said: \"Larry Vasquez, how can I help you?\""
         },
         {
           "n": 6,
-          "name": "the words match what the robot actually said",
+          "name": "the words match what the robot actually said, word for word",
           "pass": false,
-          "detail": "the check never reached the record"
+          "detail": "\"Uh, Pokemon, yeah, we've got some stuff.\" → missing"
+        },
+        {
+          "n": 7,
+          "name": "the conversation scrolls under the header and does not bounce when nothing is new",
+          "pass": true,
+          "detail": "0 bounce(s) over 43 looks · header held at 0px"
+        },
+        {
+          "n": 8,
+          "name": "the log expands",
+          "pass": true,
+          "detail": "19px → 105px"
+        },
+        {
+          "n": 13,
+          "name": "the check ends with a goodbye, not with us hanging up mid conversation",
+          "pass": true,
+          "detail": "we signed off: \"Perfect, thanks so much, have a good one!\""
+        },
+        {
+          "n": 14,
+          "name": "we never ask the same question twice",
+          "pass": true,
+          "detail": "3 things said, none of them twice"
+        },
+        {
+          "n": 15,
+          "name": "the check ends soon after the answer, instead of sitting on an open line",
+          "pass": true,
+          "detail": "the answer was in at 33 seconds and the line closed at 33 — 0 seconds of nothing"
+        },
+        {
+          "n": 9,
+          "name": "the result appears with a status",
+          "pass": true,
+          "detail": " Result Thu, Aug 6 · 5:39 AM In stock MVPs has a Pitch Black booster box.Go grab it before it's gone. Check another stor"
+        },
+        {
+          "n": 9.1,
+          "name": "the screen and the record say the same thing",
+          "pass": true,
+          "detail": "the screen said in, the record says in (in_stock)"
+        },
+        {
+          "n": 11,
+          "name": "the verdict is RIGHT for this scenario",
+          "pass": true,
+          "detail": "got in_stock · this scenario is in_stock"
+        },
+        {
+          "n": 10,
+          "name": "the screen and the till agree about money",
+          "pass": true,
+          "detail": "not charged · the screen claims no free check · the check cost 6.5¢"
         }
       ],
       "shots": [
@@ -55,7 +127,13 @@
         "./robot-run/19-live.png",
         "./robot-run/19-result.png"
       ],
-      "startedAt": 1785994042824
+      "startedAt": 1785994672191,
+      "checkId": 328,
+      "cost": 0.064517,
+      "costReadable": "6.5¢",
+      "robotCost": null,
+      "charged": false,
+      "statusKey": "in_stock"
     }
   ],
   "jsErrors": []
