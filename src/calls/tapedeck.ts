@@ -667,6 +667,24 @@ export const ROBOT_SCENES: RobotScene[] = [
     { sayAs: "transfer", say: "We did not." },
     ...WAIT_OUT,
   ] },
+  // THE OWNER'S OWN CHECK 298, MADE REPEATABLE (08-06). He told Charlie to hold, went quiet, then
+  // asked several short ways whether we were still there. Charlie never came back and not one word
+  // of it was written down. No robot scene could ever have caught it: scene 5 comes back with one
+  // long sentence, and one long sentence was the only thing the ear would accept as somebody being
+  // back. This one comes back the way a person really does, in short questions with pauses between
+  // them. Every line is corpus: the pause line is scene 6's, "Hello? Hello?" is Barnes & Noble
+  // Calabasas, and the answer is the same line scene 3 uses.
+  { n: 11, card: "hold_silence", name: "Walks away, comes back asking if we are there", expect: "not_in_stock", acts: [
+    { listen: true },
+    { say: "Um, give me just a second. Let me double-check." },
+    { silence: 20 },
+    { say: "Hello?" },
+    { silence: 4 },
+    { say: "Hello? Hello?" },
+    { listen: true },
+    { say: "No, I'm sorry. I haven't seen any yet." },
+    ...WAIT_OUT,
+  ] },
 ];
 
 export function robotScene(n: number): RobotScene | null { return ROBOT_SCENES.find((s) => s.n === n) || null; }

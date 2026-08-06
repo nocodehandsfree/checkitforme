@@ -44,6 +44,9 @@ const WORDS: Record<number, string[]> = {
   8: ["We haven't, as a matter of fact. Uh, let me double-check though. Hold on just a moment.", "Yeah, we've got a few."],
   9: ["I'm sorry. You're gonna have to call again. I can't hear you. Bye-bye."],
   10: ["Okay. Transferring you now.", "Sporting goods, this is Dana.", "We did not."],
+  // The owner's own check 298, made repeatable. Corpus throughout: the pause line is scene 6's,
+  // "Hello? Hello?" is Barnes & Noble Calabasas, the answer is scene 3's.
+  11: ["Um, give me just a second. Let me double-check.", "Hello?", "Hello? Hello?", "No, I'm sorry. I haven't seen any yet."],
 };
 const GREETINGS = [
   "Larry Vasquez, how can I help you?",
@@ -149,6 +152,7 @@ console.log("\n── the verdict each scene should produce ──");
 is(ROBOT_SCENES.map((s) => `${s.n}:${s.expect}`), [
   "1:in_stock", "2:not_in_stock", "3:not_in_stock", "4:not_in_stock", "5:not_in_stock",
   "6:no_clear_answer", "7:in_stock", "8:in_stock", "9:nobody_answered", "10:not_in_stock",
+  "11:not_in_stock",
 ], "scenes 7 and 8 expect IN STOCK — the two we really got wrong");
 
 // ---- THE TEST OF THE TEST -----------------------------------------------------------------------
