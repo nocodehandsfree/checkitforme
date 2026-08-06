@@ -9,7 +9,7 @@ scripts that made them. **The consumer site is frozen: that task file IS the unl
 |---|---|
 | `comp-3-the-list-APPROVED.png` | **APPROVED** (owner 08-05). "The main page that you come to if you have checks already set up." |
 | `comp-1-my-checks-row.png` | not approved. The real My checks screen with ONE row added: Auto-checks. |
-| `comp-2-saved.png` | not approved. The owner asked when it appears; he was told it is the one time screen shown the moment an auto-check is turned on, and he has not ruled. He offered the alternative himself: saving could just close the sheet. |
+| `comp-2-saved.png` | **RULED 08-06: BUILD IT.** "don't close the window build the screen that shows that their auto check has been saved and they should have a button there that allows them to jump directly into the auto check homepage where they can see their first check." So: the sheet stays open and flips to this screen, and its button goes straight to the list. |
 | `comp-4-report-v1-rejected.png` | **REJECTED** (owner 08-05): "I also don't think this comp looks very good and you could do a better job with a visualization." |
 | `comp-4-report-v2.png` | not approved, and the owner has already named what is wrong with it. |
 
