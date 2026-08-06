@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-06T20:13:18.372Z",
+  "at": "2026-08-06T20:25:51.605Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
@@ -64,7 +64,7 @@
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
           "pass": true,
-          "detail": "0 bounce(s) over 54 looks · header held at 62px"
+          "detail": "0 bounce(s) over 49 looks · header held at 62px"
         },
         {
           "n": 8,
@@ -76,43 +76,43 @@
           "n": 13,
           "name": "the check ends with a goodbye, not with us hanging up mid conversation",
           "pass": true,
-          "detail": "we signed off: \"Perfect, thanks so much Larry, have a good one.\""
+          "detail": "we signed off: \"No worries, take your time!\""
         },
         {
           "n": 14,
           "name": "we never ask the same question twice",
           "pass": true,
-          "detail": "4 things said, none of them twice"
+          "detail": "2 things said, none of them twice"
         },
         {
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 84 seconds and the line closed at 84 — 0 seconds of nothing"
+          "detail": "the answer was in at 185 seconds and the line closed at 185 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Thu, Aug 6 · 8:11 PM Couldn’t tell We couldn’t quite make out the answer.Read the convo and tell us what you thi"
+          "detail": " Result Thu, Aug 6 · 8:22 PM Couldn’t tell We couldn’t quite make out the answer.Read the convo and tell us what you thi"
         },
         {
           "n": 9.1,
           "name": "the screen and the record say the same thing",
-          "pass": false,
-          "detail": "the screen said unclear, the record says out (not_in_stock)"
+          "pass": true,
+          "detail": "the screen said unclear, the record says unclear (staff_hung_up)"
         },
         {
           "n": 11,
           "name": "the verdict is RIGHT for this scenario",
-          "pass": true,
-          "detail": "got not_in_stock · this scenario is not_in_stock"
+          "pass": false,
+          "detail": "got staff_hung_up · this scenario is not_in_stock"
         },
         {
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "CHARGED · the screen claims no free check · the check cost 10.8¢"
+          "detail": "CHARGED · the screen claims no free check · the check cost 15.6¢"
         }
       ],
       "shots": [
@@ -121,13 +121,13 @@
         "./robot-run/11-live.png",
         "./robot-run/11-result.png"
       ],
-      "startedAt": 1786047045057,
-      "checkId": 346,
-      "cost": 0.107922,
-      "costReadable": "10.8¢",
+      "startedAt": 1786047701780,
+      "checkId": 347,
+      "cost": 0.156217,
+      "costReadable": "15.6¢",
       "robotCost": null,
       "charged": true,
-      "statusKey": "not_in_stock"
+      "statusKey": "staff_hung_up"
     }
   ],
   "jsErrors": []

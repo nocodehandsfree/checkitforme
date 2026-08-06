@@ -537,6 +537,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   const theirVoiceStarts: number[] = [];
   let theirVoiceOn = false;
   let theirQuietFrames = 0;
+  let theirVoiceRunStartedAt = 0;   // the first frame of the stretch being listened to right now
+  let theirVoiceRunFrames = 0;      // how long it has lasted, in frames, so a blip is not a sentence
   /** The oldest start that could still belong to a line arriving now. Anything older than this is a
    *  sentence nobody ever wrote down (after a hold, whole sentences are lost) and is dropped rather
    *  than pinned onto the next line, which would file it far too early. */
@@ -1958,8 +1960,18 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // off the SAME frames, the same threshold and the same ringing test the meter and the ear
       // already use, so nothing new listens to the call. Our own audio is excluded: the agent's
       // voice coming back off the line is not the store starting a sentence.
+      // IT HAS TO BE A REAL VOICE, NOT OUR OWN TAIL. Measured on check 347: the first line back was
+      // filed at 12.4s, exactly where our own recording's audio was calculated to end, because the
+      // carrier plays out a little behind our own count of the bytes we sent it. So a start is only
+      // kept once the talking has lasted as long as this file already demands before it will call
+      // something a human, and the moment kept is the FIRST frame of that run, not the moment it
+      // passed the bar. A burst too short to clear it leaves the line stamped on arrival, as before.
       if (Date.now() >= agentPlayingUntil + ECHO_TAIL_MS && frameEnergy(b64) > VOICE_THRESH && toneShare(b64) < 0.45) {
-        if (!theirVoiceOn) { theirVoiceOn = true; theirVoiceStarts.push(Date.now()); if (theirVoiceStarts.length > 40) theirVoiceStarts.shift(); }
+        if (!theirVoiceOn) { theirVoiceOn = true; theirVoiceRunStartedAt = Date.now(); theirVoiceRunFrames = 0; }
+        if (++theirVoiceRunFrames === VOICE_FRAMES) {
+          theirVoiceStarts.push(theirVoiceRunStartedAt);
+          if (theirVoiceStarts.length > 40) theirVoiceStarts.shift();
+        }
         theirQuietFrames = 0;
       } else if (theirVoiceOn && ++theirQuietFrames >= VOICE_GAP_FRAMES) { theirVoiceOn = false; theirQuietFrames = 0; }
       // THEY ARE ANSWERING: his mouth opens on their voice, not on a clock (the second gate). While
