@@ -1,0 +1,33 @@
+{
+  "_": "Correctness and completeness per scenario, graded by a person reading the transcripts. A model grading its own answers for correctness is how a wrong answer gets a green tick, so these two points are never machine-scored. Keyed by round and scenario number. `correct` and `complete` are true/false; `why` is only needed for a false. Update this file when a round is re-read, then rerun scripts/support-scorecard.mjs.",
+  "round1": {
+    "1":  { "correct": false, "complete": true,  "why": "answered \"Yes\" to \"can I hear the call?\" then described reading it as text. Listening is comp accounts only, so the honest answer is no" },
+    "2":  { "correct": true,  "complete": true },
+    "3":  { "correct": false, "complete": true,  "why": "said \"an unclear answer is never charged\". A real two-way call that stays unclear IS charged" },
+    "4":  { "correct": false, "complete": true,  "why": "promised we check the Target in Glendale and GameStop stores. It cannot know either; it never looks at the store table" },
+    "5":  { "correct": false, "complete": false, "why": "\"I'm not sure exactly how long a check takes\" when the FAQ says about two minutes, and the follow-up got no reply at all" },
+    "6":  { "correct": true,  "complete": true },
+    "7":  { "correct": true,  "complete": true },
+    "8":  { "correct": true,  "complete": true },
+    "9":  { "correct": true,  "complete": true },
+    "10": { "correct": false, "complete": true,  "why": "\"emails are the reliable channel right now\" quietly tells a customer our texts are not reliable" },
+    "11": { "correct": false, "complete": true,  "why": "\"chat right here in the app\" — there is no app, Check runs in a browser" },
+    "12": { "correct": false, "complete": true,  "why": "walked the customer through closing and reopening an app that does not exist" },
+    "13": { "correct": true,  "complete": true },
+    "14": { "correct": true,  "complete": true },
+    "15": { "correct": true,  "complete": true },
+    "16": { "correct": true,  "complete": false, "why": "the follow-up \"do you guys check walmart?\" got no reply at all" },
+    "17": { "correct": true,  "complete": true },
+    "18": { "correct": true,  "complete": true },
+    "19": { "correct": true,  "complete": true },
+    "20": { "correct": true,  "complete": true },
+    "21": { "correct": true,  "complete": false, "why": "said it has no details on picking a specific store, which is the core of the product" },
+    "22": { "correct": true,  "complete": true },
+    "23": { "correct": true,  "complete": true },
+    "24": { "correct": true,  "complete": true },
+    "25": { "correct": true,  "complete": true },
+    "26": { "correct": true,  "complete": true },
+    "27": { "correct": true,  "complete": true }
+  },
+  "round2": {}
+}
