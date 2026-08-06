@@ -3,7 +3,7 @@ title: Payment issues
 ---
 All payments run through **Stripe**, the same processor half the internet uses. We never see or store your card number.
 
-**Paid but checks didn't show up?** They're credited the moment Stripe confirms, usually seconds. Close and reopen the app, or sign out and back in. Still missing after a few minutes? Contact us with your phone number and we'll make it right.
+**Paid but checks didn't show up?** They're credited the moment Stripe confirms, usually seconds. Close and reopen the app, or sign out and back in. Still missing after a few minutes? Open Help and tell us, with the number on your account, and we'll make it right.
 
 **Card declined?** That's between your bank and Stripe. Try another card, or your bank's app usually says why.
 
