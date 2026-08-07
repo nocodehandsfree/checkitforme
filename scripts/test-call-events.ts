@@ -278,7 +278,7 @@ console.log("▶ the buckets, his names, and they SUM TO THE TOTAL exactly (owne
   // A 62 second check: 14s of menu, 18s of Charlie, the second read ran.
   const cost = costCall({ callSecs: 62, charlieSecs: 18, avoidableSecs: 0, forkSecs: [62, 48] });
   const b = costBuckets(cost, { callSecs: 62, navSecs: 14, streams: 2 }, MEASURED_RATES, STATUS_READ_USD);
-  ok(b.map((x) => x.label).join(" · ") === "Bravo (Menu Nav) · Foxtrot (Phone Line) · Echo (Listening) · Charlie (Talking) · Echo (Words) · Status (Verification)",
+  ok(b.map((x) => x.label).join(" · ") === "Bravo (Menu Nav) · Foxtrot (Phone Line) · Echo (Listening) · Echo (Words) · Charlie (Talking) · Status (Verification)",
     `his names, his order, with Echo's words beside Echo's listening (${b.map((x) => x.label).join(" · ")})`);
   const wordsLine = b.find((x) => x.key === "echo_words")!;
   ok(wordsLine.detail.some(([l, v]) => l === "Line time" && v === "1:02"), "Echo's words are priced on the whole call, not on Charlie's minutes");

@@ -158,12 +158,6 @@ export function costBuckets(
       ["Rate (per minute)", perMin(rates.forkPerMinUsd * streams)],
       ["Cost", money(cost.forkUsd - navFork)],
     ] },
-    { key: "charlie", label: "Charlie (Talking)", usd: cost.charlieUsd, detail: [
-      ["Talk time", mmss(cost.charlieSecs)],
-      ["Rate (per minute)", perMin((rates.charlieCreditsPerMin) * rates.creditUsd)],
-      ["Covers", "voice and thinking together"],
-      ["Cost", money(cost.charlieUsd)],
-    ] },
     // ECHO'S WORDS, ITS OWN LINE (owner 08-07: "Deepgram gets its own line on the check cost card
     // and rides the margin like every other cost"). Echo already has a line for the listening it
     // does with its ears; this is what it costs to turn what it hears into sentences, and it runs
@@ -172,6 +166,12 @@ export function costBuckets(
       ["Line time", mmss(t.callSecs)],
       ["Rate (per minute)", perMin(rates.sttPerMinUsd)],
       ["Cost", money(cost.sttUsd)],
+    ] },
+    { key: "charlie", label: "Charlie (Talking)", usd: cost.charlieUsd, detail: [
+      ["Talk time", mmss(cost.charlieSecs)],
+      ["Rate (per minute)", perMin((rates.charlieCreditsPerMin) * rates.creditUsd)],
+      ["Covers", "voice and thinking together"],
+      ["Cost", money(cost.charlieUsd)],
     ] },
     { key: "status", label: "Status (Verification)", usd: statusReadUsd, detail: [
       ["Cost", money(statusReadUsd)],

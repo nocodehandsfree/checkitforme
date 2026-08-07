@@ -2504,9 +2504,14 @@ function checkV2From(d,o){
   // Every row is filed by its millisecond. A row with nothing to file it by sits at the end of the
   // check rather than guessing itself a place in the middle.
   const add=(m,e)=>{e._ms=(m==null?lastMs:m);log.push(e);return e;};
-  const takeLine=(who,at,win,back)=>{ // the nearest unclaimed spoken line for a step, inside its window
+  // The nearest unclaimed spoken line for a step, inside its window. `first` takes the EARLIEST line
+  // in the window instead of the nearest, which is the greeting's own rule: a greeting is the first
+  // thing the store says, and now that Echo writes lines from the moment of pickup the line NEAREST
+  // the person test is the one after it. Check 354 drew "Pokemon?" under Staff greeting while the
+  // real greeting sat on a row of its own, so the sheet read as Staff speaking twice.
+  const takeLine=(who,at,win,back,first)=>{
     let best=-1,gap=1e9;
-    lines.forEach((l,i)=>{ const lm=msOf(l); if(used.has(i)||l.who!==who||lm==null)return; const g=Math.abs(lm-at); if(lm>=at-(back||1)*1000&&g<(win||8)*1000&&g<gap){best=i;gap=g;} });
+    lines.forEach((l,i)=>{ const lm=msOf(l); if(used.has(i)||l.who!==who||lm==null)return; const near=Math.abs(lm-at),g=first?lm:near; if(lm>=at-(back||1)*1000&&near<(win||8)*1000&&g<gap){best=i;gap=g;} });
     if(best<0)return null; used.add(best); const l=lines[best]; return {who:l.who==='Agent'?'Agent':'Clerk',tx:l.text,_ms:msOf(l)};
   };
   for(let i=0;i<tl.length;i++){
@@ -2519,7 +2524,7 @@ function checkV2From(d,o){
       add(atM,{t:'Navigating menu ('+lane+')',group:g});i=j-1;continue;
     }
     if(e.kind==='human_detected'){
-      const g=takeLine('Clerk',atM,10,8);
+      const g=takeLine('Clerk',atM,10,8,true);
       // The greeting STARTS before the person test is sure, so the row sits at the millisecond Staff
       // really spoke, not at the detector's. Same clock, so it needs no clamping any more.
       add(g&&g._ms!=null?Math.min(atM,g._ms):atM,{t:'Staff greeting',c:'var(--green)',say:g,open:true});continue;}

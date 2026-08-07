@@ -32,9 +32,24 @@ const DG_QUERY = {
   language: "multi",
   smart_format: "true",
   punctuate: "true",
-  // Half sentences are not lines. We write down what was finished.
-  interim_results: "false",
+  // ONE TURN IS ONE LINE (owner 08-07, off check 354). Deepgram ends a piece at the first breath it
+  // hears, so "Okay, thank you for holding. Yeah, I did not see any, unfortunately." came back as
+  // "Okay. Thank you." and "For holding. Yeah. I did not see any, unfortunately." — every word
+  // there, one sentence in two halves. These three settings are how it says a TURN ended rather than
+  // a breath: it keeps sending pieces, and it tells us separately when the talking has really
+  // stopped. We hold the pieces and write the turn down whole. The line still carries the moment the
+  // FIRST piece started, so nothing moves on the check's own clock.
+  interim_results: "true",
+  // A word cannot be finished until this much quiet has passed after it.
+  endpointing: "300",
+  // …and a TURN is not over until this much has. A person pausing to think mid sentence is under a
+  // second; a person who has stopped talking is over it.
+  utterance_end_ms: "1000",
 };
+
+/** Nobody talks for half a minute without stopping. A turn this long is written down as it stands,
+ *  so a stuck marker can never hold somebody's words back for the rest of a check. */
+const LONGEST_TURN_MS = 30_000;
 
 export interface HeardLine {
   /** The finished sentence, in the store's own words. */
@@ -76,21 +91,42 @@ export function openTranscriber(onLine: (line: HeardLine) => void, log: (s: stri
     log(`transcriber: could not open (${String(e).slice(0, 80)}), the check runs without one`);
     return off;
   }
+  // THE TURN BEING BUILT. Pieces land here until the talking stops, then they go out as one line.
+  let heldPieces: string[] = [];
+  let heldFromMs = 0;
+  let heldToMs = 0;
+  const writeTheTurn = () => {
+    if (!heldPieces.length) return;
+    const text = heldPieces.join(" ").replace(/\s+/g, " ").trim();
+    heldPieces = [];
+    if (!text) return;
+    // The line carries where the TURN started, never where its last piece did, so it files at the
+    // second they began saying it.
+    onLine({ text, atAudioMs: heldFromMs, forMs: Math.max(0, heldToMs - heldFromMs) });
+  };
   ws.on("open", () => { ready = true; log("transcriber: listening"); });
   ws.on("error", (e) => { ready = false; log(`transcriber: ${String(e).slice(0, 120)}`); });
-  ws.on("close", () => { ready = false; if (!closed) log("transcriber: the socket closed"); });
+  ws.on("close", () => { ready = false; writeTheTurn(); if (!closed) log("transcriber: the socket closed"); });
   ws.on("message", (raw: Buffer) => {
     try {
       const m = JSON.parse(String(raw)) as {
-        is_final?: boolean; start?: number; duration?: number;
+        type?: string; is_final?: boolean; speech_final?: boolean; start?: number; duration?: number;
         channel?: { alternatives?: Array<{ transcript?: string }> };
       };
+      // "They have stopped talking." Whatever is held is the whole turn.
+      if (m.type === "UtteranceEnd" || m.type === "Metadata") { writeTheTurn(); return; }
+      // A piece still being revised is not words yet.
       if (!m.is_final) return;
       const text = String(m.channel?.alternatives?.[0]?.transcript || "").trim();
-      if (!text) return;
-      // ONE FINISHED SENTENCE IS ONE LINE, and it arrives with its own place in the audio, which is
-      // what puts it in the right spot on the check's own timeline.
-      onLine({ text, atAudioMs: Math.round((m.start ?? 0) * 1000), forMs: Math.round((m.duration ?? 0) * 1000) });
+      if (text) {
+        if (!heldPieces.length) heldFromMs = Math.round((m.start ?? 0) * 1000);
+        heldToMs = Math.round(((m.start ?? 0) + (m.duration ?? 0)) * 1000);
+        heldPieces.push(text);
+      }
+      // NOT on `speech_final`: that marker fires at the first BREATH, and firing on it is exactly
+      // what split one sentence into two on check 354. Only the turn marker ends a turn. A turn that
+      // runs on and on is written down anyway rather than held for ever.
+      if (heldToMs - heldFromMs >= LONGEST_TURN_MS) writeTheTurn();
     } catch { /* a message we cannot read is never worth a check */ }
   });
   return {

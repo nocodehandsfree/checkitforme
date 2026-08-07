@@ -11,8 +11,18 @@
 // pass on a real clock. Sent as fast as the socket takes them, three seconds of speech arrive in
 // milliseconds and come back slurred and welded together (the owner's checks, 08-01).
 //
-// Run:  ELEVENLABS_API_KEY=… DEEPGRAM_API_KEY=… node scripts/deepgram-bench.mjs
-import WebSocket from "ws";
+// Run:  ELEVENLABS_API_KEY=… DEEPGRAM_API_KEY=… ./node_modules/.bin/tsx scripts/deepgram-bench.ts
+//
+// IT RUNS THE REAL PIECE (08-07). The bench used to hold its own copy of the settings and its own
+// idea of when a sentence ended, so it passed five of five while a real check split one sentence in
+// two: the copy and the runtime had drifted. It now opens `src/voice/transcriber.ts` itself, so what
+// passes here is what a check runs.
+//
+// AND IT PADS THE CLIP WITH QUIET, both sides. A clip sent on its own and closed the instant it ends
+// is not a phone line: the socket closing is what finished the sentence, so the bench could never
+// see the split. Real quiet before and after lets the transcriber decide where the turn ended the
+// same way it does on a call.
+import { openTranscriber, type HeardLine } from "../src/voice/transcriber";
 
 const EL_KEY = process.env.ELEVENLABS_API_KEY || "";
 const DG_KEY = process.env.DEEPGRAM_API_KEY || "";
@@ -25,10 +35,16 @@ const FRAME_BYTES = 160;
 const FRAME_MS = 20;
 
 /** The lines that matter. Each one is a real robot store line and says what it is here to prove. */
-const LINES = [
+const LINES: Array<{ scene: number; lang: string; text: string; proves: string; oneLineOnly?: boolean }> = [
   { scene: 5, lang: "en",
     text: "Okay, thank you for holding. Yeah, I did not see any, unfortunately.",
     proves: "the sentence lost after every hold, because Charlie is switched off when it is said" },
+  { scene: 5, lang: "en",
+    text: "Uh, Pokémon? Uh, let me check. I just got in, so I have to, uh, I'll have to go up to the front and see. Okay, let me just put you on hold.",
+    proves: "the long turn check 354 wrote down in four pieces, the first of them the single word Pokemon",
+    // This one is here for the SPLIT, not for the words: it is a mouthful of "uh" and a transcriber
+    // is right to drop those, so grading it word for word would be grading the wrong thing.
+    oneLineOnly: true },
   { scene: 10, lang: "en",
     text: "We did not.",
     proves: "the short answer that came back as the single word Not on check 332" },
@@ -54,43 +70,37 @@ async function speak(text) {
   return Buffer.from(await r.arrayBuffer());
 }
 
+/** μ-law silence: 0x7f is the quietest sample the format has. */
+const QUIET = Buffer.alloc(FRAME_BYTES, 0x7f).toString("base64");
+/** How much quiet sits either side of the clip, so the turn ends on a pause and not on a hang-up. */
+const PAD_MS = 2000;
+
 /**
- * Stream one clip to Deepgram at the speed a phone line carries it, and return every finished
- * sentence it wrote. `language: multi` is the whole Spanish answer: we do not know which language a
- * store answers in until they speak, so we must never have to say in advance.
+ * Stream one clip through THE RUNTIME'S OWN transcriber at the speed a phone line carries it, with
+ * real quiet either side, and return every line it wrote. `language: multi` (inside that file) is
+ * the whole Spanish answer: we do not know which language a store answers in until they speak, so
+ * we must never have to say in advance.
  */
-function transcribe(audio) {
-  return new Promise((resolve, reject) => {
-    const qs = new URLSearchParams({
-      model: "nova-3", encoding: "mulaw", sample_rate: "8000", channels: "1",
-      language: "multi", smart_format: "true", punctuate: "true", interim_results: "false",
-    });
-    const ws = new WebSocket(`wss://api.deepgram.com/v1/listen?${qs}`, { headers: { Authorization: `Token ${DG_KEY}` } });
-    const said = [];
-    let timer = null;
-    const stop = (err) => { if (timer) clearTimeout(timer); try { ws.close(); } catch { /* already gone */ } err ? reject(err) : resolve(said); };
-    ws.on("error", (e) => stop(e));
-    ws.on("message", (raw) => {
-      let m; try { m = JSON.parse(String(raw)); } catch { return; }
-      const t = m?.channel?.alternatives?.[0]?.transcript;
-      if (m?.is_final && t) said.push(t);
-      if (m?.type === "Metadata") stop(null);
-    });
-    ws.on("open", () => {
-      let i = 0;
-      const step = () => {
-        if (i >= audio.length) {
-          // Tell it we are done and let it finish the last sentence, then give up rather than hang.
-          try { ws.send(JSON.stringify({ type: "CloseStream" })); } catch { /* torn down */ }
-          timer = setTimeout(() => stop(null), 4000);
-          return;
-        }
-        try { ws.send(audio.subarray(i, i + FRAME_BYTES)); } catch { return stop(new Error("socket closed mid send")); }
-        i += FRAME_BYTES;
-        timer = setTimeout(step, FRAME_MS);
-      };
-      step();
-    });
+function transcribe(audio: Buffer): Promise<string[]> {
+  return new Promise((resolve) => {
+    const said: string[] = [];
+    const t = openTranscriber((l: HeardLine) => { said.push(l.text); }, () => { /* quiet bench */ });
+    const frames: string[] = [];
+    for (let i = 0; i < PAD_MS / FRAME_MS; i++) frames.push(QUIET);
+    for (let i = 0; i < audio.length; i += FRAME_BYTES) frames.push(audio.subarray(i, i + FRAME_BYTES).toString("base64"));
+    for (let i = 0; i < PAD_MS / FRAME_MS; i++) frames.push(QUIET);
+    let i = 0;
+    const step = () => {
+      if (i >= frames.length) {
+        // Let the last turn come back, then let the socket go.
+        setTimeout(() => { t.close(); setTimeout(() => resolve(said), 2200); }, 1200);
+        return;
+      }
+      t.send(frames[i++]);
+      setTimeout(step, FRAME_MS);
+    };
+    // The socket needs a moment to come up before the first frame, exactly as on a check.
+    setTimeout(step, 600);
   });
 }
 
@@ -110,11 +120,11 @@ for (const line of LINES) {
   const got = heard.join(" ");
   const ok = bare(got) === bare(line.text);
   const oneLine = heard.length <= 1;
-  if (ok && oneLine) pass++;
+  if ((ok || line.oneLineOnly) && oneLine) pass++;
   console.log(`\nSCENE ${line.scene} (${line.lang}) — ${line.proves}`);
   console.log(`  said : "${line.text}"  (${secs}s of audio)`);
   console.log(`  heard: "${got}"  (${heard.length} line${heard.length === 1 ? "" : "s"})`);
-  console.log(`  ${ok ? "WORD FOR WORD" : "DIFFERENT WORDS"} · ${oneLine ? "one line" : "SPLIT INTO " + heard.length}`);
+  console.log(`  ${ok ? "WORD FOR WORD" : line.oneLineOnly ? "the words are graded elsewhere" : "DIFFERENT WORDS"} · ${oneLine ? "one line" : "SPLIT INTO " + heard.length}`);
 }
-console.log(`\n${pass} of ${LINES.length} came back word for word AND as one line.`);
+console.log(`\n${pass} of ${LINES.length} came back as ONE line, with the words right.`);
 process.exit(pass === LINES.length ? 0 : 1);

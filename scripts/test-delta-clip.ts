@@ -11,7 +11,7 @@
 //   conversation. And that an agent who tries to talk over the question is silenced.
 import { EventEmitter } from "node:events";
 import { WebSocketServer, type WebSocket as WS } from "ws";
-import { setBridgeContext, handleTwilioBridge, weEndedCheck, nudgeSignoff } from "../src/voice/bridge";
+import { setBridgeContext, handleTwilioBridge, weEndedCheck, nudgeSignoff, echoListening, echoHeardStaff } from "../src/voice/bridge";
 import { openReceipt, getReceipt, transcriptOf, closeReceipt, rollup, _reset } from "../src/calls/events";
 import { isCheckAlive } from "../src/calls/check-life";
 import { toMediaFrames } from "../src/calls/clip-cache";
@@ -2016,6 +2016,41 @@ console.log("\n▶ …and a store hanging up well inside the limit is still the 
   await sleep(150);
   ok(weEndedCheck("room-early") === null, "nothing of ours claims it, so the card reads the store hung up");
   ok(!(getReceipt("room-early")?.events || []).some((e) => e.detail?.reason === "time_cap"), "and no cap is claimed");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ ECHO HAS THE WORDS: Charlie still hears the store, and his mouth still opens");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-echo-words";
+  // Echo is writing this check's words down, which is every check from 08-07.
+  echoListening(room, true);
+  const { tw } = await callToHello(f, 400, room);
+  await sleep(400);                                   // the recording is done, his session is up
+  const before = f.chunks.length;
+  for (let i = 0; i < 60; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
+  await sleep(120);
+  ok(f.chunks.length > before, `the store's voice still reaches his session while Echo has the words (${f.chunks.length - before} frames)`);
+  // His mouth: shut until they answer, and their answer is what opens it. Proved by what the
+  // carrier is actually handed, because a shut mouth means his audio is dropped, not queued.
+  const ws = f.sockets[f.sockets.length - 1];
+  const outBefore = tw.outMedia().length;
+  ws.send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Fun store, this is Bob." } }));
+  await sleep(60);
+  ws.send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Yeah, we got some in." } }));
+  await sleep(60);
+  ws.send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x40)) } }));
+  await sleep(120);
+  ok(tw.outMedia().length > outBefore, "and once they answer, what he says goes down the line");
+  // The record is Echo's, not his session's: the same sentence must never land twice.
+  const rec = getReceipt(room)!;
+  ok(!transcriptOf(rec).includes("Yeah, we got some in."), "his session's copy of the store's words is NOT written down");
+  echoHeardStaff(room, "Yeah, we got some in.");
+  await sleep(30);
+  ok(transcriptOf(getReceipt(room)!).includes("Yeah, we got some in."), "Echo's copy IS, through the same door as always");
+  echoListening(room, false);
   restore(); tw.close(); f.close();
 }
 
