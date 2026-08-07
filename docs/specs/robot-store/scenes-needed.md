@@ -13,6 +13,7 @@ real store always says something back.
 | Scene | Card | Ends on | What Charlie asks next | Missing line to add |
 |---|---|---|---|---|
 | 2 | Answer: clear no | "We did not." | when more are coming | "Uh, probably Tuesday, that's when the truck comes." |
+| 2 | Answer: clear no | "…that's when the truck comes." | what TIME on that day (08-07) | "Uh, morning usually, before we open." |
 | 3 | Answer: clear no | "No, I'm sorry. I haven't seen any yet." | when more are coming | "Not sure, honestly. Soon, I'd think." |
 | 4 | Answer: clear no | "No, we don't have any this, this shipment." | when more are coming | "I really don't know, they don't tell us." |
 | 5 | Hold: silence | "…Yeah, I did not see any, unfortunately." | when more are coming | "Uh, next week maybe? I'm not certain." |
@@ -81,9 +82,17 @@ once, is well under a dollar.
 
 ## THE THREE HOLES IN THIS LIST, FILLED (owner approved 08-06)
 
-**Test 10, the 4 minute limit, the actual words.** A chatty Staff member who never answers. Between
-each line the robot waits for Charlie, so this stretches naturally past the limit. Charlie's own
-wrap-up counts only HIS talking, so he stays under it while Staff run the clock.
+**MOVED 08-07 (owner).** These words are no longer the 4 minute limit. That test is now the owner's
+runaround, and it is written last because it needs the transfer working first: wrong department, a
+few questions, a transfer, a long hold, a new person who says they will be right with us, another
+hold, they pick up and ask how they can help, we ask, they say they will go look, and they never come
+back. HARD RULE for it: no single hold may run 120 seconds, or the hold cap ends the check before the
+four minute cap gets a turn.
+
+**Wrapup: they never answered, the actual words.** A chatty Staff member who never answers. Between
+each line the robot waits for Charlie, so this stretches on. Charlie's own wrap-up counts only HIS
+talking, and crossing it is the whole test: he asks once more, takes what he gets and closes, so the
+check ends on No clear answer and the robot waits for his goodbye instead of hanging up on him.
 1. "Oh, Pokemon cards, yeah. We get a ton of calls about those, honestly."
 2. "You know my nephew collects them. He's got a whole binder, must be hundreds."
 3. "There was a guy in here last week, bought like twenty packs at once. Twenty."

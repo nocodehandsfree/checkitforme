@@ -35,10 +35,10 @@ const WORDS: Record<number, string[]> = {
   1: ["Yeah.", "Uh yeah, it's the Pitch Black booster boxes."],
   // Every clear no now carries the line Charlie's follow-up needs, or the check dies with no
   // goodbye. Three shapes on purpose: a real day, a vague soon, an honest I do not know.
-  // …AND THE OTHER HALF, added 08-07. Section 58 of Charlie's instructions gives him one more
-  // question when Staff name a day but no time, so a scene that stops at the day leaves him asking
-  // into silence and the check runs to a hang up with no goodbye (owner, off check 355).
-  2: ["We did not.", "Uh, probably Tuesday, that's when the truck comes.", "Uh, mornings usually. Before we open."],
+  // The third line is the owner's 08-07 fix: naming a day makes Charlie ask what TIME, and these
+  // scenes had nothing left to say, so the check ended on OUR question. Scene 3 says "soon", which
+  // is neither a day nor a time, so section 58 has him ask for both once more.
+  2: ["We did not.", "Uh, probably Tuesday, that's when the truck comes.", "Uh, morning usually, before we open."],
   3: ["No, I'm sorry. I haven't seen any yet.", "Not sure, honestly. Soon, I'd think.", "Maybe end of the week? I really couldn't say what time."],
   4: ["No, we don't have any this, this shipment.", "I really don't know, they don't tell us."],
   5: ["Uh, Pokémon? Uh, let me check. I just got in, so I have to, uh, I'll have to go up to the front and see. Okay, let me just put you on hold.",
@@ -191,7 +191,9 @@ console.log("\n── the verdict each scene should produce ──");
 is(ROBOT_SCENES.map((s) => `${s.n}:${s.expect}`), [
   "1:in_stock", "2:not_in_stock", "3:not_in_stock", "4:not_in_stock", "5:not_in_stock",
   "6:no_clear_answer", "7:in_stock", "8:in_stock", "9:nobody_answered", "10:not_in_stock",
-  "11:not_in_stock", "12:nobody_answered", "13:admin_hangup", "14:in_stock", "15:too_busy",
+  // Scene 13 moved off the 4 minute limit onto its own wrap-up card (owner 08-07), so it no longer
+  // ends by us hanging up: Charlie asks once more, takes what he gets and closes on no clear answer.
+  "11:not_in_stock", "12:nobody_answered", "13:no_clear_answer", "14:in_stock", "15:too_busy",
   "16:no_clear_answer", "17:voicemail", "18:in_stock", "19:in_stock",
 ], "scenes 7 and 8 expect IN STOCK — the two we really got wrong");
 

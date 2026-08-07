@@ -631,10 +631,9 @@ export const ROBOT_SCENES: RobotScene[] = [
   { n: 2, card: "answer_clear_no", name: "No, plainly", expect: "not_in_stock", acts: [
     { listen: true }, { say: "We did not." },
     { listen: true }, { say: "Uh, probably Tuesday, that's when the truck comes." },
-    // THE OTHER HALF, because Charlie asks for it (owner 08-07). Section 58 of his instructions says
-    // a day with no time gets one more question, so a scene that stops at the day leaves him asking
-    // into silence and the check runs to a hang up with no goodbye. They answer the time now.
-    { listen: true }, { say: "Uh, mornings usually. Before we open." },
+    // NAME A DAY AND HE ASKS THE TIME (owner 08-07). Charlie's own words now follow a shipment day
+    // with "what time", and this scene had nothing left to say, so the check ended on OUR question.
+    { listen: true }, { say: "Uh, morning usually, before we open." },
     ...WAIT_OUT,
   ] },
   { n: 3, card: "answer_clear_no", name: "No, softened", expect: "not_in_stock", acts: [
@@ -735,7 +734,12 @@ export const ROBOT_SCENES: RobotScene[] = [
   // talking, warmly, and never once answers the question. Every rule we have is working correctly
   // and the check still runs away with the margin, which is why the limit exists at all. The robot
   // waits for Charlie between each line, so this stretches past four minutes on its own.
-  { n: 13, card: "hungup_limit", name: "Talks past the answer, forever", expect: "admin_hangup", noGoodbye: true, acts: [
+  // MOVED TO ITS OWN CARD (owner 08-07). This was filed under the 4 minute limit, which is our own
+  // safety net and a different test entirely. What a rambler actually proves is Charlie's manners:
+  // once he has been TALKING for the Admin number he asks once more, takes what he gets and CLOSES.
+  // So the robot no longer hangs up on him — it waits, the way every other scene does, or a goodbye
+  // is unspeakable by design and the test can never pass.
+  { n: 13, card: "wrapup_never_answered", name: "Talks past the answer, forever", expect: "no_clear_answer", acts: [
     { listen: true }, { say: "Oh, Pokemon cards, yeah. We get a ton of calls about those, honestly." },
     { listen: true }, { say: "You know my nephew collects them. He's got a whole binder, must be hundreds." },
     { listen: true }, { say: "There was a guy in here last week, bought like twenty packs at once. Twenty." },
@@ -751,7 +755,7 @@ export const ROBOT_SCENES: RobotScene[] = [
     { listen: true }, { say: "Anyway, what was it you were after? Sorry, it's been one of those days." },
     { listen: true }, { say: "Right, right. Hang on, my manager's waving at me about something." },
     { listen: true }, { say: "Sorry about that. Where were we? Busy in here today." },
-    { hangup: true },
+    ...WAIT_OUT,
   ] },
   // A STORE MOVING US ON ITS OWN, which is the common one and has never been tested. The only
   // transfer scene we had was the one where Charlie ASKS to be put through.

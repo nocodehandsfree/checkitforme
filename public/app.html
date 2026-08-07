@@ -5404,6 +5404,7 @@ function dateOf(at){ return at?new Date(Number(at)*1000).toLocaleDateString([],{
 function runTimelineHtml(calls,gains){
   const list=(calls||[]).slice().sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0));
   if(!list.length) return '';
+  const provedAt=departmentProvedAt(calls);
   const runDate=dateOf(list[0].at);
   const rows=list.map((c,i)=>{
     const last=i===list.length-1;
@@ -5412,7 +5413,7 @@ function runTimelineHtml(calls,gains){
     // EVERY DOT THE SAME SIZE, and the line meets the dot with no gap (owner, 08-03).
     const spine=(dotColor)=>`<div style="display:flex;flex-direction:column;align-items:center;flex:0 0 auto;padding-top:5px">`
       +`<span style="width:8px;height:8px;border-radius:50%;background:${dotColor}"></span>`
-      +(last?'':`<span style="width:2px;flex:1;background:rgba(255,255,255,.10);margin:0"></span>`)+`</div>`;
+      +(last?'':`<span style="width:2px;flex:1;background:rgba(255,255,255,.10);margin:0 0 -5px"></span>`)+`</div>`;
     if(c.grade==='fail'){
       const bid='rt_'+(c.navId||Math.abs(Number(c.at)||0));
       return `<div style="display:flex;gap:12px;cursor:pointer" onclick="mapCheckOpen('${bid}')">`
@@ -5426,7 +5427,7 @@ function runTimelineHtml(calls,gains){
         +`<div id="${bid}" style="display:none"><div class="mladder" style="margin-top:10px">${callRungs(c).map((r,j,a)=>callRung(r,j===a.length-1)).join('')}</div></div>`
         +`</div></div>`;
     }
-    const pill=stagePill(c);
+    const pill=stagePill(c,provedAt);
     const bid='rt_'+(c.navId||Math.abs(Number(c.at)||0));
     return `<div style="display:flex;gap:12px;cursor:pointer" onclick="mapCheckOpen('${bid}')">`
       +spine(pill[1])
@@ -5437,7 +5438,7 @@ function runTimelineHtml(calls,gains){
       +`<div style="display:flex;align-items:center;gap:8px;margin-top:4px">`
       +`<span style="font-size:11.5px;font-weight:700;color:var(--text-tertiary)">${clockOf(c.at)}</span>`
       +(navS!=null?`<span style="font-size:11.5px;font-weight:700;color:var(--muted)">${navS}s</span>`:'')
-      +(c.madeUp?`<span style="font-size:10.5px;font-weight:800;color:#F59E0B">made up, no check happened</span>`:'')+`</div>`
+      +(c.madeUp?`<span style="font-size:10.5px;font-weight:800;color:#F59E0B">made up</span>`:'')+`</div>`
       +`<div id="${bid}" style="display:none"><div class="mladder" style="margin-top:10px">${callRungs(c).map((r,j,a)=>callRung(r,j===a.length-1)).join('')}</div></div>`
       +`</div></div>`;
   }).join('');
@@ -5453,7 +5454,8 @@ function mappingCallsHtml(calls,versions){
   // what we run now. A check says what the check did, and nothing more, so the page never carries
   // two different claims about which route is live.
   void versions;
-  const card=c=>mappingCallCard(c,gains.get(c));
+  const provedAt=departmentProvedAt(calls);
+  const card=c=>mappingCallCard(c,gains.get(c),provedAt);
   // ONE TIMELINE for the run, then the checks themselves underneath for reading one top to bottom.
   const rest=calls.slice(2);
   return runTimelineHtml(calls,gains)
@@ -5504,25 +5506,42 @@ function mapCheckOpen(id){ const el=document.getElementById(id); if(el) el.style
 // work, so every check reads Proving department over and over until it is actually proved. Nothing
 // is green until it IS proved — that check reads Department proved. Speed tries stay yellow until
 // one lands, and that one reads Speed optimized. Both new words are in the Statuses list.
-const stagePill=c=>{
+// THE HEADING BELONGS TO THE RUN, NOT TO ONE CHECK (owner 08-07: "the very first step, department
+// proved, but then the next one is proving department, this is backwards"). It used to be worked out
+// from a single check's own facts, so a later check that never got to ask Staff read Proving
+// department again even though an earlier check had already proved it, and the run read as if it had
+// gone backwards. A run only ever moves forwards: every check reads Proving department until one
+// actually proves it, that check reads Department proved, and from there every check is a speed try.
+// `provedAt` is when the department was proved on this run, or 0 if it has not been yet.
+const departmentProvedAt=calls=>{
+  let at=0;
+  (calls||[]).forEach(c=>{ if(c&&c.askedStaff&&c.grade!=='fail'&&c.reachedHuman){ const t=Number(c.at)||0; if(!at||t<at) at=t; } });
+  return at;
+};
+const stagePill=(c,provedAt)=>{
   if(!c) return ['Proving department','#FFCB05','rgba(255,203,5,.13)'];
-  if(c.stage==='speed') return c.grade!=='fail'&&c.gainedSpeed
+  const mine=Number(c.at)||0;
+  const proved=c.askedStaff&&c.grade!=='fail'&&c.reachedHuman;
+  // The check that did the proving is the green one, whatever stage it carries.
+  if(proved&&provedAt&&mine===provedAt) return ['Department proved','var(--green)','rgba(74,222,128,.13)'];
+  // Everything after that moment is speed, so the run never reads as going back a step.
+  if(c.stage==='speed'||(provedAt&&mine>provedAt)) return c.grade!=='fail'&&c.gainedSpeed
     ? ['Speed optimized','var(--green)','rgba(74,222,128,.13)']
     : ['Optimizing speed','#FFCB05','rgba(255,203,5,.13)'];
-  return (c.askedStaff&&c.grade!=='fail'&&c.reachedHuman)
+  return proved
     ? ['Department proved','var(--green)','rgba(74,222,128,.13)']
     : ['Proving department','#FFCB05','rgba(255,203,5,.13)'];
 };
-const stageWord=c=>stagePill(c)[0];
+const stageWord=(c,provedAt)=>stagePill(c,provedAt)[0];
 // One check: who we rang and when, its stage, how it ended, the conversation (comp 3a). A failed
 // check collapses to one row carrying its reason — tap to open. No PRODUCED line: the top passing
 // check IS the winner and its pill says so.
-function mappingCallCard(c,gain){
+function mappingCallCard(c,gain,provedAt){
   const rungs=callRungs(c);
   // NAV TIME ONLY (owner, 07-31): the number beside the pill is when the menu finished with us, never
   // the whole call with Staff's pickup time inside it. A check that never measured it shows nothing.
   const navS=(typeof c.transferAtSec==='number'&&c.transferAtSec>0)?c.transferAtSec:null;
-  const stage=stageWord(c);
+  const stage=stageWord(c,provedAt);
   // THE DATE AND TIME SIT IMMEDIATELY ABOVE THE TRANSCRIPT, not on the row (owner, 08-03) — the row
   // carries the stage and the gain, and nothing else competes with them.
   const ladder=`<div style="margin-top:13px;font-size:11px;font-weight:700;color:var(--text-tertiary)">${callWhen(c.at)}</div>`
@@ -5540,7 +5559,7 @@ function mappingCallCard(c,gain){
       +`<div id="${bid}" style="display:none">${stage?`<div style="font-size:11px;font-weight:700;color:#8A8A96;margin-top:10px">${stage}</div>`:''}${ladder}</div></div>`;
   }
   // GREEN ONLY FOR A CONFIRMED RIGHT DEPARTMENT (Update 16). Yellow is neutral, red is bad.
-  const pill=stagePill(c);
+  const pill=stagePill(c,provedAt);
   return `<div class="card" style="margin:0 0 10px">`
     // THE STORE'S FULL NAME, wrapping if it needs to. Cutting it off buried which store a check was.
     +`<div style="display:flex;align-items:flex-start;gap:8px">`
@@ -5551,7 +5570,7 @@ function mappingCallCard(c,gain){
     +`<span class="pill" style="gap:6px;background:${pill[2]}">${ssDot(pill[1])}<span style="color:${pill[1]}">${pill[0]}</span></span>`
     +(navS!=null?`<span style="font-size:11.5px;font-weight:700;color:var(--muted)">${navS}s</span>`:'')
     // A CHECK THAT DID NOT HAPPEN SAYS SO. Nothing on this page may look like a real check unless it was.
-    +(c.madeUp?`<span style="font-size:10.5px;font-weight:800;color:#F59E0B">made up, no check happened</span>`:'')+`</div>`
+    +(c.madeUp?`<span style="font-size:10.5px;font-weight:800;color:#F59E0B">made up</span>`:'')+`</div>`
     +ladder+`</div>`;
 }
 // The conversation as rows. The store's own lines stay as they were spoken; ours are read off the
