@@ -433,8 +433,12 @@ async function runOne(page, scene, greetingIdx) {
     const full = await readCheck(HOST, TOKEN, row.id).catch(() => null);
     if (full && full.call.providerCallId && full.call.providerCallId === rec.call.providerCallId) sameCall.push(full);
   }
+  // A check covering more than one product line still writes a row per line, and that is right: each
+  // line needs its own answer. What must never happen again is one of those rows being handed back
+  // AS the check. They carry `partOfCheck` now (the id of the row that really made the call) and are
+  // not listed as checks anywhere, so more than one row turning up here means the marking failed.
   item(12, "one check writes ONE record", sameCall.length <= 1,
-    sameCall.length <= 1 ? "one row for this check" : `${sameCall.length} rows for the same phone call: ${sameCall.map((s) => `${s.id}(${linesOf(s).length} lines)`).join(", ")}`);
+    sameCall.length <= 1 ? "one row for this check" : `${sameCall.length} rows for the same phone call, and none of them says whose check it is: ${sameCall.map((s) => `${s.id}(${linesOf(s).length} lines)`).join(", ")}`);
   // Judge the words against the FULLEST of them, so a duplicate is reported once, as itself, and
   // does not also make every word check fail for a reason that is not about the words.
   if (sameCall.length > 1) rec = sameCall.sort((a, b) => String(b.call.transcript || "").length - String(a.call.transcript || "").length)[0];

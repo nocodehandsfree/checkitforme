@@ -4838,7 +4838,14 @@ app.get("/api/admin/test-calls", async (c) => {
   // A real customer's check must never wander onto this screen, which is exactly what the third rule
   // keeps out: it is his account or it does not list.
   const master = "phone:" + (process.env.OWNER_PHONE || "+13106662331").trim();
+  // ONE PHONE CALL, ONE ROW ON THIS SCREEN (owner 08-07). A check covering more than one product
+  // line writes an extra row per line, carrying the answer and nothing else: no start, no room, no
+  // cost, no conversation. Those rows are newer than the check itself, so the newest row on this
+  // list was a half written copy of a check that had really finished (238 wrote 239, 240 and 241).
+  // They still exist and still hold their line's answer; they are simply not checks, so they are not
+  // listed as checks.
   const all = (await db.select().from(callResults))
+    .filter((r) => r.partOfCheck == null)
     .filter((r) => config.staging.on || ownerOnly.has(r.retailerId) || r.finderUserId === master)
     .sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
   const rows = all.map((r) => {
@@ -7161,8 +7168,12 @@ app.get("/api/results", async (c) => {
   // reference. (The old version pulled ALL ~100k retailers on every call — that was the slow part.)
   const limit = Math.min(Math.max(Number(c.req.query("limit") || 10), 1), 200);
   const offset = Math.max(Number(c.req.query("offset") || 0), 0);
-  const rows = await db.select().from(callResults).orderBy(desc(callResults.startedAt)).limit(limit).offset(offset);
-  const total = Number((await db.select({ n: sql<number>`count(*)` }).from(callResults))[0]?.n || 0);
+  // ONE PHONE CALL, ONE ROW (owner 08-07). A check covering more than one product line writes an
+  // extra row per line, holding that line's answer and nothing else, and those rows are the newest
+  // in the table. They are not checks, so they are neither listed nor counted as checks; the answer
+  // they hold still reaches its own category's screens through the category readers.
+  const rows = await db.select().from(callResults).where(isNull(callResults.partOfCheck)).orderBy(desc(callResults.startedAt)).limit(limit).offset(offset);
+  const total = Number((await db.select({ n: sql<number>`count(*)` }).from(callResults).where(isNull(callResults.partOfCheck)))[0]?.n || 0);
   const rids = [...new Set(rows.map((r) => r.retailerId).filter((x): x is number => !!x))];
   const rMap = new Map((rids.length ? await db.select().from(retailers).where(inArray(retailers.id, rids)) : []).map((r) => [r.id, r]));
   const names = new Map((await db.select().from(chains)).map((x) => [x.id, x.name]));

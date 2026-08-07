@@ -1504,6 +1504,17 @@ export async function ingestPending(): Promise<number> {
     await notifyAfterVerdict(row.id);
 
     // Fan out any additional lines covered in the same call into their own result rows.
+    //
+    // ONE PHONE CALL, ONE CHECK (owner 08-07). A check can genuinely cover more than one product
+    // line and each line needs its own answer, so the fan-out stays. What was wrong is that these
+    // rows were indistinguishable from a check: they carry the ANSWER and nothing else, no start, no
+    // room, no cost, no conversation, and being written last they are the NEWEST rows in the table.
+    // So anything reading "the newest check" got a half written copy of a check that had really
+    // finished. Check 238 wrote 239, 240 and 241 exactly that way.
+    //
+    // `partOfCheck` is the id of the row that really made the call, so an extra line can always be
+    // told from the check itself and led back to it. It is set on the rows we create AND on any that
+    // an older run left behind unmarked, so the fix reaches yesterday's rows too.
     for (const [label, conf] of Object.entries(outcome.categoryResults)) {
       if (label === primaryLabel) continue;
       const cid = labelToId.get(label);
@@ -1513,13 +1524,13 @@ export async function ingestPending(): Promise<number> {
       // Per-category verdict for the fan-out line (its own in/out key; else the call-level reason).
       const fanKey = conf === true ? "in_stock" : conf === false ? "not_in_stock" : outcome.statusKey;
       if (existing.length) {
-        await db.update(callResults).set({ confirmed: conf, statusKey: fanKey, status: outcome.status, completedAt: now() })
+        await db.update(callResults).set({ confirmed: conf, statusKey: fanKey, status: outcome.status, completedAt: now(), partOfCheck: row.id })
           .where(eq(callResults.id, existing[0].id));
       } else {
         await db.insert(callResults).values({
           scheduleId: row.scheduleId, retailerId: row.retailerId, categoryId: cid, mode: row.mode,
           status: outcome.status, confirmed: conf, statusKey: fanKey, summary: outcome.summary, transcript: outcome.transcript,
-          providerCallId: row.providerCallId, completedAt: now(),
+          providerCallId: row.providerCallId, completedAt: now(), partOfCheck: row.id,
         });
       }
       if (conf === true) await notifyInStock(store?.name ?? "A store", label, row.retailerId, outcome.shipmentDay);

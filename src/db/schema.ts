@@ -553,6 +553,14 @@ export const callResults = sqliteTable(
     // Provenance, so a bad number can be traced instead of argued about.
     mapVersion: text("map_version"),        // which saved menu version ran (null until Mapper ships)
     attemptOf: integer("attempt_of"),       // the check this one retries -> tries-per-answer is countable
+    // ONE PHONE CALL, ONE CHECK, AND EVERY OTHER ROW SAYS WHOSE IT IS (owner 08-07).
+    // A check that covers more than one product line fans the extra lines out into rows of their
+    // own, and those rows carry only the answer: no start, no room, no cost, no conversation. They
+    // are also NEWER, so anything reading "the newest check" got a half written copy of a check that
+    // had really finished. Check 238 wrote 239, 240 and 241 that way. The feature is right and stays;
+    // what was missing is any way at all to tell the extra rows from the check itself. This is it,
+    // and it is the id of the row that really made the call. NULL on a real check, always.
+    partOfCheck: integer("part_of_check"),
     engineVersion: text("engine_version"),  // the build that served it, so a regression is findable
     // WHICH BRAIN answered: "hosted" = the voice provider's model, "ours" = our own account, "mixed"
     // = the fallback ladder swapped mid call. Without this the cost comparison the switch exists to

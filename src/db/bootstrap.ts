@@ -131,6 +131,9 @@ export async function bootstrap() {
   // Store-request reward loop: attribute the submitter + guard the one-time go-live free-check grant.
   await client.execute("ALTER TABLE store_requests ADD COLUMN user_id TEXT").catch(() => {});
   await client.execute("ALTER TABLE store_requests ADD COLUMN rewarded_at INTEGER").catch(() => {});
+  // One phone call, one check: every extra product-line row says whose check it belongs to, so
+  // nothing reading the newest row can ever hand back a half written copy (owner 08-07, check 238).
+  await client.execute("ALTER TABLE call_results ADD COLUMN part_of_check INTEGER").catch(() => {});
   await client.execute("ALTER TABLE call_results ADD COLUMN zone_run_id TEXT").catch(() => {});
   await client.execute("ALTER TABLE call_results ADD COLUMN shipment_time_heard TEXT").catch(() => {});
   await client.execute("ALTER TABLE chains ADD COLUMN dtmf_shortcut TEXT").catch(() => {});
