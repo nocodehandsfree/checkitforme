@@ -161,6 +161,8 @@ export interface NavSession {
   /** LAYER 4 — we stayed silent for a beat to see whether the line kept reading (a recording) or
    *  stopped for us (a person), and what it did. */
   pauseTested?: boolean; keptTalkingAfterPause?: boolean; pauseStartedAtSec?: number;
+  /** THE KNOCK: when we pressed, what was playing when we did, and whether it read straight on. */
+  knockAtSec?: number; knockLine?: string; keptTalkingAfterKnock?: boolean;
   /** One unheard menu line filed per check — a condition is a menu, not every line of it. */
   filedUnknownLine?: boolean;
   /** The reigning recipe's menu time, for a speed check to beat. Not beaten = failed, "not faster". */
@@ -655,7 +657,9 @@ function judgeHere(s: NavSession, speech: string, atSec: number) {
     // The pause test is layer 4 and costs two seconds of silence; a mapping check that is walking a
     // known route has already answered its question by position, so it never gets here.
     pauseTested: s.pauseTested, keptTalkingAfterPause: s.keptTalkingAfterPause,
-    // THE KNOCK's answer, off the walker that sent it (owner 08-07).
+    // THE KNOCK's answer. The mapping check presses the keys itself, and a customer check walking a
+    // saved menu presses them through the walker, so both doors are read here.
+    ...(s.keptTalkingAfterKnock === undefined ? {} : { knockTested: true, keptTalkingAfterKnock: s.keptTalkingAfterKnock }),
     ...listenNavKnock(s.id),
   });
   // The earpiece's last word, kept so a turn where nothing at all was said has something honest to
@@ -669,6 +673,33 @@ async function navTurn(id: string, speech: string): Promise<string> {
   if (!s) return twiml(`<Hangup/>`);
   const atSec = Math.round((Date.now() - s.startMs) / 1000);
   s.turns++;
+  // THE KNOCK (owner 08-07). On a number whose menu we do NOT already hold, press a few keys the
+  // moment the store says its first thing, before any options are read. A person hears the beeps in
+  // their ear and stops. A recording reads straight on, and reading on is a machine with certainty.
+  // We never know in advance whether a store answers directly, so the keys go out once and Echo uses
+  // what happens next: that is the whole point, our side works it out instead of us knowing.
+  // Getting thrown into a random branch is fine and expected: it proves a machine, and mapping's own
+  // next check starts again from the top.
+  if (s.knockAtSec == null && !(s.knownMenuLines || []).length && String(speech || "").trim()) {
+    s.knockAtSec = atSec;
+    s.knockLine = String(speech);
+    s.steps.push({ who: "us", text: "pressed a few keys to see whether the talking stops", atSec, action: "press", value: "123" });
+    emit(s.id, "unknown", "Pressed a few keys to see whether the talking stops", { step: "knock", atSec });
+    return twiml(`<Play digits="123"/>${gather(id)}`);
+  }
+  // …and the very next thing we hear is the answer. Still reading the same line out means it never
+  // noticed, so it is a machine. Anything else is left to the other tests, because a menu goes quiet
+  // too when it acts on a key.
+  if (s.knockAtSec != null && s.keptTalkingAfterKnock === undefined && String(speech || "").trim()) {
+    const a = String(s.knockLine || "").toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
+    const b = String(speech).toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
+    const same = !!a && !!b && (a === b || a.includes(b) || b.includes(a));
+    // STILL READING THE SAME LINE means it never noticed the keys, which is a machine. A DIFFERENT
+    // line means something changed, and that is never proof of a machine on its own: it is a person
+    // startled into speaking, or a menu that acted on the key. Only reading on is proof.
+    s.keptTalkingAfterKnock = same;
+    emit(s.id, "unknown", s.keptTalkingAfterKnock ? "It read straight on through the keys, so it is a machine" : "It stopped when we pressed keys", { step: "knock_answer", keptTalking: s.keptTalkingAfterKnock, atSec });
+  }
   // ROI GUARD (owner 07-26): a mapping call that is going nowhere costs the same as one that works, so
   // it gets a hard stop — no call runs past its cap, whatever the menu does. Callers set their own cap
   // (the sweep uses a tighter one than a slow-IVR discovery run); MAX_CALL_SEC is the ceiling.

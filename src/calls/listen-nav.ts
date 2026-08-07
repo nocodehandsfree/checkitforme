@@ -418,6 +418,13 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
 
   // LAYER 3 — the words.
   if (MENU_WORDS.test(text)) return { who: "recording", why: "these are a menu's own words", ...ride };
+  // THEY STOPPED FOR THE KEYS AND THEN SPOKE TO US. The owner's own words for what a person does:
+  // "a person reacts to a beep in their ear, stops, and says something to us". Both halves together,
+  // never either alone, because a menu also goes quiet when it acts on a key. This is what lets a
+  // store that answers directly be understood without us knowing in advance that it does.
+  if (soundsAddressedToUs && o.knockTested && !o.keptTalkingAfterKnock) {
+    return { who: "person", why: "it stopped for the keys and then spoke to us", ...ride };
+  }
   // Sounding like a person is only allowed to settle it once the pause has ALSO said person, because
   // the pause is behaviour and the phrase is only a hint. Until then it waits, and waiting is free.
   if (soundsAddressedToUs && o.pauseTested && !o.keptTalkingAfterPause) {
@@ -1175,7 +1182,7 @@ export function listenNavFeed(room: string, b64: string, track?: string): void {
  *  and stops; a recording does not notice. The waiting document follows so the walk carries on
  *  exactly as it would have. Never sent twice, and never on a number whose menu we already hold. */
 async function knock(s: Session): Promise<void> {
-  const ok = await updateTwiml(s, `<Play digits="1w w w1w1"/>${HOLD}`);
+  const ok = await updateTwiml(s, `<Play digits="123"/>${HOLD}`);
   s.knockDoneAtMs = Date.now();
   s.log(`listen-nav: knocked at ${s.knockAtSec}s to see whether the talking stops${ok ? "" : " (the carrier refused it)"}`);
   try { s.onEvent?.("unknown", "Pressed a few keys to see whether the talking stops", { step: "knock", atSec: s.knockAtSec }); } catch { /* best-effort */ }
