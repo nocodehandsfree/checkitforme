@@ -161,3 +161,27 @@ reach him ONLY as a note when he was CLOSED for them (`missedWhileClosed`). Feed
 of audio would add the turn marker's full second of quiet plus the writing to every reply, so he
 would always be a beat late. The one overlap: a sentence started while he was open and finished after
 he closed is heard live in part AND handed to him whole in the note.
+
+## 11. BUILT 08-07 LATE, AND THE ONE FOUND WHILE PROVING IT
+
+All of §10's agreed list is on staging and Admin, proven on check 356 (scene 2, 12.3¢):
+`Echo (Ears)` is ONE line at 3.3¢ opening to hearing the line 2.1¢ and writing the words 1.2¢;
+`Charlie (Voice)` is ONE line at 4.8¢ opening to Speaking 4s 0.7¢, Listening 2s 0.4¢, Waiting 20s
+3.7¢; the same three print under his seconds on the tile up top; the signoff row reads "Charlie
+understood the product was not in stock and was told to ask what day and time more are coming"; the
+store answered the time follow-up and Charlie signed off ("Perfect, thanks so much Larry, have a
+good one!"), so the goodbye row passed for the first time; and `holdQuietMs` is 3, visible in the
+record as hold_start to charlie_leave gaps of exactly 3 seconds.
+
+**FOUND ON 356 AND FIXED THE SAME HOUR.** He said goodbye at 59 seconds and the line stayed open
+until the STORE hung up at 145, which billed a third whole minute and put that check's margin at 51
+percent. The rule that ends a signed-off check (owner 08-04, check 282) lived ONLY at the start of a
+wait, so a goodbye said while the line was ALREADY going quiet found the wait open and nothing
+looked again. `hangUpAfterGoodbye` is now one function with two doors: the start of a wait, and the
+goodbye landing during one. Proved in the rig (`test-delta-clip`, "the goodbye lands after the quiet
+has already started"), NOT yet on a real check.
+
+**WATCH ON THE NEXT CHECKS:** the 3 second cut made check 356 open Charlie FOUR times where 6
+seconds would have kept him open through the 3 and 6 second gaps. His meter was 26 seconds with 20
+of them waiting, so the cut has not yet been shown to save money. The split on his cost line is
+exactly the number that will settle it.

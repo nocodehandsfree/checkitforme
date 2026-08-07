@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-07T01:59:43.161Z",
+  "at": "2026-08-07T03:34:23.627Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
@@ -57,14 +57,14 @@
         {
           "n": 6,
           "name": "the words match what the robot actually said, word for word",
-          "pass": false,
-          "detail": "\"Uh, probably Tuesday, that's when the truck comes.\" → written down only in part"
+          "pass": true,
+          "detail": "2 lines, all exact"
         },
         {
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
-          "pass": false,
-          "detail": "1 bounce(s) over 130 looks · header held at 0px"
+          "pass": true,
+          "detail": "0 bounce(s) over 20 looks · header held at 62px"
         },
         {
           "n": 8,
@@ -75,8 +75,8 @@
         {
           "n": 13,
           "name": "the check ends with a goodbye, not with us hanging up mid conversation",
-          "pass": false,
-          "detail": "the last thing said was OUR OWN QUESTION: \"Agent: Oh nice, any idea what time the truck usually gets in?\""
+          "pass": true,
+          "detail": "we signed off: \"Perfect, thanks so much Larry, have a good one!\""
         },
         {
           "n": 14,
@@ -88,19 +88,19 @@
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 94 seconds and the line closed at 94 — 0 seconds of nothing"
+          "detail": "the answer was in at 145 seconds and the line closed at 145 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Fri, Aug 7 · 1:58 AM Restock incoming A shipment lands Tuesday.Be first when it drops. Check another store Calli"
+          "detail": " Result Fri, Aug 7 · 3:31 AM Nobody answered Rang and rang, but nobody picked up.No check, no charge. Try checking later"
         },
         {
           "n": 9.1,
           "name": "the screen and the record say the same thing",
-          "pass": true,
-          "detail": "the screen said out, the record says out (not_in_stock)"
+          "pass": false,
+          "detail": "the screen said unclear, the record says out (not_in_stock)"
         },
         {
           "n": 11,
@@ -111,8 +111,8 @@
         {
           "n": 10,
           "name": "the screen and the till agree about money",
-          "pass": true,
-          "detail": "CHARGED · the screen claims no free check · the check cost 8.6¢"
+          "pass": false,
+          "detail": "CHARGED · the screen says \"No charge\" · the check cost 12.3¢"
         }
       ],
       "shots": [
@@ -121,10 +121,10 @@
         "./robot-run/02-live.png",
         "./robot-run/02-result.png"
       ],
-      "startedAt": 1786067843583,
-      "checkId": 355,
-      "cost": 0.086162,
-      "costReadable": "8.6¢",
+      "startedAt": 1786073461801,
+      "checkId": 356,
+      "cost": 0.122854,
+      "costReadable": "12.3¢",
       "robotCost": null,
       "charged": true,
       "statusKey": "not_in_stock"

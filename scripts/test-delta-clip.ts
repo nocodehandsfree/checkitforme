@@ -2054,5 +2054,31 @@ console.log("\n▶ ECHO HAS THE WORDS: Charlie still hears the store, and his mo
   restore(); tw.close(); f.close();
 }
 
+console.log("\n▶ THE GOODBYE LANDS AFTER THE QUIET HAS ALREADY STARTED: we still put the phone down");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-late-goodbye";
+  const { tw } = await callToHello(f, 400, room);
+  await sleep(400);
+  theyGreetAndAnswer(f);                              // their hello, then their answer
+  await sleep(120);
+  nudgeSignoff(room, "not in stock");                 // the reader has it: thank them and end
+  await sleep(120);
+  // They stop talking. The wait opens BEFORE he has said his goodbye, which is the shape that used
+  // to leave the line open until the store hung up (check 356: goodbye at 59s, hung up at 145s).
+  for (let i = 0; i < 400; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(200);
+  ok(tw.readyState === 1, "the line is still up while nobody has said goodbye");
+  const ws = f.sockets[f.sockets.length - 1];
+  ws.send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Perfect, thanks so much, have a good one!" } }));
+  await sleep(250);
+  ok(weEndedCheck(room) === "signed_off", "the goodbye lands late and WE end the check, not the store");
+  const ev = (getReceipt(room)?.events || []).find((e) => e.detail?.reason === "signed_off");
+  ok(!!ev && String(ev.note || "").includes("said goodbye"), `and the timeline says so in plain words: "${ev?.note}"`);
+  restore(); tw.close(); f.close();
+}
+
 console.log(`\n════════════════════════════════\n  PASS: ${pass}   FAIL: ${fail}\n════════════════════════════════`);
 process.exit(fail === 0 ? 0 : 1);

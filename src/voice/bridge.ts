@@ -922,6 +922,19 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   const earMoment = (heardAtMs: number): number | undefined =>
     convEar ? Date.now() - Math.max(0, convEar.heardMs - heardAtMs) : undefined;
 
+  /** HE HAS SAID GOODBYE AND NOBODY IS TALKING, so WE put the phone down (owner 08-04, check 282;
+   *  second door added 08-07, check 356). The ear only counts quiet once our own audio has finished
+   *  playing, so his goodbye is always fully out before this can run. */
+  function hangUpAfterGoodbye(atMs: number) {
+    if (ended) return;
+    noteWeEnded(room, "signed_off");
+    emit(room, "hangup", "Charlie said goodbye and the line went quiet, so we hung up", { reason: "signed_off", atMs });
+    log("signoff: goodbye said and the line went quiet — the check is over, hanging up");
+    try { eleven?.close(); } catch { /* torn down */ }
+    signalEnd();
+    try { twilio.close(); } catch { /* best effort */ }
+  }
+
   function beginHold(reason: HoldReason, atMs: number) {
     if (onHold) return;
     // THE QUIET AFTER THE GOODBYE IS THE CHECK ENDING, NOT STAFF STEPPING AWAY (owner 08-04,
@@ -933,15 +946,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // counts quiet after our audio has finished playing, so his goodbye is always fully out
     // before this fires. Music or a transfer starting after a goodbye is somebody acting, and
     // the usual wait rules keep owning those.
-    if (signoffNudged && wrapRecorded && (reason === "quiet" || reason === "room")) {
-      noteWeEnded(room, "signed_off");
-      emit(room, "hangup", "Charlie said goodbye and the line went quiet, so we hung up", { reason: "signed_off", atMs });
-      log("signoff: goodbye said and the line went quiet — the check is over, hanging up");
-      try { eleven?.close(); } catch { /* torn down */ }
-      signalEnd();
-      try { twilio.close(); } catch { /* best effort */ }
-      return;
-    }
+    if (signoffNudged && wrapRecorded && (reason === "quiet" || reason === "room")) { hangUpAfterGoodbye(atMs); return; }
     onHold = true; holdReason = reason; heldWords = [];
     // EVERY WAIT THAT ENDS HAS TO HAVE STARTED. A transfer used to write ONLY its own line, and then
     // the wait it caused ended with a "back off hold" that had no "put on hold" anywhere above it —
@@ -1602,6 +1607,13 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           const byName = usedTheirName(String(txt), theirName);
           emit(room, "unknown", byName ? "Charlie wrapped up and thanked them by name" : "Charlie wrapped up and thanked them",
             { step: "wrap_up", usedName: byName, name: byName ? theirName : null });
+          // THE GOODBYE CAN LAND AFTER THE QUIET HAS ALREADY STARTED (owner 08-07, off check 356).
+          // The rule that ends a signed-off check lived only at the START of a wait, so a goodbye
+          // said as the line was already going quiet found the wait open and nothing looked again:
+          // he thanked them at 59 seconds and we sat on the line until the STORE hung up at 145,
+          // which billed a third whole minute and put that check's margin at 51 percent. Same
+          // ruling, second door.
+          if (signoffNudged && onHold && (holdReason === "quiet" || holdReason === "room")) hangUpAfterGoodbye(Date.now());
         }
         // WHICH LANGUAGE HE SPOKE, counted line by line off the same judge the map uses — never a
         // second opinion about what language a sentence is in.
