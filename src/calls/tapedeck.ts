@@ -631,11 +631,17 @@ export const ROBOT_SCENES: RobotScene[] = [
   { n: 2, card: "answer_clear_no", name: "No, plainly", expect: "not_in_stock", acts: [
     { listen: true }, { say: "We did not." },
     { listen: true }, { say: "Uh, probably Tuesday, that's when the truck comes." },
+    // THE OTHER HALF, because Charlie asks for it (owner 08-07). Section 58 of his instructions says
+    // a day with no time gets one more question, so a scene that stops at the day leaves him asking
+    // into silence and the check runs to a hang up with no goodbye. They answer the time now.
+    { listen: true }, { say: "Uh, mornings usually. Before we open." },
     ...WAIT_OUT,
   ] },
   { n: 3, card: "answer_clear_no", name: "No, softened", expect: "not_in_stock", acts: [
     { listen: true }, { say: "No, I'm sorry. I haven't seen any yet." },
     { listen: true }, { say: "Not sure, honestly. Soon, I'd think." },
+    // "Soon" is neither a day nor a time, so he asks for both once more. They give what they have.
+    { listen: true }, { say: "Maybe end of the week? I really couldn't say what time." },
     ...WAIT_OUT,
   ] },
   { n: 4, card: "answer_clear_no", name: "No, this shipment", expect: "not_in_stock", acts: [
@@ -650,6 +656,9 @@ export const ROBOT_SCENES: RobotScene[] = [
     { silence: 45 },
     { say: "Okay, thank you for holding. Yeah, I did not see any, unfortunately." },
     { listen: true }, { say: "Uh, next week maybe? I'm not certain." },
+    // A day with no time gets his one follow-up, same as scene 2, so the check can finish warmly
+    // instead of running out of script with his question hanging.
+    { listen: true }, { say: "No idea on the time, sorry. Whenever they drop them off." },
     ...WAIT_OUT,
   ] },
   // Happened twice for real. One of them ran 121 seconds and never resolved, so that is the length.

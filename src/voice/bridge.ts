@@ -1123,7 +1123,16 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // (owner 08-05). He is told to finish once he has what the check needs, and that is what it says.
     // "the STOCK answer", because this note lands after the yes and BEFORE the product answer, and
     // naming just "the answer" read as Charlie understanding an answer nobody had given (owner 08-06).
-    emit(room, "unknown", "Charlie understood the stock answer and was told to say goodbye when done", { step: "signoff", answer });
+    // WHAT HE UNDERSTOOD AND WHAT HE WAS TOLD TO ASK (owner 08-07). One fixed sentence used to stand
+    // in for both, so a row that read "the stock answer" told nobody which answer, and nothing on the
+    // sheet said which follow-up he owed. The two halves are section 56 and section 58 of his own
+    // instructions, and they are the only two follow-ups there are, so the row names the one he was
+    // sent to get.
+    const followUp = answer === "in stock"
+      ? "was told to ask for the set name and whether it is packs, a box or a tin"
+      : "was told to ask what day and time more are coming";
+    emit(room, "unknown", `Charlie understood the product was ${answer} and ${followUp}`,
+      { step: "signoff", answer, followUp });
     log(`signoff: the answer is in hand (${answer}) — telling him to thank them and end`);
     try {
       eleven.send(JSON.stringify({ type: "contextual_update", text:

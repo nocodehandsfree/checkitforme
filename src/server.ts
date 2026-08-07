@@ -6427,7 +6427,11 @@ app.get("/api/admin/receipt/:room", async (c) => {
       // A check from before Echo had words has no stt line stamped on it, and it never paid for one,
       // so it prices at nought and no line renders (owner's no-free-items rule).
       { ...cost, forkUsd: cost.forkUsd ?? 0, clipsUsd: cost.clipsUsd ?? 0, sttUsd: cost.sttUsd ?? 0, billedMinutes: cost.billedMinutes ?? Math.ceil((sums?.callSecs ?? 0) / 60), charlieSecs: cost.charlieSecs ?? sums?.charlieConnectedSeconds ?? 0, avoidableUsd: 0, totalUsd: cost.totalUsd },
-      { callSecs: sums?.callSecs ?? 0, navSecs: sums?.navSeconds ?? null, streams: 2 },
+      // …and the seconds he spent speaking and listening, so his one line can open to show where
+      // his meter went. Measured on the call itself; a check recorded before we measured them shows
+      // the line without the breakdown rather than an invented one.
+      { callSecs: sums?.callSecs ?? 0, navSecs: sums?.navSeconds ?? null, streams: 2,
+        speakingSecs: sums?.speakingSecs ?? null, listeningSecs: sums?.listeningSecs ?? null },
       await currentRates(), readUsd,
     ) : [];
     const totalUsd = (cost?.totalUsd ?? 0) + readUsd;
@@ -6454,7 +6458,14 @@ app.get("/api/admin/receipt/:room", async (c) => {
     } catch { /* the bubble is decoration; the check renders without it */ }
     return { test: card, buckets, totalUsd, readable: money(totalUsd),
       profitPct: totalUsd > 0 && priceUsd > 0 ? Math.round(((priceUsd - totalUsd) / priceUsd) * 100) : null,
-      talkSec: sums?.charlieConnectedSeconds ?? null, workflow };
+      talkSec: sums?.charlieConnectedSeconds ?? null, workflow,
+      // WHERE HIS METER WENT, up top as well as inside his cost line (owner 08-07): the tile reads
+      // his seconds and the three pieces sit under the number, so they are read without opening
+      // anything. Null when the check predates the measuring, never a made up split.
+      talkSplit: sums && sums.charlieConnectedSeconds > 0 && (sums.speakingSecs != null || sums.listeningSecs != null)
+        ? { speaking: sums.speakingSecs ?? 0, listening: sums.listeningSecs ?? 0,
+            waiting: Math.max(0, sums.charlieConnectedSeconds - (sums.speakingSecs ?? 0) - (sums.listeningSecs ?? 0)) }
+        : null };
   };
   const live = getReceipt(room);
   if (live && !live.closed) {

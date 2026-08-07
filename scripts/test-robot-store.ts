@@ -35,11 +35,15 @@ const WORDS: Record<number, string[]> = {
   1: ["Yeah.", "Uh yeah, it's the Pitch Black booster boxes."],
   // Every clear no now carries the line Charlie's follow-up needs, or the check dies with no
   // goodbye. Three shapes on purpose: a real day, a vague soon, an honest I do not know.
-  2: ["We did not.", "Uh, probably Tuesday, that's when the truck comes."],
-  3: ["No, I'm sorry. I haven't seen any yet.", "Not sure, honestly. Soon, I'd think."],
+  // …AND THE OTHER HALF, added 08-07. Section 58 of Charlie's instructions gives him one more
+  // question when Staff name a day but no time, so a scene that stops at the day leaves him asking
+  // into silence and the check runs to a hang up with no goodbye (owner, off check 355).
+  2: ["We did not.", "Uh, probably Tuesday, that's when the truck comes.", "Uh, mornings usually. Before we open."],
+  3: ["No, I'm sorry. I haven't seen any yet.", "Not sure, honestly. Soon, I'd think.", "Maybe end of the week? I really couldn't say what time."],
   4: ["No, we don't have any this, this shipment.", "I really don't know, they don't tell us."],
   5: ["Uh, Pokémon? Uh, let me check. I just got in, so I have to, uh, I'll have to go up to the front and see. Okay, let me just put you on hold.",
-      "Okay, thank you for holding. Yeah, I did not see any, unfortunately.", "Uh, next week maybe? I'm not certain."],
+      "Okay, thank you for holding. Yeah, I did not see any, unfortunately.", "Uh, next week maybe? I'm not certain.",
+      "No idea on the time, sorry. Whenever they drop them off."],
   6: ["Um, give me just a second. Let me double-check."],
   7: ["We did, but it's not out yet, so... uh, or I don't think it's out. Let me see.",
       "It's like a box with, like, three packs in it, I think, or something like that."],
@@ -127,7 +131,7 @@ console.log("\n── the two that break us most ──");
   const p = pauses(all);
   if (p.includes(45)) ok("scene 5: the walk to the shelf is 45 seconds"); else fail(`scene 5: the hold is ${p.join("/")}s, not 45`);
   if (!/<Play>[^<]*hold/i.test(all) && !/music/i.test(all)) ok("scene 5: the hold is SILENCE, no music"); else fail("scene 5: something is playing during the hold");
-  is(run.said.length, 4, "scene 5: greeting, the walk away, the answer they came back with, and when more are coming");
+  is(run.said.length, 5, "scene 5: greeting, the walk away, the answer they came back with, when more are coming, and what time");
   // Once they have answered they WAIT for us to say goodbye, the way a real person does. A store that
   // puts the phone down instantly would hide a caller who never signs off (owner, 08-02).
   const listens = (all.match(/<Gather/g) || []).length;

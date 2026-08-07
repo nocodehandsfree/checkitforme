@@ -2597,7 +2597,12 @@ function checkV2From(d,o){
     info:(v2.test&&v2.test.info)||'',
     passed:behavior.filter(r=>r.pass).length,
     failed:behavior.filter(r=>!r.pass).length,
-    stats:{cost:v2.readable||((d.cost&&d.cost.readable&&d.cost.readable.total)||'—'),time:secs.callSecs!=null?mmss(secs.callSecs):'—',talked:talk!=null?talk+'s':'—',profit:v2.profitPct!=null?v2.profitPct+'%':'—',talkedC,profitC},
+    // WHERE HIS METER WENT, under his number (owner 08-07). The four tiles stay four and stay the
+    // roll up; the three pieces read as small words under Charlie's seconds, so nothing has to be
+    // opened to see that a check billed 33 seconds of him with no words said. A check recorded
+    // before we measured them shows the seconds alone, exactly as it always did.
+    stats:{cost:v2.readable||((d.cost&&d.cost.readable&&d.cost.readable.total)||'—'),time:secs.callSecs!=null?mmss(secs.callSecs):'—',talked:talk!=null?talk+'s':'—',profit:v2.profitPct!=null?v2.profitPct+'%':'—',talkedC,profitC,
+      talkSplit:v2.talkSplit?v2.talkSplit.speaking+'s speaking · '+v2.talkSplit.listening+'s listening · '+v2.talkSplit.waiting+'s waiting':''},
     cost:(v2.buckets||[]).map(b=>({l:b.label,v:money2(b.usd),d:b.detail})),
     behavior,
     workflow:v2.workflow||null,
@@ -2617,7 +2622,7 @@ function checkV2Html(d){
   const stats=`<div class="stats" style="grid-template-columns:1fr 1fr;margin-bottom:14px">
       <div class="stat"><div class="n" style="color:#fff">${d.stats.cost}</div><div class="l">Total cost</div></div>
       <div class="stat"><div class="n" style="color:#fff">${d.stats.time}</div><div class="l">Total time</div></div>
-      <div class="stat"><div class="n" style="color:${d.stats.talkedC||'var(--green)'}">${d.stats.talked}</div><div class="l">Charlie talked</div></div><!-- owner rule: green at 23s or under, yellow 24 to 30, red 31 and up -->
+      <div class="stat"><div class="n" style="color:${d.stats.talkedC||'var(--green)'}">${d.stats.talked}</div><div class="l">Charlie on the meter${d.stats.talkSplit?`<div style="margin-top:3px;font-size:10px;line-height:1.35;color:#8A8A96">${esch(d.stats.talkSplit)}</div>`:''}</div></div><!-- owner rule: green at 23s or under, yellow 24 to 30, red 31 and up -->
       <div class="stat"><div class="n" style="color:${d.stats.profitC||'var(--green)'}">${d.stats.profit}</div><div class="l">Gross profit</div></div>
     </div>`;
   const mini=rows=>`<div style="padding:2px 0 8px">${rows.map(r=>`<div style="display:flex;align-items:baseline;gap:6px;padding:3px 0 3px 12px"><span style="flex:0 0 auto;font-size:12px;font-weight:600;color:#8A8A96">${esch(r[0])}</span><span style="flex:1;border-bottom:1px dotted rgba(255,255,255,.16);transform:translateY(-3px)"></span><span style="flex:0 0 auto;font-size:12px;font-weight:700;color:var(--text-strong);font-variant-numeric:tabular-nums">${esch(r[1])}</span></div>`).join('')}</div>`;
