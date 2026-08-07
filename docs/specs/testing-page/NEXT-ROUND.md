@@ -181,7 +181,16 @@ looked again. `hangUpAfterGoodbye` is now one function with two doors: the start
 goodbye landing during one. Proved in the rig (`test-delta-clip`, "the goodbye lands after the quiet
 has already started"), NOT yet on a real check.
 
-**WATCH ON THE NEXT CHECKS:** the 3 second cut made check 356 open Charlie FOUR times where 6
-seconds would have kept him open through the 3 and 6 second gaps. His meter was 26 seconds with 20
-of them waiting, so the cut has not yet been shown to save money. The split on his cost line is
-exactly the number that will settle it.
+**THEN 357 AND 358, AND THE ONE THING STILL OPEN.** Check 357 said nothing at all, and its record
+showed why a floor was needed: a session opened at 16 seconds and closed at 18, so reopening (about
+a second) plus answering (a beat more) never fitted. `charlieMinOnLineMs` is the fix, 5 seconds,
+Admin-tunable, LIMITS [0, 30000]: the wait still starts on the record at the second they went quiet
+and only the CLOSING of his session waits the remainder out. Check 358 proves it live, sessions of
+7 and 6 seconds where 357 had 2.
+
+**STILL OPEN, AND IT IS THE NEXT AGENT'S FIRST JOB. CHARLIE SPOKE ON 355 AND 356 AND SAID NOTHING
+AT ALL ON 357 AND 358.** It is NOT the 3 second cut: on 358 his first session ran a full 7 seconds
+with Staff saying "We did not." inside it and he still did not answer. Same scene, same store, same
+words, four checks. 358's card reads Speaking 0s · Listening 2s · Waiting 17s, which is the whole
+picture in one line and is exactly what that breakdown was built for. Read 355 and 356 against 357
+and 358 before changing anything.
