@@ -11,7 +11,9 @@
 // rings before a different person speaks.
 //
 // Run: npx tsx scripts/test-robot-store.ts     (no network, no database, no cost)
-import { _robotRig, robotStep, robotScene, ROBOT_GREETINGS, ROBOT_SCENES, ringbackWav, parseRobotPick } from "../src/calls/tapedeck";
+import { _robotRig, robotStep, robotScene, ROBOT_GREETINGS, ROBOT_SCENES, ROBOT_CLIPS, ringbackWav, parseRobotPick } from "../src/calls/tapedeck";
+import { existsSync, statSync } from "node:fs";
+import { join } from "node:path";
 
 let bad = 0;
 const ok = (m: string) => console.log("  ✓ " + m);
@@ -46,17 +48,27 @@ const WORDS: Record<number, string[]> = {
       "No idea on the time, sorry. Whenever they drop them off."],
   6: ["Um, give me just a second. Let me double-check."],
   7: ["We did, but it's not out yet, so... uh, or I don't think it's out. Let me see.",
-      "It's like a box with, like, three packs in it, I think, or something like that."],
+      "It's like a box with, like, three packs in it, I think, or something like that.",
+      // The set still has no name after the type answer, so he asks for the missing half once and
+      // this scene had nothing left to say (the 08-07 sweep: every scene has Staff ANSWERING).
+      "Uh, Pitch Black, I want to say? Something like that."],
   8: ["We haven't, as a matter of fact. Uh, let me double-check though. Hold on just a moment.", "Yeah, we've got a few.", "Uh, the Pitch Black boxes I think."],
   9: ["I'm sorry. You're gonna have to call again. I can't hear you. Bye-bye."],
-  10: ["Okay. Transferring you now.", "Sporting goods, this is Dana.", "We did not.", "Thursdays, usually."],
+  // REWRITTEN 08-07. This scene could never test its own card: the robot moved us on before Charlie
+  // ever had a turn, so the ask that IS the card never happened (check 332 has no such line). The
+  // wrong department is stated now, and then the robot WAITS. That empty turn is the test.
+  10: ["Oh, that's not us, that's the front.", "Sure, one sec, I'll put you through.",
+       "Sporting goods, this is Dana.", "We did not.", "Thursdays, usually.",
+       "Early, before we open, usually."],
   // The owner's own check 298, made repeatable. Corpus throughout: the pause line is scene 6's,
   // "Hello? Hello?" is Barnes & Noble Calabasas, the answer is scene 3's.
   11: ["Um, give me just a second. Let me double-check.", "Hello?", "Hello? Hello?", "No, I'm sorry. I haven't seen any yet.",
-      "Not sure, honestly. Soon, I'd think."],
-  // The nine cards that had no scene at all. Two are missing on purpose: hold with music and a
-  // phone set on the counter both need a sound recording the owner is picking himself.
-  12: [],
+      "Not sure, honestly. Soon, I'd think.", "Maybe end of the week? I really couldn't say what time."],
+  // The nine cards that had no scene at all. The two hold recordings are scenes 20 to 24 now.
+  // REWRITTEN 08-07: the 90 second ring is the ring AFTER A TRANSFER that nobody ever comes back
+  // from, which is where our own give-up really has to fire. Ringing from the first dial is the
+  // carrier's no-answer, and that never reaches our engine at all.
+  12: ["Oh, that's not us, that's the front.", "Sure, hold on, I'll put you through."],
   13: ["Oh, Pokemon cards, yeah. We get a ton of calls about those, honestly.",
        "You know my nephew collects them. He's got a whole binder, must be hundreds.",
        "There was a guy in here last week, bought like twenty packs at once. Twenty.",
@@ -77,6 +89,21 @@ const WORDS: Record<number, string[]> = {
   17: [],
   18: ["Sí, tenemos algunos.", "Son las cajas de Pitch Black."],
   19: ["Uh, Pokemon, yeah, we've got some stuff.", "Oh, the Pitch Black boxes? Yeah, we've got a couple of those."],
+  // ROUND TWO, 08-07. Three shapes of hold music, two rooms, Delta switched off, and the runaround.
+  // Every one of them ends with a person answering, because a scene that leaves Charlie asking into
+  // nothing runs the check to full length and proves nothing.
+  20: ["Sure, let me check on that for you, one moment.", "Yeah, we've got some in.", "It's the Pitch Black boxes."],
+  21: ["Hang on, let me go and see for you.", "Yeah, we do have those in.", "The Pitch Black booster boxes."],
+  22: ["One moment, I'll go and have a look.", "Yeah, we've got a few of those.", "Pitch Black, the booster boxes."],
+  23: ["Hold on, let me go look.", "Yeah, we've got a couple.", "I think they're the Pitch Black ones."],
+  24: ["Let me put this down a sec and go check.", "Yeah, there's some on the shelf.", "The Pitch Black boxes, I think they are."],
+  25: ["Yeah, we've got some of those in.", "Uh, the Pitch Black booster boxes."],
+  26: ["Pokemon cards? Uh, that's not really us back here.",
+       "Yeah, no, I can't see the shop floor from the pharmacy, sorry.",
+       "Sure, hold on, let me see who's up there.",
+       "Hi, sorry, I'll be right with you, one second.",
+       "Sorry about that. How can I help you?",
+       "Let me go and have a look for you."],
 };
 const GREETINGS = [
   "Larry Vasquez, how can I help you?",
@@ -165,7 +192,7 @@ console.log("\n── cannot hear us, and the wrong department ──");
   is(run.greeting, "MVP's pharmacy, this is Larry.", "scene 10 opens in the wrong department, with his name");
   if (/\/robot\/ring\?secs=6/.test(all)) ok("scene 10: the desk really rings for 6 seconds"); else fail("scene 10: no ringing before the new voice");
   const voices = run.said.map((s) => s.voice);
-  is(voices, ["staff", "staff", "transfer", "transfer", "transfer"], "scene 10: a DIFFERENT person picks up after the transfer, and stays on");
+  is(voices, ["staff", "staff", "staff", "transfer", "transfer", "transfer", "transfer"], "scene 10: a DIFFERENT person picks up after the transfer, and stays on");
 }
 
 console.log("\n── the ringing is a real ringback, not a beep ──");
@@ -190,11 +217,20 @@ is(parseRobotPick(null).scenario, 1, "an unset scene falls back to the first");
 console.log("\n── the verdict each scene should produce ──");
 is(ROBOT_SCENES.map((s) => `${s.n}:${s.expect}`), [
   "1:in_stock", "2:not_in_stock", "3:not_in_stock", "4:not_in_stock", "5:not_in_stock",
-  "6:no_clear_answer", "7:in_stock", "8:in_stock", "9:nobody_answered", "10:not_in_stock",
+  "6:left_on_hold", "7:in_stock", "8:in_stock", "9:nobody_answered", "10:not_in_stock",
   // Scene 13 moved off the 4 minute limit onto its own wrap-up card (owner 08-07), so it no longer
   // ends by us hanging up: Charlie asks once more, takes what he gets and closes on no clear answer.
-  "11:not_in_stock", "12:nobody_answered", "13:no_clear_answer", "14:in_stock", "15:too_busy",
-  "16:no_clear_answer", "17:voicemail", "18:in_stock", "19:in_stock",
+  // "No clear answer" is the owner's NEW status (08-07) and NOT a rename of Couldn't tell. Both of
+  // these scenes talk to us clearly and never answer, which is exactly what it is for; Couldn't tell
+  // stays for a check where we could not make out what the person was saying.
+  "11:not_in_stock", "12:nobody_answered", "13:no_straight_answer", "14:in_stock", "15:too_busy",
+  "16:no_straight_answer", "17:voicemail", "18:in_stock", "19:in_stock",
+  // ROUND TWO (owner 08-07). The three hold-with-music shapes and the two rooms all end with a
+  // person answering, so all five are IN STOCK: what they test is the METER, never the answer.
+  // 25 is Delta switched off, which changes who asks the question and nothing else about the store.
+  // 26 is the runaround, and the only thing that can end it is our own four minute limit.
+  "20:in_stock", "21:in_stock", "22:in_stock", "23:in_stock", "24:in_stock", "25:in_stock",
+  "26:admin_hangup",
 ], "scenes 7 and 8 expect IN STOCK — the two we really got wrong");
 
 // ---- THE TEST OF THE TEST -----------------------------------------------------------------------
@@ -231,6 +267,82 @@ console.log("\n── the word comparison really fails on our own past faults �
 
   // Nothing recorded at all.
   if (compareWords(said, []).misses.length === 2) ok("an empty record fails every line, never passes by default"); else fail("an empty record slipped through");
+}
+
+// ---- THE OWNER'S ROUND TWO RULE, ON EVERY SCENE ------------------------------------------------
+// "Every scene has Staff answering. The only exceptions are the tests that exist to see how Charlie
+// behaves when Staff walk off or never pick up. A scene that leaves him asking into nothing runs the
+// check to full length and proves nothing. Check EVERY scene." (owner, 08-07.)
+//
+// Read off the acts, so it holds for a scene nobody has written a word table for yet. Every scene
+// that ends by waiting for our goodbye must have a Staff line as the LAST thing before that wait: a
+// listen there is Charlie asking into an empty room, and we pay for the rest of the check.
+console.log("\n── every scene has Staff answering (the owner's rule, 08-07) ──");
+{
+  // The four that exist to prove exactly the opposite. Named one by one, because "it probably meant
+  // to do that" is how a broken scene stays broken.
+  const WALK_OFF: Record<number, string> = {
+    6: "Staff walk away and never come back",
+    9: "Staff cannot hear us and hang up",
+    12: "the desk they transfer us to only ever rings",
+    17: "a machine answers, so Charlie is never switched on",
+    26: "they go to look and never come back, which is what reaches the four minute limit",
+  };
+  for (const scene of ROBOT_SCENES) {
+    if (WALK_OFF[scene.n]) { ok(`scene ${scene.n}: exempt on purpose (${WALK_OFF[scene.n]})`); continue; }
+    // Strip the trailing wait for our goodbye (four chances to speak, then it gives up).
+    let i = scene.acts.length - 1;
+    while (i >= 0 && ("hangup" in scene.acts[i] || "listen" in scene.acts[i])) i--;
+    const last = scene.acts[i];
+    if (last && "say" in last) ok(`scene ${scene.n} (${scene.name}): Staff answer last, so he is never left asking into nothing`);
+    else fail(`scene ${scene.n} (${scene.name}): the last thing before the wait is not a Staff line, so Charlie asks into an empty room and the check runs its full length`);
+  }
+}
+
+// ---- THE COMMITTED RECORDINGS ------------------------------------------------------------------
+// The owner picked these himself and approved them by ear. They are NEVER regenerated, so what this
+// proves is that the file a scene names really is on disk and really is the one he approved: a
+// misspelled name is a 404 mid check, which sounds to the ear exactly like a hold that went wrong.
+console.log("\n── the hold recordings the owner picked are the ones the scenes play ──");
+{
+  for (const [name, c] of Object.entries(ROBOT_CLIPS)) {
+    const path = join(process.cwd(), "public/robot-clips", c.file);
+    if (existsSync(path) && statSync(path).size > 10000) ok(`${name}: ${c.file} is committed (${c.what})`);
+    else fail(`${name}: ${c.file} is missing from public/robot-clips — that scene would play a 404`);
+  }
+  const named = new Set<string>();
+  for (const scene of ROBOT_SCENES) for (const a of scene.acts) if ("clip" in a) named.add(a.clip as string);
+  const unknown = [...named].filter((n) => !ROBOT_CLIPS[n]);
+  is(unknown, [], "every recording a scene asks for is on the owner's list");
+  // VOLUME IS THE TEST on the two room recordings. The ear calls a sound the room rather than the
+  // person when it is under `roomFraction` (0.35 of amplitude, which is 9.1 dB) of the voice we have
+  // been talking to. Both rooms have to sit further under a speaking voice than that or the phone on
+  // the counter proves nothing. The advertising voice is the loudest voice on the list, so it is the
+  // fair yardstick: anything quieter would flatter the room clips.
+  const voicePeak = -2.7; // 06-ad-voice-female.mp3, measured 08-07
+  for (const room of ["busyStore", "busyCafe"]) {
+    const under = voicePeak - ROBOT_CLIPS[room].peak;
+    if (under >= 9.1) ok(`${room}: ${under.toFixed(1)} dB under a speaking voice, so the ear reads it as the room`);
+    else fail(`${room}: only ${under.toFixed(1)} dB under a speaking voice — the ear needs 9.1 or the phone on the counter proves nothing`);
+  }
+}
+
+// ---- THE RUNAROUND'S HARD RULE -----------------------------------------------------------------
+// The owner's own words: no single hold may run 120 seconds, or the hold cap ends the check before
+// the four minute cap ever gets a turn, and then this scene quietly tests the wrong thing.
+console.log("\n── the runaround reaches the four minute limit, and no single hold reaches the hold cap ──");
+{
+  const s26 = robotScene(26);
+  const waits = (s26?.acts || []).filter((a) => "silence" in a).map((a) => (a as { silence: number }).silence);
+  const longest = Math.max(0, ...waits);
+  if (longest < 120) ok(`the longest single wait is ${longest}s, ${120 - longest}s clear of the hold cap`);
+  else fail(`a single wait runs ${longest}s, which the hold cap ends first — the four minute limit never gets a turn`);
+  // His timing: about 30 in the wrong department, 90 for the hold after the transfer, 60 for the new
+  // person and the second hold, 20 to ask. About 200 seconds before the last wait even starts.
+  const ring = (s26?.acts || []).filter((a) => "ring" in a).map((a) => (a as { ring: number }).ring).reduce((a, b) => a + b, 0);
+  const held = waits.reduce((a, b) => a + b, 0) + ring;
+  if (held >= 200) ok(`${held}s of the check is spent waiting and ringing, which is what carries it to four minutes`);
+  else fail(`only ${held}s of waiting and ringing — this cannot reach the four minute limit`);
 }
 
 console.log(bad ? `\nrobot store: ${bad} FAILED\n` : "\nrobot store: all held\n");

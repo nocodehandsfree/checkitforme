@@ -21,6 +21,10 @@ import { toMediaFrames } from "../calls/clip-cache";
 // provable without a phone call.
 import { heardWrongDepartment, askedToBePutThrough, saysNobodyToTransfer, looksLikeAMenu, staffName, wrappedUp, usedTheirName } from "./prompts";
 import { guessLanguage } from "../calls/mapgraph";
+// WHAT LANGUAGE THE PERSON WHO PICKED UP IS SPEAKING, off the words of their first line. A separate
+// judge from `guessLanguage` on purpose: that one reads a MENU and its markers are menu words, so it
+// answers "unknown" on a human greeting, which is the one line this decision hangs on.
+import { staffSpokeSpanish } from "../calls/staff-language";
 // Echo's words: the store's own voice turned into sentences, whether Charlie is on the line or not.
 // Echo's words arrive from the PICKUP FORK (server.ts, /twilio-media), which starts the moment the
 // store answers and carries the whole call. This file never opens a transcriber of its own: two
@@ -101,6 +105,10 @@ export interface BridgeContext {
   // decides a call is finished. It exists so the clerk hears the question the instant they say
   // hello, while the expensive agent is still connecting behind it.
   openingClip?: { audio: Buffer; ms: number; text: string };
+  /** THE SAME QUESTION IN SPANISH, recorded before the dial beside the English one (owner 08-07).
+   *  Which of the two actually plays is decided at the moment we ask, off the WORDS of the store's
+   *  own first line. Absent on a check that could not record one, and then the English one asks. */
+  openingClipEs?: { audio: Buffer; ms: number; text: string };
   // The agent that joins a conversation ALREADY IN PROGRESS: configured once, empty greeting,
   // standing instruction to wait silently for the answer. A DEDICATED AGENT, deliberately, because
   // overriding the prompt or the first message per call once hung calls up — the whole design would
@@ -667,6 +675,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   // is what the card reads.
   /** The name Staff gave us, if they gave one. */
   let theirName: string | null = null;
+  /** The FIRST thing the store said. The one line that can say what language they are speaking, and
+   *  what the recorded question is chosen off (owner 08-07). Never overwritten. */
+  let theirFirstLine: string | null = null;
   /** He asked to be put through, so from here Staff's answer to that ask is worth reading. */
   let weAskedToBePutThrough = false;
   /** Recorded once: Staff said there is nobody to put us through to. */
@@ -1271,6 +1282,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    */
   function staffSaid(txt: string, spokenAtEpochMs?: number, fromEcho?: boolean): boolean {
     const fresh = recordLine(room, "Clerk", txt, spokenAtEpochMs);
+    // THE STORE'S FIRST LINE, KEPT (owner 08-07). It is the one thing that can say what language the
+    // person who picked up is speaking, and the recorded question is chosen off it a moment later.
+    // First only: everything after it is an answer to us, and a store that greets us in Spanish and
+    // then says one English word has still answered the phone in Spanish.
+    if (fresh && theirFirstLine == null) theirFirstLine = txt;
     // WHAT HE COULD NOT HEAR, KEPT AS WORDS. Only Echo's copy counts: a line the agent's own session
     // delivered is one he already heard.
     if (fromEcho && fresh && (!eleven || onHold)) missedWhileClosed.push(txt);
@@ -2168,7 +2184,19 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         waitTotalMs += 20;
         waitQuietMs = frameEnergy(b64) > VOICE_THRESH ? 0 : waitQuietMs + 20;
         if (waitQuietMs >= GREETING_END_MS || waitTotalMs >= GREETING_MAX_WAIT_MS) {
-          const c = pendingClip; pendingClip = null;
+          // THE SPANISH DELTA, DECIDED HERE (owner 08-07). Both recordings were made before the
+          // dial; which one plays is decided at this instant, off the WORDS of the store's own first
+          // line, because this is the first moment we have heard them at all. Never off the sound:
+          // what language somebody is speaking is meaning, and the ear cannot judge meaning, which
+          // is the same law the wrong-department save runs on.
+          //
+          // Only ever the store's FIRST line, and only when we have one. Echo writes lines from the
+          // moment of pickup and their greeting ended a moment ago, so it is normally here; if it is
+          // not, the English question asks, which is exactly today's behaviour.
+          const inSpanish = !!ctx?.openingClipEs && staffSpokeSpanish(theirFirstLine);
+          const c = inSpanish ? ctx!.openingClipEs! : pendingClip;
+          pendingClip = null;
+          if (inSpanish) { log(`delta: they answered in Spanish, asking in Spanish`); emit(room, "unknown", "Staff answered in Spanish, so the question played in Spanish", { step: "delta_language", language: "es", heard: String(theirFirstLine || "").slice(0, 120) }); }
           log(`delta: they finished after ${waitTotalMs}ms, asking now`);
           if (startOpeningClip(c)) {
             const lead = Math.max(0, c.ms - PREWARM_LEAD_MS);

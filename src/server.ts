@@ -45,7 +45,7 @@ import { buildCharlieSetup } from "./calls/charlie-setup";
 import { installReceiptStore, currentRates, onReceiptClosed, recordVerdict, lastClerkLine } from "./calls/receipt-store";
 import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
-import { behaved, agentLinesFrom, TEST_CARDS } from "./calls/behaved";
+import { behaved, agentLinesFrom, cardVerdict, TEST_CARDS, type BehavedRow } from "./calls/behaved";
 import { opsRollup, type CheckRow } from "./calls/ops";
 import { startMapper, stopMapper, mapperState, resumeMapperRuns } from "./calls/mapper";
 import { storeMetUnknownMenu, muteStore, unmuteStore, healOnce, onAutoCheckPaused, mutedReasons } from "./calls/healing";
@@ -53,7 +53,7 @@ import { activeMap, graphSummary, chainDetail, approveVersion, rejectVersion, op
 import { recipeFromCall, evidenceFromCall, type CapturedStep } from "./calls/map-capture";
 import { startSweep, stopSweep, sweepStatus, buildQueue } from "./calls/sweep";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay,
-  robotAnswer, robotStep, robotEnded, robotClip, ringbackWav, beepWav, robotScene, robotLastRun, robotRunFor, parseRobotPick, ROBOT_SCENES, ROBOT_GREETINGS } from "./calls/tapedeck";
+  robotAnswer, robotStep, robotEnded, robotClip, ringbackWav, beepWav, robotScene, robotLastRun, robotRunFor, parseRobotPick, ROBOT_SCENES, ROBOT_GREETINGS, ROBOT_CLIPS } from "./calls/tapedeck";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged, lockRecipeToChain } from "./calls/trainer-batch";
 import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, connectAtSecFor, chainDialable, chainNavPlan, type Recipe } from "./calls/recipe";
 import { llm, heli } from "./llm";
@@ -1221,6 +1221,19 @@ app.get("/robot/clip", (c) => {
   const b = robotClip(c.req.query("call") || "", Number(c.req.query("i") || 0));
   if (!b) return c.body("not found", 404);
   return c.body(new Uint8Array(b), 200, { "Content-Type": "audio/mpeg" });
+});
+// HOLD MUSIC AND A PHONE PUT DOWN ON THE COUNTER. The owner picked these recordings himself and
+// approved them by ear; they are committed at public/robot-clips/ and this only hands them to the
+// phone company. NAMED, NEVER A PATH: the name is looked up in ROBOT_CLIPS, so nothing a caller
+// types can ever reach a file the owner did not put on that list. Behind the /robot/* switch with
+// the rest, so it does not exist at all when the robot store is off.
+app.get("/robot/hold", (c) => {
+  const clip = ROBOT_CLIPS[c.req.query("f") || ""];
+  if (!clip) return c.body("not found", 404);
+  try {
+    const buf = readFileSync(join(here, `../public/robot-clips/${clip.file}`));
+    return c.body(new Uint8Array(buf), 200, { "Content-Type": "audio/mpeg", "Cache-Control": "public, max-age=86400" });
+  } catch { return c.body("not found", 404); }
 });
 app.get("/robot/ring", (c) => {
   // The ceiling was 30 seconds, which was plenty while ringing only ever meant a transfer. The 90
@@ -4825,7 +4838,14 @@ app.get("/api/admin/test-calls", async (c) => {
   // A real customer's check must never wander onto this screen, which is exactly what the third rule
   // keeps out: it is his account or it does not list.
   const master = "phone:" + (process.env.OWNER_PHONE || "+13106662331").trim();
+  // ONE PHONE CALL, ONE ROW ON THIS SCREEN (owner 08-07). A check covering more than one product
+  // line writes an extra row per line, carrying the answer and nothing else: no start, no room, no
+  // cost, no conversation. Those rows are newer than the check itself, so the newest row on this
+  // list was a half written copy of a check that had really finished (238 wrote 239, 240 and 241).
+  // They still exist and still hold their line's answer; they are simply not checks, so they are not
+  // listed as checks.
   const all = (await db.select().from(callResults))
+    .filter((r) => r.partOfCheck == null)
     .filter((r) => config.staging.on || ownerOnly.has(r.retailerId) || r.finderUserId === master)
     .sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
   const rows = all.map((r) => {
@@ -6417,7 +6437,10 @@ app.get("/api/admin/receipt/:room", async (c) => {
   // which of his 16 locked cards this check ran, the cost split into his five buckets off the rates
   // in force, the profit against his 67 percent floor, and the workflow bubble. Built server side so
   // no rate and no card string is ever typed into the page.
-  const v2For = async (timeline: Array<{ kind: string; atSec?: number | null; detail?: Record<string, unknown> | null }>, sums: Rollup | null, cost: { totalUsd: number; lineUsd: number; forkUsd?: number; charlieUsd: number; clipsUsd?: number; sttUsd?: number; billedMinutes?: number; charlieSecs?: number } | null, retailerId?: number | null) => {
+  // DID THIS TEST PASS (owner 08-07). The card names the rows that must be green and the status the
+  // check has to come back with, and `graded` is those two read against this check. Omitted while a
+  // check is still going, because a test that has not finished has not failed either.
+  const v2For = async (timeline: Array<{ kind: string; atSec?: number | null; detail?: Record<string, unknown> | null }>, sums: Rollup | null, cost: { totalUsd: number; lineUsd: number; forkUsd?: number; charlieUsd: number; clipsUsd?: number; sttUsd?: number; billedMinutes?: number; charlieSecs?: number } | null, retailerId?: number | null, graded?: { rows: BehavedRow[]; statusKey: string | null } | null) => {
     const stepOf = (name: string) => timeline.find((e) => (e.detail || {}).step === name) || null;
     const named = stepOf("named_test");
     const card = named ? TEST_CARDS[String((named.detail || {}).card || "")] ?? null : null;
@@ -6456,7 +6479,8 @@ app.get("/api/admin/receipt/:room", async (c) => {
         ["Openers", `${(wf.openers || []).length || 1} rotating`],
       ].filter((r) => r[1]) as Array<[string, string]> };
     } catch { /* the bubble is decoration; the check renders without it */ }
-    return { test: card, buckets, totalUsd, readable: money(totalUsd),
+    return { test: card ? { ...card, verdict: graded ? cardVerdict(card, graded.rows, graded.statusKey) : null } : null,
+      buckets, totalUsd, readable: money(totalUsd),
       profitPct: totalUsd > 0 && priceUsd > 0 ? Math.round(((priceUsd - totalUsd) / priceUsd) * 100) : null,
       talkSec: sums?.charlieConnectedSeconds ?? null, workflow,
       // WHERE HIS METER WENT, up top as well as inside his cost line (owner 08-07): the tile reads
@@ -6563,7 +6587,9 @@ app.get("/api/admin/receipt/:room", async (c) => {
         const m = /^(Agent|Clerk|Staff):\s*(.*)$/i.exec(l);
         return m ? { who: /agent/i.test(m[1]) ? "Agent" : "Clerk", text: m[2], atSec: null, atMs: null } : { who: "Clerk", text: l, atSec: null, atMs: null };
       }),
-    v2: await v2For(timeline, seconds, cost, attached?.retailerId ?? null),
+    v2: await v2For(timeline, seconds, cost, attached?.retailerId ?? null,
+      { rows: behaved({ timeline, rollup: seconds, agentLines: agentLinesFrom(attached?.transcript) }),
+        statusKey: attached?.statusKey ?? attached?.status ?? null }),
   });
 });
 app.get("/api/admin/call-timing", async (c) => {
@@ -7142,8 +7168,12 @@ app.get("/api/results", async (c) => {
   // reference. (The old version pulled ALL ~100k retailers on every call — that was the slow part.)
   const limit = Math.min(Math.max(Number(c.req.query("limit") || 10), 1), 200);
   const offset = Math.max(Number(c.req.query("offset") || 0), 0);
-  const rows = await db.select().from(callResults).orderBy(desc(callResults.startedAt)).limit(limit).offset(offset);
-  const total = Number((await db.select({ n: sql<number>`count(*)` }).from(callResults))[0]?.n || 0);
+  // ONE PHONE CALL, ONE ROW (owner 08-07). A check covering more than one product line writes an
+  // extra row per line, holding that line's answer and nothing else, and those rows are the newest
+  // in the table. They are not checks, so they are neither listed nor counted as checks; the answer
+  // they hold still reaches its own category's screens through the category readers.
+  const rows = await db.select().from(callResults).where(isNull(callResults.partOfCheck)).orderBy(desc(callResults.startedAt)).limit(limit).offset(offset);
+  const total = Number((await db.select({ n: sql<number>`count(*)` }).from(callResults).where(isNull(callResults.partOfCheck)))[0]?.n || 0);
   const rids = [...new Set(rows.map((r) => r.retailerId).filter((x): x is number => !!x))];
   const rMap = new Map((rids.length ? await db.select().from(retailers).where(inArray(retailers.id, rids)) : []).map((r) => [r.id, r]));
   const names = new Map((await db.select().from(chains)).map((x) => [x.id, x.name]));

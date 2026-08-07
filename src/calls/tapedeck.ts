@@ -556,11 +556,36 @@ function finalizeIfStore(s: TdSession): void {
 // into better English: the mess IS the test.
 // ===========================================================================================
 
+/**
+ * THE RECORDINGS THE OWNER PICKED AND APPROVED BY EAR, committed at `public/robot-clips/`.
+ *
+ * DO NOT REGENERATE THEM (owner 08-06, and again in the round two order). These exact files are the
+ * ones he listened to, and a re-cut file with the same name is a different test wearing the same
+ * label. The engine only ever plays them; nothing here makes audio.
+ *
+ * VOLUME IS THE TEST, so the number is written down here rather than left to whatever the file
+ * happens to be. `mean`/`peak` are measured off the committed file (ffmpeg volumedetect, 08-07) and
+ * the room recordings have to land under `roomFraction` of the Staff voice or the phone-on-the
+ * counter test proves nothing: `roomFraction` is 0.35 of amplitude in `tuning.ts`, which is 9.1 dB,
+ * and both room clips sit further under a speaking voice than that. `secs` is the file's real
+ * length, read the same way, and the scene clock needs it or every line after a hold files at the
+ * wrong second.
+ */
+export const ROBOT_CLIPS: Record<string, { file: string; secs: number; mean: number; peak: number; what: string }> = {
+  busyStore:   { file: "01-busy-store.mp3",          secs: 15.0,  mean: -27.6, peak: -13.9, what: "a shopping mall, the QUIETER of his two rooms" },
+  busyCafe:    { file: "02-busy-cafe.mp3",           secs: 15.0,  mean: -29.7, peak: -16.6, what: "a busy restaurant, the LOUDER of his two rooms" },
+  musicClassic:{ file: "03-hold-music-classic.mp3",  secs: 15.3,  mean: -15.5, peak:  -0.0, what: "hold music, loud and even all the way through" },
+  musicWaltz:  { file: "05-hold-music-waltz.mp3",    secs: 15.0,  mean: -26.8, peak: -11.6, what: "hold music that starts quiet and swells, his own pick" },
+  musicWithAd: { file: "08-hold-music-with-ad.mp3",  secs: 22.1,  mean: -26.5, peak:  -6.4, what: "the waltz with a recorded MAN selling something over it" },
+  musicWithAdB:{ file: "09-hold-music-with-ad-b.mp3", secs: 15.0, mean: -23.4, peak:  -5.9, what: "the other music with a recorded WOMAN selling something over it" },
+};
+
 /** One beat of a scene. `say` is the Staff voice; `sayAs` is the SECOND person (after a transfer). */
 export type RobotAct =
   | { say: string }
   | { sayAs: "transfer"; say: string }
-  | { silence: number }   // seconds of nothing at all. No hold music: no real store ever played us any
+  | { silence: number }   // seconds of nothing at all: the one hold in our history that ever worked
+  | { clip: keyof typeof ROBOT_CLIPS } // a committed recording: hold music, or a phone on the counter
   | { ring: number }      // seconds of a real ringback cadence, for the transfer
   | { beep: true }        // the tone at the end of a voicemail greeting, the thing that says "talk now"
   | { listen: true }      // wait for the caller to say their piece, then carry on
@@ -661,7 +686,10 @@ export const ROBOT_SCENES: RobotScene[] = [
     ...WAIT_OUT,
   ] },
   // Happened twice for real. One of them ran 121 seconds and never resolved, so that is the length.
-  { n: 6, card: "hold_permanently", name: "Walks away, never comes back", expect: "no_clear_answer", acts: [
+  // LEFT ON HOLD, NEVER COULDN'T TELL (owner 08-07). Couldn't tell is the worst case bucket, for a
+  // check where we genuinely could not make out what happened. Here we know exactly what happened:
+  // they put us on hold and never came back, and we have a status that says that in those words.
+  { n: 6, card: "hold_permanently", name: "Walks away, never comes back", expect: "left_on_hold", acts: [
     { listen: true },
     { say: "Um, give me just a second. Let me double-check." },
     { silence: 60 }, { silence: 61 },
@@ -673,6 +701,11 @@ export const ROBOT_SCENES: RobotScene[] = [
     { say: "We did, but it's not out yet, so... uh, or I don't think it's out. Let me see." },
     { listen: true },
     { say: "It's like a box with, like, three packs in it, I think, or something like that." },
+    // THE SET STILL HAS NO NAME, so he asks for the missing half once, in different words, and this
+    // scene had nothing left to say (the sweep, owner's round two rule: every scene has Staff
+    // ANSWERING, or he asks into nothing and we pay for the rest of the check). Spec-approved, not
+    // corpus, and vague on purpose: this is the scene about a store that is sure of nothing.
+    { listen: true }, { say: "Uh, Pitch Black, I want to say? Something like that." },
     ...WAIT_OUT,
   ] },
   // Second highest. We stamped NOT IN STOCK before they came back with the answer.
@@ -693,14 +726,32 @@ export const ROBOT_SCENES: RobotScene[] = [
   // The greeting names the WRONG department, and the second voice is a different person.
   // The spec's row stops at Dana's greeting; her answer is a verbatim line from the same corpus
   // ("We did not.") so the check can finish. Nothing here is invented.
+  //
+  // REWRITTEN 08-07: THIS SCENE COULD NEVER TEST THE THING IT IS NAMED FOR. The card is "Transfer:
+  // Charlie requested" and the ask is the whole of it, and check 332 has no such line anywhere. It
+  // was not Charlie's fault. The robot answered from the pharmacy, listened once (which is Delta
+  // playing our question), and then said "Okay. Transferring you now." — so Staff moved us on their
+  // own before he ever had a turn, and there was nothing left for him to ask for. That is scene 14,
+  // "Moved on without being asked", which is a different card.
+  //
+  // So the wrong department is now STATED and then the robot WAITS. That empty turn is the test: he
+  // has been told he is in the wrong place, nobody has offered to move him, and the only way this
+  // check survives is if he asks. Only after he asks do they put him through.
   { n: 10, card: "transfer_requested", name: "Wrong department, then transfers", greeting: "MVP's pharmacy, this is Larry.", expect: "not_in_stock", acts: [
     { listen: true },
-    { say: "Okay. Transferring you now." },
+    // Corpus, the same line scene 15 opens with. It says where we landed and offers us nothing.
+    { say: "Oh, that's not us, that's the front." },
+    // HIS TURN, AND THE WHOLE POINT OF THE CARD. Nothing here moves until he asks.
+    { listen: true },
+    { say: "Sure, one sec, I'll put you through." },
     { ring: 6 },
     { sayAs: "transfer", say: "Sporting goods, this is Dana." },
     { listen: true },
     { sayAs: "transfer", say: "We did not." },
     { listen: true }, { sayAs: "transfer", say: "Thursdays, usually." },
+    // A DAY NAMED GETS HIS "WHAT TIME" (owner 08-07), and this scene had nothing left to say, so
+    // the check ended on our own question with the meter running (the sweep).
+    { listen: true }, { sayAs: "transfer", say: "Early, before we open, usually." },
     ...WAIT_OUT,
   ] },
   // THE OWNER'S OWN CHECK 298, MADE REPEATABLE (08-06). He told Charlie to hold, went quiet, then
@@ -720,13 +771,33 @@ export const ROBOT_SCENES: RobotScene[] = [
     { listen: true },
     { say: "No, I'm sorry. I haven't seen any yet." },
     { listen: true }, { say: "Not sure, honestly. Soon, I'd think." },
+    // "Soon" is neither a day nor a time, so he asks for both once more, exactly as in scene 3, and
+    // this scene stopped one turn before that. Same corpus line scene 3 answers it with.
+    { listen: true }, { say: "Maybe end of the week? I really couldn't say what time." },
     ...WAIT_OUT,
   ] },
   // ---- THE NINE CARDS THAT HAD NO SCENE AT ALL (spec: scenes-needed.md, owner approved 08-06) ----
   // Two of them are missing on purpose and are the owner's own next job: hold with music and a phone
   // set down on the counter both need a sound recording, and he is picking those clips himself.
-  { n: 12, card: "hungup_ringing", name: "Nobody picks up", expect: "nobody_answered", neverAnswers: true, noGoodbye: true, acts: [
-    // Ninety five seconds, so it runs past our own ninety second give-up rather than landing on it.
+  // REWRITTEN 08-07, the owner's own correction: this is the ring AFTER A TRANSFER that nobody ever
+  // comes back from, and what it proves is that OUR system hangs up. It used to ring from the very
+  // first dial, which he says is a different test: a phone that never gets answered at all is the
+  // carrier's own no-answer, and the carrier's no-answer never reaches our engine, so all that
+  // version could ever prove is that we notice a line we are already connected to staying silent.
+  //
+  // A transfer is where this really bites and where it costs us. We have already paid to get to a
+  // person, Charlie has already been on, and the desk they send us to just rings, and rings. If our
+  // own give-up does not fire there, the check runs to the four minute cap every single time.
+  //
+  // Ninety five seconds of it, so the give-up at ninety has to fire DURING the ringing rather than
+  // landing exactly on its edge. The hang-up at the end is only ever reached if ours never fired,
+  // which makes the robot outliving us the failure this scene is looking for.
+  { n: 12, card: "hungup_ringing", name: "Transferred to a desk that only rings", expect: "nobody_answered", noGoodbye: true,
+    greeting: "MVP's pharmacy, this is Larry.", acts: [
+    { listen: true },
+    { say: "Oh, that's not us, that's the front." },
+    { listen: true },
+    { say: "Sure, hold on, I'll put you through." },
     { ring: 95 },
     { hangup: true },
   ] },
@@ -739,7 +810,7 @@ export const ROBOT_SCENES: RobotScene[] = [
   // once he has been TALKING for the Admin number he asks once more, takes what he gets and CLOSES.
   // So the robot no longer hangs up on him — it waits, the way every other scene does, or a goodbye
   // is unspeakable by design and the test can never pass.
-  { n: 13, card: "wrapup_never_answered", name: "Talks past the answer, forever", expect: "no_clear_answer", acts: [
+  { n: 13, card: "wrapup_never_answered", name: "Talks past the answer, forever", expect: "no_straight_answer", acts: [
     { listen: true }, { say: "Oh, Pokemon cards, yeah. We get a ton of calls about those, honestly." },
     { listen: true }, { say: "You know my nephew collects them. He's got a whole binder, must be hundreds." },
     { listen: true }, { say: "There was a guy in here last week, bought like twenty packs at once. Twenty." },
@@ -778,7 +849,7 @@ export const ROBOT_SCENES: RobotScene[] = [
   // THE SWITCH ITSELF. Asking to be put through is OFF for this run, so Charlie must never once
   // bring up being transferred: he takes what he can get and wraps up. The safety line is the
   // owner's own (spec, test 14): if he says anything more, Staff answer once and that is that.
-  { n: 16, card: "transfer_switch_off", name: "Wrong department, asking switched off", expect: "no_clear_answer",
+  { n: 16, card: "transfer_switch_off", name: "Wrong department, asking switched off", expect: "no_straight_answer",
     greeting: "MVP's pharmacy, this is Larry.", acts: [
     { listen: true }, { say: "That's the front, I can't see those from back here." },
     { listen: true }, { say: "Yeah, sorry, I really can't help you with that from back here." },
@@ -805,6 +876,131 @@ export const ROBOT_SCENES: RobotScene[] = [
     { listen: true }, { say: "Uh, Pokemon, yeah, we've got some stuff." },
     { listen: true }, { say: "Oh, the Pitch Black boxes? Yeah, we've got a couple of those." },
     ...WAIT_OUT,
+  ] },
+
+  // ============================== ROUND TWO, 08-07 ==============================================
+  // THE RULE BEHIND ALL OF THESE (owner's own words in the round two order): every scene has Staff
+  // ANSWERING. The only exceptions are the tests that exist to see how Charlie behaves when Staff
+  // walk off or never pick up (6, 9, 12, 17). A scene that leaves him asking into nothing runs the
+  // check to its full length and proves nothing, and we pay for the whole of it.
+  //
+  // ---- HOLD: MUSIC. Three of them, because the danger is different in each. -------------------
+  // Every recording is the owner's own pick, approved by ear and committed. Loudness and length are
+  // written into ROBOT_CLIPS and never left to whatever the file happens to be.
+  //
+  // WHAT THEY PROVE, all three: hold music stops Charlie's meter exactly the way silence does, he
+  // stays dropped for the whole of it, and he comes back when a PERSON speaks to us again. Music is
+  // the harder case than silence because there is sound on the line the whole time, so the one thing
+  // that could go wrong here is us paying through a hold we thought had ended.
+  { n: 20, card: "hold_music", name: "Hold with music, then an answer", expect: "in_stock", acts: [
+    { listen: true }, { say: "Sure, let me check on that for you, one moment." },
+    // Loud and even, peaking right at the top of the line the whole way through: the version most
+    // likely to be mistaken for somebody talking to us.
+    { clip: "musicClassic" },
+    { say: "Yeah, we've got some in." },
+    { listen: true }, { say: "It's the Pitch Black boxes." },
+    ...WAIT_OUT,
+  ] },
+  // HIS OWN REASON FOR PICKING THIS ONE: it starts quiet and gets louder, so it tests whether a
+  // RISING sound is ever read as a person coming back.
+  { n: 21, card: "hold_music", name: "Hold with music that swells, then an answer", expect: "in_stock", acts: [
+    { listen: true }, { say: "Hang on, let me go and see for you." },
+    { clip: "musicWaltz" },
+    { say: "Yeah, we do have those in." },
+    { listen: true }, { say: "The Pitch Black booster boxes." },
+    ...WAIT_OUT,
+  ] },
+  // THE DANGEROUS ONE (his own case, 08-06): real stores play music and then a RECORDED VOICE
+  // selling something, then more music. A recorded voice is the closest thing to Staff coming back
+  // that is not Staff. Charlie must stay dropped through the whole advertisement, must never answer
+  // it, and not one word of it may reach the record as something Staff said to us. The voice is
+  // already mixed under the music in the committed file, so this plays it whole and mixes nothing.
+  { n: 22, card: "hold_music", name: "Hold with an advert in the music, then an answer", expect: "in_stock", acts: [
+    { listen: true }, { say: "One moment, I'll go and have a look." },
+    { clip: "musicWithAd" },
+    { say: "Yeah, we've got a few of those." },
+    { listen: true }, { say: "Pitch Black, the booster boxes." },
+    ...WAIT_OUT,
+  ] },
+  // ---- HOLD: PHONE DOWN. Run twice, and THE TWO VOLUMES ARE THE TEST (owner 08-06). -----------
+  // The phone is set on the counter and the room carries on without us. It is neither quiet nor
+  // music, which is the fourth shape of a hold and the one that used to keep Charlie billing. The
+  // room has to land under `roomFraction` of the Staff voice or nothing is being tested: both clips
+  // do, and by how much is written into ROBOT_CLIPS.
+  //
+  // WHAT THEY PROVE: background store noise stops the meter the same way silence does, and somebody
+  // talking across the room is not somebody talking to us.
+  { n: 23, card: "hold_phone_down", name: "Phone on the counter, quieter room", expect: "in_stock", acts: [
+    { listen: true }, { say: "Hold on, let me go look." },
+    { clip: "busyStore" },
+    { say: "Yeah, we've got a couple." },
+    { listen: true }, { say: "I think they're the Pitch Black ones." },
+    ...WAIT_OUT,
+  ] },
+  { n: 24, card: "hold_phone_down", name: "Phone on the counter, louder room", expect: "in_stock", acts: [
+    { listen: true }, { say: "Let me put this down a sec and go check." },
+    { clip: "busyCafe" },
+    { say: "Yeah, there's some on the shelf." },
+    { listen: true }, { say: "The Pitch Black boxes, I think they are." },
+    ...WAIT_OUT,
+  ] },
+  // ---- DELTA: FAILED. The card existed with no scene (owner's round two order, item 4). --------
+  // Delta is the recording that carries our question. When it never plays, Charlie asks it himself,
+  // which is the DESIGNED fallback and costs a few cents more. It was proven by accident on 08-06
+  // when mapping turned out never to have wired Delta in at all, and it has never once been tested
+  // on purpose. Delta is switched off for this ONE check (`deltaOff`, put back straight after, the
+  // same way the transfer switch is handled for scene 16), Staff then answer completely normally,
+  // and the check still has to come back with a status.
+  //
+  // The words are ordinary on purpose. Nothing about how STAFF behave is being tested here, only
+  // whether the check survives its recording never playing, so anything unusual in their lines would
+  // muddy what a failure means.
+  { n: 25, card: "delta_failed", name: "Delta never played, Charlie asks it himself", expect: "in_stock", acts: [
+    { listen: true }, { say: "Yeah, we've got some of those in." },
+    { listen: true }, { say: "Uh, the Pitch Black booster boxes." },
+    ...WAIT_OUT,
+  ] },
+  // ---- HUNGUP: 4 MINUTE LIMIT. THE OWNER'S RUNAROUND, and it is written LAST on purpose because
+  // it needs the transfer working first (his order, 08-07). Every other scene is one thing going
+  // wrong. This is a store being perfectly pleasant and wasting the entire check.
+  //
+  // His own shape, in his order: wrong department, a few questions, they transfer us, a long hold,
+  // a new person who says they will be right with us, another hold, they pick up and ask how they
+  // can help, we ask, they say they will go look, and they never come back.
+  //
+  // HIS HARD RULE: no single hold may run 120 seconds, or the hold cap ends the check before the
+  // four minute cap ever gets a turn, and then this scene silently tests the wrong thing. The three
+  // waits below are 84, 55 and 60 seconds, so the longest is 36 short of the cap.
+  //
+  // AND HIS TIMING, which is what makes the four minutes reachable at all: about 30 seconds in the
+  // wrong department, about 90 for the hold after the transfer, about 60 for the new person and the
+  // second hold, about 20 to ask. That is about 200 seconds before the last wait even starts, and
+  // the last wait is what runs into the limit.
+  //
+  // THE MOST EXPENSIVE TEST ON THE LIST, roughly four times a normal check, so it is dialed on
+  // purpose and never as part of a sweep.
+  { n: 26, card: "hungup_limit", name: "The runaround, until the four minute limit", expect: "admin_hangup", noGoodbye: true,
+    greeting: "MVP's pharmacy, this is Larry.", acts: [
+    // ABOUT 30 SECONDS IN THE WRONG DEPARTMENT. Three turns, with Charlie between each, and nothing
+    // in any of them is an answer.
+    { listen: true }, { say: "Pokemon cards? Uh, that's not really us back here." },
+    { listen: true }, { say: "Yeah, no, I can't see the shop floor from the pharmacy, sorry." },
+    { listen: true }, { say: "Sure, hold on, let me see who's up there." },
+    // THEY TRANSFER US, AND THEN A LONG HOLD. 6 ringing plus 84 quiet is his 90.
+    { ring: 6 },
+    { silence: 84 },
+    // A NEW PERSON, WHO SAYS THEY WILL BE RIGHT WITH US AND GOES AGAIN. His 60.
+    { sayAs: "transfer", say: "Hi, sorry, I'll be right with you, one second." },
+    { silence: 55 },
+    // THEY PICK UP AND ASK HOW THEY CAN HELP, SO WE ASK. His 20.
+    { sayAs: "transfer", say: "Sorry about that. How can I help you?" },
+    { listen: true },
+    { sayAs: "transfer", say: "Let me go and have a look for you." },
+    // AND THEY NEVER COME BACK. Nothing but our own four minute limit can end this check now, which
+    // is the one thing it exists to prove. The hang-up below is only ever reached if the limit did
+    // not fire, so the robot outliving us is the failure this scene is looking for.
+    { silence: 60 },
+    { hangup: true },
   ] },
 ];
 
@@ -936,6 +1132,16 @@ function robotPlay(callSid: string, st: RobotState, lead = ""): string {
     if ("hangup" in a) { st.act++; parts.push("<Hangup/>"); break; }
     if ("listen" in a) { st.act++; parts.push(robotGather(callSid, 10)); break; }
     if ("silence" in a) { st.act++; ahead += Math.round(a.silence); parts.push(`<Pause length="${Math.round(a.silence)}"/>`); continue; }
+    // A COMMITTED RECORDING, PLAYED WHOLE. Its length is the measured one from ROBOT_CLIPS, because
+    // the clock has to move by what the caller really hears: a line spoken after 15 seconds of hold
+    // music files 15 seconds later, and reading it off the document build time would put every line
+    // after a hold at the wrong second on the owner's sheet.
+    if ("clip" in a) {
+      const c = ROBOT_CLIPS[a.clip];
+      st.act++; ahead += Math.round(c.secs);
+      parts.push(`<Play>https://${HOST}/robot/hold?f=${encodeURIComponent(a.clip)}</Play>`);
+      continue;
+    }
     if ("ring" in a) { st.act++; ahead += Math.round(a.ring); parts.push(`<Play>https://${HOST}/robot/ring?secs=${Math.round(a.ring)}</Play>`); continue; }
     if ("beep" in a) { st.act++; parts.push(`<Play>https://${HOST}/robot/beep</Play>`); continue; }
     st.run.said.push({ text: a.say, atSec: atSec(), voice: "sayAs" in a ? "transfer" : "staff" });

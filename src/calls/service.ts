@@ -212,6 +212,39 @@ export const RECONNECT_OPENER_ES = "Hola, perdón, se me cortó la llamada. Esta
 export const DEFAULT_OPENER_ES = "Hola, buenas. Estaba viendo si tienen cartas de {category} en stock ahora mismo.";
 
 /**
+ * "WE KEPT ASKING BUT THE STORE NEVER GAVE US A STRAIGHT ANSWER" — the owner's NEW status, 08-07,
+ * and it is NOT a rename of Couldn't tell.
+ *
+ * Couldn't tell (`no_clear_answer`) is the WORST CASE bucket and he wants it used as rarely as
+ * possible: it means we could not make out what the person was saying. That is a different, and
+ * worse, thing than a store that talked to us happily, in words we wrote down perfectly, and simply
+ * never answered the question. The rambler is the clearest case of it. The customer deserves to be
+ * told which of the two happened, because only one of them is our own fault.
+ *
+ * So the test is exactly that difference, read off our own record and nothing else: we understood
+ * them (their lines are on the record as real sentences) AND we went back at it (Charlie asked more
+ * than once). Both halves are required. One Clerk line and one question is a check that ended
+ * early, and calling that "we kept asking" would be the screen claiming effort we never spent.
+ *
+ * Lives here rather than in the verdict reader on purpose: it decides nothing about stock, it only
+ * chooses the honest WORD for a check that already came back with no answer, which is this
+ * finalizer's job. `src/voice/**` is frozen and this needed no part of it.
+ */
+export function keptAskingNoStraightAnswer(transcript: string | null | undefined): boolean {
+  const t = String(transcript || "");
+  if (!t) return false;
+  const side = (who: RegExp) => t.split("\n").map((l) => l.trim()).filter((l) => who.test(l))
+    .map((l) => l.replace(/^[A-Za-z]+:\s*/, "").trim()).filter(Boolean);
+  // WE COULD MAKE OUT WHAT THEY SAID. A one word fragment is not a sentence we understood, and a
+  // check whose entire record of the store is "Pokemon?" is honestly a Couldn't tell.
+  const understood = side(/^Clerk:/i).filter((l) => l.split(/\s+/).length >= 3);
+  // AND WE WENT BACK AT IT. The question mark is the only honest marker of an ask: Charlie's warmth
+  // ("oh nice!", "gotcha") is not a question, and counting it would turn every check into this one.
+  const asks = side(/^Agent:/i).filter((l) => l.includes("?"));
+  return understood.length >= 2 && asks.length >= 2;
+}
+
+/**
  * Did OUR LAST CALL — this customer, this store, this product — break on our end moments ago?
  *
  * ALL FOUR MATTER, and the customer most of all (owner, 07-28). We dial AS the customer's own
@@ -1204,6 +1237,10 @@ export function billableOutcome(statusKey: string | null | undefined, definitive
   // staff_hung_up joins the same family (owner 08-04): real minutes were burned on a live person.
   if (k === "left_on_hold" || k === "too_busy" || k === "language_barrier" || k === "staff_hung_up") return true;
   if (k === "no_clear_answer" && transcript && /^Agent:/m.test(transcript) && /^Clerk:/m.test(transcript)) return true;
+  // "No clear answer" (owner 08-07) is that same case with its own honest word on it: a real
+  // two-way conversation where the store never gave us a straight answer. It is only ever stamped
+  // when their words are on the record, so it is billable by the same ruling, always.
+  if (k === "no_straight_answer") return true;
   return false;
 }
 
@@ -1376,6 +1413,13 @@ export async function ingestPending(): Promise<number> {
     // already knows who put the phone down by subtraction; this is the customer's word for it. Only
     // ever over an answer we do not have: an answer they gave before hanging up still stands.
     else if (finalConfirmed === null && await staffHungUpOn(row.room)) finalStatusKey = "staff_hung_up";
+    // WE KEPT ASKING AND THEY NEVER GAVE US A STRAIGHT ANSWER (owner 08-07, a NEW status, never a
+    // rename). Only ever over Couldn't tell, and only on a check where their words really are on
+    // the record: every other reason above already has its own honest word and keeps it. Couldn't
+    // tell survives underneath this for the one case it was always meant for, which is a check
+    // where we could not make out what the person was saying.
+    else if (finalConfirmed === null && finalStatusKey === "no_clear_answer"
+      && keptAskingNoStraightAnswer(outcome.transcript)) finalStatusKey = "no_straight_answer";
 
     // Update the primary row (the line we called about).
     await db.update(callResults).set({
@@ -1460,6 +1504,17 @@ export async function ingestPending(): Promise<number> {
     await notifyAfterVerdict(row.id);
 
     // Fan out any additional lines covered in the same call into their own result rows.
+    //
+    // ONE PHONE CALL, ONE CHECK (owner 08-07). A check can genuinely cover more than one product
+    // line and each line needs its own answer, so the fan-out stays. What was wrong is that these
+    // rows were indistinguishable from a check: they carry the ANSWER and nothing else, no start, no
+    // room, no cost, no conversation, and being written last they are the NEWEST rows in the table.
+    // So anything reading "the newest check" got a half written copy of a check that had really
+    // finished. Check 238 wrote 239, 240 and 241 exactly that way.
+    //
+    // `partOfCheck` is the id of the row that really made the call, so an extra line can always be
+    // told from the check itself and led back to it. It is set on the rows we create AND on any that
+    // an older run left behind unmarked, so the fix reaches yesterday's rows too.
     for (const [label, conf] of Object.entries(outcome.categoryResults)) {
       if (label === primaryLabel) continue;
       const cid = labelToId.get(label);
@@ -1469,13 +1524,13 @@ export async function ingestPending(): Promise<number> {
       // Per-category verdict for the fan-out line (its own in/out key; else the call-level reason).
       const fanKey = conf === true ? "in_stock" : conf === false ? "not_in_stock" : outcome.statusKey;
       if (existing.length) {
-        await db.update(callResults).set({ confirmed: conf, statusKey: fanKey, status: outcome.status, completedAt: now() })
+        await db.update(callResults).set({ confirmed: conf, statusKey: fanKey, status: outcome.status, completedAt: now(), partOfCheck: row.id })
           .where(eq(callResults.id, existing[0].id));
       } else {
         await db.insert(callResults).values({
           scheduleId: row.scheduleId, retailerId: row.retailerId, categoryId: cid, mode: row.mode,
           status: outcome.status, confirmed: conf, statusKey: fanKey, summary: outcome.summary, transcript: outcome.transcript,
-          providerCallId: row.providerCallId, completedAt: now(),
+          providerCallId: row.providerCallId, completedAt: now(), partOfCheck: row.id,
         });
       }
       if (conf === true) await notifyInStock(store?.name ?? "A store", label, row.retailerId, outcome.shipmentDay);

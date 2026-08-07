@@ -46,75 +46,122 @@ import { askedToBePutThrough as saysPutMeThrough, signedOff } from "../voice/pro
  * from Statuses. Copied from that file word for word and asserted in scripts/test-behaved.ts, so
  * nothing can drift. We test things that WORK, never bugs.
  */
-export const TEST_CARDS: Record<string, { name: string; sub: string; info: string }> = {
+/**
+ * WHAT EACH CARD HAS TO SEE TO PASS (owner 08-07, item 9 of the round two order): "Every card names
+ * which of the eleven Charlie behavior rows must be green to pass. Answer: clear yes is Handed to
+ * Charlie, the question played as a recording, Charlie warmed up in time, Charlie wrapped up,
+ * Charlie ended the check, and the check comes back In stock."
+ *
+ * `needs` is that list, and `status` is the status key the check has to come back with, because his
+ * example ends with one and a card that watched only the rows would call a check green while the
+ * customer was shown the wrong answer. `status: null` where his own card names none, which today is
+ * the switch test ("This test checks the switch only, not a status") and the two hold cards whose
+ * bubbles say the right status without naming it.
+ *
+ * WHY IT IS A LIST AND NOT "EVERY ROW". A row a check never put to the test is not on the screen at
+ * all now, so without a named list a card would silently pass on the rows that happened to be
+ * exercised. And some cards require a row to be RED: Delta: failed exists to make the recording
+ * fail, so "the question played as a recording" is deliberately NOT in its list.
+ *
+ * NOTHING ABOUT MONEY IS IN ANY OF THESE (owner 08-07, item 10). Charlie speaking 23 seconds or
+ * less is a margin goal, never a test, and it stays on the tile up top where a goal belongs. Locked
+ * in scripts/test-behaved.ts so nobody can quietly put a price in a pass or fail row.
+ */
+export interface TestCard { name: string; sub: string; info: string; needs: BehavedKey[]; status: string | null }
+
+export const TEST_CARDS: Record<string, TestCard> = {
   answer_clear_yes: { name: "Answer: clear yes",
     sub: "Staff said they have the product in stock and we showed an In stock status.",
-    info: "This test proves that a plain yes ends with an In stock status, and that the set Staff named is the one on the check." },
+    info: "This test proves that a plain yes ends with an In stock status, and that the set Staff named is the one on the check.",
+    needs: ["handed_to_charlie", "question_recorded", "warmed_up_in_time", "wrapped_up", "charlie_ended_the_check"], status: "in_stock" },
   answer_clear_no: { name: "Answer: clear no",
     sub: "Staff said they do not have the product in stock and we showed a Not in stock status.",
-    info: "This test proves that a clear no always ends with a Not in stock status, no matter how Staff choose to say the no." },
+    info: "This test proves that a clear no always ends with a Not in stock status, no matter how Staff choose to say the no.",
+    needs: ["handed_to_charlie", "question_recorded", "warmed_up_in_time", "wrapped_up", "charlie_ended_the_check"], status: "not_in_stock" },
   answer_yes_vague: { name: "Answer: yes but vague",
     sub: "Staff said yes without saying yes, like \"we did, but it's not out yet.\"",
-    info: "Our reading understood the vague yes and we displayed an In stock status. This test rotates a growing list of real vague yeses, and every new one from a real check gets added." },
+    info: "Our reading understood the vague yes and we displayed an In stock status. This test rotates a growing list of real vague yeses, and every new one from a real check gets added.",
+    needs: ["handed_to_charlie", "question_recorded", "warmed_up_in_time", "wrapped_up", "charlie_ended_the_check"], status: "in_stock" },
+  // A HOLD STILL ENDS IN AN ANSWER (owner 08-07). These three cards named no status because their
+  // bubbles do not name one, but every scene behind them has Staff coming back and answering, so
+  // there IS a right answer and a card that ignored it would go green while the customer was shown
+  // the wrong one. Hold: permanently is the one real exception: nobody ever comes back.
   hold_silence: { name: "Hold: silence",
     sub: "Staff put us on a silent hold.",
-    info: "Charlie dropped on a silent hold, reconnected when they came back, and we displayed the right status." },
+    info: "Charlie dropped on a silent hold, reconnected when they came back, and we displayed the right status.",
+    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold", "wrapped_up", "charlie_ended_the_check"], status: "not_in_stock" },
   hold_permanently: { name: "Hold: permanently",
     sub: "Staff put us on hold and never returned.",
-    info: "Charlie hung up at the hold limit and we displayed a Left on hold status." },
+    info: "Charlie hung up at the hold limit and we displayed a Left on hold status.",
+    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold"], status: "left_on_hold" },
   hold_music: { name: "Hold: music",
     sub: "Staff put us on hold with music and Charlie dropped until a person came back.",
-    info: "This test proves that hold music stops Charlie's meter the same way silence does, and that he reconnected when a person spoke to us again." },
+    info: "This test proves that hold music stops Charlie's meter the same way silence does, and that he reconnected when a person spoke to us again.",
+    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold", "wrapped_up", "charlie_ended_the_check"], status: "in_stock" },
   hold_phone_down: { name: "Hold: phone down",
     sub: "Staff set the phone on the counter and Charlie dropped until someone spoke to us again.",
-    info: "This test proves that background store noise stops Charlie's meter the same way silence does. Someone talking across the room is not someone talking to us." },
+    info: "This test proves that background store noise stops Charlie's meter the same way silence does. Someone talking across the room is not someone talking to us.",
+    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold", "wrapped_up", "charlie_ended_the_check"], status: "in_stock" },
   hungup_staff: { name: "Hungup: Staff",
     sub: "Staff hung up on us before giving an answer and we showed a Staff hung up status.",
-    info: "This test proves that when Staff hung up on us, the record shows they ended the check, not us." },
+    info: "This test proves that when Staff hung up on us, the record shows they ended the check, not us.",
+    needs: [], status: "staff_hung_up" },
   hungup_ringing: { name: "Hungup: 90 seconds of ringing",
     sub: "The phone rang with nobody answering and we hung up at the ring limit.",
-    info: "This test proves that after 90 seconds of ringing with no person, we ended the check ourselves, the record shows it was us, and we displayed a Nobody answered status. Charlie was never on and never billed." },
+    info: "This test proves that after 90 seconds of ringing with no person, we ended the check ourselves, the record shows it was us, and we displayed a Nobody answered status. Charlie was never on and never billed.",
+    needs: [], status: "nobody_answered" },
   hungup_limit: { name: "Hungup: 4 minute limit",
     sub: "The check hit its 4 minute limit and we ended it.",
-    info: "This test proves that a check can never run past the limit you set in Admin, we displayed an Admin hung up status, and the customer was charged, because we really were on the phone that long." },
+    info: "This test proves that a check can never run past the limit you set in Admin, we displayed an Admin hung up status, and the customer was charged, because we really were on the phone that long.",
+    needs: [], status: "admin_hangup" },
   // THE WRAP-UP, ITS OWN TEST (owner 08-07). The chatty scene used to live under the 4 minute limit,
   // which is our own safety net and a different thing entirely. What this one proves is Charlie's
   // own manners: once he has been TALKING for `charlieWrapUpSeconds` he asks once more and closes.
   wrapup_never_answered: { name: "Wrapup: they never answered",
     sub: "Staff rambled and would not give us an answer, so Charlie wrapped up and ended the check.",
-    info: "This test proves that once Charlie has been talking for the time set in Admin, he asks the question one more time, takes whatever he gets, and ends the check himself." },
+    info: "This test proves that once Charlie has been talking for the time set in Admin, he asks the question one more time, takes whatever he gets, and ends the check himself.",
+    needs: ["handed_to_charlie", "question_recorded", "warmed_up_in_time", "wrapped_up", "charlie_ended_the_check"], status: "no_straight_answer" },
   // DELTA IS THE RECORDING THAT CARRIES OUR QUESTION. When it never plays, Charlie asks it himself —
   // the designed fallback, proven by accident on 08-06 and never once tested on purpose.
   delta_failed: { name: "Delta: failed",
     sub: "Delta failed to ask about the product, so Charlie asked it himself.",
-    info: "This test proves Charlie will ask the store the first question if Delta fails." },
+    info: "This test proves Charlie will ask the store the first question if Delta fails.",
+    needs: ["handed_to_charlie", "warmed_up_in_time", "wrapped_up", "charlie_ended_the_check"], status: "in_stock" },
   transfer_new_person: { name: "Transfer: new person",
     sub: "Staff transferred us, Charlie asked a question from the start and recognized it was a new person.",
-    info: "This test proves that when a store moves us on without being asked, Delta plays the recording again for the new person and Charlie carries on from their answer instead of starting over." },
+    info: "This test proves that when a store moves us on without being asked, Delta plays the recording again for the new person and Charlie carries on from their answer instead of starting over.",
+    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold", "asked_the_new_person", "wrapped_up", "charlie_ended_the_check"], status: "in_stock" },
   transfer_requested: { name: "Transfer: Charlie requested",
     sub: "Charlie reached a wrong department and asked to be put through.",
-    info: "This test proves that Charlie recognized the wrong department and asked to be transferred. When the new person picked up, Delta played the recording, and Charlie came back only after Staff answered it, to ask his follow-up." },
+    info: "This test proves that Charlie recognized the wrong department and asked to be transferred. When the new person picked up, Delta played the recording, and Charlie came back only after Staff answered it, to ask his follow-up.",
+    needs: ["handed_to_charlie", "question_recorded", "asked_to_be_put_through", "meter_stopped_on_hold", "asked_the_new_person", "wrapped_up", "charlie_ended_the_check"], status: "not_in_stock" },
   transfer_nobody: { name: "Transfer: nobody available",
     sub: "Charlie asked to be put through and Staff said there was nobody available.",
-    info: "This test proves that Charlie thanked them and ended the check without nagging, and we displayed a Too busy to check status." },
+    info: "This test proves that Charlie thanked them and ended the check without nagging, and we displayed a Too busy to check status.",
+    needs: ["handed_to_charlie", "question_recorded", "asked_to_be_put_through", "goodbye_when_told_no", "wrapped_up", "charlie_ended_the_check"], status: "too_busy" },
   transfer_switch_off: { name: "Transfer: switch off",
     sub: "The Admin switch for asking to be transferred was off and Charlie did not ask.",
-    info: "This test proves the switch really works. Charlie never brought up being transferred and took whatever answer Staff could give. If Staff transfer us anyway, the check rides it as normal. This test checks the switch only, not a status." },
+    info: "This test proves the switch really works. Charlie never brought up being transferred and took whatever answer Staff could give. If Staff transfer us anyway, the check rides it as normal. This test checks the switch only, not a status.",
+    needs: ["handed_to_charlie", "question_recorded", "wrapped_up", "charlie_ended_the_check"], status: null },
   voicemail_detected: { name: "Voicemail: detected",
     sub: "A machine answered and our system ended the check.",
-    info: "This test proves that we hung up the moment the voicemail was detected, Charlie was never on and never billed, and we displayed a Got their voicemail status." },
+    info: "This test proves that we hung up the moment the voicemail was detected, Charlie was never on and never billed, and we displayed a Got their voicemail status.",
+    needs: [], status: "voicemail" },
   language_spanish: { name: "Language: Spanish",
     sub: "Staff spoke Spanish and Charlie held the entire conversation in Spanish.",
-    info: "This test proves that Charlie never switched to English mid check, and the answer Staff gave in Spanish set the status." },
+    info: "This test proves that Charlie never switched to English mid check, and the answer Staff gave in Spanish set the status.",
+    needs: ["handed_to_charlie", "question_recorded", "spoke_their_language", "wrapped_up", "charlie_ended_the_check"], status: "in_stock" },
   // THE NEW CARD, the owner's ruling 08-06, and it arrives with the hobby stores. On a check for one
   // exact product Charlie has an extra question no test had ever run, and a general yes is not a yes
   // on that kind of check.
   exact_product: { name: "Product: one exact item",
     sub: "The check asked for one exact product and Charlie asked about that item by name.",
-    info: "This test proves that a general yes about the category is not an In stock status on this kind of check. Only Staff confirming the exact item is." },
+    info: "This test proves that a general yes about the category is not an In stock status on this kind of check. Only Staff confirming the exact item is.",
+    needs: ["handed_to_charlie", "question_recorded", "warmed_up_in_time", "wrapped_up", "charlie_ended_the_check"], status: "in_stock" },
   alert_email: { name: "Alert: email",
     sub: "The check landed In stock at a store a customer watches and an in stock email was sent.",
-    info: "This test proves that in stock email alerts work for a store the customer has subscribed to." },
+    info: "This test proves that in stock email alerts work for a store the customer has subscribed to.",
+    needs: ["handed_to_charlie", "question_recorded", "warmed_up_in_time", "wrapped_up", "charlie_ended_the_check"], status: "in_stock" },
 };
 
 export type BehavedKey =
@@ -152,6 +199,41 @@ export const ROW_RULES: Record<BehavedKey, string> = {
   spoke_their_language: "If Staff speak Spanish, continue in Spanish.",
   charlie_ended_the_check: "Say goodbye once, then end the check with end_call. Never leave the store to hang up on us.",
 };
+
+/**
+ * DID THIS TEST PASS (owner 08-07, item 9). The card names the rows that must be green and the
+ * status the check has to come back with; this reads the check against that list and nothing else.
+ *
+ * A ROW THE CHECK NEVER PUT TO THE TEST IS A FAIL HERE, and that is deliberate. On the screen an
+ * untested row is now hidden, because every row he can see must be one a red would be real about.
+ * But a card that NAMES a row and then never exercises it has not proved the thing it promised, and
+ * quietly passing on it is exactly how a green test hides a broken engine. So a missing row is
+ * reported by name, in his own row wording, rather than skipped.
+ *
+ * `statusOk` is null when the card names no status of its own (the switch test, and the two holds
+ * whose bubbles say "the right status" without saying which). It is never a fail on its own then.
+ */
+export interface CardVerdict {
+  pass: boolean;
+  /** Row labels the card needs green that are not green, in his words. Empty when they all held. */
+  missing: string[];
+  /** true / false, or null when this card names no status. */
+  statusOk: boolean | null;
+  /** The status the card promised, and what the check actually came back with. */
+  wantStatus: string | null;
+  gotStatus: string | null;
+}
+
+export function cardVerdict(card: TestCard | null | undefined, rows: BehavedRow[], statusKey: string | null | undefined): CardVerdict | null {
+  if (!card) return null;
+  const by = new Map(rows.map((r) => [r.key, r]));
+  const missing = card.needs
+    .filter((k) => by.get(k)?.pass !== true)
+    .map((k) => by.get(k)?.label || k);
+  const got = statusKey || null;
+  const statusOk = card.status == null ? null : got === card.status;
+  return { pass: missing.length === 0 && statusOk !== false, missing, statusOk, wantStatus: card.status, gotStatus: got };
+}
 
 /** One line of the timeline as both receipt routes already return it. */
 export interface BehavedEvent {
