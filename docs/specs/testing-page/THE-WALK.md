@@ -8,6 +8,9 @@ Each test below says what Staff do, what you should see, and which rows on the C
 card have to be green. A row a check never put to the test is not drawn at all, so every row you
 can see is one that counts.
 
+Every hold ends in a real answer and a real status, because Staff come back and answer. Hold:
+permanently is the only one where nobody ever comes back.
+
 ## 1. Answer: clear yes
 
 Staff said they have the product in stock and we showed an In stock status.
@@ -52,7 +55,7 @@ Staff put us on a silent hold.
 
 **How to dial it.** `ADMIN_TOKEN=… node scripts/robot-check.mjs 5` — scene 5 (Walks away, comes back) · scene 11 (Walks away, comes back asking if we are there)
 
-**Status it must come back with.** None. This test does not judge a status.
+**Status it must come back with.** Not in stock
 
 **Rows that must be green.** Handed to Charlie · The question played as a recording · Meter stopped · Charlie wrapped up · Charlie ended the check
 
@@ -64,7 +67,7 @@ Staff put us on hold with music and Charlie dropped until a person came back.
 
 **How to dial it.** `ADMIN_TOKEN=… node scripts/robot-check.mjs 20` — scene 20 (Hold with music, then an answer) · scene 21 (Hold with music that swells, then an answer) · scene 22 (Hold with an advert in the music, then an answer)
 
-**Status it must come back with.** None. This test does not judge a status.
+**Status it must come back with.** In stock
 
 **Rows that must be green.** Handed to Charlie · The question played as a recording · Meter stopped · Charlie wrapped up · Charlie ended the check
 
@@ -76,7 +79,7 @@ Staff set the phone on the counter and Charlie dropped until someone spoke to us
 
 **How to dial it.** `ADMIN_TOKEN=… node scripts/robot-check.mjs 23` — scene 23 (Phone on the counter, quieter room) · scene 24 (Phone on the counter, louder room)
 
-**Status it must come back with.** None. This test does not judge a status.
+**Status it must come back with.** In stock
 
 **Rows that must be green.** Handed to Charlie · The question played as a recording · Meter stopped · Charlie wrapped up · Charlie ended the check
 

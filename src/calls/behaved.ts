@@ -82,10 +82,14 @@ export const TEST_CARDS: Record<string, TestCard> = {
     sub: "Staff said yes without saying yes, like \"we did, but it's not out yet.\"",
     info: "Our reading understood the vague yes and we displayed an In stock status. This test rotates a growing list of real vague yeses, and every new one from a real check gets added.",
     needs: ["handed_to_charlie", "question_recorded", "warmed_up_in_time", "wrapped_up", "charlie_ended_the_check"], status: "in_stock" },
+  // A HOLD STILL ENDS IN AN ANSWER (owner 08-07). These three cards named no status because their
+  // bubbles do not name one, but every scene behind them has Staff coming back and answering, so
+  // there IS a right answer and a card that ignored it would go green while the customer was shown
+  // the wrong one. Hold: permanently is the one real exception: nobody ever comes back.
   hold_silence: { name: "Hold: silence",
     sub: "Staff put us on a silent hold.",
     info: "Charlie dropped on a silent hold, reconnected when they came back, and we displayed the right status.",
-    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold", "wrapped_up", "charlie_ended_the_check"], status: null },
+    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold", "wrapped_up", "charlie_ended_the_check"], status: "not_in_stock" },
   hold_permanently: { name: "Hold: permanently",
     sub: "Staff put us on hold and never returned.",
     info: "Charlie hung up at the hold limit and we displayed a Left on hold status.",
@@ -93,11 +97,11 @@ export const TEST_CARDS: Record<string, TestCard> = {
   hold_music: { name: "Hold: music",
     sub: "Staff put us on hold with music and Charlie dropped until a person came back.",
     info: "This test proves that hold music stops Charlie's meter the same way silence does, and that he reconnected when a person spoke to us again.",
-    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold", "wrapped_up", "charlie_ended_the_check"], status: null },
+    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold", "wrapped_up", "charlie_ended_the_check"], status: "in_stock" },
   hold_phone_down: { name: "Hold: phone down",
     sub: "Staff set the phone on the counter and Charlie dropped until someone spoke to us again.",
     info: "This test proves that background store noise stops Charlie's meter the same way silence does. Someone talking across the room is not someone talking to us.",
-    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold", "wrapped_up", "charlie_ended_the_check"], status: null },
+    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold", "wrapped_up", "charlie_ended_the_check"], status: "in_stock" },
   hungup_staff: { name: "Hungup: Staff",
     sub: "Staff hung up on us before giving an answer and we showed a Staff hung up status.",
     info: "This test proves that when Staff hung up on us, the record shows they ended the check, not us.",
