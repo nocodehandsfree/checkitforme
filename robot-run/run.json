@@ -1,10 +1,10 @@
 {
-  "at": "2026-08-07T01:06:28.143Z",
+  "at": "2026-08-07T01:59:43.161Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
-      "scenario": 5,
-      "name": "Walks away, comes back",
+      "scenario": 2,
+      "name": "No, plainly",
       "items": [
         {
           "n": 1,
@@ -28,7 +28,7 @@
           "n": 4,
           "name": "Staff's greeting is the first line, on the live view",
           "pass": true,
-          "detail": "live view showed: \"Larry Vásquez. How can I help you?\"  ·  robot said: \"Larry Vasquez, how can I help you?\""
+          "detail": "live view showed: \"Larry Vasquez. How can I help you?\"  ·  robot said: \"Larry Vasquez, how can I help you?\""
         },
         {
           "n": 5,
@@ -46,25 +46,25 @@
           "n": 4.1,
           "name": "Staff's greeting is the first line of the written conversation",
           "pass": true,
-          "detail": "first written line: \"Clerk: Larry Vásquez. How can I help you?\""
+          "detail": "first written line: \"Clerk: Larry Vasquez. How can I help you?\""
         },
         {
           "n": 5.1,
           "name": "the written greeting is its own line",
           "pass": true,
-          "detail": "written: \"Larry Vásquez. How can I help you?\"  ·  said: \"Larry Vasquez, how can I help you?\""
+          "detail": "written: \"Larry Vasquez. How can I help you?\"  ·  said: \"Larry Vasquez, how can I help you?\""
         },
         {
           "n": 6,
           "name": "the words match what the robot actually said, word for word",
           "pass": false,
-          "detail": "\"Uh, Pokémon? Uh, let me check. I just got in, so I have to, uh, I'll have to go up to the front and see. Okay, let me just put you on hold.\" → written down only in part | \"Okay, thank you for holding. Yeah, I did not see any, unfortunately.\" → written down only in part"
+          "detail": "\"Uh, probably Tuesday, that's when the truck comes.\" → written down only in part"
         },
         {
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
-          "pass": true,
-          "detail": "0 bounce(s) over 91 looks · header held at 0px"
+          "pass": false,
+          "detail": "1 bounce(s) over 130 looks · header held at 0px"
         },
         {
           "n": 8,
@@ -76,31 +76,31 @@
           "n": 13,
           "name": "the check ends with a goodbye, not with us hanging up mid conversation",
           "pass": false,
-          "detail": "the last thing said was theirs: \"Clerk: Next week, maybe. I'm not certain.\""
+          "detail": "the last thing said was OUR OWN QUESTION: \"Agent: Oh nice, any idea what time the truck usually gets in?\""
         },
         {
           "n": 14,
           "name": "we never ask the same question twice",
           "pass": true,
-          "detail": "1 things said, none of them twice"
+          "detail": "3 things said, none of them twice"
         },
         {
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 184 seconds and the line closed at 184 — 0 seconds of nothing"
+          "detail": "the answer was in at 94 seconds and the line closed at 94 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Fri, Aug 7 · 1:03 AM In stock MVPs has Pokémon.Go grab it before it's gone. Check another store Calling4 steps ·"
+          "detail": " Result Fri, Aug 7 · 1:58 AM Restock incoming A shipment lands Tuesday.Be first when it drops. Check another store Calli"
         },
         {
           "n": 9.1,
           "name": "the screen and the record say the same thing",
-          "pass": false,
-          "detail": "the screen said in, the record says out (not_in_stock)"
+          "pass": true,
+          "detail": "the screen said out, the record says out (not_in_stock)"
         },
         {
           "n": 11,
@@ -112,19 +112,19 @@
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "CHARGED · the screen claims no free check · the check cost 15.9¢"
+          "detail": "CHARGED · the screen claims no free check · the check cost 8.6¢"
         }
       ],
       "shots": [
-        "./robot-run/05-store-found.png",
-        "./robot-run/05-checking.png",
-        "./robot-run/05-live.png",
-        "./robot-run/05-result.png"
+        "./robot-run/02-store-found.png",
+        "./robot-run/02-checking.png",
+        "./robot-run/02-live.png",
+        "./robot-run/02-result.png"
       ],
-      "startedAt": 1786064548851,
-      "checkId": 354,
-      "cost": 0.158614,
-      "costReadable": "15.9¢",
+      "startedAt": 1786067843583,
+      "checkId": 355,
+      "cost": 0.086162,
+      "costReadable": "8.6¢",
       "robotCost": null,
       "charged": true,
       "statusKey": "not_in_stock"
