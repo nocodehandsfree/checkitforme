@@ -1872,7 +1872,7 @@ async function vtApi(p,opts={}){ return envApi(p,opts); }
 // The call-lane flags. The ONLY policy flags an environment may hold its own value for. Keep this
 // list byte-identical to KEEP_LOCAL_FLAGS in src/settings-sync.ts: a flag steered here but missing
 // there gets stomped back by the prod mirror within a minute, silently, mid test.
-const ENV_FLAGS=['cheapBridgeAll','connectOnHuman','ourBrain','askForTransfer'];
+const ENV_FLAGS=['cheapBridgeAll','connectOnHuman','ourBrain','askForTransfer','deltaOff'];
 const isEnvFlag=k=>ENV_FLAGS.indexOf(k)>=0;
 // The word for the environment the voice pages are editing right now, for toasts and headings.
 const vtEnvName=()=>CALL_SRC==='staging'?'Staging':'Live';

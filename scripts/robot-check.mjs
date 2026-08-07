@@ -42,8 +42,11 @@ const wanted = process.argv.slice(2).filter((a) => /^\d+$/.test(a)).map(Number);
 //    named item, so the harness has to pick it in the dropdown a customer picks it in.
 //  · the transfer switch: the whole test is that the switch really works, so it has to be turned
 //    off for that one check and put back straight after, whatever happens.
+//  · Delta failed: the whole test is that our own recording never plays, so it has to be switched
+//    off for that one check and put back straight after, whatever happens.
 const SCENE_PRODUCT = { 19: "Mega Evolution—Pitch Black Booster Display Box" };
 const SCENE_ASK_FOR_TRANSFER_OFF = new Set([16]);
+const SCENE_DELTA_OFF = new Set([25]);
 
 // Driving the site needs a key and a browser; reading the word comparison (which the robot store's
 // own test does, to prove the comparison really fails on a mangled transcript) needs neither.
@@ -340,6 +343,14 @@ async function runOne(page, scene, greetingIdx) {
     item(0.5, "asking to be put through is switched OFF for this one check", now.flags?.askForTransfer === false,
       `the switch reads ${String(now.flags?.askForTransfer)}`);
   }
+  // DELTA SWITCHED OFF, same discipline. Nothing else can make our own recording fail, so without
+  // this the Delta: failed card can never be dialed at all.
+  if (SCENE_DELTA_OFF.has(scene.n)) {
+    await adm("/api/policy", { method: "PATCH", body: JSON.stringify({ flags: { deltaOff: true } }) });
+    const now = await adm("/api/policy");
+    item(0.5, "Delta is switched OFF for this one check", now.flags?.deltaOff === true,
+      `the switch reads ${String(now.flags?.deltaOff)}`);
+  }
   const found = await findAndCheck(page, SCENE_PRODUCT[scene.n]);
   item(1, "the store is found from the main page and Check it is tapped", true, `searched "${STORE}"`);
   // The warning is a fact about this device, not a setting: it appears because this browser really
@@ -603,6 +614,17 @@ for (let i = 0; i < scenes.length; i++) {
         item(0.6, "asking to be put through is switched back ON after the check", back.flags?.askForTransfer === true,
           `the switch reads ${String(back.flags?.askForTransfer)}`);
       } catch (e) { item(0.6, "asking to be put through is switched back ON after the check", false, String(e).slice(0, 120)); }
+    }
+    // AND DELTA COMES BACK, whatever happened. Leaving it off would make every check after this one
+    // pay for Charlie asking the question himself, a real customer's included.
+    if (SCENE_DELTA_OFF.has(scenes[i].n)) {
+      try {
+        await adm("/api/policy", { method: "PATCH", body: JSON.stringify({ flags: { deltaOff: false } }) });
+        const back = await adm("/api/policy");
+        console.log(`  · Delta is back ON: deltaOff reads ${String(back.flags?.deltaOff)}`);
+        item(0.6, "Delta is switched back ON after the check", back.flags?.deltaOff === false,
+          `the switch reads ${String(back.flags?.deltaOff)}`);
+      } catch (e) { item(0.6, "Delta is switched back ON after the check", false, String(e).slice(0, 120)); }
     }
   }
   // OWNER RULE (08-04, voice RULES.md 15): the FIRST check of a run must be seen running WHOLE —

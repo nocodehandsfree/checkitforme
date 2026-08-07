@@ -70,7 +70,16 @@ export async function buildCharlieSetup(input: CharlieSetupInput): Promise<Charl
   let openingClip: BridgeContext["openingClip"];
   let clipFailed = false;
   const question = input.dynamicVars.opening_line || "";
-  if (config.voice.midCallAgentId && question) {
+  // DELTA SWITCHED OFF ON PURPOSE (owner 08-07, the Delta: failed card). Nothing could ever make the
+  // recording fail, so the fallback where Charlie asks the question himself had never been tested on
+  // purpose. This is the ONE door that decides whether a recording is made, so this is where the
+  // switch belongs: with it on there is simply no clip, and every path downstream takes the same
+  // route it already takes when the recording could not be made. Not a second code path, which is
+  // the only way this proves anything about the real one. OFF except for that one check.
+  if (pol.flags?.deltaOff) {
+    console.log("[charlie] Delta is switched OFF for this check: the question will not be recorded, so Charlie asks it himself");
+    clipFailed = true;
+  } else if (config.voice.midCallAgentId && question) {
     if (!input.voiceId) {
       return { refused: true, fault: "no-voice", reason: "no voice is set for this store's workflow, so the check was refused. Set one in Admin, Voice, Workflows." };
     }

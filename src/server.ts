@@ -53,7 +53,7 @@ import { activeMap, graphSummary, chainDetail, approveVersion, rejectVersion, op
 import { recipeFromCall, evidenceFromCall, type CapturedStep } from "./calls/map-capture";
 import { startSweep, stopSweep, sweepStatus, buildQueue } from "./calls/sweep";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay,
-  robotAnswer, robotStep, robotEnded, robotClip, ringbackWav, beepWav, robotScene, robotLastRun, robotRunFor, parseRobotPick, ROBOT_SCENES, ROBOT_GREETINGS } from "./calls/tapedeck";
+  robotAnswer, robotStep, robotEnded, robotClip, ringbackWav, beepWav, robotScene, robotLastRun, robotRunFor, parseRobotPick, ROBOT_SCENES, ROBOT_GREETINGS, ROBOT_CLIPS } from "./calls/tapedeck";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged, lockRecipeToChain } from "./calls/trainer-batch";
 import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, connectAtSecFor, chainDialable, chainNavPlan, type Recipe } from "./calls/recipe";
 import { llm, heli } from "./llm";
@@ -1221,6 +1221,19 @@ app.get("/robot/clip", (c) => {
   const b = robotClip(c.req.query("call") || "", Number(c.req.query("i") || 0));
   if (!b) return c.body("not found", 404);
   return c.body(new Uint8Array(b), 200, { "Content-Type": "audio/mpeg" });
+});
+// HOLD MUSIC AND A PHONE PUT DOWN ON THE COUNTER. The owner picked these recordings himself and
+// approved them by ear; they are committed at public/robot-clips/ and this only hands them to the
+// phone company. NAMED, NEVER A PATH: the name is looked up in ROBOT_CLIPS, so nothing a caller
+// types can ever reach a file the owner did not put on that list. Behind the /robot/* switch with
+// the rest, so it does not exist at all when the robot store is off.
+app.get("/robot/hold", (c) => {
+  const clip = ROBOT_CLIPS[c.req.query("f") || ""];
+  if (!clip) return c.body("not found", 404);
+  try {
+    const buf = readFileSync(join(here, `../public/robot-clips/${clip.file}`));
+    return c.body(new Uint8Array(buf), 200, { "Content-Type": "audio/mpeg", "Cache-Control": "public, max-age=86400" });
+  } catch { return c.body("not found", 404); }
 });
 app.get("/robot/ring", (c) => {
   // The ceiling was 30 seconds, which was plenty while ringing only ever meant a transfer. The 90
