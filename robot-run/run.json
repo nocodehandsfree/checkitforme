@@ -1,10 +1,10 @@
 {
-  "at": "2026-08-06T20:33:11.281Z",
+  "at": "2026-08-07T00:10:40.168Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
-      "scenario": 8,
-      "name": "The no that turns into a maybe",
+      "scenario": 2,
+      "name": "No, plainly",
       "items": [
         {
           "n": 1,
@@ -57,14 +57,14 @@
         {
           "n": 6,
           "name": "the words match what the robot actually said, word for word",
-          "pass": false,
-          "detail": "\"Yeah, we've got a few.\" → missing"
+          "pass": true,
+          "detail": "3 lines, all exact"
         },
         {
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
           "pass": true,
-          "detail": "0 bounce(s) over 69 looks · header held at 62px"
+          "detail": "0 bounce(s) over 139 looks · header held at 0px"
         },
         {
           "n": 8,
@@ -76,7 +76,7 @@
           "n": 13,
           "name": "the check ends with a goodbye, not with us hanging up mid conversation",
           "pass": false,
-          "detail": "the last thing said was theirs: \"Wait, you already mentioned black boxes, so that's helpful, do you happen to know the set \""
+          "detail": "the last thing said was OUR OWN QUESTION: \"Agent: Oh nice, any idea what time?\""
         },
         {
           "n": 14,
@@ -88,43 +88,43 @@
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 143 seconds and the line closed at 143 — 0 seconds of nothing"
+          "detail": "the answer was in at 100 seconds and the line closed at 100 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Thu, Aug 6 · 8:30 PM Left on hold They kept us on hold and the call dropped.Try checking later. Check another st"
+          "detail": " Result Fri, Aug 7 · 12:08 AM Restock incoming A shipment lands Tuesday.Be first when it drops. Check another store Call"
         },
         {
           "n": 9.1,
           "name": "the screen and the record say the same thing",
-          "pass": false,
-          "detail": "the screen said unclear, the record says out (not_in_stock)"
+          "pass": true,
+          "detail": "the screen said out, the record says out (not_in_stock)"
         },
         {
           "n": 11,
           "name": "the verdict is RIGHT for this scenario",
-          "pass": false,
-          "detail": "got not_in_stock · this scenario is in_stock"
+          "pass": true,
+          "detail": "got not_in_stock · this scenario is not_in_stock"
         },
         {
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "CHARGED · the screen claims no free check · the check cost 14.3¢"
+          "detail": "CHARGED · the screen claims no free check · the check cost 8.8¢"
         }
       ],
       "shots": [
-        "./robot-run/08-store-found.png",
-        "./robot-run/08-checking.png",
-        "./robot-run/08-live.png",
-        "./robot-run/08-result.png"
+        "./robot-run/02-store-found.png",
+        "./robot-run/02-checking.png",
+        "./robot-run/02-live.png",
+        "./robot-run/02-result.png"
       ],
-      "startedAt": 1786048201134,
-      "checkId": 348,
-      "cost": 0.143365,
-      "costReadable": "14.3¢",
+      "startedAt": 1786061295051,
+      "checkId": 351,
+      "cost": 0.088344,
+      "costReadable": "8.8¢",
       "robotCost": null,
       "charged": true,
       "statusKey": "not_in_stock"
