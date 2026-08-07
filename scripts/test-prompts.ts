@@ -39,7 +39,41 @@ says(`If their reply does not fit your question, like another "yeah" or a "we do
 says("never repeat the question in any wording, thank them warmly and wrap up", "10. …and the answer to it is the goodbye, never the question again");
 says("that is about how you phrase things, never permission to ask again", "12. varying his wording is not permission to re-ask");
 says("Always keep a real set name in the question so Staff know what you mean.", "10. a real set name stays in the question");
-says("Whatever Staff answer is the answer, even \"soon\". Never ask a second restock question.", "11. one restock question, whatever comes back");
+
+// ════════════════════════════════════════════════════════════════════════════════════════════════
+// THE FOUR EDITS THE OWNER APPROVED 08-06, copied word for word from his own document. Off his check
+// 348: Staff went to look, came back with "It's black boxes, I think.", and the check came back Not
+// in stock; and Charlie, who had just been told the package, asked for the package again and then
+// corrected himself out loud mid sentence.
+// ════════════════════════════════════════════════════════════════════════════════════════════════
+console.log("\n▶ the four edits of 08-06");
+says(`Staff might not always say the word yes, and often answer vaguely by describing what they see. If they describe what they have on the shelf, like "it's black boxes", "we've got the little packs", or "just the tins", that is a YES.`,
+  "3. describing what they have on the shelf is a YES");
+says("When the {{category}} is in stock, ask ONE question and only one, for whatever Staff have not already told you.",
+  "10. one question, and only for what he was not already told");
+says("If they have given both the set name and the package type, ask nothing, thank them warmly and wrap up.",
+  "10. both given, he asks nothing at all");
+says(`If they have described the package, like "it's black boxes", ask only for the set name: "oh nice, do you know the name of the set, like {{set_example}}?".`,
+  "10. package given, he asks only the set name");
+says(`If they have given only the set name, ask only for the package type: "oh nice, is that packs or a box or a tin?".`,
+  "10. set given, he asks only the package");
+says(`If they have given neither, ask for both in a single sentence: "oh nice, do you know the name of the set, like {{set_example}}, and is it packs or a box or a tin?".`,
+  "10. neither given, both in ONE sentence");
+says(`When nothing is in stock, ask only one question, and ask it in one sentence: "got it, do you know what day and time you might get more in?".`,
+  "11. the restock question, one sentence");
+says("If Staff give you a day and a time, thank them warmly and wrap up.", "11. day and time given, he wraps up");
+says(`If they give you only a day, like "check back tomorrow", ask only for the time: "oh nice, any idea what time?".`,
+  "11. only a day, he asks only the time");
+says(`If they only say more is coming, like "we're getting some soon", ask for the day and the time together, exactly as you asked the first time.`,
+  "11. only 'soon', he asks the day and time together once more");
+says(`Take whatever they answer, even "soon", and never ask a third time.`, "11. never a third restock question");
+says(`Never correct yourself out loud and never think out loud. No "wait", no "actually", no "you already said". Finish your sentence in your head, then say only the finished sentence.`,
+  "12. he never corrects himself out loud, the check 348 fault by name");
+// The old words asked for the set AND the package every time, however much Staff had already given,
+// and allowed exactly one restock question however little came back. Both are replaced, not added to.
+ok(!RESTOCK_PROMPT.includes("ask one question, in your own words, for the set name and whether it comes in packs, boxes, or tins"),
+  "…and the old question that asked for both no matter what is gone");
+ok(!RESTOCK_PROMPT.includes("Never ask a second restock question."), "…and the old one-restock-question line is gone");
 says("At most ONE exclamation mark in an entire call, and never on the goodbye", "12. one exclamation mark, never on the goodbye");
 says("If Staff speak Spanish, continue in Spanish.", "12. he follows Staff into Spanish");
 says("If Staff gave you their name, use it once during the check", "14. their name, used once");
@@ -61,8 +95,12 @@ says("Say goodbye once, then end the check with end_call.", "14. the goodbye com
 says("The set question below comes only after the yes is settled.", "3→10. the set question waits for the settled yes");
 // The bridge has to sit in section 3, ahead of the question it governs, or it is just a restatement.
 ok(RESTOCK_PROMPT.indexOf("The set question below comes only after the yes is settled.")
-   < RESTOCK_PROMPT.indexOf("When Staff say the {{category}} is in stock"),
+   < RESTOCK_PROMPT.indexOf("When the {{category}} is in stock, ask ONE question and only one"),
   "…and the bridge is read BEFORE the set question it governs");
+// The vague yes goes IN section 3, ahead of that same bridge, so the yes is settled by describing
+// what they have BEFORE anything sends him on to the set question (owner's edit 08-06).
+ok(RESTOCK_PROMPT.indexOf("that is a YES.") < RESTOCK_PROMPT.indexOf("The set question below comes only after the yes is settled."),
+  "3. …and describing what they have settles the yes before that bridge");
 
 console.log("\n▶ the dynamic-variable contract: what fills, and what RETIRED");
 for (const v of ["{{category}}", "{{personality}}", "{{clarification}}", "{{kiosk_note}}",
