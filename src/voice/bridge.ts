@@ -628,6 +628,22 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  saving on a real walk away is untouched and a pause mid conversation no longer gags him. */
   const MIN_ON_LINE_MS = Math.max(0, tune.charlieMinOnLineMs);
   let closeWhenReady: NodeJS.Timeout | null = null;
+  /**
+   * A CLOCK COULD NEVER FIX THIS, AND CHECK 358 IS THE PROOF (owner 08-07). The minimum above is
+   * five seconds and his session on 358 ran SEVEN, and he still said nothing: Staff answered at the
+   * end of that stretch, the robot went quiet the moment it finished its line the way it always
+   * does, three seconds of quiet read as Staff walking away, and he was dropped one second later,
+   * mid thought. Same test, same words, and 355 and 356 passed only because he happened to start
+   * talking inside those three seconds. A race is not a rule.
+   *
+   * So the close waits on a FACT instead: he has been handed their answer and has not yet opened
+   * his mouth in THIS session, so the quiet is HIM, not them. `answeredAtMs` is the moment the gate
+   * opened; `spokeThisSession` is the moment it stopped mattering. Capped, because a model that
+   * never answers must not hold a line open for free.
+   */
+  const HIS_FIRST_WORD_MS = 6000;
+  let answeredAtMs = 0;
+  let spokeThisSession = false;
   let onHold = false;             // the person is away; the agent must not be fed or heard
   /** Somebody has already stepped away and come back on this call — from here it is a live store
    *  beyond doubt, and no machine-phrase mishearing may hang it up (family 1). */
@@ -780,6 +796,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   function letHimAnswer(via: string) {
     if (charlieMaySpeak) return;
     charlieMaySpeak = true;
+    // The moment his conversation became his. Everything that waits on his FIRST word measures from
+    // here, never from when his session opened: opening is ours, answering is theirs.
+    answeredAtMs = Date.now();
     if (answerWaitTimer) { clearTimeout(answerWaitTimer); answerWaitTimer = null; }
     log(`delta: ${via} -> Charlie may speak`);
   }
@@ -1006,10 +1025,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         try { eleven?.close(); } catch { /* torn down */ }
         eleven = null; ready = false; connecting = false;
       };
-      if (onLineFor >= MIN_ON_LINE_MS) dropHim();
+      // HE WAS HANDED THEIR ANSWER AND HAS NOT SPOKEN YET, so this quiet is him thinking. Wait for
+      // his first word, capped. Music and a transfer never come through here on this path anyway:
+      // both are somebody DOING something, and neither is Charlie holding his tongue.
+      const owedHimAWord = charlieMaySpeak && !spokeThisSession && answeredAtMs > 0
+        ? Math.max(0, answeredAtMs + HIS_FIRST_WORD_MS - Date.now()) : 0;
+      const wait = Math.max(MIN_ON_LINE_MS - onLineFor, owedHimAWord);
+      if (wait <= 0) dropHim();
       else {
-        const wait = MIN_ON_LINE_MS - onLineFor;
-        log(`hold (${reason}): his session is only ${Math.round(onLineFor / 1000)}s old, giving him ${Math.round(wait / 1000)}s to answer before closing him`);
+        log(`hold (${reason}): ${owedHimAWord > 0 ? "he has their answer and has not spoken yet" : `his session is only ${Math.round(onLineFor / 1000)}s old`}, giving him ${Math.round(wait / 1000)}s before closing him`);
         if (closeWhenReady) clearTimeout(closeWhenReady);
         closeWhenReady = setTimeout(dropHim, wait);
       }
@@ -1336,6 +1360,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // Each session gets its own one-shot echo allowance: a reopened session is handed the recorded
       // question as context again and reports it as its own line again (open fault 4).
       clipEchoDropped = false;
+      // …and a fresh session has not opened its mouth yet, so the wait rules owe it a first word.
+      spokeThisSession = false;
       // THE BILLED SECOND ZERO. The provider meters from session open, so this is where the money
       // clock starts — not at first word. Everything after this is seconds we are paying for.
       markNow(room, "charlieOpenMs");
@@ -1455,6 +1481,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + ms;
           addMs(room, "speakingMs", ms); // SPEAKING = audio that really played out, not a guess
           charlieSpoke = true;           // from here there is no live model swap, whatever fails
+          spokeThisSession = true;       // …and the quiet after this is theirs again, not his
           // …and the same milliseconds are what the wrap-up limit counts: audio that really reached
           // Staff's ear, never a stopwatch on the whole check (round 1, item 1.5).
           charlieSpokenMs += ms;

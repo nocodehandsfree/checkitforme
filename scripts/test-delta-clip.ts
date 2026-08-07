@@ -2108,5 +2108,44 @@ console.log("\n▶ HE IS NEVER DROPPED BEFORE HE HAS HAD A CHANCE TO SPEAK (chec
   restore(); tw.close(); f.close();
 }
 
+console.log("\n▶ …AND A CLOCK COULD NEVER HAVE FIXED IT (check 358: his session ran SEVEN seconds and he still said nothing)");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-owed-a-word";
+  // The floor is set to nothing on purpose. On 358 his session was already OLDER than the floor, so
+  // the floor could not save him: Staff answered at the end of that stretch and the robot went quiet
+  // the moment it finished its line, which is what every robot scene does. Only the FACT that he was
+  // handed an answer and had not opened his mouth can hold the line here.
+  const audio = Buffer.alloc(400 * 8, 0x20);
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, {
+    agentId: "agent_normal", midCallAgentId: "agent_joining",
+    dynamicVars: { opening_line: "do you have any Pokemon cards in stock?" },
+    connectOnHuman: true, holdMaxSeconds: 999,
+    openingClip: { audio, ms: 400, text: "do you have any Pokemon cards in stock?" },
+    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0 },
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, room, () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_owed", customParameters: { room } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
+  await sleep(400);
+  ok((getReceipt(room)?.events || []).some((e) => e.kind === "charlie_join"), "his session is up");
+  // THEIR ANSWER. This is what opens his mouth, and from here the quiet belongs to him.
+  speak(tw, 150);
+  await sleep(60);
+  // …and then the robot goes quiet waiting for him, exactly as every robot scene does.
+  for (let i = 0; i < 400; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(500);
+  const evs = () => getReceipt(room)?.events || [];
+  ok(!evs().some((e) => e.kind === "charlie_leave"), "he has their answer and has not spoken, so he is NOT dropped");
+  ok(evs().some((e) => e.kind === "hold_start"), "the wait still starts on the record at the second they went quiet");
+  restore(); tw.close(); f.close();
+}
+
 console.log(`\n════════════════════════════════\n  PASS: ${pass}   FAIL: ${fail}\n════════════════════════════════`);
 process.exit(fail === 0 ? 0 : 1);
