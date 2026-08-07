@@ -1,6 +1,8 @@
 # Location does not follow you to a new town (found 2026-08-06, owner hundreds of miles from home)
 
-**System:** site · **Status:** open, DIAGNOSED, not fixed (owner: "don't fix anything but tell me why")
+**System:** site · **Status:** open, DIAGNOSED, not fixed. **THE BUILD SPEC IS
+`docs/specs/location-follow/README.md`** (owner 08-06: write it up, and get it done when auto-checks
+are finished). This file is the diagnosis; the spec is the contract.
 
 ## What the owner saw
 He is hundreds of miles from his house. The site still shows his home stores. He moved the radius
