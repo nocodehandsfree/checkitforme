@@ -63,8 +63,12 @@ console.log("\n▶ PRACTICE CHECK 2 — a branded hello, then \"one moment\" (th
     "a store saying its own name is not automatically a machine — that is how Staff get pressed at");
   ok(v.needsPause === true,
     "it is held open for the pause instead: a recording reads on, a person stops");
-  ok(judge({ text: hello, atSec: 9, pauseTested: true, keptTalkingAfterPause: false }).who === "person",
-    "they stopped and waited for us, so they are a person");
+  // 08-07: stopping ALONE is not a person, because a menu goes quiet too. The owner's own rule is
+  // that a person stops AND then speaks to us, so the proof is their second line.
+  ok(judge({ text: hello, atSec: 9, pauseTested: true, keptTalkingAfterPause: false }).who === "unsure",
+    "they stopped, which on its own proves nothing, so Echo keeps listening instead of guessing");
+  ok(judge({ text: "Hi, can I help you?", atSec: 12, pauseTested: true, keptTalkingAfterPause: false }).who === "person",
+    "and when they speak to us after stopping, that is a person");
   ok(judge({ text: hello + " Please listen carefully as our options have changed.", atSec: 9 }).who === "recording",
     "but the same name followed by a menu's own words is the recording, plainly");
 }
@@ -77,7 +81,8 @@ console.log("\n▶ PRACTICE CHECK 3 — voicemail says \"hello?\" (Charlie must 
   ok(v.who === "recording", "so it is never handed to Charlie as a person");
   // The same words with no mailbox in them stay a person — this must not become a rule that eats
   // real Staff checking whether we are still on the line.
-  ok(judge({ text: "Hello? Are you still there?", atSec: 22 }).who === "person" && !judge({ text: "Hello? Are you still there?", atSec: 22 }).deadEnd,
+  const stillThere = judge({ text: "Hello? Are you still there?", atSec: 22, pauseTested: true, keptTalkingAfterPause: false });
+  ok(stillThere.who === "person" && !stillThere.deadEnd,
     "and Staff asking if we are still there is still a person, with no dead end about it");
   ok(judge({ text: "Our store is closed for the night. Our store hours are nine to nine.", atSec: 8 }).deadEnd === true,
     "a closed store is a dead end too");
@@ -143,7 +148,7 @@ console.log("\n▶ PRACTICE CHECK 5 — two Staff on one check");
     "the person is dated from the first person's first word, not the second one's");
   ok(menuLinesOf(steps as never, null, 31, []).length === 1,
     "and only the store's own recording is the menu — neither person's words go back into it");
-  ok(judge({ text: steps[4].text, atSec: 58, mappedRoute: true, routeHandoffSeen: false }).who === "person",
+  ok(judge({ text: steps[4].text, atSec: 58, mappedRoute: true, routeHandoffSeen: false, pauseTested: true, keptTalkingAfterPause: false }).who === "person",
     "a second person answering is a person, even mid-route");
 }
 
@@ -154,10 +159,14 @@ console.log("\n▶ PRACTICE CHECK 6 — a Spanish-speaking person");
   // WE NEVER RECOGNISE A PERSON'S WORDS. We only know a menu when we hear one, and anything we
   // cannot prove is a menu is a person. Charlie handles whatever language they answer in.
   const hola = "Buenas tardes, gracias por llamar a Card Mart, habla María, ¿en qué le puedo servir el día de hoy?";
-  ok(judge({ text: hola, atSec: 33, knownMenuLines: [], pauseTested: true, keptTalkingAfterPause: false }).who === "person",
-    "somebody greeting us in Spanish is a person — nothing about it proves a menu");
-  ok(judge({ text: "¿Bueno? ¿Sigue ahí?", atSec: 40, pauseTested: true, keptTalkingAfterPause: false }).who === "person",
-    "and so is somebody asking in Spanish whether we are still there");
+  // No English word list can carry Spanish, so nothing about the WORDS is allowed to decide. What
+  // decides is behaviour: they went quiet for the keys and stayed quiet for us (owner 08-07).
+  ok(judge({ text: hola, atSec: 33, knownMenuLines: [], pauseTested: true, keptTalkingAfterPause: false }).who === "unsure",
+    "the Spanish greeting alone proves nothing either way, and Echo never guesses");
+  ok(judge({ text: hola, atSec: 33, knownMenuLines: [], knockTested: true, keptTalkingAfterKnock: false, pauseTested: true, keptTalkingAfterPause: false }).who === "person",
+    "somebody greeting us in Spanish is a person, proved by behaviour and not by any word we know");
+  ok(judge({ text: "¿Bueno? ¿Sigue ahí?", atSec: 40, knockTested: true, keptTalkingAfterKnock: false, pauseTested: true, keptTalkingAfterPause: false }).who === "person",
+    "and so is somebody asking in Spanish whether we are still there, proved the same way");
   ok(judge({ text: "Para español, oprima nueve.", atSec: 3 }).who === "recording",
     "while the menu's own Spanish option is still the recording");
   // DRIVEN through the engine: the same long Spanish hello, on the check that reaches Staff.
@@ -166,12 +175,18 @@ console.log("\n▶ PRACTICE CHECK 6 — a Spanish-speaking person");
     engine.open({ id: "es-1", confirm: { product: "Pokémon cards" } });
     engine.at("es-1", 30);
     const t1 = await engine.step("es-1", hola);
-    ok(!/<Play digits=/.test(t1) && /<Pause length="2"/.test(t1),
-      "nothing is pressed at them — the check goes quiet to see if the talking carries on");
+    // 08-07: we press once at WHOEVER answered, because we do not know yet what we called. That is
+    // the point. A person hears the beeps, stops, and speaks again; a recording reads straight on.
+    ok(/<Play digits="123"\/>/.test(t1),
+      "the keys go out once, because nothing yet says whether this is a menu or a person");
     engine.at("es-1", 33);
-    await engine.step("es-1", hola);
+    await engine.step("es-1", "¿Bueno? ¿Sigue ahí?");
+    ok(engine.get("es-1")?.keptTalkingAfterKnock === false,
+      "they did not read straight on, so nothing calls them a machine");
+    engine.at("es-1", 36);
+    await engine.step("es-1", "¿Bueno?");
     ok(engine.get("es-1")?.humanAtSec != null,
-      "and when it does not carry on, they are a person — no phrase of theirs was ever matched");
+      "and they are a person, proved by what they did and not by any Spanish word we know");
     engine.end("es-1");
   }
 }

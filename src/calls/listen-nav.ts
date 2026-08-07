@@ -425,6 +425,13 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
   if (soundsAddressedToUs && o.knockTested && !o.keptTalkingAfterKnock) {
     return { who: "person", why: "it stopped for the keys and then spoke to us", ...ride };
   }
+  // STOPPED FOR THE KEYS AND STOPPED FOR THE SILENCE, IN ANY LANGUAGE. This is the one that carries
+  // Staff who answer in Spanish, or any language we hold no words for. A menu that acted on a key
+  // does not go quiet, it reads the next set of options at us. Something that went quiet for both
+  // the keys AND our silence is somebody waiting for us to speak, and only a person waits.
+  if (o.knockTested && !o.keptTalkingAfterKnock && o.pauseTested && !o.keptTalkingAfterPause) {
+    return { who: "person", why: "it stopped for the keys and stayed quiet for us, which only a person does", ...ride };
+  }
   // Sounding like a person is only allowed to settle it once the pause has ALSO said person, because
   // the pause is behaviour and the phrase is only a hint. Until then it waits, and waiting is free.
   if (soundsAddressedToUs && o.pauseTested && !o.keptTalkingAfterPause) {
