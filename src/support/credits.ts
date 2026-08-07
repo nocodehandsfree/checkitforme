@@ -36,7 +36,11 @@ const BAD_KEYS = new Set([
 // out of BAD_KEYS was not enough on its own: the short-call rule let a hold back in through the
 // side door whenever the call happened to be brief, so we charged for it and refunded it in the
 // same breath, which is exactly the fight the 07-22 ruling exists to prevent (found 08-05).
-const CHARGED_ANYWAY = new Set(["left_on_hold", "too_busy", "language_barrier", "staff_hung_up"]);
+// "No clear answer" (owner 08-07) joins them: it is only ever stamped when a real person talked to
+// us in words we wrote down and still never answered, which is the same ruling with its own word on
+// it. Left out of this set it would fall through to the short-call rule and be refunded on a check
+// billableOutcome() had just charged, which is the fight the 07-22 ruling exists to prevent.
+const CHARGED_ANYWAY = new Set(["left_on_hold", "too_busy", "language_barrier", "staff_hung_up", "no_straight_answer"]);
 // The fifth case from the same ruling: an unclear verdict that came out of a REAL two-way call is
 // charged too, because a person talked to us. billableOutcome() proves it by finding both sides in
 // the transcript, so this reads the same evidence. Without it a charged unclear check looked

@@ -193,8 +193,11 @@ is(ROBOT_SCENES.map((s) => `${s.n}:${s.expect}`), [
   "6:no_clear_answer", "7:in_stock", "8:in_stock", "9:nobody_answered", "10:not_in_stock",
   // Scene 13 moved off the 4 minute limit onto its own wrap-up card (owner 08-07), so it no longer
   // ends by us hanging up: Charlie asks once more, takes what he gets and closes on no clear answer.
-  "11:not_in_stock", "12:nobody_answered", "13:no_clear_answer", "14:in_stock", "15:too_busy",
-  "16:no_clear_answer", "17:voicemail", "18:in_stock", "19:in_stock",
+  // "No clear answer" is the owner's NEW status (08-07) and NOT a rename of Couldn't tell. Both of
+  // these scenes talk to us clearly and never answer, which is exactly what it is for; Couldn't tell
+  // stays for a check where we could not make out what the person was saying.
+  "11:not_in_stock", "12:nobody_answered", "13:no_straight_answer", "14:in_stock", "15:too_busy",
+  "16:no_straight_answer", "17:voicemail", "18:in_stock", "19:in_stock",
 ], "scenes 7 and 8 expect IN STOCK — the two we really got wrong");
 
 // ---- THE TEST OF THE TEST -----------------------------------------------------------------------

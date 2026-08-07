@@ -739,7 +739,7 @@ export const ROBOT_SCENES: RobotScene[] = [
   // once he has been TALKING for the Admin number he asks once more, takes what he gets and CLOSES.
   // So the robot no longer hangs up on him — it waits, the way every other scene does, or a goodbye
   // is unspeakable by design and the test can never pass.
-  { n: 13, card: "wrapup_never_answered", name: "Talks past the answer, forever", expect: "no_clear_answer", acts: [
+  { n: 13, card: "wrapup_never_answered", name: "Talks past the answer, forever", expect: "no_straight_answer", acts: [
     { listen: true }, { say: "Oh, Pokemon cards, yeah. We get a ton of calls about those, honestly." },
     { listen: true }, { say: "You know my nephew collects them. He's got a whole binder, must be hundreds." },
     { listen: true }, { say: "There was a guy in here last week, bought like twenty packs at once. Twenty." },
@@ -778,7 +778,7 @@ export const ROBOT_SCENES: RobotScene[] = [
   // THE SWITCH ITSELF. Asking to be put through is OFF for this run, so Charlie must never once
   // bring up being transferred: he takes what he can get and wraps up. The safety line is the
   // owner's own (spec, test 14): if he says anything more, Staff answer once and that is that.
-  { n: 16, card: "transfer_switch_off", name: "Wrong department, asking switched off", expect: "no_clear_answer",
+  { n: 16, card: "transfer_switch_off", name: "Wrong department, asking switched off", expect: "no_straight_answer",
     greeting: "MVP's pharmacy, this is Larry.", acts: [
     { listen: true }, { say: "That's the front, I can't see those from back here." },
     { listen: true }, { say: "Yeah, sorry, I really can't help you with that from back here." },
