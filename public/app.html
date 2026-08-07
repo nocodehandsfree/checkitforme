@@ -2486,7 +2486,24 @@ function checkV2From(d,o){
   // Gross profit against the 67 percent floor. Red is reserved for a bad final status (color law),
   // so under the floor reads yellow, never red.
   const profitC=v2.profitPct==null?'var(--muted)':v2.profitPct>=67?'var(--green)':'var(--yellow)';
-  const behavior=(d.behaved||[]).filter(r=>r.pass===true||r.pass===false).map(r=>({l:r.label,pass:r.pass===true}));
+  // A ROW THIS CHECK NEVER PUT TO THE TEST IS NOT ON THE CARD AT ALL (owner 08-07). Every row he can
+  // see is one the test really exercised, so a red here is always a real failure.
+  const need=new Set((v2.test&&v2.test.needs)||[]);
+  const behavior=(d.behaved||[]).filter(r=>r.pass===true||r.pass===false).map(r=>({l:r.label,pass:r.pass===true,need:need.has(r.key)}));
+  // WHAT THIS CARD HAS TO SEE TO PASS (owner 08-07). The card names the rows that must be green and
+  // the status the check has to come back with, and the server grades the check against exactly
+  // those. Printed as his own row wording, so the line reads the same as the rows under it.
+  const labelOf=k=>((d.behaved||[]).find(r=>r.key===k)||{}).label||k;
+  const wordFor=k=>{const s=k?statusFor(k):null;return (s&&s.label)||(k?String(k).replace(/_/g,' '):'');};
+  const gr=(v2.test&&v2.test.verdict)||null;
+  const verdict=gr?{
+    pass:!!gr.pass, missing:gr.missing||[],
+    // A card that names no status of its own (the switch test) is never marked down for one.
+    statusLine:gr.wantStatus?(gr.statusOk?('The check came back '+wordFor(gr.wantStatus)+'.')
+      :('The check should come back '+wordFor(gr.wantStatus)+' and came back '+(gr.gotStatus?wordFor(gr.gotStatus):'nothing')+'.')):'',
+    statusOk:gr.statusOk,
+  }:null;
+  const needList=[...need].map(labelOf).concat(gr&&gr.wantStatus?['the check comes back '+wordFor(gr.wantStatus)]:[]);
 
   // ---- the log: every step end to end, menu steps grouped, spoken lines under their step ----
   // ONE LIST ON ONE CLOCK (owner 08-06). The steps and the spoken lines are stamped on the SAME call
@@ -2601,6 +2618,7 @@ function checkV2From(d,o){
     info:(v2.test&&v2.test.info)||'',
     passed:behavior.filter(r=>r.pass).length,
     failed:behavior.filter(r=>!r.pass).length,
+    verdict, needList,
     // WHERE HIS METER WENT, under his number (owner 08-07). The four tiles stay four and stay the
     // roll up; the three pieces read as small words under Charlie's seconds, so nothing has to be
     // opened to see that a check billed 33 seconds of him with no words said. A check recorded
@@ -2619,10 +2637,12 @@ function checkV2Html(d){
   const head=`<div style="display:inline-block;max-width:100%">
       <div><span data-tip="${esch(d.info)}" style="font-size:20px;font-weight:800;letter-spacing:-.4px;color:#fff;white-space:nowrap">${esch(d.name)}</span></div>
       <div class="meta" style="margin:5px 0 0;font-size:13px;max-width:0;min-width:100%">${esch(d.sub)}</div></div>
-    <div style="display:flex;gap:7px;margin:12px 0 16px">
+    <div style="display:flex;gap:7px;margin:12px 0 16px;flex-wrap:wrap">
+      ${d.verdict?`<span style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:5px 12px;${d.verdict.pass?'color:var(--green);background:rgba(74,222,128,.13)':'color:var(--red);background:rgba(239,68,68,.13)'}">${d.verdict.pass?'Test passed':'Test failed'}</span>`:''}
       ${pill(d.passed,'passed','color:var(--green);background:rgba(74,222,128,.13)')}
       ${pill(d.failed,'failed','color:var(--red);background:rgba(239,68,68,.13)')}
-    </div>`;
+    </div>
+    ${d.verdict&&!d.verdict.pass?`<div class="meta" style="margin:-6px 0 14px;color:var(--red);font-size:12.5px;line-height:1.5">${esch([d.verdict.missing.length?('Still to hold: '+d.verdict.missing.join(', ')+'.'):'',d.verdict.statusOk===false?d.verdict.statusLine:''].filter(Boolean).join(' '))}</div>`:''}`;
   const stats=`<div class="stats" style="grid-template-columns:1fr 1fr;margin-bottom:14px">
       <div class="stat"><div class="n" style="color:#fff">${d.stats.cost}</div><div class="l">Total cost</div></div>
       <div class="stat"><div class="n" style="color:#fff">${d.stats.time}</div><div class="l">Total time</div></div>
@@ -2637,8 +2657,12 @@ function checkV2Html(d){
       <div class="row" style="padding:9px 0 0;margin-top:6px;border-top:1px solid rgba(255,255,255,.08)"><span class="grow" style="font-size:14px;font-weight:800;color:#fff">Total</span><span style="font-size:15px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums">${d.stats.cost}</span></div>
     </div>`;
   const bmark=p=>`<span style="width:26px;height:26px;border-radius:50%;background:${p?'rgba(74,222,128,.15)':'rgba(239,68,68,.15)'};display:grid;place-items:center;flex:0 0 auto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${p?'#4ADE80':'#EF4444'}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${p?'<path d="M5 12l5 5 9-10"/>':'<path d="M6 6l12 12M18 6L6 18"/>'}</svg></span>`;
+  // WHAT THIS CARD HAS TO SEE TO PASS, said before the rows rather than left for him to work out
+  // (owner 08-07). Everything else on the card is worth reading and none of it decides the test.
+  const needed=(d.needList||[]).length?`<div class="meta" style="margin:0 0 10px;font-size:12px;line-height:1.5">To pass: ${esch((d.needList||[]).join(', '))}.</div>`:'';
   const behavior=`<details open class="card" style="margin-bottom:14px;padding:16px 18px"><summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;margin-bottom:8px"><span class="k-eyebrow" style="margin:0;flex:1">Charlie behavior</span>${chev}</summary>
-      ${d.behavior.map(r=>`<div class="row" style="align-items:center;padding:8px 0"><span class="grow" style="font-size:13.5px;font-weight:700;color:var(--text-strong)">${esch(r.l)}</span>${bmark(r.pass)}</div>`).join('')}
+      ${needed}
+      ${d.behavior.map(r=>`<div class="row" style="align-items:center;padding:8px 0"><span class="grow" style="font-size:13.5px;font-weight:${r.need?'800':'700'};color:var(--text-strong)">${esch(r.l)}${r.need?'<span style="margin-left:6px;font-size:10px;font-weight:800;letter-spacing:.4px;color:#8A8A96">NEEDED</span>':''}</span>${bmark(r.pass)}</div>`).join('')}
     </details>`;
   const say=(w,tx)=>{const ai=w==='Agent';return `<div class="convo-thread" style="margin:6px 0 2px"><div class="ctlv2-bub${ai?' ai':''}"><div class="who">${ai?'CHECK AI':'STAFF'}</div><div class="tx">${esch(tx)}</div></div></div>`;};
   const menuIco='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>';

@@ -45,7 +45,7 @@ import { buildCharlieSetup } from "./calls/charlie-setup";
 import { installReceiptStore, currentRates, onReceiptClosed, recordVerdict, lastClerkLine } from "./calls/receipt-store";
 import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
-import { behaved, agentLinesFrom, TEST_CARDS } from "./calls/behaved";
+import { behaved, agentLinesFrom, cardVerdict, TEST_CARDS, type BehavedRow } from "./calls/behaved";
 import { opsRollup, type CheckRow } from "./calls/ops";
 import { startMapper, stopMapper, mapperState, resumeMapperRuns } from "./calls/mapper";
 import { storeMetUnknownMenu, muteStore, unmuteStore, healOnce, onAutoCheckPaused, mutedReasons } from "./calls/healing";
@@ -6430,7 +6430,10 @@ app.get("/api/admin/receipt/:room", async (c) => {
   // which of his 16 locked cards this check ran, the cost split into his five buckets off the rates
   // in force, the profit against his 67 percent floor, and the workflow bubble. Built server side so
   // no rate and no card string is ever typed into the page.
-  const v2For = async (timeline: Array<{ kind: string; atSec?: number | null; detail?: Record<string, unknown> | null }>, sums: Rollup | null, cost: { totalUsd: number; lineUsd: number; forkUsd?: number; charlieUsd: number; clipsUsd?: number; sttUsd?: number; billedMinutes?: number; charlieSecs?: number } | null, retailerId?: number | null) => {
+  // DID THIS TEST PASS (owner 08-07). The card names the rows that must be green and the status the
+  // check has to come back with, and `graded` is those two read against this check. Omitted while a
+  // check is still going, because a test that has not finished has not failed either.
+  const v2For = async (timeline: Array<{ kind: string; atSec?: number | null; detail?: Record<string, unknown> | null }>, sums: Rollup | null, cost: { totalUsd: number; lineUsd: number; forkUsd?: number; charlieUsd: number; clipsUsd?: number; sttUsd?: number; billedMinutes?: number; charlieSecs?: number } | null, retailerId?: number | null, graded?: { rows: BehavedRow[]; statusKey: string | null } | null) => {
     const stepOf = (name: string) => timeline.find((e) => (e.detail || {}).step === name) || null;
     const named = stepOf("named_test");
     const card = named ? TEST_CARDS[String((named.detail || {}).card || "")] ?? null : null;
@@ -6469,7 +6472,8 @@ app.get("/api/admin/receipt/:room", async (c) => {
         ["Openers", `${(wf.openers || []).length || 1} rotating`],
       ].filter((r) => r[1]) as Array<[string, string]> };
     } catch { /* the bubble is decoration; the check renders without it */ }
-    return { test: card, buckets, totalUsd, readable: money(totalUsd),
+    return { test: card ? { ...card, verdict: graded ? cardVerdict(card, graded.rows, graded.statusKey) : null } : null,
+      buckets, totalUsd, readable: money(totalUsd),
       profitPct: totalUsd > 0 && priceUsd > 0 ? Math.round(((priceUsd - totalUsd) / priceUsd) * 100) : null,
       talkSec: sums?.charlieConnectedSeconds ?? null, workflow,
       // WHERE HIS METER WENT, up top as well as inside his cost line (owner 08-07): the tile reads
@@ -6576,7 +6580,9 @@ app.get("/api/admin/receipt/:room", async (c) => {
         const m = /^(Agent|Clerk|Staff):\s*(.*)$/i.exec(l);
         return m ? { who: /agent/i.test(m[1]) ? "Agent" : "Clerk", text: m[2], atSec: null, atMs: null } : { who: "Clerk", text: l, atSec: null, atMs: null };
       }),
-    v2: await v2For(timeline, seconds, cost, attached?.retailerId ?? null),
+    v2: await v2For(timeline, seconds, cost, attached?.retailerId ?? null,
+      { rows: behaved({ timeline, rollup: seconds, agentLines: agentLinesFrom(attached?.transcript) }),
+        statusKey: attached?.statusKey ?? attached?.status ?? null }),
   });
 });
 app.get("/api/admin/call-timing", async (c) => {
