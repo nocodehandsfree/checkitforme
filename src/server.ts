@@ -1446,7 +1446,7 @@ app.get("/api/calls/:id/receipt", async (c) => {
   const sums: Rollup = live ? rollup(live) : rollupFromRow(call, timeline);
   const cost = live
     ? costCall({ callSecs: sums.callSecs, charlieSecs: sums.charlieConnectedSeconds, avoidableSecs: sums.charlieSilentSeconds, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))] }, await currentRates())
-    : { lineUsd: call.costLineUsd ?? 0, forkUsd: call.costForkUsd ?? 0, charlieUsd: call.costCharlieUsd ?? 0, clipsUsd: call.costClipsUsd ?? 0, totalUsd: call.costTotalUsd ?? 0, billedMinutes: sums.billedMinutes, charlieSecs: sums.charlieConnectedSeconds, avoidableUsd: call.costAvoidableUsd ?? 0 };
+    : { lineUsd: call.costLineUsd ?? 0, forkUsd: call.costForkUsd ?? 0, charlieUsd: call.costCharlieUsd ?? 0, clipsUsd: call.costClipsUsd ?? 0, sttUsd: call.costSttUsd ?? 0, totalUsd: call.costTotalUsd ?? 0, billedMinutes: sums.billedMinutes, charlieSecs: sums.charlieConnectedSeconds, avoidableUsd: call.costAvoidableUsd ?? 0 };
 
   return c.json({
     call: {
@@ -6416,14 +6416,16 @@ app.get("/api/admin/receipt/:room", async (c) => {
   // which of his 16 locked cards this check ran, the cost split into his five buckets off the rates
   // in force, the profit against his 67 percent floor, and the workflow bubble. Built server side so
   // no rate and no card string is ever typed into the page.
-  const v2For = async (timeline: Array<{ kind: string; atSec?: number | null; detail?: Record<string, unknown> | null }>, sums: Rollup | null, cost: { totalUsd: number; lineUsd: number; forkUsd?: number; charlieUsd: number; clipsUsd?: number; billedMinutes?: number; charlieSecs?: number } | null, retailerId?: number | null) => {
+  const v2For = async (timeline: Array<{ kind: string; atSec?: number | null; detail?: Record<string, unknown> | null }>, sums: Rollup | null, cost: { totalUsd: number; lineUsd: number; forkUsd?: number; charlieUsd: number; clipsUsd?: number; sttUsd?: number; billedMinutes?: number; charlieSecs?: number } | null, retailerId?: number | null) => {
     const stepOf = (name: string) => timeline.find((e) => (e.detail || {}).step === name) || null;
     const named = stepOf("named_test");
     const card = named ? TEST_CARDS[String((named.detail || {}).card || "")] ?? null : null;
     const readStep = stepOf("second_read");
     const readUsd = readStep ? Number((readStep.detail || {}).costUsd ?? 0) : 0;
     const buckets = cost ? costBuckets(
-      { ...cost, forkUsd: cost.forkUsd ?? 0, clipsUsd: cost.clipsUsd ?? 0, billedMinutes: cost.billedMinutes ?? Math.ceil((sums?.callSecs ?? 0) / 60), charlieSecs: cost.charlieSecs ?? sums?.charlieConnectedSeconds ?? 0, avoidableUsd: 0, totalUsd: cost.totalUsd },
+      // A check from before Echo had words has no stt line stamped on it, and it never paid for one,
+      // so it prices at nought and no line renders (owner's no-free-items rule).
+      { ...cost, forkUsd: cost.forkUsd ?? 0, clipsUsd: cost.clipsUsd ?? 0, sttUsd: cost.sttUsd ?? 0, billedMinutes: cost.billedMinutes ?? Math.ceil((sums?.callSecs ?? 0) / 60), charlieSecs: cost.charlieSecs ?? sums?.charlieConnectedSeconds ?? 0, avoidableUsd: 0, totalUsd: cost.totalUsd },
       { callSecs: sums?.callSecs ?? 0, navSecs: sums?.navSeconds ?? null, streams: 2 },
       await currentRates(), readUsd,
     ) : [];
@@ -6488,7 +6490,7 @@ app.get("/api/admin/receipt/:room", async (c) => {
   // because there is no call_results row to stamp and the event set is a closed sixteen.
   const tail = parse(rows[rows.length - 1]?.detail ?? null);
   let seconds = (tail?.seconds ?? null) as Rollup | null;
-  let cost = (tail?.cost ?? null) as { totalUsd: number; charlieUsd: number; lineUsd: number; forkUsd?: number; avoidableUsd: number } | null;
+  let cost = (tail?.cost ?? null) as { totalUsd: number; charlieUsd: number; lineUsd: number; forkUsd?: number; sttUsd?: number; avoidableUsd: number } | null;
   // …but an ATTACHED call stamps them on the ROW instead, and this route only ever looked at the
   // tail — so the same finished call came back complete by call id and with the seconds and the cost
   // NULL by room. One envelope, two answers (owner 07-28). Now the row is the second place we look,
@@ -6506,6 +6508,8 @@ app.get("/api/admin/receipt/:room", async (c) => {
       if (!cost && attached.costTotalUsd != null) cost = {
         totalUsd: attached.costTotalUsd, charlieUsd: attached.costCharlieUsd ?? 0,
         lineUsd: attached.costLineUsd ?? 0, forkUsd: attached.costForkUsd ?? 0,
+        // Echo's words, stamped from 08-07. A check from before it has none and pays for none.
+        sttUsd: attached.costSttUsd ?? 0,
         avoidableUsd: attached.costAvoidableUsd ?? 0,
       };
     }

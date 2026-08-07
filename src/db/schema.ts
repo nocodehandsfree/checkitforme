@@ -569,6 +569,8 @@ export const callResults = sqliteTable(
     costForkUsd: integer("cost_fork_usd"),
     costCharlieUsd: integer("cost_charlie_usd"),
     costClipsUsd: integer("cost_clips_usd"),
+    // Echo's words: the transcriber that hears the store whether Charlie is on the line or not.
+    costSttUsd: integer("cost_stt_usd"),
     costTotalUsd: integer("cost_total_usd"),
     costAvoidableUsd: integer("cost_avoidable_usd"), // the dead-air slice, already inside costCharlieUsd
   },

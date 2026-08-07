@@ -26,6 +26,11 @@ export interface Rates {
   charlieCreditsPerMin: number;
   /** Credits per character to synthesize a recorded line (turbo tier). */
   ttsCreditsPerChar: number;
+  /** ECHO'S WORDS, per minute of the phone line (owner 08-07). The transcriber listens from the
+   *  moment the stream opens to the moment it closes, whether Charlie is on the line or not, so it
+   *  is priced on the CALL's minutes and not on his. The owner's own figure, about half a cent a
+   *  minute; Admin can correct it without a deploy like every other rate here. */
+  sttPerMinUsd: number;
 }
 
 /** Measured 2026-07-24 against the live accounts. Overridable from Admin so a re-measure needs no
@@ -36,6 +41,7 @@ export const MEASURED_RATES: Rates = {
   creditUsd: 22 / 145_094,      // = $0.00015163
   charlieCreditsPerMin: 723,    // = $0.10963/min = $0.0018272/sec
   ttsCreditsPerChar: 1,
+  sttPerMinUsd: 0.0050,         // Echo's words, the owner's figure 08-07: about half a cent a minute
 };
 
 /** Everything a call spent, in microdollars. Integers throughout. */
@@ -48,6 +54,8 @@ export interface CallCost {
   charlieUsd: number;
   /** Recorded lines synthesized for this call (0 once they are cached and reused). */
   clipsUsd: number;
+  /** Echo's words: the transcriber on the phone line, for as long as the line was up. */
+  sttUsd: number;
   totalUsd: number;
   /** The pieces a person asks about, spelled out. */
   billedMinutes: number;
@@ -71,6 +79,9 @@ export interface CostInput {
   forkSecs?: number[];
   /** Characters of speech synthesized for this call. 0 when the lines came from the cache. */
   ttsChars?: number;
+  /** Was Echo's transcriber listening on this check? False prices it at nought (an older check, or
+   *  one where the socket never came up). Left out means yes, which is every check from 08-07. */
+  sttOn?: boolean;
 }
 
 /** Price one call. Pure — no clock, no network, no database. */
@@ -87,9 +98,14 @@ export function costCall(inp: CostInput, rates: Rates = MEASURED_RATES): CallCos
 
   const clipsUsd = Math.round(Math.max(0, inp.ttsChars ?? 0) * rates.ttsCreditsPerChar * rates.creditUsd * USD);
 
+  // ECHO'S WORDS (owner 08-07). Billed on the seconds the phone line was up, because that is exactly
+  // how long the transcriber listens: it opens with the stream and closes with it. A check that ran
+  // without one (no key, or the socket never came up) is priced at nought, never at a guess.
+  const sttUsd = inp.sttOn === false ? 0 : Math.round((Math.max(0, inp.callSecs) / 60) * rates.sttPerMinUsd * USD);
+
   return {
-    lineUsd, forkUsd, charlieUsd, clipsUsd,
-    totalUsd: lineUsd + forkUsd + charlieUsd + clipsUsd,
+    lineUsd, forkUsd, charlieUsd, clipsUsd, sttUsd,
+    totalUsd: lineUsd + forkUsd + charlieUsd + clipsUsd + sttUsd,
     billedMinutes, charlieSecs: Math.max(0, inp.charlieSecs), avoidableUsd,
   };
 }
@@ -147,6 +163,15 @@ export function costBuckets(
       ["Rate (per minute)", perMin((rates.charlieCreditsPerMin) * rates.creditUsd)],
       ["Covers", "voice and thinking together"],
       ["Cost", money(cost.charlieUsd)],
+    ] },
+    // ECHO'S WORDS, ITS OWN LINE (owner 08-07: "Deepgram gets its own line on the check cost card
+    // and rides the margin like every other cost"). Echo already has a line for the listening it
+    // does with its ears; this is what it costs to turn what it hears into sentences, and it runs
+    // for the whole call because the words said while Charlie is closed are the ones we were losing.
+    { key: "echo_words", label: "Echo (Words)", usd: cost.sttUsd, detail: [
+      ["Line time", mmss(t.callSecs)],
+      ["Rate (per minute)", perMin(rates.sttPerMinUsd)],
+      ["Cost", money(cost.sttUsd)],
     ] },
     { key: "status", label: "Status (Verification)", usd: statusReadUsd, detail: [
       ["Cost", money(statusReadUsd)],

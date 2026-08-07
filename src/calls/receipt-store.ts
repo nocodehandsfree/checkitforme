@@ -148,6 +148,7 @@ export async function persistReceipt(r: Receipt): Promise<void> {
       costForkUsd: cost.forkUsd,
       costCharlieUsd: cost.charlieUsd,
       costClipsUsd: cost.clipsUsd,
+      costSttUsd: cost.sttUsd,
       costTotalUsd: cost.totalUsd,
       costAvoidableUsd: cost.avoidableUsd,
     }).where(eq(callResults.id, callId));

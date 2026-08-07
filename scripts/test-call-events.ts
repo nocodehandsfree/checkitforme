@@ -176,10 +176,14 @@ console.log("▶ the agent bills per second, with no minute cliff");
 
 console.log("▶ the baseline check comes out where the measurements say it should");
 {
-  // Menu done in time, 20 seconds of talk, all inside one billed minute.
+  // Menu done in time, 20 seconds of talk, all inside one billed minute. Echo's words ride the whole
+  // call from 08-07, which is about half a cent a minute on top of what a check used to cost.
   const c = costCall({ callSecs: 47, charlieSecs: 20, avoidableSecs: 0, forkSecs: [47, 24] });
-  ok(near(c.totalUsd / USD, 0.052, 0.004), `a clean check lands near 5.2¢ (got ${money(c.totalUsd)})`);
-  ok(c.totalUsd === c.lineUsd + c.forkUsd + c.charlieUsd + c.clipsUsd, "the pieces add up to the total");
+  ok(near(c.totalUsd / USD, 0.056, 0.004), `a clean check lands near 5.6¢ (got ${money(c.totalUsd)})`);
+  ok(c.totalUsd === c.lineUsd + c.forkUsd + c.charlieUsd + c.clipsUsd + c.sttUsd, "the pieces add up to the total");
+  ok(near(c.sttUsd / USD, 0.0039, 0.0005), `Echo's words on a 47 second check = 0.4¢ (got ${money(c.sttUsd)})`);
+  ok(costCall({ callSecs: 47, charlieSecs: 20, avoidableSecs: 0, forkSecs: [47, 24], sttOn: false }).sttUsd === 0,
+    "a check that ran without a transcriber pays nothing for one");
 }
 
 console.log("▶ dead air is priced, so we can see what it is costing us");
@@ -269,13 +273,16 @@ console.log("▶ facts can be added to the line already on the timeline, instead
 }
 
 
-console.log("▶ the five buckets, his names, and they SUM TO THE TOTAL exactly (owner 08-04)");
+console.log("▶ the buckets, his names, and they SUM TO THE TOTAL exactly (owner 08-04, Echo's words added 08-07)");
 {
   // A 62 second check: 14s of menu, 18s of Charlie, the second read ran.
   const cost = costCall({ callSecs: 62, charlieSecs: 18, avoidableSecs: 0, forkSecs: [62, 48] });
   const b = costBuckets(cost, { callSecs: 62, navSecs: 14, streams: 2 }, MEASURED_RATES, STATUS_READ_USD);
-  ok(b.map((x) => x.label).join(" · ") === "Bravo (Menu Nav) · Foxtrot (Phone Line) · Echo (Listening) · Charlie (Talking) · Status (Verification)",
-    `his five names, his order (${b.map((x) => x.label).join(" · ")})`);
+  ok(b.map((x) => x.label).join(" · ") === "Bravo (Menu Nav) · Foxtrot (Phone Line) · Echo (Listening) · Charlie (Talking) · Echo (Words) · Status (Verification)",
+    `his names, his order, with Echo's words beside Echo's listening (${b.map((x) => x.label).join(" · ")})`);
+  const wordsLine = b.find((x) => x.key === "echo_words")!;
+  ok(wordsLine.detail.some(([l, v]) => l === "Line time" && v === "1:02"), "Echo's words are priced on the whole call, not on Charlie's minutes");
+  ok(wordsLine.detail.some(([l, v]) => l === "Rate (per minute)" && v === "0.5¢"), "…at the rate in force, never typed into the page");
   const sum = b.reduce((n, x) => n + x.usd, 0);
   ok(sum === cost.totalUsd + STATUS_READ_USD, `nothing counted twice, nothing dropped: ${sum} = ${cost.totalUsd} + ${STATUS_READ_USD}`);
   const bravo = b.find((x) => x.key === "bravo")!;
