@@ -686,7 +686,10 @@ export const ROBOT_SCENES: RobotScene[] = [
     ...WAIT_OUT,
   ] },
   // Happened twice for real. One of them ran 121 seconds and never resolved, so that is the length.
-  { n: 6, card: "hold_permanently", name: "Walks away, never comes back", expect: "no_clear_answer", acts: [
+  // LEFT ON HOLD, NEVER COULDN'T TELL (owner 08-07). Couldn't tell is the worst case bucket, for a
+  // check where we genuinely could not make out what happened. Here we know exactly what happened:
+  // they put us on hold and never came back, and we have a status that says that in those words.
+  { n: 6, card: "hold_permanently", name: "Walks away, never comes back", expect: "left_on_hold", acts: [
     { listen: true },
     { say: "Um, give me just a second. Let me double-check." },
     { silence: 60 }, { silence: 61 },

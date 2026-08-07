@@ -217,7 +217,7 @@ is(parseRobotPick(null).scenario, 1, "an unset scene falls back to the first");
 console.log("\n── the verdict each scene should produce ──");
 is(ROBOT_SCENES.map((s) => `${s.n}:${s.expect}`), [
   "1:in_stock", "2:not_in_stock", "3:not_in_stock", "4:not_in_stock", "5:not_in_stock",
-  "6:no_clear_answer", "7:in_stock", "8:in_stock", "9:nobody_answered", "10:not_in_stock",
+  "6:left_on_hold", "7:in_stock", "8:in_stock", "9:nobody_answered", "10:not_in_stock",
   // Scene 13 moved off the 4 minute limit onto its own wrap-up card (owner 08-07), so it no longer
   // ends by us hanging up: Charlie asks once more, takes what he gets and closes on no clear answer.
   // "No clear answer" is the owner's NEW status (08-07) and NOT a rename of Couldn't tell. Both of
