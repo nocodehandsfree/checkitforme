@@ -22,7 +22,9 @@ import { toMediaFrames } from "../calls/clip-cache";
 import { heardWrongDepartment, askedToBePutThrough, saysNobodyToTransfer, looksLikeAMenu, staffName, wrappedUp, usedTheirName } from "./prompts";
 import { guessLanguage } from "../calls/mapgraph";
 // Echo's words: the store's own voice turned into sentences, whether Charlie is on the line or not.
-import { openTranscriber, type Transcriber } from "./transcriber";
+// Echo's words arrive from the PICKUP FORK (server.ts, /twilio-media), which starts the moment the
+// store answers and carries the whole call. This file never opens a transcriber of its own: two
+// sockets on one call would transcribe it twice and bill it twice (owner 08-07).
 
 export interface BridgeContext {
   agentId: string;
@@ -136,6 +138,40 @@ const contexts = new Map<string, BridgeContext>();
 // notes to him, and he thanks them and ends. Removed when the socket closes, so a late knock after
 // the check is over lands on nothing.
 const signoffDoors = new Map<string, (answer: string) => void>();
+
+// ── ECHO'S WORDS, ARRIVING FROM THE PICKUP FORK (owner 08-07) ────────────────────────────────────
+// The transcriber lives on the fork (server.ts, /twilio-media), which starts the moment the store
+// picks up and carries the whole call, menu and all. It is the ONLY one: wiring a second socket to
+// the bridge's own stream would transcribe the same call twice and bill it twice. These two doors
+// are how the fork reaches the check that owns the room.
+
+/** Rooms where the transcriber is listening right now. While it is, the agent's own copy of the
+ *  store's words is not written down or shown: it would be the same sentence twice. */
+const echoRooms = new Set<string>();
+export function echoListening(room: string, on: boolean): void {
+  if (!room) return;
+  if (on) echoRooms.add(room); else echoRooms.delete(room);
+}
+/** Is Echo writing the words for this check? */
+export function echoHasTheWords(room: string): boolean { return echoRooms.has(room); }
+
+/** Each live check's own way of taking a Staff line: record it, show it, remember it if Charlie was
+ *  closed for it. Hung when the bridge socket opens, dropped when it closes. */
+const staffDoors = new Map<string, (text: string, atEpochMs?: number, fromEcho?: boolean) => void>();
+/**
+ * A finished sentence Echo heard on the phone line. Returns whether the check itself took it, which
+ * is false before the bridge socket exists (the menu, and the store's very first words). The receipt
+ * opens at DIAL, so a line heard that early still goes onto the record here; only the customer's
+ * live screen needs the caller to show it.
+ */
+export function echoHeardStaff(room: string, text: string, atEpochMs?: number): boolean {
+  try {
+    const door = staffDoors.get(room);
+    if (door) { door(text, atEpochMs, true); return true; }
+    recordLine(room, "Clerk", text, atEpochMs);
+    return false;
+  } catch (e) { log(`echo line dropped: ${String(e).slice(0, 90)}`); return false; }
+}
 /** The check on this room has its answer. Tell Charlie to wrap up and end. Safe to call late, twice,
  *  or for a room that never had a Charlie: a missing door is a no-op, never an error. */
 export function nudgeSignoff(room: string, answer: string): void {
@@ -641,14 +677,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  nothing about the wait, which on a hand-over means he is talking to a stranger blind. */
   let gapNote: { secs: number; newPerson: boolean; replayed?: boolean } | null = null;
   let convEar: ConversationEar | null = null;   // attached the moment a real person is on the line
-  /** ECHO'S WORDS (owner 08-07). One transcriber on the phone line itself, opened when the STREAM
-   *  starts, so the store's words are written down whether Charlie is on the line or not. */
-  let words: Transcriber | null = null;
-  /** The phone line's own clock, tied to ours. The carrier stamps every frame with its milliseconds
-   *  since the stream started; pairing the first one with the wall clock turns any of those stamps
-   *  back into a real moment, which is how a spoken line lands at the second it was said. */
-  let firstFrameAtEpochMs = 0;
-  let firstFrameStampMs = 0;
+  /** The carrier counts its media messages. One that arrives out of order is skipped rather than
+   *  allowed to wind anything backwards. */
   let lastSeq = -1;
   /** What Staff said while Charlie was closed. He gets the WORDS when he comes back, never the audio
    *  again: the text is what he needed and it costs nothing to hand over. */
@@ -1027,7 +1057,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // is handed the sentences. The old way handed back the AUDIO, paced out frame by frame so a
     // transcriber could hear the pauses in it, and it only ever worked on the wait he stayed open
     // for. Words need no pacing, no catching up, and no buffer of somebody's voice.
-    if (words?.live() && missedWhileClosed.length) { tellCharlieWhatHeMissed(); }
+    if (echoRooms.has(room) && missedWhileClosed.length) { tellCharlieWhatHeMissed(); }
     else { for (const w of heldWords) { try { eleven?.send(JSON.stringify({ user_audio_chunk: w })); } catch { /* best effort */ } } }
     heldWords = [];
   }
@@ -1081,7 +1111,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   // registered under an empty name on EVERY real check, and the knock ("the answer is in hand…")
   // found nobody. The rig never saw it because the rig hands the room in up front. Hung here for
   // callers that do, and hung AGAIN from the start handler for the carrier's way in.
-  const hangSignoffDoor = () => { if (room) signoffDoors.set(room, signoffDoor); };
+  const hangSignoffDoor = () => { if (room) { signoffDoors.set(room, signoffDoor); staffDoors.set(room, staffSaid); } };
   const signoffDoor = (answer: string) => {
     if (signoffNudged || ended || onHold || !eleven || !ready) {
       log(`signoff: knock for ${room.slice(0, 8)} (${answer}) not deliverable: ${signoffNudged ? "already told" : ended ? "the check is over" : onHold ? "Staff are away" : !eleven ? "Charlie is not open" : "his session is not ready"}`);
@@ -1176,8 +1206,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    * @param spokenAtEpochMs the moment they started saying it, when we know it. The record does the
    *        arithmetic against this call's own zero; without it the line stamps on arrival.
    */
-  function staffSaid(txt: string, spokenAtEpochMs?: number): boolean {
+  function staffSaid(txt: string, spokenAtEpochMs?: number, fromEcho?: boolean): boolean {
     const fresh = recordLine(room, "Clerk", txt, spokenAtEpochMs);
+    // WHAT HE COULD NOT HEAR, KEPT AS WORDS. Only Echo's copy counts: a line the agent's own session
+    // delivered is one he already heard.
+    if (fromEcho && fresh && (!eleven || onHold)) missedWhileClosed.push(txt);
     // Their hello has arrived, so it goes out FIRST and our question follows it, which is the order
     // the call actually happened in.
     if (heldQuestion) {
@@ -1433,7 +1466,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // is open or closed. Everything else this handler does with the words is untouched, because
         // they are how Charlie decides what to do next. With no transcriber, this is the record and
         // the check behaves exactly as it always has.
-        if (txt && !words?.live()) {
+        if (txt && !echoRooms.has(room)) {
           const spokenAt = greetingStartedAtEpochMs || takeVoiceStart();
           if (greetingStartedAtEpochMs) dropVoiceStartsUpTo(greetingStartedAtEpochMs + 500);
           greetingStartedAtEpochMs = 0;
@@ -1913,29 +1946,6 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     try { m = JSON.parse(data.toString()); } catch { return; }
     if (m.event === "start") {
       streamSid = m.start?.streamSid || streamSid;
-      // ECHO'S WORDS START WITH THE LINE, NOT WITH CHARLIE (owner 08-07). Opened here, at the stream,
-      // because the store's first words are said before anybody knows a person is on the phone, and
-      // waiting for the person test is how the greeting got lost for months. It listens all the way
-      // through every wait, which is the whole point: Charlie is closed for those and always will be.
-      if (!words) {
-        words = openTranscriber((line) => {
-          try {
-            const t = line.text.trim();
-            if (!t) return;
-            // WHERE IT SITS ON THE PHONE LINE'S OWN CLOCK. The transcriber says how far into the
-            // audio the sentence starts, and every frame we were sent went to it, so that place is
-            // the carrier's stamp on the frame it started in: `firstFrameStampMs + atAudioMs`. The
-            // first frame paired that stamp with the wall clock, so the sentence has a real moment,
-            // with no second stopwatch anywhere and no audio kept.
-            const stampAt = firstFrameStampMs + line.atAudioMs;
-            const at = firstFrameAtEpochMs ? firstFrameAtEpochMs + (stampAt - firstFrameStampMs) : undefined;
-            staffSaid(t, at);
-            // What he could not hear, kept as WORDS for the moment he comes back.
-            if (!eleven || onHold) missedWhileClosed.push(t);
-            log(`echo heard (${Math.round(line.atAudioMs / 1000)}s): "${t.slice(0, 60)}"`);
-          } catch (e) { log(`echo line dropped: ${String(e).slice(0, 80)}`); }
-        }, log);
-      }
       if (!room && m.start?.customParameters?.room) { room = m.start.customParameters.room; hangSignoffDoor(); } // Twilio puts <Parameter> here; the check has its name NOW, so its door hangs now
       if (!ctx && room) ctx = contexts.get(room);
       if (ctx?.dtmf) scheduleDtmf(ctx.dtmf);
@@ -2025,18 +2035,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     else if (m.event === "media" && m.media?.payload) {
       frames++;
       const b64 = m.media.payload;
-      // THE FRAME'S OWN PLACE IN THE STREAM, kept once, at the first frame: the carrier's clock and
-      // ours, tied together, so any stamp it sends can be read back as a real moment. A message that
-      // arrives out of order is skipped rather than allowed to wind the clock backwards.
+      // The carrier numbers its media messages; one that arrives out of order is skipped.
       const seq = Number(m.sequenceNumber ?? 0);
       if (seq && seq <= lastSeq) return;
       if (seq) lastSeq = seq;
-      const stamp = Number(m.media.timestamp ?? 0);
-      if (!firstFrameAtEpochMs) { firstFrameAtEpochMs = Date.now(); firstFrameStampMs = stamp; }
       fanout(room, b64, "clerk"); // store/clerk audio -> browser (never gated — listeners hear the true line)
-      // …and the same frame to Echo's transcriber. The SAME stream, never a second one: it is handed
-      // the bytes the phone company just sent and nothing else happens to them.
-      words?.send(b64);
       // Echo gate: while our agent audio is playing (+ reflection tail), only a LOUD inbound frame
       // (a real human barging in) reaches ElevenLabs — attenuated line echo of the agent's own voice
       // is dropped, so it can't come back as a phantom "Clerk:" transcript line.
@@ -2192,7 +2195,6 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // Marked first, so every later question gets the truthful answer (round 2, item 5).
       farEndGone = true;
       log("twilio stop"); signalEnd(); if (eleven) eleven.close();
-      try { words?.close(); words = null; } catch { /* a transcriber never ends a check */ }
     }
   });
   twilio.on("close", () => {
@@ -2207,6 +2209,6 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       const note = spokeEn === 0 ? "Charlie spoke Spanish throughout" : "Charlie spoke Spanish and English on the same check";
       emit(room, "unknown", note, { step: "language", spanishLines: spokeEs, englishLines: spokeEn });
     }
-    signoffDoors.delete(room);
-    if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; } if (heldQuestion) { try { relayLine?.(room, "Agent", heldQuestion); } catch { /* best effort */ } heldQuestion = null; } try { convEar?.lineGone(); } catch { /* recording is best-effort */ } try { words?.close(); words = null; } catch { /* a transcriber never ends a check */ } preRoll.length = 0; pending.length = 0; missedWhileClosed = []; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (holdCapTimer) { clearTimeout(holdCapTimer); holdCapTimer = null; } if (ringWaitTimer) { clearTimeout(ringWaitTimer); ringWaitTimer = null; } if (handoverTimer) { clearTimeout(handoverTimer); handoverTimer = null; } if (answerWaitTimer) { clearTimeout(answerWaitTimer); answerWaitTimer = null; } if (eleven) eleven.close(); /* the context is NOT deleted here: Twilio can reconnect a blipped stream mid-call, and the fresh socket must still find it. The 30-minute leak guard owns cleanup. */ });
+    signoffDoors.delete(room); staffDoors.delete(room);
+    if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; } if (heldQuestion) { try { relayLine?.(room, "Agent", heldQuestion); } catch { /* best effort */ } heldQuestion = null; } try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; missedWhileClosed = []; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (holdCapTimer) { clearTimeout(holdCapTimer); holdCapTimer = null; } if (ringWaitTimer) { clearTimeout(ringWaitTimer); ringWaitTimer = null; } if (handoverTimer) { clearTimeout(handoverTimer); handoverTimer = null; } if (answerWaitTimer) { clearTimeout(answerWaitTimer); answerWaitTimer = null; } if (eleven) eleven.close(); /* the context is NOT deleted here: Twilio can reconnect a blipped stream mid-call, and the fresh socket must still find it. The 30-minute leak guard owns cleanup. */ });
 }

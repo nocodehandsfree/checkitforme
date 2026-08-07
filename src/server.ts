@@ -153,7 +153,8 @@ import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPh
 import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
 import { settings as settingsTbl } from "./db/schema";
-import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeRoomForConversation, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, activeBridgeCalls, weEndedCheck, noteWeEnded } from "./voice/bridge";
+import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeRoomForConversation, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, activeBridgeCalls, weEndedCheck, noteWeEnded, echoHeardStaff, echoListening } from "./voice/bridge";
+import { openTranscriber, type Transcriber } from "./voice/transcriber";
 import { installCheckLife, isCheckAlive, noteLineEnded, resolveRoom as lifeRoom } from "./calls/check-life";
 import { placeBridgeCall, attachListenFork, roomCallSids, roomCallProgress, roomFinalizers, RAILWAY_HOST, STAGING_HOST } from "./voice/bridge-place";
 import { kioskNote, departmentNote, SET_EXAMPLE } from "./voice/prompts";
@@ -1144,7 +1145,7 @@ app.all("/twiml/bridge", (c) => {
   // non-blocking; the fork is listen-only and goes quiet the instant the real bridge socket takes
   // over the room (bridgeLiveRooms), so listeners never hear doubled audio.
   const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
-  const fork = `<Start><Stream url="wss://${host}/twilio-media?room=${room}" track="both_tracks" statusCallback="https://${host}/twiml/stream-status?room=${room}" statusCallbackMethod="POST"><Parameter name="room" value="${room}" /></Stream></Start>`;
+  const fork = `<Start><Stream url="wss://${host}/twilio-media?room=${room}&amp;words=1" track="both_tracks" statusCallback="https://${host}/twiml/stream-status?room=${room}" statusCallbackMethod="POST"><Parameter name="room" value="${room}" /></Stream></Start>`;
   const xml = `<?xml version="1.0" encoding="UTF-8"?><Response>${fork}${play}<Connect><Stream url="wss://${host}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
   return c.body(xml, 200, { "Content-Type": "text/xml" });
 });
@@ -7730,13 +7731,57 @@ wssBridge.on("connection", (ws: WebSocket, _req: unknown, room: string) => {
   handleTwilioBridge(ws, room, fanout, relayLine, relayEnd, relayStage); // fanout(audio) + relayLine(live transcript) + relayEnd(call-over) + relayStage(ladder step) — bridge passes its resolved room
 });
 wssListen.on("connection", (ws: WebSocket, _req: unknown, room: string) => { if (room) addListener(room, ws); else bridgeLog("listen socket connected with NO room — audio cannot be routed"); });
-wssTwilio.on("connection", (ws: WebSocket, _req: unknown, qRoom: string) => {
+wssTwilio.on("connection", (ws: WebSocket, _req: unknown, qRoom: string, wantsWords = false) => {
   let room = qRoom || "";
+  // ── ECHO'S WORDS RIDE THIS FORK (owner 08-07) ────────────────────────────────────────────────
+  // THIS is the stream to put a transcriber on, and the only one. It starts the moment the store
+  // picks up, so it carries the menu and the store's very first words; the agent bridge's own stream
+  // starts later and would miss both. Wiring both would transcribe the same call twice and bill it
+  // twice. Only a CUSTOMER CHECK's fork asks for words (`?words=1`): mapping gets its menu words
+  // from the phone company already, at no extra charge.
+  let words: Transcriber | null = null;
+  // The phone line's own clock, tied to ours at the first frame, so a finished sentence can be filed
+  // at the second it was really said instead of the second we were told about it.
+  let streamZeroEpochMs = 0, firstFrameAtEpochMs = 0, lastSeq = -1;
+  const closeWords = () => { try { words?.close(); } catch { /* a transcriber never ends a check */ } words = null; if (room) echoListening(room, false); };
   ws.on("message", (data: Buffer) => {
-    let m: { event?: string; start?: { customParameters?: { room?: string }; streamSid?: string }; media?: { payload?: string; track?: string } };
+    let m: { event?: string; start?: { customParameters?: { room?: string }; streamSid?: string };
+      media?: { payload?: string; track?: string; timestamp?: string }; sequenceNumber?: string };
     try { m = JSON.parse(data.toString()); } catch { return; }
-    if (m.event === "start") room = m.start?.customParameters?.room || room || m.start?.streamSid || "";
+    if (m.event === "start") {
+      room = m.start?.customParameters?.room || room || m.start?.streamSid || "";
+      if (wantsWords && room && !words) {
+        words = openTranscriber((line) => {
+          try {
+            const t = line.text.trim();
+            if (!t) return;
+            // How far into the audio the sentence starts, turned into the real moment it was said.
+            const at = firstFrameAtEpochMs ? firstFrameAtEpochMs + line.atAudioMs : undefined;
+            // The check itself takes the line when it is up. Before that (the menu, the first hello)
+            // it goes onto the record here and the live screen is told by us.
+            if (!echoHeardStaff(room, t, at)) { try { relayLine(room, "Clerk", t); } catch { /* the screen is best-effort */ } }
+          } catch (e) { bridgeLog(`echo line dropped: ${String(e).slice(0, 90)}`); }
+        }, bridgeLog);
+        echoListening(room, true);
+      }
+    }
     else if (m.event === "media" && m.media?.payload && room) {
+      // The carrier numbers its media messages; one that arrives out of order is skipped.
+      const seq = Number(m.sequenceNumber ?? 0);
+      if (seq && seq <= lastSeq) return;
+      if (seq) lastSeq = seq;
+      if (!streamZeroEpochMs) streamZeroEpochMs = Date.now() - Number(m.media.timestamp ?? 0);
+      // THE STORE'S SIDE ONLY. This fork carries BOTH tracks on a check, so our own recorded question
+      // and Charlie's voice come back on the outbound one: transcribing those would write us down as
+      // Staff. The same one line rule the ear already uses (listenNavFeed).
+      if (!m.media.track || m.media.track === "inbound") {
+        // WHERE THE AUDIO'S OWN CLOCK STARTED, as a real moment. The carrier stamps every scrap with
+        // how far into the stream it sits, so the stream's own zero is fixed once, off the very first
+        // scrap; the first scrap OF THE STORE is that zero plus its stamp. A sentence's position in
+        // the audio we sent is measured from exactly there.
+        if (!firstFrameAtEpochMs) firstFrameAtEpochMs = streamZeroEpochMs + Number(m.media.timestamp ?? 0);
+        words?.send(m.media.payload);
+      }
       // LISTENING NAV: this fork is the ONLY audio we have while the phone menu plays (the agent
       // bridge doesn't exist yet), so it feeds the prompt detector that decides when each mapped
       // step fires. Free — it is the same fork live-listen already runs. Must come before the
@@ -7750,13 +7795,18 @@ wssTwilio.on("connection", (ws: WebSocket, _req: unknown, qRoom: string) => {
       if (!bridgeLiveRooms.has(room)) fanout(room, m.media.payload, m.media.track || "inbound");
     }
   });
-  ws.on("close", () => { if (room) endListenNav(room); });
+  ws.on("close", () => { closeWords(); if (room) endListenNav(room); });
 });
 
 (httpServer as unknown as import("node:http").Server).on("upgrade", (req, socket, head) => {
   let pathname = "/", room = "";
   try { const u = new URL(req.url || "/", "http://x"); pathname = u.pathname; room = u.searchParams.get("room") || ""; } catch { /* ignore */ }
-  if (pathname === "/twilio-media") wssTwilio.handleUpgrade(req, socket, head, (ws) => wssTwilio.emit("connection", ws, req, room));
+  if (pathname === "/twilio-media") {
+    // `?words=1` marks a CUSTOMER CHECK's fork, the only one Echo transcribes.
+    let wantsWords = false;
+    try { wantsWords = new URL(req.url || "/", "http://x").searchParams.get("words") === "1"; } catch { /* no flag, no words */ }
+    wssTwilio.handleUpgrade(req, socket, head, (ws) => wssTwilio.emit("connection", ws, req, room, wantsWords));
+  }
   else if (pathname === "/bridge") wssBridge.handleUpgrade(req, socket, head, (ws) => wssBridge.emit("connection", ws, req, room));
   else if (pathname === "/listen") wssListen.handleUpgrade(req, socket, head, (ws) => wssListen.emit("connection", ws, req, room));
   else socket.destroy();
