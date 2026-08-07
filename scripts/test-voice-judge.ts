@@ -37,7 +37,7 @@ console.log("\n▶ LAYER 1 — the store's own remembered menu");
     "and a differently transcribed hearing of that same line still reads as the recording");
   // A person's words match nothing on file.
   const v = judge({ text: "Hi there, thanks for holding, this is Dana over in the front store, what can I do for you today?", knownMenuLines: KNOWN });
-  ok(v.who === "person", "a line matching nothing we have on file is not the menu");
+  ok(v.who === "unsure" && v.unknownLine === true, "a line matching nothing we have on file is not the menu, and Echo waits rather than guessing");
   // …but a store that has never been called has nothing to match — layer 1 must not guess.
   ok(judge({ text: "Thanks for calling, please listen carefully as our options have changed.", knownMenuLines: [] }).who === "recording",
     "with nothing remembered, the words themselves still catch an obvious menu");
@@ -58,7 +58,9 @@ console.log("\n▶ LAYER 3 — the words themselves");
   ok(judge({ text: "Please listen carefully as our menu has changed." }).who === "recording", "and so is a menu announcing itself");
   ok(judge({ text: "Yeah we've got a bunch of those in, they're over by the registers.", weSpokeAtSec: 28 }).who === "person",
     "a reply to what we just said is a person");
-  ok(judge({ text: "Hello? Are you there?" }).who === "person", "and somebody asking if we are there is a person");
+  ok(judge({ text: "Hello? Are you there?" }).who === "unsure", "somebody asking if we are there SOUNDS like a person, and a hint alone never decides");
+  ok(judge({ text: "Hello? Are you there?", pauseTested: true, keptTalkingAfterPause: false }).who === "person",
+    "it is a person once the silence proves it stopped for us");
 }
 
 console.log("\n▶ LAYER 4 — the pause: a recording keeps reading, a person stops");
@@ -68,14 +70,16 @@ console.log("\n▶ LAYER 4 — the pause: a recording keeps reading, a person st
     "a line that could be either asks for the pause instead of guessing");
   ok(judge({ text: "Just a moment please.", pauseTested: true, keptTalkingAfterPause: true }).who === "recording",
     "it kept reading through the silence — a recording");
-  ok(judge({ text: "Just a moment please.", pauseTested: true, keptTalkingAfterPause: false }).who === "person",
-    "it stopped and waited for us — a person");
+  ok(judge({ text: "Just a moment please.", pauseTested: true, keptTalkingAfterPause: false }).who === "unsure",
+    "it stopped, but nothing yet says a person was ever there, so Echo keeps listening");
+  ok(judge({ text: "Just a moment please, are you still there?", pauseTested: true, keptTalkingAfterPause: false }).who === "person",
+    "it stopped AND it was talking to us — that is a person");
 }
 
-console.log("\n▶ LAYER 5 — still unsure means a person, always");
+console.log("\n▶ UNSURE MEANS WAIT, NEVER A GUESS (owner 08-07)");
 {
   const v = judge({ text: "Mm-hm.", pauseTested: true, keptTalkingAfterPause: false });
-  ok(v.who === "person", "the default flips toward a human, every time");
+  ok(v.who === "unsure", "a line nothing has settled leaves Echo waiting, it never guesses a person");
   ok(judge({ text: "" }).who !== "recording", "and silence is never called a recording");
 }
 
@@ -168,8 +172,8 @@ console.log("\n▶ EVIDENCE ORDER, AND THE PERSON'S CLOCK (fix pass 6, items 3-4
 {
   // A person-shaped line beats "we are inside the menu we hold": a store can read a line that
   // resembles its own menu, but a recording never talks TO us.
-  ok(judge({ text: "Hi, this is Maria, how can I help you?", mappedRoute: true, routeHandoffSeen: false }).who === "person",
-    "somebody talking to us beats being mid-menu on a route we hold");
+  ok(judge({ text: "Hi, this is Maria, how can I help you?", mappedRoute: true, routeHandoffSeen: false, pauseTested: true, keptTalkingAfterPause: false }).who === "person",
+    "somebody talking to us stops the route rule calling it the menu, and the silence settles it");
   // THE RING IS EVIDENCE, NOT AN OVERRIDE (owner, 08-02). A desk can ring, nobody picks up, and the
   // phone system drops us back into its own menu. A line this store has played before is that menu,
   // ring or no ring — deciding otherwise opened Charlie onto a recording.
@@ -184,7 +188,7 @@ console.log("\n▶ EVIDENCE ORDER, AND THE PERSON'S CLOCK (fix pass 6, items 3-4
     { who: "ivr" as const, text: "Hello? This is Sam.", atSec: 33 },
   ];
   ok(personStartsAt(two, 33, { knownMenuLines: KNOWN }) === 30,
-    "an unsure line between the store and the person belongs to the person, not the menu");
+    "a mumble between the store's line and the person's is dated to the person, because by then we KNOW they are there");
 }
 
 console.log("\n▶ THE FIRST CALL TO A STORE WE HAVE NEVER RUNG IS PURE LISTENING");

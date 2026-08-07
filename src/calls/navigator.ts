@@ -634,6 +634,10 @@ function judgeHere(s: NavSession, speech: string, atSec: number) {
   const out = judgeVoice({
     text: speech || "", atSec,
     knownMenuLines: s.knownMenuLines,
+    // EVERY LINE THIS NUMBER HAS ALREADY SAID ON THIS CALL, so a recording repeating itself gives
+    // itself away with no memory of the chain at all (owner 08-07). The store's own lines only:
+    // ours are not evidence about who is on the other end.
+    saidBefore: s.steps.filter((st) => st.who === "ivr" && st.text).map((st) => String(st.text)),
     mappedRoute: !!s.barge?.plan?.length,
     routeHandoffSeen: s.transferAtSec != null,
     ringsHeard: s.ear?.conv?.rings ?? s.ringsHeard ?? 0,

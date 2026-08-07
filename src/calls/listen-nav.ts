@@ -290,6 +290,10 @@ export interface JudgeInput {
   /** LAYER 4 — the pause has been run, and whether the line kept reading through it. */
   pauseTested?: boolean;
   keptTalkingAfterPause?: boolean;
+  /** Every line this number has already said ON THIS CALL. A recording repeats itself word for word
+   *  when we stay quiet; a person does not. Needs no memory of the chain, so it is the one test that
+   *  works on the first call we have ever made to a number (owner 08-07). */
+  saidBefore?: string[];
   /** The very first check to a store we have never rung: pure listening, hang up on nothing. */
   firstEverCall?: boolean;
   /** The product we asked about, so its own name counts as news about it. */
@@ -352,9 +356,21 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
   // — and with the ring answering first, that returning menu was never tested against the store's
   // own remembered lines, so Charlie was opened onto a recording. The ring now has its say further
   // down, after the menu's evidence has had its say.
-  if (CHECKING_ON_US.test(text) || ADDRESSED_TO_US.test(text)) {
-    return { who: "person", why: "somebody is talking to us, not reading at us", ...ride };
+  // IT SAID THE SAME THING TWICE (owner 08-07). This is the one signal that cannot be faked and
+  // needs no memory of the chain, so it is the FIRST real test on a number we have never rung. A
+  // recording repeats itself word for word whenever we say nothing; a person never says the same
+  // sentence twice in a row. CVS proved why this has to come first: its opening carries "if this is
+  // an emergency", which tripped a phrase meant to catch a person saying "this is Bob", and Echo
+  // handed a pharmacy menu to Charlie 16 seconds in. Behaviour decides, words do not.
+  if ((o.saidBefore || []).some((l) => sameSpokenLine(l, text))) {
+    return { who: "recording", why: "it has said this exact line already on this call", ...ride };
   }
+
+  // WORDS ARE A HINT, NEVER THE VERDICT (owner 08-07). These phrases mean somebody is probably
+  // talking to us rather than reading at us, and they used to answer outright. They cannot any more:
+  // a menu is allowed to contain any sentence at all, and one wrong phrase cost a whole check. They
+  // now only STOP the position rule below from calling this the menu, and the behaviour tests decide.
+  const soundsAddressedToUs = CHECKING_ON_US.test(text) || ADDRESSED_TO_US.test(text);
 
   // LAYER 1 — the store's own remembered menu. Recordings repeat word for word.
   const known = (o.knownMenuLines || []).filter((l) => String(l || "").trim());
@@ -371,15 +387,18 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
   // LAYER 2 — where we are on a route we hold. A ring means the phone system moved us along, so
   // "we are still inside the menu we hold" no longer holds — but it does not make the next voice a
   // person either. That is decided below, on the same evidence as everything else.
-  if (o.mappedRoute && !o.routeHandoffSeen && !rangBefore(o) && !MENU_WORDS.test(text) && !CHECKING_ON_US.test(text)) {
+  if (o.mappedRoute && !o.routeHandoffSeen && !rangBefore(o) && !MENU_WORDS.test(text) && !soundsAddressedToUs) {
     // Before the handoff on a route we already hold, the phone system is still talking to us.
     return { who: "recording", why: "we are still inside a menu we already hold", ...ride };
   }
 
   // LAYER 3 — the words.
-  if (CHECKING_ON_US.test(text)) return { who: "person", why: "somebody is checking whether we are still here", ...ride };
-  if (ADDRESSED_TO_US.test(text)) return { who: "person", why: "somebody is talking to us, not reading at us", ...ride };
   if (MENU_WORDS.test(text)) return { who: "recording", why: "these are a menu's own words", ...ride };
+  // Sounding like a person is only allowed to settle it once the pause has ALSO said person, because
+  // the pause is behaviour and the phrase is only a hint. Until then it waits, and waiting is free.
+  if (soundsAddressedToUs && o.pauseTested && !o.keptTalkingAfterPause) {
+    return { who: "person", why: "it stopped when we went quiet, and it was talking to us", ...ride };
+  }
   // A branded hello ALONE is held open for the pause below rather than settled here: a recording
   // reads on through the silence, and Staff stop and wait for us.
   // THE RING HAS ITS SAY HERE, and only here: the store's own remembered lines and the menu's own
@@ -400,8 +419,12 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
   if (!o.pauseTested) return { who: "unsure", why: "could be either — waiting through a short silence to tell", needsPause: true, ...ride };
   if (o.keptTalkingAfterPause) return { who: "recording", why: "it kept reading through the silence", ...ride };
 
-  // LAYER 5 — still unsure is a person, always.
-  return { who: "person", why: "nothing proved it was a recording, so it is treated as a person", ...ride };
+  // UNSURE MEANS WAIT (owner 08-07). This used to say that anything Echo could not settle was a
+  // person, which is a guess, and a wrong guess costs the whole check: Charlie opens onto a menu and
+  // argues with it. Charlie stays closed while Echo waits, so waiting costs nothing at all. The call
+  // keeps running and every later turn is judged again, so a machine that repeats itself gives
+  // itself away and a person who says something to us is heard the moment they do.
+  return { who: "unsure", why: "nothing has proved it either way yet, so we keep listening", needsPause: !o.pauseTested, ...ride };
 }
 
 /** WHEN THE PERSON STARTED TALKING — the first line of THEIR speech, never the turn we finally
@@ -434,7 +457,11 @@ export function personStartsAt(
       knownMenuLines: ctx.knownMenuLines, ringsHeard: ctx.ringsHeard, ringAtSec: ctx.ringAtSec,
       weSpokeAtSec: ctx.weSpokeAtSec, weAskedAtSec: ctx.weAskedAtSec, product: ctx.product,
     });
-    if (v.who === "person") {
+    // WALKING BACK IS NOT JUDGING WHO IS THERE. By the time this runs we already KNOW a person is on
+    // the line; the only question left is which of their lines was the first. So a line that Echo
+    // left unsettled counts as theirs here, exactly as it always did. The live judgement is where
+    // unsure means wait, and this is not the live judgement (owner 08-07).
+    if (v.who === "person" || (v.who === "unsure" && !STORE_SAYING_ITS_NAME.test(String(st.text)) && !startsAsARecording(String(st.text), ctx))) {
       // A JOINED line is half the store and half the person (the tail rule glues a hello onto the
       // recording it interrupted). The person begins just AFTER the recording, never at it.
       if (startsAsARecording(String(st.text), ctx)) { start = at + 1; break; }
