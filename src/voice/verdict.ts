@@ -182,6 +182,31 @@ export function reconcile(el: ElRead, second: ClerkVerdict | null): Consensus {
   const elState = el.confirmed === true ? "yes" : el.confirmed === false ? "no" : "unclear";
   const sec = second.inStock;
 
+  // THE VAGUE YES WAS A COIN FLIP, AND THIS IS WHY (owner 08-07, checks 248 and 257). Those two are
+  // the SAME words minutes apart: "We did, but it's not out yet, so uh, or I don't think it's out.
+  // Let me see." then "It's like a box with, like, three packs in it, I think, or something like
+  // that." One came back In stock and the other Couldn't tell.
+  //
+  // Neither reader was broken. OUR read is settled: it runs at temperature nought and it carries the
+  // owner's own 08-06 rule, that a clerk who went to look and comes back describing what they found
+  // is telling you they have it. The voice provider's own extraction is a different model with no
+  // such rule and no setting we control, so on a vague yes it lands "no" some checks and "unclear"
+  // on others. Unclear plus our yes is In stock; no plus our yes was a contradiction, and a
+  // contradiction is an honest Couldn't tell. Same words, two answers, decided by a wobble.
+  //
+  // His own ruling settles it: "If there was no pokemon they would say no pokemon, they wouldn't
+  // describe what it looks like." So when the two disagree and the clerk DESCRIBED WHAT THEY HAVE in
+  // their own words, that description is the evidence and it wins. Three things are required
+  // together, and all three come off the clerk, never off a mood: our reader says yes, it is sure of
+  // itself, and it captured a set or a product form the clerk actually named. An earlier "we
+  // haven't" said before they went to look is not the answer, it is the reason they went.
+  //
+  // Narrow on purpose. A bare "yeah" against a provider "no" is still a contradiction and still an
+  // honest Couldn't tell, because there is nothing there to weigh.
+  const theyDescribedIt = sec === "yes" && second.confidence >= 0.75 && !!(second.set || second.productForm);
+  if (elState === "no" && theyDescribedIt) {
+    return { confirmed: true, definitive: true, statusKey: "in_stock", agreed: false };
+  }
   // Direct contradiction → never guess. Honest "unsure", no charge.
   if ((elState === "yes" && sec === "no") || (elState === "no" && sec === "yes")) {
     return { confirmed: null, definitive: false, statusKey: "no_clear_answer", agreed: false };

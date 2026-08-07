@@ -16,6 +16,7 @@ import { getPolicy } from "../policy";
 import { callTuning } from "./tuning";
 import { warnIfCapTooLow } from "./check-life";
 import { phoneClip } from "./clip-cache";
+import { DEFAULT_OPENER_ES } from "./service";
 import type { BridgeContext } from "../voice/bridge";
 
 /** What the caller knows about ITS OWN check. Everything else is read from the owner's settings. */
@@ -37,7 +38,7 @@ export interface CharlieSetupInput {
 
 /** The shared half of the setup: everything both callers must have, and nothing either decides. */
 export type CharlieShared = Pick<BridgeContext,
-  | "agentId" | "apiKey" | "dynamicVars" | "onConversationId" | "openingClip" | "midCallAgentId"
+  | "agentId" | "apiKey" | "dynamicVars" | "onConversationId" | "openingClip" | "openingClipEs" | "midCallAgentId"
   | "departmentName" | "ourBrain" | "ourBrainAgentId" | "holdStrategy" | "tuning" | "timeLimitSec"
   | "giveUpSeconds" | "earFromSec" | "voiceId" | "voiceTuning">;
 
@@ -68,6 +69,7 @@ export async function buildCharlieSetup(input: CharlieSetupInput): Promise<Charl
   // has to be configured, or there is nobody to hand the answer to; and the check has to carry a
   // voice, so the recording and the agent are the same person rather than two.
   let openingClip: BridgeContext["openingClip"];
+  let openingClipEs: BridgeContext["openingClipEs"];
   let clipFailed = false;
   const question = input.dynamicVars.opening_line || "";
   // DELTA SWITCHED OFF ON PURPOSE (owner 08-07, the Delta: failed card). Nothing could ever make the
@@ -86,6 +88,21 @@ export async function buildCharlieSetup(input: CharlieSetupInput): Promise<Charl
     const c = await phoneClip(input.voiceId, question, input.voiceTuning || {}, input.apiKey);
     if (c) openingClip = { audio: c.audio, ms: c.ms, text: c.text };
     else clipFailed = true;
+    // THE SAME QUESTION IN SPANISH, RECORDED BESIDE IT (owner 08-07). The sentence and an approved
+    // reference recording of it have both existed for a while and nothing could ever reach them,
+    // because the question is recorded BEFORE we dial and the store has not spoken yet. So both are
+    // recorded before the dial and the bridge picks between them at the moment it asks, off the
+    // WORDS of the store's own first line.
+    //
+    // It costs nothing after the first check on a workflow: `phoneClip` records a line ONCE and
+    // keeps it. Best effort on purpose, and never a reason to fail a check: with no Spanish clip the
+    // check is exactly what it is today, which works.
+    if (openingClip) {
+      const es = DEFAULT_OPENER_ES.replace(/\{category\}/g, input.dynamicVars.category || "cartas");
+      const cEs = await phoneClip(input.voiceId, es, input.voiceTuning || {}, input.apiKey).catch(() => null);
+      if (cEs) openingClipEs = { audio: cEs.audio, ms: cEs.ms, text: cEs.text };
+      else console.log("[charlie] no Spanish recording for this check, so a Spanish store hears the English question");
+    }
   }
 
   return {
@@ -95,6 +112,7 @@ export async function buildCharlieSetup(input: CharlieSetupInput): Promise<Charl
       dynamicVars: input.dynamicVars,
       onConversationId: input.onConversationId,
       openingClip,
+      openingClipEs,
       midCallAgentId: config.voice.midCallAgentId,
       departmentName: input.departmentName,
       ourBrain: !!pol.flags?.ourBrain,
