@@ -1145,7 +1145,7 @@ app.all("/twiml/bridge", (c) => {
   // non-blocking; the fork is listen-only and goes quiet the instant the real bridge socket takes
   // over the room (bridgeLiveRooms), so listeners never hear doubled audio.
   const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
-  const fork = `<Start><Stream url="wss://${host}/twilio-media?room=${room}&amp;words=1" track="both_tracks" statusCallback="https://${host}/twiml/stream-status?room=${room}" statusCallbackMethod="POST"><Parameter name="room" value="${room}" /></Stream></Start>`;
+  const fork = `<Start><Stream url="wss://${host}/twilio-media?room=${room}&amp;words=1" track="both_tracks" statusCallback="https://${host}/twiml/stream-status?room=${room}" statusCallbackMethod="POST"><Parameter name="room" value="${room}" /><Parameter name="words" value="1" /></Stream></Start>`;
   const xml = `<?xml version="1.0" encoding="UTF-8"?><Response>${fork}${play}<Connect><Stream url="wss://${host}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
   return c.body(xml, 200, { "Content-Type": "text/xml" });
 });
@@ -7745,12 +7745,18 @@ wssTwilio.on("connection", (ws: WebSocket, _req: unknown, qRoom: string, wantsWo
   let streamZeroEpochMs = 0, firstFrameAtEpochMs = 0, lastSeq = -1;
   const closeWords = () => { try { words?.close(); } catch { /* a transcriber never ends a check */ } words = null; if (room) echoListening(room, false); };
   ws.on("message", (data: Buffer) => {
-    let m: { event?: string; start?: { customParameters?: { room?: string }; streamSid?: string };
+    let m: { event?: string; start?: { customParameters?: { room?: string; words?: string }; streamSid?: string };
       media?: { payload?: string; track?: string; timestamp?: string }; sequenceNumber?: string };
     try { m = JSON.parse(data.toString()); } catch { return; }
     if (m.event === "start") {
       room = m.start?.customParameters?.room || room || m.start?.streamSid || "";
-      if (wantsWords && room && !words) {
+      // THE FLAG TRAVELS THE WAY THE ROOM DOES. It rode the URL alone once and never arrived: the
+      // check of 08-07 ran with no words at all because the carrier did not hand the query back the
+      // way it was written. `<Parameter>` is the way the room has always reached us, so the flag
+      // rides beside it and the URL is only a fallback.
+      const askedForWords = wantsWords || m.start?.customParameters?.words === "1";
+      bridgeLog(`fork ${room.slice(0, 8)}: words ${askedForWords ? "on" : "OFF"} (url=${wantsWords ? "1" : "0"}, parameter=${m.start?.customParameters?.words ?? "none"})`);
+      if (askedForWords && room && !words) {
         words = openTranscriber((line) => {
           try {
             const t = line.text.trim();
@@ -7804,7 +7810,11 @@ wssTwilio.on("connection", (ws: WebSocket, _req: unknown, qRoom: string, wantsWo
   if (pathname === "/twilio-media") {
     // `?words=1` marks a CUSTOMER CHECK's fork, the only one Echo transcribes.
     let wantsWords = false;
-    try { wantsWords = new URL(req.url || "/", "http://x").searchParams.get("words") === "1"; } catch { /* no flag, no words */ }
+    try {
+      const sp = new URL(req.url || "/", "http://x").searchParams;
+      // `amp;words` too: an ampersand written the XML way can come back to us still spelled out.
+      wantsWords = sp.get("words") === "1" || sp.get("amp;words") === "1";
+    } catch { /* no flag, no words */ }
     wssTwilio.handleUpgrade(req, socket, head, (ws) => wssTwilio.emit("connection", ws, req, room, wantsWords));
   }
   else if (pathname === "/bridge") wssBridge.handleUpgrade(req, socket, head, (ws) => wssBridge.emit("connection", ws, req, room));

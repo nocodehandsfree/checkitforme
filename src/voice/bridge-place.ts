@@ -43,7 +43,7 @@ export async function attachListenFork(callSid: string, room: string): Promise<v
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok || !callSid || !room) return;
   const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
-  const body = new URLSearchParams({ Url: `wss://${host}/twilio-media?room=${encodeURIComponent(room)}&words=1`, Track: "both_tracks", Name: "listenfork" });
+  const body = new URLSearchParams({ Url: `wss://${host}/twilio-media?room=${encodeURIComponent(room)}&words=1`, Track: "both_tracks", Name: "listenfork", "Parameter1.Name": "room", "Parameter1.Value": room, "Parameter2.Name": "words", "Parameter2.Value": "1" });
   try {
     const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}/Streams.json`, {
       method: "POST",
@@ -196,7 +196,7 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
   // stream below only starts AFTER the whole nav walk, which is why menu calls sounded dead. The
   // fork goes quiet the instant the real bridge socket owns the room (bridgeLiveRooms in server.ts),
   // so audio never doubles. statusCallback logs start/stop/error into the bridge ring buffer.
-  const fork = `<Start><Stream url="wss://${host}/twilio-media?room=${room}&amp;words=1" track="both_tracks" statusCallback="https://${host}/twiml/stream-status?room=${room}" statusCallbackMethod="POST"><Parameter name="room" value="${room}" /></Stream></Start>`;
+  const fork = `<Start><Stream url="wss://${host}/twilio-media?room=${room}&amp;words=1" track="both_tracks" statusCallback="https://${host}/twiml/stream-status?room=${room}" statusCallbackMethod="POST"><Parameter name="room" value="${room}" /><Parameter name="words" value="1" /></Stream></Start>`;
   const bridgeUrl = `wss://${host}/bridge?room=${room}`;
   // Listening nav opens with the fork and a WAIT — no nav verbs, no <Connect> yet. Each mapped step
   // arrives as its own call-update when the store stops talking; the last one hands off to the bridge.
