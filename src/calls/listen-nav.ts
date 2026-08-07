@@ -290,6 +290,10 @@ export interface JudgeInput {
   /** LAYER 4 — the pause has been run, and whether the line kept reading through it. */
   pauseTested?: boolean;
   keptTalkingAfterPause?: boolean;
+  /** THE KNOCK has been run, and whether the talking carried straight on through it (owner 08-07).
+   *  Carrying on is a machine, with certainty, and it costs one second on the very first call. */
+  knockTested?: boolean;
+  keptTalkingAfterKnock?: boolean;
   /** Every line this number has already said ON THIS CALL. A recording repeats itself word for word
    *  when we stay quiet; a person does not. Needs no memory of the chain, so it is the one test that
    *  works on the first call we have ever made to a number (owner 08-07). */
@@ -364,6 +368,15 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
   // handed a pharmacy menu to Charlie 16 seconds in. Behaviour decides, words do not.
   if ((o.saidBefore || []).some((l) => sameSpokenLine(l, text))) {
     return { who: "recording", why: "it has said this exact line already on this call", ...ride };
+  }
+
+  // IT CARRIED STRAIGHT ON THROUGH THE KEYS (owner 08-07). On a number we have never rung we press
+  // keys during the opening sentence. A person hears the beeps in their ear and stops. A recording
+  // reads on regardless, so reading on is a machine and nothing else can explain it. Stopping is NOT
+  // a person on its own, because a menu also goes quiet when it acts on a key: that case falls
+  // through to the tests below, which is the whole point of never deciding on one signal.
+  if (o.knockTested && o.keptTalkingAfterKnock) {
+    return { who: "recording", why: "it read straight on through the keys we pressed", ...ride };
   }
 
   // WORDS ARE A HINT, NEVER THE VERDICT (owner 08-07). These phrases mean somebody is probably
@@ -896,6 +909,15 @@ interface Session {
    *  something explicitly turns it off, so the default is never firing tones at a human. */
   abortOnHuman?: boolean;
   tuning?: { personGreetingMaxMs?: number; personWaitMs?: number };
+  /** THE KNOCK (owner 08-07). On a number we have never rung, we press keys DURING the opening
+   *  sentence, before any options are read: one key, about a second, then two more quickly. A person
+   *  hears beeps in their ear, stops, and says something to us. A recording carries straight on, or
+   *  acts on the key, and either of those is a machine. Set once, never repeated. */
+  knockAtSec?: number;
+  knockDoneAtMs?: number;
+  keptTalkingAfterKnock?: boolean;
+  /** A number whose menu we already hold never gets knocked: we know what it is. */
+  neverKnock?: boolean;
 }
 
 const sessions = new Map<string, Session>();
@@ -906,6 +928,12 @@ export function listenNavFired(room: string): Array<{ value: string; atSec: numb
 }
 /** How many store recordings played on this call — the free drift measure: a menu that grew or lost
  *  a recording since we mapped it shows up here with no speech recognition and no model. */
+/** What the knock found out, ready for the judge. Empty until it has been sent and answered. */
+export function listenNavKnock(room: string): { knockTested?: boolean; keptTalkingAfterKnock?: boolean } {
+  const s = sessions.get(room);
+  if (!s || s.keptTalkingAfterKnock === undefined) return {};
+  return { knockTested: true, keptTalkingAfterKnock: s.keptTalkingAfterKnock };
+}
 export function listenNavPromptCount(room: string): number {
   return sessions.get(room)?.det.count ?? 0;
 }
@@ -1000,6 +1028,9 @@ function armClockFallback(s: Session): void {
  */
 export function startListenNav(opts: {
   room: string; callSid: string; steps: NavStep[]; bridgeUrl: string;
+  /** The lines this chain has played us before. Present means we already know this menu, so the
+   *  knock is never sent: memory is a speed-up, never the judge (owner 08-07). */
+  knownMenuLines?: string[];
   log?: (s: string) => void; onNavEnd?: (navEndSec: number) => void;
   onEvent?: (kind: string, note: string, detail?: Record<string, unknown>) => void;
   abortOnHuman?: boolean;
@@ -1024,6 +1055,9 @@ export function startListenNav(opts: {
     if (!verdict.fire) { log(`listen-nav: recording ${n} ended at ${at}s — "${step.value}" ${verdict.reason}, waiting`); return; }
     void fireNext(s.room, "prompt");
   });
+  // A NUMBER WHOSE MENU WE ALREADY HOLD IS NEVER KNOCKED. We know what it is, so there is nothing
+  // to find out and no reason to put beeps down the line (owner 08-07: memory is a speed-up).
+  s.neverKnock = (opts.knownMenuLines || []).some((l: string) => String(l || "").trim().length > 0);
   sessions.set(opts.room, s);
   const onRecording = steps.filter((x) => typeof x.afterPrompt === "number").length;
   log(`listen-nav: armed for ${steps.length} step(s)${onRecording ? `, ${onRecording} waiting on a specific recording` : ""} — firing on prompt endings, clock fallback at learned+${GRACE_SEC}s`);
@@ -1039,6 +1073,21 @@ export function listenNavFeed(room: string, b64: string, track?: string): void {
   // track and would otherwise register as prompts.
   if (track && track !== "inbound") return;
   s.det.feed(b64);
+  // THE KNOCK (owner 08-07). On a number whose menu we do not already hold, we press keys DURING the
+  // opening sentence, before any options are read: one key, about a second, then two more quickly.
+  // It is sent ONCE, the moment the store is really talking, and never on a number we already know.
+  if (!s.neverKnock && s.knockAtSec == null && s.det.count >= 1 && s.det.lastPromptMs > 0) {
+    s.knockAtSec = Math.round((Date.now() - s.startMs) / 1000);
+    void knock(s);
+  }
+  // …and a second later, did the talking carry straight on? Reading on through beeps in somebody's
+  // ear is a machine and nothing else explains it. Going quiet proves nothing on its own, because a
+  // menu goes quiet too when it acts on a key, so that case is left to the other tests.
+  if (s.knockDoneAtMs && s.keptTalkingAfterKnock === undefined && Date.now() - s.knockDoneAtMs >= 1200) {
+    s.keptTalkingAfterKnock = s.det.quietMs < 400;
+    s.log(`listen-nav: the knock says ${s.keptTalkingAfterKnock ? "it read straight on — a machine" : "it stopped, which proves nothing on its own"}`);
+    try { s.onEvent?.("unknown", s.keptTalkingAfterKnock ? "It read straight on through the keys, so it is a machine" : "It stopped when we pressed keys", { step: "knock", keptTalking: s.keptTalkingAfterKnock, atSec: s.knockAtSec }); } catch { /* best-effort */ }
+  }
   // NEVER PRESS KEYS AT A PERSON (spec: the live call runtime, section 10). A store we mapped with
   // a menu that now answers directly means our tones go off in a real human's ear. Today we would
   // keep pressing all the way down the list. Now the remaining steps are abandoned and the call
@@ -1046,6 +1095,16 @@ export function listenNavFeed(room: string, b64: string, track?: string): void {
   if (s.abortOnHuman !== false && looksLikeAPerson({ stepsFired: s.next, promptCount: s.det.count, lastPromptMs: s.det.lastPromptMs, quietMs: s.det.quietMs }, s.tuning)) {
     void handToConversation(s, "someone answered before the menu, the rest of the keys were never pressed");
   }
+}
+
+/** ONE KEY, A BEAT, THEN TWO MORE. The owner's own shape. A person hears three beeps in their ear
+ *  and stops; a recording does not notice. The waiting document follows so the walk carries on
+ *  exactly as it would have. Never sent twice, and never on a number whose menu we already hold. */
+async function knock(s: Session): Promise<void> {
+  const ok = await updateTwiml(s, `<Play digits="1w w w1w1"/>${HOLD}`);
+  s.knockDoneAtMs = Date.now();
+  s.log(`listen-nav: knocked at ${s.knockAtSec}s to see whether the talking stops${ok ? "" : " (the carrier refused it)"}`);
+  try { s.onEvent?.("unknown", "Pressed a few keys to see whether the talking stops", { step: "knock", atSec: s.knockAtSec }); } catch { /* best-effort */ }
 }
 
 /** Abandon the mapped walk and hand the live call to the agent bridge — the same handoff the last

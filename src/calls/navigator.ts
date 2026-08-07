@@ -15,7 +15,7 @@ import { openReceipt, emit, markNow, closeReceipt, getReceipt, staffSpokeOn } fr
 // speech text alone, which returns an empty string for silence, for hold music and for a desk that is
 // ringing, so it could not tell "nobody is there" from "somebody just said hello". These are the same
 // two classes the paid-agent calls listen with. Nothing new is built here.
-import { PromptDetector, ConversationEar, frameEnergy as earFrameEnergy, toneShare as earToneShare, judgeVoice, personStartsAt, looksLikeADeadEnd, type HoldReason } from "./listen-nav";
+import { PromptDetector, ConversationEar, frameEnergy as earFrameEnergy, toneShare as earToneShare, judgeVoice, personStartsAt, looksLikeADeadEnd, listenNavKnock, type HoldReason } from "./listen-nav";
 import { sameMenu, type CheckStage, type CheckFailReason } from "./mapgraph";
 import { gradeCheck } from "./map-capture";
 
@@ -649,6 +649,8 @@ function judgeHere(s: NavSession, speech: string, atSec: number) {
     // The pause test is layer 4 and costs two seconds of silence; a mapping check that is walking a
     // known route has already answered its question by position, so it never gets here.
     pauseTested: s.pauseTested, keptTalkingAfterPause: s.keptTalkingAfterPause,
+    // THE KNOCK's answer, off the walker that sent it (owner 08-07).
+    ...listenNavKnock(s.id),
   });
   // The earpiece's last word, kept so a turn where nothing at all was said has something honest to
   // lean on instead of acting blind.

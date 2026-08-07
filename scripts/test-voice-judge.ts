@@ -224,5 +224,26 @@ console.log("\n▶ THE LAST FOUR (fix pass 6, items 5-8)");
   // 8: freeing the doors reaches a live run.
 }
 
+console.log("\n▶ THE KNOCK, and every one of these run twice: remembered, and knowing nothing");
+{
+  const CVS_OPEN = KNOWN[0];
+  // Both ways round, because a chain's FIRST ever check is exactly what mapping is (owner 08-07).
+  for (const [how, mem] of [["remembered", KNOWN], ["knowing nothing", []]] as const) {
+    ok(judge({ text: CVS_OPEN, knownMenuLines: [...mem], knockTested: true, keptTalkingAfterKnock: true }).who === "recording",
+      `it read straight on through the keys, so it is a machine (${how})`);
+    ok(judge({ text: "Are you a healthcare provider?", knownMenuLines: [...mem], saidBefore: ["Are you a healthcare provider?"] }).who === "recording",
+      `it said the same line twice, so it is a machine (${how})`);
+    ok(judge({ text: "Front store, this is Bob, how can I help?", knownMenuLines: [...mem], knockTested: true, keptTalkingAfterKnock: false, pauseTested: true, keptTalkingAfterPause: false }).who === "person",
+      `it stopped for the keys and talked to us, so it is a person (${how})`);
+    ok(judge({ text: CVS_OPEN, knownMenuLines: [...mem], knockTested: true, keptTalkingAfterKnock: false }).who !== "person",
+      `going quiet for the keys is never enough on its own to call it a person (${how})`);
+  }
+  // The one the owner watched break: with no memory at all, CVS's opening must never read person.
+  ok(judge({ text: CVS_OPEN, knownMenuLines: [] }).who !== "person",
+    "CVS's opening line is never a person on a number we have never rung");
+  ok(judge({ text: "If this is an emergency, please hang up and dial 911.", knownMenuLines: [] }).who !== "person",
+    "and neither is the emergency sentence that started all this");
+}
+
 console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
