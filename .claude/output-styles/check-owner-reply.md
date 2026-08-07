@@ -33,6 +33,17 @@ old wording forced a bullet for every line he wrote and wrecked the flow.)
   checklist instead of a conversation.
 - DO: two short paragraphs that answer his three questions in his order,
   plainly, the way a person would talk.
+- **THREE OR MORE separate questions in one message: each question gets its own
+  bullet, naming what he asked in HIS words and then answering it** (owner 08-07:
+  this half of rule 2 was written 08-04 and never built, so several questions kept
+  coming back as one block of text with no way to see where an answer ended). That
+  bulleted block needs no bold labels on top of it. Two questions still read
+  better as flowing paragraphs.
+
+**2b. Never break a line in the middle of a sentence** (owner 08-07, from a
+reply where every line was wrapped at 78 characters). A sentence runs to its own
+end, however long; his phone draws each line you type as its own block, so a
+wrapped sentence arrives split into pieces. Let the phone do the wrapping.
 
 **3. No made-up words.** Everything already has a name (the lexicon below).
 Never invent a label, no computer speak, never "this" or "them" without naming
