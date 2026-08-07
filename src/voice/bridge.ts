@@ -617,6 +617,17 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  from Admin. Never a count of rings (his ruling 08-03). */
   const RING_WAIT_MS = Math.max(1, tune.ringWaitSeconds) * 1000;
   // ---- hold and transfer ----
+  /** When THIS session came up. A session closed seconds after it opened never got a word in, and
+   *  the seconds it did burn bought nothing (owner, check 357). */
+  let charlieOpenedAtMs = 0;
+  /** HE IS NEVER DROPPED BEFORE HE HAS HAD A CHANCE TO SPEAK (owner 08-07, off check 357). Cutting
+   *  the quiet to 3 seconds made a session open at 16 seconds and close at 18, and Charlie said
+   *  nothing on that whole check: reopening takes about a second and answering takes a beat more,
+   *  so the window was gone before he could use it. The wait still STARTS on the record at the
+   *  second they really went quiet; only the closing of his session waits out the remainder, so the
+   *  saving on a real walk away is untouched and a pause mid conversation no longer gags him. */
+  const MIN_ON_LINE_MS = Math.max(0, tune.charlieMinOnLineMs);
+  let closeWhenReady: NodeJS.Timeout | null = null;
   let onHold = false;             // the person is away; the agent must not be fed or heard
   /** Somebody has already stepped away and come back on this call — from here it is a live store
    *  beyond doubt, and no machine-phrase mishearing may hang it up (family 1). */
@@ -984,12 +995,24 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // Close him. This is the only thing that actually stops the meter — muting saves nothing.
       // The call, the room and the receipt all continue; when somebody comes back he opens again as
       // the next numbered segment of this same call.
-      log(`hold (${reason}): closing the agent — the meter stops until somebody comes back`);
-      closeSegment(room);
-      markNow(room, "charlieCloseMs");
-      emit(room, "charlie_leave", "Charlie dropped", { reason, strategy: "reopen" });
-      try { eleven?.close(); } catch { /* torn down */ }
-      eleven = null; ready = false; connecting = false;
+      const onLineFor = charlieOpenedAtMs ? Date.now() - charlieOpenedAtMs : MIN_ON_LINE_MS;
+      const dropHim = () => {
+        closeWhenReady = null;
+        if (ended || !onHold || !eleven) return;   // they came back, or the check is over
+        log(`hold (${reason}): closing the agent — the meter stops until somebody comes back`);
+        closeSegment(room);
+        markNow(room, "charlieCloseMs");
+        emit(room, "charlie_leave", "Charlie dropped", { reason, strategy: "reopen" });
+        try { eleven?.close(); } catch { /* torn down */ }
+        eleven = null; ready = false; connecting = false;
+      };
+      if (onLineFor >= MIN_ON_LINE_MS) dropHim();
+      else {
+        const wait = MIN_ON_LINE_MS - onLineFor;
+        log(`hold (${reason}): his session is only ${Math.round(onLineFor / 1000)}s old, giving him ${Math.round(wait / 1000)}s to answer before closing him`);
+        if (closeWhenReady) clearTimeout(closeWhenReady);
+        closeWhenReady = setTimeout(dropHim, wait);
+      }
     } else {
       log(`hold (${reason}): the agent stays open but is fed nothing and cannot be heard`);
     }
@@ -1000,6 +1023,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (!onHold) return;
     const was = holdReason;
     onHold = false; holdReason = null; everCameBack = true;
+    // He was about to be closed and does not need to be: they are back and he is still on the line.
+    if (closeWhenReady) { clearTimeout(closeWhenReady); closeWhenReady = null; }
     // Somebody came back, so the wait had an ending of its own and the cap has nothing to end.
     if (holdCapTimer) { clearTimeout(holdCapTimer); holdCapTimer = null; }
     const secs = Math.round(gapMs / 1000);
@@ -1314,6 +1339,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // THE BILLED SECOND ZERO. The provider meters from session open, so this is where the money
       // clock starts — not at first word. Everything after this is seconds we are paying for.
       markNow(room, "charlieOpenMs");
+      charlieOpenedAtMs = Date.now();
       // A NUMBERED STRETCH of this one call, never a separate call (hard rule 1). Ordinary calls
       // have exactly one; a call where he was closed for a wait has two or more.
       const n = openSegment(room, segmentBrain, segmentWhy);
@@ -2231,5 +2257,6 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       emit(room, "unknown", note, { step: "language", spanishLines: spokeEs, englishLines: spokeEn });
     }
     signoffDoors.delete(room); staffDoors.delete(room);
+    if (closeWhenReady) { clearTimeout(closeWhenReady); closeWhenReady = null; }
     if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; } if (heldQuestion) { try { relayLine?.(room, "Agent", heldQuestion); } catch { /* best effort */ } heldQuestion = null; } try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; missedWhileClosed = []; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (holdCapTimer) { clearTimeout(holdCapTimer); holdCapTimer = null; } if (ringWaitTimer) { clearTimeout(ringWaitTimer); ringWaitTimer = null; } if (handoverTimer) { clearTimeout(handoverTimer); handoverTimer = null; } if (answerWaitTimer) { clearTimeout(answerWaitTimer); answerWaitTimer = null; } if (eleven) eleven.close(); /* the context is NOT deleted here: Twilio can reconnect a blipped stream mid-call, and the fresh socket must still find it. The 30-minute leak guard owns cleanup. */ });
 }

@@ -508,6 +508,11 @@ async function callWithHold(f: Fake, room: string, holdStrategy: "gate" | "reope
   openReceipt(room, { lane: "direct" });
   setBridgeContext(room, {
     agentId: "agent_normal", dynamicVars: {}, connectOnHuman: true, holdMaxSeconds, holdStrategy,
+    // THESE SCENES TEST THE WAIT, NOT THE FLOOR. Charlie is never dropped inside the first few
+    // seconds of his session on a real check (`charlieMinOnLineMs`, added 08-07 off check 357), but
+    // the rig drives a whole call in milliseconds of real time, so every session here is newborn.
+    // The scene at the bottom of this file is the one that proves the floor, at its real value.
+    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0 },
   });
   const tw = new FakeTwilio();
   handleTwilioBridge(tw as never, room, () => { /* none */ });
@@ -1803,7 +1808,10 @@ console.log("\n▶ Staff put the phone down on the counter: Charlie is dropped, 
   const f = await fakeProvider();
   const restore = stubSignedUrl(f);
   openReceipt("room-counter", { lane: "direct" });
-  setBridgeContext("room-counter", { agentId: "agent_normal", dynamicVars: {}, connectOnHuman: true, holdStrategy: "reopen" });
+  // The floor that keeps a newborn session on the line is proved on its own at the bottom of this
+  // file; this scene is about the room being a wait, so it drops him the moment the wait starts.
+  setBridgeContext("room-counter", { agentId: "agent_normal", dynamicVars: {}, connectOnHuman: true, holdStrategy: "reopen",
+    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0 } });
   const tw = new FakeTwilio();
   handleTwilioBridge(tw as never, "room-counter", () => { /* none */ });
   tw.say({ event: "start", start: { streamSid: "MZ_c", customParameters: { room: "room-counter" } } });
@@ -2077,6 +2085,26 @@ console.log("\n▶ THE GOODBYE LANDS AFTER THE QUIET HAS ALREADY STARTED: we sti
   ok(weEndedCheck(room) === "signed_off", "the goodbye lands late and WE end the check, not the store");
   const ev = (getReceipt(room)?.events || []).find((e) => e.detail?.reason === "signed_off");
   ok(!!ev && String(ev.note || "").includes("said goodbye"), `and the timeline says so in plain words: "${ev?.note}"`);
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ HE IS NEVER DROPPED BEFORE HE HAS HAD A CHANCE TO SPEAK (check 357)");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-min-on-line";
+  const { tw } = await callToHello(f, 400, room);
+  await sleep(400);                                   // his session is seconds old
+  const opened = (getReceipt(room)?.events || []).filter((e) => e.kind === "charlie_join").length;
+  ok(opened === 1, "his session is up");
+  // The line goes quiet immediately, which at 3 seconds used to close him before he could answer.
+  for (let i = 0; i < 400; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(500);
+  const left = () => (getReceipt(room)?.events || []).some((e) => e.kind === "charlie_leave");
+  ok(!left(), "the wait has started but he is still on the line, with time to answer");
+  const started = (getReceipt(room)?.events || []).some((e) => e.kind === "hold_start");
+  ok(started, "…and the wait is on the record at the second they really went quiet");
   restore(); tw.close(); f.close();
 }
 
