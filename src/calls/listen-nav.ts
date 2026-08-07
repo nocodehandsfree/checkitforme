@@ -290,6 +290,10 @@ export interface JudgeInput {
   /** LAYER 4 — the pause has been run, and whether the line kept reading through it. */
   pauseTested?: boolean;
   keptTalkingAfterPause?: boolean;
+  /** THE SAME SOUND, HEARD AGAIN (owner 08-07). Set when the shape of the line right now matches a
+   *  shape heard earlier on this call. It is the one test that catches hold music, and hold music
+   *  with an advert talking over it, because it listens to the sound and never to the words. */
+  soundHeardBefore?: boolean;
   /** THE KNOCK has been run, and whether the talking carried straight on through it (owner 08-07).
    *  Carrying on is a machine, with certainty, and it costs one second on the very first call. */
   knockTested?: boolean;
@@ -368,6 +372,13 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
   // handed a pharmacy menu to Charlie 16 seconds in. Behaviour decides, words do not.
   if ((o.saidBefore || []).some((l) => sameSpokenLine(l, text))) {
     return { who: "recording", why: "it has said this exact line already on this call", ...ride };
+  }
+
+  // THE SAME SOUND, HEARD AGAIN (owner 08-07). A person never repeats a stretch of sound exactly;
+  // a recording playing round again always does. This is what catches hold music, and hold music
+  // with an advert over it, which every word rule calls a person.
+  if (o.soundHeardBefore) {
+    return { who: "recording", why: "this exact sound has already played on this call", ...ride };
   }
 
   // IT CARRIED STRAIGHT ON THROUGH THE KEYS (owner 08-07). On a number we have never rung we press
@@ -888,6 +899,49 @@ export function shouldFireOnPrompt(step: NavStep, n: number, at: number, lastFir
   return { fire: true, reason: "recording ended" };
 }
 
+// ---- THE SOUND FINGERPRINT (owner 08-07, item 2) ------------------------------------------------
+// A fingerprint of the SOUND of a stretch of the line, never of the words. The same sound heard
+// again, twice inside one call or on a later call to the same number, is a recording with certainty.
+// It is the one test that catches HOLD MUSIC, and hold music with an advert talking over it, which
+// no word test ever can: an advert is words on top of music, so every word rule calls it a person.
+//
+// How it is taken: loudness is measured once per 100ms and squashed to one of eight steps, and the
+// steps are written down in order. A recording plays back identically every time, so its shape
+// repeats exactly. A person never says the same thing with the same loudness twice.
+const FP_SLOT_MS = 100;
+const FP_STEPS = 8;
+export class SoundPrint {
+  private slotMs = 0;
+  private slotPeak = 0;
+  private shape: number[] = [];
+  /** Feed one 20ms frame, exactly as the ear gets it. */
+  feed(b64: string): void {
+    this.slotPeak = Math.max(this.slotPeak, frameEnergy(b64));
+    this.slotMs += 20;
+    if (this.slotMs < FP_SLOT_MS) return;
+    // Eight steps is enough to tell one piece of music from another and coarse enough that the same
+    // recording down a slightly noisier line still prints the same.
+    const step = Math.min(FP_STEPS - 1, Math.floor((this.slotPeak / 4000) * FP_STEPS));
+    this.shape.push(step);
+    this.slotMs = 0; this.slotPeak = 0;
+  }
+  /** The print of the last `seconds` of line, or empty while there is not enough to print. */
+  print(seconds = 4): string {
+    const want = Math.round((seconds * 1000) / FP_SLOT_MS);
+    if (this.shape.length < want) return "";
+    return this.shape.slice(-want).join("");
+  }
+  /** Everything heard so far, so a caller can look for the same shape earlier in the same call. */
+  all(): number[] { return this.shape; }
+}
+/** Has this exact shape been heard before in what we have already listened to? A recording looping
+ *  gives itself away here with no words at all, which is what hold music is. */
+export function heardThisSoundBefore(shape: number[], print: string): boolean {
+  if (!print) return false;
+  const upTo = shape.slice(0, Math.max(0, shape.length - print.length)).join("");
+  return upTo.includes(print);
+}
+
 // ---- the per-call session ------------------------------------------------------------------
 interface Session {
   room: string;
@@ -913,6 +967,8 @@ interface Session {
    *  sentence, before any options are read: one key, about a second, then two more quickly. A person
    *  hears beeps in their ear, stops, and says something to us. A recording carries straight on, or
    *  acts on the key, and either of those is a machine. Set once, never repeated. */
+  print: SoundPrint;
+  soundHeardBefore?: boolean;
   knockAtSec?: number;
   knockDoneAtMs?: number;
   keptTalkingAfterKnock?: boolean;
@@ -929,10 +985,12 @@ export function listenNavFired(room: string): Array<{ value: string; atSec: numb
 /** How many store recordings played on this call — the free drift measure: a menu that grew or lost
  *  a recording since we mapped it shows up here with no speech recognition and no model. */
 /** What the knock found out, ready for the judge. Empty until it has been sent and answered. */
-export function listenNavKnock(room: string): { knockTested?: boolean; keptTalkingAfterKnock?: boolean } {
+export function listenNavKnock(room: string): { knockTested?: boolean; keptTalkingAfterKnock?: boolean; soundHeardBefore?: boolean } {
   const s = sessions.get(room);
-  if (!s || s.keptTalkingAfterKnock === undefined) return {};
-  return { knockTested: true, keptTalkingAfterKnock: s.keptTalkingAfterKnock };
+  if (!s) return {};
+  const sound = s.soundHeardBefore ? { soundHeardBefore: true } : {};
+  if (s.keptTalkingAfterKnock === undefined) return sound;
+  return { knockTested: true, keptTalkingAfterKnock: s.keptTalkingAfterKnock, ...sound };
 }
 export function listenNavPromptCount(room: string): number {
   return sessions.get(room)?.det.count ?? 0;
@@ -1045,6 +1103,7 @@ export function startListenNav(opts: {
     lastFiredAtSec: 0, timers: [], bridgeUrl: opts.bridgeUrl, done: false, log,
     onNavEnd: opts.onNavEnd, onEvent: opts.onEvent, fired: [], abortOnHuman: opts.abortOnHuman, tuning: opts.tuning,
     det: new PromptDetector(() => { /* replaced below */ }),
+    print: new SoundPrint(),
   };
   s.det = new PromptDetector((n) => {
     if (s.done) return;
@@ -1073,6 +1132,17 @@ export function listenNavFeed(room: string, b64: string, track?: string): void {
   // track and would otherwise register as prompts.
   if (track && track !== "inbound") return;
   s.det.feed(b64);
+  // THE SAME SOUND, HEARD AGAIN. Taken on every frame and checked once it has four seconds to
+  // compare, so a loop of hold music gives itself away with no words at all (owner 08-07).
+  s.print.feed(b64);
+  if (!s.soundHeardBefore) {
+    const now = s.print.print(4);
+    if (now && heardThisSoundBefore(s.print.all(), now)) {
+      s.soundHeardBefore = true;
+      s.log("listen-nav: this exact sound has already played on this call — a recording");
+      try { s.onEvent?.("unknown", "The same sound played again, so this is a recording", { step: "sound_repeat" }); } catch { /* best-effort */ }
+    }
+  }
   // THE KNOCK (owner 08-07). On a number whose menu we do not already hold, we press keys DURING the
   // opening sentence, before any options are read: one key, about a second, then two more quickly.
   // It is sent ONCE, the moment the store is really talking, and never on a number we already know.

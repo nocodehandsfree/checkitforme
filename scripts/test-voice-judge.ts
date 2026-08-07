@@ -14,7 +14,7 @@
 //
 // Run: env DATABASE_URL=file:./.t-judge.db ELEVENLABS_API_KEY=test ELEVENLABS_AGENT_ID=test \
 //      ELEVENLABS_PHONE_NUMBER_ID=test ./node_modules/.bin/tsx scripts/test-voice-judge.ts
-import { judgeVoice, personStartsAt, type JudgeInput } from "../src/calls/listen-nav";
+import { judgeVoice, personStartsAt, SoundPrint, heardThisSoundBefore, type JudgeInput } from "../src/calls/listen-nav";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -243,6 +243,27 @@ console.log("\n▶ THE KNOCK, and every one of these run twice: remembered, and 
     "CVS's opening line is never a person on a number we have never rung");
   ok(judge({ text: "If this is an emergency, please hang up and dial 911.", knownMenuLines: [] }).who !== "person",
     "and neither is the emergency sentence that started all this");
+}
+
+console.log("\n▶ THE SOUND FINGERPRINT — hold music, and an advert talking over it");
+{
+  const frame = (loud: number) => Buffer.alloc(160, loud).toString("base64");
+  // Hold music is a loop. Played round twice, the second round is the same sound again.
+  const music = new SoundPrint();
+  const loop = Array.from({ length: 80 }, (_, i) => 0x10 + Math.round(100 * Math.abs(Math.sin(i / 3))));
+  for (let round = 0; round < 2; round++) for (const l of loop) for (let f = 0; f < 5; f++) music.feed(frame(l));
+  ok(heardThisSoundBefore(music.all(), music.print(4)) === true,
+    "hold music going round again is caught by its sound alone, with no words at all");
+  // Somebody talking never says four seconds the same way twice.
+  const talk = new SoundPrint();
+  for (let i = 0; i < 1000; i++) talk.feed(frame(0x10 + Math.floor(Math.random() * 110)));
+  ok(heardThisSoundBefore(talk.all(), talk.print(4)) === false,
+    "and twenty seconds of somebody talking is never mistaken for a loop");
+  // AN ADVERT OVER MUSIC is words, so every word rule calls it a person. The sound catches it.
+  ok(judge({ text: "Did you know we deliver?", soundHeardBefore: true }).who === "recording",
+    "an advert playing over hold music is a recording, because the sound came round again");
+  ok(judge({ text: "Did you know we deliver?", knownMenuLines: [] }).who !== "person",
+    "and knowing nothing at all, an advert is never called a person");
 }
 
 console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);
