@@ -188,8 +188,13 @@ Admin-tunable, LIMITS [0, 30000]: the wait still starts on the record at the sec
 and only the CLOSING of his session waits the remainder out. Check 358 proves it live, sessions of
 7 and 6 seconds where 357 had 2.
 
-**STILL OPEN, AND IT IS THE NEXT AGENT'S FIRST JOB. CHARLIE SPOKE ON 355 AND 356 AND SAID NOTHING
-AT ALL ON 357 AND 358.** It is NOT the 3 second cut: on 358 his first session ran a full 7 seconds
+**SOLVED THE SAME NIGHT (`8c98d170`), READ THAT COMMIT BEFORE TOUCHING ANY OF THESE NUMBERS.** A
+clock could never fix it: the store that answers itself goes quiet the instant it finishes a line,
+so the quiet straight after Staff's answer is CHARLIE THINKING, not Staff walking away. He is no
+longer dropped while he is holding their answer and has not spoken in that session, capped at six
+seconds from the moment they answered. `charlieMinOnLineMs` stays as the floor underneath it. The
+history, kept because it is what proves a stopwatch was the wrong tool: CHARLIE SPOKE ON 355 AND
+356 AND SAID NOTHING AT ALL ON 357 AND 358.** It is NOT the 3 second cut: on 358 his first session ran a full 7 seconds
 with Staff saying "We did not." inside it and he still did not answer. Same scene, same store, same
 words, four checks. 358's card reads Speaking 0s · Listening 2s · Waiting 17s, which is the whole
 picture in one line and is exactly what that breakdown was built for. Read 355 and 356 against 357
