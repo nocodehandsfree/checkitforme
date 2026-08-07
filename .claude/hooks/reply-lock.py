@@ -170,10 +170,17 @@ def word_scan(text, cap=CAP):
     if bolds and is_short(text):
         fails.append("bold on a quick answer (rule 10: a sentence or two carries no bold)")
     paras = [b for b in re.split(r"\n\s*\n", prose) if b.strip()]
-    if not bolds and len(paras) >= 3 and not is_short(text):
-        fails.append(f"{len(paras)} paragraphs and NO bold labels (rule 10: when a reply "
-                     "covers 2 or 3 separate things, each gets a short bold label on its "
-                     "own line so he can scroll and find the part he cares about)")
+    # A bullet per question is rule 2's own answer to several questions at once (owner
+    # 08-07), so it does NOT need bold labels on top. Before this, the floor below was
+    # rejecting exactly the shape rule 2 asks for, and every 4 question reply fell back
+    # to the agent's own block of text. Bulleted blocks are not counted as paragraphs.
+    bulleted = [p for p in paras if re.match(r"\s*[-*+]\s", p)]
+    plain = [p for p in paras if p not in bulleted]
+    if not bolds and not bulleted and len(plain) >= 3 and not is_short(text):
+        fails.append(f"{len(plain)} paragraphs, NO bold labels and NO bullets (rule 10: "
+                     "when a reply covers 2 or 3 separate things, each gets a short bold "
+                     "label on its own line. Rule 2: 3 or more questions he asked get a "
+                     "bullet each, in his words, with the answer on it)")
     if cap:
         lines = count_lines(prose)
         if lines > cap:
@@ -186,6 +193,33 @@ def word_scan(text, cap=CAP):
 def clean_dashes(text):
     cleaned = text.replace("—", ", ")
     return re.sub(r"(?<=\S) - (?=\S)", ", ", cleaned)
+
+def unwrap(text):
+    # RULE 2b (owner 08-07). An agent wrote its draft file hard wrapped at 78 characters,
+    # the writer passed it unchanged, and the owner's phone drew every wrapped line as its
+    # own block, so each sentence arrived in pieces. Nothing caught it because nothing said
+    # a line may not break mid sentence. Joined here, mechanically, before anything else
+    # reads the draft, so it can never reach him split again.
+    # A line is a WRAP when it does not end a sentence and the next line continues it in
+    # lower case. Blank lines, bullets, labels and code blocks are left exactly alone.
+    out, fences = [], False
+    for line in text.splitlines():
+        if line.lstrip().startswith("```"):
+            fences = not fences
+            out.append(line)
+            continue
+        prev = out[-1] if out else ""
+        joins = (not fences and prev.strip() and line.strip()
+                 and not re.search(r"[.!?:;)\"']\s*$", prev.rstrip())
+                 and not prev.rstrip().endswith("**")
+                 and not re.match(r"\s*([-*+]|\d+\.|#|>|\|)", line)
+                 and not re.match(r"\s*([-*+]|\d+\.|#|>|\|)", prev)
+                 and re.match(r"[a-z0-9(\"']", line.lstrip()))
+        if joins:
+            out[-1] = prev.rstrip() + " " + line.strip()
+        else:
+            out.append(line)
+    return "\n".join(out)
 
 STYLE = (
     "The owner runs the whole business from his phone. He reads like a smart friend "
@@ -203,7 +237,13 @@ STYLE = (
     "label alone on its own line with a plain paragraph under it, so he can scroll "
     "and find what he cares about. Never more than 3 bold bits, never a bold "
     "sentence, never headings, never divider lines, never bullets just to look "
-    "organized."
+    "organized. HIS QUESTIONS (rule 2, owner 08-07): count the separate questions "
+    "he asked. THREE OR MORE and each one gets its OWN BULLET, naming what he "
+    "asked in his words and then answering it, instead of all of them running "
+    "together in a paragraph. That bulleted block needs no bold labels on top. "
+    "Two questions read better as flowing paragraphs. NEVER break a line "
+    "in the middle of a sentence: his phone draws every line as its own block, so "
+    "a wrapped sentence reaches him in pieces. Let a sentence run to its own end."
 )
 
 def lexicon(root):
@@ -478,7 +518,7 @@ def latest_owner_msg(root):
 if "--check-file" in sys.argv:
     path = os.path.abspath(sys.argv[sys.argv.index("--check-file") + 1])
     root = DEF_ROOT
-    draft = open(path).read().strip()
+    draft = unwrap(open(path).read().strip())
     if not draft:
         print("empty draft"); sys.exit(2)
 
