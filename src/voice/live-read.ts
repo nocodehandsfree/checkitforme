@@ -71,7 +71,12 @@ async function runRead(room: string): Promise<void> {
       // THE SIGNOFF (owner 08-04): the moment a check has its answer, Charlie is told to thank them
       // and end. A definitive read is the moment; an unsure one is not an answer and nudges nothing.
       bridgeLog(`reader: read landed for ${room.slice(0, 8)}: ${v.inStock} (confidence ${v.confidence})`);
-      if (v.inStock === "yes" || v.inStock === "no") nudgeSignoff(room, v.inStock === "yes" ? "in stock" : "not in stock");
+      // …AND SURE OF ITSELF. The reader answers with how sure it is, and a zero means it had nothing
+      // to go on. On check 354 the one word "Pokemon?" came back "not in stock" at confidence zero,
+      // which told Charlie at 14 seconds that the answer was in hand and to wrap up while Staff had
+      // not even gone to look yet. A read the reader itself is not sure about is not an answer.
+      if ((v.inStock === "yes" || v.inStock === "no") && v.confidence > 0) nudgeSignoff(room, v.inStock === "yes" ? "in stock" : "not in stock");
+      else if (v.inStock === "yes" || v.inStock === "no") bridgeLog(`reader: ${v.inStock} at confidence zero is not an answer, Charlie is not told to wrap up`);
     } else if (cur && !v) {
       bridgeLog(`reader: no verdict for ${room.slice(0, 8)}${cur.retried ? " (second try spent)" : ", one second try in 4s"}`);
     }
