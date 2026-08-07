@@ -19,7 +19,13 @@ async function seedStatuses() {
     ["sold_out", "🕐", "Sold out", "out", "#EF4444", "{store} had it, it's gone. Sign up for restock alerts below."],
     ["does_not_sell", "🚫", "They don't carry it", "out", "#EF4444", "{store} doesn't stock {category} at all."],
     ["not_in_stock", "❌", "Not in stock", "out", "#EF4444", "{store} is out of {category}. Sign up for restock alerts below."],
+    // COULDN'T TELL IS THE WORST CASE BUCKET and the owner wants it used as rarely as possible: it
+    // is only for a check where we could not make out what the person was saying. A store that
+    // talked to us clearly and simply never answered gets its own word, the row below.
     ["no_clear_answer", "🤔", "Couldn't tell", "unk", "#FBBF24", "We couldn't get a clean yes or no. Read the convo and tell us."],
+    // THE OWNER'S NEW STATUS, 08-07, in his own words, and NOT a rename of Couldn't tell. We
+    // understood every word and they still never answered, so this says exactly that.
+    ["no_straight_answer", "🤷", "No clear answer", "unk", "#FBBF24", "We kept asking but the store never gave us a straight answer, so we had to let them go."],
     ["left_on_hold", "⏸️", "Left on hold", "unk", "#FBBF24", "They kept us on hold and the call dropped. Try checking later."],
     ["too_busy", "🕗", "Too busy to check", "unk", "#FBBF24", "{store} was too slammed to check. Try checking later."],
     ["language_barrier", "🗣️", "Couldn't understand each other", "unk", "#FBBF24", "We couldn't understand each other on the call. Try checking later."],
@@ -125,6 +131,9 @@ export async function bootstrap() {
   // Store-request reward loop: attribute the submitter + guard the one-time go-live free-check grant.
   await client.execute("ALTER TABLE store_requests ADD COLUMN user_id TEXT").catch(() => {});
   await client.execute("ALTER TABLE store_requests ADD COLUMN rewarded_at INTEGER").catch(() => {});
+  // One phone call, one check: every extra product-line row says whose check it belongs to, so
+  // nothing reading the newest row can ever hand back a half written copy (owner 08-07, check 238).
+  await client.execute("ALTER TABLE call_results ADD COLUMN part_of_check INTEGER").catch(() => {});
   await client.execute("ALTER TABLE call_results ADD COLUMN zone_run_id TEXT").catch(() => {});
   await client.execute("ALTER TABLE call_results ADD COLUMN shipment_time_heard TEXT").catch(() => {});
   await client.execute("ALTER TABLE chains ADD COLUMN dtmf_shortcut TEXT").catch(() => {});

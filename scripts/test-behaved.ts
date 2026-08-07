@@ -5,7 +5,7 @@
 // Every assertion here is one line of the contract in docs/tasks/admin-testing-new-engine.md. The
 // third state matters as much as the other two: a rule this check never put to the test must come
 // back null, because a red cross there reads as "the engine broke" and a tick reads as "we checked".
-import { behaved, agentLinesFrom, TEST_CARDS, type BehavedRow, type BehavedEvent } from "../src/calls/behaved";
+import { behaved, agentLinesFrom, cardVerdict, TEST_CARDS, ROW_RULES, type BehavedKey, type BehavedRow, type BehavedEvent } from "../src/calls/behaved";
 
 let pass = 0, fail = 0;
 const ok = (name: string, cond: boolean, saw?: unknown) => {
@@ -295,10 +295,22 @@ head("…and every way it can go wrong");
 }
 
 
-head("THE LOCKED TEST CARDS (owner 08-04, plus the exact product card he added 08-06) — word for word, so nothing drifts");
+head("THE LOCKED TEST CARDS (owner 08-04, the exact product card he added 08-06, and the two he added 08-07) — word for word, so nothing drifts");
 {
   const names = Object.values(TEST_CARDS).map((c) => c.name);
-  ok("all the locked cards exist", names.length === 18, String(names.length));
+  ok("all the locked cards exist", names.length === 20, String(names.length));
+  // The two he added 08-07. The wrap-up used to be filed under the 4 minute limit, which is our own
+  // safety net and a different test; Delta failing had never been tested on purpose at all.
+  ok("the wrap-up card is his own words", TEST_CARDS.wrapup_never_answered.name === "Wrapup: they never answered"
+    && TEST_CARDS.wrapup_never_answered.sub === "Staff rambled and would not give us an answer, so Charlie wrapped up and ended the check.");
+  ok("the Delta card is his own words", TEST_CARDS.delta_failed.name === "Delta: failed"
+    && TEST_CARDS.delta_failed.info === "This test proves Charlie will ask the store the first question if Delta fails.");
+  // EVERY CARD SAYS WHAT IT PROVES. Two shipped with an empty bubble, so a test could be looked at
+  // with nothing telling you what passing it means. Three older bubbles say it in the owner's own
+  // earlier phrasing rather than opening with "This test proves", which is his copy and is left alone.
+  ok("no bubble is empty", Object.values(TEST_CARDS).every((c) => c.info.trim().length > 20),
+    Object.entries(TEST_CARDS).filter(([, c]) => c.info.trim().length <= 20).map(([k]) => k).join(" | "));
+  ok("the 4 minute limit says the customer WAS charged", /the customer was charged/.test(TEST_CARDS.hungup_limit.info), TEST_CARDS.hungup_limit.info);
   ok("every headline is category, colon, what is tested", names.every((n) => /^[A-Za-z]+: .+/.test(n)), names.filter((n) => !/^[A-Za-z]+: .+/.test(n)).join(" | "));
   ok("no dash anywhere on a card (copy law)", Object.values(TEST_CARDS).every((c) => !/[\u2014\u2013]/.test(c.name + c.sub + c.info)));
   ok("clear no, word for word", TEST_CARDS.answer_clear_no.info === "This test proves that a clear no always ends with a Not in stock status, no matter how Staff choose to say the no.", TEST_CARDS.answer_clear_no.info);
@@ -313,6 +325,62 @@ head("THE LOCKED TEST CARDS (owner 08-04, plus the exact product card he added 0
     ["transfer_nobody", "Too busy to check"], ["voicemail_detected", "Got their voicemail"],
     ["exact_product", "In stock"],
   ].every(([k, label]) => (TEST_CARDS[k].sub + TEST_CARDS[k].info).includes(label)));
+}
+
+head("EVERY CARD NAMES WHAT MUST BE GREEN TO PASS (owner 08-07, item 9)");
+{
+  const KEYS = new Set<string>(Object.keys(ROW_RULES));
+  ok("every card names its list, even when the list is empty",
+    Object.values(TEST_CARDS).every((c) => Array.isArray(c.needs)),
+    Object.entries(TEST_CARDS).filter(([, c]) => !Array.isArray(c.needs)).map(([k]) => k).join(" | "));
+  ok("every row a card names is one of the eleven, never an invented one",
+    Object.values(TEST_CARDS).every((c) => c.needs.every((k) => KEYS.has(k))),
+    Object.entries(TEST_CARDS).flatMap(([k, c]) => c.needs.filter((n) => !KEYS.has(n)).map((n) => `${k}:${n}`)).join(" | "));
+
+  // HIS OWN EXAMPLE, WORD FOR WORD (08-07): "Answer: clear yes is Handed to Charlie, the question
+  // played as a recording, Charlie warmed up in time, Charlie wrapped up, Charlie ended the check,
+  // and the check comes back In stock."
+  ok("clear yes needs exactly the five rows he listed",
+    TEST_CARDS.answer_clear_yes.needs.join(",") === "handed_to_charlie,question_recorded,warmed_up_in_time,wrapped_up,charlie_ended_the_check",
+    TEST_CARDS.answer_clear_yes.needs.join(","));
+  ok("…and the check comes back In stock", TEST_CARDS.answer_clear_yes.status === "in_stock", String(TEST_CARDS.answer_clear_yes.status));
+
+  // DELTA: FAILED EXISTS TO MAKE THE RECORDING FAIL, so requiring the recording to have played would
+  // make the one test that proves the fallback unpassable by design.
+  ok("Delta: failed does NOT require the recording to have played",
+    !TEST_CARDS.delta_failed.needs.includes("question_recorded"));
+  // The switch test names no status, in his own words on the card.
+  ok("the switch test names no status", TEST_CARDS.transfer_switch_off.status === null);
+  ok("the wrap-up card names the new status", TEST_CARDS.wrapup_never_answered.status === "no_straight_answer");
+
+  // NOTHING ABOUT MONEY IN ANY ROW (owner 08-07, item 10): "Charlie speaking 23 seconds or less is a
+  // margin goal, never a test." A price or a talk-time budget in a pass or fail row would turn a
+  // margin miss into a red cross on the engine, which is a different thing entirely.
+  const MONEY = /\bcent|\bcost|\bprice|\bcheap|\bbudget|\bmargin|\bprofit|\bbill(ed|ing)?\b|\b23 seconds\b|¢|\$/i;
+  const rowWords = (Object.keys(ROW_RULES) as BehavedKey[]).map((k) => `${k} ${ROW_RULES[k]}`);
+  ok("no behavior row's rule talks about money or the 23 second goal",
+    rowWords.every((w) => !MONEY.test(w)), rowWords.filter((w) => MONEY.test(w)).join(" | "));
+
+  // AND THE GRADING ITSELF.
+  const rows = (over: Partial<Record<BehavedKey, boolean | null>>): BehavedRow[] =>
+    (Object.keys(ROW_RULES) as BehavedKey[]).map((key) => ({ key, label: key, tip: "", why: "", pass: over[key] ?? null }));
+  const green = { handed_to_charlie: true, question_recorded: true, warmed_up_in_time: true, wrapped_up: true, charlie_ended_the_check: true } as const;
+  ok("a clear yes with all five rows green and In stock PASSES",
+    cardVerdict(TEST_CARDS.answer_clear_yes, rows(green), "in_stock")?.pass === true);
+  ok("…and FAILS on the right status with the wrong answer on the screen",
+    cardVerdict(TEST_CARDS.answer_clear_yes, rows(green), "not_in_stock")?.pass === false);
+  {
+    const v = cardVerdict(TEST_CARDS.answer_clear_yes, rows({ ...green, wrapped_up: false }), "in_stock");
+    ok("a named row going red fails the card and is named", v?.pass === false && v.missing.join() === "wrapped_up", JSON.stringify(v?.missing));
+  }
+  {
+    // A ROW THE CARD NAMED AND THE CHECK NEVER EXERCISED IS A FAIL, not a pass by omission. It is
+    // hidden from the screen, so silently letting it slide is how a green test hides a broken engine.
+    const v = cardVerdict(TEST_CARDS.answer_clear_yes, rows({ ...green, warmed_up_in_time: null }), "in_stock");
+    ok("a named row the check never tested fails the card, by name", v?.pass === false && v.missing.join() === "warmed_up_in_time", JSON.stringify(v?.missing));
+  }
+  ok("a card that names no status is never marked down for one",
+    cardVerdict(TEST_CARDS.transfer_switch_off, rows({ handed_to_charlie: true, question_recorded: true, wrapped_up: true, charlie_ended_the_check: true }), "anything_at_all")?.pass === true);
 }
 
 console.log(`\n${fail ? "FAIL" : "PASS"}  ${pass} passed, ${fail} failed`);

@@ -508,6 +508,11 @@ async function callWithHold(f: Fake, room: string, holdStrategy: "gate" | "reope
   openReceipt(room, { lane: "direct" });
   setBridgeContext(room, {
     agentId: "agent_normal", dynamicVars: {}, connectOnHuman: true, holdMaxSeconds, holdStrategy,
+    // THESE SCENES TEST THE WAIT, NOT THE FLOOR. Charlie is never dropped inside the first few
+    // seconds of his session on a real check (`charlieMinOnLineMs`, added 08-07 off check 357), but
+    // the rig drives a whole call in milliseconds of real time, so every session here is newborn.
+    // The scene at the bottom of this file is the one that proves the floor, at its real value.
+    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0 },
   });
   const tw = new FakeTwilio();
   handleTwilioBridge(tw as never, room, () => { /* none */ });
@@ -1803,7 +1808,10 @@ console.log("\n▶ Staff put the phone down on the counter: Charlie is dropped, 
   const f = await fakeProvider();
   const restore = stubSignedUrl(f);
   openReceipt("room-counter", { lane: "direct" });
-  setBridgeContext("room-counter", { agentId: "agent_normal", dynamicVars: {}, connectOnHuman: true, holdStrategy: "reopen" });
+  // The floor that keeps a newborn session on the line is proved on its own at the bottom of this
+  // file; this scene is about the room being a wait, so it drops him the moment the wait starts.
+  setBridgeContext("room-counter", { agentId: "agent_normal", dynamicVars: {}, connectOnHuman: true, holdStrategy: "reopen",
+    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0 } });
   const tw = new FakeTwilio();
   handleTwilioBridge(tw as never, "room-counter", () => { /* none */ });
   tw.say({ event: "start", start: { streamSid: "MZ_c", customParameters: { room: "room-counter" } } });
@@ -2051,6 +2059,91 @@ console.log("\n▶ ECHO HAS THE WORDS: Charlie still hears the store, and his mo
   await sleep(30);
   ok(transcriptOf(getReceipt(room)!).includes("Yeah, we got some in."), "Echo's copy IS, through the same door as always");
   echoListening(room, false);
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ THE GOODBYE LANDS AFTER THE QUIET HAS ALREADY STARTED: we still put the phone down");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-late-goodbye";
+  const { tw } = await callToHello(f, 400, room);
+  await sleep(400);
+  theyGreetAndAnswer(f);                              // their hello, then their answer
+  await sleep(120);
+  nudgeSignoff(room, "not in stock");                 // the reader has it: thank them and end
+  await sleep(120);
+  // They stop talking. The wait opens BEFORE he has said his goodbye, which is the shape that used
+  // to leave the line open until the store hung up (check 356: goodbye at 59s, hung up at 145s).
+  for (let i = 0; i < 400; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(200);
+  ok(tw.readyState === 1, "the line is still up while nobody has said goodbye");
+  const ws = f.sockets[f.sockets.length - 1];
+  ws.send(JSON.stringify({ type: "agent_response", agent_response_event: { agent_response: "Perfect, thanks so much, have a good one!" } }));
+  await sleep(250);
+  ok(weEndedCheck(room) === "signed_off", "the goodbye lands late and WE end the check, not the store");
+  const ev = (getReceipt(room)?.events || []).find((e) => e.detail?.reason === "signed_off");
+  ok(!!ev && String(ev.note || "").includes("said goodbye"), `and the timeline says so in plain words: "${ev?.note}"`);
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ HE IS NEVER DROPPED BEFORE HE HAS HAD A CHANCE TO SPEAK (check 357)");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-min-on-line";
+  const { tw } = await callToHello(f, 400, room);
+  await sleep(400);                                   // his session is seconds old
+  const opened = (getReceipt(room)?.events || []).filter((e) => e.kind === "charlie_join").length;
+  ok(opened === 1, "his session is up");
+  // The line goes quiet immediately, which at 3 seconds used to close him before he could answer.
+  for (let i = 0; i < 400; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(500);
+  const left = () => (getReceipt(room)?.events || []).some((e) => e.kind === "charlie_leave");
+  ok(!left(), "the wait has started but he is still on the line, with time to answer");
+  const started = (getReceipt(room)?.events || []).some((e) => e.kind === "hold_start");
+  ok(started, "…and the wait is on the record at the second they really went quiet");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ …AND A CLOCK COULD NEVER HAVE FIXED IT (check 358: his session ran SEVEN seconds and he still said nothing)");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-owed-a-word";
+  // The floor is set to nothing on purpose. On 358 his session was already OLDER than the floor, so
+  // the floor could not save him: Staff answered at the end of that stretch and the robot went quiet
+  // the moment it finished its line, which is what every robot scene does. Only the FACT that he was
+  // handed an answer and had not opened his mouth can hold the line here.
+  const audio = Buffer.alloc(400 * 8, 0x20);
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, {
+    agentId: "agent_normal", midCallAgentId: "agent_joining",
+    dynamicVars: { opening_line: "do you have any Pokemon cards in stock?" },
+    connectOnHuman: true, holdMaxSeconds: 999,
+    openingClip: { audio, ms: 400, text: "do you have any Pokemon cards in stock?" },
+    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0 },
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, room, () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_owed", customParameters: { room } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
+  await sleep(400);
+  ok((getReceipt(room)?.events || []).some((e) => e.kind === "charlie_join"), "his session is up");
+  // THEIR ANSWER. This is what opens his mouth, and from here the quiet belongs to him.
+  speak(tw, 150);
+  await sleep(60);
+  // …and then the robot goes quiet waiting for him, exactly as every robot scene does.
+  for (let i = 0; i < 400; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(500);
+  const evs = () => getReceipt(room)?.events || [];
+  ok(!evs().some((e) => e.kind === "charlie_leave"), "he has their answer and has not spoken, so he is NOT dropped");
+  ok(evs().some((e) => e.kind === "hold_start"), "the wait still starts on the record at the second they went quiet");
   restore(); tw.close(); f.close();
 }
 

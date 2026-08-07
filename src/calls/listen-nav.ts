@@ -511,7 +511,7 @@ function carriesAPersonsWords(line: string, ctx: { knownMenuLines?: string[]; pr
 
 /** Fallbacks ONLY — the live values arrive from the `call_tuning` setting via the constructor.
  *  Every one of these has to be tuned against real calls, so none of them may need a release. */
-const HOLD_QUIET_MS = 6000;
+const HOLD_QUIET_MS = 3000;   // cut from 6 on 08-07, see the note beside it in tuning.ts
 const HOLD_MUSIC_MS = 6000;
 const VOICED_WINDOW_MS = 3000;
 const MUSIC_VOICED_FRACTION = 0.96;

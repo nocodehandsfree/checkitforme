@@ -48,6 +48,8 @@ run "unit: behaved (the test cards + Charlie's rows)" "$ENV $TSX scripts/test-be
 run "unit: call-events (the cost buckets sum)" "$ENV $TSX scripts/test-call-events.ts"
 run "unit: listen-nav (the ear)" "$ENV $TSX scripts/test-listen-nav.ts"
 run "unit: robot store words" "$ENV $TSX scripts/test-robot-store.ts"
+run "unit: No clear answer, the new status" "$ENV $TSX scripts/test-no-straight-answer.ts"
+run "unit: the Spanish greeting + the vague yes" "$ENV $TSX scripts/test-staff-language.ts"
 run "db: check-life (the gatekeeper)" "env DATABASE_URL=file:./.t-cl.db $ENV $TSX scripts/test-check-life.ts; rm -f .t-cl.db"
 run "db: healing (mute + re-map)" "env DATABASE_URL=file:./.t-hl.db $ENV $TSX scripts/test-healing.ts; rm -f .t-hl.db"
 run "db: practice checks (mapping)" "env DATABASE_URL=file:./.t-pc.db $ENV $TSX scripts/test-practice-checks.ts; rm -f .t-pc.db"

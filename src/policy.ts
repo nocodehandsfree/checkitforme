@@ -64,6 +64,13 @@ export interface Policy {
     // A switch and not a hardwire on purpose: the owner may later limit it to the paid plans, and that
     // must be a config change rather than a rebuild. Default ON.
     askForTransfer: boolean;         // calls: if we reach the wrong department, ask Staff to put us through instead of giving up
+    // DELTA SWITCHED OFF, FOR ONE CHECK AT A TIME (owner 08-07, the Delta: failed card). Delta is
+    // the recording that carries our question; when it never plays, Charlie asks it himself, which
+    // is the DESIGNED fallback and costs a few cents more. That fallback was proven by accident on
+    // 08-06 and had never been tested on purpose, because nothing could make the recording fail.
+    // OFF always, and the harness turns it on for that one check and puts it back straight after,
+    // the same way it handles askForTransfer for the transfer switch test.
+    deltaOff: boolean;               // calls: do not record the opening question, so Charlie has to ask it himself. TESTING ONLY
     ourBrain: boolean;               // calls: the agent's THINKING runs on our own account instead of the voice provider's hosted model. The brain is 400 of the 723 credits a minute we burn. OFF = exactly today's behaviour, which always works. A real switch, in Admin under Calls, App
   };
   // Bail library: proactive call-cutoff rules (cost control). `enabled` is the master switch —
@@ -126,6 +133,7 @@ export const DEFAULT_POLICY: Policy = {
     productPokemon: true, productOnePiece: true, productTopps: true, productNeedoh: true,
     stopKeysOnHuman: true, closeAgentOnHold: true, // baked in, forced true in getPolicy()
     askForTransfer: true,
+    deltaOff: false,
     ourBrain: false,
   },
   bail: {

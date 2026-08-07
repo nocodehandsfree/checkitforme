@@ -598,7 +598,10 @@ async function main() {
     // THE SCREEN USES ONLY WORDS THE STATUSES SCREEN OWNS (owner, 07-30). It said "nobody picked up"
     // on a check we ended ourselves while the desk was ringing, which is two untruths in one line.
     const page = readFileSync("public/app.html", "utf8");
-    ok(!/nobody picked up/i.test(page), "no check is ever described as one nobody picked up");
+    // The words the SCREEN says, not the comments explaining a bug we already killed: another system
+    // added a comment naming that old wrong line, and a comment is not something he can read on Admin.
+    const screenWords = page.split("\n").filter((l) => !l.trim().startsWith("//")).join("\n");
+    ok(!/nobody picked up/i.test(screenWords), "no check is ever described as one nobody picked up");
     // THE PILL CARRIES THE STAGE NOW (owner, 08-03), not the outcome. "Admin hung up" stays as the
     // last rung of the transcript, which is where he reads what happened to a check.
     ok(/text:'Admin hung up'/.test(page), "a check WE ended still reads 'Admin hung up' on its last rung");
@@ -617,8 +620,12 @@ async function main() {
     // OWNER UPDATE 5 REPLACED THE COMP HERE: no check says "Recipe winner". The winner lives in the
     // recipe box and in Menu, so the page never carries two claims about which route is live.
     ok(!/Recipe winner/.test(page), "no check says Recipe winner — the recipe box and Menu own that");
-    ok(/const pill=stagePill\(c\);/.test(page),
+    ok(/const pill=stagePill\(c,provedAt\);/.test(page),
       "the pill on a check carries its STAGE, and the stage decides the colour");
+    // 08-07: the stage is read off HOW FAR THE RUN HAS GOT, so a run can never read as going
+    // backwards (he saw Department proved, then Proving department under it).
+    ok(/const departmentProvedAt=calls=>\{/.test(page) && /if\(c\.stage==='speed'\|\|\(provedAt&&mine>provedAt\)\)/.test(page),
+      "once the department is proved, no later check goes back to proving it");
     ok(/if\(c\.grade==='fail'\)\{/.test(page) && /mapCheckOpen\('\$\{bid\}'\)/.test(page),
       "a failed check collapses to one row that opens on tap");
     ok(/if\(x\.c\.grade==='fail'\) continue;/.test(page), "and it never takes part in the faster-or-slower chain");
@@ -1255,8 +1262,12 @@ async function main() {
     ok(!/const pencil=/.test(page) && /border:1px dashed/.test(page),
       "Menu words are dashed editable boxes with no pencil (R5)");
     ok(/Save this wording\?/.test(page), "and a correction is confirmed before it saves");
-    ok((page.match(/made up, no check happened/g) || []).length >= 2,
-      "a check that did not happen says so on the screen, on the timeline and on its card");
+    ok((page.match(/made up/g) || []).length >= 2,
+      "a check that did not happen says made up, on the timeline and on its card (his words, 08-03)");
+    ok(!/no check happened/.test(page), "and nothing else, because the rest of that wording was mine");
+    // THE LINE MEETS THE NEXT DOT (owner 08-07: the timeline still has broken lines between the dots).
+    ok(/background:rgba\(255,255,255,\.10\);margin:0 0 -5px/.test(page),
+      "the timeline's line runs into the next dot with no break");
     ok(/\?c\.transferAtSec:null;/.test(page),
       "and the number beside a pill is nav time only, never the whole call with Staff inside it");
 

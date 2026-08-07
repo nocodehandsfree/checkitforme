@@ -277,12 +277,23 @@ console.log("▶ the buckets, his names, and they SUM TO THE TOTAL exactly (owne
 {
   // A 62 second check: 14s of menu, 18s of Charlie, the second read ran.
   const cost = costCall({ callSecs: 62, charlieSecs: 18, avoidableSecs: 0, forkSecs: [62, 48] });
-  const b = costBuckets(cost, { callSecs: 62, navSecs: 14, streams: 2 }, MEASURED_RATES, STATUS_READ_USD);
-  ok(b.map((x) => x.label).join(" · ") === "Bravo (Menu Nav) · Foxtrot (Phone Line) · Echo (Listening) · Echo (Words) · Charlie (Talking) · Status (Verification)",
-    `his names, his order, with Echo's words beside Echo's listening (${b.map((x) => x.label).join(" · ")})`);
-  const wordsLine = b.find((x) => x.key === "echo_words")!;
-  ok(wordsLine.detail.some(([l, v]) => l === "Line time" && v === "1:02"), "Echo's words are priced on the whole call, not on Charlie's minutes");
-  ok(wordsLine.detail.some(([l, v]) => l === "Rate (per minute)" && v === "0.5¢"), "…at the rate in force, never typed into the page");
+  const b = costBuckets(cost, { callSecs: 62, navSecs: 14, streams: 2, speakingSecs: 7, listeningSecs: 2 }, MEASURED_RATES, STATUS_READ_USD);
+  // ONE LINE PER NAME (owner 08-07). Echo's words shipped as a second Echo line and he sent it back:
+  // everything Echo does rolls up under Echo, and the line opens to show the pieces.
+  ok(b.map((x) => x.label).join(" · ") === "Bravo (Menu Nav) · Foxtrot (Phone Line) · Echo (Ears) · Charlie (Voice) · Status (Verification)",
+    `his names, his order, one line each (${b.map((x) => x.label).join(" · ")})`);
+  const ears = b.find((x) => x.key === "echo")!;
+  ok(ears.detail.some(([l]) => l === "Hearing the line") && ears.detail.some(([l]) => l === "Writing down the words"),
+    "Echo's line opens to both the things Echo does");
+  ok(ears.detail.some(([, v]) => v.startsWith("0.5¢ · ")), "…the words at the rate in force, never typed into the page");
+  // WHERE CHARLIE'S METER WENT. 18 seconds open, 7 speaking, 2 listening, so 9 of them waiting.
+  const voice = b.find((x) => x.key === "charlie")!;
+  ok(voice.detail.some(([l, v]) => l === "Speaking" && v.startsWith("7s · ")), "his line opens to the seconds he spoke");
+  ok(voice.detail.some(([l, v]) => l === "Listening" && v.startsWith("2s · ")), "…the seconds somebody spoke to him");
+  ok(voice.detail.some(([l, v]) => l === "Waiting" && v.startsWith("9s · ")), "…and the seconds nobody said anything, which is the waste");
+  ok(costBuckets(cost, { callSecs: 62, navSecs: 14, streams: 2 }, MEASURED_RATES, STATUS_READ_USD)
+    .find((x) => x.key === "charlie")!.detail.every(([l]) => l !== "Speaking"),
+    "a check recorded before we measured them shows no split rather than an invented one");
   const sum = b.reduce((n, x) => n + x.usd, 0);
   ok(sum === cost.totalUsd + STATUS_READ_USD, `nothing counted twice, nothing dropped: ${sum} = ${cost.totalUsd} + ${STATUS_READ_USD}`);
   const bravo = b.find((x) => x.key === "bravo")!;
@@ -290,7 +301,7 @@ console.log("▶ the buckets, his names, and they SUM TO THE TOTAL exactly (owne
   ok(bravo.detail.some(([l]) => l === "Rate (per minute)"), "…and its rate comes from the rates in force, never typed in");
   const fox = b.find((x) => x.key === "foxtrot")!;
   ok(fox.detail.some(([l, v]) => l === "Billed (minutes)" && v === "2:00"), "the whole minute rounding cliff stays on the phone line where the carrier puts it");
-  ok(b.find((x) => x.key === "charlie")!.detail.some(([l, v]) => l === "Covers" && v === "voice and thinking together"), "Charlie's line covers voice and thinking together (his ruling)");
+  ok(voice.detail.some(([l, v]) => l === "Covers" && v === "voice and thinking together"), "Charlie's line covers voice and thinking together (his ruling)");
 
   // No free items listed (his ruling): a check with no menu and no read shows no Bravo and no Status.
   const cost2 = costCall({ callSecs: 30, charlieSecs: 10, avoidableSecs: 0, forkSecs: [30] });

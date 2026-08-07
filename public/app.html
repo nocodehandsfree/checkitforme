@@ -1872,7 +1872,7 @@ async function vtApi(p,opts={}){ return envApi(p,opts); }
 // The call-lane flags. The ONLY policy flags an environment may hold its own value for. Keep this
 // list byte-identical to KEEP_LOCAL_FLAGS in src/settings-sync.ts: a flag steered here but missing
 // there gets stomped back by the prod mirror within a minute, silently, mid test.
-const ENV_FLAGS=['cheapBridgeAll','connectOnHuman','ourBrain','askForTransfer'];
+const ENV_FLAGS=['cheapBridgeAll','connectOnHuman','ourBrain','askForTransfer','deltaOff'];
 const isEnvFlag=k=>ENV_FLAGS.indexOf(k)>=0;
 // The word for the environment the voice pages are editing right now, for toasts and headings.
 const vtEnvName=()=>CALL_SRC==='staging'?'Staging':'Live';
@@ -2417,15 +2417,19 @@ async function openReceiptInto(url,o){
 // this same receipt (src/calls/behaved.ts). A GRAY DASH is the third answer and it is deliberate: it
 // means this check never put that rule to the test, and a cross there would read as a broken engine.
 // Every row carries the owner's tooltip; the gray line under it is what the record actually showed.
-function behavedCard(rows){
-  if(!Array.isArray(rows)||!rows.length) return '';
-  // THREE STATES, NEVER TWO (owner): Used · Unused · Broken. Unused is a CLEAN result, not a failure,
-  // and a plain check is mostly Unused. The word is printed beside the mark because a gray dash on
-  // its own has been read as "something went wrong" more than once.
+function behavedCard(all){
+  if(!Array.isArray(all)||!all.length) return '';
+  // A ROW THIS CHECK NEVER PUT TO THE TEST IS NOT ON THE CARD AT ALL (owner 08-07). It used to print
+  // as a gray "Unused" dash, which meant most of a plain check was gray rows saying nothing, and the
+  // owner had to work out for himself which reds were real. Every row he can see now is one this
+  // test really exercised, so a red is ALWAYS a real failure and there is nothing to read past.
+  // The three states still live in the engine (behaved.ts rule 3) and null is still a clean result.
+  // This is only what the screen shows him.
+  const rows=all.filter(r=>r.pass===true||r.pass===false);
+  if(!rows.length) return '';
   const mark=p=>{
     const m=p===true?['#4ADE80','<path d="M5 12l5 5 9-10"/>','Used']
-      :p===false?['#EF4444','<path d="M6 6l12 12M18 6L6 18"/>','Broken']
-      :['#9CA3AF','<path d="M6 12h12"/>','Unused'];
+      :['#EF4444','<path d="M6 6l12 12M18 6L6 18"/>','Broken'];
     return `<span style="display:flex;align-items:center;gap:6px;flex:0 0 auto">`
       +`<span style="font-size:10.5px;font-weight:800;letter-spacing:.4px;color:${m[0]}">${m[2]}</span>`
       +`<span style="width:26px;height:26px;border-radius:50%;background:${m[0]}26;display:grid;place-items:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${m[0]}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${m[1]}</svg></span></span>`;
@@ -2433,7 +2437,7 @@ function behavedCard(rows){
   const used=rows.filter(r=>r.pass===true).length, broke=rows.filter(r=>r.pass===false).length;
   return `<div class="card" style="margin-bottom:14px;padding:16px 18px">
     <div class="k-eyebrow" style="margin:0 0 4px">Charlie behavior</div>
-    <div class="meta" style="margin:0 0 6px">${used} used · ${rows.length-used-broke} unused · ${broke} broken</div>
+    <div class="meta" style="margin:0 0 6px">${used} used · ${broke} broken</div>
     ${rows.map(r=>`<div class="row" style="align-items:flex-start;padding:8px 0">
       <span class="grow">
         <span style="display:block;font-size:13.5px;font-weight:700;color:var(--text-strong)" data-tip="${esch(r.tip||'')}">${esch(r.label||'')}</span>
@@ -2482,7 +2486,24 @@ function checkV2From(d,o){
   // Gross profit against the 67 percent floor. Red is reserved for a bad final status (color law),
   // so under the floor reads yellow, never red.
   const profitC=v2.profitPct==null?'var(--muted)':v2.profitPct>=67?'var(--green)':'var(--yellow)';
-  const behavior=(d.behaved||[]).filter(r=>r.pass===true||r.pass===false).map(r=>({l:r.label,pass:r.pass===true}));
+  // A ROW THIS CHECK NEVER PUT TO THE TEST IS NOT ON THE CARD AT ALL (owner 08-07). Every row he can
+  // see is one the test really exercised, so a red here is always a real failure.
+  const need=new Set((v2.test&&v2.test.needs)||[]);
+  const behavior=(d.behaved||[]).filter(r=>r.pass===true||r.pass===false).map(r=>({l:r.label,pass:r.pass===true,need:need.has(r.key)}));
+  // WHAT THIS CARD HAS TO SEE TO PASS (owner 08-07). The card names the rows that must be green and
+  // the status the check has to come back with, and the server grades the check against exactly
+  // those. Printed as his own row wording, so the line reads the same as the rows under it.
+  const labelOf=k=>((d.behaved||[]).find(r=>r.key===k)||{}).label||k;
+  const wordFor=k=>{const s=k?statusFor(k):null;return (s&&s.label)||(k?String(k).replace(/_/g,' '):'');};
+  const gr=(v2.test&&v2.test.verdict)||null;
+  const verdict=gr?{
+    pass:!!gr.pass, missing:gr.missing||[],
+    // A card that names no status of its own (the switch test) is never marked down for one.
+    statusLine:gr.wantStatus?(gr.statusOk?('The check came back '+wordFor(gr.wantStatus)+'.')
+      :('The check should come back '+wordFor(gr.wantStatus)+' and came back '+(gr.gotStatus?wordFor(gr.gotStatus):'nothing')+'.')):'',
+    statusOk:gr.statusOk,
+  }:null;
+  const needList=[...need].map(labelOf).concat(gr&&gr.wantStatus?['the check comes back '+wordFor(gr.wantStatus)]:[]);
 
   // ---- the log: every step end to end, menu steps grouped, spoken lines under their step ----
   // ONE LIST ON ONE CLOCK (owner 08-06). The steps and the spoken lines are stamped on the SAME call
@@ -2597,7 +2618,13 @@ function checkV2From(d,o){
     info:(v2.test&&v2.test.info)||'',
     passed:behavior.filter(r=>r.pass).length,
     failed:behavior.filter(r=>!r.pass).length,
-    stats:{cost:v2.readable||((d.cost&&d.cost.readable&&d.cost.readable.total)||'—'),time:secs.callSecs!=null?mmss(secs.callSecs):'—',talked:talk!=null?talk+'s':'—',profit:v2.profitPct!=null?v2.profitPct+'%':'—',talkedC,profitC},
+    verdict, needList,
+    // WHERE HIS METER WENT, under his number (owner 08-07). The four tiles stay four and stay the
+    // roll up; the three pieces read as small words under Charlie's seconds, so nothing has to be
+    // opened to see that a check billed 33 seconds of him with no words said. A check recorded
+    // before we measured them shows the seconds alone, exactly as it always did.
+    stats:{cost:v2.readable||((d.cost&&d.cost.readable&&d.cost.readable.total)||'—'),time:secs.callSecs!=null?mmss(secs.callSecs):'—',talked:talk!=null?talk+'s':'—',profit:v2.profitPct!=null?v2.profitPct+'%':'—',talkedC,profitC,
+      talkSplit:v2.talkSplit?v2.talkSplit.speaking+'s speaking · '+v2.talkSplit.listening+'s listening · '+v2.talkSplit.waiting+'s waiting':''},
     cost:(v2.buckets||[]).map(b=>({l:b.label,v:money2(b.usd),d:b.detail})),
     behavior,
     workflow:v2.workflow||null,
@@ -2610,14 +2637,16 @@ function checkV2Html(d){
   const head=`<div style="display:inline-block;max-width:100%">
       <div><span data-tip="${esch(d.info)}" style="font-size:20px;font-weight:800;letter-spacing:-.4px;color:#fff;white-space:nowrap">${esch(d.name)}</span></div>
       <div class="meta" style="margin:5px 0 0;font-size:13px;max-width:0;min-width:100%">${esch(d.sub)}</div></div>
-    <div style="display:flex;gap:7px;margin:12px 0 16px">
+    <div style="display:flex;gap:7px;margin:12px 0 16px;flex-wrap:wrap">
+      ${d.verdict?`<span style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:5px 12px;${d.verdict.pass?'color:var(--green);background:rgba(74,222,128,.13)':'color:var(--red);background:rgba(239,68,68,.13)'}">${d.verdict.pass?'Test passed':'Test failed'}</span>`:''}
       ${pill(d.passed,'passed','color:var(--green);background:rgba(74,222,128,.13)')}
       ${pill(d.failed,'failed','color:var(--red);background:rgba(239,68,68,.13)')}
-    </div>`;
+    </div>
+    ${d.verdict&&!d.verdict.pass?`<div class="meta" style="margin:-6px 0 14px;color:var(--red);font-size:12.5px;line-height:1.5">${esch([d.verdict.missing.length?('Still to hold: '+d.verdict.missing.join(', ')+'.'):'',d.verdict.statusOk===false?d.verdict.statusLine:''].filter(Boolean).join(' '))}</div>`:''}`;
   const stats=`<div class="stats" style="grid-template-columns:1fr 1fr;margin-bottom:14px">
       <div class="stat"><div class="n" style="color:#fff">${d.stats.cost}</div><div class="l">Total cost</div></div>
       <div class="stat"><div class="n" style="color:#fff">${d.stats.time}</div><div class="l">Total time</div></div>
-      <div class="stat"><div class="n" style="color:${d.stats.talkedC||'var(--green)'}">${d.stats.talked}</div><div class="l">Charlie talked</div></div><!-- owner rule: green at 23s or under, yellow 24 to 30, red 31 and up -->
+      <div class="stat"><div class="n" style="color:${d.stats.talkedC||'var(--green)'}">${d.stats.talked}</div><div class="l">Charlie on the meter${d.stats.talkSplit?`<div style="margin-top:3px;font-size:10px;line-height:1.35;color:#8A8A96">${esch(d.stats.talkSplit)}</div>`:''}</div></div><!-- owner rule: green at 23s or under, yellow 24 to 30, red 31 and up -->
       <div class="stat"><div class="n" style="color:${d.stats.profitC||'var(--green)'}">${d.stats.profit}</div><div class="l">Gross profit</div></div>
     </div>`;
   const mini=rows=>`<div style="padding:2px 0 8px">${rows.map(r=>`<div style="display:flex;align-items:baseline;gap:6px;padding:3px 0 3px 12px"><span style="flex:0 0 auto;font-size:12px;font-weight:600;color:#8A8A96">${esch(r[0])}</span><span style="flex:1;border-bottom:1px dotted rgba(255,255,255,.16);transform:translateY(-3px)"></span><span style="flex:0 0 auto;font-size:12px;font-weight:700;color:var(--text-strong);font-variant-numeric:tabular-nums">${esch(r[1])}</span></div>`).join('')}</div>`;
@@ -2628,8 +2657,12 @@ function checkV2Html(d){
       <div class="row" style="padding:9px 0 0;margin-top:6px;border-top:1px solid rgba(255,255,255,.08)"><span class="grow" style="font-size:14px;font-weight:800;color:#fff">Total</span><span style="font-size:15px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums">${d.stats.cost}</span></div>
     </div>`;
   const bmark=p=>`<span style="width:26px;height:26px;border-radius:50%;background:${p?'rgba(74,222,128,.15)':'rgba(239,68,68,.15)'};display:grid;place-items:center;flex:0 0 auto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${p?'#4ADE80':'#EF4444'}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${p?'<path d="M5 12l5 5 9-10"/>':'<path d="M6 6l12 12M18 6L6 18"/>'}</svg></span>`;
+  // WHAT THIS CARD HAS TO SEE TO PASS, said before the rows rather than left for him to work out
+  // (owner 08-07). Everything else on the card is worth reading and none of it decides the test.
+  const needed=(d.needList||[]).length?`<div class="meta" style="margin:0 0 10px;font-size:12px;line-height:1.5">To pass: ${esch((d.needList||[]).join(', '))}.</div>`:'';
   const behavior=`<details open class="card" style="margin-bottom:14px;padding:16px 18px"><summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;margin-bottom:8px"><span class="k-eyebrow" style="margin:0;flex:1">Charlie behavior</span>${chev}</summary>
-      ${d.behavior.map(r=>`<div class="row" style="align-items:center;padding:8px 0"><span class="grow" style="font-size:13.5px;font-weight:700;color:var(--text-strong)">${esch(r.l)}</span>${bmark(r.pass)}</div>`).join('')}
+      ${needed}
+      ${d.behavior.map(r=>`<div class="row" style="align-items:center;padding:8px 0"><span class="grow" style="font-size:13.5px;font-weight:${r.need?'800':'700'};color:var(--text-strong)">${esch(r.l)}${r.need?'<span style="margin-left:6px;font-size:10px;font-weight:800;letter-spacing:.4px;color:#8A8A96">NEEDED</span>':''}</span>${bmark(r.pass)}</div>`).join('')}
     </details>`;
   const say=(w,tx)=>{const ai=w==='Agent';return `<div class="convo-thread" style="margin:6px 0 2px"><div class="ctlv2-bub${ai?' ai':''}"><div class="who">${ai?'CHECK AI':'STAFF'}</div><div class="tx">${esch(tx)}</div></div></div>`;};
   const menuIco='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>';
@@ -5399,6 +5432,7 @@ function dateOf(at){ return at?new Date(Number(at)*1000).toLocaleDateString([],{
 function runTimelineHtml(calls,gains){
   const list=(calls||[]).slice().sort((a,b)=>(Number(b.at)||0)-(Number(a.at)||0));
   if(!list.length) return '';
+  const provedAt=departmentProvedAt(calls);
   const runDate=dateOf(list[0].at);
   const rows=list.map((c,i)=>{
     const last=i===list.length-1;
@@ -5407,7 +5441,7 @@ function runTimelineHtml(calls,gains){
     // EVERY DOT THE SAME SIZE, and the line meets the dot with no gap (owner, 08-03).
     const spine=(dotColor)=>`<div style="display:flex;flex-direction:column;align-items:center;flex:0 0 auto;padding-top:5px">`
       +`<span style="width:8px;height:8px;border-radius:50%;background:${dotColor}"></span>`
-      +(last?'':`<span style="width:2px;flex:1;background:rgba(255,255,255,.10);margin:0"></span>`)+`</div>`;
+      +(last?'':`<span style="width:2px;flex:1;background:rgba(255,255,255,.10);margin:0 0 -5px"></span>`)+`</div>`;
     if(c.grade==='fail'){
       const bid='rt_'+(c.navId||Math.abs(Number(c.at)||0));
       return `<div style="display:flex;gap:12px;cursor:pointer" onclick="mapCheckOpen('${bid}')">`
@@ -5421,7 +5455,7 @@ function runTimelineHtml(calls,gains){
         +`<div id="${bid}" style="display:none"><div class="mladder" style="margin-top:10px">${callRungs(c).map((r,j,a)=>callRung(r,j===a.length-1)).join('')}</div></div>`
         +`</div></div>`;
     }
-    const pill=stagePill(c);
+    const pill=stagePill(c,provedAt);
     const bid='rt_'+(c.navId||Math.abs(Number(c.at)||0));
     return `<div style="display:flex;gap:12px;cursor:pointer" onclick="mapCheckOpen('${bid}')">`
       +spine(pill[1])
@@ -5432,7 +5466,7 @@ function runTimelineHtml(calls,gains){
       +`<div style="display:flex;align-items:center;gap:8px;margin-top:4px">`
       +`<span style="font-size:11.5px;font-weight:700;color:var(--text-tertiary)">${clockOf(c.at)}</span>`
       +(navS!=null?`<span style="font-size:11.5px;font-weight:700;color:var(--muted)">${navS}s</span>`:'')
-      +(c.madeUp?`<span style="font-size:10.5px;font-weight:800;color:#F59E0B">made up, no check happened</span>`:'')+`</div>`
+      +(c.madeUp?`<span style="font-size:10.5px;font-weight:800;color:#F59E0B">made up</span>`:'')+`</div>`
       +`<div id="${bid}" style="display:none"><div class="mladder" style="margin-top:10px">${callRungs(c).map((r,j,a)=>callRung(r,j===a.length-1)).join('')}</div></div>`
       +`</div></div>`;
   }).join('');
@@ -5448,7 +5482,8 @@ function mappingCallsHtml(calls,versions){
   // what we run now. A check says what the check did, and nothing more, so the page never carries
   // two different claims about which route is live.
   void versions;
-  const card=c=>mappingCallCard(c,gains.get(c));
+  const provedAt=departmentProvedAt(calls);
+  const card=c=>mappingCallCard(c,gains.get(c),provedAt);
   // ONE TIMELINE for the run, then the checks themselves underneath for reading one top to bottom.
   const rest=calls.slice(2);
   return runTimelineHtml(calls,gains)
@@ -5499,25 +5534,42 @@ function mapCheckOpen(id){ const el=document.getElementById(id); if(el) el.style
 // work, so every check reads Proving department over and over until it is actually proved. Nothing
 // is green until it IS proved — that check reads Department proved. Speed tries stay yellow until
 // one lands, and that one reads Speed optimized. Both new words are in the Statuses list.
-const stagePill=c=>{
+// THE HEADING BELONGS TO THE RUN, NOT TO ONE CHECK (owner 08-07: "the very first step, department
+// proved, but then the next one is proving department, this is backwards"). It used to be worked out
+// from a single check's own facts, so a later check that never got to ask Staff read Proving
+// department again even though an earlier check had already proved it, and the run read as if it had
+// gone backwards. A run only ever moves forwards: every check reads Proving department until one
+// actually proves it, that check reads Department proved, and from there every check is a speed try.
+// `provedAt` is when the department was proved on this run, or 0 if it has not been yet.
+const departmentProvedAt=calls=>{
+  let at=0;
+  (calls||[]).forEach(c=>{ if(c&&c.askedStaff&&c.grade!=='fail'&&c.reachedHuman){ const t=Number(c.at)||0; if(!at||t<at) at=t; } });
+  return at;
+};
+const stagePill=(c,provedAt)=>{
   if(!c) return ['Proving department','#FFCB05','rgba(255,203,5,.13)'];
-  if(c.stage==='speed') return c.grade!=='fail'&&c.gainedSpeed
+  const mine=Number(c.at)||0;
+  const proved=c.askedStaff&&c.grade!=='fail'&&c.reachedHuman;
+  // The check that did the proving is the green one, whatever stage it carries.
+  if(proved&&provedAt&&mine===provedAt) return ['Department proved','var(--green)','rgba(74,222,128,.13)'];
+  // Everything after that moment is speed, so the run never reads as going back a step.
+  if(c.stage==='speed'||(provedAt&&mine>provedAt)) return c.grade!=='fail'&&c.gainedSpeed
     ? ['Speed optimized','var(--green)','rgba(74,222,128,.13)']
     : ['Optimizing speed','#FFCB05','rgba(255,203,5,.13)'];
-  return (c.askedStaff&&c.grade!=='fail'&&c.reachedHuman)
+  return proved
     ? ['Department proved','var(--green)','rgba(74,222,128,.13)']
     : ['Proving department','#FFCB05','rgba(255,203,5,.13)'];
 };
-const stageWord=c=>stagePill(c)[0];
+const stageWord=(c,provedAt)=>stagePill(c,provedAt)[0];
 // One check: who we rang and when, its stage, how it ended, the conversation (comp 3a). A failed
 // check collapses to one row carrying its reason — tap to open. No PRODUCED line: the top passing
 // check IS the winner and its pill says so.
-function mappingCallCard(c,gain){
+function mappingCallCard(c,gain,provedAt){
   const rungs=callRungs(c);
   // NAV TIME ONLY (owner, 07-31): the number beside the pill is when the menu finished with us, never
   // the whole call with Staff's pickup time inside it. A check that never measured it shows nothing.
   const navS=(typeof c.transferAtSec==='number'&&c.transferAtSec>0)?c.transferAtSec:null;
-  const stage=stageWord(c);
+  const stage=stageWord(c,provedAt);
   // THE DATE AND TIME SIT IMMEDIATELY ABOVE THE TRANSCRIPT, not on the row (owner, 08-03) — the row
   // carries the stage and the gain, and nothing else competes with them.
   const ladder=`<div style="margin-top:13px;font-size:11px;font-weight:700;color:var(--text-tertiary)">${callWhen(c.at)}</div>`
@@ -5535,7 +5587,7 @@ function mappingCallCard(c,gain){
       +`<div id="${bid}" style="display:none">${stage?`<div style="font-size:11px;font-weight:700;color:#8A8A96;margin-top:10px">${stage}</div>`:''}${ladder}</div></div>`;
   }
   // GREEN ONLY FOR A CONFIRMED RIGHT DEPARTMENT (Update 16). Yellow is neutral, red is bad.
-  const pill=stagePill(c);
+  const pill=stagePill(c,provedAt);
   return `<div class="card" style="margin:0 0 10px">`
     // THE STORE'S FULL NAME, wrapping if it needs to. Cutting it off buried which store a check was.
     +`<div style="display:flex;align-items:flex-start;gap:8px">`
@@ -5546,7 +5598,7 @@ function mappingCallCard(c,gain){
     +`<span class="pill" style="gap:6px;background:${pill[2]}">${ssDot(pill[1])}<span style="color:${pill[1]}">${pill[0]}</span></span>`
     +(navS!=null?`<span style="font-size:11.5px;font-weight:700;color:var(--muted)">${navS}s</span>`:'')
     // A CHECK THAT DID NOT HAPPEN SAYS SO. Nothing on this page may look like a real check unless it was.
-    +(c.madeUp?`<span style="font-size:10.5px;font-weight:800;color:#F59E0B">made up, no check happened</span>`:'')+`</div>`
+    +(c.madeUp?`<span style="font-size:10.5px;font-weight:800;color:#F59E0B">made up</span>`:'')+`</div>`
     +ladder+`</div>`;
 }
 // The conversation as rows. The store's own lines stay as they were spoken; ours are read off the
@@ -6243,7 +6295,7 @@ function customerVerdict(o){
   // A KEY NOBODY HAS WORDS FOR READS AS ITSELF, never as another status. Falling back to "Nobody
   // answered" is how a check filed staff_hung_up came out on the screen as a check nobody picked up.
   const plain=String(key||'').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase())||'Unclear';
-  const F=({in_stock:['in_stock','In stock','#4ADE80','in'],sold_out:['clock','Sold out','#EF4444','out'],does_not_sell:['ban',"They don't carry it",'#EF4444','out'],not_in_stock:['circle-x','Not in stock','#EF4444','out'],no_clear_answer:['circle-help','Got a “maybe”','#FBBF24','unk'],nobody_answered:['phone-off','Nobody answered','#9CA3AF','unk'],closed:['lock','Store closed','#9CA3AF','unk'],failed:['octagon-alert','Call failed','#FBBF24','unk'],admin_hangup:['minus','Admin canceled','#9CA3AF','unk']})[key]||['circle-help',plain,'#9CA3AF','unk'];
+  const F=({in_stock:['in_stock','In stock','#4ADE80','in'],sold_out:['clock','Sold out','#EF4444','out'],does_not_sell:['ban',"They don't carry it",'#EF4444','out'],not_in_stock:['circle-x','Not in stock','#EF4444','out'],no_clear_answer:['circle-help','Got a “maybe”','#FBBF24','unk'],no_straight_answer:['circle-help','No clear answer','#FBBF24','unk'],nobody_answered:['phone-off','Nobody answered','#9CA3AF','unk'],closed:['lock','Store closed','#9CA3AF','unk'],failed:['octagon-alert','Call failed','#FBBF24','unk'],admin_hangup:['minus','Admin canceled','#9CA3AF','unk']})[key]||['circle-help',plain,'#9CA3AF','unk'];
   return {e:F[0],t:F[1],c:F[2],n:(key==='failed'&&o.failureReason)?o.failureReason:'',key,tone:F[3]};
 }
 function pollTranscript(cid, pre){
@@ -7045,7 +7097,7 @@ function tcIcon(key){
     q:'<path d="M9.2 9a3 3 0 0 1 5.8 1c0 2-2.6 2.3-2.6 4"/><path d="M12 17.5h.01"/>',
     phone:'<path d="M5 4.5h3.4l1.4 4-2.1 1.5a12 12 0 0 0 5.8 5.8l1.5-2.1 4 1.4V18a2 2 0 0 1-2.2 2A15.5 15.5 0 0 1 3 6.7 2 2 0 0 1 5 4.5z"/><path d="M4 20L20 4"/>' };
   const M={in_stock:['check','#4ADE80','In stock'],not_in_stock:['x','#EF4444','Not in'],sold_out:['x','#EF4444','Sold out'],does_not_sell:['x','#EF4444',"Doesn't carry"],
-    no_clear_answer:['q','#FBBF24','Unclear'],too_busy:['q','#FBBF24','Too busy'],left_on_hold:['q','#FBBF24','On hold'],failed:['q','#FBBF24','Failed'],
+    no_clear_answer:['q','#FBBF24','Unclear'],no_straight_answer:['q','#FBBF24','No clear answer'],too_busy:['q','#FBBF24','Too busy'],left_on_hold:['q','#FBBF24','On hold'],failed:['q','#FBBF24','Failed'],
     nobody_answered:['phone','#9CA3AF','No answer'],closed:['phone','#9CA3AF','Closed'],completed:['check','#9CA3AF','Done'],admin_hangup:['phone','#9CA3AF','Admin hung up']};
   const [ic,c,label]=M[key]||['q','#9CA3AF',key||'—'];
   return `<span title="${esch(label)}" style="width:26px;height:26px;border-radius:50%;background:${c}26;display:grid;place-items:center;flex:0 0 auto"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${I[ic]}</svg></span>`;

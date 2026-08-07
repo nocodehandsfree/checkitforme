@@ -21,6 +21,10 @@ import { toMediaFrames } from "../calls/clip-cache";
 // provable without a phone call.
 import { heardWrongDepartment, askedToBePutThrough, saysNobodyToTransfer, looksLikeAMenu, staffName, wrappedUp, usedTheirName } from "./prompts";
 import { guessLanguage } from "../calls/mapgraph";
+// WHAT LANGUAGE THE PERSON WHO PICKED UP IS SPEAKING, off the words of their first line. A separate
+// judge from `guessLanguage` on purpose: that one reads a MENU and its markers are menu words, so it
+// answers "unknown" on a human greeting, which is the one line this decision hangs on.
+import { staffSpokeSpanish } from "../calls/staff-language";
 // Echo's words: the store's own voice turned into sentences, whether Charlie is on the line or not.
 // Echo's words arrive from the PICKUP FORK (server.ts, /twilio-media), which starts the moment the
 // store answers and carries the whole call. This file never opens a transcriber of its own: two
@@ -101,6 +105,10 @@ export interface BridgeContext {
   // decides a call is finished. It exists so the clerk hears the question the instant they say
   // hello, while the expensive agent is still connecting behind it.
   openingClip?: { audio: Buffer; ms: number; text: string };
+  /** THE SAME QUESTION IN SPANISH, recorded before the dial beside the English one (owner 08-07).
+   *  Which of the two actually plays is decided at the moment we ask, off the WORDS of the store's
+   *  own first line. Absent on a check that could not record one, and then the English one asks. */
+  openingClipEs?: { audio: Buffer; ms: number; text: string };
   // The agent that joins a conversation ALREADY IN PROGRESS: configured once, empty greeting,
   // standing instruction to wait silently for the answer. A DEDICATED AGENT, deliberately, because
   // overriding the prompt or the first message per call once hung calls up — the whole design would
@@ -617,6 +625,33 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  from Admin. Never a count of rings (his ruling 08-03). */
   const RING_WAIT_MS = Math.max(1, tune.ringWaitSeconds) * 1000;
   // ---- hold and transfer ----
+  /** When THIS session came up. A session closed seconds after it opened never got a word in, and
+   *  the seconds it did burn bought nothing (owner, check 357). */
+  let charlieOpenedAtMs = 0;
+  /** HE IS NEVER DROPPED BEFORE HE HAS HAD A CHANCE TO SPEAK (owner 08-07, off check 357). Cutting
+   *  the quiet to 3 seconds made a session open at 16 seconds and close at 18, and Charlie said
+   *  nothing on that whole check: reopening takes about a second and answering takes a beat more,
+   *  so the window was gone before he could use it. The wait still STARTS on the record at the
+   *  second they really went quiet; only the closing of his session waits out the remainder, so the
+   *  saving on a real walk away is untouched and a pause mid conversation no longer gags him. */
+  const MIN_ON_LINE_MS = Math.max(0, tune.charlieMinOnLineMs);
+  let closeWhenReady: NodeJS.Timeout | null = null;
+  /**
+   * A CLOCK COULD NEVER FIX THIS, AND CHECK 358 IS THE PROOF (owner 08-07). The minimum above is
+   * five seconds and his session on 358 ran SEVEN, and he still said nothing: Staff answered at the
+   * end of that stretch, the robot went quiet the moment it finished its line the way it always
+   * does, three seconds of quiet read as Staff walking away, and he was dropped one second later,
+   * mid thought. Same test, same words, and 355 and 356 passed only because he happened to start
+   * talking inside those three seconds. A race is not a rule.
+   *
+   * So the close waits on a FACT instead: he has been handed their answer and has not yet opened
+   * his mouth in THIS session, so the quiet is HIM, not them. `answeredAtMs` is the moment the gate
+   * opened; `spokeThisSession` is the moment it stopped mattering. Capped, because a model that
+   * never answers must not hold a line open for free.
+   */
+  const HIS_FIRST_WORD_MS = 6000;
+  let answeredAtMs = 0;
+  let spokeThisSession = false;
   let onHold = false;             // the person is away; the agent must not be fed or heard
   /** Somebody has already stepped away and come back on this call — from here it is a live store
    *  beyond doubt, and no machine-phrase mishearing may hang it up (family 1). */
@@ -640,6 +675,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   // is what the card reads.
   /** The name Staff gave us, if they gave one. */
   let theirName: string | null = null;
+  /** The FIRST thing the store said. The one line that can say what language they are speaking, and
+   *  what the recorded question is chosen off (owner 08-07). Never overwritten. */
+  let theirFirstLine: string | null = null;
   /** He asked to be put through, so from here Staff's answer to that ask is worth reading. */
   let weAskedToBePutThrough = false;
   /** Recorded once: Staff said there is nobody to put us through to. */
@@ -769,6 +807,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   function letHimAnswer(via: string) {
     if (charlieMaySpeak) return;
     charlieMaySpeak = true;
+    // The moment his conversation became his. Everything that waits on his FIRST word measures from
+    // here, never from when his session opened: opening is ours, answering is theirs.
+    answeredAtMs = Date.now();
     if (answerWaitTimer) { clearTimeout(answerWaitTimer); answerWaitTimer = null; }
     log(`delta: ${via} -> Charlie may speak`);
   }
@@ -922,6 +963,19 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   const earMoment = (heardAtMs: number): number | undefined =>
     convEar ? Date.now() - Math.max(0, convEar.heardMs - heardAtMs) : undefined;
 
+  /** HE HAS SAID GOODBYE AND NOBODY IS TALKING, so WE put the phone down (owner 08-04, check 282;
+   *  second door added 08-07, check 356). The ear only counts quiet once our own audio has finished
+   *  playing, so his goodbye is always fully out before this can run. */
+  function hangUpAfterGoodbye(atMs: number) {
+    if (ended) return;
+    noteWeEnded(room, "signed_off");
+    emit(room, "hangup", "Charlie said goodbye and the line went quiet, so we hung up", { reason: "signed_off", atMs });
+    log("signoff: goodbye said and the line went quiet — the check is over, hanging up");
+    try { eleven?.close(); } catch { /* torn down */ }
+    signalEnd();
+    try { twilio.close(); } catch { /* best effort */ }
+  }
+
   function beginHold(reason: HoldReason, atMs: number) {
     if (onHold) return;
     // THE QUIET AFTER THE GOODBYE IS THE CHECK ENDING, NOT STAFF STEPPING AWAY (owner 08-04,
@@ -933,15 +987,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // counts quiet after our audio has finished playing, so his goodbye is always fully out
     // before this fires. Music or a transfer starting after a goodbye is somebody acting, and
     // the usual wait rules keep owning those.
-    if (signoffNudged && wrapRecorded && (reason === "quiet" || reason === "room")) {
-      noteWeEnded(room, "signed_off");
-      emit(room, "hangup", "Charlie said goodbye and the line went quiet, so we hung up", { reason: "signed_off", atMs });
-      log("signoff: goodbye said and the line went quiet — the check is over, hanging up");
-      try { eleven?.close(); } catch { /* torn down */ }
-      signalEnd();
-      try { twilio.close(); } catch { /* best effort */ }
-      return;
-    }
+    if (signoffNudged && wrapRecorded && (reason === "quiet" || reason === "room")) { hangUpAfterGoodbye(atMs); return; }
     onHold = true; holdReason = reason; heldWords = [];
     // EVERY WAIT THAT ENDS HAS TO HAVE STARTED. A transfer used to write ONLY its own line, and then
     // the wait it caused ended with a "back off hold" that had no "put on hold" anywhere above it —
@@ -979,12 +1025,29 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // Close him. This is the only thing that actually stops the meter — muting saves nothing.
       // The call, the room and the receipt all continue; when somebody comes back he opens again as
       // the next numbered segment of this same call.
-      log(`hold (${reason}): closing the agent — the meter stops until somebody comes back`);
-      closeSegment(room);
-      markNow(room, "charlieCloseMs");
-      emit(room, "charlie_leave", "Charlie dropped", { reason, strategy: "reopen" });
-      try { eleven?.close(); } catch { /* torn down */ }
-      eleven = null; ready = false; connecting = false;
+      const onLineFor = charlieOpenedAtMs ? Date.now() - charlieOpenedAtMs : MIN_ON_LINE_MS;
+      const dropHim = () => {
+        closeWhenReady = null;
+        if (ended || !onHold || !eleven) return;   // they came back, or the check is over
+        log(`hold (${reason}): closing the agent — the meter stops until somebody comes back`);
+        closeSegment(room);
+        markNow(room, "charlieCloseMs");
+        emit(room, "charlie_leave", "Charlie dropped", { reason, strategy: "reopen" });
+        try { eleven?.close(); } catch { /* torn down */ }
+        eleven = null; ready = false; connecting = false;
+      };
+      // HE WAS HANDED THEIR ANSWER AND HAS NOT SPOKEN YET, so this quiet is him thinking. Wait for
+      // his first word, capped. Music and a transfer never come through here on this path anyway:
+      // both are somebody DOING something, and neither is Charlie holding his tongue.
+      const owedHimAWord = charlieMaySpeak && !spokeThisSession && answeredAtMs > 0
+        ? Math.max(0, answeredAtMs + HIS_FIRST_WORD_MS - Date.now()) : 0;
+      const wait = Math.max(MIN_ON_LINE_MS - onLineFor, owedHimAWord);
+      if (wait <= 0) dropHim();
+      else {
+        log(`hold (${reason}): ${owedHimAWord > 0 ? "he has their answer and has not spoken yet" : `his session is only ${Math.round(onLineFor / 1000)}s old`}, giving him ${Math.round(wait / 1000)}s before closing him`);
+        if (closeWhenReady) clearTimeout(closeWhenReady);
+        closeWhenReady = setTimeout(dropHim, wait);
+      }
     } else {
       log(`hold (${reason}): the agent stays open but is fed nothing and cannot be heard`);
     }
@@ -995,6 +1058,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (!onHold) return;
     const was = holdReason;
     onHold = false; holdReason = null; everCameBack = true;
+    // He was about to be closed and does not need to be: they are back and he is still on the line.
+    if (closeWhenReady) { clearTimeout(closeWhenReady); closeWhenReady = null; }
     // Somebody came back, so the wait had an ending of its own and the cap has nothing to end.
     if (holdCapTimer) { clearTimeout(holdCapTimer); holdCapTimer = null; }
     const secs = Math.round(gapMs / 1000);
@@ -1123,7 +1188,16 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // (owner 08-05). He is told to finish once he has what the check needs, and that is what it says.
     // "the STOCK answer", because this note lands after the yes and BEFORE the product answer, and
     // naming just "the answer" read as Charlie understanding an answer nobody had given (owner 08-06).
-    emit(room, "unknown", "Charlie understood the stock answer and was told to say goodbye when done", { step: "signoff", answer });
+    // WHAT HE UNDERSTOOD AND WHAT HE WAS TOLD TO ASK (owner 08-07). One fixed sentence used to stand
+    // in for both, so a row that read "the stock answer" told nobody which answer, and nothing on the
+    // sheet said which follow-up he owed. The two halves are section 56 and section 58 of his own
+    // instructions, and they are the only two follow-ups there are, so the row names the one he was
+    // sent to get.
+    const followUp = answer === "in stock"
+      ? "was told to ask for the set name and whether it is packs, a box or a tin"
+      : "was told to ask what day and time more are coming";
+    emit(room, "unknown", `Charlie understood the product was ${answer} and ${followUp}`,
+      { step: "signoff", answer, followUp });
     log(`signoff: the answer is in hand (${answer}) — telling him to thank them and end`);
     try {
       eleven.send(JSON.stringify({ type: "contextual_update", text:
@@ -1208,6 +1282,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    */
   function staffSaid(txt: string, spokenAtEpochMs?: number, fromEcho?: boolean): boolean {
     const fresh = recordLine(room, "Clerk", txt, spokenAtEpochMs);
+    // THE STORE'S FIRST LINE, KEPT (owner 08-07). It is the one thing that can say what language the
+    // person who picked up is speaking, and the recorded question is chosen off it a moment later.
+    // First only: everything after it is an answer to us, and a store that greets us in Spanish and
+    // then says one English word has still answered the phone in Spanish.
+    if (fresh && theirFirstLine == null) theirFirstLine = txt;
     // WHAT HE COULD NOT HEAR, KEPT AS WORDS. Only Echo's copy counts: a line the agent's own session
     // delivered is one he already heard.
     if (fromEcho && fresh && (!eleven || onHold)) missedWhileClosed.push(txt);
@@ -1297,9 +1376,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // Each session gets its own one-shot echo allowance: a reopened session is handed the recorded
       // question as context again and reports it as its own line again (open fault 4).
       clipEchoDropped = false;
+      // …and a fresh session has not opened its mouth yet, so the wait rules owe it a first word.
+      spokeThisSession = false;
       // THE BILLED SECOND ZERO. The provider meters from session open, so this is where the money
       // clock starts — not at first word. Everything after this is seconds we are paying for.
       markNow(room, "charlieOpenMs");
+      charlieOpenedAtMs = Date.now();
       // A NUMBERED STRETCH of this one call, never a separate call (hard rule 1). Ordinary calls
       // have exactly one; a call where he was closed for a wait has two or more.
       const n = openSegment(room, segmentBrain, segmentWhy);
@@ -1415,6 +1497,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + ms;
           addMs(room, "speakingMs", ms); // SPEAKING = audio that really played out, not a guess
           charlieSpoke = true;           // from here there is no live model swap, whatever fails
+          spokeThisSession = true;       // …and the quiet after this is theirs again, not his
           // …and the same milliseconds are what the wrap-up limit counts: audio that really reached
           // Staff's ear, never a stopwatch on the whole check (round 1, item 1.5).
           charlieSpokenMs += ms;
@@ -1593,6 +1676,13 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           const byName = usedTheirName(String(txt), theirName);
           emit(room, "unknown", byName ? "Charlie wrapped up and thanked them by name" : "Charlie wrapped up and thanked them",
             { step: "wrap_up", usedName: byName, name: byName ? theirName : null });
+          // THE GOODBYE CAN LAND AFTER THE QUIET HAS ALREADY STARTED (owner 08-07, off check 356).
+          // The rule that ends a signed-off check lived only at the START of a wait, so a goodbye
+          // said as the line was already going quiet found the wait open and nothing looked again:
+          // he thanked them at 59 seconds and we sat on the line until the STORE hung up at 145,
+          // which billed a third whole minute and put that check's margin at 51 percent. Same
+          // ruling, second door.
+          if (signoffNudged && onHold && (holdReason === "quiet" || holdReason === "room")) hangUpAfterGoodbye(Date.now());
         }
         // WHICH LANGUAGE HE SPOKE, counted line by line off the same judge the map uses — never a
         // second opinion about what language a sentence is in.
@@ -2094,7 +2184,19 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         waitTotalMs += 20;
         waitQuietMs = frameEnergy(b64) > VOICE_THRESH ? 0 : waitQuietMs + 20;
         if (waitQuietMs >= GREETING_END_MS || waitTotalMs >= GREETING_MAX_WAIT_MS) {
-          const c = pendingClip; pendingClip = null;
+          // THE SPANISH DELTA, DECIDED HERE (owner 08-07). Both recordings were made before the
+          // dial; which one plays is decided at this instant, off the WORDS of the store's own first
+          // line, because this is the first moment we have heard them at all. Never off the sound:
+          // what language somebody is speaking is meaning, and the ear cannot judge meaning, which
+          // is the same law the wrong-department save runs on.
+          //
+          // Only ever the store's FIRST line, and only when we have one. Echo writes lines from the
+          // moment of pickup and their greeting ended a moment ago, so it is normally here; if it is
+          // not, the English question asks, which is exactly today's behaviour.
+          const inSpanish = !!ctx?.openingClipEs && staffSpokeSpanish(theirFirstLine);
+          const c = inSpanish ? ctx!.openingClipEs! : pendingClip;
+          pendingClip = null;
+          if (inSpanish) { log(`delta: they answered in Spanish, asking in Spanish`); emit(room, "unknown", "Staff answered in Spanish, so the question played in Spanish", { step: "delta_language", language: "es", heard: String(theirFirstLine || "").slice(0, 120) }); }
           log(`delta: they finished after ${waitTotalMs}ms, asking now`);
           if (startOpeningClip(c)) {
             const lead = Math.max(0, c.ms - PREWARM_LEAD_MS);
@@ -2210,5 +2312,6 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       emit(room, "unknown", note, { step: "language", spanishLines: spokeEs, englishLines: spokeEn });
     }
     signoffDoors.delete(room); staffDoors.delete(room);
+    if (closeWhenReady) { clearTimeout(closeWhenReady); closeWhenReady = null; }
     if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; } if (heldQuestion) { try { relayLine?.(room, "Agent", heldQuestion); } catch { /* best effort */ } heldQuestion = null; } try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; missedWhileClosed = []; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (holdCapTimer) { clearTimeout(holdCapTimer); holdCapTimer = null; } if (ringWaitTimer) { clearTimeout(ringWaitTimer); ringWaitTimer = null; } if (handoverTimer) { clearTimeout(handoverTimer); handoverTimer = null; } if (answerWaitTimer) { clearTimeout(answerWaitTimer); answerWaitTimer = null; } if (eleven) eleven.close(); /* the context is NOT deleted here: Twilio can reconnect a blipped stream mid-call, and the fresh socket must still find it. The 30-minute leak guard owns cleanup. */ });
 }

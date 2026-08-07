@@ -160,13 +160,15 @@ console.log("▶ the clerk puts the phone down and walks off");
 {
   const { e, said } = ear();
   talk(e, 3000);
-  silence(e, 3000);
-  ok(said.length === 0, "three seconds of thinking is not a hold");
-  silence(e, 3500);
-  ok(said[0] === "away:quiet", "six seconds of nothing and they have gone");
+  // The wait is 3 seconds since 08-07, cut from 6: Charlie bills 0.18¢ a second and his meter ran
+  // the whole 6 past their last word every time they stepped away.
+  silence(e, 2000);
+  ok(said.length === 0, "two seconds of thinking is not a hold");
+  silence(e, 2000);
+  ok(said[0] === "away:quiet", "four seconds of nothing and they have gone");
   talk(e, 1000);
-  ok(said[1] === "back:7s", "they come back and we know how long they were away");
-  ok(e.holdMs >= 6000 && e.holdMs <= 8000, `and the seconds are counted (${e.holdMs}ms) — holdSeconds has been null since the receipt shipped`);
+  ok(said[1] === "back:4s", "they come back and we know how long they were away");
+  ok(e.holdMs >= 3000 && e.holdMs <= 6000, `and the seconds are counted (${e.holdMs}ms) — holdSeconds has been null since the receipt shipped`);
 }
 
 console.log("▶ THE OWNER'S CHECK 298: 'hello? are you there?' brings Charlie back");

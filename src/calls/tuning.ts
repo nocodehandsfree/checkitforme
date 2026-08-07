@@ -36,6 +36,8 @@ export interface CallTuning {
   // ---- THE OWNER'S OWN NUMBERS, tuned from Admin against real checks ----
   charlieWrapUpSeconds: number;
   holdCapSeconds: number;
+  /** The least time Charlie stays on the line after his session opens, before a quiet may close it. */
+  charlieMinOnLineMs: number;
   ringWaitSeconds: number;
   maxCheckSeconds: number;
 }
@@ -48,7 +50,7 @@ export const TUNING_DEFAULTS: CallTuning = {
   greetingEndMs: 600,
   greetingMaxWaitMs: 4000,
   greetingKeepMs: 10000,
-  holdQuietMs: 6000,
+  holdQuietMs: 3000,
   holdMusicMs: 6000,
   musicWindowMs: 3000,
   musicVoicedFraction: 0.96,
@@ -62,6 +64,7 @@ export const TUNING_DEFAULTS: CallTuning = {
   reconnectWindowMin: 2,
   charlieWrapUpSeconds: 45,
   holdCapSeconds: 120,
+  charlieMinOnLineMs: 5000,
   ringWaitSeconds: 90,
   maxCheckSeconds: 240,
 };
@@ -73,7 +76,7 @@ export const TUNING_WHY: Record<keyof CallTuning, string> = {
   greetingEndMs: "A pause this long right after they pick up means they have finished saying hello and are waiting for us. Too short and our question talks over the end of their own sentence.",
   greetingMaxWaitMs: "…and if they simply never stop talking, ask anyway rather than listen forever.",
   greetingKeepMs: "How much of what Staff said BEFORE we were sure a person was there we keep and hand on, so their first words are never lost. It has to cover a whole greeting AND the pause we wait through before we are sure of them: cut it short and the beginning is missing.",
-  holdQuietMs: "Silence this long, mid conversation, and they have put the phone down and walked off.",
+  holdQuietMs: "Silence this long, mid conversation, and they have put the phone down and walked off. Cut from 6 seconds to 3 on 08-07: Charlie bills 0.18¢ a second and his meter ran the whole 6 past their last word every time they stepped away, which was 3.3¢ of check 354. It is safe to cut now that Echo writes down everything said while he is off, and a false drop never replays the recording, because only a real hand-over to another desk does that. 2 seconds is the floor: below that we would drop him inside an ordinary pause.",
   holdMusicMs: "Unbroken sound this long is hold music. Real speech always has gaps in it.",
   musicWindowMs: "How much recent audio we look at to decide speech versus continuous sound.",
   musicVoicedFraction: "How solidly filled that window has to be before we call it music. Speech never fills it.",
@@ -86,6 +89,7 @@ export const TUNING_WHY: Record<keyof CallTuning, string> = {
   clipBackstopMs: "If nothing confirms the question finished, hand over anyway this long after it should have. A clerk talking to silence is the worse failure.",
   reconnectWindowMin: "How long \"I just got disconnected\" still sounds true. Past this it is likely a different employee and a stranger saying it is worse than a normal greeting.",
   charlieWrapUpSeconds: "How long Charlie may actually be TALKING before he starts wrapping up. It never hangs the check up: cutting Staff off mid help kills a check the customer already paid for. He costs 11 cents a minute, so this is the one number that decides whether a check makes money.",
+  charlieMinOnLineMs: "The least time Charlie stays on the line after his session opens. Reopening him takes about a second and answering takes a beat more, so a quiet that closes him sooner than this gags him: on check 357 a session opened at 16 seconds and closed at 18, and he said nothing on that whole check. The wait still starts on the record at the second they went quiet; only the closing of his session waits this out.",
   holdCapSeconds: "How long a hold may run before we hang up. Waiting is nearly free because Charlie is dropped, and a second check costs more than waiting, so be generous.",
   ringWaitSeconds: "How long the phone may ring while we wait for a human. We never hang up on a count of rings (owner 08-03): a store that lets it ring twenty times may still pick up, and the only thing worth measuring is how long we have been waiting. Charlie is off the whole time, so this is the phone line only.",
   maxCheckSeconds: "How long a whole check may run before the phone company ends it for us. A backstop, not the everyday rule: what a check costs is decided by how long Charlie talks, and he costs 60 times what the line does.",
@@ -102,7 +106,7 @@ const LIMITS: Record<keyof CallTuning, [number, number]> = {
   prewarmLeadMs: [0, 10000], clipSettleMs: [0, 3000], clipBackstopMs: [500, 20000],
   reconnectWindowMin: [1, 120],
   charlieWrapUpSeconds: [5, 600],
-  holdCapSeconds: [10, 900],
+  holdCapSeconds: [10, 900], charlieMinOnLineMs: [0, 30000],
   ringWaitSeconds: [10, 600],
   maxCheckSeconds: [30, 900],
 };

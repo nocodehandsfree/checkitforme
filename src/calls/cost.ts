@@ -119,19 +119,46 @@ export function costCall(inp: CostInput, rates: Rates = MEASURED_RATES): CallCos
 // tokens; a read is about 900 tokens of prompt and transcript in, 120 out).
 export const STATUS_READ_USD = Math.round(0.000055 * USD);
 
-/** ONE COST, FIVE BUCKETS, HIS NAMES (owner ruling 08-04): Bravo (Menu Nav) · Foxtrot (Phone Line)
- *  · Echo (Listening) · Charlie (Talking) · Status (Verification). His law is that every cost rolls
- *  into nav time and talk time, so Bravo is the nav phase's slice of the line and the listening,
- *  and Foxtrot and Echo carry the rest — the buckets SUM TO THE TOTAL exactly, nothing is counted
- *  twice, and the whole-minute rounding cliff stays on the phone line where the carrier puts it.
- *  Delta is free per check (the recording is cached), so there is no Delta line. Every rate in the
- *  detail rows comes from the rates in force, never typed anywhere else. */
+/** ONE COST, FIVE BUCKETS, HIS NAMES (owner ruling 08-04, renamed 08-07): Bravo (Menu Nav) ·
+ *  Foxtrot (Phone Line) · Echo (Ears) · Charlie (Voice) · Status (Verification). His law is that
+ *  every cost rolls into nav time and talk time, so Bravo is the nav phase's slice of the line and
+ *  the listening, and Foxtrot and Echo carry the rest — the buckets SUM TO THE TOTAL exactly,
+ *  nothing is counted twice, and the whole-minute rounding cliff stays on the phone line where the
+ *  carrier puts it. Delta is free per check (the recording is cached), so there is no Delta line.
+ *  Every rate in the detail rows comes from the rates in force, never typed anywhere else.
+ *
+ *  ONE LINE PER NAME, AND IT OPENS (owner 08-07). Echo's words shipped as a SECOND Echo line and he
+ *  sent it back: "everything should roll up underneath Echo". So Echo (Ears) is one line carrying
+ *  the listening AND the words, and Charlie (Voice) is one line carrying the seconds he spoke, the
+ *  seconds he listened and the seconds he waited. Opening either shows those pieces with their own
+ *  seconds and their own cost, which is where the waste is visible. */
 export interface CostBucket { key: string; label: string; usd: number; detail: Array<[string, string]> }
 const mmss = (secs: number) => `${Math.floor(Math.max(0, secs) / 60)}:${String(Math.max(0, Math.round(secs)) % 60).padStart(2, "0")}`;
 const perMin = (usd: number) => `${(usd * 100).toFixed(1)}¢`;
+
+/** Charlie's seconds, split the way he spends them, each with what it cost. Speaking and listening
+ *  are measured off the same frames the ear uses; waiting is whatever is left of his open seconds,
+ *  and it is the only one of the three we are trying to delete. */
+function charliePieces(
+  cost: CallCost,
+  t: { speakingSecs?: number | null; listeningSecs?: number | null },
+  rates: Rates,
+): Array<[string, string]> {
+  if (t.speakingSecs == null && t.listeningSecs == null) return [];
+  const open = Math.max(0, cost.charlieSecs);
+  const spoke = Math.max(0, Math.min(t.speakingSecs ?? 0, open));
+  const heard = Math.max(0, Math.min(t.listeningSecs ?? 0, open - spoke));
+  const waited = Math.max(0, open - spoke - heard);
+  const perSec = (rates.charlieCreditsPerMin / 60) * rates.creditUsd;
+  const at = (secs: number) => `${secs}s · ${money(Math.round(secs * perSec * USD))}`;
+  return [["Speaking", at(spoke)], ["Listening", at(heard)], ["Waiting", at(waited)]];
+}
+
 export function costBuckets(
   cost: CallCost,
-  t: { callSecs: number; navSecs: number | null; streams?: number },
+  /** `speakingSecs` and `listeningSecs` are measured on the call itself, and whatever is left of
+   *  Charlie's open seconds is him waiting. Left out, his line simply does not break down. */
+  t: { callSecs: number; navSecs: number | null; streams?: number; speakingSecs?: number | null; listeningSecs?: number | null },
   rates: Rates = MEASURED_RATES,
   statusReadUsd = 0,
 ): CostBucket[] {
@@ -153,24 +180,22 @@ export function costBuckets(
       ["Billed (minutes)", mmss(cost.billedMinutes * 60)],
       ["Cost", money(cost.lineUsd - navLine)],
     ] },
-    { key: "echo", label: "Echo (Listening)", usd: cost.forkUsd - navFork, detail: [
+    // EVERYTHING ECHO DOES, UNDER ECHO (owner 08-07). Hearing the line and writing down what was
+    // said are both Echo, so they are one line that opens to the two of them.
+    { key: "echo", label: "Echo (Ears)", usd: (cost.forkUsd - navFork) + cost.sttUsd, detail: [
       ["Line time", mmss(t.callSecs)],
-      ["Rate (per minute)", perMin(rates.forkPerMinUsd * streams)],
-      ["Cost", money(cost.forkUsd - navFork)],
+      ["Hearing the line", `${perMin(rates.forkPerMinUsd * streams)} · ${money(cost.forkUsd - navFork)}`],
+      ["Writing down the words", `${perMin(rates.sttPerMinUsd)} · ${money(cost.sttUsd)}`],
+      ["Cost", money((cost.forkUsd - navFork) + cost.sttUsd)],
     ] },
-    // ECHO'S WORDS, ITS OWN LINE (owner 08-07: "Deepgram gets its own line on the check cost card
-    // and rides the margin like every other cost"). Echo already has a line for the listening it
-    // does with its ears; this is what it costs to turn what it hears into sentences, and it runs
-    // for the whole call because the words said while Charlie is closed are the ones we were losing.
-    { key: "echo_words", label: "Echo (Words)", usd: cost.sttUsd, detail: [
-      ["Line time", mmss(t.callSecs)],
-      ["Rate (per minute)", perMin(rates.sttPerMinUsd)],
-      ["Cost", money(cost.sttUsd)],
-    ] },
-    { key: "charlie", label: "Charlie (Talking)", usd: cost.charlieUsd, detail: [
-      ["Talk time", mmss(cost.charlieSecs)],
+    { key: "charlie", label: "Charlie (Voice)", usd: cost.charlieUsd, detail: [
+      ["On the meter", mmss(cost.charlieSecs)],
       ["Rate (per minute)", perMin((rates.charlieCreditsPerMin) * rates.creditUsd)],
       ["Covers", "voice and thinking together"],
+      // WHERE HIS SECONDS WENT (owner 08-07). His meter runs whether he is talking, hearing somebody
+      // talk, or sitting on a line where nobody is saying anything. Only the last one is waste, and
+      // it was invisible: check 354 billed 33 seconds of him and he never said a word.
+      ...charliePieces(cost, t, rates),
       ["Cost", money(cost.charlieUsd)],
     ] },
     { key: "status", label: "Status (Verification)", usd: statusReadUsd, detail: [
