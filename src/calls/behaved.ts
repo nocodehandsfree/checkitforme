@@ -48,7 +48,8 @@ import { askedToBePutThrough as saysPutMeThrough, signedOff } from "../voice/pro
  */
 export const TEST_CARDS: Record<string, { name: string; sub: string; info: string }> = {
   answer_clear_yes: { name: "Answer: clear yes",
-    sub: "Staff said they have the product in stock and we showed an In stock status.", info: "" },
+    sub: "Staff said they have the product in stock and we showed an In stock status.",
+    info: "This test proves that a plain yes ends with an In stock status, and that the set Staff named is the one on the check." },
   answer_clear_no: { name: "Answer: clear no",
     sub: "Staff said they do not have the product in stock and we showed a Not in stock status.",
     info: "This test proves that a clear no always ends with a Not in stock status, no matter how Staff choose to say the no." },
@@ -75,9 +76,21 @@ export const TEST_CARDS: Record<string, { name: string; sub: string; info: strin
     info: "This test proves that after 90 seconds of ringing with no person, we ended the check ourselves, the record shows it was us, and we displayed a Nobody answered status. Charlie was never on and never billed." },
   hungup_limit: { name: "Hungup: 4 minute limit",
     sub: "The check hit its 4 minute limit and we ended it.",
-    info: "This test proves that a check can never run past the limit you set in Admin, we displayed an Admin hung up status, and the customer was not charged for an answer we never got." },
+    info: "This test proves that a check can never run past the limit you set in Admin, we displayed an Admin hung up status, and the customer was charged, because we really were on the phone that long." },
+  // THE WRAP-UP, ITS OWN TEST (owner 08-07). The chatty scene used to live under the 4 minute limit,
+  // which is our own safety net and a different thing entirely. What this one proves is Charlie's
+  // own manners: once he has been TALKING for `charlieWrapUpSeconds` he asks once more and closes.
+  wrapup_never_answered: { name: "Wrapup: they never answered",
+    sub: "Staff rambled and would not give us an answer, so Charlie wrapped up and ended the check.",
+    info: "This test proves that once Charlie has been talking for the time set in Admin, he asks the question one more time, takes whatever he gets, and ends the check himself." },
+  // DELTA IS THE RECORDING THAT CARRIES OUR QUESTION. When it never plays, Charlie asks it himself —
+  // the designed fallback, proven by accident on 08-06 and never once tested on purpose.
+  delta_failed: { name: "Delta: failed",
+    sub: "Delta failed to ask about the product, so Charlie asked it himself.",
+    info: "This test proves Charlie will ask the store the first question if Delta fails." },
   transfer_new_person: { name: "Transfer: new person",
-    sub: "Staff transferred us, Charlie asked a question from the start and recognized it was a new person.", info: "" },
+    sub: "Staff transferred us, Charlie asked a question from the start and recognized it was a new person.",
+    info: "This test proves that when a store moves us on without being asked, Delta plays the recording again for the new person and Charlie carries on from their answer instead of starting over." },
   transfer_requested: { name: "Transfer: Charlie requested",
     sub: "Charlie reached a wrong department and asked to be put through.",
     info: "This test proves that Charlie recognized the wrong department and asked to be transferred. When the new person picked up, Delta played the recording, and Charlie came back only after Staff answered it, to ask his follow-up." },

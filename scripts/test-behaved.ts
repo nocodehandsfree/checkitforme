@@ -295,10 +295,22 @@ head("…and every way it can go wrong");
 }
 
 
-head("THE LOCKED TEST CARDS (owner 08-04, plus the exact product card he added 08-06) — word for word, so nothing drifts");
+head("THE LOCKED TEST CARDS (owner 08-04, the exact product card he added 08-06, and the two he added 08-07) — word for word, so nothing drifts");
 {
   const names = Object.values(TEST_CARDS).map((c) => c.name);
-  ok("all the locked cards exist", names.length === 18, String(names.length));
+  ok("all the locked cards exist", names.length === 20, String(names.length));
+  // The two he added 08-07. The wrap-up used to be filed under the 4 minute limit, which is our own
+  // safety net and a different test; Delta failing had never been tested on purpose at all.
+  ok("the wrap-up card is his own words", TEST_CARDS.wrapup_never_answered.name === "Wrapup: they never answered"
+    && TEST_CARDS.wrapup_never_answered.sub === "Staff rambled and would not give us an answer, so Charlie wrapped up and ended the check.");
+  ok("the Delta card is his own words", TEST_CARDS.delta_failed.name === "Delta: failed"
+    && TEST_CARDS.delta_failed.info === "This test proves Charlie will ask the store the first question if Delta fails.");
+  // EVERY CARD SAYS WHAT IT PROVES. Two shipped with an empty bubble, so a test could be looked at
+  // with nothing telling you what passing it means. Three older bubbles say it in the owner's own
+  // earlier phrasing rather than opening with "This test proves", which is his copy and is left alone.
+  ok("no bubble is empty", Object.values(TEST_CARDS).every((c) => c.info.trim().length > 20),
+    Object.entries(TEST_CARDS).filter(([, c]) => c.info.trim().length <= 20).map(([k]) => k).join(" | "));
+  ok("the 4 minute limit says the customer WAS charged", /the customer was charged/.test(TEST_CARDS.hungup_limit.info), TEST_CARDS.hungup_limit.info);
   ok("every headline is category, colon, what is tested", names.every((n) => /^[A-Za-z]+: .+/.test(n)), names.filter((n) => !/^[A-Za-z]+: .+/.test(n)).join(" | "));
   ok("no dash anywhere on a card (copy law)", Object.values(TEST_CARDS).every((c) => !/[\u2014\u2013]/.test(c.name + c.sub + c.info)));
   ok("clear no, word for word", TEST_CARDS.answer_clear_no.info === "This test proves that a clear no always ends with a Not in stock status, no matter how Staff choose to say the no.", TEST_CARDS.answer_clear_no.info);
