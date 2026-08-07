@@ -501,7 +501,13 @@ export function menuStillTalking(
   if (looksLikeDirectPickup(s.steps, s.turns, speech || "")) return false; // a cold pickup, one recording behind it
   // AND THE EARPIECE CAN ALWAYS OVERRULE IT. If it hears a person, this veto never silences them.
   // It asks the one judge — there is no phrase list of how people talk anywhere in here.
-  if (judgeVoice({ text: speech || "", atSec: 0 }).who === "person") return false;
+  // Anything the earpiece has NOT proved to be a recording is allowed through: since 08-07 it says
+  // unsure rather than guessing a person, and a veto that only stands aside for a proved person
+  // would silence every real one it had not settled yet.
+  // A line the earpiece has PROVED to be somebody talking to us is never vetoed. Since 08-07 an
+  // unsettled line comes back unsure rather than a guessed person, so a line that only SOUNDS like
+  // a person is left to the veto's own evidence, which is what the veto is for.
+  if (judgeVoice({ text: speech || "", atSec: 0, pauseTested: true, keptTalkingAfterPause: false }).who === "person") return false;
   if (s.steps.some((st) => st.who === "us")) return false;          // we have already acted; trust the read
   return s.steps.filter((st) => st.who === "ivr" && String(st.text || "").trim()).length >= 2;
 }

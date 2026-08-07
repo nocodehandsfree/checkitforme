@@ -485,7 +485,11 @@ export function personStartsAt(
     // the line; the only question left is which of their lines was the first. So a line that Echo
     // left unsettled counts as theirs here, exactly as it always did. The live judgement is where
     // unsure means wait, and this is not the live judgement (owner 08-07).
-    if (v.who === "person" || (v.who === "unsure" && !STORE_SAYING_ITS_NAME.test(String(st.text)) && !startsAsARecording(String(st.text), ctx))) {
+    // A line the judge left unsettled is still the person's, EXCEPT when it is nothing but the store
+    // reading its own name: that is the recording the person interrupted. A line that opens with the
+    // store's name and then carries on into somebody talking is claimed, and split below.
+    const onlyTheStoresName = STORE_SAYING_ITS_NAME.test(String(st.text)) && !startsAsARecording(String(st.text), ctx);
+    if (v.who === "person" || (v.who === "unsure" && !onlyTheStoresName)) {
       // A JOINED line is half the store and half the person (the tail rule glues a hello onto the
       // recording it interrupted). The person begins just AFTER the recording, never at it.
       if (startsAsARecording(String(st.text), ctx)) { start = at + 1; break; }
