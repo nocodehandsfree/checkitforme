@@ -14,7 +14,7 @@
 //
 // Run: env DATABASE_URL=file:./.t-judge.db ELEVENLABS_API_KEY=test ELEVENLABS_AGENT_ID=test \
 //      ELEVENLABS_PHONE_NUMBER_ID=test ./node_modules/.bin/tsx scripts/test-voice-judge.ts
-import { judgeVoice, personStartsAt, type JudgeInput } from "../src/calls/listen-nav";
+import { judgeVoice, personStartsAt, SoundPrint, heardThisSoundBefore, type JudgeInput } from "../src/calls/listen-nav";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
@@ -37,7 +37,7 @@ console.log("\n▶ LAYER 1 — the store's own remembered menu");
     "and a differently transcribed hearing of that same line still reads as the recording");
   // A person's words match nothing on file.
   const v = judge({ text: "Hi there, thanks for holding, this is Dana over in the front store, what can I do for you today?", knownMenuLines: KNOWN });
-  ok(v.who === "person", "a line matching nothing we have on file is not the menu");
+  ok(v.who === "unsure" && v.unknownLine === true, "a line matching nothing we have on file is not the menu, and Echo waits rather than guessing");
   // …but a store that has never been called has nothing to match — layer 1 must not guess.
   ok(judge({ text: "Thanks for calling, please listen carefully as our options have changed.", knownMenuLines: [] }).who === "recording",
     "with nothing remembered, the words themselves still catch an obvious menu");
@@ -58,7 +58,9 @@ console.log("\n▶ LAYER 3 — the words themselves");
   ok(judge({ text: "Please listen carefully as our menu has changed." }).who === "recording", "and so is a menu announcing itself");
   ok(judge({ text: "Yeah we've got a bunch of those in, they're over by the registers.", weSpokeAtSec: 28 }).who === "person",
     "a reply to what we just said is a person");
-  ok(judge({ text: "Hello? Are you there?" }).who === "person", "and somebody asking if we are there is a person");
+  ok(judge({ text: "Hello? Are you there?" }).who === "unsure", "somebody asking if we are there SOUNDS like a person, and a hint alone never decides");
+  ok(judge({ text: "Hello? Are you there?", pauseTested: true, keptTalkingAfterPause: false }).who === "person",
+    "it is a person once the silence proves it stopped for us");
 }
 
 console.log("\n▶ LAYER 4 — the pause: a recording keeps reading, a person stops");
@@ -68,14 +70,16 @@ console.log("\n▶ LAYER 4 — the pause: a recording keeps reading, a person st
     "a line that could be either asks for the pause instead of guessing");
   ok(judge({ text: "Just a moment please.", pauseTested: true, keptTalkingAfterPause: true }).who === "recording",
     "it kept reading through the silence — a recording");
-  ok(judge({ text: "Just a moment please.", pauseTested: true, keptTalkingAfterPause: false }).who === "person",
-    "it stopped and waited for us — a person");
+  ok(judge({ text: "Just a moment please.", pauseTested: true, keptTalkingAfterPause: false }).who === "unsure",
+    "it stopped, but nothing yet says a person was ever there, so Echo keeps listening");
+  ok(judge({ text: "Just a moment please, are you still there?", pauseTested: true, keptTalkingAfterPause: false }).who === "person",
+    "it stopped AND it was talking to us — that is a person");
 }
 
-console.log("\n▶ LAYER 5 — still unsure means a person, always");
+console.log("\n▶ UNSURE MEANS WAIT, NEVER A GUESS (owner 08-07)");
 {
   const v = judge({ text: "Mm-hm.", pauseTested: true, keptTalkingAfterPause: false });
-  ok(v.who === "person", "the default flips toward a human, every time");
+  ok(v.who === "unsure", "a line nothing has settled leaves Echo waiting, it never guesses a person");
   ok(judge({ text: "" }).who !== "recording", "and silence is never called a recording");
 }
 
@@ -168,8 +172,8 @@ console.log("\n▶ EVIDENCE ORDER, AND THE PERSON'S CLOCK (fix pass 6, items 3-4
 {
   // A person-shaped line beats "we are inside the menu we hold": a store can read a line that
   // resembles its own menu, but a recording never talks TO us.
-  ok(judge({ text: "Hi, this is Maria, how can I help you?", mappedRoute: true, routeHandoffSeen: false }).who === "person",
-    "somebody talking to us beats being mid-menu on a route we hold");
+  ok(judge({ text: "Hi, this is Maria, how can I help you?", mappedRoute: true, routeHandoffSeen: false, pauseTested: true, keptTalkingAfterPause: false }).who === "person",
+    "somebody talking to us stops the route rule calling it the menu, and the silence settles it");
   // THE RING IS EVIDENCE, NOT AN OVERRIDE (owner, 08-02). A desk can ring, nobody picks up, and the
   // phone system drops us back into its own menu. A line this store has played before is that menu,
   // ring or no ring — deciding otherwise opened Charlie onto a recording.
@@ -184,7 +188,7 @@ console.log("\n▶ EVIDENCE ORDER, AND THE PERSON'S CLOCK (fix pass 6, items 3-4
     { who: "ivr" as const, text: "Hello? This is Sam.", atSec: 33 },
   ];
   ok(personStartsAt(two, 33, { knownMenuLines: KNOWN }) === 30,
-    "an unsure line between the store and the person belongs to the person, not the menu");
+    "a mumble between the store's line and the person's is dated to the person, because by then we KNOW they are there");
 }
 
 console.log("\n▶ THE FIRST CALL TO A STORE WE HAVE NEVER RUNG IS PURE LISTENING");
@@ -218,6 +222,48 @@ console.log("\n▶ THE LAST FOUR (fix pass 6, items 5-8)");
   ok(/\(please\\s\+\)\?hold/.test(nav) || /hold\(\\s\+\(on\|please\)\)\?/.test(nav),
     "and 'please hold' still arms the handoff clock");
   // 8: freeing the doors reaches a live run.
+}
+
+console.log("\n▶ THE KNOCK, and every one of these run twice: remembered, and knowing nothing");
+{
+  const CVS_OPEN = KNOWN[0];
+  // Both ways round, because a chain's FIRST ever check is exactly what mapping is (owner 08-07).
+  for (const [how, mem] of [["remembered", KNOWN], ["knowing nothing", []]] as const) {
+    ok(judge({ text: CVS_OPEN, knownMenuLines: [...mem], knockTested: true, keptTalkingAfterKnock: true }).who === "recording",
+      `it read straight on through the keys, so it is a machine (${how})`);
+    ok(judge({ text: "Are you a healthcare provider?", knownMenuLines: [...mem], saidBefore: ["Are you a healthcare provider?"] }).who === "recording",
+      `it said the same line twice, so it is a machine (${how})`);
+    ok(judge({ text: "Front store, this is Bob, how can I help?", knownMenuLines: [...mem], knockTested: true, keptTalkingAfterKnock: false, pauseTested: true, keptTalkingAfterPause: false }).who === "person",
+      `it stopped for the keys and talked to us, so it is a person (${how})`);
+    ok(judge({ text: CVS_OPEN, knownMenuLines: [...mem], knockTested: true, keptTalkingAfterKnock: false }).who !== "person",
+      `going quiet for the keys is never enough on its own to call it a person (${how})`);
+  }
+  // The one the owner watched break: with no memory at all, CVS's opening must never read person.
+  ok(judge({ text: CVS_OPEN, knownMenuLines: [] }).who !== "person",
+    "CVS's opening line is never a person on a number we have never rung");
+  ok(judge({ text: "If this is an emergency, please hang up and dial 911.", knownMenuLines: [] }).who !== "person",
+    "and neither is the emergency sentence that started all this");
+}
+
+console.log("\n▶ THE SOUND FINGERPRINT — hold music, and an advert talking over it");
+{
+  const frame = (loud: number) => Buffer.alloc(160, loud).toString("base64");
+  // Hold music is a loop. Played round twice, the second round is the same sound again.
+  const music = new SoundPrint();
+  const loop = Array.from({ length: 80 }, (_, i) => 0x10 + Math.round(100 * Math.abs(Math.sin(i / 3))));
+  for (let round = 0; round < 2; round++) for (const l of loop) for (let f = 0; f < 5; f++) music.feed(frame(l));
+  ok(heardThisSoundBefore(music.all(), music.print(4)) === true,
+    "hold music going round again is caught by its sound alone, with no words at all");
+  // Somebody talking never says four seconds the same way twice.
+  const talk = new SoundPrint();
+  for (let i = 0; i < 1000; i++) talk.feed(frame(0x10 + Math.floor(Math.random() * 110)));
+  ok(heardThisSoundBefore(talk.all(), talk.print(4)) === false,
+    "and twenty seconds of somebody talking is never mistaken for a loop");
+  // AN ADVERT OVER MUSIC is words, so every word rule calls it a person. The sound catches it.
+  ok(judge({ text: "Did you know we deliver?", soundHeardBefore: true }).who === "recording",
+    "an advert playing over hold music is a recording, because the sound came round again");
+  ok(judge({ text: "Did you know we deliver?", knownMenuLines: [] }).who !== "person",
+    "and knowing nothing at all, an advert is never called a person");
 }
 
 console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);

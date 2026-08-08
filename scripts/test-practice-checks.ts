@@ -12,11 +12,13 @@
 //   5 two Staff on one check           the person is dated from the FIRST person's first word
 //   6 a Spanish-speaking person        Staff answering in Spanish are a person, not a recording
 //   7 Charlie cannot join as they answer  we never hang up on the person who just picked up
+//   8 the knock's own keys              a test of who picked up is never a choice at a menu
 //
 // Run: ./node_modules/.bin/tsx scripts/test-practice-checks.ts
 import { judgeVoice, personStartsAt, type JudgeInput } from "../src/calls/listen-nav";
 import { menuLinesOf } from "../src/calls/mapper";
-import { _test as engine, setMappingHandoff, navEnded, pickedDoorFrom } from "../src/calls/navigator";
+import { _test as engine, setMappingHandoff, navEnded, pickedDoorFrom, classifyMode } from "../src/calls/navigator";
+import { recipeFromCall } from "../src/calls/map-capture";
 import { emit, recordLine } from "../src/calls/events";
 import { heardWrongDepartment } from "../src/voice/prompts";
 
@@ -63,8 +65,12 @@ console.log("\n▶ PRACTICE CHECK 2 — a branded hello, then \"one moment\" (th
     "a store saying its own name is not automatically a machine — that is how Staff get pressed at");
   ok(v.needsPause === true,
     "it is held open for the pause instead: a recording reads on, a person stops");
-  ok(judge({ text: hello, atSec: 9, pauseTested: true, keptTalkingAfterPause: false }).who === "person",
-    "they stopped and waited for us, so they are a person");
+  // 08-07: stopping ALONE is not a person, because a menu goes quiet too. The owner's own rule is
+  // that a person stops AND then speaks to us, so the proof is their second line.
+  ok(judge({ text: hello, atSec: 9, pauseTested: true, keptTalkingAfterPause: false }).who === "unsure",
+    "they stopped, which on its own proves nothing, so Echo keeps listening instead of guessing");
+  ok(judge({ text: "Hi, can I help you?", atSec: 12, pauseTested: true, keptTalkingAfterPause: false }).who === "person",
+    "and when they speak to us after stopping, that is a person");
   ok(judge({ text: hello + " Please listen carefully as our options have changed.", atSec: 9 }).who === "recording",
     "but the same name followed by a menu's own words is the recording, plainly");
 }
@@ -77,7 +83,8 @@ console.log("\n▶ PRACTICE CHECK 3 — voicemail says \"hello?\" (Charlie must 
   ok(v.who === "recording", "so it is never handed to Charlie as a person");
   // The same words with no mailbox in them stay a person — this must not become a rule that eats
   // real Staff checking whether we are still on the line.
-  ok(judge({ text: "Hello? Are you still there?", atSec: 22 }).who === "person" && !judge({ text: "Hello? Are you still there?", atSec: 22 }).deadEnd,
+  const stillThere = judge({ text: "Hello? Are you still there?", atSec: 22, pauseTested: true, keptTalkingAfterPause: false });
+  ok(stillThere.who === "person" && !stillThere.deadEnd,
     "and Staff asking if we are still there is still a person, with no dead end about it");
   ok(judge({ text: "Our store is closed for the night. Our store hours are nine to nine.", atSec: 8 }).deadEnd === true,
     "a closed store is a dead end too");
@@ -143,7 +150,7 @@ console.log("\n▶ PRACTICE CHECK 5 — two Staff on one check");
     "the person is dated from the first person's first word, not the second one's");
   ok(menuLinesOf(steps as never, null, 31, []).length === 1,
     "and only the store's own recording is the menu — neither person's words go back into it");
-  ok(judge({ text: steps[4].text, atSec: 58, mappedRoute: true, routeHandoffSeen: false }).who === "person",
+  ok(judge({ text: steps[4].text, atSec: 58, mappedRoute: true, routeHandoffSeen: false, pauseTested: true, keptTalkingAfterPause: false }).who === "person",
     "a second person answering is a person, even mid-route");
 }
 
@@ -154,10 +161,14 @@ console.log("\n▶ PRACTICE CHECK 6 — a Spanish-speaking person");
   // WE NEVER RECOGNISE A PERSON'S WORDS. We only know a menu when we hear one, and anything we
   // cannot prove is a menu is a person. Charlie handles whatever language they answer in.
   const hola = "Buenas tardes, gracias por llamar a Card Mart, habla María, ¿en qué le puedo servir el día de hoy?";
-  ok(judge({ text: hola, atSec: 33, knownMenuLines: [], pauseTested: true, keptTalkingAfterPause: false }).who === "person",
-    "somebody greeting us in Spanish is a person — nothing about it proves a menu");
-  ok(judge({ text: "¿Bueno? ¿Sigue ahí?", atSec: 40, pauseTested: true, keptTalkingAfterPause: false }).who === "person",
-    "and so is somebody asking in Spanish whether we are still there");
+  // No English word list can carry Spanish, so nothing about the WORDS is allowed to decide. What
+  // decides is behaviour: they went quiet for the keys and stayed quiet for us (owner 08-07).
+  ok(judge({ text: hola, atSec: 33, knownMenuLines: [], pauseTested: true, keptTalkingAfterPause: false }).who === "unsure",
+    "the Spanish greeting alone proves nothing either way, and Echo never guesses");
+  ok(judge({ text: hola, atSec: 33, knownMenuLines: [], knockTested: true, keptTalkingAfterKnock: false, pauseTested: true, keptTalkingAfterPause: false }).who === "person",
+    "somebody greeting us in Spanish is a person, proved by behaviour and not by any word we know");
+  ok(judge({ text: "¿Bueno? ¿Sigue ahí?", atSec: 40, knockTested: true, keptTalkingAfterKnock: false, pauseTested: true, keptTalkingAfterPause: false }).who === "person",
+    "and so is somebody asking in Spanish whether we are still there, proved the same way");
   ok(judge({ text: "Para español, oprima nueve.", atSec: 3 }).who === "recording",
     "while the menu's own Spanish option is still the recording");
   // DRIVEN through the engine: the same long Spanish hello, on the check that reaches Staff.
@@ -166,12 +177,18 @@ console.log("\n▶ PRACTICE CHECK 6 — a Spanish-speaking person");
     engine.open({ id: "es-1", confirm: { product: "Pokémon cards" } });
     engine.at("es-1", 30);
     const t1 = await engine.step("es-1", hola);
-    ok(!/<Play digits=/.test(t1) && /<Pause length="2"/.test(t1),
-      "nothing is pressed at them — the check goes quiet to see if the talking carries on");
+    // 08-07: we press once at WHOEVER answered, because we do not know yet what we called. That is
+    // the point. A person hears the beeps, stops, and speaks again; a recording reads straight on.
+    ok(/<Play digits="123"\/>/.test(t1),
+      "the keys go out once, because nothing yet says whether this is a menu or a person");
     engine.at("es-1", 33);
-    await engine.step("es-1", hola);
+    await engine.step("es-1", "¿Bueno? ¿Sigue ahí?");
+    ok(engine.get("es-1")?.keptTalkingAfterKnock === false,
+      "they did not read straight on, so nothing calls them a machine");
+    engine.at("es-1", 36);
+    await engine.step("es-1", "¿Bueno?");
     ok(engine.get("es-1")?.humanAtSec != null,
-      "and when it does not carry on, they are a person — no phrase of theirs was ever matched");
+      "and they are a person, proved by what they did and not by any Spanish word we know");
     engine.end("es-1");
   }
 }
@@ -182,6 +199,11 @@ console.log("\n▶ PRACTICE CHECK 7 — Charlie cannot join as the person answer
   // person who just answered, and nothing about that way in is spent, because they were asked nothing.
   setMappingHandoff(async () => null);           // Charlie refuses to open, every time
   engine.open({ id: "nojoin-1", confirm: { product: "Pokémon cards" } });
+  // The check plays out the way a real one does now: they answer, the keys go out at whoever picked
+  // up, and what they do next is what proves they are a person.
+  engine.at("nojoin-1", 28);
+  const knocked = await engine.step("nojoin-1", "Card Mart, Dana speaking.");
+  ok(/<Play digits="123"\/>/.test(knocked), "the keys go out at whoever answered — nothing yet says which it is");
   engine.at("nojoin-1", 31);
   const first = await engine.step("nojoin-1", "Hello? Are you still there?");
   ok(!/<Hangup\/>/.test(first), "we do not hang up on the person who just answered");
@@ -202,8 +224,10 @@ console.log("\n▶ CHARLIE'S WORD ON THE DEPARTMENT — Staff engaged, so the de
   // end: hand the check to Charlie, let Staff speak to him, end the check, read the grade.
   setMappingHandoff(async () => `<Response><Connect/></Response>`);   // Charlie opens, as he does live
   engine.open({ id: "dept-1", chainId: null, confirm: { product: "Pokémon cards" }, stage: "map" });
+  engine.at("dept-1", 37);
+  await engine.step("dept-1", "Card Mart, Dana speaking.");   // the keys go out at them
   engine.at("dept-1", 40);
-  await engine.step("dept-1", "Hello? Are you still there?");
+  await engine.step("dept-1", "Hello? Are you still there?"); // they stopped for the keys, then spoke to us
   const s = engine.get("dept-1")!;
   ok(s.confirm?.asked === true, "the check is handed to Charlie the moment Staff answer");
   // What Charlie's half of the check put down: he opened, and Staff spoke to him.
@@ -219,6 +243,8 @@ console.log("\n▶ CHARLIE'S WORD ON THE DEPARTMENT — Staff engaged, so the de
 
   // Sent to a desk that cannot answer is the one thing that is NOT the right department.
   engine.open({ id: "dept-2", confirm: { product: "Pokémon cards" }, stage: "map" });
+  engine.at("dept-2", 37);
+  await engine.step("dept-2", "Card Mart, Dana speaking.");
   engine.at("dept-2", 40);
   await engine.step("dept-2", "Hello? Are you still there?");
   const w = engine.get("dept-2")!;
@@ -250,6 +276,8 @@ console.log("\n▶ A MAPPING CHECK NEVER TAKES A TRANSFER");
       { who: "ivr", text: "For the pharmacy press 1, for guest services press 2.", atSec: 10 },
       { who: "us", text: "pressed 1", atSec: 14, action: "press", value: "1" },
     ] as never });
+  engine.at("xfer-1", 37);
+  await engine.step("xfer-1", "Pharmacy, this is Alan.");
   engine.at("xfer-1", 40);
   await engine.step("xfer-1", "Hello? Are you still there?");
   const m = engine.get("xfer-1")!;
@@ -264,6 +292,45 @@ console.log("\n▶ A MAPPING CHECK NEVER TAKES A TRANSFER");
   ok(pickedDoorFrom(m.steps) === "1",
     "the choice we took is the one marked wrong — the next check takes the next choice at the same store");
   engine.end("xfer-1");
+}
+
+console.log("\n▶ PRACTICE CHECK 8 — the knock is a test of who picked up, never a choice at a menu");
+{
+  // Every check to a number we do not already hold presses a few keys at whoever answered. Those
+  // keys are on the record because we really pressed them, and NOTHING that reads the route may
+  // count them: as a plain press step they read as the door we chose, they were written into the
+  // store's saved route as "press 123", and a store that answers direct stopped reading as direct.
+  setMappingHandoff(async () => null);
+  engine.open({ id: "knock-1", confirm: { product: "Pokémon cards" } });
+  engine.at("knock-1", 6);
+  const out = await engine.step("knock-1", "Hola, buenas tardes.");
+  ok(/<Play digits="123"\/>/.test(out), "the keys go out at whoever answered");
+  const k = engine.get("knock-1")!;
+  // THE STORE'S OPENING LINE MUST SURVIVE THE KNOCK. Pressing before writing it down threw it away:
+  // it never reached the timeline, and it never reached the memory of what this number has said —
+  // which is the one test that catches a recording on a number we have never rung.
+  ok(k.steps[0]?.who === "ivr" && k.steps[0]?.text === "Hola, buenas tardes.",
+    "and the store's opening line is written down first, before the keys, so nothing is lost");
+  ok(pickedDoorFrom(k.steps) === undefined,
+    "no door was picked — the keys were a question about who is on the line, not an answer to a menu");
+  ok(recipeFromCall(k.steps, 6).steps.length === 0,
+    "and nothing about the keys is written into the store's saved route");
+  ok(classifyMode(k.steps).mode === "charlie",
+    "a store that just picks up still reads as a direct pickup, keys or no keys");
+  // THE LINE IN HAND IS NEVER EVIDENCE ABOUT ITSELF. The store's line is recorded before anything
+  // judges it, so passing the whole record through as "everything it has already said" matched the
+  // line against its own copy — and answered "it has said this already" the FIRST time it said it,
+  // which called every line on every check a recording and reached no person, ever.
+  engine.at("knock-1", 9);
+  await engine.step("knock-1", "¿Bueno? ¿Sigue ahí?");
+  ok(engine.get("knock-1")?.pauseTested === true,
+    "so a line said once is held open for the silence, never called a repeat of itself");
+  // Said a SECOND time, with us silent in between, it gives itself away as the recording it is.
+  engine.at("knock-1", 13);
+  await engine.step("knock-1", "¿Bueno? ¿Sigue ahí?");
+  const r = engine.get("knock-1")!;
+  ok(r.humanAtSec == null, "and the same line played again is the recording repeating, so no person is stamped");
+  engine.end("knock-1");
 }
 
 console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);

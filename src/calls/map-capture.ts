@@ -14,9 +14,9 @@
 import { guessLanguage, sameMenu, type MapRecipe, type MapStep, type EvidenceCall, type Language, type CheckStage, type CheckFailReason } from "./mapgraph";
 
 /** The navigator's per-turn record, loosened so this file needs no runtime import from navigator. */
-export interface CapturedStep { who?: string; text?: string; atSec?: number; action?: string; value?: string; earPrompts?: number }
+export interface CapturedStep { who?: string; text?: string; atSec?: number; action?: string; value?: string; earPrompts?: number; knock?: boolean }
 
-const isAction = (s: CapturedStep) => (s.action === "press" || s.action === "say") && !!s.value;
+const isAction = (s: CapturedStep) => (s.action === "press" || s.action === "say") && !!s.value && !s.knock;
 /** The confirm question ("asked: do you have…") is training scaffolding, not navigation — the same
  *  exclusion recipeFromSteps already makes, or a direct-answer store would learn to recite the ask. */
 const isScaffold = (s: CapturedStep) => String(s.text || "").startsWith("asked:");
@@ -236,7 +236,9 @@ export async function recordNavCall(s: {
   const reachedHuman = s.humanAtSec != null;
   const prompts = steps.filter((st) => st.who === "ivr" && st.text)
     .map((st) => ({ text: String(st.text), atSec: Math.round(st.atSec ?? 0) }));
-  const actions = steps.filter((st) => st.who === "us")
+  // The knock's keys are never a path through the menu — they are a test of who picked up, so they
+  // must not be walked back into the graph as a choice this store offered us.
+  const actions = steps.filter((st) => st.who === "us" && !st.knock)
     .map((st) => ({ action: (st.action === "press" ? "press" : "say") as "press" | "say", value: String(st.value || ""), atSec: Math.round(st.atSec ?? 0), afterPrompt: st.earPrompts }));
 
   // THE GRAPH FIRST, always. Every prompt heard is knowledge even when the call failed, and it is the

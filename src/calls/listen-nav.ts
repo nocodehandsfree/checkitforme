@@ -290,6 +290,18 @@ export interface JudgeInput {
   /** LAYER 4 — the pause has been run, and whether the line kept reading through it. */
   pauseTested?: boolean;
   keptTalkingAfterPause?: boolean;
+  /** THE SAME SOUND, HEARD AGAIN (owner 08-07). Set when the shape of the line right now matches a
+   *  shape heard earlier on this call. It is the one test that catches hold music, and hold music
+   *  with an advert talking over it, because it listens to the sound and never to the words. */
+  soundHeardBefore?: boolean;
+  /** THE KNOCK has been run, and whether the talking carried straight on through it (owner 08-07).
+   *  Carrying on is a machine, with certainty, and it costs one second on the very first call. */
+  knockTested?: boolean;
+  keptTalkingAfterKnock?: boolean;
+  /** Every line this number has already said ON THIS CALL. A recording repeats itself word for word
+   *  when we stay quiet; a person does not. Needs no memory of the chain, so it is the one test that
+   *  works on the first call we have ever made to a number (owner 08-07). */
+  saidBefore?: string[];
   /** The very first check to a store we have never rung: pure listening, hang up on nothing. */
   firstEverCall?: boolean;
   /** The product we asked about, so its own name counts as news about it. */
@@ -352,9 +364,37 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
   // — and with the ring answering first, that returning menu was never tested against the store's
   // own remembered lines, so Charlie was opened onto a recording. The ring now has its say further
   // down, after the menu's evidence has had its say.
-  if (CHECKING_ON_US.test(text) || ADDRESSED_TO_US.test(text)) {
-    return { who: "person", why: "somebody is talking to us, not reading at us", ...ride };
+  // IT SAID THE SAME THING TWICE (owner 08-07). This is the one signal that cannot be faked and
+  // needs no memory of the chain, so it is the FIRST real test on a number we have never rung. A
+  // recording repeats itself word for word whenever we say nothing; a person never says the same
+  // sentence twice in a row. CVS proved why this has to come first: its opening carries "if this is
+  // an emergency", which tripped a phrase meant to catch a person saying "this is Bob", and Echo
+  // handed a pharmacy menu to Charlie 16 seconds in. Behaviour decides, words do not.
+  if ((o.saidBefore || []).some((l) => sameSpokenLine(l, text))) {
+    return { who: "recording", why: "it has said this exact line already on this call", ...ride };
   }
+
+  // THE SAME SOUND, HEARD AGAIN (owner 08-07). A person never repeats a stretch of sound exactly;
+  // a recording playing round again always does. This is what catches hold music, and hold music
+  // with an advert over it, which every word rule calls a person.
+  if (o.soundHeardBefore) {
+    return { who: "recording", why: "this exact sound has already played on this call", ...ride };
+  }
+
+  // IT CARRIED STRAIGHT ON THROUGH THE KEYS (owner 08-07). On a number we have never rung we press
+  // keys during the opening sentence. A person hears the beeps in their ear and stops. A recording
+  // reads on regardless, so reading on is a machine and nothing else can explain it. Stopping is NOT
+  // a person on its own, because a menu also goes quiet when it acts on a key: that case falls
+  // through to the tests below, which is the whole point of never deciding on one signal.
+  if (o.knockTested && o.keptTalkingAfterKnock) {
+    return { who: "recording", why: "it read straight on through the keys we pressed", ...ride };
+  }
+
+  // WORDS ARE A HINT, NEVER THE VERDICT (owner 08-07). These phrases mean somebody is probably
+  // talking to us rather than reading at us, and they used to answer outright. They cannot any more:
+  // a menu is allowed to contain any sentence at all, and one wrong phrase cost a whole check. They
+  // now only STOP the position rule below from calling this the menu, and the behaviour tests decide.
+  const soundsAddressedToUs = CHECKING_ON_US.test(text) || ADDRESSED_TO_US.test(text);
 
   // LAYER 1 — the store's own remembered menu. Recordings repeat word for word.
   const known = (o.knownMenuLines || []).filter((l) => String(l || "").trim());
@@ -371,15 +411,32 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
   // LAYER 2 — where we are on a route we hold. A ring means the phone system moved us along, so
   // "we are still inside the menu we hold" no longer holds — but it does not make the next voice a
   // person either. That is decided below, on the same evidence as everything else.
-  if (o.mappedRoute && !o.routeHandoffSeen && !rangBefore(o) && !MENU_WORDS.test(text) && !CHECKING_ON_US.test(text)) {
+  if (o.mappedRoute && !o.routeHandoffSeen && !rangBefore(o) && !MENU_WORDS.test(text) && !soundsAddressedToUs) {
     // Before the handoff on a route we already hold, the phone system is still talking to us.
     return { who: "recording", why: "we are still inside a menu we already hold", ...ride };
   }
 
   // LAYER 3 — the words.
-  if (CHECKING_ON_US.test(text)) return { who: "person", why: "somebody is checking whether we are still here", ...ride };
-  if (ADDRESSED_TO_US.test(text)) return { who: "person", why: "somebody is talking to us, not reading at us", ...ride };
   if (MENU_WORDS.test(text)) return { who: "recording", why: "these are a menu's own words", ...ride };
+  // THEY STOPPED FOR THE KEYS AND THEN SPOKE TO US. The owner's own words for what a person does:
+  // "a person reacts to a beep in their ear, stops, and says something to us". Both halves together,
+  // never either alone, because a menu also goes quiet when it acts on a key. This is what lets a
+  // store that answers directly be understood without us knowing in advance that it does.
+  if (soundsAddressedToUs && o.knockTested && !o.keptTalkingAfterKnock) {
+    return { who: "person", why: "it stopped for the keys and then spoke to us", ...ride };
+  }
+  // STOPPED FOR THE KEYS AND STOPPED FOR THE SILENCE, IN ANY LANGUAGE. This is the one that carries
+  // Staff who answer in Spanish, or any language we hold no words for. A menu that acted on a key
+  // does not go quiet, it reads the next set of options at us. Something that went quiet for both
+  // the keys AND our silence is somebody waiting for us to speak, and only a person waits.
+  if (o.knockTested && !o.keptTalkingAfterKnock && o.pauseTested && !o.keptTalkingAfterPause) {
+    return { who: "person", why: "it stopped for the keys and stayed quiet for us, which only a person does", ...ride };
+  }
+  // Sounding like a person is only allowed to settle it once the pause has ALSO said person, because
+  // the pause is behaviour and the phrase is only a hint. Until then it waits, and waiting is free.
+  if (soundsAddressedToUs && o.pauseTested && !o.keptTalkingAfterPause) {
+    return { who: "person", why: "it stopped when we went quiet, and it was talking to us", ...ride };
+  }
   // A branded hello ALONE is held open for the pause below rather than settled here: a recording
   // reads on through the silence, and Staff stop and wait for us.
   // THE RING HAS ITS SAY HERE, and only here: the store's own remembered lines and the menu's own
@@ -400,8 +457,12 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
   if (!o.pauseTested) return { who: "unsure", why: "could be either — waiting through a short silence to tell", needsPause: true, ...ride };
   if (o.keptTalkingAfterPause) return { who: "recording", why: "it kept reading through the silence", ...ride };
 
-  // LAYER 5 — still unsure is a person, always.
-  return { who: "person", why: "nothing proved it was a recording, so it is treated as a person", ...ride };
+  // UNSURE MEANS WAIT (owner 08-07). This used to say that anything Echo could not settle was a
+  // person, which is a guess, and a wrong guess costs the whole check: Charlie opens onto a menu and
+  // argues with it. Charlie stays closed while Echo waits, so waiting costs nothing at all. The call
+  // keeps running and every later turn is judged again, so a machine that repeats itself gives
+  // itself away and a person who says something to us is heard the moment they do.
+  return { who: "unsure", why: "nothing has proved it either way yet, so we keep listening", needsPause: !o.pauseTested, ...ride };
 }
 
 /** WHEN THE PERSON STARTED TALKING — the first line of THEIR speech, never the turn we finally
@@ -434,7 +495,15 @@ export function personStartsAt(
       knownMenuLines: ctx.knownMenuLines, ringsHeard: ctx.ringsHeard, ringAtSec: ctx.ringAtSec,
       weSpokeAtSec: ctx.weSpokeAtSec, weAskedAtSec: ctx.weAskedAtSec, product: ctx.product,
     });
-    if (v.who === "person") {
+    // WALKING BACK IS NOT JUDGING WHO IS THERE. By the time this runs we already KNOW a person is on
+    // the line; the only question left is which of their lines was the first. So a line that Echo
+    // left unsettled counts as theirs here, exactly as it always did. The live judgement is where
+    // unsure means wait, and this is not the live judgement (owner 08-07).
+    // A line the judge left unsettled is still the person's, EXCEPT when it is nothing but the store
+    // reading its own name: that is the recording the person interrupted. A line that opens with the
+    // store's name and then carries on into somebody talking is claimed, and split below.
+    const onlyTheStoresName = STORE_SAYING_ITS_NAME.test(String(st.text)) && !startsAsARecording(String(st.text), ctx);
+    if (v.who === "person" || (v.who === "unsure" && !onlyTheStoresName)) {
       // A JOINED line is half the store and half the person (the tail rule glues a hello onto the
       // recording it interrupted). The person begins just AFTER the recording, never at it.
       if (startsAsARecording(String(st.text), ctx)) { start = at + 1; break; }
@@ -848,6 +917,49 @@ export function shouldFireOnPrompt(step: NavStep, n: number, at: number, lastFir
   return { fire: true, reason: "recording ended" };
 }
 
+// ---- THE SOUND FINGERPRINT (owner 08-07, item 2) ------------------------------------------------
+// A fingerprint of the SOUND of a stretch of the line, never of the words. The same sound heard
+// again, twice inside one call or on a later call to the same number, is a recording with certainty.
+// It is the one test that catches HOLD MUSIC, and hold music with an advert talking over it, which
+// no word test ever can: an advert is words on top of music, so every word rule calls it a person.
+//
+// How it is taken: loudness is measured once per 100ms and squashed to one of eight steps, and the
+// steps are written down in order. A recording plays back identically every time, so its shape
+// repeats exactly. A person never says the same thing with the same loudness twice.
+const FP_SLOT_MS = 100;
+const FP_STEPS = 8;
+export class SoundPrint {
+  private slotMs = 0;
+  private slotPeak = 0;
+  private shape: number[] = [];
+  /** Feed one 20ms frame, exactly as the ear gets it. */
+  feed(b64: string): void {
+    this.slotPeak = Math.max(this.slotPeak, frameEnergy(b64));
+    this.slotMs += 20;
+    if (this.slotMs < FP_SLOT_MS) return;
+    // Eight steps is enough to tell one piece of music from another and coarse enough that the same
+    // recording down a slightly noisier line still prints the same.
+    const step = Math.min(FP_STEPS - 1, Math.floor((this.slotPeak / 4000) * FP_STEPS));
+    this.shape.push(step);
+    this.slotMs = 0; this.slotPeak = 0;
+  }
+  /** The print of the last `seconds` of line, or empty while there is not enough to print. */
+  print(seconds = 4): string {
+    const want = Math.round((seconds * 1000) / FP_SLOT_MS);
+    if (this.shape.length < want) return "";
+    return this.shape.slice(-want).join("");
+  }
+  /** Everything heard so far, so a caller can look for the same shape earlier in the same call. */
+  all(): number[] { return this.shape; }
+}
+/** Has this exact shape been heard before in what we have already listened to? A recording looping
+ *  gives itself away here with no words at all, which is what hold music is. */
+export function heardThisSoundBefore(shape: number[], print: string): boolean {
+  if (!print) return false;
+  const upTo = shape.slice(0, Math.max(0, shape.length - print.length)).join("");
+  return upTo.includes(print);
+}
+
 // ---- the per-call session ------------------------------------------------------------------
 interface Session {
   room: string;
@@ -869,6 +981,17 @@ interface Session {
    *  something explicitly turns it off, so the default is never firing tones at a human. */
   abortOnHuman?: boolean;
   tuning?: { personGreetingMaxMs?: number; personWaitMs?: number };
+  /** THE KNOCK (owner 08-07). On a number we have never rung, we press keys DURING the opening
+   *  sentence, before any options are read: one key, about a second, then two more quickly. A person
+   *  hears beeps in their ear, stops, and says something to us. A recording carries straight on, or
+   *  acts on the key, and either of those is a machine. Set once, never repeated. */
+  print: SoundPrint;
+  soundHeardBefore?: boolean;
+  knockAtSec?: number;
+  knockDoneAtMs?: number;
+  keptTalkingAfterKnock?: boolean;
+  /** A number whose menu we already hold never gets knocked: we know what it is. */
+  neverKnock?: boolean;
 }
 
 const sessions = new Map<string, Session>();
@@ -879,6 +1002,14 @@ export function listenNavFired(room: string): Array<{ value: string; atSec: numb
 }
 /** How many store recordings played on this call — the free drift measure: a menu that grew or lost
  *  a recording since we mapped it shows up here with no speech recognition and no model. */
+/** What the knock found out, ready for the judge. Empty until it has been sent and answered. */
+export function listenNavKnock(room: string): { knockTested?: boolean; keptTalkingAfterKnock?: boolean; soundHeardBefore?: boolean } {
+  const s = sessions.get(room);
+  if (!s) return {};
+  const sound = s.soundHeardBefore ? { soundHeardBefore: true } : {};
+  if (s.keptTalkingAfterKnock === undefined) return sound;
+  return { knockTested: true, keptTalkingAfterKnock: s.keptTalkingAfterKnock, ...sound };
+}
 export function listenNavPromptCount(room: string): number {
   return sessions.get(room)?.det.count ?? 0;
 }
@@ -973,6 +1104,9 @@ function armClockFallback(s: Session): void {
  */
 export function startListenNav(opts: {
   room: string; callSid: string; steps: NavStep[]; bridgeUrl: string;
+  /** The lines this chain has played us before. Present means we already know this menu, so the
+   *  knock is never sent: memory is a speed-up, never the judge (owner 08-07). */
+  knownMenuLines?: string[];
   log?: (s: string) => void; onNavEnd?: (navEndSec: number) => void;
   onEvent?: (kind: string, note: string, detail?: Record<string, unknown>) => void;
   abortOnHuman?: boolean;
@@ -987,6 +1121,7 @@ export function startListenNav(opts: {
     lastFiredAtSec: 0, timers: [], bridgeUrl: opts.bridgeUrl, done: false, log,
     onNavEnd: opts.onNavEnd, onEvent: opts.onEvent, fired: [], abortOnHuman: opts.abortOnHuman, tuning: opts.tuning,
     det: new PromptDetector(() => { /* replaced below */ }),
+    print: new SoundPrint(),
   };
   s.det = new PromptDetector((n) => {
     if (s.done) return;
@@ -997,6 +1132,9 @@ export function startListenNav(opts: {
     if (!verdict.fire) { log(`listen-nav: recording ${n} ended at ${at}s — "${step.value}" ${verdict.reason}, waiting`); return; }
     void fireNext(s.room, "prompt");
   });
+  // A NUMBER WHOSE MENU WE ALREADY HOLD IS NEVER KNOCKED. We know what it is, so there is nothing
+  // to find out and no reason to put beeps down the line (owner 08-07: memory is a speed-up).
+  s.neverKnock = (opts.knownMenuLines || []).some((l: string) => String(l || "").trim().length > 0);
   sessions.set(opts.room, s);
   const onRecording = steps.filter((x) => typeof x.afterPrompt === "number").length;
   log(`listen-nav: armed for ${steps.length} step(s)${onRecording ? `, ${onRecording} waiting on a specific recording` : ""} — firing on prompt endings, clock fallback at learned+${GRACE_SEC}s`);
@@ -1012,6 +1150,32 @@ export function listenNavFeed(room: string, b64: string, track?: string): void {
   // track and would otherwise register as prompts.
   if (track && track !== "inbound") return;
   s.det.feed(b64);
+  // THE SAME SOUND, HEARD AGAIN. Taken on every frame and checked once it has four seconds to
+  // compare, so a loop of hold music gives itself away with no words at all (owner 08-07).
+  s.print.feed(b64);
+  if (!s.soundHeardBefore) {
+    const now = s.print.print(4);
+    if (now && heardThisSoundBefore(s.print.all(), now)) {
+      s.soundHeardBefore = true;
+      s.log("listen-nav: this exact sound has already played on this call — a recording");
+      try { s.onEvent?.("unknown", "The same sound played again, so this is a recording", { step: "sound_repeat" }); } catch { /* best-effort */ }
+    }
+  }
+  // THE KNOCK (owner 08-07). On a number whose menu we do not already hold, we press keys DURING the
+  // opening sentence, before any options are read: one key, about a second, then two more quickly.
+  // It is sent ONCE, the moment the store is really talking, and never on a number we already know.
+  if (!s.neverKnock && s.knockAtSec == null && s.det.count >= 1 && s.det.lastPromptMs > 0) {
+    s.knockAtSec = Math.round((Date.now() - s.startMs) / 1000);
+    void knock(s);
+  }
+  // …and a second later, did the talking carry straight on? Reading on through beeps in somebody's
+  // ear is a machine and nothing else explains it. Going quiet proves nothing on its own, because a
+  // menu goes quiet too when it acts on a key, so that case is left to the other tests.
+  if (s.knockDoneAtMs && s.keptTalkingAfterKnock === undefined && Date.now() - s.knockDoneAtMs >= 1200) {
+    s.keptTalkingAfterKnock = s.det.quietMs < 400;
+    s.log(`listen-nav: the knock says ${s.keptTalkingAfterKnock ? "it read straight on — a machine" : "it stopped, which proves nothing on its own"}`);
+    try { s.onEvent?.("unknown", s.keptTalkingAfterKnock ? "It read straight on through the keys, so it is a machine" : "It stopped when we pressed keys", { step: "knock", keptTalking: s.keptTalkingAfterKnock, atSec: s.knockAtSec }); } catch { /* best-effort */ }
+  }
   // NEVER PRESS KEYS AT A PERSON (spec: the live call runtime, section 10). A store we mapped with
   // a menu that now answers directly means our tones go off in a real human's ear. Today we would
   // keep pressing all the way down the list. Now the remaining steps are abandoned and the call
@@ -1019,6 +1183,16 @@ export function listenNavFeed(room: string, b64: string, track?: string): void {
   if (s.abortOnHuman !== false && looksLikeAPerson({ stepsFired: s.next, promptCount: s.det.count, lastPromptMs: s.det.lastPromptMs, quietMs: s.det.quietMs }, s.tuning)) {
     void handToConversation(s, "someone answered before the menu, the rest of the keys were never pressed");
   }
+}
+
+/** ONE KEY, A BEAT, THEN TWO MORE. The owner's own shape. A person hears three beeps in their ear
+ *  and stops; a recording does not notice. The waiting document follows so the walk carries on
+ *  exactly as it would have. Never sent twice, and never on a number whose menu we already hold. */
+async function knock(s: Session): Promise<void> {
+  const ok = await updateTwiml(s, `<Play digits="123"/>${HOLD}`);
+  s.knockDoneAtMs = Date.now();
+  s.log(`listen-nav: knocked at ${s.knockAtSec}s to see whether the talking stops${ok ? "" : " (the carrier refused it)"}`);
+  try { s.onEvent?.("unknown", "Pressed a few keys to see whether the talking stops", { step: "knock", atSec: s.knockAtSec }); } catch { /* best-effort */ }
 }
 
 /** Abandon the mapped walk and hand the live call to the agent bridge — the same handoff the last
