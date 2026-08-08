@@ -173,7 +173,9 @@ async function proveDirect(item: SweepItem): Promise<void> {
   // "Did we act on a menu" must not count the product QUESTION — the ask is scaffolding, said on
   // every call, person or menu alike. Counting it made every passing direct call read as a menu walk,
   // which false-flagged every direct chain forever (round-3 item 2).
-  const acted = steps.some((st) => st.who === "us" && (st.action === "press" || st.action === "say")
+  // Nor the KNOCK: pressing a few keys to see who picked up is a test of the line, not a menu
+  // walked, and counting it made every store that answers direct read as a menu chain.
+  const acted = steps.some((st) => st.who === "us" && !st.knock && (st.action === "press" || st.action === "say")
     && !String(st.text || "").startsWith("asked:"));
 
   // Nothing to press, but a recording answered and a person came later: the third shape. It gets its

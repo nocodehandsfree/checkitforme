@@ -592,8 +592,12 @@ async function main() {
       "a route with a step still to walk cannot be finished with us");
     ok(/if \(speech && ROUTING_RE\.test\(speech\) && !routeUnfinished && s\.humanAtSec == null\s*\n\s*&& handoffVerdict\?\.who === "recording"\)/.test(src),
       "so an offer to connect before the last answer is read as one more prompt, not the handoff");
-    ok(/if \(spokeOver && fragment && prevIvr\) \{ prevIvr\.text = [\s\S]{0,80}?saidWasTail = true; \}/.test(src),
+    ok(/if \(spokeOver && fragment && prevIvr\) \{\s*\n\s*prevIvr\.text = [\s\S]{0,80}?saidWasTail = true;/.test(src),
       "it is joined onto the line it belongs to, never listed as its own step");
+    // THE KNOCK IS NOT US TALKING OVER THE LINE. What comes back after the keys is the ANSWER to the
+    // keys, and gluing it onto the opening line destroys the only evidence the knock exists to get.
+    ok(/const spokeOver = [\s\S]{0,120}?s\.steps\.length - 1 !== s\.knockStepIdx/.test(src),
+      "and the knock's own keys are never treated as us talking over the store");
 
     // THE SCREEN USES ONLY WORDS THE STATUSES SCREEN OWNS (owner, 07-30). It said "nobody picked up"
     // on a check we ended ourselves while the desk was ringing, which is two untruths in one line.
@@ -1100,8 +1104,8 @@ async function main() {
       ok(gateAt >= 0 && gateAt < firstWrite, "and the gate sits BEFORE every write the call can make");
       // ROUND 3 ITEM 2: the product question is not "acting on a menu", the label clears WHOLE, and
       // a locked chain is never downgraded — the endless false-flag loop on direct chains is dead.
-      ok(/const acted = steps\.some\(\(st\) => st\.who === "us" && \(st\.action === "press" \|\| st\.action === "say"\)\s*\n\s*&& !String\(st\.text \|\| ""\)\.startsWith\("asked:"\)\);/.test(sw),
-        "the ask is scaffolding — a passing direct call no longer reads as a menu walk");
+      ok(/const acted = steps\.some\(\(st\) => st\.who === "us" && !st\.knock && \(st\.action === "press" \|\| st\.action === "say"\)\s*\n\s*&& !String\(st\.text \|\| ""\)\.startsWith\("asked:"\)\);/.test(sw),
+        "the ask is scaffolding, and so are the knock's keys — a passing direct call no longer reads as a menu walk");
       ok(/ringsDirect: false, answerPath: null,/.test(sw),
         "the wrong 'answers directly' label clears whole, so the mapper accepts the handoff");
       ok(/cur\?\.navStatus === "locked" \? \{\} : \{ navStatus: "review" \}/.test(sw),

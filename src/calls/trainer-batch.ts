@@ -34,7 +34,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  *  The confirm question ("asked: …") is training scaffolding, not navigation — drop it, or a
  *  direct-answer store's recipe would tell live calls to recite the ask as a menu step. */
 export function recipeFromSteps(steps: Step[], humanAtSec: number | null): Recipe {
-  const acts = (steps || []).filter((st) => st.who === "us" && !String((st as { text?: string }).text || "").startsWith("asked:")).map((st) => ({ action: st.action || "say", value: st.value || "", atSec: st.atSec }));
+  const acts = (steps || []).filter((st) => st.who === "us" && !(st as { knock?: boolean }).knock && !String((st as { text?: string }).text || "").startsWith("asked:")).map((st) => ({ action: st.action || "say", value: st.value || "", atSec: st.atSec }));
   const type = acts.length === 0 ? "direct" : (acts.every((a) => a.action === "press") ? "keypad" : "voice");
   return { type, steps: acts, seconds: humanAtSec ?? (steps[steps.length - 1]?.atSec ?? 0) };
 }

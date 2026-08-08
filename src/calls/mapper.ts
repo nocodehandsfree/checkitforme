@@ -697,7 +697,7 @@ function driveMapper(run: MapperRun): void {
       const redirected = s?.confirmResult === "redirect";
       const recipe = s ? (s.recipe ?? recipeFromSteps(s.steps as NavStep[], s.humanAtSec)) : null;
       const secs = recipe?.seconds ?? null;
-      const menuSecs = s?.transferAtSec ?? [...((s?.steps || []) as NavStep[])].reverse().find((st) => st.who === "us")?.atSec ?? null;
+      const menuSecs = s?.transferAtSec ?? [...((s?.steps || []) as NavStep[])].reverse().find((st) => st.who === "us" && !st.knock)?.atSec ?? null;
       if (!graded && s?.deadLine) run.rotate = true;
       if (graded && typeof secs === "number") run.reachedSecs.push(secs);
       if (menuChanged) {

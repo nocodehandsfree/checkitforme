@@ -62,6 +62,11 @@ export interface NavStep {
    *  what this used to do — miscounts whenever the transcriber splits one recording into two lines
    *  or glues two into one. Absent when the audio fork never connected. */
   earPrompts?: number;
+  /** THE KNOCK'S OWN KEYS — a test of who is on the line, never a choice we made at a menu. It is on
+   *  the record because it is a thing we really did and the timeline must say so, but nothing that
+   *  reads the route may count it: as a plain press step it read as the door we picked, so the wrong
+   *  door got marked wrong, and it was written into the store's saved route as "press 123". */
+  knock?: boolean;
 }
 // One choice the store offered us, and what it routes to. Best-effort from messy speech-to-text.
 // `digit` is set on a keypad menu ("press 2 for guest services"). `say` is set on a SPOKEN menu, where
@@ -162,7 +167,12 @@ export interface NavSession {
    *  stopped for us (a person), and what it did. */
   pauseTested?: boolean; keptTalkingAfterPause?: boolean; pauseStartedAtSec?: number;
   /** THE KNOCK: when we pressed, what was playing when we did, and whether it read straight on. */
-  knockAtSec?: number; knockLine?: string; keptTalkingAfterKnock?: boolean;
+  knockAtSec?: number; knockLine?: string; keptTalkingAfterKnock?: boolean; knockStepIdx?: number;
+  /** WHERE THIS TURN'S OWN LINE SITS in the steps. The store's line is written down before anything
+   *  judges it, so "every line it has already said" would otherwise contain the line in hand and
+   *  match it against itself — which called every single line a recording. This marks the one step
+   *  that is NOT evidence about itself; it is cleared at the top of every turn. */
+  thisTurnLineIdx?: number;
   /** One unheard menu line filed per check — a condition is a menu, not every line of it. */
   filedUnknownLine?: boolean;
   /** The reigning recipe's menu time, for a speed check to beat. Not beaten = failed, "not faster". */
@@ -510,7 +520,7 @@ export function menuStillTalking(
   // unsettled line comes back unsure rather than a guessed person, so a line that only SOUNDS like
   // a person is left to the veto's own evidence, which is what the veto is for.
   if (judgeVoice({ text: speech || "", atSec: 0, pauseTested: true, keptTalkingAfterPause: false }).who === "person") return false;
-  if (s.steps.some((st) => st.who === "us")) return false;          // we have already acted; trust the read
+  if (s.steps.some((st) => st.who === "us" && !st.knock)) return false;   // we have already acted; trust the read
   return s.steps.filter((st) => st.who === "ivr" && String(st.text || "").trim()).length >= 2;
 }
 
@@ -533,7 +543,10 @@ export function personLineAtSec(steps: NavStep[], speech: string, atSec: number,
     knownMenuLines: s?.knownMenuLines,
     ringsHeard: s?.ear?.conv?.rings ?? s?.ringsHeard,
     ringAtSec: s?.ringAtSec ?? null,
-    weSpokeAtSec: [...(steps || [])].reverse().find((st) => st.who === "us")?.atSec ?? null,
+    // PRESSING KEYS IS NOT US SPEAKING. The judge counts a line landing right after we spoke as a
+    // reply, and replies are people — but the knock is silent to whoever is on the line except as
+    // beeps, so a recording answering the keys must never read as somebody replying to us.
+    weSpokeAtSec: [...(steps || [])].reverse().find((st) => st.who === "us" && !st.knock)?.atSec ?? null,
     weAskedAtSec: s?.confirm?.askedAtSec ?? null,
     product: s?.confirm?.product,
   });
@@ -645,12 +658,16 @@ function judgeHere(s: NavSession, speech: string, atSec: number) {
     // EVERY LINE THIS NUMBER HAS ALREADY SAID ON THIS CALL, so a recording repeating itself gives
     // itself away with no memory of the chain at all (owner 08-07). The store's own lines only:
     // ours are not evidence about who is on the other end.
-    saidBefore: s.steps.filter((st) => st.who === "ivr" && st.text).map((st) => String(st.text)),
+    // THE LINE IN HAND IS NOT EVIDENCE ABOUT ITSELF. The store's line is written into the record
+    // before anything judges it, so passing every recorded line straight through matched this line
+    // against its own copy and answered "it has said this already" on the FIRST time it said it —
+    // which called every line on every check a recording, so no person was ever reached.
+    saidBefore: s.steps.filter((st, i) => st.who === "ivr" && st.text && i !== s.thisTurnLineIdx).map((st) => String(st.text)),
     mappedRoute: !!s.barge?.plan?.length,
     routeHandoffSeen: s.transferAtSec != null,
     ringsHeard: s.ear?.conv?.rings ?? s.ringsHeard ?? 0,
     ringAtSec: s.ringAtSec ?? null,
-    weSpokeAtSec: [...s.steps].reverse().find((st) => st.who === "us")?.atSec ?? null,
+    weSpokeAtSec: [...s.steps].reverse().find((st) => st.who === "us" && !st.knock)?.atSec ?? null,
     weAskedAtSec: s.confirm?.askedAtSec ?? null,
     firstEverCall: s.firstEverCall,
     product: s.confirm?.product,
@@ -673,23 +690,12 @@ async function navTurn(id: string, speech: string): Promise<string> {
   if (!s) return twiml(`<Hangup/>`);
   const atSec = Math.round((Date.now() - s.startMs) / 1000);
   s.turns++;
-  // THE KNOCK (owner 08-07). On a number whose menu we do NOT already hold, press a few keys the
-  // moment the store says its first thing, before any options are read. A person hears the beeps in
-  // their ear and stops. A recording reads straight on, and reading on is a machine with certainty.
-  // We never know in advance whether a store answers directly, so the keys go out once and Echo uses
-  // what happens next: that is the whole point, our side works it out instead of us knowing.
-  // Getting thrown into a random branch is fine and expected: it proves a machine, and mapping's own
-  // next check starts again from the top.
-  if (s.knockAtSec == null && !(s.knownMenuLines || []).length && String(speech || "").trim()) {
-    s.knockAtSec = atSec;
-    s.knockLine = String(speech);
-    s.steps.push({ who: "us", text: "pressed a few keys to see whether the talking stops", atSec, action: "press", value: "123" });
-    emit(s.id, "unknown", "Pressed a few keys to see whether the talking stops", { step: "knock", atSec });
-    return twiml(`<Play digits="123"/>${gather(id)}`);
-  }
-  // …and the very next thing we hear is the answer. Still reading the same line out means it never
-  // noticed, so it is a machine. Anything else is left to the other tests, because a menu goes quiet
-  // too when it acts on a key.
+  // This turn has not written its line down yet, so last turn's mark cannot stand.
+  s.thisTurnLineIdx = undefined;
+  // THE KNOCK'S ANSWER: the very next thing we hear after the keys went out. Still reading the same
+  // line out means it never noticed, so it is a machine. Anything else is left to the other tests,
+  // because a menu goes quiet too when it acts on a key. (The keys themselves go out further down,
+  // AFTER the store's line has been written into the record — see THE KNOCK below.)
   if (s.knockAtSec != null && s.keptTalkingAfterKnock === undefined && String(speech || "").trim()) {
     const a = String(s.knockLine || "").toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
     const b = String(speech).toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
@@ -756,8 +762,14 @@ async function navTurn(id: string, speech: string): Promise<string> {
     // reading "You'd like to do." A recipe cannot be right if the menu beside it says something the
     // menu never said as its own line, so the remainder is joined onto the line it belongs to.
     const line = speech.trim().slice(0, 300);
+    // THE KNOCK IS NOT US TALKING OVER THE LINE. The tail rule below exists because answering a
+    // prompt cuts the recording mid-sentence and the rest comes back as a stray fragment. Pressing a
+    // few keys to see whether the talking stops is the opposite: what comes back next is the ANSWER
+    // to the keys, and gluing it onto the opening line destroys the one piece of evidence the knock
+    // exists to collect.
     const last = s.steps[s.steps.length - 1];
-    const spokeOver = !!last && last.who === "us" && atSec - (last.atSec ?? 0) <= TAIL_SEC;
+    const spokeOver = !!last && last.who === "us" && s.steps.length - 1 !== s.knockStepIdx
+      && atSec - (last.atSec ?? 0) <= TAIL_SEC;
     // THE HANDOFF IS ITS OWN MOMENT, never a tail. "Okay, transferring you now" is short and is not a
     // question, so the first version of this rule swallowed it into the menu line above and the record
     // lost the one line that says the menu was finished with us.
@@ -768,13 +780,16 @@ async function navTurn(id: string, speech: string): Promise<string> {
     // the menu test do the separating; punctuation the transcriber guessed at cannot.
     const fragment = line.split(/\s+/).length <= TAIL_WORDS && !isMenuLine(line) && !ROUTING_RE.test(line);
     const prevIvr = [...s.steps].reverse().find((st) => st.who === "ivr" && st.text);
-    if (spokeOver && fragment && prevIvr) { prevIvr.text = `${prevIvr.text} ${line}`.slice(0, 300); saidWasTail = true; }
-    else {
+    if (spokeOver && fragment && prevIvr) {
+      prevIvr.text = `${prevIvr.text} ${line}`.slice(0, 300); saidWasTail = true;
+      // The joined line now carries this turn's words too, so it cannot be evidence about itself.
+      s.thisTurnLineIdx = s.steps.lastIndexOf(prevIvr);
+    } else {
       // SENT TO THE BEGINNING: the opening recording playing again mid-check means the menu started
       // over on us. That is a graded failure, not something the screen should improvise around.
       const firstIvr = s.steps.find((st) => st.who === "ivr" && st.text);
       if (firstIvr && s.steps.some((st) => st.who === "us") && sameMenu(firstIvr.text, line)) s.greetingTwice = true;
-      s.steps.push({ who: "ivr", text: line, atSec });
+      s.thisTurnLineIdx = s.steps.push({ who: "ivr", text: line, atSec }) - 1;
     }
     // #2: harvest the pressable options from any menu line into the chain's menu tree + keep the raw
     // line (STT is fuzzy, so the owner can read the exact wording when the parse is imperfect).
@@ -787,6 +802,28 @@ async function navTurn(id: string, speech: string): Promise<string> {
       (s.menuPrompts = s.menuPrompts || []).push(speech.trim().slice(0, 240));
       if (s.menuPrompts.length > 12) s.menuPrompts = s.menuPrompts.slice(-12);
     }
+  }
+  // THE KNOCK (owner 08-07). On a number whose menu we do NOT already hold, press a few keys the
+  // moment the store says its first thing, before any options are read. A person hears the beeps in
+  // their ear and stops. A recording reads straight on, and reading on is a machine with certainty.
+  // We never know in advance whether a store answers directly, so the keys go out once and Echo uses
+  // what happens next: that is the whole point, our side works it out instead of us knowing.
+  // Getting thrown into a random branch is fine and expected: it proves a machine, and mapping's own
+  // next check starts again from the top.
+  //
+  // IT SITS HERE, AFTER THE LINE IS WRITTEN DOWN, and not above where it was first built. Returning
+  // before the record was written threw away the store's opening line: it never reached the timeline,
+  // and it never reached the memory of what this number has already said — which is the one test that
+  // catches a recording repeating itself on a number we have never rung.
+  // Never at a mailbox or a closed store: there is nobody there to hear the beeps, and the check is
+  // about to end anyway.
+  if (s.knockAtSec == null && !(s.knownMenuLines || []).length && String(speech || "").trim()
+    && !looksLikeADeadEnd(speech)) {
+    s.knockAtSec = atSec;
+    s.knockLine = String(speech);
+    s.knockStepIdx = s.steps.push({ who: "us", text: "pressed a few keys to see whether the talking stops", atSec, action: "press", value: "123", knock: true }) - 1;
+    emit(s.id, "unknown", "Pressed a few keys to see whether the talking stops", { step: "knock", atSec });
+    return twiml(`<Play digits="123"/>${gather(id)}`);
   }
   // A MENU CANNOT BE FINISHED WITH US WHILE OUR ROUTE STILL HAS A STEP LEFT (owner, 07-30). CVS said
   // "just say what you'd like to do and I can connect you" — an OFFER to connect, mid menu — and the
@@ -1125,7 +1162,7 @@ function finish(s: NavSession, status: "human" | "failed" | "mapped") {
   {
     const heard = s.steps.find((st) => st.who === "ivr" && st.text)?.text;
     const saidValues = s.steps
-      .filter((st) => st.who === "us" && (st.action === "say" || st.action === "press") && st.value && !String(st.text).startsWith("asked:"))
+      .filter((st) => st.who === "us" && !st.knock && (st.action === "say" || st.action === "press") && st.value && !String(st.text).startsWith("asked:"))
       .map((st) => String(st.value));
     const g = gradeCheck({
       stage: s.stage ?? (s.relisten ? "speed" : "map"),
@@ -1165,7 +1202,7 @@ function finish(s: NavSession, status: "human" | "failed" | "mapped") {
   if (lockable) {
     // The confirm question itself is training scaffolding, not part of the navigation recipe — drop it.
     const acts = s.steps
-      .filter((st) => st.who === "us" && !String(st.text).startsWith("asked:"))
+      .filter((st) => st.who === "us" && !st.knock && !String(st.text).startsWith("asked:"))
       .map((st) => ({ action: st.action || "say", value: st.value || "", atSec: st.atSec }));
     // NOTHING TO PRESS IS NOT THE SAME AS NOBODY IN FRONT OF STAFF. A store that plays a recording
     // and then hands us on ("thank you for calling Barnes & Noble", hold music, a person) needs no
@@ -1228,7 +1265,9 @@ function finish(s: NavSession, status: "human" | "failed" | "mapped") {
 /** Which "team member" ran this call: Alpha = keypad presses only, Bravo = spoke menu words,
  *  Charlie = a person answered directly (no nav). Every nav hands off to Charlie at the human. */
 export function classifyMode(steps: NavStep[]): { mode: "alpha" | "bravo" | "charlie"; label: string } {
-  const acts = steps.filter((st) => st.who === "us");
+  // The knock is not a menu walked. A store that answers direct still gets the keys once, and
+  // counting them made every direct store read as Alpha instead of the direct pickup it is.
+  const acts = steps.filter((st) => st.who === "us" && !st.knock);
   if (!acts.length) return { mode: "charlie", label: "Charlie (direct)" };
   return acts.every((a) => a.action === "press")
     ? { mode: "alpha", label: "Alpha → Charlie" }
@@ -1255,7 +1294,7 @@ async function persistRun(s: NavSession): Promise<void> {
       callSid: s.callSid,
       // A re-listen reports the MENU's seconds (the handoff, else its last step), never a person's.
       seconds: s.relisten
-        ? (s.transferAtSec ?? s.steps.filter((st) => st.who === "us").slice(-1)[0]?.atSec ?? s.humanAtSec ?? null)
+        ? (s.transferAtSec ?? s.steps.filter((st) => st.who === "us" && !st.knock).slice(-1)[0]?.atSec ?? s.humanAtSec ?? null)
         : (s.humanAtSec ?? (s.steps[s.steps.length - 1]?.atSec ?? null)),
       // Confirm-mode result: did we reach the RIGHT desk (answered) or get sent elsewhere (redirect → where)?
       confirm: s.confirm ? (s.confirmResult ?? "asked") : null, redirectTo: s.redirectTo ?? null,
@@ -1274,7 +1313,7 @@ async function persistRun(s: NavSession): Promise<void> {
  *  the sentence the clerk said back. */
 export function pickedDoorFrom(steps: NavStep[]): string | undefined {
   const acts = (steps || []).filter((st) => st.who === "us" && (st.action === "say" || st.action === "press")
-    && st.value && !String(st.text || "").startsWith("asked:"));
+    && st.value && !st.knock && !String(st.text || "").startsWith("asked:"));
   const v = acts[acts.length - 1]?.value;
   return v ? String(v).toLowerCase() : undefined;
 }
@@ -1286,7 +1325,7 @@ export function questionBeforePick(steps: NavStep[]): string | undefined {
   for (let i = all.length - 1; i >= 0; i--) {
     const st = all[i];
     if (st.who === "us" && (st.action === "say" || st.action === "press") && st.value
-      && !String(st.text || "").startsWith("asked:")) { pick = i; break; }
+      && !st.knock && !String(st.text || "").startsWith("asked:")) { pick = i; break; }
   }
   if (pick < 0) return undefined;
   for (let i = pick - 1; i >= 0; i--) {
