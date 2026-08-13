@@ -174,15 +174,25 @@ console.log("\n▶ VARIANT — the menu changed, the front desk moved from 0 to 
     "and the menu says so out loud, in his words with his new key");
   const five = keyTable("menu_changed", "5");
   ok(five?.kind === "desk" && (five as { staffTakeOver: boolean }).staffTakeOver, "5 reaches the front desk");
-  // A SAVED ROUTE STILL PRESSES 0, and that is the whole test: it has to land somewhere wrong.
+  // A SAVED ROUTE STILL PRESSES 0, and that is the whole test. The owner's ruling 08-08: it has to
+  // reach a PERSON, and the wrong one. A route that lands on nobody is easy to catch, because the
+  // menu just plays again; a route that still reaches somebody and only the wrong somebody is the
+  // failure that quietly poisons the data, so that is the one this has to prove we catch.
   const zero = keyTable("menu_changed", "0");
-  ok(zero === null, "while 0, which every saved route presses, now leads nowhere at all");
+  ok(zero?.kind === "desk", "while 0, which every saved route presses, still reaches a real desk");
+  ok((zero as { answers: string }).answers === "MVP's pharmacy, this is Larry.",
+    "and it is the PHARMACY, the wrong desk for cards, not nobody at all");
+  ok(!(zero as { staffTakeOver: boolean }).staffTakeOver,
+    "so Staff never take over there and the pharmacy can never be locked as the proven department");
   const { callSid: sid } = _menuRig("menu_changed", { lineSecs: LINE });
   await robotMenuStep(sid, "", "");
   const n = said(sid).length;
-  await robotMenuStep(sid, "0", "");
-  ok(said(sid).slice(n).join(" ") === optionsFor("menu_changed").join(" "),
-    "so a check pressing 0 hears the menu again instead of the front desk");
+  const turn = await robotMenuStep(sid, "0", "");
+  ok(said(sid).slice(n).some((l) => l === "MVP's pharmacy, this is Larry."),
+    "a check pressing 0 hears a person answer, which is exactly the trap");
+  ok(!said(sid).slice(n).some((l) => l === "MVP's, this is Larry speaking."),
+    "and it is never the front desk, so the saved route is genuinely wrong now");
+  ok(turn !== null && "twiml" in turn, "the wrong desk holds the line rather than handing the check to Staff");
   _menuEnd(sid);
 }
 

@@ -118,6 +118,12 @@ export function keyTable(v: MenuVariant, key: string): KeyLanding | null {
       ? { kind: "ringout", rings: 8 }
       : { kind: "desk", rings: 3, answers: FRONT_DESK, staffTakeOver: true };
   }
+  // THE CHANGED MENU SENDS THE OLD KEY TO THE WRONG PERSON (owner 08-08). A saved route that presses
+  // 0 must still REACH somebody here, and the somebody must be wrong. A route that lands on nobody is
+  // easy to catch, because the menu simply plays again; a route that still reaches a person and only
+  // the wrong person is the failure that quietly poisons the data, so that is the one these tests
+  // have to prove we catch.
+  if (v === "menu_changed" && key === "0") return { kind: "desk", rings: 1, answers: PHARMACY_DESK, staffTakeOver: false };
   switch (key) {
     // The pharmacy desk. The WRONG department for cards: pharmacy staff cannot see the front of the
     // store. The owner's script gives this desk one line and no more, so it says that line and holds
