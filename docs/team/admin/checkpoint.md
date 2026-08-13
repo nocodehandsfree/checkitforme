@@ -33,20 +33,20 @@
 - 🔴 **`askSheet` ALWAYS resolved false:** it closed the sheet BEFORE answering and `sheetclosed` fires
   synchronously, so every Yes read as a cancel. ANSWER, then close. 🔴 **A body-level layer over the sheet is
   eaten by the tap-outside listener**; `#iconpick` is exempt and any future overlay must be too.
+- 🔴 **`touch-action:manipulation` belongs on `html` TOO, not only `*`** (WebKit settles double-tap zoom on the
+  document, so a tap on bare background still zoomed; the site has had it since 21b2f598). **Owner order: Statuses'
+  New is a top-right `button.act`, NOT comp 1e's bottom capsule.** Delete warns it is live on prod; In stock cannot go.
 ## 2026-07-30 — Voice ▸ **Test calls** is the new-engine scorecard (@5b1f325, SHIPPED + DRIVEN)
 - `src/calls/behaved.ts` = the PURE scorer on the SAME `/api/admin/receipt/:room` envelope, NO second route. 79 asserts in `scripts/test-behaved.ts`. Page = comp 1c. **PM: promote wanted**, the server half is staging only.
 - 🔴 **THREE STATES, NOT TWO.** A gray dash = this check never put that rule to the test; a cross for "nobody put us on hold" is a lie and a tick is worse. Same law as an unstamped cost never printing as nought.
 - 🔴 **`status` and `statusKey` are TWO fields, never merged.**
 ## 2026-07-30 — Unify GATE + page 1 (Live) shipped (@71b724a5). **dash is SEALED. Next page: App (settings).**
-- `scripts/qa-admin-unify.mjs`. A page = its `<section>` + its `TAB_LOADERS` loader body + a `chrome` page. It
-  fails on a SECOND way to mark a hint, on-page directional copy, the UNTRUE list and his-words. GROW those lists,
-  never weaken one to pass a page. **RATCHET:** only ids in `SEALED` are enforced, so the sweep cannot brick the
-  ship path; seal a page as its session's LAST step.
-- **The ONE hint standard is `data-tip` + one `[data-tip]::after{content:"ⓘ"}` rule** (tap-to-show). 🔴 The comp
-  board's "tooltips become gray lines" is OLDER than the shipped pattern; never "fix" the Admin back to them.
+- `scripts/qa-admin-unify.mjs`. A page = its `<section>` + its `TAB_LOADERS` loader body + a `chrome` page. It fails
+  on a SECOND way to mark a hint, on-page directional copy, the UNTRUE list and his-words. GROW those lists, never
+  weaken one. **RATCHET:** only `SEALED` ids are enforced; seal a page as its session's LAST step.
+- **ONE hint standard: `data-tip` + one `[data-tip]::after{content:"ⓘ"}` rule** (tap-to-show; never on a filled green button, the ⓘ lands inside it). 🔴 The comp board's "tooltips become gray lines" is OLDER; never "fix" the Admin back to them.
 ## 2026-07-29/30 — Policy is a console (@0f2b6b7e) · the iOS bottom tint is LOCKED (owner order)
-- 🔴 **CHECK BEFORE YOU CUT:** the queue said cut Policy's pricing form, the comp said the OPPOSITE. Console
-  pattern: a row saves on `change`, merges its sub-object, re-reads the PATCH response.
+- 🔴 **CHECK BEFORE YOU CUT:** the queue said cut Policy's pricing form, the comp said the OPPOSITE. Console pattern: a row saves on `change`, merges its sub-object, re-reads the PATCH response.
 - 🔴 **Driving the Admin in a browser: FIRST Compute entry in `docs/shared/GOTCHAS.md`** (no internet for
   Chromium). `qa-tint-lock` 28/28: **only `.sheet` may be a filled `position:fixed` on `bottom:0`**, and a
   closed sheet is `display:none`. No iOS here, he reads that edge.
