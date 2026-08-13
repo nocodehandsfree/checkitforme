@@ -2662,7 +2662,10 @@ function checkV2Html(d){
   const needed=(d.needList||[]).length?`<div class="meta" style="margin:0 0 10px;font-size:12px;line-height:1.5">To pass: ${esch((d.needList||[]).join(', '))}.</div>`:'';
   const behavior=`<details open class="card" style="margin-bottom:14px;padding:16px 18px"><summary style="list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;margin-bottom:8px"><span class="k-eyebrow" style="margin:0;flex:1">Charlie behavior</span>${chev}</summary>
       ${needed}
-      ${d.behavior.map(r=>`<div class="row" style="align-items:center;padding:8px 0"><span class="grow" style="font-size:13.5px;font-weight:${r.need?'800':'700'};color:var(--text-strong)">${esch(r.l)}${r.need?'<span style="margin-left:6px;font-size:10px;font-weight:800;letter-spacing:.4px;color:#8A8A96">NEEDED</span>':''}</span>${bmark(r.pass)}</div>`).join('')}
+      <!-- The NEEDED tag is DELETED (owner 08-08): the "To pass" line above already names those rows,
+           so the tag repeated it on every one of them. Back to the comp's own row, which is a bold
+           label and its mark and nothing else; a needed row still carries the heavier weight. -->
+      ${d.behavior.map(r=>`<div class="row" style="align-items:center;padding:8px 0"><span class="grow" style="font-size:13.5px;font-weight:${r.need?'800':'700'};color:var(--text-strong)">${esch(r.l)}</span>${bmark(r.pass)}</div>`).join('')}
     </details>`;
   const say=(w,tx)=>{const ai=w==='Agent';return `<div class="convo-thread" style="margin:6px 0 2px"><div class="ctlv2-bub${ai?' ai':''}"><div class="who">${ai?'CHECK AI':'STAFF'}</div><div class="tx">${esch(tx)}</div></div></div>`;};
   const menuIco='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>';

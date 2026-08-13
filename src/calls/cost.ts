@@ -191,7 +191,8 @@ export function costBuckets(
     { key: "charlie", label: "Charlie (Voice)", usd: cost.charlieUsd, detail: [
       ["On the meter", mmss(cost.charlieSecs)],
       ["Rate (per minute)", perMin((rates.charlieCreditsPerMin) * rates.creditUsd)],
-      ["Covers", "voice and thinking together"],
+      // The "Covers: voice and thinking together" row is DELETED (owner 08-08): he knows what
+      // Charlie's line covers and the row was explaining rather than telling him a number.
       // WHERE HIS SECONDS WENT (owner 08-07). His meter runs whether he is talking, hearing somebody
       // talk, or sitting on a line where nobody is saying anything. Only the last one is waste, and
       // it was invisible: check 354 billed 33 seconds of him and he never said a word.

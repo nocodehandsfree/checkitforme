@@ -301,7 +301,10 @@ console.log("▶ the buckets, his names, and they SUM TO THE TOTAL exactly (owne
   ok(bravo.detail.some(([l]) => l === "Rate (per minute)"), "…and its rate comes from the rates in force, never typed in");
   const fox = b.find((x) => x.key === "foxtrot")!;
   ok(fox.detail.some(([l, v]) => l === "Billed (minutes)" && v === "2:00"), "the whole minute rounding cliff stays on the phone line where the carrier puts it");
-  ok(voice.detail.some(([l, v]) => l === "Covers" && v === "voice and thinking together"), "Charlie's line covers voice and thinking together (his ruling)");
+  // THE "COVERS" ROW IS GONE (owner 08-08, off his own screenshot of check 359): he knows what
+  // Charlie's line covers, and the row was explaining instead of telling him a number. His line
+  // still covers voice and thinking together; the card simply no longer says so out loud.
+  ok(!voice.detail.some(([l]) => l === "Covers"), "Charlie's line no longer explains what it covers");
 
   // No free items listed (his ruling): a check with no menu and no read shows no Bravo and no Status.
   const cost2 = costCall({ callSecs: 30, charlieSecs: 10, avoidableSecs: 0, forkSecs: [30] });
