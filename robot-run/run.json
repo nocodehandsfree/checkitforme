@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-13T20:16:02.189Z",
+  "at": "2026-08-13T20:53:51.040Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
@@ -27,14 +27,14 @@
         {
           "n": 4,
           "name": "Staff's greeting is the first line, on the live view",
-          "pass": false,
-          "detail": "live view showed: \"Yeah.\"  ·  robot said: \"Larry Vasquez, how can I help you?\""
+          "pass": true,
+          "detail": "live view showed: \"Larry Vásquez. How can I help you?\"  ·  robot said: \"Larry Vasquez, how can I help you?\""
         },
         {
           "n": 5,
           "name": "the greeting is its own line, never welded to their answer",
-          "pass": false,
-          "detail": "it carries more than the greeting: \"Yeah.\""
+          "pass": true,
+          "detail": "one line, nothing else in it"
         },
         {
           "n": 12,
@@ -64,37 +64,37 @@
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
           "pass": true,
-          "detail": "0 bounce(s) over 46 looks · header held at 62px"
+          "detail": "0 bounce(s) over 42 looks · header held at 62px"
         },
         {
           "n": 8,
           "name": "the log expands",
           "pass": true,
-          "detail": "19px → 113px"
+          "detail": "19px → 90px"
         },
         {
           "n": 13,
           "name": "the check ends with a goodbye, not with us hanging up mid conversation",
-          "pass": true,
-          "detail": "we signed off: \"Perfect, thanks so much Larry, have a good one!\""
+          "pass": false,
+          "detail": "the last thing said was theirs: \"Clerk: Yeah. It's the pitch black booster boxes.\""
         },
         {
           "n": 14,
           "name": "we never ask the same question twice",
           "pass": true,
-          "detail": "3 things said, none of them twice"
+          "detail": "2 things said, none of them twice"
         },
         {
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 104 seconds and the line closed at 104 — 0 seconds of nothing"
+          "detail": "the answer was in at 119 seconds and the line closed at 119 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Thu, Aug 13 · 8:14 PM Couldn’t tell We couldn’t quite make out the answer.Read the convo and tell us what you th"
+          "detail": " Result Thu, Aug 13 · 8:51 PM Couldn’t tell We couldn’t quite make out the answer.Read the convo and tell us what you th"
         },
         {
           "n": 9.1,
@@ -112,7 +112,7 @@
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "CHARGED · the screen claims no free check · the check cost 9.2¢"
+          "detail": "CHARGED · the screen claims no free check · the check cost 9.0¢"
         }
       ],
       "shots": [
@@ -121,10 +121,10 @@
         "./robot-run/01-live.png",
         "./robot-run/01-result.png"
       ],
-      "startedAt": 1786652000845,
-      "checkId": 359,
-      "cost": 0.092116,
-      "costReadable": "9.2¢",
+      "startedAt": 1786654267452,
+      "checkId": 360,
+      "cost": 0.090085,
+      "costReadable": "9.0¢",
       "robotCost": null,
       "charged": true,
       "statusKey": "in_stock"
