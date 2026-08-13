@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-13T20:53:51.040Z",
+  "at": "2026-08-13T22:55:44.269Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
@@ -64,7 +64,7 @@
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
           "pass": true,
-          "detail": "0 bounce(s) over 42 looks · header held at 62px"
+          "detail": "0 bounce(s) over 55 looks · header held at 62px"
         },
         {
           "n": 8,
@@ -76,7 +76,7 @@
           "n": 13,
           "name": "the check ends with a goodbye, not with us hanging up mid conversation",
           "pass": false,
-          "detail": "the last thing said was theirs: \"Clerk: Yeah. It's the pitch black booster boxes.\""
+          "detail": "the last thing said was OUR OWN QUESTION: \"Agent: Oh nice, do you know the name of the set, like Chaos Rising?\""
         },
         {
           "n": 14,
@@ -88,13 +88,13 @@
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 119 seconds and the line closed at 119 — 0 seconds of nothing"
+          "detail": "the answer was in at 121 seconds and the line closed at 121 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Thu, Aug 13 · 8:51 PM Couldn’t tell We couldn’t quite make out the answer.Read the convo and tell us what you th"
+          "detail": " Result Thu, Aug 13 · 10:53 PM Nobody answered Rang and rang, but nobody picked up.No check, no charge. Try checking lat"
         },
         {
           "n": 9.1,
@@ -111,8 +111,8 @@
         {
           "n": 10,
           "name": "the screen and the till agree about money",
-          "pass": true,
-          "detail": "CHARGED · the screen claims no free check · the check cost 9.0¢"
+          "pass": false,
+          "detail": "CHARGED · the screen says \"No charge\" · the check cost 9.9¢"
         }
       ],
       "shots": [
@@ -121,10 +121,10 @@
         "./robot-run/01-live.png",
         "./robot-run/01-result.png"
       ],
-      "startedAt": 1786654267452,
-      "checkId": 360,
-      "cost": 0.090085,
-      "costReadable": "9.0¢",
+      "startedAt": 1786661573592,
+      "checkId": 361,
+      "cost": 0.099063,
+      "costReadable": "9.9¢",
       "robotCost": null,
       "charged": true,
       "statusKey": "in_stock"
