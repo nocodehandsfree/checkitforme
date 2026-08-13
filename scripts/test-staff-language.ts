@@ -9,13 +9,30 @@ const is = (got: unknown, want: unknown, label: string) => {
   else { console.error(`  ✗ ${label}\n     got:  ${JSON.stringify(got)}\n     want: ${JSON.stringify(want)}`); fail++; }
 };
 
+console.log("\n── THE REAL LINE OFF CHECK 359, accents and all ──");
+// THE ONE THAT GOT THROUGH (owner 08-08). The store answered in plain English and the transcriber
+// wrote the surname with its accent, so the first cut of the judge, which decided on accented
+// LETTERS, asked an English speaker our question in Spanish. This exact string, character for
+// character off the check's own record, is the first thing the judge is fed now. The old test used
+// "Larry Vasquez" with no accent, the way the robot store's script spells it, which is precisely why
+// it never saw what really arrives.
+is(staffSpokeSpanish("Larry Vásquez. How can I help you?"), false, "check 359's own line is ENGLISH, accent and all");
+is(staffSpokeSpanish("MVP's, buenas tardes. ¿En qué le puedo ayudar?"), true, "and his Spanish greeting is still SPANISH");
+// A NAME NEVER DECIDES THE LANGUAGE. Two more people whose names carry accents, greeting in English.
+is(staffSpokeSpanish("José Martínez, how can I help you today?"), false, "an accented first name and surname, greeting in English");
+is(staffSpokeSpanish("María Núñez speaking, what can I do for you?"), false, "an accented name with an n tilde in it, greeting in English");
+// AND NEITHER DOES A SHOP'S NAME. This is why the bare nouns came off the list: a sign over a door
+// is not somebody speaking.
+is(staffSpokeSpanish("Farmacia Ramirez, how can I help you?"), false, "a shop with a Spanish name, greeting in English");
+
 console.log("\n── the store's first line, in Spanish ──");
 // Scene 18's own greeting, which is the one no check has ever run end to end.
 is(staffSpokeSpanish("MVP's, buenas tardes. ¿En qué le puedo ayudar?"), true, "his own Spanish greeting");
 is(staffSpokeSpanish("Buenos dias, en que le puedo ayudar"), true, "…and with every accent lost by the transcriber");
-is(staffSpokeSpanish("Farmacia, digame."), true, "a Spanish counter answering with its own name");
+is(staffSpokeSpanish("Farmacia, digame."), true, "a Spanish counter answering with its own name AND a Spanish verb");
 is(staffSpokeSpanish("Si, tenemos algunos."), true, "a plain Spanish yes");
 is(staffSpokeSpanish("Gracias por llamar, un momento por favor."), true, "thanks for calling, in Spanish");
+is(staffSpokeSpanish("Sí, tenemos algunos."), true, "…and the same line with its accent written in");
 
 console.log("\n── and an English line is never mistaken for one ──");
 // THE WHOLE RISK IS ONE-SIDED. A false yes asks a confused English speaker a question in a language
@@ -26,6 +43,7 @@ is(staffSpokeSpanish("No, nobody is up front right now, sorry."), false, "\"no\"
 is(staffSpokeSpanish("Since when do we carry those?"), false, "\"si\" inside \"since\" is not Spanish");
 is(staffSpokeSpanish("Sorry, when did you say?"), false, "\"en\" inside \"when\" is not Spanish");
 is(staffSpokeSpanish("Good morning, MVP's Woodland Hills. How can I help today?"), false, "a long English greeting");
+is(staffSpokeSpanish("Yeah."), false, "the one word Staff answered with on check 359");
 is(staffSpokeSpanish(""), false, "nothing said is not Spanish");
 is(staffSpokeSpanish("Uh"), false, "one syllable is not enough to decide anything");
 
