@@ -16,10 +16,18 @@ import { liveReadFor } from "./live-read";
 // the one that reads WELL, not the one with the smallest sticker.
 // MEASURED, NOT GUESSED (owner 08-06: "the least expensive model that will still work"). All three
 // candidates scored 6/6 on the robot store's own spec conversations, the trick ones included (the
-// no that turns into a yes after a check, the hold), so the smallest wins: about 0.006 cents a
-// read, cheaper than Gemini's paid price and a tenth of the 70b. The same OpenAI fallback catches
-// a Groq outage, and a disagreement still costs us the charge, never the customer a wrong answer.
-export const VERDICT_MODEL = "groq:llama-3.1-8b-instant";
+// no that turns into a yes after a check, the hold), so the smallest won: llama-3.1-8b-instant.
+//
+// RE-MEASURED 08-13, because Groq is decommissioning that model on 08-16 (their letter to the
+// owner). Same bar, scripts/reader-eval.ts, eight robot conversations with the fallback DISABLED so
+// a candidate cannot be quietly rescued: the 70b read 8 of 8, the old 8b read 7 of 8 (it missed the
+// yes hidden inside a no, the exact coin flip checks 248 and 257 keep showing live), and Groq's own
+// suggested replacement gpt-oss-20b read 4 of 8 because half its calls could not produce our JSON
+// at all. So the 70b it is: about 0.06 cents a read (900 in at $0.59, 120 out at $0.79 per million),
+// ten times the old sticker and still a rounding error next to Charlie's 11 cents a minute, and it
+// reads BETTER, which is the whole point of the reader. The same OpenAI fallback catches a Groq
+// outage, and a disagreement still costs us the charge, never the customer a wrong answer.
+export const VERDICT_MODEL = "groq:llama-3.3-70b-versatile";
 
 export interface ClerkVerdict {
   inStock: "yes" | "no" | "unclear"; // buyable RIGHT NOW for the asked category
