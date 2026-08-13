@@ -672,28 +672,6 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    */
   let answeredAtMs = 0;
   let spokeThisSession = false;
-  /**
-   * AND THE SAME RULE THE OTHER WAY ROUND: ONCE WE HAVE ASKED, QUIET ON THEIR END IS THINKING TIME
-   * (the owner's own words, 08-08, off test check 360).
-   *
-   * The protection above only ever covered the START of his turn: he had been handed an answer and
-   * had not spoken yet. It said nothing at all about the far more common half of a conversation,
-   * which is that WE have just asked something and the person on the other end has not answered yet.
-   * A real person takes a beat to think. Three seconds of quiet was reading as them putting the
-   * phone down and walking off, so we dropped Charlie mid question and their answer landed with
-   * nobody of ours on the line.
-   *
-   * Check 360 did it twice. He asked his follow-up, the line went quiet at 19s, he was dropped at
-   * 22s, and Staff answered a moment later into an empty line. Then it happened again on the turn
-   * his goodbye belonged to, and the check sat open until the store hung up on us at 119 seconds.
-   *
-   * So a quiet that follows OUR OWN question holds him, until they answer or the wait is long
-   * enough to be a real walk away. `charlieAskedAtMs` is the moment his voice stopped; `staffSaid`
-   * clears it the moment they answer. The cost of being wrong is a few seconds of his meter on a
-   * genuine walk away, about a cent; the cost of being right is a check that finishes.
-   */
-  const THEIR_ANSWER_MS = Math.max(0, tune.staffThinkingMs);
-  let charlieAskedAtMs = 0;
   let onHold = false;             // the person is away; the agent must not be fed or heard
   /** Somebody has already stepped away and come back on this call — from here it is a live store
    *  beyond doubt, and no machine-phrase mishearing may hang it up (family 1). */
@@ -1083,21 +1061,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // both are somebody DOING something, and neither is Charlie holding his tongue.
       const owedHimAWord = charlieMaySpeak && !spokeThisSession && answeredAtMs > 0 && HIS_FIRST_WORD_MS > 0
         ? Math.max(0, answeredAtMs + HIS_FIRST_WORD_MS - Date.now()) : 0;
-      // AND THE OTHER HALF OF THE SAME RULE: we asked and they have not answered yet, so this quiet
-      // is them thinking. Only ever on an ordinary quiet: music and a hand-over are somebody DOING
-      // something and never reach this branch, and the hold cap above still ends a wait nobody comes
-      // back from, so a real walk away costs a few seconds of his meter and nothing more.
-      // ONLY AN ORDINARY QUIET. Music and a hand-over are somebody DOING something, and neither is
-      // a person thinking about the question we just asked, so they close him as they always have.
-      const owedUsAnAnswer = reason === "quiet" && charlieAskedAtMs > 0 && THEIR_ANSWER_MS > 0
-        ? Math.max(0, charlieAskedAtMs + THEIR_ANSWER_MS - Date.now()) : 0;
-      const wait = Math.max(MIN_ON_LINE_MS - onLineFor, owedHimAWord, owedUsAnAnswer);
+      const wait = Math.max(MIN_ON_LINE_MS - onLineFor, owedHimAWord);
       if (wait <= 0) dropHim();
       else {
-        const why = owedHimAWord > 0 ? "he has their answer and has not spoken yet"
-          : owedUsAnAnswer > 0 ? "we asked something and they have not answered yet"
-          : `his session is only ${Math.round(onLineFor / 1000)}s old`;
-        log(`hold (${reason}): ${why}, giving him ${Math.round(wait / 1000)}s before closing him`);
+        log(`hold (${reason}): ${owedHimAWord > 0 ? "he has their answer and has not spoken yet" : `his session is only ${Math.round(onLineFor / 1000)}s old`}, giving him ${Math.round(wait / 1000)}s before closing him`);
         if (closeWhenReady) clearTimeout(closeWhenReady);
         closeWhenReady = setTimeout(dropHim, wait);
       }
@@ -1180,14 +1147,56 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     heldWords = [];
   }
 
-  /** Hand the agent the sentences said while he could not hear, as a note, never spoken out loud. */
+  /**
+   * WHAT STAFF SAID WHILE HE WAS OFF THE LINE, HANDED TO HIM AS THEIR TURN (owner + PM, 08-08).
+   *
+   * THE FAULT THIS FIXES, proven on test check 360. Echo has two pipes. The one that writes Staff's
+   * words onto the record works: "Yeah. It's the pitch black booster boxes." is on that check's own
+   * record at 23 seconds. The one that hands those words to CHARLIE handed them as a background
+   * NOTE, and a note never makes him talk. He only replies to something addressed to him, and their
+   * answer landed while he had no ears. So he reconnected, heard silence, waited politely, Staff
+   * waited too, and two sides waiting is the dead air. The drop rule then fired again and the loop
+   * repeated until the store hung up on us at 119 seconds. The goodbye never came because, to him,
+   * the answer never arrived.
+   *
+   * So it goes in as a USER TURN, which is the thing he must answer, and his reply to it is spoken
+   * onto the line like any other. The standing instructions ride WITH it rather than around it: a
+   * separate note would be a second event and he would answer the turn before reading it.
+   *
+   * ONCE, NEVER TWICE (the guard). Every line handed over this way is remembered, and a line already
+   * given to him can never be queued again, whichever pipe it arrives on. That is the whole of the
+   * double: a sentence that started while he was open and finished after he closed is heard live in
+   * part AND caught whole by Echo, and both drawing a reply would have him answer the same words
+   * twice on the line.
+   */
   function tellCharlieWhatHeMissed(): void {
-    const said = missedWhileClosed.splice(0, missedWhileClosed.length).map((s) => s.trim()).filter(Boolean);
+    const said = missedWhileClosed.splice(0, missedWhileClosed.length)
+      .map((s) => s.trim()).filter(Boolean)
+      .filter((s) => !alreadyHisToAnswer(s));
     if (!said.length || !eleven || !ready) return;
-    const text = `[While you were off the line, Staff said: ${said.map((s) => `"${s}"`).join(" ")}. Carry on from that exactly as if you had heard it yourself. Never ask them to repeat it and never ask anything they have already answered.]`;
-    try { eleven.send(JSON.stringify({ type: "contextual_update", text })); log(`told the agent the ${said.length} line(s) he missed`); }
-    catch { /* best effort — never break a check over a note */ }
+    for (const s of said) markAsHis(s);
+    // HIS TURN, IN THEIR WORDS. The sentences first, so what he answers is what they said; the rule
+    // after it, so he cannot mistake our instruction for part of their sentence.
+    const text = `${said.join(" ")}\n\n[Those are Staff's own words, said while you were off the line. Answer them now, out loud, exactly as if you had heard them yourself. Never ask them to repeat it and never ask anything they have already answered.]`;
+    try {
+      eleven.send(JSON.stringify({ type: "user_message", text }));
+      log(`handed the agent the ${said.length} line(s) he missed AS THEIR TURN, so he answers them`);
+      emit(room, "unknown", "Charlie was handed what Staff said while he was off, as their turn",
+        { step: "missed_turn", lines: said.length, text: said.join(" ").slice(0, 200) });
+      // AND THE QUIET AFTER IT IS HIM THINKING, NEVER A DROP, until he has answered this turn (the
+      // PM's item 3). It is the same rule as his first words on a session, and being handed a turn
+      // is exactly that moment: he owes them a word from here.
+      charlieMaySpeak = true;
+      answeredAtMs = Date.now();
+      spokeThisSession = false;
+    } catch { /* best effort — never break a check over a turn */ }
   }
+
+  /** Every Staff line already given to Charlie, by either pipe, so nothing is ever answered twice. */
+  const hisAlready = new Set<string>();
+  const keyOf = (s: string) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const alreadyHisToAnswer = (s: string) => { const k = keyOf(s); return !!k && hisAlready.has(k); };
+  const markAsHis = (s: string) => { const k = keyOf(s); if (k) hisAlready.add(k); };
 
   // ---- THE WRAP-UP LIMIT (round 1, item 1.5) ---------------------------------------------------
   // THE CHATTY CLERK. The one case no drop rule catches: somebody genuinely IS talking, hemming and
@@ -1346,12 +1355,13 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // which `spokeThisSession` is: it goes false when his session reopens and true the instant he
     // speaks, so this can only ever protect a turn he genuinely owes a word on.
     if (fresh && charlieMaySpeak && !spokeThisSession) answeredAtMs = Date.now();
-    // THEY ANSWERED, so the question we asked is no longer outstanding and the quiet after this
-    // belongs to him again, not to them.
-    if (fresh) charlieAskedAtMs = 0;
     // WHAT HE COULD NOT HEAR, KEPT AS WORDS. Only Echo's copy counts: a line the agent's own session
     // delivered is one he already heard.
-    if (fromEcho && fresh && (!eleven || onHold)) missedWhileClosed.push(txt);
+    if (fromEcho && fresh && (!eleven || onHold) && !alreadyHisToAnswer(txt)) missedWhileClosed.push(txt);
+    // HE HEARD IT HIMSELF, so it is his to answer already and must never be handed to him again as a
+    // turn. This is the other half of the double guard: a sentence he was on the line for can arrive
+    // at Echo a moment later, and without this it would come back as something new to reply to.
+    if (fresh && eleven && !onHold) markAsHis(txt);
     // Their hello has arrived, so it goes out FIRST and our question follows it, which is the order
     // the call actually happened in.
     if (heldQuestion) {
@@ -1511,12 +1521,21 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // the old conversation belongs to somebody who is no longer on the phone.
         if (gapNote) {
           const g = gapNote; gapNote = null;
-          // AND THAT IS HOW HE GETS WHAT HE MISSED (owner 08-07). Echo writes every sentence said
-          // while he was closed straight onto the check's own record, and this note is that record,
-          // so the words he could not hear reach him here, as words, with nothing to pace or catch
-          // up. Cleared either way: after a hand-over the old conversation belongs to somebody who
-          // is no longer on the phone (his own section 5) and is deliberately not handed over.
-          missedWhileClosed = [];
+          // THIS IS WHERE THE CHECK USED TO GO DEAD (owner + PM, 08-08, off test check 360).
+          //
+          // The words Echo caught while he was closed were CLEARED right here, and all he got was
+          // the note below: the conversation so far, as background. Background never makes him
+          // talk. So he came back, heard silence, waited politely, Staff waited too, and two sides
+          // waiting is the dead air. The drop rule fired again, the loop repeated, and the store
+          // hung up on us at 119 seconds with no goodbye and no answer he had ever "heard".
+          //
+          // The note stays, because what was said BEFORE the wait really is background: it is there
+          // so he cannot re-ask something they already answered. What they said WHILE HE WAS OFF is
+          // a different thing entirely. It is the turn he owes a reply to, so it is handed to him
+          // as their turn, last and freshest, after the background and after the gap.
+          //
+          // NOT after a hand-over: there the recording asks the new person again and the old words
+          // belong to somebody who is no longer on the phone (his own section 5).
           if (!g.replayed) {
             const lines = (getReceipt(room)?.transcript ?? [])
               .slice(-12)
@@ -1528,6 +1547,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
             }
           }
           tellCharlieAboutTheGap(g.secs, g.newPerson, g.replayed);
+          // LAST AND FRESHEST: their own words, as their turn, so he answers them out loud.
+          if (g.replayed) missedWhileClosed = [];
+          else if (echoRooms.has(room) && missedWhileClosed.length) tellCharlieWhatHeMissed();
         }
       } else if (m.type === "audio") {
         const b64 = m.audio_event?.audio_base_64;
@@ -1549,7 +1571,14 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         }
         // Nobody is there to hear him. Suppressing his voice while the person is away also stops him
         // talking into hold music and then being interrupted by his own tail when they come back.
-        else if (b64 && onHold) { /* suspended: not spoken onto the line */ }
+        //
+        // UNLESS HE OWES THEM A WORD (owner + PM, 08-08, off test check 360). Staff spoke, he was
+        // handed their turn, and the quiet straight afterwards is HIM thinking about it, which is
+        // why the close rule holds him through it. Somebody IS there to hear him: they are standing
+        // at the counter waiting for his reply. Throwing his answer away here would leave the check
+        // exactly where it was, with two sides waiting and nobody talking, and it is the last place
+        // that dead air can still come from.
+        else if (b64 && onHold && !(charlieMaySpeak && !spokeThisSession && answeredAtMs > 0)) { /* suspended: not spoken onto the line */ }
         else if (b64 && twilio.readyState === 1) {
           twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: b64 } }));
           fanout(room, b64, "agent");
@@ -1560,9 +1589,6 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           addMs(room, "speakingMs", ms); // SPEAKING = audio that really played out, not a guess
           charlieSpoke = true;           // from here there is no live model swap, whatever fails
           spokeThisSession = true;       // …and the quiet after this is theirs again, not his
-          // …which is exactly why it must not be read as them WALKING OFF. We have just asked
-          // something; the quiet that follows is them thinking about it (owner 08-08, check 360).
-          charlieAskedAtMs = Date.now();
           // …and the same milliseconds are what the wrap-up limit counts: audio that really reached
           // Staff's ear, never a stopwatch on the whole check (round 1, item 1.5).
           charlieSpokenMs += ms;
