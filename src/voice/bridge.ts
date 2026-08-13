@@ -649,9 +649,51 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    * opened; `spokeThisSession` is the moment it stopped mattering. Capped, because a model that
    * never answers must not hold a line open for free.
    */
-  const HIS_FIRST_WORD_MS = 6000;
+  const HIS_FIRST_WORD_MS = Math.max(0, tune.charlieThinkingMs);
+  /**
+   * THE CLOCK RESTARTS ON THEIR LATEST WORD, NOT THE FIRST WORD OF THE CHECK (owner 08-08, off test
+   * check 360, and this is why the goodbye kept coming and going).
+   *
+   * This was stamped ONCE, by `letHimAnswer`, the first time Staff said anything that was not their
+   * hello. Every turn after that ran with a clock that had already expired, so the protection above
+   * only ever covered his FIRST answer of the whole check, and his goodbye, which is always his
+   * last, had none of it at all.
+   *
+   * Check 360, in its own seconds: Staff said "Yeah." at 12s and this was stamped. He asked his
+   * follow-up. He was dropped for the gap, reopened at 25s, and Staff gave the real answer at 26s.
+   * At 27s the line went quiet, and 12s plus six was long gone, so he was owed nothing and the five
+   * second floor from his session opening let him go at 30s, mid thought, without a goodbye. The
+   * line then sat open until the store hung up on us at 119s, and that check cost 9.0 cents.
+   *
+   * Whoever spoke last is what decides whether a quiet is theirs or his, so `staffSaid` stamps this
+   * on EVERY fresh line of theirs while he is allowed to speak. `spokeThisSession` still cancels it
+   * the moment he opens his mouth, so a line he has already answered can never hold the meter open,
+   * and the cap is unchanged: a model that never answers holds nothing for free.
+   */
   let answeredAtMs = 0;
   let spokeThisSession = false;
+  /**
+   * AND THE SAME RULE THE OTHER WAY ROUND: ONCE WE HAVE ASKED, QUIET ON THEIR END IS THINKING TIME
+   * (the owner's own words, 08-08, off test check 360).
+   *
+   * The protection above only ever covered the START of his turn: he had been handed an answer and
+   * had not spoken yet. It said nothing at all about the far more common half of a conversation,
+   * which is that WE have just asked something and the person on the other end has not answered yet.
+   * A real person takes a beat to think. Three seconds of quiet was reading as them putting the
+   * phone down and walking off, so we dropped Charlie mid question and their answer landed with
+   * nobody of ours on the line.
+   *
+   * Check 360 did it twice. He asked his follow-up, the line went quiet at 19s, he was dropped at
+   * 22s, and Staff answered a moment later into an empty line. Then it happened again on the turn
+   * his goodbye belonged to, and the check sat open until the store hung up on us at 119 seconds.
+   *
+   * So a quiet that follows OUR OWN question holds him, until they answer or the wait is long
+   * enough to be a real walk away. `charlieAskedAtMs` is the moment his voice stopped; `staffSaid`
+   * clears it the moment they answer. The cost of being wrong is a few seconds of his meter on a
+   * genuine walk away, about a cent; the cost of being right is a check that finishes.
+   */
+  const THEIR_ANSWER_MS = Math.max(0, tune.staffThinkingMs);
+  let charlieAskedAtMs = 0;
   let onHold = false;             // the person is away; the agent must not be fed or heard
   /** Somebody has already stepped away and come back on this call — from here it is a live store
    *  beyond doubt, and no machine-phrase mishearing may hang it up (family 1). */
@@ -1039,12 +1081,23 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // HE WAS HANDED THEIR ANSWER AND HAS NOT SPOKEN YET, so this quiet is him thinking. Wait for
       // his first word, capped. Music and a transfer never come through here on this path anyway:
       // both are somebody DOING something, and neither is Charlie holding his tongue.
-      const owedHimAWord = charlieMaySpeak && !spokeThisSession && answeredAtMs > 0
+      const owedHimAWord = charlieMaySpeak && !spokeThisSession && answeredAtMs > 0 && HIS_FIRST_WORD_MS > 0
         ? Math.max(0, answeredAtMs + HIS_FIRST_WORD_MS - Date.now()) : 0;
-      const wait = Math.max(MIN_ON_LINE_MS - onLineFor, owedHimAWord);
+      // AND THE OTHER HALF OF THE SAME RULE: we asked and they have not answered yet, so this quiet
+      // is them thinking. Only ever on an ordinary quiet: music and a hand-over are somebody DOING
+      // something and never reach this branch, and the hold cap above still ends a wait nobody comes
+      // back from, so a real walk away costs a few seconds of his meter and nothing more.
+      // ONLY AN ORDINARY QUIET. Music and a hand-over are somebody DOING something, and neither is
+      // a person thinking about the question we just asked, so they close him as they always have.
+      const owedUsAnAnswer = reason === "quiet" && charlieAskedAtMs > 0 && THEIR_ANSWER_MS > 0
+        ? Math.max(0, charlieAskedAtMs + THEIR_ANSWER_MS - Date.now()) : 0;
+      const wait = Math.max(MIN_ON_LINE_MS - onLineFor, owedHimAWord, owedUsAnAnswer);
       if (wait <= 0) dropHim();
       else {
-        log(`hold (${reason}): ${owedHimAWord > 0 ? "he has their answer and has not spoken yet" : `his session is only ${Math.round(onLineFor / 1000)}s old`}, giving him ${Math.round(wait / 1000)}s before closing him`);
+        const why = owedHimAWord > 0 ? "he has their answer and has not spoken yet"
+          : owedUsAnAnswer > 0 ? "we asked something and they have not answered yet"
+          : `his session is only ${Math.round(onLineFor / 1000)}s old`;
+        log(`hold (${reason}): ${why}, giving him ${Math.round(wait / 1000)}s before closing him`);
         if (closeWhenReady) clearTimeout(closeWhenReady);
         closeWhenReady = setTimeout(dropHim, wait);
       }
@@ -1287,6 +1340,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // First only: everything after it is an answer to us, and a store that greets us in Spanish and
     // then says one English word has still answered the phone in Spanish.
     if (fresh && theirFirstLine == null) theirFirstLine = txt;
+    // AND THEIR LATEST LINE RESTARTS HIS THINKING TIME (owner 08-08, check 360). The quiet straight
+    // after Staff speak is Charlie thinking, on their LAST turn exactly as much as on their first,
+    // and his goodbye is always the last thing he says. Only a line he has not answered yet counts,
+    // which `spokeThisSession` is: it goes false when his session reopens and true the instant he
+    // speaks, so this can only ever protect a turn he genuinely owes a word on.
+    if (fresh && charlieMaySpeak && !spokeThisSession) answeredAtMs = Date.now();
+    // THEY ANSWERED, so the question we asked is no longer outstanding and the quiet after this
+    // belongs to him again, not to them.
+    if (fresh) charlieAskedAtMs = 0;
     // WHAT HE COULD NOT HEAR, KEPT AS WORDS. Only Echo's copy counts: a line the agent's own session
     // delivered is one he already heard.
     if (fromEcho && fresh && (!eleven || onHold)) missedWhileClosed.push(txt);
@@ -1498,6 +1560,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           addMs(room, "speakingMs", ms); // SPEAKING = audio that really played out, not a guess
           charlieSpoke = true;           // from here there is no live model swap, whatever fails
           spokeThisSession = true;       // …and the quiet after this is theirs again, not his
+          // …which is exactly why it must not be read as them WALKING OFF. We have just asked
+          // something; the quiet that follows is them thinking about it (owner 08-08, check 360).
+          charlieAskedAtMs = Date.now();
           // …and the same milliseconds are what the wrap-up limit counts: audio that really reached
           // Staff's ear, never a stopwatch on the whole check (round 1, item 1.5).
           charlieSpokenMs += ms;

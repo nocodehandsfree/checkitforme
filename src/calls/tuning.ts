@@ -38,6 +38,8 @@ export interface CallTuning {
   holdCapSeconds: number;
   /** The least time Charlie stays on the line after his session opens, before a quiet may close it. */
   charlieMinOnLineMs: number;
+  staffThinkingMs: number;
+  charlieThinkingMs: number;
   ringWaitSeconds: number;
   maxCheckSeconds: number;
 }
@@ -65,6 +67,8 @@ export const TUNING_DEFAULTS: CallTuning = {
   charlieWrapUpSeconds: 45,
   holdCapSeconds: 120,
   charlieMinOnLineMs: 5000,
+  staffThinkingMs: 7000,
+  charlieThinkingMs: 6000,
   ringWaitSeconds: 90,
   maxCheckSeconds: 240,
 };
@@ -89,6 +93,8 @@ export const TUNING_WHY: Record<keyof CallTuning, string> = {
   clipBackstopMs: "If nothing confirms the question finished, hand over anyway this long after it should have. A clerk talking to silence is the worse failure.",
   reconnectWindowMin: "How long \"I just got disconnected\" still sounds true. Past this it is likely a different employee and a stranger saying it is worse than a normal greeting.",
   charlieWrapUpSeconds: "How long Charlie may actually be TALKING before he starts wrapping up. It never hangs the check up: cutting Staff off mid help kills a check the customer already paid for. He costs 11 cents a minute, so this is the one number that decides whether a check makes money.",
+  charlieThinkingMs: "The mirror of the number below, for Charlie's own side: how long a quiet that follows STAFF speaking is treated as Charlie thinking about what they just said rather than as them walking off. It only ever counts while he has not yet answered that turn, and the moment he opens his mouth it stops mattering, so a line he has already answered can never hold the meter open. Owner 08-08: this used to be stamped once at the FIRST thing Staff said on the whole check, so his goodbye, which is always his last word, had none of it. 0 switches it off.",
+  staffThinkingMs: "How long a quiet that follows OUR OWN question is treated as the person thinking rather than as them putting the phone down and walking off. Owner's rule 08-08, off test check 360: he asked his follow up, the line went quiet at 19 seconds, Charlie was dropped at 22, and Staff answered a moment later into an empty line, so the check went dead and cost 9.0 cents. It only ever applies to an ordinary quiet, never to hold music or a hand over, and the hold cap still ends a wait nobody comes back from. Raise it and a real walk away costs a few more seconds of his meter, about a cent; lower it and he is dropped mid question again. 0 switches it off.",
   charlieMinOnLineMs: "The least time Charlie stays on the line after his session opens. Reopening him takes about a second and answering takes a beat more, so a quiet that closes him sooner than this gags him: on check 357 a session opened at 16 seconds and closed at 18, and he said nothing on that whole check. The wait still starts on the record at the second they went quiet; only the closing of his session waits this out.",
   holdCapSeconds: "How long a hold may run before we hang up. Waiting is nearly free because Charlie is dropped, and a second check costs more than waiting, so be generous.",
   ringWaitSeconds: "How long the phone may ring while we wait for a human. We never hang up on a count of rings (owner 08-03): a store that lets it ring twenty times may still pick up, and the only thing worth measuring is how long we have been waiting. Charlie is off the whole time, so this is the phone line only.",
@@ -106,7 +112,7 @@ const LIMITS: Record<keyof CallTuning, [number, number]> = {
   prewarmLeadMs: [0, 10000], clipSettleMs: [0, 3000], clipBackstopMs: [500, 20000],
   reconnectWindowMin: [1, 120],
   charlieWrapUpSeconds: [5, 600],
-  holdCapSeconds: [10, 900], charlieMinOnLineMs: [0, 30000],
+  holdCapSeconds: [10, 900], charlieMinOnLineMs: [0, 30000], staffThinkingMs: [0, 30000], charlieThinkingMs: [0, 30000],
   ringWaitSeconds: [10, 600],
   maxCheckSeconds: [30, 900],
 };

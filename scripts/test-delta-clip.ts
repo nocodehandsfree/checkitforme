@@ -512,7 +512,7 @@ async function callWithHold(f: Fake, room: string, holdStrategy: "gate" | "reope
     // seconds of his session on a real check (`charlieMinOnLineMs`, added 08-07 off check 357), but
     // the rig drives a whole call in milliseconds of real time, so every session here is newborn.
     // The scene at the bottom of this file is the one that proves the floor, at its real value.
-    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0 },
+    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0, staffThinkingMs: 0, charlieThinkingMs: 0 },
   });
   const tw = new FakeTwilio();
   handleTwilioBridge(tw as never, room, () => { /* none */ });
@@ -1811,7 +1811,7 @@ console.log("\n▶ Staff put the phone down on the counter: Charlie is dropped, 
   // The floor that keeps a newborn session on the line is proved on its own at the bottom of this
   // file; this scene is about the room being a wait, so it drops him the moment the wait starts.
   setBridgeContext("room-counter", { agentId: "agent_normal", dynamicVars: {}, connectOnHuman: true, holdStrategy: "reopen",
-    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0 } });
+    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0, staffThinkingMs: 0, charlieThinkingMs: 0 } });
   const tw = new FakeTwilio();
   handleTwilioBridge(tw as never, "room-counter", () => { /* none */ });
   tw.say({ event: "start", start: { streamSid: "MZ_c", customParameters: { room: "room-counter" } } });
@@ -2125,7 +2125,9 @@ console.log("\n▶ …AND A CLOCK COULD NEVER HAVE FIXED IT (check 358: his sess
     dynamicVars: { opening_line: "do you have any Pokemon cards in stock?" },
     connectOnHuman: true, holdMaxSeconds: 999,
     openingClip: { audio, ms: 400, text: "do you have any Pokemon cards in stock?" },
-    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0 },
+    // HIS thinking window stays REAL here: it is the rule this scene exists to prove. The other
+    // two are off because this scene is not about them.
+    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0, staffThinkingMs: 0 },
   });
   const tw = new FakeTwilio();
   handleTwilioBridge(tw as never, room, () => { /* none */ });
@@ -2143,6 +2145,50 @@ console.log("\n▶ …AND A CLOCK COULD NEVER HAVE FIXED IT (check 358: his sess
   await sleep(500);
   const evs = () => getReceipt(room)?.events || [];
   ok(!evs().some((e) => e.kind === "charlie_leave"), "he has their answer and has not spoken, so he is NOT dropped");
+  ok(evs().some((e) => e.kind === "hold_start"), "the wait still starts on the record at the second they went quiet");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ ONCE WE HAVE ASKED, QUIET ON THEIR END IS THINKING TIME (check 360: no goodbye)");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-they-are-thinking";
+  // THE SHAPE OF CHECK 360, which is what every robot scene really does and what a real person does
+  // too: we ask something, and the other end takes a few seconds before answering. That quiet was
+  // read as Staff putting the phone down and walking off, so Charlie was dropped mid question at 22
+  // seconds and their answer landed with nobody of ours on the line. The floor is set to nothing on
+  // purpose, exactly as on 358, so the ONLY thing that can hold the line here is the rule itself.
+  const audio = Buffer.alloc(400 * 8, 0x20);
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, {
+    agentId: "agent_normal", midCallAgentId: "agent_joining",
+    dynamicVars: { opening_line: "do you have any Pokemon cards in stock?" },
+    connectOnHuman: true, holdMaxSeconds: 999,
+    openingClip: { audio, ms: 400, text: "do you have any Pokemon cards in stock?" },
+    // The thinking window stays at its REAL value here: it is the whole point of this scene.
+    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0 },
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, room, () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_think", customParameters: { room } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
+  await sleep(400);
+  const evs = () => getReceipt(room)?.events || [];
+  ok(evs().some((e) => e.kind === "charlie_join"), "his session is up");
+  // Their answer, and then HE asks his follow-up. His voice going out is what starts the clock.
+  speak(tw, 150);
+  await sleep(80);
+  const ws = f.sockets[f.sockets.length - 1];
+  for (let i = 0; i < 4; i++) ws.send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x40)) } }));
+  await sleep(200);
+  // …and now the store takes a few seconds to answer, the way a real person does.
+  for (let i = 0; i < 400; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
+  await sleep(600);
+  ok(!evs().some((e) => e.kind === "charlie_leave"), "we asked and they have not answered yet, so he is NOT dropped");
   ok(evs().some((e) => e.kind === "hold_start"), "the wait still starts on the record at the second they went quiet");
   restore(); tw.close(); f.close();
 }
