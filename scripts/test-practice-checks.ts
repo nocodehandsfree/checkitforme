@@ -165,9 +165,9 @@ console.log("\n▶ PRACTICE CHECK 6 — a Spanish-speaking person");
   // decides is behaviour: they went quiet for the keys and stayed quiet for us (owner 08-07).
   ok(judge({ text: hola, atSec: 33, knownMenuLines: [], pauseTested: true, keptTalkingAfterPause: false }).who === "unsure",
     "the Spanish greeting alone proves nothing either way, and Echo never guesses");
-  ok(judge({ text: hola, atSec: 33, knownMenuLines: [], knockTested: true, keptTalkingAfterKnock: false, pauseTested: true, keptTalkingAfterPause: false }).who === "person",
+  ok(judge({ text: hola, atSec: 33, knownMenuLines: [], knock: "stopped_and_waited" }).who === "person",
     "somebody greeting us in Spanish is a person, proved by behaviour and not by any word we know");
-  ok(judge({ text: "¿Bueno? ¿Sigue ahí?", atSec: 40, knockTested: true, keptTalkingAfterKnock: false, pauseTested: true, keptTalkingAfterPause: false }).who === "person",
+  ok(judge({ text: "¿Bueno? ¿Sigue ahí?", atSec: 40, knock: "stopped_and_waited" }).who === "person",
     "and so is somebody asking in Spanish whether we are still there, proved the same way");
   ok(judge({ text: "Para español, oprima nueve.", atSec: 3 }).who === "recording",
     "while the menu's own Spanish option is still the recording");
@@ -181,10 +181,13 @@ console.log("\n▶ PRACTICE CHECK 6 — a Spanish-speaking person");
     // the point. A person hears the beeps, stops, and speaks again; a recording reads straight on.
     ok(/<Play digits="123"\/>/.test(t1),
       "the keys go out once, because nothing yet says whether this is a menu or a person");
+    // WHAT THE EARPIECE HEARD, exactly as it would on a real call: the noise stopped dead when the
+    // beeps landed and stayed stopped through our own silence. No word of Spanish is involved.
+    engine.knock("es-1", "stopped_and_waited");
     engine.at("es-1", 33);
     await engine.step("es-1", "¿Bueno? ¿Sigue ahí?");
-    ok(engine.get("es-1")?.keptTalkingAfterKnock === false,
-      "they did not read straight on, so nothing calls them a machine");
+    ok(engine.get("es-1")?.knock === "stopped_and_waited",
+      "they stopped for the keys and stayed quiet for us, which is the answer the sound gave");
     engine.at("es-1", 36);
     await engine.step("es-1", "¿Bueno?");
     ok(engine.get("es-1")?.humanAtSec != null,
@@ -204,6 +207,9 @@ console.log("\n▶ PRACTICE CHECK 7 — Charlie cannot join as the person answer
   engine.at("nojoin-1", 28);
   const knocked = await engine.step("nojoin-1", "Card Mart, Dana speaking.");
   ok(/<Play digits="123"\/>/.test(knocked), "the keys go out at whoever answered — nothing yet says which it is");
+  // The earpiece's answer, the same one a real call produces: the line went quiet when the beeps
+  // landed, and then they started talking again.
+  engine.knock("nojoin-1", "stopped_then_spoke");
   engine.at("nojoin-1", 31);
   const first = await engine.step("nojoin-1", "Hello? Are you still there?");
   ok(!/<Hangup\/>/.test(first), "we do not hang up on the person who just answered");
@@ -226,6 +232,7 @@ console.log("\n▶ CHARLIE'S WORD ON THE DEPARTMENT — Staff engaged, so the de
   engine.open({ id: "dept-1", chainId: null, confirm: { product: "Pokémon cards" }, stage: "map" });
   engine.at("dept-1", 37);
   await engine.step("dept-1", "Card Mart, Dana speaking.");   // the keys go out at them
+  engine.knock("dept-1", "stopped_then_spoke");               // the earpiece: it really stopped, then spoke
   engine.at("dept-1", 40);
   await engine.step("dept-1", "Hello? Are you still there?"); // they stopped for the keys, then spoke to us
   const s = engine.get("dept-1")!;
@@ -245,6 +252,7 @@ console.log("\n▶ CHARLIE'S WORD ON THE DEPARTMENT — Staff engaged, so the de
   engine.open({ id: "dept-2", confirm: { product: "Pokémon cards" }, stage: "map" });
   engine.at("dept-2", 37);
   await engine.step("dept-2", "Card Mart, Dana speaking.");
+  engine.knock("dept-2", "stopped_then_spoke");
   engine.at("dept-2", 40);
   await engine.step("dept-2", "Hello? Are you still there?");
   const w = engine.get("dept-2")!;
@@ -278,6 +286,7 @@ console.log("\n▶ A MAPPING CHECK NEVER TAKES A TRANSFER");
     ] as never });
   engine.at("xfer-1", 37);
   await engine.step("xfer-1", "Pharmacy, this is Alan.");
+  engine.knock("xfer-1", "stopped_then_spoke");
   engine.at("xfer-1", 40);
   await engine.step("xfer-1", "Hello? Are you still there?");
   const m = engine.get("xfer-1")!;
@@ -331,6 +340,56 @@ console.log("\n▶ PRACTICE CHECK 8 — the knock is a test of who picked up, ne
   const r = engine.get("knock-1")!;
   ok(r.humanAtSec == null, "and the same line played again is the recording repeating, so no person is stamped");
   engine.end("knock-1");
+}
+
+console.log("\n▶ PRACTICE CHECK 9 — a menu that pauses between two DIFFERENT sentences is still a machine");
+{
+  // THE FAULT THIS CATCHES (owner 08-08). The keys used to be answered off the TRANSCRIPT: it only
+  // called something a machine when the very next line was word for word the same line again. A menu
+  // that simply moved on to its next sentence therefore counted as having stopped, which read as a
+  // person — and then the check fell back on the word test that called CVS's machine a person in the
+  // first place. The keys are answered off the SOUND now, so a menu drawing breath between two
+  // sentences never reaches a real stop and never earns a person.
+  const first = "Thank you for calling CVS, Pharmacy. If this is an emergency, please hang up and dial 911.";
+  const second = "To better assist you, are you calling in for pharmacy or front store services?";
+  ok(judge({ text: second, atSec: 12, knownMenuLines: [], knock: "read_on" }).who === "recording",
+    "the noise carried straight through the keys, so the second sentence is the machine it is");
+  // THE WORDS GET NO VOTE. Two different sentences, and nothing about them being different is
+  // allowed to say the talking stopped.
+  ok(judge({ text: second, atSec: 12, knownMenuLines: [] }).who !== "person",
+    "and with no answer from the sound, a different second sentence is still never a person");
+  ok(judge({ text: "If this is an emergency, please hang up and dial 911.", atSec: 12, knownMenuLines: [] }).who !== "person",
+    "nor is the emergency sentence, which carries no menu words at all");
+  // DRIVEN through the engine, the whole shape: the keys go out on the opening line and the menu
+  // reads its NEXT sentence at us.
+  {
+    setMappingHandoff(async () => null);
+    engine.open({ id: "menu-9", confirm: { product: "Pokémon cards" } });
+    engine.at("menu-9", 4);
+    const out = await engine.step("menu-9", first);
+    ok(/<Play digits="123"\/>/.test(out), "the keys go out on the store's opening line");
+    engine.knock("menu-9", "read_on");   // the earpiece: the noise never really stopped
+    engine.at("menu-9", 12);
+    await engine.step("menu-9", second);
+    const m = engine.get("menu-9")!;
+    ok(m.humanAtSec == null, "the menu's next sentence is not a person, so nobody is stamped");
+    ok(!m.confirm?.asked, "and Charlie is never opened on it");
+    engine.end("menu-9");
+  }
+  // The same shape with the earpiece silent: a check that never got an answer to its keys may not
+  // reach a person off the words alone either.
+  {
+    setMappingHandoff(async () => null);
+    engine.open({ id: "menu-9b", confirm: { product: "Pokémon cards" } });
+    engine.at("menu-9b", 4);
+    await engine.step("menu-9b", first);
+    engine.at("menu-9b", 12);
+    await engine.step("menu-9b", second);
+    const b = engine.get("menu-9b")!;
+    ok(b.knock === undefined, "the keys were never answered, and nothing invents an answer from the words");
+    ok(b.humanAtSec == null, "so no person is stamped on a menu reading its own second sentence");
+    engine.end("menu-9b");
+  }
 }
 
 console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);

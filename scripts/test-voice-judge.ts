@@ -229,14 +229,18 @@ console.log("\n▶ THE KNOCK, and every one of these run twice: remembered, and 
   const CVS_OPEN = KNOWN[0];
   // Both ways round, because a chain's FIRST ever check is exactly what mapping is (owner 08-07).
   for (const [how, mem] of [["remembered", KNOWN], ["knowing nothing", []]] as const) {
-    ok(judge({ text: CVS_OPEN, knownMenuLines: [...mem], knockTested: true, keptTalkingAfterKnock: true }).who === "recording",
+    ok(judge({ text: CVS_OPEN, knownMenuLines: [...mem], knock: "read_on" }).who === "recording",
       `it read straight on through the keys, so it is a machine (${how})`);
     ok(judge({ text: "Are you a healthcare provider?", knownMenuLines: [...mem], saidBefore: ["Are you a healthcare provider?"] }).who === "recording",
       `it said the same line twice, so it is a machine (${how})`);
-    ok(judge({ text: "Front store, this is Bob, how can I help?", knownMenuLines: [...mem], knockTested: true, keptTalkingAfterKnock: false, pauseTested: true, keptTalkingAfterPause: false }).who === "person",
+    ok(judge({ text: "Front store, this is Bob, how can I help?", knownMenuLines: [...mem], knock: "stopped_then_spoke" }).who === "person",
       `it stopped for the keys and talked to us, so it is a person (${how})`);
-    ok(judge({ text: CVS_OPEN, knownMenuLines: [...mem], knockTested: true, keptTalkingAfterKnock: false }).who !== "person",
-      `going quiet for the keys is never enough on its own to call it a person (${how})`);
+    ok(judge({ text: "Front store, this is Bob, how can I help?", knownMenuLines: [...mem], knock: "stopped_and_waited" }).who === "person",
+      `and it stayed quiet for us, which only a person does, so it is a person (${how})`);
+    // 08-08: THE KEYS GET NO ANSWER AT ALL is its own state, and it must decide nothing. This is
+    // where the old true/false quietly voted "it stopped" and let the word tests reach a person.
+    ok(judge({ text: CVS_OPEN, knownMenuLines: [...mem] }).who !== "person",
+      `keys with no answer to them never make it a person (${how})`);
   }
   // The one the owner watched break: with no memory at all, CVS's opening must never read person.
   ok(judge({ text: CVS_OPEN, knownMenuLines: [] }).who !== "person",

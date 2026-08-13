@@ -177,6 +177,26 @@ export class PromptDetector {
 const PERSON_GREETING_MAX_MS = 3500;
 const PERSON_WAIT_MS = 2500;
 
+// ---- WHAT THE KEYS FIND OUT (owner 08-08) ----------------------------------------------------
+/** THREE ANSWERS, NEVER TWO, AND ALL THREE OFF THE SOUND (owner 08-08).
+ *  `read_on`            — the noise carried straight through the keys. A machine, with certainty.
+ *  `stopped_then_spoke` — it really stopped, then started talking again while we said nothing.
+ *  `stopped_and_waited` — it stopped and stayed stopped through our own silence. Only a person waits.
+ *  The old answer was a single true/false read off the TRANSCRIPT: it only called something a
+ *  machine when the very next line was word for word the same line again, so a menu that simply
+ *  moved on to its next sentence counted as having stopped, which read as a person (owner 08-08). */
+export type KnockAnswer = "read_on" | "stopped_then_spoke" | "stopped_and_waited";
+/** A REAL STOP, not a menu drawing breath. A recorded menu's pause between phrases sits well under
+ *  END_SILENCE_MS (700ms, measured on the 07-24 Target runs) and a menu acting on a key does not go
+ *  quiet at all — it reads the next set of options at us. Twice the longest measured phrase gap is
+ *  the floor for calling it a stop, so the between-two-sentences case can never reach it. */
+const KNOCK_STOP_MS = 1500;
+/** Quiet held this long after the keys is somebody waiting for us to talk — the same waiting number
+ *  looksLikeAPerson already uses, so the two cannot drift apart. */
+const KNOCK_WAIT_MS = PERSON_WAIT_MS;
+/** How long we listen for an answer before calling it read straight on. */
+const KNOCK_WINDOW_MS = 5000;
+
 /** Has a real person answered instead of the menu we mapped? Pure, so the rule that decides whether
  *  we fire keypad tones at a human is provable without a phone call.
  *  Deliberately narrow: only BEFORE the first mapped step, only on the very first thing we heard.
@@ -294,10 +314,10 @@ export interface JudgeInput {
    *  shape heard earlier on this call. It is the one test that catches hold music, and hold music
    *  with an advert talking over it, because it listens to the sound and never to the words. */
   soundHeardBefore?: boolean;
-  /** THE KNOCK has been run, and whether the talking carried straight on through it (owner 08-07).
-   *  Carrying on is a machine, with certainty, and it costs one second on the very first call. */
-  knockTested?: boolean;
-  keptTalkingAfterKnock?: boolean;
+  /** WHAT THE KEYS FOUND OUT (owner 08-08). Three answers, all of them off the SOUND on the line —
+   *  the words get no vote, which is what carries Spanish and every other language. Absent means the
+   *  keys have not been answered yet, and an unanswered knock says nothing either way. */
+  knock?: KnockAnswer;
   /** Every line this number has already said ON THIS CALL. A recording repeats itself word for word
    *  when we stay quiet; a person does not. Needs no memory of the chain, so it is the one test that
    *  works on the first call we have ever made to a number (owner 08-07). */
@@ -386,7 +406,7 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
   // reads on regardless, so reading on is a machine and nothing else can explain it. Stopping is NOT
   // a person on its own, because a menu also goes quiet when it acts on a key: that case falls
   // through to the tests below, which is the whole point of never deciding on one signal.
-  if (o.knockTested && o.keptTalkingAfterKnock) {
+  if (o.knock === "read_on") {
     return { who: "recording", why: "it read straight on through the keys we pressed", ...ride };
   }
 
@@ -419,17 +439,18 @@ export function judgeVoice(o: JudgeInput): VoiceVerdict {
   // LAYER 3 — the words.
   if (MENU_WORDS.test(text)) return { who: "recording", why: "these are a menu's own words", ...ride };
   // THEY STOPPED FOR THE KEYS AND THEN SPOKE TO US. The owner's own words for what a person does:
-  // "a person reacts to a beep in their ear, stops, and says something to us". Both halves together,
-  // never either alone, because a menu also goes quiet when it acts on a key. This is what lets a
-  // store that answers directly be understood without us knowing in advance that it does.
-  if (soundsAddressedToUs && o.knockTested && !o.keptTalkingAfterKnock) {
+  // "a person reacts to a beep in their ear, stops, and says something to us". The stop is measured
+  // on the SOUND and has to be a real one (KNOCK_STOP_MS), so a menu that pauses between two
+  // different sentences never reaches it and a menu acting on a key never goes quiet at all. This is
+  // what lets a store that answers directly be understood without us knowing in advance that it does.
+  if (o.knock === "stopped_then_spoke") {
     return { who: "person", why: "it stopped for the keys and then spoke to us", ...ride };
   }
-  // STOPPED FOR THE KEYS AND STOPPED FOR THE SILENCE, IN ANY LANGUAGE. This is the one that carries
-  // Staff who answer in Spanish, or any language we hold no words for. A menu that acted on a key
-  // does not go quiet, it reads the next set of options at us. Something that went quiet for both
-  // the keys AND our silence is somebody waiting for us to speak, and only a person waits.
-  if (o.knockTested && !o.keptTalkingAfterKnock && o.pauseTested && !o.keptTalkingAfterPause) {
+  // STOPPED FOR THE KEYS AND STAYED STOPPED, IN ANY LANGUAGE. This is the one that carries Staff who
+  // answer in Spanish, or any language we hold no words for. A menu that acted on a key does not go
+  // quiet, it reads the next set of options at us. Something that stayed quiet through our own
+  // silence is somebody waiting for us to speak, and only a person waits.
+  if (o.knock === "stopped_and_waited") {
     return { who: "person", why: "it stopped for the keys and stayed quiet for us, which only a person does", ...ride };
   }
   // Sounding like a person is only allowed to settle it once the pause has ALSO said person, because
@@ -989,7 +1010,12 @@ interface Session {
   soundHeardBefore?: boolean;
   knockAtSec?: number;
   knockDoneAtMs?: number;
-  keptTalkingAfterKnock?: boolean;
+  /** The answer, once the sound has given us one. */
+  knock?: KnockAnswer;
+  /** The quiet running right now since the keys landed, and the longest stretch of it we have heard.
+   *  Both are measured off the same frame energy the prompt detector reads, never off the words. */
+  knockQuietMs?: number;
+  knockStoppedForReal?: boolean;
   /** A number whose menu we already hold never gets knocked: we know what it is. */
   neverKnock?: boolean;
 }
@@ -1003,12 +1029,12 @@ export function listenNavFired(room: string): Array<{ value: string; atSec: numb
 /** How many store recordings played on this call — the free drift measure: a menu that grew or lost
  *  a recording since we mapped it shows up here with no speech recognition and no model. */
 /** What the knock found out, ready for the judge. Empty until it has been sent and answered. */
-export function listenNavKnock(room: string): { knockTested?: boolean; keptTalkingAfterKnock?: boolean; soundHeardBefore?: boolean } {
+export function listenNavKnock(room: string): { knock?: KnockAnswer; soundHeardBefore?: boolean } {
   const s = sessions.get(room);
   if (!s) return {};
   const sound = s.soundHeardBefore ? { soundHeardBefore: true } : {};
-  if (s.keptTalkingAfterKnock === undefined) return sound;
-  return { knockTested: true, keptTalkingAfterKnock: s.keptTalkingAfterKnock, ...sound };
+  if (s.knock === undefined) return sound;
+  return { knock: s.knock, ...sound };
 }
 export function listenNavPromptCount(room: string): number {
   return sessions.get(room)?.det.count ?? 0;
@@ -1149,7 +1175,10 @@ export function listenNavFeed(room: string, b64: string, track?: string): void {
   // Only the STORE's side of the line. Our own presses and spoken words come back on the outbound
   // track and would otherwise register as prompts.
   if (track && track !== "inbound") return;
-  s.det.feed(b64);
+  // ONE READING OF THE LINE, shared by the prompt detector and the keys. The keys are answered off
+  // this same energy and never off the words (owner 08-08).
+  const energy = frameEnergy(b64);
+  s.det.feedEnergy(energy);
   // THE SAME SOUND, HEARD AGAIN. Taken on every frame and checked once it has four seconds to
   // compare, so a loop of hold music gives itself away with no words at all (owner 08-07).
   s.print.feed(b64);
@@ -1168,13 +1197,31 @@ export function listenNavFeed(room: string, b64: string, track?: string): void {
     s.knockAtSec = Math.round((Date.now() - s.startMs) / 1000);
     void knock(s);
   }
-  // …and a second later, did the talking carry straight on? Reading on through beeps in somebody's
-  // ear is a machine and nothing else explains it. Going quiet proves nothing on its own, because a
-  // menu goes quiet too when it acts on a key, so that case is left to the other tests.
-  if (s.knockDoneAtMs && s.keptTalkingAfterKnock === undefined && Date.now() - s.knockDoneAtMs >= 1200) {
-    s.keptTalkingAfterKnock = s.det.quietMs < 400;
-    s.log(`listen-nav: the knock says ${s.keptTalkingAfterKnock ? "it read straight on — a machine" : "it stopped, which proves nothing on its own"}`);
-    try { s.onEvent?.("unknown", s.keptTalkingAfterKnock ? "It read straight on through the keys, so it is a machine" : "It stopped when we pressed keys", { step: "knock", keptTalking: s.keptTalkingAfterKnock, atSec: s.knockAtSec }); } catch { /* best-effort */ }
+  // …AND THE ANSWER, OFF THE SOUND AND NOTHING ELSE (owner 08-08). Three answers, never two. It used
+  // to take one reading of the line 1.2 seconds after the keys and call anything quieter than 400ms
+  // of noise "it stopped" — so a menu drawing breath between two sentences read as having stopped,
+  // which read as a person. Now the quiet has to RUN, long enough that a menu's own phrase gap can
+  // never reach it, and what happens after that stop is what tells the two people cases apart.
+  if (s.knockDoneAtMs && s.knock === undefined) {
+    if (energy > VOICE_THRESH) {
+      // Talking again. If it had really stopped first, that stop plus this is somebody speaking to us.
+      if (s.knockStoppedForReal) s.knock = "stopped_then_spoke";
+      s.knockQuietMs = 0;
+    } else {
+      s.knockQuietMs = (s.knockQuietMs ?? 0) + FRAME_MS;
+      if (s.knockQuietMs >= KNOCK_STOP_MS) s.knockStoppedForReal = true;
+      // Stayed quiet right through our own silence. Only a person waits.
+      if (s.knockQuietMs >= KNOCK_WAIT_MS) s.knock = "stopped_and_waited";
+    }
+    // Never really stopped inside the whole window: the noise carried straight through the keys.
+    if (s.knock === undefined && !s.knockStoppedForReal && Date.now() - s.knockDoneAtMs >= KNOCK_WINDOW_MS) s.knock = "read_on";
+    if (s.knock !== undefined) {
+      const said = s.knock === "read_on" ? "It read straight on through the keys, so it is a machine"
+        : s.knock === "stopped_then_spoke" ? "It stopped for the keys and then spoke to us, so it is a person"
+        : "It stopped for the keys and stayed quiet for us, so it is a person";
+      s.log(`listen-nav: the keys say — ${said}`);
+      try { s.onEvent?.("unknown", said, { step: "knock", knock: s.knock, atSec: s.knockAtSec }); } catch { /* best-effort */ }
+    }
   }
   // NEVER PRESS KEYS AT A PERSON (spec: the live call runtime, section 10). A store we mapped with
   // a menu that now answers directly means our tones go off in a real human's ear. Today we would

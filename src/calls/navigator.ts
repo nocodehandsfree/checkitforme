@@ -15,7 +15,7 @@ import { openReceipt, emit, markNow, closeReceipt, getReceipt, staffSpokeOn } fr
 // speech text alone, which returns an empty string for silence, for hold music and for a desk that is
 // ringing, so it could not tell "nobody is there" from "somebody just said hello". These are the same
 // two classes the paid-agent calls listen with. Nothing new is built here.
-import { PromptDetector, ConversationEar, frameEnergy as earFrameEnergy, toneShare as earToneShare, judgeVoice, personStartsAt, looksLikeADeadEnd, listenNavKnock, type HoldReason } from "./listen-nav";
+import { PromptDetector, ConversationEar, frameEnergy as earFrameEnergy, toneShare as earToneShare, judgeVoice, personStartsAt, looksLikeADeadEnd, listenNavKnock, type HoldReason, type KnockAnswer } from "./listen-nav";
 import { sameMenu, type CheckStage, type CheckFailReason } from "./mapgraph";
 import { gradeCheck } from "./map-capture";
 
@@ -167,7 +167,9 @@ export interface NavSession {
    *  stopped for us (a person), and what it did. */
   pauseTested?: boolean; keptTalkingAfterPause?: boolean; pauseStartedAtSec?: number;
   /** THE KNOCK: when we pressed, what was playing when we did, and whether it read straight on. */
-  knockAtSec?: number; knockLine?: string; keptTalkingAfterKnock?: boolean; knockStepIdx?: number;
+  /** WHAT THE KEYS FOUND OUT, off the sound (owner 08-08). The earpiece is the only thing that may
+   *  answer this — a mirror is kept here so the record and the practice checks can read it. */
+  knockAtSec?: number; knock?: KnockAnswer; knockStepIdx?: number;
   /** WHERE THIS TURN'S OWN LINE SITS in the steps. The store's line is written down before anything
    *  judges it, so "every line it has already said" would otherwise contain the line in hand and
    *  match it against itself — which called every single line a recording. This marks the one step
@@ -652,6 +654,16 @@ function judgeHere(s: NavSession, speech: string, atSec: number) {
   // The moment of the FIRST ring, stamped the turn we first see the ear's count move. Everything
   // before it keeps its own verdict; everything from it on is a person.
   if ((s.ear?.conv?.rings ?? 0) >= 1 && s.ringAtSec == null) s.ringAtSec = atSec;
+  // WHAT THE KEYS FOUND OUT ARRIVES FROM THE EARPIECE, ONCE (owner 08-08). Mirrored onto the check
+  // so the timeline and the practice checks can read the same answer the judge got.
+  const heard = listenNavKnock(s.id);
+  if (heard.knock && s.knock === undefined) {
+    s.knock = heard.knock;
+    emit(s.id, "unknown", heard.knock === "read_on" ? "It read straight on through the keys, so it is a machine"
+      : heard.knock === "stopped_then_spoke" ? "It stopped for the keys and then spoke to us, so it is a person"
+      : "It stopped for the keys and stayed quiet for us, so it is a person",
+      { step: "knock_answer", knock: heard.knock, atSec });
+  }
   const out = judgeVoice({
     text: speech || "", atSec,
     knownMenuLines: s.knownMenuLines,
@@ -674,9 +686,10 @@ function judgeHere(s: NavSession, speech: string, atSec: number) {
     // The pause test is layer 4 and costs two seconds of silence; a mapping check that is walking a
     // known route has already answered its question by position, so it never gets here.
     pauseTested: s.pauseTested, keptTalkingAfterPause: s.keptTalkingAfterPause,
-    // THE KNOCK's answer. The mapping check presses the keys itself, and a customer check walking a
-    // saved menu presses them through the walker, so both doors are read here.
-    ...(s.keptTalkingAfterKnock === undefined ? {} : { knockTested: true, keptTalkingAfterKnock: s.keptTalkingAfterKnock }),
+    // WHAT THE KEYS FOUND OUT, and only ever off the sound (owner 08-08). The mapping check presses
+    // the keys itself and a customer check walking a saved menu presses them through the walker, so
+    // both doors read the SAME earpiece. Nothing in this file may work the answer out from the words.
+    knock: s.knock,
     ...listenNavKnock(s.id),
   });
   // The earpiece's last word, kept so a turn where nothing at all was said has something honest to
@@ -692,20 +705,12 @@ async function navTurn(id: string, speech: string): Promise<string> {
   s.turns++;
   // This turn has not written its line down yet, so last turn's mark cannot stand.
   s.thisTurnLineIdx = undefined;
-  // THE KNOCK'S ANSWER: the very next thing we hear after the keys went out. Still reading the same
-  // line out means it never noticed, so it is a machine. Anything else is left to the other tests,
-  // because a menu goes quiet too when it acts on a key. (The keys themselves go out further down,
-  // AFTER the store's line has been written into the record — see THE KNOCK below.)
-  if (s.knockAtSec != null && s.keptTalkingAfterKnock === undefined && String(speech || "").trim()) {
-    const a = String(s.knockLine || "").toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
-    const b = String(speech).toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
-    const same = !!a && !!b && (a === b || a.includes(b) || b.includes(a));
-    // STILL READING THE SAME LINE means it never noticed the keys, which is a machine. A DIFFERENT
-    // line means something changed, and that is never proof of a machine on its own: it is a person
-    // startled into speaking, or a menu that acted on the key. Only reading on is proof.
-    s.keptTalkingAfterKnock = same;
-    emit(s.id, "unknown", s.keptTalkingAfterKnock ? "It read straight on through the keys, so it is a machine" : "It stopped when we pressed keys", { step: "knock_answer", keptTalking: s.keptTalkingAfterKnock, atSec });
-  }
+  // THE KEYS ARE ANSWERED BY THE SOUND, NEVER BY THE TRANSCRIPT (owner 08-08). This used to compare
+  // the next line we heard against the line the keys went out on, and call it a machine only when
+  // the two matched word for word. A menu that simply moved on to its NEXT sentence therefore
+  // counted as having stopped, which read as a person, and the check fell back on the word test that
+  // called CVS's machine a person in the first place. There is no transcript answer any more: the
+  // earpiece hears whether the noise really stopped, and an unanswered knock says nothing at all.
   // ROI GUARD (owner 07-26): a mapping call that is going nowhere costs the same as one that works, so
   // it gets a hard stop — no call runs past its cap, whatever the menu does. Callers set their own cap
   // (the sweep uses a tighter one than a slow-IVR discovery run); MAX_CALL_SEC is the ceiling.
@@ -820,7 +825,6 @@ async function navTurn(id: string, speech: string): Promise<string> {
   if (s.knockAtSec == null && !(s.knownMenuLines || []).length && String(speech || "").trim()
     && !looksLikeADeadEnd(speech)) {
     s.knockAtSec = atSec;
-    s.knockLine = String(speech);
     s.knockStepIdx = s.steps.push({ who: "us", text: "pressed a few keys to see whether the talking stops", atSec, action: "press", value: "123", knock: true }) - 1;
     emit(s.id, "unknown", "Pressed a few keys to see whether the talking stops", { step: "knock", atSec });
     return twiml(`<Play digits="123"/>${gather(id)}`);
@@ -1456,6 +1460,10 @@ export const _test = {
   },
   /** Move the clock so the next turn lands at this second of the check. */
   at(id: string, sec: number): void { const s = sessions.get(id); if (s) s.startMs = Date.now() - sec * 1000; },
+  /** WHAT THE EARPIECE HEARD AFTER THE KEYS. On a real check this arrives from the sound on the line
+   *  and nowhere else; a practice check hands it in the same way, so the bench and a real call read
+   *  the identical answer. Leaving it unset is a check where the keys were never answered. */
+  knock(id: string, answer: KnockAnswer): void { const s = sessions.get(id); if (s) s.knock = answer; },
   step: navStep,
   get(id: string): NavSession | undefined { return sessions.get(id); },
   end(id: string): void { sessions.delete(id); },
