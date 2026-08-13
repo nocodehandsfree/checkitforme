@@ -1,5 +1,28 @@
 # The mapping tests (08-08)
 
+## WHERE THIS STANDS (08-08, PM checkpoint)
+
+**Green and on staging.** Mapper merged. His practice checks are 57 passing, 0 failing, and driving
+the red ones is what found three real faults in the keys we press at whoever answers. One of those
+would have written "press 123" into every store's saved route as a real menu choice, which would
+have poisoned every map we made. Holding the merge until they were green was worth it.
+
+**The one fault still open.** The keys only prove a machine when the NEXT thing said is word for
+word the same line again (`keptTalkingAfterKnock`, navigator.ts ~706). A menu that simply moves on
+to its next sentence counts as having stopped, which reads like a person, and then it falls back on
+the word test that called CVS a person in the first place. It has to judge whether the noise stopped
+at all, off the sound, not off the transcript. Fix this before any mapping test is dialed.
+
+**What is actually proven.** One of the thirteen below, Direct pickup, has ever been dialed live, and
+that dial happened before the keys existed, so even that half is untested. The other twelve have only
+run on the bench. Getting faster through a menu was driven hard there, 339 checks with no phone. So
+for nearly all of these the bench half is done and only the real dial is missing.
+
+**What the robot store still needs**, before any of this can be dialed: it cannot hear a key press,
+it cannot branch on which key was pressed, it has no menu voice of its own separate from Staff, and
+it cannot loop back to the top of its menu. It also needs the menu wording word for word and a table
+of which key leads where, which the owner approves the way he approved the nineteen Staff scripts.
+
 Thirteen tests for the mapping side, written in the same shape as the twenty on the Charlie side:
 a name, one plain sentence saying what happens, and what it proves.
 
