@@ -1087,13 +1087,23 @@ export function robotClip(callSid: string, i: number): Buffer | null { return ro
  * A call lands on the robot's number. Pick the scene, record every line it will need in the two
  * voices (cached, so this costs nothing after the first run), and start playing.
  */
-export async function robotAnswer(callSid: string, from?: string): Promise<string> {
+export async function robotAnswer(callSid: string, from?: string, opts?: {
+  /** THE LINE THE DESK ANSWERS WITH, when somebody else has already got us to a desk. The phone menu
+   *  (`robot-menu.ts`) walks the caller to the front of the store and hands the SAME live call over
+   *  here, so the scene opens on the desk's own words instead of picking a greeting of its own.
+   *  Nothing else about a scene changes, and with no opts this behaves exactly as it always has. */
+  greeting?: string;
+  /** What plays before the first word — the ringback of the desk we were just put through to. The
+   *  default is the beat a handset takes to come up when we are the ones being answered. */
+  lead?: string;
+}): Promise<string> {
   if (!callSid) return twiml("<Hangup/>");
   const existing = robotCalls.get(callSid);
   if (existing) return robotPlay(callSid, existing); // Twilio refetched the same document: carry on, never restart
   const pick = parseRobotPick(await getSetting("robot_scenario"));
   const scene = robotScene(pick.scenario) as RobotScene;
-  const greeting = scene.greeting
+  const greeting = opts?.greeting
+    || scene.greeting
     || (pick.greeting != null ? ROBOT_GREETINGS[((pick.greeting % ROBOT_GREETINGS.length) + ROBOT_GREETINGS.length) % ROBOT_GREETINGS.length] : rotatePick("robot:greeting", ROBOT_GREETINGS))
     || ROBOT_GREETINGS[0];
   // NOBODY PICKS UP: no greeting, no voice, nothing but the line ringing (owner 08-06, scene 12).
@@ -1114,8 +1124,9 @@ export async function robotAnswer(callSid: string, from?: string): Promise<strin
   robotCalls.set(callSid, st);
   setTimeout(() => robotCalls.delete(callSid), 15 * 60 * 1000);
   console.log(`[robot] answering ${from || "?"} with scenario ${scene.n} (${scene.name}) · greeting "${greeting}"`);
-  // A beat before speaking: a handset comes up, then the person talks.
-  return robotPlay(callSid, st, `<Pause length="1"/>`);
+  // A beat before speaking: a handset comes up, then the person talks. When the phone menu put us
+  // through, that beat is the desk's own ringing instead.
+  return robotPlay(callSid, st, opts?.lead ?? `<Pause length="1"/>`);
 }
 
 /** Walk the scene from where we left off until it needs to listen or the call is over. */

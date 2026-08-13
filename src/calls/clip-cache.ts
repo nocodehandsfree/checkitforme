@@ -142,6 +142,16 @@ export async function mp3Clip(voiceId: string, text: string, tuning: Record<stri
   } catch (e) { console.error("[clip] mp3 synth", e); return null; }
 }
 
+/** HOW LONG AN MP3 CLIP PLAYS FOR, off the bytes we are really going to play. `mp3Clip` asks for
+ *  `mp3_44100_64`, which is a fixed 64 kilobits a second, so the length is the byte count and nothing
+ *  else — no decoding, no guessing, and it moves if the words do. It lives here because this file is
+ *  where that format is chosen; reading it anywhere else would be a second opinion about the same
+ *  bytes. Anything that is not really a 64 kbps mp3 comes back 0, never a made-up number. */
+export function mp3Seconds(audio: Buffer | null | undefined): number {
+  const bytes = audio?.length ?? 0;
+  return bytes > 0 ? (bytes * 8) / 64_000 : 0;
+}
+
 /**
  * Split a clip into 20ms media frames, base64 as Twilio wants them. Pure, so the framing is provable
  * without a phone call. A trailing part-frame is sent as-is rather than padded: μ-law silence is not
