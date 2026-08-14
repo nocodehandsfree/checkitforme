@@ -490,6 +490,15 @@ function charlieEndedTheCheck(tl: BehavedEvent[]): BehavedRow {
   const hang = tl.filter((e) => e.kind === "hangup");
   const reason = (e: BehavedEvent) => String((e.detail || {}).reason || "");
   if (ended) return row(true, `Charlie ended the check${at(ended) ? ` at ${at(ended)}` : ""}.`);
+  // THE NEW CLEAN ENDING, AND THE ROW NEVER LEARNED IT (owner, 08-14, off test check 363). Since
+  // 08-04 the engine ends a finished check ITSELF the moment Charlie's goodbye is out and the line
+  // goes quiet, stamped `signed_off`, precisely so a store can never bill us an extra minute by
+  // being slow to hang up. That IS Charlie ending the check, done for him by our own hand, and it
+  // is the ending nearly every clean check has now. This row was written before that door existed,
+  // answered "nothing says who ended it", and the card failed a perfect check with "Still to hold:
+  // Charlie ended the check".
+  const signedOffHang = hang.find((e) => reason(e) === "signed_off");
+  if (signedOffHang) return row(true, `Charlie said goodbye and we put the phone down for him${at(signedOffHang) ? ` at ${at(signedOffHang)}` : ""}.`);
   const store = hang.find((e) => reason(e) === "store_hung_up");
   if (store) return row(false, `Staff hung up on us${at(store) ? ` at ${at(store)}` : ""}.`);
   const gone = hang.find((e) => reason(e) === "disconnected" || reason(e) === "carrier_gone" || reason(e) === "disconnected_in_transfer");

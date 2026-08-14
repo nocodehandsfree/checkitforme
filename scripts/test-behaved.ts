@@ -327,6 +327,29 @@ head("THE LOCKED TEST CARDS (owner 08-04, the exact product card he added 08-06,
   ].every(([k, label]) => (TEST_CARDS[k].sub + TEST_CARDS[k].info).includes(label)));
 }
 
+head("THE SIGNED-OFF ENDING COUNTS AS CHARLIE ENDING THE CHECK (owner 08-14, off check 363)");
+{
+  // Since 08-04 a finished check is ended by OUR OWN hangup the moment the goodbye is out and the
+  // line goes quiet (`signed_off`), so a slow store can never bill us an extra minute. That is the
+  // clean ending nearly every good check has now, and the row used to answer "nothing says who
+  // ended it", which failed a perfect check by name on the card.
+  const rows = behaved({ timeline: [
+    { kind: "human_detected", atSec: 8 },
+    { kind: "charlie_join", atSec: 9 },
+    { kind: "hangup", atSec: 41, detail: { reason: "signed_off" } },
+    { kind: "hangup", atSec: 41, detail: { reason: "completed" } },
+  ] });
+  const r = rows.find((x) => x.key === "charlie_ended_the_check")!;
+  ok("a signed_off hangup is Charlie ending the check", r.pass === true, r.why);
+  ok("…and the row says we put the phone down for him", /put the phone down for him at 41s/.test(r.why), r.why);
+  // The store hanging up on us is still a fail, exactly as before.
+  const bad = behaved({ timeline: [
+    { kind: "human_detected", atSec: 8 }, { kind: "charlie_join", atSec: 9 },
+    { kind: "hangup", atSec: 100, detail: { reason: "store_hung_up" } },
+  ] }).find((x) => x.key === "charlie_ended_the_check")!;
+  ok("the store hanging up on us still fails the row", bad.pass === false, bad.why);
+}
+
 head("EVERY CARD NAMES WHAT MUST BE GREEN TO PASS (owner 08-07, item 9)");
 {
   const KEYS = new Set<string>(Object.keys(ROW_RULES));
