@@ -1,10 +1,10 @@
 {
-  "at": "2026-08-14T18:08:02.721Z",
+  "at": "2026-08-14T19:50:49.664Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
-      "scenario": 2,
-      "name": "No, plainly",
+      "scenario": 7,
+      "name": "The yes hidden inside a no",
       "items": [
         {
           "n": 1,
@@ -28,7 +28,7 @@
           "n": 4,
           "name": "Staff's greeting is the first line, on the live view",
           "pass": true,
-          "detail": "live view showed: \"Larry Vásquez. How can I help you?\"  ·  robot said: \"Larry Vasquez, how can I help you?\""
+          "detail": "live view showed: \"Larry Vasquez. How can I help you?\"  ·  robot said: \"Larry Vasquez, how can I help you?\""
         },
         {
           "n": 5,
@@ -46,25 +46,25 @@
           "n": 4.1,
           "name": "Staff's greeting is the first line of the written conversation",
           "pass": true,
-          "detail": "first written line: \"Clerk: Larry Vásquez. How can I help you?\""
+          "detail": "first written line: \"Clerk: Larry Vasquez. How can I help you?\""
         },
         {
           "n": 5.1,
           "name": "the written greeting is its own line",
           "pass": true,
-          "detail": "written: \"Larry Vásquez. How can I help you?\"  ·  said: \"Larry Vasquez, how can I help you?\""
+          "detail": "written: \"Larry Vasquez. How can I help you?\"  ·  said: \"Larry Vasquez, how can I help you?\""
         },
         {
           "n": 6,
           "name": "the words match what the robot actually said, word for word",
           "pass": false,
-          "detail": "\"Uh, probably Tuesday, that's when the truck comes.\" → written down only in part | \"Uh, morning usually, before we open.\" → written down only in part"
+          "detail": "\"We did, but it's not out yet, so... uh, or I don't think it's out. Let me see.\" → missing | \"Uh, Pitch Black, I want to say? Something like that.\" → missing"
         },
         {
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
           "pass": true,
-          "detail": "0 bounce(s) over 56 looks · header held at 0px"
+          "detail": "0 bounce(s) over 56 looks · header held at 62px"
         },
         {
           "n": 8,
@@ -76,7 +76,7 @@
           "n": 13,
           "name": "the check ends with a goodbye, not with us hanging up mid conversation",
           "pass": true,
-          "detail": "we signed off: \"Perfect, thanks so much, have a good one!\""
+          "detail": "we signed off: \"Perfect, thanks so much Larry, have a good one!\""
         },
         {
           "n": 14,
@@ -88,46 +88,46 @@
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 41 seconds and the line closed at 41 — 0 seconds of nothing"
+          "detail": "the answer was in at 47 seconds and the line closed at 47 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Fri, Aug 14 · 6:07 PM Restock incoming A shipment lands Tuesday in the morning.Be first when it drops. Check ano"
+          "detail": " Result Fri, Aug 14 · 7:49 PM Left on hold They kept us on hold and the call dropped.Try checking later. Check another s"
         },
         {
           "n": 9.1,
           "name": "the screen and the record say the same thing",
-          "pass": true,
-          "detail": "the screen said out, the record says out (not_in_stock)"
+          "pass": false,
+          "detail": "the screen said unclear, the record says in (in_stock)"
         },
         {
           "n": 11,
           "name": "the verdict is RIGHT for this scenario",
           "pass": true,
-          "detail": "got not_in_stock · this scenario is not_in_stock"
+          "detail": "got in_stock · this scenario is in_stock"
         },
         {
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "CHARGED · the screen claims no free check · the check cost 8.2¢"
+          "detail": "CHARGED · the screen claims no free check · the check cost 9.1¢"
         }
       ],
       "shots": [
-        "./robot-run/02-store-found.png",
-        "./robot-run/02-checking.png",
-        "./robot-run/02-live.png",
-        "./robot-run/02-result.png"
+        "./robot-run/07-store-found.png",
+        "./robot-run/07-checking.png",
+        "./robot-run/07-live.png",
+        "./robot-run/07-result.png"
       ],
-      "startedAt": 1786730788193,
-      "checkId": 363,
-      "cost": 0.081897,
-      "costReadable": "8.2¢",
+      "startedAt": 1786736951922,
+      "checkId": 364,
+      "cost": 0.090585,
+      "costReadable": "9.1¢",
       "robotCost": null,
       "charged": true,
-      "statusKey": "not_in_stock"
+      "statusKey": "in_stock"
     }
   ],
   "jsErrors": []
