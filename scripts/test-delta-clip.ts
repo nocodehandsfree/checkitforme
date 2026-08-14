@@ -654,6 +654,49 @@ console.log("\n▶ the other strategy: close him for the wait, bring him back as
   restore(); tw.close(); f.close();
 }
 
+console.log("\n▶ the Admin's numbers arrive with the room: a bare carrier socket still obeys the 6 (check 364)");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-baretune";
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, {
+    agentId: "agent_normal", dynamicVars: {}, connectOnHuman: true, holdMaxSeconds: 999, holdStrategy: "reopen",
+    // The Admin's saved 6 against a code default of 3. The only way this scene passes is the ear
+    // being built from the CHECK'S OWN numbers; floors off like every hold scene, because the rig
+    // drives a whole check in milliseconds and every session here is newborn.
+    tuning: { ...TUNING_DEFAULTS, holdQuietMs: 6000, charlieMinOnLineMs: 0, charlieThinkingMs: 0 },
+  });
+  const tw = new FakeTwilio();
+  // BARE, the way the carrier really connects — the room only arrives in the start message, the
+  // 08-04 goodbye bug's exact shape. Check 364 ran this way, the tuning lookup at connect found
+  // nothing, and the ear was built on the default 3 seconds instead of the Admin's 6.
+  handleTwilioBridge(tw as never, "" as never, () => { /* bare, the way Twilio really connects */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_bt", customParameters: { room } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
+  await sleep(120);
+  speak(tw, 150);
+  announceWait(f);                                 // "hold on, let me go check" — an announced wait
+  await sleep(40);
+  // CHECK 364'S EXACT SHAPE: five seconds of quiet and Staff are back. A 6 second rule cannot fire
+  // inside it; the stale default fired at three and dropped Charlie mid look-around.
+  quiet(tw, 5000 / 20);
+  await sleep(60);
+  ok(!(getReceipt(room)?.events || []).some((e) => e.kind === "hold_start"),
+    "five seconds of announced quiet and the Admin's 6 held: no drop on the code default");
+  speak(tw, 30);                                   // …Staff are back, the check carries on
+  await sleep(60);
+  // …and the 6 is a real rule, not a wait that can never start: past six seconds it fires.
+  quiet(tw, 7000 / 20);
+  await sleep(60);
+  ok((getReceipt(room)?.events || []).some((e) => e.kind === "hold_start"),
+    "past six seconds the same quiet IS a wait — the Admin number is the one the ear obeys");
+  restore(); tw.close(); f.close();
+}
+
 console.log("\n▶ a transfer is known the moment the next desk starts ringing");
 {
   _reset();

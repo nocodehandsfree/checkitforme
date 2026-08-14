@@ -382,7 +382,10 @@ function dtmfTone(digit: string, ms = 280): Buffer {
 export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (room: string, b64: string, track: string) => void, relayLine?: (room: string, role: string, text: string) => void, relayEnd?: (room: string) => void, onStage?: (room: string, n: number, atSec: number) => void) {
   let streamSid = "";
   // Every number this runtime would otherwise guess at, from the setting the Admin reads.
-  const tune: CallTuning = contexts.get(room)?.tuning ?? TUNING_DEFAULTS;
+  // A COPY, never the shared defaults object: the carrier's socket connects BARE and the room only
+  // arrives in its start message, so this lookup finds nothing on a real check and `adoptTuning`
+  // below overlays the check's own numbers IN PLACE the moment the room is known (check 364).
+  const tune: CallTuning = { ...(contexts.get(room)?.tuning ?? TUNING_DEFAULTS) };
   let eleven: WebSocket | null = null;
   let ready = false;
   let frames = 0;
@@ -530,9 +533,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   // Fun store, ... this is Bob"), and a breath is not the end of a turn (owner, live check 07-31).
   // Both numbers live in the Admin tuning box now, like every other guessed number, so the next
   // retune is a setting rather than a release.
-  const GREETING_END_MS = tune.greetingEndMs;
+  let GREETING_END_MS!: number;        // every number derived from `tune` is set in adoptTuning below
   /** …and if they simply never stop, ask anyway rather than listen forever. */
-  const GREETING_MAX_WAIT_MS = tune.greetingMaxWaitMs;
+  let GREETING_MAX_WAIT_MS!: number;
   // WHAT THEY SAID BEFORE WE WERE SURE ANYBODY WAS THERE. The ear needs about half a second of voice
   // to call a person, and buffering only started after that, so the FIRST WORDS of every greeting
   // were thrown away — the store's own name, and whoever they said they were. The customer then read
@@ -561,7 +564,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   /** …and how long we will wait for that hello before showing the question anyway. A store that says
    *  nothing at all must never leave a customer staring at an empty conversation. */
   const QUESTION_HOLD_MS = 8000;
-  const PREROLL_MAX = Math.max(0, Math.round(tune.greetingKeepMs / 20));
+  let PREROLL_MAX!: number;
   /** When their hello actually started. Their words only exist once the agent has transcribed the
    *  audio we held, which is after our question played — so stamped on arrival, the greeting lands
    *  UNDER the question it came before. This is the time it belongs at, spent on the first line back. */
@@ -599,10 +602,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   const dropVoiceStartsUpTo = (t: number) => { while (theirVoiceStarts.length && theirVoiceStarts[0] <= t) theirVoiceStarts.shift(); };
   let waitTotalMs = 0;
   /** A breath after the clip so the agent can never clip its own tail. */
-  const CLIP_SETTLE_MS = tune.clipSettleMs;
+  let CLIP_SETTLE_MS!: number;
   /** If every signal fails, open him anyway this long after the clip should have ended. A slightly
    *  early agent is recoverable; a live clerk saying hello into silence is not. */
-  const CLIP_BACKSTOP_MS = tune.clipBackstopMs;
+  let CLIP_BACKSTOP_MS!: number;
   /** How early to start connecting him, measured back from the END of the clip.
    *
    *  He bills from the second his session opens, talking or not, so every moment he spends warming
@@ -612,18 +615,18 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *
    *  Being late is safe by construction: the gate opens on its own signals whatever he is doing, and
    *  whatever the clerk said meanwhile is already buffered and released the moment he reports ready. */
-  const PREWARM_LEAD_MS = tune.prewarmLeadMs;
+  let PREWARM_LEAD_MS!: number;
   /** How long Charlie may actually be TALKING before he starts wrapping up. The owner's number, 45
    *  seconds, tuned from Admin against real checks: his own arithmetic says 23 holds 67% profit and
    *  45 does not, so 45 buys a longer conversation at a thinner margin on purpose. */
-  const WRAP_UP_MS = Math.max(1, tune.charlieWrapUpSeconds) * 1000;
+  let WRAP_UP_MS!: number;
   /** How long a wait may run before we hang up. The owner's number, two minutes, tunable from Admin.
    *  Waiting is nearly free because Charlie is dropped, and a second check costs more than waiting,
    *  so it is deliberately generous. */
-  const HOLD_CAP_MS = Math.max(1, tune.holdCapSeconds) * 1000;
+  let HOLD_CAP_MS!: number;
   /** How long the phone may ring while we wait for a human. The owner's number, 90 seconds, tunable
    *  from Admin. Never a count of rings (his ruling 08-03). */
-  const RING_WAIT_MS = Math.max(1, tune.ringWaitSeconds) * 1000;
+  let RING_WAIT_MS!: number;
   // ---- hold and transfer ----
   /** When THIS session came up. A session closed seconds after it opened never got a word in, and
    *  the seconds it did burn bought nothing (owner, check 357). */
@@ -634,7 +637,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  so the window was gone before he could use it. The wait still STARTS on the record at the
    *  second they really went quiet; only the closing of his session waits out the remainder, so the
    *  saving on a real walk away is untouched and a pause mid conversation no longer gags him. */
-  const MIN_ON_LINE_MS = Math.max(0, tune.charlieMinOnLineMs);
+  let MIN_ON_LINE_MS!: number;
   let closeWhenReady: NodeJS.Timeout | null = null;
   /**
    * A CLOCK COULD NEVER FIX THIS, AND CHECK 358 IS THE PROOF (owner 08-07). The minimum above is
@@ -649,7 +652,32 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    * opened; `spokeThisSession` is the moment it stopped mattering. Capped, because a model that
    * never answers must not hold a line open for free.
    */
-  const HIS_FIRST_WORD_MS = Math.max(0, tune.charlieThinkingMs);
+  let HIS_FIRST_WORD_MS!: number;
+  /** THE ADMIN'S NUMBERS ARRIVE WITH THE ROOM, NOT WITH THE SOCKET (owner task 08-14, check 364).
+   *  The carrier's socket connects BARE and the room only arrives in its start message — the 08-04
+   *  goodbye bug's exact shape — so the tuning resolved at connect found no context on any real
+   *  check and every number here ran on the code defaults: the Admin's "Silence before Charlie
+   *  drops" 6 seconds never reached the ear, and 364 dropped Charlie 3 seconds into a 5 second
+   *  quiet. Every number derived from `tune` is derived HERE, once, and re-derived from the start
+   *  handler the moment the room is known (the same two moments `hangSignoffDoor` runs). The
+   *  overlay is IN PLACE, so every later `tune.` read — and the ear, built at human detect, which
+   *  is always after start — sees the check's own numbers. */
+  function adoptTuning() {
+    const own = room ? contexts.get(room)?.tuning : undefined;
+    if (own) Object.assign(tune, own);
+    GREETING_END_MS = tune.greetingEndMs;
+    GREETING_MAX_WAIT_MS = tune.greetingMaxWaitMs;
+    PREROLL_MAX = Math.max(0, Math.round(tune.greetingKeepMs / 20));
+    CLIP_SETTLE_MS = tune.clipSettleMs;
+    CLIP_BACKSTOP_MS = tune.clipBackstopMs;
+    PREWARM_LEAD_MS = tune.prewarmLeadMs;
+    WRAP_UP_MS = Math.max(1, tune.charlieWrapUpSeconds) * 1000;
+    HOLD_CAP_MS = Math.max(1, tune.holdCapSeconds) * 1000;
+    RING_WAIT_MS = Math.max(1, tune.ringWaitSeconds) * 1000;
+    MIN_ON_LINE_MS = Math.max(0, tune.charlieMinOnLineMs);
+    HIS_FIRST_WORD_MS = Math.max(0, tune.charlieThinkingMs);
+  }
+  adoptTuning();
   /**
    * THE CLOCK RESTARTS ON THEIR LATEST WORD, NOT THE FIRST WORD OF THE CHECK (owner 08-08, off test
    * check 360, and this is why the goodbye kept coming and going).
@@ -2190,6 +2218,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       streamSid = m.start?.streamSid || streamSid;
       if (!room && m.start?.customParameters?.room) { room = m.start.customParameters.room; hangSignoffDoor(); } // Twilio puts <Parameter> here; the check has its name NOW, so its door hangs now
       if (!ctx && room) ctx = contexts.get(room);
+      adoptTuning(); // the Admin's numbers catch up with the room — the socket connected bare (check 364)
       if (ctx?.dtmf) scheduleDtmf(ctx.dtmf);
       if (ctx?.connectOnHuman) {
         if (ctx.connectAtSec && ctx.connectAtSec > 0) {
