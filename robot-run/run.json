@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-13T22:55:44.269Z",
+  "at": "2026-08-14T17:31:55.738Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
@@ -64,7 +64,7 @@
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
           "pass": true,
-          "detail": "0 bounce(s) over 55 looks · header held at 62px"
+          "detail": "0 bounce(s) over 34 looks · header held at 0px"
         },
         {
           "n": 8,
@@ -75,32 +75,32 @@
         {
           "n": 13,
           "name": "the check ends with a goodbye, not with us hanging up mid conversation",
-          "pass": false,
-          "detail": "the last thing said was OUR OWN QUESTION: \"Agent: Oh nice, do you know the name of the set, like Chaos Rising?\""
+          "pass": true,
+          "detail": "we signed off: \"Perfect, thanks so much, have a good one!\""
         },
         {
           "n": 14,
           "name": "we never ask the same question twice",
           "pass": true,
-          "detail": "2 things said, none of them twice"
+          "detail": "3 things said, none of them twice"
         },
         {
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 121 seconds and the line closed at 121 — 0 seconds of nothing"
+          "detail": "the answer was in at 26 seconds and the line closed at 26 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Thu, Aug 13 · 10:53 PM Nobody answered Rang and rang, but nobody picked up.No check, no charge. Try checking lat"
+          "detail": " Result Fri, Aug 14 · 5:31 PM In stock MVPs has a Pitch Black booster box.Go grab it before it's gone. Check another sto"
         },
         {
           "n": 9.1,
           "name": "the screen and the record say the same thing",
-          "pass": false,
-          "detail": "the screen said unclear, the record says in (in_stock)"
+          "pass": true,
+          "detail": "the screen said in, the record says in (in_stock)"
         },
         {
           "n": 11,
@@ -111,8 +111,8 @@
         {
           "n": 10,
           "name": "the screen and the till agree about money",
-          "pass": false,
-          "detail": "CHARGED · the screen says \"No charge\" · the check cost 9.9¢"
+          "pass": true,
+          "detail": "CHARGED · the screen claims no free check · the check cost 5.1¢"
         }
       ],
       "shots": [
@@ -121,10 +121,10 @@
         "./robot-run/01-live.png",
         "./robot-run/01-result.png"
       ],
-      "startedAt": 1786661573592,
-      "checkId": 361,
-      "cost": 0.099063,
-      "costReadable": "9.9¢",
+      "startedAt": 1786728625902,
+      "checkId": 362,
+      "cost": 0.051041,
+      "costReadable": "5.1¢",
       "robotCost": null,
       "charged": true,
       "statusKey": "in_stock"
