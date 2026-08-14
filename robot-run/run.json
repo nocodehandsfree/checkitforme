@@ -1,10 +1,10 @@
 {
-  "at": "2026-08-14T17:31:55.738Z",
+  "at": "2026-08-14T18:08:02.721Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
-      "scenario": 1,
-      "name": "Yes, plainly",
+      "scenario": 2,
+      "name": "No, plainly",
       "items": [
         {
           "n": 1,
@@ -58,13 +58,13 @@
           "n": 6,
           "name": "the words match what the robot actually said, word for word",
           "pass": false,
-          "detail": "\"Uh yeah, it's the Pitch Black booster boxes.\" → written down only in part"
+          "detail": "\"Uh, probably Tuesday, that's when the truck comes.\" → written down only in part | \"Uh, morning usually, before we open.\" → written down only in part"
         },
         {
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
           "pass": true,
-          "detail": "0 bounce(s) over 34 looks · header held at 0px"
+          "detail": "0 bounce(s) over 56 looks · header held at 0px"
         },
         {
           "n": 8,
@@ -82,52 +82,52 @@
           "n": 14,
           "name": "we never ask the same question twice",
           "pass": true,
-          "detail": "3 things said, none of them twice"
+          "detail": "4 things said, none of them twice"
         },
         {
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 26 seconds and the line closed at 26 — 0 seconds of nothing"
+          "detail": "the answer was in at 41 seconds and the line closed at 41 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Fri, Aug 14 · 5:31 PM In stock MVPs has a Pitch Black booster box.Go grab it before it's gone. Check another sto"
+          "detail": " Result Fri, Aug 14 · 6:07 PM Restock incoming A shipment lands Tuesday in the morning.Be first when it drops. Check ano"
         },
         {
           "n": 9.1,
           "name": "the screen and the record say the same thing",
           "pass": true,
-          "detail": "the screen said in, the record says in (in_stock)"
+          "detail": "the screen said out, the record says out (not_in_stock)"
         },
         {
           "n": 11,
           "name": "the verdict is RIGHT for this scenario",
           "pass": true,
-          "detail": "got in_stock · this scenario is in_stock"
+          "detail": "got not_in_stock · this scenario is not_in_stock"
         },
         {
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "CHARGED · the screen claims no free check · the check cost 5.1¢"
+          "detail": "CHARGED · the screen claims no free check · the check cost 8.2¢"
         }
       ],
       "shots": [
-        "./robot-run/01-store-found.png",
-        "./robot-run/01-checking.png",
-        "./robot-run/01-live.png",
-        "./robot-run/01-result.png"
+        "./robot-run/02-store-found.png",
+        "./robot-run/02-checking.png",
+        "./robot-run/02-live.png",
+        "./robot-run/02-result.png"
       ],
-      "startedAt": 1786728625902,
-      "checkId": 362,
-      "cost": 0.051041,
-      "costReadable": "5.1¢",
+      "startedAt": 1786730788193,
+      "checkId": 363,
+      "cost": 0.081897,
+      "costReadable": "8.2¢",
       "robotCost": null,
       "charged": true,
-      "statusKey": "in_stock"
+      "statusKey": "not_in_stock"
     }
   ],
   "jsErrors": []
