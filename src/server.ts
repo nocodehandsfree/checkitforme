@@ -53,11 +53,8 @@ import { activeMap, graphSummary, chainDetail, approveVersion, rejectVersion, op
 import { recipeFromCall, evidenceFromCall, type CapturedStep } from "./calls/map-capture";
 import { startSweep, stopSweep, sweepStatus, buildQueue } from "./calls/sweep";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay,
-  robotAnswer, robotStep, robotEnded, robotClip, ringbackWav, beepWav, robotScene, robotLastRun, robotRunFor, parseRobotPick, ROBOT_SCENES, ROBOT_GREETINGS, ROBOT_CLIPS } from "./calls/tapedeck";
-// THE ROBOT STORE'S PHONE MENU (owner 08-08). Its own file, its own voice, its own door — the robot's
-// scenes are untouched by it.
-import { menuPick, robotMenuAnswer, robotMenuStep, robotMenuEnded, menuClip, menuLastRun, menuRunFor,
-  isMenuVariant, MENU_VARIANTS, GREETING as MENU_GREETING, optionsFor as menuOptionsFor } from "./calls/robot-menu";
+  robotAnswer, robotStep, robotEnded, robotClip, ringbackWav, beepWav, robotScene, robotLastRun, robotRunFor, parseRobotPick, ROBOT_SCENES, ROBOT_GREETINGS, ROBOT_CLIPS,
+  menuPick, isMenuVariant, MENU_VARIANTS, MENU_GREETING, menuOptions } from "./calls/tapedeck";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged, lockRecipeToChain } from "./calls/trainer-batch";
 import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, connectAtSecFor, chainDialable, chainNavPlan, type Recipe } from "./calls/recipe";
 import { llm, heli } from "./llm";
@@ -1205,48 +1202,27 @@ async function robotStoreOverCap(retailerId: number): Promise<{ error: string; m
 // our voice credit, so a promote must never open them there. Off by default anywhere but staging.
 const robotStoreOn = () => config.staging.on || process.env.ROBOT_STORE_ON === "1";
 app.use("/robot/*", async (c, next) => (robotStoreOn() ? next() : c.body("not found", 404)));
-// THE PHONE MENU ANSWERS FIRST, when it is switched on (owner 08-08). The robot store could only
-// ever answer as Staff, and every mapping test needs a menu to walk. The menu owns the call until a
-// desk picks up; with `robot_menu` unset or off, this is exactly the call the scenes always got.
 app.all("/robot/answer", async (c) => {
   let sid = "", from = "";
   try { const b = await c.req.parseBody(); sid = String(b.CallSid || ""); from = String(b.From || ""); } catch { /* GET probe */ }
   if (!sid) sid = c.req.query("CallSid") || "";
-  const menu = sid ? await menuPick() : null;
-  if (menu) return c.body(await robotMenuAnswer(sid, menu), 200, { "Content-Type": "text/xml" });
   return c.body(await robotAnswer(sid, from), 200, { "Content-Type": "text/xml" });
 });
-// One turn of the menu: a key pressed, a word said, or six seconds of nothing. The menu's own door,
-// so the scenes' listening window is untouched.
-app.post("/robot/menu", async (c) => {
-  let digits = "", speech = "", sid = c.req.query("call") || "";
+// A KEY PRESSED RIDES THE SAME DOOR AS A SPOKEN WORD (owner 08-08). A scene with no key table
+// ignores it, which is every Staff scene; the phone menu branches on it.
+app.post("/robot/step", async (c) => {
+  let speech = "", digits = "", sid = c.req.query("call") || "";
   try {
     const b = await c.req.parseBody();
-    digits = String(b.Digits || ""); speech = String(b.SpeechResult || "");
+    speech = String(b.SpeechResult || ""); digits = String(b.Digits || "");
     if (!sid) sid = String(b.CallSid || "");
   } catch { /* silent turn */ }
-  const turn = await robotMenuStep(sid, digits, speech);
-  if (!turn) return c.body(await robotAnswer(sid), 200, { "Content-Type": "text/xml" });
-  if ("twiml" in turn) return c.body(turn.twiml, 200, { "Content-Type": "text/xml" });
-  // THE FRONT OF THE STORE ANSWERED. The desk rings for real, then the robot's own Staff scenes take
-  // the same live call from its first word — the menu owns not one word of talking to a person.
-  return c.body(await robotAnswer(sid, undefined, { greeting: turn.desk.answers, lead: turn.desk.ringTwiml }),
-    200, { "Content-Type": "text/xml" });
-});
-app.get("/robot/menu-clip", (c) => {
-  const b = menuClip(c.req.query("call") || "", c.req.query("line") || "");
-  if (!b) return c.body("not found", 404);
-  return c.body(new Uint8Array(b), 200, { "Content-Type": "audio/mpeg" });
-});
-app.post("/robot/step", async (c) => {
-  let speech = "", sid = c.req.query("call") || "";
-  try { const b = await c.req.parseBody(); speech = String(b.SpeechResult || ""); if (!sid) sid = String(b.CallSid || ""); } catch { /* silent turn */ }
-  return c.body(robotStep(sid, speech), 200, { "Content-Type": "text/xml" });
+  return c.body(robotStep(sid, speech, digits), 200, { "Content-Type": "text/xml" });
 });
 app.post("/robot/ended", async (c) => {
   let sid = c.req.query("call") || "";
   try { const b = await c.req.parseBody(); if (!sid) sid = String(b.CallSid || ""); } catch { /* no body */ }
-  robotMenuEnded(sid); robotEnded(sid); return c.body("ok", 200);
+  robotEnded(sid); return c.body("ok", 200);
 });
 app.get("/robot/clip", (c) => {
   const b = robotClip(c.req.query("call") || "", Number(c.req.query("i") || 0));
@@ -1290,11 +1266,7 @@ app.get("/api/admin/robot-store", async (c) => {
     pick, scenes: ROBOT_SCENES.map((s) => ({ n: s.n, name: s.name, expect: s.expect, neverAnswers: !!s.neverAnswers, noGoodbye: !!s.noGoodbye })),
     greetings: ROBOT_GREETINGS,
     run: sid ? robotRunFor(sid) : robotLastRun(),
-    menu: {
-      on: menu, variants: MENU_VARIANTS,
-      greeting: MENU_GREETING, options: menuOptionsFor(menu || "plain"),
-      run: sid ? menuRunFor(sid) : menuLastRun(),
-    },
+    menu: { on: menu, variants: MENU_VARIANTS, greeting: MENU_GREETING, options: menuOptions(menu || "plain") },
   });
 });
 app.post("/api/admin/robot-store", async (c) => {

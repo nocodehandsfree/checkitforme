@@ -1,165 +1,162 @@
 // THE ROBOT STORE'S PHONE MENU, proved on the bench (owner approved the script 08-08).
 //
 // No phone, no money, no synthesis. What is proved here is the WORDS, the ORDER, which key leads
-// where, and the four abilities the thirteen mapping tests need: hearing a key, branching on which
-// key, a menu voice of its own, and looping back to the top. The audio route itself is proved by a
-// real call, which is not this file's job.
+// where, and the four gaps the thirteen mapping tests needed closed: hearing a key press, branching
+// on which key, a menu voice separate from Staff's, and a way back to the top of the menu. The audio
+// route itself is proved by a real call, which is not the bench's job.
+//
+// IT IS A SCENE, driven by the robot store's own player. Every check below goes through the same
+// `robotStep` a real call goes through — there is no second robot store to test.
 //
 // Run: ./node_modules/.bin/tsx scripts/test-robot-menu.ts
 import { readFileSync } from "node:fs";
 import {
-  GREETING, MENU_VARIANTS, optionsFor, keyTable, frontKey, ringSecs, isMenuVariant,
-  robotMenuStep, _menuRig, _menuElapsed, _menuState, _menuEnd, type MenuVariant,
-} from "../src/calls/robot-menu";
+  MENU_GREETING, MENU_VARIANTS, MENU_NO_PRESS_SEC, menuOptions, menuScene, menuFrontKey, menuRingSecs,
+  isMenuVariant, robotStep, robotEnded, _menuRig, _menuElapsed, _menuFixLengths, _menuRun, ROBOT_SCENES,
+} from "../src/calls/tapedeck";
 
 let pass = 0, fail = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? "✓" : "✗"} ${m}`); c ? pass++ : fail++; };
-const said = (sid: string) => (_menuState(sid)?.said || []).map((l) => l.text);
-const keys = (sid: string) => _menuState(sid)?.keys || [];
-/** One line's made-up length on the bench, so a test can say exactly where a key landed. */
+const said = (sid: string) => (_menuRun(sid)?.said || []).map((l) => l.text);
+const keys = (sid: string) => _menuRun(sid)?.keys || [];
+/** One spoken line's made-up length on the bench, so a check can place a key exactly. */
 const LINE = 3;
+/** Drive one turn the way a real call does, then re-measure the document it handed back. */
+const step = (sid: string, digits: string, speech = "") => { const out = robotStep(sid, speech, digits); _menuFixLengths(sid, LINE); return out; };
 
-// The owner's approved script, read off the file he approved rather than retyped here.
-const SPEC = readFileSync("docs/specs/mapping-tests/robot-menu.md", "utf8");
+const SPEC = readFileSync("docs/specs/mapping-tests/robot-menu.md", "utf8").replace(/\s+/g, " ");
 
 console.log("\n▶ THE WORDS ARE HIS, WORD FOR WORD");
 {
-  const greeting = GREETING.join(" ");
-  ok(SPEC.includes(greeting.replace(/dial nine one one/, "dial\nnine one one")) || SPEC.includes(greeting),
-    "the greeting is the approved greeting, to the letter");
+  const greeting = MENU_GREETING.join(" ");
+  ok(SPEC.includes(greeting), "the greeting is his approved greeting, to the letter");
   ok(greeting.includes("If this is a medical emergency, please hang up and dial nine one one."),
     "including the emergency sentence, which is the CVS shape that broke us on 08-07");
-  const options = optionsFor("plain").join(" ");
-  ok(SPEC.replace(/\n/g, " ").includes(options),
+  ok(SPEC.includes(menuOptions("plain").join(" ")),
     "and the six options are his options paragraph, in his order, to the letter");
-  ok(optionsFor("plain").length === 6, "six options are read on the approved menu");
+  for (const line of ["MVP's pharmacy, this is Larry.", "MVP's, this is Larry speaking.", "Home supplies.",
+    "Our cosmetics department is open ten to six.",
+    "We are open nine to nine, seven days a week. You can find us at 4200 Woodland Hills Drive."]) {
+    ok(SPEC.includes(line), `the desks and recordings say his words: "${line}"`);
+  }
 }
 
-console.log("\n▶ 1 — IT HEARS A KEY PRESS (the whole reason nothing could be dialed)");
+console.log("\n▶ IT IS A SCENE, not a second robot store");
+{
+  const src = readFileSync("src/calls/tapedeck.ts", "utf8");
+  ok(/export function menuScene\(v: MenuVariant\): RobotScene/.test(src),
+    "the menu is written as a RobotScene, in the same acts every Staff scene is written in");
+  ok(!/robot-menu/.test(readFileSync("src/server.ts", "utf8")),
+    "and there is no second file and no second door — the robot store has one of each");
+  const m = menuScene("plain");
+  ok(m.acts.some((a) => "label" in a) && m.acts.some((a) => "goto" in a),
+    "the only new words the acts needed are a place to jump to and a jump");
+  ok(!!m.staffAt && m.staffAt === "front",
+    "and the Staff scene is spliced in at the front of the store, on the same live call");
+  ok(ROBOT_SCENES.every((s) => !s.keys), "no Staff scene has a key table, so none of them changed behaviour");
+}
+
+console.log("\n▶ GAP 1 — IT HEARS A KEY PRESS (the whole reason nothing could be dialed)");
 {
   const { first } = _menuRig("plain", { lineSecs: LINE });
-  ok(/input="dtmf speech"/.test(first), "the listening window takes keys AND speech, where the scenes took speech only");
+  ok(/input="dtmf speech"/.test(first), "the listening window takes keys AND speech, where it took speech only");
   ok(/numDigits="1"/.test(first), "one key at a time, so a key is acted on the moment it lands");
+  ok(new RegExp(`timeout="${MENU_NO_PRESS_SEC}"`).test(first), "and the menu waits his six seconds for one");
 }
 
-console.log("\n▶ 2 — IT BRANCHES ON WHICH KEY, off his key table");
+console.log("\n▶ GAP 2 — IT BRANCHES ON WHICH KEY, off his key table");
 {
-  const t = (k: string) => keyTable("plain", k);
-  ok(t("1")?.kind === "desk" && (t("1") as { answers: string }).answers === "MVP's pharmacy, this is Larry.",
-    "1 is the pharmacy desk, one ring, and it answers in his words");
-  ok((t("1") as { rings: number }).rings === 1, "one ring at the pharmacy");
-  ok(t("2")?.kind === "read" && (t("2") as { says: string }).says === "Our cosmetics department is open ten to six.",
-    "2 is the cosmetics recording, in his words");
-  ok(t("3")?.kind === "desk" && (t("3") as { rings: number; answers: string }).rings === 2
-    && (t("3") as { answers: string }).answers === "Home supplies.",
-    "3 is home supplies, two rings, and it answers in his words");
-  ok(t("4")?.kind === "read" && (t("4") as { says: string }).says.startsWith("We are open nine to nine, seven days a week."),
-    "4 is the hours and directions recording, in his words");
-  const front = t("0");
-  ok(front?.kind === "desk" && (front as { rings: number }).rings === 3
-    && (front as { answers: string }).answers === "MVP's, this is Larry speaking."
-    && (front as { staffTakeOver: boolean }).staffTakeOver,
-    "0 is THE RIGHT DEPARTMENT: three rings, the front desk answers, and Staff carry on from there");
-  ok(t("9")?.kind === "again", "9 plays the options again");
-  ok(t("7") === null && t("*") === null, "a key he did not list leads nowhere, and nothing is announced about it");
-  ok(ringSecs(1) === 2 && ringSecs(2) === 8 && ringSecs(3) === 14 && ringSecs(8) === 44,
+  const k = menuScene("plain").keys || {};
+  ok(k["1"] === "pharmacy" && k["2"] === "cosmetics" && k["3"] === "home" && k["4"] === "hours"
+    && k["0"] === "front" && k["9"] === "options",
+    "1 pharmacy, 2 cosmetics, 3 home supplies, 4 hours, 0 the front of the store, 9 the options again");
+  ok(k["7"] === undefined, "and a key he did not list is not in the table at all");
+  ok(menuRingSecs(1) === 2 && menuRingSecs(2) === 8 && menuRingSecs(3) === 14 && menuRingSecs(8) === 44,
     "the rings are the real cadence: two seconds of tone, four of silence, per ring");
 }
 
-console.log("\n▶ 3 — IT HAS A MENU VOICE OF ITS OWN");
+console.log("\n▶ GAP 3 — A MENU VOICE, SEPARATE FROM STAFF'S");
 {
-  const src = readFileSync("src/calls/robot-menu.ts", "utf8");
-  const deck = readFileSync("src/calls/tapedeck.ts", "utf8");
-  ok(/robot_voice_menu/.test(src), "the menu reads its own voice setting, not Staff's");
-  ok(!/robot_voice_menu/.test(deck), "and Staff's voice setting is a different one entirely");
-  ok(/const MENU_TUNING/.test(src) && /mp3Clip\(voiceId, text, MENU_TUNING\)/.test(src),
-    "one voice and one set of settings for every line, so it says the same words the same way every call");
+  const src = readFileSync("src/calls/tapedeck.ts", "utf8");
+  ok(/robot_voice_menu/.test(src) && /robot_voice_staff/.test(src) && /robot_voice_transfer/.test(src),
+    "three voices now: Staff, the person a transfer hands us to, and the store's own menu");
+  ok(menuScene("plain").acts.filter((a) => "sayAs" in a && a.sayAs === "menu").length > 0,
+    "every line the menu speaks is marked as the menu's voice, never Staff's");
+  const { callSid: sid } = _menuRig("plain", { lineSecs: LINE });
+  ok((_menuRun(sid)?.said || []).every((l) => l.voice === "menu"),
+    "so the record of the call says which of them said each line");
+  ok(/stability: 0.75, similarity_boost: 0.75/.test(src),
+    "one fixed set of settings, so it says the same words the same way on every call");
 }
 
-console.log("\n▶ 4 — IT LOOPS BACK TO THE TOP");
+console.log("\n▶ GAP 4 — A WAY BACK TO THE TOP");
 {
-  // Nothing pressed: the greeting ends, the options read, six seconds of quiet, and the whole list
-  // plays again from the top of the options.
   const { callSid: sid } = _menuRig("plain", { lineSecs: LINE });
-  await robotMenuStep(sid, "", "");                       // the greeting finished
-  ok(said(sid).slice(0, 3).join(" ") === GREETING.join(" "), "the greeting reads first, all of it");
-  ok(said(sid).slice(3).join(" ") === optionsFor("plain").join(" "), "then the six options, in order");
-  const again = await robotMenuStep(sid, "", "");          // six seconds, nothing pressed
-  ok(again !== null && "twiml" in again && /timeout="6"/.test(again.twiml),
-    "the options wait his six seconds for a key");
-  ok(said(sid).slice(9).join(" ") === optionsFor("plain").join(" "),
-    "and with nothing pressed the whole list plays again from the top");
-  _menuEnd(sid);
-
-  // A key he did not list: the same loop, and not one word invented about it.
-  const { callSid: s2 } = _menuRig("plain", { lineSecs: LINE });
-  await robotMenuStep(s2, "", "");
-  const before = said(s2).length;
-  await robotMenuStep(s2, "7", "");
-  ok(said(s2).slice(before).join(" ") === optionsFor("plain").join(" "),
-    "a key off the table plays the options again, and says nothing that is not his");
-  ok(keys(s2)[0].acted === "the options again", "and the record says exactly that is what it did");
-  _menuEnd(s2);
-
-  // Pressing 9 is the same loop, asked for.
-  const { callSid: s3 } = _menuRig("plain", { lineSecs: LINE });
-  await robotMenuStep(s3, "", "");
-  const n3 = said(s3).length;
-  await robotMenuStep(s3, "9", "");
-  ok(said(s3).slice(n3).join(" ") === optionsFor("plain").join(" "), "pressing 9 plays them again too");
-  _menuEnd(s3);
+  ok(said(sid).slice(0, 3).join(" ") === MENU_GREETING.join(" "), "the greeting reads first, all of it");
+  ok(said(sid).slice(3).join(" ") === menuOptions("plain").join(" "), "then the six options, in his order");
+  step(sid, "");                                        // six seconds, nothing pressed
+  ok(said(sid).slice(9).join(" ") === menuOptions("plain").join(" "),
+    "with nothing pressed the whole list plays again from the top");
+  const n = said(sid).length;
+  _menuElapsed(sid, 6 * LINE + 1);                      // the options had finished reading
+  step(sid, "7");
+  ok(said(sid).slice(n).join(" ") === menuOptions("plain").join(" "),
+    "a key off his table plays them again too, and says nothing that is not his");
+  ok(keys(sid)[0].acted === "the options again", "and the record says exactly that is what it did");
+  const n2 = said(sid).length;
+  _menuElapsed(sid, 6 * LINE + 1);
+  step(sid, "9");
+  ok(said(sid).slice(n2).join(" ") === menuOptions("plain").join(" "), "pressing 9 plays them again, as he wrote");
+  robotEnded(sid);
 }
 
 console.log("\n▶ WALKED TO A PERSON — listen to the whole menu, press 0, three rings, the front desk");
 {
   const { callSid: sid } = _menuRig("plain", { lineSecs: LINE });
-  await robotMenuStep(sid, "", "");                       // listened to the whole greeting and options
-  _menuElapsed(sid, 6 * LINE + 1);                        // the options finished reading
-  const turn = await robotMenuStep(sid, "0", "");
-  ok(turn !== null && "desk" in turn, "pressing 0 reaches a desk, not another recording");
-  if (turn && "desk" in turn) {
-    ok(turn.desk.answers === "MVP's, this is Larry speaking.", "and the front desk answers in his words");
-    ok(/secs=14/.test(turn.desk.ringTwiml), "after three real rings");
-    ok(turn.desk.staffTakeOver, "and Staff take the same live call from there");
-  }
-  _menuEnd(sid);
+  _menuElapsed(sid, 9 * LINE + 1);                      // the greeting and the options both finished
+  const out = step(sid, "0");
+  ok(/secs=14/.test(out), "three real rings at the front desk");
+  ok(said(sid).includes("MVP's, this is Larry speaking."), "then the front desk answers in his words");
+  ok(/<Gather/.test(out), "and the call carries straight on into the Staff scene, listening");
+  ok(keys(sid)[0].acted === "front", "the record says the key took us to the front of the store");
+  robotEnded(sid);
 }
 
 console.log("\n▶ WRONG DEPARTMENT — press 1 and the pharmacy answers, with nothing put in its mouth");
 {
   const { callSid: sid } = _menuRig("plain", { lineSecs: LINE });
-  await robotMenuStep(sid, "", "");
-  _menuElapsed(sid, 6 * LINE + 1);
-  const turn = await robotMenuStep(sid, "1", "");
-  ok(turn !== null && "twiml" in turn, "the pharmacy is not the front desk, so Staff never take over there");
+  _menuElapsed(sid, 9 * LINE + 1);
+  const out = step(sid, "1");
+  ok(/secs=2/.test(out), "one ring at the pharmacy");
   ok(said(sid).includes("MVP's pharmacy, this is Larry."), "it answers with his one approved line");
   ok(said(sid).filter((l) => /pharmacy, this is Larry/.test(l)).length === 1,
-    "and says nothing more — no words he never approved");
-  if (turn && "twiml" in turn) ok(/<Gather/.test(turn.twiml), "it holds the line open and stays quiet, the way a counter does");
-  _menuEnd(sid);
+    "and says nothing more, because his script gives it nothing more");
+  ok(!said(sid).includes("MVP's, this is Larry speaking."), "the front desk never speaks on this call");
+  robotEnded(sid);
 }
 
-console.log("\n▶ IT ACTS ON OUR KEYS — the knock during the greeting");
+console.log("\n▶ IT ACTS ON OUR KEYS — the knock, pressed during the greeting");
 {
-  // The keys go out at whoever answered, DURING the greeting. His script: the key is remembered and
+  // The keys go out at whoever answered, during the greeting. His script: the key is remembered and
   // acts the moment the options start.
   const { callSid: sid } = _menuRig("plain", { lineSecs: LINE });
-  _menuElapsed(sid, LINE + 1);                            // one and a bit sentences in
-  const held = await robotMenuStep(sid, "1", "");
-  ok(held !== null && "twiml" in held, "a key during the greeting acts on nothing yet");
-  ok(said(sid).length === 5 && said(sid)[3] === GREETING[1],
-    "the greeting carries on from the sentence it was cut off in the middle of");
-  const turn = await robotMenuStep(sid, "", "");           // the greeting finished
-  ok(turn !== null && "twiml" in turn, "and the moment the options start, the held key acts");
-  ok(said(sid).includes("MVP's pharmacy, this is Larry."), "1 was remembered, so it lands at the pharmacy desk");
-  ok(keys(sid)[0].held === true, "the record says the key was held from the greeting");
-  ok(!said(sid).includes(optionsFor("plain")[0]), "and the options never got read, because the key acted first");
-  _menuEnd(sid);
+  _menuElapsed(sid, LINE + 1);                          // one sentence and a bit into the greeting
+  step(sid, "1");
+  ok(said(sid).slice(0, 3).join(" ") === MENU_GREETING.join(" "),
+    "the greeting carries on from the sentence it was cut off in the middle of, and reads whole");
+  ok(said(sid).filter((l) => l === MENU_GREETING[1]).length === 1,
+    "and the sentence it was cut off in is on the record once, not twice");
+  ok(said(sid)[3] === "MVP's pharmacy, this is Larry." && said(sid).length === 4,
+    "then the moment the options would have started, the held key acts: 1 is the pharmacy");
+  ok(!said(sid).some((l) => menuOptions("plain").includes(l)),
+    "the options are never read at all, which is exactly the trap");
+  ok(keys(sid)[0].held === true, "and the record says the key was held from the greeting");
+  robotEnded(sid);
 }
 
 console.log("\n▶ VARIANT — no option fits");
 {
-  const opts = optionsFor("no_option_fits");
+  const opts = menuOptions("no_option_fits");
   ok(opts.length === 5, "five options are read, not six");
   ok(!opts.some((l) => /front of the store/.test(l)), "the front of the store is never offered, so nothing matches cards");
   ok(opts.join(" ") === ["For the pharmacy, press 1.", "For cosmetics, press 2.", "For home supplies, press 3.",
@@ -169,75 +166,69 @@ console.log("\n▶ VARIANT — no option fits");
 
 console.log("\n▶ VARIANT — the menu changed, the front desk moved from 0 to 5");
 {
-  ok(frontKey("menu_changed") === "5", "the front of the store is key 5 now");
-  ok(optionsFor("menu_changed").some((l) => l === "For the front of the store and customer service, press 5."),
+  ok(menuFrontKey("menu_changed") === "5", "the front of the store is key 5 now");
+  ok(menuOptions("menu_changed").includes("For the front of the store and customer service, press 5."),
     "and the menu says so out loud, in his words with his new key");
-  const five = keyTable("menu_changed", "5");
-  ok(five?.kind === "desk" && (five as { staffTakeOver: boolean }).staffTakeOver, "5 reaches the front desk");
-  // A SAVED ROUTE STILL PRESSES 0, and that is the whole test. The owner's ruling 08-08: it has to
-  // reach a PERSON, and the wrong one. A route that lands on nobody is easy to catch, because the
-  // menu just plays again; a route that still reaches somebody and only the wrong somebody is the
-  // failure that quietly poisons the data, so that is the one this has to prove we catch.
-  const zero = keyTable("menu_changed", "0");
-  ok(zero?.kind === "desk", "while 0, which every saved route presses, still reaches a real desk");
-  ok((zero as { answers: string }).answers === "MVP's pharmacy, this is Larry.",
-    "and it is the PHARMACY, the wrong desk for cards, not nobody at all");
-  ok(!(zero as { staffTakeOver: boolean }).staffTakeOver,
-    "so Staff never take over there and the pharmacy can never be locked as the proven department");
+  const k = menuScene("menu_changed").keys || {};
+  ok(k["5"] === "front", "5 reaches the front desk");
+  // A SAVED ROUTE STILL PRESSES 0, and his ruling 08-08 is that it must reach a PERSON, the wrong
+  // one. A route that lands on nobody is easy to catch, because the menu just plays again; a route
+  // that still reaches somebody and only the wrong somebody is what quietly poisons the data.
+  ok(k["0"] === "pharmacy", "while 0, which every saved route presses, goes to the PHARMACY, the wrong desk");
   const { callSid: sid } = _menuRig("menu_changed", { lineSecs: LINE });
-  await robotMenuStep(sid, "", "");
-  const n = said(sid).length;
-  const turn = await robotMenuStep(sid, "0", "");
-  ok(said(sid).slice(n).some((l) => l === "MVP's pharmacy, this is Larry."),
-    "a check pressing 0 hears a person answer, which is exactly the trap");
-  ok(!said(sid).slice(n).some((l) => l === "MVP's, this is Larry speaking."),
-    "and it is never the front desk, so the saved route is genuinely wrong now");
-  ok(turn !== null && "twiml" in turn, "the wrong desk holds the line rather than handing the check to Staff");
-  _menuEnd(sid);
+  _menuElapsed(sid, 9 * LINE + 1);
+  step(sid, "0");
+  ok(said(sid).includes("MVP's pharmacy, this is Larry."),
+    "so a check pressing 0 hears a person answer, which is exactly the trap");
+  ok(!said(sid).includes("MVP's, this is Larry speaking."),
+    "and never the front desk, so the saved route is genuinely wrong now");
+  robotEnded(sid);
 }
 
 console.log("\n▶ VARIANT — the earlier press is swallowed and the menu reads on");
 {
   const { callSid: sid } = _menuRig("press_ignored", { lineSecs: LINE });
-  await robotMenuStep(sid, "", "");
-  const n = said(sid).length;
-  _menuElapsed(sid, LINE + 1);                             // one option and a bit in
-  await robotMenuStep(sid, "0", "");
+  const opts = menuOptions("press_ignored");
+  _menuElapsed(sid, 4 * LINE + 1);                      // one option in, the options still reading
+  step(sid, "0");
   ok(keys(sid)[0].early === true && keys(sid)[0].acted === "swallowed, the menu read on",
     "a press before the options finish does nothing at all");
-  ok(said(sid)[n] === optionsFor("press_ignored")[1],
+  ok(said(sid).slice(3).join(" ") === opts.join(" "),
     "and the menu reads ON from the option it was cut off in the middle of, never from the top");
-  // Once the options HAVE finished, the same press works, so the variant proves speed and not a dead key.
-  _menuElapsed(sid, 6 * LINE + 1);
-  const turn = await robotMenuStep(sid, "0", "");
-  ok(turn !== null && "desk" in turn, "the same key after the options finish still reaches the front desk");
-  _menuEnd(sid);
+  ok(said(sid).filter((l) => l === opts[0]).length === 1,
+    "the option before the press is not read twice, so the list never restarted");
+  ok(!said(sid).includes("MVP's, this is Larry speaking."), "and 0 never reached the front desk");
+  // Once the options HAVE finished, the same key works — so this proves speed, not a dead key.
+  _menuElapsed(sid, 9 * LINE + 1);
+  const out = step(sid, "0");
+  ok(/secs=14/.test(out) && said(sid).includes("MVP's, this is Larry speaking."),
+    "the same key after the options finish still reaches the front desk");
+  robotEnded(sid);
 }
 
 console.log("\n▶ VARIANT — the desk rings out");
 {
-  const zero = keyTable("ring_out", "0");
-  ok(zero?.kind === "ringout" && (zero as { rings: number }).rings === 8, "eight rings at the front desk, and nobody answers");
+  ok(!menuScene("ring_out").staffAt, "no Staff scene is spliced in: nobody picks up at the front desk");
   const { callSid: sid } = _menuRig("ring_out", { lineSecs: LINE });
-  await robotMenuStep(sid, "", "");
+  _menuElapsed(sid, 9 * LINE + 1);
   const n = said(sid).length;
-  _menuElapsed(sid, 6 * LINE + 1);
-  const turn = await robotMenuStep(sid, "0", "");
-  ok(turn !== null && "twiml" in turn && /secs=44/.test(turn.twiml), "the line really rings, for eight rings");
-  ok(said(sid).slice(n).join(" ") === optionsFor("ring_out").join(" "),
-    "and then the menu returns from the top, so the returning menu is still the menu");
-  _menuEnd(sid);
+  const out = step(sid, "0");
+  ok(/secs=44/.test(out), "the line really rings, for eight rings");
+  ok(!said(sid).includes("MVP's, this is Larry speaking."), "and nobody ever answers it");
+  ok(said(sid).slice(n).join(" ") === menuOptions("ring_out").join(" "),
+    "then the menu returns from the top, so the returning menu is still the menu");
+  robotEnded(sid);
 }
 
 console.log("\n▶ THE SPEED TEST — pressing earlier works on the approved menu");
 {
   const { callSid: sid } = _menuRig("plain", { lineSecs: LINE });
-  await robotMenuStep(sid, "", "");
-  _menuElapsed(sid, LINE * 2 + 1);                         // midway through the options
-  const turn = await robotMenuStep(sid, "0", "");
-  ok(turn !== null && "desk" in turn, "pressing 0 midway through the options still lands on the front desk");
+  _menuElapsed(sid, 5 * LINE + 1);                      // midway through the options
+  const out = step(sid, "0");
+  ok(/secs=14/.test(out) && said(sid).includes("MVP's, this is Larry speaking."),
+    "pressing 0 midway through the options still lands on the front desk");
   ok(keys(sid)[0].early === true, "and the record knows it was pressed before the options had finished");
-  _menuEnd(sid);
+  robotEnded(sid);
 }
 
 console.log("\n▶ THE MENU IS OFF UNLESS IT IS SWITCHED ON");
@@ -245,12 +236,11 @@ console.log("\n▶ THE MENU IS OFF UNLESS IT IS SWITCHED ON");
   ok(isMenuVariant("plain") && isMenuVariant("ring_out") && !isMenuVariant("whatever"),
     "only the five menus he named can be picked");
   ok(Object.keys(MENU_VARIANTS).length === 5, "five menus, and no sixth invented one");
-  const srv = readFileSync("src/server.ts", "utf8");
-  ok(/const menu = sid \? await menuPick\(\) : null;/.test(srv) && /if \(menu\) return c\.body\(await robotMenuAnswer/.test(srv),
-    "the menu answers first only when it is switched on, so the scenes' own calls are untouched");
-  const deck = readFileSync("src/calls/tapedeck.ts", "utf8");
-  ok(/return robotPlay\(callSid, st, opts\?\.lead \?\? `<Pause length="1"\/>`\);/.test(deck),
-    "and with no menu the scenes answer exactly as they always have");
+  const src = readFileSync("src/calls/tapedeck.ts", "utf8");
+  ok(/const menu = opts\?\.greeting \? null : await menuPick\(\);/.test(src),
+    "a call answers with a menu only when one is switched on");
+  ok(/const acts: RobotAct\[\] = menuSc\s*\n?\s*\? \[\.\.\.menuSc\.acts/.test(src.replace(/\r/g, "")),
+    "and with no menu the acts are the Staff scene's own, exactly as they always were");
 }
 
 console.log(`\n${fail ? "✗" : "✓"} ${pass} passed, ${fail} failed`);
