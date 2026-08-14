@@ -252,6 +252,15 @@ def lexicon(root):
     m = re.search(r"# THE LEXICON\n(.*)", raw, flags=re.S)
     return m.group(1).strip() if m else ""
 
+def rules_full(root):
+    # THE JUDGE reads the owner's locked statement itself, never a paraphrase of it
+    # (owner 08-07: every leak got patched with another paraphrase, a phrase on a list,
+    # a note in the writer's prompt, and the paraphrases drifted; his words are the law).
+    src = os.path.join(root, ".claude", "output-styles", "check-owner-reply.md")
+    raw = open(src).read()
+    m = re.search(r"# THE REPLY RULES\n(.*)", raw, flags=re.S)
+    return m.group(1).strip() if m else ""
+
 def load_examples(root, owner_msg, draft, limit=4):
     # Similarity by plain word overlap — crude on purpose, no giant prompt (owner 08-05).
     query = set(w.lower() for w in re.findall(r"[a-zA-Z]{4,}", owner_msg + " " + draft))
@@ -450,6 +459,107 @@ def meaning_check(root, owner_msg, draft, rendered, timeout=60):
         raise RuntimeError(f"meaning check rc={r.returncode}")
     return bool(v.get("faithful")), [str(p) for p in (v.get("problems") or [])]
 
+# THE JUDGE (owner's go 08-07, prototyped on his own pasted complaint before wiring in).
+# One independent reader holds the locked rules file word for word and asks one question:
+# reading his message and then this reply, would HE stumble. It judges the agent's draft
+# on the way in (a bounce goes to the AGENT, the only one who knows the missing facts)
+# and the writer's rewrite on the way out (folded into the meaning pass, one model call,
+# because "bodily" and "swallowed" came FROM the writer). It writes nothing itself.
+# Calibration is the hard part and it is in the prompt: the first prototype failed a
+# reply the owner had accepted 15 times over, strictness is a failure too. Measured on
+# 4 real replies: the bad one fails in 9s with the right sentences named, two clean ones
+# pass in ~5s with zero flags. The judge failing to run NEVER blocks a reply.
+JUDGE_BOUNCE_TTL = 900
+
+def judge_reply(root, owner_msg, reply, timeout=90):
+    prompt = (
+        "You are the judge. Below: the owner's LOCKED REPLY RULES word for word with "
+        "his lexicon, his latest message, and a reply about to be sent to him. One "
+        "question: reading HIS message and then this reply, would HE have to stop and "
+        "ask what something means, or would a sentence read as clever instead of "
+        "plain? You write nothing yourself.\n"
+        "FAIL only these, and only when confident:\n"
+        "- a clever or figurative word where a plain one exists (swallowed, bodily, "
+        "gets no vote, carries)\n"
+        "- a name or label, not in the lexicon and not used by HIM in his message, "
+        "that is never given a plain-words explanation at first use\n"
+        "- 'it'/'this'/'they' where the reader genuinely cannot tell what is meant\n"
+        "- leaning on an earlier chat's work with no one-line reminder of what it was\n"
+        "- computer speak aimed at a programmer, not a friend\n"
+        "PASS everything else. He is smart: a term HE used, a term the reply itself "
+        "explains, a term whose meaning is obvious from the sentence around it, and "
+        "ordinary words like push, test, file are all FINE. Judging the whole reply "
+        "stricter than he would is a failure of yours, not a service. At most the 6 "
+        "clearest breaks, worst first, each field one short line.\n"
+        "Answer ONLY JSON:\n"
+        '{"passes": true|false, "breaks": [{"sentence": "...", "rule": "...", '
+        '"fix_hint": "..."}]}\n'
+        "\n=== THE LOCKED RULES ===\n" + rules_full(root) +
+        "\n\n=== THE OWNER'S LATEST MESSAGE ===\n" + (owner_msg or "(not captured)") +
+        "\n\n=== THE REPLY BEING JUDGED ===\n" + reply
+    )
+    r = run_claude(prompt, "claude-sonnet-5", timeout, effort="low")
+    v = parse_json(r.stdout)
+    if r.returncode != 0 or v is None:
+        raise RuntimeError(f"judge rc={r.returncode}")
+    return bool(v.get("passes")), [
+        {"sentence": str(b.get("sentence") or ""), "rule": str(b.get("rule") or ""),
+         "fix_hint": str(b.get("fix_hint") or "")}
+        for b in (v.get("breaks") or []) if isinstance(b, dict)]
+
+def _judge_bounce_file(root):
+    sid = (os.environ.get("CLAUDE_CODE_SESSION_ID") or "default")[:36]
+    d = os.path.join(state_dir(root), "judge-bounce")
+    os.makedirs(d, exist_ok=True)
+    return os.path.join(d, sid + ".count")
+
+def judge_already_bounced(root):
+    f = _judge_bounce_file(root)
+    return os.path.exists(f) and (time.time() - os.path.getmtime(f)) < JUDGE_BOUNCE_TTL
+
+def judge_mark_bounced(root):
+    with open(_judge_bounce_file(root), "w") as fh:
+        fh.write("1")
+
+def judge_clear_bounce(root):
+    f = _judge_bounce_file(root)
+    if os.path.exists(f):
+        os.remove(f)
+
+def meaning_and_judge(root, owner_msg, draft, rendered, timeout=60):
+    # The rewrite's single model read now asks BOTH questions, fidelity and the rules,
+    # so judging the writer's own words costs no extra call (the 08-07 budget: the
+    # judge adds one draft reading, about 5 to 9 seconds, and nothing else).
+    prompt = (
+        "Compare ORIGINAL and REWRITE, written to answer the OWNER MESSAGE, and judge "
+        "the REWRITE against the owner's LOCKED RULES below.\n"
+        "Question 1, fidelity: did the rewrite CHANGE, soften, strengthen, or distort "
+        "any fact, number, decision, instruction, or uncertainty that it KEPT? Wording "
+        "may differ freely; meaning may not. DROPPING a whole topic the owner did not "
+        "ask about, that needs no decision from him, is CORRECT and is never a "
+        "problem. Count a removal as a problem ONLY when it drops the answer to his "
+        "question, a decision he must make, or a warning he needs.\n"
+        "Question 2, the rules: would the OWNER, reading his message and then the "
+        "rewrite, stumble on a clever or figurative word where a plain one exists "
+        "(real examples he flagged: 'swallowed', 'moved bodily', 'the words get no "
+        "vote', 'carries Spanish'), a name never explained at first use that he did "
+        "not use himself, an 'it' or 'this' pointing at nothing, or computer speak? "
+        "He is smart; only clear stumbles count, at most the 4 worst, one short line "
+        "each. Read the REWRITE's every sentence for these, they are exactly what he "
+        "keeps catching after the checks all pass.\n"
+        "Answer ONLY JSON: {\"faithful\": true|false, \"problems\": [\"...\"], "
+        "\"stumbles\": [\"the sentence, and the plain way to say it\"]}\n"
+        "\n=== THE LOCKED RULES ===\n" + rules_full(root) +
+        "\n\n=== OWNER MESSAGE ===\n" + (owner_msg or "(not captured)") +
+        "\n\n=== ORIGINAL ===\n" + draft + "\n\n=== REWRITE ===\n" + rendered
+    )
+    r = run_claude(prompt, "claude-sonnet-5", timeout)
+    v = parse_json(r.stdout)
+    if r.returncode != 0 or v is None:
+        raise RuntimeError(f"meaning+judge rc={r.returncode}")
+    return (bool(v.get("faithful")), [str(p) for p in (v.get("problems") or [])],
+            [str(s) for s in (v.get("stumbles") or [])])
+
 # RULE 11 (owner locked it 08-06 alongside raising the cap to 25). "anytime they have to
 # give me a work product, like I want them to give me all the tests in the chat versus
 # going to a doc, they can do that if I ask them for it. anything that might break this 25
@@ -561,13 +671,42 @@ if "--check-file" in sys.argv:
             print("Fix those in your own words and run the check once more.")
             sys.exit(0)
         record_approval(root, draft)
+        judge_clear_bounce(root)
         print("VERDICT: APPROVED AS WRITTEN (renderer unavailable: " + reason + "). "
               "Send your answer exactly as drafted.")
         sys.exit(0)
 
+    # THE JUDGE reads the agent's own draft first (owner 08-07). The bounce goes to the
+    # AGENT because only the agent knows the missing facts: the writer is forbidden from
+    # adding anything, so it can soften a clever word but can never fill in what "the
+    # four gaps" were. One bounce per session, then the reply proceeds with the judge's
+    # notes handed to the writer, so a chat can never argue itself silent.
+    judge_notes = ""
+    try:
+        tick("judge reads the draft")
+        j_passes, j_breaks = judge_reply(root, owner_msg, draft)
+        tick("judge done (passes=%s, %d breaks)" % (j_passes, len(j_breaks)))
+        if not j_passes and j_breaks:
+            if not judge_already_bounced(root):
+                judge_mark_bounced(root)
+                print("VERDICT: NOT SENDABLE. The judge read your draft against the "
+                      "owner's locked rules. Fix these sentences in YOUR OWN draft — "
+                      "only you know the facts they are missing — then run the check "
+                      "once more:")
+                for b in j_breaks:
+                    print("- SENTENCE: " + b["sentence"])
+                    print("  BROKE: " + b["rule"])
+                    if b["fix_hint"]:
+                        print("  PLAIN WAY: " + b["fix_hint"])
+                sys.exit(0)
+            judge_notes = "the judge failed these sentences, fix each one: " + "; ".join(
+                f"\"{b['sentence'][:80]}\" ({b['fix_hint'] or b['rule']})" for b in j_breaks[:6])
+    except Exception as ex:
+        log_error(root, ex)  # a broken judge never blocks a reply
+
     tick("start render")
     try:
-        final = render(root, owner_msg, draft, uncapped=uncapped)
+        final = render(root, owner_msg, draft, notes=judge_notes, uncapped=uncapped)
     except Exception as ex:
         log_error(root, ex); fail_open("error")
     tick("render done")
@@ -593,17 +732,22 @@ if "--check-file" in sys.argv:
 
     def read_meaning(rendered):
         # Returns notes. An unavailable meaning check is NOT a pass: say so, so the
-        # verdict never claims a check that did not happen.
+        # verdict never claims a check that did not happen. Since 08-07 the same single
+        # read also judges the rewrite against the locked rules, because the writer's
+        # own words are where "bodily" and "swallowed" came from.
         nonlocal_notes = []
         if not needs_meaning_check(draft, rendered):
             return nonlocal_notes, True
         try:
-            faithful, problems = meaning_check(root, owner_msg, draft, rendered)
+            faithful, problems, stumbles = meaning_and_judge(root, owner_msg, draft, rendered)
         except Exception as ex:
             log_error(root, ex)
             return nonlocal_notes, False
         if not faithful:
             nonlocal_notes.append("meaning drifted: " + "; ".join(problems[:5]))
+        if stumbles:
+            nonlocal_notes.append("the judge failed these sentences of YOURS, say them "
+                                  "plainly: " + "; ".join(stumbles[:4]))
         return nonlocal_notes, True
 
     notes = hard_faults(final)
@@ -616,7 +760,11 @@ if "--check-file" in sys.argv:
             # The retry is told exactly what it broke, so it does not need a bigger
             # thinking budget, only room not to time out. A retry that runs out of time
             # throws away the rendering and sends the raw answer.
-            final = render(root, owner_msg, draft, notes=" | ".join(notes),
+            # The retry keeps the judge's notes too: on the fallback path (an agent
+            # that reran an unchanged draft) losing them here let "bodily" survive
+            # a retry on 08-07, proven in the wiring test before this line existed.
+            retry_notes = ([judge_notes] if judge_notes else []) + notes
+            final = render(root, owner_msg, draft, notes=" | ".join(retry_notes),
                            timeout=180, uncapped=uncapped)
             # The retry gets every MECHANICAL gate, including the floor, which is what
             # stops a collapse. Tried adding a second meaning pass here on 08-06 and it
@@ -629,6 +777,7 @@ if "--check-file" in sys.argv:
     tick("done")
 
     record_approval(root, final)
+    judge_clear_bounce(root)
     if " ".join(final.split()) == " ".join(draft.split()):
         print("VERDICT: APPROVED AS WRITTEN. Send your answer exactly as drafted.")
     else:
