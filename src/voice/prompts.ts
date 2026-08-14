@@ -197,6 +197,20 @@ export function askedToBePutThrough(line: string): boolean {
 }
 
 /**
+ * STAFF ANNOUNCED A WAIT (owner + PM, 08-08, the inversion). "Let me check", "hold on", "one sec":
+ * a real person says where they are going before they go, and those words are the EVIDENCE that the
+ * next quiet is them away checking rather than them thinking about what we just asked. Mid
+ * conversation, plain quiet never drops Charlie any more; quiet after one of these lines does, at
+ * the same speed it always did. Words, never the ear (§10), and the phrase family is the same one
+ * the finalizer has always read a last clerk line by (elevenlabs.ts), so the two can never disagree
+ * about what counts as being put on hold.
+ */
+const GOING_TO_CHECK = /\b(?:hold on|hang on|one (?:sec|second|moment|minute)|just a (?:sec|second|moment|minute)|let me (?:check|see|look|go|double.?check|find out|ask|grab)|lemme (?:check|see|look|go)|bear with|give me a (?:sec|second|minute|moment)|i'?ll (?:check|go check|go look|go see|be right back)|checking (?:on|for) (?:that|you)|be right (?:back|with you)|put you on hold|i'?m gonna put you on hold)\b/i;
+export function saidGoingToCheck(line: string): boolean {
+  return GOING_TO_CHECK.test(String(line || ""));
+}
+
+/**
  * "THERE IS NOBODY TO PUT YOU THROUGH TO." The owner's fourth test, and the one place a wrong
  * department ends the check honestly rather than by nagging: he asks once, Staff say there is nobody
  * up front right now, and Charlie must wrap up warmly and go. Nothing wrote that moment down, so the

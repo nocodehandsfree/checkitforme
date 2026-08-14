@@ -345,5 +345,48 @@ console.log("\n── the runaround reaches the four minute limit, and no single
   else fail(`only ${held}s of waiting and ringing — this cannot reach the four minute limit`);
 }
 
+// ---- THE HONEST ROBOT STORE (owner + PM, 08-08) ------------------------------------------------
+// The robot used to play its next answer after two silent listens, so a Charlie who had gone quiet
+// still got "Yeah, we've got some in" and the scene looked like a conversation that never happened:
+// the test passed while the thing it tests was broken. An ANSWER line only plays after Charlie
+// actually spoke; into a silence the robot waits, says "Hello?" once the way a real person checks
+// the line, and then just waits. Its own wait-out at the end of a scene still walks through silence
+// to the hangup, because waiting out a caller who never says goodbye IS the wait-out.
+console.log("\n── an answer only ever follows Charlie actually speaking ──");
+{
+  const { callSid, run } = _robotRig(1, 0);
+  const before = run.said.length;                            // the greeting
+  let doc = robotStep(callSid, "");                          // a silent listen: the robot waits
+  if (/<Gather/.test(doc) && run.said.length === before) ok("first silence: the robot waits, no answer plays");
+  else fail(`first silence: it moved on (said ${run.said.slice(before).map((x) => x.text).join(" | ") || "nothing new"})`);
+  doc = robotStep(callSid, "");                              // still nothing: one "Hello?", like a person
+  if (run.said.length === before + 1 && run.said[before].text === "Hello?") ok('second silence: one "Hello?", the way a real person checks the line');
+  else fail(`second silence: said ${run.said.slice(before).map((x) => x.text).join(" | ") || "nothing"}`);
+  doc = robotStep(callSid, "");
+  doc = robotStep(callSid, "");
+  if (run.said.length === before + 1 && /<Gather/.test(doc)) ok("more silence: it keeps waiting, never a second Hello and never an answer");
+  else fail(`more silence: said ${run.said.slice(before).map((x) => x.text).join(" | ")}`);
+  // …and the moment Charlie speaks, the scene carries on exactly as scripted.
+  robotStep(callSid, "Hi, do you have any Pokemon cards in stock?");
+  if (run.said.some((x) => x.text === "Yeah.")) ok("Charlie speaks, and the scripted answer plays as always");
+  else fail("Charlie spoke and the answer did not come");
+}
+console.log("\n── the wait-out still ends in a hangup, silence or not ──");
+{
+  // Scene 4 has two answers and then the wait-out. Answer both, then go silent: the remaining
+  // listens are the robot waiting for our goodbye, and silence may honestly walk through them.
+  const { callSid, docs } = ((): { callSid: string; docs: string[] } => {
+    const r = _robotRig(4, 0);
+    return { callSid: r.callSid, docs: [r.first] };
+  })();
+  robotStep(callSid, "Hi, do you have any Pokemon cards in stock?");
+  robotStep(callSid, "Okay, any idea when you might get more in?");
+  let doc = "";
+  for (let i = 0; i < 12 && !/<Hangup\/>/.test(doc); i++) doc = robotStep(callSid, "");
+  if (/<Hangup\/>/.test(doc)) ok("the robot waits us out and hangs up, exactly as a real person gives up on a silent caller");
+  else fail("the wait-out never reached its hangup");
+  void docs;
+}
+
 console.log(bad ? `\nrobot store: ${bad} FAILED\n` : "\nrobot store: all held\n");
 process.exit(bad ? 1 : 0);

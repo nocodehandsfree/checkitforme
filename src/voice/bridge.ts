@@ -19,7 +19,7 @@ import { toMediaFrames } from "../calls/clip-cache";
 // The wrong-department phrase test. It lives beside the standing rule that tells the agent to ask to
 // be put through, so the words we act on and the words we look for cannot drift apart. Pure, so it is
 // provable without a phone call.
-import { heardWrongDepartment, askedToBePutThrough, saysNobodyToTransfer, looksLikeAMenu, staffName, wrappedUp, usedTheirName } from "./prompts";
+import { heardWrongDepartment, askedToBePutThrough, saysNobodyToTransfer, saidGoingToCheck, looksLikeAMenu, staffName, wrappedUp, usedTheirName } from "./prompts";
 import { guessLanguage } from "../calls/mapgraph";
 // WHAT LANGUAGE THE PERSON WHO PICKED UP IS SPEAKING, off the words of their first line. A separate
 // judge from `guessLanguage` on purpose: that one reads a MENU and its markers are menu words, so it
@@ -735,6 +735,26 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  nothing about the wait, which on a hand-over means he is talking to a stranger blind. */
   let gapNote: { secs: number; newPerson: boolean; replayed?: boolean } | null = null;
   let convEar: ConversationEar | null = null;   // attached the moment a real person is on the line
+  /**
+   * THE INVERSION (owner + PM, 08-08). Mid conversation, PLAIN QUIET NEVER DROPS CHARLIE. He is
+   * dropped only on real evidence Staff left: their own going-to-check words ("let me check",
+   * "hold on", "one sec" — `saidGoingToCheck`, the same family the finalizer has always read a
+   * last clerk line by), or hold music, or a transfer, or `quietBackstopMs` of unbroken quiet as
+   * the backstop, because at that point the handset really was put down.
+   *
+   * WHY. Real people take a beat to answer, and the quiet drop kept reading that beat as Staff
+   * walking off: checks 357, 358 and 360 all lost their answer or their goodbye to it, and every
+   * fix so far has been a clock arguing with another clock. Real people also SAY where they are
+   * going before they go, which is why every hold in our own history opens with an announcement,
+   * so the savings on real waits are untouched: an announced quiet drops him at exactly the speed
+   * it always did, and `holdQuietMs` now times only the announced cases.
+   *
+   * `waitAnnounced` is their LATEST line, nothing older: "let me check" announces the next quiet,
+   * and their coming back and answering un-announces it. Read in `staffSaid`, the one door every
+   * Staff line already passes through.
+   */
+  let waitAnnounced = false;
+  let quietBackstopTimer: NodeJS.Timeout | null = null;
   /** The carrier counts its media messages. One that arrives out of order is skipped rather than
    *  allowed to wind anything backwards. */
   let lastSeq = -1;
@@ -996,6 +1016,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     try { twilio.close(); } catch { /* best effort */ }
   }
 
+  /** True only inside the backstop's own call back into beginHold, so the gate lets it through. */
+  let backstopFired = false;
   function beginHold(reason: HoldReason, atMs: number) {
     if (onHold) return;
     // THE QUIET AFTER THE GOODBYE IS THE CHECK ENDING, NOT STAFF STEPPING AWAY (owner 08-04,
@@ -1008,6 +1030,29 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // before this fires. Music or a transfer starting after a goodbye is somebody acting, and
     // the usual wait rules keep owning those.
     if (signoffNudged && wrapRecorded && (reason === "quiet" || reason === "room")) { hangUpAfterGoodbye(atMs); return; }
+    // THE INVERSION'S GATE (owner + PM, 08-08). A quiet nobody announced is a beat in the
+    // conversation, not a wait: Charlie stays open, keeps his ears, and answers when they do.
+    // Only the backstop turns it into a wait, `quietBackstopMs` of unbroken quiet, because at that
+    // point the handset really was put down. Music and a transfer are somebody DOING something and
+    // never pass through here; the goodbye door above already took the signed-off case.
+    // A hand-over he asked for, or Staff said they were making, is ALSO an announcement: the next
+    // quiet is the phone changing hands, which is the one wait the runtime already knew was coming.
+    if ((reason === "quiet" || reason === "room") && !waitAnnounced && !expectHandover && !backstopFired) {
+      if (!quietBackstopTimer) {
+        const already = Math.max(0, tune.holdQuietMs);
+        const left = Math.max(0, Math.max(0, tune.quietBackstopMs) - already);
+        log(`quiet nobody announced: Charlie stays on the line (the inversion). Backstop in ${Math.round(left / 1000)}s if nobody speaks at all`);
+        quietBackstopTimer = setTimeout(() => {
+          quietBackstopTimer = null;
+          if (ended || onHold) return;
+          log(`quiet backstop: ${Math.round(Math.max(0, tune.quietBackstopMs) / 1000)}s of unbroken quiet with no announcement — the handset was put down, this IS a wait`);
+          backstopFired = true;
+          try { beginHold(reason, atMs); } finally { backstopFired = false; }
+        }, left);
+      }
+      return;
+    }
+    if (quietBackstopTimer) { clearTimeout(quietBackstopTimer); quietBackstopTimer = null; }
     onHold = true; holdReason = reason; heldWords = [];
     // EVERY WAIT THAT ENDS HAS TO HAVE STARTED. A transfer used to write ONLY its own line, and then
     // the wait it caused ended with a "back off hold" that had no "put on hold" anywhere above it —
@@ -1030,7 +1075,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // Every kind of wait, including one that follows a hand-over: from the customer's side the
     // outcome is identical, nobody came back. The status is the one we already have, "left on hold";
     // no new word for a customer to read (owner's ruling 08-01).
-    if (holdCapTimer) { clearTimeout(holdCapTimer); holdCapTimer = null; }
+    if (holdCapTimer) { clearTimeout(holdCapTimer); holdCapTimer = null; } if (quietBackstopTimer) { clearTimeout(quietBackstopTimer); quietBackstopTimer = null; }
     holdCapTimer = setTimeout(() => {
       holdCapTimer = null;
       if (!onHold || ended) return;
@@ -1075,6 +1120,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
 
   /** Somebody is back on the line. */
   function endHold(gapMs: number, maybeNewPerson: boolean, backAtMs?: number) {
+    // A voice on the line cancels the unannounced backstop whether or not a hold was ever accepted:
+    // the ear fires this on the SOUND of somebody speaking, which is exactly the proof the quiet was
+    // a beat and not a put-down handset.
+    if (quietBackstopTimer) { clearTimeout(quietBackstopTimer); quietBackstopTimer = null; }
     if (!onHold) return;
     const was = holdReason;
     onHold = false; holdReason = null; everCameBack = true;
@@ -1355,6 +1404,14 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // which `spokeThisSession` is: it goes false when his session reopens and true the instant he
     // speaks, so this can only ever protect a turn he genuinely owes a word on.
     if (fresh && charlieMaySpeak && !spokeThisSession) answeredAtMs = Date.now();
+    // DID THEIR LATEST LINE ANNOUNCE A WAIT (the inversion, 08-08). Their newest words decide what
+    // the next quiet means: "let me check, hold on" makes it a wait; anything else makes it a beat
+    // in the conversation. An announced quiet also cancels the unannounced backstop, because the
+    // evidence just changed shape.
+    if (fresh) {
+      waitAnnounced = saidGoingToCheck(txt);
+      if (quietBackstopTimer) { clearTimeout(quietBackstopTimer); quietBackstopTimer = null; }
+    }
     // WHAT HE COULD NOT HEAR, KEPT AS WORDS. Only Echo's copy counts: a line the agent's own session
     // delivered is one he already heard.
     if (fromEcho && fresh && (!eleven || onHold) && !alreadyHisToAnswer(txt)) missedWhileClosed.push(txt);
@@ -1773,7 +1830,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           // he thanked them at 59 seconds and we sat on the line until the STORE hung up at 145,
           // which billed a third whole minute and put that check's margin at 51 percent. Same
           // ruling, second door.
-          if (signoffNudged && onHold && (holdReason === "quiet" || holdReason === "room")) hangUpAfterGoodbye(Date.now());
+          // The line being quiet is read off the EAR, not off our hold state: under the inversion
+          // an unannounced quiet never becomes a hold, and the goodbye landing inside one must
+          // still put the phone down (check 356's rule, third door).
+          if (signoffNudged && ((onHold && (holdReason === "quiet" || holdReason === "room"))
+            || (!onHold && (convEar?.reason === "quiet" || convEar?.reason === "room")))) hangUpAfterGoodbye(Date.now());
         }
         // WHICH LANGUAGE HE SPOKE, counted line by line off the same judge the map uses — never a
         // second opinion about what language a sentence is in.
@@ -2404,5 +2465,5 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     }
     signoffDoors.delete(room); staffDoors.delete(room);
     if (closeWhenReady) { clearTimeout(closeWhenReady); closeWhenReady = null; }
-    if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; } if (heldQuestion) { try { relayLine?.(room, "Agent", heldQuestion); } catch { /* best effort */ } heldQuestion = null; } try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; missedWhileClosed = []; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (holdCapTimer) { clearTimeout(holdCapTimer); holdCapTimer = null; } if (ringWaitTimer) { clearTimeout(ringWaitTimer); ringWaitTimer = null; } if (handoverTimer) { clearTimeout(handoverTimer); handoverTimer = null; } if (answerWaitTimer) { clearTimeout(answerWaitTimer); answerWaitTimer = null; } if (eleven) eleven.close(); /* the context is NOT deleted here: Twilio can reconnect a blipped stream mid-call, and the fresh socket must still find it. The 30-minute leak guard owns cleanup. */ });
+    if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; } if (heldQuestion) { try { relayLine?.(room, "Agent", heldQuestion); } catch { /* best effort */ } heldQuestion = null; } try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; missedWhileClosed = []; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (holdCapTimer) { clearTimeout(holdCapTimer); holdCapTimer = null; } if (ringWaitTimer) { clearTimeout(ringWaitTimer); ringWaitTimer = null; } if (quietBackstopTimer) { clearTimeout(quietBackstopTimer); quietBackstopTimer = null; } if (handoverTimer) { clearTimeout(handoverTimer); handoverTimer = null; } if (answerWaitTimer) { clearTimeout(answerWaitTimer); answerWaitTimer = null; } if (eleven) eleven.close(); /* the context is NOT deleted here: Twilio can reconnect a blipped stream mid-call, and the fresh socket must still find it. The 30-minute leak guard owns cleanup. */ });
 }

@@ -1017,7 +1017,9 @@ const robotRuns: RobotRun[] = [];
 export function robotLastRun(): RobotRun | null { return robotRuns[0] || null; }
 export function robotRunFor(callSid: string): RobotRun | null { return robotRuns.find((r) => r.callSid === callSid) || null; }
 
-interface RobotState { run: RobotRun; acts: RobotAct[]; act: number; clips: (Buffer | null)[]; quiet: number }
+interface RobotState { run: RobotRun; acts: RobotAct[]; act: number; clips: (Buffer | null)[]; quiet: number;
+  /** The one "Hello?" the robot may say into a silence (the honest store, 08-08). Once, ever. */
+  saidHello: boolean }
 const robotCalls = new Map<string, RobotState>();
 
 /** Which scene the next inbound call plays, and (optionally) which greeting. Stored as "7" or "7:2"
@@ -1103,6 +1105,9 @@ export async function robotAnswer(callSid: string, from?: string): Promise<strin
     if (!("say" in a)) return Promise.resolve(null);
     return mp3Clip("sayAs" in a ? transfer : staff, a.say, { stability: 0.45, similarity_boost: 0.8 });
   }));
+  // THE ONE LINE OFF SCRIPT (the honest store, 08-08): "Hello?", in the Staff voice, for a caller
+  // who has gone silent. It rides one slot past the acts' own clips; cached like every other line.
+  clips.push(await mp3Clip(staff, "Hello?", { stability: 0.45, similarity_boost: 0.8 }).catch(() => null));
   const missing = acts.findIndex((a, i) => "say" in a && !clips[i]);
   if (missing >= 0) { console.error("[robot] clip synthesis failed — check ElevenLabs credits"); return twiml("<Hangup/>"); }
   const run: RobotRun = {
@@ -1110,7 +1115,7 @@ export async function robotAnswer(callSid: string, from?: string): Promise<strin
     startedAt: Date.now(), said: [], heard: [],
   };
   robotRuns.unshift(run); while (robotRuns.length > 40) robotRuns.pop();
-  const st: RobotState = { run, acts, act: 0, clips, quiet: 0 };
+  const st: RobotState = { run, acts, act: 0, clips, quiet: 0, saidHello: false };
   robotCalls.set(callSid, st);
   setTimeout(() => robotCalls.delete(callSid), 15 * 60 * 1000);
   console.log(`[robot] answering ${from || "?"} with scenario ${scene.n} (${scene.name}) · greeting "${greeting}"`);
@@ -1157,11 +1162,30 @@ export function robotStep(callSid: string, speech: string): string {
   if (!st) return twiml("<Hangup/>");
   const said = (speech || "").trim();
   if (said) { st.run.heard.push(said.slice(0, 300)); st.quiet = 0; return robotPlay(callSid, st); }
-  // Nobody said anything. A real person waits a bit longer before carrying on, but not forever.
+  // NOBODY SAID ANYTHING, AND THE SCRIPT MUST NOT PAPER OVER IT (owner + PM, 08-08). The robot used
+  // to play its next line anyway after two quiet listens, so a Charlie who had gone silent still got
+  // "Yeah, we've got some in" and the scene looked like a conversation that never happened: the test
+  // passed while the thing it tests was broken. A real person does not answer a question nobody
+  // asked. So an ANSWER line only ever plays after Charlie actually spoke; into a silence the robot
+  // waits, says "Hello?" once the way a real person checks the line, and then just waits. Advancing
+  // through its own listens to the hangup at the end of a scene is still allowed, because waiting
+  // out a caller who never says goodbye IS the wait-out, not an answer.
   st.quiet++;
+  const next = st.acts[st.act];
+  const answerNext = !!next && "say" in next;
+  if (!answerNext) {
+    // The rest of the scene is waiting and hanging up, which silence may honestly walk through.
+    if (st.quiet < 2) return twiml(robotGather(callSid, 10));
+    st.quiet = 0;
+    return robotPlay(callSid, st);
+  }
   if (st.quiet < 2) return twiml(robotGather(callSid, 10));
-  st.quiet = 0;
-  return robotPlay(callSid, st);
+  if (!st.saidHello) {
+    st.saidHello = true;
+    st.run.said.push({ text: "Hello?", atSec: Math.round((Date.now() - st.run.startedAt) / 1000), voice: "staff" });
+    return twiml(robotClipUrl(callSid, st.acts.length) + robotGather(callSid, 10));
+  }
+  return twiml(robotGather(callSid, 10));
 }
 
 /**
@@ -1175,7 +1199,7 @@ export function _robotRig(scenario: number, greetingIndex = 0): { callSid: strin
   const acts: RobotAct[] = scene.neverAnswers ? [...scene.acts] : [{ say: greeting }, ...scene.acts];
   const callSid = `rig:${scenario}:${greetingIndex}:${robotRuns.length}`;
   const run: RobotRun = { id: callSid, callSid, scenario: scene.n, sceneName: scene.name, greeting, startedAt: Date.now(), said: [], heard: [] };
-  const st: RobotState = { run, acts, act: 0, clips: acts.map(() => null), quiet: 0 };
+  const st: RobotState = { run, acts, act: 0, clips: acts.map(() => null), quiet: 0, saidHello: false };
   robotCalls.set(callSid, st);
   return { callSid, first: robotPlay(callSid, st, `<Pause length="1"/>`), run };
 }

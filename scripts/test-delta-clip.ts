@@ -532,6 +532,12 @@ async function callWithHold(f: Fake, room: string, holdStrategy: "gate" | "reope
 }
 /** Someone talking: sound with the gaps real speech has. */
 const speak = (tw: FakeTwilio, frames: number) => { for (let i = 0; i < frames; i++) tw.media(frame(i % 5 === 4 ? Buffer.alloc(160, 0x7f) : SPEECH(i))); };
+/** STAFF ANNOUNCE THE WAIT, the way real people do (the inversion, 08-08): mid conversation, plain
+ *  quiet never drops Charlie any more, so every scene about a WAIT has Staff saying they are going,
+ *  through the same one door every Staff line takes. Scenes about unannounced quiet stay silent on
+ *  purpose, because staying open through that quiet is now the thing they prove. */
+const announceWait = (f: Fake, text = "Hold on, let me go check.") =>
+  f.sockets[f.sockets.length - 1].send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: text } }));
 const quiet = (tw: FakeTwilio, frames: number) => { for (let i = 0; i < frames; i++) tw.media(frame(Buffer.alloc(160, 0x7f))); };
 
 console.log("\n▶ the clerk walks off: the agent stops being fed and cannot be heard");
@@ -543,7 +549,8 @@ console.log("\n▶ the clerk walks off: the agent stops being fed and cannot be 
   speak(tw, 150);                                  // a real person, talking to us
   const before = f.chunks.length;
   ok(before > 0, "while somebody is there, what they say reaches the agent");
-
+  announceWait(f);                                 // "hold on, let me go check" — like a real person
+  await sleep(40);
   quiet(tw, HOLD_QUIET_MS / 20 + 20);              // they put the handset down and go
   await sleep(60);
   const r = getReceipt("room-hold");
@@ -566,6 +573,8 @@ console.log("\n▶ …and he is TOLD there was a gap, so he does not carry on as
   const restore = stubSignedUrl(f);
   const tw = await callWithHold(f, "room-told", "gate");
   speak(tw, 150);
+  announceWait(f);
+  await sleep(40);
   quiet(tw, 25000 / 20 + 20);                      // a LONG wait — it may not be the same person
   speak(tw, 30);
   await sleep(80);
@@ -832,6 +841,8 @@ console.log("\n▶ a 'leave a message' recording heard MID-HOLD does not hang up
   const restore = stubSignedUrl(f);
   const tw = await callWithHold(f, "room-vm-hold", "gate");
   speak(tw, 150);                                   // a real person, talking to us
+  announceWait(f);
+  await sleep(40);
   quiet(tw, HOLD_QUIET_MS / 20 + 20);               // they step away — we are on hold
   await sleep(60);
   ok((getReceipt("room-vm-hold")?.events || []).some((e) => e.kind === "hold_start"), "we are on hold");
@@ -954,7 +965,9 @@ console.log("\n▶ Staff step away WHILE we are opening him: no session opens in
   for (let i = 0; i < PERSON_PAUSE; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
   await sleep(120);
   ok(f.sockets.length === 0 && !!releaseHandshake, "he is mid-handshake: no session open yet");
-  // …and NOW they walk off, before the address comes back.
+  // …and NOW they walk off, ANNOUNCED, before the address comes back. No session exists yet, so the
+  // words arrive the way Echo's words always do, through the one Staff door.
+  echoHeardStaff("room-race-open", "Hold on, let me go check.");
   quiet(tw, HOLD_QUIET_MS / 20 + 20);
   await sleep(60);
   ok((getReceipt("room-race-open")?.events || []).some((e) => e.kind === "hold_start"), "Staff stepped away while we were still opening him");
@@ -1156,6 +1169,7 @@ console.log("\n▶ …but quiet WITHOUT the goodbye still holds: told to wrap up
   tw.say({ event: "mark", mark: { name: "delta-opening" } });
   await sleep(700);   // past the clip's playout clock and its echo tail, so the ear is being fed again
   speak(tw, 150);   // Staff were here and talking…
+  announceWait(f);  // …and say they are going, like a real person
   nudgeSignoff("room-nudged-hold", "in stock");
   await sleep(80);
   quiet(tw, HOLD_QUIET_MS / 20 + 20);
@@ -1178,6 +1192,8 @@ console.log("\n▶ a late are you there from a replaced session: ignored, never 
   const tw = await callWithHold(f, "room-late-ping", "reopen");
   speak(tw, 150);
   const first = f.sockets[0];
+  announceWait(f);                                 // announced, so the wait really closes him
+  await sleep(40);
   quiet(tw, HOLD_QUIET_MS / 20 + 20);              // they step away — he is closed for the wait
   await sleep(80);
   speak(tw, 30);                                    // …and come back, so the session is REPLACED
@@ -1205,6 +1221,8 @@ console.log("\n▶ a fast return, then the OLD session's close lands: the check 
   speak(tw, 150);
   ok(f.sockets.length === 1, "one session while somebody is with us");
   const first = f.sockets[0];
+  announceWait(f);
+  await sleep(40);
   quiet(tw, HOLD_QUIET_MS / 20 + 20);              // they step away — he is closed for the wait
   await sleep(80);
   speak(tw, 30);                                    // …and come straight back, fast
@@ -1586,6 +1604,8 @@ console.log("\n▶ …and a wait says he was dropped, once, not dropped and then
   const f = await fakeProvider();
   const restore = stubSignedUrl(f);
   const tw = await callWithHold(f, "room-drop-once", "reopen");
+  announceWait(f);
+  await sleep(40);
   quiet(tw, HOLD_QUIET_MS / 20 + 40);
   await sleep(200);
   const ev = (getReceipt("room-drop-once")?.events || []);
@@ -1617,7 +1637,9 @@ console.log("\n▶ nobody ever comes back: the wait has an ending, and we are th
   for (let i = 0; i < PERSON_PAUSE; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
   await sleep(250);
   ok(f.sockets.length === 1, "Staff answered and Charlie opened");
-  // …and they walk away and never come back.
+  // …and they walk away and never come back, announced like a real person.
+  announceWait(f);
+  await sleep(40);
   quiet(tw, HOLD_QUIET_MS / 20 + 40);
   await sleep(80);
   const ev = () => (getReceipt("room-heldcap")?.events || []);
@@ -1648,6 +1670,8 @@ console.log("\n▶ …and a wait somebody DOES come back from is never capped");
   for (let i = 0; i < 40; i++) tw.media(frame(SPEECH(i)));
   for (let i = 0; i < PERSON_PAUSE; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
   await sleep(250);
+  announceWait(f);
+  await sleep(40);
   quiet(tw, HOLD_QUIET_MS / 20 + 40);
   await sleep(60);
   for (let i = 0; i < 40; i++) tw.media(frame(SPEECH(i)));   // "yeah, we got some"
@@ -1827,8 +1851,11 @@ console.log("\n▶ Staff put the phone down on the counter: Charlie is dropped, 
   for (let i = 0; i < PERSON_PAUSE; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
   await sleep(250);
   ok(f.sockets.length === 1, "he opened on a real person, as he should");
-  // …and the handset goes down on the counter. The store is still perfectly audible: a till, a
-  // radio, two people talking by the door. Just nowhere near as loud as somebody speaking into it.
+  // …and the handset goes down on the counter, ANNOUNCED, the way scenes 23 and 24 script it
+  // ("Hold on, let me go look."). The store is still perfectly audible: a till, a radio, two
+  // people talking by the door. Just nowhere near as loud as somebody speaking into it.
+  announceWait(f);
+  await sleep(40);
   const ROOM = [0x50, 0x58, 0x50, 0x7f, 0x58, 0x50, 0x58];
   for (let i = 0; i < 400; i++) tw.media(frame(Buffer.alloc(160, ROOM[i % ROOM.length])));
   await sleep(120);
@@ -2105,7 +2132,11 @@ console.log("\n▶ HE IS NEVER DROPPED BEFORE HE HAS HAD A CHANCE TO SPEAK (chec
   await sleep(400);                                   // his session is seconds old
   const opened = (getReceipt(room)?.events || []).filter((e) => e.kind === "charlie_join").length;
   ok(opened === 1, "his session is up");
-  // The line goes quiet immediately, which at 3 seconds used to close him before he could answer.
+  // The wait is ANNOUNCED (the inversion, 08-08: an unannounced quiet no longer starts one), and
+  // the line then goes quiet immediately, which at 3 seconds used to close him before he could
+  // answer.
+  announceWait(f, "Um, give me just a second. Let me double-check.");
+  await sleep(40);
   for (let i = 0; i < 400; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
   await sleep(500);
   const left = () => (getReceipt(room)?.events || []).some((e) => e.kind === "charlie_leave");
@@ -2144,8 +2175,11 @@ console.log("\n▶ …AND A CLOCK COULD NEVER HAVE FIXED IT (check 358: his sess
   for (let i = 0; i < PERSON_PAUSE; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
   await sleep(400);
   ok((getReceipt(room)?.events || []).some((e) => e.kind === "charlie_join"), "his session is up");
-  // THEIR ANSWER. This is what opens his mouth, and from here the quiet belongs to him.
+  // THEIR ANSWER, and it carries a going-away word the way scene 8's does ("We haven't, as a matter
+  // of fact. Uh, let me double-check though."), so the quiet after it is an ANNOUNCED wait and the
+  // old drop rule would fire. This is what opens his mouth, and from here the quiet belongs to him.
   speak(tw, 150);
+  announceWait(f, "We haven't, as a matter of fact. Uh, let me double-check though.");
   await sleep(60);
   // …and then the robot goes quiet waiting for him, exactly as every robot scene does.
   for (let i = 0; i < 400; i++) tw.media(frame(Buffer.alloc(160, 0x7f)));
@@ -2180,7 +2214,11 @@ console.log("\n▶ THEIR ANSWER LANDS WHILE HE IS OFF THE LINE, AND HE ANSWERS I
   await sleep(40);
   ws.send(JSON.stringify({ type: "audio", audio_event: { audio_base_64: frame(Buffer.alloc(160, 0x40)) } }));
   await sleep(120);
-  // THE SILENCE, AND THE DROP. This is the saving and it stays: the store is off looking.
+  // THE ANNOUNCED SILENCE, AND THE DROP. This is the saving and it stays: they SAID they were off
+  // to look, so the quiet is a real wait and the meter stops for it. Echo has this room's words, so
+  // the announcement arrives through Echo's door, the only door a Staff line takes on this check.
+  echoHeardStaff(room, "Hold on, let me go look.");
+  await sleep(40);
   quiet(tw, HOLD_QUIET_MS / 20 + 40);
   await sleep(400);
   ok(evs().some((e) => e.kind === "charlie_leave"), "he is dropped for the wait, which is the saving and stays");
@@ -2219,6 +2257,61 @@ console.log("\n▶ THEIR ANSWER LANDS WHILE HE IS OFF THE LINE, AND HE ANSWERS I
   await sleep(150);
   ok(tw.outMedia().length > outBefore, "and what he says back reaches the store");
   echoListening(room, false);
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ THE INVERSION (owner + PM, 08-08): a quiet nobody announced never drops him");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-unannounced";
+  // Mid conversation, Staff answer something and simply take a beat. Nobody said they were going
+  // anywhere. Checks 357, 358 and 360 all lost their answer or their goodbye to this quiet.
+  const { tw } = await callToHello(f, 400, room, { charlieMinOnLineMs: 0, charlieThinkingMs: 0 }, "reopen");
+  await sleep(400);
+  const ws = f.sockets[f.sockets.length - 1];
+  ws.send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Yeah." } }));
+  await sleep(60);
+  quiet(tw, HOLD_QUIET_MS / 20 + 60);
+  await sleep(400);
+  const ev = () => (getReceipt(room)?.events || []);
+  ok(!ev().some((e) => e.kind === "hold_start"), "no wait starts: the quiet is a beat in the conversation, not a walk away");
+  ok(!ev().some((e) => e.kind === "charlie_leave"), "and Charlie keeps his ears, so their answer can never land on an empty line");
+  // …and the moment their next line ANNOUNCES a wait, the very same quiet drops him at full speed.
+  // An announcement is SPOKEN, so the voice reaches the ear and the words reach the record: that
+  // voice is also what tells the ear the last quiet ended, so the next one can be declared.
+  speak(tw, 30);
+  ws.send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Hold on, let me go check." } }));
+  await sleep(40);
+  quiet(tw, HOLD_QUIET_MS / 20 + 60);
+  await sleep(400);
+  ok(ev().some((e) => e.kind === "hold_start"), "an announced quiet is still a wait, at the speed it always was");
+  ok(ev().some((e) => e.kind === "charlie_leave"), "and the meter still stops for it, so the savings on real waits are untouched");
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ …and the backstop: quiet with no announcement at all still becomes a wait in the end");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-backstop";
+  // The handset put down with no word at all. The backstop is the owner's thirty seconds on a real
+  // check; five here so the scene is a scene, exactly how the hold cap scenes treat their number,
+  // and still clear of the three second quiet the ear declares on.
+  const { tw } = await callToHello(f, 400, room, { charlieMinOnLineMs: 0, charlieThinkingMs: 0, quietBackstopMs: 5000 }, "reopen");
+  await sleep(400);
+  const ws = f.sockets[f.sockets.length - 1];
+  ws.send(JSON.stringify({ type: "user_transcript", user_transcription_event: { user_transcript: "Yeah." } }));
+  await sleep(60);
+  quiet(tw, HOLD_QUIET_MS / 20 + 60);
+  await sleep(300);
+  const ev = () => (getReceipt(room)?.events || []);
+  ok(!ev().some((e) => e.kind === "hold_start"), "inside the backstop the quiet is still a beat");
+  await sleep(2200);
+  ok(ev().some((e) => e.kind === "hold_start"), "past it, the handset really was put down, so the wait begins");
+  ok(ev().some((e) => e.kind === "charlie_leave"), "and Charlie is dropped for it, so a forgotten handset cannot bill him forever");
   restore(); tw.close(); f.close();
 }
 
