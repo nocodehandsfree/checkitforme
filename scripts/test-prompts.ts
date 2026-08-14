@@ -69,6 +69,16 @@ says(`If they only say more is coming, like "we're getting some soon", ask for t
 says(`Take whatever they answer, even "soon", and never ask a third time.`, "11. never a third restock question");
 says(`Never correct yourself out loud and never think out loud. No "wait", no "actually", no "you already said". Finish your sentence in your head, then say only the finished sentence.`,
   "12. he never corrects himself out loud, the check 348 fault by name");
+// BEING ASKED TO REPEAT IS THE ONE EXCEPTION (owner 08-07). He went silent when Staff asked him to
+// repeat, which loses the check. The guard sentence is the load-bearing half: without it, "they did
+// not understand me" becomes his excuse to re-ask the set question, the 08-06 fault all over again.
+says("Stores are noisy and Staff will not always catch you.", "12. the noisy store is named");
+says("say the same question again once, plainly and a little slower", "12. asked to repeat, he says it once more");
+says("That is the only time you ever say a question twice.", "12. and it is the ONLY exception");
+says("If they answer it and you simply do not like the answer, that is still their answer, never a reason to ask again.",
+  "12. a disliked answer is never an excuse to ask again");
+ok(RESTOCK_PROMPT.indexOf("Stores are noisy") < RESTOCK_PROMPT.indexOf("Never correct yourself out loud"),
+  "…and the exception sits with the never-repeat rules, not adrift");
 // The old words asked for the set AND the package every time, however much Staff had already given,
 // and allowed exactly one restock question however little came back. Both are replaced, not added to.
 ok(!RESTOCK_PROMPT.includes("ask one question, in your own words, for the set name and whether it comes in packs, boxes, or tins"),
