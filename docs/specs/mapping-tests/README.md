@@ -7,11 +7,18 @@ the red ones is what found three real faults in the keys we press at whoever ans
 would have written "press 123" into every store's saved route as a real menu choice, which would
 have poisoned every map we made. Holding the merge until they were green was worth it.
 
-**The one fault still open.** The keys only prove a machine when the NEXT thing said is word for
-word the same line again (`keptTalkingAfterKnock`, navigator.ts ~706). A menu that simply moves on
-to its next sentence counts as having stopped, which reads like a person, and then it falls back on
-the word test that called CVS a person in the first place. It has to judge whether the noise stopped
-at all, off the sound, not off the transcript. Fix this before any mapping test is dialed.
+**The fault in the keys is FIXED and MERGED to staging (08-14).** The keys used to be answered
+off the TRANSCRIPT: a machine only when the next line was word for word the same line again, so a
+menu moving on to its next sentence counted as having stopped, which read like a person. Proved on
+the unchanged code: after a different second sentence it answered "it stopped", and the judge then
+called a CVS menu line, and a Spanish menu line, a person. The transcript answer is deleted. The
+keys now have THREE answers and all three come off the sound: the noise carried straight through
+(a machine, certain) · it really stopped and then spoke to us (a person) · it stopped and stayed
+stopped through our own silence (a person, waiting). The words get no vote, which is what carries
+Spanish. A real stop has to RUN for 1.5 seconds, more than twice the longest phrase gap ever
+measured on a recorded menu, so a menu drawing breath can never reach it. Practice checks: 65
+passing, 0 failing, the 57 that were green still green and 8 new ones for this shape. The 1.5
+second number is bench-set and the first real dial is what proves it.
 
 **What is actually proven.** One of the thirteen below, Direct pickup, has ever been dialed live, and
 that dial happened before the keys existed, so even that half is untested. The other twelve have only

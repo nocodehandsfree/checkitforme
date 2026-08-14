@@ -53,7 +53,10 @@ real on some menus and stays in on purpose, so mapping has to survive it.
   returns from the top.
 - No option fits: a variant that drops option 0 from the read list, so nothing matches cards.
 - Menu changed: a variant where the front desk moves from key 0 to key 5, so a saved route that
-  presses 0 lands somewhere wrong.
+  presses 0 lands somewhere wrong. **Owner 08-08: key 0 goes to the PHARMACY, the wrong desk, never
+  to nobody.** A route that lands on nobody is easy to catch, because the menu just plays again. A
+  route that still reaches a person and only the WRONG person is the failure that quietly poisons
+  the data, so that is the one this test has to prove we catch.
 - It acts on our keys: the knock's 1 2 3 during the greeting throws us into option 1's desk the
   moment the options start, and the run has to start over cleanly.
 - Branded hello then a person: the greeting plays, and before the options finish a person picks up

@@ -11,7 +11,7 @@ import { llm } from "../llm";
 import { config } from "../config";
 import { getSetting } from "../db/settings";
 import { rotatePick } from "./rotate";
-import { mp3Clip } from "./clip-cache";
+import { mp3Clip, mp3Seconds } from "./clip-cache";
 import { openReceipt, emit, markNow, closeReceipt } from "./events";
 
 const HOST = config.staging.on ? "voice-caller-staging-production.up.railway.app" : "voice-caller-production-2d6b.up.railway.app";
@@ -580,18 +580,40 @@ export const ROBOT_CLIPS: Record<string, { file: string; secs: number; mean: num
   musicWithAdB:{ file: "09-hold-music-with-ad-b.mp3", secs: 15.0, mean: -23.4, peak:  -5.9, what: "the other music with a recorded WOMAN selling something over it" },
 };
 
-/** One beat of a scene. `say` is the Staff voice; `sayAs` is the SECOND person (after a transfer). */
+/** One beat of a scene. `say` is the Staff voice; `sayAs` is the SECOND person (after a transfer),
+ *  or the store's own PHONE MENU, which is a third voice again (owner 08-08). */
 export type RobotAct =
   | { say: string }
-  | { sayAs: "transfer"; say: string }
+  | { sayAs: "transfer" | "menu"; say: string }
   | { silence: number }   // seconds of nothing at all: the one hold in our history that ever worked
   | { clip: keyof typeof ROBOT_CLIPS } // a committed recording: hold music, or a phone on the counter
   | { ring: number }      // seconds of a real ringback cadence, for the transfer
   | { beep: true }        // the tone at the end of a voicemail greeting, the thing that says "talk now"
   | { listen: true }      // wait for the caller to say their piece, then carry on
+  // A PLACE IN THE SCENE THAT CAN BE JUMPED TO, and a jump. Nothing is played by either. They are
+  // what lets a scene be a phone MENU instead of a straight line: a key sends the call to a label,
+  // and the end of a branch sends it back to the top of the options (owner 08-08).
+  | { label: string }
+  | { goto: string }
   | { hangup: true };
 
 export interface RobotScene { n: number; name: string; greeting?: string; acts: RobotAct[]; expect: string;
+  /** THE KEY TABLE, when this scene is a phone menu: which key sends the call to which label. A scene
+   *  without one is a straight line and ignores keys entirely, exactly as every Staff scene always
+   *  has. A key that is not in the table is not an error to announce — the menu simply reads its
+   *  options again, because the owner's script has no words for one (owner 08-08). */
+  keys?: Record<string, string>;
+  /** Where a key that is not in the table, and six seconds of nothing pressed, both go. */
+  keysElse?: string;
+  /** A key pressed while this label is playing is REMEMBERED and acts the moment the label ends.
+   *  That trap is real on some menus and is in on purpose, so mapping has to survive it. */
+  holdKeysUntil?: string;
+  /** A key that lands before the options have finished reading does nothing at all and the menu reads
+   *  on from the line it was cut off in the middle of — the one menu that punishes cutting in. */
+  swallowEarlyKeys?: true;
+  /** WHERE THE STAFF SCENE IS SPLICED IN. The menu walks the caller to the front of the store, and
+   *  from that label on the robot's own Staff scene plays, on the same live call. */
+  staffAt?: string;
   /** Which of the owner's 16 locked test cards this scene runs (behaved.ts TEST_CARDS). The card is
    *  what the Testing screen names the check by; the scene is only how the robot plays it. */
   card: string;
@@ -610,6 +632,147 @@ export interface RobotScene { n: number; name: string; greeting?: string; acts: 
    *  scene must still end with one, which is the row the owner added after four checks in a row
    *  ended on our own question. */
   noGoodbye?: true }
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// THE STORE'S OWN PHONE MENU (owner approved 08-08 — `docs/specs/mapping-tests/robot-menu.md`).
+//
+// The robot store could only ever answer as Staff, so no phone menu had ever been walked without
+// spending money on a stranger's store — which is every one of the thirteen mapping tests.
+//
+// IT IS A SCENE, not a second robot store. It is written in the same acts every Staff scene is
+// written in and played by the same player; all it needed was three words the acts did not have
+// (a place to jump to, a jump, and a third voice) and a key table on the scene. That is why the
+// menu can hand the call to a Staff scene mid-call: they are the same thing all the way down.
+//
+// THE WORDS ARE THE OWNER'S, WORD FOR WORD. Nothing here writes a sentence he did not approve.
+// Where his script gives no line for something (a key that is not on his table), the options play
+// again rather than inventing a "sorry, I did not get that".
+
+/** Played the moment the call is answered. The emergency sentence is in ON PURPOSE: it is the exact
+ *  CVS shape that fooled the earpiece into calling a machine a person on 08-07, so every mapping
+ *  test walks straight past the words that broke us. */
+export const MENU_GREETING: string[] = [
+  "Thank you for calling MVP's Pharmacy.",
+  "If this is a medical emergency, please hang up and dial nine one one.",
+  "Please listen closely, as our menu options have changed.",
+];
+/** Read straight after the greeting. One sentence per line, in the owner's order; read end to end
+ *  they are his options paragraph exactly. */
+const OPT_PHARMACY = "For the pharmacy, press 1.";
+const OPT_COSMETICS = "For cosmetics, press 2.";
+const OPT_HOME = "For home supplies, press 3.";
+const OPT_HOURS = "For store hours and directions, press 4.";
+const OPT_FRONT_0 = "For the front of the store and customer service, press 0.";
+const OPT_FRONT_5 = "For the front of the store and customer service, press 5.";
+const OPT_REPEAT = "To hear these options again, press 9.";
+/** The desks that answer with a voice, and the recordings that do not. */
+const MENU_PHARMACY_DESK = "MVP's pharmacy, this is Larry.";
+const MENU_FRONT_DESK = "MVP's, this is Larry speaking.";
+const MENU_HOME_SUPPLIES = "Home supplies.";
+const MENU_COSMETICS = "Our cosmetics department is open ten to six.";
+const MENU_HOURS = "We are open nine to nine, seven days a week. You can find us at 4200 Woodland Hills Drive.";
+
+/** Six seconds of nothing pressed and the whole list plays again from the top of the options. The
+ *  first mapping check listens all the way through before it acts, and that free repeat is the second
+ *  sample that proves a recording with certainty. */
+export const MENU_NO_PRESS_SEC = 6;
+/** US ringback runs two seconds of tone then four of silence, so a ring is one six second cycle and
+ *  the last one ends the moment its tone does: one ring 2s, two 8s, three 14s, eight 44s. */
+export const menuRingSecs = (rings: number) => Math.max(1, rings * 6 - 4);
+/** A caller that never presses anything cannot loop for ever on a real line. Mapping hangs up long
+ *  before this; it is here so a forgotten call cannot run up a bill on its own. */
+const MENU_MAX_LOOPS = 8;
+
+/** The five menus the owner's tests name. `plain` is his script as written; each of the others
+ *  differs from it in exactly one way. */
+export type MenuVariant = "plain" | "no_option_fits" | "menu_changed" | "press_ignored" | "ring_out";
+export const MENU_VARIANTS: Record<MenuVariant, string> = {
+  plain: "the menu as approved",
+  no_option_fits: "option 0 is left out of the read list, so nothing matches cards",
+  menu_changed: "the front desk moves from key 0 to key 5, and 0 reaches the pharmacy",
+  press_ignored: "a press before the options finish is swallowed and the menu reads on",
+  ring_out: "the front desk rings eight times, nobody answers, and the menu returns from the top",
+};
+export const isMenuVariant = (v: string): v is MenuVariant => Object.prototype.hasOwnProperty.call(MENU_VARIANTS, v);
+/** WHICH KEY OPENS THE FRONT OF THE STORE. It is 0 everywhere except the changed menu, where the
+ *  owner moved it to 5 — which is the whole point of that variant: a saved route still presses 0. */
+export const menuFrontKey = (v: MenuVariant) => (v === "menu_changed" ? "5" : "0");
+/** The options this menu reads out, in order. */
+export function menuOptions(v: MenuVariant): string[] {
+  const front = v === "menu_changed" ? OPT_FRONT_5 : OPT_FRONT_0;
+  const lines = [OPT_PHARMACY, OPT_COSMETICS, OPT_HOME, OPT_HOURS, front, OPT_REPEAT];
+  // NO OPTION FITS: the front of the store is simply never offered, so a caller looking for cards
+  // hears the whole list and finds nothing that matches.
+  return v === "no_option_fits" ? lines.filter((l) => l !== front) : lines;
+}
+
+const menuSay = (say: string): RobotAct => ({ sayAs: "menu", say });
+
+/** ONE MENU, WRITTEN AS A SCENE. The greeting, then the options, then a branch per key on the owner's
+ *  table, each branch ending back at the top of the options — which is also where six seconds of
+ *  nothing, and a key he never listed, both land. */
+export function menuScene(v: MenuVariant): RobotScene {
+  const front = menuFrontKey(v);
+  const acts: RobotAct[] = [
+    { label: "greeting" },
+    ...MENU_GREETING.map(menuSay),
+    { label: "options" },
+    ...menuOptions(v).map(menuSay),
+    { listen: true },
+    { goto: "options" },
+
+    // 1 · THE PHARMACY DESK. The WRONG department for cards: pharmacy staff cannot see the front of
+    // the store. His script gives this desk one line and no more, so it says that line and then holds
+    // the line, quiet, the way a counter does. Nothing here puts another word in its mouth.
+    { label: "pharmacy" },
+    { ring: menuRingSecs(1) }, menuSay(MENU_PHARMACY_DESK),
+    { listen: true }, { listen: true }, { listen: true }, { listen: true }, { hangup: true },
+
+    // 2 · Cosmetics: a recording, then the options again.
+    { label: "cosmetics" }, menuSay(MENU_COSMETICS), { goto: "options" },
+
+    // 3 · Home supplies. Two rings, then a voice that cannot help with cards; on the ring-out menu
+    // nobody picks this one up either.
+    { label: "home" },
+    ...(v === "ring_out"
+      ? [{ ring: menuRingSecs(2) } as RobotAct, { goto: "options" } as RobotAct]
+      : [{ ring: menuRingSecs(2) } as RobotAct, menuSay(MENU_HOME_SUPPLIES),
+         { listen: true } as RobotAct, { listen: true } as RobotAct, { listen: true } as RobotAct, { hangup: true } as RobotAct]),
+
+    // 4 · Hours and directions: a recording, then the options again.
+    { label: "hours" }, menuSay(MENU_HOURS), { goto: "options" },
+
+    // 0 (or 5) · THE RIGHT DEPARTMENT. The front of the store, which is also customer service. Three
+    // real rings, the desk answers, and the robot's own Staff scene takes the same live call from
+    // there. On the ring-out menu it rings eight times, nobody answers, and the menu returns.
+    { label: "front" },
+    ...(v === "ring_out"
+      ? [{ ring: menuRingSecs(8) } as RobotAct, { goto: "options" } as RobotAct]
+      : [{ ring: menuRingSecs(3) } as RobotAct, menuSay(MENU_FRONT_DESK)]),
+  ];
+  // THE CHANGED MENU SENDS THE OLD KEY TO THE WRONG PERSON (owner 08-08). A saved route that presses
+  // 0 must still REACH somebody, and the somebody must be wrong. A route that lands on nobody is easy
+  // to catch, because the menu just plays again; a route that still reaches a person and only the
+  // wrong person is the failure that quietly poisons the data, and that is the one to catch.
+  const keys: Record<string, string> = {
+    "1": "pharmacy", "2": "cosmetics", "3": "home", "4": "hours", "9": "options", [front]: "front",
+  };
+  if (v === "menu_changed") keys["0"] = "pharmacy";
+  return {
+    n: 0, card: "", name: `Phone menu — ${MENU_VARIANTS[v]}`, expect: "in_stock", acts,
+    greeting: "", keys, keysElse: "options", holdKeysUntil: "options",
+    ...(v === "press_ignored" ? { swallowEarlyKeys: true as const } : {}),
+    ...(v === "ring_out" ? {} : { staffAt: "front" }),
+  };
+}
+
+/** Which menu the next call plays, or null when the menu is off and the robot answers as Staff the
+ *  way it always has. */
+export async function menuPick(): Promise<MenuVariant | null> {
+  const raw = ((await getSetting("robot_menu")) || "").trim().toLowerCase();
+  if (!raw || raw === "off") return null;
+  return isMenuVariant(raw) ? raw : null;
+}
 
 /** The greetings, one per run, rotated. All five are real openings from our own history. */
 export const ROBOT_GREETINGS: string[] = [
@@ -1008,10 +1171,19 @@ export function robotScene(n: number): RobotScene | null { return ROBOT_SCENES.f
 
 /** What the robot has actually said on a call, in order — the ground truth the harness compares the
  *  site's written transcript against. Word for word, because the script is known exactly. */
-export interface RobotSaid { text: string; atSec: number; voice: "staff" | "transfer" }
+export interface RobotSaid { text: string; atSec: number; voice: "staff" | "transfer" | "menu";
+  /** Which beat of the scene this line was. A key press stops the audio dead, so a line handed to the
+   *  phone company but cut off before it played has to come back OFF the record — or the record
+   *  claims the caller heard something they never did (owner 08-08). */
+  act?: number }
 export interface RobotRun {
   id: string; callSid: string; scenario: number; sceneName: string; greeting: string;
   startedAt: number; endedAt?: number; said: RobotSaid[]; heard: string[];
+  /** WHICH MENU this call played, when it played one, and every key the caller pressed: whether it
+   *  landed before the reading had finished, whether it was held from the greeting, and what it
+   *  actually did. This is what a mapping test reads back (owner 08-08). */
+  menu?: MenuVariant;
+  keys?: Array<{ key: string; atSec: number; early: boolean; held: boolean; acted: string }>;
 }
 const robotRuns: RobotRun[] = [];
 export function robotLastRun(): RobotRun | null { return robotRuns[0] || null; }
@@ -1019,7 +1191,15 @@ export function robotRunFor(callSid: string): RobotRun | null { return robotRuns
 
 interface RobotState { run: RobotRun; acts: RobotAct[]; act: number; clips: (Buffer | null)[]; quiet: number;
   /** The one "Hello?" the robot may say into a silence (the honest store, 08-08). Once, ever. */
-  saidHello: boolean }
+  saidHello: boolean;
+  /** THE MENU'S SIDE OF A CALL, on a scene that has a key table. `sentMs` is when the document we are
+   *  playing right now went out and `secs` is how long each of its lines runs, so the second a key
+   *  comes back says exactly which line was playing — the phone company stops the audio dead on a key
+   *  and never says how far in. `held` is a key pressed during the greeting, waiting for the options.
+   *  `loops` stops a forgotten call reading the menu for ever on a real line. */
+  sentMs?: number; sentParts?: Array<{ act: number; secs: number }>; saidFrom?: number; held?: string | null; loops?: number;
+  /** The menu this call is playing, and its key table, read once when the call was answered. */
+  menu?: MenuVariant; keys?: Record<string, string>; keysElse?: string; holdLabel?: string; swallowEarly?: boolean }
 const robotCalls = new Map<string, RobotState>();
 
 /** Which scene the next inbound call plays, and (optionally) which greeting. Stored as "7" or "7:2"
@@ -1031,11 +1211,13 @@ export function parseRobotPick(raw: string | null): { scenario: number; greeting
   return { scenario: Number.isFinite(n) && robotScene(n) ? n : 1, greeting: g != null && Number.isFinite(g) ? g : null };
 }
 
-/** The two voices. Staff is NOT Charlie: anyone listening back has to be able to tell who is who,
- *  and the person a transfer hands us to is a different person again. */
-async function robotVoices(): Promise<{ staff: string; transfer: string }> {
-  const [s, t] = await Promise.all([getSetting("robot_voice_staff"), getSetting("robot_voice_transfer")]);
-  return { staff: (s || "pNInz6obpgDQGcFmaJgB").trim(), transfer: (t || "21m00Tcm4TlvDq8ikWAM").trim() };
+/** The THREE voices. Staff is NOT Charlie: anyone listening back has to be able to tell who is who,
+ *  the person a transfer hands us to is a different person again, and the store's own phone MENU is
+ *  not a person at all. The menu voice is fixed and its settings are fixed, so it says the same words
+ *  the same way on every call — which is the whole thing these mapping tests are about (owner 08-08). */
+async function robotVoices(): Promise<{ staff: string; transfer: string; menu: string }> {
+  const [s, t, m] = await Promise.all([getSetting("robot_voice_staff"), getSetting("robot_voice_transfer"), getSetting("robot_voice_menu")]);
+  return { staff: (s || "pNInz6obpgDQGcFmaJgB").trim(), transfer: (t || "21m00Tcm4TlvDq8ikWAM").trim(), menu: (m || "EXAVITQu4vr4xnSDxMaL").trim() };
 }
 
 /** US ringback, by the published cadence: 440 + 480 Hz, two seconds of tone then four of silence.
@@ -1078,8 +1260,12 @@ export function beepWav(): Buffer {
 }
 
 const robotClipUrl = (sid: string, i: number) => `<Play>https://${HOST}/robot/clip?call=${encodeURIComponent(sid)}&amp;i=${i}</Play>`;
+// IT HEARS A KEY PRESS NOW, as well as speech (owner 08-08). Listening for speech alone is exactly
+// why pressing 2 at the robot store did nothing at all, and why no phone menu had ever been walked
+// without spending money on a stranger's store. A Staff scene has no key table and simply ignores a
+// key, so this changes nothing for the nineteen scenes that were already here.
 const robotGather = (sid: string, secs: number) =>
-  `<Gather input="speech" speechTimeout="auto" enhanced="true" speechModel="phone_call" timeout="${secs}" ` +
+  `<Gather input="dtmf speech" numDigits="1" speechTimeout="auto" enhanced="true" speechModel="phone_call" timeout="${secs}" ` +
   `action="https://${HOST}/robot/step?call=${encodeURIComponent(sid)}" method="POST"/>` +
   `<Redirect method="POST">https://${HOST}/robot/step?call=${encodeURIComponent(sid)}&amp;silent=1</Redirect>`;
 
@@ -1089,20 +1275,42 @@ export function robotClip(callSid: string, i: number): Buffer | null { return ro
  * A call lands on the robot's number. Pick the scene, record every line it will need in the two
  * voices (cached, so this costs nothing after the first run), and start playing.
  */
-export async function robotAnswer(callSid: string, from?: string): Promise<string> {
+export async function robotAnswer(callSid: string, from?: string, opts?: {
+  /** THE LINE THE DESK ANSWERS WITH, when somebody else has already got us to a desk. The phone menu
+   *  (`robot-menu.ts`) walks the caller to the front of the store and hands the SAME live call over
+   *  here, so the scene opens on the desk's own words instead of picking a greeting of its own.
+   *  Nothing else about a scene changes, and with no opts this behaves exactly as it always has. */
+  greeting?: string;
+  /** What plays before the first word — the ringback of the desk we were just put through to. The
+   *  default is the beat a handset takes to come up when we are the ones being answered. */
+  lead?: string;
+}): Promise<string> {
   if (!callSid) return twiml("<Hangup/>");
   const existing = robotCalls.get(callSid);
   if (existing) return robotPlay(callSid, existing); // Twilio refetched the same document: carry on, never restart
   const pick = parseRobotPick(await getSetting("robot_scenario"));
   const scene = robotScene(pick.scenario) as RobotScene;
-  const greeting = scene.greeting
+  const greeting = opts?.greeting
+    || scene.greeting
     || (pick.greeting != null ? ROBOT_GREETINGS[((pick.greeting % ROBOT_GREETINGS.length) + ROBOT_GREETINGS.length) % ROBOT_GREETINGS.length] : rotatePick("robot:greeting", ROBOT_GREETINGS))
     || ROBOT_GREETINGS[0];
+  // THE STORE ANSWERS AS A PHONE MENU, when one is switched on (owner 08-08). It is a scene like any
+  // other, so it is built the same way and played by the same player; the only difference is that at
+  // the front of the store the chosen STAFF scene is spliced straight in, and the same live call
+  // carries on into it. With no menu switched on, everything below is exactly what it always was.
+  const menu = opts?.greeting ? null : await menuPick();
+  const menuSc = menu ? menuScene(menu) : null;
   // NOBODY PICKS UP: no greeting, no voice, nothing but the line ringing (owner 08-06, scene 12).
-  const acts: RobotAct[] = scene.neverAnswers ? [...scene.acts] : [{ say: greeting }, ...scene.acts];
-  const { staff, transfer } = await robotVoices();
+  const staffActs: RobotAct[] = scene.neverAnswers ? [...scene.acts] : [{ say: greeting }, ...scene.acts];
+  const acts: RobotAct[] = menuSc
+    ? [...menuSc.acts, ...(menuSc.staffAt ? scene.acts : [])]
+    : staffActs;
+  const { staff, transfer, menu: menuVoice } = await robotVoices();
   const clips = await Promise.all(acts.map((a) => {
     if (!("say" in a)) return Promise.resolve(null);
+    // The menu is a third voice, and it is fixed: same voice, same settings, so it says the same
+    // words the same way on every call, which is the whole thing these mapping tests are about.
+    if ("sayAs" in a && a.sayAs === "menu") return mp3Clip(menuVoice, a.say, { stability: 0.75, similarity_boost: 0.75 });
     return mp3Clip("sayAs" in a ? transfer : staff, a.say, { stability: 0.45, similarity_boost: 0.8 });
   }));
   // THE ONE LINE OFF SCRIPT (the honest store, 08-08): "Hello?", in the Staff voice, for a caller
@@ -1112,20 +1320,34 @@ export async function robotAnswer(callSid: string, from?: string): Promise<strin
   if (missing >= 0) { console.error("[robot] clip synthesis failed — check ElevenLabs credits"); return twiml("<Hangup/>"); }
   const run: RobotRun = {
     id: crypto.randomUUID().slice(0, 8), callSid, scenario: scene.n, sceneName: scene.name, greeting,
-    startedAt: Date.now(), said: [], heard: [],
+    startedAt: Date.now(), said: [], heard: [], ...(menu ? { menu, keys: [] } : {}),
   };
   robotRuns.unshift(run); while (robotRuns.length > 40) robotRuns.pop();
-  const st: RobotState = { run, acts, act: 0, clips, quiet: 0, saidHello: false };
+  const st: RobotState = { run, acts, act: 0, clips, quiet: 0, saidHello: false,
+    ...(menuSc ? { menu: menu as MenuVariant, keys: menuSc.keys, keysElse: menuSc.keysElse, holdLabel: menuSc.holdKeysUntil, swallowEarly: !!menuSc.swallowEarlyKeys, held: null, loops: 0 } : {}) };
   robotCalls.set(callSid, st);
   setTimeout(() => robotCalls.delete(callSid), 15 * 60 * 1000);
-  console.log(`[robot] answering ${from || "?"} with scenario ${scene.n} (${scene.name}) · greeting "${greeting}"`);
-  // A beat before speaking: a handset comes up, then the person talks.
-  return robotPlay(callSid, st, `<Pause length="1"/>`);
+  console.log(menuSc
+    ? `[robot] answering ${from || "?"} with the "${menu}" phone menu (${MENU_VARIANTS[menu as MenuVariant]}), then scenario ${scene.n} (${scene.name}) at the front of the store`
+    : `[robot] answering ${from || "?"} with scenario ${scene.n} (${scene.name}) · greeting "${greeting}"`);
+  // A beat before speaking: a handset comes up, then the person talks. When the phone menu put us
+  // through, that beat is the desk's own ringing instead.
+  return robotPlay(callSid, st, opts?.lead ?? `<Pause length="1"/>`);
+}
+
+/** WHERE A LABEL SITS in this call's acts. Labels are a place in the scene and never a sound. */
+function labelAt(st: RobotState, label: string): number {
+  const i = st.acts.findIndex((a) => "label" in a && a.label === label);
+  return i < 0 ? st.acts.length : i;
 }
 
 /** Walk the scene from where we left off until it needs to listen or the call is over. */
 function robotPlay(callSid: string, st: RobotState, lead = ""): string {
   const parts: string[] = lead ? [lead] : [];
+  // WHAT THIS DOCUMENT IS ABOUT TO PLAY, line by line, so a key that arrives mid-list says which line
+  // was playing. The phone company stops the audio dead on a key press and never says how far in
+  // (owner 08-08). Only a menu needs this; a Staff scene leaves it empty and pays nothing for it.
+  st.sentMs = Date.now(); st.sentParts = []; st.saidFrom = st.run.said.length;
   // Everything in ONE document plays in order, so a line after a 45 second wait is spoken 45 seconds
   // later than the document was built. The waits are added up as we go, or the record would claim
   // the person walked away and came back in the same instant.
@@ -1135,33 +1357,123 @@ function robotPlay(callSid: string, st: RobotState, lead = ""): string {
     const a = st.acts[st.act];
     if (!a) { parts.push("<Hangup/>"); break; }
     if ("hangup" in a) { st.act++; parts.push("<Hangup/>"); break; }
-    if ("listen" in a) { st.act++; parts.push(robotGather(callSid, 10)); break; }
-    if ("silence" in a) { st.act++; ahead += Math.round(a.silence); parts.push(`<Pause length="${Math.round(a.silence)}"/>`); continue; }
+    // A PLACE IN THE SCENE, and a jump to one. Neither plays a sound; a jump is what sends a menu
+    // branch back to the top of the options.
+    if ("label" in a) {
+      // A KEY PRESSED DURING THE GREETING ACTS THE MOMENT THE OPTIONS START (owner 08-08). The
+      // greeting finishes reading, and then the held key takes us straight to its branch — the
+      // options are never read at all, which is exactly the trap the knock's own keys walk into.
+      if (st.held && st.holdLabel && a.label === st.holdLabel) {
+        const k = st.held; st.held = null;
+        const label = st.keys?.[k];
+        (st.run.keys = st.run.keys || []).push({ key: k, atSec: atSec(), early: true, held: true, acted: label && label !== topLabel(st) ? label : "the options again" });
+        st.act = labelAt(st, label || topLabel(st));
+        continue;
+      }
+      st.act++; continue;
+    }
+    if ("goto" in a) { st.act = labelAt(st, a.goto); continue; }
+    // The menu waits the owner's six seconds for a key; Staff wait the ten they always have.
+    if ("listen" in a) { st.act++; parts.push(robotGather(callSid, menuOf(st) ? MENU_NO_PRESS_SEC : 10)); break; }
+    if ("silence" in a) { st.sentParts.push({ act: st.act, secs: a.silence }); st.act++; ahead += Math.round(a.silence); parts.push(`<Pause length="${Math.round(a.silence)}"/>`); continue; }
     // A COMMITTED RECORDING, PLAYED WHOLE. Its length is the measured one from ROBOT_CLIPS, because
     // the clock has to move by what the caller really hears: a line spoken after 15 seconds of hold
     // music files 15 seconds later, and reading it off the document build time would put every line
     // after a hold at the wrong second on the owner's sheet.
     if ("clip" in a) {
       const c = ROBOT_CLIPS[a.clip];
+      st.sentParts.push({ act: st.act, secs: c.secs });
       st.act++; ahead += Math.round(c.secs);
       parts.push(`<Play>https://${HOST}/robot/hold?f=${encodeURIComponent(a.clip)}</Play>`);
       continue;
     }
-    if ("ring" in a) { st.act++; ahead += Math.round(a.ring); parts.push(`<Play>https://${HOST}/robot/ring?secs=${Math.round(a.ring)}</Play>`); continue; }
-    if ("beep" in a) { st.act++; parts.push(`<Play>https://${HOST}/robot/beep</Play>`); continue; }
-    st.run.said.push({ text: a.say, atSec: atSec(), voice: "sayAs" in a ? "transfer" : "staff" });
+    if ("ring" in a) { st.sentParts.push({ act: st.act, secs: a.ring }); st.act++; ahead += Math.round(a.ring); parts.push(`<Play>https://${HOST}/robot/ring?secs=${Math.round(a.ring)}</Play>`); continue; }
+    if ("beep" in a) { st.sentParts.push({ act: st.act, secs: 0.33 }); st.act++; parts.push(`<Play>https://${HOST}/robot/beep</Play>`); continue; }
+    st.run.said.push({ text: a.say, atSec: atSec(), voice: "sayAs" in a ? a.sayAs : "staff", act: st.act });
+    st.sentParts.push({ act: st.act, secs: mp3Seconds(st.clips[st.act]) });
     parts.push(robotClipUrl(callSid, st.act));
     st.act++;
   }
   return twiml(parts.join(""));
 }
 
-/** The caller said something (or said nothing). Either way the scene moves on the way it really did. */
-export function robotStep(callSid: string, speech: string): string {
+/** The menu this call is playing, or null on a Staff scene — which is every scene that was here
+ *  before the menu and every one that ignores keys. */
+function menuOf(st: RobotState): MenuVariant | null { return st.menu ?? null; }
+const topLabel = (st: RobotState) => st.keysElse || "options";
+
+/** WHICH LINE WAS PLAYING when the key landed, off the lengths of the parts we handed out and the
+ *  second the key came back. Also says whether the reading had finished — "before the options
+ *  finish" is the whole of the swallowed-press menu. */
+function actAtPress(st: RobotState): { act: number; early: boolean } {
+  let left = (Date.now() - (st.sentMs ?? Date.now())) / 1000;
+  for (const p of st.sentParts ?? []) {
+    if (left < p.secs) return { act: p.act, early: true };
+    left -= p.secs;
+  }
+  return { act: st.act, early: false };
+}
+
+/** The whole list again, from the top of the options. */
+function menuTop(callSid: string, st: RobotState): string {
+  st.held = null;
+  st.loops = (st.loops ?? 0) + 1;
+  if (st.loops > MENU_MAX_LOOPS) return twiml("<Hangup/>");
+  st.act = labelAt(st, topLabel(st));
+  return robotPlay(callSid, st);
+}
+
+/** A key the caller pressed at a MENU. Everything the owner's key table can say, turned into what
+ *  the caller hears next. */
+function menuKey(callSid: string, st: RobotState, key: string): string {
+  const at = actAtPress(st);
+  // WHAT THE CALLER REALLY HEARD. The whole rest of the menu goes to the phone company in one
+  // document, and a key press stops it dead partway through — so every line from the cut onwards was
+  // handed over and never played. They come off the record here, or the record claims the caller
+  // heard options they were talking over (owner 08-08).
+  const kept = st.run.said.slice(0, st.saidFrom ?? st.run.said.length)
+    .concat(st.run.said.slice(st.saidFrom ?? st.run.said.length).filter((l) => (l.act ?? -1) < at.act));
+  st.run.said = kept;
+  const note = (acted: string) =>
+    (st.run.keys = st.run.keys || []).push({ key, atSec: Math.round((Date.now() - st.run.startedAt) / 1000), early: at.early, held: false, acted });
+  // DURING THE GREETING the key is REMEMBERED and acts the moment the options start, and the greeting
+  // carries on from the sentence it was cut off in the middle of. Where the key LANDED says whether
+  // the greeting was still playing — the phone company never tells us how far in a key arrived.
+  if (st.holdLabel && at.act < labelAt(st, st.holdLabel)) {
+    st.held = key;
+    st.act = at.act;
+    return robotPlay(callSid, st);
+  }
+  // A PRESS BEFORE THE OPTIONS FINISH, on the menu that swallows one: it does nothing at all and the
+  // menu reads ON from the line it was cut off in the middle of, never from the top.
+  if (st.swallowEarly && at.early) {
+    note("swallowed, the menu read on");
+    st.act = at.act;
+    return robotPlay(callSid, st);
+  }
+  const label = st.keys?.[key];
+  // A KEY THE OWNER'S TABLE DOES NOT LIST. His script has no words for one, so nothing is announced
+  // and the options play again from the top.
+  if (!label) { note("the options again"); return menuTop(callSid, st); }
+  note(label === topLabel(st) ? "the options again" : label);
+  st.act = labelAt(st, label);
+  return robotPlay(callSid, st);
+}
+
+/** The caller pressed a key, said something, or said nothing. Either way the scene moves on the way
+ *  it really did. */
+export function robotStep(callSid: string, speech: string, digits?: string): string {
   const st = robotCalls.get(callSid);
   if (!st) return twiml("<Hangup/>");
+  const isMenu = !!st.keys;
+  const key = (digits || "").trim().slice(0, 1);
+  // A KEY, at a scene that has a key table. Everything else ignores keys exactly as it always has.
+  if (key && isMenu) { st.quiet = 0; return menuKey(callSid, st, key); }
   const said = (speech || "").trim();
   if (said) { st.run.heard.push(said.slice(0, 300)); st.quiet = 0; return robotPlay(callSid, st); }
+  // NOTHING PRESSED AT A MENU is the owner's six seconds: the whole list plays again from the top,
+  // unless a key was held from the greeting, which acts the moment the options would have started.
+  if (isMenu) { st.quiet = 0; return menuTop(callSid, st); }
   // NOBODY SAID ANYTHING, AND THE SCRIPT MUST NOT PAPER OVER IT (owner + PM, 08-08). The robot used
   // to play its next line anyway after two quiet listens, so a Charlie who had gone silent still got
   // "Yeah, we've got some in" and the scene looked like a conversation that never happened: the test
@@ -1203,6 +1515,37 @@ export function _robotRig(scenario: number, greetingIndex = 0): { callSid: strin
   robotCalls.set(callSid, st);
   return { callSid, first: robotPlay(callSid, st, `<Pause length="1"/>`), run };
 }
+
+/** Test-only: stand a PHONE MENU up with no synthesis, no database and no phone, with the chosen
+ *  Staff scene spliced in at the front of the store exactly as a real call does it. Every spoken line
+ *  is given the same made-up length so a test can say exactly where a key landed; the audio route
+ *  itself is proved by a real call, which is not the bench's job. */
+export function _menuRig(variant: MenuVariant, opts: { scenario?: number; lineSecs?: number } = {}): { callSid: string; first: string; run: RobotRun } {
+  const secs = opts.lineSecs ?? 3;
+  const scene = robotScene(opts.scenario ?? 1) as RobotScene;
+  const m = menuScene(variant);
+  const acts: RobotAct[] = [...m.acts, ...(m.staffAt ? scene.acts : [])];
+  const callSid = `rig:menu:${variant}:${robotRuns.length}:${robotCalls.size}`;
+  const run: RobotRun = { id: callSid, callSid, scenario: scene.n, sceneName: m.name, greeting: "", startedAt: Date.now(), said: [], heard: [], menu: variant, keys: [] };
+  robotRuns.unshift(run); while (robotRuns.length > 40) robotRuns.pop();
+  const st: RobotState = { run, acts, act: 0, clips: acts.map(() => null), quiet: 0, saidHello: false,
+    menu: variant, keys: m.keys, keysElse: m.keysElse, holdLabel: m.holdKeysUntil, swallowEarly: !!m.swallowEarlyKeys, held: null, loops: 0 };
+  robotCalls.set(callSid, st);
+  const first = robotPlay(callSid, st, `<Pause length="1"/>`);
+  // Every line on the bench runs for the same made-up length, so a test can place a key exactly.
+  st.sentParts = (st.sentParts || []).map((x) => ({ ...x, secs: "ring" in (acts[x.act] || {}) ? (acts[x.act] as { ring: number }).ring : secs }));
+  return { callSid, first, run };
+}
+/** Test-only: pretend this many seconds of the document just handed out have already played. */
+export function _menuElapsed(callSid: string, secs: number): void {
+  const st = robotCalls.get(callSid); if (st) st.sentMs = Date.now() - secs * 1000;
+}
+/** Test-only: the same rebuild of the per-line lengths the rig does, after a fresh document. */
+export function _menuFixLengths(callSid: string, lineSecs = 3): void {
+  const st = robotCalls.get(callSid); if (!st) return;
+  st.sentParts = (st.sentParts || []).map((x) => ({ ...x, secs: "ring" in (st.acts[x.act] || {}) ? (st.acts[x.act] as { ring: number }).ring : lineSecs }));
+}
+export function _menuRun(callSid: string): RobotRun | null { return robotCalls.get(callSid)?.run || robotRunFor(callSid); }
 
 export function robotEnded(callSid: string): void {
   const st = robotCalls.get(callSid);

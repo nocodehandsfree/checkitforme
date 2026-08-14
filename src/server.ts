@@ -53,7 +53,8 @@ import { activeMap, graphSummary, chainDetail, approveVersion, rejectVersion, op
 import { recipeFromCall, evidenceFromCall, type CapturedStep } from "./calls/map-capture";
 import { startSweep, stopSweep, sweepStatus, buildQueue } from "./calls/sweep";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay,
-  robotAnswer, robotStep, robotEnded, robotClip, ringbackWav, beepWav, robotScene, robotLastRun, robotRunFor, parseRobotPick, ROBOT_SCENES, ROBOT_GREETINGS, ROBOT_CLIPS } from "./calls/tapedeck";
+  robotAnswer, robotStep, robotEnded, robotClip, ringbackWav, beepWav, robotScene, robotLastRun, robotRunFor, parseRobotPick, ROBOT_SCENES, ROBOT_GREETINGS, ROBOT_CLIPS,
+  menuPick, isMenuVariant, MENU_VARIANTS, MENU_GREETING, menuOptions } from "./calls/tapedeck";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged, lockRecipeToChain } from "./calls/trainer-batch";
 import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, connectAtSecFor, chainDialable, chainNavPlan, type Recipe } from "./calls/recipe";
 import { llm, heli } from "./llm";
@@ -1207,10 +1208,16 @@ app.all("/robot/answer", async (c) => {
   if (!sid) sid = c.req.query("CallSid") || "";
   return c.body(await robotAnswer(sid, from), 200, { "Content-Type": "text/xml" });
 });
+// A KEY PRESSED RIDES THE SAME DOOR AS A SPOKEN WORD (owner 08-08). A scene with no key table
+// ignores it, which is every Staff scene; the phone menu branches on it.
 app.post("/robot/step", async (c) => {
-  let speech = "", sid = c.req.query("call") || "";
-  try { const b = await c.req.parseBody(); speech = String(b.SpeechResult || ""); if (!sid) sid = String(b.CallSid || ""); } catch { /* silent turn */ }
-  return c.body(robotStep(sid, speech), 200, { "Content-Type": "text/xml" });
+  let speech = "", digits = "", sid = c.req.query("call") || "";
+  try {
+    const b = await c.req.parseBody();
+    speech = String(b.SpeechResult || ""); digits = String(b.Digits || "");
+    if (!sid) sid = String(b.CallSid || "");
+  } catch { /* silent turn */ }
+  return c.body(robotStep(sid, speech, digits), 200, { "Content-Type": "text/xml" });
 });
 app.post("/robot/ended", async (c) => {
   let sid = c.req.query("call") || "";
@@ -1251,20 +1258,32 @@ app.get("/api/admin/robot-store", async (c) => {
   if (!robotStoreOn()) return c.json({ error: "the robot store is staging only" }, 404);
   const pick = parseRobotPick(await getSetting("robot_scenario"));
   const sid = c.req.query("call");
+  // THE PHONE MENU rides the same door as the scenes: which menu the next call plays, its words, and
+  // exactly what the menu did on the last one. The harness reads this the way it already reads a
+  // scene, so nothing new has to be learned to run a mapping test.
+  const menu = await menuPick();
   return c.json({
     pick, scenes: ROBOT_SCENES.map((s) => ({ n: s.n, name: s.name, expect: s.expect, neverAnswers: !!s.neverAnswers, noGoodbye: !!s.noGoodbye })),
     greetings: ROBOT_GREETINGS,
     run: sid ? robotRunFor(sid) : robotLastRun(),
+    menu: { on: menu, variants: MENU_VARIANTS, greeting: MENU_GREETING, options: menuOptions(menu || "plain") },
   });
 });
 app.post("/api/admin/robot-store", async (c) => {
   if (!robotStoreOn()) return c.json({ error: "the robot store is staging only" }, 404);
-  const b = (await c.req.json().catch(() => ({}))) as { scenario?: number; greeting?: number };
+  const b = (await c.req.json().catch(() => ({}))) as { scenario?: number; greeting?: number; menu?: string };
+  // WHICH MENU THE NEXT CALL PLAYS, or "off" for the robot answering as Staff the way it always has.
+  if (typeof b.menu === "string") {
+    const want = b.menu.trim().toLowerCase();
+    if (want && want !== "off" && !isMenuVariant(want)) return c.json({ error: "unknown menu", menus: Object.keys(MENU_VARIANTS) }, 400);
+    await setSetting("robot_menu", want === "off" ? "" : want);
+    if (b.scenario == null) return c.json({ ok: true, menu: await menuPick(), variants: MENU_VARIANTS });
+  }
   const n = Number(b.scenario);
   if (!robotScene(n)) return c.json({ error: "unknown scenario" }, 400);
   const val = b.greeting == null ? String(n) : `${n}:${Number(b.greeting)}`;
   await setSetting("robot_scenario", val);
-  return c.json({ ok: true, pick: parseRobotPick(val), scene: robotScene(n) });
+  return c.json({ ok: true, pick: parseRobotPick(val), scene: robotScene(n), menu: await menuPick() });
 });
 
 app.post("/api/admin/tapedeck/call", async (c) => {
