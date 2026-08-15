@@ -2303,6 +2303,63 @@ console.log("\n▶ THEIR ANSWER LANDS WHILE HE IS OFF THE LINE, AND HE ANSWERS I
   restore(); tw.close(); f.close();
 }
 
+console.log("\n▶ CHECK 366'S SHAPE: a stale hello never rides the reconnect, and a no that finishes writing late is still handed");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-late-no";
+  echoListening(room, true);
+  const clipMs = 400;
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, {
+    agentId: "agent_normal", midCallAgentId: "agent_joining",
+    dynamicVars: { opening_line: "do you have any Pokemon cards in stock?" },
+    connectOnHuman: true, holdMaxSeconds: 999, holdStrategy: "reopen",
+    openingClip: { audio: Buffer.alloc(clipMs * 8, 0x20), ms: clipMs, text: "do you have any Pokemon cards in stock?" },
+    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0, charlieThinkingMs: 0 },
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, room, () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_366", customParameters: { room } } });
+  await sleep(50);
+  // THE STALE LINE: the store's hello lands from Echo BEFORE his session exists, exactly like the
+  // hello from second 3 of check 366. On the old engine it sat in the pocket the whole call and was
+  // handed at the reconnect as "what you missed", instead of the no.
+  echoHeardStaff(room, "Larry Vasquez. How can I help you?", Date.now());
+  await sleep(300);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
+  await sleep(400);
+  const evs = () => getReceipt(room)?.events || [];
+  ok(evs().some((e) => e.kind === "charlie_join"), "his session is up");
+  // Staff answer and announce the wait, through Echo's door, the only door on this check.
+  echoHeardStaff(room, "Pokemon? Let me check. Let me just put you on hold.", Date.now());
+  await sleep(40);
+  quiet(tw, HOLD_QUIET_MS / 20 + 40);
+  await sleep(400);
+  ok(evs().some((e) => e.kind === "charlie_leave"), "he is dropped for the announced wait");
+  const sockets = f.sockets.length;
+  // STAFF COME BACK: their voice reopens him, and the WORDS of what they said finish writing a
+  // second AFTER his new session opens — the exact race of check 366, where "I did not see any"
+  // was spoken at 65 seconds, his session opened at 69, and the writing landed at 70.
+  const spokenAt = Date.now();
+  for (let i = 0; i < 60; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
+  await sleep(500);
+  ok(f.sockets.length > sockets, "somebody spoke, so he is opened again");
+  echoHeardStaff(room, "Thank you for holding. I did not see any, unfortunately.", spokenAt);
+  await sleep(200);
+  // THE TWO ASSERTS THAT FAIL ON THE OLD ENGINE.
+  ok(!f.raw.some((m) => m.includes("user_message") && m.includes("Larry Vasquez")),
+    "the stale hello from before his first join is never handed back as their turn");
+  ok(f.raw.some((m) => m.includes("user_message") && m.includes("did not see any")),
+    "…and the no that finished writing after he reconnected IS handed as their turn");
+  ok(evs().some((e) => (e.detail || {}).step === "missed_turn" && String((e.detail || {}).text || "").includes("did not see any")),
+    "…and the record says so");
+  echoListening(room, false);
+  restore(); tw.close(); f.close();
+}
+
 console.log("\n▶ THE INVERSION (owner + PM, 08-08): a quiet nobody announced never drops him");
 {
   _reset();

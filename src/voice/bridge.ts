@@ -762,6 +762,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  his new session reports ready — see the metadata handler. Without this the reopened agent knows
    *  nothing about the wait, which on a hand-over means he is talking to a stranger blind. */
   let gapNote: { secs: number; newPerson: boolean; replayed?: boolean } | null = null;
+  /** A reopen hands WORDS, never audio — so after one, a line spoken before the new session opened
+   *  can never have reached his ears and may still need handing (owner task 08-15, check 366). The
+   *  first join is different: it hands the held audio itself, so this stays false until a real
+   *  words-only reopen has happened. */
+  let wordsOnlyReopen = false;
+  /** The moment his ears came back at that reopen: audio from here is buffered and flushed into the
+   *  new session, so a line SPOKEN before this moment is the only kind whose sound never reached
+   *  him. Stamped where the reopen commits, which is where the buffering resumes. */
+  let hisEarsBackAtMs = 0;
   let convEar: ConversationEar | null = null;   // attached the moment a real person is on the line
   /**
    * THE INVERSION (owner + PM, 08-08). Mid conversation, PLAIN QUIET NEVER DROPS CHARLIE. He is
@@ -1206,6 +1215,8 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // sent the instant his new session reports ready. Skipping it is how a reopened agent greets a
       // brand new person as though they had been on the line the whole time.
       gapNote = { secs, newPerson, replayed: handedOn };
+      wordsOnlyReopen = true;         // from here, words are the only way a hold-window line reaches him
+      hisEarsBackAtMs = Date.now();   // …and audio from this exact moment on is buffered for his new session
       void connectEleven(`back after a ${secs}s wait`);
       // The buffer is the existing one: everything said from here is held until his session reports
       // ready, then released whole, exactly as it is on the opening handoff.
@@ -1247,19 +1258,27 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    * twice on the line.
    */
   function tellCharlieWhatHeMissed(): void {
-    const said = missedWhileClosed.splice(0, missedWhileClosed.length)
-      .map((s) => s.trim()).filter(Boolean)
-      .filter((s) => !alreadyHisToAnswer(s));
+    handTheirTurn(missedWhileClosed.splice(0, missedWhileClosed.length), "said while he was off");
+  }
+
+  /** THE ONE DOOR THAT FEEDS HIS SESSION STAFF'S WORDS AS THEIR TURN, and the moment "he has heard
+   *  it" is recorded — at the handover itself, never worked out from clocks (owner task 08-15).
+   *  Called with the pocket at a reopen, and with a single late line whose writing landed after he
+   *  reconnected (check 366's shape). */
+  function handTheirTurn(lines: string[], why: string): void {
+    const said = lines.map((s) => s.trim()).filter(Boolean).filter((s) => !alreadyHisToAnswer(s));
     if (!said.length || !eleven || !ready) return;
     for (const s of said) markAsHis(s);
     // HIS TURN, IN THEIR WORDS. The sentences first, so what he answers is what they said; the rule
-    // after it, so he cannot mistake our instruction for part of their sentence.
-    const text = `${said.join(" ")}\n\n[Those are Staff's own words, said while you were off the line. Answer them now, out loud, exactly as if you had heard them yourself. Never ask them to repeat it and never ask anything they have already answered.]`;
+    // after it, so he cannot mistake our instruction for part of their sentence. The rule carries
+    // the ladder's own wording (owner, round two): ask only for the piece still missing, and if
+    // nothing is missing, wrap up.
+    const text = `${said.join(" ")}\n\n[Those are Staff's own words, said while you were off the line. Answer them now, out loud, exactly as if you had heard them yourself. Never ask them to repeat it and never ask anything they have already answered. If their words answer the question, take the answer and ask only for whatever piece is still missing; if nothing is missing, wrap up.]`;
     try {
       eleven.send(JSON.stringify({ type: "user_message", text }));
-      log(`handed the agent the ${said.length} line(s) he missed AS THEIR TURN, so he answers them`);
+      log(`handed the agent ${said.length} line(s) AS THEIR TURN (${why}), so he answers them`);
       emit(room, "unknown", "Charlie was handed what Staff said while he was off, as their turn",
-        { step: "missed_turn", lines: said.length, text: said.join(" ").slice(0, 200) });
+        { step: "missed_turn", lines: said.length, text: said.join(" ").slice(0, 200), why });
       // AND THE QUIET AFTER IT IS HIM THINKING, NEVER A DROP, until he has answered this turn (the
       // PM's item 3). It is the same rule as his first words on a session, and being handed a turn
       // is exactly that moment: he owes them a word from here.
@@ -1443,10 +1462,26 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // WHAT HE COULD NOT HEAR, KEPT AS WORDS. Only Echo's copy counts: a line the agent's own session
     // delivered is one he already heard.
     if (fromEcho && fresh && (!eleven || onHold) && !alreadyHisToAnswer(txt)) missedWhileClosed.push(txt);
-    // HE HEARD IT HIMSELF, so it is his to answer already and must never be handed to him again as a
-    // turn. This is the other half of the double guard: a sentence he was on the line for can arrive
-    // at Echo a moment later, and without this it would come back as something new to reply to.
-    if (fresh && eleven && !onHold) markAsHis(txt);
+    // A LINE SPOKEN INTO THE WAIT THAT FINISHED WRITING JUST AFTER HE RECONNECTED IS STILL HIS TO BE
+    // HANDED (owner task 08-15, check 366). Staff's "I did not see any" was spoken while his session
+    // was closed, and its writing landed a second after the new session opened — so the old rule
+    // below filed it as a line he had heard himself, and he stood silent for 9 seconds until the
+    // reader's note told him the answer at 75s. His session opened AFTER those words were spoken, so
+    // no audio of them ever reached him: hand them as their turn the moment they land. Only after a
+    // words-only reopen (a reopen hands words, never audio; the first join hands the held audio
+    // itself, so a pre-join line already reached him and must not be doubled).
+    else if (fromEcho && fresh && eleven && !onHold && !alreadyHisToAnswer(txt)
+      && wordsOnlyReopen && spokenAtEpochMs != null && hisEarsBackAtMs > 0 && spokenAtEpochMs < hisEarsBackAtMs) {
+      // His session may still be opening: then the pocket carries it into the reopen hand-over
+      // that runs the moment the session reports ready, so the line is never dropped between doors.
+      if (!ready) missedWhileClosed.push(txt);
+      else handTheirTurn([txt], "the line finished writing after he reconnected");
+    }
+    // HE HEARD IT HIMSELF is recorded AT THE HANDOVER, never worked out from what happened to be
+    // open when Echo's copy landed (owner task 08-15): that inference is exactly what lost the no on
+    // check 366. A line is his only when his own session's transcript delivered it (marked in the
+    // user_transcript handler) or when we handed it to him ourselves (marked in handTheirTurn).
+    if (fresh && !fromEcho && eleven && !onHold) markAsHis(txt);
     // Their hello has arrived, so it goes out FIRST and our question follows it, which is the order
     // the call actually happened in.
     if (heldQuestion) {
@@ -1604,6 +1639,13 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // reads, and the settle law can hold because he can finally see what Staff already gave.
         // NEVER after a hand-over: a new person is a fresh start by the owner's own section 5, and
         // the old conversation belongs to somebody who is no longer on the phone.
+        // THE STALE POCKET DIES AT EVERY JOIN (owner task 08-15, check 366). Everything Staff said
+        // before this session opened reached it as the HELD AUDIO flushed just above, so the
+        // pocket's copy of those lines is a double waiting to be handed — and on 366 the store's
+        // hello from second 3 sat in it the whole call and was handed at the reconnect as "what you
+        // missed", instead of the no. A reopen consumes the pocket through the hand-over below;
+        // a first join clears it here.
+        if (!gapNote) missedWhileClosed = [];
         if (gapNote) {
           const g = gapNote; gapNote = null;
           // THIS IS WHERE THE CHECK USED TO GO DEAD (owner + PM, 08-08, off test check 360).
@@ -1725,6 +1767,11 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // is open or closed. Everything else this handler does with the words is untouched, because
         // they are how Charlie decides what to do next. With no transcriber, this is the record and
         // the check behaves exactly as it always has.
+        // HIS SESSION TRANSCRIBED IT, SO HIS SESSION HEARD IT (owner task 08-15). This is the one
+        // honest record of "he heard this himself": written at the moment his own session delivered
+        // the words, never worked out from what happened to be open when Echo's copy landed. It is
+        // what stops a line he answered live from being handed back to him as new.
+        if (txt && echoRooms.has(room)) markAsHis(String(txt));
         if (txt && !echoRooms.has(room)) {
           const spokenAt = greetingStartedAtEpochMs || takeVoiceStart();
           if (greetingStartedAtEpochMs) dropVoiceStartsUpTo(greetingStartedAtEpochMs + 500);
