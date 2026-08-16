@@ -186,15 +186,28 @@ plumbing: what we buffer, when Charlie opens, what gets recorded.
 partners, a real dial, the real record. The only rung where "proven" may be said, inside the 200 a
 day. A real store is never dialed.
 
-**What rung one costs (owner asked 08-16).** No new bill to start. The talking is Anthropic
-compute and runs inside the $200 a month Max account the owner already pays for, the same way his
-agent chats run today; one generation can play out a whole pretend call, both voices, so thousands
-fit in a day. That account also runs his other chats and has its own weekly limits, so simulation
-gets a daily cap on pretend calls (proposed: 1,000) and never starves his own work. The data is
-not bought: free public collections of real recorded calls and transcripts exist on the internet
-and we start there. If simulation ever outgrows the plan, the overflow moves to pay per use, a
-fraction of a cent per pretend call on the key staging already holds (`BRAIN_API_KEY`), and the
-numbers come back to the owner before that switch is flipped.
+**What rung one costs (owner asked 08-16, refined same day).** No new bill to start. The talking
+is Anthropic compute and runs inside the $200 a month Max account the owner already pays for, the
+same way his agent chats run today; one generation can play out a whole pretend call, both voices,
+so thousands fit in a day. The data is not bought: free public collections of real recorded calls
+and transcripts exist on the internet and we start there.
+
+**The simulation gets a usage unit, measured, never guessed (owner, 08-16).** Exactly the way the
+check got its cost card: ONE simulation = one pretend call played out plus its grade. The build's
+FIRST step runs 100 of them on the smallest model that can do the job, reads the account's weekly
+usage bar before and after, and locks the measured number into this plan as "1,000 simulations =
+N% of the weekly all-models limit." No percent is stated before that batch runs; a guessed number
+here is how a surprise credit bill happens. Guardrails, tied to usage the way he asked:
+- The machine reads the same usage meter his phone shows before every batch and refuses to start
+  one when the all-models bar is past a line he sets (proposed: 60%), so his builder agents always
+  have room.
+- Paid credits are never touched: the brake is the plan's own limits, not the credit card. Credits
+  covering overflow is a decision only he can make, per batch, never a default.
+- Simulations run on the smaller models, never Fable, so the Fable bar his builder chats draw on
+  stays untouched.
+- If simulation ever needs more than the plan can give, the overflow path is pay per use on the
+  key staging already holds (`BRAIN_API_KEY`), a fraction of a cent per pretend call, and the
+  numbers come back to the owner before that switch is flipped.
 
 **The genes of a call.** Real calls that already exist on the internet get broken down into genes,
 the behaviors that make calls what they are: Staff pissed off, the caller pissed off, a caller who
