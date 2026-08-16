@@ -46,6 +46,7 @@ import { installReceiptStore, currentRates, onReceiptClosed, recordVerdict, last
 import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
 import { costCall, money } from "./calls/cost";
 import { behaved, agentLinesFrom, cardVerdict, TEST_CARDS, type BehavedRow } from "./calls/behaved";
+import { meterVerdict } from "./calls/meter";
 import { opsRollup, type CheckRow } from "./calls/ops";
 import { startMapper, stopMapper, mapperState, resumeMapperRuns } from "./calls/mapper";
 import { storeMetUnknownMenu, muteStore, unmuteStore, healOnce, onAutoCheckPaused, mutedReasons } from "./calls/healing";
@@ -6478,6 +6479,7 @@ app.get("/api/admin/receipt/:room", async (c) => {
     ) : [];
     const totalUsd = (cost?.totalUsd ?? 0) + readUsd;
     const priceUsd = ((await getPolicy()).pricing.perCallCents / 100) * 1_000_000;
+    const profitPct = totalUsd > 0 && priceUsd > 0 ? Math.round(((priceUsd - totalUsd) / priceUsd) * 100) : null;
     // The workflow bubble: the same store to chain to default resolution every call uses.
     let workflow: { name: string; d: Array<[string, string]> } | null = null;
     try {
@@ -6498,9 +6500,15 @@ app.get("/api/admin/receipt/:room", async (c) => {
         ["Openers", `${(wf.openers || []).length || 1} rotating`],
       ].filter((r) => r[1]) as Array<[string, string]> };
     } catch { /* the bubble is decoration; the check renders without it */ }
-    return { test: card ? { ...card, verdict: graded ? cardVerdict(card, graded.rows, graded.statusKey) : null } : null,
+    return { test: card ? { ...card, verdict: graded ? cardVerdict(card, graded.rows, graded.statusKey) : null,
+      // THE METER HALF (owner's go 08-16, src/calls/meter.ts): the same numbers the tiles already
+      // show, read INTO the grade, so a wasteful pass fails with no human looking. Only once the
+      // check is finished, same as the verdict — an unfinished test has not failed either.
+      meter: graded ? meterVerdict(card, { meterSec: sums?.charlieConnectedSeconds ?? null,
+        speakingSec: sums?.speakingSecs ?? null, listeningSec: sums?.listeningSecs ?? null,
+        profitPct }) : null } : null,
       buckets, totalUsd, readable: money(totalUsd),
-      profitPct: totalUsd > 0 && priceUsd > 0 ? Math.round(((priceUsd - totalUsd) / priceUsd) * 100) : null,
+      profitPct,
       talkSec: sums?.charlieConnectedSeconds ?? null, workflow,
       // WHERE HIS METER WENT, up top as well as inside his cost line (owner 08-07): the tile reads
       // his seconds and the three pieces sit under the number, so they are read without opening

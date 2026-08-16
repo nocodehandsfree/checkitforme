@@ -303,6 +303,30 @@ new pages.
 7. A change that breaks any of the twenty is reverted with the reason on the report.
 8. Every write-up names the waste, the cost per check, and what fixing it needs.
 
+## THE BUILD PLAN (owner's go, 08-16: "OK let's create a plan and let's start building")
+
+One stage per session, the trust ladder's order — each stage lands on staging and is driven
+before the next is boxed:
+
+1. **The grade sees waste — BUILT 08-16, this session.** `src/calls/meter.ts` grades every named
+   test's money and clock beside the behavior rows: the meter against 23, profit against the 67%
+   floor, the waiting slice on the record; five clock-burning cards exempt from the floor
+   (`meter` on the card in behaved.ts, his to re-rule); the sheet's pill and red line read both
+   halves; `scripts/test-meter.ts` pins the 08-16 shape (43s meter, 9 waiting, all rows green)
+   as a FAIL. This is trust ladder stage one.
+2. **Every customer check graded and filed.** The same grade runs on every real check as it ends;
+   fails and waste land in Admin under Calls with the diagnosis in plain words.
+3. **The runner.** The graph (dial · read · grade · name the waste · one change · re-dial · keep
+   or revert · the twenty sweep) behind the money brake (20/50/100/200, approved), robot store
+   only, state saved every step.
+4. **Rung-one simulation.** The pretend-call harness plus the measured usage unit: 100 runs on
+   the smallest workable model against the weekly usage bar, the number locked into this file
+   before any big batch.
+5. **The genes and the floors.** Real-call data mined into behaviors with frequencies; the
+   benchmarks computed and brought back to the owner (deferred by him until the floors exist).
+6. **The fences and the turning.** The five Admin numbers get owner-set fences and the runner may
+   turn them, stage three of the trust ladder; unsupervised only at his ruled count of clean runs.
+
 ## What you rule before anything is built
 
 1. The 08-07 reversal: may the margin goal fail a test on the machine's card, rows staying

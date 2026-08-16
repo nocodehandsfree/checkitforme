@@ -67,7 +67,12 @@ import { askedToBePutThrough as saysPutMeThrough, signedOff } from "../voice/pro
  * less is a margin goal, never a test, and it stays on the tile up top where a goal belongs. Locked
  * in scripts/test-behaved.ts so nobody can quietly put a price in a pass or fail row.
  */
-export interface TestCard { name: string; sub: string; info: string; needs: BehavedKey[]; status: string | null }
+/** The meter half's per-card overrides (graded by src/calls/meter.ts, the 08-16 build). `null`
+ *  switches that number off for the card; absent = the owner's two numbers bind (23s meter ·
+ *  67% floor). The rows above stay money-free — this rides BESIDE them, never inside them. */
+export interface MeterBounds { meterCapSec?: number | null; profitFloorPct?: number | null }
+
+export interface TestCard { name: string; sub: string; info: string; needs: BehavedKey[]; status: string | null; meter?: MeterBounds }
 
 export const TEST_CARDS: Record<string, TestCard> = {
   answer_clear_yes: { name: "Answer: clear yes",
@@ -90,10 +95,15 @@ export const TEST_CARDS: Record<string, TestCard> = {
     sub: "Staff put us on a silent hold.",
     info: "Charlie dropped on a silent hold, reconnected when they came back, and we displayed the right status.",
     needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold", "wrapped_up", "charlie_ended_the_check"], status: "not_in_stock" },
+  // METER EXEMPTIONS (owner's go 08-16, per-card list proposed in the spec, his to re-rule): a
+  // scene built to burn the clock can never hold the 67% floor, so grading it there fails it
+  // forever and the red becomes noise. The meter cap stays on every card — Charlie's own seconds
+  // are always his to keep down.
   hold_permanently: { name: "Hold: permanently",
     sub: "Staff put us on hold and never returned.",
     info: "Charlie hung up at the hold limit and we displayed a Left on hold status.",
-    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold"], status: "left_on_hold" },
+    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold"], status: "left_on_hold",
+    meter: { profitFloorPct: null } },
   hold_music: { name: "Hold: music",
     sub: "Staff put us on hold with music and Charlie dropped until a person came back.",
     info: "This test proves that hold music stops Charlie's meter the same way silence does, and that he reconnected when a person spoke to us again.",
@@ -109,18 +119,21 @@ export const TEST_CARDS: Record<string, TestCard> = {
   hungup_ringing: { name: "Hungup: 90 seconds of ringing",
     sub: "The phone rang with nobody answering and we hung up at the ring limit.",
     info: "This test proves that after 90 seconds of ringing with no person, we ended the check ourselves, the record shows it was us, and we displayed a Nobody answered status. Charlie was never on and never billed.",
-    needs: [], status: "nobody_answered" },
+    needs: [], status: "nobody_answered", meter: { profitFloorPct: null } },
   hungup_limit: { name: "Hungup: 4 minute limit",
     sub: "The check hit its 4 minute limit and we ended it.",
     info: "This test proves that a check can never run past the limit you set in Admin, we displayed an Admin hung up status, and the customer was charged, because we really were on the phone that long.",
-    needs: [], status: "admin_hangup" },
+    needs: [], status: "admin_hangup", meter: { profitFloorPct: null } },
   // THE WRAP-UP, ITS OWN TEST (owner 08-07). The chatty scene used to live under the 4 minute limit,
   // which is our own safety net and a different thing entirely. What this one proves is Charlie's
   // own manners: once he has been TALKING for `charlieWrapUpSeconds` he asks once more and closes.
   wrapup_never_answered: { name: "Wrapup: they never answered",
     sub: "Staff rambled and would not give us an answer, so Charlie wrapped up and ended the check.",
     info: "This test proves that once Charlie has been talking for the time set in Admin, he asks the question one more time, takes whatever he gets, and ends the check himself.",
-    needs: ["handed_to_charlie", "question_recorded", "warmed_up_in_time", "wrapped_up", "charlie_ended_the_check"], status: "no_straight_answer" },
+    needs: ["handed_to_charlie", "question_recorded", "warmed_up_in_time", "wrapped_up", "charlie_ended_the_check"], status: "no_straight_answer",
+    // The rambler burns the clock by design; what this card guards is Charlie CLOSING. His meter
+    // cap here is the Admin wrap-up number's territory, so only the floor is off.
+    meter: { profitFloorPct: null } },
   // DELTA IS THE RECORDING THAT CARRIES OUR QUESTION. When it never plays, Charlie asks it himself —
   // the designed fallback, proven by accident on 08-06 and never once tested on purpose.
   delta_failed: { name: "Delta: failed",
@@ -146,7 +159,7 @@ export const TEST_CARDS: Record<string, TestCard> = {
   voicemail_detected: { name: "Voicemail: detected",
     sub: "A machine answered and our system ended the check.",
     info: "This test proves that we hung up the moment the voicemail was detected, Charlie was never on and never billed, and we displayed a Got their voicemail status.",
-    needs: [], status: "voicemail" },
+    needs: [], status: "voicemail", meter: { profitFloorPct: null } },
   language_spanish: { name: "Language: Spanish",
     sub: "Staff spoke Spanish and Charlie held the entire conversation in Spanish.",
     info: "This test proves that Charlie never switched to English mid check, and the answer Staff gave in Spanish set the status.",

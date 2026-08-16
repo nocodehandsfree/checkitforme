@@ -45,6 +45,7 @@ run "unit: security-checks" "$ENV $TSX scripts/test-securitychecks.ts"
 run "unit: bridge"     "$ENV $TSX scripts/test-bridge.ts"
 # The new engine's seven (wired 08-05, owner's OK): without these the green mark never exercises it.
 run "unit: behaved (the test cards + Charlie's rows)" "$ENV $TSX scripts/test-behaved.ts"
+run "unit: meter (the card's money-and-clock half)" "$ENV $TSX scripts/test-meter.ts"
 run "unit: call-events (the cost buckets sum)" "$ENV $TSX scripts/test-call-events.ts"
 run "unit: listen-nav (the ear)" "$ENV $TSX scripts/test-listen-nav.ts"
 run "unit: robot store words" "$ENV $TSX scripts/test-robot-store.ts"

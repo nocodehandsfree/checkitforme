@@ -157,6 +157,7 @@ Live [dash](admin-cleanup-dash.md) · Users [users](admin-cleanup-users.md) · R
 ## Other active
 | Task | System | Status |
 |---|---|---|
+| [Self-improving Charlie — the six-stage build](self-improving-charlie-build.md) | voice-calls | active — owner's go 08-16; stage 1 built (PR #121, merge on his word); spec: `docs/specs/self-improving-charlie/README.md` |
 | [Admin: double-tap zoom regression — fix morning 08-02, after logo lands, BEFORE the Echo test day](admin-double-tap-zoom-regression.md) | admin | active — owner-timed |
 | [Pull 424 from staging ADMIN_PHONES before the real-card walk](staging-424-admin-phones.md) | data | active |
 | [Staging store-list overwrite mystery](staging-storelist-overwrite.md) | data | active |
