@@ -186,6 +186,16 @@ plumbing: what we buffer, when Charlie opens, what gets recorded.
 partners, a real dial, the real record. The only rung where "proven" may be said, inside the 200 a
 day. A real store is never dialed.
 
+**What rung one costs (owner asked 08-16).** No new bill to start. The talking is Anthropic
+compute and runs inside the $200 a month Max account the owner already pays for, the same way his
+agent chats run today; one generation can play out a whole pretend call, both voices, so thousands
+fit in a day. That account also runs his other chats and has its own weekly limits, so simulation
+gets a daily cap on pretend calls (proposed: 1,000) and never starves his own work. The data is
+not bought: free public collections of real recorded calls and transcripts exist on the internet
+and we start there. If simulation ever outgrows the plan, the overflow moves to pay per use, a
+fraction of a cent per pretend call on the key staging already holds (`BRAIN_API_KEY`), and the
+numbers come back to the owner before that switch is flipped.
+
 **The genes of a call.** Real calls that already exist on the internet get broken down into genes,
 the behaviors that make calls what they are: Staff pissed off, the caller pissed off, a caller who
 talks about family and never gets to the point, calls that keep getting hung up on, a sixteen year
@@ -228,7 +238,7 @@ the loop the moment it ends:
 A real check whose shape no scene covers also becomes a drafted shape for the simulation bank, so
 the scene list grows from what actually happens on phones, not from imagination.
 
-## The money brake (owner, 08-16: $20 a day adds up)
+## The money brake (owner APPROVED 08-16: "the money brake numbers are fine")
 
 The 200 is a ceiling, not a right. The machine EARNS its dials:
 - It starts at 20 real dials a day and steps up (50, then 100, then 200, you bless the ladder)
@@ -293,11 +303,11 @@ new pages.
 7. The try budget: how many changes a scene gets before it is parked (proposed: three).
 8. How many clean stage-three runs buy stage four of the trust ladder.
 9. Whether the words Echo listens with is part of this build or its own box.
-10. The simulation budget: how many rung-one runs a day, and how many simulated scenes may take
-    real dials out of the 200.
+10. The daily cap on pretend calls (proposed: 1,000; no new dollars, it rides the Max account),
+    and how many simulated scenes may take real dials out of the 200.
 11. Confirm the widened ladder: the machine may build code fixes on staging from its own
     diagnosis, with words, voice, money and every promote still yours.
-12. The money brake's ladder (proposed: 20, 50, 100, 200) and the stop rule (a day with no kept
-    win and no new find stops the machine until you answer its questions).
-13. The first benchmarks, one per major kind of call, once the floors are computed (the clear yes
-    near 17 seconds is the first candidate).
+12. APPROVED 08-16: the money brake's ladder (20, 50, 100, 200) and the stop rule (a day with no
+    kept win and no new find stops the machine until the owner answers its questions).
+13. DEFERRED 08-16, owner's call: the first benchmarks wait until the floors are computed as part
+    of the build (the clear yes near 17 seconds is the first candidate).
