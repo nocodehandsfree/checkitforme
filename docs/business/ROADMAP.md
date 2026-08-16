@@ -71,8 +71,11 @@ built clean pipes and it stayed the standard), Instacart (humans walking aisles 
 inventory API on the customer's dime until stores paid to integrate), OpenTable (aggregate the
 diners, then hand restaurants the terminal — own demand and supply must come to you).
 
-**The lines that never move.** Charlie tells the truth about being AI whenever asked (wording is the
-owner's, pending). Business numbers only, proven public before the first ring. Customer facts never
+**The lines that never move.** Charlie tells the truth about being AI whenever a store asks, and one
+day says it up front unasked, the day the owner calls the culture ready, maybe launch day, maybe
+later, which makes us compliant in every US state the moment we flip it. NOT BUILT YET: neither
+behavior is in Charlie's directions today; it goes in with the owner's own wording plus a walk scene
+the day he hands the words over. Business numbers only, proven public before the first ring. Customer facts never
 leave their box. Experiments never ride the goal of a paid call. Production ships only on the
 owner's go.
 
