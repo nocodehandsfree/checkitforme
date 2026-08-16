@@ -7,7 +7,7 @@
 // check under the 67% floor fails the same way on the cards the owner has not exempted, the
 // 08-16 shape (43 seconds of meter, 9 waiting, every behavior row green) reads FAIL, and an old
 // check that never measured a number is not graded on it — nothing is invented.
-import { meterVerdict, METER_CAP_SEC, PROFIT_FLOOR_PCT } from "../src/calls/meter";
+import { meterVerdict, METER_GOAL_SEC, METER_YELLOW_MAX_SEC, PROFIT_FLOOR_PCT } from "../src/calls/meter";
 import { TEST_CARDS } from "../src/calls/behaved";
 
 let pass = 0, fail = 0;
@@ -20,8 +20,9 @@ const head = (s: string) => console.log(`\n${s}`);
 const clearYes = TEST_CARDS.answer_clear_yes;
 const runaround = TEST_CARDS.hungup_limit;
 
-head("The owner's two numbers are the locked ones");
-ok("the meter cap is 23", METER_CAP_SEC === 23, METER_CAP_SEC);
+head("The owner's numbers are the locked ones (his color rule 08-16: green to 23, yellow to 30, red at 31)");
+ok("the meter goal is 23", METER_GOAL_SEC === 23, METER_GOAL_SEC);
+ok("the yellow band ends at 30", METER_YELLOW_MAX_SEC === 30, METER_YELLOW_MAX_SEC);
 ok("the profit floor is 67", PROFIT_FLOOR_PCT === 67, PROFIT_FLOOR_PCT);
 
 head("A thrifty check passes both halves");
@@ -32,11 +33,18 @@ head("A thrifty check passes both halves");
   ok("the To pass line names both numbers", v.toPass.length === 2, v.toPass);
 }
 
-head("Charlie past 23 on the meter fails the test by itself");
+head("24 to 30 is yellow, STILL ACCEPTABLE (owner's color rule): it passes and says it is over the goal");
 {
-  const v = meterVerdict(clearYes, { meterSec: 24, speakingSec: 20, listeningSec: 4, profitPct: 70 })!;
+  const v = meterVerdict(clearYes, { meterSec: 27, speakingSec: 20, listeningSec: 4, profitPct: 70 })!;
+  ok("passes inside the yellow band", v.pass === true, v);
+  ok("the row says over the goal, inside the yellow", /over the 23s goal.*yellow 30s/.test(v.rows[0]?.value || ""), v.rows);
+}
+
+head("31 or higher is red: the test fails by itself");
+{
+  const v = meterVerdict(clearYes, { meterSec: 31, speakingSec: 24, listeningSec: 4, profitPct: 70 })!;
   ok("fails", v.pass === false);
-  ok("the sentence names his seconds and the goal", /24 seconds.*23 second goal/.test(v.fails[0] || ""), v.fails);
+  ok("the sentence names the yellow line and the goal", /31 seconds.*yellow line of 30.*23 second goal/.test(v.fails[0] || ""), v.fails);
 }
 
 head("Profit under the 67% floor fails the test by itself");
@@ -61,8 +69,8 @@ head("A clock-burning card is exempt from the floor, never from the meter cap");
   const v = meterVerdict(runaround, { meterSec: 8, profitPct: -40 })!;
   ok("deep negative profit does not fail it", v.pass === true, v);
   ok("profit is shown without a floor", v.rows.some((r) => r.label === "Gross profit" && r.pass === null), v.rows);
-  const over = meterVerdict(runaround, { meterSec: 30, profitPct: -40 })!;
-  ok("the meter cap still bites on it", over.pass === false, over);
+  const over = meterVerdict(runaround, { meterSec: 31, profitPct: -40 })!;
+  ok("the red line still bites on it at 31", over.pass === false, over);
 }
 
 head("The exempt set is exactly the spec's proposed list");

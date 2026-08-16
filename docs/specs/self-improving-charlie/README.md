@@ -36,8 +36,10 @@ whole hole: the numbers are on the page and the grade ignores them.
 four numbers off the record the check already keeps, and any one of them out of bounds makes the
 whole test a FAIL, in words that say why:
 
-1. **Charlie's talk seconds** — over 23 is a fail. Measured off the same frames the cost card
-   already uses for his Speaking line.
+1. **Charlie's meter seconds** — the owner's color rule, his exact words 08-16 evening, matching
+   the tile the sheet has carried since 08-04: 23 or less is green · 24 to 30 is yellow, STILL
+   ACCEPTABLE, so it passes and says it is over the goal · 31 or higher is red and the test
+   fails.
 2. **Profit against the 67% floor** — under the floor is a fail. The same arithmetic the profit
    tile already does.
 3. **Dead air before his turns** — the quiet between Staff finishing a line and Charlie starting

@@ -14,11 +14,16 @@
 // act on ("part one of your proposal must be the grade learning to SEE waste").
 import type { TestCard } from "./behaved";
 
-/** The owner's two numbers (CLAUDE.md lexicon: 67% gross profit margin is the floor · Charlie
- *  speaks 23 seconds or less on a check; his 08-16 wording is "23 seconds total meter time", so
- *  the cap binds his whole meter, not only the speaking slice). */
-export const METER_CAP_SEC = 23;
+/** The owner's numbers (CLAUDE.md lexicon: 67% gross profit margin is the floor · Charlie speaks
+ *  23 seconds or less; his 08-16 wording is "23 seconds total meter time", so the cap binds his
+ *  whole meter, not only the speaking slice). THE COLOR RULE, his exact words 08-16 evening,
+ *  matching the tile the sheet has carried since 08-04: 23 or less is green · 24 to 30 is yellow,
+ *  STILL ACCEPTABLE, so it passes · 31 or higher is red and the test fails. */
+export const METER_GOAL_SEC = 23;
+export const METER_YELLOW_MAX_SEC = 30;
 export const PROFIT_FLOOR_PCT = 67;
+/** Kept for the one release that imported the old name. The goal is the same 23. */
+export const METER_CAP_SEC = METER_GOAL_SEC;
 
 // A card's overrides live ON the card (`meter` in behaved.ts TestCard, beside `needs` and
 // `status`): `null` switches a number off for that card — a scene built to burn the clock (the
@@ -59,17 +64,28 @@ export interface MeterInput {
 export function meterVerdict(card: TestCard | null | undefined, m: MeterInput): MeterVerdict | null {
   if (!card) return null;
   const b = card.meter ?? {};
-  const cap = b.meterCapSec === undefined ? METER_CAP_SEC : b.meterCapSec;
+  const cap = b.meterCapSec === undefined ? METER_GOAL_SEC : b.meterCapSec;
+  // The yellow band belongs to the OWNER'S pair (23/30). A card that sets its own cap sets a hard
+  // line with no band; a card that sets null switches the number off. No card sets one today.
+  const redFrom = b.meterCapSec === undefined ? METER_YELLOW_MAX_SEC + 1 : (cap == null ? null : cap + 1);
   const floor = b.profitFloorPct === undefined ? PROFIT_FLOOR_PCT : b.profitFloorPct;
   const rows: MeterVerdict["rows"] = [];
   const fails: string[] = [];
   const toPass: string[] = [];
 
-  if (cap != null) toPass.push(`Charlie on the meter ${cap} seconds or less`);
+  if (cap != null && redFrom != null) toPass.push(cap === METER_GOAL_SEC
+    ? `Charlie on the meter ${cap} seconds or less (yellow to ${redFrom - 1})`
+    : `Charlie on the meter ${cap} seconds or less`);
   if (m.meterSec != null) {
-    const pass = cap == null ? null : m.meterSec <= cap;
-    rows.push({ label: "Charlie on the meter", value: cap == null ? `${m.meterSec}s` : `${m.meterSec}s against ${cap}s`, pass });
-    if (pass === false) fails.push(`Charlie ran ${m.meterSec} seconds on the meter against the ${cap} second goal.`);
+    const pass = cap == null || redFrom == null ? null : m.meterSec < redFrom;
+    const inYellow = pass === true && cap != null && m.meterSec > cap;
+    rows.push({ label: "Charlie on the meter",
+      value: cap == null ? `${m.meterSec}s`
+        : inYellow ? `${m.meterSec}s, over the ${cap}s goal but inside your yellow ${redFrom! - 1}s`
+        : `${m.meterSec}s against ${cap}s`, pass });
+    if (pass === false) fails.push(cap === METER_GOAL_SEC
+      ? `Charlie ran ${m.meterSec} seconds on the meter, past your yellow line of ${redFrom! - 1}, against the ${cap} second goal.`
+      : `Charlie ran ${m.meterSec} seconds on the meter against this card's ${cap} second line.`);
     // The waiting slice is the piece of his meter where nobody said anything — the 9 silent
     // seconds of 08-16. Shown whenever it was measured; its own bound is the owner's open
     // decision (spec decision 2), so it is not graded alone yet. It already drags the two graded
