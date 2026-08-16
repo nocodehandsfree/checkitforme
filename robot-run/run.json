@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-15T23:35:34.914Z",
+  "at": "2026-08-16T02:44:22.013Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
@@ -28,7 +28,7 @@
           "n": 4,
           "name": "Staff's greeting is the first line, on the live view",
           "pass": true,
-          "detail": "live view showed: \"Larry Vásquez. How can I help you?\"  ·  robot said: \"Larry Vasquez, how can I help you?\""
+          "detail": "live view showed: \"Larry Vasquez. How can I help you?\"  ·  robot said: \"Larry Vasquez, how can I help you?\""
         },
         {
           "n": 5,
@@ -46,25 +46,25 @@
           "n": 4.1,
           "name": "Staff's greeting is the first line of the written conversation",
           "pass": true,
-          "detail": "first written line: \"Clerk: Larry Vásquez. How can I help you?\""
+          "detail": "first written line: \"Clerk: Larry Vasquez. How can I help you?\""
         },
         {
           "n": 5.1,
           "name": "the written greeting is its own line",
           "pass": true,
-          "detail": "written: \"Larry Vásquez. How can I help you?\"  ·  said: \"Larry Vasquez, how can I help you?\""
+          "detail": "written: \"Larry Vasquez. How can I help you?\"  ·  said: \"Larry Vasquez, how can I help you?\""
         },
         {
           "n": 6,
           "name": "the words match what the robot actually said, word for word",
           "pass": false,
-          "detail": "\"Uh, Pokémon? Uh, let me check. I just got in, so I have to, uh, I'll have to go up to the front and see. Okay, let me just put you on hold.\" → missing"
+          "detail": "\"Uh, Pokémon? Uh, let me check. I just got in, so I have to, uh, I'll have to go up to the front and see. Okay, let me just put you on hold.\" → missing | \"Okay, thank you for holding. Yeah, I did not see any, unfortunately.\" → missing"
         },
         {
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
           "pass": true,
-          "detail": "0 bounce(s) over 95 looks · header held at 49px"
+          "detail": "0 bounce(s) over 92 looks · header held at 49px"
         },
         {
           "n": 8,
@@ -88,13 +88,13 @@
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 93 seconds and the line closed at 93 — 0 seconds of nothing"
+          "detail": "the answer was in at 91 seconds and the line closed at 91 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Sat, Aug 15 · 11:33 PM In stock MVPs has Pokémon.Go grab it before it's gone. Check another store Calling4 steps"
+          "detail": " Result Sun, Aug 16 · 2:42 AM In stock MVPs has Pokémon.Go grab it before it's gone. Check another store Calling4 steps "
         },
         {
           "n": 9.1,
@@ -112,7 +112,7 @@
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "CHARGED · the screen claims no free check · the check cost 13.3¢"
+          "detail": "CHARGED · the screen claims no free check · the check cost 12.7¢"
         }
       ],
       "shots": [
@@ -121,10 +121,10 @@
         "./robot-run/05-live.png",
         "./robot-run/05-result.png"
       ],
-      "startedAt": 1786836792002,
-      "checkId": 367,
-      "cost": 0.133436,
-      "costReadable": "13.3¢",
+      "startedAt": 1786848118910,
+      "checkId": 368,
+      "cost": 0.127495,
+      "costReadable": "12.7¢",
       "robotCost": null,
       "charged": true,
       "statusKey": "not_in_stock"
