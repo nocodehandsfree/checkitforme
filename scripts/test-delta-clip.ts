@@ -2449,10 +2449,13 @@ console.log("\n▶ FIX 1 (owner box 08-16): Charlie joins as Delta ends, and an 
   handleTwilioBridge(tw as never, room, () => { /* none */ });
   tw.say({ event: "start", start: { streamSid: "MZ_lo", customParameters: { room } } });
   await sleep(350);
-  // Echo writes their hello BEFORE anybody commits, the way a real check's transcriber does.
-  echoHeardStaff(room, "Larry Vasquez. How can I help you?", Date.now());
   for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
   for (let i = 0; i < PERSON_PAUSE; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
+  // CHECK 370'S RACE: Echo's writing of the hello lands AFTER the question has committed. It must
+  // still reach him as the written hello, and NEVER as a turn he owes — on 370 it was handed as one
+  // and he asked the set question before Staff had said a word.
+  await sleep(80);
+  echoHeardStaff(room, "Larry Vasquez. How can I help you?", Date.now() - 4000); // spoken at the greeting, written late
   // The clip is 4 seconds and the lead is 800ms, so for the first ~3 seconds of his own question
   // there is NO billed session at all — that is fix 1, the meter no longer runs under the clip.
   await sleep(900);
@@ -2467,7 +2470,7 @@ console.log("\n▶ FIX 1 (owner box 08-16): Charlie joins as Delta ends, and an 
   ok(f.raw.some((m) => m.includes("user_message") && m.includes("we have some in stock")),
     "…and the answer Staff gave DURING the clip is handed to him as their turn");
   ok(!f.raw.some((m) => m.includes("user_message") && m.includes("Larry Vasquez")),
-    "…while the hello the recording already answered never rides that hand-over");
+    "…while the late-written hello never rides any hand-over as a turn (check 370's exact fault)");
   ok(STT_CALLS === 0, "their hello was handed from Echo's written words: no second transcription was bought");
   echoListening(room, false);
   restore(); tw.close(); f.close();

@@ -564,6 +564,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  with it the greeting on the customer's page, Staff's name, and the voicemail net's one look at
    *  the store's first words. Delivered in the metadata handler, ahead of everything else. */
   let helloLineWaiting: { text: string } | null = null;
+  /** The clip committed before Echo's writing of the hello landed (check 370): the first written
+   *  line to arrive may be the hello, and `staffSaid` finishes the hand-over then. Only a line
+   *  SPOKEN before the commit qualifies — the greeting always is, because the commit waits for it
+   *  to end; a first line spoken after the commit is conversation, never the hello. */
+  let wantHelloFromEcho = false;
+  let clipCommittedAtMs = 0;
   /** Running while held audio is being paced out. Live frames queue behind it so nothing overtakes. */
   let handoverTimer: NodeJS.Timeout | null = null;
   /** Our question, kept off the live view until the store's hello can be shown above it. */
@@ -1015,6 +1021,14 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       markAsHis(theirFirstLine);
       deliverHelloLine();
     }
+    // THE HELLO'S WRITING CAN LOSE THE RACE TO THIS MOMENT (check 370). The shorter opening wait on
+    // a known-direct store commits the question ~1.5s after the greeting ends, and Echo's writing of
+    // that greeting lands about a second behind the sound — on 370 it landed just after, so the
+    // branch above never ran, the hello went unmarked, and the first-join hand-over gave it to
+    // Charlie as a turn he owed: he asked the set question at 12.7s before Staff had said a word.
+    // On an Echo check the hello is NEVER transcribed a second time; instead `staffSaid` finishes
+    // this hand-over the moment the first line lands, whichever side of this instant that is.
+    else if (echoRooms.has(room)) { wantHelloFromEcho = true; clipCommittedAtMs = Date.now(); }
     else void transcribeTheirHello(helloAudio, ctx?.apiKey || config.voice.apiKey);
     // THE QUESTION WE ACTUALLY ASKED IS A LINE OF THE CONVERSATION. It is played from a recording
     // rather than generated, so nothing in the provider's transcript knows it happened — which left
@@ -1316,7 +1330,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    * twice on the line.
    */
   function tellCharlieWhatHeMissed(): void {
-    handTheirTurn(missedWhileClosed.splice(0, missedWhileClosed.length), "said while he was off");
+    // THE GREETING IS NEVER MISSED WORDS (check 370). Delta answers the store's hello by design
+    // (owner 08-05), so whatever race put it in the pocket, it may not reach him as a turn: handed
+    // as one at 10.7s on 370, he answered it with the set question before Staff had said a word.
+    const said = missedWhileClosed.splice(0, missedWhileClosed.length)
+      .filter((s) => !theirFirstLine || keyOf(s) !== keyOf(theirFirstLine));
+    handTheirTurn(said, "said while he was off");
   }
 
   /** THE ONE DOOR THAT FEEDS HIS SESSION STAFF'S WORDS AS THEIR TURN, and the moment "he has heard
@@ -1530,7 +1549,20 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // person who picked up is speaking, and the recorded question is chosen off it a moment later.
     // First only: everything after it is an answer to us, and a store that greets us in Spanish and
     // then says one English word has still answered the phone in Spanish.
-    if (fresh && theirFirstLine == null) theirFirstLine = txt;
+    if (fresh && theirFirstLine == null) {
+      theirFirstLine = txt;
+      // The other side of check 370's race: the question committed before this line landed, so the
+      // hello hand-over waited here. Marked his FIRST, so no pocket or hand-over path that runs
+      // after this line can ever give the greeting to Charlie as a turn (owner 08-05).
+      if (wantHelloFromEcho && fromEcho) {
+        wantHelloFromEcho = false;   // one look: only the first line can be the hello
+        if (spokenAtEpochMs != null && clipCommittedAtMs > 0 && spokenAtEpochMs < clipCommittedAtMs) {
+          markAsHis(txt);
+          helloLineWaiting = { text: txt };
+          deliverHelloLine();
+        }
+      }
+    }
     // AND THEIR LATEST LINE RESTARTS HIS THINKING TIME (owner 08-08, check 360). The quiet straight
     // after Staff speak is Charlie thinking, on their LAST turn exactly as much as on their first,
     // and his goodbye is always the last thing he says. Only a line he has not answered yet counts,
