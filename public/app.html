@@ -2497,10 +2497,13 @@ function checkV2From(d,o){
   const wordFor=k=>{const s=k?statusFor(k):null;return (s&&s.label)||(k?String(k).replace(/_/g,' '):'');};
   const gr=(v2.test&&v2.test.verdict)||null;
   // THE METER HALF (owner's go 08-16): the server grades the same numbers the tiles already show,
-  // the meter against 23 and profit against the 67% floor, and a number out of bounds fails the
-  // TEST, the test-four lesson (the card said PASS over dead air). Strings ride from the server
-  // (src/calls/meter.ts); nothing is worded or priced here. The pixels are the sheet's own: the
-  // verdict pill and the red line under it, unchanged, now reading both halves.
+  // the meter against 23 (his colors: green to 23, yellow to 30, red at 31) and profit against the
+  // 67% floor, and a number out of bounds fails the TEST, the test-four lesson (the card said PASS
+  // over dead air). ONLY THE PILL SPEAKS FOR IT (owner 08-16 late, off check 370's screen): the
+  // fail sentences shipped as a red text block above the tiles and he sent it back, "everything
+  // that is said in the text is displayed on the dashboard". The tiles ARE the display; the pill
+  // flips to Test failed; no sentence is printed. The sentences stay on the record (v2.test.meter)
+  // for the machine and the reports.
   const mt=(v2.test&&v2.test.meter)||null;
   const verdict=gr?{
     pass:!!gr.pass&&!(mt&&mt.pass===false), missing:gr.missing||[],
@@ -2508,7 +2511,6 @@ function checkV2From(d,o){
     statusLine:gr.wantStatus?(gr.statusOk?('The check came back '+wordFor(gr.wantStatus)+'.')
       :('The check should come back '+wordFor(gr.wantStatus)+' and came back '+(gr.gotStatus?wordFor(gr.gotStatus):'nothing')+'.')):'',
     statusOk:gr.statusOk,
-    meterLine:(mt&&mt.fails&&mt.fails.length)?mt.fails.join(' '):'',
   }:null;
   const needList=[...need].map(labelOf).concat(gr&&gr.wantStatus?['the check comes back '+wordFor(gr.wantStatus)]:[])
     .concat((mt&&mt.toPass)||[]);
@@ -2650,7 +2652,10 @@ function checkV2Html(d){
       ${pill(d.passed,'passed','color:var(--green);background:rgba(74,222,128,.13)')}
       ${pill(d.failed,'failed','color:var(--red);background:rgba(239,68,68,.13)')}
     </div>
-    ${d.verdict&&!d.verdict.pass?`<div class="meta" style="margin:-6px 0 14px;color:var(--red);font-size:12.5px;line-height:1.5">${esch([d.verdict.missing.length?('Still to hold: '+d.verdict.missing.join(', ')+'.'):'',d.verdict.statusOk===false?d.verdict.statusLine:'',d.verdict.meterLine||''].filter(Boolean).join(' '))}</div>`:''}`;
+    ${(()=>{const t=d.verdict&&!d.verdict.pass?[d.verdict.missing.length?('Still to hold: '+d.verdict.missing.join(', ')+'.'):'',d.verdict.statusOk===false?d.verdict.statusLine:''].filter(Boolean).join(' '):'';
+      // A meter-only fail has no sentence here on purpose (owner 08-16 late): the pill and the
+      // tiles say it, so an empty strip must not draw.
+      return t?`<div class="meta" style="margin:-6px 0 14px;color:var(--red);font-size:12.5px;line-height:1.5">${esch(t)}</div>`:'';})()}`;
   const stats=`<div class="stats" style="grid-template-columns:1fr 1fr;margin-bottom:14px">
       <div class="stat"><div class="n" style="color:#fff">${d.stats.cost}</div><div class="l">Total cost</div></div>
       <div class="stat"><div class="n" style="color:#fff">${d.stats.time}</div><div class="l">Total time</div></div>
