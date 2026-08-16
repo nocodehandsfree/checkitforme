@@ -1,7 +1,80 @@
-# Check — Roadmap & Backlog
+# Check — Vision & Roadmap
 
-Living doc. The vision: **build the largest database of retailers selling TCG/collectibles at MSRP,
-verified by real phone calls — that data IS the moat.** Everything below compounds on it.
+## THE VISION (owner, locked in conversation with the PM, 2026-08-16)
+
+**The goalpost.** A person opens checkitforme.com, names ANY business, and says in plain words what
+they want done: "call Delta, move both my 11:30 tickets to the 8:10 flight, add a bag." We already
+hold their account, their card, their authority ("approve whatever it costs") and every fact the task
+needs. They press one button. Charlie calls, walks the menu, sits the hold for cents, and comes back
+done. People are not buying phone calls; they are extending their life with an agent. People will
+want to get OUT to stores more, not less — the agent does the recon so their time out is the good part.
+
+**The wedge.** Collectible checks are the beachhead: high-urgency, phone-only information, no API
+anywhere, customers pay per answer. The old vision line stands underneath as the wedge's moat: the
+largest phone-verified database of retailers selling collectibles at MSRP. Consumers come first;
+stores respond second — the big box chains with money move first, and it trickles down. A two-sided
+marketplace built one side at a time.
+
+**The phases, walking back from the goalpost.**
+1. NOW — one call, excellent and cheap: the twenty-test walk on the robot store, the mapping menu
+   walk next, 67% gross margin floor, Charlie talks 23 seconds or less, one memory per check owned
+   by Echo.
+2. The self-improving engine: the graph (dial a scene · read the record · grade against the cards AND
+   the two money numbers · name the biggest waste · change ONE thing · re-dial · keep or revert). The
+   robot store simulator grows personas — sleepy grumpy Staff, the talker, the upset customer, the
+   kid who can't speak — thousands of simulations a day with no technology partner in the loop,
+   benchmark-gated, auto-promoted when the whole exam stays green. Every real failed call becomes a
+   permanent scene: a mistake happens once, ever.
+3. Any business by phone number: a customer types a number, reverse lookup pulls name, site and
+   hours, and today's by-hand homework runs automatically. HARD GUARD: the number must resolve to a
+   public BUSINESS listing before Charlie ever dials — never a way to sic a robot on a private person.
+4. Actions, not just answers (the Delta phase): the one memory grows into the authority envelope,
+   what Charlie may spend, decide and say for this customer. Everything collected up front; if a
+   business asks for a fact we do not hold, Charlie says "hold on one second, let me get that," we
+   text or push the customer, and a customer who never answers gets the hang-up and still pays (that
+   outcome gets its OWN status and owner-written words). Track two underneath: our own brain runs the
+   conversation at 1 to 2 seconds a turn, the voice vendor only speaks.
+
+**The knowledge engine (learned in real time, on customers' dime).**
+- Three boxes, walled: the check's memory, the business's, the customer's. Business knowledge serves
+  every customer automatically; a customer's own facts serve only them.
+- Facts promote by agreement, never by a person: one store's box → the chain's box when enough stores
+  agree; one contradiction demotes only that store. Ace Hardware's 7,000 stores sort themselves.
+- The cheapest call is the one we never make: answers shared across customers while fresh, freshness
+  learned per store per product. Cost per check becomes cost per FACT, paid once and sold many times.
+  Restock patterns learned so well they will wonder if we put trackers on their trucks.
+- Cliffs on the map, not just roads: failures are first-class facts (hangs up at lunch, punishes
+  early presses, voicemail after six), so no lesson is paid for twice.
+- Every check is a clock: real hold lengths per business per hour; work schedules itself into cheap
+  windows and customers get warned before expensive ones.
+- Paid calls carry the experiments: a stale fact re-proves itself on the next paying call, one
+  experiment per call, only on the path to the goal, never on the goal itself.
+
+**The models this walks into.**
+- The marketplace (reverse advertising): verified demand meets verified supply, we take the cut. A
+  store never buys an ad — HAVING the thing is the ad. Asymmetric curve: each fact costs cents once,
+  each match is worth dollars many times, and only our side keeps the data.
+- The truth feed: live street-level knowledge of what is actually on shelves and when it restocks,
+  a data product for the people who decide where product ships.
+- The playbook library: every efficient call becomes a saved program (rebook at this airline, renew
+  at this pharmacy). TiVo recorded television; we learn the skip button for every business interaction.
+- The new phonebook: Charlie's volume forces businesses to answer with their own agents; our knock
+  becomes the machine-to-machine handshake, and we write the phonebook of which businesses have an
+  agent. Then any store gets a free page — post your stock and the calls stop. The phone bootstraps
+  the network; the network retires the phone.
+
+**The threat, and the corner.** Real-time shelf tech (walk-out stores, NFC inventory) will erase the
+site-vs-shelf gap for the giants. The corner we hold either way: the long tail that can never afford
+those systems — hobby shops, comics, crafts, single-store retail — where a phone call stays the only
+API for a decade. Case studies to steal from: Plaid (screen-scraped the ugly bootstrap until banks
+built clean pipes and it stayed the standard), Instacart (humans walking aisles AS the missing
+inventory API on the customer's dime until stores paid to integrate), OpenTable (aggregate the
+diners, then hand restaurants the terminal — own demand and supply must come to you).
+
+**The lines that never move.** Charlie tells the truth about being AI whenever asked (wording is the
+owner's, pending). Business numbers only, proven public before the first ring. Customer facts never
+leave their box. Experiments never ride the goal of a paid call. Production ships only on the
+owner's go.
 
 ---
 
@@ -203,7 +276,7 @@ flow. (Owner has a prototype to share.) This is what makes the geographic rollou
 ---
 
 ## 5. Pre-Public Launch — must-resolve
-**Legal/compliance** for AI voice calls (cloned voice, "never reveal you're an AI", calling CA
+**Legal/compliance** for AI voice calls (cloned voice, truthful-when-asked AI identity per the owner's 08-16 ruling, calling CA
 businesses): TCPA / FCC AI-robocall rules + two-party-consent (we store transcripts). Get clarity
 before opening the doors. Not a blocker to building — a blocker to *public marketing*.
 
