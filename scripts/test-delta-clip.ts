@@ -2409,6 +2409,14 @@ console.log("\n▶ THE RECONNECT FEED: pieces hand at the ear's voice stop, the 
   const handed = f.raw.filter((m) => m.includes("user_message") && m.includes("did not see any"));
   ok(handed.length === 1, "the pieces are handed as their turn when the EAR hears the voice stop");
   ok(!!handed[0] && handed[0].includes("Thank you for holding"), "…every piece, oldest first, in the one turn");
+  // CHECK 369'S FALSE HOLD: the quiet right after the handed turn is Charlie thinking. The announce
+  // from before the wait ("let me go check") is SPENT when that wait ends, so 3.6 seconds of quiet
+  // here must never go on the record as a second wait, even with the drop switch at its new 3.
+  const holdsBefore = evs().filter((e) => e.kind === "hold_start").length;
+  quiet(tw, 180);
+  await sleep(200);
+  ok(evs().filter((e) => e.kind === "hold_start").length === holdsBefore,
+    "the quiet after the handed turn is him thinking, never a second announced wait");
   // The writer's one second quiet then delivers the joined line: recorded once, never re-handed.
   echoHeardStaff(room, "Okay. Thank you for holding. Yeah. I did not see any, unfortunately.", Date.now() - 3000);
   await sleep(150);

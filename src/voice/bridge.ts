@@ -1198,6 +1198,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (!onHold) return;
     const was = holdReason;
     onHold = false; holdReason = null; everCameBack = true;
+    // THE ANNOUNCEMENT IS SPENT (check 369). "Let me check, I'll put you on hold" announces ONE
+    // wait, and this is that wait ending. It used to stay armed until Staff's next WRITTEN line
+    // landed, and Echo's writing runs seconds behind — so with the drop switch at 3 seconds,
+    // Charlie's own thinking gap right after the comeback was read as a second announced wait: a
+    // false hold pair went on the record at 72s and the sheet failed the check on "Meter stopped".
+    waitAnnounced = false;
     // He was about to be closed and does not need to be: they are back and he is still on the line.
     if (closeWhenReady) { clearTimeout(closeWhenReady); closeWhenReady = null; }
     // Somebody came back, so the wait had an ending of its own and the cap has nothing to end.
@@ -1357,6 +1363,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (!un.length) return;
     reconnectFeed.handed.push(...un);
     handTheirTurn(un, why);
+    // …and their words re-decide what the next quiet means, exactly as a written line would: the
+    // handed turn IS their latest line, arriving early (check 369: the stale announce from before
+    // the hold outlived the comeback because the written line lands seconds behind the sound).
+    waitAnnounced = saidGoingToCheck(reconnectFeed.handed.join(" "));
+    // The joined line these pieces will become is HIS from this moment, whatever happens to the
+    // feed before it lands (check 369: a false hold closed the feed first, the joined line missed
+    // its absorb, rode the pocket, and the same no reached him twice). Marked AFTER the hand, or
+    // a single-piece turn would be filtered out as already his.
+    markAsHis(reconnectFeed.handed.join(" "));
   }
 
   /** Every Staff line already given to Charlie, by either pipe, so nothing is ever answered twice. */
