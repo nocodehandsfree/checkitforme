@@ -61,6 +61,16 @@ export interface HeardLine {
   forMs: number;
 }
 
+/** A final, confirmed piece of the turn still being built (owner task 08-15, the reconnect words).
+ *  Its words never change; the joined whole line follows when the talking stops and REPLACES the
+ *  pieces everywhere: only the joined line is ever written on the record. */
+export interface HeardPiece {
+  text: string;
+  /** Where this piece starts in the audio we have sent, in milliseconds. */
+  atAudioMs: number;
+  forMs: number;
+}
+
 export interface Transcriber {
   /** Feed one 20ms frame, exactly as the phone company sent it. Never throws. */
   send(payloadB64: string): void;
@@ -75,8 +85,12 @@ export interface Transcriber {
  *
  * @param onLine  every finished sentence, in order, as it lands.
  * @param log     the bridge's own log, so a check's diary reads in one place.
+ * @param onPiece each final, confirmed piece as it lands, BEFORE the turn is joined — so a
+ *                reconnected Charlie can be handed words the moment they exist instead of waiting
+ *                out the one second end-of-turn quiet (owner task 08-15). Optional: with it absent
+ *                everything behaves exactly as before.
  */
-export function openTranscriber(onLine: (line: HeardLine) => void, log: (s: string) => void): Transcriber {
+export function openTranscriber(onLine: (line: HeardLine) => void, log: (s: string) => void, onPiece?: (piece: HeardPiece) => void): Transcriber {
   const key = (process.env.DEEPGRAM_API_KEY || "").trim();
   const off: Transcriber = { send: () => {}, live: () => false, close: () => {} };
   if (!key) { log("transcriber: no DEEPGRAM_API_KEY, the check runs without one"); return off; }
@@ -122,6 +136,11 @@ export function openTranscriber(onLine: (line: HeardLine) => void, log: (s: stri
         if (!heldPieces.length) heldFromMs = Math.round((m.start ?? 0) * 1000);
         heldToMs = Math.round(((m.start ?? 0) + (m.duration ?? 0)) * 1000);
         heldPieces.push(text);
+        // The piece is final: its words never change, only the join is still pending. Handed out
+        // here so a starving reconnect need not wait for the end-of-turn quiet; the joined line
+        // still goes out through onLine exactly as always and is the only thing recorded.
+        try { onPiece?.({ text, atAudioMs: Math.round((m.start ?? 0) * 1000), forMs: Math.round((m.duration ?? 0) * 1000) }); }
+        catch { /* a piece may never break the turn */ }
       }
       // NOT on `speech_final`: that marker fires at the first BREATH, and firing on it is exactly
       // what split one sentence into two on check 354. Only the turn marker ends a turn. A turn that

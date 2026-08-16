@@ -11,11 +11,12 @@
 //   conversation. And that an agent who tries to talk over the question is silenced.
 import { EventEmitter } from "node:events";
 import { WebSocketServer, type WebSocket as WS } from "ws";
-import { setBridgeContext, handleTwilioBridge, weEndedCheck, nudgeSignoff, echoListening, echoHeardStaff } from "../src/voice/bridge";
+import { setBridgeContext, handleTwilioBridge, weEndedCheck, nudgeSignoff, echoListening, echoHeardStaff, echoHeardPiece } from "../src/voice/bridge";
 import { openReceipt, getReceipt, transcriptOf, closeReceipt, rollup, _reset } from "../src/calls/events";
 import { isCheckAlive } from "../src/calls/check-life";
 import { toMediaFrames } from "../src/calls/clip-cache";
 import { TUNING_DEFAULTS, type CallTuning } from "../src/calls/tuning";
+import { personWaitForStore } from "../src/calls/charlie-setup";
 
 /** Real ringback: the published North American pair, 440 + 480 Hz, μ-law encoded — the same thing
  *  the runtime measures with a Goertzel. Loudness alone would not prove anything here. */
@@ -112,12 +113,14 @@ class FakeTwilio extends EventEmitter {
 /** What the stubbed transcriber "hears" in the store's hello. "" = nothing worth writing down,
  *  which keeps every scene deterministic; the hello scene below sets a real greeting. */
 let STT_TEXT = "";
+let STT_CALLS = 0;
 function stubSignedUrl(f: Fake) {
   const real = globalThis.fetch;
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     // The hello transcriber must NEVER reach the real provider from a unit test.
     if (url.includes("/v1/speech-to-text")) {
+      STT_CALLS++;
       return new Response(JSON.stringify({ text: STT_TEXT }), { status: 200, headers: { "content-type": "application/json" } });
     }
     if (url.includes("/convai/conversation/get-signed-url")) {
@@ -2358,6 +2361,123 @@ console.log("\n▶ CHECK 366'S SHAPE: a stale hello never rides the reconnect, a
     "…and the record says so");
   echoListening(room, false);
   restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ THE RECONNECT FEED: pieces hand at the ear's voice stop, the joined line never re-hands them");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-pieces";
+  echoListening(room, true);
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, {
+    agentId: "agent_normal", midCallAgentId: "agent_joining",
+    dynamicVars: { opening_line: "do you have any Pokemon cards in stock?" },
+    connectOnHuman: true, holdMaxSeconds: 999, holdStrategy: "reopen",
+    openingClip: { audio: Buffer.alloc(400 * 8, 0x20), ms: 400, text: "do you have any Pokemon cards in stock?" },
+    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0, charlieThinkingMs: 0 },
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "" as never, () => { /* bare, the way the carrier connects */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_pc", customParameters: { room } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
+  await sleep(400);
+  echoHeardStaff(room, "Let me check. Let me just put you on hold.", Date.now());
+  await sleep(40);
+  quiet(tw, HOLD_QUIET_MS / 20 + 40);
+  await sleep(400);
+  const evs = () => getReceipt(room)?.events || [];
+  ok(evs().some((e) => e.kind === "charlie_leave"), "he is dropped for the announced wait");
+  const sockets = f.sockets.length;
+  // STAFF COME BACK and are still mid sentence while his new session opens.
+  for (let i = 0; i < 60; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
+  await sleep(400);
+  ok(f.sockets.length > sockets, "somebody spoke, so he is opened again");
+  // The writer's final pieces land while their voice is still going: held, not handed.
+  echoHeardPiece(room, "Okay. Thank you for holding.");
+  for (let i = 0; i < 20; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
+  echoHeardPiece(room, "Yeah. I did not see any, unfortunately.");
+  await sleep(40);
+  ok(!f.raw.some((m) => m.includes("user_message") && m.includes("did not see any")),
+    "while their voice is still going, nothing is handed: the turn is not his yet");
+  // …and NOW their voice stops. The EAR's own quiet is what opens his turn, never the writer's.
+  quiet(tw, 50);
+  await sleep(150);
+  const handed = f.raw.filter((m) => m.includes("user_message") && m.includes("did not see any"));
+  ok(handed.length === 1, "the pieces are handed as their turn when the EAR hears the voice stop");
+  ok(!!handed[0] && handed[0].includes("Thank you for holding"), "…every piece, oldest first, in the one turn");
+  // CHECK 369'S FALSE HOLD: the quiet right after the handed turn is Charlie thinking. The announce
+  // from before the wait ("let me go check") is SPENT when that wait ends, so 3.6 seconds of quiet
+  // here must never go on the record as a second wait, even with the drop switch at its new 3.
+  const holdsBefore = evs().filter((e) => e.kind === "hold_start").length;
+  quiet(tw, 180);
+  await sleep(200);
+  ok(evs().filter((e) => e.kind === "hold_start").length === holdsBefore,
+    "the quiet after the handed turn is him thinking, never a second announced wait");
+  // The writer's one second quiet then delivers the joined line: recorded once, never re-handed.
+  echoHeardStaff(room, "Okay. Thank you for holding. Yeah. I did not see any, unfortunately.", Date.now() - 3000);
+  await sleep(150);
+  ok(f.raw.filter((m) => m.includes("user_message") && m.includes("did not see any")).length === 1,
+    "the joined line replaces the pieces and is never re-handed");
+  ok((getReceipt(room)?.transcript || []).filter((l) => l.text.includes("did not see any")).length === 1,
+    "…and the record holds the one whole line, exactly as before");
+  echoListening(room, false);
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ FIX 1 (owner box 08-16): Charlie joins as Delta ends, and an answer DURING the clip is still caught");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  STT_CALLS = 0;
+  const room = "room-lateopen";
+  echoListening(room, true);
+  const clipMs = 4000;
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, {
+    agentId: "agent_normal", midCallAgentId: "agent_joining",
+    dynamicVars: { opening_line: "do you have any Pokemon cards in stock?" },
+    connectOnHuman: true, holdMaxSeconds: 999, holdStrategy: "reopen",
+    openingClip: { audio: Buffer.alloc(clipMs * 8, 0x20), ms: clipMs, text: "do you have any Pokemon cards in stock?" },
+    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0, charlieThinkingMs: 0 },
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, room, () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_lo", customParameters: { room } } });
+  await sleep(350);
+  // Echo writes their hello BEFORE anybody commits, the way a real check's transcriber does.
+  echoHeardStaff(room, "Larry Vasquez. How can I help you?", Date.now());
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
+  // The clip is 4 seconds and the lead is 800ms, so for the first ~3 seconds of his own question
+  // there is NO billed session at all — that is fix 1, the meter no longer runs under the clip.
+  await sleep(900);
+  if (f.sockets.length !== 0) { const { bridgeDebug } = await import("../src/voice/bridge"); console.log(bridgeDebug().slice(-14).join("\n")); }
+  ok(f.sockets.length === 0, "one second into his own question there is no billed session yet");
+  // Staff answer DURING the clip. Echo writes it down; the words are how it reaches him now.
+  for (let i = 0; i < 25; i++) { tw.media(frame(LOUD(160, i % 3))); await sleep(1); }
+  echoHeardStaff(room, "Yeah, we have some in stock.", Date.now());
+  await sleep(2600);   // past the prewarm (3.2s into the clip) and the session's opening
+  ok(f.sockets.length === 1, "the session opened on the prewarm, 800ms before the clip ends");
+  await sleep(1800);
+  ok(f.raw.some((m) => m.includes("user_message") && m.includes("we have some in stock")),
+    "…and the answer Staff gave DURING the clip is handed to him as their turn");
+  ok(!f.raw.some((m) => m.includes("user_message") && m.includes("Larry Vasquez")),
+    "…while the hello the recording already answered never rides that hand-over");
+  ok(STT_CALLS === 0, "their hello was handed from Echo's written words: no second transcription was bought");
+  echoListening(room, false);
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ FIX 4 (owner box 08-16): the opening wait shortens only on a store known to ring straight to a person");
+{
+  ok(personWaitForStore(2500, true) === 1500, "a known-direct store waits 1500ms of quiet, not 2500");
+  ok(personWaitForStore(2500, false) === 2500, "every other store keeps the owner's number exactly");
+  ok(personWaitForStore(1200, true) === 1200, "a saved number already lower than the shave is never raised");
 }
 
 console.log("\n▶ THE INVERSION (owner + PM, 08-08): a quiet nobody announced never drops him");

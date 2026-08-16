@@ -22,7 +22,7 @@
 // is not a phone line: the socket closing is what finished the sentence, so the bench could never
 // see the split. Real quiet before and after lets the transcriber decide where the turn ended the
 // same way it does on a call.
-import { openTranscriber, type HeardLine } from "../src/voice/transcriber";
+import { openTranscriber, type HeardLine, type HeardPiece } from "../src/voice/transcriber";
 
 const EL_KEY = process.env.ELEVENLABS_API_KEY || "";
 const DG_KEY = process.env.DEEPGRAM_API_KEY || "";
@@ -81,22 +81,58 @@ const PAD_MS = 2000;
  * the whole Spanish answer: we do not know which language a store answers in until they speak, so
  * we must never have to say in advance.
  */
-function transcribe(audio: Buffer): Promise<string[]> {
+/** What one bench run measures, all in milliseconds on the SEND clock (0 = the first frame sent).
+ *  `earStopMs` is when the EAR hears their voice stop: the sound, not the words — the same energy
+ *  test and the same 0.8s gap the bridge's own voice tracker uses (owner task 08-15: that stamp
+ *  decides when a reconnected Charlie's turn may open). */
+type BenchRun = { said: string[]; earStopMs: number; pieces: Array<{ text: string; atMs: number }>; joinedAtMs: number };
+
+/** μ-law mean-abs energy of one frame — the same arithmetic the bridge's ear runs. */
+function ulawEnergy(b64: string): number {
+  const buf = Buffer.from(b64, "base64");
+  if (!buf.length) return 0;
+  let sum = 0;
+  for (let i = 0; i < buf.length; i++) {
+    let u = ~buf[i] & 0xff;
+    const sign = u & 0x80, exp = (u >> 4) & 7, man = u & 0x0f;
+    let mag = ((man << 3) + 0x84) << exp; mag -= 0x84;
+    sum += sign ? mag : mag;
+  }
+  return sum / buf.length;
+}
+const VOICE_THRESH = 350;       // the bridge's own bar for "someone's talking"
+const VOICE_GAP_FRAMES = 40;    // …and its own 0.8s of quiet that ends a stretch of talking
+
+function transcribe(audio: Buffer): Promise<BenchRun> {
   return new Promise((resolve) => {
     const said: string[] = [];
-    const t = openTranscriber((l: HeardLine) => { said.push(l.text); }, () => { /* quiet bench */ });
+    const pieces: Array<{ text: string; atMs: number }> = [];
+    let joinedAtMs = -1;
+    let sendClockMs = -1;                 // ms since the first frame went down the wire
+    const t = openTranscriber(
+      (l: HeardLine) => { said.push(l.text); if (joinedAtMs < 0) joinedAtMs = sendClockMs; },
+      () => { /* quiet bench */ },
+      (p: HeardPiece) => { pieces.push({ text: p.text, atMs: sendClockMs }); });
     const frames: string[] = [];
     for (let i = 0; i < PAD_MS / FRAME_MS; i++) frames.push(QUIET);
     for (let i = 0; i < audio.length; i += FRAME_BYTES) frames.push(audio.subarray(i, i + FRAME_BYTES).toString("base64"));
     for (let i = 0; i < PAD_MS / FRAME_MS; i++) frames.push(QUIET);
+    // THE EAR'S OWN STOP STAMP, computed off the frames as they are sent: a voiced frame restarts
+    // the count, 40 quiet frames after voice = their voice stopped 0.8s ago, stamped at the LAST
+    // voiced frame, which is the moment the sound really ended.
+    let voicedEver = false, quietRun = 0, lastVoicedAtMs = -1, earStopMs = -1;
     let i = 0;
     const step = () => {
       if (i >= frames.length) {
         // Let the last turn come back, then let the socket go.
-        setTimeout(() => { t.close(); setTimeout(() => resolve(said), 2200); }, 1200);
+        setTimeout(() => { t.close(); setTimeout(() => resolve({ said, earStopMs, pieces, joinedAtMs }), 2200); }, 1200);
         return;
       }
-      t.send(frames[i++]);
+      const f = frames[i++];
+      sendClockMs = (i - 1) * FRAME_MS;
+      if (ulawEnergy(f) > VOICE_THRESH) { voicedEver = true; lastVoicedAtMs = sendClockMs; quietRun = 0; }
+      else if (voicedEver && earStopMs < 0 && ++quietRun >= VOICE_GAP_FRAMES) earStopMs = lastVoicedAtMs;
+      t.send(f);
       setTimeout(step, FRAME_MS);
     };
     // The socket needs a moment to come up before the first frame, exactly as on a check.
@@ -116,7 +152,8 @@ let pass = 0;
 for (const line of LINES) {
   const audio = await speak(line.text);
   const secs = (audio.length / 8000).toFixed(1);
-  const heard = await transcribe(audio);
+  const run = await transcribe(audio);
+  const heard = run.said;
   const got = heard.join(" ");
   const ok = bare(got) === bare(line.text);
   const oneLine = heard.length <= 1;
@@ -125,6 +162,19 @@ for (const line of LINES) {
   console.log(`  said : "${line.text}"  (${secs}s of audio)`);
   console.log(`  heard: "${got}"  (${heard.length} line${heard.length === 1 ? "" : "s"})`);
   console.log(`  ${ok ? "WORD FOR WORD" : line.oneLineOnly ? "the words are graded elsewhere" : "DIFFERENT WORDS"} · ${oneLine ? "one line" : "SPLIT INTO " + heard.length}`);
+  // THE SPLIT (owner task 08-15). All on the send clock, 0 = the first frame down the wire.
+  // The ear's stop stamp is the sound ending; the pieces are Deepgram's final text landing; the
+  // joined line is what today's engine waits for. earStop→lastPiece is the writing lag a
+  // reconnected Charlie could NOT avoid; lastPiece→joined is the end-of-turn quiet plus the join,
+  // which is the part the pieces hand-over gets back.
+  console.log(`  the split: voice stops at ${run.earStopMs}ms` +
+    ` · pieces land at [${run.pieces.map((p) => p.atMs).join(", ")}]ms` +
+    ` · joined line lands at ${run.joinedAtMs}ms`);
+  if (run.earStopMs >= 0 && run.pieces.length && run.joinedAtMs >= 0) {
+    const lastPiece = run.pieces[run.pieces.length - 1].atMs;
+    console.log(`  ear stop → last piece: ${lastPiece - run.earStopMs}ms · last piece → joined: ${run.joinedAtMs - lastPiece}ms` +
+      ` · ear stop → joined (today's wait): ${run.joinedAtMs - run.earStopMs}ms`);
+  }
 }
 console.log(`\n${pass} of ${LINES.length} came back as ONE line, with the words right.`);
 process.exit(pass === LINES.length ? 0 : 1);
