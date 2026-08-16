@@ -388,7 +388,7 @@ export async function buildRestockVars(
   /** WHO is checking. We dial as their own verified number, so the reconnect opener can only apply
    *  to the customer whose call was actually cut off — see recentlyDropped. */
   finderUserId?: string | null,
-): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; say: string | null; connectAtSec: number | null; maxTalk: number | null; voiceId: string | null; voiceTuning: Record<string, unknown> | null; listenNav: boolean; navSteps: NavStep[]; mapVersion: number | null; mapVersionId: number | null; dynamicVars: Record<string, string> } | null> {
+): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; say: string | null; connectAtSec: number | null; maxTalk: number | null; voiceId: string | null; voiceTuning: Record<string, unknown> | null; listenNav: boolean; navSteps: NavStep[]; mapVersion: number | null; mapVersionId: number | null; directPickup: boolean; dynamicVars: Record<string, string> } | null> {
   const retailer = (await db.select().from(retailers).where(eq(retailers.id, retailerId)))[0];
   if (!retailer) return null;
   const category = (await db.select().from(categories).where(eq(categories.id, categoryId)))[0];
@@ -487,6 +487,9 @@ export async function buildRestockVars(
     // Which saved version ran, so the receipt can say so and a bad call is traceable to a decision.
     mapVersion: mapV?.version ?? null,
     mapVersionId: mapV?.id ?? null,
+    // The chain's own record says this phone rings straight to a person (fix 4, owner box 08-16):
+    // the person test's quiet wait shortens on these stores, in charlie-setup, never here.
+    directPickup: chain?.ringsDirect === true || chain?.answerPath === "direct_human",
     // ABC deterministic hand-off: open the billed agent at the chain's LEARNED time-to-human.
     // Guarded (connectAtSecFor): direct-answer chains and chains with no tree evidence NEVER get a
     // timer — the timer mutes the agent until it fires (the 2026-07-02 silent-agent bug). null =
@@ -831,7 +834,7 @@ export async function bridgeCheckCall(a: TriggerArgs) {
     // Human reached, billed agent open — hand the row to the normal EL ingest by conv id.
     db.update(callResults).set({ providerCallId: convId, status: "in_progress" }).where(eq(callResults.id, row.id))
       .catch((e) => console.error("bridge check connect update:", e));
-  }, v.dtmf, { from, room, timeLimitSec: v.maxTalk ?? undefined, /* no per store cap → the owner's own number, from call_tuning */ say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, apiKey: acct.apiKey, agentId: acct.agentId, listenNav: v.listenNav, navSteps: v.navSteps, mapVersion: v.mapVersion });
+  }, v.dtmf, { from, room, timeLimitSec: v.maxTalk ?? undefined, /* no per store cap → the owner's own number, from call_tuning */ say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, apiKey: acct.apiKey, agentId: acct.agentId, listenNav: v.listenNav, navSteps: v.navSteps, mapVersion: v.mapVersion, directPickup: v.directPickup });
   if (r.error || !r.room) {
     await slot.release(); // dial never placed → free the slot immediately
     // The row keeps its room, so the refusal's own record opens from the Testing list like any check.

@@ -34,6 +34,20 @@ export interface CharlieSetupInput {
   earFromSec?: number;
   /** A store carrying its own cost cap wins; everything else takes the owner's number. */
   timeLimitSec?: number;
+  /** The chain's own record says this phone rings straight to a person (fix 4, owner box 08-16). */
+  directPickup?: boolean;
+}
+
+/** THE OPENING SHAVE (fix 4, owner box 08-16, off check 368: line answered at 3, greeting done near
+ *  6.5, the question at 8). The last stretch is the person test waiting `personWaitMs` of quiet to
+ *  be sure a person stopped for us rather than a recording pausing for breath. On a chain whose own
+ *  record says the phone rings straight to a person, that wait drops to 1500ms: recorded greetings
+ *  pause well under 1.2 seconds between their sentences, so 1.5 still refuses a voicemail's mid
+ *  greeting pause, and the two real voicemail nets are untouched — the greeting length test
+ *  (`personGreetingMaxMs`) and the words test on the store's first line. Never below the saved
+ *  number when the owner has already tuned it lower. */
+export function personWaitForStore(baseMs: number, directPickup: boolean): number {
+  return directPickup ? Math.min(baseMs, 1500) : baseMs;
 }
 
 /** The shared half of the setup: everything both callers must have, and nothing either decides. */
@@ -53,6 +67,9 @@ export async function buildCharlieSetup(input: CharlieSetupInput): Promise<Charl
   const pol = await getPolicy();
   // Every number the runtime would otherwise guess at, resolved once from the setting Admin reads.
   const tuning = await callTuning();
+  // The per-check copy is adjusted, never the saved setting: Admin stays the record of truth and a
+  // store that is not known-direct keeps the owner's number exactly.
+  tuning.personWaitMs = personWaitForStore(tuning.personWaitMs, !!input.directPickup);
   // HOW LONG A WHOLE CHECK MAY RUN. One of the owner's own numbers, living in call_tuning with the
   // rest, so production copying its policy down onto staging every sixty seconds cannot stomp it.
   const timeLimitSec = input.timeLimitSec && input.timeLimitSec > 0 ? Math.floor(input.timeLimitSec) : tuning.maxCheckSeconds;

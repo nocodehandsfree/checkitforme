@@ -7534,7 +7534,7 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
       .catch((e) => console.error("bridge call log update:", e));
     // Per-store talk cap (chains.maxTalkSeconds) wins over the global bail ceiling when set, so a
     // store the owner marked "wrap fast" gets a tighter Twilio TimeLimit — the cost guarantee.
-  }, v.dtmf, { from, room, timeLimitSec: v.maxTalk ?? undefined, /* no per store cap → the owner's own number, from call_tuning */ say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, listenNav: v.listenNav });
+  }, v.dtmf, { from, room, timeLimitSec: v.maxTalk ?? undefined, /* no per store cap → the owner's own number, from call_tuning */ say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning, listenNav: v.listenNav, directPickup: v.directPickup });
 
   if (result.error || !result.room) {
     if (governed) await releaseCallSlot(`call:${rid}`);

@@ -54,7 +54,7 @@ export async function attachListenFork(callSid: string, room: string): Promise<v
   } catch (e) { console.error("[listenfork]", e); }
 }
 
-export async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, string>, onConversationId?: (id: string) => void, dtmf?: string | null, opts?: { from?: string; timeLimitSec?: number; connectOnHuman?: boolean; connectAtSec?: number; say?: string | null; voiceId?: string | null; voiceTuning?: Record<string, unknown> | null; apiKey?: string; agentId?: string; listenNav?: boolean; navSteps?: NavStep[]; mapVersion?: number | null; room?: string; knownMenuLines?: string[] }): Promise<{ room?: string; error?: string }> {
+export async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, string>, onConversationId?: (id: string) => void, dtmf?: string | null, opts?: { from?: string; timeLimitSec?: number; connectOnHuman?: boolean; connectAtSec?: number; say?: string | null; voiceId?: string | null; voiceTuning?: Record<string, unknown> | null; apiKey?: string; agentId?: string; listenNav?: boolean; navSteps?: NavStep[]; mapVersion?: number | null; room?: string; knownMenuLines?: string[]; directPickup?: boolean }): Promise<{ room?: string; error?: string }> {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
@@ -146,6 +146,7 @@ export async function placeBridgeCall(toNumber: string, dynamicVars: Record<stri
   const setup = await buildCharlieSetup({
     dynamicVars, voiceId: opts?.voiceId, voiceTuning: opts?.voiceTuning, apiKey: opts?.apiKey,
     agentId: opts?.agentId, onConversationId, departmentName, earFromSec, timeLimitSec: opts?.timeLimitSec,
+    directPickup: opts?.directPickup,
   });
   if (setup.refused) {
     emit(room, "unknown", "This store has no voice set, so the check was refused rather than run the old way", { fault: "no-voice" });

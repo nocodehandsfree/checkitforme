@@ -1002,7 +1002,20 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // still written down and their name is still used — `transcribeTheirHello` below does both,
     // off this same audio, without putting a turn in front of him.
     helloAudio = pending.splice(0, pending.length);
-    void transcribeTheirHello(helloAudio, ctx?.apiKey || config.voice.apiKey);
+    // ECHO ALREADY WROTE THEIR HELLO DOWN (owner box 08-16, fix 1). On a check where Echo has the
+    // words, the store's first line landed in writing seconds ago, so paying the voice company to
+    // transcribe the same audio a second time bought nothing but a slower, costlier copy of a line
+    // we hold. The written words are handed over instead; a check without Echo transcribes exactly
+    // as before, because there the audio is the only copy that exists.
+    if (echoRooms.has(room) && theirFirstLine) {
+      helloLineWaiting = { text: theirFirstLine };
+      // …and the hello is HIS from this moment: the pocket is handed at his first join now (the
+      // clip path no longer carries early audio to him), and the one line that must never ride
+      // that hand-over is the hello the recording already answered (owner 08-05, checks 282-286).
+      markAsHis(theirFirstLine);
+      deliverHelloLine();
+    }
+    else void transcribeTheirHello(helloAudio, ctx?.apiKey || config.voice.apiKey);
     // THE QUESTION WE ACTUALLY ASKED IS A LINE OF THE CONVERSATION. It is played from a recording
     // rather than generated, so nothing in the provider's transcript knows it happened — which left
     // our own record missing the single most important line on the call, and left the live view with
@@ -1532,8 +1545,9 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     }
     if (fromEcho) openTurnPieces = [];
     // WHAT HE COULD NOT HEAR, KEPT AS WORDS. Only Echo's copy counts: a line the agent's own session
-    // delivered is one he already heard.
-    if (fromEcho && fresh && (!eleven || onHold) && !alreadyHisToAnswer(txt)) missedWhileClosed.push(txt);
+    // delivered is one he already heard. `!ready` too: a line landing while his session is still
+    // opening reached no ears either, and the pocket is what the ready hand-over reads.
+    if (fromEcho && fresh && (!eleven || onHold || !ready) && !alreadyHisToAnswer(txt)) missedWhileClosed.push(txt);
     // A LINE SPOKEN INTO THE WAIT THAT FINISHED WRITING JUST AFTER HE RECONNECTED IS STILL HIS TO BE
     // HANDED (owner task 08-15, check 366). Staff's "I did not see any" was spoken while his session
     // was closed, and its writing landed a second after the new session opened — so the old rule
@@ -1711,13 +1725,17 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // reads, and the settle law can hold because he can finally see what Staff already gave.
         // NEVER after a hand-over: a new person is a fresh start by the owner's own section 5, and
         // the old conversation belongs to somebody who is no longer on the phone.
-        // THE STALE POCKET DIES AT EVERY JOIN (owner task 08-15, check 366). Everything Staff said
-        // before this session opened reached it as the HELD AUDIO flushed just above, so the
-        // pocket's copy of those lines is a double waiting to be handed — and on 366 the store's
+        // THE STALE POCKET DIES AT EVERY JOIN (owner task 08-15, check 366): on 366 the store's
         // hello from second 3 sat in it the whole call and was handed at the reconnect as "what you
-        // missed", instead of the no. A reopen consumes the pocket through the hand-over below;
-        // a first join clears it here.
-        if (!gapNote) missedWhileClosed = [];
+        // missed", instead of the no. On a check where Echo has the words it is HANDED first, then
+        // dies (owner box 08-16, fix 1): the clip path no longer carries early audio into his late
+        // session — the echo window drops store frames while our own question plays — so a real
+        // answer said during the clip lives only in the pocket. The hello cannot ride this: it was
+        // marked his the moment its written line was handed to his session.
+        if (!gapNote) {
+          if (echoRooms.has(room) && missedWhileClosed.length) tellCharlieWhatHeMissed();
+          missedWhileClosed = [];
+        }
         if (gapNote) {
           const g = gapNote; gapNote = null;
           // THIS IS WHERE THE CHECK USED TO GO DEAD (owner + PM, 08-08, off test check 360).
@@ -2177,8 +2195,20 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       // over the top of our recorded question. It is closed here, the moment we commit to asking.
       holdHimForTheirAnswer();
       clipText = clip.text;
-      log("delta: person heard, opening his ears now and waiting for them to finish before asking");
-      void connectEleven();
+      // HIS SESSION NO LONGER OPENS HERE ON A CHECK WHERE ECHO HAS THE WORDS (owner box 08-16,
+      // fix 1, off check 368: he was metered through all 4 seconds of his own question). The 08-01
+      // reason for opening this early was that his session was our only transcriber, and audio
+      // held for a late session came back slurred and welded (check 229). Echo owns the words now:
+      // the greeting reaches him as Echo's written line, and whatever Staff say during the clip is
+      // buffered and paced into his session when the prewarm opens it, 800ms before the question
+      // ends — so he bills from the clip's end, not from the person test. A check without Echo
+      // keeps the early open, because there his session still is the only transcriber.
+      if (!echoRooms.has(room)) {
+        log("delta: person heard, opening his ears now and waiting for them to finish before asking");
+        void connectEleven();
+      } else {
+        log("delta: person heard; Echo has the words, so his session waits for the prewarm and bills from the clip's end");
+      }
     } else {
       // NO RECORDING, SO CHARLIE ASKS IT HIMSELF, NOW (round 1, item 1.4). We know the instant it is
       // not there — it is either on the check or it is not — so there is nothing to wait for and
