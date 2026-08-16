@@ -211,6 +211,24 @@ here is how a surprise credit bill happens. Guardrails, tied to usage the way he
   key staging already holds (`BRAIN_API_KEY`), a fraction of a cent per pretend call, and the
   numbers come back to the owner before that switch is flipped.
 
+**The owner's working cost targets (08-16 late), and the 60 second line.** The phone company bills
+whole minutes, so a check that ends under 60 seconds never pays the second minute: staying under
+60 is a named target the machine aims at, worth the second minute's line and listening money every
+time. His targets: about 11 cents for a long-hold check with the optimizations now in flight, and
+about 7.3 cents once Charlie and Echo are fully optimized; a check that runs past two minutes
+breaks the model every time. Holds KEEP the 67% floor for now (his call: too early to excuse them
+while the optimizing is live); their reds are the work list, not noise.
+
+**THE REPLAY RUN — the fast lane (owner's ask 08-16 late: optimize without burning money on real
+dials).** We already own a library of hundreds of real checks with every second on the clock
+(`call_results.transcript_timed` and the timelines). A replay run takes ONE proposed change (a
+number, a rule, a shorter wording's length) and plays it against EVERY recorded check, pricing
+what each would have cost under the change, in minutes, for compute pennies, no phone. So
+exploring is free: fifty ideas ranked by real cents saved across the whole history, and only the
+top one or two earn robot store dials. Dials confirm, never explore. This is rung one's first
+deliverable, pulled forward, because it runs on OUR real recordings instead of imagined calls:
+more honest than acted simulation and cheaper than any dial.
+
 **The genes of a call.** Real calls that already exist on the internet get broken down into genes,
 the behaviors that make calls what they are: Staff pissed off, the caller pissed off, a caller who
 talks about family and never gets to the point, calls that keep getting hung up on, a sixteen year
