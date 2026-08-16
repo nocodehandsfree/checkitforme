@@ -7,6 +7,14 @@ that heals itself (`src/calls/healing.ts`): first make it right, then make it ch
 step at a time, and you review a report instead of every check. This document proposes it. Nothing
 here is built, and nothing gets built until you and the PM say so.
 
+**What this engine is really for (the owner's frame, 08-16).** Today the product asks one question
+about trading cards. The engine is not about cards: it is walking a menu, waiting without paying,
+talking a human toward a goal, and squeezing every wasted second out against a benchmark. The
+owner's end state: a customer names any business and any goal in plain words ("call the airline,
+move my two tickets to the 8:10 flight, add a bag"), hands over what the call needs, and Charlie
+does the whole thing. Every piece of this plan is built so nothing in it knows or cares that
+today's question is about cards.
+
 **Why it exists.** On test four the card said PASS while Charlie sat through seconds of dead air.
 You caught it only by reading the transcript yourself. It happened again on 08-16: a check ran 43
 seconds of meter with 9 seconds of Charlie on the clock and not answering, and every card was
@@ -157,23 +165,37 @@ try changed, and why it stopped. Three parked scenes in a row end the whole run.
 4. **Unsupervised inside the bounds**, only after enough clean runs at stage three where its
    grades caught everything you would have caught. You rule how many clean runs buy this.
 
-## New scenes: the twenty locked tests, plus a simulation bank (owner ruled 08-16)
-
-Real phone behavior is bigger than the twenty tests, and the owner ruled the machine must learn
-from the kinds of calls that already exist in the world, not only from scenes we invent. Two
-tiers:
+## The simulation ladder: three rungs, and the genes of a call (owner, 08-16)
 
 **Your twenty stay locked.** The walk's tests keep their owner-approved words and owner-approved
 clips, unchanged. They are the regression gate everything must pass.
 
-**The simulation bank runs in two layers.** Real recorded calls and call transcripts that already
-exist on the internet get mined for SHAPES: how people interrupt, mumble, put a phone down, talk
-over hold music, hand a call over, wander off the question. We write our own scenes from those
-shapes (never replaying someone else's audio as ours). Layer one runs them on the rig, the pretend
-phone line that costs nothing, so thousands of shapes can run without spending a dial. Layer two:
-a shape that breaks us or shows waste on the rig gets a real robot store scene and dials for real,
-inside the same 200 a day. You approve the bank's existence and its budget once, not scene by
-scene; the twenty stay word for word yours.
+**Rung one: pure simulation, no partners at all.** A conversation played out entirely in our own
+compute: one AI plays Staff in a chosen mood, another plays Charlie with his words and his rules,
+and the whole call is scored on turns, words, seconds and money against the benchmark for that
+kind of call. No phone line, no voice partner, no transcriber. Fractions of a cent each, thousands
+a day. What it can prove: our words, our decisions, our timing rules. What it can NEVER prove: the
+phone plumbing and the partners' hearing. We have been burned exactly there: the goodbye passed
+the rig and three live checks in a row never spoke it (08-04, checks 276 to 278, RULES.md 14). A
+rung-one win is a candidate, never a proof.
+
+**Rung two: the rig** (already built). The real engine code on a pretend phone line. Proves our
+plumbing: what we buffer, when Charlie opens, what gets recorded.
+
+**Rung three: the robot store**, the test store we built that answers its own phone. The real
+partners, a real dial, the real record. The only rung where "proven" may be said, inside the 200 a
+day. A real store is never dialed.
+
+**The genes of a call.** Real calls that already exist on the internet get broken down into genes,
+the behaviors that make calls what they are: Staff pissed off, the caller pissed off, a caller who
+talks about family and never gets to the point, calls that keep getting hung up on, a sixteen year
+old who can barely be heard. Each gene gets a measured frequency, how often it shows up in real
+calls, so we test what actually happens instead of what we imagine. Scenes are composed from
+genes, and every major kind of call gets a BENCHMARK: the fewest seconds and cents a perfect run
+can take while Staff and the customer both have a good experience. A clear yes runs 23 seconds of
+talk today and its floor is likely near 17, the length of the words themselves. The card then
+grades distance to the benchmark, not only pass or fail. We write our own scenes from what the
+genes teach, never replaying someone else's audio as ours.
 
 ## The words Echo listens with (its own small build, fed by this one)
 
@@ -205,6 +227,19 @@ the loop the moment it ends:
 
 A real check whose shape no scene covers also becomes a drafted shape for the simulation bank, so
 the scene list grows from what actually happens on phones, not from imagination.
+
+## The money brake (owner, 08-16: $20 a day adds up)
+
+The 200 is a ceiling, not a right. The machine EARNS its dials:
+- It starts at 20 real dials a day and steps up (50, then 100, then 200, you bless the ladder)
+  only while it is making progress: a kept improvement or a new confirmed find inside the last
+  step's dials.
+- A day that ends with no kept win and no new find STOPS the machine, and it does not dial the
+  next day on its own. It comes back to you with the specific questions it is stuck on, because
+  your questions are what get it moving again. Stuck never burns money.
+- The try budget stands underneath: three changes per scene, three set-aside scenes end the run.
+- Rung-one simulation is not braked the same way: it costs compute, not dials, and its daily
+  budget is its own number you set.
 
 ## What it costs
 
@@ -258,7 +293,11 @@ new pages.
 7. The try budget: how many changes a scene gets before it is parked (proposed: three).
 8. How many clean stage-three runs buy stage four of the trust ladder.
 9. Whether the words Echo listens with is part of this build or its own box.
-10. The simulation bank's budget: how many rig runs a day, and how many of its scenes may take
+10. The simulation budget: how many rung-one runs a day, and how many simulated scenes may take
     real dials out of the 200.
 11. Confirm the widened ladder: the machine may build code fixes on staging from its own
     diagnosis, with words, voice, money and every promote still yours.
+12. The money brake's ladder (proposed: 20, 50, 100, 200) and the stop rule (a day with no kept
+    win and no new find stops the machine until you answer its questions).
+13. The first benchmarks, one per major kind of call, once the floors are computed (the clear yes
+    near 17 seconds is the first candidate).
