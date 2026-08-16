@@ -154,7 +154,7 @@ import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPh
 import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
 import { settings as settingsTbl } from "./db/schema";
-import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeRoomForConversation, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, activeBridgeCalls, weEndedCheck, noteWeEnded, echoHeardStaff, echoListening } from "./voice/bridge";
+import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeRoomForConversation, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, activeBridgeCalls, weEndedCheck, noteWeEnded, echoHeardStaff, echoHeardPiece, echoListening } from "./voice/bridge";
 import { openTranscriber, type Transcriber } from "./voice/transcriber";
 import { installCheckLife, isCheckAlive, noteLineEnded, resolveRoom as lifeRoom } from "./calls/check-life";
 import { placeBridgeCall, attachListenFork, roomCallSids, roomCallProgress, roomFinalizers, RAILWAY_HOST, STAGING_HOST } from "./voice/bridge-place";
@@ -7827,7 +7827,11 @@ wssTwilio.on("connection", (ws: WebSocket, _req: unknown, qRoom: string, wantsWo
             // it goes onto the record here and the live screen is told by us.
             if (!echoHeardStaff(room, t, at)) { try { relayLine(room, "Clerk", t); } catch { /* the screen is best-effort */ } }
           } catch (e) { bridgeLog(`echo line dropped: ${String(e).slice(0, 90)}`); }
-        }, bridgeLog);
+        }, bridgeLog,
+        // Each final, confirmed piece of the turn still being written, so a reconnected Charlie can
+        // be handed words the moment they exist (owner task 08-15). Pieces are never recorded; the
+        // joined line above is the record, exactly as before.
+        (piece) => { try { echoHeardPiece(room, piece.text); } catch (e) { bridgeLog(`echo piece dropped: ${String(e).slice(0, 90)}`); } });
         echoListening(room, true);
       }
     }

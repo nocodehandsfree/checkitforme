@@ -11,7 +11,7 @@
 //   conversation. And that an agent who tries to talk over the question is silenced.
 import { EventEmitter } from "node:events";
 import { WebSocketServer, type WebSocket as WS } from "ws";
-import { setBridgeContext, handleTwilioBridge, weEndedCheck, nudgeSignoff, echoListening, echoHeardStaff } from "../src/voice/bridge";
+import { setBridgeContext, handleTwilioBridge, weEndedCheck, nudgeSignoff, echoListening, echoHeardStaff, echoHeardPiece } from "../src/voice/bridge";
 import { openReceipt, getReceipt, transcriptOf, closeReceipt, rollup, _reset } from "../src/calls/events";
 import { isCheckAlive } from "../src/calls/check-life";
 import { toMediaFrames } from "../src/calls/clip-cache";
@@ -2356,6 +2356,63 @@ console.log("\n▶ CHECK 366'S SHAPE: a stale hello never rides the reconnect, a
     "…and the no that finished writing after he reconnected IS handed as their turn");
   ok(evs().some((e) => (e.detail || {}).step === "missed_turn" && String((e.detail || {}).text || "").includes("did not see any")),
     "…and the record says so");
+  echoListening(room, false);
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ THE RECONNECT FEED: pieces hand at the ear's voice stop, the joined line never re-hands them");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-pieces";
+  echoListening(room, true);
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, {
+    agentId: "agent_normal", midCallAgentId: "agent_joining",
+    dynamicVars: { opening_line: "do you have any Pokemon cards in stock?" },
+    connectOnHuman: true, holdMaxSeconds: 999, holdStrategy: "reopen",
+    openingClip: { audio: Buffer.alloc(400 * 8, 0x20), ms: 400, text: "do you have any Pokemon cards in stock?" },
+    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0, charlieThinkingMs: 0 },
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "" as never, () => { /* bare, the way the carrier connects */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_pc", customParameters: { room } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
+  await sleep(400);
+  echoHeardStaff(room, "Let me check. Let me just put you on hold.", Date.now());
+  await sleep(40);
+  quiet(tw, HOLD_QUIET_MS / 20 + 40);
+  await sleep(400);
+  const evs = () => getReceipt(room)?.events || [];
+  ok(evs().some((e) => e.kind === "charlie_leave"), "he is dropped for the announced wait");
+  const sockets = f.sockets.length;
+  // STAFF COME BACK and are still mid sentence while his new session opens.
+  for (let i = 0; i < 60; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
+  await sleep(400);
+  ok(f.sockets.length > sockets, "somebody spoke, so he is opened again");
+  // The writer's final pieces land while their voice is still going: held, not handed.
+  echoHeardPiece(room, "Okay. Thank you for holding.");
+  for (let i = 0; i < 20; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
+  echoHeardPiece(room, "Yeah. I did not see any, unfortunately.");
+  await sleep(40);
+  ok(!f.raw.some((m) => m.includes("user_message") && m.includes("did not see any")),
+    "while their voice is still going, nothing is handed: the turn is not his yet");
+  // …and NOW their voice stops. The EAR's own quiet is what opens his turn, never the writer's.
+  quiet(tw, 50);
+  await sleep(150);
+  const handed = f.raw.filter((m) => m.includes("user_message") && m.includes("did not see any"));
+  ok(handed.length === 1, "the pieces are handed as their turn when the EAR hears the voice stop");
+  ok(!!handed[0] && handed[0].includes("Thank you for holding"), "…every piece, oldest first, in the one turn");
+  // The writer's one second quiet then delivers the joined line: recorded once, never re-handed.
+  echoHeardStaff(room, "Okay. Thank you for holding. Yeah. I did not see any, unfortunately.", Date.now() - 3000);
+  await sleep(150);
+  ok(f.raw.filter((m) => m.includes("user_message") && m.includes("did not see any")).length === 1,
+    "the joined line replaces the pieces and is never re-handed");
+  ok((getReceipt(room)?.transcript || []).filter((l) => l.text.includes("did not see any")).length === 1,
+    "…and the record holds the one whole line, exactly as before");
   echoListening(room, false);
   restore(); tw.close(); f.close();
 }
