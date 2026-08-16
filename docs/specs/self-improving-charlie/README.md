@@ -45,6 +45,11 @@ rows stay money-free. The meter half is a separate block on the card, not new ro
 turn your margin goal into something that can fail a test, which is the opposite of the 08-07
 ruling, because the machine needs a grade it can act on with no human looking. Your call to make.
 
+**The grade covers every piece, not only Charlie (owner, 08-16).** Echo's writing delay (how long
+after Staff stop talking their words land written), whether Delta played, and the nav time each get
+their own bound on the card, so a check that fails because Echo was slow says Echo by name instead
+of blaming Charlie, and a wasteful menu walk shows as nav, not talk.
+
 **Some scenes can never hold the two numbers, on purpose.** The runaround to the four minute limit
 and Hold: permanently burn the clock by design, so grading them against 67% fails them forever. The
 numbers ride the card the same way the status already does: every card defaults to your two, and
@@ -114,10 +119,14 @@ Admin: a floor, a ceiling, and a step size. Example: silence before Charlie drop
 STAGING's numbers only — the real site's numbers stay yours, and the report tells you what won so
 you carry it over when you choose.
 
+**It may build on staging, never promote (owner widened this 08-16):** a fix that needs code. The
+diagnosis becomes a work order, an agent session builds it on staging, proves it on the robot
+store against the twenty, and it waits for your promote.
+
 **It may only write up for you:** Charlie's words (your locked instructions), his voice (the model
-and speed you ruled by ear), anything about money (prices, what is charged, the 67% floor and the
-23 themselves), and anything that needs code. A write-up says what the waste is, what it costs per
-check, and what changing it would take.
+and speed you ruled by ear), and anything about money (prices, what is charged, the 67% floor and
+the 23 themselves). A write-up says what the waste is, what it costs per check, and what changing
+it would take.
 
 ## Bounds
 
@@ -148,13 +157,23 @@ try changed, and why it stopped. Three parked scenes in a row end the whole run.
 4. **Unsupervised inside the bounds**, only after enough clean runs at stage three where its
    grades caught everything you would have caught. You rule how many clean runs buy this.
 
-## New scenes, and who writes them
+## New scenes: the twenty locked tests, plus a simulation bank (owner ruled 08-16)
 
-Real phone behavior is bigger than the twenty tests. The machine may DRAFT a new scene or a change
-to one (a louder room, a softer room, a shape a real check showed that no scene covers): the
-script, the reason, and the waste or danger it would expose. It never records or dials one on its
-own. Your lock stands: scene words are approved by you word for word, and clips are approved by
-your ear and committed, never regenerated. A drafted scene is a write-up until you bless it.
+Real phone behavior is bigger than the twenty tests, and the owner ruled the machine must learn
+from the kinds of calls that already exist in the world, not only from scenes we invent. Two
+tiers:
+
+**Your twenty stay locked.** The walk's tests keep their owner-approved words and owner-approved
+clips, unchanged. They are the regression gate everything must pass.
+
+**The simulation bank runs in two layers.** Real recorded calls and call transcripts that already
+exist on the internet get mined for SHAPES: how people interrupt, mumble, put a phone down, talk
+over hold music, hand a call over, wander off the question. We write our own scenes from those
+shapes (never replaying someone else's audio as ours). Layer one runs them on the rig, the pretend
+phone line that costs nothing, so thousands of shapes can run without spending a dial. Layer two:
+a shape that breaks us or shows waste on the rig gets a real robot store scene and dials for real,
+inside the same 200 a day. You approve the bank's existence and its budget once, not scene by
+scene; the twenty stay word for word yours.
 
 ## The words Echo listens with (its own small build, fed by this one)
 
@@ -166,13 +185,26 @@ The list grows on its own: when a check's record shows a wrong word where a name
 belongs, the wrong form joins that store's list so it is corrected next time. This is its own
 small build; the machine feeds it by catching the checks where a misheard word changed the answer.
 
-## Live customer checks join the graph
+## Every customer check self-improves (owner ruled 08-16: not a side feed, THE loop)
 
-The machine never experiments on a paying customer. Live checks join as the FINDING half: every
-real check gets the same waste grade, the machine reads those grades beside the robot store's, and
-a real check whose shape no scene covers becomes a drafted scene for you to bless. All TRYING
-happens on the robot store, and a winning number reaches real checks the way every change already
-does: staging, your walk, then a promote.
+The machine never experiments mid-call on a paying customer. But every single customer check joins
+the loop the moment it ends:
+
+1. **Graded automatically**, the same card as the tests: the two numbers, every behavior row, and
+   every piece by name (Charlie, Echo, Delta, the menu walk), against your goals.
+2. **A check that fails or wastes is diagnosed on its own** and filed in Admin under Calls with
+   what went wrong in plain words, so the bad ones are waiting for you in one place instead of
+   hiding in the pile.
+3. **The system builds the fix.** A number inside its fence it turns itself on staging. A fix that
+   needs code becomes a work order an agent session builds on staging, proves on the robot store
+   against the twenty, and leaves ready. Charlie's words, his voice, and anything about money
+   still only reach you as write-ups.
+4. **You push to production.** Nothing reaches the real site on its own. The owner named
+   fix-it-and-push-straight-to-production as a someday; it is written here as a switch that does
+   not exist yet and stays off until he asks for it.
+
+A real check whose shape no scene covers also becomes a drafted shape for the simulation bank, so
+the scene list grows from what actually happens on phones, not from imagination.
 
 ## What it costs
 
@@ -226,3 +258,7 @@ new pages.
 7. The try budget: how many changes a scene gets before it is parked (proposed: three).
 8. How many clean stage-three runs buy stage four of the trust ladder.
 9. Whether the words Echo listens with is part of this build or its own box.
+10. The simulation bank's budget: how many rig runs a day, and how many of its scenes may take
+    real dials out of the 200.
+11. Confirm the widened ladder: the machine may build code fixes on staging from its own
+    diagnosis, with words, voice, money and every promote still yours.
