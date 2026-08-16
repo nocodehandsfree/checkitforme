@@ -8,8 +8,9 @@ step at a time, and you review a report instead of every check. This document pr
 here is built, and nothing gets built until you and the PM say so.
 
 **Why it exists.** On test four the card said PASS while Charlie sat through seconds of dead air.
-You caught it only by reading the transcript yourself. The card grades whether Charlie behaved; it
-is blind to whether the check made money. So a wasteful check can pass forever and the only meter
+You caught it only by reading the transcript yourself. It happened again on 08-16: a check ran 43
+seconds of meter with 9 seconds of Charlie on the clock and not answering, and every card was
+green. The card grades whether Charlie behaved; it is blind to whether the check made money. So a wasteful check can pass forever and the only meter
 reader is you.
 
 ---
@@ -127,6 +128,52 @@ check, and what changing it would take.
   enforces this).
 - It never dials a real store. Robot store only, forever.
 
+## The safety ladder (owner's questions, 08-16 — how it earns running unsupervised)
+
+**It cannot think ahead, by design.** The machine holds no plan. It is only ever one dial deep: it
+saves its state after every step, the record of the last check decides the next step, and a stop
+stays stopped. There is no long chain of reasoning that can wander off.
+
+**The try budget.** A scene gets three changes per run (you rule the number). If it still misses
+your two numbers after three, the scene is parked with a write-up naming what was tried, what each
+try changed, and why it stopped. Three parked scenes in a row end the whole run. Stuck never loops.
+
+**The trust ladder, four stages, you climb it:**
+1. **The grade only.** Every check, robot or real, carries the meter half and you read it. No
+   machine yet. This stage alone catches a check like the 43 second one with no human digging.
+2. **Dials but changes nothing.** The machine runs the graph and grades, and every change it wants
+   is a proposal you approve one by one. You are checking its judgment against your own.
+3. **Turns numbers inside fences alone.** You read the report at the end of every run, and you
+   start every run anyway.
+4. **Unsupervised inside the bounds**, only after enough clean runs at stage three where its
+   grades caught everything you would have caught. You rule how many clean runs buy this.
+
+## New scenes, and who writes them
+
+Real phone behavior is bigger than the twenty tests. The machine may DRAFT a new scene or a change
+to one (a louder room, a softer room, a shape a real check showed that no scene covers): the
+script, the reason, and the waste or danger it would expose. It never records or dials one on its
+own. Your lock stands: scene words are approved by you word for word, and clips are approved by
+your ear and committed, never regenerated. A drafted scene is a write-up until you bless it.
+
+## The words Echo listens with (its own small build, fed by this one)
+
+Staff say CVS and the record writes CS; they say Barnes and Noble and the record writes Francis
+Noble. Each check can hand Echo a short list of the words that matter at that store (the store's
+name, the chain, the product words) so it leans toward hearing them right, and a correction layer
+fixes what the CUSTOMER sees while the written record stays exactly as heard, your standing rule.
+The list grows on its own: when a check's record shows a wrong word where a name on that list
+belongs, the wrong form joins that store's list so it is corrected next time. This is its own
+small build; the machine feeds it by catching the checks where a misheard word changed the answer.
+
+## Live customer checks join the graph
+
+The machine never experiments on a paying customer. Live checks join as the FINDING half: every
+real check gets the same waste grade, the machine reads those grades beside the robot store's, and
+a real check whose shape no scene covers becomes a drafted scene for you to bless. All TRYING
+happens on the robot store, and a winning number reaches real checks the way every change already
+does: staging, your walk, then a promote.
+
 ## What it costs
 
 A robot check runs about 5 to 13 cents. A full day at the 200 allowance is about $10 to $26; a
@@ -176,3 +223,6 @@ new pages.
 5. Where the report lives (proposed: inside the existing Testing screen).
 6. Whether one machine-run day may share a calendar day with your walk at all, or only run on
    days you are not walking.
+7. The try budget: how many changes a scene gets before it is parked (proposed: three).
+8. How many clean stage-three runs buy stage four of the trust ladder.
+9. Whether the words Echo listens with is part of this build or its own box.
