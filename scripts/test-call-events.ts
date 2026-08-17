@@ -6,7 +6,7 @@
 // from the plan, and the phone line bills whole minutes. No database, no network, no clock games.
 import {
   openReceipt, emit, amend, markNow, addMs, closeReceipt, rollup, rollupFromRow, setEventSink,
-  getReceipt, laneNote, laneFor, actualLane, recordLine, oneSlowestReplyRow, _receiptFrom, _reset, type Receipt, type RtEvent,
+  getReceipt, laneNote, laneFor, actualLane, recordLine, oneSlowestReplyRow, lastLineEndEpoch, stampLineEnd, _receiptFrom, _reset, type Receipt, type RtEvent,
 } from "../src/calls/events";
 import { costCall, costPerResult, costBuckets, money, MEASURED_RATES, STATUS_READ_USD, USD } from "../src/calls/cost";
 
@@ -411,6 +411,41 @@ console.log("\n== the ear-measured hello still files above the question it prece
   ok(t[0].who === "Clerk" && /this is Bob/.test(t[0].text), "the ear-measured hello reads first, the order it was said in");
   ok(t[1].who === "Agent", "…and our question follows it");
   ok(t.every((l, i, a) => i === 0 || a[i - 1].atMs <= l.atMs), "the record is still in one order, oldest first");
+}
+
+// EVERY SPOKEN LINE FILES WITH A START AND AN END (owner, 08-17 evening), and a reply gap counts
+// from the END of the line before it, never from where that line started.
+console.log("\n== every spoken line files with a start and an end ==");
+{
+  _reset();
+  const r = openReceipt("room-ends");
+  r.startMs = Date.now() - 60_000;
+  const spoke = Date.now() - 40_000;
+  recordLine("room-ends", "Clerk", "Okay. Thank you for holding. Yeah. I did not see any, unfortunately.", spoke, undefined, undefined, spoke + 5_300);
+  const l = r.transcript[0];
+  ok(l.endMs != null && l.endMs - l.atMs === 5_300, `the line knows it took 5.3 seconds to say (${l.atMs} to ${l.endMs})`);
+  ok(Math.abs((lastLineEndEpoch("room-ends", "Clerk") ?? 0) - (spoke + 5_300)) <= 1,
+    "a reply gap counts from the END of that line, not from where it started");
+  // Charlie answers 1.9 seconds after they FINISH: measured from the end, that is 1.9, and measuring
+  // from the start of their line would have called it 7.2 (check 373's shape).
+  const answered = spoke + 5_300 + 1_900;
+  ok(Math.round((answered - (lastLineEndEpoch("room-ends", "Clerk") ?? 0)) / 100) === 19,
+    "his gap reads 1.9 seconds, the wait Staff really stood through");
+  // His own line's end is stamped as his voice plays out.
+  recordLine("room-ends", "Agent", "Ah gotcha, no worries!", answered);
+  stampLineEnd("room-ends", "Agent", answered + 2_100);
+  const his = r.transcript[r.transcript.length - 1];
+  ok(his.who === "Agent" && his.endMs != null && his.endMs - his.atMs === 2_100, `his line carries its own end too (${his.endMs! - his.atMs})`);
+  stampLineEnd("room-ends", "Agent", answered + 900);
+  ok(r.transcript[r.transcript.length - 1].endMs! - his.atMs === 2_100, "an end only ever moves later, never earlier");
+  // A line nobody measured the end of says so, and answers with its start rather than a made up end.
+  _reset();
+  const r2 = openReceipt("room-noend");
+  r2.startMs = Date.now() - 20_000;
+  recordLine("room-noend", "Clerk", "Yeah, we have some.", Date.now() - 10_000);
+  ok(r2.transcript[0].endMs === null, "a line whose end nobody measured keeps none, never a guess");
+  ok(Math.abs((lastLineEndEpoch("room-noend", "Clerk") ?? 0) - (r2.startMs + r2.transcript[0].atMs)) <= 1,
+    "…and the gap falls back to where it started, the only honest number we hold");
 }
 
 // CHECK 373'S OWN SHEET: "Charlie's slowest reply so far" printed at 75 seconds and again at 83,

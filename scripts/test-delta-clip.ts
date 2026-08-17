@@ -2404,8 +2404,13 @@ console.log("\n▶ THE RECONNECT FEED: pieces hand at the ear's voice stop, the 
   ok(!f.raw.some((m) => m.includes("user_message") && m.includes("did not see any")),
     "while their voice is still going, nothing is handed: the turn is not his yet");
   // …and NOW their voice stops. The EAR's own quiet is what opens his turn, never the writer's.
+  // ONE HAND-OVER, EVER (owner, 08-17 evening, off check 373): the ear's stop arms the turn and it
+  // waits ONE BEAT of 300ms first, so a last piece or the whole written line rides the same turn.
   quiet(tw, 50);
   await sleep(150);
+  ok(!f.raw.some((m) => m.includes("user_message") && m.includes("did not see any")),
+    "inside the beat nothing has gone yet, so a straggler can still join the same turn");
+  await sleep(350);
   const handed = f.raw.filter((m) => m.includes("user_message") && m.includes("did not see any"));
   ok(handed.length === 1, "the pieces are handed as their turn when the EAR hears the voice stop");
   ok(!!handed[0] && handed[0].includes("Thank you for holding"), "…every piece, oldest first, in the one turn");
@@ -2424,6 +2429,55 @@ console.log("\n▶ THE RECONNECT FEED: pieces hand at the ear's voice stop, the 
     "the joined line replaces the pieces and is never re-handed");
   ok((getReceipt(room)?.transcript || []).filter((l) => l.text.includes("did not see any")).length === 1,
     "…and the record holds the one whole line, exactly as before");
+  echoListening(room, false);
+  restore(); tw.close(); f.close();
+}
+
+console.log("\n▶ CHECK 373'S SHAPE: Staff's comeback reaches Charlie ONCE, as one whole turn");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-373";
+  echoListening(room, true);
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, {
+    agentId: "agent_normal", midCallAgentId: "agent_joining",
+    dynamicVars: { opening_line: "do you have any Pokemon cards in stock?" },
+    connectOnHuman: true, holdMaxSeconds: 999, holdStrategy: "reopen",
+    openingClip: { audio: Buffer.alloc(400 * 8, 0x20), ms: 400, text: "do you have any Pokemon cards in stock?" },
+    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0, charlieThinkingMs: 0 },
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, "" as never, () => { /* bare, the way the carrier connects */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_373", customParameters: { room } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
+  await sleep(400);
+  echoHeardStaff(room, "Let me check. Let me just put you on hold.", Date.now());
+  await sleep(40);
+  quiet(tw, HOLD_QUIET_MS / 20 + 40);
+  await sleep(400);
+  const sockets = f.sockets.length;
+  for (let i = 0; i < 60; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
+  await sleep(400);
+  ok(f.sockets.length > sockets, "Staff came back and he is opened again");
+  // 373's own shape: the first piece lands, their voice stops, and 93 MILLISECONDS later the
+  // finished line arrives from Echo. That is what handed him two turns and printed the handed
+  // words step twice at 73 seconds.
+  echoHeardPiece(room, "Okay. Thank you for holding. Yeah. I did not");
+  quiet(tw, 50);
+  await sleep(93);
+  echoHeardStaff(room, "Okay. Thank you for holding. Yeah. I did not see any, unfortunately.", Date.now() - 1200, undefined);
+  await sleep(500);
+  const turns = f.raw.filter((m) => m.includes("user_message") && m.includes("Thank you for holding"));
+  ok(turns.length === 1, `Staff's comeback reached him ONCE, never twice (${turns.length})`);
+  ok(!!turns[0] && turns[0].includes("see any, unfortunately"), "…and the turn carries their WHOLE sentence, not the half that had been written");
+  const steps = (getReceipt(room)?.events || []).filter((e) => (e.detail as { step?: string } | null)?.step === "missed_turn");
+  ok(steps.length === 1, `the handed words step is on the record once, ever (${steps.length})`);
+  ok((getReceipt(room)?.transcript || []).filter((l) => l.text.includes("see any")).length === 1,
+    "the record still holds their one whole line");
   echoListening(room, false);
   restore(); tw.close(); f.close();
 }

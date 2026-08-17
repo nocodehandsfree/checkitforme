@@ -129,7 +129,10 @@ export interface Receipt {
   segments: CharlieSegment[];
   /** WHAT WAS SAID, as we heard it live (hard rule 2). Text only — never audio, on any path. The
    *  provider's own post-call version becomes supporting evidence, not the record. */
-  transcript: Array<{ atMs: number; who: "Agent" | "Clerk"; text: string }>;
+  /** Every spoken line files with a START and an END on the call's own clock (owner, 08-17
+   *  evening). `endMs` is when the SOUND of that line stopped, which is what a reply gap is
+   *  measured from; null on a line whose end nobody measured, never a guessed number. */
+  transcript: Array<{ atMs: number; endMs: number | null; who: "Agent" | "Clerk"; text: string }>;
   events: RtEvent[];
   meters: Meters;
   closed: boolean;
@@ -291,7 +294,7 @@ export function amend(room: string, kind: EventKind, patch: Record<string, unkno
  *  a line ABOVE lines already written: Staff's hello really is spoken before our question and only
  *  becomes words later (owner screenshot 07-31), and the moment their voice started is ours, not
  *  guessed. A transcriber's stamp gets the one-clock clamp below (owner box 08-17, off check 372). */
-export function recordLine(room: string, who: "Agent" | "Clerk", text: string, spokenAtEpochMs?: number, certain?: boolean, earMeasured?: boolean): boolean {
+export function recordLine(room: string, who: "Agent" | "Clerk", text: string, spokenAtEpochMs?: number, certain?: boolean, earMeasured?: boolean, endedAtEpochMs?: number): boolean {
   try {
     const r = receipts.get(room);
     if (!r || r.closed) return true; // no record to guard — the caller may still show the line
@@ -307,7 +310,10 @@ export function recordLine(room: string, who: "Agent" | "Clerk", text: string, s
     // whether the line was fresh, so a relay can skip exactly what the record skipped.
     const key = `${who}:${normSaid(t)}`;
     if (!certain && r.transcript.slice(-4).some((l) => Math.abs(l.atMs - at) < 10_000 && `${l.who}:${normSaid(l.text)}` === key)) return false;
-    const line = { atMs: at, who, text: t.slice(0, 1000) };
+    // The end of the sound, on the same clock. A line that never had its end measured keeps null:
+    // the gap that would have been measured from it falls back to the ear, never to a made up end.
+    const ended = (endedAtEpochMs != null && endedAtEpochMs > 1e12) ? Math.max(at, endedAtEpochMs - r.startMs) : null;
+    const line = { atMs: at, endMs: ended, who, text: t.slice(0, 1000) };
     // ONE CLOCK, MONOTONIC (owner box 08-17, off check 372). A reply can only ever ARRIVE after the
     // line it answers — every path that writes here transcribes what was already said — so arrival
     // order IS the conversation's order. This used to re-sort on any backdate: a line whose stamp
@@ -325,6 +331,7 @@ export function recordLine(room: string, who: "Agent" | "Clerk", text: string, s
         r.transcript.splice(i, 0, line);
       } else {
         line.atMs = last.atMs;
+        if (line.endMs != null && line.endMs < line.atMs) line.endMs = line.atMs;
         r.transcript.push(line);
       }
     } else r.transcript.push(line);
@@ -711,6 +718,40 @@ export function _reset(): void { receipts.clear(); flushed.clear(); sink = null;
  * winner and drops the interim ones, and the survivor wears the engine's own closing words instead
  * of "so far". Nothing is invented and no other step is touched.
  */
+/**
+ * STAMP THE END OF THE LINE THAT SPEAKER IS STILL SAYING (owner, 08-17 evening). Charlie's line is
+ * written down the moment his words exist and his voice plays out over the seconds after it, so his
+ * end is stamped as the sound goes and only ever moves later, never earlier.
+ */
+export function stampLineEnd(room: string, who: "Agent" | "Clerk", endedAtEpochMs: number): void {
+  const r = receipts.get(room);
+  if (!r || r.closed || !(endedAtEpochMs > 1e12)) return;
+  for (let i = r.transcript.length - 1; i >= 0; i--) {
+    const l = r.transcript[i];
+    if (l.who !== who) continue;
+    const end = Math.max(l.atMs, endedAtEpochMs - r.startMs);
+    if (l.endMs == null || end > l.endMs) l.endMs = end;
+    return;
+  }
+}
+
+/**
+ * WHEN THE LAST THING THAT SPEAKER SAID STOPPED (owner, 08-17 evening: a reply gap counts from the
+ * END of the line before it, never from its start). Answers on the wall clock, so the engine can
+ * measure a gap against it directly. Null when nobody has spoken yet; a line whose end was never
+ * measured answers with its start, which is the only honest number we hold for it.
+ */
+export function lastLineEndEpoch(room: string, who: "Agent" | "Clerk"): number | null {
+  const r = receipts.get(room);
+  if (!r) return null;
+  for (let i = r.transcript.length - 1; i >= 0; i--) {
+    const l = r.transcript[i];
+    if (l.who !== who) continue;
+    return r.startMs + (l.endMs ?? l.atMs);
+  }
+  return null;
+}
+
 export function oneSlowestReplyRow<T extends { kind: string; note?: string; detail?: Record<string, unknown> | null }>(timeline: T[]): T[] {
   const isGap = (e: T) => (e.detail || {}).step === "gaps";
   const worst = timeline.filter(isGap).reduce<number | null>((m, e) => {

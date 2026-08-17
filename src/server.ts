@@ -6564,7 +6564,7 @@ app.get("/api/admin/receipt/:room", async (c) => {
       // the earlier "move mapping out": "it would allow me to see in the testing area a complete end
       // to end log of the entire transaction which is huge for myself and any agent"). The steps were
       // already here; what was missing was the conversation itself, which is half of what he reads.
-      lines: live.transcript.map((l) => ({ who: l.who, text: l.text, atSec: Math.round(l.atMs / 1000), atMs: l.atMs })),
+      lines: live.transcript.map((l) => ({ who: l.who, text: l.text, atSec: Math.round(l.atMs / 1000), atMs: l.atMs, endMs: l.endMs })),
       v2: await v2For(timeline, sums, cost, (await db.select({ rid: callResults.retailerId }).from(callResults).where(eq(callResults.room, room)).limit(1))[0]?.rid ?? null),
     });
   }
@@ -6617,13 +6617,16 @@ app.get("/api/admin/receipt/:room", async (c) => {
     // event at persist — and the verdict tail lands AFTER that once the check settles, so the holder
     // is found by searching back rather than assumed to be last). Older checks predate the stamp and
     // fall back to the flat transcript with no clock, exactly as before.
-    lines: ((): Array<{ who: string; text: string; atSec: number | null; atMs: number | null }> | null => {
-      type Said = { who: string; text: string; atSec: number | null; atMs?: number | null };
+    lines: ((): Array<{ who: string; text: string; atSec: number | null; atMs: number | null; endMs: number | null }> | null => {
+      type Said = { who: string; text: string; atSec: number | null; atMs?: number | null; endMs?: number | null };
       // ONE CLOCK FOR THE WHOLE SHEET (owner 08-06): a line's real millisecond is what puts it in
       // order against the steps. A check recorded before the writer kept it has seconds only, and
       // its second stands in — the same number it always drew at, never a millisecond we invented.
       const timed = (ls: Said[]) => ls.map((l) => ({ who: l.who, text: l.text, atSec: l.atSec ?? null,
-        atMs: l.atMs != null ? l.atMs : (l.atSec != null ? l.atSec * 1000 : null) }));
+        atMs: l.atMs != null ? l.atMs : (l.atSec != null ? l.atSec * 1000 : null),
+        // The END of the sound, on the same clock. A check recorded before we kept ends has none,
+        // and it says so rather than borrowing its own start.
+        endMs: l.endMs ?? null }));
       // The row's full timed conversation first (uncapped; owner 08-05: the record holds everything,
       // the unexpected included) — then the 16-line copy an unattached call leaves on its events.
       try { const t = attached?.transcriptTimed ? JSON.parse(attached.transcriptTimed) as Said[] : null; if (Array.isArray(t) && t.length) return timed(t); } catch { /* fall through */ }
@@ -6635,7 +6638,7 @@ app.get("/api/admin/receipt/:room", async (c) => {
     })()
       ?? String(attached?.transcript || "").split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
         const m = /^(Agent|Clerk|Staff):\s*(.*)$/i.exec(l);
-        return m ? { who: /agent/i.test(m[1]) ? "Agent" : "Clerk", text: m[2], atSec: null, atMs: null } : { who: "Clerk", text: l, atSec: null, atMs: null };
+        return m ? { who: /agent/i.test(m[1]) ? "Agent" : "Clerk", text: m[2], atSec: null, atMs: null, endMs: null } : { who: "Clerk", text: l, atSec: null, atMs: null, endMs: null };
       }),
     v2: await v2For(timeline, seconds, cost, attached?.retailerId ?? null,
       { rows: behaved({ timeline, rollup: seconds, agentLines: agentLinesFrom(attached?.transcript) }),
@@ -7926,11 +7929,13 @@ wssTwilio.on("connection", (ws: WebSocket, _req: unknown, qRoom: string, wantsWo
           try {
             const t = line.text.trim();
             if (!t) return;
-            // How far into the audio the sentence starts, turned into the real moment it was said.
+            // How far into the audio the sentence starts, turned into the real moment it was said,
+            // and the moment its sound STOPPED, which is what a reply gap counts from (owner 08-17).
             const at = firstFrameAtEpochMs ? firstFrameAtEpochMs + line.atAudioMs : undefined;
+            const ended = firstFrameAtEpochMs ? firstFrameAtEpochMs + line.atAudioMs + line.forMs : undefined;
             // The check itself takes the line when it is up. Before that (the menu, the first hello)
             // it goes onto the record here and the live screen is told by us.
-            if (!echoHeardStaff(room, t, at)) { try { relayLine(room, "Clerk", t); } catch { /* the screen is best-effort */ } }
+            if (!echoHeardStaff(room, t, at, ended)) { try { relayLine(room, "Clerk", t); } catch { /* the screen is best-effort */ } }
           } catch (e) { bridgeLog(`echo line dropped: ${String(e).slice(0, 90)}`); }
         }, bridgeLog,
         // Each final, confirmed piece of the turn still being written, so a reconnected Charlie can
