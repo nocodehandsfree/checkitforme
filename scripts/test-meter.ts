@@ -124,5 +124,35 @@ head("THE NAMED GAPS (owner box 08-16 late): every metered second belongs to som
     v.shortFails.includes("Charlie meter time, 44 seconds"), v.shortFails);
 }
 
+head("THE HOLD SET-ASIDE (owner, 08-17): a hold test grades profit with the scripted hold's cost set aside");
+{
+  const holdCard = TEST_CARDS.hold_silence;
+  ok("the three come-back hold cards carry the flag",
+    [TEST_CARDS.hold_silence, TEST_CARDS.hold_music, TEST_CARDS.hold_phone_down].every((c) => c.meter?.holdCostAside === true));
+  // Check 372's own shape: 61% as dialed, over the floor once the scene's hold is set aside.
+  const v = meterVerdict(holdCard, { meterSec: 28, speakingSec: 14, listeningSec: 8, profitPct: 61,
+    holdSec: 25, profitHoldAsidePct: 72 })!;
+  ok("372's shape passes on the aside number", v.rows.find((r) => r.label === "Gross profit")!.pass === true, v.rows);
+  ok("the row says both numbers and the hold", /72%.*25s hold.*61% as dialed.*67% floor/.test(v.rows.find((r) => r.label === "Gross profit")!.value), v.rows);
+  ok("the To pass line says the set-aside", v.toPass.some((t) => /set aside/.test(t)), v.toPass);
+  const bad = meterVerdict(holdCard, { meterSec: 20, profitPct: 40, holdSec: 25, profitHoldAsidePct: 55 })!;
+  ok("still under the floor WITH the aside still fails, and the sentence says so",
+    bad.pass === false && /even with the scene's scripted hold set aside/.test(bad.fails[0] || ""), bad.fails);
+  const plain = meterVerdict(clearYes, { meterSec: 20, profitPct: 61, holdSec: 25, profitHoldAsidePct: 72 })!;
+  ok("a card WITHOUT the flag keeps the strict floor untouched", plain.pass === false, plain.fails);
+  const unmeasured = meterVerdict(holdCard, { meterSec: 20, profitPct: 61, holdSec: null, profitHoldAsidePct: null })!;
+  ok("a hold card with no measured aside grades as dialed, nothing invented", unmeasured.pass === false, unmeasured.fails);
+}
+
+head("THE SHEET'S ROW SHAPE (owner box 08-17): short label, bare number, the two expand sentences");
+{
+  const v = meterVerdict(clearYes, { meterSec: 27, speakingSec: 20, listeningSec: 4, profitPct: 70,
+    answerGapWorstSec: 5, handoverGapWorstSec: 1, dropGapWorstSec: 3 })!;
+  ok("every row carries a short label", v.rows.every((r) => !!r.short), v.rows.map((r) => r.short));
+  ok("every row's number is bare (no words to wrap)", v.rows.every((r) => /^\d+(s|%)$/.test(r.num || "")), v.rows.map((r) => r.num));
+  ok("every row carries the two sentences", v.rows.every((r) => !!r.measures && !!r.whenOff));
+  ok("a gap row's whenOff names its own bands", /Green is 2 seconds or less, red from 7/.test(v.rows.find((r) => r.short === "Answer gap")!.whenOff || ""), v.rows);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);

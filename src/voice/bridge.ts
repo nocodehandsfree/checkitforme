@@ -1598,7 +1598,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *        arithmetic against this call's own zero; without it the line stamps on arrival.
    */
   function staffSaid(txt: string, spokenAtEpochMs?: number, fromEcho?: boolean): boolean {
-    const fresh = recordLine(room, "Clerk", txt, spokenAtEpochMs);
+    // The session path's moment comes from OUR ear (the held greeting's start, the energy ear's
+    // voice start), so it may still file the hello above the question it preceded (owner 07-31).
+    // Echo's stamps are the transcriber's clock and get the one-clock clamp (owner box 08-17).
+    const fresh = recordLine(room, "Clerk", txt, spokenAtEpochMs, undefined, !fromEcho);
     // THE STORE'S FIRST LINE, KEPT (owner 08-07). It is the one thing that can say what language the
     // person who picked up is speaking, and the recorded question is chosen off it a moment later.
     // First only: everything after it is an answer to us, and a store that greets us in Spanish and
@@ -1916,7 +1919,14 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
             hisTurnOpen = true;
             const anchor = Math.max(lastTheirVoiceStopAtMs, lastHandAtMs);
             const gapMs = anchor > 0 ? Date.now() - anchor : 0;
-            if (gapMs > 0 && gapMs < 60_000) worstAnswerGapMs = Math.max(worstAnswerGapMs, gapMs);
+            if (gapMs > 0 && gapMs < 60_000 && gapMs > worstAnswerGapMs) {
+              worstAnswerGapMs = gapMs;
+              // Stamped the moment it is measured, because the close-time stamp below lost a race
+              // on check 372: the carrier's status callback closed the receipt first and the row
+              // never wrote. The sheet reads the worst across every stamp, so a new worst simply
+              // writes again and the last one standing is the check's slowest reply.
+              try { emit(room, "unknown", "Charlie's slowest reply so far", { step: "gaps", answerGapWorstMs: worstAnswerGapMs }); } catch { /* the stamp is best-effort */ }
+            }
           }
           twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: b64 } }));
           fanout(room, b64, "agent");
