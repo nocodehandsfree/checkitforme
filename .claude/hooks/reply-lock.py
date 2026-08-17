@@ -7,7 +7,7 @@
 #      names, decisions, uncertainty, exact quotes intact). No style effort needed.
 #   2. Short reply (4 lines or less, owner widened it from 2 on 08-06): word scan only,
 #      instant approve. An answer far
-#      past the 25 line limit bounces the same instant: no rewrite saves it, and the
+#      past the 20 line limit bounces the same instant: no rewrite saves it, and the
 #      agent cutting it costs a second instead of waiting on a model. The one thing the
 #      cap does not touch is a piece of work the owner asked to be handed in the chat
 #      (rule 11, owner 08-06) — see work_product_asked.
@@ -116,11 +116,10 @@ def skips_writer(text):
     lines = [l for l in text.splitlines() if l.strip()]
     return len(lines) <= 4 and len(text.strip()) <= 420
 
-# THE LINE CAP (owner 08-06, raised from 15). At 15 the replies were scrunching words in
-# and going thin on the explaining, which is the opposite of rule 4. HARD_STOP is where no
-# rewrite is even attempted: it was 22 against a cap of 15, kept at the same distance here.
-CAP = 25
-HARD_STOP = 35
+# THE LINE CAP (owner set 20 on 08-08; 15 scrunched the explaining, 25 ran long).
+# HARD_STOP is where no rewrite is even attempted, kept 10 above the cap as always.
+CAP = 20
+HARD_STOP = 30
 
 def count_lines(prose):
     return sum(max(1, -(-len(l.rstrip()) // 90)) for l in prose.splitlines() if l.strip())

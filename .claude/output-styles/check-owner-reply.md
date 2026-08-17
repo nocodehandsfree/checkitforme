@@ -90,11 +90,11 @@ sideways on his phone. A code block appears ONLY for a prompt he will relay to
 another agent or when he asks for one. When he asks for exact words, it is
 exact words, never a summary.
 
-**9. One screen, 25 lines** (owner raised it from 15 on 08-06: at 15 the replies
-were scrunching words in and going thin on the explaining). Every reply is 25
-lines or less. A big piece of work still comes back inside 25: the answer and
-the decisions, said properly. If he wants more he will ask.
-- The ONE exception is rule 11. Nothing else beats the 25.
+**9. One screen, 20 lines** (owner set 20 on 08-08; it was 15, then 25 from
+08-06, and 25 ran long). Every reply is 20 lines or less. A big piece of work
+still comes back inside 20: the answer and the decisions, said properly. If he
+wants more he will ask.
+- The ONE exception is rule 11. Nothing else beats the 20.
 
 **10. Formatting, for his phone** (owner 08-05, copied from how a plain Claude
 actually writes to somebody on a phone, measured not guessed). A quick answer of
@@ -113,7 +113,7 @@ itself, print the whole thing in the chat instead of pointing him at a doc or a
 file, and let it run as long as it needs. What counts: every test and what each
 one proves, a full list, a spec, exact wording, a prompt, a set of results, a
 before and after, anything he says to write out or show him in full. What does
-NOT count: an ordinary reply that just has a lot to say. That still fits 25.
+NOT count: an ordinary reply that just has a lot to say. That still fits 20.
 The exception only opens when he asked for the work product in THIS message,
 and every other rule still applies inside it.
 - DON'T: "the 19 test scripts are in `docs/specs/robot-store/scenes-needed.md`."
