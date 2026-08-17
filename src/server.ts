@@ -6506,20 +6506,10 @@ app.get("/api/admin/receipt/:room", async (c) => {
       // check is finished, same as the verdict — an unfinished test has not failed either.
       meter: graded ? meterVerdict(card, { meterSec: sums?.charlieConnectedSeconds ?? null,
         speakingSec: sums?.speakingSecs ?? null, listeningSec: sums?.listeningSecs ?? null,
+        // THE SET-ASIDE IS GONE (owner, 08-17 evening: "we already have a system, I didn't ask to
+        // change shit"). A hold test is priced and graded exactly like every other check: the real
+        // profit the check made, against the 67% floor, and no second number of any kind.
         profitPct,
-        // THE HOLD SET-ASIDE (owner, 08-17): the scene's scripted hold seconds priced off THIS
-        // check's own measured cost — the hold's share of the line, the ears and the writing-down,
-        // never Charlie (his meter is dropped on a hold; any seconds he did burn stay his). The
-        // meter half grades with it only on a card that says holdCostAside.
-        ...((): { holdSec: number | null; profitHoldAsidePct: number | null } => {
-          const holdSec = sums?.holdSeconds ?? null;
-          const callSecs = sums?.callSecs ?? 0;
-          if (holdSec == null || holdSec <= 0 || callSecs <= 0 || totalUsd <= 0 || priceUsd <= 0)
-            return { holdSec, profitHoldAsidePct: null };
-          const share = Math.min(1, holdSec / callSecs);
-          const asideUsd = Math.round(((cost?.lineUsd ?? 0) + (cost?.forkUsd ?? 0) + (cost?.sttUsd ?? 0)) * share);
-          return { holdSec, profitHoldAsidePct: Math.round(((priceUsd - (totalUsd - asideUsd)) / priceUsd) * 100) };
-        })(),
         // THE NAMED GAPS, read off the check's own record (owner box 08-16 late): the engine
         // stamped each as it was measured, so nothing here is re-derived or guessed.
         ...((): { answerGapWorstSec: number | null; handoverGapWorstSec: number | null; dropGapWorstSec: number | null } => {

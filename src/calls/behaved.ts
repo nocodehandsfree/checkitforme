@@ -70,11 +70,7 @@ import { askedToBePutThrough as saysPutMeThrough, signedOff } from "../voice/pro
 /** The meter half's per-card overrides (graded by src/calls/meter.ts, the 08-16 build). `null`
  *  switches that number off for the card; absent = the owner's two numbers bind (23s meter ·
  *  67% floor). The rows above stay money-free — this rides BESIDE them, never inside them. */
-export interface MeterBounds { meterCapSec?: number | null; profitFloorPct?: number | null;
-  /** HOLD TESTS GRADE WHAT OUR SYSTEM CONTROLS (owner, 08-17): the scene's scripted hold seconds
-   *  and the phone minutes they force are set aside before the profit is graded — on the TEST
-   *  sheet only. A real customer check carries no card, so its 67 floor is untouched. */
-  holdCostAside?: boolean }
+export interface MeterBounds { meterCapSec?: number | null; profitFloorPct?: number | null }
 
 export interface TestCard { name: string; sub: string; info: string; needs: BehavedKey[]; status: string | null; meter?: MeterBounds }
 
@@ -98,8 +94,7 @@ export const TEST_CARDS: Record<string, TestCard> = {
   hold_silence: { name: "Hold: silence",
     sub: "Staff put us on a silent hold.",
     info: "Charlie dropped on a silent hold, reconnected when they came back, and we displayed the right status.",
-    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold", "wrapped_up", "charlie_ended_the_check"], status: "not_in_stock",
-    meter: { holdCostAside: true } },
+    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold", "wrapped_up", "charlie_ended_the_check"], status: "not_in_stock" },
   // METER EXEMPTIONS (owner's go 08-16, per-card list proposed in the spec, his to re-rule): a
   // scene built to burn the clock can never hold the 67% floor, so grading it there fails it
   // forever and the red becomes noise. The meter cap stays on every card — Charlie's own seconds
@@ -112,13 +107,11 @@ export const TEST_CARDS: Record<string, TestCard> = {
   hold_music: { name: "Hold: music",
     sub: "Staff put us on hold with music and Charlie dropped until a person came back.",
     info: "This test proves that hold music stops Charlie's meter the same way silence does, and that he reconnected when a person spoke to us again.",
-    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold", "wrapped_up", "charlie_ended_the_check"], status: "in_stock",
-    meter: { holdCostAside: true } },
+    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold", "wrapped_up", "charlie_ended_the_check"], status: "in_stock" },
   hold_phone_down: { name: "Hold: phone down",
     sub: "Staff set the phone on the counter and Charlie dropped until someone spoke to us again.",
     info: "This test proves that background store noise stops Charlie's meter the same way silence does. Someone talking across the room is not someone talking to us.",
-    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold", "wrapped_up", "charlie_ended_the_check"], status: "in_stock",
-    meter: { holdCostAside: true } },
+    needs: ["handed_to_charlie", "question_recorded", "meter_stopped_on_hold", "wrapped_up", "charlie_ended_the_check"], status: "in_stock" },
   hungup_staff: { name: "Hungup: Staff",
     sub: "Staff hung up on us before giving an answer and we showed a Staff hung up status.",
     info: "This test proves that when Staff hung up on us, the record shows they ended the check, not us.",

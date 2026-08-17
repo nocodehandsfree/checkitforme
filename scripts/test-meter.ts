@@ -124,31 +124,26 @@ head("THE NAMED GAPS (owner box 08-16 late): every metered second belongs to som
     v.shortFails.includes("Charlie meter time, 44 seconds"), v.shortFails);
 }
 
-head("THE HOLD SET-ASIDE (owner, 08-17): a hold test grades profit with the scripted hold's cost set aside");
+head("THE SET-ASIDE IS GONE (owner, 08-17 evening): a hold test is graded like every other check");
 {
   const holdCard = TEST_CARDS.hold_silence;
-  ok("the three come-back hold cards carry the flag",
-    [TEST_CARDS.hold_silence, TEST_CARDS.hold_music, TEST_CARDS.hold_phone_down].every((c) => c.meter?.holdCostAside === true));
-  // Check 372's own shape: 61% as dialed, over the floor once the scene's hold is set aside.
-  const v = meterVerdict(holdCard, { meterSec: 28, speakingSec: 14, listeningSec: 8, profitPct: 61,
-    holdSec: 25, profitHoldAsidePct: 72 })!;
-  ok("372's shape passes on the aside number", v.rows.find((r) => r.label === "Gross profit")!.pass === true, v.rows);
-  // THE OWNER'S RULING (08-17): the set-aside percent is an invented number and may never print
-  // or be spoken anywhere on the sheet. The row shows ONLY what the check really made.
+  ok("no card carries a set-aside of any kind any more",
+    [TEST_CARDS.hold_silence, TEST_CARDS.hold_music, TEST_CARDS.hold_phone_down]
+      .every((c) => !(c.meter && Object.prototype.hasOwnProperty.call(c.meter, "holdCostAside"))));
+  // Check 373's own numbers: 60% real, which is under the floor, and that is the whole grade now.
+  const v = meterVerdict(holdCard, { meterSec: 29, speakingSec: 9, listeningSec: 7, profitPct: 60 })!;
   const profitRow = v.rows.find((r) => r.label === "Gross profit")!;
-  ok("the row shows only the real number", profitRow.value === "61% against the 67% floor", v.rows);
-  ok("the invented percent appears NOWHERE on the row", ![profitRow.value, profitRow.say?.num ?? "", profitRow.open ?? ""].some((s) => /72/.test(s)), profitRow);
-  ok("the spoken sentence says the real number", profitRow.say?.num === "61%", profitRow.say);
-  ok("the tapped-open words name the set-aside with no percent in them",
-    /set aside/.test(profitRow.open ?? "") && !/\d+%/.test(profitRow.open ?? ""), profitRow.open);
-  ok("the To pass line says the set-aside", v.toPass.some((t) => /set aside/.test(t)), v.toPass);
-  const bad = meterVerdict(holdCard, { meterSec: 20, profitPct: 40, holdSec: 25, profitHoldAsidePct: 55 })!;
-  ok("still under the floor WITH the aside still fails, and the sentence says so",
-    bad.pass === false && /even with the scene's scripted hold set aside/.test(bad.fails[0] || ""), bad.fails);
-  const plain = meterVerdict(clearYes, { meterSec: 20, profitPct: 61, holdSec: 25, profitHoldAsidePct: 72 })!;
-  ok("a card WITHOUT the flag keeps the strict floor untouched", plain.pass === false, plain.fails);
-  const unmeasured = meterVerdict(holdCard, { meterSec: 20, profitPct: 61, holdSec: null, profitHoldAsidePct: null })!;
-  ok("a hold card with no measured aside grades as dialed, nothing invented", unmeasured.pass === false, unmeasured.fails);
+  ok("373's shape fails on what the check really made", profitRow.pass === false && v.pass === false, v.rows);
+  ok("the row shows the real number and only that", profitRow.value === "60% against the 67% floor", profitRow);
+  ok("the spoken sentence says the real number", profitRow.say?.num === "60%", profitRow.say);
+  ok("no set-aside is named or hinted at anywhere on the row",
+    ![profitRow.value, profitRow.say?.num ?? "", profitRow.say?.tail ?? "", profitRow.open ?? ""].some((t) => /set aside/i.test(t)), profitRow);
+  ok("the To pass line asks for the plain floor", v.toPass.some((t) => t === "gross profit 67% or better")
+    && !v.toPass.some((t) => /set aside/i.test(t)), v.toPass);
+  ok("the failing sentence names the plain floor too",
+    /made 60% gross profit against the 67% floor\./.test(v.fails.join(" ")) && !/set aside/i.test(v.fails.join(" ")), v.fails);
+  const over = meterVerdict(holdCard, { meterSec: 20, profitPct: 70 })!;
+  ok("a hold test over the floor passes on the real number", over.pass === true, over.fails);
 }
 
 head("THE ROW WORDS ARE THE OWNER'S OWN SENTENCES (08-17), numbers filled in from the check");

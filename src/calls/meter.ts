@@ -71,13 +71,6 @@ export interface MeterInput {
   answerGapWorstSec?: number | null;
   handoverGapWorstSec?: number | null;
   dropGapWorstSec?: number | null;
-  /** THE HOLD SET-ASIDE (owner, 08-17): on a hold test the scene scripts the hold, so its seconds
-   *  and the phone minutes they force are our scene's doing, not our system's. The server prices
-   *  those seconds off the check's own measured cost and sends the profit with them set aside.
-   *  Graded ONLY when the card says `holdCostAside` — a real customer check never carries a card,
-   *  so its floor is untouched. */
-  holdSec?: number | null;
-  profitHoldAsidePct?: number | null;
 }
 
 /** The owner's gap bands (his box, 08-16 late): Charlie's answer gap green to 2, yellow to 6, red
@@ -177,30 +170,19 @@ export function meterVerdict(card: TestCard | null | undefined, m: MeterInput): 
   gap("handover", m.handoverGapWorstSec);
   gap("drop", m.dropGapWorstSec);
 
-  // THE HOLD SET-ASIDE (owner, 08-17): a hold card grades the profit with the scene's scripted
-  // hold seconds and the phone minutes they force set aside, because the scene forced them, not
-  // our system. Only when the card says so AND the aside was measured; a real customer check has
-  // no card and keeps the strict floor untouched.
-  // THE ROW NEVER PRINTS THE SET-ASIDE PERCENT (owner, 08-17 day's end, restated 08-17 late): a
-  // percent the check never made is an invented number and may never print or be spoken anywhere
-  // on the sheet. The row shows ONLY what the check really made; the set-aside works underneath,
-  // in the grade alone, and the tapped-open sentences say so in words with no number.
-  const aside = b.holdCostAside === true && m.profitHoldAsidePct != null;
-  if (floor != null) toPass.push(aside
-    ? `gross profit ${floor}% or better with the scene's scripted hold set aside`
-    : `gross profit ${floor}% or better`);
-  const gradedPct = aside ? m.profitHoldAsidePct! : m.profitPct;
+  // THE PROFIT ROW IS THE REAL PROFIT AND NOTHING ELSE (owner, 08-17 evening). The hold set-aside
+  // built earlier that day is DELETED: a hold test is shown and graded exactly like every other
+  // check, what it really made against the floor, which is the system as it already was.
+  if (floor != null) toPass.push(`gross profit ${floor}% or better`);
   if (m.profitPct != null) {
-    const pass = floor == null || gradedPct == null ? null : gradedPct >= floor;
+    const pass = floor == null ? null : m.profitPct >= floor;
     rows.push({ label: "Gross profit",
       value: floor == null ? `${m.profitPct}%` : `${m.profitPct}% against the ${floor}% floor`,
       pass, tone: pass === false ? "r" : pass === true ? "g" : undefined,
       say: { pre: "This check made ", num: `${m.profitPct}%`, post: ".",
         tail: floor == null ? undefined : `The floor is ${floor}.` },
-      open: aside
-        ? `The scene scripted a ${secWord(m.holdSec ?? 0)} hold, so its phone cost is set aside when this test sheet grades the floor. A real customer check gets no set aside.`
-        : "The price of the check, minus what it cost to run, as a share of the price. The Check cost card below says where the money went." });
-    if (pass === false) { fails.push(`The check made ${m.profitPct}% gross profit against the ${floor}% floor${aside ? ", even with the scene's scripted hold set aside" : ""}.`); shortFails.push(`profit ${m.profitPct}% under the ${floor}% floor`); }
+      open: "The price of the check, minus what it cost to run, as a share of the price. The Check cost card below says where the money went." });
+    if (pass === false) { fails.push(`The check made ${m.profitPct}% gross profit against the ${floor}% floor.`); shortFails.push(`profit ${m.profitPct}% under the ${floor}% floor`); }
   }
 
   return { pass: fails.length === 0, fails, shortFails, toPass, rows };
