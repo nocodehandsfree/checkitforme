@@ -6506,7 +6506,22 @@ app.get("/api/admin/receipt/:room", async (c) => {
       // check is finished, same as the verdict — an unfinished test has not failed either.
       meter: graded ? meterVerdict(card, { meterSec: sums?.charlieConnectedSeconds ?? null,
         speakingSec: sums?.speakingSecs ?? null, listeningSec: sums?.listeningSecs ?? null,
-        profitPct }) : null } : null,
+        profitPct,
+        // THE NAMED GAPS, read off the check's own record (owner box 08-16 late): the engine
+        // stamped each as it was measured, so nothing here is re-derived or guessed.
+        ...((): { answerGapWorstSec: number | null; handoverGapWorstSec: number | null; dropGapWorstSec: number | null } => {
+          let answer: number | null = null, handover: number | null = null, drop: number | null = null;
+          let lastHold: number | null = null;
+          for (const e of timeline as Array<{ kind: string; atMs?: number; detail?: Record<string, unknown> | null }>) {
+            const det = (e.detail || {}) as Record<string, unknown>;
+            const ms = typeof e.atMs === "number" ? e.atMs : null;
+            if (det.step === "gaps" && typeof det.answerGapWorstMs === "number") answer = Math.max(answer ?? 0, Math.round(det.answerGapWorstMs / 1000));
+            if (det.step === "missed_turn" && typeof det.sinceVoiceStopMs === "number") handover = Math.max(handover ?? 0, Math.round(det.sinceVoiceStopMs / 1000));
+            if (e.kind === "hold_start" && ms != null) lastHold = ms;
+            if (e.kind === "charlie_leave" && ms != null && lastHold != null) { drop = Math.max(drop ?? 0, Math.round((ms - lastHold) / 1000)); lastHold = null; }
+          }
+          return { answerGapWorstSec: answer, handoverGapWorstSec: handover, dropGapWorstSec: drop };
+        })() }) : null } : null,
       buckets, totalUsd, readable: money(totalUsd),
       profitPct,
       talkSec: sums?.charlieConnectedSeconds ?? null, workflow,

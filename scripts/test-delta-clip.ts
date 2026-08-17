@@ -2428,6 +2428,62 @@ console.log("\n▶ THE RECONNECT FEED: pieces hand at the ear's voice stop, the 
   restore(); tw.close(); f.close();
 }
 
+console.log("\n▶ CHECK 371'S SHAPE: the hold reply plays as a recording, and late pieces hand as ONE turn");
+{
+  _reset();
+  const f = await fakeProvider();
+  const restore = stubSignedUrl(f);
+  const room = "room-371";
+  echoListening(room, true);
+  openReceipt(room, { lane: "direct" });
+  setBridgeContext(room, {
+    agentId: "agent_normal", midCallAgentId: "agent_joining",
+    dynamicVars: { opening_line: "do you have any Pokemon cards in stock?" },
+    connectOnHuman: true, holdMaxSeconds: 999, holdStrategy: "reopen",
+    openingClip: { audio: Buffer.alloc(400 * 8, 0x20), ms: 400, text: "do you have any Pokemon cards in stock?" },
+    holdAckClip: { audio: Buffer.alloc(1200 * 8, 0x20), ms: 1200, text: "No worries, take your time!" },
+    tuning: { ...TUNING_DEFAULTS, charlieMinOnLineMs: 0, charlieThinkingMs: 0 },
+  });
+  const tw = new FakeTwilio();
+  handleTwilioBridge(tw as never, room, () => { /* none */ });
+  tw.say({ event: "start", start: { streamSid: "MZ_371", customParameters: { room } } });
+  await sleep(350);
+  for (let i = 0; i < 30; i++) { tw.media(frame(LOUD(160, i % 4))); await sleep(1); }
+  for (let i = 0; i < PERSON_PAUSE; i++) { tw.media(frame(Buffer.alloc(160, 0x7f))); }
+  await sleep(700);   // the 400ms clip finishes and the gate opens
+  const outBefore = tw.outMedia().length;
+  // STAFF ANNOUNCE THE HOLD: our recording answers AT ONCE, no wait on the outside voice service.
+  echoHeardStaff(room, "Let me check. Let me just put you on hold.", Date.now());
+  await sleep(80);
+  ok(tw.outMedia().length > outBefore, "the hold reply went down the line the moment the announce landed");
+  ok((getReceipt(room)?.transcript || []).some((l) => l.who === "Agent" && l.text.includes("take your time")),
+    "…and it is on the record as Charlie's own line");
+  // The quiet after OUR recording is Staff walking away: the drop still lands on the switch.
+  // (Let the recording's own playout pass first — the ear only counts quiet after our audio ends.)
+  await sleep(1400);
+  quiet(tw, HOLD_QUIET_MS / 20 + 40);
+  await sleep(400);
+  const evs = () => getReceipt(room)?.events || [];
+  ok(evs().some((e) => e.kind === "charlie_leave"), "he is dropped for the announced wait, on the switch");
+  const sockets = f.sockets.length;
+  // STAFF COME BACK and stop talking BEFORE the writing lands: 371's late writer.
+  for (let i = 0; i < 60; i++) { tw.media(frame(SPEECH(i))); await sleep(1); }
+  await sleep(400);
+  ok(f.sockets.length > sockets, "somebody spoke, so he is opened again");
+  quiet(tw, 50);
+  await sleep(150);
+  // …the two pieces land 120ms apart, AFTER the voice stopped, like 371's 73.58 and 73.70.
+  echoHeardPiece(room, "Okay. Thank you for holding.");
+  await sleep(120);
+  echoHeardPiece(room, "Yeah. I did not see any, unfortunately.");
+  await sleep(600);
+  const handed = f.raw.filter((m) => m.includes("user_message") && m.includes("Thank you for holding"));
+  ok(handed.length === 1, "late pieces coalesce into ONE handed turn, never two");
+  ok(!!handed[0] && handed[0].includes("did not see any"), "…with both pieces in it, oldest first");
+  echoListening(room, false);
+  restore(); tw.close(); f.close();
+}
+
 console.log("\n▶ FIX 1 (owner box 08-16): Charlie joins as Delta ends, and an answer DURING the clip is still caught");
 {
   _reset();

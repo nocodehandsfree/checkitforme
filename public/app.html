@@ -2511,6 +2511,14 @@ function checkV2From(d,o){
     statusLine:gr.wantStatus?(gr.statusOk?('The check came back '+wordFor(gr.wantStatus)+'.')
       :('The check should come back '+wordFor(gr.wantStatus)+' and came back '+(gr.gotStatus?wordFor(gr.gotStatus):'nothing')+'.')):'',
     statusOk:gr.statusOk,
+    // THE PILL NAMES ITS REASON (owner 08-16 late): what killed the test, a few words, worn on the
+    // pill itself. First kill wins: a behavior row that never ticked, then a wrong status, then the
+    // meter half's own short words ("Charlie meter time, 44 seconds").
+    why:((gr.missing||[]).length?labelOf(gr.missing[0])+' row':'')
+      ||(gr.statusOk===false?'wrong status':'')
+      ||((mt&&mt.pass===false&&mt.shortFails&&mt.shortFails[0])||''),
+    // The meter half's graded rows ride along so the sheet can draw the waiting by name.
+    meterRows:(mt&&mt.rows)||[],
   }:null;
   const needList=[...need].map(labelOf).concat(gr&&gr.wantStatus?['the check comes back '+wordFor(gr.wantStatus)]:[])
     .concat((mt&&mt.toPass)||[]);
@@ -2648,7 +2656,7 @@ function checkV2Html(d){
       <div><span data-tip="${esch(d.info)}" style="font-size:20px;font-weight:800;letter-spacing:-.4px;color:#fff;white-space:nowrap">${esch(d.name)}</span></div>
       <div class="meta" style="margin:5px 0 0;font-size:13px;max-width:0;min-width:100%">${esch(d.sub)}</div></div>
     <div style="display:flex;gap:7px;margin:12px 0 16px;flex-wrap:wrap">
-      ${d.verdict?`<span style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:5px 12px;${d.verdict.pass?'color:var(--green);background:rgba(74,222,128,.13)':'color:var(--red);background:rgba(239,68,68,.13)'}">${d.verdict.pass?'Test passed':'Test failed'}</span>`:''}
+      ${d.verdict?`<span style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:5px 12px;${d.verdict.pass?'color:var(--green);background:rgba(74,222,128,.13)':'color:var(--red);background:rgba(239,68,68,.13)'}">${d.verdict.pass?'Test passed':'Test failed'+(d.verdict.why?' · '+esch(d.verdict.why):'')}</span>`:''}
       ${pill(d.passed,'passed','color:var(--green);background:rgba(74,222,128,.13)')}
       ${pill(d.failed,'failed','color:var(--red);background:rgba(239,68,68,.13)')}
     </div>
@@ -2661,7 +2669,10 @@ function checkV2Html(d){
       <div class="stat"><div class="n" style="color:#fff">${d.stats.time}</div><div class="l">Total time</div></div>
       <div class="stat"><div class="n" style="color:${d.stats.talkedC||'var(--green)'}">${d.stats.talked}</div><div class="l">Charlie on the meter${d.stats.talkSplit?`<div style="margin-top:3px;font-size:10px;line-height:1.35;color:#8A8A96">${esch(d.stats.talkSplit)}</div>`:''}</div></div><!-- owner rule: green at 23s or under, yellow 24 to 30, red 31 and up -->
       <div class="stat"><div class="n" style="color:${d.stats.profitC||'var(--green)'}">${d.stats.profit}</div><div class="l">Gross profit</div></div>
-    </div>`;
+    </div>${(d.verdict&&d.verdict.meterRows&&d.verdict.meterRows.length)?`<div class="card" style="margin-bottom:14px;padding:12px 18px">
+      <div class="k-eyebrow" style="margin:0 0 4px">Where the seconds went</div>
+      ${d.verdict.meterRows.map(r=>`<div class="row" style="padding:4px 0"><span class="grow" style="font-size:12.5px;font-weight:600;color:#CDCDD8">${esch(r.label)}</span><span style="font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums;color:${r.tone==='r'?'var(--red)':r.tone==='y'?'#F59E0B':r.tone==='g'?'var(--green)':'#CDCDD8'}">${esch(r.value)}</span></div>`).join('')}
+    </div>`:''}`;
   const mini=rows=>`<div style="padding:2px 0 8px">${rows.map(r=>`<div style="display:flex;align-items:baseline;gap:6px;padding:3px 0 3px 12px"><span style="flex:0 0 auto;font-size:12px;font-weight:600;color:#8A8A96">${esch(r[0])}</span><span style="flex:1;border-bottom:1px dotted rgba(255,255,255,.16);transform:translateY(-3px)"></span><span style="flex:0 0 auto;font-size:12px;font-weight:700;color:var(--text-strong);font-variant-numeric:tabular-nums">${esch(r[1])}</span></div>`).join('')}</div>`;
   const chev='<svg class="pk-chev" width="15" height="15" style="flex:0 0 auto;width:15px;height:15px;color:#5C5C68" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
   const cost=`<div class="card" style="margin-bottom:14px;padding:16px 18px">
