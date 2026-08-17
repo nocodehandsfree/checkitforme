@@ -7190,7 +7190,10 @@ async function loadTesting(){
   const s=d.summary||{};
   // Report strip over the log (comp: Testing is a LOG with a report strip).
   const well=(n,l,cls)=>`<div class="k-well"><div class="n${cls?' '+cls:''}">${n}</div><div class="l">${l}</div></div>`;
-  sum.innerHTML=`<div class="k-hero"><span class="n">${d.count||0}</span><span class="l">test calls</span></div>
+  // THE BIG NUMBER IS THE NEWEST CHECK'S OWN NUMBER (owner, 08-17 evening): a report that names
+  // check 374 and a page that reads 372 were counting two different things. The server sends the
+  // newest number now; the row count stands in only for a page that has not been told one yet.
+  sum.innerHTML=`<div class="k-hero"><span class="n">${d.newest||d.count||0}</span><span class="l">test calls</span></div>
     <div class="k-wells">${well(secsFmt(s.avgNavSec||0),'To a person','')}${well(secsFmt(s.avgTalkSec||0),'Avg talk','g')}${well(secsFmt(s.avgCallSec||0),'Avg total','')}</div>`;
   let html='', lastDay=null;
   // TEN AT A TIME (owner 07-30). Two hundred checks in one screen is a page that has to render two

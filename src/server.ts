@@ -4899,6 +4899,11 @@ app.get("/api/admin/test-calls", async (c) => {
   const avg = (xs: number[]) => (xs.length ? Math.round(xs.reduce((s, x) => s + x, 0) / xs.length) : 0);
   return c.json({
     count: rows.length,
+    // THE PAGE'S BIG NUMBER IS THE NEWEST CHECK'S OWN NUMBER (owner, 08-17 evening). It used to
+    // count the rows, and the count had drifted below the numbering: 372 counted against a newest
+    // check numbered 373, so a report naming a check named a number this page never showed. From
+    // here the two are the same number moving forward, and nothing in the history is renumbered.
+    newest: rows.reduce((m, r) => Math.max(m, Number(r.id) || 0), 0) || null,
     summary: {
       calls: timed.length,
       avgNavSec: avg(timed.map((r) => r.navSec || 0)),
