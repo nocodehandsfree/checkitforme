@@ -38,6 +38,11 @@ export interface CharlieSetupInput {
   directPickup?: boolean;
 }
 
+/** THE HOLD REPLY'S WORDS — Charlie's own line from checks 368 and 371, and its Spanish beside it
+ *  (every spoken string rides with its Spanish, same as the opening question). */
+export const HOLD_ACK_LINE = "No worries, take your time!";
+export const HOLD_ACK_LINE_ES = "No se preocupe, tómese su tiempo.";
+
 /** THE OPENING SHAVE (fix 4, owner box 08-16, off check 368: line answered at 3, greeting done near
  *  6.5, the question at 8). The last stretch is the person test waiting `personWaitMs` of quiet to
  *  be sure a person stopped for us rather than a recording pausing for breath. On a chain whose own
@@ -54,6 +59,7 @@ export function personWaitForStore(baseMs: number, directPickup: boolean): numbe
 export type CharlieShared = Pick<BridgeContext,
   | "agentId" | "apiKey" | "dynamicVars" | "onConversationId" | "openingClip" | "openingClipEs" | "midCallAgentId"
   | "departmentName" | "ourBrain" | "ourBrainAgentId" | "holdStrategy" | "tuning" | "timeLimitSec"
+  | "holdAckClip" | "holdAckClipEs"
   | "giveUpSeconds" | "earFromSec" | "voiceId" | "voiceTuning">;
 
 export type CharlieSetup =
@@ -87,6 +93,8 @@ export async function buildCharlieSetup(input: CharlieSetupInput): Promise<Charl
   // voice, so the recording and the agent are the same person rather than two.
   let openingClip: BridgeContext["openingClip"];
   let openingClipEs: BridgeContext["openingClipEs"];
+  let holdAckClip: BridgeContext["holdAckClip"];
+  let holdAckClipEs: BridgeContext["holdAckClipEs"];
   let clipFailed = false;
   const question = input.dynamicVars.opening_line || "";
   // DELTA SWITCHED OFF ON PURPOSE (owner 08-07, the Delta: failed card). Nothing could ever make the
@@ -119,6 +127,15 @@ export async function buildCharlieSetup(input: CharlieSetupInput): Promise<Charl
       const cEs = await phoneClip(input.voiceId, es, input.voiceTuning || {}, input.apiKey).catch(() => null);
       if (cEs) openingClipEs = { audio: cEs.audio, ms: cEs.ms, text: cEs.text };
       else console.log("[charlie] no Spanish recording for this check, so a Spanish store hears the English question");
+      // THE HOLD REPLY, RECORDED BESIDE THE QUESTION (owner box 08-16 late, off check 371: the
+      // spoken version of "No worries, take your time!" cost 8 metered seconds while the outside
+      // voice service thought it up). Recorded ONCE per voice, cached like the question, played by
+      // our own system the moment Staff announce a hold. Best effort: with no recording the check
+      // runs exactly as it does today.
+      const ack = await phoneClip(input.voiceId, HOLD_ACK_LINE, input.voiceTuning || {}, input.apiKey).catch(() => null);
+      if (ack) holdAckClip = { audio: ack.audio, ms: ack.ms, text: ack.text };
+      const ackEs = await phoneClip(input.voiceId, HOLD_ACK_LINE_ES, input.voiceTuning || {}, input.apiKey).catch(() => null);
+      if (ackEs) holdAckClipEs = { audio: ackEs.audio, ms: ackEs.ms, text: ackEs.text };
     }
   }
 
@@ -130,6 +147,8 @@ export async function buildCharlieSetup(input: CharlieSetupInput): Promise<Charl
       onConversationId: input.onConversationId,
       openingClip,
       openingClipEs,
+      holdAckClip,
+      holdAckClipEs,
       midCallAgentId: config.voice.midCallAgentId,
       departmentName: input.departmentName,
       ourBrain: !!pol.flags?.ourBrain,

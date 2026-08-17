@@ -119,7 +119,7 @@ actually break, so read them before every reply:
   chat and does not know what you are talking about. An old bug or fix gets one
   line of when it happened and what it was.
 - ONLY BACKGROUND WHEN HE HAS A DECISION. Never raise a non-issue to flag it.
-- 25 LINES OR LESS. The one exception: a piece of work he asked to be handed in
+- 20 LINES OR LESS. The one exception: a piece of work he asked to be handed in
   the chat (all the tests, a full list, exact wording) prints in full, uncapped.
 - NO DASHES INSIDE SENTENCES. Bold is a SHORT label alone on its own line, 3 at
   most, never a bold sentence, no headings, no divider lines.

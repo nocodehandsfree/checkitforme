@@ -109,6 +109,12 @@ export interface BridgeContext {
    *  Which of the two actually plays is decided at the moment we ask, off the WORDS of the store's
    *  own first line. Absent on a check that could not record one, and then the English one asks. */
   openingClipEs?: { audio: Buffer; ms: number; text: string };
+  /** THE HOLD REPLY AS A RECORDING (owner box 08-16 late, off check 371). Staff announce a hold and
+   *  the acknowledgment plays from OUR system at once, in Charlie's own voice, the way Delta's
+   *  question does — no waiting on the outside voice service to think one up. Both languages ride,
+   *  picked at play time the same way the opening clip is. */
+  holdAckClip?: { audio: Buffer; ms: number; text: string };
+  holdAckClipEs?: { audio: Buffer; ms: number; text: string };
   // The agent that joins a conversation ALREADY IN PROGRESS: configured once, empty greeting,
   // standing instruction to wait silently for the answer. A DEDICATED AGENT, deliberately, because
   // overriding the prompt or the first message per call once hung calls up — the whole design would
@@ -564,6 +570,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  with it the greeting on the customer's page, Staff's name, and the voicemail net's one look at
    *  the store's first words. Delivered in the metadata handler, ahead of everything else. */
   let helloLineWaiting: { text: string } | null = null;
+  /** The clip committed before Echo's writing of the hello landed (check 370): the first written
+   *  line to arrive may be the hello, and `staffSaid` finishes the hand-over then. Only a line
+   *  SPOKEN before the commit qualifies — the greeting always is, because the commit waits for it
+   *  to end; a first line spoken after the commit is conversation, never the hello. */
+  let wantHelloFromEcho = false;
+  let clipCommittedAtMs = 0;
   /** Running while held audio is being paced out. Live frames queue behind it so nothing overtakes. */
   let handoverTimer: NodeJS.Timeout | null = null;
   /** Our question, kept off the live view until the store's hello can be shown above it. */
@@ -790,6 +802,17 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    *  never re-handed (the mirror image of the stale hello). `voiceStopped` is the EAR's own word
    *  that their voice ended, which is what opens his turn — never the writer's one second quiet. */
   let reconnectFeed: { handed: string[]; voiceStopped: boolean } | null = null;
+  /** Post-stop pieces coalesce for a beat so a burst of late writing hands as ONE turn, not two
+   *  (check 371: two pieces 0.12s apart reached him as two turns). */
+  let pieceCoalesceTimer: NodeJS.Timeout | null = null;
+  /** THE GAP STAMPS (owner box 08-16 late): measured by the engine on the call itself, written onto
+   *  the record, so every metered second belongs to somebody by name. */
+  let lastTheirVoiceStopAtMs = 0;   // the sound's real end, backdated past the ear's confirm gap
+  let lastHandAtMs = 0;             // when words were last handed to him as their turn
+  let worstAnswerGapMs = 0;         // his slowest reply, anchored at their stop or the hand
+  let hisTurnOpen = false;
+  /** Our recorded hold reply is covering the announce; his own generated version is dropped. */
+  let ackPlayingUntil = 0;
   let convEar: ConversationEar | null = null;   // attached the moment a real person is on the line
   /**
    * THE INVERSION (owner + PM, 08-08). Mid conversation, PLAIN QUIET NEVER DROPS CHARLIE. He is
@@ -1015,6 +1038,14 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       markAsHis(theirFirstLine);
       deliverHelloLine();
     }
+    // THE HELLO'S WRITING CAN LOSE THE RACE TO THIS MOMENT (check 370). The shorter opening wait on
+    // a known-direct store commits the question ~1.5s after the greeting ends, and Echo's writing of
+    // that greeting lands about a second behind the sound — on 370 it landed just after, so the
+    // branch above never ran, the hello went unmarked, and the first-join hand-over gave it to
+    // Charlie as a turn he owed: he asked the set question at 12.7s before Staff had said a word.
+    // On an Echo check the hello is NEVER transcribed a second time; instead `staffSaid` finishes
+    // this hand-over the moment the first line lands, whichever side of this instant that is.
+    else if (echoRooms.has(room)) { wantHelloFromEcho = true; clipCommittedAtMs = Date.now(); }
     else void transcribeTheirHello(helloAudio, ctx?.apiKey || config.voice.apiKey);
     // THE QUESTION WE ACTUALLY ASKED IS A LINE OF THE CONVERSATION. It is played from a recording
     // rather than generated, so nothing in the provider's transcript knows it happened — which left
@@ -1316,7 +1347,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
    * twice on the line.
    */
   function tellCharlieWhatHeMissed(): void {
-    handTheirTurn(missedWhileClosed.splice(0, missedWhileClosed.length), "said while he was off");
+    // THE GREETING IS NEVER MISSED WORDS (check 370). Delta answers the store's hello by design
+    // (owner 08-05), so whatever race put it in the pocket, it may not reach him as a turn: handed
+    // as one at 10.7s on 370, he answered it with the set question before Staff had said a word.
+    const said = missedWhileClosed.splice(0, missedWhileClosed.length)
+      .filter((s) => !theirFirstLine || keyOf(s) !== keyOf(theirFirstLine));
+    handTheirTurn(said, "said while he was off");
   }
 
   /** THE ONE DOOR THAT FEEDS HIS SESSION STAFF'S WORDS AS THEIR TURN, and the moment "he has heard
@@ -1334,9 +1370,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     const text = `${said.join(" ")}\n\n[Those are Staff's own words, said while you were off the line. Answer them now, out loud, exactly as if you had heard them yourself. Never ask them to repeat it and never ask anything they have already answered. If their words answer the question, take the answer and ask only for whatever piece is still missing; if nothing is missing, wrap up.]`;
     try {
       eleven.send(JSON.stringify({ type: "user_message", text }));
+      lastHandAtMs = Date.now();
       log(`handed the agent ${said.length} line(s) AS THEIR TURN (${why}), so he answers them`);
       emit(room, "unknown", "Charlie was handed what Staff said while he was off, as their turn",
-        { step: "missed_turn", lines: said.length, text: said.join(" ").slice(0, 200), why });
+        { step: "missed_turn", lines: said.length, text: said.join(" ").slice(0, 200), why,
+          // Echo's handover gap, measured here: sound stopped -> words in his hands.
+          sinceVoiceStopMs: lastTheirVoiceStopAtMs > 0 ? Math.max(0, Date.now() - lastTheirVoiceStopAtMs) : undefined });
       // AND THE QUIET AFTER IT IS HIM THINKING, NEVER A DROP, until he has answered this turn (the
       // PM's item 3). It is the same rule as his first words on a session, and being handed a turn
       // is exactly that moment: he owes them a word from here.
@@ -1352,7 +1391,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     const t = String(text || "").trim();
     if (!t || ended) return;
     openTurnPieces.push(t);
-    if (reconnectFeed?.voiceStopped) handPiecesNow("the piece landed after their voice had stopped");
+    // Pieces landing after the voice stopped wait one beat for a trailing piece, so late writing
+    // hands as ONE turn (check 371: two pieces 0.12s apart reached him as two separate turns).
+    if (reconnectFeed?.voiceStopped) {
+      if (pieceCoalesceTimer) clearTimeout(pieceCoalesceTimer);
+      pieceCoalesceTimer = setTimeout(() => {
+        pieceCoalesceTimer = null;
+        handPiecesNow("the pieces landed after their voice had stopped");
+      }, 300);
+    }
   }
   /** Hand every not-yet-handed piece of the in-flight turn as their turn. Only during a reconnect
    *  feed, only once the EAR heard their voice stop, and every piece is marked heard at this exact
@@ -1372,6 +1419,32 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // its absorb, rode the pocket, and the same no reached him twice). Marked AFTER the hand, or
     // a single-piece turn would be filtered out as already his.
     markAsHis(reconnectFeed.handed.join(" "));
+  }
+
+  /** THE HOLD REPLY AS A RECORDING (owner box 08-16 late, off check 371). Staff announce a hold
+   *  and the acknowledgment plays AT ONCE from our own system, in Charlie's voice, the way Delta's
+   *  question plays — the spoken version cost 8 metered seconds on 371 while the outside voice
+   *  service thought it up. His own generated reply to the same announce is dropped while the
+   *  recording covers it, and the quiet after it is THEIRS, so the drop counts from their walk
+   *  away exactly as the switch says. */
+  function playHoldAck(): void {
+    if (ended || onHold || twilio.readyState !== 1 || !streamSid || !charlieGateOpen) return;
+    const es = !!ctx?.holdAckClipEs && staffSpokeSpanish(theirFirstLine);
+    const clip = es ? ctx?.holdAckClipEs : ctx?.holdAckClip;
+    if (!clip) return;
+    for (const f of toMediaFrames(clip.audio)) {
+      twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: f } }));
+      fanout(room, f, "agent");
+    }
+    agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + clip.ms;
+    ackPlayingUntil = Date.now() + clip.ms + 4000;
+    addMs(room, "speakingMs", clip.ms);
+    charlieSpokenMs += clip.ms;
+    spokeThisSession = true;   // he has had his say: the quiet that follows is Staff walking away
+    recordLine(room, "Agent", clip.text);
+    try { relayLine?.(room, "Agent", clip.text); } catch { /* the screen is best-effort */ }
+    emit(room, "unknown", "The hold reply played as a recording", { step: "hold_ack_clip", ms: clip.ms, language: es ? "es" : "en" });
+    log(`hold ack: our recording played (${clip.ms}ms), no wait on the outside voice service`);
   }
 
   /** Every Staff line already given to Charlie, by either pipe, so nothing is ever answered twice. */
@@ -1530,7 +1603,20 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // person who picked up is speaking, and the recorded question is chosen off it a moment later.
     // First only: everything after it is an answer to us, and a store that greets us in Spanish and
     // then says one English word has still answered the phone in Spanish.
-    if (fresh && theirFirstLine == null) theirFirstLine = txt;
+    if (fresh && theirFirstLine == null) {
+      theirFirstLine = txt;
+      // The other side of check 370's race: the question committed before this line landed, so the
+      // hello hand-over waited here. Marked his FIRST, so no pocket or hand-over path that runs
+      // after this line can ever give the greeting to Charlie as a turn (owner 08-05).
+      if (wantHelloFromEcho && fromEcho) {
+        wantHelloFromEcho = false;   // one look: only the first line can be the hello
+        if (spokenAtEpochMs != null && clipCommittedAtMs > 0 && spokenAtEpochMs < clipCommittedAtMs) {
+          markAsHis(txt);
+          helloLineWaiting = { text: txt };
+          deliverHelloLine();
+        }
+      }
+    }
     // AND THEIR LATEST LINE RESTARTS HIS THINKING TIME (owner 08-08, check 360). The quiet straight
     // after Staff speak is Charlie thinking, on their LAST turn exactly as much as on their first,
     // and his goodbye is always the last thing he says. Only a line he has not answered yet counts,
@@ -1542,7 +1628,13 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // in the conversation. An announced quiet also cancels the unannounced backstop, because the
     // evidence just changed shape.
     if (fresh) {
-      waitAnnounced = saidGoingToCheck(txt);
+      const announcedNow = saidGoingToCheck(txt);
+      // THE RECORDED HOLD REPLY plays the moment the announce lands (owner box 08-16 late) — and a
+      // fresh line that is NOT an announce ends the covering window, so a reply to real new words
+      // is never dropped as a duplicate acknowledgment.
+      if (announcedNow && !waitAnnounced) playHoldAck();
+      else if (!announcedNow) ackPlayingUntil = 0;
+      waitAnnounced = announcedNow;
       if (quietBackstopTimer) { clearTimeout(quietBackstopTimer); quietBackstopTimer = null; }
     }
     // THE JOINED LINE REPLACES ITS PIECES (owner task 08-15). Any tail piece not yet handed goes
@@ -1814,7 +1906,18 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // exactly where it was, with two sides waiting and nobody talking, and it is the last place
         // that dead air can still come from.
         else if (b64 && onHold && !(charlieMaySpeak && !spokeThisSession && answeredAtMs > 0)) { /* suspended: not spoken onto the line */ }
+        // Our recorded hold reply already answered the announce; his own generated version would be
+        // the same sentiment twice on the line (owner box 08-16 late).
+        else if (b64 && Date.now() < ackPlayingUntil) { /* covered by the recording, dropped */ }
         else if (b64 && twilio.readyState === 1) {
+          // HIS TURN STARTS with its first frame on the line: the reply gap is measured from their
+          // voice stopping, or from the words being handed to him, whichever came last.
+          if (!hisTurnOpen) {
+            hisTurnOpen = true;
+            const anchor = Math.max(lastTheirVoiceStopAtMs, lastHandAtMs);
+            const gapMs = anchor > 0 ? Date.now() - anchor : 0;
+            if (gapMs > 0 && gapMs < 60_000) worstAnswerGapMs = Math.max(worstAnswerGapMs, gapMs);
+          }
           twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: b64 } }));
           fanout(room, b64, "agent");
           // Extend the echo-gate window by this chunk's real playout time (μ-law 8kHz = 8 bytes/ms);
@@ -2517,6 +2620,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         theirQuietFrames = 0;
       } else if (theirVoiceOn && ++theirQuietFrames >= VOICE_GAP_FRAMES) {
         theirVoiceOn = false; theirQuietFrames = 0;
+        // The sound's real end, backdated past the confirm gap: the anchor every reply gap measures
+        // from (owner box 08-16 late: every metered second belongs to somebody by name).
+        lastTheirVoiceStopAtMs = Date.now() - VOICE_GAP_FRAMES * 20;
+        hisTurnOpen = false;
         // THE EAR HEARD THEIR VOICE STOP, and during a reconnect feed that is what opens his turn
         // (owner task 08-15): the pieces already landed are handed now, and the writer's one second
         // end-of-turn quiet is never waited for. The same sound test that stamps every line's start.
@@ -2673,5 +2780,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     }
     signoffDoors.delete(room); staffDoors.delete(room); pieceDoors.delete(room);
     if (closeWhenReady) { clearTimeout(closeWhenReady); closeWhenReady = null; }
-    if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; } if (heldQuestion) { try { relayLine?.(room, "Agent", heldQuestion); } catch { /* best effort */ } heldQuestion = null; } try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; missedWhileClosed = []; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (holdCapTimer) { clearTimeout(holdCapTimer); holdCapTimer = null; } if (ringWaitTimer) { clearTimeout(ringWaitTimer); ringWaitTimer = null; } if (quietBackstopTimer) { clearTimeout(quietBackstopTimer); quietBackstopTimer = null; } if (handoverTimer) { clearTimeout(handoverTimer); handoverTimer = null; } if (answerWaitTimer) { clearTimeout(answerWaitTimer); answerWaitTimer = null; } if (eleven) eleven.close(); /* the context is NOT deleted here: Twilio can reconnect a blipped stream mid-call, and the fresh socket must still find it. The 30-minute leak guard owns cleanup. */ });
+    if (questionTimer) { clearTimeout(questionTimer); questionTimer = null; } if (heldQuestion) { try { relayLine?.(room, "Agent", heldQuestion); } catch { /* best effort */ } heldQuestion = null; } try { convEar?.lineGone(); } catch { /* recording is best-effort */ } preRoll.length = 0; pending.length = 0; missedWhileClosed = []; /* hard rule 3: no store audio outlives the call */ activeCalls = Math.max(0, activeCalls - 1);
+    // WHERE THE WAITING WENT, stamped once as the line closes, so the sheet can grade the slowest
+    // reply by name (owner box 08-16 late). Only when something was measured; an old check reads
+    // exactly as it always did.
+    if (worstAnswerGapMs > 0) { try { emit(room, "unknown", "Charlie's slowest reply on this check", { step: "gaps", answerGapWorstMs: worstAnswerGapMs }); } catch { /* the stamp is best-effort */ } }
+    log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); clipTimers.forEach(clearTimeout); if (prewarmTimer) { clearTimeout(prewarmTimer); prewarmTimer = null; } if (giveUpTimer) { clearTimeout(giveUpTimer); giveUpTimer = null; } if (holdCapTimer) { clearTimeout(holdCapTimer); holdCapTimer = null; } if (ringWaitTimer) { clearTimeout(ringWaitTimer); ringWaitTimer = null; } if (quietBackstopTimer) { clearTimeout(quietBackstopTimer); quietBackstopTimer = null; } if (handoverTimer) { clearTimeout(handoverTimer); handoverTimer = null; } if (answerWaitTimer) { clearTimeout(answerWaitTimer); answerWaitTimer = null; } if (eleven) eleven.close(); /* the context is NOT deleted here: Twilio can reconnect a blipped stream mid-call, and the fresh socket must still find it. The 30-minute leak guard owns cleanup. */ });
 }

@@ -92,5 +92,37 @@ head("A number the record never measured is not graded — an old check reads as
 head("No card, no grade — an ordinary check is never failed by a test it did not run");
 ok("null in, null out", meterVerdict(null, { meterSec: 99, profitPct: 0 }) === null);
 
+
+head("THE NAMED GAPS (owner box 08-16 late): every metered second belongs to somebody by name");
+{
+  const v = meterVerdict(clearYes, { meterSec: 19, speakingSec: 12, listeningSec: 5, profitPct: 71,
+    answerGapWorstSec: 2, handoverGapWorstSec: 1, dropGapWorstSec: 3 })!;
+  ok("all three gaps at their green numbers pass", v.pass === true, v.fails);
+  ok("each gap is its own named row", v.rows.filter((r) => /gap/.test(r.label)).length === 3, v.rows);
+  ok("green gaps wear green", v.rows.filter((r) => /gap/.test(r.label)).every((r) => r.tone === "g"), v.rows);
+}
+{
+  const v = meterVerdict(clearYes, { meterSec: 19, speakingSec: 12, listeningSec: 5, profitPct: 71,
+    answerGapWorstSec: 8 })!;
+  ok("an 8 second answer gap is red and FAILS the test (red at 7 plus)", v.pass === false, v);
+  ok("…and the pill's short words name it", v.shortFails.some((f) => /answer gap/.test(f)), v.shortFails);
+}
+{
+  const v = meterVerdict(clearYes, { meterSec: 19, speakingSec: 12, listeningSec: 5, profitPct: 71,
+    answerGapWorstSec: 5 })!;
+  ok("a 5 second answer gap is yellow and still passes", v.pass === true && v.rows.some((r) => /answer gap/.test(r.label) && r.tone === "y"), v.rows);
+}
+{
+  const v = meterVerdict(clearYes, { meterSec: 19, speakingSec: 12, listeningSec: 5, profitPct: 71 })!;
+  ok("a gap the check never exercised has NO row (a row exists only if a working check could hide it)",
+    v.rows.every((r) => !/gap/.test(r.label)), v.rows);
+}
+{
+  const v = meterVerdict(clearYes, { meterSec: 44, speakingSec: 9, listeningSec: 8, profitPct: 48 })!;
+  ok("check 371's own numbers fail", v.pass === false, v);
+  ok("…and the pill's words are the owner's shape: Charlie meter time, 44 seconds",
+    v.shortFails.includes("Charlie meter time, 44 seconds"), v.shortFails);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);

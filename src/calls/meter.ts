@@ -36,10 +36,14 @@ export interface MeterVerdict {
   pass: boolean;
   /** One plain sentence per number out of bounds, in the owner's words, for the red line. */
   fails: string[];
+  /** The same fails as a few words each, for the pill to wear: "Charlie meter time, 44 seconds"
+   *  (owner box 08-16 late: a failed check says what killed it, in red, on the pill). */
+  shortFails: string[];
   /** What this card's meter half requires, for the "To pass" line. Empty when fully exempt. */
   toPass: string[];
-  /** The numbers as graded, for the record: label · value · pass (null = shown, not graded). */
-  rows: Array<{ label: string; value: string; pass: boolean | null }>;
+  /** The numbers as graded, for the record: label · value · pass (null = shown, not graded),
+   *  tone = the owner's color for the row (g green · y yellow, still passing · r red, failing). */
+  rows: Array<{ label: string; value: string; pass: boolean | null; tone?: "g" | "y" | "r" }>;
 }
 
 export interface MeterInput {
@@ -50,7 +54,24 @@ export interface MeterInput {
   listeningSec?: number | null;
   /** Profit against the plan price, whole percent. Null = the check was never priced. */
   profitPct: number | null;
+  /** THE WAITING, SPLIT INTO NAMED GAPS (owner box 08-16 late: every metered second belongs to
+   *  somebody by name). Each null = the check never exercised it, and its row does not exist —
+   *  a row exists only if a working check could hide it. Measured by the engine on the call
+   *  itself and read off the record, never re-derived. */
+  answerGapWorstSec?: number | null;
+  handoverGapWorstSec?: number | null;
+  dropGapWorstSec?: number | null;
 }
+
+/** The owner's gap bands (his box, 08-16 late): Charlie's answer gap green to 2, yellow to 6, red
+ *  at 7 and failing · Echo's handover gap green at 1 · the announced drop gap green at 3. The two
+ *  yellow widths not named in the box are one notch of grace before red; flagged in the checkpoint
+ *  for his eye. */
+const GAP_BANDS = {
+  answer: { label: "Charlie's answer gap, worst turn", green: 2, red: 7 },
+  handover: { label: "Echo's handover gap", green: 1, red: 4 },
+  drop: { label: "The announced hold drop gap", green: 3, red: 6 },
+} as const;
 
 /**
  * Grade a check's money and clock against the card. Returns null with no card (an ordinary check
@@ -71,6 +92,7 @@ export function meterVerdict(card: TestCard | null | undefined, m: MeterInput): 
   const floor = b.profitFloorPct === undefined ? PROFIT_FLOOR_PCT : b.profitFloorPct;
   const rows: MeterVerdict["rows"] = [];
   const fails: string[] = [];
+  const shortFails: string[] = [];
   const toPass: string[] = [];
 
   if (cap != null && redFrom != null) toPass.push(cap === METER_GOAL_SEC
@@ -83,9 +105,13 @@ export function meterVerdict(card: TestCard | null | undefined, m: MeterInput): 
       value: cap == null ? `${m.meterSec}s`
         : inYellow ? `${m.meterSec}s, over the ${cap}s goal but inside your yellow ${redFrom! - 1}s`
         : `${m.meterSec}s against ${cap}s`, pass });
-    if (pass === false) fails.push(cap === METER_GOAL_SEC
-      ? `Charlie ran ${m.meterSec} seconds on the meter, past your yellow line of ${redFrom! - 1}, against the ${cap} second goal.`
-      : `Charlie ran ${m.meterSec} seconds on the meter against this card's ${cap} second line.`);
+    if (pass === false) {
+      fails.push(cap === METER_GOAL_SEC
+        ? `Charlie ran ${m.meterSec} seconds on the meter, past your yellow line of ${redFrom! - 1}, against the ${cap} second goal.`
+        : `Charlie ran ${m.meterSec} seconds on the meter against this card's ${cap} second line.`);
+      shortFails.push(`Charlie meter time, ${m.meterSec} seconds`);
+    }
+    rows[rows.length - 1].tone = pass === false ? "r" : inYellow ? "y" : pass === true ? "g" : undefined;
     // The waiting slice is the piece of his meter where nobody said anything — the 9 silent
     // seconds of 08-16. Shown whenever it was measured; its own bound is the owner's open
     // decision (spec decision 2), so it is not graded alone yet. It already drags the two graded
@@ -96,12 +122,29 @@ export function meterVerdict(card: TestCard | null | undefined, m: MeterInput): 
     }
   }
 
+  // THE NAMED GAPS (owner box 08-16 late). Each row exists only when the check measured it, so an
+  // ordinary check with no hold shows no drop row and an old check shows none at all. A red gap
+  // fails the test the same way a red meter does: it is a metered second nobody would otherwise see.
+  const gap = (key: keyof typeof GAP_BANDS, sec: number | null | undefined) => {
+    if (sec == null) return;
+    const band = GAP_BANDS[key];
+    const tone: "g" | "y" | "r" = sec <= band.green ? "g" : sec < band.red ? "y" : "r";
+    rows.push({ label: band.label, value: `${sec}s, green at ${band.green}`, pass: tone !== "r", tone });
+    if (tone === "r") {
+      fails.push(`${band.label} ran ${sec} seconds, against ${band.green} green and red from ${band.red}.`);
+      shortFails.push(`${band.label.toLowerCase()}, ${sec} seconds`);
+    }
+  };
+  gap("answer", m.answerGapWorstSec);
+  gap("handover", m.handoverGapWorstSec);
+  gap("drop", m.dropGapWorstSec);
+
   if (floor != null) toPass.push(`gross profit ${floor}% or better`);
   if (m.profitPct != null) {
     const pass = floor == null ? null : m.profitPct >= floor;
-    rows.push({ label: "Gross profit", value: floor == null ? `${m.profitPct}%` : `${m.profitPct}% against the ${floor}% floor`, pass });
-    if (pass === false) fails.push(`The check made ${m.profitPct}% gross profit against the ${floor}% floor.`);
+    rows.push({ label: "Gross profit", value: floor == null ? `${m.profitPct}%` : `${m.profitPct}% against the ${floor}% floor`, pass, tone: pass === false ? "r" : pass === true ? "g" : undefined });
+    if (pass === false) { fails.push(`The check made ${m.profitPct}% gross profit against the ${floor}% floor.`); shortFails.push(`profit ${m.profitPct}% under the ${floor}% floor`); }
   }
 
-  return { pass: fails.length === 0, fails, toPass, rows };
+  return { pass: fails.length === 0, fails, shortFails, toPass, rows };
 }

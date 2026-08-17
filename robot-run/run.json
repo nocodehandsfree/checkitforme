@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-16T04:41:43.380Z",
+  "at": "2026-08-17T17:52:43.532Z",
   "host": "https://staging.checkitforme.com",
   "runs": [
     {
@@ -64,7 +64,7 @@
           "n": 7,
           "name": "the conversation scrolls under the header and does not bounce when nothing is new",
           "pass": true,
-          "detail": "0 bounce(s) over 97 looks · header held at 0px"
+          "detail": "0 bounce(s) over 91 looks · header held at 26px"
         },
         {
           "n": 8,
@@ -76,7 +76,7 @@
           "n": 13,
           "name": "the check ends with a goodbye, not with us hanging up mid conversation",
           "pass": true,
-          "detail": "we signed off: \"Oh totally, thanks so much Larry, have a good one!\""
+          "detail": "we signed off: \"Got it, thanks so much Larry, have a good one!\""
         },
         {
           "n": 14,
@@ -88,13 +88,13 @@
           "n": 15,
           "name": "the check ends soon after the answer, instead of sitting on an open line",
           "pass": true,
-          "detail": "the answer was in at 91 seconds and the line closed at 91 — 0 seconds of nothing"
+          "detail": "the answer was in at 81 seconds and the line closed at 81 — 0 seconds of nothing"
         },
         {
           "n": 9,
           "name": "the result appears with a status",
           "pass": true,
-          "detail": " Result Sun, Aug 16 · 4:39 AM In stock MVPs has Pokémon.Go grab it before it's gone. Check another store Translate Calli"
+          "detail": " Result Mon, Aug 17 · 5:51 PM In stock MVPs has Pokémon.Go grab it before it's gone. Check another store Calling5 steps "
         },
         {
           "n": 9.1,
@@ -112,7 +112,7 @@
           "n": 10,
           "name": "the screen and the till agree about money",
           "pass": true,
-          "detail": "CHARGED · the screen claims no free check · the check cost 11.7¢"
+          "detail": "CHARGED · the screen claims no free check · the check cost 9.8¢"
         }
       ],
       "shots": [
@@ -121,10 +121,10 @@
         "./robot-run/05-live.png",
         "./robot-run/05-result.png"
       ],
-      "startedAt": 1786855159582,
-      "checkId": 370,
-      "cost": 0.116532,
-      "costReadable": "11.7¢",
+      "startedAt": 1786989026505,
+      "checkId": 372,
+      "cost": 0.097789,
+      "costReadable": "9.8¢",
       "robotCost": null,
       "charged": true,
       "statusKey": "not_in_stock"
