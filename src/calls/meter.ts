@@ -181,24 +181,26 @@ export function meterVerdict(card: TestCard | null | undefined, m: MeterInput): 
   // hold seconds and the phone minutes they force set aside, because the scene forced them, not
   // our system. Only when the card says so AND the aside was measured; a real customer check has
   // no card and keeps the strict floor untouched.
+  // THE ROW NEVER PRINTS THE SET-ASIDE PERCENT (owner, 08-17 day's end, restated 08-17 late): a
+  // percent the check never made is an invented number and may never print or be spoken anywhere
+  // on the sheet. The row shows ONLY what the check really made; the set-aside works underneath,
+  // in the grade alone, and the tapped-open sentences say so in words with no number.
   const aside = b.holdCostAside === true && m.profitHoldAsidePct != null;
   if (floor != null) toPass.push(aside
     ? `gross profit ${floor}% or better with the scene's scripted hold set aside`
     : `gross profit ${floor}% or better`);
   const gradedPct = aside ? m.profitHoldAsidePct! : m.profitPct;
-  if (gradedPct != null) {
-    const pass = floor == null ? null : gradedPct >= floor;
+  if (m.profitPct != null) {
+    const pass = floor == null || gradedPct == null ? null : gradedPct >= floor;
     rows.push({ label: "Gross profit",
-      value: floor == null ? `${gradedPct}%`
-        : aside ? `${gradedPct}% with the scene's ${m.holdSec ?? 0}s hold set aside (${m.profitPct ?? "?"}% as dialed), against the ${floor}% floor`
-        : `${gradedPct}% against the ${floor}% floor`,
+      value: floor == null ? `${m.profitPct}%` : `${m.profitPct}% against the ${floor}% floor`,
       pass, tone: pass === false ? "r" : pass === true ? "g" : undefined,
-      say: { pre: "This check made ", num: `${gradedPct}%`, post: ".",
+      say: { pre: "This check made ", num: `${m.profitPct}%`, post: ".",
         tail: floor == null ? undefined : `The floor is ${floor}.` },
       open: aside
-        ? `The scene scripted a ${secWord(m.holdSec ?? 0)} hold, so its phone cost is set aside on this test sheet. As dialed the check made ${m.profitPct ?? "?"}%. A real customer check gets no set aside.`
+        ? `The scene scripted a ${secWord(m.holdSec ?? 0)} hold, so its phone cost is set aside when this test sheet grades the floor. A real customer check gets no set aside.`
         : "The price of the check, minus what it cost to run, as a share of the price. The Check cost card below says where the money went." });
-    if (pass === false) { fails.push(`The check made ${gradedPct}% gross profit against the ${floor}% floor${aside ? ", even with the scene's scripted hold set aside" : ""}.`); shortFails.push(`profit ${gradedPct}% under the ${floor}% floor`); }
+    if (pass === false) { fails.push(`The check made ${m.profitPct}% gross profit against the ${floor}% floor${aside ? ", even with the scene's scripted hold set aside" : ""}.`); shortFails.push(`profit ${m.profitPct}% under the ${floor}% floor`); }
   }
 
   return { pass: fails.length === 0, fails, shortFails, toPass, rows };

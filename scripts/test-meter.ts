@@ -133,7 +133,14 @@ head("THE HOLD SET-ASIDE (owner, 08-17): a hold test grades profit with the scri
   const v = meterVerdict(holdCard, { meterSec: 28, speakingSec: 14, listeningSec: 8, profitPct: 61,
     holdSec: 25, profitHoldAsidePct: 72 })!;
   ok("372's shape passes on the aside number", v.rows.find((r) => r.label === "Gross profit")!.pass === true, v.rows);
-  ok("the row says both numbers and the hold", /72%.*25s hold.*61% as dialed.*67% floor/.test(v.rows.find((r) => r.label === "Gross profit")!.value), v.rows);
+  // THE OWNER'S RULING (08-17): the set-aside percent is an invented number and may never print
+  // or be spoken anywhere on the sheet. The row shows ONLY what the check really made.
+  const profitRow = v.rows.find((r) => r.label === "Gross profit")!;
+  ok("the row shows only the real number", profitRow.value === "61% against the 67% floor", v.rows);
+  ok("the invented percent appears NOWHERE on the row", ![profitRow.value, profitRow.say?.num ?? "", profitRow.open ?? ""].some((s) => /72/.test(s)), profitRow);
+  ok("the spoken sentence says the real number", profitRow.say?.num === "61%", profitRow.say);
+  ok("the tapped-open words name the set-aside with no percent in them",
+    /set aside/.test(profitRow.open ?? "") && !/\d+%/.test(profitRow.open ?? ""), profitRow.open);
   ok("the To pass line says the set-aside", v.toPass.some((t) => /set aside/.test(t)), v.toPass);
   const bad = meterVerdict(holdCard, { meterSec: 20, profitPct: 40, holdSec: 25, profitHoldAsidePct: 55 })!;
   ok("still under the floor WITH the aside still fails, and the sentence says so",
