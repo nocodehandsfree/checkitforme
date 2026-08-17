@@ -1600,8 +1600,12 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   function staffSaid(txt: string, spokenAtEpochMs?: number, fromEcho?: boolean): boolean {
     // The session path's moment comes from OUR ear (the held greeting's start, the energy ear's
     // voice start), so it may still file the hello above the question it preceded (owner 07-31).
-    // Echo's stamps are the transcriber's clock and get the one-clock clamp (owner box 08-17).
-    const fresh = recordLine(room, "Clerk", txt, spokenAtEpochMs, undefined, !fromEcho);
+    // Echo's stamps are the transcriber's clock and get the one-clock clamp (owner box 08-17) —
+    // EXCEPT the store's FIRST line: the greeting genuinely predates our question, its writing can
+    // lose the race to the clip's commit (check 373 filed the greeting UNDER the question), and
+    // only this one line may ever need to step back over an Agent line. Every later Staff line is
+    // an answer and files where it arrived, which is what 372's fix exists to hold.
+    const fresh = recordLine(room, "Clerk", txt, spokenAtEpochMs, undefined, !fromEcho || theirFirstLine == null);
     // THE STORE'S FIRST LINE, KEPT (owner 08-07). It is the one thing that can say what language the
     // person who picked up is speaking, and the recorded question is chosen off it a moment later.
     // First only: everything after it is an answer to us, and a store that greets us in Spanish and

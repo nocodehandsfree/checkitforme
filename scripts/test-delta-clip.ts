@@ -2528,6 +2528,18 @@ console.log("\n▶ FIX 1 (owner box 08-16): Charlie joins as Delta ends, and an 
   ok(!f.raw.some((m) => m.includes("user_message") && m.includes("Larry Vasquez")),
     "…while the late-written hello never rides any hand-over as a turn (check 370's exact fault)");
   ok(STT_CALLS === 0, "their hello was handed from Echo's written words: no second transcription was bought");
+  // CHECK 373: the greeting's late writing hit the one-clock clamp and filed UNDER the question.
+  // The store's FIRST line is the one line that genuinely predates our question, so it alone may
+  // step back over it; every later Staff line still files where it arrived (372's fix holds).
+  {
+    const t = getReceipt(room)?.transcript ?? [];
+    const hello = t.findIndex((l) => /Larry Vasquez/.test(l.text));
+    const asked = t.findIndex((l) => /Pokemon cards in stock/.test(l.text) && l.who === "Agent");
+    ok(hello >= 0 && asked >= 0 && hello < asked,
+      `the greeting reads ABOVE our question on the record, the order it was said in (hello ${hello}, question ${asked})`);
+    const answer = t.findIndex((l) => /we have some in stock/.test(l.text));
+    ok(answer > asked, "…while their ANSWER files after the question it answers, never above it");
+  }
   echoListening(room, false);
   restore(); tw.close(); f.close();
 }
