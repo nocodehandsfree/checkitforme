@@ -471,6 +471,11 @@ export function closeReceipt(room: string, note?: string, reason?: string): Rece
   emit(room, "hangup", note || "Check ended", reason ? { reason } : undefined);
   r.closed = true;
   if (r.meters.endMs === null) r.meters.endMs = Math.max(0, Date.now() - r.startMs);
+  // AN END CAN NEVER BE LATER THAN THE CALL'S OWN END (owner, 08-17 late, off check 374: the hold
+  // reply was marked as ending at 81.3 seconds and Charlie's question at 90.0 on a call that ended
+  // at 88.0). A line's end is stamped from the sound still queued to play, so a line cut short by
+  // the check ending would otherwise keep the end it was HEADING for. Trimmed to the truth here.
+  for (const l of r.transcript) if (l.endMs != null && l.endMs > r.meters.endMs) l.endMs = r.meters.endMs;
   // A session still open when the line drops was billing right up to the end.
   if (r.meters.charlieOpenMs !== null && r.meters.charlieCloseMs === null) r.meters.charlieCloseMs = r.meters.endMs;
   flushed.add(room);

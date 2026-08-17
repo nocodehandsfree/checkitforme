@@ -805,6 +805,26 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   /** Post-stop pieces coalesce for a beat so a burst of late writing hands as ONE turn, not two
    *  (check 371: two pieces 0.12s apart reached him as two turns). */
   let pieceCoalesceTimer: NodeJS.Timeout | null = null;
+  /** HOW LONG HIS OWN EARS HAVE TO HAVE BEEN OPEN before his own answer is trusted at a comeback
+   *  (owner, 08-17 late). Under this he joined too late to have heard the end of their sentence,
+   *  and the written words are the only thing that can tell him what they said. */
+  const HEARD_ENOUGH_MS = 1200;
+  /** The last thing Staff said, as written down: what he is answering when he answers on his own. */
+  let theirLastLine = "";
+  /** The moment his voice last really went out on the line, used to hold the goodbye's own sound. */
+  let hisVoiceOutAtMs = 0;
+  /** His line's end while its words are still on their way (his sound starts before the provider
+   *  sends the text), so the end lands on HIS line and never on the one before it. */
+  let hisEndWaitingForWords = 0;
+  /** Has THIS turn's line been written down yet? His sound and his words arrive separately. */
+  let hisTurnLineWritten = false;
+  /** When his sound for this turn first went out, which is when Staff actually heard him start. */
+  let hisTurnAudioStartMs = 0;
+  /** When Staff came back from the last wait. Silence before that moment is the wait itself, never
+   *  a person standing there waiting on Charlie. */
+  let lastHoldEndAtMs = 0;
+  /** When he last answered Staff off his own hearing instead of our written words. */
+  let answeredFromHisEarsAtMs = 0;
   /** THE GAP STAMPS (owner box 08-16 late): measured by the engine on the call itself, written onto
    *  the record, so every metered second belongs to somebody by name. */
   let lastTheirVoiceStopAtMs = 0;   // the sound's real end, backdated past the ear's confirm gap
@@ -1107,7 +1127,43 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   /** HE HAS SAID GOODBYE AND NOBODY IS TALKING, so WE put the phone down (owner 08-04, check 282;
    *  second door added 08-07, check 356). The ear only counts quiet once our own audio has finished
    *  playing, so his goodbye is always fully out before this can run. */
+  /** NEVER HANG UP MID GOODBYE (owner, 08-17 late, off check 374: the check ended at 88.0 seconds
+   *  while the goodbye that started at 87.6 was still playing, so Staff and the recording both got
+   *  half of it). His words reach us before his sound has finished going out, so the phone goes
+   *  down only once the goodbye has really played, with a short tail so the recording holds all of
+   *  it. Capped, so a goodbye whose sound never comes cannot hold the line open forever. */
+  const GOODBYE_TAIL_MS = 600;
+  const GOODBYE_MAX_WAIT_MS = 12_000;
+  /** If no sound of his has gone out at all, there is nothing to wait for: a goodbye whose voice
+   *  never came is silence on the line, and holding the call open for it just bills for nothing. */
+  const GOODBYE_NO_VOICE_MS = 2_500;
+  let goodbyeTimer: NodeJS.Timeout | null = null;
   function hangUpAfterGoodbye(atMs: number) {
+    if (ended || goodbyeTimer) return;
+    const askedAtMs = Date.now();
+    const finish = (heldMs: number, playedOut: boolean) => {
+      goodbyeTimer = null;
+      if (ended) return;
+      if (heldMs > 0) emit(room, "unknown", playedOut
+        ? "We waited for Charlie's goodbye to finish playing before hanging up"
+        : "Charlie's goodbye never finished playing, so we hung up on the cap",
+        { step: "goodbye_played_out", heldMs, playedOut });
+      endTheCheck(atMs);
+    };
+    const waitForHisVoice = () => {
+      goodbyeTimer = null;
+      if (ended) return;
+      const held = Date.now() - askedAtMs;
+      const started = hisVoiceOutAtMs >= askedAtMs - 1_500;      // the goodbye's own sound, not an older line's
+      const finished = started && Date.now() >= agentPlayingUntil + GOODBYE_TAIL_MS;
+      if (finished) { finish(held, true); return; }
+      if (!started && held >= GOODBYE_NO_VOICE_MS) { finish(held, false); return; }
+      if (held >= GOODBYE_MAX_WAIT_MS) { finish(held, false); return; }
+      goodbyeTimer = setTimeout(waitForHisVoice, 120);
+    };
+    waitForHisVoice();
+  }
+  function endTheCheck(atMs: number) {
     if (ended) return;
     noteWeEnded(room, "signed_off");
     emit(room, "hangup", "Charlie said goodbye and the line went quiet, so we hung up", { reason: "signed_off", atMs });
@@ -1258,6 +1314,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     addMs(room, "holdMs", gapMs);   // the number that has been null on every receipt until now
     // AT THE MOMENT THEY SPOKE, not the moment we had heard enough of it to be sure. The ear already
     // backdates to their first word, which is why the length above is right; the row draws there too.
+    lastHoldEndAtMs = Date.now();
     emit(room, "hold_end", `Staff back after ${secs}s${newPerson ? ", and it may not be the same person" : ""}`,
       { gapSec: secs, maybeNewPerson: newPerson, reason: was, ...(asked ? { afterAskingToBePutThrough: true } : {}) },
       backAtMs != null ? earMoment(backAtMs) : undefined);
@@ -1376,7 +1433,13 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       emit(room, "unknown", "Charlie was handed what Staff said while he was off, as their turn",
         { step: "missed_turn", lines: said.length, text: said.join(" ").slice(0, 200), why,
           // Echo's handover gap, measured here: sound stopped -> words in his hands.
-          sinceVoiceStopMs: lastTheirVoiceStopAtMs > 0 ? Math.max(0, Date.now() - lastTheirVoiceStopAtMs) : undefined });
+          // From the true end of their voice, the same anchor his answer gap counts from, so the
+          // handing and his own thinking add up to the whole silence Staff stood in (owner 08-17).
+          sinceVoiceStopMs: ((): number | undefined => {
+            const theirEnd = lastLineEndEpoch(room, "Clerk");
+            const from = theirEnd != null && theirEnd > lastHoldEndAtMs ? theirEnd : lastTheirVoiceStopAtMs;
+            return from > 0 ? Math.max(0, Date.now() - from) : undefined;
+          })() });
       // AND THE QUIET AFTER IT IS HIM THINKING, NEVER A DROP, until he has answered this turn (the
       // PM's item 3). It is the same rule as his first words on a session, and being handed a turn
       // is exactly that moment: he owes them a word from here.
@@ -1609,6 +1672,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // lose the race to the clip's commit (check 373 filed the greeting UNDER the question), and
     // only this one line may ever need to step back over an Agent line. Every later Staff line is
     // an answer and files where it arrived, which is what 372's fix exists to hold.
+    theirLastLine = txt;   // the last thing Staff said, for the comeback he answers on his own ears
     // EVERY SPOKEN LINE FILES WITH A START AND AN END (owner, 08-17 evening). Echo knows exactly how
     // long the sentence took, so the end rides in with it; a line nobody measured the end of keeps
     // none rather than borrowing a number, and our own ear's stop stands in for those.
@@ -1691,6 +1755,13 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     // no audio of them ever reached him: hand them as their turn the moment they land. Only after a
     // words-only reopen (a reopen hands words, never audio; the first join hands the held audio
     // itself, so a pre-join line already reached him and must not be doubled).
+    // …UNLESS HE ALREADY ANSWERED IT ON HIS OWN EARS (owner, 08-17 late). A sentence that was
+    // still being spoken while his session was open is one he HEARD, however early it started, so
+    // handing it once its writing lands would be the same words twice and a second answer.
+    else if (answeredFromHisEarsAtMs > 0 && hisEarsBackAtMs > 0
+      && (endedAtEpochMs ?? spokenAtEpochMs ?? 0) >= hisEarsBackAtMs) {
+      markAsHis(txt);
+    }
     else if (fromEcho && fresh && eleven && !onHold && !alreadyHisToAnswer(txt)
       && wordsOnlyReopen && spokenAtEpochMs != null && hisEarsBackAtMs > 0 && spokenAtEpochMs < hisEarsBackAtMs) {
       // His session may still be opening: then the pocket carries it into the reopen hand-over
@@ -1916,6 +1987,37 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // used to escape and the store answered it (check 286). Dropped, not queued — a delay would
         // only put the same duplicate on the line a second later. Recorded ONCE, because a check where
         // it was silently dropped looks identical to a check where he never tried (rule 8).
+        // HE HEARD THEM HIMSELF, SO HIS ANSWER GOES OUT (owner, 08-17 late, off check 374: Staff
+        // finished at 70.8 seconds and his voice did not start until 76.6, six seconds of a person
+        // standing on a silent line). At a comeback his session is opened while Staff are still
+        // talking, so he hears the end of their sentence with his own ears and answers it. We were
+        // throwing that answer away and waiting for Echo's writing to reach us instead: the ear
+        // called their voice on for 2.2 seconds past the sound, the writing landed 3.2 seconds
+        // past it, and only then did we ask him for a second answer. His own reply is let out when
+        // his session has been listening long enough to have heard them finish, and the written
+        // words are then his, never a fresh turn.
+        else if (b64 && !charlieMaySpeak && reconnectFeed && hisEarsBackAtMs > 0
+                 && Date.now() - hisEarsBackAtMs >= HEARD_ENOUGH_MS) {
+          emit(room, "unknown", "Charlie answered what he heard himself, without waiting for the words to be written down",
+            { step: "answered_from_his_ears", listenedMs: Date.now() - hisEarsBackAtMs });
+          if (pieceCoalesceTimer) { clearTimeout(pieceCoalesceTimer); pieceCoalesceTimer = null; }
+          // Everything of theirs already written is his as of now, so the writing landing behind
+          // him is absorbed instead of handed back as a turn he still owes.
+          for (const said of openTurnPieces) markAsHis(said);
+          if (theirLastLine) markAsHis(theirLastLine);
+          reconnectFeed = null;
+          openTurnPieces = [];
+          missedWhileClosed = [];
+          answeredFromHisEarsAtMs = Date.now();
+          letHimAnswer("he heard them himself while his session was open");
+          twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: b64 } }));
+          fanout(room, b64, "agent");
+          const msOwn = Math.ceil((b64.length * 3) / 4 / 8);
+          agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + msOwn;
+          hisVoiceOutAtMs = Date.now();
+          addMs(room, "speakingMs", msOwn);
+          charlieSpoke = true; spokeThisSession = true; charlieSpokenMs += msOwn;
+        }
         else if (b64 && !charlieMaySpeak) {
           if (!heldHisHelloReply) {
             heldHisHelloReply = true;
@@ -1942,11 +2044,17 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           // voice stopping, or from the words being handed to him, whichever came last.
           if (!hisTurnOpen) {
             hisTurnOpen = true;
-            // From the END of the line before his (owner, 08-17 evening): the recorded end of
-            // Staff's last line, our own ear's stop, or the moment their words were handed to him,
-            // whichever came LAST. He cannot answer a sentence before it finished or before it
-            // reached him, so the latest of the three is where his gap really starts.
-            const anchor = Math.max(lastLineEndEpoch(room, "Clerk") ?? 0, lastTheirVoiceStopAtMs, lastHandAtMs);
+            hisTurnAudioStartMs = Date.now();
+            hisTurnLineWritten = false;
+            hisEndWaitingForWords = 0;   // a turn whose words never came never stamps the next line
+            // THE SILENCE STAFF REALLY STOOD IN (owner, 08-17 late, off check 374, where the row
+            // read 3 seconds while Staff heard 5.8). It counts from the END OF THEIR VOICE to his
+            // first sound, and nothing else: not from when their words were handed to him, which
+            // is our own delay and hid three of those seconds, and not from our ear's stop when
+            // Echo's own writing says the sound ended earlier. Echo measures the end off the audio
+            // itself, so it is the truer end; the ear stands in when there are no words at all.
+            const theirEnd = lastLineEndEpoch(room, "Clerk");
+            const anchor = theirEnd != null && theirEnd > lastHoldEndAtMs ? theirEnd : lastTheirVoiceStopAtMs;
             const gapMs = anchor > 0 ? Date.now() - anchor : 0;
             if (gapMs > 0 && gapMs < 60_000 && gapMs > worstAnswerGapMs) {
               worstAnswerGapMs = gapMs;
@@ -1963,10 +2071,16 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           // Twilio plays queued audio sequentially, so chunks extend the window back-to-back.
           const ms = Math.ceil((b64.length * 3) / 4 / 8);
           agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + ms;
+          hisVoiceOutAtMs = Date.now();
           // HIS LINE'S END, as the sound goes out (owner, 08-17 evening: every spoken line files
-          // with a start and an end). His words are written down the moment they exist and his
-          // voice plays out over the seconds after, so the end only ever moves later.
-          stampLineEnd(room, "Agent", agentPlayingUntil);
+          // with a start and an end), AND IT LANDS ON HIS OWN LINE (owner, 08-17 late, off check
+          // 374). His sound starts before the provider sends us the words, so stamping whatever
+          // line was last written put his end on the line BEFORE it: the hold reply of second 23
+          // was marked as ending at 81.3, and his question of 76.6 as ending at 90.0 on a call
+          // that ended at 88.0. While his words are still on their way the end waits here and is
+          // stamped the moment they land.
+          if (hisTurnLineWritten) stampLineEnd(room, "Agent", agentPlayingUntil);
+          else hisEndWaitingForWords = agentPlayingUntil;
           addMs(room, "speakingMs", ms); // SPEAKING = audio that really played out, not a guess
           charlieSpoke = true;           // from here there is no live model swap, whatever fails
           spokeThisSession = true;       // …and the quiet after this is theirs again, not his
@@ -2168,7 +2282,17 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         // WHICH LANGUAGE HE SPOKE, counted line by line off the same judge the map uses — never a
         // second opinion about what language a sentence is in.
         if (txt) { const l = guessLanguage(String(txt)); if (l === "es") spokeEs++; else if (l === "en") spokeEn++; }
-        if (txt && recordLine(room, "Agent", String(txt))) try { relayLine?.(room, "Agent", String(txt)); } catch { /* relay best-effort */ }
+        // HIS LINE IS FILED WHERE HIS SOUND STARTED (owner, 08-17 late). The provider sends his
+        // words a moment after his voice is already going out, so the record read the goodbye as
+        // starting at 87.6 on check 374 when Staff heard it start at 86.7. The turn's own first
+        // frame is when they heard him, so that is the moment it files at.
+        const hisStart = (hisTurnOpen && hisTurnAudioStartMs > 0 && Date.now() - hisTurnAudioStartMs < 20_000)
+          ? hisTurnAudioStartMs : undefined;
+        if (txt && recordLine(room, "Agent", String(txt), hisStart)) {
+          hisTurnLineWritten = true;
+          if (hisEndWaitingForWords > 0) { stampLineEnd(room, "Agent", hisEndWaitingForWords); hisEndWaitingForWords = 0; }
+          try { relayLine?.(room, "Agent", String(txt)); } catch { /* relay best-effort */ }
+        }
       } else if (m.type === "ping") {
         // THE PING CRASH (owner 08-04). This used to answer on whatever `eleven` pointed at RIGHT
         // NOW, and after Charlie is dropped for a wait that is null — so a late are you there from

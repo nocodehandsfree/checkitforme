@@ -448,6 +448,25 @@ console.log("\n== every spoken line files with a start and an end ==");
     "…and the gap falls back to where it started, the only honest number we hold");
 }
 
+// NO IMPOSSIBLE ENDS (owner, 08-17 late, off check 374: the hold reply was marked as ending at
+// 81.3 seconds and Charlie's question at 90.0 on a call that ended at 88.0). An end is stamped from
+// the sound still queued to play, so a line cut short by the check ending kept the end it was
+// heading for. The record trims every end to the call's own end when the check closes.
+console.log("\n== no line can end after the check did ==");
+{
+  _reset();
+  const r = openReceipt("room-ends-late");
+  r.startMs = Date.now() - 88_000;
+  const said = Date.now() - 2_000;
+  // His goodbye: written down at 86 seconds, its sound heading for 90 on an 88 second call.
+  recordLine("room-ends-late", "Agent", "Oh totally, thanks so much, have a good one!", said, undefined, undefined, said + 4_000);
+  ok(r.transcript[0].endMs != null && r.transcript[0].endMs > 88_000, "before the check closes the end is still the one his sound was heading for");
+  closeReceipt("room-ends-late", "Check ended", "completed");
+  const end = r.meters.endMs ?? 0;
+  ok(r.transcript.every((l) => l.endMs == null || l.endMs <= end), `every end is inside the call (${r.transcript[0].endMs} <= ${end})`);
+  ok(r.transcript[0].endMs === end, "…and the goodbye ends exactly where the check did, never a second later");
+}
+
 // CHECK 373'S OWN SHEET: "Charlie's slowest reply so far" printed at 75 seconds and again at 83,
 // two stamps of ONE fact. The record keeps the worst and drops the interim ones (owner, 08-17).
 console.log("\n== the slowest reply is ONE row, the worst one ==");
