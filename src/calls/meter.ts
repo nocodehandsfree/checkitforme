@@ -43,11 +43,17 @@ export interface MeterVerdict {
   toPass: string[];
   /** The numbers as graded, for the record: label · value · pass (null = shown, not graded),
    *  tone = the owner's color for the row (g green · y yellow, still passing · r red, failing).
-   *  THE SHEET'S ROW SHAPE (owner box 08-17): `short` is the left label that never wraps and `num`
-   *  is the bare number on the right; tapping the row opens `measures` (what this measures) and
-   *  `whenOff` (what to look at when it is red or yellow). `label`/`value` stay the long record. */
+   *  THE SHEET'S ROW WORDS (owner, 08-17, his exact sentences): each row is ONE plain sentence
+   *  about THIS call with the number colored inside it — `say.pre` + `say.num` (worn in the row's
+   *  color) + `say.post`. The COLOR does the grading; a sentence never mentions colors or bands.
+   *  Tapping a row opens `open`: plain sentences about this call, never the rulebook.
+   *  `label`/`value` stay the long record. */
   rows: Array<{ label: string; value: string; pass: boolean | null; tone?: "g" | "y" | "r";
-    short?: string; num?: string; measures?: string; whenOff?: string }>;
+    say?: { pre: string; num: string; post: string;
+      /** The sentence's second half, kept whole: it sits on the same line when it fits and drops
+       *  to its own line in one piece when it does not, so a phone never breaks it mid phrase. */
+      tail?: string };
+    open?: string }>;
 }
 
 export interface MeterInput {
@@ -78,16 +84,22 @@ export interface MeterInput {
  *  at 7 and failing · Echo's handover gap green at 1 · the announced drop gap green at 3. The two
  *  yellow widths not named in the box are one notch of grace before red; flagged in the checkpoint
  *  for his eye. */
+/** One number said out loud: "1 second" or "14 seconds". */
+const secWord = (n: number): string => `${n} second${n === 1 ? "" : "s"}`;
+
+// The row sentences are the OWNER'S OWN WORDS (08-17), numbers filled in from the check. The color
+// does the grading; a sentence never mentions goals, colors, bands, or "green at". Tapping a row
+// opens plain sentences about THIS call, never the rulebook.
 const GAP_BANDS = {
-  answer: { label: "Charlie's answer gap, worst turn", short: "Answer gap", green: 2, red: 7,
-    measures: "How long Charlie took to start answering after Staff finished talking, on his slowest turn of the check.",
-    whenOff: "Staff sat waiting on Charlie. Look at whether Staff's words reached him late or he had them and was slow to speak." },
-  handover: { label: "Echo's handover gap", short: "Handover gap", green: 1, red: 4,
-    measures: "How long Echo held Staff's words before handing them to Charlie.",
-    whenOff: "The hand came late. Look at when Staff stopped talking against when Charlie was given their words." },
-  drop: { label: "The announced hold drop gap", short: "Hold drop gap", green: 3, red: 6,
-    measures: "How long Charlie stayed on his meter after Staff announced the hold.",
-    whenOff: "Charlie kept billing on a hold. Look at the moment Staff announced the hold against the moment he dropped." },
+  answer: { label: "Charlie's answer gap, worst turn", green: 2, red: 7,
+    say: (s: number) => ({ pre: "Charlie's slowest answer took ", num: secWord(s), post: "." }),
+    open: "Staff finished talking and this is how long Charlie's reply took to start. That wait is Staff standing on a quiet line." },
+  handover: { label: "Echo's handover gap", green: 1, red: 4,
+    say: (s: number) => ({ pre: "Echo handed Charlie the words in ", num: secWord(s), post: "." }),
+    open: "Echo is the earpiece that writes down what Staff say. This is how long their words took to reach Charlie after their voice stopped." },
+  drop: { label: "The announced hold drop gap", green: 3, red: 6,
+    say: (s: number) => ({ pre: "Charlie's meter went off ", num: secWord(s), post: "", tail: "after Staff said hold on." }),
+    open: "Staff said they were stepping away, and this is how long Charlie's meter kept running before it switched off. The waiting after the switch cost nothing." },
 } as const;
 
 /**
@@ -118,13 +130,17 @@ export function meterVerdict(card: TestCard | null | undefined, m: MeterInput): 
   if (m.meterSec != null) {
     const pass = cap == null || redFrom == null ? null : m.meterSec < redFrom;
     const inYellow = pass === true && cap != null && m.meterSec > cap;
+    const waited = (m.speakingSec != null || m.listeningSec != null)
+      ? Math.max(0, m.meterSec - (m.speakingSec ?? 0) - (m.listeningSec ?? 0)) : null;
     rows.push({ label: "Charlie on the meter",
       value: cap == null ? `${m.meterSec}s`
         : inYellow ? `${m.meterSec}s, over the ${cap}s goal but inside your yellow ${redFrom! - 1}s`
         : `${m.meterSec}s against ${cap}s`, pass,
-      short: "Charlie's meter", num: `${m.meterSec}s`,
-      measures: "Every second Charlie's meter ran on this check: speaking, listening and waiting together.",
-      whenOff: `Yellow is over the ${cap ?? METER_GOAL_SEC} second goal but still passing; red fails. Open the check's lines and find the seconds where nobody was talking.` });
+      say: { pre: "Charlie was on the clock ", num: secWord(m.meterSec), post: ".",
+        tail: cap == null ? undefined : `The goal is ${cap}.` },
+      open: waited != null
+        ? `Talking, listening and waiting all count while Charlie is on the clock. On this check he spoke for ${secWord(m.speakingSec ?? 0)}, listened for ${secWord(m.listeningSec ?? 0)}, and waited for ${secWord(waited)}.`
+        : "Talking, listening and waiting all count while Charlie is on the clock, and every second bills the same." });
     if (pass === false) {
       fails.push(cap === METER_GOAL_SEC
         ? `Charlie ran ${m.meterSec} seconds on the meter, past your yellow line of ${redFrom! - 1}, against the ${cap} second goal.`
@@ -136,12 +152,10 @@ export function meterVerdict(card: TestCard | null | undefined, m: MeterInput): 
     // seconds of 08-16. Shown whenever it was measured; its own bound is the owner's open
     // decision (spec decision 2), so it is not graded alone yet. It already drags the two graded
     // numbers: waited seconds sit inside the meter cap and cost money against the floor.
-    if (m.speakingSec != null || m.listeningSec != null) {
-      const waited = Math.max(0, m.meterSec - (m.speakingSec ?? 0) - (m.listeningSec ?? 0));
+    if (waited != null) {
       rows.push({ label: "Of that, waiting on a quiet line", value: `${waited}s`, pass: null,
-        short: "Waiting on quiet", num: `${waited}s`,
-        measures: "The piece of Charlie's meter where nobody was saying anything.",
-        whenOff: "His meter ran on a quiet line. Look for a hold that did not drop him or an answer that came slow." });
+        say: { pre: "", num: secWord(waited), post: " of that was waiting." },
+        open: "Nobody was saying anything for those seconds, and Charlie's meter was still running. A hold that did not switch him off, or a slow answer, is usually where this time goes." });
     }
   }
 
@@ -153,8 +167,7 @@ export function meterVerdict(card: TestCard | null | undefined, m: MeterInput): 
     const band = GAP_BANDS[key];
     const tone: "g" | "y" | "r" = sec <= band.green ? "g" : sec < band.red ? "y" : "r";
     rows.push({ label: band.label, value: `${sec}s, green at ${band.green}`, pass: tone !== "r", tone,
-      short: band.short, num: `${sec}s`, measures: band.measures,
-      whenOff: `Green is ${band.green} seconds or less, red from ${band.red}. ${band.whenOff}` });
+      say: band.say(sec), open: band.open });
     if (tone === "r") {
       fails.push(`${band.label} ran ${sec} seconds, against ${band.green} green and red from ${band.red}.`);
       shortFails.push(`${band.label.toLowerCase()}, ${sec} seconds`);
@@ -180,11 +193,11 @@ export function meterVerdict(card: TestCard | null | undefined, m: MeterInput): 
         : aside ? `${gradedPct}% with the scene's ${m.holdSec ?? 0}s hold set aside (${m.profitPct ?? "?"}% as dialed), against the ${floor}% floor`
         : `${gradedPct}% against the ${floor}% floor`,
       pass, tone: pass === false ? "r" : pass === true ? "g" : undefined,
-      short: "Profit", num: `${gradedPct}%`,
-      measures: aside
-        ? `What is left of the check's price after every cost our system controls: the scene scripted a ${m.holdSec ?? 0} second hold, so those seconds' phone cost is set aside (as dialed it made ${m.profitPct ?? "?"}%).`
-        : "What is left of the check's price after every cost, as a percent of the price.",
-      whenOff: `The check made less than the ${floor ?? PROFIT_FLOOR_PCT} floor. Open the cost lines and find the biggest bucket.` });
+      say: { pre: "This check made ", num: `${gradedPct}%`, post: ".",
+        tail: floor == null ? undefined : `The floor is ${floor}.` },
+      open: aside
+        ? `The scene scripted a ${secWord(m.holdSec ?? 0)} hold, so its phone cost is set aside on this test sheet. As dialed the check made ${m.profitPct ?? "?"}%. A real customer check gets no set aside.`
+        : "The price of the check, minus what it cost to run, as a share of the price. The Check cost card below says where the money went." });
     if (pass === false) { fails.push(`The check made ${gradedPct}% gross profit against the ${floor}% floor${aside ? ", even with the scene's scripted hold set aside" : ""}.`); shortFails.push(`profit ${gradedPct}% under the ${floor}% floor`); }
   }
 

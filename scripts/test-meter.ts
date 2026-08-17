@@ -144,14 +144,29 @@ head("THE HOLD SET-ASIDE (owner, 08-17): a hold test grades profit with the scri
   ok("a hold card with no measured aside grades as dialed, nothing invented", unmeasured.pass === false, unmeasured.fails);
 }
 
-head("THE SHEET'S ROW SHAPE (owner box 08-17): short label, bare number, the two expand sentences");
+head("THE ROW WORDS ARE THE OWNER'S OWN SENTENCES (08-17), numbers filled in from the check");
 {
-  const v = meterVerdict(clearYes, { meterSec: 27, speakingSec: 20, listeningSec: 4, profitPct: 70,
+  const v = meterVerdict(clearYes, { meterSec: 28, speakingSec: 14, listeningSec: 8, profitPct: 61,
     answerGapWorstSec: 5, handoverGapWorstSec: 1, dropGapWorstSec: 3 })!;
-  ok("every row carries a short label", v.rows.every((r) => !!r.short), v.rows.map((r) => r.short));
-  ok("every row's number is bare (no words to wrap)", v.rows.every((r) => /^\d+(s|%)$/.test(r.num || "")), v.rows.map((r) => r.num));
-  ok("every row carries the two sentences", v.rows.every((r) => !!r.measures && !!r.whenOff));
-  ok("a gap row's whenOff names its own bands", /Green is 2 seconds or less, red from 7/.test(v.rows.find((r) => r.short === "Answer gap")!.whenOff || ""), v.rows);
+  const said = (r: { say?: { pre: string; num: string; post: string; tail?: string } } | undefined) =>
+    r?.say ? `${r.say.pre}${r.say.num}${r.say.post}${r.say.tail ? ` ${r.say.tail}` : ""}` : "";
+  const byLabel = (l: string) => v.rows.find((r) => r.label.includes(l));
+  ok("the top line is his: Charlie was on the clock 28 seconds. The goal is 23.",
+    said(byLabel("Charlie on the meter")) === "Charlie was on the clock 28 seconds. The goal is 23.", said(byLabel("Charlie on the meter")));
+  ok("the waiting row is his: 6 seconds of that was waiting.",
+    said(byLabel("waiting")) === "6 seconds of that was waiting.", said(byLabel("waiting")));
+  ok("the Echo row is his: Echo handed Charlie the words in 1 second.",
+    said(byLabel("handover")) === "Echo handed Charlie the words in 1 second.", said(byLabel("handover")));
+  ok("the drop row is his: Charlie's meter went off 3 seconds after Staff said hold on.",
+    said(byLabel("drop")) === "Charlie's meter went off 3 seconds after Staff said hold on.", said(byLabel("drop")));
+  ok("the profit row is his: This check made 61%. The floor is 67.",
+    said(byLabel("Gross profit")) === "This check made 61%. The floor is 67.", said(byLabel("Gross profit")));
+  // The color does the grading: a sentence never mentions goals as colors, bands, or "green at",
+  // and tapping a row opens plain sentences about THIS call, never the rulebook.
+  const everything = v.rows.map((r) => `${said(r)} ${r.open || ""}`).join(" ");
+  ok("no sentence speaks the rulebook", !/green|yellow|red|band/i.test(everything), everything);
+  ok("every row opens to plain sentences about this call", v.rows.every((r) => !!r.open));
+  ok("one second is singular, never 1 seconds", !/\b1 seconds\b/.test(everything));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

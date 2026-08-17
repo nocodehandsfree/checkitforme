@@ -2652,13 +2652,16 @@ function checkV2From(d,o){
 }
 function checkV2Html(d){
   const pill=(n,w,cls)=>n?`<span style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:5px 12px;${cls}">${n} ${w}</span>`:'';
-  const head=`<div style="display:inline-block;max-width:100%">
+  const head=`<div style="max-width:100%">
       <div style="display:flex;align-items:center;gap:10px"><span data-tip="${esch(d.info)}" style="font-size:20px;font-weight:800;letter-spacing:-.4px;color:#fff;white-space:nowrap">${esch(d.name)}</span>
       <!-- HEAR THE CALL (owner box 08-17): the lucide speaker at the top of the check's screen,
            playing the call's own recording. Hidden until the probe proves a recording exists, so a
            simulated check that never dialed shows no player at all. Wired in openTestReceipt. -->
       <button id="v2hear" aria-label="Hear the call" style="display:none;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;border:0;cursor:pointer;background:rgba(74,222,128,.13);color:var(--green);flex:0 0 auto"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></button></div>
-      <div class="meta" style="margin:5px 0 0;font-size:13px;max-width:0;min-width:100%">${esch(d.sub)}</div></div>
+      <!-- The sub takes the screen's own width now (owner, 08-17: it was wrapping one word per
+           line on his phone). The old max-width:0 trick sized it to the title above, and Safari
+           can resolve that to a zero-wide box. -->
+      <div class="meta" style="margin:5px 0 0;font-size:13px">${esch(d.sub)}</div></div>
     <div style="display:flex;gap:7px;margin:12px 0 16px;flex-wrap:wrap">
       ${d.verdict?`<span${d.verdict.pass?'':` onclick="var w=this.closest('div').nextElementSibling;if(w&&w.id==='v2why')w.style.display=w.style.display==='none'?'':'none'"`} style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:5px 12px;${d.verdict.pass?'color:var(--green);background:rgba(74,222,128,.13)':'cursor:pointer;color:var(--red);background:rgba(239,68,68,.13)'}">${d.verdict.pass?'Test passed':'Test failed'}</span>`:''}
       ${pill(d.passed,'passed','color:var(--green);background:rgba(74,222,128,.13)')}
@@ -2678,13 +2681,14 @@ function checkV2Html(d){
       <div class="stat"><div class="n" style="color:${d.stats.profitC||'var(--green)'}">${d.stats.profit}</div><div class="l">Gross profit</div></div>
     </div>${(d.verdict&&d.verdict.meterRows&&d.verdict.meterRows.length)?`<div class="card" style="margin-bottom:14px;padding:12px 18px">
       <div class="k-eyebrow" style="margin:0 0 4px">Where the seconds went</div>
-      <!-- SHORT LABEL LEFT, NUMBER RIGHT, NOTHING WRAPS (owner box 08-17). Each row is the same
-           tappable details row the Check cost card carries: tapping opens the two plain sentences
-           the server sends with the row: what it measures, and what to look at when it is red or
-           yellow. Old records without the short words fall back to the long label, as before. -->
+      <!-- THE OWNER'S OWN SENTENCES (08-17): each row is one plain sentence about this call with
+           the number worn in the row's color, and the color alone does the grading. Tapping a row
+           opens more plain sentences about this call. An old record without the sentences falls
+           back to the long label and value it always drew. -->
       ${d.verdict.meterRows.map(r=>{const col=r.tone==='r'?'var(--red)':r.tone==='y'?'#F59E0B':r.tone==='g'?'var(--green)':'#CDCDD8';
-        const face=`<div class="row" style="padding:4px 0;align-items:center"><span class="grow" style="font-size:12.5px;font-weight:600;color:#CDCDD8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(r.short||r.label)}</span><span style="flex:0 0 auto;font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums;color:${col}">${esch(r.num||r.value)}</span></div>`;
-        return (r.measures||r.whenOff)?`<details class="v2c"><summary style="list-style:none;cursor:pointer">${face}</summary><div style="padding:2px 0 8px;font-size:12px;line-height:1.55;color:#8A8A96">${esch(r.measures||'')}${r.measures&&r.whenOff?' ':''}${esch(r.whenOff||'')}</div></details>`:face;}).join('')}
+        const face=r.say?`<div style="padding:5px 0;font-size:12px;font-weight:600;color:#CDCDD8;line-height:1.5">${esch(r.say.pre)}<span style="font-weight:800;font-variant-numeric:tabular-nums;color:${col}">${esch(r.say.num)}</span>${esch(r.say.post)}${r.say.tail?` <span style="display:inline-block">${esch(r.say.tail)}</span>`:''}</div>`
+          :`<div class="row" style="padding:4px 0;align-items:center"><span class="grow" style="font-size:12px;font-weight:600;color:#CDCDD8">${esch(r.label)}</span><span style="flex:0 0 auto;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;color:${col}">${esch(r.value)}</span></div>`;
+        return r.open?`<details class="v2c"><summary style="list-style:none;cursor:pointer">${face}</summary><div style="padding:2px 0 8px;font-size:12px;line-height:1.55;color:#8A8A96">${esch(r.open)}</div></details>`:face;}).join('')}
     </div>`:''}`;
   const mini=rows=>`<div style="padding:2px 0 8px">${rows.map(r=>`<div style="display:flex;align-items:baseline;gap:6px;padding:3px 0 3px 12px"><span style="flex:0 0 auto;font-size:12px;font-weight:600;color:#8A8A96">${esch(r[0])}</span><span style="flex:1;border-bottom:1px dotted rgba(255,255,255,.16);transform:translateY(-3px)"></span><span style="flex:0 0 auto;font-size:12px;font-weight:700;color:var(--text-strong);font-variant-numeric:tabular-nums">${esch(r[1])}</span></div>`).join('')}</div>`;
   const chev='<svg class="pk-chev" width="15" height="15" style="flex:0 0 auto;width:15px;height:15px;color:#5C5C68" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
