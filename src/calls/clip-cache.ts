@@ -16,10 +16,19 @@
 // audio. Anyone tidying this cache away in the name of privacy is deleting the wrong thing: the
 // privacy rule lives in the bridge, which drops every inbound frame the moment it has been relayed.
 //
-// The cache is in memory, keyed by exactly what makes a clip sound different — the voice, the words
-// and the tuning. A deploy starts it cold, which costs one synthesis per distinct line and then
-// nothing, and it can never serve a stale clip because a changed line is a different key.
+// The cache is keyed by exactly what makes a clip sound different: the voice, the words and the
+// tuning. It can never serve a stale clip, because a changed line is a different key.
+//
+// AND IT SURVIVES A RESTART (owner, 08-17 evening: "clips must be stable"). It used to live only in
+// memory, so every deploy re-recorded every line, and the provider renders the same sentence at a
+// different length each time it is asked: check 372 played our question in 4.2 seconds and check
+// 373 played the identical words in 5.6, with the hold reply drifting 1.6 to 1.8 the same way. The
+// bytes are kept on the service's own disk now, so the same words in the same voice are the SAME
+// recording tomorrow, and a re-record costs nothing because it never happens.
 import { config } from "../config";
+import { createHash } from "node:crypto";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { join } from "node:path";
 
 /** μ-law 8kHz: one byte per sample, 8000 samples a second — so bytes and milliseconds are the same
  *  arithmetic everywhere in the call path. The bridge's playout clock uses this identity too. */
@@ -43,6 +52,23 @@ export interface PhoneClip {
  *  hundred of them is well under 10MB and covers every opener × voice combination in use. */
 const MAX_CLIPS = 100;
 const cache = new Map<string, PhoneClip>();
+
+/** WHERE A CLIP LIVES BETWEEN RESTARTS. The service's own mounted disk, the same one the Admin
+ *  shell is served from; with no disk mounted (a test box, a laptop) the cache is memory-only and
+ *  behaves exactly as it always did. Only audio WE generated from OUR script is ever written here:
+ *  the live-call rule against persisting a store's voice is untouched. */
+const CLIP_DIR = process.env.CLIP_CACHE_DIR
+  || (process.env.RAILWAY_VOLUME_MOUNT_PATH ? join(process.env.RAILWAY_VOLUME_MOUNT_PATH, "clips") : "");
+const fileFor = (key: string) => join(CLIP_DIR, createHash("sha1").update(key).digest("hex") + ".bin");
+function fromDisk(key: string): Buffer | null {
+  if (!CLIP_DIR) return null;
+  try { const f = fileFor(key); return existsSync(f) ? readFileSync(f) : null; } catch { return null; }
+}
+function toDisk(key: string, audio: Buffer): void {
+  if (!CLIP_DIR) return;
+  try { mkdirSync(CLIP_DIR, { recursive: true }); writeFileSync(fileFor(key), audio); }
+  catch (e) { console.error("[clip] keep", e); }   // a disk that will not take it never breaks a check
+}
 
 /** Test/ops visibility: how many clips are held and roughly how much memory they use. */
 export function clipCacheStats(): { clips: number; bytes: number } {
@@ -91,6 +117,15 @@ export async function phoneClip(voiceId: string, text: string, tuning: Record<st
     cache.delete(key); cache.set(key, hit);
     return hit;
   }
+  // The same words in the same voice, kept from an earlier run: play those exact bytes rather than
+  // paying to have them said again at a different length.
+  const kept = fromDisk(key);
+  if (kept && kept.length) {
+    const clip: PhoneClip = { audio: kept, ms: Math.round(kept.length / ULAW_BYTES_PER_MS), text: words, voiceId };
+    cache.set(key, clip);
+    while (cache.size > MAX_CLIPS) { const oldest = cache.keys().next().value; if (oldest === undefined) break; cache.delete(oldest); }
+    return clip;
+  }
   const modelId = tuning.modelId === "eleven_flash_v2" ? "eleven_flash_v2" : "eleven_turbo_v2";
   try {
     const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=ulaw_8000`, {
@@ -103,6 +138,7 @@ export async function phoneClip(voiceId: string, text: string, tuning: Record<st
     if (!audio.length) return null;
     const clip: PhoneClip = { audio, ms: Math.round(audio.length / ULAW_BYTES_PER_MS), text: words, voiceId };
     cache.set(key, clip);
+    toDisk(key, audio);
     while (cache.size > MAX_CLIPS) { const oldest = cache.keys().next().value; if (oldest === undefined) break; cache.delete(oldest); }
     return clip;
   } catch (e) { console.error("[clip] synth", e); return null; }
@@ -124,6 +160,14 @@ export async function mp3Clip(voiceId: string, text: string, tuning: Record<stri
   const key = "mp3|" + keyFor(voiceId, words, tuning);
   const hit = cache.get(key);
   if (hit) { cache.delete(key); cache.set(key, hit); return hit.audio; }
+  // The same words in the same voice, kept from an earlier run. The ms is the μ-law identity and
+  // means nothing for an MP3, so it stays zero here exactly as it does on a fresh recording.
+  const kept = fromDisk(key);
+  if (kept && kept.length) {
+    cache.set(key, { audio: kept, ms: 0, text: words, voiceId });
+    while (cache.size > MAX_CLIPS) { const oldest = cache.keys().next().value; if (oldest === undefined) break; cache.delete(oldest); }
+    return kept;
+  }
   const modelId = tuning.modelId === "eleven_flash_v2" ? "eleven_flash_v2" : "eleven_turbo_v2";
   try {
     const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_64`, {
@@ -137,6 +181,7 @@ export async function mp3Clip(voiceId: string, text: string, tuning: Record<stri
     // ms is the μ-law identity (bytes ÷ 8) and means nothing for an MP3, so it is left at zero rather
     // than filled with a number that would be wrong wherever it was read.
     cache.set(key, { audio, ms: 0, text: words, voiceId });
+    toDisk(key, audio);
     while (cache.size > MAX_CLIPS) { const oldest = cache.keys().next().value; if (oldest === undefined) break; cache.delete(oldest); }
     return audio;
   } catch (e) { console.error("[clip] mp3 synth", e); return null; }
