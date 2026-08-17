@@ -6,7 +6,7 @@
 // from the plan, and the phone line bills whole minutes. No database, no network, no clock games.
 import {
   openReceipt, emit, amend, markNow, addMs, closeReceipt, rollup, rollupFromRow, setEventSink,
-  getReceipt, laneNote, laneFor, actualLane, recordLine, _receiptFrom, _reset, type Receipt, type RtEvent,
+  getReceipt, laneNote, laneFor, actualLane, recordLine, oneSlowestReplyRow, _receiptFrom, _reset, type Receipt, type RtEvent,
 } from "../src/calls/events";
 import { costCall, costPerResult, costBuckets, money, MEASURED_RATES, STATUS_READ_USD, USD } from "../src/calls/cost";
 
@@ -411,6 +411,26 @@ console.log("\n== the ear-measured hello still files above the question it prece
   ok(t[0].who === "Clerk" && /this is Bob/.test(t[0].text), "the ear-measured hello reads first, the order it was said in");
   ok(t[1].who === "Agent", "…and our question follows it");
   ok(t.every((l, i, a) => i === 0 || a[i - 1].atMs <= l.atMs), "the record is still in one order, oldest first");
+}
+
+// CHECK 373'S OWN SHEET: "Charlie's slowest reply so far" printed at 75 seconds and again at 83,
+// two stamps of ONE fact. The record keeps the worst and drops the interim ones (owner, 08-17).
+console.log("\n== the slowest reply is ONE row, the worst one ==");
+{
+  const tl = [
+    { kind: "unknown", note: "Charlie was handed what Staff said while he was off, as their turn", detail: { step: "missed_turn", sinceVoiceStopMs: 800 } },
+    { kind: "unknown", note: "Charlie's slowest reply so far", detail: { step: "gaps", answerGapWorstMs: 1944 } },
+    { kind: "unknown", note: "Charlie's slowest reply so far", detail: { step: "gaps", answerGapWorstMs: 3939 } },
+    { kind: "hangup", note: "Check ended", detail: { reason: "completed" } },
+  ];
+  const out = oneSlowestReplyRow(tl);
+  const gaps = out.filter((e) => (e.detail as { step?: string }).step === "gaps");
+  ok(gaps.length === 1, `one slowest-reply row, not two (${gaps.length})`);
+  ok(Number((gaps[0].detail as { answerGapWorstMs?: number }).answerGapWorstMs) === 3939, "…and the row kept is the WORST gap, 3939ms");
+  ok(gaps[0].note === "Charlie's slowest reply on this check", `…wearing the closing words, never "so far" (${gaps[0].note})`);
+  ok(out.length === 3 && out[0].detail!.step === "missed_turn" && out[2].kind === "hangup", "every other step is untouched, in its own place");
+  const none = oneSlowestReplyRow([{ kind: "hangup", note: "Check ended", detail: null }]);
+  ok(none.length === 1, "a check that never measured a reply gap draws no row at all");
 }
 
 console.log(`\n${fail === 0 ? "ALL PASS" : "FAILURES"} — ${pass} passed, ${fail} failed`);

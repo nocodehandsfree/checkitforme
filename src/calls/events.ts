@@ -702,3 +702,28 @@ export function _receiptFrom(parts: { room?: string; lane?: Lane; events?: RtEve
 
 /** Test-only: forget every in-memory receipt. */
 export function _reset(): void { receipts.clear(); flushed.clear(); sink = null; }
+
+/**
+ * ONE ROW FOR THE SLOWEST REPLY, THE WORST ONE (owner, 08-17 evening, off check 373's own sheet,
+ * where it printed at 75 seconds and again at 83). The engine stamps that number every time the
+ * worst grows, on purpose: the close-time stamp lost a race on check 372 and the row never wrote
+ * at all. Every stamp but the biggest is the SAME fact measured earlier, so the record keeps the
+ * winner and drops the interim ones, and the survivor wears the engine's own closing words instead
+ * of "so far". Nothing is invented and no other step is touched.
+ */
+export function oneSlowestReplyRow<T extends { kind: string; note?: string; detail?: Record<string, unknown> | null }>(timeline: T[]): T[] {
+  const isGap = (e: T) => (e.detail || {}).step === "gaps";
+  const worst = timeline.filter(isGap).reduce<number | null>((m, e) => {
+    const ms = Number((e.detail || {}).answerGapWorstMs);
+    return Number.isFinite(ms) && (m == null || ms > m) ? ms : m;
+  }, null);
+  if (worst == null) return timeline;
+  let kept = false;
+  return timeline.filter((e) => {
+    if (!isGap(e)) return true;
+    if (kept || Number((e.detail || {}).answerGapWorstMs) !== worst) return false;
+    kept = true;
+    (e as { note?: string }).note = "Charlie's slowest reply on this check";
+    return true;
+  });
+}

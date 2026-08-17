@@ -376,7 +376,7 @@ range (`offset` + `limit`). Ranges run to the next `id=` — a navigation aid, n
 | ho_done | div | 9219–9221 | ${t('ho.done.title',"Bonus released. You're done.")} |
 | ho_donep | p | 9222–9577 |  |
 
-## public/app.html (8076 lines, 418 sections)
+## public/app.html (8079 lines, 418 sections)
 
 | id | element | lines | description |
 |---|---|---|---|
@@ -791,13 +791,13 @@ range (`offset` + `limit`). Ranges run to the next `id=` — a navigation aid, n
 | set_runs_more | div | 5555–6458 |  |
 | iconpick_q | input | 6459–6976 |  |
 | iconpick_grid | div.iconpick-grid | 6459–6976 |  |
-| wfg_add | input | 6977–7832 |  |
-| rs_details | div | 7833–7955 |  |
-| ds_rsfunnel | div | 7833–7955 |  |
-| ds_rsdays | div | 7833–7955 |  |
-| ds_rsland | div | 7833–7955 |  |
-| wl_region | select | 7956–8076 |  |
-| wl_notify_out | div | 7956–8076 |  |
+| wfg_add | input | 6977–7835 |  |
+| rs_details | div | 7836–7958 |  |
+| ds_rsfunnel | div | 7836–7958 |  |
+| ds_rsdays | div | 7836–7958 |  |
+| ds_rsland | div | 7836–7958 |  |
+| wl_region | select | 7959–8079 |  |
+| wl_notify_out | div | 7959–8079 |  |
 
 ## docs/design/comps/ADMIN_COMPS.dc.html (1064 lines, 23 sections)
 

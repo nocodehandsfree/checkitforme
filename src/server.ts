@@ -40,7 +40,7 @@ import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
 import { placeNavCall, navInitialTwiml, navStep, navEnded, navMediaFeed, getNavSession, latestNavSessionForChain, NAV_MODEL, confirmAskedStores, setMappingHandoff } from "./calls/navigator";
 import { listenNavFeed, endListenNav } from "./calls/listen-nav";
 // THE CALL RECEIPT (owner 07-26): every runtime decision, with its real second, on every call.
-import { emit, markNow, closeReceipt, linkCall, navOutcomeOf, rollup, rollupFromRow, getReceipt, transcriptOf, setLineHook, normSaid, type Rollup } from "./calls/events";
+import { emit, markNow, closeReceipt, linkCall, navOutcomeOf, rollup, rollupFromRow, getReceipt, transcriptOf, setLineHook, normSaid, oneSlowestReplyRow, type Rollup } from "./calls/events";
 import { buildCharlieSetup } from "./calls/charlie-setup";
 import { installReceiptStore, currentRates, onReceiptClosed, recordVerdict, lastClerkLine } from "./calls/receipt-store";
 import { brainCompletion, brainKeyOk, checkBrainRequest } from "./calls/brain";
@@ -1469,9 +1469,9 @@ app.get("/api/calls/:id/receipt", async (c) => {
   // `atMs` rides beside `atSec` on every step: the sheet orders the steps and the spoken lines as ONE
   // list on the call's own clock, and whole seconds cannot say which of two things in one second
   // happened first (owner 08-06).
-  const timeline = live
+  const timeline = oneSlowestReplyRow(live
     ? live.events.map((e) => ({ atMs: e.atMs, atSec: e.atSec, kind: e.kind, note: e.note ?? "", detail: e.detail ?? null }))
-    : rows.map((r) => ({ atMs: r.atMs, atSec: r.atSec, kind: r.kind, note: r.note ?? "", detail: r.detail ? JSON.parse(r.detail) as unknown : null }));
+    : rows.map((r) => ({ atMs: r.atMs, atSec: r.atSec, kind: r.kind, note: r.note ?? "", detail: r.detail ? JSON.parse(r.detail) as Record<string, unknown> : null })));
 
   // A finished call is served from its own stamped row, so a replay always agrees with the numbers
   // the reports are summing. A null here means we never measured it — not that it was zero.
@@ -6545,7 +6545,7 @@ app.get("/api/admin/receipt/:room", async (c) => {
   if (live && !live.closed) {
     const sums = rollup(live);
     const cost = costCall({ callSecs: sums.callSecs, charlieSecs: sums.charlieConnectedSeconds, avoidableSecs: sums.charlieSilentSeconds, forkSecs: [sums.callSecs, Math.max(0, sums.callSecs - (sums.menuSeconds ?? 0))] }, await currentRates());
-    const timeline = live.events.map((e) => ({ atMs: e.atMs, atSec: e.atSec, kind: e.kind, note: e.note ?? "", detail: e.detail ?? null }));
+    const timeline = oneSlowestReplyRow(live.events.map((e) => ({ atMs: e.atMs, atSec: e.atSec, kind: e.kind, note: e.note ?? "", detail: e.detail ?? null })));
     return c.json({
       room, live: true, stamped: true,
       timeline,
@@ -6571,7 +6571,7 @@ app.get("/api/admin/receipt/:room", async (c) => {
   const rows = await db.select().from(callEvents).where(eq(callEvents.room, room)).orderBy(callEvents.atMs);
   if (!rows.length) return c.json({ error: "no receipt for that call" }, 404);
   const parse = (s: string | null) => { try { return s ? JSON.parse(s) as Record<string, unknown> : null; } catch { return null; } };
-  const timeline = rows.map((r) => ({ atMs: r.atMs, atSec: r.atSec, kind: r.kind, note: r.note ?? "", detail: parse(r.detail) }));
+  const timeline = oneSlowestReplyRow(rows.map((r) => ({ atMs: r.atMs, atSec: r.atSec, kind: r.kind, note: r.note ?? "", detail: parse(r.detail) })));
   // An UNATTACHED call rolls its seconds and cost onto the LAST event's detail (receipt-store.ts),
   // because there is no call_results row to stamp and the event set is a closed sixteen.
   const tail = parse(rows[rows.length - 1]?.detail ?? null);
