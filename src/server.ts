@@ -6507,6 +6507,19 @@ app.get("/api/admin/receipt/:room", async (c) => {
       meter: graded ? meterVerdict(card, { meterSec: sums?.charlieConnectedSeconds ?? null,
         speakingSec: sums?.speakingSecs ?? null, listeningSec: sums?.listeningSecs ?? null,
         profitPct,
+        // THE HOLD SET-ASIDE (owner, 08-17): the scene's scripted hold seconds priced off THIS
+        // check's own measured cost — the hold's share of the line, the ears and the writing-down,
+        // never Charlie (his meter is dropped on a hold; any seconds he did burn stay his). The
+        // meter half grades with it only on a card that says holdCostAside.
+        ...((): { holdSec: number | null; profitHoldAsidePct: number | null } => {
+          const holdSec = sums?.holdSeconds ?? null;
+          const callSecs = sums?.callSecs ?? 0;
+          if (holdSec == null || holdSec <= 0 || callSecs <= 0 || totalUsd <= 0 || priceUsd <= 0)
+            return { holdSec, profitHoldAsidePct: null };
+          const share = Math.min(1, holdSec / callSecs);
+          const asideUsd = Math.round(((cost?.lineUsd ?? 0) + (cost?.forkUsd ?? 0) + (cost?.sttUsd ?? 0)) * share);
+          return { holdSec, profitHoldAsidePct: Math.round(((priceUsd - (totalUsd - asideUsd)) / priceUsd) * 100) };
+        })(),
         // THE NAMED GAPS, read off the check's own record (owner box 08-16 late): the engine
         // stamped each as it was measured, so nothing here is re-derived or guessed.
         ...((): { answerGapWorstSec: number | null; handoverGapWorstSec: number | null; dropGapWorstSec: number | null } => {
@@ -6633,6 +6646,37 @@ app.get("/api/admin/receipt/:room", async (c) => {
       { rows: behaved({ timeline, rollup: seconds, agentLines: agentLinesFrom(attached?.transcript) }),
         statusKey: attached?.statusKey ?? attached?.status ?? null }),
   });
+});
+// THE HEAR-THE-CALL BUTTON'S AUDIO (owner box 08-17). Every check we dial ourselves is recorded at
+// the carrier (bridge-place sets the same flag mapping checks have carried since 07-30); this finds
+// the check's carrier call and streams its recording, exactly the way the mapper's play button
+// does. `?probe=1` answers only whether a recording EXISTS, so the sheet shows the button only
+// where one does — a simulated check never dialed, has no carrier call, and shows no player at all.
+app.get("/api/admin/check-audio/:room", async (c) => {
+  const room = c.req.param("room");
+  if (!room) return c.json({ error: "room required" }, 400);
+  const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
+  if (!sid || !tok) return c.json({ error: "carrier not configured" }, 500);
+  // The check's carrier call id: the live map first, then the answered stamp on its own record.
+  let callSid = roomCallSids.get(room) || "";
+  if (!callSid) {
+    const rows = await db.select({ kind: callEvents.kind, detail: callEvents.detail })
+      .from(callEvents).where(eq(callEvents.room, room));
+    for (const r of rows) {
+      if (r.kind !== "connected" || !r.detail) continue;
+      try { const d = JSON.parse(r.detail) as { callSid?: string }; if (d.callSid) { callSid = d.callSid; break; } } catch { /* keep looking */ }
+    }
+  }
+  if (!/^CA[a-zA-Z0-9]{32}$/.test(callSid)) return c.json({ error: "this check never dialed", exists: false }, 404);
+  const auth = "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64");
+  const list = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}/Recordings.json`, { headers: { Authorization: auth } });
+  if (!list.ok) return c.json({ error: `carrier ${list.status}` }, 502);
+  const recs = ((await list.json()) as { recordings?: Array<{ sid: string }> }).recordings || [];
+  if (c.req.query("probe")) return c.json({ exists: recs.length > 0 });
+  if (!recs.length) return c.json({ error: "no recording for this check", exists: false }, 404);
+  const media = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Recordings/${recs[0].sid}.mp3`, { headers: { Authorization: auth } });
+  if (!media.ok || !media.body) return c.json({ error: `carrier ${media.status}` }, 502);
+  return new Response(media.body, { headers: { "content-type": "audio/mpeg", "cache-control": "private, max-age=3600" } });
 });
 app.get("/api/admin/call-timing", async (c) => {
   const ownerOnly = await ownerOnlyRetailerIds(); // owner-only "Fun"/MVP store excluded from timings
@@ -7385,7 +7429,10 @@ app.post("/twiml/bridge-status", async (c) => {
     // The carrier's own view of the call goes on the receipt — the only truthful source for when the
     // line was actually answered (our sockets open later, and on a menu call much later).
     if (status === "ringing") emit(room, "ringing", "The store's phone is ringing", { leg: "store" });
-    if (status === "in-progress") { markNow(room, "answeredMs"); emit(room, "connected", "The line was answered"); }
+    // The carrier's own id for this call rides the answered stamp, so a finished check can still
+    // find its recording later (the hear-the-call button, owner box 08-17) — the in-memory
+    // room-to-call map forgets after ten minutes and a restart forgets it entirely.
+    if (status === "in-progress") { markNow(room, "answeredMs"); emit(room, "connected", "The line was answered", { callSid: String((form as Record<string, unknown>).CallSid || "") || undefined }); }
     if (["completed", "busy", "failed", "no-answer", "canceled"].includes(status)) {
       setTimeout(() => roomCallProgress.delete(room), 60_000);
       // Headless bridge calls (schedules/zones/admin call-now) registered a finalizer so a call

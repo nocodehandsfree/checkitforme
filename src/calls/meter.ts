@@ -42,8 +42,12 @@ export interface MeterVerdict {
   /** What this card's meter half requires, for the "To pass" line. Empty when fully exempt. */
   toPass: string[];
   /** The numbers as graded, for the record: label · value · pass (null = shown, not graded),
-   *  tone = the owner's color for the row (g green · y yellow, still passing · r red, failing). */
-  rows: Array<{ label: string; value: string; pass: boolean | null; tone?: "g" | "y" | "r" }>;
+   *  tone = the owner's color for the row (g green · y yellow, still passing · r red, failing).
+   *  THE SHEET'S ROW SHAPE (owner box 08-17): `short` is the left label that never wraps and `num`
+   *  is the bare number on the right; tapping the row opens `measures` (what this measures) and
+   *  `whenOff` (what to look at when it is red or yellow). `label`/`value` stay the long record. */
+  rows: Array<{ label: string; value: string; pass: boolean | null; tone?: "g" | "y" | "r";
+    short?: string; num?: string; measures?: string; whenOff?: string }>;
 }
 
 export interface MeterInput {
@@ -61,6 +65,13 @@ export interface MeterInput {
   answerGapWorstSec?: number | null;
   handoverGapWorstSec?: number | null;
   dropGapWorstSec?: number | null;
+  /** THE HOLD SET-ASIDE (owner, 08-17): on a hold test the scene scripts the hold, so its seconds
+   *  and the phone minutes they force are our scene's doing, not our system's. The server prices
+   *  those seconds off the check's own measured cost and sends the profit with them set aside.
+   *  Graded ONLY when the card says `holdCostAside` — a real customer check never carries a card,
+   *  so its floor is untouched. */
+  holdSec?: number | null;
+  profitHoldAsidePct?: number | null;
 }
 
 /** The owner's gap bands (his box, 08-16 late): Charlie's answer gap green to 2, yellow to 6, red
@@ -68,9 +79,15 @@ export interface MeterInput {
  *  yellow widths not named in the box are one notch of grace before red; flagged in the checkpoint
  *  for his eye. */
 const GAP_BANDS = {
-  answer: { label: "Charlie's answer gap, worst turn", green: 2, red: 7 },
-  handover: { label: "Echo's handover gap", green: 1, red: 4 },
-  drop: { label: "The announced hold drop gap", green: 3, red: 6 },
+  answer: { label: "Charlie's answer gap, worst turn", short: "Answer gap", green: 2, red: 7,
+    measures: "How long Charlie took to start answering after Staff finished talking, on his slowest turn of the check.",
+    whenOff: "Staff sat waiting on Charlie. Look at whether Staff's words reached him late or he had them and was slow to speak." },
+  handover: { label: "Echo's handover gap", short: "Handover gap", green: 1, red: 4,
+    measures: "How long Echo held Staff's words before handing them to Charlie.",
+    whenOff: "The hand came late. Look at when Staff stopped talking against when Charlie was given their words." },
+  drop: { label: "The announced hold drop gap", short: "Hold drop gap", green: 3, red: 6,
+    measures: "How long Charlie stayed on his meter after Staff announced the hold.",
+    whenOff: "Charlie kept billing on a hold. Look at the moment Staff announced the hold against the moment he dropped." },
 } as const;
 
 /**
@@ -104,7 +121,10 @@ export function meterVerdict(card: TestCard | null | undefined, m: MeterInput): 
     rows.push({ label: "Charlie on the meter",
       value: cap == null ? `${m.meterSec}s`
         : inYellow ? `${m.meterSec}s, over the ${cap}s goal but inside your yellow ${redFrom! - 1}s`
-        : `${m.meterSec}s against ${cap}s`, pass });
+        : `${m.meterSec}s against ${cap}s`, pass,
+      short: "Charlie's meter", num: `${m.meterSec}s`,
+      measures: "Every second Charlie's meter ran on this check: speaking, listening and waiting together.",
+      whenOff: `Yellow is over the ${cap ?? METER_GOAL_SEC} second goal but still passing; red fails. Open the check's lines and find the seconds where nobody was talking.` });
     if (pass === false) {
       fails.push(cap === METER_GOAL_SEC
         ? `Charlie ran ${m.meterSec} seconds on the meter, past your yellow line of ${redFrom! - 1}, against the ${cap} second goal.`
@@ -118,7 +138,10 @@ export function meterVerdict(card: TestCard | null | undefined, m: MeterInput): 
     // numbers: waited seconds sit inside the meter cap and cost money against the floor.
     if (m.speakingSec != null || m.listeningSec != null) {
       const waited = Math.max(0, m.meterSec - (m.speakingSec ?? 0) - (m.listeningSec ?? 0));
-      rows.push({ label: "Of that, waiting on a quiet line", value: `${waited}s`, pass: null });
+      rows.push({ label: "Of that, waiting on a quiet line", value: `${waited}s`, pass: null,
+        short: "Waiting on quiet", num: `${waited}s`,
+        measures: "The piece of Charlie's meter where nobody was saying anything.",
+        whenOff: "His meter ran on a quiet line. Look for a hold that did not drop him or an answer that came slow." });
     }
   }
 
@@ -129,7 +152,9 @@ export function meterVerdict(card: TestCard | null | undefined, m: MeterInput): 
     if (sec == null) return;
     const band = GAP_BANDS[key];
     const tone: "g" | "y" | "r" = sec <= band.green ? "g" : sec < band.red ? "y" : "r";
-    rows.push({ label: band.label, value: `${sec}s, green at ${band.green}`, pass: tone !== "r", tone });
+    rows.push({ label: band.label, value: `${sec}s, green at ${band.green}`, pass: tone !== "r", tone,
+      short: band.short, num: `${sec}s`, measures: band.measures,
+      whenOff: `Green is ${band.green} seconds or less, red from ${band.red}. ${band.whenOff}` });
     if (tone === "r") {
       fails.push(`${band.label} ran ${sec} seconds, against ${band.green} green and red from ${band.red}.`);
       shortFails.push(`${band.label.toLowerCase()}, ${sec} seconds`);
@@ -139,11 +164,28 @@ export function meterVerdict(card: TestCard | null | undefined, m: MeterInput): 
   gap("handover", m.handoverGapWorstSec);
   gap("drop", m.dropGapWorstSec);
 
-  if (floor != null) toPass.push(`gross profit ${floor}% or better`);
-  if (m.profitPct != null) {
-    const pass = floor == null ? null : m.profitPct >= floor;
-    rows.push({ label: "Gross profit", value: floor == null ? `${m.profitPct}%` : `${m.profitPct}% against the ${floor}% floor`, pass, tone: pass === false ? "r" : pass === true ? "g" : undefined });
-    if (pass === false) { fails.push(`The check made ${m.profitPct}% gross profit against the ${floor}% floor.`); shortFails.push(`profit ${m.profitPct}% under the ${floor}% floor`); }
+  // THE HOLD SET-ASIDE (owner, 08-17): a hold card grades the profit with the scene's scripted
+  // hold seconds and the phone minutes they force set aside, because the scene forced them, not
+  // our system. Only when the card says so AND the aside was measured; a real customer check has
+  // no card and keeps the strict floor untouched.
+  const aside = b.holdCostAside === true && m.profitHoldAsidePct != null;
+  if (floor != null) toPass.push(aside
+    ? `gross profit ${floor}% or better with the scene's scripted hold set aside`
+    : `gross profit ${floor}% or better`);
+  const gradedPct = aside ? m.profitHoldAsidePct! : m.profitPct;
+  if (gradedPct != null) {
+    const pass = floor == null ? null : gradedPct >= floor;
+    rows.push({ label: "Gross profit",
+      value: floor == null ? `${gradedPct}%`
+        : aside ? `${gradedPct}% with the scene's ${m.holdSec ?? 0}s hold set aside (${m.profitPct ?? "?"}% as dialed), against the ${floor}% floor`
+        : `${gradedPct}% against the ${floor}% floor`,
+      pass, tone: pass === false ? "r" : pass === true ? "g" : undefined,
+      short: "Profit", num: `${gradedPct}%`,
+      measures: aside
+        ? `What is left of the check's price after every cost our system controls: the scene scripted a ${m.holdSec ?? 0} second hold, so those seconds' phone cost is set aside (as dialed it made ${m.profitPct ?? "?"}%).`
+        : "What is left of the check's price after every cost, as a percent of the price.",
+      whenOff: `The check made less than the ${floor ?? PROFIT_FLOOR_PCT} floor. Open the cost lines and find the biggest bucket.` });
+    if (pass === false) { fails.push(`The check made ${gradedPct}% gross profit against the ${floor}% floor${aside ? ", even with the scene's scripted hold set aside" : ""}.`); shortFails.push(`profit ${gradedPct}% under the ${floor}% floor`); }
   }
 
   return { pass: fails.length === 0, fails, shortFails, toPass, rows };

@@ -286,7 +286,12 @@ export function amend(room: string, kind: EventKind, patch: Record<string, unkno
 /** @param certain WE produced this line ourselves (a recording we played down the wire), so it can
  *  never be an echo and the echo protection must not eat it. A recording really can ask the same
  *  question twice inside ten seconds on a fast hand-over, and both askings belong on the record. */
-export function recordLine(room: string, who: "Agent" | "Clerk", text: string, spokenAtEpochMs?: number, certain?: boolean): boolean {
+/** @param earMeasured the moment came from OUR OWN ear (the energy ear's voice start, the held
+ *  greeting's arrival) rather than a transcriber's mapped clock. Only such a moment may still file
+ *  a line ABOVE lines already written: Staff's hello really is spoken before our question and only
+ *  becomes words later (owner screenshot 07-31), and the moment their voice started is ours, not
+ *  guessed. A transcriber's stamp gets the one-clock clamp below (owner box 08-17, off check 372). */
+export function recordLine(room: string, who: "Agent" | "Clerk", text: string, spokenAtEpochMs?: number, certain?: boolean, earMeasured?: boolean): boolean {
   try {
     const r = receipts.get(room);
     if (!r || r.closed) return true; // no record to guard — the caller may still show the line
@@ -303,12 +308,25 @@ export function recordLine(room: string, who: "Agent" | "Clerk", text: string, s
     const key = `${who}:${normSaid(t)}`;
     if (!certain && r.transcript.slice(-4).some((l) => Math.abs(l.atMs - at) < 10_000 && `${l.who}:${normSaid(l.text)}` === key)) return false;
     const line = { atMs: at, who, text: t.slice(0, 1000) };
+    // ONE CLOCK, MONOTONIC (owner box 08-17, off check 372). A reply can only ever ARRIVE after the
+    // line it answers — every path that writes here transcribes what was already said — so arrival
+    // order IS the conversation's order. This used to re-sort on any backdate: a line whose stamp
+    // came out wrong was inserted ABOVE lines already written, which is exactly how Staff's "Next
+    // week maybe?" printed above the question Charlie asked first on 372's screen. A transcriber's
+    // stamp may never rearrange the story: it is clamped to the last written line's moment instead,
+    // and the line files where it arrived. The ONE exception is a moment our own ear measured
+    // (`earMeasured`): Staff's hello really is spoken before our question and only becomes words
+    // later, so it still files where it belongs (owner screenshot 07-31, both laws kept).
     const last = r.transcript[r.transcript.length - 1];
     if (last && last.atMs > at) {
-      // Out of order, so put it in its place. Insert BEFORE the first line said later than this one;
-      // ties keep the order they arrived in, which is what a real back-and-forth reads like.
-      const i = r.transcript.findIndex((l) => l.atMs > at);
-      r.transcript.splice(i < 0 ? r.transcript.length : i, 0, line);
+      if (earMeasured && spoken != null) {
+        let i = r.transcript.length;
+        while (i > 0 && r.transcript[i - 1].atMs > at) i--;
+        r.transcript.splice(i, 0, line);
+      } else {
+        line.atMs = last.atMs;
+        r.transcript.push(line);
+      }
     } else r.transcript.push(line);
     if (r.transcript.length > 300) r.transcript.splice(0, r.transcript.length - 300); // runaway guard
     // READ AS IT GOES: hand the line to the reader now, while the check is still running, so the

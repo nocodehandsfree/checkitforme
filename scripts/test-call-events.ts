@@ -373,5 +373,45 @@ console.log("▶ a step can be filed at the moment it really happened");
   ok(r.events.every((e, i, a) => i === 0 || a[i - 1].atMs <= e.atMs), "the timeline stays in the order it happened");
 }
 
+
+// ONE CLOCK, MONOTONIC (owner box 08-17, check 372's screen): Staff's answer printed ABOVE the
+// question Charlie asked first, because a line with a wrongly early backdate was re-sorted up the
+// page. A reply can only ARRIVE after what it answers, so arrival order is the conversation's
+// order and a wrong stamp is clamped, never allowed to rearrange the story.
+console.log("\n== the one clock: an answer can never print before its question ==");
+{
+  _reset();
+  const r = openReceipt("room-oneclock");
+  r.startMs = Date.now() - 80_000;
+  recordLine("room-oneclock", "Clerk", "Okay. Thank you for holding. I did not see any.", Date.now() - 12_000);
+  recordLine("room-oneclock", "Agent", "Ah gotcha, do you know what day you might get more in?", Date.now() - 8_300);
+  // 372's shape: the robot's answer, spoken AFTER the question, arrives with a backdate 120ms
+  // EARLIER than the question's own stamp.
+  recordLine("room-oneclock", "Clerk", "Next week maybe? I'm not certain.", Date.now() - 8_420);
+  const t = r.transcript;
+  ok(t.length === 3, `three lines written (${t.length})`);
+  ok(t[2].who === "Clerk" && /Next week/.test(t[2].text), "the answer files where it ARRIVED, after its question");
+  ok(t[1].atMs <= t[2].atMs, `…and its clamped moment can never draw it above the question (${t[1].atMs} <= ${t[2].atMs})`);
+  ok(t.every((l, i, a) => i === 0 || a[i - 1].atMs <= l.atMs), "the whole conversation is monotonic on the one clock");
+}
+
+// THE ONE EXCEPTION, KEPT ON PURPOSE (owner screenshot 07-31 beside owner box 08-17): Staff's
+// hello is spoken BEFORE our question and only becomes words later, and the moment their voice
+// started is measured by OUR OWN ear, not a transcriber's mapped clock. Only such an ear-measured
+// moment may still file a line above lines already written; everything else keeps the clamp above.
+console.log("\n== the ear-measured hello still files above the question it preceded ==");
+{
+  _reset();
+  const r = openReceipt("room-hello");
+  r.startMs = Date.now() - 80_000;
+  recordLine("room-hello", "Agent", "do you have any Pokemon cards in stock?", undefined, true);
+  // The held greeting, transcribed seconds later, backdated to the ear's own voice-start moment.
+  recordLine("room-hello", "Clerk", "Thanks for calling the Fun store, this is Bob.", Date.now() - 6_000, undefined, true);
+  const t = r.transcript;
+  ok(t[0].who === "Clerk" && /this is Bob/.test(t[0].text), "the ear-measured hello reads first, the order it was said in");
+  ok(t[1].who === "Agent", "…and our question follows it");
+  ok(t.every((l, i, a) => i === 0 || a[i - 1].atMs <= l.atMs), "the record is still in one order, oldest first");
+}
+
 console.log(`\n${fail === 0 ? "ALL PASS" : "FAILURES"} — ${pass} passed, ${fail} failed`);
 process.exit(fail === 0 ? 0 : 1);
