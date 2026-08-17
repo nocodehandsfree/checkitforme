@@ -6647,6 +6647,23 @@ app.get("/api/admin/receipt/:room", async (c) => {
 // the check's carrier call and streams its recording, exactly the way the mapper's play button
 // does. `?probe=1` answers only whether a recording EXISTS, so the sheet shows the button only
 // where one does — a simulated check never dialed, has no carrier call, and shows no player at all.
+/** THE RECORDING, HELD WHILE HE IS LISTENING TO IT. A player asks for a dozen pieces of the same
+ *  file as he drags around it, and fetching the whole thing from the carrier each time would be a
+ *  dozen downloads of one call. Three recordings are kept for five minutes, which covers listening
+ *  to a check and comparing it with the one before it, and nothing here is a store's live audio:
+ *  it is the finished recording the carrier already holds for us. */
+const checkAudioHeld = new Map<string, { bytes: Buffer; atMs: number }>();
+async function checkAudioBytes(accountSid: string, auth: string, recSid: string): Promise<Buffer | null> {
+  const held = checkAudioHeld.get(recSid);
+  if (held && Date.now() - held.atMs < 5 * 60_000) return held.bytes;
+  const media = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Recordings/${recSid}.mp3`, { headers: { Authorization: auth } });
+  if (!media.ok) return null;
+  const bytes = Buffer.from(await media.arrayBuffer());
+  if (!bytes.length) return null;
+  checkAudioHeld.set(recSid, { bytes, atMs: Date.now() });
+  while (checkAudioHeld.size > 3) { const oldest = checkAudioHeld.keys().next().value; if (oldest === undefined) break; checkAudioHeld.delete(oldest); }
+  return bytes;
+}
 app.get("/api/admin/check-audio/:room", async (c) => {
   const room = c.req.param("room");
   if (!room) return c.json({ error: "room required" }, 400);
@@ -6671,17 +6688,30 @@ app.get("/api/admin/check-audio/:room", async (c) => {
   // player can print the total length and size its bar before a single byte of sound is fetched.
   if (c.req.query("probe")) return c.json({ exists: recs.length > 0, seconds: recs.length ? Number(recs[0].duration || 0) || null : null });
   if (!recs.length) return c.json({ error: "no recording for this check", exists: false }, 404);
-  // DRAGGING TO ANY POINT NEEDS THE ASK FOR A PIECE TO SURVIVE THE TRIP (owner box 08-17). A player
-  // that drags asks for the bytes around the point it was dragged to, so the browser's Range ask is
-  // handed to the carrier and the carrier's answer — the piece, its length, and its place in the
-  // whole — is handed straight back. Without this the browser can only play from the beginning.
-  const range = c.req.header("range");
-  const media = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Recordings/${recs[0].sid}.mp3`,
-    { headers: { Authorization: auth, ...(range ? { Range: range } : {}) } });
-  if (!media.ok || !media.body) return c.json({ error: `carrier ${media.status}` }, 502);
+  // DRAGGING TO ANY POINT IS OUR OWN JOB (owner, 08-17 evening, after the PM drove it). Handing the
+  // browser's ask for a piece of the file through to the carrier does nothing: the carrier answers
+  // the WHOLE recording every time, asked from the start or from the middle, so the browser could
+  // never jump and every drag fell back to the beginning. We cut the piece ourselves now: the whole
+  // recording is fetched once, held for a few minutes, and the asked bytes are answered with their
+  // own place in the whole, which is the answer a player needs to seek.
+  const buf = await checkAudioBytes(sid, auth, recs[0].sid);
+  if (!buf) return c.json({ error: "carrier would not send the recording" }, 502);
   const headers: Record<string, string> = { "content-type": "audio/mpeg", "cache-control": "private, max-age=3600", "accept-ranges": "bytes" };
-  for (const k of ["content-length", "content-range"]) { const v = media.headers.get(k); if (v) headers[k] = v; }
-  return new Response(media.body, { status: media.status, headers });
+  const asked = /^bytes=(\d*)-(\d*)$/.exec((c.req.header("range") || "").trim());
+  if (asked && (asked[1] !== "" || asked[2] !== "")) {
+    // "bytes=500-" is everything from 500 on; "bytes=-500" is the LAST 500 bytes; both are legal.
+    const start = asked[1] === "" ? Math.max(0, buf.length - Number(asked[2])) : Number(asked[1]);
+    const end = asked[1] === "" ? buf.length - 1 : (asked[2] === "" ? buf.length - 1 : Math.min(Number(asked[2]), buf.length - 1));
+    if (!Number.isFinite(start) || start >= buf.length || end < start) {
+      return new Response(null, { status: 416, headers: { ...headers, "content-range": `bytes */${buf.length}` } });
+    }
+    const piece = buf.subarray(start, end + 1);
+    headers["content-range"] = `bytes ${start}-${end}/${buf.length}`;
+    headers["content-length"] = String(piece.length);
+    return new Response(new Uint8Array(piece), { status: 206, headers });
+  }
+  headers["content-length"] = String(buf.length);
+  return new Response(new Uint8Array(buf), { status: 200, headers });
 });
 app.get("/api/admin/call-timing", async (c) => {
   const ownerOnly = await ownerOnlyRetailerIds(); // owner-only "Fun"/MVP store excluded from timings
