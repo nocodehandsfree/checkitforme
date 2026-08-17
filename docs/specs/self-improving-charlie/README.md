@@ -229,6 +229,19 @@ top one or two earn robot store dials. Dials confirm, never explore. This is run
 deliverable, pulled forward, because it runs on OUR real recordings instead of imagined calls:
 more honest than acted simulation and cheaper than any dial.
 
+**THE PM'S SIX, all folded in (08-16 late, before any simulations build):** the grader of a
+pretend call is the SAME test cards and the same meter law as a real check (green to 23, yellow
+24 to 30 passes, red at 31 fails, profit against the 67 floor), never a second grader · no
+invented numbers anywhere: the projected tiles are deleted and a run shows only what it measured
+(calls run · passed and failed · average meter seconds wearing the meter color · phone money 0¢),
+real money only from the robot store confirm call · pretend calls are filed in their own store,
+never in the checks record, never touching the twenty tests' scenes or the robot store's settings
+· the bottom line names the robot store for the one confirming call, a real store never dialed ·
+a pretend call is numbered inside its run ("call 305 of 500"), never like a check number · build
+and merge only between tests, never while a check is in the air, with the robot-store, robot-menu
+and meter suites rerun green before any merge. Owner-reviewed drawings beside this file:
+mock-simulations-closed.png · mock-simulations-open.png.
+
 **The genes of a call.** Real calls that already exist on the internet get broken down into genes,
 the behaviors that make calls what they are: Staff pissed off, the caller pissed off, a caller who
 talks about family and never gets to the point, calls that keep getting hung up on, a sixteen year
